@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect } from 'react'
 import { Newspaper, ChevronUp, ChevronDown, X, Globe, TrendingUp, TrendingDown, Minus, IndianRupee } from 'lucide-react'
 
 interface NewsItem {
@@ -69,7 +69,7 @@ export default function MarketNewsTicker() {
         className="fixed z-[9994] flex items-center gap-2 px-3 py-2 rounded-xl transition-all duration-300 hover:scale-[1.02] group"
         style={{
           top: '140px',
-          left: '16px',
+          right: '16px',
           maxWidth: '280px',
           background: 'rgba(10,10,10,0.9)',
           backdropFilter: 'blur(16px)',
@@ -100,7 +100,7 @@ export default function MarketNewsTicker() {
       className="fixed z-[9994] rounded-2xl transition-all duration-300"
       style={{
         top: '140px',
-        left: '16px',
+        right: '16px',
         width: '300px',
         maxHeight: isMinimized ? '44px' : '420px',
         background: 'rgba(10,10,10,0.95)',

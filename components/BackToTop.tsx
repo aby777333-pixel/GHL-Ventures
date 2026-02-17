@@ -12,16 +12,19 @@ export default function BackToTop() {
     return () => window.removeEventListener('scroll', handleScroll)
   }, [])
 
-  const scrollToTop = () => window.scrollTo({ top: 0, behavior: 'smooth' })
-
   return (
     <button
-      onClick={scrollToTop}
-      className={`fixed z-40 w-10 h-10 bg-brand-red text-white rounded-full shadow-lg
-        flex items-center justify-center hover:bg-red-700 transition-all duration-300 ${
-          show ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4 pointer-events-none'
+      onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+      type="button"
+      className={`fixed z-[9991] w-11 h-11 bg-brand-red text-white rounded-full
+        flex items-center justify-center hover:bg-red-700 transition-all duration-300 cursor-pointer ${
+          show ? 'opacity-100 translate-y-0 scale-100' : 'opacity-0 translate-y-4 scale-75 pointer-events-none'
         }`}
-      style={{ bottom: '80px', left: '24px' }}
+      style={{
+        bottom: '24px',
+        left: '24px',
+        boxShadow: '0 4px 20px rgba(208,2,27,0.4)',
+      }}
       aria-label="Scroll to top"
     >
       <ArrowUp className="w-5 h-5" />

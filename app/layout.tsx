@@ -14,6 +14,7 @@ import SocialProofToasts from '@/components/SocialProofToasts'
 import LiveVisitorCount from '@/components/LiveVisitorCount'
 import CommandPalette from '@/components/CommandPalette'
 import MarketNewsTicker from '@/components/MarketNewsTicker'
+import EconomicCalendar from '@/components/EconomicCalendar'
 
 export const metadata: Metadata = {
   title: {
@@ -94,6 +95,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <SocialProofToasts />
           <LiveVisitorCount />
           <MarketNewsTicker />
+          <EconomicCalendar />
           <CommandPalette />
           <ChatWidget />
         </ThemeProvider>
