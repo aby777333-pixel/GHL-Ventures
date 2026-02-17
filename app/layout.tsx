@@ -18,6 +18,7 @@ import EconomicCalendar from '@/components/EconomicCalendar'
 import PortfolioHeatmap from '@/components/PortfolioHeatmap'
 import VoiceNavigator from '@/components/VoiceNavigator'
 import InvestorPersonality from '@/components/InvestorPersonality'
+import AvatarConcierge from '@/components/AvatarConcierge'
 
 export const metadata: Metadata = {
   title: {
@@ -104,6 +105,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <InvestorPersonality />
           <CommandPalette />
           <ChatWidget />
+          <AvatarConcierge />
         </ThemeProvider>
       </body>
     </html>
