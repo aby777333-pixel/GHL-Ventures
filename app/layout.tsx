@@ -15,6 +15,9 @@ import LiveVisitorCount from '@/components/LiveVisitorCount'
 import CommandPalette from '@/components/CommandPalette'
 import MarketNewsTicker from '@/components/MarketNewsTicker'
 import EconomicCalendar from '@/components/EconomicCalendar'
+import PortfolioHeatmap from '@/components/PortfolioHeatmap'
+import VoiceNavigator from '@/components/VoiceNavigator'
+import InvestorPersonality from '@/components/InvestorPersonality'
 
 export const metadata: Metadata = {
   title: {
@@ -96,6 +99,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <LiveVisitorCount />
           <MarketNewsTicker />
           <EconomicCalendar />
+          <PortfolioHeatmap />
+          <VoiceNavigator />
+          <InvestorPersonality />
           <CommandPalette />
           <ChatWidget />
         </ThemeProvider>
