@@ -1,0 +1,927 @@
+'use client'
+
+import { useState, useEffect } from 'react'
+import Link from 'next/link'
+import AnimatedSection from '@/components/AnimatedSection'
+import PlaceholderImage from '@/components/PlaceholderImage'
+import { useIntersectionObserver, useCountUp } from '@/lib/hooks'
+import { BRAND, PORTFOLIO_COMPANIES, BLOG_POSTS } from '@/lib/constants'
+import {
+  ArrowRight, Shield, Play, MapPin, BadgeCheck, IndianRupee,
+  TrendingUp, Target, Users, BarChart3, Eye, Scale, Leaf,
+  Building2, Quote, Star, Phone, Mail, Clock,
+  BookOpen, Video, FileText,
+  Landmark, LockKeyhole, Sparkles, Calculator
+} from 'lucide-react'
+import RiskAssessmentQuiz from '@/components/RiskAssessmentQuiz'
+import InvestmentCalculator from '@/components/InvestmentCalculator'
+
+/* ================================================================
+   HELPER: Animated Counter (standalone)
+   ================================================================ */
+function CountUpStat({ end, prefix, suffix, label }: {
+  end: number; prefix?: string; suffix?: string; label: string
+}) {
+  const { ref, isVisible } = useIntersectionObserver(0.3)
+  const { count, startCounting } = useCountUp(end, 2200)
+
+  useEffect(() => {
+    if (isVisible) startCounting()
+  }, [isVisible, startCounting])
+
+  return (
+    <div ref={ref} className="text-center">
+      <div className="text-3xl md:text-4xl font-extrabold text-white mb-1 tracking-tight">
+        {prefix}{count}{suffix}
+      </div>
+      <div className="text-gray-400 text-sm font-medium uppercase tracking-widest">{label}</div>
+    </div>
+  )
+}
+
+/* ================================================================
+   SECTION 1: Hero -- Full Viewport, Dark, Immersive
+   ================================================================ */
+function HeroSection() {
+  const captions = [
+    'Stressed Real Estate Recovery',
+    'Early-Stage Startup Investments',
+    'Institutional-Grade Returns',
+  ]
+  const [captionIdx, setCaptionIdx] = useState(0)
+
+  useEffect(() => {
+    const t = setInterval(() => setCaptionIdx(i => (i + 1) % captions.length), 3500)
+    return () => clearInterval(t)
+  }, [captions.length])
+
+  return (
+    <section className="relative min-h-screen flex items-center hero-gradient grain-overlay overflow-hidden">
+      {/* Animated red particle dots (CSS-only) */}
+      {[...Array(12)].map((_, i) => (
+        <span
+          key={i}
+          className="absolute rounded-full bg-brand-red/40 animate-float pointer-events-none"
+          style={{
+            width: `${4 + (i % 5) * 3}px`,
+            height: `${4 + (i % 5) * 3}px`,
+            top: `${8 + (i * 7) % 85}%`,
+            left: `${5 + (i * 11) % 90}%`,
+            animationDelay: `${i * 0.6}s`,
+            animationDuration: `${3 + (i % 4)}s`,
+          }}
+        />
+      ))}
+
+      <div className="container-max mx-auto px-4 sm:px-6 lg:px-8 relative z-10 pt-44 pb-14">
+        <div className="grid lg:grid-cols-2 gap-12 xl:gap-20 items-center">
+          {/* LEFT: Hero Copy */}
+          <div>
+            <AnimatedSection delay={0}>
+              <div className="inline-flex items-center px-4 py-2 bg-brand-red/10 border border-brand-red/20 rounded-full mb-8">
+                <Shield className="w-4 h-4 text-brand-red mr-2" />
+                <span className="text-brand-red text-xs font-semibold uppercase tracking-widest">
+                  SEBI Registered &nbsp;|&nbsp; Category II AIF
+                </span>
+              </div>
+            </AnimatedSection>
+
+            <AnimatedSection delay={200}>
+              <h1 className="text-3xl sm:text-4xl md:text-4xl lg:text-5xl font-extrabold text-white leading-[1.08] mb-5 tracking-tight">
+                Where <span className="text-gradient">Bold Capital</span> Meets Rigorous Intelligence
+              </h1>
+            </AnimatedSection>
+
+            <AnimatedSection delay={400}>
+              <p className="text-base text-gray-300 mb-8 max-w-xl leading-relaxed">
+                GHL India Ventures delivers institutional-grade alternative investments for India&apos;s discerning investors. Minimum &#8377;1 Crore.
+              </p>
+            </AnimatedSection>
+
+            <AnimatedSection delay={550}>
+              <div className="flex flex-wrap gap-4 mb-10">
+                <Link href="/fund" className="btn-primary">
+                  Explore Our Fund <ArrowRight className="ml-2 w-4 h-4" />
+                </Link>
+                <Link href="/contact" className="btn-outline-white">
+                  Talk to an Advisor
+                </Link>
+              </div>
+            </AnimatedSection>
+
+            {/* Trust badges */}
+            <AnimatedSection delay={700}>
+              <div className="flex flex-wrap gap-3">
+                {[
+                  { icon: BadgeCheck, text: 'SEBI Reg.' },
+                  { icon: MapPin, text: 'Egmore, Chennai' },
+                  { icon: Landmark, text: 'Category II AIF' },
+                  { icon: IndianRupee, text: '₹1 Cr Minimum' },
+                ].map(b => (
+                  <span
+                    key={b.text}
+                    className="inline-flex items-center gap-1.5 px-4 py-1.5 bg-white/5 border border-white/10 rounded-full text-gray-300 text-xs font-medium"
+                  >
+                    <b.icon className="w-3.5 h-3.5 text-brand-red" />
+                    {b.text}
+                  </span>
+                ))}
+              </div>
+            </AnimatedSection>
+          </div>
+
+          {/* RIGHT: Video + Image Slider placeholders */}
+          <div className="space-y-6">
+            <AnimatedSection delay={400} direction="right">
+              <div className="relative group cursor-pointer">
+                <PlaceholderImage theme="hero" aspectRatio="aspect-video" label="Fund Overview — 90 seconds" className="rounded-2xl border border-white/10" />
+                <div className="absolute inset-0 flex items-center justify-center z-10">
+                  <div className="w-16 h-16 bg-brand-red rounded-full flex items-center justify-center group-hover:scale-110 transition-transform">
+                    <Play className="w-7 h-7 text-white ml-1" />
+                  </div>
+                </div>
+              </div>
+            </AnimatedSection>
+
+            <AnimatedSection delay={600} direction="right">
+              <div className="relative h-48 rounded-2xl overflow-hidden border border-white/10">
+                <PlaceholderImage theme={captionIdx === 0 ? 'real-estate' : captionIdx === 1 ? 'startup' : 'finance'} aspectRatio="h-full w-full" className="rounded-2xl" />
+                <div className="absolute inset-0 z-10 flex flex-col items-center justify-center text-center px-6">
+                  <p className="text-white font-semibold text-lg mb-1 transition-opacity duration-500">
+                    {captions[captionIdx]}
+                  </p>
+                  <div className="flex gap-2 justify-center mt-3">
+                    {captions.map((_, i) => (
+                      <span
+                        key={i}
+                        className={`w-2 h-2 rounded-full transition-colors ${i === captionIdx ? 'bg-brand-red' : 'bg-white/30'}`}
+                      />
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </AnimatedSection>
+          </div>
+        </div>
+      </div>
+
+      {/* Scroll indicator */}
+      <div className="absolute bottom-8 left-1/2 -translate-x-1/2 animate-bounce z-10">
+        <div className="w-7 h-11 border-2 border-white/30 rounded-full flex justify-center pt-2">
+          <div className="w-1.5 h-3 bg-white/50 rounded-full" />
+        </div>
+      </div>
+    </section>
+  )
+}
+
+/* ================================================================
+   SECTION 2: Ticker / Stats Strip
+   ================================================================ */
+function TickerStrip() {
+  const text = `SEBI Registration No. ${BRAND.sebi}  \u2022  Category II AIF  \u2022  Min Investment: \u20B91 Crore  \u2022  Stressed Real Estate & Early-Stage Startups  \u2022  Chennai, India  \u2022  ${BRAND.email}`
+
+  return (
+    <section className="relative overflow-hidden py-3" style={{ backgroundColor: '#1a0000' }}>
+      <div className="flex whitespace-nowrap animate-marquee">
+        {[0, 1].map(i => (
+          <span key={i} className="inline-block text-gray-400 text-sm font-medium tracking-wide px-8">
+            {text} &nbsp;&nbsp;&bull;&nbsp;&nbsp; {text}
+          </span>
+        ))}
+      </div>
+    </section>
+  )
+}
+
+/* ================================================================
+   SECTION 3: Who We Are (Split Layout)
+   ================================================================ */
+function WhoWeAre() {
+  return (
+    <section className="section-padding bg-brand-offwhite">
+      <div className="container-max mx-auto">
+        <div className="grid lg:grid-cols-2 gap-10 items-center">
+          {/* Left: Image placeholder */}
+          <AnimatedSection direction="left">
+            <PlaceholderImage theme="team" aspectRatio="aspect-[4/3]" label="GHL India Ventures Team / Chennai Office" className="rounded-3xl" />
+          </AnimatedSection>
+
+          {/* Right: Stats + copy */}
+          <AnimatedSection direction="right">
+            <span className="eyebrow">Who We Are</span>
+            <h2 className="section-title mt-3 text-brand-black">
+              Capital That <span className="text-gradient">Creates Value</span>
+            </h2>
+
+            {/* Animated counter stats */}
+            <div className="grid grid-cols-2 gap-6 my-10">
+              <CountUpStat end={25} suffix="+" label="Years of Experience" />
+              <CountUpStat end={500} prefix="₹" suffix=" Cr+" label="Value Created" />
+              <CountUpStat end={1000} suffix="+" label="Pitch Decks Analyzed" />
+              <CountUpStat end={50} suffix="+" label="Strong Support Team" />
+            </div>
+
+            <p className="text-brand-grey text-base leading-relaxed mb-4">
+              GHL India Ventures is a SEBI-registered Category II Alternative Investment Fund focused on two high-conviction strategies: recovering value from stressed real estate assets and backing early-stage startups poised to transform India&apos;s economic landscape.
+            </p>
+            <p className="text-brand-grey text-base leading-relaxed mb-8">
+              Headquartered in Chennai, our leadership brings over 25 years of experience spanning private equity, financial services, and strategic advisory.
+            </p>
+
+            <Link href="/about" className="btn-primary">
+              Read Our Full Story <ArrowRight className="ml-2 w-4 h-4" />
+            </Link>
+          </AnimatedSection>
+        </div>
+      </div>
+    </section>
+  )
+}
+
+/* ================================================================
+   SECTION 4: Investment Capabilities (6 Cards)
+   ================================================================ */
+function InvestmentCapabilities() {
+  const pillars = [
+    { icon: TrendingUp, title: 'Value Investing', desc: 'We seek asymmetric risk-reward opportunities in stressed assets and emerging ventures where intrinsic value is deeply misunderstood.' },
+    { icon: Shield, title: 'Risk Management', desc: 'A multi-layered risk framework ensures downside protection across every allocation, from macro stress testing to deal-level hedging.' },
+    { icon: BarChart3, title: 'Fundamental Analysis', desc: 'Every investment undergoes 360-degree forensic diligence — financial modelling, management scoring, and sector benchmarking.' },
+    { icon: Eye, title: 'Liquidity Management', desc: 'We engineer liquidity windows and secondary exit pathways to balance portfolio agility with long-term conviction.' },
+    { icon: Scale, title: 'Transparency & Accountability', desc: 'Institutional-grade reporting, quarterly NAV disclosures, and open-door governance that treats every investor as a partner.' },
+    { icon: Leaf, title: 'Ethical / ESG Considerations', desc: 'We integrate environmental, social, and governance criteria at every stage, because sustainable returns demand responsible capital.' },
+  ]
+
+  return (
+    <section className="section-padding bg-white">
+      <div className="container-max mx-auto">
+        <AnimatedSection className="text-center mb-10">
+          <span className="eyebrow">Our Approach</span>
+          <h2 className="section-title mt-3 text-brand-black">Six Pillars of Our Investment Philosophy</h2>
+          <p className="section-subtitle mx-auto mt-4">
+            We don&apos;t just invest capital — we invest conviction.
+          </p>
+        </AnimatedSection>
+
+        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+          {pillars.map((p, i) => (
+            <AnimatedSection key={p.title} delay={i * 120}>
+              <div className="card h-full group hover:-translate-y-2 hover:border-brand-red/20 border border-transparent">
+                <div className="w-14 h-14 bg-brand-red/10 rounded-2xl flex items-center justify-center mb-5 group-hover:bg-brand-red transition-all duration-300">
+                  <p.icon className="w-7 h-7 text-brand-red group-hover:text-white transition-colors" />
+                </div>
+                <h3 className="text-xl font-bold text-brand-black mb-3">{p.title}</h3>
+                <p className="text-brand-grey text-sm leading-relaxed">{p.desc}</p>
+              </div>
+            </AnimatedSection>
+          ))}
+        </div>
+      </div>
+    </section>
+  )
+}
+
+/* ================================================================
+   SECTION 5: Video Feature (Full-Width, Dark)
+   ================================================================ */
+function VideoFeature() {
+  return (
+    <section className="relative py-16 md:py-20 overflow-hidden">
+      {/* Dark gradient + red radial bg */}
+      <div className="absolute inset-0 hero-gradient" />
+      <div
+        className="absolute inset-0"
+        style={{ background: 'radial-gradient(ellipse at center, rgba(208,2,27,0.15) 0%, transparent 65%)' }}
+      />
+
+      <div className="container-max mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+        <AnimatedSection className="text-center mb-10">
+          <span className="eyebrow !text-brand-red">From Our Chairman</span>
+          <h2 className="section-title mt-3 text-white">The GHL India Ventures Story</h2>
+        </AnimatedSection>
+
+        <AnimatedSection delay={200}>
+          <div className="relative max-w-4xl mx-auto group cursor-pointer">
+            <PlaceholderImage theme="hero" aspectRatio="aspect-video" label="Chairman's Message — 3 minutes" className="rounded-3xl border border-white/10" />
+            <div className="absolute inset-0 flex items-center justify-center z-10">
+              <div className="relative">
+                <div className="absolute inset-0 w-20 h-20 rounded-full bg-brand-red/40 animate-pulse-ring" />
+                <div className="relative w-20 h-20 bg-brand-red rounded-full flex items-center justify-center group-hover:scale-110 transition-transform duration-300 shadow-lg shadow-brand-red/30">
+                  <Play className="w-9 h-9 text-white ml-1" />
+                </div>
+              </div>
+            </div>
+          </div>
+        </AnimatedSection>
+      </div>
+    </section>
+  )
+}
+
+/* ================================================================
+   SECTION 6: Why Choose Us (Alternating Layout)
+   ================================================================ */
+function WhyChooseUs() {
+  const features = [
+    {
+      title: 'SEBI-Regulated Trust',
+      desc: 'Our registration as a Category II Alternative Investment Fund (IN/AIF2/2425/1517) guarantees full regulatory compliance, third-party audits, and custodial safeguards for every rupee you commit.',
+      icon: Shield,
+    },
+    {
+      title: 'Diversified Portfolio',
+      desc: 'We balance high-conviction plays in stressed real estate recovery with early-stage startup exposure, offering built-in diversification across asset types, geographies, and time horizons.',
+      icon: BarChart3,
+    },
+    {
+      title: 'Expert-Led Strategy',
+      desc: 'Our investment committee brings 25+ years of experience spanning private equity, structured finance, and entrepreneurial growth. Every decision is backed by rigorous analysis.',
+      icon: Target,
+    },
+    {
+      title: 'Investor-First Approach',
+      desc: 'Quarterly NAV reporting, transparent fee structures, dedicated relationship managers, and a governance framework that places investor interests at the absolute centre of every decision.',
+      icon: Users,
+    },
+  ]
+
+  return (
+    <section className="section-padding bg-brand-offwhite">
+      <div className="container-max mx-auto">
+        <AnimatedSection className="text-center mb-10">
+          <span className="eyebrow">The GHL Advantage</span>
+          <h2 className="section-title mt-3 text-brand-black">Why Choose Us</h2>
+        </AnimatedSection>
+
+        <div className="space-y-14">
+          {features.map((f, i) => {
+            const isEven = i % 2 === 0
+            return (
+              <div
+                key={f.title}
+                className={`grid lg:grid-cols-2 gap-12 items-center ${isEven ? '' : 'lg:direction-rtl'}`}
+              >
+                {/* Image placeholder */}
+                <AnimatedSection direction={isEven ? 'left' : 'right'} className={isEven ? '' : 'lg:order-2'}>
+                  <PlaceholderImage theme={i === 0 ? 'compliance' : i === 1 ? 'portfolio' : i === 2 ? 'finance' : 'team'} aspectRatio="aspect-[4/3]" label={f.title} className="rounded-3xl" />
+                </AnimatedSection>
+
+                {/* Text */}
+                <AnimatedSection direction={isEven ? 'right' : 'left'} className={isEven ? '' : 'lg:order-1'}>
+                  <span className="inline-block px-3 py-1 bg-brand-red/10 text-brand-red text-xs font-bold uppercase tracking-widest rounded-full mb-4">
+                    0{i + 1}
+                  </span>
+                  <h3 className="text-xl md:text-2xl font-bold text-brand-black mb-3">{f.title}</h3>
+                  <p className="text-brand-grey text-base leading-relaxed">{f.desc}</p>
+                </AnimatedSection>
+              </div>
+            )
+          })}
+        </div>
+      </div>
+    </section>
+  )
+}
+
+/* ================================================================
+   SECTION 7: Portfolio Spotlight (Carousel / Grid)
+   ================================================================ */
+function PortfolioSpotlight() {
+  return (
+    <section className="section-padding bg-white">
+      <div className="container-max mx-auto">
+        <AnimatedSection className="text-center mb-10">
+          <span className="eyebrow">Portfolio</span>
+          <h2 className="section-title mt-3 text-brand-black">Companies We Back</h2>
+          <p className="section-subtitle mx-auto mt-4">Partnering with visionary founders building transformative businesses across India.</p>
+        </AnimatedSection>
+
+        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-8">
+          {PORTFOLIO_COMPANIES.slice(0, 6).map((company, i) => (
+            <AnimatedSection key={company.name} delay={i * 100}>
+              <div className="card group hover:-translate-y-2 h-full">
+                <div className="w-14 h-14 bg-brand-offwhite rounded-xl flex items-center justify-center mb-5">
+                  <Building2 className="w-7 h-7 text-brand-red" />
+                </div>
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="font-bold text-lg text-brand-black">{company.name}</h3>
+                  <span className="text-[11px] bg-brand-red/10 text-brand-red px-2.5 py-1 rounded-full font-semibold">
+                    {company.stage}
+                  </span>
+                </div>
+                <p className="text-brand-grey text-sm mb-4 leading-relaxed">{company.description}</p>
+                <span className="text-xs font-semibold text-brand-grey uppercase tracking-widest">{company.sector}</span>
+              </div>
+            </AnimatedSection>
+          ))}
+        </div>
+
+        <div className="text-center mt-10">
+          <Link href="/portfolio" className="btn-outline-red">
+            View Full Portfolio <ArrowRight className="ml-2 w-4 h-4" />
+          </Link>
+        </div>
+      </div>
+    </section>
+  )
+}
+
+/* ================================================================
+   SECTION 8: Latest from Blog (3 Cards)
+   ================================================================ */
+function BlogSection() {
+  return (
+    <section className="section-padding bg-brand-offwhite">
+      <div className="container-max mx-auto">
+        <AnimatedSection className="text-center mb-10">
+          <span className="eyebrow">Insights</span>
+          <h2 className="section-title mt-3 text-brand-black">Financial Intelligence. Delivered.</h2>
+        </AnimatedSection>
+
+        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+          {BLOG_POSTS.slice(0, 6).map((post, i) => {
+            const themes = ['analytics', 'real-estate', 'startup', 'finance', 'compliance', 'hero', 'portfolio', 'team'] as const
+            return (
+              <AnimatedSection key={post.slug} delay={i * 120}>
+                <Link href={`/blog#${post.slug}`} className="card group block h-full hover:-translate-y-2">
+                  {/* Image placeholder */}
+                  <PlaceholderImage theme={themes[i % themes.length]} aspectRatio="h-48 w-full" label={post.category} className="rounded-xl mb-5" />
+                  <span className="text-xs font-bold text-brand-red uppercase tracking-widest">{post.category}</span>
+                  <h3 className="text-lg font-bold text-brand-black mt-2 mb-2 group-hover:text-brand-red transition-colors leading-snug">
+                    {post.title}
+                  </h3>
+                  <p className="text-brand-grey text-sm mb-4 leading-relaxed line-clamp-3">{post.excerpt}</p>
+                  <div className="flex items-center justify-between text-xs text-brand-grey">
+                    <span>{new Date(post.date).toLocaleDateString('en-IN', { year: 'numeric', month: 'short', day: 'numeric' })}</span>
+                    <span>{post.readTime}</span>
+                  </div>
+                </Link>
+              </AnimatedSection>
+            )
+          })}
+        </div>
+
+        <div className="text-center mt-10">
+          <Link href="/blog" className="btn-outline-red">
+            Visit Our Blog <ArrowRight className="ml-2 w-4 h-4" />
+          </Link>
+        </div>
+      </div>
+    </section>
+  )
+}
+
+/* ================================================================
+   SECTION 9: Financial IQ Teaser
+   ================================================================ */
+function FinancialIQTeaser() {
+  const pills = [
+    { icon: Video, label: 'Videos' },
+    { icon: FileText, label: 'Articles' },
+    { icon: BookOpen, label: 'Glossary' },
+  ]
+
+  return (
+    <section className="relative py-14 md:py-20 overflow-hidden">
+      <div className="absolute inset-0 hero-gradient" />
+      <div className="absolute top-0 right-0 w-96 h-96 bg-brand-red/20 rounded-full blur-[120px]" />
+
+      <div className="container-max mx-auto px-4 sm:px-6 lg:px-8 relative z-10 text-center">
+        <AnimatedSection>
+          <span className="eyebrow !text-brand-red">Learn &amp; Grow</span>
+          <h2 className="section-title mt-3 text-white">Build Your Financial IQ</h2>
+          <p className="text-gray-400 text-base max-w-2xl mx-auto mt-3 mb-8">
+            Knowledge is the ultimate edge. Explore curated content designed to sharpen your investment acumen.
+          </p>
+        </AnimatedSection>
+
+        <AnimatedSection delay={200}>
+          <div className="flex flex-wrap justify-center gap-4 mb-12">
+            {pills.map(p => (
+              <span
+                key={p.label}
+                className="inline-flex items-center gap-2.5 px-6 py-3 bg-white/5 border border-white/10 rounded-full text-white text-sm font-semibold hover:bg-brand-red/20 hover:border-brand-red/30 transition-all cursor-pointer"
+              >
+                <p.icon className="w-4 h-4 text-brand-red" />
+                {p.label}
+              </span>
+            ))}
+          </div>
+
+          <Link href="/financial-iq" className="btn-primary">
+            Explore Financial IQ <ArrowRight className="ml-2 w-5 h-5" />
+          </Link>
+        </AnimatedSection>
+      </div>
+    </section>
+  )
+}
+
+/* ================================================================
+   SECTION 10: Testimonials / Trust Signals
+   ================================================================ */
+function TestimonialsSection() {
+  const testimonials = [
+    {
+      quote: 'The depth of diligence and the transparency of reporting gave me confidence that my capital was in the hands of genuine professionals.',
+      name: 'R****** M.',
+      title: 'HNI Investor, Mumbai',
+    },
+    {
+      quote: 'What impressed us was the governance structure. Quarterly NAV updates, open communication, and a team that treats investors as true partners.',
+      name: 'S****** K.',
+      title: 'Family Office, Bengaluru',
+    },
+    {
+      quote: 'GHL India Ventures brought a rare combination of deep market knowledge and ethical rigour. Their stressed-asset strategy is genuinely differentiated.',
+      name: 'A****** P.',
+      title: 'Institutional LP, Chennai',
+    },
+  ]
+
+  return (
+    <section className="section-padding bg-white">
+      <div className="container-max mx-auto">
+        <AnimatedSection className="text-center mb-10">
+          <span className="eyebrow">Trust</span>
+          <h2 className="section-title mt-3 text-brand-black">What Our Investors Say</h2>
+        </AnimatedSection>
+
+        <div className="grid md:grid-cols-3 gap-8 mb-10">
+          {testimonials.map((t, i) => (
+            <AnimatedSection key={i} delay={i * 150}>
+              <div className="card h-full flex flex-col">
+                <Quote className="w-8 h-8 text-brand-red mb-4 shrink-0" />
+                <p className="text-brand-grey leading-relaxed flex-1 mb-6 text-sm">
+                  &ldquo;{t.quote}&rdquo;
+                </p>
+                <div className="flex items-center space-x-1 mb-4">
+                  {[...Array(5)].map((_, j) => (
+                    <Star key={j} className="w-4 h-4 text-brand-red fill-brand-red" />
+                  ))}
+                </div>
+                <div>
+                  <p className="font-bold text-brand-black text-sm">{t.name}</p>
+                  <p className="text-brand-grey text-xs">{t.title}</p>
+                </div>
+              </div>
+            </AnimatedSection>
+          ))}
+        </div>
+
+        {/* Trust badges */}
+        <AnimatedSection delay={300}>
+          <div className="flex flex-wrap justify-center gap-6">
+            {[
+              { icon: Shield, text: 'SEBI Registered' },
+              { icon: BadgeCheck, text: 'Category II Certified' },
+              { icon: LockKeyhole, text: '256-bit Encryption' },
+              { icon: Landmark, text: 'Custodian-Held Assets' },
+            ].map(b => (
+              <div key={b.text} className="flex items-center gap-2 px-5 py-3 bg-brand-offwhite rounded-xl border border-gray-200">
+                <b.icon className="w-5 h-5 text-brand-red" />
+                <span className="text-brand-black text-sm font-semibold">{b.text}</span>
+              </div>
+            ))}
+          </div>
+        </AnimatedSection>
+      </div>
+    </section>
+  )
+}
+
+/* ================================================================
+   SECTION 11: Pre-Footer Contact Form
+   ================================================================ */
+function ContactFormSection() {
+  const [form, setForm] = useState({
+    fullName: '',
+    email: '',
+    phone: '',
+    isd: '+91',
+    city: '',
+    amount: '',
+    message: '',
+    accredited: false,
+    privacy: false,
+  })
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+    const target = e.target
+    const value = target instanceof HTMLInputElement && target.type === 'checkbox' ? target.checked : target.value
+    setForm(prev => ({ ...prev, [target.name]: value }))
+  }
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
+    // Form submission logic
+  }
+
+  return (
+    <section className="section-padding" style={{ backgroundColor: '#F8F7F5' }}>
+      <div className="container-max mx-auto">
+        <div className="grid lg:grid-cols-5 gap-12 items-start">
+          {/* Left: Form */}
+          <div className="lg:col-span-3">
+            <div className="border-l-4 border-brand-red pl-6 mb-10">
+              <AnimatedSection>
+                <span className="eyebrow">Get Started</span>
+                <h2 className="section-title mt-3 text-brand-black">Start Your Investment Journey</h2>
+                <p className="text-brand-grey text-base mt-2">
+                  Request a private consultation with our investment advisory team.
+                </p>
+              </AnimatedSection>
+            </div>
+
+            <AnimatedSection delay={200}>
+              <form onSubmit={handleSubmit} className="space-y-5">
+                <div className="grid sm:grid-cols-2 gap-5">
+                  <div>
+                    <label className="block text-sm font-semibold text-brand-black mb-1.5">Full Name *</label>
+                    <input
+                      type="text"
+                      name="fullName"
+                      value={form.fullName}
+                      onChange={handleChange}
+                      required
+                      placeholder="Your full name"
+                      className="input-field"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-semibold text-brand-black mb-1.5">Email *</label>
+                    <input
+                      type="email"
+                      name="email"
+                      value={form.email}
+                      onChange={handleChange}
+                      required
+                      placeholder="you@example.com"
+                      className="input-field"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid sm:grid-cols-2 gap-5">
+                  <div>
+                    <label className="block text-sm font-semibold text-brand-black mb-1.5">Phone *</label>
+                    <div className="flex gap-2">
+                      <select
+                        name="isd"
+                        value={form.isd}
+                        onChange={handleChange}
+                        className="input-field !w-24 shrink-0"
+                      >
+                        <option value="+91">+91</option>
+                        <option value="+1">+1</option>
+                        <option value="+44">+44</option>
+                        <option value="+971">+971</option>
+                        <option value="+65">+65</option>
+                      </select>
+                      <input
+                        type="tel"
+                        name="phone"
+                        value={form.phone}
+                        onChange={handleChange}
+                        required
+                        placeholder="98765 43210"
+                        className="input-field flex-1"
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-semibold text-brand-black mb-1.5">City</label>
+                    <input
+                      type="text"
+                      name="city"
+                      value={form.city}
+                      onChange={handleChange}
+                      placeholder="Chennai"
+                      className="input-field"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-semibold text-brand-black mb-1.5">Investment Amount *</label>
+                  <select
+                    name="amount"
+                    value={form.amount}
+                    onChange={handleChange}
+                    required
+                    className="input-field"
+                  >
+                    <option value="">Select a range</option>
+                    <option value="1-5">&#8377;1 Cr – &#8377;5 Cr</option>
+                    <option value="5-10">&#8377;5 Cr – &#8377;10 Cr</option>
+                    <option value="10-25">&#8377;10 Cr – &#8377;25 Cr</option>
+                    <option value="25+">&#8377;25 Cr+</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-semibold text-brand-black mb-1.5">Message</label>
+                  <textarea
+                    name="message"
+                    value={form.message}
+                    onChange={handleChange}
+                    rows={4}
+                    placeholder="Tell us about your investment goals..."
+                    className="input-field resize-none"
+                  />
+                </div>
+
+                {/* Checkboxes */}
+                <div className="space-y-3">
+                  <label className="flex items-start gap-3 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      name="accredited"
+                      checked={form.accredited}
+                      onChange={handleChange}
+                      className="mt-1 w-4 h-4 accent-brand-red"
+                    />
+                    <span className="text-sm text-brand-grey leading-relaxed">
+                      I confirm that I am an accredited / qualified investor with a minimum investable surplus of &#8377;1 Crore.
+                    </span>
+                  </label>
+                  <label className="flex items-start gap-3 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      name="privacy"
+                      checked={form.privacy}
+                      onChange={handleChange}
+                      required
+                      className="mt-1 w-4 h-4 accent-brand-red"
+                    />
+                    <span className="text-sm text-brand-grey leading-relaxed">
+                      I agree to the <Link href="/privacy" className="text-brand-red underline hover:no-underline">Privacy Policy</Link> and consent to being contacted by the GHL India Ventures team. *
+                    </span>
+                  </label>
+                </div>
+
+                <button
+                  type="submit"
+                  className="w-full sm:w-auto inline-flex items-center justify-center px-8 py-3 text-white font-bold text-base rounded-full transition-all duration-300 transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-offset-2"
+                  style={{
+                    background: 'linear-gradient(135deg, #D0021B 0%, #8B0000 100%)',
+                    boxShadow: '0 6px 30px rgba(208,2,27,0.4)',
+                  }}
+                >
+                  Request a Consultation <ArrowRight className="ml-2 w-5 h-5" />
+                </button>
+              </form>
+            </AnimatedSection>
+          </div>
+
+          {/* Right: Contact info card */}
+          <div className="lg:col-span-2">
+            <AnimatedSection delay={300} direction="right">
+              <div className="card-dark sticky top-28">
+                <h3 className="text-xl font-bold text-white mb-6">Get in Touch</h3>
+
+                <div className="space-y-5">
+                  <div className="flex items-start gap-4">
+                    <div className="w-10 h-10 bg-brand-red/20 rounded-xl flex items-center justify-center shrink-0">
+                      <Phone className="w-5 h-5 text-brand-red" />
+                    </div>
+                    <div>
+                      <p className="text-gray-400 text-xs uppercase tracking-widest mb-1">Phone</p>
+                      <p className="text-white text-sm font-medium">{BRAND.phone1}</p>
+                      <p className="text-white text-sm font-medium">{BRAND.phone2}</p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-start gap-4">
+                    <div className="w-10 h-10 bg-brand-red/20 rounded-xl flex items-center justify-center shrink-0">
+                      <Mail className="w-5 h-5 text-brand-red" />
+                    </div>
+                    <div>
+                      <p className="text-gray-400 text-xs uppercase tracking-widest mb-1">Email</p>
+                      <p className="text-white text-sm font-medium">{BRAND.email}</p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-start gap-4">
+                    <div className="w-10 h-10 bg-brand-red/20 rounded-xl flex items-center justify-center shrink-0">
+                      <MapPin className="w-5 h-5 text-brand-red" />
+                    </div>
+                    <div>
+                      <p className="text-gray-400 text-xs uppercase tracking-widest mb-1">Address</p>
+                      <p className="text-white text-sm font-medium leading-relaxed">{BRAND.address}</p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-start gap-4">
+                    <div className="w-10 h-10 bg-brand-red/20 rounded-xl flex items-center justify-center shrink-0">
+                      <Clock className="w-5 h-5 text-brand-red" />
+                    </div>
+                    <div>
+                      <p className="text-gray-400 text-xs uppercase tracking-widest mb-1">Office Hours</p>
+                      <p className="text-white text-sm font-medium">Mon – Sat: 10:00 AM – 6:00 PM IST</p>
+                    </div>
+                  </div>
+                </div>
+
+                <hr className="border-white/10 my-6" />
+
+                <div className="flex items-center gap-2 text-gray-400 text-xs">
+                  <Shield className="w-4 h-4 text-brand-red" />
+                  <span>SEBI Reg. No. {BRAND.sebi}</span>
+                </div>
+              </div>
+            </AnimatedSection>
+          </div>
+        </div>
+      </div>
+    </section>
+  )
+}
+
+/* ================================================================
+   SECTION: Risk Quiz + Calculator CTA (after WhyChooseUs)
+   ================================================================ */
+function InvestorToolsCTA({ onOpenQuiz, onOpenCalc }: { onOpenQuiz: () => void; onOpenCalc: () => void }) {
+  return (
+    <section className="relative py-14 md:py-20 overflow-hidden">
+      <div className="absolute inset-0 hero-gradient" />
+      <div
+        className="absolute inset-0"
+        style={{ background: 'radial-gradient(ellipse at 70% 50%, rgba(208,2,27,0.12) 0%, transparent 65%)' }}
+      />
+
+      <div className="container-max mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+        <AnimatedSection className="text-center mb-10">
+          <span className="eyebrow !text-brand-red">Interactive Tools</span>
+          <h2 className="section-title mt-3 text-white">Find Your Ideal Investment Route</h2>
+          <p className="text-gray-400 text-base max-w-2xl mx-auto mt-3">
+            Not sure where to start? Use our interactive tools to discover the investment path that matches your goals and risk appetite.
+          </p>
+        </AnimatedSection>
+
+        <div className="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto items-stretch">
+          {/* Risk Quiz Card */}
+          <AnimatedSection delay={100} className="flex">
+            <div className="card-glass text-center p-8 hover:bg-white/10 transition-all cursor-pointer group flex flex-col w-full" onClick={onOpenQuiz}>
+              <div className="w-16 h-16 rounded-2xl bg-brand-red/10 flex items-center justify-center mx-auto mb-5 group-hover:bg-brand-red transition-all duration-300">
+                <Sparkles className="w-8 h-8 text-brand-red group-hover:text-white transition-colors" />
+              </div>
+              <h3 className="text-white text-xl font-bold mb-3">Risk Assessment Quiz</h3>
+              <p className="text-gray-400 text-sm leading-relaxed flex-1 mb-6">
+                Answer 7 quick questions and we&apos;ll recommend the ideal investment route for your profile — Conservative, Moderate, or Aggressive.
+              </p>
+              <span className="inline-flex items-center justify-center gap-2 text-brand-red text-sm font-semibold group-hover:gap-3 transition-all mt-auto">
+                Take the Quiz <ArrowRight className="w-4 h-4" />
+              </span>
+            </div>
+          </AnimatedSection>
+
+          {/* Calculator Card */}
+          <AnimatedSection delay={200} className="flex">
+            <div className="card-glass text-center p-8 hover:bg-white/10 transition-all cursor-pointer group flex flex-col w-full" onClick={onOpenCalc}>
+              <div className="w-16 h-16 rounded-2xl bg-amber-500/10 flex items-center justify-center mx-auto mb-5 group-hover:bg-amber-500 transition-all duration-300">
+                <Calculator className="w-8 h-8 text-amber-500 group-hover:text-white transition-colors" />
+              </div>
+              <h3 className="text-white text-xl font-bold mb-3">Investment Calculator</h3>
+              <p className="text-gray-400 text-sm leading-relaxed flex-1 mb-6">
+                Model returns across SIP, Debenture Route, and Direct AIF. Compare with FDs, Gold, and NIFTY 50 side by side.
+              </p>
+              <span className="inline-flex items-center justify-center gap-2 text-amber-500 text-sm font-semibold group-hover:gap-3 transition-all mt-auto">
+                Calculate Returns <ArrowRight className="w-4 h-4" />
+              </span>
+            </div>
+          </AnimatedSection>
+        </div>
+      </div>
+    </section>
+  )
+}
+
+/* ================================================================
+   HOME PAGE — All Sections + Modals
+   ================================================================ */
+export default function HomePage() {
+  const [quizOpen, setQuizOpen] = useState(false)
+  const [calcOpen, setCalcOpen] = useState(false)
+
+  return (
+    <>
+      <HeroSection />
+      <TickerStrip />
+      <WhoWeAre />
+      <InvestmentCapabilities />
+      <VideoFeature />
+      <WhyChooseUs />
+      <InvestorToolsCTA onOpenQuiz={() => setQuizOpen(true)} onOpenCalc={() => setCalcOpen(true)} />
+      <PortfolioSpotlight />
+      <BlogSection />
+      <FinancialIQTeaser />
+      <TestimonialsSection />
+      <ContactFormSection />
+
+      {/* Modals */}
+      <RiskAssessmentQuiz isOpen={quizOpen} onClose={() => setQuizOpen(false)} />
+      <InvestmentCalculator isOpen={calcOpen} onClose={() => setCalcOpen(false)} />
+    </>
+  )
+}

@@ -1,0 +1,30 @@
+# Dependencies
+node_modules/
+
+# Next.js build
+.next/
+
+# Static export
+out/
+
+# Local Netlify folder
+.netlify/
+
+# Claude workspace files (contains Windows reserved filenames)
+claude/
+
+# Windows reserved filenames
+nul
+
+# Environment variables
+.env
+.env.local
+.env.production
+
+# IDE
+.vscode/
+.idea/
+
+# OS files
+Thumbs.db
+.DS_Store
