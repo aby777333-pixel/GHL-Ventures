@@ -217,6 +217,22 @@ function MiniTina() {
   )
 }
 
+// ─── Page context helper ───
+function getCurrentPageContext(): string {
+  if (typeof window === 'undefined') return 'home'
+  const path = window.location.pathname
+  if (path.includes('/about')) return 'about'
+  if (path.includes('/fund/debenture')) return 'debenture'
+  if (path.includes('/fund/direct')) return 'direct-aif'
+  if (path.includes('/fund')) return 'fund'
+  if (path.includes('/blog')) return 'blog'
+  if (path.includes('/portfolio')) return 'portfolio'
+  if (path.includes('/contact')) return 'contact'
+  if (path.includes('/downloads')) return 'downloads'
+  if (path.includes('/financial-iq')) return 'financial-iq'
+  return 'home'
+}
+
 // ─── Main Component ───
 export default function AvatarConcierge() {
   const router = useRouter()
@@ -234,9 +250,11 @@ export default function AvatarConcierge() {
   const [showLangPicker, setShowLangPicker] = useState(false)
   const [typewriterText, setTypewriterText] = useState('')
   const [typewriterDone, setTypewriterDone] = useState(false)
+  const [micPermission, setMicPermission] = useState<'granted' | 'denied' | 'prompt'>('prompt')
   const chatEndRef = useRef<HTMLDivElement>(null)
   const recognitionRef = useRef<any>(null)
   const inputRef = useRef<HTMLInputElement>(null)
+  const autoListenRef = useRef(false)
 
   const t = getTranslations(lang)
   const isRtl = lang === 'ar'
@@ -306,24 +324,58 @@ export default function AvatarConcierge() {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages])
 
-  // ── TTS helper ──
+  // ── TTS helper with character-appropriate voices ──
   const speak = useCallback((text: string, speaker: 'abe' | 'tina') => {
     if (!ttsEnabled || typeof window === 'undefined' || !window.speechSynthesis) return
     window.speechSynthesis.cancel()
-    const utter = new SpeechSynthesisUtterance(text)
-    utter.lang = lang === 'en' ? 'en-IN' : lang
-    utter.rate = 0.95
-    utter.onstart = () => {
-      setIsSpeaking(true)
-      if (speaker === 'abe') setAbeAnim('speaking')
-      else setTinaAnim('speaking')
+
+    // Split long text into sentence chunks for smoother delivery
+    const chunks = text.match(/[^.!?]+[.!?]*/g) || [text]
+    let chunkIndex = 0
+
+    const speakChunk = () => {
+      if (chunkIndex >= chunks.length) {
+        setIsSpeaking(false)
+        setAbeAnim('idle')
+        setTinaAnim('idle')
+        return
+      }
+      const chunk = chunks[chunkIndex++].trim()
+      if (!chunk) { speakChunk(); return }
+
+      const utter = new SpeechSynthesisUtterance(chunk)
+      const langCode = lang === 'en' ? 'en-IN' : lang
+      utter.lang = langCode
+
+      // Select appropriate voice
+      const voices = window.speechSynthesis.getVoices()
+      const langVoices = voices.filter(v => v.lang.startsWith(langCode.split('-')[0]))
+      if (langVoices.length > 0) {
+        // Try to pick a voice matching character gender
+        const isTina = speaker === 'tina'
+        const preferred = langVoices.find(v =>
+          isTina
+            ? v.name.toLowerCase().includes('female') || v.name.toLowerCase().includes('woman')
+            : v.name.toLowerCase().includes('male') || v.name.toLowerCase().includes('man')
+        )
+        utter.voice = preferred || langVoices[0]
+      }
+
+      utter.rate = speaker === 'tina' ? 1.0 : 0.92
+      utter.pitch = speaker === 'tina' ? 1.08 : 0.9
+      utter.volume = 1
+
+      utter.onstart = () => {
+        setIsSpeaking(true)
+        if (speaker === 'abe') setAbeAnim('speaking')
+        else setTinaAnim('speaking')
+      }
+      utter.onend = speakChunk
+      utter.onerror = speakChunk
+      window.speechSynthesis.speak(utter)
     }
-    utter.onend = () => {
-      setIsSpeaking(false)
-      setAbeAnim('idle')
-      setTinaAnim('idle')
-    }
-    window.speechSynthesis.speak(utter)
+
+    speakChunk()
   }, [lang, ttsEnabled])
 
   // ── Add message to chat ──
@@ -381,7 +433,7 @@ export default function AvatarConcierge() {
     // Show thinking
     setAbeAnim('thinking')
     setTimeout(() => {
-      const responses = generateResponse(text, visitorName)
+      const responses = generateResponse(text, visitorName, getCurrentPageContext())
       setAbeAnim('idle')
       responses.forEach((resp, i) => {
         setTimeout(() => {
@@ -420,15 +472,56 @@ export default function AvatarConcierge() {
     }, 800)
   }, [addMsg, messages, visitorName, speak, t, router])
 
+  // ── Check mic permission on mount ──
+  useEffect(() => {
+    if (typeof navigator === 'undefined' || !navigator.permissions) return
+    navigator.permissions.query({ name: 'microphone' as PermissionName }).then(result => {
+      setMicPermission(result.state as 'granted' | 'denied' | 'prompt')
+      result.onchange = () => setMicPermission(result.state as 'granted' | 'denied' | 'prompt')
+    }).catch(() => {})
+  }, [])
+
+  // ── Auto-start listening when entering chat phase ──
+  useEffect(() => {
+    if (phase === 'chat' && ttsEnabled && !autoListenRef.current) {
+      autoListenRef.current = true
+      // Small delay to let TTS finish and UI settle
+      const timer = setTimeout(() => {
+        if (!isSpeaking && micPermission !== 'denied') {
+          // Request mic permission silently if already granted, else skip
+          if (micPermission === 'granted') {
+            startListening()
+          } else {
+            navigator.mediaDevices?.getUserMedia({ audio: true }).then(() => {
+              setMicPermission('granted')
+              startListening()
+            }).catch(() => {
+              setMicPermission('denied')
+            })
+          }
+        }
+      }, 3000)
+      return () => clearTimeout(timer)
+    }
+    if (phase !== 'chat') autoListenRef.current = false
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [phase, isSpeaking])
+
   // ── Voice input ──
   const startListening = useCallback(() => {
     if (typeof window === 'undefined') return
     const SR = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition
     if (!SR) return
 
+    // Stop any existing recognition
+    if (recognitionRef.current) {
+      try { recognitionRef.current.abort() } catch {}
+    }
+
     const recognition = new SR()
     recognition.continuous = false
     recognition.interimResults = true
+    recognition.maxAlternatives = 1
     recognition.lang = lang === 'en' ? 'en-IN' : lang
 
     recognition.onstart = () => {
@@ -437,28 +530,66 @@ export default function AvatarConcierge() {
       setTinaAnim('listening')
     }
     recognition.onresult = (e: any) => {
-      const result = e.results[e.results.length - 1]
-      setInputText(result[0].transcript)
-      if (result.isFinal) {
+      let finalTranscript = ''
+      let interimTranscript = ''
+      for (let i = e.resultIndex; i < e.results.length; i++) {
+        const transcript = e.results[i][0].transcript
+        if (e.results[i].isFinal) {
+          finalTranscript += transcript
+        } else {
+          interimTranscript += transcript
+        }
+      }
+      setInputText(finalTranscript || interimTranscript)
+      if (finalTranscript) {
         setIsListening(false)
         setAbeAnim('idle')
         setTinaAnim('idle')
-        processInput(result[0].transcript)
+        processInput(finalTranscript.trim())
       }
     }
-    recognition.onerror = () => {
+    recognition.onerror = (e: any) => {
       setIsListening(false)
       setAbeAnim('idle')
       setTinaAnim('idle')
+      if (e.error === 'not-allowed') {
+        setMicPermission('denied')
+      }
+      // Auto-restart on recoverable errors after a delay
+      if (e.error === 'network' || e.error === 'audio-capture') {
+        setTimeout(() => {
+          if (phase === 'chat' && ttsEnabled && !isSpeaking) startListening()
+        }, 2000)
+      }
     }
     recognition.onend = () => {
       setIsListening(false)
       setAbeAnim('idle')
       setTinaAnim('idle')
+      // Auto-restart listening if in chat mode and voice enabled
+      if (phase === 'chat' && ttsEnabled && !isSpeaking && micPermission === 'granted') {
+        setTimeout(() => {
+          if (phase === 'chat' && ttsEnabled && !isSpeaking) startListening()
+        }, 1500)
+      }
     }
     recognitionRef.current = recognition
-    recognition.start()
-  }, [lang, processInput])
+    try {
+      recognition.start()
+    } catch {
+      // Already started - ignore
+    }
+  }, [lang, processInput, phase, ttsEnabled, isSpeaking, micPermission])
+
+  const stopListening = useCallback(() => {
+    if (recognitionRef.current) {
+      try { recognitionRef.current.abort() } catch {}
+      recognitionRef.current = null
+    }
+    setIsListening(false)
+    setAbeAnim('idle')
+    setTinaAnim('idle')
+  }, [])
 
   const handleSend = () => {
     if (inputText.trim()) processInput(inputText)
@@ -470,7 +601,7 @@ export default function AvatarConcierge() {
   // ── Minimized state ──
   if (phase === 'minimized') {
     return (
-      <div className="fixed z-[9995] flex flex-col gap-2" style={{ bottom: '200px', right: '24px' }}>
+      <div className="fixed z-[9995] flex flex-col gap-2" style={{ bottom: '200px', left: '24px' }}>
         <button
           onClick={() => setPhase('chat')}
           className="relative group"
@@ -494,7 +625,7 @@ export default function AvatarConcierge() {
   // ── Greeting state ──
   if (phase === 'greeting') {
     return (
-      <div className="fixed z-[9997] flex flex-col items-end gap-3 p-4" style={{ bottom: '200px', right: '16px', maxWidth: '380px' }}>
+      <div className="fixed z-[9997] flex flex-col items-start gap-3 p-4" style={{ bottom: '200px', left: '16px', maxWidth: '380px' }}>
         {/* Avatars */}
         <div className="flex items-end gap-2">
           <AbeAvatar anim={abeAnim} size={100} />
@@ -585,7 +716,7 @@ export default function AvatarConcierge() {
       className="fixed z-[9997] flex flex-col rounded-2xl overflow-hidden transition-all duration-300"
       style={{
         bottom: '24px',
-        right: '24px',
+        left: '24px',
         width: '400px',
         maxWidth: 'calc(100vw - 48px)',
         height: '600px',
@@ -630,13 +761,13 @@ export default function AvatarConcierge() {
             {ttsEnabled ? <Volume2 className="w-3.5 h-3.5" /> : <VolumeX className="w-3.5 h-3.5" />}
           </button>
           {/* Minimize */}
-          <button onClick={() => setPhase('minimized')}
+          <button onClick={() => { stopListening(); window.speechSynthesis?.cancel(); setPhase('minimized') }}
             className="w-7 h-7 rounded-lg flex items-center justify-center text-gray-500 hover:text-white hover:bg-white/10 transition-colors"
           >
             <Minimize2 className="w-3.5 h-3.5" />
           </button>
           {/* Close */}
-          <button onClick={() => setPhase('hidden')}
+          <button onClick={() => { stopListening(); window.speechSynthesis?.cancel(); setPhase('hidden') }}
             className="w-7 h-7 rounded-lg flex items-center justify-center text-gray-500 hover:text-white hover:bg-white/10 transition-colors"
           >
             <X className="w-3.5 h-3.5" />
@@ -646,7 +777,7 @@ export default function AvatarConcierge() {
 
       {/* Inline language picker dropdown */}
       {showLangPicker && (
-        <div className="absolute top-12 right-12 z-50 rounded-xl p-2 grid grid-cols-2 gap-1"
+        <div className="absolute top-12 left-12 z-50 rounded-xl p-2 grid grid-cols-2 gap-1"
           style={{ background: 'rgba(10,10,10,0.98)', border: '1px solid rgba(255,255,255,0.1)', boxShadow: '0 8px 32px rgba(0,0,0,0.5)' }}
         >
           {LANGUAGES.map(l => (
@@ -753,14 +884,14 @@ export default function AvatarConcierge() {
         />
         {/* Mic button */}
         <button
-          onClick={isListening ? () => recognitionRef.current?.stop() : startListening}
+          onClick={isListening ? stopListening : startListening}
           className={`w-9 h-9 rounded-xl flex items-center justify-center transition-all ${
             isListening
               ? 'bg-brand-red text-white shadow-[0_0_16px_rgba(208,2,27,0.5)] animate-pulse'
-              : 'bg-white/5 text-gray-500 hover:bg-white/10 hover:text-white'
+              : 'bg-brand-red/20 text-brand-red hover:bg-brand-red/30 hover:text-white border border-brand-red/30'
           }`}
         >
-          {isListening ? <Mic className="w-4 h-4" /> : <MicOff className="w-4 h-4" />}
+          <Mic className="w-4 h-4" />
         </button>
         {/* Send */}
         <button

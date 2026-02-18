@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Voice AI Companion SDK — Demo</title>
+  <link rel="stylesheet" href="./styles.css">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #0A0A0A;
+      color: #FFFFFF;
+      min-height: 100vh;
+    }
+    .demo-header {
+      padding: 40px 24px;
+      text-align: center;
+      border-bottom: 1px solid rgba(255,255,255,0.08);
+    }
+    .demo-header h1 {
+      font-size: 28px;
+      font-weight: 700;
+      margin-bottom: 8px;
+    }
+    .demo-header h1 span { color: #D0021B; }
+    .demo-header p { color: rgba(255,255,255,0.6); font-size: 14px; }
+    .demo-config {
+      max-width: 600px;
+      margin: 32px auto;
+      padding: 24px;
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 12px;
+    }
+    .demo-config h2 {
+      font-size: 16px;
+      margin-bottom: 16px;
+      color: rgba(255,255,255,0.8);
+    }
+    .demo-field {
+      margin-bottom: 12px;
+    }
+    .demo-field label {
+      display: block;
+      font-size: 12px;
+      color: rgba(255,255,255,0.5);
+      margin-bottom: 4px;
+    }
+    .demo-field input, .demo-field select {
+      width: 100%;
+      padding: 10px 14px;
+      background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 8px;
+      color: #FFFFFF;
+      font-size: 14px;
+      outline: none;
+    }
+    .demo-field input:focus, .demo-field select:focus {
+      border-color: #D0021B;
+    }
+    .demo-btn {
+      width: 100%;
+      padding: 12px;
+      background: #D0021B;
+      color: #FFFFFF;
+      border: none;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      margin-top: 8px;
+    }
+    .demo-btn:hover { opacity: 0.9; }
+    .demo-content {
+      max-width: 800px;
+      margin: 40px auto;
+      padding: 0 24px;
+    }
+    .demo-content h2 {
+      font-size: 22px;
+      margin-bottom: 16px;
+    }
+    .demo-content p {
+      color: rgba(255,255,255,0.7);
+      line-height: 1.7;
+      margin-bottom: 16px;
+    }
+    .demo-section {
+      margin-bottom: 40px;
+      padding: 24px;
+      background: rgba(255,255,255,0.02);
+      border: 1px solid rgba(255,255,255,0.06);
+      border-radius: 12px;
+    }
+    .demo-api-btns {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 16px;
+    }
+    .demo-api-btn {
+      padding: 8px 16px;
+      background: rgba(255,255,255,0.08);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 20px;
+      color: rgba(255,255,255,0.8);
+      font-size: 12px;
+      cursor: pointer;
+    }
+    .demo-api-btn:hover {
+      background: rgba(208,2,27,0.15);
+      border-color: #D0021B;
+    }
+    .demo-log {
+      margin-top: 16px;
+      padding: 12px;
+      background: rgba(0,0,0,0.3);
+      border-radius: 8px;
+      font-family: monospace;
+      font-size: 12px;
+      color: rgba(255,255,255,0.6);
+      max-height: 200px;
+      overflow-y: auto;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="demo-header">
+    <h1>Voice AI <span>Companion</span> SDK</h1>
+    <p>GHL India Ventures | Abe & Tina | Demo Page</p>
+  </div>
+
+  <div class="demo-config">
+    <h2>Configuration</h2>
+    <div class="demo-field">
+      <label>Claude API Key (optional)</label>
+      <input type="password" id="apiKey" placeholder="sk-ant-..." />
+    </div>
+    <div class="demo-field">
+      <label>Default Character</label>
+      <select id="character">
+        <option value="abe">Abe (Investment Advisor)</option>
+        <option value="tina">Tina (Portfolio Navigator)</option>
+      </select>
+    </div>
+    <div class="demo-field">
+      <label>Position</label>
+      <select id="position">
+        <option value="bottom-right">Bottom Right</option>
+        <option value="bottom-left">Bottom Left</option>
+      </select>
+    </div>
+    <div class="demo-field">
+      <label>Theme</label>
+      <select id="theme">
+        <option value="dark">Dark</option>
+        <option value="light">Light</option>
+        <option value="auto">Auto</option>
+      </select>
+    </div>
+    <button class="demo-btn" id="initBtn">Initialize Companion</button>
+  </div>
+
+  <div class="demo-content">
+    <div class="demo-section">
+      <h2>API Controls</h2>
+      <p>Test the SDK public API after initialization:</p>
+      <div class="demo-api-btns">
+        <button class="demo-api-btn" onclick="companion?.show()">show()</button>
+        <button class="demo-api-btn" onclick="companion?.hide()">hide()</button>
+        <button class="demo-api-btn" onclick="companion?.minimize()">minimize()</button>
+        <button class="demo-api-btn" onclick="companion?.setCharacter('abe')">setCharacter('abe')</button>
+        <button class="demo-api-btn" onclick="companion?.setCharacter('tina')">setCharacter('tina')</button>
+        <button class="demo-api-btn" onclick="companion?.setLanguage('hi')">setLanguage('hi')</button>
+        <button class="demo-api-btn" onclick="companion?.setLanguage('en')">setLanguage('en')</button>
+        <button class="demo-api-btn" onclick="companion?.sendMessage('What is an AIF?')">sendMessage('What is an AIF?')</button>
+        <button class="demo-api-btn" onclick="companion?.speak('Welcome to GHL India Ventures')">speak('Welcome...')</button>
+        <button class="demo-api-btn" onclick="companion?.stopSpeaking()">stopSpeaking()</button>
+        <button class="demo-api-btn" onclick="companion?.startListening()">startListening()</button>
+        <button class="demo-api-btn" onclick="companion?.stopListening()">stopListening()</button>
+      </div>
+      <div class="demo-log" id="log">SDK Events will appear here...</div>
+    </div>
+
+    <div class="demo-section">
+      <h2>About GHL India Ventures</h2>
+      <p>GHL India Ventures is a SEBI-registered Category II Alternative Investment Fund focused on high-growth opportunities across real estate, technology startups, and emerging sectors in India.</p>
+      <p>With a diversified portfolio spanning enterprise SaaS, sustainable real estate, healthtech, agritech, fintech, and renewable energy, we provide sophisticated investors access to India's most promising growth stories.</p>
+    </div>
+
+    <div class="demo-section">
+      <h2>Try These Commands</h2>
+      <p>Voice or type any of these to test the companion:</p>
+      <ul style="color: rgba(255,255,255,0.6); padding-left: 20px; line-height: 2;">
+        <li>"What is an AIF?"</li>
+        <li>"Tell me about the team"</li>
+        <li>"How do I invest?"</li>
+        <li>"Go to portfolio page"</li>
+        <li>"What's the minimum investment?"</li>
+        <li>"Compare AIF vs debenture"</li>
+        <li>"I'm worried about risk"</li>
+        <li>"Can NRIs invest?"</li>
+        <li>"Switch to Tina"</li>
+        <li>"Speak in Hindi"</li>
+      </ul>
+    </div>
+  </div>
+
+  <script type="module">
+    // In a real setup, import from the built SDK
+    // import { VoiceCompanion } from './index';
+
+    // For demo purposes, we use a dynamic import
+    let companion = null;
+    window.companion = companion;
+
+    const logEl = document.getElementById('log');
+    function log(msg) {
+      const time = new Date().toLocaleTimeString();
+      logEl.innerHTML += `\n[${time}] ${msg}`;
+      logEl.scrollTop = logEl.scrollHeight;
+    }
+
+    document.getElementById('initBtn').addEventListener('click', async () => {
+      try {
+        log('Initializing Voice Companion SDK...');
+
+        // Dynamic import
+        const { VoiceCompanion } = await import('./index.ts');
+
+        const config = {
+          claudeApiKey: document.getElementById('apiKey').value || undefined,
+          defaultCharacter: document.getElementById('character').value,
+          position: document.getElementById('position').value,
+          theme: document.getElementById('theme').value,
+          autoGreet: true,
+          autoGreetDelay: 1000,
+          enableTts: true,
+          enableClaudeAI: !!document.getElementById('apiKey').value,
+          navigationHandler: (path) => {
+            log(`Navigation: ${path}`);
+            // In demo, just log instead of navigating
+          },
+          onReady: () => log('SDK Ready!'),
+          onError: (err) => log(`Error: ${err.message}`),
+        };
+
+        companion = await VoiceCompanion.create(config);
+        window.companion = companion;
+
+        // Listen to events
+        companion.on('messageAdded', (msg) => log(`Message: [${msg.speaker}] ${msg.text.substring(0, 50)}...`));
+        companion.on('phaseChanged', (phase) => log(`Phase: ${phase}`));
+        companion.on('languageChanged', (lang) => log(`Language: ${lang}`));
+        companion.on('characterChanged', (char) => log(`Character: ${char}`));
+        companion.on('emotionDetected', (e) => log(`Emotion: ${e.emotion} (${(e.confidence * 100).toFixed(0)}%)`));
+        companion.on('speakStart', () => log('Speaking...'));
+        companion.on('speakEnd', () => log('Speech ended'));
+        companion.on('listenStart', () => log('Listening...'));
+        companion.on('listenEnd', () => log('Listening ended'));
+
+        log('Companion initialized successfully!');
+        document.getElementById('initBtn').textContent = 'Re-initialize';
+
+      } catch (err) {
+        log(`Init failed: ${err.message}`);
+        console.error(err);
+      }
+    });
+  </script>
+
+</body>
+</html>

@@ -11,7 +11,7 @@ import {
   TrendingUp, Target, Users, BarChart3, Eye, Scale, Leaf,
   Building2, Quote, Star, Phone, Mail, Clock,
   BookOpen, Video, FileText,
-  Landmark, LockKeyhole, Sparkles, Calculator
+  Landmark, LockKeyhole, Sparkles, Calculator, ChevronDown
 } from 'lucide-react'
 import RiskAssessmentQuiz from '@/components/RiskAssessmentQuiz'
 import InvestmentCalculator from '@/components/InvestmentCalculator'
@@ -88,7 +88,7 @@ function HeroSection() {
 
             <AnimatedSection delay={200}>
               <h1 className="text-3xl sm:text-4xl md:text-4xl lg:text-5xl font-extrabold text-white leading-[1.08] mb-5 tracking-tight">
-                Where <span className="text-gradient">Bold Capital</span> Meets Rigorous Intelligence
+                SEBI Registered <span className="text-gradient">Alternative Investment Fund</span> — Where Bold Capital Meets Intelligence
               </h1>
             </AnimatedSection>
 
@@ -169,6 +169,47 @@ function HeroSection() {
       <div className="absolute bottom-8 left-1/2 -translate-x-1/2 animate-bounce z-10">
         <div className="w-7 h-11 border-2 border-white/30 rounded-full flex justify-center pt-2">
           <div className="w-1.5 h-3 bg-white/50 rounded-full" />
+        </div>
+      </div>
+    </section>
+  )
+}
+
+/* ================================================================
+   SECTION 1.5: News Scroller — World & India Headlines
+   ================================================================ */
+function NewsScroller() {
+  const headlines = [
+    { label: '🇮🇳 India', text: 'SENSEX rallies 450 points; NIFTY crosses 23,800 on strong FII buying' },
+    { label: '🌍 Global', text: 'US Fed signals potential rate cut in June as inflation eases to 2.3%' },
+    { label: '🇮🇳 India', text: 'India GDP growth revised upward to 7.2% for FY26 by IMF' },
+    { label: '🌍 Global', text: 'China manufacturing PMI expands at fastest pace in 14 months' },
+    { label: '🇮🇳 India', text: 'RBI holds repo rate at 6.25% — maintains accommodative stance' },
+    { label: '🌍 Global', text: 'European markets open higher on easing trade tensions' },
+    { label: '🇮🇳 India', text: 'Indian startup funding sees 40% jump in Q1 2026 — $4.2B raised' },
+    { label: '🌍 Global', text: 'Gold surges past $2,400/oz as safe-haven demand spikes worldwide' },
+    { label: '🇮🇳 India', text: 'SEBI tightens AIF disclosure norms — enhanced reporting from Q3 2026' },
+    { label: '🌍 Global', text: 'Crude oil drops below $72/bbl as OPEC+ signals production increase' },
+    { label: '🇮🇳 India', text: 'Real estate sector sees 25% growth in Chennai micro-markets' },
+    { label: '🌍 Global', text: 'Japan Nikkei 225 gains 1.8% on tech rally and weak yen boost' },
+  ]
+
+  const feed = headlines.map(h => `${h.label}  ${h.text}`).join('  \u00A0\u00A0\u2022\u00A0\u00A0  ')
+
+  return (
+    <section className="relative overflow-hidden py-2.5" style={{ backgroundColor: '#0D0D0D', borderTop: '1px solid rgba(208,2,27,0.15)', borderBottom: '1px solid rgba(208,2,27,0.15)' }}>
+      <div className="flex items-center">
+        <span className="shrink-0 px-4 py-1 bg-brand-red text-white text-[10px] font-bold uppercase tracking-widest rounded-r-full mr-4">
+          Live News
+        </span>
+        <div className="flex-1 overflow-hidden">
+          <div className="flex whitespace-nowrap animate-marquee">
+            {[0, 1].map(i => (
+              <span key={i} className="inline-block text-gray-300 text-xs font-medium tracking-wide px-4">
+                {feed}
+              </span>
+            ))}
+          </div>
         </div>
       </div>
     </section>
@@ -898,6 +939,90 @@ function InvestorToolsCTA({ onOpenQuiz, onOpenCalc }: { onOpenQuiz: () => void; 
 }
 
 /* ================================================================
+   SECTION: FAQ — SEO-Optimized Investor Questions
+   ================================================================ */
+function FAQSection() {
+  const [openIdx, setOpenIdx] = useState<number | null>(null)
+
+  const faqs = [
+    {
+      q: 'What is a Category II AIF?',
+      a: 'A Category II Alternative Investment Fund (AIF) is a SEBI-regulated pooled investment vehicle that invests in real estate, private equity, distressed assets, and unlisted companies. GHL India Ventures is registered under SEBI Registration No. IN/AIF2/2425/1517, with mandatory quarterly audits and third-party custodial safeguards.',
+    },
+    {
+      q: 'What is the minimum investment in GHL India Ventures?',
+      a: 'The minimum investment for the Direct AIF Route is ₹1 Crore, as mandated by SEBI for Category II AIFs. For the Debenture Route (NCD structure), the minimum investment starts at ₹10 Lakhs — ideal for salaried professionals looking to access institutional-grade returns.',
+    },
+    {
+      q: 'Is GHL India Ventures SEBI registered?',
+      a: 'Yes. GHL India Ventures is registered with the Securities and Exchange Board of India (SEBI) as a Category II Alternative Investment Fund under Registration Number IN/AIF2/2425/1517. This ensures institutional-grade governance, transparent NAV reporting, and strict regulatory compliance.',
+    },
+    {
+      q: 'How does stressed real estate investment work?',
+      a: 'Stressed real estate investment involves acquiring distressed or undervalued properties through NCLT (National Company Law Tribunal) resolutions under the IBC (Insolvency and Bankruptcy Code) at 40-60% discounts below replacement cost. GHL India Ventures revitalizes these assets — completing construction, clearing legal encumbrances, and repositioning for sale or lease.',
+    },
+    {
+      q: 'What is the expected IRR on the fund?',
+      a: 'Specific fund performance data is available to registered investors after KYC verification. Our stressed real estate strategy is designed for significant value creation through deep-discount NCLT acquisitions. Past performance is not indicative of future results. Please contact our advisory team at +91 7200 255 252 for detailed information.',
+    },
+    {
+      q: 'Can NRIs invest in GHL India Ventures?',
+      a: 'Yes, Non-Resident Indians (NRIs) can invest through their NRO account. GHL India Ventures handles all FEMA/RBI compliance documentation. Our team has successfully onboarded NRI investors from the US, UK, UAE, Singapore, and Australia.',
+    },
+  ]
+
+  return (
+    <section className="py-16 md:py-24" style={{ background: 'linear-gradient(180deg, rgba(10,10,10,0.98) 0%, rgba(26,26,26,1) 100%)' }}>
+      <div className="container-max mx-auto px-4 sm:px-6 lg:px-8">
+        <AnimatedSection className="text-center mb-12">
+          <span className="eyebrow !text-brand-red">Frequently Asked Questions</span>
+          <h2 className="section-title mt-3 text-white">Common Investor Questions</h2>
+          <p className="text-gray-400 text-base max-w-2xl mx-auto mt-3">
+            Everything you need to know about investing with GHL India Ventures, SEBI registration, and our fund structure.
+          </p>
+        </AnimatedSection>
+
+        <div className="max-w-3xl mx-auto space-y-3">
+          {faqs.map((faq, idx) => (
+            <AnimatedSection key={idx} delay={idx * 80}>
+              <div className="card-glass overflow-hidden">
+                <button
+                  onClick={() => setOpenIdx(openIdx === idx ? null : idx)}
+                  className="w-full flex items-center justify-between px-6 py-5 text-left group"
+                >
+                  <h3 className="text-white text-sm md:text-base font-semibold pr-4">{faq.q}</h3>
+                  <ChevronDown
+                    className={`w-5 h-5 text-brand-red shrink-0 transition-transform duration-300 ${
+                      openIdx === idx ? 'rotate-180' : ''
+                    }`}
+                  />
+                </button>
+                <div
+                  className={`overflow-hidden transition-all duration-300 ${
+                    openIdx === idx ? 'max-h-[500px] opacity-100' : 'max-h-0 opacity-0'
+                  }`}
+                >
+                  <p className="px-6 pb-5 text-gray-400 text-sm leading-relaxed">{faq.a}</p>
+                </div>
+              </div>
+            </AnimatedSection>
+          ))}
+        </div>
+
+        <AnimatedSection delay={500} className="text-center mt-10">
+          <Link
+            href="/contact"
+            className="btn-primary"
+          >
+            Schedule a Consultation <ArrowRight className="ml-2 w-4 h-4" />
+          </Link>
+        </AnimatedSection>
+      </div>
+    </section>
+  )
+}
+
+/* ================================================================
    HOME PAGE — All Sections + Modals
    ================================================================ */
 export default function HomePage() {
@@ -907,7 +1032,7 @@ export default function HomePage() {
   return (
     <>
       <HeroSection />
-      <TickerStrip />
+      <NewsScroller />
       <WhoWeAre />
       <InvestmentCapabilities />
       <VideoFeature />
@@ -916,6 +1041,7 @@ export default function HomePage() {
       <PortfolioSpotlight />
       <BlogSection />
       <FinancialIQTeaser />
+      <FAQSection />
       <TestimonialsSection />
       <ContactFormSection />
 

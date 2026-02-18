@@ -1,3 +1,7 @@
 User-agent: *
 Allow: /
-Sitemap: https://ghlindiaventures.com/sitemap.xml
+Disallow: /login
+Disallow: /register
+Disallow: /admin/
+
+Sitemap: https://ghl-india-ventures-2025.netlify.app/sitemap.xml

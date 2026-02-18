@@ -90,13 +90,60 @@ function findNavTarget(input: string): string | null {
   return null
 }
 
-export function generateResponse(input: string, visitorName?: string): AvatarResponse[] {
+// Page-context-aware greeting variations
+const PAGE_GREETINGS: Record<string, { abe: string; tina: string }> = {
+  'home': {
+    abe: 'Welcome to GHL India Ventures! I\'m Abe — your guide to smart investing. What would you like to explore?',
+    tina: 'Hey there! I\'m Tina. Whether you\'re just curious or ready to invest, we\'ve got you covered!',
+  },
+  'about': {
+    abe: 'You\'re on our About page — the story behind GHL India Ventures. 25+ years of trust and track record. Any questions about our team or history?',
+    tina: 'Great choice checking us out! Ask me anything about our leadership, our journey, or our Chennai headquarters.',
+  },
+  'fund': {
+    abe: 'Welcome to the Fund Overview. This is where we break down our SEBI-registered Category II AIF structure. What would you like to understand?',
+    tina: 'You\'re exploring our fund options! We have the Direct AIF at ₹1 Crore and the Debenture Route from ₹10 Lakhs. Which interests you?',
+  },
+  'portfolio': {
+    abe: 'You\'re viewing our Portfolio — 6 active investments across stressed real estate and startups. Ask me about any specific project.',
+    tina: 'Our portfolio is exciting! From Montieth Square to FinStack Technologies — each one has a story. Want details on any of them?',
+  },
+  'blog': {
+    abe: 'Welcome to our Insights section. We publish thought leadership on AIFs, market trends, and investment strategies. Want me to recommend an article?',
+    tina: 'Love that you\'re reading our blog! We cover everything from AIF taxation to market analysis. What topic interests you?',
+  },
+  'contact': {
+    abe: 'You\'re on the Contact page. Our Chennai office is at Montieth Road, Egmore. We\'re here Mon-Sat, 10 AM to 6 PM IST.',
+    tina: 'Want to reach us? Call +91 7200 255 252, WhatsApp us, or fill out the form below. We respond within 24 hours!',
+  },
+  'downloads': {
+    abe: 'Here are all our investor resources — brochures, factsheets, and the PPM. Everything is downloadable as PDF.',
+    tina: 'Perfect page for due diligence! Download our fund brochure, presentation deck, or compliance documents.',
+  },
+  'financial-iq': {
+    abe: 'Welcome to Financial IQ — our learning center. We break down complex investment concepts into simple language.',
+    tina: 'This is my favourite section! Glossary terms, video lessons, and tools to make you a smarter investor.',
+  },
+  'debenture': {
+    abe: 'You\'re exploring the Debenture Route — our structured entry point starting at ₹10 Lakhs. Great for salaried professionals.',
+    tina: 'The Debenture Route is perfect if you want to start smaller! Let me explain how it works.',
+  },
+  'direct-aif': {
+    abe: 'This is our Direct AIF Route — the full fund experience for HNIs and family offices. Minimum ₹1 Crore, SEBI-regulated.',
+    tina: 'The Direct AIF gives you the complete institutional experience. Want to know about the process?',
+  },
+}
+
+export function generateResponse(input: string, visitorName?: string, pageContext?: string): AvatarResponse[] {
   const intent = classifyIntent(input)
   const name = visitorName ? ` ${visitorName}` : ''
+  const page = pageContext || 'home'
 
   switch (intent) {
-    case 'greeting':
-      return [{ speaker: 'abe', text: `Hello${name}! Great to have you here. How can Tina and I help you today?` }]
+    case 'greeting': {
+      const ctx = PAGE_GREETINGS[page] || PAGE_GREETINGS['home']
+      return [{ speaker: 'abe', text: `Hello${name}! ${ctx.abe}` }]
+    }
 
     case 'thanks':
       return [{ speaker: 'tina', text: `You're most welcome${name}! That's what we're here for. Anything else you'd like to know?` }]
@@ -196,8 +243,21 @@ export function generateResponse(input: string, visitorName?: string): AvatarRes
     case 'blog':
       return [{ speaker: 'tina', text: `Our blog has great insights on AIFs, investment strategies, and market trends. Let me take you there!`, action: 'navigate', actionData: '/blog' }]
 
-    case 'read':
-      return [{ speaker: 'tina', text: `I'd be happy to read this page for you! Just select any text on the page and I'll read it aloud in your chosen language. You can also ask me to summarize key sections.` }]
+    case 'read': {
+      // Read actual page content
+      const pageContent = typeof document !== 'undefined'
+        ? Array.from(document.querySelectorAll('h1, h2, h3, p:not([class*="footer"]):not([class*="legal"]):not([class*="disclaimer"])'))
+            .map(el => el.textContent?.trim())
+            .filter(t => t && t.length > 20)
+            .slice(0, 8)
+            .join('. ')
+            .substring(0, 600)
+        : ''
+      if (pageContent) {
+        return [{ speaker: 'tina', text: `Here's what this page says: ${pageContent}` }]
+      }
+      return [{ speaker: 'tina', text: `I'd be happy to read this page for you! Just select any text on the page and I'll read it aloud in your chosen language.` }]
+    }
 
     case 'quiz':
       return [{ speaker: 'abe', text: `Great idea${name}! Our Risk Assessment Quiz is just 7 quick questions that'll help us understand your investment personality. Let me open it for you!`, action: 'quiz' }]
@@ -214,10 +274,13 @@ export function generateResponse(input: string, visitorName?: string): AvatarRes
         { speaker: 'abe', text: `If you'd prefer to speak with a real person, our team is available Mon-Sat, 10 AM - 6 PM IST at +91 7200 255 252. They're wonderful people who genuinely care about helping you.` }
       ]
 
-    default:
+    default: {
+      const pageHint = PAGE_GREETINGS[page]
+      const contextHint = pageHint ? ` Right now you're on our ${page} page — ${pageHint.abe.split('.')[0]}.` : ''
       return [
-        { speaker: 'abe', text: `That's a thoughtful question${name}! Let me see how I can help with that.` },
+        { speaker: 'abe', text: `That's a thoughtful question${name}!${contextHint} Let me see how I can help with that.` },
         { speaker: 'tina', text: `For the most accurate answer, I'd recommend connecting with our expert team: 📞 +91 7200 255 252 | 💬 WhatsApp | ✉️ info@ghlindiaventures.com. They'll take great care of you!` }
       ]
+    }
   }
 }

@@ -19,42 +19,77 @@ import PortfolioHeatmap from '@/components/PortfolioHeatmap'
 import VoiceNavigator from '@/components/VoiceNavigator'
 import InvestorPersonality from '@/components/InvestorPersonality'
 import AvatarConcierge from '@/components/AvatarConcierge'
+import VoiceCompanion from '@/components/VoiceCompanion'
+
+const SITE_URL = 'https://ghl-india-ventures-2025.netlify.app'
 
 export const metadata: Metadata = {
   title: {
-    default: 'GHL India Ventures | SEBI Registered AIF - Investing in India\'s Future',
-    template: '%s | GHL India Ventures',
+    default: 'SEBI Registered Category II AIF | GHL India Ventures | Chennai',
+    template: '%s',
   },
-  description: 'GHL India Ventures is a SEBI-registered Category II Alternative Investment Fund (IN/AIF2/2425/1517) focused on high-growth Indian enterprises across technology, healthcare, and consumer sectors.',
-  keywords: ['AIF', 'Alternative Investment Fund', 'SEBI', 'India', 'Private Equity', 'GHL India Ventures', 'Category II AIF', 'Chennai', 'Investment'],
+  description: 'GHL India Ventures is a SEBI-registered Category II Alternative Investment Fund based in Chennai, offering HNI investors access to stressed real estate and early-stage startup portfolios. Minimum ₹1 Crore.',
+  keywords: [
+    'AIF', 'Alternative Investment Fund', 'SEBI registered AIF', 'Category II AIF',
+    'GHL India Ventures', 'Chennai investment fund', 'stressed real estate fund India',
+    'startup investment fund', 'HNI investment India', 'NCLT real estate recovery',
+    'Private Equity India', 'AIF minimum investment', 'SEBI IN/AIF2/2425/1517',
+  ],
   authors: [{ name: 'GHL India Ventures' }],
+  creator: 'GHL India Ventures',
+  publisher: 'GHL India Ventures',
   openGraph: {
     type: 'website',
     locale: 'en_IN',
-    url: 'https://ghlindiaventures.com',
+    url: SITE_URL,
     siteName: 'GHL India Ventures',
-    title: 'GHL India Ventures | Investing in India\'s Future',
-    description: 'SEBI-registered Category II AIF focused on high-growth Indian enterprises.',
-    images: [{ url: '/og-image.jpg', width: 1200, height: 630, alt: 'GHL India Ventures' }],
+    title: 'SEBI Registered Category II AIF | GHL India Ventures',
+    description: 'SEBI-registered Category II AIF offering HNI investors access to stressed real estate and early-stage startup portfolios. Based in Chennai.',
+    images: [{ url: `${SITE_URL}/og-image.jpg`, width: 1200, height: 630, alt: 'GHL India Ventures - SEBI Registered Category II AIF' }],
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'GHL India Ventures',
-    description: 'SEBI-registered Category II AIF investing in India\'s future.',
+    title: 'GHL India Ventures | SEBI Registered Category II AIF',
+    description: 'SEBI-registered Category II AIF investing in stressed real estate and startups. Based in Chennai.',
+    images: [`${SITE_URL}/og-image.jpg`],
   },
-  robots: { index: true, follow: true },
-  metadataBase: new URL('https://ghlindiaventures.com'),
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      'max-video-preview': -1,
+      'max-image-preview': 'large',
+      'max-snippet': -1,
+    },
+  },
+  alternates: {
+    canonical: SITE_URL,
+  },
+  metadataBase: new URL(SITE_URL),
+  verification: {
+    // Add Google Search Console verification when available
+    // google: 'your-verification-code',
+  },
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
-  const jsonLd = {
+  // Organization + LocalBusiness combined schema
+  const organizationSchema = {
     '@context': 'https://schema.org',
-    '@type': 'FinancialService',
+    '@type': ['FinancialService', 'LocalBusiness', 'Organization'],
+    '@id': `${SITE_URL}/#organization`,
     name: 'GHL India Ventures',
-    description: 'SEBI-registered Category II Alternative Investment Fund',
-    url: 'https://ghlindiaventures.com',
+    legalName: 'GHL India Ventures Private Limited',
+    description: 'SEBI-registered Category II Alternative Investment Fund (IN/AIF2/2425/1517) focused on stressed real estate recovery and early-stage startup investments in India.',
+    url: SITE_URL,
+    logo: `${SITE_URL}/icon.svg`,
+    image: `${SITE_URL}/og-image.jpg`,
     telephone: ['+914428431043', '+917200255252'],
     email: 'info@ghlindiaventures.com',
+    foundingDate: '2024',
+    numberOfEmployees: { '@type': 'QuantitativeValue', value: 50 },
     address: {
       '@type': 'PostalAddress',
       streetAddress: '2D, Queens Court, No. 6, Montieth Road, Egmore',
@@ -62,6 +97,45 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       addressRegion: 'Tamil Nadu',
       postalCode: '600008',
       addressCountry: 'IN',
+    },
+    geo: {
+      '@type': 'GeoCoordinates',
+      latitude: 13.0719,
+      longitude: 80.2609,
+    },
+    openingHoursSpecification: {
+      '@type': 'OpeningHoursSpecification',
+      dayOfWeek: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'],
+      opens: '10:00',
+      closes: '18:00',
+    },
+    priceRange: '₹₹₹₹',
+    currenciesAccepted: 'INR',
+    areaServed: {
+      '@type': 'Country',
+      name: 'India',
+    },
+    hasOfferCatalog: {
+      '@type': 'OfferCatalog',
+      name: 'Investment Products',
+      itemListElement: [
+        {
+          '@type': 'Offer',
+          itemOffered: {
+            '@type': 'FinancialProduct',
+            name: 'Category II AIF - Direct Route',
+            description: 'SEBI-registered Category II Alternative Investment Fund for HNIs and family offices. Minimum investment ₹1 Crore.',
+          },
+        },
+        {
+          '@type': 'Offer',
+          itemOffered: {
+            '@type': 'FinancialProduct',
+            name: 'Debenture Route',
+            description: 'Non-Convertible Debenture investment starting at ₹10 Lakhs with exposure to stressed real estate recovery.',
+          },
+        },
+      ],
     },
     sameAs: [
       'https://linkedin.com/company/ghl-india-ventures',
@@ -74,13 +148,87 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     ],
   }
 
+  // BreadcrumbList schema
+  const breadcrumbSchema = {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: [
+      { '@type': 'ListItem', position: 1, name: 'Home', item: SITE_URL },
+      { '@type': 'ListItem', position: 2, name: 'About', item: `${SITE_URL}/about` },
+      { '@type': 'ListItem', position: 3, name: 'Fund', item: `${SITE_URL}/fund` },
+      { '@type': 'ListItem', position: 4, name: 'Portfolio', item: `${SITE_URL}/portfolio` },
+      { '@type': 'ListItem', position: 5, name: 'Blog', item: `${SITE_URL}/blog` },
+      { '@type': 'ListItem', position: 6, name: 'Financial IQ', item: `${SITE_URL}/financial-iq` },
+      { '@type': 'ListItem', position: 7, name: 'Contact', item: `${SITE_URL}/contact` },
+    ],
+  }
+
+  // FAQPage schema for common investor questions
+  const faqSchema = {
+    '@context': 'https://schema.org',
+    '@type': 'FAQPage',
+    mainEntity: [
+      {
+        '@type': 'Question',
+        name: 'What is a Category II AIF?',
+        acceptedAnswer: {
+          '@type': 'Answer',
+          text: 'A Category II Alternative Investment Fund (AIF) is a SEBI-regulated pooled investment vehicle that invests in real estate, private equity, distressed assets, and unlisted companies. GHL India Ventures is registered as Category II AIF under SEBI Registration No. IN/AIF2/2425/1517.',
+        },
+      },
+      {
+        '@type': 'Question',
+        name: 'What is the minimum investment in GHL India Ventures?',
+        acceptedAnswer: {
+          '@type': 'Answer',
+          text: 'The minimum investment for the Direct AIF Route is ₹1 Crore, as mandated by SEBI for Category II AIFs. For the Debenture Route (NCD structure), the minimum investment starts at ₹10 Lakhs.',
+        },
+      },
+      {
+        '@type': 'Question',
+        name: 'Is GHL India Ventures SEBI registered?',
+        acceptedAnswer: {
+          '@type': 'Answer',
+          text: 'Yes, GHL India Ventures is registered with the Securities and Exchange Board of India (SEBI) as a Category II Alternative Investment Fund under Registration Number IN/AIF2/2425/1517. This ensures mandatory quarterly audits, third-party custodial safeguards, and transparent NAV reporting.',
+        },
+      },
+      {
+        '@type': 'Question',
+        name: 'How does stressed real estate investment work?',
+        acceptedAnswer: {
+          '@type': 'Answer',
+          text: 'Stressed real estate investment involves acquiring distressed or undervalued properties through legal processes like NCLT (National Company Law Tribunal) resolutions under the IBC (Insolvency and Bankruptcy Code) at significant discounts — typically 40-60% below replacement cost. GHL India Ventures then revitalizes these assets to generate returns for investors.',
+        },
+      },
+      {
+        '@type': 'Question',
+        name: 'What is the expected return on the fund?',
+        acceptedAnswer: {
+          '@type': 'Answer',
+          text: 'While specific fund performance data is available to registered investors after KYC verification, GHL India Ventures\' stressed real estate strategy is designed for significant value creation through deep-discount NCLT acquisitions. Past performance is not indicative of future results. Please consult our advisory team for detailed information.',
+        },
+      },
+    ],
+  }
+
   return (
     <html lang="en" className="scroll-smooth">
       <head>
         <link rel="preconnect" href="https://fonts.cdnfonts.com" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <link rel="icon" href="/icon.svg" type="image/svg+xml" />
+        <link rel="apple-touch-icon" href="/apple-icon.svg" />
         <script
           type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationSchema) }}
+        />
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbSchema) }}
+        />
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(faqSchema) }}
         />
       </head>
       <body className="min-h-screen flex flex-col">
@@ -106,6 +254,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <CommandPalette />
           <ChatWidget />
           <AvatarConcierge />
+          <VoiceCompanion />
         </ThemeProvider>
       </body>
     </html>
