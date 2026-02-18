@@ -423,7 +423,7 @@ export default function MusicRadioWidget() {
   return (
     <>
       {/* Floating trigger button - right side */}
-      <div className="fixed z-[9994] group" style={{ bottom: '272px', right: '24px' }}>
+      <div className="fixed z-[9994] group" style={{ bottom: '330px', right: '24px' }}>
         {!isOpen && isPlaying && (
           <>
             <span className="absolute inset-0 rounded-full bg-violet-500/30 animate-ping opacity-20" />
@@ -463,7 +463,7 @@ export default function MusicRadioWidget() {
         <div
           className="fixed z-[9995] w-80 max-w-[calc(100vw-3rem)] rounded-2xl shadow-2xl overflow-hidden transition-all duration-500"
           style={{
-            bottom: '332px',
+            bottom: '390px',
             right: '24px',
             background: 'rgba(10, 10, 10, 0.96)',
             backdropFilter: 'blur(24px)',
