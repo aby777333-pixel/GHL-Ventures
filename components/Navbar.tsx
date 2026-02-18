@@ -62,7 +62,7 @@ export default function Navbar() {
             style={{ fontSize: '11px', letterSpacing: '0.02em' }}
           >
             SEBI Registered AIF &nbsp;|&nbsp; Registration No. IN/AIF2/2425/1517
-            &nbsp;|&nbsp; Invest from &#8377;10 Lakhs &nbsp;|&nbsp;
+            &nbsp;|&nbsp; AIF: Min &#8377;1 Crore &nbsp;|&nbsp; Debenture Route: From &#8377;10 Lakhs &nbsp;|&nbsp;
             Stressed Real Estate &amp; Early-Stage Startups &nbsp;|&nbsp;
             Chennai, India
           </span>
@@ -71,7 +71,7 @@ export default function Navbar() {
             style={{ fontSize: '11px', letterSpacing: '0.02em' }}
           >
             SEBI Registered AIF &nbsp;|&nbsp; Registration No. IN/AIF2/2425/1517
-            &nbsp;|&nbsp; Invest from &#8377;10 Lakhs &nbsp;|&nbsp;
+            &nbsp;|&nbsp; AIF: Min &#8377;1 Crore &nbsp;|&nbsp; Debenture Route: From &#8377;10 Lakhs &nbsp;|&nbsp;
             Stressed Real Estate &amp; Early-Stage Startups &nbsp;|&nbsp;
             Chennai, India
           </span>

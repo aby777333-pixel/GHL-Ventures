@@ -302,6 +302,13 @@ export default function Footer() {
                 >
                   Terms &amp; Conditions
                 </Link>
+                <span className="text-white/20">|</span>
+                <Link
+                  href="/disclaimer"
+                  className="hover:text-brand-red transition-colors duration-200"
+                >
+                  Disclaimer
+                </Link>
               </div>
 
               {/* Right */}

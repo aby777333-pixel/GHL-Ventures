@@ -15,6 +15,7 @@ import {
 } from 'lucide-react'
 import RiskAssessmentQuiz from '@/components/RiskAssessmentQuiz'
 import InvestmentCalculator from '@/components/InvestmentCalculator'
+import { AlertTriangle } from 'lucide-react'
 
 /* ================================================================
    HELPER: Animated Counter (standalone)
@@ -87,13 +88,13 @@ function HeroSection() {
             </AnimatedSection>
 
             <AnimatedSection delay={200}>
-              <h1 className="text-3xl sm:text-4xl md:text-4xl lg:text-5xl font-extrabold text-white leading-[1.08] mb-5 tracking-tight">
+              <h1 className="text-3xl sm:text-4xl md:text-4xl lg:text-5xl font-extrabold text-white leading-[1.08] mb-5 tracking-tight" style={{ textShadow: '0 2px 12px rgba(0,0,0,0.7)' }}>
                 SEBI Registered <span className="text-gradient">Alternative Investment Fund</span> — Where Bold Capital Meets Intelligence
               </h1>
             </AnimatedSection>
 
             <AnimatedSection delay={400}>
-              <p className="text-base text-gray-300 mb-8 max-w-xl leading-relaxed">
+              <p className="text-base text-gray-300 mb-8 max-w-xl leading-relaxed" style={{ textShadow: '0 1px 8px rgba(0,0,0,0.6)' }}>
                 GHL India Ventures delivers institutional-grade alternative investments for India&apos;s discerning investors. Minimum &#8377;1 Crore.
               </p>
             </AnimatedSection>
@@ -753,10 +754,12 @@ function ContactFormSection() {
                     className="input-field"
                   >
                     <option value="">Select a range</option>
+                    <option value="10L-1Cr">&#8377;10 Lakhs – &#8377;1 Cr (Debenture Route)</option>
                     <option value="1-5">&#8377;1 Cr – &#8377;5 Cr</option>
                     <option value="5-10">&#8377;5 Cr – &#8377;10 Cr</option>
                     <option value="10-25">&#8377;10 Cr – &#8377;25 Cr</option>
                     <option value="25+">&#8377;25 Cr+</option>
+                    <option value="not-sure">Not sure yet — help me decide</option>
                   </select>
                 </div>
 
@@ -1023,6 +1026,24 @@ function FAQSection() {
 }
 
 /* ================================================================
+   SECTION: Investment Disclaimer (SEBI Compliance)
+   ================================================================ */
+function InvestmentDisclaimer() {
+  return (
+    <section className="py-6 px-4 sm:px-6 lg:px-8" style={{ backgroundColor: '#0D0D0D' }}>
+      <div className="container-max mx-auto">
+        <div className="flex items-start gap-3 p-4 rounded-xl border border-amber-500/20 bg-amber-500/5">
+          <AlertTriangle className="w-5 h-5 text-amber-500 shrink-0 mt-0.5" />
+          <p className="text-xs text-gray-400 leading-relaxed">
+            <strong className="text-amber-400">Investment Risk Disclaimer:</strong> Investments in Alternative Investment Funds (AIFs) and Non-Convertible Debentures (NCDs) are subject to market risks including possible loss of principal. Past performance is not indicative of future results. The information on this website does not constitute an offer, solicitation, or investment advice. Prospective investors must read the Private Placement Memorandum (PPM) and all scheme-related documents before investing. SEBI Registration No. IN/AIF2/2425/1517. Category II AIF minimum investment: &#8377;1 Crore as mandated by SEBI.
+          </p>
+        </div>
+      </div>
+    </section>
+  )
+}
+
+/* ================================================================
    HOME PAGE — All Sections + Modals
    ================================================================ */
 export default function HomePage() {
@@ -1032,6 +1053,7 @@ export default function HomePage() {
   return (
     <>
       <HeroSection />
+      <InvestmentDisclaimer />
       <NewsScroller />
       <WhoWeAre />
       <InvestmentCapabilities />

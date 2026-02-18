@@ -1,8 +1,8 @@
 import type { Metadata } from 'next'
 
 export const metadata: Metadata = {
-  title: 'Financial IQ | Investment Education & Glossary | GHL India Ventures',
-  description: 'Build your Financial IQ with GHL India Ventures. Learn investment terms, AIF fundamentals, SEBI regulations, and smart investing strategies through our glossary and video library.',
+  title: 'Financial IQ | Learn Investing | GHL India Ventures',
+  description: 'Build your Financial IQ with GHL India Ventures. Learn AIF fundamentals, SEBI regulations, and smart investing strategies.',
   keywords: ['investment education India', 'AIF glossary', 'financial literacy', 'investment terms explained', 'SEBI AIF regulations guide'],
   openGraph: {
     title: 'Financial IQ | Investment Education | GHL India Ventures',

@@ -2,6 +2,8 @@ import { BLOG_POSTS, FUND_ARTICLES, BRAND } from '@/lib/constants'
 import { notFound } from 'next/navigation'
 import FundArticleClient from '@/app/fund/[slug]/FundArticleClient'
 
+const SITE_URL = 'https://ghl-india-ventures-2025.netlify.app'
+
 export function generateStaticParams() {
   return BLOG_POSTS.map((post) => ({ slug: post.slug }))
 }
@@ -12,6 +14,17 @@ export function generateMetadata({ params }: { params: { slug: string } }) {
   return {
     title: `${post.title} | GHL India Ventures Blog`,
     description: post.excerpt,
+    alternates: {
+      canonical: `${SITE_URL}/blog/${post.slug}`,
+    },
+    openGraph: {
+      title: post.title,
+      description: post.excerpt,
+      type: 'article',
+      publishedTime: post.date,
+      authors: ['GHL India Ventures'],
+      url: `${SITE_URL}/blog/${post.slug}`,
+    },
   }
 }
 
@@ -96,19 +109,55 @@ export default function BlogArticlePage({ params }: { params: { slug: string } }
   ]
   const relatedArticles = allArticles.filter((a) => a.slug !== params.slug).slice(0, 3)
 
+  // Article/BlogPosting structured data for Google rich results
+  const articleSchema = {
+    '@context': 'https://schema.org',
+    '@type': 'BlogPosting',
+    headline: post.title,
+    description: post.excerpt,
+    datePublished: post.date,
+    dateModified: post.date,
+    author: {
+      '@type': 'Organization',
+      name: 'GHL India Ventures',
+      url: SITE_URL,
+    },
+    publisher: {
+      '@type': 'Organization',
+      name: 'GHL India Ventures',
+      logo: {
+        '@type': 'ImageObject',
+        url: `${SITE_URL}/icon.svg`,
+      },
+    },
+    mainEntityOfPage: {
+      '@type': 'WebPage',
+      '@id': `${SITE_URL}/blog/${post.slug}`,
+    },
+    articleSection: post.category,
+    wordCount: content.join(' ').split(/\s+/).length,
+    url: `${SITE_URL}/blog/${post.slug}`,
+  }
+
   return (
-    <FundArticleClient
-      article={{
-        slug: post.slug,
-        title: post.title,
-        excerpt: post.excerpt,
-        date: post.date,
-        category: post.category,
-        readTime: post.readTime,
-      }}
-      content={content}
-      relatedArticles={relatedArticles}
-      sebiReg={BRAND.sebi}
-    />
+    <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(articleSchema) }}
+      />
+      <FundArticleClient
+        article={{
+          slug: post.slug,
+          title: post.title,
+          excerpt: post.excerpt,
+          date: post.date,
+          category: post.category,
+          readTime: post.readTime,
+        }}
+        content={content}
+        relatedArticles={relatedArticles}
+        sebiReg={BRAND.sebi}
+      />
+    </>
   )
 }
