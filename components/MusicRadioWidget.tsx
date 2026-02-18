@@ -59,6 +59,14 @@ const INDIA_MUSIC_STATIONS: RadioStation[] = [
   // Kerala
   { name: 'AIR Trivandrum FM', url: 'https://air.pc.cdn.bitgravity.com/air/live/pbaudio076/playlist.m3u8', country: 'IN', genre: 'Malayalam', region: 'India', state: 'Kerala' },
   { name: 'Club FM Kerala', url: 'https://stream.zeno.fm/a54f1ps5dn8uv', country: 'IN', genre: 'Malayalam Hits', region: 'India', state: 'Kerala' },
+  { name: 'Radio Mango Kerala', url: 'https://stream.zeno.fm/4d6rh56r008uv', country: 'IN', genre: 'Malayalam Pop', region: 'India', state: 'Kerala' },
+  { name: 'AIR Kozhikode FM', url: 'https://air.pc.cdn.bitgravity.com/air/live/pbaudio037/playlist.m3u8', country: 'IN', genre: 'Malayalam', region: 'India', state: 'Kerala' },
+  { name: 'AIR Kochi FM', url: 'https://air.pc.cdn.bitgravity.com/air/live/pbaudio035/playlist.m3u8', country: 'IN', genre: 'Malayalam', region: 'India', state: 'Kerala' },
+  { name: 'Radio Mirchi Kerala', url: 'https://stream.zeno.fm/89gm3hq1dn8uv', country: 'IN', genre: 'Malayalam Hits', region: 'India', state: 'Kerala' },
+  { name: 'Best FM Kerala', url: 'https://stream.zeno.fm/e1f6ypsd008uv', country: 'IN', genre: 'Malayalam Mix', region: 'India', state: 'Kerala' },
+  { name: 'Radio City Malayalam', url: 'https://stream.zeno.fm/ksd27fdd8wzuv', country: 'IN', genre: 'Malayalam', region: 'India', state: 'Kerala' },
+  { name: 'Hit 96.7 FM Kerala', url: 'https://stream.zeno.fm/hsd82gq1dn8uv', country: 'IN', genre: 'Malayalam Retro', region: 'India', state: 'Kerala' },
+  { name: 'Red FM Kerala', url: 'https://stream.zeno.fm/red93fdd8wzuv', country: 'IN', genre: 'Malayalam/Hindi', region: 'India', state: 'Kerala' },
   // Andhra Pradesh
   { name: 'AIR Vijayawada FM', url: 'https://air.pc.cdn.bitgravity.com/air/live/pbaudio083/playlist.m3u8', country: 'IN', genre: 'Telugu', region: 'India', state: 'Andhra Pradesh' },
   // Punjab

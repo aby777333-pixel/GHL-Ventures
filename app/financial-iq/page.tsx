@@ -25,6 +25,7 @@ import {
   RotateCcw,
 } from 'lucide-react'
 import { useState } from 'react'
+import SpaceHero from '@/components/SpaceHero'
 
 /* ─── Glossary Data ─── */
 const GLOSSARY_TERMS: { term: string; definition: string }[] = [
@@ -244,7 +245,9 @@ export default function FinancialIQPage() {
   return (
     <>
       {/* Hero */}
-      <section className="pt-40 pb-20 bg-white relative overflow-hidden">
+      <section className="pt-40 pb-20 gradient-dark relative overflow-hidden">
+        {/* Space: Pulsar theme */}
+        <SpaceHero variant="pulsar" />
         <div className="absolute inset-0 overflow-hidden pointer-events-none">
           <div className="absolute -top-40 right-0 w-96 h-96 bg-brand-red/5 rounded-full blur-3xl" />
           <div className="absolute bottom-0 -left-20 w-72 h-72 bg-brand-red/3 rounded-full blur-3xl" />
@@ -256,11 +259,11 @@ export default function FinancialIQPage() {
                 <GraduationCap className="w-4 h-4 text-brand-red mr-2" />
                 <span className="text-brand-red text-sm font-semibold">Financial IQ</span>
               </div>
-              <h1 className="text-2xl md:text-3xl lg:text-4xl font-bold text-brand-black leading-tight mb-5">
+              <h1 className="text-2xl md:text-3xl lg:text-4xl font-bold text-white leading-tight mb-5">
                 The Intelligent Investor&apos;s{' '}
                 <span className="text-gradient">Resource Hub</span>
               </h1>
-              <p className="text-base text-brand-grey max-w-2xl leading-relaxed">
+              <p className="text-base text-gray-300 max-w-2xl leading-relaxed">
                 Knowledge is the best investment you can make.
               </p>
             </div>

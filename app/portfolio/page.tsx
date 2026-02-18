@@ -20,6 +20,7 @@ import {
   Calendar,
 } from 'lucide-react'
 import { useState } from 'react'
+import SpaceHero from '@/components/SpaceHero'
 
 /* ─── Portfolio Data ─── */
 
@@ -141,6 +142,8 @@ export default function PortfolioPage() {
     <>
       {/* Hero */}
       <section className="pt-40 pb-20 gradient-dark relative overflow-hidden">
+        {/* Space: Satellite theme */}
+        <SpaceHero variant="satellite" />
         <div className="absolute inset-0 overflow-hidden pointer-events-none">
           <div className="absolute -top-40 -right-40 w-80 h-80 bg-brand-red/5 rounded-full blur-3xl" />
           <div className="absolute -bottom-20 -left-20 w-60 h-60 bg-brand-red/3 rounded-full blur-3xl" />

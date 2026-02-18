@@ -11,11 +11,14 @@ import {
   Search, ClipboardCheck, Gavel, Rocket, Eye,
   Building2, Sparkles, Layers, ShieldCheck, BarChart2
 } from 'lucide-react'
+import SpaceHero from '@/components/SpaceHero'
 
 /* ───────────────────────────── 1. HERO ───────────────────────────── */
 function FundHero() {
   return (
     <section className="relative min-h-[80vh] flex items-center gradient-dark overflow-hidden">
+      {/* Space: Nebula theme */}
+      <SpaceHero variant="nebula" />
       <div className="absolute inset-0 opacity-10">
         <div className="absolute top-20 left-20 w-96 h-96 bg-brand-red rounded-full blur-3xl" />
         <div className="absolute bottom-10 right-10 w-64 h-64 bg-brand-red rounded-full blur-3xl" />

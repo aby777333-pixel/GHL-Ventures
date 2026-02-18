@@ -11,11 +11,14 @@ import {
   Lightbulb, Lock, ChevronDown, ChevronUp, Linkedin,
   Play, Home, ChevronRight, Building2, Sparkles
 } from 'lucide-react'
+import SpaceHero from '@/components/SpaceHero'
 
 /* ───────────────────────────── 1. HERO ───────────────────────────── */
 function AboutHero() {
   return (
     <section className="relative min-h-[80vh] flex items-center gradient-dark overflow-hidden">
+      {/* Space: Constellation theme */}
+      <SpaceHero variant="constellation" />
       {/* Decorative blurs */}
       <div className="absolute inset-0 opacity-10">
         <div className="absolute top-20 right-20 w-96 h-96 bg-brand-red rounded-full blur-3xl" />

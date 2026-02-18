@@ -8,6 +8,7 @@ import {
   FileText, Download, Play, Calendar, HardDrive, File,
   CheckCircle, BookOpen, Map, BarChart3, Building2,
 } from 'lucide-react'
+import SpaceHero from '@/components/SpaceHero'
 
 const SECTIONS = [
   {
@@ -267,8 +268,10 @@ export default function DownloadsPage() {
   return (
     <>
       {/* Hero */}
-      <section className="pt-40 pb-16 gradient-dark">
-        <div className="container-max mx-auto px-4 sm:px-6 lg:px-8">
+      <section className="pt-40 pb-16 gradient-dark relative overflow-hidden">
+        {/* Space: Hubble deep space theme */}
+        <SpaceHero variant="hubble" />
+        <div className="container-max mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
           <AnimatedSection>
             <span className="eyebrow">Resources</span>
             <h1 className="text-2xl md:text-3xl lg:text-4xl font-bold text-white mt-4 mb-5">

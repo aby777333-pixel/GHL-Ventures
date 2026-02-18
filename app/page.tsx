@@ -16,6 +16,9 @@ import {
 import RiskAssessmentQuiz from '@/components/RiskAssessmentQuiz'
 import InvestmentCalculator from '@/components/InvestmentCalculator'
 import AllInvestmentsCalculator from '@/components/AllInvestmentsCalculator'
+import WealthGrowthMap from '@/components/WealthGrowthMap'
+import TaxImpactAnalyzer from '@/components/TaxImpactAnalyzer'
+import InflationProofChecker from '@/components/InflationProofChecker'
 import { AlertTriangle } from 'lucide-react'
 
 /* ================================================================
@@ -1073,7 +1076,7 @@ function ContactFormSection() {
 /* ================================================================
    SECTION: Risk Quiz + Calculator CTA (after WhyChooseUs)
    ================================================================ */
-function InvestorToolsCTA({ onOpenQuiz, onOpenCalc, onOpenAllCalc }: { onOpenQuiz: () => void; onOpenCalc: () => void; onOpenAllCalc: () => void }) {
+function InvestorToolsCTA({ onOpenQuiz, onOpenCalc, onOpenAllCalc, onOpenWealthMap, onOpenTaxAnalyzer, onOpenInflationCheck }: { onOpenQuiz: () => void; onOpenCalc: () => void; onOpenAllCalc: () => void; onOpenWealthMap: () => void; onOpenTaxAnalyzer: () => void; onOpenInflationCheck: () => void }) {
   return (
     <section className="relative py-14 md:py-20 overflow-hidden">
       <div className="absolute inset-0 hero-gradient" />
@@ -1145,7 +1148,7 @@ function InvestorToolsCTA({ onOpenQuiz, onOpenCalc, onOpenAllCalc }: { onOpenQui
 
           {/* Wealth Goal Planner */}
           <AnimatedSection delay={400} className="flex">
-            <div className="card-glass text-center p-7 hover:bg-white/10 transition-all cursor-pointer group flex flex-col w-full" onClick={onOpenAllCalc}>
+            <div className="card-glass text-center p-7 hover:bg-white/10 transition-all cursor-pointer group flex flex-col w-full" onClick={onOpenWealthMap}>
               <div className="w-14 h-14 rounded-2xl bg-violet-500/10 flex items-center justify-center mx-auto mb-4 group-hover:bg-violet-500 transition-all duration-300">
                 <Target className="w-7 h-7 text-violet-500 group-hover:text-white transition-colors" />
               </div>
@@ -1161,7 +1164,7 @@ function InvestorToolsCTA({ onOpenQuiz, onOpenCalc, onOpenAllCalc }: { onOpenQui
 
           {/* Tax Impact Analyzer */}
           <AnimatedSection delay={500} className="flex">
-            <div className="card-glass text-center p-7 hover:bg-white/10 transition-all cursor-pointer group flex flex-col w-full" onClick={onOpenAllCalc}>
+            <div className="card-glass text-center p-7 hover:bg-white/10 transition-all cursor-pointer group flex flex-col w-full" onClick={onOpenTaxAnalyzer}>
               <div className="w-14 h-14 rounded-2xl bg-sky-500/10 flex items-center justify-center mx-auto mb-4 group-hover:bg-sky-500 transition-all duration-300">
                 <IndianRupee className="w-7 h-7 text-sky-500 group-hover:text-white transition-colors" />
               </div>
@@ -1177,7 +1180,7 @@ function InvestorToolsCTA({ onOpenQuiz, onOpenCalc, onOpenAllCalc }: { onOpenQui
 
           {/* Inflation-Proof Checker */}
           <AnimatedSection delay={600} className="flex">
-            <div className="card-glass text-center p-7 hover:bg-white/10 transition-all cursor-pointer group flex flex-col w-full" onClick={onOpenAllCalc}>
+            <div className="card-glass text-center p-7 hover:bg-white/10 transition-all cursor-pointer group flex flex-col w-full" onClick={onOpenInflationCheck}>
               <div className="w-14 h-14 rounded-2xl bg-rose-500/10 flex items-center justify-center mx-auto mb-4 group-hover:bg-rose-500 transition-all duration-300">
                 <TrendingUp className="w-7 h-7 text-rose-500 group-hover:text-white transition-colors" />
               </div>
@@ -1305,6 +1308,9 @@ export default function HomePage() {
   const [quizOpen, setQuizOpen] = useState(false)
   const [calcOpen, setCalcOpen] = useState(false)
   const [allCalcOpen, setAllCalcOpen] = useState(false)
+  const [wealthMapOpen, setWealthMapOpen] = useState(false)
+  const [taxAnalyzerOpen, setTaxAnalyzerOpen] = useState(false)
+  const [inflationCheckOpen, setInflationCheckOpen] = useState(false)
 
   return (
     <>
@@ -1319,6 +1325,9 @@ export default function HomePage() {
         onOpenQuiz={() => setQuizOpen(true)}
         onOpenCalc={() => setCalcOpen(true)}
         onOpenAllCalc={() => setAllCalcOpen(true)}
+        onOpenWealthMap={() => setWealthMapOpen(true)}
+        onOpenTaxAnalyzer={() => setTaxAnalyzerOpen(true)}
+        onOpenInflationCheck={() => setInflationCheckOpen(true)}
       />
       <PortfolioSpotlight />
       <BlogSection />
@@ -1331,6 +1340,9 @@ export default function HomePage() {
       <RiskAssessmentQuiz isOpen={quizOpen} onClose={() => setQuizOpen(false)} />
       <InvestmentCalculator isOpen={calcOpen} onClose={() => setCalcOpen(false)} />
       <AllInvestmentsCalculator isOpen={allCalcOpen} onClose={() => setAllCalcOpen(false)} />
+      <WealthGrowthMap isOpen={wealthMapOpen} onClose={() => setWealthMapOpen(false)} />
+      <TaxImpactAnalyzer isOpen={taxAnalyzerOpen} onClose={() => setTaxAnalyzerOpen(false)} />
+      <InflationProofChecker isOpen={inflationCheckOpen} onClose={() => setInflationCheckOpen(false)} />
     </>
   )
 }

@@ -4,6 +4,7 @@ import Link from 'next/link'
 import AnimatedSection from '@/components/AnimatedSection'
 import PlaceholderImage from '@/components/PlaceholderImage'
 import { BLOG_POSTS, FUND_ARTICLES } from '@/lib/constants'
+import SpaceHero from '@/components/SpaceHero'
 import {
   BarChart3,
   Clock,
@@ -132,6 +133,8 @@ export default function BlogPage() {
     <>
       {/* SEO-optimized Hero */}
       <section className="pt-40 pb-12 gradient-dark relative overflow-hidden">
+        {/* Space: Rocket theme */}
+        <SpaceHero variant="rocket" />
         {/* Background decorative elements */}
         <div className="absolute inset-0 overflow-hidden pointer-events-none">
           <div className="absolute -top-40 -right-40 w-80 h-80 bg-brand-red/5 rounded-full blur-3xl" />

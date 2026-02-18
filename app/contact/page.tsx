@@ -8,6 +8,7 @@ import {
   MessageCircle, ArrowRight,
 } from 'lucide-react'
 import Link from 'next/link'
+import SpaceHero from '@/components/SpaceHero'
 
 const FAQ_ITEMS = [
   {
@@ -59,8 +60,10 @@ export default function ContactPage() {
   return (
     <>
       {/* Hero */}
-      <section className="pt-40 pb-12 gradient-dark">
-        <div className="container-max mx-auto px-4 sm:px-6 lg:px-8">
+      <section className="pt-40 pb-12 gradient-dark relative overflow-hidden">
+        {/* Space: Lunar theme */}
+        <SpaceHero variant="lunar" />
+        <div className="container-max mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
           <AnimatedSection>
             <span className="eyebrow">Get In Touch</span>
             <h1 className="text-2xl md:text-3xl lg:text-4xl font-bold text-white mt-4 mb-5">

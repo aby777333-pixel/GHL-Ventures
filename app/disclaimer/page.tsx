@@ -3,11 +3,14 @@
 import { Shield, AlertTriangle } from 'lucide-react'
 import AnimatedSection from '@/components/AnimatedSection'
 import { BRAND } from '@/lib/constants'
+import SpaceHero from '@/components/SpaceHero'
 
 export default function DisclaimerPage() {
   return (
-    <section className="min-h-screen py-32 md:py-40 px-4 sm:px-6 lg:px-8" style={{ backgroundColor: '#0A0A0A' }}>
-      <div className="max-w-4xl mx-auto">
+    <section className="relative min-h-screen py-32 md:py-40 px-4 sm:px-6 lg:px-8 overflow-hidden" style={{ backgroundColor: '#0A0A0A' }}>
+      {/* Space: Lightning theme */}
+      <SpaceHero variant="lightning" />
+      <div className="max-w-4xl mx-auto relative z-10">
         <AnimatedSection>
           <div className="flex items-center gap-3 mb-8">
             <div className="w-12 h-12 bg-amber-500/10 rounded-xl flex items-center justify-center">
