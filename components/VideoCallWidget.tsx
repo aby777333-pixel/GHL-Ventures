@@ -105,7 +105,7 @@ export default function VideoCallWidget() {
   return (
     <>
       {/* ── Floating Trigger Button ── */}
-      <div className="fixed bottom-8 left-6 z-[9996] group">
+      <div className="fixed bottom-12 left-6 z-[9996] group">
         {/* Pulse rings */}
         {!isOpen && (
           <>
@@ -144,7 +144,7 @@ export default function VideoCallWidget() {
       {/* ── Call Panel ── */}
       {isOpen && (
         <div
-          className={`fixed bottom-28 left-6 z-[9997] ${panelWidth} max-w-[calc(100vw-3rem)] rounded-2xl shadow-2xl overflow-hidden transition-all duration-500`}
+          className={`fixed bottom-32 left-6 z-[9997] ${panelWidth} max-w-[calc(100vw-3rem)] rounded-2xl shadow-2xl overflow-hidden transition-all duration-500`}
           style={{
             background: 'rgba(10, 10, 10, 0.95)',
             backdropFilter: 'blur(24px)',

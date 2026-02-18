@@ -21,7 +21,7 @@ export default function BackToTop() {
           show ? 'opacity-100 translate-y-0 scale-100' : 'opacity-0 translate-y-4 scale-75 pointer-events-none'
         }`}
       style={{
-        bottom: '24px',
+        bottom: '40px',
         left: '24px',
         boxShadow: '0 4px 20px rgba(208,2,27,0.4)',
       }}

@@ -295,7 +295,7 @@ export default function ChatWidget() {
   return (
     <>
       {/* ── Collapsed: Avatar Button ── */}
-      <div className="fixed z-[9999]" style={{ bottom: '136px', right: '24px' }}>
+      <div className="fixed z-[9999]" style={{ bottom: '272px', right: '24px' }}>
         {/* Proactive bubble */}
         {showProactive && !isOpen && (
           <div className="absolute bottom-[84px] right-0 animate-fade-in" style={{ width: '280px' }}>

@@ -20,6 +20,9 @@ import {
   CalendarDays,
   Download,
   ChevronRight,
+  Plus,
+  Minus,
+  RotateCcw,
 } from 'lucide-react'
 import { useState } from 'react'
 
@@ -71,6 +74,142 @@ const EVENTS = [
     description: 'Hands-on session covering financial modeling, term sheets, and founder evaluation.',
   },
 ]
+
+/* ─── IRR Calculator (Newton-Raphson) ─── */
+function computeIRR(cashFlows: number[], maxIter = 1000, tol = 1e-7): number | null {
+  if (cashFlows.length < 2) return null
+  let rate = 0.1 // initial guess
+  for (let i = 0; i < maxIter; i++) {
+    let npv = 0
+    let dNpv = 0
+    for (let t = 0; t < cashFlows.length; t++) {
+      const disc = Math.pow(1 + rate, t)
+      npv += cashFlows[t] / disc
+      if (t > 0) dNpv -= t * cashFlows[t] / Math.pow(1 + rate, t + 1)
+    }
+    if (Math.abs(dNpv) < 1e-12) break
+    const next = rate - npv / dNpv
+    if (Math.abs(next - rate) < tol) return next
+    rate = next
+    if (rate < -0.999 || rate > 100) return null
+  }
+  return rate
+}
+
+function IrrCalculator() {
+  const [flows, setFlows] = useState<{ year: number; amount: string }[]>([
+    { year: 0, amount: '-1000000' },
+    { year: 1, amount: '300000' },
+    { year: 2, amount: '350000' },
+    { year: 3, amount: '400000' },
+    { year: 4, amount: '450000' },
+  ])
+  const [result, setResult] = useState<string | null>(null)
+
+  const addFlow = () => setFlows(f => [...f, { year: f.length, amount: '' }])
+  const removeFlow = (i: number) => setFlows(f => f.filter((_, idx) => idx !== i))
+  const updateAmount = (i: number, val: string) => {
+    setFlows(f => f.map((fl, idx) => idx === i ? { ...fl, amount: val } : fl))
+  }
+
+  const calculate = () => {
+    const cf = flows.map(f => parseFloat(f.amount) || 0)
+    const irr = computeIRR(cf)
+    if (irr === null || !isFinite(irr)) {
+      setResult('Could not compute IRR. Check your cash flows.')
+    } else {
+      setResult(`${(irr * 100).toFixed(2)}%`)
+    }
+  }
+
+  const reset = () => {
+    setFlows([
+      { year: 0, amount: '-1000000' },
+      { year: 1, amount: '300000' },
+      { year: 2, amount: '350000' },
+      { year: 3, amount: '400000' },
+      { year: 4, amount: '450000' },
+    ])
+    setResult(null)
+  }
+
+  return (
+    <div className="card h-full flex flex-col">
+      <div className="flex items-center gap-3 mb-4">
+        <div className="w-12 h-12 bg-blue-500/10 rounded-xl flex items-center justify-center">
+          <TrendingUp className="w-6 h-6 text-blue-600" />
+        </div>
+        <div>
+          <h3 className="font-bold text-brand-black text-lg">IRR Calculator</h3>
+          <p className="text-brand-grey text-xs">Internal Rate of Return (Newton-Raphson)</p>
+        </div>
+      </div>
+
+      <p className="text-brand-grey text-xs mb-4 leading-relaxed">
+        Enter your cash flows below. Use negative values for investments (outflows) and positive values for returns (inflows).
+      </p>
+
+      {/* Cash flow rows */}
+      <div className="space-y-2 mb-4 max-h-52 overflow-y-auto pr-1">
+        {flows.map((f, i) => (
+          <div key={i} className="flex items-center gap-2">
+            <span className="text-brand-grey text-[10px] font-semibold w-10 shrink-0 uppercase tracking-wider">Yr {f.year}</span>
+            <div className="relative flex-1">
+              <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-brand-grey text-xs">₹</span>
+              <input
+                type="number"
+                value={f.amount}
+                onChange={e => updateAmount(i, e.target.value)}
+                className="w-full pl-7 pr-2 py-2 bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-lg text-brand-black text-sm font-mono focus:ring-1 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
+                placeholder="e.g. -1000000"
+              />
+            </div>
+            {flows.length > 2 && (
+              <button onClick={() => removeFlow(i)} className="p-1.5 text-red-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-500/10 rounded-lg transition-all">
+                <Minus className="w-3.5 h-3.5" />
+              </button>
+            )}
+          </div>
+        ))}
+      </div>
+
+      {/* Add row */}
+      <button onClick={addFlow} className="w-full py-2 border border-dashed border-gray-300 dark:border-white/15 rounded-lg text-brand-grey text-xs font-medium hover:bg-gray-50 dark:hover:bg-white/5 transition-all flex items-center justify-center gap-1.5 mb-4">
+        <Plus className="w-3 h-3" /> Add Cash Flow
+      </button>
+
+      {/* Buttons */}
+      <div className="flex gap-2">
+        <button
+          onClick={calculate}
+          className="flex-1 py-2.5 rounded-xl text-white text-sm font-bold transition-all hover:opacity-90 shadow-lg"
+          style={{ background: 'linear-gradient(135deg, #1E40AF 0%, #3B82F6 100%)' }}
+        >
+          Calculate IRR
+        </button>
+        <button
+          onClick={reset}
+          className="px-3 py-2.5 rounded-xl border border-gray-200 dark:border-white/10 text-brand-grey hover:bg-gray-50 dark:hover:bg-white/5 transition-all"
+          title="Reset"
+        >
+          <RotateCcw className="w-4 h-4" />
+        </button>
+      </div>
+
+      {/* Result */}
+      {result && (
+        <div className={`mt-4 p-4 rounded-xl text-center ${result.includes('Could not') ? 'bg-red-50 dark:bg-red-500/10' : 'bg-green-50 dark:bg-green-500/10'}`}>
+          <p className="text-xs text-brand-grey mb-1 uppercase tracking-wider font-semibold">
+            {result.includes('Could not') ? 'Error' : 'Annualized IRR'}
+          </p>
+          <p className={`text-2xl font-extrabold ${result.includes('Could not') ? 'text-red-600' : 'text-green-600'}`}>
+            {result}
+          </p>
+        </div>
+      )}
+    </div>
+  )
+}
 
 export default function FinancialIQPage() {
   const [glossarySearch, setGlossarySearch] = useState('')
@@ -426,34 +565,9 @@ export default function FinancialIQPage() {
               </div>
             </AnimatedSection>
 
-            {/* IRR Calculator placeholder */}
+            {/* IRR Calculator — Working */}
             <AnimatedSection delay={100}>
-              <div className="card h-full flex flex-col">
-                <div className="flex items-center gap-3 mb-6">
-                  <div className="w-12 h-12 bg-blue-500/10 rounded-xl flex items-center justify-center">
-                    <TrendingUp className="w-6 h-6 text-blue-600" />
-                  </div>
-                  <div>
-                    <h3 className="font-bold text-brand-black text-lg">IRR Calculator</h3>
-                    <p className="text-brand-grey text-xs">Internal Rate of Return</p>
-                  </div>
-                </div>
-
-                <div className="flex-1 flex flex-col items-center justify-center text-center py-12">
-                  <div className="w-20 h-20 bg-blue-500/10 rounded-2xl flex items-center justify-center mb-6">
-                    <Calculator className="w-10 h-10 text-blue-500/50" />
-                  </div>
-                  <h4 className="font-bold text-brand-black text-lg mb-2">Coming Soon</h4>
-                  <p className="text-brand-grey text-sm max-w-xs leading-relaxed mb-6">
-                    Our IRR calculator will help you evaluate the true annualized return on your
-                    alternative investments, accounting for irregular cash flows.
-                  </p>
-                  <span className="inline-flex items-center px-4 py-2 bg-blue-500/10 text-blue-600 text-sm font-medium rounded-full">
-                    <Lightbulb className="w-4 h-4 mr-2" />
-                    In Development
-                  </span>
-                </div>
-              </div>
+              <IrrCalculator />
             </AnimatedSection>
           </div>
         </div>

@@ -15,6 +15,7 @@ import {
 } from 'lucide-react'
 import RiskAssessmentQuiz from '@/components/RiskAssessmentQuiz'
 import InvestmentCalculator from '@/components/InvestmentCalculator'
+import AllInvestmentsCalculator from '@/components/AllInvestmentsCalculator'
 import { AlertTriangle } from 'lucide-react'
 
 /* ================================================================
@@ -41,45 +42,210 @@ function CountUpStat({ end, prefix, suffix, label }: {
 }
 
 /* ================================================================
-   SECTION 1: Hero -- Full Viewport, Dark, Immersive
+   SECTION 1: Hero -- Full Viewport, Space/Cosmos Theme
    ================================================================ */
-function HeroSection() {
-  const captions = [
-    'Stressed Real Estate Recovery',
-    'Early-Stage Startup Investments',
-    'Institutional-Grade Returns',
-  ]
-  const [captionIdx, setCaptionIdx] = useState(0)
 
-  useEffect(() => {
-    const t = setInterval(() => setCaptionIdx(i => (i + 1) % captions.length), 3500)
-    return () => clearInterval(t)
-  }, [captions.length])
+/* Star field data - positioned deterministically to avoid hydration mismatch */
+const STARS = [
+  // Small stars (1px)
+  { x: 5, y: 8, size: 'sm', delay: 0 }, { x: 12, y: 15, size: 'sm', delay: 1.2 },
+  { x: 22, y: 5, size: 'sm', delay: 0.5 }, { x: 35, y: 12, size: 'sm', delay: 2.1 },
+  { x: 42, y: 25, size: 'sm', delay: 0.8 }, { x: 55, y: 8, size: 'sm', delay: 1.5 },
+  { x: 68, y: 18, size: 'sm', delay: 0.3 }, { x: 75, y: 6, size: 'sm', delay: 2.5 },
+  { x: 82, y: 22, size: 'sm', delay: 1.8 }, { x: 90, y: 10, size: 'sm', delay: 0.7 },
+  { x: 15, y: 35, size: 'sm', delay: 1.1 }, { x: 28, y: 42, size: 'sm', delay: 2.3 },
+  { x: 48, y: 38, size: 'sm', delay: 0.4 }, { x: 62, y: 32, size: 'sm', delay: 1.7 },
+  { x: 78, y: 40, size: 'sm', delay: 0.9 }, { x: 88, y: 35, size: 'sm', delay: 2.0 },
+  { x: 8, y: 55, size: 'sm', delay: 1.4 }, { x: 25, y: 60, size: 'sm', delay: 0.6 },
+  { x: 38, y: 52, size: 'sm', delay: 2.2 }, { x: 52, y: 58, size: 'sm', delay: 1.0 },
+  { x: 70, y: 55, size: 'sm', delay: 0.2 }, { x: 85, y: 62, size: 'sm', delay: 1.9 },
+  { x: 18, y: 72, size: 'sm', delay: 2.4 }, { x: 45, y: 70, size: 'sm', delay: 0.1 },
+  { x: 65, y: 75, size: 'sm', delay: 1.6 }, { x: 92, y: 48, size: 'sm', delay: 0.8 },
+  { x: 3, y: 88, size: 'sm', delay: 1.3 }, { x: 33, y: 85, size: 'sm', delay: 2.1 },
+  { x: 58, y: 82, size: 'sm', delay: 0.5 }, { x: 80, y: 78, size: 'sm', delay: 1.7 },
+  // Extra small blinkers scattered throughout
+  { x: 7, y: 3, size: 'sm', delay: 0.9 }, { x: 16, y: 28, size: 'sm', delay: 2.7 },
+  { x: 27, y: 18, size: 'sm', delay: 0.3 }, { x: 37, y: 48, size: 'sm', delay: 1.8 },
+  { x: 47, y: 6, size: 'sm', delay: 2.4 }, { x: 57, y: 30, size: 'sm', delay: 0.7 },
+  { x: 67, y: 65, size: 'sm', delay: 1.5 }, { x: 77, y: 45, size: 'sm', delay: 2.9 },
+  { x: 87, y: 25, size: 'sm', delay: 0.4 }, { x: 95, y: 55, size: 'sm', delay: 1.2 },
+  { x: 2, y: 40, size: 'sm', delay: 2.0 }, { x: 13, y: 92, size: 'sm', delay: 0.6 },
+  { x: 43, y: 90, size: 'sm', delay: 1.9 }, { x: 73, y: 88, size: 'sm', delay: 2.3 },
+  { x: 96, y: 82, size: 'sm', delay: 0.1 }, { x: 53, y: 95, size: 'sm', delay: 1.1 },
+  // Medium stars (2px)
+  { x: 10, y: 20, size: 'md', delay: 0.8 }, { x: 30, y: 30, size: 'md', delay: 1.5 },
+  { x: 50, y: 15, size: 'md', delay: 2.0 }, { x: 72, y: 28, size: 'md', delay: 0.3 },
+  { x: 88, y: 18, size: 'md', delay: 1.2 }, { x: 20, y: 50, size: 'md', delay: 2.5 },
+  { x: 40, y: 45, size: 'md', delay: 0.6 }, { x: 60, y: 48, size: 'md', delay: 1.8 },
+  { x: 75, y: 60, size: 'md', delay: 0.9 }, { x: 15, y: 78, size: 'md', delay: 2.2 },
+  { x: 55, y: 72, size: 'md', delay: 1.1 }, { x: 85, y: 70, size: 'md', delay: 0.4 },
+  // Extra medium blinkers
+  { x: 5, y: 45, size: 'md', delay: 1.7 }, { x: 35, y: 55, size: 'md', delay: 2.8 },
+  { x: 65, y: 85, size: 'md', delay: 0.5 }, { x: 93, y: 38, size: 'md', delay: 1.3 },
+  { x: 48, y: 78, size: 'md', delay: 2.1 }, { x: 22, y: 88, size: 'md', delay: 0.9 },
+  // Large stars (3px, with glow)
+  { x: 18, y: 12, size: 'lg', delay: 1.0 }, { x: 45, y: 22, size: 'lg', delay: 2.3 },
+  { x: 70, y: 10, size: 'lg', delay: 0.7 }, { x: 25, y: 65, size: 'lg', delay: 1.6 },
+  { x: 60, y: 42, size: 'lg', delay: 2.8 }, { x: 90, y: 52, size: 'lg', delay: 0.2 },
+  { x: 38, y: 80, size: 'lg', delay: 1.4 }, { x: 82, y: 85, size: 'lg', delay: 2.6 },
+  // Extra large bright blinkers
+  { x: 8, y: 68, size: 'lg', delay: 1.9 }, { x: 52, y: 5, size: 'lg', delay: 0.8 },
+  { x: 95, y: 15, size: 'lg', delay: 2.5 }, { x: 32, y: 72, size: 'lg', delay: 0.3 },
+]
+
+/* Live TV channel options — using direct video IDs for stable streams,
+   channel-based embed as fallback. CNBC-TV18 & Bloomberg have persistent 24/7 streams. */
+const LIVE_CHANNELS = [
+  { id: 'cnbc', label: 'CNBC-TV18', videoId: 'P857H4ej-MQ', channel: 'UCmRbHAgG2k2vDUvb3xsEunQ' },
+  { id: 'bloomberg', label: 'Bloomberg', videoId: null, channel: 'UCIALMKvObZNtJ6AmdCLP7Lg' },
+  { id: 'ndtv', label: 'NDTV Profit', videoId: null, channel: 'UC3uJIdRFTGgLWrUziaHbzrg' },
+  { id: 'zee', label: 'Zee Business', videoId: null, channel: 'UCkXopQ3ubd-rnXnStZqCl2w' },
+  { id: 'etnow', label: 'ET Now', videoId: null, channel: 'UCI_mwTKUhicNzFrhm33MzBQ' },
+]
+
+function getLiveEmbedUrl(ch: typeof LIVE_CHANNELS[0]) {
+  if (ch.videoId) return `https://www.youtube.com/embed/${ch.videoId}?autoplay=0`
+  return `https://www.youtube.com/embed/live_stream?channel=${ch.channel}&autoplay=0`
+}
+
+function LiveFinancialTV() {
+  const [activeChannel, setActiveChannel] = useState(0)
+  const ch = LIVE_CHANNELS[activeChannel]
 
   return (
-    <section className="relative min-h-screen flex items-center hero-gradient grain-overlay overflow-hidden">
-      {/* Animated red particle dots (CSS-only) */}
-      {[...Array(12)].map((_, i) => (
+    <div className="relative rounded-2xl overflow-hidden border border-white/10 bg-black/40 backdrop-blur-sm">
+      <div className="aspect-video relative bg-black">
+        <iframe
+          key={ch.id}
+          src={getLiveEmbedUrl(ch)}
+          title={`${ch.label} Live - Financial News`}
+          className="w-full h-full absolute inset-0"
+          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+          allowFullScreen
+          loading="lazy"
+        />
+      </div>
+      {/* Live indicator badge */}
+      <div className="absolute top-3 left-3 z-10 flex items-center gap-2 px-3 py-1 bg-black/70 backdrop-blur-sm rounded-full border border-white/10">
+        <span className="relative flex h-2 w-2">
+          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-500 opacity-75" />
+          <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500" />
+        </span>
+        <span className="text-white text-[10px] font-bold uppercase tracking-wider">Live</span>
+      </div>
+      {/* Channel switcher */}
+      <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/90 via-black/70 to-transparent p-3 pt-8">
+        <div className="flex items-center gap-1.5 overflow-x-auto pb-0.5">
+          {LIVE_CHANNELS.map((c, i) => (
+            <button
+              key={c.id}
+              onClick={() => setActiveChannel(i)}
+              className={`shrink-0 px-2.5 py-1 rounded-full text-[9px] font-semibold uppercase tracking-wider transition-all ${
+                i === activeChannel
+                  ? 'bg-brand-red text-white'
+                  : 'bg-white/10 text-gray-400 hover:bg-white/20 hover:text-white'
+              }`}
+            >
+              {c.label}
+            </button>
+          ))}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function HeroSection() {
+  /* Live chart symbol options */
+  const CHART_SYMBOLS = [
+    { label: 'NIFTY 50', symbol: 'NSE:NIFTY' },
+    { label: 'SENSEX', symbol: 'BSE:SENSEX' },
+    { label: 'BANK NIFTY', symbol: 'NSE:BANKNIFTY' },
+    { label: 'Reliance', symbol: 'NSE:RELIANCE' },
+    { label: 'TCS', symbol: 'NSE:TCS' },
+    { label: 'HDFC Bank', symbol: 'NSE:HDFCBANK' },
+    { label: 'Gold MCX', symbol: 'MCX:GOLD1!' },
+    { label: 'Silver MCX', symbol: 'MCX:SILVER1!' },
+    { label: 'Crude Oil', symbol: 'MCX:CRUDEOIL1!' },
+  ]
+  const [chartSymbol, setChartSymbol] = useState(0)
+  const [chartDropdownOpen, setChartDropdownOpen] = useState(false)
+
+  return (
+    <section className="relative min-h-screen flex items-center overflow-hidden" style={{ background: 'linear-gradient(180deg, #030014 0%, #0a0020 30%, #0d0010 60%, #0a0a0a 100%)' }}>
+
+      {/* ---- SPACE BACKGROUND LAYERS ---- */}
+
+      {/* Deep space nebula patches */}
+      <div className="nebula-patch" style={{ top: '10%', left: '10%', width: '300px', height: '300px', background: 'rgba(208, 2, 27, 0.06)' }} />
+      <div className="nebula-patch" style={{ top: '30%', right: '5%', width: '250px', height: '250px', background: 'rgba(80, 20, 120, 0.05)', animationDelay: '-7s' }} />
+      <div className="nebula-patch" style={{ bottom: '20%', left: '30%', width: '350px', height: '200px', background: 'rgba(208, 2, 27, 0.04)', animationDelay: '-13s' }} />
+
+      {/* Star field */}
+      {STARS.map((star, i) => (
         <span
           key={i}
-          className="absolute rounded-full bg-brand-red/40 animate-float pointer-events-none"
+          className={`star star-${star.size}`}
           style={{
-            width: `${4 + (i % 5) * 3}px`,
-            height: `${4 + (i % 5) * 3}px`,
-            top: `${8 + (i * 7) % 85}%`,
-            left: `${5 + (i * 11) % 90}%`,
-            animationDelay: `${i * 0.6}s`,
-            animationDuration: `${3 + (i % 4)}s`,
+            top: `${star.y}%`,
+            left: `${star.x}%`,
+            animationDelay: `${star.delay}s`,
           }}
         />
       ))}
+
+      {/* Single shooting star */}
+      <span className="shooting-star" style={{ top: '18%', left: '25%', animation: 'shooting-star 8s ease-out infinite 5s' }} />
+
+      {/* Comets (larger, with long gradient tails) */}
+      <div className="comet" style={{ top: '10%', left: '5%', animation: 'comet-streak-1 12s ease-out infinite 2s' }}>
+        <div className="comet-head" />
+      </div>
+      <div className="comet" style={{ top: '35%', left: '70%', animation: 'comet-streak-2 16s ease-out infinite 7s' }}>
+        <div className="comet-head" />
+      </div>
+      <div className="comet" style={{ top: '55%', left: '20%', animation: 'comet-streak-3 14s ease-out infinite 12s' }}>
+        <div className="comet-head" />
+      </div>
+      <div className="comet" style={{ top: '20%', left: '45%', animation: 'comet-streak-1 18s ease-out infinite 20s' }}>
+        <div className="comet-head" />
+      </div>
+
+      {/* Space station orbiting across the sky */}
+      <div className="space-station">
+        <div className="space-station-body" />
+      </div>
+
+      {/* Passenger airplane with blinking lights — subtle, high in the sky */}
+      <div className="airplane">
+        <div className="airplane-body">
+          <span className="airplane-light airplane-light-red" />
+          <span className="airplane-light airplane-light-white" />
+          <span className="airplane-light airplane-light-green" />
+        </div>
+      </div>
+
+      {/* Big arc / planetary horizon with silver edge */}
+      <div className="space-arc" />
+      <div className="space-arc-inner" />
+
+      {/* Horizon glow band with silver-white sunrise bloom */}
+      <div className="space-horizon" />
+
+      {/* Subtle grain overlay */}
+      <div className="absolute inset-0 grain-overlay pointer-events-none" />
+
+      {/* Red burst radial (existing brand style) */}
+      <div className="absolute inset-0 pointer-events-none" style={{ background: 'radial-gradient(ellipse at 25% 50%, rgba(208, 2, 27, 0.08) 0%, transparent 60%)' }} />
+
+      {/* ---- END SPACE BACKGROUND ---- */}
 
       <div className="container-max mx-auto px-4 sm:px-6 lg:px-8 relative z-10 pt-44 pb-14">
         <div className="grid lg:grid-cols-2 gap-12 xl:gap-20 items-center">
           {/* LEFT: Hero Copy */}
           <div>
             <AnimatedSection delay={0}>
-              <div className="inline-flex items-center px-4 py-2 bg-brand-red/10 border border-brand-red/20 rounded-full mb-8">
+              <div className="inline-flex items-center px-4 py-2 bg-brand-red/10 border border-brand-red/20 rounded-full mb-8 backdrop-blur-sm">
                 <Shield className="w-4 h-4 text-brand-red mr-2" />
                 <span className="text-brand-red text-xs font-semibold uppercase tracking-widest">
                   SEBI Registered &nbsp;|&nbsp; Category II AIF
@@ -88,7 +254,7 @@ function HeroSection() {
             </AnimatedSection>
 
             <AnimatedSection delay={200}>
-              <h1 className="text-3xl sm:text-4xl md:text-4xl lg:text-5xl font-extrabold text-white leading-[1.08] mb-5 tracking-tight" style={{ textShadow: '0 2px 12px rgba(0,0,0,0.7)' }}>
+              <h1 className="text-3xl sm:text-4xl md:text-4xl lg:text-5xl font-extrabold text-white leading-[1.08] mb-5 tracking-tight" style={{ textShadow: '0 2px 16px rgba(0,0,0,0.8), 0 0 40px rgba(208,2,27,0.15)' }}>
                 SEBI Registered <span className="text-gradient">Alternative Investment Fund</span> — Where Bold Capital Meets Intelligence
               </h1>
             </AnimatedSection>
@@ -121,7 +287,7 @@ function HeroSection() {
                 ].map(b => (
                   <span
                     key={b.text}
-                    className="inline-flex items-center gap-1.5 px-4 py-1.5 bg-white/5 border border-white/10 rounded-full text-gray-300 text-xs font-medium"
+                    className="inline-flex items-center gap-1.5 px-4 py-1.5 bg-white/5 border border-white/10 rounded-full text-gray-300 text-xs font-medium backdrop-blur-sm"
                   >
                     <b.icon className="w-3.5 h-3.5 text-brand-red" />
                     {b.text}
@@ -131,34 +297,56 @@ function HeroSection() {
             </AnimatedSection>
           </div>
 
-          {/* RIGHT: Video + Image Slider placeholders */}
+          {/* RIGHT: Live Financial TV + Image Slider */}
           <div className="space-y-6">
+            {/* Live Financial TV Embed — with channel switcher */}
             <AnimatedSection delay={400} direction="right">
-              <div className="relative group cursor-pointer">
-                <PlaceholderImage theme="hero" aspectRatio="aspect-video" label="Fund Overview — 90 seconds" className="rounded-2xl border border-white/10" />
-                <div className="absolute inset-0 flex items-center justify-center z-10">
-                  <div className="w-16 h-16 bg-brand-red rounded-full flex items-center justify-center group-hover:scale-110 transition-transform">
-                    <Play className="w-7 h-7 text-white ml-1" />
-                  </div>
-                </div>
-              </div>
+              <LiveFinancialTV />
             </AnimatedSection>
 
+            {/* Live Indian Market Chart (TradingView Advanced) */}
             <AnimatedSection delay={600} direction="right">
-              <div className="relative h-48 rounded-2xl overflow-hidden border border-white/10">
-                <PlaceholderImage theme={captionIdx === 0 ? 'real-estate' : captionIdx === 1 ? 'startup' : 'finance'} aspectRatio="h-full w-full" className="rounded-2xl" />
-                <div className="absolute inset-0 z-10 flex flex-col items-center justify-center text-center px-6">
-                  <p className="text-white font-semibold text-lg mb-1 transition-opacity duration-500">
-                    {captions[captionIdx]}
-                  </p>
-                  <div className="flex gap-2 justify-center mt-3">
-                    {captions.map((_, i) => (
-                      <span
-                        key={i}
-                        className={`w-2 h-2 rounded-full transition-colors ${i === captionIdx ? 'bg-brand-red' : 'bg-white/30'}`}
-                      />
-                    ))}
+              <div className="relative rounded-2xl overflow-hidden border border-white/10 bg-black/40 backdrop-blur-sm">
+                {/* Chart symbol dropdown */}
+                <div className="absolute top-2 left-2 z-20">
+                  <div className="relative">
+                    <button
+                      onClick={() => setChartDropdownOpen(!chartDropdownOpen)}
+                      className="flex items-center gap-1.5 px-2.5 py-1 bg-black/80 backdrop-blur-sm rounded-full border border-white/15 text-white text-[9px] font-semibold uppercase tracking-wider hover:bg-black/90 transition-all shadow-lg"
+                    >
+                      <TrendingUp className="w-2.5 h-2.5 text-brand-red" />
+                      {CHART_SYMBOLS[chartSymbol].label}
+                      <ChevronDown className={`w-2.5 h-2.5 transition-transform ${chartDropdownOpen ? 'rotate-180' : ''}`} />
+                    </button>
+                    {chartDropdownOpen && (
+                      <div className="absolute top-full left-0 mt-1 w-44 bg-[#111]/95 backdrop-blur-xl border border-white/10 rounded-xl shadow-2xl shadow-black/50 overflow-hidden z-50">
+                        {CHART_SYMBOLS.map((sym, i) => (
+                          <button
+                            key={sym.symbol}
+                            onClick={() => { setChartSymbol(i); setChartDropdownOpen(false) }}
+                            className={`w-full text-left px-3 py-2 text-[10px] font-medium transition-all ${
+                              i === chartSymbol
+                                ? 'bg-white/10 text-brand-red'
+                                : 'text-white/70 hover:bg-white/5 hover:text-white'
+                            }`}
+                          >
+                            {sym.label}
+                          </button>
+                        ))}
+                      </div>
+                    )}
                   </div>
+                </div>
+                {/* TradingView Advanced Chart Widget */}
+                <div className="h-56">
+                  <iframe
+                    key={CHART_SYMBOLS[chartSymbol].symbol}
+                    src={`https://s.tradingview.com/widgetembed/?symbol=${encodeURIComponent(CHART_SYMBOLS[chartSymbol].symbol)}&interval=D&hidesidetoolbar=1&symboledit=1&saveimage=0&toolbarbg=000000&studies=MASimple%409%2CRSI%4014&theme=dark&style=1&timezone=Asia%2FKolkata&withdateranges=1&showpopupbutton=0&hideideas=1&studies_overrides=%7B%7D&overrides=%7B%22paneProperties.background%22%3A%22%23000000%22%2C%22paneProperties.backgroundType%22%3A%22solid%22%2C%22scalesProperties.textColor%22%3A%22%23FFFFFF%22%2C%22scalesProperties.lineColor%22%3A%22%23333333%22%2C%22mainSeriesProperties.candleStyle.upColor%22%3A%22%2300C853%22%2C%22mainSeriesProperties.candleStyle.downColor%22%3A%22%23FF1744%22%2C%22mainSeriesProperties.candleStyle.borderUpColor%22%3A%22%2300C853%22%2C%22mainSeriesProperties.candleStyle.borderDownColor%22%3A%22%23FF1744%22%2C%22mainSeriesProperties.candleStyle.wickUpColor%22%3A%22%2300C853%22%2C%22mainSeriesProperties.candleStyle.wickDownColor%22%3A%22%23FF1744%22%7D&enabled_features=%5B%5D&disabled_features=%5B%5D&locale=en&utm_source=&utm_medium=widget&utm_campaign=chart`}
+                    title={`${CHART_SYMBOLS[chartSymbol].label} Live Chart`}
+                    className="w-full h-full border-0"
+                    loading="lazy"
+                    allow="encrypted-media"
+                  />
                 </div>
               </div>
             </AnimatedSection>
@@ -885,7 +1073,7 @@ function ContactFormSection() {
 /* ================================================================
    SECTION: Risk Quiz + Calculator CTA (after WhyChooseUs)
    ================================================================ */
-function InvestorToolsCTA({ onOpenQuiz, onOpenCalc }: { onOpenQuiz: () => void; onOpenCalc: () => void }) {
+function InvestorToolsCTA({ onOpenQuiz, onOpenCalc, onOpenAllCalc }: { onOpenQuiz: () => void; onOpenCalc: () => void; onOpenAllCalc: () => void }) {
   return (
     <section className="relative py-14 md:py-20 overflow-hidden">
       <div className="absolute inset-0 hero-gradient" />
@@ -903,15 +1091,15 @@ function InvestorToolsCTA({ onOpenQuiz, onOpenCalc }: { onOpenQuiz: () => void; 
           </p>
         </AnimatedSection>
 
-        <div className="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto items-stretch">
+        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-6xl mx-auto items-stretch">
           {/* Risk Quiz Card */}
           <AnimatedSection delay={100} className="flex">
-            <div className="card-glass text-center p-8 hover:bg-white/10 transition-all cursor-pointer group flex flex-col w-full" onClick={onOpenQuiz}>
-              <div className="w-16 h-16 rounded-2xl bg-brand-red/10 flex items-center justify-center mx-auto mb-5 group-hover:bg-brand-red transition-all duration-300">
-                <Sparkles className="w-8 h-8 text-brand-red group-hover:text-white transition-colors" />
+            <div className="card-glass text-center p-7 hover:bg-white/10 transition-all cursor-pointer group flex flex-col w-full" onClick={onOpenQuiz}>
+              <div className="w-14 h-14 rounded-2xl bg-brand-red/10 flex items-center justify-center mx-auto mb-4 group-hover:bg-brand-red transition-all duration-300">
+                <Sparkles className="w-7 h-7 text-brand-red group-hover:text-white transition-colors" />
               </div>
-              <h3 className="text-white text-xl font-bold mb-3">Risk Assessment Quiz</h3>
-              <p className="text-gray-400 text-sm leading-relaxed flex-1 mb-6">
+              <h3 className="text-white text-lg font-bold mb-2">Risk Assessment Quiz</h3>
+              <p className="text-gray-400 text-sm leading-relaxed flex-1 mb-5">
                 Answer 7 quick questions and we&apos;ll recommend the ideal investment route for your profile — Conservative, Moderate, or Aggressive.
               </p>
               <span className="inline-flex items-center justify-center gap-2 text-brand-red text-sm font-semibold group-hover:gap-3 transition-all mt-auto">
@@ -922,16 +1110,83 @@ function InvestorToolsCTA({ onOpenQuiz, onOpenCalc }: { onOpenQuiz: () => void; 
 
           {/* Calculator Card */}
           <AnimatedSection delay={200} className="flex">
-            <div className="card-glass text-center p-8 hover:bg-white/10 transition-all cursor-pointer group flex flex-col w-full" onClick={onOpenCalc}>
-              <div className="w-16 h-16 rounded-2xl bg-amber-500/10 flex items-center justify-center mx-auto mb-5 group-hover:bg-amber-500 transition-all duration-300">
-                <Calculator className="w-8 h-8 text-amber-500 group-hover:text-white transition-colors" />
+            <div className="card-glass text-center p-7 hover:bg-white/10 transition-all cursor-pointer group flex flex-col w-full" onClick={onOpenCalc}>
+              <div className="w-14 h-14 rounded-2xl bg-amber-500/10 flex items-center justify-center mx-auto mb-4 group-hover:bg-amber-500 transition-all duration-300">
+                <Calculator className="w-7 h-7 text-amber-500 group-hover:text-white transition-colors" />
               </div>
-              <h3 className="text-white text-xl font-bold mb-3">Investment Calculator</h3>
-              <p className="text-gray-400 text-sm leading-relaxed flex-1 mb-6">
-                Model returns across SIP, Debenture Route, and Direct AIF. Compare with FDs, Gold, and NIFTY 50 side by side.
+              <h3 className="text-white text-lg font-bold mb-2">Investment Calculator</h3>
+              <p className="text-gray-400 text-sm leading-relaxed flex-1 mb-5">
+                Model returns across SIP, Debenture Route, and Direct AIF. Compare FDs, gold, and NIFTY 50 side by side.
               </p>
               <span className="inline-flex items-center justify-center gap-2 text-amber-500 text-sm font-semibold group-hover:gap-3 transition-all mt-auto">
                 Calculate Returns <ArrowRight className="w-4 h-4" />
+              </span>
+            </div>
+          </AnimatedSection>
+
+          {/* NEW: All Investments & Comparison Calculator */}
+          <AnimatedSection delay={300} className="flex">
+            <div className="card-glass text-center p-7 hover:bg-white/10 transition-all cursor-pointer group flex flex-col w-full ring-1 ring-brand-red/20" onClick={onOpenAllCalc}>
+              <div className="w-14 h-14 rounded-2xl bg-emerald-500/10 flex items-center justify-center mx-auto mb-4 group-hover:bg-emerald-500 transition-all duration-300">
+                <Scale className="w-7 h-7 text-emerald-500 group-hover:text-white transition-colors" />
+              </div>
+              <div className="flex items-center justify-center gap-2 mb-2">
+                <h3 className="text-white text-lg font-bold">All Investments Comparison</h3>
+                <span className="px-1.5 py-0.5 bg-brand-red text-white text-[8px] font-bold uppercase rounded tracking-wider">New</span>
+              </div>
+              <p className="text-gray-400 text-sm leading-relaxed flex-1 mb-5">
+                Compare every Indian investment — FDs, PPF, Gold, NPS, Real Estate, Mutual Funds, PMS vs GHL. See tax impact, inflation-adjusted returns, and year-by-year growth.
+              </p>
+              <span className="inline-flex items-center justify-center gap-2 text-emerald-500 text-sm font-semibold group-hover:gap-3 transition-all mt-auto">
+                Compare All Investments <ArrowRight className="w-4 h-4" />
+              </span>
+            </div>
+          </AnimatedSection>
+
+          {/* Wealth Goal Planner */}
+          <AnimatedSection delay={400} className="flex">
+            <div className="card-glass text-center p-7 hover:bg-white/10 transition-all cursor-pointer group flex flex-col w-full" onClick={onOpenAllCalc}>
+              <div className="w-14 h-14 rounded-2xl bg-violet-500/10 flex items-center justify-center mx-auto mb-4 group-hover:bg-violet-500 transition-all duration-300">
+                <Target className="w-7 h-7 text-violet-500 group-hover:text-white transition-colors" />
+              </div>
+              <h3 className="text-white text-lg font-bold mb-2">Wealth Growth Map</h3>
+              <p className="text-gray-400 text-sm leading-relaxed flex-1 mb-5">
+                Visualize year-by-year portfolio growth. See how ₹1 Crore in GHL compounds vs traditional assets over 5, 10, or 20 years.
+              </p>
+              <span className="inline-flex items-center justify-center gap-2 text-violet-500 text-sm font-semibold group-hover:gap-3 transition-all mt-auto">
+                Map Your Growth <ArrowRight className="w-4 h-4" />
+              </span>
+            </div>
+          </AnimatedSection>
+
+          {/* Tax Impact Analyzer */}
+          <AnimatedSection delay={500} className="flex">
+            <div className="card-glass text-center p-7 hover:bg-white/10 transition-all cursor-pointer group flex flex-col w-full" onClick={onOpenAllCalc}>
+              <div className="w-14 h-14 rounded-2xl bg-sky-500/10 flex items-center justify-center mx-auto mb-4 group-hover:bg-sky-500 transition-all duration-300">
+                <IndianRupee className="w-7 h-7 text-sky-500 group-hover:text-white transition-colors" />
+              </div>
+              <h3 className="text-white text-lg font-bold mb-2">Tax Impact Analyzer</h3>
+              <p className="text-gray-400 text-sm leading-relaxed flex-1 mb-5">
+                Real wealth = what you keep after tax. Compare post-tax returns across all asset classes at your income slab (5%, 20%, 30%).
+              </p>
+              <span className="inline-flex items-center justify-center gap-2 text-sky-500 text-sm font-semibold group-hover:gap-3 transition-all mt-auto">
+                Analyze Tax Impact <ArrowRight className="w-4 h-4" />
+              </span>
+            </div>
+          </AnimatedSection>
+
+          {/* Inflation-Proof Checker */}
+          <AnimatedSection delay={600} className="flex">
+            <div className="card-glass text-center p-7 hover:bg-white/10 transition-all cursor-pointer group flex flex-col w-full" onClick={onOpenAllCalc}>
+              <div className="w-14 h-14 rounded-2xl bg-rose-500/10 flex items-center justify-center mx-auto mb-4 group-hover:bg-rose-500 transition-all duration-300">
+                <TrendingUp className="w-7 h-7 text-rose-500 group-hover:text-white transition-colors" />
+              </div>
+              <h3 className="text-white text-lg font-bold mb-2">Inflation-Proof Check</h3>
+              <p className="text-gray-400 text-sm leading-relaxed flex-1 mb-5">
+                Is your investment beating inflation? See real purchasing power after CPI erosion. Many &ldquo;safe&rdquo; investments actually lose you money.
+              </p>
+              <span className="inline-flex items-center justify-center gap-2 text-rose-500 text-sm font-semibold group-hover:gap-3 transition-all mt-auto">
+                Check Real Returns <ArrowRight className="w-4 h-4" />
               </span>
             </div>
           </AnimatedSection>
@@ -1049,6 +1304,7 @@ function InvestmentDisclaimer() {
 export default function HomePage() {
   const [quizOpen, setQuizOpen] = useState(false)
   const [calcOpen, setCalcOpen] = useState(false)
+  const [allCalcOpen, setAllCalcOpen] = useState(false)
 
   return (
     <>
@@ -1059,7 +1315,11 @@ export default function HomePage() {
       <InvestmentCapabilities />
       <VideoFeature />
       <WhyChooseUs />
-      <InvestorToolsCTA onOpenQuiz={() => setQuizOpen(true)} onOpenCalc={() => setCalcOpen(true)} />
+      <InvestorToolsCTA
+        onOpenQuiz={() => setQuizOpen(true)}
+        onOpenCalc={() => setCalcOpen(true)}
+        onOpenAllCalc={() => setAllCalcOpen(true)}
+      />
       <PortfolioSpotlight />
       <BlogSection />
       <FinancialIQTeaser />
@@ -1070,6 +1330,7 @@ export default function HomePage() {
       {/* Modals */}
       <RiskAssessmentQuiz isOpen={quizOpen} onClose={() => setQuizOpen(false)} />
       <InvestmentCalculator isOpen={calcOpen} onClose={() => setCalcOpen(false)} />
+      <AllInvestmentsCalculator isOpen={allCalcOpen} onClose={() => setAllCalcOpen(false)} />
     </>
   )
 }

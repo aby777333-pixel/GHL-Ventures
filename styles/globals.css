@@ -595,6 +595,56 @@
   background: #111;
 }
 
+/* ============================================================
+   GLOBAL COLOR OVERRIDE
+   When data-global-override is set, CSS vars override everything
+   ============================================================ */
+[data-global-override="true"] body {
+  background-color: var(--global-override-bg) !important;
+  color: var(--global-override-text) !important;
+}
+
+[data-global-override="true"] .bg-white,
+[data-global-override="true"] .bg-brand-offwhite {
+  background-color: var(--global-override-bg) !important;
+}
+
+[data-global-override="true"] .card {
+  background-color: var(--global-override-card) !important;
+  color: var(--global-override-text) !important;
+}
+
+[data-global-override="true"] .text-brand-black {
+  color: var(--global-override-text) !important;
+}
+
+[data-global-override="true"] .text-brand-grey,
+[data-global-override="true"] .section-subtitle {
+  color: var(--global-override-text) !important;
+  opacity: 0.7;
+}
+
+[data-global-override="true"] .input-field {
+  background-color: var(--global-override-card) !important;
+  color: var(--global-override-text) !important;
+  border-color: var(--global-override-text) !important;
+  border-opacity: 0.2;
+}
+
+[data-global-override="true"] h1,
+[data-global-override="true"] h2,
+[data-global-override="true"] h3,
+[data-global-override="true"] h4,
+[data-global-override="true"] h5,
+[data-global-override="true"] h6,
+[data-global-override="true"] p,
+[data-global-override="true"] span,
+[data-global-override="true"] a,
+[data-global-override="true"] li,
+[data-global-override="true"] label {
+  color: var(--global-override-text);
+}
+
 /* Smooth theme transition */
 html,
 body,
@@ -648,4 +698,410 @@ body,
 
 .toast-slide-in {
   animation: slideInFromLeft 0.4s ease-out;
+}
+
+/* ============================================================
+   SPACE / COSMOS HERO BACKGROUND
+   ============================================================ */
+
+/* Twinkling stars keyframe */
+@keyframes twinkle {
+  0%, 100% { opacity: 0.2; }
+  50% { opacity: 1; }
+}
+
+@keyframes twinkle-slow {
+  0%, 100% { opacity: 0.15; }
+  50% { opacity: 0.8; }
+}
+
+/* Horizon glow pulse */
+@keyframes horizon-glow {
+  0%, 100% { opacity: 0.4; }
+  50% { opacity: 0.7; }
+}
+
+/* Arc sweep animation */
+@keyframes arc-rotate {
+  0% { transform: rotate(-15deg); opacity: 0.3; }
+  50% { transform: rotate(0deg); opacity: 0.6; }
+  100% { transform: rotate(-15deg); opacity: 0.3; }
+}
+
+/* Shooting star */
+@keyframes shooting-star {
+  0% { transform: translateX(0) translateY(0); opacity: 0; }
+  5% { opacity: 1; }
+  15% { opacity: 1; }
+  30% { transform: translateX(300px) translateY(150px); opacity: 0; }
+  100% { transform: translateX(300px) translateY(150px); opacity: 0; }
+}
+
+/* Nebula drift */
+@keyframes nebula-drift {
+  0% { transform: translate(0, 0) scale(1); }
+  33% { transform: translate(15px, -10px) scale(1.05); }
+  66% { transform: translate(-10px, 8px) scale(0.97); }
+  100% { transform: translate(0, 0) scale(1); }
+}
+
+/* Star layer base */
+.star {
+  position: absolute;
+  border-radius: 50%;
+  background: white;
+  pointer-events: none;
+}
+
+.star-sm {
+  width: 1px;
+  height: 1px;
+  animation: twinkle 3s ease-in-out infinite;
+}
+
+.star-md {
+  width: 2px;
+  height: 2px;
+  animation: twinkle 4s ease-in-out infinite;
+  box-shadow: 0 0 3px rgba(255,255,255,0.4);
+}
+
+.star-lg {
+  width: 3px;
+  height: 3px;
+  animation: twinkle-slow 5s ease-in-out infinite;
+  box-shadow: 0 0 6px rgba(208,2,27,0.3), 0 0 12px rgba(255,255,255,0.2);
+}
+
+/* The arc / horizon line */
+.space-arc {
+  position: absolute;
+  bottom: -40%;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 160%;
+  height: 80%;
+  border-radius: 50%;
+  border: 1.5px solid rgba(208, 2, 27, 0.3);
+  box-shadow:
+    0 0 60px rgba(208, 2, 27, 0.15),
+    0 0 120px rgba(208, 2, 27, 0.08),
+    inset 0 0 60px rgba(208, 2, 27, 0.05);
+  animation: horizon-glow 6s ease-in-out infinite;
+  pointer-events: none;
+}
+
+/* Sun-ray glow along the arc — fine, subtle, curved silver light */
+.space-arc::before {
+  content: '';
+  position: absolute;
+  top: -2px;
+  left: 15%;
+  width: 70%;
+  height: 4px;
+  background: linear-gradient(90deg,
+    transparent 0%,
+    rgba(255,245,230,0.03) 10%,
+    rgba(255,250,240,0.15) 25%,
+    rgba(255,255,255,0.5) 40%,
+    rgba(255,248,220,0.85) 50%,
+    rgba(255,255,255,0.5) 60%,
+    rgba(255,250,240,0.15) 75%,
+    rgba(255,245,230,0.03) 90%,
+    transparent 100%
+  );
+  border-radius: 50%;
+  filter: blur(1.5px);
+  animation: sunrise-glow 6s ease-in-out infinite;
+}
+
+/* Wider warm sunrise bloom above the arc */
+.space-arc::after {
+  content: '';
+  position: absolute;
+  top: -35px;
+  left: 15%;
+  width: 70%;
+  height: 60px;
+  background: radial-gradient(ellipse at 50% 100%,
+    rgba(255,240,210,0.18) 0%,
+    rgba(255,235,200,0.08) 30%,
+    rgba(255,220,180,0.03) 50%,
+    transparent 70%
+  );
+  border-radius: 50%;
+  filter: blur(12px);
+  animation: sunrise-glow 6s ease-in-out infinite 1s;
+}
+
+.space-arc-inner {
+  position: absolute;
+  bottom: -35%;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 140%;
+  height: 70%;
+  border-radius: 50%;
+  border: 1px solid rgba(208, 2, 27, 0.12);
+  box-shadow:
+    0 0 40px rgba(208, 2, 27, 0.08),
+    inset 0 0 40px rgba(208, 2, 27, 0.03);
+  animation: horizon-glow 8s ease-in-out infinite 1s;
+  pointer-events: none;
+}
+
+/* Sunrise glow breathing — slow, subtle arc light */
+@keyframes sunrise-glow {
+  0%, 100% { opacity: 0.4; transform: scaleX(0.95); }
+  50% { opacity: 1; transform: scaleX(1.02); }
+}
+
+/* Horizon glow band - warm sunrise bloom with subtle sun rays */
+.space-horizon {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 40%;
+  background:
+    radial-gradient(ellipse 35% 25% at 50% 100%, rgba(255,245,220,0.06) 0%, transparent 50%),
+    radial-gradient(ellipse 60% 40% at 50% 100%, rgba(255,220,180,0.04) 0%, transparent 60%),
+    radial-gradient(ellipse 120% 100% at 50% 100%, rgba(208, 2, 27, 0.12) 0%, rgba(208, 2, 27, 0.04) 30%, transparent 70%);
+  pointer-events: none;
+}
+
+/* ---- SPACE STATION ---- */
+
+@keyframes space-station-orbit {
+  0% { transform: translateX(-120px) translateY(20px); opacity: 0; }
+  5% { opacity: 1; }
+  95% { opacity: 1; }
+  100% { transform: translateX(calc(100vw + 120px)) translateY(-40px); opacity: 0; }
+}
+
+.space-station {
+  position: absolute;
+  top: 22%;
+  left: 0;
+  pointer-events: none;
+  animation: space-station-orbit 45s linear infinite;
+}
+
+/* Station body — cross shape using pseudo-elements */
+.space-station-body {
+  position: relative;
+  width: 18px;
+  height: 3px;
+  background: linear-gradient(90deg, rgba(180,190,210,0.5), rgba(220,230,255,0.9), rgba(180,190,210,0.5));
+  border-radius: 1px;
+  box-shadow: 0 0 6px rgba(220,230,255,0.4), 0 0 12px rgba(200,210,255,0.2);
+}
+
+/* Solar panels (vertical cross bar) */
+.space-station-body::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 3px;
+  height: 12px;
+  background: linear-gradient(180deg, rgba(100,140,220,0.4), rgba(140,170,255,0.7), rgba(100,140,220,0.4));
+  border-radius: 1px;
+  box-shadow: 0 0 4px rgba(140,170,255,0.3);
+}
+
+/* Small glint that blinks */
+.space-station-body::after {
+  content: '';
+  position: absolute;
+  top: -1px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 2px;
+  height: 2px;
+  background: white;
+  border-radius: 50%;
+  animation: twinkle 2s ease-in-out infinite;
+  box-shadow: 0 0 4px white, 0 0 8px rgba(220,230,255,0.6);
+}
+
+/* ---- COMET WITH LONG TAIL ---- */
+
+@keyframes comet-streak-1 {
+  0% { transform: translate(0, 0) rotate(-35deg); opacity: 0; }
+  3% { opacity: 1; }
+  12% { opacity: 1; }
+  20% { transform: translate(500px, 280px) rotate(-35deg); opacity: 0; }
+  100% { transform: translate(500px, 280px) rotate(-35deg); opacity: 0; }
+}
+
+@keyframes comet-streak-2 {
+  0% { transform: translate(0, 0) rotate(-25deg); opacity: 0; }
+  4% { opacity: 1; }
+  15% { opacity: 1; }
+  25% { transform: translate(600px, 200px) rotate(-25deg); opacity: 0; }
+  100% { transform: translate(600px, 200px) rotate(-25deg); opacity: 0; }
+}
+
+@keyframes comet-streak-3 {
+  0% { transform: translate(0, 0) rotate(-40deg); opacity: 0; }
+  2% { opacity: 1; }
+  10% { opacity: 1; }
+  18% { transform: translate(400px, 320px) rotate(-40deg); opacity: 0; }
+  100% { transform: translate(400px, 320px) rotate(-40deg); opacity: 0; }
+}
+
+.comet {
+  position: absolute;
+  pointer-events: none;
+}
+
+.comet-head {
+  width: 4px;
+  height: 4px;
+  background: white;
+  border-radius: 50%;
+  box-shadow: 0 0 6px white, 0 0 15px rgba(200,210,255,0.6), 0 0 30px rgba(180,190,255,0.3);
+  position: relative;
+}
+
+/* Long gradient tail behind the comet */
+.comet-head::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  right: 4px;
+  transform: translateY(-50%);
+  width: 80px;
+  height: 2px;
+  background: linear-gradient(to left, rgba(255,255,255,0.8), rgba(200,210,255,0.3) 30%, rgba(180,190,255,0.1) 60%, transparent);
+  border-radius: 2px;
+}
+
+/* Wider diffuse glow tail */
+.comet-head::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  right: 2px;
+  transform: translateY(-50%);
+  width: 50px;
+  height: 6px;
+  background: linear-gradient(to left, rgba(200,210,255,0.2), transparent);
+  border-radius: 3px;
+  filter: blur(3px);
+}
+
+/* Nebula cloud patches */
+.nebula-patch {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(60px);
+  pointer-events: none;
+  animation: nebula-drift 20s ease-in-out infinite;
+}
+
+/* Shooting star trail */
+.shooting-star {
+  position: absolute;
+  width: 2px;
+  height: 2px;
+  background: white;
+  border-radius: 50%;
+  pointer-events: none;
+}
+
+.shooting-star::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 40px;
+  height: 1px;
+  background: linear-gradient(to left, white, transparent);
+  transform: rotate(-30deg);
+  transform-origin: right center;
+}
+
+/* ---- PASSENGER AIRPLANE ---- */
+
+@keyframes airplane-fly {
+  0% { transform: translateX(-60px) translateY(0); opacity: 0; }
+  3% { opacity: 0.7; }
+  97% { opacity: 0.7; }
+  100% { transform: translateX(calc(100vw + 60px)) translateY(-30px); opacity: 0; }
+}
+
+@keyframes blink-red {
+  0%, 45% { opacity: 0.15; }
+  50%, 55% { opacity: 1; }
+  60%, 100% { opacity: 0.15; }
+}
+
+@keyframes blink-white {
+  0%, 40% { opacity: 0.2; }
+  45%, 55% { opacity: 1; }
+  60%, 100% { opacity: 0.2; }
+}
+
+@keyframes blink-green {
+  0%, 50% { opacity: 0.15; }
+  55%, 60% { opacity: 1; }
+  65%, 100% { opacity: 0.15; }
+}
+
+.airplane {
+  position: absolute;
+  top: 15%;
+  left: 0;
+  pointer-events: none;
+  animation: airplane-fly 60s linear infinite 10s;
+}
+
+.airplane-body {
+  position: relative;
+  width: 14px;
+  height: 2px;
+  background: linear-gradient(90deg, rgba(180,190,210,0.2), rgba(200,210,220,0.35), rgba(180,190,210,0.2));
+  border-radius: 1px;
+}
+
+/* Three lights: red (left wing), white (belly strobe), green (right wing) */
+.airplane-light {
+  position: absolute;
+  width: 2px;
+  height: 2px;
+  border-radius: 50%;
+}
+
+.airplane-light-red {
+  top: -3px;
+  left: 2px;
+  background: #ff3333;
+  box-shadow: 0 0 4px #ff3333, 0 0 8px rgba(255,50,50,0.4);
+  animation: blink-red 1.5s ease-in-out infinite;
+}
+
+.airplane-light-white {
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: white;
+  box-shadow: 0 0 4px white, 0 0 10px rgba(255,255,255,0.5);
+  animation: blink-white 1.2s ease-in-out infinite;
+}
+
+.airplane-light-green {
+  bottom: -3px;
+  right: 2px;
+  background: #33ff66;
+  box-shadow: 0 0 4px #33ff66, 0 0 8px rgba(50,255,100,0.4);
+  animation: blink-green 1.5s ease-in-out infinite 0.3s;
+}
+
+/* ── Radio Widget Visualizer Bars ── */
+@keyframes radioBar {
+  0% { height: 15%; }
+  100% { height: 90%; }
 }

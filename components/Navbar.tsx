@@ -10,6 +10,7 @@ import MarketDataMarquee from '@/components/MarketDataMarquee'
 import CurrencyTicker from '@/components/CurrencyTicker'
 import NotificationCenter from '@/components/NotificationCenter'
 import ThemeToggle from '@/components/ThemeToggle'
+import ThemePicker from '@/components/ThemePicker'
 
 export default function Navbar() {
   const [isOpen, setIsOpen] = useState(false)
@@ -108,14 +109,14 @@ export default function Navbar() {
 
             {/* ── Desktop Nav Links (centred) ── */}
             <div className="hidden xl:flex items-center justify-center flex-1 mx-4">
-              <div className="flex items-center" style={{ gap: '4px' }}>
+              <div className="flex items-center" style={{ gap: '2px' }}>
                 {NAV_LINKS.map((link) => {
                   const isActive = pathname === link.href
                   return (
                     <Link
                       key={link.href}
                       href={link.href}
-                      className={`relative uppercase font-semibold transition-colors duration-200 px-2.5 py-1.5 rounded ${
+                      className={`relative uppercase font-semibold transition-colors duration-200 px-2 py-1.5 rounded ${
                         isActive
                           ? 'text-brand-red'
                           : scrolled
@@ -123,8 +124,8 @@ export default function Navbar() {
                           : 'text-white/80 hover:text-brand-red'
                       }`}
                       style={{
-                        fontSize: '10.5px',
-                        letterSpacing: '0.07em',
+                        fontSize: '9.5px',
+                        letterSpacing: '0.06em',
                         fontWeight: 600,
                         whiteSpace: 'nowrap',
                       }}
@@ -201,8 +202,9 @@ export default function Navbar() {
                 </Link>
               </div>
 
-              {/* Notification Center & Theme Toggle — desktop */}
+              {/* Theme Controls & Notification Center — desktop */}
               <div className="hidden xl:flex items-center space-x-0.5">
+                <ThemePicker scrolled={scrolled} />
                 <ThemeToggle scrolled={scrolled} />
                 <NotificationCenter scrolled={scrolled} />
               </div>

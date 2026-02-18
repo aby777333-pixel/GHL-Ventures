@@ -38,6 +38,7 @@ export const NAV_LINKS = [
   { label: 'Home', href: '/' },
   { label: 'About', href: '/about' },
   { label: 'Fund', href: '/fund' },
+  { label: 'Tools', href: '/tools' },
   { label: 'Blog', href: '/blog' },
   { label: 'Financial IQ', href: '/financial-iq' },
   { label: 'Portfolio', href: '/portfolio' },

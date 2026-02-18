@@ -23,6 +23,8 @@ const VoiceNavigator = dynamic(() => import('@/components/VoiceNavigator'), { ss
 const InvestorPersonality = dynamic(() => import('@/components/InvestorPersonality'), { ssr: false })
 const AvatarConcierge = dynamic(() => import('@/components/AvatarConcierge'), { ssr: false })
 const VoiceCompanion = dynamic(() => import('@/components/VoiceCompanion'), { ssr: false })
+const BusinessRadioWidget = dynamic(() => import('@/components/BusinessRadioWidget'), { ssr: false })
+const MusicRadioWidget = dynamic(() => import('@/components/MusicRadioWidget'), { ssr: false })
 
 const SITE_URL = 'https://ghl-india-ventures-2025.netlify.app'
 
@@ -265,6 +267,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <ChatWidget />
           <AvatarConcierge />
           <VoiceCompanion />
+          <BusinessRadioWidget />
+          <MusicRadioWidget />
         </ThemeProvider>
       </body>
     </html>
