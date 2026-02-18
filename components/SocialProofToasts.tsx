@@ -129,7 +129,7 @@ export default function SocialProofToasts() {
       className={`fixed z-[9990] transition-transform duration-300 ease-out ${
         isSliding ? 'translate-x-0 opacity-100' : '-translate-x-full opacity-0'
       }`}
-      style={{ bottom: '136px', left: '24px' }}
+      style={{ bottom: '216px', left: '24px' }}
     >
       <div className="relative bg-white dark:bg-[#1a1a1a] rounded-xl shadow-2xl min-w-[300px] max-w-[360px] border border-gray-100 dark:border-white/10 overflow-hidden">
         {/* Left red accent border */}

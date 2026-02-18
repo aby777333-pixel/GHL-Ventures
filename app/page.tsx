@@ -94,18 +94,18 @@ const STARS = [
 ]
 
 /* Live TV channel options — using direct video IDs for stable streams,
-   channel-based embed as fallback. CNBC-TV18 & Bloomberg have persistent 24/7 streams. */
+   channel handle-based /live embed as fallback for channels with rotating streams. */
 const LIVE_CHANNELS = [
-  { id: 'cnbc', label: 'CNBC-TV18', videoId: 'P857H4ej-MQ', channel: 'UCmRbHAgG2k2vDUvb3xsEunQ' },
-  { id: 'bloomberg', label: 'Bloomberg', videoId: null, channel: 'UCIALMKvObZNtJ6AmdCLP7Lg' },
-  { id: 'ndtv', label: 'NDTV Profit', videoId: null, channel: 'UC3uJIdRFTGgLWrUziaHbzrg' },
-  { id: 'zee', label: 'Zee Business', videoId: null, channel: 'UCkXopQ3ubd-rnXnStZqCl2w' },
-  { id: 'etnow', label: 'ET Now', videoId: null, channel: 'UCI_mwTKUhicNzFrhm33MzBQ' },
+  { id: 'cnbc', label: 'CNBC-TV18', videoId: 'P857H4ej-MQ', handle: 'CNBCTV18Digital' },
+  { id: 'bloomberg', label: 'Bloomberg', videoId: null, handle: 'Bloomberg' },
+  { id: 'ndtv', label: 'NDTV Profit', videoId: 'EN-N1xhtBqU', handle: 'NDTVProfitIndia' },
+  { id: 'zee', label: 'Zee Business', videoId: 'x0X9YeejdcM', handle: 'ZeeBusiness' },
+  { id: 'etnow', label: 'ET Now', videoId: 'C6DdVpvyoK8', handle: 'ETNow' },
 ]
 
 function getLiveEmbedUrl(ch: typeof LIVE_CHANNELS[0]) {
-  if (ch.videoId) return `https://www.youtube.com/embed/${ch.videoId}?autoplay=0`
-  return `https://www.youtube.com/embed/live_stream?channel=${ch.channel}&autoplay=0`
+  if (ch.videoId) return `https://www.youtube.com/embed/${ch.videoId}?autoplay=0&rel=0`
+  return `https://www.youtube.com/embed?listType=playlist&list=UU${ch.handle}&autoplay=0&rel=0`
 }
 
 function LiveFinancialTV() {

@@ -295,7 +295,7 @@ export default function ChatWidget() {
   return (
     <>
       {/* ── Collapsed: Avatar Button ── */}
-      <div className="fixed z-[9999]" style={{ bottom: '272px', right: '24px' }}>
+      <div className="fixed z-[9999]" style={{ bottom: '212px', right: '24px' }}>
         {/* Proactive bubble */}
         {showProactive && !isOpen && (
           <div className="absolute bottom-[84px] right-0 animate-fade-in" style={{ width: '280px' }}>
@@ -358,8 +358,8 @@ export default function ChatWidget() {
           isOpen ? 'opacity-100 translate-y-0 scale-100' : 'opacity-0 translate-y-4 scale-95 pointer-events-none'
         }`}
         style={{
-          bottom: '136px', right: '24px', width: '380px', height: '540px',
-          maxWidth: 'calc(100vw - 2rem)', maxHeight: 'calc(100vh - 176px)',
+          bottom: '80px', right: '24px', width: '380px', height: '540px',
+          maxWidth: 'calc(100vw - 2rem)', maxHeight: 'calc(100vh - 120px)',
           background: 'rgba(10,10,10,0.95)', backdropFilter: 'blur(28px)',
           border: '1px solid rgba(255,255,255,0.1)', borderRadius: '20px',
           boxShadow: '0 24px 80px rgba(0,0,0,0.6)',

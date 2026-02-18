@@ -415,7 +415,7 @@ export default function BusinessRadioWidget() {
   return (
     <>
       {/* Floating trigger button - left side */}
-      <div className="fixed z-[9994] group" style={{ bottom: '100px', left: '24px' }}>
+      <div className="fixed z-[9994] group" style={{ bottom: '148px', left: '24px' }}>
         {!isOpen && isPlaying && (
           <>
             <span className="absolute inset-0 rounded-full bg-amber-500/30 animate-ping opacity-20" />
@@ -455,7 +455,7 @@ export default function BusinessRadioWidget() {
         <div
           className="fixed z-[9995] w-80 max-w-[calc(100vw-3rem)] rounded-2xl shadow-2xl overflow-hidden transition-all duration-500"
           style={{
-            bottom: '160px',
+            bottom: '208px',
             left: '24px',
             background: 'rgba(10, 10, 10, 0.96)',
             backdropFilter: 'blur(24px)',

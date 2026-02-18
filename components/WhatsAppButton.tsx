@@ -11,7 +11,7 @@ export default function WhatsAppButton() {
   )}`
 
   return (
-    <div className="fixed z-[9998] flex items-center" style={{ bottom: '160px', right: '24px' }}>
+    <div className="fixed z-[9998] flex items-center" style={{ bottom: '100px', right: '24px' }}>
       {/* Tooltip */}
       <div
         className={`mr-3 px-4 py-2 bg-white rounded-lg shadow-lg text-sm font-medium text-brand-black whitespace-nowrap transition-all duration-300 ${
