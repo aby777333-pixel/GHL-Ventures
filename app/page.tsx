@@ -101,7 +101,7 @@ const STARS = [
    channel handle-based /live embed as fallback for channels with rotating streams. */
 const LIVE_CHANNELS = [
   { id: 'cnbc', label: 'CNBC-TV18', videoId: 'P857H4ej-MQ', handle: 'CNBCTV18Digital' },
-  { id: 'bloomberg', label: 'Bloomberg', videoId: null, handle: 'Bloomberg' },
+  { id: 'bloomberg', label: 'Bloomberg', videoId: null, handle: 'Bloomberg', channelId: 'UChirEOpgFCupRAk5etXqPaA' },
   { id: 'ndtv', label: 'NDTV Profit', videoId: 'EN-N1xhtBqU', handle: 'NDTVProfitIndia' },
   { id: 'zee', label: 'Zee Business', videoId: 'x0X9YeejdcM', handle: 'ZeeBusiness' },
   { id: 'etnow', label: 'ET Now', videoId: 'C6DdVpvyoK8', handle: 'ETNow' },
@@ -109,6 +109,7 @@ const LIVE_CHANNELS = [
 
 function getLiveEmbedUrl(ch: typeof LIVE_CHANNELS[0]) {
   if (ch.videoId) return `https://www.youtube.com/embed/${ch.videoId}?autoplay=0&rel=0`
+  if ('channelId' in ch && (ch as any).channelId) return `https://www.youtube.com/embed/live_stream?channel=${(ch as any).channelId}&autoplay=0&rel=0`
   return `https://www.youtube.com/embed?listType=playlist&list=UU${ch.handle}&autoplay=0&rel=0`
 }
 
