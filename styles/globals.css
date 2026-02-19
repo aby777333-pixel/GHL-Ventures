@@ -2147,3 +2147,127 @@ body.dashboard-active main {
   from { opacity: 0; transform: translateY(10px); }
   to { opacity: 1; transform: translateY(0); }
 }
+
+/* ══════════════════════════════════════════════════════════════
+   CITY VARIANT — Helicopters, Drones, Lasers, Rotors
+   ══════════════════════════════════════════════════════════════ */
+
+/* ── Helicopter flights ── */
+.city-helicopter {
+  position: absolute;
+  z-index: 2;
+}
+
+.city-heli-1 {
+  top: 22%;
+  animation: city-heli-fly-1 25s linear infinite;
+}
+
+@keyframes city-heli-fly-1 {
+  0% { transform: translateX(-60px); opacity: 0; }
+  3% { opacity: 0.85; }
+  50% { transform: translateX(50vw) translateY(-15px); }
+  97% { opacity: 0.85; }
+  100% { transform: translateX(calc(100vw + 60px)) translateY(-30px); opacity: 0; }
+}
+
+.city-heli-2 {
+  top: 14%;
+  animation: city-heli-fly-2 32s linear infinite;
+  animation-delay: 8s;
+}
+
+@keyframes city-heli-fly-2 {
+  0% { transform: translateX(calc(100vw + 40px)); opacity: 0; }
+  3% { opacity: 0.7; }
+  50% { transform: translateX(50vw) translateY(10px); }
+  97% { opacity: 0.7; }
+  100% { transform: translateX(-40px) translateY(20px); opacity: 0; }
+}
+
+/* ── Drone flights — smaller, more agile paths ── */
+.city-drone {
+  position: absolute;
+  z-index: 2;
+}
+
+.city-drone-1 {
+  top: 35%;
+  animation: city-drone-fly-1 18s ease-in-out infinite;
+}
+
+@keyframes city-drone-fly-1 {
+  0% { transform: translateX(20vw) translateY(0); opacity: 0; }
+  5% { opacity: 0.9; }
+  25% { transform: translateX(35vw) translateY(-12px); }
+  50% { transform: translateX(50vw) translateY(5px); }
+  75% { transform: translateX(65vw) translateY(-8px); }
+  95% { opacity: 0.9; }
+  100% { transform: translateX(80vw) translateY(0); opacity: 0; }
+}
+
+.city-drone-2 {
+  top: 28%;
+  animation: city-drone-fly-2 22s ease-in-out infinite;
+  animation-delay: 5s;
+}
+
+@keyframes city-drone-fly-2 {
+  0% { transform: translateX(70vw) translateY(0); opacity: 0; }
+  5% { opacity: 0.85; }
+  25% { transform: translateX(55vw) translateY(-8px); }
+  50% { transform: translateX(40vw) translateY(6px); }
+  75% { transform: translateX(25vw) translateY(-10px); }
+  95% { opacity: 0.85; }
+  100% { transform: translateX(10vw) translateY(0); opacity: 0; }
+}
+
+.city-drone-3 {
+  top: 18%;
+  animation: city-drone-fly-3 28s ease-in-out infinite;
+  animation-delay: 12s;
+}
+
+@keyframes city-drone-fly-3 {
+  0% { transform: translateX(10vw) translateY(0); opacity: 0; }
+  5% { opacity: 0.7; }
+  33% { transform: translateX(30vw) translateY(-6px); }
+  66% { transform: translateX(55vw) translateY(4px); }
+  95% { opacity: 0.7; }
+  100% { transform: translateX(75vw) translateY(-3px); opacity: 0; }
+}
+
+/* ── Rotor spin effect ── */
+.city-rotor {
+  animation: city-rotor-spin 0.15s linear infinite;
+  transform-origin: center;
+}
+
+@keyframes city-rotor-spin {
+  0% { opacity: 0.15; }
+  50% { opacity: 0.05; }
+  100% { opacity: 0.15; }
+}
+
+/* ── Laser beam pulse animations ── */
+.city-laser-1 { animation: city-laser-pulse-1 2.5s ease-in-out infinite; }
+.city-laser-2 { animation: city-laser-pulse-2 3.2s ease-in-out infinite; }
+.city-laser-3 { animation: city-laser-pulse-3 2.8s ease-in-out infinite; }
+.city-laser-4 { animation: city-laser-pulse-4 3.5s ease-in-out infinite; }
+
+@keyframes city-laser-pulse-1 {
+  0%, 100% { opacity: 0.6; }
+  50% { opacity: 1; }
+}
+@keyframes city-laser-pulse-2 {
+  0%, 100% { opacity: 0.5; }
+  50% { opacity: 0.9; }
+}
+@keyframes city-laser-pulse-3 {
+  0%, 100% { opacity: 0.4; }
+  50% { opacity: 0.85; }
+}
+@keyframes city-laser-pulse-4 {
+  0%, 100% { opacity: 0.5; }
+  50% { opacity: 0.95; }
+}

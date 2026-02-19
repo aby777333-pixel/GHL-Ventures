@@ -9,21 +9,22 @@ import {
   Briefcase, Globe, Layers, Building2, Users, Landmark,
   FileText, Lock, Scale, PieChart, Lightbulb, Zap,
   CheckCircle, Home, ChevronRight, ChevronDown, ChevronUp,
-  DollarSign, Eye, Award, ShieldCheck, Activity
+  DollarSign, Eye, Award, ShieldCheck, Activity, Play
 } from 'lucide-react'
 import SpaceHero from '@/components/SpaceHero'
+import PlaceholderImage from '@/components/PlaceholderImage'
 
 /* ───────────────────────────── 1. HERO — City Theme ───────────────────────────── */
 function WhyAIFsHero() {
   return (
-    <section className="relative min-h-[80vh] flex items-center gradient-dark overflow-hidden">
+    <section className="relative min-h-[60vh] flex items-center gradient-dark overflow-hidden">
       <SpaceHero variant="city" />
       <div className="absolute inset-0 opacity-10">
-        <div className="absolute top-20 left-20 w-96 h-96 bg-brand-red rounded-full blur-3xl" />
-        <div className="absolute bottom-10 right-10 w-64 h-64 bg-amber-500 rounded-full blur-3xl" />
+        <div className="absolute top-16 left-20 w-80 h-80 bg-brand-red rounded-full blur-3xl" />
+        <div className="absolute bottom-10 right-10 w-56 h-56 bg-amber-500 rounded-full blur-3xl" />
       </div>
 
-      <div className="container-max mx-auto px-4 sm:px-6 lg:px-8 relative z-10 pt-40 pb-32">
+      <div className="container-max mx-auto px-4 sm:px-6 lg:px-8 relative z-10 pt-32 pb-20">
         <AnimatedSection>
           {/* Breadcrumb */}
           <nav className="flex items-center space-x-2 text-sm text-gray-400 mb-8">
@@ -593,28 +594,74 @@ function FAQ() {
           <h2 className="section-title mt-2 text-brand-black">AIF Questions, Answered</h2>
         </AnimatedSection>
 
-        <AnimatedSection delay={150}>
-          <div className="mt-8 max-w-3xl">
-            {faqs.map((faq, i) => (
-              <div key={i} className="border-b border-gray-200">
-                <button
-                  onClick={() => setOpenIndex(openIndex === i ? null : i)}
-                  className="flex justify-between items-center w-full py-5 text-left group"
-                >
-                  <span className="font-semibold text-brand-black group-hover:text-brand-red transition-colors pr-4">{faq.q}</span>
-                  {openIndex === i ? (
-                    <ChevronUp className="w-5 h-5 text-brand-red shrink-0" />
-                  ) : (
-                    <ChevronDown className="w-5 h-5 text-brand-grey shrink-0" />
-                  )}
-                </button>
-                <div className={`overflow-hidden transition-all duration-300 ${openIndex === i ? 'max-h-[400px] pb-5' : 'max-h-0'}`}>
-                  <p className="text-brand-grey text-sm leading-relaxed">{faq.a}</p>
+        <div className="grid lg:grid-cols-5 gap-8 mt-8">
+          {/* FAQ Accordion — left side (3 cols) */}
+          <AnimatedSection delay={150}>
+            <div className="lg:col-span-3">
+              {faqs.map((faq, i) => (
+                <div key={i} className="border-b border-gray-200">
+                  <button
+                    onClick={() => setOpenIndex(openIndex === i ? null : i)}
+                    className="flex justify-between items-center w-full py-5 text-left group"
+                  >
+                    <span className="font-semibold text-brand-black group-hover:text-brand-red transition-colors pr-4">{faq.q}</span>
+                    {openIndex === i ? (
+                      <ChevronUp className="w-5 h-5 text-brand-red shrink-0" />
+                    ) : (
+                      <ChevronDown className="w-5 h-5 text-brand-grey shrink-0" />
+                    )}
+                  </button>
+                  <div className={`overflow-hidden transition-all duration-300 ${openIndex === i ? 'max-h-[400px] pb-5' : 'max-h-0'}`}>
+                    <p className="text-brand-grey text-sm leading-relaxed">{faq.a}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </AnimatedSection>
+
+          {/* Video Placeholder — right side (2 cols) */}
+          <AnimatedSection delay={300} direction="right">
+            <div className="lg:col-span-2">
+              <div className="sticky top-24">
+                <div className="relative group cursor-pointer">
+                  <PlaceholderImage
+                    theme="education"
+                    aspectRatio="aspect-video"
+                    label="Understanding AIFs — Video Guide"
+                    className="rounded-2xl border border-gray-200 shadow-lg"
+                  />
+                  {/* Play button overlay */}
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <div className="w-16 h-16 bg-brand-red/90 rounded-full flex items-center justify-center shadow-xl group-hover:scale-110 group-hover:bg-brand-red transition-all duration-300">
+                      <Play className="w-7 h-7 text-white ml-1" fill="white" />
+                    </div>
+                  </div>
+                </div>
+                <p className="text-center text-brand-grey text-xs mt-3">
+                  Watch our comprehensive video guide on Alternative Investment Funds
+                </p>
+
+                {/* Quick stats below video */}
+                <div className="mt-5 bg-white rounded-xl border border-gray-200 p-5">
+                  <h4 className="font-bold text-brand-black text-sm mb-3">Quick Reference</h4>
+                  <div className="space-y-3">
+                    {[
+                      { label: 'Min Investment', value: '\u20B91 Crore' },
+                      { label: 'Fund Category', value: 'Category II AIF' },
+                      { label: 'SEBI Reg No.', value: BRAND.sebi },
+                      { label: 'Typical Tenure', value: '3\u20137 Years' },
+                    ].map((item) => (
+                      <div key={item.label} className="flex justify-between items-center">
+                        <span className="text-brand-grey text-xs">{item.label}</span>
+                        <span className="text-brand-black text-xs font-semibold">{item.value}</span>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               </div>
-            ))}
-          </div>
-        </AnimatedSection>
+            </div>
+          </AnimatedSection>
+        </div>
       </div>
     </section>
   )

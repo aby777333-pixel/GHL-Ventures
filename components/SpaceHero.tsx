@@ -736,101 +736,292 @@ export default function SpaceHero({ variant }: SpaceHeroProps) {
 
       {/* ═══════════════════════════════════════════════════════════
           CITY — Why AIFs Page
-          Urban skyline silhouette + financial district + metro glow
+          Urban skyline + laser beams + helicopters + drones
          ═══════════════════════════════════════════════════════════ */}
       {variant === 'city' && (
         <>
           {/* City skyline silhouette — buildings across the bottom */}
-          <svg className="absolute bottom-0 left-0 right-0 w-full h-[45%]" viewBox="0 0 1440 400" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
-            {/* Far background buildings — darker, shorter */}
-            <rect x="20" y="160" width="50" height="240" fill="rgba(15,15,25,0.9)" />
-            <rect x="75" y="140" width="35" height="260" fill="rgba(12,12,22,0.85)" />
-            <rect x="120" y="180" width="60" height="220" fill="rgba(18,18,28,0.9)" />
-            <rect x="200" y="100" width="45" height="300" fill="rgba(10,10,18,0.95)" />
-            <rect x="250" y="150" width="55" height="250" fill="rgba(15,15,25,0.88)" />
-            <rect x="320" y="80" width="40" height="320" fill="rgba(10,10,18,0.95)" />
-            <rect x="365" y="130" width="50" height="270" fill="rgba(15,15,25,0.9)" />
-            <rect x="430" y="60" width="55" height="340" fill="rgba(8,8,15,0.95)" />
-            <rect x="490" y="120" width="40" height="280" fill="rgba(14,14,24,0.9)" />
-            <rect x="540" y="90" width="50" height="310" fill="rgba(10,10,18,0.95)" />
-            <rect x="600" y="140" width="45" height="260" fill="rgba(16,16,26,0.88)" />
-            <rect x="660" y="50" width="60" height="350" fill="rgba(8,8,15,0.95)" />
-            <rect x="725" y="110" width="40" height="290" fill="rgba(13,13,23,0.9)" />
-            <rect x="780" y="70" width="55" height="330" fill="rgba(10,10,18,0.95)" />
-            <rect x="845" y="130" width="45" height="270" fill="rgba(15,15,25,0.88)" />
-            <rect x="900" y="90" width="50" height="310" fill="rgba(10,10,18,0.95)" />
-            <rect x="960" y="40" width="65" height="360" fill="rgba(8,8,15,0.95)" />
-            <rect x="1030" y="100" width="45" height="300" fill="rgba(12,12,22,0.9)" />
-            <rect x="1090" y="150" width="55" height="250" fill="rgba(16,16,26,0.88)" />
-            <rect x="1150" y="80" width="40" height="320" fill="rgba(10,10,18,0.95)" />
-            <rect x="1200" y="120" width="50" height="280" fill="rgba(14,14,24,0.9)" />
-            <rect x="1260" y="60" width="55" height="340" fill="rgba(10,10,18,0.95)" />
-            <rect x="1330" y="140" width="45" height="260" fill="rgba(15,15,25,0.9)" />
-            <rect x="1385" y="100" width="55" height="300" fill="rgba(12,12,22,0.85)" />
+          <svg className="absolute bottom-0 left-0 right-0 w-full h-[55%]" viewBox="0 0 1440 500" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+              {/* Laser beam gradients */}
+              <linearGradient id="laser-red" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor="rgba(208,2,27,0)" />
+                <stop offset="15%" stopColor="rgba(208,2,27,0.7)" />
+                <stop offset="50%" stopColor="rgba(208,2,27,0.15)" />
+                <stop offset="100%" stopColor="rgba(208,2,27,0)" />
+              </linearGradient>
+              <linearGradient id="laser-blue" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor="rgba(60,130,255,0)" />
+                <stop offset="15%" stopColor="rgba(60,130,255,0.6)" />
+                <stop offset="50%" stopColor="rgba(60,130,255,0.12)" />
+                <stop offset="100%" stopColor="rgba(60,130,255,0)" />
+              </linearGradient>
+              <linearGradient id="laser-white" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor="rgba(255,255,255,0)" />
+                <stop offset="15%" stopColor="rgba(255,255,255,0.5)" />
+                <stop offset="50%" stopColor="rgba(255,255,255,0.08)" />
+                <stop offset="100%" stopColor="rgba(255,255,255,0)" />
+              </linearGradient>
+              {/* Diagonal laser gradients for angled beams */}
+              <linearGradient id="laser-red-diag" x1="0" y1="1" x2="0.3" y2="0">
+                <stop offset="0%" stopColor="rgba(208,2,27,0.6)" />
+                <stop offset="40%" stopColor="rgba(208,2,27,0.15)" />
+                <stop offset="100%" stopColor="rgba(208,2,27,0)" />
+              </linearGradient>
+              <linearGradient id="laser-blue-diag" x1="0" y1="1" x2="-0.3" y2="0">
+                <stop offset="0%" stopColor="rgba(60,130,255,0.5)" />
+                <stop offset="40%" stopColor="rgba(60,130,255,0.1)" />
+                <stop offset="100%" stopColor="rgba(60,130,255,0)" />
+              </linearGradient>
+            </defs>
 
-            {/* Antenna/spire details on tall buildings */}
-            <line x1="458" y1="60" x2="458" y2="30" stroke="rgba(208,2,27,0.6)" strokeWidth="2" />
-            <circle cx="458" cy="28" r="2" fill="#D0021B" opacity="0.8" className="animate-twinkle-1" />
-            <line x1="690" y1="50" x2="690" y2="18" stroke="rgba(208,2,27,0.6)" strokeWidth="2" />
-            <circle cx="690" cy="16" r="2" fill="#D0021B" opacity="0.8" className="animate-twinkle-2" />
-            <line x1="993" y1="40" x2="993" y2="8" stroke="rgba(208,2,27,0.6)" strokeWidth="2" />
-            <circle cx="993" cy="6" r="2.5" fill="#D0021B" opacity="0.9" className="animate-twinkle-3" />
+            {/* ── Buildings — varied heights, tighter spacing ── */}
+            {/* Layer 1: Far background buildings */}
+            <rect x="0" y="220" width="45" height="280" fill="rgba(12,12,22,0.85)" />
+            <rect x="48" y="180" width="38" height="320" fill="rgba(10,10,18,0.9)" />
+            <rect x="90" y="240" width="55" height="260" fill="rgba(16,16,26,0.85)" />
+            <rect x="150" y="140" width="42" height="360" fill="rgba(8,8,15,0.95)" />
+            <rect x="195" y="200" width="50" height="300" fill="rgba(14,14,24,0.88)" />
+            <rect x="250" y="100" width="48" height="400" fill="rgba(6,6,12,0.95)" />
+            <rect x="302" y="160" width="40" height="340" fill="rgba(12,12,22,0.9)" />
+            <rect x="345" y="80" width="55" height="420" fill="rgba(5,5,10,0.97)" />
+            <rect x="405" y="130" width="38" height="370" fill="rgba(10,10,18,0.92)" />
+            <rect x="448" y="60" width="52" height="440" fill="rgba(4,4,8,0.97)" />
+            <rect x="505" y="150" width="42" height="350" fill="rgba(12,12,22,0.88)" />
+            <rect x="552" y="90" width="50" height="410" fill="rgba(6,6,12,0.95)" />
+            <rect x="608" y="180" width="38" height="320" fill="rgba(14,14,24,0.87)" />
+            <rect x="650" y="45" width="60" height="455" fill="rgba(3,3,7,0.97)" />
+            <rect x="715" y="120" width="42" height="380" fill="rgba(10,10,18,0.92)" />
+            <rect x="762" y="70" width="55" height="430" fill="rgba(5,5,10,0.96)" />
+            <rect x="822" y="160" width="40" height="340" fill="rgba(12,12,22,0.88)" />
+            <rect x="866" y="100" width="48" height="400" fill="rgba(7,7,14,0.95)" />
+            <rect x="920" y="55" width="58" height="445" fill="rgba(4,4,8,0.97)" />
+            <rect x="982" y="130" width="42" height="370" fill="rgba(11,11,20,0.9)" />
+            <rect x="1030" y="80" width="50" height="420" fill="rgba(6,6,12,0.95)" />
+            <rect x="1085" y="170" width="38" height="330" fill="rgba(14,14,24,0.87)" />
+            <rect x="1128" y="50" width="55" height="450" fill="rgba(3,3,7,0.97)" />
+            <rect x="1188" y="140" width="42" height="360" fill="rgba(10,10,18,0.92)" />
+            <rect x="1235" y="90" width="50" height="410" fill="rgba(6,6,12,0.95)" />
+            <rect x="1290" y="110" width="45" height="390" fill="rgba(8,8,15,0.93)" />
+            <rect x="1340" y="70" width="52" height="430" fill="rgba(5,5,10,0.96)" />
+            <rect x="1395" y="150" width="50" height="350" fill="rgba(12,12,22,0.88)" />
 
-            {/* Building window lights — scattered yellow/white dots */}
-            {/* Block 1 */}
-            <rect x="207" y="115" width="3" height="3" fill="rgba(255,220,100,0.6)" />
-            <rect x="215" y="130" width="3" height="3" fill="rgba(255,220,100,0.4)" />
-            <rect x="225" y="160" width="3" height="3" fill="rgba(255,255,200,0.5)" />
-            <rect x="210" y="200" width="3" height="3" fill="rgba(255,220,100,0.5)" />
-            <rect x="230" y="250" width="3" height="3" fill="rgba(255,220,100,0.3)" />
-            {/* Block 2 */}
-            <rect x="325" y="95" width="3" height="3" fill="rgba(255,220,100,0.6)" />
-            <rect x="340" y="120" width="3" height="3" fill="rgba(255,255,200,0.5)" />
-            <rect x="330" y="180" width="3" height="3" fill="rgba(255,220,100,0.4)" />
-            <rect x="345" y="230" width="3" height="3" fill="rgba(255,220,100,0.3)" />
-            {/* Block 3 — tallest */}
-            <rect x="438" y="75" width="3" height="3" fill="rgba(255,220,100,0.7)" />
-            <rect x="448" y="95" width="3" height="3" fill="rgba(255,255,200,0.5)" />
-            <rect x="460" y="120" width="3" height="3" fill="rgba(255,220,100,0.5)" />
-            <rect x="440" y="160" width="3" height="3" fill="rgba(255,220,100,0.4)" />
-            <rect x="468" y="200" width="3" height="3" fill="rgba(255,255,200,0.4)" />
-            <rect x="445" y="250" width="3" height="3" fill="rgba(255,220,100,0.3)" />
-            {/* Block 4 */}
-            <rect x="668" y="65" width="3" height="3" fill="rgba(255,220,100,0.7)" />
-            <rect x="680" y="90" width="3" height="3" fill="rgba(255,255,200,0.5)" />
-            <rect x="670" y="130" width="3" height="3" fill="rgba(255,220,100,0.5)" />
-            <rect x="695" y="170" width="3" height="3" fill="rgba(255,220,100,0.4)" />
-            <rect x="675" y="220" width="3" height="3" fill="rgba(255,255,200,0.3)" />
-            {/* Block 5 */}
-            <rect x="790" y="85" width="3" height="3" fill="rgba(255,220,100,0.6)" />
-            <rect x="800" y="110" width="3" height="3" fill="rgba(255,255,200,0.5)" />
-            <rect x="815" y="160" width="3" height="3" fill="rgba(255,220,100,0.4)" />
-            <rect x="795" y="210" width="3" height="3" fill="rgba(255,220,100,0.3)" />
-            {/* Block 6 */}
-            <rect x="970" y="55" width="3" height="3" fill="rgba(255,220,100,0.7)" />
-            <rect x="985" y="80" width="3" height="3" fill="rgba(255,255,200,0.5)" />
-            <rect x="975" y="120" width="3" height="3" fill="rgba(255,220,100,0.5)" />
-            <rect x="1000" y="160" width="3" height="3" fill="rgba(255,220,100,0.4)" />
-            <rect x="980" y="210" width="3" height="3" fill="rgba(255,220,100,0.3)" />
-            <rect x="1005" y="260" width="3" height="3" fill="rgba(255,255,200,0.3)" />
-            {/* Block 7 */}
-            <rect x="1160" y="95" width="3" height="3" fill="rgba(255,220,100,0.6)" />
-            <rect x="1170" y="130" width="3" height="3" fill="rgba(255,255,200,0.5)" />
-            <rect x="1155" y="180" width="3" height="3" fill="rgba(255,220,100,0.4)" />
-            {/* Block 8 */}
-            <rect x="1270" y="75" width="3" height="3" fill="rgba(255,220,100,0.6)" />
-            <rect x="1285" y="100" width="3" height="3" fill="rgba(255,255,200,0.5)" />
-            <rect x="1275" y="150" width="3" height="3" fill="rgba(255,220,100,0.4)" />
-            <rect x="1290" y="200" width="3" height="3" fill="rgba(255,220,100,0.3)" />
+            {/* ── Antenna/spire details on tallest buildings ── */}
+            <line x1="474" y1="60" x2="474" y2="20" stroke="rgba(255,255,255,0.3)" strokeWidth="1.5" />
+            <circle cx="474" cy="18" r="2.5" fill="#D0021B" opacity="0.9" className="animate-twinkle-1" />
+            <line x1="680" y1="45" x2="680" y2="5" stroke="rgba(255,255,255,0.3)" strokeWidth="1.5" />
+            <circle cx="680" cy="3" r="2.5" fill="#D0021B" opacity="0.9" className="animate-twinkle-2" />
+            <line x1="949" y1="55" x2="949" y2="12" stroke="rgba(255,255,255,0.3)" strokeWidth="1.5" />
+            <circle cx="949" cy="10" r="3" fill="#D0021B" opacity="0.9" className="animate-twinkle-3" />
+            <line x1="1155" y1="50" x2="1155" y2="8" stroke="rgba(255,255,255,0.3)" strokeWidth="1.5" />
+            <circle cx="1155" cy="6" r="2.5" fill="#D0021B" opacity="0.9" className="animate-twinkle-1" />
+            <line x1="345" y1="80" x2="345" y2="48" stroke="rgba(255,255,255,0.25)" strokeWidth="1" />
+            <circle cx="345" cy="46" r="2" fill="#D0021B" opacity="0.8" className="animate-twinkle-2" />
+            <line x1="1366" y1="70" x2="1366" y2="35" stroke="rgba(255,255,255,0.25)" strokeWidth="1" />
+            <circle cx="1366" cy="33" r="2" fill="#D0021B" opacity="0.8" className="animate-twinkle-3" />
+
+            {/* ── Laser Beams from building tops — vertical + angled ── */}
+            {/* Laser 1 — red vertical from tallest */}
+            <rect x="678" y="-200" width="3" height="250" fill="url(#laser-red)" className="city-laser city-laser-1" />
+            {/* Laser 2 — blue vertical */}
+            <rect x="947" y="-180" width="2.5" height="240" fill="url(#laser-blue)" className="city-laser city-laser-2" />
+            {/* Laser 3 — white vertical */}
+            <rect x="1153" y="-160" width="2" height="220" fill="url(#laser-white)" className="city-laser city-laser-3" />
+            {/* Laser 4 — red vertical from left tower */}
+            <rect x="472" y="-150" width="2.5" height="215" fill="url(#laser-red)" className="city-laser city-laser-4" />
+            {/* Laser 5 — angled red beam from center-left tower */}
+            <line x1="345" y1="48" x2="280" y2="-120" stroke="rgba(208,2,27,0.3)" strokeWidth="1.5" className="city-laser city-laser-5">
+              <animate attributeName="opacity" values="0.3;0.6;0.3" dur="3s" repeatCount="indefinite" />
+            </line>
+            {/* Laser 6 — angled blue beam from right tower */}
+            <line x1="1366" y1="33" x2="1430" y2="-100" stroke="rgba(60,130,255,0.25)" strokeWidth="1.5" className="city-laser city-laser-6">
+              <animate attributeName="opacity" values="0.25;0.5;0.25" dur="4s" repeatCount="indefinite" />
+            </line>
+            {/* Laser 7 — crossing angled beam */}
+            <line x1="680" y1="3" x2="600" y2="-150" stroke="rgba(208,2,27,0.2)" strokeWidth="1" className="city-laser city-laser-7">
+              <animate attributeName="opacity" values="0.2;0.45;0.2" dur="3.5s" repeatCount="indefinite" />
+            </line>
+            {/* Laser 8 — blue angled from center tower */}
+            <line x1="949" y1="10" x2="1020" y2="-140" stroke="rgba(60,130,255,0.2)" strokeWidth="1" className="city-laser city-laser-8">
+              <animate attributeName="opacity" values="0.2;0.4;0.2" dur="2.8s" repeatCount="indefinite" />
+            </line>
+
+            {/* Laser glow halos at source points */}
+            <circle cx="680" cy="3" r="8" fill="rgba(208,2,27,0.15)" className="city-laser city-laser-1">
+              <animate attributeName="r" values="6;12;6" dur="2s" repeatCount="indefinite" />
+            </circle>
+            <circle cx="949" cy="10" r="7" fill="rgba(60,130,255,0.12)" className="city-laser city-laser-2">
+              <animate attributeName="r" values="5;10;5" dur="2.5s" repeatCount="indefinite" />
+            </circle>
+            <circle cx="1155" cy="6" r="6" fill="rgba(255,255,255,0.1)" className="city-laser city-laser-3">
+              <animate attributeName="r" values="4;9;4" dur="3s" repeatCount="indefinite" />
+            </circle>
+
+            {/* ── Building window lights — more dense ── */}
+            {/* Building at x=250 */}
+            <rect x="258" y="115" width="3" height="3" fill="rgba(255,220,100,0.6)" />
+            <rect x="265" y="145" width="3" height="3" fill="rgba(255,220,100,0.4)" />
+            <rect x="272" y="200" width="3" height="3" fill="rgba(255,255,200,0.5)" />
+            <rect x="260" y="280" width="3" height="3" fill="rgba(255,220,100,0.3)" />
+            {/* Building at x=345 */}
+            <rect x="355" y="95" width="3" height="3" fill="rgba(255,220,100,0.6)" />
+            <rect x="365" y="130" width="3" height="3" fill="rgba(255,255,200,0.5)" />
+            <rect x="358" y="200" width="3" height="3" fill="rgba(255,220,100,0.4)" />
+            <rect x="370" y="280" width="3" height="3" fill="rgba(255,220,100,0.3)" />
+            {/* Building at x=448 */}
+            <rect x="455" y="75" width="3" height="3" fill="rgba(255,220,100,0.7)" />
+            <rect x="465" y="110" width="3" height="3" fill="rgba(255,255,200,0.5)" />
+            <rect x="458" y="160" width="3" height="3" fill="rgba(255,220,100,0.4)" />
+            <rect x="470" y="230" width="3" height="3" fill="rgba(255,255,200,0.4)" />
+            <rect x="460" y="310" width="3" height="3" fill="rgba(255,220,100,0.3)" />
+            {/* Building at x=650 (tallest) */}
+            <rect x="658" y="60" width="3" height="3" fill="rgba(255,220,100,0.7)" />
+            <rect x="670" y="95" width="3" height="3" fill="rgba(255,255,200,0.6)" />
+            <rect x="662" y="150" width="3" height="3" fill="rgba(255,220,100,0.5)" />
+            <rect x="685" y="200" width="3" height="3" fill="rgba(255,220,100,0.4)" />
+            <rect x="668" y="270" width="3" height="3" fill="rgba(255,255,200,0.3)" />
+            <rect x="690" y="340" width="3" height="3" fill="rgba(255,220,100,0.25)" />
+            {/* Building at x=762 */}
+            <rect x="772" y="85" width="3" height="3" fill="rgba(255,220,100,0.6)" />
+            <rect x="782" y="130" width="3" height="3" fill="rgba(255,255,200,0.5)" />
+            <rect x="775" y="200" width="3" height="3" fill="rgba(255,220,100,0.4)" />
+            <rect x="790" y="280" width="3" height="3" fill="rgba(255,220,100,0.3)" />
+            {/* Building at x=920 */}
+            <rect x="930" y="70" width="3" height="3" fill="rgba(255,220,100,0.7)" />
+            <rect x="942" y="110" width="3" height="3" fill="rgba(255,255,200,0.5)" />
+            <rect x="935" y="170" width="3" height="3" fill="rgba(255,220,100,0.4)" />
+            <rect x="950" y="240" width="3" height="3" fill="rgba(255,220,100,0.3)" />
+            <rect x="938" y="330" width="3" height="3" fill="rgba(255,255,200,0.25)" />
+            {/* Building at x=1128 */}
+            <rect x="1138" y="65" width="3" height="3" fill="rgba(255,220,100,0.7)" />
+            <rect x="1148" y="100" width="3" height="3" fill="rgba(255,255,200,0.5)" />
+            <rect x="1140" y="160" width="3" height="3" fill="rgba(255,220,100,0.4)" />
+            <rect x="1155" y="230" width="3" height="3" fill="rgba(255,220,100,0.3)" />
+            {/* Building at x=1340 */}
+            <rect x="1350" y="85" width="3" height="3" fill="rgba(255,220,100,0.6)" />
+            <rect x="1362" y="130" width="3" height="3" fill="rgba(255,255,200,0.5)" />
+            <rect x="1355" y="200" width="3" height="3" fill="rgba(255,220,100,0.4)" />
+            <rect x="1368" y="290" width="3" height="3" fill="rgba(255,220,100,0.3)" />
           </svg>
 
+          {/* ── Helicopter 1 — flying left to right, mid-altitude ── */}
+          <div className="city-helicopter city-heli-1">
+            <svg width="28" height="14" viewBox="0 0 28 14" fill="none" xmlns="http://www.w3.org/2000/svg">
+              {/* Body */}
+              <ellipse cx="14" cy="9" rx="8" ry="4" fill="rgba(20,20,35,0.9)" />
+              {/* Cockpit window */}
+              <ellipse cx="19" cy="8" rx="3" ry="2.5" fill="rgba(60,130,255,0.3)" />
+              {/* Tail boom */}
+              <line x1="6" y1="9" x2="1" y2="7" stroke="rgba(20,20,35,0.8)" strokeWidth="2" />
+              {/* Tail rotor */}
+              <line x1="0" y1="5" x2="2" y2="9" stroke="rgba(255,255,255,0.25)" strokeWidth="0.5" />
+              {/* Main rotor — spinning blade */}
+              <line x1="2" y1="5" x2="26" y2="5" stroke="rgba(255,255,255,0.15)" strokeWidth="0.5" className="city-rotor" />
+              {/* Rotor hub */}
+              <circle cx="14" cy="5" r="1" fill="rgba(255,255,255,0.3)" />
+              {/* Skids */}
+              <line x1="10" y1="13" x2="20" y2="13" stroke="rgba(255,255,255,0.15)" strokeWidth="0.5" />
+              {/* Navigation light — red blinking */}
+              <circle cx="22" cy="8" r="1" fill="#D0021B" opacity="0.9">
+                <animate attributeName="opacity" values="0.9;0.2;0.9" dur="1s" repeatCount="indefinite" />
+              </circle>
+              {/* Tail light — white blinking */}
+              <circle cx="1" cy="7" r="0.8" fill="white" opacity="0.7">
+                <animate attributeName="opacity" values="0.7;0.1;0.7" dur="1.5s" repeatCount="indefinite" />
+              </circle>
+            </svg>
+          </div>
+
+          {/* ── Helicopter 2 — flying right to left, higher ── */}
+          <div className="city-helicopter city-heli-2">
+            <svg width="22" height="11" viewBox="0 0 28 14" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ transform: 'scaleX(-1)' }}>
+              <ellipse cx="14" cy="9" rx="8" ry="4" fill="rgba(20,20,35,0.8)" />
+              <ellipse cx="19" cy="8" rx="3" ry="2.5" fill="rgba(60,130,255,0.2)" />
+              <line x1="6" y1="9" x2="1" y2="7" stroke="rgba(20,20,35,0.7)" strokeWidth="2" />
+              <line x1="0" y1="5" x2="2" y2="9" stroke="rgba(255,255,255,0.2)" strokeWidth="0.5" />
+              <line x1="2" y1="5" x2="26" y2="5" stroke="rgba(255,255,255,0.1)" strokeWidth="0.5" className="city-rotor" />
+              <circle cx="14" cy="5" r="1" fill="rgba(255,255,255,0.25)" />
+              <line x1="10" y1="13" x2="20" y2="13" stroke="rgba(255,255,255,0.12)" strokeWidth="0.5" />
+              <circle cx="22" cy="8" r="1" fill="#D0021B" opacity="0.7">
+                <animate attributeName="opacity" values="0.7;0.15;0.7" dur="1.2s" repeatCount="indefinite" />
+              </circle>
+              <circle cx="1" cy="7" r="0.8" fill="white" opacity="0.5">
+                <animate attributeName="opacity" values="0.5;0.1;0.5" dur="1.8s" repeatCount="indefinite" />
+              </circle>
+            </svg>
+          </div>
+
+          {/* ── Drone 1 — small, hovering near buildings ── */}
+          <div className="city-drone city-drone-1">
+            <svg width="12" height="8" viewBox="0 0 16 10" fill="none" xmlns="http://www.w3.org/2000/svg">
+              {/* Body */}
+              <rect x="5" y="4" width="6" height="3" rx="1" fill="rgba(30,30,50,0.8)" />
+              {/* Arms */}
+              <line x1="5" y1="5" x2="1" y2="3" stroke="rgba(255,255,255,0.2)" strokeWidth="0.5" />
+              <line x1="11" y1="5" x2="15" y2="3" stroke="rgba(255,255,255,0.2)" strokeWidth="0.5" />
+              <line x1="5" y1="6" x2="1" y2="8" stroke="rgba(255,255,255,0.2)" strokeWidth="0.5" />
+              <line x1="11" y1="6" x2="15" y2="8" stroke="rgba(255,255,255,0.2)" strokeWidth="0.5" />
+              {/* Propeller discs */}
+              <circle cx="1" cy="3" r="2" fill="rgba(255,255,255,0.06)" className="city-rotor" />
+              <circle cx="15" cy="3" r="2" fill="rgba(255,255,255,0.06)" className="city-rotor" />
+              <circle cx="1" cy="8" r="2" fill="rgba(255,255,255,0.06)" className="city-rotor" />
+              <circle cx="15" cy="8" r="2" fill="rgba(255,255,255,0.06)" className="city-rotor" />
+              {/* LEDs — green front, red back */}
+              <circle cx="8" cy="4" r="0.7" fill="#34D399" opacity="0.9">
+                <animate attributeName="opacity" values="0.9;0.3;0.9" dur="0.8s" repeatCount="indefinite" />
+              </circle>
+              <circle cx="8" cy="7" r="0.7" fill="#D0021B" opacity="0.8">
+                <animate attributeName="opacity" values="0.8;0.2;0.8" dur="0.8s" repeatCount="indefinite" />
+              </circle>
+            </svg>
+          </div>
+
+          {/* ── Drone 2 — slightly larger, different trajectory ── */}
+          <div className="city-drone city-drone-2">
+            <svg width="14" height="9" viewBox="0 0 16 10" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <rect x="5" y="4" width="6" height="3" rx="1" fill="rgba(25,25,45,0.8)" />
+              <line x1="5" y1="5" x2="1" y2="3" stroke="rgba(255,255,255,0.18)" strokeWidth="0.5" />
+              <line x1="11" y1="5" x2="15" y2="3" stroke="rgba(255,255,255,0.18)" strokeWidth="0.5" />
+              <line x1="5" y1="6" x2="1" y2="8" stroke="rgba(255,255,255,0.18)" strokeWidth="0.5" />
+              <line x1="11" y1="6" x2="15" y2="8" stroke="rgba(255,255,255,0.18)" strokeWidth="0.5" />
+              <circle cx="1" cy="3" r="2" fill="rgba(255,255,255,0.05)" className="city-rotor" />
+              <circle cx="15" cy="3" r="2" fill="rgba(255,255,255,0.05)" className="city-rotor" />
+              <circle cx="1" cy="8" r="2" fill="rgba(255,255,255,0.05)" className="city-rotor" />
+              <circle cx="15" cy="8" r="2" fill="rgba(255,255,255,0.05)" className="city-rotor" />
+              <circle cx="8" cy="4" r="0.7" fill="#34D399" opacity="0.8">
+                <animate attributeName="opacity" values="0.8;0.2;0.8" dur="0.7s" repeatCount="indefinite" />
+              </circle>
+              <circle cx="8" cy="7" r="0.7" fill="#D0021B" opacity="0.7">
+                <animate attributeName="opacity" values="0.7;0.15;0.7" dur="0.7s" repeatCount="indefinite" />
+              </circle>
+            </svg>
+          </div>
+
+          {/* ── Drone 3 — small distant drone ── */}
+          <div className="city-drone city-drone-3">
+            <svg width="8" height="5" viewBox="0 0 16 10" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <rect x="5" y="4" width="6" height="3" rx="1" fill="rgba(20,20,40,0.7)" />
+              <line x1="5" y1="5" x2="2" y2="3" stroke="rgba(255,255,255,0.12)" strokeWidth="0.5" />
+              <line x1="11" y1="5" x2="14" y2="3" stroke="rgba(255,255,255,0.12)" strokeWidth="0.5" />
+              <circle cx="8" cy="4" r="0.8" fill="#34D399" opacity="0.7">
+                <animate attributeName="opacity" values="0.7;0.2;0.7" dur="0.6s" repeatCount="indefinite" />
+              </circle>
+            </svg>
+          </div>
+
           {/* City ground glow — warm amber light pollution */}
-          <div className="absolute bottom-0 left-0 right-0 h-[30%]"
-            style={{ background: 'linear-gradient(to top, rgba(208,2,27,0.08) 0%, rgba(255,140,50,0.04) 40%, transparent 100%)' }} />
+          <div className="absolute bottom-0 left-0 right-0 h-[35%]"
+            style={{ background: 'linear-gradient(to top, rgba(208,2,27,0.1) 0%, rgba(255,140,50,0.05) 40%, transparent 100%)' }} />
 
           {/* Horizon glow line */}
-          <div className="absolute bottom-[42%] left-0 right-0 h-[2px]"
-            style={{ background: 'linear-gradient(to right, transparent, rgba(208,2,27,0.15) 20%, rgba(255,180,80,0.12) 50%, rgba(208,2,27,0.15) 80%, transparent)', filter: 'blur(1px)' }} />
+          <div className="absolute bottom-[52%] left-0 right-0 h-[2px]"
+            style={{ background: 'linear-gradient(to right, transparent, rgba(208,2,27,0.2) 15%, rgba(255,180,80,0.15) 35%, rgba(60,130,255,0.12) 55%, rgba(208,2,27,0.2) 75%, transparent)', filter: 'blur(1px)' }} />
+
+          {/* Laser scatter glow in sky */}
+          <div className="absolute top-[5%] left-[45%] w-[200px] h-[200px] rounded-full animate-pulse-slow"
+            style={{ background: 'radial-gradient(circle, rgba(208,2,27,0.04) 0%, transparent 70%)', filter: 'blur(40px)' }} />
+          <div className="absolute top-[10%] right-[30%] w-[180px] h-[180px] rounded-full animate-pulse-slow-2"
+            style={{ background: 'radial-gradient(circle, rgba(60,130,255,0.03) 0%, transparent 70%)', filter: 'blur(35px)' }} />
 
           {/* Financial district ambient glow — warm metropolitan light */}
           <div className="absolute bottom-[10%] left-[30%] w-[500px] h-[200px] rounded-full animate-pulse-slow"
@@ -838,9 +1029,9 @@ export default function SpaceHero({ variant }: SpaceHeroProps) {
           <div className="absolute bottom-[15%] right-[20%] w-[400px] h-[180px] rounded-full animate-pulse-slow-2"
             style={{ background: 'radial-gradient(ellipse, rgba(208,2,27,0.05) 0%, transparent 70%)', filter: 'blur(40px)' }} />
 
-          {/* Upper atmosphere glow — subtle */}
+          {/* Upper atmosphere glow */}
           <div className="absolute top-[15%] left-[20%] w-72 h-72 bg-brand-red/5 rounded-full blur-[100px] animate-pulse-slow" />
-          <div className="absolute top-[25%] right-[15%] w-64 h-64 bg-amber-500/4 rounded-full blur-[80px] animate-pulse-slow-2" />
+          <div className="absolute top-[25%] right-[15%] w-64 h-64 bg-blue-500/4 rounded-full blur-[80px] animate-pulse-slow-2" />
         </>
       )}
     </div>
