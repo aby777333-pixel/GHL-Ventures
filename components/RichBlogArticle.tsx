@@ -349,7 +349,6 @@ export default function RichBlogArticle({ article, children, relatedArticles, se
               <ShareSidebar title={article.title} slug={article.slug} />
             </div>
             <div className="flex-grow max-w-3xl">
-              <AnimatedSection>
                 <div className="prose prose-lg max-w-none">
                   {children}
                 </div>
@@ -388,19 +387,21 @@ export default function RichBlogArticle({ article, children, relatedArticles, se
                 </div>
 
                 {/* ─── CTA: Want to Invest? ─── */}
-                <div className="mt-12 bg-gradient-to-r from-brand-black to-gray-800 rounded-2xl p-8 text-center">
-                  <h3 className="text-2xl font-bold text-white mb-3">Ready to Get Started?</h3>
-                  <p className="text-gray-400 text-sm mb-6 max-w-lg mx-auto">
-                    Learn how our SEBI-registered Category II AIF can help you access
-                    institutional-grade alternative investments starting at ₹1 Crore.
-                  </p>
-                  <Link
-                    href="/contact"
-                    className="inline-flex items-center px-8 py-3 bg-brand-red text-white font-bold rounded-lg hover:bg-red-700 transition-all"
-                  >
-                    Schedule a Consultation <ArrowRight className="ml-2 w-4 h-4" />
-                  </Link>
-                </div>
+                <AnimatedSection>
+                  <div className="mt-12 bg-gradient-to-r from-brand-black to-gray-800 rounded-2xl p-8 text-center">
+                    <h3 className="text-2xl font-bold text-white mb-3">Ready to Get Started?</h3>
+                    <p className="text-gray-400 text-sm mb-6 max-w-lg mx-auto">
+                      Learn how our SEBI-registered Category II AIF can help you access
+                      institutional-grade alternative investments starting at ₹1 Crore.
+                    </p>
+                    <Link
+                      href="/contact"
+                      className="inline-flex items-center px-8 py-3 bg-brand-red text-white font-bold rounded-lg hover:bg-red-700 transition-all"
+                    >
+                      Schedule a Consultation <ArrowRight className="ml-2 w-4 h-4" />
+                    </Link>
+                  </div>
+                </AnimatedSection>
 
                 {/* ─── Disclaimer ─── */}
                 <div className="mt-8 bg-brand-offwhite rounded-xl p-6 border-l-4 border-brand-red">
@@ -420,7 +421,6 @@ export default function RichBlogArticle({ article, children, relatedArticles, se
                     </div>
                   </div>
                 </div>
-              </AnimatedSection>
             </div>
           </div>
         </div>
