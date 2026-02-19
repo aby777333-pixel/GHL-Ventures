@@ -1,20 +1,38 @@
 'use client'
 
 /**
- * SpaceHero — Vivid, clearly visible space-themed animated background overlays.
- * Each variant is visually distinct and HIGHLY visible with bold colors and prominent animations.
- * CSS-only animations for performance.
+ * SpaceHero — Jaw-dropping, vivid celestial animated backgrounds.
+ * Each variant is visually SPECTACULAR with dramatic effects people will wonder about.
+ * Pure CSS animations + SVG for performance.
+ *
+ * Variants:
+ *   constellation — About page: bold constellation lines + twinkling stars
+ *   nebula        — Fund page: vivid nebula clouds + bright pulsars
+ *   rocket        — Blog page: bright shooting stars + rocket with fire trail
+ *   satellite     — Portfolio page: visible orbits + glowing satellite + planet
+ *   lunar         — Contact page: large luminous moon + floating particles
+ *   pulsar        — Financial IQ page: bold pulsing rings + streaming particles
+ *   hubble        — Downloads page: vivid galaxies + cosmic dust
+ *   lightning     — Disclaimer page: bright lightning + storm flashes
+ *   aurora        — Home hero: northern lights aurora borealis + meteor shower
+ *   blackhole     — Fund/Direct AIF: gravitational lensing black hole + accretion disk
+ *   supernova     — Fund/Debenture: expanding supernova explosion + shockwave
+ *   wormhole      — Tools page: spinning wormhole tunnel + time-space distortion
  */
 
 type SpaceVariant =
-  | 'constellation'   // About — bold constellation lines + bright twinkling stars
-  | 'nebula'          // Fund — vivid nebula clouds + bright pulsars
-  | 'rocket'          // Blog — bright shooting stars + rocket with fire trail
-  | 'satellite'       // Portfolio — visible orbits + glowing satellite + planet
-  | 'lunar'           // Contact — large luminous moon + floating particles
-  | 'pulsar'          // Financial IQ — bold pulsing rings + streaming particles
-  | 'hubble'          // Downloads — vivid galaxies + cosmic dust
-  | 'lightning'       // Disclaimer — bright lightning + storm flashes
+  | 'constellation'
+  | 'nebula'
+  | 'rocket'
+  | 'satellite'
+  | 'lunar'
+  | 'pulsar'
+  | 'hubble'
+  | 'lightning'
+  | 'aurora'
+  | 'blackhole'
+  | 'supernova'
+  | 'wormhole'
 
 interface SpaceHeroProps {
   variant: SpaceVariant
@@ -352,6 +370,218 @@ export default function SpaceHero({ variant }: SpaceHeroProps) {
 
           {/* Rain effect */}
           <div className="space-rain" />
+        </>
+      )}
+
+      {/* ═══════════════════════════════════════════════════════════
+          ★ AURORA — Home Page Hero ★
+          Northern Lights Aurora Borealis + Meteor Shower + Solar Wind
+          THE most spectacular variant — this is what visitors see first
+         ═══════════════════════════════════════════════════════════ */}
+      {variant === 'aurora' && (
+        <>
+          {/* Aurora Borealis curtain layers — flowing bands of light */}
+          <div className="aurora-curtain-1" />
+          <div className="aurora-curtain-2" />
+          <div className="aurora-curtain-3" />
+
+          {/* Aurora reflection glow on bottom */}
+          <div className="absolute bottom-0 left-0 right-0 h-[30%]"
+            style={{ background: 'linear-gradient(to top, rgba(0,255,128,0.04), rgba(0,200,255,0.02), transparent)' }} />
+
+          {/* Meteor shower — multiple bright streaks */}
+          <div className="meteor-streak meteor-1" />
+          <div className="meteor-streak meteor-2" />
+          <div className="meteor-streak meteor-3" />
+          <div className="meteor-streak meteor-4" />
+          <div className="meteor-streak meteor-5" />
+          <div className="meteor-streak meteor-6" />
+          <div className="meteor-streak meteor-7" />
+
+          {/* Solar wind particles flowing */}
+          <div className="solar-wind-particles" />
+          <div className="solar-wind-particles-2" />
+
+          {/* Bright Venus-like star */}
+          <div className="absolute top-[12%] right-[18%]">
+            <div className="w-4 h-4 rounded-full animate-pulsar-core"
+              style={{ background: 'radial-gradient(circle, #fff 0%, rgba(255,200,100,0.8) 40%, transparent 70%)', boxShadow: '0 0 20px rgba(255,255,255,0.8), 0 0 40px rgba(255,200,100,0.4), 0 0 80px rgba(255,150,50,0.2)' }} />
+            {/* Cross-flare / diffraction spikes */}
+            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[60px] h-[1px] animate-star-flare"
+              style={{ background: 'linear-gradient(to right, transparent, rgba(255,255,255,0.6), transparent)' }} />
+            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[1px] h-[60px] animate-star-flare"
+              style={{ background: 'linear-gradient(to bottom, transparent, rgba(255,255,255,0.6), transparent)' }} />
+            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[40px] h-[1px] rotate-45 animate-star-flare-2"
+              style={{ background: 'linear-gradient(to right, transparent, rgba(255,200,100,0.4), transparent)' }} />
+            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[40px] h-[1px] -rotate-45 animate-star-flare-2"
+              style={{ background: 'linear-gradient(to right, transparent, rgba(255,200,100,0.4), transparent)' }} />
+          </div>
+
+          {/* Distant nebula wash */}
+          <div className="absolute top-[5%] left-[5%] w-[500px] h-[300px] rounded-full blur-[120px] animate-nebula-drift"
+            style={{ background: 'radial-gradient(circle, rgba(208,2,27,0.08) 0%, rgba(88,28,135,0.04) 50%, transparent 70%)' }} />
+
+          {/* Ambient cosmic glow */}
+          <div className="absolute top-[30%] right-[10%] w-96 h-96 bg-brand-red/5 rounded-full blur-[100px] animate-pulse-slow" />
+          <div className="absolute bottom-[10%] left-[30%] w-64 h-64 bg-emerald-500/3 rounded-full blur-[80px] animate-pulse-slow-2" />
+        </>
+      )}
+
+      {/* ═══════════════════════════════════════════════════════════
+          ★ BLACK HOLE — Fund/Direct AIF ★
+          Gravitational lensing black hole + accretion disk + matter jets
+         ═══════════════════════════════════════════════════════════ */}
+      {variant === 'blackhole' && (
+        <>
+          {/* Gravitational lensing light bend — warped light ring */}
+          <div className="absolute top-[38%] right-[20%] -translate-y-1/2">
+            {/* Event horizon — pitch black core */}
+            <div className="w-24 h-24 rounded-full bg-black relative"
+              style={{ boxShadow: '0 0 0 3px rgba(255,150,50,0.15), 0 0 60px rgba(0,0,0,0.8), inset 0 0 40px rgba(0,0,0,1)' }}>
+              {/* Photon ring — bright orange ring around the event horizon */}
+              <div className="absolute -inset-1 rounded-full border-2 border-orange-400/50 animate-blackhole-photon-ring"
+                style={{ boxShadow: '0 0 15px rgba(255,165,0,0.3), 0 0 30px rgba(255,100,0,0.15), inset 0 0 15px rgba(255,165,0,0.2)' }} />
+            </div>
+
+            {/* Accretion disk — tilted elliptical ring of superheated matter */}
+            <div className="absolute top-1/2 left-1/2 w-[280px] h-[80px] -translate-x-1/2 -translate-y-1/2 animate-accretion-spin"
+              style={{ transform: 'translate(-50%, -50%) rotateX(75deg)' }}>
+              <div className="absolute inset-0 rounded-full"
+                style={{ background: 'conic-gradient(from 0deg, rgba(255,100,0,0.5) 0%, rgba(255,200,50,0.7) 25%, rgba(255,255,200,0.4) 50%, rgba(255,100,0,0.6) 75%, rgba(255,100,0,0.5) 100%)', filter: 'blur(3px)' }} />
+              <div className="absolute inset-[30%] rounded-full bg-black" />
+            </div>
+
+            {/* Second inner accretion ring */}
+            <div className="absolute top-1/2 left-1/2 w-[180px] h-[50px] -translate-x-1/2 -translate-y-1/2 animate-accretion-spin-reverse"
+              style={{ transform: 'translate(-50%, -50%) rotateX(70deg) rotateZ(10deg)' }}>
+              <div className="absolute inset-0 rounded-full"
+                style={{ background: 'conic-gradient(from 90deg, rgba(255,200,100,0.3) 0%, rgba(255,255,200,0.5) 30%, rgba(255,150,50,0.2) 60%, rgba(255,200,100,0.4) 100%)', filter: 'blur(2px)' }} />
+              <div className="absolute inset-[35%] rounded-full bg-black" />
+            </div>
+
+            {/* Relativistic jet — matter beam shooting from poles */}
+            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 w-[3px] h-[200px] -translate-y-full animate-blackhole-jet"
+              style={{ background: 'linear-gradient(to top, rgba(100,150,255,0.6), rgba(150,200,255,0.4), rgba(200,220,255,0.2), transparent)', filter: 'blur(1px)' }} />
+            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 w-[3px] h-[200px] animate-blackhole-jet-bottom"
+              style={{ background: 'linear-gradient(to bottom, rgba(100,150,255,0.6), rgba(150,200,255,0.4), rgba(200,220,255,0.2), transparent)', filter: 'blur(1px)' }} />
+
+            {/* Jet glow cones */}
+            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-full w-[40px] h-[150px] animate-blackhole-jet"
+              style={{ background: 'linear-gradient(to top, rgba(100,150,255,0.08), transparent)', clipPath: 'polygon(40% 100%, 60% 100%, 100% 0%, 0% 0%)', filter: 'blur(4px)' }} />
+          </div>
+
+          {/* Gravitational lensing arcs */}
+          <svg className="absolute inset-0 w-full h-full" xmlns="http://www.w3.org/2000/svg">
+            <ellipse cx="78%" cy="38%" rx="180" ry="100" fill="none" stroke="rgba(255,200,100,0.06)" strokeWidth="40" className="animate-pulse-slow"
+              style={{ filter: 'blur(15px)' }} />
+          </svg>
+
+          {/* Infalling matter streaks */}
+          <div className="blackhole-matter-streak-1" />
+          <div className="blackhole-matter-streak-2" />
+          <div className="blackhole-matter-streak-3" />
+
+          {/* Ambient glow */}
+          <div className="absolute top-[30%] right-[15%] w-80 h-80 bg-orange-500/8 rounded-full blur-[100px] animate-pulse-slow" />
+        </>
+      )}
+
+      {/* ═══════════════════════════════════════════════════════════
+          ★ SUPERNOVA — Fund/Debenture Route ★
+          Expanding supernova explosion + shockwave rings + debris
+         ═══════════════════════════════════════════════════════════ */}
+      {variant === 'supernova' && (
+        <>
+          {/* Central supernova core — white-hot center */}
+          <div className="absolute top-[35%] left-[45%] -translate-x-1/2 -translate-y-1/2">
+            <div className="w-8 h-8 rounded-full animate-supernova-core"
+              style={{ background: 'radial-gradient(circle, #fff 0%, #ffe4b5 30%, #ff6b00 60%, rgba(208,2,27,0.8) 80%, transparent 100%)', boxShadow: '0 0 40px rgba(255,255,255,0.7), 0 0 80px rgba(255,165,0,0.4), 0 0 120px rgba(208,2,27,0.2)' }} />
+
+            {/* Expanding shockwave rings */}
+            <div className="absolute -inset-4 rounded-full border-2 border-white/50 animate-supernova-ring-1" />
+            <div className="absolute -inset-8 rounded-full border-2 border-orange-400/40 animate-supernova-ring-2" />
+            <div className="absolute -inset-16 rounded-full border border-red-500/30 animate-supernova-ring-3" />
+            <div className="absolute -inset-28 rounded-full border border-brand-red/20 animate-supernova-ring-4" />
+            <div className="absolute -inset-44 rounded-full border border-violet-500/10 animate-supernova-ring-5" />
+          </div>
+
+          {/* Supernova gas ejecta — vivid color clouds expanding */}
+          <div className="absolute top-[30%] left-[40%] w-[400px] h-[400px] animate-supernova-ejecta-1"
+            style={{ background: 'radial-gradient(circle, rgba(255,100,0,0.15) 0%, rgba(208,2,27,0.08) 40%, transparent 70%)', filter: 'blur(30px)' }} />
+          <div className="absolute top-[25%] left-[50%] w-[350px] h-[350px] animate-supernova-ejecta-2"
+            style={{ background: 'radial-gradient(circle, rgba(100,150,255,0.12) 0%, rgba(139,92,246,0.06) 40%, transparent 70%)', filter: 'blur(25px)' }} />
+          <div className="absolute top-[40%] left-[35%] w-[300px] h-[300px] animate-supernova-ejecta-3"
+            style={{ background: 'radial-gradient(circle, rgba(255,200,50,0.1) 0%, rgba(255,100,0,0.05) 50%, transparent 70%)', filter: 'blur(20px)' }} />
+
+          {/* Flying debris / stellar remnants */}
+          <div className="supernova-debris supernova-debris-1" />
+          <div className="supernova-debris supernova-debris-2" />
+          <div className="supernova-debris supernova-debris-3" />
+          <div className="supernova-debris supernova-debris-4" />
+          <div className="supernova-debris supernova-debris-5" />
+          <div className="supernova-debris supernova-debris-6" />
+
+          {/* Light echo ripple */}
+          <div className="absolute top-[35%] left-[45%] w-4 h-4 -translate-x-1/2 -translate-y-1/2 rounded-full animate-supernova-light-echo"
+            style={{ boxShadow: '0 0 0 0 rgba(255,200,100,0.3)' }} />
+
+          {/* Ambient supernova glow */}
+          <div className="absolute top-[25%] left-[35%] w-96 h-96 bg-orange-500/6 rounded-full blur-[120px] animate-pulse-slow" />
+        </>
+      )}
+
+      {/* ═══════════════════════════════════════════════════════════
+          ★ WORMHOLE — Tools Page ★
+          Spinning wormhole tunnel + time-space distortion + energy rings
+         ═══════════════════════════════════════════════════════════ */}
+      {variant === 'wormhole' && (
+        <>
+          {/* Wormhole tunnel — concentric spinning rings creating depth illusion */}
+          <div className="absolute top-[40%] left-[50%] -translate-x-1/2 -translate-y-1/2">
+            {/* Outermost ring */}
+            <div className="absolute -inset-[120px] rounded-full border border-violet-500/10 animate-wormhole-ring-1"
+              style={{ transform: 'rotateX(70deg)' }} />
+            <div className="absolute -inset-[100px] rounded-full border border-brand-red/15 animate-wormhole-ring-2"
+              style={{ transform: 'rotateX(70deg)' }} />
+            <div className="absolute -inset-[80px] rounded-full border-2 border-violet-400/20 animate-wormhole-ring-3"
+              style={{ transform: 'rotateX(70deg)' }} />
+            <div className="absolute -inset-[60px] rounded-full border-2 border-blue-400/25 animate-wormhole-ring-4"
+              style={{ transform: 'rotateX(70deg)' }} />
+            <div className="absolute -inset-[40px] rounded-full border-2 border-cyan-400/30 animate-wormhole-ring-5"
+              style={{ transform: 'rotateX(70deg)' }} />
+            <div className="absolute -inset-[20px] rounded-full border-2 border-white/35 animate-wormhole-ring-6"
+              style={{ transform: 'rotateX(70deg)' }} />
+
+            {/* Wormhole center — bright core opening */}
+            <div className="w-10 h-10 rounded-full"
+              style={{ background: 'radial-gradient(circle, rgba(255,255,255,0.9) 0%, rgba(100,200,255,0.5) 30%, rgba(139,92,246,0.3) 60%, transparent 100%)', boxShadow: '0 0 30px rgba(255,255,255,0.5), 0 0 60px rgba(100,200,255,0.3), 0 0 100px rgba(139,92,246,0.15)' }} />
+          </div>
+
+          {/* Time-space distortion grid lines */}
+          <svg className="absolute inset-0 w-full h-full opacity-[0.08]" xmlns="http://www.w3.org/2000/svg">
+            {/* Horizontal distortion lines curving toward wormhole */}
+            <path d="M0,20% Q50%,25% 100%,20%" fill="none" stroke="rgba(139,92,246,0.5)" strokeWidth="0.5" />
+            <path d="M0,40% Q50%,48% 100%,40%" fill="none" stroke="rgba(139,92,246,0.4)" strokeWidth="0.5" />
+            <path d="M0,60% Q50%,52% 100%,60%" fill="none" stroke="rgba(139,92,246,0.4)" strokeWidth="0.5" />
+            <path d="M0,80% Q50%,75% 100%,80%" fill="none" stroke="rgba(139,92,246,0.5)" strokeWidth="0.5" />
+          </svg>
+
+          {/* Energy streams spiraling into the wormhole */}
+          <div className="wormhole-energy-stream wormhole-stream-1" />
+          <div className="wormhole-energy-stream wormhole-stream-2" />
+          <div className="wormhole-energy-stream wormhole-stream-3" />
+
+          {/* Space-time fabric distortion glow */}
+          <div className="absolute top-[35%] left-[45%] w-[500px] h-[500px] -translate-x-1/2 -translate-y-1/2 rounded-full animate-wormhole-distortion"
+            style={{ background: 'radial-gradient(circle, rgba(139,92,246,0.1) 0%, rgba(59,130,246,0.05) 30%, transparent 60%)', filter: 'blur(40px)' }} />
+
+          {/* Floating time particles */}
+          <div className="space-particles-vivid" />
+          <div className="space-particles-vivid-2" />
+
+          {/* Ambient glow */}
+          <div className="absolute top-[30%] left-[40%] w-80 h-80 bg-violet-500/8 rounded-full blur-[100px] animate-pulse-slow" />
+          <div className="absolute bottom-[20%] right-[20%] w-64 h-64 bg-cyan-500/5 rounded-full blur-[80px] animate-pulse-slow-2" />
         </>
       )}
     </div>

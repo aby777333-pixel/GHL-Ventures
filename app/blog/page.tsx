@@ -162,7 +162,7 @@ export default function BlogPage() {
       <section className="bg-white py-12">
         <div className="container-max mx-auto px-4 sm:px-6 lg:px-8">
           <AnimatedSection>
-            <div className="relative rounded-2xl overflow-hidden bg-gradient-to-r from-brand-black via-gray-900 to-brand-black border border-gray-800 group">
+            <div className="relative rounded-2xl overflow-hidden bg-gradient-to-r from-brand-black via-gray-900 to-brand-black border border-gray-800 group glow-card-red">
               <div className="grid lg:grid-cols-2 gap-0">
                 {/* Image placeholder */}
                 <div className="min-h-[280px]">
@@ -262,11 +262,12 @@ export default function BlogPage() {
             <div className="columns-1 md:columns-2 lg:columns-3 gap-8 space-y-8">
               {filtered.map((post, i) => {
                 const mappedCat = getCategoryForPost(post)
+                const glowColors = ['glow-card-red', 'glow-card-blue', 'glow-card-violet', 'glow-card-emerald', 'glow-card-amber', 'glow-card-cyan']
 
                 return (
                   <AnimatedSection key={post.slug} delay={i * 80}>
                     <div
-                      className="card group hover:-translate-y-1 break-inside-avoid"
+                      className={`card group hover:-translate-y-1 break-inside-avoid ${glowColors[i % glowColors.length]}`}
                       id={post.slug}
                     >
                       {/* 16:9 Image placeholder */}

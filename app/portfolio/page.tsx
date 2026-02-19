@@ -222,7 +222,7 @@ export default function PortfolioPage() {
 
                 return (
                   <AnimatedSection key={company.name} delay={i * 100}>
-                    <div className="card group hover:-translate-y-2 h-full flex flex-col">
+                    <div className={"card group hover:-translate-y-2 h-full flex flex-col " + ['glow-card-amber','glow-card-blue','glow-card-violet','glow-card-emerald','glow-card-rose','glow-card-cyan'][i % 6]}>
                       {/* Image placeholder */}
                       <div className="relative mb-5">
                         <PlaceholderImage
@@ -323,7 +323,7 @@ export default function PortfolioPage() {
               },
             ].map((item, i) => (
               <AnimatedSection key={item.title} delay={i * 100}>
-                <div className="card group hover:-translate-y-2 h-full text-center">
+                <div className={"card group hover:-translate-y-2 h-full text-center " + ['glow-card-amber','glow-card-blue','glow-card-violet','glow-card-emerald'][i % 4]}>
                   <div
                     className={`w-16 h-16 bg-gradient-to-br ${item.gradient} rounded-2xl flex items-center justify-center mx-auto mb-5 group-hover:scale-110 transition-transform`}
                   >

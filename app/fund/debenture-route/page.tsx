@@ -8,12 +8,14 @@ import {
   Wallet, Heart, Home, Briefcase, Clock,
   ArrowLeft, Star, IndianRupee, ShieldCheck, BarChart3
 } from 'lucide-react'
+import SpaceHero from '@/components/SpaceHero'
 
 export default function DebentureRoutePage() {
   return (
     <>
       {/* Hero */}
       <section className="relative pt-40 pb-16 overflow-hidden" style={{ background: 'linear-gradient(135deg, #0A0A0A 0%, #1a1a2e 50%, #0A0A0A 100%)' }}>
+        <SpaceHero variant="supernova" />
         <div className="absolute inset-0 overflow-hidden pointer-events-none">
           <div className="absolute top-20 left-20 w-80 h-80 bg-brand-red/8 rounded-full blur-3xl" />
           <div className="absolute bottom-10 right-10 w-60 h-60 bg-blue-500/5 rounded-full blur-3xl" />
@@ -71,7 +73,7 @@ export default function DebentureRoutePage() {
               { icon: ShieldCheck, title: 'Professionally Managed', value: 'Expert Team', desc: 'Your capital is managed by institutional-grade professionals' },
             ].map((item, i) => (
               <AnimatedSection key={item.title} delay={i * 100}>
-                <div className="card text-center h-full group hover:-translate-y-1">
+                <div className={`card text-center h-full group hover:-translate-y-1 ${['glow-card-red','glow-card-blue','glow-card-violet','glow-card-amber'][i % 4]}`}>
                   <div className="w-12 h-12 bg-brand-red/10 rounded-xl flex items-center justify-center mx-auto mb-4 group-hover:bg-brand-red transition-all">
                     <item.icon className="w-6 h-6 text-brand-red group-hover:text-white transition-all" />
                   </div>
@@ -101,7 +103,7 @@ export default function DebentureRoutePage() {
                 { step: '03', title: 'You Earn', desc: 'Receive structured returns based on the pre-defined framework. Your family benefits from a steady alternative income stream.' },
               ].map((item, i) => (
                 <AnimatedSection key={item.step} delay={i * 150}>
-                  <div className="card text-center h-full">
+                  <div className={`card text-center h-full ${['glow-card-cyan','glow-card-emerald','glow-card-amber'][i % 3]}`}>
                     <div className="w-10 h-10 bg-brand-red text-white rounded-full flex items-center justify-center mx-auto mb-4 text-sm font-bold">
                       {item.step}
                     </div>
@@ -133,7 +135,7 @@ export default function DebentureRoutePage() {
               { icon: Users, title: 'Not Just for Crorepatis', desc: 'At ₹10 Lakhs, alternative investment exposure is now accessible to salaried professionals across India — not just ultra-HNIs.' },
             ].map((item, i) => (
               <AnimatedSection key={item.title} delay={i * 80}>
-                <div className="flex gap-4">
+                <div className={`card flex gap-4 h-full ${['glow-card-red','glow-card-blue','glow-card-violet','glow-card-emerald','glow-card-amber','glow-card-cyan'][i % 6]}`}>
                   <div className="w-10 h-10 bg-brand-red/10 rounded-lg flex items-center justify-center shrink-0 mt-1">
                     <item.icon className="w-5 h-5 text-brand-red" />
                   </div>
@@ -158,7 +160,7 @@ export default function DebentureRoutePage() {
 
           <div className="max-w-3xl mx-auto">
             <AnimatedSection>
-              <div className="card overflow-hidden">
+              <div className="card overflow-hidden glow-card-blue">
                 <div className="grid grid-cols-3 bg-brand-black text-white">
                   <div className="px-4 py-3 text-xs font-bold uppercase tracking-wider">Parameter</div>
                   <div className="px-4 py-3 text-xs font-bold uppercase tracking-wider text-center">GHL Debenture</div>
@@ -199,7 +201,7 @@ export default function DebentureRoutePage() {
 
           <div className="max-w-3xl mx-auto">
             <AnimatedSection>
-              <div className="card">
+              <div className="card glow-card-emerald">
                 <ul className="space-y-4">
                   {[
                     'Salaried professionals (IT, banking, manufacturing, healthcare) seeking a financial safety net',

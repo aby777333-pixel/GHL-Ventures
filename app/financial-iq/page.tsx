@@ -135,7 +135,7 @@ function IrrCalculator() {
   }
 
   return (
-    <div className="card h-full flex flex-col">
+    <div className="card h-full flex flex-col glow-card-blue">
       <div className="flex items-center gap-3 mb-4">
         <div className="w-12 h-12 bg-blue-500/10 rounded-xl flex items-center justify-center">
           <TrendingUp className="w-6 h-6 text-blue-600" />
@@ -287,7 +287,7 @@ export default function FinancialIQPage() {
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
             {VIDEOS.map((video, i) => (
               <AnimatedSection key={video.slug} delay={i * 80}>
-                <div className="card group hover:-translate-y-1 h-full">
+                <div className={`card group hover:-translate-y-1 h-full ${['glow-card-red', 'glow-card-blue', 'glow-card-violet', 'glow-card-emerald', 'glow-card-amber', 'glow-card-cyan'][i % 6]}`}>
                   {/* Thumbnail placeholder */}
                   <div className="relative w-full aspect-video rounded-xl mb-4 overflow-hidden">
                     <PlaceholderImage theme="education" aspectRatio="aspect-video" className="rounded-xl" />
@@ -327,7 +327,7 @@ export default function FinancialIQPage() {
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
             {FINANCIAL_IQ_ARTICLES.map((article, i) => (
               <AnimatedSection key={article.slug} delay={i * 80}>
-                <div className="card group h-full hover:-translate-y-1">
+                <div className={`card group h-full hover:-translate-y-1 ${['glow-card-orange', 'glow-card-pink', 'glow-card-teal', 'glow-card-rose', 'glow-card-blue', 'glow-card-violet', 'glow-card-emerald', 'glow-card-amber', 'glow-card-cyan', 'glow-card-red'][i % 10]}`}>
                   <div className="w-12 h-12 bg-brand-red/10 rounded-xl flex items-center justify-center mb-4 group-hover:bg-brand-red transition-all">
                     <BookOpen className="w-6 h-6 text-brand-red group-hover:text-white transition-colors" />
                   </div>
@@ -425,10 +425,10 @@ export default function FinancialIQPage() {
                     <p className="text-brand-grey">No terms found. Try a different search.</p>
                   </div>
                 ) : (
-                  filteredGlossary.map((item) => (
+                  filteredGlossary.map((item, gi) => (
                     <div
                       key={item.term}
-                      className="bg-white rounded-xl p-5 border border-gray-100 hover:border-brand-red/20 hover:shadow-md transition-all"
+                      className={`bg-white rounded-xl p-5 border border-gray-100 hover:border-brand-red/20 hover:shadow-md transition-all ${['glow-card-violet', 'glow-card-cyan', 'glow-card-amber', 'glow-card-rose', 'glow-card-teal', 'glow-card-blue', 'glow-card-emerald', 'glow-card-red', 'glow-card-pink', 'glow-card-orange'][gi % 10]}`}
                     >
                       <div className="flex items-start gap-4">
                         <span className="inline-flex items-center justify-center w-12 h-12 bg-brand-red/10 text-brand-red font-bold text-sm rounded-xl flex-shrink-0">
@@ -464,7 +464,7 @@ export default function FinancialIQPage() {
           <div className="grid lg:grid-cols-2 gap-8 max-w-5xl mx-auto">
             {/* SIP Calculator */}
             <AnimatedSection delay={0}>
-              <div className="card h-full">
+              <div className="card h-full glow-card-emerald">
                 <div className="flex items-center gap-3 mb-6">
                   <div className="w-12 h-12 bg-emerald-500/10 rounded-xl flex items-center justify-center">
                     <Calculator className="w-6 h-6 text-emerald-600" />
@@ -594,7 +594,7 @@ export default function FinancialIQPage() {
               const eventDate = new Date(event.date)
               return (
                 <AnimatedSection key={event.title} delay={i * 100}>
-                  <div className="card group hover:-translate-y-1 h-full">
+                  <div className={`card group hover:-translate-y-1 h-full ${['glow-card-pink', 'glow-card-teal', 'glow-card-amber'][i % 3]}`}>
                     {/* Date badge */}
                     <div className="flex items-start gap-4 mb-4">
                       <div className="bg-brand-red/10 rounded-xl p-3 text-center flex-shrink-0 min-w-[60px]">
@@ -658,7 +658,7 @@ export default function FinancialIQPage() {
             ].map((guide, i) => (
               <AnimatedSection key={guide.title} delay={i * 100}>
                 <Link href="/downloads" className="block">
-                  <div className="card group hover:-translate-y-1 h-full text-center">
+                  <div className={`card group hover:-translate-y-1 h-full text-center ${['glow-card-rose', 'glow-card-cyan', 'glow-card-orange'][i % 3]}`}>
                     <div className="w-14 h-14 bg-brand-red/10 rounded-xl flex items-center justify-center mx-auto mb-4 group-hover:bg-brand-red transition-all">
                       <guide.icon className="w-7 h-7 text-brand-red group-hover:text-white transition-colors" />
                     </div>

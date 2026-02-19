@@ -20,6 +20,7 @@ import WealthGrowthMap from '@/components/WealthGrowthMap'
 import TaxImpactAnalyzer from '@/components/TaxImpactAnalyzer'
 import InflationProofChecker from '@/components/InflationProofChecker'
 import { AlertTriangle } from 'lucide-react'
+import SpaceHero from '@/components/SpaceHero'
 
 /* ================================================================
    HELPER: Animated Counter (standalone)
@@ -176,6 +177,8 @@ function HeroSection() {
 
   return (
     <section className="relative min-h-screen flex items-center overflow-hidden" style={{ background: 'linear-gradient(180deg, #030014 0%, #0a0020 30%, #0d0010 60%, #0a0a0a 100%)' }}>
+
+      <SpaceHero variant="aurora" />
 
       {/* ---- SPACE BACKGROUND LAYERS ---- */}
 

@@ -8,6 +8,7 @@ import {
   IndianRupee, ArrowRight, ChevronDown, ChevronUp, Percent,
   Wallet, Home, LineChart, Scale, Coins, Globe, Star,
 } from 'lucide-react'
+import SpaceHero from '@/components/SpaceHero'
 
 /* ================================================================
    TYPES
@@ -1548,6 +1549,7 @@ export default function ToolsPage() {
         className="relative min-h-[50vh] flex items-center overflow-hidden"
         style={{ background: 'linear-gradient(135deg, #030014 0%, #0a0020 40%, #0d0010 70%, #0a0a0a 100%)' }}
       >
+        <SpaceHero variant="wormhole" />
         {/* Star field (fewer, decorative) */}
         {Array.from({ length: 30 }, (_, i) => {
           const positions = [

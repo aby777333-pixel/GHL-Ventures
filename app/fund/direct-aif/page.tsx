@@ -8,12 +8,14 @@ import {
   BarChart3, Eye, FileText, Phone, Building2, Sparkles,
   ArrowLeft, Star
 } from 'lucide-react'
+import SpaceHero from '@/components/SpaceHero'
 
 export default function DirectAIFPage() {
   return (
     <>
       {/* Hero */}
       <section className="relative pt-40 pb-16 gradient-dark overflow-hidden">
+        <SpaceHero variant="blackhole" />
         <div className="absolute inset-0 overflow-hidden pointer-events-none">
           <div className="absolute top-20 right-20 w-80 h-80 bg-brand-red/10 rounded-full blur-3xl" />
           <div className="absolute bottom-10 left-10 w-60 h-60 bg-brand-red/5 rounded-full blur-3xl" />
@@ -71,7 +73,7 @@ export default function DirectAIFPage() {
               { icon: Shield, title: 'SEBI Regulated', value: 'Category II AIF', desc: 'Regulated by SEBI with custodian, auditor & compliance' },
             ].map((item, i) => (
               <AnimatedSection key={item.title} delay={i * 100}>
-                <div className="card text-center h-full group hover:-translate-y-1">
+                <div className={`card text-center h-full group hover:-translate-y-1 ${['glow-card-red','glow-card-blue','glow-card-violet','glow-card-amber'][i % 4]}`}>
                   <div className="w-12 h-12 bg-brand-red/10 rounded-xl flex items-center justify-center mx-auto mb-4 group-hover:bg-brand-red transition-all">
                     <item.icon className="w-6 h-6 text-brand-red group-hover:text-white transition-all" />
                   </div>
@@ -95,7 +97,7 @@ export default function DirectAIFPage() {
 
           <div className="max-w-3xl mx-auto">
             <AnimatedSection>
-              <div className="card overflow-hidden">
+              <div className="card overflow-hidden glow-card-blue">
                 <div className="grid sm:grid-cols-2 gap-0">
                   {[
                     { label: 'Minimum Investment', value: '₹1 Crore' },
@@ -137,7 +139,7 @@ export default function DirectAIFPage() {
               { icon: FileText, title: 'Complete Transparency', desc: 'Quarterly NAV updates, detailed portfolio reports, annual audited statements, and direct access to our investment team.' },
             ].map((item, i) => (
               <AnimatedSection key={item.title} delay={i * 100}>
-                <div className="flex gap-4">
+                <div className={`card flex gap-4 h-full ${['glow-card-cyan','glow-card-emerald','glow-card-amber','glow-card-violet'][i % 4]}`}>
                   <div className="w-10 h-10 bg-brand-red/10 rounded-lg flex items-center justify-center shrink-0 mt-1">
                     <item.icon className="w-5 h-5 text-brand-red" />
                   </div>
@@ -162,7 +164,7 @@ export default function DirectAIFPage() {
 
           <div className="max-w-3xl mx-auto">
             <AnimatedSection>
-              <div className="card">
+              <div className="card glow-card-emerald">
                 <ul className="space-y-4">
                   {[
                     'High-Net-Worth Individuals (HNIs) with investable surplus of ₹1 Crore or more',

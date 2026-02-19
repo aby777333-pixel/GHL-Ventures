@@ -76,10 +76,14 @@ interface GateFormState {
   accredited: boolean
 }
 
+const GLOW_COLORS = ['glow-card-red', 'glow-card-blue', 'glow-card-violet', 'glow-card-emerald', 'glow-card-amber', 'glow-card-cyan']
+
 function DownloadCard({
   section,
+  index,
 }: {
   section: (typeof SECTIONS)[number]
+  index: number
 }) {
   const [gateForm, setGateForm] = useState<GateFormState>({
     name: '',
@@ -96,7 +100,7 @@ function DownloadCard({
   }
 
   return (
-    <div className="card">
+    <div className={`card ${GLOW_COLORS[index % GLOW_COLORS.length]}`}>
       <div className="grid lg:grid-cols-2 gap-8">
         {/* Left: Preview + Info */}
         <div>
@@ -125,7 +129,7 @@ function DownloadCard({
           </div>
 
           {/* Video placeholder */}
-          <div className="mt-6 rounded-xl bg-gray-100 border border-gray-200 p-4 flex items-center space-x-3">
+          <div className={`mt-6 rounded-xl bg-gray-100 border border-gray-200 p-4 flex items-center space-x-3 ${GLOW_COLORS[(index + 3) % GLOW_COLORS.length]}`}>
             <div className="w-10 h-10 rounded-full bg-brand-red/10 flex items-center justify-center shrink-0">
               <Play className="w-5 h-5 text-brand-red ml-0.5" />
             </div>
@@ -139,7 +143,7 @@ function DownloadCard({
         {/* Right: Download Gate Form */}
         <div>
           {downloaded ? (
-            <div className="bg-green-50 border border-green-200 rounded-xl p-8 text-center h-full flex flex-col items-center justify-center">
+            <div className={`bg-green-50 border border-green-200 rounded-xl p-8 text-center h-full flex flex-col items-center justify-center ${GLOW_COLORS[(index + 4) % GLOW_COLORS.length]}`}>
               <CheckCircle className="w-12 h-12 text-green-600 mb-4" />
               <h4 className="text-lg font-bold text-brand-black mb-2">Download Starting</h4>
               <p className="text-sm text-brand-grey mb-4">
@@ -153,7 +157,7 @@ function DownloadCard({
               </button>
             </div>
           ) : (
-            <div className="bg-gray-50 rounded-xl p-6 border border-gray-100">
+            <div className={`bg-gray-50 rounded-xl p-6 border border-gray-100 ${GLOW_COLORS[(index + 2) % GLOW_COLORS.length]}`}>
               <h4 className="text-base font-bold text-brand-black mb-1">Download This Document</h4>
               <p className="text-xs text-brand-grey mb-5">
                 Fill in your details to access the document instantly.
@@ -354,7 +358,7 @@ export default function DownloadsPage() {
                       <p className="text-brand-grey text-sm ml-[52px]">{section.description}</p>
                     </div>
 
-                    <DownloadCard section={section} />
+                    <DownloadCard section={section} index={index} />
                   </AnimatedSection>
                 </div>
               ))}
