@@ -1,6 +1,12 @@
 import { BLOG_POSTS, FUND_ARTICLES, BRAND } from '@/lib/constants'
 import { notFound } from 'next/navigation'
 import FundArticleClient from '@/app/fund/[slug]/FundArticleClient'
+import RichBlogArticle from '@/components/RichBlogArticle'
+import Blog1CategoryIIAIF from '@/components/blog/Blog1CategoryIIAIF'
+import Blog2StressedRealEstate from '@/components/blog/Blog2StressedRealEstate'
+import Blog3EarlyStageGrowth from '@/components/blog/Blog3EarlyStageGrowth'
+import Blog4GovernanceTransparency from '@/components/blog/Blog4GovernanceTransparency'
+import Blog5PillarGuide from '@/components/blog/Blog5PillarGuide'
 
 const SITE_URL = 'https://ghl-india-ventures-2025.netlify.app'
 
@@ -11,9 +17,20 @@ export function generateStaticParams() {
 export function generateMetadata({ params }: { params: { slug: string } }) {
   const post = BLOG_POSTS.find((p) => p.slug === params.slug)
   if (!post) return { title: 'Article Not Found' }
+
+  // Enhanced SEO metadata for new blog posts
+  const seoKeywords: Record<string, string> = {
+    'category-ii-aif-preferred-choice-sophisticated-investors': 'Category II AIF, SEBI registered AIF, alternative investment fund India, HNI investment, sophisticated investors India',
+    'stressed-real-estate-high-alpha-opportunities': 'stressed real estate India, distressed property fund, NCLT real estate, high alpha investment, real estate turnaround',
+    'early-stage-growth-companies-india': 'venture capital India, early stage investing, startup investment India, growth equity fund, Series A investment',
+    'governance-transparency-alternative-investment-funds': 'AIF governance, SEBI compliance, fund transparency, independent trustee, investor protection',
+    'category-ii-aif-india-complete-guide': 'Category II AIF India, SEBI registered AIF, alternative investment fund India, distressed real estate fund India, venture capital fund India, HNI investment opportunities India, private equity fund India',
+  }
+
   return {
     title: `${post.title} | GHL India Ventures Blog`,
     description: post.excerpt,
+    keywords: seoKeywords[params.slug] || undefined,
     alternates: {
       canonical: `${SITE_URL}/blog/${post.slug}`,
     },
@@ -28,6 +45,16 @@ export function generateMetadata({ params }: { params: { slug: string } }) {
   }
 }
 
+// ─── Rich Blog Component Map ───
+const RICH_BLOG_COMPONENTS: Record<string, React.ComponentType> = {
+  'category-ii-aif-preferred-choice-sophisticated-investors': Blog1CategoryIIAIF,
+  'stressed-real-estate-high-alpha-opportunities': Blog2StressedRealEstate,
+  'early-stage-growth-companies-india': Blog3EarlyStageGrowth,
+  'governance-transparency-alternative-investment-funds': Blog4GovernanceTransparency,
+  'category-ii-aif-india-complete-guide': Blog5PillarGuide,
+}
+
+// ─── Legacy Blog Content (plain paragraphs) ───
 const BLOG_CONTENT: Record<string, string[]> = {
   'stressed-real-estate-nclt-hidden-value': [
     'The National Company Law Tribunal (NCLT) has quietly become one of the most powerful mechanisms for unlocking hidden value in India\'s stressed real estate sector. Since the implementation of the Insolvency and Bankruptcy Code (IBC) in 2016, over ₹3 lakh crore worth of stressed assets have entered resolution processes, with real estate comprising a significant portion of this pipeline.',
@@ -84,6 +111,146 @@ export default function BlogArticlePage({ params }: { params: { slug: string } }
   const post = BLOG_POSTS.find((p) => p.slug === params.slug)
   if (!post) notFound()
 
+  // Check if this is a rich blog post
+  const RichComponent = RICH_BLOG_COMPONENTS[params.slug]
+
+  if (RichComponent) {
+    // Get related articles
+    const allArticles = [
+      ...BLOG_POSTS.map((p) => ({
+        slug: p.slug,
+        title: p.title,
+        excerpt: p.excerpt,
+        date: p.date,
+        category: p.category,
+        readTime: p.readTime,
+      })),
+      ...FUND_ARTICLES.slice(0, 3).map((a) => ({
+        slug: a.slug,
+        title: a.title,
+        excerpt: a.excerpt,
+        date: a.date,
+        category: a.category,
+        readTime: a.readTime,
+      })),
+    ]
+    const relatedArticles = allArticles.filter((a) => a.slug !== params.slug).slice(0, 3)
+
+    // Enhanced Article Schema for rich blogs
+    const articleSchema = {
+      '@context': 'https://schema.org',
+      '@type': 'Article',
+      headline: post.title,
+      description: post.excerpt,
+      datePublished: post.date,
+      dateModified: post.date,
+      author: {
+        '@type': 'Organization',
+        name: 'GHL India Ventures',
+        url: SITE_URL,
+      },
+      publisher: {
+        '@type': 'Organization',
+        name: 'GHL India Ventures',
+        logo: {
+          '@type': 'ImageObject',
+          url: `${SITE_URL}/icon.svg`,
+        },
+      },
+      mainEntityOfPage: {
+        '@type': 'WebPage',
+        '@id': `${SITE_URL}/blog/${post.slug}`,
+      },
+      articleSection: post.category,
+      url: `${SITE_URL}/blog/${post.slug}`,
+    }
+
+    // Organization Schema (FinancialService)
+    const orgSchema = {
+      '@context': 'https://schema.org',
+      '@type': 'FinancialService',
+      name: 'GHL India Ventures',
+      description: 'SEBI Registered Category II Alternative Investment Fund in India specializing in stressed real estate and venture capital investments.',
+      url: SITE_URL,
+      areaServed: 'India',
+      serviceType: 'Alternative Investment Fund',
+      identifier: {
+        '@type': 'PropertyValue',
+        name: 'SEBI Registration',
+        value: BRAND.sebi,
+      },
+    }
+
+    // FAQ Schema for pillar page
+    const faqSchema = params.slug === 'category-ii-aif-india-complete-guide' ? {
+      '@context': 'https://schema.org',
+      '@type': 'FAQPage',
+      mainEntity: [
+        {
+          '@type': 'Question',
+          name: 'What is Category II AIF in India?',
+          acceptedAnswer: {
+            '@type': 'Answer',
+            text: 'A Category II AIF (Alternative Investment Fund) is a privately pooled investment vehicle regulated under SEBI (Alternative Investment Funds) Regulations, 2012. It invests in private equity, stressed real estate, venture capital, and special situations, targeting 18–30% IRR for sophisticated investors.',
+          },
+        },
+        {
+          '@type': 'Question',
+          name: 'Who can invest in a Category II AIF?',
+          acceptedAnswer: {
+            '@type': 'Answer',
+            text: 'Category II AIFs are designed for High Net-Worth Individuals (HNIs), Ultra HNIs, family offices, institutional investors, and corporate treasuries. The minimum investment is ₹1 Crore per investor as mandated by SEBI.',
+          },
+        },
+        {
+          '@type': 'Question',
+          name: 'What is the minimum investment in Category II AIF India?',
+          acceptedAnswer: {
+            '@type': 'Answer',
+            text: 'The minimum investment required for a Category II AIF in India is ₹1 Crore per investor, as mandated by SEBI.',
+          },
+        },
+        {
+          '@type': 'Question',
+          name: 'What returns do Category II AIFs generate?',
+          acceptedAnswer: {
+            '@type': 'Answer',
+            text: 'Well-managed Category II AIFs typically target 18–30% IRR depending on the strategy. Stressed real estate strategies target 18–25% IRR, while venture capital strategies target 22–30% IRR.',
+          },
+        },
+        {
+          '@type': 'Question',
+          name: 'Is Category II AIF regulated by SEBI?',
+          acceptedAnswer: {
+            '@type': 'Answer',
+            text: 'Yes, all Category II AIFs must be registered with SEBI and operate under the SEBI (Alternative Investment Funds) Regulations, 2012.',
+          },
+        },
+      ],
+    } : undefined
+
+    const schemas = [articleSchema, orgSchema, ...(faqSchema ? [faqSchema] : [])]
+
+    return (
+      <RichBlogArticle
+        article={{
+          slug: post.slug,
+          title: post.title,
+          excerpt: post.excerpt,
+          date: post.date,
+          category: post.category,
+          readTime: post.readTime,
+        }}
+        relatedArticles={relatedArticles}
+        sebiReg={BRAND.sebi}
+        schemas={schemas}
+      >
+        <RichComponent />
+      </RichBlogArticle>
+    )
+  }
+
+  // Legacy: simple paragraph-based blogs
   const content = BLOG_CONTENT[params.slug] || [
     `This article explores important aspects of alternative investing that every sophisticated investor should understand. At GHL India Ventures, we believe that informed investors make better decisions, which is why we produce educational content spanning investment strategies, market analysis, and personal finance.`,
   ]

@@ -413,6 +413,56 @@ export const BLOG_POSTS = [
     readTime: '8 min read',
     image: '/blog/ai-alternative-investments-2026.jpg',
   },
+  {
+    slug: 'category-ii-aif-preferred-choice-sophisticated-investors',
+    title: 'Why Category II AIFs Are Becoming the Preferred Choice for Sophisticated Investors in India',
+    excerpt:
+      'Discover why High Net-Worth Individuals are turning to Category II Alternative Investment Funds for access to off-market opportunities, institutional governance, and attractive risk-adjusted returns targeting 18–30% IRR.',
+    date: '2026-02-15',
+    category: 'Investor Education',
+    readTime: '8 min read',
+    image: '/blog/category-ii-aif-choice.jpg',
+  },
+  {
+    slug: 'stressed-real-estate-high-alpha-opportunities',
+    title: 'How Stressed Real Estate Creates High-Alpha Investment Opportunities',
+    excerpt:
+      'Learn how distressed real estate projects acquired at 30–50% below intrinsic value can be transformed into stabilized assets delivering 18–25% IRR through disciplined execution and NCLT expertise.',
+    date: '2026-02-16',
+    category: 'Real Estate',
+    readTime: '7 min read',
+    image: '/blog/stressed-real-estate-alpha.jpg',
+  },
+  {
+    slug: 'early-stage-growth-companies-india',
+    title: 'Investing in India\'s Early-Stage Growth Companies: Where Scale Meets Strategy',
+    excerpt:
+      'India\'s startup ecosystem has matured. Explore how disciplined venture investing at the Series A to pre-IPO stage delivers 22–30% IRR by backing validated, capital-efficient companies.',
+    date: '2026-02-17',
+    category: 'Startups',
+    readTime: '8 min read',
+    image: '/blog/early-stage-growth.jpg',
+  },
+  {
+    slug: 'governance-transparency-alternative-investment-funds',
+    title: 'The Importance of Governance and Transparency in Alternative Investment Funds',
+    excerpt:
+      'Trust in finance is built slowly and lost instantly. Understand why SEBI-regulated governance, independent trustees, and transparent reporting are the foundation of credible AIF investing.',
+    date: '2026-02-18',
+    category: 'Investor Education',
+    readTime: '6 min read',
+    image: '/blog/governance-transparency-aif.jpg',
+  },
+  {
+    slug: 'category-ii-aif-india-complete-guide',
+    title: 'Category II AIF India: Complete Guide to SEBI Registered Alternative Investment Funds for HNIs & Institutional Investors',
+    excerpt:
+      'The definitive pillar guide to Category II AIFs in India — covering SEBI regulations, investment strategies, target returns, risk profiles, and why HNIs are choosing alternative investment funds for superior wealth creation.',
+    date: '2026-02-19',
+    category: 'Investor Education',
+    readTime: '15 min read',
+    image: '/blog/category-ii-aif-guide.jpg',
+  },
 ] as const
 
 // ============================================================
