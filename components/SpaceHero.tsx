@@ -408,19 +408,6 @@ export default function SpaceHero({ variant }: SpaceHeroProps) {
           <div className="absolute top-[0%] left-[40%] w-[400px] h-[300px] rounded-full blur-[80px] animate-nebula-drift"
             style={{ background: 'radial-gradient(circle, rgba(255,50,150,0.08) 0%, rgba(0,255,200,0.04) 50%, transparent 70%)' }} />
 
-          {/* Meteor shower — multiple bright streaks */}
-          <div className="meteor-streak meteor-1" />
-          <div className="meteor-streak meteor-2" />
-          <div className="meteor-streak meteor-3" />
-          <div className="meteor-streak meteor-4" />
-          <div className="meteor-streak meteor-5" />
-          <div className="meteor-streak meteor-6" />
-          <div className="meteor-streak meteor-7" />
-
-          {/* Solar wind particles flowing */}
-          <div className="solar-wind-particles" />
-          <div className="solar-wind-particles-2" />
-
           {/* Bright Venus-like star */}
           <div className="absolute top-[12%] right-[18%]">
             <div className="w-5 h-5 rounded-full animate-pulsar-core"

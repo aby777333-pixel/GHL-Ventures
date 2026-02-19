@@ -202,23 +202,6 @@ function HeroSection() {
         />
       ))}
 
-      {/* Single shooting star */}
-      <span className="shooting-star" style={{ top: '18%', left: '25%', animation: 'shooting-star 8s ease-out infinite 5s' }} />
-
-      {/* Comets (larger, with long gradient tails) */}
-      <div className="comet" style={{ top: '10%', left: '5%', animation: 'comet-streak-1 12s ease-out infinite 2s' }}>
-        <div className="comet-head" />
-      </div>
-      <div className="comet" style={{ top: '35%', left: '70%', animation: 'comet-streak-2 16s ease-out infinite 7s' }}>
-        <div className="comet-head" />
-      </div>
-      <div className="comet" style={{ top: '55%', left: '20%', animation: 'comet-streak-3 14s ease-out infinite 12s' }}>
-        <div className="comet-head" />
-      </div>
-      <div className="comet" style={{ top: '20%', left: '45%', animation: 'comet-streak-1 18s ease-out infinite 20s' }}>
-        <div className="comet-head" />
-      </div>
-
       {/* Space station orbiting across the sky */}
       <div className="space-station">
         <div className="space-station-body" />
