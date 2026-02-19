@@ -313,12 +313,7 @@ export default function BusinessRadioWidget() {
     }
   }, [])
 
-  // Auto-play once station is set
-  useEffect(() => {
-    if (currentStation && !audioRef.current) {
-      playStation(currentStation)
-    }
-  }, [currentStation])
+  // Do NOT auto-play — wait for user to click play or select a station
 
   const playStation = useCallback((station: RadioStation) => {
     setHasError(false)
@@ -359,14 +354,13 @@ export default function BusinessRadioWidget() {
   }, [])
 
   const togglePlay = useCallback(() => {
-    if (!audioRef.current || !currentStation) return
+    if (!currentStation) return
 
-    if (isPlaying) {
+    if (isPlaying && audioRef.current) {
       audioRef.current.pause()
       setIsPlaying(false)
     } else {
       setIsLoading(true)
-      // Re-create audio on play to handle stale connections
       playStation(currentStation)
     }
   }, [isPlaying, currentStation, playStation])
