@@ -6,8 +6,7 @@ import { usePathname } from 'next/navigation'
 import { NAV_LINKS, BRAND } from '@/lib/constants'
 import { Menu, X, Phone, ArrowRight, LogIn, UserPlus, ShieldCheck, Search } from 'lucide-react'
 import Logo from '@/components/Logo'
-import MarketDataMarquee from '@/components/MarketDataMarquee'
-import CurrencyTicker from '@/components/CurrencyTicker'
+// MarketDataMarquee and CurrencyTicker moved to home page (above NewsScroller)
 import NotificationCenter from '@/components/NotificationCenter'
 import ThemeToggle from '@/components/ThemeToggle'
 import ThemePicker from '@/components/ThemePicker'
@@ -46,39 +45,6 @@ export default function Navbar() {
 
   return (
     <header className="fixed top-0 left-0 right-0 z-50" role="banner">
-      {/* ── Market Data Marquee ── */}
-      <MarketDataMarquee />
-
-      {/* ── Currency Ticker ── */}
-      <CurrencyTicker />
-
-      {/* ── Announcement Bar ── */}
-      <div
-        className="w-full overflow-hidden"
-        style={{ backgroundColor: '#1a0000' }}
-      >
-        <div className="animate-marquee whitespace-nowrap py-1.5">
-          <span
-            className="inline-block text-white/80 mx-8"
-            style={{ fontSize: '11px', letterSpacing: '0.02em' }}
-          >
-            SEBI Registered AIF &nbsp;|&nbsp; Registration No. IN/AIF2/2425/1517
-            &nbsp;|&nbsp; AIF: Min &#8377;1 Crore &nbsp;|&nbsp; Debenture Route: From &#8377;10 Lakhs &nbsp;|&nbsp;
-            Stressed Real Estate &amp; Early-Stage Startups &nbsp;|&nbsp;
-            Chennai, India
-          </span>
-          <span
-            className="inline-block text-white/80 mx-8"
-            style={{ fontSize: '11px', letterSpacing: '0.02em' }}
-          >
-            SEBI Registered AIF &nbsp;|&nbsp; Registration No. IN/AIF2/2425/1517
-            &nbsp;|&nbsp; AIF: Min &#8377;1 Crore &nbsp;|&nbsp; Debenture Route: From &#8377;10 Lakhs &nbsp;|&nbsp;
-            Stressed Real Estate &amp; Early-Stage Startups &nbsp;|&nbsp;
-            Chennai, India
-          </span>
-        </div>
-      </div>
-
       {/* ── Main Nav Bar ── */}
       <nav
         className={`transition-all duration-300 ${

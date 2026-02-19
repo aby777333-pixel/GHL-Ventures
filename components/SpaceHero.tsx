@@ -385,25 +385,27 @@ export default function SpaceHero({ variant }: SpaceHeroProps) {
           <div className="aurora-subtle-1" />
           <div className="aurora-subtle-2" />
 
-          {/* ── Moon — luminous crescent with crater detail ── */}
-          <div className="absolute top-[6%] right-[12%]" style={{ opacity: 0.85 }}>
-            <div className="w-20 h-20 rounded-full"
+          {/* ── Moon — luminous, smaller, lower, more illuminated ── */}
+          <div className="absolute top-[18%] right-[14%]" style={{ opacity: 0.95 }}>
+            <div className="w-14 h-14 rounded-full"
               style={{
-                background: 'radial-gradient(circle at 35% 35%, #fffff0 0%, #e8e0d0 25%, #b8a890 50%, #888070 80%, #605850 100%)',
-                boxShadow: '0 0 40px rgba(255,255,240,0.2), 0 0 80px rgba(255,255,240,0.1), 0 0 150px rgba(255,250,230,0.06)',
+                background: 'radial-gradient(circle at 38% 38%, #fffff8 0%, #f0e8d8 20%, #d8c8b0 40%, #b0a090 65%, #908070 100%)',
+                boxShadow: '0 0 30px rgba(255,255,240,0.35), 0 0 60px rgba(255,255,240,0.2), 0 0 120px rgba(255,250,230,0.12), 0 0 200px rgba(255,245,220,0.06)',
               }}>
-              {/* Crescent shadow — makes it a crescent moon */}
-              <div className="absolute -right-1 -top-1 w-[68px] h-[68px] rounded-full" style={{ background: 'radial-gradient(circle at 60% 40%, #050010 0%, #050010 55%, transparent 80%)' }} />
+              {/* Subtle crescent shadow */}
+              <div className="absolute -right-0.5 -top-0.5 w-[48px] h-[48px] rounded-full" style={{ background: 'radial-gradient(circle at 65% 38%, #050010 0%, #050010 45%, transparent 75%)' }} />
               {/* Craters */}
-              <div className="absolute top-3 left-3 w-4 h-4 rounded-full bg-black/10 blur-[0.5px]" />
-              <div className="absolute top-8 left-7 w-3 h-3 rounded-full bg-black/8" />
-              <div className="absolute bottom-4 left-4 w-5 h-5 rounded-full bg-black/8 blur-[0.5px]" />
+              <div className="absolute top-2 left-2 w-3 h-3 rounded-full bg-black/8 blur-[0.5px]" />
+              <div className="absolute top-6 left-5 w-2 h-2 rounded-full bg-black/6" />
+              <div className="absolute bottom-3 left-3 w-3.5 h-3.5 rounded-full bg-black/6 blur-[0.5px]" />
             </div>
-            {/* Moonlight halo */}
-            <div className="absolute -inset-12 rounded-full" style={{ background: 'radial-gradient(circle, rgba(255,255,240,0.04) 0%, transparent 70%)' }} />
+            {/* Bright moonlight halo */}
+            <div className="absolute -inset-16 rounded-full" style={{ background: 'radial-gradient(circle, rgba(255,255,240,0.08) 0%, rgba(255,255,240,0.03) 40%, transparent 70%)' }} />
             {/* Cross-flare on moon */}
-            <div className="absolute top-1/2 left-[30%] -translate-y-1/2 w-[60px] h-[1px] animate-star-flare"
-              style={{ background: 'linear-gradient(to right, transparent, rgba(255,255,240,0.3), transparent)' }} />
+            <div className="absolute top-1/2 left-[30%] -translate-y-1/2 w-[50px] h-[1px] animate-star-flare"
+              style={{ background: 'linear-gradient(to right, transparent, rgba(255,255,240,0.4), transparent)' }} />
+            <div className="absolute top-[35%] left-1/2 -translate-x-1/2 w-[1px] h-[40px] animate-star-flare"
+              style={{ background: 'linear-gradient(to bottom, transparent, rgba(255,255,240,0.25), transparent)' }} />
           </div>
 
           {/* ── Distant Planets ── */}
@@ -416,7 +418,7 @@ export default function SpaceHero({ variant }: SpaceHeroProps) {
               style={{ border: '1px solid rgba(255,220,160,0.4)', transform: 'translate(-50%, -50%) rotateX(70deg)' }} />
           </div>
 
-          {/* Mars — small reddish dot, upper right area */}
+          {/* Mars — small reddish dot */}
           <div className="absolute top-[22%] right-[30%] w-3 h-3 rounded-full" style={{ opacity: 0.5, background: 'radial-gradient(circle at 40% 40%, #ff8060, #c04020, #801000)', boxShadow: '0 0 8px rgba(255,80,40,0.3)' }} />
 
           {/* Jupiter — larger, banded */}
@@ -429,42 +431,13 @@ export default function SpaceHero({ variant }: SpaceHeroProps) {
             </div>
           </div>
 
+          {/* Neptune — distant blue planet, subtle */}
+          <div className="absolute top-[12%] right-[45%] w-4 h-4 rounded-full" style={{ opacity: 0.3, background: 'radial-gradient(circle at 40% 40%, #80c0ff, #4080d0, #204080)', boxShadow: '0 0 10px rgba(80,140,255,0.2)' }} />
+
           {/* ── Moonlit Cloud Wisps — just above Earth's arc ── */}
           <div className="cloud-wisp cloud-wisp-1" />
           <div className="cloud-wisp cloud-wisp-2" />
           <div className="cloud-wisp cloud-wisp-3" />
-
-          {/* ── Market Lightning Horizon — glowing market line across the horizon ── */}
-          <svg className="absolute inset-0 w-full h-full pointer-events-none" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="none">
-            {/* Main market line — electric, jagged like a stock chart */}
-            <polyline
-              points="0,78 60,76 120,79 180,72 240,75 300,68 360,74 420,65 480,70 540,62 600,67 660,58 720,63 780,55 840,60 900,52 960,58 1020,50 1080,56 1140,48 1200,54 1260,46 1320,52 1440,45"
-              fill="none"
-              stroke="url(#market-glow)"
-              strokeWidth="1.5"
-              className="market-lightning-line"
-              style={{ filter: 'drop-shadow(0 0 8px rgba(0,200,255,0.6)) drop-shadow(0 0 20px rgba(0,150,255,0.3))' }}
-            />
-            {/* Gradient definition for the market line */}
-            <defs>
-              <linearGradient id="market-glow" x1="0%" y1="0%" x2="100%" y2="0%">
-                <stop offset="0%" stopColor="rgba(0,100,255,0.1)" />
-                <stop offset="15%" stopColor="rgba(0,200,255,0.6)" />
-                <stop offset="30%" stopColor="rgba(100,255,200,0.8)" />
-                <stop offset="50%" stopColor="rgba(255,255,255,0.9)" />
-                <stop offset="70%" stopColor="rgba(0,200,255,0.7)" />
-                <stop offset="85%" stopColor="rgba(100,150,255,0.5)" />
-                <stop offset="100%" stopColor="rgba(0,100,255,0.1)" />
-              </linearGradient>
-            </defs>
-          </svg>
-          {/* Market line glow bloom behind */}
-          <div className="market-horizon-glow" />
-
-          {/* ── Comet — bright, streaking across upper sky ── */}
-          <div className="hero-comet">
-            <div className="hero-comet-head" />
-          </div>
 
           {/* ── Celestial Wonders ── */}
 
@@ -476,6 +449,14 @@ export default function SpaceHero({ variant }: SpaceHeroProps) {
 
           {/* Milky Way Band — very subtle diagonal band across the sky */}
           <div className="milky-way-band" />
+
+          {/* Zodiacal Light — very faint triangular glow near horizon */}
+          <div className="absolute bottom-[20%] left-[35%] w-[200px] h-[300px] pointer-events-none"
+            style={{
+              background: 'linear-gradient(to top, rgba(255,240,200,0.04) 0%, rgba(255,230,180,0.02) 40%, transparent 100%)',
+              clipPath: 'polygon(30% 100%, 50% 0%, 70% 100%)',
+              filter: 'blur(15px)',
+            }} />
 
           {/* Bright Venus-like star with diffraction spikes */}
           <div className="absolute top-[10%] left-[42%]">
@@ -494,28 +475,54 @@ export default function SpaceHero({ variant }: SpaceHeroProps) {
           {/* Sirius — bright blue-white star */}
           <div className="absolute top-[28%] right-[8%]">
             <div className="w-3 h-3 rounded-full"
-              style={{ background: 'radial-gradient(circle, #fff 0%, rgba(150,200,255,0.7) 50%, transparent 70%)', boxShadow: '0 0 12px rgba(150,200,255,0.6), 0 0 25px rgba(100,150,255,0.3)', animationDelay: '2s' }} />
+              style={{ background: 'radial-gradient(circle, #fff 0%, rgba(150,200,255,0.7) 50%, transparent 70%)', boxShadow: '0 0 12px rgba(150,200,255,0.6), 0 0 25px rgba(100,150,255,0.3)' }} />
           </div>
 
-          {/* Star Cluster — tiny group of stars */}
+          {/* Orion's Belt — three aligned stars */}
+          <div className="absolute top-[25%] left-[32%]" style={{ opacity: 0.55 }}>
+            <div className="w-2 h-2 rounded-full bg-white/70" style={{ boxShadow: '0 0 6px rgba(200,220,255,0.5)' }} />
+            <div className="absolute top-[6px] left-[10px] w-2 h-2 rounded-full bg-white/65" style={{ boxShadow: '0 0 5px rgba(200,220,255,0.4)' }} />
+            <div className="absolute top-[12px] left-[20px] w-1.5 h-1.5 rounded-full bg-white/60" style={{ boxShadow: '0 0 5px rgba(200,220,255,0.4)' }} />
+            {/* Betelgeuse — reddish bright star above belt */}
+            <div className="absolute -top-[16px] -left-[4px] w-2.5 h-2.5 rounded-full" style={{ background: 'radial-gradient(circle, rgba(255,180,120,0.9), rgba(255,100,50,0.4), transparent)', boxShadow: '0 0 8px rgba(255,120,60,0.4)' }} />
+            {/* Rigel — blue-white below belt */}
+            <div className="absolute top-[24px] left-[24px] w-2 h-2 rounded-full" style={{ background: 'radial-gradient(circle, #fff, rgba(160,200,255,0.5), transparent)', boxShadow: '0 0 6px rgba(160,200,255,0.5)' }} />
+          </div>
+
+          {/* Star Cluster (Pleiades) — tiny group of stars */}
           <div className="absolute top-[18%] left-[60%]" style={{ opacity: 0.6 }}>
             <div className="w-1.5 h-1.5 rounded-full bg-white/80" style={{ boxShadow: '0 0 4px white' }} />
             <div className="absolute top-1 left-2 w-1 h-1 rounded-full bg-white/60" style={{ boxShadow: '0 0 3px white' }} />
             <div className="absolute -top-1 left-3 w-1 h-1 rounded-full bg-white/50" style={{ boxShadow: '0 0 3px white' }} />
             <div className="absolute top-2 left-1 w-0.5 h-0.5 rounded-full bg-white/40" />
             <div className="absolute top-0 left-4 w-0.5 h-0.5 rounded-full bg-white/45" />
+            <div className="absolute top-1.5 left-5 w-0.5 h-0.5 rounded-full bg-white/35" />
+            <div className="absolute -top-0.5 left-5.5 w-0.5 h-0.5 rounded-full bg-white/30" />
+            {/* Faint nebula haze around Pleiades */}
+            <div className="absolute -inset-3 rounded-full" style={{ background: 'radial-gradient(circle, rgba(150,180,255,0.04) 0%, transparent 70%)', filter: 'blur(5px)' }} />
           </div>
 
-          {/* Shooting Star — quick flash */}
-          <div className="hero-shooting-star-1" />
-          <div className="hero-shooting-star-2" />
+          {/* Second Star Cluster — upper right */}
+          <div className="absolute top-[8%] right-[25%]" style={{ opacity: 0.45 }}>
+            <div className="w-1 h-1 rounded-full bg-white/60" style={{ boxShadow: '0 0 3px white' }} />
+            <div className="absolute top-1 left-1.5 w-0.5 h-0.5 rounded-full bg-white/45" />
+            <div className="absolute -top-0.5 left-2 w-1 h-1 rounded-full bg-white/50" style={{ boxShadow: '0 0 2px white' }} />
+            <div className="absolute top-1.5 left-3 w-0.5 h-0.5 rounded-full bg-white/40" />
+          </div>
 
-          {/* ── Earth's night-glow atmosphere band — the warm city-light glow at the limb ── */}
-          <div className="earth-atmosphere-glow" />
+          {/* Distant Galaxy Smudge — very faint elliptical */}
+          <div className="absolute top-[35%] right-[18%] w-8 h-3 rounded-full animate-slow-rotate" style={{ opacity: 0.12, background: 'radial-gradient(ellipse, rgba(255,255,255,0.5) 0%, rgba(200,210,230,0.2) 50%, transparent 80%)', filter: 'blur(1.5px)' }} />
+
+          {/* Binary Star System — two close stars with gentle color contrast */}
+          <div className="absolute top-[40%] right-[35%]" style={{ opacity: 0.5 }}>
+            <div className="w-1.5 h-1.5 rounded-full" style={{ background: 'radial-gradient(circle, #fff, rgba(255,200,120,0.6), transparent)', boxShadow: '0 0 6px rgba(255,220,150,0.4)' }} />
+            <div className="absolute top-[3px] left-[5px] w-1 h-1 rounded-full" style={{ background: 'radial-gradient(circle, #fff, rgba(150,180,255,0.6), transparent)', boxShadow: '0 0 4px rgba(150,180,255,0.3)' }} />
+          </div>
 
           {/* ── Ambient cosmic depth ── */}
           <div className="absolute top-[30%] right-[15%] w-80 h-80 bg-brand-red/4 rounded-full blur-[100px] animate-pulse-slow" />
           <div className="absolute bottom-[15%] left-[25%] w-64 h-64 bg-blue-500/3 rounded-full blur-[80px] animate-pulse-slow-2" />
+          <div className="absolute top-[50%] left-[50%] w-96 h-96 -translate-x-1/2 -translate-y-1/2 bg-indigo-900/3 rounded-full blur-[120px] animate-pulse-slow" />
         </>
       )}
 

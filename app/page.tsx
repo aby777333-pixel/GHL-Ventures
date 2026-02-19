@@ -13,6 +13,8 @@ import {
   BookOpen, Video, FileText,
   Landmark, LockKeyhole, Sparkles, Calculator, ChevronDown
 } from 'lucide-react'
+import MarketDataMarquee from '@/components/MarketDataMarquee'
+import CurrencyTicker from '@/components/CurrencyTicker'
 import RiskAssessmentQuiz from '@/components/RiskAssessmentQuiz'
 import InvestmentCalculator from '@/components/InvestmentCalculator'
 import AllInvestmentsCalculator from '@/components/AllInvestmentsCalculator'
@@ -95,6 +97,38 @@ const STARS = [
   // Extra large bright blinkers
   { x: 8, y: 68, size: 'lg', delay: 1.9 }, { x: 52, y: 5, size: 'lg', delay: 0.8 },
   { x: 95, y: 15, size: 'lg', delay: 2.5 }, { x: 32, y: 72, size: 'lg', delay: 0.3 },
+  // ── Additional stars for denser sky ──
+  // Extra small scattered
+  { x: 1, y: 12, size: 'sm', delay: 0.4 }, { x: 4, y: 30, size: 'sm', delay: 1.6 },
+  { x: 9, y: 48, size: 'sm', delay: 2.8 }, { x: 11, y: 62, size: 'sm', delay: 0.2 },
+  { x: 14, y: 82, size: 'sm', delay: 1.4 }, { x: 19, y: 8, size: 'sm', delay: 2.6 },
+  { x: 21, y: 45, size: 'sm', delay: 0.7 }, { x: 24, y: 68, size: 'sm', delay: 1.9 },
+  { x: 29, y: 22, size: 'sm', delay: 2.3 }, { x: 31, y: 55, size: 'sm', delay: 0.5 },
+  { x: 34, y: 78, size: 'sm', delay: 1.1 }, { x: 36, y: 8, size: 'sm', delay: 2.7 },
+  { x: 39, y: 32, size: 'sm', delay: 0.8 }, { x: 41, y: 62, size: 'sm', delay: 1.5 },
+  { x: 44, y: 15, size: 'sm', delay: 2.1 }, { x: 46, y: 85, size: 'sm', delay: 0.3 },
+  { x: 49, y: 42, size: 'sm', delay: 1.8 }, { x: 51, y: 65, size: 'sm', delay: 2.4 },
+  { x: 54, y: 18, size: 'sm', delay: 0.6 }, { x: 56, y: 75, size: 'sm', delay: 1.3 },
+  { x: 59, y: 38, size: 'sm', delay: 2.9 }, { x: 61, y: 52, size: 'sm', delay: 0.1 },
+  { x: 63, y: 12, size: 'sm', delay: 1.7 }, { x: 66, y: 82, size: 'sm', delay: 2.2 },
+  { x: 69, y: 28, size: 'sm', delay: 0.9 }, { x: 71, y: 58, size: 'sm', delay: 1.0 },
+  { x: 74, y: 92, size: 'sm', delay: 2.5 }, { x: 76, y: 35, size: 'sm', delay: 0.4 },
+  { x: 79, y: 15, size: 'sm', delay: 1.6 }, { x: 81, y: 68, size: 'sm', delay: 2.0 },
+  { x: 84, y: 42, size: 'sm', delay: 0.7 }, { x: 86, y: 8, size: 'sm', delay: 1.2 },
+  { x: 89, y: 55, size: 'sm', delay: 2.8 }, { x: 91, y: 78, size: 'sm', delay: 0.5 },
+  { x: 94, y: 32, size: 'sm', delay: 1.9 }, { x: 97, y: 62, size: 'sm', delay: 2.3 },
+  { x: 3, y: 95, size: 'sm', delay: 0.8 }, { x: 17, y: 5, size: 'sm', delay: 1.4 },
+  { x: 26, y: 38, size: 'sm', delay: 2.6 }, { x: 42, y: 58, size: 'sm', delay: 0.3 },
+  // Extra medium
+  { x: 6, y: 25, size: 'md', delay: 1.0 }, { x: 16, y: 52, size: 'md', delay: 2.4 },
+  { x: 26, y: 75, size: 'md', delay: 0.6 }, { x: 36, y: 18, size: 'md', delay: 1.8 },
+  { x: 46, y: 55, size: 'md', delay: 2.2 }, { x: 56, y: 85, size: 'md', delay: 0.4 },
+  { x: 66, y: 42, size: 'md', delay: 1.6 }, { x: 76, y: 12, size: 'md', delay: 2.8 },
+  { x: 86, y: 58, size: 'md', delay: 0.9 }, { x: 94, y: 72, size: 'md', delay: 1.2 },
+  // Extra large bright
+  { x: 14, y: 42, size: 'lg', delay: 2.1 }, { x: 44, y: 32, size: 'lg', delay: 0.5 },
+  { x: 74, y: 52, size: 'lg', delay: 1.3 }, { x: 86, y: 15, size: 'lg', delay: 2.7 },
+  { x: 28, y: 85, size: 'lg', delay: 0.8 }, { x: 62, y: 8, size: 'lg', delay: 1.5 },
 ]
 
 /* Live TV channel options — using direct video IDs for stable streams,
@@ -224,6 +258,24 @@ function HeroSection() {
         </div>
       </div>
 
+      {/* Airplane 3 — higher altitude, smaller */}
+      <div className="airplane-3">
+        <div className="airplane-body">
+          <span className="airplane-light airplane-light-red" />
+          <span className="airplane-light airplane-light-white" />
+          <span className="airplane-light airplane-light-green" />
+        </div>
+      </div>
+
+      {/* Airplane 4 — low near horizon, slow */}
+      <div className="airplane-4">
+        <div className="airplane-body">
+          <span className="airplane-light airplane-light-red" />
+          <span className="airplane-light airplane-light-white" />
+          <span className="airplane-light airplane-light-green" />
+        </div>
+      </div>
+
       {/* Earth arc — night side with city light glow */}
       <div className="space-arc" />
       <div className="space-arc-inner" />
@@ -242,7 +294,7 @@ function HeroSection() {
 
       {/* ---- END SPACE BACKGROUND ---- */}
 
-      <div className="container-max mx-auto px-4 sm:px-6 lg:px-8 relative z-10 pt-44 pb-14">
+      <div className="container-max mx-auto px-4 sm:px-6 lg:px-8 relative z-10 pt-28 pb-14">
         <div className="grid lg:grid-cols-2 gap-12 xl:gap-20 items-center">
           {/* LEFT: Hero Copy */}
           <div>
@@ -1376,6 +1428,27 @@ export default function HomePage() {
     <>
       <HeroSection />
       <InvestmentDisclaimer />
+
+      {/* ── Market Data Marquees — moved from Navbar to right above News ── */}
+      <MarketDataMarquee />
+      <CurrencyTicker />
+      <div className="w-full overflow-hidden" style={{ backgroundColor: '#1a0000' }}>
+        <div className="animate-marquee whitespace-nowrap py-1.5">
+          <span className="inline-block text-white/80 mx-8" style={{ fontSize: '11px', letterSpacing: '0.02em' }}>
+            SEBI Registered AIF &nbsp;|&nbsp; Registration No. IN/AIF2/2425/1517
+            &nbsp;|&nbsp; AIF: Min &#8377;1 Crore &nbsp;|&nbsp; Debenture Route: From &#8377;10 Lakhs &nbsp;|&nbsp;
+            Stressed Real Estate &amp; Early-Stage Startups &nbsp;|&nbsp;
+            Chennai, India
+          </span>
+          <span className="inline-block text-white/80 mx-8" style={{ fontSize: '11px', letterSpacing: '0.02em' }}>
+            SEBI Registered AIF &nbsp;|&nbsp; Registration No. IN/AIF2/2425/1517
+            &nbsp;|&nbsp; AIF: Min &#8377;1 Crore &nbsp;|&nbsp; Debenture Route: From &#8377;10 Lakhs &nbsp;|&nbsp;
+            Stressed Real Estate &amp; Early-Stage Startups &nbsp;|&nbsp;
+            Chennai, India
+          </span>
+        </div>
+      </div>
+
       <NewsScroller />
       <WhoWeAre />
       <InvestmentCapabilities />

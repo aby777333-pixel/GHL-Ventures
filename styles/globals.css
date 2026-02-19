@@ -793,27 +793,25 @@ body,
   pointer-events: none;
 }
 
-/* Thin atmospheric limb glow along the Earth's edge — blue-white */
+/* Thin atmospheric limb glow along the Earth's edge — very subtle warm glow */
 .space-arc::before {
   content: '';
   position: absolute;
   top: -2px;
-  left: 15%;
-  width: 70%;
-  height: 4px;
+  left: 20%;
+  width: 60%;
+  height: 3px;
   background: linear-gradient(90deg,
     transparent 0%,
-    rgba(60,140,255,0.05) 10%,
-    rgba(80,180,255,0.2) 25%,
-    rgba(120,200,255,0.5) 40%,
-    rgba(160,220,255,0.7) 50%,
-    rgba(120,200,255,0.5) 60%,
-    rgba(80,180,255,0.2) 75%,
-    rgba(60,140,255,0.05) 90%,
+    rgba(255,200,100,0.03) 15%,
+    rgba(255,220,150,0.08) 35%,
+    rgba(255,240,200,0.12) 50%,
+    rgba(255,220,150,0.08) 65%,
+    rgba(255,200,100,0.03) 85%,
     transparent 100%
   );
   border-radius: 50%;
-  filter: blur(1.5px);
+  filter: blur(2px);
   animation: sunrise-glow 6s ease-in-out infinite;
 }
 
@@ -1548,84 +1546,7 @@ body,
   50% { transform: translateX(60px); opacity: 0.8; }
 }
 
-/* ── Market Lightning Horizon — glowing stock-chart line ── */
-.market-lightning-line {
-  animation: market-line-pulse 4s ease-in-out infinite;
-  vector-effect: non-scaling-stroke;
-}
-
-@keyframes market-line-pulse {
-  0%, 100% { opacity: 0.5; stroke-width: 1.2; }
-  50% { opacity: 0.9; stroke-width: 2; }
-}
-
-.market-horizon-glow {
-  position: absolute;
-  bottom: 18%;
-  left: 5%;
-  right: 5%;
-  height: 30px;
-  background: radial-gradient(ellipse 80% 100% at 50% 50%, rgba(0,200,255,0.08) 0%, rgba(100,255,200,0.04) 40%, transparent 80%);
-  filter: blur(20px);
-  animation: market-glow-pulse 4s ease-in-out infinite;
-  pointer-events: none;
-}
-
-@keyframes market-glow-pulse {
-  0%, 100% { opacity: 0.3; }
-  50% { opacity: 0.7; }
-}
-
-/* ── Hero Comet — bright streak across upper sky ── */
-@keyframes hero-comet-fly {
-  0% { transform: translate(0, 0) rotate(-30deg); opacity: 0; }
-  5% { opacity: 1; }
-  25% { opacity: 0.9; }
-  40% { transform: translate(80vw, 35vh) rotate(-30deg); opacity: 0; }
-  100% { opacity: 0; }
-}
-
-.hero-comet {
-  position: absolute;
-  top: 8%;
-  left: -80px;
-  pointer-events: none;
-  animation: hero-comet-fly 12s ease-in infinite 6s;
-}
-
-.hero-comet-head {
-  width: 5px;
-  height: 5px;
-  background: white;
-  border-radius: 50%;
-  box-shadow: 0 0 8px white, 0 0 20px rgba(200,220,255,0.7), 0 0 40px rgba(150,180,255,0.4);
-  position: relative;
-}
-
-.hero-comet-head::after {
-  content: '';
-  position: absolute;
-  top: 50%;
-  right: 5px;
-  transform: translateY(-50%);
-  width: 120px;
-  height: 2.5px;
-  background: linear-gradient(to left, rgba(255,255,255,0.9), rgba(180,200,255,0.4) 30%, rgba(120,150,255,0.15) 60%, transparent);
-  border-radius: 2px;
-}
-
-.hero-comet-head::before {
-  content: '';
-  position: absolute;
-  top: 50%;
-  right: 3px;
-  transform: translateY(-50%);
-  width: 80px;
-  height: 8px;
-  background: linear-gradient(to left, rgba(180,200,255,0.25), rgba(100,140,255,0.08), transparent);
-  border-radius: 4px;
-  filter: blur(3px);
-}
+/* Market lightning, comet — removed from cinematic hero */
 
 /* ── Milky Way Band — very subtle diagonal luminance ── */
 .milky-way-band {
@@ -1647,129 +1568,111 @@ body,
   pointer-events: none;
 }
 
-/* ── Hero Shooting Stars — quick diagonal streaks ── */
-@keyframes hero-shoot-1 {
-  0% { transform: translate(0, 0) rotate(-40deg); opacity: 0; }
-  2% { opacity: 1; }
-  10% { opacity: 0.8; }
-  18% { transform: translate(400px, 300px) rotate(-40deg); opacity: 0; }
-  100% { opacity: 0; }
-}
+/* Shooting stars, earth-atmosphere-glow — removed from cinematic hero */
 
-@keyframes hero-shoot-2 {
-  0% { transform: translate(0, 0) rotate(-35deg); opacity: 0; }
-  3% { opacity: 1; }
-  12% { opacity: 0.7; }
-  22% { transform: translate(350px, 220px) rotate(-35deg); opacity: 0; }
-  100% { opacity: 0; }
-}
-
-.hero-shooting-star-1 {
-  position: absolute;
-  top: 15%;
-  left: 20%;
-  width: 2px;
-  height: 2px;
-  background: white;
-  border-radius: 50%;
-  pointer-events: none;
-  animation: hero-shoot-1 8s ease-in infinite 4s;
-  box-shadow: 0 0 4px white;
-}
-
-.hero-shooting-star-1::after {
-  content: '';
-  position: absolute;
-  top: 0;
-  right: 0;
-  width: 50px;
-  height: 1.5px;
-  background: linear-gradient(to left, white, rgba(200,210,255,0.3), transparent);
-  transform: rotate(-40deg);
-  transform-origin: right center;
-}
-
-.hero-shooting-star-2 {
-  position: absolute;
-  top: 30%;
-  left: 55%;
-  width: 1.5px;
-  height: 1.5px;
-  background: white;
-  border-radius: 50%;
-  pointer-events: none;
-  animation: hero-shoot-2 10s ease-in infinite 9s;
-  box-shadow: 0 0 3px white;
-}
-
-.hero-shooting-star-2::after {
-  content: '';
-  position: absolute;
-  top: 0;
-  right: 0;
-  width: 35px;
-  height: 1px;
-  background: linear-gradient(to left, white, rgba(200,210,255,0.2), transparent);
-  transform: rotate(-35deg);
-  transform-origin: right center;
-}
-
-/* ── Earth Atmosphere Glow — thin luminous blue limb at horizon ── */
-.earth-atmosphere-glow {
-  position: absolute;
-  bottom: 12%;
-  left: 0;
-  right: 0;
-  height: 8px;
-  background: linear-gradient(90deg,
-    transparent 5%,
-    rgba(60,140,255,0.15) 20%,
-    rgba(80,180,255,0.25) 35%,
-    rgba(100,200,255,0.3) 50%,
-    rgba(80,180,255,0.25) 65%,
-    rgba(60,140,255,0.15) 80%,
-    transparent 95%
-  );
-  filter: blur(4px);
-  border-radius: 50%;
-  animation: atmosphere-pulse 5s ease-in-out infinite;
-  pointer-events: none;
-}
-
-@keyframes atmosphere-pulse {
-  0%, 100% { opacity: 0.5; transform: scaleY(1); }
-  50% { opacity: 0.8; transform: scaleY(1.3); }
-}
-
-/* ── Earth City Lights — tiny dots visible on the dark Earth surface ── */
+/* ── Earth City Lights — vivid illuminated cities, continent outlines, country clusters ── */
 .earth-city-lights {
   position: absolute;
   bottom: 0;
-  left: 15%;
-  right: 15%;
-  height: 15%;
+  left: 8%;
+  right: 8%;
+  height: 18%;
   background-image:
-    radial-gradient(1px 1px at 10% 30%, rgba(255,200,100,0.4), transparent),
-    radial-gradient(1.5px 1.5px at 15% 50%, rgba(255,220,150,0.3), transparent),
-    radial-gradient(1px 1px at 22% 25%, rgba(255,180,80,0.35), transparent),
-    radial-gradient(1px 1px at 30% 45%, rgba(255,200,120,0.3), transparent),
-    radial-gradient(1.5px 1.5px at 38% 35%, rgba(255,220,160,0.35), transparent),
-    radial-gradient(1px 1px at 45% 50%, rgba(255,200,100,0.25), transparent),
-    radial-gradient(1px 1px at 52% 30%, rgba(255,180,80,0.3), transparent),
-    radial-gradient(1.5px 1.5px at 60% 40%, rgba(255,220,140,0.35), transparent),
-    radial-gradient(1px 1px at 68% 25%, rgba(255,200,100,0.3), transparent),
-    radial-gradient(1px 1px at 75% 50%, rgba(255,180,80,0.25), transparent),
-    radial-gradient(1.5px 1.5px at 82% 35%, rgba(255,220,150,0.3), transparent),
-    radial-gradient(1px 1px at 90% 45%, rgba(255,200,120,0.25), transparent);
+    /* === INDIA CLUSTER — bright, prominent (center-right area) === */
+    radial-gradient(3px 3px at 58% 35%, rgba(255,200,80,0.9), transparent),   /* Mumbai */
+    radial-gradient(3px 3px at 62% 30%, rgba(255,220,100,0.85), transparent),  /* Delhi */
+    radial-gradient(2.5px 2.5px at 60% 45%, rgba(255,180,60,0.8), transparent), /* Chennai */
+    radial-gradient(2px 2px at 61% 38%, rgba(255,200,80,0.7), transparent),    /* Bangalore */
+    radial-gradient(2px 2px at 59% 25%, rgba(255,220,100,0.6), transparent),   /* Kolkata */
+    radial-gradient(1.5px 1.5px at 60% 42%, rgba(255,190,70,0.55), transparent), /* Hyderabad */
+    radial-gradient(1.5px 1.5px at 57% 40%, rgba(255,200,90,0.5), transparent),  /* Pune */
+    /* India coastline outline glow */
+    radial-gradient(8px 12px at 59% 36%, rgba(255,200,100,0.12), transparent),
+
+    /* === MIDDLE EAST / GULF === */
+    radial-gradient(2.5px 2.5px at 48% 30%, rgba(255,220,120,0.75), transparent), /* Dubai/UAE */
+    radial-gradient(2px 2px at 47% 28%, rgba(255,200,80,0.6), transparent),       /* Saudi */
+    radial-gradient(1.5px 1.5px at 46% 32%, rgba(255,180,60,0.5), transparent),   /* Qatar */
+
+    /* === EUROPE CLUSTER (upper left area) === */
+    radial-gradient(2.5px 2.5px at 35% 18%, rgba(255,220,150,0.8), transparent),  /* London */
+    radial-gradient(2.5px 2.5px at 37% 20%, rgba(255,200,100,0.75), transparent), /* Paris */
+    radial-gradient(2px 2px at 38% 18%, rgba(255,210,120,0.7), transparent),      /* Berlin */
+    radial-gradient(2px 2px at 36% 22%, rgba(255,190,80,0.65), transparent),      /* Rome */
+    radial-gradient(1.5px 1.5px at 34% 20%, rgba(255,200,100,0.55), transparent), /* Madrid */
+    radial-gradient(1.5px 1.5px at 39% 16%, rgba(255,210,130,0.5), transparent),  /* Moscow */
+    radial-gradient(1.5px 1.5px at 33% 18%, rgba(255,220,140,0.45), transparent), /* Amsterdam */
+    /* Europe cluster glow */
+    radial-gradient(12px 8px at 36% 19%, rgba(255,210,120,0.1), transparent),
+
+    /* === EAST ASIA CLUSTER === */
+    radial-gradient(3px 3px at 72% 25%, rgba(255,220,100,0.85), transparent),     /* Tokyo */
+    radial-gradient(2.5px 2.5px at 70% 28%, rgba(255,200,80,0.8), transparent),   /* Shanghai */
+    radial-gradient(2px 2px at 68% 30%, rgba(255,180,60,0.7), transparent),       /* Beijing */
+    radial-gradient(2px 2px at 71% 32%, rgba(255,200,90,0.65), transparent),      /* Hong Kong */
+    radial-gradient(2px 2px at 73% 30%, rgba(255,210,110,0.6), transparent),      /* Seoul */
+    radial-gradient(1.5px 1.5px at 66% 35%, rgba(255,190,70,0.55), transparent),  /* Singapore */
+    /* East Asia cluster glow */
+    radial-gradient(10px 8px at 70% 28%, rgba(255,200,80,0.1), transparent),
+
+    /* === AFRICA CLUSTER === */
+    radial-gradient(2px 2px at 40% 45%, rgba(255,180,60,0.6), transparent),       /* Lagos */
+    radial-gradient(1.5px 1.5px at 42% 38%, rgba(255,200,80,0.5), transparent),   /* Cairo */
+    radial-gradient(1.5px 1.5px at 45% 50%, rgba(255,190,70,0.45), transparent),  /* Nairobi */
+    radial-gradient(1.5px 1.5px at 38% 55%, rgba(255,200,90,0.4), transparent),   /* Cape Town */
+    radial-gradient(1px 1px at 41% 42%, rgba(255,180,60,0.35), transparent),      /* Addis Ababa */
+
+    /* === AMERICAS (visible on left edge) === */
+    radial-gradient(2px 2px at 15% 25%, rgba(255,220,120,0.7), transparent),      /* New York */
+    radial-gradient(2px 2px at 12% 30%, rgba(255,200,80,0.6), transparent),       /* São Paulo */
+    radial-gradient(1.5px 1.5px at 10% 22%, rgba(255,210,100,0.55), transparent), /* LA */
+    radial-gradient(1.5px 1.5px at 13% 28%, rgba(255,190,70,0.5), transparent),   /* Mexico City */
+    radial-gradient(1px 1px at 14% 35%, rgba(255,200,90,0.4), transparent),       /* Buenos Aires */
+
+    /* === AUSTRALIA === */
+    radial-gradient(2px 2px at 78% 55%, rgba(255,200,80,0.6), transparent),       /* Sydney */
+    radial-gradient(1.5px 1.5px at 76% 52%, rgba(255,180,60,0.5), transparent),   /* Melbourne */
+
+    /* === SCATTERED SMALLER CITIES everywhere === */
+    radial-gradient(1px 1px at 20% 40%, rgba(255,200,100,0.3), transparent),
+    radial-gradient(1px 1px at 25% 15%, rgba(255,220,120,0.25), transparent),
+    radial-gradient(1px 1px at 50% 22%, rgba(255,180,60,0.3), transparent),
+    radial-gradient(1px 1px at 55% 50%, rgba(255,200,80,0.25), transparent),
+    radial-gradient(1px 1px at 65% 18%, rgba(255,210,100,0.3), transparent),
+    radial-gradient(1px 1px at 75% 42%, rgba(255,190,70,0.25), transparent),
+    radial-gradient(1px 1px at 82% 35%, rgba(255,220,130,0.3), transparent),
+    radial-gradient(1px 1px at 85% 48%, rgba(255,200,100,0.2), transparent),
+    radial-gradient(1px 1px at 30% 50%, rgba(255,180,60,0.25), transparent),
+    radial-gradient(1px 1px at 43% 55%, rgba(255,200,90,0.2), transparent),
+    radial-gradient(1px 1px at 52% 48%, rgba(255,220,110,0.25), transparent),
+    radial-gradient(1px 1px at 18% 48%, rgba(255,200,80,0.2), transparent),
+    radial-gradient(1px 1px at 88% 25%, rgba(255,190,70,0.2), transparent),
+
+    /* === CONTINENT COASTLINE OUTLINES — very faint warm glow tracing landmasses === */
+    /* Europe coastline */
+    radial-gradient(20px 6px at 35% 17%, rgba(255,200,100,0.06), transparent),
+    /* Africa outline */
+    radial-gradient(10px 18px at 40% 45%, rgba(255,190,80,0.05), transparent),
+    /* Asia mainland */
+    radial-gradient(25px 10px at 65% 28%, rgba(255,200,100,0.06), transparent),
+    /* India subcontinent shape */
+    radial-gradient(6px 10px at 59% 38%, rgba(255,200,100,0.08), transparent),
+    /* Americas */
+    radial-gradient(8px 20px at 13% 28%, rgba(255,200,100,0.05), transparent),
+    /* Australia */
+    radial-gradient(10px 6px at 77% 53%, rgba(255,200,100,0.05), transparent);
+
   pointer-events: none;
   animation: city-lights-twinkle 4s ease-in-out infinite;
-  mask-image: radial-gradient(ellipse 80% 100% at 50% 100%, black 0%, transparent 80%);
-  -webkit-mask-image: radial-gradient(ellipse 80% 100% at 50% 100%, black 0%, transparent 80%);
+  mask-image: radial-gradient(ellipse 90% 100% at 50% 100%, black 0%, black 30%, transparent 85%);
+  -webkit-mask-image: radial-gradient(ellipse 90% 100% at 50% 100%, black 0%, black 30%, transparent 85%);
 }
 
 @keyframes city-lights-twinkle {
-  0%, 100% { opacity: 0.5; }
-  50% { opacity: 0.8; }
+  0%, 100% { opacity: 0.6; }
+  30% { opacity: 0.85; }
+  50% { opacity: 0.95; }
+  70% { opacity: 0.8; }
 }
 
 /* ── Airplane 2 — second plane, opposite direction, higher altitude ── */
@@ -1786,6 +1689,46 @@ body,
   right: 0;
   pointer-events: none;
   animation: airplane-fly-reverse 75s linear infinite 30s;
+}
+
+/* ── Airplane 3 — higher altitude, slightly faster ── */
+@keyframes airplane-fly-3 {
+  0% { transform: translateX(-50px) translateY(0); opacity: 0; }
+  3% { opacity: 0.4; }
+  97% { opacity: 0.4; }
+  100% { transform: translateX(calc(100vw + 50px)) translateY(-15px); opacity: 0; }
+}
+
+.airplane-3 {
+  position: absolute;
+  top: 42%;
+  left: 0;
+  pointer-events: none;
+  animation: airplane-fly-3 90s linear infinite 45s;
+}
+
+.airplane-3 .airplane-body {
+  transform: scale(0.7);
+}
+
+/* ── Airplane 4 — low altitude near horizon, slow ── */
+@keyframes airplane-fly-4 {
+  0% { transform: translateX(40px) translateY(0) scaleX(-1); opacity: 0; }
+  4% { opacity: 0.35; }
+  96% { opacity: 0.35; }
+  100% { transform: translateX(calc(-100vw - 40px)) translateY(10px) scaleX(-1); opacity: 0; }
+}
+
+.airplane-4 {
+  position: absolute;
+  top: 68%;
+  right: 0;
+  pointer-events: none;
+  animation: airplane-fly-4 100s linear infinite 15s;
+}
+
+.airplane-4 .airplane-body {
+  transform: scale(0.6);
 }
 
 /* Meteor shower streaks */
