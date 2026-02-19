@@ -380,14 +380,33 @@ export default function SpaceHero({ variant }: SpaceHeroProps) {
          ═══════════════════════════════════════════════════════════ */}
       {variant === 'aurora' && (
         <>
-          {/* Aurora Borealis curtain layers — flowing bands of light */}
+          {/* ═══ GIANT AURORA BOREALIS ═══
+              5 curtain layers + shimmer + reflection + color pulse
+              Vivid, oscillating, colorful — the most stunning effect on the site */}
+
+          {/* Color cycling pulse — background hue that shifts through aurora colors */}
+          <div className="aurora-color-pulse" />
+
+          {/* 5 Aurora Borealis curtain layers — each a different color band */}
           <div className="aurora-curtain-1" />
           <div className="aurora-curtain-2" />
           <div className="aurora-curtain-3" />
+          <div className="aurora-curtain-4" />
+          <div className="aurora-curtain-5" />
 
-          {/* Aurora reflection glow on bottom */}
-          <div className="absolute bottom-0 left-0 right-0 h-[30%]"
-            style={{ background: 'linear-gradient(to top, rgba(0,255,128,0.04), rgba(0,200,255,0.02), transparent)' }} />
+          {/* Fast-moving shimmer overlay — makes the aurora sparkle */}
+          <div className="aurora-shimmer" />
+
+          {/* Ground reflection — aurora colors reflecting below */}
+          <div className="aurora-reflection" />
+
+          {/* Extra vivid green glow — the signature aurora color */}
+          <div className="absolute top-[5%] left-[15%] w-[600px] h-[400px] rounded-full blur-[100px] animate-pulse-slow"
+            style={{ background: 'radial-gradient(circle, rgba(0,255,128,0.12) 0%, rgba(0,200,255,0.06) 50%, transparent 70%)' }} />
+          <div className="absolute top-[10%] right-[10%] w-[500px] h-[350px] rounded-full blur-[90px] animate-pulse-slow-2"
+            style={{ background: 'radial-gradient(circle, rgba(0,200,255,0.10) 0%, rgba(139,92,246,0.06) 50%, transparent 70%)' }} />
+          <div className="absolute top-[0%] left-[40%] w-[400px] h-[300px] rounded-full blur-[80px] animate-nebula-drift"
+            style={{ background: 'radial-gradient(circle, rgba(255,50,150,0.08) 0%, rgba(0,255,200,0.04) 50%, transparent 70%)' }} />
 
           {/* Meteor shower — multiple bright streaks */}
           <div className="meteor-streak meteor-1" />
@@ -404,17 +423,27 @@ export default function SpaceHero({ variant }: SpaceHeroProps) {
 
           {/* Bright Venus-like star */}
           <div className="absolute top-[12%] right-[18%]">
-            <div className="w-4 h-4 rounded-full animate-pulsar-core"
-              style={{ background: 'radial-gradient(circle, #fff 0%, rgba(255,200,100,0.8) 40%, transparent 70%)', boxShadow: '0 0 20px rgba(255,255,255,0.8), 0 0 40px rgba(255,200,100,0.4), 0 0 80px rgba(255,150,50,0.2)' }} />
+            <div className="w-5 h-5 rounded-full animate-pulsar-core"
+              style={{ background: 'radial-gradient(circle, #fff 0%, rgba(255,200,100,0.8) 40%, transparent 70%)', boxShadow: '0 0 25px rgba(255,255,255,0.9), 0 0 50px rgba(255,200,100,0.5), 0 0 100px rgba(255,150,50,0.25)' }} />
             {/* Cross-flare / diffraction spikes */}
-            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[60px] h-[1px] animate-star-flare"
-              style={{ background: 'linear-gradient(to right, transparent, rgba(255,255,255,0.6), transparent)' }} />
-            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[1px] h-[60px] animate-star-flare"
-              style={{ background: 'linear-gradient(to bottom, transparent, rgba(255,255,255,0.6), transparent)' }} />
-            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[40px] h-[1px] rotate-45 animate-star-flare-2"
-              style={{ background: 'linear-gradient(to right, transparent, rgba(255,200,100,0.4), transparent)' }} />
-            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[40px] h-[1px] -rotate-45 animate-star-flare-2"
-              style={{ background: 'linear-gradient(to right, transparent, rgba(255,200,100,0.4), transparent)' }} />
+            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[80px] h-[1.5px] animate-star-flare"
+              style={{ background: 'linear-gradient(to right, transparent, rgba(255,255,255,0.7), transparent)' }} />
+            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[1.5px] h-[80px] animate-star-flare"
+              style={{ background: 'linear-gradient(to bottom, transparent, rgba(255,255,255,0.7), transparent)' }} />
+            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[50px] h-[1px] rotate-45 animate-star-flare-2"
+              style={{ background: 'linear-gradient(to right, transparent, rgba(255,200,100,0.5), transparent)' }} />
+            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[50px] h-[1px] -rotate-45 animate-star-flare-2"
+              style={{ background: 'linear-gradient(to right, transparent, rgba(255,200,100,0.5), transparent)' }} />
+          </div>
+
+          {/* Second bright star — left side */}
+          <div className="absolute top-[25%] left-[8%]">
+            <div className="w-3 h-3 rounded-full animate-pulsar-core"
+              style={{ background: 'radial-gradient(circle, #fff 0%, rgba(100,255,200,0.7) 50%, transparent 70%)', boxShadow: '0 0 15px rgba(100,255,200,0.7), 0 0 30px rgba(0,255,128,0.3)', animationDelay: '1.5s' }} />
+            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[40px] h-[1px] animate-star-flare-2"
+              style={{ background: 'linear-gradient(to right, transparent, rgba(100,255,200,0.5), transparent)' }} />
+            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[1px] h-[40px] animate-star-flare-2"
+              style={{ background: 'linear-gradient(to bottom, transparent, rgba(100,255,200,0.5), transparent)' }} />
           </div>
 
           {/* Distant nebula wash */}

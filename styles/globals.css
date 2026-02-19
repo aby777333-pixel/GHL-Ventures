@@ -1445,11 +1445,148 @@ body,
 }
 
 /* ============================================================
-   ★ AURORA BOREALIS — Home Hero — Northern Lights Effect
+   ★ GIANT AURORA BOREALIS — Home Hero — Stunning Northern Lights
    ============================================================ */
 
-/* Aurora curtains — flowing vertical bands of green/blue/violet light */
+/* Aurora curtain 1 — Primary vivid GREEN band — full-width, tall, dramatic */
 .aurora-curtain-1 {
+  position: absolute;
+  top: 0;
+  left: -10%;
+  right: -10%;
+  height: 85%;
+  background: linear-gradient(
+    180deg,
+    transparent 0%,
+    rgba(0,255,100,0.18) 10%,
+    rgba(0,255,160,0.22) 20%,
+    rgba(0,200,255,0.15) 35%,
+    rgba(100,50,255,0.10) 50%,
+    rgba(0,255,128,0.06) 65%,
+    transparent 80%
+  );
+  mask-image: linear-gradient(
+    90deg,
+    transparent 0%,
+    black 8%,
+    transparent 18%,
+    black 28%,
+    transparent 38%,
+    black 48%,
+    transparent 58%,
+    black 68%,
+    transparent 78%,
+    black 88%,
+    transparent 100%
+  );
+  -webkit-mask-image: linear-gradient(
+    90deg,
+    transparent 0%,
+    black 8%,
+    transparent 18%,
+    black 28%,
+    transparent 38%,
+    black 48%,
+    transparent 58%,
+    black 68%,
+    transparent 78%,
+    black 88%,
+    transparent 100%
+  );
+  animation: aurora-wave-1 6s ease-in-out infinite;
+  filter: blur(12px);
+}
+
+/* Aurora curtain 2 — CYAN / TEAL secondary band */
+.aurora-curtain-2 {
+  position: absolute;
+  top: 0;
+  left: -5%;
+  right: -5%;
+  height: 80%;
+  background: linear-gradient(
+    180deg,
+    transparent 0%,
+    rgba(0,255,200,0.14) 12%,
+    rgba(0,180,255,0.18) 25%,
+    rgba(80,0,200,0.12) 40%,
+    rgba(0,255,180,0.08) 55%,
+    rgba(208,2,27,0.05) 70%,
+    transparent 85%
+  );
+  mask-image: linear-gradient(
+    90deg,
+    black 0%,
+    transparent 12%,
+    black 24%,
+    transparent 36%,
+    black 48%,
+    transparent 60%,
+    black 72%,
+    transparent 84%,
+    black 96%
+  );
+  -webkit-mask-image: linear-gradient(
+    90deg,
+    black 0%,
+    transparent 12%,
+    black 24%,
+    transparent 36%,
+    black 48%,
+    transparent 60%,
+    black 72%,
+    transparent 84%,
+    black 96%
+  );
+  animation: aurora-wave-2 9s ease-in-out infinite 1s;
+  filter: blur(16px);
+}
+
+/* Aurora curtain 3 — VIOLET / MAGENTA shimmer */
+.aurora-curtain-3 {
+  position: absolute;
+  top: 0;
+  left: -8%;
+  right: -8%;
+  height: 75%;
+  background: linear-gradient(
+    180deg,
+    transparent 0%,
+    rgba(180,60,255,0.12) 8%,
+    rgba(100,255,180,0.14) 22%,
+    rgba(60,200,255,0.16) 38%,
+    rgba(200,50,200,0.10) 52%,
+    rgba(0,255,128,0.06) 66%,
+    transparent 80%
+  );
+  mask-image: linear-gradient(
+    90deg,
+    transparent 5%,
+    black 16%,
+    transparent 32%,
+    black 44%,
+    transparent 56%,
+    black 68%,
+    transparent 80%,
+    black 92%
+  );
+  -webkit-mask-image: linear-gradient(
+    90deg,
+    transparent 5%,
+    black 16%,
+    transparent 32%,
+    black 44%,
+    transparent 56%,
+    black 68%,
+    transparent 80%,
+    black 92%
+  );
+  animation: aurora-wave-3 7s ease-in-out infinite 2.5s;
+  filter: blur(20px);
+}
+
+/* Aurora curtain 4 — ROSE / PINK warm band — NEW */
+.aurora-curtain-4 {
   position: absolute;
   top: 0;
   left: 0;
@@ -1458,153 +1595,241 @@ body,
   background: linear-gradient(
     180deg,
     transparent 0%,
-    rgba(0,255,128,0.06) 15%,
-    rgba(0,200,255,0.08) 30%,
-    rgba(100,50,255,0.04) 50%,
+    rgba(255,50,120,0.10) 15%,
+    rgba(255,100,200,0.12) 28%,
+    rgba(200,0,100,0.08) 42%,
+    rgba(0,255,200,0.06) 58%,
+    transparent 75%
+  );
+  mask-image: linear-gradient(
+    90deg,
+    black 2%,
+    transparent 20%,
+    black 38%,
+    transparent 52%,
+    black 70%,
+    transparent 88%
+  );
+  -webkit-mask-image: linear-gradient(
+    90deg,
+    black 2%,
+    transparent 20%,
+    black 38%,
+    transparent 52%,
+    black 70%,
+    transparent 88%
+  );
+  animation: aurora-wave-4 11s ease-in-out infinite 3.5s;
+  filter: blur(18px);
+}
+
+/* Aurora curtain 5 — ELECTRIC BLUE / WHITE bright flash band — NEW */
+.aurora-curtain-5 {
+  position: absolute;
+  top: 0;
+  left: -5%;
+  right: -5%;
+  height: 65%;
+  background: linear-gradient(
+    180deg,
+    transparent 0%,
+    rgba(100,200,255,0.15) 10%,
+    rgba(200,255,255,0.12) 25%,
+    rgba(0,255,128,0.10) 40%,
+    rgba(139,92,246,0.08) 55%,
     transparent 70%
   );
   mask-image: linear-gradient(
     90deg,
-    transparent 0%,
-    black 10%,
-    transparent 25%,
-    black 35%,
-    transparent 50%,
-    black 60%,
-    transparent 75%,
-    black 85%,
-    transparent 100%
+    transparent 10%,
+    black 22%,
+    transparent 42%,
+    black 58%,
+    transparent 78%,
+    black 90%
   );
   -webkit-mask-image: linear-gradient(
     90deg,
-    transparent 0%,
-    black 10%,
-    transparent 25%,
-    black 35%,
-    transparent 50%,
-    black 60%,
-    transparent 75%,
-    black 85%,
-    transparent 100%
+    transparent 10%,
+    black 22%,
+    transparent 42%,
+    black 58%,
+    transparent 78%,
+    black 90%
   );
-  animation: aurora-wave-1 8s ease-in-out infinite;
-  filter: blur(20px);
+  animation: aurora-wave-5 8s ease-in-out infinite 5s;
+  filter: blur(14px);
 }
 
-.aurora-curtain-2 {
+/* Aurora shimmer overlay — fast-moving sparkle layer */
+.aurora-shimmer {
   position: absolute;
-  top: 5%;
+  top: 0;
   left: 0;
   right: 0;
   height: 60%;
   background: linear-gradient(
     180deg,
     transparent 0%,
-    rgba(0,255,200,0.05) 20%,
-    rgba(0,100,255,0.07) 40%,
-    rgba(208,2,27,0.03) 60%,
-    transparent 80%
+    rgba(255,255,255,0.03) 20%,
+    rgba(0,255,200,0.04) 40%,
+    transparent 60%
   );
   mask-image: linear-gradient(
     90deg,
-    black 0%,
-    transparent 15%,
-    black 30%,
-    transparent 45%,
+    transparent 0%,
+    black 5%,
+    transparent 10%,
+    black 15%,
+    transparent 20%,
+    black 25%,
+    transparent 30%,
+    black 35%,
+    transparent 40%,
+    black 45%,
+    transparent 50%,
     black 55%,
+    transparent 60%,
+    black 65%,
     transparent 70%,
-    black 80%,
-    transparent 95%
+    black 75%,
+    transparent 80%,
+    black 85%,
+    transparent 90%,
+    black 95%,
+    transparent 100%
   );
   -webkit-mask-image: linear-gradient(
     90deg,
-    black 0%,
-    transparent 15%,
-    black 30%,
-    transparent 45%,
+    transparent 0%,
+    black 5%,
+    transparent 10%,
+    black 15%,
+    transparent 20%,
+    black 25%,
+    transparent 30%,
+    black 35%,
+    transparent 40%,
+    black 45%,
+    transparent 50%,
     black 55%,
+    transparent 60%,
+    black 65%,
     transparent 70%,
-    black 80%,
-    transparent 95%
+    black 75%,
+    transparent 80%,
+    black 85%,
+    transparent 90%,
+    black 95%,
+    transparent 100%
   );
-  animation: aurora-wave-2 12s ease-in-out infinite 2s;
-  filter: blur(25px);
+  animation: aurora-shimmer-move 3s ease-in-out infinite;
+  filter: blur(6px);
 }
 
-.aurora-curtain-3 {
+/* Aurora bottom reflection — ground glow */
+.aurora-reflection {
   position: absolute;
-  top: 0;
+  bottom: 0;
   left: 0;
   right: 0;
-  height: 65%;
+  height: 40%;
   background: linear-gradient(
-    180deg,
-    transparent 0%,
-    rgba(100,255,150,0.04) 10%,
-    rgba(50,200,255,0.06) 35%,
-    rgba(139,92,246,0.04) 55%,
-    transparent 75%
+    to top,
+    rgba(0,255,128,0.06) 0%,
+    rgba(0,200,255,0.04) 20%,
+    rgba(139,92,246,0.03) 40%,
+    rgba(255,50,120,0.02) 60%,
+    transparent 100%
   );
-  mask-image: linear-gradient(
-    90deg,
-    transparent 5%,
-    black 20%,
-    transparent 40%,
-    black 50%,
-    transparent 65%,
-    black 75%,
-    transparent 90%
-  );
-  -webkit-mask-image: linear-gradient(
-    90deg,
-    transparent 5%,
-    black 20%,
-    transparent 40%,
-    black 50%,
-    transparent 65%,
-    black 75%,
-    transparent 90%
-  );
-  animation: aurora-wave-3 10s ease-in-out infinite 4s;
-  filter: blur(30px);
+  animation: aurora-reflect-pulse 6s ease-in-out infinite;
+  filter: blur(40px);
 }
 
+/* Aurora wave keyframes — dramatic oscillating motion */
 @keyframes aurora-wave-1 {
-  0%, 100% { transform: translateX(0) skewX(0deg); opacity: 0.6; }
-  25% { transform: translateX(30px) skewX(2deg); opacity: 1; }
-  50% { transform: translateX(-20px) skewX(-1deg); opacity: 0.7; }
-  75% { transform: translateX(15px) skewX(1deg); opacity: 0.9; }
+  0%, 100% { transform: translateX(0) skewX(0deg) scaleY(1); opacity: 0.7; }
+  15% { transform: translateX(60px) skewX(3deg) scaleY(1.1); opacity: 1; }
+  35% { transform: translateX(-40px) skewX(-2deg) scaleY(0.95); opacity: 0.85; }
+  55% { transform: translateX(30px) skewX(2deg) scaleY(1.05); opacity: 0.95; }
+  75% { transform: translateX(-20px) skewX(-1deg) scaleY(1); opacity: 0.8; }
 }
 
 @keyframes aurora-wave-2 {
-  0%, 100% { transform: translateX(0) skewX(0deg); opacity: 0.5; }
-  33% { transform: translateX(-25px) skewX(-2deg); opacity: 0.9; }
-  66% { transform: translateX(20px) skewX(1.5deg); opacity: 0.6; }
+  0%, 100% { transform: translateX(0) skewX(0deg) scaleY(1); opacity: 0.6; }
+  20% { transform: translateX(-50px) skewX(-3deg) scaleY(1.08); opacity: 1; }
+  45% { transform: translateX(40px) skewX(2deg) scaleY(0.92); opacity: 0.75; }
+  70% { transform: translateX(-25px) skewX(-1.5deg) scaleY(1.04); opacity: 0.9; }
 }
 
 @keyframes aurora-wave-3 {
-  0%, 100% { transform: translateX(10px) skewX(1deg); opacity: 0.4; }
-  50% { transform: translateX(-30px) skewX(-2deg); opacity: 0.8; }
+  0%, 100% { transform: translateX(10px) skewX(1deg) scaleY(1); opacity: 0.5; }
+  25% { transform: translateX(-60px) skewX(-4deg) scaleY(1.12); opacity: 0.95; }
+  50% { transform: translateX(45px) skewX(3deg) scaleY(0.88); opacity: 0.7; }
+  75% { transform: translateX(-30px) skewX(-2deg) scaleY(1.06); opacity: 0.85; }
+}
+
+@keyframes aurora-wave-4 {
+  0%, 100% { transform: translateX(-15px) skewX(-1deg) scaleY(1); opacity: 0.4; }
+  30% { transform: translateX(55px) skewX(3deg) scaleY(1.1); opacity: 0.9; }
+  60% { transform: translateX(-35px) skewX(-2.5deg) scaleY(0.9); opacity: 0.65; }
+}
+
+@keyframes aurora-wave-5 {
+  0%, 100% { transform: translateX(20px) skewX(1.5deg) scaleY(0.95); opacity: 0.35; }
+  40% { transform: translateX(-50px) skewX(-3deg) scaleY(1.15); opacity: 0.85; }
+  70% { transform: translateX(30px) skewX(2deg) scaleY(1); opacity: 0.55; }
+}
+
+@keyframes aurora-shimmer-move {
+  0%, 100% { transform: translateX(0); opacity: 0.4; }
+  50% { transform: translateX(40px); opacity: 0.8; }
+}
+
+@keyframes aurora-reflect-pulse {
+  0%, 100% { opacity: 0.4; transform: scaleY(1); }
+  50% { opacity: 0.7; transform: scaleY(1.1); }
+}
+
+/* Aurora color pulse — cycling through vivid hues */
+.aurora-color-pulse {
+  position: absolute;
+  top: 5%;
+  left: 10%;
+  right: 10%;
+  height: 50%;
+  border-radius: 50%;
+  filter: blur(80px);
+  animation: aurora-color-cycle 12s ease-in-out infinite;
+}
+
+@keyframes aurora-color-cycle {
+  0%, 100% { background: radial-gradient(ellipse, rgba(0,255,128,0.12) 0%, transparent 70%); }
+  16% { background: radial-gradient(ellipse, rgba(0,200,255,0.14) 0%, transparent 70%); }
+  33% { background: radial-gradient(ellipse, rgba(139,92,246,0.12) 0%, transparent 70%); }
+  50% { background: radial-gradient(ellipse, rgba(255,50,150,0.10) 0%, transparent 70%); }
+  66% { background: radial-gradient(ellipse, rgba(0,255,200,0.12) 0%, transparent 70%); }
+  83% { background: radial-gradient(ellipse, rgba(100,200,255,0.14) 0%, transparent 70%); }
 }
 
 /* Meteor shower streaks */
 .meteor-streak {
   position: absolute;
-  width: 150px;
-  height: 2px;
-  background: linear-gradient(to right, transparent, rgba(255,255,255,0.9), rgba(255,200,100,0.6), transparent);
+  width: 200px;
+  height: 2.5px;
+  background: linear-gradient(to right, transparent, rgba(255,255,255,0.95), rgba(255,200,100,0.7), transparent);
   transform: rotate(-45deg);
   border-radius: 2px;
-  filter: drop-shadow(0 0 6px rgba(255,255,255,0.6));
+  filter: drop-shadow(0 0 8px rgba(255,255,255,0.7));
 }
 
-.meteor-1 { top: 5%; left: -150px; animation: meteor-fall 2.5s ease-in infinite 0s; }
-.meteor-2 { top: 15%; left: -150px; animation: meteor-fall 2.5s ease-in infinite 0.8s; }
-.meteor-3 { top: 30%; left: -150px; animation: meteor-fall 2.5s ease-in infinite 1.5s; }
-.meteor-4 { top: 8%; left: -150px; animation: meteor-fall 2.5s ease-in infinite 2.2s; }
-.meteor-5 { top: 20%; left: -150px; animation: meteor-fall 3s ease-in infinite 0.4s; }
-.meteor-6 { top: 40%; left: -150px; animation: meteor-fall 2.8s ease-in infinite 3s; }
-.meteor-7 { top: 12%; left: -150px; animation: meteor-fall 2.2s ease-in infinite 1.8s; }
+.meteor-1 { top: 5%; left: -200px; animation: meteor-fall 2.5s ease-in infinite 0s; }
+.meteor-2 { top: 15%; left: -200px; animation: meteor-fall 2.5s ease-in infinite 0.8s; }
+.meteor-3 { top: 30%; left: -200px; animation: meteor-fall 2.5s ease-in infinite 1.5s; }
+.meteor-4 { top: 8%; left: -200px; animation: meteor-fall 2.5s ease-in infinite 2.2s; }
+.meteor-5 { top: 20%; left: -200px; animation: meteor-fall 3s ease-in infinite 0.4s; }
+.meteor-6 { top: 40%; left: -200px; animation: meteor-fall 2.8s ease-in infinite 3s; }
+.meteor-7 { top: 12%; left: -200px; animation: meteor-fall 2.2s ease-in infinite 1.8s; }
 
 @keyframes meteor-fall {
   0% { transform: translateX(0) translateY(0) rotate(-45deg); opacity: 0; }
@@ -1619,32 +1844,36 @@ body,
   position: absolute;
   inset: 0;
   background-image:
-    radial-gradient(1.5px 1.5px at 10% 20%, rgba(0,255,128,0.4), transparent),
-    radial-gradient(2px 2px at 25% 40%, rgba(0,200,255,0.3), transparent),
-    radial-gradient(1px 1px at 40% 15%, rgba(100,255,200,0.35), transparent),
-    radial-gradient(1.5px 1.5px at 55% 55%, rgba(0,255,128,0.3), transparent),
-    radial-gradient(2px 2px at 70% 25%, rgba(0,200,255,0.25), transparent),
-    radial-gradient(1px 1px at 85% 45%, rgba(100,255,200,0.3), transparent),
-    radial-gradient(1.5px 1.5px at 30% 70%, rgba(0,255,128,0.2), transparent),
-    radial-gradient(1px 1px at 65% 75%, rgba(0,200,255,0.25), transparent);
+    radial-gradient(2px 2px at 10% 20%, rgba(0,255,128,0.5), transparent),
+    radial-gradient(2.5px 2.5px at 25% 40%, rgba(0,200,255,0.4), transparent),
+    radial-gradient(1.5px 1.5px at 40% 15%, rgba(100,255,200,0.45), transparent),
+    radial-gradient(2px 2px at 55% 55%, rgba(0,255,128,0.4), transparent),
+    radial-gradient(2.5px 2.5px at 70% 25%, rgba(0,200,255,0.35), transparent),
+    radial-gradient(1.5px 1.5px at 85% 45%, rgba(100,255,200,0.4), transparent),
+    radial-gradient(2px 2px at 30% 70%, rgba(0,255,128,0.3), transparent),
+    radial-gradient(1.5px 1.5px at 65% 75%, rgba(0,200,255,0.35), transparent),
+    radial-gradient(2px 2px at 15% 60%, rgba(139,92,246,0.3), transparent),
+    radial-gradient(2px 2px at 80% 35%, rgba(255,100,200,0.25), transparent);
   animation: solar-wind-drift 8s ease-in-out infinite;
 }
 .solar-wind-particles-2 {
   position: absolute;
   inset: 0;
   background-image:
-    radial-gradient(1px 1px at 15% 35%, rgba(100,255,200,0.3), transparent),
-    radial-gradient(1.5px 1.5px at 35% 60%, rgba(0,255,128,0.25), transparent),
-    radial-gradient(1px 1px at 50% 30%, rgba(0,200,255,0.2), transparent),
-    radial-gradient(1.5px 1.5px at 75% 50%, rgba(100,255,200,0.25), transparent),
-    radial-gradient(1px 1px at 90% 65%, rgba(0,255,128,0.2), transparent);
+    radial-gradient(1.5px 1.5px at 15% 35%, rgba(100,255,200,0.4), transparent),
+    radial-gradient(2px 2px at 35% 60%, rgba(0,255,128,0.35), transparent),
+    radial-gradient(1.5px 1.5px at 50% 30%, rgba(0,200,255,0.3), transparent),
+    radial-gradient(2px 2px at 75% 50%, rgba(100,255,200,0.35), transparent),
+    radial-gradient(1.5px 1.5px at 90% 65%, rgba(0,255,128,0.3), transparent),
+    radial-gradient(2px 2px at 5% 80%, rgba(139,92,246,0.25), transparent),
+    radial-gradient(1.5px 1.5px at 60% 10%, rgba(255,50,150,0.2), transparent);
   animation: solar-wind-drift 10s ease-in-out infinite 3s reverse;
 }
 
 @keyframes solar-wind-drift {
-  0%, 100% { transform: translateX(0) translateY(0); opacity: 0.4; }
-  33% { transform: translateX(20px) translateY(-10px); opacity: 0.8; }
-  66% { transform: translateX(-10px) translateY(5px); opacity: 0.5; }
+  0%, 100% { transform: translateX(0) translateY(0); opacity: 0.5; }
+  33% { transform: translateX(25px) translateY(-15px); opacity: 0.9; }
+  66% { transform: translateX(-15px) translateY(8px); opacity: 0.6; }
 }
 
 /* Star diffraction flares */

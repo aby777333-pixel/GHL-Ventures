@@ -1529,6 +1529,7 @@ function CalculatorCard({ tool, accentColor }: { tool: ToolDef; accentColor: str
 export default function ToolsPage() {
   const [activeCategory, setActiveCategory] = useState('investment')
   const [searchQuery, setSearchQuery] = useState('')
+  const [marketTab, setMarketTab] = useState<'india' | 'us'>('india')
 
   const activeCat = CATEGORIES.find(c => c.id === activeCategory)!
 
@@ -1672,24 +1673,68 @@ export default function ToolsPage() {
         </div>
       </section>
 
-      {/* ── Live Market Chart (TradingView) ── */}
+      {/* ── Live Market Data — Indian & US Indices ── */}
       <section className="py-16 bg-[#0a0a0a]">
         <div className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-8">
             <span className="text-brand-red font-semibold text-xs uppercase tracking-wider">Live Markets</span>
-            <h2 className="text-2xl md:text-3xl font-extrabold text-white mt-2">Real-Time Market Chart</h2>
+            <h2 className="text-2xl md:text-3xl font-extrabold text-white mt-2">Real-Time Market Data</h2>
             <p className="text-white/40 text-sm mt-2 max-w-lg mx-auto">
-              Track Indian equities, commodities, and indices with interactive TradingView charts.
+              Track Indian & US equities, commodities, and indices in real time.
             </p>
           </div>
+
+          {/* Market Tab Switcher */}
+          <div className="flex justify-center mb-6">
+            <div className="flex items-center gap-1 bg-white/5 rounded-full p-1 border border-white/10">
+              <button
+                onClick={() => setMarketTab('india')}
+                className={`px-5 py-2 rounded-full text-xs font-bold uppercase tracking-wider transition-all ${
+                  marketTab === 'india' ? 'bg-brand-red text-white shadow-lg' : 'text-gray-400 hover:text-white'
+                }`}
+              >
+                🇮🇳 Indian Indices
+              </button>
+              <button
+                onClick={() => setMarketTab('us')}
+                className={`px-5 py-2 rounded-full text-xs font-bold uppercase tracking-wider transition-all ${
+                  marketTab === 'us' ? 'bg-brand-red text-white shadow-lg' : 'text-gray-400 hover:text-white'
+                }`}
+              >
+                🇺🇸 US / NYSE Indices
+              </button>
+            </div>
+          </div>
+
+          {/* Live indicator */}
+          <div className="flex justify-center mb-4">
+            <div className="flex items-center gap-2 px-3 py-1.5 bg-white/5 rounded-full border border-white/10">
+              <span className="relative flex h-2 w-2">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-500 opacity-75" />
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500" />
+              </span>
+              <span className="text-green-400 text-[10px] font-semibold uppercase tracking-wider">Live Data</span>
+            </div>
+          </div>
+
           <div className="rounded-2xl overflow-hidden border border-white/10 bg-black/50" style={{ height: '500px' }}>
-            <iframe
-              src={`https://s.tradingview.com/widgetembed/?symbol=NSE%3ANIFTY&interval=D&hidesidetoolbar=0&symboledit=1&saveimage=0&toolbarbg=000000&studies=MASimple%409%2CRSI%4014&theme=dark&style=1&timezone=Asia%2FKolkata&withdateranges=1&showpopupbutton=0&hideideas=1&studies_overrides=%7B%7D&overrides=%7B%22paneProperties.background%22%3A%22%23000000%22%2C%22paneProperties.backgroundType%22%3A%22solid%22%2C%22scalesProperties.textColor%22%3A%22%23FFFFFF%22%2C%22scalesProperties.lineColor%22%3A%22%23333333%22%2C%22mainSeriesProperties.candleStyle.upColor%22%3A%22%2300C853%22%2C%22mainSeriesProperties.candleStyle.downColor%22%3A%22%23FF1744%22%2C%22mainSeriesProperties.candleStyle.borderUpColor%22%3A%22%2300C853%22%2C%22mainSeriesProperties.candleStyle.borderDownColor%22%3A%22%23FF1744%22%2C%22mainSeriesProperties.candleStyle.wickUpColor%22%3A%22%2300C853%22%2C%22mainSeriesProperties.candleStyle.wickDownColor%22%3A%22%23FF1744%22%7D&enabled_features=%5B%5D&disabled_features=%5B%5D&locale=en&utm_source=&utm_medium=widget&utm_campaign=chart`}
-              title="Live Market Chart — NIFTY 50"
-              className="w-full h-full border-0"
-              loading="lazy"
-              allow="encrypted-media"
-            />
+            {marketTab === 'india' ? (
+              <iframe
+                key="tools-india-market"
+                src="https://s.tradingview.com/embed-widget/market-quotes/?locale=en#%7B%22symbolsGroups%22%3A%5B%7B%22name%22%3A%22Indian%20Indices%22%2C%22symbols%22%3A%5B%7B%22name%22%3A%22BSE%3ASENSEX%22%2C%22displayName%22%3A%22SENSEX%22%7D%2C%7B%22name%22%3A%22NSE%3ANIFTY%22%2C%22displayName%22%3A%22NIFTY%2050%22%7D%2C%7B%22name%22%3A%22NSE%3ABANKNIFTY%22%2C%22displayName%22%3A%22BANK%20NIFTY%22%7D%2C%7B%22name%22%3A%22NSE%3ANIFTY_IT%22%2C%22displayName%22%3A%22NIFTY%20IT%22%7D%2C%7B%22name%22%3A%22NSE%3ANIFTY_FIN_SERVICE%22%2C%22displayName%22%3A%22NIFTY%20Financial%22%7D%2C%7B%22name%22%3A%22BSE%3ABSE500%22%2C%22displayName%22%3A%22BSE%20500%22%7D%5D%7D%2C%7B%22name%22%3A%22Indian%20Stocks%22%2C%22symbols%22%3A%5B%7B%22name%22%3A%22NSE%3ARELIANCE%22%2C%22displayName%22%3A%22Reliance%22%7D%2C%7B%22name%22%3A%22NSE%3ATCS%22%2C%22displayName%22%3A%22TCS%22%7D%2C%7B%22name%22%3A%22NSE%3AHDFCBANK%22%2C%22displayName%22%3A%22HDFC%20Bank%22%7D%2C%7B%22name%22%3A%22NSE%3AINFY%22%2C%22displayName%22%3A%22Infosys%22%7D%2C%7B%22name%22%3A%22NSE%3AICICIBANK%22%2C%22displayName%22%3A%22ICICI%20Bank%22%7D%2C%7B%22name%22%3A%22NSE%3ASBIN%22%2C%22displayName%22%3A%22SBI%22%7D%5D%7D%2C%7B%22name%22%3A%22Commodities%22%2C%22symbols%22%3A%5B%7B%22name%22%3A%22TVC%3AGOLD%22%2C%22displayName%22%3A%22Gold%22%7D%2C%7B%22name%22%3A%22TVC%3ASILVER%22%2C%22displayName%22%3A%22Silver%22%7D%2C%7B%22name%22%3A%22TVC%3AUSOIL%22%2C%22displayName%22%3A%22Crude%20Oil%22%7D%2C%7B%22name%22%3A%22FX_IDC%3AUSDINR%22%2C%22displayName%22%3A%22USD%2FINR%22%7D%5D%7D%5D%2C%22showSymbolLogo%22%3Atrue%2C%22isTransparent%22%3Atrue%2C%22colorTheme%22%3A%22dark%22%2C%22width%22%3A%22100%25%22%2C%22height%22%3A%22100%25%22%7D"
+                title="Indian Market Data Live"
+                className="w-full h-full border-0"
+                loading="lazy"
+              />
+            ) : (
+              <iframe
+                key="tools-us-market"
+                src="https://s.tradingview.com/embed-widget/market-quotes/?locale=en#%7B%22symbolsGroups%22%3A%5B%7B%22name%22%3A%22US%20Indices%22%2C%22symbols%22%3A%5B%7B%22name%22%3A%22FOREXCOM%3ASPXUSD%22%2C%22displayName%22%3A%22S%26P%20500%22%7D%2C%7B%22name%22%3A%22FOREXCOM%3ANSXUSD%22%2C%22displayName%22%3A%22NASDAQ%22%7D%2C%7B%22name%22%3A%22FOREXCOM%3ADJI%22%2C%22displayName%22%3A%22Dow%20Jones%22%7D%2C%7B%22name%22%3A%22INDEX%3ARUT%22%2C%22displayName%22%3A%22Russell%202000%22%7D%2C%7B%22name%22%3A%22INDEX%3AVIX%22%2C%22displayName%22%3A%22VIX%22%7D%2C%7B%22name%22%3A%22TVC%3ADXY%22%2C%22displayName%22%3A%22US%20Dollar%20Index%22%7D%5D%7D%2C%7B%22name%22%3A%22US%20Stocks%22%2C%22symbols%22%3A%5B%7B%22name%22%3A%22NASDAQ%3AAAPL%22%2C%22displayName%22%3A%22Apple%22%7D%2C%7B%22name%22%3A%22NASDAQ%3AMSFT%22%2C%22displayName%22%3A%22Microsoft%22%7D%2C%7B%22name%22%3A%22NASDAQ%3AAMZN%22%2C%22displayName%22%3A%22Amazon%22%7D%2C%7B%22name%22%3A%22NASDAQ%3AGOOGL%22%2C%22displayName%22%3A%22Google%22%7D%2C%7B%22name%22%3A%22NASDAQ%3ANVDA%22%2C%22displayName%22%3A%22NVIDIA%22%7D%2C%7B%22name%22%3A%22NASDAQ%3ATSLA%22%2C%22displayName%22%3A%22Tesla%22%7D%5D%7D%2C%7B%22name%22%3A%22Global%22%2C%22symbols%22%3A%5B%7B%22name%22%3A%22TVC%3AGOLD%22%2C%22displayName%22%3A%22Gold%22%7D%2C%7B%22name%22%3A%22TVC%3AUSOIL%22%2C%22displayName%22%3A%22Crude%20Oil%22%7D%2C%7B%22name%22%3A%22FX_IDC%3AEURUSD%22%2C%22displayName%22%3A%22EUR%2FUSD%22%7D%2C%7B%22name%22%3A%22BITSTAMP%3ABTCUSD%22%2C%22displayName%22%3A%22Bitcoin%22%7D%5D%7D%5D%2C%22showSymbolLogo%22%3Atrue%2C%22isTransparent%22%3Atrue%2C%22colorTheme%22%3A%22dark%22%2C%22width%22%3A%22100%25%22%2C%22height%22%3A%22100%25%22%7D"
+                title="US Market Data Live"
+                className="w-full h-full border-0"
+                loading="lazy"
+              />
+            )}
           </div>
         </div>
       </section>

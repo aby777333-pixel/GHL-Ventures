@@ -161,20 +161,7 @@ function LiveFinancialTV() {
 }
 
 function HeroSection() {
-  /* Live chart symbol options */
-  const CHART_SYMBOLS = [
-    { label: 'NIFTY 50', symbol: 'NSE:NIFTY' },
-    { label: 'SENSEX', symbol: 'BSE:SENSEX' },
-    { label: 'BANK NIFTY', symbol: 'NSE:BANKNIFTY' },
-    { label: 'Reliance', symbol: 'NSE:RELIANCE' },
-    { label: 'TCS', symbol: 'NSE:TCS' },
-    { label: 'HDFC Bank', symbol: 'NSE:HDFCBANK' },
-    { label: 'Gold MCX', symbol: 'MCX:GOLD1!' },
-    { label: 'Silver MCX', symbol: 'MCX:SILVER1!' },
-    { label: 'Crude Oil', symbol: 'MCX:CRUDEOIL1!' },
-  ]
-  const [chartSymbol, setChartSymbol] = useState(0)
-  const [chartDropdownOpen, setChartDropdownOpen] = useState(false)
+  const [marketTab, setMarketTab] = useState<'india' | 'us'>('india')
 
   return (
     <section className="relative min-h-screen flex items-center overflow-hidden" style={{ background: 'linear-gradient(180deg, #030014 0%, #0a0020 30%, #0d0010 60%, #0a0a0a 100%)' }}>
@@ -311,49 +298,56 @@ function HeroSection() {
               <LiveFinancialTV />
             </AnimatedSection>
 
-            {/* Live Indian Market Chart (TradingView Advanced) */}
+            {/* Live Market Data — Indian & US Indices */}
             <AnimatedSection delay={600} direction="right">
               <div className="relative rounded-2xl overflow-hidden border border-white/10 bg-black/40 backdrop-blur-sm">
-                {/* Chart symbol dropdown */}
-                <div className="absolute top-2 left-2 z-20">
-                  <div className="relative">
+                {/* Tab switcher: India / US */}
+                <div className="flex items-center gap-1 px-3 pt-3 pb-1">
+                  <div className="flex items-center gap-1 bg-white/5 rounded-full p-0.5">
                     <button
-                      onClick={() => setChartDropdownOpen(!chartDropdownOpen)}
-                      className="flex items-center gap-1.5 px-2.5 py-1 bg-black/80 backdrop-blur-sm rounded-full border border-white/15 text-white text-[9px] font-semibold uppercase tracking-wider hover:bg-black/90 transition-all shadow-lg"
+                      onClick={() => setMarketTab('india')}
+                      className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider transition-all ${
+                        marketTab === 'india' ? 'bg-brand-red text-white' : 'text-gray-400 hover:text-white'
+                      }`}
                     >
-                      <TrendingUp className="w-2.5 h-2.5 text-brand-red" />
-                      {CHART_SYMBOLS[chartSymbol].label}
-                      <ChevronDown className={`w-2.5 h-2.5 transition-transform ${chartDropdownOpen ? 'rotate-180' : ''}`} />
+                      🇮🇳 India
                     </button>
-                    {chartDropdownOpen && (
-                      <div className="absolute top-full left-0 mt-1 w-44 bg-[#111]/95 backdrop-blur-xl border border-white/10 rounded-xl shadow-2xl shadow-black/50 overflow-hidden z-50">
-                        {CHART_SYMBOLS.map((sym, i) => (
-                          <button
-                            key={sym.symbol}
-                            onClick={() => { setChartSymbol(i); setChartDropdownOpen(false) }}
-                            className={`w-full text-left px-3 py-2 text-[10px] font-medium transition-all ${
-                              i === chartSymbol
-                                ? 'bg-white/10 text-brand-red'
-                                : 'text-white/70 hover:bg-white/5 hover:text-white'
-                            }`}
-                          >
-                            {sym.label}
-                          </button>
-                        ))}
-                      </div>
-                    )}
+                    <button
+                      onClick={() => setMarketTab('us')}
+                      className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider transition-all ${
+                        marketTab === 'us' ? 'bg-brand-red text-white' : 'text-gray-400 hover:text-white'
+                      }`}
+                    >
+                      🇺🇸 NYSE
+                    </button>
+                  </div>
+                  <div className="flex items-center gap-1.5 ml-auto">
+                    <span className="relative flex h-2 w-2">
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-500 opacity-75" />
+                      <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500" />
+                    </span>
+                    <span className="text-green-400 text-[9px] font-semibold uppercase tracking-wider">Live</span>
                   </div>
                 </div>
-                {/* TradingView Advanced Chart Widget */}
-                <div className="h-56">
-                  <iframe
-                    key={CHART_SYMBOLS[chartSymbol].symbol}
-                    src={`https://s.tradingview.com/widgetembed/?symbol=${encodeURIComponent(CHART_SYMBOLS[chartSymbol].symbol)}&interval=D&hidesidetoolbar=1&symboledit=1&saveimage=0&toolbarbg=000000&studies=MASimple%409%2CRSI%4014&theme=dark&style=1&timezone=Asia%2FKolkata&withdateranges=1&showpopupbutton=0&hideideas=1&studies_overrides=%7B%7D&overrides=%7B%22paneProperties.background%22%3A%22%23000000%22%2C%22paneProperties.backgroundType%22%3A%22solid%22%2C%22scalesProperties.textColor%22%3A%22%23FFFFFF%22%2C%22scalesProperties.lineColor%22%3A%22%23333333%22%2C%22mainSeriesProperties.candleStyle.upColor%22%3A%22%2300C853%22%2C%22mainSeriesProperties.candleStyle.downColor%22%3A%22%23FF1744%22%2C%22mainSeriesProperties.candleStyle.borderUpColor%22%3A%22%2300C853%22%2C%22mainSeriesProperties.candleStyle.borderDownColor%22%3A%22%23FF1744%22%2C%22mainSeriesProperties.candleStyle.wickUpColor%22%3A%22%2300C853%22%2C%22mainSeriesProperties.candleStyle.wickDownColor%22%3A%22%23FF1744%22%7D&enabled_features=%5B%5D&disabled_features=%5B%5D&locale=en&utm_source=&utm_medium=widget&utm_campaign=chart`}
-                    title={`${CHART_SYMBOLS[chartSymbol].label} Live Chart`}
-                    className="w-full h-full border-0"
-                    loading="lazy"
-                    allow="encrypted-media"
-                  />
+                {/* TradingView Market Overview Widget */}
+                <div className="h-52">
+                  {marketTab === 'india' ? (
+                    <iframe
+                      key="india-market"
+                      src="https://s.tradingview.com/embed-widget/market-quotes/?locale=en#%7B%22symbolsGroups%22%3A%5B%7B%22name%22%3A%22Indian%20Indices%22%2C%22symbols%22%3A%5B%7B%22name%22%3A%22BSE%3ASENSEX%22%2C%22displayName%22%3A%22SENSEX%22%7D%2C%7B%22name%22%3A%22NSE%3ANIFTY%22%2C%22displayName%22%3A%22NIFTY%2050%22%7D%2C%7B%22name%22%3A%22NSE%3ABANKNIFTY%22%2C%22displayName%22%3A%22BANK%20NIFTY%22%7D%2C%7B%22name%22%3A%22NSE%3ANIFTY_IT%22%2C%22displayName%22%3A%22NIFTY%20IT%22%7D%2C%7B%22name%22%3A%22NSE%3ANIFTY_FIN_SERVICE%22%2C%22displayName%22%3A%22NIFTY%20Financial%22%7D%2C%7B%22name%22%3A%22BSE%3ABSE500%22%2C%22displayName%22%3A%22BSE%20500%22%7D%5D%7D%5D%2C%22showSymbolLogo%22%3Atrue%2C%22isTransparent%22%3Atrue%2C%22colorTheme%22%3A%22dark%22%2C%22width%22%3A%22100%25%22%2C%22height%22%3A%22100%25%22%7D"
+                      title="Indian Market Indices Live"
+                      className="w-full h-full border-0"
+                      loading="lazy"
+                    />
+                  ) : (
+                    <iframe
+                      key="us-market"
+                      src="https://s.tradingview.com/embed-widget/market-quotes/?locale=en#%7B%22symbolsGroups%22%3A%5B%7B%22name%22%3A%22US%20Indices%22%2C%22symbols%22%3A%5B%7B%22name%22%3A%22FOREXCOM%3ASPXUSD%22%2C%22displayName%22%3A%22S%26P%20500%22%7D%2C%7B%22name%22%3A%22FOREXCOM%3ANSXUSD%22%2C%22displayName%22%3A%22NASDAQ%22%7D%2C%7B%22name%22%3A%22FOREXCOM%3ADJI%22%2C%22displayName%22%3A%22Dow%20Jones%22%7D%2C%7B%22name%22%3A%22INDEX%3ARUT%22%2C%22displayName%22%3A%22Russell%202000%22%7D%2C%7B%22name%22%3A%22INDEX%3AVIX%22%2C%22displayName%22%3A%22VIX%22%7D%2C%7B%22name%22%3A%22TVC%3ADXY%22%2C%22displayName%22%3A%22US%20Dollar%20Index%22%7D%5D%7D%5D%2C%22showSymbolLogo%22%3Atrue%2C%22isTransparent%22%3Atrue%2C%22colorTheme%22%3A%22dark%22%2C%22width%22%3A%22100%25%22%2C%22height%22%3A%22100%25%22%7D"
+                      title="US Market Indices Live"
+                      className="w-full h-full border-0"
+                      loading="lazy"
+                    />
+                  )}
                 </div>
               </div>
             </AnimatedSection>
