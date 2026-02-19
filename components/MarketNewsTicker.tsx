@@ -60,7 +60,7 @@ export default function MarketNewsTicker() {
 
   if (!showWidget) return null
 
-  // Minimized pill — rotating headline
+  // Minimized pill — bottom-right, left of Economic Calendar
   if (!isOpen) {
     const current = NEWS_FEED[currentIndex]
     return (
@@ -68,8 +68,8 @@ export default function MarketNewsTicker() {
         onClick={() => setIsOpen(true)}
         className="fixed z-[9994] flex items-center gap-2 px-3 py-2 rounded-xl transition-all duration-300 hover:scale-[1.02] group"
         style={{
-          top: '140px',
-          right: '16px',
+          bottom: '24px',
+          right: '330px',
           maxWidth: '280px',
           background: 'rgba(10,10,10,0.9)',
           backdropFilter: 'blur(16px)',
@@ -94,24 +94,24 @@ export default function MarketNewsTicker() {
     )
   }
 
-  // Expanded panel
+  // Expanded panel — opens UPWARD from bottom-right
   return (
     <div
-      className="fixed z-[9994] rounded-2xl transition-all duration-300"
+      className="fixed z-[9994] rounded-2xl transition-all duration-300 flex flex-col"
       style={{
-        top: '140px',
-        right: '16px',
+        bottom: '24px',
+        right: '330px',
         width: '300px',
         maxHeight: isMinimized ? '44px' : '420px',
         background: 'rgba(10,10,10,0.95)',
         backdropFilter: 'blur(24px)',
         border: '1px solid rgba(255,255,255,0.1)',
-        boxShadow: '0 16px 60px rgba(0,0,0,0.5)',
+        boxShadow: '0 -16px 60px rgba(0,0,0,0.5)',
         overflow: 'hidden',
       }}
     >
-      {/* Header */}
-      <div className="flex items-center justify-between px-3 py-2.5 border-b border-white/5">
+      {/* Header — at BOTTOM of panel (since it drops UP, header stays at bottom) */}
+      <div className="order-last flex items-center justify-between px-3 py-2.5 border-t border-white/5">
         <div className="flex items-center gap-2">
           <div className="w-6 h-6 rounded-md bg-brand-red/20 flex items-center justify-center">
             <Newspaper className="w-3 h-3 text-brand-red" />
@@ -124,7 +124,7 @@ export default function MarketNewsTicker() {
             onClick={() => setIsMinimized(!isMinimized)}
             className="w-5 h-5 rounded flex items-center justify-center text-gray-500 hover:text-white hover:bg-white/10 transition-colors"
           >
-            {isMinimized ? <ChevronDown className="w-3 h-3" /> : <ChevronUp className="w-3 h-3" />}
+            {isMinimized ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
           </button>
           <button
             onClick={() => setIsOpen(false)}
@@ -136,32 +136,17 @@ export default function MarketNewsTicker() {
       </div>
 
       {!isMinimized && (
-        <>
-          {/* Filter tabs */}
-          <div className="flex items-center gap-1 px-3 py-2">
-            {[
-              { key: 'all' as const, label: 'All', icon: <Newspaper className="w-2.5 h-2.5" /> },
-              { key: 'india' as const, label: 'India', icon: <IndianRupee className="w-2.5 h-2.5" /> },
-              { key: 'global' as const, label: 'Global', icon: <Globe className="w-2.5 h-2.5" /> },
-            ].map(f => (
-              <button
-                key={f.key}
-                onClick={() => setFilter(f.key)}
-                className={`flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-medium transition-all ${
-                  filter === f.key
-                    ? 'bg-brand-red/20 text-brand-red'
-                    : 'text-gray-500 hover:text-gray-300 hover:bg-white/5'
-                }`}
-              >
-                {f.icon}
-                {f.label}
-              </button>
-            ))}
+        <div className="order-first flex flex-col">
+          {/* Footer note at top of drop-up */}
+          <div className="px-3 py-1.5 border-b border-white/5 text-center">
+            <span className="text-[9px] text-gray-600">
+              Simulated · Updated every 5 min
+            </span>
           </div>
 
           {/* News list */}
-          <div className="overflow-y-auto px-2 pb-2" style={{ maxHeight: '320px', scrollbarWidth: 'thin', scrollbarColor: 'rgba(208,2,27,0.3) transparent' }}>
-            {filtered.map((item, i) => (
+          <div className="overflow-y-auto px-2 py-1" style={{ maxHeight: '320px', scrollbarWidth: 'thin', scrollbarColor: 'rgba(208,2,27,0.3) transparent' }}>
+            {filtered.map((item) => (
               <div
                 key={item.id}
                 className="flex items-start gap-2.5 px-2 py-2 rounded-lg hover:bg-white/5 transition-colors cursor-pointer group"
@@ -186,13 +171,28 @@ export default function MarketNewsTicker() {
             ))}
           </div>
 
-          {/* Footer */}
-          <div className="px-3 py-1.5 border-t border-white/5 text-center">
-            <span className="text-[9px] text-gray-600">
-              Simulated · Updated every 5 min
-            </span>
+          {/* Filter tabs */}
+          <div className="flex items-center gap-1 px-3 py-2 border-t border-white/5">
+            {[
+              { key: 'all' as const, label: 'All', icon: <Newspaper className="w-2.5 h-2.5" /> },
+              { key: 'india' as const, label: 'India', icon: <IndianRupee className="w-2.5 h-2.5" /> },
+              { key: 'global' as const, label: 'Global', icon: <Globe className="w-2.5 h-2.5" /> },
+            ].map(f => (
+              <button
+                key={f.key}
+                onClick={() => setFilter(f.key)}
+                className={`flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-medium transition-all ${
+                  filter === f.key
+                    ? 'bg-brand-red/20 text-brand-red'
+                    : 'text-gray-500 hover:text-gray-300 hover:bg-white/5'
+                }`}
+              >
+                {f.icon}
+                {f.label}
+              </button>
+            ))}
           </div>
-        </>
+        </div>
       )}
     </div>
   )

@@ -19,10 +19,12 @@ const ChatWidget = dynamic(() => import('@/components/chat/ChatWidget'), { ssr: 
 const CommandPalette = dynamic(() => import('@/components/CommandPalette'), { ssr: false })
 const MarketNewsTicker = dynamic(() => import('@/components/MarketNewsTicker'), { ssr: false })
 const EconomicCalendar = dynamic(() => import('@/components/EconomicCalendar'), { ssr: false })
-const PortfolioHeatmap = dynamic(() => import('@/components/PortfolioHeatmap'), { ssr: false })
+// PortfolioHeatmap removed
+// const PortfolioHeatmap = dynamic(() => import('@/components/PortfolioHeatmap'), { ssr: false })
 // VoiceNavigator removed (voice command bot)
 // const VoiceNavigator = dynamic(() => import('@/components/VoiceNavigator'), { ssr: false })
-const InvestorPersonality = dynamic(() => import('@/components/InvestorPersonality'), { ssr: false })
+// InvestorPersonality removed
+// const InvestorPersonality = dynamic(() => import('@/components/InvestorPersonality'), { ssr: false })
 // AvatarConcierge (Abe & Tina) removed
 // const AvatarConcierge = dynamic(() => import('@/components/AvatarConcierge'), { ssr: false })
 // VoiceCompanion removed (voice command bot)
@@ -261,12 +263,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <CookieConsent />
           <SocialProofToasts />
           <LiveVisitorCount />
-          <MarketNewsTicker />
-          <EconomicCalendar />
-          <PortfolioHeatmap />
-          <InvestorPersonality />
           <CommandPalette />
           <ChatWidget />
+          <MarketNewsTicker />
+          <EconomicCalendar />
         </ThemeProvider>
       </body>
     </html>
