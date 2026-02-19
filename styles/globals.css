@@ -2140,33 +2140,26 @@ body,
    DASHBOARD - Glassmorphic UI System
    ============================================================ */
 
-/* Dashboard root: position context */
+/* Dashboard root: position context - full screen takeover */
 .dashboard-root {
   position: relative;
+  z-index: 9999;
 }
 
-/* When dashboard is active, hide ALL main site chrome */
+/* When dashboard is active, clean slate for dashboard */
 body.dashboard-active {
   background-color: #0A0A0A !important;
-  overflow: hidden;
 }
 
-body.dashboard-active > * > * > nav,
-body.dashboard-active > * > * > footer,
-body.dashboard-active > * > * > aside {
-  display: none !important;
-}
-
-/* Hide all fixed-positioned widgets and overlays */
-body.dashboard-active > * > * > div[class*="fixed"],
-body.dashboard-active > * > * > button[class*="fixed"] {
-  display: none !important;
-}
-
-/* Keep the dashboard-root main area visible at full width */
+/* Strip all padding/margin from main container so dashboard is full-bleed */
 body.dashboard-active main {
   padding: 0 !important;
   margin: 0 !important;
+}
+
+/* Elements hidden by JS get data-dash-hidden attr — this ensures they stay hidden */
+[data-dash-hidden="true"] {
+  display: none !important;
 }
 
 /* Glass hover effect */

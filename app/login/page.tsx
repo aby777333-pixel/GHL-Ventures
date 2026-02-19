@@ -15,13 +15,13 @@ export default function LoginPage() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    // Demo: redirect to dashboard (Production: connect to authentication backend)
-    router.push('/dashboard')
+    // Demo: open dashboard in new tab (Production: connect to authentication backend)
+    window.open('/dashboard', '_blank')
   }
 
   const handleGoogleSignIn = () => {
-    // Demo: redirect to dashboard (Production: connect Google OAuth)
-    router.push('/dashboard')
+    // Demo: open dashboard in new tab (Production: connect Google OAuth)
+    window.open('/dashboard', '_blank')
   }
 
   return (

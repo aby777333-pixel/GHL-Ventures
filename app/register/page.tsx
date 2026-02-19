@@ -122,7 +122,7 @@ export default function RegisterPage() {
           {/* Google OAuth */}
           <button
             type="button"
-            onClick={() => router.push('/dashboard')}
+            onClick={() => window.open('/dashboard', '_blank')}
             className="w-full flex items-center justify-center space-x-3 px-5 py-2.5 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors mb-4 shadow-sm"
           >
             <svg className="w-5 h-5" viewBox="0 0 24 24">
