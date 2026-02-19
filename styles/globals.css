@@ -2135,3 +2135,103 @@ body,
 :root.dark .glow-card-orange { background: linear-gradient(135deg, rgba(249,115,22,0.08) 0%, rgba(26,26,26,1) 100%) !important; }
 :root.dark .glow-card-pink { background: linear-gradient(135deg, rgba(236,72,153,0.08) 0%, rgba(26,26,26,1) 100%) !important; }
 :root.dark .glow-card-teal { background: linear-gradient(135deg, rgba(20,184,166,0.08) 0%, rgba(26,26,26,1) 100%) !important; }
+
+/* ============================================================
+   DASHBOARD - Glassmorphic UI System
+   ============================================================ */
+
+/* Dashboard root: position context */
+.dashboard-root {
+  position: relative;
+}
+
+/* When dashboard is active, hide ALL main site chrome */
+body.dashboard-active {
+  background-color: #0A0A0A !important;
+  overflow: hidden;
+}
+
+body.dashboard-active > * > * > nav,
+body.dashboard-active > * > * > footer,
+body.dashboard-active > * > * > aside {
+  display: none !important;
+}
+
+/* Hide all fixed-positioned widgets and overlays */
+body.dashboard-active > * > * > div[class*="fixed"],
+body.dashboard-active > * > * > button[class*="fixed"] {
+  display: none !important;
+}
+
+/* Keep the dashboard-root main area visible at full width */
+body.dashboard-active main {
+  padding: 0 !important;
+  margin: 0 !important;
+}
+
+/* Glass hover effect */
+.dash-glass-hover {
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.dash-glass-hover:hover {
+  border-color: rgba(255, 255, 255, 0.12);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3), 0 0 0 1px rgba(255, 255, 255, 0.06);
+}
+
+/* Glass glow effect */
+.dash-glow {
+  position: relative;
+}
+.dash-glow::before {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  border-radius: inherit;
+  padding: 1px;
+  background: linear-gradient(135deg, rgba(208, 2, 27, 0.15), transparent 50%, rgba(208, 2, 27, 0.08));
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.4s ease;
+}
+.dash-glow:hover::before {
+  opacity: 1;
+}
+
+/* Notification pulse dot */
+.dash-pulse-dot {
+  animation: dashPulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+@keyframes dashPulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(208, 2, 27, 0.6); }
+  50% { box-shadow: 0 0 0 6px rgba(208, 2, 27, 0); }
+}
+
+/* Dashboard scrollbar */
+.dashboard-root ::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+.dashboard-root ::-webkit-scrollbar-track {
+  background: transparent;
+}
+.dashboard-root ::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 3px;
+}
+.dashboard-root ::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.15);
+}
+
+/* Chart container smooth entrance */
+.recharts-wrapper {
+  animation: dashFadeIn 0.8s ease-out;
+}
+
+@keyframes dashFadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}

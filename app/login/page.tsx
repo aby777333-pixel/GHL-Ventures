@@ -1,20 +1,27 @@
 'use client'
 
 import { useState } from 'react'
+import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { BRAND } from '@/lib/constants'
 import { Eye, EyeOff, Lock, ArrowLeft, Shield } from 'lucide-react'
 import Logo from '@/components/Logo'
 
 export default function LoginPage() {
+  const router = useRouter()
   const [showPassword, setShowPassword] = useState(false)
   const [mobile, setMobile] = useState('')
   const [password, setPassword] = useState('')
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    // Production: connect to authentication backend
-    alert('Login functionality will be connected to your backend. This is a demo.')
+    // Demo: redirect to dashboard (Production: connect to authentication backend)
+    router.push('/dashboard')
+  }
+
+  const handleGoogleSignIn = () => {
+    // Demo: redirect to dashboard (Production: connect Google OAuth)
+    router.push('/dashboard')
   }
 
   return (
@@ -79,6 +86,7 @@ export default function LoginPage() {
           {/* Google OAuth */}
           <button
             type="button"
+            onClick={handleGoogleSignIn}
             className="w-full flex items-center justify-center space-x-3 px-6 py-3 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors mb-6 shadow-sm"
           >
             <svg className="w-5 h-5" viewBox="0 0 24 24">
