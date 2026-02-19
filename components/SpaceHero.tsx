@@ -385,27 +385,75 @@ export default function SpaceHero({ variant }: SpaceHeroProps) {
           <div className="aurora-subtle-1" />
           <div className="aurora-subtle-2" />
 
-          {/* ── Moon — luminous, smaller, lower, more illuminated ── */}
+          {/* ── Full Moon — luminous with realistic craters & dark maria ── */}
           <div className="absolute top-[8%] right-[10%]" style={{ opacity: 0.95 }}>
-            <div className="w-14 h-14 rounded-full"
+            <div className="w-14 h-14 rounded-full relative overflow-hidden"
               style={{
-                background: 'radial-gradient(circle at 38% 38%, #fffff8 0%, #f0e8d8 20%, #d8c8b0 40%, #b0a090 65%, #908070 100%)',
-                boxShadow: '0 0 30px rgba(255,255,240,0.35), 0 0 60px rgba(255,255,240,0.2), 0 0 120px rgba(255,250,230,0.12), 0 0 200px rgba(255,245,220,0.06)',
+                background: 'radial-gradient(circle at 50% 50%, #fffff8 0%, #f5eed8 15%, #e8dcc4 30%, #d8ccb0 50%, #c8b898 70%, #b8a888 90%)',
+                boxShadow: '0 0 30px rgba(255,255,240,0.4), 0 0 60px rgba(255,255,240,0.25), 0 0 120px rgba(255,250,230,0.15), 0 0 200px rgba(255,245,220,0.08)',
               }}>
-              {/* Subtle crescent shadow */}
-              <div className="absolute -right-0.5 -top-0.5 w-[48px] h-[48px] rounded-full" style={{ background: 'radial-gradient(circle at 65% 38%, #050010 0%, #050010 45%, transparent 75%)' }} />
-              {/* Craters */}
-              <div className="absolute top-2 left-2 w-3 h-3 rounded-full bg-black/8 blur-[0.5px]" />
-              <div className="absolute top-6 left-5 w-2 h-2 rounded-full bg-black/6" />
-              <div className="absolute bottom-3 left-3 w-3.5 h-3.5 rounded-full bg-black/6 blur-[0.5px]" />
+              {/* Subtle full-moon limb darkening */}
+              <div className="absolute inset-0 rounded-full" style={{ background: 'radial-gradient(circle at 50% 50%, transparent 50%, rgba(0,0,0,0.08) 70%, rgba(0,0,0,0.2) 90%, rgba(0,0,0,0.35) 100%)' }} />
+
+              {/* ── Dark Maria (lunar seas) ── */}
+              {/* Mare Imbrium — large dark area upper-left */}
+              <div className="absolute rounded-full" style={{ top: '14%', left: '18%', width: '38%', height: '32%', background: 'radial-gradient(ellipse, rgba(80,70,55,0.35) 0%, rgba(90,80,65,0.2) 60%, transparent 100%)', filter: 'blur(1px)' }} />
+              {/* Mare Serenitatis — dark patch upper-right of center */}
+              <div className="absolute rounded-full" style={{ top: '20%', left: '50%', width: '28%', height: '24%', background: 'radial-gradient(ellipse, rgba(75,65,50,0.3) 0%, rgba(85,75,60,0.15) 60%, transparent 100%)', filter: 'blur(0.8px)' }} />
+              {/* Mare Tranquillitatis — dark region center-right */}
+              <div className="absolute rounded-full" style={{ top: '38%', left: '52%', width: '30%', height: '26%', background: 'radial-gradient(ellipse, rgba(70,60,48,0.32) 0%, rgba(80,70,55,0.18) 60%, transparent 100%)', filter: 'blur(1px)' }} />
+              {/* Mare Crisium — isolated dark spot right side */}
+              <div className="absolute rounded-full" style={{ top: '28%', left: '70%', width: '16%', height: '14%', background: 'radial-gradient(circle, rgba(65,55,42,0.35) 0%, rgba(75,65,50,0.15) 70%, transparent 100%)', filter: 'blur(0.5px)' }} />
+              {/* Oceanus Procellarum — large dark area left side */}
+              <div className="absolute rounded-full" style={{ top: '30%', left: '8%', width: '35%', height: '40%', background: 'radial-gradient(ellipse, rgba(85,75,58,0.28) 0%, rgba(95,85,68,0.12) 60%, transparent 100%)', filter: 'blur(1.2px)' }} />
+              {/* Mare Nubium — lower dark patch */}
+              <div className="absolute rounded-full" style={{ top: '58%', left: '30%', width: '25%', height: '20%', background: 'radial-gradient(ellipse, rgba(78,68,52,0.25) 0%, rgba(88,78,62,0.1) 65%, transparent 100%)', filter: 'blur(0.8px)' }} />
+              {/* Mare Fecunditatis — lower right */}
+              <div className="absolute rounded-full" style={{ top: '50%', left: '60%', width: '22%', height: '18%', background: 'radial-gradient(ellipse, rgba(72,62,48,0.28) 0%, rgba(82,72,55,0.12) 65%, transparent 100%)', filter: 'blur(0.7px)' }} />
+
+              {/* ── Prominent Craters ── */}
+              {/* Tycho — bright crater bottom with ray system */}
+              <div className="absolute rounded-full" style={{ top: '72%', left: '42%', width: '10%', height: '10%', background: 'radial-gradient(circle, rgba(255,255,245,0.5) 0%, rgba(200,190,170,0.3) 50%, rgba(120,110,90,0.2) 80%, transparent 100%)', boxShadow: '0 0 3px rgba(255,255,240,0.3)' }} />
+              {/* Tycho rays — bright streaks radiating outward */}
+              <div className="absolute" style={{ top: '68%', left: '44%', width: '1px', height: '12px', background: 'linear-gradient(to top, rgba(255,255,240,0.15), transparent)', transform: 'rotate(-15deg)' }} />
+              <div className="absolute" style={{ top: '70%', left: '48%', width: '1px', height: '10px', background: 'linear-gradient(to top, rgba(255,255,240,0.12), transparent)', transform: 'rotate(20deg)' }} />
+              <div className="absolute" style={{ top: '76%', left: '40%', width: '1px', height: '8px', background: 'linear-gradient(to bottom, rgba(255,255,240,0.1), transparent)', transform: 'rotate(-30deg)' }} />
+
+              {/* Copernicus — prominent crater center-left */}
+              <div className="absolute rounded-full" style={{ top: '42%', left: '32%', width: '9%', height: '9%', background: 'radial-gradient(circle, rgba(180,170,150,0.4) 0%, rgba(100,90,70,0.3) 60%, transparent 100%)', boxShadow: 'inset 0 1px 1px rgba(255,255,240,0.2), inset 0 -1px 1px rgba(0,0,0,0.15)' }} />
+              {/* Copernicus rays */}
+              <div className="absolute" style={{ top: '39%', left: '34%', width: '1px', height: '6px', background: 'linear-gradient(to top, rgba(255,255,240,0.1), transparent)', transform: 'rotate(10deg)' }} />
+
+              {/* Kepler — small bright crater */}
+              <div className="absolute rounded-full" style={{ top: '40%', left: '20%', width: '6%', height: '6%', background: 'radial-gradient(circle, rgba(220,210,190,0.35) 0%, rgba(140,130,110,0.2) 70%, transparent 100%)', boxShadow: 'inset 0 0.5px 0.5px rgba(255,255,240,0.2)' }} />
+
+              {/* Plato — dark-floored crater at top */}
+              <div className="absolute rounded-full" style={{ top: '12%', left: '38%', width: '12%', height: '8%', background: 'radial-gradient(ellipse, rgba(60,52,40,0.4) 0%, rgba(80,70,55,0.2) 70%, transparent 100%)', boxShadow: 'inset 0 0.5px 0.5px rgba(255,255,240,0.1)' }} />
+
+              {/* Aristarchus — very bright small crater */}
+              <div className="absolute rounded-full" style={{ top: '30%', left: '14%', width: '5%', height: '5%', background: 'radial-gradient(circle, rgba(255,255,240,0.6) 0%, rgba(220,210,190,0.3) 60%, transparent 100%)', boxShadow: '0 0 2px rgba(255,255,240,0.3)' }} />
+
+              {/* Grimaldi — dark-floored crater left edge */}
+              <div className="absolute rounded-full" style={{ top: '48%', left: '5%', width: '8%', height: '10%', background: 'radial-gradient(ellipse, rgba(55,48,38,0.4) 0%, rgba(75,65,52,0.15) 70%, transparent 100%)' }} />
+
+              {/* Small scattered craters for texture */}
+              <div className="absolute rounded-full" style={{ top: '55%', left: '45%', width: '4%', height: '4%', background: 'radial-gradient(circle, rgba(160,150,130,0.3) 0%, transparent 80%)', boxShadow: 'inset 0 0.5px 0.5px rgba(255,255,240,0.15)' }} />
+              <div className="absolute rounded-full" style={{ top: '24%', left: '42%', width: '5%', height: '5%', background: 'radial-gradient(circle, rgba(150,140,120,0.25) 0%, transparent 75%)', boxShadow: 'inset 0 0.5px 0.5px rgba(255,255,240,0.1)' }} />
+              <div className="absolute rounded-full" style={{ top: '65%', left: '55%', width: '5%', height: '5%', background: 'radial-gradient(circle, rgba(170,160,140,0.2) 0%, transparent 80%)', boxShadow: 'inset 0 0.5px 0.5px rgba(255,255,240,0.1)' }} />
+              <div className="absolute rounded-full" style={{ top: '80%', left: '28%', width: '6%', height: '6%', background: 'radial-gradient(circle, rgba(145,135,115,0.25) 0%, transparent 75%)', boxShadow: 'inset 0 0.5px 0.5px rgba(255,255,240,0.12)' }} />
+              <div className="absolute rounded-full" style={{ top: '15%', left: '62%', width: '4%', height: '4%', background: 'radial-gradient(circle, rgba(155,145,125,0.2) 0%, transparent 80%)' }} />
+              <div className="absolute rounded-full" style={{ top: '60%', left: '18%', width: '5%', height: '5%', background: 'radial-gradient(circle, rgba(140,130,110,0.22) 0%, transparent 75%)', boxShadow: 'inset 0 0.5px 0.5px rgba(255,255,240,0.08)' }} />
+
+              {/* Surface texture overlay — subtle noise effect */}
+              <div className="absolute inset-0 rounded-full" style={{ background: 'radial-gradient(circle at 30% 25%, rgba(255,255,240,0.06) 0%, transparent 20%), radial-gradient(circle at 70% 60%, rgba(255,255,240,0.04) 0%, transparent 15%), radial-gradient(circle at 45% 75%, rgba(0,0,0,0.04) 0%, transparent 18%)' }} />
             </div>
-            {/* Bright moonlight halo */}
-            <div className="absolute -inset-16 rounded-full" style={{ background: 'radial-gradient(circle, rgba(255,255,240,0.08) 0%, rgba(255,255,240,0.03) 40%, transparent 70%)' }} />
-            {/* Cross-flare on moon */}
+            {/* Bright full-moon halo */}
+            <div className="absolute -inset-16 rounded-full" style={{ background: 'radial-gradient(circle, rgba(255,255,240,0.1) 0%, rgba(255,255,240,0.04) 40%, transparent 70%)' }} />
+            {/* Subtle cross-flare on full moon */}
             <div className="absolute top-1/2 left-[30%] -translate-y-1/2 w-[50px] h-[1px] animate-star-flare"
-              style={{ background: 'linear-gradient(to right, transparent, rgba(255,255,240,0.4), transparent)' }} />
+              style={{ background: 'linear-gradient(to right, transparent, rgba(255,255,240,0.3), transparent)' }} />
             <div className="absolute top-[35%] left-1/2 -translate-x-1/2 w-[1px] h-[40px] animate-star-flare"
-              style={{ background: 'linear-gradient(to bottom, transparent, rgba(255,255,240,0.25), transparent)' }} />
+              style={{ background: 'linear-gradient(to bottom, transparent, rgba(255,255,240,0.2), transparent)' }} />
           </div>
 
           {/* ── Distant Planets ── */}
