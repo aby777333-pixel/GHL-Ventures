@@ -386,7 +386,7 @@ export default function SpaceHero({ variant }: SpaceHeroProps) {
           <div className="aurora-subtle-2" />
 
           {/* ── Moon — luminous, smaller, lower, more illuminated ── */}
-          <div className="absolute top-[18%] right-[14%]" style={{ opacity: 0.95 }}>
+          <div className="absolute top-[8%] right-[10%]" style={{ opacity: 0.95 }}>
             <div className="w-14 h-14 rounded-full"
               style={{
                 background: 'radial-gradient(circle at 38% 38%, #fffff8 0%, #f0e8d8 20%, #d8c8b0 40%, #b0a090 65%, #908070 100%)',
