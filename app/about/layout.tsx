@@ -1,18 +1,76 @@
-import type { Metadata } from 'next'
+import type { Metadata } from 'next';
+
+const SITE_URL = 'https://ghl-india-ventures-2025.netlify.app';
 
 export const metadata: Metadata = {
-  title: 'About Us | GHL India Ventures | SEBI AIF Chennai',
-  description: 'GHL India Ventures: SEBI-registered Category II AIF in Chennai. 25+ years experience, 500 Cr+ value created, 50+ team.',
+  title: 'About GHL India Ventures | SEBI Registered Category II AIF Chennai',
+  description:
+    'Learn about GHL India Ventures — a SEBI-registered Category II AIF (IN/AIF2/2425/1517) based in Chennai. Our team, investment philosophy, stressed real estate recovery strategy, and startup investment approach.',
+  keywords: [
+    'GHL India Ventures about',
+    'SEBI registered AIF Chennai',
+    'Category II AIF India',
+    'investment philosophy',
+    'fund management team Chennai',
+    'stressed real estate fund',
+    'why GHL',
+  ],
   openGraph: {
-    title: 'About GHL India Ventures | SEBI Registered AIF',
-    description: 'SEBI-registered Category II AIF with 25+ years of investment experience in stressed real estate and startups.',
-    url: 'https://ghl-india-ventures-2025.netlify.app/about',
+    title: 'About GHL India Ventures | SEBI Registered Category II AIF Chennai',
+    description:
+      'Learn about GHL India Ventures — a SEBI-registered Category II AIF (IN/AIF2/2425/1517) based in Chennai. Our team, investment philosophy, stressed real estate recovery strategy, and startup investment approach.',
+    url: `${SITE_URL}/about`,
+    siteName: 'GHL India Ventures',
+    type: 'website',
+    images: [
+      {
+        url: `${SITE_URL}/og-image.jpg`,
+        width: 1200,
+        height: 630,
+        alt: 'About GHL India Ventures — SEBI Registered Category II AIF Chennai',
+      },
+    ],
+    locale: 'en_IN',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'About GHL India Ventures | SEBI Registered Category II AIF Chennai',
+    description:
+      'Learn about GHL India Ventures — a SEBI-registered Category II AIF (IN/AIF2/2425/1517) based in Chennai. Our team, investment philosophy, stressed real estate recovery strategy, and startup investment approach.',
+    images: [`${SITE_URL}/og-image.jpg`],
   },
   alternates: {
-    canonical: 'https://ghl-india-ventures-2025.netlify.app/about',
+    canonical: `${SITE_URL}/about`,
   },
-}
+};
 
 export default function AboutLayout({ children }: { children: React.ReactNode }) {
-  return children
+  const breadcrumbSchema = {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: [
+      {
+        '@type': 'ListItem',
+        position: 1,
+        name: 'Home',
+        item: SITE_URL,
+      },
+      {
+        '@type': 'ListItem',
+        position: 2,
+        name: 'About',
+        item: `${SITE_URL}/about`,
+      },
+    ],
+  };
+
+  return (
+    <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbSchema) }}
+      />
+      {children}
+    </>
+  );
 }
