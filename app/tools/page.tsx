@@ -1529,7 +1529,9 @@ function CalculatorCard({ tool, accentColor }: { tool: ToolDef; accentColor: str
 export default function ToolsPage() {
   const [activeCategory, setActiveCategory] = useState('investment')
   const [searchQuery, setSearchQuery] = useState('')
-  const [marketTab, setMarketTab] = useState<'india' | 'us'>('india')
+  const [marketTab, setMarketTab] = useState<'india' | 'us' | 'chart'>('india')
+  const [chartSymbol, setChartSymbol] = useState('NSE:NIFTY')
+  const [chartDropdownOpen, setChartDropdownOpen] = useState(false)
 
   const activeCat = CATEGORIES.find(c => c.id === activeCategory)!
 
@@ -1673,7 +1675,7 @@ export default function ToolsPage() {
         </div>
       </section>
 
-      {/* ── Live Market Data — Indian & US Indices ── */}
+      {/* ── Live Market Data — Indian & US Indices + Live Chart ── */}
       <section className="py-16 bg-[#0a0a0a]">
         <div className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-8">
@@ -1693,7 +1695,7 @@ export default function ToolsPage() {
                   marketTab === 'india' ? 'bg-brand-red text-white shadow-lg' : 'text-gray-400 hover:text-white'
                 }`}
               >
-                🇮🇳 Indian Indices
+                🇮🇳 Indian Markets
               </button>
               <button
                 onClick={() => setMarketTab('us')}
@@ -1701,13 +1703,21 @@ export default function ToolsPage() {
                   marketTab === 'us' ? 'bg-brand-red text-white shadow-lg' : 'text-gray-400 hover:text-white'
                 }`}
               >
-                🇺🇸 US / NYSE Indices
+                🇺🇸 US / NYSE
+              </button>
+              <button
+                onClick={() => setMarketTab('chart')}
+                className={`px-5 py-2 rounded-full text-xs font-bold uppercase tracking-wider transition-all ${
+                  marketTab === 'chart' ? 'bg-brand-red text-white shadow-lg' : 'text-gray-400 hover:text-white'
+                }`}
+              >
+                📈 Live Chart
               </button>
             </div>
           </div>
 
-          {/* Live indicator */}
-          <div className="flex justify-center mb-4">
+          {/* Live indicator + chart symbol selector */}
+          <div className="flex justify-center items-center gap-4 mb-4">
             <div className="flex items-center gap-2 px-3 py-1.5 bg-white/5 rounded-full border border-white/10">
               <span className="relative flex h-2 w-2">
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-500 opacity-75" />
@@ -1715,24 +1725,92 @@ export default function ToolsPage() {
               </span>
               <span className="text-green-400 text-[10px] font-semibold uppercase tracking-wider">Live Data</span>
             </div>
+
+            {/* Chart symbol dropdown — only on chart tab */}
+            {marketTab === 'chart' && (
+              <div className="relative">
+                <button
+                  onClick={() => setChartDropdownOpen(!chartDropdownOpen)}
+                  className="flex items-center gap-2 px-4 py-1.5 bg-white/5 rounded-full border border-white/10 text-white text-xs font-semibold uppercase tracking-wider hover:bg-white/10 transition-all"
+                >
+                  <TrendingUp className="w-3.5 h-3.5 text-brand-red" />
+                  {[
+                    { label: 'NIFTY 50', symbol: 'NSE:NIFTY' },
+                    { label: 'SENSEX', symbol: 'BSE:SENSEX' },
+                    { label: 'BANK NIFTY', symbol: 'NSE:BANKNIFTY' },
+                    { label: 'Reliance', symbol: 'NSE:RELIANCE' },
+                    { label: 'TCS', symbol: 'NSE:TCS' },
+                    { label: 'HDFC Bank', symbol: 'NSE:HDFCBANK' },
+                    { label: 'S&P 500', symbol: 'FOREXCOM:SPXUSD' },
+                    { label: 'NASDAQ', symbol: 'FOREXCOM:NSXUSD' },
+                    { label: 'Dow Jones', symbol: 'FOREXCOM:DJI' },
+                    { label: 'Gold', symbol: 'TVC:GOLD' },
+                    { label: 'Crude Oil', symbol: 'TVC:USOIL' },
+                    { label: 'USD/INR', symbol: 'FX_IDC:USDINR' },
+                    { label: 'Bitcoin', symbol: 'BITSTAMP:BTCUSD' },
+                  ].find(c => c.symbol === chartSymbol)?.label || 'NIFTY 50'}
+                  <ChevronDown className={`w-3 h-3 transition-transform ${chartDropdownOpen ? 'rotate-180' : ''}`} />
+                </button>
+                {chartDropdownOpen && (
+                  <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 w-48 bg-[#111]/95 backdrop-blur-xl border border-white/10 rounded-xl shadow-2xl overflow-hidden z-50">
+                    {[
+                      { label: 'NIFTY 50', symbol: 'NSE:NIFTY' },
+                      { label: 'SENSEX', symbol: 'BSE:SENSEX' },
+                      { label: 'BANK NIFTY', symbol: 'NSE:BANKNIFTY' },
+                      { label: 'Reliance', symbol: 'NSE:RELIANCE' },
+                      { label: 'TCS', symbol: 'NSE:TCS' },
+                      { label: 'HDFC Bank', symbol: 'NSE:HDFCBANK' },
+                      { label: 'S&P 500', symbol: 'FOREXCOM:SPXUSD' },
+                      { label: 'NASDAQ', symbol: 'FOREXCOM:NSXUSD' },
+                      { label: 'Dow Jones', symbol: 'FOREXCOM:DJI' },
+                      { label: 'Gold', symbol: 'TVC:GOLD' },
+                      { label: 'Crude Oil', symbol: 'TVC:USOIL' },
+                      { label: 'USD/INR', symbol: 'FX_IDC:USDINR' },
+                      { label: 'Bitcoin', symbol: 'BITSTAMP:BTCUSD' },
+                    ].map((opt) => (
+                      <button
+                        key={opt.symbol}
+                        onClick={() => { setChartSymbol(opt.symbol); setChartDropdownOpen(false) }}
+                        className={`w-full text-left px-4 py-2.5 text-xs font-medium transition-all ${
+                          opt.symbol === chartSymbol ? 'bg-white/10 text-brand-red' : 'text-white/70 hover:bg-white/5 hover:text-white'
+                        }`}
+                      >
+                        {opt.label}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
           </div>
 
           <div className="rounded-2xl overflow-hidden border border-white/10 bg-black/50" style={{ height: '500px' }}>
-            {marketTab === 'india' ? (
+            {marketTab === 'india' && (
               <iframe
-                key="tools-india-market"
-                src="https://s.tradingview.com/embed-widget/market-quotes/?locale=en#%7B%22symbolsGroups%22%3A%5B%7B%22name%22%3A%22Indian%20Indices%22%2C%22symbols%22%3A%5B%7B%22name%22%3A%22BSE%3ASENSEX%22%2C%22displayName%22%3A%22SENSEX%22%7D%2C%7B%22name%22%3A%22NSE%3ANIFTY%22%2C%22displayName%22%3A%22NIFTY%2050%22%7D%2C%7B%22name%22%3A%22NSE%3ABANKNIFTY%22%2C%22displayName%22%3A%22BANK%20NIFTY%22%7D%2C%7B%22name%22%3A%22NSE%3ANIFTY_IT%22%2C%22displayName%22%3A%22NIFTY%20IT%22%7D%2C%7B%22name%22%3A%22NSE%3ANIFTY_FIN_SERVICE%22%2C%22displayName%22%3A%22NIFTY%20Financial%22%7D%2C%7B%22name%22%3A%22BSE%3ABSE500%22%2C%22displayName%22%3A%22BSE%20500%22%7D%5D%7D%2C%7B%22name%22%3A%22Indian%20Stocks%22%2C%22symbols%22%3A%5B%7B%22name%22%3A%22NSE%3ARELIANCE%22%2C%22displayName%22%3A%22Reliance%22%7D%2C%7B%22name%22%3A%22NSE%3ATCS%22%2C%22displayName%22%3A%22TCS%22%7D%2C%7B%22name%22%3A%22NSE%3AHDFCBANK%22%2C%22displayName%22%3A%22HDFC%20Bank%22%7D%2C%7B%22name%22%3A%22NSE%3AINFY%22%2C%22displayName%22%3A%22Infosys%22%7D%2C%7B%22name%22%3A%22NSE%3AICICIBANK%22%2C%22displayName%22%3A%22ICICI%20Bank%22%7D%2C%7B%22name%22%3A%22NSE%3ASBIN%22%2C%22displayName%22%3A%22SBI%22%7D%5D%7D%2C%7B%22name%22%3A%22Commodities%22%2C%22symbols%22%3A%5B%7B%22name%22%3A%22TVC%3AGOLD%22%2C%22displayName%22%3A%22Gold%22%7D%2C%7B%22name%22%3A%22TVC%3ASILVER%22%2C%22displayName%22%3A%22Silver%22%7D%2C%7B%22name%22%3A%22TVC%3AUSOIL%22%2C%22displayName%22%3A%22Crude%20Oil%22%7D%2C%7B%22name%22%3A%22FX_IDC%3AUSDINR%22%2C%22displayName%22%3A%22USD%2FINR%22%7D%5D%7D%5D%2C%22showSymbolLogo%22%3Atrue%2C%22isTransparent%22%3Atrue%2C%22colorTheme%22%3A%22dark%22%2C%22width%22%3A%22100%25%22%2C%22height%22%3A%22100%25%22%7D"
-                title="Indian Market Data Live"
+                key="tools-india-overview"
+                src="https://s.tradingview.com/embed-widget/market-overview/?locale=en#%7B%22colorTheme%22%3A%22dark%22%2C%22dateRange%22%3A%2212M%22%2C%22showChart%22%3Atrue%2C%22width%22%3A%22100%25%22%2C%22height%22%3A%22100%25%22%2C%22isTransparent%22%3Atrue%2C%22showSymbolLogo%22%3Atrue%2C%22showFloatingTooltip%22%3Atrue%2C%22plotLineColorGrowing%22%3A%22rgba(0%2C200%2C100%2C1)%22%2C%22plotLineColorFalling%22%3A%22rgba(255%2C23%2C68%2C1)%22%2C%22gridLineColor%22%3A%22rgba(255%2C255%2C255%2C0.06)%22%2C%22scaleFontColor%22%3A%22rgba(255%2C255%2C255%2C0.5)%22%2C%22belowLineFillColorGrowing%22%3A%22rgba(0%2C200%2C100%2C0.05)%22%2C%22belowLineFillColorFalling%22%3A%22rgba(255%2C23%2C68%2C0.05)%22%2C%22belowLineFillColorGrowingBottom%22%3A%22rgba(0%2C0%2C0%2C0)%22%2C%22belowLineFillColorFallingBottom%22%3A%22rgba(0%2C0%2C0%2C0)%22%2C%22symbolActiveColor%22%3A%22rgba(208%2C2%2C27%2C0.15)%22%2C%22tabs%22%3A%5B%7B%22title%22%3A%22Indices%22%2C%22symbols%22%3A%5B%7B%22s%22%3A%22BSE%3ASENSEX%22%2C%22d%22%3A%22SENSEX%22%7D%2C%7B%22s%22%3A%22NSE%3ANIFTY%22%2C%22d%22%3A%22NIFTY%2050%22%7D%2C%7B%22s%22%3A%22NSE%3ABANKNIFTY%22%2C%22d%22%3A%22BANK%20NIFTY%22%7D%5D%7D%2C%7B%22title%22%3A%22Stocks%22%2C%22symbols%22%3A%5B%7B%22s%22%3A%22NSE%3ARELIANCE%22%2C%22d%22%3A%22Reliance%22%7D%2C%7B%22s%22%3A%22NSE%3ATCS%22%2C%22d%22%3A%22TCS%22%7D%2C%7B%22s%22%3A%22NSE%3AHDFCBANK%22%2C%22d%22%3A%22HDFC%20Bank%22%7D%2C%7B%22s%22%3A%22NSE%3AINFY%22%2C%22d%22%3A%22Infosys%22%7D%2C%7B%22s%22%3A%22NSE%3AICICIBANK%22%2C%22d%22%3A%22ICICI%20Bank%22%7D%2C%7B%22s%22%3A%22NSE%3ASBIN%22%2C%22d%22%3A%22SBI%22%7D%5D%7D%2C%7B%22title%22%3A%22Commodities%22%2C%22symbols%22%3A%5B%7B%22s%22%3A%22TVC%3AGOLD%22%2C%22d%22%3A%22Gold%22%7D%2C%7B%22s%22%3A%22TVC%3ASILVER%22%2C%22d%22%3A%22Silver%22%7D%2C%7B%22s%22%3A%22TVC%3AUSOIL%22%2C%22d%22%3A%22Crude%20Oil%22%7D%2C%7B%22s%22%3A%22FX_IDC%3AUSDINR%22%2C%22d%22%3A%22USD%2FINR%22%7D%5D%7D%5D%7D"
+                title="Indian Market Overview"
                 className="w-full h-full border-0"
                 loading="lazy"
               />
-            ) : (
+            )}
+            {marketTab === 'us' && (
               <iframe
-                key="tools-us-market"
-                src="https://s.tradingview.com/embed-widget/market-quotes/?locale=en#%7B%22symbolsGroups%22%3A%5B%7B%22name%22%3A%22US%20Indices%22%2C%22symbols%22%3A%5B%7B%22name%22%3A%22FOREXCOM%3ASPXUSD%22%2C%22displayName%22%3A%22S%26P%20500%22%7D%2C%7B%22name%22%3A%22FOREXCOM%3ANSXUSD%22%2C%22displayName%22%3A%22NASDAQ%22%7D%2C%7B%22name%22%3A%22FOREXCOM%3ADJI%22%2C%22displayName%22%3A%22Dow%20Jones%22%7D%2C%7B%22name%22%3A%22INDEX%3ARUT%22%2C%22displayName%22%3A%22Russell%202000%22%7D%2C%7B%22name%22%3A%22INDEX%3AVIX%22%2C%22displayName%22%3A%22VIX%22%7D%2C%7B%22name%22%3A%22TVC%3ADXY%22%2C%22displayName%22%3A%22US%20Dollar%20Index%22%7D%5D%7D%2C%7B%22name%22%3A%22US%20Stocks%22%2C%22symbols%22%3A%5B%7B%22name%22%3A%22NASDAQ%3AAAPL%22%2C%22displayName%22%3A%22Apple%22%7D%2C%7B%22name%22%3A%22NASDAQ%3AMSFT%22%2C%22displayName%22%3A%22Microsoft%22%7D%2C%7B%22name%22%3A%22NASDAQ%3AAMZN%22%2C%22displayName%22%3A%22Amazon%22%7D%2C%7B%22name%22%3A%22NASDAQ%3AGOOGL%22%2C%22displayName%22%3A%22Google%22%7D%2C%7B%22name%22%3A%22NASDAQ%3ANVDA%22%2C%22displayName%22%3A%22NVIDIA%22%7D%2C%7B%22name%22%3A%22NASDAQ%3ATSLA%22%2C%22displayName%22%3A%22Tesla%22%7D%5D%7D%2C%7B%22name%22%3A%22Global%22%2C%22symbols%22%3A%5B%7B%22name%22%3A%22TVC%3AGOLD%22%2C%22displayName%22%3A%22Gold%22%7D%2C%7B%22name%22%3A%22TVC%3AUSOIL%22%2C%22displayName%22%3A%22Crude%20Oil%22%7D%2C%7B%22name%22%3A%22FX_IDC%3AEURUSD%22%2C%22displayName%22%3A%22EUR%2FUSD%22%7D%2C%7B%22name%22%3A%22BITSTAMP%3ABTCUSD%22%2C%22displayName%22%3A%22Bitcoin%22%7D%5D%7D%5D%2C%22showSymbolLogo%22%3Atrue%2C%22isTransparent%22%3Atrue%2C%22colorTheme%22%3A%22dark%22%2C%22width%22%3A%22100%25%22%2C%22height%22%3A%22100%25%22%7D"
-                title="US Market Data Live"
+                key="tools-us-overview"
+                src="https://s.tradingview.com/embed-widget/market-overview/?locale=en#%7B%22colorTheme%22%3A%22dark%22%2C%22dateRange%22%3A%2212M%22%2C%22showChart%22%3Atrue%2C%22width%22%3A%22100%25%22%2C%22height%22%3A%22100%25%22%2C%22isTransparent%22%3Atrue%2C%22showSymbolLogo%22%3Atrue%2C%22showFloatingTooltip%22%3Atrue%2C%22plotLineColorGrowing%22%3A%22rgba(0%2C200%2C100%2C1)%22%2C%22plotLineColorFalling%22%3A%22rgba(255%2C23%2C68%2C1)%22%2C%22gridLineColor%22%3A%22rgba(255%2C255%2C255%2C0.06)%22%2C%22scaleFontColor%22%3A%22rgba(255%2C255%2C255%2C0.5)%22%2C%22belowLineFillColorGrowing%22%3A%22rgba(0%2C200%2C100%2C0.05)%22%2C%22belowLineFillColorFalling%22%3A%22rgba(255%2C23%2C68%2C0.05)%22%2C%22belowLineFillColorGrowingBottom%22%3A%22rgba(0%2C0%2C0%2C0)%22%2C%22belowLineFillColorFallingBottom%22%3A%22rgba(0%2C0%2C0%2C0)%22%2C%22symbolActiveColor%22%3A%22rgba(208%2C2%2C27%2C0.15)%22%2C%22tabs%22%3A%5B%7B%22title%22%3A%22Indices%22%2C%22symbols%22%3A%5B%7B%22s%22%3A%22FOREXCOM%3ASPXUSD%22%2C%22d%22%3A%22S%26P%20500%22%7D%2C%7B%22s%22%3A%22FOREXCOM%3ANSXUSD%22%2C%22d%22%3A%22NASDAQ%22%7D%2C%7B%22s%22%3A%22FOREXCOM%3ADJI%22%2C%22d%22%3A%22Dow%20Jones%22%7D%5D%7D%2C%7B%22title%22%3A%22Stocks%22%2C%22symbols%22%3A%5B%7B%22s%22%3A%22NASDAQ%3AAAPL%22%2C%22d%22%3A%22Apple%22%7D%2C%7B%22s%22%3A%22NASDAQ%3AMSFT%22%2C%22d%22%3A%22Microsoft%22%7D%2C%7B%22s%22%3A%22NASDAQ%3ANVDA%22%2C%22d%22%3A%22NVIDIA%22%7D%2C%7B%22s%22%3A%22NASDAQ%3AAMZN%22%2C%22d%22%3A%22Amazon%22%7D%2C%7B%22s%22%3A%22NASDAQ%3AGOOGL%22%2C%22d%22%3A%22Google%22%7D%2C%7B%22s%22%3A%22NASDAQ%3ATSLA%22%2C%22d%22%3A%22Tesla%22%7D%5D%7D%2C%7B%22title%22%3A%22Forex%20%26%20Crypto%22%2C%22symbols%22%3A%5B%7B%22s%22%3A%22TVC%3AGOLD%22%2C%22d%22%3A%22Gold%22%7D%2C%7B%22s%22%3A%22TVC%3AUSOIL%22%2C%22d%22%3A%22Crude%20Oil%22%7D%2C%7B%22s%22%3A%22FX_IDC%3AUSDINR%22%2C%22d%22%3A%22USD%2FINR%22%7D%2C%7B%22s%22%3A%22BITSTAMP%3ABTCUSD%22%2C%22d%22%3A%22Bitcoin%22%7D%5D%7D%5D%7D"
+                title="US Market Overview"
                 className="w-full h-full border-0"
                 loading="lazy"
+              />
+            )}
+            {marketTab === 'chart' && (
+              <iframe
+                key={`tools-chart-${chartSymbol}`}
+                src={`https://s.tradingview.com/widgetembed/?symbol=${encodeURIComponent(chartSymbol)}&interval=D&hidesidetoolbar=0&symboledit=1&saveimage=0&toolbarbg=000000&studies=MASimple%409%2CRSI%4014&theme=dark&style=1&timezone=Asia%2FKolkata&withdateranges=1&showpopupbutton=0&hideideas=1&overrides=%7B%22paneProperties.background%22%3A%22%23000000%22%2C%22paneProperties.backgroundType%22%3A%22solid%22%2C%22scalesProperties.textColor%22%3A%22%23AAA%22%2C%22mainSeriesProperties.candleStyle.upColor%22%3A%22%2300C853%22%2C%22mainSeriesProperties.candleStyle.downColor%22%3A%22%23FF1744%22%2C%22mainSeriesProperties.candleStyle.borderUpColor%22%3A%22%2300C853%22%2C%22mainSeriesProperties.candleStyle.borderDownColor%22%3A%22%23FF1744%22%2C%22mainSeriesProperties.candleStyle.wickUpColor%22%3A%22%2300C853%22%2C%22mainSeriesProperties.candleStyle.wickDownColor%22%3A%22%23FF1744%22%7D&locale=en`}
+                title={`Live Chart — ${chartSymbol}`}
+                className="w-full h-full border-0"
+                loading="lazy"
+                allow="encrypted-media"
               />
             )}
           </div>
