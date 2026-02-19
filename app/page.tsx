@@ -377,14 +377,15 @@ function HeroSection() {
                   </div>
                 )}
 
-                {/* Widget content */}
-                <div className="h-72">
+                {/* Widget content — clipped to hide TradingView branding below timeframe */}
+                <div className="overflow-hidden" style={{ height: '258px' }}>
                   {marketTab === 'india' && (
                     <iframe
                       key="india-overview"
                       src="https://s.tradingview.com/embed-widget/market-overview/?locale=en#%7B%22colorTheme%22%3A%22dark%22%2C%22dateRange%22%3A%2212M%22%2C%22showChart%22%3Atrue%2C%22width%22%3A%22100%25%22%2C%22height%22%3A%22100%25%22%2C%22isTransparent%22%3Atrue%2C%22showSymbolLogo%22%3Atrue%2C%22showFloatingTooltip%22%3Atrue%2C%22plotLineColorGrowing%22%3A%22rgba(0%2C200%2C100%2C1)%22%2C%22plotLineColorFalling%22%3A%22rgba(255%2C23%2C68%2C1)%22%2C%22gridLineColor%22%3A%22rgba(255%2C255%2C255%2C0.06)%22%2C%22scaleFontColor%22%3A%22rgba(255%2C255%2C255%2C0.5)%22%2C%22belowLineFillColorGrowing%22%3A%22rgba(0%2C200%2C100%2C0.05)%22%2C%22belowLineFillColorFalling%22%3A%22rgba(255%2C23%2C68%2C0.05)%22%2C%22belowLineFillColorGrowingBottom%22%3A%22rgba(0%2C0%2C0%2C0)%22%2C%22belowLineFillColorFallingBottom%22%3A%22rgba(0%2C0%2C0%2C0)%22%2C%22symbolActiveColor%22%3A%22rgba(208%2C2%2C27%2C0.15)%22%2C%22tabs%22%3A%5B%7B%22title%22%3A%22Indices%22%2C%22symbols%22%3A%5B%7B%22s%22%3A%22BSE%3ASENSEX%22%2C%22d%22%3A%22SENSEX%22%7D%2C%7B%22s%22%3A%22NSE%3ANIFTY%22%2C%22d%22%3A%22NIFTY%2050%22%7D%2C%7B%22s%22%3A%22NSE%3ABANKNIFTY%22%2C%22d%22%3A%22BANK%20NIFTY%22%7D%5D%7D%2C%7B%22title%22%3A%22Stocks%22%2C%22symbols%22%3A%5B%7B%22s%22%3A%22NSE%3ARELIANCE%22%2C%22d%22%3A%22Reliance%22%7D%2C%7B%22s%22%3A%22NSE%3ATCS%22%2C%22d%22%3A%22TCS%22%7D%2C%7B%22s%22%3A%22NSE%3AHDFCBANK%22%2C%22d%22%3A%22HDFC%20Bank%22%7D%5D%7D%2C%7B%22title%22%3A%22Commodities%22%2C%22symbols%22%3A%5B%7B%22s%22%3A%22TVC%3AGOLD%22%2C%22d%22%3A%22Gold%22%7D%2C%7B%22s%22%3A%22TVC%3ASILVER%22%2C%22d%22%3A%22Silver%22%7D%2C%7B%22s%22%3A%22FX_IDC%3AUSDINR%22%2C%22d%22%3A%22USD%2FINR%22%7D%5D%7D%5D%7D"
                       title="Indian Market Overview"
-                      className="w-full h-full border-0"
+                      className="w-full border-0"
+                      style={{ height: '320px' }}
                       loading="lazy"
                     />
                   )}
@@ -393,7 +394,8 @@ function HeroSection() {
                       key="us-overview"
                       src="https://s.tradingview.com/embed-widget/market-overview/?locale=en#%7B%22colorTheme%22%3A%22dark%22%2C%22dateRange%22%3A%2212M%22%2C%22showChart%22%3Atrue%2C%22width%22%3A%22100%25%22%2C%22height%22%3A%22100%25%22%2C%22isTransparent%22%3Atrue%2C%22showSymbolLogo%22%3Atrue%2C%22showFloatingTooltip%22%3Atrue%2C%22plotLineColorGrowing%22%3A%22rgba(0%2C200%2C100%2C1)%22%2C%22plotLineColorFalling%22%3A%22rgba(255%2C23%2C68%2C1)%22%2C%22gridLineColor%22%3A%22rgba(255%2C255%2C255%2C0.06)%22%2C%22scaleFontColor%22%3A%22rgba(255%2C255%2C255%2C0.5)%22%2C%22belowLineFillColorGrowing%22%3A%22rgba(0%2C200%2C100%2C0.05)%22%2C%22belowLineFillColorFalling%22%3A%22rgba(255%2C23%2C68%2C0.05)%22%2C%22belowLineFillColorGrowingBottom%22%3A%22rgba(0%2C0%2C0%2C0)%22%2C%22belowLineFillColorFallingBottom%22%3A%22rgba(0%2C0%2C0%2C0)%22%2C%22symbolActiveColor%22%3A%22rgba(208%2C2%2C27%2C0.15)%22%2C%22tabs%22%3A%5B%7B%22title%22%3A%22Indices%22%2C%22symbols%22%3A%5B%7B%22s%22%3A%22FOREXCOM%3ASPXUSD%22%2C%22d%22%3A%22S%26P%20500%22%7D%2C%7B%22s%22%3A%22FOREXCOM%3ANSXUSD%22%2C%22d%22%3A%22NASDAQ%22%7D%2C%7B%22s%22%3A%22FOREXCOM%3ADJI%22%2C%22d%22%3A%22Dow%20Jones%22%7D%5D%7D%2C%7B%22title%22%3A%22Stocks%22%2C%22symbols%22%3A%5B%7B%22s%22%3A%22NASDAQ%3AAAPL%22%2C%22d%22%3A%22Apple%22%7D%2C%7B%22s%22%3A%22NASDAQ%3AMSFT%22%2C%22d%22%3A%22Microsoft%22%7D%2C%7B%22s%22%3A%22NASDAQ%3ANVDA%22%2C%22d%22%3A%22NVIDIA%22%7D%5D%7D%2C%7B%22title%22%3A%22Forex%22%2C%22symbols%22%3A%5B%7B%22s%22%3A%22FX_IDC%3AUSDINR%22%2C%22d%22%3A%22USD%2FINR%22%7D%2C%7B%22s%22%3A%22TVC%3AGOLD%22%2C%22d%22%3A%22Gold%22%7D%2C%7B%22s%22%3A%22TVC%3AUSOIL%22%2C%22d%22%3A%22Crude%20Oil%22%7D%5D%7D%5D%7D"
                       title="US Market Overview"
-                      className="w-full h-full border-0"
+                      className="w-full border-0"
+                      style={{ height: '320px' }}
                       loading="lazy"
                     />
                   )}
@@ -402,7 +404,8 @@ function HeroSection() {
                       key={`chart-${chartSymbol}`}
                       src={`https://s.tradingview.com/widgetembed/?symbol=${encodeURIComponent(chartSymbol)}&interval=D&hidesidetoolbar=1&symboledit=0&saveimage=0&toolbarbg=000000&theme=dark&style=1&timezone=Asia%2FKolkata&withdateranges=1&showpopupbutton=0&hideideas=1&overrides=%7B%22paneProperties.background%22%3A%22%23000000%22%2C%22paneProperties.backgroundType%22%3A%22solid%22%2C%22scalesProperties.textColor%22%3A%22%23AAA%22%2C%22mainSeriesProperties.candleStyle.upColor%22%3A%22%2300C853%22%2C%22mainSeriesProperties.candleStyle.downColor%22%3A%22%23FF1744%22%2C%22mainSeriesProperties.candleStyle.borderUpColor%22%3A%22%2300C853%22%2C%22mainSeriesProperties.candleStyle.borderDownColor%22%3A%22%23FF1744%22%2C%22mainSeriesProperties.candleStyle.wickUpColor%22%3A%22%2300C853%22%2C%22mainSeriesProperties.candleStyle.wickDownColor%22%3A%22%23FF1744%22%7D&locale=en`}
                       title={`Live Chart — ${CHART_OPTIONS.find(c => c.symbol === chartSymbol)?.label}`}
-                      className="w-full h-full border-0"
+                      className="w-full border-0"
+                      style={{ height: '320px' }}
                       loading="lazy"
                       allow="encrypted-media"
                     />
