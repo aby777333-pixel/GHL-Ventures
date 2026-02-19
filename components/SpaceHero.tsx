@@ -18,6 +18,7 @@
  *   blackhole     — Fund/Direct AIF: gravitational lensing black hole + accretion disk
  *   supernova     — Fund/Debenture: expanding supernova explosion + shockwave
  *   wormhole      — Tools page: spinning wormhole tunnel + time-space distortion
+ *   city          — Why AIFs page: urban skyline silhouette + financial district + metro glow
  */
 
 type SpaceVariant =
@@ -33,6 +34,7 @@ type SpaceVariant =
   | 'blackhole'
   | 'supernova'
   | 'wormhole'
+  | 'city'
 
 interface SpaceHeroProps {
   variant: SpaceVariant
@@ -729,6 +731,116 @@ export default function SpaceHero({ variant }: SpaceHeroProps) {
           {/* Ambient glow */}
           <div className="absolute top-[30%] left-[40%] w-80 h-80 bg-violet-500/8 rounded-full blur-[100px] animate-pulse-slow" />
           <div className="absolute bottom-[20%] right-[20%] w-64 h-64 bg-cyan-500/5 rounded-full blur-[80px] animate-pulse-slow-2" />
+        </>
+      )}
+
+      {/* ═══════════════════════════════════════════════════════════
+          CITY — Why AIFs Page
+          Urban skyline silhouette + financial district + metro glow
+         ═══════════════════════════════════════════════════════════ */}
+      {variant === 'city' && (
+        <>
+          {/* City skyline silhouette — buildings across the bottom */}
+          <svg className="absolute bottom-0 left-0 right-0 w-full h-[45%]" viewBox="0 0 1440 400" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
+            {/* Far background buildings — darker, shorter */}
+            <rect x="20" y="160" width="50" height="240" fill="rgba(15,15,25,0.9)" />
+            <rect x="75" y="140" width="35" height="260" fill="rgba(12,12,22,0.85)" />
+            <rect x="120" y="180" width="60" height="220" fill="rgba(18,18,28,0.9)" />
+            <rect x="200" y="100" width="45" height="300" fill="rgba(10,10,18,0.95)" />
+            <rect x="250" y="150" width="55" height="250" fill="rgba(15,15,25,0.88)" />
+            <rect x="320" y="80" width="40" height="320" fill="rgba(10,10,18,0.95)" />
+            <rect x="365" y="130" width="50" height="270" fill="rgba(15,15,25,0.9)" />
+            <rect x="430" y="60" width="55" height="340" fill="rgba(8,8,15,0.95)" />
+            <rect x="490" y="120" width="40" height="280" fill="rgba(14,14,24,0.9)" />
+            <rect x="540" y="90" width="50" height="310" fill="rgba(10,10,18,0.95)" />
+            <rect x="600" y="140" width="45" height="260" fill="rgba(16,16,26,0.88)" />
+            <rect x="660" y="50" width="60" height="350" fill="rgba(8,8,15,0.95)" />
+            <rect x="725" y="110" width="40" height="290" fill="rgba(13,13,23,0.9)" />
+            <rect x="780" y="70" width="55" height="330" fill="rgba(10,10,18,0.95)" />
+            <rect x="845" y="130" width="45" height="270" fill="rgba(15,15,25,0.88)" />
+            <rect x="900" y="90" width="50" height="310" fill="rgba(10,10,18,0.95)" />
+            <rect x="960" y="40" width="65" height="360" fill="rgba(8,8,15,0.95)" />
+            <rect x="1030" y="100" width="45" height="300" fill="rgba(12,12,22,0.9)" />
+            <rect x="1090" y="150" width="55" height="250" fill="rgba(16,16,26,0.88)" />
+            <rect x="1150" y="80" width="40" height="320" fill="rgba(10,10,18,0.95)" />
+            <rect x="1200" y="120" width="50" height="280" fill="rgba(14,14,24,0.9)" />
+            <rect x="1260" y="60" width="55" height="340" fill="rgba(10,10,18,0.95)" />
+            <rect x="1330" y="140" width="45" height="260" fill="rgba(15,15,25,0.9)" />
+            <rect x="1385" y="100" width="55" height="300" fill="rgba(12,12,22,0.85)" />
+
+            {/* Antenna/spire details on tall buildings */}
+            <line x1="458" y1="60" x2="458" y2="30" stroke="rgba(208,2,27,0.6)" strokeWidth="2" />
+            <circle cx="458" cy="28" r="2" fill="#D0021B" opacity="0.8" className="animate-twinkle-1" />
+            <line x1="690" y1="50" x2="690" y2="18" stroke="rgba(208,2,27,0.6)" strokeWidth="2" />
+            <circle cx="690" cy="16" r="2" fill="#D0021B" opacity="0.8" className="animate-twinkle-2" />
+            <line x1="993" y1="40" x2="993" y2="8" stroke="rgba(208,2,27,0.6)" strokeWidth="2" />
+            <circle cx="993" cy="6" r="2.5" fill="#D0021B" opacity="0.9" className="animate-twinkle-3" />
+
+            {/* Building window lights — scattered yellow/white dots */}
+            {/* Block 1 */}
+            <rect x="207" y="115" width="3" height="3" fill="rgba(255,220,100,0.6)" />
+            <rect x="215" y="130" width="3" height="3" fill="rgba(255,220,100,0.4)" />
+            <rect x="225" y="160" width="3" height="3" fill="rgba(255,255,200,0.5)" />
+            <rect x="210" y="200" width="3" height="3" fill="rgba(255,220,100,0.5)" />
+            <rect x="230" y="250" width="3" height="3" fill="rgba(255,220,100,0.3)" />
+            {/* Block 2 */}
+            <rect x="325" y="95" width="3" height="3" fill="rgba(255,220,100,0.6)" />
+            <rect x="340" y="120" width="3" height="3" fill="rgba(255,255,200,0.5)" />
+            <rect x="330" y="180" width="3" height="3" fill="rgba(255,220,100,0.4)" />
+            <rect x="345" y="230" width="3" height="3" fill="rgba(255,220,100,0.3)" />
+            {/* Block 3 — tallest */}
+            <rect x="438" y="75" width="3" height="3" fill="rgba(255,220,100,0.7)" />
+            <rect x="448" y="95" width="3" height="3" fill="rgba(255,255,200,0.5)" />
+            <rect x="460" y="120" width="3" height="3" fill="rgba(255,220,100,0.5)" />
+            <rect x="440" y="160" width="3" height="3" fill="rgba(255,220,100,0.4)" />
+            <rect x="468" y="200" width="3" height="3" fill="rgba(255,255,200,0.4)" />
+            <rect x="445" y="250" width="3" height="3" fill="rgba(255,220,100,0.3)" />
+            {/* Block 4 */}
+            <rect x="668" y="65" width="3" height="3" fill="rgba(255,220,100,0.7)" />
+            <rect x="680" y="90" width="3" height="3" fill="rgba(255,255,200,0.5)" />
+            <rect x="670" y="130" width="3" height="3" fill="rgba(255,220,100,0.5)" />
+            <rect x="695" y="170" width="3" height="3" fill="rgba(255,220,100,0.4)" />
+            <rect x="675" y="220" width="3" height="3" fill="rgba(255,255,200,0.3)" />
+            {/* Block 5 */}
+            <rect x="790" y="85" width="3" height="3" fill="rgba(255,220,100,0.6)" />
+            <rect x="800" y="110" width="3" height="3" fill="rgba(255,255,200,0.5)" />
+            <rect x="815" y="160" width="3" height="3" fill="rgba(255,220,100,0.4)" />
+            <rect x="795" y="210" width="3" height="3" fill="rgba(255,220,100,0.3)" />
+            {/* Block 6 */}
+            <rect x="970" y="55" width="3" height="3" fill="rgba(255,220,100,0.7)" />
+            <rect x="985" y="80" width="3" height="3" fill="rgba(255,255,200,0.5)" />
+            <rect x="975" y="120" width="3" height="3" fill="rgba(255,220,100,0.5)" />
+            <rect x="1000" y="160" width="3" height="3" fill="rgba(255,220,100,0.4)" />
+            <rect x="980" y="210" width="3" height="3" fill="rgba(255,220,100,0.3)" />
+            <rect x="1005" y="260" width="3" height="3" fill="rgba(255,255,200,0.3)" />
+            {/* Block 7 */}
+            <rect x="1160" y="95" width="3" height="3" fill="rgba(255,220,100,0.6)" />
+            <rect x="1170" y="130" width="3" height="3" fill="rgba(255,255,200,0.5)" />
+            <rect x="1155" y="180" width="3" height="3" fill="rgba(255,220,100,0.4)" />
+            {/* Block 8 */}
+            <rect x="1270" y="75" width="3" height="3" fill="rgba(255,220,100,0.6)" />
+            <rect x="1285" y="100" width="3" height="3" fill="rgba(255,255,200,0.5)" />
+            <rect x="1275" y="150" width="3" height="3" fill="rgba(255,220,100,0.4)" />
+            <rect x="1290" y="200" width="3" height="3" fill="rgba(255,220,100,0.3)" />
+          </svg>
+
+          {/* City ground glow — warm amber light pollution */}
+          <div className="absolute bottom-0 left-0 right-0 h-[30%]"
+            style={{ background: 'linear-gradient(to top, rgba(208,2,27,0.08) 0%, rgba(255,140,50,0.04) 40%, transparent 100%)' }} />
+
+          {/* Horizon glow line */}
+          <div className="absolute bottom-[42%] left-0 right-0 h-[2px]"
+            style={{ background: 'linear-gradient(to right, transparent, rgba(208,2,27,0.15) 20%, rgba(255,180,80,0.12) 50%, rgba(208,2,27,0.15) 80%, transparent)', filter: 'blur(1px)' }} />
+
+          {/* Financial district ambient glow — warm metropolitan light */}
+          <div className="absolute bottom-[10%] left-[30%] w-[500px] h-[200px] rounded-full animate-pulse-slow"
+            style={{ background: 'radial-gradient(ellipse, rgba(255,180,80,0.06) 0%, transparent 70%)', filter: 'blur(50px)' }} />
+          <div className="absolute bottom-[15%] right-[20%] w-[400px] h-[180px] rounded-full animate-pulse-slow-2"
+            style={{ background: 'radial-gradient(ellipse, rgba(208,2,27,0.05) 0%, transparent 70%)', filter: 'blur(40px)' }} />
+
+          {/* Upper atmosphere glow — subtle */}
+          <div className="absolute top-[15%] left-[20%] w-72 h-72 bg-brand-red/5 rounded-full blur-[100px] animate-pulse-slow" />
+          <div className="absolute top-[25%] right-[15%] w-64 h-64 bg-amber-500/4 rounded-full blur-[80px] animate-pulse-slow-2" />
         </>
       )}
     </div>

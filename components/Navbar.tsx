@@ -1,10 +1,10 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { NAV_LINKS, BRAND } from '@/lib/constants'
-import { Menu, X, Phone, ArrowRight, LogIn, UserPlus, ShieldCheck, Search } from 'lucide-react'
+import { Menu, X, Phone, ArrowRight, LogIn, UserPlus, ShieldCheck, Search, ChevronDown, ChevronRight as ChevRight } from 'lucide-react'
 import Logo from '@/components/Logo'
 // MarketDataMarquee and CurrencyTicker moved to home page (above NewsScroller)
 import NotificationCenter from '@/components/NotificationCenter'
@@ -14,6 +14,10 @@ import ThemePicker from '@/components/ThemePicker'
 export default function Navbar() {
   const [isOpen, setIsOpen] = useState(false)
   const [scrolled, setScrolled] = useState(false)
+  const [aboutOpen, setAboutOpen] = useState(false)
+  const [mobileAboutOpen, setMobileAboutOpen] = useState(false)
+  const aboutRef = useRef<HTMLDivElement>(null)
+  const aboutTimeout = useRef<NodeJS.Timeout | null>(null)
   const pathname = usePathname()
 
   const handleScroll = useCallback(() => {
@@ -29,6 +33,8 @@ export default function Navbar() {
   // Close mobile menu on route change
   useEffect(() => {
     setIsOpen(false)
+    setAboutOpen(false)
+    setMobileAboutOpen(false)
   }, [pathname])
 
   // Lock body scroll when mobile menu is open
@@ -42,6 +48,28 @@ export default function Navbar() {
       document.body.style.overflow = ''
     }
   }, [isOpen])
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (aboutRef.current && !aboutRef.current.contains(e.target as Node)) {
+        setAboutOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [])
+
+  // Check if About submenu item is active
+  const isAboutActive = pathname === '/about' || pathname === '/tools' || pathname === '/downloads'
+
+  const handleAboutEnter = () => {
+    if (aboutTimeout.current) clearTimeout(aboutTimeout.current)
+    setAboutOpen(true)
+  }
+  const handleAboutLeave = () => {
+    aboutTimeout.current = setTimeout(() => setAboutOpen(false), 200)
+  }
 
   return (
     <header className="fixed top-0 left-0 right-0 z-50" role="banner">
@@ -77,7 +105,93 @@ export default function Navbar() {
             <div className="hidden xl:flex items-center justify-center flex-1 mx-4">
               <div className="flex items-center" style={{ gap: '2px' }}>
                 {NAV_LINKS.map((link) => {
-                  const isActive = pathname === link.href
+                  // Check if this link has children (dropdown)
+                  const hasChildren = 'children' in link && link.children
+                  const isActive = hasChildren ? isAboutActive : pathname === link.href
+
+                  if (hasChildren) {
+                    // Dropdown menu for About
+                    return (
+                      <div
+                        key={link.label}
+                        ref={aboutRef}
+                        className="relative"
+                        onMouseEnter={handleAboutEnter}
+                        onMouseLeave={handleAboutLeave}
+                      >
+                        <button
+                          onClick={() => setAboutOpen(!aboutOpen)}
+                          className={`relative uppercase font-semibold transition-colors duration-200 px-2 py-1.5 rounded inline-flex items-center gap-0.5 ${
+                            isActive
+                              ? 'text-brand-red'
+                              : scrolled
+                              ? 'text-brand-black/80 hover:text-brand-red'
+                              : 'text-white/80 hover:text-brand-red'
+                          }`}
+                          style={{
+                            fontSize: '9.5px',
+                            letterSpacing: '0.06em',
+                            fontWeight: 600,
+                            whiteSpace: 'nowrap',
+                          }}
+                        >
+                          {link.label}
+                          <ChevronDown className={`w-2.5 h-2.5 transition-transform duration-200 ${aboutOpen ? 'rotate-180' : ''}`} />
+                          {/* Active underline */}
+                          <span
+                            className={`absolute left-2 right-2 -bottom-0.5 h-[1.5px] bg-brand-red transition-all duration-300 ${
+                              isActive ? 'opacity-100' : 'opacity-0'
+                            }`}
+                          />
+                        </button>
+
+                        {/* Dropdown panel */}
+                        <div
+                          className={`absolute top-full left-1/2 -translate-x-1/2 mt-1 transition-all duration-200 ${
+                            aboutOpen
+                              ? 'opacity-100 translate-y-0 pointer-events-auto'
+                              : 'opacity-0 -translate-y-2 pointer-events-none'
+                          }`}
+                        >
+                          <div
+                            className="rounded-xl border shadow-2xl py-1.5 min-w-[160px] overflow-hidden"
+                            style={{
+                              background: scrolled ? 'rgba(255,255,255,0.97)' : 'rgba(15,15,20,0.97)',
+                              borderColor: scrolled ? 'rgba(0,0,0,0.08)' : 'rgba(255,255,255,0.1)',
+                              backdropFilter: 'blur(20px)',
+                            }}
+                          >
+                            {link.children.map((child) => {
+                              const childActive = pathname === child.href
+                              return (
+                                <Link
+                                  key={child.href}
+                                  href={child.href}
+                                  className={`flex items-center px-4 py-2.5 transition-all duration-150 ${
+                                    childActive
+                                      ? 'text-brand-red'
+                                      : scrolled
+                                      ? 'text-brand-black/80 hover:text-brand-red hover:bg-gray-50'
+                                      : 'text-white/80 hover:text-brand-red hover:bg-white/5'
+                                  }`}
+                                  style={{
+                                    fontSize: '11px',
+                                    fontWeight: 600,
+                                    letterSpacing: '0.04em',
+                                  }}
+                                >
+                                  <ChevRight className="w-3 h-3 mr-2 opacity-40" />
+                                  {child.label}
+                                </Link>
+                              )
+                            })}
+                          </div>
+                        </div>
+                      </div>
+                    )
+                  }
+
+                  // Regular nav link
                   return (
                     <Link
                       key={link.href}
@@ -254,29 +368,83 @@ export default function Navbar() {
             </span>
           </div>
 
-          {/* Nav Links — staggered animation */}
+          {/* Nav Links — staggered animation with mobile About accordion */}
           <nav className="flex flex-col items-center space-y-5">
-            {NAV_LINKS.map((link, index) => {
-              const isActive = pathname === link.href
-              return (
-                <Link
-                  key={link.href}
-                  href={link.href}
-                  onClick={() => setIsOpen(false)}
-                  className={`uppercase font-semibold text-xl transition-all duration-500 ${
-                    isActive ? 'text-brand-red' : 'text-white/80 hover:text-brand-red'
-                  }`}
-                  style={{
-                    letterSpacing: '0.08em',
-                    transitionDelay: isOpen ? `${index * 50}ms` : '0ms',
-                    opacity: isOpen ? 1 : 0,
-                    transform: isOpen ? 'translateY(0)' : 'translateY(20px)',
-                  }}
-                >
-                  {link.label}
-                </Link>
-              )
-            })}
+            {(() => {
+              let animIndex = 0
+              return NAV_LINKS.map((link) => {
+                const hasChildren = 'children' in link && link.children
+                const currentIndex = animIndex
+                animIndex += 1
+
+                if (hasChildren) {
+                  // About with mobile accordion
+                  return (
+                    <div key={link.label} className="flex flex-col items-center">
+                      <button
+                        onClick={() => setMobileAboutOpen(!mobileAboutOpen)}
+                        className={`uppercase font-semibold text-xl transition-all duration-500 inline-flex items-center gap-1.5 ${
+                          isAboutActive ? 'text-brand-red' : 'text-white/80 hover:text-brand-red'
+                        }`}
+                        style={{
+                          letterSpacing: '0.08em',
+                          transitionDelay: isOpen ? `${currentIndex * 50}ms` : '0ms',
+                          opacity: isOpen ? 1 : 0,
+                          transform: isOpen ? 'translateY(0)' : 'translateY(20px)',
+                        }}
+                      >
+                        {link.label}
+                        <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${mobileAboutOpen ? 'rotate-180' : ''}`} />
+                      </button>
+                      {/* Sub-items */}
+                      <div
+                        className={`flex flex-col items-center space-y-3 overflow-hidden transition-all duration-300 ${
+                          mobileAboutOpen ? 'max-h-[200px] mt-3 opacity-100' : 'max-h-0 mt-0 opacity-0'
+                        }`}
+                      >
+                        {link.children.map((child) => {
+                          const childActive = pathname === child.href
+                          return (
+                            <Link
+                              key={child.href}
+                              href={child.href}
+                              onClick={() => setIsOpen(false)}
+                              className={`text-base font-medium transition-colors ${
+                                childActive ? 'text-brand-red' : 'text-white/60 hover:text-brand-red'
+                              }`}
+                              style={{ letterSpacing: '0.06em' }}
+                            >
+                              {child.label}
+                            </Link>
+                          )
+                        })}
+                      </div>
+                    </div>
+                  )
+                }
+
+                // Regular mobile nav link
+                const isActive = pathname === link.href
+                return (
+                  <Link
+                    key={link.href}
+                    href={link.href}
+                    onClick={() => setIsOpen(false)}
+                    className={`uppercase font-semibold text-xl transition-all duration-500 ${
+                      isActive ? 'text-brand-red' : 'text-white/80 hover:text-brand-red'
+                    }`}
+                    style={{
+                      letterSpacing: '0.08em',
+                      transitionDelay: isOpen ? `${currentIndex * 50}ms` : '0ms',
+                      opacity: isOpen ? 1 : 0,
+                      transform: isOpen ? 'translateY(0)' : 'translateY(20px)',
+                    }}
+                  >
+                    {link.label}
+                  </Link>
+                )
+              })
+            })()}
           </nav>
 
           {/* CTA in overlay */}

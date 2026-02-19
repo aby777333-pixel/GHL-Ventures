@@ -36,13 +36,20 @@ export const BRAND = {
 
 export const NAV_LINKS = [
   { label: 'Home', href: '/' },
-  { label: 'About', href: '/about' },
+  {
+    label: 'About',
+    href: '#',
+    children: [
+      { label: 'Why GHL?', href: '/about' },
+      { label: 'Tools', href: '/tools' },
+      { label: 'Downloads', href: '/downloads' },
+    ],
+  },
+  { label: 'Why AIFs', href: '/why-aifs' },
   { label: 'Fund', href: '/fund' },
-  { label: 'Tools', href: '/tools' },
   { label: 'Blog', href: '/blog' },
   { label: 'Financial IQ', href: '/financial-iq' },
   { label: 'Portfolio', href: '/portfolio' },
-  { label: 'Downloads', href: '/downloads' },
   { label: 'Contact', href: '/contact' },
 ] as const
 
