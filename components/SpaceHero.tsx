@@ -375,71 +375,147 @@ export default function SpaceHero({ variant }: SpaceHeroProps) {
 
       {/* ═══════════════════════════════════════════════════════════
           ★ AURORA — Home Page Hero ★
-          Northern Lights Aurora Borealis + Meteor Shower + Solar Wind
-          THE most spectacular variant — this is what visitors see first
+          Cinematic space view: Earth arc, moon, stars, planets, ISS,
+          airplanes, market-lightning horizon, comet, subtle borealis,
+          celestial wonders. Premium & refined.
          ═══════════════════════════════════════════════════════════ */}
       {variant === 'aurora' && (
         <>
-          {/* ═══ GIANT AURORA BOREALIS ═══
-              5 curtain layers + shimmer + reflection + color pulse
-              Vivid, oscillating, colorful — the most stunning effect on the site */}
+          {/* ── Subtle Aurora Borealis — faint, ethereal, not overpowering ── */}
+          <div className="aurora-subtle-1" />
+          <div className="aurora-subtle-2" />
 
-          {/* Color cycling pulse — background hue that shifts through aurora colors */}
-          <div className="aurora-color-pulse" />
-
-          {/* 5 Aurora Borealis curtain layers — each a different color band */}
-          <div className="aurora-curtain-1" />
-          <div className="aurora-curtain-2" />
-          <div className="aurora-curtain-3" />
-          <div className="aurora-curtain-4" />
-          <div className="aurora-curtain-5" />
-
-          {/* Fast-moving shimmer overlay — makes the aurora sparkle */}
-          <div className="aurora-shimmer" />
-
-          {/* Ground reflection — aurora colors reflecting below */}
-          <div className="aurora-reflection" />
-
-          {/* Extra vivid green glow — the signature aurora color */}
-          <div className="absolute top-[5%] left-[15%] w-[600px] h-[400px] rounded-full blur-[100px] animate-pulse-slow"
-            style={{ background: 'radial-gradient(circle, rgba(0,255,128,0.12) 0%, rgba(0,200,255,0.06) 50%, transparent 70%)' }} />
-          <div className="absolute top-[10%] right-[10%] w-[500px] h-[350px] rounded-full blur-[90px] animate-pulse-slow-2"
-            style={{ background: 'radial-gradient(circle, rgba(0,200,255,0.10) 0%, rgba(139,92,246,0.06) 50%, transparent 70%)' }} />
-          <div className="absolute top-[0%] left-[40%] w-[400px] h-[300px] rounded-full blur-[80px] animate-nebula-drift"
-            style={{ background: 'radial-gradient(circle, rgba(255,50,150,0.08) 0%, rgba(0,255,200,0.04) 50%, transparent 70%)' }} />
-
-          {/* Bright Venus-like star */}
-          <div className="absolute top-[12%] right-[18%]">
-            <div className="w-5 h-5 rounded-full animate-pulsar-core"
-              style={{ background: 'radial-gradient(circle, #fff 0%, rgba(255,200,100,0.8) 40%, transparent 70%)', boxShadow: '0 0 25px rgba(255,255,255,0.9), 0 0 50px rgba(255,200,100,0.5), 0 0 100px rgba(255,150,50,0.25)' }} />
-            {/* Cross-flare / diffraction spikes */}
-            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[80px] h-[1.5px] animate-star-flare"
-              style={{ background: 'linear-gradient(to right, transparent, rgba(255,255,255,0.7), transparent)' }} />
-            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[1.5px] h-[80px] animate-star-flare"
-              style={{ background: 'linear-gradient(to bottom, transparent, rgba(255,255,255,0.7), transparent)' }} />
-            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[50px] h-[1px] rotate-45 animate-star-flare-2"
-              style={{ background: 'linear-gradient(to right, transparent, rgba(255,200,100,0.5), transparent)' }} />
-            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[50px] h-[1px] -rotate-45 animate-star-flare-2"
-              style={{ background: 'linear-gradient(to right, transparent, rgba(255,200,100,0.5), transparent)' }} />
+          {/* ── Moon — luminous crescent with crater detail ── */}
+          <div className="absolute top-[6%] right-[12%]" style={{ opacity: 0.85 }}>
+            <div className="w-20 h-20 rounded-full"
+              style={{
+                background: 'radial-gradient(circle at 35% 35%, #fffff0 0%, #e8e0d0 25%, #b8a890 50%, #888070 80%, #605850 100%)',
+                boxShadow: '0 0 40px rgba(255,255,240,0.2), 0 0 80px rgba(255,255,240,0.1), 0 0 150px rgba(255,250,230,0.06)',
+              }}>
+              {/* Crescent shadow — makes it a crescent moon */}
+              <div className="absolute -right-1 -top-1 w-[68px] h-[68px] rounded-full" style={{ background: 'radial-gradient(circle at 60% 40%, #050010 0%, #050010 55%, transparent 80%)' }} />
+              {/* Craters */}
+              <div className="absolute top-3 left-3 w-4 h-4 rounded-full bg-black/10 blur-[0.5px]" />
+              <div className="absolute top-8 left-7 w-3 h-3 rounded-full bg-black/8" />
+              <div className="absolute bottom-4 left-4 w-5 h-5 rounded-full bg-black/8 blur-[0.5px]" />
+            </div>
+            {/* Moonlight halo */}
+            <div className="absolute -inset-12 rounded-full" style={{ background: 'radial-gradient(circle, rgba(255,255,240,0.04) 0%, transparent 70%)' }} />
+            {/* Cross-flare on moon */}
+            <div className="absolute top-1/2 left-[30%] -translate-y-1/2 w-[60px] h-[1px] animate-star-flare"
+              style={{ background: 'linear-gradient(to right, transparent, rgba(255,255,240,0.3), transparent)' }} />
           </div>
 
-          {/* Second bright star — left side */}
-          <div className="absolute top-[25%] left-[8%]">
-            <div className="w-3 h-3 rounded-full animate-pulsar-core"
-              style={{ background: 'radial-gradient(circle, #fff 0%, rgba(100,255,200,0.7) 50%, transparent 70%)', boxShadow: '0 0 15px rgba(100,255,200,0.7), 0 0 30px rgba(0,255,128,0.3)', animationDelay: '1.5s' }} />
-            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[40px] h-[1px] animate-star-flare-2"
-              style={{ background: 'linear-gradient(to right, transparent, rgba(100,255,200,0.5), transparent)' }} />
-            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[1px] h-[40px] animate-star-flare-2"
-              style={{ background: 'linear-gradient(to bottom, transparent, rgba(100,255,200,0.5), transparent)' }} />
+          {/* ── Distant Planets ── */}
+          {/* Saturn — upper left area */}
+          <div className="absolute top-[15%] left-[18%]" style={{ opacity: 0.4 }}>
+            <div className="w-6 h-6 rounded-full"
+              style={{ background: 'radial-gradient(circle at 40% 35%, #ffe0a0 0%, #d4a060 40%, #8a6040 80%, #504030 100%)' }} />
+            {/* Ring */}
+            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-14 h-3 rounded-full"
+              style={{ border: '1px solid rgba(255,220,160,0.4)', transform: 'translate(-50%, -50%) rotateX(70deg)' }} />
           </div>
 
-          {/* Distant nebula wash */}
-          <div className="absolute top-[5%] left-[5%] w-[500px] h-[300px] rounded-full blur-[120px] animate-nebula-drift"
-            style={{ background: 'radial-gradient(circle, rgba(208,2,27,0.08) 0%, rgba(88,28,135,0.04) 50%, transparent 70%)' }} />
+          {/* Mars — small reddish dot, upper right area */}
+          <div className="absolute top-[22%] right-[30%] w-3 h-3 rounded-full" style={{ opacity: 0.5, background: 'radial-gradient(circle at 40% 40%, #ff8060, #c04020, #801000)', boxShadow: '0 0 8px rgba(255,80,40,0.3)' }} />
 
-          {/* Ambient cosmic glow */}
-          <div className="absolute top-[30%] right-[10%] w-96 h-96 bg-brand-red/5 rounded-full blur-[100px] animate-pulse-slow" />
-          <div className="absolute bottom-[10%] left-[30%] w-64 h-64 bg-emerald-500/3 rounded-full blur-[80px] animate-pulse-slow-2" />
+          {/* Jupiter — larger, banded */}
+          <div className="absolute top-[32%] left-[6%]" style={{ opacity: 0.25 }}>
+            <div className="w-10 h-10 rounded-full overflow-hidden"
+              style={{ background: 'radial-gradient(circle at 38% 38%, #f0d0a0 0%, #d4a870 30%, #b08050 60%, #806040 100%)' }}>
+              <div className="absolute top-[30%] left-0 right-0 h-[2px] bg-white/15" />
+              <div className="absolute top-[45%] left-0 right-0 h-[3px] bg-black/10" />
+              <div className="absolute top-[60%] left-0 right-0 h-[1.5px] bg-white/10" />
+            </div>
+          </div>
+
+          {/* ── Moonlit Cloud Wisps — just above Earth's arc ── */}
+          <div className="cloud-wisp cloud-wisp-1" />
+          <div className="cloud-wisp cloud-wisp-2" />
+          <div className="cloud-wisp cloud-wisp-3" />
+
+          {/* ── Market Lightning Horizon — glowing market line across the horizon ── */}
+          <svg className="absolute inset-0 w-full h-full pointer-events-none" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="none">
+            {/* Main market line — electric, jagged like a stock chart */}
+            <polyline
+              points="0,78 60,76 120,79 180,72 240,75 300,68 360,74 420,65 480,70 540,62 600,67 660,58 720,63 780,55 840,60 900,52 960,58 1020,50 1080,56 1140,48 1200,54 1260,46 1320,52 1440,45"
+              fill="none"
+              stroke="url(#market-glow)"
+              strokeWidth="1.5"
+              className="market-lightning-line"
+              style={{ filter: 'drop-shadow(0 0 8px rgba(0,200,255,0.6)) drop-shadow(0 0 20px rgba(0,150,255,0.3))' }}
+            />
+            {/* Gradient definition for the market line */}
+            <defs>
+              <linearGradient id="market-glow" x1="0%" y1="0%" x2="100%" y2="0%">
+                <stop offset="0%" stopColor="rgba(0,100,255,0.1)" />
+                <stop offset="15%" stopColor="rgba(0,200,255,0.6)" />
+                <stop offset="30%" stopColor="rgba(100,255,200,0.8)" />
+                <stop offset="50%" stopColor="rgba(255,255,255,0.9)" />
+                <stop offset="70%" stopColor="rgba(0,200,255,0.7)" />
+                <stop offset="85%" stopColor="rgba(100,150,255,0.5)" />
+                <stop offset="100%" stopColor="rgba(0,100,255,0.1)" />
+              </linearGradient>
+            </defs>
+          </svg>
+          {/* Market line glow bloom behind */}
+          <div className="market-horizon-glow" />
+
+          {/* ── Comet — bright, streaking across upper sky ── */}
+          <div className="hero-comet">
+            <div className="hero-comet-head" />
+          </div>
+
+          {/* ── Celestial Wonders ── */}
+
+          {/* Nebula Whisper — very faint distant nebula color wash */}
+          <div className="absolute top-[8%] left-[30%] w-[500px] h-[300px] rounded-full blur-[120px] animate-nebula-drift"
+            style={{ background: 'radial-gradient(circle, rgba(100,50,200,0.06) 0%, rgba(200,100,255,0.03) 50%, transparent 70%)' }} />
+          <div className="absolute top-[5%] right-[20%] w-[400px] h-[250px] rounded-full blur-[100px] animate-nebula-drift-2"
+            style={{ background: 'radial-gradient(circle, rgba(0,100,200,0.05) 0%, rgba(0,200,150,0.03) 50%, transparent 70%)' }} />
+
+          {/* Milky Way Band — very subtle diagonal band across the sky */}
+          <div className="milky-way-band" />
+
+          {/* Bright Venus-like star with diffraction spikes */}
+          <div className="absolute top-[10%] left-[42%]">
+            <div className="w-4 h-4 rounded-full animate-pulsar-core"
+              style={{ background: 'radial-gradient(circle, #fff 0%, rgba(255,220,150,0.8) 40%, transparent 70%)', boxShadow: '0 0 20px rgba(255,255,255,0.8), 0 0 40px rgba(255,200,100,0.4), 0 0 80px rgba(255,150,50,0.2)' }} />
+            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[60px] h-[1px] animate-star-flare"
+              style={{ background: 'linear-gradient(to right, transparent, rgba(255,255,255,0.6), transparent)' }} />
+            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[1px] h-[60px] animate-star-flare"
+              style={{ background: 'linear-gradient(to bottom, transparent, rgba(255,255,255,0.6), transparent)' }} />
+            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[40px] h-[1px] rotate-45 animate-star-flare-2"
+              style={{ background: 'linear-gradient(to right, transparent, rgba(255,200,100,0.4), transparent)' }} />
+            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[40px] h-[1px] -rotate-45 animate-star-flare-2"
+              style={{ background: 'linear-gradient(to right, transparent, rgba(255,200,100,0.4), transparent)' }} />
+          </div>
+
+          {/* Sirius — bright blue-white star */}
+          <div className="absolute top-[28%] right-[8%]">
+            <div className="w-3 h-3 rounded-full"
+              style={{ background: 'radial-gradient(circle, #fff 0%, rgba(150,200,255,0.7) 50%, transparent 70%)', boxShadow: '0 0 12px rgba(150,200,255,0.6), 0 0 25px rgba(100,150,255,0.3)', animationDelay: '2s' }} />
+          </div>
+
+          {/* Star Cluster — tiny group of stars */}
+          <div className="absolute top-[18%] left-[60%]" style={{ opacity: 0.6 }}>
+            <div className="w-1.5 h-1.5 rounded-full bg-white/80" style={{ boxShadow: '0 0 4px white' }} />
+            <div className="absolute top-1 left-2 w-1 h-1 rounded-full bg-white/60" style={{ boxShadow: '0 0 3px white' }} />
+            <div className="absolute -top-1 left-3 w-1 h-1 rounded-full bg-white/50" style={{ boxShadow: '0 0 3px white' }} />
+            <div className="absolute top-2 left-1 w-0.5 h-0.5 rounded-full bg-white/40" />
+            <div className="absolute top-0 left-4 w-0.5 h-0.5 rounded-full bg-white/45" />
+          </div>
+
+          {/* Shooting Star — quick flash */}
+          <div className="hero-shooting-star-1" />
+          <div className="hero-shooting-star-2" />
+
+          {/* ── Earth's night-glow atmosphere band — the warm city-light glow at the limb ── */}
+          <div className="earth-atmosphere-glow" />
+
+          {/* ── Ambient cosmic depth ── */}
+          <div className="absolute top-[30%] right-[15%] w-80 h-80 bg-brand-red/4 rounded-full blur-[100px] animate-pulse-slow" />
+          <div className="absolute bottom-[15%] left-[25%] w-64 h-64 bg-blue-500/3 rounded-full blur-[80px] animate-pulse-slow-2" />
         </>
       )}
 

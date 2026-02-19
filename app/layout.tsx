@@ -17,8 +17,10 @@ import LiveVisitorCount from '@/components/LiveVisitorCount'
 // Lazy-load heavy widgets (reduces initial page load by ~2s)
 const ChatWidget = dynamic(() => import('@/components/chat/ChatWidget'), { ssr: false })
 const CommandPalette = dynamic(() => import('@/components/CommandPalette'), { ssr: false })
-const MarketNewsTicker = dynamic(() => import('@/components/MarketNewsTicker'), { ssr: false })
-const EconomicCalendar = dynamic(() => import('@/components/EconomicCalendar'), { ssr: false })
+// MarketNewsTicker removed
+// const MarketNewsTicker = dynamic(() => import('@/components/MarketNewsTicker'), { ssr: false })
+// EconomicCalendar removed
+// const EconomicCalendar = dynamic(() => import('@/components/EconomicCalendar'), { ssr: false })
 // PortfolioHeatmap removed
 // const PortfolioHeatmap = dynamic(() => import('@/components/PortfolioHeatmap'), { ssr: false })
 // VoiceNavigator removed (voice command bot)
@@ -265,8 +267,6 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <LiveVisitorCount />
           <CommandPalette />
           <ChatWidget />
-          <MarketNewsTicker />
-          <EconomicCalendar />
         </ThemeProvider>
       </body>
     </html>

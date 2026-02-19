@@ -178,16 +178,15 @@ function HeroSection() {
   ]
 
   return (
-    <section className="relative min-h-screen flex items-center overflow-hidden" style={{ background: 'linear-gradient(180deg, #030014 0%, #0a0020 30%, #0d0010 60%, #0a0a0a 100%)' }}>
+    <section className="relative min-h-screen flex items-center overflow-hidden" style={{ background: 'linear-gradient(180deg, #020012 0%, #060020 20%, #08001a 40%, #0a0014 60%, #0c0a10 80%, #0a0a0a 100%)' }}>
 
       <SpaceHero variant="aurora" />
 
-      {/* ---- SPACE BACKGROUND LAYERS ---- */}
+      {/* ---- CINEMATIC SPACE BACKGROUND ---- */}
 
-      {/* Deep space nebula patches */}
-      <div className="nebula-patch" style={{ top: '10%', left: '10%', width: '300px', height: '300px', background: 'rgba(208, 2, 27, 0.06)' }} />
-      <div className="nebula-patch" style={{ top: '30%', right: '5%', width: '250px', height: '250px', background: 'rgba(80, 20, 120, 0.05)', animationDelay: '-7s' }} />
-      <div className="nebula-patch" style={{ bottom: '20%', left: '30%', width: '350px', height: '200px', background: 'rgba(208, 2, 27, 0.04)', animationDelay: '-13s' }} />
+      {/* Deep space subtle nebula patches */}
+      <div className="nebula-patch" style={{ top: '8%', left: '10%', width: '300px', height: '300px', background: 'rgba(60, 20, 120, 0.05)' }} />
+      <div className="nebula-patch" style={{ top: '25%', right: '5%', width: '250px', height: '250px', background: 'rgba(30, 40, 120, 0.04)', animationDelay: '-7s' }} />
 
       {/* Star field */}
       {STARS.map((star, i) => (
@@ -202,12 +201,12 @@ function HeroSection() {
         />
       ))}
 
-      {/* Space station orbiting across the sky */}
+      {/* ISS orbiting across the sky */}
       <div className="space-station">
         <div className="space-station-body" />
       </div>
 
-      {/* Passenger airplane with blinking lights — subtle, high in the sky */}
+      {/* Airplane 1 — cruising through moonlit clouds near horizon */}
       <div className="airplane">
         <div className="airplane-body">
           <span className="airplane-light airplane-light-red" />
@@ -216,18 +215,30 @@ function HeroSection() {
         </div>
       </div>
 
-      {/* Big arc / planetary horizon with silver edge */}
+      {/* Airplane 2 — second plane going opposite direction, higher */}
+      <div className="airplane-2">
+        <div className="airplane-body">
+          <span className="airplane-light airplane-light-red" />
+          <span className="airplane-light airplane-light-white" />
+          <span className="airplane-light airplane-light-green" />
+        </div>
+      </div>
+
+      {/* Earth arc — night side with city light glow */}
       <div className="space-arc" />
       <div className="space-arc-inner" />
 
-      {/* Horizon glow band with silver-white sunrise bloom */}
+      {/* Earth surface — faint city lights visible on the night side */}
+      <div className="earth-city-lights" />
+
+      {/* Horizon glow — the thin atmosphere line */}
       <div className="space-horizon" />
 
       {/* Subtle grain overlay */}
       <div className="absolute inset-0 grain-overlay pointer-events-none" />
 
-      {/* Red burst radial (existing brand style) */}
-      <div className="absolute inset-0 pointer-events-none" style={{ background: 'radial-gradient(ellipse at 25% 50%, rgba(208, 2, 27, 0.08) 0%, transparent 60%)' }} />
+      {/* Subtle brand radial */}
+      <div className="absolute inset-0 pointer-events-none" style={{ background: 'radial-gradient(ellipse at 25% 50%, rgba(208, 2, 27, 0.06) 0%, transparent 60%)' }} />
 
       {/* ---- END SPACE BACKGROUND ---- */}
 
