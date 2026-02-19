@@ -5,8 +5,9 @@ import Navbar from '@/components/Navbar'
 import Footer from '@/components/Footer'
 import ScrollProgress from '@/components/ScrollProgress'
 import BackToTop from '@/components/BackToTop'
-import WhatsAppButton from '@/components/WhatsAppButton'
-import TelegramButton from '@/components/TelegramButton'
+// WhatsAppButton and TelegramButton removed
+// import WhatsAppButton from '@/components/WhatsAppButton'
+// import TelegramButton from '@/components/TelegramButton'
 import VideoCallWidget from '@/components/VideoCallWidget'
 import CookieConsent from '@/components/CookieConsent'
 import ThemeProvider from '@/lib/ThemeProvider'
@@ -19,12 +20,16 @@ const CommandPalette = dynamic(() => import('@/components/CommandPalette'), { ss
 const MarketNewsTicker = dynamic(() => import('@/components/MarketNewsTicker'), { ssr: false })
 const EconomicCalendar = dynamic(() => import('@/components/EconomicCalendar'), { ssr: false })
 const PortfolioHeatmap = dynamic(() => import('@/components/PortfolioHeatmap'), { ssr: false })
-const VoiceNavigator = dynamic(() => import('@/components/VoiceNavigator'), { ssr: false })
+// VoiceNavigator removed (voice command bot)
+// const VoiceNavigator = dynamic(() => import('@/components/VoiceNavigator'), { ssr: false })
 const InvestorPersonality = dynamic(() => import('@/components/InvestorPersonality'), { ssr: false })
-const AvatarConcierge = dynamic(() => import('@/components/AvatarConcierge'), { ssr: false })
-const VoiceCompanion = dynamic(() => import('@/components/VoiceCompanion'), { ssr: false })
-const BusinessRadioWidget = dynamic(() => import('@/components/BusinessRadioWidget'), { ssr: false })
-const MusicRadioWidget = dynamic(() => import('@/components/MusicRadioWidget'), { ssr: false })
+// AvatarConcierge (Abe & Tina) removed
+// const AvatarConcierge = dynamic(() => import('@/components/AvatarConcierge'), { ssr: false })
+// VoiceCompanion removed (voice command bot)
+// const VoiceCompanion = dynamic(() => import('@/components/VoiceCompanion'), { ssr: false })
+// Radio widgets removed
+// const BusinessRadioWidget = dynamic(() => import('@/components/BusinessRadioWidget'), { ssr: false })
+// const MusicRadioWidget = dynamic(() => import('@/components/MusicRadioWidget'), { ssr: false })
 
 const SITE_URL = 'https://ghl-india-ventures-2025.netlify.app'
 
@@ -252,8 +257,6 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           </main>
           <Footer />
           <BackToTop />
-          <WhatsAppButton />
-          <TelegramButton />
           <VideoCallWidget />
           <CookieConsent />
           <SocialProofToasts />
@@ -261,14 +264,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <MarketNewsTicker />
           <EconomicCalendar />
           <PortfolioHeatmap />
-          <VoiceNavigator />
           <InvestorPersonality />
           <CommandPalette />
           <ChatWidget />
-          <AvatarConcierge />
-          <VoiceCompanion />
-          <BusinessRadioWidget />
-          <MusicRadioWidget />
         </ThemeProvider>
       </body>
     </html>
