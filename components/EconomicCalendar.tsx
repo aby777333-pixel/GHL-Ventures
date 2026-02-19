@@ -91,7 +91,7 @@ export default function EconomicCalendar() {
 
   if (!showWidget) return null
 
-  // Collapsed pill — bottom-right, to the right side
+  // Collapsed pill — bottom-right
   if (!isOpen) {
     const nextHigh = CALENDAR_EVENTS.find(e => e.impact === 'high')
     return (
@@ -102,10 +102,11 @@ export default function EconomicCalendar() {
           bottom: '24px',
           right: '24px',
           maxWidth: '280px',
-          background: 'rgba(10,10,10,0.9)',
-          backdropFilter: 'blur(16px)',
+          background: 'rgba(10,10,10,0.92)',
+          backdropFilter: 'blur(20px)',
+          WebkitBackdropFilter: 'blur(20px)',
           border: '1px solid rgba(255,255,255,0.08)',
-          boxShadow: '0 8px 32px rgba(0,0,0,0.4)',
+          boxShadow: '0 4px 24px rgba(0,0,0,0.5)',
         }}
         title="Click to expand economic calendar"
       >
@@ -125,59 +126,65 @@ export default function EconomicCalendar() {
     )
   }
 
-  // Expanded panel — opens UPWARD from bottom-right
+  // Expanded panel — anchored at bottom, grows upward
   return (
     <div
-      className="fixed z-[9993] rounded-2xl transition-all duration-300 flex flex-col"
+      className="fixed z-[9993] rounded-2xl transition-all duration-300"
       style={{
         bottom: '24px',
         right: '24px',
         width: '310px',
-        maxHeight: isMinimized ? '44px' : '480px',
         background: 'rgba(10,10,10,0.95)',
         backdropFilter: 'blur(24px)',
+        WebkitBackdropFilter: 'blur(24px)',
         border: '1px solid rgba(255,255,255,0.1)',
-        boxShadow: '0 -16px 60px rgba(0,0,0,0.5)',
+        boxShadow: '0 -8px 40px rgba(0,0,0,0.5)',
         overflow: 'hidden',
       }}
     >
-      {/* Header — at BOTTOM (drop-up: header anchors at bottom) */}
-      <div className="order-last flex items-center justify-between px-3 py-2.5 border-t border-white/5">
-        <div className="flex items-center gap-2">
-          <div className="w-6 h-6 rounded-md bg-amber-500/20 flex items-center justify-center">
-            <Calendar className="w-3 h-3 text-amber-400" />
-          </div>
-          <span className="text-white text-xs font-semibold">Economic Calendar</span>
-        </div>
-        <div className="flex items-center gap-1">
-          <button
-            onClick={() => setIsMinimized(!isMinimized)}
-            className="w-5 h-5 rounded flex items-center justify-center text-gray-500 hover:text-white hover:bg-white/10 transition-colors"
-          >
-            {isMinimized ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
-          </button>
-          <button
-            onClick={() => setIsOpen(false)}
-            className="w-5 h-5 rounded flex items-center justify-center text-gray-500 hover:text-white hover:bg-white/10 transition-colors"
-          >
-            <X className="w-3 h-3" />
-          </button>
-        </div>
-      </div>
-
+      {/* Content area — only shows when not minimized */}
       {!isMinimized && (
-        <div className="order-first flex flex-col">
-          {/* Footer note at top (drop-up inverts) */}
-          <div className="px-3 py-1.5 border-b border-white/5 text-center">
-            <span className="text-[9px] text-gray-600">
-              Simulated · Times in IST · {tab === 'india' ? '🇮🇳' : '🌍'} {filtered.length} events
-            </span>
+        <>
+          {/* Region tabs + impact legend */}
+          <div className="flex items-center gap-1 px-3 py-2 border-b border-white/5">
+            <button
+              onClick={() => setTab('india')}
+              className={`flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-medium transition-all ${
+                tab === 'india'
+                  ? 'bg-orange-500/20 text-orange-400'
+                  : 'text-gray-500 hover:text-gray-300 hover:bg-white/5'
+              }`}
+            >
+              <IndianRupee className="w-2.5 h-2.5" />
+              India
+            </button>
+            <button
+              onClick={() => setTab('global')}
+              className={`flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-medium transition-all ${
+                tab === 'global'
+                  ? 'bg-blue-500/20 text-blue-400'
+                  : 'text-gray-500 hover:text-gray-300 hover:bg-white/5'
+              }`}
+            >
+              <Globe className="w-2.5 h-2.5" />
+              Global
+            </button>
+
+            {/* Impact legend */}
+            <div className="ml-auto flex items-center gap-2">
+              {(['high', 'medium', 'low'] as Impact[]).map(lvl => (
+                <div key={lvl} className="flex items-center gap-1">
+                  <span className={`w-1.5 h-1.5 rounded-full ${impactColors[lvl].dot}`} />
+                  <span className="text-[8px] text-gray-600 capitalize">{lvl}</span>
+                </div>
+              ))}
+            </div>
           </div>
 
-          {/* Calendar events grouped by date */}
+          {/* Calendar events grouped by date — scrollable */}
           <div
             className="overflow-y-auto px-2 py-1"
-            style={{ maxHeight: '370px', scrollbarWidth: 'thin', scrollbarColor: 'rgba(208,2,27,0.3) transparent' }}
+            style={{ maxHeight: '340px', scrollbarWidth: 'thin', scrollbarColor: 'rgba(208,2,27,0.3) transparent' }}
           >
             {Object.entries(grouped).map(([date, events]) => (
               <div key={date} className="mb-2">
@@ -245,43 +252,41 @@ export default function EconomicCalendar() {
             ))}
           </div>
 
-          {/* Region tabs + impact legend */}
-          <div className="flex items-center gap-1 px-3 py-2 border-t border-white/5">
-            <button
-              onClick={() => setTab('india')}
-              className={`flex items-center gap-1 px-3 py-1.5 rounded-full text-[10px] font-medium transition-all ${
-                tab === 'india'
-                  ? 'bg-orange-500/20 text-orange-400'
-                  : 'text-gray-500 hover:text-gray-300 hover:bg-white/5'
-              }`}
-            >
-              <IndianRupee className="w-2.5 h-2.5" />
-              India
-            </button>
-            <button
-              onClick={() => setTab('global')}
-              className={`flex items-center gap-1 px-3 py-1.5 rounded-full text-[10px] font-medium transition-all ${
-                tab === 'global'
-                  ? 'bg-blue-500/20 text-blue-400'
-                  : 'text-gray-500 hover:text-gray-300 hover:bg-white/5'
-              }`}
-            >
-              <Globe className="w-2.5 h-2.5" />
-              Global
-            </button>
-
-            {/* Impact legend */}
-            <div className="ml-auto flex items-center gap-2">
-              {(['high', 'medium', 'low'] as Impact[]).map(lvl => (
-                <div key={lvl} className="flex items-center gap-1">
-                  <span className={`w-1.5 h-1.5 rounded-full ${impactColors[lvl].dot}`} />
-                  <span className="text-[8px] text-gray-600 capitalize">{lvl}</span>
-                </div>
-              ))}
-            </div>
+          {/* Simulated note */}
+          <div className="px-3 py-1.5 border-t border-white/5 text-center">
+            <span className="text-[9px] text-gray-600">
+              Simulated · Times in IST · {tab === 'india' ? '🇮🇳' : '🌍'} {filtered.length} events
+            </span>
           </div>
-        </div>
+        </>
       )}
+
+      {/* Header bar — always at the bottom of the panel */}
+      <div className="flex items-center justify-between px-3 py-2.5 border-t border-white/5">
+        <div className="flex items-center gap-2">
+          <div className="w-6 h-6 rounded-md bg-amber-500/20 flex items-center justify-center">
+            <Calendar className="w-3 h-3 text-amber-400" />
+          </div>
+          <span className="text-white text-xs font-semibold">Economic Calendar</span>
+          <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" />
+        </div>
+        <div className="flex items-center gap-1">
+          <button
+            onClick={() => setIsMinimized(!isMinimized)}
+            className="w-6 h-6 rounded-md flex items-center justify-center text-gray-400 hover:text-white hover:bg-white/10 transition-colors"
+            title={isMinimized ? 'Expand' : 'Collapse'}
+          >
+            {isMinimized ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+          </button>
+          <button
+            onClick={() => { setIsOpen(false); setIsMinimized(false) }}
+            className="w-6 h-6 rounded-md flex items-center justify-center text-gray-400 hover:text-white hover:bg-white/10 transition-colors"
+            title="Close"
+          >
+            <X className="w-3.5 h-3.5" />
+          </button>
+        </div>
+      </div>
     </div>
   )
 }

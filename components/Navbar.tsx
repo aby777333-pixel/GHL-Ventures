@@ -57,7 +57,7 @@ export default function Navbar() {
         className="w-full overflow-hidden"
         style={{ backgroundColor: '#1a0000' }}
       >
-        <div className="animate-marquee whitespace-nowrap py-1">
+        <div className="animate-marquee whitespace-nowrap py-1.5">
           <span
             className="inline-block text-white/80 mx-8"
             style={{ fontSize: '11px', letterSpacing: '0.02em' }}

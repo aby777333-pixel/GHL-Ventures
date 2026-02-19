@@ -39,7 +39,7 @@ export default function CurrencyTicker() {
 
   return (
     <div
-      className="w-full overflow-hidden py-1"
+      className="w-full overflow-hidden py-1.5"
       style={{
         background: 'rgba(0,0,0,0.3)',
         borderBottom: '1px solid rgba(255,255,255,0.05)',

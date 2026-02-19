@@ -34,13 +34,11 @@ export default function MarketNewsTicker() {
   const [currentIndex, setCurrentIndex] = useState(0)
   const [showWidget, setShowWidget] = useState(false)
 
-  // Show the widget after a delay
   useEffect(() => {
     const timer = setTimeout(() => setShowWidget(true), 4000)
     return () => clearTimeout(timer)
   }, [])
 
-  // Auto-rotate headline when minimized
   useEffect(() => {
     if (!isOpen || isMinimized) {
       const interval = setInterval(() => {
@@ -60,7 +58,7 @@ export default function MarketNewsTicker() {
 
   if (!showWidget) return null
 
-  // Minimized pill — bottom-right, left of Economic Calendar
+  // Collapsed pill — bottom, to the left of Economic Calendar
   if (!isOpen) {
     const current = NEWS_FEED[currentIndex]
     return (
@@ -69,12 +67,13 @@ export default function MarketNewsTicker() {
         className="fixed z-[9994] flex items-center gap-2 px-3 py-2 rounded-xl transition-all duration-300 hover:scale-[1.02] group"
         style={{
           bottom: '24px',
-          right: '330px',
+          right: '310px',
           maxWidth: '280px',
-          background: 'rgba(10,10,10,0.9)',
-          backdropFilter: 'blur(16px)',
+          background: 'rgba(10,10,10,0.92)',
+          backdropFilter: 'blur(20px)',
+          WebkitBackdropFilter: 'blur(20px)',
           border: '1px solid rgba(255,255,255,0.08)',
-          boxShadow: '0 8px 32px rgba(0,0,0,0.4)',
+          boxShadow: '0 4px 24px rgba(0,0,0,0.5)',
         }}
         title="Click to expand market news"
       >
@@ -94,58 +93,49 @@ export default function MarketNewsTicker() {
     )
   }
 
-  // Expanded panel — opens UPWARD from bottom-right
+  // Expanded panel — anchored at bottom, grows upward
   return (
     <div
-      className="fixed z-[9994] rounded-2xl transition-all duration-300 flex flex-col"
+      className="fixed z-[9994] rounded-2xl transition-all duration-300"
       style={{
         bottom: '24px',
-        right: '330px',
+        right: '310px',
         width: '300px',
-        maxHeight: isMinimized ? '44px' : '420px',
         background: 'rgba(10,10,10,0.95)',
         backdropFilter: 'blur(24px)',
+        WebkitBackdropFilter: 'blur(24px)',
         border: '1px solid rgba(255,255,255,0.1)',
-        boxShadow: '0 -16px 60px rgba(0,0,0,0.5)',
+        boxShadow: '0 -8px 40px rgba(0,0,0,0.5)',
         overflow: 'hidden',
       }}
     >
-      {/* Header — at BOTTOM of panel (since it drops UP, header stays at bottom) */}
-      <div className="order-last flex items-center justify-between px-3 py-2.5 border-t border-white/5">
-        <div className="flex items-center gap-2">
-          <div className="w-6 h-6 rounded-md bg-brand-red/20 flex items-center justify-center">
-            <Newspaper className="w-3 h-3 text-brand-red" />
-          </div>
-          <span className="text-white text-xs font-semibold">Market News</span>
-          <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-        </div>
-        <div className="flex items-center gap-1">
-          <button
-            onClick={() => setIsMinimized(!isMinimized)}
-            className="w-5 h-5 rounded flex items-center justify-center text-gray-500 hover:text-white hover:bg-white/10 transition-colors"
-          >
-            {isMinimized ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
-          </button>
-          <button
-            onClick={() => setIsOpen(false)}
-            className="w-5 h-5 rounded flex items-center justify-center text-gray-500 hover:text-white hover:bg-white/10 transition-colors"
-          >
-            <X className="w-3 h-3" />
-          </button>
-        </div>
-      </div>
-
+      {/* Content area — only shows when not minimized */}
       {!isMinimized && (
-        <div className="order-first flex flex-col">
-          {/* Footer note at top of drop-up */}
-          <div className="px-3 py-1.5 border-b border-white/5 text-center">
-            <span className="text-[9px] text-gray-600">
-              Simulated · Updated every 5 min
-            </span>
+        <>
+          {/* Filter tabs */}
+          <div className="flex items-center gap-1 px-3 py-2 border-b border-white/5">
+            {[
+              { key: 'all' as const, label: 'All', icon: <Newspaper className="w-2.5 h-2.5" /> },
+              { key: 'india' as const, label: 'India', icon: <IndianRupee className="w-2.5 h-2.5" /> },
+              { key: 'global' as const, label: 'Global', icon: <Globe className="w-2.5 h-2.5" /> },
+            ].map(f => (
+              <button
+                key={f.key}
+                onClick={() => setFilter(f.key)}
+                className={`flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-medium transition-all ${
+                  filter === f.key
+                    ? 'bg-brand-red/20 text-brand-red'
+                    : 'text-gray-500 hover:text-gray-300 hover:bg-white/5'
+                }`}
+              >
+                {f.icon}
+                {f.label}
+              </button>
+            ))}
           </div>
 
-          {/* News list */}
-          <div className="overflow-y-auto px-2 py-1" style={{ maxHeight: '320px', scrollbarWidth: 'thin', scrollbarColor: 'rgba(208,2,27,0.3) transparent' }}>
+          {/* News list — scrollable */}
+          <div className="overflow-y-auto px-2 py-1" style={{ maxHeight: '300px', scrollbarWidth: 'thin', scrollbarColor: 'rgba(208,2,27,0.3) transparent' }}>
             {filtered.map((item) => (
               <div
                 key={item.id}
@@ -171,29 +161,39 @@ export default function MarketNewsTicker() {
             ))}
           </div>
 
-          {/* Filter tabs */}
-          <div className="flex items-center gap-1 px-3 py-2 border-t border-white/5">
-            {[
-              { key: 'all' as const, label: 'All', icon: <Newspaper className="w-2.5 h-2.5" /> },
-              { key: 'india' as const, label: 'India', icon: <IndianRupee className="w-2.5 h-2.5" /> },
-              { key: 'global' as const, label: 'Global', icon: <Globe className="w-2.5 h-2.5" /> },
-            ].map(f => (
-              <button
-                key={f.key}
-                onClick={() => setFilter(f.key)}
-                className={`flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-medium transition-all ${
-                  filter === f.key
-                    ? 'bg-brand-red/20 text-brand-red'
-                    : 'text-gray-500 hover:text-gray-300 hover:bg-white/5'
-                }`}
-              >
-                {f.icon}
-                {f.label}
-              </button>
-            ))}
+          {/* Simulated note */}
+          <div className="px-3 py-1.5 border-t border-white/5 text-center">
+            <span className="text-[9px] text-gray-600">Simulated · Updated every 5 min</span>
           </div>
-        </div>
+        </>
       )}
+
+      {/* Header bar — always at the bottom of the panel */}
+      <div className="flex items-center justify-between px-3 py-2.5 border-t border-white/5">
+        <div className="flex items-center gap-2">
+          <div className="w-6 h-6 rounded-md bg-brand-red/20 flex items-center justify-center">
+            <Newspaper className="w-3 h-3 text-brand-red" />
+          </div>
+          <span className="text-white text-xs font-semibold">Market News</span>
+          <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+        </div>
+        <div className="flex items-center gap-1">
+          <button
+            onClick={() => setIsMinimized(!isMinimized)}
+            className="w-6 h-6 rounded-md flex items-center justify-center text-gray-400 hover:text-white hover:bg-white/10 transition-colors"
+            title={isMinimized ? 'Expand' : 'Collapse'}
+          >
+            {isMinimized ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+          </button>
+          <button
+            onClick={() => { setIsOpen(false); setIsMinimized(false) }}
+            className="w-6 h-6 rounded-md flex items-center justify-center text-gray-400 hover:text-white hover:bg-white/10 transition-colors"
+            title="Close"
+          >
+            <X className="w-3.5 h-3.5" />
+          </button>
+        </div>
+      </div>
     </div>
   )
 }

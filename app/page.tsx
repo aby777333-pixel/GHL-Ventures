@@ -367,7 +367,7 @@ function HeroSection() {
                 )}
 
                 {/* Widget content */}
-                <div className="h-56">
+                <div className="h-72">
                   {marketTab === 'india' && (
                     <iframe
                       key="india-overview"

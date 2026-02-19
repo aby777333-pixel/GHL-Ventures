@@ -78,7 +78,7 @@ export default function MarketDataMarquee() {
   return (
     <div className="relative w-full overflow-hidden" style={{ backgroundColor: '#0d0d0d' }}>
       <div
-        className="flex whitespace-nowrap py-1 animate-marquee-fast"
+        className="flex whitespace-nowrap py-2 animate-marquee-fast"
         style={{ animationPlayState: 'running' }}
         onMouseEnter={(e) => { e.currentTarget.style.animationPlayState = 'paused' }}
         onMouseLeave={(e) => { e.currentTarget.style.animationPlayState = 'running' }}
