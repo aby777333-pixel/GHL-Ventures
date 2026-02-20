@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 import Logo from '@/components/Logo'
+import { LegalLink } from '@/components/LegalPopup'
 import { BRAND, NAV_LINKS, SOCIAL_LINKS } from '@/lib/constants'
 import {
   MapPin,
@@ -289,26 +290,26 @@ export default function Footer() {
 
               {/* Center */}
               <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1">
-                <Link
-                  href="/privacy"
+                <LegalLink
+                  type="privacy"
                   className="hover:text-brand-red transition-colors duration-200"
                 >
                   Privacy Policy
-                </Link>
+                </LegalLink>
                 <span className="text-white/20">|</span>
-                <Link
-                  href="/terms"
+                <LegalLink
+                  type="terms"
                   className="hover:text-brand-red transition-colors duration-200"
                 >
                   Terms &amp; Conditions
-                </Link>
+                </LegalLink>
                 <span className="text-white/20">|</span>
-                <Link
-                  href="/disclaimer"
+                <LegalLink
+                  type="disclaimer"
                   className="hover:text-brand-red transition-colors duration-200"
                 >
                   Disclaimer
-                </Link>
+                </LegalLink>
               </div>
 
               {/* Right */}

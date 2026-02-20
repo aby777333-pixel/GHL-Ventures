@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { BRAND } from '@/lib/constants'
 import { Cookie, X, Settings } from 'lucide-react'
 import Link from 'next/link'
+import { LegalLink } from '@/components/LegalPopup'
 
 const STORAGE_KEY = 'ghl-cookie-consent'
 
@@ -75,9 +76,9 @@ export default function CookieConsent() {
                 <div className="flex-1">
                   <p className="text-sm text-brand-black leading-relaxed">
                     We use cookies to improve your experience on our website. By continuing to browse, you agree to our{' '}
-                    <Link href="/privacy" className="text-brand-red hover:underline font-medium">
+                    <LegalLink type="privacy" className="text-brand-red hover:underline font-medium">
                       Privacy Policy
-                    </Link>
+                    </LegalLink>
                     .
                   </p>
                 </div>

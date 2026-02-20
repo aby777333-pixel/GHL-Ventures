@@ -8,6 +8,7 @@ import {
   MessageCircle, ArrowRight,
 } from 'lucide-react'
 import Link from 'next/link'
+import { LegalLink } from '@/components/LegalPopup'
 import SpaceHero from '@/components/SpaceHero'
 
 const FAQ_ITEMS = [
@@ -274,7 +275,7 @@ export default function ContactPage() {
                             />
                             <span className="text-sm text-brand-grey">
                               I agree to the{' '}
-                              <Link href="/privacy" className="text-brand-red hover:underline">Privacy Policy</Link>{' '}
+                              <LegalLink type="privacy" className="text-brand-red hover:underline">Privacy Policy</LegalLink>{' '}
                               and consent to being contacted. <span className="text-brand-red">*</span>
                             </span>
                           </label>

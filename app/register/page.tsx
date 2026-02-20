@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import { LegalLink } from '@/components/LegalPopup'
 import { BRAND } from '@/lib/constants'
 import { Eye, EyeOff, UserPlus, ArrowLeft, Shield, CheckCircle } from 'lucide-react'
 import Logo from '@/components/Logo'
@@ -326,9 +327,9 @@ export default function RegisterPage() {
                 />
                 <span className="text-xs text-brand-grey">
                   I agree to the{' '}
-                  <Link href="/terms" className="text-brand-red hover:underline">Terms of Service</Link>{' '}
+                  <LegalLink type="terms" className="text-brand-red hover:underline">Terms of Service</LegalLink>{' '}
                   and{' '}
-                  <Link href="/privacy" className="text-brand-red hover:underline">Privacy Policy</Link>.
+                  <LegalLink type="privacy" className="text-brand-red hover:underline">Privacy Policy</LegalLink>.
                   I understand that investments in AIFs involve risks. <span className="text-brand-red">*</span>
                 </span>
               </label>
