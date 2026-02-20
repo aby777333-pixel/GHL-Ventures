@@ -4,7 +4,7 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import { usePathname, useRouter } from 'next/navigation'
 import {
   Mic, MicOff, X, ChevronUp, ChevronDown, Volume2, VolumeX,
-  Globe, Navigation, Send, Phone, Mail, MessageCircle,
+  Globe, Navigation, Send, Phone, PhoneCall, Mail, MessageCircle,
   Video, Moon, Sun, Search, Zap, Power,
 } from 'lucide-react'
 import { NAV_LINKS, BRAND } from '@/lib/constants'
@@ -730,7 +730,8 @@ export default function VoiceCommandWidget() {
             {/* Row 2: Contact shortcuts */}
             <div className="flex items-center gap-1.5 flex-wrap mt-1.5">
               {[
-                { icon: <Phone className="w-2.5 h-2.5" />, label: 'Call', color: 'text-green-400', action: () => executeCommand('call') },
+                { icon: <PhoneCall className="w-2.5 h-2.5" />, label: 'Direct Call', color: 'text-green-400', action: () => executeCommand('direct call') },
+                { icon: <Phone className="w-2.5 h-2.5" />, label: 'Call', color: 'text-green-300', action: () => executeCommand('call') },
                 { icon: <Mail className="w-2.5 h-2.5" />, label: 'Email', color: 'text-blue-400', action: () => executeCommand('email') },
                 { icon: <MessageCircle className="w-2.5 h-2.5" />, label: 'WhatsApp', color: 'text-emerald-400', action: () => executeCommand('whatsapp') },
                 { icon: <Send className="w-2.5 h-2.5" />, label: 'Telegram', color: 'text-sky-400', action: () => executeCommand('telegram') },

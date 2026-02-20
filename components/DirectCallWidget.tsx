@@ -1,7 +1,10 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
-import { Phone, X, PhoneCall, Clock, ChevronRight, Wifi, WifiOff, Building2 } from 'lucide-react'
+import {
+  Phone, X, PhoneCall, Clock, ChevronRight, Wifi, WifiOff,
+  Building2, MessageCircle, PhoneForwarded, Globe,
+} from 'lucide-react'
 import { BRAND } from '@/lib/constants'
 
 interface PhoneLine {
@@ -16,14 +19,14 @@ const PHONE_LINES: PhoneLine[] = [
   {
     label: 'GHL Main Office',
     number: BRAND.phone1,
-    telLink: `tel:+914428431043`,
+    telLink: 'tel:+914428431043',
     description: 'Landline \u2014 Chennai HQ',
     icon: 'office',
   },
   {
     label: 'GHL Direct Line',
     number: BRAND.phone2,
-    telLink: `tel:+917200255252`,
+    telLink: 'tel:+917200255252',
     description: 'Mobile \u2014 Sales & Support',
     icon: 'mobile',
   },
@@ -32,11 +35,10 @@ const PHONE_LINES: PhoneLine[] = [
 function isOfficeHours(): boolean {
   const now = new Date()
   const ist = new Date(now.toLocaleString('en-US', { timeZone: 'Asia/Kolkata' }))
-  const day = ist.getDay() // 0=Sun, 6=Sat
+  const day = ist.getDay()
   const hour = ist.getHours()
   const minute = ist.getMinutes()
   const timeVal = hour * 60 + minute
-  // Mon-Fri 9:30 AM - 6:30 PM IST
   return day >= 1 && day <= 5 && timeVal >= 570 && timeVal <= 1110
 }
 
@@ -46,12 +48,12 @@ export default function DirectCallWidget() {
   const [online, setOnline] = useState(false)
   const [calling, setCalling] = useState<string | null>(null)
   const [showPulse, setShowPulse] = useState(true)
+  const [callCount, setCallCount] = useState(0)
   const callTimerRef = useRef<NodeJS.Timeout | null>(null)
 
   useEffect(() => {
     setMounted(true)
     setOnline(isOfficeHours())
-    // Check office hours every minute
     const interval = setInterval(() => setOnline(isOfficeHours()), 60000)
     const pulseTimer = setTimeout(() => setShowPulse(false), 12000)
     return () => {
@@ -62,15 +64,14 @@ export default function DirectCallWidget() {
 
   const handleCall = (line: PhoneLine) => {
     setCalling(line.label)
-    // Open the phone dialer
+    setCallCount(prev => prev + 1)
     window.open(line.telLink, '_self')
-    // Reset calling state after 3s
     if (callTimerRef.current) clearTimeout(callTimerRef.current)
-    callTimerRef.current = setTimeout(() => setCalling(null), 3000)
+    callTimerRef.current = setTimeout(() => setCalling(null), 4000)
   }
 
   const handleOpen = () => {
-    setIsOpen(true)
+    setIsOpen(prev => !prev)
     setShowPulse(false)
   }
 
@@ -78,11 +79,15 @@ export default function DirectCallWidget() {
 
   return (
     <>
-      {/* ── Floating Trigger Button — bottom right ── */}
-      <div className="fixed z-[9994] group" style={{ bottom: '28px', right: '16px' }}>
+      {/* ── Floating Trigger Button — between Voice (left) and Video (center) ── */}
+      <div className="fixed z-[9994] group" style={{ bottom: '28px', left: '30%', transform: 'translateX(-50%)' }}>
         {/* Pulse ring */}
         {!isOpen && showPulse && (
           <span className="absolute inset-0 rounded-full animate-ping" style={{ background: 'rgba(34,197,94,0.25)' }} />
+        )}
+        {/* Calling ring animation */}
+        {calling && (
+          <span className="absolute inset-0 rounded-full animate-ping" style={{ background: 'rgba(34,197,94,0.4)' }} />
         )}
         <button
           onClick={handleOpen}
@@ -90,18 +95,21 @@ export default function DirectCallWidget() {
           style={{
             background: isOpen ? 'rgba(34,197,94,0.9)' : calling ? 'rgba(34,197,94,0.7)' : 'rgba(10,10,10,0.88)',
             backdropFilter: 'blur(12px)',
-            border: `1px solid ${isOpen ? 'rgba(34,197,94,0.4)' : 'rgba(255,255,255,0.08)'}`,
-            boxShadow: isOpen ? '0 4px 20px rgba(34,197,94,0.3)' : '0 4px 20px rgba(0,0,0,0.3)',
+            border: `1px solid ${isOpen ? 'rgba(34,197,94,0.4)' : calling ? 'rgba(34,197,94,0.5)' : 'rgba(255,255,255,0.08)'}`,
+            boxShadow: isOpen || calling ? '0 4px 20px rgba(34,197,94,0.3)' : '0 4px 20px rgba(0,0,0,0.3)',
           }}
           aria-label="Open Direct Call"
           title="Direct Call \u2014 Click to call GHL"
         >
-          <PhoneCall className={`w-3.5 h-3.5 ${isOpen ? 'text-white' : 'text-green-400'} transition-colors`} />
-          <span className={`${isOpen ? 'text-white' : 'text-gray-300'} group-hover:text-white transition-colors`}>
+          {calling ? (
+            <PhoneForwarded className="w-3.5 h-3.5 text-white animate-pulse" />
+          ) : (
+            <PhoneCall className={`w-3.5 h-3.5 ${isOpen ? 'text-white' : 'text-green-400'} transition-colors`} />
+          )}
+          <span className={`${isOpen || calling ? 'text-white' : 'text-gray-300'} group-hover:text-white transition-colors`}>
             {calling ? 'Calling...' : isOpen ? 'Close' : 'Direct Call'}
           </span>
-          {/* Online indicator */}
-          {online && !isOpen && (
+          {online && !isOpen && !calling && (
             <span className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
           )}
         </button>
@@ -112,7 +120,7 @@ export default function DirectCallWidget() {
         className={`fixed z-[9995] transition-all duration-300 ${
           isOpen ? 'opacity-100 translate-y-0 pointer-events-auto' : 'opacity-0 translate-y-4 pointer-events-none'
         }`}
-        style={{ bottom: '64px', right: '16px', width: '320px' }}
+        style={{ bottom: '64px', left: '30%', transform: 'translateX(-50%)', width: '320px', maxWidth: 'calc(100vw - 2rem)' }}
       >
         <div
           className="rounded-2xl overflow-hidden"
@@ -126,11 +134,19 @@ export default function DirectCallWidget() {
           {/* Header */}
           <div className="flex items-center justify-between px-4 py-3 border-b border-white/10">
             <div className="flex items-center gap-2">
-              <div className="w-7 h-7 rounded-full bg-green-500/20 flex items-center justify-center">
-                <PhoneCall className="w-3.5 h-3.5 text-green-400" />
+              <div className={`w-7 h-7 rounded-full flex items-center justify-center ${
+                calling ? 'bg-green-500 animate-pulse' : 'bg-green-500/20'
+              }`}>
+                {calling ? (
+                  <PhoneForwarded className="w-3.5 h-3.5 text-white" />
+                ) : (
+                  <PhoneCall className="w-3.5 h-3.5 text-green-400" />
+                )}
               </div>
               <div>
-                <span className="text-white text-xs font-bold tracking-wide">DIRECT CALL</span>
+                <span className="text-white text-xs font-bold tracking-wide">
+                  {calling ? 'CONNECTING...' : 'DIRECT CALL'}
+                </span>
                 <div className="flex items-center gap-1.5 mt-0.5">
                   {online ? (
                     <>
@@ -154,6 +170,20 @@ export default function DirectCallWidget() {
             </button>
           </div>
 
+          {/* Calling Banner */}
+          {calling && (
+            <div className="px-4 py-2.5 bg-green-500/10 border-b border-green-500/20">
+              <div className="flex items-center gap-2">
+                <div className="flex gap-0.5">
+                  <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-bounce" style={{ animationDelay: '0ms' }} />
+                  <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-bounce" style={{ animationDelay: '150ms' }} />
+                  <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-bounce" style={{ animationDelay: '300ms' }} />
+                </div>
+                <span className="text-green-300 text-[10px] font-medium">Dialing {calling}...</span>
+              </div>
+            </div>
+          )}
+
           {/* Phone Lines */}
           <div className="p-3 space-y-2">
             {PHONE_LINES.map((line) => (
@@ -162,13 +192,13 @@ export default function DirectCallWidget() {
                 onClick={() => handleCall(line)}
                 className={`w-full flex items-center gap-3 px-4 py-3.5 rounded-xl transition-all duration-200 group/line ${
                   calling === line.label
-                    ? 'bg-green-500/20 border border-green-500/30'
-                    : 'bg-white/5 border border-white/5 hover:bg-white/10 hover:border-white/10'
+                    ? 'bg-green-500/20 border border-green-500/30 scale-[1.02]'
+                    : 'bg-white/5 border border-white/5 hover:bg-white/10 hover:border-white/10 hover:scale-[1.01]'
                 }`}
               >
-                <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 ${
-                  calling === line.label ? 'bg-green-500 animate-pulse' : 'bg-white/10 group-hover/line:bg-green-500/20'
-                } transition-all`}>
+                <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 transition-all ${
+                  calling === line.label ? 'bg-green-500 animate-pulse shadow-lg shadow-green-500/30' : 'bg-white/10 group-hover/line:bg-green-500/20'
+                }`}>
                   {line.icon === 'office' ? (
                     <Building2 className={`w-4 h-4 ${calling === line.label ? 'text-white' : 'text-green-400'}`} />
                   ) : (
@@ -184,11 +214,36 @@ export default function DirectCallWidget() {
                   </p>
                   <p className="text-[9px] text-gray-500 mt-0.5">{line.description}</p>
                 </div>
-                <ChevronRight className={`w-4 h-4 ${
-                  calling === line.label ? 'text-green-400' : 'text-gray-600 group-hover/line:text-green-400'
-                } transition-colors`} />
+                <div className="flex flex-col items-center gap-1">
+                  <ChevronRight className={`w-4 h-4 ${
+                    calling === line.label ? 'text-green-400' : 'text-gray-600 group-hover/line:text-green-400'
+                  } transition-colors`} />
+                  <span className="text-[8px] text-gray-600">TAP</span>
+                </div>
               </button>
             ))}
+          </div>
+
+          {/* Quick Actions — WhatsApp fallback */}
+          <div className="px-3 pb-2">
+            <div className="flex gap-2">
+              <a
+                href={`https://wa.me/${BRAND.whatsapp}?text=${encodeURIComponent(BRAND.whatsappMessage)}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-lg bg-emerald-600/20 hover:bg-emerald-600/30 border border-emerald-600/20 text-emerald-400 text-[10px] font-medium transition-all"
+              >
+                <MessageCircle className="w-3 h-3" />
+                <span>WhatsApp Instead</span>
+              </a>
+              <a
+                href={`mailto:${BRAND.email}?subject=Investment%20Inquiry`}
+                className="flex items-center justify-center gap-2 px-3 py-2 rounded-lg bg-white/5 hover:bg-white/10 border border-white/5 text-gray-400 text-[10px] font-medium transition-all"
+              >
+                <Globe className="w-3 h-3" />
+                <span>Email</span>
+              </a>
+            </div>
           </div>
 
           {/* Footer info */}
@@ -199,7 +254,12 @@ export default function DirectCallWidget() {
             </div>
             {!online && (
               <p className="text-center text-[9px] text-yellow-500/70 mt-1.5">
-                Office is closed. You can still reach us on WhatsApp.
+                Office is closed. Try WhatsApp for instant response.
+              </p>
+            )}
+            {callCount > 0 && (
+              <p className="text-center text-[8px] text-gray-600 mt-1">
+                {callCount} call{callCount > 1 ? 's' : ''} initiated this session
               </p>
             )}
           </div>
