@@ -1446,53 +1446,107 @@ export default function SpaceHero({ variant }: SpaceHeroProps) {
             )
           })}
 
-          {/* ── Subtle World Map SVG — India glows brighter ── */}
-          <svg className="absolute inset-0 w-full h-full opacity-[0.06]" viewBox="0 0 1000 500" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg">
-            {/* Simplified world continents */}
-            {/* North America */}
-            <path d="M150,80 L180,60 L220,55 L260,70 L280,110 L250,160 L220,190 L200,200 L180,180 L160,170 L140,130 Z" fill="rgba(100,140,200,0.5)" stroke="rgba(100,140,200,0.2)" strokeWidth="0.5" />
-            {/* South America */}
-            <path d="M220,220 L250,210 L270,240 L280,300 L260,360 L240,390 L220,380 L210,340 L200,280 Z" fill="rgba(100,140,200,0.5)" stroke="rgba(100,140,200,0.2)" strokeWidth="0.5" />
-            {/* Europe */}
-            <path d="M440,60 L470,50 L510,55 L530,70 L520,100 L490,110 L460,105 L440,90 Z" fill="rgba(100,140,200,0.5)" stroke="rgba(100,140,200,0.2)" strokeWidth="0.5" />
-            {/* Africa */}
-            <path d="M460,140 L500,130 L530,150 L540,200 L530,270 L510,320 L480,340 L460,310 L450,250 L445,190 Z" fill="rgba(100,140,200,0.5)" stroke="rgba(100,140,200,0.2)" strokeWidth="0.5" />
-            {/* Asia (excluding India) */}
-            <path d="M540,50 L600,40 L680,50 L750,70 L780,90 L790,130 L770,160 L730,150 L680,140 L640,130 L600,110 L560,90 Z" fill="rgba(100,140,200,0.5)" stroke="rgba(100,140,200,0.2)" strokeWidth="0.5" />
-            {/* Australia */}
-            <path d="M740,300 L790,290 L820,310 L810,340 L780,350 L750,340 Z" fill="rgba(100,140,200,0.5)" stroke="rgba(100,140,200,0.2)" strokeWidth="0.5" />
-            {/* ★ INDIA — brighter, shimmering with night lights ★ */}
-            <path d="M620,140 L645,135 L660,150 L665,175 L660,200 L650,220 L640,230 L630,225 L620,200 L615,175 L610,155 Z"
-              fill="rgba(208,2,27,0.25)"
-              stroke="rgba(255,170,50,0.6)"
-              strokeWidth="1.5"
-              className="nri-india-glow" />
-            {/* India city lights — tiny bright dots */}
-            {[
-              [637,160],[630,175],[645,180],[635,195],[650,170],[625,165],[640,205],[632,150],[655,190],[628,185]
-            ].map(([cx,cy], idx) => (
-              <circle key={`city-${idx}`} cx={cx} cy={cy} r="1.5"
-                fill="rgba(255,200,100,0.9)"
-                className="nri-city-light"
-                style={{ animationDelay: `${idx * 0.3}s` }} />
-            ))}
-            {/* India label glow */}
-            <circle cx="638" cy="185" r="20" fill="rgba(255,165,0,0.08)" className="animate-pulse-slow" />
-          </svg>
-
-          {/* ── Flight routes — curved dotted lines from India to world ── */}
-          <svg className="absolute inset-0 w-full h-full opacity-[0.08]" viewBox="0 0 1000 500" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg">
-            {[
-              'M638,185 Q400,50 200,100',   // India → N.America
-              'M638,185 Q550,80 470,75',      // India → Europe
-              'M638,185 Q700,100 780,90',     // India → E.Asia
-              'M638,185 Q720,250 780,310',    // India → Australia
-              'M638,185 Q550,200 480,250',    // India → Africa
-              'M638,185 Q400,250 240,300',    // India → S.America
-            ].map((d, idx) => (
-              <path key={`route-${idx}`} d={d} fill="none" stroke="rgba(255,165,0,0.4)" strokeWidth="0.8" strokeDasharray="4,6" className="nri-flight-route" style={{ animationDelay: `${idx * 0.5}s` }} />
-            ))}
-          </svg>
+          {/* ── Earth Arc / Curvature — glowing horizon across bottom half ── */}
+          <div className="absolute inset-0 overflow-hidden pointer-events-none">
+            {/* Earth surface — dark curved mass at bottom */}
+            <div
+              className="absolute"
+              style={{
+                bottom: '-55%',
+                left: '-15%',
+                right: '-15%',
+                height: '85%',
+                borderRadius: '50% 50% 0 0',
+                background: 'radial-gradient(ellipse at 50% 15%, rgba(8,18,38,0.98) 0%, rgba(3,6,18,1) 40%, rgba(1,2,8,1) 70%)',
+              }}
+            />
+            {/* Atmosphere glow — primary blue-white edge */}
+            <div
+              className="absolute nri-earth-atmosphere"
+              style={{
+                bottom: '-55%',
+                left: '-15%',
+                right: '-15%',
+                height: '85%',
+                borderRadius: '50% 50% 0 0',
+                background: 'transparent',
+                boxShadow: '0 -2px 40px 8px rgba(60,140,255,0.15), 0 -1px 20px 4px rgba(100,180,255,0.2), 0 -4px 80px 15px rgba(40,100,220,0.08)',
+              }}
+            />
+            {/* Inner atmosphere — warm hint near surface */}
+            <div
+              className="absolute nri-earth-inner-glow"
+              style={{
+                bottom: '-55.5%',
+                left: '-14%',
+                right: '-14%',
+                height: '85%',
+                borderRadius: '50% 50% 0 0',
+                background: 'transparent',
+                boxShadow: '0 -1px 15px 3px rgba(255,140,50,0.06), 0 -1px 8px 2px rgba(255,200,100,0.04)',
+              }}
+            />
+            {/* Thin bright edge line */}
+            <svg className="absolute w-full" style={{ bottom: '30%', left: 0, right: 0, height: '40%' }} viewBox="0 0 1200 400" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
+              <defs>
+                <linearGradient id="earth-edge-grad" x1="0%" y1="0%" x2="100%" y2="0%">
+                  <stop offset="0%" stopColor="rgba(60,140,255,0)" />
+                  <stop offset="15%" stopColor="rgba(60,140,255,0.2)" />
+                  <stop offset="35%" stopColor="rgba(100,180,255,0.5)" />
+                  <stop offset="50%" stopColor="rgba(140,200,255,0.7)" />
+                  <stop offset="65%" stopColor="rgba(100,180,255,0.5)" />
+                  <stop offset="85%" stopColor="rgba(60,140,255,0.2)" />
+                  <stop offset="100%" stopColor="rgba(60,140,255,0)" />
+                </linearGradient>
+                <filter id="earth-glow">
+                  <feGaussianBlur stdDeviation="3" result="blur" />
+                  <feMerge>
+                    <feMergeNode in="blur" />
+                    <feMergeNode in="SourceGraphic" />
+                  </feMerge>
+                </filter>
+              </defs>
+              <path
+                d="M0,350 Q300,200 600,180 Q900,200 1200,350"
+                fill="none"
+                stroke="url(#earth-edge-grad)"
+                strokeWidth="2"
+                filter="url(#earth-glow)"
+                className="nri-earth-edge"
+              />
+              {/* Secondary softer glow line */}
+              <path
+                d="M0,350 Q300,200 600,180 Q900,200 1200,350"
+                fill="none"
+                stroke="rgba(80,160,255,0.12)"
+                strokeWidth="8"
+                filter="url(#earth-glow)"
+              />
+            </svg>
+            {/* City lights scattered on Earth surface */}
+            {Array.from({ length: 25 }, (_, i) => {
+              const s = (i * 3571 + 821) % 10000
+              const angle = ((i / 25) * 120) - 60 // spread across visible arc
+              const r = 42 + (s % 8) // distance from bottom
+              const x = 50 + angle * 0.6 // horizontal spread
+              const y = 100 - r // from bottom
+              if (y > 55 || y < 30) return null // only on visible Earth surface
+              return (
+                <div
+                  key={`earthlight-${i}`}
+                  className="absolute rounded-full nri-earth-city"
+                  style={{
+                    left: `${x}%`,
+                    top: `${y}%`,
+                    width: `${1.5 + (s % 2)}px`,
+                    height: `${1.5 + (s % 2)}px`,
+                    background: `rgba(255,200,${100 + (s % 80)},${0.3 + (s % 30) / 100})`,
+                    animationDelay: `${(s % 30) / 10}s`,
+                  }}
+                />
+              )
+            })}
+          </div>
 
           {/* === AIRPLANE FLEET — 35 tiny aircraft with red/green flashing nav lights === */}
           {Array.from({ length: 35 }, (_, i) => {

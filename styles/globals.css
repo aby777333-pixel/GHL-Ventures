@@ -1589,31 +1589,61 @@ body,
   97%, 100% { opacity: 0; }
 }
 
-/* India shimmer glow on world map */
-.nri-india-glow {
-  animation: nri-india-shimmer 3s ease-in-out infinite;
+/* ── Earth Arc / Curvature — NRI Hero ── */
+.nri-earth-atmosphere {
+  animation: nri-atmo-pulse 6s ease-in-out infinite;
 }
-@keyframes nri-india-shimmer {
-  0%, 100% { fill: rgba(208,2,27,0.2); stroke: rgba(255,170,50,0.5); }
-  50% { fill: rgba(208,2,27,0.4); stroke: rgba(255,200,80,0.9); }
+@keyframes nri-atmo-pulse {
+  0%, 100% {
+    box-shadow: 0 -2px 40px 8px rgba(60,140,255,0.12), 0 -1px 20px 4px rgba(100,180,255,0.18), 0 -4px 80px 15px rgba(40,100,220,0.06);
+  }
+  50% {
+    box-shadow: 0 -3px 50px 12px rgba(60,140,255,0.2), 0 -2px 30px 6px rgba(100,180,255,0.28), 0 -6px 100px 20px rgba(40,100,220,0.1);
+  }
 }
 
-/* City lights twinkle */
-.nri-city-light {
-  animation: nri-city-twinkle 2s ease-in-out infinite;
+.nri-earth-inner-glow {
+  animation: nri-inner-pulse 8s ease-in-out infinite;
 }
-@keyframes nri-city-twinkle {
-  0%, 100% { opacity: 0.4; }
+@keyframes nri-inner-pulse {
+  0%, 100% {
+    box-shadow: 0 -1px 15px 3px rgba(255,140,50,0.04), 0 -1px 8px 2px rgba(255,200,100,0.03);
+  }
+  50% {
+    box-shadow: 0 -2px 20px 5px rgba(255,140,50,0.08), 0 -1px 12px 3px rgba(255,200,100,0.06);
+  }
+}
+
+.nri-earth-edge {
+  animation: nri-edge-breathe 5s ease-in-out infinite;
+}
+@keyframes nri-edge-breathe {
+  0%, 100% { opacity: 0.8; }
   50% { opacity: 1; }
 }
 
-/* Flight route dash animation */
-.nri-flight-route {
-  animation: nri-route-dash 4s linear infinite;
+.nri-earth-city {
+  animation: nri-earth-city-twinkle 3s ease-in-out infinite;
 }
-@keyframes nri-route-dash {
-  0% { stroke-dashoffset: 0; }
-  100% { stroke-dashoffset: -20; }
+@keyframes nri-earth-city-twinkle {
+  0%, 100% { opacity: 0.2; }
+  30% { opacity: 0.8; }
+  50% { opacity: 0.3; }
+  80% { opacity: 0.9; }
+}
+
+/* ── Voice Command Widget — "Speak to navigate" prompt ── */
+@keyframes voice-prompt-bounce {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-6px); }
+}
+
+.animate-fade-in {
+  animation: voice-fade-in 0.5s ease-out;
+}
+@keyframes voice-fade-in {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
 /* ── DATASTREAM — Education Insights hero ── */

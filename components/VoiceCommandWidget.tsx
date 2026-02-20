@@ -5,7 +5,7 @@ import { usePathname, useRouter } from 'next/navigation'
 import {
   Mic, MicOff, X, ChevronUp, ChevronDown, Volume2, VolumeX,
   Globe, Navigation, Send, Phone, Mail, MessageCircle,
-  Video, Moon, Sun, Search, Zap,
+  Video, Moon, Sun, Search, Zap, Power,
 } from 'lucide-react'
 import { NAV_LINKS, BRAND } from '@/lib/constants'
 
@@ -29,23 +29,24 @@ const ALL_PAGES = flattenNav()
 
 // ─── Supported languages for TTS ───
 const LANGUAGES = [
-  { code: 'en-US', label: 'English', flag: '🇺🇸' },
-  { code: 'hi-IN', label: 'Hindi', flag: '🇮🇳' },
-  { code: 'ta-IN', label: 'Tamil', flag: '🇮🇳' },
-  { code: 'te-IN', label: 'Telugu', flag: '🇮🇳' },
-  { code: 'kn-IN', label: 'Kannada', flag: '🇮🇳' },
-  { code: 'ml-IN', label: 'Malayalam', flag: '🇮🇳' },
-  { code: 'es-ES', label: 'Spanish', flag: '🇪🇸' },
-  { code: 'fr-FR', label: 'French', flag: '🇫🇷' },
-  { code: 'de-DE', label: 'German', flag: '🇩🇪' },
-  { code: 'ja-JP', label: 'Japanese', flag: '🇯🇵' },
-  { code: 'zh-CN', label: 'Chinese', flag: '🇨🇳' },
-  { code: 'ar-SA', label: 'Arabic', flag: '🇸🇦' },
+  { code: 'en-US', label: 'English', flag: '\u{1F1FA}\u{1F1F8}' },
+  { code: 'hi-IN', label: 'Hindi', flag: '\u{1F1EE}\u{1F1F3}' },
+  { code: 'ta-IN', label: 'Tamil', flag: '\u{1F1EE}\u{1F1F3}' },
+  { code: 'te-IN', label: 'Telugu', flag: '\u{1F1EE}\u{1F1F3}' },
+  { code: 'kn-IN', label: 'Kannada', flag: '\u{1F1EE}\u{1F1F3}' },
+  { code: 'ml-IN', label: 'Malayalam', flag: '\u{1F1EE}\u{1F1F3}' },
+  { code: 'es-ES', label: 'Spanish', flag: '\u{1F1EA}\u{1F1F8}' },
+  { code: 'fr-FR', label: 'French', flag: '\u{1F1EB}\u{1F1F7}' },
+  { code: 'de-DE', label: 'German', flag: '\u{1F1E9}\u{1F1EA}' },
+  { code: 'ja-JP', label: 'Japanese', flag: '\u{1F1EF}\u{1F1F5}' },
+  { code: 'zh-CN', label: 'Chinese', flag: '\u{1F1E8}\u{1F1F3}' },
+  { code: 'ar-SA', label: 'Arabic', flag: '\u{1F1F8}\u{1F1E6}' },
 ]
 
 // ─── Command parser ───
 type CmdType = 'navigate' | 'scroll' | 'read' | 'stop' | 'help' | 'language'
-  | 'call' | 'email' | 'whatsapp' | 'telegram' | 'video' | 'dark' | 'light' | 'search' | 'unknown'
+  | 'call' | 'email' | 'whatsapp' | 'telegram' | 'video' | 'dark' | 'light'
+  | 'search' | 'close' | 'home' | 'back' | 'unknown'
 
 interface ParsedCommand {
   type: CmdType
@@ -55,6 +56,13 @@ interface ParsedCommand {
 
 function parseCommand(input: string): ParsedCommand {
   const text = input.toLowerCase().trim()
+
+  // Close widget
+  if (/^(?:close|exit|bye|goodbye|shut|dismiss|hide|go away|stop listening)$/.test(text)) return { type: 'close' }
+
+  // Home / back
+  if (/^(?:go home|home page|take me home|homepage)$/.test(text)) return { type: 'home' }
+  if (/^(?:go back|back|previous page|previous)$/.test(text)) return { type: 'back' }
 
   // Navigation commands
   const navPatterns = [
@@ -67,13 +75,17 @@ function parseCommand(input: string): ParsedCommand {
   }
 
   // Scroll commands
-  if (/scroll\s*up|go\s*up|page\s*up|up/.test(text) && text.length < 15) return { type: 'scroll', direction: 'up' }
-  if (/scroll\s*down|go\s*down|page\s*down|down/.test(text) && text.length < 15) return { type: 'scroll', direction: 'down' }
-  if (/scroll\s*(?:to\s*)?top|go\s*(?:to\s*)?top|beginning|top/.test(text) && text.length < 20) return { type: 'scroll', direction: 'top' }
-  if (/scroll\s*(?:to\s*)?bottom|go\s*(?:to\s*)?bottom|end|bottom/.test(text) && text.length < 20) return { type: 'scroll', direction: 'bottom' }
+  if (/scroll\s*up|go\s*up|page\s*up/.test(text) && text.length < 20) return { type: 'scroll', direction: 'up' }
+  if (/scroll\s*down|go\s*down|page\s*down/.test(text) && text.length < 20) return { type: 'scroll', direction: 'down' }
+  if (/^up$/.test(text)) return { type: 'scroll', direction: 'up' }
+  if (/^down$/.test(text)) return { type: 'scroll', direction: 'down' }
+  if (/scroll\s*(?:to\s*)?top|go\s*(?:to\s*)?top|beginning/.test(text) && text.length < 25) return { type: 'scroll', direction: 'top' }
+  if (/scroll\s*(?:to\s*)?bottom|go\s*(?:to\s*)?bottom|^end$/.test(text) && text.length < 25) return { type: 'scroll', direction: 'bottom' }
+  if (/^top$/.test(text)) return { type: 'scroll', direction: 'top' }
+  if (/^bottom$/.test(text)) return { type: 'scroll', direction: 'bottom' }
 
   // Read aloud
-  if (/^(?:read|read aloud|read this|read page|read out|read it)/.test(text)) return { type: 'read' }
+  if (/^(?:read|read aloud|read this|read page|read out|read it|read the page|read content)/.test(text)) return { type: 'read' }
 
   // Stop speaking
   if (/^(?:stop|shut up|quiet|silence|cancel|pause|mute)/.test(text)) return { type: 'stop' }
@@ -130,11 +142,14 @@ export default function VoiceCommandWidget() {
   const [mounted, setMounted] = useState(false)
   const [showPulse, setShowPulse] = useState(true)
   const [voicesLoaded, setVoicesLoaded] = useState(false)
+  const [showPrompt, setShowPrompt] = useState(false)
 
   const recognitionRef = useRef<any>(null)
   const synthRef = useRef<SpeechSynthesis | null>(null)
   const inputRef = useRef<HTMLInputElement>(null)
   const autoMicTriggered = useRef(false)
+  const intentionalStop = useRef(false)
+  const widgetClosed = useRef(false)
 
   const router = useRouter()
   const pathname = usePathname()
@@ -152,32 +167,43 @@ export default function VoiceCommandWidget() {
     loadVoices()
     window.speechSynthesis.onvoiceschanged = loadVoices
 
-    const t = setTimeout(() => setShowPulse(false), 10000)
-    return () => clearTimeout(t)
+    return () => { window.speechSynthesis.onvoiceschanged = null }
   }, [])
 
-  // ─── Auto-trigger mic on page load (after 2s delay) ───
+  // ─── Auto-trigger: show "Speak to navigate" prompt, then open mic ───
   useEffect(() => {
     if (!mounted || autoMicTriggered.current) return
     autoMicTriggered.current = true
 
-    const timer = setTimeout(() => {
-      // Auto-open the panel and start listening
+    // Show floating "Speak to navigate" prompt first
+    const promptTimer = setTimeout(() => {
+      setShowPrompt(true)
+    }, 1500)
+
+    // After 3s, auto-open widget and start continuous mic
+    const openTimer = setTimeout(() => {
+      setShowPrompt(false)
       setIsOpen(true)
       setShowPulse(false)
-      setFeedback('Say "help" for commands, or speak a page name.')
-      // Auto-start mic after a brief delay for the panel to render
+      widgetClosed.current = false
+      setFeedback('Mic is ON. Say "help" for commands, or speak a page name. Say "close" to exit.')
+      // Start continuous mic after panel renders
       setTimeout(() => {
-        autoStartMic()
+        startContinuousMic()
       }, 600)
-    }, 2500)
+    }, 4000)
 
-    return () => clearTimeout(timer)
+    return () => {
+      clearTimeout(promptTimer)
+      clearTimeout(openTimer)
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mounted])
 
-  // Close panel on route change
+  // Stop speaking on route change (but keep mic on)
   useEffect(() => {
     stopSpeaking()
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pathname])
 
   const stopSpeaking = useCallback(() => {
@@ -187,6 +213,7 @@ export default function VoiceCommandWidget() {
     }
   }, [])
 
+  // ─── TTS Speak — with robust voice matching for selected language ───
   const speak = useCallback((text: string, lang?: string) => {
     if (!synthRef.current) return
     synthRef.current.cancel()
@@ -195,18 +222,31 @@ export default function VoiceCommandWidget() {
     utterance.lang = useLang
     utterance.rate = 0.95
     utterance.pitch = 1
+    utterance.volume = 1
     utterance.onstart = () => setIsSpeaking(true)
     utterance.onend = () => setIsSpeaking(false)
     utterance.onerror = () => setIsSpeaking(false)
 
-    // Find best voice for selected language
+    // ── Robust voice selection ──
     const voices = synthRef.current.getVoices()
-    const langPrefix = useLang.split('-')[0]
-    // Prefer native voices, then any matching voice
-    const voice = voices.find(v => v.lang === useLang && !v.localService === false)
-      || voices.find(v => v.lang === useLang)
-      || voices.find(v => v.lang.startsWith(langPrefix))
-    if (voice) utterance.voice = voice
+    const langPrefix = useLang.split('-')[0] // e.g. 'ml' from 'ml-IN'
+
+    // Priority 1: Exact match (e.g. 'ml-IN')
+    let voice = voices.find(v => v.lang === useLang)
+    // Priority 2: Same prefix with region variant (e.g. 'ml_IN' or 'ml')
+    if (!voice) voice = voices.find(v => v.lang.replace('_', '-') === useLang)
+    if (!voice) voice = voices.find(v => v.lang.startsWith(langPrefix + '-') || v.lang.startsWith(langPrefix + '_'))
+    if (!voice) voice = voices.find(v => v.lang === langPrefix)
+    // Priority 3: Voice name contains language name
+    if (!voice) {
+      const langLabel = LANGUAGES.find(l => l.code === useLang)?.label.toLowerCase() || ''
+      if (langLabel) voice = voices.find(v => v.name.toLowerCase().includes(langLabel))
+    }
+
+    if (voice) {
+      utterance.voice = voice
+      utterance.lang = voice.lang // Ensure lang matches the voice
+    }
 
     synthRef.current.speak(utterance)
   }, [language])
@@ -240,17 +280,52 @@ export default function VoiceCommandWidget() {
     }
 
     if (text.trim()) {
-      setFeedback(`Reading page in ${LANGUAGES.find(l => l.code === language)?.label || 'English'}...`)
+      const langName = LANGUAGES.find(l => l.code === language)?.label || 'English'
+      setFeedback(`Reading page in ${langName}...`)
       speak(text.trim())
     } else {
       setFeedback('No readable content found on this page.')
     }
   }, [speak, language])
 
+  // ─── Close the entire widget ───
+  const closeWidget = useCallback(() => {
+    widgetClosed.current = true
+    intentionalStop.current = true
+    if (recognitionRef.current) {
+      try { recognitionRef.current.abort() } catch {}
+      recognitionRef.current = null
+    }
+    stopSpeaking()
+    setIsListening(false)
+    setIsOpen(false)
+    setFeedback('')
+    setInputText('')
+    setShowLangPicker(false)
+  }, [stopSpeaking])
+
   const executeCommand = useCallback((raw: string) => {
     const cmd = parseCommand(raw)
 
     switch (cmd.type) {
+      case 'close': {
+        setFeedback('Closing voice navigator. Goodbye!')
+        speak('Goodbye!')
+        setTimeout(() => closeWidget(), 800)
+        break
+      }
+      case 'home': {
+        setFeedback('Going to Home page...')
+        speak('Going to Home page.')
+        setTimeout(() => router.push('/'), 500)
+        break
+      }
+      case 'back': {
+        setFeedback('Going back...')
+        speak('Going back.')
+        setTimeout(() => window.history.back(), 500)
+        break
+      }
       case 'navigate': {
         const page = findPage(cmd.target || '')
         if (page) {
@@ -313,7 +388,6 @@ export default function VoiceCommandWidget() {
       case 'video': {
         setFeedback('Opening video call widget...')
         speak('Opening video call.')
-        // Trigger the VideoCallWidget by clicking its button
         const videoBtn = document.querySelector('[aria-label="Open Sales & Support Video Call"]') as HTMLElement
         if (videoBtn) videoBtn.click()
         break
@@ -346,12 +420,11 @@ export default function VoiceCommandWidget() {
       }
       case 'search': {
         setFeedback(`Searching for "${cmd.target}"...`)
-        // Open command palette with search query
         document.dispatchEvent(new KeyboardEvent('keydown', { key: 'k', ctrlKey: true, metaKey: true, bubbles: true }))
         break
       }
       case 'help': {
-        const helpText = 'Commands: "Go to Fund", "Scroll up", "Scroll down", "Read page", "Stop", "Call", "Email", "WhatsApp", "Telegram", "Video call", "Dark mode", "Light mode", "Switch to Hindi", "Search [query]", or say any page name.'
+        const helpText = 'Commands: "Go to [page]", "Scroll up/down/top/bottom", "Read page", "Stop", "Call", "Email", "WhatsApp", "Telegram", "Video call", "Dark mode", "Light mode", "Switch to [language]", "Search [query]", "Go back", "Home", "Close", or say any page name.'
         setFeedback(helpText)
         speak(helpText)
         break
@@ -363,100 +436,67 @@ export default function VoiceCommandWidget() {
           speak(`Going to ${page.label}`)
           setTimeout(() => router.push(page.href), 500)
         } else {
-          setFeedback('Command not recognized. Say "help" for available commands.')
-          speak('Sorry, I did not understand that. Say help for commands.')
+          setFeedback(`"${raw}" - not recognized. Say "help" for commands.`)
         }
       }
     }
-  }, [router, speak, readPageContent, stopSpeaking, language])
+  }, [router, speak, readPageContent, stopSpeaking, language, closeWidget])
 
-  // ─── Auto-start mic helper (no permission popup on auto) ───
-  const autoStartMic = useCallback(() => {
-    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition
-    if (!SpeechRecognition) return
-
-    if (recognitionRef.current) {
-      try { recognitionRef.current.abort() } catch {}
-    }
-
-    const recognition = new SpeechRecognition()
-    recognition.lang = language
-    recognition.continuous = false
-    recognition.interimResults = true
-    recognition.maxAlternatives = 1
-
-    recognition.onstart = () => {
-      setIsListening(true)
-      setFeedback('Listening... speak now.')
-    }
-    recognition.onend = () => setIsListening(false)
-    recognition.onerror = () => setIsListening(false)
-    recognition.onresult = (event: any) => {
-      const result = event.results[event.results.length - 1]
-      const transcript = result[0].transcript
-      if (result.isFinal) {
-        setInputText(transcript)
-        setFeedback(`Heard: "${transcript}"`)
-        executeCommand(transcript)
-      } else {
-        setInputText(transcript)
-        setFeedback(`Hearing: "${transcript}"...`)
-      }
-    }
-
-    recognitionRef.current = recognition
-    try { recognition.start() } catch {}
-  }, [language, executeCommand])
-
-  const startListening = useCallback(async () => {
+  // ─── Start CONTINUOUS mic — stays on until "close" or manual stop ───
+  const startContinuousMic = useCallback(() => {
     const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition
     if (!SpeechRecognition) {
-      setFeedback('Voice recognition not supported. Please type your command.')
+      setFeedback('Voice recognition not supported in this browser.')
       return
     }
 
-    // Request mic permission
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
-      stream.getTracks().forEach(track => track.stop())
-    } catch (err: any) {
-      if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
-        setFeedback('Microphone access denied. Please allow microphone in browser settings.')
-      } else if (err.name === 'NotFoundError') {
-        setFeedback('No microphone found. Please connect a microphone.')
-      } else {
-        setFeedback('Could not access microphone. Please type your command.')
-      }
-      return
-    }
-
+    // Abort any existing instance
     if (recognitionRef.current) {
       try { recognitionRef.current.abort() } catch {}
     }
 
+    intentionalStop.current = false
+
     const recognition = new SpeechRecognition()
-    recognition.lang = language
-    recognition.continuous = false
+    recognition.lang = 'en-US' // Always listen in English for commands
+    recognition.continuous = true
     recognition.interimResults = true
     recognition.maxAlternatives = 1
 
     recognition.onstart = () => {
       setIsListening(true)
-      setFeedback('Listening... speak now.')
     }
-    recognition.onend = () => setIsListening(false)
-    recognition.onerror = (event: any) => {
-      setIsListening(false)
-      const errorMap: Record<string, string> = {
-        'not-allowed': 'Microphone access denied.',
-        'no-speech': 'No speech detected. Try again.',
-        'audio-capture': 'No microphone found.',
-        'network': 'Network error. Check connection.',
-        'aborted': '',
+
+    recognition.onend = () => {
+      // Auto-restart unless intentionally stopped or widget closed
+      if (!intentionalStop.current && !widgetClosed.current) {
+        try {
+          setTimeout(() => {
+            if (!intentionalStop.current && !widgetClosed.current && recognitionRef.current) {
+              recognitionRef.current.start()
+            }
+          }, 300)
+        } catch {}
+      } else {
+        setIsListening(false)
       }
-      const msg = errorMap[event.error] || `Voice error: ${event.error}`
-      if (msg) setFeedback(msg)
     }
+
+    recognition.onerror = (event: any) => {
+      // For non-fatal errors, let onend handle restart
+      if (event.error === 'aborted' || event.error === 'no-speech') {
+        // These are fine — mic will auto-restart via onend
+        return
+      }
+      if (event.error === 'not-allowed') {
+        setIsListening(false)
+        setFeedback('Microphone access denied. Please allow microphone in browser settings and refresh.')
+        intentionalStop.current = true
+      } else if (event.error === 'network') {
+        setFeedback('Network error. Mic will retry...')
+      }
+    }
+
     recognition.onresult = (event: any) => {
       const result = event.results[event.results.length - 1]
       const transcript = result[0].transcript
@@ -471,18 +511,41 @@ export default function VoiceCommandWidget() {
     }
 
     recognitionRef.current = recognition
-    try { recognition.start() } catch {
-      setIsListening(false)
-      setFeedback('Could not start voice recognition.')
-    }
-  }, [language, executeCommand])
 
-  const stopListening = useCallback(() => {
-    if (recognitionRef.current) {
-      recognitionRef.current.stop()
+    // Request mic permission first, then start
+    navigator.mediaDevices.getUserMedia({ audio: true })
+      .then(stream => {
+        stream.getTracks().forEach(track => track.stop())
+        try {
+          recognition.start()
+        } catch {
+          setFeedback('Could not start voice recognition.')
+        }
+      })
+      .catch((err: any) => {
+        if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
+          setFeedback('Microphone access denied. Please allow mic in browser settings.')
+        } else if (err.name === 'NotFoundError') {
+          setFeedback('No microphone found. Please connect a microphone.')
+        } else {
+          setFeedback('Could not access microphone. Please type your command.')
+        }
+      })
+  }, [executeCommand])
+
+  // Manual mic toggle (for the button in the panel)
+  const toggleMic = useCallback(() => {
+    if (isListening) {
+      intentionalStop.current = true
+      if (recognitionRef.current) {
+        try { recognitionRef.current.stop() } catch {}
+      }
       setIsListening(false)
+      setFeedback('Mic paused. Click mic button or say nothing to resume.')
+    } else {
+      startContinuousMic()
     }
-  }, [])
+  }, [isListening, startContinuousMic])
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
@@ -493,17 +556,21 @@ export default function VoiceCommandWidget() {
   }
 
   const togglePanel = () => {
-    setIsOpen(prev => {
-      if (!prev) {
-        setShowPulse(false)
-        setTimeout(() => inputRef.current?.focus(), 200)
-      } else {
-        stopSpeaking()
-        stopListening()
-      }
-      return !prev
-    })
-    setFeedback('')
+    if (isOpen) {
+      // Closing
+      closeWidget()
+    } else {
+      // Opening
+      widgetClosed.current = false
+      setIsOpen(true)
+      setShowPulse(false)
+      setShowPrompt(false)
+      setFeedback('Mic is ON. Speak a command or say "help".')
+      setTimeout(() => {
+        inputRef.current?.focus()
+        startContinuousMic()
+      }, 400)
+    }
   }
 
   if (!mounted) return null
@@ -512,6 +579,36 @@ export default function VoiceCommandWidget() {
 
   return (
     <>
+      {/* ── "Speak to navigate" floating prompt ── */}
+      {showPrompt && !isOpen && (
+        <div
+          className="fixed z-[9993] animate-fade-in"
+          style={{
+            bottom: '60px',
+            left: '16px',
+          }}
+        >
+          <div
+            className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-medium"
+            style={{
+              background: 'rgba(10,10,10,0.92)',
+              backdropFilter: 'blur(16px)',
+              border: '1px solid rgba(208,2,27,0.3)',
+              boxShadow: '0 8px 30px rgba(208,2,27,0.15), 0 4px 20px rgba(0,0,0,0.4)',
+              animation: 'voice-prompt-bounce 2s ease-in-out infinite',
+            }}
+          >
+            <Mic className="w-4 h-4 text-brand-red animate-pulse" />
+            <span className="text-white font-semibold">Speak to navigate</span>
+            <span className="text-gray-400 text-[10px] ml-1">or click to open</span>
+          </div>
+          <div
+            className="absolute -bottom-1.5 left-6 w-3 h-3 rotate-45"
+            style={{ background: 'rgba(10,10,10,0.92)', borderRight: '1px solid rgba(208,2,27,0.3)', borderBottom: '1px solid rgba(208,2,27,0.3)' }}
+          />
+        </div>
+      )}
+
       {/* Floating trigger button */}
       <button
         onClick={togglePanel}
@@ -524,7 +621,7 @@ export default function VoiceCommandWidget() {
           border: `1px solid ${isOpen ? 'rgba(208,2,27,0.3)' : isListening ? 'rgba(208,2,27,0.5)' : 'rgba(255,255,255,0.08)'}`,
           boxShadow: isListening ? '0 4px 20px rgba(208,2,27,0.4)' : '0 4px 20px rgba(0,0,0,0.3)',
         }}
-        title="Hey GHL — Voice Commands"
+        title="Hey GHL \u2014 Voice Commands"
       >
         {showPulse && !isOpen && (
           <span className="absolute inset-0 rounded-full animate-ping" style={{ background: 'rgba(208,2,27,0.3)' }} />
@@ -543,7 +640,7 @@ export default function VoiceCommandWidget() {
         className={`fixed z-[9992] transition-all duration-300 ${
           isOpen ? 'opacity-100 translate-y-0 pointer-events-auto' : 'opacity-0 translate-y-4 pointer-events-none'
         }`}
-        style={{ bottom: '60px', left: '16px', width: '330px', maxHeight: '480px' }}
+        style={{ bottom: '60px', left: '16px', width: '330px', maxHeight: '500px' }}
       >
         <div
           className="rounded-2xl overflow-hidden flex flex-col"
@@ -561,6 +658,12 @@ export default function VoiceCommandWidget() {
                 <Zap className="w-3 h-3 text-brand-red" />
               </div>
               <span className="text-white text-xs font-bold tracking-wide">GHL VOICE NAV</span>
+              {isListening && (
+                <span className="flex items-center gap-1">
+                  <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />
+                  <span className="text-[9px] text-red-400 font-medium">LIVE</span>
+                </span>
+              )}
               <span className="text-[9px] text-gray-500">{currentLang?.flag} {currentLang?.label}</span>
             </div>
             <div className="flex items-center gap-1">
@@ -572,7 +675,7 @@ export default function VoiceCommandWidget() {
                   <VolumeX className="w-3.5 h-3.5" />
                 </button>
               )}
-              <button onClick={togglePanel} className="p-1.5 rounded-lg hover:bg-white/10 text-gray-400 hover:text-white transition-colors">
+              <button onClick={closeWidget} className="p-1.5 rounded-lg hover:bg-white/10 text-gray-400 hover:text-white transition-colors" title="Close (or say &quot;close&quot;)">
                 <X className="w-3.5 h-3.5" />
               </button>
             </div>
@@ -588,7 +691,7 @@ export default function VoiceCommandWidget() {
                     onClick={() => {
                       setLanguage(lang.code)
                       setShowLangPicker(false)
-                      setFeedback(`Language: ${lang.label}. TTS and voice input will use ${lang.label}.`)
+                      setFeedback(`Language: ${lang.label}. TTS will read in ${lang.label}.`)
                       speak(`Language changed to ${lang.label}.`, lang.code)
                     }}
                     className={`text-[10px] px-2 py-1.5 rounded-lg transition-all ${
@@ -634,7 +737,7 @@ export default function VoiceCommandWidget() {
 
           {/* Pages list */}
           <div className="px-3 py-2 max-h-[150px] overflow-y-auto border-b border-white/10 scrollbar-thin">
-            <p className="text-[9px] text-gray-500 uppercase tracking-wider mb-1.5 font-semibold">Quick Nav — all pages</p>
+            <p className="text-[9px] text-gray-500 uppercase tracking-wider mb-1.5 font-semibold">Quick Nav \u2014 all pages</p>
             <div className="grid grid-cols-2 gap-1">
               {ALL_PAGES.map(page => {
                 const isActive = pathname === page.href
@@ -662,7 +765,7 @@ export default function VoiceCommandWidget() {
             <div className="px-3 py-2 border-b border-white/10">
               <p className="text-[10px] text-gray-300 leading-relaxed flex items-start gap-2">
                 {isSpeaking && <Volume2 className="w-3 h-3 text-brand-red shrink-0 mt-0.5 animate-pulse" />}
-                {isListening && <Mic className="w-3 h-3 text-brand-red shrink-0 mt-0.5 animate-pulse" />}
+                {isListening && !isSpeaking && <Mic className="w-3 h-3 text-brand-red shrink-0 mt-0.5 animate-pulse" />}
                 <span>{feedback}</span>
               </p>
             </div>
@@ -672,13 +775,13 @@ export default function VoiceCommandWidget() {
           <form onSubmit={handleSubmit} className="flex items-center gap-2 px-3 py-2.5">
             <button
               type="button"
-              onClick={isListening ? stopListening : startListening}
+              onClick={toggleMic}
               className={`shrink-0 w-8 h-8 rounded-full flex items-center justify-center transition-all ${
                 isListening
                   ? 'bg-brand-red text-white animate-pulse shadow-lg shadow-brand-red/30'
                   : 'bg-white/10 text-gray-400 hover:bg-white/20 hover:text-white'
               }`}
-              title={isListening ? 'Stop listening' : 'Start voice input'}
+              title={isListening ? 'Pause mic' : 'Resume mic'}
             >
               {isListening ? <MicOff className="w-3.5 h-3.5" /> : <Mic className="w-3.5 h-3.5" />}
             </button>
@@ -687,13 +790,20 @@ export default function VoiceCommandWidget() {
               type="text"
               value={inputText}
               onChange={e => setInputText(e.target.value)}
-              placeholder={isListening ? 'Listening...' : 'Say or type a command...'}
+              placeholder={isListening ? 'Listening continuously...' : 'Type a command...'}
               className="flex-1 bg-white/5 border border-white/10 rounded-lg px-3 py-1.5 text-[11px] text-white placeholder-gray-500 outline-none focus:border-brand-red/50 transition-colors"
             />
             <button type="submit" className="shrink-0 w-8 h-8 rounded-full bg-brand-red/80 hover:bg-brand-red text-white flex items-center justify-center transition-all">
               <Send className="w-3 h-3" />
             </button>
           </form>
+
+          {/* Bottom hint */}
+          <div className="px-3 pb-2 text-center">
+            <p className="text-[9px] text-gray-600">
+              Mic stays on. Say <strong className="text-gray-400">&quot;close&quot;</strong> to exit or <strong className="text-gray-400">&quot;help&quot;</strong> for all commands.
+            </p>
+          </div>
         </div>
       </div>
     </>
