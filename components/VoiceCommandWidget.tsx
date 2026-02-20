@@ -163,19 +163,42 @@ export default function VoiceCommandWidget() {
       setFeedback('No content found to read.')
       return
     }
-    // Extract visible text, limiting to ~2000 chars for TTS
-    const walker = document.createTreeWalker(main, NodeFilter.SHOW_TEXT, null)
+
+    // Extract meaningful page content — headings + paragraphs only
+    const selectors = 'h1, h2, h3, h4, p, li, td, blockquote, figcaption, [role="heading"]'
+    const elements = Array.from(main.querySelectorAll(selectors))
+    const seen = new Set<string>()
     let text = ''
-    let node: Node | null
-    while ((node = walker.nextNode()) && text.length < 2000) {
-      const t = (node.textContent || '').trim()
-      if (t.length > 2) text += t + '. '
+
+    for (const el of elements) {
+      if (text.length > 2500) break
+
+      // Skip hidden elements
+      const style = window.getComputedStyle(el)
+      if (style.display === 'none' || style.visibility === 'hidden' || style.opacity === '0') continue
+
+      // Skip elements inside nav, footer, button, or form
+      if (el.closest('nav, footer, button, form, [aria-hidden="true"], script, style, noscript')) continue
+
+      // Get visible inner text (not innerHTML/textContent which includes hidden children)
+      const raw = (el as HTMLElement).innerText || ''
+      const cleaned = raw.replace(/\s+/g, ' ').trim()
+
+      // Skip very short strings, URLs, or duplicates
+      if (cleaned.length < 4) continue
+      if (/^https?:\/\//.test(cleaned)) continue
+      if (/^[A-Z0-9]{2,4}$/.test(cleaned)) continue // skip icon text like "FAQ"
+      if (seen.has(cleaned)) continue
+      seen.add(cleaned)
+
+      text += cleaned + '. '
     }
+
     if (text.trim()) {
       setFeedback('Reading page content aloud...')
       speak(text.trim())
     } else {
-      setFeedback('No readable content found.')
+      setFeedback('No readable content found on this page.')
     }
   }, [speak])
 
@@ -241,33 +264,85 @@ export default function VoiceCommandWidget() {
     }
   }, [router, speak, readPageContent, stopSpeaking])
 
-  const startListening = useCallback(() => {
+  const startListening = useCallback(async () => {
     const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition
     if (!SpeechRecognition) {
-      setFeedback('Voice recognition not supported in this browser. Please type your command.')
+      setFeedback('Voice recognition not supported in this browser. Please type your command instead.')
       return
+    }
+
+    // Request microphone permission first
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+      // Got permission — stop the stream immediately (SpeechRecognition manages its own)
+      stream.getTracks().forEach(track => track.stop())
+    } catch (err: any) {
+      if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
+        setFeedback('Microphone access denied. Please allow microphone in your browser settings, or type your command.')
+      } else if (err.name === 'NotFoundError') {
+        setFeedback('No microphone found. Please connect a microphone, or type your command.')
+      } else {
+        setFeedback('Could not access microphone. Please type your command instead.')
+      }
+      return
+    }
+
+    // Stop any existing recognition
+    if (recognitionRef.current) {
+      try { recognitionRef.current.abort() } catch {}
     }
 
     const recognition = new SpeechRecognition()
     recognition.lang = language
     recognition.continuous = false
-    recognition.interimResults = false
+    recognition.interimResults = true
     recognition.maxAlternatives = 1
 
-    recognition.onstart = () => setIsListening(true)
-    recognition.onend = () => setIsListening(false)
-    recognition.onerror = () => {
-      setIsListening(false)
-      setFeedback('Voice recognition error. Please try again or type your command.')
+    recognition.onstart = () => {
+      setIsListening(true)
+      setFeedback('Listening... speak now.')
     }
+
+    recognition.onend = () => {
+      setIsListening(false)
+    }
+
+    recognition.onerror = (event: any) => {
+      setIsListening(false)
+      const errorMap: Record<string, string> = {
+        'not-allowed': 'Microphone access denied. Allow it in browser settings.',
+        'no-speech': 'No speech detected. Try again or type your command.',
+        'audio-capture': 'No microphone found. Connect one or type your command.',
+        'network': 'Network error. Check your connection and try again.',
+        'aborted': '',
+      }
+      const msg = errorMap[event.error] || `Voice error: ${event.error}. Try typing your command.`
+      if (msg) setFeedback(msg)
+    }
+
     recognition.onresult = (event: any) => {
-      const transcript = event.results[0][0].transcript
-      setInputText(transcript)
-      executeCommand(transcript)
+      const result = event.results[event.results.length - 1]
+      const transcript = result[0].transcript
+
+      if (result.isFinal) {
+        setInputText(transcript)
+        setFeedback(`Heard: "${transcript}"`)
+        executeCommand(transcript)
+      } else {
+        // Show interim results as user speaks
+        setInputText(transcript)
+        setFeedback(`Hearing: "${transcript}"...`)
+      }
     }
 
     recognitionRef.current = recognition
-    recognition.start()
+
+    try {
+      recognition.start()
+    } catch (err) {
+      setIsListening(false)
+      setFeedback('Could not start voice recognition. Please type your command.')
+    }
   }, [language, executeCommand])
 
   const stopListening = useCallback(() => {
