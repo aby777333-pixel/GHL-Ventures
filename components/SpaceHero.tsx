@@ -1486,43 +1486,7 @@ export default function SpaceHero({ variant }: SpaceHeroProps) {
                 boxShadow: '0 -1px 15px 3px rgba(255,140,50,0.06), 0 -1px 8px 2px rgba(255,200,100,0.04)',
               }}
             />
-            {/* Thin bright edge line */}
-            <svg className="absolute w-full" style={{ bottom: '30%', left: 0, right: 0, height: '40%' }} viewBox="0 0 1200 400" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
-              <defs>
-                <linearGradient id="earth-edge-grad" x1="0%" y1="0%" x2="100%" y2="0%">
-                  <stop offset="0%" stopColor="rgba(60,140,255,0)" />
-                  <stop offset="15%" stopColor="rgba(60,140,255,0.2)" />
-                  <stop offset="35%" stopColor="rgba(100,180,255,0.5)" />
-                  <stop offset="50%" stopColor="rgba(140,200,255,0.7)" />
-                  <stop offset="65%" stopColor="rgba(100,180,255,0.5)" />
-                  <stop offset="85%" stopColor="rgba(60,140,255,0.2)" />
-                  <stop offset="100%" stopColor="rgba(60,140,255,0)" />
-                </linearGradient>
-                <filter id="earth-glow">
-                  <feGaussianBlur stdDeviation="3" result="blur" />
-                  <feMerge>
-                    <feMergeNode in="blur" />
-                    <feMergeNode in="SourceGraphic" />
-                  </feMerge>
-                </filter>
-              </defs>
-              <path
-                d="M0,350 Q300,200 600,180 Q900,200 1200,350"
-                fill="none"
-                stroke="url(#earth-edge-grad)"
-                strokeWidth="2"
-                filter="url(#earth-glow)"
-                className="nri-earth-edge"
-              />
-              {/* Secondary softer glow line */}
-              <path
-                d="M0,350 Q300,200 600,180 Q900,200 1200,350"
-                fill="none"
-                stroke="rgba(80,160,255,0.12)"
-                strokeWidth="8"
-                filter="url(#earth-glow)"
-              />
-            </svg>
+            {/* Blue arc removed per request */}
             {/* City lights scattered on Earth surface */}
             {Array.from({ length: 25 }, (_, i) => {
               const s = (i * 3571 + 821) % 10000
@@ -1555,8 +1519,8 @@ export default function SpaceHero({ variant }: SpaceHeroProps) {
             const yPos = 4 + ((seed * 3) % 90) // random vertical spread 4-94%
             const duration = 20 + (seed % 25) // 20-45 seconds
             const negDelay = -1 * ((seed % (duration * 10)) / 10)
-            const size = 5 + (seed % 7) // 5-11px fuselage (tiny!)
-            const opacity = 0.3 + ((seed % 40) / 100) // 0.3-0.7
+            const size = 3 + (seed % 5) // 3-7px fuselage (even tinier)
+            const opacity = 0.25 + ((seed % 35) / 100) // 0.25-0.6
             const lightDelay = (seed % 15) / 10
             const lightSize = 2 + (size > 8 ? 1 : 0) // tiny lights
 
