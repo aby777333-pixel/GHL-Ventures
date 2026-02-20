@@ -24,7 +24,7 @@
  *   galaxy        — Startup Application page: spiral galaxy with companion
  *   eclipse       — Grievance Redressal page: total solar eclipse with corona
  *   mars          — Careers page: Martian terrain with red dunes + moons
- *   gurukul       — Education page: ancient Indian wisdom + oil lamp + scrolls + starry sky
+ *   knowledge-rain — Education page: silver light drops from heavens + divine glow + starry sky
  *   nri-flight    — NRI Invest page: aircraft connecting global cities to India + flight paths
  */
 
@@ -47,7 +47,7 @@ type SpaceVariant =
   | 'galaxy'
   | 'eclipse'
   | 'mars'
-  | 'gurukul'
+  | 'knowledge-rain'
   | 'nri-flight'
 
 interface SpaceHeroProps {
@@ -1302,93 +1302,96 @@ export default function SpaceHero({ variant }: SpaceHeroProps) {
         </>
       )}
 
-      {/* ── Gurukul — Ancient Indian wisdom + oil lamp + scrolls + starry sky ── */}
-      {variant === 'gurukul' && (
+      {/* ═══════════════════════════════════════════════════════════
+          ★ KNOWLEDGE-RAIN — Education Page ★
+          Silver light drops from the heavens like divine rain on a dark starry night
+         ═══════════════════════════════════════════════════════════ */}
+      {variant === 'knowledge-rain' && (
         <>
-          {/* Warm night sky gradient */}
+          {/* Deep cosmic night sky — dark indigo to near-black */}
           <div className="absolute inset-0"
-            style={{ background: 'linear-gradient(to bottom, rgba(5,5,15,1) 0%, rgba(15,10,25,0.9) 30%, rgba(25,15,10,0.7) 60%, rgba(40,20,10,0.6) 80%, rgba(60,30,15,0.5) 100%)' }} />
+            style={{ background: 'linear-gradient(to bottom, rgba(2,2,12,1) 0%, rgba(5,5,20,0.98) 20%, rgba(8,10,30,0.95) 50%, rgba(10,12,35,0.92) 75%, rgba(12,15,40,0.88) 100%)' }} />
 
-          {/* Central oil lamp (diya) glow */}
-          <div className="absolute bottom-[15%] left-1/2 -translate-x-1/2">
-            {/* Outer warm glow halo */}
-            <div className="absolute -top-40 -left-40 w-80 h-80 rounded-full animate-pulse-slow"
-              style={{ background: 'radial-gradient(circle, rgba(255,180,60,0.12) 0%, rgba(255,140,30,0.06) 40%, transparent 70%)' }} />
-            {/* Inner flame glow */}
-            <div className="absolute -top-20 -left-16 w-32 h-32 rounded-full animate-pulse-slow-2"
-              style={{ background: 'radial-gradient(circle, rgba(255,200,80,0.25) 0%, rgba(255,160,40,0.12) 40%, transparent 70%)' }} />
-            {/* Diya lamp base (SVG) */}
-            <svg width="60" height="40" viewBox="0 0 60 40" className="relative z-10 opacity-60">
-              <ellipse cx="30" cy="35" rx="25" ry="5" fill="rgba(180,120,50,0.6)" />
-              <path d="M12,35 Q12,20 20,18 L40,18 Q48,20 48,35 Z" fill="rgba(160,100,40,0.7)" />
-              {/* Flame */}
-              <ellipse cx="30" cy="12" rx="5" ry="10" fill="rgba(255,200,80,0.9)" className="animate-twinkle-2" />
-              <ellipse cx="30" cy="10" rx="3" ry="7" fill="rgba(255,240,180,0.95)" className="animate-twinkle-3" />
-            </svg>
-          </div>
+          {/* Divine source glow — heavenly light at the top center */}
+          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-[300px]"
+            style={{ background: 'radial-gradient(ellipse at center top, rgba(200,210,255,0.12) 0%, rgba(180,200,255,0.06) 30%, rgba(150,180,255,0.02) 50%, transparent 70%)' }} />
+          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[300px] h-[200px] animate-pulse-slow"
+            style={{ background: 'radial-gradient(ellipse at center top, rgba(220,230,255,0.15) 0%, rgba(200,215,255,0.05) 40%, transparent 70%)', filter: 'blur(20px)' }} />
 
-          {/* Floating ancient scroll silhouettes */}
-          <svg className="absolute top-[15%] left-[8%] w-20 h-16 opacity-[0.12] animate-float" viewBox="0 0 80 60">
-            <rect x="10" y="10" width="60" height="40" rx="3" fill="rgba(255,200,120,0.5)" />
-            <circle cx="10" cy="30" r="8" fill="rgba(255,200,120,0.4)" />
-            <circle cx="70" cy="30" r="8" fill="rgba(255,200,120,0.4)" />
-            <line x1="20" y1="22" x2="60" y2="22" stroke="rgba(255,200,120,0.3)" strokeWidth="1" />
-            <line x1="20" y1="30" x2="55" y2="30" stroke="rgba(255,200,120,0.3)" strokeWidth="1" />
-            <line x1="20" y1="38" x2="50" y2="38" stroke="rgba(255,200,120,0.3)" strokeWidth="1" />
-          </svg>
-          <svg className="absolute top-[25%] right-[12%] w-16 h-14 opacity-[0.10] animate-float" style={{ animationDelay: '2s', animationDuration: '5s' }} viewBox="0 0 80 60">
-            <rect x="10" y="10" width="60" height="40" rx="3" fill="rgba(255,200,120,0.5)" />
-            <circle cx="10" cy="30" r="8" fill="rgba(255,200,120,0.4)" />
-            <circle cx="70" cy="30" r="8" fill="rgba(255,200,120,0.4)" />
-          </svg>
+          {/* Silver rain drops — CSS animated vertical streaks */}
+          <div className="knowledge-rain-layer-1" />
+          <div className="knowledge-rain-layer-2" />
+          <div className="knowledge-rain-layer-3" />
 
-          {/* Book silhouette */}
-          <svg className="absolute bottom-[35%] right-[18%] w-14 h-12 opacity-[0.08] animate-float" style={{ animationDelay: '1s', animationDuration: '6s' }} viewBox="0 0 60 50">
-            <path d="M5,45 L5,8 Q30,2 30,10 L30,45 Q15,40 5,45 Z" fill="rgba(255,200,120,0.5)" />
-            <path d="M55,45 L55,8 Q30,2 30,10 L30,45 Q45,40 55,45 Z" fill="rgba(255,180,100,0.4)" />
-          </svg>
-
-          {/* Decorative mandala ring */}
-          <div className="absolute top-[10%] left-1/2 -translate-x-1/2 w-[500px] h-[500px] opacity-[0.04] animate-spin-slow" style={{ animationDuration: '60s' }}>
-            <svg viewBox="0 0 500 500" className="w-full h-full">
-              <circle cx="250" cy="250" r="240" fill="none" stroke="rgba(255,180,60,0.5)" strokeWidth="0.5" strokeDasharray="8 12" />
-              <circle cx="250" cy="250" r="200" fill="none" stroke="rgba(255,180,60,0.4)" strokeWidth="0.5" strokeDasharray="4 8" />
-              <circle cx="250" cy="250" r="160" fill="none" stroke="rgba(255,180,60,0.3)" strokeWidth="0.5" strokeDasharray="2 6" />
-              {/* Compass points */}
-              {[0, 45, 90, 135, 180, 225, 270, 315].map((angle) => (
-                <line key={angle} x1="250" y1="10" x2="250" y2="40" stroke="rgba(255,180,60,0.3)" strokeWidth="0.5"
-                  transform={`rotate(${angle} 250 250)`} />
-              ))}
-            </svg>
-          </div>
-
-          {/* Wisdom particles (floating gold dots) */}
+          {/* Individual light drops — larger, more visible silver drops */}
           {[
-            { top: '20%', left: '15%', size: 3, delay: '0s', dur: '4s' },
-            { top: '30%', left: '75%', size: 2.5, delay: '1s', dur: '5s' },
-            { top: '45%', left: '25%', size: 2, delay: '2s', dur: '4.5s' },
-            { top: '35%', left: '60%', size: 3.5, delay: '0.5s', dur: '5.5s' },
-            { top: '55%', left: '40%', size: 2, delay: '1.5s', dur: '4s' },
-            { top: '25%', left: '50%', size: 3, delay: '3s', dur: '6s' },
-            { top: '40%', left: '85%', size: 2.5, delay: '2.5s', dur: '5s' },
-            { top: '60%', left: '70%', size: 2, delay: '0.8s', dur: '4.5s' },
-            { top: '15%', left: '35%', size: 3, delay: '1.2s', dur: '5.5s' },
-            { top: '50%', left: '10%', size: 2.5, delay: '2.2s', dur: '4s' },
-          ].map((p, i) => (
-            <div key={i} className="absolute rounded-full animate-float"
+            { left: '8%', delay: '0s', dur: '2.8s', h: 35, opacity: 0.5 },
+            { left: '15%', delay: '0.6s', dur: '3.2s', h: 30, opacity: 0.4 },
+            { left: '22%', delay: '1.2s', dur: '2.5s', h: 40, opacity: 0.6 },
+            { left: '30%', delay: '0.3s', dur: '3.5s', h: 28, opacity: 0.35 },
+            { left: '38%', delay: '1.8s', dur: '2.9s', h: 38, opacity: 0.55 },
+            { left: '45%', delay: '0.9s', dur: '3.1s', h: 32, opacity: 0.5 },
+            { left: '52%', delay: '1.5s', dur: '2.7s', h: 42, opacity: 0.65 },
+            { left: '60%', delay: '0.2s', dur: '3.3s', h: 30, opacity: 0.4 },
+            { left: '68%', delay: '2.0s', dur: '2.6s', h: 36, opacity: 0.5 },
+            { left: '75%', delay: '0.7s', dur: '3.0s', h: 34, opacity: 0.45 },
+            { left: '82%', delay: '1.4s', dur: '2.8s', h: 38, opacity: 0.55 },
+            { left: '90%', delay: '1.0s', dur: '3.4s', h: 26, opacity: 0.35 },
+            { left: '5%', delay: '2.2s', dur: '2.4s', h: 44, opacity: 0.6 },
+            { left: '35%', delay: '1.7s', dur: '3.6s', h: 30, opacity: 0.4 },
+            { left: '55%', delay: '0.5s', dur: '2.3s', h: 46, opacity: 0.7 },
+            { left: '72%', delay: '2.5s', dur: '2.9s', h: 32, opacity: 0.45 },
+            { left: '95%', delay: '1.1s', dur: '3.1s', h: 28, opacity: 0.35 },
+            { left: '18%', delay: '2.8s', dur: '2.6s', h: 40, opacity: 0.5 },
+            { left: '48%', delay: '0.4s', dur: '3.0s', h: 36, opacity: 0.55 },
+            { left: '85%', delay: '1.9s', dur: '2.5s', h: 34, opacity: 0.45 },
+          ].map((drop, i) => (
+            <div key={i} className="absolute top-0 knowledge-rain-drop"
               style={{
-                top: p.top, left: p.left,
-                width: `${p.size}px`, height: `${p.size}px`,
-                background: `radial-gradient(circle, rgba(255,200,80,0.9), rgba(255,160,40,0.4))`,
-                boxShadow: `0 0 ${p.size * 2}px rgba(255,180,60,0.3)`,
-                animationDelay: p.delay, animationDuration: p.dur,
+                left: drop.left,
+                width: '1px',
+                height: `${drop.h}px`,
+                background: `linear-gradient(to bottom, transparent 0%, rgba(200,215,255,${drop.opacity}) 30%, rgba(220,230,255,${drop.opacity * 1.2}) 60%, transparent 100%)`,
+                animationDelay: drop.delay,
+                animationDuration: drop.dur,
+                filter: `blur(${i % 3 === 0 ? '0.5px' : '0px'})`,
               }} />
           ))}
 
-          {/* Warm ambient glow spots */}
-          <div className="absolute bottom-[10%] left-[30%] w-96 h-96 bg-amber-700/[0.06] rounded-full blur-[120px] animate-pulse-slow" />
-          <div className="absolute top-[20%] right-[15%] w-64 h-64 bg-orange-800/[0.04] rounded-full blur-[80px] animate-pulse-slow-2" />
-          <div className="absolute bottom-[25%] right-[40%] w-48 h-48 bg-yellow-700/[0.05] rounded-full blur-[60px] animate-pulse-slow" />
+          {/* Splash particles — where drops hit the "ground" (bottom area) */}
+          {[
+            { left: '10%', delay: '0.8s' },
+            { left: '25%', delay: '1.5s' },
+            { left: '40%', delay: '0.3s' },
+            { left: '55%', delay: '2.0s' },
+            { left: '70%', delay: '1.0s' },
+            { left: '85%', delay: '2.5s' },
+          ].map((sp, i) => (
+            <div key={i} className="absolute bottom-[10%] knowledge-rain-splash"
+              style={{
+                left: sp.left,
+                width: '3px', height: '3px',
+                borderRadius: '50%',
+                background: 'rgba(200,215,255,0.5)',
+                boxShadow: '0 0 6px rgba(200,215,255,0.3), 0 0 12px rgba(180,200,255,0.15)',
+                animationDelay: sp.delay,
+              }} />
+          ))}
+
+          {/* Subtle ground reflection pool */}
+          <div className="absolute bottom-0 left-0 right-0 h-[15%]"
+            style={{ background: 'linear-gradient(to top, rgba(180,200,255,0.03) 0%, transparent 100%)' }} />
+
+          {/* Distant silver nebula wisps */}
+          <div className="absolute top-[15%] left-[5%] w-[300px] h-[200px] opacity-[0.03] animate-pulse-slow"
+            style={{ background: 'radial-gradient(ellipse, rgba(200,210,255,0.4), transparent 70%)', filter: 'blur(30px)' }} />
+          <div className="absolute top-[35%] right-[8%] w-[250px] h-[150px] opacity-[0.025] animate-pulse-slow-2"
+            style={{ background: 'radial-gradient(ellipse, rgba(180,190,255,0.4), transparent 70%)', filter: 'blur(25px)' }} />
+
+          {/* Ambient cosmic glow */}
+          <div className="absolute top-[5%] left-1/2 -translate-x-1/2 w-80 h-80 bg-blue-300/[0.02] rounded-full blur-[100px] animate-pulse-slow" />
+          <div className="absolute bottom-[20%] left-[20%] w-64 h-64 bg-indigo-400/[0.02] rounded-full blur-[80px] animate-pulse-slow-2" />
+          <div className="absolute bottom-[30%] right-[25%] w-48 h-48 bg-blue-200/[0.015] rounded-full blur-[60px] animate-pulse-slow" />
         </>
       )}
 

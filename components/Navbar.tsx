@@ -137,7 +137,7 @@ export default function Navbar() {
       <nav
         className={`transition-all duration-300 ${
           scrolled
-            ? 'bg-white/90 backdrop-blur-[20px] shadow-lg'
+            ? 'bg-white/90 dark:bg-[#0A0A0A]/90 backdrop-blur-[20px] shadow-lg dark:shadow-black/30'
             : 'bg-[#0A0A0A]'
         }`}
         aria-label="Main navigation"
@@ -231,12 +231,12 @@ export default function Navbar() {
                           }`}
                         >
                           <div
-                            className={`rounded-xl border shadow-2xl py-1.5 overflow-hidden ${isAbout ? 'min-w-[160px]' : isFund ? 'min-w-[180px]' : isEducation ? 'min-w-[150px]' : 'min-w-[190px]'}`}
-                            style={{
-                              background: scrolled ? 'rgba(255,255,255,0.97)' : 'rgba(15,15,20,0.97)',
-                              borderColor: scrolled ? 'rgba(0,0,0,0.08)' : 'rgba(255,255,255,0.1)',
-                              backdropFilter: 'blur(20px)',
-                            }}
+                            className={`rounded-xl border shadow-2xl py-1.5 overflow-hidden ${isAbout ? 'min-w-[160px]' : isFund ? 'min-w-[180px]' : isEducation ? 'min-w-[150px]' : 'min-w-[190px]'} ${
+                              scrolled
+                                ? 'bg-white/[0.97] dark:bg-[#111]/[0.97] border-black/[0.08] dark:border-white/[0.1]'
+                                : 'bg-[#0f0f14]/[0.97] border-white/[0.1]'
+                            }`}
+                            style={{ backdropFilter: 'blur(20px)' }}
                           >
                             {link.children.map((child) => {
                               const childActive = pathname === child.href
@@ -248,7 +248,7 @@ export default function Navbar() {
                                     childActive
                                       ? 'text-brand-red'
                                       : scrolled
-                                      ? 'text-brand-black/80 hover:text-brand-red hover:bg-gray-50'
+                                      ? 'text-brand-black/80 hover:text-brand-red hover:bg-gray-50 dark:hover:bg-white/5'
                                       : 'text-white/80 hover:text-brand-red hover:bg-white/5'
                                   }`}
                                   style={{
@@ -310,7 +310,7 @@ export default function Navbar() {
                 }}
                 className={`hidden xl:inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full font-medium transition-all duration-200 border ${
                   scrolled
-                    ? 'border-gray-200 text-brand-black/50 hover:bg-gray-50 hover:text-brand-black'
+                    ? 'border-gray-200 dark:border-white/15 text-brand-black/50 hover:bg-gray-50 dark:hover:bg-white/10 hover:text-brand-black'
                     : 'border-white/15 text-white/50 hover:bg-white/10 hover:text-white'
                 }`}
                 style={{ fontSize: '10px' }}
@@ -326,7 +326,7 @@ export default function Navbar() {
                   href="/login"
                   className={`inline-flex items-center space-x-1 px-2.5 py-1 rounded-full font-semibold transition-all duration-200 border ${
                     scrolled
-                      ? 'border-gray-200 text-brand-black/70 hover:bg-gray-50 hover:text-brand-black'
+                      ? 'border-gray-200 dark:border-white/15 text-brand-black/70 hover:bg-gray-50 dark:hover:bg-white/10 hover:text-brand-black'
                       : 'border-white/15 text-white/70 hover:bg-white/10 hover:text-white'
                   }`}
                   style={{ fontSize: '10px', letterSpacing: '0.03em' }}
@@ -350,7 +350,7 @@ export default function Navbar() {
                   href="/admin/login"
                   className={`inline-flex items-center justify-center w-6 h-6 rounded-full transition-all duration-200 ${
                     scrolled
-                      ? 'text-gray-400 hover:text-brand-red hover:bg-red-50'
+                      ? 'text-gray-400 hover:text-brand-red hover:bg-red-50 dark:hover:bg-white/10'
                       : 'text-white/40 hover:text-brand-red hover:bg-white/10'
                   }`}
                   title="Admin Portal"
@@ -368,7 +368,7 @@ export default function Navbar() {
 
               {/* Divider */}
               <div className={`hidden xl:block w-px h-4 mx-1 ${
-                scrolled ? 'bg-gray-200' : 'bg-white/15'
+                scrolled ? 'bg-gray-200 dark:bg-white/15' : 'bg-white/15'
               }`} />
 
               {/* Let's Talk pill button — desktop */}
@@ -392,7 +392,7 @@ export default function Navbar() {
                 onClick={() => setIsOpen(!isOpen)}
                 className={`xl:hidden p-2 rounded-lg transition-colors duration-200 ${
                   scrolled
-                    ? 'text-brand-black hover:bg-gray-100'
+                    ? 'text-brand-black hover:bg-gray-100 dark:hover:bg-white/10'
                     : 'text-white hover:bg-white/10'
                 }`}
                 aria-expanded={isOpen}

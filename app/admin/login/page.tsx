@@ -17,7 +17,7 @@ export default function AdminLoginPage() {
   }
 
   return (
-    <section className="min-h-screen flex items-center justify-center bg-[#0A0A0A] pt-36 pb-20 relative overflow-hidden">
+    <section className="min-h-screen flex items-center justify-center gradient-dark pt-36 pb-20 relative overflow-hidden">
       {/* Background subtle effects */}
       <div className="absolute inset-0">
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-brand-red/5 rounded-full blur-[200px]" />

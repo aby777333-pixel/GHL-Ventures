@@ -197,10 +197,10 @@ export default function InsightsPage() {
     <>
       {/* Hero */}
       <section className="relative min-h-[60vh] flex items-center gradient-dark overflow-hidden">
-        <SpaceHero variant="gurukul" />
+        <SpaceHero variant="knowledge-rain" />
         {/* Decorative blurs */}
         <div className="absolute inset-0 opacity-10">
-          <div className="absolute top-20 right-20 w-96 h-96 bg-amber-500 rounded-full blur-3xl" />
+          <div className="absolute top-20 right-20 w-96 h-96 bg-blue-400 rounded-full blur-3xl" />
           <div className="absolute bottom-10 left-10 w-64 h-64 bg-brand-red rounded-full blur-3xl" />
         </div>
         <div className="container-max mx-auto px-4 sm:px-6 lg:px-8 relative z-10 pt-40 pb-12">
@@ -210,7 +210,7 @@ export default function InsightsPage() {
               <ChevronRight className="w-3.5 h-3.5" />
               <span className="text-gray-500">Education</span>
               <ChevronRight className="w-3.5 h-3.5" />
-              <span className="text-amber-400 font-medium">Insights</span>
+              <span className="text-brand-red font-medium">Insights</span>
             </nav>
             <h1 className="text-2xl md:text-3xl lg:text-4xl font-bold text-white mb-4 leading-tight">
               Investor Education<br />

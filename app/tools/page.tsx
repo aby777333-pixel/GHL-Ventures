@@ -1676,7 +1676,7 @@ export default function ToolsPage() {
       </section>
 
       {/* ── Live Market Data — Indian & US Indices + Live Chart ── */}
-      <section className="py-16 bg-[#0a0a0a]">
+      <section className="py-16 gradient-dark">
         <div className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-8">
             <span className="text-brand-red font-semibold text-xs uppercase tracking-wider">Live Markets</span>
