@@ -18,6 +18,10 @@ export default function Navbar() {
   const [mobileAboutOpen, setMobileAboutOpen] = useState(false)
   const aboutRef = useRef<HTMLDivElement>(null)
   const aboutTimeout = useRef<NodeJS.Timeout | null>(null)
+  const [fundOpen, setFundOpen] = useState(false)
+  const [mobileFundOpen, setMobileFundOpen] = useState(false)
+  const fundRef = useRef<HTMLDivElement>(null)
+  const fundTimeout = useRef<NodeJS.Timeout | null>(null)
   const [educationOpen, setEducationOpen] = useState(false)
   const [mobileEducationOpen, setMobileEducationOpen] = useState(false)
   const educationRef = useRef<HTMLDivElement>(null)
@@ -43,6 +47,8 @@ export default function Navbar() {
     setIsOpen(false)
     setAboutOpen(false)
     setMobileAboutOpen(false)
+    setFundOpen(false)
+    setMobileFundOpen(false)
     setEducationOpen(false)
     setMobileEducationOpen(false)
     setContactOpen(false)
@@ -67,6 +73,9 @@ export default function Navbar() {
       if (aboutRef.current && !aboutRef.current.contains(e.target as Node)) {
         setAboutOpen(false)
       }
+      if (fundRef.current && !fundRef.current.contains(e.target as Node)) {
+        setFundOpen(false)
+      }
       if (educationRef.current && !educationRef.current.contains(e.target as Node)) {
         setEducationOpen(false)
       }
@@ -81,6 +90,9 @@ export default function Navbar() {
   // Check if About submenu item is active
   const isAboutActive = pathname === '/about' || pathname === '/tools' || pathname === '/downloads'
 
+  // Check if Fund submenu item is active
+  const isFundActive = pathname.startsWith('/fund')
+
   // Check if Education submenu item is active
   const isEducationActive = pathname.startsWith('/education')
 
@@ -93,6 +105,14 @@ export default function Navbar() {
   }
   const handleAboutLeave = () => {
     aboutTimeout.current = setTimeout(() => setAboutOpen(false), 200)
+  }
+
+  const handleFundEnter = () => {
+    if (fundTimeout.current) clearTimeout(fundTimeout.current)
+    setFundOpen(true)
+  }
+  const handleFundLeave = () => {
+    fundTimeout.current = setTimeout(() => setFundOpen(false), 200)
   }
 
   const handleEducationEnter = () => {
@@ -148,19 +168,22 @@ export default function Navbar() {
                   // Check if this link has children (dropdown)
                   const hasChildren = 'children' in link && link.children
                   const isAbout = link.label === 'About'
+                  const isFund = link.label === 'Fund'
                   const isEducation = link.label === 'Education'
                   const isContact = link.label === 'Contact'
                   const isActive = hasChildren
-                    ? (isAbout ? isAboutActive : isEducation ? isEducationActive : isContactActive)
+                    ? (isAbout ? isAboutActive : isFund ? isFundActive : isEducation ? isEducationActive : isContactActive)
                     : pathname === link.href
 
                   if (hasChildren) {
-                    const dropdownOpen = isAbout ? aboutOpen : isEducation ? educationOpen : contactOpen
-                    const dropdownRef = isAbout ? aboutRef : isEducation ? educationRef : contactRef
-                    const onEnter = isAbout ? handleAboutEnter : isEducation ? handleEducationEnter : handleContactEnter
-                    const onLeave = isAbout ? handleAboutLeave : isEducation ? handleEducationLeave : handleContactLeave
+                    const dropdownOpen = isAbout ? aboutOpen : isFund ? fundOpen : isEducation ? educationOpen : contactOpen
+                    const dropdownRef = isAbout ? aboutRef : isFund ? fundRef : isEducation ? educationRef : contactRef
+                    const onEnter = isAbout ? handleAboutEnter : isFund ? handleFundEnter : isEducation ? handleEducationEnter : handleContactEnter
+                    const onLeave = isAbout ? handleAboutLeave : isFund ? handleFundLeave : isEducation ? handleEducationLeave : handleContactLeave
                     const toggleOpen = isAbout
                       ? () => setAboutOpen(!aboutOpen)
+                      : isFund
+                      ? () => setFundOpen(!fundOpen)
                       : isEducation
                       ? () => setEducationOpen(!educationOpen)
                       : () => setContactOpen(!contactOpen)
@@ -208,7 +231,7 @@ export default function Navbar() {
                           }`}
                         >
                           <div
-                            className={`rounded-xl border shadow-2xl py-1.5 overflow-hidden ${isAbout ? 'min-w-[160px]' : isEducation ? 'min-w-[150px]' : 'min-w-[190px]'}`}
+                            className={`rounded-xl border shadow-2xl py-1.5 overflow-hidden ${isAbout ? 'min-w-[160px]' : isFund ? 'min-w-[180px]' : isEducation ? 'min-w-[150px]' : 'min-w-[190px]'}`}
                             style={{
                               background: scrolled ? 'rgba(255,255,255,0.97)' : 'rgba(15,15,20,0.97)',
                               borderColor: scrolled ? 'rgba(0,0,0,0.08)' : 'rgba(255,255,255,0.1)',
@@ -433,14 +456,17 @@ export default function Navbar() {
 
                 if (hasChildren) {
                   const isAboutMenu = link.label === 'About'
+                  const isFundMenu = link.label === 'Fund'
                   const isEducationMenu = link.label === 'Education'
-                  const mobileOpen = isAboutMenu ? mobileAboutOpen : isEducationMenu ? mobileEducationOpen : mobileContactOpen
+                  const mobileOpen = isAboutMenu ? mobileAboutOpen : isFundMenu ? mobileFundOpen : isEducationMenu ? mobileEducationOpen : mobileContactOpen
                   const toggleMobile = isAboutMenu
                     ? () => setMobileAboutOpen(!mobileAboutOpen)
+                    : isFundMenu
+                    ? () => setMobileFundOpen(!mobileFundOpen)
                     : isEducationMenu
                     ? () => setMobileEducationOpen(!mobileEducationOpen)
                     : () => setMobileContactOpen(!mobileContactOpen)
-                  const isDropdownActive = isAboutMenu ? isAboutActive : isEducationMenu ? isEducationActive : isContactActive
+                  const isDropdownActive = isAboutMenu ? isAboutActive : isFundMenu ? isFundActive : isEducationMenu ? isEducationActive : isContactActive
 
                   return (
                     <div key={link.label} className="flex flex-col items-center">
@@ -462,7 +488,7 @@ export default function Navbar() {
                       {/* Sub-items */}
                       <div
                         className={`flex flex-col items-center space-y-3 overflow-hidden transition-all duration-300 ${
-                          mobileOpen ? `${isAboutMenu ? 'max-h-[200px]' : isEducationMenu ? 'max-h-[100px]' : 'max-h-[350px]'} mt-3 opacity-100` : 'max-h-0 mt-0 opacity-0'
+                          mobileOpen ? `${isAboutMenu ? 'max-h-[200px]' : isFundMenu ? 'max-h-[250px]' : isEducationMenu ? 'max-h-[100px]' : 'max-h-[350px]'} mt-3 opacity-100` : 'max-h-0 mt-0 opacity-0'
                         }`}
                       >
                         {link.children.map((child) => {

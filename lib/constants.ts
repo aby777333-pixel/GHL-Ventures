@@ -46,7 +46,16 @@ export const NAV_LINKS = [
     ],
   },
   { label: 'Why AIFs', href: '/why-aifs' },
-  { label: 'Fund', href: '/fund' },
+  {
+    label: 'Fund',
+    href: '#',
+    children: [
+      { label: 'Fund Overview', href: '/fund' },
+      { label: 'Direct AIF Route', href: '/fund/direct-aif' },
+      { label: 'Debenture Route', href: '/fund/debenture-route' },
+      { label: 'NRI Invest', href: '/fund/nri-invest' },
+    ],
+  },
   { label: 'Blog', href: '/blog' },
   { label: 'Financial IQ', href: '/financial-iq' },
   { label: 'Portfolio', href: '/portfolio' },
