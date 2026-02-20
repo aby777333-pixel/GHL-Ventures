@@ -1303,92 +1303,113 @@ export default function SpaceHero({ variant }: SpaceHeroProps) {
       )}
 
       {/* ═══════════════════════════════════════════════════════════
-          ★ KNOWLEDGE-RAIN — Education Page ★
-          Silver light drops from the heavens like divine rain on a dark starry night
+          ★ NEURAL CONSTELLATION — Education/Insights Page ★
+          An organic network of glowing knowledge-nodes connected by
+          gossamer threads. Neurons firing, synapses lighting up,
+          ideas interconnecting across a deep midnight canvas.
+          Warm amber/gold primary nodes + cool blue secondary.
          ═══════════════════════════════════════════════════════════ */}
-      {variant === 'knowledge-rain' && (
-        <>
-          {/* Deep cosmic night sky — dark indigo to near-black */}
-          <div className="absolute inset-0"
-            style={{ background: 'linear-gradient(to bottom, rgba(2,2,12,1) 0%, rgba(5,5,20,0.98) 20%, rgba(8,10,30,0.95) 50%, rgba(10,12,35,0.92) 75%, rgba(12,15,40,0.88) 100%)' }} />
+      {variant === 'knowledge-rain' && (() => {
+        // 22 knowledge nodes spread across the viewport
+        const nodes = [
+          { x: 12, y: 18, r: 4, g: 'a', p: 4,   d: 0 },
+          { x: 28, y: 12, r: 3, g: 'b', p: 5,   d: 0.6 },
+          { x: 45, y: 22, r: 5, g: 'a', p: 3.5, d: 1.2 },
+          { x: 62, y: 15, r: 3, g: 'b', p: 4.5, d: 0.3 },
+          { x: 78, y: 20, r: 4, g: 'a', p: 4,   d: 0.9 },
+          { x: 90, y: 10, r: 3, g: 'b', p: 5.5, d: 1.8 },
+          { x: 8,  y: 45, r: 3, g: 'b', p: 4.8, d: 2.1 },
+          { x: 22, y: 40, r: 5, g: 'a', p: 3.8, d: 0.4 },
+          { x: 38, y: 50, r: 3, g: 'b', p: 5.2, d: 1.5 },
+          { x: 55, y: 42, r: 6, g: 'a', p: 3,   d: 0 },
+          { x: 72, y: 48, r: 3, g: 'b', p: 4.2, d: 0.8 },
+          { x: 88, y: 38, r: 4, g: 'a', p: 3.6, d: 2.4 },
+          { x: 15, y: 72, r: 3, g: 'a', p: 5,   d: 1.1 },
+          { x: 32, y: 68, r: 4, g: 'b', p: 4.4, d: 0.7 },
+          { x: 50, y: 75, r: 3, g: 'a', p: 3.2, d: 1.9 },
+          { x: 68, y: 70, r: 5, g: 'b', p: 3.8, d: 0.2 },
+          { x: 85, y: 65, r: 3, g: 'a', p: 4.6, d: 1.6 },
+          { x: 5,  y: 88, r: 2, g: 'b', p: 5.4, d: 2.8 },
+          { x: 42, y: 90, r: 3, g: 'a', p: 4,   d: 0.5 },
+          { x: 65, y: 85, r: 4, g: 'b', p: 3.4, d: 1.3 },
+          { x: 92, y: 82, r: 2, g: 'a', p: 5.6, d: 2.0 },
+          { x: 20, y: 55, r: 2, g: 'b', p: 4.8, d: 3.0 },
+        ]
+        // Connections between nearby nodes (distance < 28 units)
+        const conns: { x1: number; y1: number; x2: number; y2: number; i: number }[] = []
+        for (let i = 0; i < nodes.length; i++) {
+          for (let j = i + 1; j < nodes.length; j++) {
+            const dist = Math.sqrt((nodes[i].x - nodes[j].x) ** 2 + (nodes[i].y - nodes[j].y) ** 2)
+            if (dist < 28) conns.push({ x1: nodes[i].x, y1: nodes[i].y, x2: nodes[j].x, y2: nodes[j].y, i: conns.length })
+          }
+        }
+        const A = '245,180,50', B = '100,160,255'
 
-          {/* Divine source glow — heavenly light at the top center */}
-          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-[300px]"
-            style={{ background: 'radial-gradient(ellipse at center top, rgba(200,210,255,0.12) 0%, rgba(180,200,255,0.06) 30%, rgba(150,180,255,0.02) 50%, transparent 70%)' }} />
-          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[300px] h-[200px] animate-pulse-slow"
-            style={{ background: 'radial-gradient(ellipse at center top, rgba(220,230,255,0.15) 0%, rgba(200,215,255,0.05) 40%, transparent 70%)', filter: 'blur(20px)' }} />
+        return (
+          <>
+            {/* Deep midnight canvas */}
+            <div className="absolute inset-0"
+              style={{ background: 'linear-gradient(135deg, rgba(3,3,18,1) 0%, rgba(6,6,28,1) 25%, rgba(10,8,32,1) 50%, rgba(5,5,22,1) 75%, rgba(3,3,15,1) 100%)' }} />
 
-          {/* Individual light drops — silver drops falling from the heavens */}
-          {[
-            { left: '8%', delay: '0s', dur: '2.8s', h: 35, opacity: 0.5 },
-            { left: '15%', delay: '0.6s', dur: '3.2s', h: 30, opacity: 0.4 },
-            { left: '22%', delay: '1.2s', dur: '2.5s', h: 40, opacity: 0.6 },
-            { left: '30%', delay: '0.3s', dur: '3.5s', h: 28, opacity: 0.35 },
-            { left: '38%', delay: '1.8s', dur: '2.9s', h: 38, opacity: 0.55 },
-            { left: '45%', delay: '0.9s', dur: '3.1s', h: 32, opacity: 0.5 },
-            { left: '52%', delay: '1.5s', dur: '2.7s', h: 42, opacity: 0.65 },
-            { left: '60%', delay: '0.2s', dur: '3.3s', h: 30, opacity: 0.4 },
-            { left: '68%', delay: '2.0s', dur: '2.6s', h: 36, opacity: 0.5 },
-            { left: '75%', delay: '0.7s', dur: '3.0s', h: 34, opacity: 0.45 },
-            { left: '82%', delay: '1.4s', dur: '2.8s', h: 38, opacity: 0.55 },
-            { left: '90%', delay: '1.0s', dur: '3.4s', h: 26, opacity: 0.35 },
-            { left: '5%', delay: '2.2s', dur: '2.4s', h: 44, opacity: 0.6 },
-            { left: '35%', delay: '1.7s', dur: '3.6s', h: 30, opacity: 0.4 },
-            { left: '55%', delay: '0.5s', dur: '2.3s', h: 46, opacity: 0.7 },
-            { left: '72%', delay: '2.5s', dur: '2.9s', h: 32, opacity: 0.45 },
-            { left: '95%', delay: '1.1s', dur: '3.1s', h: 28, opacity: 0.35 },
-            { left: '18%', delay: '2.8s', dur: '2.6s', h: 40, opacity: 0.5 },
-            { left: '48%', delay: '0.4s', dur: '3.0s', h: 36, opacity: 0.55 },
-            { left: '85%', delay: '1.9s', dur: '2.5s', h: 34, opacity: 0.45 },
-          ].map((drop, i) => (
-            <div key={i} className="absolute top-0 knowledge-rain-drop"
-              style={{
-                left: drop.left,
-                width: '1px',
-                height: `${drop.h}px`,
-                background: `linear-gradient(to bottom, transparent 0%, rgba(200,215,255,${drop.opacity}) 30%, rgba(220,230,255,${drop.opacity * 1.2}) 60%, transparent 100%)`,
-                animationDelay: drop.delay,
-                animationDuration: drop.dur,
-                filter: `blur(${i % 3 === 0 ? '0.5px' : '0px'})`,
+            {/* Soft ambient glow pools */}
+            <div className="absolute top-[10%] left-[20%] w-[400px] h-[400px] animate-pulse-slow"
+              style={{ background: `radial-gradient(ellipse, rgba(${A},0.04) 0%, transparent 70%)`, filter: 'blur(60px)' }} />
+            <div className="absolute top-[40%] right-[15%] w-[350px] h-[350px] animate-pulse-slow-2"
+              style={{ background: `radial-gradient(ellipse, rgba(${B},0.035) 0%, transparent 70%)`, filter: 'blur(50px)' }} />
+            <div className="absolute bottom-[5%] left-[40%] w-[500px] h-[300px] animate-pulse-slow"
+              style={{ background: `radial-gradient(ellipse, rgba(${A},0.03) 0%, transparent 70%)`, filter: 'blur(70px)' }} />
+
+            {/* SVG constellation network — connection lines */}
+            <svg className="absolute inset-0 w-full h-full" viewBox="0 0 100 100" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
+              {conns.map((c, i) => (
+                <line key={`c-${i}`} x1={c.x1} y1={c.y1} x2={c.x2} y2={c.y2}
+                  stroke={`rgba(${i % 2 === 0 ? A : B},0.08)`} strokeWidth="0.15"
+                  className="neural-conn" style={{ animationDelay: `${(i * 0.6) % 8}s` }} />
+              ))}
+            </svg>
+
+            {/* Knowledge nodes — glowing orbs */}
+            {nodes.map((n, i) => {
+              const c = n.g === 'a' ? A : B
+              return (
+                <div key={`n-${i}`} className="absolute rounded-full neural-node" style={{
+                  left: `${n.x}%`, top: `${n.y}%`,
+                  width: `${n.r * 2}px`, height: `${n.r * 2}px`,
+                  background: `rgba(${c},0.7)`,
+                  boxShadow: `0 0 ${n.r * 3}px ${n.r}px rgba(${c},0.3), 0 0 ${n.r * 8}px ${n.r * 2}px rgba(${c},0.1)`,
+                  animationDuration: `${n.p}s`, animationDelay: `${n.d}s`,
+                  transform: 'translate(-50%, -50%)',
+                }} />
+              )
+            })}
+
+            {/* Travelling particles along every other connection */}
+            {conns.filter((_, i) => i % 2 === 0).map((c, i) => (
+              <div key={`p-${i}`} className="absolute rounded-full neural-particle" style={{
+                width: '2px', height: '2px',
+                background: `rgba(${i % 2 === 0 ? A : B},0.8)`,
+                boxShadow: `0 0 4px rgba(${i % 2 === 0 ? A : B},0.5)`,
+                left: `${c.x1}%`, top: `${c.y1}%`,
+                ['--end-x' as string]: `${c.x2 - c.x1}cqw`,
+                ['--end-y' as string]: `${c.y2 - c.y1}cqh`,
+                animationDuration: `${3 + (i % 4)}s`, animationDelay: `${i * 0.7}s`,
               }} />
-          ))}
+            ))}
 
-          {/* Splash particles — where drops hit the "ground" (bottom area) */}
-          {[
-            { left: '10%', delay: '0.8s' },
-            { left: '25%', delay: '1.5s' },
-            { left: '40%', delay: '0.3s' },
-            { left: '55%', delay: '2.0s' },
-            { left: '70%', delay: '1.0s' },
-            { left: '85%', delay: '2.5s' },
-          ].map((sp, i) => (
-            <div key={i} className="absolute bottom-[10%] knowledge-rain-splash"
-              style={{
-                left: sp.left,
-                width: '3px', height: '3px',
-                borderRadius: '50%',
-                background: 'rgba(200,215,255,0.5)',
-                boxShadow: '0 0 6px rgba(200,215,255,0.3), 0 0 12px rgba(180,200,255,0.15)',
-                animationDelay: sp.delay,
-              }} />
-          ))}
-
-          {/* Subtle ground reflection pool */}
-          <div className="absolute bottom-0 left-0 right-0 h-[15%]"
-            style={{ background: 'linear-gradient(to top, rgba(180,200,255,0.03) 0%, transparent 100%)' }} />
-
-          {/* Distant silver nebula wisps */}
-          <div className="absolute top-[15%] left-[5%] w-[300px] h-[200px] opacity-[0.03] animate-pulse-slow"
-            style={{ background: 'radial-gradient(ellipse, rgba(200,210,255,0.4), transparent 70%)', filter: 'blur(30px)' }} />
-          <div className="absolute top-[35%] right-[8%] w-[250px] h-[150px] opacity-[0.025] animate-pulse-slow-2"
-            style={{ background: 'radial-gradient(ellipse, rgba(180,190,255,0.4), transparent 70%)', filter: 'blur(25px)' }} />
-
-          {/* Ambient cosmic glow */}
-          <div className="absolute top-[5%] left-1/2 -translate-x-1/2 w-80 h-80 bg-blue-300/[0.02] rounded-full blur-[100px] animate-pulse-slow" />
-          <div className="absolute bottom-[20%] left-[20%] w-64 h-64 bg-indigo-400/[0.02] rounded-full blur-[80px] animate-pulse-slow-2" />
-          <div className="absolute bottom-[30%] right-[25%] w-48 h-48 bg-blue-200/[0.015] rounded-full blur-[60px] animate-pulse-slow" />
-        </>
-      )}
+            {/* Background micro-stars */}
+            {Array.from({ length: 60 }, (_, i) => {
+              const s = (i * 4937 + 1723) % 10000
+              return (
+                <div key={`s-${i}`} className="absolute rounded-full" style={{
+                  top: `${(s % 94) + 3}%`, left: `${((s * 7) % 94) + 3}%`,
+                  width: `${1 + (s % 2)}px`, height: `${1 + (s % 2)}px`,
+                  background: `rgba(200,210,240,${0.08 + (s % 15) / 200})`,
+                }} />
+              )
+            })}
+          </>
+        )
+      })()}
 
       {/* ═══════════════════════════════════════════════════════════
           ★ NRI-FLIGHT — NRI Invest Page ★
