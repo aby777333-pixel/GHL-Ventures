@@ -85,7 +85,7 @@ function FundOverview() {
   ]
 
   return (
-    <section className="section-padding bg-white">
+    <section className="section-padding bg-white dark:bg-brand-black">
       <div className="container-max mx-auto">
         <AnimatedSection className="text-center mb-10">
           <span className="text-brand-red font-semibold text-xs uppercase tracking-wider">Overview</span>
@@ -164,20 +164,20 @@ function InvestmentRoutes() {
             <AnimatedSection key={route.title} delay={i * 150} direction={i === 0 ? 'left' : 'right'}>
               <div className="relative group h-full">
                 {/* Card */}
-                <div className="relative bg-white rounded-2xl p-8 h-full flex flex-col overflow-hidden border border-gray-100 shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-1">
+                <div className="relative bg-white dark:bg-white/[0.07] rounded-2xl p-8 h-full flex flex-col overflow-hidden border border-gray-100 dark:border-white/10 shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-1">
                   {/* Top badge */}
                   <div className="flex items-center justify-between mb-5">
                     <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider ${
-                      i === 0 ? 'bg-brand-red/10 text-brand-red' : 'bg-brand-black/10 text-brand-black'
+                      i === 0 ? 'bg-brand-red/10 text-brand-red' : 'bg-brand-black/10 text-brand-black dark:bg-white/10 dark:text-white'
                     }`}>
                       {route.badge}
                     </span>
-                    <span className="text-xs text-brand-grey">Min. Investment</span>
+                    <span className="text-xs text-brand-grey dark:text-gray-400">Min. Investment</span>
                   </div>
 
                   {/* Title */}
-                  <h3 className="text-xl font-bold text-brand-black mb-1">{route.title}</h3>
-                  <p className="text-sm text-brand-grey mb-4">{route.subtitle}</p>
+                  <h3 className="text-xl font-bold text-brand-black dark:text-white mb-1">{route.title}</h3>
+                  <p className="text-sm text-brand-grey dark:text-gray-400 mb-4">{route.subtitle}</p>
 
                   {/* Min Investment — prominent */}
                   <div className={`text-3xl font-extrabold mb-6 bg-gradient-to-r ${route.gradient} bg-clip-text text-transparent`}>
@@ -187,7 +187,7 @@ function InvestmentRoutes() {
                   {/* Features */}
                   <ul className="space-y-3 mb-8 flex-1">
                     {route.features.map((feature) => (
-                      <li key={feature} className="flex items-start text-sm text-brand-black/80">
+                      <li key={feature} className="flex items-start text-sm text-brand-black/80 dark:text-gray-300">
                         <CheckCircle className="w-4 h-4 text-brand-red mr-2.5 mt-0.5 shrink-0" />
                         {feature}
                       </li>
@@ -304,7 +304,7 @@ function InvestmentStrategy() {
 /* ───────────────────────────── 4. FUND STRUCTURE DIAGRAM ───────────────────────────── */
 function FundStructure() {
   return (
-    <section className="section-padding bg-white">
+    <section className="section-padding bg-white dark:bg-brand-black">
       <div className="container-max mx-auto">
         <AnimatedSection className="text-center mb-10">
           <span className="text-brand-red font-semibold text-xs uppercase tracking-wider">Structure</span>
@@ -314,21 +314,21 @@ function FundStructure() {
         <AnimatedSection>
           <div className="max-w-4xl mx-auto">
             {/* Structure diagram placeholder */}
-            <div className="relative bg-brand-offwhite border-2 border-dashed border-gray-300 rounded-3xl p-12 text-center">
+            <div className="relative bg-brand-offwhite border-2 border-dashed border-gray-300 dark:border-white/10 rounded-3xl p-12 text-center">
               <Layers className="w-16 h-16 text-brand-red mx-auto mb-6" />
               <p className="text-gray-500 text-sm mb-8">[DIAGRAM: AIF Fund Structure]</p>
 
               {/* Simplified text-based structure */}
               <div className="grid md:grid-cols-3 gap-6 text-left">
-                <div className="bg-white rounded-xl p-6 shadow-sm">
+                <div className="card rounded-xl p-6">
                   <h4 className="font-bold text-brand-black mb-2 text-sm">Investors (LPs)</h4>
                   <p className="text-brand-grey text-xs">HNIs, Family Offices, Institutional Investors contribute capital to the Fund.</p>
                 </div>
-                <div className="bg-white rounded-xl p-6 shadow-sm border-2 border-brand-red/20">
+                <div className="card rounded-xl p-6 border-2 border-brand-red/20">
                   <h4 className="font-bold text-brand-red mb-2 text-sm">GHL India Ventures AIF</h4>
                   <p className="text-brand-grey text-xs">Category II AIF registered with SEBI. Managed by GHL India Ventures as Investment Manager.</p>
                 </div>
-                <div className="bg-white rounded-xl p-6 shadow-sm">
+                <div className="card rounded-xl p-6">
                   <h4 className="font-bold text-brand-black mb-2 text-sm">Portfolio Assets</h4>
                   <p className="text-brand-grey text-xs">Stressed Real Estate Projects + Early-Stage Startup Equity positions.</p>
                 </div>
@@ -336,7 +336,7 @@ function FundStructure() {
 
               <div className="mt-8 flex flex-wrap justify-center gap-4">
                 {['Independent Custodian', 'SEBI-empanelled Auditor', 'Legal Counsel', 'Fund Administrator'].map((role) => (
-                  <span key={role} className="px-3 py-1.5 bg-white rounded-full text-xs font-medium text-brand-grey border border-gray-200">
+                  <span key={role} className="px-3 py-1.5 bg-white dark:bg-white/10 rounded-full text-xs font-medium text-brand-grey border border-gray-200 dark:border-white/10">
                     {role}
                   </span>
                 ))}
@@ -419,7 +419,7 @@ function InvestmentProcess() {
   ]
 
   return (
-    <section className="section-padding bg-white">
+    <section className="section-padding bg-white dark:bg-brand-black">
       <div className="container-max mx-auto">
         <AnimatedSection className="text-center mb-10">
           <span className="text-brand-red font-semibold text-xs uppercase tracking-wider">Process</span>
@@ -484,7 +484,7 @@ function ReturnsPerformance() {
             </div>
 
             {/* Disclaimer */}
-            <div className="bg-white rounded-2xl p-6 shadow-sm border-l-4 border-brand-red">
+            <div className="card rounded-2xl p-6 border-l-4 border-brand-red">
               <div className="flex items-start space-x-3">
                 <AlertTriangle className="w-5 h-5 text-brand-red shrink-0 mt-0.5" />
                 <div className="text-xs text-brand-grey leading-relaxed space-y-2">
@@ -516,7 +516,7 @@ function ReturnsPerformance() {
 /* ───────────────────────────── 8. FUND ARTICLES ───────────────────────────── */
 function FundArticles() {
   return (
-    <section className="section-padding bg-white">
+    <section className="section-padding bg-white dark:bg-brand-black">
       <div className="container-max mx-auto">
         <AnimatedSection className="text-center mb-10">
           <span className="text-brand-red font-semibold text-xs uppercase tracking-wider">Resources</span>

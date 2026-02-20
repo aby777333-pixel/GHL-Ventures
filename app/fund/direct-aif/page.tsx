@@ -59,7 +59,7 @@ export default function DirectAIFPage() {
       </section>
 
       {/* Key Highlights */}
-      <section className="section-padding bg-white">
+      <section className="section-padding bg-white dark:bg-brand-black">
         <div className="container-max mx-auto">
           <AnimatedSection className="text-center mb-10">
             <span className="text-brand-red font-semibold text-xs uppercase tracking-wider">Overview</span>
@@ -111,8 +111,8 @@ export default function DirectAIFPage() {
                     { label: 'Performance Fee', value: '20% above hurdle' },
                   ].map((item, i) => (
                     <div key={item.label} className={`flex justify-between items-center px-5 py-3.5 ${
-                      i % 2 === 0 ? 'bg-white' : 'bg-brand-offwhite/50'
-                    } ${i < 6 ? 'border-b border-gray-100' : ''}`}>
+                      i % 2 === 0 ? 'bg-white dark:bg-white/[0.03]' : 'bg-brand-offwhite/50 dark:bg-white/[0.06]'
+                    } ${i < 6 ? 'border-b border-gray-100 dark:border-white/5' : ''}`}>
                       <span className="text-sm text-brand-grey">{item.label}</span>
                       <span className="text-sm font-bold text-brand-black">{item.value}</span>
                     </div>
@@ -125,7 +125,7 @@ export default function DirectAIFPage() {
       </section>
 
       {/* What You Get */}
-      <section className="section-padding bg-white">
+      <section className="section-padding bg-white dark:bg-brand-black">
         <div className="container-max mx-auto">
           <AnimatedSection className="text-center mb-10">
             <span className="text-brand-red font-semibold text-xs uppercase tracking-wider">Benefits</span>
@@ -179,7 +179,7 @@ export default function DirectAIFPage() {
                   ].map((item) => (
                     <li key={item} className="flex items-start">
                       <CheckCircle className="w-5 h-5 text-brand-red mr-3 mt-0.5 shrink-0" />
-                      <span className="text-sm text-brand-black/80">{item}</span>
+                      <span className="text-sm text-brand-black/80 dark:text-gray-300">{item}</span>
                     </li>
                   ))}
                 </ul>

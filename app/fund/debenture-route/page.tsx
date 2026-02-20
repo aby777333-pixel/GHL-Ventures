@@ -15,7 +15,7 @@ export default function DebentureRoutePage() {
   return (
     <>
       {/* Hero */}
-      <section className="relative pt-40 pb-16 overflow-hidden" style={{ background: 'linear-gradient(135deg, #0A0A0A 0%, #1a1a2e 50%, #0A0A0A 100%)' }}>
+      <section className="relative pt-40 pb-16 overflow-hidden gradient-dark">
         <SpaceHero variant="supernova" />
         <div className="absolute inset-0 overflow-hidden pointer-events-none">
           <div className="absolute top-20 left-20 w-80 h-80 bg-brand-red/8 rounded-full blur-3xl" />
@@ -59,7 +59,7 @@ export default function DebentureRoutePage() {
       </section>
 
       {/* Key Highlights */}
-      <section className="section-padding bg-white">
+      <section className="section-padding bg-white dark:bg-brand-black">
         <div className="container-max mx-auto">
           <AnimatedSection className="text-center mb-10">
             <span className="text-brand-red font-semibold text-xs uppercase tracking-wider">At a Glance</span>
@@ -119,7 +119,7 @@ export default function DebentureRoutePage() {
       </section>
 
       {/* Benefits for Salaried Professionals */}
-      <section className="section-padding bg-white">
+      <section className="section-padding bg-white dark:bg-brand-black">
         <div className="container-max mx-auto">
           <AnimatedSection className="text-center mb-10">
             <span className="text-brand-red font-semibold text-xs uppercase tracking-wider">Benefits</span>
@@ -180,7 +180,7 @@ export default function DebentureRoutePage() {
                   { param: 'Liquidity', ghl: 'Lock-in Period', fd: 'Premature Withdrawal' },
                   { param: 'DICGC Insurance', ghl: '✗ Not applicable', fd: '✓ Up to ₹5 Lakhs' },
                 ].map((row, i) => (
-                  <div key={row.param} className={`grid grid-cols-3 ${i % 2 === 0 ? 'bg-white' : 'bg-brand-offwhite/50'} border-b border-gray-100 last:border-0`}>
+                  <div key={row.param} className={`grid grid-cols-3 ${i % 2 === 0 ? 'bg-white dark:bg-white/[0.03]' : 'bg-brand-offwhite/50 dark:bg-white/[0.06]'} border-b border-gray-100 dark:border-white/5 last:border-0`}>
                     <div className="px-4 py-3 text-xs font-medium text-brand-black">{row.param}</div>
                     <div className="px-4 py-3 text-xs text-center font-semibold text-brand-red">{row.ghl}</div>
                     <div className="px-4 py-3 text-xs text-center text-brand-grey">{row.fd}</div>
@@ -196,7 +196,7 @@ export default function DebentureRoutePage() {
       </section>
 
       {/* Who Is This For */}
-      <section className="section-padding bg-white">
+      <section className="section-padding bg-white dark:bg-brand-black">
         <div className="container-max mx-auto">
           <AnimatedSection className="text-center mb-10">
             <span className="text-brand-red font-semibold text-xs uppercase tracking-wider">Ideal For</span>
@@ -217,7 +217,7 @@ export default function DebentureRoutePage() {
                   ].map((item) => (
                     <li key={item} className="flex items-start">
                       <CheckCircle className="w-5 h-5 text-brand-red mr-3 mt-0.5 shrink-0" />
-                      <span className="text-sm text-brand-black/80">{item}</span>
+                      <span className="text-sm text-brand-black/80 dark:text-gray-300">{item}</span>
                     </li>
                   ))}
                 </ul>
@@ -228,7 +228,7 @@ export default function DebentureRoutePage() {
       </section>
 
       {/* CTA */}
-      <section className="section-padding text-center relative overflow-hidden" style={{ background: 'linear-gradient(135deg, #1a1a2e 0%, #0A0A0A 100%)' }}>
+      <section className="section-padding text-center relative overflow-hidden gradient-dark">
         <div className="absolute inset-0 overflow-hidden pointer-events-none">
           <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-brand-red/5 rounded-full blur-3xl" />
         </div>

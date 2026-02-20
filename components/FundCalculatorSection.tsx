@@ -331,7 +331,7 @@ export default function FundCalculatorSection({
 
       {/* ──────── COMPARISON SECTION ──────── */}
       {showComparison && (
-        <section className="section-padding bg-white">
+        <section className="section-padding bg-white dark:bg-brand-black">
           <div className="container-max mx-auto px-4 sm:px-6 lg:px-8">
             <AnimatedSection className="text-center mb-10">
               <span className="text-brand-red font-semibold text-xs uppercase tracking-wider">Compare</span>

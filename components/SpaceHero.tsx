@@ -1318,12 +1318,7 @@ export default function SpaceHero({ variant }: SpaceHeroProps) {
           <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[300px] h-[200px] animate-pulse-slow"
             style={{ background: 'radial-gradient(ellipse at center top, rgba(220,230,255,0.15) 0%, rgba(200,215,255,0.05) 40%, transparent 70%)', filter: 'blur(20px)' }} />
 
-          {/* Silver rain drops — CSS animated vertical streaks */}
-          <div className="knowledge-rain-layer-1" />
-          <div className="knowledge-rain-layer-2" />
-          <div className="knowledge-rain-layer-3" />
-
-          {/* Individual light drops — larger, more visible silver drops */}
+          {/* Individual light drops — silver drops falling from the heavens */}
           {[
             { left: '8%', delay: '0s', dur: '2.8s', h: 35, opacity: 0.5 },
             { left: '15%', delay: '0.6s', dur: '3.2s', h: 30, opacity: 0.4 },
@@ -1410,101 +1405,98 @@ export default function SpaceHero({ variant }: SpaceHeroProps) {
           <div className="absolute bottom-0 left-0 right-0 h-[200px]"
             style={{ background: 'linear-gradient(to top, rgba(255,153,51,0.04) 0%, transparent 100%)' }} />
 
-          {/* === AIRPLANE FLEET — 120 aircraft with nav lights === */}
-          {/* Each airplane: tiny aircraft silhouette + red port light + green starboard light + white strobe */}
+          {/* Faint distant stars */}
+          {Array.from({ length: 80 }, (_, i) => {
+            const s = (i * 6337 + 2719) % 10000
+            return (
+              <div key={`star-${i}`} className="absolute rounded-full animate-pulse-slow" style={{
+                top: `${(s % 95) + 2}%`,
+                left: `${((s * 3) % 96) + 2}%`,
+                width: `${1 + (s % 2)}px`,
+                height: `${1 + (s % 2)}px`,
+                background: `rgba(200,215,255,${0.15 + (s % 20) / 100})`,
+                animationDelay: `${(s % 40) / 10}s`,
+              }} />
+            )
+          })}
+
+          {/* === AIRPLANE FLEET — 120 aircraft with red/green flashing nav lights === */}
           {Array.from({ length: 120 }, (_, i) => {
-            // Deterministic pseudo-random using index
             const seed = (i * 7919 + 104729) % 100000
-            const flyDir = (i % 6) + 1          // 1-6 flight directions
-            const topPos = (seed % 90) + 2       // 2-92% vertical start
-            const leftPos = ((seed * 3) % 95) + 2 // 2-97% horizontal positioning
-            const duration = 14 + (seed % 22)    // 14-35 seconds
-            const delay = (seed % 30)            // 0-29s stagger
-            const size = 6 + (seed % 8)          // 6-13px airplane body
-            const opacity = 0.15 + ((seed % 40) / 100)  // 0.15-0.55
-            const lightDelay = (seed % 15) / 10  // 0-1.5s light offset
-            // Rotation angles matching flight direction
-            const rotations = [90, 270, 135, 315, 180, 0]
-            const rotation = rotations[flyDir - 1]
+            const dirType = i % 6  // 0=L→R, 1=R→L, 2=diag-down, 3=diag-up, 4=steep-down, 5=steep-up
+            const topStart = (seed % 85) + 5      // 5-90% vertical
+            const duration = 15 + (seed % 20)      // 15-34 seconds
+            const delay = -1 * (seed % 30)         // negative delay so some are mid-flight on load
+            const size = 5 + (seed % 9)            // 5-13px
+            const opacity = 0.2 + ((seed % 45) / 100) // 0.2-0.65
+            const lightDelay = (seed % 15) / 10
+
+            // Rotation for each direction: airplane nose points in direction of travel
+            const rotations = [0, 180, 30, 210, 70, 290]
+            const rotation = rotations[dirType]
+
+            // Use CSS custom properties for start/end positions — avoids calc() viewport issues
+            // Directions translate using % of element's own width/height inside absolute container
+            // Since container is full viewport width, we position via left/top and animate with left
+            const dirStyles: Record<number, React.CSSProperties> = {
+              0: { top: `${topStart}%`, left: '-3%', animation: `nri-fly-lr ${duration}s linear ${delay}s infinite` },
+              1: { top: `${topStart}%`, right: '-3%', animation: `nri-fly-rl ${duration}s linear ${delay}s infinite` },
+              2: { top: '-3%', left: `${(seed % 70) + 10}%`, animation: `nri-fly-diag-down ${duration}s linear ${delay}s infinite` },
+              3: { bottom: '-3%', left: `${(seed % 70) + 10}%`, animation: `nri-fly-diag-up ${duration}s linear ${delay}s infinite` },
+              4: { top: '-3%', left: `${(seed % 80) + 5}%`, animation: `nri-fly-down ${duration}s linear ${delay}s infinite` },
+              5: { bottom: '-3%', left: `${(seed % 80) + 5}%`, animation: `nri-fly-up ${duration}s linear ${delay}s infinite` },
+            }
 
             return (
               <div
                 key={`plane-${i}`}
-                className="absolute"
-                style={{
-                  top: `${topPos}%`,
-                  left: `${leftPos}%`,
-                  animation: `nri-fly-${flyDir} ${duration}s linear ${delay}s infinite`,
-                  willChange: 'transform',
-                }}
+                className="absolute pointer-events-none"
+                style={{ ...dirStyles[dirType], zIndex: 1 }}
               >
-                {/* Aircraft body — tiny triangle/dot */}
                 <div className="relative" style={{ transform: `rotate(${rotation}deg)`, opacity }}>
                   {/* Fuselage */}
                   <div style={{
                     width: `${size}px`,
-                    height: `${Math.round(size * 0.3)}px`,
-                    background: 'rgba(200,210,230,0.5)',
-                    borderRadius: '50% 50% 30% 30%',
+                    height: `${Math.round(size * 0.35)}px`,
+                    background: 'rgba(200,215,235,0.6)',
+                    borderRadius: '60% 60% 30% 30%',
                   }} />
                   {/* Wings */}
                   <div style={{
-                    position: 'absolute',
-                    top: '50%',
-                    left: '30%',
-                    width: `${Math.round(size * 0.5)}px`,
-                    height: '1px',
-                    background: 'rgba(180,190,210,0.4)',
-                    transform: 'translateY(-50%)',
+                    position: 'absolute', top: '40%', left: '20%',
+                    width: `${Math.round(size * 0.6)}px`, height: '1px',
+                    background: 'rgba(180,195,215,0.4)',
                   }} />
-
-                  {/* RED port light (left wing tip) */}
+                  {/* RED port light */}
                   <div style={{
-                    position: 'absolute',
-                    top: '50%',
-                    left: '15%',
-                    width: '2px',
-                    height: '2px',
-                    borderRadius: '50%',
-                    background: '#ff2020',
-                    boxShadow: '0 0 4px #ff2020, 0 0 8px rgba(255,32,32,0.5)',
+                    position: 'absolute', top: '35%', left: '10%',
+                    width: '3px', height: '3px', borderRadius: '50%',
+                    background: '#ff2222',
+                    boxShadow: '0 0 6px 2px #ff2222, 0 0 12px 4px rgba(255,34,34,0.4)',
                     animation: `nri-blink-red 1.2s ease-in-out ${lightDelay}s infinite`,
-                    transform: 'translateY(-50%)',
                   }} />
-
-                  {/* GREEN starboard light (right wing tip) */}
+                  {/* GREEN starboard light */}
                   <div style={{
-                    position: 'absolute',
-                    top: '50%',
-                    right: '15%',
-                    width: '2px',
-                    height: '2px',
-                    borderRadius: '50%',
-                    background: '#20ff40',
-                    boxShadow: '0 0 4px #20ff40, 0 0 8px rgba(32,255,64,0.5)',
+                    position: 'absolute', top: '35%', right: '10%',
+                    width: '3px', height: '3px', borderRadius: '50%',
+                    background: '#22ff44',
+                    boxShadow: '0 0 6px 2px #22ff44, 0 0 12px 4px rgba(34,255,68,0.4)',
                     animation: `nri-blink-green 1.4s ease-in-out ${lightDelay + 0.3}s infinite`,
-                    transform: 'translateY(-50%)',
                   }} />
-
-                  {/* WHITE anti-collision strobe (center) */}
+                  {/* WHITE strobe */}
                   <div style={{
-                    position: 'absolute',
-                    top: '-1px',
-                    left: '50%',
-                    width: '1.5px',
-                    height: '1.5px',
-                    borderRadius: '50%',
+                    position: 'absolute', top: '-2px', left: '45%',
+                    width: '2px', height: '2px', borderRadius: '50%',
                     background: '#ffffff',
-                    boxShadow: '0 0 3px #fff, 0 0 6px rgba(255,255,255,0.4)',
+                    boxShadow: '0 0 4px 1px #fff, 0 0 8px 2px rgba(255,255,255,0.5)',
                     animation: `nri-strobe 2s ease-in-out ${lightDelay + 0.7}s infinite`,
-                    transform: 'translateX(-50%)',
                   }} />
                 </div>
               </div>
             )
           })}
 
-          {/* Ambient glow spots for atmosphere */}
+          {/* Ambient glow spots */}
           <div className="absolute top-[10%] left-[15%] w-72 h-72 bg-blue-700/[0.03] rounded-full blur-[100px] animate-pulse-slow" />
           <div className="absolute top-[50%] right-[10%] w-80 h-80 bg-indigo-600/[0.03] rounded-full blur-[100px] animate-pulse-slow-2" />
           <div className="absolute bottom-[10%] left-[50%] w-96 h-96 bg-blue-500/[0.02] rounded-full blur-[120px] animate-pulse-slow" />

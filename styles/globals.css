@@ -1519,32 +1519,38 @@ body,
 
 /* ──────────────────────────────────────────────────────────── */
 /* NRI FLIGHT — Hundreds of Airplanes with Nav Lights         */
+/* Uses left/top % for container-relative movement            */
 /* ──────────────────────────────────────────────────────────── */
 
-/* Six flight path directions */
-@keyframes nri-fly-1 { /* L → R */
-  0%   { transform: translate3d(-50px, 0, 0); }
-  100% { transform: translate3d(calc(100vw + 50px), 0, 0); }
+/* L → R: fly from left:-3% to left:103% */
+@keyframes nri-fly-lr {
+  0%   { left: -3%; }
+  100% { left: 103%; }
 }
-@keyframes nri-fly-2 { /* R → L */
-  0%   { transform: translate3d(calc(100vw + 50px), 0, 0); }
-  100% { transform: translate3d(-50px, 0, 0); }
+/* R → L: fly from right:-3% to right:103% */
+@keyframes nri-fly-rl {
+  0%   { right: -3%; }
+  100% { right: 103%; }
 }
-@keyframes nri-fly-3 { /* TL → BR diagonal */
-  0%   { transform: translate3d(-50px, -30px, 0); }
-  100% { transform: translate3d(calc(100vw + 50px), 80vh, 0); }
+/* Diagonal down: top-left to bottom-right */
+@keyframes nri-fly-diag-down {
+  0%   { top: -3%; transform: translateX(0); }
+  100% { top: 103%; transform: translateX(40vw); }
 }
-@keyframes nri-fly-4 { /* BR → TL diagonal */
-  0%   { transform: translate3d(calc(100vw + 50px), 80vh, 0); }
-  100% { transform: translate3d(-50px, -30px, 0); }
+/* Diagonal up: bottom to top-right */
+@keyframes nri-fly-diag-up {
+  0%   { bottom: -3%; transform: translateX(0); }
+  100% { bottom: 103%; transform: translateX(35vw); }
 }
-@keyframes nri-fly-5 { /* T → B (slight angle) */
-  0%   { transform: translate3d(0, -50px, 0); }
-  100% { transform: translate3d(12vw, calc(100vh + 50px), 0); }
+/* Steep down */
+@keyframes nri-fly-down {
+  0%   { top: -3%; transform: translateX(0); }
+  100% { top: 103%; transform: translateX(8vw); }
 }
-@keyframes nri-fly-6 { /* B → T (slight angle) */
-  0%   { transform: translate3d(0, calc(100vh + 50px), 0); }
-  100% { transform: translate3d(-8vw, -50px, 0); }
+/* Steep up */
+@keyframes nri-fly-up {
+  0%   { bottom: -3%; transform: translateX(0); }
+  100% { bottom: 103%; transform: translateX(-8vw); }
 }
 
 /* Red port light blink */
