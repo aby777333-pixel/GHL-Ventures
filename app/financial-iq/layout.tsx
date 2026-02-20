@@ -1,19 +1,75 @@
-import type { Metadata } from 'next'
+import type { Metadata } from 'next';
+
+const SITE_URL = 'https://ghl-india-ventures-2025.netlify.app';
 
 export const metadata: Metadata = {
-  title: 'Financial IQ | Learn Investing | GHL India Ventures',
-  description: 'Build your Financial IQ with GHL India Ventures. Learn AIF fundamentals, SEBI regulations, and smart investing strategies.',
-  keywords: ['investment education India', 'AIF glossary', 'financial literacy', 'investment terms explained', 'SEBI AIF regulations guide'],
+  title: 'Financial IQ — Investment Education & Resources | GHL India Ventures',
+  description:
+    "Build your investment knowledge with GHL India Ventures' Financial IQ resources — guides on AIFs, stressed real estate, startup investing, tax planning, and wealth management.",
+  keywords: [
+    'financial education India',
+    'investment education',
+    'AIF guide',
+    'learn about alternative investments',
+    'financial literacy HNI',
+    'investment knowledge resources',
+  ],
   openGraph: {
-    title: 'Financial IQ | Investment Education | GHL India Ventures',
-    description: 'Learn investment fundamentals, AIF concepts, and smart investing strategies.',
-    url: 'https://ghl-india-ventures-2025.netlify.app/financial-iq',
+    title: 'Financial IQ — Investment Education & Resources | GHL India Ventures',
+    description:
+      "Build your investment knowledge with GHL India Ventures' Financial IQ resources — guides on AIFs, stressed real estate, startup investing, tax planning, and wealth management.",
+    url: `${SITE_URL}/financial-iq`,
+    siteName: 'GHL India Ventures',
+    type: 'website',
+    images: [
+      {
+        url: `${SITE_URL}/og-image.jpg`,
+        width: 1200,
+        height: 630,
+        alt: 'GHL India Ventures Financial IQ — Investment Education & Resources',
+      },
+    ],
+    locale: 'en_IN',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Financial IQ — Investment Education & Resources | GHL India Ventures',
+    description:
+      "Build your investment knowledge with GHL India Ventures' Financial IQ resources — guides on AIFs, stressed real estate, startup investing, tax planning, and wealth management.",
+    images: [`${SITE_URL}/og-image.jpg`],
   },
   alternates: {
-    canonical: 'https://ghl-india-ventures-2025.netlify.app/financial-iq',
+    canonical: `${SITE_URL}/financial-iq`,
   },
-}
+};
 
-export default function FinancialIQLayout({ children }: { children: React.ReactNode }) {
-  return children
+export default function FinancialIqLayout({ children }: { children: React.ReactNode }) {
+  const breadcrumbSchema = {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: [
+      {
+        '@type': 'ListItem',
+        position: 1,
+        name: 'Home',
+        item: SITE_URL,
+      },
+      {
+        '@type': 'ListItem',
+        position: 2,
+        name: 'Financial IQ',
+        item: `${SITE_URL}/financial-iq`,
+      },
+    ],
+  };
+
+  return (
+    <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbSchema) }}
+      />
+      {children}
+    </>
+  );
 }

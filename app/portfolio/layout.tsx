@@ -1,19 +1,75 @@
-import type { Metadata } from 'next'
+import type { Metadata } from 'next';
+
+const SITE_URL = 'https://ghl-india-ventures-2025.netlify.app';
 
 export const metadata: Metadata = {
-  title: 'Portfolio | Real Estate & Startup Investments | GHL',
-  description: 'GHL India Ventures portfolio: NCLT real estate recovery projects and startup investments in fintech, healthtech, cleantech across India.',
-  keywords: ['NCLT resolution real estate India', 'startup investment fund Chennai', 'stressed real estate portfolio', 'AIF portfolio companies', 'real estate recovery investments'],
+  title: 'Portfolio & Track Record | Investment Performance | GHL India Ventures',
+  description:
+    "View GHL India Ventures' investment portfolio — stressed real estate recovery projects, startup investments, sector allocation, and performance metrics.",
+  keywords: [
+    'AIF portfolio India',
+    'investment track record',
+    'stressed real estate portfolio',
+    'startup portfolio India',
+    'fund performance metrics',
+    'AIF investment results',
+  ],
   openGraph: {
-    title: 'Investment Portfolio | GHL India Ventures',
-    description: 'Explore our portfolio of stressed real estate recovery projects and high-growth startup investments.',
-    url: 'https://ghl-india-ventures-2025.netlify.app/portfolio',
+    title: 'Portfolio & Track Record | Investment Performance | GHL India Ventures',
+    description:
+      "View GHL India Ventures' investment portfolio — stressed real estate recovery projects, startup investments, sector allocation, and performance metrics.",
+    url: `${SITE_URL}/portfolio`,
+    siteName: 'GHL India Ventures',
+    type: 'website',
+    images: [
+      {
+        url: `${SITE_URL}/og-image.jpg`,
+        width: 1200,
+        height: 630,
+        alt: 'GHL India Ventures Portfolio & Track Record — Investment Performance',
+      },
+    ],
+    locale: 'en_IN',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Portfolio & Track Record | Investment Performance | GHL India Ventures',
+    description:
+      "View GHL India Ventures' investment portfolio — stressed real estate recovery projects, startup investments, sector allocation, and performance metrics.",
+    images: [`${SITE_URL}/og-image.jpg`],
   },
   alternates: {
-    canonical: 'https://ghl-india-ventures-2025.netlify.app/portfolio',
+    canonical: `${SITE_URL}/portfolio`,
   },
-}
+};
 
 export default function PortfolioLayout({ children }: { children: React.ReactNode }) {
-  return children
+  const breadcrumbSchema = {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: [
+      {
+        '@type': 'ListItem',
+        position: 1,
+        name: 'Home',
+        item: SITE_URL,
+      },
+      {
+        '@type': 'ListItem',
+        position: 2,
+        name: 'Portfolio',
+        item: `${SITE_URL}/portfolio`,
+      },
+    ],
+  };
+
+  return (
+    <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbSchema) }}
+      />
+      {children}
+    </>
+  );
 }

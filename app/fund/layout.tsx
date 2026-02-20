@@ -1,19 +1,78 @@
-import type { Metadata } from 'next'
+import type { Metadata } from 'next';
+
+const SITE_URL = 'https://ghl-india-ventures-2025.netlify.app';
 
 export const metadata: Metadata = {
-  title: 'AIF Fund | Stressed Real Estate & Startups | GHL',
-  description: 'GHL India Ventures Category II AIF fund. Stressed real estate recovery & startup investments. SEBI Reg. IN/AIF2/2425/1517. Min 1 Cr.',
-  keywords: ['Category II AIF fund India', 'stressed real estate fund India', 'alternative investment fund minimum investment', 'SEBI registered AIF', 'AIF investment Chennai'],
+  title: 'Investment Fund | Category II AIF — Stressed Real Estate & Startups | GHL India Ventures',
+  description:
+    "Explore GHL India Ventures' SEBI-registered Category II AIF — dual strategy combining stressed real estate recovery via NCLT and early-stage venture capital. Min ₹1 Crore AIF or ₹10 Lakhs Debenture Route.",
+  keywords: [
+    'AIF fund India',
+    'Category II AIF fund',
+    'stressed real estate investment',
+    'startup investment fund',
+    'NCLT real estate recovery',
+    'debenture route',
+    'private equity India',
+    'AIF minimum investment 1 crore',
+    'venture capital fund India',
+  ],
   openGraph: {
-    title: 'Category II AIF Fund | GHL India Ventures',
-    description: 'SEBI-registered Category II AIF focused on stressed real estate and startup investments. Minimum 1 Crore.',
-    url: 'https://ghl-india-ventures-2025.netlify.app/fund',
+    title: 'Investment Fund | Category II AIF — Stressed Real Estate & Startups | GHL India Ventures',
+    description:
+      "Explore GHL India Ventures' SEBI-registered Category II AIF — dual strategy combining stressed real estate recovery via NCLT and early-stage venture capital. Min ₹1 Crore AIF or ₹10 Lakhs Debenture Route.",
+    url: `${SITE_URL}/fund`,
+    siteName: 'GHL India Ventures',
+    type: 'website',
+    images: [
+      {
+        url: `${SITE_URL}/og-image.jpg`,
+        width: 1200,
+        height: 630,
+        alt: 'GHL India Ventures Investment Fund — Category II AIF Stressed Real Estate & Startups',
+      },
+    ],
+    locale: 'en_IN',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Investment Fund | Category II AIF — Stressed Real Estate & Startups | GHL India Ventures',
+    description:
+      "Explore GHL India Ventures' SEBI-registered Category II AIF — dual strategy combining stressed real estate recovery via NCLT and early-stage venture capital. Min ₹1 Crore AIF or ₹10 Lakhs Debenture Route.",
+    images: [`${SITE_URL}/og-image.jpg`],
   },
   alternates: {
-    canonical: 'https://ghl-india-ventures-2025.netlify.app/fund',
+    canonical: `${SITE_URL}/fund`,
   },
-}
+};
 
 export default function FundLayout({ children }: { children: React.ReactNode }) {
-  return children
+  const breadcrumbSchema = {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: [
+      {
+        '@type': 'ListItem',
+        position: 1,
+        name: 'Home',
+        item: SITE_URL,
+      },
+      {
+        '@type': 'ListItem',
+        position: 2,
+        name: 'Fund',
+        item: `${SITE_URL}/fund`,
+      },
+    ],
+  };
+
+  return (
+    <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbSchema) }}
+      />
+      {children}
+    </>
+  );
 }

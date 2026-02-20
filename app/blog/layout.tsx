@@ -1,19 +1,77 @@
-import type { Metadata } from 'next'
+import type { Metadata } from 'next';
+
+const SITE_URL = 'https://ghl-india-ventures-2025.netlify.app';
 
 export const metadata: Metadata = {
-  title: 'Blog | AIF Insights & Analysis | GHL India Ventures',
-  description: 'Expert insights on AIFs, stressed real estate, startup investing, AIF vs PMS comparison, and investment strategies in India.',
-  keywords: ['AIF vs PMS India', 'alternative investment fund tax benefits India', 'stressed real estate investment blog', 'AIF insights India', 'Category II AIF analysis'],
+  title: 'Insights & Blog | Alternative Investment Research | GHL India Ventures',
+  description:
+    "Expert insights on alternative investments, stressed real estate, startup investing, AIF regulations, and wealth management strategies from GHL India Ventures' research team.",
+  keywords: [
+    'AIF blog',
+    'alternative investment insights',
+    'stressed real estate India blog',
+    'startup investing insights',
+    'HNI investment blog',
+    'SEBI AIF news',
+    'private equity India blog',
+    'wealth management insights',
+  ],
   openGraph: {
-    title: 'Investment Insights & Blog | GHL India Ventures',
-    description: 'Expert insights on AIFs, stressed real estate, startup investing, and market analysis.',
-    url: 'https://ghl-india-ventures-2025.netlify.app/blog',
+    title: 'Insights & Blog | Alternative Investment Research | GHL India Ventures',
+    description:
+      "Expert insights on alternative investments, stressed real estate, startup investing, AIF regulations, and wealth management strategies from GHL India Ventures' research team.",
+    url: `${SITE_URL}/blog`,
+    siteName: 'GHL India Ventures',
+    type: 'website',
+    images: [
+      {
+        url: `${SITE_URL}/og-image.jpg`,
+        width: 1200,
+        height: 630,
+        alt: 'GHL India Ventures Blog — Alternative Investment Insights & Research',
+      },
+    ],
+    locale: 'en_IN',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Insights & Blog | Alternative Investment Research | GHL India Ventures',
+    description:
+      "Expert insights on alternative investments, stressed real estate, startup investing, AIF regulations, and wealth management strategies from GHL India Ventures' research team.",
+    images: [`${SITE_URL}/og-image.jpg`],
   },
   alternates: {
-    canonical: 'https://ghl-india-ventures-2025.netlify.app/blog',
+    canonical: `${SITE_URL}/blog`,
   },
-}
+};
 
 export default function BlogLayout({ children }: { children: React.ReactNode }) {
-  return children
+  const breadcrumbSchema = {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: [
+      {
+        '@type': 'ListItem',
+        position: 1,
+        name: 'Home',
+        item: SITE_URL,
+      },
+      {
+        '@type': 'ListItem',
+        position: 2,
+        name: 'Blog',
+        item: `${SITE_URL}/blog`,
+      },
+    ],
+  };
+
+  return (
+    <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbSchema) }}
+      />
+      {children}
+    </>
+  );
 }
