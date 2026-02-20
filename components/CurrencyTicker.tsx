@@ -39,31 +39,33 @@ export default function CurrencyTicker() {
 
   return (
     <div
-      className="w-full overflow-hidden py-1.5"
+      className="w-full py-1.5"
       style={{
         background: 'rgba(0,0,0,0.3)',
         borderBottom: '1px solid rgba(255,255,255,0.05)',
       }}
     >
-      <div className="flex animate-marquee-fast whitespace-nowrap">
-        {[0, 1].map(set => (
-          <div key={set} className="flex items-center">
-            {rates.map((r, i) => (
-              <span key={`${set}-${i}`} className="inline-flex items-center gap-1.5 px-4 text-[10px] font-medium">
-                <span className="text-gray-500">{r.flag}</span>
-                <span className="text-gray-400">{r.pair}</span>
-                <span className="text-white font-semibold">{r.rate < 1 ? r.rate.toFixed(4) : r.rate.toFixed(2)}</span>
-                <span className={`inline-flex items-center gap-0.5 ${
-                  r.change > 0 ? 'text-emerald-400' : r.change < 0 ? 'text-red-400' : 'text-gray-500'
-                }`}>
-                  {r.change > 0 ? <TrendingUp className="w-2.5 h-2.5" /> : r.change < 0 ? <TrendingDown className="w-2.5 h-2.5" /> : <Minus className="w-2.5 h-2.5" />}
-                  {r.change > 0 ? '+' : ''}{r.change.toFixed(2)}
+      <div className="max-w-7xl mx-auto overflow-hidden">
+        <div className="flex animate-marquee-fast whitespace-nowrap">
+          {[0, 1].map(set => (
+            <div key={set} className="flex items-center">
+              {rates.map((r, i) => (
+                <span key={`${set}-${i}`} className="inline-flex items-center gap-1.5 px-4 text-[10px] font-medium">
+                  <span className="text-gray-500">{r.flag}</span>
+                  <span className="text-gray-400">{r.pair}</span>
+                  <span className="text-white font-semibold">{r.rate < 1 ? r.rate.toFixed(4) : r.rate.toFixed(2)}</span>
+                  <span className={`inline-flex items-center gap-0.5 ${
+                    r.change > 0 ? 'text-emerald-400' : r.change < 0 ? 'text-red-400' : 'text-gray-500'
+                  }`}>
+                    {r.change > 0 ? <TrendingUp className="w-2.5 h-2.5" /> : r.change < 0 ? <TrendingDown className="w-2.5 h-2.5" /> : <Minus className="w-2.5 h-2.5" />}
+                    {r.change > 0 ? '+' : ''}{r.change.toFixed(2)}
+                  </span>
+                  <span className="text-gray-700 mx-2">|</span>
                 </span>
-                <span className="text-gray-700 mx-2">|</span>
-              </span>
-            ))}
-          </div>
-        ))}
+              ))}
+            </div>
+          ))}
+        </div>
       </div>
     </div>
   )

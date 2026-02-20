@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import { LegalLink } from '@/components/LegalPopup'
 import { BRAND } from '@/lib/constants'
 import { Eye, EyeOff, Lock, ArrowLeft, Shield } from 'lucide-react'
 import Logo from '@/components/Logo'
@@ -196,9 +197,9 @@ export default function LoginPage() {
           <div className="mt-8 pt-6 border-t border-gray-100 text-center">
             <p className="text-xs text-brand-grey">
               By logging in, you agree to our{' '}
-              <Link href="/terms" className="text-brand-red hover:underline">Terms of Service</Link>{' '}
+              <LegalLink type="terms" className="text-brand-red hover:underline">Terms of Service</LegalLink>{' '}
               and{' '}
-              <Link href="/privacy" className="text-brand-red hover:underline">Privacy Policy</Link>.
+              <LegalLink type="privacy" className="text-brand-red hover:underline">Privacy Policy</LegalLink>.
             </p>
             <div className="mt-3 inline-flex items-center space-x-1.5 text-gray-400 text-xs">
               <Shield className="w-3.5 h-3.5" />

@@ -501,18 +501,20 @@ function NewsScroller() {
   const feed = headlines.map(h => `${h.label}  ${h.text}`).join('  \u00A0\u00A0\u2022\u00A0\u00A0  ')
 
   return (
-    <section className="relative overflow-hidden py-2.5" style={{ backgroundColor: '#0D0D0D', borderTop: '1px solid rgba(208,2,27,0.15)', borderBottom: '1px solid rgba(208,2,27,0.15)' }}>
-      <div className="flex items-center">
-        <span className="shrink-0 px-4 py-1 bg-brand-red text-white text-[10px] font-bold uppercase tracking-widest rounded-r-full mr-4">
-          Live News
-        </span>
-        <div className="flex-1 overflow-hidden">
-          <div className="flex whitespace-nowrap animate-marquee">
-            {[0, 1].map(i => (
-              <span key={i} className="inline-block text-gray-300 text-xs font-medium tracking-wide px-4">
-                {feed}
-              </span>
-            ))}
+    <section className="relative py-2.5" style={{ backgroundColor: '#0D0D0D', borderTop: '1px solid rgba(208,2,27,0.15)', borderBottom: '1px solid rgba(208,2,27,0.15)' }}>
+      <div className="container-max mx-auto overflow-hidden">
+        <div className="flex items-center">
+          <span className="shrink-0 px-4 py-1 bg-brand-red text-white text-[10px] font-bold uppercase tracking-widest rounded-r-full mr-4">
+            Live News
+          </span>
+          <div className="flex-1 overflow-hidden">
+            <div className="flex whitespace-nowrap animate-marquee">
+              {[0, 1].map(i => (
+                <span key={i} className="inline-block text-gray-300 text-xs font-medium tracking-wide px-4">
+                  {feed}
+                </span>
+              ))}
+            </div>
           </div>
         </div>
       </div>
@@ -1432,20 +1434,22 @@ export default function HomePage() {
       {/* ── Market Data Marquees — moved from Navbar to right above News ── */}
       <MarketDataMarquee />
       <CurrencyTicker />
-      <div className="w-full overflow-hidden" style={{ backgroundColor: '#1a0000' }}>
-        <div className="animate-marquee whitespace-nowrap py-1.5">
-          <span className="inline-block text-white/80 mx-8" style={{ fontSize: '11px', letterSpacing: '0.02em' }}>
-            SEBI Registered AIF &nbsp;|&nbsp; Registration No. IN/AIF2/2425/1517
-            &nbsp;|&nbsp; AIF: Min &#8377;1 Crore &nbsp;|&nbsp; Debenture Route: From &#8377;10 Lakhs &nbsp;|&nbsp;
-            Stressed Real Estate &amp; Early-Stage Startups &nbsp;|&nbsp;
-            Chennai, India
-          </span>
-          <span className="inline-block text-white/80 mx-8" style={{ fontSize: '11px', letterSpacing: '0.02em' }}>
-            SEBI Registered AIF &nbsp;|&nbsp; Registration No. IN/AIF2/2425/1517
-            &nbsp;|&nbsp; AIF: Min &#8377;1 Crore &nbsp;|&nbsp; Debenture Route: From &#8377;10 Lakhs &nbsp;|&nbsp;
-            Stressed Real Estate &amp; Early-Stage Startups &nbsp;|&nbsp;
-            Chennai, India
-          </span>
+      <div className="w-full" style={{ backgroundColor: '#1a0000' }}>
+        <div className="container-max mx-auto overflow-hidden">
+          <div className="animate-marquee whitespace-nowrap py-1.5">
+            <span className="inline-block text-white/80 mx-8" style={{ fontSize: '11px', letterSpacing: '0.02em' }}>
+              SEBI Registered AIF &nbsp;|&nbsp; Registration No. IN/AIF2/2425/1517
+              &nbsp;|&nbsp; AIF: Min &#8377;1 Crore &nbsp;|&nbsp; Debenture Route: From &#8377;10 Lakhs &nbsp;|&nbsp;
+              Stressed Real Estate &amp; Early-Stage Startups &nbsp;|&nbsp;
+              Chennai, India
+            </span>
+            <span className="inline-block text-white/80 mx-8" style={{ fontSize: '11px', letterSpacing: '0.02em' }}>
+              SEBI Registered AIF &nbsp;|&nbsp; Registration No. IN/AIF2/2425/1517
+              &nbsp;|&nbsp; AIF: Min &#8377;1 Crore &nbsp;|&nbsp; Debenture Route: From &#8377;10 Lakhs &nbsp;|&nbsp;
+              Stressed Real Estate &amp; Early-Stage Startups &nbsp;|&nbsp;
+              Chennai, India
+            </span>
+          </div>
         </div>
       </div>
 

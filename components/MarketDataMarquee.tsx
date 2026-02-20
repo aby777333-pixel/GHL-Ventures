@@ -76,33 +76,35 @@ export default function MarketDataMarquee() {
   )
 
   return (
-    <div className="relative w-full overflow-hidden" style={{ backgroundColor: '#0d0d0d' }}>
-      <div
-        className="flex whitespace-nowrap py-2 animate-marquee-fast"
-        style={{ animationPlayState: 'running' }}
-        onMouseEnter={(e) => { e.currentTarget.style.animationPlayState = 'paused' }}
-        onMouseLeave={(e) => { e.currentTarget.style.animationPlayState = 'running' }}
-      >
-        <div className="flex items-center shrink-0 pr-8">{tickerContent}</div>
-        <div className="flex items-center shrink-0 pr-8">{tickerContent}</div>
-      </div>
-
-      {currentTime && (
-        <span
-          className="absolute left-2 top-1/2 -translate-y-1/2 text-white/25 font-mono z-10 pointer-events-none hidden sm:inline"
-          style={{ fontSize: '8px' }}
+    <div className="relative w-full" style={{ backgroundColor: '#0d0d0d' }}>
+      <div className="max-w-7xl mx-auto overflow-hidden relative">
+        <div
+          className="flex whitespace-nowrap py-2 animate-marquee-fast"
+          style={{ animationPlayState: 'running' }}
+          onMouseEnter={(e) => { e.currentTarget.style.animationPlayState = 'paused' }}
+          onMouseLeave={(e) => { e.currentTarget.style.animationPlayState = 'running' }}
         >
-          {currentTime}
-        </span>
-      )}
+          <div className="flex items-center shrink-0 pr-8">{tickerContent}</div>
+          <div className="flex items-center shrink-0 pr-8">{tickerContent}</div>
+        </div>
 
-      <button
-        onClick={handleDismiss}
-        className="absolute right-1 top-1/2 -translate-y-1/2 z-10 p-0.5 rounded text-white/30 hover:text-white/70 hover:bg-white/10 transition-colors"
-        aria-label="Dismiss market data bar"
-      >
-        <X className="w-3 h-3" />
-      </button>
+        {currentTime && (
+          <span
+            className="absolute left-2 top-1/2 -translate-y-1/2 text-white/25 font-mono z-10 pointer-events-none hidden sm:inline"
+            style={{ fontSize: '8px' }}
+          >
+            {currentTime}
+          </span>
+        )}
+
+        <button
+          onClick={handleDismiss}
+          className="absolute right-1 top-1/2 -translate-y-1/2 z-10 p-0.5 rounded text-white/30 hover:text-white/70 hover:bg-white/10 transition-colors"
+          aria-label="Dismiss market data bar"
+        >
+          <X className="w-3 h-3" />
+        </button>
+      </div>
     </div>
   )
 }
