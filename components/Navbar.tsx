@@ -18,6 +18,10 @@ export default function Navbar() {
   const [mobileAboutOpen, setMobileAboutOpen] = useState(false)
   const aboutRef = useRef<HTMLDivElement>(null)
   const aboutTimeout = useRef<NodeJS.Timeout | null>(null)
+  const [contactOpen, setContactOpen] = useState(false)
+  const [mobileContactOpen, setMobileContactOpen] = useState(false)
+  const contactRef = useRef<HTMLDivElement>(null)
+  const contactTimeout = useRef<NodeJS.Timeout | null>(null)
   const pathname = usePathname()
 
   const handleScroll = useCallback(() => {
@@ -35,6 +39,8 @@ export default function Navbar() {
     setIsOpen(false)
     setAboutOpen(false)
     setMobileAboutOpen(false)
+    setContactOpen(false)
+    setMobileContactOpen(false)
   }, [pathname])
 
   // Lock body scroll when mobile menu is open
@@ -49,11 +55,14 @@ export default function Navbar() {
     }
   }, [isOpen])
 
-  // Close dropdown when clicking outside
+  // Close dropdowns when clicking outside
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
       if (aboutRef.current && !aboutRef.current.contains(e.target as Node)) {
         setAboutOpen(false)
+      }
+      if (contactRef.current && !contactRef.current.contains(e.target as Node)) {
+        setContactOpen(false)
       }
     }
     document.addEventListener('mousedown', handleClickOutside)
@@ -63,12 +72,23 @@ export default function Navbar() {
   // Check if About submenu item is active
   const isAboutActive = pathname === '/about' || pathname === '/tools' || pathname === '/downloads'
 
+  // Check if Contact submenu item is active
+  const isContactActive = pathname === '/contact' || pathname === '/contact/faqs' || pathname === '/contact/refer' || pathname === '/contact/startup-apply' || pathname === '/contact/grievance' || pathname === '/contact/careers'
+
   const handleAboutEnter = () => {
     if (aboutTimeout.current) clearTimeout(aboutTimeout.current)
     setAboutOpen(true)
   }
   const handleAboutLeave = () => {
     aboutTimeout.current = setTimeout(() => setAboutOpen(false), 200)
+  }
+
+  const handleContactEnter = () => {
+    if (contactTimeout.current) clearTimeout(contactTimeout.current)
+    setContactOpen(true)
+  }
+  const handleContactLeave = () => {
+    contactTimeout.current = setTimeout(() => setContactOpen(false), 200)
   }
 
   return (
@@ -107,20 +127,30 @@ export default function Navbar() {
                 {NAV_LINKS.map((link) => {
                   // Check if this link has children (dropdown)
                   const hasChildren = 'children' in link && link.children
-                  const isActive = hasChildren ? isAboutActive : pathname === link.href
+                  const isAbout = link.label === 'About'
+                  const isActive = hasChildren
+                    ? (isAbout ? isAboutActive : isContactActive)
+                    : pathname === link.href
 
                   if (hasChildren) {
-                    // Dropdown menu for About
+                    const dropdownOpen = isAbout ? aboutOpen : contactOpen
+                    const dropdownRef = isAbout ? aboutRef : contactRef
+                    const onEnter = isAbout ? handleAboutEnter : handleContactEnter
+                    const onLeave = isAbout ? handleAboutLeave : handleContactLeave
+                    const toggleOpen = isAbout
+                      ? () => setAboutOpen(!aboutOpen)
+                      : () => setContactOpen(!contactOpen)
+
                     return (
                       <div
                         key={link.label}
-                        ref={aboutRef}
+                        ref={dropdownRef}
                         className="relative"
-                        onMouseEnter={handleAboutEnter}
-                        onMouseLeave={handleAboutLeave}
+                        onMouseEnter={onEnter}
+                        onMouseLeave={onLeave}
                       >
                         <button
-                          onClick={() => setAboutOpen(!aboutOpen)}
+                          onClick={toggleOpen}
                           className={`relative uppercase font-semibold transition-colors duration-200 px-2 py-1.5 rounded inline-flex items-center gap-0.5 ${
                             isActive
                               ? 'text-brand-red'
@@ -136,7 +166,7 @@ export default function Navbar() {
                           }}
                         >
                           {link.label}
-                          <ChevronDown className={`w-2.5 h-2.5 transition-transform duration-200 ${aboutOpen ? 'rotate-180' : ''}`} />
+                          <ChevronDown className={`w-2.5 h-2.5 transition-transform duration-200 ${dropdownOpen ? 'rotate-180' : ''}`} />
                           {/* Active underline */}
                           <span
                             className={`absolute left-2 right-2 -bottom-0.5 h-[1.5px] bg-brand-red transition-all duration-300 ${
@@ -148,13 +178,13 @@ export default function Navbar() {
                         {/* Dropdown panel */}
                         <div
                           className={`absolute top-full left-1/2 -translate-x-1/2 mt-1 transition-all duration-200 ${
-                            aboutOpen
+                            dropdownOpen
                               ? 'opacity-100 translate-y-0 pointer-events-auto'
                               : 'opacity-0 -translate-y-2 pointer-events-none'
                           }`}
                         >
                           <div
-                            className="rounded-xl border shadow-2xl py-1.5 min-w-[160px] overflow-hidden"
+                            className={`rounded-xl border shadow-2xl py-1.5 overflow-hidden ${isAbout ? 'min-w-[160px]' : 'min-w-[190px]'}`}
                             style={{
                               background: scrolled ? 'rgba(255,255,255,0.97)' : 'rgba(15,15,20,0.97)',
                               borderColor: scrolled ? 'rgba(0,0,0,0.08)' : 'rgba(255,255,255,0.1)',
@@ -378,13 +408,19 @@ export default function Navbar() {
                 animIndex += 1
 
                 if (hasChildren) {
-                  // About with mobile accordion
+                  const isAboutMenu = link.label === 'About'
+                  const mobileOpen = isAboutMenu ? mobileAboutOpen : mobileContactOpen
+                  const toggleMobile = isAboutMenu
+                    ? () => setMobileAboutOpen(!mobileAboutOpen)
+                    : () => setMobileContactOpen(!mobileContactOpen)
+                  const isDropdownActive = isAboutMenu ? isAboutActive : isContactActive
+
                   return (
                     <div key={link.label} className="flex flex-col items-center">
                       <button
-                        onClick={() => setMobileAboutOpen(!mobileAboutOpen)}
+                        onClick={toggleMobile}
                         className={`uppercase font-semibold text-xl transition-all duration-500 inline-flex items-center gap-1.5 ${
-                          isAboutActive ? 'text-brand-red' : 'text-white/80 hover:text-brand-red'
+                          isDropdownActive ? 'text-brand-red' : 'text-white/80 hover:text-brand-red'
                         }`}
                         style={{
                           letterSpacing: '0.08em',
@@ -394,12 +430,12 @@ export default function Navbar() {
                         }}
                       >
                         {link.label}
-                        <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${mobileAboutOpen ? 'rotate-180' : ''}`} />
+                        <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${mobileOpen ? 'rotate-180' : ''}`} />
                       </button>
                       {/* Sub-items */}
                       <div
                         className={`flex flex-col items-center space-y-3 overflow-hidden transition-all duration-300 ${
-                          mobileAboutOpen ? 'max-h-[200px] mt-3 opacity-100' : 'max-h-0 mt-0 opacity-0'
+                          mobileOpen ? `${isAboutMenu ? 'max-h-[200px]' : 'max-h-[350px]'} mt-3 opacity-100` : 'max-h-0 mt-0 opacity-0'
                         }`}
                       >
                         {link.children.map((child) => {

@@ -19,6 +19,11 @@
  *   supernova     — Fund/Debenture: expanding supernova explosion + shockwave
  *   wormhole      — Tools page: spinning wormhole tunnel + time-space distortion
  *   city          — Why AIFs page: urban skyline silhouette + financial district + metro glow
+ *   comet         — FAQs page: bright comet with ion + dust tails
+ *   meteor        — Refer an Investor page: dramatic meteor shower with fireballs
+ *   galaxy        — Startup Application page: spiral galaxy with companion
+ *   eclipse       — Grievance Redressal page: total solar eclipse with corona
+ *   mars          — Careers page: Martian terrain with red dunes + moons
  */
 
 type SpaceVariant =
@@ -35,6 +40,11 @@ type SpaceVariant =
   | 'supernova'
   | 'wormhole'
   | 'city'
+  | 'comet'
+  | 'meteor'
+  | 'galaxy'
+  | 'eclipse'
+  | 'mars'
 
 interface SpaceHeroProps {
   variant: SpaceVariant
@@ -1032,6 +1042,259 @@ export default function SpaceHero({ variant }: SpaceHeroProps) {
           {/* Upper atmosphere glow */}
           <div className="absolute top-[15%] left-[20%] w-72 h-72 bg-brand-red/5 rounded-full blur-[100px] animate-pulse-slow" />
           <div className="absolute top-[25%] right-[15%] w-64 h-64 bg-blue-500/4 rounded-full blur-[80px] animate-pulse-slow-2" />
+        </>
+      )}
+
+      {/* ── COMET — FAQs page ── */}
+      {variant === 'comet' && (
+        <>
+          {/* Comet nucleus — bright white-blue core */}
+          <div className="absolute top-[18%] right-[20%]">
+            {/* Coma glow */}
+            <div className="absolute -inset-8 rounded-full animate-pulse-slow"
+              style={{ background: 'radial-gradient(circle, rgba(150,200,255,0.3) 0%, rgba(100,150,255,0.1) 50%, transparent 80%)', filter: 'blur(8px)' }} />
+            {/* Nucleus core */}
+            <div className="w-5 h-5 rounded-full"
+              style={{ background: 'radial-gradient(circle, #fff 0%, rgba(180,220,255,0.9) 40%, rgba(100,150,255,0.5) 80%, transparent 100%)', boxShadow: '0 0 20px rgba(200,230,255,0.8), 0 0 40px rgba(150,200,255,0.4), 0 0 80px rgba(100,150,255,0.2)' }} />
+          </div>
+
+          {/* Dust tail — wide, faint yellow-white */}
+          <div className="absolute top-[10%] right-[10%] w-[500px] h-[200px]"
+            style={{
+              background: 'linear-gradient(220deg, rgba(255,250,220,0.15) 0%, rgba(255,240,180,0.08) 30%, transparent 70%)',
+              filter: 'blur(12px)',
+              transformOrigin: 'right center',
+              transform: 'rotate(-15deg)',
+            }} />
+
+          {/* Ion tail — narrower, blue */}
+          <div className="absolute top-[18%] right-[22%] w-[400px] h-[60px]"
+            style={{
+              background: 'linear-gradient(180deg, transparent 0%, rgba(100,180,255,0.2) 20%, rgba(80,150,255,0.1) 60%, transparent 100%)',
+              filter: 'blur(8px)',
+              transform: 'rotate(-10deg)',
+              transformOrigin: 'right center',
+            }} />
+
+          {/* Comet trail particles */}
+          <div className="absolute top-[22%] right-[30%] w-2 h-2 rounded-full bg-white/60 animate-twinkle-1"
+            style={{ boxShadow: '0 0 6px rgba(200,230,255,0.6)' }} />
+          <div className="absolute top-[26%] right-[38%] w-1.5 h-1.5 rounded-full bg-white/50 animate-twinkle-2"
+            style={{ boxShadow: '0 0 4px rgba(200,230,255,0.4)' }} />
+          <div className="absolute top-[29%] right-[46%] w-1 h-1 rounded-full bg-white/40 animate-twinkle-3" />
+          <div className="absolute top-[31%] right-[54%] w-1 h-1 rounded-full bg-white/30 animate-twinkle-1" />
+          <div className="absolute top-[24%] right-[35%] w-1 h-1 rounded-full bg-blue-200/40 animate-twinkle-2" />
+
+          {/* Ambient glow */}
+          <div className="absolute top-[10%] right-[15%] w-80 h-80 bg-blue-400/[0.06] rounded-full blur-[100px] animate-pulse-slow" />
+          <div className="absolute bottom-[20%] left-[20%] w-64 h-64 bg-brand-red/[0.04] rounded-full blur-[80px] animate-pulse-slow-2" />
+        </>
+      )}
+
+      {/* ── METEOR — Refer an Investor page ── */}
+      {variant === 'meteor' && (
+        <>
+          {/* Shooting stars reused with fire tones */}
+          <div className="space-shooting-star-vivid animate-shoot-1" style={{ filter: 'hue-rotate(20deg)' }} />
+          <div className="space-shooting-star-vivid animate-shoot-2" style={{ filter: 'hue-rotate(25deg)' }} />
+          <div className="space-shooting-star-vivid animate-shoot-3" style={{ filter: 'hue-rotate(15deg)' }} />
+          <div className="space-shooting-star-vivid animate-shoot-4" />
+          <div className="space-shooting-star-vivid animate-shoot-5" style={{ filter: 'hue-rotate(30deg)' }} />
+
+          {/* Large fireball meteor — upper-left */}
+          <div className="absolute top-[12%] left-[25%]">
+            {/* Fireball head */}
+            <div className="w-4 h-4 rounded-full animate-twinkle-1"
+              style={{ background: 'radial-gradient(circle, #fff 0%, rgba(255,180,50,0.9) 40%, rgba(255,80,0,0.6) 80%, transparent 100%)', boxShadow: '0 0 20px rgba(255,150,50,0.7), 0 0 40px rgba(255,80,0,0.3)' }} />
+            {/* Fire trail */}
+            <div className="absolute right-full top-1/2 -translate-y-1/2 w-[120px] h-3"
+              style={{ background: 'linear-gradient(to left, rgba(255,150,50,0.5), rgba(255,80,0,0.3), rgba(208,2,27,0.1), transparent)', filter: 'blur(3px)', borderRadius: '0 50% 50% 0' }} />
+          </div>
+
+          {/* Second fireball — right side */}
+          <div className="absolute top-[30%] right-[18%]">
+            <div className="w-3 h-3 rounded-full animate-twinkle-2"
+              style={{ background: 'radial-gradient(circle, #fff 0%, rgba(255,200,80,0.9) 40%, rgba(255,100,0,0.5) 80%, transparent 100%)', boxShadow: '0 0 15px rgba(255,160,60,0.6), 0 0 30px rgba(255,80,0,0.2)' }} />
+            <div className="absolute right-full top-1/2 -translate-y-1/2 w-[80px] h-2"
+              style={{ background: 'linear-gradient(to left, rgba(255,160,60,0.4), rgba(208,2,27,0.1), transparent)', filter: 'blur(2px)', borderRadius: '0 50% 50% 0' }} />
+          </div>
+
+          {/* Atmospheric glow from impacts */}
+          <div className="absolute top-0 left-0 right-0 h-[40%]"
+            style={{ background: 'radial-gradient(ellipse at 25% 0%, rgba(255,100,30,0.08) 0%, transparent 60%), radial-gradient(ellipse at 65% 0%, rgba(208,2,27,0.06) 0%, transparent 50%)' }} />
+
+          {/* Ground flash glow */}
+          <div className="absolute bottom-0 left-[30%] w-64 h-32 bg-orange-500/[0.05] rounded-full blur-[60px] animate-pulse-slow" />
+          <div className="absolute bottom-0 right-[20%] w-48 h-24 bg-brand-red/[0.04] rounded-full blur-[50px] animate-pulse-slow-2" />
+          <div className="absolute top-[30%] right-[20%] w-80 h-80 bg-orange-800/[0.04] rounded-full blur-[100px]" />
+        </>
+      )}
+
+      {/* ── GALAXY — Startup Application page ── */}
+      {variant === 'galaxy' && (
+        <>
+          {/* Deep space color wash */}
+          <div className="absolute inset-0"
+            style={{ background: 'radial-gradient(ellipse at 65% 40%, rgba(88,28,135,0.18) 0%, transparent 55%), radial-gradient(ellipse at 25% 70%, rgba(208,2,27,0.08) 0%, transparent 50%), radial-gradient(ellipse at 80% 75%, rgba(59,130,246,0.06) 0%, transparent 40%)' }} />
+
+          {/* Main spiral galaxy */}
+          <div className="absolute top-[25%] right-[15%] w-[280px] h-[280px] animate-slow-rotate" style={{ opacity: 0.35 }}>
+            {/* Outer spiral arms */}
+            <div className="absolute inset-0 rounded-full"
+              style={{ background: 'conic-gradient(from 0deg, transparent 0%, rgba(255,255,255,0.6) 8%, transparent 18%, rgba(208,2,27,0.4) 26%, transparent 36%, rgba(255,255,255,0.5) 50%, transparent 60%, rgba(200,150,255,0.4) 68%, transparent 78%, rgba(255,255,255,0.4) 88%, transparent 98%)', filter: 'blur(4px)' }} />
+            {/* Inner spiral density */}
+            <div className="absolute inset-[20%] rounded-full"
+              style={{ background: 'conic-gradient(from 45deg, transparent 0%, rgba(255,255,255,0.8) 15%, rgba(255,200,200,0.5) 30%, transparent 45%, rgba(255,255,255,0.6) 60%, transparent 75%)', filter: 'blur(3px)' }} />
+            {/* Galactic core */}
+            <div className="absolute inset-[42%] rounded-full"
+              style={{ background: 'radial-gradient(circle, rgba(255,240,220,0.9) 0%, rgba(255,200,150,0.6) 50%, transparent 80%)', boxShadow: '0 0 30px rgba(255,220,180,0.5)', filter: 'blur(1px)' }} />
+          </div>
+
+          {/* Galaxy ambient glow */}
+          <div className="absolute top-[20%] right-[10%] w-[320px] h-[320px] rounded-full animate-pulse-slow"
+            style={{ background: 'radial-gradient(circle, rgba(139,92,246,0.12) 0%, rgba(88,28,135,0.06) 50%, transparent 70%)', filter: 'blur(40px)' }} />
+
+          {/* Companion galaxy — smaller */}
+          <div className="absolute bottom-[20%] left-[8%] w-[140px] h-[100px] animate-slow-rotate-reverse" style={{ opacity: 0.25 }}>
+            <div className="absolute inset-0 rounded-full"
+              style={{ background: 'conic-gradient(from 90deg, transparent 0%, rgba(208,2,27,0.7) 12%, transparent 25%, rgba(255,200,200,0.5) 50%, transparent 65%, rgba(208,2,27,0.5) 80%, transparent 95%)', filter: 'blur(3px)' }} />
+            <div className="absolute inset-[35%] rounded-full"
+              style={{ background: 'radial-gradient(circle, rgba(255,200,180,0.7) 0%, transparent 70%)', filter: 'blur(2px)' }} />
+          </div>
+
+          {/* Distant galaxy smudge */}
+          <div className="absolute top-[12%] left-[45%] w-12 h-5 rounded-full animate-slow-rotate"
+            style={{ opacity: 0.18, background: 'radial-gradient(ellipse, rgba(255,255,255,0.6) 0%, rgba(200,200,255,0.3) 50%, transparent 80%)', filter: 'blur(2px)' }} />
+
+          {/* Cosmic dust */}
+          <div className="space-cosmic-dust" />
+
+          {/* Bright star cluster near galactic core */}
+          <div className="absolute top-[28%] right-[22%]">
+            <div className="w-2 h-2 rounded-full bg-white/90 animate-twinkle-1"
+              style={{ boxShadow: '0 0 10px rgba(255,255,255,0.8), 0 0 20px rgba(200,180,255,0.4)' }} />
+            <div className="absolute top-1 left-3 w-1.5 h-1.5 rounded-full bg-white/70 animate-twinkle-2"
+              style={{ boxShadow: '0 0 6px rgba(255,255,255,0.5)' }} />
+            <div className="absolute -top-1 left-5 w-1 h-1 rounded-full bg-white/60 animate-twinkle-3" />
+          </div>
+
+          {/* Ambient violet glow */}
+          <div className="absolute top-[15%] right-[10%] w-96 h-96 bg-violet-600/[0.06] rounded-full blur-[120px] animate-pulse-slow" />
+          <div className="absolute bottom-[25%] left-[15%] w-64 h-64 bg-brand-red/[0.04] rounded-full blur-[80px] animate-pulse-slow-2" />
+        </>
+      )}
+
+      {/* ── ECLIPSE — Grievance Redressal page ── */}
+      {variant === 'eclipse' && (
+        <>
+          {/* Eclipse system — upper-right */}
+          <div className="absolute top-[8%] right-[12%]">
+            {/* Solar corona — outermost glow */}
+            <div className="absolute -inset-[80px] rounded-full animate-pulse-slow"
+              style={{ background: 'radial-gradient(circle, rgba(255,250,230,0.15) 0%, rgba(255,220,150,0.08) 40%, rgba(255,180,80,0.04) 70%, transparent 100%)', filter: 'blur(20px)' }} />
+
+            {/* Corona streamers */}
+            <svg className="absolute -inset-[100px] w-[300px] h-[300px]" viewBox="0 0 300 300" xmlns="http://www.w3.org/2000/svg">
+              <line x1="150" y1="150" x2="280" y2="60" stroke="rgba(255,240,200,0.12)" strokeWidth="1.5" />
+              <line x1="150" y1="150" x2="290" y2="150" stroke="rgba(255,240,200,0.15)" strokeWidth="2" />
+              <line x1="150" y1="150" x2="270" y2="240" stroke="rgba(255,240,200,0.10)" strokeWidth="1" />
+              <line x1="150" y1="150" x2="60" y2="50" stroke="rgba(255,240,200,0.10)" strokeWidth="1.5" />
+              <line x1="150" y1="150" x2="20" y2="150" stroke="rgba(255,240,200,0.12)" strokeWidth="1" />
+              <line x1="150" y1="150" x2="80" y2="260" stroke="rgba(255,240,200,0.08)" strokeWidth="1" />
+              <line x1="150" y1="150" x2="200" y2="20" stroke="rgba(255,240,200,0.09)" strokeWidth="1" />
+              <line x1="150" y1="150" x2="200" y2="280" stroke="rgba(255,240,200,0.08)" strokeWidth="1" />
+            </svg>
+
+            {/* Solar prominences — red arcs behind the moon */}
+            <svg className="absolute -inset-[40px] w-[180px] h-[180px]" viewBox="0 0 180 180" xmlns="http://www.w3.org/2000/svg">
+              <path d="M90,90 Q130,30 100,10 Q70,30 90,90" fill="none" stroke="rgba(208,2,27,0.5)" strokeWidth="2" className="animate-twinkle-1" style={{ filter: 'drop-shadow(0 0 4px rgba(208,2,27,0.5))' }} />
+              <path d="M90,90 Q40,20 70,5 Q60,40 90,90" fill="none" stroke="rgba(255,80,0,0.4)" strokeWidth="1.5" className="animate-twinkle-2" style={{ filter: 'drop-shadow(0 0 3px rgba(255,80,0,0.4))' }} />
+              <path d="M90,90 Q150,60 165,80 Q145,100 90,90" fill="none" stroke="rgba(208,2,27,0.35)" strokeWidth="1.5" className="animate-twinkle-3" style={{ filter: 'drop-shadow(0 0 3px rgba(208,2,27,0.35))' }} />
+            </svg>
+
+            {/* Moon disc — pitch black */}
+            <div className="w-[100px] h-[100px] rounded-full bg-black relative"
+              style={{ boxShadow: '0 0 0 2px rgba(255,240,200,0.2), 0 0 30px rgba(255,240,200,0.1)' }} />
+          </div>
+
+          {/* Sky darkening — eclipse twilight */}
+          <div className="absolute inset-0"
+            style={{ background: 'radial-gradient(ellipse at 85% 15%, rgba(0,0,0,0) 20%, rgba(10,5,20,0.3) 60%, rgba(20,10,30,0.5) 100%)' }} />
+
+          {/* Stars visible during eclipse */}
+          <div className="absolute top-[15%] right-[35%] w-1.5 h-1.5 rounded-full bg-white/70 animate-twinkle-1"
+            style={{ boxShadow: '0 0 4px rgba(255,255,255,0.5)' }} />
+          <div className="absolute top-[5%] right-[30%] w-1 h-1 rounded-full bg-white/60 animate-twinkle-2" />
+          <div className="absolute top-[20%] right-[40%] w-1 h-1 rounded-full bg-white/50 animate-twinkle-3" />
+          <div className="absolute top-[8%] right-[22%] w-2 h-2 rounded-full bg-white/80 animate-twinkle-1"
+            style={{ boxShadow: '0 0 6px rgba(255,255,255,0.6)' }} />
+
+          {/* Horizon glow */}
+          <div className="absolute bottom-0 left-0 right-0 h-[30%]"
+            style={{ background: 'linear-gradient(to top, rgba(255,120,50,0.06) 0%, transparent 100%)' }} />
+          <div className="absolute bottom-0 left-[20%] w-96 h-48 bg-orange-400/[0.04] rounded-full blur-[80px] animate-pulse-slow" />
+        </>
+      )}
+
+      {/* ── MARS — Careers page ── */}
+      {variant === 'mars' && (
+        <>
+          {/* Martian sky — red-orange atmosphere gradient */}
+          <div className="absolute inset-0"
+            style={{ background: 'linear-gradient(to bottom, rgba(15,5,5,1) 0%, rgba(40,10,5,0.8) 40%, rgba(80,25,10,0.6) 70%, rgba(120,45,20,0.4) 85%, rgba(160,60,25,0.5) 100%)' }} />
+
+          {/* Mars planet disc — partially visible */}
+          <div className="absolute -top-[80px] right-[5%] w-[280px] h-[280px] rounded-full"
+            style={{
+              background: 'radial-gradient(circle at 38% 38%, rgba(200,100,50,0.7) 0%, rgba(160,60,20,0.6) 40%, rgba(100,30,10,0.5) 70%, rgba(50,10,5,0.4) 100%)',
+              boxShadow: '0 0 60px rgba(180,80,30,0.2), 0 0 120px rgba(160,60,20,0.1)',
+              opacity: 0.55,
+            }}>
+            {/* Dark basaltic plains */}
+            <div className="absolute top-[30%] left-[20%] w-[40%] h-[20%] rounded-full opacity-30"
+              style={{ background: 'rgba(40,10,5,0.5)', filter: 'blur(8px)' }} />
+            {/* Polar ice cap */}
+            <div className="absolute top-[5%] left-[35%] w-[30%] h-[12%] rounded-full opacity-50"
+              style={{ background: 'rgba(255,240,230,0.4)', filter: 'blur(4px)' }} />
+            {/* Valles Marineris */}
+            <div className="absolute top-[55%] left-[15%] w-[60%] h-[8%] rounded-full opacity-25"
+              style={{ background: 'rgba(20,5,2,0.6)', filter: 'blur(6px)', transform: 'rotate(-5deg)' }} />
+          </div>
+
+          {/* Phobos moon */}
+          <div className="absolute top-[22%] right-[35%]">
+            <div className="w-5 h-4 rounded-full opacity-60"
+              style={{ background: 'radial-gradient(circle at 40% 40%, rgba(120,90,70,0.8), rgba(60,40,30,0.7))', boxShadow: '0 0 6px rgba(120,90,70,0.3)' }} />
+          </div>
+
+          {/* Deimos moon */}
+          <div className="absolute top-[12%] left-[38%]">
+            <div className="w-3 h-3 rounded-full opacity-45"
+              style={{ background: 'radial-gradient(circle at 40% 35%, rgba(160,130,100,0.7), rgba(100,80,60,0.5))', boxShadow: '0 0 4px rgba(160,130,100,0.2)' }} />
+          </div>
+
+          {/* Martian terrain — dune silhouettes */}
+          <svg className="absolute bottom-0 left-0 right-0 w-full" viewBox="0 0 1440 200" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg" style={{ height: '25%' }}>
+            {/* Far background mountains */}
+            <path d="M0,200 L0,120 Q180,80 360,100 Q540,120 720,90 Q900,60 1080,95 Q1260,130 1440,105 L1440,200 Z"
+              fill="rgba(80,25,10,0.6)" />
+            {/* Mid-ground dune ridges */}
+            <path d="M0,200 L0,155 Q120,130 240,148 Q360,165 480,140 Q600,115 720,138 Q840,160 960,145 Q1080,130 1200,150 Q1320,168 1440,155 L1440,200 Z"
+              fill="rgba(100,35,15,0.75)" />
+            {/* Foreground dunes */}
+            <path d="M0,200 L0,175 Q90,162 180,172 Q270,182 360,168 Q450,155 540,170 Q630,185 720,172 Q810,160 900,175 Q990,188 1080,175 Q1170,162 1260,178 Q1350,192 1440,180 L1440,200 Z"
+              fill="rgba(130,50,20,0.85)" />
+          </svg>
+
+          {/* Dust storm wisps */}
+          <div className="absolute bottom-[22%] left-[15%] w-64 h-16 rounded-full animate-nebula-drift"
+            style={{ background: 'radial-gradient(ellipse, rgba(160,70,30,0.12) 0%, transparent 80%)', filter: 'blur(12px)' }} />
+          <div className="absolute bottom-[28%] right-[25%] w-48 h-12 rounded-full animate-nebula-drift-2"
+            style={{ background: 'radial-gradient(ellipse, rgba(180,80,35,0.10) 0%, transparent 80%)', filter: 'blur(10px)' }} />
+
+          {/* Ambient glow */}
+          <div className="absolute top-[30%] right-[20%] w-80 h-80 bg-orange-800/[0.06] rounded-full blur-[100px] animate-pulse-slow" />
+          <div className="absolute top-[40%] left-[10%] w-64 h-64 bg-red-900/[0.04] rounded-full blur-[80px] animate-pulse-slow-2" />
         </>
       )}
     </div>

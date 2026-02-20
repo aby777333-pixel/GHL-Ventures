@@ -50,7 +50,18 @@ export const NAV_LINKS = [
   { label: 'Blog', href: '/blog' },
   { label: 'Financial IQ', href: '/financial-iq' },
   { label: 'Portfolio', href: '/portfolio' },
-  { label: 'Contact', href: '/contact' },
+  {
+    label: 'Contact',
+    href: '#',
+    children: [
+      { label: 'Contact Us', href: '/contact' },
+      { label: 'FAQs', href: '/contact/faqs' },
+      { label: 'Refer an Investor', href: '/contact/refer' },
+      { label: 'Startup Application', href: '/contact/startup-apply' },
+      { label: 'Grievance Redressal', href: '/contact/grievance' },
+      { label: 'Careers', href: '/contact/careers' },
+    ],
+  },
 ] as const
 
 export const SOCIAL_LINKS = [
