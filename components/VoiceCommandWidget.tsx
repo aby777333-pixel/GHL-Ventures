@@ -45,7 +45,7 @@ const LANGUAGES = [
 
 // ─── Command parser ───
 type CmdType = 'navigate' | 'scroll' | 'read' | 'stop' | 'help' | 'language'
-  | 'call' | 'email' | 'whatsapp' | 'telegram' | 'video' | 'dark' | 'light'
+  | 'call' | 'directcall' | 'email' | 'whatsapp' | 'telegram' | 'video' | 'dark' | 'light'
   | 'search' | 'close' | 'home' | 'back' | 'unknown'
 
 interface ParsedCommand {
@@ -91,6 +91,7 @@ function parseCommand(input: string): ParsedCommand {
   if (/^(?:stop|shut up|quiet|silence|cancel|pause|mute)/.test(text)) return { type: 'stop' }
 
   // Contact actions
+  if (/(?:direct call|call us|phone numbers|office number)/.test(text)) return { type: 'directcall' }
   if (/(?:call|phone|ring|dial)/.test(text)) return { type: 'call' }
   if (/(?:email|mail|send email|write email)/.test(text)) return { type: 'email' }
   if (/(?:whatsapp|whats app|chat on whatsapp|message on whatsapp)/.test(text)) return { type: 'whatsapp' }
@@ -361,6 +362,13 @@ export default function VoiceCommandWidget() {
         setFeedback('Stopped speaking.')
         break
       }
+      case 'directcall': {
+        setFeedback('Opening Direct Call widget...')
+        speak('Opening direct call.')
+        const directCallBtn = document.querySelector('[aria-label="Open Direct Call"]') as HTMLElement
+        if (directCallBtn) directCallBtn.click()
+        break
+      }
       case 'call': {
         setFeedback('Opening phone dialer...')
         speak('Calling GHL India Ventures.')
@@ -424,7 +432,7 @@ export default function VoiceCommandWidget() {
         break
       }
       case 'help': {
-        const helpText = 'Commands: "Go to [page]", "Scroll up/down/top/bottom", "Read page", "Stop", "Call", "Email", "WhatsApp", "Telegram", "Video call", "Dark mode", "Light mode", "Switch to [language]", "Search [query]", "Go back", "Home", "Close", or say any page name.'
+        const helpText = 'Commands: "Go to [page]", "Scroll up/down/top/bottom", "Read page", "Stop", "Direct Call", "Call", "Email", "WhatsApp", "Telegram", "Video call", "Dark mode", "Light mode", "Switch to [language]", "Search [query]", "Go back", "Home", "Close", or say any page name.'
         setFeedback(helpText)
         speak(helpText)
         break

@@ -9,6 +9,7 @@ import BackToTop from '@/components/BackToTop'
 // import WhatsAppButton from '@/components/WhatsAppButton'
 // import TelegramButton from '@/components/TelegramButton'
 import VideoCallWidget from '@/components/VideoCallWidget'
+import DirectCallWidget from '@/components/DirectCallWidget'
 import CookieConsent from '@/components/CookieConsent'
 import { LegalPopupProvider } from '@/components/LegalPopup'
 import { ArticleReaderProvider } from '@/components/ArticleReader'
@@ -267,6 +268,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               <Footer />
               <BackToTop />
               <VideoCallWidget />
+              <DirectCallWidget />
               <CookieConsent />
               <SocialProofToasts />
               <LiveVisitorCount />

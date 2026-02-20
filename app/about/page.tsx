@@ -5,11 +5,12 @@ import Link from 'next/link'
 import AnimatedSection from '@/components/AnimatedSection'
 import PlaceholderImage from '@/components/PlaceholderImage'
 import { BRAND, TEAM_MEMBERS, ADVISORY_BOARD, MILESTONES } from '@/lib/constants'
+import Image from 'next/image'
 import {
   ArrowRight, Target, Eye, Heart, Shield, Users, Award,
   CheckCircle, TrendingUp, Globe, Briefcase, Star,
   Lightbulb, Lock, ChevronDown, ChevronUp, Linkedin,
-  Play, Home, ChevronRight, Building2, Sparkles
+  Play, Home, ChevronRight, Building2, Sparkles, MapPin
 } from 'lucide-react'
 import SpaceHero from '@/components/SpaceHero'
 
@@ -459,31 +460,151 @@ function RegulatoryCompliance() {
   )
 }
 
-/* ───────────────────────────── 8. OFFICE GALLERY ───────────────────────────── */
+/* ───────────────────────────── 8. OFFICE GALLERY — TABBED ───────────────────────────── */
+const OFFICE_TABS = [
+  {
+    id: 'reception',
+    label: 'Reception',
+    image: '/images/office/reception.jpg',
+    title: 'Welcome Lounge',
+    description: 'Our warm reception area greets every visitor with the refined elegance that mirrors GHL\u2019s commitment to excellence. A first impression designed to inspire confidence.',
+  },
+  {
+    id: 'conference',
+    label: 'Conference Room',
+    image: '/images/office/conference.jpg',
+    title: 'Executive Boardroom',
+    description: 'Where investment strategies take shape. Our state-of-the-art conference room is equipped for high-level presentations, investor meetings, and deal closings.',
+  },
+  {
+    id: 'workspace',
+    label: 'Team Workspace',
+    image: '/images/office/workspace.jpg',
+    title: 'The Engine Room',
+    description: 'An open, collaborative workspace where our analysts, fund managers, and operations team work together to deliver exceptional investment outcomes.',
+  },
+  {
+    id: 'meeting',
+    label: 'Meeting Area',
+    image: '/images/office/meeting.jpg',
+    title: 'Consultation Suite',
+    description: 'Private meeting spaces designed for one-on-one investor consultations, portfolio reviews, and confidential discussions about your investment journey.',
+  },
+]
+
 function OfficeGallery() {
-  const images = [
-    'Chennai Office Interior — Reception',
-    'Chennai Office Interior — Conference Room',
-    'Chennai Office Interior — Team Workspace',
-    'Chennai Office Interior — Meeting Area',
-  ]
+  const [activeTab, setActiveTab] = useState(0)
 
   return (
     <section className="section-padding bg-brand-offwhite">
       <div className="container-max mx-auto">
-        <AnimatedSection className="text-center mb-12">
+        <AnimatedSection className="text-center mb-10">
           <span className="text-brand-red font-semibold text-xs uppercase tracking-wider">Our Space</span>
           <h2 className="section-title mt-2 text-brand-black">Our Office</h2>
-          <p className="text-brand-grey mt-2">{BRAND.address}</p>
+          <div className="flex items-center justify-center gap-2 mt-2 text-brand-grey text-sm">
+            <MapPin className="w-4 h-4 text-brand-red" />
+            <span>{BRAND.address}</span>
+          </div>
         </AnimatedSection>
 
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          {images.map((label, i) => (
-            <AnimatedSection key={i} delay={i * 100}>
-              <PlaceholderImage theme="location" aspectRatio="aspect-[4/3]" label={label} className="rounded-2xl" />
-            </AnimatedSection>
-          ))}
+        {/* Tab Navigation */}
+        <div className="flex justify-center mb-8">
+          <div className="inline-flex bg-white rounded-2xl p-1.5 shadow-lg border border-gray-100">
+            {OFFICE_TABS.map((tab, i) => (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(i)}
+                className={`px-5 py-2.5 rounded-xl text-sm font-semibold transition-all duration-300 ${
+                  activeTab === i
+                    ? 'bg-brand-red text-white shadow-md shadow-brand-red/20'
+                    : 'text-gray-500 hover:text-brand-red hover:bg-gray-50'
+                }`}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </div>
         </div>
+
+        {/* Active Tab Content */}
+        <AnimatedSection>
+          <div className="grid lg:grid-cols-5 gap-8 items-center">
+            {/* Large Image */}
+            <div className="lg:col-span-3 relative rounded-2xl overflow-hidden shadow-2xl group">
+              <div className="aspect-[16/10] relative">
+                <Image
+                  src={OFFICE_TABS[activeTab].image}
+                  alt={`GHL India Ventures - ${OFFICE_TABS[activeTab].label}`}
+                  fill
+                  className="object-cover transition-transform duration-700 group-hover:scale-105"
+                  sizes="(max-width: 768px) 100vw, 60vw"
+                  priority={activeTab === 0}
+                />
+                {/* Gradient overlay at bottom */}
+                <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent" />
+                <div className="absolute bottom-0 left-0 right-0 p-6">
+                  <span className="inline-block px-3 py-1 bg-brand-red/90 text-white text-[10px] font-bold uppercase tracking-wider rounded-full mb-2">
+                    {OFFICE_TABS[activeTab].label}
+                  </span>
+                  <h3 className="text-white text-xl font-bold">{OFFICE_TABS[activeTab].title}</h3>
+                </div>
+              </div>
+            </div>
+
+            {/* Description + Thumbnail Grid */}
+            <div className="lg:col-span-2 space-y-6">
+              <div>
+                <h3 className="text-xl font-bold text-brand-black mb-3">{OFFICE_TABS[activeTab].title}</h3>
+                <p className="text-brand-grey text-sm leading-relaxed">{OFFICE_TABS[activeTab].description}</p>
+              </div>
+
+              {/* Thumbnail grid — click to switch tabs */}
+              <div className="grid grid-cols-4 gap-2">
+                {OFFICE_TABS.map((tab, i) => (
+                  <button
+                    key={tab.id}
+                    onClick={() => setActiveTab(i)}
+                    className={`relative aspect-square rounded-xl overflow-hidden transition-all duration-300 ${
+                      activeTab === i
+                        ? 'ring-2 ring-brand-red ring-offset-2 scale-105 shadow-lg'
+                        : 'opacity-60 hover:opacity-100 hover:scale-105'
+                    }`}
+                  >
+                    <Image
+                      src={tab.image}
+                      alt={tab.label}
+                      fill
+                      className="object-cover"
+                      sizes="80px"
+                    />
+                    {activeTab === i && (
+                      <div className="absolute inset-0 border-2 border-brand-red rounded-xl" />
+                    )}
+                  </button>
+                ))}
+              </div>
+
+              {/* Visit CTA */}
+              <div className="flex items-center gap-3 p-4 bg-white rounded-xl border border-gray-100 shadow-sm">
+                <div className="w-10 h-10 rounded-full bg-brand-red/10 flex items-center justify-center shrink-0">
+                  <Building2 className="w-5 h-5 text-brand-red" />
+                </div>
+                <div className="flex-1">
+                  <p className="text-xs font-bold text-brand-black">Visit Our Office</p>
+                  <p className="text-[10px] text-brand-grey">Queens Court, Egmore, Chennai</p>
+                </div>
+                <a
+                  href="https://maps.google.com/?q=Queens+Court+Egmore+Chennai"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="px-3 py-1.5 bg-brand-red text-white text-[10px] font-bold rounded-lg hover:bg-red-700 transition-colors"
+                >
+                  Directions
+                </a>
+              </div>
+            </div>
+          </div>
+        </AnimatedSection>
       </div>
     </section>
   )

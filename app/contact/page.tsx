@@ -383,14 +383,17 @@ export default function ContactPage() {
                         <span>Video Call</span>
                       </button>
 
-                      {/* Live Call — direct phone dialer */}
-                      <a
-                        href={`tel:${BRAND.mobile}`}
+                      {/* Direct Call — opens floating Direct Call widget */}
+                      <button
+                        onClick={() => {
+                          const btn = document.querySelector('[aria-label="Open Direct Call"]') as HTMLElement
+                          if (btn) btn.click()
+                        }}
                         className="flex items-center gap-3 px-4 py-3 rounded-xl bg-green-600 hover:bg-green-700 text-white font-semibold text-sm transition-all duration-300 hover:scale-[1.02] shadow-lg shadow-green-600/20"
                       >
                         <Phone className="w-5 h-5" />
-                        <span>Live Call</span>
-                      </a>
+                        <span>Direct Call</span>
+                      </button>
 
                       {/* Email — opens email client */}
                       <a
