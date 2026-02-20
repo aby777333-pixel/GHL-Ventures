@@ -175,9 +175,9 @@ export function ArticleReaderProvider({ children }: { children: React.ReactNode 
           <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" onClick={close} />
 
           {/* Modal */}
-          <div className="relative mx-auto w-full max-w-3xl flex flex-col bg-[#0A0A0A] overflow-hidden my-0 sm:my-4 sm:rounded-2xl border border-white/10">
+          <div className="relative mx-auto w-full max-w-3xl flex flex-col bg-brand-offwhite overflow-hidden my-0 sm:my-4 sm:rounded-2xl border border-brand-black/10">
             {/* Reading progress bar */}
-            <div className="absolute top-0 left-0 right-0 h-0.5 bg-white/5 z-10">
+            <div className="absolute top-0 left-0 right-0 h-0.5 bg-brand-black/5 z-10">
               <div
                 className="h-full bg-gradient-to-r from-red-500 to-amber-500 transition-all duration-200"
                 style={{ width: `${scrollPct}%` }}
@@ -185,7 +185,7 @@ export function ArticleReaderProvider({ children }: { children: React.ReactNode 
             </div>
 
             {/* Header */}
-            <div className="flex items-center justify-between px-4 sm:px-6 py-3 border-b border-white/10 bg-[#0A0A0A]/95 backdrop-blur-md shrink-0">
+            <div className="flex items-center justify-between px-4 sm:px-6 py-3 border-b border-brand-black/10 bg-brand-offwhite/95 backdrop-blur-md shrink-0">
               <div className="flex items-center gap-2 min-w-0">
                 {category && (
                   <span className={`text-xs px-2 py-0.5 rounded-full bg-${category.color}-500/20 text-${category.color}-400 whitespace-nowrap`}>
@@ -208,21 +208,21 @@ export function ArticleReaderProvider({ children }: { children: React.ReactNode 
                 {/* Font size */}
                 <button
                   onClick={() => changeFontSize(-1)}
-                  className="p-1.5 rounded-lg text-gray-400 hover:text-white hover:bg-white/10 transition-colors"
+                  className="p-1.5 rounded-lg text-brand-grey hover:text-brand-black hover:bg-brand-black/10 transition-colors"
                   title="Decrease font size"
                 >
                   <Minus className="w-3.5 h-3.5" />
                 </button>
-                <span className="text-xs text-gray-500 w-5 text-center">{fontSize}</span>
+                <span className="text-xs text-brand-grey w-5 text-center">{fontSize}</span>
                 <button
                   onClick={() => changeFontSize(1)}
-                  className="p-1.5 rounded-lg text-gray-400 hover:text-white hover:bg-white/10 transition-colors"
+                  className="p-1.5 rounded-lg text-brand-grey hover:text-brand-black hover:bg-brand-black/10 transition-colors"
                   title="Increase font size"
                 >
                   <Plus className="w-3.5 h-3.5" />
                 </button>
 
-                <div className="w-px h-4 bg-white/10 mx-1" />
+                <div className="w-px h-4 bg-brand-black/10 mx-1" />
 
                 {/* Bookmark */}
                 <button
@@ -230,7 +230,7 @@ export function ArticleReaderProvider({ children }: { children: React.ReactNode 
                   className={`p-1.5 rounded-lg transition-colors ${
                     isBookmarked
                       ? 'text-amber-400 bg-amber-400/10'
-                      : 'text-gray-400 hover:text-white hover:bg-white/10'
+                      : 'text-brand-grey hover:text-brand-black hover:bg-brand-black/10'
                   }`}
                   title={isBookmarked ? 'Remove bookmark' : 'Bookmark'}
                 >
@@ -241,16 +241,16 @@ export function ArticleReaderProvider({ children }: { children: React.ReactNode 
                 <div className="relative">
                   <button
                     onClick={() => setShareOpen(!shareOpen)}
-                    className="p-1.5 rounded-lg text-gray-400 hover:text-white hover:bg-white/10 transition-colors"
+                    className="p-1.5 rounded-lg text-brand-grey hover:text-brand-black hover:bg-brand-black/10 transition-colors"
                     title="Share"
                   >
                     <Share2 className="w-4 h-4" />
                   </button>
                   {shareOpen && (
-                    <div className="absolute right-0 top-full mt-1 bg-[#1a1a1a] border border-white/10 rounded-lg p-2 min-w-[160px] z-50 shadow-xl">
+                    <div className="absolute right-0 top-full mt-1 bg-brand-offwhite border border-brand-black/10 rounded-lg p-2 min-w-[160px] z-50 shadow-xl">
                       <button
                         onClick={copyLink}
-                        className="flex items-center gap-2 w-full px-3 py-2 text-xs text-gray-300 hover:bg-white/10 rounded-md transition-colors"
+                        className="flex items-center gap-2 w-full px-3 py-2 text-xs text-brand-grey hover:bg-brand-black/10 rounded-md transition-colors"
                       >
                         {copied ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
                         {copied ? 'Copied!' : 'Copy link'}
@@ -259,7 +259,7 @@ export function ArticleReaderProvider({ children }: { children: React.ReactNode 
                         href={`https://wa.me/?text=${encodeURIComponent(article?.title + ' — GHL India Ventures Education Hub')}`}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="flex items-center gap-2 w-full px-3 py-2 text-xs text-gray-300 hover:bg-white/10 rounded-md transition-colors"
+                        className="flex items-center gap-2 w-full px-3 py-2 text-xs text-brand-grey hover:bg-brand-black/10 rounded-md transition-colors"
                       >
                         <ExternalLink className="w-3.5 h-3.5" /> WhatsApp
                       </a>
@@ -267,7 +267,7 @@ export function ArticleReaderProvider({ children }: { children: React.ReactNode 
                         href={`https://twitter.com/intent/tweet?text=${encodeURIComponent(article?.title + ' — GHL India Ventures')}`}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="flex items-center gap-2 w-full px-3 py-2 text-xs text-gray-300 hover:bg-white/10 rounded-md transition-colors"
+                        className="flex items-center gap-2 w-full px-3 py-2 text-xs text-brand-grey hover:bg-brand-black/10 rounded-md transition-colors"
                       >
                         <ExternalLink className="w-3.5 h-3.5" /> Twitter / X
                       </a>
@@ -275,7 +275,7 @@ export function ArticleReaderProvider({ children }: { children: React.ReactNode 
                         href={`https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(window?.location?.origin + '/education/insights')}`}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="flex items-center gap-2 w-full px-3 py-2 text-xs text-gray-300 hover:bg-white/10 rounded-md transition-colors"
+                        className="flex items-center gap-2 w-full px-3 py-2 text-xs text-brand-grey hover:bg-brand-black/10 rounded-md transition-colors"
                       >
                         <ExternalLink className="w-3.5 h-3.5" /> LinkedIn
                       </a>
@@ -283,12 +283,12 @@ export function ArticleReaderProvider({ children }: { children: React.ReactNode 
                   )}
                 </div>
 
-                <div className="w-px h-4 bg-white/10 mx-1" />
+                <div className="w-px h-4 bg-brand-black/10 mx-1" />
 
                 {/* Close */}
                 <button
                   onClick={close}
-                  className="p-1.5 rounded-lg text-gray-400 hover:text-white hover:bg-white/10 transition-colors"
+                  className="p-1.5 rounded-lg text-brand-grey hover:text-brand-black hover:bg-brand-black/10 transition-colors"
                   title="Close (ESC)"
                 >
                   <X className="w-4 h-4" />
@@ -306,21 +306,21 @@ export function ArticleReaderProvider({ children }: { children: React.ReactNode 
                 <>
                   {/* Title */}
                   <h1
-                    className="font-bold text-white leading-tight mb-4"
+                    className="font-bold text-brand-black leading-tight mb-4"
                     style={{ fontSize: `${fontSize + 8}px` }}
                   >
                     {article.title}
                   </h1>
 
                   {/* Meta line */}
-                  <div className="flex items-center gap-3 mb-6 pb-6 border-b border-white/10">
-                    <span className="text-xs text-gray-500">Article {article.id} of 53</span>
-                    <span className="text-xs text-gray-600">·</span>
-                    <span className="text-xs text-gray-500 flex items-center gap-1">
+                  <div className="flex items-center gap-3 mb-6 pb-6 border-b border-brand-black/10">
+                    <span className="text-xs text-brand-grey">Article {article.id} of 53</span>
+                    <span className="text-xs text-brand-grey/50">·</span>
+                    <span className="text-xs text-brand-grey flex items-center gap-1">
                       <BookOpen className="w-3 h-3" /> {category.name}
                     </span>
-                    <span className="text-xs text-gray-600">·</span>
-                    <span className="text-xs text-gray-500">{scrollPct}% read</span>
+                    <span className="text-xs text-brand-grey/50">·</span>
+                    <span className="text-xs text-brand-grey">{scrollPct}% read</span>
                   </div>
 
                   {/* Article content */}
@@ -332,7 +332,7 @@ export function ArticleReaderProvider({ children }: { children: React.ReactNode 
                         return (
                           <h2
                             key={i}
-                            className="font-semibold text-white mt-6 mb-2"
+                            className="font-semibold text-brand-black mt-6 mb-2"
                             style={{ fontSize: `${fontSize + 2}px` }}
                           >
                             {para}
@@ -342,7 +342,7 @@ export function ArticleReaderProvider({ children }: { children: React.ReactNode 
                       return (
                         <p
                           key={i}
-                          className="text-gray-300 leading-relaxed"
+                          className="text-brand-grey leading-relaxed"
                           style={{ fontSize: `${fontSize}px`, lineHeight: '1.8' }}
                         >
                           {para}
@@ -352,8 +352,8 @@ export function ArticleReaderProvider({ children }: { children: React.ReactNode 
                   </div>
 
                   {/* Disclaimer */}
-                  <div className="mt-8 p-4 rounded-xl bg-white/5 border border-white/10">
-                    <p className="text-xs text-gray-500 italic leading-relaxed">
+                  <div className="mt-8 p-4 rounded-xl bg-brand-black/5 border border-brand-black/10">
+                    <p className="text-xs text-brand-grey italic leading-relaxed">
                       Disclaimer: This article is for educational purposes only and does not constitute investment advice.
                       Investments in AIFs are subject to market risks including loss of principal.
                       Past performance is not indicative of future results. SEBI Reg. No. IN/AIF2/2425/1517.
@@ -370,12 +370,12 @@ export function ArticleReaderProvider({ children }: { children: React.ReactNode 
                       <button
                         key={label}
                         disabled
-                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/5 border border-white/10 text-gray-500 text-xs cursor-not-allowed group relative"
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-brand-black/5 border border-brand-black/10 text-brand-grey text-xs cursor-not-allowed group relative"
                       >
                         <Lock className="w-3 h-3" />
                         <Icon className="w-3.5 h-3.5" />
                         {label}
-                        <span className="absolute -top-7 left-1/2 -translate-x-1/2 bg-white/10 text-gray-400 text-[10px] px-2 py-0.5 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
+                        <span className="absolute -top-7 left-1/2 -translate-x-1/2 bg-brand-black/10 text-brand-grey text-[10px] px-2 py-0.5 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
                           Coming Soon
                         </span>
                       </button>
@@ -383,11 +383,11 @@ export function ArticleReaderProvider({ children }: { children: React.ReactNode 
                   </div>
 
                   {/* Prev / Next navigation */}
-                  <div className="mt-8 pt-6 border-t border-white/10 flex items-center justify-between gap-4">
+                  <div className="mt-8 pt-6 border-t border-brand-black/10 flex items-center justify-between gap-4">
                     {prevArt ? (
                       <button
                         onClick={() => openArticle(prevArt.id)}
-                        className="flex items-center gap-2 text-sm text-gray-400 hover:text-white transition-colors group"
+                        className="flex items-center gap-2 text-sm text-brand-grey hover:text-brand-black transition-colors group"
                       >
                         <ChevronLeft className="w-4 h-4 group-hover:-translate-x-0.5 transition-transform" />
                         <span className="truncate max-w-[200px]">{prevArt.title}</span>
@@ -396,7 +396,7 @@ export function ArticleReaderProvider({ children }: { children: React.ReactNode 
                     {nextArt ? (
                       <button
                         onClick={() => openArticle(nextArt.id)}
-                        className="flex items-center gap-2 text-sm text-gray-400 hover:text-white transition-colors group text-right"
+                        className="flex items-center gap-2 text-sm text-brand-grey hover:text-brand-black transition-colors group text-right"
                       >
                         <span className="truncate max-w-[200px]">{nextArt.title}</span>
                         <ChevronRight className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" />

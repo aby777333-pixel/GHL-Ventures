@@ -47,7 +47,7 @@ function ProgressRing({ pct, size = 36 }: { pct: number; size?: number }) {
   const offset = c - (pct / 100) * c
   return (
     <svg width={size} height={size} className="transform -rotate-90">
-      <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth={3} />
+      <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="currentColor" strokeWidth={3} opacity={0.1} />
       <circle
         cx={size / 2} cy={size / 2} r={r}
         fill="none"
@@ -224,41 +224,41 @@ export default function InsightsPage() {
       </section>
 
       {/* Progress Dashboard */}
-      <section className="section-padding bg-[#0A0A0A] border-b border-white/5">
+      <section className="section-padding bg-brand-offwhite border-b border-brand-black/5">
         <div className="container-max">
           <AnimatedSection>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               {/* Articles Read */}
-              <div className="bg-white/[0.03] border border-white/10 rounded-2xl p-5 flex items-center gap-4">
+              <div className="card rounded-2xl p-5 flex items-center gap-4">
                 <div className="relative">
                   <ProgressRing pct={mounted ? (readCount / 53) * 100 : 0} size={56} />
-                  <BookOpen className="absolute inset-0 m-auto w-5 h-5 text-white/40" />
+                  <BookOpen className="absolute inset-0 m-auto w-5 h-5 text-brand-grey" />
                 </div>
                 <div>
-                  <p className="text-2xl font-bold text-white">{mounted ? readCount : 0}<span className="text-gray-500 text-sm font-normal"> / 53</span></p>
-                  <p className="text-xs text-gray-500">Articles Completed</p>
+                  <p className="text-2xl font-bold text-brand-black">{mounted ? readCount : 0}<span className="text-brand-grey text-sm font-normal"> / 53</span></p>
+                  <p className="text-xs text-brand-grey">Articles Completed</p>
                 </div>
               </div>
 
               {/* Knowledge Score */}
-              <div className="bg-white/[0.03] border border-white/10 rounded-2xl p-5 flex items-center gap-4">
+              <div className="card rounded-2xl p-5 flex items-center gap-4">
                 <div className="w-14 h-14 rounded-full bg-amber-500/10 flex items-center justify-center">
                   <Trophy className="w-6 h-6 text-amber-400" />
                 </div>
                 <div>
-                  <p className="text-2xl font-bold text-white">{mounted ? knowledgeScore : 0}<span className="text-gray-500 text-sm font-normal"> / {maxScore}</span></p>
-                  <p className="text-xs text-gray-500">Knowledge Score</p>
+                  <p className="text-2xl font-bold text-brand-black">{mounted ? knowledgeScore : 0}<span className="text-brand-grey text-sm font-normal"> / {maxScore}</span></p>
+                  <p className="text-xs text-brand-grey">Knowledge Score</p>
                 </div>
               </div>
 
               {/* Bookmarks */}
-              <div className="bg-white/[0.03] border border-white/10 rounded-2xl p-5 flex items-center gap-4">
+              <div className="card rounded-2xl p-5 flex items-center gap-4">
                 <div className="w-14 h-14 rounded-full bg-rose-500/10 flex items-center justify-center">
                   <BookmarkCheck className="w-6 h-6 text-rose-400" />
                 </div>
                 <div>
-                  <p className="text-2xl font-bold text-white">{mounted ? bookmarks.length : 0}</p>
-                  <p className="text-xs text-gray-500">Saved Bookmarks</p>
+                  <p className="text-2xl font-bold text-brand-black">{mounted ? bookmarks.length : 0}</p>
+                  <p className="text-xs text-brand-grey">Saved Bookmarks</p>
                 </div>
               </div>
             </div>
@@ -277,7 +277,7 @@ export default function InsightsPage() {
                     <button
                       key={art.id}
                       onClick={() => openArticle(art.id)}
-                      className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white/5 border border-white/10 rounded-lg text-xs text-gray-300 hover:bg-white/10 hover:text-white transition-colors"
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 card rounded-lg text-xs text-brand-grey hover:text-brand-black transition-colors"
                     >
                       <span>{art.title}</span>
                       <ArrowRight className="w-3 h-3" />
@@ -291,23 +291,23 @@ export default function InsightsPage() {
       </section>
 
       {/* Search + Category Tabs + Grid */}
-      <section className="section-padding bg-[#0A0A0A]" id="articles">
+      <section className="section-padding bg-brand-offwhite" id="articles">
         <div className="container-max">
           {/* Search Bar */}
           <AnimatedSection>
             <div className="relative mb-8">
-              <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500" />
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-brand-grey" />
               <input
                 type="text"
                 value={searchQuery}
                 onChange={e => { setSearchQuery(e.target.value); setActiveTab(0) }}
                 placeholder="Search 53 articles by title, topic, or keyword…"
-                className="w-full pl-12 pr-12 py-4 bg-white/[0.03] border border-white/10 rounded-2xl text-white placeholder-gray-600 focus:outline-none focus:border-red-500/50 focus:ring-1 focus:ring-red-500/20 transition-all text-sm"
+                className="input-field w-full pl-12 pr-12 py-4 rounded-2xl text-sm"
               />
               {searchQuery && (
                 <button
                   onClick={() => setSearchQuery('')}
-                  className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 hover:text-white"
+                  className="absolute right-4 top-1/2 -translate-y-1/2 text-brand-grey hover:text-brand-black"
                 >
                   <X className="w-5 h-5" />
                 </button>
@@ -323,7 +323,7 @@ export default function InsightsPage() {
                 className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs border transition-colors ${
                   showBookmarksOnly
                     ? 'bg-amber-500/10 border-amber-500/30 text-amber-400'
-                    : 'bg-white/5 border-white/10 text-gray-400 hover:text-white'
+                    : 'card text-brand-grey hover:text-brand-black'
                 }`}
               >
                 <Bookmark className="w-3.5 h-3.5" />
@@ -342,8 +342,8 @@ export default function InsightsPage() {
             <AnimatedSection>
               <div className="relative mb-8">
                 {/* Gradient fade edges */}
-                <div className="absolute left-0 top-0 bottom-0 w-8 bg-gradient-to-r from-[#0A0A0A] to-transparent z-10 pointer-events-none sm:hidden" />
-                <div className="absolute right-0 top-0 bottom-0 w-8 bg-gradient-to-l from-[#0A0A0A] to-transparent z-10 pointer-events-none sm:hidden" />
+                <div className="absolute left-0 top-0 bottom-0 w-8 bg-gradient-to-r from-brand-offwhite to-transparent z-10 pointer-events-none sm:hidden" />
+                <div className="absolute right-0 top-0 bottom-0 w-8 bg-gradient-to-l from-brand-offwhite to-transparent z-10 pointer-events-none sm:hidden" />
 
                 <div ref={tabsRef} className="flex overflow-x-auto scrollbar-hide gap-1 pb-2 -mx-1 px-1">
                   {/* All tab */}
@@ -352,7 +352,7 @@ export default function InsightsPage() {
                     className={`shrink-0 px-4 py-2.5 rounded-xl text-xs font-medium transition-all whitespace-nowrap ${
                       activeTab === 0
                         ? 'bg-red-500/10 text-red-400 border border-red-500/30'
-                        : 'bg-white/[0.03] text-gray-400 border border-white/5 hover:bg-white/[0.06] hover:text-white'
+                        : 'card text-brand-grey hover:text-brand-black'
                     }`}
                   >
                     All Articles
@@ -371,7 +371,7 @@ export default function InsightsPage() {
                         className={`shrink-0 px-4 py-2.5 rounded-xl text-xs font-medium transition-all whitespace-nowrap inline-flex items-center gap-1.5 ${
                           activeTab === cat.id
                             ? `bg-${cat.color}-500/10 text-${cat.color}-400 border border-${cat.color}-500/30`
-                            : 'bg-white/[0.03] text-gray-400 border border-white/5 hover:bg-white/[0.06] hover:text-white'
+                            : 'card text-brand-grey hover:text-brand-black'
                         }`}
                       >
                         {Icon && <Icon className="w-3.5 h-3.5" />}
@@ -387,8 +387,8 @@ export default function InsightsPage() {
                     onClick={() => setActiveTab(9)}
                     className={`shrink-0 px-4 py-2.5 rounded-xl text-xs font-medium transition-all whitespace-nowrap inline-flex items-center gap-1.5 ${
                       activeTab === 9
-                        ? 'bg-white/10 text-white border border-white/20'
-                        : 'bg-white/[0.03] text-gray-400 border border-white/5 hover:bg-white/[0.06] hover:text-white'
+                        ? 'bg-brand-black/10 text-brand-black border border-brand-black/20'
+                        : 'card text-brand-grey hover:text-brand-black'
                     }`}
                   >
                     <FileText className="w-3.5 h-3.5" />
@@ -455,18 +455,18 @@ export default function InsightsPage() {
                         </div>
 
                         {/* Title */}
-                        <h3 className="text-sm font-semibold text-white group-hover:text-red-400 transition-colors mb-2 line-clamp-2 leading-snug">
+                        <h3 className="text-sm font-semibold text-brand-black group-hover:text-brand-red transition-colors mb-2 line-clamp-2 leading-snug">
                           {art.title}
                         </h3>
 
                         {/* Description */}
-                        <p className="text-xs text-gray-500 line-clamp-2 flex-1 leading-relaxed">
+                        <p className="text-xs text-brand-grey line-clamp-2 flex-1 leading-relaxed">
                           {art.description}
                         </p>
 
                         {/* Read button */}
-                        <div className="mt-4 pt-3 border-t border-white/5">
-                          <span className="inline-flex items-center gap-1 text-xs text-red-400 group-hover:text-red-300 font-medium transition-colors">
+                        <div className="mt-4 pt-3 border-t border-brand-black/5">
+                          <span className="inline-flex items-center gap-1 text-xs text-brand-red font-medium transition-colors">
                             {isRead ? 'Read Again' : 'Read Article'}
                             <ArrowRight className="w-3 h-3 group-hover:translate-x-0.5 transition-transform" />
                           </span>
@@ -499,19 +499,19 @@ export default function InsightsPage() {
           {activeTab === 9 && (
             <AnimatedSection>
               <div className="max-w-xl mx-auto text-center py-12">
-                <div className="w-20 h-20 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center mx-auto mb-6">
-                  <FileText className="w-10 h-10 text-gray-400" />
+                <div className="w-20 h-20 rounded-2xl card flex items-center justify-center mx-auto mb-6">
+                  <FileText className="w-10 h-10 text-brand-grey" />
                 </div>
-                <h3 className="text-xl font-bold text-white mb-3">Complete Education Compendium</h3>
-                <p className="text-sm text-gray-400 mb-2">
+                <h3 className="text-xl font-bold text-brand-black mb-3">Complete Education Compendium</h3>
+                <p className="text-sm text-brand-grey mb-2">
                   All 53 articles compiled into a single PDF document for offline reading and reference.
                 </p>
-                <p className="text-xs text-gray-600 mb-6">
+                <p className="text-xs text-brand-grey/60 mb-6">
                   February 2026 Edition · ~120 pages · PDF format
                 </p>
                 <button
                   disabled
-                  className="inline-flex items-center gap-2 px-6 py-3 bg-white/5 border border-white/10 rounded-xl text-gray-500 text-sm cursor-not-allowed"
+                  className="inline-flex items-center gap-2 px-6 py-3 card rounded-xl text-brand-grey text-sm cursor-not-allowed"
                 >
                   <Lock className="w-4 h-4" />
                   <Download className="w-4 h-4" />
@@ -525,12 +525,12 @@ export default function InsightsPage() {
       </section>
 
       {/* Learning Path Section */}
-      <section className="section-padding bg-[#0A0A0A] border-t border-white/5">
+      <section className="section-padding bg-brand-offwhite border-t border-brand-black/5">
         <div className="container-max">
           <AnimatedSection>
             <div className="text-center mb-10">
-              <h2 className="text-2xl font-bold text-white mb-2">Your Learning Path</h2>
-              <p className="text-sm text-gray-400">Progress through each category from beginner to advanced</p>
+              <h2 className="text-2xl font-bold text-brand-black mb-2">Your Learning Path</h2>
+              <p className="text-sm text-brand-grey">Progress through each category from beginner to advanced</p>
             </div>
           </AnimatedSection>
 
@@ -544,7 +544,7 @@ export default function InsightsPage() {
               return (
                 <AnimatedSection key={cat.id}>
                   <div
-                    className="bg-white/[0.03] border border-white/10 rounded-2xl p-5 hover:bg-white/[0.05] transition-colors cursor-pointer"
+                    className="card rounded-2xl p-5 hover:shadow-lg transition-all cursor-pointer"
                     onClick={() => { setActiveTab(cat.id); document.getElementById('articles')?.scrollIntoView({ behavior: 'smooth' }) }}
                   >
                     <div className="flex items-center gap-3 mb-3">
@@ -552,8 +552,8 @@ export default function InsightsPage() {
                         {Icon && <Icon className={`w-5 h-5 text-${cat.color}-400`} />}
                       </div>
                       <div className="flex-1">
-                        <p className="text-sm font-medium text-white">{cat.name}</p>
-                        <p className="text-[10px] text-gray-500">
+                        <p className="text-sm font-medium text-brand-black">{cat.name}</p>
+                        <p className="text-[10px] text-brand-grey">
                           {mounted ? comp?.done || 0 : 0} / {comp?.total || 0} articles
                         </p>
                       </div>
@@ -565,7 +565,7 @@ export default function InsightsPage() {
                       )}
                     </div>
                     {/* Progress bar */}
-                    <div className="h-1.5 bg-white/5 rounded-full overflow-hidden">
+                    <div className="h-1.5 bg-brand-black/5 rounded-full overflow-hidden">
                       <div
                         className={`h-full rounded-full transition-all duration-700 ${
                           isComplete ? 'bg-emerald-500' : `bg-${cat.color}-500`
@@ -582,14 +582,14 @@ export default function InsightsPage() {
       </section>
 
       {/* CTA Section */}
-      <section className="section-padding bg-[#0A0A0A] border-t border-white/5">
+      <section className="section-padding bg-brand-offwhite border-t border-brand-black/5">
         <div className="container-max">
           <AnimatedSection>
             <div className="text-center max-w-2xl mx-auto">
-              <h2 className="text-2xl font-bold text-white mb-3">
+              <h2 className="text-2xl font-bold text-brand-black mb-3">
                 Ready to Put Your Knowledge Into Action?
               </h2>
-              <p className="text-sm text-gray-400 mb-8">
+              <p className="text-sm text-brand-grey mb-8">
                 Now that you understand AIFs, stressed real estate, and venture capital investing,
                 explore how GHL India Ventures can be part of your wealth strategy.
               </p>
@@ -602,7 +602,7 @@ export default function InsightsPage() {
                 </Link>
                 <Link
                   href="/contact"
-                  className="px-8 py-3 border border-white/20 rounded-xl text-sm text-gray-300 hover:text-white hover:bg-white/5 transition-all inline-flex items-center gap-2"
+                  className="px-8 py-3 border border-brand-black/20 rounded-xl text-sm text-brand-grey hover:text-brand-black hover:bg-brand-black/5 transition-all inline-flex items-center gap-2"
                 >
                   Talk to Our Team <ChevronRight className="w-4 h-4" />
                 </Link>
