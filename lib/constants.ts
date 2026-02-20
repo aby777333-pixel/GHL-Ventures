@@ -51,6 +51,13 @@ export const NAV_LINKS = [
   { label: 'Financial IQ', href: '/financial-iq' },
   { label: 'Portfolio', href: '/portfolio' },
   {
+    label: 'Education',
+    href: '#',
+    children: [
+      { label: 'Insights', href: '/education/insights' },
+    ],
+  },
+  {
     label: 'Contact',
     href: '#',
     children: [

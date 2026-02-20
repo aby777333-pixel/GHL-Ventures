@@ -11,6 +11,7 @@ import BackToTop from '@/components/BackToTop'
 import VideoCallWidget from '@/components/VideoCallWidget'
 import CookieConsent from '@/components/CookieConsent'
 import { LegalPopupProvider } from '@/components/LegalPopup'
+import { ArticleReaderProvider } from '@/components/ArticleReader'
 import ThemeProvider from '@/lib/ThemeProvider'
 import SocialProofToasts from '@/components/SocialProofToasts'
 import LiveVisitorCount from '@/components/LiveVisitorCount'
@@ -256,19 +257,21 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         </a>
         <ThemeProvider>
           <LegalPopupProvider>
-            <ScrollProgress />
-            <Navbar />
-            <main className="flex-1" id="main-content" role="main">
-              {children}
-            </main>
-            <Footer />
-            <BackToTop />
-            <VideoCallWidget />
-            <CookieConsent />
-            <SocialProofToasts />
-            <LiveVisitorCount />
-            <CommandPalette />
-            <ChatWidget />
+            <ArticleReaderProvider>
+              <ScrollProgress />
+              <Navbar />
+              <main className="flex-1" id="main-content" role="main">
+                {children}
+              </main>
+              <Footer />
+              <BackToTop />
+              <VideoCallWidget />
+              <CookieConsent />
+              <SocialProofToasts />
+              <LiveVisitorCount />
+              <CommandPalette />
+              <ChatWidget />
+            </ArticleReaderProvider>
           </LegalPopupProvider>
         </ThemeProvider>
       </body>

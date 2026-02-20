@@ -18,6 +18,10 @@ export default function Navbar() {
   const [mobileAboutOpen, setMobileAboutOpen] = useState(false)
   const aboutRef = useRef<HTMLDivElement>(null)
   const aboutTimeout = useRef<NodeJS.Timeout | null>(null)
+  const [educationOpen, setEducationOpen] = useState(false)
+  const [mobileEducationOpen, setMobileEducationOpen] = useState(false)
+  const educationRef = useRef<HTMLDivElement>(null)
+  const educationTimeout = useRef<NodeJS.Timeout | null>(null)
   const [contactOpen, setContactOpen] = useState(false)
   const [mobileContactOpen, setMobileContactOpen] = useState(false)
   const contactRef = useRef<HTMLDivElement>(null)
@@ -39,6 +43,8 @@ export default function Navbar() {
     setIsOpen(false)
     setAboutOpen(false)
     setMobileAboutOpen(false)
+    setEducationOpen(false)
+    setMobileEducationOpen(false)
     setContactOpen(false)
     setMobileContactOpen(false)
   }, [pathname])
@@ -61,6 +67,9 @@ export default function Navbar() {
       if (aboutRef.current && !aboutRef.current.contains(e.target as Node)) {
         setAboutOpen(false)
       }
+      if (educationRef.current && !educationRef.current.contains(e.target as Node)) {
+        setEducationOpen(false)
+      }
       if (contactRef.current && !contactRef.current.contains(e.target as Node)) {
         setContactOpen(false)
       }
@@ -72,6 +81,9 @@ export default function Navbar() {
   // Check if About submenu item is active
   const isAboutActive = pathname === '/about' || pathname === '/tools' || pathname === '/downloads'
 
+  // Check if Education submenu item is active
+  const isEducationActive = pathname.startsWith('/education')
+
   // Check if Contact submenu item is active
   const isContactActive = pathname === '/contact' || pathname === '/contact/faqs' || pathname === '/contact/refer' || pathname === '/contact/startup-apply' || pathname === '/contact/grievance' || pathname === '/contact/careers'
 
@@ -81,6 +93,14 @@ export default function Navbar() {
   }
   const handleAboutLeave = () => {
     aboutTimeout.current = setTimeout(() => setAboutOpen(false), 200)
+  }
+
+  const handleEducationEnter = () => {
+    if (educationTimeout.current) clearTimeout(educationTimeout.current)
+    setEducationOpen(true)
+  }
+  const handleEducationLeave = () => {
+    educationTimeout.current = setTimeout(() => setEducationOpen(false), 200)
   }
 
   const handleContactEnter = () => {
@@ -128,17 +148,21 @@ export default function Navbar() {
                   // Check if this link has children (dropdown)
                   const hasChildren = 'children' in link && link.children
                   const isAbout = link.label === 'About'
+                  const isEducation = link.label === 'Education'
+                  const isContact = link.label === 'Contact'
                   const isActive = hasChildren
-                    ? (isAbout ? isAboutActive : isContactActive)
+                    ? (isAbout ? isAboutActive : isEducation ? isEducationActive : isContactActive)
                     : pathname === link.href
 
                   if (hasChildren) {
-                    const dropdownOpen = isAbout ? aboutOpen : contactOpen
-                    const dropdownRef = isAbout ? aboutRef : contactRef
-                    const onEnter = isAbout ? handleAboutEnter : handleContactEnter
-                    const onLeave = isAbout ? handleAboutLeave : handleContactLeave
+                    const dropdownOpen = isAbout ? aboutOpen : isEducation ? educationOpen : contactOpen
+                    const dropdownRef = isAbout ? aboutRef : isEducation ? educationRef : contactRef
+                    const onEnter = isAbout ? handleAboutEnter : isEducation ? handleEducationEnter : handleContactEnter
+                    const onLeave = isAbout ? handleAboutLeave : isEducation ? handleEducationLeave : handleContactLeave
                     const toggleOpen = isAbout
                       ? () => setAboutOpen(!aboutOpen)
+                      : isEducation
+                      ? () => setEducationOpen(!educationOpen)
                       : () => setContactOpen(!contactOpen)
 
                     return (
@@ -184,7 +208,7 @@ export default function Navbar() {
                           }`}
                         >
                           <div
-                            className={`rounded-xl border shadow-2xl py-1.5 overflow-hidden ${isAbout ? 'min-w-[160px]' : 'min-w-[190px]'}`}
+                            className={`rounded-xl border shadow-2xl py-1.5 overflow-hidden ${isAbout ? 'min-w-[160px]' : isEducation ? 'min-w-[150px]' : 'min-w-[190px]'}`}
                             style={{
                               background: scrolled ? 'rgba(255,255,255,0.97)' : 'rgba(15,15,20,0.97)',
                               borderColor: scrolled ? 'rgba(0,0,0,0.08)' : 'rgba(255,255,255,0.1)',
@@ -409,11 +433,14 @@ export default function Navbar() {
 
                 if (hasChildren) {
                   const isAboutMenu = link.label === 'About'
-                  const mobileOpen = isAboutMenu ? mobileAboutOpen : mobileContactOpen
+                  const isEducationMenu = link.label === 'Education'
+                  const mobileOpen = isAboutMenu ? mobileAboutOpen : isEducationMenu ? mobileEducationOpen : mobileContactOpen
                   const toggleMobile = isAboutMenu
                     ? () => setMobileAboutOpen(!mobileAboutOpen)
+                    : isEducationMenu
+                    ? () => setMobileEducationOpen(!mobileEducationOpen)
                     : () => setMobileContactOpen(!mobileContactOpen)
-                  const isDropdownActive = isAboutMenu ? isAboutActive : isContactActive
+                  const isDropdownActive = isAboutMenu ? isAboutActive : isEducationMenu ? isEducationActive : isContactActive
 
                   return (
                     <div key={link.label} className="flex flex-col items-center">
@@ -435,7 +462,7 @@ export default function Navbar() {
                       {/* Sub-items */}
                       <div
                         className={`flex flex-col items-center space-y-3 overflow-hidden transition-all duration-300 ${
-                          mobileOpen ? `${isAboutMenu ? 'max-h-[200px]' : 'max-h-[350px]'} mt-3 opacity-100` : 'max-h-0 mt-0 opacity-0'
+                          mobileOpen ? `${isAboutMenu ? 'max-h-[200px]' : isEducationMenu ? 'max-h-[100px]' : 'max-h-[350px]'} mt-3 opacity-100` : 'max-h-0 mt-0 opacity-0'
                         }`}
                       >
                         {link.children.map((child) => {

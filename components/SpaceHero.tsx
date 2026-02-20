@@ -24,6 +24,7 @@
  *   galaxy        — Startup Application page: spiral galaxy with companion
  *   eclipse       — Grievance Redressal page: total solar eclipse with corona
  *   mars          — Careers page: Martian terrain with red dunes + moons
+ *   gurukul       — Education page: ancient Indian wisdom + oil lamp + scrolls + starry sky
  */
 
 type SpaceVariant =
@@ -45,6 +46,7 @@ type SpaceVariant =
   | 'galaxy'
   | 'eclipse'
   | 'mars'
+  | 'gurukul'
 
 interface SpaceHeroProps {
   variant: SpaceVariant
@@ -1295,6 +1297,96 @@ export default function SpaceHero({ variant }: SpaceHeroProps) {
           {/* Ambient glow */}
           <div className="absolute top-[30%] right-[20%] w-80 h-80 bg-orange-800/[0.06] rounded-full blur-[100px] animate-pulse-slow" />
           <div className="absolute top-[40%] left-[10%] w-64 h-64 bg-red-900/[0.04] rounded-full blur-[80px] animate-pulse-slow-2" />
+        </>
+      )}
+
+      {/* ── Gurukul — Ancient Indian wisdom + oil lamp + scrolls + starry sky ── */}
+      {variant === 'gurukul' && (
+        <>
+          {/* Warm night sky gradient */}
+          <div className="absolute inset-0"
+            style={{ background: 'linear-gradient(to bottom, rgba(5,5,15,1) 0%, rgba(15,10,25,0.9) 30%, rgba(25,15,10,0.7) 60%, rgba(40,20,10,0.6) 80%, rgba(60,30,15,0.5) 100%)' }} />
+
+          {/* Central oil lamp (diya) glow */}
+          <div className="absolute bottom-[15%] left-1/2 -translate-x-1/2">
+            {/* Outer warm glow halo */}
+            <div className="absolute -top-40 -left-40 w-80 h-80 rounded-full animate-pulse-slow"
+              style={{ background: 'radial-gradient(circle, rgba(255,180,60,0.12) 0%, rgba(255,140,30,0.06) 40%, transparent 70%)' }} />
+            {/* Inner flame glow */}
+            <div className="absolute -top-20 -left-16 w-32 h-32 rounded-full animate-pulse-slow-2"
+              style={{ background: 'radial-gradient(circle, rgba(255,200,80,0.25) 0%, rgba(255,160,40,0.12) 40%, transparent 70%)' }} />
+            {/* Diya lamp base (SVG) */}
+            <svg width="60" height="40" viewBox="0 0 60 40" className="relative z-10 opacity-60">
+              <ellipse cx="30" cy="35" rx="25" ry="5" fill="rgba(180,120,50,0.6)" />
+              <path d="M12,35 Q12,20 20,18 L40,18 Q48,20 48,35 Z" fill="rgba(160,100,40,0.7)" />
+              {/* Flame */}
+              <ellipse cx="30" cy="12" rx="5" ry="10" fill="rgba(255,200,80,0.9)" className="animate-twinkle-2" />
+              <ellipse cx="30" cy="10" rx="3" ry="7" fill="rgba(255,240,180,0.95)" className="animate-twinkle-3" />
+            </svg>
+          </div>
+
+          {/* Floating ancient scroll silhouettes */}
+          <svg className="absolute top-[15%] left-[8%] w-20 h-16 opacity-[0.12] animate-float" viewBox="0 0 80 60">
+            <rect x="10" y="10" width="60" height="40" rx="3" fill="rgba(255,200,120,0.5)" />
+            <circle cx="10" cy="30" r="8" fill="rgba(255,200,120,0.4)" />
+            <circle cx="70" cy="30" r="8" fill="rgba(255,200,120,0.4)" />
+            <line x1="20" y1="22" x2="60" y2="22" stroke="rgba(255,200,120,0.3)" strokeWidth="1" />
+            <line x1="20" y1="30" x2="55" y2="30" stroke="rgba(255,200,120,0.3)" strokeWidth="1" />
+            <line x1="20" y1="38" x2="50" y2="38" stroke="rgba(255,200,120,0.3)" strokeWidth="1" />
+          </svg>
+          <svg className="absolute top-[25%] right-[12%] w-16 h-14 opacity-[0.10] animate-float" style={{ animationDelay: '2s', animationDuration: '5s' }} viewBox="0 0 80 60">
+            <rect x="10" y="10" width="60" height="40" rx="3" fill="rgba(255,200,120,0.5)" />
+            <circle cx="10" cy="30" r="8" fill="rgba(255,200,120,0.4)" />
+            <circle cx="70" cy="30" r="8" fill="rgba(255,200,120,0.4)" />
+          </svg>
+
+          {/* Book silhouette */}
+          <svg className="absolute bottom-[35%] right-[18%] w-14 h-12 opacity-[0.08] animate-float" style={{ animationDelay: '1s', animationDuration: '6s' }} viewBox="0 0 60 50">
+            <path d="M5,45 L5,8 Q30,2 30,10 L30,45 Q15,40 5,45 Z" fill="rgba(255,200,120,0.5)" />
+            <path d="M55,45 L55,8 Q30,2 30,10 L30,45 Q45,40 55,45 Z" fill="rgba(255,180,100,0.4)" />
+          </svg>
+
+          {/* Decorative mandala ring */}
+          <div className="absolute top-[10%] left-1/2 -translate-x-1/2 w-[500px] h-[500px] opacity-[0.04] animate-spin-slow" style={{ animationDuration: '60s' }}>
+            <svg viewBox="0 0 500 500" className="w-full h-full">
+              <circle cx="250" cy="250" r="240" fill="none" stroke="rgba(255,180,60,0.5)" strokeWidth="0.5" strokeDasharray="8 12" />
+              <circle cx="250" cy="250" r="200" fill="none" stroke="rgba(255,180,60,0.4)" strokeWidth="0.5" strokeDasharray="4 8" />
+              <circle cx="250" cy="250" r="160" fill="none" stroke="rgba(255,180,60,0.3)" strokeWidth="0.5" strokeDasharray="2 6" />
+              {/* Compass points */}
+              {[0, 45, 90, 135, 180, 225, 270, 315].map((angle) => (
+                <line key={angle} x1="250" y1="10" x2="250" y2="40" stroke="rgba(255,180,60,0.3)" strokeWidth="0.5"
+                  transform={`rotate(${angle} 250 250)`} />
+              ))}
+            </svg>
+          </div>
+
+          {/* Wisdom particles (floating gold dots) */}
+          {[
+            { top: '20%', left: '15%', size: 3, delay: '0s', dur: '4s' },
+            { top: '30%', left: '75%', size: 2.5, delay: '1s', dur: '5s' },
+            { top: '45%', left: '25%', size: 2, delay: '2s', dur: '4.5s' },
+            { top: '35%', left: '60%', size: 3.5, delay: '0.5s', dur: '5.5s' },
+            { top: '55%', left: '40%', size: 2, delay: '1.5s', dur: '4s' },
+            { top: '25%', left: '50%', size: 3, delay: '3s', dur: '6s' },
+            { top: '40%', left: '85%', size: 2.5, delay: '2.5s', dur: '5s' },
+            { top: '60%', left: '70%', size: 2, delay: '0.8s', dur: '4.5s' },
+            { top: '15%', left: '35%', size: 3, delay: '1.2s', dur: '5.5s' },
+            { top: '50%', left: '10%', size: 2.5, delay: '2.2s', dur: '4s' },
+          ].map((p, i) => (
+            <div key={i} className="absolute rounded-full animate-float"
+              style={{
+                top: p.top, left: p.left,
+                width: `${p.size}px`, height: `${p.size}px`,
+                background: `radial-gradient(circle, rgba(255,200,80,0.9), rgba(255,160,40,0.4))`,
+                boxShadow: `0 0 ${p.size * 2}px rgba(255,180,60,0.3)`,
+                animationDelay: p.delay, animationDuration: p.dur,
+              }} />
+          ))}
+
+          {/* Warm ambient glow spots */}
+          <div className="absolute bottom-[10%] left-[30%] w-96 h-96 bg-amber-700/[0.06] rounded-full blur-[120px] animate-pulse-slow" />
+          <div className="absolute top-[20%] right-[15%] w-64 h-64 bg-orange-800/[0.04] rounded-full blur-[80px] animate-pulse-slow-2" />
+          <div className="absolute bottom-[25%] right-[40%] w-48 h-48 bg-yellow-700/[0.05] rounded-full blur-[60px] animate-pulse-slow" />
         </>
       )}
     </div>
