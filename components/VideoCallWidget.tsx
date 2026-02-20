@@ -104,8 +104,8 @@ export default function VideoCallWidget() {
 
   return (
     <>
-      {/* ── Floating Trigger Button ── */}
-      <div className="fixed z-[9996] group" style={{ bottom: '80px', left: '24px' }}>
+      {/* ── Floating Trigger Button — bottom center ── */}
+      <div className="fixed z-[9996] group" style={{ bottom: '24px', left: '50%', transform: 'translateX(-50%)' }}>
         {/* Pulse rings */}
         {!isOpen && (
           <>
@@ -130,12 +130,12 @@ export default function VideoCallWidget() {
           )}
         </button>
 
-        {/* Tooltip */}
+        {/* Tooltip — above button */}
         {!isOpen && (
-          <div className="absolute left-full ml-3 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none whitespace-nowrap">
+          <div className="absolute bottom-full mb-3 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none whitespace-nowrap">
             <div className="bg-gray-900 text-white text-xs px-3 py-2 rounded-lg shadow-xl">
               Sales &amp; Support Call
-              <div className="absolute right-full top-1/2 -translate-y-1/2 border-4 border-transparent border-r-gray-900" />
+              <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-gray-900" />
             </div>
           </div>
         )}
@@ -146,8 +146,9 @@ export default function VideoCallWidget() {
         <div
           className={`fixed z-[9997] ${panelWidth} max-w-[calc(100vw-3rem)] rounded-2xl shadow-2xl overflow-hidden transition-all duration-500`}
           style={{
-            bottom: '148px',
-            left: '24px',
+            bottom: '96px',
+            left: '50%',
+            transform: 'translateX(-50%)',
             background: 'rgba(10, 10, 10, 0.95)',
             backdropFilter: 'blur(24px)',
             WebkitBackdropFilter: 'blur(24px)',
