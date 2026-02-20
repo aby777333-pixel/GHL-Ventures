@@ -6,6 +6,7 @@ import AnimatedSection from '@/components/AnimatedSection'
 import { BRAND } from '@/lib/constants'
 import SpaceHero from '@/components/SpaceHero'
 import { NRIHandbookProvider, useNRIHandbook } from '@/components/NRIHandbook'
+import FundCalculatorSection from '@/components/FundCalculatorSection'
 import {
   ArrowRight, ArrowLeft, Shield, Globe, Building2, TrendingUp,
   Users, CheckCircle, FileText, Phone, Mail, ChevronRight,
@@ -234,6 +235,11 @@ function NRIInvestContent() {
           </div>
         </div>
       </section>
+
+      {/* ═══════════════════════════════════════════════
+          NRI CALCULATOR, COMPARISON & GHL ADVANTAGES
+         ═══════════════════════════════════════════════ */}
+      <FundCalculatorSection mode="both" showComparison={true} showAdvantages={true} />
 
       {/* ═══════════════════════════════════════════════
           4. NRI FUND CARDS — Two Investment Routes

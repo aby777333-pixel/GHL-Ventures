@@ -12,6 +12,7 @@ import {
   Building2, Sparkles, Layers, ShieldCheck, BarChart2
 } from 'lucide-react'
 import SpaceHero from '@/components/SpaceHero'
+import FundCalculatorSection from '@/components/FundCalculatorSection'
 
 /* ───────────────────────────── 1. HERO ───────────────────────────── */
 function FundHero() {
@@ -599,6 +600,7 @@ export default function FundPage() {
       <RiskFramework />
       <InvestmentProcess />
       <ReturnsPerformance />
+      <FundCalculatorSection mode="both" showComparison={true} showAdvantages={true} />
       <FundArticles />
       <FundCTA />
     </>

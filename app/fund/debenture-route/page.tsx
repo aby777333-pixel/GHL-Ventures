@@ -9,6 +9,7 @@ import {
   ArrowLeft, Star, IndianRupee, ShieldCheck, BarChart3
 } from 'lucide-react'
 import SpaceHero from '@/components/SpaceHero'
+import FundCalculatorSection from '@/components/FundCalculatorSection'
 
 export default function DebentureRoutePage() {
   return (
@@ -149,6 +150,9 @@ export default function DebentureRoutePage() {
           </div>
         </div>
       </section>
+
+      {/* Calculator, Comparison & GHL Advantages */}
+      <FundCalculatorSection mode="debenture" showComparison={true} showAdvantages={true} />
 
       {/* Comparison: Debenture vs FD */}
       <section className="section-padding bg-brand-offwhite">

@@ -25,7 +25,7 @@
  *   eclipse       — Grievance Redressal page: total solar eclipse with corona
  *   mars          — Careers page: Martian terrain with red dunes + moons
  *   knowledge-rain — Education page: silver light drops from heavens + divine glow + starry sky
- *   nri-flight    — NRI Invest page: aircraft connecting global cities to India + flight paths
+ *   nri-flight    — NRI Invest page: 100s of passenger airplanes with red/green flashing nav lights
  */
 
 type SpaceVariant =
@@ -1397,112 +1397,117 @@ export default function SpaceHero({ variant }: SpaceHeroProps) {
 
       {/* ═══════════════════════════════════════════════════════════
           ★ NRI-FLIGHT — NRI Invest Page ★
-          Aircraft connecting global cities to India + flight paths + globe
+          100s of passenger airplanes with red/green flashing navigation
+          lights flying to and fro across a dark night sky
          ═══════════════════════════════════════════════════════════ */}
       {variant === 'nri-flight' && (
         <>
-          {/* Deep blue-black sky gradient with warm India glow at bottom */}
+          {/* Deep night sky gradient */}
           <div className="absolute inset-0"
-            style={{ background: 'linear-gradient(to bottom, rgba(2,5,20,1) 0%, rgba(5,10,30,0.95) 25%, rgba(10,15,40,0.9) 50%, rgba(20,15,30,0.85) 70%, rgba(40,20,15,0.7) 100%)' }} />
+            style={{ background: 'linear-gradient(to bottom, rgba(1,2,12,1) 0%, rgba(3,6,22,1) 30%, rgba(6,10,32,0.98) 60%, rgba(10,14,38,0.95) 100%)' }} />
 
-          {/* India glow — warm saffron/amber at bottom center */}
-          <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-[600px] h-[300px]"
-            style={{ background: 'radial-gradient(ellipse at center bottom, rgba(255,153,51,0.12) 0%, rgba(255,120,30,0.06) 40%, transparent 70%)', filter: 'blur(40px)' }} />
+          {/* Subtle runway glow at bottom */}
+          <div className="absolute bottom-0 left-0 right-0 h-[200px]"
+            style={{ background: 'linear-gradient(to top, rgba(255,153,51,0.04) 0%, transparent 100%)' }} />
 
-          {/* Globe outline — stylised arc representing Earth */}
-          <svg className="absolute inset-0 w-full h-full opacity-[0.06]" xmlns="http://www.w3.org/2000/svg">
-            {/* Curved horizon line */}
-            <ellipse cx="50%" cy="120%" rx="55%" ry="80%" fill="none" stroke="rgba(100,180,255,0.3)" strokeWidth="0.5" />
-            {/* Latitude lines */}
-            <ellipse cx="50%" cy="110%" rx="50%" ry="60%" fill="none" stroke="rgba(100,180,255,0.15)" strokeWidth="0.3" strokeDasharray="8 16" />
-            <ellipse cx="50%" cy="100%" rx="45%" ry="45%" fill="none" stroke="rgba(100,180,255,0.1)" strokeWidth="0.3" strokeDasharray="6 12" />
-          </svg>
+          {/* === AIRPLANE FLEET — 120 aircraft with nav lights === */}
+          {/* Each airplane: tiny aircraft silhouette + red port light + green starboard light + white strobe */}
+          {Array.from({ length: 120 }, (_, i) => {
+            // Deterministic pseudo-random using index
+            const seed = (i * 7919 + 104729) % 100000
+            const flyDir = (i % 6) + 1          // 1-6 flight directions
+            const topPos = (seed % 90) + 2       // 2-92% vertical start
+            const leftPos = ((seed * 3) % 95) + 2 // 2-97% horizontal positioning
+            const duration = 14 + (seed % 22)    // 14-35 seconds
+            const delay = (seed % 30)            // 0-29s stagger
+            const size = 6 + (seed % 8)          // 6-13px airplane body
+            const opacity = 0.15 + ((seed % 40) / 100)  // 0.15-0.55
+            const lightDelay = (seed % 15) / 10  // 0-1.5s light offset
+            // Rotation angles matching flight direction
+            const rotations = [90, 270, 135, 315, 180, 0]
+            const rotation = rotations[flyDir - 1]
 
-          {/* City nodes — global NRI hubs */}
-          {[
-            { label: 'Dubai', x: '38%', y: '42%', size: 4, glow: 'rgba(255,200,100,0.6)' },
-            { label: 'Singapore', x: '72%', y: '55%', size: 3.5, glow: 'rgba(100,200,255,0.5)' },
-            { label: 'London', x: '22%', y: '22%', size: 4, glow: 'rgba(150,180,255,0.5)' },
-            { label: 'New York', x: '8%', y: '30%', size: 3.5, glow: 'rgba(100,200,255,0.5)' },
-            { label: 'Sydney', x: '85%', y: '68%', size: 3, glow: 'rgba(100,255,200,0.4)' },
-            { label: 'Toronto', x: '12%', y: '18%', size: 3, glow: 'rgba(150,200,255,0.4)' },
-            { label: 'San Francisco', x: '5%', y: '38%', size: 3, glow: 'rgba(200,150,255,0.4)' },
-          ].map((city, i) => (
-            <div key={i} className="absolute animate-pulse-slow" style={{ left: city.x, top: city.y, animationDelay: `${i * 0.5}s` }}>
-              <div className="rounded-full" style={{
-                width: `${city.size}px`, height: `${city.size}px`,
-                background: city.glow,
-                boxShadow: `0 0 ${city.size * 3}px ${city.glow}, 0 0 ${city.size * 6}px ${city.glow.replace(/[\d.]+\)$/, '0.2)')}`,
-              }} />
-            </div>
-          ))}
+            return (
+              <div
+                key={`plane-${i}`}
+                className="absolute"
+                style={{
+                  top: `${topPos}%`,
+                  left: `${leftPos}%`,
+                  animation: `nri-fly-${flyDir} ${duration}s linear ${delay}s infinite`,
+                  willChange: 'transform',
+                }}
+              >
+                {/* Aircraft body — tiny triangle/dot */}
+                <div className="relative" style={{ transform: `rotate(${rotation}deg)`, opacity }}>
+                  {/* Fuselage */}
+                  <div style={{
+                    width: `${size}px`,
+                    height: `${Math.round(size * 0.3)}px`,
+                    background: 'rgba(200,210,230,0.5)',
+                    borderRadius: '50% 50% 30% 30%',
+                  }} />
+                  {/* Wings */}
+                  <div style={{
+                    position: 'absolute',
+                    top: '50%',
+                    left: '30%',
+                    width: `${Math.round(size * 0.5)}px`,
+                    height: '1px',
+                    background: 'rgba(180,190,210,0.4)',
+                    transform: 'translateY(-50%)',
+                  }} />
 
-          {/* India destination — larger, pulsing saffron node */}
-          <div className="absolute" style={{ left: '55%', top: '52%' }}>
-            <div className="w-3 h-3 rounded-full animate-pulse-slow"
-              style={{
-                background: 'radial-gradient(circle, rgba(255,153,51,0.9) 0%, rgba(255,100,30,0.6) 50%, transparent 100%)',
-                boxShadow: '0 0 15px rgba(255,153,51,0.5), 0 0 30px rgba(255,120,30,0.2)',
-              }} />
-            {/* Concentric pulse rings around India */}
-            <div className="absolute -inset-2 rounded-full border border-orange-400/30 animate-supernova-ring-1" />
-            <div className="absolute -inset-4 rounded-full border border-orange-300/15 animate-supernova-ring-2" />
-          </div>
+                  {/* RED port light (left wing tip) */}
+                  <div style={{
+                    position: 'absolute',
+                    top: '50%',
+                    left: '15%',
+                    width: '2px',
+                    height: '2px',
+                    borderRadius: '50%',
+                    background: '#ff2020',
+                    boxShadow: '0 0 4px #ff2020, 0 0 8px rgba(255,32,32,0.5)',
+                    animation: `nri-blink-red 1.2s ease-in-out ${lightDelay}s infinite`,
+                    transform: 'translateY(-50%)',
+                  }} />
 
-          {/* Flight path arcs — curved lines from cities to India */}
-          <svg className="absolute inset-0 w-full h-full" xmlns="http://www.w3.org/2000/svg">
-            {/* Dubai → India (short arc) */}
-            <path d="M 38% 42% Q 45% 35%, 55% 52%" fill="none" stroke="rgba(255,153,51,0.15)" strokeWidth="0.8" strokeDasharray="4 6" className="animate-constellation-1" />
-            {/* Singapore → India */}
-            <path d="M 72% 55% Q 65% 42%, 55% 52%" fill="none" stroke="rgba(100,200,255,0.12)" strokeWidth="0.7" strokeDasharray="4 6" className="animate-constellation-2" />
-            {/* London → India (long arc) */}
-            <path d="M 22% 22% Q 38% 20%, 55% 52%" fill="none" stroke="rgba(150,180,255,0.12)" strokeWidth="0.7" strokeDasharray="4 8" className="animate-constellation-1" />
-            {/* New York → India (longest arc) */}
-            <path d="M 8% 30% Q 30% 15%, 55% 52%" fill="none" stroke="rgba(100,200,255,0.10)" strokeWidth="0.6" strokeDasharray="3 8" className="animate-constellation-2" />
-            {/* Sydney → India */}
-            <path d="M 85% 68% Q 72% 50%, 55% 52%" fill="none" stroke="rgba(100,255,200,0.10)" strokeWidth="0.6" strokeDasharray="3 6" className="animate-constellation-1" />
-            {/* Toronto → India */}
-            <path d="M 12% 18% Q 32% 18%, 55% 52%" fill="none" stroke="rgba(150,200,255,0.08)" strokeWidth="0.5" strokeDasharray="3 8" className="animate-constellation-2" />
-          </svg>
+                  {/* GREEN starboard light (right wing tip) */}
+                  <div style={{
+                    position: 'absolute',
+                    top: '50%',
+                    right: '15%',
+                    width: '2px',
+                    height: '2px',
+                    borderRadius: '50%',
+                    background: '#20ff40',
+                    boxShadow: '0 0 4px #20ff40, 0 0 8px rgba(32,255,64,0.5)',
+                    animation: `nri-blink-green 1.4s ease-in-out ${lightDelay + 0.3}s infinite`,
+                    transform: 'translateY(-50%)',
+                  }} />
 
-          {/* Aircraft silhouette — moving along a flight path */}
-          <div className="absolute animate-float" style={{ left: '42%', top: '34%', animationDuration: '6s' }}>
-            <svg width="24" height="24" viewBox="0 0 24 24" className="opacity-30 rotate-[135deg]" fill="rgba(255,200,100,0.7)">
-              <path d="M21,16V14L13,9V3.5A1.5,1.5 0 0,0 11.5,2A1.5,1.5 0 0,0 10,3.5V9L2,14V16L10,13.5V19L8,20.5V22L11.5,21L15,22V20.5L13,19V13.5L21,16Z" />
-            </svg>
-          </div>
-          {/* Second aircraft */}
-          <div className="absolute animate-float" style={{ left: '68%', top: '46%', animationDuration: '7s', animationDelay: '2s' }}>
-            <svg width="18" height="18" viewBox="0 0 24 24" className="opacity-20 rotate-[200deg]" fill="rgba(100,200,255,0.7)">
-              <path d="M21,16V14L13,9V3.5A1.5,1.5 0 0,0 11.5,2A1.5,1.5 0 0,0 10,3.5V9L2,14V16L10,13.5V19L8,20.5V22L11.5,21L15,22V20.5L13,19V13.5L21,16Z" />
-            </svg>
-          </div>
+                  {/* WHITE anti-collision strobe (center) */}
+                  <div style={{
+                    position: 'absolute',
+                    top: '-1px',
+                    left: '50%',
+                    width: '1.5px',
+                    height: '1.5px',
+                    borderRadius: '50%',
+                    background: '#ffffff',
+                    boxShadow: '0 0 3px #fff, 0 0 6px rgba(255,255,255,0.4)',
+                    animation: `nri-strobe 2s ease-in-out ${lightDelay + 0.7}s infinite`,
+                    transform: 'translateX(-50%)',
+                  }} />
+                </div>
+              </div>
+            )
+          })}
 
-          {/* Floating currency symbols */}
-          {[
-            { sym: '$', x: '10%', y: '35%', size: 14, delay: '0s' },
-            { sym: '£', x: '20%', y: '25%', size: 12, delay: '1s' },
-            { sym: 'S$', x: '75%', y: '48%', size: 11, delay: '2s' },
-            { sym: 'A$', x: '88%', y: '62%', size: 10, delay: '1.5s' },
-            { sym: 'C$', x: '14%', y: '20%', size: 10, delay: '3s' },
-            { sym: 'AED', x: '35%', y: '38%', size: 10, delay: '0.5s' },
-          ].map((c, i) => (
-            <div key={i} className="absolute animate-float opacity-[0.06] font-mono font-bold text-blue-300"
-              style={{ left: c.x, top: c.y, fontSize: `${c.size}px`, animationDelay: c.delay, animationDuration: '5s' }}>
-              {c.sym}
-            </div>
-          ))}
-
-          {/* ₹ symbol at India — brighter */}
-          <div className="absolute animate-pulse-slow opacity-[0.15] font-mono font-bold text-orange-300"
-            style={{ left: '58%', top: '48%', fontSize: '18px' }}>
-            ₹
-          </div>
-
-          {/* Ambient glow spots */}
-          <div className="absolute top-[15%] left-[10%] w-64 h-64 bg-blue-600/[0.04] rounded-full blur-[80px] animate-pulse-slow" />
-          <div className="absolute top-[40%] right-[20%] w-80 h-80 bg-blue-500/[0.03] rounded-full blur-[100px] animate-pulse-slow-2" />
-          <div className="absolute bottom-[15%] left-[40%] w-96 h-96 bg-orange-600/[0.05] rounded-full blur-[120px] animate-pulse-slow" />
+          {/* Ambient glow spots for atmosphere */}
+          <div className="absolute top-[10%] left-[15%] w-72 h-72 bg-blue-700/[0.03] rounded-full blur-[100px] animate-pulse-slow" />
+          <div className="absolute top-[50%] right-[10%] w-80 h-80 bg-indigo-600/[0.03] rounded-full blur-[100px] animate-pulse-slow-2" />
+          <div className="absolute bottom-[10%] left-[50%] w-96 h-96 bg-blue-500/[0.02] rounded-full blur-[120px] animate-pulse-slow" />
         </>
       )}
     </div>

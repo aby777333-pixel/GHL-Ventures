@@ -1517,6 +1517,56 @@ body,
   100% { transform: scale(4); opacity: 0; }
 }
 
+/* ──────────────────────────────────────────────────────────── */
+/* NRI FLIGHT — Hundreds of Airplanes with Nav Lights         */
+/* ──────────────────────────────────────────────────────────── */
+
+/* Six flight path directions */
+@keyframes nri-fly-1 { /* L → R */
+  0%   { transform: translate3d(-50px, 0, 0); }
+  100% { transform: translate3d(calc(100vw + 50px), 0, 0); }
+}
+@keyframes nri-fly-2 { /* R → L */
+  0%   { transform: translate3d(calc(100vw + 50px), 0, 0); }
+  100% { transform: translate3d(-50px, 0, 0); }
+}
+@keyframes nri-fly-3 { /* TL → BR diagonal */
+  0%   { transform: translate3d(-50px, -30px, 0); }
+  100% { transform: translate3d(calc(100vw + 50px), 80vh, 0); }
+}
+@keyframes nri-fly-4 { /* BR → TL diagonal */
+  0%   { transform: translate3d(calc(100vw + 50px), 80vh, 0); }
+  100% { transform: translate3d(-50px, -30px, 0); }
+}
+@keyframes nri-fly-5 { /* T → B (slight angle) */
+  0%   { transform: translate3d(0, -50px, 0); }
+  100% { transform: translate3d(12vw, calc(100vh + 50px), 0); }
+}
+@keyframes nri-fly-6 { /* B → T (slight angle) */
+  0%   { transform: translate3d(0, calc(100vh + 50px), 0); }
+  100% { transform: translate3d(-8vw, -50px, 0); }
+}
+
+/* Red port light blink */
+@keyframes nri-blink-red {
+  0%, 40% { opacity: 1; }
+  42%, 58% { opacity: 0; }
+  60%, 100% { opacity: 1; }
+}
+/* Green starboard light blink (offset) */
+@keyframes nri-blink-green {
+  0%, 15% { opacity: 0; }
+  18%, 62% { opacity: 1; }
+  65%, 80% { opacity: 0; }
+  83%, 100% { opacity: 1; }
+}
+/* White strobe */
+@keyframes nri-strobe {
+  0%, 92% { opacity: 0; }
+  93%, 96% { opacity: 1; }
+  97%, 100% { opacity: 0; }
+}
+
 /* ============================================================
    ★ CINEMATIC SPACE HERO — Home Page
    Subtle aurora + Moon + Planets + Market Lightning + Comet

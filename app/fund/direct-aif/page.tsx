@@ -9,6 +9,7 @@ import {
   ArrowLeft, Star
 } from 'lucide-react'
 import SpaceHero from '@/components/SpaceHero'
+import FundCalculatorSection from '@/components/FundCalculatorSection'
 
 export default function DirectAIFPage() {
   return (
@@ -153,6 +154,9 @@ export default function DirectAIFPage() {
           </div>
         </div>
       </section>
+
+      {/* Calculator, Comparison & GHL Advantages */}
+      <FundCalculatorSection mode="aif" showComparison={true} showAdvantages={true} />
 
       {/* Who Is This For */}
       <section className="section-padding bg-brand-offwhite">
