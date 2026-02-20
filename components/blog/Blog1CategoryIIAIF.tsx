@@ -99,7 +99,7 @@ export default function Blog1CategoryIIAIF() {
 
       <HighlightBox title="Why GHL India Ventures?">
         <P>
-          As a <InternalLink href="/about-us">SEBI-registered Category II AIF</InternalLink>, GHL India Ventures specializes in <InternalLink href="/stressed-real-estate-investment-india">stressed real estate investments</InternalLink> and <InternalLink href="/venture-capital-fund-india">venture capital opportunities</InternalLink>, providing HNIs with access to curated private market deals targeting 18–30% IRR through disciplined, governance-driven strategies.
+          As a <InternalLink href="/about">SEBI-registered Category II AIF</InternalLink>, GHL India Ventures specializes in <InternalLink href="/fund/direct-aif">stressed real estate investments</InternalLink> and <InternalLink href="/fund/direct-aif">venture capital opportunities</InternalLink>, providing HNIs with access to curated private market deals targeting 18–30% IRR through disciplined, governance-driven strategies.
         </P>
       </HighlightBox>
 

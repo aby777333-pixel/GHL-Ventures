@@ -113,7 +113,7 @@ export default function Blog3EarlyStageGrowth() {
 
       <HighlightBox title="When Expertise Meets Execution">
         <P>
-          When expertise meets execution-ready founders, compounding begins. <InternalLink href="/venture-capital-fund-india">GHL India Ventures&apos; venture capital strategy</InternalLink> backs validated companies across India&apos;s growth sectors, delivering structured returns through active portfolio management within our <InternalLink href="/fund-structure">SEBI-registered AIF structure</InternalLink>.
+          When expertise meets execution-ready founders, compounding begins. <InternalLink href="/fund/direct-aif">GHL India Ventures&apos; venture capital strategy</InternalLink> backs validated companies across India&apos;s growth sectors, delivering structured returns through active portfolio management within our <InternalLink href="/fund">SEBI-registered AIF structure</InternalLink>.
         </P>
       </HighlightBox>
 

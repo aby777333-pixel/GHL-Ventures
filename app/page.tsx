@@ -1104,7 +1104,7 @@ function ContactFormSection() {
                       className="mt-1 w-4 h-4 accent-brand-red"
                     />
                     <span className="text-sm text-brand-grey leading-relaxed">
-                      I agree to the <Link href="/privacy" className="text-brand-red underline hover:no-underline">Privacy Policy</Link> and consent to being contacted by the GHL India Ventures team. *
+                      I agree to the <Link href="/disclaimer" className="text-brand-red underline hover:no-underline">Privacy Policy</Link> and consent to being contacted by the GHL India Ventures team. *
                     </span>
                   </label>
                 </div>

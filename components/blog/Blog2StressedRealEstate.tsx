@@ -107,7 +107,7 @@ export default function Blog2StressedRealEstate() {
 
       <HighlightBox title="High Alpha in Complexity">
         <P>
-          High alpha is rarely found in comfort. It is found in complexity handled with competence. <InternalLink href="/stressed-real-estate-investment-india">GHL India Ventures&apos; stressed real estate strategy</InternalLink> is built around the NCLT opportunity, bringing deep expertise to unlock hidden value for <InternalLink href="/investor-portal">Category II AIF investors</InternalLink>.
+          High alpha is rarely found in comfort. It is found in complexity handled with competence. <InternalLink href="/fund/direct-aif">GHL India Ventures&apos; stressed real estate strategy</InternalLink> is built around the NCLT opportunity, bringing deep expertise to unlock hidden value for <InternalLink href="/dashboard">Category II AIF investors</InternalLink>.
         </P>
       </HighlightBox>
 

@@ -399,10 +399,10 @@ export default function ContactPage() {
           <div className="space-y-4">
             {FAQ_ITEMS.map((item, index) => (
               <AnimatedSection key={index} delay={index * 80}>
-                <div className={`border border-gray-200 rounded-xl overflow-hidden ${['glow-card-blue','glow-card-violet','glow-card-emerald','glow-card-amber','glow-card-cyan'][index % 5]}`}>
+                <div className={`border border-gray-200 dark:border-white/10 rounded-xl overflow-hidden ${['glow-card-blue','glow-card-violet','glow-card-emerald','glow-card-amber','glow-card-cyan'][index % 5]}`}>
                   <button
                     onClick={() => setOpenFaq(openFaq === index ? null : index)}
-                    className="w-full flex items-center justify-between p-5 text-left hover:bg-gray-50 transition-colors"
+                    className="w-full flex items-center justify-between p-5 text-left hover:bg-gray-50 dark:hover:bg-white/5 transition-colors"
                     aria-expanded={openFaq === index}
                   >
                     <span className="font-semibold text-brand-black pr-4">{item.q}</span>

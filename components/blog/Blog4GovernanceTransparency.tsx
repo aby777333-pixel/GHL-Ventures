@@ -112,7 +112,7 @@ export default function Blog4GovernanceTransparency() {
 
       <HighlightBox title="Discipline Compounds">
         <P>
-          Good governance does not reduce returns. It strengthens them by protecting capital from avoidable risk. In alternative investments, discipline compounds. At <InternalLink href="/about-us">GHL India Ventures</InternalLink>, our commitment to <InternalLink href="/investor-portal">transparent investor reporting</InternalLink> and SEBI-compliant governance ensures that your capital is protected by institutional-grade frameworks.
+          Good governance does not reduce returns. It strengthens them by protecting capital from avoidable risk. In alternative investments, discipline compounds. At <InternalLink href="/about">GHL India Ventures</InternalLink>, our commitment to <InternalLink href="/dashboard">transparent investor reporting</InternalLink> and SEBI-compliant governance ensures that your capital is protected by institutional-grade frameworks.
         </P>
       </HighlightBox>
 

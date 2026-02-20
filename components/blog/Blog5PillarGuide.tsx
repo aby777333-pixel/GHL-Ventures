@@ -107,7 +107,7 @@ export default function Blog5PillarGuide() {
       ]} />
 
       <P>
-        A <InternalLink href="/stressed-real-estate-investment-india">distressed real estate fund in India</InternalLink> under a Category II AIF structure acquires such assets at significant discounts (30–50% below intrinsic value).
+        A <InternalLink href="/fund/direct-aif">distressed real estate fund in India</InternalLink> under a Category II AIF structure acquires such assets at significant discounts (30–50% below intrinsic value).
       </P>
 
       <BlogTable
@@ -139,7 +139,7 @@ export default function Blog5PillarGuide() {
       />
 
       <P>
-        A <InternalLink href="/venture-capital-fund-india">venture capital Category II AIF India</InternalLink> structure invests in:
+        A <InternalLink href="/fund/direct-aif">venture capital Category II AIF India</InternalLink> structure invests in:
       </P>
 
       <BulletList items={[
@@ -178,7 +178,7 @@ export default function Blog5PillarGuide() {
       <SectionHeading level={2}>Regulatory Framework for Category II AIF in India</SectionHeading>
 
       <P>
-        A <InternalLink href="/about-us">SEBI-registered Category II AIF</InternalLink> in India must comply with:
+        A <InternalLink href="/about">SEBI-registered Category II AIF</InternalLink> in India must comply with:
       </P>
 
       <BlogTable
@@ -285,12 +285,12 @@ export default function Blog5PillarGuide() {
       <SectionHeading level={2}>Why GHL India Ventures — SEBI Registered Category II AIF</SectionHeading>
 
       <P>
-        <InternalLink href="/about-us">GHL India Ventures</InternalLink> is a SEBI-registered Category II Alternative Investment Fund (Registration No.: IN/AIF2/2425/1517) specializing in:
+        <InternalLink href="/about">GHL India Ventures</InternalLink> is a SEBI-registered Category II Alternative Investment Fund (Registration No.: IN/AIF2/2425/1517) specializing in:
       </P>
 
       <BulletList items={[
-        <><InternalLink href="/stressed-real-estate-investment-india">Stressed real estate investment in India</InternalLink> — acquiring distressed assets at institutional discounts</>,
-        <><InternalLink href="/venture-capital-fund-india">Early-stage and growth venture investments</InternalLink> — backing validated companies for 3x–5x returns</>,
+        <><InternalLink href="/fund/direct-aif">Stressed real estate investment in India</InternalLink> — acquiring distressed assets at institutional discounts</>,
+        <><InternalLink href="/fund/direct-aif">Early-stage and growth venture investments</InternalLink> — backing validated companies for 3x–5x returns</>,
         'Special situations capital deployment — structured strategies for complex opportunities',
       ]} />
 
@@ -300,7 +300,7 @@ export default function Blog5PillarGuide() {
 
       <HighlightBox title="Schedule Your Confidential Consultation">
         <P>
-          Ready to explore how Category II AIF investment can transform your portfolio? <InternalLink href="/contact">Schedule your confidential consultation</InternalLink> with our investment team to discuss your goals and learn about our current opportunities. Access our <InternalLink href="/investor-portal">investor reporting portal</InternalLink> for detailed fund performance and governance documentation.
+          Ready to explore how Category II AIF investment can transform your portfolio? <InternalLink href="/contact">Schedule your confidential consultation</InternalLink> with our investment team to discuss your goals and learn about our current opportunities. Access our <InternalLink href="/dashboard">investor reporting portal</InternalLink> for detailed fund performance and governance documentation.
         </P>
       </HighlightBox>
 

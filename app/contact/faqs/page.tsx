@@ -165,11 +165,11 @@ export default function FaqsPage() {
                   return (
                     <div
                       key={idx}
-                      className={`border border-gray-200 rounded-xl overflow-hidden ${glowColors[(catIdx * 3 + idx) % 6]}`}
+                      className={`border border-gray-200 dark:border-white/10 rounded-xl overflow-hidden ${glowColors[(catIdx * 3 + idx) % 6]}`}
                     >
                       <button
                         onClick={() => toggleItem(category.title, idx)}
-                        className="w-full flex items-center justify-between p-5 text-left hover:bg-gray-50 transition-colors"
+                        className="w-full flex items-center justify-between p-5 text-left hover:bg-gray-50 dark:hover:bg-white/5 transition-colors"
                       >
                         <span className="font-semibold text-brand-black pr-4 text-sm md:text-base">{item.q}</span>
                         <ChevronDown

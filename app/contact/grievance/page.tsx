@@ -212,10 +212,10 @@ export default function GrievancePage() {
           <div className="space-y-4">
             {ESCALATION_LEVELS.map((item, i) => (
               <AnimatedSection key={item.level} delay={i * 100}>
-                <div className={`border border-gray-200 rounded-xl overflow-hidden ${['glow-card-blue', 'glow-card-amber', 'glow-card-red'][i]}`}>
+                <div className={`border border-gray-200 dark:border-white/10 rounded-xl overflow-hidden ${['glow-card-blue', 'glow-card-amber', 'glow-card-red'][i]}`}>
                   <button
                     onClick={() => setOpenEscalation(openEscalation === i ? null : i)}
-                    className="w-full flex items-center justify-between p-5 text-left hover:bg-gray-50 transition-colors"
+                    className="w-full flex items-center justify-between p-5 text-left hover:bg-gray-50 dark:hover:bg-white/5 transition-colors"
                   >
                     <div className="flex items-center gap-3">
                       <span className="bg-brand-red text-white text-xs font-bold px-2.5 py-1 rounded-full">{item.level}</span>

@@ -290,7 +290,7 @@ export default function BlogPage() {
                           <User className="w-3.5 h-3.5 text-brand-red/60" />
                         </div>
                         <div className="flex items-center gap-2 text-xs text-brand-grey">
-                          <span className="font-medium text-brand-black/70">
+                          <span className="font-medium text-gray-700 dark:text-gray-300">
                             {(post as typeof allPosts[number]).author}
                           </span>
                           <span className="text-gray-300">|</span>

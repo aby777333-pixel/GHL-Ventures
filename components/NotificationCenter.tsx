@@ -84,7 +84,7 @@ export default function NotificationCenter({ scrolled }: NotificationCenterProps
         onClick={() => setIsOpen(!isOpen)}
         className={`relative w-7 h-7 rounded-full flex items-center justify-center transition-all duration-300 ${
           scrolled
-            ? 'text-brand-black/60 hover:text-brand-red hover:bg-red-50'
+            ? 'text-gray-600 dark:text-white/60 hover:text-brand-red hover:bg-red-50 dark:hover:bg-white/10'
             : 'text-white/60 hover:text-brand-red hover:bg-white/10'
         }`}
         aria-label="Notifications"

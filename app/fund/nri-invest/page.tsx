@@ -177,7 +177,7 @@ function NRIInvestContent() {
       {/* ═══════════════════════════════════════════════
           3. WHY INDIA — Macroeconomic Case
          ═══════════════════════════════════════════════ */}
-      <section className="section-padding bg-brand-black/[0.02]">
+      <section className="section-padding bg-white dark:bg-brand-black">
         <div className="container-max mx-auto px-4 sm:px-6 lg:px-8">
           <AnimatedSection>
             <div className="text-center mb-12">
@@ -446,7 +446,7 @@ function NRIInvestContent() {
       {/* ═══════════════════════════════════════════════
           7. SOCIAL PROOF — NRI Corridors
          ═══════════════════════════════════════════════ */}
-      <section className="section-padding bg-brand-black/[0.02]">
+      <section className="section-padding bg-white dark:bg-brand-black">
         <div className="container-max mx-auto px-4 sm:px-6 lg:px-8">
           <AnimatedSection>
             <div className="text-center mb-12">
@@ -717,7 +717,7 @@ function ComplianceAccordion() {
   ]
 
   return (
-    <section className="section-padding bg-brand-black/[0.02]">
+    <section className="section-padding bg-white dark:bg-brand-black">
       <div className="container-max mx-auto px-4 sm:px-6 lg:px-8">
         <AnimatedSection>
           <div className="text-center mb-12">
@@ -738,7 +738,7 @@ function ComplianceAccordion() {
               <div className="card rounded-xl overflow-hidden">
                 <button
                   onClick={() => setOpenIdx(openIdx === idx ? null : idx)}
-                  className="w-full flex items-center justify-between p-4 sm:p-5 text-left hover:bg-brand-black/[0.02] transition-colors"
+                  className="w-full flex items-center justify-between p-4 sm:p-5 text-left hover:bg-gray-50 dark:hover:bg-white/5 transition-colors"
                 >
                   <div className="flex items-center gap-3">
                     <div className="w-10 h-10 rounded-lg bg-brand-red/10 flex items-center justify-center text-brand-red shrink-0">
@@ -791,7 +791,7 @@ function ConsultationForm() {
   }
 
   return (
-    <section id="consultation" className="section-padding bg-brand-black/[0.02]">
+    <section id="consultation" className="section-padding bg-white dark:bg-brand-black">
       <div className="container-max mx-auto px-4 sm:px-6 lg:px-8">
         <AnimatedSection>
           <div className="text-center mb-12">

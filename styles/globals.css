@@ -1519,38 +1519,21 @@ body,
 
 /* ──────────────────────────────────────────────────────────── */
 /* NRI FLIGHT — Hundreds of Airplanes with Nav Lights         */
-/* Uses left/top % for container-relative movement            */
+/* Uses transform:translateX() so planes work inside          */
+/* overflow:hidden containers. Each plane is positioned at    */
+/* left:50% and the animation sweeps from -60vw to +60vw     */
+/* (L→R) or +60vw to -60vw (R→L), covering the full viewport */
 /* ──────────────────────────────────────────────────────────── */
 
-/* L → R: fly from left:-3% to left:103% */
-@keyframes nri-fly-lr {
-  0%   { left: -3%; }
-  100% { left: 103%; }
+/* Left-to-right sweep: starts far left, ends far right */
+@keyframes nri-plane-ltr {
+  0%   { transform: translateX(-60vw); }
+  100% { transform: translateX(60vw); }
 }
-/* R → L: fly from right:-3% to right:103% */
-@keyframes nri-fly-rl {
-  0%   { right: -3%; }
-  100% { right: 103%; }
-}
-/* Diagonal down: top-left to bottom-right */
-@keyframes nri-fly-diag-down {
-  0%   { top: -3%; transform: translateX(0); }
-  100% { top: 103%; transform: translateX(40vw); }
-}
-/* Diagonal up: bottom to top-right */
-@keyframes nri-fly-diag-up {
-  0%   { bottom: -3%; transform: translateX(0); }
-  100% { bottom: 103%; transform: translateX(35vw); }
-}
-/* Steep down */
-@keyframes nri-fly-down {
-  0%   { top: -3%; transform: translateX(0); }
-  100% { top: 103%; transform: translateX(8vw); }
-}
-/* Steep up */
-@keyframes nri-fly-up {
-  0%   { bottom: -3%; transform: translateX(0); }
-  100% { bottom: 103%; transform: translateX(-8vw); }
+/* Right-to-left sweep: starts far right, ends far left */
+@keyframes nri-plane-rtl {
+  0%   { transform: translateX(60vw); }
+  100% { transform: translateX(-60vw); }
 }
 
 /* Red port light blink */

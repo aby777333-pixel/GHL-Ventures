@@ -153,7 +153,7 @@ export default function Navbar() {
               <Logo size={38} />
               <span
                 className={`font-bold tracking-wide transition-colors duration-300 hidden sm:inline ${
-                  scrolled ? 'text-brand-black' : 'text-white'
+                  scrolled ? 'text-brand-black dark:text-white' : 'text-white'
                 }`}
                 style={{ fontSize: '12px', letterSpacing: '0.1em' }}
               >
@@ -202,7 +202,7 @@ export default function Navbar() {
                             isActive
                               ? 'text-brand-red'
                               : scrolled
-                              ? 'text-brand-black/80 hover:text-brand-red'
+                              ? 'text-gray-800 dark:text-white/80 hover:text-brand-red'
                               : 'text-white/80 hover:text-brand-red'
                           }`}
                           style={{
@@ -248,7 +248,7 @@ export default function Navbar() {
                                     childActive
                                       ? 'text-brand-red'
                                       : scrolled
-                                      ? 'text-brand-black/80 hover:text-brand-red hover:bg-gray-50 dark:hover:bg-white/5'
+                                      ? 'text-gray-800 dark:text-white/80 hover:text-brand-red hover:bg-gray-50 dark:hover:bg-white/5'
                                       : 'text-white/80 hover:text-brand-red hover:bg-white/5'
                                   }`}
                                   style={{
@@ -277,7 +277,7 @@ export default function Navbar() {
                         isActive
                           ? 'text-brand-red'
                           : scrolled
-                          ? 'text-brand-black/80 hover:text-brand-red'
+                          ? 'text-gray-800 dark:text-white/80 hover:text-brand-red'
                           : 'text-white/80 hover:text-brand-red'
                       }`}
                       style={{
@@ -310,7 +310,7 @@ export default function Navbar() {
                 }}
                 className={`hidden xl:inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full font-medium transition-all duration-200 border ${
                   scrolled
-                    ? 'border-gray-200 dark:border-white/15 text-brand-black/50 hover:bg-gray-50 dark:hover:bg-white/10 hover:text-brand-black'
+                    ? 'border-gray-200 dark:border-white/15 text-gray-500 dark:text-white/50 hover:bg-gray-50 dark:hover:bg-white/10 hover:text-gray-800 dark:hover:text-white'
                     : 'border-white/15 text-white/50 hover:bg-white/10 hover:text-white'
                 }`}
                 style={{ fontSize: '10px' }}
@@ -326,7 +326,7 @@ export default function Navbar() {
                   href="/login"
                   className={`inline-flex items-center space-x-1 px-2.5 py-1 rounded-full font-semibold transition-all duration-200 border ${
                     scrolled
-                      ? 'border-gray-200 dark:border-white/15 text-brand-black/70 hover:bg-gray-50 dark:hover:bg-white/10 hover:text-brand-black'
+                      ? 'border-gray-200 dark:border-white/15 text-gray-700 dark:text-white/70 hover:bg-gray-50 dark:hover:bg-white/10 hover:text-gray-900 dark:hover:text-white'
                       : 'border-white/15 text-white/70 hover:bg-white/10 hover:text-white'
                   }`}
                   style={{ fontSize: '10px', letterSpacing: '0.03em' }}
@@ -350,7 +350,7 @@ export default function Navbar() {
                   href="/admin/login"
                   className={`inline-flex items-center justify-center w-6 h-6 rounded-full transition-all duration-200 ${
                     scrolled
-                      ? 'text-gray-400 hover:text-brand-red hover:bg-red-50 dark:hover:bg-white/10'
+                      ? 'text-gray-400 dark:text-white/40 hover:text-brand-red hover:bg-red-50 dark:hover:bg-white/10'
                       : 'text-white/40 hover:text-brand-red hover:bg-white/10'
                   }`}
                   title="Admin Portal"
@@ -368,7 +368,7 @@ export default function Navbar() {
 
               {/* Divider */}
               <div className={`hidden xl:block w-px h-4 mx-1 ${
-                scrolled ? 'bg-gray-200 dark:bg-white/15' : 'bg-white/15'
+                scrolled ? 'bg-gray-200 dark:bg-white/20' : 'bg-white/15'
               }`} />
 
               {/* Let's Talk pill button — desktop */}
@@ -392,7 +392,7 @@ export default function Navbar() {
                 onClick={() => setIsOpen(!isOpen)}
                 className={`xl:hidden p-2 rounded-lg transition-colors duration-200 ${
                   scrolled
-                    ? 'text-brand-black hover:bg-gray-100 dark:hover:bg-white/10'
+                    ? 'text-gray-800 dark:text-white hover:bg-gray-100 dark:hover:bg-white/10'
                     : 'text-white hover:bg-white/10'
                 }`}
                 aria-expanded={isOpen}

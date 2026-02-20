@@ -294,7 +294,7 @@ export default function CareersPage() {
       </section>
 
       {/* ── Why Work With Us ── */}
-      <section className="section-padding bg-white">
+      <section className="section-padding bg-white dark:bg-brand-black">
         <div className="container-max mx-auto">
           <AnimatedSection className="text-center mb-12">
             <span className="text-brand-red font-semibold text-xs uppercase tracking-wider">Culture & Benefits</span>
@@ -337,10 +337,10 @@ export default function CareersPage() {
               const globalIdx = POSITIONS.indexOf(role)
               return (
               <AnimatedSection key={role.title} delay={i * 80}>
-                <div className={`border border-gray-200 rounded-xl overflow-hidden bg-white ${glowColors[i % 5]}`}>
+                <div className={`border border-gray-200 dark:border-white/10 rounded-xl overflow-hidden bg-white dark:bg-brand-black ${glowColors[i % 5]}`}>
                   <button
                     onClick={() => setExpandedRole(expandedRole === globalIdx ? null : globalIdx)}
-                    className="w-full flex items-center justify-between p-5 text-left hover:bg-gray-50 transition-colors"
+                    className="w-full flex items-center justify-between p-5 text-left hover:bg-gray-50 dark:hover:bg-white/5 transition-colors"
                   >
                     <div>
                       <h3 className="font-bold text-brand-black text-base">{role.title}</h3>
@@ -401,10 +401,10 @@ export default function CareersPage() {
               const globalIdx = POSITIONS.indexOf(role)
               return (
               <AnimatedSection key={role.title}>
-                <div className={`border border-blue-100 rounded-xl overflow-hidden bg-white glow-card-blue`}>
+                <div className={`border border-blue-100 dark:border-white/10 rounded-xl overflow-hidden bg-white dark:bg-brand-black glow-card-blue`}>
                   <button
                     onClick={() => setExpandedRole(expandedRole === globalIdx ? null : globalIdx)}
-                    className="w-full flex items-center justify-between p-5 text-left hover:bg-gray-50 transition-colors"
+                    className="w-full flex items-center justify-between p-5 text-left hover:bg-gray-50 dark:hover:bg-white/5 transition-colors"
                   >
                     <div>
                       <h3 className="font-bold text-brand-black text-base">{role.title}</h3>
@@ -465,10 +465,10 @@ export default function CareersPage() {
               const globalIdx = POSITIONS.indexOf(role)
               return (
               <AnimatedSection key={role.title} delay={i * 80}>
-                <div className={`border border-purple-100 rounded-xl overflow-hidden bg-white glow-card-violet`}>
+                <div className={`border border-purple-100 dark:border-white/10 rounded-xl overflow-hidden bg-white dark:bg-brand-black glow-card-violet`}>
                   <button
                     onClick={() => setExpandedRole(expandedRole === globalIdx ? null : globalIdx)}
-                    className="w-full flex items-center justify-between p-5 text-left hover:bg-gray-50 transition-colors"
+                    className="w-full flex items-center justify-between p-5 text-left hover:bg-gray-50 dark:hover:bg-white/5 transition-colors"
                   >
                     <div>
                       <h3 className="font-bold text-brand-black text-base">{role.title}</h3>
@@ -520,7 +520,7 @@ export default function CareersPage() {
       </section>
 
       {/* ── Application Form ── */}
-      <section id="apply" className="section-padding bg-white">
+      <section id="apply" className="section-padding bg-white dark:bg-brand-black">
         <div className="container-max mx-auto max-w-3xl">
           <AnimatedSection>
             <div className="card glow-card-red">

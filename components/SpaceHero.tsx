@@ -1393,7 +1393,10 @@ export default function SpaceHero({ variant }: SpaceHeroProps) {
       {/* ═══════════════════════════════════════════════════════════
           ★ NRI-FLIGHT — NRI Invest Page ★
           100s of passenger airplanes with red/green flashing navigation
-          lights flying to and fro across a dark night sky
+          lights flying to and fro across a dark night sky.
+          KEY: All planes STAY within 0-100% bounds (no off-screen starts)
+          and use CSS transform: translateX() for smooth movement.
+          Container has overflow:hidden so nothing can start off-screen.
          ═══════════════════════════════════════════════════════════ */}
       {variant === 'nri-flight' && (
         <>
@@ -1410,8 +1413,8 @@ export default function SpaceHero({ variant }: SpaceHeroProps) {
             const s = (i * 6337 + 2719) % 10000
             return (
               <div key={`star-${i}`} className="absolute rounded-full animate-pulse-slow" style={{
-                top: `${(s % 95) + 2}%`,
-                left: `${((s * 3) % 96) + 2}%`,
+                top: `${(s % 90) + 3}%`,
+                left: `${((s * 3) % 94) + 3}%`,
                 width: `${1 + (s % 2)}px`,
                 height: `${1 + (s % 2)}px`,
                 background: `rgba(200,215,255,${0.15 + (s % 20) / 100})`,
@@ -1420,75 +1423,87 @@ export default function SpaceHero({ variant }: SpaceHeroProps) {
             )
           })}
 
-          {/* === AIRPLANE FLEET — 120 aircraft with red/green flashing nav lights === */}
-          {Array.from({ length: 120 }, (_, i) => {
+          {/* === AIRPLANE FLEET — 100 aircraft with red/green flashing nav lights ===
+               APPROACH: Each plane is positioned at a fixed top% with left:50%.
+               The CSS animation nri-plane-drift-N moves them using transform:translateX()
+               from far left to far right (or reverse), crossing the full viewport.
+               Negative animation-delay places them at various mid-flight positions on load.
+               This works inside overflow:hidden because the element stays in the flow
+               and transform doesn't affect layout. */}
+          {Array.from({ length: 100 }, (_, i) => {
             const seed = (i * 7919 + 104729) % 100000
-            const dirType = i % 6  // 0=L→R, 1=R→L, 2=diag-down, 3=diag-up, 4=steep-down, 5=steep-up
-            const topStart = (seed % 85) + 5      // 5-90% vertical
-            const duration = 15 + (seed % 20)      // 15-34 seconds
-            const delay = -1 * (seed % 30)         // negative delay so some are mid-flight on load
-            const size = 5 + (seed % 9)            // 5-13px
-            const opacity = 0.2 + ((seed % 45) / 100) // 0.2-0.65
+            const isReverse = i % 2 === 0 // half go L→R, half go R→L
+            const yPos = (seed % 88) + 4 // 4-92% vertical spread
+            const duration = 18 + (seed % 22) // 18-40 seconds
+            const negDelay = -1 * ((seed % (duration * 10)) / 10) // spread across animation timeline
+            const size = 8 + (seed % 10) // 8-17px fuselage
+            const opacity = 0.35 + ((seed % 40) / 100) // 0.35-0.75
             const lightDelay = (seed % 15) / 10
-
-            // Rotation for each direction: airplane nose points in direction of travel
-            const rotations = [0, 180, 30, 210, 70, 290]
-            const rotation = rotations[dirType]
-
-            // Use CSS custom properties for start/end positions — avoids calc() viewport issues
-            // Directions translate using % of element's own width/height inside absolute container
-            // Since container is full viewport width, we position via left/top and animate with left
-            const dirStyles: Record<number, React.CSSProperties> = {
-              0: { top: `${topStart}%`, left: '-3%', animation: `nri-fly-lr ${duration}s linear ${delay}s infinite` },
-              1: { top: `${topStart}%`, right: '-3%', animation: `nri-fly-rl ${duration}s linear ${delay}s infinite` },
-              2: { top: '-3%', left: `${(seed % 70) + 10}%`, animation: `nri-fly-diag-down ${duration}s linear ${delay}s infinite` },
-              3: { bottom: '-3%', left: `${(seed % 70) + 10}%`, animation: `nri-fly-diag-up ${duration}s linear ${delay}s infinite` },
-              4: { top: '-3%', left: `${(seed % 80) + 5}%`, animation: `nri-fly-down ${duration}s linear ${delay}s infinite` },
-              5: { bottom: '-3%', left: `${(seed % 80) + 5}%`, animation: `nri-fly-up ${duration}s linear ${delay}s infinite` },
-            }
+            const lightSize = 4 + (size > 13 ? 2 : 0) // bigger lights for bigger planes
 
             return (
               <div
                 key={`plane-${i}`}
                 className="absolute pointer-events-none"
-                style={{ ...dirStyles[dirType], zIndex: 1 }}
+                style={{
+                  top: `${yPos}%`,
+                  left: '50%',
+                  zIndex: 1,
+                  animation: `${isReverse ? 'nri-plane-rtl' : 'nri-plane-ltr'} ${duration}s linear ${negDelay}s infinite`,
+                }}
               >
-                <div className="relative" style={{ transform: `rotate(${rotation}deg)`, opacity }}>
-                  {/* Fuselage */}
+                <div className="relative" style={{ opacity }}>
+                  {/* Fuselage — capsule shape */}
                   <div style={{
                     width: `${size}px`,
                     height: `${Math.round(size * 0.35)}px`,
-                    background: 'rgba(200,215,235,0.6)',
-                    borderRadius: '60% 60% 30% 30%',
+                    background: `rgba(200,215,240,${0.5 + (seed % 30) / 100})`,
+                    borderRadius: '50%',
+                    boxShadow: '0 0 3px rgba(200,215,240,0.3)',
                   }} />
-                  {/* Wings */}
+                  {/* Wings — horizontal bar */}
                   <div style={{
-                    position: 'absolute', top: '40%', left: '20%',
-                    width: `${Math.round(size * 0.6)}px`, height: '1px',
-                    background: 'rgba(180,195,215,0.4)',
+                    position: 'absolute',
+                    top: '30%',
+                    left: '10%',
+                    width: `${Math.round(size * 0.8)}px`,
+                    height: '1.5px',
+                    background: 'rgba(180,195,220,0.5)',
                   }} />
-                  {/* RED port light */}
+                  {/* RED port (left) wingtip light */}
                   <div style={{
-                    position: 'absolute', top: '35%', left: '10%',
-                    width: '3px', height: '3px', borderRadius: '50%',
+                    position: 'absolute',
+                    top: '20%',
+                    left: '-2px',
+                    width: `${lightSize}px`,
+                    height: `${lightSize}px`,
+                    borderRadius: '50%',
                     background: '#ff2222',
-                    boxShadow: '0 0 6px 2px #ff2222, 0 0 12px 4px rgba(255,34,34,0.4)',
+                    boxShadow: `0 0 ${lightSize * 2}px ${lightSize}px #ff2222, 0 0 ${lightSize * 4}px ${lightSize * 2}px rgba(255,34,34,0.3)`,
                     animation: `nri-blink-red 1.2s ease-in-out ${lightDelay}s infinite`,
                   }} />
-                  {/* GREEN starboard light */}
+                  {/* GREEN starboard (right) wingtip light */}
                   <div style={{
-                    position: 'absolute', top: '35%', right: '10%',
-                    width: '3px', height: '3px', borderRadius: '50%',
+                    position: 'absolute',
+                    top: '20%',
+                    right: '-2px',
+                    width: `${lightSize}px`,
+                    height: `${lightSize}px`,
+                    borderRadius: '50%',
                     background: '#22ff44',
-                    boxShadow: '0 0 6px 2px #22ff44, 0 0 12px 4px rgba(34,255,68,0.4)',
+                    boxShadow: `0 0 ${lightSize * 2}px ${lightSize}px #22ff44, 0 0 ${lightSize * 4}px ${lightSize * 2}px rgba(34,255,68,0.3)`,
                     animation: `nri-blink-green 1.4s ease-in-out ${lightDelay + 0.3}s infinite`,
                   }} />
-                  {/* WHITE strobe */}
+                  {/* WHITE anti-collision strobe on top */}
                   <div style={{
-                    position: 'absolute', top: '-2px', left: '45%',
-                    width: '2px', height: '2px', borderRadius: '50%',
+                    position: 'absolute',
+                    top: '-3px',
+                    left: '45%',
+                    width: '3px',
+                    height: '3px',
+                    borderRadius: '50%',
                     background: '#ffffff',
-                    boxShadow: '0 0 4px 1px #fff, 0 0 8px 2px rgba(255,255,255,0.5)',
+                    boxShadow: '0 0 6px 2px #fff, 0 0 12px 4px rgba(255,255,255,0.5)',
                     animation: `nri-strobe 2s ease-in-out ${lightDelay + 0.7}s infinite`,
                   }} />
                 </div>
