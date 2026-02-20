@@ -46,7 +46,7 @@ const LANGUAGES = [
 // ─── Command parser ───
 type CmdType = 'navigate' | 'scroll' | 'read' | 'stop' | 'help' | 'language'
   | 'call' | 'directcall' | 'email' | 'whatsapp' | 'telegram' | 'video' | 'dark' | 'light'
-  | 'search' | 'close' | 'home' | 'back' | 'unknown'
+  | 'search' | 'close' | 'home' | 'back' | 'downloadapps' | 'unknown'
 
 interface ParsedCommand {
   type: CmdType
@@ -91,12 +91,13 @@ function parseCommand(input: string): ParsedCommand {
   if (/^(?:stop|shut up|quiet|silence|cancel|pause|mute)/.test(text)) return { type: 'stop' }
 
   // Contact actions
-  if (/(?:direct call|call us|phone numbers|office number)/.test(text)) return { type: 'directcall' }
+  if (/(?:direct call|call us|phone numbers|office number|call ghl|phone call)/.test(text)) return { type: 'directcall' }
+  if (/(?:download.*app|get.*calling.*app|install.*app|need.*calling|no.*app)/.test(text)) return { type: 'downloadapps' }
   if (/(?:call|phone|ring|dial)/.test(text)) return { type: 'call' }
-  if (/(?:email|mail|send email|write email)/.test(text)) return { type: 'email' }
-  if (/(?:whatsapp|whats app|chat on whatsapp|message on whatsapp)/.test(text)) return { type: 'whatsapp' }
-  if (/(?:telegram|tg)/.test(text)) return { type: 'telegram' }
-  if (/(?:video call|video chat|video|webcam)/.test(text)) return { type: 'video' }
+  if (/(?:email|mail|send email|write email|send mail|email us|mail us)/.test(text)) return { type: 'email' }
+  if (/(?:whatsapp|whats app|chat on whatsapp|message on whatsapp|whatsapp chat)/.test(text)) return { type: 'whatsapp' }
+  if (/(?:telegram|tg|telegram chat)/.test(text)) return { type: 'telegram' }
+  if (/(?:video call|video chat|video|webcam|start video|video meeting)/.test(text)) return { type: 'video' }
 
   // Theme commands
   if (/(?:dark mode|dark theme|night mode|go dark)/.test(text)) return { type: 'dark' }
@@ -396,8 +397,22 @@ export default function VoiceCommandWidget() {
       case 'video': {
         setFeedback('Opening video call widget...')
         speak('Opening video call.')
-        const videoBtn = document.querySelector('[aria-label="Open Sales & Support Video Call"]') as HTMLElement
-        if (videoBtn) videoBtn.click()
+        setTimeout(() => {
+          const videoBtn = document.querySelector('[aria-label="Open Sales & Support Video Call"]') as HTMLElement
+          if (videoBtn) videoBtn.click()
+        }, 300)
+        break
+      }
+      case 'downloadapps': {
+        setFeedback('Opening calling app downloads...')
+        speak('Opening download options for calling apps.')
+        // First open direct call widget, then trigger its downloads panel
+        const dcBtn = document.querySelector('[aria-label="Open Direct Call"]') as HTMLElement
+        if (dcBtn) dcBtn.click()
+        // Give it time to open, then dispatch custom event to show downloads
+        setTimeout(() => {
+          window.dispatchEvent(new CustomEvent('ghl-show-downloads'))
+        }, 500)
         break
       }
       case 'dark': {
@@ -432,7 +447,7 @@ export default function VoiceCommandWidget() {
         break
       }
       case 'help': {
-        const helpText = 'Commands: "Go to [page]", "Scroll up/down/top/bottom", "Read page", "Stop", "Direct Call", "Call", "Email", "WhatsApp", "Telegram", "Video call", "Dark mode", "Light mode", "Switch to [language]", "Search [query]", "Go back", "Home", "Close", or say any page name.'
+        const helpText = 'Commands: "Go to [page]", "Scroll up/down/top/bottom", "Read page", "Stop", "Direct Call", "Call", "Email us", "WhatsApp", "Telegram", "Video call", "Download app", "Dark mode", "Light mode", "Switch to [language]", "Search [query]", "Go back", "Home", "Close", or say any page name.'
         setFeedback(helpText)
         speak(helpText)
         break
@@ -736,6 +751,7 @@ export default function VoiceCommandWidget() {
                 { icon: <MessageCircle className="w-2.5 h-2.5" />, label: 'WhatsApp', color: 'text-emerald-400', action: () => executeCommand('whatsapp') },
                 { icon: <Send className="w-2.5 h-2.5" />, label: 'Telegram', color: 'text-sky-400', action: () => executeCommand('telegram') },
                 { icon: <Video className="w-2.5 h-2.5" />, label: 'Video', color: 'text-purple-400', action: () => executeCommand('video call') },
+                { icon: <Phone className="w-2.5 h-2.5" />, label: 'Get App', color: 'text-cyan-400', action: () => executeCommand('download app') },
               ].map(btn => (
                 <button key={btn.label} onClick={btn.action} className={`inline-flex items-center gap-1 px-2 py-1 rounded-full bg-white/5 hover:bg-white/10 ${btn.color} text-[10px] transition-all`}>
                   {btn.icon} {btn.label}

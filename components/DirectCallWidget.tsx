@@ -5,6 +5,7 @@ import {
   Phone, X, PhoneCall, Clock, Wifi, WifiOff,
   Building2, MessageCircle, PhoneForwarded, Copy, Check,
   Monitor, Smartphone, PhoneIncoming, Send,
+  Download, ExternalLink, ArrowLeft, RefreshCw,
 } from 'lucide-react'
 import { BRAND } from '@/lib/constants'
 
@@ -36,6 +37,45 @@ const PHONE_LINES: PhoneLine[] = [
   },
 ]
 
+const CALLING_APPS = [
+  {
+    name: 'Skype',
+    desc: 'Free calling app by Microsoft',
+    color: 'bg-sky-500/15 border-sky-500/20',
+    textColor: 'text-sky-400',
+    hoverBg: 'hover:bg-sky-500/25',
+    url: 'https://www.skype.com/en/get-skype/',
+    icon: '\uD83D\uDD35',
+  },
+  {
+    name: 'Microsoft Teams',
+    desc: 'Free for personal use',
+    color: 'bg-indigo-500/15 border-indigo-500/20',
+    textColor: 'text-indigo-400',
+    hoverBg: 'hover:bg-indigo-500/25',
+    url: 'https://www.microsoft.com/en-in/microsoft-teams/download-app',
+    icon: '\uD83D\uDFE3',
+  },
+  {
+    name: 'Zoom',
+    desc: 'Free video & phone calling',
+    color: 'bg-blue-500/15 border-blue-500/20',
+    textColor: 'text-blue-400',
+    hoverBg: 'hover:bg-blue-500/25',
+    url: 'https://zoom.us/download',
+    icon: '\uD83D\uDD37',
+  },
+  {
+    name: 'WhatsApp Desktop',
+    desc: 'Call via WhatsApp on PC',
+    color: 'bg-emerald-500/15 border-emerald-500/20',
+    textColor: 'text-emerald-400',
+    hoverBg: 'hover:bg-emerald-500/25',
+    url: 'https://www.whatsapp.com/download',
+    icon: '\uD83D\uDFE2',
+  },
+]
+
 function isOfficeHours(): boolean {
   const now = new Date()
   const ist = new Date(now.toLocaleString('en-US', { timeZone: 'Asia/Kolkata' }))
@@ -63,6 +103,8 @@ export default function DirectCallWidget() {
   const [callCount, setCallCount] = useState(0)
   const [copied, setCopied] = useState<string | null>(null)
   const [showCallback, setShowCallback] = useState(false)
+  const [showDownloads, setShowDownloads] = useState(false)
+  const [pendingCallLine, setPendingCallLine] = useState<PhoneLine | null>(null)
   const [cbForm, setCbForm] = useState({ name: '', phone: '' })
   const [cbSent, setCbSent] = useState(false)
   const callTimerRef = useRef<NodeJS.Timeout | null>(null)
@@ -73,13 +115,23 @@ export default function DirectCallWidget() {
     setIsMobile(detectMobile())
     const interval = setInterval(() => setOnline(isOfficeHours()), 60000)
     const pulseTimer = setTimeout(() => setShowPulse(false), 12000)
+
+    // Listen for voice widget "download apps" command
+    const handleShowDownloads = () => {
+      setIsOpen(true)
+      setShowDownloads(true)
+      setShowCallback(false)
+    }
+    window.addEventListener('ghl-show-downloads', handleShowDownloads)
+
     return () => {
       clearInterval(interval)
       clearTimeout(pulseTimer)
+      window.removeEventListener('ghl-show-downloads', handleShowDownloads)
     }
   }, [])
 
-  // ── Mobile: direct tel: call ──
+  // Mobile: direct tel: call
   const handleMobileCall = (line: PhoneLine) => {
     setCalling(line.label)
     setCallCount(prev => prev + 1)
@@ -88,29 +140,32 @@ export default function DirectCallWidget() {
     callTimerRef.current = setTimeout(() => setCalling(null), 4000)
   }
 
-  // ── Desktop: tel: link (opens Skype/Teams if registered) ──
+  // Desktop: tel: link (opens Skype/Teams if registered) then show download options
   const handleDesktopCall = (line: PhoneLine) => {
     setCalling(line.label)
     setCallCount(prev => prev + 1)
+    setPendingCallLine(line)
     window.location.href = line.telLink
     if (callTimerRef.current) clearTimeout(callTimerRef.current)
-    callTimerRef.current = setTimeout(() => setCalling(null), 4000)
+    callTimerRef.current = setTimeout(() => {
+      setCalling(null)
+      setShowDownloads(true)
+    }, 3000)
   }
 
-  // ── Desktop: WhatsApp call ──
+  // Desktop: WhatsApp call
   const handleWhatsAppCall = (line: PhoneLine) => {
     const num = line.rawNumber.replace(/[^0-9]/g, '')
     window.open(`https://wa.me/${num}`, '_blank')
   }
 
-  // ── Copy number to clipboard ──
+  // Copy number to clipboard
   const handleCopy = async (line: PhoneLine) => {
     try {
       await navigator.clipboard.writeText(line.rawNumber)
       setCopied(line.label)
       setTimeout(() => setCopied(null), 2000)
     } catch {
-      // Fallback
       const el = document.createElement('textarea')
       el.value = line.rawNumber
       document.body.appendChild(el)
@@ -122,7 +177,7 @@ export default function DirectCallWidget() {
     }
   }
 
-  // ── Request callback ──
+  // Request callback
   const handleCallback = (e: React.FormEvent) => {
     e.preventDefault()
     if (!cbForm.name.trim() || !cbForm.phone.trim()) return
@@ -143,13 +198,15 @@ export default function DirectCallWidget() {
     setIsOpen(prev => !prev)
     setShowPulse(false)
     setShowCallback(false)
+    setShowDownloads(false)
+    setPendingCallLine(null)
   }
 
   if (!mounted) return null
 
   return (
     <>
-      {/* ── Floating Trigger Button ── */}
+      {/* Floating Trigger Button */}
       <div className="fixed z-[9994] group" style={{ bottom: '28px', left: '30%', transform: 'translateX(-50%)' }}>
         {!isOpen && showPulse && (
           <span className="absolute inset-0 rounded-full animate-ping" style={{ background: 'rgba(34,197,94,0.25)' }} />
@@ -183,7 +240,7 @@ export default function DirectCallWidget() {
         </button>
       </div>
 
-      {/* ── Call Panel ── */}
+      {/* Call Panel */}
       <div
         className={`fixed z-[9995] transition-all duration-300 ${
           isOpen ? 'opacity-100 translate-y-0 pointer-events-auto' : 'opacity-0 translate-y-4 pointer-events-none'
@@ -210,7 +267,7 @@ export default function DirectCallWidget() {
               <div>
                 <div className="flex items-center gap-2">
                   <span className="text-white text-xs font-bold tracking-wide">
-                    {calling ? 'CONNECTING...' : 'DIRECT CALL'}
+                    {calling ? 'CONNECTING...' : showDownloads ? 'GET CALLING APP' : 'DIRECT CALL'}
                   </span>
                   {isMobile ? (
                     <span className="flex items-center gap-1 px-1.5 py-0.5 rounded bg-green-500/10 text-[8px] text-green-400 font-medium">
@@ -252,7 +309,7 @@ export default function DirectCallWidget() {
             </div>
           )}
 
-          {/* ═══════ MOBILE VIEW — Simple tap-to-call ═══════ */}
+          {/* MOBILE VIEW */}
           {isMobile && (
             <div className="p-3 space-y-2">
               {PHONE_LINES.map((line) => (
@@ -286,20 +343,18 @@ export default function DirectCallWidget() {
             </div>
           )}
 
-          {/* ═══════ DESKTOP VIEW — Multiple calling options ═══════ */}
-          {!isMobile && !showCallback && (
+          {/* DESKTOP VIEW — Phone numbers + calling options */}
+          {!isMobile && !showCallback && !showDownloads && (
             <div className="p-3 space-y-3">
-              {/* Tip banner */}
               <div className="px-3 py-2 rounded-lg bg-blue-500/10 border border-blue-500/10">
                 <p className="text-[10px] text-blue-300 leading-relaxed">
                   <Monitor className="w-3 h-3 inline mr-1 -mt-0.5" />
-                  Desktop detected \u2014 choose how you&apos;d like to connect:
+                  Desktop detected &mdash; choose how you&apos;d like to connect:
                 </p>
               </div>
 
               {PHONE_LINES.map((line) => (
                 <div key={line.label} className="rounded-xl bg-white/5 border border-white/5 overflow-hidden">
-                  {/* Number header */}
                   <div className="flex items-center gap-3 px-4 py-3">
                     <div className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center shrink-0">
                       {line.icon === 'office'
@@ -312,9 +367,7 @@ export default function DirectCallWidget() {
                       <p className="text-[10px] text-white/70 font-mono">{line.number}</p>
                     </div>
                   </div>
-                  {/* Action buttons row */}
                   <div className="flex border-t border-white/5">
-                    {/* Open calling app */}
                     <button
                       onClick={() => handleDesktopCall(line)}
                       className="flex-1 flex items-center justify-center gap-1.5 px-2 py-2.5 text-[9px] font-medium text-green-400 hover:bg-green-500/10 transition-all border-r border-white/5"
@@ -323,7 +376,6 @@ export default function DirectCallWidget() {
                       <PhoneForwarded className="w-3 h-3" />
                       <span>Call App</span>
                     </button>
-                    {/* WhatsApp */}
                     <button
                       onClick={() => handleWhatsAppCall(line)}
                       className="flex-1 flex items-center justify-center gap-1.5 px-2 py-2.5 text-[9px] font-medium text-emerald-400 hover:bg-emerald-500/10 transition-all border-r border-white/5"
@@ -332,7 +384,6 @@ export default function DirectCallWidget() {
                       <MessageCircle className="w-3 h-3" />
                       <span>WhatsApp</span>
                     </button>
-                    {/* Copy */}
                     <button
                       onClick={() => handleCopy(line)}
                       className="flex-1 flex items-center justify-center gap-1.5 px-2 py-2.5 text-[9px] font-medium text-gray-400 hover:bg-white/10 transition-all"
@@ -347,10 +398,77 @@ export default function DirectCallWidget() {
                   </div>
                 </div>
               ))}
+
+              {/* Link to download calling apps */}
+              <button
+                onClick={() => setShowDownloads(true)}
+                className="w-full flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg bg-white/5 hover:bg-white/10 border border-white/5 text-[9px] text-gray-400 hover:text-white font-medium transition-all"
+              >
+                <Download className="w-3 h-3" />
+                <span>No calling app? Download one free</span>
+              </button>
             </div>
           )}
 
-          {/* ═══════ CALLBACK REQUEST FORM (desktop) ═══════ */}
+          {/* DOWNLOAD CALLING APPS PANEL (desktop) */}
+          {!isMobile && showDownloads && !showCallback && (
+            <div className="p-3 space-y-2.5">
+              <div className="flex items-center gap-2 mb-1">
+                <button
+                  onClick={() => { setShowDownloads(false); setPendingCallLine(null) }}
+                  className="p-1 rounded-lg hover:bg-white/10 text-gray-400 hover:text-white transition-colors"
+                >
+                  <ArrowLeft className="w-3.5 h-3.5" />
+                </button>
+                <Download className="w-4 h-4 text-blue-400" />
+                <span className="text-white text-xs font-bold">Get a Calling App</span>
+              </div>
+
+              <p className="text-gray-400 text-[10px] leading-relaxed px-1">
+                Install any free app below to call directly from your computer:
+              </p>
+
+              {CALLING_APPS.map(app => (
+                <a
+                  key={app.name}
+                  href={app.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className={`flex items-center gap-3 px-3 py-2.5 rounded-xl border transition-all ${app.color} ${app.hoverBg}`}
+                >
+                  <span className="text-base shrink-0">{app.icon}</span>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-[11px] font-bold text-white">{app.name}</p>
+                    <p className="text-[9px] text-gray-400">{app.desc}</p>
+                  </div>
+                  <div className={`shrink-0 flex items-center gap-1 px-2 py-1 rounded-md bg-white/5 text-[8px] font-medium ${app.textColor}`}>
+                    <ExternalLink className="w-2.5 h-2.5" />
+                    Download
+                  </div>
+                </a>
+              ))}
+
+              {/* Try again after downloading */}
+              {pendingCallLine && (
+                <button
+                  onClick={() => {
+                    setShowDownloads(false)
+                    handleDesktopCall(pendingCallLine)
+                  }}
+                  className="w-full flex items-center justify-center gap-2 px-3 py-2.5 mt-1 rounded-lg bg-green-600/20 hover:bg-green-600/30 border border-green-500/20 text-green-400 text-[10px] font-bold transition-all"
+                >
+                  <RefreshCw className="w-3 h-3" />
+                  <span>Installed? Try calling {pendingCallLine.label} again</span>
+                </button>
+              )}
+
+              <p className="text-[8px] text-gray-600 text-center px-2 leading-relaxed">
+                After installing, click &quot;Call App&quot; on any number and it will connect automatically.
+              </p>
+            </div>
+          )}
+
+          {/* CALLBACK REQUEST FORM (desktop) */}
           {!isMobile && showCallback && (
             <div className="p-4">
               {cbSent ? (
@@ -413,7 +531,6 @@ export default function DirectCallWidget() {
           {/* Bottom Actions */}
           <div className="px-3 pb-2 border-t border-white/5 pt-2">
             <div className="flex gap-2">
-              {/* WhatsApp fallback */}
               <a
                 href={`https://wa.me/${BRAND.whatsapp}?text=${encodeURIComponent(BRAND.whatsappMessage)}`}
                 target="_blank"
@@ -423,10 +540,9 @@ export default function DirectCallWidget() {
                 <MessageCircle className="w-3 h-3" />
                 <span>WhatsApp Chat</span>
               </a>
-              {/* Request callback (desktop only) */}
               {!isMobile && (
                 <button
-                  onClick={() => setShowCallback(!showCallback)}
+                  onClick={() => { setShowCallback(!showCallback); setShowDownloads(false) }}
                   className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg border text-[9px] font-medium transition-all ${
                     showCallback
                       ? 'bg-green-500/15 border-green-500/20 text-green-400'
