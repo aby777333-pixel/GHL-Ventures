@@ -1446,23 +1446,65 @@ export default function SpaceHero({ variant }: SpaceHeroProps) {
             )
           })}
 
-          {/* === AIRPLANE FLEET — 10 aircraft with red/green flashing nav lights ===
-               APPROACH: Each plane is positioned at a fixed top% with left:50%.
-               The CSS animation nri-plane-drift-N moves them using transform:translateX()
-               from far left to far right (or reverse), crossing the full viewport.
-               Negative animation-delay places them at various mid-flight positions on load.
-               This works inside overflow:hidden because the element stays in the flow
-               and transform doesn't affect layout. */}
-          {Array.from({ length: 10 }, (_, i) => {
+          {/* ── Subtle World Map SVG — India glows brighter ── */}
+          <svg className="absolute inset-0 w-full h-full opacity-[0.06]" viewBox="0 0 1000 500" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg">
+            {/* Simplified world continents */}
+            {/* North America */}
+            <path d="M150,80 L180,60 L220,55 L260,70 L280,110 L250,160 L220,190 L200,200 L180,180 L160,170 L140,130 Z" fill="rgba(100,140,200,0.5)" stroke="rgba(100,140,200,0.2)" strokeWidth="0.5" />
+            {/* South America */}
+            <path d="M220,220 L250,210 L270,240 L280,300 L260,360 L240,390 L220,380 L210,340 L200,280 Z" fill="rgba(100,140,200,0.5)" stroke="rgba(100,140,200,0.2)" strokeWidth="0.5" />
+            {/* Europe */}
+            <path d="M440,60 L470,50 L510,55 L530,70 L520,100 L490,110 L460,105 L440,90 Z" fill="rgba(100,140,200,0.5)" stroke="rgba(100,140,200,0.2)" strokeWidth="0.5" />
+            {/* Africa */}
+            <path d="M460,140 L500,130 L530,150 L540,200 L530,270 L510,320 L480,340 L460,310 L450,250 L445,190 Z" fill="rgba(100,140,200,0.5)" stroke="rgba(100,140,200,0.2)" strokeWidth="0.5" />
+            {/* Asia (excluding India) */}
+            <path d="M540,50 L600,40 L680,50 L750,70 L780,90 L790,130 L770,160 L730,150 L680,140 L640,130 L600,110 L560,90 Z" fill="rgba(100,140,200,0.5)" stroke="rgba(100,140,200,0.2)" strokeWidth="0.5" />
+            {/* Australia */}
+            <path d="M740,300 L790,290 L820,310 L810,340 L780,350 L750,340 Z" fill="rgba(100,140,200,0.5)" stroke="rgba(100,140,200,0.2)" strokeWidth="0.5" />
+            {/* ★ INDIA — brighter, shimmering with night lights ★ */}
+            <path d="M620,140 L645,135 L660,150 L665,175 L660,200 L650,220 L640,230 L630,225 L620,200 L615,175 L610,155 Z"
+              fill="rgba(208,2,27,0.25)"
+              stroke="rgba(255,170,50,0.6)"
+              strokeWidth="1.5"
+              className="nri-india-glow" />
+            {/* India city lights — tiny bright dots */}
+            {[
+              [637,160],[630,175],[645,180],[635,195],[650,170],[625,165],[640,205],[632,150],[655,190],[628,185]
+            ].map(([cx,cy], idx) => (
+              <circle key={`city-${idx}`} cx={cx} cy={cy} r="1.5"
+                fill="rgba(255,200,100,0.9)"
+                className="nri-city-light"
+                style={{ animationDelay: `${idx * 0.3}s` }} />
+            ))}
+            {/* India label glow */}
+            <circle cx="638" cy="185" r="20" fill="rgba(255,165,0,0.08)" className="animate-pulse-slow" />
+          </svg>
+
+          {/* ── Flight routes — curved dotted lines from India to world ── */}
+          <svg className="absolute inset-0 w-full h-full opacity-[0.08]" viewBox="0 0 1000 500" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg">
+            {[
+              'M638,185 Q400,50 200,100',   // India → N.America
+              'M638,185 Q550,80 470,75',      // India → Europe
+              'M638,185 Q700,100 780,90',     // India → E.Asia
+              'M638,185 Q720,250 780,310',    // India → Australia
+              'M638,185 Q550,200 480,250',    // India → Africa
+              'M638,185 Q400,250 240,300',    // India → S.America
+            ].map((d, idx) => (
+              <path key={`route-${idx}`} d={d} fill="none" stroke="rgba(255,165,0,0.4)" strokeWidth="0.8" strokeDasharray="4,6" className="nri-flight-route" style={{ animationDelay: `${idx * 0.5}s` }} />
+            ))}
+          </svg>
+
+          {/* === AIRPLANE FLEET — 35 tiny aircraft with red/green flashing nav lights === */}
+          {Array.from({ length: 35 }, (_, i) => {
             const seed = (i * 7919 + 104729) % 100000
-            const isReverse = i % 2 === 0 // half go L→R, half go R→L
-            const yPos = 8 + (i * 9) // evenly spread across 8-89% vertical
-            const duration = 22 + (seed % 18) // 22-40 seconds
-            const negDelay = -1 * ((seed % (duration * 10)) / 10) // spread across animation timeline
-            const size = 16 + (seed % 12) // 16-27px fuselage (bigger, more visible)
-            const opacity = 0.55 + ((seed % 30) / 100) // 0.55-0.85 (brighter)
+            const isReverse = i % 2 === 0
+            const yPos = 4 + ((seed * 3) % 90) // random vertical spread 4-94%
+            const duration = 20 + (seed % 25) // 20-45 seconds
+            const negDelay = -1 * ((seed % (duration * 10)) / 10)
+            const size = 5 + (seed % 7) // 5-11px fuselage (tiny!)
+            const opacity = 0.3 + ((seed % 40) / 100) // 0.3-0.7
             const lightDelay = (seed % 15) / 10
-            const lightSize = 5 + (size > 20 ? 3 : 1) // bigger lights for bigger planes
+            const lightSize = 2 + (size > 8 ? 1 : 0) // tiny lights
 
             return (
               <div
@@ -1476,57 +1518,57 @@ export default function SpaceHero({ variant }: SpaceHeroProps) {
                 }}
               >
                 <div className="relative" style={{ opacity }}>
-                  {/* Fuselage — capsule shape */}
+                  {/* Fuselage — tiny capsule */}
                   <div style={{
                     width: `${size}px`,
-                    height: `${Math.round(size * 0.35)}px`,
-                    background: `rgba(200,215,240,${0.5 + (seed % 30) / 100})`,
+                    height: `${Math.max(2, Math.round(size * 0.3))}px`,
+                    background: `rgba(200,215,240,${0.4 + (seed % 25) / 100})`,
                     borderRadius: '50%',
-                    boxShadow: '0 0 3px rgba(200,215,240,0.3)',
+                    boxShadow: '0 0 2px rgba(200,215,240,0.2)',
                   }} />
-                  {/* Wings — horizontal bar */}
+                  {/* Wings — thin horizontal bar */}
                   <div style={{
                     position: 'absolute',
                     top: '30%',
-                    left: '10%',
-                    width: `${Math.round(size * 0.8)}px`,
-                    height: '1.5px',
-                    background: 'rgba(180,195,220,0.5)',
+                    left: '5%',
+                    width: `${Math.round(size * 0.9)}px`,
+                    height: '1px',
+                    background: 'rgba(180,195,220,0.35)',
                   }} />
-                  {/* RED port (left) wingtip light */}
+                  {/* RED port light */}
                   <div style={{
                     position: 'absolute',
-                    top: '20%',
-                    left: '-2px',
+                    top: '15%',
+                    left: '-1px',
                     width: `${lightSize}px`,
                     height: `${lightSize}px`,
                     borderRadius: '50%',
                     background: '#ff2222',
-                    boxShadow: `0 0 ${lightSize * 2}px ${lightSize}px #ff2222, 0 0 ${lightSize * 4}px ${lightSize * 2}px rgba(255,34,34,0.3)`,
+                    boxShadow: `0 0 ${lightSize}px ${lightSize}px rgba(255,34,34,0.4)`,
                     animation: `nri-blink-red 1.2s ease-in-out ${lightDelay}s infinite`,
                   }} />
-                  {/* GREEN starboard (right) wingtip light */}
+                  {/* GREEN starboard light */}
                   <div style={{
                     position: 'absolute',
-                    top: '20%',
-                    right: '-2px',
+                    top: '15%',
+                    right: '-1px',
                     width: `${lightSize}px`,
                     height: `${lightSize}px`,
                     borderRadius: '50%',
                     background: '#22ff44',
-                    boxShadow: `0 0 ${lightSize * 2}px ${lightSize}px #22ff44, 0 0 ${lightSize * 4}px ${lightSize * 2}px rgba(34,255,68,0.3)`,
+                    boxShadow: `0 0 ${lightSize}px ${lightSize}px rgba(34,255,68,0.4)`,
                     animation: `nri-blink-green 1.4s ease-in-out ${lightDelay + 0.3}s infinite`,
                   }} />
-                  {/* WHITE anti-collision strobe on top */}
+                  {/* WHITE strobe */}
                   <div style={{
                     position: 'absolute',
-                    top: '-3px',
+                    top: '-2px',
                     left: '45%',
-                    width: '3px',
-                    height: '3px',
+                    width: '2px',
+                    height: '2px',
                     borderRadius: '50%',
                     background: '#ffffff',
-                    boxShadow: '0 0 6px 2px #fff, 0 0 12px 4px rgba(255,255,255,0.5)',
+                    boxShadow: '0 0 4px 1px #fff',
                     animation: `nri-strobe 2s ease-in-out ${lightDelay + 0.7}s infinite`,
                   }} />
                 </div>

@@ -1589,6 +1589,33 @@ body,
   97%, 100% { opacity: 0; }
 }
 
+/* India shimmer glow on world map */
+.nri-india-glow {
+  animation: nri-india-shimmer 3s ease-in-out infinite;
+}
+@keyframes nri-india-shimmer {
+  0%, 100% { fill: rgba(208,2,27,0.2); stroke: rgba(255,170,50,0.5); }
+  50% { fill: rgba(208,2,27,0.4); stroke: rgba(255,200,80,0.9); }
+}
+
+/* City lights twinkle */
+.nri-city-light {
+  animation: nri-city-twinkle 2s ease-in-out infinite;
+}
+@keyframes nri-city-twinkle {
+  0%, 100% { opacity: 0.4; }
+  50% { opacity: 1; }
+}
+
+/* Flight route dash animation */
+.nri-flight-route {
+  animation: nri-route-dash 4s linear infinite;
+}
+@keyframes nri-route-dash {
+  0% { stroke-dashoffset: 0; }
+  100% { stroke-dashoffset: -20; }
+}
+
 /* ── DATASTREAM — Education Insights hero ── */
 .datastream-line {
   animation: datastream-line-pulse 3s ease-in-out infinite;

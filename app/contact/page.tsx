@@ -5,7 +5,7 @@ import AnimatedSection from '@/components/AnimatedSection'
 import { BRAND } from '@/lib/constants'
 import {
   MapPin, Phone, Mail, Clock, Send, CheckCircle, ChevronDown,
-  MessageCircle, ArrowRight,
+  MessageCircle, ArrowRight, Video, Headphones,
 } from 'lucide-react'
 import Link from 'next/link'
 import { LegalLink } from '@/components/LegalPopup'
@@ -367,7 +367,54 @@ export default function ContactPage() {
                     />
                   </div>
 
-                  {/* WhatsApp Quick Link */}
+                  {/* ── Connect With Us — Channel Buttons ── */}
+                  <div>
+                    <h3 className="font-bold text-brand-black text-base mb-4">Connect With Us</h3>
+                    <div className="grid grid-cols-2 gap-3">
+                      {/* Video Call — opens floating video widget */}
+                      <button
+                        onClick={() => {
+                          const btn = document.querySelector('[aria-label="Open Sales & Support Video Call"]') as HTMLElement
+                          if (btn) btn.click()
+                        }}
+                        className="flex items-center gap-3 px-4 py-3 rounded-xl bg-purple-600 hover:bg-purple-700 text-white font-semibold text-sm transition-all duration-300 hover:scale-[1.02] shadow-lg shadow-purple-600/20"
+                      >
+                        <Video className="w-5 h-5" />
+                        <span>Video Call</span>
+                      </button>
+
+                      {/* Live Call — direct phone dialer */}
+                      <a
+                        href={`tel:${BRAND.mobile}`}
+                        className="flex items-center gap-3 px-4 py-3 rounded-xl bg-green-600 hover:bg-green-700 text-white font-semibold text-sm transition-all duration-300 hover:scale-[1.02] shadow-lg shadow-green-600/20"
+                      >
+                        <Phone className="w-5 h-5" />
+                        <span>Live Call</span>
+                      </a>
+
+                      {/* Email — opens email client */}
+                      <a
+                        href={`mailto:${BRAND.email}?subject=Investment%20Inquiry%20-%20GHL%20India%20Ventures`}
+                        className="flex items-center gap-3 px-4 py-3 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-semibold text-sm transition-all duration-300 hover:scale-[1.02] shadow-lg shadow-blue-600/20"
+                      >
+                        <Mail className="w-5 h-5" />
+                        <span>Email Us</span>
+                      </a>
+
+                      {/* Telegram — opens Telegram */}
+                      <a
+                        href="https://t.me/ghlindia"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center gap-3 px-4 py-3 rounded-xl bg-[#0088cc] hover:bg-[#006fa8] text-white font-semibold text-sm transition-all duration-300 hover:scale-[1.02] shadow-lg shadow-[#0088cc]/20"
+                      >
+                        <Send className="w-5 h-5" />
+                        <span>Telegram</span>
+                      </a>
+                    </div>
+                  </div>
+
+                  {/* WhatsApp — full-width CTA */}
                   <a
                     href="https://wa.me/917200255252?text=Hi%2C%20I%27d%20like%20to%20learn%20more%20about%20GHL%20India%20Ventures."
                     target="_blank"
