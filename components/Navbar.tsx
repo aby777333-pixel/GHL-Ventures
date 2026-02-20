@@ -137,7 +137,7 @@ export default function Navbar() {
       <nav
         className={`transition-all duration-300 ${
           scrolled
-            ? 'bg-white/90 dark:bg-[#0A0A0A]/90 backdrop-blur-[20px] shadow-lg dark:shadow-black/30'
+            ? 'navbar-scrolled backdrop-blur-[20px] shadow-lg'
             : 'bg-[#0A0A0A]'
         }`}
         aria-label="Main navigation"

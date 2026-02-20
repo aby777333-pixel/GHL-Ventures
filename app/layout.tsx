@@ -19,6 +19,7 @@ import LiveVisitorCount from '@/components/LiveVisitorCount'
 // Lazy-load heavy widgets (reduces initial page load by ~2s)
 const ChatWidget = dynamic(() => import('@/components/chat/ChatWidget'), { ssr: false })
 const CommandPalette = dynamic(() => import('@/components/CommandPalette'), { ssr: false })
+const VoiceCommandWidget = dynamic(() => import('@/components/VoiceCommandWidget'), { ssr: false })
 // MarketNewsTicker removed
 // const MarketNewsTicker = dynamic(() => import('@/components/MarketNewsTicker'), { ssr: false })
 // EconomicCalendar removed
@@ -269,6 +270,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               <CookieConsent />
               <SocialProofToasts />
               <LiveVisitorCount />
+              <VoiceCommandWidget />
               <CommandPalette />
               <ChatWidget />
             </ArticleReaderProvider>

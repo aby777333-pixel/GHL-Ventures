@@ -556,8 +556,15 @@
   background-color: #111111 !important;
 }
 
-:root.dark .bg-brand-offwhite {
-  background-color: #0A0A0A !important;
+/* Navbar scrolled state dark mode */
+.navbar-scrolled {
+  background-color: rgba(255, 255, 255, 0.9);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+}
+:root.dark .navbar-scrolled {
+  background-color: rgba(10, 10, 10, 0.92) !important;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.5) !important;
+  border-bottom: 1px solid rgba(255,255,255,0.06);
 }
 
 :root.dark .card {
@@ -584,11 +591,75 @@
 }
 
 :root.dark .text-brand-black {
-  color: #FFFFFF;
+  color: #FFFFFF !important;
 }
 
 :root.dark .text-brand-grey {
-  color: #9CA3AF;
+  color: #9CA3AF !important;
+}
+
+/* Fund pages & submenus: headings, labels, table cells */
+:root.dark .text-brand-black\/80 {
+  color: rgba(255,255,255,0.8) !important;
+}
+
+:root.dark .section-title {
+  color: #FFFFFF !important;
+}
+
+:root.dark .border-gray-100 {
+  border-color: rgba(255,255,255,0.08) !important;
+}
+
+:root.dark .border-gray-200 {
+  border-color: rgba(255,255,255,0.1) !important;
+}
+
+:root.dark .border-gray-300 {
+  border-color: rgba(255,255,255,0.12) !important;
+}
+
+:root.dark .bg-brand-offwhite {
+  background-color: #111111 !important;
+}
+
+/* Fund page form inputs dark mode */
+:root.dark select,
+:root.dark textarea,
+:root.dark input[type="text"],
+:root.dark input[type="email"],
+:root.dark input[type="tel"] {
+  background-color: #1A1A1A !important;
+  border-color: #333 !important;
+  color: #E5E7EB !important;
+}
+
+:root.dark select option {
+  background-color: #1A1A1A;
+  color: #E5E7EB;
+}
+
+/* Fund structure diagram placeholder */
+:root.dark .border-dashed {
+  border-color: rgba(255,255,255,0.15) !important;
+}
+
+/* Table rows in dark mode (debenture comparison) */
+:root.dark tbody tr {
+  border-color: rgba(255,255,255,0.06);
+}
+
+:root.dark thead {
+  background-color: rgba(255,255,255,0.05);
+}
+
+/* Gray text improvements for dark mode readability */
+:root.dark .text-gray-500 {
+  color: #9CA3AF !important;
+}
+
+:root.dark .text-gray-600 {
+  color: #9CA3AF !important;
 }
 
 :root.dark ::-webkit-scrollbar-track {
@@ -1516,6 +1587,33 @@ body,
   0%, 92% { opacity: 0; }
   93%, 96% { opacity: 1; }
   97%, 100% { opacity: 0; }
+}
+
+/* ── DATASTREAM — Education Insights hero ── */
+.datastream-line {
+  animation: datastream-line-pulse 3s ease-in-out infinite;
+}
+@keyframes datastream-line-pulse {
+  0%, 100% { opacity: 0.1; stroke-width: 0.5; }
+  50% { opacity: 0.35; stroke-width: 1.5; }
+}
+
+.datastream-node {
+  animation: datastream-node-glow 2.5s ease-in-out infinite;
+}
+@keyframes datastream-node-glow {
+  0%, 100% { transform: scale(1); opacity: 0.5; }
+  50% { transform: scale(1.6); opacity: 1; }
+}
+
+.datastream-particle {
+  animation: datastream-float linear infinite;
+}
+@keyframes datastream-float {
+  0%   { transform: translateY(0); opacity: 0; }
+  10%  { opacity: 0.7; }
+  85%  { opacity: 0.5; }
+  100% { transform: translateY(-110vh); opacity: 0; }
 }
 
 /* ============================================================

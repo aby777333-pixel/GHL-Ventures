@@ -25,7 +25,8 @@
  *   eclipse       — Grievance Redressal page: total solar eclipse with corona
  *   mars          — Careers page: Martian terrain with red dunes + moons
  *   knowledge-rain — Education page: silver light drops from heavens + divine glow + starry sky
- *   nri-flight    — NRI Invest page: 100s of passenger airplanes with red/green flashing nav lights
+ *   nri-flight    — NRI Invest page: 10 passenger airplanes with red/green flashing nav lights
+ *   datastream    — Education Insights: flowing data nodes with connected lines + pulsing particles
  */
 
 type SpaceVariant =
@@ -49,6 +50,7 @@ type SpaceVariant =
   | 'mars'
   | 'knowledge-rain'
   | 'nri-flight'
+  | 'datastream'
 
 interface SpaceHeroProps {
   variant: SpaceVariant
@@ -1444,23 +1446,23 @@ export default function SpaceHero({ variant }: SpaceHeroProps) {
             )
           })}
 
-          {/* === AIRPLANE FLEET — 100 aircraft with red/green flashing nav lights ===
+          {/* === AIRPLANE FLEET — 10 aircraft with red/green flashing nav lights ===
                APPROACH: Each plane is positioned at a fixed top% with left:50%.
                The CSS animation nri-plane-drift-N moves them using transform:translateX()
                from far left to far right (or reverse), crossing the full viewport.
                Negative animation-delay places them at various mid-flight positions on load.
                This works inside overflow:hidden because the element stays in the flow
                and transform doesn't affect layout. */}
-          {Array.from({ length: 100 }, (_, i) => {
+          {Array.from({ length: 10 }, (_, i) => {
             const seed = (i * 7919 + 104729) % 100000
             const isReverse = i % 2 === 0 // half go L→R, half go R→L
-            const yPos = (seed % 88) + 4 // 4-92% vertical spread
-            const duration = 18 + (seed % 22) // 18-40 seconds
+            const yPos = 8 + (i * 9) // evenly spread across 8-89% vertical
+            const duration = 22 + (seed % 18) // 22-40 seconds
             const negDelay = -1 * ((seed % (duration * 10)) / 10) // spread across animation timeline
-            const size = 8 + (seed % 10) // 8-17px fuselage
-            const opacity = 0.35 + ((seed % 40) / 100) // 0.35-0.75
+            const size = 16 + (seed % 12) // 16-27px fuselage (bigger, more visible)
+            const opacity = 0.55 + ((seed % 30) / 100) // 0.55-0.85 (brighter)
             const lightDelay = (seed % 15) / 10
-            const lightSize = 4 + (size > 13 ? 2 : 0) // bigger lights for bigger planes
+            const lightSize = 5 + (size > 20 ? 3 : 1) // bigger lights for bigger planes
 
             return (
               <div
@@ -1536,6 +1538,130 @@ export default function SpaceHero({ variant }: SpaceHeroProps) {
           <div className="absolute top-[10%] left-[15%] w-72 h-72 bg-blue-700/[0.03] rounded-full blur-[100px] animate-pulse-slow" />
           <div className="absolute top-[50%] right-[10%] w-80 h-80 bg-indigo-600/[0.03] rounded-full blur-[100px] animate-pulse-slow-2" />
           <div className="absolute bottom-[10%] left-[50%] w-96 h-96 bg-blue-500/[0.02] rounded-full blur-[120px] animate-pulse-slow" />
+        </>
+      )}
+
+      {/* ═══════════════════════════════════════════════════════════
+          DATASTREAM — Education Insights Page
+          Flowing data nodes connected by lines + streaming particles
+          Neural-network-inspired with pulsing nodes and data flow
+         ═══════════════════════════════════════════════════════════ */}
+      {variant === 'datastream' && (
+        <>
+          {/* Deep gradient background */}
+          <div className="absolute inset-0"
+            style={{ background: 'linear-gradient(135deg, rgba(2,4,15,1) 0%, rgba(8,12,35,1) 40%, rgba(15,5,25,0.98) 70%, rgba(5,8,22,1) 100%)' }} />
+
+          {/* SVG Node Network — connected nodes with glowing lines */}
+          <svg className="absolute inset-0 w-full h-full" xmlns="http://www.w3.org/2000/svg">
+            {/* Network connections — animated lines */}
+            {[
+              { x1: '12%', y1: '20%', x2: '28%', y2: '35%', delay: '0s' },
+              { x1: '28%', y1: '35%', x2: '45%', y2: '18%', delay: '0.5s' },
+              { x1: '45%', y1: '18%', x2: '62%', y2: '40%', delay: '1s' },
+              { x1: '62%', y1: '40%', x2: '78%', y2: '25%', delay: '1.5s' },
+              { x1: '78%', y1: '25%', x2: '92%', y2: '45%', delay: '2s' },
+              { x1: '15%', y1: '60%', x2: '35%', y2: '70%', delay: '0.3s' },
+              { x1: '35%', y1: '70%', x2: '55%', y2: '55%', delay: '0.8s' },
+              { x1: '55%', y1: '55%', x2: '72%', y2: '65%', delay: '1.3s' },
+              { x1: '72%', y1: '65%', x2: '88%', y2: '50%', delay: '1.8s' },
+              { x1: '28%', y1: '35%', x2: '35%', y2: '70%', delay: '0.6s' },
+              { x1: '45%', y1: '18%', x2: '55%', y2: '55%', delay: '1.1s' },
+              { x1: '62%', y1: '40%', x2: '72%', y2: '65%', delay: '1.6s' },
+              { x1: '20%', y1: '85%', x2: '45%', y2: '80%', delay: '0.4s' },
+              { x1: '45%', y1: '80%', x2: '65%', y2: '85%', delay: '0.9s' },
+              { x1: '65%', y1: '85%', x2: '85%', y2: '75%', delay: '1.4s' },
+            ].map((line, i) => (
+              <line
+                key={`net-${i}`}
+                x1={line.x1} y1={line.y1} x2={line.x2} y2={line.y2}
+                stroke="rgba(208,2,27,0.15)"
+                strokeWidth="1"
+                className="datastream-line"
+                style={{ animationDelay: line.delay }}
+              />
+            ))}
+
+            {/* Bright data-flow pulses traveling along lines */}
+            {[
+              { x1: '12%', y1: '20%', x2: '28%', y2: '35%', dur: '3s', delay: '0s' },
+              { x1: '45%', y1: '18%', x2: '62%', y2: '40%', dur: '3.5s', delay: '1s' },
+              { x1: '78%', y1: '25%', x2: '92%', y2: '45%', dur: '2.8s', delay: '2s' },
+              { x1: '35%', y1: '70%', x2: '55%', y2: '55%', dur: '3.2s', delay: '1.5s' },
+              { x1: '72%', y1: '65%', x2: '88%', y2: '50%', dur: '3s', delay: '0.5s' },
+              { x1: '20%', y1: '85%', x2: '45%', y2: '80%', dur: '2.5s', delay: '2.5s' },
+            ].map((pulse, i) => (
+              <circle key={`pulse-${i}`} r="3" fill="#D0021B" opacity="0.8">
+                <animateMotion
+                  dur={pulse.dur}
+                  begin={pulse.delay}
+                  repeatCount="indefinite"
+                  path={`M0,0 L100,100`}
+                />
+                <animate attributeName="opacity" values="0.3;1;0.3" dur={pulse.dur} begin={pulse.delay} repeatCount="indefinite" />
+                <animate attributeName="r" values="2;4;2" dur={pulse.dur} begin={pulse.delay} repeatCount="indefinite" />
+              </circle>
+            ))}
+          </svg>
+
+          {/* Glowing data nodes */}
+          {[
+            { x: 12, y: 20, size: 8, color: '#D0021B', delay: 0 },
+            { x: 28, y: 35, size: 10, color: '#D0021B', delay: 0.3 },
+            { x: 45, y: 18, size: 12, color: '#fff', delay: 0.6 },
+            { x: 62, y: 40, size: 9, color: '#D0021B', delay: 0.9 },
+            { x: 78, y: 25, size: 11, color: '#fff', delay: 1.2 },
+            { x: 92, y: 45, size: 8, color: '#D0021B', delay: 1.5 },
+            { x: 15, y: 60, size: 7, color: '#fff', delay: 0.4 },
+            { x: 35, y: 70, size: 10, color: '#D0021B', delay: 0.7 },
+            { x: 55, y: 55, size: 13, color: '#fff', delay: 1.0 },
+            { x: 72, y: 65, size: 9, color: '#D0021B', delay: 1.3 },
+            { x: 88, y: 50, size: 8, color: '#fff', delay: 1.6 },
+            { x: 20, y: 85, size: 7, color: '#D0021B', delay: 0.5 },
+            { x: 45, y: 80, size: 9, color: '#fff', delay: 0.8 },
+            { x: 65, y: 85, size: 8, color: '#D0021B', delay: 1.1 },
+            { x: 85, y: 75, size: 10, color: '#fff', delay: 1.4 },
+          ].map((node, i) => (
+            <div
+              key={`node-${i}`}
+              className="absolute rounded-full datastream-node"
+              style={{
+                left: `${node.x}%`,
+                top: `${node.y}%`,
+                width: `${node.size}px`,
+                height: `${node.size}px`,
+                background: node.color,
+                boxShadow: `0 0 ${node.size * 2}px ${node.size}px ${node.color === '#fff' ? 'rgba(255,255,255,0.3)' : 'rgba(208,2,27,0.4)'}`,
+                animationDelay: `${node.delay}s`,
+              }}
+            />
+          ))}
+
+          {/* Floating data particles — small dots streaming upward */}
+          {Array.from({ length: 40 }, (_, i) => {
+            const s = (i * 4231 + 1789) % 10000
+            return (
+              <div
+                key={`dp-${i}`}
+                className="absolute datastream-particle"
+                style={{
+                  left: `${(s % 96) + 2}%`,
+                  bottom: `-${5 + (s % 10)}%`,
+                  width: `${2 + (s % 3)}px`,
+                  height: `${2 + (s % 3)}px`,
+                  borderRadius: '50%',
+                  background: s % 3 === 0 ? 'rgba(208,2,27,0.6)' : 'rgba(200,210,255,0.4)',
+                  animationDuration: `${8 + (s % 12)}s`,
+                  animationDelay: `${(s % 50) / 10}s`,
+                }}
+              />
+            )
+          })}
+
+          {/* Ambient glow */}
+          <div className="absolute top-[15%] left-[20%] w-80 h-80 bg-brand-red/[0.04] rounded-full blur-[100px] animate-pulse-slow" />
+          <div className="absolute top-[40%] right-[15%] w-96 h-96 bg-purple-600/[0.03] rounded-full blur-[120px] animate-pulse-slow-2" />
+          <div className="absolute bottom-[10%] left-[40%] w-72 h-72 bg-blue-500/[0.03] rounded-full blur-[100px] animate-pulse-slow" />
         </>
       )}
     </div>

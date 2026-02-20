@@ -197,7 +197,7 @@ export default function InsightsPage() {
     <>
       {/* Hero */}
       <section className="relative min-h-[60vh] flex items-center gradient-dark overflow-hidden">
-        <SpaceHero variant="knowledge-rain" />
+        <SpaceHero variant="datastream" />
         {/* Decorative blurs */}
         <div className="absolute inset-0 opacity-10">
           <div className="absolute top-20 right-20 w-96 h-96 bg-blue-400 rounded-full blur-3xl" />

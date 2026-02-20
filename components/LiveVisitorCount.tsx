@@ -31,7 +31,7 @@ export default function LiveVisitorCount() {
     <div className="fixed z-[9990] flex items-center gap-2 px-3 py-1.5 rounded-full text-[11px] font-medium transition-all duration-500"
       style={{
         bottom: '28px',
-        left: '92px',
+        left: '120px',
         background: 'rgba(10,10,10,0.85)',
         backdropFilter: 'blur(12px)',
         border: '1px solid rgba(255,255,255,0.08)',
