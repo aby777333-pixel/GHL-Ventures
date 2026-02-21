@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback, useMemo } from 'react'
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import Link from 'next/link'
 import {
   LayoutDashboard, TrendingUp, Briefcase, FileText, ArrowLeftRight,
@@ -8,7 +8,12 @@ import {
   ChevronRight, ArrowUpRight, ArrowDownRight, Shield, Zap, Download,
   Plus, Eye, Calendar, Clock, Star, Award, Target, PieChart as PieIcon,
   BarChart3, Wallet, IndianRupee, Percent, Building2, Rocket,
-  Menu, X, ExternalLink, Copy, CheckCircle, AlertCircle, Info
+  Menu, X, ExternalLink, Copy, CheckCircle, AlertCircle, Info,
+  Upload, Camera, MessageSquare, Ticket, Phone, Video, Globe,
+  Sun, Moon, Lock, CreditCard, Users, MapPin, Landmark, FileCheck,
+  Send, Paperclip, ChevronUp, HelpCircle, RefreshCw, Fingerprint,
+  BookOpen, Languages, Sparkles, CircleDot, Filter, MoreHorizontal,
+  Home, Mail, BellRing, Archive, Trash2, ImageIcon, Flag
 } from 'lucide-react'
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip,
@@ -16,7 +21,15 @@ import {
 } from 'recharts'
 import Logo from '@/components/Logo'
 
-// ─── MOCK DATA ──────────────────────────────────────────────
+/* ═══════════════════════════════════════════════════════════════
+   TYPES
+   ═══════════════════════════════════════════════════════════════ */
+type Theme = 'dark' | 'light'
+type TabId = 'dashboard' | 'investments' | 'portfolio' | 'kyc' | 'transactions' | 'messages' | 'support' | 'referrals' | 'profile' | 'settings'
+
+/* ═══════════════════════════════════════════════════════════════
+   MOCK DATA
+   ═══════════════════════════════════════════════════════════════ */
 const NAV_HISTORY = [
   { month: 'Apr 24', nav: 100.0, benchmark: 100.0 },
   { month: 'May 24', nav: 102.3, benchmark: 101.1 },
@@ -34,103 +47,94 @@ const NAV_HISTORY = [
 
 const ALLOCATION_DATA = [
   { name: 'Stressed RE', value: 45, color: '#D0021B' },
-  { name: 'Early-Stage', value: 25, color: '#FF4444' },
-  { name: 'Co-Invest', value: 20, color: '#FF8888' },
-  { name: 'Cash/Liquid', value: 10, color: '#1A1A1A' },
+  { name: 'Early-Stage', value: 25, color: '#10B981' },
+  { name: 'Co-Invest', value: 20, color: '#3B82F6' },
+  { name: 'Cash/Liquid', value: 10, color: '#F59E0B' },
 ]
 
 const PORTFOLIO_ASSETS = [
-  {
-    name: 'Phoenix Towers - NCLT Recovery',
-    type: 'Stressed Real Estate',
-    invested: 2500000,
-    current: 3125000,
-    returnPct: 25.0,
-    status: 'active',
-    icon: Building2,
-  },
-  {
-    name: 'Meridian Heights - Chennai',
-    type: 'Stressed Real Estate',
-    invested: 1800000,
-    current: 2340000,
-    returnPct: 30.0,
-    status: 'active',
-    icon: Building2,
-  },
-  {
-    name: 'TechStar AI Solutions',
-    type: 'Early-Stage Startup',
-    invested: 1000000,
-    current: 1450000,
-    returnPct: 45.0,
-    status: 'active',
-    icon: Rocket,
-  },
-  {
-    name: 'GHL Co-Invest Series A',
-    type: 'Co-Invest Instrument',
-    invested: 1500000,
-    current: 1627500,
-    returnPct: 8.5,
-    status: 'active',
-    icon: FileText,
-  },
+  { name: 'Phoenix Towers - NCLT Recovery', type: 'Stressed Real Estate', invested: 2500000, current: 3125000, returnPct: 25.0, status: 'active', milestone: 75 },
+  { name: 'Meridian Heights - Chennai', type: 'Stressed Real Estate', invested: 1800000, current: 2340000, returnPct: 30.0, status: 'active', milestone: 60 },
+  { name: 'TechStar AI Solutions', type: 'Early-Stage Startup', invested: 1000000, current: 1450000, returnPct: 45.0, status: 'active', milestone: 40 },
+  { name: 'GHL Co-Invest Series A', type: 'Co-Invest Instrument', invested: 1500000, current: 1627500, returnPct: 8.5, status: 'active', milestone: 85 },
 ]
 
 const RECENT_TRANSACTIONS = [
-  { date: '15 Mar 2025', type: 'Investment', amount: 1500000, fund: 'GHL Co-Invest Series A', status: 'completed' },
-  { date: '01 Mar 2025', type: 'Dividend', amount: 125000, fund: 'Phoenix Towers', status: 'completed' },
-  { date: '15 Feb 2025', type: 'Investment', amount: 1000000, fund: 'TechStar AI', status: 'completed' },
-  { date: '01 Feb 2025', type: 'NAV Update', amount: 0, fund: 'All Funds', status: 'info' },
-  { date: '15 Jan 2025', type: 'Investment', amount: 2500000, fund: 'Phoenix Towers', status: 'completed' },
-]
-
-const ANNOUNCEMENTS = [
-  {
-    title: 'Q4 NAV Report Published',
-    desc: 'Latest quarterly Net Asset Value report is now available for download.',
-    date: '10 Mar 2025',
-    type: 'report',
-  },
-  {
-    title: 'New Investment Opportunity',
-    desc: 'Stressed real estate asset in Bengaluru with 40% discount from IBC resolution.',
-    date: '05 Mar 2025',
-    type: 'opportunity',
-  },
-  {
-    title: 'KYC Verification Update',
-    desc: 'Annual KYC re-verification due by 31 March 2025.',
-    date: '01 Mar 2025',
-    type: 'alert',
-  },
+  { id: 'T001', date: '15 Mar 2025', type: 'Investment', amount: 1500000, fund: 'GHL Co-Invest Series A', status: 'completed' },
+  { id: 'T002', date: '01 Mar 2025', type: 'Dividend', amount: 125000, fund: 'Phoenix Towers', status: 'completed' },
+  { id: 'T003', date: '15 Feb 2025', type: 'Investment', amount: 1000000, fund: 'TechStar AI', status: 'completed' },
+  { id: 'T004', date: '01 Feb 2025', type: 'NAV Update', amount: 0, fund: 'All Funds', status: 'info' },
+  { id: 'T005', date: '15 Jan 2025', type: 'Investment', amount: 2500000, fund: 'Phoenix Towers', status: 'completed' },
+  { id: 'T006', date: '01 Jan 2025', type: 'Dividend', amount: 95000, fund: 'Meridian Heights', status: 'completed' },
+  { id: 'T007', date: '15 Dec 2024', type: 'Investment', amount: 1800000, fund: 'Meridian Heights', status: 'completed' },
 ]
 
 const MARKET_DATA = [
-  { name: 'SENSEX', value: '73,842.16', change: '+1.24%', up: true },
-  { name: 'NIFTY 50', value: '22,456.80', change: '+0.98%', up: true },
+  { name: 'SENSEX', value: '73,842', change: '+1.24%', up: true },
+  { name: 'NIFTY 50', value: '22,456', change: '+0.98%', up: true },
   { name: 'GOLD', value: '71,230', change: '-0.32%', up: false },
   { name: 'USD/INR', value: '83.12', change: '+0.15%', up: true },
 ]
 
-// ─── SIDEBAR ITEMS ──────────────────────────────────────────
-const SIDEBAR_ITEMS = [
-  { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
-  { id: 'invest', label: 'Invest', icon: TrendingUp },
-  { id: 'portfolio', label: 'Portfolio', icon: Briefcase },
-  { id: 'documents', label: 'Documents', icon: FileText },
-  { id: 'transactions', label: 'Transactions', icon: ArrowLeftRight },
-  { id: 'support', label: 'Support', icon: HeadphonesIcon },
-  { id: 'referrals', label: 'Referrals', icon: Gift },
+const KYC_STEPS = [
+  { id: 'personal', label: 'Personal Details', status: 'completed' as const, icon: User },
+  { id: 'business', label: 'Business Details', status: 'completed' as const, icon: Building2 },
+  { id: 'bank', label: 'Bank Details', status: 'completed' as const, icon: Landmark },
+  { id: 'demat', label: 'Demat Account', status: 'pending' as const, icon: CreditCard },
+  { id: 'nominee', label: 'Nominee Details', status: 'pending' as const, icon: Users },
+  { id: 'documents', label: 'Document Upload', status: 'in-review' as const, icon: FileCheck },
 ]
 
-const SIDEBAR_BOTTOM = [
+const MESSAGES_DATA = [
+  { id: 1, from: 'Relationship Manager', subject: 'Q4 Portfolio Review Summary', preview: 'Dear Rajesh, Your Q4 2024 portfolio has shown exceptional performance...', time: '2h ago', read: false, avatar: 'RM' },
+  { id: 2, from: 'GHL Compliance', subject: 'Annual KYC Re-verification', preview: 'As per SEBI regulations, please update your KYC documents by March 31...', time: '1d ago', read: false, avatar: 'GC' },
+  { id: 3, from: 'Investment Team', subject: 'New Opportunity: Bengaluru Stressed Asset', preview: 'We are excited to share a new stressed real estate opportunity in Bengaluru...', time: '3d ago', read: true, avatar: 'IT' },
+  { id: 4, from: 'Support Team', subject: 'Re: Tax Certificate Query', preview: 'Your TDS certificate for FY2024 has been uploaded to your documents section...', time: '5d ago', read: true, avatar: 'ST' },
+]
+
+const SUPPORT_TICKETS = [
+  { id: 'TKT-001', subject: 'Tax Certificate for FY2024', status: 'resolved', date: '10 Mar 2025', priority: 'medium' },
+  { id: 'TKT-002', subject: 'NAV Statement Download Issue', status: 'open', date: '15 Mar 2025', priority: 'low' },
+]
+
+const NOTIFICATIONS_DATA = [
+  { id: 1, title: 'Q4 NAV Report Published', desc: 'Latest quarterly NAV report is ready for download.', time: '2h ago', type: 'report', read: false },
+  { id: 2, title: 'New Investment Opportunity', desc: 'Stressed asset in Bengaluru at 40% discount.', time: '1d ago', type: 'opportunity', read: false },
+  { id: 3, title: 'KYC Re-verification Due', desc: 'Annual KYC update required by 31 March 2025.', time: '3d ago', type: 'alert', read: false },
+  { id: 4, title: 'Dividend Credited', desc: 'Dividend of \u20B91,25,000 from Phoenix Towers.', time: '5d ago', type: 'payment', read: true },
+  { id: 5, title: 'Portfolio Milestone', desc: 'Your portfolio has crossed \u20B985 Lakh mark!', time: '7d ago', type: 'milestone', read: true },
+]
+
+const TOUR_STEPS = [
+  { target: 'dashboard', title: 'Welcome to Your Dashboard', desc: 'Get a bird\u2019s-eye view of your portfolio, performance, and recent activity all in one place.' },
+  { target: 'investments', title: 'Explore Investments', desc: 'Browse available investment opportunities, express interest, and modify your allocations.' },
+  { target: 'portfolio', title: 'Track Performance', desc: 'View NAV trends, asset allocation, and milestone progress for each investment.' },
+  { target: 'kyc', title: 'KYC & Documents', desc: 'Upload documents, track your KYC status, and manage compliance requirements.' },
+  { target: 'messages', title: 'Secure Messages', desc: 'Communicate directly with your relationship manager and support team.' },
+  { target: 'support', title: 'Get Help Anytime', desc: 'Raise tickets, access FAQs, or connect via live chat and video call.' },
+]
+
+/* ═══════════════════════════════════════════════════════════════
+   SIDEBAR ITEMS
+   ═══════════════════════════════════════════════════════════════ */
+const SIDEBAR_ITEMS: { id: TabId; label: string; icon: any; badge?: string }[] = [
+  { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
+  { id: 'investments', label: 'Investments', icon: TrendingUp },
+  { id: 'portfolio', label: 'Portfolio', icon: Briefcase },
+  { id: 'kyc', label: 'KYC & Documents', icon: FileCheck },
+  { id: 'transactions', label: 'Transactions', icon: ArrowLeftRight },
+  { id: 'messages', label: 'Messages', icon: MessageSquare, badge: '2' },
+  { id: 'support', label: 'Support', icon: HeadphonesIcon },
+  { id: 'referrals', label: 'Referrals', icon: Gift, badge: 'NEW' },
+]
+const SIDEBAR_BOTTOM: { id: TabId; label: string; icon: any }[] = [
   { id: 'profile', label: 'Profile', icon: User },
   { id: 'settings', label: 'Settings', icon: Settings },
 ]
 
-// ─── HELPERS ────────────────────────────────────────────────
+/* ═══════════════════════════════════════════════════════════════
+   HELPERS
+   ═══════════════════════════════════════════════════════════════ */
 function formatINR(n: number): string {
   if (n >= 10000000) return `${(n / 10000000).toFixed(2)} Cr`
   if (n >= 100000) return `${(n / 100000).toFixed(2)} L`
@@ -140,13 +144,12 @@ function formatINR(n: number): string {
 function useAnimatedCounter(end: number, duration = 2000) {
   const [val, setVal] = useState(0)
   useEffect(() => {
-    let start = 0
     const startTime = Date.now()
     const tick = () => {
       const elapsed = Date.now() - startTime
       const progress = Math.min(elapsed / duration, 1)
       const eased = 1 - Math.pow(1 - progress, 4)
-      setVal(Math.floor(start + (end - start) * eased))
+      setVal(Math.floor(end * eased))
       if (progress < 1) requestAnimationFrame(tick)
     }
     requestAnimationFrame(tick)
@@ -154,137 +157,88 @@ function useAnimatedCounter(end: number, duration = 2000) {
   return val
 }
 
-// ─── GLASS CARD ─────────────────────────────────────────────
-function Glass({
-  children,
-  className = '',
-  hover = true,
-  glow = false,
-}: {
-  children: React.ReactNode
-  className?: string
-  hover?: boolean
-  glow?: boolean
+/* ═══════════════════════════════════════════════════════════════
+   GLASS CARD — theme-aware
+   ═══════════════════════════════════════════════════════════════ */
+function Glass({ children, className = '', hover = true, glow = false, theme = 'dark' as Theme }: {
+  children: React.ReactNode; className?: string; hover?: boolean; glow?: boolean; theme?: Theme
 }) {
+  const isDark = theme === 'dark'
   return (
     <div
-      className={`
-        relative rounded-2xl border border-white/[0.08] overflow-hidden
-        ${hover ? 'dash-glass-hover' : ''}
-        ${glow ? 'dash-glow' : ''}
-        ${className}
-      `}
+      className={`relative rounded-2xl border overflow-hidden transition-all duration-500
+        ${isDark ? 'border-white/[0.08]' : 'border-gray-200/80 shadow-sm'}
+        ${hover ? 'dash-glass-hover' : ''} ${glow ? 'dash-glow' : ''} ${className}`}
       style={{
-        background: 'linear-gradient(135deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.02) 100%)',
+        background: isDark
+          ? 'linear-gradient(135deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.02) 100%)'
+          : 'linear-gradient(135deg, rgba(255,255,255,0.9) 0%, rgba(248,247,245,0.95) 100%)',
         backdropFilter: 'blur(40px) saturate(180%)',
         WebkitBackdropFilter: 'blur(40px) saturate(180%)',
       }}
     >
-      {/* Inner shine */}
-      <div
-        className="absolute inset-0 pointer-events-none opacity-[0.04]"
-        style={{
-          background: 'linear-gradient(135deg, rgba(255,255,255,0.3) 0%, transparent 50%, rgba(255,255,255,0.05) 100%)',
-        }}
-      />
+      <div className="absolute inset-0 pointer-events-none opacity-[0.04]"
+        style={{ background: isDark ? 'linear-gradient(135deg, rgba(255,255,255,0.3) 0%, transparent 50%)' : 'linear-gradient(135deg, rgba(255,255,255,0.8) 0%, transparent 50%)' }} />
       <div className="relative z-10">{children}</div>
     </div>
   )
 }
 
-// ─── KYC BADGE ──────────────────────────────────────────────
-function KYCBadge() {
-  return (
-    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-emerald-500/15 text-emerald-400 border border-emerald-500/20">
-      <Shield className="w-3 h-3" />
-      KYC Verified
-    </span>
-  )
-}
-
-// ─── CHART TOOLTIP ──────────────────────────────────────────
+/* ═══════════════════════════════════════════════════════════════
+   CHART TOOLTIP
+   ═══════════════════════════════════════════════════════════════ */
 function ChartTooltipContent({ active, payload, label }: any) {
   if (!active || !payload?.length) return null
   return (
-    <div
-      className="rounded-xl px-4 py-3 border border-white/10 shadow-2xl"
-      style={{
-        background: 'rgba(26, 26, 26, 0.95)',
-        backdropFilter: 'blur(20px)',
-      }}
-    >
+    <div className="rounded-xl px-4 py-3 border border-white/10 shadow-2xl"
+      style={{ background: 'rgba(26,26,26,0.95)', backdropFilter: 'blur(20px)' }}>
       <p className="text-xs text-gray-400 mb-1.5">{label}</p>
       {payload.map((p: any, i: number) => (
-        <p key={i} className="text-sm font-semibold" style={{ color: p.color }}>
-          {p.name}: {p.value.toFixed(2)}
-        </p>
+        <p key={i} className="text-sm font-semibold" style={{ color: p.color }}>{p.name}: {p.value.toFixed(2)}</p>
       ))}
     </div>
   )
 }
 
-// ─── QUICK ACTION ───────────────────────────────────────────
-function QuickAction({
-  icon: Icon,
-  label,
-  desc,
-  color,
-}: {
-  icon: any
-  label: string
-  desc: string
-  color: string
-}) {
-  return (
-    <button className="group text-left w-full">
-      <Glass className="p-4 h-full" hover>
-        <div
-          className="w-10 h-10 rounded-xl flex items-center justify-center mb-3 transition-transform duration-300 group-hover:scale-110"
-          style={{ background: `${color}20` }}
-        >
-          <Icon className="w-5 h-5" style={{ color }} />
-        </div>
-        <p className="text-sm font-semibold text-white mb-0.5">{label}</p>
-        <p className="text-xs text-gray-500 leading-relaxed">{desc}</p>
-      </Glass>
-    </button>
-  )
-}
-
-// =============================================================
-// MAIN DASHBOARD COMPONENT
-// =============================================================
+/* ═══════════════════════════════════════════════════════════════
+   MAIN DASHBOARD COMPONENT
+   ═══════════════════════════════════════════════════════════════ */
 export default function DashboardClient() {
-  const [activeTab, setActiveTab] = useState('dashboard')
+  // ─── State ────────────────────────────────────────────────
+  const [theme, setTheme] = useState<Theme>('dark')
+  const [activeTab, setActiveTab] = useState<TabId>('dashboard')
   const [sidebarOpen, setSidebarOpen] = useState(false)
-  const [searchOpen, setSearchOpen] = useState(false)
-  const [notifications, setNotifications] = useState(3)
+  const [notifOpen, setNotifOpen] = useState(false)
   const [currentTime, setCurrentTime] = useState('')
   const [greeting, setGreeting] = useState('')
+  const [tourActive, setTourActive] = useState(false)
+  const [tourStep, setTourStep] = useState(0)
+  const [searchQuery, setSearchQuery] = useState('')
+  const [ticketForm, setTicketForm] = useState(false)
+  const [messageCompose, setMessageCompose] = useState(false)
+  const [bankConnectOpen, setBankConnectOpen] = useState(false)
+  const [uploadModalOpen, setUploadModalOpen] = useState(false)
+  const [taskReminders] = useState([
+    { id: 1, task: 'Complete KYC re-verification', due: '31 Mar 2025', urgent: true },
+    { id: 2, task: 'Review Q4 NAV report', due: '20 Mar 2025', urgent: false },
+  ])
+  const fileInputRef = useRef<HTMLInputElement>(null)
+
+  const isDark = theme === 'dark'
+  const t = (dark: string, light: string) => isDark ? dark : light
 
   // Animated counters
   const portfolioValue = useAnimatedCounter(8542500)
   const aifInvestment = useAnimatedCounter(6300000)
-  const debentureValue = useAnimatedCounter(1627500)
+  const coInvestValue = useAnimatedCounter(1627500)
   const currentNAV = useAnimatedCounter(13242)
 
   useEffect(() => {
     const updateTime = () => {
       const now = new Date()
-      setCurrentTime(
-        now.toLocaleString('en-IN', {
-          weekday: 'short',
-          day: 'numeric',
-          month: 'short',
-          year: 'numeric',
-          hour: '2-digit',
-          minute: '2-digit',
-        })
-      )
+      setCurrentTime(now.toLocaleString('en-IN', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }))
       const hour = now.getHours()
-      if (hour < 12) setGreeting('Good Morning')
-      else if (hour < 17) setGreeting('Good Afternoon')
-      else setGreeting('Good Evening')
+      setGreeting(hour < 12 ? 'Good Morning' : hour < 17 ? 'Good Afternoon' : 'Good Evening')
     }
     updateTime()
     const interval = setInterval(updateTime, 60000)
@@ -297,53 +251,38 @@ export default function DashboardClient() {
     return ((current - invested) / invested * 100).toFixed(1)
   }, [])
 
-  // ─── SIDEBAR ────────────────────────────────────────────
+  // ═══════════════════════════════════════════════════════════
+  // SIDEBAR
+  // ═══════════════════════════════════════════════════════════
   const renderSidebar = () => (
     <>
-      {/* Mobile overlay */}
-      {sidebarOpen && (
-        <div
-          className="fixed inset-0 bg-black/60 z-40 lg:hidden backdrop-blur-sm"
-          onClick={() => setSidebarOpen(false)}
-        />
-      )}
-
-      <aside
-        className={`
-          fixed top-0 left-0 h-full z-50 w-[260px] flex flex-col
-          transition-transform duration-500 ease-out
-          lg:translate-x-0
-          ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}
-        `}
+      {sidebarOpen && <div className="fixed inset-0 bg-black/60 z-40 lg:hidden backdrop-blur-sm" onClick={() => setSidebarOpen(false)} />}
+      <aside className={`fixed top-0 left-0 h-full z-50 w-[260px] flex flex-col transition-transform duration-500 ease-out lg:translate-x-0 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}
         style={{
-          background: 'linear-gradient(180deg, rgba(10,10,10,0.98) 0%, rgba(15,5,5,0.98) 100%)',
-          borderRight: '1px solid rgba(255,255,255,0.06)',
+          background: isDark ? 'linear-gradient(180deg, rgba(10,10,10,0.98) 0%, rgba(15,5,5,0.98) 100%)' : 'linear-gradient(180deg, rgba(255,255,255,0.98) 0%, rgba(248,247,245,0.98) 100%)',
+          borderRight: `1px solid ${isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.08)'}`,
           backdropFilter: 'blur(40px)',
-        }}
-      >
+        }}>
         {/* Logo */}
         <div className="px-6 pt-6 pb-4 flex items-center justify-between">
-          <Link href="/" className="flex items-center gap-3 group">
+          <Link href="/" target="_blank" className="flex items-center gap-3 group">
             <Logo size={36} />
             <div>
-              <p className="text-sm font-bold text-white tracking-tight">GHL India</p>
+              <p className={`text-sm font-bold tracking-tight ${t('text-white','text-gray-900')}`}>GHL India</p>
               <p className="text-[10px] text-brand-red font-medium tracking-widest uppercase">Ventures</p>
             </div>
           </Link>
-          <button
-            onClick={() => setSidebarOpen(false)}
-            className="lg:hidden text-gray-500 hover:text-white transition-colors"
-          >
+          <button onClick={() => setSidebarOpen(false)} className={`lg:hidden ${t('text-gray-500 hover:text-white','text-gray-400 hover:text-gray-900')} transition-colors`}>
             <X className="w-5 h-5" />
           </button>
         </div>
 
         {/* Investor badge */}
-        <div className="px-6 mb-6">
-          <div className="px-3 py-2 rounded-xl bg-white/[0.04] border border-white/[0.06]">
-            <p className="text-[10px] text-gray-500 uppercase tracking-widest mb-0.5">Investor</p>
-            <p className="text-sm text-white font-semibold">Rajesh Krishnan</p>
-            <p className="text-[10px] text-gray-500 mt-0.5">ID: GHL-INV-2024-0847</p>
+        <div className="px-6 mb-4">
+          <div className={`px-3 py-2.5 rounded-xl ${t('bg-white/[0.04] border border-white/[0.06]','bg-gray-50 border border-gray-200')}`}>
+            <p className={`text-[10px] uppercase tracking-widest mb-0.5 ${t('text-gray-500','text-gray-400')}`}>Investor</p>
+            <p className={`text-sm font-semibold ${t('text-white','text-gray-900')}`}>Rajesh Krishnan</p>
+            <p className={`text-[10px] mt-0.5 ${t('text-gray-500','text-gray-500')}`}>ID: GHL-INV-2024-0847</p>
           </div>
         </div>
 
@@ -352,66 +291,54 @@ export default function DashboardClient() {
           {SIDEBAR_ITEMS.map((item) => {
             const isActive = activeTab === item.id
             return (
-              <button
-                key={item.id}
-                onClick={() => {
-                  setActiveTab(item.id)
-                  setSidebarOpen(false)
-                }}
-                className={`
-                  w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium
-                  transition-all duration-300 group relative
+              <button key={item.id} onClick={() => { setActiveTab(item.id); setSidebarOpen(false) }}
+                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-300 group relative
                   ${isActive
-                    ? 'text-white bg-brand-red/15 border border-brand-red/20'
-                    : 'text-gray-400 hover:text-white hover:bg-white/[0.04]'
-                  }
-                `}
-              >
-                {isActive && (
-                  <div className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-5 rounded-r-full bg-brand-red" />
-                )}
-                <item.icon className={`w-[18px] h-[18px] ${isActive ? 'text-brand-red' : 'text-gray-500 group-hover:text-gray-300'}`} />
+                    ? isDark ? 'text-white bg-brand-red/15 border border-brand-red/20' : 'text-brand-red bg-red-50 border border-red-200'
+                    : isDark ? 'text-gray-400 hover:text-white hover:bg-white/[0.04]' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
+                  }`}>
+                {isActive && <div className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-5 rounded-r-full bg-brand-red" />}
+                <item.icon className={`w-[18px] h-[18px] ${isActive ? 'text-brand-red' : isDark ? 'text-gray-500 group-hover:text-gray-300' : 'text-gray-400 group-hover:text-gray-600'}`} />
                 {item.label}
-                {item.id === 'referrals' && (
-                  <span className="ml-auto text-[10px] px-1.5 py-0.5 rounded-full bg-brand-red/20 text-brand-red font-bold">
-                    NEW
+                {item.badge && (
+                  <span className={`ml-auto text-[10px] px-1.5 py-0.5 rounded-full font-bold ${item.badge === 'NEW' ? 'bg-brand-red/20 text-brand-red' : 'bg-blue-500/20 text-blue-400'}`}>
+                    {item.badge}
                   </span>
                 )}
               </button>
             )
           })}
-
-          <div className="my-4 border-t border-white/[0.06]" />
-
+          <div className={`my-4 border-t ${t('border-white/[0.06]','border-gray-200')}`} />
           {SIDEBAR_BOTTOM.map((item) => (
-            <button
-              key={item.id}
-              onClick={() => {
-                setActiveTab(item.id)
-                setSidebarOpen(false)
-              }}
-              className={`
-                w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium
-                transition-all duration-300 group
+            <button key={item.id} onClick={() => { setActiveTab(item.id); setSidebarOpen(false) }}
+              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-300 group
                 ${activeTab === item.id
-                  ? 'text-white bg-white/[0.06]'
-                  : 'text-gray-500 hover:text-gray-300 hover:bg-white/[0.03]'
-                }
-              `}
-            >
+                  ? isDark ? 'text-white bg-white/[0.06]' : 'text-gray-900 bg-gray-100'
+                  : isDark ? 'text-gray-500 hover:text-gray-300 hover:bg-white/[0.03]' : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'
+                }`}>
               <item.icon className="w-[18px] h-[18px]" />
               {item.label}
             </button>
           ))}
         </nav>
 
-        {/* Logout */}
-        <div className="px-3 pb-6 pt-2">
-          <Link
-            href="/login"
-            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium
-              text-gray-500 hover:text-red-400 hover:bg-red-500/[0.06] transition-all duration-300"
-          >
+        {/* Theme toggle + Logout */}
+        <div className="px-3 pb-4 pt-2 space-y-1">
+          <button onClick={() => setTheme(isDark ? 'light' : 'dark')}
+            className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-300
+              ${isDark ? 'text-gray-400 hover:text-amber-400 hover:bg-amber-500/[0.06]' : 'text-gray-500 hover:text-indigo-600 hover:bg-indigo-50'}`}>
+            {isDark ? <Sun className="w-[18px] h-[18px]" /> : <Moon className="w-[18px] h-[18px]" />}
+            {isDark ? 'Light Mode' : 'Dark Mode'}
+          </button>
+          <button onClick={() => setTourActive(true)}
+            className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-300
+              ${isDark ? 'text-gray-400 hover:text-purple-400 hover:bg-purple-500/[0.06]' : 'text-gray-500 hover:text-purple-600 hover:bg-purple-50'}`}>
+            <Sparkles className="w-[18px] h-[18px]" />
+            Virtual Tour
+          </button>
+          <Link href="/login"
+            className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-300
+              ${isDark ? 'text-gray-500 hover:text-red-400 hover:bg-red-500/[0.06]' : 'text-gray-500 hover:text-red-600 hover:bg-red-50'}`}>
             <LogOut className="w-[18px] h-[18px]" />
             Sign Out
           </Link>
@@ -420,26 +347,20 @@ export default function DashboardClient() {
     </>
   )
 
-  // ─── TOP BAR ────────────────────────────────────────────
+  // ═══════════════════════════════════════════════════════════
+  // TOP BAR
+  // ═══════════════════════════════════════════════════════════
   const renderTopBar = () => (
-    <header
-      className="sticky top-0 z-30 border-b border-white/[0.06]"
-      style={{
-        background: 'rgba(10, 10, 10, 0.8)',
-        backdropFilter: 'blur(40px) saturate(180%)',
-        WebkitBackdropFilter: 'blur(40px) saturate(180%)',
-      }}
-    >
+    <header className={`sticky top-0 z-30 border-b ${t('border-white/[0.06]','border-gray-200')}`}
+      style={{ background: isDark ? 'rgba(10,10,10,0.8)' : 'rgba(255,255,255,0.85)', backdropFilter: 'blur(40px) saturate(180%)' }}>
       {/* Market Ticker */}
-      <div className="border-b border-white/[0.04] px-4 py-1.5 overflow-hidden">
+      <div className={`border-b ${t('border-white/[0.04]','border-gray-100')} px-4 py-1.5 overflow-hidden`}>
         <div className="flex items-center gap-6 text-xs animate-marquee whitespace-nowrap">
           {[...MARKET_DATA, ...MARKET_DATA].map((m, i) => (
             <span key={i} className="inline-flex items-center gap-2">
-              <span className="text-gray-500 font-medium">{m.name}</span>
-              <span className="text-white font-semibold">{m.value}</span>
-              <span className={`font-semibold ${m.up ? 'text-emerald-400' : 'text-red-400'}`}>
-                {m.change}
-              </span>
+              <span className={`font-medium ${t('text-gray-500','text-gray-400')}`}>{m.name}</span>
+              <span className={`font-semibold ${t('text-white','text-gray-900')}`}>{m.value}</span>
+              <span className={`font-semibold ${m.up ? 'text-emerald-400' : 'text-red-400'}`}>{m.change}</span>
             </span>
           ))}
         </div>
@@ -447,408 +368,248 @@ export default function DashboardClient() {
 
       {/* Main bar */}
       <div className="flex items-center justify-between px-4 lg:px-6 py-3">
-        {/* Left: Hamburger + Breadcrumb */}
         <div className="flex items-center gap-3">
-          <button
-            onClick={() => setSidebarOpen(true)}
-            className="lg:hidden text-gray-400 hover:text-white transition-colors p-1"
-          >
+          <button onClick={() => setSidebarOpen(true)} className={`lg:hidden ${t('text-gray-400 hover:text-white','text-gray-500 hover:text-gray-900')} transition-colors p-1`}>
             <Menu className="w-5 h-5" />
           </button>
-          <div className="hidden sm:flex items-center gap-2 text-xs text-gray-500">
-            <span>Portal</span>
-            <ChevronRight className="w-3 h-3" />
-            <span className="text-white capitalize">{activeTab}</span>
-          </div>
-          <div className="sm:hidden">
-            <p className="text-sm font-semibold text-white capitalize">{activeTab}</p>
+          <div className={`hidden sm:flex items-center gap-2 text-xs ${t('text-gray-500','text-gray-400')}`}>
+            <Home className="w-3 h-3" /> <ChevronRight className="w-3 h-3" />
+            <span className={`capitalize ${t('text-white','text-gray-900')}`}>{activeTab === 'kyc' ? 'KYC & Documents' : activeTab}</span>
           </div>
         </div>
 
-        {/* Right: Search + Notifications + Avatar */}
         <div className="flex items-center gap-2">
           {/* Search */}
-          <div className="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-xl bg-white/[0.04] border border-white/[0.06] w-56 focus-within:border-brand-red/30 transition-colors">
-            <Search className="w-3.5 h-3.5 text-gray-500" />
-            <input
-              type="text"
-              placeholder="Search..."
-              className="bg-transparent border-none outline-none text-xs text-white placeholder-gray-600 w-full"
-            />
-            <kbd className="text-[10px] text-gray-600 border border-white/[0.08] rounded px-1">
-              /
-            </kbd>
+          <div className={`hidden md:flex items-center gap-2 px-3 py-1.5 rounded-xl w-56 transition-colors
+            ${t('bg-white/[0.04] border border-white/[0.06] focus-within:border-brand-red/30','bg-gray-100 border border-gray-200 focus-within:border-brand-red/40')}`}>
+            <Search className={`w-3.5 h-3.5 ${t('text-gray-500','text-gray-400')}`} />
+            <input type="text" placeholder="Search..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)}
+              className={`bg-transparent border-none outline-none text-xs w-full ${t('text-white placeholder-gray-600','text-gray-900 placeholder-gray-400')}`} />
           </div>
 
-          {/* Mobile search toggle */}
-          <button className="md:hidden p-2 rounded-xl text-gray-400 hover:text-white hover:bg-white/[0.04] transition-colors">
-            <Search className="w-4 h-4" />
-          </button>
+          {/* Task reminders */}
+          {taskReminders.some(r => r.urgent) && (
+            <div className="hidden lg:flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-amber-500/15 border border-amber-500/20">
+              <BellRing className="w-3 h-3 text-amber-400 animate-pulse" />
+              <span className="text-[10px] font-semibold text-amber-400">{taskReminders.filter(r => r.urgent).length} urgent</span>
+            </div>
+          )}
 
           {/* Notifications */}
-          <button className="relative p-2 rounded-xl text-gray-400 hover:text-white hover:bg-white/[0.04] transition-colors">
-            <Bell className="w-4 h-4" />
-            {notifications > 0 && (
-              <span className="absolute -top-0.5 -right-0.5 w-4 h-4 rounded-full bg-brand-red text-[9px] font-bold text-white flex items-center justify-center dash-pulse-dot">
-                {notifications}
+          <div className="relative">
+            <button onClick={() => setNotifOpen(!notifOpen)} className={`relative p-2 rounded-xl transition-colors ${t('text-gray-400 hover:text-white hover:bg-white/[0.04]','text-gray-500 hover:text-gray-900 hover:bg-gray-100')}`}>
+              <Bell className="w-4 h-4" />
+              <span className="absolute -top-0.5 -right-0.5 w-4 h-4 rounded-full bg-brand-red text-[9px] font-bold text-white flex items-center justify-center">
+                {NOTIFICATIONS_DATA.filter(n => !n.read).length}
               </span>
+            </button>
+
+            {/* Notification dropdown */}
+            {notifOpen && (
+              <div className={`absolute right-0 top-12 w-80 rounded-2xl border shadow-2xl z-50 overflow-hidden
+                ${t('bg-[#111] border-white/[0.08]','bg-white border-gray-200')}`}>
+                <div className={`px-4 py-3 flex items-center justify-between border-b ${t('border-white/[0.06]','border-gray-100')}`}>
+                  <h4 className={`text-sm font-bold ${t('text-white','text-gray-900')}`}>Notifications</h4>
+                  <button className="text-[10px] text-brand-red font-semibold">Mark all read</button>
+                </div>
+                <div className="max-h-80 overflow-y-auto">
+                  {NOTIFICATIONS_DATA.map(n => (
+                    <div key={n.id} className={`px-4 py-3 flex gap-3 cursor-pointer transition-colors ${!n.read ? (isDark ? 'bg-white/[0.02]' : 'bg-blue-50/50') : ''} ${t('hover:bg-white/[0.04]','hover:bg-gray-50')}`}>
+                      <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0
+                        ${n.type === 'report' ? 'bg-blue-500/15' : n.type === 'opportunity' ? 'bg-emerald-500/15' : n.type === 'alert' ? 'bg-amber-500/15' : n.type === 'payment' ? 'bg-emerald-500/15' : 'bg-purple-500/15'}`}>
+                        {n.type === 'report' ? <FileText className="w-4 h-4 text-blue-400" /> :
+                         n.type === 'opportunity' ? <Star className="w-4 h-4 text-emerald-400" /> :
+                         n.type === 'alert' ? <AlertCircle className="w-4 h-4 text-amber-400" /> :
+                         n.type === 'payment' ? <IndianRupee className="w-4 h-4 text-emerald-400" /> :
+                         <Award className="w-4 h-4 text-purple-400" />}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className={`text-xs font-semibold ${t('text-white','text-gray-900')} ${!n.read ? '' : 'opacity-60'}`}>{n.title}</p>
+                        <p className={`text-[11px] mt-0.5 ${t('text-gray-500','text-gray-500')}`}>{n.desc}</p>
+                        <p className={`text-[10px] mt-1 ${t('text-gray-600','text-gray-400')}`}>{n.time}</p>
+                      </div>
+                      {!n.read && <div className="w-2 h-2 rounded-full bg-brand-red shrink-0 mt-1.5" />}
+                    </div>
+                  ))}
+                </div>
+              </div>
             )}
-          </button>
+          </div>
 
           {/* Time */}
-          <span className="hidden lg:block text-[11px] text-gray-500 ml-2">
-            {currentTime}
-          </span>
+          <span className={`hidden lg:block text-[11px] ml-2 ${t('text-gray-500','text-gray-400')}`}>{currentTime}</span>
+
+          {/* Theme toggle (compact) */}
+          <button onClick={() => setTheme(isDark ? 'light' : 'dark')}
+            className={`p-2 rounded-xl transition-all duration-300 ${t('text-gray-400 hover:text-amber-400 hover:bg-amber-500/[0.06]','text-gray-500 hover:text-indigo-600 hover:bg-indigo-50')}`}>
+            {isDark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+          </button>
 
           {/* Avatar */}
-          <div className="flex items-center gap-2 ml-2 pl-3 border-l border-white/[0.06]">
-            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-brand-red to-red-800 flex items-center justify-center text-xs font-bold text-white ring-2 ring-white/[0.08]">
-              RK
-            </div>
-            <ChevronDown className="w-3 h-3 text-gray-500 hidden sm:block" />
+          <div className={`flex items-center gap-2 ml-2 pl-3 border-l ${t('border-white/[0.06]','border-gray-200')}`}>
+            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-brand-red to-red-800 flex items-center justify-center text-xs font-bold text-white ring-2 ring-white/[0.08]">RK</div>
           </div>
         </div>
       </div>
     </header>
   )
 
-  // ─── HERO METRICS ───────────────────────────────────────
+  // ═══════════════════════════════════════════════════════════
+  // VIRTUAL TOUR OVERLAY
+  // ═══════════════════════════════════════════════════════════
+  const renderTourOverlay = () => {
+    if (!tourActive) return null
+    const step = TOUR_STEPS[tourStep]
+    return (
+      <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 backdrop-blur-sm">
+        <div className={`max-w-md w-full mx-4 rounded-2xl border p-8 text-center ${t('bg-[#111] border-white/10','bg-white border-gray-200 shadow-2xl')}`}>
+          <div className="w-16 h-16 rounded-2xl bg-brand-red/15 flex items-center justify-center mx-auto mb-5">
+            <Sparkles className="w-8 h-8 text-brand-red" />
+          </div>
+          <h3 className={`text-lg font-bold mb-2 ${t('text-white','text-gray-900')}`}>{step.title}</h3>
+          <p className={`text-sm mb-6 leading-relaxed ${t('text-gray-400','text-gray-500')}`}>{step.desc}</p>
+          <div className="flex items-center justify-center gap-1.5 mb-6">
+            {TOUR_STEPS.map((_, i) => (
+              <div key={i} className={`h-1.5 rounded-full transition-all duration-300 ${i === tourStep ? 'w-6 bg-brand-red' : 'w-1.5 bg-gray-600'}`} />
+            ))}
+          </div>
+          <div className="flex gap-3 justify-center">
+            <button onClick={() => { setTourActive(false); setTourStep(0) }}
+              className={`px-4 py-2 rounded-xl text-sm font-medium ${t('text-gray-400 hover:text-white','text-gray-500 hover:text-gray-900')}`}>Skip</button>
+            <button onClick={() => {
+              if (tourStep < TOUR_STEPS.length - 1) {
+                setActiveTab(TOUR_STEPS[tourStep + 1].target as TabId)
+                setTourStep(tourStep + 1)
+              } else {
+                setTourActive(false); setTourStep(0)
+              }
+            }} className="px-6 py-2 rounded-xl text-sm font-semibold text-white" style={{ background: 'linear-gradient(135deg, #D0021B, #8B0000)' }}>
+              {tourStep < TOUR_STEPS.length - 1 ? 'Next' : 'Finish'}
+            </button>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  // ═══════════════════════════════════════════════════════════
+  // HERO METRICS
+  // ═══════════════════════════════════════════════════════════
   const renderHeroMetrics = () => {
     const metrics = [
-      {
-        label: 'Total Portfolio',
-        value: `\u20B9${formatINR(portfolioValue)}`,
-        change: `+${totalReturn}%`,
-        up: true,
-        icon: Wallet,
-        gradient: 'from-brand-red/20 to-red-900/20',
-        iconColor: '#D0021B',
-      },
-      {
-        label: 'AIF Investment',
-        value: `\u20B9${formatINR(aifInvestment)}`,
-        change: '+32.4%',
-        up: true,
-        icon: Building2,
-        gradient: 'from-emerald-500/20 to-emerald-900/20',
-        iconColor: '#10B981',
-      },
-      {
-        label: 'Co-Invest Value',
-        value: `\u20B9${formatINR(debentureValue)}`,
-        change: '+8.5%',
-        up: true,
-        icon: FileText,
-        gradient: 'from-blue-500/20 to-blue-900/20',
-        iconColor: '#3B82F6',
-      },
-      {
-        label: 'Current NAV',
-        value: `\u20B9${(currentNAV / 100).toFixed(2)}`,
-        change: '+32.4%',
-        up: true,
-        icon: TrendingUp,
-        gradient: 'from-amber-500/20 to-amber-900/20',
-        iconColor: '#F59E0B',
-      },
+      { label: 'Total Portfolio', value: `\u20B9${formatINR(portfolioValue)}`, change: `+${totalReturn}%`, up: true, icon: Wallet, gradient: 'from-brand-red/20 to-red-900/20', iconColor: '#D0021B' },
+      { label: 'AIF Investment', value: `\u20B9${formatINR(aifInvestment)}`, change: '+32.4%', up: true, icon: Building2, gradient: 'from-emerald-500/20 to-emerald-900/20', iconColor: '#10B981' },
+      { label: 'Co-Invest Value', value: `\u20B9${formatINR(coInvestValue)}`, change: '+8.5%', up: true, icon: FileText, gradient: 'from-blue-500/20 to-blue-900/20', iconColor: '#3B82F6' },
+      { label: 'Current NAV', value: `\u20B9${(currentNAV / 100).toFixed(2)}`, change: '+32.4%', up: true, icon: TrendingUp, gradient: 'from-amber-500/20 to-amber-900/20', iconColor: '#F59E0B' },
     ]
-
     return (
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
         {metrics.map((m, i) => (
-          <Glass key={i} className="p-5" hover glow>
+          <Glass key={i} className="p-5" hover glow theme={theme}>
             <div className="flex items-start justify-between mb-3">
-              <div
-                className={`w-11 h-11 rounded-xl bg-gradient-to-br ${m.gradient} flex items-center justify-center`}
-              >
+              <div className={`w-11 h-11 rounded-xl bg-gradient-to-br ${m.gradient} flex items-center justify-center`}>
                 <m.icon className="w-5 h-5" style={{ color: m.iconColor }} />
               </div>
-              <span
-                className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
-                  m.up
-                    ? 'bg-emerald-500/15 text-emerald-400'
-                    : 'bg-red-500/15 text-red-400'
-                }`}
-              >
-                {m.up ? <ArrowUpRight className="w-3 h-3 inline mr-0.5" /> : <ArrowDownRight className="w-3 h-3 inline mr-0.5" />}
-                {m.change}
+              <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${m.up ? 'bg-emerald-500/15 text-emerald-400' : 'bg-red-500/15 text-red-400'}`}>
+                {m.up ? <ArrowUpRight className="w-3 h-3 inline mr-0.5" /> : <ArrowDownRight className="w-3 h-3 inline mr-0.5" />}{m.change}
               </span>
             </div>
-            <p className="text-2xl font-extrabold text-white tracking-tight mb-0.5">
-              {m.value}
-            </p>
-            <p className="text-xs text-gray-500">{m.label}</p>
+            <p className={`text-2xl font-extrabold tracking-tight mb-0.5 ${t('text-white','text-gray-900')}`}>{m.value}</p>
+            <p className={`text-xs ${t('text-gray-500','text-gray-500')}`}>{m.label}</p>
           </Glass>
         ))}
       </div>
     )
   }
 
-  // ─── NAV CHART ──────────────────────────────────────────
+  // ═══════════════════════════════════════════════════════════
+  // NAV CHART
+  // ═══════════════════════════════════════════════════════════
   const renderNAVChart = () => (
-    <Glass className="p-5 lg:p-6" hover>
+    <Glass className="p-5 lg:p-6" hover theme={theme}>
       <div className="flex items-center justify-between mb-5">
         <div>
-          <h3 className="text-base font-bold text-white mb-0.5">NAV Performance</h3>
-          <p className="text-xs text-gray-500">Fund NAV vs NIFTY 50 Benchmark</p>
+          <h3 className={`text-base font-bold mb-0.5 ${t('text-white','text-gray-900')}`}>NAV Performance</h3>
+          <p className={`text-xs ${t('text-gray-500','text-gray-500')}`}>Fund NAV vs NIFTY 50 Benchmark</p>
         </div>
         <div className="flex items-center gap-4 text-xs">
-          <span className="flex items-center gap-1.5">
-            <span className="w-2.5 h-2.5 rounded-full bg-brand-red" />
-            <span className="text-gray-400">Fund NAV</span>
-          </span>
-          <span className="flex items-center gap-1.5">
-            <span className="w-2.5 h-2.5 rounded-full bg-gray-500" />
-            <span className="text-gray-400">Benchmark</span>
-          </span>
+          <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-brand-red" /><span className={t('text-gray-400','text-gray-500')}>Fund NAV</span></span>
+          <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-gray-500" /><span className={t('text-gray-400','text-gray-500')}>Benchmark</span></span>
         </div>
       </div>
       <div className="h-[280px] -ml-2">
         <ResponsiveContainer width="100%" height="100%">
           <AreaChart data={NAV_HISTORY}>
-            <defs>
-              <linearGradient id="navGrad" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor="#D0021B" stopOpacity={0.3} />
-                <stop offset="100%" stopColor="#D0021B" stopOpacity={0} />
-              </linearGradient>
-            </defs>
-            <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" />
-            <XAxis
-              dataKey="month"
-              tick={{ fill: '#6B7280', fontSize: 11 }}
-              axisLine={{ stroke: 'rgba(255,255,255,0.06)' }}
-              tickLine={false}
-            />
-            <YAxis
-              tick={{ fill: '#6B7280', fontSize: 11 }}
-              axisLine={false}
-              tickLine={false}
-              domain={['dataMin - 5', 'dataMax + 5']}
-            />
+            <defs><linearGradient id="navGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#D0021B" stopOpacity={0.3} /><stop offset="100%" stopColor="#D0021B" stopOpacity={0} /></linearGradient></defs>
+            <CartesianGrid strokeDasharray="3 3" stroke={isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.06)'} />
+            <XAxis dataKey="month" tick={{ fill: '#6B7280', fontSize: 11 }} axisLine={{ stroke: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.08)' }} tickLine={false} />
+            <YAxis tick={{ fill: '#6B7280', fontSize: 11 }} axisLine={false} tickLine={false} domain={['dataMin - 5', 'dataMax + 5']} />
             <Tooltip content={<ChartTooltipContent />} />
-            <Area
-              type="monotone"
-              dataKey="nav"
-              name="Fund NAV"
-              stroke="#D0021B"
-              strokeWidth={2.5}
-              fill="url(#navGrad)"
-              dot={false}
-              activeDot={{ r: 5, fill: '#D0021B', stroke: '#fff', strokeWidth: 2 }}
-            />
-            <Line
-              type="monotone"
-              dataKey="benchmark"
-              name="Benchmark"
-              stroke="#4B5563"
-              strokeWidth={1.5}
-              strokeDasharray="6 4"
-              dot={false}
-            />
+            <Area type="monotone" dataKey="nav" name="Fund NAV" stroke="#D0021B" strokeWidth={2.5} fill="url(#navGrad)" dot={false} activeDot={{ r: 5, fill: '#D0021B', stroke: '#fff', strokeWidth: 2 }} />
+            <Line type="monotone" dataKey="benchmark" name="Benchmark" stroke="#4B5563" strokeWidth={1.5} strokeDasharray="6 4" dot={false} />
           </AreaChart>
         </ResponsiveContainer>
       </div>
     </Glass>
   )
 
-  // ─── ALLOCATION CHART ─────────────────────────────────────
+  // ═══════════════════════════════════════════════════════════
+  // ALLOCATION CHART
+  // ═══════════════════════════════════════════════════════════
   const renderAllocationChart = () => (
-    <Glass className="p-5 lg:p-6" hover>
-      <div className="flex items-center justify-between mb-5">
-        <div>
-          <h3 className="text-base font-bold text-white mb-0.5">Allocation</h3>
-          <p className="text-xs text-gray-500">Investment distribution</p>
-        </div>
-        <PieIcon className="w-4 h-4 text-gray-500" />
-      </div>
+    <Glass className="p-5 lg:p-6" hover theme={theme}>
+      <h3 className={`text-base font-bold mb-5 ${t('text-white','text-gray-900')}`}>Allocation</h3>
       <div className="h-[200px]">
         <ResponsiveContainer width="100%" height="100%">
           <PieChart>
-            <Pie
-              data={ALLOCATION_DATA}
-              innerRadius={55}
-              outerRadius={85}
-              paddingAngle={3}
-              dataKey="value"
-              strokeWidth={0}
-            >
-              {ALLOCATION_DATA.map((entry, i) => (
-                <Cell key={i} fill={entry.color} />
-              ))}
+            <Pie data={ALLOCATION_DATA} innerRadius={55} outerRadius={85} paddingAngle={3} dataKey="value" strokeWidth={0}>
+              {ALLOCATION_DATA.map((entry, i) => <Cell key={i} fill={entry.color} />)}
             </Pie>
-            <Tooltip
-              content={({ active, payload }) => {
-                if (!active || !payload?.length) return null
-                const d = payload[0].payload
-                return (
-                  <div
-                    className="rounded-lg px-3 py-2 border border-white/10"
-                    style={{ background: 'rgba(26,26,26,0.95)', backdropFilter: 'blur(20px)' }}
-                  >
-                    <p className="text-xs font-semibold text-white">{d.name}: {d.value}%</p>
-                  </div>
-                )
-              }}
-            />
           </PieChart>
         </ResponsiveContainer>
       </div>
-      {/* Legend */}
       <div className="space-y-2 mt-4">
         {ALLOCATION_DATA.map((d, i) => (
           <div key={i} className="flex items-center justify-between text-xs">
-            <span className="flex items-center gap-2">
-              <span className="w-2.5 h-2.5 rounded-full" style={{ background: d.color }} />
-              <span className="text-gray-400">{d.name}</span>
-            </span>
-            <span className="text-white font-semibold">{d.value}%</span>
+            <span className="flex items-center gap-2"><span className="w-2.5 h-2.5 rounded-full" style={{ background: d.color }} /><span className={t('text-gray-400','text-gray-600')}>{d.name}</span></span>
+            <span className={`font-semibold ${t('text-white','text-gray-900')}`}>{d.value}%</span>
           </div>
         ))}
       </div>
     </Glass>
   )
 
-  // ─── QUICK ACTIONS ────────────────────────────────────────
-  const renderQuickActions = () => (
-    <div>
-      <h3 className="text-base font-bold text-white mb-4">Quick Actions</h3>
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        <QuickAction icon={Plus} label="New Investment" desc="Explore opportunities" color="#D0021B" />
-        <QuickAction icon={Download} label="Statements" desc="Download reports" color="#3B82F6" />
-        <QuickAction icon={Eye} label="View NAV" desc="Latest fund NAV" color="#10B981" />
-        <QuickAction icon={HeadphonesIcon} label="Get Support" desc="Talk to advisor" color="#F59E0B" />
-      </div>
-    </div>
-  )
-
-  // ─── PORTFOLIO ASSETS ─────────────────────────────────────
+  // ═══════════════════════════════════════════════════════════
+  // PORTFOLIO ASSETS with milestone bars
+  // ═══════════════════════════════════════════════════════════
   const renderPortfolioAssets = () => (
-    <Glass className="p-5 lg:p-6" hover>
+    <Glass className="p-5 lg:p-6" hover theme={theme}>
       <div className="flex items-center justify-between mb-5">
-        <div>
-          <h3 className="text-base font-bold text-white mb-0.5">Portfolio Assets</h3>
-          <p className="text-xs text-gray-500">{PORTFOLIO_ASSETS.length} active investments</p>
-        </div>
-        <button className="text-xs text-brand-red hover:text-red-300 font-semibold transition-colors flex items-center gap-1">
-          View All <ChevronRight className="w-3 h-3" />
-        </button>
+        <h3 className={`text-base font-bold ${t('text-white','text-gray-900')}`}>Portfolio Assets</h3>
+        <button className="text-xs text-brand-red font-semibold flex items-center gap-1">View All <ChevronRight className="w-3 h-3" /></button>
       </div>
       <div className="space-y-3">
         {PORTFOLIO_ASSETS.map((asset, i) => (
-          <div
-            key={i}
-            className="flex items-center gap-4 p-3 rounded-xl bg-white/[0.02] border border-white/[0.04] hover:border-white/[0.08] transition-all duration-300 group cursor-pointer"
-          >
-            <div className="w-10 h-10 rounded-xl bg-white/[0.04] flex items-center justify-center shrink-0">
-              <asset.icon className="w-5 h-5 text-gray-400 group-hover:text-brand-red transition-colors" />
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-semibold text-white truncate">{asset.name}</p>
-              <p className="text-xs text-gray-500">{asset.type}</p>
-            </div>
-            <div className="text-right shrink-0">
-              <p className="text-sm font-bold text-white">{'\u20B9'}{formatINR(asset.current)}</p>
-              <p className={`text-xs font-semibold ${asset.returnPct >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
-                {asset.returnPct >= 0 ? '+' : ''}{asset.returnPct}%
-              </p>
-            </div>
-          </div>
-        ))}
-      </div>
-    </Glass>
-  )
-
-  // ─── RECENT ACTIVITY ──────────────────────────────────────
-  const renderRecentActivity = () => (
-    <Glass className="p-5 lg:p-6" hover>
-      <div className="flex items-center justify-between mb-5">
-        <div>
-          <h3 className="text-base font-bold text-white mb-0.5">Recent Activity</h3>
-          <p className="text-xs text-gray-500">Latest transactions</p>
-        </div>
-        <button className="text-xs text-brand-red hover:text-red-300 font-semibold transition-colors flex items-center gap-1">
-          All <ChevronRight className="w-3 h-3" />
-        </button>
-      </div>
-      <div className="space-y-2.5">
-        {RECENT_TRANSACTIONS.map((tx, i) => (
-          <div
-            key={i}
-            className="flex items-center gap-3 p-2.5 rounded-lg hover:bg-white/[0.02] transition-colors"
-          >
-            <div
-              className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${
-                tx.type === 'Investment'
-                  ? 'bg-blue-500/15'
-                  : tx.type === 'Dividend'
-                  ? 'bg-emerald-500/15'
-                  : 'bg-gray-500/15'
-              }`}
-            >
-              {tx.type === 'Investment' ? (
-                <ArrowUpRight className="w-4 h-4 text-blue-400" />
-              ) : tx.type === 'Dividend' ? (
-                <IndianRupee className="w-4 h-4 text-emerald-400" />
-              ) : (
-                <Info className="w-4 h-4 text-gray-400" />
-              )}
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-xs font-semibold text-white">{tx.type}</p>
-              <p className="text-[11px] text-gray-500 truncate">{tx.fund}</p>
-            </div>
-            <div className="text-right shrink-0">
-              {tx.amount > 0 && (
-                <p className={`text-xs font-bold ${tx.type === 'Dividend' ? 'text-emerald-400' : 'text-white'}`}>
-                  {tx.type === 'Dividend' ? '+' : ''}{'\u20B9'}{formatINR(tx.amount)}
-                </p>
-              )}
-              <p className="text-[10px] text-gray-600">{tx.date}</p>
-            </div>
-          </div>
-        ))}
-      </div>
-    </Glass>
-  )
-
-  // ─── ANNOUNCEMENTS ────────────────────────────────────────
-  const renderAnnouncements = () => (
-    <Glass className="p-5 lg:p-6" hover>
-      <div className="flex items-center justify-between mb-5">
-        <h3 className="text-base font-bold text-white">Announcements</h3>
-        <Bell className="w-4 h-4 text-gray-500" />
-      </div>
-      <div className="space-y-3">
-        {ANNOUNCEMENTS.map((a, i) => (
-          <div
-            key={i}
-            className="p-3 rounded-xl bg-white/[0.02] border border-white/[0.04] hover:border-white/[0.08] transition-all cursor-pointer group"
-          >
-            <div className="flex items-start gap-3">
-              <div
-                className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 mt-0.5 ${
-                  a.type === 'report'
-                    ? 'bg-blue-500/15'
-                    : a.type === 'opportunity'
-                    ? 'bg-emerald-500/15'
-                    : 'bg-amber-500/15'
-                }`}
-              >
-                {a.type === 'report' ? (
-                  <FileText className="w-4 h-4 text-blue-400" />
-                ) : a.type === 'opportunity' ? (
-                  <Star className="w-4 h-4 text-emerald-400" />
-                ) : (
-                  <AlertCircle className="w-4 h-4 text-amber-400" />
-                )}
+          <div key={i} className={`p-3 rounded-xl transition-all duration-300 group cursor-pointer ${t('bg-white/[0.02] border border-white/[0.04] hover:border-white/[0.08]','bg-gray-50 border border-gray-200 hover:border-gray-300')}`}>
+            <div className="flex items-center gap-4 mb-2">
+              <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${t('bg-white/[0.04]','bg-gray-100')}`}>
+                {asset.type.includes('Real Estate') ? <Building2 className="w-5 h-5 text-brand-red" /> : asset.type.includes('Startup') ? <Rocket className="w-5 h-5 text-amber-400" /> : <FileText className="w-5 h-5 text-blue-400" />}
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-semibold text-white group-hover:text-brand-red transition-colors">
-                  {a.title}
-                </p>
-                <p className="text-xs text-gray-500 mt-0.5 leading-relaxed">{a.desc}</p>
-                <p className="text-[10px] text-gray-600 mt-1.5">{a.date}</p>
+                <p className={`text-sm font-semibold truncate ${t('text-white','text-gray-900')}`}>{asset.name}</p>
+                <p className={`text-xs ${t('text-gray-500','text-gray-500')}`}>{asset.type}</p>
               </div>
+              <div className="text-right shrink-0">
+                <p className={`text-sm font-bold ${t('text-white','text-gray-900')}`}>{'\u20B9'}{formatINR(asset.current)}</p>
+                <p className={`text-xs font-semibold ${asset.returnPct >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>+{asset.returnPct}%</p>
+              </div>
+            </div>
+            {/* Milestone progress bar */}
+            <div className="flex items-center gap-2">
+              <div className={`flex-1 h-1.5 rounded-full overflow-hidden ${t('bg-white/[0.06]','bg-gray-200')}`}>
+                <div className="h-full rounded-full bg-gradient-to-r from-brand-red to-red-400 transition-all duration-1000" style={{ width: `${asset.milestone}%` }} />
+              </div>
+              <span className={`text-[10px] font-medium ${t('text-gray-500','text-gray-400')}`}>{asset.milestone}%</span>
             </div>
           </div>
         ))}
@@ -856,248 +617,328 @@ export default function DashboardClient() {
     </Glass>
   )
 
-  // ─── REFERRAL CARD ────────────────────────────────────────
-  const renderReferralCard = () => (
-    <Glass className="p-5 lg:p-6 relative overflow-hidden" hover glow>
-      {/* Decorative background */}
-      <div className="absolute -right-8 -top-8 w-32 h-32 bg-brand-red/10 rounded-full blur-[60px]" />
-      <div className="absolute -left-4 -bottom-4 w-24 h-24 bg-brand-red/5 rounded-full blur-[40px]" />
-
-      <div className="relative">
-        <div className="flex items-center gap-3 mb-4">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-brand-red/20 to-red-900/20 flex items-center justify-center">
-            <Gift className="w-5 h-5 text-brand-red" />
-          </div>
-          <div>
-            <h3 className="text-base font-bold text-white">Refer & Earn</h3>
-            <p className="text-xs text-gray-500">Invite investors, earn rewards</p>
-          </div>
-        </div>
-        <p className="text-xs text-gray-400 mb-4 leading-relaxed">
-          Refer qualified investors to GHL India Ventures and earn referral bonuses on their investments.
-        </p>
-        <div className="flex items-center gap-2 p-2.5 rounded-xl bg-white/[0.03] border border-white/[0.06] mb-4">
-          <code className="flex-1 text-xs text-gray-300 font-mono truncate">
-            https://ghlindiaventures.com/ref/RK2024
-          </code>
-          <button className="p-1.5 rounded-lg hover:bg-white/[0.06] text-gray-400 hover:text-white transition-colors">
-            <Copy className="w-3.5 h-3.5" />
-          </button>
-        </div>
-        <div className="flex items-center gap-4 text-xs">
-          <div>
-            <p className="text-gray-500">Referred</p>
-            <p className="text-white font-bold text-lg">3</p>
-          </div>
-          <div className="w-px h-8 bg-white/[0.06]" />
-          <div>
-            <p className="text-gray-500">Earned</p>
-            <p className="text-emerald-400 font-bold text-lg">{'\u20B9'}75K</p>
-          </div>
-        </div>
-      </div>
-    </Glass>
-  )
-
-  // ─── INVEST TAB ───────────────────────────────────────────
-  const renderInvestTab = () => (
-    <div className="space-y-6">
-      <div>
-        <h2 className="text-xl font-bold text-white mb-1">Investment Opportunities</h2>
-        <p className="text-sm text-gray-500">Explore current investment options</p>
-      </div>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {[
-          {
-            title: 'Category II AIF - Direct Route',
-            desc: 'Invest directly in the SEBI-registered AIF with exposure to stressed real estate and early-stage startups.',
-            min: 'As per SEBI AIF Regulations',
-            targetReturn: '18-22% IRR',
-            tenure: '5-7 Years',
-            risk: 'High',
-            icon: Building2,
-            color: '#D0021B',
-          },
-          {
-            title: 'SEBI Co-Invest Framework',
-            desc: 'SEBI-regulated co-invest structure offering fixed returns with exposure to the same asset pool.',
-            min: 'Contact for details',
-            targetReturn: '12-15% p.a.',
-            tenure: '3-5 Years',
-            risk: 'Moderate',
-            icon: FileText,
-            color: '#3B82F6',
-          },
-          {
-            title: 'NCLT Recovery Assets',
-            desc: 'Stressed real estate properties acquired at 40-60% discount through IBC resolution process.',
-            min: '\u20B950 Lakhs',
-            targetReturn: '25-35% IRR',
-            tenure: '2-4 Years',
-            risk: 'High',
-            icon: Target,
-            color: '#10B981',
-          },
-          {
-            title: 'Early-Stage Startups',
-            desc: 'Pre-Series A and Series A investments in high-growth Indian startups across technology sectors.',
-            min: '\u20B925 Lakhs',
-            targetReturn: '30-50% IRR',
-            tenure: '5-8 Years',
-            risk: 'Very High',
-            icon: Rocket,
-            color: '#F59E0B',
-          },
-        ].map((opp, i) => (
-          <Glass key={i} className="p-6" hover glow>
-            <div className="flex items-start gap-4 mb-4">
-              <div
-                className="w-12 h-12 rounded-xl flex items-center justify-center shrink-0"
-                style={{ background: `${opp.color}15` }}
-              >
-                <opp.icon className="w-6 h-6" style={{ color: opp.color }} />
-              </div>
-              <div>
-                <h4 className="text-sm font-bold text-white mb-1">{opp.title}</h4>
-                <p className="text-xs text-gray-500 leading-relaxed">{opp.desc}</p>
-              </div>
+  // ═══════════════════════════════════════════════════════════
+  // QUICK ACTIONS
+  // ═══════════════════════════════════════════════════════════
+  const renderQuickActions = () => (
+    <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+      {[
+        { icon: Plus, label: 'New Investment', desc: 'Explore opportunities', color: '#D0021B', action: () => setActiveTab('investments') },
+        { icon: Download, label: 'Statements', desc: 'Download reports', color: '#3B82F6', action: () => setActiveTab('kyc') },
+        { icon: Ticket, label: 'Raise Ticket', desc: 'Get support', color: '#F59E0B', action: () => { setActiveTab('support'); setTicketForm(true) } },
+        { icon: Video, label: 'Video Call', desc: 'Talk to advisor', color: '#10B981', action: () => window.dispatchEvent(new CustomEvent('ghl-open-video-call')) },
+      ].map((item, i) => (
+        <button key={i} onClick={item.action} className="group text-left w-full">
+          <Glass className="p-4 h-full" hover theme={theme}>
+            <div className="w-10 h-10 rounded-xl flex items-center justify-center mb-3 transition-transform duration-300 group-hover:scale-110" style={{ background: `${item.color}20` }}>
+              <item.icon className="w-5 h-5" style={{ color: item.color }} />
             </div>
-            <div className="grid grid-cols-2 gap-3 mb-4">
-              <div className="p-2.5 rounded-lg bg-white/[0.02]">
-                <p className="text-[10px] text-gray-600 uppercase tracking-wider">Min Investment</p>
-                <p className="text-sm font-bold text-white">{opp.min}</p>
-              </div>
-              <div className="p-2.5 rounded-lg bg-white/[0.02]">
-                <p className="text-[10px] text-gray-600 uppercase tracking-wider">Target Return</p>
-                <p className="text-sm font-bold text-emerald-400">{opp.targetReturn}</p>
-              </div>
-              <div className="p-2.5 rounded-lg bg-white/[0.02]">
-                <p className="text-[10px] text-gray-600 uppercase tracking-wider">Tenure</p>
-                <p className="text-sm font-bold text-white">{opp.tenure}</p>
-              </div>
-              <div className="p-2.5 rounded-lg bg-white/[0.02]">
-                <p className="text-[10px] text-gray-600 uppercase tracking-wider">Risk Level</p>
-                <p className={`text-sm font-bold ${
-                  opp.risk === 'Very High' ? 'text-red-400' :
-                  opp.risk === 'High' ? 'text-amber-400' : 'text-blue-400'
-                }`}>{opp.risk}</p>
-              </div>
-            </div>
-            <button className="w-full py-2.5 rounded-xl text-sm font-semibold text-white transition-all duration-300 hover:scale-[1.02]"
-              style={{ background: 'linear-gradient(135deg, #D0021B, #8B0000)' }}>
-              Express Interest
-            </button>
+            <p className={`text-sm font-semibold mb-0.5 ${t('text-white','text-gray-900')}`}>{item.label}</p>
+            <p className={`text-xs leading-relaxed ${t('text-gray-500','text-gray-500')}`}>{item.desc}</p>
           </Glass>
-        ))}
-      </div>
-      <div className="text-center">
-        <p className="text-xs text-gray-600">
-          All investments are subject to market risks. Past performance is not indicative of future results. SEBI Reg: IN/AIF2/2425/1517
-        </p>
-      </div>
+        </button>
+      ))}
     </div>
   )
 
-  // ─── PORTFOLIO TAB ────────────────────────────────────────
-  const renderPortfolioTab = () => (
-    <div className="space-y-6">
-      <div>
-        <h2 className="text-xl font-bold text-white mb-1">Your Portfolio</h2>
-        <p className="text-sm text-gray-500">Detailed view of all investments</p>
+  // ═══════════════════════════════════════════════════════════
+  // RECENT ACTIVITY
+  // ═══════════════════════════════════════════════════════════
+  const renderRecentActivity = () => (
+    <Glass className="p-5 lg:p-6" hover theme={theme}>
+      <h3 className={`text-base font-bold mb-5 ${t('text-white','text-gray-900')}`}>Recent Activity</h3>
+      <div className="space-y-2.5">
+        {RECENT_TRANSACTIONS.slice(0, 5).map((tx, i) => (
+          <div key={i} className={`flex items-center gap-3 p-2.5 rounded-lg transition-colors ${t('hover:bg-white/[0.02]','hover:bg-gray-50')}`}>
+            <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${tx.type === 'Investment' ? 'bg-blue-500/15' : tx.type === 'Dividend' ? 'bg-emerald-500/15' : 'bg-gray-500/15'}`}>
+              {tx.type === 'Investment' ? <ArrowUpRight className="w-4 h-4 text-blue-400" /> : tx.type === 'Dividend' ? <IndianRupee className="w-4 h-4 text-emerald-400" /> : <Info className="w-4 h-4 text-gray-400" />}
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className={`text-xs font-semibold ${t('text-white','text-gray-900')}`}>{tx.type}</p>
+              <p className={`text-[11px] truncate ${t('text-gray-500','text-gray-500')}`}>{tx.fund}</p>
+            </div>
+            <div className="text-right shrink-0">
+              {tx.amount > 0 && <p className={`text-xs font-bold ${tx.type === 'Dividend' ? 'text-emerald-400' : t('text-white','text-gray-900')}`}>{tx.type === 'Dividend' ? '+' : ''}{'\u20B9'}{formatINR(tx.amount)}</p>}
+              <p className={`text-[10px] ${t('text-gray-600','text-gray-400')}`}>{tx.date}</p>
+            </div>
+          </div>
+        ))}
       </div>
+    </Glass>
+  )
+
+  // ═══════════════════════════════════════════════════════════
+  // DASHBOARD HOME
+  // ═══════════════════════════════════════════════════════════
+  const renderDashboardHome = () => (
+    <div className="space-y-6">
+      {/* Welcome + Task reminders */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <div>
+          <h2 className={`text-xl font-bold mb-0.5 ${t('text-white','text-gray-900')}`}>{greeting}, <span className="text-brand-red">Rajesh</span></h2>
+          <p className={`text-sm flex items-center gap-2 ${t('text-gray-500','text-gray-500')}`}>
+            Welcome to your investor portal
+            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-emerald-500/15 text-emerald-400 border border-emerald-500/20">
+              <Shield className="w-3 h-3" /> KYC Verified
+            </span>
+          </p>
+        </div>
+        <div className="flex items-center gap-2">
+          <button onClick={() => setActiveTab('investments')} className="px-4 py-2 rounded-xl text-xs font-semibold text-white transition-all hover:scale-105" style={{ background: 'linear-gradient(135deg, #D0021B, #8B0000)' }}>
+            <Plus className="w-3.5 h-3.5 inline mr-1.5" /> New Investment
+          </button>
+        </div>
+      </div>
+
+      {/* Task reminders bar */}
+      {taskReminders.length > 0 && (
+        <Glass className="p-4" theme={theme}>
+          <div className="flex items-center gap-3 flex-wrap">
+            <BellRing className="w-4 h-4 text-amber-400 shrink-0" />
+            <span className={`text-xs font-semibold ${t('text-white','text-gray-900')}`}>Reminders:</span>
+            {taskReminders.map(r => (
+              <span key={r.id} className={`text-xs px-2.5 py-1 rounded-lg ${r.urgent ? 'bg-amber-500/15 text-amber-400 border border-amber-500/20' : t('bg-white/[0.04] text-gray-400','bg-gray-100 text-gray-600')}`}>
+                {r.task} &bull; {r.due}
+              </span>
+            ))}
+          </div>
+        </Glass>
+      )}
+
       {renderHeroMetrics()}
+
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         <div className="lg:col-span-2">{renderNAVChart()}</div>
         <div>{renderAllocationChart()}</div>
       </div>
-      {renderPortfolioAssets()}
+
+      {renderQuickActions()}
+
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        <div>{renderPortfolioAssets()}</div>
+        <div>{renderRecentActivity()}</div>
+        <div>
+          {/* Announcements */}
+          <Glass className="p-5" hover theme={theme}>
+            <h3 className={`text-base font-bold mb-4 ${t('text-white','text-gray-900')}`}>Announcements</h3>
+            <div className="space-y-3">
+              {[
+                { title: 'Q4 NAV Report Published', desc: 'Latest quarterly report ready for download.', time: '2h ago', type: 'report' },
+                { title: 'New Investment Opportunity', desc: 'Stressed RE asset in Bengaluru at 40% discount.', time: '1d ago', type: 'opportunity' },
+                { title: 'KYC Re-verification Due', desc: 'Annual update required by 31 March 2025.', time: '3d ago', type: 'alert' },
+              ].map((a, i) => (
+                <div key={i} className={`p-3 rounded-xl cursor-pointer transition-all ${t('bg-white/[0.02] border border-white/[0.04] hover:border-white/[0.08]','bg-gray-50 border border-gray-200 hover:border-gray-300')}`}>
+                  <p className={`text-sm font-semibold ${t('text-white','text-gray-900')}`}>{a.title}</p>
+                  <p className={`text-xs mt-0.5 ${t('text-gray-500','text-gray-500')}`}>{a.desc}</p>
+                  <p className={`text-[10px] mt-1 ${t('text-gray-600','text-gray-400')}`}>{a.time}</p>
+                </div>
+              ))}
+            </div>
+          </Glass>
+        </div>
+      </div>
     </div>
   )
 
-  // ─── DOCUMENTS TAB ────────────────────────────────────────
-  const renderDocumentsTab = () => (
+  // ═══════════════════════════════════════════════════════════
+  // INVESTMENTS TAB
+  // ═══════════════════════════════════════════════════════════
+  const renderInvestmentsTab = () => (
     <div className="space-y-6">
       <div>
-        <h2 className="text-xl font-bold text-white mb-1">Documents</h2>
-        <p className="text-sm text-gray-500">Download reports, statements & legal documents</p>
+        <h2 className={`text-xl font-bold mb-1 ${t('text-white','text-gray-900')}`}>Investment Opportunities</h2>
+        <p className={`text-sm ${t('text-gray-500','text-gray-500')}`}>Browse, select, and manage your allocations</p>
       </div>
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {[
-          { name: 'Q4 2024 NAV Report', type: 'PDF', size: '2.4 MB', date: '10 Mar 2025', category: 'Reports' },
-          { name: 'Annual Statement FY24', type: 'PDF', size: '5.1 MB', date: '15 Apr 2024', category: 'Statements' },
-          { name: 'PPM Document', type: 'PDF', size: '12.3 MB', date: '01 Jan 2024', category: 'Legal' },
-          { name: 'Tax Certificate (TDS)', type: 'PDF', size: '1.2 MB', date: '30 Jun 2024', category: 'Tax' },
-          { name: 'Investment Agreement', type: 'PDF', size: '3.8 MB', date: '15 Dec 2023', category: 'Legal' },
-          { name: 'KYC Documents', type: 'ZIP', size: '8.5 MB', date: '01 Nov 2023', category: 'KYC' },
-        ].map((doc, i) => (
-          <Glass key={i} className="p-5 group cursor-pointer" hover>
-            <div className="flex items-start gap-3">
-              <div className="w-10 h-10 rounded-xl bg-blue-500/15 flex items-center justify-center shrink-0">
-                <FileText className="w-5 h-5 text-blue-400" />
+          { title: 'Category II AIF - Direct', desc: 'Invest in SEBI-registered AIF with stressed RE and startup exposure.', min: 'As per SEBI AIF Regulations', target: '18-22% IRR', tenure: '5-7 Years', risk: 'High', color: '#D0021B', icon: Building2 },
+          { title: 'SEBI Co-Invest Framework', desc: 'Regulated co-invest structure with fixed returns and same asset pool.', min: 'Contact for details', target: '12-15% p.a.', tenure: '3-5 Years', risk: 'Moderate', color: '#3B82F6', icon: FileText },
+          { title: 'NCLT Recovery Assets', desc: 'Stressed properties at 40-60% discount through IBC resolution.', min: '\u20B950 Lakhs', target: '25-35% IRR', tenure: '2-4 Years', risk: 'High', color: '#10B981', icon: Target },
+          { title: 'Early-Stage Startups', desc: 'Pre-Series A in high-growth Indian tech startups.', min: '\u20B925 Lakhs', target: '30-50% IRR', tenure: '5-8 Years', risk: 'Very High', color: '#F59E0B', icon: Rocket },
+        ].map((opp, i) => (
+          <Glass key={i} className="p-6" hover glow theme={theme}>
+            <div className="flex items-start gap-4 mb-4">
+              <div className="w-12 h-12 rounded-xl flex items-center justify-center shrink-0" style={{ background: `${opp.color}15` }}>
+                <opp.icon className="w-6 h-6" style={{ color: opp.color }} />
               </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-semibold text-white group-hover:text-brand-red transition-colors truncate">{doc.name}</p>
-                <p className="text-xs text-gray-500 mt-0.5">{doc.category} &bull; {doc.size}</p>
-                <p className="text-[10px] text-gray-600 mt-1">{doc.date}</p>
+              <div>
+                <h4 className={`text-sm font-bold mb-1 ${t('text-white','text-gray-900')}`}>{opp.title}</h4>
+                <p className={`text-xs leading-relaxed ${t('text-gray-500','text-gray-500')}`}>{opp.desc}</p>
               </div>
-              <Download className="w-4 h-4 text-gray-600 group-hover:text-brand-red transition-colors shrink-0 mt-1" />
             </div>
+            <div className="grid grid-cols-2 gap-3 mb-4">
+              {[
+                { label: 'Min Investment', val: opp.min },
+                { label: 'Target Return', val: opp.target, green: true },
+                { label: 'Tenure', val: opp.tenure },
+                { label: 'Risk Level', val: opp.risk, risk: true },
+              ].map((f, j) => (
+                <div key={j} className={`p-2.5 rounded-lg ${t('bg-white/[0.02]','bg-gray-50')}`}>
+                  <p className={`text-[10px] uppercase tracking-wider ${t('text-gray-600','text-gray-400')}`}>{f.label}</p>
+                  <p className={`text-sm font-bold ${f.green ? 'text-emerald-400' : f.risk ? (opp.risk === 'Very High' ? 'text-red-400' : opp.risk === 'High' ? 'text-amber-400' : 'text-blue-400') : t('text-white','text-gray-900')}`}>{f.val}</p>
+                </div>
+              ))}
+            </div>
+            <button className="w-full py-2.5 rounded-xl text-sm font-semibold text-white transition-all duration-300 hover:scale-[1.02]"
+              style={{ background: 'linear-gradient(135deg, #D0021B, #8B0000)' }}>Express Interest</button>
           </Glass>
         ))}
       </div>
+
+      {/* Modify Allocation Section */}
+      <Glass className="p-6" hover theme={theme}>
+        <h3 className={`text-base font-bold mb-4 ${t('text-white','text-gray-900')}`}>Modify Allocation</h3>
+        <p className={`text-xs mb-4 ${t('text-gray-500','text-gray-500')}`}>Request changes to your current investment allocation. Our advisory team will review and process your request.</p>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
+          {ALLOCATION_DATA.map((a, i) => (
+            <div key={i} className={`p-3 rounded-xl ${t('bg-white/[0.03] border border-white/[0.06]','bg-gray-50 border border-gray-200')}`}>
+              <div className="flex items-center gap-2 mb-2">
+                <div className="w-3 h-3 rounded-full" style={{ background: a.color }} />
+                <span className={`text-xs font-semibold ${t('text-white','text-gray-900')}`}>{a.name}</span>
+              </div>
+              <p className={`text-lg font-bold ${t('text-white','text-gray-900')}`}>{a.value}%</p>
+            </div>
+          ))}
+        </div>
+        <button className="px-5 py-2.5 rounded-xl text-sm font-semibold text-white" style={{ background: 'linear-gradient(135deg, #D0021B, #8B0000)' }}>
+          Request Reallocation
+        </button>
+      </Glass>
     </div>
   )
 
-  // ─── TRANSACTIONS TAB ─────────────────────────────────────
+  // ═══════════════════════════════════════════════════════════
+  // KYC & DOCUMENTS TAB
+  // ═══════════════════════════════════════════════════════════
+  const renderKYCTab = () => (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className={`text-xl font-bold mb-1 ${t('text-white','text-gray-900')}`}>KYC & Documents</h2>
+          <p className={`text-sm ${t('text-gray-500','text-gray-500')}`}>Upload, track, and manage your compliance documents</p>
+        </div>
+        <button onClick={() => setUploadModalOpen(true)} className="px-4 py-2 rounded-xl text-xs font-semibold text-white flex items-center gap-1.5" style={{ background: 'linear-gradient(135deg, #D0021B, #8B0000)' }}>
+          <Upload className="w-3.5 h-3.5" /> Upload Document
+        </button>
+      </div>
+
+      {/* KYC Progress */}
+      <Glass className="p-6" hover theme={theme}>
+        <h3 className={`text-base font-bold mb-1 ${t('text-white','text-gray-900')}`}>KYC Verification Progress</h3>
+        <p className={`text-xs mb-5 ${t('text-gray-500','text-gray-500')}`}>As required by SEBI, complete your KYC before investing.</p>
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+          {KYC_STEPS.map((step, i) => (
+            <div key={i} className={`p-4 rounded-xl text-center transition-all cursor-pointer
+              ${step.status === 'completed' ? (isDark ? 'bg-emerald-500/10 border border-emerald-500/20' : 'bg-emerald-50 border border-emerald-200') :
+                step.status === 'in-review' ? (isDark ? 'bg-amber-500/10 border border-amber-500/20' : 'bg-amber-50 border border-amber-200') :
+                t('bg-white/[0.03] border border-white/[0.06]','bg-gray-50 border border-gray-200')}`}>
+              <step.icon className={`w-6 h-6 mx-auto mb-2 ${step.status === 'completed' ? 'text-emerald-400' : step.status === 'in-review' ? 'text-amber-400' : t('text-gray-500','text-gray-400')}`} />
+              <p className={`text-[11px] font-medium ${t('text-white','text-gray-900')}`}>{step.label}</p>
+              <span className={`text-[9px] font-semibold uppercase mt-1 inline-block px-1.5 py-0.5 rounded-full
+                ${step.status === 'completed' ? 'text-emerald-400 bg-emerald-500/20' : step.status === 'in-review' ? 'text-amber-400 bg-amber-500/20' : 'text-gray-500 bg-gray-500/20'}`}>
+                {step.status === 'in-review' ? 'In Review' : step.status}
+              </span>
+            </div>
+          ))}
+        </div>
+      </Glass>
+
+      {/* Document uploads */}
+      <Glass className="p-6" hover theme={theme}>
+        <h3 className={`text-base font-bold mb-4 ${t('text-white','text-gray-900')}`}>Your Documents</h3>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {[
+            { name: 'PAN Card', status: 'verified', date: '15 Nov 2023', type: 'Identity' },
+            { name: 'Aadhaar Card', status: 'verified', date: '15 Nov 2023', type: 'Identity' },
+            { name: 'Bank Statement', status: 'verified', date: '20 Dec 2023', type: 'Financial' },
+            { name: 'Photo (Passport Size)', status: 'verified', date: '15 Nov 2023', type: 'Identity' },
+            { name: 'Cancelled Cheque', status: 'pending', date: '10 Mar 2025', type: 'Financial' },
+            { name: 'Address Proof', status: 'verified', date: '15 Nov 2023', type: 'Identity' },
+            { name: 'Q4 NAV Report', status: 'available', date: '10 Mar 2025', type: 'Reports' },
+            { name: 'Annual Statement FY24', status: 'available', date: '15 Apr 2024', type: 'Statements' },
+            { name: 'TDS Certificate', status: 'available', date: '30 Jun 2024', type: 'Tax' },
+          ].map((doc, i) => (
+            <div key={i} className={`flex items-center gap-3 p-4 rounded-xl transition-all cursor-pointer group
+              ${t('bg-white/[0.02] border border-white/[0.04] hover:border-white/[0.08]','bg-gray-50 border border-gray-200 hover:border-gray-300')}`}>
+              <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0
+                ${doc.status === 'verified' ? 'bg-emerald-500/15' : doc.status === 'pending' ? 'bg-amber-500/15' : 'bg-blue-500/15'}`}>
+                {doc.status === 'verified' ? <CheckCircle className="w-5 h-5 text-emerald-400" /> :
+                 doc.status === 'pending' ? <Clock className="w-5 h-5 text-amber-400" /> :
+                 <FileText className="w-5 h-5 text-blue-400" />}
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className={`text-sm font-semibold truncate ${t('text-white','text-gray-900')}`}>{doc.name}</p>
+                <p className={`text-[11px] ${t('text-gray-500','text-gray-500')}`}>{doc.type} &bull; {doc.date}</p>
+              </div>
+              {doc.status === 'available' && <Download className={`w-4 h-4 shrink-0 ${t('text-gray-600','text-gray-400')} group-hover:text-brand-red transition-colors`} />}
+            </div>
+          ))}
+        </div>
+      </Glass>
+
+      {/* Upload Modal */}
+      {uploadModalOpen && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 backdrop-blur-sm">
+          <div className={`max-w-lg w-full mx-4 rounded-2xl border p-6 ${t('bg-[#111] border-white/10','bg-white border-gray-200 shadow-2xl')}`}>
+            <div className="flex items-center justify-between mb-5">
+              <h3 className={`text-lg font-bold ${t('text-white','text-gray-900')}`}>Upload Document</h3>
+              <button onClick={() => setUploadModalOpen(false)} className={t('text-gray-500 hover:text-white','text-gray-400 hover:text-gray-900')}><X className="w-5 h-5" /></button>
+            </div>
+            <div className={`border-2 border-dashed rounded-xl p-8 text-center mb-4 cursor-pointer transition-colors ${t('border-white/10 hover:border-brand-red/30','border-gray-300 hover:border-brand-red/40')}`}
+              onClick={() => fileInputRef.current?.click()}>
+              <Upload className={`w-10 h-10 mx-auto mb-3 ${t('text-gray-500','text-gray-400')}`} />
+              <p className={`text-sm font-medium mb-1 ${t('text-white','text-gray-900')}`}>Click to upload or drag & drop</p>
+              <p className={`text-xs ${t('text-gray-500','text-gray-500')}`}>PDF, JPG, PNG up to 10MB</p>
+              <input ref={fileInputRef} type="file" className="hidden" accept=".pdf,.jpg,.jpeg,.png" multiple />
+            </div>
+            <select className={`w-full px-4 py-2.5 rounded-xl text-sm mb-4 ${t('bg-white/[0.04] border border-white/[0.06] text-white','bg-gray-50 border border-gray-200 text-gray-900')}`}>
+              <option value="">Select document type...</option>
+              <option>PAN Card</option><option>Aadhaar Card</option><option>Bank Statement</option>
+              <option>Cancelled Cheque</option><option>Photo (Passport Size)</option><option>Address Proof</option>
+              <option>Demat Statement</option><option>Business Registration</option><option>Other</option>
+            </select>
+            <button className="w-full py-2.5 rounded-xl text-sm font-semibold text-white" style={{ background: 'linear-gradient(135deg, #D0021B, #8B0000)' }}>
+              Upload & Submit
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+
+  // ═══════════════════════════════════════════════════════════
+  // TRANSACTIONS TAB
+  // ═══════════════════════════════════════════════════════════
   const renderTransactionsTab = () => (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-xl font-bold text-white mb-1">Transactions</h2>
-          <p className="text-sm text-gray-500">Complete transaction history</p>
+          <h2 className={`text-xl font-bold mb-1 ${t('text-white','text-gray-900')}`}>Transactions</h2>
+          <p className={`text-sm ${t('text-gray-500','text-gray-500')}`}>Complete transaction history</p>
         </div>
-        <button className="flex items-center gap-2 text-xs text-brand-red hover:text-red-300 font-semibold transition-colors">
-          <Download className="w-3.5 h-3.5" /> Export CSV
-        </button>
+        <button className="flex items-center gap-2 text-xs text-brand-red font-semibold"><Download className="w-3.5 h-3.5" /> Export CSV</button>
       </div>
-      <Glass className="overflow-hidden" hover={false}>
+      <Glass className="overflow-hidden" hover={false} theme={theme}>
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-white/[0.06]">
-                <th className="text-left text-xs text-gray-500 font-medium py-3 px-5">Date</th>
-                <th className="text-left text-xs text-gray-500 font-medium py-3 px-5">Type</th>
-                <th className="text-left text-xs text-gray-500 font-medium py-3 px-5">Fund</th>
-                <th className="text-right text-xs text-gray-500 font-medium py-3 px-5">Amount</th>
-                <th className="text-right text-xs text-gray-500 font-medium py-3 px-5">Status</th>
+              <tr className={`border-b ${t('border-white/[0.06]','border-gray-200')}`}>
+                {['Date', 'Type', 'Fund', 'Amount', 'Status'].map(h => (
+                  <th key={h} className={`text-${h === 'Amount' || h === 'Status' ? 'right' : 'left'} text-xs font-medium py-3 px-5 ${t('text-gray-500','text-gray-400')}`}>{h}</th>
+                ))}
               </tr>
             </thead>
             <tbody>
-              {[
-                ...RECENT_TRANSACTIONS,
-                { date: '01 Jan 2025', type: 'Dividend', amount: 95000, fund: 'Meridian Heights', status: 'completed' },
-                { date: '15 Dec 2024', type: 'Investment', amount: 1800000, fund: 'Meridian Heights', status: 'completed' },
-                { date: '01 Dec 2024', type: 'NAV Update', amount: 0, fund: 'All Funds', status: 'info' },
-              ].map((tx, i) => (
-                <tr key={i} className="border-b border-white/[0.03] hover:bg-white/[0.02] transition-colors">
-                  <td className="py-3 px-5 text-gray-400 text-xs">{tx.date}</td>
+              {RECENT_TRANSACTIONS.map((tx, i) => (
+                <tr key={i} className={`border-b transition-colors ${t('border-white/[0.03] hover:bg-white/[0.02]','border-gray-100 hover:bg-gray-50')}`}>
+                  <td className={`py-3 px-5 text-xs ${t('text-gray-400','text-gray-500')}`}>{tx.date}</td>
                   <td className="py-3 px-5">
-                    <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${
-                      tx.type === 'Investment' ? 'bg-blue-500/15 text-blue-400' :
-                      tx.type === 'Dividend' ? 'bg-emerald-500/15 text-emerald-400' :
-                      'bg-gray-500/15 text-gray-400'
-                    }`}>
-                      {tx.type}
-                    </span>
+                    <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${tx.type === 'Investment' ? 'bg-blue-500/15 text-blue-400' : tx.type === 'Dividend' ? 'bg-emerald-500/15 text-emerald-400' : 'bg-gray-500/15 text-gray-400'}`}>{tx.type}</span>
                   </td>
-                  <td className="py-3 px-5 text-white text-xs font-medium">{tx.fund}</td>
-                  <td className="py-3 px-5 text-right text-white text-xs font-semibold">
-                    {tx.amount > 0 ? `\u20B9${formatINR(tx.amount)}` : '-'}
-                  </td>
+                  <td className={`py-3 px-5 text-xs font-medium ${t('text-white','text-gray-900')}`}>{tx.fund}</td>
+                  <td className={`py-3 px-5 text-right text-xs font-semibold ${t('text-white','text-gray-900')}`}>{tx.amount > 0 ? `\u20B9${formatINR(tx.amount)}` : '-'}</td>
                   <td className="py-3 px-5 text-right">
-                    <span className={`inline-flex items-center gap-1 text-[10px] font-semibold ${
-                      tx.status === 'completed' ? 'text-emerald-400' : 'text-gray-500'
-                    }`}>
+                    <span className={`inline-flex items-center gap-1 text-[10px] font-semibold ${tx.status === 'completed' ? 'text-emerald-400' : 'text-gray-500'}`}>
                       {tx.status === 'completed' ? <CheckCircle className="w-3 h-3" /> : <Info className="w-3 h-3" />}
                       {tx.status === 'completed' ? 'Completed' : 'Info'}
                     </span>
@@ -1111,62 +952,137 @@ export default function DashboardClient() {
     </div>
   )
 
-  // ─── SUPPORT TAB ──────────────────────────────────────────
+  // ═══════════════════════════════════════════════════════════
+  // MESSAGES TAB (Secure Messaging Center)
+  // ═══════════════════════════════════════════════════════════
+  const renderMessagesTab = () => (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className={`text-xl font-bold mb-1 ${t('text-white','text-gray-900')}`}>Secure Messages</h2>
+          <p className={`text-sm ${t('text-gray-500','text-gray-500')}`}>Communicate with your advisory team</p>
+        </div>
+        <button onClick={() => setMessageCompose(!messageCompose)} className="px-4 py-2 rounded-xl text-xs font-semibold text-white flex items-center gap-1.5" style={{ background: 'linear-gradient(135deg, #D0021B, #8B0000)' }}>
+          <Send className="w-3.5 h-3.5" /> Compose
+        </button>
+      </div>
+
+      {messageCompose && (
+        <Glass className="p-6" theme={theme}>
+          <h4 className={`text-sm font-bold mb-4 ${t('text-white','text-gray-900')}`}>New Message</h4>
+          <div className="space-y-3">
+            <select className={`w-full px-4 py-2.5 rounded-xl text-sm ${t('bg-white/[0.04] border border-white/[0.06] text-white','bg-gray-50 border border-gray-200 text-gray-900')}`}>
+              <option>Relationship Manager</option><option>Compliance Team</option><option>Investment Team</option><option>Support Team</option>
+            </select>
+            <input type="text" placeholder="Subject" className={`w-full px-4 py-2.5 rounded-xl text-sm ${t('bg-white/[0.04] border border-white/[0.06] text-white placeholder-gray-600','bg-gray-50 border border-gray-200 text-gray-900 placeholder-gray-400')}`} />
+            <textarea rows={4} placeholder="Write your message..." className={`w-full px-4 py-2.5 rounded-xl text-sm resize-none ${t('bg-white/[0.04] border border-white/[0.06] text-white placeholder-gray-600','bg-gray-50 border border-gray-200 text-gray-900 placeholder-gray-400')}`} />
+            <div className="flex items-center gap-3">
+              <button className={`p-2 rounded-lg ${t('hover:bg-white/[0.04]','hover:bg-gray-100')}`}><Paperclip className={`w-4 h-4 ${t('text-gray-500','text-gray-400')}`} /></button>
+              <div className="flex-1" />
+              <button onClick={() => setMessageCompose(false)} className={`px-4 py-2 rounded-xl text-sm font-medium ${t('text-gray-400','text-gray-500')}`}>Cancel</button>
+              <button className="px-5 py-2 rounded-xl text-sm font-semibold text-white" style={{ background: 'linear-gradient(135deg, #D0021B, #8B0000)' }}>Send</button>
+            </div>
+          </div>
+        </Glass>
+      )}
+
+      <div className="space-y-2">
+        {MESSAGES_DATA.map(msg => (
+          <Glass key={msg.id} className={`p-4 cursor-pointer ${!msg.read ? (isDark ? 'border-l-2 border-l-brand-red' : 'border-l-2 border-l-brand-red') : ''}`} hover theme={theme}>
+            <div className="flex items-start gap-3">
+              <div className="w-10 h-10 rounded-full bg-gradient-to-br from-brand-red/20 to-red-900/20 flex items-center justify-center text-xs font-bold text-brand-red shrink-0">{msg.avatar}</div>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center justify-between mb-0.5">
+                  <p className={`text-sm font-semibold ${t('text-white','text-gray-900')} ${!msg.read ? '' : 'opacity-70'}`}>{msg.from}</p>
+                  <span className={`text-[10px] ${t('text-gray-600','text-gray-400')}`}>{msg.time}</span>
+                </div>
+                <p className={`text-xs font-medium mb-0.5 ${t('text-gray-300','text-gray-700')} ${!msg.read ? '' : 'opacity-70'}`}>{msg.subject}</p>
+                <p className={`text-xs truncate ${t('text-gray-500','text-gray-500')}`}>{msg.preview}</p>
+              </div>
+              {!msg.read && <div className="w-2 h-2 rounded-full bg-brand-red shrink-0 mt-2" />}
+            </div>
+          </Glass>
+        ))}
+      </div>
+    </div>
+  )
+
+  // ═══════════════════════════════════════════════════════════
+  // SUPPORT TAB (Raise Ticket, FAQ, Chat, Call)
+  // ═══════════════════════════════════════════════════════════
   const renderSupportTab = () => (
     <div className="space-y-6">
       <div>
-        <h2 className="text-xl font-bold text-white mb-1">Support</h2>
-        <p className="text-sm text-gray-500">Get help from our advisory team</p>
+        <h2 className={`text-xl font-bold mb-1 ${t('text-white','text-gray-900')}`}>Support Center</h2>
+        <p className={`text-sm ${t('text-gray-500','text-gray-500')}`}>Get help from our team</p>
       </div>
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+
+      {/* Quick connect */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {[
-          {
-            title: 'Schedule a Call',
-            desc: 'Book a call with your relationship manager for investment guidance.',
-            icon: Calendar,
-            color: '#D0021B',
-            action: 'Book Now',
-          },
-          {
-            title: 'Email Support',
-            desc: 'Write to us and our team will respond within 24 hours.',
-            icon: ExternalLink,
-            color: '#3B82F6',
-            action: 'Send Email',
-          },
-          {
-            title: 'WhatsApp',
-            desc: 'Quick queries? Message us directly on WhatsApp.',
-            icon: HeadphonesIcon,
-            color: '#10B981',
-            action: 'Chat Now',
-          },
+          { title: 'Live Chat', desc: 'Chat with ARIA or a live advisor.', icon: MessageSquare, color: '#D0021B', action: () => {} },
+          { title: 'Video Call', desc: 'Face-to-face consultation.', icon: Video, color: '#3B82F6', action: () => window.dispatchEvent(new CustomEvent('ghl-open-video-call')) },
+          { title: 'Call Us', desc: '+91 7200 255 252', icon: Phone, color: '#10B981', action: () => window.dispatchEvent(new CustomEvent('ghl-open-direct-call')) },
         ].map((item, i) => (
-          <Glass key={i} className="p-6" hover glow>
-            <div className="w-12 h-12 rounded-xl flex items-center justify-center mb-4" style={{ background: `${item.color}15` }}>
-              <item.icon className="w-6 h-6" style={{ color: item.color }} />
-            </div>
-            <h4 className="text-sm font-bold text-white mb-1">{item.title}</h4>
-            <p className="text-xs text-gray-500 mb-4 leading-relaxed">{item.desc}</p>
-            <button className="text-xs font-semibold text-brand-red hover:text-red-300 transition-colors flex items-center gap-1">
-              {item.action} <ChevronRight className="w-3 h-3" />
-            </button>
-          </Glass>
+          <button key={i} onClick={item.action} className="text-left w-full">
+            <Glass className="p-5" hover glow theme={theme}>
+              <div className="w-12 h-12 rounded-xl flex items-center justify-center mb-3" style={{ background: `${item.color}15` }}>
+                <item.icon className="w-6 h-6" style={{ color: item.color }} />
+              </div>
+              <h4 className={`text-sm font-bold ${t('text-white','text-gray-900')}`}>{item.title}</h4>
+              <p className={`text-xs mt-1 ${t('text-gray-500','text-gray-500')}`}>{item.desc}</p>
+            </Glass>
+          </button>
         ))}
       </div>
 
+      {/* Raise Ticket */}
+      <Glass className="p-6" hover theme={theme}>
+        <div className="flex items-center justify-between mb-4">
+          <h3 className={`text-base font-bold ${t('text-white','text-gray-900')}`}>Raise a Ticket</h3>
+          <button onClick={() => setTicketForm(!ticketForm)} className="text-xs text-brand-red font-semibold flex items-center gap-1">
+            {ticketForm ? 'Cancel' : <><Plus className="w-3 h-3" /> New Ticket</>}
+          </button>
+        </div>
+        {ticketForm && (
+          <div className="space-y-3 mb-6">
+            <input type="text" placeholder="Subject" className={`w-full px-4 py-2.5 rounded-xl text-sm ${t('bg-white/[0.04] border border-white/[0.06] text-white placeholder-gray-600','bg-gray-50 border border-gray-200 text-gray-900 placeholder-gray-400')}`} />
+            <select className={`w-full px-4 py-2.5 rounded-xl text-sm ${t('bg-white/[0.04] border border-white/[0.06] text-white','bg-gray-50 border border-gray-200 text-gray-900')}`}>
+              <option>General Inquiry</option><option>Investment Query</option><option>KYC Issue</option><option>Technical Issue</option><option>Document Request</option>
+            </select>
+            <textarea rows={3} placeholder="Describe your issue..." className={`w-full px-4 py-2.5 rounded-xl text-sm resize-none ${t('bg-white/[0.04] border border-white/[0.06] text-white placeholder-gray-600','bg-gray-50 border border-gray-200 text-gray-900 placeholder-gray-400')}`} />
+            <button className="px-5 py-2.5 rounded-xl text-sm font-semibold text-white" style={{ background: 'linear-gradient(135deg, #D0021B, #8B0000)' }}>Submit Ticket</button>
+          </div>
+        )}
+        {/* Existing tickets */}
+        <div className="space-y-2">
+          {SUPPORT_TICKETS.map(tk => (
+            <div key={tk.id} className={`flex items-center gap-3 p-3 rounded-xl ${t('bg-white/[0.02] border border-white/[0.04]','bg-gray-50 border border-gray-200')}`}>
+              <Ticket className={`w-5 h-5 shrink-0 ${tk.status === 'resolved' ? 'text-emerald-400' : 'text-amber-400'}`} />
+              <div className="flex-1 min-w-0">
+                <p className={`text-sm font-semibold ${t('text-white','text-gray-900')}`}>{tk.subject}</p>
+                <p className={`text-[11px] ${t('text-gray-500','text-gray-500')}`}>{tk.id} &bull; {tk.date}</p>
+              </div>
+              <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${tk.status === 'resolved' ? 'bg-emerald-500/15 text-emerald-400' : 'bg-amber-500/15 text-amber-400'}`}>{tk.status}</span>
+            </div>
+          ))}
+        </div>
+      </Glass>
+
       {/* FAQ */}
-      <Glass className="p-6" hover>
-        <h3 className="text-base font-bold text-white mb-4">Frequently Asked Questions</h3>
+      <Glass className="p-6" hover theme={theme}>
+        <h3 className={`text-base font-bold mb-4 ${t('text-white','text-gray-900')}`}>Frequently Asked Questions</h3>
         <div className="space-y-3">
           {[
-            { q: 'How do I track my investment performance?', a: 'Navigate to the Portfolio tab to see real-time NAV updates, allocation breakdown, and detailed asset-level performance.' },
+            { q: 'How do I track my investment performance?', a: 'Navigate to the Portfolio tab for real-time NAV updates, allocation breakdown, and asset-level milestone progress.' },
             { q: 'When is the next NAV update?', a: 'NAV is updated quarterly. The next update will be available by 15 April 2025.' },
-            { q: 'How do I increase my investment?', a: 'Go to the Invest tab and click "Express Interest" on your preferred investment vehicle. Our team will reach out within 24 hours.' },
+            { q: 'How do I increase my investment?', a: 'Go to the Investments tab and click "Express Interest" on your preferred vehicle.' },
+            { q: 'How can I download my tax certificate?', a: 'Visit KYC & Documents tab and look for TDS Certificate under the available documents.' },
+            { q: 'What are the exit options?', a: 'Exit options depend on the fund strategy. Contact your relationship manager for details.' },
           ].map((faq, i) => (
-            <div key={i} className="p-4 rounded-xl bg-white/[0.02] border border-white/[0.04]">
-              <p className="text-sm font-semibold text-white mb-1.5">{faq.q}</p>
-              <p className="text-xs text-gray-500 leading-relaxed">{faq.a}</p>
+            <div key={i} className={`p-4 rounded-xl ${t('bg-white/[0.02] border border-white/[0.04]','bg-gray-50 border border-gray-200')}`}>
+              <p className={`text-sm font-semibold mb-1.5 ${t('text-white','text-gray-900')}`}>{faq.q}</p>
+              <p className={`text-xs leading-relaxed ${t('text-gray-500','text-gray-500')}`}>{faq.a}</p>
             </div>
           ))}
         </div>
@@ -1174,294 +1090,254 @@ export default function DashboardClient() {
     </div>
   )
 
-  // ─── REFERRALS TAB ────────────────────────────────────────
+  // ═══════════════════════════════════════════════════════════
+  // REFERRALS TAB
+  // ═══════════════════════════════════════════════════════════
   const renderReferralsTab = () => (
     <div className="space-y-6">
-      <div>
-        <h2 className="text-xl font-bold text-white mb-1">Referral Program</h2>
-        <p className="text-sm text-gray-500">Invite investors and earn rewards</p>
-      </div>
+      <h2 className={`text-xl font-bold ${t('text-white','text-gray-900')}`}>Referral Program</h2>
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        <div className="lg:col-span-2">{renderReferralCard()}</div>
-        <Glass className="p-6" hover>
-          <h4 className="text-sm font-bold text-white mb-4">How It Works</h4>
-          <div className="space-y-4">
-            {[
-              { step: '1', title: 'Share Link', desc: 'Share your unique referral link' },
-              { step: '2', title: 'They Invest', desc: 'Your referral completes investment' },
-              { step: '3', title: 'You Earn', desc: 'Receive referral bonus in your account' },
-            ].map((s, i) => (
-              <div key={i} className="flex items-start gap-3">
-                <span className="w-7 h-7 rounded-full bg-brand-red/15 flex items-center justify-center text-xs font-bold text-brand-red shrink-0">
-                  {s.step}
-                </span>
-                <div>
-                  <p className="text-xs font-semibold text-white">{s.title}</p>
-                  <p className="text-[11px] text-gray-500">{s.desc}</p>
-                </div>
+        <div className="lg:col-span-2">
+          <Glass className="p-6 relative overflow-hidden" hover glow theme={theme}>
+            <div className="absolute -right-8 -top-8 w-32 h-32 bg-brand-red/10 rounded-full blur-[60px]" />
+            <div className="relative">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-brand-red/20 to-red-900/20 flex items-center justify-center"><Gift className="w-5 h-5 text-brand-red" /></div>
+                <div><h3 className={`text-base font-bold ${t('text-white','text-gray-900')}`}>Refer & Earn</h3><p className={`text-xs ${t('text-gray-500','text-gray-500')}`}>Invite investors, earn rewards</p></div>
               </div>
+              <div className={`flex items-center gap-2 p-2.5 rounded-xl mb-4 ${t('bg-white/[0.03] border border-white/[0.06]','bg-gray-50 border border-gray-200')}`}>
+                <code className={`flex-1 text-xs font-mono truncate ${t('text-gray-300','text-gray-600')}`}>https://ghlindiaventures.com/ref/RK2024</code>
+                <button className={`p-1.5 rounded-lg ${t('hover:bg-white/[0.06] text-gray-400','hover:bg-gray-200 text-gray-500')}`}><Copy className="w-3.5 h-3.5" /></button>
+              </div>
+              <div className="flex items-center gap-6 text-xs">
+                <div><p className={t('text-gray-500','text-gray-500')}>Referred</p><p className={`text-lg font-bold ${t('text-white','text-gray-900')}`}>3</p></div>
+                <div className={`w-px h-8 ${t('bg-white/[0.06]','bg-gray-200')}`} />
+                <div><p className={t('text-gray-500','text-gray-500')}>Earned</p><p className="text-lg font-bold text-emerald-400">{'\u20B9'}75K</p></div>
+              </div>
+            </div>
+          </Glass>
+        </div>
+        <Glass className="p-6" hover theme={theme}>
+          <h4 className={`text-sm font-bold mb-4 ${t('text-white','text-gray-900')}`}>How It Works</h4>
+          {[{ step: '1', t: 'Share Link', d: 'Share your unique referral link' },{ step: '2', t: 'They Invest', d: 'Your referral completes investment' },{ step: '3', t: 'You Earn', d: 'Receive referral bonus' }].map((s, i) => (
+            <div key={i} className="flex items-start gap-3 mb-3">
+              <span className="w-7 h-7 rounded-full bg-brand-red/15 flex items-center justify-center text-xs font-bold text-brand-red shrink-0">{s.step}</span>
+              <div><p className={`text-xs font-semibold ${t('text-white','text-gray-900')}`}>{s.t}</p><p className={`text-[11px] ${t('text-gray-500','text-gray-500')}`}>{s.d}</p></div>
+            </div>
+          ))}
+        </Glass>
+      </div>
+    </div>
+  )
+
+  // ═══════════════════════════════════════════════════════════
+  // PROFILE TAB (Personal, Nominee, Bank)
+  // ═══════════════════════════════════════════════════════════
+  const renderProfileTab = () => (
+    <div className="space-y-6">
+      <h2 className={`text-xl font-bold ${t('text-white','text-gray-900')}`}>Your Profile</h2>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <Glass className="p-6 text-center" hover glow theme={theme}>
+          <div className="w-20 h-20 rounded-full bg-gradient-to-br from-brand-red to-red-800 flex items-center justify-center text-2xl font-bold text-white mx-auto mb-4 ring-4 ring-white/[0.08]">RK</div>
+          <h3 className={`text-lg font-bold ${t('text-white','text-gray-900')}`}>Rajesh Krishnan</h3>
+          <p className={`text-xs mb-3 ${t('text-gray-500','text-gray-500')}`}>rajesh.k@email.com</p>
+          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-emerald-500/15 text-emerald-400 border border-emerald-500/20"><Shield className="w-3 h-3" /> KYC Verified</span>
+          <div className={`mt-4 pt-4 border-t text-left space-y-2.5 ${t('border-white/[0.06]','border-gray-200')}`}>
+            {[['Investor ID','GHL-INV-2024-0847'],['PAN','ABCPK****F'],['Mobile','+91 98XXX XXXXX'],['Joined','December 2023']].map(([l,v],i) => (
+              <div key={i} className="flex justify-between text-xs"><span className={t('text-gray-500','text-gray-500')}>{l}</span><span className={`font-medium ${t('text-white','text-gray-900')}`}>{v}</span></div>
             ))}
           </div>
         </Glass>
+
+        <div className="lg:col-span-2 space-y-4">
+          {/* Personal Details */}
+          <Glass className="p-6" hover theme={theme}>
+            <h4 className={`text-sm font-bold mb-4 ${t('text-white','text-gray-900')}`}>Personal Details</h4>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {[['Full Name','Rajesh Krishnan'],['Email','rajesh.k@email.com'],['Phone','+91 98765 43210'],['City','Chennai, Tamil Nadu'],['Date of Birth','15 Aug 1978'],['Occupation','Business Owner']].map(([l,v],i) => (
+                <div key={i}><p className={`text-[10px] uppercase tracking-wider mb-1 ${t('text-gray-600','text-gray-400')}`}>{l}</p><p className={`text-sm font-medium ${t('text-white','text-gray-900')}`}>{v}</p></div>
+              ))}
+            </div>
+          </Glass>
+
+          {/* Nominee Details */}
+          <Glass className="p-6" hover theme={theme}>
+            <h4 className={`text-sm font-bold mb-4 ${t('text-white','text-gray-900')}`}>Nominee Details</h4>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {[['Nominee Name','Lakshmi Krishnan'],['Relationship','Spouse'],['Nominee PAN','ABCPL****G'],['Share','100%']].map(([l,v],i) => (
+                <div key={i}><p className={`text-[10px] uppercase tracking-wider mb-1 ${t('text-gray-600','text-gray-400')}`}>{l}</p><p className={`text-sm font-medium ${t('text-white','text-gray-900')}`}>{v}</p></div>
+              ))}
+            </div>
+          </Glass>
+
+          {/* Bank Details */}
+          <Glass className="p-6" hover theme={theme}>
+            <div className="flex items-center justify-between mb-4">
+              <h4 className={`text-sm font-bold ${t('text-white','text-gray-900')}`}>Bank Details</h4>
+              <button onClick={() => setBankConnectOpen(true)} className="text-xs text-brand-red font-semibold flex items-center gap-1"><Landmark className="w-3 h-3" /> Bank Connect</button>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {[['Bank Name','HDFC Bank'],['Account No','XXXX XXXX 4521'],['IFSC','HDFC0001234'],['Account Type','Savings']].map(([l,v],i) => (
+                <div key={i}><p className={`text-[10px] uppercase tracking-wider mb-1 ${t('text-gray-600','text-gray-400')}`}>{l}</p><p className={`text-sm font-medium ${t('text-white','text-gray-900')}`}>{v}</p></div>
+              ))}
+            </div>
+          </Glass>
+        </div>
       </div>
 
-      {/* Referral history */}
-      <Glass className="p-6" hover>
-        <h3 className="text-base font-bold text-white mb-4">Referral History</h3>
-        <div className="space-y-3">
-          {[
-            { name: 'Amit Sharma', status: 'Invested', amount: '\u20B950L', date: '15 Feb 2025', bonus: '\u20B925K' },
-            { name: 'Priya Nair', status: 'Invested', amount: '\u20B91 Cr', date: '20 Jan 2025', bonus: '\u20B950K' },
-            { name: 'Sanjay Mehta', status: 'Onboarding', amount: '-', date: '05 Mar 2025', bonus: 'Pending' },
-          ].map((ref, i) => (
-            <div key={i} className="flex items-center gap-4 p-3 rounded-xl bg-white/[0.02] border border-white/[0.04]">
-              <div className="w-9 h-9 rounded-full bg-gradient-to-br from-brand-red/20 to-red-900/20 flex items-center justify-center text-xs font-bold text-brand-red">
-                {ref.name.split(' ').map(n => n[0]).join('')}
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-semibold text-white">{ref.name}</p>
-                <p className="text-[11px] text-gray-500">{ref.date}</p>
-              </div>
-              <div className="text-right">
-                <p className={`text-xs font-semibold ${ref.status === 'Invested' ? 'text-emerald-400' : 'text-amber-400'}`}>
-                  {ref.status}
-                </p>
-                <p className="text-xs text-gray-500">{ref.bonus}</p>
-              </div>
+      {/* Bank Connect Modal */}
+      {bankConnectOpen && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 backdrop-blur-sm">
+          <div className={`max-w-md w-full mx-4 rounded-2xl border p-6 ${t('bg-[#111] border-white/10','bg-white border-gray-200 shadow-2xl')}`}>
+            <div className="flex items-center justify-between mb-5">
+              <h3 className={`text-lg font-bold ${t('text-white','text-gray-900')}`}>Bank Connect</h3>
+              <button onClick={() => setBankConnectOpen(false)} className={t('text-gray-500 hover:text-white','text-gray-400 hover:text-gray-900')}><X className="w-5 h-5" /></button>
             </div>
-          ))}
+            <div className={`p-4 rounded-xl mb-4 ${t('bg-emerald-500/10 border border-emerald-500/20','bg-emerald-50 border border-emerald-200')}`}>
+              <div className="flex items-center gap-2 mb-1"><Shield className="w-4 h-4 text-emerald-400" /><span className={`text-sm font-semibold ${t('text-emerald-400','text-emerald-600')}`}>Secure Connection</span></div>
+              <p className={`text-xs ${t('text-gray-400','text-gray-500')}`}>Your bank details are encrypted and secured with 256-bit SSL.</p>
+            </div>
+            <div className="space-y-3">
+              <input type="text" placeholder="Account Holder Name" className={`w-full px-4 py-2.5 rounded-xl text-sm ${t('bg-white/[0.04] border border-white/[0.06] text-white placeholder-gray-600','bg-gray-50 border border-gray-200 text-gray-900 placeholder-gray-400')}`} />
+              <input type="text" placeholder="Account Number" className={`w-full px-4 py-2.5 rounded-xl text-sm ${t('bg-white/[0.04] border border-white/[0.06] text-white placeholder-gray-600','bg-gray-50 border border-gray-200 text-gray-900 placeholder-gray-400')}`} />
+              <input type="text" placeholder="IFSC Code" className={`w-full px-4 py-2.5 rounded-xl text-sm ${t('bg-white/[0.04] border border-white/[0.06] text-white placeholder-gray-600','bg-gray-50 border border-gray-200 text-gray-900 placeholder-gray-400')}`} />
+              <select className={`w-full px-4 py-2.5 rounded-xl text-sm ${t('bg-white/[0.04] border border-white/[0.06] text-white','bg-gray-50 border border-gray-200 text-gray-900')}`}>
+                <option>Savings Account</option><option>Current Account</option><option>NRO Account</option>
+              </select>
+              <button className="w-full py-2.5 rounded-xl text-sm font-semibold text-white" style={{ background: 'linear-gradient(135deg, #D0021B, #8B0000)' }}>Verify & Connect</button>
+            </div>
+          </div>
         </div>
-      </Glass>
+      )}
     </div>
   )
 
-  // ─── PROFILE TAB ──────────────────────────────────────────
-  const renderProfileTab = () => (
+  // ═══════════════════════════════════════════════════════════
+  // SETTINGS TAB
+  // ═══════════════════════════════════════════════════════════
+  const renderSettingsTab = () => (
     <div className="space-y-6">
-      <div>
-        <h2 className="text-xl font-bold text-white mb-1">Your Profile</h2>
-        <p className="text-sm text-gray-500">Manage your account information</p>
-      </div>
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Profile card */}
-        <Glass className="p-6 text-center" hover glow>
-          <div className="w-20 h-20 rounded-full bg-gradient-to-br from-brand-red to-red-800 flex items-center justify-center text-2xl font-bold text-white mx-auto mb-4 ring-4 ring-white/[0.08]">
-            RK
+      <h2 className={`text-xl font-bold ${t('text-white','text-gray-900')}`}>Settings</h2>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        {/* Appearance */}
+        <Glass className="p-6" hover theme={theme}>
+          <div className="flex items-center gap-3 mb-4">
+            <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${t('bg-white/[0.04]','bg-gray-100')}`}>
+              {isDark ? <Moon className="w-5 h-5 text-indigo-400" /> : <Sun className="w-5 h-5 text-amber-500" />}
+            </div>
+            <div><h4 className={`text-sm font-bold ${t('text-white','text-gray-900')}`}>Appearance</h4><p className={`text-xs ${t('text-gray-500','text-gray-500')}`}>Theme and display preferences</p></div>
           </div>
-          <h3 className="text-lg font-bold text-white">Rajesh Krishnan</h3>
-          <p className="text-xs text-gray-500 mb-3">rajesh.k@email.com</p>
-          <KYCBadge />
-          <div className="mt-4 pt-4 border-t border-white/[0.06] text-left space-y-2.5">
-            <div className="flex justify-between text-xs">
-              <span className="text-gray-500">Investor ID</span>
-              <span className="text-white font-medium">GHL-INV-2024-0847</span>
-            </div>
-            <div className="flex justify-between text-xs">
-              <span className="text-gray-500">PAN</span>
-              <span className="text-white font-medium">ABCPK****F</span>
-            </div>
-            <div className="flex justify-between text-xs">
-              <span className="text-gray-500">Mobile</span>
-              <span className="text-white font-medium">+91 98XXX XXXXX</span>
-            </div>
-            <div className="flex justify-between text-xs">
-              <span className="text-gray-500">Joined</span>
-              <span className="text-white font-medium">December 2023</span>
-            </div>
+          <div className="flex gap-3">
+            <button onClick={() => setTheme('dark')} className={`flex-1 p-3 rounded-xl text-center text-sm font-medium transition-all ${theme === 'dark' ? 'bg-brand-red/15 text-white border border-brand-red/20' : t('bg-white/[0.03] text-gray-400','bg-gray-50 text-gray-500')}`}>
+              <Moon className="w-5 h-5 mx-auto mb-1" /> Dark
+            </button>
+            <button onClick={() => setTheme('light')} className={`flex-1 p-3 rounded-xl text-center text-sm font-medium transition-all ${theme === 'light' ? 'bg-brand-red/15 text-brand-red border border-brand-red/20' : t('bg-white/[0.03] text-gray-400','bg-gray-50 text-gray-500')}`}>
+              <Sun className="w-5 h-5 mx-auto mb-1" /> Light
+            </button>
           </div>
         </Glass>
 
-        {/* Details */}
-        <div className="lg:col-span-2 space-y-4">
-          <Glass className="p-6" hover>
-            <h4 className="text-sm font-bold text-white mb-4">Personal Details</h4>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {[
-                { label: 'Full Name', value: 'Rajesh Krishnan' },
-                { label: 'Email', value: 'rajesh.k@email.com' },
-                { label: 'Phone', value: '+91 98765 43210' },
-                { label: 'City', value: 'Chennai, Tamil Nadu' },
-                { label: 'Date of Birth', value: '15 Aug 1978' },
-                { label: 'Occupation', value: 'Business Owner' },
-              ].map((d, i) => (
-                <div key={i}>
-                  <p className="text-[10px] text-gray-600 uppercase tracking-wider mb-1">{d.label}</p>
-                  <p className="text-sm text-white font-medium">{d.value}</p>
-                </div>
-              ))}
+        {/* Language */}
+        <Glass className="p-6" hover theme={theme}>
+          <div className="flex items-center gap-3 mb-4">
+            <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${t('bg-white/[0.04]','bg-gray-100')}`}><Languages className="w-5 h-5 text-blue-400" /></div>
+            <div><h4 className={`text-sm font-bold ${t('text-white','text-gray-900')}`}>Language</h4><p className={`text-xs ${t('text-gray-500','text-gray-500')}`}>Dashboard language preference</p></div>
+          </div>
+          <select className={`w-full px-4 py-2.5 rounded-xl text-sm ${t('bg-white/[0.04] border border-white/[0.06] text-white','bg-gray-50 border border-gray-200 text-gray-900')}`}>
+            <option>English</option><option>Hindi</option><option>Tamil</option><option>Telugu</option><option>Kannada</option><option>Malayalam</option><option>Marathi</option><option>Bengali</option><option>Gujarati</option>
+          </select>
+        </Glass>
+
+        {/* Notifications */}
+        <Glass className="p-6" hover theme={theme}>
+          <div className="flex items-center gap-3 mb-4">
+            <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${t('bg-white/[0.04]','bg-gray-100')}`}><Bell className="w-5 h-5 text-amber-400" /></div>
+            <div><h4 className={`text-sm font-bold ${t('text-white','text-gray-900')}`}>Notifications</h4><p className={`text-xs ${t('text-gray-500','text-gray-500')}`}>Email and push preferences</p></div>
+          </div>
+          {['Email Alerts','NAV Updates','Investment Opportunities','Dividend Notifications'].map((opt,j) => (
+            <div key={j} className={`flex items-center justify-between p-2.5 rounded-lg ${t('hover:bg-white/[0.02]','hover:bg-gray-50')} transition-colors`}>
+              <span className={`text-xs ${t('text-gray-400','text-gray-600')}`}>{opt}</span>
+              <div className="w-9 h-5 rounded-full bg-brand-red/20 relative cursor-pointer"><div className="absolute right-0.5 top-0.5 w-4 h-4 rounded-full bg-brand-red transition-all" /></div>
             </div>
-          </Glass>
-          <Glass className="p-6" hover>
-            <h4 className="text-sm font-bold text-white mb-4">Investment Summary</h4>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-              {[
-                { label: 'Total Invested', value: '\u20B968.0L' },
-                { label: 'Current Value', value: '\u20B985.4L' },
-                { label: 'Total Return', value: `+${totalReturn}%` },
-                { label: 'Active Assets', value: '4' },
-              ].map((s, i) => (
-                <div key={i} className="text-center p-3 rounded-xl bg-white/[0.02]">
-                  <p className="text-lg font-bold text-white">{s.value}</p>
-                  <p className="text-[10px] text-gray-500 uppercase tracking-wider mt-1">{s.label}</p>
-                </div>
-              ))}
+          ))}
+        </Glass>
+
+        {/* Security */}
+        <Glass className="p-6" hover theme={theme}>
+          <div className="flex items-center gap-3 mb-4">
+            <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${t('bg-white/[0.04]','bg-gray-100')}`}><Lock className="w-5 h-5 text-emerald-400" /></div>
+            <div><h4 className={`text-sm font-bold ${t('text-white','text-gray-900')}`}>Security</h4><p className={`text-xs ${t('text-gray-500','text-gray-500')}`}>Password and authentication</p></div>
+          </div>
+          {['Change Password','Enable 2FA','Active Sessions','Login History'].map((opt,j) => (
+            <div key={j} className={`flex items-center justify-between p-2.5 rounded-lg cursor-pointer group ${t('hover:bg-white/[0.02]','hover:bg-gray-50')} transition-colors`}>
+              <span className={`text-xs ${t('text-gray-400 group-hover:text-white','text-gray-600 group-hover:text-gray-900')} transition-colors`}>{opt}</span>
+              <ChevronRight className={`w-3.5 h-3.5 ${t('text-gray-600','text-gray-400')}`} />
             </div>
-          </Glass>
-        </div>
+          ))}
+        </Glass>
       </div>
     </div>
   )
 
-  // ─── SETTINGS TAB ─────────────────────────────────────────
-  const renderSettingsTab = () => (
+  // ═══════════════════════════════════════════════════════════
+  // PORTFOLIO TAB
+  // ═══════════════════════════════════════════════════════════
+  const renderPortfolioTab = () => (
     <div className="space-y-6">
-      <div>
-        <h2 className="text-xl font-bold text-white mb-1">Settings</h2>
-        <p className="text-sm text-gray-500">Manage your preferences</p>
-      </div>
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        {[
-          {
-            title: 'Notifications',
-            desc: 'Manage email and push notification preferences',
-            icon: Bell,
-            options: ['Email Alerts', 'NAV Updates', 'Investment Opportunities', 'Dividend Notifications'],
-          },
-          {
-            title: 'Security',
-            desc: 'Password, two-factor authentication, and sessions',
-            icon: Shield,
-            options: ['Change Password', 'Enable 2FA', 'Active Sessions', 'Login History'],
-          },
-        ].map((section, i) => (
-          <Glass key={i} className="p-6" hover>
-            <div className="flex items-center gap-3 mb-4">
-              <div className="w-10 h-10 rounded-xl bg-white/[0.04] flex items-center justify-center">
-                <section.icon className="w-5 h-5 text-gray-400" />
-              </div>
-              <div>
-                <h4 className="text-sm font-bold text-white">{section.title}</h4>
-                <p className="text-xs text-gray-500">{section.desc}</p>
-              </div>
-            </div>
-            <div className="space-y-2">
-              {section.options.map((opt, j) => (
-                <div key={j} className="flex items-center justify-between p-2.5 rounded-lg hover:bg-white/[0.02] transition-colors cursor-pointer group">
-                  <span className="text-xs text-gray-400 group-hover:text-white transition-colors">{opt}</span>
-                  <ChevronRight className="w-3.5 h-3.5 text-gray-600 group-hover:text-gray-400 transition-colors" />
-                </div>
-              ))}
-            </div>
-          </Glass>
-        ))}
-      </div>
-    </div>
-  )
-
-  // ─── RENDER ACTIVE TAB ────────────────────────────────────
-  const renderContent = () => {
-    switch (activeTab) {
-      case 'invest':
-        return renderInvestTab()
-      case 'portfolio':
-        return renderPortfolioTab()
-      case 'documents':
-        return renderDocumentsTab()
-      case 'transactions':
-        return renderTransactionsTab()
-      case 'support':
-        return renderSupportTab()
-      case 'referrals':
-        return renderReferralsTab()
-      case 'profile':
-        return renderProfileTab()
-      case 'settings':
-        return renderSettingsTab()
-      default:
-        return renderDashboardHome()
-    }
-  }
-
-  // ─── DASHBOARD HOME ───────────────────────────────────────
-  const renderDashboardHome = () => (
-    <div className="space-y-6">
-      {/* Welcome */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-        <div>
-          <h2 className="text-xl font-bold text-white mb-0.5">
-            {greeting}, <span className="text-brand-red">Rajesh</span>
-          </h2>
-          <p className="text-sm text-gray-500 flex items-center gap-2">
-            Welcome to your investor portal
-            <KYCBadge />
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          <button className="px-4 py-2 rounded-xl text-xs font-semibold text-white transition-all hover:scale-105"
-            style={{ background: 'linear-gradient(135deg, #D0021B, #8B0000)' }}>
-            <Plus className="w-3.5 h-3.5 inline mr-1.5" />
-            New Investment
-          </button>
-        </div>
-      </div>
-
-      {/* Hero Metrics */}
+      <h2 className={`text-xl font-bold ${t('text-white','text-gray-900')}`}>Your Portfolio</h2>
       {renderHeroMetrics()}
-
-      {/* Charts row */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         <div className="lg:col-span-2">{renderNAVChart()}</div>
         <div>{renderAllocationChart()}</div>
       </div>
-
-      {/* Quick Actions */}
-      {renderQuickActions()}
-
-      {/* Bottom row */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        <div className="lg:col-span-1">{renderPortfolioAssets()}</div>
-        <div className="lg:col-span-1">{renderRecentActivity()}</div>
-        <div className="space-y-4">
-          {renderAnnouncements()}
-          {renderReferralCard()}
-        </div>
-      </div>
+      {renderPortfolioAssets()}
     </div>
   )
 
-  // ─── MAIN RENDER ──────────────────────────────────────────
+  // ═══════════════════════════════════════════════════════════
+  // TAB ROUTER
+  // ═══════════════════════════════════════════════════════════
+  const renderContent = () => {
+    switch (activeTab) {
+      case 'investments': return renderInvestmentsTab()
+      case 'portfolio': return renderPortfolioTab()
+      case 'kyc': return renderKYCTab()
+      case 'transactions': return renderTransactionsTab()
+      case 'messages': return renderMessagesTab()
+      case 'support': return renderSupportTab()
+      case 'referrals': return renderReferralsTab()
+      case 'profile': return renderProfileTab()
+      case 'settings': return renderSettingsTab()
+      default: return renderDashboardHome()
+    }
+  }
+
+  // ═══════════════════════════════════════════════════════════
+  // MAIN RENDER
+  // ═══════════════════════════════════════════════════════════
   return (
-    <div className="min-h-screen bg-brand-black relative">
+    <div className={`min-h-screen relative transition-colors duration-500 ${isDark ? 'bg-brand-black' : 'bg-[#F8F7F5]'}`}>
       {/* Background ambient effects */}
       <div className="fixed inset-0 pointer-events-none z-0">
-        <div className="absolute top-0 left-1/4 w-[600px] h-[600px] bg-brand-red/[0.03] rounded-full blur-[200px]" />
-        <div className="absolute bottom-0 right-1/4 w-[500px] h-[500px] bg-brand-red/[0.02] rounded-full blur-[180px]" />
-        <div
-          className="absolute inset-0 opacity-[0.015]"
-          style={{
-            backgroundImage: 'radial-gradient(rgba(255,255,255,0.3) 1px, transparent 1px)',
-            backgroundSize: '40px 40px',
-          }}
-        />
+        {isDark && (
+          <>
+            <div className="absolute top-0 left-1/4 w-[600px] h-[600px] bg-brand-red/[0.03] rounded-full blur-[200px]" />
+            <div className="absolute bottom-0 right-1/4 w-[500px] h-[500px] bg-brand-red/[0.02] rounded-full blur-[180px]" />
+            <div className="absolute inset-0 opacity-[0.015]" style={{ backgroundImage: 'radial-gradient(rgba(255,255,255,0.3) 1px, transparent 1px)', backgroundSize: '40px 40px' }} />
+          </>
+        )}
       </div>
 
-      {/* Sidebar */}
       {renderSidebar()}
+      {renderTourOverlay()}
 
-      {/* Main content area */}
       <div className="lg:ml-[260px] relative z-10 min-h-screen flex flex-col">
         {renderTopBar()}
-        <div className="flex-1 p-4 lg:p-6 overflow-auto">
-          {renderContent()}
-        </div>
-
-        {/* Footer */}
-        <footer className="border-t border-white/[0.04] px-4 lg:px-6 py-3 flex flex-col sm:flex-row items-center justify-between gap-2 text-[11px] text-gray-600">
+        <div className="flex-1 p-4 lg:p-6 overflow-auto">{renderContent()}</div>
+        <footer className={`border-t px-4 lg:px-6 py-3 flex flex-col sm:flex-row items-center justify-between gap-2 text-[11px]
+          ${t('border-white/[0.04] text-gray-600','border-gray-200 text-gray-400')}`}>
           <p>&copy; 2025 GHL India Ventures. SEBI Reg: IN/AIF2/2425/1517</p>
-          <p className="flex items-center gap-1.5">
-            <Shield className="w-3 h-3" />
-            256-bit SSL Encrypted &bull; SEBI Compliant
-          </p>
+          <p className="flex items-center gap-1.5"><Shield className="w-3 h-3" /> 256-bit SSL Encrypted &bull; SEBI Compliant</p>
         </footer>
       </div>
     </div>

@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { LegalLink } from '@/components/LegalPopup'
 import { BRAND } from '@/lib/constants'
-import { Eye, EyeOff, Lock, ArrowLeft, Shield } from 'lucide-react'
+import { Eye, EyeOff, Lock, ArrowLeft, Shield, Smartphone, Fingerprint } from 'lucide-react'
 import Logo from '@/components/Logo'
 
 export default function LoginPage() {
@@ -13,6 +13,10 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false)
   const [mobile, setMobile] = useState('')
   const [password, setPassword] = useState('')
+  const [loginMode, setLoginMode] = useState<'password' | 'otp'>('password')
+  const [otpSent, setOtpSent] = useState(false)
+  const [otp, setOtp] = useState(['', '', '', '', '', ''])
+  const [otpTimer, setOtpTimer] = useState(0)
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
@@ -22,6 +26,35 @@ export default function LoginPage() {
 
   const handleGoogleSignIn = () => {
     // Demo: open dashboard in new tab (Production: connect Google OAuth)
+    window.open('/dashboard', '_blank')
+  }
+
+  const handleSendOTP = () => {
+    if (!mobile || mobile.length < 10) return
+    setOtpSent(true)
+    setOtpTimer(30)
+    const interval = setInterval(() => {
+      setOtpTimer(prev => {
+        if (prev <= 1) { clearInterval(interval); return 0 }
+        return prev - 1
+      })
+    }, 1000)
+  }
+
+  const handleOtpChange = (index: number, value: string) => {
+    if (value.length > 1) return
+    const newOtp = [...otp]
+    newOtp[index] = value
+    setOtp(newOtp)
+    // Auto-focus next input
+    if (value && index < 5) {
+      const next = document.getElementById(`otp-${index + 1}`)
+      next?.focus()
+    }
+  }
+
+  const handleOtpLogin = (e: React.FormEvent) => {
+    e.preventDefault()
     window.open('/dashboard', '_blank')
   }
 
@@ -99,78 +132,183 @@ export default function LoginPage() {
             <span className="text-sm font-medium text-gray-700">Continue with Google</span>
           </button>
 
+          {/* Login Mode Toggle */}
+          <div className="flex rounded-xl bg-gray-100 p-1 mb-6">
+            <button
+              type="button"
+              onClick={() => { setLoginMode('password'); setOtpSent(false) }}
+              className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-medium transition-all ${loginMode === 'password' ? 'bg-white shadow-sm text-brand-black' : 'text-brand-grey hover:text-brand-black'}`}
+            >
+              <Lock className="w-4 h-4" /> Password
+            </button>
+            <button
+              type="button"
+              onClick={() => setLoginMode('otp')}
+              className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-medium transition-all ${loginMode === 'otp' ? 'bg-white shadow-sm text-brand-black' : 'text-brand-grey hover:text-brand-black'}`}
+            >
+              <Fingerprint className="w-4 h-4" /> OTP Login
+            </button>
+          </div>
+
           {/* Divider */}
           <div className="relative mb-6">
             <div className="absolute inset-0 flex items-center">
               <div className="w-full border-t border-gray-200" />
             </div>
             <div className="relative flex justify-center text-xs">
-              <span className="bg-white px-4 text-brand-grey">or log in with credentials</span>
+              <span className="bg-white px-4 text-brand-grey">
+                {loginMode === 'password' ? 'or log in with credentials' : 'one-time password login'}
+              </span>
             </div>
           </div>
 
-          {/* Form */}
-          <form onSubmit={handleSubmit} className="space-y-5">
-            {/* Mobile Number */}
-            <div>
-              <label htmlFor="login-mobile" className="block text-sm font-medium text-brand-black mb-2">
-                Mobile Number
-              </label>
-              <div className="relative">
-                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-brand-grey text-sm font-medium">
-                  +91
-                </span>
-                <input
-                  id="login-mobile"
-                  type="tel"
-                  required
-                  className="input-field pl-14"
-                  placeholder="XXXXX XXXXX"
-                  value={mobile}
-                  onChange={(e) => setMobile(e.target.value)}
-                />
+          {loginMode === 'password' ? (
+            /* Password Form */
+            <form onSubmit={handleSubmit} className="space-y-5">
+              {/* Mobile Number */}
+              <div>
+                <label htmlFor="login-mobile" className="block text-sm font-medium text-brand-black mb-2">
+                  Mobile Number
+                </label>
+                <div className="relative">
+                  <span className="absolute left-4 top-1/2 -translate-y-1/2 text-brand-grey text-sm font-medium">
+                    +91
+                  </span>
+                  <input
+                    id="login-mobile"
+                    type="tel"
+                    required
+                    className="input-field pl-14"
+                    placeholder="XXXXX XXXXX"
+                    value={mobile}
+                    onChange={(e) => setMobile(e.target.value)}
+                  />
+                </div>
               </div>
-            </div>
 
-            {/* Password */}
-            <div>
-              <label htmlFor="login-password" className="block text-sm font-medium text-brand-black mb-2">
-                Password
-              </label>
-              <div className="relative">
-                <input
-                  id="login-password"
-                  type={showPassword ? 'text' : 'password'}
-                  required
-                  className="input-field pr-12"
-                  placeholder="Enter your password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-brand-grey hover:text-brand-black transition-colors"
-                  aria-label="Toggle password visibility"
-                >
-                  {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+              {/* Password */}
+              <div>
+                <label htmlFor="login-password" className="block text-sm font-medium text-brand-black mb-2">
+                  Password
+                </label>
+                <div className="relative">
+                  <input
+                    id="login-password"
+                    type={showPassword ? 'text' : 'password'}
+                    required
+                    className="input-field pr-12"
+                    placeholder="Enter your password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-brand-grey hover:text-brand-black transition-colors"
+                    aria-label="Toggle password visibility"
+                  >
+                    {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                  </button>
+                </div>
+              </div>
+
+              {/* Forgot Password */}
+              <div className="text-right">
+                <a href="#" className="text-sm text-brand-red hover:underline font-medium">
+                  Forgot Password?
+                </a>
+              </div>
+
+              {/* Submit */}
+              <button type="submit" className="btn-primary w-full text-center">
+                <Lock className="w-4 h-4 mr-2" />
+                Login
+              </button>
+            </form>
+          ) : (
+            /* OTP Form */
+            <form onSubmit={handleOtpLogin} className="space-y-5">
+              {/* Mobile Number */}
+              <div>
+                <label htmlFor="otp-mobile" className="block text-sm font-medium text-brand-black mb-2">
+                  Registered Mobile Number
+                </label>
+                <div className="relative">
+                  <span className="absolute left-4 top-1/2 -translate-y-1/2 text-brand-grey text-sm font-medium">
+                    +91
+                  </span>
+                  <input
+                    id="otp-mobile"
+                    type="tel"
+                    required
+                    className="input-field pl-14"
+                    placeholder="XXXXX XXXXX"
+                    value={mobile}
+                    onChange={(e) => setMobile(e.target.value)}
+                    disabled={otpSent}
+                  />
+                </div>
+              </div>
+
+              {!otpSent ? (
+                <button type="button" onClick={handleSendOTP}
+                  className="btn-primary w-full text-center">
+                  <Smartphone className="w-4 h-4 mr-2" />
+                  Send OTP
                 </button>
-              </div>
-            </div>
+              ) : (
+                <>
+                  {/* OTP Input */}
+                  <div>
+                    <label className="block text-sm font-medium text-brand-black mb-2">
+                      Enter 6-digit OTP
+                    </label>
+                    <p className="text-xs text-brand-grey mb-3">
+                      Sent to +91 {mobile}
+                      <button type="button" onClick={() => { setOtpSent(false); setOtp(['','','','','','']) }}
+                        className="text-brand-red ml-2 hover:underline font-medium">Change</button>
+                    </p>
+                    <div className="flex gap-2 justify-center">
+                      {otp.map((digit, idx) => (
+                        <input
+                          key={idx}
+                          id={`otp-${idx}`}
+                          type="text"
+                          inputMode="numeric"
+                          maxLength={1}
+                          value={digit}
+                          onChange={(e) => handleOtpChange(idx, e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Backspace' && !digit && idx > 0) {
+                              document.getElementById(`otp-${idx - 1}`)?.focus()
+                            }
+                          }}
+                          className="w-12 h-14 text-center text-xl font-bold rounded-xl border-2 border-gray-200 focus:border-brand-red focus:ring-2 focus:ring-brand-red/20 outline-none transition-all text-brand-black"
+                        />
+                      ))}
+                    </div>
+                  </div>
 
-            {/* Forgot Password */}
-            <div className="text-right">
-              <a href="#" className="text-sm text-brand-red hover:underline font-medium">
-                Forgot Password?
-              </a>
-            </div>
+                  {/* Resend timer */}
+                  <div className="text-center">
+                    {otpTimer > 0 ? (
+                      <p className="text-xs text-brand-grey">Resend OTP in <span className="text-brand-red font-semibold">{otpTimer}s</span></p>
+                    ) : (
+                      <button type="button" onClick={handleSendOTP} className="text-xs text-brand-red font-semibold hover:underline">
+                        Resend OTP
+                      </button>
+                    )}
+                  </div>
 
-            {/* Submit */}
-            <button type="submit" className="btn-primary w-full text-center">
-              <Lock className="w-4 h-4 mr-2" />
-              Login
-            </button>
-          </form>
+                  {/* Submit */}
+                  <button type="submit" className="btn-primary w-full text-center">
+                    <Fingerprint className="w-4 h-4 mr-2" />
+                    Verify & Login
+                  </button>
+                </>
+              )}
+            </form>
+          )}
 
           {/* Create Account */}
           <div className="mt-6 text-center">
