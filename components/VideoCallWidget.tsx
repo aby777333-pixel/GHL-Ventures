@@ -52,6 +52,27 @@ export default function VideoCallWidget() {
     return () => clearInterval(interval)
   }, [callState])
 
+  // Listen for external open events (from ARIA chatbot, Voice widget, etc.)
+  useEffect(() => {
+    const handleExternalOpen = () => {
+      // Prevent duplicate: if already open, just bring to focus
+      if (isOpen) {
+        // Widget is already open — scroll into view / pulse effect
+        const panel = document.querySelector('[aria-label="Close"]')?.closest('.fixed.z-\\[9997\\]') as HTMLElement
+        if (panel) {
+          panel.style.animation = 'none'
+          panel.offsetHeight // force reflow
+          panel.style.animation = 'ghlPulseHighlight 0.6s ease'
+        }
+        return
+      }
+      setIsOpen(true)
+      setShowBadge(false)
+    }
+    window.addEventListener('ghl-open-video-call', handleExternalOpen)
+    return () => window.removeEventListener('ghl-open-video-call', handleExternalOpen)
+  }, [isOpen])
+
   // Show notification badge after 30s
   useEffect(() => {
     const t = setTimeout(() => {

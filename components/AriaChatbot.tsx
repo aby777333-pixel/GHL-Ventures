@@ -73,9 +73,20 @@ function getResponse(input: string): string {
     return "I\u2019m sorry to hear that. Our team takes concerns very seriously.\n\n+91 44 2843 1043 | +91 7200 255 252\ninfo@ghlindiaventures.com\n2D, Queens Court, Egmore, Chennai \u2013 600 008\n\nAs a SEBI-registered entity, you can also escalate to **SEBI SCORES** at scores.gov.in.\n\nI hope we can resolve this quickly."
   }
 
+  // Video call — trigger the floating video widget
+  if (lower.includes('video call') || lower.includes('video chat') || lower.includes('start video') || lower.includes('video meeting') || lower.includes('video consultation')) {
+    // Dispatch event to open the floating VideoCallWidget
+    if (typeof window !== 'undefined') {
+      setTimeout(() => {
+        window.dispatchEvent(new CustomEvent('ghl-open-video-call'))
+      }, 500)
+    }
+    return "Opening the **Video Call** widget for you! You can connect with our Sales & Support team directly from your browser.\n\nJust fill in your details and our team will be with you shortly.\n\n*The video call widget should now be open below.*"
+  }
+
   // Human / advisor
   if (lower.includes('human') || lower.includes('speak') || lower.includes('advisor') || lower.includes('call') || lower.includes('talk to')) {
-    return "Of course! Our advisors are ready to help.\n\n**Call:** +91 7200 255 252\n**Email:** info@ghlindiaventures.com\n**WhatsApp:** +91 7200 255 252\n\nOr visit our Contact page to schedule a consultation at your convenience.\n\nThey typically respond within 2 business hours."
+    return "Of course! Our advisors are ready to help.\n\n**Call:** +91 7200 255 252\n**Email:** info@ghlindiaventures.com\n**WhatsApp:** +91 7200 255 252\n\nYou can also say **\"video call\"** to open our Video Call widget right here!\n\nOr visit our Contact page to schedule a consultation at your convenience.\n\nThey typically respond within 2 business hours."
   }
 
   // Default
@@ -150,6 +161,7 @@ export default function AriaChatbot() {
     'What is an AIF?',
     'How do I invest?',
     'Tell me about GHL',
+    'Start a Video Call',
     'Talk to a human',
   ]
 

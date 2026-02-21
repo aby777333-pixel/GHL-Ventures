@@ -46,7 +46,10 @@ const LANGUAGES = [
 // ─── Command parser ───
 type CmdType = 'navigate' | 'scroll' | 'read' | 'stop' | 'help' | 'language'
   | 'call' | 'directcall' | 'email' | 'whatsapp' | 'telegram' | 'video' | 'dark' | 'light'
-  | 'search' | 'close' | 'home' | 'back' | 'downloadapps' | 'unknown'
+  | 'search' | 'close' | 'home' | 'back' | 'downloadapps' | 'callingsolutions'
+  | 'openchat' | 'closechat' | 'refresh' | 'share' | 'print' | 'fullscreen'
+  | 'time' | 'date' | 'ghlinfo' | 'sebi' | 'address' | 'officehours'
+  | 'unknown'
 
 interface ParsedCommand {
   type: CmdType
@@ -93,15 +96,36 @@ function parseCommand(input: string): ParsedCommand {
   // Contact actions
   if (/(?:direct call|call us|phone numbers|office number|call ghl|phone call)/.test(text)) return { type: 'directcall' }
   if (/(?:download.*app|get.*calling.*app|install.*app|need.*calling|no.*app)/.test(text)) return { type: 'downloadapps' }
+  if (/(?:calling solutions|web calling|click to call|webrtc|call integrations|call solutions)/.test(text)) return { type: 'callingsolutions' }
   if (/(?:call|phone|ring|dial)/.test(text)) return { type: 'call' }
   if (/(?:email|mail|send email|write email|send mail|email us|mail us)/.test(text)) return { type: 'email' }
   if (/(?:whatsapp|whats app|chat on whatsapp|message on whatsapp|whatsapp chat)/.test(text)) return { type: 'whatsapp' }
   if (/(?:telegram|tg|telegram chat)/.test(text)) return { type: 'telegram' }
   if (/(?:video call|video chat|video|webcam|start video|video meeting)/.test(text)) return { type: 'video' }
 
+  // Chat/ARIA commands
+  if (/(?:open chat|open aria|hey aria|talk to aria|start chat|chatbot)/.test(text)) return { type: 'openchat' }
+  if (/(?:close chat|close aria|hide chat)/.test(text)) return { type: 'closechat' }
+
   // Theme commands
   if (/(?:dark mode|dark theme|night mode|go dark)/.test(text)) return { type: 'dark' }
   if (/(?:light mode|light theme|day mode|go light|bright)/.test(text)) return { type: 'light' }
+
+  // Utility commands
+  if (/(?:refresh|reload)/.test(text)) return { type: 'refresh' }
+  if (/(?:share|copy link|share page|share this)/.test(text)) return { type: 'share' }
+  if (/(?:print|print page)/.test(text)) return { type: 'print' }
+  if (/(?:fullscreen|full screen|maximize)/.test(text)) return { type: 'fullscreen' }
+
+  // Time & date
+  if (/(?:what time|current time|time now|tell.*time)/.test(text)) return { type: 'time' }
+  if (/(?:what date|current date|today|what day|tell.*date)/.test(text)) return { type: 'date' }
+
+  // Quick info
+  if (/(?:what is ghl|about ghl|tell me about ghl|ghl info)/.test(text)) return { type: 'ghlinfo' }
+  if (/(?:sebi|registration|sebi number|registered)/.test(text)) return { type: 'sebi' }
+  if (/(?:address|location|where is ghl|office location|where are you)/.test(text)) return { type: 'address' }
+  if (/(?:office hours|working hours|timings|business hours|when.*open)/.test(text)) return { type: 'officehours' }
 
   // Language switch
   if (/(?:switch to|speak in|change language|set language|language)\s+(.+)/.test(text)) {
@@ -398,6 +422,9 @@ export default function VoiceCommandWidget() {
         setFeedback('Opening video call widget...')
         speak('Opening video call.')
         setTimeout(() => {
+          // Use custom event (preferred, works with duplicate prevention)
+          window.dispatchEvent(new CustomEvent('ghl-open-video-call'))
+          // Fallback: also try direct button click
           const videoBtn = document.querySelector('[aria-label="Open Sales & Support Video Call"]') as HTMLElement
           if (videoBtn) videoBtn.click()
         }, 300)
@@ -406,13 +433,107 @@ export default function VoiceCommandWidget() {
       case 'downloadapps': {
         setFeedback('Opening calling app downloads...')
         speak('Opening download options for calling apps.')
-        // First open direct call widget, then trigger its downloads panel
         const dcBtn = document.querySelector('[aria-label="Open Direct Call"]') as HTMLElement
         if (dcBtn) dcBtn.click()
-        // Give it time to open, then dispatch custom event to show downloads
         setTimeout(() => {
           window.dispatchEvent(new CustomEvent('ghl-show-downloads'))
         }, 500)
+        break
+      }
+      case 'callingsolutions': {
+        setFeedback('Opening web calling solutions...')
+        speak('Opening web calling solutions and integrations.')
+        const dcBtn2 = document.querySelector('[aria-label="Open Direct Call"]') as HTMLElement
+        if (dcBtn2) dcBtn2.click()
+        setTimeout(() => {
+          window.dispatchEvent(new CustomEvent('ghl-show-solutions'))
+        }, 500)
+        break
+      }
+      case 'openchat': {
+        setFeedback('Opening ARIA chatbot...')
+        speak('Opening ARIA chat assistant.')
+        const chatBtn = document.querySelector('[aria-label="Open ARIA chatbot"]') as HTMLElement
+        if (chatBtn) chatBtn.click()
+        break
+      }
+      case 'closechat': {
+        setFeedback('Closing ARIA chatbot...')
+        speak('Closing chat.')
+        const closeBtn = document.querySelector('[aria-label="Close chat"]') as HTMLElement
+        if (closeBtn) closeBtn.click()
+        break
+      }
+      case 'refresh': {
+        setFeedback('Refreshing page...')
+        speak('Refreshing the page.')
+        setTimeout(() => window.location.reload(), 500)
+        break
+      }
+      case 'share': {
+        setFeedback('Copying page link...')
+        if (navigator.share) {
+          navigator.share({ title: document.title, url: window.location.href })
+        } else {
+          navigator.clipboard.writeText(window.location.href).then(() => {
+            setFeedback('Link copied to clipboard!')
+            speak('Link copied to clipboard.')
+          })
+        }
+        break
+      }
+      case 'print': {
+        setFeedback('Opening print dialog...')
+        speak('Opening print dialog.')
+        setTimeout(() => window.print(), 500)
+        break
+      }
+      case 'fullscreen': {
+        if (!document.fullscreenElement) {
+          document.documentElement.requestFullscreen().catch(() => {})
+          setFeedback('Entered fullscreen mode.')
+          speak('Entering fullscreen.')
+        } else {
+          document.exitFullscreen()
+          setFeedback('Exited fullscreen mode.')
+          speak('Exiting fullscreen.')
+        }
+        break
+      }
+      case 'time': {
+        const now = new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })
+        setFeedback(`Current time: ${now}`)
+        speak(`The current time is ${now}`)
+        break
+      }
+      case 'date': {
+        const today = new Date().toLocaleDateString('en-IN', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })
+        setFeedback(`Today: ${today}`)
+        speak(`Today is ${today}`)
+        break
+      }
+      case 'ghlinfo': {
+        const info = 'GHL India Ventures is a SEBI registered Category 2 Alternative Investment Fund based in Chennai, specializing in stressed real estate and early-stage startup investments.'
+        setFeedback(info)
+        speak(info)
+        break
+      }
+      case 'sebi': {
+        const sebiInfo = 'GHL India Ventures SEBI registration number is IN/AIF2/2425/1517, registered as a Category 2 Alternative Investment Fund.'
+        setFeedback('SEBI Reg: IN/AIF2/2425/1517')
+        speak(sebiInfo)
+        break
+      }
+      case 'address': {
+        const addr = '2D, Queens Court, Number 6, Montieth Road, Egmore, Chennai, Tamil Nadu, PIN 600008'
+        setFeedback(`Office: ${addr}`)
+        speak(`GHL India Ventures is located at ${addr}`)
+        break
+      }
+      case 'officehours': {
+        const hours = 'Monday to Saturday, 9:30 AM to 6:30 PM IST'
+        setFeedback(`Office Hours: ${hours}`)
+        speak(`GHL India Ventures office hours are ${hours}`)
         break
       }
       case 'dark': {
@@ -447,7 +568,7 @@ export default function VoiceCommandWidget() {
         break
       }
       case 'help': {
-        const helpText = 'Commands: "Go to [page]", "Scroll up/down/top/bottom", "Read page", "Stop", "Direct Call", "Call", "Email us", "WhatsApp", "Telegram", "Video call", "Download app", "Dark mode", "Light mode", "Switch to [language]", "Search [query]", "Go back", "Home", "Close", or say any page name.'
+        const helpText = 'Commands: "Go to [page]", "Scroll up/down/top/bottom", "Read page", "Stop", "Direct Call", "Call", "Email us", "WhatsApp", "Telegram", "Video call", "Open chat", "Download app", "Calling solutions", "Dark/Light mode", "Switch to [language]", "Search [query]", "What time", "What date", "SEBI number", "Address", "Office hours", "Share", "Print", "Fullscreen", "Refresh", "Go back", "Home", "Close".'
         setFeedback(helpText)
         speak(helpText)
         break
@@ -752,6 +873,7 @@ export default function VoiceCommandWidget() {
                 { icon: <Send className="w-2.5 h-2.5" />, label: 'Telegram', color: 'text-sky-400', action: () => executeCommand('telegram') },
                 { icon: <Video className="w-2.5 h-2.5" />, label: 'Video', color: 'text-purple-400', action: () => executeCommand('video call') },
                 { icon: <Phone className="w-2.5 h-2.5" />, label: 'Get App', color: 'text-cyan-400', action: () => executeCommand('download app') },
+                { icon: <Power className="w-2.5 h-2.5" />, label: 'Solutions', color: 'text-indigo-400', action: () => executeCommand('calling solutions') },
               ].map(btn => (
                 <button key={btn.label} onClick={btn.action} className={`inline-flex items-center gap-1 px-2 py-1 rounded-full bg-white/5 hover:bg-white/10 ${btn.color} text-[10px] transition-all`}>
                   {btn.icon} {btn.label}

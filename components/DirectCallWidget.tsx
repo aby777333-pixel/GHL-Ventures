@@ -6,6 +6,7 @@ import {
   Building2, MessageCircle, PhoneForwarded, Copy, Check,
   Monitor, Smartphone, PhoneIncoming, Send,
   Download, ExternalLink, ArrowLeft, RefreshCw,
+  Plug, Globe, Shield, Zap,
 } from 'lucide-react'
 import { BRAND } from '@/lib/constants'
 
@@ -76,6 +77,88 @@ const CALLING_APPS = [
   },
 ]
 
+// ─── Click-to-Call / Web Calling Solutions ───
+interface CallingSolution {
+  name: string
+  desc: string
+  color: string
+  textColor: string
+  hoverBg: string
+  url: string
+  icon: string
+  status: 'not_installed' | 'installed' | 'active'
+  type: 'click-to-call' | 'webrtc' | 'sdk'
+}
+
+const WEB_CALLING_SOLUTIONS: CallingSolution[] = [
+  {
+    name: 'Zadarma Click-to-Call',
+    desc: 'Free browser-based click-to-call widget with callback & CRM integration',
+    color: 'bg-orange-500/15 border-orange-500/20',
+    textColor: 'text-orange-400',
+    hoverBg: 'hover:bg-orange-500/25',
+    url: 'https://zadarma.com/en/services/click-to-call/',
+    icon: '\uD83D\uDFE0',
+    status: 'not_installed',
+    type: 'click-to-call',
+  },
+  {
+    name: 'Twilio Voice JS SDK',
+    desc: 'Programmable Voice SDK for WebRTC calls directly in the browser',
+    color: 'bg-red-500/15 border-red-500/20',
+    textColor: 'text-red-400',
+    hoverBg: 'hover:bg-red-500/25',
+    url: 'https://www.twilio.com/docs/voice/sdks/javascript',
+    icon: '\uD83D\uDD34',
+    status: 'not_installed',
+    type: 'sdk',
+  },
+  {
+    name: 'CallPage Click-to-Call',
+    desc: 'Automated callback widget — connects visitors with your team in 28 seconds',
+    color: 'bg-teal-500/15 border-teal-500/20',
+    textColor: 'text-teal-400',
+    hoverBg: 'hover:bg-teal-500/25',
+    url: 'https://www.callpage.io/',
+    icon: '\uD83D\uDFE2',
+    status: 'not_installed',
+    type: 'click-to-call',
+  },
+  {
+    name: 'Web-Phone.org Free SDK',
+    desc: 'Free open-source WebRTC softphone SDK for browser-based SIP calling',
+    color: 'bg-violet-500/15 border-violet-500/20',
+    textColor: 'text-violet-400',
+    hoverBg: 'hover:bg-violet-500/25',
+    url: 'https://www.web-phone.org/',
+    icon: '\uD83D\uDFE3',
+    status: 'not_installed',
+    type: 'sdk',
+  },
+  {
+    name: 'Elfsight Call Widget',
+    desc: 'No-code call button widget with customizable design and click-to-call',
+    color: 'bg-amber-500/15 border-amber-500/20',
+    textColor: 'text-amber-400',
+    hoverBg: 'hover:bg-amber-500/25',
+    url: 'https://elfsight.com/callback-widget/',
+    icon: '\uD83D\uDFE1',
+    status: 'not_installed',
+    type: 'click-to-call',
+  },
+  {
+    name: 'Wildix Kite WebRTC',
+    desc: 'Enterprise WebRTC platform for browser-based voice, video & chat',
+    color: 'bg-cyan-500/15 border-cyan-500/20',
+    textColor: 'text-cyan-400',
+    hoverBg: 'hover:bg-cyan-500/25',
+    url: 'https://www.wildix.com/kite/',
+    icon: '\uD83D\uDD35',
+    status: 'not_installed',
+    type: 'webrtc',
+  },
+]
+
 function isOfficeHours(): boolean {
   const now = new Date()
   const ist = new Date(now.toLocaleString('en-US', { timeZone: 'Asia/Kolkata' }))
@@ -104,6 +187,8 @@ export default function DirectCallWidget() {
   const [copied, setCopied] = useState<string | null>(null)
   const [showCallback, setShowCallback] = useState(false)
   const [showDownloads, setShowDownloads] = useState(false)
+  const [showSolutions, setShowSolutions] = useState(false)
+  const [activeCallingApp, setActiveCallingApp] = useState<string | null>(null)
   const [pendingCallLine, setPendingCallLine] = useState<PhoneLine | null>(null)
   const [cbForm, setCbForm] = useState({ name: '', phone: '' })
   const [cbSent, setCbSent] = useState(false)
@@ -121,13 +206,36 @@ export default function DirectCallWidget() {
       setIsOpen(true)
       setShowDownloads(true)
       setShowCallback(false)
+      setShowSolutions(false)
     }
     window.addEventListener('ghl-show-downloads', handleShowDownloads)
+
+    // Listen for voice widget "calling solutions" command
+    const handleShowSolutions = () => {
+      setIsOpen(true)
+      setShowSolutions(true)
+      setShowCallback(false)
+      setShowDownloads(false)
+    }
+    window.addEventListener('ghl-show-solutions', handleShowSolutions)
+
+    // Detect which calling app is currently active/installed (browser-based check)
+    const detectCallingApp = () => {
+      // Check if tel: protocol handler is registered (indicates Skype/Teams/etc.)
+      const hasProtocol = 'registerProtocolHandler' in navigator
+      // Check for common calling extensions via user agent or installed PWAs
+      const ua = navigator.userAgent || ''
+      if (ua.includes('Teams')) setActiveCallingApp('Microsoft Teams')
+      else if (ua.includes('Skype')) setActiveCallingApp('Skype')
+      else setActiveCallingApp(null) // No specific app detected
+    }
+    detectCallingApp()
 
     return () => {
       clearInterval(interval)
       clearTimeout(pulseTimer)
       window.removeEventListener('ghl-show-downloads', handleShowDownloads)
+      window.removeEventListener('ghl-show-solutions', handleShowSolutions)
     }
   }, [])
 
@@ -199,6 +307,7 @@ export default function DirectCallWidget() {
     setShowPulse(false)
     setShowCallback(false)
     setShowDownloads(false)
+    setShowSolutions(false)
     setPendingCallLine(null)
   }
 
@@ -267,7 +376,7 @@ export default function DirectCallWidget() {
               <div>
                 <div className="flex items-center gap-2">
                   <span className="text-white text-xs font-bold tracking-wide">
-                    {calling ? 'CONNECTING...' : showDownloads ? 'GET CALLING APP' : 'DIRECT CALL'}
+                    {calling ? 'CONNECTING...' : showSolutions ? 'WEB CALLING SOLUTIONS' : showDownloads ? 'GET CALLING APP' : 'DIRECT CALL'}
                   </span>
                   {isMobile ? (
                     <span className="flex items-center gap-1 px-1.5 py-0.5 rounded bg-green-500/10 text-[8px] text-green-400 font-medium">
@@ -276,6 +385,11 @@ export default function DirectCallWidget() {
                   ) : (
                     <span className="flex items-center gap-1 px-1.5 py-0.5 rounded bg-blue-500/10 text-[8px] text-blue-400 font-medium">
                       <Monitor className="w-2.5 h-2.5" /> Desktop
+                    </span>
+                  )}
+                  {activeCallingApp && (
+                    <span className="flex items-center gap-1 px-1.5 py-0.5 rounded bg-emerald-500/10 text-[8px] text-emerald-400 font-medium">
+                      <Zap className="w-2.5 h-2.5" /> {activeCallingApp}
                     </span>
                   )}
                 </div>
@@ -344,7 +458,7 @@ export default function DirectCallWidget() {
           )}
 
           {/* DESKTOP VIEW — Phone numbers + calling options */}
-          {!isMobile && !showCallback && !showDownloads && (
+          {!isMobile && !showCallback && !showDownloads && !showSolutions && (
             <div className="p-3 space-y-3">
               <div className="px-3 py-2 rounded-lg bg-blue-500/10 border border-blue-500/10">
                 <p className="text-[10px] text-blue-300 leading-relaxed">
@@ -407,11 +521,20 @@ export default function DirectCallWidget() {
                 <Download className="w-3 h-3" />
                 <span>No calling app? Download one free</span>
               </button>
+
+              {/* Link to web calling solutions */}
+              <button
+                onClick={() => { setShowSolutions(true); setShowDownloads(false) }}
+                className="w-full flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg bg-indigo-500/10 hover:bg-indigo-500/20 border border-indigo-500/15 text-[9px] text-indigo-400 hover:text-indigo-300 font-medium transition-all"
+              >
+                <Plug className="w-3 h-3" />
+                <span>Web Calling Solutions &amp; Integrations</span>
+              </button>
             </div>
           )}
 
           {/* DOWNLOAD CALLING APPS PANEL (desktop) */}
-          {!isMobile && showDownloads && !showCallback && (
+          {!isMobile && showDownloads && !showCallback && !showSolutions && (
             <div className="p-3 space-y-2.5">
               <div className="flex items-center gap-2 mb-1">
                 <button
@@ -464,6 +587,115 @@ export default function DirectCallWidget() {
 
               <p className="text-[8px] text-gray-600 text-center px-2 leading-relaxed">
                 After installing, click &quot;Call App&quot; on any number and it will connect automatically.
+              </p>
+            </div>
+          )}
+
+          {/* WEB CALLING SOLUTIONS PANEL (desktop) */}
+          {!isMobile && showSolutions && !showCallback && !showDownloads && (
+            <div className="p-3 space-y-2.5">
+              <div className="flex items-center gap-2 mb-1">
+                <button
+                  onClick={() => setShowSolutions(false)}
+                  className="p-1 rounded-lg hover:bg-white/10 text-gray-400 hover:text-white transition-colors"
+                >
+                  <ArrowLeft className="w-3.5 h-3.5" />
+                </button>
+                <Plug className="w-4 h-4 text-indigo-400" />
+                <span className="text-white text-xs font-bold">Web Calling Solutions</span>
+              </div>
+
+              <p className="text-gray-400 text-[10px] leading-relaxed px-1">
+                Click-to-call &amp; WebRTC solutions for browser-based calling integration:
+              </p>
+
+              {/* Active calling app indicator */}
+              <div className="px-3 py-2 rounded-lg bg-emerald-500/10 border border-emerald-500/15">
+                <div className="flex items-center gap-2">
+                  <Shield className="w-3.5 h-3.5 text-emerald-400" />
+                  <div>
+                    <p className="text-[10px] text-emerald-300 font-medium">
+                      Active Browser Calling: {activeCallingApp || 'Native tel: handler (default)'}
+                    </p>
+                    <p className="text-[8px] text-emerald-400/60 mt-0.5">
+                      {activeCallingApp
+                        ? `${activeCallingApp} is handling click-to-call on this device`
+                        : 'Using system default tel: protocol handler for calls'}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Solutions list */}
+              <div className="max-h-[280px] overflow-y-auto space-y-2 pr-1" style={{ scrollbarWidth: 'thin', scrollbarColor: 'rgba(99,102,241,0.3) transparent' }}>
+                {WEB_CALLING_SOLUTIONS.map(solution => (
+                  <div
+                    key={solution.name}
+                    className={`rounded-xl border overflow-hidden transition-all ${solution.color}`}
+                  >
+                    <div className="flex items-start gap-3 px-3 py-2.5">
+                      <span className="text-base shrink-0 mt-0.5">{solution.icon}</span>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-1.5">
+                          <p className="text-[11px] font-bold text-white">{solution.name}</p>
+                          <span className={`px-1.5 py-0.5 rounded text-[7px] font-bold uppercase tracking-wider ${
+                            solution.type === 'click-to-call' ? 'bg-green-500/15 text-green-400' :
+                            solution.type === 'webrtc' ? 'bg-blue-500/15 text-blue-400' :
+                            'bg-purple-500/15 text-purple-400'
+                          }`}>
+                            {solution.type === 'click-to-call' ? 'Click-to-Call' : solution.type === 'webrtc' ? 'WebRTC' : 'SDK'}
+                          </span>
+                        </div>
+                        <p className="text-[9px] text-gray-400 mt-0.5 leading-relaxed">{solution.desc}</p>
+                        <div className="flex items-center gap-2 mt-1.5">
+                          {/* Integration status */}
+                          <span className={`flex items-center gap-1 text-[8px] font-medium ${
+                            solution.status === 'active' ? 'text-green-400' :
+                            solution.status === 'installed' ? 'text-yellow-400' :
+                            'text-gray-500'
+                          }`}>
+                            <span className={`w-1.5 h-1.5 rounded-full ${
+                              solution.status === 'active' ? 'bg-green-400 animate-pulse' :
+                              solution.status === 'installed' ? 'bg-yellow-400' :
+                              'bg-gray-600'
+                            }`} />
+                            {solution.status === 'active' ? 'Active' :
+                             solution.status === 'installed' ? 'Installed' :
+                             'Not Installed'}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                    {/* Action buttons */}
+                    <div className="flex border-t border-white/5">
+                      <a
+                        href={solution.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className={`flex-1 flex items-center justify-center gap-1.5 px-2 py-2 text-[9px] font-medium ${solution.textColor} hover:bg-white/5 transition-all`}
+                      >
+                        {solution.status === 'not_installed' ? (
+                          <><Download className="w-3 h-3" /><span>Download / Setup</span></>
+                        ) : (
+                          <><ExternalLink className="w-3 h-3" /><span>Open Dashboard</span></>
+                        )}
+                      </a>
+                      <a
+                        href={solution.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center justify-center gap-1.5 px-3 py-2 text-[9px] font-medium text-gray-400 hover:text-white hover:bg-white/5 transition-all border-l border-white/5"
+                      >
+                        <Globe className="w-3 h-3" />
+                        <span>Docs</span>
+                      </a>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <p className="text-[8px] text-gray-600 text-center px-2 leading-relaxed">
+                These solutions enable browser-based calling without requiring users to install desktop apps.
               </p>
             </div>
           )}
