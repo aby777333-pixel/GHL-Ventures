@@ -14,7 +14,7 @@ const ASSETS = [
   { id: 'nifty', name: 'NIFTY 50', rate: 14.0, color: '#3B82F6', taxRate: 0.125 },
   { id: 'realestate', name: 'Real Estate', rate: 8.0, color: '#22C55E', taxRate: 0.125 },
   { id: 'mf_equity', name: 'Equity MF', rate: 13.0, color: '#8B5CF6', taxRate: 0.125 },
-  { id: 'ghl_deb', name: 'GHL Debenture', rate: 16.0, color: '#D0021B', taxRate: 0.30 },
+  { id: 'ghl_deb', name: 'GHL Co-Invest', rate: 16.0, color: '#D0021B', taxRate: 0.30 },
   { id: 'ghl_aif', name: 'GHL AIF', rate: 20.0, color: '#EF4444', taxRate: 0.125 },
 ]
 

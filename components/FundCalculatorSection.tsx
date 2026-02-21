@@ -32,7 +32,7 @@ const VEHICLES = [
   { id: 'nifty', name: 'NIFTY 50 Index', rate: 12.5, color: '#8B5CF6', risk: 'Medium', icon: TrendingUp },
   { id: 'pms', name: 'Portfolio Mgmt (PMS)', rate: 16.0, color: '#EC4899', risk: 'Med-High', icon: Trophy },
   { id: 'realestate', name: 'Direct Real Estate', rate: 8.0, color: '#22C55E', risk: 'Medium', icon: Scale },
-  { id: 'ghl-deb', name: 'GHL Debenture Route', rate: 16.0, color: '#D0021B', risk: 'Med-High', icon: Zap, isGHL: true },
+  { id: 'ghl-deb', name: 'GHL Co-Invest Framework', rate: 16.0, color: '#D0021B', risk: 'Med-High', icon: Zap, isGHL: true },
   { id: 'ghl-aif', name: 'GHL Direct AIF', rate: 22.0, color: '#D0021B', risk: 'High', icon: Star, isGHL: true },
 ]
 
@@ -64,9 +64,9 @@ const GHL_ADVANTAGES = [
     vs: 'vs. passive FDs, index funds, and gold',
   },
   {
-    title: 'Accessible Entry at ₹10 Lakhs',
-    desc: 'Through our Debenture Route, salaried professionals can access alternative investments that were traditionally limited to ₹1 Crore+ investors.',
-    vs: 'vs. most AIFs requiring ₹1 Crore minimum',
+    title: 'Accessible Entry via Co-Invest Framework',
+    desc: 'Through our SEBI Co-Invest Framework, salaried professionals can access alternative investments that were traditionally limited to institutional investors.',
+    vs: 'vs. most AIFs with higher minimum thresholds',
   },
 ]
 
@@ -159,7 +159,7 @@ export default function FundCalculatorSection({
                             : 'text-brand-grey hover:text-brand-black'
                         }`}
                       >
-                        <IndianRupee className="w-3.5 h-3.5" /> Debenture
+                        <IndianRupee className="w-3.5 h-3.5" /> Co-Invest
                       </button>
                     </div>
                   )}
@@ -170,7 +170,7 @@ export default function FundCalculatorSection({
                     </div>
                     <div>
                       <h3 className="text-brand-black text-lg font-bold">
-                        {activeCalc === 'aif' ? 'Direct AIF Calculator' : 'Debenture Route Calculator'}
+                        {activeCalc === 'aif' ? 'Direct AIF Calculator' : 'Co-Invest Framework Calculator'}
                       </h3>
                       <p className="text-brand-grey text-xs">Adjust parameters to see projected returns</p>
                     </div>

@@ -35,7 +35,7 @@ const NAV_HISTORY = [
 const ALLOCATION_DATA = [
   { name: 'Stressed RE', value: 45, color: '#D0021B' },
   { name: 'Early-Stage', value: 25, color: '#FF4444' },
-  { name: 'Debentures', value: 20, color: '#FF8888' },
+  { name: 'Co-Invest', value: 20, color: '#FF8888' },
   { name: 'Cash/Liquid', value: 10, color: '#1A1A1A' },
 ]
 
@@ -68,8 +68,8 @@ const PORTFOLIO_ASSETS = [
     icon: Rocket,
   },
   {
-    name: 'GHL NCD Series A',
-    type: 'Debenture',
+    name: 'GHL Co-Invest Series A',
+    type: 'Co-Invest Instrument',
     invested: 1500000,
     current: 1627500,
     returnPct: 8.5,
@@ -79,7 +79,7 @@ const PORTFOLIO_ASSETS = [
 ]
 
 const RECENT_TRANSACTIONS = [
-  { date: '15 Mar 2025', type: 'Investment', amount: 1500000, fund: 'GHL NCD Series A', status: 'completed' },
+  { date: '15 Mar 2025', type: 'Investment', amount: 1500000, fund: 'GHL Co-Invest Series A', status: 'completed' },
   { date: '01 Mar 2025', type: 'Dividend', amount: 125000, fund: 'Phoenix Towers', status: 'completed' },
   { date: '15 Feb 2025', type: 'Investment', amount: 1000000, fund: 'TechStar AI', status: 'completed' },
   { date: '01 Feb 2025', type: 'NAV Update', amount: 0, fund: 'All Funds', status: 'info' },
@@ -534,7 +534,7 @@ export default function DashboardClient() {
         iconColor: '#10B981',
       },
       {
-        label: 'Debenture Value',
+        label: 'Co-Invest Value',
         value: `\u20B9${formatINR(debentureValue)}`,
         change: '+8.5%',
         up: true,
@@ -911,7 +911,7 @@ export default function DashboardClient() {
           {
             title: 'Category II AIF - Direct Route',
             desc: 'Invest directly in the SEBI-registered AIF with exposure to stressed real estate and early-stage startups.',
-            min: '\u20B91 Crore',
+            min: 'As per SEBI AIF Regulations',
             targetReturn: '18-22% IRR',
             tenure: '5-7 Years',
             risk: 'High',
@@ -919,9 +919,9 @@ export default function DashboardClient() {
             color: '#D0021B',
           },
           {
-            title: 'Debenture Route (NCD)',
-            desc: 'Non-Convertible Debenture structure offering fixed returns with exposure to the same asset pool.',
-            min: '\u20B910 Lakhs',
+            title: 'SEBI Co-Invest Framework',
+            desc: 'SEBI-regulated co-invest structure offering fixed returns with exposure to the same asset pool.',
+            min: 'Contact for details',
             targetReturn: '12-15% p.a.',
             tenure: '3-5 Years',
             risk: 'Moderate',

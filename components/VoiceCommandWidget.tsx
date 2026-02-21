@@ -383,8 +383,13 @@ export default function VoiceCommandWidget() {
     utterance.onend = () => setIsSpeaking(false)
     utterance.onerror = () => setIsSpeaking(false)
 
-    // ── Robust voice selection ──
-    const voices = synthRef.current.getVoices()
+    // ── Robust voice selection (Chrome loads voices async) ──
+    let voices = synthRef.current.getVoices()
+    // Retry voice load if empty (Chrome quirk)
+    if (voices.length === 0) {
+      synthRef.current.cancel()
+      voices = synthRef.current.getVoices()
+    }
     const langPrefix = useLang.split('-')[0] // e.g. 'ml' from 'ml-IN'
 
     // Priority 1: Exact match (e.g. 'ml-IN')
@@ -408,7 +413,7 @@ export default function VoiceCommandWidget() {
   }, [language])
 
   const readPageContent = useCallback(() => {
-    const main = document.getElementById('main-content')
+    const main = document.getElementById('main-content') || document.querySelector('main') || document.querySelector('[role="main"]') || document.body
     if (!main) {
       setFeedback('No content found to read.')
       return
@@ -1201,7 +1206,7 @@ export default function VoiceCommandWidget() {
         break
       }
       case 'minimuminvest': {
-        const minMsg = 'The minimum investment for the Direct AIF Route is 1 Crore as mandated by SEBI. For the Debenture Route, minimum investment starts at 10 Lakhs.'
+        const minMsg = 'The minimum investment for the Direct AIF Route is as per SEBI AIF Regulations. We also offer a SEBI Co-Invest Framework for professionals. Contact our team for details.'
         setFeedback(minMsg)
         speak(minMsg)
         break

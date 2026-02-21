@@ -14,11 +14,11 @@ const FAQ_CATEGORIES = [
     items: [
       {
         q: 'What is the minimum investment amount?',
-        a: 'The minimum investment in GHL India Ventures\' Category II AIF is ₹1 Crore, in line with SEBI regulations. The investment can be drawn down in tranches over the commitment period, so the entire amount is not required upfront.',
+        a: 'The minimum investment in GHL India Ventures\' Category II AIF is as per SEBI AIF Regulations. The investment can be drawn down in tranches over the commitment period, so the entire amount is not required upfront.',
       },
       {
         q: 'Who can invest in GHL India Ventures?',
-        a: 'Our fund is open to Indian residents, NRIs, HUFs, trusts, corporate bodies, and other eligible entities as defined by SEBI. Each investor must meet the minimum commitment of ₹1 Crore and complete KYC documentation.',
+        a: 'Our fund is open to Indian residents, NRIs, HUFs, trusts, corporate bodies, and other eligible entities as defined by SEBI. Each investor must meet the minimum commitment as per SEBI AIF Regulations and complete KYC documentation.',
       },
       {
         q: 'How do I start investing?',
@@ -29,8 +29,8 @@ const FAQ_CATEGORIES = [
         a: 'Standard KYC documents include PAN card, Aadhaar card, address proof, bank statement (last 6 months), passport-size photograph, and a completed FATCA declaration. NRIs will need additional documentation including overseas address proof and NRE/NRO account details.',
       },
       {
-        q: 'Is there a Debenture Route for smaller investments?',
-        a: 'Yes. For investors who may not meet the ₹1 Crore AIF minimum, we offer a Debenture Route via Non-Convertible Debentures (NCDs) with a minimum investment of ₹10 Lakhs. This provides exposure to similar underlying strategies with a different instrument structure.',
+        q: 'Is there a co-invest option for professionals?',
+        a: 'Yes. We offer a SEBI Co-Invest Framework designed for salaried professionals. This provides exposure to similar underlying strategies with a structured investment framework. Contact our team for minimum investment details and eligibility.',
       },
       {
         q: 'Can NRIs invest in GHL India Ventures?',

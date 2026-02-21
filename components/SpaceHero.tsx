@@ -16,7 +16,7 @@
  *   lightning     — Disclaimer page: bright lightning + storm flashes
  *   aurora        — Home hero: northern lights aurora borealis + meteor shower
  *   blackhole     — Fund/Direct AIF: gravitational lensing black hole + accretion disk
- *   supernova     — Fund/Debenture: expanding supernova explosion + shockwave
+ *   supernova     — Fund/SEBI Co-Invest: expanding supernova explosion + shockwave
  *   wormhole      — Tools page: spinning wormhole tunnel + time-space distortion
  *   city          — Why AIFs page: urban skyline silhouette + financial district + metro glow
  *   comet         — FAQs page: bright comet with ion + dust tails
@@ -652,7 +652,7 @@ export default function SpaceHero({ variant }: SpaceHeroProps) {
       )}
 
       {/* ═══════════════════════════════════════════════════════════
-          ★ SUPERNOVA — Fund/Debenture Route ★
+          ★ SUPERNOVA — Fund/SEBI Co-Invest Framework ★
           Expanding supernova explosion + shockwave rings + debris
          ═══════════════════════════════════════════════════════════ */}
       {variant === 'supernova' && (

@@ -54,18 +54,18 @@ const SECTIONS = [
     videoLabel: '[VIDEO: Investment Guide Walkthrough]',
   },
   {
-    id: 'report',
+    id: 'nav',
     icon: BarChart3,
-    title: 'Annual Report',
-    description: 'Fund performance, portfolio snapshot, compliance updates, and outlook.',
+    title: 'NAV',
+    description: 'Net Asset Value reports, fund performance, portfolio snapshot, and compliance updates.',
     document: {
-      title: 'Annual Report 2024',
-      desc: 'Comprehensive performance report including portfolio company updates, NAV progression, sector-wise performance analysis, compliance disclosures, and the outlook for the upcoming year.',
+      title: 'NAV Report 2024',
+      desc: 'Comprehensive NAV report including portfolio company updates, NAV progression, sector-wise performance analysis, compliance disclosures, and the outlook for the upcoming year.',
       lastUpdated: 'March 2025',
       fileSize: '6.1 MB',
       fileType: 'PDF',
     },
-    videoLabel: '[VIDEO: Annual Report Walkthrough]',
+    videoLabel: '[VIDEO: NAV Report Walkthrough]',
   },
 ]
 

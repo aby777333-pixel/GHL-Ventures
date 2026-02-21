@@ -66,7 +66,7 @@ const DOWNLOAD_LINKS = [
   { label: 'Corporate Brochure', href: '/downloads#corporate-brochure' },
   { label: 'Investment Roadmap', href: '/downloads#investment-roadmap' },
   { label: 'Investment Guide', href: '/downloads#investment-guide' },
-  { label: 'Annual Report', href: '/downloads#annual-report' },
+  { label: 'NAV Report', href: '/downloads#nav' },
 ]
 
 const QUICK_LINKS = NAV_LINKS.filter((link) =>

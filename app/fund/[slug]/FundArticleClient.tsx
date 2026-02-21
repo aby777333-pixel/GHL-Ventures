@@ -230,7 +230,7 @@ export default function FundArticleClient({ article, content, relatedArticles, s
                   <h3 className="text-2xl font-bold text-white mb-3">Want to invest?</h3>
                   <p className="text-gray-400 text-sm mb-6 max-w-lg mx-auto">
                     Learn how our SEBI-registered Category II AIF can help you access
-                    institutional-grade alternative investments starting at Rs 1 Crore.
+                    institutional-grade alternative investments as per SEBI AIF Regulations.
                   </p>
                   <Link
                     href="/contact"

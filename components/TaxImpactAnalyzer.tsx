@@ -94,10 +94,10 @@ const INVESTMENTS = [
   },
   {
     id: 'ghl_deb',
-    name: 'GHL Debenture',
+    name: 'GHL Co-Invest',
     preRate: 16.0,
     taxType: 'slab' as const,
-    description: 'Listed NCD — interest/gains taxed at slab rate',
+    description: 'Co-invest instrument — interest/gains taxed at slab rate',
     color: '#D0021B',
     section: 'Interest Income',
     stcg: null,
@@ -262,7 +262,7 @@ export default function TaxImpactAnalyzer({ isOpen, onClose }: TaxImpactAnalyzer
           <div className="flex items-center gap-2 bg-sky-500/10 border border-sky-500/20 rounded-lg px-4 py-2">
             <Percent className="w-4 h-4 text-sky-400 shrink-0" />
             <span className="text-xs text-sky-300">
-              Showing post-tax returns at <strong>{(slabRate * 100).toFixed(0)}% income tax slab</strong>. Slab-taxed investments (FD, Debt MF, Debentures) are impacted most by your tax bracket.
+              Showing post-tax returns at <strong>{(slabRate * 100).toFixed(0)}% income tax slab</strong>. Slab-taxed investments (FD, Debt MF, Co-Invest instruments) are impacted most by your tax bracket.
             </span>
           </div>
 

@@ -23,7 +23,7 @@ const NAV_TARGETS: Record<string, NavigationTarget> = {
   downloads:      { path: '/downloads', label: 'Downloads' },
   'financial iq': { path: '/financial-iq', label: 'Financial IQ' },
   financial:      { path: '/financial-iq', label: 'Financial IQ' },
-  debenture:      { path: '/fund/debenture-route', label: 'Debenture Route' },
+  debenture:      { path: '/fund/debenture-route', label: 'SEBI Co-Invest Framework' },
   'direct aif':   { path: '/fund/direct-aif', label: 'Direct AIF' },
   direct:         { path: '/fund/direct-aif', label: 'Direct AIF' },
   login:          { path: '/login', label: 'Login' },
@@ -38,7 +38,7 @@ const NAV_TARGETS: Record<string, NavigationTarget> = {
   '\u0938\u0902\u092A\u0930\u094D\u0915':       { path: '/contact', label: 'Contact' }, // sampark
   '\u092A\u094B\u0930\u094D\u091F\u092B\u094B\u0932\u093F\u092F\u094B': { path: '/portfolio', label: 'Portfolio' },
   '\u0921\u093E\u0909\u0928\u0932\u094B\u0921':    { path: '/downloads', label: 'Downloads' },
-  '\u0921\u093F\u092C\u0947\u0902\u091A\u0930':    { path: '/fund/debenture-route', label: 'Debenture' },
+  '\u0921\u093F\u092C\u0947\u0902\u091A\u0930':    { path: '/fund/debenture-route', label: 'को-इन्वेस्ट' },
   '\u0932\u0949\u0917\u093F\u0928':        { path: '/login', label: 'Login' },
   '\u092A\u0902\u091C\u0940\u0915\u0930\u0923':    { path: '/register', label: 'Register' },
   // Tamil
@@ -166,7 +166,7 @@ const INTENT_PATTERNS: IntentPattern[] = [
   ], priority: 5 },
 
   { intent: 'minimum_investment', keywords: [
-    'minimum', 'minimum investment', 'how much', 'entry amount', '1 crore', 'one crore', '10 lakh',
+    'minimum', 'minimum investment', 'how much', 'entry amount',
     '\u0928\u094D\u092F\u0942\u0928\u0924\u092E', '\u0915\u093F\u0924\u0928\u093E \u092A\u0948\u0938\u093E', '\u090F\u0915 \u0915\u0930\u094B\u0921\u093C', '\u0926\u0938 \u0932\u093E\u0916',
     '\u0B95\u0BC1\u0BB1\u0BC8\u0BA8\u0BCD\u0BA4\u0BAA\u0B9F\u0BCD\u0B9A\u0BAE\u0BCD', '\u0B8E\u0BB5\u0BCD\u0BB5\u0BB3\u0BB5\u0BC1',
     '\u0C0E\u0C02\u0C24', '\u0C15\u0C28\u0C40\u0C38\u0C02',
@@ -191,8 +191,8 @@ const INTENT_PATTERNS: IntentPattern[] = [
   { intent: 'real_estate', keywords: ['real estate', 'property', 'stressed asset', 'nclt', '\u0930\u093F\u092F\u0932 \u090F\u0938\u094D\u091F\u0947\u091F', '\u0938\u0902\u092A\u0924\u094D\u0924\u093F'], priority: 4 },
   { intent: 'startups', keywords: ['startup', 'early stage', 'venture', 'tech', '\u0938\u094D\u091F\u093E\u0930\u094D\u091F\u0905\u092A'], priority: 3 },
   { intent: 'portfolio', keywords: ['portfolio', 'companies', 'investments', 'holdings', '\u092A\u094B\u0930\u094D\u091F\u092B\u094B\u0932\u093F\u092F\u094B', '\u0915\u0902\u092A\u0928\u093F\u092F\u093E\u0902'], priority: 3 },
-  { intent: 'debenture', keywords: ['debenture', 'ncd', 'fixed income', 'debt', '10 lakh', '\u0921\u093F\u092C\u0947\u0902\u091A\u0930'], priority: 5 },
-  { intent: 'direct_aif', keywords: ['direct aif', 'category ii', 'direct route', '1 crore', '\u0921\u093E\u092F\u0930\u0947\u0915\u094D\u091F'], priority: 5 },
+  { intent: 'debenture', keywords: ['debenture', 'co-invest', 'co invest', 'ncd', 'fixed income', 'debt', '\u0921\u093F\u092C\u0947\u0902\u091A\u0930'], priority: 5 },
+  { intent: 'direct_aif', keywords: ['direct aif', 'category ii', 'direct route', '\u0921\u093E\u092F\u0930\u0947\u0915\u094D\u091F'], priority: 5 },
   { intent: 'compare_routes', keywords: ['compare', 'difference', 'which is better', 'vs', '\u0924\u0941\u0932\u0928\u093E', '\u0905\u0902\u0924\u0930'], priority: 4 },
   { intent: 'fd_comparison', keywords: ['fixed deposit', 'fd', 'bank', 'mutual fund', 'pms', '\u090F\u092B\u0921\u0940', '\u092C\u0948\u0902\u0915'], priority: 3 },
   { intent: 'eligibility', keywords: ['eligible', 'eligibility', 'who can invest', 'hni', '\u092A\u093E\u0924\u094D\u0930\u0924\u093E', '\u092F\u094B\u0917\u094D\u092F\u0924\u093E'], priority: 3 },

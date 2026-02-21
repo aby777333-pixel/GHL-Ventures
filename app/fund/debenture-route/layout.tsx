@@ -1,11 +1,11 @@
 import type { Metadata } from 'next'
 
 export const metadata: Metadata = {
-  title: 'Debenture Route | Invest from 10 Lakhs | GHL India',
-  description: 'GHL India Ventures Debenture Route: NCD investment from 10 Lakhs. Access stressed real estate returns via structured investment.',
+  title: 'SEBI Co-Invest Framework | Structured Investment | GHL India',
+  description: 'GHL India Ventures SEBI Co-Invest Framework: Structured co-invest opportunity. Access stressed real estate returns via regulated investment.',
   openGraph: {
-    title: 'Debenture Route | 10 Lakhs Entry | GHL India Ventures',
-    description: 'Structured NCD investment starting at 10 Lakhs with exposure to stressed real estate recovery.',
+    title: 'SEBI Co-Invest Framework | Structured Investment | GHL India Ventures',
+    description: 'Structured co-invest opportunity with exposure to stressed real estate recovery. Contact for details.',
     url: 'https://ghl-india-ventures-2025.netlify.app/fund/debenture-route',
   },
   alternates: {

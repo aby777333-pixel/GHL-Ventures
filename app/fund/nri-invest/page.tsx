@@ -94,8 +94,8 @@ function NRIInvestContent() {
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-12 max-w-4xl">
               {[
                 { label: 'NRI Corridors Served', value: '15+', icon: <Globe className="w-5 h-5" /> },
-                { label: 'Min AIF Investment', value: '₹1 Cr', icon: <IndianRupee className="w-5 h-5" /> },
-                { label: 'Debenture Route From', value: '₹10L', icon: <Banknote className="w-5 h-5" /> },
+                { label: 'AIF Investment', value: 'As per SEBI', icon: <IndianRupee className="w-5 h-5" /> },
+                { label: 'Co-Invest Framework', value: 'Contact Us', icon: <Banknote className="w-5 h-5" /> },
                 { label: 'FEMA Compliant', value: '100%', icon: <Shield className="w-5 h-5" /> },
               ].map((stat) => (
                 <div key={stat.label} className="text-center p-4 rounded-xl border border-white/10 bg-white/[0.03] backdrop-blur-sm">
@@ -275,7 +275,7 @@ function NRIInvestContent() {
                       </div>
                     </div>
                     <div className="text-3xl font-bold text-white">
-                      ₹1 Crore <span className="text-sm font-normal text-white/60">minimum</span>
+                      As per SEBI <span className="text-sm font-normal text-white/60">AIF Regulations</span>
                     </div>
                   </div>
                 </div>
@@ -314,18 +314,18 @@ function NRIInvestContent() {
                         <Banknote className="w-5 h-5 text-white" />
                       </div>
                       <div>
-                        <h3 className="text-white font-bold text-lg">Debenture Route</h3>
+                        <h3 className="text-white font-bold text-lg">SEBI Co-Invest Framework</h3>
                         <p className="text-white/70 text-xs">Accessible Entry Point</p>
                       </div>
                     </div>
                     <div className="text-3xl font-bold text-white">
-                      ₹10 Lakhs <span className="text-sm font-normal text-white/60">minimum</span>
+                      Contact Us <span className="text-sm font-normal text-white/60">for details</span>
                     </div>
                   </div>
                 </div>
                 <div className="p-6 space-y-3">
                   {[
-                    'Non-Convertible Debenture (NCD) structure',
+                    'SEBI-compliant co-invest structure',
                     'Asset-backed security',
                     'Fixed coupon structure',
                     'Target returns: 14–18% p.a.',
@@ -341,7 +341,7 @@ function NRIInvestContent() {
                   ))}
                   <div className="pt-4">
                     <Link href="/fund/debenture-route" className="inline-flex items-center justify-center gap-2 w-full px-6 py-2.5 text-sm border-2 border-brand-red text-brand-red font-bold rounded-lg hover:bg-brand-red hover:text-white transition-all">
-                      Explore Debenture Route <ArrowRight className="w-4 h-4" />
+                      Explore Co-Invest Framework <ArrowRight className="w-4 h-4" />
                     </Link>
                   </div>
                 </div>
@@ -548,7 +548,7 @@ function NRIInvestContent() {
                   </h3>
                   <p className="text-sm text-brand-grey mb-4 leading-relaxed">
                     15 comprehensive chapters covering everything NRIs need to know:
-                    FEMA compliance, AIF vs Debenture routes, country-specific tax guidance,
+                    FEMA compliance, AIF vs Co-Invest routes, country-specific tax guidance,
                     repatriation rules, and step-by-step onboarding.
                   </p>
                   <div className="space-y-2 mb-6">
@@ -910,10 +910,10 @@ function ConsultationForm() {
                       className="input-field w-full"
                     >
                       <option value="">Select range</option>
-                      <option value="10L-50L">₹10 Lakhs – ₹50 Lakhs</option>
-                      <option value="50L-1Cr">₹50 Lakhs – ₹1 Crore</option>
-                      <option value="1Cr-5Cr">₹1 Crore – ₹5 Crore</option>
-                      <option value="5Cr+">₹5 Crore+</option>
+                      <option value="10L-50L">Contact for Co-Invest Details</option>
+                      <option value="50L-1Cr">As per SEBI AIF Regulations</option>
+                      <option value="1Cr-5Cr">Multiple Crores</option>
+                      <option value="5Cr+">Large Allocation</option>
                     </select>
                   </div>
                   <div>
@@ -924,8 +924,8 @@ function ConsultationForm() {
                       className="input-field w-full"
                     >
                       <option value="">Select route</option>
-                      <option value="direct-aif">Direct AIF Route (₹1 Cr+)</option>
-                      <option value="debenture">Debenture Route (₹10L+)</option>
+                      <option value="direct-aif">Direct AIF Route</option>
+                      <option value="debenture">SEBI Co-Invest Framework</option>
                       <option value="unsure">Not sure yet — need guidance</option>
                     </select>
                   </div>

@@ -185,7 +185,7 @@ export default function Blog5PillarGuide() {
         caption="SEBI Regulatory Requirements"
         headers={['Requirement', 'Specification']}
         rows={[
-          ['Minimum Investment', '₹1 Crore per investor'],
+          ['Minimum Investment', 'As per SEBI AIF Regulations'],
           ['Minimum Corpus', '₹20 Crore per scheme'],
           ['Maximum Exposure', '25% to single investee company'],
           ['Trusteeship', 'Independent trustee mandatory'],
@@ -239,7 +239,7 @@ export default function Blog5PillarGuide() {
         headers={['Feature', 'Category II AIF India', 'PMS', 'Mutual Funds']}
         rows={[
           ['Asset Class', 'Private markets', 'Listed equity', 'Listed securities'],
-          ['Minimum Investment', '₹1 Crore', '₹50 Lakh', '₹500+'],
+          ['Minimum Investment', 'As per SEBI Regulations', '₹50 Lakh', '₹500+'],
           ['Liquidity', 'Low (lock-in)', 'Moderate', 'High'],
           ['Target Returns', '18–30% IRR', 'Market-linked', 'Market-linked'],
           ['Governance', 'SEBI AIF Regulated', 'SEBI PMS Regulated', 'SEBI MF Regulated'],
@@ -266,7 +266,7 @@ export default function Blog5PillarGuide() {
       <P>Ideal investors include:</P>
 
       <BulletList items={[
-        'High Net-Worth Individuals (HNIs) with ₹1 Crore+ investable surplus',
+        'High Net-Worth Individuals (HNIs) meeting SEBI AIF investment requirements',
         'Ultra HNIs seeking private market diversification',
         'Family offices looking for structured alternative exposure',
         'Institutional investors allocating to alternative strategies',
@@ -313,11 +313,11 @@ export default function Blog5PillarGuide() {
         },
         {
           q: 'Who can invest in a Category II AIF?',
-          a: 'Category II AIFs are designed for High Net-Worth Individuals (HNIs), Ultra HNIs, family offices, institutional investors, and corporate treasuries. The minimum investment is ₹1 Crore per investor as mandated by SEBI.',
+          a: 'Category II AIFs are designed for High Net-Worth Individuals (HNIs), Ultra HNIs, family offices, institutional investors, and corporate treasuries. The minimum investment is as per SEBI AIF regulations.',
         },
         {
           q: 'What is the minimum investment in Category II AIF India?',
-          a: 'The minimum investment required for a Category II AIF in India is ₹1 Crore per investor, as mandated by SEBI. GHL India Ventures also offers a Debenture Route starting at ₹10 Lakhs for broader accessibility.',
+          a: 'The minimum investment required for a Category II AIF in India is as per SEBI regulations. GHL India Ventures also offers the SEBI Co-Invest Framework for broader accessibility. Contact us for current investment details.',
         },
         {
           q: 'What returns do Category II AIFs generate?',

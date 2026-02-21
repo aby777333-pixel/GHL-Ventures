@@ -13,7 +13,7 @@ const SOCIAL_PROOF_DATA: SocialProofEntry[] = [
   { city: 'Mumbai', action: 'scheduled a consultation', timeAgo: '2 minutes ago' },
   { city: 'Bengaluru', action: 'downloaded the fund brochure', timeAgo: '5 minutes ago' },
   { city: 'Chennai', action: 'started an investment inquiry', timeAgo: '3 minutes ago' },
-  { city: 'Delhi', action: 'viewed the Debenture Route', timeAgo: '7 minutes ago' },
+  { city: 'Delhi', action: 'viewed the SEBI Co-Invest Framework', timeAgo: '7 minutes ago' },
   { city: 'Hyderabad', action: 'requested a callback', timeAgo: '4 minutes ago' },
   { city: 'Pune', action: 'explored the portfolio', timeAgo: '6 minutes ago' },
   { city: 'Kolkata', action: 'registered for the webinar', timeAgo: '8 minutes ago' },

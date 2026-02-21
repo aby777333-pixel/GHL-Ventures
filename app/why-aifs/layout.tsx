@@ -44,7 +44,7 @@ export default function WhyAIFsLayout({ children }: { children: React.ReactNode 
         name: 'Who can invest in an AIF?',
         acceptedAnswer: {
           '@type': 'Answer',
-          text: 'AIFs are designed for sophisticated investors including Indian residents, HNIs, family offices, corporates, banks, NBFCs, insurance companies, pension funds, and NRIs (through NRO accounts). The minimum investment is ₹1 Crore for Category I and II AIFs.',
+          text: 'AIFs are designed for sophisticated investors including Indian residents, HNIs, family offices, corporates, banks, NBFCs, insurance companies, pension funds, and NRIs (through NRO accounts). The minimum investment for Category I and II AIFs is as per SEBI regulations.',
         },
       },
       {
@@ -52,7 +52,7 @@ export default function WhyAIFsLayout({ children }: { children: React.ReactNode 
         name: 'How is an AIF different from a mutual fund?',
         acceptedAnswer: {
           '@type': 'Answer',
-          text: 'Mutual funds are publicly offered with low minimums (₹500) and invest in listed securities. AIFs are privately placed with high minimums (₹1 Crore), invest in unlisted and alternative assets, have longer lock-in periods, and offer access to strategies not available through public markets.',
+          text: 'Mutual funds are publicly offered with low minimums and invest in listed securities. AIFs are privately placed with higher minimums as per SEBI regulations, invest in unlisted and alternative assets, have longer lock-in periods, and offer access to strategies not available through public markets.',
         },
       },
       {

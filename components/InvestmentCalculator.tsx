@@ -107,7 +107,7 @@ export default function InvestmentCalculator({ isOpen, onClose }: InvestmentCalc
 
   const tabs: { key: CalcTab; label: string; icon: typeof Calculator }[] = [
     { key: 'sip', label: 'SIP', icon: TrendingUp },
-    { key: 'debenture', label: 'Debenture', icon: IndianRupee },
+    { key: 'debenture', label: 'Co-Invest', icon: IndianRupee },
     { key: 'aif', label: 'AIF', icon: BarChart3 },
     { key: 'compare', label: 'Compare', icon: Layers },
   ]
@@ -235,7 +235,7 @@ export default function InvestmentCalculator({ isOpen, onClose }: InvestmentCalc
             </div>
           )}
 
-          {/* Debenture Tab */}
+          {/* Co-Invest Tab */}
           {activeTab === 'debenture' && (
             <div>
               <div className="space-y-5">
@@ -296,7 +296,7 @@ export default function InvestmentCalculator({ isOpen, onClose }: InvestmentCalc
                   </div>
                 </div>
               </div>
-              <ResultCard result={debResult} label="Debenture" />
+              <ResultCard result={debResult} label="Co-Invest" />
             </div>
           )}
 

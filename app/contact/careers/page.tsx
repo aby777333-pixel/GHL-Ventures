@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { Send, Briefcase, GraduationCap, MapPin, Heart, CheckCircle, ArrowRight, ChevronDown, Mail, Clock } from 'lucide-react'
+import { Send, Briefcase, GraduationCap, MapPin, Heart, CheckCircle, ArrowRight, ChevronDown, Mail, Clock, Upload } from 'lucide-react'
 import SpaceHero from '@/components/SpaceHero'
 import AnimatedSection from '@/components/AnimatedSection'
 
@@ -257,6 +257,7 @@ export default function CareersPage() {
     experience: '', currentCompany: '', currentCTC: '',
     linkedin: '', portfolio: '', coverLetter: '', privacy: false,
   })
+  const [resumeFile, setResumeFile] = useState<File | null>(null)
   const [submitted, setSubmitted] = useState(false)
   const [expandedRole, setExpandedRole] = useState<number | null>(null)
 
@@ -570,6 +571,40 @@ export default function CareersPage() {
 
                   <input type="url" placeholder="Portfolio / Work Samples URL (Optional)" className="input-field" value={formData.portfolio} onChange={(e) => handleChange('portfolio', e.target.value)} />
 
+                  {/* Resume Upload */}
+                  <div>
+                    <label className="block text-xs font-medium text-brand-black mb-1.5">Upload Resume / CV <span className="text-brand-red">*</span></label>
+                    <label className="flex items-center justify-center gap-3 px-4 py-4 border-2 border-dashed border-gray-300 rounded-xl cursor-pointer hover:border-brand-red hover:bg-brand-red/5 transition-all duration-200 group">
+                      <Upload className="w-5 h-5 text-brand-grey group-hover:text-brand-red transition-colors" />
+                      <div className="text-center">
+                        <span className="text-sm font-medium text-brand-black group-hover:text-brand-red transition-colors">
+                          {resumeFile ? resumeFile.name : 'Click to upload your resume'}
+                        </span>
+                        <p className="text-xs text-brand-grey mt-0.5">PDF, DOC, DOCX — Max 5 MB</p>
+                      </div>
+                      <input
+                        type="file"
+                        required
+                        accept=".pdf,.doc,.docx"
+                        className="hidden"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0]
+                          if (file && file.size <= 5 * 1024 * 1024) {
+                            setResumeFile(file)
+                          } else if (file) {
+                            alert('File size must be under 5 MB.')
+                          }
+                        }}
+                      />
+                    </label>
+                    {resumeFile && (
+                      <div className="flex items-center justify-between mt-2 px-3 py-2 bg-green-50 border border-green-200 rounded-lg">
+                        <span className="text-xs text-green-700 font-medium truncate">{resumeFile.name} ({(resumeFile.size / 1024).toFixed(0)} KB)</span>
+                        <button type="button" onClick={() => setResumeFile(null)} className="text-xs text-red-500 hover:underline ml-2 shrink-0">Remove</button>
+                      </div>
+                    )}
+                  </div>
+
                   <div>
                     <textarea placeholder="Why do you want to join GHL India Ventures? *" required className="input-field resize-none" rows={4} maxLength={500} value={formData.coverLetter} onChange={(e) => handleChange('coverLetter', e.target.value)} />
                     <p className="text-xs text-brand-grey mt-1">{formData.coverLetter.length}/500 characters</p>
@@ -591,7 +626,7 @@ export default function CareersPage() {
                   </div>
                   <h3 className="text-xl font-bold text-brand-black mb-2">Application Submitted!</h3>
                   <p className="text-brand-grey text-sm mb-6">Thank you for your interest in joining GHL India Ventures. Our HR team will review your application and reach out within 5 working days.</p>
-                  <button onClick={() => { setSubmitted(false); setFormData({ name: '', email: '', phone: '', position: '', experience: '', currentCompany: '', currentCTC: '', linkedin: '', portfolio: '', coverLetter: '', privacy: false }) }} className="text-brand-red font-semibold text-sm hover:underline">
+                  <button onClick={() => { setSubmitted(false); setResumeFile(null); setFormData({ name: '', email: '', phone: '', position: '', experience: '', currentCompany: '', currentCTC: '', linkedin: '', portfolio: '', coverLetter: '', privacy: false }) }} className="text-brand-red font-semibold text-sm hover:underline">
                     Submit Another Application
                   </button>
                 </div>

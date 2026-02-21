@@ -19,7 +19,7 @@ export const BRAND = {
   address:
     '2D, Queens Court, No. 6, Montieth Road, Egmore, Chennai, Tamil Nadu \u2013 600 008, India',
   officeHours: 'Mon\u2013Fri, 9:30 AM \u2013 6:30 PM IST',
-  minInvestment: '\u20B91 Crore',
+  minInvestment: 'As per SEBI AIF Regulations',
   colors: {
     red: '#D0021B',
     black: '#0A0A0A',
@@ -52,7 +52,7 @@ export const NAV_LINKS = [
     children: [
       { label: 'Fund Overview', href: '/fund' },
       { label: 'Direct AIF Route', href: '/fund/direct-aif' },
-      { label: 'Debenture Route', href: '/fund/debenture-route' },
+      { label: 'SEBI Co-Invest Framework', href: '/fund/debenture-route' },
       { label: 'NRI Invest', href: '/fund/nri-invest' },
     ],
   },
@@ -401,17 +401,17 @@ export const BLOG_POSTS = [
     slug: 'afraid-of-losing-your-job-invest-for-security',
     title: 'Afraid of Losing Your Job? Here\'s How Smart Investing Can Secure Your Family\'s Future',
     excerpt:
-      'With AI disruption and corporate layoffs on the rise, salaried professionals need a financial safety net. Discover how investing through GHL India Ventures\' Debenture Route — starting at just ₹10 Lakhs — can provide steady alternative income for your family.',
+      'With AI disruption and corporate layoffs on the rise, salaried professionals need a financial safety net. Discover how investing through GHL India Ventures\' SEBI co-invest framework can provide steady alternative income for your family.',
     date: '2025-02-10',
     category: 'Investor Education',
     readTime: '8 min read',
     image: '/blog/job-security-investing.jpg',
   },
   {
-    slug: 'debenture-investments-salaried-professionals-guide',
-    title: 'The Rise of Debenture Investments: A Salaried Professional\'s Guide to Steady Returns',
+    slug: 'sebi-co-invest-framework-professionals-guide',
+    title: 'SEBI Co-Invest Framework: A Professional\'s Guide to Structured Alternative Returns',
     excerpt:
-      'Why structured debenture investments are becoming the go-to alternative for salaried families seeking consistent returns beyond traditional FDs and mutual funds.',
+      'Why the SEBI co-invest framework is becoming the go-to alternative for professionals seeking consistent returns beyond traditional FDs and mutual funds.',
     date: '2025-02-05',
     category: 'Investor Education',
     readTime: '7 min read',
@@ -652,7 +652,7 @@ export const FAQ_ITEMS = [
   {
     question: 'What is the minimum investment amount to participate in GHL India Ventures?',
     answer:
-      'The minimum investment in our SEBI-registered Category II AIF is \u20B91 Crore, in line with SEBI regulations for Alternative Investment Funds. Investments are drawn down in tranches as deployment opportunities arise.',
+      'The minimum investment in our SEBI-registered Category II AIF is in line with prevailing SEBI regulations for Alternative Investment Funds. Please contact our investor relations team for the latest details. Investments are drawn down in tranches as deployment opportunities arise.',
   },
   {
     question: 'How does GHL India Ventures select stressed real estate assets?',

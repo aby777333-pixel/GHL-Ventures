@@ -315,7 +315,7 @@ function HeroSection() {
 
             <AnimatedSection delay={400}>
               <p className="text-base text-gray-300 mb-8 max-w-xl leading-relaxed" style={{ textShadow: '0 1px 8px rgba(0,0,0,0.6)' }}>
-                GHL India Ventures delivers institutional-grade alternative investments for India&apos;s discerning investors. Minimum &#8377;1 Crore.
+                GHL India Ventures delivers institutional-grade alternative investments for India&apos;s discerning investors. As per SEBI AIF Regulations.
               </p>
             </AnimatedSection>
 
@@ -337,7 +337,7 @@ function HeroSection() {
                   { icon: BadgeCheck, text: 'SEBI Reg.' },
                   { icon: MapPin, text: 'Egmore, Chennai' },
                   { icon: Landmark, text: 'Category II AIF' },
-                  { icon: IndianRupee, text: '₹1 Cr Minimum' },
+                  { icon: IndianRupee, text: 'SEBI Regulated' },
                 ].map(b => (
                   <span
                     key={b.text}
@@ -526,7 +526,7 @@ function NewsScroller() {
    SECTION 2: Ticker / Stats Strip
    ================================================================ */
 function TickerStrip() {
-  const text = `SEBI Registration No. ${BRAND.sebi}  \u2022  Category II AIF  \u2022  Min Investment: \u20B91 Crore  \u2022  Stressed Real Estate & Early-Stage Startups  \u2022  Chennai, India  \u2022  ${BRAND.email}`
+  const text = `SEBI Registration No. ${BRAND.sebi}  \u2022  Category II AIF  \u2022  As per SEBI AIF Regulations  \u2022  Stressed Real Estate & Early-Stage Startups  \u2022  Chennai, India  \u2022  ${BRAND.email}`
 
   return (
     <section className="relative overflow-hidden py-3" style={{ backgroundColor: '#1a0000' }}>
@@ -1059,7 +1059,7 @@ function ContactFormSection() {
                     className="input-field"
                   >
                     <option value="">Select a range</option>
-                    <option value="10L-1Cr">&#8377;10 Lakhs – &#8377;1 Cr (Debenture Route)</option>
+                    <option value="10L-1Cr">Contact for Co-Invest Details</option>
                     <option value="1-5">&#8377;1 Cr – &#8377;5 Cr</option>
                     <option value="5-10">&#8377;5 Cr – &#8377;10 Cr</option>
                     <option value="10-25">&#8377;10 Cr – &#8377;25 Cr</option>
@@ -1091,7 +1091,7 @@ function ContactFormSection() {
                       className="mt-1 w-4 h-4 accent-brand-red"
                     />
                     <span className="text-sm text-brand-grey leading-relaxed">
-                      I confirm that I am an accredited / qualified investor with a minimum investable surplus of &#8377;1 Crore.
+                      I confirm that I am an accredited / qualified investor as per SEBI AIF Regulations.
                     </span>
                   </label>
                   <label className="flex items-start gap-3 cursor-pointer">
@@ -1233,7 +1233,7 @@ function InvestorToolsCTA({ onOpenQuiz, onOpenCalc, onOpenAllCalc, onOpenWealthM
               </div>
               <h3 className="text-white text-lg font-bold mb-2">Investment Calculator</h3>
               <p className="text-gray-400 text-sm leading-relaxed flex-1 mb-5">
-                Model returns across SIP, Debenture Route, and Direct AIF. Compare FDs, gold, and NIFTY 50 side by side.
+                Model returns across SIP, SEBI Co-Invest Framework, and Direct AIF. Compare FDs, gold, and NIFTY 50 side by side.
               </p>
               <span className="inline-flex items-center justify-center gap-2 text-amber-500 text-sm font-semibold group-hover:gap-3 transition-all mt-auto">
                 Calculate Returns <ArrowRight className="w-4 h-4" />
@@ -1268,7 +1268,7 @@ function InvestorToolsCTA({ onOpenQuiz, onOpenCalc, onOpenAllCalc, onOpenWealthM
               </div>
               <h3 className="text-white text-lg font-bold mb-2">Wealth Growth Map</h3>
               <p className="text-gray-400 text-sm leading-relaxed flex-1 mb-5">
-                Visualize year-by-year portfolio growth. See how ₹1 Crore in GHL compounds vs traditional assets over 5, 10, or 20 years.
+                Visualize year-by-year portfolio growth. See how your investment in GHL compounds vs traditional assets over 5, 10, or 20 years.
               </p>
               <span className="inline-flex items-center justify-center gap-2 text-violet-500 text-sm font-semibold group-hover:gap-3 transition-all mt-auto">
                 Map Your Growth <ArrowRight className="w-4 h-4" />
@@ -1326,7 +1326,7 @@ function FAQSection() {
     },
     {
       q: 'What is the minimum investment in GHL India Ventures?',
-      a: 'The minimum investment for the Direct AIF Route is ₹1 Crore, as mandated by SEBI for Category II AIFs. For the Debenture Route (NCD structure), the minimum investment starts at ₹10 Lakhs — ideal for salaried professionals looking to access institutional-grade returns.',
+      a: 'The minimum investment for the Direct AIF Route is as per SEBI regulations for Category II AIFs. For the SEBI Co-Invest Framework, please contact our advisory team for current eligibility and investment details — ideal for salaried professionals looking to access institutional-grade returns.',
     },
     {
       q: 'Is GHL India Ventures SEBI registered?',
@@ -1407,7 +1407,7 @@ function InvestmentDisclaimer() {
         <div className="flex items-start gap-3 p-4 rounded-xl border border-amber-500/20 bg-amber-500/5">
           <AlertTriangle className="w-5 h-5 text-amber-500 shrink-0 mt-0.5" />
           <p className="text-xs text-gray-400 leading-relaxed">
-            <strong className="text-amber-400">Investment Risk Disclaimer:</strong> Investments in Alternative Investment Funds (AIFs) and Non-Convertible Debentures (NCDs) are subject to market risks including possible loss of principal. Past performance is not indicative of future results. The information on this website does not constitute an offer, solicitation, or investment advice. Prospective investors must read the Private Placement Memorandum (PPM) and all scheme-related documents before investing. SEBI Registration No. IN/AIF2/2425/1517. Category II AIF minimum investment: &#8377;1 Crore as mandated by SEBI.
+            <strong className="text-amber-400">Investment Risk Disclaimer:</strong> Investments in Alternative Investment Funds (AIFs) and related co-invest instruments are subject to market risks including possible loss of principal. Past performance is not indicative of future results. The information on this website does not constitute an offer, solicitation, or investment advice. Prospective investors must read the Private Placement Memorandum (PPM) and all scheme-related documents before investing. SEBI Registration No. IN/AIF2/2425/1517. Category II AIF minimum investment as per SEBI regulations.
           </p>
         </div>
       </div>
@@ -1429,7 +1429,6 @@ export default function HomePage() {
   return (
     <>
       <HeroSection />
-      <InvestmentDisclaimer />
 
       {/* ── Market Data Marquees — moved from Navbar to right above News ── */}
       <MarketDataMarquee />
@@ -1439,13 +1438,13 @@ export default function HomePage() {
           <div className="animate-marquee whitespace-nowrap py-1.5">
             <span className="inline-block text-white/80 mx-8" style={{ fontSize: '11px', letterSpacing: '0.02em' }}>
               SEBI Registered AIF &nbsp;|&nbsp; Registration No. IN/AIF2/2425/1517
-              &nbsp;|&nbsp; AIF: Min &#8377;1 Crore &nbsp;|&nbsp; Debenture Route: From &#8377;10 Lakhs &nbsp;|&nbsp;
+              &nbsp;|&nbsp; AIF: As per SEBI Regulations &nbsp;|&nbsp; SEBI Co-Invest Framework &nbsp;|&nbsp;
               Stressed Real Estate &amp; Early-Stage Startups &nbsp;|&nbsp;
               Chennai, India
             </span>
             <span className="inline-block text-white/80 mx-8" style={{ fontSize: '11px', letterSpacing: '0.02em' }}>
               SEBI Registered AIF &nbsp;|&nbsp; Registration No. IN/AIF2/2425/1517
-              &nbsp;|&nbsp; AIF: Min &#8377;1 Crore &nbsp;|&nbsp; Debenture Route: From &#8377;10 Lakhs &nbsp;|&nbsp;
+              &nbsp;|&nbsp; AIF: As per SEBI Regulations &nbsp;|&nbsp; SEBI Co-Invest Framework &nbsp;|&nbsp;
               Stressed Real Estate &amp; Early-Stage Startups &nbsp;|&nbsp;
               Chennai, India
             </span>

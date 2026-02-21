@@ -162,7 +162,7 @@ const PAGE_GREETINGS: Record<string, { abe: string; tina: string }> = {
   },
   'fund': {
     abe: 'Welcome to the Fund Overview. This is where we break down our SEBI-registered Category II AIF structure. What would you like to understand?',
-    tina: 'You\'re exploring our fund options! We have the Direct AIF at ₹1 Crore and the Debenture Route from ₹10 Lakhs. Which interests you?',
+    tina: 'You\'re exploring our fund options! We have the Direct AIF as per SEBI regulations and the SEBI Co-Invest Framework for professionals. Which interests you?',
   },
   'portfolio': {
     abe: 'You\'re viewing our Portfolio — 6 active investments across stressed real estate and startups. Ask me about any specific project.',
@@ -185,11 +185,11 @@ const PAGE_GREETINGS: Record<string, { abe: string; tina: string }> = {
     tina: 'This is my favourite section! Glossary terms, video lessons, and tools to make you a smarter investor.',
   },
   'debenture': {
-    abe: 'You\'re exploring the Debenture Route — our structured entry point starting at ₹10 Lakhs. Great for salaried professionals.',
-    tina: 'The Debenture Route is perfect if you want to start smaller! Let me explain how it works.',
+    abe: 'You\'re exploring the SEBI Co-Invest Framework — our structured entry point for professionals. Contact our team for details.',
+    tina: 'The SEBI Co-Invest Framework is perfect if you want a structured entry! Let me explain how it works.',
   },
   'direct-aif': {
-    abe: 'This is our Direct AIF Route — the full fund experience for HNIs and family offices. Minimum ₹1 Crore, SEBI-regulated.',
+    abe: 'This is our Direct AIF Route — the full fund experience for HNIs and family offices. As per SEBI AIF Regulations, fully regulated.',
     tina: 'The Direct AIF gives you the complete institutional experience. Want to know about the process?',
   },
 }
@@ -261,12 +261,12 @@ export function generateResponse(input: string, visitorName?: string, pageContex
 
     case 'investment_start':
       return [
-        { speaker: 'abe', text: `Wonderful${name}! I'd love to help you get started. We have two investment routes: the Direct AIF at ₹1 Crore for the full institutional experience, and the Debenture Route starting at ₹10 Lakhs for a structured entry. Which sounds right for you?` },
+        { speaker: 'abe', text: `Wonderful${name}! I'd love to help you get started. We have two investment routes: the Direct AIF as per SEBI AIF Regulations for the full institutional experience, and the SEBI Co-Invest Framework for a structured entry for professionals. Which sounds right for you?` },
         { speaker: 'tina', text: `Not sure which route to pick? Try our Risk Assessment Quiz — it takes just 7 questions to find your ideal investment path. Or I can take you straight to the Fund page for full details!` }
       ]
 
     case 'minimum_investment':
-      return [{ speaker: 'abe', text: `For our main AIF, the minimum investment is ₹1 Crore — that's the SEBI-mandated minimum for Category II AIFs. However, if you're looking for a lower entry point, our Debenture Route starts at just ₹10 Lakhs. Both are excellent options depending on your situation. Want me to explain the difference?` }]
+      return [{ speaker: 'abe', text: `For our main AIF, the minimum investment is as per SEBI AIF Regulations for Category II AIFs. We also offer a SEBI Co-Invest Framework for professionals looking for a structured entry. Both are excellent options depending on your situation. Contact our team for details. Want me to explain the difference?` }]
 
     case 'returns':
       return [{ speaker: 'abe', text: `I appreciate you asking about returns${name}! As a responsible advisor, I must note that specific fund performance data is available to registered investors after KYC verification. What I can tell you is that our stressed real estate strategy targets significant value creation through deep-discount NCLT acquisitions, and our startup portfolio is built for high-growth potential. Would you like to use our Investment Calculator to model different scenarios?`, action: 'calculator' }]
@@ -290,7 +290,7 @@ export function generateResponse(input: string, visitorName?: string, pageContex
       return [{ speaker: 'tina', text: `Let me take you to our portfolio page where you can see all our current investments across real estate and startups!`, action: 'navigate', actionData: '/portfolio' }]
 
     case 'debenture':
-      return [{ speaker: 'abe', text: `The Debenture Route is our lower-entry option starting at just ₹10 Lakhs. It's a Non-Convertible Debenture (NCD) structure that offers exposure to our stressed real estate recovery pipeline with a more accessible investment size. Want me to show you the details?`, action: 'navigate', actionData: '/fund/debenture-route' }]
+      return [{ speaker: 'abe', text: `The SEBI Co-Invest Framework is our structured entry option for professionals. It offers exposure to our stressed real estate recovery pipeline with an accessible investment structure. Contact our team for details. Want me to show you more?`, action: 'navigate', actionData: '/fund/debenture-route' }]
 
     case 'nri':
       return [
@@ -358,7 +358,7 @@ export function generateResponse(input: string, visitorName?: string, pageContex
       return [{ speaker: 'abe', text: `Great idea${name}! Our Risk Assessment Quiz is just 7 quick questions that'll help us understand your investment personality. Let me open it for you!`, action: 'quiz' }]
 
     case 'calculator':
-      return [{ speaker: 'abe', text: `Let's crunch some numbers! Our Investment Calculator lets you compare returns across SIP, Debenture Route, and Direct AIF against benchmarks like FDs, Gold, and NIFTY 50. Let me open it!`, action: 'calculator' }]
+      return [{ speaker: 'abe', text: `Let's crunch some numbers! Our Investment Calculator lets you compare returns across SIP, Co-Invest Framework, and Direct AIF against benchmarks like FDs, Gold, and NIFTY 50. Let me open it!`, action: 'calculator' }]
 
     case 'confidential':
       return [{ speaker: 'abe', text: `Specific fund performance data, including NAV and actual returns, is available to registered investors after KYC verification. This is to protect both you and our existing investors. I can help you start the registration process right now though — would you like that?` }]

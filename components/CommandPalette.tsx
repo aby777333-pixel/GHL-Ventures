@@ -28,7 +28,7 @@ const PALETTE_ITEMS: PaletteItem[] = [
   { id: 'financial-iq', label: 'Financial IQ', description: 'Learn & grow', href: '/financial-iq', icon: GraduationCap, category: 'Navigation' },
   { id: 'downloads', label: 'Downloads', description: 'Brochures & documents', href: '/downloads', icon: Download, category: 'Navigation' },
   { id: 'contact', label: 'Contact Us', description: 'Get in touch', href: '/contact', icon: Phone, category: 'Navigation' },
-  { id: 'debenture', label: 'Debenture Route', description: 'Structured debt investment', href: '/fund/debenture-route', icon: FileText, category: 'Navigation' },
+  { id: 'debenture', label: 'SEBI Co-Invest Framework', description: 'SEBI-regulated co-invest option', href: '/fund/debenture-route', icon: FileText, category: 'Navigation' },
   { id: 'direct-aif', label: 'Direct AIF', description: 'Category II AIF investment', href: '/fund/direct-aif', icon: Briefcase, category: 'Navigation' },
 
   // Tools

@@ -5,22 +5,22 @@ const SITE_URL = 'https://ghl-india-ventures-2025.netlify.app';
 export const metadata: Metadata = {
   title: 'Investment Fund | Category II AIF — Stressed Real Estate & Startups | GHL India Ventures',
   description:
-    "Explore GHL India Ventures' SEBI-registered Category II AIF — dual strategy combining stressed real estate recovery via NCLT and early-stage venture capital. Min ₹1 Crore AIF or ₹10 Lakhs Debenture Route.",
+    "Explore GHL India Ventures' SEBI-registered Category II AIF — dual strategy combining stressed real estate recovery via NCLT and early-stage venture capital. AIF as per SEBI regulations or SEBI Co-Invest Framework.",
   keywords: [
     'AIF fund India',
     'Category II AIF fund',
     'stressed real estate investment',
     'startup investment fund',
     'NCLT real estate recovery',
-    'debenture route',
+    'SEBI co-invest framework',
     'private equity India',
-    'AIF minimum investment 1 crore',
+    'AIF minimum investment SEBI regulated',
     'venture capital fund India',
   ],
   openGraph: {
     title: 'Investment Fund | Category II AIF — Stressed Real Estate & Startups | GHL India Ventures',
     description:
-      "Explore GHL India Ventures' SEBI-registered Category II AIF — dual strategy combining stressed real estate recovery via NCLT and early-stage venture capital. Min ₹1 Crore AIF or ₹10 Lakhs Debenture Route.",
+      "Explore GHL India Ventures' SEBI-registered Category II AIF — dual strategy combining stressed real estate recovery via NCLT and early-stage venture capital. AIF as per SEBI regulations or SEBI Co-Invest Framework.",
     url: `${SITE_URL}/fund`,
     siteName: 'GHL India Ventures',
     type: 'website',
@@ -38,7 +38,7 @@ export const metadata: Metadata = {
     card: 'summary_large_image',
     title: 'Investment Fund | Category II AIF — Stressed Real Estate & Startups | GHL India Ventures',
     description:
-      "Explore GHL India Ventures' SEBI-registered Category II AIF — dual strategy combining stressed real estate recovery via NCLT and early-stage venture capital. Min ₹1 Crore AIF or ₹10 Lakhs Debenture Route.",
+      "Explore GHL India Ventures' SEBI-registered Category II AIF — dual strategy combining stressed real estate recovery via NCLT and early-stage venture capital. AIF as per SEBI regulations or SEBI Co-Invest Framework.",
     images: [`${SITE_URL}/og-image.jpg`],
   },
   alternates: {

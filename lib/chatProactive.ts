@@ -13,11 +13,11 @@ export const PROACTIVE_MESSAGES: Record<string, ProactiveMessage> = {
     delay: 8000,
   },
   '/fund': {
-    message: 'Exploring our fund? I can explain our two investment routes \u2014 starting from just \u20B910 Lakhs!',
+    message: 'Exploring our fund? I can explain our two investment routes \u2014 the AIF and the SEBI Co-Invest Framework!',
     delay: 6000,
   },
   '/fund/debenture-route': {
-    message: 'The Debenture Route is perfect for salaried professionals. Want me to walk you through it?',
+    message: 'The SEBI Co-Invest Framework is designed for salaried professionals. Want me to walk you through it?',
     delay: 5000,
   },
   '/fund/direct-aif': {

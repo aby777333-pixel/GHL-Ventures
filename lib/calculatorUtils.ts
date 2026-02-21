@@ -35,7 +35,7 @@ export function calculateSIP(
 }
 
 /**
- * Debenture Route Calculator: Lump sum with fixed returns
+ * Co-Invest Framework Calculator: Lump sum with fixed returns
  */
 export function calculateDebenture(
   principal: number,
@@ -93,6 +93,6 @@ export const COMPARISON_BENCHMARKS = [
   { name: 'Gold', rate: 10, color: '#F59E0B' },
   { name: 'Real Estate', rate: 12, color: '#22C55E' },
   { name: 'NIFTY 50', rate: 14, color: '#3B82F6' },
-  { name: 'GHL Debenture', rate: 16, color: '#8B5CF6' },
+  { name: 'GHL Co-Invest', rate: 16, color: '#8B5CF6' },
   { name: 'GHL AIF', rate: 20, color: '#D0021B' },
 ]

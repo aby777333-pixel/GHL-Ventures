@@ -14,7 +14,7 @@ import SpaceHero from '@/components/SpaceHero'
 const FAQ_ITEMS = [
   {
     q: 'What is the minimum investment?',
-    a: 'The minimum investment in our AIF is \u20B91 Crore, as per SEBI guidelines for Category II Alternative Investment Funds. This threshold ensures regulatory compliance and aligns with accredited investor requirements.',
+    a: 'The minimum investment in our AIF is as per SEBI guidelines for Category II Alternative Investment Funds. This threshold ensures regulatory compliance and aligns with accredited investor requirements. Contact our team for current details.',
   },
   {
     q: 'How do I start investing?',

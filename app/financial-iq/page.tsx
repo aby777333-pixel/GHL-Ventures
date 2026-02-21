@@ -32,7 +32,7 @@ const GLOSSARY_TERMS: { term: string; definition: string }[] = [
   { term: 'AIF', definition: 'Alternative Investment Fund -- a privately pooled investment vehicle regulated by SEBI under the AIF Regulations, 2012.' },
   { term: 'AML', definition: 'Anti-Money Laundering -- a set of laws and regulations designed to prevent money laundering activities.' },
   { term: 'Category II AIF', definition: 'A SEBI classification for funds that include PE funds, debt funds, and funds not leveraging or borrowing other than to meet day-to-day requirements.' },
-  { term: 'HNI', definition: 'High Net-worth Individual -- an investor with a substantial investable surplus, typically above Rs 1 crore for AIF participation.' },
+  { term: 'HNI', definition: 'High Net-worth Individual -- an investor with a substantial investable surplus, as per SEBI AIF regulations for AIF participation.' },
   { term: 'IRR', definition: 'Internal Rate of Return -- the annualized effective compounded return rate that makes the net present value of all cash flows equal to zero.' },
   { term: 'KYC', definition: 'Know Your Customer -- the process of verifying the identity of investors as mandated by SEBI and RBI regulations.' },
   { term: 'NAV', definition: 'Net Asset Value -- the per-unit value of a fund, calculated by dividing total net assets by the number of outstanding units.' },

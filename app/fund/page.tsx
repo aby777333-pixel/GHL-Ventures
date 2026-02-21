@@ -78,7 +78,7 @@ function FundOverview() {
   const metrics = [
     { icon: FileText, label: 'Fund Type', value: 'Category II AIF' },
     { icon: Shield, label: 'SEBI Registration', value: BRAND.sebi },
-    { icon: DollarSign, label: 'Invest From', value: '₹10 Lakhs' },
+    { icon: DollarSign, label: 'Invest From', value: 'Contact for Details' },
     { icon: Clock, label: 'Investment Horizon', value: '5-7 Years' },
     { icon: TrendingUp, label: 'Target IRR', value: '18-22%' },
     { icon: Target, label: 'Fund Size Target', value: '₹500 Crore' },
@@ -117,7 +117,7 @@ function InvestmentRoutes() {
       badge: 'Direct AIF',
       title: 'Direct AIF Route',
       subtitle: 'Best for HNIs & Family Offices',
-      minInvestment: '₹1 Crore',
+      minInvestment: 'As per SEBI Regulations',
       features: [
         'Direct ownership in premium ventures',
         'Target returns: 15–25% IRR',
@@ -129,15 +129,15 @@ function InvestmentRoutes() {
       iconBg: 'bg-brand-red/10',
     },
     {
-      badge: 'Debenture',
-      title: 'Debenture Route',
+      badge: 'Co-Invest',
+      title: 'SEBI Co-Invest Framework',
       subtitle: 'Best for Salaried Professionals',
-      minInvestment: '₹10 Lakhs',
+      minInvestment: 'Contact for Details',
       features: [
         'Flexible investment options',
         'Steady alternative income stream',
         'Ideal for families seeking sustenance',
-        'Structured returns framework',
+        'SEBI-regulated structured framework',
       ],
       href: '/fund/debenture-route',
       gradient: 'from-[#1a1a2e] to-brand-black',
@@ -153,7 +153,7 @@ function InvestmentRoutes() {
       <div className="container-max mx-auto relative z-10">
         <AnimatedSection className="text-center mb-10">
           <span className="text-brand-red font-semibold text-xs uppercase tracking-wider">Choose Your Path</span>
-          <h2 className="section-title mt-2 text-white">Two Investment Routes</h2>
+          <h2 className="section-title mt-2 text-white">Investment Routes</h2>
           <p className="section-subtitle mx-auto mt-3 text-gray-400">
             Whether you&apos;re an HNI investor or a salaried professional, we have a route designed for you.
           </p>

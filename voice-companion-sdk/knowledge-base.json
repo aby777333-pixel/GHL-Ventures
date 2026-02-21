@@ -9,8 +9,8 @@
     "whatsapp": "+919876543210",
     "address": "GHL India Ventures, Financial District, Mumbai, Maharashtra 400001",
     "officeHours": "Mon-Fri 9:30 AM - 6:30 PM IST",
-    "minInvestmentAIF": "₹1 Crore",
-    "minInvestmentDebenture": "₹10 Lakhs"
+    "minInvestmentAIF": "As per SEBI AIF Regulations",
+    "minInvestmentDebenture": "Contact for details"
   },
   "team": [
     { "name": "Rajesh Kumar", "role": "Managing Director & CIO", "bio": "25+ years in alternative investments, ex-Goldman Sachs" },
@@ -35,7 +35,7 @@
     },
     {
       "question": "What is the minimum investment?",
-      "answer": "For our Category II AIF, the minimum investment is ₹1 Crore as per SEBI regulations. For Non-Convertible Debentures (NCDs), the minimum is ₹10 Lakhs."
+      "answer": "For our Category II AIF, the minimum investment is as per SEBI AIF Regulations. We also offer a SEBI Co-Invest Framework for professionals. Contact our team for current details."
     },
     {
       "question": "Is GHL India Ventures SEBI registered?",
@@ -83,7 +83,7 @@
     "/portfolio": "Curious about any portfolio company? Just ask!",
     "/invest": "Ready to start your investment journey?",
     "/contact": "Need help reaching our team?",
-    "/debenture": "Interested in NCDs? I can explain the benefits.",
+    "/debenture": "Interested in the SEBI Co-Invest Framework? I can explain the benefits.",
     "/team": "Want to learn about the people behind GHL?"
   }
 }

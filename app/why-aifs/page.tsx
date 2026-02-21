@@ -118,9 +118,9 @@ function WhatIsAIF() {
                 {[
                   { icon: FileText, label: 'Regulator', value: 'Securities and Exchange Board of India (SEBI)' },
                   { icon: Landmark, label: 'Governing Law', value: 'SEBI (AIF) Regulations, 2012' },
-                  { icon: DollarSign, label: 'Min Investment', value: '\u20B91 Crore (\u20B925 Cr for Large Value Funds)' },
+                  { icon: DollarSign, label: 'Min Investment', value: 'As per SEBI AIF Regulations' },
                   { icon: Users, label: 'Eligible Investors', value: 'HNIs, Family Offices, Institutions, NRIs' },
-                  { icon: Scale, label: 'Structure', value: 'Trust (most common), Company, LLP' },
+                  { icon: Scale, label: 'Structure', value: 'SEBI Regulated AIF Structure' },
                 ].map((item) => (
                   <div key={item.label} className="flex items-start space-x-3">
                     <div className="w-8 h-8 bg-brand-red/15 rounded-lg flex items-center justify-center shrink-0 mt-0.5">
@@ -369,9 +369,9 @@ function GHLApproach() {
     },
     {
       num: '04',
-      title: 'Accessible Entry via Debenture Route',
-      desc: 'For investors below the \u20B91 Crore AIF threshold, GHL offers a Debenture Route (NCD structure) starting at \u20B910 Lakhs \u2014 providing access to institutional-grade returns.',
-      tags: ['From \u20B910 Lakhs', 'NCD Structure', 'Structured Returns', 'Salaried Professionals'],
+      title: 'Accessible Entry via SEBI Co-Invest Framework',
+      desc: 'For investors seeking alternative entry, GHL offers a SEBI Co-Invest Framework \u2014 providing access to institutional-grade returns through a structured co-invest instrument.',
+      tags: ['Contact for Details', 'Co-Invest Structure', 'Structured Returns', 'Salaried Professionals'],
     },
   ]
 
@@ -457,7 +457,7 @@ function SEBIFramework() {
 /* ───────────────────────────── 9. COMPARISON TABLE ───────────────────────────── */
 function ComparisonTable() {
   const rows = [
-    { param: 'Minimum Investment', aif: '\u20B91 Crore', pms: '\u20B950 Lakhs', mf: '\u20B9500', fd: '\u20B91,000' },
+    { param: 'Minimum Investment', aif: 'As per SEBI AIF Regulations', pms: '\u20B950 Lakhs', mf: '\u20B9500', fd: '\u20B91,000' },
     { param: 'Regulator', aif: 'SEBI', pms: 'SEBI', mf: 'SEBI', fd: 'RBI' },
     { param: 'Asset Classes', aif: 'PE, Real Estate, Credit, VC, Distressed', pms: 'Listed Equities & Bonds', mf: 'Listed Securities', fd: 'Bank Deposits' },
     { param: 'Investor Base', aif: 'HNIs, Family Offices, Institutions', pms: 'HNIs', mf: 'Retail & Institutional', fd: 'Everyone' },
@@ -557,11 +557,11 @@ function FAQ() {
   const faqs = [
     {
       q: 'Who can invest in an AIF?',
-      a: 'AIFs are designed for sophisticated investors. Eligible participants include Indian residents, HNIs, family offices, corporates, banks, NBFCs, insurance companies, pension funds, and NRIs (through NRO accounts). The minimum investment is \u20B91 Crore for Category I and II AIFs. SEBI has also introduced the concept of Accredited Investors who may access specific schemes with differentiated terms.',
+      a: 'AIFs are designed for sophisticated investors. Eligible participants include Indian residents, HNIs, family offices, corporates, banks, NBFCs, insurance companies, pension funds, and NRIs (through NRO accounts). The minimum investment is as per SEBI AIF Regulations for Category I and II AIFs. SEBI has also introduced the concept of Accredited Investors who may access specific schemes with differentiated terms.',
     },
     {
       q: 'How is an AIF different from a mutual fund?',
-      a: 'While both are pooled investment vehicles regulated by SEBI, they differ significantly. Mutual funds are publicly offered, have low minimums (\u20B9500), and primarily invest in listed securities. AIFs are privately placed with high minimums (\u20B91 Crore), invest in unlisted and alternative assets, have longer lock-in periods, and offer access to strategies not available through public markets.',
+      a: 'While both are pooled investment vehicles regulated by SEBI, they differ significantly. Mutual funds are publicly offered, have low minimums (\u20B9500), and primarily invest in listed securities. AIFs are privately placed with higher minimums as per SEBI AIF Regulations, invest in unlisted and alternative assets, have longer lock-in periods, and offer access to strategies not available through public markets.',
     },
     {
       q: 'What is the lock-in period for an AIF?',
@@ -673,8 +673,7 @@ function Disclaimer() {
           Prospective investors must read the Private Placement Memorandum (PPM) and all scheme-related documents carefully
           before making any investment decisions. The industry statistics and data referenced are sourced from publicly available
           reports and are provided for illustrative purposes.{' '}
-          <strong className="text-brand-black">SEBI Registration No. {BRAND.sebi}.</strong> Category II AIF minimum investment:
-          &#x20B9;1 Crore as mandated by SEBI. The fund does not guarantee any returns.
+          <strong className="text-brand-black">SEBI Registration No. {BRAND.sebi}.</strong> Category II AIF minimum investment is as per SEBI AIF Regulations. The fund does not guarantee any returns.
         </p>
       </div>
     </section>

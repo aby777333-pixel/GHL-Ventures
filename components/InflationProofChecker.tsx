@@ -17,7 +17,7 @@ const ASSETS = [
   { id: 'realestate', name: 'Real Estate', nominalRate: 8.0, color: '#22C55E', icon: '🏠' },
   { id: 'equity_mf', name: 'Equity MF', nominalRate: 13.0, color: '#3B82F6', icon: '📈' },
   { id: 'nifty', name: 'NIFTY 50', nominalRate: 14.0, color: '#2563EB', icon: '📊' },
-  { id: 'ghl_deb', name: 'GHL Debenture', nominalRate: 16.0, color: '#D0021B', icon: '🔴' },
+  { id: 'ghl_deb', name: 'GHL Co-Invest', nominalRate: 16.0, color: '#D0021B', icon: '🔴' },
   { id: 'ghl_aif', name: 'GHL AIF', nominalRate: 20.0, color: '#EF4444', icon: '🚀' },
 ]
 

@@ -43,8 +43,8 @@ export const NOTIFICATIONS: Notification[] = [
   {
     id: 'n4',
     type: 'fund',
-    title: 'Debenture Route Now Open',
-    description: 'Invest from ₹10 Lakhs via our new Debenture Route — perfect for salaried professionals.',
+    title: 'SEBI Co-Invest Framework Now Open',
+    description: 'Explore our SEBI Co-Invest Framework — designed for salaried professionals. Contact our team for details.',
     date: '2025-01-08',
     read: false,
     link: '/fund/debenture-route',

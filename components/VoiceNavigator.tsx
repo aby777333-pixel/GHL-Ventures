@@ -45,7 +45,7 @@ export default function VoiceNavigator() {
     { keywords: ['search', 'find', 'look for'], action: 'Search', description: 'Open search', icon: Search, handler: () => { document.dispatchEvent(new KeyboardEvent('keydown', { key: 'k', ctrlKey: true })) } },
     { keywords: ['scroll up', 'go up', 'top', 'back to top'], action: 'Scroll Top', description: 'Go to top', icon: Navigation, handler: () => { window.scrollTo({ top: 0, behavior: 'smooth' }) } },
     { keywords: ['scroll down', 'go down'], action: 'Scroll Down', description: 'Scroll down', icon: Navigation, handler: () => { window.scrollBy({ top: 500, behavior: 'smooth' }) } },
-    { keywords: ['debenture', 'ncd', 'debt'], action: 'Debenture Route', description: 'View debentures', icon: Navigation, handler: () => router.push('/fund/debenture-route') },
+    { keywords: ['co-invest', 'co invest', 'sebi co-invest', 'debt'], action: 'SEBI Co-Invest Framework', description: 'View co-invest framework', icon: Navigation, handler: () => router.push('/fund/debenture-route') },
     { keywords: ['direct', 'direct aif', 'direct fund'], action: 'Direct AIF', description: 'View Direct AIF', icon: Navigation, handler: () => router.push('/fund/direct-aif') },
     { keywords: ['login', 'sign in', 'log in'], action: 'Login', description: 'Investor login', icon: Navigation, handler: () => router.push('/login') },
   ]

@@ -49,7 +49,7 @@ const CHAPTERS: Chapter[] = [
     content: [
       'An Alternative Investment Fund (AIF) is a privately pooled investment vehicle registered with SEBI that collects funds from sophisticated investors for investing in accordance with a defined investment policy. Category II AIFs, like GHL India Ventures, invest in unlisted securities, real estate, private equity, and distressed assets.',
       'For NRIs, AIFs offer several advantages over direct investment: professional fund management with institutional-grade due diligence; SEBI-regulated structure ensuring transparency and investor protection; diversified portfolio across multiple assets rather than concentrated single-asset risk; clear governance framework with independent trustees, custodians, and auditors.',
-      'The minimum investment in a Category II AIF is ₹1 Crore (approximately USD 120,000), as mandated by SEBI. GHL India Ventures also offers a Debenture Route starting at ₹10 Lakhs for NRIs who wish to start with a smaller commitment.',
+      'The minimum investment in a Category II AIF is as per SEBI regulations. GHL India Ventures also offers the SEBI Co-Invest Framework for NRIs who wish to start with an accessible entry point. Contact us for current investment details.',
       'NRIs from most countries can invest in Indian AIFs, subject to FEMA (Foreign Exchange Management Act) regulations and RBI guidelines. The fund accepts investments through NRO (Non-Resident Ordinary) and NRE (Non-Resident External) accounts held with Indian banks.',
     ],
   },
@@ -66,12 +66,12 @@ const CHAPTERS: Chapter[] = [
   },
   {
     id: 5,
-    title: 'Investment Routes: AIF vs Debenture',
+    title: 'Investment Routes: AIF vs Co-Invest',
     icon: <Banknote className="w-5 h-5" />,
     content: [
       'GHL India Ventures offers two distinct investment pathways for NRIs, each designed for different risk appetites and investment sizes.',
-      'Route 1 — Direct AIF (₹1 Crore minimum): This is the primary investment route through our SEBI-registered Category II AIF. Investors become unit holders in the fund and gain exposure to the entire portfolio of stressed real estate assets and startup investments. Benefits include: full portfolio diversification, SEBI regulatory protection, quarterly NAV reporting, target IRR of 18–25%, and a fund tenure of 7–10 years with provision for extensions.',
-      'Route 2 — Debenture Route (₹10 Lakhs minimum): For NRIs who prefer a smaller entry point or fixed-income-like exposure, the Debenture Route involves investing through Non-Convertible Debentures (NCDs) issued by the fund\'s SPV entities. Benefits include: lower entry point, fixed coupon structure, asset-backed security, shorter tenures (3–5 years), and target returns of 14–18% per annum.',
+      'Route 1 — Direct AIF (as per SEBI regulations): This is the primary investment route through our SEBI-registered Category II AIF. Investors become unit holders in the fund and gain exposure to the entire portfolio of stressed real estate assets and startup investments. Benefits include: full portfolio diversification, SEBI regulatory protection, quarterly NAV reporting, target IRR of 18–25%, and a fund tenure of 7–10 years with provision for extensions.',
+      'Route 2 — SEBI Co-Invest Framework: For NRIs who prefer an accessible entry point or structured exposure, the Co-Invest Framework provides access through regulated instruments. Benefits include: accessible entry, structured returns framework, asset-backed security, shorter tenures (3–5 years), and competitive target returns. Contact us for current details.',
       'Both routes are fully FEMA-compliant and can be funded through NRO or NRE accounts. The choice between routes depends on your investment horizon, risk tolerance, and desired portfolio allocation. Our advisory team provides personalised guidance to help NRIs select the optimal route.',
     ],
   },
@@ -125,7 +125,7 @@ const CHAPTERS: Chapter[] = [
     icon: <Users className="w-5 h-5" />,
     content: [
       'GHL India Ventures has streamlined the NRI onboarding process to be as frictionless as possible. The entire process can be completed remotely without requiring a visit to India.',
-      'Step 1 — Initial Consultation: Schedule a video call with our NRI Advisory Team. We understand your investment objectives, risk tolerance, and preferred route (AIF or Debenture). This consultation is complimentary and non-binding.',
+      'Step 1 — Initial Consultation: Schedule a video call with our NRI Advisory Team. We understand your investment objectives, risk tolerance, and preferred route (AIF or Co-Invest). This consultation is complimentary and non-binding.',
       'Step 2 — KYC Documentation: Submit the following documents digitally: valid passport (all pages); overseas proof of address (utility bill, bank statement, or driving licence); PAN card (Indian Permanent Account Number); NRO/NRE bank account details; recent passport-size photograph; FATCA/CRS self-certification form; tax residency certificate (if applicable for DTAA benefits).',
       'Step 3 — Agreement Execution: Review and digitally sign the subscription agreement and contribution agreement. All documents are prepared by our legal team and can be executed electronically using Aadhaar e-sign or digital signature certificates. Step 4 — Fund Transfer: Transfer the investment amount from your NRO/NRE account to the fund\'s designated bank account. Step 5 — Confirmation: Receive unit allotment confirmation and welcome kit within 7 business days of fund receipt.',
     ],
@@ -171,7 +171,7 @@ const CHAPTERS: Chapter[] = [
       'Can NRIs from any country invest? NRIs and PIOs (Persons of Indian Origin) from most countries can invest. Citizens of Pakistan and Bangladesh require prior RBI approval. Citizens of countries under UN sanctions cannot invest.',
       'Do I need to visit India for onboarding? No. The entire process — consultation, KYC, agreement signing, and fund transfer — can be completed remotely. We support Aadhaar e-sign and digital signature certificates for document execution.',
       'What happens to my investment if I return to India? If you become a resident Indian during the fund tenure, your investment continues as-is. However, the tax treatment will change to resident Indian rates. You should inform the fund and your tax advisor of the status change.',
-      'Can I invest jointly with my spouse? Yes, joint investments are permitted where both parties complete KYC. The primary holder must be an NRI. How are returns distributed? Returns are distributed after each asset exit, following a waterfall structure: return of capital first, then preferred return, then profit sharing. Interim distributions may occur from rental income or coupon payments (Debenture Route).',
+      'Can I invest jointly with my spouse? Yes, joint investments are permitted where both parties complete KYC. The primary holder must be an NRI. How are returns distributed? Returns are distributed after each asset exit, following a waterfall structure: return of capital first, then preferred return, then profit sharing. Interim distributions may occur from rental income or structured payments (Co-Invest Framework).',
     ],
   },
   {
@@ -290,7 +290,7 @@ function NRIHandbookModal({ onClose }: { onClose: () => void }) {
           <div className="space-y-3 mb-6">
             {[
               'FEMA & RBI compliance framework',
-              'AIF vs Debenture route comparison',
+              'AIF vs Co-Invest route comparison',
               'Country-specific tax guidance',
               'Step-by-step onboarding process',
             ].map((item) => (

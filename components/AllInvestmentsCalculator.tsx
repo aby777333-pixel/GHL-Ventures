@@ -149,9 +149,9 @@ const INVESTMENT_VEHICLES = [
     cons: ['₹50L minimum', 'High fees (2%+20%)', 'Concentration risk'],
   },
   {
-    id: 'ghl_debenture',
-    name: 'GHL Debenture Route',
-    shortName: 'GHL NCD',
+    id: 'ghl_coinvest',
+    name: 'GHL Co-Invest',
+    shortName: 'GHL Co-Invest',
     returnRate: 16.0,
     minInvestment: 1000000,
     lockIn: '3-5 years',
@@ -162,7 +162,7 @@ const INVESTMENT_VEHICLES = [
     regulator: 'SEBI',
     color: '#8B5CF6',
     icon: Trophy,
-    pros: ['₹10L entry (vs ₹1Cr AIF)', 'Institutional returns', 'Structured exit', 'Stressed asset upside'],
+    pros: ['Accessible entry for professionals', 'Institutional returns', 'Structured exit', 'Stressed asset upside'],
     cons: ['Lock-in period', 'Not government guaranteed', 'Illiquid during tenure'],
     isGHL: true,
   },
@@ -181,7 +181,7 @@ const INVESTMENT_VEHICLES = [
     color: '#D0021B',
     icon: Trophy,
     pros: ['Highest potential IRR', 'SEBI regulated (Cat II)', 'Deep-value stressed assets', 'Professional fund management'],
-    cons: ['₹1Cr minimum', 'Long lock-in', 'Market & execution risk'],
+    cons: ['As per SEBI AIF Regulations', 'Long lock-in', 'Market & execution risk'],
     isGHL: true,
   },
 ]
@@ -366,7 +366,7 @@ function DetailCard({ vehicle, amount, years, expanded, onToggle }: {
    WEALTH JOURNEY CALCULATOR (Year-by-year growth)
    ============================================================ */
 function WealthJourneyTab({ amount, years }: { amount: number; years: number }) {
-  const selectedVehicles = ['fd', 'gold', 'nifty50', 'ghl_debenture', 'ghl_aif']
+  const selectedVehicles = ['fd', 'gold', 'nifty50', 'ghl_coinvest', 'ghl_aif']
   const vehicles = INVESTMENT_VEHICLES.filter(v => selectedVehicles.includes(v.id))
 
   const yearlyData = useMemo(() => {
@@ -757,7 +757,7 @@ export default function AllInvestmentsCalculator({ isOpen, onClose }: AllInvestm
                     <p className="text-white text-xs font-bold mb-1">The GHL Advantage</p>
                     <p className="text-gray-400 text-[10px] leading-relaxed">
                       GHL AIF targets {INVESTMENT_VEHICLES.find(v => v.id === 'ghl_aif')?.returnRate}% IRR through deep-discount stressed real estate acquisitions via NCLT.
-                      Even the GHL Debenture Route at ₹10L entry outperforms most traditional instruments.
+                      The GHL Co-Invest Framework also outperforms most traditional instruments. Contact our team for details.
                     </p>
                   </div>
                 </div>

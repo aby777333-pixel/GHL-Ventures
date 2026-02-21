@@ -21,7 +21,7 @@ const PROACTIVE_MESSAGES: ProactiveMessage[] = [
   { page: '/portfolio', delay: 5000, message: 'Curious about any of our portfolio companies? I can share details.', trigger: 'pageload' },
   { page: '/invest', delay: 3000, message: 'Ready to start your investment journey? I can walk you through the process.', trigger: 'pageload' },
   { page: '/contact', delay: 3000, message: 'Need help reaching our team? I can connect you right away.', trigger: 'pageload' },
-  { page: '/debenture', delay: 5000, message: 'Interested in our Non-Convertible Debentures? I can explain the benefits.', trigger: 'pageload' },
+  { page: '/debenture', delay: 5000, message: 'Interested in our SEBI Co-Invest Framework? I can explain the benefits.', trigger: 'pageload' },
   { page: '/team', delay: 5000, message: 'Want to learn about the people behind GHL India Ventures?', trigger: 'pageload' },
   { page: '/blog', delay: 10000, message: 'Looking for market insights? Ask me about trends and analysis.', trigger: 'idle' },
 ];

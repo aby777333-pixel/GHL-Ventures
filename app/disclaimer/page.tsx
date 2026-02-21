@@ -28,7 +28,7 @@ export default function DisclaimerPage() {
             <div className="p-5 rounded-xl border border-amber-500/20 bg-amber-500/5 border-l-[3px] border-l-amber-500/30">
               <p className="font-semibold text-amber-400 mb-2">Investment Risk Warning</p>
               <p>
-                Investments in Alternative Investment Funds (AIFs) and Non-Convertible Debentures (NCDs) are subject to market risks, including the possible loss of the principal amount invested. Past performance is not indicative of future results. Returns are not guaranteed.
+                Investments in Alternative Investment Funds (AIFs) and related co-invest instruments are subject to market risks, including the possible loss of the principal amount invested. Past performance is not indicative of future results. Returns are not guaranteed.
               </p>
             </div>
 
@@ -56,7 +56,7 @@ export default function DisclaimerPage() {
             <div className="p-5 rounded-xl border border-white/10 bg-white/[0.03] border-l-[3px] border-l-red-500/30">
               <p className="font-semibold text-white mb-2">Minimum Investment</p>
               <p>
-                As mandated by SEBI, the minimum investment for Category II AIFs is &#8377;1 Crore (INR Ten Million). The Debenture Route (Non-Convertible Debentures) requires a minimum investment of &#8377;10 Lakhs (INR One Million). These are distinct investment products with different risk profiles, return structures, and regulatory frameworks.
+                The minimum investment for Category II AIFs is as per SEBI regulations. The SEBI Co-Invest Framework offers an accessible entry point for qualified investors — contact our team for current investment details. These are distinct investment products with different risk profiles, return structures, and regulatory frameworks.
               </p>
             </div>
 

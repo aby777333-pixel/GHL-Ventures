@@ -213,7 +213,7 @@ export default function ChatWidget() {
           timestamp: new Date(),
         }
         setMessages(prev => [...prev, agentMsg])
-        setQuickReplies(['Tell me about AIF', 'Investment options', 'Schedule a call', 'Debenture Route'])
+        setQuickReplies(['Tell me about AIF', 'Investment options', 'Schedule a call', 'SEBI Co-Invest'])
       }, 2500)
     }
     // 'connect' mode doesn't add messages — just shows the panel

@@ -15,7 +15,7 @@ export default function Blog4GovernanceTransparency() {
       />
 
       <P>
-        Trust in finance is built slowly and lost instantly. For investors allocating ₹1 crore or more into private markets, governance is not a footnote. It is the foundation.
+        Trust in finance is built slowly and lost instantly. For investors allocating as per SEBI AIF Regulations into private markets, governance is not a footnote. It is the foundation.
       </P>
 
       <SectionHeading level={2}>Why Regulation Matters</SectionHeading>

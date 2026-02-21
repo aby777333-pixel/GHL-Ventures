@@ -30,7 +30,7 @@ function getResponse(input: string): string {
 
   // Minimum investment
   if (lower.includes('minimum investment') || lower.includes('how much') || lower.includes('minimum')) {
-    return "The minimum investment is **\u20B91 crore**\u2014in line with SEBI\u2019s guidelines for Category II AIFs designed for High Net Worth Individuals.\n\nFor investors who meet this threshold, the access you get\u2014quality deals, due diligence, professional management\u2014would cost far more independently.\n\nWould you like to know the investment journey once you decide to proceed?"
+    return "The minimum investment is as per SEBI\u2019s guidelines for Category II AIFs designed for High Net Worth Individuals.\n\nFor investors who meet this threshold, the access you get\u2014quality deals, due diligence, professional management\u2014would cost far more independently.\n\nWould you like to know the investment journey once you decide to proceed?"
   }
 
   // How to invest / process

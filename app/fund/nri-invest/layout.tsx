@@ -5,13 +5,13 @@ const SITE_URL = 'https://ghl-india-ventures-2025.netlify.app'
 export const metadata: Metadata = {
   title: 'NRI Invest — Invest in India from Abroad | GHL India Ventures',
   description:
-    'NRI-focused SEBI-registered Category II AIF. Invest in India\'s stressed real estate & startups from anywhere in the world. FEMA/RBI-compliant structure, NRO/NRE routing, ₹1 Crore AIF or ₹10 Lakhs Debenture Route.',
+    'NRI-focused SEBI-registered Category II AIF. Invest in India\'s stressed real estate & startups from anywhere in the world. FEMA/RBI-compliant structure, NRO/NRE routing. AIF as per SEBI regulations or SEBI Co-Invest Framework.',
   keywords: [
     'NRI investment India',
     'NRI AIF investment',
     'NRI invest in real estate India',
     'SEBI registered AIF for NRI',
-    'NRI debenture investment',
+    'NRI co-invest opportunity',
     'FEMA compliant AIF',
     'NRO NRE AIF investment',
     'NRI startup investment India',

@@ -29,7 +29,7 @@ export default function DebentureRoutePage() {
               <span className="mx-2">/</span>
               <Link href="/fund" className="hover:text-white transition-colors">Fund</Link>
               <span className="mx-2">/</span>
-              <span className="text-brand-red font-medium">Debenture Route</span>
+              <span className="text-brand-red font-medium">SEBI Co-Invest Framework</span>
             </nav>
 
             <div className="inline-flex items-center px-4 py-2 bg-white/5 border border-white/10 rounded-full mb-6">
@@ -38,12 +38,13 @@ export default function DebentureRoutePage() {
             </div>
 
             <h1 className="text-2xl md:text-3xl lg:text-4xl font-bold text-white mb-5 leading-tight">
-              Debenture Route<br />
+              SEBI Co-Invest Framework<br />
               <span className="text-gradient">For Salaried Professionals</span>
             </h1>
             <p className="text-base text-gray-300 max-w-3xl leading-relaxed">
-              Flexible investment starting at just ₹10 Lakhs. Build a steady alternative income stream for your family
-              through structured debenture investments backed by GHL India Ventures&apos; dual asset strategy.
+              Build a steady alternative income stream for your family
+              through structured co-invest opportunities backed by GHL India Ventures&apos; dual asset strategy.
+              Contact us for eligibility and investment details.
             </p>
 
             <div className="mt-8 flex flex-wrap gap-4">
@@ -63,12 +64,12 @@ export default function DebentureRoutePage() {
         <div className="container-max mx-auto">
           <AnimatedSection className="text-center mb-10">
             <span className="text-brand-red font-semibold text-xs uppercase tracking-wider">At a Glance</span>
-            <h2 className="section-title mt-2 text-brand-black">Why the Debenture Route?</h2>
+            <h2 className="section-title mt-2 text-brand-black">Why the SEBI Co-Invest Framework?</h2>
           </AnimatedSection>
 
           <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 max-w-5xl mx-auto">
             {[
-              { icon: IndianRupee, title: 'Accessible Entry', value: '₹10 Lakhs', desc: 'Start with an amount that fits a salaried professional\'s savings' },
+              { icon: IndianRupee, title: 'Accessible Entry', value: 'Contact for Details', desc: 'Flexible entry designed for salaried professionals' },
               { icon: TrendingUp, title: 'Structured Returns', value: 'Steady Income', desc: 'Pre-defined returns framework for predictable cash flows' },
               { icon: Heart, title: 'Family Focused', value: 'Sustenance', desc: 'Ideal for families seeking an alternative income stream' },
               { icon: ShieldCheck, title: 'Professionally Managed', value: 'Expert Team', desc: 'Your capital is managed by institutional-grade professionals' },
@@ -99,7 +100,7 @@ export default function DebentureRoutePage() {
           <div className="max-w-4xl mx-auto">
             <div className="grid md:grid-cols-3 gap-6">
               {[
-                { step: '01', title: 'Invest', desc: 'Start with a minimum of ₹10 Lakhs. Complete KYC and sign the debenture agreement with GHL India Ventures.' },
+                { step: '01', title: 'Invest', desc: 'Contact us for investment details. Complete KYC and sign the co-invest agreement with GHL India Ventures.' },
                 { step: '02', title: 'We Deploy', desc: 'Your capital is professionally deployed into stressed real estate resolution and high-growth startup investments across India.' },
                 { step: '03', title: 'You Earn', desc: 'Receive structured returns based on the pre-defined framework. Your family benefits from a steady alternative income stream.' },
               ].map((item, i) => (
@@ -133,7 +134,7 @@ export default function DebentureRoutePage() {
               { icon: Briefcase, title: 'Career Freedom', desc: 'With alternative income flowing in, you can upskill, switch careers, or take entrepreneurial risks without financial fear.' },
               { icon: Home, title: 'Family Security', desc: 'Build a financial safety net for your family — protection against job loss, health emergencies, or economic downturns.' },
               { icon: BarChart3, title: 'Better Than FDs', desc: 'Structured returns that aim to meaningfully outperform traditional Fixed Deposits while maintaining a focus on capital safety.' },
-              { icon: Users, title: 'Not Just for Crorepatis', desc: 'At ₹10 Lakhs, alternative investment exposure is now accessible to salaried professionals across India — not just ultra-HNIs.' },
+              { icon: Users, title: 'Not Just for Crorepatis', desc: 'Alternative investment exposure is now accessible to salaried professionals across India — not just ultra-HNIs. Contact us for details.' },
             ].map((item, i) => (
               <AnimatedSection key={item.title} delay={i * 80}>
                 <div className={`card flex gap-4 h-full ${['glow-card-red','glow-card-blue','glow-card-violet','glow-card-emerald','glow-card-amber','glow-card-cyan'][i % 6]}`}>
@@ -159,7 +160,7 @@ export default function DebentureRoutePage() {
         <div className="container-max mx-auto">
           <AnimatedSection className="text-center mb-10">
             <span className="text-brand-red font-semibold text-xs uppercase tracking-wider">Comparison</span>
-            <h2 className="section-title mt-2 text-brand-black">Debenture Route vs Fixed Deposits</h2>
+            <h2 className="section-title mt-2 text-brand-black">SEBI Co-Invest Framework vs Fixed Deposits</h2>
           </AnimatedSection>
 
           <div className="max-w-3xl mx-auto">
@@ -167,11 +168,11 @@ export default function DebentureRoutePage() {
               <div className="card overflow-hidden glow-card-blue">
                 <div className="grid grid-cols-3 bg-brand-black text-white">
                   <div className="px-4 py-3 text-xs font-bold uppercase tracking-wider">Parameter</div>
-                  <div className="px-4 py-3 text-xs font-bold uppercase tracking-wider text-center">GHL Debenture</div>
+                  <div className="px-4 py-3 text-xs font-bold uppercase tracking-wider text-center">GHL Co-Invest</div>
                   <div className="px-4 py-3 text-xs font-bold uppercase tracking-wider text-center">Bank FD</div>
                 </div>
                 {[
-                  { param: 'Minimum Investment', ghl: '₹10 Lakhs', fd: '₹1,000+' },
+                  { param: 'Minimum Investment', ghl: 'Contact for Details', fd: '₹1,000+' },
                   { param: 'Returns Potential', ghl: 'Higher*', fd: '6–7% p.a.' },
                   { param: 'Asset Backing', ghl: 'Real Estate + Startups', fd: 'Bank Guarantee' },
                   { param: 'Professional Management', ghl: '✓ Institutional-grade', fd: '✗ None' },
@@ -187,7 +188,7 @@ export default function DebentureRoutePage() {
                   </div>
                 ))}
                 <div className="px-4 py-3 bg-gray-50 text-[10px] text-brand-grey">
-                  *Returns are not guaranteed and depend on fund performance. Past performance is not indicative of future results. Investment in debentures involves risks including potential loss of capital.
+                  *Returns are not guaranteed and depend on fund performance. Past performance is not indicative of future results. Investment in co-invest instruments involves risks including potential loss of capital.
                 </div>
               </div>
             </AnimatedSection>
@@ -200,7 +201,7 @@ export default function DebentureRoutePage() {
         <div className="container-max mx-auto">
           <AnimatedSection className="text-center mb-10">
             <span className="text-brand-red font-semibold text-xs uppercase tracking-wider">Ideal For</span>
-            <h2 className="section-title mt-2 text-brand-black">Is the Debenture Route Right for You?</h2>
+            <h2 className="section-title mt-2 text-brand-black">Is the SEBI Co-Invest Framework Right for You?</h2>
           </AnimatedSection>
 
           <div className="max-w-3xl mx-auto">
@@ -212,7 +213,7 @@ export default function DebentureRoutePage() {
                     'Dual-income families looking to build an alternative income stream',
                     'First-time alternative investors who want professional fund management',
                     'Young professionals saving for long-term goals (children\'s education, retirement, home)',
-                    'Anyone with ₹10 Lakhs+ savings who wants better returns than FDs without stock market volatility',
+                    'Anyone with investable savings who wants better returns than FDs without stock market volatility',
                     'Families concerned about job security in the age of AI and automation',
                   ].map((item) => (
                     <li key={item} className="flex items-start">
@@ -239,8 +240,8 @@ export default function DebentureRoutePage() {
               Secure Your Family&apos;s Financial Future
             </h2>
             <p className="text-gray-400 text-base max-w-2xl mx-auto mb-6">
-              Start with just ₹10 Lakhs. Build an alternative income stream that doesn&apos;t depend on your job.
-              Your family&apos;s financial security starts with one smart decision.
+              Build an alternative income stream that doesn&apos;t depend on your job.
+              Your family&apos;s financial security starts with one smart decision. Contact us for investment details.
             </p>
             <div className="flex flex-col sm:flex-row justify-center gap-4">
               <Link

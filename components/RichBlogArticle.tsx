@@ -392,7 +392,7 @@ export default function RichBlogArticle({ article, children, relatedArticles, se
                     <h3 className="text-2xl font-bold text-white mb-3">Ready to Get Started?</h3>
                     <p className="text-gray-400 text-sm mb-6 max-w-lg mx-auto">
                       Learn how our SEBI-registered Category II AIF can help you access
-                      institutional-grade alternative investments starting at ₹1 Crore.
+                      institutional-grade alternative investments as per SEBI regulations.
                     </p>
                     <Link
                       href="/contact"

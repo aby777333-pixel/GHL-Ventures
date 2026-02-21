@@ -101,7 +101,7 @@ export default function DirectAIFPage() {
               <div className="card overflow-hidden glow-card-blue">
                 <div className="grid sm:grid-cols-2 gap-0">
                   {[
-                    { label: 'Minimum Investment', value: '₹1 Crore' },
+                    { label: 'Minimum Investment', value: 'As per SEBI AIF Regulations' },
                     { label: 'Fund Category', value: 'SEBI Category II AIF' },
                     { label: 'Investment Horizon', value: '5–7 Years' },
                     { label: 'Target IRR', value: '15–25%' },
@@ -171,7 +171,7 @@ export default function DirectAIFPage() {
               <div className="card glow-card-emerald">
                 <ul className="space-y-4">
                   {[
-                    'High-Net-Worth Individuals (HNIs) with investable surplus of ₹1 Crore or more',
+                    'High-Net-Worth Individuals (HNIs) meeting SEBI AIF investment requirements',
                     'Family Offices seeking diversified alternative asset exposure',
                     'Corporate treasuries looking for superior risk-adjusted returns',
                     'NRIs seeking regulated investment vehicles in Indian alternatives',

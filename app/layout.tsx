@@ -47,7 +47,7 @@ export const metadata: Metadata = {
     default: 'GHL India Ventures | SEBI Registered AIF Chennai',
     template: '%s',
   },
-  description: 'SEBI-registered Category II AIF in Chennai. Invest in stressed real estate & startups. Min \u20B91 Crore (AIF) or \u20B910 Lakhs (Debenture Route). SEBI Reg. IN/AIF2/2425/1517.',
+  description: 'SEBI-registered Category II AIF in Chennai. Invest in stressed real estate & startups via AIF or SEBI Co-Invest Framework. SEBI Reg. IN/AIF2/2425/1517.',
   keywords: [
     'AIF', 'Alternative Investment Fund', 'SEBI registered AIF', 'Category II AIF',
     'GHL India Ventures', 'Chennai investment fund', 'stressed real estate fund India',
@@ -63,7 +63,7 @@ export const metadata: Metadata = {
     url: SITE_URL,
     siteName: 'GHL India Ventures',
     title: 'GHL India Ventures | SEBI Registered AIF Chennai',
-    description: 'SEBI-registered Category II AIF investing in stressed real estate and startups. Based in Chennai. Min \u20B91 Cr.',
+    description: 'SEBI-registered Category II AIF investing in stressed real estate and startups. Based in Chennai.',
     images: [{ url: `${SITE_URL}/og-image.jpg`, width: 1200, height: 630, alt: 'GHL India Ventures - SEBI Registered Category II AIF' }],
   },
   twitter: {
@@ -143,15 +143,15 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           itemOffered: {
             '@type': 'FinancialProduct',
             name: 'Category II AIF - Direct Route',
-            description: 'SEBI-registered Category II Alternative Investment Fund for HNIs and family offices. Minimum investment ₹1 Crore.',
+            description: 'SEBI-registered Category II Alternative Investment Fund for HNIs and family offices. Minimum investment as per SEBI AIF Regulations.',
           },
         },
         {
           '@type': 'Offer',
           itemOffered: {
             '@type': 'FinancialProduct',
-            name: 'Debenture Route',
-            description: 'Non-Convertible Debenture investment starting at ₹10 Lakhs with exposure to stressed real estate recovery.',
+            name: 'SEBI Co-Invest Framework',
+            description: 'Co-invest instrument providing exposure to stressed real estate recovery. Contact for investment details.',
           },
         },
       ],
@@ -200,7 +200,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         name: 'What is the minimum investment in GHL India Ventures?',
         acceptedAnswer: {
           '@type': 'Answer',
-          text: 'The minimum investment for the Direct AIF Route is ₹1 Crore, as mandated by SEBI for Category II AIFs. For the Debenture Route (NCD structure), the minimum investment starts at ₹10 Lakhs.',
+          text: 'The minimum investment for the Direct AIF Route is as per SEBI AIF Regulations for Category II AIFs. For the SEBI Co-Invest Framework, please contact our team for current investment details.',
         },
       },
       {
