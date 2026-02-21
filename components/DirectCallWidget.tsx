@@ -533,7 +533,7 @@ export default function DirectCallWidget() {
             </div>
           )}
 
-          {/* DOWNLOAD CALLING APPS PANEL (desktop) */}
+          {/* DOWNLOAD CALLING APPS + WEB SOLUTIONS PANEL (desktop) */}
           {!isMobile && showDownloads && !showCallback && !showSolutions && (
             <div className="p-3 space-y-2.5">
               <div className="flex items-center gap-2 mb-1">
@@ -544,32 +544,76 @@ export default function DirectCallWidget() {
                   <ArrowLeft className="w-3.5 h-3.5" />
                 </button>
                 <Download className="w-4 h-4 text-blue-400" />
-                <span className="text-white text-xs font-bold">Get a Calling App</span>
+                <span className="text-white text-xs font-bold">Calling Apps &amp; Web Solutions</span>
               </div>
 
-              <p className="text-gray-400 text-[10px] leading-relaxed px-1">
-                Install any free app below to call directly from your computer:
-              </p>
+              <div className="max-h-[340px] overflow-y-auto space-y-2 pr-1" style={{ scrollbarWidth: 'thin', scrollbarColor: 'rgba(59,130,246,0.3) transparent' }}>
+                {/* ── Section: Desktop Calling Apps ── */}
+                <div className="flex items-center gap-1.5 px-1">
+                  <Monitor className="w-3 h-3 text-blue-400" />
+                  <span className="text-[9px] text-blue-400 font-bold uppercase tracking-wider">Desktop Apps</span>
+                  <div className="flex-1 h-px bg-blue-500/15" />
+                </div>
 
-              {CALLING_APPS.map(app => (
-                <a
-                  key={app.name}
-                  href={app.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className={`flex items-center gap-3 px-3 py-2.5 rounded-xl border transition-all ${app.color} ${app.hoverBg}`}
-                >
-                  <span className="text-base shrink-0">{app.icon}</span>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-[11px] font-bold text-white">{app.name}</p>
-                    <p className="text-[9px] text-gray-400">{app.desc}</p>
-                  </div>
-                  <div className={`shrink-0 flex items-center gap-1 px-2 py-1 rounded-md bg-white/5 text-[8px] font-medium ${app.textColor}`}>
-                    <ExternalLink className="w-2.5 h-2.5" />
-                    Download
-                  </div>
-                </a>
-              ))}
+                {CALLING_APPS.map(app => (
+                  <a
+                    key={app.name}
+                    href={app.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className={`flex items-center gap-3 px-3 py-2.5 rounded-xl border transition-all ${app.color} ${app.hoverBg}`}
+                  >
+                    <span className="text-base shrink-0">{app.icon}</span>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-1.5">
+                        <p className="text-[11px] font-bold text-white">{app.name}</p>
+                        <span className="px-1 py-0.5 rounded text-[7px] font-bold uppercase tracking-wider bg-blue-500/15 text-blue-400">App</span>
+                      </div>
+                      <p className="text-[9px] text-gray-400">{app.desc}</p>
+                    </div>
+                    <div className={`shrink-0 flex items-center gap-1 px-2 py-1 rounded-md bg-white/5 text-[8px] font-medium ${app.textColor}`}>
+                      <ExternalLink className="w-2.5 h-2.5" />
+                      Download
+                    </div>
+                  </a>
+                ))}
+
+                {/* ── Section: Web Calling Solutions ── */}
+                <div className="flex items-center gap-1.5 px-1 pt-1.5">
+                  <Globe className="w-3 h-3 text-indigo-400" />
+                  <span className="text-[9px] text-indigo-400 font-bold uppercase tracking-wider">Web Calling Solutions</span>
+                  <div className="flex-1 h-px bg-indigo-500/15" />
+                </div>
+
+                {WEB_CALLING_SOLUTIONS.map(solution => (
+                  <a
+                    key={solution.name}
+                    href={solution.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className={`flex items-center gap-3 px-3 py-2.5 rounded-xl border transition-all ${solution.color} ${solution.hoverBg}`}
+                  >
+                    <span className="text-base shrink-0">{solution.icon}</span>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-1.5">
+                        <p className="text-[11px] font-bold text-white">{solution.name}</p>
+                        <span className={`px-1 py-0.5 rounded text-[7px] font-bold uppercase tracking-wider ${
+                          solution.type === 'click-to-call' ? 'bg-green-500/15 text-green-400' :
+                          solution.type === 'webrtc' ? 'bg-blue-500/15 text-blue-400' :
+                          'bg-purple-500/15 text-purple-400'
+                        }`}>
+                          {solution.type === 'click-to-call' ? 'Click-to-Call' : solution.type === 'webrtc' ? 'WebRTC' : 'SDK'}
+                        </span>
+                      </div>
+                      <p className="text-[9px] text-gray-400 mt-0.5">{solution.desc}</p>
+                    </div>
+                    <div className={`shrink-0 flex items-center gap-1 px-2 py-1 rounded-md bg-white/5 text-[8px] font-medium ${solution.textColor}`}>
+                      <ExternalLink className="w-2.5 h-2.5" />
+                      Setup
+                    </div>
+                  </a>
+                ))}
+              </div>
 
               {/* Try again after downloading */}
               {pendingCallLine && (
@@ -586,7 +630,7 @@ export default function DirectCallWidget() {
               )}
 
               <p className="text-[8px] text-gray-600 text-center px-2 leading-relaxed">
-                After installing, click &quot;Call App&quot; on any number and it will connect automatically.
+                Desktop apps connect via tel: protocol. Web solutions run in your browser &mdash; no install needed.
               </p>
             </div>
           )}

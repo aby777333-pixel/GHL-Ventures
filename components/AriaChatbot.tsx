@@ -84,6 +84,26 @@ function getResponse(input: string): string {
     return "Opening the **Video Call** widget for you! You can connect with our Sales & Support team directly from your browser.\n\nJust fill in your details and our team will be with you shortly.\n\n*The video call widget should now be open below.*"
   }
 
+  // Live chat widgets / free chat solutions
+  if (lower.includes('live chat') || lower.includes('chat widget') || lower.includes('free chat') || lower.includes('live support') || lower.includes('chat solution') || lower.includes('customer chat') || lower.includes('chat tool')) {
+    return "Here are the **best free live chat widgets** you can integrate:\n\n**Tawk.to** — 100% free, unlimited agents, customizable widget. The most popular free live chat.\n**Crisp** — Free plan for 2 agents, built-in chatbot, knowledge base & shared inbox.\n**Tidio** — Free for 50 conversations/month, AI chatbot, Shopify/WordPress integration.\n**HubSpot Free Chat** — Free forever live chat with CRM integration and chatbot builder.\n**Smartsupp** — Free plan with video recordings and 3 agent seats.\n**Chatwoot** — Open-source, self-hosted option with unlimited agents and channels.\n\nAll of these offer embeddable widgets similar to this ARIA chat. Would you like details on any specific one?"
+  }
+
+  // Tawk.to specific
+  if (lower.includes('tawk') || lower.includes('tawk.to')) {
+    return "**Tawk.to** is the world's most popular free live chat platform.\n\n• **100% free** — no limits on agents, chats, or history\n• Real-time visitor monitoring\n• Customizable widget with branding\n• Mobile apps for iOS & Android\n• Ticketing system included\n• 45+ languages supported\n\nVisit: **tawk.to** to set up in minutes."
+  }
+
+  // Crisp specific
+  if (lower.includes('crisp')) {
+    return "**Crisp** is an all-in-one messaging platform with a generous free tier.\n\n• Free plan includes **2 agent seats**\n• Live chat widget + shared inbox\n• Built-in chatbot (basic)\n• Knowledge base\n• Mobile apps\n\nVisit: **crisp.chat** to get started."
+  }
+
+  // Tidio specific
+  if (lower.includes('tidio')) {
+    return "**Tidio** combines live chat with AI-powered chatbots.\n\n• Free plan: **50 conversations/month**\n• AI chatbot builder (Lyro AI)\n• Shopify, WordPress, Wix plugins\n• Email integration\n• Visitor tracking\n\nVisit: **tidio.com** to try it free."
+  }
+
   // Human / advisor
   if (lower.includes('human') || lower.includes('speak') || lower.includes('advisor') || lower.includes('call') || lower.includes('talk to')) {
     return "Of course! Our advisors are ready to help.\n\n**Call:** +91 7200 255 252\n**Email:** info@ghlindiaventures.com\n**WhatsApp:** +91 7200 255 252\n\nYou can also say **\"video call\"** to open our Video Call widget right here!\n\nOr visit our Contact page to schedule a consultation at your convenience.\n\nThey typically respond within 2 business hours."
@@ -162,6 +182,7 @@ export default function AriaChatbot() {
     'How do I invest?',
     'Tell me about GHL',
     'Start a Video Call',
+    'Live Chat Widgets',
     'Talk to a human',
   ]
 
@@ -275,6 +296,31 @@ export default function AriaChatbot() {
                   borderBottom: '1px solid rgba(208,2,27,0.25)',
                 }}
               />
+            </div>
+          </div>
+        )}
+
+        {/* Label showing 3 modes inside */}
+        {!isOpen && (
+          <div
+            className="absolute -top-8 right-0 whitespace-nowrap animate-fade-in"
+            style={{ pointerEvents: 'none' }}
+          >
+            <div
+              className="flex items-center gap-1 px-2.5 py-1 rounded-full text-[9px] font-medium"
+              style={{
+                background: 'rgba(10,10,10,0.88)',
+                backdropFilter: 'blur(12px)',
+                border: '1px solid rgba(208,2,27,0.2)',
+              }}
+            >
+              <span className="text-brand-red font-bold">ARIA</span>
+              <span className="text-gray-500">|</span>
+              <span className="text-gray-400">Chat</span>
+              <span className="text-gray-600">&middot;</span>
+              <span className="text-gray-400">Video</span>
+              <span className="text-gray-600">&middot;</span>
+              <span className="text-gray-400">Live Chat</span>
             </div>
           </div>
         )}

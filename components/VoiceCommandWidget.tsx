@@ -5,7 +5,7 @@ import { usePathname, useRouter } from 'next/navigation'
 import {
   Mic, MicOff, X, ChevronUp, ChevronDown, Volume2, VolumeX,
   Globe, Navigation, Send, Phone, PhoneCall, Mail, MessageCircle,
-  Video, Moon, Sun, Search, Zap, Power,
+  Video, Moon, Sun, Search, Zap, Power, ArrowLeft, ArrowRight,
 } from 'lucide-react'
 import { NAV_LINKS, BRAND } from '@/lib/constants'
 
@@ -49,12 +49,17 @@ type CmdType = 'navigate' | 'scroll' | 'read' | 'stop' | 'help' | 'language'
   | 'search' | 'close' | 'home' | 'back' | 'downloadapps' | 'callingsolutions'
   | 'openchat' | 'closechat' | 'refresh' | 'share' | 'print' | 'fullscreen'
   | 'time' | 'date' | 'ghlinfo' | 'sebi' | 'address' | 'officehours'
+  | 'zoomin' | 'zoomout' | 'zoomreset' | 'fontup' | 'fontdown' | 'fontreset'
+  | 'scrollleft' | 'scrollright' | 'scrollfast' | 'scrollslow'
+  | 'nextsection' | 'prevsection' | 'highlight' | 'contrast'
+  | 'bookmark' | 'openlivechat' | 'weather' | 'calculator'
+  | 'forward' | 'selectall' | 'clearhistory' | 'focusmain'
   | 'unknown'
 
 interface ParsedCommand {
   type: CmdType
   target?: string
-  direction?: 'up' | 'down' | 'top' | 'bottom'
+  direction?: 'up' | 'down' | 'top' | 'bottom' | 'left' | 'right'
 }
 
 function parseCommand(input: string): ParsedCommand {
@@ -77,15 +82,27 @@ function parseCommand(input: string): ParsedCommand {
     if (match) return { type: 'navigate', target: match[1].trim() }
   }
 
-  // Scroll commands
-  if (/scroll\s*up|go\s*up|page\s*up/.test(text) && text.length < 20) return { type: 'scroll', direction: 'up' }
-  if (/scroll\s*down|go\s*down|page\s*down/.test(text) && text.length < 20) return { type: 'scroll', direction: 'down' }
+  // Scroll commands — vertical
+  if (/scroll\s*up|go\s*up|page\s*up|move\s*up|swipe\s*up/.test(text) && text.length < 25) return { type: 'scroll', direction: 'up' }
+  if (/scroll\s*down|go\s*down|page\s*down|move\s*down|swipe\s*down/.test(text) && text.length < 25) return { type: 'scroll', direction: 'down' }
   if (/^up$/.test(text)) return { type: 'scroll', direction: 'up' }
   if (/^down$/.test(text)) return { type: 'scroll', direction: 'down' }
+  if (/^move$/.test(text)) return { type: 'scroll', direction: 'down' }
   if (/scroll\s*(?:to\s*)?top|go\s*(?:to\s*)?top|beginning/.test(text) && text.length < 25) return { type: 'scroll', direction: 'top' }
   if (/scroll\s*(?:to\s*)?bottom|go\s*(?:to\s*)?bottom|^end$/.test(text) && text.length < 25) return { type: 'scroll', direction: 'bottom' }
   if (/^top$/.test(text)) return { type: 'scroll', direction: 'top' }
   if (/^bottom$/.test(text)) return { type: 'scroll', direction: 'bottom' }
+  // Scroll commands — horizontal
+  if (/scroll\s*left|go\s*left|move\s*left|swipe\s*left/.test(text) && text.length < 25) return { type: 'scroll', direction: 'left' }
+  if (/scroll\s*right|go\s*right|move\s*right|swipe\s*right/.test(text) && text.length < 25) return { type: 'scroll', direction: 'right' }
+  if (/^left$/.test(text)) return { type: 'scroll', direction: 'left' }
+  if (/^right$/.test(text)) return { type: 'scroll', direction: 'right' }
+  // Scroll speed
+  if (/scroll\s*fast|fast\s*scroll|quick\s*scroll/.test(text)) return { type: 'scrollfast' }
+  if (/scroll\s*slow|slow\s*scroll|gentle\s*scroll/.test(text)) return { type: 'scrollslow' }
+  // Section navigation
+  if (/next\s*section|next\s*part|scroll\s*next|next/.test(text) && text.length < 20) return { type: 'nextsection' }
+  if (/previous\s*section|prev\s*section|scroll\s*prev|previous/.test(text) && text.length < 25) return { type: 'prevsection' }
 
   // Read aloud
   if (/^(?:read|read aloud|read this|read page|read out|read it|read the page|read content)/.test(text)) return { type: 'read' }
@@ -120,6 +137,30 @@ function parseCommand(input: string): ParsedCommand {
   // Time & date
   if (/(?:what time|current time|time now|tell.*time)/.test(text)) return { type: 'time' }
   if (/(?:what date|current date|today|what day|tell.*date)/.test(text)) return { type: 'date' }
+
+  // Zoom commands
+  if (/(?:zoom in|zoom\s*\+|bigger|enlarge|magnify)/.test(text)) return { type: 'zoomin' }
+  if (/(?:zoom out|zoom\s*-|smaller|shrink|reduce)/.test(text)) return { type: 'zoomout' }
+  if (/(?:zoom reset|normal zoom|reset zoom|100%|actual size)/.test(text)) return { type: 'zoomreset' }
+
+  // Font size commands
+  if (/(?:font bigger|font up|increase font|larger text|bigger text|bigger font)/.test(text)) return { type: 'fontup' }
+  if (/(?:font smaller|font down|decrease font|smaller text|smaller font)/.test(text)) return { type: 'fontdown' }
+  if (/(?:font reset|reset font|normal font|default font)/.test(text)) return { type: 'fontreset' }
+
+  // Accessibility
+  if (/(?:high contrast|contrast mode|toggle contrast)/.test(text)) return { type: 'contrast' }
+  if (/(?:highlight links|highlight|show links)/.test(text)) return { type: 'highlight' }
+  if (/(?:focus main|focus content|skip to content|main content)/.test(text)) return { type: 'focusmain' }
+
+  // Additional utility commands
+  if (/(?:bookmark|save page|add bookmark)/.test(text)) return { type: 'bookmark' }
+  if (/(?:live chat|open live chat|chat widgets|free chat)/.test(text)) return { type: 'openlivechat' }
+  if (/(?:go forward|forward|next page)/.test(text)) return { type: 'forward' }
+  if (/(?:select all|select everything)/.test(text)) return { type: 'selectall' }
+  if (/(?:clear|clear history|clear chat|reset)/.test(text)) return { type: 'clearhistory' }
+  if (/(?:calculator|calculate|calc|math)/.test(text)) return { type: 'calculator' }
+  if (/(?:weather|temperature|forecast)/.test(text)) return { type: 'weather' }
 
   // Quick info
   if (/(?:what is ghl|about ghl|tell me about ghl|ghl info)/.test(text)) return { type: 'ghlinfo' }
@@ -365,16 +406,58 @@ export default function VoiceCommandWidget() {
         break
       }
       case 'scroll': {
-        const scrollMap = { up: -600, down: 600 }
+        const scrollMap = { up: -600, down: 600, left: 0, right: 0, top: 0, bottom: 0 }
         if (cmd.direction === 'up' || cmd.direction === 'down') {
           window.scrollBy({ top: scrollMap[cmd.direction], behavior: 'smooth' })
           setFeedback(`Scrolling ${cmd.direction}...`)
+        } else if (cmd.direction === 'left') {
+          window.scrollBy({ left: -400, behavior: 'smooth' })
+          setFeedback('Scrolling left...')
+        } else if (cmd.direction === 'right') {
+          window.scrollBy({ left: 400, behavior: 'smooth' })
+          setFeedback('Scrolling right...')
         } else if (cmd.direction === 'top') {
           window.scrollTo({ top: 0, behavior: 'smooth' })
           setFeedback('Scrolling to top...')
         } else if (cmd.direction === 'bottom') {
           window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' })
           setFeedback('Scrolling to bottom...')
+        }
+        break
+      }
+      case 'scrollfast': {
+        window.scrollBy({ top: 1500, behavior: 'smooth' })
+        setFeedback('Fast scrolling down...')
+        break
+      }
+      case 'scrollslow': {
+        window.scrollBy({ top: 200, behavior: 'smooth' })
+        setFeedback('Slow scrolling down...')
+        break
+      }
+      case 'nextsection': {
+        // Find the next heading below current viewport
+        const headings = Array.from(document.querySelectorAll('h1, h2, h3, section'))
+        const viewTop = window.scrollY + 100
+        const nextH = headings.find(h => (h as HTMLElement).offsetTop > viewTop)
+        if (nextH) {
+          (nextH as HTMLElement).scrollIntoView({ behavior: 'smooth', block: 'start' })
+          setFeedback('Jumping to next section...')
+        } else {
+          setFeedback('No more sections below.')
+        }
+        break
+      }
+      case 'prevsection': {
+        const headingsRev = Array.from(document.querySelectorAll('h1, h2, h3, section')).reverse()
+        const viewTopRev = window.scrollY - 50
+        const prevH = headingsRev.find(h => (h as HTMLElement).offsetTop < viewTopRev)
+        if (prevH) {
+          (prevH as HTMLElement).scrollIntoView({ behavior: 'smooth', block: 'start' })
+          setFeedback('Jumping to previous section...')
+        } else {
+          window.scrollTo({ top: 0, behavior: 'smooth' })
+          setFeedback('At the top — no previous sections.')
         }
         break
       }
@@ -536,6 +619,142 @@ export default function VoiceCommandWidget() {
         speak(`GHL India Ventures office hours are ${hours}`)
         break
       }
+      case 'zoomin': {
+        const currentZoom = parseFloat(document.documentElement.style.zoom || '1')
+        const newZoom = Math.min(currentZoom + 0.1, 2)
+        document.documentElement.style.zoom = String(newZoom)
+        setFeedback(`Zoomed in to ${Math.round(newZoom * 100)}%`)
+        speak(`Zoomed in to ${Math.round(newZoom * 100)} percent`)
+        break
+      }
+      case 'zoomout': {
+        const currentZ = parseFloat(document.documentElement.style.zoom || '1')
+        const newZ = Math.max(currentZ - 0.1, 0.5)
+        document.documentElement.style.zoom = String(newZ)
+        setFeedback(`Zoomed out to ${Math.round(newZ * 100)}%`)
+        speak(`Zoomed out to ${Math.round(newZ * 100)} percent`)
+        break
+      }
+      case 'zoomreset': {
+        document.documentElement.style.zoom = '1'
+        setFeedback('Zoom reset to 100%')
+        speak('Zoom reset to normal.')
+        break
+      }
+      case 'fontup': {
+        const root = document.documentElement
+        const currentSize = parseFloat(getComputedStyle(root).fontSize)
+        root.style.fontSize = `${Math.min(currentSize + 2, 28)}px`
+        setFeedback(`Font size increased to ${Math.min(currentSize + 2, 28)}px`)
+        speak('Font size increased.')
+        break
+      }
+      case 'fontdown': {
+        const rootEl = document.documentElement
+        const curSize = parseFloat(getComputedStyle(rootEl).fontSize)
+        rootEl.style.fontSize = `${Math.max(curSize - 2, 10)}px`
+        setFeedback(`Font size decreased to ${Math.max(curSize - 2, 10)}px`)
+        speak('Font size decreased.')
+        break
+      }
+      case 'fontreset': {
+        document.documentElement.style.fontSize = ''
+        setFeedback('Font size reset to default.')
+        speak('Font size reset.')
+        break
+      }
+      case 'contrast': {
+        const body = document.body
+        if (body.classList.contains('ghl-high-contrast')) {
+          body.classList.remove('ghl-high-contrast')
+          body.style.filter = ''
+          setFeedback('High contrast mode OFF.')
+          speak('High contrast mode disabled.')
+        } else {
+          body.classList.add('ghl-high-contrast')
+          body.style.filter = 'contrast(1.4) saturate(0.3)'
+          setFeedback('High contrast mode ON.')
+          speak('High contrast mode enabled.')
+        }
+        break
+      }
+      case 'highlight': {
+        const links = document.querySelectorAll('a')
+        const isHighlighted = document.body.classList.contains('ghl-links-highlighted')
+        if (isHighlighted) {
+          links.forEach(a => (a as HTMLElement).style.outline = '')
+          document.body.classList.remove('ghl-links-highlighted')
+          setFeedback('Link highlighting removed.')
+          speak('Links no longer highlighted.')
+        } else {
+          links.forEach(a => (a as HTMLElement).style.outline = '2px solid #D0021B')
+          document.body.classList.add('ghl-links-highlighted')
+          setFeedback('All links highlighted!')
+          speak('All links are now highlighted.')
+        }
+        break
+      }
+      case 'focusmain': {
+        const mainContent = document.getElementById('main-content') || document.querySelector('main') || document.querySelector('[role="main"]')
+        if (mainContent) {
+          (mainContent as HTMLElement).tabIndex = -1
+          ;(mainContent as HTMLElement).focus()
+          mainContent.scrollIntoView({ behavior: 'smooth' })
+          setFeedback('Focused on main content.')
+          speak('Focused on main content area.')
+        } else {
+          setFeedback('No main content area found.')
+        }
+        break
+      }
+      case 'bookmark': {
+        setFeedback('Bookmark shortcut: Press Ctrl+D (or Cmd+D on Mac) to bookmark this page.')
+        speak('To bookmark this page, press Control D or Command D on Mac.')
+        break
+      }
+      case 'openlivechat': {
+        setFeedback('Opening ARIA with live chat info...')
+        speak('Opening ARIA chat with live chat widget information.')
+        const chatBtn = document.querySelector('[aria-label="Open ARIA chatbot"]') as HTMLElement
+        if (chatBtn) chatBtn.click()
+        break
+      }
+      case 'forward': {
+        setFeedback('Going forward...')
+        speak('Going forward.')
+        setTimeout(() => window.history.forward(), 500)
+        break
+      }
+      case 'selectall': {
+        setFeedback('Selecting all text on page...')
+        if (typeof window.getSelection !== 'undefined') {
+          const range = document.createRange()
+          const mainEl = document.getElementById('main-content') || document.body
+          range.selectNodeContents(mainEl)
+          const sel = window.getSelection()
+          sel?.removeAllRanges()
+          sel?.addRange(range)
+        }
+        speak('All text selected.')
+        break
+      }
+      case 'clearhistory': {
+        setFeedback('Feedback cleared.')
+        setInputText('')
+        break
+      }
+      case 'calculator': {
+        setFeedback('Opening calculator...')
+        speak('Opening web calculator.')
+        window.open('https://www.google.com/search?q=calculator', '_blank')
+        break
+      }
+      case 'weather': {
+        setFeedback('Opening weather for Chennai...')
+        speak('Opening weather forecast for Chennai.')
+        window.open('https://www.google.com/search?q=weather+chennai', '_blank')
+        break
+      }
       case 'dark': {
         setFeedback('Switching to dark mode...')
         speak('Switching to dark mode.')
@@ -568,7 +787,7 @@ export default function VoiceCommandWidget() {
         break
       }
       case 'help': {
-        const helpText = 'Commands: "Go to [page]", "Scroll up/down/top/bottom", "Read page", "Stop", "Direct Call", "Call", "Email us", "WhatsApp", "Telegram", "Video call", "Open chat", "Download app", "Calling solutions", "Dark/Light mode", "Switch to [language]", "Search [query]", "What time", "What date", "SEBI number", "Address", "Office hours", "Share", "Print", "Fullscreen", "Refresh", "Go back", "Home", "Close".'
+        const helpText = 'Commands: "Go to [page]", "Scroll up/down/left/right/top/bottom", "Move up/down", "Next/Previous section", "Scroll fast/slow", "Read page", "Stop", "Direct Call", "Call", "Email", "WhatsApp", "Telegram", "Video call", "Open chat", "Live chat", "Download app", "Calling solutions", "Dark/Light mode", "Zoom in/out/reset", "Font bigger/smaller/reset", "High contrast", "Highlight links", "Focus main", "Bookmark", "Calculator", "Weather", "Switch to [language]", "Search [query]", "What time", "What date", "SEBI", "Address", "Office hours", "Share", "Print", "Fullscreen", "Refresh", "Go back", "Go forward", "Home", "Select all", "Clear", "Close".'
         setFeedback(helpText)
         speak(helpText)
         break
@@ -853,10 +1072,14 @@ export default function VoiceCommandWidget() {
           <div className="px-3 py-2 border-b border-white/10">
             <div className="flex items-center gap-1.5 flex-wrap">
               {[
-                { icon: <ChevronUp className="w-2.5 h-2.5" />, label: 'Up', action: () => { window.scrollBy({ top: -600, behavior: 'smooth' }); setFeedback('Scrolling up...') } },
-                { icon: <ChevronDown className="w-2.5 h-2.5" />, label: 'Down', action: () => { window.scrollBy({ top: 600, behavior: 'smooth' }); setFeedback('Scrolling down...') } },
+                { icon: <ChevronUp className="w-2.5 h-2.5" />, label: 'Up', action: () => executeCommand('scroll up') },
+                { icon: <ChevronDown className="w-2.5 h-2.5" />, label: 'Down', action: () => executeCommand('scroll down') },
+                { icon: <Navigation className="w-2.5 h-2.5" />, label: 'Top', action: () => executeCommand('scroll top') },
+                { icon: <Navigation className="w-2.5 h-2.5 rotate-180" />, label: 'Bottom', action: () => executeCommand('scroll bottom') },
                 { icon: <Volume2 className="w-2.5 h-2.5" />, label: 'Read', action: readPageContent },
-                { icon: <Navigation className="w-2.5 h-2.5" />, label: 'Top', action: () => { window.scrollTo({ top: 0, behavior: 'smooth' }); setFeedback('Scrolling to top...') } },
+                { icon: <Search className="w-2.5 h-2.5" />, label: 'Zoom+', action: () => executeCommand('zoom in') },
+                { icon: <Search className="w-2.5 h-2.5" />, label: 'Zoom-', action: () => executeCommand('zoom out') },
+                { icon: <Sun className="w-2.5 h-2.5" />, label: 'Contrast', action: () => executeCommand('high contrast') },
               ].map(btn => (
                 <button key={btn.label} onClick={btn.action} className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white text-[10px] transition-all">
                   {btn.icon} {btn.label}
@@ -874,6 +1097,9 @@ export default function VoiceCommandWidget() {
                 { icon: <Video className="w-2.5 h-2.5" />, label: 'Video', color: 'text-purple-400', action: () => executeCommand('video call') },
                 { icon: <Phone className="w-2.5 h-2.5" />, label: 'Get App', color: 'text-cyan-400', action: () => executeCommand('download app') },
                 { icon: <Power className="w-2.5 h-2.5" />, label: 'Solutions', color: 'text-indigo-400', action: () => executeCommand('calling solutions') },
+                { icon: <MessageCircle className="w-2.5 h-2.5" />, label: 'Live Chat', color: 'text-pink-400', action: () => executeCommand('live chat') },
+                { icon: <Moon className="w-2.5 h-2.5" />, label: 'Dark', color: 'text-gray-300', action: () => executeCommand('dark mode') },
+                { icon: <Sun className="w-2.5 h-2.5" />, label: 'Light', color: 'text-yellow-400', action: () => executeCommand('light mode') },
               ].map(btn => (
                 <button key={btn.label} onClick={btn.action} className={`inline-flex items-center gap-1 px-2 py-1 rounded-full bg-white/5 hover:bg-white/10 ${btn.color} text-[10px] transition-all`}>
                   {btn.icon} {btn.label}
