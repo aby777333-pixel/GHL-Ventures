@@ -277,7 +277,7 @@ export function findBestResponse(
   // Greeting detection
   if (/^(hi|hello|hey|good morning|good afternoon|good evening|namaste|howdy)[\s!.?]*$/i.test(lower)) {
     return {
-      text: 'Hello! \ud83d\udc4b Welcome to GHL India Ventures. I\u2019m ARIA, your investment assistant.\n\nI can help you with:\n\u2022 Our investment routes (from \u20B910 Lakhs)\n\u2022 Fund details & performance\n\u2022 How to start investing\n\u2022 Connecting with an advisor\n\nWhat would you like to know?',
+      text: 'Hello! \ud83d\udc4b Welcome to GHL India Ventures. I\u2019m ARIA, your investment assistant.\n\nI can help you with:\n\u2022 Our investment routes (AIF & SEBI Co-Invest Framework)\n\u2022 Fund details & performance\n\u2022 How to start investing\n\u2022 Connecting with an advisor\n\nWhat would you like to know?',
       quickReplies: ['Investment Routes', 'Minimum Investment', 'How to Invest', 'Talk to Advisor'],
     }
   }
