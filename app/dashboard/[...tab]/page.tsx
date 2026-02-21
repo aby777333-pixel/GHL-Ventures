@@ -7,7 +7,6 @@ const DashboardClient = dynamic(
 
 export function generateStaticParams() {
   return [
-    {},
     { tab: ['investments'] },
     { tab: ['invest-onboard'] },
     { tab: ['portfolio'] },
