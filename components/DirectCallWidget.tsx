@@ -219,6 +219,15 @@ export default function DirectCallWidget() {
     }
     window.addEventListener('ghl-show-solutions', handleShowSolutions)
 
+    // Listen for ARIA Connect "Call Us" — open in default phone view
+    const handleOpenDirectCall = () => {
+      setIsOpen(true)
+      setShowSolutions(false)
+      setShowCallback(false)
+      setShowDownloads(false)
+    }
+    window.addEventListener('ghl-open-direct-call', handleOpenDirectCall)
+
     // Detect which calling app is currently active/installed (browser-based check)
     const detectCallingApp = () => {
       // Check if tel: protocol handler is registered (indicates Skype/Teams/etc.)
@@ -236,6 +245,7 @@ export default function DirectCallWidget() {
       clearTimeout(pulseTimer)
       window.removeEventListener('ghl-show-downloads', handleShowDownloads)
       window.removeEventListener('ghl-show-solutions', handleShowSolutions)
+      window.removeEventListener('ghl-open-direct-call', handleOpenDirectCall)
     }
   }, [])
 

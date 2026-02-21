@@ -492,14 +492,12 @@ export default function ChatWidget() {
                 <ArrowRight className="w-4 h-4 text-gray-500" />
               </a>
 
-              {/* Video Call — triggers the on-page Video Call Widget */}
+              {/* Video Call — opens the floating Video Call Widget via custom event */}
               <button
                 onClick={() => {
                   setIsOpen(false)
-                  // Click the VideoCallWidget button on the page
                   setTimeout(() => {
-                    const vcBtn = document.querySelector('[aria-label="Start video call"], [aria-label="Schedule a Video Call"]') as HTMLButtonElement
-                    if (vcBtn) vcBtn.click()
+                    window.dispatchEvent(new CustomEvent('ghl-open-video-call'))
                   }, 300)
                 }}
                 className="w-full flex items-center space-x-3 p-3 rounded-xl transition-all hover:scale-[1.02] mb-2.5 text-left"
@@ -531,10 +529,15 @@ export default function ChatWidget() {
                 <ArrowRight className="w-4 h-4 text-gray-500" />
               </a>
 
-              {/* Phone */}
-              <a
-                href="tel:+917200255252"
-                className="flex items-center space-x-3 p-3 rounded-xl transition-all hover:scale-[1.02] mb-2.5"
+              {/* Phone — opens the floating Direct Call Widget via custom event */}
+              <button
+                onClick={() => {
+                  setIsOpen(false)
+                  setTimeout(() => {
+                    window.dispatchEvent(new CustomEvent('ghl-open-direct-call'))
+                  }, 300)
+                }}
+                className="w-full flex items-center space-x-3 p-3 rounded-xl transition-all hover:scale-[1.02] mb-2.5 text-left"
                 style={{ background: 'rgba(168,85,247,0.12)', border: '1px solid rgba(168,85,247,0.25)' }}
               >
                 <div className="w-10 h-10 rounded-xl bg-purple-500 flex items-center justify-center shrink-0">
@@ -545,7 +548,7 @@ export default function ChatWidget() {
                   <p className="text-gray-400 text-[11px]">+91 7200 255 252 · Mon–Sat 9:30 AM–6:30 PM</p>
                 </div>
                 <ArrowRight className="w-4 h-4 text-gray-500" />
-              </a>
+              </button>
 
               {/* Telegram */}
               <a
