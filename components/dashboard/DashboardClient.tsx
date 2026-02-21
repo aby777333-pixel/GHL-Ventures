@@ -2188,6 +2188,7 @@ export default function DashboardClient() {
   // ═══════════════════════════════════════════════════════════
   const renderContent = () => {
     switch (activeTab) {
+      case 'dashboard': return renderDashboardHome()
       case 'investments': return renderInvestmentsTab()
       case 'invest-onboard': return renderInvestOnboard()
       case 'portfolio': return renderPortfolioTab()
