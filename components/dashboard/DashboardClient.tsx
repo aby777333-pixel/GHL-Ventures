@@ -225,7 +225,7 @@ function Glass({ children, className = '', hover = true, glow = false, theme = '
       style={{
         background: isDark
           ? 'linear-gradient(135deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.02) 100%)'
-          : 'linear-gradient(135deg, rgba(245,243,240,0.9) 0%, rgba(238,236,232,0.94) 100%)',
+          : 'linear-gradient(135deg, rgba(228,225,220,0.92) 0%, rgba(222,219,214,0.96) 100%)',
         backdropFilter: 'blur(40px) saturate(180%)',
         WebkitBackdropFilter: 'blur(40px) saturate(180%)',
       }}
@@ -282,6 +282,8 @@ export default function DashboardClient() {
   const [investVehicle, setInvestVehicle] = useState('AIF Direct')
   const [activeCalc, setActiveCalc] = useState('sip')
   const [calcInputs, setCalcInputs] = useState({ amount: 100000, rate: 15, years: 5 })
+  const [notifPrefs, setNotifPrefs] = useState({ email: true, nav: true, invest: true, dividend: true })
+  const [dashLang, setDashLang] = useState('English')
   const [taskReminders] = useState([
     { id: 1, task: 'Complete KYC re-verification', due: '31 Mar 2025', urgent: true },
     { id: 2, task: 'Review Q4 NAV report', due: '20 Mar 2025', urgent: false },
@@ -325,7 +327,7 @@ export default function DashboardClient() {
       {sidebarOpen && <div className="fixed inset-0 bg-black/60 z-40 lg:hidden backdrop-blur-sm" onClick={() => setSidebarOpen(false)} />}
       <aside className={`fixed top-0 left-0 h-full z-50 w-[260px] flex flex-col transition-transform duration-500 ease-out lg:translate-x-0 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}
         style={{
-          background: isDark ? 'linear-gradient(180deg, rgba(10,10,10,0.98) 0%, rgba(15,5,5,0.98) 100%)' : 'linear-gradient(180deg, rgba(240,238,234,0.98) 0%, rgba(236,234,230,0.98) 100%)',
+          background: isDark ? 'linear-gradient(180deg, rgba(10,10,10,0.98) 0%, rgba(15,5,5,0.98) 100%)' : 'linear-gradient(180deg, rgba(214,211,206,0.98) 0%, rgba(210,207,202,0.98) 100%)',
           borderRight: `1px solid ${isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)'}`,
           backdropFilter: 'blur(40px)',
         }}>
@@ -418,7 +420,7 @@ export default function DashboardClient() {
   // ═══════════════════════════════════════════════════════════
   const renderTopBar = () => (
     <header className={`sticky top-0 z-30 border-b ${t('border-white/[0.06]','border-gray-200/50')}`}
-      style={{ background: isDark ? 'rgba(10,10,10,0.8)' : 'rgba(240,238,234,0.9)', backdropFilter: 'blur(40px) saturate(180%)' }}>
+      style={{ background: isDark ? 'rgba(10,10,10,0.8)' : 'rgba(214,211,206,0.92)', backdropFilter: 'blur(40px) saturate(180%)' }}>
       {/* Market Ticker */}
       <div className={`border-b ${t('border-white/[0.04]','border-gray-200/40')} px-4 py-1.5 overflow-hidden`}>
         <div className="flex items-center gap-6 text-xs animate-marquee whitespace-nowrap">
@@ -1648,9 +1650,19 @@ export default function DashboardClient() {
             <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${t('bg-white/[0.04]','bg-gray-200/40')}`}><Languages className="w-5 h-5 text-blue-400" /></div>
             <div><h4 className={`text-sm font-bold ${t('text-white','text-gray-900')}`}>Language</h4><p className={`text-xs ${t('text-gray-500','text-gray-500')}`}>Dashboard language preference</p></div>
           </div>
-          <select className={`w-full px-4 py-2.5 rounded-xl text-sm ${t('bg-white/[0.04] border border-white/[0.06] text-white','bg-gray-100/60 border border-gray-200/40 text-gray-900')}`}>
-            <option>English</option><option>Hindi</option><option>Tamil</option><option>Telugu</option><option>Kannada</option><option>Malayalam</option><option>Marathi</option><option>Bengali</option><option>Gujarati</option>
+          <select
+            value={dashLang}
+            onChange={(e) => setDashLang(e.target.value)}
+            className={`w-full px-4 py-2.5 rounded-xl text-sm cursor-pointer ${t('bg-white/[0.04] border border-white/[0.06] text-white','bg-gray-100/60 border border-gray-200/40 text-gray-900')}`}
+          >
+            <option value="English">English</option><option value="Hindi">हिन्दी (Hindi)</option><option value="Tamil">தமிழ் (Tamil)</option><option value="Telugu">తెలుగు (Telugu)</option><option value="Kannada">ಕನ್ನಡ (Kannada)</option><option value="Malayalam">മലയാളം (Malayalam)</option><option value="Marathi">मराठी (Marathi)</option><option value="Bengali">বাংলা (Bengali)</option><option value="Gujarati">ગુજરાતી (Gujarati)</option>
           </select>
+          {dashLang !== 'English' && (
+            <p className={`text-[10px] mt-2 ${t('text-gray-500','text-gray-500')}`}>
+              <Info className="w-3 h-3 inline mr-1" />
+              Translation to {dashLang} will be available in a future update. Currently displaying in English.
+            </p>
+          )}
         </Glass>
 
         {/* Notifications */}
@@ -1659,12 +1671,23 @@ export default function DashboardClient() {
             <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${t('bg-white/[0.04]','bg-gray-200/40')}`}><Bell className="w-5 h-5 text-amber-400" /></div>
             <div><h4 className={`text-sm font-bold ${t('text-white','text-gray-900')}`}>Notifications</h4><p className={`text-xs ${t('text-gray-500','text-gray-500')}`}>Email and push preferences</p></div>
           </div>
-          {['Email Alerts','NAV Updates','Investment Opportunities','Dividend Notifications'].map((opt,j) => (
-            <div key={j} className={`flex items-center justify-between p-2.5 rounded-lg ${t('hover:bg-white/[0.02]','hover:bg-gray-200/40')} transition-colors`}>
-              <span className={`text-xs ${t('text-gray-400','text-gray-600')}`}>{opt}</span>
-              <div className="w-9 h-5 rounded-full bg-brand-red/20 relative cursor-pointer"><div className="absolute right-0.5 top-0.5 w-4 h-4 rounded-full bg-brand-red transition-all" /></div>
-            </div>
-          ))}
+          {([
+            { key: 'email' as const, label: 'Email Alerts' },
+            { key: 'nav' as const, label: 'NAV Updates' },
+            { key: 'invest' as const, label: 'Investment Opportunities' },
+            { key: 'dividend' as const, label: 'Dividend Notifications' },
+          ]).map((opt) => {
+            const isOn = notifPrefs[opt.key]
+            return (
+              <div key={opt.key} className={`flex items-center justify-between p-2.5 rounded-lg ${t('hover:bg-white/[0.02]','hover:bg-gray-200/40')} transition-colors`}>
+                <span className={`text-xs ${t('text-gray-400','text-gray-600')}`}>{opt.label}</span>
+                <button onClick={() => setNotifPrefs(p => ({ ...p, [opt.key]: !p[opt.key] }))}
+                  className={`w-10 h-[22px] rounded-full relative cursor-pointer transition-all duration-300 ${isOn ? 'bg-brand-red' : t('bg-white/[0.08]','bg-gray-300')}`}>
+                  <div className={`absolute top-[3px] w-4 h-4 rounded-full bg-white shadow-md transition-all duration-300 ${isOn ? 'left-[22px]' : 'left-[3px]'}`} />
+                </button>
+              </div>
+            )
+          })}
         </Glass>
 
         {/* Security */}
@@ -2184,7 +2207,7 @@ export default function DashboardClient() {
   // MAIN RENDER
   // ═══════════════════════════════════════════════════════════
   return (
-    <div className={`min-h-screen relative transition-colors duration-500 ${isDark ? 'bg-brand-black' : 'bg-[#ECEAE6]'}`}>
+    <div className={`min-h-screen relative transition-colors duration-500 ${isDark ? 'bg-brand-black' : 'bg-[#D5D1CC]'}`}>
       {/* Background ambient effects */}
       <div className="fixed inset-0 pointer-events-none z-0">
         {isDark && (

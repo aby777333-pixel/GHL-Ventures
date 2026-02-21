@@ -2294,21 +2294,57 @@ body,
   z-index: 9999;
 }
 
-/* When dashboard is active, clean slate for dashboard */
+/* ── Dashboard Mode: CSS-based visibility control ──
+   When dashboard is active, hide site chrome. Widgets stay visible. */
+
 body.dashboard-active {
-  background-color: #0A0A0A !important;
+  overflow-x: hidden;
 }
 
-/* Strip all padding/margin from main container so dashboard is full-bleed */
 body.dashboard-active main {
   padding: 0 !important;
   margin: 0 !important;
 }
 
-/* Elements hidden by JS get data-dash-hidden attr — this ensures they stay hidden */
-[data-dash-hidden="true"] {
-  display: none !important;
+/* Hide ALL fixed-positioned elements by default in dashboard mode */
+body.dashboard-active .fixed {
+  visibility: hidden !important;
+  pointer-events: none !important;
 }
+
+/* KEEP: Dashboard's own fixed elements (sidebar, topbar, modals, overlays) */
+body.dashboard-active .dashboard-root .fixed {
+  visibility: visible !important;
+  pointer-events: auto !important;
+}
+
+/* KEEP: All 4 GHL widget containers and their fixed children */
+body.dashboard-active #ghl-chat-widget,
+body.dashboard-active #ghl-video-widget,
+body.dashboard-active #ghl-direct-widget,
+body.dashboard-active #ghl-voice-widget {
+  position: relative;
+  z-index: 10000;
+}
+body.dashboard-active #ghl-chat-widget .fixed,
+body.dashboard-active #ghl-video-widget .fixed,
+body.dashboard-active #ghl-direct-widget .fixed,
+body.dashboard-active #ghl-voice-widget .fixed {
+  visibility: visible !important;
+  pointer-events: auto !important;
+}
+
+/* Hide site Navbar, Footer, skip-link in dashboard mode */
+body.dashboard-active nav { display: none !important; }
+body.dashboard-active footer { display: none !important; }
+body.dashboard-active .skip-to-content { display: none !important; }
+
+/* But keep nav/footer INSIDE the dashboard root */
+body.dashboard-active .dashboard-root nav { display: block !important; }
+body.dashboard-active .dashboard-root footer { display: flex !important; }
+
+/* Hide other floating widgets that aren't needed in dashboard */
+body.dashboard-active .scroll-progress-bar { display: none !important; }
 
 /* Glass hover effect */
 .dash-glass-hover {
