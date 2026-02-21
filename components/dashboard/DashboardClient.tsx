@@ -15,7 +15,8 @@ import {
   BookOpen, Languages, Sparkles, CircleDot, Filter, MoreHorizontal,
   Home, Mail, BellRing, Archive, Trash2, ImageIcon, Flag,
   Activity, Gauge, Timer, Newspaper, AlarmClock, TrendingDown,
-  Flame, DollarSign, Megaphone, Trophy, Heart, Banknote
+  Flame, DollarSign, Megaphone, Trophy, Heart, Banknote,
+  Calculator, FolderOpen, FileUp, Sliders, ScrollText
 } from 'lucide-react'
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip,
@@ -28,7 +29,7 @@ import Logo from '@/components/Logo'
    TYPES
    ═══════════════════════════════════════════════════════════════ */
 type Theme = 'dark' | 'light'
-type TabId = 'dashboard' | 'investments' | 'portfolio' | 'kyc' | 'transactions' | 'messages' | 'support' | 'referrals' | 'profile' | 'settings'
+type TabId = 'dashboard' | 'investments' | 'invest-onboard' | 'portfolio' | 'kyc' | 'transactions' | 'messages' | 'support' | 'referrals' | 'calculators' | 'profile' | 'settings'
 
 /* ═══════════════════════════════════════════════════════════════
    MOCK DATA
@@ -176,6 +177,7 @@ const SIDEBAR_ITEMS: { id: TabId; label: string; icon: any; badge?: string }[] =
   { id: 'transactions', label: 'Transactions', icon: ArrowLeftRight },
   { id: 'messages', label: 'Messages', icon: MessageSquare, badge: '2' },
   { id: 'support', label: 'Support', icon: HeadphonesIcon },
+  { id: 'calculators', label: 'Calculators', icon: BarChart3 },
   { id: 'referrals', label: 'Referrals', icon: Gift, badge: 'NEW' },
 ]
 const SIDEBAR_BOTTOM: { id: TabId; label: string; icon: any }[] = [
@@ -218,12 +220,12 @@ function Glass({ children, className = '', hover = true, glow = false, theme = '
   return (
     <div
       className={`relative rounded-2xl border overflow-hidden transition-all duration-500
-        ${isDark ? 'border-white/[0.08]' : 'border-stone-300/50 shadow-sm shadow-stone-200/40'}
+        ${isDark ? 'border-white/[0.08]' : 'border-stone-400/30 shadow-sm shadow-stone-300/30'}
         ${hover ? 'dash-glass-hover' : ''} ${glow ? 'dash-glow' : ''} ${className}`}
       style={{
         background: isDark
           ? 'linear-gradient(135deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.02) 100%)'
-          : 'linear-gradient(135deg, rgba(240,237,232,0.85) 0%, rgba(235,231,226,0.9) 100%)',
+          : 'linear-gradient(135deg, rgba(224,219,212,0.88) 0%, rgba(218,213,205,0.92) 100%)',
         backdropFilter: 'blur(40px) saturate(180%)',
         WebkitBackdropFilter: 'blur(40px) saturate(180%)',
       }}
@@ -269,11 +271,21 @@ export default function DashboardClient() {
   const [messageCompose, setMessageCompose] = useState(false)
   const [bankConnectOpen, setBankConnectOpen] = useState(false)
   const [uploadModalOpen, setUploadModalOpen] = useState(false)
+  const [termsOpen, setTermsOpen] = useState(false)
+  const [termsAccepted, setTermsAccepted] = useState(false)
+  const [termsScrolled, setTermsScrolled] = useState(false)
+  const [docName, setDocName] = useState('')
+  const [docCategory, setDocCategory] = useState('')
+  const [investAmount, setInvestAmount] = useState(2500000)
+  const [investVehicle, setInvestVehicle] = useState('AIF Direct')
+  const [activeCalc, setActiveCalc] = useState('sip')
+  const [calcInputs, setCalcInputs] = useState({ amount: 100000, rate: 15, years: 5 })
   const [taskReminders] = useState([
     { id: 1, task: 'Complete KYC re-verification', due: '31 Mar 2025', urgent: true },
     { id: 2, task: 'Review Q4 NAV report', due: '20 Mar 2025', urgent: false },
   ])
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const termsRef = useRef<HTMLDivElement>(null)
 
   const isDark = theme === 'dark'
   const t = (dark: string, light: string) => isDark ? dark : light
@@ -310,7 +322,7 @@ export default function DashboardClient() {
       {sidebarOpen && <div className="fixed inset-0 bg-black/60 z-40 lg:hidden backdrop-blur-sm" onClick={() => setSidebarOpen(false)} />}
       <aside className={`fixed top-0 left-0 h-full z-50 w-[260px] flex flex-col transition-transform duration-500 ease-out lg:translate-x-0 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}
         style={{
-          background: isDark ? 'linear-gradient(180deg, rgba(10,10,10,0.98) 0%, rgba(15,5,5,0.98) 100%)' : 'linear-gradient(180deg, rgba(235,231,226,0.98) 0%, rgba(228,224,218,0.98) 100%)',
+          background: isDark ? 'linear-gradient(180deg, rgba(10,10,10,0.98) 0%, rgba(15,5,5,0.98) 100%)' : 'linear-gradient(180deg, rgba(210,205,197,0.98) 0%, rgba(204,199,190,0.98) 100%)',
           borderRight: `1px solid ${isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)'}`,
           backdropFilter: 'blur(40px)',
         }}>
@@ -330,7 +342,7 @@ export default function DashboardClient() {
 
         {/* Investor badge */}
         <div className="px-6 mb-4">
-          <div className={`px-3 py-2.5 rounded-xl ${t('bg-white/[0.04] border border-white/[0.06]','bg-stone-200/50 border border-stone-300/50')}`}>
+          <div className={`px-3 py-2.5 rounded-xl ${t('bg-white/[0.04] border border-white/[0.06]','bg-stone-300/40 border border-stone-400/30')}`}>
             <p className={`text-[10px] uppercase tracking-widest mb-0.5 ${t('text-gray-500','text-gray-400')}`}>Investor</p>
             <p className={`text-sm font-semibold ${t('text-white','text-gray-900')}`}>Rajesh Krishnan</p>
             <p className={`text-[10px] mt-0.5 ${t('text-gray-500','text-gray-500')}`}>ID: GHL-INV-2024-0847</p>
@@ -346,7 +358,7 @@ export default function DashboardClient() {
                 className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-300 group relative
                   ${isActive
                     ? isDark ? 'text-white bg-brand-red/15 border border-brand-red/20' : 'text-brand-red bg-red-50 border border-red-200'
-                    : isDark ? 'text-gray-400 hover:text-white hover:bg-white/[0.04]' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
+                    : isDark ? 'text-gray-400 hover:text-white hover:bg-white/[0.04]' : 'text-gray-600 hover:text-gray-900 hover:bg-stone-300/30'
                   }`}>
                 {isActive && <div className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-5 rounded-r-full bg-brand-red" />}
                 <item.icon className={`w-[18px] h-[18px] ${isActive ? 'text-brand-red' : isDark ? 'text-gray-500 group-hover:text-gray-300' : 'text-gray-400 group-hover:text-gray-600'}`} />
@@ -359,13 +371,13 @@ export default function DashboardClient() {
               </button>
             )
           })}
-          <div className={`my-4 border-t ${t('border-white/[0.06]','border-gray-200')}`} />
+          <div className={`my-4 border-t ${t('border-white/[0.06]','border-stone-400/25')}`} />
           {SIDEBAR_BOTTOM.map((item) => (
             <button key={item.id} onClick={() => { setActiveTab(item.id); setSidebarOpen(false) }}
               className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-300 group
                 ${activeTab === item.id
-                  ? isDark ? 'text-white bg-white/[0.06]' : 'text-gray-900 bg-gray-100'
-                  : isDark ? 'text-gray-500 hover:text-gray-300 hover:bg-white/[0.03]' : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'
+                  ? isDark ? 'text-white bg-white/[0.06]' : 'text-gray-900 bg-stone-300/30'
+                  : isDark ? 'text-gray-500 hover:text-gray-300 hover:bg-white/[0.03]' : 'text-gray-500 hover:text-gray-700 hover:bg-stone-300/25'
                 }`}>
               <item.icon className="w-[18px] h-[18px]" />
               {item.label}
@@ -402,10 +414,10 @@ export default function DashboardClient() {
   // TOP BAR
   // ═══════════════════════════════════════════════════════════
   const renderTopBar = () => (
-    <header className={`sticky top-0 z-30 border-b ${t('border-white/[0.06]','border-gray-200')}`}
-      style={{ background: isDark ? 'rgba(10,10,10,0.8)' : 'rgba(235,231,226,0.85)', backdropFilter: 'blur(40px) saturate(180%)' }}>
+    <header className={`sticky top-0 z-30 border-b ${t('border-white/[0.06]','border-stone-400/25')}`}
+      style={{ background: isDark ? 'rgba(10,10,10,0.8)' : 'rgba(210,205,197,0.88)', backdropFilter: 'blur(40px) saturate(180%)' }}>
       {/* Market Ticker */}
-      <div className={`border-b ${t('border-white/[0.04]','border-gray-100')} px-4 py-1.5 overflow-hidden`}>
+      <div className={`border-b ${t('border-white/[0.04]','border-stone-300/30')} px-4 py-1.5 overflow-hidden`}>
         <div className="flex items-center gap-6 text-xs animate-marquee whitespace-nowrap">
           {[...MARKET_DATA, ...MARKET_DATA].map((m, i) => (
             <span key={i} className="inline-flex items-center gap-2">
@@ -432,7 +444,7 @@ export default function DashboardClient() {
         <div className="flex items-center gap-2">
           {/* Search */}
           <div className={`hidden md:flex items-center gap-2 px-3 py-1.5 rounded-xl w-56 transition-colors
-            ${t('bg-white/[0.04] border border-white/[0.06] focus-within:border-brand-red/30','bg-gray-100 border border-gray-200 focus-within:border-brand-red/40')}`}>
+            ${t('bg-white/[0.04] border border-white/[0.06] focus-within:border-brand-red/30','bg-stone-300/30 border border-stone-400/25 focus-within:border-brand-red/40')}`}>
             <Search className={`w-3.5 h-3.5 ${t('text-gray-500','text-gray-400')}`} />
             <input type="text" placeholder="Search..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)}
               className={`bg-transparent border-none outline-none text-xs w-full ${t('text-white placeholder-gray-600','text-gray-900 placeholder-gray-400')}`} />
@@ -448,7 +460,7 @@ export default function DashboardClient() {
 
           {/* Notifications */}
           <div className="relative">
-            <button onClick={() => setNotifOpen(!notifOpen)} className={`relative p-2 rounded-xl transition-colors ${t('text-gray-400 hover:text-white hover:bg-white/[0.04]','text-gray-500 hover:text-gray-900 hover:bg-gray-100')}`}>
+            <button onClick={() => setNotifOpen(!notifOpen)} className={`relative p-2 rounded-xl transition-colors ${t('text-gray-400 hover:text-white hover:bg-white/[0.04]','text-gray-500 hover:text-gray-900 hover:bg-stone-300/30')}`}>
               <Bell className="w-4 h-4" />
               <span className="absolute -top-0.5 -right-0.5 w-4 h-4 rounded-full bg-brand-red text-[9px] font-bold text-white flex items-center justify-center">
                 {NOTIFICATIONS_DATA.filter(n => !n.read).length}
@@ -458,14 +470,14 @@ export default function DashboardClient() {
             {/* Notification dropdown */}
             {notifOpen && (
               <div className={`absolute right-0 top-12 w-80 rounded-2xl border shadow-2xl z-50 overflow-hidden
-                ${t('bg-[#111] border-white/[0.08]','bg-white border-gray-200')}`}>
-                <div className={`px-4 py-3 flex items-center justify-between border-b ${t('border-white/[0.06]','border-gray-100')}`}>
+                ${t('bg-[#111] border-white/[0.08]','bg-[#E0DBD4] border-stone-400/25')}`}>
+                <div className={`px-4 py-3 flex items-center justify-between border-b ${t('border-white/[0.06]','border-stone-300/30')}`}>
                   <h4 className={`text-sm font-bold ${t('text-white','text-gray-900')}`}>Notifications</h4>
                   <button className="text-[10px] text-brand-red font-semibold">Mark all read</button>
                 </div>
                 <div className="max-h-80 overflow-y-auto">
                   {NOTIFICATIONS_DATA.map(n => (
-                    <div key={n.id} className={`px-4 py-3 flex gap-3 cursor-pointer transition-colors ${!n.read ? (isDark ? 'bg-white/[0.02]' : 'bg-blue-50/50') : ''} ${t('hover:bg-white/[0.04]','hover:bg-stone-200/40')}`}>
+                    <div key={n.id} className={`px-4 py-3 flex gap-3 cursor-pointer transition-colors ${!n.read ? (isDark ? 'bg-white/[0.02]' : 'bg-blue-50/50') : ''} ${t('hover:bg-white/[0.04]','hover:bg-stone-300/35')}`}>
                       <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0
                         ${n.type === 'report' ? 'bg-blue-500/15' : n.type === 'opportunity' ? 'bg-emerald-500/15' : n.type === 'alert' ? 'bg-amber-500/15' : n.type === 'payment' ? 'bg-emerald-500/15' : 'bg-purple-500/15'}`}>
                         {n.type === 'report' ? <FileText className="w-4 h-4 text-blue-400" /> :
@@ -497,7 +509,7 @@ export default function DashboardClient() {
           </button>
 
           {/* Avatar */}
-          <div className={`flex items-center gap-2 ml-2 pl-3 border-l ${t('border-white/[0.06]','border-gray-200')}`}>
+          <div className={`flex items-center gap-2 ml-2 pl-3 border-l ${t('border-white/[0.06]','border-stone-400/25')}`}>
             <div className="w-8 h-8 rounded-full bg-gradient-to-br from-brand-red to-red-800 flex items-center justify-center text-xs font-bold text-white ring-2 ring-white/[0.08]">RK</div>
           </div>
         </div>
@@ -641,9 +653,9 @@ export default function DashboardClient() {
       </div>
       <div className="space-y-3">
         {PORTFOLIO_ASSETS.map((asset, i) => (
-          <div key={i} className={`p-3 rounded-xl transition-all duration-300 group cursor-pointer ${t('bg-white/[0.02] border border-white/[0.04] hover:border-white/[0.08]','bg-gray-50 border border-gray-200 hover:border-gray-300')}`}>
+          <div key={i} className={`p-3 rounded-xl transition-all duration-300 group cursor-pointer ${t('bg-white/[0.02] border border-white/[0.04] hover:border-white/[0.08]','bg-stone-300/20 border border-stone-400/20 hover:border-stone-500/25')}`}>
             <div className="flex items-center gap-4 mb-2">
-              <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${t('bg-white/[0.04]','bg-stone-300/40')}`}>
+              <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${t('bg-white/[0.04]','bg-stone-400/25')}`}>
                 {asset.type.includes('Real Estate') ? <Building2 className="w-5 h-5 text-brand-red" /> : asset.type.includes('Startup') ? <Rocket className="w-5 h-5 text-amber-400" /> : <FileText className="w-5 h-5 text-blue-400" />}
               </div>
               <div className="flex-1 min-w-0">
@@ -700,7 +712,7 @@ export default function DashboardClient() {
       <h3 className={`text-base font-bold mb-5 ${t('text-white','text-gray-900')}`}>Recent Activity</h3>
       <div className="space-y-2.5">
         {RECENT_TRANSACTIONS.slice(0, 5).map((tx, i) => (
-          <div key={i} className={`flex items-center gap-3 p-2.5 rounded-lg transition-colors ${t('hover:bg-white/[0.02]','hover:bg-stone-200/40')}`}>
+          <div key={i} className={`flex items-center gap-3 p-2.5 rounded-lg transition-colors ${t('hover:bg-white/[0.02]','hover:bg-stone-300/35')}`}>
             <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${tx.type === 'Investment' ? 'bg-blue-500/15' : tx.type === 'Dividend' ? 'bg-emerald-500/15' : 'bg-gray-500/15'}`}>
               {tx.type === 'Investment' ? <ArrowUpRight className="w-4 h-4 text-blue-400" /> : tx.type === 'Dividend' ? <IndianRupee className="w-4 h-4 text-emerald-400" /> : <Info className="w-4 h-4 text-gray-400" />}
             </div>
@@ -773,7 +785,7 @@ export default function DashboardClient() {
         </div>
         <div className="flex items-center gap-3 mb-2">
           {[{ v: days, l: 'Days' },{ v: hours, l: 'Hrs' }].map((u,i) => (
-            <div key={i} className={`flex-1 text-center p-2.5 rounded-xl ${t('bg-white/[0.04] border border-white/[0.06]','bg-stone-200/50 border border-stone-300/50')}`}>
+            <div key={i} className={`flex-1 text-center p-2.5 rounded-xl ${t('bg-white/[0.04] border border-white/[0.06]','bg-stone-300/40 border border-stone-400/30')}`}>
               <p className={`text-2xl font-black tracking-tight ${t('text-white','text-gray-900')}`}>{u.v}</p>
               <p className={`text-[9px] uppercase tracking-widest ${t('text-gray-600','text-gray-500')}`}>{u.l}</p>
             </div>
@@ -820,7 +832,7 @@ export default function DashboardClient() {
       <div className="grid grid-cols-2 gap-3">
         {[{ label: 'SENSEX', val: '73,842', chg: '+1.24%', data: SENSEX_INTRADAY, color: '#D0021B' },
           { label: 'NIFTY 50', val: '22,456', chg: '+0.98%', data: NIFTY_INTRADAY, color: '#3B82F6' }].map((chart,i) => (
-          <div key={i} className={`p-3 rounded-xl ${t('bg-white/[0.03] border border-white/[0.04]','bg-stone-200/30 border border-stone-300/30')}`}>
+          <div key={i} className={`p-3 rounded-xl ${t('bg-white/[0.03] border border-white/[0.04]','bg-stone-300/25 border border-stone-400/20')}`}>
             <div className="flex items-center justify-between mb-1">
               <span className={`text-[10px] font-semibold ${t('text-gray-400','text-gray-500')}`}>{chart.label}</span>
               <span className="text-[10px] font-bold text-emerald-400">{chart.chg}</span>
@@ -853,7 +865,7 @@ export default function DashboardClient() {
       </div>
       <div className="space-y-2">
         {GLOBAL_MARKETS.map((m,i) => (
-          <div key={i} className={`flex items-center justify-between p-2 rounded-lg ${t('hover:bg-white/[0.02]','hover:bg-stone-200/40')} transition-colors`}>
+          <div key={i} className={`flex items-center justify-between p-2 rounded-lg ${t('hover:bg-white/[0.02]','hover:bg-stone-300/35')} transition-colors`}>
             <div className="flex items-center gap-2">
               <span className={`w-6 h-4 rounded text-[8px] font-bold flex items-center justify-center text-white ${m.up ? 'bg-emerald-500/80' : 'bg-red-500/80'}`}>{m.region}</span>
               <span className={`text-xs font-medium ${t('text-gray-300','text-gray-700')}`}>{m.name}</span>
@@ -879,7 +891,7 @@ export default function DashboardClient() {
       </div>
       <div className="grid grid-cols-2 gap-2.5">
         {INDIA_INDICATORS.map((ind,i) => (
-          <div key={i} className={`p-3 rounded-xl text-center ${t('bg-white/[0.03] border border-white/[0.04]','bg-stone-200/30 border border-stone-300/30')}`}>
+          <div key={i} className={`p-3 rounded-xl text-center ${t('bg-white/[0.03] border border-white/[0.04]','bg-stone-300/25 border border-stone-400/20')}`}>
             <ind.icon className={`w-4 h-4 mx-auto mb-1.5 ${ind.trend === 'up' ? 'text-emerald-400' : ind.trend === 'down' ? 'text-red-400' : 'text-blue-400'}`} />
             <p className={`text-sm font-black ${t('text-white','text-gray-900')}`}>{ind.value}</p>
             <p className={`text-[9px] mt-0.5 ${t('text-gray-500','text-gray-500')}`}>{ind.label}</p>
@@ -907,7 +919,7 @@ export default function DashboardClient() {
       </div>
       <div className="space-y-1.5">
         {ECONOMIC_CALENDAR.slice(0, 6).map((ev,i) => (
-          <div key={i} className={`flex items-center gap-3 p-2 rounded-lg ${t('hover:bg-white/[0.02]','hover:bg-stone-200/40')} transition-colors`}>
+          <div key={i} className={`flex items-center gap-3 p-2 rounded-lg ${t('hover:bg-white/[0.02]','hover:bg-stone-300/35')} transition-colors`}>
             <div className={`w-10 text-center shrink-0 ${t('text-gray-500','text-gray-500')}`}>
               <p className="text-[10px] font-bold leading-tight">{ev.date.split(' ')[0]}</p>
               <p className="text-[8px] uppercase">{ev.date.split(' ')[1]}</p>
@@ -938,7 +950,7 @@ export default function DashboardClient() {
       </div>
       <div className="space-y-2.5">
         {ADMIN_NEWS.map(news => (
-          <div key={news.id} className={`p-3 rounded-xl cursor-pointer transition-all group ${news.pinned ? (isDark ? 'bg-brand-red/[0.06] border border-brand-red/15 hover:border-brand-red/30' : 'bg-red-50/60 border border-red-200/40 hover:border-red-300/60') : t('bg-white/[0.02] border border-white/[0.04] hover:border-white/[0.08]','bg-stone-200/30 border border-stone-300/30 hover:border-stone-400/40')}`}>
+          <div key={news.id} className={`p-3 rounded-xl cursor-pointer transition-all group ${news.pinned ? (isDark ? 'bg-brand-red/[0.06] border border-brand-red/15 hover:border-brand-red/30' : 'bg-red-50/60 border border-red-200/40 hover:border-red-300/60') : t('bg-white/[0.02] border border-white/[0.04] hover:border-white/[0.08]','bg-stone-300/25 border border-stone-400/20 hover:border-stone-400/40')}`}>
             <div className="flex items-start gap-2 mb-1">
               {news.pinned && <Flame className="w-3 h-3 text-brand-red shrink-0 mt-0.5" />}
               <div className="flex-1 min-w-0">
@@ -1002,7 +1014,7 @@ export default function DashboardClient() {
           { label: '\u20B91 Crore Portfolio', achieved: false, progress: 85 },
         ].map((m,i) => (
           <div key={i} className="flex items-center gap-3">
-            <div className={`w-7 h-7 rounded-full flex items-center justify-center shrink-0 ${m.achieved ? 'bg-amber-500/20' : t('bg-white/[0.04]','bg-stone-300/40')}`}>
+            <div className={`w-7 h-7 rounded-full flex items-center justify-center shrink-0 ${m.achieved ? 'bg-amber-500/20' : t('bg-white/[0.04]','bg-stone-400/25')}`}>
               {m.achieved ? <CheckCircle className="w-4 h-4 text-amber-400" /> : <CircleDot className={`w-4 h-4 ${t('text-gray-600','text-gray-400')}`} />}
             </div>
             <div className="flex-1 min-w-0">
@@ -1054,7 +1066,7 @@ export default function DashboardClient() {
             <BellRing className="w-4 h-4 text-amber-400 shrink-0" />
             <span className={`text-xs font-semibold ${t('text-white','text-gray-900')}`}>Reminders:</span>
             {taskReminders.map(r => (
-              <span key={r.id} className={`text-xs px-2.5 py-1 rounded-lg ${r.urgent ? 'bg-amber-500/15 text-amber-400 border border-amber-500/20' : t('bg-white/[0.04] text-gray-400','bg-gray-100 text-gray-600')}`}>
+              <span key={r.id} className={`text-xs px-2.5 py-1 rounded-lg ${r.urgent ? 'bg-amber-500/15 text-amber-400 border border-amber-500/20' : t('bg-white/[0.04] text-gray-400','bg-stone-300/25 text-gray-600')}`}>
                 {r.task} &bull; {r.due}
               </span>
             ))}
@@ -1136,7 +1148,7 @@ export default function DashboardClient() {
                 { label: 'Tenure', val: opp.tenure },
                 { label: 'Risk Level', val: opp.risk, risk: true },
               ].map((f, j) => (
-                <div key={j} className={`p-2.5 rounded-lg ${t('bg-white/[0.02]','bg-gray-50')}`}>
+                <div key={j} className={`p-2.5 rounded-lg ${t('bg-white/[0.02]','bg-stone-300/20')}`}>
                   <p className={`text-[10px] uppercase tracking-wider ${t('text-gray-600','text-gray-400')}`}>{f.label}</p>
                   <p className={`text-sm font-bold ${f.green ? 'text-emerald-400' : f.risk ? (opp.risk === 'Very High' ? 'text-red-400' : opp.risk === 'High' ? 'text-amber-400' : 'text-blue-400') : t('text-white','text-gray-900')}`}>{f.val}</p>
                 </div>
@@ -1144,6 +1156,8 @@ export default function DashboardClient() {
             </div>
             <button className="w-full py-2.5 rounded-xl text-sm font-semibold text-white transition-all duration-300 hover:scale-[1.02]"
               style={{ background: 'linear-gradient(135deg, #D0021B, #8B0000)' }}>Express Interest</button>
+            <button onClick={() => setActiveTab('invest-onboard')} className={`w-full py-2 rounded-lg text-xs font-medium mt-2 transition-all ${t('text-gray-400 bg-white/[0.03] hover:bg-white/[0.06]','text-gray-600 bg-stone-300/35 hover:bg-stone-400/30')}`}>
+              Proceed to Invest &rarr;</button>
           </Glass>
         ))}
       </div>
@@ -1154,7 +1168,7 @@ export default function DashboardClient() {
         <p className={`text-xs mb-4 ${t('text-gray-500','text-gray-500')}`}>Request changes to your current investment allocation. Our advisory team will review and process your request.</p>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
           {ALLOCATION_DATA.map((a, i) => (
-            <div key={i} className={`p-3 rounded-xl ${t('bg-white/[0.03] border border-white/[0.06]','bg-stone-200/50 border border-stone-300/50')}`}>
+            <div key={i} className={`p-3 rounded-xl ${t('bg-white/[0.03] border border-white/[0.06]','bg-stone-300/40 border border-stone-400/30')}`}>
               <div className="flex items-center gap-2 mb-2">
                 <div className="w-3 h-3 rounded-full" style={{ background: a.color }} />
                 <span className={`text-xs font-semibold ${t('text-white','text-gray-900')}`}>{a.name}</span>
@@ -1194,7 +1208,7 @@ export default function DashboardClient() {
             <div key={i} className={`p-4 rounded-xl text-center transition-all cursor-pointer
               ${step.status === 'completed' ? (isDark ? 'bg-emerald-500/10 border border-emerald-500/20' : 'bg-emerald-50 border border-emerald-200') :
                 step.status === 'in-review' ? (isDark ? 'bg-amber-500/10 border border-amber-500/20' : 'bg-amber-50 border border-amber-200') :
-                t('bg-white/[0.03] border border-white/[0.06]','bg-stone-200/50 border border-stone-300/50')}`}>
+                t('bg-white/[0.03] border border-white/[0.06]','bg-stone-300/40 border border-stone-400/30')}`}>
               <step.icon className={`w-6 h-6 mx-auto mb-2 ${step.status === 'completed' ? 'text-emerald-400' : step.status === 'in-review' ? 'text-amber-400' : t('text-gray-500','text-gray-400')}`} />
               <p className={`text-[11px] font-medium ${t('text-white','text-gray-900')}`}>{step.label}</p>
               <span className={`text-[9px] font-semibold uppercase mt-1 inline-block px-1.5 py-0.5 rounded-full
@@ -1222,7 +1236,7 @@ export default function DashboardClient() {
             { name: 'TDS Certificate', status: 'available', date: '30 Jun 2024', type: 'Tax' },
           ].map((doc, i) => (
             <div key={i} className={`flex items-center gap-3 p-4 rounded-xl transition-all cursor-pointer group
-              ${t('bg-white/[0.02] border border-white/[0.04] hover:border-white/[0.08]','bg-gray-50 border border-gray-200 hover:border-gray-300')}`}>
+              ${t('bg-white/[0.02] border border-white/[0.04] hover:border-white/[0.08]','bg-stone-300/20 border border-stone-400/20 hover:border-stone-500/25')}`}>
               <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0
                 ${doc.status === 'verified' ? 'bg-emerald-500/15' : doc.status === 'pending' ? 'bg-amber-500/15' : 'bg-blue-500/15'}`}>
                 {doc.status === 'verified' ? <CheckCircle className="w-5 h-5 text-emerald-400" /> :
@@ -1242,24 +1256,46 @@ export default function DashboardClient() {
       {/* Upload Modal */}
       {uploadModalOpen && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 backdrop-blur-sm">
-          <div className={`max-w-lg w-full mx-4 rounded-2xl border p-6 ${t('bg-[#111] border-white/10','bg-white border-gray-200 shadow-2xl')}`}>
+          <div className={`max-w-lg w-full mx-4 rounded-2xl border p-6 ${t('bg-[#111] border-white/10','bg-[#DDD8D0] border-stone-400/30 shadow-2xl')}`}>
             <div className="flex items-center justify-between mb-5">
               <h3 className={`text-lg font-bold ${t('text-white','text-gray-900')}`}>Upload Document</h3>
               <button onClick={() => setUploadModalOpen(false)} className={t('text-gray-500 hover:text-white','text-gray-400 hover:text-gray-900')}><X className="w-5 h-5" /></button>
             </div>
-            <div className={`border-2 border-dashed rounded-xl p-8 text-center mb-4 cursor-pointer transition-colors ${t('border-white/10 hover:border-brand-red/30','border-gray-300 hover:border-brand-red/40')}`}
+            {/* Document Name */}
+            <div className="mb-3">
+              <label className={`text-xs font-medium mb-1 block ${t('text-gray-400','text-gray-600')}`}>Document Name</label>
+              <input type="text" placeholder="e.g. Rajesh_PAN_2025" value={docName} onChange={e => setDocName(e.target.value)}
+                className={`w-full px-4 py-2.5 rounded-xl text-sm ${t('bg-white/[0.04] border border-white/[0.06] text-white placeholder-gray-600','bg-stone-300/40 border border-stone-400/30 text-gray-900 placeholder-gray-400')}`} />
+            </div>
+            {/* Folder / Category */}
+            <div className="mb-3">
+              <label className={`text-xs font-medium mb-1 block ${t('text-gray-400','text-gray-600')}`}>File To Folder</label>
+              <select value={docCategory} onChange={e => setDocCategory(e.target.value)}
+                className={`w-full px-4 py-2.5 rounded-xl text-sm ${t('bg-white/[0.04] border border-white/[0.06] text-white','bg-stone-300/40 border border-stone-400/30 text-gray-900')}`}>
+                <option value="">Select folder...</option>
+                <option value="pan">PAN Card</option><option value="aadhaar">Aadhaar Card</option>
+                <option value="bank">Bank Statements</option><option value="cheque">Cancelled Cheque</option>
+                <option value="photo">Photo (Passport Size)</option><option value="address">Address Proof</option>
+                <option value="demat">Demat Statement</option><option value="business">Business Registration</option>
+                <option value="tax">Tax Documents</option><option value="other">Other</option>
+              </select>
+            </div>
+            {/* Folder Preview */}
+            {docCategory && (
+              <div className={`flex items-center gap-2 mb-3 p-2 rounded-lg text-xs ${t('bg-white/[0.03]','bg-stone-200/50')}`}>
+                <FolderOpen className="w-4 h-4 text-amber-400" />
+                <span className={t('text-gray-400','text-gray-600')}>Will be saved to:</span>
+                <span className={`font-semibold ${t('text-white','text-gray-900')}`}>/{docCategory}/{docName || 'untitled'}</span>
+              </div>
+            )}
+            {/* Drop zone */}
+            <div className={`border-2 border-dashed rounded-xl p-6 text-center mb-4 cursor-pointer transition-colors ${t('border-white/10 hover:border-brand-red/30','border-stone-300 hover:border-brand-red/40')}`}
               onClick={() => fileInputRef.current?.click()}>
-              <Upload className={`w-10 h-10 mx-auto mb-3 ${t('text-gray-500','text-gray-400')}`} />
+              <Upload className={`w-8 h-8 mx-auto mb-2 ${t('text-gray-500','text-gray-400')}`} />
               <p className={`text-sm font-medium mb-1 ${t('text-white','text-gray-900')}`}>Click to upload or drag & drop</p>
               <p className={`text-xs ${t('text-gray-500','text-gray-500')}`}>PDF, JPG, PNG up to 10MB</p>
               <input ref={fileInputRef} type="file" className="hidden" accept=".pdf,.jpg,.jpeg,.png" multiple />
             </div>
-            <select className={`w-full px-4 py-2.5 rounded-xl text-sm mb-4 ${t('bg-white/[0.04] border border-white/[0.06] text-white','bg-stone-200/50 border border-stone-300/50 text-gray-900')}`}>
-              <option value="">Select document type...</option>
-              <option>PAN Card</option><option>Aadhaar Card</option><option>Bank Statement</option>
-              <option>Cancelled Cheque</option><option>Photo (Passport Size)</option><option>Address Proof</option>
-              <option>Demat Statement</option><option>Business Registration</option><option>Other</option>
-            </select>
             <button className="w-full py-2.5 rounded-xl text-sm font-semibold text-white" style={{ background: 'linear-gradient(135deg, #D0021B, #8B0000)' }}>
               Upload & Submit
             </button>
@@ -1285,7 +1321,7 @@ export default function DashboardClient() {
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
-              <tr className={`border-b ${t('border-white/[0.06]','border-gray-200')}`}>
+              <tr className={`border-b ${t('border-white/[0.06]','border-stone-400/25')}`}>
                 {['Date', 'Type', 'Fund', 'Amount', 'Status'].map(h => (
                   <th key={h} className={`text-${h === 'Amount' || h === 'Status' ? 'right' : 'left'} text-xs font-medium py-3 px-5 ${t('text-gray-500','text-gray-400')}`}>{h}</th>
                 ))}
@@ -1293,7 +1329,7 @@ export default function DashboardClient() {
             </thead>
             <tbody>
               {RECENT_TRANSACTIONS.map((tx, i) => (
-                <tr key={i} className={`border-b transition-colors ${t('border-white/[0.03] hover:bg-white/[0.02]','border-gray-100 hover:bg-gray-50')}`}>
+                <tr key={i} className={`border-b transition-colors ${t('border-white/[0.03] hover:bg-white/[0.02]','border-gray-100 hover:bg-stone-300/25')}`}>
                   <td className={`py-3 px-5 text-xs ${t('text-gray-400','text-gray-500')}`}>{tx.date}</td>
                   <td className="py-3 px-5">
                     <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${tx.type === 'Investment' ? 'bg-blue-500/15 text-blue-400' : tx.type === 'Dividend' ? 'bg-emerald-500/15 text-emerald-400' : 'bg-gray-500/15 text-gray-400'}`}>{tx.type}</span>
@@ -1334,13 +1370,13 @@ export default function DashboardClient() {
         <Glass className="p-6" theme={theme}>
           <h4 className={`text-sm font-bold mb-4 ${t('text-white','text-gray-900')}`}>New Message</h4>
           <div className="space-y-3">
-            <select className={`w-full px-4 py-2.5 rounded-xl text-sm ${t('bg-white/[0.04] border border-white/[0.06] text-white','bg-stone-200/50 border border-stone-300/50 text-gray-900')}`}>
+            <select className={`w-full px-4 py-2.5 rounded-xl text-sm ${t('bg-white/[0.04] border border-white/[0.06] text-white','bg-stone-300/40 border border-stone-400/30 text-gray-900')}`}>
               <option>Relationship Manager</option><option>Compliance Team</option><option>Investment Team</option><option>Support Team</option>
             </select>
-            <input type="text" placeholder="Subject" className={`w-full px-4 py-2.5 rounded-xl text-sm ${t('bg-white/[0.04] border border-white/[0.06] text-white placeholder-gray-600','bg-gray-50 border border-gray-200 text-gray-900 placeholder-gray-400')}`} />
-            <textarea rows={4} placeholder="Write your message..." className={`w-full px-4 py-2.5 rounded-xl text-sm resize-none ${t('bg-white/[0.04] border border-white/[0.06] text-white placeholder-gray-600','bg-gray-50 border border-gray-200 text-gray-900 placeholder-gray-400')}`} />
+            <input type="text" placeholder="Subject" className={`w-full px-4 py-2.5 rounded-xl text-sm ${t('bg-white/[0.04] border border-white/[0.06] text-white placeholder-gray-600','bg-stone-300/25 border border-stone-400/25 text-gray-900 placeholder-gray-400')}`} />
+            <textarea rows={4} placeholder="Write your message..." className={`w-full px-4 py-2.5 rounded-xl text-sm resize-none ${t('bg-white/[0.04] border border-white/[0.06] text-white placeholder-gray-600','bg-stone-300/25 border border-stone-400/25 text-gray-900 placeholder-gray-400')}`} />
             <div className="flex items-center gap-3">
-              <button className={`p-2 rounded-lg ${t('hover:bg-white/[0.04]','hover:bg-stone-200/40')}`}><Paperclip className={`w-4 h-4 ${t('text-gray-500','text-gray-400')}`} /></button>
+              <button className={`p-2 rounded-lg ${t('hover:bg-white/[0.04]','hover:bg-stone-300/35')}`}><Paperclip className={`w-4 h-4 ${t('text-gray-500','text-gray-400')}`} /></button>
               <div className="flex-1" />
               <button onClick={() => setMessageCompose(false)} className={`px-4 py-2 rounded-xl text-sm font-medium ${t('text-gray-400','text-gray-500')}`}>Cancel</button>
               <button className="px-5 py-2 rounded-xl text-sm font-semibold text-white" style={{ background: 'linear-gradient(135deg, #D0021B, #8B0000)' }}>Send</button>
@@ -1409,18 +1445,18 @@ export default function DashboardClient() {
         </div>
         {ticketForm && (
           <div className="space-y-3 mb-6">
-            <input type="text" placeholder="Subject" className={`w-full px-4 py-2.5 rounded-xl text-sm ${t('bg-white/[0.04] border border-white/[0.06] text-white placeholder-gray-600','bg-gray-50 border border-gray-200 text-gray-900 placeholder-gray-400')}`} />
-            <select className={`w-full px-4 py-2.5 rounded-xl text-sm ${t('bg-white/[0.04] border border-white/[0.06] text-white','bg-stone-200/50 border border-stone-300/50 text-gray-900')}`}>
+            <input type="text" placeholder="Subject" className={`w-full px-4 py-2.5 rounded-xl text-sm ${t('bg-white/[0.04] border border-white/[0.06] text-white placeholder-gray-600','bg-stone-300/25 border border-stone-400/25 text-gray-900 placeholder-gray-400')}`} />
+            <select className={`w-full px-4 py-2.5 rounded-xl text-sm ${t('bg-white/[0.04] border border-white/[0.06] text-white','bg-stone-300/40 border border-stone-400/30 text-gray-900')}`}>
               <option>General Inquiry</option><option>Investment Query</option><option>KYC Issue</option><option>Technical Issue</option><option>Document Request</option>
             </select>
-            <textarea rows={3} placeholder="Describe your issue..." className={`w-full px-4 py-2.5 rounded-xl text-sm resize-none ${t('bg-white/[0.04] border border-white/[0.06] text-white placeholder-gray-600','bg-gray-50 border border-gray-200 text-gray-900 placeholder-gray-400')}`} />
+            <textarea rows={3} placeholder="Describe your issue..." className={`w-full px-4 py-2.5 rounded-xl text-sm resize-none ${t('bg-white/[0.04] border border-white/[0.06] text-white placeholder-gray-600','bg-stone-300/25 border border-stone-400/25 text-gray-900 placeholder-gray-400')}`} />
             <button className="px-5 py-2.5 rounded-xl text-sm font-semibold text-white" style={{ background: 'linear-gradient(135deg, #D0021B, #8B0000)' }}>Submit Ticket</button>
           </div>
         )}
         {/* Existing tickets */}
         <div className="space-y-2">
           {SUPPORT_TICKETS.map(tk => (
-            <div key={tk.id} className={`flex items-center gap-3 p-3 rounded-xl ${t('bg-white/[0.02] border border-white/[0.04]','bg-stone-200/50 border border-stone-300/50')}`}>
+            <div key={tk.id} className={`flex items-center gap-3 p-3 rounded-xl ${t('bg-white/[0.02] border border-white/[0.04]','bg-stone-300/40 border border-stone-400/30')}`}>
               <Ticket className={`w-5 h-5 shrink-0 ${tk.status === 'resolved' ? 'text-emerald-400' : 'text-amber-400'}`} />
               <div className="flex-1 min-w-0">
                 <p className={`text-sm font-semibold ${t('text-white','text-gray-900')}`}>{tk.subject}</p>
@@ -1443,7 +1479,7 @@ export default function DashboardClient() {
             { q: 'How can I download my tax certificate?', a: 'Visit KYC & Documents tab and look for TDS Certificate under the available documents.' },
             { q: 'What are the exit options?', a: 'Exit options depend on the fund strategy. Contact your relationship manager for details.' },
           ].map((faq, i) => (
-            <div key={i} className={`p-4 rounded-xl ${t('bg-white/[0.02] border border-white/[0.04]','bg-stone-200/50 border border-stone-300/50')}`}>
+            <div key={i} className={`p-4 rounded-xl ${t('bg-white/[0.02] border border-white/[0.04]','bg-stone-300/40 border border-stone-400/30')}`}>
               <p className={`text-sm font-semibold mb-1.5 ${t('text-white','text-gray-900')}`}>{faq.q}</p>
               <p className={`text-xs leading-relaxed ${t('text-gray-500','text-gray-500')}`}>{faq.a}</p>
             </div>
@@ -1468,7 +1504,7 @@ export default function DashboardClient() {
                 <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-brand-red/20 to-red-900/20 flex items-center justify-center"><Gift className="w-5 h-5 text-brand-red" /></div>
                 <div><h3 className={`text-base font-bold ${t('text-white','text-gray-900')}`}>Refer & Earn</h3><p className={`text-xs ${t('text-gray-500','text-gray-500')}`}>Invite investors, earn rewards</p></div>
               </div>
-              <div className={`flex items-center gap-2 p-2.5 rounded-xl mb-4 ${t('bg-white/[0.03] border border-white/[0.06]','bg-stone-200/50 border border-stone-300/50')}`}>
+              <div className={`flex items-center gap-2 p-2.5 rounded-xl mb-4 ${t('bg-white/[0.03] border border-white/[0.06]','bg-stone-300/40 border border-stone-400/30')}`}>
                 <code className={`flex-1 text-xs font-mono truncate ${t('text-gray-300','text-gray-600')}`}>https://ghlindiaventures.com/ref/RK2024</code>
                 <button className={`p-1.5 rounded-lg ${t('hover:bg-white/[0.06] text-gray-400','hover:bg-gray-200 text-gray-500')}`}><Copy className="w-3.5 h-3.5" /></button>
               </div>
@@ -1505,7 +1541,7 @@ export default function DashboardClient() {
           <h3 className={`text-lg font-bold ${t('text-white','text-gray-900')}`}>Rajesh Krishnan</h3>
           <p className={`text-xs mb-3 ${t('text-gray-500','text-gray-500')}`}>rajesh.k@email.com</p>
           <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-emerald-500/15 text-emerald-400 border border-emerald-500/20"><Shield className="w-3 h-3" /> KYC Verified</span>
-          <div className={`mt-4 pt-4 border-t text-left space-y-2.5 ${t('border-white/[0.06]','border-gray-200')}`}>
+          <div className={`mt-4 pt-4 border-t text-left space-y-2.5 ${t('border-white/[0.06]','border-stone-400/25')}`}>
             {[['Investor ID','GHL-INV-2024-0847'],['PAN','ABCPK****F'],['Mobile','+91 98XXX XXXXX'],['Joined','December 2023']].map(([l,v],i) => (
               <div key={i} className="flex justify-between text-xs"><span className={t('text-gray-500','text-gray-500')}>{l}</span><span className={`font-medium ${t('text-white','text-gray-900')}`}>{v}</span></div>
             ))}
@@ -1561,10 +1597,10 @@ export default function DashboardClient() {
               <p className={`text-xs ${t('text-gray-400','text-gray-500')}`}>Your bank details are encrypted and secured with 256-bit SSL.</p>
             </div>
             <div className="space-y-3">
-              <input type="text" placeholder="Account Holder Name" className={`w-full px-4 py-2.5 rounded-xl text-sm ${t('bg-white/[0.04] border border-white/[0.06] text-white placeholder-gray-600','bg-gray-50 border border-gray-200 text-gray-900 placeholder-gray-400')}`} />
-              <input type="text" placeholder="Account Number" className={`w-full px-4 py-2.5 rounded-xl text-sm ${t('bg-white/[0.04] border border-white/[0.06] text-white placeholder-gray-600','bg-gray-50 border border-gray-200 text-gray-900 placeholder-gray-400')}`} />
-              <input type="text" placeholder="IFSC Code" className={`w-full px-4 py-2.5 rounded-xl text-sm ${t('bg-white/[0.04] border border-white/[0.06] text-white placeholder-gray-600','bg-gray-50 border border-gray-200 text-gray-900 placeholder-gray-400')}`} />
-              <select className={`w-full px-4 py-2.5 rounded-xl text-sm ${t('bg-white/[0.04] border border-white/[0.06] text-white','bg-stone-200/50 border border-stone-300/50 text-gray-900')}`}>
+              <input type="text" placeholder="Account Holder Name" className={`w-full px-4 py-2.5 rounded-xl text-sm ${t('bg-white/[0.04] border border-white/[0.06] text-white placeholder-gray-600','bg-stone-300/25 border border-stone-400/25 text-gray-900 placeholder-gray-400')}`} />
+              <input type="text" placeholder="Account Number" className={`w-full px-4 py-2.5 rounded-xl text-sm ${t('bg-white/[0.04] border border-white/[0.06] text-white placeholder-gray-600','bg-stone-300/25 border border-stone-400/25 text-gray-900 placeholder-gray-400')}`} />
+              <input type="text" placeholder="IFSC Code" className={`w-full px-4 py-2.5 rounded-xl text-sm ${t('bg-white/[0.04] border border-white/[0.06] text-white placeholder-gray-600','bg-stone-300/25 border border-stone-400/25 text-gray-900 placeholder-gray-400')}`} />
+              <select className={`w-full px-4 py-2.5 rounded-xl text-sm ${t('bg-white/[0.04] border border-white/[0.06] text-white','bg-stone-300/40 border border-stone-400/30 text-gray-900')}`}>
                 <option>Savings Account</option><option>Current Account</option><option>NRO Account</option>
               </select>
               <button className="w-full py-2.5 rounded-xl text-sm font-semibold text-white" style={{ background: 'linear-gradient(135deg, #D0021B, #8B0000)' }}>Verify & Connect</button>
@@ -1585,16 +1621,16 @@ export default function DashboardClient() {
         {/* Appearance */}
         <Glass className="p-6" hover theme={theme}>
           <div className="flex items-center gap-3 mb-4">
-            <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${t('bg-white/[0.04]','bg-stone-300/40')}`}>
+            <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${t('bg-white/[0.04]','bg-stone-400/25')}`}>
               {isDark ? <Moon className="w-5 h-5 text-indigo-400" /> : <Sun className="w-5 h-5 text-amber-500" />}
             </div>
             <div><h4 className={`text-sm font-bold ${t('text-white','text-gray-900')}`}>Appearance</h4><p className={`text-xs ${t('text-gray-500','text-gray-500')}`}>Theme and display preferences</p></div>
           </div>
           <div className="flex gap-3">
-            <button onClick={() => setTheme('dark')} className={`flex-1 p-3 rounded-xl text-center text-sm font-medium transition-all ${theme === 'dark' ? 'bg-brand-red/15 text-white border border-brand-red/20' : t('bg-white/[0.03] text-gray-400','bg-gray-50 text-gray-500')}`}>
+            <button onClick={() => setTheme('dark')} className={`flex-1 p-3 rounded-xl text-center text-sm font-medium transition-all ${theme === 'dark' ? 'bg-brand-red/15 text-white border border-brand-red/20' : t('bg-white/[0.03] text-gray-400','bg-stone-300/25 text-gray-500')}`}>
               <Moon className="w-5 h-5 mx-auto mb-1" /> Dark
             </button>
-            <button onClick={() => setTheme('light')} className={`flex-1 p-3 rounded-xl text-center text-sm font-medium transition-all ${theme === 'light' ? 'bg-brand-red/15 text-brand-red border border-brand-red/20' : t('bg-white/[0.03] text-gray-400','bg-gray-50 text-gray-500')}`}>
+            <button onClick={() => setTheme('light')} className={`flex-1 p-3 rounded-xl text-center text-sm font-medium transition-all ${theme === 'light' ? 'bg-brand-red/15 text-brand-red border border-brand-red/20' : t('bg-white/[0.03] text-gray-400','bg-stone-300/25 text-gray-500')}`}>
               <Sun className="w-5 h-5 mx-auto mb-1" /> Light
             </button>
           </div>
@@ -1603,10 +1639,10 @@ export default function DashboardClient() {
         {/* Language */}
         <Glass className="p-6" hover theme={theme}>
           <div className="flex items-center gap-3 mb-4">
-            <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${t('bg-white/[0.04]','bg-stone-300/40')}`}><Languages className="w-5 h-5 text-blue-400" /></div>
+            <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${t('bg-white/[0.04]','bg-stone-400/25')}`}><Languages className="w-5 h-5 text-blue-400" /></div>
             <div><h4 className={`text-sm font-bold ${t('text-white','text-gray-900')}`}>Language</h4><p className={`text-xs ${t('text-gray-500','text-gray-500')}`}>Dashboard language preference</p></div>
           </div>
-          <select className={`w-full px-4 py-2.5 rounded-xl text-sm ${t('bg-white/[0.04] border border-white/[0.06] text-white','bg-stone-200/50 border border-stone-300/50 text-gray-900')}`}>
+          <select className={`w-full px-4 py-2.5 rounded-xl text-sm ${t('bg-white/[0.04] border border-white/[0.06] text-white','bg-stone-300/40 border border-stone-400/30 text-gray-900')}`}>
             <option>English</option><option>Hindi</option><option>Tamil</option><option>Telugu</option><option>Kannada</option><option>Malayalam</option><option>Marathi</option><option>Bengali</option><option>Gujarati</option>
           </select>
         </Glass>
@@ -1614,11 +1650,11 @@ export default function DashboardClient() {
         {/* Notifications */}
         <Glass className="p-6" hover theme={theme}>
           <div className="flex items-center gap-3 mb-4">
-            <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${t('bg-white/[0.04]','bg-stone-300/40')}`}><Bell className="w-5 h-5 text-amber-400" /></div>
+            <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${t('bg-white/[0.04]','bg-stone-400/25')}`}><Bell className="w-5 h-5 text-amber-400" /></div>
             <div><h4 className={`text-sm font-bold ${t('text-white','text-gray-900')}`}>Notifications</h4><p className={`text-xs ${t('text-gray-500','text-gray-500')}`}>Email and push preferences</p></div>
           </div>
           {['Email Alerts','NAV Updates','Investment Opportunities','Dividend Notifications'].map((opt,j) => (
-            <div key={j} className={`flex items-center justify-between p-2.5 rounded-lg ${t('hover:bg-white/[0.02]','hover:bg-stone-200/40')} transition-colors`}>
+            <div key={j} className={`flex items-center justify-between p-2.5 rounded-lg ${t('hover:bg-white/[0.02]','hover:bg-stone-300/35')} transition-colors`}>
               <span className={`text-xs ${t('text-gray-400','text-gray-600')}`}>{opt}</span>
               <div className="w-9 h-5 rounded-full bg-brand-red/20 relative cursor-pointer"><div className="absolute right-0.5 top-0.5 w-4 h-4 rounded-full bg-brand-red transition-all" /></div>
             </div>
@@ -1628,15 +1664,59 @@ export default function DashboardClient() {
         {/* Security */}
         <Glass className="p-6" hover theme={theme}>
           <div className="flex items-center gap-3 mb-4">
-            <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${t('bg-white/[0.04]','bg-stone-300/40')}`}><Lock className="w-5 h-5 text-emerald-400" /></div>
+            <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${t('bg-white/[0.04]','bg-stone-400/25')}`}><Lock className="w-5 h-5 text-emerald-400" /></div>
             <div><h4 className={`text-sm font-bold ${t('text-white','text-gray-900')}`}>Security</h4><p className={`text-xs ${t('text-gray-500','text-gray-500')}`}>Password and authentication</p></div>
           </div>
           {['Change Password','Enable 2FA','Active Sessions','Login History'].map((opt,j) => (
-            <div key={j} className={`flex items-center justify-between p-2.5 rounded-lg cursor-pointer group ${t('hover:bg-white/[0.02]','hover:bg-stone-200/40')} transition-colors`}>
+            <div key={j} className={`flex items-center justify-between p-2.5 rounded-lg cursor-pointer group ${t('hover:bg-white/[0.02]','hover:bg-stone-300/35')} transition-colors`}>
               <span className={`text-xs ${t('text-gray-400 group-hover:text-white','text-gray-600 group-hover:text-gray-900')} transition-colors`}>{opt}</span>
               <ChevronRight className={`w-3.5 h-3.5 ${t('text-gray-600','text-gray-400')}`} />
             </div>
           ))}
+        </Glass>
+
+        {/* Legal & Policies */}
+        <Glass className="p-6" hover theme={theme}>
+          <div className="flex items-center gap-3 mb-4">
+            <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${t('bg-white/[0.04]','bg-stone-400/25')}`}><ScrollText className="w-5 h-5 text-brand-red" /></div>
+            <div><h4 className={`text-sm font-bold ${t('text-white','text-gray-900')}`}>Legal & Policies</h4><p className={`text-xs ${t('text-gray-500','text-gray-500')}`}>Terms, conditions, and compliance</p></div>
+          </div>
+          <button onClick={() => { setTermsOpen(true); setTermsScrolled(false) }}
+            className={`w-full flex items-center justify-between p-3 rounded-xl cursor-pointer group transition-all mb-2 ${t('bg-white/[0.03] hover:bg-white/[0.06] border border-white/[0.04]','bg-stone-200/40 hover:bg-stone-300/50 border border-stone-300/40')}`}>
+            <div className="flex items-center gap-2.5">
+              <FileText className="w-4 h-4 text-brand-red" />
+              <div className="text-left">
+                <span className={`text-xs font-semibold block ${t('text-white','text-gray-900')}`}>Terms & Conditions</span>
+                <span className={`text-[10px] ${t('text-gray-500','text-gray-400')}`}>Dashboard usage policy</span>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              {termsAccepted && <span className="text-[10px] font-bold text-emerald-400 flex items-center gap-0.5"><CheckCircle className="w-3 h-3" /> Accepted</span>}
+              <ChevronRight className={`w-3.5 h-3.5 ${t('text-gray-600','text-gray-400')}`} />
+            </div>
+          </button>
+          <button onClick={() => window.open('/privacy-policy', '_blank')}
+            className={`w-full flex items-center justify-between p-3 rounded-xl cursor-pointer group transition-all mb-2 ${t('bg-white/[0.03] hover:bg-white/[0.06] border border-white/[0.04]','bg-stone-200/40 hover:bg-stone-300/50 border border-stone-300/40')}`}>
+            <div className="flex items-center gap-2.5">
+              <Shield className="w-4 h-4 text-blue-400" />
+              <div className="text-left">
+                <span className={`text-xs font-semibold block ${t('text-white','text-gray-900')}`}>Privacy Policy</span>
+                <span className={`text-[10px] ${t('text-gray-500','text-gray-400')}`}>How we protect your data</span>
+              </div>
+            </div>
+            <ChevronRight className={`w-3.5 h-3.5 ${t('text-gray-600','text-gray-400')}`} />
+          </button>
+          <button onClick={() => window.open('https://www.sebi.gov.in/', '_blank')}
+            className={`w-full flex items-center justify-between p-3 rounded-xl cursor-pointer group transition-all ${t('bg-white/[0.03] hover:bg-white/[0.06] border border-white/[0.04]','bg-stone-200/40 hover:bg-stone-300/50 border border-stone-300/40')}`}>
+            <div className="flex items-center gap-2.5">
+              <Landmark className="w-4 h-4 text-amber-400" />
+              <div className="text-left">
+                <span className={`text-xs font-semibold block ${t('text-white','text-gray-900')}`}>SEBI Compliance</span>
+                <span className={`text-[10px] ${t('text-gray-500','text-gray-400')}`}>Reg: IN/AIF2/2425/1517</span>
+              </div>
+            </div>
+            <ExternalLink className={`w-3.5 h-3.5 ${t('text-gray-600','text-gray-400')}`} />
+          </button>
         </Glass>
       </div>
     </div>
@@ -1658,16 +1738,304 @@ export default function DashboardClient() {
   )
 
   // ═══════════════════════════════════════════════════════════
+  // INVESTMENT ONBOARDING TAB
+  // ═══════════════════════════════════════════════════════════
+  const renderInvestOnboard = () => (
+    <div className="space-y-6">
+      <div>
+        <h2 className={`text-xl font-bold mb-1 ${t('text-white','text-gray-900')}`}>Complete Your Investment</h2>
+        <p className={`text-sm ${t('text-gray-500','text-gray-500')}`}>Select your investment, set the amount, and provide bank details</p>
+      </div>
+
+      {/* Step 1: Vehicle + Amount */}
+      <Glass className="p-6" hover glow theme={theme}>
+        <h3 className={`text-base font-bold mb-4 ${t('text-white','text-gray-900')}`}>1. Investment Selection</h3>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-5">
+          <div>
+            <label className={`text-xs font-medium mb-1.5 block ${t('text-gray-400','text-gray-600')}`}>Investment Vehicle</label>
+            <select value={investVehicle} onChange={e => setInvestVehicle(e.target.value)}
+              className={`w-full px-4 py-3 rounded-xl text-sm ${t('bg-white/[0.04] border border-white/[0.06] text-white','bg-stone-300/40 border border-stone-400/30 text-gray-900')}`}>
+              <option>AIF Direct - Category II</option>
+              <option>SEBI Co-Invest Framework</option>
+              <option>NCLT Recovery Assets</option>
+              <option>Early-Stage Startups</option>
+            </select>
+          </div>
+          <div>
+            <label className={`text-xs font-medium mb-1.5 block ${t('text-gray-400','text-gray-600')}`}>Tenure Preference</label>
+            <select className={`w-full px-4 py-3 rounded-xl text-sm ${t('bg-white/[0.04] border border-white/[0.06] text-white','bg-stone-300/40 border border-stone-400/30 text-gray-900')}`}>
+              <option>3 Years</option><option>5 Years</option><option>7 Years</option>
+            </select>
+          </div>
+        </div>
+        <div>
+          <div className="flex items-center justify-between mb-2">
+            <label className={`text-xs font-medium ${t('text-gray-400','text-gray-600')}`}>Investment Amount</label>
+            <span className={`text-lg font-black text-brand-red`}>{'\u20B9'}{formatINR(investAmount)}</span>
+          </div>
+          <input type="range" min={500000} max={50000000} step={100000} value={investAmount}
+            onChange={e => setInvestAmount(Number(e.target.value))}
+            className="w-full h-2 rounded-full appearance-none cursor-pointer accent-brand-red"
+            style={{ background: `linear-gradient(to right, #D0021B ${((investAmount - 500000) / 49500000) * 100}%, ${isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.1)'} 0%)` }} />
+          <div className={`flex justify-between text-[10px] mt-1 ${t('text-gray-600','text-gray-400')}`}>
+            <span>{'\u20B9'}5L</span><span>{'\u20B9'}1Cr</span><span>{'\u20B9'}2.5Cr</span><span>{'\u20B9'}5Cr</span>
+          </div>
+        </div>
+      </Glass>
+
+      {/* Step 2: Bank Details */}
+      <Glass className="p-6" hover theme={theme}>
+        <h3 className={`text-base font-bold mb-4 ${t('text-white','text-gray-900')}`}>2. Bank Account Details</h3>
+        <p className={`text-xs mb-4 ${t('text-gray-500','text-gray-500')}`}>Add one or more bank accounts for fund transfer. Primary account will be used for dividends.</p>
+        {[1].map(idx => (
+          <div key={idx} className={`p-4 rounded-xl mb-3 ${t('bg-white/[0.02] border border-white/[0.04]','bg-stone-300/25 border border-stone-400/20')}`}>
+            <div className="flex items-center justify-between mb-3">
+              <span className={`text-xs font-bold ${t('text-white','text-gray-900')}`}>Bank Account {idx}</span>
+              <span className="text-[9px] px-2 py-0.5 rounded-full bg-brand-red/15 text-brand-red font-bold">Primary</span>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <input placeholder="Account Holder Name" className={`px-3 py-2.5 rounded-xl text-sm ${t('bg-white/[0.04] border border-white/[0.06] text-white placeholder-gray-600','bg-stone-300/40 border border-stone-400/30 text-gray-900 placeholder-gray-400')}`} />
+              <input placeholder="Account Number" className={`px-3 py-2.5 rounded-xl text-sm ${t('bg-white/[0.04] border border-white/[0.06] text-white placeholder-gray-600','bg-stone-300/40 border border-stone-400/30 text-gray-900 placeholder-gray-400')}`} />
+              <input placeholder="IFSC Code" className={`px-3 py-2.5 rounded-xl text-sm ${t('bg-white/[0.04] border border-white/[0.06] text-white placeholder-gray-600','bg-stone-300/40 border border-stone-400/30 text-gray-900 placeholder-gray-400')}`} />
+              <select className={`px-3 py-2.5 rounded-xl text-sm ${t('bg-white/[0.04] border border-white/[0.06] text-white','bg-stone-300/40 border border-stone-400/30 text-gray-900')}`}>
+                <option>Savings</option><option>Current</option><option>NRO</option><option>NRE</option>
+              </select>
+            </div>
+            <div className={`mt-3 p-3 rounded-lg border-2 border-dashed cursor-pointer text-center ${t('border-white/[0.08] hover:border-brand-red/20','border-stone-300 hover:border-brand-red/30')}`}>
+              <FileUp className={`w-5 h-5 mx-auto mb-1 ${t('text-gray-500','text-gray-400')}`} />
+              <p className={`text-[11px] ${t('text-gray-500','text-gray-500')}`}>Upload cancelled cheque / bank statement</p>
+            </div>
+          </div>
+        ))}
+        <button className={`flex items-center gap-2 text-xs font-semibold ${t('text-blue-400 hover:text-blue-300','text-blue-600 hover:text-blue-500')} transition-colors`}>
+          <Plus className="w-3.5 h-3.5" /> Add Another Bank Account
+        </button>
+      </Glass>
+
+      {/* Step 3: Confirm */}
+      <Glass className="p-6" hover glow theme={theme}>
+        <h3 className={`text-base font-bold mb-4 ${t('text-white','text-gray-900')}`}>3. Review & Submit</h3>
+        <div className={`grid grid-cols-2 md:grid-cols-4 gap-3 mb-4`}>
+          {[{ l: 'Vehicle', v: investVehicle },{ l: 'Amount', v: `\u20B9${formatINR(investAmount)}` },{ l: 'Tenure', v: '5 Years' },{ l: 'Bank', v: 'HDFC ****4521' }].map((r,i) => (
+            <div key={i} className={`p-3 rounded-xl ${t('bg-white/[0.03] border border-white/[0.04]','bg-stone-300/25 border border-stone-400/20')}`}>
+              <p className={`text-[9px] uppercase tracking-wider ${t('text-gray-600','text-gray-400')}`}>{r.l}</p>
+              <p className={`text-sm font-bold mt-0.5 ${t('text-white','text-gray-900')}`}>{r.v}</p>
+            </div>
+          ))}
+        </div>
+        <label className="flex items-start gap-2 mb-4 cursor-pointer">
+          <input type="checkbox" className="mt-0.5 w-4 h-4 rounded border-gray-300 text-brand-red focus:ring-brand-red" />
+          <span className={`text-xs ${t('text-gray-400','text-gray-600')}`}>I confirm the details above and agree to the investment terms. I understand that AIF investments involve risk and are subject to SEBI regulations.</span>
+        </label>
+        <button className="w-full py-3 rounded-xl text-sm font-bold text-white transition-all hover:scale-[1.01]"
+          style={{ background: 'linear-gradient(135deg, #D0021B, #8B0000)' }}>Submit Investment Application</button>
+      </Glass>
+    </div>
+  )
+
+  // ═══════════════════════════════════════════════════════════
+  // CALCULATORS TAB
+  // ═══════════════════════════════════════════════════════════
+  const renderCalculatorsTab = () => {
+    const future = calcInputs.amount * Math.pow(1 + calcInputs.rate / 100, calcInputs.years)
+    const sipFuture = calcInputs.amount * (((Math.pow(1 + calcInputs.rate / 1200, calcInputs.years * 12) - 1) / (calcInputs.rate / 1200)) * (1 + calcInputs.rate / 1200))
+
+    const calcs = [
+      { id: 'sip', label: 'SIP', icon: TrendingUp },
+      { id: 'lumpsum', label: 'Lumpsum', icon: Wallet },
+      { id: 'swp', label: 'SWP', icon: ArrowLeftRight },
+      { id: 'goal', label: 'Goal Planner', icon: Target },
+      { id: 'inflation', label: 'Inflation', icon: Flame },
+      { id: 'tax', label: 'Tax Benefit', icon: Percent },
+      { id: 'fd', label: 'FD vs AIF', icon: BarChart3 },
+      { id: 'emi', label: 'EMI', icon: Calculator },
+    ]
+
+    return (
+      <div className="space-y-6">
+        <div>
+          <h2 className={`text-xl font-bold mb-1 ${t('text-white','text-gray-900')}`}>Investment Calculators</h2>
+          <p className={`text-sm ${t('text-gray-500','text-gray-500')}`}>Plan, compare, and project your investments</p>
+        </div>
+
+        {/* Calculator tabs */}
+        <div className="flex flex-wrap gap-2">
+          {calcs.map(c => (
+            <button key={c.id} onClick={() => setActiveCalc(c.id)}
+              className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium transition-all
+                ${activeCalc === c.id ? 'text-white bg-brand-red' : t('text-gray-400 bg-white/[0.04] hover:bg-white/[0.06]','text-gray-600 bg-stone-300/35 hover:bg-stone-400/30')}`}>
+              <c.icon className="w-3.5 h-3.5" /> {c.label}
+            </button>
+          ))}
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          {/* Input panel */}
+          <Glass className="p-6" hover theme={theme}>
+            <h3 className={`text-base font-bold mb-5 ${t('text-white','text-gray-900')}`}>
+              {calcs.find(c => c.id === activeCalc)?.label} Calculator
+            </h3>
+            <div className="space-y-5">
+              <div>
+                <div className="flex justify-between mb-2">
+                  <label className={`text-xs font-medium ${t('text-gray-400','text-gray-600')}`}>
+                    {activeCalc === 'sip' ? 'Monthly Investment' : 'Investment Amount'}
+                  </label>
+                  <span className={`text-sm font-bold ${t('text-white','text-gray-900')}`}>{'\u20B9'}{formatINR(calcInputs.amount)}</span>
+                </div>
+                <input type="range" min={activeCalc === 'sip' ? 5000 : 100000} max={activeCalc === 'sip' ? 500000 : 50000000} step={activeCalc === 'sip' ? 5000 : 100000}
+                  value={calcInputs.amount} onChange={e => setCalcInputs(p => ({ ...p, amount: +e.target.value }))}
+                  className="w-full h-2 rounded-full appearance-none cursor-pointer accent-brand-red" />
+              </div>
+              <div>
+                <div className="flex justify-between mb-2">
+                  <label className={`text-xs font-medium ${t('text-gray-400','text-gray-600')}`}>Expected Return (%)</label>
+                  <span className={`text-sm font-bold ${t('text-white','text-gray-900')}`}>{calcInputs.rate}%</span>
+                </div>
+                <input type="range" min={5} max={35} step={0.5} value={calcInputs.rate}
+                  onChange={e => setCalcInputs(p => ({ ...p, rate: +e.target.value }))}
+                  className="w-full h-2 rounded-full appearance-none cursor-pointer accent-emerald-500" />
+              </div>
+              <div>
+                <div className="flex justify-between mb-2">
+                  <label className={`text-xs font-medium ${t('text-gray-400','text-gray-600')}`}>Time Period (Years)</label>
+                  <span className={`text-sm font-bold ${t('text-white','text-gray-900')}`}>{calcInputs.years} Yrs</span>
+                </div>
+                <input type="range" min={1} max={30} step={1} value={calcInputs.years}
+                  onChange={e => setCalcInputs(p => ({ ...p, years: +e.target.value }))}
+                  className="w-full h-2 rounded-full appearance-none cursor-pointer accent-blue-500" />
+              </div>
+            </div>
+          </Glass>
+
+          {/* Results panel */}
+          <Glass className="p-6" hover glow theme={theme}>
+            <h3 className={`text-base font-bold mb-5 ${t('text-white','text-gray-900')}`}>Projected Returns</h3>
+            <div className="grid grid-cols-2 gap-3 mb-5">
+              <div className={`p-4 rounded-xl text-center ${t('bg-white/[0.03] border border-white/[0.04]','bg-stone-300/25 border border-stone-400/20')}`}>
+                <p className={`text-[10px] uppercase tracking-wider ${t('text-gray-500','text-gray-400')}`}>Total Invested</p>
+                <p className={`text-lg font-black mt-1 ${t('text-white','text-gray-900')}`}>{'\u20B9'}{formatINR(activeCalc === 'sip' ? calcInputs.amount * calcInputs.years * 12 : calcInputs.amount)}</p>
+              </div>
+              <div className={`p-4 rounded-xl text-center ${t('bg-emerald-500/[0.06] border border-emerald-500/[0.1]','bg-emerald-50/60 border border-emerald-200/50')}`}>
+                <p className={`text-[10px] uppercase tracking-wider ${t('text-gray-500','text-gray-400')}`}>Future Value</p>
+                <p className="text-lg font-black mt-1 text-emerald-400">{'\u20B9'}{formatINR(Math.round(activeCalc === 'sip' ? sipFuture : future))}</p>
+              </div>
+              <div className={`p-4 rounded-xl text-center ${t('bg-white/[0.03] border border-white/[0.04]','bg-stone-300/25 border border-stone-400/20')}`}>
+                <p className={`text-[10px] uppercase tracking-wider ${t('text-gray-500','text-gray-400')}`}>Wealth Gain</p>
+                <p className={`text-lg font-black mt-1 text-emerald-400`}>{'\u20B9'}{formatINR(Math.round((activeCalc === 'sip' ? sipFuture : future) - (activeCalc === 'sip' ? calcInputs.amount * calcInputs.years * 12 : calcInputs.amount)))}</p>
+              </div>
+              <div className={`p-4 rounded-xl text-center ${t('bg-white/[0.03] border border-white/[0.04]','bg-stone-300/25 border border-stone-400/20')}`}>
+                <p className={`text-[10px] uppercase tracking-wider ${t('text-gray-500','text-gray-400')}`}>CAGR</p>
+                <p className={`text-lg font-black mt-1 text-brand-red`}>{calcInputs.rate}%</p>
+              </div>
+            </div>
+
+            {/* Comparison bar chart */}
+            <h4 className={`text-xs font-bold mb-3 ${t('text-gray-400','text-gray-600')}`}>Comparison: Same Amount Across Products</h4>
+            <div className="space-y-2">
+              {[
+                { name: 'GHL AIF', rate: calcInputs.rate, color: '#D0021B' },
+                { name: 'Fixed Deposit', rate: 7.5, color: '#6B7280' },
+                { name: 'PPF', rate: 7.1, color: '#F59E0B' },
+                { name: 'Gold', rate: 10, color: '#EAB308' },
+                { name: 'NIFTY 50', rate: 12, color: '#3B82F6' },
+              ].map((p, i) => {
+                const pv = calcInputs.amount * Math.pow(1 + p.rate / 100, calcInputs.years)
+                const maxVal = calcInputs.amount * Math.pow(1 + calcInputs.rate / 100, calcInputs.years)
+                return (
+                  <div key={i} className="flex items-center gap-3">
+                    <span className={`w-20 text-[10px] font-medium text-right ${t('text-gray-400','text-gray-600')}`}>{p.name}</span>
+                    <div className={`flex-1 h-4 rounded-full overflow-hidden ${t('bg-white/[0.04]','bg-stone-400/20')}`}>
+                      <div className="h-full rounded-full transition-all duration-700" style={{ width: `${Math.min((pv / maxVal) * 100, 100)}%`, background: p.color }} />
+                    </div>
+                    <span className={`w-16 text-[10px] font-bold text-right ${t('text-white','text-gray-900')}`}>{'\u20B9'}{formatINR(Math.round(pv))}</span>
+                  </div>
+                )
+              })}
+            </div>
+          </Glass>
+        </div>
+      </div>
+    )
+  }
+
+  // ═══════════════════════════════════════════════════════════
+  // TERMS & CONDITIONS POPUP
+  // ═══════════════════════════════════════════════════════════
+  const renderTermsPopup = () => {
+    if (!termsOpen) return null
+    return (
+      <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 backdrop-blur-sm">
+        <div className={`max-w-2xl w-full mx-4 rounded-2xl border overflow-hidden flex flex-col max-h-[85vh]
+          ${t('bg-[#111] border-white/10','bg-[#DDD8D0] border-stone-400/30 shadow-2xl')}`}>
+          <div className={`px-6 py-4 flex items-center justify-between border-b shrink-0 ${t('border-white/[0.06]','border-stone-400/30')}`}>
+            <div className="flex items-center gap-2">
+              <ScrollText className="w-5 h-5 text-brand-red" />
+              <h3 className={`text-lg font-bold ${t('text-white','text-gray-900')}`}>Terms & Conditions</h3>
+            </div>
+            <button onClick={() => setTermsOpen(false)} className={t('text-gray-500 hover:text-white','text-gray-400 hover:text-gray-900')}>
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+          <div ref={termsRef} className="flex-1 overflow-y-auto px-6 py-4"
+            onScroll={() => {
+              if (!termsRef.current) return
+              const { scrollTop, scrollHeight, clientHeight } = termsRef.current
+              if (scrollTop + clientHeight >= scrollHeight - 20) setTermsScrolled(true)
+            }}>
+            <div className={`prose prose-sm max-w-none ${isDark ? 'prose-invert' : ''}`}>
+              <h4 className={`text-sm font-bold mb-2 ${t('text-white','text-gray-900')}`}>GHL India Ventures - Dashboard Usage Policy</h4>
+              <p className={`text-xs leading-relaxed mb-3 ${t('text-gray-400','text-gray-600')}`}>Last Updated: 1 March 2025</p>
+              {[
+                { title: '1. Acceptance of Terms', body: 'By accessing and using the GHL India Ventures Investor Dashboard, you agree to be bound by these Terms and Conditions and our Privacy Policy. If you do not agree, please do not use this platform.' },
+                { title: '2. Dashboard Access', body: 'Access to this dashboard is restricted to registered investors of GHL India Ventures. Your login credentials are confidential and must not be shared. You are responsible for all activity under your account.' },
+                { title: '3. Investment Information', body: 'All investment data, NAV figures, returns, and projections displayed on this dashboard are for informational purposes only. Past performance does not guarantee future results. All investments in Alternative Investment Funds are subject to market risks.' },
+                { title: '4. SEBI Compliance', body: 'GHL India Ventures is a SEBI-registered Category II AIF (Reg: IN/AIF2/2425/1517). All investment activities are conducted in compliance with SEBI (Alternative Investment Funds) Regulations, 2012 and subsequent amendments.' },
+                { title: '5. Data Privacy & Security', body: 'Your personal and financial data is encrypted using 256-bit SSL encryption. We do not share your data with third parties except as required by law or regulation. KYC documents are stored securely and accessed only by authorized personnel.' },
+                { title: '6. Document Uploads', body: 'Documents uploaded through this dashboard must be authentic and unaltered. Uploading forged or fraudulent documents is a criminal offense. GHL reserves the right to verify all submitted documents.' },
+                { title: '7. Communication', body: 'Messages sent through the secure messaging center are confidential. GHL India Ventures will never ask for passwords, OTPs, or sensitive credentials through any communication channel.' },
+                { title: '8. Limitation of Liability', body: 'GHL India Ventures shall not be liable for any losses arising from technical failures, market conditions, or unauthorized access to your account due to negligence in safeguarding credentials.' },
+                { title: '9. Dispute Resolution', body: 'Any disputes shall be subject to the exclusive jurisdiction of courts in Chennai, Tamil Nadu, India. Disputes may also be resolved through SEBI SCORES portal or arbitration as per SEBI guidelines.' },
+                { title: '10. Amendments', body: 'GHL reserves the right to modify these terms at any time. Continued use of the dashboard after modifications constitutes acceptance of the revised terms.' },
+              ].map((s,i) => (
+                <div key={i} className="mb-4">
+                  <h5 className={`text-xs font-bold mb-1 ${t('text-white','text-gray-900')}`}>{s.title}</h5>
+                  <p className={`text-[11px] leading-relaxed ${t('text-gray-400','text-gray-600')}`}>{s.body}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+          <div className={`px-6 py-4 flex items-center justify-between border-t shrink-0 ${t('border-white/[0.06]','border-stone-400/30')}`}>
+            <p className={`text-[10px] ${t('text-gray-600','text-gray-400')}`}>
+              {termsScrolled ? <span className="text-emerald-400 font-semibold flex items-center gap-1"><CheckCircle className="w-3 h-3" /> Document read</span> : 'Scroll to bottom to accept'}
+            </p>
+            <div className="flex gap-2">
+              <button onClick={() => setTermsOpen(false)} className={`px-4 py-2 rounded-xl text-sm font-medium ${t('text-gray-400 hover:text-white','text-gray-500 hover:text-gray-900')}`}>Close</button>
+              <button disabled={!termsScrolled} onClick={() => { setTermsAccepted(true); setTermsOpen(false) }}
+                className={`px-5 py-2 rounded-xl text-sm font-bold text-white transition-all ${termsScrolled ? 'hover:scale-105' : 'opacity-40 cursor-not-allowed'}`}
+                style={{ background: 'linear-gradient(135deg, #D0021B, #8B0000)' }}>
+                Accept Terms
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  // ═══════════════════════════════════════════════════════════
   // TAB ROUTER
   // ═══════════════════════════════════════════════════════════
   const renderContent = () => {
     switch (activeTab) {
       case 'investments': return renderInvestmentsTab()
+      case 'invest-onboard': return renderInvestOnboard()
       case 'portfolio': return renderPortfolioTab()
       case 'kyc': return renderKYCTab()
       case 'transactions': return renderTransactionsTab()
       case 'messages': return renderMessagesTab()
       case 'support': return renderSupportTab()
+      case 'calculators': return renderCalculatorsTab()
       case 'referrals': return renderReferralsTab()
       case 'profile': return renderProfileTab()
       case 'settings': return renderSettingsTab()
@@ -1679,7 +2047,7 @@ export default function DashboardClient() {
   // MAIN RENDER
   // ═══════════════════════════════════════════════════════════
   return (
-    <div className={`min-h-screen relative transition-colors duration-500 ${isDark ? 'bg-brand-black' : 'bg-[#E4E0DA]'}`}>
+    <div className={`min-h-screen relative transition-colors duration-500 ${isDark ? 'bg-brand-black' : 'bg-[#D5D0C8]'}`}>
       {/* Background ambient effects */}
       <div className="fixed inset-0 pointer-events-none z-0">
         {isDark && (
@@ -1693,14 +2061,19 @@ export default function DashboardClient() {
 
       {renderSidebar()}
       {renderTourOverlay()}
+      {renderTermsPopup()}
 
       <div className="lg:ml-[260px] relative z-10 min-h-screen flex flex-col">
         {renderTopBar()}
         <div className="flex-1 p-4 lg:p-6 overflow-auto">{renderContent()}</div>
         <footer className={`border-t px-4 lg:px-6 py-3 flex flex-col sm:flex-row items-center justify-between gap-2 text-[11px]
-          ${t('border-white/[0.04] text-gray-600','border-gray-200 text-gray-400')}`}>
+          ${t('border-white/[0.04] text-gray-600','border-stone-400/30 text-gray-500')}`}>
           <p>&copy; 2025 GHL India Ventures. SEBI Reg: IN/AIF2/2425/1517</p>
-          <p className="flex items-center gap-1.5"><Shield className="w-3 h-3" /> 256-bit SSL Encrypted &bull; SEBI Compliant</p>
+          <div className="flex items-center gap-3">
+            <button onClick={() => { setTermsOpen(true); setTermsScrolled(false) }} className={`hover:underline ${t('hover:text-white','hover:text-gray-700')} transition-colors`}>Terms & Conditions</button>
+            <span>&bull;</span>
+            <p className="flex items-center gap-1.5"><Shield className="w-3 h-3" /> 256-bit SSL Encrypted &bull; SEBI Compliant</p>
+          </div>
         </footer>
       </div>
     </div>
