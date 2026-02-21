@@ -8,7 +8,7 @@ export default function DashboardShell({ children }: { children: React.ReactNode
 
     const hidden: HTMLElement[] = []
 
-    // Hide main nav and footer (but not elements inside dashboard)
+    // 1. Hide main site navigation, footer, and skip-link
     const hideSelectors = ['nav', 'footer', '.skip-to-content']
     hideSelectors.forEach((sel) => {
       document.querySelectorAll<HTMLElement>(sel).forEach((el) => {
@@ -18,45 +18,37 @@ export default function DashboardShell({ children }: { children: React.ReactNode
       })
     })
 
-    // Hide all fixed/absolute positioned elements except GHL widgets
+    // 2. Find ALL elements in the page and hide fixed/absolute ones
+    //    EXCEPT those that are GHL widgets or inside the dashboard
     const dashRoot = document.querySelector('.dashboard-root')
-    const widgetIds = ['ghl-chat-widget', 'ghl-video-widget', 'ghl-direct-widget', 'ghl-voice-widget']
 
-    document.querySelectorAll<HTMLElement>('body > *').forEach((el) => {
-      // Skip the dashboard root itself
-      if (dashRoot && (dashRoot.contains(el) || el.contains(dashRoot))) return
-
-      // Skip GHL widget containers (by id or data attribute)
-      if (widgetIds.includes(el.id) || el.hasAttribute('data-ghl-widget')) return
-
-      const style = window.getComputedStyle(el)
-      if (style.position === 'fixed' || style.position === 'absolute') {
-        el.setAttribute('data-dash-hidden', 'true')
-        el.style.display = 'none'
-        hidden.push(el)
-      }
-    })
-
-    // Also hide deeper fixed elements but preserve widgets
-    document.querySelectorAll<HTMLElement>('[style*="position: fixed"], [style*="position:fixed"]').forEach((el) => {
+    // Use querySelectorAll('*') to traverse all elements
+    // But for performance, only check elements that have fixed/absolute via computed style
+    // We'll target known wrappers: ScrollProgress, BackToTop, CookieConsent, SocialProofToasts, LiveVisitorCount, SpeechTranslation, CommandPalette
+    const allElements = document.querySelectorAll<HTMLElement>('*')
+    allElements.forEach((el) => {
+      // Skip anything inside the dashboard
       if (dashRoot && dashRoot.contains(el)) return
-      // Check if this element or any ancestor is a GHL widget
-      if (el.closest('[data-ghl-widget]')) return
-      if (widgetIds.some(id => el.id === id)) return
 
-      // Skip elements already hidden
+      // Skip script, style, meta, link, etc.
+      const tag = el.tagName.toLowerCase()
+      if (['script', 'style', 'meta', 'link', 'head', 'html', 'body', 'noscript'].includes(tag)) return
+
+      // Skip if it's a GHL widget or inside one
+      if (el.hasAttribute('data-ghl-widget') || el.closest('[data-ghl-widget]')) return
+
+      // Skip if already hidden
       if (el.getAttribute('data-dash-hidden') === 'true') return
+      if (el.style.display === 'none') return
 
-      const style = window.getComputedStyle(el)
-      if (style.display !== 'none') {
-        // Double-check it's not inside a widget
-        const isInWidget = el.closest('#ghl-chat-widget, #ghl-video-widget, #ghl-direct-widget, #ghl-voice-widget')
-        if (isInWidget) return
+      // Check if this element has fixed positioning (via class or computed style)
+      const hasFixedClass = el.classList.contains('fixed')
+      if (!hasFixedClass) return
 
-        el.setAttribute('data-dash-hidden', 'true')
-        el.style.display = 'none'
-        hidden.push(el)
-      }
+      // This is a fixed element outside the dashboard and not a widget — hide it
+      el.setAttribute('data-dash-hidden', 'true')
+      el.style.display = 'none'
+      hidden.push(el)
     })
 
     return () => {

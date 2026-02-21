@@ -687,12 +687,14 @@ export default function DashboardClient() {
   // QUICK ACTIONS
   // ═══════════════════════════════════════════════════════════
   const renderQuickActions = () => (
-    <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+    <div className="grid grid-cols-2 lg:grid-cols-3 gap-3">
       {[
         { icon: Plus, label: 'New Investment', desc: 'Explore opportunities', color: '#D0021B', action: () => setActiveTab('investments') },
         { icon: Download, label: 'Statements', desc: 'Download reports', color: '#3B82F6', action: () => setActiveTab('kyc') },
         { icon: Ticket, label: 'Raise Ticket', desc: 'Get support', color: '#F59E0B', action: () => { setActiveTab('support'); setTicketForm(true) } },
-        { icon: Video, label: 'Video Call', desc: 'Talk to advisor', color: '#10B981', action: () => window.dispatchEvent(new CustomEvent('ghl-open-video-call')) },
+        { icon: Video, label: 'Video Call', desc: 'Talk to advisor', color: '#8B5CF6', action: () => window.dispatchEvent(new CustomEvent('ghl-open-video-call')) },
+        { icon: Phone, label: 'Call Us', desc: 'Direct call support', color: '#10B981', action: () => window.dispatchEvent(new CustomEvent('ghl-open-direct-call')) },
+        { icon: MessageSquare, label: 'Chat with ARIA', desc: 'AI assistant', color: '#D0021B', action: () => window.dispatchEvent(new CustomEvent('ghl-open-chat')) },
       ].map((item, i) => (
         <button key={i} onClick={item.action} className="group text-left w-full">
           <Glass className="p-4 h-full" hover theme={theme}>
@@ -1159,7 +1161,8 @@ export default function DashboardClient() {
             </div>
             <button className="w-full py-2.5 rounded-xl text-sm font-semibold text-white transition-all duration-300 hover:scale-[1.02]"
               style={{ background: 'linear-gradient(135deg, #D0021B, #8B0000)' }}>Express Interest</button>
-            <button onClick={() => setActiveTab('invest-onboard')} className={`w-full py-2 rounded-lg text-xs font-medium mt-2 transition-all ${t('text-gray-400 bg-white/[0.03] hover:bg-white/[0.06]','text-gray-600 bg-gray-100/50 hover:bg-gray-200/40')}`}>
+            <button onClick={() => setActiveTab('invest-onboard')} className="w-full py-2.5 rounded-xl text-xs font-bold mt-2 transition-all duration-300 hover:scale-[1.02] text-white"
+              style={{ background: 'linear-gradient(135deg, #228B22, #1B6B1B)' }}>
               Proceed to Invest &rarr;</button>
           </Glass>
         ))}
