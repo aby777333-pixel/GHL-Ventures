@@ -700,8 +700,8 @@ export default function DashboardClient() {
         { icon: Plus, label: 'New Investment', desc: 'Explore opportunities', color: '#D0021B', action: () => setActiveTab('investments') },
         { icon: Download, label: 'Statements', desc: 'Download reports', color: '#3B82F6', action: () => setActiveTab('kyc') },
         { icon: Ticket, label: 'Raise Ticket', desc: 'Get support', color: '#F59E0B', action: () => { setActiveTab('support'); setTicketForm(true) } },
-        { icon: Video, label: 'Video Call', desc: 'Talk to advisor', color: '#8B5CF6', action: () => window.dispatchEvent(new CustomEvent('ghl-open-video-call')) },
-        { icon: Phone, label: 'Call Us', desc: 'Direct call support', color: '#10B981', action: () => window.dispatchEvent(new CustomEvent('ghl-open-direct-call')) },
+        { icon: Briefcase, label: 'Portfolio', desc: 'Track performance', color: '#8B5CF6', action: () => setActiveTab('portfolio') },
+        { icon: BarChart3, label: 'Calculators', desc: 'SIP, Lumpsum, IRR', color: '#10B981', action: () => setActiveTab('calculators') },
         { icon: MessageSquare, label: 'Chat with ARIA', desc: 'AI assistant', color: '#D0021B', action: () => window.dispatchEvent(new CustomEvent('ghl-open-chat')) },
       ].map((item, i) => (
         <button key={i} onClick={item.action} className="group text-left w-full">
@@ -1436,9 +1436,9 @@ export default function DashboardClient() {
       {/* Quick connect */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {[
-          { title: 'Live Chat', desc: 'Chat with ARIA or a live advisor.', icon: MessageSquare, color: '#D0021B', action: () => window.dispatchEvent(new CustomEvent('ghl-open-chat')) },
-          { title: 'Video Call', desc: 'Face-to-face consultation.', icon: Video, color: '#3B82F6', action: () => window.dispatchEvent(new CustomEvent('ghl-open-video-call')) },
-          { title: 'Call Us', desc: '+91 7200 255 252', icon: Phone, color: '#10B981', action: () => window.dispatchEvent(new CustomEvent('ghl-open-direct-call')) },
+          { title: 'Chat with ARIA', desc: 'AI assistant & live advisor.', icon: MessageSquare, color: '#D0021B', action: () => window.dispatchEvent(new CustomEvent('ghl-open-chat')) },
+          { title: 'Email Us', desc: 'info@ghlindia.com', icon: Mail, color: '#3B82F6', action: () => { window.open('mailto:info@ghlindia.com', '_blank'); showToast('Opening email client...', 'info') } },
+          { title: 'Call Us', desc: '+91 7200 255 252', icon: Phone, color: '#10B981', action: () => { window.open('tel:+917200255252'); showToast('Initiating call...', 'info') } },
         ].map((item, i) => (
           <button key={i} onClick={item.action} className="text-left w-full">
             <Glass className="p-5" hover glow theme={theme}>

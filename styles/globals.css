@@ -2318,29 +2318,21 @@ body.dashboard-active .dashboard-root .fixed {
   pointer-events: auto !important;
 }
 
-/* KEEP: Chat, Video, Direct Call widgets visible in dashboard */
-body.dashboard-active #ghl-chat-widget,
-body.dashboard-active #ghl-video-widget,
-body.dashboard-active #ghl-direct-widget {
+/* KEEP: Only ARIA chat widget visible in dashboard */
+body.dashboard-active #ghl-chat-widget {
   position: relative;
   z-index: 10000;
 }
-body.dashboard-active #ghl-chat-widget .fixed,
-body.dashboard-active #ghl-video-widget .fixed,
-body.dashboard-active #ghl-direct-widget .fixed {
+body.dashboard-active #ghl-chat-widget .fixed {
   visibility: visible !important;
   pointer-events: auto !important;
 }
 
-/* HIDE: Voice Command widget ("Hey GHL") in dashboard mode */
-body.dashboard-active #ghl-voice-widget {
+/* HIDE: Hey GHL, Direct Call, Video Call widgets in dashboard */
+body.dashboard-active #ghl-voice-widget,
+body.dashboard-active #ghl-video-widget,
+body.dashboard-active #ghl-direct-widget {
   display: none !important;
-}
-
-/* Reposition Direct Call widget to bottom-left in dashboard (replaces Hey GHL) */
-body.dashboard-active #ghl-direct-widget .fixed {
-  left: 16px !important;
-  transform: none !important;
 }
 
 /* Hide site Navbar, Footer, skip-link in dashboard mode */
