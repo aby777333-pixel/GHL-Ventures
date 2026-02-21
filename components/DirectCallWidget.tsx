@@ -324,7 +324,7 @@ export default function DirectCallWidget() {
   if (!mounted) return null
 
   return (
-    <>
+    <div id="ghl-direct-widget" data-ghl-widget="direct">
       {/* Floating Trigger Button */}
       <div className="fixed z-[9994] group" style={{ bottom: '28px', left: '30%', transform: 'translateX(-50%)' }}>
         {!isOpen && showPulse && (
@@ -861,6 +861,6 @@ export default function DirectCallWidget() {
           </div>
         </div>
       </div>
-    </>
+    </div>
   )
 }

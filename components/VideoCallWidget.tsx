@@ -124,7 +124,7 @@ export default function VideoCallWidget() {
   const panelWidth = showTranscript && callState === 'active' ? 'w-[650px]' : 'w-[370px]'
 
   return (
-    <>
+    <div id="ghl-video-widget" data-ghl-widget="video">
       {/* ── Floating Trigger Button — bottom center ── */}
       <div className="fixed z-[9996] group" style={{ bottom: '24px', left: '50%', transform: 'translateX(-50%)' }}>
         {/* Pulse rings */}
@@ -434,6 +434,6 @@ export default function VideoCallWidget() {
           </div>
         </div>
       )}
-    </>
+    </div>
   )
 }

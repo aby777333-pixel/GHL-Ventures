@@ -98,6 +98,13 @@ export default function ChatWidget() {
     } catch { /* ignore */ }
   }, [])
 
+  // External open event (from dashboard support tab)
+  useEffect(() => {
+    const handleExternalOpen = () => setIsOpen(true)
+    window.addEventListener('ghl-open-chat', handleExternalOpen)
+    return () => window.removeEventListener('ghl-open-chat', handleExternalOpen)
+  }, [])
+
   // Proactive message based on page
   useEffect(() => {
     const pm = PROACTIVE_MESSAGES[pathname]
@@ -293,7 +300,7 @@ export default function ChatWidget() {
   const isActiveChat = chatState === 'active' && chatMode !== 'connect'
 
   return (
-    <>
+    <div id="ghl-chat-widget" data-ghl-widget="chat">
       {/* ── Collapsed: Avatar Button ── */}
       <div className="fixed z-[9999]" style={{ bottom: '24px', right: '24px' }}>
         {/* Proactive bubble */}
@@ -725,6 +732,6 @@ export default function ChatWidget() {
           </div>
         </div>
       </div>
-    </>
+    </div>
   )
 }
