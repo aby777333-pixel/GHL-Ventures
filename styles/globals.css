@@ -2323,7 +2323,9 @@ body.dashboard-active #ghl-chat-widget {
   position: relative;
   z-index: 10000;
 }
-body.dashboard-active #ghl-chat-widget .fixed {
+body.dashboard-active #ghl-chat-widget .fixed,
+body.dashboard-active #ghl-chat-widget .fixed *,
+body.dashboard-active #ghl-chat-widget [class*="fixed"] {
   visibility: visible !important;
   pointer-events: auto !important;
 }

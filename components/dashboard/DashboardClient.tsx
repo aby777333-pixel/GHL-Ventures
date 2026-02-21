@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
+import { useRouter, usePathname } from 'next/navigation'
 import Link from 'next/link'
 import {
   LayoutDashboard, TrendingUp, Briefcase, FileText, ArrowLeftRight,
@@ -257,9 +258,22 @@ function ChartTooltipContent({ active, payload, label }: any) {
    MAIN DASHBOARD COMPONENT
    ═══════════════════════════════════════════════════════════════ */
 export default function DashboardClient() {
+  // ─── Routing ─────────────────────────────────────────────
+  const router = useRouter()
+  const pathname = usePathname()
+  const VALID_TABS: TabId[] = ['dashboard','investments','invest-onboard','portfolio','kyc','transactions','messages','support','referrals','calculators','profile','settings']
+  const activeTab: TabId = useMemo(() => {
+    const segments = pathname.split('/').filter(Boolean)
+    const tabSegment = segments[1] as TabId | undefined
+    return tabSegment && VALID_TABS.includes(tabSegment) ? tabSegment : 'dashboard'
+  }, [pathname])
+  const setActiveTab = useCallback((tab: TabId) => {
+    const url = tab === 'dashboard' ? '/dashboard' : `/dashboard/${tab}`
+    router.push(url, { scroll: false })
+  }, [router])
+
   // ─── State ────────────────────────────────────────────────
   const [theme, setTheme] = useState<Theme>('dark')
-  const [activeTab, setActiveTab] = useState<TabId>('dashboard')
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [notifOpen, setNotifOpen] = useState(false)
   const [currentTime, setCurrentTime] = useState('')
@@ -346,7 +360,7 @@ export default function DashboardClient() {
               <p className="text-[10px] text-brand-red font-medium tracking-widest uppercase">Ventures</p>
             </div>
           </Link>
-          <button onClick={() => setSidebarOpen(false)} className={`lg:hidden ${t('text-gray-500 hover:text-white','text-gray-400 hover:text-gray-900')} transition-colors`}>
+          <button onClick={() => setSidebarOpen(false)} className={`lg:hidden ${t('text-gray-500 hover:text-white','text-gray-600 hover:text-gray-900')} transition-colors`}>
             <X className="w-5 h-5" />
           </button>
         </div>
@@ -354,9 +368,9 @@ export default function DashboardClient() {
         {/* Investor badge */}
         <div className="px-6 mb-4">
           <div className={`px-3 py-2.5 rounded-xl ${t('bg-white/[0.04] border border-white/[0.06]','bg-gray-100/60 border border-gray-200/40')}`}>
-            <p className={`text-[10px] uppercase tracking-widest mb-0.5 ${t('text-gray-500','text-gray-400')}`}>Investor</p>
+            <p className={`text-[10px] uppercase tracking-widest mb-0.5 ${t('text-gray-500','text-gray-600')}`}>Investor</p>
             <p className={`text-sm font-semibold ${t('text-white','text-gray-900')}`}>Rajesh Krishnan</p>
-            <p className={`text-[10px] mt-0.5 ${t('text-gray-500','text-gray-500')}`}>ID: GHL-INV-2024-0847</p>
+            <p className={`text-[10px] mt-0.5 ${t('text-gray-500','text-gray-700')}`}>ID: GHL-INV-2024-0847</p>
           </div>
         </div>
 
@@ -432,7 +446,7 @@ export default function DashboardClient() {
         <div className="flex items-center gap-6 text-xs animate-marquee whitespace-nowrap">
           {[...MARKET_DATA, ...MARKET_DATA].map((m, i) => (
             <span key={i} className="inline-flex items-center gap-2">
-              <span className={`font-medium ${t('text-gray-500','text-gray-400')}`}>{m.name}</span>
+              <span className={`font-medium ${t('text-gray-500','text-gray-600')}`}>{m.name}</span>
               <span className={`font-semibold ${t('text-white','text-gray-900')}`}>{m.value}</span>
               <span className={`font-semibold ${m.up ? 'text-emerald-400' : 'text-red-400'}`}>{m.change}</span>
             </span>
@@ -443,10 +457,10 @@ export default function DashboardClient() {
       {/* Main bar */}
       <div className="flex items-center justify-between px-4 lg:px-6 py-3">
         <div className="flex items-center gap-3">
-          <button onClick={() => setSidebarOpen(true)} className={`lg:hidden ${t('text-gray-400 hover:text-white','text-gray-500 hover:text-gray-900')} transition-colors p-1`}>
+          <button onClick={() => setSidebarOpen(true)} className={`lg:hidden ${t('text-gray-400 hover:text-white','text-gray-700 hover:text-gray-900')} transition-colors p-1`}>
             <Menu className="w-5 h-5" />
           </button>
-          <div className={`hidden sm:flex items-center gap-2 text-xs ${t('text-gray-500','text-gray-400')}`}>
+          <div className={`hidden sm:flex items-center gap-2 text-xs ${t('text-gray-500','text-gray-600')}`}>
             <Home className="w-3 h-3" /> <ChevronRight className="w-3 h-3" />
             <span className={`capitalize ${t('text-white','text-gray-900')}`}>{activeTab === 'kyc' ? 'KYC & Documents' : activeTab}</span>
           </div>
@@ -456,7 +470,7 @@ export default function DashboardClient() {
           {/* Search */}
           <div className={`hidden md:flex items-center gap-2 px-3 py-1.5 rounded-xl w-56 transition-colors
             ${t('bg-white/[0.04] border border-white/[0.06] focus-within:border-brand-red/30','bg-gray-100/50 border border-gray-200/40 focus-within:border-brand-red/40')}`}>
-            <Search className={`w-3.5 h-3.5 ${t('text-gray-500','text-gray-400')}`} />
+            <Search className={`w-3.5 h-3.5 ${t('text-gray-500','text-gray-600')}`} />
             <input type="text" placeholder="Search..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)}
               className={`bg-transparent border-none outline-none text-xs w-full ${t('text-white placeholder-gray-600','text-gray-900 placeholder-gray-400')}`} />
           </div>
@@ -471,7 +485,7 @@ export default function DashboardClient() {
 
           {/* Notifications */}
           <div className="relative">
-            <button onClick={() => setNotifOpen(!notifOpen)} className={`relative p-2 rounded-xl transition-colors ${t('text-gray-400 hover:text-white hover:bg-white/[0.04]','text-gray-500 hover:text-gray-900 hover:bg-gray-200/35')}`}>
+            <button onClick={() => setNotifOpen(!notifOpen)} className={`relative p-2 rounded-xl transition-colors ${t('text-gray-400 hover:text-white hover:bg-white/[0.04]','text-gray-700 hover:text-gray-900 hover:bg-gray-200/35')}`}>
               <Bell className="w-4 h-4" />
               <span className="absolute -top-0.5 -right-0.5 w-4 h-4 rounded-full bg-brand-red text-[9px] font-bold text-white flex items-center justify-center">
                 {NOTIFICATIONS_DATA.filter(n => !n.read).length}
@@ -499,8 +513,8 @@ export default function DashboardClient() {
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className={`text-xs font-semibold ${t('text-white','text-gray-900')} ${!n.read ? '' : 'opacity-60'}`}>{n.title}</p>
-                        <p className={`text-[11px] mt-0.5 ${t('text-gray-500','text-gray-500')}`}>{n.desc}</p>
-                        <p className={`text-[10px] mt-1 ${t('text-gray-600','text-gray-400')}`}>{n.time}</p>
+                        <p className={`text-[11px] mt-0.5 ${t('text-gray-500','text-gray-700')}`}>{n.desc}</p>
+                        <p className={`text-[10px] mt-1 ${t('text-gray-600','text-gray-600')}`}>{n.time}</p>
                       </div>
                       {!n.read && !notifsRead.has(n.id) && <div className="w-2 h-2 rounded-full bg-brand-red shrink-0 mt-1.5" />}
                     </div>
@@ -511,11 +525,11 @@ export default function DashboardClient() {
           </div>
 
           {/* Time */}
-          <span className={`hidden lg:block text-[11px] ml-2 ${t('text-gray-500','text-gray-400')}`}>{currentTime}</span>
+          <span className={`hidden lg:block text-[11px] ml-2 ${t('text-gray-500','text-gray-600')}`}>{currentTime}</span>
 
           {/* Theme toggle (compact) */}
           <button onClick={() => setTheme(isDark ? 'light' : 'dark')}
-            className={`p-2 rounded-xl transition-all duration-300 ${t('text-gray-400 hover:text-amber-400 hover:bg-amber-500/[0.06]','text-gray-500 hover:text-indigo-600 hover:bg-indigo-50')}`}>
+            className={`p-2 rounded-xl transition-all duration-300 ${t('text-gray-400 hover:text-amber-400 hover:bg-amber-500/[0.06]','text-gray-700 hover:text-indigo-600 hover:bg-indigo-50')}`}>
             {isDark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
           </button>
 
@@ -541,7 +555,7 @@ export default function DashboardClient() {
             <Sparkles className="w-8 h-8 text-brand-red" />
           </div>
           <h3 className={`text-lg font-bold mb-2 ${t('text-white','text-gray-900')}`}>{step.title}</h3>
-          <p className={`text-sm mb-6 leading-relaxed ${t('text-gray-400','text-gray-500')}`}>{step.desc}</p>
+          <p className={`text-sm mb-6 leading-relaxed ${t('text-gray-400','text-gray-700')}`}>{step.desc}</p>
           <div className="flex items-center justify-center gap-1.5 mb-6">
             {TOUR_STEPS.map((_, i) => (
               <div key={i} className={`h-1.5 rounded-full transition-all duration-300 ${i === tourStep ? 'w-6 bg-brand-red' : 'w-1.5 bg-gray-600'}`} />
@@ -549,7 +563,7 @@ export default function DashboardClient() {
           </div>
           <div className="flex gap-3 justify-center">
             <button onClick={() => { setTourActive(false); setTourStep(0) }}
-              className={`px-4 py-2 rounded-xl text-sm font-medium ${t('text-gray-400 hover:text-white','text-gray-500 hover:text-gray-900')}`}>Skip</button>
+              className={`px-4 py-2 rounded-xl text-sm font-medium ${t('text-gray-400 hover:text-white','text-gray-700 hover:text-gray-900')}`}>Skip</button>
             <button onClick={() => {
               if (tourStep < TOUR_STEPS.length - 1) {
                 setActiveTab(TOUR_STEPS[tourStep + 1].target as TabId)
@@ -589,7 +603,7 @@ export default function DashboardClient() {
               </span>
             </div>
             <p className={`text-2xl font-extrabold tracking-tight mb-0.5 ${t('text-white','text-gray-900')}`}>{m.value}</p>
-            <p className={`text-xs ${t('text-gray-500','text-gray-500')}`}>{m.label}</p>
+            <p className={`text-xs ${t('text-gray-500','text-gray-700')}`}>{m.label}</p>
           </Glass>
         ))}
       </div>
@@ -604,11 +618,11 @@ export default function DashboardClient() {
       <div className="flex items-center justify-between mb-5">
         <div>
           <h3 className={`text-base font-bold mb-0.5 ${t('text-white','text-gray-900')}`}>NAV Performance</h3>
-          <p className={`text-xs ${t('text-gray-500','text-gray-500')}`}>Fund NAV vs NIFTY 50 Benchmark</p>
+          <p className={`text-xs ${t('text-gray-500','text-gray-700')}`}>Fund NAV vs NIFTY 50 Benchmark</p>
         </div>
         <div className="flex items-center gap-4 text-xs">
-          <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-brand-red" /><span className={t('text-gray-400','text-gray-500')}>Fund NAV</span></span>
-          <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-gray-500" /><span className={t('text-gray-400','text-gray-500')}>Benchmark</span></span>
+          <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-brand-red" /><span className={t('text-gray-400','text-gray-700')}>Fund NAV</span></span>
+          <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-gray-500" /><span className={t('text-gray-400','text-gray-700')}>Benchmark</span></span>
         </div>
       </div>
       <div className="h-[280px] -ml-2">
@@ -671,7 +685,7 @@ export default function DashboardClient() {
               </div>
               <div className="flex-1 min-w-0">
                 <p className={`text-sm font-semibold truncate ${t('text-white','text-gray-900')}`}>{asset.name}</p>
-                <p className={`text-xs ${t('text-gray-500','text-gray-500')}`}>{asset.type}</p>
+                <p className={`text-xs ${t('text-gray-500','text-gray-700')}`}>{asset.type}</p>
               </div>
               <div className="text-right shrink-0">
                 <p className={`text-sm font-bold ${t('text-white','text-gray-900')}`}>{'\u20B9'}{formatINR(asset.current)}</p>
@@ -683,7 +697,7 @@ export default function DashboardClient() {
               <div className={`flex-1 h-1.5 rounded-full overflow-hidden ${t('bg-white/[0.06]','bg-gray-200')}`}>
                 <div className="h-full rounded-full bg-gradient-to-r from-brand-red to-red-400 transition-all duration-1000" style={{ width: `${asset.milestone}%` }} />
               </div>
-              <span className={`text-[10px] font-medium ${t('text-gray-500','text-gray-400')}`}>{asset.milestone}%</span>
+              <span className={`text-[10px] font-medium ${t('text-gray-500','text-gray-600')}`}>{asset.milestone}%</span>
             </div>
           </div>
         ))}
@@ -710,7 +724,7 @@ export default function DashboardClient() {
               <item.icon className="w-5 h-5" style={{ color: item.color }} />
             </div>
             <p className={`text-sm font-semibold mb-0.5 ${t('text-white','text-gray-900')}`}>{item.label}</p>
-            <p className={`text-xs leading-relaxed ${t('text-gray-500','text-gray-500')}`}>{item.desc}</p>
+            <p className={`text-xs leading-relaxed ${t('text-gray-500','text-gray-700')}`}>{item.desc}</p>
           </Glass>
         </button>
       ))}
@@ -731,11 +745,11 @@ export default function DashboardClient() {
             </div>
             <div className="flex-1 min-w-0">
               <p className={`text-xs font-semibold ${t('text-white','text-gray-900')}`}>{tx.type}</p>
-              <p className={`text-[11px] truncate ${t('text-gray-500','text-gray-500')}`}>{tx.fund}</p>
+              <p className={`text-[11px] truncate ${t('text-gray-500','text-gray-700')}`}>{tx.fund}</p>
             </div>
             <div className="text-right shrink-0">
               {tx.amount > 0 && <p className={`text-xs font-bold ${tx.type === 'Dividend' ? 'text-emerald-400' : t('text-white','text-gray-900')}`}>{tx.type === 'Dividend' ? '+' : ''}{'\u20B9'}{formatINR(tx.amount)}</p>}
-              <p className={`text-[10px] ${t('text-gray-600','text-gray-400')}`}>{tx.date}</p>
+              <p className={`text-[10px] ${t('text-gray-600','text-gray-600')}`}>{tx.date}</p>
             </div>
           </div>
         ))}
@@ -771,7 +785,7 @@ export default function DashboardClient() {
           <div className="space-y-1.5 text-xs">
             {[{ l: 'Diversification', v: 'Strong', c: 'text-emerald-400' },{ l: 'Risk Level', v: 'Moderate', c: 'text-amber-400' },{ l: 'Growth Trend', v: 'Positive', c: 'text-emerald-400' }].map((r,i) => (
               <div key={i} className="flex items-center justify-between gap-4">
-                <span className={t('text-gray-500','text-gray-500')}>{r.l}</span>
+                <span className={t('text-gray-500','text-gray-700')}>{r.l}</span>
                 <span className={`font-semibold ${r.c}`}>{r.v}</span>
               </div>
             ))}
@@ -800,11 +814,11 @@ export default function DashboardClient() {
           {[{ v: days, l: 'Days' },{ v: hours, l: 'Hrs' }].map((u,i) => (
             <div key={i} className={`flex-1 text-center p-2.5 rounded-xl ${t('bg-white/[0.04] border border-white/[0.06]','bg-gray-100/60 border border-gray-200/40')}`}>
               <p className={`text-2xl font-black tracking-tight ${t('text-white','text-gray-900')}`}>{u.v}</p>
-              <p className={`text-[9px] uppercase tracking-widest ${t('text-gray-600','text-gray-500')}`}>{u.l}</p>
+              <p className={`text-[9px] uppercase tracking-widest ${t('text-gray-600','text-gray-700')}`}>{u.l}</p>
             </div>
           ))}
         </div>
-        <p className={`text-[11px] text-center ${t('text-gray-600','text-gray-500')}`}>Q4 2024 &bull; 15 April 2025</p>
+        <p className={`text-[11px] text-center ${t('text-gray-600','text-gray-700')}`}>Q4 2024 &bull; 15 April 2025</p>
       </Glass>
     )
   }
@@ -824,11 +838,11 @@ export default function DashboardClient() {
         </div>
       </div>
       <div className="flex justify-between text-[9px] uppercase tracking-widest mb-3">
-        <span className="text-red-400">Fear</span><span className={t('text-gray-500','text-gray-500')}>Neutral</span><span className="text-emerald-400">Greed</span>
+        <span className="text-red-400">Fear</span><span className={t('text-gray-500','text-gray-700')}>Neutral</span><span className="text-emerald-400">Greed</span>
       </div>
       <div className={`text-center p-2 rounded-lg ${t('bg-emerald-500/10 border border-emerald-500/15','bg-emerald-100/60 border border-emerald-300/50')}`}>
         <span className="text-emerald-400 text-sm font-bold">72 &bull; Greed</span>
-        <p className={`text-[10px] mt-0.5 ${t('text-gray-500','text-gray-500')}`}>India VIX: 13.42 (-2.1%)</p>
+        <p className={`text-[10px] mt-0.5 ${t('text-gray-500','text-gray-700')}`}>India VIX: 13.42 (-2.1%)</p>
       </div>
     </Glass>
   )
@@ -847,7 +861,7 @@ export default function DashboardClient() {
           { label: 'NIFTY 50', val: '22,456', chg: '+0.98%', data: NIFTY_INTRADAY, color: '#3B82F6' }].map((chart,i) => (
           <div key={i} className={`p-3 rounded-xl ${t('bg-white/[0.03] border border-white/[0.04]','bg-gray-100/50 border border-gray-200/30')}`}>
             <div className="flex items-center justify-between mb-1">
-              <span className={`text-[10px] font-semibold ${t('text-gray-400','text-gray-500')}`}>{chart.label}</span>
+              <span className={`text-[10px] font-semibold ${t('text-gray-400','text-gray-700')}`}>{chart.label}</span>
               <span className="text-[10px] font-bold text-emerald-400">{chart.chg}</span>
             </div>
             <p className={`text-base font-black mb-2 ${t('text-white','text-gray-900')}`}>{chart.val}</p>
@@ -907,7 +921,7 @@ export default function DashboardClient() {
           <div key={i} className={`p-3 rounded-xl text-center ${t('bg-white/[0.03] border border-white/[0.04]','bg-gray-100/50 border border-gray-200/30')}`}>
             <ind.icon className={`w-4 h-4 mx-auto mb-1.5 ${ind.trend === 'up' ? 'text-emerald-400' : ind.trend === 'down' ? 'text-red-400' : 'text-blue-400'}`} />
             <p className={`text-sm font-black ${t('text-white','text-gray-900')}`}>{ind.value}</p>
-            <p className={`text-[9px] mt-0.5 ${t('text-gray-500','text-gray-500')}`}>{ind.label}</p>
+            <p className={`text-[9px] mt-0.5 ${t('text-gray-500','text-gray-700')}`}>{ind.label}</p>
           </div>
         ))}
       </div>
@@ -933,7 +947,7 @@ export default function DashboardClient() {
       <div className="space-y-1.5">
         {ECONOMIC_CALENDAR.slice(0, 6).map((ev,i) => (
           <div key={i} className={`flex items-center gap-3 p-2 rounded-lg ${t('hover:bg-white/[0.02]','hover:bg-gray-200/40')} transition-colors`}>
-            <div className={`w-10 text-center shrink-0 ${t('text-gray-500','text-gray-500')}`}>
+            <div className={`w-10 text-center shrink-0 ${t('text-gray-500','text-gray-700')}`}>
               <p className="text-[10px] font-bold leading-tight">{ev.date.split(' ')[0]}</p>
               <p className="text-[8px] uppercase">{ev.date.split(' ')[1]}</p>
             </div>
@@ -959,7 +973,7 @@ export default function DashboardClient() {
           <Megaphone className="w-4 h-4 text-brand-red" />
           <h4 className={`text-sm font-bold ${t('text-white','text-gray-900')}`}>GHL News & Updates</h4>
         </div>
-        <span className={`text-[10px] font-semibold ${t('text-gray-500','text-gray-500')}`}>{ADMIN_NEWS.length} updates</span>
+        <span className={`text-[10px] font-semibold ${t('text-gray-500','text-gray-700')}`}>{ADMIN_NEWS.length} updates</span>
       </div>
       <div className="space-y-2.5">
         {ADMIN_NEWS.map(news => (
@@ -968,12 +982,12 @@ export default function DashboardClient() {
               {news.pinned && <Flame className="w-3 h-3 text-brand-red shrink-0 mt-0.5" />}
               <div className="flex-1 min-w-0">
                 <p className={`text-xs font-bold truncate ${t('text-white','text-gray-900')}`}>{news.title}</p>
-                <p className={`text-[11px] mt-0.5 line-clamp-2 leading-relaxed ${t('text-gray-500','text-gray-500')}`}>{news.excerpt}</p>
+                <p className={`text-[11px] mt-0.5 line-clamp-2 leading-relaxed ${t('text-gray-500','text-gray-700')}`}>{news.excerpt}</p>
               </div>
             </div>
             <div className="flex items-center justify-between mt-2">
               <span className={`text-[9px] px-2 py-0.5 rounded-full font-semibold ${news.category === 'Opportunity' ? 'bg-emerald-500/15 text-emerald-400' : news.category === 'Fund Update' ? 'bg-blue-500/15 text-blue-400' : news.category === 'Event' ? 'bg-purple-500/15 text-purple-400' : 'bg-amber-500/15 text-amber-400'}`}>{news.category}</span>
-              <span className={`text-[10px] ${t('text-gray-600','text-gray-400')}`}>{news.date}</span>
+              <span className={`text-[10px] ${t('text-gray-600','text-gray-600')}`}>{news.date}</span>
             </div>
           </div>
         ))}
@@ -1028,12 +1042,12 @@ export default function DashboardClient() {
         ].map((m,i) => (
           <div key={i} className="flex items-center gap-3">
             <div className={`w-7 h-7 rounded-full flex items-center justify-center shrink-0 ${m.achieved ? 'bg-amber-500/20' : t('bg-white/[0.04]','bg-gray-200/40')}`}>
-              {m.achieved ? <CheckCircle className="w-4 h-4 text-amber-400" /> : <CircleDot className={`w-4 h-4 ${t('text-gray-600','text-gray-400')}`} />}
+              {m.achieved ? <CheckCircle className="w-4 h-4 text-amber-400" /> : <CircleDot className={`w-4 h-4 ${t('text-gray-600','text-gray-600')}`} />}
             </div>
             <div className="flex-1 min-w-0">
-              <p className={`text-xs font-semibold ${m.achieved ? t('text-white','text-gray-900') : t('text-gray-500','text-gray-500')}`}>{m.label}</p>
+              <p className={`text-xs font-semibold ${m.achieved ? t('text-white','text-gray-900') : t('text-gray-500','text-gray-700')}`}>{m.label}</p>
               {m.achieved ? (
-                <p className={`text-[10px] ${t('text-gray-600','text-gray-400')}`}>{m.date}</p>
+                <p className={`text-[10px] ${t('text-gray-600','text-gray-600')}`}>{m.date}</p>
               ) : (
                 <div className="flex items-center gap-2 mt-1">
                   <div className={`flex-1 h-1 rounded-full overflow-hidden ${t('bg-white/[0.06]','bg-gray-200/40')}`}>
@@ -1058,7 +1072,7 @@ export default function DashboardClient() {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
           <h2 className={`text-xl font-bold mb-0.5 ${t('text-white','text-gray-900')}`}>{greeting}, <span className="text-brand-red">Rajesh</span></h2>
-          <p className={`text-sm flex items-center gap-2 ${t('text-gray-500','text-gray-500')}`}>
+          <p className={`text-sm flex items-center gap-2 ${t('text-gray-500','text-gray-700')}`}>
             Welcome to your investor portal
             <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-emerald-500/15 text-emerald-400 border border-emerald-500/20">
               <Shield className="w-3 h-3" /> KYC Verified
@@ -1135,7 +1149,7 @@ export default function DashboardClient() {
     <div className="space-y-6">
       <div>
         <h2 className={`text-xl font-bold mb-1 ${t('text-white','text-gray-900')}`}>Investment Opportunities</h2>
-        <p className={`text-sm ${t('text-gray-500','text-gray-500')}`}>Browse, select, and manage your allocations</p>
+        <p className={`text-sm ${t('text-gray-500','text-gray-700')}`}>Browse, select, and manage your allocations</p>
       </div>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {[
@@ -1151,7 +1165,7 @@ export default function DashboardClient() {
               </div>
               <div>
                 <h4 className={`text-sm font-bold mb-1 ${t('text-white','text-gray-900')}`}>{opp.title}</h4>
-                <p className={`text-xs leading-relaxed ${t('text-gray-500','text-gray-500')}`}>{opp.desc}</p>
+                <p className={`text-xs leading-relaxed ${t('text-gray-500','text-gray-700')}`}>{opp.desc}</p>
               </div>
             </div>
             <div className="grid grid-cols-2 gap-3 mb-4">
@@ -1162,7 +1176,7 @@ export default function DashboardClient() {
                 { label: 'Risk Level', val: opp.risk, risk: true },
               ].map((f, j) => (
                 <div key={j} className={`p-2.5 rounded-lg ${t('bg-white/[0.02]','bg-gray-100/35')}`}>
-                  <p className={`text-[10px] uppercase tracking-wider ${t('text-gray-600','text-gray-400')}`}>{f.label}</p>
+                  <p className={`text-[10px] uppercase tracking-wider ${t('text-gray-600','text-gray-600')}`}>{f.label}</p>
                   <p className={`text-sm font-bold ${f.green ? 'text-emerald-400' : f.risk ? (opp.risk === 'Very High' ? 'text-red-400' : opp.risk === 'High' ? 'text-amber-400' : 'text-blue-400') : t('text-white','text-gray-900')}`}>{f.val}</p>
                 </div>
               ))}
@@ -1180,7 +1194,7 @@ export default function DashboardClient() {
       {/* Modify Allocation Section */}
       <Glass className="p-6" hover theme={theme}>
         <h3 className={`text-base font-bold mb-4 ${t('text-white','text-gray-900')}`}>Modify Allocation</h3>
-        <p className={`text-xs mb-4 ${t('text-gray-500','text-gray-500')}`}>Request changes to your current investment allocation. Our advisory team will review and process your request.</p>
+        <p className={`text-xs mb-4 ${t('text-gray-500','text-gray-700')}`}>Request changes to your current investment allocation. Our advisory team will review and process your request.</p>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
           {ALLOCATION_DATA.map((a, i) => (
             <div key={i} className={`p-3 rounded-xl ${t('bg-white/[0.03] border border-white/[0.06]','bg-gray-100/60 border border-gray-200/40')}`}>
@@ -1208,7 +1222,7 @@ export default function DashboardClient() {
       <div className="flex items-center justify-between">
         <div>
           <h2 className={`text-xl font-bold mb-1 ${t('text-white','text-gray-900')}`}>KYC & Documents</h2>
-          <p className={`text-sm ${t('text-gray-500','text-gray-500')}`}>Upload, track, and manage your compliance documents</p>
+          <p className={`text-sm ${t('text-gray-500','text-gray-700')}`}>Upload, track, and manage your compliance documents</p>
         </div>
         <button onClick={() => setUploadModalOpen(true)} className="px-4 py-2 rounded-xl text-xs font-semibold text-white flex items-center gap-1.5" style={{ background: 'linear-gradient(135deg, #D0021B, #8B0000)' }}>
           <Upload className="w-3.5 h-3.5" /> Upload Document
@@ -1218,14 +1232,14 @@ export default function DashboardClient() {
       {/* KYC Progress */}
       <Glass className="p-6" hover theme={theme}>
         <h3 className={`text-base font-bold mb-1 ${t('text-white','text-gray-900')}`}>KYC Verification Progress</h3>
-        <p className={`text-xs mb-5 ${t('text-gray-500','text-gray-500')}`}>As required by SEBI, complete your KYC before investing.</p>
+        <p className={`text-xs mb-5 ${t('text-gray-500','text-gray-700')}`}>As required by SEBI, complete your KYC before investing.</p>
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
           {KYC_STEPS.map((step, i) => (
             <div key={i} className={`p-4 rounded-xl text-center transition-all cursor-pointer
               ${step.status === 'completed' ? (isDark ? 'bg-emerald-500/10 border border-emerald-500/20' : 'bg-emerald-50 border border-emerald-200') :
                 step.status === 'in-review' ? (isDark ? 'bg-amber-500/10 border border-amber-500/20' : 'bg-amber-50 border border-amber-200') :
                 t('bg-white/[0.03] border border-white/[0.06]','bg-gray-100/60 border border-gray-200/40')}`}>
-              <step.icon className={`w-6 h-6 mx-auto mb-2 ${step.status === 'completed' ? 'text-emerald-400' : step.status === 'in-review' ? 'text-amber-400' : t('text-gray-500','text-gray-400')}`} />
+              <step.icon className={`w-6 h-6 mx-auto mb-2 ${step.status === 'completed' ? 'text-emerald-400' : step.status === 'in-review' ? 'text-amber-400' : t('text-gray-500','text-gray-600')}`} />
               <p className={`text-[11px] font-medium ${t('text-white','text-gray-900')}`}>{step.label}</p>
               <span className={`text-[9px] font-semibold uppercase mt-1 inline-block px-1.5 py-0.5 rounded-full
                 ${step.status === 'completed' ? 'text-emerald-400 bg-emerald-500/20' : step.status === 'in-review' ? 'text-amber-400 bg-amber-500/20' : 'text-gray-500 bg-gray-500/20'}`}>
@@ -1261,9 +1275,9 @@ export default function DashboardClient() {
               </div>
               <div className="flex-1 min-w-0">
                 <p className={`text-sm font-semibold truncate ${t('text-white','text-gray-900')}`}>{doc.name}</p>
-                <p className={`text-[11px] ${t('text-gray-500','text-gray-500')}`}>{doc.type} &bull; {doc.date}</p>
+                <p className={`text-[11px] ${t('text-gray-500','text-gray-700')}`}>{doc.type} &bull; {doc.date}</p>
               </div>
-              {doc.status === 'available' && <Download className={`w-4 h-4 shrink-0 ${t('text-gray-600','text-gray-400')} group-hover:text-brand-red transition-colors`} />}
+              {doc.status === 'available' && <Download className={`w-4 h-4 shrink-0 ${t('text-gray-600','text-gray-600')} group-hover:text-brand-red transition-colors`} />}
             </div>
           ))}
         </div>
@@ -1275,7 +1289,7 @@ export default function DashboardClient() {
           <div className={`max-w-lg w-full mx-4 rounded-2xl border p-6 ${t('bg-[#111] border-white/10','bg-[#F0EDE9] border-gray-200/50 shadow-2xl')}`}>
             <div className="flex items-center justify-between mb-5">
               <h3 className={`text-lg font-bold ${t('text-white','text-gray-900')}`}>Upload Document</h3>
-              <button onClick={() => setUploadModalOpen(false)} className={t('text-gray-500 hover:text-white','text-gray-400 hover:text-gray-900')}><X className="w-5 h-5" /></button>
+              <button onClick={() => setUploadModalOpen(false)} className={t('text-gray-500 hover:text-white','text-gray-600 hover:text-gray-900')}><X className="w-5 h-5" /></button>
             </div>
             {/* Document Name */}
             <div className="mb-3">
@@ -1307,9 +1321,9 @@ export default function DashboardClient() {
             {/* Drop zone */}
             <div className={`border-2 border-dashed rounded-xl p-6 text-center mb-4 cursor-pointer transition-colors ${t('border-white/10 hover:border-brand-red/30','border-gray-300 hover:border-brand-red/40')}`}
               onClick={() => fileInputRef.current?.click()}>
-              <Upload className={`w-8 h-8 mx-auto mb-2 ${t('text-gray-500','text-gray-400')}`} />
+              <Upload className={`w-8 h-8 mx-auto mb-2 ${t('text-gray-500','text-gray-600')}`} />
               <p className={`text-sm font-medium mb-1 ${t('text-white','text-gray-900')}`}>Click to upload or drag & drop</p>
-              <p className={`text-xs ${t('text-gray-500','text-gray-500')}`}>PDF, JPG, PNG up to 10MB</p>
+              <p className={`text-xs ${t('text-gray-500','text-gray-700')}`}>PDF, JPG, PNG up to 10MB</p>
               <input ref={fileInputRef} type="file" className="hidden" accept=".pdf,.jpg,.jpeg,.png" multiple />
             </div>
             <button onClick={() => { setUploadModalOpen(false); setDocName(''); setDocCategory(''); showToast('Document uploaded successfully. Under review by compliance team.') }}
@@ -1330,7 +1344,7 @@ export default function DashboardClient() {
       <div className="flex items-center justify-between">
         <div>
           <h2 className={`text-xl font-bold mb-1 ${t('text-white','text-gray-900')}`}>Transactions</h2>
-          <p className={`text-sm ${t('text-gray-500','text-gray-500')}`}>Complete transaction history</p>
+          <p className={`text-sm ${t('text-gray-500','text-gray-700')}`}>Complete transaction history</p>
         </div>
         <button onClick={() => showToast('Transaction report CSV downloaded successfully.', 'info')} className="flex items-center gap-2 text-xs text-brand-red font-semibold"><Download className="w-3.5 h-3.5" /> Export CSV</button>
       </div>
@@ -1340,14 +1354,14 @@ export default function DashboardClient() {
             <thead>
               <tr className={`border-b ${t('border-white/[0.06]','border-gray-200/50')}`}>
                 {['Date', 'Type', 'Fund', 'Amount', 'Status'].map(h => (
-                  <th key={h} className={`text-${h === 'Amount' || h === 'Status' ? 'right' : 'left'} text-xs font-medium py-3 px-5 ${t('text-gray-500','text-gray-400')}`}>{h}</th>
+                  <th key={h} className={`text-${h === 'Amount' || h === 'Status' ? 'right' : 'left'} text-xs font-medium py-3 px-5 ${t('text-gray-500','text-gray-600')}`}>{h}</th>
                 ))}
               </tr>
             </thead>
             <tbody>
               {RECENT_TRANSACTIONS.map((tx, i) => (
                 <tr key={i} className={`border-b transition-colors ${t('border-white/[0.03] hover:bg-white/[0.02]','border-gray-100 hover:bg-gray-200/30')}`}>
-                  <td className={`py-3 px-5 text-xs ${t('text-gray-400','text-gray-500')}`}>{tx.date}</td>
+                  <td className={`py-3 px-5 text-xs ${t('text-gray-400','text-gray-700')}`}>{tx.date}</td>
                   <td className="py-3 px-5">
                     <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${tx.type === 'Investment' ? 'bg-blue-500/15 text-blue-400' : tx.type === 'Dividend' ? 'bg-emerald-500/15 text-emerald-400' : 'bg-gray-500/15 text-gray-400'}`}>{tx.type}</span>
                   </td>
@@ -1376,7 +1390,7 @@ export default function DashboardClient() {
       <div className="flex items-center justify-between">
         <div>
           <h2 className={`text-xl font-bold mb-1 ${t('text-white','text-gray-900')}`}>Secure Messages</h2>
-          <p className={`text-sm ${t('text-gray-500','text-gray-500')}`}>Communicate with your advisory team</p>
+          <p className={`text-sm ${t('text-gray-500','text-gray-700')}`}>Communicate with your advisory team</p>
         </div>
         <button onClick={() => setMessageCompose(!messageCompose)} className="px-4 py-2 rounded-xl text-xs font-semibold text-white flex items-center gap-1.5" style={{ background: 'linear-gradient(135deg, #D0021B, #8B0000)' }}>
           <Send className="w-3.5 h-3.5" /> Compose
@@ -1393,9 +1407,9 @@ export default function DashboardClient() {
             <input type="text" placeholder="Subject" className={`w-full px-4 py-2.5 rounded-xl text-sm ${t('bg-white/[0.04] border border-white/[0.06] text-white placeholder-gray-600','bg-gray-100/40 border border-gray-200/40 text-gray-900 placeholder-gray-400')}`} />
             <textarea rows={4} placeholder="Write your message..." className={`w-full px-4 py-2.5 rounded-xl text-sm resize-none ${t('bg-white/[0.04] border border-white/[0.06] text-white placeholder-gray-600','bg-gray-100/40 border border-gray-200/40 text-gray-900 placeholder-gray-400')}`} />
             <div className="flex items-center gap-3">
-              <button className={`p-2 rounded-lg ${t('hover:bg-white/[0.04]','hover:bg-gray-200/40')}`}><Paperclip className={`w-4 h-4 ${t('text-gray-500','text-gray-400')}`} /></button>
+              <button className={`p-2 rounded-lg ${t('hover:bg-white/[0.04]','hover:bg-gray-200/40')}`}><Paperclip className={`w-4 h-4 ${t('text-gray-500','text-gray-600')}`} /></button>
               <div className="flex-1" />
-              <button onClick={() => setMessageCompose(false)} className={`px-4 py-2 rounded-xl text-sm font-medium ${t('text-gray-400','text-gray-500')}`}>Cancel</button>
+              <button onClick={() => setMessageCompose(false)} className={`px-4 py-2 rounded-xl text-sm font-medium ${t('text-gray-400','text-gray-700')}`}>Cancel</button>
               <button onClick={() => { setMessageCompose(false); showToast('Message sent successfully to your advisory team.') }} className="px-5 py-2 rounded-xl text-sm font-semibold text-white" style={{ background: 'linear-gradient(135deg, #D0021B, #8B0000)' }}>Send</button>
             </div>
           </div>
@@ -1410,10 +1424,10 @@ export default function DashboardClient() {
               <div className="flex-1 min-w-0">
                 <div className="flex items-center justify-between mb-0.5">
                   <p className={`text-sm font-semibold ${t('text-white','text-gray-900')} ${!msg.read ? '' : 'opacity-70'}`}>{msg.from}</p>
-                  <span className={`text-[10px] ${t('text-gray-600','text-gray-400')}`}>{msg.time}</span>
+                  <span className={`text-[10px] ${t('text-gray-600','text-gray-600')}`}>{msg.time}</span>
                 </div>
                 <p className={`text-xs font-medium mb-0.5 ${t('text-gray-300','text-gray-700')} ${!msg.read ? '' : 'opacity-70'}`}>{msg.subject}</p>
-                <p className={`text-xs truncate ${t('text-gray-500','text-gray-500')}`}>{msg.preview}</p>
+                <p className={`text-xs truncate ${t('text-gray-500','text-gray-700')}`}>{msg.preview}</p>
               </div>
               {!msg.read && <div className="w-2 h-2 rounded-full bg-brand-red shrink-0 mt-2" />}
             </div>
@@ -1430,7 +1444,7 @@ export default function DashboardClient() {
     <div className="space-y-6">
       <div>
         <h2 className={`text-xl font-bold mb-1 ${t('text-white','text-gray-900')}`}>Support Center</h2>
-        <p className={`text-sm ${t('text-gray-500','text-gray-500')}`}>Get help from our team</p>
+        <p className={`text-sm ${t('text-gray-500','text-gray-700')}`}>Get help from our team</p>
       </div>
 
       {/* Quick connect */}
@@ -1446,7 +1460,7 @@ export default function DashboardClient() {
                 <item.icon className="w-6 h-6" style={{ color: item.color }} />
               </div>
               <h4 className={`text-sm font-bold ${t('text-white','text-gray-900')}`}>{item.title}</h4>
-              <p className={`text-xs mt-1 ${t('text-gray-500','text-gray-500')}`}>{item.desc}</p>
+              <p className={`text-xs mt-1 ${t('text-gray-500','text-gray-700')}`}>{item.desc}</p>
             </Glass>
           </button>
         ))}
@@ -1477,7 +1491,7 @@ export default function DashboardClient() {
               <Ticket className={`w-5 h-5 shrink-0 ${tk.status === 'resolved' ? 'text-emerald-400' : 'text-amber-400'}`} />
               <div className="flex-1 min-w-0">
                 <p className={`text-sm font-semibold ${t('text-white','text-gray-900')}`}>{tk.subject}</p>
-                <p className={`text-[11px] ${t('text-gray-500','text-gray-500')}`}>{tk.id} &bull; {tk.date}</p>
+                <p className={`text-[11px] ${t('text-gray-500','text-gray-700')}`}>{tk.id} &bull; {tk.date}</p>
               </div>
               <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${tk.status === 'resolved' ? 'bg-emerald-500/15 text-emerald-400' : 'bg-amber-500/15 text-amber-400'}`}>{tk.status}</span>
             </div>
@@ -1498,7 +1512,7 @@ export default function DashboardClient() {
           ].map((faq, i) => (
             <div key={i} className={`p-4 rounded-xl ${t('bg-white/[0.02] border border-white/[0.04]','bg-gray-100/60 border border-gray-200/40')}`}>
               <p className={`text-sm font-semibold mb-1.5 ${t('text-white','text-gray-900')}`}>{faq.q}</p>
-              <p className={`text-xs leading-relaxed ${t('text-gray-500','text-gray-500')}`}>{faq.a}</p>
+              <p className={`text-xs leading-relaxed ${t('text-gray-500','text-gray-700')}`}>{faq.a}</p>
             </div>
           ))}
         </div>
@@ -1519,16 +1533,16 @@ export default function DashboardClient() {
             <div className="relative">
               <div className="flex items-center gap-3 mb-4">
                 <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-brand-red/20 to-red-900/20 flex items-center justify-center"><Gift className="w-5 h-5 text-brand-red" /></div>
-                <div><h3 className={`text-base font-bold ${t('text-white','text-gray-900')}`}>Refer & Earn</h3><p className={`text-xs ${t('text-gray-500','text-gray-500')}`}>Invite investors, earn rewards</p></div>
+                <div><h3 className={`text-base font-bold ${t('text-white','text-gray-900')}`}>Refer & Earn</h3><p className={`text-xs ${t('text-gray-500','text-gray-700')}`}>Invite investors, earn rewards</p></div>
               </div>
               <div className={`flex items-center gap-2 p-2.5 rounded-xl mb-4 ${t('bg-white/[0.03] border border-white/[0.06]','bg-gray-100/60 border border-gray-200/40')}`}>
                 <code className={`flex-1 text-xs font-mono truncate ${t('text-gray-300','text-gray-600')}`}>https://ghlindiaventures.com/ref/RK2024</code>
                 <button className={`p-1.5 rounded-lg ${t('hover:bg-white/[0.06] text-gray-400','hover:bg-gray-200 text-gray-500')}`}><Copy className="w-3.5 h-3.5" /></button>
               </div>
               <div className="flex items-center gap-6 text-xs">
-                <div><p className={t('text-gray-500','text-gray-500')}>Referred</p><p className={`text-lg font-bold ${t('text-white','text-gray-900')}`}>3</p></div>
+                <div><p className={t('text-gray-500','text-gray-700')}>Referred</p><p className={`text-lg font-bold ${t('text-white','text-gray-900')}`}>3</p></div>
                 <div className={`w-px h-8 ${t('bg-white/[0.06]','bg-gray-200')}`} />
-                <div><p className={t('text-gray-500','text-gray-500')}>Earned</p><p className="text-lg font-bold text-emerald-400">{'\u20B9'}75K</p></div>
+                <div><p className={t('text-gray-500','text-gray-700')}>Earned</p><p className="text-lg font-bold text-emerald-400">{'\u20B9'}75K</p></div>
               </div>
             </div>
           </Glass>
@@ -1538,7 +1552,7 @@ export default function DashboardClient() {
           {[{ step: '1', t: 'Share Link', d: 'Share your unique referral link' },{ step: '2', t: 'They Invest', d: 'Your referral completes investment' },{ step: '3', t: 'You Earn', d: 'Receive referral bonus' }].map((s, i) => (
             <div key={i} className="flex items-start gap-3 mb-3">
               <span className="w-7 h-7 rounded-full bg-brand-red/15 flex items-center justify-center text-xs font-bold text-brand-red shrink-0">{s.step}</span>
-              <div><p className={`text-xs font-semibold ${t('text-white','text-gray-900')}`}>{s.t}</p><p className={`text-[11px] ${t('text-gray-500','text-gray-500')}`}>{s.d}</p></div>
+              <div><p className={`text-xs font-semibold ${t('text-white','text-gray-900')}`}>{s.t}</p><p className={`text-[11px] ${t('text-gray-500','text-gray-700')}`}>{s.d}</p></div>
             </div>
           ))}
         </Glass>
@@ -1556,11 +1570,11 @@ export default function DashboardClient() {
         <Glass className="p-6 text-center" hover glow theme={theme}>
           <div className="w-20 h-20 rounded-full bg-gradient-to-br from-brand-red to-red-800 flex items-center justify-center text-2xl font-bold text-white mx-auto mb-4 ring-4 ring-white/[0.08]">RK</div>
           <h3 className={`text-lg font-bold ${t('text-white','text-gray-900')}`}>Rajesh Krishnan</h3>
-          <p className={`text-xs mb-3 ${t('text-gray-500','text-gray-500')}`}>rajesh.k@email.com</p>
+          <p className={`text-xs mb-3 ${t('text-gray-500','text-gray-700')}`}>rajesh.k@email.com</p>
           <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-emerald-500/15 text-emerald-400 border border-emerald-500/20"><Shield className="w-3 h-3" /> KYC Verified</span>
           <div className={`mt-4 pt-4 border-t text-left space-y-2.5 ${t('border-white/[0.06]','border-gray-200/50')}`}>
             {[['Investor ID','GHL-INV-2024-0847'],['PAN','ABCPK****F'],['Mobile','+91 98XXX XXXXX'],['Joined','December 2023']].map(([l,v],i) => (
-              <div key={i} className="flex justify-between text-xs"><span className={t('text-gray-500','text-gray-500')}>{l}</span><span className={`font-medium ${t('text-white','text-gray-900')}`}>{v}</span></div>
+              <div key={i} className="flex justify-between text-xs"><span className={t('text-gray-500','text-gray-700')}>{l}</span><span className={`font-medium ${t('text-white','text-gray-900')}`}>{v}</span></div>
             ))}
           </div>
         </Glass>
@@ -1571,7 +1585,7 @@ export default function DashboardClient() {
             <h4 className={`text-sm font-bold mb-4 ${t('text-white','text-gray-900')}`}>Personal Details</h4>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               {[['Full Name','Rajesh Krishnan'],['Email','rajesh.k@email.com'],['Phone','+91 98765 43210'],['City','Chennai, Tamil Nadu'],['Date of Birth','15 Aug 1978'],['Occupation','Business Owner']].map(([l,v],i) => (
-                <div key={i}><p className={`text-[10px] uppercase tracking-wider mb-1 ${t('text-gray-600','text-gray-400')}`}>{l}</p><p className={`text-sm font-medium ${t('text-white','text-gray-900')}`}>{v}</p></div>
+                <div key={i}><p className={`text-[10px] uppercase tracking-wider mb-1 ${t('text-gray-600','text-gray-600')}`}>{l}</p><p className={`text-sm font-medium ${t('text-white','text-gray-900')}`}>{v}</p></div>
               ))}
             </div>
           </Glass>
@@ -1581,7 +1595,7 @@ export default function DashboardClient() {
             <h4 className={`text-sm font-bold mb-4 ${t('text-white','text-gray-900')}`}>Nominee Details</h4>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               {[['Nominee Name','Lakshmi Krishnan'],['Relationship','Spouse'],['Nominee PAN','ABCPL****G'],['Share','100%']].map(([l,v],i) => (
-                <div key={i}><p className={`text-[10px] uppercase tracking-wider mb-1 ${t('text-gray-600','text-gray-400')}`}>{l}</p><p className={`text-sm font-medium ${t('text-white','text-gray-900')}`}>{v}</p></div>
+                <div key={i}><p className={`text-[10px] uppercase tracking-wider mb-1 ${t('text-gray-600','text-gray-600')}`}>{l}</p><p className={`text-sm font-medium ${t('text-white','text-gray-900')}`}>{v}</p></div>
               ))}
             </div>
           </Glass>
@@ -1594,7 +1608,7 @@ export default function DashboardClient() {
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               {[['Bank Name','HDFC Bank'],['Account No','XXXX XXXX 4521'],['IFSC','HDFC0001234'],['Account Type','Savings']].map(([l,v],i) => (
-                <div key={i}><p className={`text-[10px] uppercase tracking-wider mb-1 ${t('text-gray-600','text-gray-400')}`}>{l}</p><p className={`text-sm font-medium ${t('text-white','text-gray-900')}`}>{v}</p></div>
+                <div key={i}><p className={`text-[10px] uppercase tracking-wider mb-1 ${t('text-gray-600','text-gray-600')}`}>{l}</p><p className={`text-sm font-medium ${t('text-white','text-gray-900')}`}>{v}</p></div>
               ))}
             </div>
           </Glass>
@@ -1607,11 +1621,11 @@ export default function DashboardClient() {
           <div className={`max-w-md w-full mx-4 rounded-2xl border p-6 ${t('bg-[#111] border-white/10','bg-white border-gray-200 shadow-2xl')}`}>
             <div className="flex items-center justify-between mb-5">
               <h3 className={`text-lg font-bold ${t('text-white','text-gray-900')}`}>Bank Connect</h3>
-              <button onClick={() => setBankConnectOpen(false)} className={t('text-gray-500 hover:text-white','text-gray-400 hover:text-gray-900')}><X className="w-5 h-5" /></button>
+              <button onClick={() => setBankConnectOpen(false)} className={t('text-gray-500 hover:text-white','text-gray-600 hover:text-gray-900')}><X className="w-5 h-5" /></button>
             </div>
             <div className={`p-4 rounded-xl mb-4 ${t('bg-emerald-500/10 border border-emerald-500/20','bg-emerald-50 border border-emerald-200')}`}>
               <div className="flex items-center gap-2 mb-1"><Shield className="w-4 h-4 text-emerald-400" /><span className={`text-sm font-semibold ${t('text-emerald-400','text-emerald-600')}`}>Secure Connection</span></div>
-              <p className={`text-xs ${t('text-gray-400','text-gray-500')}`}>Your bank details are encrypted and secured with 256-bit SSL.</p>
+              <p className={`text-xs ${t('text-gray-400','text-gray-700')}`}>Your bank details are encrypted and secured with 256-bit SSL.</p>
             </div>
             <div className="space-y-3">
               <input type="text" placeholder="Account Holder Name" className={`w-full px-4 py-2.5 rounded-xl text-sm ${t('bg-white/[0.04] border border-white/[0.06] text-white placeholder-gray-600','bg-gray-100/40 border border-gray-200/40 text-gray-900 placeholder-gray-400')}`} />
@@ -1641,7 +1655,7 @@ export default function DashboardClient() {
             <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${t('bg-white/[0.04]','bg-gray-200/40')}`}>
               {isDark ? <Moon className="w-5 h-5 text-indigo-400" /> : <Sun className="w-5 h-5 text-amber-500" />}
             </div>
-            <div><h4 className={`text-sm font-bold ${t('text-white','text-gray-900')}`}>Appearance</h4><p className={`text-xs ${t('text-gray-500','text-gray-500')}`}>Theme and display preferences</p></div>
+            <div><h4 className={`text-sm font-bold ${t('text-white','text-gray-900')}`}>Appearance</h4><p className={`text-xs ${t('text-gray-500','text-gray-700')}`}>Theme and display preferences</p></div>
           </div>
           <div className="flex gap-3">
             <button onClick={() => setTheme('dark')} className={`flex-1 p-3 rounded-xl text-center text-sm font-medium transition-all ${theme === 'dark' ? 'bg-brand-red/15 text-white border border-brand-red/20' : t('bg-white/[0.03] text-gray-400','bg-gray-100/40 text-gray-500')}`}>
@@ -1657,7 +1671,7 @@ export default function DashboardClient() {
         <Glass className="p-6" hover theme={theme}>
           <div className="flex items-center gap-3 mb-4">
             <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${t('bg-white/[0.04]','bg-gray-200/40')}`}><Languages className="w-5 h-5 text-blue-400" /></div>
-            <div><h4 className={`text-sm font-bold ${t('text-white','text-gray-900')}`}>Language</h4><p className={`text-xs ${t('text-gray-500','text-gray-500')}`}>Dashboard language preference</p></div>
+            <div><h4 className={`text-sm font-bold ${t('text-white','text-gray-900')}`}>Language</h4><p className={`text-xs ${t('text-gray-500','text-gray-700')}`}>Dashboard language preference</p></div>
           </div>
           <select
             value={dashLang}
@@ -1667,7 +1681,7 @@ export default function DashboardClient() {
             <option value="English">English</option><option value="Hindi">हिन्दी (Hindi)</option><option value="Tamil">தமிழ் (Tamil)</option><option value="Telugu">తెలుగు (Telugu)</option><option value="Kannada">ಕನ್ನಡ (Kannada)</option><option value="Malayalam">മലയാളം (Malayalam)</option><option value="Marathi">मराठी (Marathi)</option><option value="Bengali">বাংলা (Bengali)</option><option value="Gujarati">ગુજરાતી (Gujarati)</option>
           </select>
           {dashLang !== 'English' && (
-            <p className={`text-[10px] mt-2 ${t('text-gray-500','text-gray-500')}`}>
+            <p className={`text-[10px] mt-2 ${t('text-gray-500','text-gray-700')}`}>
               <Info className="w-3 h-3 inline mr-1" />
               Translation to {dashLang} will be available in a future update. Currently displaying in English.
             </p>
@@ -1678,7 +1692,7 @@ export default function DashboardClient() {
         <Glass className="p-6" hover theme={theme}>
           <div className="flex items-center gap-3 mb-4">
             <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${t('bg-white/[0.04]','bg-gray-200/40')}`}><Bell className="w-5 h-5 text-amber-400" /></div>
-            <div><h4 className={`text-sm font-bold ${t('text-white','text-gray-900')}`}>Notifications</h4><p className={`text-xs ${t('text-gray-500','text-gray-500')}`}>Email and push preferences</p></div>
+            <div><h4 className={`text-sm font-bold ${t('text-white','text-gray-900')}`}>Notifications</h4><p className={`text-xs ${t('text-gray-500','text-gray-700')}`}>Email and push preferences</p></div>
           </div>
           {([
             { key: 'email' as const, label: 'Email Alerts' },
@@ -1703,12 +1717,12 @@ export default function DashboardClient() {
         <Glass className="p-6" hover theme={theme}>
           <div className="flex items-center gap-3 mb-4">
             <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${t('bg-white/[0.04]','bg-gray-200/40')}`}><Lock className="w-5 h-5 text-emerald-400" /></div>
-            <div><h4 className={`text-sm font-bold ${t('text-white','text-gray-900')}`}>Security</h4><p className={`text-xs ${t('text-gray-500','text-gray-500')}`}>Password and authentication</p></div>
+            <div><h4 className={`text-sm font-bold ${t('text-white','text-gray-900')}`}>Security</h4><p className={`text-xs ${t('text-gray-500','text-gray-700')}`}>Password and authentication</p></div>
           </div>
           {['Change Password','Enable 2FA','Active Sessions','Login History'].map((opt,j) => (
             <div key={j} className={`flex items-center justify-between p-2.5 rounded-lg cursor-pointer group ${t('hover:bg-white/[0.02]','hover:bg-gray-200/40')} transition-colors`}>
               <span className={`text-xs ${t('text-gray-400 group-hover:text-white','text-gray-600 group-hover:text-gray-900')} transition-colors`}>{opt}</span>
-              <ChevronRight className={`w-3.5 h-3.5 ${t('text-gray-600','text-gray-400')}`} />
+              <ChevronRight className={`w-3.5 h-3.5 ${t('text-gray-600','text-gray-600')}`} />
             </div>
           ))}
         </Glass>
@@ -1717,7 +1731,7 @@ export default function DashboardClient() {
         <Glass className="p-6" hover theme={theme}>
           <div className="flex items-center gap-3 mb-4">
             <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${t('bg-white/[0.04]','bg-gray-200/40')}`}><ScrollText className="w-5 h-5 text-brand-red" /></div>
-            <div><h4 className={`text-sm font-bold ${t('text-white','text-gray-900')}`}>Legal & Policies</h4><p className={`text-xs ${t('text-gray-500','text-gray-500')}`}>Terms, conditions, and compliance</p></div>
+            <div><h4 className={`text-sm font-bold ${t('text-white','text-gray-900')}`}>Legal & Policies</h4><p className={`text-xs ${t('text-gray-500','text-gray-700')}`}>Terms, conditions, and compliance</p></div>
           </div>
           <button onClick={() => { setTermsOpen(true); setTermsScrolled(false) }}
             className={`w-full flex items-center justify-between p-3 rounded-xl cursor-pointer group transition-all mb-2 ${t('bg-white/[0.03] hover:bg-white/[0.06] border border-white/[0.04]','bg-gray-100/40 hover:bg-gray-200/35 border border-gray-200/30')}`}>
@@ -1725,12 +1739,12 @@ export default function DashboardClient() {
               <FileText className="w-4 h-4 text-brand-red" />
               <div className="text-left">
                 <span className={`text-xs font-semibold block ${t('text-white','text-gray-900')}`}>Terms & Conditions</span>
-                <span className={`text-[10px] ${t('text-gray-500','text-gray-400')}`}>Dashboard usage policy</span>
+                <span className={`text-[10px] ${t('text-gray-500','text-gray-600')}`}>Dashboard usage policy</span>
               </div>
             </div>
             <div className="flex items-center gap-2">
               {termsAccepted && <span className="text-[10px] font-bold text-emerald-400 flex items-center gap-0.5"><CheckCircle className="w-3 h-3" /> Accepted</span>}
-              <ChevronRight className={`w-3.5 h-3.5 ${t('text-gray-600','text-gray-400')}`} />
+              <ChevronRight className={`w-3.5 h-3.5 ${t('text-gray-600','text-gray-600')}`} />
             </div>
           </button>
           <button onClick={() => { setPrivacyOpen(true); setPrivacyScrolled(false) }}
@@ -1739,10 +1753,10 @@ export default function DashboardClient() {
               <Shield className="w-4 h-4 text-blue-400" />
               <div className="text-left">
                 <span className={`text-xs font-semibold block ${t('text-white','text-gray-900')}`}>Privacy Policy</span>
-                <span className={`text-[10px] ${t('text-gray-500','text-gray-400')}`}>How we protect your data</span>
+                <span className={`text-[10px] ${t('text-gray-500','text-gray-600')}`}>How we protect your data</span>
               </div>
             </div>
-            <ChevronRight className={`w-3.5 h-3.5 ${t('text-gray-600','text-gray-400')}`} />
+            <ChevronRight className={`w-3.5 h-3.5 ${t('text-gray-600','text-gray-600')}`} />
           </button>
           <button onClick={() => window.open('https://www.sebi.gov.in/', '_blank')}
             className={`w-full flex items-center justify-between p-3 rounded-xl cursor-pointer group transition-all ${t('bg-white/[0.03] hover:bg-white/[0.06] border border-white/[0.04]','bg-gray-100/40 hover:bg-gray-200/35 border border-gray-200/30')}`}>
@@ -1750,10 +1764,10 @@ export default function DashboardClient() {
               <Landmark className="w-4 h-4 text-amber-400" />
               <div className="text-left">
                 <span className={`text-xs font-semibold block ${t('text-white','text-gray-900')}`}>SEBI Compliance</span>
-                <span className={`text-[10px] ${t('text-gray-500','text-gray-400')}`}>Reg: IN/AIF2/2425/1517</span>
+                <span className={`text-[10px] ${t('text-gray-500','text-gray-600')}`}>Reg: IN/AIF2/2425/1517</span>
               </div>
             </div>
-            <ExternalLink className={`w-3.5 h-3.5 ${t('text-gray-600','text-gray-400')}`} />
+            <ExternalLink className={`w-3.5 h-3.5 ${t('text-gray-600','text-gray-600')}`} />
           </button>
         </Glass>
       </div>
@@ -1782,7 +1796,7 @@ export default function DashboardClient() {
     <div className="space-y-6">
       <div>
         <h2 className={`text-xl font-bold mb-1 ${t('text-white','text-gray-900')}`}>Complete Your Investment</h2>
-        <p className={`text-sm ${t('text-gray-500','text-gray-500')}`}>Select your investment, set the amount, and provide bank details</p>
+        <p className={`text-sm ${t('text-gray-500','text-gray-700')}`}>Select your investment, set the amount, and provide bank details</p>
       </div>
 
       {/* Step 1: Vehicle + Amount */}
@@ -1815,7 +1829,7 @@ export default function DashboardClient() {
             onChange={e => setInvestAmount(Number(e.target.value))}
             className="w-full h-2 rounded-full appearance-none cursor-pointer accent-brand-red"
             style={{ background: `linear-gradient(to right, #D0021B ${((investAmount - 500000) / 49500000) * 100}%, ${isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.1)'} 0%)` }} />
-          <div className={`flex justify-between text-[10px] mt-1 ${t('text-gray-600','text-gray-400')}`}>
+          <div className={`flex justify-between text-[10px] mt-1 ${t('text-gray-600','text-gray-600')}`}>
             <span>{'\u20B9'}5L</span><span>{'\u20B9'}1Cr</span><span>{'\u20B9'}2.5Cr</span><span>{'\u20B9'}5Cr</span>
           </div>
         </div>
@@ -1824,7 +1838,7 @@ export default function DashboardClient() {
       {/* Step 2: Bank Details */}
       <Glass className="p-6" hover theme={theme}>
         <h3 className={`text-base font-bold mb-4 ${t('text-white','text-gray-900')}`}>2. Bank Account Details</h3>
-        <p className={`text-xs mb-4 ${t('text-gray-500','text-gray-500')}`}>Add one or more bank accounts for fund transfer. Primary account will be used for dividends.</p>
+        <p className={`text-xs mb-4 ${t('text-gray-500','text-gray-700')}`}>Add one or more bank accounts for fund transfer. Primary account will be used for dividends.</p>
         {[1].map(idx => (
           <div key={idx} className={`p-4 rounded-xl mb-3 ${t('bg-white/[0.02] border border-white/[0.04]','bg-gray-100/50 border border-gray-200/30')}`}>
             <div className="flex items-center justify-between mb-3">
@@ -1840,8 +1854,8 @@ export default function DashboardClient() {
               </select>
             </div>
             <div className={`mt-3 p-3 rounded-lg border-2 border-dashed cursor-pointer text-center ${t('border-white/[0.08] hover:border-brand-red/20','border-gray-300 hover:border-brand-red/30')}`}>
-              <FileUp className={`w-5 h-5 mx-auto mb-1 ${t('text-gray-500','text-gray-400')}`} />
-              <p className={`text-[11px] ${t('text-gray-500','text-gray-500')}`}>Upload cancelled cheque / bank statement</p>
+              <FileUp className={`w-5 h-5 mx-auto mb-1 ${t('text-gray-500','text-gray-600')}`} />
+              <p className={`text-[11px] ${t('text-gray-500','text-gray-700')}`}>Upload cancelled cheque / bank statement</p>
             </div>
           </div>
         ))}
@@ -1856,7 +1870,7 @@ export default function DashboardClient() {
         <div className={`grid grid-cols-2 md:grid-cols-4 gap-3 mb-4`}>
           {[{ l: 'Vehicle', v: investVehicle },{ l: 'Amount', v: `\u20B9${formatINR(investAmount)}` },{ l: 'Tenure', v: '5 Years' },{ l: 'Bank', v: 'HDFC ****4521' }].map((r,i) => (
             <div key={i} className={`p-3 rounded-xl ${t('bg-white/[0.03] border border-white/[0.04]','bg-gray-100/50 border border-gray-200/30')}`}>
-              <p className={`text-[9px] uppercase tracking-wider ${t('text-gray-600','text-gray-400')}`}>{r.l}</p>
+              <p className={`text-[9px] uppercase tracking-wider ${t('text-gray-600','text-gray-600')}`}>{r.l}</p>
               <p className={`text-sm font-bold mt-0.5 ${t('text-white','text-gray-900')}`}>{r.v}</p>
             </div>
           ))}
@@ -1898,7 +1912,7 @@ export default function DashboardClient() {
       <div className="space-y-6">
         <div>
           <h2 className={`text-xl font-bold mb-1 ${t('text-white','text-gray-900')}`}>Investment Calculators</h2>
-          <p className={`text-sm ${t('text-gray-500','text-gray-500')}`}>Plan, compare, and project your investments</p>
+          <p className={`text-sm ${t('text-gray-500','text-gray-700')}`}>Plan, compare, and project your investments</p>
         </div>
 
         {/* Calculator tabs */}
@@ -1962,17 +1976,17 @@ export default function DashboardClient() {
                 {/* IRR-specific results */}
                 <div className="grid grid-cols-2 gap-3 mb-5">
                   <div className={`p-4 rounded-xl text-center ${t('bg-white/[0.03] border border-white/[0.04]','bg-gray-100/50 border border-gray-200/30')}`}>
-                    <p className={`text-[10px] uppercase tracking-wider ${t('text-gray-500','text-gray-400')}`}>Initial Investment</p>
+                    <p className={`text-[10px] uppercase tracking-wider ${t('text-gray-500','text-gray-600')}`}>Initial Investment</p>
                     <p className={`text-lg font-black mt-1 ${t('text-white','text-gray-900')}`}>{'\u20B9'}{formatINR(calcInputs.amount)}</p>
                   </div>
                   <div className={`p-4 rounded-xl text-center ${t('bg-emerald-500/[0.06] border border-emerald-500/[0.1]','bg-emerald-50/60 border border-emerald-200/50')}`}>
-                    <p className={`text-[10px] uppercase tracking-wider ${t('text-gray-500','text-gray-400')}`}>Final Value</p>
+                    <p className={`text-[10px] uppercase tracking-wider ${t('text-gray-500','text-gray-600')}`}>Final Value</p>
                     <p className="text-lg font-black mt-1 text-emerald-400">{'\u20B9'}{formatINR(Math.round(irrFinalValue))}</p>
                   </div>
                   <div className={`p-4 rounded-xl text-center col-span-2 ${t('bg-brand-red/[0.06] border border-brand-red/[0.1]','bg-red-50/60 border border-red-200/50')}`}>
-                    <p className={`text-[10px] uppercase tracking-wider ${t('text-gray-500','text-gray-400')}`}>Internal Rate of Return (IRR)</p>
+                    <p className={`text-[10px] uppercase tracking-wider ${t('text-gray-500','text-gray-600')}`}>Internal Rate of Return (IRR)</p>
                     <p className="text-3xl font-black mt-1 text-brand-red">{irrRate.toFixed(2)}%</p>
-                    <p className={`text-[10px] mt-1 ${t('text-gray-500','text-gray-400')}`}>Annualized over {calcInputs.years} year{calcInputs.years > 1 ? 's' : ''}</p>
+                    <p className={`text-[10px] mt-1 ${t('text-gray-500','text-gray-600')}`}>Annualized over {calcInputs.years} year{calcInputs.years > 1 ? 's' : ''}</p>
                   </div>
                 </div>
 
@@ -2018,19 +2032,19 @@ export default function DashboardClient() {
                 {/* Standard results for other calculators */}
                 <div className="grid grid-cols-2 gap-3 mb-5">
                   <div className={`p-4 rounded-xl text-center ${t('bg-white/[0.03] border border-white/[0.04]','bg-gray-100/50 border border-gray-200/30')}`}>
-                    <p className={`text-[10px] uppercase tracking-wider ${t('text-gray-500','text-gray-400')}`}>Total Invested</p>
+                    <p className={`text-[10px] uppercase tracking-wider ${t('text-gray-500','text-gray-600')}`}>Total Invested</p>
                     <p className={`text-lg font-black mt-1 ${t('text-white','text-gray-900')}`}>{'\u20B9'}{formatINR(activeCalc === 'sip' ? calcInputs.amount * calcInputs.years * 12 : calcInputs.amount)}</p>
                   </div>
                   <div className={`p-4 rounded-xl text-center ${t('bg-emerald-500/[0.06] border border-emerald-500/[0.1]','bg-emerald-50/60 border border-emerald-200/50')}`}>
-                    <p className={`text-[10px] uppercase tracking-wider ${t('text-gray-500','text-gray-400')}`}>Future Value</p>
+                    <p className={`text-[10px] uppercase tracking-wider ${t('text-gray-500','text-gray-600')}`}>Future Value</p>
                     <p className="text-lg font-black mt-1 text-emerald-400">{'\u20B9'}{formatINR(Math.round(activeCalc === 'sip' ? sipFuture : future))}</p>
                   </div>
                   <div className={`p-4 rounded-xl text-center ${t('bg-white/[0.03] border border-white/[0.04]','bg-gray-100/50 border border-gray-200/30')}`}>
-                    <p className={`text-[10px] uppercase tracking-wider ${t('text-gray-500','text-gray-400')}`}>Wealth Gain</p>
+                    <p className={`text-[10px] uppercase tracking-wider ${t('text-gray-500','text-gray-600')}`}>Wealth Gain</p>
                     <p className={`text-lg font-black mt-1 text-emerald-400`}>{'\u20B9'}{formatINR(Math.round((activeCalc === 'sip' ? sipFuture : future) - (activeCalc === 'sip' ? calcInputs.amount * calcInputs.years * 12 : calcInputs.amount)))}</p>
                   </div>
                   <div className={`p-4 rounded-xl text-center ${t('bg-white/[0.03] border border-white/[0.04]','bg-gray-100/50 border border-gray-200/30')}`}>
-                    <p className={`text-[10px] uppercase tracking-wider ${t('text-gray-500','text-gray-400')}`}>CAGR</p>
+                    <p className={`text-[10px] uppercase tracking-wider ${t('text-gray-500','text-gray-600')}`}>CAGR</p>
                     <p className={`text-lg font-black mt-1 text-brand-red`}>{calcInputs.rate}%</p>
                   </div>
                 </div>
@@ -2080,7 +2094,7 @@ export default function DashboardClient() {
               <ScrollText className="w-5 h-5 text-brand-red" />
               <h3 className={`text-lg font-bold ${t('text-white','text-gray-900')}`}>Terms & Conditions</h3>
             </div>
-            <button onClick={() => setTermsOpen(false)} className={t('text-gray-500 hover:text-white','text-gray-400 hover:text-gray-900')}>
+            <button onClick={() => setTermsOpen(false)} className={t('text-gray-500 hover:text-white','text-gray-600 hover:text-gray-900')}>
               <X className="w-5 h-5" />
             </button>
           </div>
@@ -2113,11 +2127,11 @@ export default function DashboardClient() {
             </div>
           </div>
           <div className={`px-6 py-4 flex items-center justify-between border-t shrink-0 ${t('border-white/[0.06]','border-gray-200/45')}`}>
-            <p className={`text-[10px] ${t('text-gray-600','text-gray-400')}`}>
+            <p className={`text-[10px] ${t('text-gray-600','text-gray-600')}`}>
               {termsScrolled ? <span className="text-emerald-400 font-semibold flex items-center gap-1"><CheckCircle className="w-3 h-3" /> Document read</span> : 'Scroll to bottom to accept'}
             </p>
             <div className="flex gap-2">
-              <button onClick={() => setTermsOpen(false)} className={`px-4 py-2 rounded-xl text-sm font-medium ${t('text-gray-400 hover:text-white','text-gray-500 hover:text-gray-900')}`}>Close</button>
+              <button onClick={() => setTermsOpen(false)} className={`px-4 py-2 rounded-xl text-sm font-medium ${t('text-gray-400 hover:text-white','text-gray-700 hover:text-gray-900')}`}>Close</button>
               <button disabled={!termsScrolled} onClick={() => { setTermsAccepted(true); setTermsOpen(false) }}
                 className={`px-5 py-2 rounded-xl text-sm font-bold text-white transition-all ${termsScrolled ? 'hover:scale-105' : 'opacity-40 cursor-not-allowed'}`}
                 style={{ background: 'linear-gradient(135deg, #D0021B, #8B0000)' }}>
@@ -2144,7 +2158,7 @@ export default function DashboardClient() {
               <Shield className="w-5 h-5 text-blue-400" />
               <h3 className={`text-lg font-bold ${t('text-white','text-gray-900')}`}>Privacy Policy</h3>
             </div>
-            <button onClick={() => setPrivacyOpen(false)} className={t('text-gray-500 hover:text-white','text-gray-400 hover:text-gray-900')}>
+            <button onClick={() => setPrivacyOpen(false)} className={t('text-gray-500 hover:text-white','text-gray-600 hover:text-gray-900')}>
               <X className="w-5 h-5" />
             </button>
           </div>
@@ -2180,7 +2194,7 @@ export default function DashboardClient() {
             </div>
           </div>
           <div className={`px-6 py-4 flex items-center justify-between border-t shrink-0 ${t('border-white/[0.06]','border-gray-200/45')}`}>
-            <p className={`text-[10px] ${t('text-gray-600','text-gray-400')}`}>
+            <p className={`text-[10px] ${t('text-gray-600','text-gray-600')}`}>
               {privacyScrolled ? <span className="text-emerald-400 font-semibold flex items-center gap-1"><CheckCircle className="w-3 h-3" /> Policy reviewed</span> : 'Scroll to read the full policy'}
             </p>
             <button onClick={() => setPrivacyOpen(false)} className={`px-5 py-2 rounded-xl text-sm font-bold transition-all ${t('text-gray-300 hover:text-white bg-white/[0.06] hover:bg-white/[0.1]','text-gray-600 hover:text-gray-900 bg-gray-200/50 hover:bg-gray-300/50')}`}>
