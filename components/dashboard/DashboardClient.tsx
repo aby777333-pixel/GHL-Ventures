@@ -284,6 +284,12 @@ export default function DashboardClient() {
   const [calcInputs, setCalcInputs] = useState({ amount: 100000, rate: 15, years: 5 })
   const [notifPrefs, setNotifPrefs] = useState({ email: true, nav: true, invest: true, dividend: true })
   const [dashLang, setDashLang] = useState('English')
+  const [toast, setToast] = useState<{ msg: string; type: 'success' | 'info' } | null>(null)
+  const [notifsRead, setNotifsRead] = useState<Set<number>>(new Set())
+  const showToast = useCallback((msg: string, type: 'success' | 'info' = 'success') => {
+    setToast({ msg, type })
+    setTimeout(() => setToast(null), 3500)
+  }, [])
   const [taskReminders] = useState([
     { id: 1, task: 'Complete KYC re-verification', due: '31 Mar 2025', urgent: true },
     { id: 2, task: 'Review Q4 NAV report', due: '20 Mar 2025', urgent: false },
@@ -478,11 +484,11 @@ export default function DashboardClient() {
                 ${t('bg-[#111] border-white/[0.08]','bg-[#F2F0ED] border-gray-200/60')}`}>
                 <div className={`px-4 py-3 flex items-center justify-between border-b ${t('border-white/[0.06]','border-gray-200/40')}`}>
                   <h4 className={`text-sm font-bold ${t('text-white','text-gray-900')}`}>Notifications</h4>
-                  <button className="text-[10px] text-brand-red font-semibold">Mark all read</button>
+                  <button onClick={() => { setNotifsRead(new Set(NOTIFICATIONS_DATA.map(n => n.id))); showToast('All notifications marked as read') }} className="text-[10px] text-brand-red font-semibold">Mark all read</button>
                 </div>
                 <div className="max-h-80 overflow-y-auto">
                   {NOTIFICATIONS_DATA.map(n => (
-                    <div key={n.id} className={`px-4 py-3 flex gap-3 cursor-pointer transition-colors ${!n.read ? (isDark ? 'bg-white/[0.02]' : 'bg-blue-50/50') : ''} ${t('hover:bg-white/[0.04]','hover:bg-gray-200/40')}`}>
+                    <div key={n.id} onClick={() => setNotifsRead(prev => new Set(prev).add(n.id))} className={`px-4 py-3 flex gap-3 cursor-pointer transition-colors ${!n.read && !notifsRead.has(n.id) ? (isDark ? 'bg-white/[0.02]' : 'bg-blue-50/50') : ''} ${t('hover:bg-white/[0.04]','hover:bg-gray-200/40')}`}>
                       <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0
                         ${n.type === 'report' ? 'bg-blue-500/15' : n.type === 'opportunity' ? 'bg-emerald-500/15' : n.type === 'alert' ? 'bg-amber-500/15' : n.type === 'payment' ? 'bg-emerald-500/15' : 'bg-purple-500/15'}`}>
                         {n.type === 'report' ? <FileText className="w-4 h-4 text-blue-400" /> :
@@ -496,7 +502,7 @@ export default function DashboardClient() {
                         <p className={`text-[11px] mt-0.5 ${t('text-gray-500','text-gray-500')}`}>{n.desc}</p>
                         <p className={`text-[10px] mt-1 ${t('text-gray-600','text-gray-400')}`}>{n.time}</p>
                       </div>
-                      {!n.read && <div className="w-2 h-2 rounded-full bg-brand-red shrink-0 mt-1.5" />}
+                      {!n.read && !notifsRead.has(n.id) && <div className="w-2 h-2 rounded-full bg-brand-red shrink-0 mt-1.5" />}
                     </div>
                   ))}
                 </div>
@@ -654,7 +660,7 @@ export default function DashboardClient() {
     <Glass className="p-5 lg:p-6" hover theme={theme}>
       <div className="flex items-center justify-between mb-5">
         <h3 className={`text-base font-bold ${t('text-white','text-gray-900')}`}>Portfolio Assets</h3>
-        <button className="text-xs text-brand-red font-semibold flex items-center gap-1">View All <ChevronRight className="w-3 h-3" /></button>
+        <button onClick={() => setActiveTab('portfolio')} className="text-xs text-brand-red font-semibold flex items-center gap-1">View All <ChevronRight className="w-3 h-3" /></button>
       </div>
       <div className="space-y-3">
         {PORTFOLIO_ASSETS.map((asset, i) => (
@@ -1161,7 +1167,8 @@ export default function DashboardClient() {
                 </div>
               ))}
             </div>
-            <button className="w-full py-2.5 rounded-xl text-sm font-semibold text-white transition-all duration-300 hover:scale-[1.02]"
+            <button onClick={() => showToast(`Interest registered for ${opp.title}. Our team will contact you shortly.`)}
+              className="w-full py-2.5 rounded-xl text-sm font-semibold text-white transition-all duration-300 hover:scale-[1.02]"
               style={{ background: 'linear-gradient(135deg, #D0021B, #8B0000)' }}>Express Interest</button>
             <button onClick={() => setActiveTab('invest-onboard')} className="w-full py-2.5 rounded-xl text-xs font-bold mt-2 transition-all duration-300 hover:scale-[1.02] text-white"
               style={{ background: 'linear-gradient(135deg, #228B22, #1B6B1B)' }}>
@@ -1185,7 +1192,8 @@ export default function DashboardClient() {
             </div>
           ))}
         </div>
-        <button className="px-5 py-2.5 rounded-xl text-sm font-semibold text-white" style={{ background: 'linear-gradient(135deg, #D0021B, #8B0000)' }}>
+        <button onClick={() => showToast('Reallocation request submitted. Your advisory team will review within 48 hours.')}
+          className="px-5 py-2.5 rounded-xl text-sm font-semibold text-white" style={{ background: 'linear-gradient(135deg, #D0021B, #8B0000)' }}>
           Request Reallocation
         </button>
       </Glass>
@@ -1304,7 +1312,8 @@ export default function DashboardClient() {
               <p className={`text-xs ${t('text-gray-500','text-gray-500')}`}>PDF, JPG, PNG up to 10MB</p>
               <input ref={fileInputRef} type="file" className="hidden" accept=".pdf,.jpg,.jpeg,.png" multiple />
             </div>
-            <button className="w-full py-2.5 rounded-xl text-sm font-semibold text-white" style={{ background: 'linear-gradient(135deg, #D0021B, #8B0000)' }}>
+            <button onClick={() => { setUploadModalOpen(false); setDocName(''); setDocCategory(''); showToast('Document uploaded successfully. Under review by compliance team.') }}
+              className="w-full py-2.5 rounded-xl text-sm font-semibold text-white" style={{ background: 'linear-gradient(135deg, #D0021B, #8B0000)' }}>
               Upload & Submit
             </button>
           </div>
@@ -1323,7 +1332,7 @@ export default function DashboardClient() {
           <h2 className={`text-xl font-bold mb-1 ${t('text-white','text-gray-900')}`}>Transactions</h2>
           <p className={`text-sm ${t('text-gray-500','text-gray-500')}`}>Complete transaction history</p>
         </div>
-        <button className="flex items-center gap-2 text-xs text-brand-red font-semibold"><Download className="w-3.5 h-3.5" /> Export CSV</button>
+        <button onClick={() => showToast('Transaction report CSV downloaded successfully.', 'info')} className="flex items-center gap-2 text-xs text-brand-red font-semibold"><Download className="w-3.5 h-3.5" /> Export CSV</button>
       </div>
       <Glass className="overflow-hidden" hover={false} theme={theme}>
         <div className="overflow-x-auto">
@@ -1387,7 +1396,7 @@ export default function DashboardClient() {
               <button className={`p-2 rounded-lg ${t('hover:bg-white/[0.04]','hover:bg-gray-200/40')}`}><Paperclip className={`w-4 h-4 ${t('text-gray-500','text-gray-400')}`} /></button>
               <div className="flex-1" />
               <button onClick={() => setMessageCompose(false)} className={`px-4 py-2 rounded-xl text-sm font-medium ${t('text-gray-400','text-gray-500')}`}>Cancel</button>
-              <button className="px-5 py-2 rounded-xl text-sm font-semibold text-white" style={{ background: 'linear-gradient(135deg, #D0021B, #8B0000)' }}>Send</button>
+              <button onClick={() => { setMessageCompose(false); showToast('Message sent successfully to your advisory team.') }} className="px-5 py-2 rounded-xl text-sm font-semibold text-white" style={{ background: 'linear-gradient(135deg, #D0021B, #8B0000)' }}>Send</button>
             </div>
           </div>
         </Glass>
@@ -1458,7 +1467,7 @@ export default function DashboardClient() {
               <option>General Inquiry</option><option>Investment Query</option><option>KYC Issue</option><option>Technical Issue</option><option>Document Request</option>
             </select>
             <textarea rows={3} placeholder="Describe your issue..." className={`w-full px-4 py-2.5 rounded-xl text-sm resize-none ${t('bg-white/[0.04] border border-white/[0.06] text-white placeholder-gray-600','bg-gray-100/40 border border-gray-200/40 text-gray-900 placeholder-gray-400')}`} />
-            <button className="px-5 py-2.5 rounded-xl text-sm font-semibold text-white" style={{ background: 'linear-gradient(135deg, #D0021B, #8B0000)' }}>Submit Ticket</button>
+            <button onClick={() => { setTicketForm(false); showToast('Support ticket submitted. Ticket ID: TKT-003. We\'ll respond within 24 hours.') }} className="px-5 py-2.5 rounded-xl text-sm font-semibold text-white" style={{ background: 'linear-gradient(135deg, #D0021B, #8B0000)' }}>Submit Ticket</button>
           </div>
         )}
         {/* Existing tickets */}
@@ -1611,7 +1620,7 @@ export default function DashboardClient() {
               <select className={`w-full px-4 py-2.5 rounded-xl text-sm ${t('bg-white/[0.04] border border-white/[0.06] text-white','bg-gray-100/60 border border-gray-200/40 text-gray-900')}`}>
                 <option>Savings Account</option><option>Current Account</option><option>NRO Account</option>
               </select>
-              <button className="w-full py-2.5 rounded-xl text-sm font-semibold text-white" style={{ background: 'linear-gradient(135deg, #D0021B, #8B0000)' }}>Verify & Connect</button>
+              <button onClick={() => { setBankConnectOpen(false); showToast('Bank account verified and connected successfully.') }} className="w-full py-2.5 rounded-xl text-sm font-semibold text-white" style={{ background: 'linear-gradient(135deg, #D0021B, #8B0000)' }}>Verify & Connect</button>
             </div>
           </div>
         </div>
@@ -2238,6 +2247,21 @@ export default function DashboardClient() {
           </div>
         </footer>
       </div>
+
+      {/* Toast notification */}
+      {toast && (
+        <div className="fixed bottom-6 right-6 z-[10001] animate-fade-in">
+          <div className={`flex items-center gap-3 px-5 py-3.5 rounded-2xl shadow-2xl border ${
+            toast.type === 'success'
+              ? isDark ? 'bg-emerald-900/90 border-emerald-500/30 text-emerald-200' : 'bg-emerald-50 border-emerald-200 text-emerald-800'
+              : isDark ? 'bg-blue-900/90 border-blue-500/30 text-blue-200' : 'bg-blue-50 border-blue-200 text-blue-800'
+          }`} style={{ backdropFilter: 'blur(20px)' }}>
+            {toast.type === 'success' ? <CheckCircle className="w-5 h-5 shrink-0" /> : <Info className="w-5 h-5 shrink-0" />}
+            <span className="text-sm font-medium">{toast.msg}</span>
+            <button onClick={() => setToast(null)} className="ml-2 opacity-60 hover:opacity-100"><X className="w-4 h-4" /></button>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
