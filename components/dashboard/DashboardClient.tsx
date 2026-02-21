@@ -13,11 +13,14 @@ import {
   Sun, Moon, Lock, CreditCard, Users, MapPin, Landmark, FileCheck,
   Send, Paperclip, ChevronUp, HelpCircle, RefreshCw, Fingerprint,
   BookOpen, Languages, Sparkles, CircleDot, Filter, MoreHorizontal,
-  Home, Mail, BellRing, Archive, Trash2, ImageIcon, Flag
+  Home, Mail, BellRing, Archive, Trash2, ImageIcon, Flag,
+  Activity, Gauge, Timer, Newspaper, AlarmClock, TrendingDown,
+  Flame, DollarSign, Megaphone, Trophy, Heart, Banknote
 } from 'lucide-react'
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, PieChart, Pie, Cell, Area, AreaChart,
+  BarChart, Bar,
 } from 'recharts'
 import Logo from '@/components/Logo'
 
@@ -114,6 +117,54 @@ const TOUR_STEPS = [
   { target: 'support', title: 'Get Help Anytime', desc: 'Raise tickets, access FAQs, or connect via live chat and video call.' },
 ]
 
+const GLOBAL_MARKETS = [
+  { name: 'S&P 500', value: '5,218.19', change: '+0.82%', up: true, region: 'US' },
+  { name: 'FTSE 100', value: '7,930.41', change: '+0.34%', up: true, region: 'UK' },
+  { name: 'Nikkei 225', value: '38,487.90', change: '-0.56%', up: false, region: 'JP' },
+  { name: 'DAX', value: '18,001.60', change: '+0.91%', up: true, region: 'DE' },
+  { name: 'Hang Seng', value: '17,108.71', change: '-1.23%', up: false, region: 'HK' },
+  { name: 'ASX 200', value: '7,896.90', change: '+0.45%', up: true, region: 'AU' },
+]
+
+const INDIA_INDICATORS = [
+  { label: 'GDP Growth', value: '7.6%', trend: 'up', icon: TrendingUp },
+  { label: 'Repo Rate', value: '6.50%', trend: 'stable', icon: Landmark },
+  { label: 'CPI Inflation', value: '5.09%', trend: 'down', icon: Banknote },
+  { label: 'FII Flows', value: '+\u20B92,840 Cr', trend: 'up', icon: DollarSign },
+]
+
+const ECONOMIC_CALENDAR = [
+  { date: '25 Mar', event: 'RBI MPC Meeting', region: 'India', impact: 'high', icon: Landmark },
+  { date: '28 Mar', event: 'US GDP Q4 Final', region: 'Global', impact: 'high', icon: Globe },
+  { date: '01 Apr', event: 'GST Revenue Data', region: 'India', impact: 'medium', icon: IndianRupee },
+  { date: '02 Apr', event: 'US Non-Farm Payrolls', region: 'Global', impact: 'high', icon: Globe },
+  { date: '10 Apr', event: 'RBI Policy Decision', region: 'India', impact: 'high', icon: Landmark },
+  { date: '15 Apr', event: 'GHL Q4 NAV Update', region: 'GHL', impact: 'high', icon: Star },
+  { date: '22 Apr', event: 'India PMI Manufacturing', region: 'India', impact: 'medium', icon: Activity },
+  { date: '30 Apr', event: 'ECB Rate Decision', region: 'Global', impact: 'high', icon: Globe },
+]
+
+const ADMIN_NEWS = [
+  { id: 1, title: 'GHL Fund Manager Commentary - Q4 2024', excerpt: 'Our stressed real estate portfolio delivered 32.4% returns driven by NCLT resolution of Phoenix Towers and Meridian Heights projects in Chennai.', date: '18 Mar 2025', pinned: true, category: 'Fund Update' },
+  { id: 2, title: 'New Investment: Bengaluru Stressed Asset at 40% Discount', excerpt: 'We have identified a premium residential project through IBC resolution at 40% below market value in Whitefield, Bengaluru.', date: '15 Mar 2025', pinned: true, category: 'Opportunity' },
+  { id: 3, title: 'Annual Investor Meet - Save the Date', excerpt: 'Join us for the Annual Investor Meet on 15 May 2025 at The Leela Palace, Chennai. RSVP required.', date: '10 Mar 2025', pinned: false, category: 'Event' },
+  { id: 4, title: 'Tax Planning: Section 10(38) Benefits for AIF Investors', excerpt: 'Our compliance team has prepared a comprehensive guide on tax benefits available to Category II AIF investors.', date: '05 Mar 2025', pinned: false, category: 'Advisory' },
+]
+
+const SENSEX_INTRADAY = [
+  { t: '9:15', v: 73200 }, { t: '9:45', v: 73380 }, { t: '10:15', v: 73520 },
+  { t: '10:45', v: 73450 }, { t: '11:15', v: 73610 }, { t: '11:45', v: 73580 },
+  { t: '12:15', v: 73720 }, { t: '12:45', v: 73690 }, { t: '1:15', v: 73750 },
+  { t: '1:45', v: 73800 }, { t: '2:15', v: 73770 }, { t: '2:45', v: 73842 },
+]
+
+const NIFTY_INTRADAY = [
+  { t: '9:15', v: 22200 }, { t: '9:45', v: 22280 }, { t: '10:15', v: 22350 },
+  { t: '10:45', v: 22310 }, { t: '11:15', v: 22380 }, { t: '11:45', v: 22360 },
+  { t: '12:15', v: 22410 }, { t: '12:45', v: 22390 }, { t: '1:15', v: 22430 },
+  { t: '1:45', v: 22440 }, { t: '2:15', v: 22420 }, { t: '2:45', v: 22456 },
+]
+
 /* ═══════════════════════════════════════════════════════════════
    SIDEBAR ITEMS
    ═══════════════════════════════════════════════════════════════ */
@@ -167,12 +218,12 @@ function Glass({ children, className = '', hover = true, glow = false, theme = '
   return (
     <div
       className={`relative rounded-2xl border overflow-hidden transition-all duration-500
-        ${isDark ? 'border-white/[0.08]' : 'border-gray-200/80 shadow-sm'}
+        ${isDark ? 'border-white/[0.08]' : 'border-stone-300/50 shadow-sm shadow-stone-200/40'}
         ${hover ? 'dash-glass-hover' : ''} ${glow ? 'dash-glow' : ''} ${className}`}
       style={{
         background: isDark
           ? 'linear-gradient(135deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.02) 100%)'
-          : 'linear-gradient(135deg, rgba(255,255,255,0.9) 0%, rgba(248,247,245,0.95) 100%)',
+          : 'linear-gradient(135deg, rgba(240,237,232,0.85) 0%, rgba(235,231,226,0.9) 100%)',
         backdropFilter: 'blur(40px) saturate(180%)',
         WebkitBackdropFilter: 'blur(40px) saturate(180%)',
       }}
@@ -259,8 +310,8 @@ export default function DashboardClient() {
       {sidebarOpen && <div className="fixed inset-0 bg-black/60 z-40 lg:hidden backdrop-blur-sm" onClick={() => setSidebarOpen(false)} />}
       <aside className={`fixed top-0 left-0 h-full z-50 w-[260px] flex flex-col transition-transform duration-500 ease-out lg:translate-x-0 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}
         style={{
-          background: isDark ? 'linear-gradient(180deg, rgba(10,10,10,0.98) 0%, rgba(15,5,5,0.98) 100%)' : 'linear-gradient(180deg, rgba(255,255,255,0.98) 0%, rgba(248,247,245,0.98) 100%)',
-          borderRight: `1px solid ${isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.08)'}`,
+          background: isDark ? 'linear-gradient(180deg, rgba(10,10,10,0.98) 0%, rgba(15,5,5,0.98) 100%)' : 'linear-gradient(180deg, rgba(235,231,226,0.98) 0%, rgba(228,224,218,0.98) 100%)',
+          borderRight: `1px solid ${isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)'}`,
           backdropFilter: 'blur(40px)',
         }}>
         {/* Logo */}
@@ -279,7 +330,7 @@ export default function DashboardClient() {
 
         {/* Investor badge */}
         <div className="px-6 mb-4">
-          <div className={`px-3 py-2.5 rounded-xl ${t('bg-white/[0.04] border border-white/[0.06]','bg-gray-50 border border-gray-200')}`}>
+          <div className={`px-3 py-2.5 rounded-xl ${t('bg-white/[0.04] border border-white/[0.06]','bg-stone-200/50 border border-stone-300/50')}`}>
             <p className={`text-[10px] uppercase tracking-widest mb-0.5 ${t('text-gray-500','text-gray-400')}`}>Investor</p>
             <p className={`text-sm font-semibold ${t('text-white','text-gray-900')}`}>Rajesh Krishnan</p>
             <p className={`text-[10px] mt-0.5 ${t('text-gray-500','text-gray-500')}`}>ID: GHL-INV-2024-0847</p>
@@ -352,7 +403,7 @@ export default function DashboardClient() {
   // ═══════════════════════════════════════════════════════════
   const renderTopBar = () => (
     <header className={`sticky top-0 z-30 border-b ${t('border-white/[0.06]','border-gray-200')}`}
-      style={{ background: isDark ? 'rgba(10,10,10,0.8)' : 'rgba(255,255,255,0.85)', backdropFilter: 'blur(40px) saturate(180%)' }}>
+      style={{ background: isDark ? 'rgba(10,10,10,0.8)' : 'rgba(235,231,226,0.85)', backdropFilter: 'blur(40px) saturate(180%)' }}>
       {/* Market Ticker */}
       <div className={`border-b ${t('border-white/[0.04]','border-gray-100')} px-4 py-1.5 overflow-hidden`}>
         <div className="flex items-center gap-6 text-xs animate-marquee whitespace-nowrap">
@@ -414,7 +465,7 @@ export default function DashboardClient() {
                 </div>
                 <div className="max-h-80 overflow-y-auto">
                   {NOTIFICATIONS_DATA.map(n => (
-                    <div key={n.id} className={`px-4 py-3 flex gap-3 cursor-pointer transition-colors ${!n.read ? (isDark ? 'bg-white/[0.02]' : 'bg-blue-50/50') : ''} ${t('hover:bg-white/[0.04]','hover:bg-gray-50')}`}>
+                    <div key={n.id} className={`px-4 py-3 flex gap-3 cursor-pointer transition-colors ${!n.read ? (isDark ? 'bg-white/[0.02]' : 'bg-blue-50/50') : ''} ${t('hover:bg-white/[0.04]','hover:bg-stone-200/40')}`}>
                       <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0
                         ${n.type === 'report' ? 'bg-blue-500/15' : n.type === 'opportunity' ? 'bg-emerald-500/15' : n.type === 'alert' ? 'bg-amber-500/15' : n.type === 'payment' ? 'bg-emerald-500/15' : 'bg-purple-500/15'}`}>
                         {n.type === 'report' ? <FileText className="w-4 h-4 text-blue-400" /> :
@@ -592,7 +643,7 @@ export default function DashboardClient() {
         {PORTFOLIO_ASSETS.map((asset, i) => (
           <div key={i} className={`p-3 rounded-xl transition-all duration-300 group cursor-pointer ${t('bg-white/[0.02] border border-white/[0.04] hover:border-white/[0.08]','bg-gray-50 border border-gray-200 hover:border-gray-300')}`}>
             <div className="flex items-center gap-4 mb-2">
-              <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${t('bg-white/[0.04]','bg-gray-100')}`}>
+              <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${t('bg-white/[0.04]','bg-stone-300/40')}`}>
                 {asset.type.includes('Real Estate') ? <Building2 className="w-5 h-5 text-brand-red" /> : asset.type.includes('Startup') ? <Rocket className="w-5 h-5 text-amber-400" /> : <FileText className="w-5 h-5 text-blue-400" />}
               </div>
               <div className="flex-1 min-w-0">
@@ -649,7 +700,7 @@ export default function DashboardClient() {
       <h3 className={`text-base font-bold mb-5 ${t('text-white','text-gray-900')}`}>Recent Activity</h3>
       <div className="space-y-2.5">
         {RECENT_TRANSACTIONS.slice(0, 5).map((tx, i) => (
-          <div key={i} className={`flex items-center gap-3 p-2.5 rounded-lg transition-colors ${t('hover:bg-white/[0.02]','hover:bg-gray-50')}`}>
+          <div key={i} className={`flex items-center gap-3 p-2.5 rounded-lg transition-colors ${t('hover:bg-white/[0.02]','hover:bg-stone-200/40')}`}>
             <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${tx.type === 'Investment' ? 'bg-blue-500/15' : tx.type === 'Dividend' ? 'bg-emerald-500/15' : 'bg-gray-500/15'}`}>
               {tx.type === 'Investment' ? <ArrowUpRight className="w-4 h-4 text-blue-400" /> : tx.type === 'Dividend' ? <IndianRupee className="w-4 h-4 text-emerald-400" /> : <Info className="w-4 h-4 text-gray-400" />}
             </div>
@@ -660,6 +711,312 @@ export default function DashboardClient() {
             <div className="text-right shrink-0">
               {tx.amount > 0 && <p className={`text-xs font-bold ${tx.type === 'Dividend' ? 'text-emerald-400' : t('text-white','text-gray-900')}`}>{tx.type === 'Dividend' ? '+' : ''}{'\u20B9'}{formatINR(tx.amount)}</p>}
               <p className={`text-[10px] ${t('text-gray-600','text-gray-400')}`}>{tx.date}</p>
+            </div>
+          </div>
+        ))}
+      </div>
+    </Glass>
+  )
+
+  // ═══════════════════════════════════════════════════════════
+  // PORTFOLIO HEALTH SCORE (Animated Gauge)
+  // ═══════════════════════════════════════════════════════════
+  const renderHealthScore = () => {
+    const score = 87
+    const circumference = 2 * Math.PI * 45
+    const offset = circumference - (score / 100) * circumference
+    return (
+      <Glass className="p-5" hover glow theme={theme}>
+        <div className="flex items-center justify-between mb-3">
+          <h4 className={`text-sm font-bold ${t('text-white','text-gray-900')}`}>Portfolio Health</h4>
+          <Gauge className="w-4 h-4 text-emerald-400" />
+        </div>
+        <div className="flex items-center gap-4">
+          <div className="relative w-24 h-24 shrink-0">
+            <svg className="w-24 h-24 -rotate-90" viewBox="0 0 100 100">
+              <circle cx="50" cy="50" r="45" fill="none" stroke={isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)'} strokeWidth="8" />
+              <circle cx="50" cy="50" r="45" fill="none" stroke="url(#healthGrad)" strokeWidth="8" strokeLinecap="round"
+                strokeDasharray={circumference} strokeDashoffset={offset} className="transition-all duration-2000" />
+              <defs><linearGradient id="healthGrad" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stopColor="#10B981" /><stop offset="100%" stopColor="#34D399" /></linearGradient></defs>
+            </svg>
+            <div className="absolute inset-0 flex items-center justify-center">
+              <span className={`text-xl font-black ${t('text-white','text-gray-900')}`}>{score}</span>
+            </div>
+          </div>
+          <div className="space-y-1.5 text-xs">
+            {[{ l: 'Diversification', v: 'Strong', c: 'text-emerald-400' },{ l: 'Risk Level', v: 'Moderate', c: 'text-amber-400' },{ l: 'Growth Trend', v: 'Positive', c: 'text-emerald-400' }].map((r,i) => (
+              <div key={i} className="flex items-center justify-between gap-4">
+                <span className={t('text-gray-500','text-gray-500')}>{r.l}</span>
+                <span className={`font-semibold ${r.c}`}>{r.v}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </Glass>
+    )
+  }
+
+  // ═══════════════════════════════════════════════════════════
+  // COUNTDOWN TO NEXT NAV UPDATE
+  // ═══════════════════════════════════════════════════════════
+  const renderCountdown = () => {
+    const navDate = new Date('2025-04-15T00:00:00+05:30')
+    const now = new Date()
+    const diff = Math.max(0, navDate.getTime() - now.getTime())
+    const days = Math.floor(diff / 86400000)
+    const hours = Math.floor((diff % 86400000) / 3600000)
+    return (
+      <Glass className="p-5" hover glow theme={theme}>
+        <div className="flex items-center gap-2 mb-3">
+          <Timer className="w-4 h-4 text-brand-red" />
+          <h4 className={`text-sm font-bold ${t('text-white','text-gray-900')}`}>Next NAV Update</h4>
+        </div>
+        <div className="flex items-center gap-3 mb-2">
+          {[{ v: days, l: 'Days' },{ v: hours, l: 'Hrs' }].map((u,i) => (
+            <div key={i} className={`flex-1 text-center p-2.5 rounded-xl ${t('bg-white/[0.04] border border-white/[0.06]','bg-stone-200/50 border border-stone-300/50')}`}>
+              <p className={`text-2xl font-black tracking-tight ${t('text-white','text-gray-900')}`}>{u.v}</p>
+              <p className={`text-[9px] uppercase tracking-widest ${t('text-gray-600','text-gray-500')}`}>{u.l}</p>
+            </div>
+          ))}
+        </div>
+        <p className={`text-[11px] text-center ${t('text-gray-600','text-gray-500')}`}>Q4 2024 &bull; 15 April 2025</p>
+      </Glass>
+    )
+  }
+
+  // ═══════════════════════════════════════════════════════════
+  // MARKET SENTIMENT GAUGE
+  // ═══════════════════════════════════════════════════════════
+  const renderSentiment = () => (
+    <Glass className="p-5" hover theme={theme}>
+      <div className="flex items-center gap-2 mb-3">
+        <Activity className="w-4 h-4 text-blue-400" />
+        <h4 className={`text-sm font-bold ${t('text-white','text-gray-900')}`}>Market Sentiment</h4>
+      </div>
+      <div className="flex items-center gap-3 mb-3">
+        <div className="flex-1 h-2.5 rounded-full bg-gradient-to-r from-red-500 via-amber-400 to-emerald-500 relative">
+          <div className="absolute top-1/2 -translate-y-1/2 w-4 h-4 rounded-full bg-white border-2 border-emerald-500 shadow-lg transition-all" style={{ left: '72%', transform: 'translate(-50%, -50%)' }} />
+        </div>
+      </div>
+      <div className="flex justify-between text-[9px] uppercase tracking-widest mb-3">
+        <span className="text-red-400">Fear</span><span className={t('text-gray-500','text-gray-500')}>Neutral</span><span className="text-emerald-400">Greed</span>
+      </div>
+      <div className={`text-center p-2 rounded-lg ${t('bg-emerald-500/10 border border-emerald-500/15','bg-emerald-100/60 border border-emerald-300/50')}`}>
+        <span className="text-emerald-400 text-sm font-bold">72 &bull; Greed</span>
+        <p className={`text-[10px] mt-0.5 ${t('text-gray-500','text-gray-500')}`}>India VIX: 13.42 (-2.1%)</p>
+      </div>
+    </Glass>
+  )
+
+  // ═══════════════════════════════════════════════════════════
+  // INDIA LIVE CHARTS (SENSEX + NIFTY Mini)
+  // ═══════════════════════════════════════════════════════════
+  const renderLiveCharts = () => (
+    <Glass className="p-5" hover theme={theme}>
+      <div className="flex items-center justify-between mb-4">
+        <h4 className={`text-sm font-bold ${t('text-white','text-gray-900')}`}>India Live Markets</h4>
+        <span className="flex items-center gap-1 text-[10px] text-emerald-400 font-semibold"><span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" /> Live</span>
+      </div>
+      <div className="grid grid-cols-2 gap-3">
+        {[{ label: 'SENSEX', val: '73,842', chg: '+1.24%', data: SENSEX_INTRADAY, color: '#D0021B' },
+          { label: 'NIFTY 50', val: '22,456', chg: '+0.98%', data: NIFTY_INTRADAY, color: '#3B82F6' }].map((chart,i) => (
+          <div key={i} className={`p-3 rounded-xl ${t('bg-white/[0.03] border border-white/[0.04]','bg-stone-200/30 border border-stone-300/30')}`}>
+            <div className="flex items-center justify-between mb-1">
+              <span className={`text-[10px] font-semibold ${t('text-gray-400','text-gray-500')}`}>{chart.label}</span>
+              <span className="text-[10px] font-bold text-emerald-400">{chart.chg}</span>
+            </div>
+            <p className={`text-base font-black mb-2 ${t('text-white','text-gray-900')}`}>{chart.val}</p>
+            <div className="h-[50px] -mx-1">
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={chart.data}>
+                  <defs><linearGradient id={`mc${i}`} x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor={chart.color} stopOpacity={0.3} /><stop offset="100%" stopColor={chart.color} stopOpacity={0} /></linearGradient></defs>
+                  <Area type="monotone" dataKey="v" stroke={chart.color} strokeWidth={1.5} fill={`url(#mc${i})`} dot={false} />
+                </AreaChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+        ))}
+      </div>
+    </Glass>
+  )
+
+  // ═══════════════════════════════════════════════════════════
+  // GLOBAL MARKETS WIDGET
+  // ═══════════════════════════════════════════════════════════
+  const renderGlobalMarkets = () => (
+    <Glass className="p-5" hover theme={theme}>
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center gap-2">
+          <Globe className="w-4 h-4 text-purple-400" />
+          <h4 className={`text-sm font-bold ${t('text-white','text-gray-900')}`}>Global Markets</h4>
+        </div>
+      </div>
+      <div className="space-y-2">
+        {GLOBAL_MARKETS.map((m,i) => (
+          <div key={i} className={`flex items-center justify-between p-2 rounded-lg ${t('hover:bg-white/[0.02]','hover:bg-stone-200/40')} transition-colors`}>
+            <div className="flex items-center gap-2">
+              <span className={`w-6 h-4 rounded text-[8px] font-bold flex items-center justify-center text-white ${m.up ? 'bg-emerald-500/80' : 'bg-red-500/80'}`}>{m.region}</span>
+              <span className={`text-xs font-medium ${t('text-gray-300','text-gray-700')}`}>{m.name}</span>
+            </div>
+            <div className="flex items-center gap-3">
+              <span className={`text-xs font-semibold ${t('text-white','text-gray-900')}`}>{m.value}</span>
+              <span className={`text-[10px] font-bold w-14 text-right ${m.up ? 'text-emerald-400' : 'text-red-400'}`}>{m.change}</span>
+            </div>
+          </div>
+        ))}
+      </div>
+    </Glass>
+  )
+
+  // ═══════════════════════════════════════════════════════════
+  // INDIA ECONOMIC INDICATORS
+  // ═══════════════════════════════════════════════════════════
+  const renderIndiaIndicators = () => (
+    <Glass className="p-5" hover theme={theme}>
+      <div className="flex items-center gap-2 mb-4">
+        <Flag className="w-4 h-4 text-amber-500" />
+        <h4 className={`text-sm font-bold ${t('text-white','text-gray-900')}`}>India Economy</h4>
+      </div>
+      <div className="grid grid-cols-2 gap-2.5">
+        {INDIA_INDICATORS.map((ind,i) => (
+          <div key={i} className={`p-3 rounded-xl text-center ${t('bg-white/[0.03] border border-white/[0.04]','bg-stone-200/30 border border-stone-300/30')}`}>
+            <ind.icon className={`w-4 h-4 mx-auto mb-1.5 ${ind.trend === 'up' ? 'text-emerald-400' : ind.trend === 'down' ? 'text-red-400' : 'text-blue-400'}`} />
+            <p className={`text-sm font-black ${t('text-white','text-gray-900')}`}>{ind.value}</p>
+            <p className={`text-[9px] mt-0.5 ${t('text-gray-500','text-gray-500')}`}>{ind.label}</p>
+          </div>
+        ))}
+      </div>
+    </Glass>
+  )
+
+  // ═══════════════════════════════════════════════════════════
+  // ECONOMIC CALENDAR
+  // ═══════════════════════════════════════════════════════════
+  const renderEconomicCalendar = () => (
+    <Glass className="p-5" hover theme={theme}>
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center gap-2">
+          <Calendar className="w-4 h-4 text-blue-400" />
+          <h4 className={`text-sm font-bold ${t('text-white','text-gray-900')}`}>Economic Calendar</h4>
+        </div>
+        <div className="flex gap-1.5">
+          {['India','Global','GHL'].map(f => (
+            <span key={f} className={`text-[9px] px-2 py-0.5 rounded-full cursor-pointer font-semibold ${t('bg-white/[0.04] text-gray-400 hover:bg-white/[0.08] hover:text-white','bg-stone-200/50 text-gray-500 hover:bg-stone-300/50 hover:text-gray-900')} transition-all`}>{f}</span>
+          ))}
+        </div>
+      </div>
+      <div className="space-y-1.5">
+        {ECONOMIC_CALENDAR.slice(0, 6).map((ev,i) => (
+          <div key={i} className={`flex items-center gap-3 p-2 rounded-lg ${t('hover:bg-white/[0.02]','hover:bg-stone-200/40')} transition-colors`}>
+            <div className={`w-10 text-center shrink-0 ${t('text-gray-500','text-gray-500')}`}>
+              <p className="text-[10px] font-bold leading-tight">{ev.date.split(' ')[0]}</p>
+              <p className="text-[8px] uppercase">{ev.date.split(' ')[1]}</p>
+            </div>
+            <div className={`w-px h-6 ${t('bg-white/[0.06]','bg-stone-300')}`} />
+            <ev.icon className={`w-3.5 h-3.5 shrink-0 ${ev.region === 'GHL' ? 'text-brand-red' : ev.region === 'India' ? 'text-amber-400' : 'text-blue-400'}`} />
+            <div className="flex-1 min-w-0">
+              <p className={`text-xs font-medium truncate ${t('text-gray-300','text-gray-700')}`}>{ev.event}</p>
+            </div>
+            <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${ev.impact === 'high' ? 'bg-red-400' : 'bg-amber-400'}`} />
+          </div>
+        ))}
+      </div>
+    </Glass>
+  )
+
+  // ═══════════════════════════════════════════════════════════
+  // ADMIN / GHL NEWS CARD
+  // ═══════════════════════════════════════════════════════════
+  const renderAdminNews = () => (
+    <Glass className="p-5" hover theme={theme}>
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center gap-2">
+          <Megaphone className="w-4 h-4 text-brand-red" />
+          <h4 className={`text-sm font-bold ${t('text-white','text-gray-900')}`}>GHL News & Updates</h4>
+        </div>
+        <span className={`text-[10px] font-semibold ${t('text-gray-500','text-gray-500')}`}>{ADMIN_NEWS.length} updates</span>
+      </div>
+      <div className="space-y-2.5">
+        {ADMIN_NEWS.map(news => (
+          <div key={news.id} className={`p-3 rounded-xl cursor-pointer transition-all group ${news.pinned ? (isDark ? 'bg-brand-red/[0.06] border border-brand-red/15 hover:border-brand-red/30' : 'bg-red-50/60 border border-red-200/40 hover:border-red-300/60') : t('bg-white/[0.02] border border-white/[0.04] hover:border-white/[0.08]','bg-stone-200/30 border border-stone-300/30 hover:border-stone-400/40')}`}>
+            <div className="flex items-start gap-2 mb-1">
+              {news.pinned && <Flame className="w-3 h-3 text-brand-red shrink-0 mt-0.5" />}
+              <div className="flex-1 min-w-0">
+                <p className={`text-xs font-bold truncate ${t('text-white','text-gray-900')}`}>{news.title}</p>
+                <p className={`text-[11px] mt-0.5 line-clamp-2 leading-relaxed ${t('text-gray-500','text-gray-500')}`}>{news.excerpt}</p>
+              </div>
+            </div>
+            <div className="flex items-center justify-between mt-2">
+              <span className={`text-[9px] px-2 py-0.5 rounded-full font-semibold ${news.category === 'Opportunity' ? 'bg-emerald-500/15 text-emerald-400' : news.category === 'Fund Update' ? 'bg-blue-500/15 text-blue-400' : news.category === 'Event' ? 'bg-purple-500/15 text-purple-400' : 'bg-amber-500/15 text-amber-400'}`}>{news.category}</span>
+              <span className={`text-[10px] ${t('text-gray-600','text-gray-400')}`}>{news.date}</span>
+            </div>
+          </div>
+        ))}
+      </div>
+    </Glass>
+  )
+
+  // ═══════════════════════════════════════════════════════════
+  // AI INSIGHTS CARD
+  // ═══════════════════════════════════════════════════════════
+  const renderAIInsights = () => (
+    <Glass className="p-5 relative overflow-hidden" hover glow theme={theme}>
+      <div className="absolute -right-6 -top-6 w-24 h-24 bg-purple-500/10 rounded-full blur-[40px]" />
+      <div className="relative">
+        <div className="flex items-center gap-2 mb-3">
+          <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-purple-500/20 to-indigo-500/20 flex items-center justify-center">
+            <Sparkles className="w-3.5 h-3.5 text-purple-400" />
+          </div>
+          <h4 className={`text-sm font-bold ${t('text-white','text-gray-900')}`}>Smart Insights</h4>
+        </div>
+        <div className="space-y-2.5">
+          {[
+            { icon: TrendingUp, text: 'Your portfolio outperformed the NIFTY 50 benchmark by 21.3% this year.', color: 'text-emerald-400' },
+            { icon: Shield, text: 'Diversification score is strong. Real estate exposure provides stability.', color: 'text-blue-400' },
+            { icon: Target, text: 'Phoenix Towers NCLT resolution at 75% milestone \u2014 ahead of schedule.', color: 'text-amber-400' },
+          ].map((insight,i) => (
+            <div key={i} className={`flex items-start gap-2.5 p-2 rounded-lg ${t('bg-white/[0.02]','bg-stone-200/30')}`}>
+              <insight.icon className={`w-3.5 h-3.5 mt-0.5 shrink-0 ${insight.color}`} />
+              <p className={`text-[11px] leading-relaxed ${t('text-gray-400','text-gray-600')}`}>{insight.text}</p>
+            </div>
+          ))}
+        </div>
+      </div>
+    </Glass>
+  )
+
+  // ═══════════════════════════════════════════════════════════
+  // WEALTH MILESTONES
+  // ═══════════════════════════════════════════════════════════
+  const renderMilestones = () => (
+    <Glass className="p-5" hover theme={theme}>
+      <div className="flex items-center gap-2 mb-4">
+        <Trophy className="w-4 h-4 text-amber-400" />
+        <h4 className={`text-sm font-bold ${t('text-white','text-gray-900')}`}>Wealth Milestones</h4>
+      </div>
+      <div className="space-y-3">
+        {[
+          { label: '\u20B950 Lakh Portfolio', achieved: true, date: 'Mar 2024' },
+          { label: '\u20B975 Lakh Portfolio', achieved: true, date: 'Sep 2024' },
+          { label: '\u20B985 Lakh Portfolio', achieved: true, date: 'Feb 2025' },
+          { label: '\u20B91 Crore Portfolio', achieved: false, progress: 85 },
+        ].map((m,i) => (
+          <div key={i} className="flex items-center gap-3">
+            <div className={`w-7 h-7 rounded-full flex items-center justify-center shrink-0 ${m.achieved ? 'bg-amber-500/20' : t('bg-white/[0.04]','bg-stone-300/40')}`}>
+              {m.achieved ? <CheckCircle className="w-4 h-4 text-amber-400" /> : <CircleDot className={`w-4 h-4 ${t('text-gray-600','text-gray-400')}`} />}
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className={`text-xs font-semibold ${m.achieved ? t('text-white','text-gray-900') : t('text-gray-500','text-gray-500')}`}>{m.label}</p>
+              {m.achieved ? (
+                <p className={`text-[10px] ${t('text-gray-600','text-gray-400')}`}>{m.date}</p>
+              ) : (
+                <div className="flex items-center gap-2 mt-1">
+                  <div className={`flex-1 h-1 rounded-full overflow-hidden ${t('bg-white/[0.06]','bg-stone-300/50')}`}>
+                    <div className="h-full rounded-full bg-gradient-to-r from-brand-red to-amber-400" style={{ width: `${m.progress}%` }} />
+                  </div>
+                  <span className="text-[9px] text-brand-red font-semibold">{m.progress}%</span>
+                </div>
+              )}
             </div>
           </div>
         ))}
@@ -707,6 +1064,13 @@ export default function DashboardClient() {
 
       {renderHeroMetrics()}
 
+      {/* Portfolio Health + Countdown + Sentiment */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        {renderHealthScore()}
+        {renderCountdown()}
+        {renderSentiment()}
+      </div>
+
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         <div className="lg:col-span-2">{renderNAVChart()}</div>
         <div>{renderAllocationChart()}</div>
@@ -714,28 +1078,27 @@ export default function DashboardClient() {
 
       {renderQuickActions()}
 
+      {/* Live Charts + Global Markets + India Economy */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        <div>{renderPortfolioAssets()}</div>
-        <div>{renderRecentActivity()}</div>
-        <div>
-          {/* Announcements */}
-          <Glass className="p-5" hover theme={theme}>
-            <h3 className={`text-base font-bold mb-4 ${t('text-white','text-gray-900')}`}>Announcements</h3>
-            <div className="space-y-3">
-              {[
-                { title: 'Q4 NAV Report Published', desc: 'Latest quarterly report ready for download.', time: '2h ago', type: 'report' },
-                { title: 'New Investment Opportunity', desc: 'Stressed RE asset in Bengaluru at 40% discount.', time: '1d ago', type: 'opportunity' },
-                { title: 'KYC Re-verification Due', desc: 'Annual update required by 31 March 2025.', time: '3d ago', type: 'alert' },
-              ].map((a, i) => (
-                <div key={i} className={`p-3 rounded-xl cursor-pointer transition-all ${t('bg-white/[0.02] border border-white/[0.04] hover:border-white/[0.08]','bg-gray-50 border border-gray-200 hover:border-gray-300')}`}>
-                  <p className={`text-sm font-semibold ${t('text-white','text-gray-900')}`}>{a.title}</p>
-                  <p className={`text-xs mt-0.5 ${t('text-gray-500','text-gray-500')}`}>{a.desc}</p>
-                  <p className={`text-[10px] mt-1 ${t('text-gray-600','text-gray-400')}`}>{a.time}</p>
-                </div>
-              ))}
-            </div>
-          </Glass>
+        {renderLiveCharts()}
+        {renderGlobalMarkets()}
+        {renderIndiaIndicators()}
+      </div>
+
+      {/* GHL Admin News + AI Insights + Economic Calendar */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        {renderAdminNews()}
+        <div className="space-y-4">
+          {renderAIInsights()}
+          {renderMilestones()}
         </div>
+        {renderEconomicCalendar()}
+      </div>
+
+      {/* Portfolio Assets + Recent Activity */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        {renderPortfolioAssets()}
+        {renderRecentActivity()}
       </div>
     </div>
   )
@@ -791,7 +1154,7 @@ export default function DashboardClient() {
         <p className={`text-xs mb-4 ${t('text-gray-500','text-gray-500')}`}>Request changes to your current investment allocation. Our advisory team will review and process your request.</p>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
           {ALLOCATION_DATA.map((a, i) => (
-            <div key={i} className={`p-3 rounded-xl ${t('bg-white/[0.03] border border-white/[0.06]','bg-gray-50 border border-gray-200')}`}>
+            <div key={i} className={`p-3 rounded-xl ${t('bg-white/[0.03] border border-white/[0.06]','bg-stone-200/50 border border-stone-300/50')}`}>
               <div className="flex items-center gap-2 mb-2">
                 <div className="w-3 h-3 rounded-full" style={{ background: a.color }} />
                 <span className={`text-xs font-semibold ${t('text-white','text-gray-900')}`}>{a.name}</span>
@@ -831,7 +1194,7 @@ export default function DashboardClient() {
             <div key={i} className={`p-4 rounded-xl text-center transition-all cursor-pointer
               ${step.status === 'completed' ? (isDark ? 'bg-emerald-500/10 border border-emerald-500/20' : 'bg-emerald-50 border border-emerald-200') :
                 step.status === 'in-review' ? (isDark ? 'bg-amber-500/10 border border-amber-500/20' : 'bg-amber-50 border border-amber-200') :
-                t('bg-white/[0.03] border border-white/[0.06]','bg-gray-50 border border-gray-200')}`}>
+                t('bg-white/[0.03] border border-white/[0.06]','bg-stone-200/50 border border-stone-300/50')}`}>
               <step.icon className={`w-6 h-6 mx-auto mb-2 ${step.status === 'completed' ? 'text-emerald-400' : step.status === 'in-review' ? 'text-amber-400' : t('text-gray-500','text-gray-400')}`} />
               <p className={`text-[11px] font-medium ${t('text-white','text-gray-900')}`}>{step.label}</p>
               <span className={`text-[9px] font-semibold uppercase mt-1 inline-block px-1.5 py-0.5 rounded-full
@@ -891,7 +1254,7 @@ export default function DashboardClient() {
               <p className={`text-xs ${t('text-gray-500','text-gray-500')}`}>PDF, JPG, PNG up to 10MB</p>
               <input ref={fileInputRef} type="file" className="hidden" accept=".pdf,.jpg,.jpeg,.png" multiple />
             </div>
-            <select className={`w-full px-4 py-2.5 rounded-xl text-sm mb-4 ${t('bg-white/[0.04] border border-white/[0.06] text-white','bg-gray-50 border border-gray-200 text-gray-900')}`}>
+            <select className={`w-full px-4 py-2.5 rounded-xl text-sm mb-4 ${t('bg-white/[0.04] border border-white/[0.06] text-white','bg-stone-200/50 border border-stone-300/50 text-gray-900')}`}>
               <option value="">Select document type...</option>
               <option>PAN Card</option><option>Aadhaar Card</option><option>Bank Statement</option>
               <option>Cancelled Cheque</option><option>Photo (Passport Size)</option><option>Address Proof</option>
@@ -971,13 +1334,13 @@ export default function DashboardClient() {
         <Glass className="p-6" theme={theme}>
           <h4 className={`text-sm font-bold mb-4 ${t('text-white','text-gray-900')}`}>New Message</h4>
           <div className="space-y-3">
-            <select className={`w-full px-4 py-2.5 rounded-xl text-sm ${t('bg-white/[0.04] border border-white/[0.06] text-white','bg-gray-50 border border-gray-200 text-gray-900')}`}>
+            <select className={`w-full px-4 py-2.5 rounded-xl text-sm ${t('bg-white/[0.04] border border-white/[0.06] text-white','bg-stone-200/50 border border-stone-300/50 text-gray-900')}`}>
               <option>Relationship Manager</option><option>Compliance Team</option><option>Investment Team</option><option>Support Team</option>
             </select>
             <input type="text" placeholder="Subject" className={`w-full px-4 py-2.5 rounded-xl text-sm ${t('bg-white/[0.04] border border-white/[0.06] text-white placeholder-gray-600','bg-gray-50 border border-gray-200 text-gray-900 placeholder-gray-400')}`} />
             <textarea rows={4} placeholder="Write your message..." className={`w-full px-4 py-2.5 rounded-xl text-sm resize-none ${t('bg-white/[0.04] border border-white/[0.06] text-white placeholder-gray-600','bg-gray-50 border border-gray-200 text-gray-900 placeholder-gray-400')}`} />
             <div className="flex items-center gap-3">
-              <button className={`p-2 rounded-lg ${t('hover:bg-white/[0.04]','hover:bg-gray-100')}`}><Paperclip className={`w-4 h-4 ${t('text-gray-500','text-gray-400')}`} /></button>
+              <button className={`p-2 rounded-lg ${t('hover:bg-white/[0.04]','hover:bg-stone-200/40')}`}><Paperclip className={`w-4 h-4 ${t('text-gray-500','text-gray-400')}`} /></button>
               <div className="flex-1" />
               <button onClick={() => setMessageCompose(false)} className={`px-4 py-2 rounded-xl text-sm font-medium ${t('text-gray-400','text-gray-500')}`}>Cancel</button>
               <button className="px-5 py-2 rounded-xl text-sm font-semibold text-white" style={{ background: 'linear-gradient(135deg, #D0021B, #8B0000)' }}>Send</button>
@@ -1047,7 +1410,7 @@ export default function DashboardClient() {
         {ticketForm && (
           <div className="space-y-3 mb-6">
             <input type="text" placeholder="Subject" className={`w-full px-4 py-2.5 rounded-xl text-sm ${t('bg-white/[0.04] border border-white/[0.06] text-white placeholder-gray-600','bg-gray-50 border border-gray-200 text-gray-900 placeholder-gray-400')}`} />
-            <select className={`w-full px-4 py-2.5 rounded-xl text-sm ${t('bg-white/[0.04] border border-white/[0.06] text-white','bg-gray-50 border border-gray-200 text-gray-900')}`}>
+            <select className={`w-full px-4 py-2.5 rounded-xl text-sm ${t('bg-white/[0.04] border border-white/[0.06] text-white','bg-stone-200/50 border border-stone-300/50 text-gray-900')}`}>
               <option>General Inquiry</option><option>Investment Query</option><option>KYC Issue</option><option>Technical Issue</option><option>Document Request</option>
             </select>
             <textarea rows={3} placeholder="Describe your issue..." className={`w-full px-4 py-2.5 rounded-xl text-sm resize-none ${t('bg-white/[0.04] border border-white/[0.06] text-white placeholder-gray-600','bg-gray-50 border border-gray-200 text-gray-900 placeholder-gray-400')}`} />
@@ -1057,7 +1420,7 @@ export default function DashboardClient() {
         {/* Existing tickets */}
         <div className="space-y-2">
           {SUPPORT_TICKETS.map(tk => (
-            <div key={tk.id} className={`flex items-center gap-3 p-3 rounded-xl ${t('bg-white/[0.02] border border-white/[0.04]','bg-gray-50 border border-gray-200')}`}>
+            <div key={tk.id} className={`flex items-center gap-3 p-3 rounded-xl ${t('bg-white/[0.02] border border-white/[0.04]','bg-stone-200/50 border border-stone-300/50')}`}>
               <Ticket className={`w-5 h-5 shrink-0 ${tk.status === 'resolved' ? 'text-emerald-400' : 'text-amber-400'}`} />
               <div className="flex-1 min-w-0">
                 <p className={`text-sm font-semibold ${t('text-white','text-gray-900')}`}>{tk.subject}</p>
@@ -1080,7 +1443,7 @@ export default function DashboardClient() {
             { q: 'How can I download my tax certificate?', a: 'Visit KYC & Documents tab and look for TDS Certificate under the available documents.' },
             { q: 'What are the exit options?', a: 'Exit options depend on the fund strategy. Contact your relationship manager for details.' },
           ].map((faq, i) => (
-            <div key={i} className={`p-4 rounded-xl ${t('bg-white/[0.02] border border-white/[0.04]','bg-gray-50 border border-gray-200')}`}>
+            <div key={i} className={`p-4 rounded-xl ${t('bg-white/[0.02] border border-white/[0.04]','bg-stone-200/50 border border-stone-300/50')}`}>
               <p className={`text-sm font-semibold mb-1.5 ${t('text-white','text-gray-900')}`}>{faq.q}</p>
               <p className={`text-xs leading-relaxed ${t('text-gray-500','text-gray-500')}`}>{faq.a}</p>
             </div>
@@ -1105,7 +1468,7 @@ export default function DashboardClient() {
                 <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-brand-red/20 to-red-900/20 flex items-center justify-center"><Gift className="w-5 h-5 text-brand-red" /></div>
                 <div><h3 className={`text-base font-bold ${t('text-white','text-gray-900')}`}>Refer & Earn</h3><p className={`text-xs ${t('text-gray-500','text-gray-500')}`}>Invite investors, earn rewards</p></div>
               </div>
-              <div className={`flex items-center gap-2 p-2.5 rounded-xl mb-4 ${t('bg-white/[0.03] border border-white/[0.06]','bg-gray-50 border border-gray-200')}`}>
+              <div className={`flex items-center gap-2 p-2.5 rounded-xl mb-4 ${t('bg-white/[0.03] border border-white/[0.06]','bg-stone-200/50 border border-stone-300/50')}`}>
                 <code className={`flex-1 text-xs font-mono truncate ${t('text-gray-300','text-gray-600')}`}>https://ghlindiaventures.com/ref/RK2024</code>
                 <button className={`p-1.5 rounded-lg ${t('hover:bg-white/[0.06] text-gray-400','hover:bg-gray-200 text-gray-500')}`}><Copy className="w-3.5 h-3.5" /></button>
               </div>
@@ -1201,7 +1564,7 @@ export default function DashboardClient() {
               <input type="text" placeholder="Account Holder Name" className={`w-full px-4 py-2.5 rounded-xl text-sm ${t('bg-white/[0.04] border border-white/[0.06] text-white placeholder-gray-600','bg-gray-50 border border-gray-200 text-gray-900 placeholder-gray-400')}`} />
               <input type="text" placeholder="Account Number" className={`w-full px-4 py-2.5 rounded-xl text-sm ${t('bg-white/[0.04] border border-white/[0.06] text-white placeholder-gray-600','bg-gray-50 border border-gray-200 text-gray-900 placeholder-gray-400')}`} />
               <input type="text" placeholder="IFSC Code" className={`w-full px-4 py-2.5 rounded-xl text-sm ${t('bg-white/[0.04] border border-white/[0.06] text-white placeholder-gray-600','bg-gray-50 border border-gray-200 text-gray-900 placeholder-gray-400')}`} />
-              <select className={`w-full px-4 py-2.5 rounded-xl text-sm ${t('bg-white/[0.04] border border-white/[0.06] text-white','bg-gray-50 border border-gray-200 text-gray-900')}`}>
+              <select className={`w-full px-4 py-2.5 rounded-xl text-sm ${t('bg-white/[0.04] border border-white/[0.06] text-white','bg-stone-200/50 border border-stone-300/50 text-gray-900')}`}>
                 <option>Savings Account</option><option>Current Account</option><option>NRO Account</option>
               </select>
               <button className="w-full py-2.5 rounded-xl text-sm font-semibold text-white" style={{ background: 'linear-gradient(135deg, #D0021B, #8B0000)' }}>Verify & Connect</button>
@@ -1222,7 +1585,7 @@ export default function DashboardClient() {
         {/* Appearance */}
         <Glass className="p-6" hover theme={theme}>
           <div className="flex items-center gap-3 mb-4">
-            <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${t('bg-white/[0.04]','bg-gray-100')}`}>
+            <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${t('bg-white/[0.04]','bg-stone-300/40')}`}>
               {isDark ? <Moon className="w-5 h-5 text-indigo-400" /> : <Sun className="w-5 h-5 text-amber-500" />}
             </div>
             <div><h4 className={`text-sm font-bold ${t('text-white','text-gray-900')}`}>Appearance</h4><p className={`text-xs ${t('text-gray-500','text-gray-500')}`}>Theme and display preferences</p></div>
@@ -1240,10 +1603,10 @@ export default function DashboardClient() {
         {/* Language */}
         <Glass className="p-6" hover theme={theme}>
           <div className="flex items-center gap-3 mb-4">
-            <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${t('bg-white/[0.04]','bg-gray-100')}`}><Languages className="w-5 h-5 text-blue-400" /></div>
+            <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${t('bg-white/[0.04]','bg-stone-300/40')}`}><Languages className="w-5 h-5 text-blue-400" /></div>
             <div><h4 className={`text-sm font-bold ${t('text-white','text-gray-900')}`}>Language</h4><p className={`text-xs ${t('text-gray-500','text-gray-500')}`}>Dashboard language preference</p></div>
           </div>
-          <select className={`w-full px-4 py-2.5 rounded-xl text-sm ${t('bg-white/[0.04] border border-white/[0.06] text-white','bg-gray-50 border border-gray-200 text-gray-900')}`}>
+          <select className={`w-full px-4 py-2.5 rounded-xl text-sm ${t('bg-white/[0.04] border border-white/[0.06] text-white','bg-stone-200/50 border border-stone-300/50 text-gray-900')}`}>
             <option>English</option><option>Hindi</option><option>Tamil</option><option>Telugu</option><option>Kannada</option><option>Malayalam</option><option>Marathi</option><option>Bengali</option><option>Gujarati</option>
           </select>
         </Glass>
@@ -1251,11 +1614,11 @@ export default function DashboardClient() {
         {/* Notifications */}
         <Glass className="p-6" hover theme={theme}>
           <div className="flex items-center gap-3 mb-4">
-            <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${t('bg-white/[0.04]','bg-gray-100')}`}><Bell className="w-5 h-5 text-amber-400" /></div>
+            <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${t('bg-white/[0.04]','bg-stone-300/40')}`}><Bell className="w-5 h-5 text-amber-400" /></div>
             <div><h4 className={`text-sm font-bold ${t('text-white','text-gray-900')}`}>Notifications</h4><p className={`text-xs ${t('text-gray-500','text-gray-500')}`}>Email and push preferences</p></div>
           </div>
           {['Email Alerts','NAV Updates','Investment Opportunities','Dividend Notifications'].map((opt,j) => (
-            <div key={j} className={`flex items-center justify-between p-2.5 rounded-lg ${t('hover:bg-white/[0.02]','hover:bg-gray-50')} transition-colors`}>
+            <div key={j} className={`flex items-center justify-between p-2.5 rounded-lg ${t('hover:bg-white/[0.02]','hover:bg-stone-200/40')} transition-colors`}>
               <span className={`text-xs ${t('text-gray-400','text-gray-600')}`}>{opt}</span>
               <div className="w-9 h-5 rounded-full bg-brand-red/20 relative cursor-pointer"><div className="absolute right-0.5 top-0.5 w-4 h-4 rounded-full bg-brand-red transition-all" /></div>
             </div>
@@ -1265,11 +1628,11 @@ export default function DashboardClient() {
         {/* Security */}
         <Glass className="p-6" hover theme={theme}>
           <div className="flex items-center gap-3 mb-4">
-            <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${t('bg-white/[0.04]','bg-gray-100')}`}><Lock className="w-5 h-5 text-emerald-400" /></div>
+            <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${t('bg-white/[0.04]','bg-stone-300/40')}`}><Lock className="w-5 h-5 text-emerald-400" /></div>
             <div><h4 className={`text-sm font-bold ${t('text-white','text-gray-900')}`}>Security</h4><p className={`text-xs ${t('text-gray-500','text-gray-500')}`}>Password and authentication</p></div>
           </div>
           {['Change Password','Enable 2FA','Active Sessions','Login History'].map((opt,j) => (
-            <div key={j} className={`flex items-center justify-between p-2.5 rounded-lg cursor-pointer group ${t('hover:bg-white/[0.02]','hover:bg-gray-50')} transition-colors`}>
+            <div key={j} className={`flex items-center justify-between p-2.5 rounded-lg cursor-pointer group ${t('hover:bg-white/[0.02]','hover:bg-stone-200/40')} transition-colors`}>
               <span className={`text-xs ${t('text-gray-400 group-hover:text-white','text-gray-600 group-hover:text-gray-900')} transition-colors`}>{opt}</span>
               <ChevronRight className={`w-3.5 h-3.5 ${t('text-gray-600','text-gray-400')}`} />
             </div>
@@ -1316,7 +1679,7 @@ export default function DashboardClient() {
   // MAIN RENDER
   // ═══════════════════════════════════════════════════════════
   return (
-    <div className={`min-h-screen relative transition-colors duration-500 ${isDark ? 'bg-brand-black' : 'bg-[#F8F7F5]'}`}>
+    <div className={`min-h-screen relative transition-colors duration-500 ${isDark ? 'bg-brand-black' : 'bg-[#E4E0DA]'}`}>
       {/* Background ambient effects */}
       <div className="fixed inset-0 pointer-events-none z-0">
         {isDark && (
