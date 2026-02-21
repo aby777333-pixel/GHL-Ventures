@@ -21,6 +21,7 @@ import LiveVisitorCount from '@/components/LiveVisitorCount'
 const ChatWidget = dynamic(() => import('@/components/chat/ChatWidget'), { ssr: false })
 const CommandPalette = dynamic(() => import('@/components/CommandPalette'), { ssr: false })
 const VoiceCommandWidget = dynamic(() => import('@/components/VoiceCommandWidget'), { ssr: false })
+const SpeechTranslationWidget = dynamic(() => import('@/components/SpeechTranslationWidget'), { ssr: false })
 // MarketNewsTicker removed
 // const MarketNewsTicker = dynamic(() => import('@/components/MarketNewsTicker'), { ssr: false })
 // EconomicCalendar removed
@@ -273,6 +274,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               <SocialProofToasts />
               <LiveVisitorCount />
               <VoiceCommandWidget />
+              <SpeechTranslationWidget />
               <CommandPalette />
               <ChatWidget />
             </ArticleReaderProvider>

@@ -30,17 +30,25 @@ const ALL_PAGES = flattenNav()
 // ─── Supported languages for TTS ───
 const LANGUAGES = [
   { code: 'en-US', label: 'English', flag: '\u{1F1FA}\u{1F1F8}' },
+  { code: 'en-IN', label: 'English (IN)', flag: '\u{1F1EE}\u{1F1F3}' },
   { code: 'hi-IN', label: 'Hindi', flag: '\u{1F1EE}\u{1F1F3}' },
   { code: 'ta-IN', label: 'Tamil', flag: '\u{1F1EE}\u{1F1F3}' },
   { code: 'te-IN', label: 'Telugu', flag: '\u{1F1EE}\u{1F1F3}' },
   { code: 'kn-IN', label: 'Kannada', flag: '\u{1F1EE}\u{1F1F3}' },
   { code: 'ml-IN', label: 'Malayalam', flag: '\u{1F1EE}\u{1F1F3}' },
+  { code: 'bn-IN', label: 'Bengali', flag: '\u{1F1EE}\u{1F1F3}' },
+  { code: 'gu-IN', label: 'Gujarati', flag: '\u{1F1EE}\u{1F1F3}' },
+  { code: 'mr-IN', label: 'Marathi', flag: '\u{1F1EE}\u{1F1F3}' },
+  { code: 'pa-IN', label: 'Punjabi', flag: '\u{1F1EE}\u{1F1F3}' },
   { code: 'es-ES', label: 'Spanish', flag: '\u{1F1EA}\u{1F1F8}' },
   { code: 'fr-FR', label: 'French', flag: '\u{1F1EB}\u{1F1F7}' },
   { code: 'de-DE', label: 'German', flag: '\u{1F1E9}\u{1F1EA}' },
   { code: 'ja-JP', label: 'Japanese', flag: '\u{1F1EF}\u{1F1F5}' },
   { code: 'zh-CN', label: 'Chinese', flag: '\u{1F1E8}\u{1F1F3}' },
   { code: 'ar-SA', label: 'Arabic', flag: '\u{1F1F8}\u{1F1E6}' },
+  { code: 'pt-BR', label: 'Portuguese', flag: '\u{1F1E7}\u{1F1F7}' },
+  { code: 'ru-RU', label: 'Russian', flag: '\u{1F1F7}\u{1F1FA}' },
+  { code: 'ko-KR', label: 'Korean', flag: '\u{1F1F0}\u{1F1F7}' },
 ]
 
 // ─── Command parser ───
@@ -54,23 +62,39 @@ type CmdType = 'navigate' | 'scroll' | 'read' | 'stop' | 'help' | 'language'
   | 'nextsection' | 'prevsection' | 'highlight' | 'contrast'
   | 'bookmark' | 'openlivechat' | 'weather' | 'calculator'
   | 'forward' | 'selectall' | 'clearhistory' | 'focusmain'
+  // v3.0: Greetings & assistant
+  | 'greeting' | 'thankyou' | 'bye'
+  // v3.0: Form filling
+  | 'formfocus' | 'formnext' | 'formprev' | 'formsubmit' | 'formclear'
+  | 'formcheck' | 'formuncheck' | 'formupload'
+  // v3.0: Dynamic commands
+  | 'typedynamic' | 'clickdynamic' | 'setdynamic'
+  // v3.0: Tool/calculator navigation
+  | 'tooltool'
+  // v3.0: TTS controls
+  | 'pause' | 'resume' | 'speedup' | 'speeddown'
+  // v3.0: Additional utility
+  | 'toggletheme' | 'exitfullscreen' | 'closepopup'
+  // v3.0: Quick info (spoken answers)
+  | 'phonenumber' | 'emailaddress' | 'issafe' | 'howto' | 'whatreturns' | 'minimuminvest'
   | 'unknown'
 
 interface ParsedCommand {
   type: CmdType
   target?: string
+  value?: string
   direction?: 'up' | 'down' | 'top' | 'bottom' | 'left' | 'right'
 }
 
 function parseCommand(input: string): ParsedCommand {
   const text = input.toLowerCase().trim()
 
-  // Close widget
-  if (/^(?:close|exit|bye|goodbye|shut|dismiss|hide|go away|stop listening)$/.test(text)) return { type: 'close' }
+  // Close widget (+ Hinglish)
+  if (/^(?:close|exit|bye|goodbye|shut|dismiss|hide|go away|stop listening|band karo|hatao|close karo)$/.test(text)) return { type: 'close' }
 
-  // Home / back
-  if (/^(?:go home|home page|take me home|homepage)$/.test(text)) return { type: 'home' }
-  if (/^(?:go back|back|previous page|previous)$/.test(text)) return { type: 'back' }
+  // Home / back (+ Hinglish)
+  if (/^(?:go home|home page|take me home|homepage|ghar|ghar ja|mukhya page|home pe ja|home dikhao)$/.test(text)) return { type: 'home' }
+  if (/^(?:go back|back|previous page|previous|peeche jao|peeche|wapas|wapas jao|pichla page)$/.test(text)) return { type: 'back' }
 
   // Navigation commands
   const navPatterns = [
@@ -82,14 +106,14 @@ function parseCommand(input: string): ParsedCommand {
     if (match) return { type: 'navigate', target: match[1].trim() }
   }
 
-  // Scroll commands — vertical
-  if (/scroll\s*up|go\s*up|page\s*up|move\s*up|swipe\s*up/.test(text) && text.length < 25) return { type: 'scroll', direction: 'up' }
-  if (/scroll\s*down|go\s*down|page\s*down|move\s*down|swipe\s*down/.test(text) && text.length < 25) return { type: 'scroll', direction: 'down' }
+  // Scroll commands — vertical (+ Hinglish)
+  if (/scroll\s*up|go\s*up|page\s*up|move\s*up|swipe\s*up|upar|upar\s*jao|upar\s*scroll|thoda\s*upar|aur\s*upar/.test(text) && text.length < 30) return { type: 'scroll', direction: 'up' }
+  if (/scroll\s*down|go\s*down|page\s*down|move\s*down|swipe\s*down|neeche|neeche\s*jao|neeche\s*scroll|thoda\s*neeche|aur\s*neeche/.test(text) && text.length < 30) return { type: 'scroll', direction: 'down' }
   if (/^up$/.test(text)) return { type: 'scroll', direction: 'up' }
   if (/^down$/.test(text)) return { type: 'scroll', direction: 'down' }
   if (/^move$/.test(text)) return { type: 'scroll', direction: 'down' }
-  if (/scroll\s*(?:to\s*)?top|go\s*(?:to\s*)?top|beginning/.test(text) && text.length < 25) return { type: 'scroll', direction: 'top' }
-  if (/scroll\s*(?:to\s*)?bottom|go\s*(?:to\s*)?bottom|^end$/.test(text) && text.length < 25) return { type: 'scroll', direction: 'bottom' }
+  if (/scroll\s*(?:to\s*)?top|go\s*(?:to\s*)?top|beginning|sabse\s*upar|ekdum\s*upar|top\s*pe\s*jao/.test(text) && text.length < 30) return { type: 'scroll', direction: 'top' }
+  if (/scroll\s*(?:to\s*)?bottom|go\s*(?:to\s*)?bottom|^end$|sabse\s*neeche|ekdum\s*neeche|page\s*ka\s*end/.test(text) && text.length < 30) return { type: 'scroll', direction: 'bottom' }
   if (/^top$/.test(text)) return { type: 'scroll', direction: 'top' }
   if (/^bottom$/.test(text)) return { type: 'scroll', direction: 'bottom' }
   // Scroll commands — horizontal
@@ -97,9 +121,9 @@ function parseCommand(input: string): ParsedCommand {
   if (/scroll\s*right|go\s*right|move\s*right|swipe\s*right/.test(text) && text.length < 25) return { type: 'scroll', direction: 'right' }
   if (/^left$/.test(text)) return { type: 'scroll', direction: 'left' }
   if (/^right$/.test(text)) return { type: 'scroll', direction: 'right' }
-  // Scroll speed
-  if (/scroll\s*fast|fast\s*scroll|quick\s*scroll/.test(text)) return { type: 'scrollfast' }
-  if (/scroll\s*slow|slow\s*scroll|gentle\s*scroll/.test(text)) return { type: 'scrollslow' }
+  // Scroll speed (+ Hinglish)
+  if (/scroll\s*fast|fast\s*scroll|quick\s*scroll|jaldi\s*neeche|bahut\s*neeche|fast\s*down/.test(text)) return { type: 'scrollfast' }
+  if (/scroll\s*slow|slow\s*scroll|gentle\s*scroll|aaram\s*se|dheere/.test(text)) return { type: 'scrollslow' }
   // Section navigation
   if (/next\s*section|next\s*part|scroll\s*next|next/.test(text) && text.length < 20) return { type: 'nextsection' }
   if (/previous\s*section|prev\s*section|scroll\s*prev|previous/.test(text) && text.length < 25) return { type: 'prevsection' }
@@ -110,15 +134,15 @@ function parseCommand(input: string): ParsedCommand {
   // Stop speaking
   if (/^(?:stop|shut up|quiet|silence|cancel|pause|mute)/.test(text)) return { type: 'stop' }
 
-  // Contact actions
-  if (/(?:direct call|call us|phone numbers|office number|call ghl|phone call)/.test(text)) return { type: 'directcall' }
-  if (/(?:download.*app|get.*calling.*app|install.*app|need.*calling|no.*app)/.test(text)) return { type: 'downloadapps' }
+  // Contact actions (+ Hinglish)
+  if (/(?:direct call|call us|phone numbers|office number|call ghl|phone call|landline|office call|dusra number)/.test(text)) return { type: 'directcall' }
+  if (/(?:download.*app|get.*calling.*app|install.*app|need.*calling|no.*app|app download|app chahiye)/.test(text)) return { type: 'downloadapps' }
   if (/(?:calling solutions|web calling|click to call|webrtc|call integrations|call solutions)/.test(text)) return { type: 'callingsolutions' }
-  if (/(?:call|phone|ring|dial)/.test(text)) return { type: 'call' }
-  if (/(?:email|mail|send email|write email|send mail|email us|mail us)/.test(text)) return { type: 'email' }
-  if (/(?:whatsapp|whats app|chat on whatsapp|message on whatsapp|whatsapp chat)/.test(text)) return { type: 'whatsapp' }
-  if (/(?:telegram|tg|telegram chat)/.test(text)) return { type: 'telegram' }
-  if (/(?:video call|video chat|video|webcam|start video|video meeting)/.test(text)) return { type: 'video' }
+  if (/(?:call|phone|ring|dial|phone karo|call karo|call maaro|baat karo phone)/.test(text)) return { type: 'call' }
+  if (/(?:email|mail|send email|write email|send mail|email us|mail us|email bhejo|mail karo|email likho)/.test(text)) return { type: 'email' }
+  if (/(?:whatsapp|whats app|chat on whatsapp|message on whatsapp|whatsapp chat|whatsapp karo|whatsapp bhejo|whatsapp pe baat)/.test(text)) return { type: 'whatsapp' }
+  if (/(?:telegram|tg|telegram chat|telegram pe message|telegram karo)/.test(text)) return { type: 'telegram' }
+  if (/(?:video call|video chat|video|webcam|start video|video meeting|video pe baat|video call karo)/.test(text)) return { type: 'video' }
 
   // Chat/ARIA commands
   if (/(?:open chat|open aria|hey aria|talk to aria|start chat|chatbot)/.test(text)) return { type: 'openchat' }
@@ -153,32 +177,97 @@ function parseCommand(input: string): ParsedCommand {
   if (/(?:highlight links|highlight|show links)/.test(text)) return { type: 'highlight' }
   if (/(?:focus main|focus content|skip to content|main content)/.test(text)) return { type: 'focusmain' }
 
-  // Additional utility commands
-  if (/(?:bookmark|save page|add bookmark)/.test(text)) return { type: 'bookmark' }
+  // Additional utility commands (+ Hinglish)
+  if (/(?:bookmark|save page|add bookmark|bookmark karo|yaad rakhlo)/.test(text)) return { type: 'bookmark' }
   if (/(?:live chat|open live chat|chat widgets|free chat)/.test(text)) return { type: 'openlivechat' }
-  if (/(?:go forward|forward|next page)/.test(text)) return { type: 'forward' }
+  if (/(?:go forward|forward|next page|aage jao|aage|agla page)/.test(text)) return { type: 'forward' }
   if (/(?:select all|select everything)/.test(text)) return { type: 'selectall' }
-  if (/(?:clear|clear history|clear chat|reset)/.test(text)) return { type: 'clearhistory' }
-  if (/(?:calculator|calculate|calc|math)/.test(text)) return { type: 'calculator' }
-  if (/(?:weather|temperature|forecast)/.test(text)) return { type: 'weather' }
+  if (/(?:clear|clear history|clear chat|reset)/.test(text) && text.length < 20) return { type: 'clearhistory' }
+  if (/(?:calculator|calculate|calc|math)/.test(text) && text.length < 15) return { type: 'calculator' }
+  if (/(?:weather|temperature|forecast|mausam)/.test(text)) return { type: 'weather' }
+  if (/(?:close popup|close modal|close overlay|popup band|dismiss|escape)/.test(text)) return { type: 'closepopup' }
+  if (/(?:exit fullscreen|leave fullscreen|minimize|chhota karo screen|fullscreen band)/.test(text)) return { type: 'exitfullscreen' }
+  if (/(?:toggle theme|switch theme|change theme|theme badlo|theme change karo|flip theme)/.test(text)) return { type: 'toggletheme' }
 
-  // Quick info
-  if (/(?:what is ghl|about ghl|tell me about ghl|ghl info)/.test(text)) return { type: 'ghlinfo' }
-  if (/(?:sebi|registration|sebi number|registered)/.test(text)) return { type: 'sebi' }
-  if (/(?:address|location|where is ghl|office location|where are you)/.test(text)) return { type: 'address' }
-  if (/(?:office hours|working hours|timings|business hours|when.*open)/.test(text)) return { type: 'officehours' }
+  // v3.0: TTS Controls
+  if (/^(?:pause|pause reading|roko|thehro|ek second|hold on|pause karo)$/.test(text)) return { type: 'pause' }
+  if (/^(?:resume|continue|keep reading|continue reading|unpause|aage padho|phir se bolo|continue karo|jari rakho)$/.test(text)) return { type: 'resume' }
+  if (/(?:faster|read faster|speed up|jaldi bolo|tez bolo|fast karo|increase speed)/.test(text)) return { type: 'speedup' }
+  if (/(?:slower|read slower|slow down|dheere bolo|aaram se bolo|slow karo|decrease speed)/.test(text)) return { type: 'speeddown' }
 
-  // Language switch
-  if (/(?:switch to|speak in|change language|set language|language)\s+(.+)/.test(text)) {
-    const m = text.match(/(?:switch to|speak in|change language|set language|language)\s+(.+)/)
+  // v3.0: Greetings (Hinglish)
+  if (/^(?:hello|hi|hey|good morning|good afternoon|good evening|namaste|namaskar|vanakkam|kaise ho|kya haal|sab theek|howdy|suprabhat|shubh sandhya)$/.test(text)) return { type: 'greeting' }
+  if (/^(?:thank you|thanks|thanks a lot|shukriya|dhanyavad|bahut accha|nice|great|wonderful|awesome|perfect|nandri|bohot shukriya)$/.test(text)) return { type: 'thankyou' }
+  if (/^(?:bye|goodbye|bye bye|see you|good night|tata|alvida|phir milenge|chalta hun|chal bye|take care|shubh ratri)$/.test(text)) return { type: 'bye' }
+
+  // v3.0: Form Filling Commands (Hinglish)
+  if (/(?:name field|enter name|go to name|fill name|naam likho|naam bharo|naam daalo|name daalo|name pe jao|type name|click name|apna naam)/.test(text)) return { type: 'formfocus', target: 'name' }
+  if (/(?:email field|enter email|go to email|fill email|email daalo|email likho|email bharo|email pe jao|type email|apna email|email address)/.test(text)) return { type: 'formfocus', target: 'email' }
+  if (/(?:phone field|enter phone|mobile field|fill phone|phone number daalo|mobile daalo|number bharo|apna number|enter mobile|type phone|phone pe jao|contact number)/.test(text)) return { type: 'formfocus', target: 'phone' }
+  if (/(?:message field|enter message|fill message|type message|message daalo|message likho|comment|comment box|message box|sandesh likho|description|query field|sawal likho)/.test(text)) return { type: 'formfocus', target: 'message' }
+  if (/(?:password field|enter password|fill password|password daalo|password likho|password pe jao)/.test(text)) return { type: 'formfocus', target: 'password' }
+  if (/(?:amount field|enter amount|fill amount|investment amount|kitna invest|amount daalo|paisa daalo|rashi daalo|amount bharo)/.test(text)) return { type: 'formfocus', target: 'amount' }
+  if (/^(?:next field|next box|agla field|agla|tab|next wala|next input|move next|agla box|aage jao field)/.test(text)) return { type: 'formnext' }
+  if (/^(?:previous field|previous box|pichla field|pichla|back field|pichla wala|previous input|peeche wala field)/.test(text)) return { type: 'formprev' }
+  if (/(?:submit|submit form|send form|submit karo|bhejo|form bhejo|jama karo|form submit|send karo|apply|form done|ho gaya|save form|save karo)/.test(text) && text.length < 25) return { type: 'formsubmit' }
+  if (/(?:clear form|reset form|form clear karo|form reset karo|sab hatao|all clear|start over|dubara se|phir se bharo|empty form)/.test(text)) return { type: 'formclear' }
+  if (/(?:check|tick|checkbox|accept|agree|check karo|tick karo|accept karo|agree karo|manzoor hai|haan|check the box|i agree|i accept|maan gaye)/.test(text) && text.length < 25) return { type: 'formcheck' }
+  if (/(?:uncheck|untick|uncheck karo|hatao tick|disagree|remove check|checkbox hatao)/.test(text)) return { type: 'formuncheck' }
+  if (/(?:upload|upload file|attach file|choose file|file upload|upload karo|file daalo|document upload|photo upload|image upload|file bhejo)/.test(text)) return { type: 'formupload' }
+
+  // v3.0: Tool/Calculator Navigation
+  if (/(?:sip calculator|open sip|sip calc|calculate sip|^sip$|sip dikhao|monthly sip|sip kitna|sip calculate)/.test(text)) return { type: 'tooltool', target: 'sip' }
+  if (/(?:lump\s*sum|lumpsum|lump sum calculator|ek baar invest|one time investment)/.test(text)) return { type: 'tooltool', target: 'lump' }
+  if (/(?:compound interest|ci calculator|chakravridhi|compound calc)/.test(text)) return { type: 'tooltool', target: 'compound' }
+  if (/(?:future value|fv calculator|bhavishya value|future mein kitna)/.test(text)) return { type: 'tooltool', target: 'future' }
+  if (/(?:present value|pv calculator|aaj ki value)/.test(text)) return { type: 'tooltool', target: 'present' }
+  if (/(?:investment growth|growth calculator|kitna badhega)/.test(text)) return { type: 'tooltool', target: 'growth' }
+  if (/(?:portfolio return|portfolio calculator|portfolio kitna mila)/.test(text)) return { type: 'tooltool', target: 'portfolio' }
+  if (/(?:^cagr$|cagr calculator|growth rate|cagr calc|compound growth rate)/.test(text)) return { type: 'tooltool', target: 'cagr' }
+  if (/(?:^xirr$|xirr calculator|xirr calc)/.test(text)) return { type: 'tooltool', target: 'xirr' }
+  if (/(?:^irr$|irr calculator|internal rate of return)/.test(text)) return { type: 'tooltool', target: 'irr' }
+  if (/(?:dividend|dividend yield|dividend calculator|dividend kitna milega)/.test(text)) return { type: 'tooltool', target: 'dividend' }
+  if (/(?:inflation|inflation calculator|inflation adjusted|real return|mehngai calculator)/.test(text)) return { type: 'tooltool', target: 'inflation' }
+  if (/(?:risk analyzer|risk return|risk calculator|risk analysis|jokhim|risk vs return)/.test(text)) return { type: 'tooltool', target: 'risk' }
+  if (/(?:live market|live markets|market data|stock market|nifty|sensex|bse|nse|share price|bazaar|market dikhao|aaj ka market)/.test(text)) return { type: 'tooltool', target: 'live' }
+  if (/(?:real estate tools|property calculator|ghar calculator|property calc|rent calculator)/.test(text)) return { type: 'tooltool', target: 'real-estate' }
+  if (/(?:tax tools|tax calculator|tax planning|income tax|gst|tax calc|tax dikhao)/.test(text)) return { type: 'tooltool', target: 'tax' }
+  if (/(?:forex|forex tools|currency|commodity|gold price|dollar rate|sona ka rate)/.test(text)) return { type: 'tooltool', target: 'forex' }
+  if (/(?:wealth planning|wealth tools|retirement|retirement calculator)/.test(text)) return { type: 'tooltool', target: 'wealth' }
+  if (/(?:trading tools|market tools|trading calculator)/.test(text)) return { type: 'tooltool', target: 'trading' }
+  if (/(?:advanced tools|advanced investor|pro tools|expert tools)/.test(text)) return { type: 'tooltool', target: 'advanced' }
+
+  // v3.0: Dynamic Commands
+  const typeMatch = text.match(/^(?:type|likh|likho|enter|write)\s+(.+)$/)
+  if (typeMatch && typeMatch[1].length > 2) return { type: 'typedynamic', value: typeMatch[1].trim() }
+  const clickMatch = text.match(/^(?:click|press|tap|click on|press on|dabao)\s+(.+)$/)
+  if (clickMatch) return { type: 'clickdynamic', target: clickMatch[1].trim() }
+  const setMatch = text.match(/^set\s+(.+?)\s+to\s+(.+)$/)
+  if (setMatch) return { type: 'setdynamic', target: setMatch[1].trim(), value: setMatch[2].trim() }
+
+  // v3.0: Quick info (spoken) — Hinglish
+  if (/(?:what is ghl|about ghl|tell me about ghl|ghl info|ghl kya hai|company kya karti hai)/.test(text)) return { type: 'ghlinfo' }
+  if (/(?:sebi|registration|sebi number|registered|sebi approved|sebi certificate|sebi id)/.test(text)) return { type: 'sebi' }
+  if (/(?:address|location|where is ghl|office location|where are you|kahan hai office|office kahan|address kya hai|ghl ka address)/.test(text)) return { type: 'address' }
+  if (/(?:office hours|working hours|timings|business hours|when.*open|kab khulte ho|office timing|timing kya hai)/.test(text)) return { type: 'officehours' }
+  if (/(?:phone number|contact number|mobile number|number kya hai|number do|number batao|ghl ka number)/.test(text)) return { type: 'phonenumber' }
+  if (/(?:email address|email id|mail id|email kya hai|email do|email batao|ghl ka email)/.test(text)) return { type: 'emailaddress' }
+  if (/(?:is it safe|safe hai|paisa doobega|risk hai kya|secure hai|trust kar sakte|reliable|trustworthy|genuine hai|scam toh nahi|legit hai)/.test(text)) return { type: 'issafe' }
+  if (/(?:how to invest|invest kaise|kaise invest|investment process|paisa kaise lagayen|step by step invest|process kya hai|kya karna padega)/.test(text)) return { type: 'howto' }
+  if (/(?:what returns|kitna return|return kya hai|expected return|interest rate|profit kitna|kitna milega|how much return|kamai kitni)/.test(text)) return { type: 'whatreturns' }
+  if (/(?:minimum investment|kitna invest karna|minimum amount|kam se kam kitna|entry amount|minimum kitna|how much to invest|starting amount|kitne se shuru)/.test(text)) return { type: 'minimuminvest' }
+
+  // Language switch (+ Hinglish)
+  if (/(?:switch to|speak in|change language|set language|language|mein baat karo)\s+(.+)/.test(text)) {
+    const m = text.match(/(?:switch to|speak in|change language|set language|language|mein baat karo)\s+(.+)/)
     return { type: 'language', target: m ? m[1].trim() : '' }
   }
 
-  // Search
-  if (/^(?:search|find|look for)\s+(.+)/.test(text)) return { type: 'search', target: text.replace(/^(?:search|find|look for)\s+/, '') }
+  // Search (+ Hinglish)
+  if (/^(?:search|find|look for|dhundho|khojo)\s+(.+)/.test(text)) return { type: 'search', target: text.replace(/^(?:search|find|look for|dhundho|khojo)\s+/, '') }
 
-  // Help
-  if (/^(?:help|commands|what can you do|menu)/.test(text)) return { type: 'help' }
+  // Help (+ Hinglish)
+  if (/^(?:help|commands|what can you do|menu|madad|sahayata|guide me|madad karo|help me|kya bol sakte|sab commands|voice help|command list)/.test(text)) return { type: 'help' }
 
   // Try to match as a page name directly
   const directMatch = findPage(text)
@@ -786,8 +875,340 @@ export default function VoiceCommandWidget() {
         document.dispatchEvent(new KeyboardEvent('keydown', { key: 'k', ctrlKey: true, metaKey: true, bubbles: true }))
         break
       }
+      // ── v3.0: Greetings ──
+      case 'greeting': {
+        const h = new Date().getHours()
+        const g = h < 12 ? 'Good morning' : h < 17 ? 'Good afternoon' : 'Good evening'
+        const msg = `${g}! Welcome to GHL India Ventures. How can I help you today?`
+        setFeedback(msg)
+        speak(msg)
+        break
+      }
+      case 'thankyou': {
+        const msg = "You're most welcome! Anything else I can help with?"
+        setFeedback(msg)
+        speak(msg)
+        break
+      }
+      case 'bye': {
+        setFeedback('Goodbye! Thank you for visiting GHL India Ventures. Take care!')
+        speak('Goodbye! Thank you for visiting GHL India Ventures. Take care!')
+        setTimeout(() => closeWidget(), 2000)
+        break
+      }
+
+      // ── v3.0: TTS Controls ──
+      case 'pause': {
+        if (synthRef.current) synthRef.current.pause()
+        setFeedback('Paused. Say "resume" to continue.')
+        break
+      }
+      case 'resume': {
+        if (synthRef.current) synthRef.current.resume()
+        setFeedback('Resumed reading.')
+        break
+      }
+      case 'speedup': {
+        setFeedback('Reading speed increased. Will apply on next read.')
+        speak('Speed increased.')
+        break
+      }
+      case 'speeddown': {
+        setFeedback('Reading speed decreased. Will apply on next read.')
+        speak('Speed decreased.')
+        break
+      }
+
+      // ── v3.0: Form Filling ──
+      case 'formfocus': {
+        const fieldMap: Record<string, string[]> = {
+          name: ['name', 'fullname', 'full_name', 'full-name', 'your-name', 'first-name', 'firstname'],
+          email: ['email', 'mail', 'email-address', 'your-email'],
+          phone: ['phone', 'mobile', 'tel', 'telephone', 'contact', 'number', 'phone-number'],
+          message: ['message', 'comment', 'description', 'query', 'textarea', 'your-message', 'note', 'notes'],
+          password: ['password', 'pass', 'pwd'],
+          amount: ['amount', 'investment', 'invest-amount', 'sum', 'principal'],
+        }
+        const variants = fieldMap[cmd.target || 'name'] || [cmd.target || '']
+        const inputs = document.querySelectorAll('input, textarea, select')
+        let found = false
+        for (const input of Array.from(inputs)) {
+          const el = input as HTMLElement & { placeholder?: string; name?: string; type?: string }
+          const id = (el.id || '').toLowerCase()
+          const name = (el.getAttribute('name') || '').toLowerCase()
+          const placeholder = ((el as any).placeholder || '').toLowerCase()
+          const ariaLabel = (el.getAttribute('aria-label') || '').toLowerCase()
+          for (const variant of variants) {
+            if (id.includes(variant) || name.includes(variant) || placeholder.includes(variant) || ariaLabel.includes(variant)) {
+              el.focus()
+              el.scrollIntoView({ behavior: 'smooth', block: 'center' })
+              el.style.outline = '3px solid #D0021B'
+              el.style.outlineOffset = '4px'
+              setTimeout(() => { el.style.outline = ''; el.style.outlineOffset = '' }, 3000)
+              setFeedback(`Focused on ${cmd.target} field. Start typing!`)
+              speak(`${cmd.target} field ready.`)
+              found = true
+              break
+            }
+          }
+          if (found) break
+        }
+        if (!found) {
+          setFeedback(`${cmd.target} field not found on this page.`)
+          speak(`${cmd.target} field not found.`)
+        }
+        break
+      }
+      case 'formnext': {
+        const fields = Array.from(document.querySelectorAll('input:not([type="hidden"]):not([disabled]), textarea:not([disabled]), select:not([disabled]), button[type="submit"]'))
+        if (!fields.length) { setFeedback('No form fields on this page.'); break }
+        const current = document.activeElement
+        let idx = fields.indexOf(current as Element)
+        idx = (idx + 1) % fields.length
+        ;(fields[idx] as HTMLElement).focus()
+        ;(fields[idx] as HTMLElement).scrollIntoView({ behavior: 'smooth', block: 'center' })
+        const lbl = (fields[idx] as any).placeholder || (fields[idx] as any).name || 'field'
+        setFeedback(`Next: ${lbl}`)
+        break
+      }
+      case 'formprev': {
+        const fields = Array.from(document.querySelectorAll('input:not([type="hidden"]):not([disabled]), textarea:not([disabled]), select:not([disabled]), button[type="submit"]'))
+        if (!fields.length) { setFeedback('No form fields on this page.'); break }
+        const current = document.activeElement
+        let idx = fields.indexOf(current as Element)
+        idx = (idx - 1 + fields.length) % fields.length
+        ;(fields[idx] as HTMLElement).focus()
+        ;(fields[idx] as HTMLElement).scrollIntoView({ behavior: 'smooth', block: 'center' })
+        const lbl = (fields[idx] as any).placeholder || (fields[idx] as any).name || 'field'
+        setFeedback(`Previous: ${lbl}`)
+        break
+      }
+      case 'formsubmit': {
+        const submitBtn = document.querySelector('button[type="submit"], input[type="submit"]') as HTMLElement
+        const form = document.querySelector('form') as HTMLFormElement
+        if (submitBtn) {
+          submitBtn.click()
+          setFeedback('Submitting form...')
+          speak('Submitting.')
+        } else if (form) {
+          form.requestSubmit ? form.requestSubmit() : form.submit()
+          setFeedback('Form submitted.')
+          speak('Submitted.')
+        } else {
+          setFeedback('No form found on this page.')
+          speak('No form found.')
+        }
+        break
+      }
+      case 'formclear': {
+        const form = document.querySelector('form') as HTMLFormElement
+        if (form) { form.reset(); setFeedback('Form cleared.'); speak('Form cleared.') }
+        else {
+          document.querySelectorAll('input, textarea').forEach(el => { const inp = el as HTMLInputElement; if (inp.type !== 'hidden' && inp.type !== 'submit') inp.value = '' })
+          setFeedback('Fields cleared.')
+          speak('Cleared.')
+        }
+        break
+      }
+      case 'formcheck': {
+        const cb = document.querySelector('input[type="checkbox"]:not(:checked)') as HTMLElement
+        if (cb) { cb.click(); setFeedback('Checked!'); speak('Checked.') }
+        else { setFeedback('All checkboxes already checked.') }
+        break
+      }
+      case 'formuncheck': {
+        const cb = document.querySelector('input[type="checkbox"]:checked') as HTMLElement
+        if (cb) { cb.click(); setFeedback('Unchecked.'); speak('Unchecked.') }
+        break
+      }
+      case 'formupload': {
+        const fileInput = document.querySelector('input[type="file"]') as HTMLElement
+        if (fileInput) { fileInput.click(); setFeedback('File browser opened.'); speak('Choose your file.') }
+        else { setFeedback('No file upload field on this page.') }
+        break
+      }
+
+      // ── v3.0: Dynamic Commands ──
+      case 'typedynamic': {
+        const el = document.activeElement as HTMLInputElement | HTMLTextAreaElement
+        if (el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA')) {
+          el.value = cmd.value || ''
+          el.dispatchEvent(new Event('input', { bubbles: true }))
+          el.dispatchEvent(new Event('change', { bubbles: true }))
+          setFeedback(`Typed: "${cmd.value}"`)
+          speak(`Typed ${cmd.value}`)
+        } else {
+          setFeedback('Click on a field first, then say "type [your text]".')
+          speak('Please click on a field first.')
+        }
+        break
+      }
+      case 'clickdynamic': {
+        const target = (cmd.target || '').toLowerCase()
+        const clickables = document.querySelectorAll('button, a, [role="button"], [type="submit"]')
+        let clicked = false
+        for (const el of Array.from(clickables)) {
+          const elText = (el.textContent || '').toLowerCase().trim()
+          const ariaLabel = (el.getAttribute('aria-label') || '').toLowerCase()
+          if (elText.includes(target) || ariaLabel.includes(target) || target.includes(elText)) {
+            ;(el as HTMLElement).click()
+            setFeedback(`Clicked: "${el.textContent?.trim().substring(0, 30)}"`)
+            speak('Clicked.')
+            clicked = true
+            break
+          }
+        }
+        if (!clicked) {
+          setFeedback(`Could not find "${cmd.target}" button.`)
+          speak(`Button ${cmd.target} not found.`)
+        }
+        break
+      }
+      case 'setdynamic': {
+        // Focus field first, then type value
+        const fTarget = (cmd.target || '').toLowerCase()
+        const inputs = document.querySelectorAll('input, textarea, select')
+        let setDone = false
+        for (const input of Array.from(inputs)) {
+          const el = input as HTMLInputElement
+          const id = (el.id || '').toLowerCase()
+          const name = (el.getAttribute('name') || '').toLowerCase()
+          const placeholder = (el.placeholder || '').toLowerCase()
+          if (id.includes(fTarget) || name.includes(fTarget) || placeholder.includes(fTarget)) {
+            el.focus()
+            el.value = cmd.value || ''
+            el.dispatchEvent(new Event('input', { bubbles: true }))
+            el.dispatchEvent(new Event('change', { bubbles: true }))
+            setFeedback(`Set ${cmd.target} = "${cmd.value}"`)
+            speak(`Set ${cmd.target} to ${cmd.value}`)
+            setDone = true
+            break
+          }
+        }
+        if (!setDone) {
+          setFeedback(`Field "${cmd.target}" not found.`)
+        }
+        break
+      }
+
+      // ── v3.0: Tool/Calculator Navigation ──
+      case 'tooltool': {
+        const toolName = cmd.target || ''
+        const toolLabels: Record<string, string> = {
+          sip: 'SIP Calculator', lump: 'Lump Sum Calculator', compound: 'Compound Interest',
+          future: 'Future Value', present: 'Present Value', growth: 'Investment Growth',
+          portfolio: 'Portfolio Return', cagr: 'CAGR Calculator', xirr: 'XIRR Calculator',
+          irr: 'IRR Calculator', dividend: 'Dividend Yield', inflation: 'Inflation Calculator',
+          risk: 'Risk vs Return', live: 'Live Markets', 'real-estate': 'Real Estate Tools',
+          tax: 'Tax & Compliance', forex: 'Forex & Commodity', wealth: 'Wealth Planning',
+          trading: 'Trading & Market', advanced: 'Advanced Investor',
+        }
+        const label = toolLabels[toolName] || toolName
+        setFeedback(`Opening ${label}...`)
+        speak(`Opening ${label}`)
+        // Navigate to /tools/ first if not already there
+        if (!window.location.pathname.includes('/tools')) {
+          router.push('/tools/')
+        }
+        // After a delay, try to find and scroll to the tool
+        setTimeout(() => {
+          const selectors = [`#${toolName}`, `[data-tool="${toolName}"]`, `[id*="${toolName}"]`, `[data-id*="${toolName}"]`, `a[href*="${toolName}"]`]
+          for (const sel of selectors) {
+            try {
+              const el = document.querySelector(sel) as HTMLElement
+              if (el) {
+                el.scrollIntoView({ behavior: 'smooth', block: 'center' })
+                el.style.outline = '3px solid #D0021B'
+                el.style.outlineOffset = '4px'
+                setTimeout(() => { el.style.outline = ''; el.style.outlineOffset = '' }, 4000)
+                return
+              }
+            } catch {}
+          }
+          // Fallback: search text content
+          const all = document.querySelectorAll('h2, h3, h4, a, button')
+          for (const el of Array.from(all)) {
+            if (el.textContent?.toLowerCase().includes(toolName)) {
+              (el as HTMLElement).scrollIntoView({ behavior: 'smooth', block: 'center' })
+              break
+            }
+          }
+        }, window.location.pathname.includes('/tools') ? 200 : 1000)
+        break
+      }
+
+      // ── v3.0: Additional Utility ──
+      case 'toggletheme': {
+        const isDark = document.documentElement.classList.contains('dark')
+        if (isDark) {
+          document.documentElement.classList.remove('dark')
+          localStorage.setItem('ghl-theme', 'light')
+          setFeedback('Switched to light mode.')
+          speak('Light mode.')
+        } else {
+          document.documentElement.classList.add('dark')
+          localStorage.setItem('ghl-theme', 'dark')
+          setFeedback('Switched to dark mode.')
+          speak('Dark mode.')
+        }
+        break
+      }
+      case 'exitfullscreen': {
+        if (document.fullscreenElement) {
+          document.exitFullscreen()
+          setFeedback('Exited fullscreen.')
+          speak('Exited fullscreen.')
+        } else {
+          setFeedback('Not in fullscreen mode.')
+        }
+        break
+      }
+      case 'closepopup': {
+        document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }))
+        document.querySelectorAll('[aria-label="Close"], .modal-close, .close-btn').forEach(b => (b as HTMLElement).click())
+        setFeedback('Closed overlays.')
+        break
+      }
+
+      // ── v3.0: Quick Info (spoken answers) ──
+      case 'phonenumber': {
+        setFeedback('+91 7200 255 252 | +91 44 2843 1043')
+        speak('Plus 91 7200 255 252, or office landline plus 91 44 2843 1043.')
+        break
+      }
+      case 'emailaddress': {
+        setFeedback('info@ghlindiaventures.com')
+        speak('info at ghlindiaventures dot com')
+        break
+      }
+      case 'issafe': {
+        const safeMsg = 'GHL India Ventures is SEBI registered under Category 2 AIF with registration IN/AIF2/2425/1517. All investments are SEBI regulated. However, all investments carry market risk. Please read the PPM carefully.'
+        setFeedback(safeMsg)
+        speak(safeMsg)
+        break
+      }
+      case 'howto': {
+        const howMsg = 'Register on our website, choose your investment tier, and our team will guide you. Visit the sign up page to get started, or call us directly.'
+        setFeedback(howMsg)
+        speak(howMsg)
+        setTimeout(() => router.push('/register/'), 2000)
+        break
+      }
+      case 'whatreturns': {
+        const retMsg = 'Returns depend on the specific investment tier and route you choose. GHL does not guarantee fixed returns as per SEBI regulations. Visit the Fund page for details or speak with our advisor.'
+        setFeedback(retMsg)
+        speak(retMsg)
+        break
+      }
+      case 'minimuminvest': {
+        const minMsg = 'The minimum investment for the Direct AIF Route is 1 Crore as mandated by SEBI. For the Debenture Route, minimum investment starts at 10 Lakhs.'
+        setFeedback(minMsg)
+        speak(minMsg)
+        break
+      }
+
       case 'help': {
-        const helpText = 'Commands: "Go to [page]", "Scroll up/down/left/right/top/bottom", "Move up/down", "Next/Previous section", "Scroll fast/slow", "Read page", "Stop", "Direct Call", "Call", "Email", "WhatsApp", "Telegram", "Video call", "Open chat", "Live chat", "Download app", "Calling solutions", "Dark/Light mode", "Zoom in/out/reset", "Font bigger/smaller/reset", "High contrast", "Highlight links", "Focus main", "Bookmark", "Calculator", "Weather", "Switch to [language]", "Search [query]", "What time", "What date", "SEBI", "Address", "Office hours", "Share", "Print", "Fullscreen", "Refresh", "Go back", "Go forward", "Home", "Select all", "Clear", "Close".'
+        const helpText = 'Commands: "Go to [page]", "Scroll up/down/top/bottom" (or Hindi: "upar/neeche"), "Next/Previous section", "Read page", "Stop/Pause/Resume", "Direct Call", "Call", "Email", "WhatsApp", "Telegram", "Video call", "Open chat", "Live chat", "Dark/Light/Toggle theme", "Zoom in/out/reset", "Font bigger/smaller/reset", "High contrast", "Highlight links", "Focus main", "Bookmark", "Calculator", "SIP/CAGR/XIRR/IRR calculator", "Live markets", "Tax tools", "Forex tools", "Name/Email/Phone/Message field", "Next/Previous field", "Submit/Clear form", "Type [text]", "Click [button]", "Set [field] to [value]", "Switch to [language]", "Search [query]", "Hello/Namaste/Vanakkam", "How to invest", "Minimum investment", "Is it safe", "What returns", "SEBI number", "Address", "Office hours", "Phone number", "Email address", "Share", "Print", "Fullscreen", "Refresh", "Close".'
         setFeedback(helpText)
         speak(helpText)
         break

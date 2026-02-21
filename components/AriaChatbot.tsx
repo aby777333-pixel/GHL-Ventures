@@ -73,20 +73,26 @@ function getResponse(input: string): string {
     return "I\u2019m sorry to hear that. Our team takes concerns very seriously.\n\n+91 44 2843 1043 | +91 7200 255 252\ninfo@ghlindiaventures.com\n2D, Queens Court, Egmore, Chennai \u2013 600 008\n\nAs a SEBI-registered entity, you can also escalate to **SEBI SCORES** at scores.gov.in.\n\nI hope we can resolve this quickly."
   }
 
-  // Video call — trigger the floating video widget
+  // Video call — handled by component (dispatches event + minimizes ARIA so widget is visible)
   if (lower.includes('video call') || lower.includes('video chat') || lower.includes('start video') || lower.includes('video meeting') || lower.includes('video consultation')) {
-    // Dispatch event to open the floating VideoCallWidget
+    return "Opening the **Video Call** widget for you! You can connect with our Sales & Support team directly from your browser.\n\nJust fill in your details and our team will be with you shortly.\n\n*ARIA will minimize so the Video Call panel is fully visible.*"
+  }
+
+  // Web call / browser call / click to call
+  if (lower.includes('web call') || lower.includes('browser call') || lower.includes('click to call') || lower.includes('webrtc') || lower.includes('call from browser') || lower.includes('online call')) {
     if (typeof window !== 'undefined') {
       setTimeout(() => {
-        window.dispatchEvent(new CustomEvent('ghl-open-video-call'))
-      }, 500)
+        window.dispatchEvent(new CustomEvent('ghl-show-solutions'))
+        const dcBtn = document.querySelector('[aria-label="Open Direct Call"]') as HTMLElement
+        if (dcBtn) dcBtn.click()
+      }, 600)
     }
-    return "Opening the **Video Call** widget for you! You can connect with our Sales & Support team directly from your browser.\n\nJust fill in your details and our team will be with you shortly.\n\n*The video call widget should now be open below.*"
+    return "Opening our **Web Calling Solutions** panel for you!\n\nYou can make calls directly from your browser using:\n\n**JustCall** — Cloud phone with WebRTC, 100+ integrations\n**Aircall** — Cloud-based VoIP with real-time analytics\n**Toky** — Click-to-call widget with SMS & CRM integration\n**Telnyx** — Developer-friendly SIP/WebRTC APIs\n**Vonage** — Programmable voice with global coverage\n**Exotel** — India-focused cloud telephony\n\n*The calling solutions panel should now be open.*"
   }
 
   // Live chat widgets / free chat solutions
   if (lower.includes('live chat') || lower.includes('chat widget') || lower.includes('free chat') || lower.includes('live support') || lower.includes('chat solution') || lower.includes('customer chat') || lower.includes('chat tool')) {
-    return "Here are the **best free live chat widgets** you can integrate:\n\n**Tawk.to** — 100% free, unlimited agents, customizable widget. The most popular free live chat.\n**Crisp** — Free plan for 2 agents, built-in chatbot, knowledge base & shared inbox.\n**Tidio** — Free for 50 conversations/month, AI chatbot, Shopify/WordPress integration.\n**HubSpot Free Chat** — Free forever live chat with CRM integration and chatbot builder.\n**Smartsupp** — Free plan with video recordings and 3 agent seats.\n**Chatwoot** — Open-source, self-hosted option with unlimited agents and channels.\n\nAll of these offer embeddable widgets similar to this ARIA chat. Would you like details on any specific one?"
+    return "Here are the **best free live chat widgets** you can embed:\n\n**Tawk.to** — 100% free, unlimited agents & chats. Just add one script tag to go live instantly.\n**Crisp** — Free for 2 agents, built-in chatbot, shared inbox. Embed with a single JS snippet.\n**Tidio** — Free for 50 chats/month, AI chatbot (Lyro). One-click install for any site.\n**HubSpot Free Chat** — Free live chat with full CRM. Embed via HubSpot tracking code.\n**Smartsupp** — Free plan with video recordings, 3 agents. Simple embed code.\n**Chatwoot** — Open-source, self-hosted. Unlimited agents, full API access.\n\nAll embed with a single JavaScript snippet \u2014 no backend needed.\n\nSay **\"Tawk\"**, **\"Crisp\"**, or **\"Tidio\"** for setup details, or say **\"Web Call\"** for browser-based calling."
   }
 
   // Tawk.to specific
@@ -183,6 +189,7 @@ export default function AriaChatbot() {
     'Tell me about GHL',
     'Start a Video Call',
     'Live Chat Widgets',
+    'Web Call',
     'Talk to a human',
   ]
 
@@ -245,10 +252,22 @@ export default function AriaChatbot() {
     setInput('')
     setIsTyping(true)
 
+    // Detect video call intent
+    const lower = content.toLowerCase()
+    const isVideoCall = lower.includes('video call') || lower.includes('video chat') || lower.includes('start video') || lower.includes('video meeting') || lower.includes('video consultation')
+
     setTimeout(() => {
       const botMsg: Message = { id: uid(), role: 'bot', text: getResponse(content) }
       setMessages(prev => [...prev, botMsg])
       setIsTyping(false)
+
+      // If video call requested → minimize ARIA, then open video widget
+      if (isVideoCall && typeof window !== 'undefined') {
+        setTimeout(() => {
+          setIsOpen(false) // Minimize ARIA (z-9999) so VideoCallWidget (z-9997) is visible
+          window.dispatchEvent(new CustomEvent('ghl-open-video-call'))
+        }, 1200)
+      }
     }, 800 + Math.random() * 700)
   }, [input])
 
@@ -300,28 +319,34 @@ export default function AriaChatbot() {
           </div>
         )}
 
-        {/* Label showing 3 modes inside */}
+        {/* Label: "ARIA – GHL Help" beside the widget */}
         {!isOpen && (
           <div
-            className="absolute -top-8 right-0 whitespace-nowrap animate-fade-in"
-            style={{ pointerEvents: 'none' }}
+            className="absolute top-1/2 -translate-y-1/2 animate-fade-in"
+            style={{ right: '82px', pointerEvents: 'none' }}
           >
             <div
-              className="flex items-center gap-1 px-2.5 py-1 rounded-full text-[9px] font-medium"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-medium whitespace-nowrap"
               style={{
-                background: 'rgba(10,10,10,0.88)',
-                backdropFilter: 'blur(12px)',
-                border: '1px solid rgba(208,2,27,0.2)',
+                background: 'rgba(10,10,10,0.9)',
+                backdropFilter: 'blur(14px)',
+                border: '1px solid rgba(208,2,27,0.25)',
+                boxShadow: '0 4px 16px rgba(0,0,0,0.4)',
               }}
             >
-              <span className="text-brand-red font-bold">ARIA</span>
-              <span className="text-gray-500">|</span>
-              <span className="text-gray-400">Chat</span>
-              <span className="text-gray-600">&middot;</span>
-              <span className="text-gray-400">Video</span>
-              <span className="text-gray-600">&middot;</span>
-              <span className="text-gray-400">Live Chat</span>
+              <span className="text-brand-red font-bold text-[11px]">ARIA</span>
+              <span className="text-gray-500">&ndash;</span>
+              <span className="text-gray-300 font-semibold">GHL Help</span>
             </div>
+            {/* Arrow pointing right to the avatar */}
+            <div
+              className="absolute top-1/2 -translate-y-1/2 -right-1.5 w-3 h-3 rotate-45"
+              style={{
+                background: 'rgba(10,10,10,0.9)',
+                borderRight: '1px solid rgba(208,2,27,0.25)',
+                borderTop: '1px solid rgba(208,2,27,0.25)',
+              }}
+            />
           </div>
         )}
 
