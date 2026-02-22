@@ -7,6 +7,9 @@ import AdminTopBar from './AdminTopBar'
 import AdminToast from './shared/AdminToast'
 import AdminGlass from './shared/AdminGlass'
 import OverviewModule from './modules/OverviewModule'
+import ClientModule from './modules/ClientModule'
+import SalesModule from './modules/SalesModule'
+import FinancialModule from './modules/FinancialModule'
 import { useAdminAuth, useAdminToast } from '@/lib/admin/adminHooks'
 import { getAdminSession } from '@/lib/admin/adminAuth'
 import type { AdminModule } from '@/lib/admin/adminTypes'
@@ -54,7 +57,7 @@ function ModulePlaceholder({ moduleId, subTab, navigate, showToast }: {
         <h1 className="text-2xl font-bold text-white">{label}</h1>
         <p className="text-sm text-gray-500 mt-1">
           {subTab ? `${subTab.charAt(0).toUpperCase() + subTab.slice(1).replace(/-/g, ' ')} — ` : ''}
-          Module coming in Phase {moduleId === 'clients' || moduleId === 'sales' || moduleId === 'financial' ? '2' : moduleId === 'employees' || moduleId === 'compliance' || moduleId === 'assets' ? '3' : moduleId === 'ai-ops' || moduleId === 'analytics' || moduleId === 'comms' ? '4' : '5'}
+          Module coming in Phase {moduleId === 'employees' || moduleId === 'compliance' || moduleId === 'assets' ? '3' : moduleId === 'ai-ops' || moduleId === 'analytics' || moduleId === 'comms' ? '4' : '5'}
         </p>
       </div>
 
@@ -171,7 +174,13 @@ export default function AdminClient() {
     switch (activeModule) {
       case 'overview':
         return <OverviewModule navigate={navigate} showToast={showToast} />
-      // Phase 2-5 modules — show placeholder for now
+      case 'clients':
+        return <ClientModule subTab={activeSubTab} navigate={navigate} showToast={showToast} />
+      case 'sales':
+        return <SalesModule subTab={activeSubTab} navigate={navigate} showToast={showToast} />
+      case 'financial':
+        return <FinancialModule subTab={activeSubTab} navigate={navigate} showToast={showToast} />
+      // Phase 3-5 modules — show placeholder for now
       default:
         return (
           <ModulePlaceholder

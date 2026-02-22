@@ -1,0 +1,539 @@
+'use client'
+
+import { useState, useMemo } from 'react'
+import {
+  Users, UserPlus, Eye, Phone, Mail, Calendar, IndianRupee,
+  ShieldCheck, AlertTriangle, FileText, Filter, CheckCircle2,
+  XCircle, Clock, MoreHorizontal, ArrowUpRight, ChevronRight,
+  Search, UserCircle, FileSearch, PieChart, Activity, Building2,
+} from 'lucide-react'
+import AdminGlass from '../shared/AdminGlass'
+import AdminDataTable, { type Column } from '../shared/AdminDataTable'
+import AdminBadge, { getKYCBadgeVariant, getAccountBadgeVariant } from '../shared/AdminBadge'
+import AdminModal, { ModalButton } from '../shared/AdminModal'
+import AdminEmptyState from '../shared/AdminEmptyState'
+import AdminKPICard from '../shared/AdminKPICard'
+import { CLIENTS_DATA, KYC_DOCUMENTS } from '@/lib/admin/adminMockData'
+import { formatINR, formatDate } from '@/lib/admin/adminHooks'
+import type { Client, KYCDocument, KYCStatus } from '@/lib/admin/adminTypes'
+
+// ── Sub-tabs ─────────────────────────────────────────────────────
+const CLIENT_TABS = [
+  { id: 'list', label: 'Client List', icon: Users },
+  { id: 'kyc-queue', label: 'KYC Queue', icon: ShieldCheck },
+  { id: 'analytics', label: 'Client Analytics', icon: PieChart },
+] as const
+
+type ClientTab = typeof CLIENT_TABS[number]['id']
+
+interface ClientModuleProps {
+  subTab: string | null
+  navigate: (path: string) => void
+  showToast: (msg: string, type?: 'success' | 'error' | 'info' | 'warning') => void
+}
+
+export default function ClientModule({ subTab, navigate, showToast }: ClientModuleProps) {
+  const activeTab = (CLIENT_TABS.some(t => t.id === subTab) ? subTab : 'list') as ClientTab
+  const [selectedClient, setSelectedClient] = useState<Client | null>(null)
+  const [profileModalOpen, setProfileModalOpen] = useState(false)
+  const [kycFilter, setKycFilter] = useState<KYCStatus | 'all'>('all')
+
+  // ── KPIs ──────────────────────────────────────────────────────
+  const kpis = useMemo(() => {
+    const active = CLIENTS_DATA.filter(c => c.accountStatus === 'active').length
+    const totalAUM = CLIENTS_DATA.reduce((s, c) => s + c.aum, 0)
+    const pendingKYC = KYC_DOCUMENTS.filter(d => d.status === 'pending' || d.status === 'under-review').length
+    const avgAUM = active > 0 ? totalAUM / active : 0
+    return { total: CLIENTS_DATA.length, active, totalAUM, pendingKYC, avgAUM }
+  }, [])
+
+  // ── Tab Navigation ────────────────────────────────────────────
+  const handleTabClick = (tabId: string) => {
+    navigate(tabId === 'list' ? 'clients' : `clients/${tabId}`)
+  }
+
+  return (
+    <div className="space-y-6 admin-section-enter">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-bold text-white">Client Management</h1>
+          <p className="text-sm text-gray-500 mt-1">Manage investors, KYC verification, and client relationships</p>
+        </div>
+        <button
+          onClick={() => showToast('New client form coming soon', 'info')}
+          className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium text-white bg-brand-red/20 border border-brand-red/30 hover:bg-brand-red/30 transition-colors self-start admin-btn-press"
+        >
+          <UserPlus className="w-4 h-4" />
+          Add Client
+        </button>
+      </div>
+
+      {/* KPI Row */}
+      <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
+        <AdminKPICard title="Total Clients" value={kpis.total} icon={Users} color="#3B82F6" delay={0} />
+        <AdminKPICard title="Active Clients" value={kpis.active} icon={CheckCircle2} color="#10B981" delay={50} />
+        <AdminKPICard title="Total AUM" value={formatINR(kpis.totalAUM)} icon={IndianRupee} color="#DC2626" delay={100} />
+        <AdminKPICard title="Avg AUM / Client" value={formatINR(kpis.avgAUM)} icon={ArrowUpRight} color="#8B5CF6" delay={150} />
+        <AdminKPICard title="Pending KYC" value={kpis.pendingKYC} icon={AlertTriangle} color="#F59E0B" delay={200} />
+      </div>
+
+      {/* Sub-tab Navigation */}
+      <div className="flex gap-1 p-1 bg-white/[0.03] rounded-xl border border-white/[0.06] w-fit">
+        {CLIENT_TABS.map(tab => {
+          const Icon = tab.icon
+          const isActive = activeTab === tab.id
+          return (
+            <button
+              key={tab.id}
+              onClick={() => handleTabClick(tab.id)}
+              className={`flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-xs font-medium transition-all duration-300 ${
+                isActive
+                  ? 'bg-brand-red/20 text-white border border-brand-red/30'
+                  : 'text-gray-500 hover:text-gray-300 hover:bg-white/[0.04]'
+              }`}
+            >
+              <Icon className="w-3.5 h-3.5" />
+              {tab.label}
+            </button>
+          )
+        })}
+      </div>
+
+      {/* Tab Content */}
+      <div className="admin-tab-switch">
+        {activeTab === 'list' && (
+          <ClientListTab
+            onViewClient={(c) => { setSelectedClient(c); setProfileModalOpen(true) }}
+            showToast={showToast}
+          />
+        )}
+        {activeTab === 'kyc-queue' && (
+          <KYCQueueTab
+            filter={kycFilter}
+            setFilter={setKycFilter}
+            showToast={showToast}
+          />
+        )}
+        {activeTab === 'analytics' && <ClientAnalyticsTab />}
+      </div>
+
+      {/* Client Profile Modal */}
+      {selectedClient && (
+        <AdminModal
+          isOpen={profileModalOpen}
+          onClose={() => { setProfileModalOpen(false); setSelectedClient(null) }}
+          title={selectedClient.name}
+          subtitle={`${selectedClient.id} • Joined ${formatDate(selectedClient.joinDate)}`}
+          maxWidth="max-w-3xl"
+          footer={
+            <>
+              <ModalButton onClick={() => { setProfileModalOpen(false); setSelectedClient(null) }}>Close</ModalButton>
+              <ModalButton variant="primary" onClick={() => showToast('Edit mode coming soon', 'info')}>Edit Client</ModalButton>
+            </>
+          }
+        >
+          <ClientProfileContent client={selectedClient} />
+        </AdminModal>
+      )}
+    </div>
+  )
+}
+
+// ── Client List Tab ─────────────────────────────────────────────
+function ClientListTab({
+  onViewClient,
+  showToast,
+}: {
+  onViewClient: (c: Client) => void
+  showToast: (msg: string, type?: 'success' | 'error' | 'info' | 'warning') => void
+}) {
+  const columns: Column<Client>[] = [
+    {
+      key: 'name',
+      label: 'Client',
+      render: (row) => (
+        <div className="flex items-center gap-3">
+          <div className="w-8 h-8 rounded-full bg-gradient-to-br from-brand-red/30 to-purple-500/30 flex items-center justify-center text-xs font-bold text-white">
+            {row.name.split(' ').map(n => n[0]).join('')}
+          </div>
+          <div>
+            <p className="text-sm font-medium text-white">{row.name}</p>
+            <p className="text-[11px] text-gray-500">{row.id}</p>
+          </div>
+        </div>
+      ),
+    },
+    {
+      key: 'kycStatus',
+      label: 'KYC',
+      render: (row) => <AdminBadge label={row.kycStatus.replace('-', ' ')} variant={getKYCBadgeVariant(row.kycStatus)} dot />,
+    },
+    {
+      key: 'accountStatus',
+      label: 'Account',
+      render: (row) => <AdminBadge label={row.accountStatus} variant={getAccountBadgeVariant(row.accountStatus)} />,
+    },
+    {
+      key: 'aum',
+      label: 'AUM',
+      render: (row) => <span className="text-white font-medium">{formatINR(row.aum)}</span>,
+    },
+    {
+      key: 'riskProfile',
+      label: 'Risk Profile',
+      render: (row) => (
+        <span className={`text-xs font-medium capitalize ${
+          row.riskProfile === 'conservative' ? 'text-emerald-400' :
+          row.riskProfile === 'moderate' ? 'text-blue-400' :
+          row.riskProfile === 'aggressive' ? 'text-amber-400' : 'text-red-400'
+        }`}>
+          {row.riskProfile}
+        </span>
+      ),
+    },
+    {
+      key: 'assignedRM',
+      label: 'Relationship Manager',
+      render: (row) => <span className="text-xs text-gray-400">{row.assignedRM}</span>,
+    },
+    {
+      key: 'actions',
+      label: '',
+      sortable: false,
+      width: '60px',
+      render: (row) => (
+        <button
+          onClick={(e) => { e.stopPropagation(); onViewClient(row) }}
+          className="p-1.5 rounded-lg hover:bg-white/[0.06] text-gray-500 hover:text-white transition-colors"
+        >
+          <Eye className="w-4 h-4" />
+        </button>
+      ),
+    },
+  ]
+
+  return (
+    <AdminGlass padding="p-4">
+      <AdminDataTable<Client>
+        columns={columns}
+        data={CLIENTS_DATA}
+        searchKeys={['name', 'email', 'id', 'pan', 'assignedRM']}
+        searchPlaceholder="Search clients by name, ID, PAN..."
+        onRowClick={onViewClient}
+        exportable
+        title="All Clients"
+        emptyMessage="No clients found"
+      />
+    </AdminGlass>
+  )
+}
+
+// ── KYC Queue Tab ───────────────────────────────────────────────
+function KYCQueueTab({
+  filter,
+  setFilter,
+  showToast,
+}: {
+  filter: KYCStatus | 'all'
+  setFilter: (f: KYCStatus | 'all') => void
+  showToast: (msg: string, type?: 'success' | 'error' | 'info' | 'warning') => void
+}) {
+  const filteredDocs = useMemo(() => {
+    if (filter === 'all') return KYC_DOCUMENTS
+    return KYC_DOCUMENTS.filter(d => d.status === filter)
+  }, [filter])
+
+  const statusCounts = useMemo(() => {
+    const counts: Record<string, number> = { all: KYC_DOCUMENTS.length }
+    KYC_DOCUMENTS.forEach(d => { counts[d.status] = (counts[d.status] || 0) + 1 })
+    return counts
+  }, [])
+
+  const columns: Column<KYCDocument>[] = [
+    {
+      key: 'clientName',
+      label: 'Client',
+      render: (row) => (
+        <div>
+          <p className="text-sm font-medium text-white">{row.clientName}</p>
+          <p className="text-[11px] text-gray-500">{row.clientId}</p>
+        </div>
+      ),
+    },
+    { key: 'type', label: 'Document Type' },
+    { key: 'fileName', label: 'File', render: (row) => (
+      <span className="flex items-center gap-1.5 text-xs text-gray-400">
+        <FileText className="w-3.5 h-3.5" />{row.fileName}
+      </span>
+    )},
+    {
+      key: 'uploadDate',
+      label: 'Uploaded',
+      render: (row) => <span className="text-xs text-gray-400">{formatDate(row.uploadDate)}</span>,
+    },
+    {
+      key: 'status',
+      label: 'Status',
+      render: (row) => <AdminBadge label={row.status.replace('-', ' ')} variant={getKYCBadgeVariant(row.status)} dot />,
+    },
+    {
+      key: 'reviewer',
+      label: 'Reviewer',
+      render: (row) => <span className="text-xs text-gray-400">{row.reviewer || '—'}</span>,
+    },
+    {
+      key: 'actions',
+      label: 'Actions',
+      sortable: false,
+      width: '120px',
+      render: (row) => (
+        <div className="flex items-center gap-1">
+          {(row.status === 'pending' || row.status === 'under-review') && (
+            <>
+              <button
+                onClick={(e) => { e.stopPropagation(); showToast(`KYC ${row.id} approved`, 'success') }}
+                className="p-1.5 rounded-lg hover:bg-emerald-500/10 text-gray-500 hover:text-emerald-400 transition-colors"
+                title="Approve"
+              >
+                <CheckCircle2 className="w-4 h-4" />
+              </button>
+              <button
+                onClick={(e) => { e.stopPropagation(); showToast(`KYC ${row.id} rejected`, 'error') }}
+                className="p-1.5 rounded-lg hover:bg-red-500/10 text-gray-500 hover:text-red-400 transition-colors"
+                title="Reject"
+              >
+                <XCircle className="w-4 h-4" />
+              </button>
+            </>
+          )}
+          <button
+            onClick={(e) => { e.stopPropagation(); showToast('Document preview coming soon', 'info') }}
+            className="p-1.5 rounded-lg hover:bg-white/[0.06] text-gray-500 hover:text-white transition-colors"
+            title="View"
+          >
+            <Eye className="w-4 h-4" />
+          </button>
+        </div>
+      ),
+    },
+  ]
+
+  const filters: { id: KYCStatus | 'all'; label: string }[] = [
+    { id: 'all', label: `All (${statusCounts.all || 0})` },
+    { id: 'pending', label: `Pending (${statusCounts.pending || 0})` },
+    { id: 'under-review', label: `Review (${statusCounts['under-review'] || 0})` },
+    { id: 'approved', label: `Approved (${statusCounts.approved || 0})` },
+    { id: 'rejected', label: `Rejected (${statusCounts.rejected || 0})` },
+  ]
+
+  return (
+    <div className="space-y-4">
+      {/* Filters */}
+      <div className="flex flex-wrap gap-2">
+        {filters.map(f => (
+          <button
+            key={f.id}
+            onClick={() => setFilter(f.id)}
+            className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors ${
+              filter === f.id
+                ? 'bg-brand-red/20 text-white border-brand-red/30'
+                : 'bg-white/[0.03] text-gray-500 border-white/[0.06] hover:bg-white/[0.06] hover:text-gray-300'
+            }`}
+          >
+            {f.label}
+          </button>
+        ))}
+      </div>
+
+      <AdminGlass padding="p-4">
+        <AdminDataTable<KYCDocument>
+          columns={columns}
+          data={filteredDocs}
+          searchKeys={['clientName', 'type', 'fileName']}
+          searchPlaceholder="Search KYC documents..."
+          emptyMessage="No KYC documents match the selected filter"
+        />
+      </AdminGlass>
+    </div>
+  )
+}
+
+// ── Client Analytics Tab ────────────────────────────────────────
+function ClientAnalyticsTab() {
+  const riskBreakdown = useMemo(() => {
+    const counts: Record<string, number> = {}
+    CLIENTS_DATA.forEach(c => { counts[c.riskProfile] = (counts[c.riskProfile] || 0) + 1 })
+    return counts
+  }, [])
+
+  const statusBreakdown = useMemo(() => {
+    const counts: Record<string, number> = {}
+    CLIENTS_DATA.forEach(c => { counts[c.accountStatus] = (counts[c.accountStatus] || 0) + 1 })
+    return counts
+  }, [])
+
+  const topClients = useMemo(() =>
+    [...CLIENTS_DATA].sort((a, b) => b.aum - a.aum).slice(0, 5),
+  [])
+
+  return (
+    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+      {/* Risk Profile Distribution */}
+      <AdminGlass>
+        <h3 className="text-sm font-semibold text-white mb-4 flex items-center gap-2">
+          <Activity className="w-4 h-4 text-brand-red" />
+          Risk Profile Distribution
+        </h3>
+        <div className="space-y-3">
+          {Object.entries(riskBreakdown).map(([profile, count]) => {
+            const pct = Math.round((count / CLIENTS_DATA.length) * 100)
+            const color = profile === 'conservative' ? '#10B981' : profile === 'moderate' ? '#3B82F6' : profile === 'aggressive' ? '#F59E0B' : '#EF4444'
+            return (
+              <div key={profile}>
+                <div className="flex items-center justify-between text-xs mb-1">
+                  <span className="text-gray-400 capitalize">{profile}</span>
+                  <span className="text-white font-medium">{count} ({pct}%)</span>
+                </div>
+                <div className="h-2 bg-white/[0.04] rounded-full overflow-hidden">
+                  <div className="h-full rounded-full transition-all duration-1000" style={{ width: `${pct}%`, backgroundColor: color }} />
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      </AdminGlass>
+
+      {/* Account Status */}
+      <AdminGlass>
+        <h3 className="text-sm font-semibold text-white mb-4 flex items-center gap-2">
+          <UserCircle className="w-4 h-4 text-brand-red" />
+          Account Status
+        </h3>
+        <div className="grid grid-cols-2 gap-3">
+          {Object.entries(statusBreakdown).map(([status, count]) => (
+            <div key={status} className="p-3 rounded-xl bg-white/[0.03] border border-white/[0.04]">
+              <AdminBadge label={status} variant={getAccountBadgeVariant(status)} />
+              <p className="text-xl font-bold text-white mt-2">{count}</p>
+              <p className="text-[11px] text-gray-500">{Math.round((count / CLIENTS_DATA.length) * 100)}% of total</p>
+            </div>
+          ))}
+        </div>
+      </AdminGlass>
+
+      {/* Top Clients by AUM */}
+      <AdminGlass className="lg:col-span-2">
+        <h3 className="text-sm font-semibold text-white mb-4 flex items-center gap-2">
+          <IndianRupee className="w-4 h-4 text-brand-red" />
+          Top Clients by AUM
+        </h3>
+        <div className="space-y-2">
+          {topClients.map((c, i) => {
+            const maxAUM = topClients[0]?.aum || 1
+            const pct = Math.round((c.aum / maxAUM) * 100)
+            return (
+              <div key={c.id} className="flex items-center gap-3 p-3 rounded-xl bg-white/[0.02] hover:bg-white/[0.04] transition-colors">
+                <span className="text-xs font-bold text-gray-600 w-6">#{i + 1}</span>
+                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-brand-red/30 to-purple-500/30 flex items-center justify-center text-[10px] font-bold text-white flex-shrink-0">
+                  {c.name.split(' ').map(n => n[0]).join('')}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-sm font-medium text-white truncate">{c.name}</span>
+                    <span className="text-sm font-bold text-white ml-2">{formatINR(c.aum)}</span>
+                  </div>
+                  <div className="h-1.5 bg-white/[0.04] rounded-full overflow-hidden">
+                    <div className="h-full rounded-full bg-gradient-to-r from-brand-red to-red-400" style={{ width: `${pct}%` }} />
+                  </div>
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      </AdminGlass>
+    </div>
+  )
+}
+
+// ── Client Profile Modal Content ────────────────────────────────
+function ClientProfileContent({ client }: { client: Client }) {
+  const returns = client.investedAmount > 0
+    ? ((client.currentValue - client.investedAmount) / client.investedAmount * 100).toFixed(1)
+    : '0'
+
+  return (
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex items-center gap-4">
+        <div className="w-14 h-14 rounded-full bg-gradient-to-br from-brand-red/40 to-purple-500/40 flex items-center justify-center text-lg font-bold text-white">
+          {client.name.split(' ').map(n => n[0]).join('')}
+        </div>
+        <div className="flex-1">
+          <div className="flex items-center gap-2 flex-wrap">
+            <AdminBadge label={client.kycStatus.replace('-', ' ')} variant={getKYCBadgeVariant(client.kycStatus)} dot />
+            <AdminBadge label={client.accountStatus} variant={getAccountBadgeVariant(client.accountStatus)} />
+            <AdminBadge label={client.riskProfile} variant={
+              client.riskProfile === 'conservative' ? 'success' :
+              client.riskProfile === 'moderate' ? 'info' :
+              client.riskProfile === 'aggressive' ? 'warning' : 'error'
+            } />
+          </div>
+        </div>
+      </div>
+
+      {/* Contact Info */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <div className="flex items-center gap-2 p-3 rounded-xl bg-white/[0.03] border border-white/[0.04]">
+          <Mail className="w-4 h-4 text-gray-500" />
+          <span className="text-xs text-gray-300 truncate">{client.email}</span>
+        </div>
+        <div className="flex items-center gap-2 p-3 rounded-xl bg-white/[0.03] border border-white/[0.04]">
+          <Phone className="w-4 h-4 text-gray-500" />
+          <span className="text-xs text-gray-300">{client.phone}</span>
+        </div>
+        <div className="flex items-center gap-2 p-3 rounded-xl bg-white/[0.03] border border-white/[0.04]">
+          <FileText className="w-4 h-4 text-gray-500" />
+          <span className="text-xs text-gray-300">PAN: {client.pan}</span>
+        </div>
+      </div>
+
+      {/* Financial Summary */}
+      <div>
+        <h4 className="text-xs text-gray-500 uppercase tracking-wider font-medium mb-3">Financial Summary</h4>
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          {[
+            { label: 'Total AUM', value: formatINR(client.aum), color: 'text-white' },
+            { label: 'Invested', value: formatINR(client.investedAmount), color: 'text-gray-300' },
+            { label: 'Current Value', value: formatINR(client.currentValue), color: 'text-white' },
+            { label: 'Returns', value: `${Number(returns) >= 0 ? '+' : ''}${returns}%`, color: Number(returns) >= 0 ? 'text-emerald-400' : 'text-red-400' },
+          ].map(item => (
+            <div key={item.label} className="p-3 rounded-xl bg-white/[0.03] border border-white/[0.04]">
+              <p className="text-[11px] text-gray-500 uppercase tracking-wider">{item.label}</p>
+              <p className={`text-lg font-bold mt-1 ${item.color}`}>{item.value}</p>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Details */}
+      <div className="grid grid-cols-2 gap-4 text-xs">
+        <div>
+          <span className="text-gray-500">Relationship Manager</span>
+          <p className="text-gray-300 mt-0.5">{client.assignedRM}</p>
+        </div>
+        <div>
+          <span className="text-gray-500">Joined</span>
+          <p className="text-gray-300 mt-0.5">{formatDate(client.joinDate)}</p>
+        </div>
+        <div>
+          <span className="text-gray-500">Last Active</span>
+          <p className="text-gray-300 mt-0.5">{formatDate(client.lastActive)}</p>
+        </div>
+        <div>
+          <span className="text-gray-500">Risk Profile</span>
+          <p className="text-gray-300 mt-0.5 capitalize">{client.riskProfile}</p>
+        </div>
+      </div>
+    </div>
+  )
+}
