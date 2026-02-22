@@ -2347,14 +2347,12 @@ body.dashboard-active #ghl-direct-widget [class*="fixed"] {
   visibility: visible !important;
   pointer-events: auto !important;
 }
-/* On mobile: push Direct Call widget above the bottom nav bar */
-@media (max-width: 1023px) {
-  body.dashboard-active #ghl-direct-widget .fixed {
-    bottom: 68px !important;
-    left: auto !important;
-    right: 16px !important;
-    transform: none !important;
-  }
+/* Push Direct Call widget above the bottom nav bar on all screens */
+body.dashboard-active #ghl-direct-widget .fixed {
+  bottom: 68px !important;
+  left: auto !important;
+  right: 16px !important;
+  transform: none !important;
 }
 
 /* Hide site Navbar, Footer, skip-link in dashboard mode */

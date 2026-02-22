@@ -367,8 +367,8 @@ export default function DashboardClient() {
   // ═══════════════════════════════════════════════════════════
   const renderSidebar = () => (
     <>
-      {sidebarOpen && <div className="fixed inset-0 bg-black/60 z-40 lg:hidden backdrop-blur-sm" onClick={() => setSidebarOpen(false)} />}
-      <aside className={`fixed top-0 left-0 h-full z-[60] w-[260px] flex flex-col transition-transform duration-500 ease-out lg:translate-x-0 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}
+      {sidebarOpen && <div className="fixed inset-0 bg-black/60 z-[9999] lg:hidden backdrop-blur-sm" onClick={() => setSidebarOpen(false)} />}
+      <aside className={`fixed top-0 left-0 h-full z-[10000] w-[260px] flex flex-col transition-transform duration-500 ease-out lg:translate-x-0 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}
         style={{
           background: isDark ? 'linear-gradient(180deg, rgba(10,10,10,0.98) 0%, rgba(15,5,5,0.98) 100%)' : 'linear-gradient(180deg, rgba(214,211,206,0.98) 0%, rgba(210,207,202,0.98) 100%)',
           borderRight: `1px solid ${isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)'}`,
@@ -434,7 +434,7 @@ export default function DashboardClient() {
         </nav>
 
         {/* Tour + Logout — pushed above mobile bottom nav */}
-        <div className="px-3 pb-20 lg:pb-4 pt-2 space-y-1">
+        <div className="px-3 pb-28 lg:pb-4 pt-2 space-y-1">
           <button onClick={() => setTourActive(true)}
             className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-300
               text-gray-400 hover:text-purple-400 hover:bg-purple-500/[0.06]">
@@ -2361,7 +2361,6 @@ export default function DashboardClient() {
     { id: 'dashboard' as TabId, icon: Home, label: 'Home' },
     { id: 'investments' as TabId, icon: TrendingUp, label: 'Invest' },
     { id: 'portfolio' as TabId, icon: Briefcase, label: 'Portfolio' },
-    { id: 'messages' as TabId, icon: MessageSquare, label: 'Msgs' },
     { id: 'calculators' as TabId, icon: Calculator, label: 'Tools' },
     { id: 'support' as TabId, icon: HeadphonesIcon, label: 'Support' },
   ]
@@ -2382,7 +2381,7 @@ export default function DashboardClient() {
 
       <div className="lg:ml-[260px] relative z-10 min-h-screen flex flex-col">
         {renderTopBar()}
-        <div className="flex-1 p-4 lg:p-6 pb-20 lg:pb-6 overflow-auto">{renderContent()}</div>
+        <div className="flex-1 p-4 lg:p-6 pb-20 overflow-auto">{renderContent()}</div>
         <footer className="hidden sm:flex border-t px-4 lg:px-6 py-3 flex-col sm:flex-row items-center justify-between gap-2 text-[11px] border-white/[0.04] text-gray-600">
           <p>&copy; 2025 GHL India Ventures. SEBI Reg: IN/AIF2/2425/1517</p>
           <div className="flex items-center gap-3">
@@ -2394,7 +2393,7 @@ export default function DashboardClient() {
       </div>
 
       {/* Mobile Bottom Navigation Bar */}
-      <nav className="fixed bottom-0 left-0 right-0 z-[9998] lg:hidden border-t border-white/[0.06]"
+      <nav className="fixed bottom-0 left-0 right-0 z-[9998] lg:left-[260px] border-t border-white/[0.06]"
         style={{ background: 'rgba(10,10,10,0.97)', backdropFilter: 'blur(24px)', WebkitBackdropFilter: 'blur(24px)' }}>
         <div className="flex items-center justify-around px-0.5 py-1 safe-area-bottom">
           {MOBILE_NAV.map(item => {
