@@ -2330,11 +2330,31 @@ body.dashboard-active #ghl-chat-widget [class*="fixed"] {
   pointer-events: auto !important;
 }
 
-/* HIDE: Hey GHL, Direct Call, Video Call widgets in dashboard */
+/* HIDE: Hey GHL, Video Call widgets in dashboard */
 body.dashboard-active #ghl-voice-widget,
-body.dashboard-active #ghl-video-widget,
-body.dashboard-active #ghl-direct-widget {
+body.dashboard-active #ghl-video-widget {
   display: none !important;
+}
+
+/* KEEP: Direct Call widget visible in dashboard — repositioned above mobile nav */
+body.dashboard-active #ghl-direct-widget {
+  position: relative;
+  z-index: 10000;
+}
+body.dashboard-active #ghl-direct-widget .fixed,
+body.dashboard-active #ghl-direct-widget .fixed *,
+body.dashboard-active #ghl-direct-widget [class*="fixed"] {
+  visibility: visible !important;
+  pointer-events: auto !important;
+}
+/* On mobile: push Direct Call widget above the bottom nav bar */
+@media (max-width: 1023px) {
+  body.dashboard-active #ghl-direct-widget .fixed {
+    bottom: 68px !important;
+    left: auto !important;
+    right: 16px !important;
+    transform: none !important;
+  }
 }
 
 /* Hide site Navbar, Footer, skip-link in dashboard mode */
@@ -2349,14 +2369,17 @@ body.dashboard-active .dashboard-root footer { display: flex !important; }
 /* Hide other floating widgets not needed in dashboard */
 body.dashboard-active .scroll-progress-bar { display: none !important; }
 
-/* Glass hover effect */
+/* Glass hover effect — refined subtle lift */
 .dash-glass-hover {
-  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: all 0.35s cubic-bezier(0.25, 0.46, 0.45, 0.94);
 }
 .dash-glass-hover:hover {
   border-color: rgba(255, 255, 255, 0.12);
-  transform: translateY(-2px);
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3), 0 0 0 1px rgba(255, 255, 255, 0.06);
+  transform: translateY(-1px);
+  box-shadow:
+    0 4px 24px rgba(0, 0, 0, 0.25),
+    0 0 0 1px rgba(255, 255, 255, 0.06),
+    inset 0 1px 0 rgba(255, 255, 255, 0.04);
 }
 
 /* Glass glow effect */
@@ -2414,6 +2437,239 @@ body.dashboard-active .scroll-progress-bar { display: none !important; }
 @keyframes dashFadeIn {
   from { opacity: 0; transform: translateY(10px); }
   to { opacity: 1; transform: translateY(0); }
+}
+
+/* ── Dashboard Card Staggered Entrance ── */
+.dashboard-root .grid > * {
+  animation: dashCardEntrance 0.5s ease-out both;
+}
+.dashboard-root .grid > *:nth-child(1) { animation-delay: 0ms; }
+.dashboard-root .grid > *:nth-child(2) { animation-delay: 60ms; }
+.dashboard-root .grid > *:nth-child(3) { animation-delay: 120ms; }
+.dashboard-root .grid > *:nth-child(4) { animation-delay: 180ms; }
+.dashboard-root .grid > *:nth-child(5) { animation-delay: 240ms; }
+.dashboard-root .grid > *:nth-child(6) { animation-delay: 300ms; }
+.dashboard-root .grid > *:nth-child(7) { animation-delay: 360ms; }
+.dashboard-root .grid > *:nth-child(8) { animation-delay: 420ms; }
+.dashboard-root .grid > *:nth-child(9) { animation-delay: 480ms; }
+
+@keyframes dashCardEntrance {
+  from { opacity: 0; transform: translateY(16px) scale(0.98); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+/* ── Dashboard Fade-in for content sections ── */
+.dashboard-root .space-y-6 > * {
+  animation: dashSectionFade 0.6s ease-out both;
+}
+.dashboard-root .space-y-6 > *:nth-child(1) { animation-delay: 0ms; }
+.dashboard-root .space-y-6 > *:nth-child(2) { animation-delay: 80ms; }
+.dashboard-root .space-y-6 > *:nth-child(3) { animation-delay: 160ms; }
+.dashboard-root .space-y-6 > *:nth-child(4) { animation-delay: 240ms; }
+.dashboard-root .space-y-6 > *:nth-child(5) { animation-delay: 320ms; }
+.dashboard-root .space-y-6 > *:nth-child(6) { animation-delay: 400ms; }
+.dashboard-root .space-y-6 > *:nth-child(7) { animation-delay: 480ms; }
+.dashboard-root .space-y-6 > *:nth-child(8) { animation-delay: 560ms; }
+
+@keyframes dashSectionFade {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ── Dashboard Marquee (market ticker) smooth loop ── */
+.dashboard-root .animate-marquee {
+  animation: marquee 30s linear infinite;
+  will-change: transform;
+}
+.dashboard-root .animate-marquee:hover {
+  animation-play-state: paused;
+}
+
+/* ── Animated counter pulse ── */
+.dash-counter-flash {
+  animation: dashCounterFlash 2s ease-out;
+}
+@keyframes dashCounterFlash {
+  0% { color: #D0021B; text-shadow: 0 0 12px rgba(208, 2, 27, 0.3); }
+  100% { color: inherit; text-shadow: none; }
+}
+
+/* ── Shimmer loading effect for cards ── */
+.dash-shimmer {
+  background: linear-gradient(90deg, rgba(255,255,255,0.02) 25%, rgba(255,255,255,0.06) 50%, rgba(255,255,255,0.02) 75%);
+  background-size: 200% 100%;
+  animation: dashShimmer 2s ease-in-out infinite;
+}
+@keyframes dashShimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+/* ── Progress bar animation ── */
+.dash-progress-fill {
+  animation: dashProgressGrow 1.2s ease-out both;
+}
+@keyframes dashProgressGrow {
+  from { width: 0%; }
+}
+
+/* ── Notification bell ring ── */
+.dash-bell-ring {
+  animation: dashBellRing 1s ease-in-out;
+}
+@keyframes dashBellRing {
+  0%, 100% { transform: rotate(0); }
+  15% { transform: rotate(14deg); }
+  30% { transform: rotate(-12deg); }
+  45% { transform: rotate(10deg); }
+  60% { transform: rotate(-8deg); }
+  75% { transform: rotate(4deg); }
+}
+
+/* ── Tooltip fade ── */
+.dash-tooltip-enter {
+  animation: dashTooltipIn 0.2s ease-out;
+}
+@keyframes dashTooltipIn {
+  from { opacity: 0; transform: scale(0.95) translateY(4px); }
+  to   { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+/* ── Dashboard Mobile Responsiveness ── */
+@media (max-width: 1024px) {
+  .dashboard-root .lg\:ml-\[260px\] {
+    margin-left: 0 !important;
+  }
+}
+
+@media (max-width: 640px) {
+  /* Compact hero metrics on mobile */
+  .dashboard-root .grid.grid-cols-1.sm\:grid-cols-2 {
+    gap: 0.5rem;
+  }
+
+  /* Tighter padding on mobile */
+  .dashboard-root .p-5 {
+    padding: 0.875rem;
+  }
+  .dashboard-root .p-6 {
+    padding: 1rem;
+  }
+
+  /* Smaller card border radius on mobile */
+  .dashboard-root .rounded-2xl {
+    border-radius: 1rem;
+  }
+
+  /* Mobile topbar compact */
+  .dashboard-root header .text-xs {
+    font-size: 0.625rem;
+  }
+
+  /* Mobile-friendly toast positioning */
+  .dashboard-root .fixed.bottom-6.right-6 {
+    bottom: 0.75rem;
+    right: 0.75rem;
+    left: 0.75rem;
+  }
+
+  /* Stack notification dropdown wider on mobile */
+  .dashboard-root .absolute.right-0.w-80 {
+    width: calc(100vw - 2rem);
+    right: -1rem;
+  }
+}
+
+/* ── Smooth tab transitions ── */
+.dashboard-root .flex-1.overflow-auto {
+  animation: dashTabSwitch 0.35s ease-out;
+}
+@keyframes dashTabSwitch {
+  from { opacity: 0; transform: translateX(8px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+
+/* ── Mobile safe area for bottom nav ── */
+.safe-area-bottom {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+/* ── Mobile bottom nav glass effect ── */
+@media (max-width: 1023px) {
+  .dashboard-root {
+    padding-bottom: 0;
+  }
+}
+
+/* ── Subtle ambient glow on active sidebar item ── */
+.dashboard-root aside button[class*="bg-white/[0.06]"],
+.dashboard-root aside button[class*="bg-brand-red"] {
+  box-shadow: 0 0 12px rgba(208, 2, 27, 0.06);
+}
+
+/* ── Refined button press effect ── */
+.dashboard-root button:active:not(:disabled) {
+  transform: scale(0.98);
+  transition: transform 0.1s ease;
+}
+
+/* ── Subtle text selection color in dashboard ── */
+.dashboard-root ::selection {
+  background-color: rgba(208, 2, 27, 0.3);
+  color: #fff;
+}
+
+/* ── Glass card inner shine (top edge highlight) ── */
+.dash-glass-hover::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 10%;
+  right: 10%;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.06), transparent);
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* ── Refined focus ring for accessibility ── */
+.dashboard-root button:focus-visible,
+.dashboard-root a:focus-visible,
+.dashboard-root input:focus-visible,
+.dashboard-root select:focus-visible,
+.dashboard-root textarea:focus-visible {
+  outline: 2px solid rgba(208, 2, 27, 0.5);
+  outline-offset: 2px;
+  border-radius: 8px;
+}
+
+/* ── Smooth input focus glow ── */
+.dashboard-root input:focus,
+.dashboard-root select:focus,
+.dashboard-root textarea:focus {
+  border-color: rgba(208, 2, 27, 0.3) !important;
+  box-shadow: 0 0 0 3px rgba(208, 2, 27, 0.08);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+/* ── Badge pulse for unread indicators ── */
+.dashboard-root .bg-brand-red[class*="w-2"][class*="h-2"] {
+  animation: dashUnreadPulse 2.5s ease-in-out infinite;
+}
+@keyframes dashUnreadPulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+/* ── Sidebar divider subtle gradient ── */
+.dashboard-root aside .border-t {
+  border-image: linear-gradient(90deg, transparent 5%, rgba(255,255,255,0.08) 50%, transparent 95%) 1;
+}
+
+/* ── Smooth scrollbar for entire dashboard ── */
+.dashboard-root * {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255,255,255,0.08) transparent;
 }
 
 /* ══════════════════════════════════════════════════════════════

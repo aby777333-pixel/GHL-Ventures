@@ -10,7 +10,7 @@ import {
   Plus, Eye, Calendar, Clock, Star, Award, Target, PieChart as PieIcon,
   BarChart3, Wallet, IndianRupee, Percent, Building2, Rocket,
   Menu, X, ExternalLink, Copy, CheckCircle, AlertCircle, Info,
-  Upload, Camera, MessageSquare, Ticket, Phone, Video, Globe,
+  Upload, Camera, MessageSquare, Ticket, Phone, PhoneCall, Video, Globe,
   Sun, Moon, Lock, CreditCard, Users, MapPin, Landmark, FileCheck,
   Send, Paperclip, ChevronUp, HelpCircle, RefreshCw, Fingerprint,
   BookOpen, Languages, Sparkles, CircleDot, Filter, MoreHorizontal,
@@ -273,7 +273,7 @@ export default function DashboardClient() {
   }, [router])
 
   // ─── State ────────────────────────────────────────────────
-  const [theme, setTheme] = useState<Theme>('dark')
+  const theme: Theme = 'dark'  // Dark mode only
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [notifOpen, setNotifOpen] = useState(false)
   const [currentTime, setCurrentTime] = useState('')
@@ -309,8 +309,31 @@ export default function DashboardClient() {
     { id: 2, task: 'Review Q4 NAV report', due: '20 Mar 2025', urgent: false },
   ])
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const profilePhotoRef = useRef<HTMLInputElement>(null)
   const termsRef = useRef<HTMLDivElement>(null)
   const privacyRef = useRef<HTMLDivElement>(null)
+  const [profilePhoto, setProfilePhoto] = useState<string | null>(null)
+
+  // Handle profile photo upload
+  const handleProfilePhotoUpload = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    if (!file.type.startsWith('image/')) {
+      showToast('Please upload an image file (JPG, PNG, etc.)', 'info')
+      return
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      showToast('Image must be smaller than 5MB', 'info')
+      return
+    }
+    const reader = new FileReader()
+    reader.onload = (ev) => {
+      const result = ev.target?.result as string
+      setProfilePhoto(result)
+      showToast('Profile photo updated successfully!')
+    }
+    reader.readAsDataURL(file)
+  }, [showToast])
 
   const isDark = theme === 'dark'
   const t = (dark: string, light: string) => isDark ? dark : light
@@ -345,7 +368,7 @@ export default function DashboardClient() {
   const renderSidebar = () => (
     <>
       {sidebarOpen && <div className="fixed inset-0 bg-black/60 z-40 lg:hidden backdrop-blur-sm" onClick={() => setSidebarOpen(false)} />}
-      <aside className={`fixed top-0 left-0 h-full z-50 w-[260px] flex flex-col transition-transform duration-500 ease-out lg:translate-x-0 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}
+      <aside className={`fixed top-0 left-0 h-full z-[60] w-[260px] flex flex-col transition-transform duration-500 ease-out lg:translate-x-0 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}
         style={{
           background: isDark ? 'linear-gradient(180deg, rgba(10,10,10,0.98) 0%, rgba(15,5,5,0.98) 100%)' : 'linear-gradient(180deg, rgba(214,211,206,0.98) 0%, rgba(210,207,202,0.98) 100%)',
           borderRight: `1px solid ${isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)'}`,
@@ -410,23 +433,17 @@ export default function DashboardClient() {
           ))}
         </nav>
 
-        {/* Theme toggle + Logout */}
-        <div className="px-3 pb-4 pt-2 space-y-1">
-          <button onClick={() => setTheme(isDark ? 'light' : 'dark')}
-            className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-300
-              ${isDark ? 'text-gray-400 hover:text-amber-400 hover:bg-amber-500/[0.06]' : 'text-gray-500 hover:text-indigo-600 hover:bg-indigo-50'}`}>
-            {isDark ? <Sun className="w-[18px] h-[18px]" /> : <Moon className="w-[18px] h-[18px]" />}
-            {isDark ? 'Light Mode' : 'Dark Mode'}
-          </button>
+        {/* Tour + Logout — pushed above mobile bottom nav */}
+        <div className="px-3 pb-20 lg:pb-4 pt-2 space-y-1">
           <button onClick={() => setTourActive(true)}
-            className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-300
-              ${isDark ? 'text-gray-400 hover:text-purple-400 hover:bg-purple-500/[0.06]' : 'text-gray-500 hover:text-purple-600 hover:bg-purple-50'}`}>
+            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-300
+              text-gray-400 hover:text-purple-400 hover:bg-purple-500/[0.06]">
             <Sparkles className="w-[18px] h-[18px]" />
             Virtual Tour
           </button>
           <Link href="/login"
-            className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-300
-              ${isDark ? 'text-gray-500 hover:text-red-400 hover:bg-red-500/[0.06]' : 'text-gray-500 hover:text-red-600 hover:bg-red-50'}`}>
+            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-300
+              text-gray-500 hover:text-red-400 hover:bg-red-500/[0.06]">
             <LogOut className="w-[18px] h-[18px]" />
             Sign Out
           </Link>
@@ -487,22 +504,27 @@ export default function DashboardClient() {
           <div className="relative">
             <button onClick={() => setNotifOpen(!notifOpen)} className={`relative p-2 rounded-xl transition-colors ${t('text-gray-400 hover:text-white hover:bg-white/[0.04]','text-gray-700 hover:text-gray-900 hover:bg-gray-200/35')}`}>
               <Bell className="w-4 h-4" />
-              <span className="absolute -top-0.5 -right-0.5 w-4 h-4 rounded-full bg-brand-red text-[9px] font-bold text-white flex items-center justify-center">
-                {NOTIFICATIONS_DATA.filter(n => !n.read).length}
-              </span>
+              {NOTIFICATIONS_DATA.filter(n => !n.read && !notifsRead.has(n.id)).length > 0 && (
+                <span className="absolute -top-0.5 -right-0.5 w-4 h-4 rounded-full bg-brand-red text-[9px] font-bold text-white flex items-center justify-center">
+                  {NOTIFICATIONS_DATA.filter(n => !n.read && !notifsRead.has(n.id)).length}
+                </span>
+              )}
             </button>
 
             {/* Notification dropdown */}
             {notifOpen && (
-              <div className={`absolute right-0 top-12 w-80 rounded-2xl border shadow-2xl z-50 overflow-hidden
-                ${t('bg-[#111] border-white/[0.08]','bg-[#F2F0ED] border-gray-200/60')}`}>
+              <>
+              <div className="fixed inset-0 z-40" onClick={() => setNotifOpen(false)} />
+              <div className="absolute right-0 top-12 w-80 rounded-2xl border shadow-2xl z-50 overflow-hidden bg-[#111] border-white/[0.08]" style={{ animation: 'dashTooltipIn 0.2s ease-out' }}>
                 <div className={`px-4 py-3 flex items-center justify-between border-b ${t('border-white/[0.06]','border-gray-200/40')}`}>
                   <h4 className={`text-sm font-bold ${t('text-white','text-gray-900')}`}>Notifications</h4>
                   <button onClick={() => { setNotifsRead(new Set(NOTIFICATIONS_DATA.map(n => n.id))); showToast('All notifications marked as read') }} className="text-[10px] text-brand-red font-semibold">Mark all read</button>
                 </div>
                 <div className="max-h-80 overflow-y-auto">
-                  {NOTIFICATIONS_DATA.map(n => (
-                    <div key={n.id} onClick={() => setNotifsRead(prev => new Set(prev).add(n.id))} className={`px-4 py-3 flex gap-3 cursor-pointer transition-colors ${!n.read && !notifsRead.has(n.id) ? (isDark ? 'bg-white/[0.02]' : 'bg-blue-50/50') : ''} ${t('hover:bg-white/[0.04]','hover:bg-gray-200/40')}`}>
+                  {NOTIFICATIONS_DATA.map(n => {
+                    const notifTabMap: Record<string, TabId> = { report: 'kyc', opportunity: 'investments', alert: 'kyc', payment: 'transactions', milestone: 'portfolio' }
+                    return (
+                    <div key={n.id} onClick={() => { setNotifsRead(prev => new Set(prev).add(n.id)); setNotifOpen(false); setActiveTab(notifTabMap[n.type] || 'dashboard') }} className={`px-4 py-3 flex gap-3 cursor-pointer transition-colors ${!n.read && !notifsRead.has(n.id) ? 'bg-white/[0.02]' : ''} hover:bg-white/[0.04]`}>
                       <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0
                         ${n.type === 'report' ? 'bg-blue-500/15' : n.type === 'opportunity' ? 'bg-emerald-500/15' : n.type === 'alert' ? 'bg-amber-500/15' : n.type === 'payment' ? 'bg-emerald-500/15' : 'bg-purple-500/15'}`}>
                         {n.type === 'report' ? <FileText className="w-4 h-4 text-blue-400" /> :
@@ -518,24 +540,26 @@ export default function DashboardClient() {
                       </div>
                       {!n.read && !notifsRead.has(n.id) && <div className="w-2 h-2 rounded-full bg-brand-red shrink-0 mt-1.5" />}
                     </div>
-                  ))}
+                  )})}
+
                 </div>
               </div>
+              </>
             )}
           </div>
 
           {/* Time */}
           <span className={`hidden lg:block text-[11px] ml-2 ${t('text-gray-500','text-gray-600')}`}>{currentTime}</span>
 
-          {/* Theme toggle (compact) */}
-          <button onClick={() => setTheme(isDark ? 'light' : 'dark')}
-            className={`p-2 rounded-xl transition-all duration-300 ${t('text-gray-400 hover:text-amber-400 hover:bg-amber-500/[0.06]','text-gray-700 hover:text-indigo-600 hover:bg-indigo-50')}`}>
-            {isDark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
-          </button>
-
           {/* Avatar */}
           <div className={`flex items-center gap-2 ml-2 pl-3 border-l ${t('border-white/[0.06]','border-gray-200/50')}`}>
-            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-brand-red to-red-800 flex items-center justify-center text-xs font-bold text-white ring-2 ring-white/[0.08]">RK</div>
+            <button onClick={() => setActiveTab('profile')} className="relative group">
+              {profilePhoto ? (
+                <img src={profilePhoto} alt="Profile" className="w-8 h-8 rounded-full object-cover ring-2 ring-white/[0.08] group-hover:ring-brand-red/40 transition-all" />
+              ) : (
+                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-brand-red to-red-800 flex items-center justify-center text-xs font-bold text-white ring-2 ring-white/[0.08] group-hover:ring-brand-red/40 transition-all">RK</div>
+              )}
+            </button>
           </div>
         </div>
       </div>
@@ -678,7 +702,7 @@ export default function DashboardClient() {
       </div>
       <div className="space-y-3">
         {PORTFOLIO_ASSETS.map((asset, i) => (
-          <div key={i} className={`p-3 rounded-xl transition-all duration-300 group cursor-pointer ${t('bg-white/[0.02] border border-white/[0.04] hover:border-white/[0.08]','bg-gray-100/35 border border-gray-200/30 hover:border-gray-300/40')}`}>
+          <div key={i} onClick={() => setActiveTab('portfolio')} className={`p-3 rounded-xl transition-all duration-300 group cursor-pointer ${t('bg-white/[0.02] border border-white/[0.04] hover:border-white/[0.08]','bg-gray-100/35 border border-gray-200/30 hover:border-gray-300/40')}`}>
             <div className="flex items-center gap-4 mb-2">
               <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${t('bg-white/[0.04]','bg-gray-200/40')}`}>
                 {asset.type.includes('Real Estate') ? <Building2 className="w-5 h-5 text-brand-red" /> : asset.type.includes('Startup') ? <Rocket className="w-5 h-5 text-amber-400" /> : <FileText className="w-5 h-5 text-blue-400" />}
@@ -709,13 +733,15 @@ export default function DashboardClient() {
   // QUICK ACTIONS
   // ═══════════════════════════════════════════════════════════
   const renderQuickActions = () => (
-    <div className="grid grid-cols-2 lg:grid-cols-3 gap-3">
+    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
       {[
         { icon: Plus, label: 'New Investment', desc: 'Explore opportunities', color: '#D0021B', action: () => setActiveTab('investments') },
         { icon: Download, label: 'Statements', desc: 'Download reports', color: '#3B82F6', action: () => setActiveTab('kyc') },
         { icon: Ticket, label: 'Raise Ticket', desc: 'Get support', color: '#F59E0B', action: () => { setActiveTab('support'); setTicketForm(true) } },
-        { icon: Briefcase, label: 'Portfolio', desc: 'Track performance', color: '#8B5CF6', action: () => setActiveTab('portfolio') },
-        { icon: BarChart3, label: 'Calculators', desc: 'SIP, Lumpsum, IRR', color: '#10B981', action: () => setActiveTab('calculators') },
+        { icon: PhoneCall, label: 'Direct Call', desc: 'Call GHL directly', color: '#8B5CF6', action: () => { setActiveTab('support'); window.open('tel:+914428431043') } },
+        { icon: Briefcase, label: 'Portfolio', desc: 'Track performance', color: '#10B981', action: () => setActiveTab('portfolio') },
+        { icon: BarChart3, label: 'Calculators', desc: 'SIP, Lumpsum, IRR', color: '#06B6D4', action: () => setActiveTab('calculators') },
+        { icon: Gift, label: 'Refer & Earn', desc: 'Invite investors', color: '#F43F5E', action: () => setActiveTab('referrals') },
         { icon: MessageSquare, label: 'Chat with ARIA', desc: 'AI assistant', color: '#D0021B', action: () => window.dispatchEvent(new CustomEvent('ghl-open-chat')) },
       ].map((item, i) => (
         <button key={i} onClick={item.action} className="group text-left w-full">
@@ -977,7 +1003,7 @@ export default function DashboardClient() {
       </div>
       <div className="space-y-2.5">
         {ADMIN_NEWS.map(news => (
-          <div key={news.id} className={`p-3 rounded-xl cursor-pointer transition-all group ${news.pinned ? (isDark ? 'bg-brand-red/[0.06] border border-brand-red/15 hover:border-brand-red/30' : 'bg-red-50/60 border border-red-200/40 hover:border-red-300/60') : t('bg-white/[0.02] border border-white/[0.04] hover:border-white/[0.08]','bg-gray-100/50 border border-gray-200/30 hover:border-gray-300/40')}`}>
+          <div key={news.id} onClick={() => showToast(`${news.title} — Full article coming soon.`, 'info')} className={`p-3 rounded-xl cursor-pointer transition-all group ${news.pinned ? (isDark ? 'bg-brand-red/[0.06] border border-brand-red/15 hover:border-brand-red/30' : 'bg-red-50/60 border border-red-200/40 hover:border-red-300/60') : t('bg-white/[0.02] border border-white/[0.04] hover:border-white/[0.08]','bg-gray-100/50 border border-gray-200/30 hover:border-gray-300/40')}`}>
             <div className="flex items-start gap-2 mb-1">
               {news.pinned && <Flame className="w-3 h-3 text-brand-red shrink-0 mt-0.5" />}
               <div className="flex-1 min-w-0">
@@ -1139,6 +1165,82 @@ export default function DashboardClient() {
         {renderPortfolioAssets()}
         {renderRecentActivity()}
       </div>
+
+      {/* Contact GHL + Relationship Manager */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        {/* Contact GHL Card */}
+        <Glass className="p-5 relative overflow-hidden" hover glow theme={theme}>
+          <div className="absolute -right-8 -bottom-8 w-28 h-28 bg-purple-500/10 rounded-full blur-[50px]" />
+          <div className="relative">
+            <div className="flex items-center gap-2 mb-4">
+              <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-purple-500/20 to-indigo-500/20 flex items-center justify-center">
+                <PhoneCall className="w-4 h-4 text-purple-400" />
+              </div>
+              <h4 className="text-sm font-bold text-white">Contact GHL</h4>
+            </div>
+            <div className="space-y-2">
+              {[
+                { label: 'Chennai HQ', number: '+91 44 2843 1043', href: 'tel:+914428431043', icon: Building2, toast: 'Calling Chennai HQ...' },
+                { label: 'Sales & Support', number: '+91 7200 255 252', href: 'tel:+917200255252', icon: Phone, toast: 'Calling Sales & Support...' },
+                { label: 'Email', number: 'info@ghlindia.com', href: 'mailto:info@ghlindia.com', icon: Mail, toast: 'Opening email client...' },
+                { label: 'Live Chat', number: 'Chat with ARIA', href: '#', icon: MessageSquare, toast: 'Opening live chat...' },
+              ].map((line, i) => (
+                <button key={i} onClick={() => {
+                  if (line.href === '#') { window.dispatchEvent(new CustomEvent('ghl-open-chat')) }
+                  else { window.open(line.href, line.href.startsWith('mailto') ? '_blank' : '_self') }
+                  showToast(line.toast, 'info')
+                }}
+                  className="w-full flex items-center gap-3 p-2.5 rounded-xl bg-white/[0.02] border border-white/[0.04] hover:border-purple-500/20 hover:bg-purple-500/[0.04] transition-all group cursor-pointer text-left">
+                  <line.icon className="w-4 h-4 text-gray-500 group-hover:text-purple-400 transition-colors" />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-[10px] text-gray-500">{line.label}</p>
+                    <p className="text-xs font-semibold text-white">{line.number}</p>
+                  </div>
+                  <ExternalLink className="w-3 h-3 text-gray-600 group-hover:text-purple-400 transition-colors" />
+                </button>
+              ))}
+            </div>
+            <button onClick={() => setActiveTab('support')}
+              className="w-full mt-3 py-2 rounded-xl text-xs font-semibold text-purple-300 bg-purple-500/10 border border-purple-500/15 hover:bg-purple-500/20 transition-all">
+              Open Support Center &rarr;
+            </button>
+          </div>
+        </Glass>
+
+        {/* Relationship Manager Card */}
+        <Glass className="p-5" hover theme={theme}>
+          <div className="flex items-center gap-2 mb-4">
+            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-blue-500/20 to-cyan-500/20 flex items-center justify-center">
+              <Users className="w-4 h-4 text-blue-400" />
+            </div>
+            <h4 className="text-sm font-bold text-white">Your RM</h4>
+          </div>
+          <div className="flex items-center gap-4 mb-4">
+            <div className="w-14 h-14 rounded-full bg-gradient-to-br from-blue-500/30 to-cyan-500/30 flex items-center justify-center text-lg font-bold text-blue-300 ring-2 ring-blue-500/20">
+              AK
+            </div>
+            <div>
+              <p className="text-sm font-bold text-white">Arun Kumar</p>
+              <p className="text-xs text-gray-500">Senior Relationship Manager</p>
+              <p className="text-[10px] text-gray-600 mt-0.5">12+ years wealth management experience</p>
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            <button onClick={() => { setActiveTab('support'); setTimeout(() => window.dispatchEvent(new CustomEvent('ghl-open-chat')), 300) }}
+              className="flex items-center justify-center gap-2 p-2.5 rounded-xl bg-white/[0.03] border border-white/[0.06] hover:border-brand-red/20 hover:bg-brand-red/[0.04] text-xs font-medium text-gray-300 hover:text-brand-red transition-all">
+              <MessageSquare className="w-3.5 h-3.5" /> Live Chat
+            </button>
+            <button onClick={() => { window.open('tel:+917200255252'); showToast('Connecting to your RM...', 'info') }}
+              className="flex items-center justify-center gap-2 p-2.5 rounded-xl bg-white/[0.03] border border-white/[0.06] hover:border-emerald-500/20 hover:bg-emerald-500/[0.04] text-xs font-medium text-gray-300 hover:text-emerald-300 transition-all">
+              <Phone className="w-3.5 h-3.5" /> Call
+            </button>
+          </div>
+          <div className="flex items-center gap-2 mt-3 p-2 rounded-lg bg-emerald-500/[0.06] border border-emerald-500/10">
+            <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+            <span className="text-[10px] text-emerald-400 font-medium">Available now &bull; Mon-Sat 9:30 AM - 6:30 PM IST</span>
+          </div>
+        </Glass>
+      </div>
     </div>
   )
 
@@ -1277,7 +1379,7 @@ export default function DashboardClient() {
                 <p className={`text-sm font-semibold truncate ${t('text-white','text-gray-900')}`}>{doc.name}</p>
                 <p className={`text-[11px] ${t('text-gray-500','text-gray-700')}`}>{doc.type} &bull; {doc.date}</p>
               </div>
-              {doc.status === 'available' && <Download className={`w-4 h-4 shrink-0 ${t('text-gray-600','text-gray-600')} group-hover:text-brand-red transition-colors`} />}
+              {doc.status === 'available' && <button onClick={(e) => { e.stopPropagation(); showToast(`Downloading ${doc.name}...`, 'info') }}><Download className="w-4 h-4 shrink-0 text-gray-600 group-hover:text-brand-red transition-colors" /></button>}
             </div>
           ))}
         </div>
@@ -1418,7 +1520,8 @@ export default function DashboardClient() {
 
       <div className="space-y-2">
         {MESSAGES_DATA.map(msg => (
-          <Glass key={msg.id} className={`p-4 cursor-pointer ${!msg.read ? (isDark ? 'border-l-2 border-l-brand-red' : 'border-l-2 border-l-brand-red') : ''}`} hover theme={theme}>
+          <div key={msg.id} onClick={() => showToast(`Opening: "${msg.subject}" from ${msg.from}`, 'info')}>
+          <Glass className={`p-4 cursor-pointer ${!msg.read ? 'border-l-2 border-l-brand-red' : ''}`} hover theme={theme}>
             <div className="flex items-start gap-3">
               <div className="w-10 h-10 rounded-full bg-gradient-to-br from-brand-red/20 to-red-900/20 flex items-center justify-center text-xs font-bold text-brand-red shrink-0">{msg.avatar}</div>
               <div className="flex-1 min-w-0">
@@ -1432,6 +1535,7 @@ export default function DashboardClient() {
               {!msg.read && <div className="w-2 h-2 rounded-full bg-brand-red shrink-0 mt-2" />}
             </div>
           </Glass>
+          </div>
         ))}
       </div>
     </div>
@@ -1448,11 +1552,12 @@ export default function DashboardClient() {
       </div>
 
       {/* Quick connect */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {[
           { title: 'Chat with ARIA', desc: 'AI assistant & live advisor.', icon: MessageSquare, color: '#D0021B', action: () => window.dispatchEvent(new CustomEvent('ghl-open-chat')) },
           { title: 'Email Us', desc: 'info@ghlindia.com', icon: Mail, color: '#3B82F6', action: () => { window.open('mailto:info@ghlindia.com', '_blank'); showToast('Opening email client...', 'info') } },
-          { title: 'Call Us', desc: '+91 7200 255 252', icon: Phone, color: '#10B981', action: () => { window.open('tel:+917200255252'); showToast('Initiating call...', 'info') } },
+          { title: 'Message Us', desc: 'Live chat with our team', icon: Send, color: '#10B981', action: () => { window.dispatchEvent(new CustomEvent('ghl-open-chat')); showToast('Opening live chat...', 'info') } },
+          { title: 'Direct Call', desc: 'Chennai HQ: +91 44 2843 1043', icon: PhoneCall, color: '#8B5CF6', action: () => { window.open('tel:+914428431043'); showToast('Connecting to GHL Chennai HQ...', 'info') } },
         ].map((item, i) => (
           <button key={i} onClick={item.action} className="text-left w-full">
             <Glass className="p-5" hover glow theme={theme}>
@@ -1537,7 +1642,7 @@ export default function DashboardClient() {
               </div>
               <div className={`flex items-center gap-2 p-2.5 rounded-xl mb-4 ${t('bg-white/[0.03] border border-white/[0.06]','bg-gray-100/60 border border-gray-200/40')}`}>
                 <code className={`flex-1 text-xs font-mono truncate ${t('text-gray-300','text-gray-600')}`}>https://ghlindiaventures.com/ref/RK2024</code>
-                <button className={`p-1.5 rounded-lg ${t('hover:bg-white/[0.06] text-gray-400','hover:bg-gray-200 text-gray-500')}`}><Copy className="w-3.5 h-3.5" /></button>
+                <button onClick={() => { navigator.clipboard.writeText('https://ghlindiaventures.com/ref/RK2024'); showToast('Referral link copied to clipboard!') }} className={`p-1.5 rounded-lg ${t('hover:bg-white/[0.06] text-gray-400','hover:bg-gray-200 text-gray-500')}`}><Copy className="w-3.5 h-3.5" /></button>
               </div>
               <div className="flex items-center gap-6 text-xs">
                 <div><p className={t('text-gray-500','text-gray-700')}>Referred</p><p className={`text-lg font-bold ${t('text-white','text-gray-900')}`}>3</p></div>
@@ -1568,7 +1673,24 @@ export default function DashboardClient() {
       <h2 className={`text-xl font-bold ${t('text-white','text-gray-900')}`}>Your Profile</h2>
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <Glass className="p-6 text-center" hover glow theme={theme}>
-          <div className="w-20 h-20 rounded-full bg-gradient-to-br from-brand-red to-red-800 flex items-center justify-center text-2xl font-bold text-white mx-auto mb-4 ring-4 ring-white/[0.08]">RK</div>
+          {/* Profile Photo with Upload */}
+          <div className="relative w-24 h-24 mx-auto mb-4 group">
+            {profilePhoto ? (
+              <img src={profilePhoto} alt="Profile" className="w-24 h-24 rounded-full object-cover ring-4 ring-white/[0.08]" />
+            ) : (
+              <div className="w-24 h-24 rounded-full bg-gradient-to-br from-brand-red to-red-800 flex items-center justify-center text-3xl font-bold text-white ring-4 ring-white/[0.08]">RK</div>
+            )}
+            <button onClick={() => profilePhotoRef.current?.click()}
+              className="absolute inset-0 rounded-full bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200 cursor-pointer">
+              <Camera className="w-6 h-6 text-white" />
+            </button>
+            <input ref={profilePhotoRef} type="file" className="hidden" accept="image/jpeg,image/png,image/webp"
+              onChange={handleProfilePhotoUpload} />
+            <div className="absolute -bottom-1 -right-1 w-7 h-7 rounded-full bg-brand-red flex items-center justify-center ring-2 ring-brand-black cursor-pointer hover:scale-110 transition-transform"
+              onClick={() => profilePhotoRef.current?.click()}>
+              <Camera className="w-3.5 h-3.5 text-white" />
+            </div>
+          </div>
           <h3 className={`text-lg font-bold ${t('text-white','text-gray-900')}`}>Rajesh Krishnan</h3>
           <p className={`text-xs mb-3 ${t('text-gray-500','text-gray-700')}`}>rajesh.k@email.com</p>
           <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-emerald-500/15 text-emerald-400 border border-emerald-500/20"><Shield className="w-3 h-3" /> KYC Verified</span>
@@ -1652,19 +1774,17 @@ export default function DashboardClient() {
         {/* Appearance */}
         <Glass className="p-6" hover theme={theme}>
           <div className="flex items-center gap-3 mb-4">
-            <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${t('bg-white/[0.04]','bg-gray-200/40')}`}>
-              {isDark ? <Moon className="w-5 h-5 text-indigo-400" /> : <Sun className="w-5 h-5 text-amber-500" />}
+            <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-white/[0.04]">
+              <Moon className="w-5 h-5 text-indigo-400" />
             </div>
-            <div><h4 className={`text-sm font-bold ${t('text-white','text-gray-900')}`}>Appearance</h4><p className={`text-xs ${t('text-gray-500','text-gray-700')}`}>Theme and display preferences</p></div>
+            <div><h4 className="text-sm font-bold text-white">Appearance</h4><p className="text-xs text-gray-500">Theme and display preferences</p></div>
           </div>
           <div className="flex gap-3">
-            <button onClick={() => setTheme('dark')} className={`flex-1 p-3 rounded-xl text-center text-sm font-medium transition-all ${theme === 'dark' ? 'bg-brand-red/15 text-white border border-brand-red/20' : t('bg-white/[0.03] text-gray-400','bg-gray-100/40 text-gray-500')}`}>
-              <Moon className="w-5 h-5 mx-auto mb-1" /> Dark
-            </button>
-            <button onClick={() => setTheme('light')} className={`flex-1 p-3 rounded-xl text-center text-sm font-medium transition-all ${theme === 'light' ? 'bg-brand-red/15 text-brand-red border border-brand-red/20' : t('bg-white/[0.03] text-gray-400','bg-gray-100/40 text-gray-500')}`}>
-              <Sun className="w-5 h-5 mx-auto mb-1" /> Light
-            </button>
+            <div className="flex-1 p-3 rounded-xl text-center text-sm font-medium bg-brand-red/15 text-white border border-brand-red/20">
+              <Moon className="w-5 h-5 mx-auto mb-1" /> Dark Mode
+            </div>
           </div>
+          <p className="text-[10px] text-gray-600 mt-3 flex items-center gap-1"><Shield className="w-3 h-3" /> Optimized for low-light, premium viewing experience</p>
         </Glass>
 
         {/* Language */}
@@ -1719,11 +1839,16 @@ export default function DashboardClient() {
             <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${t('bg-white/[0.04]','bg-gray-200/40')}`}><Lock className="w-5 h-5 text-emerald-400" /></div>
             <div><h4 className={`text-sm font-bold ${t('text-white','text-gray-900')}`}>Security</h4><p className={`text-xs ${t('text-gray-500','text-gray-700')}`}>Password and authentication</p></div>
           </div>
-          {['Change Password','Enable 2FA','Active Sessions','Login History'].map((opt,j) => (
-            <div key={j} className={`flex items-center justify-between p-2.5 rounded-lg cursor-pointer group ${t('hover:bg-white/[0.02]','hover:bg-gray-200/40')} transition-colors`}>
-              <span className={`text-xs ${t('text-gray-400 group-hover:text-white','text-gray-600 group-hover:text-gray-900')} transition-colors`}>{opt}</span>
-              <ChevronRight className={`w-3.5 h-3.5 ${t('text-gray-600','text-gray-600')}`} />
-            </div>
+          {[
+            { label: 'Change Password', action: () => showToast('Password reset link sent to rajesh.k@email.com', 'info') },
+            { label: 'Enable 2FA', action: () => showToast('Two-factor authentication setup initiated. Check your email for the QR code.', 'info') },
+            { label: 'Active Sessions', action: () => showToast('You have 1 active session: Chrome on Windows — Current Device', 'info') },
+            { label: 'Login History', action: () => showToast('Last login: Today at 10:30 AM from Chennai, India (Chrome/Windows)', 'info') },
+          ].map((opt, j) => (
+            <button key={j} onClick={opt.action} className="w-full flex items-center justify-between p-2.5 rounded-lg cursor-pointer group hover:bg-white/[0.02] transition-colors">
+              <span className="text-xs text-gray-400 group-hover:text-white transition-colors">{opt.label}</span>
+              <ChevronRight className="w-3.5 h-3.5 text-gray-600" />
+            </button>
           ))}
         </Glass>
 
@@ -1853,13 +1978,13 @@ export default function DashboardClient() {
                 <option>Savings</option><option>Current</option><option>NRO</option><option>NRE</option>
               </select>
             </div>
-            <div className={`mt-3 p-3 rounded-lg border-2 border-dashed cursor-pointer text-center ${t('border-white/[0.08] hover:border-brand-red/20','border-gray-300 hover:border-brand-red/30')}`}>
-              <FileUp className={`w-5 h-5 mx-auto mb-1 ${t('text-gray-500','text-gray-600')}`} />
-              <p className={`text-[11px] ${t('text-gray-500','text-gray-700')}`}>Upload cancelled cheque / bank statement</p>
+            <div onClick={() => showToast('File picker opened. Select your cancelled cheque or bank statement.', 'info')} className="mt-3 p-3 rounded-lg border-2 border-dashed cursor-pointer text-center border-white/[0.08] hover:border-brand-red/20 transition-colors">
+              <FileUp className="w-5 h-5 mx-auto mb-1 text-gray-500" />
+              <p className="text-[11px] text-gray-500">Upload cancelled cheque / bank statement</p>
             </div>
           </div>
         ))}
-        <button className={`flex items-center gap-2 text-xs font-semibold ${t('text-blue-400 hover:text-blue-300','text-blue-600 hover:text-blue-500')} transition-colors`}>
+        <button onClick={() => showToast('Additional bank account fields will appear here. For demo, use the primary account.', 'info')} className="flex items-center gap-2 text-xs font-semibold text-blue-400 hover:text-blue-300 transition-colors">
           <Plus className="w-3.5 h-3.5" /> Add Another Bank Account
         </button>
       </Glass>
@@ -1879,7 +2004,8 @@ export default function DashboardClient() {
           <input type="checkbox" className="mt-0.5 w-4 h-4 rounded border-gray-300 text-brand-red focus:ring-brand-red" />
           <span className={`text-xs ${t('text-gray-400','text-gray-600')}`}>I confirm the details above and agree to the investment terms. I understand that AIF investments involve risk and are subject to SEBI regulations.</span>
         </label>
-        <button className="w-full py-3 rounded-xl text-sm font-bold text-white transition-all hover:scale-[1.01]"
+        <button onClick={() => showToast('Investment application submitted successfully! Our team will contact you within 24 hours for verification.')}
+          className="w-full py-3 rounded-xl text-sm font-bold text-white transition-all hover:scale-[1.01]"
           style={{ background: 'linear-gradient(135deg, #D0021B, #8B0000)' }}>Submit Investment Application</button>
       </Glass>
     </div>
@@ -2230,17 +2356,23 @@ export default function DashboardClient() {
   // ═══════════════════════════════════════════════════════════
   // MAIN RENDER
   // ═══════════════════════════════════════════════════════════
+  // Mobile bottom nav items (quick access on small screens)
+  const MOBILE_NAV = [
+    { id: 'dashboard' as TabId, icon: Home, label: 'Home' },
+    { id: 'investments' as TabId, icon: TrendingUp, label: 'Invest' },
+    { id: 'portfolio' as TabId, icon: Briefcase, label: 'Portfolio' },
+    { id: 'messages' as TabId, icon: MessageSquare, label: 'Msgs' },
+    { id: 'calculators' as TabId, icon: Calculator, label: 'Tools' },
+    { id: 'support' as TabId, icon: HeadphonesIcon, label: 'Support' },
+  ]
+
   return (
-    <div className={`min-h-screen relative transition-colors duration-500 ${isDark ? 'bg-brand-black' : 'bg-[#D5D1CC]'}`}>
+    <div className="min-h-screen relative bg-brand-black">
       {/* Background ambient effects */}
       <div className="fixed inset-0 pointer-events-none z-0">
-        {isDark && (
-          <>
-            <div className="absolute top-0 left-1/4 w-[600px] h-[600px] bg-brand-red/[0.03] rounded-full blur-[200px]" />
-            <div className="absolute bottom-0 right-1/4 w-[500px] h-[500px] bg-brand-red/[0.02] rounded-full blur-[180px]" />
-            <div className="absolute inset-0 opacity-[0.015]" style={{ backgroundImage: 'radial-gradient(rgba(255,255,255,0.3) 1px, transparent 1px)', backgroundSize: '40px 40px' }} />
-          </>
-        )}
+        <div className="absolute top-0 left-1/4 w-[600px] h-[600px] bg-brand-red/[0.03] rounded-full blur-[200px]" />
+        <div className="absolute bottom-0 right-1/4 w-[500px] h-[500px] bg-brand-red/[0.02] rounded-full blur-[180px]" />
+        <div className="absolute inset-0 opacity-[0.015]" style={{ backgroundImage: 'radial-gradient(rgba(255,255,255,0.3) 1px, transparent 1px)', backgroundSize: '40px 40px' }} />
       </div>
 
       {renderSidebar()}
@@ -2250,25 +2382,42 @@ export default function DashboardClient() {
 
       <div className="lg:ml-[260px] relative z-10 min-h-screen flex flex-col">
         {renderTopBar()}
-        <div className="flex-1 p-4 lg:p-6 overflow-auto">{renderContent()}</div>
-        <footer className={`border-t px-4 lg:px-6 py-3 flex flex-col sm:flex-row items-center justify-between gap-2 text-[11px]
-          ${t('border-white/[0.04] text-gray-600','border-gray-200/40 text-gray-500')}`}>
+        <div className="flex-1 p-4 lg:p-6 pb-20 lg:pb-6 overflow-auto">{renderContent()}</div>
+        <footer className="hidden sm:flex border-t px-4 lg:px-6 py-3 flex-col sm:flex-row items-center justify-between gap-2 text-[11px] border-white/[0.04] text-gray-600">
           <p>&copy; 2025 GHL India Ventures. SEBI Reg: IN/AIF2/2425/1517</p>
           <div className="flex items-center gap-3">
-            <button onClick={() => { setTermsOpen(true); setTermsScrolled(false) }} className={`hover:underline ${t('hover:text-white','hover:text-gray-700')} transition-colors`}>Terms & Conditions</button>
+            <button onClick={() => { setTermsOpen(true); setTermsScrolled(false) }} className="hover:underline hover:text-white transition-colors">Terms & Conditions</button>
             <span>&bull;</span>
             <p className="flex items-center gap-1.5"><Shield className="w-3 h-3" /> 256-bit SSL Encrypted &bull; SEBI Compliant</p>
           </div>
         </footer>
       </div>
 
+      {/* Mobile Bottom Navigation Bar */}
+      <nav className="fixed bottom-0 left-0 right-0 z-[9998] lg:hidden border-t border-white/[0.06]"
+        style={{ background: 'rgba(10,10,10,0.97)', backdropFilter: 'blur(24px)', WebkitBackdropFilter: 'blur(24px)' }}>
+        <div className="flex items-center justify-around px-0.5 py-1 safe-area-bottom">
+          {MOBILE_NAV.map(item => {
+            const isActive = activeTab === item.id
+            return (
+              <button key={item.id} onClick={() => setActiveTab(item.id)}
+                className={`flex flex-col items-center gap-0 px-1.5 py-1 rounded-lg transition-all duration-200 min-w-0 flex-1
+                  ${isActive ? 'text-brand-red' : 'text-gray-500'}`}>
+                <item.icon className={`w-[18px] h-[18px] ${isActive ? 'text-brand-red' : ''}`} />
+                <span className="text-[8px] font-semibold leading-tight mt-0.5">{item.label}</span>
+              </button>
+            )
+          })}
+        </div>
+      </nav>
+
       {/* Toast notification */}
       {toast && (
-        <div className="fixed bottom-6 right-6 z-[10001] animate-fade-in">
+        <div className="fixed bottom-20 lg:bottom-6 right-4 lg:right-6 left-4 lg:left-auto z-[10001] animate-fade-in">
           <div className={`flex items-center gap-3 px-5 py-3.5 rounded-2xl shadow-2xl border ${
             toast.type === 'success'
-              ? isDark ? 'bg-emerald-900/90 border-emerald-500/30 text-emerald-200' : 'bg-emerald-50 border-emerald-200 text-emerald-800'
-              : isDark ? 'bg-blue-900/90 border-blue-500/30 text-blue-200' : 'bg-blue-50 border-blue-200 text-blue-800'
+              ? 'bg-emerald-900/90 border-emerald-500/30 text-emerald-200'
+              : 'bg-blue-900/90 border-blue-500/30 text-blue-200'
           }`} style={{ backdropFilter: 'blur(20px)' }}>
             {toast.type === 'success' ? <CheckCircle className="w-5 h-5 shrink-0" /> : <Info className="w-5 h-5 shrink-0" />}
             <span className="text-sm font-medium">{toast.msg}</span>
