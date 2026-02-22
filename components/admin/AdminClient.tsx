@@ -16,6 +16,7 @@ import AssetDocModule from './modules/AssetDocModule'
 import AIOperationsModule from './modules/AIOperationsModule'
 import AnalyticsModule from './modules/AnalyticsModule'
 import CommsModule from './modules/CommsModule'
+import SettingsModule from './modules/SettingsModule'
 import { useAdminAuth, useAdminToast } from '@/lib/admin/adminHooks'
 import { getAdminSession } from '@/lib/admin/adminAuth'
 import type { AdminModule } from '@/lib/admin/adminTypes'
@@ -198,7 +199,8 @@ export default function AdminClient() {
         return <AnalyticsModule subTab={activeSubTab} navigate={navigate} showToast={showToast} />
       case 'comms':
         return <CommsModule subTab={activeSubTab} navigate={navigate} showToast={showToast} />
-      // Phase 5 modules — show placeholder for now
+      case 'settings':
+        return <SettingsModule subTab={activeSubTab} navigate={navigate} showToast={showToast} />
       default:
         return (
           <ModulePlaceholder
