@@ -1,19 +1,62 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import { BRAND } from '@/lib/constants'
-import { Shield, Lock, Eye, EyeOff, AlertTriangle, KeyRound } from 'lucide-react'
+import { Shield, Lock, Eye, EyeOff, AlertTriangle, KeyRound, Loader2 } from 'lucide-react'
 import Logo from '@/components/Logo'
+import { authenticateAdmin, getAdminSession } from '@/lib/admin/adminAuth'
 
 export default function AdminLoginPage() {
+  const router = useRouter()
   const [showPassword, setShowPassword] = useState(false)
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [twoFaCode, setTwoFaCode] = useState('')
+  const [error, setError] = useState('')
+  const [loading, setLoading] = useState(false)
+  const [attempts, setAttempts] = useState(0)
 
-  const handleSubmit = (e: React.FormEvent) => {
+  // Redirect if already logged in
+  useEffect(() => {
+    const session = getAdminSession()
+    if (session) {
+      router.push('/admin')
+    }
+  }, [router])
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    alert('Admin login will be connected to your secure backend. This is a demo.')
+    setError('')
+
+    if (attempts >= 5) {
+      setError('Account locked. Too many failed attempts. Please wait 15 minutes.')
+      return
+    }
+
+    if (twoFaCode.length !== 6) {
+      setError('Please enter a valid 6-digit 2FA code')
+      return
+    }
+
+    setLoading(true)
+    await new Promise(resolve => setTimeout(resolve, 1200))
+
+    const session = authenticateAdmin(email, password)
+
+    if (session) {
+      setLoading(false)
+      router.push('/admin')
+    } else {
+      setLoading(false)
+      setAttempts(prev => prev + 1)
+      const remaining = 5 - (attempts + 1)
+      setError(
+        remaining > 0
+          ? `Invalid credentials. ${remaining} attempt${remaining > 1 ? 's' : ''} remaining.`
+          : 'Account locked due to too many failed attempts. Please wait 15 minutes.'
+      )
+    }
   }
 
   return (
@@ -39,7 +82,6 @@ export default function AdminLoginPage() {
           <h1 className="text-2xl font-bold text-white mb-3">
             {BRAND.name}
           </h1>
-          {/* Admin Access Only badge */}
           <div className="inline-flex items-center space-x-1.5 px-4 py-1.5 bg-brand-red/15 border border-brand-red/30 rounded-full">
             <Shield className="w-3.5 h-3.5 text-brand-red" />
             <span className="text-xs font-semibold text-brand-red uppercase tracking-wider">Admin Access Only</span>
@@ -57,6 +99,14 @@ export default function AdminLoginPage() {
           }}
         >
           <form onSubmit={handleSubmit} className="space-y-5">
+            {/* Error Message */}
+            {error && (
+              <div className="flex items-center gap-2 p-3 rounded-lg bg-red-500/10 border border-red-500/20 animate-fade-in">
+                <AlertTriangle className="w-4 h-4 text-red-400 flex-shrink-0" />
+                <p className="text-xs text-red-300">{error}</p>
+              </div>
+            )}
+
             {/* Email */}
             <div>
               <label htmlFor="admin-email" className="block text-sm font-medium text-gray-300 mb-2">
@@ -66,7 +116,8 @@ export default function AdminLoginPage() {
                 id="admin-email"
                 type="email"
                 required
-                className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-lg text-white placeholder-gray-500 focus:ring-2 focus:ring-brand-red focus:border-transparent outline-none transition-all"
+                disabled={loading}
+                className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-lg text-white placeholder-gray-500 focus:ring-2 focus:ring-brand-red focus:border-transparent outline-none transition-all disabled:opacity-50"
                 placeholder="admin@ghlindiaventures.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
@@ -83,7 +134,8 @@ export default function AdminLoginPage() {
                   id="admin-password"
                   type={showPassword ? 'text' : 'password'}
                   required
-                  className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-lg text-white placeholder-gray-500 focus:ring-2 focus:ring-brand-red focus:border-transparent outline-none pr-12 transition-all"
+                  disabled={loading}
+                  className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-lg text-white placeholder-gray-500 focus:ring-2 focus:ring-brand-red focus:border-transparent outline-none pr-12 transition-all disabled:opacity-50"
                   placeholder="Enter admin password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
@@ -113,7 +165,9 @@ export default function AdminLoginPage() {
                 inputMode="numeric"
                 pattern="[0-9]*"
                 maxLength={6}
-                className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-lg text-white placeholder-gray-500 focus:ring-2 focus:ring-brand-red focus:border-transparent outline-none tracking-[0.5em] text-center font-mono text-lg transition-all"
+                required
+                disabled={loading}
+                className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-lg text-white placeholder-gray-500 focus:ring-2 focus:ring-brand-red focus:border-transparent outline-none tracking-[0.5em] text-center font-mono text-lg transition-all disabled:opacity-50"
                 placeholder="------"
                 value={twoFaCode}
                 onChange={(e) => setTwoFaCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
@@ -124,11 +178,35 @@ export default function AdminLoginPage() {
             </div>
 
             {/* Submit */}
-            <button type="submit" className="btn-primary w-full text-center mt-2">
-              <Lock className="w-4 h-4 mr-2" />
-              Secure Login
+            <button
+              type="submit"
+              disabled={loading || attempts >= 5}
+              className="btn-primary w-full text-center mt-2 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {loading ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  Authenticating...
+                </>
+              ) : (
+                <>
+                  <Lock className="w-4 h-4" />
+                  Secure Login
+                </>
+              )}
             </button>
           </form>
+
+          {/* Demo Credentials Hint */}
+          <div className="mt-5 pt-4 border-t border-white/[0.06]">
+            <p className="text-[10px] text-gray-600 text-center mb-2">Demo Credentials</p>
+            <div className="text-[10px] text-gray-500 space-y-0.5">
+              <p><span className="text-gray-400">Super Admin:</span> admin@ghlindiaventures.com / GHL@dmin2025!</p>
+              <p><span className="text-gray-400">Compliance:</span> compliance@ghlindiaventures.com / GHLComply2025!</p>
+              <p><span className="text-gray-400">Sales:</span> sales@ghlindiaventures.com / GHLSales2025!</p>
+              <p className="text-gray-600 mt-1">2FA: any 6 digits (e.g., 123456)</p>
+            </div>
+          </div>
         </div>
 
         {/* Security footer */}
