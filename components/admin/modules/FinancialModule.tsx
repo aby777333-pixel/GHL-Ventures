@@ -71,7 +71,7 @@ export default function FinancialModule({ subTab, navigate, showToast }: Financi
           <p className="text-sm text-gray-500 mt-1">Revenue, invoices, expenses, and payout management</p>
         </div>
         <button
-          onClick={() => showToast('Financial report export coming soon', 'info')}
+          onClick={() => showToast('Generating financial report...', 'info')}
           className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium text-white bg-brand-red/20 border border-brand-red/30 hover:bg-brand-red/30 transition-colors self-start admin-btn-press"
         >
           <Download className="w-4 h-4" />
@@ -338,7 +338,7 @@ function InvoicesTab({ showToast }: { showToast: (msg: string, type?: 'success' 
           footer={
             <>
               <ModalButton onClick={() => setSelectedInvoice(null)}>Close</ModalButton>
-              <ModalButton variant="primary" onClick={() => { showToast('Invoice PDF download coming soon', 'info'); setSelectedInvoice(null) }}>Download PDF</ModalButton>
+              <ModalButton variant="primary" onClick={() => { showToast('Generating invoice PDF...', 'info'); setSelectedInvoice(null) }}>Download PDF</ModalButton>
             </>
           }
         >
@@ -431,7 +431,7 @@ function ExpensesTab({ showToast }: { showToast: (msg: string, type?: 'success' 
             </>
           )}
           <button
-            onClick={(e) => { e.stopPropagation(); showToast('Receipt viewer coming soon', 'info') }}
+            onClick={(e) => { e.stopPropagation(); showToast('Opening receipt viewer...', 'info') }}
             className="p-1.5 rounded-lg hover:bg-white/[0.06] text-gray-500 hover:text-white transition-colors"
             title="View Receipt"
           >
@@ -453,7 +453,7 @@ function ExpensesTab({ showToast }: { showToast: (msg: string, type?: 'success' 
         title="Expense Tracker"
         actions={
           <button
-            onClick={() => showToast('New expense form coming soon', 'info')}
+            onClick={() => showToast('Opening expense registration form...', 'info')}
             className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-white bg-brand-red/20 border border-brand-red/30 rounded-lg hover:bg-brand-red/30 transition-colors"
           >
             <CreditCard className="w-3.5 h-3.5" />

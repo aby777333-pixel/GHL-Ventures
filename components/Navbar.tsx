@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { NAV_LINKS, BRAND } from '@/lib/constants'
-import { Menu, X, Phone, ArrowRight, LogIn, UserPlus, ShieldCheck, Search, ChevronDown, ChevronRight as ChevRight } from 'lucide-react'
+import { Menu, X, Phone, ArrowRight, LogIn, UserPlus, ShieldCheck, Search, ChevronDown, ChevronRight as ChevRight, BadgeCheck } from 'lucide-react'
 import Logo from '@/components/Logo'
 // MarketDataMarquee and CurrencyTicker moved to home page (above NewsScroller)
 import NotificationCenter from '@/components/NotificationCenter'
@@ -357,6 +357,17 @@ export default function Navbar() {
                 >
                   <ShieldCheck className="w-3 h-3" />
                 </Link>
+                <Link
+                  href="/admin/login"
+                  className={`inline-flex items-center justify-center w-6 h-6 rounded-full transition-all duration-200 ${
+                    scrolled
+                      ? 'text-gray-400 dark:text-white/40 hover:text-amber-500 hover:bg-amber-50 dark:hover:bg-white/10'
+                      : 'text-white/40 hover:text-amber-500 hover:bg-white/10'
+                  }`}
+                  title="Employee Login"
+                >
+                  <BadgeCheck className="w-3 h-3" />
+                </Link>
               </div>
 
               {/* Theme Controls & Notification Center — desktop */}
@@ -586,18 +597,30 @@ export default function Navbar() {
               <span>Sign Up</span>
             </Link>
           </div>
-          <Link
-            href="/admin/login"
-            onClick={() => setIsOpen(false)}
-            className="mt-3 inline-flex items-center space-x-1.5 text-white/40 text-xs hover:text-brand-red transition-colors"
+          <div
+            className="mt-3 flex items-center space-x-4"
             style={{
               transitionDelay: isOpen ? `${NAV_LINKS.length * 50 + 150}ms` : '0ms',
               opacity: isOpen ? 1 : 0,
             }}
           >
-            <ShieldCheck className="w-3 h-3" />
-            <span>Admin Portal</span>
-          </Link>
+            <Link
+              href="/admin/login"
+              onClick={() => setIsOpen(false)}
+              className="inline-flex items-center space-x-1.5 text-white/40 text-xs hover:text-brand-red transition-colors"
+            >
+              <ShieldCheck className="w-3 h-3" />
+              <span>Admin Portal</span>
+            </Link>
+            <Link
+              href="/admin/login"
+              onClick={() => setIsOpen(false)}
+              className="inline-flex items-center space-x-1.5 text-white/40 text-xs hover:text-amber-500 transition-colors"
+            >
+              <BadgeCheck className="w-3 h-3" />
+              <span>Employee Login</span>
+            </Link>
+          </div>
 
           {/* Phone at bottom of overlay */}
           <div

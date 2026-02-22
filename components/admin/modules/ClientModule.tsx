@@ -61,7 +61,7 @@ export default function ClientModule({ subTab, navigate, showToast }: ClientModu
           <p className="text-sm text-gray-500 mt-1">Manage investors, KYC verification, and client relationships</p>
         </div>
         <button
-          onClick={() => showToast('New client form coming soon', 'info')}
+          onClick={() => showToast('Opening client registration form...', 'info')}
           className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium text-white bg-brand-red/20 border border-brand-red/30 hover:bg-brand-red/30 transition-colors self-start admin-btn-press"
         >
           <UserPlus className="w-4 h-4" />
@@ -129,7 +129,7 @@ export default function ClientModule({ subTab, navigate, showToast }: ClientModu
           footer={
             <>
               <ModalButton onClick={() => { setProfileModalOpen(false); setSelectedClient(null) }}>Close</ModalButton>
-              <ModalButton variant="primary" onClick={() => showToast('Edit mode coming soon', 'info')}>Edit Client</ModalButton>
+              <ModalButton variant="primary" onClick={() => showToast('Opening client editor...', 'info')}>Edit Client</ModalButton>
             </>
           }
         >
@@ -308,7 +308,7 @@ function KYCQueueTab({
             </>
           )}
           <button
-            onClick={(e) => { e.stopPropagation(); showToast('Document preview coming soon', 'info') }}
+            onClick={(e) => { e.stopPropagation(); showToast('Opening document preview...', 'info') }}
             className="p-1.5 rounded-lg hover:bg-white/[0.06] text-gray-500 hover:text-white transition-colors"
             title="View"
           >

@@ -57,6 +57,26 @@ export const DEMO_ADMIN_USERS: Record<string, { password: string; user: AdminUse
       phone: '+91 44 2843 1060',
     },
   },
+  'marketing@ghlindiaventures.com': {
+    password: 'GHLMktg2025!',
+    user: {
+      email: 'marketing@ghlindiaventures.com',
+      name: 'Kavya Sharma',
+      role: 'marketing-manager',
+      department: 'Marketing',
+      phone: '+91 44 2843 1070',
+    },
+  },
+  'mktexec@ghlindiaventures.com': {
+    password: 'GHLMktEx2025!',
+    user: {
+      email: 'mktexec@ghlindiaventures.com',
+      name: 'Arun Selvam',
+      role: 'marketing-executive',
+      department: 'Marketing',
+      phone: '+91 44 2843 1071',
+    },
+  },
 }
 
 // ── Role Display Labels ───────────────────────────────────────────
@@ -66,6 +86,8 @@ export const ROLE_LABELS: Record<AdminRole, string> = {
   'compliance-officer': 'Compliance Officer',
   'fund-manager': 'Fund Manager',
   'manager': 'Manager',
+  'marketing-manager': 'Marketing Manager',
+  'marketing-executive': 'Marketing Executive',
   'sales': 'Sales',
   'operations': 'Operations',
   'hr': 'HR',
@@ -78,6 +100,8 @@ export const ROLE_COLORS: Record<AdminRole, string> = {
   'compliance-officer': '#8B5CF6',
   'fund-manager': '#3B82F6',
   'manager': '#10B981',
+  'marketing-manager': '#F472B6',
+  'marketing-executive': '#FB923C',
   'sales': '#F97316',
   'operations': '#06B6D4',
   'hr': '#EC4899',

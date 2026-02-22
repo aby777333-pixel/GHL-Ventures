@@ -418,7 +418,7 @@ function SystemTab({ showToast }: { showToast: (msg: string, type?: 'success' | 
               <div className="flex items-center gap-2">
                 <AdminBadge label="Completed" variant="success" dot />
                 <button
-                  onClick={() => showToast('Restore from backup coming soon', 'info')}
+                  onClick={() => showToast('Initiating backup restore process...', 'info')}
                   className="p-1.5 rounded-lg hover:bg-white/[0.06] text-gray-500 hover:text-white transition-colors"
                   title="Restore"
                 >

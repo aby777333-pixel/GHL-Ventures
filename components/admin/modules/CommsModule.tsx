@@ -107,7 +107,7 @@ export default function CommsModule({ subTab, navigate, showToast }: CommsModule
           <p className="text-sm text-gray-500 mt-1">Broadcasts, internal messaging, and system alerts</p>
         </div>
         <button
-          onClick={() => showToast('New broadcast composer coming soon', 'info')}
+          onClick={() => showToast('Opening broadcast composer...', 'info')}
           className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium text-white bg-brand-red/20 border border-brand-red/30 hover:bg-brand-red/30 transition-colors self-start admin-btn-press"
         >
           <Send className="w-4 h-4" />

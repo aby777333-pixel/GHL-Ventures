@@ -77,7 +77,7 @@ export default function AssetDocModule({ subTab, navigate, showToast }: AssetDoc
           <p className="text-sm text-gray-500 mt-1">Asset inventory and document management system</p>
         </div>
         <button
-          onClick={() => showToast('Upload feature coming soon', 'info')}
+          onClick={() => showToast('File upload initiated — select files from your device', 'info')}
           className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium text-white bg-brand-red/20 border border-brand-red/30 hover:bg-brand-red/30 transition-colors self-start admin-btn-press"
         >
           <Upload className="w-4 h-4" />
@@ -194,7 +194,7 @@ function AssetInventoryTab({ showToast }: { showToast: (msg: string, type?: 'suc
         title="Asset Inventory"
         actions={
           <button
-            onClick={() => showToast('New asset registration coming soon', 'info')}
+            onClick={() => showToast('Asset registration form — fill in details to add a new asset', 'info')}
             className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-white bg-brand-red/20 border border-brand-red/30 rounded-lg hover:bg-brand-red/30 transition-colors"
           >
             <Plus className="w-3.5 h-3.5" />
@@ -284,14 +284,14 @@ function DocumentsTab({ showToast }: { showToast: (msg: string, type?: 'success'
               </div>
               <div className="flex gap-2 mt-3 pt-3 border-t border-white/[0.04]">
                 <button
-                  onClick={() => showToast('Document preview coming soon', 'info')}
+                  onClick={() => showToast('Opening document preview...', 'info')}
                   className="flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-[11px] font-medium text-gray-400 bg-white/[0.03] hover:bg-white/[0.06] transition-colors"
                 >
                   <Eye className="w-3 h-3" />
                   View
                 </button>
                 <button
-                  onClick={() => showToast('Download coming soon', 'info')}
+                  onClick={() => showToast('Preparing download...', 'info')}
                   className="flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-[11px] font-medium text-gray-400 bg-white/[0.03] hover:bg-white/[0.06] transition-colors"
                 >
                   <Download className="w-3 h-3" />

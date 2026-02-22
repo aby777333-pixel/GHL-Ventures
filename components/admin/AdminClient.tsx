@@ -17,6 +17,8 @@ import AIOperationsModule from './modules/AIOperationsModule'
 import AnalyticsModule from './modules/AnalyticsModule'
 import CommsModule from './modules/CommsModule'
 import SettingsModule from './modules/SettingsModule'
+import RealtyBrokersModule from './modules/RealtyBrokersModule'
+import MarketingModule from './modules/MarketingModule'
 import { useAdminAuth, useAdminToast } from '@/lib/admin/adminHooks'
 import { getAdminSession } from '@/lib/admin/adminAuth'
 import type { AdminModule } from '@/lib/admin/adminTypes'
@@ -25,19 +27,20 @@ import { hasModuleAccess } from '@/lib/admin/adminRBAC'
 import {
   LayoutDashboard, Users, TrendingUp, UserCheck, FolderOpen, Sparkles,
   Shield, IndianRupee, BarChart3, MessageSquare, Settings, Construction,
-  Lock,
+  Lock, Building2, Megaphone,
 } from 'lucide-react'
 
 // ── Valid Modules ──────────────────────────────────────────────────
 const VALID_MODULES: AdminModule[] = [
-  'overview', 'clients', 'sales', 'employees', 'assets',
-  'ai-ops', 'compliance', 'financial', 'analytics', 'comms', 'settings',
+  'overview', 'clients', 'sales', 'realty-brokers', 'employees', 'assets',
+  'ai-ops', 'compliance', 'financial', 'analytics', 'comms', 'marketing', 'settings',
 ]
 
 const MODULE_ICONS: Record<AdminModule, React.ComponentType<{ className?: string }>> = {
   overview: LayoutDashboard,
   clients: Users,
   sales: TrendingUp,
+  'realty-brokers': Building2,
   employees: UserCheck,
   assets: FolderOpen,
   'ai-ops': Sparkles,
@@ -45,6 +48,7 @@ const MODULE_ICONS: Record<AdminModule, React.ComponentType<{ className?: string
   financial: IndianRupee,
   analytics: BarChart3,
   comms: MessageSquare,
+  marketing: Megaphone,
   settings: Settings,
 }
 
@@ -185,6 +189,8 @@ export default function AdminClient() {
         return <ClientModule subTab={activeSubTab} navigate={navigate} showToast={showToast} />
       case 'sales':
         return <SalesModule subTab={activeSubTab} navigate={navigate} showToast={showToast} />
+      case 'realty-brokers':
+        return <RealtyBrokersModule subTab={activeSubTab} navigate={navigate} showToast={showToast} />
       case 'financial':
         return <FinancialModule subTab={activeSubTab} navigate={navigate} showToast={showToast} />
       case 'employees':
@@ -199,6 +205,8 @@ export default function AdminClient() {
         return <AnalyticsModule subTab={activeSubTab} navigate={navigate} showToast={showToast} />
       case 'comms':
         return <CommsModule subTab={activeSubTab} navigate={navigate} showToast={showToast} />
+      case 'marketing':
+        return <MarketingModule subTab={activeSubTab} navigate={navigate} showToast={showToast} />
       case 'settings':
         return <SettingsModule subTab={activeSubTab} navigate={navigate} showToast={showToast} />
       default:

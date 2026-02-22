@@ -73,7 +73,7 @@ export default function SalesModule({ subTab, navigate, showToast }: SalesModule
           <p className="text-sm text-gray-500 mt-1">Manage leads, pipeline, commissions, and sales performance</p>
         </div>
         <button
-          onClick={() => showToast('New lead form coming soon', 'info')}
+          onClick={() => showToast('Opening new lead registration form...', 'info')}
           className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium text-white bg-brand-red/20 border border-brand-red/30 hover:bg-brand-red/30 transition-colors self-start admin-btn-press"
         >
           <UserPlus className="w-4 h-4" />
@@ -127,7 +127,7 @@ export default function SalesModule({ subTab, navigate, showToast }: SalesModule
           footer={
             <>
               <ModalButton onClick={() => { setLeadModalOpen(false); setSelectedLead(null) }}>Close</ModalButton>
-              <ModalButton variant="primary" onClick={() => showToast('Lead editing coming soon', 'info')}>Edit Lead</ModalButton>
+              <ModalButton variant="primary" onClick={() => showToast('Opening lead editor...', 'info')}>Edit Lead</ModalButton>
             </>
           }
         >

@@ -9,6 +9,8 @@ export type AdminRole =
   | 'compliance-officer'
   | 'fund-manager'
   | 'manager'
+  | 'marketing-manager'
+  | 'marketing-executive'
   | 'sales'
   | 'operations'
   | 'hr'
@@ -33,7 +35,7 @@ export interface AdminSession {
 
 // ── Permissions ───────────────────────────────────────────────────
 export type PermissionAction = 'view' | 'create' | 'edit' | 'approve' | 'delete' | 'export' | 'configure'
-export type PermissionModule = 'overview' | 'clients' | 'sales' | 'employees' | 'assets' | 'ai-ops' | 'compliance' | 'financial' | 'analytics' | 'comms' | 'settings'
+export type PermissionModule = 'overview' | 'clients' | 'sales' | 'realty-brokers' | 'employees' | 'assets' | 'ai-ops' | 'compliance' | 'financial' | 'analytics' | 'comms' | 'marketing' | 'settings'
 export type Permission = `${PermissionAction}:${PermissionModule}` | '*'
 
 // ── Navigation ────────────────────────────────────────────────────
@@ -41,6 +43,7 @@ export type AdminModule =
   | 'overview'
   | 'clients'
   | 'sales'
+  | 'realty-brokers'
   | 'employees'
   | 'assets'
   | 'ai-ops'
@@ -48,6 +51,7 @@ export type AdminModule =
   | 'financial'
   | 'analytics'
   | 'comms'
+  | 'marketing'
   | 'settings'
 
 export interface AdminNavItem {
@@ -303,4 +307,133 @@ export interface AIResult {
   timestamp: string
   userId: string
   confidence?: number
+}
+
+// ── Realty Brokers ───────────────────────────────────────────────
+export type BrokerStatus = 'active' | 'inactive' | 'pending-verification' | 'suspended'
+export type BrokerInquiryStatus = 'new' | 'contacted' | 'in-progress' | 'closed' | 'converted'
+export type BrokerSpecialization = 'residential' | 'commercial' | 'land' | 'industrial' | 'mixed-use'
+
+export interface RealtyBroker {
+  id: string
+  name: string
+  email: string
+  phone: string
+  company?: string
+  reraId?: string
+  specialization: BrokerSpecialization
+  city: string
+  status: BrokerStatus
+  totalDeals: number
+  totalValue: number
+  commission: number
+  rating: number
+  joinDate: string
+  lastActive: string
+  assignedRM?: string
+  tags: string[]
+}
+
+export interface BrokerInquiry {
+  id: string
+  brokerId?: string
+  brokerName: string
+  source: 'website' | 'referral' | 'direct' | 'event'
+  type: 'land' | 'realty' | 'partnership' | 'listing'
+  subject: string
+  message: string
+  status: BrokerInquiryStatus
+  priority: 'high' | 'medium' | 'low'
+  assignedTo?: string
+  createdDate: string
+  lastUpdated: string
+  propertyType?: string
+  location?: string
+  estimatedValue?: number
+}
+
+// ── Marketing ────────────────────────────────────────────────────
+export type CampaignType = 'email' | 'social' | 'google-ads' | 'meta-ads' | 'linkedin-ads' | 'youtube-ads' | 'event' | 'whatsapp' | 'telegram' | 'sms' | 'rcs' | 'push' | 'offline' | 'multi-channel'
+export type CampaignStatus = 'draft' | 'scheduled' | 'live' | 'paused' | 'completed' | 'archived'
+export type MarketingChannel = 'email' | 'linkedin' | 'instagram' | 'facebook' | 'twitter' | 'youtube' | 'google-ads' | 'meta-ads' | 'whatsapp' | 'telegram' | 'sms' | 'rcs' | 'push' | 'events' | 'offline' | 'referral'
+
+export interface MarketingCampaign {
+  id: string
+  name: string
+  type: CampaignType
+  channels: MarketingChannel[]
+  status: CampaignStatus
+  startDate: string
+  endDate?: string
+  budget: number
+  spend: number
+  leads: number
+  roi: number
+  owner: string
+  description?: string
+}
+
+export interface MarketingKPIs {
+  totalLeads: number
+  leadsTrend: number
+  campaignROI: number
+  emailOpenRate: number
+  socialEngagement: number
+  marketingSpend: number
+  marketingBudget: number
+  websiteTraffic: number
+  trafficTrend: number
+}
+
+export interface ContentItem {
+  id: string
+  title: string
+  type: 'blog' | 'social-post' | 'email' | 'infographic' | 'video' | 'brochure' | 'landing-page'
+  channel: MarketingChannel
+  status: 'idea' | 'draft' | 'review' | 'approved' | 'scheduled' | 'published'
+  scheduledDate?: string
+  publishedDate?: string
+  author: string
+  engagement?: number
+}
+
+export interface AudienceSegment {
+  id: string
+  name: string
+  description: string
+  contactCount: number
+  type: 'dynamic' | 'static'
+  criteria: string
+  lastUsed?: string
+  createdBy: string
+}
+
+export interface OutreachSequence {
+  id: string
+  name: string
+  channel: 'email' | 'whatsapp' | 'telegram' | 'sms' | 'multi-channel'
+  steps: number
+  enrolled: number
+  completed: number
+  responseRate: number
+  status: 'active' | 'paused' | 'draft'
+}
+
+export interface MarketingAITool {
+  id: string
+  name: string
+  description: string
+  icon: string
+  category: 'content' | 'analytics' | 'optimization' | 'intelligence' | 'automation'
+  status: 'active' | 'beta' | 'coming-soon'
+}
+
+export interface IntegrationService {
+  id: string
+  name: string
+  icon: string
+  status: 'connected' | 'disconnected' | 'pending'
+  lastSync?: string
+  dataFlowing?: string
+  category: 'advertising' | 'social' | 'messaging' | 'crm' | 'analytics' | 'scheduling' | 'automation'
 }

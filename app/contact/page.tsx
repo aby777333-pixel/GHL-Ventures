@@ -42,6 +42,7 @@ export default function ContactPage() {
     email: '',
     phone: '',
     city: '',
+    inquiryType: '',
     investmentRange: '',
     contactMethod: 'Phone',
     message: '',
@@ -108,7 +109,7 @@ export default function ContactPage() {
                         onClick={() => {
                           setSubmitted(false)
                           setFormData({
-                            name: '', email: '', phone: '', city: '', investmentRange: '',
+                            name: '', email: '', phone: '', city: '', inquiryType: '', investmentRange: '',
                             contactMethod: 'Phone', message: '', accredited: false, privacy: false,
                           })
                         }}
@@ -178,8 +179,29 @@ export default function ContactPage() {
                           </div>
                         </div>
 
-                        {/* City + Investment Range */}
+                        {/* Inquiry Type + City */}
                         <div className="grid md:grid-cols-2 gap-5">
+                          <div>
+                            <label htmlFor="contact-inquiry" className="block text-sm font-medium text-brand-black mb-2">
+                              Inquiry Type
+                            </label>
+                            <select
+                              id="contact-inquiry"
+                              className="input-field"
+                              value={formData.inquiryType}
+                              onChange={(e) => handleChange('inquiryType', e.target.value)}
+                            >
+                              <option value="">Select inquiry type</option>
+                              <option value="investment">Investment Consultation</option>
+                              <option value="fund-info">Fund Information</option>
+                              <option value="nri-investment">NRI Investment</option>
+                              <option value="land-broker">Land Broker</option>
+                              <option value="realty-broker">Realty Broker</option>
+                              <option value="startup-funding">Startup Funding</option>
+                              <option value="partnership">Partnership Inquiry</option>
+                              <option value="general">General Inquiry</option>
+                            </select>
+                          </div>
                           <div>
                             <label htmlFor="contact-city" className="block text-sm font-medium text-brand-black mb-2">
                               City of Residence
@@ -193,23 +215,26 @@ export default function ContactPage() {
                               onChange={(e) => handleChange('city', e.target.value)}
                             />
                           </div>
-                          <div>
-                            <label htmlFor="contact-range" className="block text-sm font-medium text-brand-black mb-2">
-                              Investment Amount Range
-                            </label>
-                            <select
-                              id="contact-range"
-                              className="input-field"
-                              value={formData.investmentRange}
-                              onChange={(e) => handleChange('investmentRange', e.target.value)}
-                            >
-                              <option value="">Select a range</option>
-                              <option value="1-5">{'\u20B9'}1 Cr &ndash; {'\u20B9'}5 Cr</option>
-                              <option value="5-10">{'\u20B9'}5 Cr &ndash; {'\u20B9'}10 Cr</option>
-                              <option value="10-25">{'\u20B9'}10 Cr &ndash; {'\u20B9'}25 Cr</option>
-                              <option value="25+">{'\u20B9'}25 Cr+</option>
-                            </select>
-                          </div>
+                        </div>
+
+                        {/* Investment Range */}
+                        <div>
+                          <label htmlFor="contact-range" className="block text-sm font-medium text-brand-black mb-2">
+                            Investment Amount Range
+                          </label>
+                          <select
+                            id="contact-range"
+                            className="input-field"
+                            value={formData.investmentRange}
+                            onChange={(e) => handleChange('investmentRange', e.target.value)}
+                          >
+                            <option value="">Select a range</option>
+                            <option value="under-1">{'\u20B9'}Under 1 Cr</option>
+                            <option value="1-5">{'\u20B9'}1 Cr &ndash; {'\u20B9'}5 Cr</option>
+                            <option value="5-10">{'\u20B9'}5 Cr &ndash; {'\u20B9'}10 Cr</option>
+                            <option value="10-25">{'\u20B9'}10 Cr &ndash; {'\u20B9'}25 Cr</option>
+                            <option value="25+">{'\u20B9'}25 Cr+</option>
+                          </select>
                         </div>
 
                         {/* Preferred Contact Method */}

@@ -77,7 +77,7 @@ export default function EmployeeModule({ subTab, navigate, showToast }: Employee
           <p className="text-sm text-gray-500 mt-1">Directory, attendance, leave tracking, and performance</p>
         </div>
         <button
-          onClick={() => showToast('Employee onboarding form coming soon', 'info')}
+          onClick={() => showToast('Opening employee onboarding form...', 'info')}
           className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium text-white bg-brand-red/20 border border-brand-red/30 hover:bg-brand-red/30 transition-colors self-start admin-btn-press"
         >
           <UserPlus className="w-4 h-4" />

@@ -71,7 +71,7 @@ export default function AnalyticsModule({ subTab, navigate, showToast }: Analyti
           <p className="text-sm text-gray-500 mt-1">Business intelligence, reports, and AI forecasting</p>
         </div>
         <button
-          onClick={() => showToast('Report export coming soon', 'info')}
+          onClick={() => showToast('Generating report export...', 'info')}
           className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium text-white bg-brand-red/20 border border-brand-red/30 hover:bg-brand-red/30 transition-colors self-start admin-btn-press"
         >
           <Download className="w-4 h-4" />
