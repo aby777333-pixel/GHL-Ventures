@@ -358,13 +358,13 @@ export default function Navbar() {
                   <ShieldCheck className="w-3 h-3" />
                 </Link>
                 <Link
-                  href="/admin/login"
+                  href="/staff/login"
                   className={`inline-flex items-center justify-center w-6 h-6 rounded-full transition-all duration-200 ${
                     scrolled
                       ? 'text-gray-400 dark:text-white/40 hover:text-amber-500 hover:bg-amber-50 dark:hover:bg-white/10'
                       : 'text-white/40 hover:text-amber-500 hover:bg-white/10'
                   }`}
-                  title="Employee Login"
+                  title="Employee & Support Staff Portal"
                 >
                   <BadgeCheck className="w-3 h-3" />
                 </Link>
@@ -613,12 +613,12 @@ export default function Navbar() {
               <span>Admin Portal</span>
             </Link>
             <Link
-              href="/admin/login"
+              href="/staff/login"
               onClick={() => setIsOpen(false)}
               className="inline-flex items-center space-x-1.5 text-white/40 text-xs hover:text-amber-500 transition-colors"
             >
               <BadgeCheck className="w-3 h-3" />
-              <span>Employee Login</span>
+              <span>Staff Portal</span>
             </Link>
           </div>
 

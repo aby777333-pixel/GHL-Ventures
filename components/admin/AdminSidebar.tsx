@@ -6,7 +6,7 @@ import {
   LayoutDashboard, Users, TrendingUp, UserCheck, FolderOpen, Sparkles,
   Shield, IndianRupee, BarChart3, MessageSquare, Settings, ChevronDown,
   ChevronRight, LogOut, HelpCircle, ExternalLink, X, Menu,
-  Building2, Megaphone,
+  Building2, Megaphone, BadgeCheck,
 } from 'lucide-react'
 import Logo from '@/components/Logo'
 import { ADMIN_SIDEBAR_ITEMS, MODULE_LABELS } from '@/lib/admin/adminConstants'
@@ -209,6 +209,15 @@ export default function AdminSidebar({
           >
             <ExternalLink className="w-[18px] h-[18px]" />
             Client Dashboard
+          </Link>
+          <Link
+            href="/staff/login"
+            target="_blank"
+            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-300
+              text-gray-500 hover:text-teal-400 hover:bg-teal-500/[0.06]"
+          >
+            <BadgeCheck className="w-[18px] h-[18px]" />
+            Staff Portal
           </Link>
           <button
             onClick={onLogout}
