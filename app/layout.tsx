@@ -5,6 +5,7 @@ import Navbar from '@/components/Navbar'
 import Footer from '@/components/Footer'
 import ScrollProgress from '@/components/ScrollProgress'
 import BackToTop from '@/components/BackToTop'
+import MainSiteOnly from '@/components/MainSiteOnly'
 // WhatsAppButton and TelegramButton removed
 // import WhatsAppButton from '@/components/WhatsAppButton'
 // import TelegramButton from '@/components/TelegramButton'
@@ -261,18 +262,23 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <ThemeProvider>
           <LegalPopupProvider>
             <ArticleReaderProvider>
-              <ScrollProgress />
-              <Navbar />
+              <MainSiteOnly>
+                <ScrollProgress />
+                <Navbar />
+              </MainSiteOnly>
               <main className="flex-1" id="main-content" role="main">
                 {children}
               </main>
-              <Footer />
-              <BackToTop />
+              <MainSiteOnly>
+                <Footer />
+                <BackToTop />
+                <CookieConsent />
+                <SocialProofToasts />
+                <LiveVisitorCount />
+              </MainSiteOnly>
+              {/* Floating widgets — always visible (useful for staff telecallers & CS) */}
               <VideoCallWidget />
               <DirectCallWidget />
-              <CookieConsent />
-              <SocialProofToasts />
-              <LiveVisitorCount />
               <VoiceCommandWidget />
               <SpeechTranslationWidget />
               <CommandPalette />
