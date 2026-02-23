@@ -750,7 +750,10 @@ function AIAdvisorTab({ showToast }: { showToast: Props['showToast'] }) {
 
   // Check for API key on mount and when returning from settings
   useEffect(() => {
-    const checkKey = () => setIsLive(!!sessionStorage.getItem('claude_api_key'))
+    const checkKey = () => {
+      const key = sessionStorage.getItem('claude_api_key') || process.env.NEXT_PUBLIC_CLAUDE_API_KEY || ''
+      setIsLive(!!key)
+    }
     checkKey()
     const interval = setInterval(checkKey, 2000) // poll for key changes
     return () => clearInterval(interval)
@@ -779,7 +782,7 @@ function AIAdvisorTab({ showToast }: { showToast: Props['showToast'] }) {
     setInput('')
     setThinking(true)
 
-    const apiKey = sessionStorage.getItem('claude_api_key')
+    const apiKey = sessionStorage.getItem('claude_api_key') || process.env.NEXT_PUBLIC_CLAUDE_API_KEY || ''
 
     if (apiKey) {
       // ── LIVE MODE: Call Claude API ──
