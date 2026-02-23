@@ -1,5 +1,6 @@
 import dynamic from 'next/dynamic'
 import { ALL_ADMIN_TAB_PARAMS } from '@/lib/admin/adminConstants'
+import ErrorBoundary from '@/components/shared/ErrorBoundary'
 
 const AdminClient = dynamic(
   () => import('@/components/admin/AdminClient'),
@@ -11,5 +12,9 @@ export function generateStaticParams() {
 }
 
 export default function AdminTabPage() {
-  return <AdminClient />
+  return (
+    <ErrorBoundary theme="dark" fallbackTitle="Admin Portal Error">
+      <AdminClient />
+    </ErrorBoundary>
+  )
 }

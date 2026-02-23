@@ -1,4 +1,5 @@
 import dynamic from 'next/dynamic'
+import ErrorBoundary from '@/components/shared/ErrorBoundary'
 
 const AdminClient = dynamic(
   () => import('@/components/admin/AdminClient'),
@@ -6,5 +7,9 @@ const AdminClient = dynamic(
 )
 
 export default function AdminPage() {
-  return <AdminClient />
+  return (
+    <ErrorBoundary theme="dark" fallbackTitle="Admin Portal Error">
+      <AdminClient />
+    </ErrorBoundary>
+  )
 }

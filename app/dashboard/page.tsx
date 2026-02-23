@@ -1,4 +1,5 @@
 import dynamic from 'next/dynamic'
+import ErrorBoundary from '@/components/shared/ErrorBoundary'
 
 const DashboardClient = dynamic(
   () => import('@/components/dashboard/DashboardClient'),
@@ -6,5 +7,9 @@ const DashboardClient = dynamic(
 )
 
 export default function DashboardPage() {
-  return <DashboardClient />
+  return (
+    <ErrorBoundary theme="light" fallbackTitle="Dashboard Error">
+      <DashboardClient />
+    </ErrorBoundary>
+  )
 }
