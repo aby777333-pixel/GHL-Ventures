@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { submitContactForm } from '@/lib/supabase/reportsDataService'
 import { Send, Briefcase, GraduationCap, MapPin, Heart, CheckCircle, ArrowRight, ChevronDown, Mail, Clock, Upload } from 'lucide-react'
 import SpaceHero from '@/components/SpaceHero'
 import AnimatedSection from '@/components/AnimatedSection'
@@ -270,9 +271,27 @@ export default function CareersPage() {
     document.getElementById('apply')?.scrollIntoView({ behavior: 'smooth' })
   }
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setSubmitted(true)
+    try {
+      await submitContactForm({
+        formType: 'career_application',
+        fullName: formData.name,
+        email: formData.email,
+        phone: formData.phone,
+        message: JSON.stringify({
+          position: formData.position,
+          experience: formData.experience,
+          currentCompany: formData.currentCompany,
+          currentCTC: formData.currentCTC,
+          linkedin: formData.linkedin,
+          portfolio: formData.portfolio,
+          coverLetter: formData.coverLetter,
+        }),
+        pageUrl: typeof window !== 'undefined' ? window.location.href : '',
+      })
+    } catch (err) { console.warn('Career form Supabase error:', err) }
   }
 
   return (

@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { submitContactForm, submitLead } from '@/lib/supabase/reportsDataService'
 import AnimatedSection from '@/components/AnimatedSection'
 import { BRAND } from '@/lib/constants'
 import {
@@ -50,9 +51,35 @@ export default function ContactPage() {
     privacy: false,
   })
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    // Save to Supabase (non-blocking — shows success immediately)
     setSubmitted(true)
+    try {
+      await Promise.all([
+        submitContactForm({
+          formType: formData.inquiryType || 'contact',
+          fullName: formData.name,
+          email: formData.email,
+          phone: formData.phone,
+          message: formData.message,
+          investmentRange: formData.investmentRange,
+          investmentInterest: formData.inquiryType,
+          pageUrl: typeof window !== 'undefined' ? window.location.href : '',
+        }),
+        submitLead({
+          firstName: formData.name.split(' ')[0] || '',
+          lastName: formData.name.split(' ').slice(1).join(' ') || '',
+          email: formData.email,
+          phone: formData.phone,
+          city: formData.city,
+          source: 'website',
+          investmentInterest: formData.inquiryType,
+        }),
+      ])
+    } catch (err) {
+      console.warn('Form submission to Supabase failed (non-critical):', err)
+    }
   }
 
   const handleChange = (field: string, value: string | boolean) => {

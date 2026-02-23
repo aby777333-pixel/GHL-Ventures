@@ -110,40 +110,81 @@ export interface ClaudeMessage {
   content: string
 }
 
+// Models to try in order of preference
+const CLAUDE_MODELS = [
+  'claude-sonnet-4-20250514',
+  'claude-3-5-sonnet-20241022',
+  'claude-3-haiku-20240307',
+]
+
 export async function callClaudeAPI(
   messages: ClaudeMessage[],
   apiKey: string
 ): Promise<string> {
-  const response = await fetch('https://api.anthropic.com/v1/messages', {
-    method: 'POST',
-    headers: {
-      'x-api-key': apiKey,
-      'anthropic-version': '2023-06-01',
-      'anthropic-dangerous-direct-browser-access': 'true',
-      'content-type': 'application/json',
-    },
-    body: JSON.stringify({
-      model: 'claude-sonnet-4-20250514',
-      max_tokens: 1024,
-      system: SYSTEM_PROMPT,
-      messages,
-    }),
-  })
+  let lastError = ''
 
-  if (!response.ok) {
-    const status = response.status
-    if (status === 401) throw new Error('Invalid API key. Check your key in Report Settings.')
-    if (status === 429) throw new Error('Rate limit exceeded. Please wait a moment and try again.')
-    if (status === 400) throw new Error('Bad request. The message may be too long.')
-    if (status === 529) throw new Error('Claude is currently overloaded. Please try again shortly.')
-    throw new Error(`API error (${status}). Please try again.`)
+  for (const model of CLAUDE_MODELS) {
+    try {
+      const response = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: {
+          'x-api-key': apiKey,
+          'anthropic-version': '2023-06-01',
+          'anthropic-dangerous-direct-browser-access': 'true',
+          'content-type': 'application/json',
+        },
+        body: JSON.stringify({
+          model,
+          max_tokens: 1024,
+          system: SYSTEM_PROMPT,
+          messages,
+        }),
+      })
+
+      if (!response.ok) {
+        // Parse the actual error body for better diagnostics
+        let errorDetail = ''
+        try {
+          const errBody = await response.json()
+          errorDetail = errBody?.error?.message || JSON.stringify(errBody)
+        } catch {
+          errorDetail = await response.text().catch(() => '')
+        }
+
+        const status = response.status
+
+        // If model not found, try next model
+        if (status === 400 && errorDetail.toLowerCase().includes('model')) {
+          lastError = `Model ${model} not available`
+          continue
+        }
+        if (status === 404) {
+          lastError = `Model ${model} not found`
+          continue
+        }
+
+        if (status === 401) throw new Error(`Invalid API key. ${errorDetail}`)
+        if (status === 429) throw new Error('Rate limit exceeded. Please wait a moment and try again.')
+        if (status === 529) throw new Error('Claude is currently overloaded. Please try again shortly.')
+        throw new Error(`API error (${status}): ${errorDetail}`)
+      }
+
+      const data = await response.json()
+
+      if (data.content && data.content.length > 0 && data.content[0].type === 'text') {
+        return data.content[0].text
+      }
+
+      throw new Error('Unexpected response format from Claude API.')
+    } catch (err) {
+      // If it's a model fallback, continue to next; otherwise rethrow
+      if (err instanceof Error && (err.message.includes('not available') || err.message.includes('not found'))) {
+        lastError = err.message
+        continue
+      }
+      throw err
+    }
   }
 
-  const data = await response.json()
-
-  if (data.content && data.content.length > 0 && data.content[0].type === 'text') {
-    return data.content[0].text
-  }
-
-  throw new Error('Unexpected response format from Claude API.')
+  throw new Error(`All models failed. Last error: ${lastError}`)
 }

@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { submitContactForm } from '@/lib/supabase/reportsDataService'
 import { Send, Users, Target, TrendingUp, Lightbulb, Cpu, BarChart3, CheckCircle, ArrowRight, Clock } from 'lucide-react'
 import SpaceHero from '@/components/SpaceHero'
 import AnimatedSection from '@/components/AnimatedSection'
@@ -36,9 +37,20 @@ export default function StartupApplyPage() {
     setFormData((prev) => ({ ...prev, [field]: value }))
   }
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setSubmitted(true)
+    try {
+      await submitContactForm({
+        formType: 'startup_apply',
+        fullName: formData.founderName,
+        email: formData.email,
+        phone: formData.phone,
+        company: formData.companyName,
+        message: `${formData.pitch}\n\nSector: ${formData.sector}, Stage: ${formData.stage}, MRR: ${formData.mrr}, Seeking: ${formData.amountSeeking}`,
+        pageUrl: typeof window !== 'undefined' ? window.location.href : '',
+      })
+    } catch (err) { console.warn('Startup form Supabase error:', err) }
   }
 
   return (

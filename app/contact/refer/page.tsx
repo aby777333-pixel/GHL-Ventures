@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { submitContactForm, submitLead } from '@/lib/supabase/reportsDataService'
 import { Send, Users, Heart, TrendingUp, CheckCircle, ArrowRight } from 'lucide-react'
 import SpaceHero from '@/components/SpaceHero'
 import AnimatedSection from '@/components/AnimatedSection'
@@ -30,9 +31,30 @@ export default function ReferPage() {
     setFormData((prev) => ({ ...prev, [field]: value }))
   }
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setSubmitted(true)
+    try {
+      await Promise.all([
+        submitContactForm({
+          formType: 'refer_investor',
+          fullName: formData.yourName,
+          email: formData.yourEmail,
+          phone: formData.yourPhone,
+          message: formData.message,
+          pageUrl: typeof window !== 'undefined' ? window.location.href : '',
+        }),
+        submitLead({
+          firstName: formData.theirName.split(' ')[0] || '',
+          lastName: formData.theirName.split(' ').slice(1).join(' ') || '',
+          email: formData.theirEmail,
+          phone: formData.theirPhone,
+          city: formData.theirCity,
+          source: 'referral',
+          investmentInterest: formData.investableSurplus,
+        }),
+      ])
+    } catch (err) { console.warn('Referral form Supabase error:', err) }
   }
 
   return (
