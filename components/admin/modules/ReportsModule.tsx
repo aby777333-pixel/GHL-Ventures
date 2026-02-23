@@ -18,13 +18,10 @@ import {
 import AdminGlass from '../shared/AdminGlass'
 import AdminKPICard from '../shared/AdminKPICard'
 import {
-  REPORT_KPIS, MONTHLY_REVENUE, REVENUE_BY_TYPE, AI_INSIGHTS, STAFF_ACTIVITY,
-  SCHEDULED_REPORTS, GENERATED_REPORTS, LEAD_FUNNEL, CAMPAIGN_METRICS,
-  REVENUE_FORECAST, formatINRCompact, REPORT_CLIENTS, REPORT_LEADS,
-  EXPENSE_SUMMARY, REVENUE_BY_CITY, CALL_LOGS, DOCUMENT_VAULT, EMAIL_TEMPLATES,
-  TRAFFIC_SOURCES, TOP_PAGES, getClientsByTier,
+  formatINRCompact, getClientsByTier,
 } from '@/lib/admin/reportsData'
 import { callClaudeAPI, type ClaudeMessage } from '@/lib/admin/claudeApi'
+import { useReportsLiveData, ReportsDataContext, useReportsDataContext } from '@/lib/admin/useReportsLiveData'
 
 // ── Constants ────────────────────────────────────────────────
 const CHART_COLORS = ['#DC2626', '#D4AF37', '#3B82F6', '#10B981', '#8B5CF6', '#F59E0B', '#EC4899', '#06B6D4']
@@ -57,17 +54,19 @@ interface Props {
 
 export default function ReportsModule({ subTab, navigate, showToast }: Props) {
   const activeTab = (TABS.some(t => t.id === subTab) ? subTab : 'dashboard') as TabId
+  const liveData = useReportsLiveData()
 
   const handleTabClick = (tabId: string) => {
     navigate(tabId === 'dashboard' ? 'reports' : `reports/${tabId}`)
   }
 
   return (
+    <ReportsDataContext.Provider value={liveData}>
     <div className="space-y-6 admin-section-enter">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold text-white">Reports & Intelligence OS</h1>
-          <p className="text-sm text-gray-500 mt-1">GHL Intelligence Command Center &mdash; AI-powered business analytics</p>
+          <p className="text-sm text-gray-500 mt-1">GHL Intelligence Command Center &mdash; AI-powered business analytics{liveData.isLiveData ? ' · Live' : ''}</p>
         </div>
         <div className="flex gap-2">
           <button onClick={() => showToast('Generating dashboard export...', 'info')} className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium text-white bg-brand-red/20 border border-brand-red/30 hover:bg-brand-red/30 transition-colors admin-btn-press">
@@ -103,6 +102,7 @@ export default function ReportsModule({ subTab, navigate, showToast }: Props) {
         {activeTab === 'rpt-settings' && <SettingsTab showToast={showToast} />}
       </div>
     </div>
+    </ReportsDataContext.Provider>
   )
 }
 
@@ -111,6 +111,7 @@ export default function ReportsModule({ subTab, navigate, showToast }: Props) {
 // ═══════════════════════════════════════════════════════════════
 
 function DashboardTab({ navigate, showToast }: { navigate: (p: string) => void; showToast: Props['showToast'] }) {
+  const { REPORT_KPIS, MONTHLY_REVENUE, REVENUE_BY_TYPE, LEAD_FUNNEL, CAMPAIGN_METRICS, STAFF_ACTIVITY, GENERATED_REPORTS, AI_INSIGHTS } = useReportsDataContext()
   const [clock, setClock] = useState('')
   useEffect(() => {
     const tick = () => setClock(new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true }))
@@ -440,6 +441,7 @@ function BuilderTab({ showToast }: { showToast: Props['showToast'] }) {
 // ═══════════════════════════════════════════════════════════════
 
 function FinancialTab({ showToast }: { showToast: Props['showToast'] }) {
+  const { REPORT_KPIS, REVENUE_BY_TYPE, REVENUE_BY_CITY, EXPENSE_SUMMARY, REVENUE_FORECAST } = useReportsDataContext()
   const [mktBudget, setMktBudget] = useState(0)
   const [staffDelta, setStaffDelta] = useState(0)
 
@@ -602,6 +604,7 @@ function FinancialTab({ showToast }: { showToast: Props['showToast'] }) {
 // ═══════════════════════════════════════════════════════════════
 
 function MarketingTab({ showToast }: { showToast: Props['showToast'] }) {
+  const { CAMPAIGN_METRICS, REPORT_LEADS, TRAFFIC_SOURCES, TOP_PAGES } = useReportsDataContext()
   const platformAgg = useMemo(() => {
     const map = new Map<string, { spend: number; impressions: number; clicks: number; conversions: number; revenue: number }>()
     CAMPAIGN_METRICS.forEach(c => {
@@ -610,12 +613,12 @@ function MarketingTab({ showToast }: { showToast: Props['showToast'] }) {
       map.set(c.platform, p)
     })
     return Array.from(map.entries()).map(([platform, data]) => ({ platform, ...data, ctr: ((data.clicks / data.impressions) * 100).toFixed(2), roi: (data.revenue / data.spend).toFixed(1) }))
-  }, [])
+  }, [CAMPAIGN_METRICS])
 
   const leadsByStatus = useMemo(() => {
     const statuses = ['new', 'contacted', 'qualified', 'pitched', 'negotiating', 'won', 'lost'] as const
     return statuses.map(s => ({ status: s, count: REPORT_LEADS.filter(l => l.status === s).length, leads: REPORT_LEADS.filter(l => l.status === s) }))
-  }, [])
+  }, [REPORT_LEADS])
 
   return (
     <div className="space-y-6">
@@ -737,6 +740,7 @@ function MarketingTab({ showToast }: { showToast: Props['showToast'] }) {
 // ═══════════════════════════════════════════════════════════════
 
 function AIAdvisorTab({ showToast }: { showToast: Props['showToast'] }) {
+  const { REPORT_KPIS, AI_INSIGHTS, SCHEDULED_REPORTS } = useReportsDataContext()
   const [messages, setMessages] = useState<{ role: 'user' | 'ai'; content: string }[]>([
     { role: 'ai', content: 'Welcome to the GHL Intelligence Advisor. I have access to your financial, marketing, and operational data. Ask me anything about your business strategy, or try one of the suggested queries below.' },
   ])
@@ -910,6 +914,7 @@ function AIAdvisorTab({ showToast }: { showToast: Props['showToast'] }) {
 // ═══════════════════════════════════════════════════════════════
 
 function EmailerTab({ showToast }: { showToast: Props['showToast'] }) {
+  const { EMAIL_TEMPLATES } = useReportsDataContext()
   const [subject, setSubject] = useState('')
   const [body, setBody] = useState('')
   const [selectedTemplate, setSelectedTemplate] = useState<string | null>(null)
@@ -968,11 +973,12 @@ function EmailerTab({ showToast }: { showToast: Props['showToast'] }) {
 // ═══════════════════════════════════════════════════════════════
 
 function DialerTab({ showToast }: { showToast: Props['showToast'] }) {
+  const { REPORT_CLIENTS, REPORT_LEADS, CALL_LOGS } = useReportsDataContext()
   const [searchTerm, setSearchTerm] = useState('')
   const allContacts = useMemo(() => [
     ...REPORT_CLIENTS.map(c => ({ name: c.name, phone: c.phone, type: 'Client' as const, tier: c.tier })),
     ...REPORT_LEADS.map(l => ({ name: l.name, phone: l.phone, type: 'Lead' as const, tier: 0 })),
-  ], [])
+  ], [REPORT_CLIENTS, REPORT_LEADS])
   const filtered = useMemo(() => allContacts.filter(c => c.name.toLowerCase().includes(searchTerm.toLowerCase())), [allContacts, searchTerm])
 
   return (
@@ -1045,6 +1051,7 @@ function DialerTab({ showToast }: { showToast: Props['showToast'] }) {
 // ═══════════════════════════════════════════════════════════════
 
 function DocumentsTab({ showToast }: { showToast: Props['showToast'] }) {
+  const { DOCUMENT_VAULT } = useReportsDataContext()
   const [activeFolder, setActiveFolder] = useState<string>('fund')
   const [search, setSearch] = useState('')
   const folders = ['fund', 'compliance', 'marketing', 'internal', 'reports'] as const
