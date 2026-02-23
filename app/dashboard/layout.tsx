@@ -7,5 +7,10 @@ export const metadata: Metadata = {
 }
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
-  return <DashboardShell>{children}</DashboardShell>
+  return (
+    <>
+      <style dangerouslySetInnerHTML={{ __html: '.main-site-shell{display:none!important}' }} />
+      <DashboardShell>{children}</DashboardShell>
+    </>
+  )
 }

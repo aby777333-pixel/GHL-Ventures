@@ -7,5 +7,10 @@ export const metadata: Metadata = {
 }
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
-  return <AdminShell>{children}</AdminShell>
+  return (
+    <>
+      <style dangerouslySetInnerHTML={{ __html: '.main-site-shell{display:none!important}' }} />
+      <AdminShell>{children}</AdminShell>
+    </>
+  )
 }
