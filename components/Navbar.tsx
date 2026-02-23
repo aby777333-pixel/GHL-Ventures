@@ -11,6 +11,8 @@ import NotificationCenter from '@/components/NotificationCenter'
 import ThemeToggle from '@/components/ThemeToggle'
 import ThemePicker from '@/components/ThemePicker'
 
+const PORTAL_PREFIXES = ['/staff', '/admin', '/dashboard']
+
 export default function Navbar() {
   const [isOpen, setIsOpen] = useState(false)
   const [scrolled, setScrolled] = useState(false)
@@ -31,6 +33,9 @@ export default function Navbar() {
   const contactRef = useRef<HTMLDivElement>(null)
   const contactTimeout = useRef<NodeJS.Timeout | null>(null)
   const pathname = usePathname()
+
+  // Hide on portal routes (staff, admin, dashboard)
+  if (PORTAL_PREFIXES.some(p => pathname.startsWith(p))) return null
 
   const handleScroll = useCallback(() => {
     setScrolled(window.scrollY > 20)

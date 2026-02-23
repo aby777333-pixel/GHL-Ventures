@@ -1,9 +1,14 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { usePathname } from 'next/navigation'
 import { Eye } from 'lucide-react'
 
+const PORTAL_PREFIXES = ['/staff', '/admin', '/dashboard']
+
 export default function LiveVisitorCount() {
+  const pathname = usePathname()
+  if (PORTAL_PREFIXES.some(p => pathname.startsWith(p))) return null
   const [count, setCount] = useState(0)
   const [show, setShow] = useState(false)
 

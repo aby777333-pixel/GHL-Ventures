@@ -1,14 +1,18 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { usePathname } from 'next/navigation'
 import { BRAND } from '@/lib/constants'
 import { Cookie, X, Settings } from 'lucide-react'
 import Link from 'next/link'
 import { LegalLink } from '@/components/LegalPopup'
 
 const STORAGE_KEY = 'ghl-cookie-consent'
+const PORTAL_PREFIXES = ['/staff', '/admin', '/dashboard']
 
 export default function CookieConsent() {
+  const pathname = usePathname()
+  if (PORTAL_PREFIXES.some(p => pathname.startsWith(p))) return null
   const [visible, setVisible] = useState(false)
   const [showPreferences, setShowPreferences] = useState(false)
   const [preferences, setPreferences] = useState({

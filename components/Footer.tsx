@@ -1,6 +1,7 @@
 'use client'
 
 import Link from 'next/link'
+import { usePathname } from 'next/navigation'
 import Logo from '@/components/Logo'
 import { LegalLink } from '@/components/LegalPopup'
 import { BRAND, NAV_LINKS, SOCIAL_LINKS } from '@/lib/constants'
@@ -73,7 +74,12 @@ const QUICK_LINKS = NAV_LINKS.filter((link) =>
   ['/', '/about', '/fund', '/portfolio', '/blog', '/contact'].includes(link.href)
 )
 
+const PORTAL_PREFIXES = ['/staff', '/admin', '/dashboard']
+
 export default function Footer() {
+  const pathname = usePathname()
+  if (PORTAL_PREFIXES.some(p => pathname.startsWith(p))) return null
+
   return (
     <footer role="contentinfo">
       {/* ── WhatsApp Strip ── */}

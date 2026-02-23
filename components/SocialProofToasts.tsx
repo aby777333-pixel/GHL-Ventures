@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
+import { usePathname } from 'next/navigation'
 import { X, User, CheckCircle } from 'lucide-react'
 
 interface SocialProofEntry {
@@ -36,7 +37,12 @@ function shuffleArray<T>(array: T[]): T[] {
 const SESSION_STORAGE_KEY = 'ghl-toast-count'
 const MAX_TOASTS_PER_SESSION = 6
 
+const PORTAL_PREFIXES = ['/staff', '/admin', '/dashboard']
+
 export default function SocialProofToasts() {
+  const pathname = usePathname()
+  if (PORTAL_PREFIXES.some(p => pathname.startsWith(p))) return null
+
   const [currentIndex, setCurrentIndex] = useState(0)
   const [isVisible, setIsVisible] = useState(false)
   const [sessionCount, setSessionCount] = useState(0)

@@ -1,9 +1,14 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
+import { usePathname } from 'next/navigation'
 import { ArrowUp } from 'lucide-react'
 
+const PORTAL_PREFIXES = ['/staff', '/admin', '/dashboard']
+
 export default function BackToTop() {
+  const pathname = usePathname()
+  if (PORTAL_PREFIXES.some(p => pathname.startsWith(p))) return null
   const [show, setShow] = useState(false)
 
   useEffect(() => {
