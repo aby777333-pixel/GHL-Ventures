@@ -24,6 +24,7 @@ import {
   EXPENSE_SUMMARY, REVENUE_BY_CITY, CALL_LOGS, DOCUMENT_VAULT, EMAIL_TEMPLATES,
   TRAFFIC_SOURCES, TOP_PAGES, getClientsByTier,
 } from '@/lib/admin/reportsData'
+import { callClaudeAPI, type ClaudeMessage } from '@/lib/admin/claudeApi'
 
 // ── Constants ────────────────────────────────────────────────
 const CHART_COLORS = ['#DC2626', '#D4AF37', '#3B82F6', '#10B981', '#8B5CF6', '#F59E0B', '#EC4899', '#06B6D4']
@@ -741,33 +742,72 @@ function AIAdvisorTab({ showToast }: { showToast: Props['showToast'] }) {
   ])
   const [input, setInput] = useState('')
   const [thinking, setThinking] = useState(false)
+  const [isLive, setIsLive] = useState(false)
+
+  // Check for API key on mount and when returning from settings
+  useEffect(() => {
+    const checkKey = () => setIsLive(!!sessionStorage.getItem('claude_api_key'))
+    checkKey()
+    const interval = setInterval(checkKey, 2000) // poll for key changes
+    return () => clearInterval(interval)
+  }, [])
 
   const suggestedQueries = ['What\'s our revenue trend this quarter?', 'Which campaigns should we kill?', 'Analyze our client retention', 'Compare CAC across channels', 'Draft a board report for February']
 
-  const handleSend = () => {
-    if (!input.trim()) return
+  // Simulated fallback (keyword matching) when no API key
+  const getSimulatedResponse = (userMsg: string): string => {
+    const kpis = REPORT_KPIS
+    const q = userMsg.toLowerCase()
+    if (q.includes('revenue') || q.includes('trend')) {
+      return `**Revenue Analysis — February 2025**\n\nYour monthly revenue stands at ${formatINRCompact(kpis.monthlyRevenue)}, up ${kpis.revenueChange}% vs last month.\n\n**Key drivers:**\n- Management fees: ₹51L (38.2% of total)\n- Performance fees: ₹32.5L (24.3%)\n- NRI segment contributing 25% of total revenue\n\n**Recommendation:** Double down on LinkedIn campaigns for NRI acquisition — they show 4x conversion rate vs domestic channels.`
+    } else if (q.includes('campaign') || q.includes('kill')) {
+      return `**Campaign Optimization Analysis**\n\nBased on ROI analysis:\n\n✅ **Keep & Scale:**\n- LinkedIn CXO Campaign (50x ROI)\n- NRI Investment Search (50x ROI)\n\n⚠️ **Optimize:**\n- Instagram HNI Stories (11.1x ROI) — good but CPC rising\n\n❌ **Consider Pausing:**\n- YouTube Explainer Series (12.5x ROI but only 3 conversions)\n- Brand Campaign (10x ROI, low volume)\n\n**Projected savings:** ₹1.7L/month reallocation could yield 5-8 additional conversions.`
+    } else if (q.includes('retention') || q.includes('churn')) {
+      return `**Client Retention Analysis**\n\nOverall retention: ${kpis.retentionRate}% (industry avg: 88%)\n\n**Concerns:**\n- Tier 1 (₹25L-1Cr) segment showing 12% churn increase\n- 2 clients moved to 'dormant' status this quarter\n\n**Top retention drivers:**\n1. Regular portfolio updates (NPS +15 when consistent)\n2. Dedicated RM assignment\n3. AI-powered market insights\n\n**Action items:**\n- Launch quarterly review calls for Tier 1\n- Implement automated market alerts\n- Consider fee restructuring for competitive positioning`
+    }
+    return `Great question! Based on the current data:\n\n- **AUM:** ${formatINRCompact(kpis.totalAUM)} across ${kpis.activeClients} active clients\n- **Monthly revenue:** ${formatINRCompact(kpis.monthlyRevenue)} with ${kpis.profitMargin}% margin\n- **Key opportunity:** NRI segment from UAE (4x conversion rate, zero dedicated campaigns)\n- **Key risk:** Tier 1 retention declining, competitors offering lower fees\n\nWould you like me to dive deeper into any of these areas, or generate a detailed report?`
+  }
+
+  const handleSend = async () => {
+    if (!input.trim() || thinking) return
     const userMsg = input.trim()
     setMessages(prev => [...prev, { role: 'user', content: userMsg }])
     setInput('')
     setThinking(true)
 
-    // Simulated AI response
-    setTimeout(() => {
-      const kpis = REPORT_KPIS
-      let response = ''
-      const q = userMsg.toLowerCase()
-      if (q.includes('revenue') || q.includes('trend')) {
-        response = `**Revenue Analysis — February 2025**\n\nYour monthly revenue stands at ${formatINRCompact(kpis.monthlyRevenue)}, up ${kpis.revenueChange}% vs last month.\n\n**Key drivers:**\n- Management fees: ₹51L (38.2% of total)\n- Performance fees: ₹32.5L (24.3%)\n- NRI segment contributing 25% of total revenue\n\n**Recommendation:** Double down on LinkedIn campaigns for NRI acquisition — they show 4x conversion rate vs domestic channels.`
-      } else if (q.includes('campaign') || q.includes('kill')) {
-        response = `**Campaign Optimization Analysis**\n\nBased on ROI analysis:\n\n✅ **Keep & Scale:**\n- LinkedIn CXO Campaign (50x ROI)\n- NRI Investment Search (50x ROI)\n\n⚠️ **Optimize:**\n- Instagram HNI Stories (11.1x ROI) — good but CPC rising\n\n❌ **Consider Pausing:**\n- YouTube Explainer Series (12.5x ROI but only 3 conversions)\n- Brand Campaign (10x ROI, low volume)\n\n**Projected savings:** ₹1.7L/month reallocation could yield 5-8 additional conversions.`
-      } else if (q.includes('retention') || q.includes('churn')) {
-        response = `**Client Retention Analysis**\n\nOverall retention: ${kpis.retentionRate}% (industry avg: 88%)\n\n**Concerns:**\n- Tier 1 (₹25L-1Cr) segment showing 12% churn increase\n- 2 clients moved to 'dormant' status this quarter\n\n**Top retention drivers:**\n1. Regular portfolio updates (NPS +15 when consistent)\n2. Dedicated RM assignment\n3. AI-powered market insights\n\n**Action items:**\n- Launch quarterly review calls for Tier 1\n- Implement automated market alerts\n- Consider fee restructuring for competitive positioning`
-      } else {
-        response = `Great question! Based on the current data:\n\n- **AUM:** ${formatINRCompact(kpis.totalAUM)} across ${kpis.activeClients} active clients\n- **Monthly revenue:** ${formatINRCompact(kpis.monthlyRevenue)} with ${kpis.profitMargin}% margin\n- **Key opportunity:** NRI segment from UAE (4x conversion rate, zero dedicated campaigns)\n- **Key risk:** Tier 1 retention declining, competitors offering lower fees\n\nWould you like me to dive deeper into any of these areas, or generate a detailed report?`
+    const apiKey = sessionStorage.getItem('claude_api_key')
+
+    if (apiKey) {
+      // ── LIVE MODE: Call Claude API ──
+      try {
+        // Build conversation history for Claude (map 'ai' → 'assistant')
+        const history: ClaudeMessage[] = messages
+          .filter(m => m.role === 'user' || m.role === 'ai')
+          .map(m => ({ role: m.role === 'ai' ? 'assistant' as const : 'user' as const, content: m.content }))
+        // Add current user message
+        history.push({ role: 'user', content: userMsg })
+        // Remove the initial welcome message from history (it's system-level context)
+        if (history.length > 0 && history[0].role === 'assistant') {
+          history.shift()
+        }
+
+        const response = await callClaudeAPI(history, apiKey)
+        setMessages(prev => [...prev, { role: 'ai', content: response }])
+      } catch (err: unknown) {
+        const errorMsg = err instanceof Error ? err.message : 'Unknown error occurred'
+        showToast(`AI Error: ${errorMsg}`, 'error')
+        // Fall back to simulated response on API failure
+        const fallback = getSimulatedResponse(userMsg)
+        setMessages(prev => [...prev, { role: 'ai', content: `⚠️ *Live AI unavailable — showing cached analysis*\n\n${fallback}` }])
       }
+    } else {
+      // ── SIMULATED MODE: Keyword matching fallback ──
+      await new Promise(resolve => setTimeout(resolve, 1200))
+      const response = getSimulatedResponse(userMsg)
       setMessages(prev => [...prev, { role: 'ai', content: response }])
-      setThinking(false)
-    }, 1500)
+    }
+
+    setThinking(false)
   }
 
   return (
@@ -780,7 +820,7 @@ function AIAdvisorTab({ showToast }: { showToast: Props['showToast'] }) {
             {messages.map((m, i) => (
               <div key={i} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
                 <div className={`max-w-[85%] rounded-2xl p-3.5 ${m.role === 'user' ? 'bg-brand-red/20 border border-brand-red/30' : 'bg-white/[0.04] border border-white/[0.08]'}`}>
-                  {m.role === 'ai' && <div className="flex items-center gap-1.5 mb-2"><Brain className="w-3.5 h-3.5 text-purple-400" /><span className="text-[10px] text-purple-400 font-semibold uppercase">GHL AI Advisor</span></div>}
+                  {m.role === 'ai' && <div className="flex items-center gap-1.5 mb-2"><Brain className="w-3.5 h-3.5 text-purple-400" /><span className="text-[10px] text-purple-400 font-semibold uppercase">GHL AI Advisor{isLive ? ' · Live' : ''}</span></div>}
                   <div className="text-sm text-gray-200 whitespace-pre-wrap leading-relaxed">{m.content.split('**').map((part, j) => j % 2 === 1 ? <strong key={j} className="text-white">{part}</strong> : part)}</div>
                 </div>
               </div>
@@ -788,7 +828,7 @@ function AIAdvisorTab({ showToast }: { showToast: Props['showToast'] }) {
             {thinking && (
               <div className="flex justify-start">
                 <div className="bg-white/[0.04] border border-white/[0.08] rounded-2xl p-3.5">
-                  <div className="flex items-center gap-2"><Brain className="w-3.5 h-3.5 text-purple-400 animate-pulse" /><span className="text-sm text-gray-400 animate-pulse">Analyzing your data...</span></div>
+                  <div className="flex items-center gap-2"><Brain className="w-3.5 h-3.5 text-purple-400 animate-pulse" /><span className="text-sm text-gray-400 animate-pulse">{isLive ? 'Querying Claude...' : 'Analyzing your data...'}</span></div>
                 </div>
               </div>
             )}
@@ -807,7 +847,12 @@ function AIAdvisorTab({ showToast }: { showToast: Props['showToast'] }) {
               <input value={input} onChange={e => setInput(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleSend()} placeholder="Ask about revenue, campaigns, strategy..." className="flex-1 px-4 py-2.5 rounded-xl bg-white/[0.04] border border-white/[0.08] text-sm text-white placeholder:text-gray-600 focus:outline-none focus:border-brand-red/40" />
               <button onClick={handleSend} disabled={thinking} className="px-4 py-2.5 rounded-xl bg-brand-red/20 border border-brand-red/30 hover:bg-brand-red/30 transition-colors disabled:opacity-50 admin-btn-press"><Send className="w-4 h-4 text-white" /></button>
             </div>
-            <p className="text-[10px] text-gray-600 mt-2 text-center">Connect your Claude API key in Settings for live AI responses</p>
+            <p className="text-[10px] mt-2 text-center">
+              {isLive
+                ? <span className="text-emerald-400">● Live AI connected — responses powered by Claude</span>
+                : <span className="text-gray-600">○ Simulated mode — add your Claude API key in Report Settings for live AI</span>
+              }
+            </p>
           </div>
         </AdminGlass>
       </div>
