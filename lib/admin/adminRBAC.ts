@@ -36,6 +36,7 @@ export const ROLE_PERMISSIONS: Record<AdminRole, Permission[]> = {
     'view:analytics', 'export:analytics',
     'view:comms', 'create:comms',
     'view:marketing', 'create:marketing', 'edit:marketing', 'approve:marketing', 'export:marketing',
+    'view:reports', 'create:reports', 'edit:reports', 'delete:reports', 'export:reports',
     'view:settings',
   ],
 
@@ -48,6 +49,7 @@ export const ROLE_PERMISSIONS: Record<AdminRole, Permission[]> = {
     'view:ai-ops',
     'view:realty-brokers',
     'view:marketing',
+    'view:reports', 'export:reports',
   ],
 
   'fund-manager': [
@@ -60,6 +62,7 @@ export const ROLE_PERMISSIONS: Record<AdminRole, Permission[]> = {
     'view:financial', 'export:financial',
     'view:analytics', 'export:analytics',
     'view:realty-brokers',
+    'view:reports', 'create:reports', 'export:reports',
   ],
 
   'manager': [
@@ -71,6 +74,7 @@ export const ROLE_PERMISSIONS: Record<AdminRole, Permission[]> = {
     'view:comms', 'create:comms',
     'view:realty-brokers', 'edit:realty-brokers',
     'view:marketing', 'edit:marketing', 'approve:marketing',
+    'view:reports', 'export:reports',
   ],
 
   'marketing-manager': [
@@ -82,6 +86,7 @@ export const ROLE_PERMISSIONS: Record<AdminRole, Permission[]> = {
     'view:comms', 'create:comms',
     'view:ai-ops', 'create:ai-ops',
     'view:realty-brokers',
+    'view:reports', 'create:reports', 'export:reports',
   ],
 
   'marketing-executive': [
@@ -124,6 +129,7 @@ export const ROLE_PERMISSIONS: Record<AdminRole, Permission[]> = {
     'view:sales',
     'view:analytics',
     'view:marketing',
+    'view:reports',
   ],
 }
 
@@ -154,7 +160,7 @@ export function isRoleHigherOrEqual(role: AdminRole, targetRole: AdminRole): boo
 export function getVisibleModules(role: AdminRole): PermissionModule[] {
   const all: PermissionModule[] = [
     'overview', 'clients', 'sales', 'realty-brokers', 'employees', 'assets',
-    'ai-ops', 'compliance', 'financial', 'analytics', 'comms', 'marketing', 'settings',
+    'ai-ops', 'compliance', 'financial', 'analytics', 'comms', 'marketing', 'reports', 'settings',
   ]
   return all.filter(mod => hasModuleAccess(role, mod))
 }

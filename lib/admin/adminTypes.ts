@@ -35,7 +35,7 @@ export interface AdminSession {
 
 // ── Permissions ───────────────────────────────────────────────────
 export type PermissionAction = 'view' | 'create' | 'edit' | 'approve' | 'delete' | 'export' | 'configure'
-export type PermissionModule = 'overview' | 'clients' | 'sales' | 'realty-brokers' | 'employees' | 'assets' | 'ai-ops' | 'compliance' | 'financial' | 'analytics' | 'comms' | 'marketing' | 'settings'
+export type PermissionModule = 'overview' | 'clients' | 'sales' | 'realty-brokers' | 'employees' | 'assets' | 'ai-ops' | 'compliance' | 'financial' | 'analytics' | 'comms' | 'marketing' | 'reports' | 'settings'
 export type Permission = `${PermissionAction}:${PermissionModule}` | '*'
 
 // ── Navigation ────────────────────────────────────────────────────
@@ -52,6 +52,7 @@ export type AdminModule =
   | 'analytics'
   | 'comms'
   | 'marketing'
+  | 'reports'
   | 'settings'
 
 export interface AdminNavItem {
@@ -436,4 +437,132 @@ export interface IntegrationService {
   lastSync?: string
   dataFlowing?: string
   category: 'advertising' | 'social' | 'messaging' | 'crm' | 'analytics' | 'scheduling' | 'automation'
+}
+
+// ── Reports & Intelligence ──────────────────────────────────
+export type ReportFrequency = 'daily' | 'weekly' | 'monthly' | 'quarterly' | 'annual' | 'once'
+export type ReportStatus = 'draft' | 'scheduled' | 'generating' | 'ready' | 'failed' | 'sent'
+export type ReportFormat = 'pdf' | 'xlsx' | 'csv' | 'json' | 'google-sheets'
+
+export interface ScheduledReport {
+  id: string
+  name: string
+  description?: string
+  type: 'financial' | 'marketing' | 'compliance' | 'board' | 'client' | 'staff' | 'custom'
+  frequency: ReportFrequency
+  lastRun?: string
+  nextRun?: string
+  status: ReportStatus
+  owner: string
+  recipients: string[]
+  format: ReportFormat[]
+  createdDate: string
+}
+
+export interface GeneratedReport {
+  id: string
+  name: string
+  type: string
+  format: ReportFormat
+  generatedAt: string
+  generatedBy: string
+  size: string
+  status: 'ready' | 'expired' | 'archived'
+  downloadCount: number
+}
+
+export interface AIInsight {
+  id: string
+  type: 'growth' | 'risk' | 'anomaly' | 'opportunity' | 'efficiency'
+  summary: string
+  confidence: number
+  priority: 'high' | 'medium' | 'low'
+  createdAt: string
+  actionable: boolean
+  impact?: string
+}
+
+export interface RevenueStream {
+  id: string
+  clientId?: string
+  type: 'management_fee' | 'performance_fee' | 'advisory_fee' | 'subscription' | 'referral_commission'
+  amount: number
+  period: string
+  source: string
+}
+
+export interface ExpenseRecord {
+  id: string
+  category: string
+  subCategory: string
+  department: string
+  amount: number
+  vendor: string
+  month: string
+  campaignId?: string
+}
+
+export interface CampaignMetric {
+  id: string
+  platform: string
+  name: string
+  spend: number
+  impressions: number
+  clicks: number
+  conversions: number
+  revenueGenerated: number
+  startDate: string
+  endDate?: string
+  status: 'active' | 'paused' | 'completed'
+}
+
+export interface EmailDraft {
+  id: string
+  subject: string
+  body: string
+  template?: string
+  recipients: string[]
+  scheduledDate?: string
+  status: 'draft' | 'scheduled' | 'sent' | 'failed'
+  sentDate?: string
+  openRate?: number
+  clickRate?: number
+}
+
+export interface CallLog {
+  id: string
+  contactName: string
+  contactPhone: string
+  direction: 'inbound' | 'outbound'
+  duration: number
+  outcome: 'connected' | 'voicemail' | 'no-answer' | 'callback-requested' | 'deal-progressed'
+  notes?: string
+  staffId: string
+  timestamp: string
+  followUpDate?: string
+}
+
+export interface DocumentVaultItem {
+  id: string
+  name: string
+  folder: 'client' | 'fund' | 'compliance' | 'marketing' | 'internal' | 'reports'
+  type: string
+  size: string
+  uploadedBy: string
+  uploadDate: string
+  version: number
+  tags: string[]
+  accessRoles: AdminRole[]
+  expiryDate?: string
+}
+
+export interface KPIAlert {
+  id: string
+  metric: string
+  condition: 'above' | 'below' | 'change'
+  threshold: number
+  currentValue: number
+  triggered: boolean
+  lastChecked: string
+  severity: 'critical' | 'warning' | 'info'
 }

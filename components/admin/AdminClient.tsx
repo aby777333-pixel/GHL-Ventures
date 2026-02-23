@@ -19,6 +19,7 @@ import CommsModule from './modules/CommsModule'
 import SettingsModule from './modules/SettingsModule'
 import RealtyBrokersModule from './modules/RealtyBrokersModule'
 import MarketingModule from './modules/MarketingModule'
+import ReportsModule from './modules/ReportsModule'
 import { useAdminAuth, useAdminToast } from '@/lib/admin/adminHooks'
 import { getAdminSession } from '@/lib/admin/adminAuth'
 import type { AdminModule } from '@/lib/admin/adminTypes'
@@ -27,13 +28,13 @@ import { hasModuleAccess } from '@/lib/admin/adminRBAC'
 import {
   LayoutDashboard, Users, TrendingUp, UserCheck, FolderOpen, Sparkles,
   Shield, IndianRupee, BarChart3, MessageSquare, Settings, Construction,
-  Lock, Building2, Megaphone,
+  Lock, Building2, Megaphone, FileBarChart,
 } from 'lucide-react'
 
 // ── Valid Modules ──────────────────────────────────────────────────
 const VALID_MODULES: AdminModule[] = [
   'overview', 'clients', 'sales', 'realty-brokers', 'employees', 'assets',
-  'ai-ops', 'compliance', 'financial', 'analytics', 'comms', 'marketing', 'settings',
+  'ai-ops', 'compliance', 'financial', 'analytics', 'comms', 'marketing', 'reports', 'settings',
 ]
 
 const MODULE_ICONS: Record<AdminModule, React.ComponentType<{ className?: string }>> = {
@@ -49,6 +50,7 @@ const MODULE_ICONS: Record<AdminModule, React.ComponentType<{ className?: string
   analytics: BarChart3,
   comms: MessageSquare,
   marketing: Megaphone,
+  reports: FileBarChart,
   settings: Settings,
 }
 
@@ -207,6 +209,8 @@ export default function AdminClient() {
         return <CommsModule subTab={activeSubTab} navigate={navigate} showToast={showToast} />
       case 'marketing':
         return <MarketingModule subTab={activeSubTab} navigate={navigate} showToast={showToast} />
+      case 'reports':
+        return <ReportsModule subTab={activeSubTab} navigate={navigate} showToast={showToast} />
       case 'settings':
         return <SettingsModule subTab={activeSubTab} navigate={navigate} showToast={showToast} />
       default:
