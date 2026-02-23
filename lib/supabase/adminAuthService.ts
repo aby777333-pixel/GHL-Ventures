@@ -44,7 +44,11 @@ export async function authenticateAdmin(
 
   try {
     const { data, error } = await supabase.auth.signInWithPassword({ email, password })
-    if (error || !data.user) return null
+    if (error || !data.user) {
+      // User doesn't exist in Supabase yet — fall back to mock/demo auth
+      console.info('[adminAuth] Supabase auth failed, falling back to demo credentials')
+      return mockAuth(email, password)
+    }
 
     // Fetch profile with role
     const { data: profile, error: profileError } = await supabase

@@ -30,7 +30,11 @@ export async function loginStaff(
 
   try {
     const { data, error } = await supabase.auth.signInWithPassword({ email, password })
-    if (error || !data.user) return null
+    if (error || !data.user) {
+      // User doesn't exist in Supabase yet — fall back to mock/demo auth
+      console.info('[staffAuth] Supabase auth failed, falling back to demo credentials')
+      return mockLogin(email, password, staffCode)
+    }
 
     // Fetch profile
     const { data: profile } = await supabase
