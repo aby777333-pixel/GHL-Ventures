@@ -5,8 +5,10 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { LegalLink } from '@/components/LegalPopup'
 import { BRAND } from '@/lib/constants'
-import { Eye, EyeOff, UserPlus, ArrowLeft, Shield, CheckCircle } from 'lucide-react'
+import { Eye, EyeOff, UserPlus, ArrowLeft, Shield, CheckCircle, AlertTriangle, Loader2 } from 'lucide-react'
 import Logo from '@/components/Logo'
+import { supabase, isSupabaseConfigured } from '@/lib/supabase/client'
+import { submitContactForm } from '@/lib/supabase/reportsDataService'
 
 export default function RegisterPage() {
   const router = useRouter()
@@ -30,13 +32,64 @@ export default function RegisterPage() {
     setForm((prev) => ({ ...prev, [field]: value }))
   }
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const [error, setError] = useState('')
+  const [loading, setLoading] = useState(false)
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    setError('')
+
     if (form.password !== form.confirm) {
-      alert('Passwords do not match.')
+      setError('Passwords do not match.')
       return
     }
-    setSubmitted(true)
+
+    if (!isSupabaseConfigured()) {
+      // Demo mode — show success
+      setSubmitted(true)
+      return
+    }
+
+    setLoading(true)
+    try {
+      const { data, error: signupError } = await supabase.auth.signUp({
+        email: form.email,
+        password: form.password,
+        options: {
+          data: {
+            full_name: form.name,
+            phone: form.mobile,
+            city: form.city,
+            pan: form.pan,
+            referral_source: form.referral,
+          },
+        },
+      })
+
+      if (signupError) {
+        setError(signupError.message)
+        setLoading(false)
+        return
+      }
+
+      // Also save as contact form / lead
+      try {
+        await submitContactForm({
+          formType: 'invest',
+          fullName: form.name,
+          email: form.email,
+          phone: form.mobile,
+          city: form.city,
+          message: JSON.stringify({ pan: form.pan, referral: form.referral }),
+          pageUrl: typeof window !== 'undefined' ? window.location.href : '',
+        })
+      } catch { /* non-blocking */ }
+
+      setSubmitted(true)
+    } catch {
+      setError('Registration service unavailable. Please try again.')
+    }
+    setLoading(false)
   }
 
   if (submitted) {
@@ -144,6 +197,14 @@ export default function RegisterPage() {
               <span className="bg-white px-4 text-brand-grey">or register with details</span>
             </div>
           </div>
+
+          {/* Error Message */}
+          {error && (
+            <div className="flex items-center gap-2 p-3 rounded-lg bg-red-50 border border-red-200 mb-4">
+              <AlertTriangle className="w-4 h-4 text-red-500 flex-shrink-0" />
+              <p className="text-xs text-red-600">{error}</p>
+            </div>
+          )}
 
           {/* Form */}
           <form onSubmit={handleSubmit} className="space-y-3.5">
@@ -336,9 +397,12 @@ export default function RegisterPage() {
             </div>
 
             {/* Submit */}
-            <button type="submit" className="btn-primary w-full text-center">
-              <UserPlus className="w-4 h-4 mr-2" />
-              Create Account
+            <button type="submit" disabled={loading} className="btn-primary w-full text-center disabled:opacity-60">
+              {loading ? (
+                <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Creating Account...</>
+              ) : (
+                <><UserPlus className="w-4 h-4 mr-2" /> Create Account</>
+              )}
             </button>
           </form>
 

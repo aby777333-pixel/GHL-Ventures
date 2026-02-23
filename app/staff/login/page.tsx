@@ -3,7 +3,9 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Eye, EyeOff, Shield, Lock, Fingerprint, AlertCircle } from 'lucide-react'
-import { loginStaff } from '@/lib/staff/staffAuth'
+import { loginStaff as mockLoginStaff } from '@/lib/staff/staffAuth'
+import { loginStaff as supaLoginStaff } from '@/lib/supabase/staffAuthService'
+import { isSupabaseConfigured } from '@/lib/supabase/client'
 import Logo from '@/components/Logo'
 
 export default function StaffLoginPage() {
@@ -20,13 +22,18 @@ export default function StaffLoginPage() {
     setError('')
     setLoading(true)
 
-    await new Promise(r => setTimeout(r, 800))
+    try {
+      const session = isSupabaseConfigured()
+        ? await supaLoginStaff(email, password, staffCode)
+        : mockLoginStaff(email, password, staffCode)
 
-    const session = loginStaff(email, password, staffCode)
-    if (session) {
-      router.push('/staff')
-    } else {
-      setError('Invalid credentials. Please check your email, password, and employee code.')
+      if (session) {
+        router.push('/staff')
+      } else {
+        setError('Invalid credentials. Please check your email, password, and employee code.')
+      }
+    } catch {
+      setError('Authentication service unavailable. Please try again.')
     }
     setLoading(false)
   }

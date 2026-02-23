@@ -5,8 +5,9 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { LegalLink } from '@/components/LegalPopup'
 import { BRAND } from '@/lib/constants'
-import { Eye, EyeOff, Lock, ArrowLeft, Shield, Smartphone, Fingerprint } from 'lucide-react'
+import { Eye, EyeOff, Lock, ArrowLeft, Shield, Smartphone, Fingerprint, AlertTriangle, Loader2 } from 'lucide-react'
 import Logo from '@/components/Logo'
+import { supabase, isSupabaseConfigured } from '@/lib/supabase/client'
 
 export default function LoginPage() {
   const router = useRouter()
@@ -17,16 +18,51 @@ export default function LoginPage() {
   const [otpSent, setOtpSent] = useState(false)
   const [otp, setOtp] = useState(['', '', '', '', '', ''])
   const [otpTimer, setOtpTimer] = useState(0)
+  const [error, setError] = useState('')
+  const [loading, setLoading] = useState(false)
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    // Demo: open dashboard in new tab (Production: connect to authentication backend)
-    window.open('/dashboard', '_blank')
+    setError('')
+
+    if (!isSupabaseConfigured()) {
+      // Demo mode — open dashboard directly
+      window.open('/dashboard', '_blank')
+      return
+    }
+
+    setLoading(true)
+    try {
+      // Use email = mobile@ghl.local pattern or actual email
+      const loginEmail = mobile.includes('@') ? mobile : `${mobile}@ghlindiaventures.com`
+      const { data, error: authError } = await supabase.auth.signInWithPassword({
+        email: loginEmail,
+        password,
+      })
+      if (authError || !data.user) {
+        setError('Invalid credentials. Please check your mobile number and password.')
+      } else {
+        router.push('/dashboard')
+      }
+    } catch {
+      setError('Authentication service unavailable.')
+    }
+    setLoading(false)
   }
 
-  const handleGoogleSignIn = () => {
-    // Demo: open dashboard in new tab (Production: connect Google OAuth)
-    window.open('/dashboard', '_blank')
+  const handleGoogleSignIn = async () => {
+    if (!isSupabaseConfigured()) {
+      window.open('/dashboard', '_blank')
+      return
+    }
+    try {
+      await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: { redirectTo: `${typeof window !== 'undefined' ? window.location.origin : ''}/dashboard` },
+      })
+    } catch {
+      setError('Google sign-in unavailable.')
+    }
   }
 
   const handleSendOTP = () => {
@@ -53,9 +89,29 @@ export default function LoginPage() {
     }
   }
 
-  const handleOtpLogin = (e: React.FormEvent) => {
+  const handleOtpLogin = async (e: React.FormEvent) => {
     e.preventDefault()
-    window.open('/dashboard', '_blank')
+    if (!isSupabaseConfigured()) {
+      window.open('/dashboard', '_blank')
+      return
+    }
+    setLoading(true)
+    try {
+      const otpCode = otp.join('')
+      const { data, error: verifyError } = await supabase.auth.verifyOtp({
+        phone: `+91${mobile}`,
+        token: otpCode,
+        type: 'sms',
+      })
+      if (verifyError || !data.user) {
+        setError('Invalid OTP. Please try again.')
+      } else {
+        router.push('/dashboard')
+      }
+    } catch {
+      setError('OTP verification unavailable.')
+    }
+    setLoading(false)
   }
 
   return (
@@ -161,6 +217,14 @@ export default function LoginPage() {
               </span>
             </div>
           </div>
+
+          {/* Error Message */}
+          {error && (
+            <div className="flex items-center gap-2 p-3 rounded-lg bg-red-50 border border-red-200 mb-4">
+              <AlertTriangle className="w-4 h-4 text-red-500 flex-shrink-0" />
+              <p className="text-xs text-red-600">{error}</p>
+            </div>
+          )}
 
           {loginMode === 'password' ? (
             /* Password Form */

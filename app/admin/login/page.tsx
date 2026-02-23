@@ -5,7 +5,9 @@ import { useRouter } from 'next/navigation'
 import { BRAND } from '@/lib/constants'
 import { Shield, Lock, Eye, EyeOff, AlertTriangle, KeyRound, Loader2 } from 'lucide-react'
 import Logo from '@/components/Logo'
-import { authenticateAdmin, getAdminSession } from '@/lib/admin/adminAuth'
+import { authenticateAdmin as mockAuth, getAdminSession as mockGetSession } from '@/lib/admin/adminAuth'
+import { authenticateAdmin as supaAuth, getAdminSession as supaGetSession } from '@/lib/supabase/adminAuthService'
+import { isSupabaseConfigured } from '@/lib/supabase/client'
 
 export default function AdminLoginPage() {
   const router = useRouter()
@@ -19,10 +21,15 @@ export default function AdminLoginPage() {
 
   // Redirect if already logged in
   useEffect(() => {
-    const session = getAdminSession()
-    if (session) {
-      router.push('/admin')
+    const checkSession = async () => {
+      const session = isSupabaseConfigured()
+        ? await supaGetSession()
+        : mockGetSession()
+      if (session) {
+        router.push('/admin')
+      }
     }
+    checkSession()
   }, [router])
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -40,22 +47,32 @@ export default function AdminLoginPage() {
     }
 
     setLoading(true)
-    await new Promise(resolve => setTimeout(resolve, 1200))
 
-    const session = authenticateAdmin(email, password)
+    try {
+      const session = isSupabaseConfigured()
+        ? await supaAuth(email, password)
+        : mockAuth(email, password)
 
-    if (session) {
+      if (session) {
+        // Also store in localStorage for mock-compatible session checks
+        if (!isSupabaseConfigured()) {
+          // mockAuth already stores it
+        }
+        setLoading(false)
+        router.push('/admin')
+      } else {
+        setLoading(false)
+        setAttempts(prev => prev + 1)
+        const remaining = 5 - (attempts + 1)
+        setError(
+          remaining > 0
+            ? `Invalid credentials. ${remaining} attempt${remaining > 1 ? 's' : ''} remaining.`
+            : 'Account locked due to too many failed attempts. Please wait 15 minutes.'
+        )
+      }
+    } catch {
       setLoading(false)
-      router.push('/admin')
-    } else {
-      setLoading(false)
-      setAttempts(prev => prev + 1)
-      const remaining = 5 - (attempts + 1)
-      setError(
-        remaining > 0
-          ? `Invalid credentials. ${remaining} attempt${remaining > 1 ? 's' : ''} remaining.`
-          : 'Account locked due to too many failed attempts. Please wait 15 minutes.'
-      )
+      setError('Authentication service unavailable. Please try again.')
     }
   }
 

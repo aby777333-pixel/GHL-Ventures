@@ -1,8 +1,7 @@
 /* ─────────────────────────────────────────────────────────────
    Staff Auth Service — Supabase auth with mock fallback
 
-   Re-uses StaffSession / StaffUser types from staffTypes.ts
-   so the mock and live auth return the same shape.
+   Uses new schema: profiles (role) + staff_profiles (employee_id)
    ───────────────────────────────────────────────────────────── */
 
 import { supabase, isSupabaseConfigured } from './client'
@@ -29,49 +28,55 @@ export async function loginStaff(
     return mockLogin(email, password, staffCode)
   }
 
-  const { data, error } = await supabase.auth.signInWithPassword({ email, password })
-  if (error || !data.user) return null
+  try {
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password })
+    if (error || !data.user) return null
 
-  // Fetch staff profile and verify staff code
-  const { data: profileData } = await supabase
-    .from('profiles')
-    .select('*')
-    .eq('id', data.user.id)
-    .single()
+    // Fetch profile
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('id', data.user.id)
+      .single()
 
-  const { data: staffProfileData } = await supabase
-    .from('staff_profiles')
-    .select('*')
-    .eq('id', data.user.id)
-    .single()
+    // Fetch staff profile and verify employee code
+    const { data: staffProfile } = await supabase
+      .from('staff_profiles')
+      .select('*')
+      .eq('user_id', data.user.id)
+      .single()
 
-  const profile = profileData as any
-  const staffProfile = staffProfileData as any
+    const p = profile as any
+    const sp = staffProfile as any
 
-  if (!profile || !staffProfile || staffProfile.staff_code !== staffCode) {
-    await supabase.auth.signOut()
-    return null
-  }
+    if (!p || !sp || sp.employee_id !== staffCode) {
+      await supabase.auth.signOut()
+      return null
+    }
 
-  const SESSION_DURATION = 8 * 60 * 60 * 1000
+    const SESSION_DURATION = 8 * 60 * 60 * 1000
 
-  return {
-    user: {
-      id: data.user.id,
-      name: profile.name,
-      email: profile.email,
-      role: staffProfile.role as StaffRole,
-      staffCode: staffProfile.staff_code,
-      department: staffProfile.department || '',
-      designation: staffProfile.designation || '',
-      phone: profile.phone || '',
-      reportingTo: staffProfile.reporting_to || undefined,
-      joinDate: profile.created_at?.split('T')[0] || '',
-      status: staffProfile.status || 'active',
-    },
-    token: `staff_${Date.now()}_${Math.random().toString(36).slice(2)}`,
-    loginAt: new Date().toISOString(),
-    expiresAt: new Date(Date.now() + SESSION_DURATION).toISOString(),
+    return {
+      user: {
+        id: data.user.id,
+        name: p.full_name || data.user.email || '',
+        email: data.user.email || '',
+        role: (sp.designation || 'general-employee') as StaffRole,
+        staffCode: sp.employee_id,
+        department: sp.department || '',
+        designation: sp.designation || '',
+        phone: p.phone || '',
+        reportingTo: sp.reporting_to || undefined,
+        joinDate: sp.date_of_joining || p.created_at?.split('T')[0] || '',
+        status: (sp.is_active ? 'active' : 'contract') as any,
+      },
+      token: `staff_${Date.now()}_${Math.random().toString(36).slice(2)}`,
+      loginAt: new Date().toISOString(),
+      expiresAt: new Date(Date.now() + SESSION_DURATION).toISOString(),
+    }
+  } catch (err) {
+    console.warn('[staffAuth] Supabase auth error, falling back to mock:', err)
+    return mockLogin(email, password, staffCode)
   }
 }
 
@@ -80,45 +85,49 @@ export async function getStaffSession(): Promise<StaffSession | null> {
     return mockGetSession()
   }
 
-  const { data: { session } } = await supabase.auth.getSession()
-  if (!session?.user) return null
+  try {
+    const { data: { session } } = await supabase.auth.getSession()
+    if (!session?.user) return null
 
-  const { data: profileData } = await supabase
-    .from('profiles')
-    .select('*')
-    .eq('id', session.user.id)
-    .single()
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('id', session.user.id)
+      .single()
 
-  const { data: staffProfileData } = await supabase
-    .from('staff_profiles')
-    .select('*')
-    .eq('id', session.user.id)
-    .single()
+    const { data: staffProfile } = await supabase
+      .from('staff_profiles')
+      .select('*')
+      .eq('user_id', session.user.id)
+      .single()
 
-  const profile = profileData as any
-  const staffProfile = staffProfileData as any
+    const p = profile as any
+    const sp = staffProfile as any
 
-  if (!profile || !staffProfile) return null
+    if (!p || !sp) return null
 
-  const SESSION_DURATION = 8 * 60 * 60 * 1000
+    const SESSION_DURATION = 8 * 60 * 60 * 1000
 
-  return {
-    user: {
-      id: session.user.id,
-      name: profile.name,
-      email: profile.email,
-      role: staffProfile.role as StaffRole,
-      staffCode: staffProfile.staff_code,
-      department: staffProfile.department || '',
-      designation: staffProfile.designation || '',
-      phone: profile.phone || '',
-      reportingTo: staffProfile.reporting_to || undefined,
-      joinDate: profile.created_at?.split('T')[0] || '',
-      status: staffProfile.status || 'active',
-    },
-    token: `staff_${Date.now()}_${Math.random().toString(36).slice(2)}`,
-    loginAt: new Date().toISOString(),
-    expiresAt: new Date(Date.now() + SESSION_DURATION).toISOString(),
+    return {
+      user: {
+        id: session.user.id,
+        name: p.full_name || session.user.email || '',
+        email: session.user.email || '',
+        role: (sp.designation || 'general-employee') as StaffRole,
+        staffCode: sp.employee_id,
+        department: sp.department || '',
+        designation: sp.designation || '',
+        phone: p.phone || '',
+        reportingTo: sp.reporting_to || undefined,
+        joinDate: sp.date_of_joining || p.created_at?.split('T')[0] || '',
+        status: (sp.is_active ? 'active' : 'contract') as any,
+      },
+      token: `staff_${Date.now()}_${Math.random().toString(36).slice(2)}`,
+      loginAt: new Date().toISOString(),
+      expiresAt: new Date(Date.now() + SESSION_DURATION).toISOString(),
+    }
+  } catch {
+    return mockGetSession()
   }
 }
 
@@ -127,5 +136,9 @@ export async function logoutStaff(): Promise<void> {
     mockLogout()
     return
   }
-  await supabase.auth.signOut()
+  try {
+    await supabase.auth.signOut()
+  } catch {
+    mockLogout()
+  }
 }

@@ -211,6 +211,8 @@ export async function submitContactForm(formData: {
   email?: string
   phone?: string
   company?: string
+  city?: string
+  subject?: string
   message?: string
   investmentRange?: string
   investmentInterest?: string
@@ -227,9 +229,9 @@ export async function submitContactForm(formData: {
       email: formData.email,
       phone: formData.phone,
       company: formData.company,
+      city: formData.city,
+      subject: formData.subject,
       message: formData.message,
-      investment_range: formData.investmentRange,
-      investment_interest: formData.investmentInterest,
       page_url: formData.pageUrl || (typeof window !== 'undefined' ? window.location.href : ''),
       utm_source: typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('utm_source') : null,
       utm_medium: typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('utm_medium') : null,
