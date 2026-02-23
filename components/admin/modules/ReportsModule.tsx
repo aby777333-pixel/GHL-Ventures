@@ -802,10 +802,14 @@ function AIAdvisorTab({ showToast }: { showToast: Props['showToast'] }) {
         setMessages(prev => [...prev, { role: 'ai', content: response }])
       } catch (err: unknown) {
         const errorMsg = err instanceof Error ? err.message : 'Unknown error occurred'
-        showToast(`AI Error: ${errorMsg}`, 'error')
+        const isBilling = errorMsg.toLowerCase().includes('credit') || errorMsg.toLowerCase().includes('balance') || errorMsg.toLowerCase().includes('billing')
+        showToast(isBilling ? 'Claude API: Credit balance too low. Check console.anthropic.com/settings/billing' : `AI Error: ${errorMsg}`, 'error')
         // Fall back to simulated response on API failure
         const fallback = getSimulatedResponse(userMsg)
-        setMessages(prev => [...prev, { role: 'ai', content: `⚠️ *Live AI unavailable — showing cached analysis*\n\n${fallback}` }])
+        const prefix = isBilling
+          ? '⚠️ **Claude API credits depleted** — Please add credits at console.anthropic.com → Billing. Showing cached analysis below:\n\n'
+          : '⚠️ *Live AI unavailable — showing cached analysis*\n\n'
+        setMessages(prev => [...prev, { role: 'ai', content: `${prefix}${fallback}` }])
       }
     } else {
       // ── SIMULATED MODE: Keyword matching fallback ──
