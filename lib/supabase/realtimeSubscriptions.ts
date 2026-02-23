@@ -1,0 +1,124 @@
+/* ─────────────────────────────────────────────────────────────
+   Realtime Subscriptions — Supabase Realtime for live updates
+
+   Provides subscription functions for cross-portal data sync.
+   Key flows:
+   - Admin edits client → Staff sees it → Client sees it
+   - Client creates ticket → Staff gets it → Admin monitors
+   - Staff updates KYC → Client dashboard reflects
+   ───────────────────────────────────────────────────────────── */
+
+'use client'
+
+import { supabase, isSupabaseConfigured } from './client'
+import type { RealtimeChannel } from '@supabase/supabase-js'
+
+type ChangeHandler = (payload: any) => void
+
+// ── Active channels registry ────────────────────────────────
+const activeChannels = new Map<string, RealtimeChannel>()
+
+// ── Subscribe to table changes ──────────────────────────────
+export function subscribeToTable(
+  table: string,
+  event: 'INSERT' | 'UPDATE' | 'DELETE' | '*',
+  handler: ChangeHandler,
+  filter?: string
+): (() => void) | null {
+  if (!isSupabaseConfigured()) return null
+
+  const channelName = `${table}-${event}-${filter || 'all'}`
+
+  // Prevent duplicate subscriptions
+  if (activeChannels.has(channelName)) {
+    activeChannels.get(channelName)?.unsubscribe()
+  }
+
+  const channelConfig: any = {
+    event,
+    schema: 'public',
+    table,
+  }
+
+  if (filter) {
+    channelConfig.filter = filter
+  }
+
+  const channel = supabase
+    .channel(channelName)
+    .on('postgres_changes', channelConfig, handler)
+    .subscribe()
+
+  activeChannels.set(channelName, channel)
+
+  // Return unsubscribe function
+  return () => {
+    channel.unsubscribe()
+    activeChannels.delete(channelName)
+  }
+}
+
+// ── Portal-Specific Subscriptions ───────────────────────────
+
+/** Admin: Subscribe to new tickets from clients */
+export function onNewTicket(handler: ChangeHandler) {
+  return subscribeToTable('tickets', 'INSERT', handler)
+}
+
+/** Admin: Subscribe to all notification changes */
+export function onNotificationChange(handler: ChangeHandler) {
+  return subscribeToTable('notifications', '*', handler)
+}
+
+/** Staff: Subscribe to tickets assigned to a specific staff member */
+export function onMyTicketUpdate(staffId: string, handler: ChangeHandler) {
+  return subscribeToTable('tickets', '*', handler, `assigned_to=eq.${staffId}`)
+}
+
+/** Staff: Subscribe to new task assignments */
+export function onNewTask(staffId: string, handler: ChangeHandler) {
+  return subscribeToTable('tasks', 'INSERT', handler, `assigned_to=eq.${staffId}`)
+}
+
+/** Client: Subscribe to their own notification updates */
+export function onClientNotification(clientId: string, handler: ChangeHandler) {
+  return subscribeToTable('notifications', 'INSERT', handler, `user_id=eq.${clientId}`)
+}
+
+/** Client: Subscribe to their ticket status changes */
+export function onClientTicketUpdate(clientId: string, handler: ChangeHandler) {
+  return subscribeToTable('tickets', 'UPDATE', handler, `client_id=eq.${clientId}`)
+}
+
+/** Client: Subscribe to new messages */
+export function onNewMessage(clientId: string, handler: ChangeHandler) {
+  return subscribeToTable('messages', 'INSERT', handler, `to_id=eq.${clientId}`)
+}
+
+/** Client: Subscribe to investment/portfolio updates */
+export function onInvestmentUpdate(clientId: string, handler: ChangeHandler) {
+  return subscribeToTable('investments', 'UPDATE', handler, `client_id=eq.${clientId}`)
+}
+
+/** Admin: Subscribe to audit log entries */
+export function onAuditEvent(handler: ChangeHandler) {
+  return subscribeToTable('audit_log', 'INSERT', handler)
+}
+
+/** Admin: Subscribe to KYC document status changes */
+export function onKYCStatusChange(handler: ChangeHandler) {
+  return subscribeToTable('kyc_documents', 'UPDATE', handler)
+}
+
+// ── Cleanup ─────────────────────────────────────────────────
+
+/** Unsubscribe from all active channels */
+export function unsubscribeAll() {
+  activeChannels.forEach(channel => channel.unsubscribe())
+  activeChannels.clear()
+}
+
+/** Get count of active subscriptions */
+export function getActiveSubscriptionCount(): number {
+  return activeChannels.size
+}
