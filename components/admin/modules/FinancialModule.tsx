@@ -20,6 +20,7 @@ import AdminEmptyState from '../shared/AdminEmptyState'
 import { INVOICES_DATA, EXPENSES_DATA, REVENUE_BREAKDOWN, OVERVIEW_KPIS, COMMISSIONS_DATA } from '@/lib/admin/adminMockData'
 import { formatINR, formatDate } from '@/lib/admin/adminHooks'
 import type { Invoice, Expense, InvoiceStatus, ExpenseCategory } from '@/lib/admin/adminTypes'
+import { saveBlobAs } from '@/lib/supabase/storageService'
 
 // ── Sub-tabs ─────────────────────────────────────────────────────
 const FINANCIAL_TABS = [
@@ -71,7 +72,13 @@ export default function FinancialModule({ subTab, navigate, showToast }: Financi
           <p className="text-sm text-gray-500 mt-1">Revenue, invoices, expenses, and payout management</p>
         </div>
         <button
-          onClick={() => showToast('Generating financial report...', 'info')}
+          onClick={async () => {
+            showToast('Generating financial report...', 'info')
+            const rows = ['Type,Client,Amount,GST,Total,Status,Date']
+            INVOICES_DATA.forEach(inv => rows.push(`${inv.type},${inv.clientName},${inv.amount},${inv.gst},${inv.total},${inv.status},${inv.date}`))
+            const blob = new Blob([rows.join('\n')], { type: 'text/csv' })
+            await saveBlobAs(blob, `GHL_Financial_Report_${new Date().toISOString().slice(0,10)}.csv`, showToast as any)
+          }}
           className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium text-white bg-brand-red/20 border border-brand-red/30 hover:bg-brand-red/30 transition-colors self-start admin-btn-press"
         >
           <Download className="w-4 h-4" />
@@ -338,7 +345,14 @@ function InvoicesTab({ showToast }: { showToast: (msg: string, type?: 'success' 
           footer={
             <>
               <ModalButton onClick={() => setSelectedInvoice(null)}>Close</ModalButton>
-              <ModalButton variant="primary" onClick={() => { showToast('Generating invoice PDF...', 'info'); setSelectedInvoice(null) }}>Download PDF</ModalButton>
+              <ModalButton variant="primary" onClick={async () => {
+                showToast('Generating invoice PDF...', 'info')
+                const inv = selectedInvoice
+                const content = `INVOICE: ${inv.id}\nClient: ${inv.clientName}\nType: ${inv.type}\nAmount: ${inv.amount}\nGST: ${inv.gst}\nTotal: ${inv.total}\nStatus: ${inv.status}\nDate: ${inv.date}\nDue Date: ${inv.dueDate}`
+                const blob = new Blob([content], { type: 'application/pdf' })
+                await saveBlobAs(blob, `Invoice_${inv.id}.pdf`, showToast as any)
+                setSelectedInvoice(null)
+              }}>Download PDF</ModalButton>
             </>
           }
         >

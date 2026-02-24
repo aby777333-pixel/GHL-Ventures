@@ -10,7 +10,7 @@ import {
   CheckCircle2, XCircle, Timer, Coffee, Star, Send, Plus, Eye,
   Briefcase, Heart, BarChart3, MessageSquare, Play, FileCheck,
 } from 'lucide-react'
-import { saveBlobAs } from '@/lib/supabase/storageService'
+import { saveBlobAs, pickAndUploadFiles } from '@/lib/supabase/storageService'
 
 // ── Props ──────────────────────────────────────────────────────
 interface SelfServiceModuleProps {
@@ -576,7 +576,16 @@ function DocumentsView({ showToast }: { showToast: SelfServiceModuleProps['showT
       <AdminGlass>
         <SectionHeader title="Upload Document" icon={Upload} />
         <div className="border-2 border-dashed border-white/[0.08] rounded-xl p-8 text-center hover:border-teal-500/30 transition-colors cursor-pointer"
-          onClick={() => showToast('File picker would open here', 'info')}>
+          onClick={async () => {
+            const results = await pickAndUploadFiles('staff/documents', {
+              accept: '.pdf,.jpg,.jpeg,.png',
+              portal: 'staff',
+              category: 'employee-document',
+            })
+            const successCount = results.filter(r => r.success).length
+            if (successCount > 0) showToast(`Uploaded ${successCount} document(s) successfully`, 'success')
+            else if (results.length > 0) showToast('Upload failed — please try again', 'info')
+          }}>
           <Upload className="w-8 h-8 text-gray-600 mx-auto mb-3" />
           <p className="text-sm text-gray-400">Drag and drop files here or <span className="text-teal-400 font-medium">browse</span></p>
           <p className="text-[10px] text-gray-600 mt-1">PDF, JPG, PNG up to 5 MB</p>
@@ -838,7 +847,16 @@ function ExpensesView({ showToast }: { showToast: SelfServiceModuleProps['showTo
           </div>
           <div>
             <label className="block text-[10px] text-gray-500 uppercase tracking-wider mb-1">Receipt</label>
-            <button onClick={() => showToast('File picker would open here', 'info')}
+            <button onClick={async () => {
+              const results = await pickAndUploadFiles('staff/expenses', {
+                accept: '.pdf,.jpg,.jpeg,.png',
+                multiple: false,
+                portal: 'staff',
+                category: 'expense-receipt',
+              })
+              if (results.length > 0 && results[0].success) showToast(`Receipt "${results[0].file?.name}" attached`, 'success')
+              else if (results.length > 0) showToast('Upload failed', 'info')
+            }}
               className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2 text-xs text-gray-500 hover:border-teal-500/40 transition-colors text-left flex items-center gap-1.5">
               <Upload className="w-3.5 h-3.5" /> Attach receipt
             </button>

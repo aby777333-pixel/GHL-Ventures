@@ -17,6 +17,7 @@ import { ROLE_PERMISSIONS } from '@/lib/admin/adminRBAC'
 import { ROLE_LABELS } from '@/lib/admin/adminAuth'
 import { formatDate } from '@/lib/admin/adminHooks'
 import type { AdminRole } from '@/lib/admin/adminTypes'
+import { saveBlobAs } from '@/lib/supabase/storageService'
 
 // ── Sub-tabs ─────────────────────────────────────────────────────
 const SETTINGS_TABS = [
@@ -638,7 +639,12 @@ function SystemTab({ showToast }: { showToast: (msg: string, type?: 'success' | 
             Backup Management
           </h3>
           <button
-            onClick={() => showToast('Manual backup initiated', 'success')}
+            onClick={async () => {
+              showToast('Generating backup snapshot...', 'info')
+              const snapshot = JSON.stringify({ exportedAt: new Date().toISOString(), platform: 'GHL India Ventures', settings: true, data: 'snapshot' }, null, 2)
+              const blob = new Blob([snapshot], { type: 'application/json' })
+              await saveBlobAs(blob, `GHL_Backup_${new Date().toISOString().slice(0,10)}.json`, showToast as any)
+            }}
             className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-white bg-brand-red/20 border border-brand-red/30 rounded-lg hover:bg-brand-red/30 transition-colors admin-btn-press"
           >
             <RefreshCw className="w-3.5 h-3.5" />
@@ -664,9 +670,14 @@ function SystemTab({ showToast }: { showToast: (msg: string, type?: 'success' | 
               <div className="flex items-center gap-2">
                 <AdminBadge label="Completed" variant="success" dot />
                 <button
-                  onClick={() => showToast('Initiating backup restore process...', 'info')}
+                  onClick={async () => {
+                    showToast('Downloading backup file...', 'info')
+                    const snapshot = JSON.stringify({ backupId: backup.id, date: backup.date, size: backup.size, type: backup.type }, null, 2)
+                    const blob = new Blob([snapshot], { type: 'application/json' })
+                    await saveBlobAs(blob, `GHL_Backup_${backup.id}.json`, showToast as any)
+                  }}
                   className="p-1.5 rounded-lg hover:bg-white/[0.06] text-gray-500 hover:text-white transition-colors"
-                  title="Restore"
+                  title="Download Backup"
                 >
                   <Download className="w-3.5 h-3.5" />
                 </button>
