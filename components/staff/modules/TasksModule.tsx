@@ -10,7 +10,7 @@ import AdminGlass from '@/components/admin/shared/AdminGlass'
 import AdminBadge from '@/components/admin/shared/AdminBadge'
 import AdminDataTable, { type Column } from '@/components/admin/shared/AdminDataTable'
 import AdminModal from '@/components/admin/shared/AdminModal'
-import { uploadFile } from '@/lib/supabase/storageService'
+import UploadWithFolderPicker from '@/components/shared/UploadWithFolderPicker'
 import { TASKS_DATA } from '@/lib/staff/staffMockData'
 import type { StaffTask, TaskStatus, TaskPriority } from '@/lib/staff/staffTypes'
 
@@ -79,6 +79,7 @@ function MyTasksView({ showToast }: { showToast: TasksModuleProps['showToast'] }
   const [statusFilter, setStatusFilter] = useState<TaskStatus | 'all'>('all')
   const [priorityFilter, setPriorityFilter] = useState<TaskPriority | 'all'>('all')
   const [newTaskOpen, setNewTaskOpen] = useState(false)
+  const [folderPickerOpen, setFolderPickerOpen] = useState(false)
   const [taskForm, setTaskForm] = useState({ title: '', description: '', priority: 'normal' as TaskPriority, status: 'todo' as TaskStatus, dueDate: '', assignedTo: '', tags: '' })
 
   const filtered = useMemo(() => {
@@ -265,7 +266,7 @@ function MyTasksView({ showToast }: { showToast: TasksModuleProps['showToast'] }
           </div>
           <div className="sm:col-span-2">
             <label className="block text-xs font-medium text-gray-400 mb-1.5">Attach Documents</label>
-            <button type="button" onClick={() => { const inp = document.createElement('input'); inp.type = 'file'; inp.multiple = true; inp.accept = '.pdf,.docx,.xlsx,.jpg,.jpeg,.png,.gif,.webp'; inp.onchange = async () => { if (inp.files && inp.files.length > 0) { showToast(`Uploading ${inp.files.length} file(s)...`, 'info'); let ok = 0, fail = 0; for (let i = 0; i < inp.files.length; i++) { const result = await uploadFile(inp.files[i], 'staff/tasks'); if (result.success) ok++; else fail++ } if (ok > 0) showToast(`${ok} file(s) uploaded`, 'success'); if (fail > 0) showToast(`${fail} failed`, 'error') } }; inp.click() }} className="flex items-center gap-2 px-3 py-2.5 rounded-xl text-sm font-medium text-gray-400 bg-white/[0.04] border border-dashed border-white/[0.12] hover:bg-white/[0.08] hover:border-white/[0.2] transition-colors w-full justify-center">
+            <button type="button" onClick={() => setFolderPickerOpen(true)} className="flex items-center gap-2 px-3 py-2.5 rounded-xl text-sm font-medium text-gray-400 bg-white/[0.04] border border-dashed border-white/[0.12] hover:bg-white/[0.08] hover:border-white/[0.2] transition-colors w-full justify-center">
               <Upload className="w-4 h-4" /> Upload Documents & Images
             </button>
             <p className="text-[10px] text-gray-600 mt-1">Stored in File Repository &gt; Staff Tasks</p>
@@ -276,6 +277,19 @@ function MyTasksView({ showToast }: { showToast: TasksModuleProps['showToast'] }
           <button onClick={() => { if (!taskForm.title.trim()) { showToast('Task title is required', 'error'); return } showToast('Task created successfully', 'success'); setNewTaskOpen(false); setTaskForm({ title: '', description: '', priority: 'normal', status: 'todo', dueDate: '', assignedTo: '', tags: '' }) }} className="px-5 py-2 rounded-xl text-sm font-medium text-white bg-teal-600 hover:bg-teal-700 transition-colors">Create Task</button>
         </div>
       </AdminModal>
+
+      <UploadWithFolderPicker
+        open={folderPickerOpen}
+        onClose={() => setFolderPickerOpen(false)}
+        defaultRoute="staff/tasks"
+        showToast={showToast as any}
+        onUploadComplete={(results) => {
+          const ok = results.filter(r => r.success).length
+          if (ok > 0) showToast(`${ok} file(s) uploaded`, 'success')
+        }}
+        theme="teal"
+        portal="staff"
+      />
     </>
   )
 }

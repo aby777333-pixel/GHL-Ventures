@@ -219,7 +219,7 @@ export async function submitContactForm(formData: {
   pageUrl?: string
 }) {
   if (!isSupabaseConfigured()) {
-    console.log('[reportsData] Supabase not configured, form submission logged locally')
+    console.debug('[reportsData] Supabase not configured, form submission logged locally')
     return { success: true, local: true }
   }
   try {
@@ -258,7 +258,7 @@ export async function submitLead(leadData: {
   estimatedInvestment?: number
 }) {
   if (!isSupabaseConfigured()) {
-    console.log('[reportsData] Supabase not configured, lead logged locally')
+    console.debug('[reportsData] Supabase not configured, lead logged locally')
     return { success: true, local: true }
   }
   try {
@@ -289,7 +289,7 @@ export async function submitLead(leadData: {
 // ── Newsletter Subscription ─────────────────────────────────
 export async function subscribeNewsletter(email: string, name?: string) {
   if (!isSupabaseConfigured()) {
-    console.log('[reportsData] Supabase not configured, subscription logged locally')
+    console.debug('[reportsData] Supabase not configured, subscription logged locally')
     return { success: true, local: true }
   }
   try {

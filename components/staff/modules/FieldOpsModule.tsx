@@ -18,7 +18,9 @@ import AdminBadge from '@/components/admin/shared/AdminBadge'
 import AdminKPICard from '@/components/admin/shared/AdminKPICard'
 import AdminDataTable, { type Column } from '@/components/admin/shared/AdminDataTable'
 import AdminModal from '@/components/admin/shared/AdminModal'
-import { uploadFile } from '@/lib/supabase/storageService'
+import UploadWithFolderPicker from '@/components/shared/UploadWithFolderPicker'
+// Lead service — when Supabase is live, replace PROSPECTS mock with fetchLeadsForStaff()
+// import { fetchLeadsForStaff, fetchStaffLeadNotifications } from '@/lib/supabase/leadService'
 
 // ── Props ─────────────────────────────────────────────────────────
 interface FieldOpsModuleProps {
@@ -762,6 +764,7 @@ function PipelineKanban({ showToast }: FieldOpsModuleProps) {
 // ══════════════════════════════════════════════════════════════════
 function ExpensesPanel({ showToast }: FieldOpsModuleProps) {
   const [addExpenseOpen, setAddExpenseOpen] = useState(false)
+  const [folderPickerOpen, setFolderPickerOpen] = useState(false)
   const [expForm, setExpForm] = useState({ type: 'Travel', description: '', amount: '', date: '', notes: '' })
   const totalExpenses = EXPENSES.reduce((s, e) => s + e.amount, 0)
   const approvedExpenses = EXPENSES.filter(e => e.status === 'Approved').reduce((s, e) => s + e.amount, 0)
@@ -869,20 +872,7 @@ function ExpensesPanel({ showToast }: FieldOpsModuleProps) {
           </div>
           <div>
             <label className="block text-xs font-medium text-gray-400 mb-1.5">Attach Receipt</label>
-            <button onClick={() => {
-              const inp = document.createElement('input')
-              inp.type = 'file'
-              inp.accept = '.pdf,.jpg,.jpeg,.png'
-              inp.onchange = async () => {
-                if (inp.files?.[0]) {
-                  showToast('Uploading receipt...', 'info')
-                  const result = await uploadFile(inp.files[0], 'staff/expenses')
-                  if (result.success) showToast('Receipt uploaded', 'success')
-                  else showToast('Upload failed', 'error')
-                }
-              }
-              inp.click()
-            }} className="flex items-center gap-2 px-3 py-2.5 rounded-xl text-sm font-medium text-gray-400 bg-white/[0.04] border border-white/[0.06] hover:bg-white/[0.08] transition-colors w-full">
+            <button onClick={() => setFolderPickerOpen(true)} className="flex items-center gap-2 px-3 py-2.5 rounded-xl text-sm font-medium text-gray-400 bg-white/[0.04] border border-white/[0.06] hover:bg-white/[0.08] transition-colors w-full">
               <Upload className="w-4 h-4" /> Upload Receipt
             </button>
           </div>
@@ -896,6 +886,18 @@ function ExpensesPanel({ showToast }: FieldOpsModuleProps) {
           <button onClick={() => { if (!expForm.description.trim() || !expForm.amount) { showToast('Description and amount are required', 'error'); return } showToast('Expense submitted successfully', 'success'); setAddExpenseOpen(false); setExpForm({ type: 'Travel', description: '', amount: '', date: '', notes: '' }) }} className="px-5 py-2 rounded-xl text-sm font-medium text-white bg-teal-600 hover:bg-teal-700 transition-colors">Submit Expense</button>
         </div>
       </AdminModal>
+      <UploadWithFolderPicker
+        open={folderPickerOpen}
+        onClose={() => setFolderPickerOpen(false)}
+        defaultRoute="staff/expenses"
+        showToast={showToast as any}
+        onUploadComplete={(results) => {
+          const ok = results.filter(r => r.success).length
+          if (ok > 0) showToast(`${ok} receipt(s) uploaded`, 'success')
+        }}
+        theme="teal"
+        portal="staff"
+      />
     </div>
   )
 }

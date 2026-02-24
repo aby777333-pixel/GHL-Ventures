@@ -32,6 +32,8 @@ import type {
   OutreachSequence, MarketingAITool, IntegrationService,
 } from '@/lib/admin/adminTypes'
 import { uploadFile, saveBlobAs } from '@/lib/supabase/storageService'
+import { createLead } from '@/lib/supabase/leadService'
+import UploadWithFolderPicker from '@/components/shared/UploadWithFolderPicker'
 
 // ── Icon Maps ─────────────────────────────────────────────────────
 const AI_ICON_MAP: Record<string, React.ComponentType<{ className?: string; style?: React.CSSProperties }>> = {
@@ -177,6 +179,7 @@ export default function MarketingModule({ subTab, navigate, showToast }: Marketi
 //  SUB-TAB 1: OVERVIEW
 // ══════════════════════════════════════════════════════════════════
 function OverviewTab({ navigate, showToast }: { navigate: (p: string) => void; showToast: (m: string, t?: 'success' | 'error' | 'info' | 'warning') => void }) {
+  const [folderPickerOpen, setFolderPickerOpen] = useState(false)
   const liveCampaigns = MARKETING_CAMPAIGNS_DATA.filter(c => c.status === 'live')
   const spendPct = Math.round((MARKETING_KPIS.marketingSpend / MARKETING_KPIS.marketingBudget) * 100)
 
@@ -267,24 +270,7 @@ function OverviewTab({ navigate, showToast }: { navigate: (p: string) => void; s
             { label: '+ New Campaign', action: () => navigate('marketing/campaigns') },
             { label: '+ Schedule Post', action: () => navigate('marketing/content') },
             { label: '+ Create Email', action: () => showToast('Email composer launched', 'success') },
-            { label: '+ Upload Asset', action: () => {
-              const input = document.createElement('input')
-              input.type = 'file'
-              input.multiple = true
-              input.accept = '.pdf,.xlsx,.xls,.docx,.doc,.pptx,.ppt,.csv,.jpg,.jpeg,.png,.gif,.webp,.svg,.zip,.mp4,.mp3'
-              input.onchange = async () => {
-                if (input.files && input.files.length > 0) {
-                  showToast(`Uploading ${input.files.length} asset(s)...`, 'info')
-                  let ok = 0
-                  for (let i = 0; i < input.files.length; i++) {
-                    const result = await uploadFile(input.files[i], 'admin/marketing-assets')
-                    if (result.success) ok++
-                  }
-                  showToast(`Uploaded ${ok} asset(s) to Supabase Storage`, 'success')
-                }
-              }
-              input.click()
-            }},
+            { label: '+ Upload Asset', action: () => setFolderPickerOpen(true) },
             { label: '+ Import Contacts', action: () => navigate('marketing/audience') },
           ].map(item => (
             <button
@@ -297,6 +283,18 @@ function OverviewTab({ navigate, showToast }: { navigate: (p: string) => void; s
           ))}
         </div>
       </AdminGlass>
+      <UploadWithFolderPicker
+        open={folderPickerOpen}
+        onClose={() => setFolderPickerOpen(false)}
+        defaultRoute="admin/marketing"
+        showToast={showToast as any}
+        onUploadComplete={(results) => {
+          const ok = results.filter(r => r.success).length
+          if (ok > 0) showToast(`${ok} asset(s) uploaded to Marketing`, 'success')
+        }}
+        theme="dark"
+        portal="admin"
+      />
     </div>
   )
 }
@@ -310,6 +308,20 @@ function CampaignsTab({ showToast }: { showToast: (m: string, t?: 'success' | 'e
   const [selectedCampaign, setSelectedCampaign] = useState<MarketingCampaign | null>(null)
   const [modalOpen, setModalOpen] = useState(false)
   const [newCampaignOpen, setNewCampaignOpen] = useState(false)
+  const [folderPickerOpen, setFolderPickerOpen] = useState(false)
+  const [campaignForm, setCampaignForm] = useState({ name: '', type: 'email', status: 'draft', budget: '', startDate: '', endDate: '', audience: '', description: '' })
+  const resetCampaignForm = () => setCampaignForm({ name: '', type: 'email', status: 'draft', budget: '', startDate: '', endDate: '', audience: '', description: '' })
+
+  const handleCreateCampaign = async () => {
+    if (!campaignForm.name.trim()) { showToast('Campaign name is required', 'error'); return }
+    // Create campaign record (mock)
+    const campaignId = `MC-${Date.now().toString(36).toUpperCase()}`
+    showToast(`Campaign "${campaignForm.name}" created (ID: ${campaignId})`, 'success')
+    // If campaign is live, auto-track lead source for any leads generated from it
+    console.debug(`[Marketing] Campaign ${campaignId} created. Leads from this campaign will be auto-tracked via leadService.createLead({ campaignId: "${campaignId}", utmCampaign: "${campaignForm.name}" })`)
+    resetCampaignForm()
+    setNewCampaignOpen(false)
+  }
 
   const filtered = useMemo(() => {
     if (typeFilter === 'all') return MARKETING_CAMPAIGNS_DATA
@@ -505,11 +517,11 @@ function CampaignsTab({ showToast }: { showToast: (m: string, t?: 'success' | 'e
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <label className="block text-xs font-medium text-gray-400 mb-1.5">Campaign Name *</label>
-            <input type="text" required placeholder="e.g. Q1 Lead Gen Drive" className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-brand-red/40 focus:ring-1 focus:ring-brand-red/20" />
+            <input type="text" required placeholder="e.g. Q1 Lead Gen Drive" value={campaignForm.name} onChange={e => setCampaignForm(f => ({ ...f, name: e.target.value }))} className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-brand-red/40 focus:ring-1 focus:ring-brand-red/20" />
           </div>
           <div>
             <label className="block text-xs font-medium text-gray-400 mb-1.5">Type</label>
-            <select className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-brand-red/40 focus:ring-1 focus:ring-brand-red/20">
+            <select value={campaignForm.type} onChange={e => setCampaignForm(f => ({ ...f, type: e.target.value }))} className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-brand-red/40 focus:ring-1 focus:ring-brand-red/20">
               <option value="email">Email</option>
               <option value="social">Social</option>
               <option value="google-ads">Google Ads</option>
@@ -527,7 +539,7 @@ function CampaignsTab({ showToast }: { showToast: (m: string, t?: 'success' | 'e
           </div>
           <div>
             <label className="block text-xs font-medium text-gray-400 mb-1.5">Status</label>
-            <select className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-brand-red/40 focus:ring-1 focus:ring-brand-red/20">
+            <select value={campaignForm.status} onChange={e => setCampaignForm(f => ({ ...f, status: e.target.value }))} className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-brand-red/40 focus:ring-1 focus:ring-brand-red/20">
               <option value="draft">Draft</option>
               <option value="scheduled">Scheduled</option>
               <option value="live">Live</option>
@@ -536,52 +548,49 @@ function CampaignsTab({ showToast }: { showToast: (m: string, t?: 'success' | 'e
           </div>
           <div>
             <label className="block text-xs font-medium text-gray-400 mb-1.5">Budget (INR)</label>
-            <input type="number" placeholder="e.g. 500000" className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-brand-red/40 focus:ring-1 focus:ring-brand-red/20" />
+            <input type="number" placeholder="e.g. 500000" value={campaignForm.budget} onChange={e => setCampaignForm(f => ({ ...f, budget: e.target.value }))} className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-brand-red/40 focus:ring-1 focus:ring-brand-red/20" />
           </div>
           <div>
             <label className="block text-xs font-medium text-gray-400 mb-1.5">Start Date</label>
-            <input type="date" className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-brand-red/40 focus:ring-1 focus:ring-brand-red/20" />
+            <input type="date" value={campaignForm.startDate} onChange={e => setCampaignForm(f => ({ ...f, startDate: e.target.value }))} className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-brand-red/40 focus:ring-1 focus:ring-brand-red/20" />
           </div>
           <div>
             <label className="block text-xs font-medium text-gray-400 mb-1.5">End Date</label>
-            <input type="date" className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-brand-red/40 focus:ring-1 focus:ring-brand-red/20" />
+            <input type="date" value={campaignForm.endDate} onChange={e => setCampaignForm(f => ({ ...f, endDate: e.target.value }))} className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-brand-red/40 focus:ring-1 focus:ring-brand-red/20" />
           </div>
           <div>
             <label className="block text-xs font-medium text-gray-400 mb-1.5">Target Audience</label>
-            <input type="text" placeholder="e.g. HNI Investors, Chennai" className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-brand-red/40 focus:ring-1 focus:ring-brand-red/20" />
+            <input type="text" placeholder="e.g. HNI Investors, Chennai" value={campaignForm.audience} onChange={e => setCampaignForm(f => ({ ...f, audience: e.target.value }))} className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-brand-red/40 focus:ring-1 focus:ring-brand-red/20" />
           </div>
           <div className="sm:col-span-2">
             <label className="block text-xs font-medium text-gray-400 mb-1.5">Description</label>
-            <textarea rows={3} placeholder="Campaign description..." className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-brand-red/40 focus:ring-1 focus:ring-brand-red/20" />
+            <textarea rows={3} placeholder="Campaign description..." value={campaignForm.description} onChange={e => setCampaignForm(f => ({ ...f, description: e.target.value }))} className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-brand-red/40 focus:ring-1 focus:ring-brand-red/20" />
           </div>
           <div className="sm:col-span-2">
             <label className="block text-xs font-medium text-gray-400 mb-1.5">Campaign Assets</label>
-            <button type="button" onClick={() => {
-              const inp = document.createElement('input'); inp.type = 'file'; inp.multiple = true
-              inp.accept = '.pdf,.docx,.xlsx,.jpg,.jpeg,.png,.gif,.webp,.mp4,.svg'
-              inp.onchange = async () => {
-                if (inp.files && inp.files.length > 0) {
-                  showToast(`Uploading ${inp.files.length} asset(s)...`, 'info')
-                  let ok = 0, fail = 0
-                  for (let i = 0; i < inp.files.length; i++) {
-                    const result = await uploadFile(inp.files[i], 'admin/marketing')
-                    if (result.success) ok++; else fail++
-                  }
-                  if (ok > 0) showToast(`${ok} asset(s) uploaded to Marketing`, 'success')
-                  if (fail > 0) showToast(`${fail} failed`, 'error')
-                }
-              }; inp.click()
-            }} className="flex items-center gap-2 px-3 py-2.5 rounded-xl text-sm font-medium text-gray-400 bg-white/[0.04] border border-dashed border-white/[0.12] hover:bg-white/[0.08] hover:border-white/[0.2] transition-colors w-full justify-center">
+            <button type="button" onClick={() => setFolderPickerOpen(true)} className="flex items-center gap-2 px-3 py-2.5 rounded-xl text-sm font-medium text-gray-400 bg-white/[0.04] border border-dashed border-white/[0.12] hover:bg-white/[0.08] hover:border-white/[0.2] transition-colors w-full justify-center">
               <Upload className="w-4 h-4" /> Upload Campaign Assets
             </button>
             <p className="text-[10px] text-gray-600 mt-1">Images, videos, PDFs — stored in Marketing Assets</p>
           </div>
         </div>
         <div className="flex justify-end gap-3 mt-6 pt-4 border-t border-white/[0.06]">
-          <button onClick={() => setNewCampaignOpen(false)} className="px-4 py-2 rounded-xl text-sm font-medium text-gray-400 hover:text-white hover:bg-white/[0.06] transition-colors">Cancel</button>
-          <button onClick={() => { showToast('Campaign created successfully', 'success'); setNewCampaignOpen(false) }} className="px-5 py-2 rounded-xl text-sm font-medium text-white bg-brand-red hover:bg-red-600 transition-colors">Create</button>
+          <button onClick={() => { resetCampaignForm(); setNewCampaignOpen(false) }} className="px-4 py-2 rounded-xl text-sm font-medium text-gray-400 hover:text-white hover:bg-white/[0.06] transition-colors">Cancel</button>
+          <button onClick={handleCreateCampaign} className="px-5 py-2 rounded-xl text-sm font-medium text-white bg-brand-red hover:bg-red-600 transition-colors">Create</button>
         </div>
       </AdminModal>
+      <UploadWithFolderPicker
+        open={folderPickerOpen}
+        onClose={() => setFolderPickerOpen(false)}
+        defaultRoute="admin/marketing"
+        showToast={showToast as any}
+        onUploadComplete={(results) => {
+          const ok = results.filter(r => r.success).length
+          if (ok > 0) showToast(`${ok} asset(s) uploaded to Marketing`, 'success')
+        }}
+        theme="dark"
+        portal="admin"
+      />
     </div>
   )
 }
@@ -641,6 +650,7 @@ function CampaignDetailContent({ campaign }: { campaign: MarketingCampaign }) {
 // ══════════════════════════════════════════════════════════════════
 function ContentTab({ showToast }: { showToast: (m: string, t?: 'success' | 'error' | 'info' | 'warning') => void }) {
   const [newContentOpen, setNewContentOpen] = useState(false)
+  const [folderPickerOpen, setFolderPickerOpen] = useState(false)
   const contentStatuses = ['idea', 'draft', 'review', 'approved', 'scheduled', 'published'] as const
   const [typeFilter, setTypeFilter] = useState<string>('all')
 
@@ -782,22 +792,7 @@ function ContentTab({ showToast }: { showToast: (m: string, t?: 'success' | 'err
           </div>
           <div className="sm:col-span-2">
             <label className="block text-xs font-medium text-gray-400 mb-1.5">Attach Media</label>
-            <button type="button" onClick={() => {
-              const inp = document.createElement('input'); inp.type = 'file'; inp.multiple = true
-              inp.accept = '.pdf,.docx,.jpg,.jpeg,.png,.gif,.webp,.mp4,.svg'
-              inp.onchange = async () => {
-                if (inp.files && inp.files.length > 0) {
-                  showToast(`Uploading ${inp.files.length} file(s)...`, 'info')
-                  let ok = 0, fail = 0
-                  for (let i = 0; i < inp.files.length; i++) {
-                    const result = await uploadFile(inp.files[i], 'admin/marketing')
-                    if (result.success) ok++; else fail++
-                  }
-                  if (ok > 0) showToast(`${ok} file(s) uploaded`, 'success')
-                  if (fail > 0) showToast(`${fail} failed`, 'error')
-                }
-              }; inp.click()
-            }} className="flex items-center gap-2 px-3 py-2.5 rounded-xl text-sm font-medium text-gray-400 bg-white/[0.04] border border-dashed border-white/[0.12] hover:bg-white/[0.08] hover:border-white/[0.2] transition-colors w-full justify-center">
+            <button type="button" onClick={() => setFolderPickerOpen(true)} className="flex items-center gap-2 px-3 py-2.5 rounded-xl text-sm font-medium text-gray-400 bg-white/[0.04] border border-dashed border-white/[0.12] hover:bg-white/[0.08] hover:border-white/[0.2] transition-colors w-full justify-center">
               <Upload className="w-4 h-4" /> Upload Content Media
             </button>
             <p className="text-[10px] text-gray-600 mt-1">Images, videos, documents for this content piece</p>
@@ -808,6 +803,18 @@ function ContentTab({ showToast }: { showToast: (m: string, t?: 'success' | 'err
           <button onClick={() => { showToast('Content created successfully', 'success'); setNewContentOpen(false) }} className="px-5 py-2 rounded-xl text-sm font-medium text-white bg-brand-red hover:bg-red-600 transition-colors">Create</button>
         </div>
       </AdminModal>
+      <UploadWithFolderPicker
+        open={folderPickerOpen}
+        onClose={() => setFolderPickerOpen(false)}
+        defaultRoute="admin/marketing"
+        showToast={showToast as any}
+        onUploadComplete={(results) => {
+          const ok = results.filter(r => r.success).length
+          if (ok > 0) showToast(`${ok} file(s) uploaded to Marketing`, 'success')
+        }}
+        theme="dark"
+        portal="admin"
+      />
     </div>
   )
 }

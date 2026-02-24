@@ -17,10 +17,11 @@ import AdminBadge from '../shared/AdminBadge'
 import AdminModal, { ModalButton } from '../shared/AdminModal'
 import AdminKPICard from '../shared/AdminKPICard'
 import AdminEmptyState from '../shared/AdminEmptyState'
+import UploadWithFolderPicker from '@/components/shared/UploadWithFolderPicker'
 import { INVOICES_DATA, EXPENSES_DATA, REVENUE_BREAKDOWN, OVERVIEW_KPIS, COMMISSIONS_DATA } from '@/lib/admin/adminMockData'
 import { formatINR, formatDate } from '@/lib/admin/adminHooks'
 import type { Invoice, Expense, InvoiceStatus, ExpenseCategory } from '@/lib/admin/adminTypes'
-import { saveBlobAs, uploadFile } from '@/lib/supabase/storageService'
+import { saveBlobAs } from '@/lib/supabase/storageService'
 
 // ── Sub-tabs ─────────────────────────────────────────────────────
 const FINANCIAL_TABS = [
@@ -382,6 +383,7 @@ function InvoicesTab({ showToast }: { showToast: (msg: string, type?: 'success' 
 // ── Expenses Tab ────────────────────────────────────────────────
 function ExpensesTab({ showToast }: { showToast: (msg: string, type?: 'success' | 'error' | 'info' | 'warning') => void }) {
   const [addExpenseOpen, setAddExpenseOpen] = useState(false)
+  const [folderPickerOpen, setFolderPickerOpen] = useState(false)
   const [expenseForm, setExpenseForm] = useState({
     description: '',
     category: 'operations' as ExpenseCategory,
@@ -637,20 +639,7 @@ function ExpensesTab({ showToast }: { showToast: (msg: string, type?: 'success' 
           <div>
             <label className="block text-xs font-medium text-gray-400 mb-1.5">Receipt</label>
             <button
-              onClick={() => {
-                const input = document.createElement('input')
-                input.type = 'file'
-                input.accept = '.pdf,.jpg,.jpeg,.png,.gif'
-                input.onchange = async () => {
-                  if (input.files?.[0]) {
-                    showToast('Uploading receipt...', 'info')
-                    const result = await uploadFile(input.files[0], 'admin/expenses')
-                    if (result.success) showToast('Receipt uploaded', 'success')
-                    else showToast('Upload failed', 'error')
-                  }
-                }
-                input.click()
-              }}
+              onClick={() => setFolderPickerOpen(true)}
               className="flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-medium text-gray-400 bg-white/[0.04] border border-white/[0.06] hover:bg-white/[0.08] transition-colors"
             >
               <Upload className="w-4 h-4" />
@@ -675,6 +664,19 @@ function ExpensesTab({ showToast }: { showToast: (msg: string, type?: 'success' 
           </button>
         </div>
       </AdminModal>
+
+      <UploadWithFolderPicker
+        open={folderPickerOpen}
+        onClose={() => setFolderPickerOpen(false)}
+        defaultRoute="admin/expenses"
+        showToast={showToast as any}
+        onUploadComplete={(results) => {
+          const ok = results.filter(r => r.success).length
+          if (ok > 0) showToast(`${ok} receipt(s) uploaded`, 'success')
+        }}
+        theme="dark"
+        portal="admin"
+      />
     </>
   )
 }

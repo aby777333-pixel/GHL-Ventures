@@ -21,7 +21,7 @@ import {
   REALTY_BROKERS_DATA, BROKER_INQUIRIES_DATA,
 } from '@/lib/admin/adminMockData'
 import { formatINR } from '@/lib/admin/adminHooks'
-import { uploadFile } from '@/lib/supabase/storageService'
+import UploadWithFolderPicker from '@/components/shared/UploadWithFolderPicker'
 import type { RealtyBroker, BrokerInquiry } from '@/lib/admin/adminTypes'
 
 // ── Status Config ──────────────────────────────────────────────────
@@ -95,6 +95,7 @@ export default function RealtyBrokersModule({ subTab, navigate, showToast }: Rea
   const [selectedBroker, setSelectedBroker] = useState<RealtyBroker | null>(null)
   const [selectedInquiry, setSelectedInquiry] = useState<BrokerInquiry | null>(null)
   const [addBrokerOpen, setAddBrokerOpen] = useState(false)
+  const [folderPickerOpen, setFolderPickerOpen] = useState(false)
   const [brokerForm, setBrokerForm] = useState({
     name: '',
     email: '',
@@ -503,25 +504,7 @@ export default function RealtyBrokersModule({ subTab, navigate, showToast }: Rea
             <label className="block text-xs font-medium text-gray-400 mb-1.5">Attach RERA Certificate & Documents</label>
             <button
               type="button"
-              onClick={() => {
-                const inp = document.createElement('input')
-                inp.type = 'file'
-                inp.multiple = true
-                inp.accept = '.pdf,.docx,.xlsx,.jpg,.jpeg,.png,.gif,.webp'
-                inp.onchange = async () => {
-                  if (inp.files && inp.files.length > 0) {
-                    showToast(`Uploading ${inp.files.length} file(s)...`, 'info')
-                    let ok = 0, fail = 0
-                    for (let i = 0; i < inp.files.length; i++) {
-                      const result = await uploadFile(inp.files[i], 'admin/sales')
-                      if (result.success) ok++; else fail++
-                    }
-                    if (ok > 0) showToast(`${ok} file(s) uploaded to Sales & CRM`, 'success')
-                    if (fail > 0) showToast(`${fail} file(s) failed`, 'error')
-                  }
-                }
-                inp.click()
-              }}
+              onClick={() => setFolderPickerOpen(true)}
               className="flex items-center gap-2 px-3 py-2.5 rounded-xl text-sm font-medium text-gray-400 bg-white/[0.04] border border-dashed border-white/[0.12] hover:bg-white/[0.08] hover:border-white/[0.2] transition-colors w-full justify-center"
             >
               <Upload className="w-4 h-4" />
@@ -531,6 +514,19 @@ export default function RealtyBrokersModule({ subTab, navigate, showToast }: Rea
           </div>
         </div>
       </AdminModal>
+
+      <UploadWithFolderPicker
+        open={folderPickerOpen}
+        onClose={() => setFolderPickerOpen(false)}
+        defaultRoute="admin/sales"
+        showToast={showToast as any}
+        onUploadComplete={(results) => {
+          const ok = results.filter(r => r.success).length
+          if (ok > 0) showToast(`${ok} file(s) uploaded to Sales & CRM`, 'success')
+        }}
+        theme="dark"
+        portal="admin"
+      />
     </div>
   )
 }

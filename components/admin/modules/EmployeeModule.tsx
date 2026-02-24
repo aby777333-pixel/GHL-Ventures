@@ -16,7 +16,7 @@ import AdminEmptyState from '../shared/AdminEmptyState'
 import { EMPLOYEES_DATA } from '@/lib/admin/adminMockData'
 import { formatDate } from '@/lib/admin/adminHooks'
 import type { Employee, EmployeeStatus, LeaveRequest, AttendanceRecord } from '@/lib/admin/adminTypes'
-import { uploadFile } from '@/lib/supabase/storageService'
+import UploadWithFolderPicker from '@/components/shared/UploadWithFolderPicker'
 
 // ── Mock Leave & Attendance Data ─────────────────────────────────
 const LEAVE_REQUESTS: LeaveRequest[] = [
@@ -58,6 +58,7 @@ export default function EmployeeModule({ subTab, navigate, showToast }: Employee
   const activeTab = (EMPLOYEE_TABS.some(t => t.id === subTab) ? subTab : 'directory') as EmployeeTab
   const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null)
   const [addEmployeeOpen, setAddEmployeeOpen] = useState(false)
+  const [folderPickerOpen, setFolderPickerOpen] = useState(false)
   const [editEmployee, setEditEmployee] = useState<Employee | null>(null)
   const [empForm, setEmpForm] = useState({
     name: '', email: '', phone: '', department: 'Operations', role: '',
@@ -320,25 +321,7 @@ export default function EmployeeModule({ subTab, navigate, showToast }: Employee
               <label className="block text-xs font-medium text-gray-400 mb-1.5">Attach Employee Documents</label>
               <button
                 type="button"
-                onClick={() => {
-                  const inp = document.createElement('input')
-                  inp.type = 'file'
-                  inp.multiple = true
-                  inp.accept = '.pdf,.docx,.xlsx,.jpg,.jpeg,.png,.gif,.webp'
-                  inp.onchange = async () => {
-                    if (inp.files && inp.files.length > 0) {
-                      showToast(`Uploading ${inp.files.length} file(s)...`, 'info')
-                      let ok = 0, fail = 0
-                      for (let i = 0; i < inp.files.length; i++) {
-                        const result = await uploadFile(inp.files[i], 'admin/employees')
-                        if (result.success) ok++; else fail++
-                      }
-                      if (ok > 0) showToast(`${ok} file(s) uploaded to Employee Records`, 'success')
-                      if (fail > 0) showToast(`${fail} file(s) failed`, 'error')
-                    }
-                  }
-                  inp.click()
-                }}
+                onClick={() => setFolderPickerOpen(true)}
                 className="flex items-center gap-2 px-3 py-2.5 rounded-xl text-sm font-medium text-gray-400 bg-white/[0.04] border border-dashed border-white/[0.12] hover:bg-white/[0.08] hover:border-white/[0.2] transition-colors w-full justify-center"
               >
                 <Upload className="w-4 h-4" />
@@ -355,6 +338,19 @@ export default function EmployeeModule({ subTab, navigate, showToast }: Employee
           </div>
         </form>
       </AdminModal>
+
+      <UploadWithFolderPicker
+        open={folderPickerOpen}
+        onClose={() => setFolderPickerOpen(false)}
+        defaultRoute="admin/employees"
+        showToast={showToast as any}
+        onUploadComplete={(results) => {
+          const ok = results.filter(r => r.success).length
+          if (ok > 0) showToast(`${ok} file(s) uploaded to Employee Records`, 'success')
+        }}
+        theme="dark"
+        portal="admin"
+      />
     </div>
   )
 }

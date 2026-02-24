@@ -15,8 +15,9 @@ import AdminKPICard from '../shared/AdminKPICard'
 import AdminEmptyState from '../shared/AdminEmptyState'
 import { LEADS_DATA, COMMISSIONS_DATA } from '@/lib/admin/adminMockData'
 import { formatINR, formatDate } from '@/lib/admin/adminHooks'
-import type { Lead, LeadStage, Commission } from '@/lib/admin/adminTypes'
-import { uploadFile } from '@/lib/supabase/storageService'
+import type { Lead, LeadStage, LeadSource, Commission } from '@/lib/admin/adminTypes'
+import UploadWithFolderPicker from '@/components/shared/UploadWithFolderPicker'
+import { createLead } from '@/lib/supabase/leadService'
 
 // ── Sub-tabs ─────────────────────────────────────────────────────
 const SALES_TABS = [
@@ -49,6 +50,45 @@ export default function SalesModule({ subTab, navigate, showToast }: SalesModule
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null)
   const [leadModalOpen, setLeadModalOpen] = useState(false)
   const [addLeadOpen, setAddLeadOpen] = useState(false)
+  const [folderPickerOpen, setFolderPickerOpen] = useState(false)
+  const [savingLead, setSavingLead] = useState(false)
+
+  // ── Add Lead form state ─────────────────────────────────────
+  const [leadForm, setLeadForm] = useState({
+    name: '', email: '', phone: '', source: 'website' as LeadSource,
+    stage: 'new' as LeadStage, value: '', probability: '50',
+    assignedTo: '', notes: '',
+  })
+  const resetLeadForm = () => setLeadForm({ name: '', email: '', phone: '', source: 'website', stage: 'new', value: '', probability: '50', assignedTo: '', notes: '' })
+
+  const handleSaveLead = async () => {
+    if (!leadForm.name.trim()) { showToast('Lead name is required', 'error'); return }
+    setSavingLead(true)
+    try {
+      const result = await createLead({
+        name: leadForm.name.trim(),
+        email: leadForm.email.trim() || undefined,
+        phone: leadForm.phone.trim() || undefined,
+        source: leadForm.source,
+        stage: leadForm.stage,
+        value: leadForm.value ? Number(leadForm.value) : 0,
+        probability: leadForm.probability ? Number(leadForm.probability) : 50,
+        assignedTo: leadForm.assignedTo.trim() || undefined,
+        notes: leadForm.notes.trim() || undefined,
+      })
+      if (result.success) {
+        showToast(`Lead "${leadForm.name}" created — folder auto-created in Sales & Reports`, 'success')
+        resetLeadForm()
+        setAddLeadOpen(false)
+      } else {
+        showToast(result.error || 'Failed to create lead', 'error')
+      }
+    } catch (err: any) {
+      showToast(err.message || 'Error creating lead', 'error')
+    } finally {
+      setSavingLead(false)
+    }
+  }
 
   // ── KPIs ──────────────────────────────────────────────────────
   const kpis = useMemo(() => {
@@ -147,8 +187,8 @@ export default function SalesModule({ subTab, navigate, showToast }: SalesModule
           maxWidth="max-w-xl"
           footer={
             <>
-              <ModalButton onClick={() => setAddLeadOpen(false)}>Cancel</ModalButton>
-              <ModalButton variant="primary" onClick={() => { setAddLeadOpen(false); showToast('Lead created successfully', 'success') }}>Save Lead</ModalButton>
+              <ModalButton onClick={() => { resetLeadForm(); setAddLeadOpen(false) }}>Cancel</ModalButton>
+              <ModalButton variant="primary" onClick={handleSaveLead} disabled={savingLead}>{savingLead ? 'Creating…' : 'Save Lead'}</ModalButton>
             </>
           }
         >
@@ -156,21 +196,21 @@ export default function SalesModule({ subTab, navigate, showToast }: SalesModule
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="block text-xs font-medium text-gray-400 mb-1.5">Full Name *</label>
-                <input type="text" placeholder="Enter full name" className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-brand-red/40 focus:ring-1 focus:ring-brand-red/20" />
+                <input type="text" placeholder="Enter full name" value={leadForm.name} onChange={e => setLeadForm(f => ({ ...f, name: e.target.value }))} className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-brand-red/40 focus:ring-1 focus:ring-brand-red/20" />
               </div>
               <div>
                 <label className="block text-xs font-medium text-gray-400 mb-1.5">Email *</label>
-                <input type="email" placeholder="email@example.com" className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-brand-red/40 focus:ring-1 focus:ring-brand-red/20" />
+                <input type="email" placeholder="email@example.com" value={leadForm.email} onChange={e => setLeadForm(f => ({ ...f, email: e.target.value }))} className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-brand-red/40 focus:ring-1 focus:ring-brand-red/20" />
               </div>
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="block text-xs font-medium text-gray-400 mb-1.5">Phone *</label>
-                <input type="tel" placeholder="+91 98765 43210" className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-brand-red/40 focus:ring-1 focus:ring-brand-red/20" />
+                <input type="tel" placeholder="+91 98765 43210" value={leadForm.phone} onChange={e => setLeadForm(f => ({ ...f, phone: e.target.value }))} className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-brand-red/40 focus:ring-1 focus:ring-brand-red/20" />
               </div>
               <div>
                 <label className="block text-xs font-medium text-gray-400 mb-1.5">Lead Source</label>
-                <select className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-brand-red/40 focus:ring-1 focus:ring-brand-red/20">
+                <select value={leadForm.source} onChange={e => setLeadForm(f => ({ ...f, source: e.target.value as LeadSource }))} className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-brand-red/40 focus:ring-1 focus:ring-brand-red/20">
                   <option value="website">Website</option>
                   <option value="referral">Referral</option>
                   <option value="cold-outreach">Cold Outreach</option>
@@ -183,16 +223,16 @@ export default function SalesModule({ subTab, navigate, showToast }: SalesModule
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="block text-xs font-medium text-gray-400 mb-1.5">Deal Value (₹)</label>
-                <input type="number" placeholder="0" className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-brand-red/40 focus:ring-1 focus:ring-brand-red/20" />
+                <input type="number" placeholder="0" value={leadForm.value} onChange={e => setLeadForm(f => ({ ...f, value: e.target.value }))} className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-brand-red/40 focus:ring-1 focus:ring-brand-red/20" />
               </div>
               <div>
                 <label className="block text-xs font-medium text-gray-400 mb-1.5">Probability (%)</label>
-                <input type="number" placeholder="50" min="0" max="100" className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-brand-red/40 focus:ring-1 focus:ring-brand-red/20" />
+                <input type="number" placeholder="50" min="0" max="100" value={leadForm.probability} onChange={e => setLeadForm(f => ({ ...f, probability: e.target.value }))} className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-brand-red/40 focus:ring-1 focus:ring-brand-red/20" />
               </div>
             </div>
             <div>
               <label className="block text-xs font-medium text-gray-400 mb-1.5">Stage</label>
-              <select className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-brand-red/40 focus:ring-1 focus:ring-brand-red/20">
+              <select value={leadForm.stage} onChange={e => setLeadForm(f => ({ ...f, stage: e.target.value as LeadStage }))} className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-brand-red/40 focus:ring-1 focus:ring-brand-red/20">
                 <option value="new">New</option>
                 <option value="contacted">Contacted</option>
                 <option value="qualified">Qualified</option>
@@ -202,35 +242,17 @@ export default function SalesModule({ subTab, navigate, showToast }: SalesModule
             </div>
             <div>
               <label className="block text-xs font-medium text-gray-400 mb-1.5">Assigned To</label>
-              <input type="text" placeholder="Sales rep name" className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-brand-red/40 focus:ring-1 focus:ring-brand-red/20" />
+              <input type="text" placeholder="Sales rep name" value={leadForm.assignedTo} onChange={e => setLeadForm(f => ({ ...f, assignedTo: e.target.value }))} className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-brand-red/40 focus:ring-1 focus:ring-brand-red/20" />
             </div>
             <div>
               <label className="block text-xs font-medium text-gray-400 mb-1.5">Notes</label>
-              <textarea rows={3} placeholder="Any additional notes about this lead..." className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-brand-red/40 focus:ring-1 focus:ring-brand-red/20 resize-none" />
+              <textarea rows={3} placeholder="Any additional notes about this lead..." value={leadForm.notes} onChange={e => setLeadForm(f => ({ ...f, notes: e.target.value }))} className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-brand-red/40 focus:ring-1 focus:ring-brand-red/20 resize-none" />
             </div>
             <div className="sm:col-span-2">
               <label className="block text-xs font-medium text-gray-400 mb-1.5">Attach Documents</label>
               <button
                 type="button"
-                onClick={() => {
-                  const inp = document.createElement('input')
-                  inp.type = 'file'
-                  inp.multiple = true
-                  inp.accept = '.pdf,.docx,.xlsx,.jpg,.jpeg,.png,.gif,.webp'
-                  inp.onchange = async () => {
-                    if (inp.files && inp.files.length > 0) {
-                      showToast(`Uploading ${inp.files.length} file(s)...`, 'info')
-                      let ok = 0, fail = 0
-                      for (let i = 0; i < inp.files.length; i++) {
-                        const result = await uploadFile(inp.files[i], 'admin/sales')
-                        if (result.success) ok++; else fail++
-                      }
-                      if (ok > 0) showToast(`${ok} file(s) uploaded to Sales & CRM`, 'success')
-                      if (fail > 0) showToast(`${fail} file(s) failed`, 'error')
-                    }
-                  }
-                  inp.click()
-                }}
+                onClick={() => setFolderPickerOpen(true)}
                 className="flex items-center gap-2 px-3 py-2.5 rounded-xl text-sm font-medium text-gray-400 bg-white/[0.04] border border-dashed border-white/[0.12] hover:bg-white/[0.08] hover:border-white/[0.2] transition-colors w-full justify-center"
               >
                 <Upload className="w-4 h-4" />
@@ -241,6 +263,19 @@ export default function SalesModule({ subTab, navigate, showToast }: SalesModule
           </div>
         </AdminModal>
       )}
+
+      <UploadWithFolderPicker
+        open={folderPickerOpen}
+        onClose={() => setFolderPickerOpen(false)}
+        defaultRoute="admin/sales"
+        showToast={showToast as any}
+        onUploadComplete={(results) => {
+          const ok = results.filter(r => r.success).length
+          if (ok > 0) showToast(`${ok} file(s) uploaded to Sales & CRM`, 'success')
+        }}
+        theme="dark"
+        portal="admin"
+      />
     </div>
   )
 }

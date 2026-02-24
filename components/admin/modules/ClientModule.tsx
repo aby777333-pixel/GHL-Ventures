@@ -16,7 +16,7 @@ import AdminKPICard from '../shared/AdminKPICard'
 import { CLIENTS_DATA, KYC_DOCUMENTS } from '@/lib/admin/adminMockData'
 import { formatINR, formatDate } from '@/lib/admin/adminHooks'
 import type { Client, KYCDocument, KYCStatus } from '@/lib/admin/adminTypes'
-import { uploadFile } from '@/lib/supabase/storageService'
+import UploadWithFolderPicker from '@/components/shared/UploadWithFolderPicker'
 
 // ── Sub-tabs ─────────────────────────────────────────────────────
 const CLIENT_TABS = [
@@ -39,6 +39,7 @@ export default function ClientModule({ subTab, navigate, showToast }: ClientModu
   const [profileModalOpen, setProfileModalOpen] = useState(false)
   const [kycFilter, setKycFilter] = useState<KYCStatus | 'all'>('all')
   const [addClientOpen, setAddClientOpen] = useState(false)
+  const [folderPickerOpen, setFolderPickerOpen] = useState(false)
 
   // ── KPIs ──────────────────────────────────────────────────────
   const kpis = useMemo(() => {
@@ -198,25 +199,7 @@ export default function ClientModule({ subTab, navigate, showToast }: ClientModu
               <label className="block text-xs font-medium text-gray-400 mb-1.5">Attach KYC / Documents</label>
               <button
                 type="button"
-                onClick={() => {
-                  const inp = document.createElement('input')
-                  inp.type = 'file'
-                  inp.multiple = true
-                  inp.accept = '.pdf,.docx,.xlsx,.jpg,.jpeg,.png,.gif,.webp'
-                  inp.onchange = async () => {
-                    if (inp.files && inp.files.length > 0) {
-                      showToast(`Uploading ${inp.files.length} file(s)...`, 'info')
-                      let ok = 0, fail = 0
-                      for (let i = 0; i < inp.files.length; i++) {
-                        const result = await uploadFile(inp.files[i], 'admin/clients')
-                        if (result.success) ok++; else fail++
-                      }
-                      if (ok > 0) showToast(`${ok} file(s) uploaded to Client Documents`, 'success')
-                      if (fail > 0) showToast(`${fail} file(s) failed`, 'error')
-                    }
-                  }
-                  inp.click()
-                }}
+                onClick={() => setFolderPickerOpen(true)}
                 className="flex items-center gap-2 px-3 py-2.5 rounded-xl text-sm font-medium text-gray-400 bg-white/[0.04] border border-dashed border-white/[0.12] hover:bg-white/[0.08] hover:border-white/[0.2] transition-colors w-full justify-center"
               >
                 <Upload className="w-4 h-4" />
@@ -227,6 +210,19 @@ export default function ClientModule({ subTab, navigate, showToast }: ClientModu
           </div>
         </AdminModal>
       )}
+
+      <UploadWithFolderPicker
+        open={folderPickerOpen}
+        onClose={() => setFolderPickerOpen(false)}
+        defaultRoute="admin/clients"
+        showToast={showToast as any}
+        onUploadComplete={(results) => {
+          const ok = results.filter(r => r.success).length
+          if (ok > 0) showToast(`${ok} file(s) uploaded to Client Documents`, 'success')
+        }}
+        theme="dark"
+        portal="admin"
+      />
     </div>
   )
 }

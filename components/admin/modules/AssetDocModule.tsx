@@ -16,7 +16,8 @@ import AdminEmptyState from '../shared/AdminEmptyState'
 import { ASSETS_DATA } from '@/lib/admin/adminMockData'
 import { formatINR, formatDate } from '@/lib/admin/adminHooks'
 import type { Asset, AssetCategory, AssetStatus } from '@/lib/admin/adminTypes'
-import { uploadFile, saveBlobAs } from '@/lib/supabase/storageService'
+import { saveBlobAs } from '@/lib/supabase/storageService'
+import UploadWithFolderPicker from '@/components/shared/UploadWithFolderPicker'
 
 // ── Mock Documents ──────────────────────────────────────────────
 interface AdminDocument {
@@ -58,6 +59,7 @@ interface AssetDocModuleProps {
 
 export default function AssetDocModule({ subTab, navigate, showToast }: AssetDocModuleProps) {
   const activeTab = (ASSET_TABS.some(t => t.id === subTab) ? subTab : 'assets') as AssetTab
+  const [folderPickerOpen, setFolderPickerOpen] = useState(false)
 
   const kpis = useMemo(() => {
     const totalAssetValue = ASSETS_DATA.reduce((s, a) => s + a.value, 0)
@@ -78,31 +80,26 @@ export default function AssetDocModule({ subTab, navigate, showToast }: AssetDoc
           <p className="text-sm text-gray-500 mt-1">Asset inventory and document management system</p>
         </div>
         <button
-          onClick={() => {
-            const input = document.createElement('input')
-            input.type = 'file'
-            input.multiple = true
-            input.accept = '.pdf,.xlsx,.xls,.docx,.doc,.pptx,.ppt,.csv,.jpg,.jpeg,.png,.gif,.webp,.svg,.zip'
-            input.onchange = async () => {
-              if (input.files && input.files.length > 0) {
-                showToast(`Uploading ${input.files.length} file(s)...`, 'info')
-                let ok = 0, fail = 0
-                for (let i = 0; i < input.files.length; i++) {
-                  const result = await uploadFile(input.files[i], 'admin/assets')
-                  if (result.success) ok++; else fail++
-                }
-                if (ok > 0) showToast(`Uploaded ${ok} file(s) to Supabase Storage`, 'success')
-                if (fail > 0) showToast(`${fail} file(s) failed to upload`, 'error')
-              }
-            }
-            input.click()
-          }}
+          onClick={() => setFolderPickerOpen(true)}
           className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium text-white bg-brand-red/20 border border-brand-red/30 hover:bg-brand-red/30 transition-colors self-start admin-btn-press"
         >
           <Upload className="w-4 h-4" />
           Upload Document
         </button>
       </div>
+
+      <UploadWithFolderPicker
+        open={folderPickerOpen}
+        onClose={() => setFolderPickerOpen(false)}
+        defaultRoute="admin/assets"
+        showToast={showToast as any}
+        onUploadComplete={(results) => {
+          const ok = results.filter(r => r.success).length
+          if (ok > 0) showToast(`${ok} file(s) uploaded to Assets`, 'success')
+        }}
+        theme="dark"
+        portal="admin"
+      />
 
       <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
         <AdminKPICard title="Total Assets" value={kpis.totalAssets} icon={Monitor} color="#3B82F6" delay={0} />
@@ -142,6 +139,7 @@ export default function AssetDocModule({ subTab, navigate, showToast }: AssetDoc
 // ── Asset Inventory Tab ─────────────────────────────────────────
 function AssetInventoryTab({ showToast }: { showToast: (msg: string, type?: 'success' | 'error' | 'info' | 'warning') => void }) {
   const [addAssetOpen, setAddAssetOpen] = useState(false)
+  const [assetFolderPickerOpen, setAssetFolderPickerOpen] = useState(false)
   const [assetForm, setAssetForm] = useState({
     name: '',
     category: 'laptop' as string,
@@ -411,25 +409,7 @@ function AssetInventoryTab({ showToast }: { showToast: (msg: string, type?: 'suc
             <label className="block text-xs font-medium text-gray-400 mb-1.5">Attach Asset Documents</label>
             <button
               type="button"
-              onClick={() => {
-                const inp = document.createElement('input')
-                inp.type = 'file'
-                inp.multiple = true
-                inp.accept = '.pdf,.docx,.xlsx,.jpg,.jpeg,.png,.gif,.webp'
-                inp.onchange = async () => {
-                  if (inp.files && inp.files.length > 0) {
-                    showToast(`Uploading ${inp.files.length} file(s)...`, 'info')
-                    let ok = 0, fail = 0
-                    for (let i = 0; i < inp.files.length; i++) {
-                      const result = await uploadFile(inp.files[i], 'admin/assets')
-                      if (result.success) ok++; else fail++
-                    }
-                    if (ok > 0) showToast(`${ok} file(s) uploaded to Assets`, 'success')
-                    if (fail > 0) showToast(`${fail} file(s) failed`, 'error')
-                  }
-                }
-                inp.click()
-              }}
+              onClick={() => setAssetFolderPickerOpen(true)}
               className="flex items-center gap-2 px-3 py-2.5 rounded-xl text-sm font-medium text-gray-400 bg-white/[0.04] border border-dashed border-white/[0.12] hover:bg-white/[0.08] hover:border-white/[0.2] transition-colors w-full justify-center"
             >
               <Upload className="w-4 h-4" />
@@ -437,6 +417,19 @@ function AssetInventoryTab({ showToast }: { showToast: (msg: string, type?: 'suc
             </button>
             <p className="text-[10px] text-gray-600 mt-1">Stored in File Repository &gt; Assets</p>
           </div>
+
+          <UploadWithFolderPicker
+            open={assetFolderPickerOpen}
+            onClose={() => setAssetFolderPickerOpen(false)}
+            defaultRoute="admin/assets"
+            showToast={showToast as any}
+            onUploadComplete={(results) => {
+              const ok = results.filter(r => r.success).length
+              if (ok > 0) showToast(`${ok} file(s) uploaded to Assets`, 'success')
+            }}
+            theme="dark"
+            portal="admin"
+          />
         </div>
 
         {/* Footer actions */}
