@@ -131,38 +131,62 @@ const STARS = [
   { x: 28, y: 85, size: 'lg', delay: 0.8 }, { x: 62, y: 8, size: 'lg', delay: 1.5 },
 ]
 
-/* Live TV channel options — using direct video IDs for stable streams,
-   channel handle-based /live embed as fallback for channels with rotating streams. */
+/* Live TV channel options — using @handle/live pattern for resilient live streams.
+   YouTube's @handle/live always redirects to the current live broadcast.
+   Falls back to channel ID-based live_stream embed, then direct video ID. */
 const LIVE_CHANNELS = [
-  { id: 'cnbc', label: 'CNBC-TV18', videoId: 'P857H4ej-MQ', handle: 'CNBCTV18Digital' },
-  { id: 'bloomberg', label: 'Bloomberg', videoId: null, handle: 'Bloomberg', channelId: 'UChirEOpgFCupRAk5etXqPaA' },
-  { id: 'ndtv', label: 'NDTV Profit', videoId: 'EN-N1xhtBqU', handle: 'NDTVProfitIndia' },
-  { id: 'zee', label: 'Zee Business', videoId: 'x0X9YeejdcM', handle: 'ZeeBusiness' },
-  { id: 'etnow', label: 'ET Now', videoId: 'C6DdVpvyoK8', handle: 'ETNow' },
+  { id: 'cnbc', label: 'CNBC-TV18', handle: 'CNBCTV18Digital', channelId: 'UCkKRiMm0fAqT0wLByp2_pqg', videoId: 'P857H4ej-MQ' },
+  { id: 'bloomberg', label: 'Bloomberg', handle: 'Bloomberg', channelId: 'UCIALMKvObZNtJ6AmdCLP7Lg', videoId: null },
+  { id: 'ndtv', label: 'NDTV Profit', handle: 'NDTVProfitIndia', channelId: 'UCfMGHZdTael1bVd3hMWJHOQ', videoId: null },
+  { id: 'zee', label: 'Zee Business', handle: 'ZeeBusiness', channelId: 'UCGe3sTPlHlCoXEOq2AhxQAg', videoId: null },
+  { id: 'etnow', label: 'ET Now', handle: 'ETNow', channelId: 'UCNqpmQ3HWb9HMqfNNESJPHg', videoId: null },
 ]
 
 function getLiveEmbedUrl(ch: typeof LIVE_CHANNELS[0]) {
-  if (ch.videoId) return `https://www.youtube.com/embed/${ch.videoId}?autoplay=0&rel=0`
-  if ('channelId' in ch && (ch as any).channelId) return `https://www.youtube.com/embed/live_stream?channel=${(ch as any).channelId}&autoplay=0&rel=0`
+  // Primary: channel live_stream embed (most reliable for current live broadcast)
+  if (ch.channelId) return `https://www.youtube.com/embed/live_stream?channel=${ch.channelId}&autoplay=0&rel=0&modestbranding=1`
+  // Fallback: direct video ID
+  if (ch.videoId) return `https://www.youtube.com/embed/${ch.videoId}?autoplay=0&rel=0&modestbranding=1`
+  // Last resort: handle-based
   return `https://www.youtube.com/embed?listType=playlist&list=UU${ch.handle}&autoplay=0&rel=0`
 }
 
 function LiveFinancialTV() {
   const [activeChannel, setActiveChannel] = useState(0)
+  const [iframeError, setIframeError] = useState(false)
   const ch = LIVE_CHANNELS[activeChannel]
+
+  const handleChannelSwitch = (idx: number) => {
+    setIframeError(false)
+    setActiveChannel(idx)
+  }
 
   return (
     <div className="relative rounded-2xl overflow-hidden border border-white/10 bg-black/40 backdrop-blur-sm">
       <div className="aspect-video relative bg-black">
-        <iframe
-          key={ch.id}
-          src={getLiveEmbedUrl(ch)}
-          title={`${ch.label} Live - Financial News`}
-          className="w-full h-full absolute inset-0"
-          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-          allowFullScreen
-          loading="lazy"
-        />
+        {iframeError ? (
+          <div className="w-full h-full absolute inset-0 flex flex-col items-center justify-center bg-black/80">
+            <Video className="w-10 h-10 text-gray-600 mb-3" />
+            <p className="text-gray-400 text-xs mb-2">Stream temporarily unavailable</p>
+            <button
+              onClick={() => setIframeError(false)}
+              className="px-3 py-1 bg-brand-red/20 text-brand-red text-[10px] font-semibold rounded-full hover:bg-brand-red/30 transition-colors"
+            >
+              Retry
+            </button>
+          </div>
+        ) : (
+          <iframe
+            key={`${ch.id}-${activeChannel}`}
+            src={getLiveEmbedUrl(ch)}
+            title={`${ch.label} Live - Financial News`}
+            className="w-full h-full absolute inset-0"
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+            allowFullScreen
+            loading="lazy"
+            onError={() => setIframeError(true)}
+          />
+        )}
       </div>
       {/* Live indicator badge */}
       <div className="absolute top-3 left-3 z-10 flex items-center gap-2 px-3 py-1 bg-black/70 backdrop-blur-sm rounded-full border border-white/10">
@@ -178,7 +202,7 @@ function LiveFinancialTV() {
           {LIVE_CHANNELS.map((c, i) => (
             <button
               key={c.id}
-              onClick={() => setActiveChannel(i)}
+              onClick={() => handleChannelSwitch(i)}
               className={`shrink-0 px-2.5 py-1 rounded-full text-[9px] font-semibold uppercase tracking-wider transition-all ${
                 i === activeChannel
                   ? 'bg-brand-red text-white'
@@ -632,6 +656,21 @@ function InvestmentCapabilities() {
    SECTION 5: Video Feature (Full-Width, Dark)
    ================================================================ */
 function VideoFeature() {
+  const [isPlaying, setIsPlaying] = useState(false)
+  const videoRef = { current: null as HTMLVideoElement | null }
+
+  const handlePlay = () => {
+    setIsPlaying(true)
+    // Small delay to let state update and video element render
+    setTimeout(() => {
+      if (videoRef.current) {
+        videoRef.current.play().catch(() => {
+          // Autoplay blocked — user can manually click video controls
+        })
+      }
+    }, 100)
+  }
+
   return (
     <section className="relative py-16 md:py-20 overflow-hidden">
       {/* Dark gradient + red radial bg */}
@@ -645,19 +684,61 @@ function VideoFeature() {
         <AnimatedSection className="text-center mb-10">
           <span className="eyebrow !text-brand-red">From Our Chairman</span>
           <h2 className="section-title mt-3 text-white">The GHL India Ventures Story</h2>
+          <p className="text-gray-400 text-sm mt-3 max-w-lg mx-auto">
+            Watch our overview to understand how we create value through strategic alternative investments.
+          </p>
         </AnimatedSection>
 
         <AnimatedSection delay={200}>
-          <div className="relative max-w-4xl mx-auto group cursor-pointer">
-            <PlaceholderImage theme="hero" aspectRatio="aspect-video" label="Chairman's Message — 3 minutes" className="rounded-3xl border border-white/10" />
-            <div className="absolute inset-0 flex items-center justify-center z-10">
-              <div className="relative">
-                <div className="absolute inset-0 w-20 h-20 rounded-full bg-brand-red/40 animate-pulse-ring" />
-                <div className="relative w-20 h-20 bg-brand-red rounded-full flex items-center justify-center group-hover:scale-110 transition-transform duration-300 shadow-lg shadow-brand-red/30">
-                  <Play className="w-9 h-9 text-white ml-1" />
+          <div className="relative max-w-4xl mx-auto">
+            {!isPlaying ? (
+              /* Poster / play button overlay */
+              <div
+                className="relative aspect-video rounded-3xl overflow-hidden border border-white/10 bg-black/60 group cursor-pointer"
+                onClick={handlePlay}
+              >
+                {/* Video preview frame — first frame as poster */}
+                <video
+                  src="/ghlbart.mp4"
+                  className="w-full h-full object-cover"
+                  muted
+                  playsInline
+                  preload="metadata"
+                />
+                {/* Gradient overlay */}
+                <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
+                {/* Play button */}
+                <div className="absolute inset-0 flex items-center justify-center z-10">
+                  <div className="relative">
+                    <div className="absolute -inset-4 w-28 h-28 rounded-full bg-brand-red/20 animate-ping" style={{ animationDuration: '2s' }} />
+                    <div className="relative w-20 h-20 bg-brand-red rounded-full flex items-center justify-center group-hover:scale-110 transition-transform duration-300 shadow-2xl shadow-brand-red/40">
+                      <Play className="w-9 h-9 text-white ml-1" />
+                    </div>
+                  </div>
+                </div>
+                {/* Duration badge */}
+                <div className="absolute bottom-4 right-4 z-10 px-3 py-1 bg-black/70 backdrop-blur-sm rounded-full border border-white/10">
+                  <span className="text-white text-[10px] font-semibold uppercase tracking-wider">
+                    Watch Overview
+                  </span>
                 </div>
               </div>
-            </div>
+            ) : (
+              /* Active video player */
+              <div className="relative aspect-video rounded-3xl overflow-hidden border border-white/10 bg-black">
+                <video
+                  ref={(el) => { videoRef.current = el }}
+                  src="/ghlbart.mp4"
+                  className="w-full h-full object-contain"
+                  controls
+                  playsInline
+                  autoPlay
+                  controlsList="nodownload"
+                >
+                  Your browser does not support the video tag.
+                </video>
+              </div>
+            )}
           </div>
         </AnimatedSection>
       </div>

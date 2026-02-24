@@ -188,7 +188,7 @@ export const ADMIN_SIDEBAR_ITEMS: SidebarItem[] = [
       { id: 'reports/ai-advisor', label: 'AI Advisor' },
       { id: 'reports/emailer', label: 'Smart Emailer' },
       { id: 'reports/dialer', label: 'Phone & Calls' },
-      { id: 'reports/documents', label: 'Document Vault' },
+      { id: 'reports/documents', label: 'File Repository' },
       { id: 'reports/rpt-settings', label: 'Report Settings' },
     ],
   },

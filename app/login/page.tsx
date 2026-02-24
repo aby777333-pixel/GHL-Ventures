@@ -8,6 +8,7 @@ import { BRAND } from '@/lib/constants'
 import { Eye, EyeOff, Lock, ArrowLeft, Shield, Smartphone, Fingerprint, AlertTriangle, Loader2 } from 'lucide-react'
 import Logo from '@/components/Logo'
 import { supabase, isSupabaseConfigured } from '@/lib/supabase/client'
+import { loginClient } from '@/lib/supabase/clientAuthService'
 
 export default function LoginPage() {
   const router = useRouter()
@@ -26,8 +27,10 @@ export default function LoginPage() {
     setError('')
 
     if (!isSupabaseConfigured()) {
-      // Demo mode — open dashboard directly
-      window.open('/dashboard', '_blank')
+      // Demo mode — store mock session then navigate
+      const loginEmail = mobile.includes('@') ? mobile : `${mobile}@ghlindiaventures.com`
+      await loginClient(loginEmail, '')
+      router.push('/dashboard')
       return
     }
 
@@ -41,8 +44,9 @@ export default function LoginPage() {
       })
       if (authError || !data.user) {
         // Supabase user not found — fall back to demo mode
-        console.info('[clientAuth] Supabase auth failed, opening demo dashboard')
-        window.open('/dashboard', '_blank')
+        console.info('[clientAuth] Supabase auth failed, falling back to demo')
+        await loginClient(loginEmail, '')
+        router.push('/dashboard')
         setLoading(false)
         return
       } else {
@@ -56,7 +60,8 @@ export default function LoginPage() {
 
   const handleGoogleSignIn = async () => {
     if (!isSupabaseConfigured()) {
-      window.open('/dashboard', '_blank')
+      await loginClient('demo@ghlindiaventures.com', '')
+      router.push('/dashboard')
       return
     }
     try {
@@ -96,7 +101,8 @@ export default function LoginPage() {
   const handleOtpLogin = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!isSupabaseConfigured()) {
-      window.open('/dashboard', '_blank')
+      await loginClient(`${mobile}@ghlindiaventures.com`, '')
+      router.push('/dashboard')
       return
     }
     setLoading(true)

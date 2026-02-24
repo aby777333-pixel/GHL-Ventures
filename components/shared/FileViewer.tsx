@@ -57,13 +57,34 @@ export default function FileViewer({
     const url = await getFileUrl()
     setLoading(false)
 
-    if (url && url !== '#') {
-      const a = document.createElement('a')
-      a.href = url
-      a.download = fileName
-      a.target = '_blank'
-      a.click()
+    if (!url || url === '#') return
+
+    // Try File System Access API — opens native Save-As dialog
+    if ('showSaveFilePicker' in window) {
+      try {
+        const response = await fetch(url)
+        const blob = await response.blob()
+        const handle = await (window as any).showSaveFilePicker({
+          suggestedName: fileName,
+        })
+        const writable = await handle.createWritable()
+        await writable.write(blob)
+        await writable.close()
+        return
+      } catch (err: any) {
+        if (err?.name === 'AbortError') return
+        // Fall through to standard download
+      }
     }
+
+    // Fallback: standard download to Downloads folder
+    const a = document.createElement('a')
+    a.href = url
+    a.download = fileName
+    a.target = '_blank'
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
   }
 
   const handlePreview = async () => {

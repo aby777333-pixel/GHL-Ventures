@@ -95,7 +95,7 @@ export default function AdminDataTable<T extends Record<string, any>>({
     setPage(0)
   }
 
-  const handleExport = () => {
+  const handleExport = async () => {
     const headers = columns.map(c => c.label).join(',')
     const rows = sorted.map(row =>
       columns.map(c => {
@@ -103,12 +103,34 @@ export default function AdminDataTable<T extends Record<string, any>>({
         return typeof val === 'string' && val.includes(',') ? `"${val}"` : String(val ?? '')
       }).join(',')
     ).join('\n')
-    const blob = new Blob([`${headers}\n${rows}`], { type: 'text/csv' })
+    const bom = '\uFEFF'
+    const blob = new Blob([`${bom}${headers}\n${rows}`], { type: 'text/csv;charset=utf-8' })
+    const filename = `${title || 'export'}.csv`
+
+    // Try File System Access API (opens native Save-As dialog)
+    if ('showSaveFilePicker' in window) {
+      try {
+        const handle = await (window as any).showSaveFilePicker({
+          suggestedName: filename,
+          types: [{ description: 'CSV File', accept: { 'text/csv': ['.csv'] } }],
+        })
+        const writable = await handle.createWritable()
+        await writable.write(blob)
+        await writable.close()
+        return
+      } catch (err: any) {
+        if (err?.name === 'AbortError') return // User cancelled
+      }
+    }
+
+    // Fallback: standard download
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
     a.href = url
-    a.download = `${title || 'export'}.csv`
+    a.download = filename
+    document.body.appendChild(a)
     a.click()
+    document.body.removeChild(a)
     URL.revokeObjectURL(url)
   }
 

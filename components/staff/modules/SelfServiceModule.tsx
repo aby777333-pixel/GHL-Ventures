@@ -892,7 +892,7 @@ function PlaceholderView({ title, icon: Icon, description }: { title: string; ic
       <Icon className="w-10 h-10 text-teal-500/50 mb-4" />
       <h2 className="text-lg font-semibold text-white mb-2">{title}</h2>
       <p className="text-sm text-gray-500 text-center max-w-md">{description}</p>
-      <AdminBadge label="Coming Soon" variant="info" size="md" />
+      <AdminBadge label="In Development" variant="info" size="md" />
     </AdminGlass>
   )
 }

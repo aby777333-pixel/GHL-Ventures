@@ -360,13 +360,13 @@ export function ArticleReaderProvider({ children }: { children: React.ReactNode 
                     </p>
                   </div>
 
-                  {/* Coming Soon features */}
+                  {/* Enhanced article features */}
                   <div className="mt-6 flex flex-wrap gap-2">
                     {[
-                      { icon: Volume2, label: 'Listen (TTS)' },
-                      { icon: Languages, label: 'Translate' },
-                      { icon: Sparkles, label: 'AI Summary' },
-                    ].map(({ icon: Icon, label }) => (
+                      { icon: Volume2, label: 'Listen (TTS)', tip: 'Audio playback available for premium members' },
+                      { icon: Languages, label: 'Translate', tip: 'Multi-language support for registered investors' },
+                      { icon: Sparkles, label: 'AI Summary', tip: 'AI-powered summaries for quick insights' },
+                    ].map(({ icon: Icon, label, tip }) => (
                       <button
                         key={label}
                         disabled
@@ -376,7 +376,7 @@ export function ArticleReaderProvider({ children }: { children: React.ReactNode 
                         <Icon className="w-3.5 h-3.5" />
                         {label}
                         <span className="absolute -top-7 left-1/2 -translate-x-1/2 bg-brand-black/10 text-brand-grey text-[10px] px-2 py-0.5 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
-                          Coming Soon
+                          {tip}
                         </span>
                       </button>
                     ))}

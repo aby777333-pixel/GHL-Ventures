@@ -134,7 +134,8 @@ export default function StaffClient() {
         return (
           <AdminGlass className="flex flex-col items-center justify-center py-16">
             <Construction className="w-10 h-10 text-teal-500 mb-4" />
-            <h2 className="text-lg font-semibold text-white mb-2">Module Coming Soon</h2>
+            <h2 className="text-lg font-semibold text-white mb-2">Module Under Development</h2>
+            <p className="text-sm text-gray-500 mb-4 text-center max-w-sm">This module is being built and will be available in an upcoming release.</p>
             <button onClick={() => navigate('home')} className="px-4 py-2 rounded-xl text-sm font-medium text-white bg-teal-500/20 border border-teal-500/30 hover:bg-teal-500/30 transition-colors">
               Back to Home
             </button>

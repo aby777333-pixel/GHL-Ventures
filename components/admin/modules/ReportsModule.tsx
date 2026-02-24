@@ -17,6 +17,7 @@ import {
 } from 'recharts'
 import AdminGlass from '../shared/AdminGlass'
 import AdminKPICard from '../shared/AdminKPICard'
+import FileRepository from './FileRepository'
 import {
   formatINRCompact, getClientsByTier,
 } from '@/lib/admin/reportsData'
@@ -36,7 +37,7 @@ const TABS = [
   { id: 'ai-advisor', label: 'AI Advisor', icon: Brain },
   { id: 'emailer', label: 'Emailer', icon: Mail },
   { id: 'dialer', label: 'Calls', icon: Phone },
-  { id: 'documents', label: 'Documents', icon: FolderOpen },
+  { id: 'documents', label: 'File Repository', icon: FolderOpen },
   { id: 'rpt-settings', label: 'Settings', icon: Settings },
 ] as const
 
@@ -69,7 +70,41 @@ export default function ReportsModule({ subTab, navigate, showToast }: Props) {
           <p className="text-sm text-gray-500 mt-1">GHL Intelligence Command Center &mdash; AI-powered business analytics{liveData.isLiveData ? ' · Live' : ''}</p>
         </div>
         <div className="flex gap-2">
-          <button onClick={() => showToast('Generating dashboard export...', 'info')} className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium text-white bg-brand-red/20 border border-brand-red/30 hover:bg-brand-red/30 transition-colors admin-btn-press">
+          <button onClick={async () => {
+            showToast('Generating dashboard export...', 'info')
+            // Build a CSV export of key dashboard metrics
+            const kpis = liveData.REPORT_KPIS
+            const dashboardData = [
+              { metric: 'Total AUM', value: kpis?.totalAUM ?? 'N/A', period: 'Current' },
+              { metric: 'Active Clients', value: kpis?.activeClients ?? 'N/A', period: 'Current' },
+              { metric: 'Monthly Revenue', value: kpis?.monthlyRevenue ?? 'N/A', period: 'Current' },
+              { metric: 'Net Profit', value: kpis?.netProfit ?? 'N/A', period: 'Current' },
+              { metric: 'Retention Rate', value: kpis?.retentionRate ? `${kpis.retentionRate}%` : 'N/A', period: 'Current' },
+            ]
+            const bom = '\uFEFF'
+            const csv = `${bom}Metric,Value,Period\n${dashboardData.map(d => `${d.metric},${d.value},${d.period}`).join('\n')}`
+            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' })
+            const filename = `GHL_Reports_Dashboard_${new Date().toISOString().slice(0,10)}.csv`
+            if ('showSaveFilePicker' in window) {
+              try {
+                const handle = await (window as any).showSaveFilePicker({
+                  suggestedName: filename,
+                  types: [{ description: 'CSV File', accept: { 'text/csv': ['.csv'] } }],
+                })
+                const writable = await handle.createWritable()
+                await writable.write(blob)
+                await writable.close()
+                showToast('Dashboard exported', 'success')
+                return
+              } catch (err: any) { if (err?.name === 'AbortError') return }
+            }
+            const url = URL.createObjectURL(blob)
+            const a = document.createElement('a')
+            a.href = url; a.download = filename
+            document.body.appendChild(a); a.click()
+            document.body.removeChild(a); URL.revokeObjectURL(url)
+            showToast('Dashboard exported', 'success')
+          }} className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium text-white bg-brand-red/20 border border-brand-red/30 hover:bg-brand-red/30 transition-colors admin-btn-press">
             <Download className="w-4 h-4" /> Export
           </button>
         </div>
@@ -98,7 +133,7 @@ export default function ReportsModule({ subTab, navigate, showToast }: Props) {
         {activeTab === 'ai-advisor' && <AIAdvisorTab showToast={showToast} />}
         {activeTab === 'emailer' && <EmailerTab showToast={showToast} />}
         {activeTab === 'dialer' && <DialerTab showToast={showToast} />}
-        {activeTab === 'documents' && <DocumentsTab showToast={showToast} />}
+        {activeTab === 'documents' && <FileRepository showToast={showToast} navigate={navigate} />}
         {activeTab === 'rpt-settings' && <SettingsTab showToast={showToast} />}
       </div>
     </div>
@@ -1054,87 +1089,8 @@ function DialerTab({ showToast }: { showToast: Props['showToast'] }) {
 }
 
 // ═══════════════════════════════════════════════════════════════
-// TAB 8: DOCUMENT VAULT
+// TAB 8: FILE REPOSITORY (moved to FileRepository.tsx)
 // ═══════════════════════════════════════════════════════════════
-
-function DocumentsTab({ showToast }: { showToast: Props['showToast'] }) {
-  const { DOCUMENT_VAULT } = useReportsDataContext()
-  const [activeFolder, setActiveFolder] = useState<string>('fund')
-  const [search, setSearch] = useState('')
-  const folders = ['fund', 'compliance', 'marketing', 'internal', 'reports'] as const
-
-  const filteredDocs = useMemo(() => {
-    let docs = DOCUMENT_VAULT.filter(d => d.folder === activeFolder)
-    if (search) docs = docs.filter(d => d.name.toLowerCase().includes(search.toLowerCase()) || d.tags.some(t => t.toLowerCase().includes(search.toLowerCase())))
-    return docs
-  }, [activeFolder, search])
-
-  return (
-    <div className="space-y-6">
-      {/* Upload Zone */}
-      <div className="rounded-2xl border-2 border-dashed border-white/[0.08] bg-white/[0.01] p-8 text-center hover:border-brand-red/20 transition-colors">
-        <Upload className="w-8 h-8 text-gray-600 mx-auto mb-3" />
-        <p className="text-sm text-gray-400">Drag & drop files here to upload</p>
-        <p className="text-xs text-gray-600 mt-1">PDF, XLSX, DOCX, images up to 10MB</p>
-        <button onClick={() => showToast('File upload simulated', 'success')} className="mt-3 px-4 py-2 rounded-xl text-xs font-medium text-brand-red bg-brand-red/10 border border-brand-red/20 hover:bg-brand-red/20 transition-colors">Browse Files</button>
-      </div>
-
-      {/* Folder Tabs + Search */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-        <div className="flex gap-1 p-1 bg-white/[0.03] rounded-xl border border-white/[0.06]">
-          {folders.map(f => (
-            <button key={f} onClick={() => setActiveFolder(f)} className={`px-3 py-1.5 rounded-lg text-xs font-medium capitalize transition-colors ${activeFolder === f ? 'bg-brand-red/20 text-white border border-brand-red/30' : 'text-gray-500 hover:text-gray-300'}`}>{f}</button>
-          ))}
-        </div>
-        <div className="relative w-64">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-500" />
-          <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search documents..." className="w-full pl-9 pr-3 py-2 rounded-lg bg-white/[0.04] border border-white/[0.08] text-xs text-white placeholder:text-gray-600 focus:outline-none" />
-        </div>
-      </div>
-
-      {/* Document List */}
-      <AdminGlass>
-        <div className="space-y-2">
-          {filteredDocs.length === 0 ? (
-            <div className="text-center py-8"><FolderOpen className="w-8 h-8 text-gray-600 mx-auto mb-2" /><p className="text-sm text-gray-500">No documents in this folder</p></div>
-          ) : filteredDocs.map(doc => (
-            <div key={doc.id} className="flex items-center gap-4 p-3 rounded-xl bg-white/[0.02] hover:bg-white/[0.04] transition-colors group">
-              <div className={`p-2 rounded-lg ${doc.type === 'pdf' ? 'bg-red-500/10' : doc.type === 'xlsx' ? 'bg-emerald-500/10' : 'bg-blue-500/10'}`}>
-                <File className={`w-4 h-4 ${doc.type === 'pdf' ? 'text-red-400' : doc.type === 'xlsx' ? 'text-emerald-400' : 'text-blue-400'}`} />
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm text-white font-medium truncate">{doc.name}</p>
-                <div className="flex items-center gap-2 mt-0.5">
-                  <span className="text-[10px] text-gray-500">{doc.size}</span>
-                  <span className="text-[10px] text-gray-600">&middot;</span>
-                  <span className="text-[10px] text-gray-500">v{doc.version}</span>
-                  <span className="text-[10px] text-gray-600">&middot;</span>
-                  <span className="text-[10px] text-gray-500">{doc.uploadedBy}</span>
-                  <span className="text-[10px] text-gray-600">&middot;</span>
-                  <span className="text-[10px] text-gray-500">{new Date(doc.uploadDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}</span>
-                </div>
-                <div className="flex gap-1 mt-1">{doc.tags.map(t => <span key={t} className="text-[9px] px-1.5 py-0.5 rounded bg-white/[0.04] text-gray-400">{t}</span>)}</div>
-              </div>
-              <button onClick={() => showToast(`Downloading ${doc.name}`, 'info')} className="opacity-0 group-hover:opacity-100 p-2 rounded-lg hover:bg-white/[0.06] transition-all"><Download className="w-4 h-4 text-gray-400" /></button>
-            </div>
-          ))}
-        </div>
-      </AdminGlass>
-
-      {/* Storage Indicator */}
-      <AdminGlass padding="p-3">
-        <div className="flex items-center justify-between text-xs mb-2">
-          <span className="text-gray-400">Storage Used</span>
-          <span className="text-white">24.6 MB / 500 MB</span>
-        </div>
-        <div className="h-2 rounded-full bg-white/[0.04] overflow-hidden">
-          <div className="h-full rounded-full bg-brand-red" style={{ width: '4.9%' }} />
-        </div>
-        <p className="text-[10px] text-gray-600 mt-2">// BACKEND_HOOK: In production, files stored in S3/Cloud Storage</p>
-      </AdminGlass>
-    </div>
-  )
-}
 
 // ═══════════════════════════════════════════════════════════════
 // TAB 9: SETTINGS

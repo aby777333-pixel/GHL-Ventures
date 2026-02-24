@@ -135,7 +135,25 @@ export default function FileUploader({
         onDragOver={e => { e.preventDefault(); setDragOver(true) }}
         onDragLeave={() => setDragOver(false)}
         onDrop={e => { e.preventDefault(); setDragOver(false); handleFiles(e.dataTransfer.files) }}
-        onClick={() => inputRef.current?.click()}
+        onClick={async () => {
+          // Try native file picker (File System Access API)
+          if ('showOpenFilePicker' in window) {
+            try {
+              const handles = await (window as any).showOpenFilePicker({ multiple })
+              const picked: File[] = []
+              for (let i = 0; i < handles.length; i++) picked.push(await handles[i].getFile())
+              if (picked.length > 0) {
+                const dt = new DataTransfer()
+                for (let i = 0; i < picked.length; i++) dt.items.add(picked[i])
+                handleFiles(dt.files)
+              }
+              return
+            } catch (err: any) {
+              if (err?.name === 'AbortError') return // User cancelled
+            }
+          }
+          inputRef.current?.click()
+        }}
       >
         <input
           ref={inputRef}

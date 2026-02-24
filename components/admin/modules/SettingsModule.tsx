@@ -183,77 +183,323 @@ function GeneralTab({ showToast }: { showToast: (msg: string, type?: 'success' |
 
 // ── Permissions Matrix ──────────────────────────────────────────
 function PermissionsTab() {
+  const [permView, setPermView] = useState<'roles' | 'users' | 'matrix' | 'audit' | 'presets'>('roles')
   const roles = Object.keys(ROLE_LABELS) as AdminRole[]
-  const modules = ['overview', 'clients', 'sales', 'employees', 'assets', 'ai-ops', 'compliance', 'financial', 'analytics', 'comms', 'settings']
-  const actions = ['view', 'create', 'edit', 'approve', 'delete']
+  const allModules = ['overview', 'clients', 'sales', 'realty-brokers', 'employees', 'assets', 'ai-ops', 'compliance', 'financial', 'analytics', 'comms', 'marketing', 'reports', 'settings']
+  const allActions = ['view', 'create', 'edit', 'approve', 'delete', 'export', 'configure']
+  const [expandedRole, setExpandedRole] = useState<AdminRole | null>(null)
+
+  const userAssignments = [
+    { email: 'admin@ghlindiaventures.com', name: 'Abe Thayil', role: 'super-admin' as AdminRole, dept: 'Executive', lastActive: '2026-02-24T10:00:00' },
+    { email: 'compliance@ghlindiaventures.com', name: 'Meera Subramaniam', role: 'compliance-officer' as AdminRole, dept: 'Compliance', lastActive: '2026-02-24T09:30:00' },
+    { email: 'manager@ghlindiaventures.com', name: 'Venkatesh Raghavan', role: 'fund-manager' as AdminRole, dept: 'Investments', lastActive: '2026-02-23T18:00:00' },
+    { email: 'sales@ghlindiaventures.com', name: 'Priya Natarajan', role: 'sales' as AdminRole, dept: 'Sales', lastActive: '2026-02-24T08:45:00' },
+    { email: 'viewer@ghlindiaventures.com', name: 'Rajiv Kumar', role: 'viewer' as AdminRole, dept: 'Reporting', lastActive: '2026-02-22T15:00:00' },
+    { email: 'mktmgr@ghlindiaventures.com', name: 'Kavitha Rangan', role: 'marketing-manager' as AdminRole, dept: 'Marketing', lastActive: '2026-02-24T11:00:00' },
+    { email: 'mktexec@ghlindiaventures.com', name: 'Arun Selvam', role: 'marketing-executive' as AdminRole, dept: 'Marketing', lastActive: '2026-02-24T07:30:00' },
+  ]
+
+  const permAuditLog = [
+    { id: 'PA-001', timestamp: '2026-02-24T10:15:00', user: 'Abe Thayil', action: 'Granted', target: 'Priya Natarajan', detail: 'Added create:realty-brokers permission', module: 'Realty Brokers' },
+    { id: 'PA-002', timestamp: '2026-02-23T16:40:00', user: 'Abe Thayil', action: 'Role Changed', target: 'Arun Selvam', detail: 'Changed from viewer to marketing-executive', module: 'User Roles' },
+    { id: 'PA-003', timestamp: '2026-02-22T14:20:00', user: 'Abe Thayil', action: 'Revoked', target: 'Rajiv Kumar', detail: 'Removed export:financial permission', module: 'Financial' },
+    { id: 'PA-004', timestamp: '2026-02-21T09:00:00', user: 'Abe Thayil', action: 'Created', target: 'Custom Role', detail: 'Created Marketing Manager role preset', module: 'System' },
+    { id: 'PA-005', timestamp: '2026-02-20T11:30:00', user: 'Abe Thayil', action: 'Granted', target: 'Meera Subramaniam', detail: 'Added view:marketing permission', module: 'Marketing' },
+    { id: 'PA-006', timestamp: '2026-02-19T15:10:00', user: 'Abe Thayil', action: 'Bulk Update', target: '3 users', detail: 'Applied Read-Only Analyst preset', module: 'System' },
+    { id: 'PA-007', timestamp: '2026-02-18T08:45:00', user: 'Abe Thayil', action: 'Role Changed', target: 'Kavitha Rangan', detail: 'Changed from sales to marketing-manager', module: 'User Roles' },
+    { id: 'PA-008', timestamp: '2026-02-17T17:00:00', user: 'System', action: 'Auto-Revoked', target: 'Former Employee', detail: 'Session expired and permissions cleared', module: 'System' },
+  ]
+
+  const presets = [
+    { id: 'PR-001', name: 'Read-Only Analyst', description: 'View-only access to all reports and analytics modules', permCount: 6, usedBy: 2 },
+    { id: 'PR-002', name: 'Sales Executive', description: 'Full CRM access with client view and basic reporting', permCount: 12, usedBy: 3 },
+    { id: 'PR-003', name: 'Compliance Team', description: 'Full compliance access with client KYC approval rights', permCount: 14, usedBy: 1 },
+    { id: 'PR-004', name: 'Marketing Power User', description: 'All marketing tools plus AI ops and analytics export', permCount: 18, usedBy: 2 },
+    { id: 'PR-005', name: 'Department Head', description: 'Full departmental access with approval rights and exports', permCount: 20, usedBy: 1 },
+  ]
+
+  const PERM_VIEWS = [
+    { id: 'roles' as const, label: 'Roles', icon: Users },
+    { id: 'users' as const, label: 'Users', icon: Key },
+    { id: 'matrix' as const, label: 'Matrix', icon: Shield },
+    { id: 'audit' as const, label: 'Audit', icon: Clock },
+    { id: 'presets' as const, label: 'Presets', icon: Copy },
+  ]
 
   return (
-    <AdminGlass>
-      <h3 className="text-sm font-semibold text-white mb-4 flex items-center gap-2">
-        <Shield className="w-4 h-4 text-brand-red" />
-        Role Permission Matrix
-      </h3>
-      <p className="text-xs text-gray-500 mb-4">Shows which permissions each role has across all modules</p>
+    <div className="space-y-4">
+      {/* KPIs */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        <AdminKPICard title="Total Roles" value={roles.length} icon={Shield} color="#DC2626" delay={0} />
+        <AdminKPICard title="Active Users" value={userAssignments.length} icon={Users} color="#3B82F6" delay={50} />
+        <AdminKPICard title="Permission Rules" value={Object.values(ROLE_PERMISSIONS).flat().length} icon={Key} color="#10B981" delay={100} />
+        <AdminKPICard title="Audit Events (30d)" value={permAuditLog.length} icon={Eye} color="#8B5CF6" delay={150} />
+      </div>
 
-      <div className="overflow-x-auto">
-        <table className="w-full text-[11px]">
-          <thead>
-            <tr className="border-b border-white/[0.06]">
-              <th className="text-left px-3 py-2 text-gray-500 uppercase tracking-wider font-medium sticky left-0 bg-black/40 backdrop-blur-sm z-10">Role</th>
-              <th className="text-center px-2 py-2 text-gray-500 uppercase tracking-wider font-medium">Level</th>
-              {modules.map(m => (
-                <th key={m} className="text-center px-2 py-2 text-gray-500 uppercase tracking-wider font-medium whitespace-nowrap">
-                  {m.replace('-', ' ')}
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {roles.map((role, i) => {
-              const perms = ROLE_PERMISSIONS[role] || []
-              const hasWildcard = perms.includes('*')
-              return (
-                <tr key={role} className="border-b border-white/[0.04] hover:bg-white/[0.02]">
-                  <td className="px-3 py-2.5 font-medium text-white whitespace-nowrap sticky left-0 bg-black/40 backdrop-blur-sm z-10">
-                    {ROLE_LABELS[role]}
-                  </td>
-                  <td className="text-center px-2 py-2.5">
-                    <span className="text-gray-500">{i}</span>
-                  </td>
-                  {modules.map(mod => {
-                    if (hasWildcard) {
-                      return (
-                        <td key={mod} className="text-center px-2 py-2.5">
-                          <span className="text-emerald-400 font-bold">Full</span>
-                        </td>
-                      )
-                    }
-                    const modPerms = actions.filter(a => perms.includes(`${a}:${mod}` as never))
-                    if (modPerms.length === 0) {
-                      return <td key={mod} className="text-center px-2 py-2.5 text-gray-700">—</td>
-                    }
-                    return (
-                      <td key={mod} className="text-center px-2 py-2.5">
-                        <span className="text-blue-400">{modPerms.length > 3 ? 'Full' : modPerms.map(p => p.charAt(0).toUpperCase()).join('')}</span>
-                      </td>
-                    )
-                  })}
+      {/* View switcher */}
+      <div className="flex gap-1 p-1 bg-white/[0.03] rounded-xl border border-white/[0.06] overflow-x-auto">
+        {PERM_VIEWS.map(v => {
+          const Icon = v.icon
+          return (
+            <button
+              key={v.id}
+              onClick={() => setPermView(v.id)}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-medium whitespace-nowrap transition-all ${
+                permView === v.id ? 'bg-brand-red/20 text-white border border-brand-red/30' : 'text-gray-500 hover:text-gray-300 hover:bg-white/[0.04]'
+              }`}
+            >
+              <Icon className="w-3.5 h-3.5" />
+              {v.label}
+            </button>
+          )
+        })}
+      </div>
+
+      {/* ROLES OVERVIEW */}
+      {permView === 'roles' && (
+        <div className="space-y-3">
+          {roles.map(role => {
+            const perms = ROLE_PERMISSIONS[role] || []
+            const hasWildcard = perms.includes('*')
+            const userCount = userAssignments.filter(u => u.role === role).length
+            const moduleCount = hasWildcard ? allModules.length : allModules.filter(m => perms.some(p => p.endsWith(`:${m}`))).length
+            const isExpanded = expandedRole === role
+            return (
+              <AdminGlass key={role} className="!p-0 overflow-hidden">
+                <button
+                  onClick={() => setExpandedRole(isExpanded ? null : role)}
+                  className="w-full flex items-center justify-between p-4 hover:bg-white/[0.02] transition-colors text-left"
+                >
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className="w-8 h-8 rounded-lg bg-brand-red/10 flex items-center justify-center shrink-0">
+                      <Shield className="w-4 h-4 text-brand-red" />
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium text-white truncate">{ROLE_LABELS[role]}</p>
+                      <p className="text-[11px] text-gray-500 truncate">{hasWildcard ? 'Full system access' : `${perms.length} permissions \u00b7 ${moduleCount} modules`}</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2 shrink-0 ml-2">
+                    <span className="text-[11px] text-gray-500 hidden sm:inline">{userCount} user{userCount !== 1 ? 's' : ''}</span>
+                    <AdminBadge
+                      label={hasWildcard ? 'Super' : moduleCount >= 10 ? 'Full' : moduleCount >= 5 ? 'Standard' : 'Limited'}
+                      variant={hasWildcard ? 'error' : moduleCount >= 10 ? 'success' : moduleCount >= 5 ? 'info' : 'neutral'}
+                    />
+                    <ChevronRight className={`w-4 h-4 text-gray-500 transition-transform ${isExpanded ? 'rotate-90' : ''}`} />
+                  </div>
+                </button>
+                {isExpanded && (
+                  <div className="px-4 pb-4 border-t border-white/[0.04]">
+                    <div className="pt-3 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2">
+                      {allModules.map(mod => {
+                        const modPerms = hasWildcard ? allActions : allActions.filter(a => perms.includes(`${a}:${mod}` as never))
+                        const hasAccess = modPerms.length > 0
+                        return (
+                          <div key={mod} className={`p-2.5 rounded-lg border text-[11px] ${hasAccess ? 'bg-white/[0.02] border-white/[0.06]' : 'bg-white/[0.01] border-white/[0.03] opacity-40'}`}>
+                            <p className="text-white font-medium capitalize mb-1">{mod.replace(/-/g, ' ')}</p>
+                            {hasAccess ? (
+                              <div className="flex flex-wrap gap-1">
+                                {modPerms.map(a => (
+                                  <span key={a} className="px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-400 text-[9px] uppercase font-semibold">{a.charAt(0)}</span>
+                                ))}
+                              </div>
+                            ) : (
+                              <span className="text-gray-600 text-[10px]">No access</span>
+                            )}
+                          </div>
+                        )
+                      })}
+                    </div>
+                    {userCount > 0 && (
+                      <div className="mt-3 pt-3 border-t border-white/[0.04]">
+                        <p className="text-[10px] text-gray-600 uppercase tracking-wider mb-2">Users with this role</p>
+                        <div className="flex flex-wrap gap-2">
+                          {userAssignments.filter(u => u.role === role).map(u => (
+                            <span key={u.email} className="px-2 py-1 rounded-lg bg-white/[0.03] border border-white/[0.06] text-[11px] text-gray-300">{u.name}</span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </AdminGlass>
+            )
+          })}
+        </div>
+      )}
+
+      {/* USER ACCESS */}
+      {permView === 'users' && (
+        <AdminGlass>
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-sm font-semibold text-white flex items-center gap-2">
+              <Users className="w-4 h-4 text-brand-red" />
+              User Role Assignments
+            </h3>
+            <button className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-white bg-brand-red/20 border border-brand-red/30 rounded-lg hover:bg-brand-red/30 transition-colors">
+              <Plus className="w-3.5 h-3.5" />
+              Add User
+            </button>
+          </div>
+          <div className="space-y-2">
+            {userAssignments.map(user => (
+              <div key={user.email} className="flex items-center justify-between p-3 rounded-xl bg-white/[0.02] border border-white/[0.04] hover:bg-white/[0.03] transition-colors">
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-full bg-brand-red/10 flex items-center justify-center text-white text-xs font-bold">
+                    {user.name.split(' ').map(n => n[0]).join('')}
+                  </div>
+                  <div>
+                    <p className="text-sm text-white font-medium">{user.name}</p>
+                    <p className="text-[11px] text-gray-500">{user.email} &middot; {user.dept}</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3">
+                  <AdminBadge
+                    label={ROLE_LABELS[user.role]}
+                    variant={user.role === 'super-admin' ? 'error' : user.role.includes('admin') ? 'warning' : 'info'}
+                  />
+                  <span className="text-[10px] text-gray-600 hidden sm:inline">{formatDate(user.lastActive)}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </AdminGlass>
+      )}
+
+      {/* PERMISSION MATRIX */}
+      {permView === 'matrix' && (
+        <AdminGlass>
+          <h3 className="text-sm font-semibold text-white mb-1 flex items-center gap-2">
+            <Shield className="w-4 h-4 text-brand-red" />
+            Permission Matrix
+          </h3>
+          <p className="text-[11px] text-gray-500 mb-4">{allModules.length} modules &middot; {allActions.length} actions &middot; {roles.length} roles</p>
+          <div className="overflow-x-auto -mx-4 px-4 pb-2">
+            <table className="w-full text-[10px]">
+              <thead>
+                <tr className="border-b border-white/[0.06]">
+                  <th className="text-left px-2 py-2 text-gray-500 uppercase tracking-wider font-medium sticky left-0 bg-black/40 backdrop-blur-sm z-10 min-w-[110px]">Role</th>
+                  {allModules.map(m => (
+                    <th key={m} className="text-center px-1 py-2 text-gray-500 uppercase font-medium whitespace-nowrap" style={{ fontSize: '8px', letterSpacing: '0.05em' }}>
+                      {m.replace(/-/g, ' ').replace('realty brokers', 'Brokers')}
+                    </th>
+                  ))}
                 </tr>
-              )
-            })}
-          </tbody>
-        </table>
-      </div>
+              </thead>
+              <tbody>
+                {roles.map((role, idx) => {
+                  const perms = ROLE_PERMISSIONS[role] || []
+                  const hasWildcard = perms.includes('*')
+                  return (
+                    <tr key={role} className={`border-b border-white/[0.03] ${idx % 2 === 0 ? '' : 'bg-white/[0.01]'}`}>
+                      <td className="px-2 py-1.5 font-medium text-white whitespace-nowrap sticky left-0 bg-black/40 backdrop-blur-sm z-10 text-[10px]">{ROLE_LABELS[role]}</td>
+                      {allModules.map(mod => {
+                        if (hasWildcard) return <td key={mod} className="text-center px-1 py-1.5"><span className="inline-block w-5 h-5 rounded bg-emerald-500/20 text-emerald-400 text-[9px] font-bold leading-5">*</span></td>
+                        const modPerms = allActions.filter(a => perms.includes(`${a}:${mod}` as never))
+                        if (modPerms.length === 0) return <td key={mod} className="text-center px-1 py-1.5 text-gray-800">&mdash;</td>
+                        return (
+                          <td key={mod} className="text-center px-1 py-1.5">
+                            <div className="flex gap-px justify-center flex-wrap">
+                              {modPerms.map(a => (
+                                <span key={a} className="w-3 h-3 rounded-sm bg-blue-500/20 text-blue-400 text-[7px] font-bold inline-flex items-center justify-center" title={`${a}:${mod}`}>{a.charAt(0).toUpperCase()}</span>
+                              ))}
+                            </div>
+                          </td>
+                        )
+                      })}
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          </div>
+          <div className="mt-3 pt-3 border-t border-white/[0.04] flex flex-wrap gap-3 text-[9px] text-gray-500">
+            <span><span className="text-emerald-400 font-bold">*</span> = All</span>
+            <span><span className="text-blue-400 font-bold">V</span> = View</span>
+            <span><span className="text-blue-400 font-bold">C</span> = Create</span>
+            <span><span className="text-blue-400 font-bold">E</span> = Edit</span>
+            <span><span className="text-blue-400 font-bold">A</span> = Approve</span>
+            <span><span className="text-blue-400 font-bold">D</span> = Delete</span>
+            <span><span className="text-blue-400 font-bold">X</span> = Export</span>
+            <span><span className="text-blue-400 font-bold">F</span> = Configure</span>
+          </div>
+        </AdminGlass>
+      )}
 
-      <div className="mt-4 pt-3 border-t border-white/[0.04] flex flex-wrap gap-3 text-[10px] text-gray-500">
-        <span><span className="text-emerald-400 font-bold">Full</span> = All permissions (V/C/E/A/D)</span>
-        <span><span className="text-blue-400 font-bold">V</span> = View</span>
-        <span><span className="text-blue-400 font-bold">C</span> = Create</span>
-        <span><span className="text-blue-400 font-bold">E</span> = Edit</span>
-        <span><span className="text-blue-400 font-bold">A</span> = Approve</span>
-        <span><span className="text-blue-400 font-bold">D</span> = Delete</span>
-      </div>
-    </AdminGlass>
+      {/* AUDIT TRAIL */}
+      {permView === 'audit' && (
+        <AdminGlass>
+          <h3 className="text-sm font-semibold text-white mb-4 flex items-center gap-2">
+            <Clock className="w-4 h-4 text-brand-red" />
+            Permission Change Audit Trail
+          </h3>
+          <div className="space-y-2">
+            {permAuditLog.map(entry => (
+              <div key={entry.id} className="flex items-start gap-3 p-3 rounded-xl bg-white/[0.02] border border-white/[0.04]">
+                <div className={`w-2 h-2 rounded-full mt-1.5 shrink-0 ${
+                  entry.action === 'Granted' ? 'bg-emerald-400' :
+                  entry.action === 'Revoked' || entry.action === 'Auto-Revoked' ? 'bg-red-400' :
+                  entry.action === 'Role Changed' ? 'bg-blue-400' :
+                  entry.action === 'Created' ? 'bg-purple-400' : 'bg-amber-400'
+                }`} />
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="text-sm text-white font-medium">{entry.action}</span>
+                    <span className="text-[11px] text-gray-400">&rarr; {entry.target}</span>
+                    <AdminBadge label={entry.module} variant="neutral" />
+                  </div>
+                  <p className="text-[11px] text-gray-500 mt-0.5">{entry.detail}</p>
+                  <p className="text-[10px] text-gray-600 mt-1">by {entry.user} &middot; {formatDate(entry.timestamp)}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </AdminGlass>
+      )}
+
+      {/* PRESETS */}
+      {permView === 'presets' && (
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="text-sm font-semibold text-white flex items-center gap-2">
+                <Copy className="w-4 h-4 text-brand-red" />
+                Permission Presets
+              </h3>
+              <p className="text-[11px] text-gray-500 mt-0.5">Pre-configured role templates for quick user setup</p>
+            </div>
+            <button className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-white bg-brand-red/20 border border-brand-red/30 rounded-lg hover:bg-brand-red/30 transition-colors">
+              <Plus className="w-3.5 h-3.5" />
+              New Preset
+            </button>
+          </div>
+          {presets.map(preset => (
+            <AdminGlass key={preset.id}>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-purple-500/10 flex items-center justify-center shrink-0">
+                    <Shield className="w-5 h-5 text-purple-400" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-white">{preset.name}</p>
+                    <p className="text-[11px] text-gray-500">{preset.description}</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3 shrink-0">
+                  <div className="text-right hidden sm:block">
+                    <p className="text-xs text-white font-medium">{preset.permCount} perms</p>
+                    <p className="text-[10px] text-gray-500">{preset.usedBy} user{preset.usedBy !== 1 ? 's' : ''}</p>
+                  </div>
+                  <button className="p-2 rounded-lg hover:bg-white/[0.06] text-gray-500 hover:text-white transition-colors" title="Apply preset">
+                    <CheckCircle2 className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+            </AdminGlass>
+          ))}
+        </div>
+      )}
+    </div>
   )
 }
 

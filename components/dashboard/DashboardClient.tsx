@@ -26,6 +26,39 @@ import {
 } from 'recharts'
 import Logo from '@/components/Logo'
 
+// Auth
+import { useClientAuth } from '@/lib/supabase/clientHooks'
+
+// Data hooks
+import {
+  usePortfolioAssets,
+  useNAVHistory,
+  useAllocation,
+  useTransactions,
+  useMessages,
+  useSupportTickets,
+  useNotifications,
+  useKYCSteps,
+  useDocuments,
+  useAdminNews,
+} from '@/lib/supabase/dashboardDataHooks'
+
+// Data service (for mutations)
+import {
+  createSupportTicket,
+  sendMessage,
+  markNotificationRead,
+  uploadDocument,
+} from '@/lib/supabase/dashboardDataService'
+
+// Realtime
+import {
+  onClientNotification,
+  onClientTicketUpdate,
+  onNewMessage,
+  onInvestmentUpdate,
+} from '@/lib/supabase/realtimeSubscriptions'
+
 /* ═══════════════════════════════════════════════════════════════
    TYPES
    ═══════════════════════════════════════════════════════════════ */
@@ -33,8 +66,17 @@ type Theme = 'dark' | 'light'
 type TabId = 'dashboard' | 'investments' | 'invest-onboard' | 'portfolio' | 'kyc' | 'transactions' | 'messages' | 'support' | 'referrals' | 'calculators' | 'profile' | 'settings'
 
 /* ═══════════════════════════════════════════════════════════════
-   MOCK DATA
+   MOCK DATA — constants below are kept as fallbacks; hooks from
+   dashboardDataHooks.ts are used at runtime instead.
    ═══════════════════════════════════════════════════════════════ */
+
+// KYC icon map — service mock data doesn't include icon components
+const KYC_ICON_MAP: Record<string, any> = {
+  personal: User, identity: Fingerprint, address: MapPin,
+  bank: Landmark, risk: Shield, agreement: FileCheck,
+  business: Building2, demat: CreditCard, nominee: Users, documents: FileCheck,
+}
+
 const NAV_HISTORY = [
   { month: 'Apr 24', nav: 100.0, benchmark: 100.0 },
   { month: 'May 24', nav: 102.3, benchmark: 101.1 },
@@ -272,6 +314,63 @@ export default function DashboardClient() {
     router.push(url, { scroll: false })
   }, [router])
 
+  // ─── Auth ────────────────────────────────────────────────
+  const { user, clientId, isAuthenticated, loading: authLoading, logout } = useClientAuth()
+
+  // Auth guard — redirect to login if not authenticated
+  useEffect(() => {
+    if (!authLoading && !isAuthenticated) {
+      router.push('/login')
+    }
+  }, [authLoading, isAuthenticated, router])
+
+  // ─── Data Hooks ─────────────────────────────────────────
+  const { data: portfolioAssets, refetch: refetchPortfolio } = usePortfolioAssets(clientId ?? undefined)
+  const { data: navHistory } = useNAVHistory(clientId ?? undefined)
+  const { data: allocationData } = useAllocation()
+  const { data: transactions } = useTransactions(clientId ?? undefined)
+  const { data: messagesData, refetch: refetchMessages } = useMessages(clientId ?? undefined)
+  const { data: supportTickets, refetch: refetchTickets } = useSupportTickets(clientId ?? undefined)
+  const { data: notifications, refetch: refetchNotifications } = useNotifications(clientId ?? undefined)
+  const { data: kycSteps } = useKYCSteps()
+  const { data: documents, refetch: refetchDocs } = useDocuments(clientId ?? undefined)
+  const { data: adminNews } = useAdminNews()
+
+  // ─── Derived User Values ────────────────────────────────
+  const userInitials = user?.name ? user.name.split(' ').map((n: string) => n[0]).join('').toUpperCase() : 'U'
+  const firstName = user?.name ? user.name.split(' ')[0] : 'Investor'
+  const userName = user?.name || 'Investor'
+  const userEmail = user?.email || ''
+  const userKycStatus = user?.kyc_status || 'pending'
+
+  // ─── Realtime Subscriptions ─────────────────────────────
+  useEffect(() => {
+    if (!clientId) return
+    const unsub1 = onClientNotification(clientId, () => refetchNotifications())
+    const unsub2 = onClientTicketUpdate(clientId, () => refetchTickets())
+    const unsub3 = onNewMessage(clientId, () => refetchMessages())
+    const unsub4 = onInvestmentUpdate(clientId, () => refetchPortfolio())
+    return () => {
+      unsub1?.()
+      unsub2?.()
+      unsub3?.()
+      unsub4?.()
+    }
+  }, [clientId]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ─── Auth Loading / Guard Render ────────────────────────
+  if (authLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-brand-black">
+        <div className="text-center">
+          <div className="w-10 h-10 border-2 border-brand-red border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+          <p className="text-sm text-gray-500">Loading Investor Portal...</p>
+        </div>
+      </div>
+    )
+  }
+  if (!isAuthenticated || !user) return null
+
   // ─── State ────────────────────────────────────────────────
   const theme: Theme = 'dark'  // Dark mode only
   const [sidebarOpen, setSidebarOpen] = useState(false)
@@ -282,7 +381,13 @@ export default function DashboardClient() {
   const [tourStep, setTourStep] = useState(0)
   const [searchQuery, setSearchQuery] = useState('')
   const [ticketForm, setTicketForm] = useState(false)
+  const [ticketSubject, setTicketSubject] = useState('')
+  const [ticketCategory, setTicketCategory] = useState('General Inquiry')
+  const [ticketDesc, setTicketDesc] = useState('')
   const [messageCompose, setMessageCompose] = useState(false)
+  const [msgTo, setMsgTo] = useState('Relationship Manager')
+  const [msgSubject, setMsgSubject] = useState('')
+  const [msgBody, setMsgBody] = useState('')
   const [bankConnectOpen, setBankConnectOpen] = useState(false)
   const [uploadModalOpen, setUploadModalOpen] = useState(false)
   const [termsOpen, setTermsOpen] = useState(false)
@@ -338,11 +443,13 @@ export default function DashboardClient() {
   const isDark = theme === 'dark'
   const t = (dark: string, light: string) => isDark ? dark : light
 
-  // Animated counters
-  const portfolioValue = useAnimatedCounter(8542500)
-  const aifInvestment = useAnimatedCounter(6300000)
-  const coInvestValue = useAnimatedCounter(1627500)
-  const currentNAV = useAnimatedCounter(13242)
+  // Animated counters — derive from user/portfolio data
+  const totalCurrent = useMemo(() => portfolioAssets.reduce((s: number, a: any) => s + (a.current || 0), 0), [portfolioAssets])
+  const totalInvested = useMemo(() => portfolioAssets.reduce((s: number, a: any) => s + (a.invested || 0), 0), [portfolioAssets])
+  const portfolioValue = useAnimatedCounter(user?.aum || totalCurrent || 0)
+  const aifInvestment = useAnimatedCounter(totalInvested || 0)
+  const coInvestValue = useAnimatedCounter(totalCurrent - totalInvested || 0)
+  const currentNAV = useAnimatedCounter(navHistory.length ? navHistory[navHistory.length - 1]?.nav * 100 || 0 : 0)
 
   useEffect(() => {
     const updateTime = () => {
@@ -357,10 +464,9 @@ export default function DashboardClient() {
   }, [])
 
   const totalReturn = useMemo(() => {
-    const invested = PORTFOLIO_ASSETS.reduce((s, a) => s + a.invested, 0)
-    const current = PORTFOLIO_ASSETS.reduce((s, a) => s + a.current, 0)
-    return ((current - invested) / invested * 100).toFixed(1)
-  }, [])
+    if (!totalInvested) return '0.0'
+    return ((totalCurrent - totalInvested) / totalInvested * 100).toFixed(1)
+  }, [totalCurrent, totalInvested])
 
   // ═══════════════════════════════════════════════════════════
   // SIDEBAR
@@ -392,8 +498,8 @@ export default function DashboardClient() {
         <div className="px-6 mb-4">
           <div className={`px-3 py-2.5 rounded-xl ${t('bg-white/[0.04] border border-white/[0.06]','bg-gray-100/60 border border-gray-200/40')}`}>
             <p className={`text-[10px] uppercase tracking-widest mb-0.5 ${t('text-gray-500','text-gray-600')}`}>Investor</p>
-            <p className={`text-sm font-semibold ${t('text-white','text-gray-900')}`}>Rajesh Krishnan</p>
-            <p className={`text-[10px] mt-0.5 ${t('text-gray-500','text-gray-700')}`}>ID: GHL-INV-2024-0847</p>
+            <p className={`text-sm font-semibold ${t('text-white','text-gray-900')}`}>{userName}</p>
+            <p className={`text-[10px] mt-0.5 ${t('text-gray-500','text-gray-700')}`}>ID: {clientId || 'N/A'}</p>
           </div>
         </div>
 
@@ -441,12 +547,12 @@ export default function DashboardClient() {
             <Sparkles className="w-[18px] h-[18px]" />
             Virtual Tour
           </button>
-          <Link href="/login"
+          <button onClick={async () => { await logout(); router.push('/login') }}
             className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-300
               text-gray-500 hover:text-red-400 hover:bg-red-500/[0.06]">
             <LogOut className="w-[18px] h-[18px]" />
             Sign Out
-          </Link>
+          </button>
         </div>
       </aside>
     </>
@@ -504,9 +610,9 @@ export default function DashboardClient() {
           <div className="relative">
             <button onClick={() => setNotifOpen(!notifOpen)} className={`relative p-2 rounded-xl transition-colors ${t('text-gray-400 hover:text-white hover:bg-white/[0.04]','text-gray-700 hover:text-gray-900 hover:bg-gray-200/35')}`}>
               <Bell className="w-4 h-4" />
-              {NOTIFICATIONS_DATA.filter(n => !n.read && !notifsRead.has(n.id)).length > 0 && (
+              {notifications.filter((n: any) => !n.read && !notifsRead.has(n.id)).length > 0 && (
                 <span className="absolute -top-0.5 -right-0.5 w-4 h-4 rounded-full bg-brand-red text-[9px] font-bold text-white flex items-center justify-center">
-                  {NOTIFICATIONS_DATA.filter(n => !n.read && !notifsRead.has(n.id)).length}
+                  {notifications.filter((n: any) => !n.read && !notifsRead.has(n.id)).length}
                 </span>
               )}
             </button>
@@ -518,13 +624,13 @@ export default function DashboardClient() {
               <div className="absolute right-0 top-12 w-80 rounded-2xl border shadow-2xl z-50 overflow-hidden bg-[#111] border-white/[0.08]" style={{ animation: 'dashTooltipIn 0.2s ease-out' }}>
                 <div className={`px-4 py-3 flex items-center justify-between border-b ${t('border-white/[0.06]','border-gray-200/40')}`}>
                   <h4 className={`text-sm font-bold ${t('text-white','text-gray-900')}`}>Notifications</h4>
-                  <button onClick={() => { setNotifsRead(new Set(NOTIFICATIONS_DATA.map(n => n.id))); showToast('All notifications marked as read') }} className="text-[10px] text-brand-red font-semibold">Mark all read</button>
+                  <button onClick={() => { setNotifsRead(new Set(notifications.map((n: any) => n.id))); showToast('All notifications marked as read') }} className="text-[10px] text-brand-red font-semibold">Mark all read</button>
                 </div>
                 <div className="max-h-80 overflow-y-auto">
-                  {NOTIFICATIONS_DATA.map(n => {
+                  {notifications.map((n: any) => {
                     const notifTabMap: Record<string, TabId> = { report: 'kyc', opportunity: 'investments', alert: 'kyc', payment: 'transactions', milestone: 'portfolio' }
                     return (
-                    <div key={n.id} onClick={() => { setNotifsRead(prev => new Set(prev).add(n.id)); setNotifOpen(false); setActiveTab(notifTabMap[n.type] || 'dashboard') }} className={`px-4 py-3 flex gap-3 cursor-pointer transition-colors ${!n.read && !notifsRead.has(n.id) ? 'bg-white/[0.02]' : ''} hover:bg-white/[0.04]`}>
+                    <div key={n.id} onClick={() => { setNotifsRead(prev => new Set(prev).add(n.id)); markNotificationRead(String(n.id)); setNotifOpen(false); setActiveTab(notifTabMap[n.type] || 'dashboard') }} className={`px-4 py-3 flex gap-3 cursor-pointer transition-colors ${!n.read && !notifsRead.has(n.id) ? 'bg-white/[0.02]' : ''} hover:bg-white/[0.04]`}>
                       <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0
                         ${n.type === 'report' ? 'bg-blue-500/15' : n.type === 'opportunity' ? 'bg-emerald-500/15' : n.type === 'alert' ? 'bg-amber-500/15' : n.type === 'payment' ? 'bg-emerald-500/15' : 'bg-purple-500/15'}`}>
                         {n.type === 'report' ? <FileText className="w-4 h-4 text-blue-400" /> :
@@ -557,7 +663,7 @@ export default function DashboardClient() {
               {profilePhoto ? (
                 <img src={profilePhoto} alt="Profile" className="w-8 h-8 rounded-full object-cover ring-2 ring-white/[0.08] group-hover:ring-brand-red/40 transition-all" />
               ) : (
-                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-brand-red to-red-800 flex items-center justify-center text-xs font-bold text-white ring-2 ring-white/[0.08] group-hover:ring-brand-red/40 transition-all">RK</div>
+                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-brand-red to-red-800 flex items-center justify-center text-xs font-bold text-white ring-2 ring-white/[0.08] group-hover:ring-brand-red/40 transition-all">{userInitials}</div>
               )}
             </button>
           </div>
@@ -651,7 +757,7 @@ export default function DashboardClient() {
       </div>
       <div className="h-[280px] -ml-2">
         <ResponsiveContainer width="100%" height="100%">
-          <AreaChart data={NAV_HISTORY}>
+          <AreaChart data={navHistory}>
             <defs><linearGradient id="navGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#D0021B" stopOpacity={0.3} /><stop offset="100%" stopColor="#D0021B" stopOpacity={0} /></linearGradient></defs>
             <CartesianGrid strokeDasharray="3 3" stroke={isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.06)'} />
             <XAxis dataKey="month" tick={{ fill: '#6B7280', fontSize: 11 }} axisLine={{ stroke: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.08)' }} tickLine={false} />
@@ -674,14 +780,14 @@ export default function DashboardClient() {
       <div className="h-[200px]">
         <ResponsiveContainer width="100%" height="100%">
           <PieChart>
-            <Pie data={ALLOCATION_DATA} innerRadius={55} outerRadius={85} paddingAngle={3} dataKey="value" strokeWidth={0}>
-              {ALLOCATION_DATA.map((entry, i) => <Cell key={i} fill={entry.color} />)}
+            <Pie data={allocationData} innerRadius={55} outerRadius={85} paddingAngle={3} dataKey="value" strokeWidth={0}>
+              {allocationData.map((entry: any, i: number) => <Cell key={i} fill={entry.color} />)}
             </Pie>
           </PieChart>
         </ResponsiveContainer>
       </div>
       <div className="space-y-2 mt-4">
-        {ALLOCATION_DATA.map((d, i) => (
+        {allocationData.map((d: any, i: number) => (
           <div key={i} className="flex items-center justify-between text-xs">
             <span className="flex items-center gap-2"><span className="w-2.5 h-2.5 rounded-full" style={{ background: d.color }} /><span className={t('text-gray-400','text-gray-600')}>{d.name}</span></span>
             <span className={`font-semibold ${t('text-white','text-gray-900')}`}>{d.value}%</span>
@@ -701,7 +807,7 @@ export default function DashboardClient() {
         <button onClick={() => setActiveTab('portfolio')} className="text-xs text-brand-red font-semibold flex items-center gap-1">View All <ChevronRight className="w-3 h-3" /></button>
       </div>
       <div className="space-y-3">
-        {PORTFOLIO_ASSETS.map((asset, i) => (
+        {portfolioAssets.map((asset: any, i: number) => (
           <div key={i} onClick={() => setActiveTab('portfolio')} className={`p-3 rounded-xl transition-all duration-300 group cursor-pointer ${t('bg-white/[0.02] border border-white/[0.04] hover:border-white/[0.08]','bg-gray-100/35 border border-gray-200/30 hover:border-gray-300/40')}`}>
             <div className="flex items-center gap-4 mb-2">
               <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${t('bg-white/[0.04]','bg-gray-200/40')}`}>
@@ -764,7 +870,7 @@ export default function DashboardClient() {
     <Glass className="p-5 lg:p-6" hover theme={theme}>
       <h3 className={`text-base font-bold mb-5 ${t('text-white','text-gray-900')}`}>Recent Activity</h3>
       <div className="space-y-2.5">
-        {RECENT_TRANSACTIONS.slice(0, 5).map((tx, i) => (
+        {transactions.slice(0, 5).map((tx: any, i: number) => (
           <div key={i} className={`flex items-center gap-3 p-2.5 rounded-lg transition-colors ${t('hover:bg-white/[0.02]','hover:bg-gray-200/40')}`}>
             <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${tx.type === 'Investment' ? 'bg-blue-500/15' : tx.type === 'Dividend' ? 'bg-emerald-500/15' : 'bg-gray-500/15'}`}>
               {tx.type === 'Investment' ? <ArrowUpRight className="w-4 h-4 text-blue-400" /> : tx.type === 'Dividend' ? <IndianRupee className="w-4 h-4 text-emerald-400" /> : <Info className="w-4 h-4 text-gray-400" />}
@@ -999,10 +1105,10 @@ export default function DashboardClient() {
           <Megaphone className="w-4 h-4 text-brand-red" />
           <h4 className={`text-sm font-bold ${t('text-white','text-gray-900')}`}>GHL News & Updates</h4>
         </div>
-        <span className={`text-[10px] font-semibold ${t('text-gray-500','text-gray-700')}`}>{ADMIN_NEWS.length} updates</span>
+        <span className={`text-[10px] font-semibold ${t('text-gray-500','text-gray-700')}`}>{adminNews.length} updates</span>
       </div>
       <div className="space-y-2.5">
-        {ADMIN_NEWS.map(news => (
+        {adminNews.map((news: any) => (
           <div key={news.id} onClick={() => showToast(`${news.title} — Full article coming soon.`, 'info')} className={`p-3 rounded-xl cursor-pointer transition-all group ${news.pinned ? (isDark ? 'bg-brand-red/[0.06] border border-brand-red/15 hover:border-brand-red/30' : 'bg-red-50/60 border border-red-200/40 hover:border-red-300/60') : t('bg-white/[0.02] border border-white/[0.04] hover:border-white/[0.08]','bg-gray-100/50 border border-gray-200/30 hover:border-gray-300/40')}`}>
             <div className="flex items-start gap-2 mb-1">
               {news.pinned && <Flame className="w-3 h-3 text-brand-red shrink-0 mt-0.5" />}
@@ -1097,11 +1203,11 @@ export default function DashboardClient() {
       {/* Welcome + Task reminders */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
-          <h2 className={`text-xl font-bold mb-0.5 ${t('text-white','text-gray-900')}`}>{greeting}, <span className="text-brand-red">Rajesh</span></h2>
+          <h2 className={`text-xl font-bold mb-0.5 ${t('text-white','text-gray-900')}`}>{greeting}, <span className="text-brand-red">{firstName}</span></h2>
           <p className={`text-sm flex items-center gap-2 ${t('text-gray-500','text-gray-700')}`}>
             Welcome to your investor portal
-            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-emerald-500/15 text-emerald-400 border border-emerald-500/20">
-              <Shield className="w-3 h-3" /> KYC Verified
+            <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold ${userKycStatus === 'approved' || userKycStatus === 'verified' ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/20' : 'bg-amber-500/15 text-amber-400 border border-amber-500/20'}`}>
+              <Shield className="w-3 h-3" /> KYC {userKycStatus === 'approved' || userKycStatus === 'verified' ? 'Verified' : userKycStatus}
             </span>
           </p>
         </div>
@@ -1298,7 +1404,7 @@ export default function DashboardClient() {
         <h3 className={`text-base font-bold mb-4 ${t('text-white','text-gray-900')}`}>Modify Allocation</h3>
         <p className={`text-xs mb-4 ${t('text-gray-500','text-gray-700')}`}>Request changes to your current investment allocation. Our advisory team will review and process your request.</p>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
-          {ALLOCATION_DATA.map((a, i) => (
+          {allocationData.map((a: any, i: number) => (
             <div key={i} className={`p-3 rounded-xl ${t('bg-white/[0.03] border border-white/[0.06]','bg-gray-100/60 border border-gray-200/40')}`}>
               <div className="flex items-center gap-2 mb-2">
                 <div className="w-3 h-3 rounded-full" style={{ background: a.color }} />
@@ -1336,19 +1442,21 @@ export default function DashboardClient() {
         <h3 className={`text-base font-bold mb-1 ${t('text-white','text-gray-900')}`}>KYC Verification Progress</h3>
         <p className={`text-xs mb-5 ${t('text-gray-500','text-gray-700')}`}>As required by SEBI, complete your KYC before investing.</p>
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
-          {KYC_STEPS.map((step, i) => (
+          {kycSteps.map((step: any, i: number) => {
+            const StepIcon = KYC_ICON_MAP[step.id] || FileCheck
+            return (
             <div key={i} className={`p-4 rounded-xl text-center transition-all cursor-pointer
               ${step.status === 'completed' ? (isDark ? 'bg-emerald-500/10 border border-emerald-500/20' : 'bg-emerald-50 border border-emerald-200') :
                 step.status === 'in-review' ? (isDark ? 'bg-amber-500/10 border border-amber-500/20' : 'bg-amber-50 border border-amber-200') :
                 t('bg-white/[0.03] border border-white/[0.06]','bg-gray-100/60 border border-gray-200/40')}`}>
-              <step.icon className={`w-6 h-6 mx-auto mb-2 ${step.status === 'completed' ? 'text-emerald-400' : step.status === 'in-review' ? 'text-amber-400' : t('text-gray-500','text-gray-600')}`} />
+              <StepIcon className={`w-6 h-6 mx-auto mb-2 ${step.status === 'completed' ? 'text-emerald-400' : step.status === 'in-review' ? 'text-amber-400' : t('text-gray-500','text-gray-600')}`} />
               <p className={`text-[11px] font-medium ${t('text-white','text-gray-900')}`}>{step.label}</p>
               <span className={`text-[9px] font-semibold uppercase mt-1 inline-block px-1.5 py-0.5 rounded-full
                 ${step.status === 'completed' ? 'text-emerald-400 bg-emerald-500/20' : step.status === 'in-review' ? 'text-amber-400 bg-amber-500/20' : 'text-gray-500 bg-gray-500/20'}`}>
                 {step.status === 'in-review' ? 'In Review' : step.status}
               </span>
             </div>
-          ))}
+          )})}
         </div>
       </Glass>
 
@@ -1428,7 +1536,7 @@ export default function DashboardClient() {
               <p className={`text-xs ${t('text-gray-500','text-gray-700')}`}>PDF, JPG, PNG up to 10MB</p>
               <input ref={fileInputRef} type="file" className="hidden" accept=".pdf,.jpg,.jpeg,.png" multiple />
             </div>
-            <button onClick={() => { setUploadModalOpen(false); setDocName(''); setDocCategory(''); showToast('Document uploaded successfully. Under review by compliance team.') }}
+            <button onClick={async () => { await uploadDocument({ client_id: clientId, title: docName, category: docCategory, entity_type: 'client', entity_id: clientId }); setUploadModalOpen(false); setDocName(''); setDocCategory(''); refetchDocs(); showToast('Document uploaded successfully. Under review by compliance team.') }}
               className="w-full py-2.5 rounded-xl text-sm font-semibold text-white" style={{ background: 'linear-gradient(135deg, #D0021B, #8B0000)' }}>
               Upload & Submit
             </button>
@@ -1461,7 +1569,7 @@ export default function DashboardClient() {
               </tr>
             </thead>
             <tbody>
-              {RECENT_TRANSACTIONS.map((tx, i) => (
+              {transactions.map((tx: any, i: number) => (
                 <tr key={i} className={`border-b transition-colors ${t('border-white/[0.03] hover:bg-white/[0.02]','border-gray-100 hover:bg-gray-200/30')}`}>
                   <td className={`py-3 px-5 text-xs ${t('text-gray-400','text-gray-700')}`}>{tx.date}</td>
                   <td className="py-3 px-5">
@@ -1503,23 +1611,23 @@ export default function DashboardClient() {
         <Glass className="p-6" theme={theme}>
           <h4 className={`text-sm font-bold mb-4 ${t('text-white','text-gray-900')}`}>New Message</h4>
           <div className="space-y-3">
-            <select className={`w-full px-4 py-2.5 rounded-xl text-sm ${t('bg-white/[0.04] border border-white/[0.06] text-white','bg-gray-100/60 border border-gray-200/40 text-gray-900')}`}>
+            <select value={msgTo} onChange={e => setMsgTo(e.target.value)} className={`w-full px-4 py-2.5 rounded-xl text-sm ${t('bg-white/[0.04] border border-white/[0.06] text-white','bg-gray-100/60 border border-gray-200/40 text-gray-900')}`}>
               <option>Relationship Manager</option><option>Compliance Team</option><option>Investment Team</option><option>Support Team</option>
             </select>
-            <input type="text" placeholder="Subject" className={`w-full px-4 py-2.5 rounded-xl text-sm ${t('bg-white/[0.04] border border-white/[0.06] text-white placeholder-gray-600','bg-gray-100/40 border border-gray-200/40 text-gray-900 placeholder-gray-400')}`} />
-            <textarea rows={4} placeholder="Write your message..." className={`w-full px-4 py-2.5 rounded-xl text-sm resize-none ${t('bg-white/[0.04] border border-white/[0.06] text-white placeholder-gray-600','bg-gray-100/40 border border-gray-200/40 text-gray-900 placeholder-gray-400')}`} />
+            <input type="text" placeholder="Subject" value={msgSubject} onChange={e => setMsgSubject(e.target.value)} className={`w-full px-4 py-2.5 rounded-xl text-sm ${t('bg-white/[0.04] border border-white/[0.06] text-white placeholder-gray-600','bg-gray-100/40 border border-gray-200/40 text-gray-900 placeholder-gray-400')}`} />
+            <textarea rows={4} placeholder="Write your message..." value={msgBody} onChange={e => setMsgBody(e.target.value)} className={`w-full px-4 py-2.5 rounded-xl text-sm resize-none ${t('bg-white/[0.04] border border-white/[0.06] text-white placeholder-gray-600','bg-gray-100/40 border border-gray-200/40 text-gray-900 placeholder-gray-400')}`} />
             <div className="flex items-center gap-3">
               <button className={`p-2 rounded-lg ${t('hover:bg-white/[0.04]','hover:bg-gray-200/40')}`}><Paperclip className={`w-4 h-4 ${t('text-gray-500','text-gray-600')}`} /></button>
               <div className="flex-1" />
               <button onClick={() => setMessageCompose(false)} className={`px-4 py-2 rounded-xl text-sm font-medium ${t('text-gray-400','text-gray-700')}`}>Cancel</button>
-              <button onClick={() => { setMessageCompose(false); showToast('Message sent successfully to your advisory team.') }} className="px-5 py-2 rounded-xl text-sm font-semibold text-white" style={{ background: 'linear-gradient(135deg, #D0021B, #8B0000)' }}>Send</button>
+              <button onClick={async () => { await sendMessage({ from_id: clientId, to: msgTo, subject: msgSubject, body: msgBody }); setMessageCompose(false); setMsgTo('Relationship Manager'); setMsgSubject(''); setMsgBody(''); refetchMessages(); showToast('Message sent successfully to your advisory team.') }} className="px-5 py-2 rounded-xl text-sm font-semibold text-white" style={{ background: 'linear-gradient(135deg, #D0021B, #8B0000)' }}>Send</button>
             </div>
           </div>
         </Glass>
       )}
 
       <div className="space-y-2">
-        {MESSAGES_DATA.map(msg => (
+        {messagesData.map((msg: any) => (
           <div key={msg.id} onClick={() => showToast(`Opening: "${msg.subject}" from ${msg.from}`, 'info')}>
           <Glass className={`p-4 cursor-pointer ${!msg.read ? 'border-l-2 border-l-brand-red' : ''}`} hover theme={theme}>
             <div className="flex items-start gap-3">
@@ -1581,17 +1689,17 @@ export default function DashboardClient() {
         </div>
         {ticketForm && (
           <div className="space-y-3 mb-6">
-            <input type="text" placeholder="Subject" className={`w-full px-4 py-2.5 rounded-xl text-sm ${t('bg-white/[0.04] border border-white/[0.06] text-white placeholder-gray-600','bg-gray-100/40 border border-gray-200/40 text-gray-900 placeholder-gray-400')}`} />
-            <select className={`w-full px-4 py-2.5 rounded-xl text-sm ${t('bg-white/[0.04] border border-white/[0.06] text-white','bg-gray-100/60 border border-gray-200/40 text-gray-900')}`}>
+            <input type="text" placeholder="Subject" value={ticketSubject} onChange={e => setTicketSubject(e.target.value)} className={`w-full px-4 py-2.5 rounded-xl text-sm ${t('bg-white/[0.04] border border-white/[0.06] text-white placeholder-gray-600','bg-gray-100/40 border border-gray-200/40 text-gray-900 placeholder-gray-400')}`} />
+            <select value={ticketCategory} onChange={e => setTicketCategory(e.target.value)} className={`w-full px-4 py-2.5 rounded-xl text-sm ${t('bg-white/[0.04] border border-white/[0.06] text-white','bg-gray-100/60 border border-gray-200/40 text-gray-900')}`}>
               <option>General Inquiry</option><option>Investment Query</option><option>KYC Issue</option><option>Technical Issue</option><option>Document Request</option>
             </select>
-            <textarea rows={3} placeholder="Describe your issue..." className={`w-full px-4 py-2.5 rounded-xl text-sm resize-none ${t('bg-white/[0.04] border border-white/[0.06] text-white placeholder-gray-600','bg-gray-100/40 border border-gray-200/40 text-gray-900 placeholder-gray-400')}`} />
-            <button onClick={() => { setTicketForm(false); showToast('Support ticket submitted. Ticket ID: TKT-003. We\'ll respond within 24 hours.') }} className="px-5 py-2.5 rounded-xl text-sm font-semibold text-white" style={{ background: 'linear-gradient(135deg, #D0021B, #8B0000)' }}>Submit Ticket</button>
+            <textarea rows={3} placeholder="Describe your issue..." value={ticketDesc} onChange={e => setTicketDesc(e.target.value)} className={`w-full px-4 py-2.5 rounded-xl text-sm resize-none ${t('bg-white/[0.04] border border-white/[0.06] text-white placeholder-gray-600','bg-gray-100/40 border border-gray-200/40 text-gray-900 placeholder-gray-400')}`} />
+            <button onClick={async () => { await createSupportTicket({ client_id: clientId, subject: ticketSubject, category: ticketCategory, description: ticketDesc, status: 'open', priority: 'medium' }); setTicketForm(false); setTicketSubject(''); setTicketCategory('General Inquiry'); setTicketDesc(''); refetchTickets(); showToast('Support ticket submitted. We\'ll respond within 24 hours.') }} className="px-5 py-2.5 rounded-xl text-sm font-semibold text-white" style={{ background: 'linear-gradient(135deg, #D0021B, #8B0000)' }}>Submit Ticket</button>
           </div>
         )}
         {/* Existing tickets */}
         <div className="space-y-2">
-          {SUPPORT_TICKETS.map(tk => (
+          {supportTickets.map((tk: any) => (
             <div key={tk.id} className={`flex items-center gap-3 p-3 rounded-xl ${t('bg-white/[0.02] border border-white/[0.04]','bg-gray-100/60 border border-gray-200/40')}`}>
               <Ticket className={`w-5 h-5 shrink-0 ${tk.status === 'resolved' ? 'text-emerald-400' : 'text-amber-400'}`} />
               <div className="flex-1 min-w-0">
@@ -1678,7 +1786,7 @@ export default function DashboardClient() {
             {profilePhoto ? (
               <img src={profilePhoto} alt="Profile" className="w-24 h-24 rounded-full object-cover ring-4 ring-white/[0.08]" />
             ) : (
-              <div className="w-24 h-24 rounded-full bg-gradient-to-br from-brand-red to-red-800 flex items-center justify-center text-3xl font-bold text-white ring-4 ring-white/[0.08]">RK</div>
+              <div className="w-24 h-24 rounded-full bg-gradient-to-br from-brand-red to-red-800 flex items-center justify-center text-3xl font-bold text-white ring-4 ring-white/[0.08]">{userInitials}</div>
             )}
             <button onClick={() => profilePhotoRef.current?.click()}
               className="absolute inset-0 rounded-full bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200 cursor-pointer">
@@ -1691,11 +1799,11 @@ export default function DashboardClient() {
               <Camera className="w-3.5 h-3.5 text-white" />
             </div>
           </div>
-          <h3 className={`text-lg font-bold ${t('text-white','text-gray-900')}`}>Rajesh Krishnan</h3>
-          <p className={`text-xs mb-3 ${t('text-gray-500','text-gray-700')}`}>rajesh.k@email.com</p>
-          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-emerald-500/15 text-emerald-400 border border-emerald-500/20"><Shield className="w-3 h-3" /> KYC Verified</span>
+          <h3 className={`text-lg font-bold ${t('text-white','text-gray-900')}`}>{userName}</h3>
+          <p className={`text-xs mb-3 ${t('text-gray-500','text-gray-700')}`}>{userEmail}</p>
+          <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold ${userKycStatus === 'approved' || userKycStatus === 'verified' ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/20' : 'bg-amber-500/15 text-amber-400 border border-amber-500/20'}`}><Shield className="w-3 h-3" /> KYC {userKycStatus === 'approved' || userKycStatus === 'verified' ? 'Verified' : userKycStatus}</span>
           <div className={`mt-4 pt-4 border-t text-left space-y-2.5 ${t('border-white/[0.06]','border-gray-200/50')}`}>
-            {[['Investor ID','GHL-INV-2024-0847'],['PAN','ABCPK****F'],['Mobile','+91 98XXX XXXXX'],['Joined','December 2023']].map(([l,v],i) => (
+            {[['Investor ID', clientId || 'N/A'],['PAN','ABCPK****F'],['Mobile', user?.phone || '+91 98XXX XXXXX'],['Joined','December 2023']].map(([l,v],i) => (
               <div key={i} className="flex justify-between text-xs"><span className={t('text-gray-500','text-gray-700')}>{l}</span><span className={`font-medium ${t('text-white','text-gray-900')}`}>{v}</span></div>
             ))}
           </div>
@@ -1706,7 +1814,7 @@ export default function DashboardClient() {
           <Glass className="p-6" hover theme={theme}>
             <h4 className={`text-sm font-bold mb-4 ${t('text-white','text-gray-900')}`}>Personal Details</h4>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {[['Full Name','Rajesh Krishnan'],['Email','rajesh.k@email.com'],['Phone','+91 98765 43210'],['City','Chennai, Tamil Nadu'],['Date of Birth','15 Aug 1978'],['Occupation','Business Owner']].map(([l,v],i) => (
+              {[['Full Name', userName],['Email', userEmail],['Phone', user?.phone || '+91 98765 43210'],['City', user?.city || 'Chennai, Tamil Nadu'],['Date of Birth','15 Aug 1978'],['Occupation','Business Owner']].map(([l,v],i) => (
                 <div key={i}><p className={`text-[10px] uppercase tracking-wider mb-1 ${t('text-gray-600','text-gray-600')}`}>{l}</p><p className={`text-sm font-medium ${t('text-white','text-gray-900')}`}>{v}</p></div>
               ))}
             </div>
@@ -1840,7 +1948,7 @@ export default function DashboardClient() {
             <div><h4 className={`text-sm font-bold ${t('text-white','text-gray-900')}`}>Security</h4><p className={`text-xs ${t('text-gray-500','text-gray-700')}`}>Password and authentication</p></div>
           </div>
           {[
-            { label: 'Change Password', action: () => showToast('Password reset link sent to rajesh.k@email.com', 'info') },
+            { label: 'Change Password', action: () => showToast(`Password reset link sent to ${userEmail}`, 'info') },
             { label: 'Enable 2FA', action: () => showToast('Two-factor authentication setup initiated. Check your email for the QR code.', 'info') },
             { label: 'Active Sessions', action: () => showToast('You have 1 active session: Chrome on Windows — Current Device', 'info') },
             { label: 'Login History', action: () => showToast('Last login: Today at 10:30 AM from Chennai, India (Chrome/Windows)', 'info') },

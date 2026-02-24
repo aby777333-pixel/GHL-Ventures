@@ -516,7 +516,7 @@ export default function InsightsPage() {
                   <Lock className="w-4 h-4" />
                   <Download className="w-4 h-4" />
                   Download PDF
-                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-400 ml-1">Coming Soon</span>
+                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-400 ml-1">Registered Investors Only</span>
                 </button>
               </div>
             </AnimatedSection>

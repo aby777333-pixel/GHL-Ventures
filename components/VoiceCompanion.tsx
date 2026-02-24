@@ -74,7 +74,7 @@ export default function VoiceCompanionWrapper() {
           },
 
           onReady: () => {
-            console.log('[VoiceCompanion] SDK Ready');
+            // SDK ready
           },
 
           onError: (error: Error) => {
