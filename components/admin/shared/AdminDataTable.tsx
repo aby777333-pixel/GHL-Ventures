@@ -2,6 +2,7 @@
 
 import { useState, useMemo } from 'react'
 import { ChevronUp, ChevronDown, ChevronsUpDown, Search, ChevronLeft, ChevronRight, Download } from 'lucide-react'
+import { saveBlobAs } from '@/lib/supabase/storageService'
 
 // ── Types ────────────────────────────────────────────────────────
 export interface Column<T> {
@@ -105,33 +106,7 @@ export default function AdminDataTable<T extends Record<string, any>>({
     ).join('\n')
     const bom = '\uFEFF'
     const blob = new Blob([`${bom}${headers}\n${rows}`], { type: 'text/csv;charset=utf-8' })
-    const filename = `${title || 'export'}.csv`
-
-    // Try File System Access API (opens native Save-As dialog)
-    if ('showSaveFilePicker' in window) {
-      try {
-        const handle = await (window as any).showSaveFilePicker({
-          suggestedName: filename,
-          types: [{ description: 'CSV File', accept: { 'text/csv': ['.csv'] } }],
-        })
-        const writable = await handle.createWritable()
-        await writable.write(blob)
-        await writable.close()
-        return
-      } catch (err: any) {
-        if (err?.name === 'AbortError') return // User cancelled
-      }
-    }
-
-    // Fallback: standard download
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = filename
-    document.body.appendChild(a)
-    a.click()
-    document.body.removeChild(a)
-    URL.revokeObjectURL(url)
+    await saveBlobAs(blob, `${title || 'export'}.csv`)
   }
 
   return (

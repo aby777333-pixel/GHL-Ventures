@@ -31,6 +31,7 @@ import type {
   MarketingCampaign, ContentItem, AudienceSegment,
   OutreachSequence, MarketingAITool, IntegrationService,
 } from '@/lib/admin/adminTypes'
+import { uploadFile, saveBlobAs } from '@/lib/supabase/storageService'
 
 // ── Icon Maps ─────────────────────────────────────────────────────
 const AI_ICON_MAP: Record<string, React.ComponentType<{ className?: string; style?: React.CSSProperties }>> = {
@@ -271,10 +272,15 @@ function OverviewTab({ navigate, showToast }: { navigate: (p: string) => void; s
               input.type = 'file'
               input.multiple = true
               input.accept = '.pdf,.xlsx,.xls,.docx,.doc,.pptx,.ppt,.csv,.jpg,.jpeg,.png,.gif,.webp,.svg,.zip,.mp4,.mp3'
-              input.onchange = () => {
+              input.onchange = async () => {
                 if (input.files && input.files.length > 0) {
-                  const names = Array.from(input.files).map(f => f.name).join(', ')
-                  showToast(`Selected ${input.files.length} asset(s): ${names}`, 'success')
+                  showToast(`Uploading ${input.files.length} asset(s)...`, 'info')
+                  let ok = 0
+                  for (let i = 0; i < input.files.length; i++) {
+                    const result = await uploadFile(input.files[i], 'admin/marketing-assets')
+                    if (result.success) ok++
+                  }
+                  showToast(`Uploaded ${ok} asset(s) to Supabase Storage`, 'success')
                 }
               }
               input.click()
@@ -665,9 +671,12 @@ function AudienceTab({ showToast }: { showToast: (m: string, t?: 'success' | 'er
             const input = document.createElement('input')
             input.type = 'file'
             input.accept = '.csv,.xlsx,.xls,.vcf'
-            input.onchange = () => {
+            input.onchange = async () => {
               if (input.files && input.files.length > 0) {
-                showToast(`Importing contacts from: ${input.files[0].name}`, 'success')
+                showToast(`Uploading ${input.files[0].name}...`, 'info')
+                const result = await uploadFile(input.files[0], 'admin/contacts-import')
+                if (result.success) showToast(`Imported contacts from ${input.files[0].name} via Supabase Storage`, 'success')
+                else showToast(`Import failed: ${result.error}`, 'error')
               }
             }
             input.click()
@@ -681,22 +690,7 @@ function AudienceTab({ showToast }: { showToast: (m: string, t?: 'success' | 'er
             const csv = `${bom}Name,Email,Phone,Segment,Status\nSample Contact,sample@email.com,+91 99999 00000,High Value,Active`
             const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' })
             const filename = `GHL_Contacts_Export_${new Date().toISOString().slice(0,10)}.csv`
-            if ('showSaveFilePicker' in window) {
-              try {
-                const handle = await (window as any).showSaveFilePicker({ suggestedName: filename, types: [{ description: 'CSV File', accept: { 'text/csv': ['.csv'] } }] })
-                const writable = await handle.createWritable()
-                await writable.write(blob)
-                await writable.close()
-                showToast('Contacts exported', 'success')
-                return
-              } catch (err: any) { if (err?.name === 'AbortError') return }
-            }
-            const url = URL.createObjectURL(blob)
-            const a = document.createElement('a')
-            a.href = url; a.download = filename
-            document.body.appendChild(a); a.click()
-            document.body.removeChild(a); URL.revokeObjectURL(url)
-            showToast('Contacts exported', 'success')
+            await saveBlobAs(blob, filename, showToast as any)
           }} className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium text-gray-400 bg-white/[0.04] border border-white/[0.08] hover:bg-white/[0.08] hover:text-white transition-colors admin-btn-press">
             <ArrowDownRight className="w-4 h-4" />
             Export

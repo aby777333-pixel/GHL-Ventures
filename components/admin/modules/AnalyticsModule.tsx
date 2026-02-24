@@ -16,6 +16,7 @@ import AdminBadge from '../shared/AdminBadge'
 import AdminKPICard from '../shared/AdminKPICard'
 import { OVERVIEW_KPIS, AUM_GROWTH_DATA, REVENUE_BREAKDOWN, CLIENTS_DATA, LEADS_DATA } from '@/lib/admin/adminMockData'
 import { formatINR } from '@/lib/admin/adminHooks'
+import { saveBlobAs } from '@/lib/supabase/storageService'
 
 // ── Sub-tabs ─────────────────────────────────────────────────────
 const ANALYTICS_TABS = [
@@ -77,23 +78,7 @@ export default function AnalyticsModule({ subTab, navigate, showToast }: Analyti
             const rows = MONTHLY_METRICS.map(m => `${m.month},${m.clients},${m.leads},${m.conversions},${m.churn}`)
             const csv = `${bom}Month,Clients,Leads,Conversions,Churn\n${rows.join('\n')}`
             const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' })
-            const filename = `GHL_Analytics_Report_${new Date().toISOString().slice(0,10)}.csv`
-            if ('showSaveFilePicker' in window) {
-              try {
-                const handle = await (window as any).showSaveFilePicker({ suggestedName: filename, types: [{ description: 'CSV File', accept: { 'text/csv': ['.csv'] } }] })
-                const writable = await handle.createWritable()
-                await writable.write(blob)
-                await writable.close()
-                showToast('Report exported', 'success')
-                return
-              } catch (err: any) { if (err?.name === 'AbortError') return }
-            }
-            const url = URL.createObjectURL(blob)
-            const a = document.createElement('a')
-            a.href = url; a.download = filename
-            document.body.appendChild(a); a.click()
-            document.body.removeChild(a); URL.revokeObjectURL(url)
-            showToast('Report exported', 'success')
+            await saveBlobAs(blob, `GHL_Analytics_Report_${new Date().toISOString().slice(0,10)}.csv`, showToast as any)
           }}
           className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium text-white bg-brand-red/20 border border-brand-red/30 hover:bg-brand-red/30 transition-colors self-start admin-btn-press"
         >

@@ -3,7 +3,10 @@
 
    Supports: CSV, JSON, PDF (placeholder), Google Sheets (mock),
    WhatsApp/Telegram sharing, clipboard, and share link generation.
+   Uses storageService.saveBlobAs for all file downloads.
    ================================================================ */
+
+import { saveBlobAs } from '@/lib/supabase/storageService'
 
 // ── Types ─────────────────────────────────────────────────────
 export type ExportFormat = 'csv' | 'json' | 'pdf' | 'xlsx'
@@ -158,43 +161,9 @@ export function generateShareLink(reportId: string, expiresIn: '1h' | '24h' | '7
   return `${typeof window !== 'undefined' ? window.location.origin : ''}/shared/${token}`
 }
 
-// ── Helper: Download Blob (uses Save-As dialog when available) ──
+// ── Helper: Download Blob (delegates to centralized storageService) ──
 async function downloadBlob(blob: Blob, filename: string): Promise<void> {
-  // Try File System Access API first (opens native "Save As" dialog)
-  if (typeof window !== 'undefined' && 'showSaveFilePicker' in window) {
-    try {
-      const ext = filename.split('.').pop() || ''
-      const mimeTypes: Record<string, string> = {
-        csv: 'text/csv', json: 'application/json', pdf: 'application/pdf',
-        xlsx: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-        html: 'text/html', txt: 'text/plain',
-      }
-      const handle = await (window as any).showSaveFilePicker({
-        suggestedName: filename,
-        types: [{
-          description: `${ext.toUpperCase()} File`,
-          accept: { [mimeTypes[ext] || 'application/octet-stream']: [`.${ext}`] },
-        }],
-      })
-      const writable = await handle.createWritable()
-      await writable.write(blob)
-      await writable.close()
-      return
-    } catch (err: any) {
-      // User cancelled the dialog or API not supported — fall through
-      if (err?.name === 'AbortError') return
-    }
-  }
-
-  // Fallback: standard download (browser auto-saves to Downloads folder)
-  const url = URL.createObjectURL(blob)
-  const a = document.createElement('a')
-  a.href = url
-  a.download = filename
-  document.body.appendChild(a)
-  a.click()
-  document.body.removeChild(a)
-  URL.revokeObjectURL(url)
+  await saveBlobAs(blob, filename)
 }
 
 // ── Helper: Open system file picker for uploads ───────────────

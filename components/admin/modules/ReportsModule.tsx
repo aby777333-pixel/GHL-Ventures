@@ -23,6 +23,7 @@ import {
 } from '@/lib/admin/reportsData'
 import { callClaudeAPI, type ClaudeMessage } from '@/lib/admin/claudeApi'
 import { useReportsLiveData, ReportsDataContext, useReportsDataContext } from '@/lib/admin/useReportsLiveData'
+import { saveBlobAs } from '@/lib/supabase/storageService'
 
 // ── Constants ────────────────────────────────────────────────
 const CHART_COLORS = ['#DC2626', '#D4AF37', '#3B82F6', '#10B981', '#8B5CF6', '#F59E0B', '#EC4899', '#06B6D4']
@@ -72,7 +73,6 @@ export default function ReportsModule({ subTab, navigate, showToast }: Props) {
         <div className="flex gap-2">
           <button onClick={async () => {
             showToast('Generating dashboard export...', 'info')
-            // Build a CSV export of key dashboard metrics
             const kpis = liveData.REPORT_KPIS
             const dashboardData = [
               { metric: 'Total AUM', value: kpis?.totalAUM ?? 'N/A', period: 'Current' },
@@ -84,26 +84,7 @@ export default function ReportsModule({ subTab, navigate, showToast }: Props) {
             const bom = '\uFEFF'
             const csv = `${bom}Metric,Value,Period\n${dashboardData.map(d => `${d.metric},${d.value},${d.period}`).join('\n')}`
             const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' })
-            const filename = `GHL_Reports_Dashboard_${new Date().toISOString().slice(0,10)}.csv`
-            if ('showSaveFilePicker' in window) {
-              try {
-                const handle = await (window as any).showSaveFilePicker({
-                  suggestedName: filename,
-                  types: [{ description: 'CSV File', accept: { 'text/csv': ['.csv'] } }],
-                })
-                const writable = await handle.createWritable()
-                await writable.write(blob)
-                await writable.close()
-                showToast('Dashboard exported', 'success')
-                return
-              } catch (err: any) { if (err?.name === 'AbortError') return }
-            }
-            const url = URL.createObjectURL(blob)
-            const a = document.createElement('a')
-            a.href = url; a.download = filename
-            document.body.appendChild(a); a.click()
-            document.body.removeChild(a); URL.revokeObjectURL(url)
-            showToast('Dashboard exported', 'success')
+            await saveBlobAs(blob, `GHL_Reports_Dashboard_${new Date().toISOString().slice(0,10)}.csv`, showToast as any)
           }} className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium text-white bg-brand-red/20 border border-brand-red/30 hover:bg-brand-red/30 transition-colors admin-btn-press">
             <Download className="w-4 h-4" /> Export
           </button>

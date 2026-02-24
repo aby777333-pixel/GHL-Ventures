@@ -21,6 +21,8 @@ import {
   formatFileSize, getFileTypeColor, buildFolderTree, MOCK_FOLDERS,
 } from '@/lib/admin/fileRepositoryData'
 import * as svc from '@/lib/supabase/fileRepositoryService'
+import { uploadFile, uploadFiles, saveFileAs, saveBlobAs, checkStorageConnection } from '@/lib/supabase/storageService'
+import { isSupabaseConfigured } from '@/lib/supabase/client'
 import type { FolderNode, RepoFile, ViewMode, SortField, SortDir } from '@/lib/admin/fileRepositoryTypes'
 
 // ── Icon Map for folder icons ───────────────────────────────
@@ -74,6 +76,7 @@ export default function FileRepository({ showToast, navigate }: Props) {
   const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set())
   const [filterOpen, setFilterOpen] = useState(false)
   const [activeFilters, setActiveFilters] = useState<{ type?: string[]; access?: string[] }>({})
+  const [uploadProgress, setUploadProgress] = useState<{ done: number; total: number } | null>(null)
 
   // ── Data hooks ────────────────────────────────────────────
   const { data: folderTree, loading: foldersLoading } = useFolderTree()
@@ -187,37 +190,22 @@ export default function FileRepository({ showToast, navigate }: Props) {
     showToast(`Downloading ${file.fileName}...`, 'info')
     svc.logAudit(file.id, 'download', { fileName: file.fileName })
 
-    // Create a mock blob (in production, fetch from Supabase storage)
-    const blob = new Blob([`File content for: ${file.fileName}\nSize: ${file.fileSize}\nGenerated for demo.`], {
-      type: 'application/octet-stream',
-    })
-
-    // Try File System Access API — opens native Save-As file dialog
-    if ('showSaveFilePicker' in window) {
-      try {
-        const handle = await (window as any).showSaveFilePicker({
-          suggestedName: file.fileName,
-        })
-        const writable = await handle.createWritable()
-        await writable.write(blob)
-        await writable.close()
-        showToast(`Saved ${file.fileName}`, 'success')
-        return
-      } catch (err: any) {
-        if (err?.name === 'AbortError') return
-      }
+    // If file has a storage path, download from Supabase
+    if (file.fileUrl && isSupabaseConfigured()) {
+      // fileUrl may be a full URL or a storage path
+      const storagePath = file.fileUrl.startsWith('http')
+        ? file.fileUrl.split('/storage/v1/object/public/uploads/')[1] || file.fileUrl
+        : file.fileUrl
+      await saveFileAs(storagePath, file.fileName, 'uploads', showToast as any)
+      return
     }
 
-    // Fallback: standard download
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = file.fileName
-    document.body.appendChild(a)
-    a.click()
-    document.body.removeChild(a)
-    URL.revokeObjectURL(url)
-    showToast(`Downloaded ${file.fileName}`, 'success')
+    // Fallback: generate demo content and save
+    const blob = new Blob(
+      [`File: ${file.fileName}\nTitle: ${file.title}\nSize: ${file.fileSize}\nCategory: ${file.category}\n\nThis is demo content. Upload real files to see real downloads.`],
+      { type: 'application/octet-stream' }
+    )
+    await saveBlobAs(blob, file.fileName, showToast as any)
   }, [showToast])
 
   const handleBatchDelete = useCallback(async () => {
@@ -608,7 +596,7 @@ export default function FileRepository({ showToast, navigate }: Props) {
       {/* ── Upload Modal ──────────────────────────────────────── */}
       <AdminModal
         isOpen={uploadModalOpen}
-        onClose={() => setUploadModalOpen(false)}
+        onClose={() => { setUploadModalOpen(false); setUploadProgress(null) }}
         title="Upload Files"
         maxWidth="max-w-3xl"
       >
@@ -617,27 +605,38 @@ export default function FileRepository({ showToast, navigate }: Props) {
             className="rounded-2xl border-2 border-dashed border-white/[0.08] bg-white/[0.01] p-8 text-center hover:border-brand-red/20 transition-colors cursor-pointer"
             onDragOver={e => { e.preventDefault(); e.currentTarget.classList.add('border-brand-red/40', 'bg-brand-red/5') }}
             onDragLeave={e => { e.currentTarget.classList.remove('border-brand-red/40', 'bg-brand-red/5') }}
-            onDrop={e => {
+            onDrop={async e => {
               e.preventDefault()
               e.currentTarget.classList.remove('border-brand-red/40', 'bg-brand-red/5')
-              const files = e.dataTransfer.files
-              if (files.length > 0) {
-                const names = Array.from(files).map(f => f.name).join(', ')
-                showToast(`Received ${files.length} file(s): ${names}. Connect Supabase for real storage.`, 'success')
+              const droppedFiles = e.dataTransfer.files
+              if (droppedFiles.length > 0) {
+                const folder = currentFolder ? `admin/documents/${currentFolder.slug}` : 'admin/documents'
+                setUploadProgress({ done: 0, total: droppedFiles.length })
+                const results = await uploadFiles(Array.from(droppedFiles), folder, (done, total) => setUploadProgress({ done, total }))
+                const successes = results.filter(r => r.success)
+                const failures = results.filter(r => !r.success)
+                if (successes.length > 0) showToast(`Uploaded ${successes.length} file(s) to Supabase Storage`, 'success')
+                if (failures.length > 0) showToast(`${failures.length} file(s) failed: ${failures[0].error}`, 'error')
+                setUploadProgress(null)
                 setUploadModalOpen(false)
                 refetchFiles()
               }
             }}
             onClick={() => {
-              // Open native file picker dialog
               const input = document.createElement('input')
               input.type = 'file'
               input.multiple = true
               input.accept = '.pdf,.xlsx,.xls,.docx,.doc,.pptx,.ppt,.csv,.jpg,.jpeg,.png,.gif,.webp,.svg,.zip'
-              input.onchange = () => {
+              input.onchange = async () => {
                 if (input.files && input.files.length > 0) {
-                  const names = Array.from(input.files).map(f => f.name).join(', ')
-                  showToast(`Selected ${input.files.length} file(s): ${names}. Connect Supabase for real storage.`, 'success')
+                  const folder = currentFolder ? `admin/documents/${currentFolder.slug}` : 'admin/documents'
+                  setUploadProgress({ done: 0, total: input.files.length })
+                  const results = await uploadFiles(Array.from(input.files), folder, (done, total) => setUploadProgress({ done, total }))
+                  const successes = results.filter(r => r.success)
+                  const failures = results.filter(r => !r.success)
+                  if (successes.length > 0) showToast(`Uploaded ${successes.length} file(s) to Supabase Storage`, 'success')
+                  if (failures.length > 0) showToast(`${failures.length} file(s) failed: ${failures[0].error}`, 'error')
+                  setUploadProgress(null)
                   setUploadModalOpen(false)
                   refetchFiles()
                 }
@@ -645,18 +644,37 @@ export default function FileRepository({ showToast, navigate }: Props) {
               input.click()
             }}
           >
-            <Upload className="w-8 h-8 text-gray-600 mx-auto mb-3" />
-            <p className="text-sm text-gray-400">Drag & drop files here, or click to browse</p>
-            <p className="text-xs text-gray-600 mt-1">PDF, XLSX, DOCX, PPTX, images up to 50MB</p>
-            <span className="inline-block mt-3 px-4 py-2 rounded-xl text-xs font-medium text-brand-red bg-brand-red/10 border border-brand-red/20 hover:bg-brand-red/20 transition-colors">
-              Browse Files
-            </span>
+            {uploadProgress ? (
+              <div className="flex flex-col items-center gap-2">
+                <div className="animate-spin rounded-full h-8 w-8 border-2 border-brand-red border-t-transparent" />
+                <p className="text-sm text-gray-400">Uploading {uploadProgress.done}/{uploadProgress.total} files…</p>
+                <div className="w-48 h-1.5 rounded-full bg-white/[0.04] overflow-hidden">
+                  <div className="h-full rounded-full bg-brand-red transition-all" style={{ width: `${(uploadProgress.done / uploadProgress.total) * 100}%` }} />
+                </div>
+              </div>
+            ) : (
+              <>
+                <Upload className="w-8 h-8 text-gray-600 mx-auto mb-3" />
+                <p className="text-sm text-gray-400">Drag & drop files here, or click to browse</p>
+                <p className="text-xs text-gray-600 mt-1">PDF, XLSX, DOCX, PPTX, images up to 50MB</p>
+                <span className="inline-block mt-3 px-4 py-2 rounded-xl text-xs font-medium text-brand-red bg-brand-red/10 border border-brand-red/20 hover:bg-brand-red/20 transition-colors">
+                  Browse Files
+                </span>
+              </>
+            )}
           </div>
 
           {currentFolder && (
             <div className="flex items-center gap-2 text-xs text-gray-400">
               <FolderOpen className="w-3.5 h-3.5" />
               <span>Uploading to: <span className="text-white">{currentFolder.name}</span></span>
+            </div>
+          )}
+
+          {isSupabaseConfigured() && (
+            <div className="flex items-center gap-2 text-[10px] text-emerald-500">
+              <CheckCircle className="w-3 h-3" />
+              <span>Supabase Storage connected — files will be stored in cloud</span>
             </div>
           )}
         </div>

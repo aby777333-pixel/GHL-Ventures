@@ -16,6 +16,7 @@ import AdminEmptyState from '../shared/AdminEmptyState'
 import { ASSETS_DATA } from '@/lib/admin/adminMockData'
 import { formatINR, formatDate } from '@/lib/admin/adminHooks'
 import type { Asset, AssetCategory, AssetStatus } from '@/lib/admin/adminTypes'
+import { uploadFile, saveBlobAs } from '@/lib/supabase/storageService'
 
 // ── Mock Documents ──────────────────────────────────────────────
 interface AdminDocument {
@@ -82,10 +83,16 @@ export default function AssetDocModule({ subTab, navigate, showToast }: AssetDoc
             input.type = 'file'
             input.multiple = true
             input.accept = '.pdf,.xlsx,.xls,.docx,.doc,.pptx,.ppt,.csv,.jpg,.jpeg,.png,.gif,.webp,.svg,.zip'
-            input.onchange = () => {
+            input.onchange = async () => {
               if (input.files && input.files.length > 0) {
-                const names = Array.from(input.files).map(f => f.name).join(', ')
-                showToast(`Selected ${input.files.length} file(s): ${names}`, 'success')
+                showToast(`Uploading ${input.files.length} file(s)...`, 'info')
+                let ok = 0, fail = 0
+                for (let i = 0; i < input.files.length; i++) {
+                  const result = await uploadFile(input.files[i], 'admin/assets')
+                  if (result.success) ok++; else fail++
+                }
+                if (ok > 0) showToast(`Uploaded ${ok} file(s) to Supabase Storage`, 'success')
+                if (fail > 0) showToast(`${fail} file(s) failed to upload`, 'error')
               }
             }
             input.click()
@@ -305,26 +312,11 @@ function DocumentsTab({ showToast }: { showToast: (msg: string, type?: 'success'
                 <button
                   onClick={async () => {
                     showToast(`Downloading ${doc.name}...`, 'info')
-                    const content = `Document: ${doc.name}\nType: ${doc.type}\nCategory: ${doc.category}\nVersion: ${doc.version}\nUploaded by: ${doc.uploadedBy}\nDate: ${doc.uploadDate}\nSize: ${doc.size}\n\n[Demo document content — connect Supabase Storage for real files]`
-                    const blob = new Blob([content], { type: 'application/octet-stream' })
                     const ext = doc.type.toLowerCase() === 'pdf' ? 'pdf' : doc.type.toLowerCase() === 'xlsx' ? 'xlsx' : doc.type.toLowerCase() === 'docx' ? 'docx' : 'txt'
                     const filename = `${doc.name.replace(/[^a-zA-Z0-9 ]/g, '')}.${ext}`
-                    if ('showSaveFilePicker' in window) {
-                      try {
-                        const handle = await (window as any).showSaveFilePicker({ suggestedName: filename })
-                        const writable = await handle.createWritable()
-                        await writable.write(blob)
-                        await writable.close()
-                        showToast(`Saved ${doc.name}`, 'success')
-                        return
-                      } catch (err: any) { if (err?.name === 'AbortError') return }
-                    }
-                    const url = URL.createObjectURL(blob)
-                    const a = document.createElement('a')
-                    a.href = url; a.download = filename
-                    document.body.appendChild(a); a.click()
-                    document.body.removeChild(a); URL.revokeObjectURL(url)
-                    showToast(`Downloaded ${doc.name}`, 'success')
+                    const content = `Document: ${doc.name}\nType: ${doc.type}\nCategory: ${doc.category}\nVersion: ${doc.version}\nUploaded by: ${doc.uploadedBy}\nDate: ${doc.uploadDate}\nSize: ${doc.size}`
+                    const blob = new Blob([content], { type: 'application/octet-stream' })
+                    await saveBlobAs(blob, filename, showToast as any)
                   }}
                   className="flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-[11px] font-medium text-gray-400 bg-white/[0.03] hover:bg-white/[0.06] transition-colors"
                 >

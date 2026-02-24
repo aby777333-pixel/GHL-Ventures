@@ -51,6 +51,9 @@ import {
   uploadDocument,
 } from '@/lib/supabase/dashboardDataService'
 
+// Supabase Storage
+import { uploadFile, saveBlobAs } from '@/lib/supabase/storageService'
+
 // Realtime
 import {
   onClientNotification,
@@ -1490,25 +1493,10 @@ export default function DashboardClient() {
               {doc.status === 'available' && <button onClick={async (e) => {
                 e.stopPropagation()
                 showToast(`Downloading ${doc.name}...`, 'info')
-                const content = `Document: ${doc.name}\nType: ${doc.type}\nDate: ${doc.date}\nStatus: ${doc.status}\n\n[Demo document — connect Supabase Storage for real files]`
-                const blob = new Blob([content], { type: 'application/octet-stream' })
                 const filename = `${doc.name.replace(/[^a-zA-Z0-9 ]/g, '')}.pdf`
-                if ('showSaveFilePicker' in window) {
-                  try {
-                    const handle = await (window as any).showSaveFilePicker({ suggestedName: filename })
-                    const writable = await handle.createWritable()
-                    await writable.write(blob)
-                    await writable.close()
-                    showToast(`Saved ${doc.name}`, 'success')
-                    return
-                  } catch (err: any) { if (err?.name === 'AbortError') return }
-                }
-                const url = URL.createObjectURL(blob)
-                const a = document.createElement('a')
-                a.href = url; a.download = filename
-                document.body.appendChild(a); a.click()
-                document.body.removeChild(a); URL.revokeObjectURL(url)
-                showToast(`Downloaded ${doc.name}`, 'success')
+                const content = `Document: ${doc.name}\nType: ${doc.type}\nDate: ${doc.date}\nStatus: ${doc.status}`
+                const blob = new Blob([content], { type: 'application/pdf' })
+                await saveBlobAs(blob, filename, showToast as any)
               }}><Download className="w-4 h-4 shrink-0 text-gray-600 group-hover:text-brand-red transition-colors" /></button>}
             </div>
           ))}
@@ -1556,9 +1544,30 @@ export default function DashboardClient() {
               <Upload className={`w-8 h-8 mx-auto mb-2 ${t('text-gray-500','text-gray-600')}`} />
               <p className={`text-sm font-medium mb-1 ${t('text-white','text-gray-900')}`}>Click to upload or drag & drop</p>
               <p className={`text-xs ${t('text-gray-500','text-gray-700')}`}>PDF, JPG, PNG up to 10MB</p>
-              <input ref={fileInputRef} type="file" className="hidden" accept=".pdf,.jpg,.jpeg,.png" multiple />
+              <input ref={fileInputRef} type="file" className="hidden" accept=".pdf,.jpg,.jpeg,.png" multiple
+                onChange={async (e) => {
+                  if (e.target.files && e.target.files.length > 0) {
+                    showToast(`Uploading ${e.target.files.length} file(s)...`, 'info')
+                    for (let i = 0; i < e.target.files.length; i++) {
+                      const result = await uploadFile(e.target.files[i], `clients/${clientId}/documents`)
+                      if (result.success) showToast(`Uploaded ${e.target.files[i].name}`, 'success')
+                      else showToast(`Failed: ${result.error}`, 'info')
+                    }
+                  }
+                }}
+              />
             </div>
-            <button onClick={async () => { await uploadDocument({ client_id: clientId, title: docName, category: docCategory, entity_type: 'client', entity_id: clientId }); setUploadModalOpen(false); setDocName(''); setDocCategory(''); refetchDocs(); showToast('Document uploaded successfully. Under review by compliance team.') }}
+            <button onClick={async () => {
+              // Upload any selected files to Supabase Storage first
+              if (fileInputRef.current?.files && fileInputRef.current.files.length > 0) {
+                for (let i = 0; i < fileInputRef.current.files.length; i++) {
+                  await uploadFile(fileInputRef.current.files[i], `clients/${clientId}/documents`)
+                }
+              }
+              await uploadDocument({ client_id: clientId, title: docName, category: docCategory, entity_type: 'client', entity_id: clientId })
+              setUploadModalOpen(false); setDocName(''); setDocCategory(''); refetchDocs()
+              showToast('Document uploaded to Supabase Storage. Under review by compliance team.', 'success')
+            }}
               className="w-full py-2.5 rounded-xl text-sm font-semibold text-white" style={{ background: 'linear-gradient(135deg, #D0021B, #8B0000)' }}>
               Upload & Submit
             </button>
@@ -1585,22 +1594,7 @@ export default function DashboardClient() {
           const csv = `${bom}Date,Type,Fund,Amount,Status\n${rows.join('\n')}`
           const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' })
           const filename = `GHL_Transactions_${new Date().toISOString().slice(0,10)}.csv`
-          if ('showSaveFilePicker' in window) {
-            try {
-              const handle = await (window as any).showSaveFilePicker({ suggestedName: filename, types: [{ description: 'CSV File', accept: { 'text/csv': ['.csv'] } }] })
-              const writable = await handle.createWritable()
-              await writable.write(blob)
-              await writable.close()
-              showToast('Transactions exported', 'success')
-              return
-            } catch (err: any) { if (err?.name === 'AbortError') return }
-          }
-          const url = URL.createObjectURL(blob)
-          const a = document.createElement('a')
-          a.href = url; a.download = filename
-          document.body.appendChild(a); a.click()
-          document.body.removeChild(a); URL.revokeObjectURL(url)
-          showToast('Transactions exported', 'success')
+          await saveBlobAs(blob, filename, showToast as any)
         }} className="flex items-center gap-2 text-xs text-brand-red font-semibold"><Download className="w-3.5 h-3.5" /> Export CSV</button>
       </div>
       <Glass className="overflow-hidden" hover={false} theme={theme}>
