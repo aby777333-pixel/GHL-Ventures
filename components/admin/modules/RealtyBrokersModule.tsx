@@ -6,7 +6,7 @@ import {
   UserCheck, AlertCircle, Plus, Search, Filter, Eye, Edit3,
   Clock, CheckCircle2, XCircle, ArrowUpRight, ArrowDownRight,
   Globe, MessageSquare, FileText, ExternalLink, Tag, Users,
-  BarChart3, Briefcase, Home, Factory, Layers,
+  BarChart3, Briefcase, Home, Factory, Layers, Upload,
 } from 'lucide-react'
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
@@ -21,6 +21,7 @@ import {
   REALTY_BROKERS_DATA, BROKER_INQUIRIES_DATA,
 } from '@/lib/admin/adminMockData'
 import { formatINR } from '@/lib/admin/adminHooks'
+import { uploadFile } from '@/lib/supabase/storageService'
 import type { RealtyBroker, BrokerInquiry } from '@/lib/admin/adminTypes'
 
 // ── Status Config ──────────────────────────────────────────────────
@@ -93,6 +94,44 @@ const SUB_TABS = [
 export default function RealtyBrokersModule({ subTab, navigate, showToast }: RealtyBrokersModuleProps) {
   const [selectedBroker, setSelectedBroker] = useState<RealtyBroker | null>(null)
   const [selectedInquiry, setSelectedInquiry] = useState<BrokerInquiry | null>(null)
+  const [addBrokerOpen, setAddBrokerOpen] = useState(false)
+  const [brokerForm, setBrokerForm] = useState({
+    name: '',
+    email: '',
+    phone: '',
+    company: '',
+    reraId: '',
+    city: 'Chennai',
+    specialization: 'residential',
+    experience: '',
+    commissionRate: '',
+    status: 'pending-verification' as string,
+  })
+
+  const handleBrokerFormChange = (field: string, value: string) => {
+    setBrokerForm(prev => ({ ...prev, [field]: value }))
+  }
+
+  const handleBrokerSubmit = () => {
+    if (!brokerForm.name || !brokerForm.email || !brokerForm.phone) {
+      showToast('Please fill in all required fields', 'error')
+      return
+    }
+    showToast('Broker registered successfully', 'success')
+    setAddBrokerOpen(false)
+    setBrokerForm({
+      name: '',
+      email: '',
+      phone: '',
+      company: '',
+      reraId: '',
+      city: 'Chennai',
+      specialization: 'residential',
+      experience: '',
+      commissionRate: '',
+      status: 'pending-verification',
+    })
+  }
 
   // ── KPIs ────────────────────────────────────────────────────────
   const kpis = useMemo(() => {
@@ -116,7 +155,7 @@ export default function RealtyBrokersModule({ subTab, navigate, showToast }: Rea
         </div>
         <div className="flex items-center gap-2">
           <button
-            onClick={() => showToast('New broker registration form would open here', 'info')}
+            onClick={() => setAddBrokerOpen(true)}
             className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-medium text-white bg-brand-red/20 border border-brand-red/30 hover:bg-brand-red/30 transition-colors"
           >
             <Plus className="w-4 h-4" />
@@ -329,6 +368,169 @@ export default function RealtyBrokersModule({ subTab, navigate, showToast }: Rea
           </div>
         </AdminModal>
       )}
+
+      {/* Add Broker Modal */}
+      <AdminModal
+        isOpen={addBrokerOpen}
+        onClose={() => setAddBrokerOpen(false)}
+        title="Register New Broker"
+        maxWidth="max-w-3xl"
+        footer={
+          <div className="flex justify-end gap-3">
+            <button onClick={() => setAddBrokerOpen(false)} className="px-4 py-2 rounded-xl text-sm font-medium text-gray-400 hover:text-white hover:bg-white/[0.06] transition-colors">Cancel</button>
+            <button onClick={handleBrokerSubmit} className="px-5 py-2 rounded-xl text-sm font-medium text-white bg-brand-red hover:bg-red-600 transition-colors">Register Broker</button>
+          </div>
+        }
+      >
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label className="block text-xs font-medium text-gray-400 mb-1.5">Broker Name *</label>
+            <input
+              type="text"
+              value={brokerForm.name}
+              onChange={(e) => handleBrokerFormChange('name', e.target.value)}
+              placeholder="Full name"
+              className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-brand-red/40 focus:ring-1 focus:ring-brand-red/20"
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-gray-400 mb-1.5">Email *</label>
+            <input
+              type="email"
+              value={brokerForm.email}
+              onChange={(e) => handleBrokerFormChange('email', e.target.value)}
+              placeholder="broker@example.com"
+              className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-brand-red/40 focus:ring-1 focus:ring-brand-red/20"
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-gray-400 mb-1.5">Phone *</label>
+            <input
+              type="tel"
+              value={brokerForm.phone}
+              onChange={(e) => handleBrokerFormChange('phone', e.target.value)}
+              placeholder="+91 98765 43210"
+              className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-brand-red/40 focus:ring-1 focus:ring-brand-red/20"
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-gray-400 mb-1.5">Company Name</label>
+            <input
+              type="text"
+              value={brokerForm.company}
+              onChange={(e) => handleBrokerFormChange('company', e.target.value)}
+              placeholder="Brokerage firm name"
+              className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-brand-red/40 focus:ring-1 focus:ring-brand-red/20"
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-gray-400 mb-1.5">RERA Registration ID</label>
+            <input
+              type="text"
+              value={brokerForm.reraId}
+              onChange={(e) => handleBrokerFormChange('reraId', e.target.value)}
+              placeholder="TN/REA/..."
+              className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-brand-red/40 focus:ring-1 focus:ring-brand-red/20"
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-gray-400 mb-1.5">City</label>
+            <select
+              value={brokerForm.city}
+              onChange={(e) => handleBrokerFormChange('city', e.target.value)}
+              className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-brand-red/40 focus:ring-1 focus:ring-brand-red/20"
+            >
+              <option value="Chennai">Chennai</option>
+              <option value="Bangalore">Bangalore</option>
+              <option value="Coimbatore">Coimbatore</option>
+              <option value="Hosur">Hosur</option>
+              <option value="Hyderabad">Hyderabad</option>
+              <option value="Mumbai">Mumbai</option>
+              <option value="Pune">Pune</option>
+            </select>
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-gray-400 mb-1.5">Specialization</label>
+            <select
+              value={brokerForm.specialization}
+              onChange={(e) => handleBrokerFormChange('specialization', e.target.value)}
+              className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-brand-red/40 focus:ring-1 focus:ring-brand-red/20"
+            >
+              <option value="residential">Residential</option>
+              <option value="commercial">Commercial</option>
+              <option value="land">Land</option>
+              <option value="industrial">Industrial</option>
+              <option value="mixed-use">Mixed-Use</option>
+            </select>
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-gray-400 mb-1.5">Experience (years)</label>
+            <input
+              type="number"
+              value={brokerForm.experience}
+              onChange={(e) => handleBrokerFormChange('experience', e.target.value)}
+              placeholder="e.g. 5"
+              min="0"
+              className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-brand-red/40 focus:ring-1 focus:ring-brand-red/20"
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-gray-400 mb-1.5">Commission Rate (%)</label>
+            <input
+              type="number"
+              value={brokerForm.commissionRate}
+              onChange={(e) => handleBrokerFormChange('commissionRate', e.target.value)}
+              placeholder="e.g. 2.5"
+              min="0"
+              step="0.1"
+              className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-brand-red/40 focus:ring-1 focus:ring-brand-red/20"
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-gray-400 mb-1.5">Status</label>
+            <select
+              value={brokerForm.status}
+              onChange={(e) => handleBrokerFormChange('status', e.target.value)}
+              className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-brand-red/40 focus:ring-1 focus:ring-brand-red/20"
+            >
+              <option value="active">Active</option>
+              <option value="inactive">Inactive</option>
+              <option value="pending-verification">Pending Verification</option>
+              <option value="suspended">Suspended</option>
+            </select>
+          </div>
+          <div className="sm:col-span-2">
+            <label className="block text-xs font-medium text-gray-400 mb-1.5">Attach RERA Certificate & Documents</label>
+            <button
+              type="button"
+              onClick={() => {
+                const inp = document.createElement('input')
+                inp.type = 'file'
+                inp.multiple = true
+                inp.accept = '.pdf,.docx,.xlsx,.jpg,.jpeg,.png,.gif,.webp'
+                inp.onchange = async () => {
+                  if (inp.files && inp.files.length > 0) {
+                    showToast(`Uploading ${inp.files.length} file(s)...`, 'info')
+                    let ok = 0, fail = 0
+                    for (let i = 0; i < inp.files.length; i++) {
+                      const result = await uploadFile(inp.files[i], 'admin/sales')
+                      if (result.success) ok++; else fail++
+                    }
+                    if (ok > 0) showToast(`${ok} file(s) uploaded to Sales & CRM`, 'success')
+                    if (fail > 0) showToast(`${fail} file(s) failed`, 'error')
+                  }
+                }
+                inp.click()
+              }}
+              className="flex items-center gap-2 px-3 py-2.5 rounded-xl text-sm font-medium text-gray-400 bg-white/[0.04] border border-dashed border-white/[0.12] hover:bg-white/[0.08] hover:border-white/[0.2] transition-colors w-full justify-center"
+            >
+              <Upload className="w-4 h-4" />
+              Upload RERA Certificates & Documents
+            </button>
+            <p className="text-[10px] text-gray-600 mt-1">Stored in File Repository &gt; Sales &amp; CRM</p>
+          </div>
+        </div>
+      </AdminModal>
     </div>
   )
 }
@@ -469,6 +671,43 @@ function InquiriesView({ onSelect, showToast }: {
   onSelect: (i: BrokerInquiry) => void
   showToast: (msg: string, type?: 'success' | 'error' | 'info' | 'warning') => void
 }) {
+  const [addInquiryOpen, setAddInquiryOpen] = useState(false)
+  const [inquiryForm, setInquiryForm] = useState({
+    clientName: '',
+    clientPhone: '',
+    clientEmail: '',
+    propertyType: 'Residential Apartment',
+    preferredLocation: '',
+    budgetRange: '',
+    priority: 'medium' as string,
+    notes: '',
+    assignedBroker: '',
+  })
+
+  const handleInquiryFormChange = (field: string, value: string) => {
+    setInquiryForm(prev => ({ ...prev, [field]: value }))
+  }
+
+  const handleInquirySubmit = () => {
+    if (!inquiryForm.clientName) {
+      showToast('Please enter the client name', 'error')
+      return
+    }
+    showToast('Inquiry created successfully', 'success')
+    setAddInquiryOpen(false)
+    setInquiryForm({
+      clientName: '',
+      clientPhone: '',
+      clientEmail: '',
+      propertyType: 'Residential Apartment',
+      preferredLocation: '',
+      budgetRange: '',
+      priority: 'medium',
+      notes: '',
+      assignedBroker: '',
+    })
+  }
+
   const columns: Column<BrokerInquiry>[] = [
     {
       key: 'id',
@@ -551,28 +790,146 @@ function InquiriesView({ onSelect, showToast }: {
   ]
 
   return (
-    <AdminGlass hover={false}>
-      <AdminDataTable<BrokerInquiry>
-        columns={columns}
-        data={BROKER_INQUIRIES_DATA}
-        searchable
-        searchPlaceholder="Search inquiries..."
-        searchKeys={['subject', 'brokerName', 'type', 'location']}
-        onRowClick={onSelect}
-        exportable
-        title="Broker Inquiries"
-        pageSize={10}
-        actions={
-          <button
-            onClick={() => showToast('New inquiry form would open here', 'info')}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-white bg-brand-red/20 border border-brand-red/30 hover:bg-brand-red/30 transition-colors"
-          >
-            <Plus className="w-3 h-3" />
-            New Inquiry
-          </button>
+    <>
+      <AdminGlass hover={false}>
+        <AdminDataTable<BrokerInquiry>
+          columns={columns}
+          data={BROKER_INQUIRIES_DATA}
+          searchable
+          searchPlaceholder="Search inquiries..."
+          searchKeys={['subject', 'brokerName', 'type', 'location']}
+          onRowClick={onSelect}
+          exportable
+          title="Broker Inquiries"
+          pageSize={10}
+          actions={
+            <button
+              onClick={() => setAddInquiryOpen(true)}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-white bg-brand-red/20 border border-brand-red/30 hover:bg-brand-red/30 transition-colors"
+            >
+              <Plus className="w-3 h-3" />
+              New Inquiry
+            </button>
+          }
+        />
+      </AdminGlass>
+
+      {/* Add Inquiry Modal */}
+      <AdminModal
+        isOpen={addInquiryOpen}
+        onClose={() => setAddInquiryOpen(false)}
+        title="Create New Inquiry"
+        maxWidth="max-w-3xl"
+        footer={
+          <div className="flex justify-end gap-3">
+            <button onClick={() => setAddInquiryOpen(false)} className="px-4 py-2 rounded-xl text-sm font-medium text-gray-400 hover:text-white hover:bg-white/[0.06] transition-colors">Cancel</button>
+            <button onClick={handleInquirySubmit} className="px-5 py-2 rounded-xl text-sm font-medium text-white bg-brand-red hover:bg-red-600 transition-colors">Create Inquiry</button>
+          </div>
         }
-      />
-    </AdminGlass>
+      >
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label className="block text-xs font-medium text-gray-400 mb-1.5">Client Name *</label>
+            <input
+              type="text"
+              value={inquiryForm.clientName}
+              onChange={(e) => handleInquiryFormChange('clientName', e.target.value)}
+              placeholder="Client full name"
+              className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-brand-red/40 focus:ring-1 focus:ring-brand-red/20"
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-gray-400 mb-1.5">Client Phone</label>
+            <input
+              type="tel"
+              value={inquiryForm.clientPhone}
+              onChange={(e) => handleInquiryFormChange('clientPhone', e.target.value)}
+              placeholder="+91 98765 43210"
+              className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-brand-red/40 focus:ring-1 focus:ring-brand-red/20"
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-gray-400 mb-1.5">Client Email</label>
+            <input
+              type="email"
+              value={inquiryForm.clientEmail}
+              onChange={(e) => handleInquiryFormChange('clientEmail', e.target.value)}
+              placeholder="client@example.com"
+              className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-brand-red/40 focus:ring-1 focus:ring-brand-red/20"
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-gray-400 mb-1.5">Property Type</label>
+            <select
+              value={inquiryForm.propertyType}
+              onChange={(e) => handleInquiryFormChange('propertyType', e.target.value)}
+              className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-brand-red/40 focus:ring-1 focus:ring-brand-red/20"
+            >
+              <option value="Residential Apartment">Residential Apartment</option>
+              <option value="Commercial Office">Commercial Office</option>
+              <option value="Land Plot">Land Plot</option>
+              <option value="Villa">Villa</option>
+              <option value="Industrial">Industrial</option>
+            </select>
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-gray-400 mb-1.5">Preferred Location</label>
+            <input
+              type="text"
+              value={inquiryForm.preferredLocation}
+              onChange={(e) => handleInquiryFormChange('preferredLocation', e.target.value)}
+              placeholder="e.g. OMR, Chennai"
+              className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-brand-red/40 focus:ring-1 focus:ring-brand-red/20"
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-gray-400 mb-1.5">Budget Range</label>
+            <input
+              type="text"
+              value={inquiryForm.budgetRange}
+              onChange={(e) => handleInquiryFormChange('budgetRange', e.target.value)}
+              placeholder="e.g. 50L - 1Cr"
+              className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-brand-red/40 focus:ring-1 focus:ring-brand-red/20"
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-gray-400 mb-1.5">Priority</label>
+            <select
+              value={inquiryForm.priority}
+              onChange={(e) => handleInquiryFormChange('priority', e.target.value)}
+              className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-brand-red/40 focus:ring-1 focus:ring-brand-red/20"
+            >
+              <option value="high">High</option>
+              <option value="medium">Medium</option>
+              <option value="low">Low</option>
+            </select>
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-gray-400 mb-1.5">Assigned Broker</label>
+            <select
+              value={inquiryForm.assignedBroker}
+              onChange={(e) => handleInquiryFormChange('assignedBroker', e.target.value)}
+              className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-brand-red/40 focus:ring-1 focus:ring-brand-red/20"
+            >
+              <option value="">Select a broker...</option>
+              {REALTY_BROKERS_DATA.map(broker => (
+                <option key={broker.id} value={broker.name}>{broker.name} — {broker.city}</option>
+              ))}
+            </select>
+          </div>
+          <div className="sm:col-span-2">
+            <label className="block text-xs font-medium text-gray-400 mb-1.5">Notes</label>
+            <textarea
+              value={inquiryForm.notes}
+              onChange={(e) => handleInquiryFormChange('notes', e.target.value)}
+              placeholder="Additional details about the inquiry..."
+              rows={3}
+              className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-brand-red/40 focus:ring-1 focus:ring-brand-red/20 resize-none"
+            />
+          </div>
+        </div>
+      </AdminModal>
+    </>
   )
 }
 

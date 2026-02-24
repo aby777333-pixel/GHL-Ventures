@@ -141,6 +141,45 @@ export default function AssetDocModule({ subTab, navigate, showToast }: AssetDoc
 
 // ── Asset Inventory Tab ─────────────────────────────────────────
 function AssetInventoryTab({ showToast }: { showToast: (msg: string, type?: 'success' | 'error' | 'info' | 'warning') => void }) {
+  const [addAssetOpen, setAddAssetOpen] = useState(false)
+  const [assetForm, setAssetForm] = useState({
+    name: '',
+    category: 'laptop' as string,
+    serialNumber: '',
+    assignedTo: '',
+    purchaseValue: '',
+    purchaseDate: '',
+    warrantyExpiry: '',
+    status: 'active' as string,
+    location: '',
+    notes: '',
+  })
+
+  const handleAssetFormChange = (field: string, value: string) => {
+    setAssetForm(prev => ({ ...prev, [field]: value }))
+  }
+
+  const handleAssetSubmit = () => {
+    if (!assetForm.name.trim()) {
+      showToast('Asset name is required', 'error')
+      return
+    }
+    showToast('Asset registered successfully', 'success')
+    setAddAssetOpen(false)
+    setAssetForm({
+      name: '',
+      category: 'laptop',
+      serialNumber: '',
+      assignedTo: '',
+      purchaseValue: '',
+      purchaseDate: '',
+      warrantyExpiry: '',
+      status: 'active',
+      location: '',
+      notes: '',
+    })
+  }
+
   const getCategoryIcon = (cat: AssetCategory) => {
     switch (cat) {
       case 'digital': return Globe
@@ -203,25 +242,220 @@ function AssetInventoryTab({ showToast }: { showToast: (msg: string, type?: 'suc
   ]
 
   return (
-    <AdminGlass padding="p-4">
-      <AdminDataTable<Asset>
-        columns={columns}
-        data={ASSETS_DATA}
-        searchKeys={['name', 'category', 'assignedTo']}
-        searchPlaceholder="Search assets..."
-        exportable
-        title="Asset Inventory"
-        actions={
+    <>
+      <AdminGlass padding="p-4">
+        <AdminDataTable<Asset>
+          columns={columns}
+          data={ASSETS_DATA}
+          searchKeys={['name', 'category', 'assignedTo']}
+          searchPlaceholder="Search assets..."
+          exportable
+          title="Asset Inventory"
+          actions={
+            <button
+              onClick={() => setAddAssetOpen(true)}
+              className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-white bg-brand-red/20 border border-brand-red/30 rounded-lg hover:bg-brand-red/30 transition-colors"
+            >
+              <Plus className="w-3.5 h-3.5" />
+              Add Asset
+            </button>
+          }
+        />
+      </AdminGlass>
+
+      <AdminModal
+        isOpen={addAssetOpen}
+        onClose={() => setAddAssetOpen(false)}
+        title="Register New Asset"
+        maxWidth="max-w-lg"
+      >
+        <div className="space-y-4">
+          {/* Asset Name */}
+          <div>
+            <label className="block text-xs font-medium text-gray-400 mb-1.5">Asset Name *</label>
+            <input
+              type="text"
+              value={assetForm.name}
+              onChange={(e) => handleAssetFormChange('name', e.target.value)}
+              placeholder="e.g. MacBook Pro 16-inch"
+              className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-brand-red/40 focus:ring-1 focus:ring-brand-red/20"
+            />
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {/* Category */}
+            <div>
+              <label className="block text-xs font-medium text-gray-400 mb-1.5">Category</label>
+              <select
+                value={assetForm.category}
+                onChange={(e) => handleAssetFormChange('category', e.target.value)}
+                className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-brand-red/40 focus:ring-1 focus:ring-brand-red/20"
+              >
+                <option value="laptop">Laptop</option>
+                <option value="desktop">Desktop</option>
+                <option value="phone">Phone</option>
+                <option value="tablet">Tablet</option>
+                <option value="monitor">Monitor</option>
+                <option value="server">Server</option>
+                <option value="networking">Networking</option>
+                <option value="software">Software</option>
+                <option value="furniture">Furniture</option>
+                <option value="vehicle">Vehicle</option>
+                <option value="other">Other</option>
+              </select>
+            </div>
+
+            {/* Serial Number */}
+            <div>
+              <label className="block text-xs font-medium text-gray-400 mb-1.5">Serial Number</label>
+              <input
+                type="text"
+                value={assetForm.serialNumber}
+                onChange={(e) => handleAssetFormChange('serialNumber', e.target.value)}
+                placeholder="e.g. SN-2025-001"
+                className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-brand-red/40 focus:ring-1 focus:ring-brand-red/20"
+              />
+            </div>
+
+            {/* Assigned To */}
+            <div>
+              <label className="block text-xs font-medium text-gray-400 mb-1.5">Assigned To</label>
+              <input
+                type="text"
+                value={assetForm.assignedTo}
+                onChange={(e) => handleAssetFormChange('assignedTo', e.target.value)}
+                placeholder="e.g. Karthik Sundaram"
+                className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-brand-red/40 focus:ring-1 focus:ring-brand-red/20"
+              />
+            </div>
+
+            {/* Purchase Value */}
+            <div>
+              <label className="block text-xs font-medium text-gray-400 mb-1.5">Purchase Value</label>
+              <div className="relative">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-gray-500 font-medium">INR</span>
+                <input
+                  type="number"
+                  value={assetForm.purchaseValue}
+                  onChange={(e) => handleAssetFormChange('purchaseValue', e.target.value)}
+                  placeholder="0"
+                  className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl pl-11 pr-3 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-brand-red/40 focus:ring-1 focus:ring-brand-red/20"
+                />
+              </div>
+            </div>
+
+            {/* Purchase Date */}
+            <div>
+              <label className="block text-xs font-medium text-gray-400 mb-1.5">Purchase Date</label>
+              <input
+                type="date"
+                value={assetForm.purchaseDate}
+                onChange={(e) => handleAssetFormChange('purchaseDate', e.target.value)}
+                className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-brand-red/40 focus:ring-1 focus:ring-brand-red/20"
+              />
+            </div>
+
+            {/* Warranty Expiry Date */}
+            <div>
+              <label className="block text-xs font-medium text-gray-400 mb-1.5">Warranty Expiry Date</label>
+              <input
+                type="date"
+                value={assetForm.warrantyExpiry}
+                onChange={(e) => handleAssetFormChange('warrantyExpiry', e.target.value)}
+                className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-brand-red/40 focus:ring-1 focus:ring-brand-red/20"
+              />
+            </div>
+
+            {/* Status */}
+            <div>
+              <label className="block text-xs font-medium text-gray-400 mb-1.5">Status</label>
+              <select
+                value={assetForm.status}
+                onChange={(e) => handleAssetFormChange('status', e.target.value)}
+                className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-brand-red/40 focus:ring-1 focus:ring-brand-red/20"
+              >
+                <option value="active">Active</option>
+                <option value="in-maintenance">In Maintenance</option>
+                <option value="retired">Retired</option>
+                <option value="disposed">Disposed</option>
+              </select>
+            </div>
+
+            {/* Location */}
+            <div>
+              <label className="block text-xs font-medium text-gray-400 mb-1.5">Location</label>
+              <input
+                type="text"
+                value={assetForm.location}
+                onChange={(e) => handleAssetFormChange('location', e.target.value)}
+                placeholder="e.g. HQ — Floor 3"
+                className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-brand-red/40 focus:ring-1 focus:ring-brand-red/20"
+              />
+            </div>
+          </div>
+
+          {/* Notes */}
+          <div>
+            <label className="block text-xs font-medium text-gray-400 mb-1.5">Notes</label>
+            <textarea
+              value={assetForm.notes}
+              onChange={(e) => handleAssetFormChange('notes', e.target.value)}
+              placeholder="Additional notes about this asset..."
+              rows={3}
+              className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-brand-red/40 focus:ring-1 focus:ring-brand-red/20 resize-none"
+            />
+          </div>
+
+          {/* Attach Asset Documents */}
+          <div className="sm:col-span-2">
+            <label className="block text-xs font-medium text-gray-400 mb-1.5">Attach Asset Documents</label>
+            <button
+              type="button"
+              onClick={() => {
+                const inp = document.createElement('input')
+                inp.type = 'file'
+                inp.multiple = true
+                inp.accept = '.pdf,.docx,.xlsx,.jpg,.jpeg,.png,.gif,.webp'
+                inp.onchange = async () => {
+                  if (inp.files && inp.files.length > 0) {
+                    showToast(`Uploading ${inp.files.length} file(s)...`, 'info')
+                    let ok = 0, fail = 0
+                    for (let i = 0; i < inp.files.length; i++) {
+                      const result = await uploadFile(inp.files[i], 'admin/assets')
+                      if (result.success) ok++; else fail++
+                    }
+                    if (ok > 0) showToast(`${ok} file(s) uploaded to Assets`, 'success')
+                    if (fail > 0) showToast(`${fail} file(s) failed`, 'error')
+                  }
+                }
+                inp.click()
+              }}
+              className="flex items-center gap-2 px-3 py-2.5 rounded-xl text-sm font-medium text-gray-400 bg-white/[0.04] border border-dashed border-white/[0.12] hover:bg-white/[0.08] hover:border-white/[0.2] transition-colors w-full justify-center"
+            >
+              <Upload className="w-4 h-4" />
+              Upload Invoices, Warranties & Photos
+            </button>
+            <p className="text-[10px] text-gray-600 mt-1">Stored in File Repository &gt; Assets</p>
+          </div>
+        </div>
+
+        {/* Footer actions */}
+        <div className="flex justify-end gap-3 mt-6 pt-4 border-t border-white/[0.06]">
           <button
-            onClick={() => showToast('Asset registration form — fill in details to add a new asset', 'info')}
-            className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-white bg-brand-red/20 border border-brand-red/30 rounded-lg hover:bg-brand-red/30 transition-colors"
+            onClick={() => setAddAssetOpen(false)}
+            className="px-4 py-2 rounded-xl text-sm font-medium text-gray-400 hover:text-white hover:bg-white/[0.06] transition-colors"
           >
-            <Plus className="w-3.5 h-3.5" />
-            Add Asset
+            Cancel
           </button>
-        }
-      />
-    </AdminGlass>
+          <button
+            onClick={handleAssetSubmit}
+            className="px-5 py-2 rounded-xl text-sm font-medium text-white bg-brand-red hover:bg-red-600 transition-colors"
+          >
+            Register Asset
+          </button>
+        </div>
+      </AdminModal>
+    </>
   )
 }
 

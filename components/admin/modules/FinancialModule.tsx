@@ -5,7 +5,7 @@ import {
   IndianRupee, TrendingUp, TrendingDown, Receipt, CreditCard,
   FileText, PieChart, ArrowUpRight, ArrowDownRight, Eye,
   CheckCircle2, Clock, AlertCircle, Calendar, Download,
-  BarChart3, Wallet, Banknote, CircleDollarSign, Building,
+  BarChart3, Wallet, Banknote, CircleDollarSign, Building, Upload,
 } from 'lucide-react'
 import {
   AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid,
@@ -20,7 +20,7 @@ import AdminEmptyState from '../shared/AdminEmptyState'
 import { INVOICES_DATA, EXPENSES_DATA, REVENUE_BREAKDOWN, OVERVIEW_KPIS, COMMISSIONS_DATA } from '@/lib/admin/adminMockData'
 import { formatINR, formatDate } from '@/lib/admin/adminHooks'
 import type { Invoice, Expense, InvoiceStatus, ExpenseCategory } from '@/lib/admin/adminTypes'
-import { saveBlobAs } from '@/lib/supabase/storageService'
+import { saveBlobAs, uploadFile } from '@/lib/supabase/storageService'
 
 // ── Sub-tabs ─────────────────────────────────────────────────────
 const FINANCIAL_TABS = [
@@ -381,6 +381,37 @@ function InvoicesTab({ showToast }: { showToast: (msg: string, type?: 'success' 
 
 // ── Expenses Tab ────────────────────────────────────────────────
 function ExpensesTab({ showToast }: { showToast: (msg: string, type?: 'success' | 'error' | 'info' | 'warning') => void }) {
+  const [addExpenseOpen, setAddExpenseOpen] = useState(false)
+  const [expenseForm, setExpenseForm] = useState({
+    description: '',
+    category: 'operations' as ExpenseCategory,
+    amount: '',
+    date: '',
+    vendor: '',
+    paymentMethod: 'bank-transfer',
+    status: 'pending',
+    notes: '',
+  })
+
+  const handleExpenseSubmit = () => {
+    if (!expenseForm.description || !expenseForm.amount || !expenseForm.date) {
+      showToast('Please fill in all required fields', 'error')
+      return
+    }
+    showToast('Expense recorded successfully', 'success')
+    setAddExpenseOpen(false)
+    setExpenseForm({
+      description: '',
+      category: 'operations',
+      amount: '',
+      date: '',
+      vendor: '',
+      paymentMethod: 'bank-transfer',
+      status: 'pending',
+      notes: '',
+    })
+  }
+
   const getExpenseVariant = (status: string) => {
     switch (status) {
       case 'paid': return 'success' as const
@@ -457,25 +488,194 @@ function ExpensesTab({ showToast }: { showToast: (msg: string, type?: 'success' 
   ]
 
   return (
-    <AdminGlass padding="p-4">
-      <AdminDataTable<Expense>
-        columns={columns}
-        data={EXPENSES_DATA}
-        searchKeys={['description', 'category', 'submittedBy']}
-        searchPlaceholder="Search expenses..."
-        exportable
-        title="Expense Tracker"
-        actions={
+    <>
+      <AdminGlass padding="p-4">
+        <AdminDataTable<Expense>
+          columns={columns}
+          data={EXPENSES_DATA}
+          searchKeys={['description', 'category', 'submittedBy']}
+          searchPlaceholder="Search expenses..."
+          exportable
+          title="Expense Tracker"
+          actions={
+            <button
+              onClick={() => setAddExpenseOpen(true)}
+              className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-white bg-brand-red/20 border border-brand-red/30 rounded-lg hover:bg-brand-red/30 transition-colors"
+            >
+              <CreditCard className="w-3.5 h-3.5" />
+              Add Expense
+            </button>
+          }
+        />
+      </AdminGlass>
+
+      {/* Add Expense Modal */}
+      <AdminModal
+        isOpen={addExpenseOpen}
+        onClose={() => setAddExpenseOpen(false)}
+        title="Add New Expense"
+        maxWidth="max-w-2xl"
+      >
+        <div className="space-y-4">
+          {/* Row 1: Description (full width) */}
+          <div>
+            <label className="block text-xs font-medium text-gray-400 mb-1.5">Description *</label>
+            <input
+              type="text"
+              value={expenseForm.description}
+              onChange={(e) => setExpenseForm(f => ({ ...f, description: e.target.value }))}
+              placeholder="e.g. Office furniture purchase"
+              className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-brand-red/40 focus:ring-1 focus:ring-brand-red/20"
+            />
+          </div>
+
+          {/* Row 2: Category + Amount */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-xs font-medium text-gray-400 mb-1.5">Category *</label>
+              <select
+                value={expenseForm.category}
+                onChange={(e) => setExpenseForm(f => ({ ...f, category: e.target.value as ExpenseCategory }))}
+                className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-brand-red/40 focus:ring-1 focus:ring-brand-red/20"
+              >
+                <option value="operations">Office Supplies</option>
+                <option value="travel">Travel</option>
+                <option value="technology">Software &amp; Licenses</option>
+                <option value="legal">Professional Services</option>
+                <option value="marketing">Marketing &amp; Advertising</option>
+                <option value="hr">Utilities</option>
+                <option value="operations">Rent</option>
+                <option value="legal">Insurance</option>
+                <option value="hr">Training &amp; Development</option>
+                <option value="operations">Miscellaneous</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-400 mb-1.5">Amount (INR) *</label>
+              <div className="relative">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-gray-500">₹</span>
+                <input
+                  type="number"
+                  value={expenseForm.amount}
+                  onChange={(e) => setExpenseForm(f => ({ ...f, amount: e.target.value }))}
+                  placeholder="0.00"
+                  min="0"
+                  step="0.01"
+                  className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl pl-7 pr-3 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-brand-red/40 focus:ring-1 focus:ring-brand-red/20"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Row 3: Date + Vendor */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-xs font-medium text-gray-400 mb-1.5">Date *</label>
+              <input
+                type="date"
+                value={expenseForm.date}
+                onChange={(e) => setExpenseForm(f => ({ ...f, date: e.target.value }))}
+                className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-brand-red/40 focus:ring-1 focus:ring-brand-red/20"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-400 mb-1.5">Vendor / Paid To</label>
+              <input
+                type="text"
+                value={expenseForm.vendor}
+                onChange={(e) => setExpenseForm(f => ({ ...f, vendor: e.target.value }))}
+                placeholder="e.g. Amazon, Swiggy"
+                className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-brand-red/40 focus:ring-1 focus:ring-brand-red/20"
+              />
+            </div>
+          </div>
+
+          {/* Row 4: Payment Method + Status */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-xs font-medium text-gray-400 mb-1.5">Payment Method</label>
+              <select
+                value={expenseForm.paymentMethod}
+                onChange={(e) => setExpenseForm(f => ({ ...f, paymentMethod: e.target.value }))}
+                className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-brand-red/40 focus:ring-1 focus:ring-brand-red/20"
+              >
+                <option value="bank-transfer">Bank Transfer</option>
+                <option value="credit-card">Credit Card</option>
+                <option value="cash">Cash</option>
+                <option value="upi">UPI</option>
+                <option value="cheque">Cheque</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-400 mb-1.5">Status</label>
+              <select
+                value={expenseForm.status}
+                onChange={(e) => setExpenseForm(f => ({ ...f, status: e.target.value }))}
+                className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-brand-red/40 focus:ring-1 focus:ring-brand-red/20"
+              >
+                <option value="pending">Pending</option>
+                <option value="approved">Approved</option>
+                <option value="rejected">Rejected</option>
+                <option value="reimbursed">Reimbursed</option>
+              </select>
+            </div>
+          </div>
+
+          {/* Row 5: Notes (full width) */}
+          <div>
+            <label className="block text-xs font-medium text-gray-400 mb-1.5">Notes</label>
+            <textarea
+              value={expenseForm.notes}
+              onChange={(e) => setExpenseForm(f => ({ ...f, notes: e.target.value }))}
+              placeholder="Additional details about this expense..."
+              rows={3}
+              className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-brand-red/40 focus:ring-1 focus:ring-brand-red/20 resize-none"
+            />
+          </div>
+
+          {/* Receipt Upload */}
+          <div>
+            <label className="block text-xs font-medium text-gray-400 mb-1.5">Receipt</label>
+            <button
+              onClick={() => {
+                const input = document.createElement('input')
+                input.type = 'file'
+                input.accept = '.pdf,.jpg,.jpeg,.png,.gif'
+                input.onchange = async () => {
+                  if (input.files?.[0]) {
+                    showToast('Uploading receipt...', 'info')
+                    const result = await uploadFile(input.files[0], 'admin/expenses')
+                    if (result.success) showToast('Receipt uploaded', 'success')
+                    else showToast('Upload failed', 'error')
+                  }
+                }
+                input.click()
+              }}
+              className="flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-medium text-gray-400 bg-white/[0.04] border border-white/[0.06] hover:bg-white/[0.08] transition-colors"
+            >
+              <Upload className="w-4 h-4" />
+              Attach Receipt
+            </button>
+          </div>
+        </div>
+
+        {/* Footer Actions */}
+        <div className="flex justify-end gap-3 mt-6 pt-4 border-t border-white/[0.06]">
           <button
-            onClick={() => showToast('Opening expense registration form...', 'info')}
-            className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-white bg-brand-red/20 border border-brand-red/30 rounded-lg hover:bg-brand-red/30 transition-colors"
+            onClick={() => setAddExpenseOpen(false)}
+            className="px-4 py-2 rounded-xl text-sm font-medium text-gray-400 hover:text-white hover:bg-white/[0.06] transition-colors"
           >
-            <CreditCard className="w-3.5 h-3.5" />
+            Cancel
+          </button>
+          <button
+            onClick={handleExpenseSubmit}
+            className="px-5 py-2 rounded-xl text-sm font-medium text-white bg-brand-red hover:bg-red-600 transition-colors"
+          >
             Add Expense
           </button>
-        }
-      />
-    </AdminGlass>
+        </div>
+      </AdminModal>
+    </>
   )
 }
 

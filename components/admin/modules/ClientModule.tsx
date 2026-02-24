@@ -5,7 +5,7 @@ import {
   Users, UserPlus, Eye, Phone, Mail, Calendar, IndianRupee,
   ShieldCheck, AlertTriangle, FileText, Filter, CheckCircle2,
   XCircle, Clock, MoreHorizontal, ArrowUpRight, ChevronRight,
-  Search, UserCircle, FileSearch, PieChart, Activity, Building2,
+  Search, UserCircle, FileSearch, PieChart, Activity, Building2, Upload,
 } from 'lucide-react'
 import AdminGlass from '../shared/AdminGlass'
 import AdminDataTable, { type Column } from '../shared/AdminDataTable'
@@ -16,6 +16,7 @@ import AdminKPICard from '../shared/AdminKPICard'
 import { CLIENTS_DATA, KYC_DOCUMENTS } from '@/lib/admin/adminMockData'
 import { formatINR, formatDate } from '@/lib/admin/adminHooks'
 import type { Client, KYCDocument, KYCStatus } from '@/lib/admin/adminTypes'
+import { uploadFile } from '@/lib/supabase/storageService'
 
 // ── Sub-tabs ─────────────────────────────────────────────────────
 const CLIENT_TABS = [
@@ -37,6 +38,7 @@ export default function ClientModule({ subTab, navigate, showToast }: ClientModu
   const [selectedClient, setSelectedClient] = useState<Client | null>(null)
   const [profileModalOpen, setProfileModalOpen] = useState(false)
   const [kycFilter, setKycFilter] = useState<KYCStatus | 'all'>('all')
+  const [addClientOpen, setAddClientOpen] = useState(false)
 
   // ── KPIs ──────────────────────────────────────────────────────
   const kpis = useMemo(() => {
@@ -61,7 +63,7 @@ export default function ClientModule({ subTab, navigate, showToast }: ClientModu
           <p className="text-sm text-gray-500 mt-1">Manage investors, KYC verification, and client relationships</p>
         </div>
         <button
-          onClick={() => showToast('Opening client registration form...', 'info')}
+          onClick={() => setAddClientOpen(true)}
           className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium text-white bg-brand-red/20 border border-brand-red/30 hover:bg-brand-red/30 transition-colors self-start admin-btn-press"
         >
           <UserPlus className="w-4 h-4" />
@@ -129,11 +131,100 @@ export default function ClientModule({ subTab, navigate, showToast }: ClientModu
           footer={
             <>
               <ModalButton onClick={() => { setProfileModalOpen(false); setSelectedClient(null) }}>Close</ModalButton>
-              <ModalButton variant="primary" onClick={() => showToast('Opening client editor...', 'info')}>Edit Client</ModalButton>
+              <ModalButton variant="primary" onClick={() => { setProfileModalOpen(false); setSelectedClient(null); setAddClientOpen(true) }}>Edit Client</ModalButton>
             </>
           }
         >
           <ClientProfileContent client={selectedClient} />
+        </AdminModal>
+      )}
+
+      {/* Add / Edit Client Modal */}
+      {addClientOpen && (
+        <AdminModal
+          isOpen={addClientOpen}
+          onClose={() => setAddClientOpen(false)}
+          title="New Client"
+          subtitle="Register a new investment client"
+          maxWidth="max-w-xl"
+          footer={
+            <>
+              <ModalButton onClick={() => setAddClientOpen(false)}>Cancel</ModalButton>
+              <ModalButton variant="primary" onClick={() => { setAddClientOpen(false); showToast('Client registered successfully', 'success') }}>Save Client</ModalButton>
+            </>
+          }
+        >
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-xs font-medium text-gray-400 mb-1.5">Full Name *</label>
+                <input type="text" placeholder="Enter full name" className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-brand-red/40 focus:ring-1 focus:ring-brand-red/20" />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-400 mb-1.5">Email *</label>
+                <input type="email" placeholder="email@example.com" className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-brand-red/40 focus:ring-1 focus:ring-brand-red/20" />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-xs font-medium text-gray-400 mb-1.5">Phone *</label>
+                <input type="tel" placeholder="+91 98765 43210" className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-brand-red/40 focus:ring-1 focus:ring-brand-red/20" />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-400 mb-1.5">PAN Number *</label>
+                <input type="text" placeholder="ABCDE1234F" maxLength={10} className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-brand-red/40 focus:ring-1 focus:ring-brand-red/20 uppercase" />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-xs font-medium text-gray-400 mb-1.5">Risk Profile</label>
+                <select className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-brand-red/40 focus:ring-1 focus:ring-brand-red/20">
+                  <option value="conservative">Conservative</option>
+                  <option value="moderate">Moderate</option>
+                  <option value="aggressive">Aggressive</option>
+                  <option value="speculative">Speculative</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-400 mb-1.5">Assigned RM</label>
+                <input type="text" placeholder="Relationship Manager" className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-brand-red/40 focus:ring-1 focus:ring-brand-red/20" />
+              </div>
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-400 mb-1.5">Initial Investment Amount (₹)</label>
+              <input type="number" placeholder="0" className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-brand-red/40 focus:ring-1 focus:ring-brand-red/20" />
+            </div>
+            <div className="sm:col-span-2">
+              <label className="block text-xs font-medium text-gray-400 mb-1.5">Attach KYC / Documents</label>
+              <button
+                type="button"
+                onClick={() => {
+                  const inp = document.createElement('input')
+                  inp.type = 'file'
+                  inp.multiple = true
+                  inp.accept = '.pdf,.docx,.xlsx,.jpg,.jpeg,.png,.gif,.webp'
+                  inp.onchange = async () => {
+                    if (inp.files && inp.files.length > 0) {
+                      showToast(`Uploading ${inp.files.length} file(s)...`, 'info')
+                      let ok = 0, fail = 0
+                      for (let i = 0; i < inp.files.length; i++) {
+                        const result = await uploadFile(inp.files[i], 'admin/clients')
+                        if (result.success) ok++; else fail++
+                      }
+                      if (ok > 0) showToast(`${ok} file(s) uploaded to Client Documents`, 'success')
+                      if (fail > 0) showToast(`${fail} file(s) failed`, 'error')
+                    }
+                  }
+                  inp.click()
+                }}
+                className="flex items-center gap-2 px-3 py-2.5 rounded-xl text-sm font-medium text-gray-400 bg-white/[0.04] border border-dashed border-white/[0.12] hover:bg-white/[0.08] hover:border-white/[0.2] transition-colors w-full justify-center"
+              >
+                <Upload className="w-4 h-4" />
+                Upload KYC Documents & Images
+              </button>
+              <p className="text-[10px] text-gray-600 mt-1">PAN, Aadhaar, agreements — stored in File Repository &gt; Client Documents</p>
+            </div>
+          </div>
         </AdminModal>
       )}
     </div>

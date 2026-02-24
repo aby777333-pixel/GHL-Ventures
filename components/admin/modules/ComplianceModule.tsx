@@ -108,6 +108,8 @@ export default function ComplianceModule({ subTab, navigate, showToast }: Compli
 // ── Approvals Tab ───────────────────────────────────────────────
 function ApprovalsTab({ showToast }: { showToast: (msg: string, type?: 'success' | 'error' | 'info' | 'warning') => void }) {
   const [statusFilter, setStatusFilter] = useState<ApprovalStatus | 'all'>('all')
+  const [reviewApproval, setReviewApproval] = useState<Approval | null>(null)
+  const [reviewAction, setReviewAction] = useState<'approve' | 'reject' | null>(null)
 
   const filtered = useMemo(() => {
     if (statusFilter === 'all') return APPROVALS_DATA
@@ -177,13 +179,13 @@ function ApprovalsTab({ showToast }: { showToast: (msg: string, type?: 'success'
                   {approval.status === 'pending' ? (
                     <div className="flex gap-1">
                       <button
-                        onClick={() => showToast(`Approval ${approval.id} approved`, 'success')}
+                        onClick={() => { setReviewApproval(approval); setReviewAction('approve') }}
                         className="p-1.5 rounded-lg hover:bg-emerald-500/10 text-gray-500 hover:text-emerald-400 transition-colors"
                       >
                         <CheckCircle2 className="w-4 h-4" />
                       </button>
                       <button
-                        onClick={() => showToast(`Approval ${approval.id} rejected`, 'error')}
+                        onClick={() => { setReviewApproval(approval); setReviewAction('reject') }}
                         className="p-1.5 rounded-lg hover:bg-red-500/10 text-gray-500 hover:text-red-400 transition-colors"
                       >
                         <XCircle className="w-4 h-4" />
@@ -205,6 +207,70 @@ function ApprovalsTab({ showToast }: { showToast: (msg: string, type?: 'success'
           <AdminGlass><AdminEmptyState title="No approvals" description="No approval requests match the selected filter." /></AdminGlass>
         )}
       </div>
+
+      {/* ── Approval Review Confirmation Modal ── */}
+      <AdminModal
+        isOpen={!!reviewApproval && !!reviewAction}
+        onClose={() => { setReviewApproval(null); setReviewAction(null) }}
+        title={reviewAction === 'approve' ? 'Approve Request' : 'Reject Request'}
+        maxWidth="max-w-md"
+      >
+        {reviewApproval && (
+          <div className="space-y-4">
+            <div className="p-3 rounded-xl bg-white/[0.03] border border-white/[0.06]">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-xs text-gray-500">{reviewApproval.id}</span>
+                <AdminBadge label={reviewApproval.priority} variant={getSeverityBadgeVariant(reviewApproval.priority)} />
+              </div>
+              <h3 className="text-sm font-medium text-white">{reviewApproval.description}</h3>
+              <p className="text-xs text-gray-500 mt-1">Requested by {reviewApproval.requestedBy} on {formatDate(reviewApproval.date)}</p>
+              <div className="flex items-center gap-2 mt-2">
+                <AdminBadge label={reviewApproval.type.toUpperCase()} variant="neutral" />
+                {reviewApproval.assignedReviewer && (
+                  <span className="text-xs text-gray-500">Reviewer: {reviewApproval.assignedReviewer}</span>
+                )}
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-xs font-medium text-gray-400 mb-1.5">Reviewer Notes</label>
+              <textarea
+                rows={3}
+                placeholder="Add notes about this decision..."
+                className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-brand-red/40 focus:ring-1 focus:ring-brand-red/20 resize-none"
+              />
+            </div>
+
+            <div className="flex justify-end gap-3 pt-4 border-t border-white/[0.06]">
+              <button
+                onClick={() => { setReviewApproval(null); setReviewAction(null) }}
+                className="px-4 py-2 rounded-xl text-sm font-medium text-gray-400 hover:text-white hover:bg-white/[0.06] transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => {
+                  showToast(
+                    reviewAction === 'approve'
+                      ? `${reviewApproval.id} approved successfully`
+                      : `${reviewApproval.id} rejected`,
+                    reviewAction === 'approve' ? 'success' : 'error'
+                  )
+                  setReviewApproval(null)
+                  setReviewAction(null)
+                }}
+                className={`px-5 py-2 rounded-xl text-sm font-medium text-white transition-colors ${
+                  reviewAction === 'approve'
+                    ? 'bg-emerald-600 hover:bg-emerald-700'
+                    : 'bg-red-600 hover:bg-red-700'
+                }`}
+              >
+                {reviewAction === 'approve' ? 'Confirm Approval' : 'Confirm Rejection'}
+              </button>
+            </div>
+          </div>
+        )}
+      </AdminModal>
     </div>
   )
 }

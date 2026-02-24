@@ -1,11 +1,11 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import {
   UserCheck, Users, CalendarDays, Clock, Award, Eye,
   Mail, Phone, Building2, CheckCircle2, XCircle, Coffee,
   Laptop, Sun, Moon, AlertTriangle, BarChart3, Plus,
-  Star, TrendingUp, UserPlus, Briefcase,
+  Star, TrendingUp, UserPlus, Briefcase, Upload,
 } from 'lucide-react'
 import AdminGlass from '../shared/AdminGlass'
 import AdminDataTable, { type Column } from '../shared/AdminDataTable'
@@ -16,6 +16,7 @@ import AdminEmptyState from '../shared/AdminEmptyState'
 import { EMPLOYEES_DATA } from '@/lib/admin/adminMockData'
 import { formatDate } from '@/lib/admin/adminHooks'
 import type { Employee, EmployeeStatus, LeaveRequest, AttendanceRecord } from '@/lib/admin/adminTypes'
+import { uploadFile } from '@/lib/supabase/storageService'
 
 // ── Mock Leave & Attendance Data ─────────────────────────────────
 const LEAVE_REQUESTS: LeaveRequest[] = [
@@ -56,6 +57,33 @@ interface EmployeeModuleProps {
 export default function EmployeeModule({ subTab, navigate, showToast }: EmployeeModuleProps) {
   const activeTab = (EMPLOYEE_TABS.some(t => t.id === subTab) ? subTab : 'directory') as EmployeeTab
   const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null)
+  const [addEmployeeOpen, setAddEmployeeOpen] = useState(false)
+  const [editEmployee, setEditEmployee] = useState<Employee | null>(null)
+  const [empForm, setEmpForm] = useState({
+    name: '', email: '', phone: '', department: 'Operations', role: '',
+    employeeType: 'full-time' as 'full-time' | 'contract' | 'intern',
+    reportingTo: '', joiningDate: '', status: 'active' as EmployeeStatus
+  })
+
+  useEffect(() => {
+    if (editEmployee && addEmployeeOpen) {
+      setEmpForm({
+        name: editEmployee.name, email: editEmployee.email, phone: editEmployee.phone || '',
+        department: editEmployee.department, role: editEmployee.role,
+        employeeType: 'full-time', reportingTo: editEmployee.reportingTo || '',
+        joiningDate: editEmployee.joinDate || '', status: editEmployee.status
+      })
+    } else if (!editEmployee && addEmployeeOpen) {
+      setEmpForm({ name: '', email: '', phone: '', department: 'Operations', role: '', employeeType: 'full-time', reportingTo: '', joiningDate: '', status: 'active' })
+    }
+  }, [editEmployee, addEmployeeOpen])
+
+  const handleEmployeeSubmit = () => {
+    showToast(editEmployee ? 'Employee updated successfully' : 'Employee added successfully', 'success')
+    setAddEmployeeOpen(false)
+    setEditEmployee(null)
+    setEmpForm({ name: '', email: '', phone: '', department: 'Operations', role: '', employeeType: 'full-time', reportingTo: '', joiningDate: '', status: 'active' })
+  }
 
   const kpis = useMemo(() => {
     const active = EMPLOYEES_DATA.filter(e => e.status === 'active').length
@@ -77,7 +105,7 @@ export default function EmployeeModule({ subTab, navigate, showToast }: Employee
           <p className="text-sm text-gray-500 mt-1">Directory, attendance, leave tracking, and performance</p>
         </div>
         <button
-          onClick={() => showToast('Opening employee onboarding form...', 'info')}
+          onClick={() => { setEditEmployee(null); setAddEmployeeOpen(true) }}
           className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium text-white bg-brand-red/20 border border-brand-red/30 hover:bg-brand-red/30 transition-colors self-start admin-btn-press"
         >
           <UserPlus className="w-4 h-4" />
@@ -125,7 +153,12 @@ export default function EmployeeModule({ subTab, navigate, showToast }: Employee
           onClose={() => setSelectedEmployee(null)}
           title={selectedEmployee.name}
           subtitle={`${selectedEmployee.id} • ${selectedEmployee.role}`}
-          footer={<ModalButton onClick={() => setSelectedEmployee(null)}>Close</ModalButton>}
+          footer={
+            <>
+              <ModalButton onClick={() => setSelectedEmployee(null)}>Close</ModalButton>
+              <ModalButton variant="primary" onClick={() => { const emp = selectedEmployee; setSelectedEmployee(null); setEditEmployee(emp); setAddEmployeeOpen(true) }}>Edit</ModalButton>
+            </>
+          }
         >
           <div className="space-y-5">
             <div className="flex items-center gap-4">
@@ -164,6 +197,164 @@ export default function EmployeeModule({ subTab, navigate, showToast }: Employee
           </div>
         </AdminModal>
       )}
+
+      {/* Add / Edit Employee Modal */}
+      <AdminModal
+        isOpen={addEmployeeOpen}
+        onClose={() => { setAddEmployeeOpen(false); setEditEmployee(null) }}
+        title={editEmployee ? 'Edit Employee' : 'Add New Employee'}
+        maxWidth="max-w-3xl"
+      >
+        <form onSubmit={(e) => { e.preventDefault(); handleEmployeeSubmit() }}>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {/* Full Name */}
+            <div>
+              <label className="block text-xs font-medium text-gray-400 mb-1.5">Full Name</label>
+              <input
+                type="text"
+                required
+                value={empForm.name}
+                onChange={(e) => setEmpForm(f => ({ ...f, name: e.target.value }))}
+                placeholder="Enter full name"
+                className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-brand-red/40 focus:ring-1 focus:ring-brand-red/20"
+              />
+            </div>
+            {/* Email */}
+            <div>
+              <label className="block text-xs font-medium text-gray-400 mb-1.5">Email</label>
+              <input
+                type="email"
+                required
+                value={empForm.email}
+                onChange={(e) => setEmpForm(f => ({ ...f, email: e.target.value }))}
+                placeholder="employee@company.com"
+                className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-brand-red/40 focus:ring-1 focus:ring-brand-red/20"
+              />
+            </div>
+            {/* Phone */}
+            <div>
+              <label className="block text-xs font-medium text-gray-400 mb-1.5">Phone</label>
+              <input
+                type="tel"
+                required
+                value={empForm.phone}
+                onChange={(e) => setEmpForm(f => ({ ...f, phone: e.target.value }))}
+                placeholder="+91 98765 43210"
+                className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-brand-red/40 focus:ring-1 focus:ring-brand-red/20"
+              />
+            </div>
+            {/* Department */}
+            <div>
+              <label className="block text-xs font-medium text-gray-400 mb-1.5">Department</label>
+              <select
+                value={empForm.department}
+                onChange={(e) => setEmpForm(f => ({ ...f, department: e.target.value }))}
+                className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-brand-red/40 focus:ring-1 focus:ring-brand-red/20"
+              >
+                {['Operations', 'Fund Management', 'Compliance', 'Legal', 'Marketing', 'Technology', 'Sales', 'HR', 'Admin'].map(d => (
+                  <option key={d} value={d} className="bg-neutral-900">{d}</option>
+                ))}
+              </select>
+            </div>
+            {/* Role / Designation */}
+            <div>
+              <label className="block text-xs font-medium text-gray-400 mb-1.5">Role / Designation</label>
+              <input
+                type="text"
+                required
+                value={empForm.role}
+                onChange={(e) => setEmpForm(f => ({ ...f, role: e.target.value }))}
+                placeholder="e.g. Senior Fund Analyst"
+                className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-brand-red/40 focus:ring-1 focus:ring-brand-red/20"
+              />
+            </div>
+            {/* Employee Type */}
+            <div>
+              <label className="block text-xs font-medium text-gray-400 mb-1.5">Employee Type</label>
+              <select
+                value={empForm.employeeType}
+                onChange={(e) => setEmpForm(f => ({ ...f, employeeType: e.target.value as 'full-time' | 'contract' | 'intern' }))}
+                className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-brand-red/40 focus:ring-1 focus:ring-brand-red/20"
+              >
+                <option value="full-time" className="bg-neutral-900">Full-Time</option>
+                <option value="contract" className="bg-neutral-900">Contract</option>
+                <option value="intern" className="bg-neutral-900">Intern</option>
+              </select>
+            </div>
+            {/* Reporting To */}
+            <div>
+              <label className="block text-xs font-medium text-gray-400 mb-1.5">Reporting To</label>
+              <input
+                type="text"
+                value={empForm.reportingTo}
+                onChange={(e) => setEmpForm(f => ({ ...f, reportingTo: e.target.value }))}
+                placeholder="Manager name"
+                className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-brand-red/40 focus:ring-1 focus:ring-brand-red/20"
+              />
+            </div>
+            {/* Date of Joining */}
+            <div>
+              <label className="block text-xs font-medium text-gray-400 mb-1.5">Date of Joining</label>
+              <input
+                type="date"
+                value={empForm.joiningDate}
+                onChange={(e) => setEmpForm(f => ({ ...f, joiningDate: e.target.value }))}
+                className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-brand-red/40 focus:ring-1 focus:ring-brand-red/20"
+              />
+            </div>
+            {/* Status */}
+            <div>
+              <label className="block text-xs font-medium text-gray-400 mb-1.5">Status</label>
+              <select
+                value={empForm.status}
+                onChange={(e) => setEmpForm(f => ({ ...f, status: e.target.value as EmployeeStatus }))}
+                className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-brand-red/40 focus:ring-1 focus:ring-brand-red/20"
+              >
+                <option value="active" className="bg-neutral-900">Active</option>
+                <option value="on-leave" className="bg-neutral-900">On Leave</option>
+                <option value="inactive" className="bg-neutral-900">Inactive</option>
+              </select>
+            </div>
+            {/* Attach Employee Documents */}
+            <div className="sm:col-span-2">
+              <label className="block text-xs font-medium text-gray-400 mb-1.5">Attach Employee Documents</label>
+              <button
+                type="button"
+                onClick={() => {
+                  const inp = document.createElement('input')
+                  inp.type = 'file'
+                  inp.multiple = true
+                  inp.accept = '.pdf,.docx,.xlsx,.jpg,.jpeg,.png,.gif,.webp'
+                  inp.onchange = async () => {
+                    if (inp.files && inp.files.length > 0) {
+                      showToast(`Uploading ${inp.files.length} file(s)...`, 'info')
+                      let ok = 0, fail = 0
+                      for (let i = 0; i < inp.files.length; i++) {
+                        const result = await uploadFile(inp.files[i], 'admin/employees')
+                        if (result.success) ok++; else fail++
+                      }
+                      if (ok > 0) showToast(`${ok} file(s) uploaded to Employee Records`, 'success')
+                      if (fail > 0) showToast(`${fail} file(s) failed`, 'error')
+                    }
+                  }
+                  inp.click()
+                }}
+                className="flex items-center gap-2 px-3 py-2.5 rounded-xl text-sm font-medium text-gray-400 bg-white/[0.04] border border-dashed border-white/[0.12] hover:bg-white/[0.08] hover:border-white/[0.2] transition-colors w-full justify-center"
+              >
+                <Upload className="w-4 h-4" />
+                Upload ID Proofs, Offer Letters & Documents
+              </button>
+              <p className="text-[10px] text-gray-600 mt-1">Stored in File Repository &gt; Employee Records</p>
+            </div>
+          </div>
+          <div className="flex justify-end gap-3 mt-6 pt-4 border-t border-white/[0.06]">
+            <button type="button" onClick={() => { setAddEmployeeOpen(false); setEditEmployee(null) }} className="px-4 py-2 rounded-xl text-sm font-medium text-gray-400 hover:text-white hover:bg-white/[0.06] transition-colors">Cancel</button>
+            <button type="submit" className="px-5 py-2 rounded-xl text-sm font-medium text-white bg-brand-red hover:bg-red-600 transition-colors">
+              {editEmployee ? 'Update Employee' : 'Add Employee'}
+            </button>
+          </div>
+        </form>
+      </AdminModal>
     </div>
   )
 }

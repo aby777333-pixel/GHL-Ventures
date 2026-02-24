@@ -10,7 +10,7 @@ import {
   ShieldCheck, PieChart as PieChartIcon, UserCheck, SplitSquareVertical,
   Compass, RefreshCw, MapPin, Code, Facebook, Linkedin,
   Youtube, Twitter, Chrome, Filter, ArrowUpRight, ArrowDownRight,
-  CheckCircle2, FileText, Layers, Activity, Brain,
+  CheckCircle2, FileText, Layers, Activity, Brain, Upload,
 } from 'lucide-react'
 import {
   AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid,
@@ -309,6 +309,7 @@ function CampaignsTab({ showToast }: { showToast: (m: string, t?: 'success' | 'e
   const [viewMode, setViewMode] = useState<'cards' | 'table'>('cards')
   const [selectedCampaign, setSelectedCampaign] = useState<MarketingCampaign | null>(null)
   const [modalOpen, setModalOpen] = useState(false)
+  const [newCampaignOpen, setNewCampaignOpen] = useState(false)
 
   const filtered = useMemo(() => {
     if (typeFilter === 'all') return MARKETING_CAMPAIGNS_DATA
@@ -389,7 +390,7 @@ function CampaignsTab({ showToast }: { showToast: (m: string, t?: 'success' | 'e
               </button>
             ))}
           </div>
-          <button onClick={() => showToast('Campaign builder launched', 'success')} className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium text-white bg-brand-red/20 border border-brand-red/30 hover:bg-brand-red/30 transition-colors admin-btn-press">
+          <button onClick={() => setNewCampaignOpen(true)} className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium text-white bg-brand-red/20 border border-brand-red/30 hover:bg-brand-red/30 transition-colors admin-btn-press">
             <Plus className="w-4 h-4" />
             New Campaign
           </button>
@@ -498,6 +499,89 @@ function CampaignsTab({ showToast }: { showToast: (m: string, t?: 'success' | 'e
           <CampaignDetailContent campaign={selectedCampaign} />
         </AdminModal>
       )}
+
+      {/* New Campaign Modal */}
+      <AdminModal isOpen={newCampaignOpen} onClose={() => setNewCampaignOpen(false)} title="New Campaign" maxWidth="max-w-2xl">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label className="block text-xs font-medium text-gray-400 mb-1.5">Campaign Name *</label>
+            <input type="text" required placeholder="e.g. Q1 Lead Gen Drive" className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-brand-red/40 focus:ring-1 focus:ring-brand-red/20" />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-gray-400 mb-1.5">Type</label>
+            <select className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-brand-red/40 focus:ring-1 focus:ring-brand-red/20">
+              <option value="email">Email</option>
+              <option value="social">Social</option>
+              <option value="google-ads">Google Ads</option>
+              <option value="meta-ads">Meta Ads</option>
+              <option value="linkedin-ads">LinkedIn Ads</option>
+              <option value="youtube-ads">YouTube Ads</option>
+              <option value="event">Event</option>
+              <option value="whatsapp">WhatsApp</option>
+              <option value="telegram">Telegram</option>
+              <option value="sms">SMS</option>
+              <option value="push">Push</option>
+              <option value="offline">Offline</option>
+              <option value="multi-channel">Multi-Channel</option>
+            </select>
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-gray-400 mb-1.5">Status</label>
+            <select className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-brand-red/40 focus:ring-1 focus:ring-brand-red/20">
+              <option value="draft">Draft</option>
+              <option value="scheduled">Scheduled</option>
+              <option value="live">Live</option>
+              <option value="paused">Paused</option>
+            </select>
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-gray-400 mb-1.5">Budget (INR)</label>
+            <input type="number" placeholder="e.g. 500000" className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-brand-red/40 focus:ring-1 focus:ring-brand-red/20" />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-gray-400 mb-1.5">Start Date</label>
+            <input type="date" className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-brand-red/40 focus:ring-1 focus:ring-brand-red/20" />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-gray-400 mb-1.5">End Date</label>
+            <input type="date" className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-brand-red/40 focus:ring-1 focus:ring-brand-red/20" />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-gray-400 mb-1.5">Target Audience</label>
+            <input type="text" placeholder="e.g. HNI Investors, Chennai" className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-brand-red/40 focus:ring-1 focus:ring-brand-red/20" />
+          </div>
+          <div className="sm:col-span-2">
+            <label className="block text-xs font-medium text-gray-400 mb-1.5">Description</label>
+            <textarea rows={3} placeholder="Campaign description..." className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-brand-red/40 focus:ring-1 focus:ring-brand-red/20" />
+          </div>
+          <div className="sm:col-span-2">
+            <label className="block text-xs font-medium text-gray-400 mb-1.5">Campaign Assets</label>
+            <button type="button" onClick={() => {
+              const inp = document.createElement('input'); inp.type = 'file'; inp.multiple = true
+              inp.accept = '.pdf,.docx,.xlsx,.jpg,.jpeg,.png,.gif,.webp,.mp4,.svg'
+              inp.onchange = async () => {
+                if (inp.files && inp.files.length > 0) {
+                  showToast(`Uploading ${inp.files.length} asset(s)...`, 'info')
+                  let ok = 0, fail = 0
+                  for (let i = 0; i < inp.files.length; i++) {
+                    const result = await uploadFile(inp.files[i], 'admin/marketing')
+                    if (result.success) ok++; else fail++
+                  }
+                  if (ok > 0) showToast(`${ok} asset(s) uploaded to Marketing`, 'success')
+                  if (fail > 0) showToast(`${fail} failed`, 'error')
+                }
+              }; inp.click()
+            }} className="flex items-center gap-2 px-3 py-2.5 rounded-xl text-sm font-medium text-gray-400 bg-white/[0.04] border border-dashed border-white/[0.12] hover:bg-white/[0.08] hover:border-white/[0.2] transition-colors w-full justify-center">
+              <Upload className="w-4 h-4" /> Upload Campaign Assets
+            </button>
+            <p className="text-[10px] text-gray-600 mt-1">Images, videos, PDFs — stored in Marketing Assets</p>
+          </div>
+        </div>
+        <div className="flex justify-end gap-3 mt-6 pt-4 border-t border-white/[0.06]">
+          <button onClick={() => setNewCampaignOpen(false)} className="px-4 py-2 rounded-xl text-sm font-medium text-gray-400 hover:text-white hover:bg-white/[0.06] transition-colors">Cancel</button>
+          <button onClick={() => { showToast('Campaign created successfully', 'success'); setNewCampaignOpen(false) }} className="px-5 py-2 rounded-xl text-sm font-medium text-white bg-brand-red hover:bg-red-600 transition-colors">Create</button>
+        </div>
+      </AdminModal>
     </div>
   )
 }
@@ -556,6 +640,7 @@ function CampaignDetailContent({ campaign }: { campaign: MarketingCampaign }) {
 //  SUB-TAB 3: CONTENT HUB
 // ══════════════════════════════════════════════════════════════════
 function ContentTab({ showToast }: { showToast: (m: string, t?: 'success' | 'error' | 'info' | 'warning') => void }) {
+  const [newContentOpen, setNewContentOpen] = useState(false)
   const contentStatuses = ['idea', 'draft', 'review', 'approved', 'scheduled', 'published'] as const
   const [typeFilter, setTypeFilter] = useState<string>('all')
 
@@ -580,7 +665,7 @@ function ContentTab({ showToast }: { showToast: (m: string, t?: 'success' | 'err
           <h1 className="text-2xl font-bold text-white">Content Hub</h1>
           <p className="text-sm text-gray-500 mt-1">Content pipeline from ideation to publication</p>
         </div>
-        <button onClick={() => showToast('Content creator launched', 'success')} className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium text-white bg-brand-red/20 border border-brand-red/30 hover:bg-brand-red/30 transition-colors self-start admin-btn-press">
+        <button onClick={() => setNewContentOpen(true)} className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium text-white bg-brand-red/20 border border-brand-red/30 hover:bg-brand-red/30 transition-colors self-start admin-btn-press">
           <Plus className="w-4 h-4" />
           Create Content
         </button>
@@ -647,6 +732,82 @@ function ContentTab({ showToast }: { showToast: (m: string, t?: 'success' | 'err
           })}
         </div>
       </div>
+
+      {/* New Content Modal */}
+      <AdminModal isOpen={newContentOpen} onClose={() => setNewContentOpen(false)} title="Create Content" maxWidth="max-w-2xl">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label className="block text-xs font-medium text-gray-400 mb-1.5">Title *</label>
+            <input type="text" required placeholder="e.g. Q1 Investment Insights Blog" className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-brand-red/40 focus:ring-1 focus:ring-brand-red/20" />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-gray-400 mb-1.5">Content Type</label>
+            <select className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-brand-red/40 focus:ring-1 focus:ring-brand-red/20">
+              <option value="blog-post">Blog Post</option>
+              <option value="social-post">Social Post</option>
+              <option value="email-template">Email Template</option>
+              <option value="landing-page">Landing Page</option>
+              <option value="case-study">Case Study</option>
+              <option value="infographic">Infographic</option>
+              <option value="video-script">Video Script</option>
+              <option value="webinar">Webinar</option>
+            </select>
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-gray-400 mb-1.5">Author</label>
+            <input type="text" placeholder="e.g. Priya Sharma" className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-brand-red/40 focus:ring-1 focus:ring-brand-red/20" />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-gray-400 mb-1.5">Status</label>
+            <select className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-brand-red/40 focus:ring-1 focus:ring-brand-red/20">
+              <option value="idea">Idea</option>
+              <option value="draft">Draft</option>
+              <option value="review">Review</option>
+              <option value="approved">Approved</option>
+              <option value="scheduled">Scheduled</option>
+              <option value="published">Published</option>
+            </select>
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-gray-400 mb-1.5">Publish Date</label>
+            <input type="date" className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-brand-red/40 focus:ring-1 focus:ring-brand-red/20" />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-gray-400 mb-1.5">Tags (comma-separated)</label>
+            <input type="text" placeholder="e.g. investing, mutual-funds, Q1" className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-brand-red/40 focus:ring-1 focus:ring-brand-red/20" />
+          </div>
+          <div className="sm:col-span-2">
+            <label className="block text-xs font-medium text-gray-400 mb-1.5">Brief / Description</label>
+            <textarea rows={3} placeholder="Content brief or description..." className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-brand-red/40 focus:ring-1 focus:ring-brand-red/20" />
+          </div>
+          <div className="sm:col-span-2">
+            <label className="block text-xs font-medium text-gray-400 mb-1.5">Attach Media</label>
+            <button type="button" onClick={() => {
+              const inp = document.createElement('input'); inp.type = 'file'; inp.multiple = true
+              inp.accept = '.pdf,.docx,.jpg,.jpeg,.png,.gif,.webp,.mp4,.svg'
+              inp.onchange = async () => {
+                if (inp.files && inp.files.length > 0) {
+                  showToast(`Uploading ${inp.files.length} file(s)...`, 'info')
+                  let ok = 0, fail = 0
+                  for (let i = 0; i < inp.files.length; i++) {
+                    const result = await uploadFile(inp.files[i], 'admin/marketing')
+                    if (result.success) ok++; else fail++
+                  }
+                  if (ok > 0) showToast(`${ok} file(s) uploaded`, 'success')
+                  if (fail > 0) showToast(`${fail} failed`, 'error')
+                }
+              }; inp.click()
+            }} className="flex items-center gap-2 px-3 py-2.5 rounded-xl text-sm font-medium text-gray-400 bg-white/[0.04] border border-dashed border-white/[0.12] hover:bg-white/[0.08] hover:border-white/[0.2] transition-colors w-full justify-center">
+              <Upload className="w-4 h-4" /> Upload Content Media
+            </button>
+            <p className="text-[10px] text-gray-600 mt-1">Images, videos, documents for this content piece</p>
+          </div>
+        </div>
+        <div className="flex justify-end gap-3 mt-6 pt-4 border-t border-white/[0.06]">
+          <button onClick={() => setNewContentOpen(false)} className="px-4 py-2 rounded-xl text-sm font-medium text-gray-400 hover:text-white hover:bg-white/[0.06] transition-colors">Cancel</button>
+          <button onClick={() => { showToast('Content created successfully', 'success'); setNewContentOpen(false) }} className="px-5 py-2 rounded-xl text-sm font-medium text-white bg-brand-red hover:bg-red-600 transition-colors">Create</button>
+        </div>
+      </AdminModal>
     </div>
   )
 }
@@ -655,6 +816,7 @@ function ContentTab({ showToast }: { showToast: (m: string, t?: 'success' | 'err
 //  SUB-TAB 4: AUDIENCE
 // ══════════════════════════════════════════════════════════════════
 function AudienceTab({ showToast }: { showToast: (m: string, t?: 'success' | 'error' | 'info' | 'warning') => void }) {
+  const [newSegmentOpen, setNewSegmentOpen] = useState(false)
   const totalContacts = AUDIENCE_SEGMENTS_DATA.reduce((s, seg) => s + seg.contactCount, 0)
   const dynamicSegments = AUDIENCE_SEGMENTS_DATA.filter(s => s.type === 'dynamic').length
   const staticSegments = AUDIENCE_SEGMENTS_DATA.filter(s => s.type === 'static').length
@@ -695,7 +857,7 @@ function AudienceTab({ showToast }: { showToast: (m: string, t?: 'success' | 'er
             <ArrowDownRight className="w-4 h-4" />
             Export
           </button>
-          <button onClick={() => showToast('Segment builder launched', 'success')} className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium text-white bg-brand-red/20 border border-brand-red/30 hover:bg-brand-red/30 transition-colors admin-btn-press">
+          <button onClick={() => setNewSegmentOpen(true)} className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium text-white bg-brand-red/20 border border-brand-red/30 hover:bg-brand-red/30 transition-colors admin-btn-press">
             <Plus className="w-4 h-4" />
             Create Segment
           </button>
@@ -740,6 +902,39 @@ function AudienceTab({ showToast }: { showToast: (m: string, t?: 'success' | 'er
           </AdminGlass>
         ))}
       </div>
+
+      {/* New Segment Modal */}
+      <AdminModal isOpen={newSegmentOpen} onClose={() => setNewSegmentOpen(false)} title="Create Segment" maxWidth="max-w-2xl">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label className="block text-xs font-medium text-gray-400 mb-1.5">Segment Name *</label>
+            <input type="text" required placeholder="e.g. High-Value Chennai Investors" className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-brand-red/40 focus:ring-1 focus:ring-brand-red/20" />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-gray-400 mb-1.5">Type</label>
+            <select className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-brand-red/40 focus:ring-1 focus:ring-brand-red/20">
+              <option value="dynamic">Dynamic</option>
+              <option value="static">Static</option>
+            </select>
+          </div>
+          <div className="sm:col-span-2">
+            <label className="block text-xs font-medium text-gray-400 mb-1.5">Description</label>
+            <textarea rows={2} placeholder="Segment description..." className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-brand-red/40 focus:ring-1 focus:ring-brand-red/20" />
+          </div>
+          <div className="sm:col-span-2">
+            <label className="block text-xs font-medium text-gray-400 mb-1.5">Criteria</label>
+            <textarea rows={2} placeholder="e.g. Investment > 50L AND City = Chennai" className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-brand-red/40 focus:ring-1 focus:ring-brand-red/20" />
+          </div>
+          <div className="sm:col-span-2">
+            <label className="block text-xs font-medium text-gray-400 mb-1.5">Tags (comma-separated)</label>
+            <input type="text" placeholder="e.g. hni, chennai, active" className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-brand-red/40 focus:ring-1 focus:ring-brand-red/20" />
+          </div>
+        </div>
+        <div className="flex justify-end gap-3 mt-6 pt-4 border-t border-white/[0.06]">
+          <button onClick={() => setNewSegmentOpen(false)} className="px-4 py-2 rounded-xl text-sm font-medium text-gray-400 hover:text-white hover:bg-white/[0.06] transition-colors">Cancel</button>
+          <button onClick={() => { showToast('Segment created successfully', 'success'); setNewSegmentOpen(false) }} className="px-5 py-2 rounded-xl text-sm font-medium text-white bg-brand-red hover:bg-red-600 transition-colors">Create</button>
+        </div>
+      </AdminModal>
     </div>
   )
 }
@@ -748,6 +943,7 @@ function AudienceTab({ showToast }: { showToast: (m: string, t?: 'success' | 'er
 //  SUB-TAB 5: OUTREACH
 // ══════════════════════════════════════════════════════════════════
 function OutreachTab({ showToast }: { showToast: (m: string, t?: 'success' | 'error' | 'info' | 'warning') => void }) {
+  const [newSequenceOpen, setNewSequenceOpen] = useState(false)
   const channelIcons: Record<string, React.ComponentType<{ className?: string }>> = {
     email: Mail,
     whatsapp: MessageCircle,
@@ -772,7 +968,7 @@ function OutreachTab({ showToast }: { showToast: (m: string, t?: 'success' | 'er
           <h1 className="text-2xl font-bold text-white">Outreach Sequences</h1>
           <p className="text-sm text-gray-500 mt-1">Manage automated outreach sequences across channels</p>
         </div>
-        <button onClick={() => showToast('Sequence builder launched', 'success')} className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium text-white bg-brand-red/20 border border-brand-red/30 hover:bg-brand-red/30 transition-colors self-start admin-btn-press">
+        <button onClick={() => setNewSequenceOpen(true)} className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium text-white bg-brand-red/20 border border-brand-red/30 hover:bg-brand-red/30 transition-colors self-start admin-btn-press">
           <Plus className="w-4 h-4" />
           New Sequence
         </button>
@@ -852,6 +1048,58 @@ function OutreachTab({ showToast }: { showToast: (m: string, t?: 'success' | 'er
           })}
         </div>
       </AdminGlass>
+
+      {/* New Sequence Modal */}
+      <AdminModal isOpen={newSequenceOpen} onClose={() => setNewSequenceOpen(false)} title="New Sequence" maxWidth="max-w-2xl">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label className="block text-xs font-medium text-gray-400 mb-1.5">Sequence Name *</label>
+            <input type="text" required placeholder="e.g. New Investor Welcome Series" className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-brand-red/40 focus:ring-1 focus:ring-brand-red/20" />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-gray-400 mb-1.5">Channel</label>
+            <select className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-brand-red/40 focus:ring-1 focus:ring-brand-red/20">
+              <option value="email">Email</option>
+              <option value="whatsapp">WhatsApp</option>
+              <option value="telegram">Telegram</option>
+              <option value="sms">SMS</option>
+              <option value="linkedin">LinkedIn</option>
+              <option value="push">Push</option>
+              <option value="multi-channel">Multi-Channel</option>
+            </select>
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-gray-400 mb-1.5">Trigger</label>
+            <select className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-brand-red/40 focus:ring-1 focus:ring-brand-red/20">
+              <option value="manual">Manual</option>
+              <option value="on-signup">On Signup</option>
+              <option value="on-purchase">On Purchase</option>
+              <option value="on-inactivity">On Inactivity</option>
+              <option value="scheduled">Scheduled</option>
+            </select>
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-gray-400 mb-1.5">Steps Count</label>
+            <input type="number" placeholder="e.g. 5" className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-brand-red/40 focus:ring-1 focus:ring-brand-red/20" />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-gray-400 mb-1.5">Delay Between Steps</label>
+            <input type="text" placeholder="e.g. 2 days" className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-brand-red/40 focus:ring-1 focus:ring-brand-red/20" />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-gray-400 mb-1.5">Target Segment</label>
+            <input type="text" placeholder="e.g. High-Value Investors" className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-brand-red/40 focus:ring-1 focus:ring-brand-red/20" />
+          </div>
+          <div className="sm:col-span-2">
+            <label className="block text-xs font-medium text-gray-400 mb-1.5">Description</label>
+            <textarea rows={3} placeholder="Sequence description..." className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-brand-red/40 focus:ring-1 focus:ring-brand-red/20" />
+          </div>
+        </div>
+        <div className="flex justify-end gap-3 mt-6 pt-4 border-t border-white/[0.06]">
+          <button onClick={() => setNewSequenceOpen(false)} className="px-4 py-2 rounded-xl text-sm font-medium text-gray-400 hover:text-white hover:bg-white/[0.06] transition-colors">Cancel</button>
+          <button onClick={() => { showToast('Sequence created successfully', 'success'); setNewSequenceOpen(false) }} className="px-5 py-2 rounded-xl text-sm font-medium text-white bg-brand-red hover:bg-red-600 transition-colors">Create</button>
+        </div>
+      </AdminModal>
     </div>
   )
 }

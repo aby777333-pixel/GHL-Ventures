@@ -17,6 +17,8 @@ import AdminGlass from '@/components/admin/shared/AdminGlass'
 import AdminBadge from '@/components/admin/shared/AdminBadge'
 import AdminKPICard from '@/components/admin/shared/AdminKPICard'
 import AdminDataTable, { type Column } from '@/components/admin/shared/AdminDataTable'
+import AdminModal from '@/components/admin/shared/AdminModal'
+import { uploadFile } from '@/lib/supabase/storageService'
 
 // ── Props ─────────────────────────────────────────────────────────
 interface FieldOpsModuleProps {
@@ -759,6 +761,8 @@ function PipelineKanban({ showToast }: FieldOpsModuleProps) {
 // 9. EXPENSES
 // ══════════════════════════════════════════════════════════════════
 function ExpensesPanel({ showToast }: FieldOpsModuleProps) {
+  const [addExpenseOpen, setAddExpenseOpen] = useState(false)
+  const [expForm, setExpForm] = useState({ type: 'Travel', description: '', amount: '', date: '', notes: '' })
   const totalExpenses = EXPENSES.reduce((s, e) => s + e.amount, 0)
   const approvedExpenses = EXPENSES.filter(e => e.status === 'Approved').reduce((s, e) => s + e.amount, 0)
 
@@ -792,7 +796,7 @@ function ExpensesPanel({ showToast }: FieldOpsModuleProps) {
       </div>
 
       {/* Quick Submit */}
-      <button onClick={() => showToast('Opening expense submission form...', 'info')} className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl text-sm font-medium text-white bg-teal-600/20 border border-teal-500/30 hover:bg-teal-600/30 transition-colors">
+      <button onClick={() => setAddExpenseOpen(true)} className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl text-sm font-medium text-white bg-teal-600/20 border border-teal-500/30 hover:bg-teal-600/30 transition-colors">
         <Plus className="w-4 h-4" /> Submit New Expense
       </button>
 
@@ -839,6 +843,59 @@ function ExpensesPanel({ showToast }: FieldOpsModuleProps) {
           )
         })}
       </div>
+
+      {/* Add Expense Modal */}
+      <AdminModal isOpen={addExpenseOpen} onClose={() => setAddExpenseOpen(false)} title="Submit New Expense" maxWidth="max-w-2xl">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label className="block text-xs font-medium text-gray-400 mb-1.5">Expense Type</label>
+            <select value={expForm.type} onChange={e => setExpForm({ ...expForm, type: e.target.value })} className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-teal-500/40 focus:ring-1 focus:ring-teal-500/20">
+              {['Travel', 'Food', 'Stay', 'Office Supplies', 'Client Entertainment', 'Fuel', 'Phone/Internet', 'Miscellaneous'].map(t => (
+                <option key={t} value={t} className="bg-neutral-900">{t}</option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-gray-400 mb-1.5">Amount (INR) *</label>
+            <input type="number" value={expForm.amount} onChange={e => setExpForm({ ...expForm, amount: e.target.value })} placeholder="0" className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-teal-500/40 focus:ring-1 focus:ring-teal-500/20" />
+          </div>
+          <div className="sm:col-span-2">
+            <label className="block text-xs font-medium text-gray-400 mb-1.5">Description *</label>
+            <input value={expForm.description} onChange={e => setExpForm({ ...expForm, description: e.target.value })} placeholder="What was this expense for?" className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-teal-500/40 focus:ring-1 focus:ring-teal-500/20" />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-gray-400 mb-1.5">Date *</label>
+            <input type="date" value={expForm.date} onChange={e => setExpForm({ ...expForm, date: e.target.value })} className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-teal-500/40 focus:ring-1 focus:ring-teal-500/20" />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-gray-400 mb-1.5">Attach Receipt</label>
+            <button onClick={() => {
+              const inp = document.createElement('input')
+              inp.type = 'file'
+              inp.accept = '.pdf,.jpg,.jpeg,.png'
+              inp.onchange = async () => {
+                if (inp.files?.[0]) {
+                  showToast('Uploading receipt...', 'info')
+                  const result = await uploadFile(inp.files[0], 'staff/expenses')
+                  if (result.success) showToast('Receipt uploaded', 'success')
+                  else showToast('Upload failed', 'error')
+                }
+              }
+              inp.click()
+            }} className="flex items-center gap-2 px-3 py-2.5 rounded-xl text-sm font-medium text-gray-400 bg-white/[0.04] border border-white/[0.06] hover:bg-white/[0.08] transition-colors w-full">
+              <Upload className="w-4 h-4" /> Upload Receipt
+            </button>
+          </div>
+          <div className="sm:col-span-2">
+            <label className="block text-xs font-medium text-gray-400 mb-1.5">Notes</label>
+            <textarea value={expForm.notes} onChange={e => setExpForm({ ...expForm, notes: e.target.value })} rows={2} placeholder="Additional notes..." className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-teal-500/40 focus:ring-1 focus:ring-teal-500/20 resize-none" />
+          </div>
+        </div>
+        <div className="flex justify-end gap-3 mt-6 pt-4 border-t border-white/[0.06]">
+          <button onClick={() => setAddExpenseOpen(false)} className="px-4 py-2 rounded-xl text-sm font-medium text-gray-400 hover:text-white hover:bg-white/[0.06] transition-colors">Cancel</button>
+          <button onClick={() => { if (!expForm.description.trim() || !expForm.amount) { showToast('Description and amount are required', 'error'); return } showToast('Expense submitted successfully', 'success'); setAddExpenseOpen(false); setExpForm({ type: 'Travel', description: '', amount: '', date: '', notes: '' }) }} className="px-5 py-2 rounded-xl text-sm font-medium text-white bg-teal-600 hover:bg-teal-700 transition-colors">Submit Expense</button>
+        </div>
+      </AdminModal>
     </div>
   )
 }

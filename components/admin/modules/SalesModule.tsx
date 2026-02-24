@@ -5,7 +5,7 @@ import {
   TrendingUp, Users, Target, IndianRupee, Phone, Mail,
   Calendar, ArrowUpRight, ArrowDownRight, Eye, MoreHorizontal,
   Trophy, Zap, Filter, Plus, Clock, CheckCircle2,
-  Star, BarChart3, Percent, DollarSign, UserPlus,
+  Star, BarChart3, Percent, DollarSign, UserPlus, Upload,
 } from 'lucide-react'
 import AdminGlass from '../shared/AdminGlass'
 import AdminDataTable, { type Column } from '../shared/AdminDataTable'
@@ -16,6 +16,7 @@ import AdminEmptyState from '../shared/AdminEmptyState'
 import { LEADS_DATA, COMMISSIONS_DATA } from '@/lib/admin/adminMockData'
 import { formatINR, formatDate } from '@/lib/admin/adminHooks'
 import type { Lead, LeadStage, Commission } from '@/lib/admin/adminTypes'
+import { uploadFile } from '@/lib/supabase/storageService'
 
 // ── Sub-tabs ─────────────────────────────────────────────────────
 const SALES_TABS = [
@@ -47,6 +48,7 @@ export default function SalesModule({ subTab, navigate, showToast }: SalesModule
   const activeTab = (SALES_TABS.some(t => t.id === subTab) ? subTab : 'pipeline') as SalesTab
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null)
   const [leadModalOpen, setLeadModalOpen] = useState(false)
+  const [addLeadOpen, setAddLeadOpen] = useState(false)
 
   // ── KPIs ──────────────────────────────────────────────────────
   const kpis = useMemo(() => {
@@ -73,7 +75,7 @@ export default function SalesModule({ subTab, navigate, showToast }: SalesModule
           <p className="text-sm text-gray-500 mt-1">Manage leads, pipeline, commissions, and sales performance</p>
         </div>
         <button
-          onClick={() => showToast('Opening new lead registration form...', 'info')}
+          onClick={() => setAddLeadOpen(true)}
           className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium text-white bg-brand-red/20 border border-brand-red/30 hover:bg-brand-red/30 transition-colors self-start admin-btn-press"
         >
           <UserPlus className="w-4 h-4" />
@@ -127,11 +129,116 @@ export default function SalesModule({ subTab, navigate, showToast }: SalesModule
           footer={
             <>
               <ModalButton onClick={() => { setLeadModalOpen(false); setSelectedLead(null) }}>Close</ModalButton>
-              <ModalButton variant="primary" onClick={() => showToast('Opening lead editor...', 'info')}>Edit Lead</ModalButton>
+              <ModalButton variant="primary" onClick={() => { setLeadModalOpen(false); setSelectedLead(null); setAddLeadOpen(true) }}>Edit Lead</ModalButton>
             </>
           }
         >
           <LeadDetailContent lead={selectedLead} />
+        </AdminModal>
+      )}
+
+      {/* Add / Edit Lead Modal */}
+      {addLeadOpen && (
+        <AdminModal
+          isOpen={addLeadOpen}
+          onClose={() => setAddLeadOpen(false)}
+          title="New Lead"
+          subtitle="Register a new sales lead"
+          maxWidth="max-w-xl"
+          footer={
+            <>
+              <ModalButton onClick={() => setAddLeadOpen(false)}>Cancel</ModalButton>
+              <ModalButton variant="primary" onClick={() => { setAddLeadOpen(false); showToast('Lead created successfully', 'success') }}>Save Lead</ModalButton>
+            </>
+          }
+        >
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-xs font-medium text-gray-400 mb-1.5">Full Name *</label>
+                <input type="text" placeholder="Enter full name" className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-brand-red/40 focus:ring-1 focus:ring-brand-red/20" />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-400 mb-1.5">Email *</label>
+                <input type="email" placeholder="email@example.com" className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-brand-red/40 focus:ring-1 focus:ring-brand-red/20" />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-xs font-medium text-gray-400 mb-1.5">Phone *</label>
+                <input type="tel" placeholder="+91 98765 43210" className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-brand-red/40 focus:ring-1 focus:ring-brand-red/20" />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-400 mb-1.5">Lead Source</label>
+                <select className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-brand-red/40 focus:ring-1 focus:ring-brand-red/20">
+                  <option value="website">Website</option>
+                  <option value="referral">Referral</option>
+                  <option value="cold-outreach">Cold Outreach</option>
+                  <option value="event">Event</option>
+                  <option value="social-media">Social Media</option>
+                  <option value="whatsapp">WhatsApp</option>
+                </select>
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-xs font-medium text-gray-400 mb-1.5">Deal Value (₹)</label>
+                <input type="number" placeholder="0" className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-brand-red/40 focus:ring-1 focus:ring-brand-red/20" />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-400 mb-1.5">Probability (%)</label>
+                <input type="number" placeholder="50" min="0" max="100" className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-brand-red/40 focus:ring-1 focus:ring-brand-red/20" />
+              </div>
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-400 mb-1.5">Stage</label>
+              <select className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-brand-red/40 focus:ring-1 focus:ring-brand-red/20">
+                <option value="new">New</option>
+                <option value="contacted">Contacted</option>
+                <option value="qualified">Qualified</option>
+                <option value="proposal">Proposal</option>
+                <option value="negotiation">Negotiation</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-400 mb-1.5">Assigned To</label>
+              <input type="text" placeholder="Sales rep name" className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-brand-red/40 focus:ring-1 focus:ring-brand-red/20" />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-400 mb-1.5">Notes</label>
+              <textarea rows={3} placeholder="Any additional notes about this lead..." className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-brand-red/40 focus:ring-1 focus:ring-brand-red/20 resize-none" />
+            </div>
+            <div className="sm:col-span-2">
+              <label className="block text-xs font-medium text-gray-400 mb-1.5">Attach Documents</label>
+              <button
+                type="button"
+                onClick={() => {
+                  const inp = document.createElement('input')
+                  inp.type = 'file'
+                  inp.multiple = true
+                  inp.accept = '.pdf,.docx,.xlsx,.jpg,.jpeg,.png,.gif,.webp'
+                  inp.onchange = async () => {
+                    if (inp.files && inp.files.length > 0) {
+                      showToast(`Uploading ${inp.files.length} file(s)...`, 'info')
+                      let ok = 0, fail = 0
+                      for (let i = 0; i < inp.files.length; i++) {
+                        const result = await uploadFile(inp.files[i], 'admin/sales')
+                        if (result.success) ok++; else fail++
+                      }
+                      if (ok > 0) showToast(`${ok} file(s) uploaded to Sales & CRM`, 'success')
+                      if (fail > 0) showToast(`${fail} file(s) failed`, 'error')
+                    }
+                  }
+                  inp.click()
+                }}
+                className="flex items-center gap-2 px-3 py-2.5 rounded-xl text-sm font-medium text-gray-400 bg-white/[0.04] border border-dashed border-white/[0.12] hover:bg-white/[0.08] hover:border-white/[0.2] transition-colors w-full justify-center"
+              >
+                <Upload className="w-4 h-4" />
+                Upload Documents & Images
+              </button>
+              <p className="text-[10px] text-gray-600 mt-1">PDF, DOCX, XLSX, JPG, PNG — stored in File Repository &gt; Sales &amp; CRM</p>
+            </div>
+          </div>
         </AdminModal>
       )}
     </div>

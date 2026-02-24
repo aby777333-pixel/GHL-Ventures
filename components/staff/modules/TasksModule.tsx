@@ -4,11 +4,13 @@ import { useState, useMemo } from 'react'
 import {
   ListTodo, Plus, Filter, Eye, Calendar, Tag,
   Columns3, Workflow, Clock, AlertCircle, CheckCircle2,
-  Circle, Pause, ChevronRight, Play,
+  Circle, Pause, ChevronRight, Play, Upload,
 } from 'lucide-react'
 import AdminGlass from '@/components/admin/shared/AdminGlass'
 import AdminBadge from '@/components/admin/shared/AdminBadge'
 import AdminDataTable, { type Column } from '@/components/admin/shared/AdminDataTable'
+import AdminModal from '@/components/admin/shared/AdminModal'
+import { uploadFile } from '@/lib/supabase/storageService'
 import { TASKS_DATA } from '@/lib/staff/staffMockData'
 import type { StaffTask, TaskStatus, TaskPriority } from '@/lib/staff/staffTypes'
 
@@ -76,6 +78,8 @@ export default function TasksModule({ subTab, navigate, showToast }: TasksModule
 function MyTasksView({ showToast }: { showToast: TasksModuleProps['showToast'] }) {
   const [statusFilter, setStatusFilter] = useState<TaskStatus | 'all'>('all')
   const [priorityFilter, setPriorityFilter] = useState<TaskPriority | 'all'>('all')
+  const [newTaskOpen, setNewTaskOpen] = useState(false)
+  const [taskForm, setTaskForm] = useState({ title: '', description: '', priority: 'normal' as TaskPriority, status: 'todo' as TaskStatus, dueDate: '', assignedTo: '', tags: '' })
 
   const filtered = useMemo(() => {
     return TASKS_DATA.filter(t => {
@@ -159,7 +163,7 @@ function MyTasksView({ showToast }: { showToast: TasksModuleProps['showToast'] }
           <p className="text-sm text-gray-500 mt-1">Track and manage your assigned tasks</p>
         </div>
         <button
-          onClick={() => showToast('Opening new task form...', 'info')}
+          onClick={() => setNewTaskOpen(true)}
           className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium text-white bg-teal-500/20 border border-teal-500/30 hover:bg-teal-500/30 transition-colors self-start admin-btn-press"
         >
           <Plus className="w-4 h-4" />
@@ -217,6 +221,61 @@ function MyTasksView({ showToast }: { showToast: TasksModuleProps['showToast'] }
           title={`Tasks (${filtered.length})`}
         />
       </AdminGlass>
+
+      {/* New Task Modal */}
+      <AdminModal isOpen={newTaskOpen} onClose={() => setNewTaskOpen(false)} title="Create New Task" maxWidth="max-w-2xl">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="sm:col-span-2">
+            <label className="block text-xs font-medium text-gray-400 mb-1.5">Task Title *</label>
+            <input value={taskForm.title} onChange={e => setTaskForm({ ...taskForm, title: e.target.value })} placeholder="Enter task title" className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-teal-500/40 focus:ring-1 focus:ring-teal-500/20" />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-gray-400 mb-1.5">Priority</label>
+            <select value={taskForm.priority} onChange={e => setTaskForm({ ...taskForm, priority: e.target.value as TaskPriority })} className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-teal-500/40 focus:ring-1 focus:ring-teal-500/20">
+              <option value="urgent" className="bg-neutral-900">Urgent</option>
+              <option value="high" className="bg-neutral-900">High</option>
+              <option value="normal" className="bg-neutral-900">Normal</option>
+              <option value="low" className="bg-neutral-900">Low</option>
+            </select>
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-gray-400 mb-1.5">Status</label>
+            <select value={taskForm.status} onChange={e => setTaskForm({ ...taskForm, status: e.target.value as TaskStatus })} className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-teal-500/40 focus:ring-1 focus:ring-teal-500/20">
+              <option value="todo" className="bg-neutral-900">To-Do</option>
+              <option value="in-progress" className="bg-neutral-900">In Progress</option>
+              <option value="blocked" className="bg-neutral-900">Blocked</option>
+              <option value="done" className="bg-neutral-900">Done</option>
+            </select>
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-gray-400 mb-1.5">Due Date</label>
+            <input type="date" value={taskForm.dueDate} onChange={e => setTaskForm({ ...taskForm, dueDate: e.target.value })} className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-teal-500/40 focus:ring-1 focus:ring-teal-500/20" />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-gray-400 mb-1.5">Assigned To</label>
+            <input value={taskForm.assignedTo} onChange={e => setTaskForm({ ...taskForm, assignedTo: e.target.value })} placeholder="Team member name" className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-teal-500/40 focus:ring-1 focus:ring-teal-500/20" />
+          </div>
+          <div className="sm:col-span-2">
+            <label className="block text-xs font-medium text-gray-400 mb-1.5">Tags</label>
+            <input value={taskForm.tags} onChange={e => setTaskForm({ ...taskForm, tags: e.target.value })} placeholder="e.g. client-onboarding, kyc, urgent" className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-teal-500/40 focus:ring-1 focus:ring-teal-500/20" />
+          </div>
+          <div className="sm:col-span-2">
+            <label className="block text-xs font-medium text-gray-400 mb-1.5">Description</label>
+            <textarea value={taskForm.description} onChange={e => setTaskForm({ ...taskForm, description: e.target.value })} rows={3} placeholder="Describe the task..." className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-teal-500/40 focus:ring-1 focus:ring-teal-500/20 resize-none" />
+          </div>
+          <div className="sm:col-span-2">
+            <label className="block text-xs font-medium text-gray-400 mb-1.5">Attach Documents</label>
+            <button type="button" onClick={() => { const inp = document.createElement('input'); inp.type = 'file'; inp.multiple = true; inp.accept = '.pdf,.docx,.xlsx,.jpg,.jpeg,.png,.gif,.webp'; inp.onchange = async () => { if (inp.files && inp.files.length > 0) { showToast(`Uploading ${inp.files.length} file(s)...`, 'info'); let ok = 0, fail = 0; for (let i = 0; i < inp.files.length; i++) { const result = await uploadFile(inp.files[i], 'staff/tasks'); if (result.success) ok++; else fail++ } if (ok > 0) showToast(`${ok} file(s) uploaded`, 'success'); if (fail > 0) showToast(`${fail} failed`, 'error') } }; inp.click() }} className="flex items-center gap-2 px-3 py-2.5 rounded-xl text-sm font-medium text-gray-400 bg-white/[0.04] border border-dashed border-white/[0.12] hover:bg-white/[0.08] hover:border-white/[0.2] transition-colors w-full justify-center">
+              <Upload className="w-4 h-4" /> Upload Documents & Images
+            </button>
+            <p className="text-[10px] text-gray-600 mt-1">Stored in File Repository &gt; Staff Tasks</p>
+          </div>
+        </div>
+        <div className="flex justify-end gap-3 mt-6 pt-4 border-t border-white/[0.06]">
+          <button onClick={() => setNewTaskOpen(false)} className="px-4 py-2 rounded-xl text-sm font-medium text-gray-400 hover:text-white hover:bg-white/[0.06] transition-colors">Cancel</button>
+          <button onClick={() => { if (!taskForm.title.trim()) { showToast('Task title is required', 'error'); return } showToast('Task created successfully', 'success'); setNewTaskOpen(false); setTaskForm({ title: '', description: '', priority: 'normal', status: 'todo', dueDate: '', assignedTo: '', tags: '' }) }} className="px-5 py-2 rounded-xl text-sm font-medium text-white bg-teal-600 hover:bg-teal-700 transition-colors">Create Task</button>
+        </div>
+      </AdminModal>
     </>
   )
 }
