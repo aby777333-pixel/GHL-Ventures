@@ -71,7 +71,30 @@ export default function AnalyticsModule({ subTab, navigate, showToast }: Analyti
           <p className="text-sm text-gray-500 mt-1">Business intelligence, reports, and AI forecasting</p>
         </div>
         <button
-          onClick={() => showToast('Generating report export...', 'info')}
+          onClick={async () => {
+            showToast('Generating analytics export...', 'info')
+            const bom = '\uFEFF'
+            const rows = MONTHLY_METRICS.map(m => `${m.month},${m.clients},${m.leads},${m.conversions},${m.churn}`)
+            const csv = `${bom}Month,Clients,Leads,Conversions,Churn\n${rows.join('\n')}`
+            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' })
+            const filename = `GHL_Analytics_Report_${new Date().toISOString().slice(0,10)}.csv`
+            if ('showSaveFilePicker' in window) {
+              try {
+                const handle = await (window as any).showSaveFilePicker({ suggestedName: filename, types: [{ description: 'CSV File', accept: { 'text/csv': ['.csv'] } }] })
+                const writable = await handle.createWritable()
+                await writable.write(blob)
+                await writable.close()
+                showToast('Report exported', 'success')
+                return
+              } catch (err: any) { if (err?.name === 'AbortError') return }
+            }
+            const url = URL.createObjectURL(blob)
+            const a = document.createElement('a')
+            a.href = url; a.download = filename
+            document.body.appendChild(a); a.click()
+            document.body.removeChild(a); URL.revokeObjectURL(url)
+            showToast('Report exported', 'success')
+          }}
           className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium text-white bg-brand-red/20 border border-brand-red/30 hover:bg-brand-red/30 transition-colors self-start admin-btn-press"
         >
           <Download className="w-4 h-4" />

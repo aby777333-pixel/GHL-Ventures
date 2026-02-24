@@ -77,7 +77,19 @@ export default function AssetDocModule({ subTab, navigate, showToast }: AssetDoc
           <p className="text-sm text-gray-500 mt-1">Asset inventory and document management system</p>
         </div>
         <button
-          onClick={() => showToast('File upload initiated — select files from your device', 'info')}
+          onClick={() => {
+            const input = document.createElement('input')
+            input.type = 'file'
+            input.multiple = true
+            input.accept = '.pdf,.xlsx,.xls,.docx,.doc,.pptx,.ppt,.csv,.jpg,.jpeg,.png,.gif,.webp,.svg,.zip'
+            input.onchange = () => {
+              if (input.files && input.files.length > 0) {
+                const names = Array.from(input.files).map(f => f.name).join(', ')
+                showToast(`Selected ${input.files.length} file(s): ${names}`, 'success')
+              }
+            }
+            input.click()
+          }}
           className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium text-white bg-brand-red/20 border border-brand-red/30 hover:bg-brand-red/30 transition-colors self-start admin-btn-press"
         >
           <Upload className="w-4 h-4" />
@@ -291,7 +303,29 @@ function DocumentsTab({ showToast }: { showToast: (msg: string, type?: 'success'
                   View
                 </button>
                 <button
-                  onClick={() => showToast('Preparing download...', 'info')}
+                  onClick={async () => {
+                    showToast(`Downloading ${doc.name}...`, 'info')
+                    const content = `Document: ${doc.name}\nType: ${doc.type}\nCategory: ${doc.category}\nVersion: ${doc.version}\nUploaded by: ${doc.uploadedBy}\nDate: ${doc.uploadDate}\nSize: ${doc.size}\n\n[Demo document content — connect Supabase Storage for real files]`
+                    const blob = new Blob([content], { type: 'application/octet-stream' })
+                    const ext = doc.type.toLowerCase() === 'pdf' ? 'pdf' : doc.type.toLowerCase() === 'xlsx' ? 'xlsx' : doc.type.toLowerCase() === 'docx' ? 'docx' : 'txt'
+                    const filename = `${doc.name.replace(/[^a-zA-Z0-9 ]/g, '')}.${ext}`
+                    if ('showSaveFilePicker' in window) {
+                      try {
+                        const handle = await (window as any).showSaveFilePicker({ suggestedName: filename })
+                        const writable = await handle.createWritable()
+                        await writable.write(blob)
+                        await writable.close()
+                        showToast(`Saved ${doc.name}`, 'success')
+                        return
+                      } catch (err: any) { if (err?.name === 'AbortError') return }
+                    }
+                    const url = URL.createObjectURL(blob)
+                    const a = document.createElement('a')
+                    a.href = url; a.download = filename
+                    document.body.appendChild(a); a.click()
+                    document.body.removeChild(a); URL.revokeObjectURL(url)
+                    showToast(`Downloaded ${doc.name}`, 'success')
+                  }}
                   className="flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-[11px] font-medium text-gray-400 bg-white/[0.03] hover:bg-white/[0.06] transition-colors"
                 >
                   <Download className="w-3 h-3" />

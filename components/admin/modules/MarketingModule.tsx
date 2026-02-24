@@ -266,7 +266,19 @@ function OverviewTab({ navigate, showToast }: { navigate: (p: string) => void; s
             { label: '+ New Campaign', action: () => navigate('marketing/campaigns') },
             { label: '+ Schedule Post', action: () => navigate('marketing/content') },
             { label: '+ Create Email', action: () => showToast('Email composer launched', 'success') },
-            { label: '+ Upload Asset', action: () => showToast('Asset uploader opened', 'success') },
+            { label: '+ Upload Asset', action: () => {
+              const input = document.createElement('input')
+              input.type = 'file'
+              input.multiple = true
+              input.accept = '.pdf,.xlsx,.xls,.docx,.doc,.pptx,.ppt,.csv,.jpg,.jpeg,.png,.gif,.webp,.svg,.zip,.mp4,.mp3'
+              input.onchange = () => {
+                if (input.files && input.files.length > 0) {
+                  const names = Array.from(input.files).map(f => f.name).join(', ')
+                  showToast(`Selected ${input.files.length} asset(s): ${names}`, 'success')
+                }
+              }
+              input.click()
+            }},
             { label: '+ Import Contacts', action: () => navigate('marketing/audience') },
           ].map(item => (
             <button
@@ -649,11 +661,43 @@ function AudienceTab({ showToast }: { showToast: (m: string, t?: 'success' | 'er
           <p className="text-sm text-gray-500 mt-1">Manage audience segments and contact lists</p>
         </div>
         <div className="flex items-center gap-2">
-          <button onClick={() => showToast('Contacts imported successfully', 'success')} className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium text-gray-400 bg-white/[0.04] border border-white/[0.08] hover:bg-white/[0.08] hover:text-white transition-colors admin-btn-press">
+          <button onClick={() => {
+            const input = document.createElement('input')
+            input.type = 'file'
+            input.accept = '.csv,.xlsx,.xls,.vcf'
+            input.onchange = () => {
+              if (input.files && input.files.length > 0) {
+                showToast(`Importing contacts from: ${input.files[0].name}`, 'success')
+              }
+            }
+            input.click()
+          }} className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium text-gray-400 bg-white/[0.04] border border-white/[0.08] hover:bg-white/[0.08] hover:text-white transition-colors admin-btn-press">
             <ArrowUpRight className="w-4 h-4" />
             Import
           </button>
-          <button onClick={() => showToast('Contacts exported to CSV', 'success')} className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium text-gray-400 bg-white/[0.04] border border-white/[0.08] hover:bg-white/[0.08] hover:text-white transition-colors admin-btn-press">
+          <button onClick={async () => {
+            showToast('Exporting contacts...', 'info')
+            const bom = '\uFEFF'
+            const csv = `${bom}Name,Email,Phone,Segment,Status\nSample Contact,sample@email.com,+91 99999 00000,High Value,Active`
+            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' })
+            const filename = `GHL_Contacts_Export_${new Date().toISOString().slice(0,10)}.csv`
+            if ('showSaveFilePicker' in window) {
+              try {
+                const handle = await (window as any).showSaveFilePicker({ suggestedName: filename, types: [{ description: 'CSV File', accept: { 'text/csv': ['.csv'] } }] })
+                const writable = await handle.createWritable()
+                await writable.write(blob)
+                await writable.close()
+                showToast('Contacts exported', 'success')
+                return
+              } catch (err: any) { if (err?.name === 'AbortError') return }
+            }
+            const url = URL.createObjectURL(blob)
+            const a = document.createElement('a')
+            a.href = url; a.download = filename
+            document.body.appendChild(a); a.click()
+            document.body.removeChild(a); URL.revokeObjectURL(url)
+            showToast('Contacts exported', 'success')
+          }} className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium text-gray-400 bg-white/[0.04] border border-white/[0.08] hover:bg-white/[0.08] hover:text-white transition-colors admin-btn-press">
             <ArrowDownRight className="w-4 h-4" />
             Export
           </button>

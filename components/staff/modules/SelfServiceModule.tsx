@@ -442,7 +442,28 @@ function PayslipsView({ showToast }: { showToast: SelfServiceModuleProps['showTo
                 className="p-2 rounded-lg bg-white/[0.04] hover:bg-white/[0.08] transition-colors">
                 <Eye className="w-4 h-4 text-gray-400" />
               </button>
-              <button onClick={() => showToast('Payslip PDF downloading...', 'info')}
+              <button onClick={async () => {
+                showToast(`Downloading ${p.month} payslip...`, 'info')
+                const content = `GHL India Ventures — Payslip\n\nEmployee: Staff Member\nMonth: ${p.month}\nPay Date: ${p.payDate}\n\nGross Salary: ${fmt(p.gross)}\nDeductions: ${fmt(p.deductions)}\nTDS: ${fmt(p.tds)}\nNet Salary: ${fmt(p.net)}\n\n[Demo payslip — connect HR system for real PDFs]`
+                const blob = new Blob([content], { type: 'application/pdf' })
+                const filename = `GHL_Payslip_${p.month.replace(' ', '_')}.pdf`
+                if ('showSaveFilePicker' in window) {
+                  try {
+                    const handle = await (window as any).showSaveFilePicker({ suggestedName: filename, types: [{ description: 'PDF File', accept: { 'application/pdf': ['.pdf'] } }] })
+                    const writable = await handle.createWritable()
+                    await writable.write(blob)
+                    await writable.close()
+                    showToast(`Saved ${p.month} payslip`, 'success')
+                    return
+                  } catch (err: any) { if (err?.name === 'AbortError') return }
+                }
+                const url = URL.createObjectURL(blob)
+                const a = document.createElement('a')
+                a.href = url; a.download = filename
+                document.body.appendChild(a); a.click()
+                document.body.removeChild(a); URL.revokeObjectURL(url)
+                showToast(`Downloaded ${p.month} payslip`, 'success')
+              }}
                 className="p-2 rounded-lg bg-white/[0.04] hover:bg-white/[0.08] transition-colors">
                 <Download className="w-4 h-4 text-gray-400" />
               </button>

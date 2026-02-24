@@ -1487,7 +1487,29 @@ export default function DashboardClient() {
                 <p className={`text-sm font-semibold truncate ${t('text-white','text-gray-900')}`}>{doc.name}</p>
                 <p className={`text-[11px] ${t('text-gray-500','text-gray-700')}`}>{doc.type} &bull; {doc.date}</p>
               </div>
-              {doc.status === 'available' && <button onClick={(e) => { e.stopPropagation(); showToast(`Downloading ${doc.name}...`, 'info') }}><Download className="w-4 h-4 shrink-0 text-gray-600 group-hover:text-brand-red transition-colors" /></button>}
+              {doc.status === 'available' && <button onClick={async (e) => {
+                e.stopPropagation()
+                showToast(`Downloading ${doc.name}...`, 'info')
+                const content = `Document: ${doc.name}\nType: ${doc.type}\nDate: ${doc.date}\nStatus: ${doc.status}\n\n[Demo document — connect Supabase Storage for real files]`
+                const blob = new Blob([content], { type: 'application/octet-stream' })
+                const filename = `${doc.name.replace(/[^a-zA-Z0-9 ]/g, '')}.pdf`
+                if ('showSaveFilePicker' in window) {
+                  try {
+                    const handle = await (window as any).showSaveFilePicker({ suggestedName: filename })
+                    const writable = await handle.createWritable()
+                    await writable.write(blob)
+                    await writable.close()
+                    showToast(`Saved ${doc.name}`, 'success')
+                    return
+                  } catch (err: any) { if (err?.name === 'AbortError') return }
+                }
+                const url = URL.createObjectURL(blob)
+                const a = document.createElement('a')
+                a.href = url; a.download = filename
+                document.body.appendChild(a); a.click()
+                document.body.removeChild(a); URL.revokeObjectURL(url)
+                showToast(`Downloaded ${doc.name}`, 'success')
+              }}><Download className="w-4 h-4 shrink-0 text-gray-600 group-hover:text-brand-red transition-colors" /></button>}
             </div>
           ))}
         </div>
@@ -1556,7 +1578,30 @@ export default function DashboardClient() {
           <h2 className={`text-xl font-bold mb-1 ${t('text-white','text-gray-900')}`}>Transactions</h2>
           <p className={`text-sm ${t('text-gray-500','text-gray-700')}`}>Complete transaction history</p>
         </div>
-        <button onClick={() => showToast('Transaction report CSV downloaded successfully.', 'info')} className="flex items-center gap-2 text-xs text-brand-red font-semibold"><Download className="w-3.5 h-3.5" /> Export CSV</button>
+        <button onClick={async () => {
+          showToast('Exporting transactions...', 'info')
+          const bom = '\uFEFF'
+          const rows = transactions.map((tx: any) => `${tx.date},${tx.type},${tx.fund},${tx.amount},${tx.status}`)
+          const csv = `${bom}Date,Type,Fund,Amount,Status\n${rows.join('\n')}`
+          const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' })
+          const filename = `GHL_Transactions_${new Date().toISOString().slice(0,10)}.csv`
+          if ('showSaveFilePicker' in window) {
+            try {
+              const handle = await (window as any).showSaveFilePicker({ suggestedName: filename, types: [{ description: 'CSV File', accept: { 'text/csv': ['.csv'] } }] })
+              const writable = await handle.createWritable()
+              await writable.write(blob)
+              await writable.close()
+              showToast('Transactions exported', 'success')
+              return
+            } catch (err: any) { if (err?.name === 'AbortError') return }
+          }
+          const url = URL.createObjectURL(blob)
+          const a = document.createElement('a')
+          a.href = url; a.download = filename
+          document.body.appendChild(a); a.click()
+          document.body.removeChild(a); URL.revokeObjectURL(url)
+          showToast('Transactions exported', 'success')
+        }} className="flex items-center gap-2 text-xs text-brand-red font-semibold"><Download className="w-3.5 h-3.5" /> Export CSV</button>
       </div>
       <Glass className="overflow-hidden" hover={false} theme={theme}>
         <div className="overflow-x-auto">
