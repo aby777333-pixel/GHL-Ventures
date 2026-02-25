@@ -1,8 +1,12 @@
 /* ================================================================
    GHL INTELLIGENCE OS — CLAUDE API CLIENT
-   Direct browser-side Claude API integration for AI Advisor.
-   Uses the anthropic-dangerous-direct-browser-access header
-   for client-side calls (no server required).
+
+   Routes all AI Advisor requests through a Netlify serverless
+   function (/.netlify/functions/claude-proxy) so the Anthropic
+   API key stays server-side and is never bundled into client JS.
+
+   If the user has pasted a personal key via Admin > Settings,
+   that key is forwarded through the proxy instead.
    ================================================================ */
 
 import {
@@ -102,7 +106,7 @@ RESPONSE GUIDELINES:
 - Never make up data that isn't in the context above — say "I don't have data on that" if needed`
 
 // ─────────────────────────────────────────────────────────────
-// API CALL
+// API CALL  — routed through Netlify serverless proxy
 // ─────────────────────────────────────────────────────────────
 
 export interface ClaudeMessage {
@@ -117,27 +121,35 @@ const CLAUDE_MODELS = [
   'claude-3-haiku-20240307',
 ]
 
+// Proxy endpoint — Netlify function keeps the API key server-side
+const PROXY_URL = '/.netlify/functions/claude-proxy'
+
+/**
+ * Calls the Claude API through the server-side proxy.
+ *
+ * @param messages  Conversation history
+ * @param apiKey    Optional user-supplied key (from sessionStorage).
+ *                  If empty/blank the proxy falls back to the
+ *                  server-side CLAUDE_API_KEY env var.
+ */
 export async function callClaudeAPI(
   messages: ClaudeMessage[],
-  apiKey: string
+  apiKey?: string
 ): Promise<string> {
   let lastError = ''
 
   for (const model of CLAUDE_MODELS) {
     try {
-      const response = await fetch('https://api.anthropic.com/v1/messages', {
+      const response = await fetch(PROXY_URL, {
         method: 'POST',
-        headers: {
-          'x-api-key': apiKey,
-          'anthropic-version': '2023-06-01',
-          'anthropic-dangerous-direct-browser-access': 'true',
-          'content-type': 'application/json',
-        },
+        headers: { 'content-type': 'application/json' },
         body: JSON.stringify({
           model,
           max_tokens: 1024,
           system: SYSTEM_PROMPT,
           messages,
+          // Only forward if the user pasted their own key in settings
+          ...(apiKey ? { apiKey } : {}),
         }),
       })
 

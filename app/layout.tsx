@@ -6,9 +6,7 @@ import Footer from '@/components/Footer'
 import ScrollProgress from '@/components/ScrollProgress'
 import BackToTop from '@/components/BackToTop'
 import MainSiteOnly from '@/components/MainSiteOnly'
-// WhatsAppButton and TelegramButton removed
-// import WhatsAppButton from '@/components/WhatsAppButton'
-// import TelegramButton from '@/components/TelegramButton'
+import WhatsAppButton from '@/components/WhatsAppButton'
 import VideoCallWidget from '@/components/VideoCallWidget'
 import DirectCallWidget from '@/components/DirectCallWidget'
 import CookieConsent from '@/components/CookieConsent'
@@ -159,8 +157,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     },
     sameAs: [
       'https://linkedin.com/company/ghl-india-ventures',
-      'https://twitter.com/ghlindia',
-      'https://instagram.com/ghlindia',
+      'https://x.com/ghlindia',
+      'https://instagram.com/GHL_India_Venture',
       'https://youtube.com/@ghlindia',
       'https://facebook.com/ghlindia',
       'https://t.me/ghlindia',
@@ -272,6 +270,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               <MainSiteOnly>
                 <Footer />
                 <BackToTop />
+                <WhatsAppButton />
                 <CookieConsent />
                 <SocialProofToasts />
                 <LiveVisitorCount />

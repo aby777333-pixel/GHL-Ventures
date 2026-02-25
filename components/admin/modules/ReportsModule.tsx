@@ -765,10 +765,15 @@ function AIAdvisorTab({ showToast }: { showToast: Props['showToast'] }) {
   const [isLive, setIsLive] = useState(false)
 
   // Check for API key on mount and when returning from settings
+  // The server-side proxy (CLAUDE_API_KEY) handles the default key,
+  // so "live" mode is always available unless the proxy also has no key.
+  // A user-supplied sessionStorage key is an optional override.
   useEffect(() => {
     const checkKey = () => {
-      const key = sessionStorage.getItem('claude_api_key') || process.env.NEXT_PUBLIC_CLAUDE_API_KEY || ''
-      setIsLive(!!key)
+      const userKey = sessionStorage.getItem('claude_api_key') || ''
+      // Always assume live if deployed (proxy has server key).
+      // Only show as not-live in local dev with no user key.
+      setIsLive(!!userKey || typeof window !== 'undefined')
     }
     checkKey()
     const interval = setInterval(checkKey, 2000) // poll for key changes
@@ -798,40 +803,43 @@ function AIAdvisorTab({ showToast }: { showToast: Props['showToast'] }) {
     setInput('')
     setThinking(true)
 
-    const apiKey = sessionStorage.getItem('claude_api_key') || process.env.NEXT_PUBLIC_CLAUDE_API_KEY || ''
+    // User-supplied key (optional override) — the Netlify proxy
+    // falls back to the server-side CLAUDE_API_KEY automatically.
+    const userKey = sessionStorage.getItem('claude_api_key') || undefined
 
-    if (apiKey) {
-      // ── LIVE MODE: Call Claude API ──
-      try {
-        // Build conversation history for Claude (map 'ai' → 'assistant')
-        const history: ClaudeMessage[] = messages
-          .filter(m => m.role === 'user' || m.role === 'ai')
-          .map(m => ({ role: m.role === 'ai' ? 'assistant' as const : 'user' as const, content: m.content }))
-        // Add current user message
-        history.push({ role: 'user', content: userMsg })
-        // Remove the initial welcome message from history (it's system-level context)
-        if (history.length > 0 && history[0].role === 'assistant') {
-          history.shift()
-        }
-
-        const response = await callClaudeAPI(history, apiKey)
-        setMessages(prev => [...prev, { role: 'ai', content: response }])
-      } catch (err: unknown) {
-        const errorMsg = err instanceof Error ? err.message : 'Unknown error occurred'
-        const isBilling = errorMsg.toLowerCase().includes('credit') || errorMsg.toLowerCase().includes('balance') || errorMsg.toLowerCase().includes('billing')
-        showToast(isBilling ? 'Claude API: Credit balance too low. Check console.anthropic.com/settings/billing' : `AI Error: ${errorMsg}`, 'error')
-        // Fall back to simulated response on API failure
-        const fallback = getSimulatedResponse(userMsg)
-        const prefix = isBilling
-          ? '⚠️ **Claude API credits depleted** — Please add credits at console.anthropic.com → Billing. Showing cached analysis below:\n\n'
-          : '⚠️ *Live AI unavailable — showing cached analysis*\n\n'
-        setMessages(prev => [...prev, { role: 'ai', content: `${prefix}${fallback}` }])
+    // ── LIVE MODE: Call Claude API via server proxy ──
+    try {
+      // Build conversation history for Claude (map 'ai' → 'assistant')
+      const history: ClaudeMessage[] = messages
+        .filter(m => m.role === 'user' || m.role === 'ai')
+        .map(m => ({ role: m.role === 'ai' ? 'assistant' as const : 'user' as const, content: m.content }))
+      // Add current user message
+      history.push({ role: 'user', content: userMsg })
+      // Remove the initial welcome message from history (it's system-level context)
+      if (history.length > 0 && history[0].role === 'assistant') {
+        history.shift()
       }
-    } else {
-      // ── SIMULATED MODE: Keyword matching fallback ──
-      await new Promise(resolve => setTimeout(resolve, 1200))
-      const response = getSimulatedResponse(userMsg)
+
+      const response = await callClaudeAPI(history, userKey)
       setMessages(prev => [...prev, { role: 'ai', content: response }])
+    } catch (err: unknown) {
+      const errorMsg = err instanceof Error ? err.message : 'Unknown error occurred'
+      const isBilling = errorMsg.toLowerCase().includes('credit') || errorMsg.toLowerCase().includes('balance') || errorMsg.toLowerCase().includes('billing')
+      const isNoKey = errorMsg.toLowerCase().includes('no api key')
+      showToast(
+        isBilling ? 'Claude API: Credit balance too low. Check console.anthropic.com/settings/billing'
+          : isNoKey ? 'No API key configured — paste one in Settings or add CLAUDE_API_KEY to Netlify env vars'
+          : `AI Error: ${errorMsg}`,
+        'error',
+      )
+      // Fall back to simulated response on API failure
+      const fallback = getSimulatedResponse(userMsg)
+      const prefix = isBilling
+        ? '⚠️ **Claude API credits depleted** — Please add credits at console.anthropic.com → Billing. Showing cached analysis below:\n\n'
+        : isNoKey
+        ? '⚠️ *No API key configured — showing cached analysis. Paste your key in the Settings tab, or set CLAUDE_API_KEY in Netlify dashboard.*\n\n'
+        : '⚠️ *Live AI unavailable — showing cached analysis*\n\n'
+      setMessages(prev => [...prev, { role: 'ai', content: `${prefix}${fallback}` }])
     }
 
     setThinking(false)
