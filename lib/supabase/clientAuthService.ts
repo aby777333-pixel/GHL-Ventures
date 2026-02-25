@@ -53,22 +53,24 @@ export async function loginClient(email: string, password: string): Promise<Clie
   const { data, error } = await supabase.auth.signInWithPassword({ email, password })
   if (error || !data.user) return null
 
+  // profiles table has: full_name, avatar_url, phone, city (no email/portal column)
   const { data: profileData } = await supabase
     .from('profiles')
     .select('*')
     .eq('id', data.user.id)
     .single()
 
-  const { data: clientProfileData } = await supabase
-    .from('client_profiles')
+  // clients table stores KYC, AUM, risk_profile — linked via user_id
+  const { data: clientData } = await supabase
+    .from('clients')
     .select('*')
-    .eq('id', data.user.id)
+    .eq('user_id', data.user.id)
     .single()
 
   const profile = profileData as any
-  const clientProfile = clientProfileData as any
+  const client = clientData as any
 
-  if (!profile || !clientProfile) {
+  if (!profile && !client) {
     await supabase.auth.signOut()
     return null
   }
@@ -76,15 +78,15 @@ export async function loginClient(email: string, password: string): Promise<Clie
   return {
     user: {
       id: data.user.id,
-      name: profile.name,
-      email: profile.email,
-      phone: profile.phone,
-      avatar_url: profile.avatar_url,
-      kyc_status: clientProfile.kyc_status,
-      account_status: clientProfile.account_status,
-      risk_profile: clientProfile.risk_profile,
-      aum: clientProfile.aum,
-      city: clientProfile.city,
+      name: profile?.full_name || data.user.user_metadata?.full_name || data.user.email?.split('@')[0] || '',
+      email: data.user.email || '',
+      phone: profile?.phone || client?.phone || null,
+      avatar_url: profile?.avatar_url || null,
+      kyc_status: client?.kyc_status || 'pending',
+      account_status: client ? 'active' : 'pending',
+      risk_profile: client?.risk_profile || null,
+      aum: client?.total_invested || 0,
+      city: profile?.city || client?.city || null,
     },
     loginAt: Date.now(),
     expiresAt: Date.now() + 8 * 60 * 60 * 1000,
@@ -105,17 +107,20 @@ export async function signupClient(
   if (error) return { success: false, error: error.message }
   if (!data.user) return { success: false, error: 'Signup failed' }
 
-  // Create profile and client_profile
+  // Create profile (full_name — no email/portal column in profiles table)
   await supabase.from('profiles').insert({
     id: data.user.id,
-    email,
-    name,
+    full_name: name,
     phone: phone || null,
-    portal: 'client',
+    role: 'client',
   } as any)
 
-  await supabase.from('client_profiles').insert({
-    id: data.user.id,
+  // Create client record linked via user_id
+  await supabase.from('clients').insert({
+    user_id: data.user.id,
+    full_name: name,
+    email,
+    phone: phone || null,
   } as any)
 
   return { success: true }
@@ -147,29 +152,29 @@ export async function getClientSession(): Promise<ClientSession | null> {
     .eq('id', session.user.id)
     .single()
 
-  const { data: clientProfileData } = await supabase
-    .from('client_profiles')
+  const { data: clientData } = await supabase
+    .from('clients')
     .select('*')
-    .eq('id', session.user.id)
+    .eq('user_id', session.user.id)
     .single()
 
   const profile = profileData as any
-  const clientProfile = clientProfileData as any
+  const client = clientData as any
 
-  if (!profile || !clientProfile) return null
+  if (!profile && !client) return null
 
   return {
     user: {
       id: session.user.id,
-      name: profile.name,
-      email: profile.email,
-      phone: profile.phone,
-      avatar_url: profile.avatar_url,
-      kyc_status: clientProfile.kyc_status,
-      account_status: clientProfile.account_status,
-      risk_profile: clientProfile.risk_profile,
-      aum: clientProfile.aum,
-      city: clientProfile.city,
+      name: profile?.full_name || session.user.user_metadata?.full_name || session.user.email?.split('@')[0] || '',
+      email: session.user.email || '',
+      phone: profile?.phone || client?.phone || null,
+      avatar_url: profile?.avatar_url || null,
+      kyc_status: client?.kyc_status || 'pending',
+      account_status: client ? 'active' : 'pending',
+      risk_profile: client?.risk_profile || null,
+      aum: client?.total_invested || 0,
+      city: profile?.city || client?.city || null,
     },
     loginAt: Date.now(),
     expiresAt: Date.now() + 8 * 60 * 60 * 1000,
