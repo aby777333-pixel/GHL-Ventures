@@ -406,13 +406,13 @@ export class VoiceCompanion implements VoiceCompanionAPI {
 
     switch (type) {
       case 'whatsapp':
-        window.open('https://wa.me/919876543210', '_blank');
+        window.open('https://wa.me/917200255252', '_blank');
         break;
       case 'call':
-        window.open('tel:+919876543210', '_self');
+        window.open('tel:+917200255252', '_self');
         break;
       case 'email':
-        window.open('mailto:info@ghlindia.com', '_self');
+        window.open('mailto:info@ghlindiaventures.com', '_self');
         break;
       case 'scroll':
         if (data === 'top') window.scrollTo({ top: 0, behavior: 'smooth' });

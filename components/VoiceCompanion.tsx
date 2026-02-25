@@ -59,10 +59,10 @@ export default function VoiceCompanionWrapper() {
                 document.documentElement.classList.toggle('dark');
                 break;
               case 'quiz':
-                router.push('/quiz');
+                router.push('/financial-iq');
                 break;
               case 'calculator':
-                router.push('/calculator');
+                router.push('/tools');
                 break;
               case 'search':
                 // Trigger command palette
