@@ -6,6 +6,7 @@ import {
   Calendar, ArrowUpRight, ArrowDownRight, Eye, MoreHorizontal,
   Trophy, Zap, Filter, Plus, Clock, CheckCircle2,
   Star, BarChart3, Percent, DollarSign, UserPlus, Upload,
+  ArrowRightLeft, Loader2,
 } from 'lucide-react'
 import AdminGlass from '../shared/AdminGlass'
 import AdminDataTable, { type Column } from '../shared/AdminDataTable'
@@ -52,6 +53,38 @@ export default function SalesModule({ subTab, navigate, showToast }: SalesModule
   const [addLeadOpen, setAddLeadOpen] = useState(false)
   const [folderPickerOpen, setFolderPickerOpen] = useState(false)
   const [savingLead, setSavingLead] = useState(false)
+  const [mondaySyncing, setMondaySyncing] = useState(false)
+  const [mondayAvailable, setMondayAvailable] = useState(false)
+
+  // Check if Monday.com is configured on mount
+  useState(() => {
+    if (typeof window === 'undefined') return
+    const { isMondayConfigured } = require('@/lib/mondayService')
+    setMondayAvailable(isMondayConfigured())
+  })
+
+  const handleSyncToMonday = async () => {
+    setMondaySyncing(true)
+    try {
+      const { pushLeadsToMonday, getSavedMappings } = await import('@/lib/mondayService')
+      const mappings = getSavedMappings()
+      if (mappings.length === 0) {
+        showToast('No board mapping configured — go to Settings > Integrations first', 'warning')
+        return
+      }
+      const m = mappings[0]
+      const result = await pushLeadsToMonday(LEADS_DATA, m.boardId, m.columnMappings, m.groupId)
+      if (result.success) {
+        showToast(`${result.synced} leads synced to Monday.com`, 'success')
+      } else {
+        showToast(`Synced ${result.synced}, failed ${result.failed} — check Settings > Integrations for details`, 'warning')
+      }
+    } catch (err: unknown) {
+      showToast(err instanceof Error ? err.message : 'Monday.com sync failed', 'error')
+    } finally {
+      setMondaySyncing(false)
+    }
+  }
 
   // ── Add Lead form state ─────────────────────────────────────
   const [leadForm, setLeadForm] = useState({
@@ -114,13 +147,25 @@ export default function SalesModule({ subTab, navigate, showToast }: SalesModule
           <h1 className="text-2xl font-bold text-white">Sales CRM</h1>
           <p className="text-sm text-gray-500 mt-1">Manage leads, pipeline, commissions, and sales performance</p>
         </div>
-        <button
-          onClick={() => setAddLeadOpen(true)}
-          className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium text-white bg-brand-red/20 border border-brand-red/30 hover:bg-brand-red/30 transition-colors self-start admin-btn-press"
-        >
-          <UserPlus className="w-4 h-4" />
-          Add Lead
-        </button>
+        <div className="flex items-center gap-2 self-start">
+          {mondayAvailable && (
+            <button
+              onClick={handleSyncToMonday}
+              disabled={mondaySyncing}
+              className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium text-white bg-white/[0.04] border border-white/[0.08] hover:bg-white/[0.08] transition-colors disabled:opacity-40 disabled:cursor-not-allowed admin-btn-press"
+            >
+              {mondaySyncing ? <Loader2 className="w-4 h-4 animate-spin" /> : <ArrowRightLeft className="w-4 h-4" />}
+              {mondaySyncing ? 'Syncing…' : 'Sync to Monday'}
+            </button>
+          )}
+          <button
+            onClick={() => setAddLeadOpen(true)}
+            className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium text-white bg-brand-red/20 border border-brand-red/30 hover:bg-brand-red/30 transition-colors admin-btn-press"
+          >
+            <UserPlus className="w-4 h-4" />
+            Add Lead
+          </button>
+        </div>
       </div>
 
       {/* KPI Row */}

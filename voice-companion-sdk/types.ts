@@ -217,7 +217,7 @@ export interface SpeechCapabilities {
   ttsSupported: boolean;
   sttSupported: boolean;
   nativeVoiceCount: number;
-  preferredProvider: 'native' | 'elevenlabs' | 'google';
+  preferredProvider: 'native' | 'elevenlabs' | 'google' | 'sarvam';
   isMobile: boolean;
   browserName: string;
 }
@@ -231,7 +231,7 @@ export interface TTSRequest {
   pitch?: number;
 }
 
-export type TTSProvider = 'native' | 'elevenlabs' | 'google' | 'auto';
+export type TTSProvider = 'native' | 'elevenlabs' | 'google' | 'sarvam' | 'auto';
 
 // ── Knowledge ────────────────────────────────────────────────
 
@@ -313,6 +313,8 @@ export interface VoiceCompanionConfig {
   elevenLabsApiKey?: string;
   elevenLabsVoices?: { abe: string; tina: string };
   googleCloudTtsKey?: string;
+  sarvamApiKey?: string;
+  sarvamVoices?: { abe: string; tina: string };
   ttsProvider?: TTSProvider;
   defaultCharacter?: CharacterName;
   language?: LangCode;

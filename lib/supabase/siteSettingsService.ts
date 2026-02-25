@@ -45,83 +45,77 @@ const DEFAULT_SETTINGS: Record<string, string> = {
 export async function getAllSettings(): Promise<Record<string, string>> {
   if (!isSupabaseConfigured()) return { ...DEFAULT_SETTINGS }
 
-  const { data, error } = await sb.from('site_settings').select('key, value')
-
-  if (error || !data || data.length === 0) {
-    console.warn('[settings] Falling back to defaults:', error?.message)
-    return { ...DEFAULT_SETTINGS }
-  }
-
-  const settings = { ...DEFAULT_SETTINGS }
-  data.forEach((row: any) => {
-    settings[row.key] = row.value
-  })
-  return settings
+  try {
+    const { data, error } = await sb.from('site_settings').select('key, value')
+    if (error || !data || data.length === 0) {
+      console.warn('[settings] Falling back to defaults:', error?.message)
+      return { ...DEFAULT_SETTINGS }
+    }
+    const settings = { ...DEFAULT_SETTINGS }
+    data.forEach((row: any) => { settings[row.key] = row.value })
+    return settings
+  } catch { return { ...DEFAULT_SETTINGS } }
 }
 
 export async function getSetting(key: string): Promise<string> {
   if (!isSupabaseConfigured()) return DEFAULT_SETTINGS[key] || ''
-
-  const { data, error } = await sb.from('site_settings').select('value').eq('key', key).single()
-  if (error || !data) return DEFAULT_SETTINGS[key] || ''
-  return data.value
+  try {
+    const { data, error } = await sb.from('site_settings').select('value').eq('key', key).single()
+    if (error || !data) return DEFAULT_SETTINGS[key] || ''
+    return data.value
+  } catch { return DEFAULT_SETTINGS[key] || '' }
 }
 
 export async function getSettingsByCategory(
   category: SiteSettings['category']
 ): Promise<SiteSettings[]> {
   if (!isSupabaseConfigured()) return []
-
-  const { data, error } = await sb.from('site_settings').select('*').eq('category', category).order('key')
-  if (error || !data) return []
-  return data as SiteSettings[]
+  try {
+    const { data, error } = await sb.from('site_settings').select('*').eq('category', category).order('key')
+    if (error || !data) return []
+    return data as SiteSettings[]
+  } catch { return [] }
 }
 
 // ── Write (Admin only) ─────────────────────────────────────
 
 export async function updateSetting(key: string, value: string): Promise<boolean> {
   if (!isSupabaseConfigured()) return false
-
-  const { error } = await sb.from('site_settings').upsert(
-    { key, value, updated_at: new Date().toISOString() },
-    { onConflict: 'key' }
-  )
-
-  if (error) { console.warn('[settings] Update error:', error.message); return false }
-  return true
+  try {
+    const { error } = await sb.from('site_settings').upsert(
+      { key, value, updated_at: new Date().toISOString() },
+      { onConflict: 'key' }
+    )
+    if (error) { console.warn('[settings] Update error:', error.message); return false }
+    return true
+  } catch { return false }
 }
 
 export async function updateSettings(
   settings: Record<string, string>
 ): Promise<boolean> {
   if (!isSupabaseConfigured()) return false
-
-  const rows = Object.entries(settings).map(([key, value]) => ({
-    key,
-    value,
-    updated_at: new Date().toISOString(),
-  }))
-
-  const { error } = await sb.from('site_settings').upsert(rows, { onConflict: 'key' })
-  if (error) { console.warn('[settings] Bulk update error:', error.message); return false }
-  return true
+  try {
+    const rows = Object.entries(settings).map(([key, value]) => ({
+      key, value, updated_at: new Date().toISOString(),
+    }))
+    const { error } = await sb.from('site_settings').upsert(rows, { onConflict: 'key' })
+    if (error) { console.warn('[settings] Bulk update error:', error.message); return false }
+    return true
+  } catch { return false }
 }
 
 // ── Seed defaults ───────────────────────────────────────────
 export async function seedDefaultSettings(): Promise<boolean> {
   if (!isSupabaseConfigured()) return false
-
-  const rows = Object.entries(DEFAULT_SETTINGS).map(([key, value]) => ({
-    key,
-    value,
-    category: categorizeKey(key),
-    label: formatLabel(key),
-    description: null,
-  }))
-
-  const { error } = await sb.from('site_settings').upsert(rows, { onConflict: 'key' })
-  if (error) { console.warn('[settings] Seed error:', error.message); return false }
-  return true
+  try {
+    const rows = Object.entries(DEFAULT_SETTINGS).map(([key, value]) => ({
+      key, value, category: categorizeKey(key), label: formatLabel(key), description: null,
+    }))
+    const { error } = await sb.from('site_settings').upsert(rows, { onConflict: 'key' })
+    if (error) { console.warn('[settings] Seed error:', error.message); return false }
+    return true
+  } catch { return false }
 }
 
 // ── Helpers ─────────────────────────────────────────────────

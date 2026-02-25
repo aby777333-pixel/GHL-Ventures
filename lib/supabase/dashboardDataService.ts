@@ -100,13 +100,33 @@ const MOCK_ADMIN_NEWS = [
   { id: 4, title: 'Investor Meet - Mumbai, April 12', excerpt: 'Join us for our quarterly investor meet and portfolio review...', date: '05 Mar 2025', pinned: false, category: 'Event' },
 ]
 
+// ── Safe query helper (catches network/SSL/HTML errors) ─────
+async function safeFetch<T>(
+  queryFn: () => Promise<{ data: T | null; error: any }>,
+  fallback: T,
+  label: string,
+): Promise<T> {
+  try {
+    const { data, error } = await queryFn()
+    if (error) {
+      console.warn(`[dashboard] ${label}:`, error.message)
+      return fallback
+    }
+    return data ?? fallback
+  } catch (err) {
+    console.warn(`[dashboard] ${label} exception:`, err)
+    return fallback
+  }
+}
+
 // ── Service Functions ───────────────────────────────────────
 
 export async function fetchPortfolioAssets(clientId?: string) {
   if (!isSupabaseConfigured() || !clientId) return MOCK_PORTFOLIO_ASSETS
-  const { data, error } = await sb.from('investments').select('*').eq('client_id', clientId)
-  if (error || !data) return MOCK_PORTFOLIO_ASSETS
-  return data
+  return safeFetch(
+    () => sb.from('investments').select('*').eq('client_id', clientId),
+    MOCK_PORTFOLIO_ASSETS, 'fetchPortfolioAssets',
+  )
 }
 
 export async function fetchNAVHistory(clientId?: string) {
@@ -119,39 +139,44 @@ export function getAllocation() { return MOCK_ALLOCATION }
 
 export async function fetchTransactions(clientId?: string) {
   if (!isSupabaseConfigured() || !clientId) return MOCK_TRANSACTIONS
-  const { data, error } = await sb.from('transactions').select('*').eq('client_id', clientId).order('date', { ascending: false })
-  if (error || !data) return MOCK_TRANSACTIONS
-  return data
+  return safeFetch(
+    () => sb.from('transactions').select('*').eq('client_id', clientId).order('date', { ascending: false }),
+    MOCK_TRANSACTIONS, 'fetchTransactions',
+  )
 }
 
 export async function fetchMessages(clientId?: string) {
   if (!isSupabaseConfigured() || !clientId) return MOCK_MESSAGES
-  const { data, error } = await sb.from('messages').select('*').eq('to_id', clientId).order('created_at', { ascending: false })
-  if (error || !data) return MOCK_MESSAGES
-  return data
+  return safeFetch(
+    () => sb.from('messages').select('*').eq('to_id', clientId).order('created_at', { ascending: false }),
+    MOCK_MESSAGES, 'fetchMessages',
+  )
 }
 
 export async function fetchSupportTickets(clientId?: string) {
   if (!isSupabaseConfigured() || !clientId) return MOCK_SUPPORT_TICKETS
-  const { data, error } = await sb.from('tickets').select('*').eq('client_id', clientId).order('created_at', { ascending: false })
-  if (error || !data) return MOCK_SUPPORT_TICKETS
-  return data
+  return safeFetch(
+    () => sb.from('tickets').select('*').eq('client_id', clientId).order('created_at', { ascending: false }),
+    MOCK_SUPPORT_TICKETS, 'fetchSupportTickets',
+  )
 }
 
 export async function fetchNotifications(clientId?: string) {
   if (!isSupabaseConfigured() || !clientId) return MOCK_NOTIFICATIONS
-  const { data, error } = await sb.from('notifications').select('*').eq('user_id', clientId).order('created_at', { ascending: false }).limit(20)
-  if (error || !data) return MOCK_NOTIFICATIONS
-  return data
+  return safeFetch(
+    () => sb.from('notifications').select('*').eq('user_id', clientId).order('created_at', { ascending: false }).limit(20),
+    MOCK_NOTIFICATIONS, 'fetchNotifications',
+  )
 }
 
 export function getKYCSteps() { return MOCK_KYC_STEPS }
 
 export async function fetchDocuments(clientId?: string) {
   if (!isSupabaseConfigured() || !clientId) return MOCK_DOCUMENTS
-  const { data, error } = await sb.from('documents').select('*').eq('client_id', clientId).order('uploaded_at', { ascending: false })
-  if (error || !data) return MOCK_DOCUMENTS
-  return data
+  return safeFetch(
+    () => sb.from('documents').select('*').eq('client_id', clientId).order('uploaded_at', { ascending: false }),
+    MOCK_DOCUMENTS, 'fetchDocuments',
+  )
 }
 
 export function getAdminNews() { return MOCK_ADMIN_NEWS }

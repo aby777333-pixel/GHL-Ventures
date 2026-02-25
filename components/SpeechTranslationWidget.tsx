@@ -2,6 +2,10 @@
 
 import { useState, useRef, useEffect, useCallback } from 'react'
 import { Languages, Mic, MicOff, Volume2, X, ChevronDown, ArrowRightLeft, Loader2 } from 'lucide-react'
+import {
+  isSarvamConfigured, sarvamTranslateText, sarvamTTS, playSarvamAudio,
+  toSarvamLangCode, isSarvamTTSLanguage, SARVAM_AVATAR_VOICES,
+} from '@/lib/sarvamService'
 
 // ─── Language codes for translation ───
 const TRANSLATION_LANGUAGES = [
@@ -71,8 +75,23 @@ export default function SpeechTranslationWidget() {
     return TRANSLATION_LANGUAGES.find(l => l.code === targetLang) || TRANSLATION_LANGUAGES[1]
   }, [targetLang])
 
-  // Translate using MyMemory free API (no key needed, CORS-friendly)
+  // Indian language codes that Sarvam supports for translation
+  const SARVAM_LANG_CODES = ['en', 'hi', 'ta', 'te', 'kn', 'ml', 'bn', 'gu', 'mr', 'pa']
+
+  // Translate using Sarvam AI for Indian languages, MyMemory for others
   const translate = useCallback(async (text: string): Promise<string> => {
+    // Use Sarvam for Indian language pairs
+    const bothIndian = SARVAM_LANG_CODES.includes(sourceLang) && SARVAM_LANG_CODES.includes(targetLang)
+    if (bothIndian && isSarvamConfigured()) {
+      try {
+        const result = await sarvamTranslateText(text, targetLang, sourceLang)
+        if (result) return result
+      } catch {
+        // Fall through to MyMemory
+      }
+    }
+
+    // Fallback: MyMemory free API (for non-Indian language pairs)
     try {
       const langPair = `${sourceLang}|${targetLang}`
       const url = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(text)}&langpair=${langPair}`
@@ -80,7 +99,6 @@ export default function SpeechTranslationWidget() {
       const data = await res.json()
       if (data.responseStatus === 200 && data.responseData?.translatedText) {
         const translated = data.responseData.translatedText
-        // MyMemory sometimes returns UPPERCASE for untranslated text
         if (translated === text.toUpperCase()) return text
         return translated
       }
@@ -90,12 +108,31 @@ export default function SpeechTranslationWidget() {
     }
   }, [sourceLang, targetLang])
 
-  // Speak translated text
-  const speakTranslation = useCallback((text: string) => {
+  // Speak translated text — prefer Sarvam TTS for Indian languages
+  const speakTranslation = useCallback(async (text: string) => {
+    const tLang = getTargetLang()
+
+    // Try Sarvam TTS for supported Indian languages
+    if (isSarvamConfigured() && isSarvamTTSLanguage(tLang.code)) {
+      try {
+        const audio = await sarvamTTS({
+          text,
+          targetLanguage: toSarvamLangCode(tLang.code),
+          speaker: SARVAM_AVATAR_VOICES.tina,
+        })
+        if (audio) {
+          await playSarvamAudio(audio)
+          return
+        }
+      } catch {
+        // Fall through to native TTS
+      }
+    }
+
+    // Fallback: Web Speech API
     if (!synthRef.current) return
     synthRef.current.cancel()
     const utterance = new SpeechSynthesisUtterance(text)
-    const tLang = getTargetLang()
     utterance.lang = tLang.speechCode
     utterance.rate = 0.9
     utterance.pitch = 1
@@ -357,7 +394,7 @@ export default function SpeechTranslationWidget() {
                   <br />Translation will appear in {getTargetLang().label}.
                 </p>
                 <p className="text-gray-600 text-[9px] mt-2">
-                  Free API: MyMemory Translation | 20 languages
+                  Sarvam AI + MyMemory Translation | 20 languages
                 </p>
               </div>
             )}
@@ -433,7 +470,7 @@ export default function SpeechTranslationWidget() {
           {/* Footer */}
           <div className="px-4 py-2 border-t border-white/5 text-center">
             <p className="text-[8px] text-gray-600">
-              Powered by MyMemory API + Web Speech API | Voice-to-voice translation
+              Powered by Sarvam AI + Web Speech API | Voice-to-voice translation
             </p>
           </div>
         </div>

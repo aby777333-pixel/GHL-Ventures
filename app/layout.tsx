@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import dynamic from 'next/dynamic'
+import Script from 'next/script'
 import '@/styles/globals.css'
 import Navbar from '@/components/Navbar'
 import Footer from '@/components/Footer'
@@ -274,6 +275,24 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                 <CookieConsent />
                 <SocialProofToasts />
                 <LiveVisitorCount />
+                {/* Tawk.to Live Chat */}
+                <Script
+                  id="tawk-to"
+                  strategy="lazyOnload"
+                  dangerouslySetInnerHTML={{
+                    __html: `
+                      var Tawk_API=Tawk_API||{}, Tawk_LoadStart=new Date();
+                      (function(){
+                        var s1=document.createElement("script"),s0=document.getElementsByTagName("script")[0];
+                        s1.async=true;
+                        s1.src='https://embed.tawk.to/699f1c7dedd3e21c341593ce/1jiaoeitu';
+                        s1.charset='UTF-8';
+                        s1.setAttribute('crossorigin','*');
+                        s0.parentNode.insertBefore(s1,s0);
+                      })();
+                    `,
+                  }}
+                />
               </MainSiteOnly>
               {/* Floating widgets — always visible (useful for staff telecallers & CS) */}
               <VideoCallWidget />

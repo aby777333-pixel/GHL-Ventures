@@ -33,7 +33,13 @@ function useQuery<T>(fetcher: () => Promise<T>, fallback: T): UseQueryResult<T> 
 
     fetcher()
       .then(result => { if (!cancelled) { setData(result); setLoading(false) } })
-      .catch(err => { if (!cancelled) { setError(err?.message || 'Unknown error'); setLoading(false) } })
+      .catch(err => {
+        if (!cancelled) {
+          setError(err?.message || 'Unknown error')
+          setData(fallback) // Restore mock data on failure
+          setLoading(false)
+        }
+      })
 
     return () => { cancelled = true }
   }, [trigger]) // eslint-disable-line react-hooks/exhaustive-deps

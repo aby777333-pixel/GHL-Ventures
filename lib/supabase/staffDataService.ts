@@ -24,12 +24,17 @@ const sb = supabase as any
 // ── Generic query helper ────────────────────────────────────
 async function queryTable<T>(table: string, mockData: T[]): Promise<T[]> {
   if (!isSupabaseConfigured()) return mockData
-  const { data, error } = await sb.from(table).select('*').order('created_at', { ascending: false })
-  if (error) {
-    console.warn(`[staffData] Error fetching ${table}:`, error.message)
+  try {
+    const { data, error } = await sb.from(table).select('*').order('created_at', { ascending: false })
+    if (error) {
+      console.warn(`[staffData] Error fetching ${table}:`, error.message)
+      return mockData
+    }
+    return (data as T[]) || mockData
+  } catch (err) {
+    console.warn(`[staffData] Exception fetching ${table}:`, err)
     return mockData
   }
-  return (data as T[]) || mockData
 }
 
 // ── Staff Directory ─────────────────────────────────────────
@@ -39,21 +44,23 @@ export async function fetchStaffEmployees() {
 
 // ── HR / Employee Self-Service ──────────────────────────────
 export async function fetchMyAttendance(staffId?: string) {
-  if (!isSupabaseConfigured()) return MY_ATTENDANCE_DATA
-  if (!staffId) return MY_ATTENDANCE_DATA
-  const { data, error } = await sb.from('attendance').select('*').eq('staff_id', staffId).order('date', { ascending: false })
-  if (error || !data) return MY_ATTENDANCE_DATA
-  return data
+  if (!isSupabaseConfigured() || !staffId) return MY_ATTENDANCE_DATA
+  try {
+    const { data, error } = await sb.from('attendance').select('*').eq('staff_id', staffId).order('date', { ascending: false })
+    if (error || !data) return MY_ATTENDANCE_DATA
+    return data
+  } catch { return MY_ATTENDANCE_DATA }
 }
 
 export function getMyLeaveBalances() { return MY_LEAVE_BALANCES }
 
 export async function fetchMyLeaveHistory(staffId?: string) {
-  if (!isSupabaseConfigured()) return MY_LEAVE_HISTORY
-  if (!staffId) return MY_LEAVE_HISTORY
-  const { data, error } = await sb.from('leave_requests').select('*').eq('staff_id', staffId).order('created_at', { ascending: false })
-  if (error || !data) return MY_LEAVE_HISTORY
-  return data
+  if (!isSupabaseConfigured() || !staffId) return MY_LEAVE_HISTORY
+  try {
+    const { data, error } = await sb.from('leave_requests').select('*').eq('staff_id', staffId).order('created_at', { ascending: false })
+    if (error || !data) return MY_LEAVE_HISTORY
+    return data
+  } catch { return MY_LEAVE_HISTORY }
 }
 
 export async function fetchMyPayslips(staffId?: string) {
@@ -67,11 +74,13 @@ export function getCSKPIs() { return CS_KPIS_DATA }
 
 export async function fetchTickets(assignedTo?: string) {
   if (!isSupabaseConfigured()) return TICKETS_DATA
-  let query = sb.from('tickets').select('*').order('created_at', { ascending: false })
-  if (assignedTo) query = query.eq('assigned_to', assignedTo)
-  const { data, error } = await query
-  if (error || !data) return TICKETS_DATA
-  return data
+  try {
+    let query = sb.from('tickets').select('*').order('created_at', { ascending: false })
+    if (assignedTo) query = query.eq('assigned_to', assignedTo)
+    const { data, error } = await query
+    if (error || !data) return TICKETS_DATA
+    return data
+  } catch { return TICKETS_DATA }
 }
 
 export async function fetchClientInteractions(staffId?: string) {
@@ -85,28 +94,32 @@ export function getQueueData() { return QUEUE_DATA }
 // ── Tasks ───────────────────────────────────────────────────
 export async function fetchTasks(assignedTo?: string) {
   if (!isSupabaseConfigured()) return TASKS_DATA
-  let query = sb.from('tasks').select('*').order('created_at', { ascending: false })
-  if (assignedTo) query = query.eq('assigned_to', assignedTo)
-  const { data, error } = await query
-  if (error || !data) return TASKS_DATA
-  return data
+  try {
+    let query = sb.from('tasks').select('*').order('created_at', { ascending: false })
+    if (assignedTo) query = query.eq('assigned_to', assignedTo)
+    const { data, error } = await query
+    if (error || !data) return TASKS_DATA
+    return data
+  } catch { return TASKS_DATA }
 }
 
 // ── Field Operations ────────────────────────────────────────
 export async function fetchFieldCheckins(staffId?: string) {
-  if (!isSupabaseConfigured()) return FIELD_CHECKINS_DATA
-  if (!staffId) return FIELD_CHECKINS_DATA
-  const { data, error } = await sb.from('field_checkins').select('*').eq('staff_id', staffId).order('created_at', { ascending: false })
-  if (error || !data) return FIELD_CHECKINS_DATA
-  return data
+  if (!isSupabaseConfigured() || !staffId) return FIELD_CHECKINS_DATA
+  try {
+    const { data, error } = await sb.from('field_checkins').select('*').eq('staff_id', staffId).order('created_at', { ascending: false })
+    if (error || !data) return FIELD_CHECKINS_DATA
+    return data
+  } catch { return FIELD_CHECKINS_DATA }
 }
 
 export async function fetchSiteVisits(staffId?: string) {
-  if (!isSupabaseConfigured()) return SITE_VISITS_DATA
-  if (!staffId) return SITE_VISITS_DATA
-  const { data, error } = await sb.from('site_visits').select('*').eq('staff_id', staffId).order('visit_date', { ascending: false })
-  if (error || !data) return SITE_VISITS_DATA
-  return data
+  if (!isSupabaseConfigured() || !staffId) return SITE_VISITS_DATA
+  try {
+    const { data, error } = await sb.from('site_visits').select('*').eq('staff_id', staffId).order('visit_date', { ascending: false })
+    if (error || !data) return SITE_VISITS_DATA
+    return data
+  } catch { return SITE_VISITS_DATA }
 }
 
 export function getFieldProspects() { return FIELD_PROSPECTS_DATA }
@@ -118,16 +131,20 @@ export function getStaffAITools() { return STAFF_AI_TOOLS }
 // ── Knowledge Base & Training ───────────────────────────────
 export async function fetchKBArticles() {
   if (!isSupabaseConfigured()) return KB_ARTICLES_DATA
-  const { data, error } = await sb.from('kb_articles').select('*').order('created_at', { ascending: false })
-  if (error || !data) return KB_ARTICLES_DATA
-  return data
+  try {
+    const { data, error } = await sb.from('kb_articles').select('*').order('created_at', { ascending: false })
+    if (error || !data) return KB_ARTICLES_DATA
+    return data
+  } catch { return KB_ARTICLES_DATA }
 }
 
 export async function fetchAnnouncements() {
   if (!isSupabaseConfigured()) return ANNOUNCEMENTS_DATA
-  const { data, error } = await sb.from('announcements').select('*').eq('active', true).order('created_at', { ascending: false })
-  if (error || !data) return ANNOUNCEMENTS_DATA
-  return data
+  try {
+    const { data, error } = await sb.from('announcements').select('*').eq('active', true).order('created_at', { ascending: false })
+    if (error || !data) return ANNOUNCEMENTS_DATA
+    return data
+  } catch { return ANNOUNCEMENTS_DATA }
 }
 
 export function getTrainingModules() { return TRAINING_MODULES_DATA }
@@ -135,45 +152,56 @@ export function getDailyQuotes() { return STAFF_DAILY_QUOTES }
 
 // ── Notifications ───────────────────────────────────────────
 export async function fetchStaffNotifications(staffId?: string) {
-  if (!isSupabaseConfigured()) return []
-  if (!staffId) return []
-  const { data, error } = await sb.from('notifications').select('*').eq('user_id', staffId).order('created_at', { ascending: false }).limit(50)
-  if (error || !data) return []
-  return data
+  if (!isSupabaseConfigured() || !staffId) return []
+  try {
+    const { data, error } = await sb.from('notifications').select('*').eq('user_id', staffId).order('created_at', { ascending: false }).limit(50)
+    if (error || !data) return []
+    return data
+  } catch { return [] }
 }
 
 // ── CRUD Helpers ────────────────────────────────────────────
 export async function createTicket(ticket: Record<string, any>) {
   if (!isSupabaseConfigured()) return null
-  const { data, error } = await sb.from('tickets').insert(ticket).select().single()
-  if (error) { console.warn('[staff] Create ticket error:', error.message); return null }
-  return data
+  try {
+    const { data, error } = await sb.from('tickets').insert(ticket).select().single()
+    if (error) { console.warn('[staff] Create ticket error:', error.message); return null }
+    return data
+  } catch { return null }
 }
 
 export async function updateTicket(id: string, updates: Record<string, any>) {
   if (!isSupabaseConfigured()) return null
-  const { data, error } = await sb.from('tickets').update(updates).eq('id', id).select().single()
-  if (error) { console.warn('[staff] Update ticket error:', error.message); return null }
-  return data
+  try {
+    const { data, error } = await sb.from('tickets').update(updates).eq('id', id).select().single()
+    if (error) { console.warn('[staff] Update ticket error:', error.message); return null }
+    return data
+  } catch { return null }
 }
 
 export async function createFieldCheckin(checkin: Record<string, any>) {
   if (!isSupabaseConfigured()) return null
-  const { data, error } = await sb.from('field_checkins').insert(checkin).select().single()
-  if (error) { console.warn('[staff] Checkin error:', error.message); return null }
-  return data
+  try {
+    const { data, error } = await sb.from('field_checkins').insert(checkin).select().single()
+    if (error) { console.warn('[staff] Checkin error:', error.message); return null }
+    return data
+  } catch { return null }
 }
 
 export async function submitLeaveRequest(leave: Record<string, any>) {
   if (!isSupabaseConfigured()) return null
-  const { data, error } = await sb.from('leave_requests').insert(leave).select().single()
-  if (error) { console.warn('[staff] Leave request error:', error.message); return null }
-  return data
+  try {
+    const { data, error } = await sb.from('leave_requests').insert(leave).select().single()
+    if (error) { console.warn('[staff] Leave request error:', error.message); return null }
+    return data
+  } catch { return null }
 }
 
 export async function submitExpense(expense: Record<string, any>) {
   if (!isSupabaseConfigured()) return null
-  const { data, error } = await sb.from('expenses').insert(expense).select().single()
-  if (error) { console.warn('[staff] Expense error:', error.message); return null }
-  return data
+  try {
+    const { data, error } = await sb.from('expenses').insert(expense).select().single()
+    if (error) { console.warn('[staff] Expense error:', error.message); return null }
+    return data
+  } catch { return null }
 }

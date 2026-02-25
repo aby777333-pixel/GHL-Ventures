@@ -44,12 +44,17 @@ import {
 async function queryTable<T>(table: string, mockData: T[], orderBy = 'created_at'): Promise<T[]> {
   if (!isSupabaseConfigured()) return mockData
 
-  const { data, error } = await supabase.from(table as any).select('*').order(orderBy, { ascending: false }) as any
-  if (error) {
-    console.warn(`[adminData] Error fetching ${table}:`, error.message)
-    return mockData // Fallback to mock on error
+  try {
+    const { data, error } = await supabase.from(table as any).select('*').order(orderBy, { ascending: false }) as any
+    if (error) {
+      console.warn(`[adminData] Error fetching ${table}:`, error.message)
+      return mockData
+    }
+    return (data as T[]) || mockData
+  } catch (err) {
+    console.warn(`[adminData] Exception fetching ${table}:`, err)
+    return mockData
   }
-  return (data as T[]) || mockData
 }
 
 // ── Overview ────────────────────────────────────────────────
@@ -63,24 +68,25 @@ export function getSystemHealth() { return SYSTEM_HEALTH }
 // clients.user_id → profiles.id for the user's profile data
 export async function fetchClients() {
   if (!isSupabaseConfigured()) return CLIENTS_DATA
-  const { data, error } = await (supabase
-    .from('clients')
-    .select('*')
-    .order('created_at', { ascending: false }) as any)
-  if (error || !data) return CLIENTS_DATA
-  // Map Supabase "clients" shape to existing Client mock shape
-  return (data as any[]).map((c: any) => ({
-    id: c.id,
-    name: c.full_name || '',
-    email: c.email || '',
-    phone: c.phone || '',
-    kycStatus: c.kyc_status,
-    accountStatus: c.kyc_status === 'verified' ? 'active' : 'pending',
-    aum: c.total_invested || 0,
-    riskProfile: c.risk_profile,
-    city: c.city,
-    joinDate: c.created_at?.split('T')[0] || '',
-  }))
+  try {
+    const { data, error } = await (supabase
+      .from('clients')
+      .select('*')
+      .order('created_at', { ascending: false }) as any)
+    if (error || !data) return CLIENTS_DATA
+    return (data as any[]).map((c: any) => ({
+      id: c.id,
+      name: c.full_name || '',
+      email: c.email || '',
+      phone: c.phone || '',
+      kycStatus: c.kyc_status,
+      accountStatus: c.kyc_status === 'verified' ? 'active' : 'pending',
+      aum: c.total_invested || 0,
+      riskProfile: c.risk_profile,
+      city: c.city,
+      joinDate: c.created_at?.split('T')[0] || '',
+    }))
+  } catch { return CLIENTS_DATA }
 }
 
 // Table not yet created — uses mock fallback
@@ -98,23 +104,24 @@ export async function fetchLeads() {
 // Actual table: "staff_profiles" (not "employees")
 export async function fetchEmployees() {
   if (!isSupabaseConfigured()) return EMPLOYEES_DATA
-  const { data, error } = await (supabase
-    .from('staff_profiles')
-    .select('*')
-    .order('created_at', { ascending: false }) as any)
-  if (error || !data) return EMPLOYEES_DATA
-  // Map staff_profiles shape to Employee mock shape
-  return (data as any[]).map((s: any) => ({
-    id: s.id,
-    name: s.full_name || s.designation || '',
-    email: '',
-    phone: '',
-    role_title: s.designation || s.role || '',
-    department: s.department || '',
-    status: s.status === 'active' ? 'active' : 'inactive',
-    join_date: s.join_date || s.created_at?.split('T')[0] || '',
-    reporting_to: s.reporting_to || null,
-  }))
+  try {
+    const { data, error } = await (supabase
+      .from('staff_profiles')
+      .select('*')
+      .order('created_at', { ascending: false }) as any)
+    if (error || !data) return EMPLOYEES_DATA
+    return (data as any[]).map((s: any) => ({
+      id: s.id,
+      name: s.full_name || s.designation || '',
+      email: '',
+      phone: '',
+      role_title: s.designation || s.role || '',
+      department: s.department || '',
+      status: s.status === 'active' ? 'active' : 'inactive',
+      join_date: s.join_date || s.created_at?.split('T')[0] || '',
+      reporting_to: s.reporting_to || null,
+    }))
+  } catch { return EMPLOYEES_DATA }
 }
 
 // ── Compliance ──────────────────────────────────────────────
@@ -130,13 +137,15 @@ export async function fetchRiskFlags() {
 // Actual table: "audit_logs" (not "audit_log")
 export async function fetchAuditLog() {
   if (!isSupabaseConfigured()) return ACTIVITY_FEED
-  const { data, error } = await (supabase
-    .from('audit_logs')
-    .select('*')
-    .order('created_at', { ascending: false })
-    .limit(100) as any)
-  if (error || !data) return ACTIVITY_FEED
-  return data
+  try {
+    const { data, error } = await (supabase
+      .from('audit_logs')
+      .select('*')
+      .order('created_at', { ascending: false })
+      .limit(100) as any)
+    if (error || !data) return ACTIVITY_FEED
+    return data
+  } catch { return ACTIVITY_FEED }
 }
 
 // ── Finance ─────────────────────────────────────────────────
@@ -196,92 +205,107 @@ export function getMarketingIntegrations() { return INTEGRATION_SERVICES_DATA }
 // Table may not yet exist — graceful fallback
 export async function fetchBlogPosts(publishedOnly = false) {
   if (!isSupabaseConfigured()) return []
-  let query = supabase.from('blog_posts').select('*').order('created_at', { ascending: false }) as any
-  if (publishedOnly) query = query.eq('published', true)
-  const { data, error } = await query
-  if (error || !data) return []
-  return data
+  try {
+    let query = supabase.from('blog_posts').select('*').order('created_at', { ascending: false }) as any
+    if (publishedOnly) query = query.eq('published', true)
+    const { data, error } = await query
+    if (error || !data) return []
+    return data
+  } catch { return [] }
 }
 
 export async function fetchBlogPostBySlug(slug: string) {
   if (!isSupabaseConfigured()) return null
-  const { data, error } = await (supabase
-    .from('blog_posts')
-    .select('*')
-    .eq('slug', slug)
-    .single() as any)
-  if (error || !data) return null
-  return data
+  try {
+    const { data, error } = await (supabase
+      .from('blog_posts')
+      .select('*')
+      .eq('slug', slug)
+      .single() as any)
+    if (error || !data) return null
+    return data
+  } catch { return null }
 }
 
 export async function upsertBlogPost(post: Partial<BlogPost> & { slug: string; title: string }) {
   if (!isSupabaseConfigured()) return null
-  const { data, error } = await (supabase
-    .from('blog_posts')
-    .upsert(post as any, { onConflict: 'slug' })
-    .select()
-    .single() as any)
-  if (error) { console.warn('[blog] Upsert error:', error.message); return null }
-  return data
+  try {
+    const { data, error } = await (supabase
+      .from('blog_posts')
+      .upsert(post as any, { onConflict: 'slug' })
+      .select()
+      .single() as any)
+    if (error) { console.warn('[blog] Upsert error:', error.message); return null }
+    return data
+  } catch { return null }
 }
 
 // ── Tickets ─────────────────────────────────────────────────
-// Table may not yet exist — graceful fallback
 export async function fetchTickets() {
   if (!isSupabaseConfigured()) return []
-  const { data, error } = await (supabase
-    .from('tickets')
-    .select('*')
-    .order('created_at', { ascending: false }) as any)
-  if (error || !data) return []
-  return data
+  try {
+    const { data, error } = await (supabase
+      .from('tickets')
+      .select('*')
+      .order('created_at', { ascending: false }) as any)
+    if (error || !data) return []
+    return data
+  } catch { return [] }
 }
 
 // ── Tasks ───────────────────────────────────────────────────
-// Table may not yet exist — graceful fallback
 export async function fetchTasks() {
   if (!isSupabaseConfigured()) return []
-  const { data, error } = await (supabase
-    .from('tasks')
-    .select('*')
-    .order('created_at', { ascending: false }) as any)
-  if (error || !data) return []
-  return data
+  try {
+    const { data, error } = await (supabase
+      .from('tasks')
+      .select('*')
+      .order('created_at', { ascending: false }) as any)
+    if (error || !data) return []
+    return data
+  } catch { return [] }
 }
 
 // ── Documents ───────────────────────────────────────────────
-// Actual table: "documents" — EXISTS (order by created_at, not uploaded_at)
 export async function fetchDocuments() {
   if (!isSupabaseConfigured()) return []
-  const { data, error } = await (supabase
-    .from('documents')
-    .select('*')
-    .order('created_at', { ascending: false }) as any)
-  if (error || !data) return []
-  return data
+  try {
+    const { data, error } = await (supabase
+      .from('documents')
+      .select('*')
+      .order('created_at', { ascending: false }) as any)
+    if (error || !data) return []
+    return data
+  } catch { return [] }
 }
 
 // ── CRUD Helpers ────────────────────────────────────────────
 export async function insertRow(table: string, row: Record<string, any>) {
   if (!isSupabaseConfigured()) return null
-  const sb = supabase as any
-  const { data, error } = await sb.from(table).insert(row).select().single()
-  if (error) { console.warn(`[insert] ${table}:`, error.message); return null }
-  return data
+  try {
+    const sb = supabase as any
+    const { data, error } = await sb.from(table).insert(row).select().single()
+    if (error) { console.warn(`[insert] ${table}:`, error.message); return null }
+    return data
+  } catch { return null }
 }
 
 export async function updateRow(table: string, id: string, updates: Record<string, any>) {
   if (!isSupabaseConfigured()) return null
-  const sb = supabase as any
-  const { data, error } = await sb.from(table).update(updates).eq('id', id).select().single()
-  if (error) { console.warn(`[update] ${table}:`, error.message); return null }
-  return data
+  try {
+    const sb = supabase as any
+    const { data, error } = await sb.from(table).update(updates).eq('id', id).select().single()
+    if (error) { console.warn(`[update] ${table}:`, error.message); return null }
+    return data
+  } catch { return null }
 }
 
 export async function deleteRow(table: string, id: string) {
   if (!isSupabaseConfigured()) return false
-  const sb = supabase as any
-  const { error } = await sb.from(table).delete().eq('id', id)
-  if (error) { console.warn(`[delete] ${table}:`, error.message); return false }
-  return true
+  try {
+    const sb = supabase as any
+    const { error } = await sb.from(table).delete().eq('id', id)
+    if (error) { console.warn(`[delete] ${table}:`, error.message); return false }
+    return true
+  } catch { return false }
 }

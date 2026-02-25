@@ -201,6 +201,7 @@ export const ADMIN_SIDEBAR_ITEMS: SidebarItem[] = [
       { id: 'settings', label: 'General' },
       { id: 'settings/permissions', label: 'Permissions' },
       { id: 'settings/security', label: 'Security' },
+      { id: 'settings/integrations', label: 'Integrations' },
       { id: 'settings/api-keys', label: 'API Keys' },
       { id: 'settings/backups', label: 'Backups' },
     ],
@@ -300,6 +301,7 @@ export const ALL_ADMIN_TAB_PARAMS = [
   { tab: ['settings'] },
   { tab: ['settings', 'permissions'] },
   { tab: ['settings', 'security'] },
+  { tab: ['settings', 'integrations'] },
   { tab: ['settings', 'api-keys'] },
   { tab: ['settings', 'backups'] },
 ]

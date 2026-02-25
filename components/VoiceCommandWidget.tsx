@@ -8,6 +8,10 @@ import {
   Video, Moon, Sun, Search, Zap, Power, ArrowLeft, ArrowRight,
 } from 'lucide-react'
 import { NAV_LINKS, BRAND } from '@/lib/constants'
+import {
+  isSarvamConfigured, sarvamTTS, playSarvamAudio,
+  toSarvamLangCode, isSarvamTTSLanguage, SARVAM_AVATAR_VOICES,
+} from '@/lib/sarvamService'
 
 // ─── Flatten all nav links for navigation ───
 interface NavItem { label: string; href: string }
@@ -369,11 +373,37 @@ export default function VoiceCommandWidget() {
     }
   }, [])
 
-  // ─── TTS Speak — with robust voice matching for selected language ───
+  // ─── TTS Speak — Sarvam AI for Indian languages, native fallback ───
   const speak = useCallback((text: string, lang?: string) => {
+    const useLang = lang || language
+
+    // Try Sarvam TTS for Indian languages
+    if (isSarvamConfigured() && isSarvamTTSLanguage(useLang)) {
+      setIsSpeaking(true)
+      sarvamTTS({
+        text,
+        targetLanguage: toSarvamLangCode(useLang),
+        speaker: SARVAM_AVATAR_VOICES.abe,
+      }).then(audio => {
+        if (audio) return playSarvamAudio(audio)
+        // Sarvam failed — fall through to native
+        speakNative(text, useLang)
+      }).catch(() => {
+        speakNative(text, useLang)
+      }).finally(() => {
+        setIsSpeaking(false)
+      })
+      return
+    }
+
+    // Fallback: Web Speech API
+    speakNative(text, useLang)
+  }, [language])
+
+  // Native Web Speech API TTS (fallback)
+  const speakNative = useCallback((text: string, useLang: string) => {
     if (!synthRef.current) return
     synthRef.current.cancel()
-    const useLang = lang || language
     const utterance = new SpeechSynthesisUtterance(text)
     utterance.lang = useLang
     utterance.rate = 0.95
@@ -383,22 +413,17 @@ export default function VoiceCommandWidget() {
     utterance.onend = () => setIsSpeaking(false)
     utterance.onerror = () => setIsSpeaking(false)
 
-    // ── Robust voice selection (Chrome loads voices async) ──
     let voices = synthRef.current.getVoices()
-    // Retry voice load if empty (Chrome quirk)
     if (voices.length === 0) {
       synthRef.current.cancel()
       voices = synthRef.current.getVoices()
     }
-    const langPrefix = useLang.split('-')[0] // e.g. 'ml' from 'ml-IN'
+    const langPrefix = useLang.split('-')[0]
 
-    // Priority 1: Exact match (e.g. 'ml-IN')
     let voice = voices.find(v => v.lang === useLang)
-    // Priority 2: Same prefix with region variant (e.g. 'ml_IN' or 'ml')
     if (!voice) voice = voices.find(v => v.lang.replace('_', '-') === useLang)
     if (!voice) voice = voices.find(v => v.lang.startsWith(langPrefix + '-') || v.lang.startsWith(langPrefix + '_'))
     if (!voice) voice = voices.find(v => v.lang === langPrefix)
-    // Priority 3: Voice name contains language name
     if (!voice) {
       const langLabel = LANGUAGES.find(l => l.code === useLang)?.label.toLowerCase() || ''
       if (langLabel) voice = voices.find(v => v.name.toLowerCase().includes(langLabel))
@@ -406,11 +431,11 @@ export default function VoiceCommandWidget() {
 
     if (voice) {
       utterance.voice = voice
-      utterance.lang = voice.lang // Ensure lang matches the voice
+      utterance.lang = voice.lang
     }
 
     synthRef.current.speak(utterance)
-  }, [language])
+  }, [])
 
   const readPageContent = useCallback(() => {
     const main = document.getElementById('main-content') || document.querySelector('main') || document.querySelector('[role="main"]') || document.body

@@ -1,6 +1,6 @@
 // ─────────────────────────────────────────────────────────────
 // Voice AI Companion SDK — Speech Engine
-// TTS/STT abstraction: Web Speech API + ElevenLabs + Google Cloud
+// TTS/STT abstraction: Web Speech API + ElevenLabs + Google Cloud + Sarvam AI
 // ─────────────────────────────────────────────────────────────
 
 import type {
@@ -92,6 +92,9 @@ export class SpeechEngine {
     this.stopSpeaking();
     const provider = this.resolveProvider();
 
+    if (provider === 'sarvam' && this.config.sarvamApiKey) {
+      return this.speakSarvam(request);
+    }
     if (provider === 'elevenlabs' && this.config.elevenLabsApiKey) {
       return this.speakElevenLabs(request);
     }
@@ -448,15 +451,94 @@ export class SpeechEngine {
     return langVoices[0] || null;
   }
 
-  private resolveProvider(): 'native' | 'elevenlabs' | 'google' {
+  private resolveProvider(): 'native' | 'elevenlabs' | 'google' | 'sarvam' {
     const pref = this.config.ttsProvider || 'auto';
+    if (pref === 'sarvam' && this.config.sarvamApiKey) return 'sarvam';
     if (pref === 'elevenlabs' && this.config.elevenLabsApiKey) return 'elevenlabs';
     if (pref === 'google' && this.config.googleCloudTtsKey) return 'google';
     if (pref === 'auto') {
+      // Prefer Sarvam for Indian languages (best quality for Indic voices)
+      if (this.config.sarvamApiKey) {
+        const lang = this.config.language || 'en';
+        const indianLangs = ['en', 'hi', 'ta', 'te', 'kn', 'ml'];
+        if (indianLangs.includes(lang)) return 'sarvam';
+      }
       if (this.config.elevenLabsApiKey) return 'elevenlabs';
       if (this.config.googleCloudTtsKey) return 'google';
     }
     return 'native';
+  }
+
+  // ── Sarvam AI TTS (Indian Languages — Bulbul v3) ─────────
+
+  private async speakSarvam(request: TTSRequest): Promise<void> {
+    if (!this.config.sarvamApiKey) return this.speakNative(request);
+
+    this.speaking = true;
+    this.emit('speakStart');
+
+    const langCode = VOICE_LANG_MAP[request.language] || 'en-IN';
+    const speaker = request.character === 'tina'
+      ? (this.config.sarvamVoices?.tina || 'priya')
+      : (this.config.sarvamVoices?.abe || 'ratan');
+
+    try {
+      const res = await fetch('https://api.sarvam.ai/text-to-speech', {
+        method: 'POST',
+        headers: {
+          'api-subscription-key': this.config.sarvamApiKey,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          text: request.text.slice(0, 2500),
+          target_language_code: langCode,
+          speaker,
+          model: 'bulbul:v3',
+          pace: 1.0,
+          speech_sample_rate: 24000,
+        }),
+      });
+
+      if (!res.ok) {
+        console.warn('[speech] Sarvam TTS error, falling back to native:', res.status);
+        this.speaking = false;
+        return this.speakNative(request);
+      }
+
+      const data = await res.json();
+      const base64Audio = data.audios?.[0];
+      if (!base64Audio) {
+        this.speaking = false;
+        return this.speakNative(request);
+      }
+
+      await this.playBase64Audio(base64Audio);
+    } catch (err) {
+      console.warn('[speech] Sarvam TTS exception, falling back to native:', err);
+      this.speaking = false;
+      return this.speakNative(request);
+    }
+  }
+
+  private playBase64Audio(base64: string): Promise<void> {
+    return new Promise((resolve) => {
+      const audio = new Audio(`data:audio/wav;base64,${base64}`);
+      audio.onended = () => {
+        this.speaking = false;
+        this.emit('speakEnd');
+        resolve();
+      };
+      audio.onerror = () => {
+        this.speaking = false;
+        this.emit('speakEnd');
+        resolve();
+      };
+      audio.play().catch(() => {
+        this.speaking = false;
+        this.emit('speakEnd');
+        resolve();
+      });
+    });
   }
 
   private chunkText(text: string): string[] {

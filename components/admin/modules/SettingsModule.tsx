@@ -7,6 +7,7 @@ import {
   Server, HardDrive, Wifi, RefreshCw, Download, Upload,
   Palette, Monitor, Mail, Smartphone, Copy, Trash2,
   Plus, Save, ToggleLeft, ToggleRight, ChevronRight,
+  Plug, Link2, Unlink, ArrowRightLeft, Loader2,
 } from 'lucide-react'
 import AdminGlass from '../shared/AdminGlass'
 import AdminBadge from '../shared/AdminBadge'
@@ -24,6 +25,7 @@ const SETTINGS_TABS = [
   { id: 'general', label: 'General', icon: Settings },
   { id: 'permissions', label: 'Permissions', icon: Shield },
   { id: 'security', label: 'Security', icon: Lock },
+  { id: 'integrations', label: 'Integrations', icon: Plug },
   { id: 'system', label: 'System', icon: Server },
 ] as const
 
@@ -72,6 +74,7 @@ export default function SettingsModule({ subTab, navigate, showToast }: Settings
         {activeTab === 'general' && <GeneralTab showToast={showToast} />}
         {activeTab === 'permissions' && <PermissionsTab />}
         {activeTab === 'security' && <SecurityTab showToast={showToast} />}
+        {activeTab === 'integrations' && <IntegrationsTab showToast={showToast} />}
         {activeTab === 'system' && <SystemTab showToast={showToast} />}
       </div>
     </div>
@@ -574,6 +577,331 @@ function SecurityTab({ showToast }: { showToast: (msg: string, type?: 'success' 
           ))}
         </div>
       </AdminGlass>
+    </div>
+  )
+}
+
+// ── Integrations Tab ────────────────────────────────────────────
+function IntegrationsTab({ showToast }: { showToast: (msg: string, type?: 'success' | 'error' | 'info' | 'warning') => void }) {
+  const [mondayKey, setMondayKey] = useState('')
+  const [showKey, setShowKey] = useState(false)
+  const [testing, setTesting] = useState(false)
+  const [connected, setConnected] = useState<{ accountName: string; userName: string } | null>(null)
+  const [boards, setBoards] = useState<{ id: string; name: string; items_count: number }[]>([])
+  const [selectedBoard, setSelectedBoard] = useState('')
+  const [loadingBoards, setLoadingBoards] = useState(false)
+  const [mapping, setMapping] = useState<Record<string, string>>({
+    email: '', phone: '', source: '', stage: '', value: '', assignedTo: '',
+  })
+  const [syncLog, setSyncLog] = useState<{ time: string; message: string; type: 'success' | 'error' | 'info' }[]>([])
+
+  // Load persisted state on mount
+  useState(() => {
+    if (typeof window === 'undefined') return
+    const { getMondayApiKey, isMondayConfigured, getSavedMappings } = require('@/lib/mondayService')
+    const key = getMondayApiKey()
+    if (key) {
+      setMondayKey(key)
+      // Auto-test on load
+      handleTestConnection(key)
+    }
+    const mappings = getSavedMappings()
+    if (mappings.length > 0) {
+      const m = mappings[0]
+      setSelectedBoard(m.boardId)
+      setMapping(m.columnMappings || {})
+    }
+  })
+
+  const handleTestConnection = async (keyOverride?: string) => {
+    const key = keyOverride || mondayKey
+    if (!key.trim()) { showToast('Please enter a Monday.com API key', 'error'); return }
+    setTesting(true)
+    try {
+      const { setMondayApiKey, testConnection } = await import('@/lib/mondayService')
+      setMondayApiKey(key.trim())
+      const result = await testConnection()
+      if (result.success) {
+        setConnected({ accountName: result.accountName || '', userName: result.userName || '' })
+        showToast(`Connected to ${result.accountName}`, 'success')
+        // Auto-load boards
+        handleLoadBoards()
+      } else {
+        setConnected(null)
+        showToast(result.error || 'Connection failed', 'error')
+      }
+    } catch {
+      setConnected(null)
+      showToast('Failed to connect to Monday.com', 'error')
+    } finally {
+      setTesting(false)
+    }
+  }
+
+  const handleDisconnect = async () => {
+    const { setMondayApiKey } = await import('@/lib/mondayService')
+    setMondayApiKey('')
+    setMondayKey('')
+    setConnected(null)
+    setBoards([])
+    setSelectedBoard('')
+    showToast('Disconnected from Monday.com', 'info')
+  }
+
+  const handleLoadBoards = async () => {
+    setLoadingBoards(true)
+    try {
+      const { fetchBoards } = await import('@/lib/mondayService')
+      const result = await fetchBoards()
+      setBoards(result.map(b => ({ id: b.id, name: b.name, items_count: b.items_count })))
+    } catch {
+      showToast('Failed to load boards', 'error')
+    } finally {
+      setLoadingBoards(false)
+    }
+  }
+
+  const handleSaveMapping = async () => {
+    if (!selectedBoard) { showToast('Select a board first', 'error'); return }
+    try {
+      const { saveBoardMapping } = await import('@/lib/mondayService')
+      const boardName = boards.find(b => b.id === selectedBoard)?.name || ''
+      saveBoardMapping({
+        boardId: selectedBoard,
+        boardName,
+        mappingType: 'leads',
+        columnMappings: mapping,
+        syncDirection: 'push',
+        lastSync: undefined,
+      })
+      showToast('Board mapping saved', 'success')
+    } catch {
+      showToast('Failed to save mapping', 'error')
+    }
+  }
+
+  const handlePushLeads = async () => {
+    if (!selectedBoard) { showToast('Select a board first', 'error'); return }
+    const log = (message: string, type: 'success' | 'error' | 'info') =>
+      setSyncLog(prev => [{ time: new Date().toLocaleTimeString(), message, type }, ...prev.slice(0, 19)])
+
+    log('Starting lead sync to Monday.com...', 'info')
+    try {
+      const { pushLeadsToMonday, saveBoardMapping, getSavedMappings } = await import('@/lib/mondayService')
+      const { LEADS_DATA } = await import('@/lib/admin/adminMockData')
+      const result = await pushLeadsToMonday(LEADS_DATA, selectedBoard, mapping)
+      if (result.success) {
+        log(`Synced ${result.synced} leads successfully`, 'success')
+        showToast(`${result.synced} leads synced to Monday.com`, 'success')
+      } else {
+        log(`Synced ${result.synced}, failed ${result.failed}`, 'error')
+        result.errors.forEach(e => log(e, 'error'))
+        showToast(`Sync completed with ${result.failed} errors`, 'warning')
+      }
+      // Update last sync timestamp
+      const mappings = getSavedMappings()
+      const existing = mappings.find(m => m.boardId === selectedBoard)
+      if (existing) {
+        saveBoardMapping({ ...existing, lastSync: result.timestamp })
+      }
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Sync failed'
+      log(msg, 'error')
+      showToast(msg, 'error')
+    }
+  }
+
+  return (
+    <div className="space-y-4">
+      {/* Monday.com Connection */}
+      <AdminGlass>
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-sm font-semibold text-white flex items-center gap-2">
+            <Link2 className="w-4 h-4 text-brand-red" />
+            Monday.com Integration
+          </h3>
+          {connected && (
+            <AdminBadge label={`Connected — ${connected.accountName}`} variant="success" dot />
+          )}
+        </div>
+
+        {/* API Key Input */}
+        <div className="space-y-3">
+          <div>
+            <label className="block text-[11px] text-gray-500 uppercase tracking-wider font-medium mb-1.5">API Key</label>
+            <div className="flex gap-2">
+              <div className="relative flex-1">
+                <input
+                  type={showKey ? 'text' : 'password'}
+                  placeholder="Paste your Monday.com API key"
+                  value={mondayKey}
+                  onChange={e => setMondayKey(e.target.value)}
+                  className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-brand-red/40 focus:ring-1 focus:ring-brand-red/20 font-mono pr-10"
+                />
+                <button
+                  onClick={() => setShowKey(s => !s)}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-gray-500 hover:text-gray-300 transition-colors"
+                >
+                  {showKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
+              <button
+                onClick={() => handleTestConnection()}
+                disabled={testing || !mondayKey.trim()}
+                className="flex items-center gap-1.5 px-4 py-2.5 text-xs font-medium text-white bg-brand-red/20 border border-brand-red/30 rounded-xl hover:bg-brand-red/30 transition-colors disabled:opacity-40 disabled:cursor-not-allowed admin-btn-press"
+              >
+                {testing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <CheckCircle2 className="w-3.5 h-3.5" />}
+                {testing ? 'Testing…' : 'Test Connection'}
+              </button>
+              {connected && (
+                <button
+                  onClick={handleDisconnect}
+                  className="flex items-center gap-1.5 px-3 py-2.5 text-xs font-medium text-red-400 bg-red-500/10 border border-red-500/20 rounded-xl hover:bg-red-500/20 transition-colors admin-btn-press"
+                >
+                  <Unlink className="w-3.5 h-3.5" />
+                  Disconnect
+                </button>
+              )}
+            </div>
+            <p className="text-[10px] text-gray-600 mt-1.5">
+              Find your key at monday.com → Avatar → Developers → My Access Tokens. Stored in session only.
+            </p>
+          </div>
+
+          {/* Connection Status */}
+          {connected && (
+            <div className="p-3 rounded-xl bg-emerald-500/5 border border-emerald-500/15">
+              <div className="flex items-center gap-2">
+                <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                <span className="text-sm text-emerald-300">Connected as {connected.userName}</span>
+              </div>
+              <p className="text-[11px] text-gray-500 mt-1 ml-6">Workspace: {connected.accountName}</p>
+            </div>
+          )}
+        </div>
+      </AdminGlass>
+
+      {/* Board Mapping — only shown when connected */}
+      {connected && (
+        <AdminGlass>
+          <h3 className="text-sm font-semibold text-white mb-4 flex items-center gap-2">
+            <ArrowRightLeft className="w-4 h-4 text-brand-red" />
+            Board & Column Mapping
+          </h3>
+
+          <div className="space-y-4">
+            {/* Board Selector */}
+            <div>
+              <label className="block text-[11px] text-gray-500 uppercase tracking-wider font-medium mb-1.5">Target Board</label>
+              <div className="flex gap-2">
+                <select
+                  value={selectedBoard}
+                  onChange={e => setSelectedBoard(e.target.value)}
+                  className="flex-1 bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-brand-red/40 focus:ring-1 focus:ring-brand-red/20"
+                >
+                  <option value="">Select a board…</option>
+                  {boards.map(b => (
+                    <option key={b.id} value={b.id}>{b.name} ({b.items_count} items)</option>
+                  ))}
+                </select>
+                <button
+                  onClick={handleLoadBoards}
+                  disabled={loadingBoards}
+                  className="flex items-center gap-1.5 px-3 py-2.5 text-xs font-medium text-gray-300 bg-white/[0.04] border border-white/[0.08] rounded-xl hover:bg-white/[0.06] transition-colors disabled:opacity-40 admin-btn-press"
+                >
+                  {loadingBoards ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <RefreshCw className="w-3.5 h-3.5" />}
+                  Refresh
+                </button>
+              </div>
+            </div>
+
+            {/* Column Mapping Table */}
+            {selectedBoard && (
+              <div>
+                <label className="block text-[11px] text-gray-500 uppercase tracking-wider font-medium mb-2">Column Mapping (GHL Field → Monday.com Column ID)</label>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  {[
+                    { key: 'email', label: 'Email' },
+                    { key: 'phone', label: 'Phone' },
+                    { key: 'source', label: 'Lead Source' },
+                    { key: 'stage', label: 'Stage / Status' },
+                    { key: 'value', label: 'Deal Value' },
+                    { key: 'assignedTo', label: 'Assigned To' },
+                  ].map(field => (
+                    <div key={field.key} className="flex items-center gap-2">
+                      <span className="text-xs text-gray-400 w-24 shrink-0">{field.label}</span>
+                      <input
+                        type="text"
+                        placeholder="column_id"
+                        value={mapping[field.key] || ''}
+                        onChange={e => setMapping(m => ({ ...m, [field.key]: e.target.value }))}
+                        className="flex-1 bg-white/[0.04] border border-white/[0.08] rounded-lg px-2.5 py-2 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-brand-red/40 font-mono"
+                      />
+                    </div>
+                  ))}
+                </div>
+                <button
+                  onClick={handleSaveMapping}
+                  className="mt-3 flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-medium text-white bg-brand-red/20 border border-brand-red/30 hover:bg-brand-red/30 transition-colors admin-btn-press"
+                >
+                  <Save className="w-3.5 h-3.5" />
+                  Save Mapping
+                </button>
+              </div>
+            )}
+          </div>
+        </AdminGlass>
+      )}
+
+      {/* Sync Controls — only shown when board is selected */}
+      {connected && selectedBoard && (
+        <AdminGlass>
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-sm font-semibold text-white flex items-center gap-2">
+              <ArrowRightLeft className="w-4 h-4 text-brand-red" />
+              Sync Controls
+            </h3>
+          </div>
+          <div className="flex flex-wrap gap-2 mb-4">
+            <button
+              onClick={handlePushLeads}
+              className="flex items-center gap-2 px-4 py-2.5 text-xs font-medium text-white bg-brand-red/20 border border-brand-red/30 rounded-xl hover:bg-brand-red/30 transition-colors admin-btn-press"
+            >
+              <Upload className="w-3.5 h-3.5" />
+              Push All Leads to Monday.com
+            </button>
+          </div>
+
+          {/* Sync Log */}
+          {syncLog.length > 0 && (
+            <div>
+              <p className="text-[10px] text-gray-600 uppercase tracking-wider mb-2">Sync Log</p>
+              <div className="space-y-1 max-h-40 overflow-y-auto">
+                {syncLog.map((entry, i) => (
+                  <div key={i} className="flex items-start gap-2 text-[11px]">
+                    <span className="text-gray-600 shrink-0 font-mono">{entry.time}</span>
+                    <span className={`w-1.5 h-1.5 rounded-full mt-1.5 shrink-0 ${
+                      entry.type === 'success' ? 'bg-emerald-400' : entry.type === 'error' ? 'bg-red-400' : 'bg-blue-400'
+                    }`} />
+                    <span className={entry.type === 'error' ? 'text-red-400' : 'text-gray-400'}>{entry.message}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </AdminGlass>
+      )}
+
+      {/* Placeholder for future integrations */}
+      {!connected && (
+        <AdminGlass className="!border-dashed">
+          <AdminEmptyState
+            icon={Plug}
+            title="No Integrations Active"
+            description="Connect Monday.com above to sync your lead pipeline, tasks, and project boards."
+          />
+        </AdminGlass>
+      )}
     </div>
   )
 }

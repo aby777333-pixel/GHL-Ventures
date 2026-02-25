@@ -374,13 +374,15 @@ export async function fetchAIHistory(
 ): Promise<AIToolResult[]> {
   if (!isSupabaseConfigured()) return []
 
-  let query = sb.from('ai_results').select('*').order('created_at', { ascending: false }).limit(limit)
-  if (portal) query = query.eq('portal', portal)
-  if (userId) query = query.eq('user_id', userId)
+  try {
+    let query = sb.from('ai_results').select('*').order('created_at', { ascending: false }).limit(limit)
+    if (portal) query = query.eq('portal', portal)
+    if (userId) query = query.eq('user_id', userId)
 
-  const { data, error } = await query
-  if (error || !data) return []
-  return data as AIToolResult[]
+    const { data, error } = await query
+    if (error || !data) return []
+    return data as AIToolResult[]
+  } catch { return [] }
 }
 
 export async function getAIUsageStats(portal?: string): Promise<{
@@ -389,39 +391,38 @@ export async function getAIUsageStats(portal?: string): Promise<{
   avgProcessingTime: number
   topTools: { tool_name: string; count: number }[]
 }> {
-  if (!isSupabaseConfigured()) {
-    return { totalCalls: 0, successRate: 100, avgProcessingTime: 0, topTools: [] }
-  }
+  const fallback = { totalCalls: 0, successRate: 100, avgProcessingTime: 0, topTools: [] as { tool_name: string; count: number }[] }
+  if (!isSupabaseConfigured()) return fallback
 
-  let query = sb.from('ai_results').select('*')
-  if (portal) query = query.eq('portal', portal)
+  try {
+    let query = sb.from('ai_results').select('*')
+    if (portal) query = query.eq('portal', portal)
 
-  const { data, error } = await query
-  if (error || !data || data.length === 0) {
-    return { totalCalls: 0, successRate: 100, avgProcessingTime: 0, topTools: [] }
-  }
+    const { data, error } = await query
+    if (error || !data || data.length === 0) return fallback
 
-  const totalCalls = data.length
-  const successes = data.filter((r: any) => r.status === 'success').length
-  const avgTime = data.reduce((sum: number, r: any) => sum + (r.processing_time_ms || 0), 0) / totalCalls
+    const totalCalls = data.length
+    const successes = data.filter((r: any) => r.status === 'success').length
+    const avgTime = data.reduce((sum: number, r: any) => sum + (r.processing_time_ms || 0), 0) / totalCalls
 
-  // Count tool usage
-  const toolCounts: Record<string, number> = {}
-  data.forEach((r: any) => {
-    toolCounts[r.tool_name] = (toolCounts[r.tool_name] || 0) + 1
-  })
+    // Count tool usage
+    const toolCounts: Record<string, number> = {}
+    data.forEach((r: any) => {
+      toolCounts[r.tool_name] = (toolCounts[r.tool_name] || 0) + 1
+    })
 
-  const topTools = Object.entries(toolCounts)
-    .map(([tool_name, count]) => ({ tool_name, count }))
-    .sort((a, b) => b.count - a.count)
-    .slice(0, 5)
+    const topTools = Object.entries(toolCounts)
+      .map(([tool_name, count]) => ({ tool_name, count }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 5)
 
-  return {
-    totalCalls,
-    successRate: Math.round((successes / totalCalls) * 100),
-    avgProcessingTime: Math.round(avgTime),
-    topTools,
-  }
+    return {
+      totalCalls,
+      successRate: Math.round((successes / totalCalls) * 100),
+      avgProcessingTime: Math.round(avgTime),
+      topTools,
+    }
+  } catch { return fallback }
 }
 
 // ── Helpers ─────────────────────────────────────────────────

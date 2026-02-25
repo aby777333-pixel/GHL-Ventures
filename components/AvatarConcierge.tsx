@@ -7,6 +7,10 @@ import { LANGUAGES, getTranslations, getTimeGreeting, detectLanguageFromRegion }
 import type { LangCode } from '@/lib/avatarTranslations'
 import { generateResponse } from '@/lib/avatarKnowledge'
 import type { AvatarResponse } from '@/lib/avatarKnowledge'
+import {
+  isSarvamConfigured, sarvamTTS, playSarvamAudio,
+  toSarvamLangCode, isSarvamTTSLanguage, SARVAM_AVATAR_VOICES,
+} from '@/lib/sarvamService'
 
 // ─── Types ───
 type Phase = 'hidden' | 'greeting' | 'langPick' | 'capabilities' | 'chat' | 'minimized'
@@ -304,16 +308,34 @@ export default function AvatarConcierge() {
         clearInterval(interval)
       }
     }, 25)
-    // TTS
-    if (ttsEnabled && typeof window !== 'undefined' && window.speechSynthesis) {
+    // TTS — try Sarvam for Indian languages, fallback to Web Speech API
+    if (ttsEnabled && typeof window !== 'undefined') {
       setTimeout(() => {
-        const utter = new SpeechSynthesisUtterance(fullText)
-        utter.lang = lang === 'en' ? 'en-IN' : lang
-        utter.rate = 0.9
-        utter.onstart = () => setAbeAnim('speaking')
-        utter.onend = () => setAbeAnim('idle')
-        window.speechSynthesis.speak(utter)
+        if (isSarvamConfigured() && isSarvamTTSLanguage(lang)) {
+          setAbeAnim('speaking')
+          sarvamTTS({
+            text: fullText,
+            targetLanguage: toSarvamLangCode(lang),
+            speaker: SARVAM_AVATAR_VOICES.abe,
+          }).then(audio => {
+            if (audio) return playSarvamAudio(audio)
+            // Fallback to native
+            speakGreetingNative(fullText)
+          }).catch(() => speakGreetingNative(fullText))
+            .finally(() => setAbeAnim('idle'))
+        } else if (window.speechSynthesis) {
+          speakGreetingNative(fullText)
+        }
       }, 500)
+    }
+
+    function speakGreetingNative(txt: string) {
+      const utter = new SpeechSynthesisUtterance(txt)
+      utter.lang = lang === 'en' ? 'en-IN' : lang
+      utter.rate = 0.9
+      utter.onstart = () => setAbeAnim('speaking')
+      utter.onend = () => setAbeAnim('idle')
+      window.speechSynthesis.speak(utter)
     }
     return () => clearInterval(interval)
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -324,12 +346,48 @@ export default function AvatarConcierge() {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages])
 
-  // ── TTS helper with character-appropriate voices ──
+  // ── TTS helper — Sarvam AI for Indian languages, Web Speech API fallback ──
   const speak = useCallback((text: string, speaker: 'abe' | 'tina') => {
-    if (!ttsEnabled || typeof window === 'undefined' || !window.speechSynthesis) return
-    window.speechSynthesis.cancel()
+    if (!ttsEnabled || typeof window === 'undefined') return
+    window.speechSynthesis?.cancel()
 
-    // Split long text into sentence chunks for smoother delivery
+    const langCode = lang === 'en' ? 'en-IN' : lang
+    const sarvamSpeaker = speaker === 'tina' ? SARVAM_AVATAR_VOICES.tina : SARVAM_AVATAR_VOICES.abe
+
+    // Try Sarvam TTS for Indian languages
+    if (isSarvamConfigured() && isSarvamTTSLanguage(lang)) {
+      setIsSpeaking(true)
+      if (speaker === 'abe') setAbeAnim('speaking')
+      else setTinaAnim('speaking')
+
+      sarvamTTS({
+        text,
+        targetLanguage: toSarvamLangCode(lang),
+        speaker: sarvamSpeaker,
+      }).then(audio => {
+        if (audio) {
+          return playSarvamAudio(audio)
+        }
+        // Sarvam failed — fall through to native
+        speakNative(text, langCode, speaker)
+      }).catch(() => {
+        speakNative(text, langCode, speaker)
+      }).finally(() => {
+        setIsSpeaking(false)
+        setAbeAnim('idle')
+        setTinaAnim('idle')
+      })
+      return
+    }
+
+    // Fallback: Web Speech API
+    speakNative(text, langCode, speaker)
+  }, [lang, ttsEnabled])
+
+  // Native Web Speech API TTS (fallback)
+  const speakNative = useCallback((text: string, langCode: string, speaker: 'abe' | 'tina') => {
+    if (!window.speechSynthesis) return
+
     const chunks = text.match(/[^.!?]+[.!?]*/g) || [text]
     let chunkIndex = 0
 
@@ -344,14 +402,11 @@ export default function AvatarConcierge() {
       if (!chunk) { speakChunk(); return }
 
       const utter = new SpeechSynthesisUtterance(chunk)
-      const langCode = lang === 'en' ? 'en-IN' : lang
       utter.lang = langCode
 
-      // Select appropriate voice
       const voices = window.speechSynthesis.getVoices()
       const langVoices = voices.filter(v => v.lang.startsWith(langCode.split('-')[0]))
       if (langVoices.length > 0) {
-        // Try to pick a voice matching character gender
         const isTina = speaker === 'tina'
         const preferred = langVoices.find(v =>
           isTina
@@ -376,7 +431,7 @@ export default function AvatarConcierge() {
     }
 
     speakChunk()
-  }, [lang, ttsEnabled])
+  }, [])
 
   // ── Add message to chat ──
   const addMsg = useCallback((speaker: ChatMsg['speaker'], text: string) => {

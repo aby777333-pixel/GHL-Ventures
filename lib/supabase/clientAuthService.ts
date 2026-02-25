@@ -50,46 +50,50 @@ export async function loginClient(email: string, password: string): Promise<Clie
     return mockSession
   }
 
-  const { data, error } = await supabase.auth.signInWithPassword({ email, password })
-  if (error || !data.user) return null
+  try {
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password })
+    if (error || !data.user) return null
 
-  // profiles table has: full_name, avatar_url, phone, city (no email/portal column)
-  const { data: profileData } = await supabase
-    .from('profiles')
-    .select('*')
-    .eq('id', data.user.id)
-    .single()
+    // profiles table has: full_name, avatar_url, phone, city (no email/portal column)
+    const { data: profileData } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('id', data.user.id)
+      .single()
 
-  // clients table stores KYC, AUM, risk_profile — linked via user_id
-  const { data: clientData } = await supabase
-    .from('clients')
-    .select('*')
-    .eq('user_id', data.user.id)
-    .single()
+    // clients table stores KYC, AUM, risk_profile — linked via user_id
+    const { data: clientData } = await supabase
+      .from('clients')
+      .select('*')
+      .eq('user_id', data.user.id)
+      .single()
 
-  const profile = profileData as any
-  const client = clientData as any
+    const profile = profileData as any
+    const client = clientData as any
 
-  if (!profile && !client) {
-    await supabase.auth.signOut()
+    // Don't reject OAuth users who haven't had their profile created yet
+    // (the auth callback page creates it, but in case of race conditions)
+    const meta = data.user.user_metadata ?? {}
+
+    return {
+      user: {
+        id: data.user.id,
+        name: profile?.full_name || meta.full_name || meta.name || data.user.email?.split('@')[0] || '',
+        email: data.user.email || '',
+        phone: profile?.phone || client?.phone || meta.phone || null,
+        avatar_url: profile?.avatar_url || meta.avatar_url || meta.picture || null,
+        kyc_status: client?.kyc_status || 'pending',
+        account_status: client ? 'active' : 'pending',
+        risk_profile: client?.risk_profile || null,
+        aum: client?.total_invested || 0,
+        city: profile?.city || client?.city || null,
+      },
+      loginAt: Date.now(),
+      expiresAt: Date.now() + 8 * 60 * 60 * 1000,
+    }
+  } catch (err) {
+    console.warn('[clientAuth] loginClient exception:', err)
     return null
-  }
-
-  return {
-    user: {
-      id: data.user.id,
-      name: profile?.full_name || data.user.user_metadata?.full_name || data.user.email?.split('@')[0] || '',
-      email: data.user.email || '',
-      phone: profile?.phone || client?.phone || null,
-      avatar_url: profile?.avatar_url || null,
-      kyc_status: client?.kyc_status || 'pending',
-      account_status: client ? 'active' : 'pending',
-      risk_profile: client?.risk_profile || null,
-      aum: client?.total_invested || 0,
-      city: profile?.city || client?.city || null,
-    },
-    loginAt: Date.now(),
-    expiresAt: Date.now() + 8 * 60 * 60 * 1000,
   }
 }
 
@@ -103,27 +107,32 @@ export async function signupClient(
     return { success: true }
   }
 
-  const { data, error } = await supabase.auth.signUp({ email, password })
-  if (error) return { success: false, error: error.message }
-  if (!data.user) return { success: false, error: 'Signup failed' }
+  try {
+    const { data, error } = await supabase.auth.signUp({ email, password })
+    if (error) return { success: false, error: error.message }
+    if (!data.user) return { success: false, error: 'Signup failed' }
 
-  // Create profile (full_name — no email/portal column in profiles table)
-  await supabase.from('profiles').insert({
-    id: data.user.id,
-    full_name: name,
-    phone: phone || null,
-    role: 'client',
-  } as any)
+    // Create profile (full_name — no email/portal column in profiles table)
+    await supabase.from('profiles').insert({
+      id: data.user.id,
+      full_name: name,
+      phone: phone || null,
+      role: 'client',
+    } as any)
 
-  // Create client record linked via user_id
-  await supabase.from('clients').insert({
-    user_id: data.user.id,
-    full_name: name,
-    email,
-    phone: phone || null,
-  } as any)
+    // Create client record linked via user_id
+    await supabase.from('clients').insert({
+      user_id: data.user.id,
+      full_name: name,
+      email,
+      phone: phone || null,
+    } as any)
 
-  return { success: true }
+    return { success: true }
+  } catch (err) {
+    console.warn('[clientAuth] signupClient exception:', err)
+    return { success: false, error: 'Connection error. Please try again.' }
+  }
 }
 
 export async function getClientSession(): Promise<ClientSession | null> {
@@ -143,41 +152,47 @@ export async function getClientSession(): Promise<ClientSession | null> {
     }
   }
 
-  const { data: { session } } = await supabase.auth.getSession()
-  if (!session?.user) return null
+  try {
+    const { data: { session } } = await supabase.auth.getSession()
+    if (!session?.user) return null
 
-  const { data: profileData } = await supabase
-    .from('profiles')
-    .select('*')
-    .eq('id', session.user.id)
-    .single()
+    const { data: profileData } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('id', session.user.id)
+      .single()
 
-  const { data: clientData } = await supabase
-    .from('clients')
-    .select('*')
-    .eq('user_id', session.user.id)
-    .single()
+    const { data: clientData } = await supabase
+      .from('clients')
+      .select('*')
+      .eq('user_id', session.user.id)
+      .single()
 
-  const profile = profileData as any
-  const client = clientData as any
+    const profile = profileData as any
+    const client = clientData as any
 
-  if (!profile && !client) return null
+    // Don't reject OAuth users who haven't had their profile created yet
+    const meta = session.user.user_metadata ?? {}
 
-  return {
-    user: {
-      id: session.user.id,
-      name: profile?.full_name || session.user.user_metadata?.full_name || session.user.email?.split('@')[0] || '',
-      email: session.user.email || '',
-      phone: profile?.phone || client?.phone || null,
-      avatar_url: profile?.avatar_url || null,
-      kyc_status: client?.kyc_status || 'pending',
-      account_status: client ? 'active' : 'pending',
-      risk_profile: client?.risk_profile || null,
-      aum: client?.total_invested || 0,
-      city: profile?.city || client?.city || null,
-    },
-    loginAt: Date.now(),
-    expiresAt: Date.now() + 8 * 60 * 60 * 1000,
+    return {
+      user: {
+        id: session.user.id,
+        name: profile?.full_name || meta.full_name || meta.name || session.user.email?.split('@')[0] || '',
+        email: session.user.email || '',
+        phone: profile?.phone || client?.phone || meta.phone || null,
+        avatar_url: profile?.avatar_url || meta.avatar_url || meta.picture || null,
+        kyc_status: client?.kyc_status || 'pending',
+        account_status: client ? 'active' : 'pending',
+        risk_profile: client?.risk_profile || null,
+        aum: client?.total_invested || 0,
+        city: profile?.city || client?.city || null,
+      },
+      loginAt: Date.now(),
+      expiresAt: Date.now() + 8 * 60 * 60 * 1000,
+    }
+  } catch (err) {
+    console.warn('[clientAuth] getClientSession exception:', err)
+    return null
   }
 }
 
@@ -188,19 +203,35 @@ export async function logoutClient(): Promise<void> {
     }
     return
   }
-  await supabase.auth.signOut()
+  try {
+    await supabase.auth.signOut()
+  } catch (err) {
+    console.warn('[clientAuth] logoutClient exception:', err)
+  }
 }
 
 export async function loginWithOAuth(provider: 'google'): Promise<void> {
   if (!isSupabaseConfigured()) return
-  await supabase.auth.signInWithOAuth({ provider })
+  try {
+    await supabase.auth.signInWithOAuth({
+      provider,
+      options: { redirectTo: `${typeof window !== 'undefined' ? window.location.origin : ''}/auth/callback/` },
+    })
+  } catch (err) {
+    console.warn('[clientAuth] loginWithOAuth exception:', err)
+  }
 }
 
 export async function loginWithOTP(email: string): Promise<{ success: boolean; error?: string }> {
   if (!isSupabaseConfigured()) {
     return { success: true }
   }
-  const { error } = await supabase.auth.signInWithOtp({ email })
-  if (error) return { success: false, error: error.message }
-  return { success: true }
+  try {
+    const { error } = await supabase.auth.signInWithOtp({ email })
+    if (error) return { success: false, error: error.message }
+    return { success: true }
+  } catch (err) {
+    console.warn('[clientAuth] loginWithOTP exception:', err)
+    return { success: false, error: 'Connection error. Please try again.' }
+  }
 }

@@ -108,7 +108,7 @@ export default function LoginPage() {
 
       const { error: oauthError } = await supabase.auth.signInWithOAuth({
         provider,
-        options: { redirectTo: `${typeof window !== 'undefined' ? window.location.origin : ''}/dashboard` },
+        options: { redirectTo: `${typeof window !== 'undefined' ? window.location.origin : ''}/auth/callback/` },
       })
       if (oauthError) {
         setError(`${providerNames[provider]} sign-in failed. Please try another method.`)

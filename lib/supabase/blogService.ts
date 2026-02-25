@@ -37,37 +37,47 @@ export interface BlogPost {
 
 export async function getAllBlogPosts(): Promise<BlogPost[]> {
   if (!isSupabaseConfigured()) return []
-  const { data, error } = await sb.from('blog_posts').select('*').order('created_at', { ascending: false })
-  if (error || !data) { console.warn('[blog] Error fetching posts:', error?.message); return [] }
-  return data as BlogPost[]
+  try {
+    const { data, error } = await sb.from('blog_posts').select('*').order('created_at', { ascending: false })
+    if (error || !data) { console.warn('[blog] Error fetching posts:', error?.message); return [] }
+    return data as BlogPost[]
+  } catch { return [] }
 }
 
 export async function getPublishedPosts(): Promise<BlogPost[]> {
   if (!isSupabaseConfigured()) return []
-  const { data, error } = await sb.from('blog_posts').select('*').eq('published', true).order('created_at', { ascending: false })
-  if (error || !data) return []
-  return data as BlogPost[]
+  try {
+    const { data, error } = await sb.from('blog_posts').select('*').eq('published', true).order('created_at', { ascending: false })
+    if (error || !data) return []
+    return data as BlogPost[]
+  } catch { return [] }
 }
 
 export async function getBlogPostBySlug(slug: string): Promise<BlogPost | null> {
   if (!isSupabaseConfigured()) return null
-  const { data, error } = await sb.from('blog_posts').select('*').eq('slug', slug).single()
-  if (error || !data) return null
-  return data as BlogPost
+  try {
+    const { data, error } = await sb.from('blog_posts').select('*').eq('slug', slug).single()
+    if (error || !data) return null
+    return data as BlogPost
+  } catch { return null }
 }
 
 export async function getFeaturedPosts(limit = 3): Promise<BlogPost[]> {
   if (!isSupabaseConfigured()) return []
-  const { data, error } = await sb.from('blog_posts').select('*').eq('published', true).eq('featured', true).order('created_at', { ascending: false }).limit(limit)
-  if (error || !data) return []
-  return data as BlogPost[]
+  try {
+    const { data, error } = await sb.from('blog_posts').select('*').eq('published', true).eq('featured', true).order('created_at', { ascending: false }).limit(limit)
+    if (error || !data) return []
+    return data as BlogPost[]
+  } catch { return [] }
 }
 
 export async function getPostsByCategory(category: string): Promise<BlogPost[]> {
   if (!isSupabaseConfigured()) return []
-  const { data, error } = await sb.from('blog_posts').select('*').eq('published', true).eq('category', category).order('created_at', { ascending: false })
-  if (error || !data) return []
-  return data as BlogPost[]
+  try {
+    const { data, error } = await sb.from('blog_posts').select('*').eq('published', true).eq('category', category).order('created_at', { ascending: false })
+    if (error || !data) return []
+    return data as BlogPost[]
+  } catch { return [] }
 }
 
 // ── Write (Admin CMS) ──────────────────────────────────────
@@ -76,9 +86,11 @@ export async function createBlogPost(
   post: Omit<BlogPost, 'id' | 'created_at' | 'updated_at'>
 ): Promise<BlogPost | null> {
   if (!isSupabaseConfigured()) return null
-  const { data, error } = await sb.from('blog_posts').insert(post).select().single()
-  if (error) { console.warn('[blog] Create error:', error.message); return null }
-  return data as BlogPost
+  try {
+    const { data, error } = await sb.from('blog_posts').insert(post).select().single()
+    if (error) { console.warn('[blog] Create error:', error.message); return null }
+    return data as BlogPost
+  } catch { return null }
 }
 
 export async function updateBlogPost(
@@ -86,23 +98,29 @@ export async function updateBlogPost(
   updates: Partial<Omit<BlogPost, 'id' | 'created_at'>>
 ): Promise<BlogPost | null> {
   if (!isSupabaseConfigured()) return null
-  const { data, error } = await sb.from('blog_posts').update({ ...updates, updated_at: new Date().toISOString() }).eq('id', id).select().single()
-  if (error) { console.warn('[blog] Update error:', error.message); return null }
-  return data as BlogPost
+  try {
+    const { data, error } = await sb.from('blog_posts').update({ ...updates, updated_at: new Date().toISOString() }).eq('id', id).select().single()
+    if (error) { console.warn('[blog] Update error:', error.message); return null }
+    return data as BlogPost
+  } catch { return null }
 }
 
 export async function deleteBlogPost(id: string): Promise<boolean> {
   if (!isSupabaseConfigured()) return false
-  const { error } = await sb.from('blog_posts').delete().eq('id', id)
-  if (error) { console.warn('[blog] Delete error:', error.message); return false }
-  return true
+  try {
+    const { error } = await sb.from('blog_posts').delete().eq('id', id)
+    if (error) { console.warn('[blog] Delete error:', error.message); return false }
+    return true
+  } catch { return false }
 }
 
 export async function togglePublish(id: string, published: boolean): Promise<boolean> {
   if (!isSupabaseConfigured()) return false
-  const { error } = await sb.from('blog_posts').update({ published, updated_at: new Date().toISOString() }).eq('id', id)
-  if (error) { console.warn('[blog] Toggle publish error:', error.message); return false }
-  return true
+  try {
+    const { error } = await sb.from('blog_posts').update({ published, updated_at: new Date().toISOString() }).eq('id', id)
+    if (error) { console.warn('[blog] Toggle publish error:', error.message); return false }
+    return true
+  } catch { return false }
 }
 
 // ── Slug helper ─────────────────────────────────────────────
