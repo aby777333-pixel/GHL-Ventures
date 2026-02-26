@@ -12,6 +12,13 @@ out/
 
 # Claude workspace files (contains Windows reserved filenames)
 claude/
+.claude/
+
+# Supabase temp files
+supabase/.temp/
+
+# TypeScript build info
+tsconfig.tsbuildinfo
 
 # Windows reserved filenames
 nul
