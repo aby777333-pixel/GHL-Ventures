@@ -183,12 +183,18 @@ export async function fetchBoardItems(
 
 // ── Item CRUD ───────────────────────────────────────────────
 
+export interface CreateItemResult {
+  success: boolean
+  item?: { id: string; name: string }
+  error?: string
+}
+
 export async function createItem(
   boardId: string,
   groupId: string,
   itemName: string,
   columnValues: Record<string, unknown>,
-): Promise<{ id: string; name: string } | null> {
+): Promise<CreateItemResult> {
   const { data, errors } = await mondayQuery<{ create_item: { id: string; name: string } }>(`
     mutation ($boardId: ID!, $groupId: String!, $itemName: String!, $columnValues: JSON!) {
       create_item(
@@ -207,8 +213,40 @@ export async function createItem(
     columnValues: JSON.stringify(columnValues),
   })
 
-  if (errors?.length || !data) return null
-  return data.create_item
+  if (errors?.length || !data) {
+    return { success: false, error: errors?.[0]?.message || 'Unknown Monday.com error' }
+  }
+  return { success: true, item: data.create_item }
+}
+
+// ── Fetch board groups ─────────────────────────────────────
+
+export async function fetchBoardGroups(boardId: string): Promise<MondayGroup[]> {
+  const { data, errors } = await mondayQuery<{ boards: { groups: MondayGroup[] }[] }>(`
+    query ($boardId: [ID!]!) {
+      boards(ids: $boardId) {
+        groups { id title color }
+      }
+    }
+  `, { boardId: [boardId] })
+
+  if (errors?.length || !data?.boards?.[0]) return []
+  return data.boards[0].groups
+}
+
+// ── Fetch board columns ────────────────────────────────────
+
+export async function fetchBoardColumns(boardId: string): Promise<MondayColumn[]> {
+  const { data, errors } = await mondayQuery<{ boards: { columns: MondayColumn[] }[] }>(`
+    query ($boardId: [ID!]!) {
+      boards(ids: $boardId) {
+        columns { id title type }
+      }
+    }
+  `, { boardId: [boardId] })
+
+  if (errors?.length || !data?.boards?.[0]) return []
+  return data.boards[0].columns
 }
 
 export async function updateItem(
@@ -258,7 +296,17 @@ export async function pushLeadsToMonday(
     errors: [],
     timestamp: new Date().toISOString(),
   }
-  const targetGroup = groupId || 'topics'
+
+  // Auto-detect group if none provided — use first group on the board
+  let targetGroup = groupId
+  if (!targetGroup) {
+    try {
+      const groups = await fetchBoardGroups(boardId)
+      targetGroup = groups[0]?.id || 'topics'
+    } catch {
+      targetGroup = 'topics'
+    }
+  }
 
   for (const lead of leads) {
     try {
@@ -272,11 +320,11 @@ export async function pushLeadsToMonday(
       if (columnMappings.assignedTo) colVals[columnMappings.assignedTo] = lead.assignedTo
 
       const created = await createItem(boardId, targetGroup, lead.name, colVals)
-      if (created) {
+      if (created.success) {
         result.synced++
       } else {
         result.failed++
-        result.errors.push(`Failed to sync: ${lead.name}`)
+        result.errors.push(`${lead.name}: ${created.error}`)
       }
     } catch (err: unknown) {
       result.failed++

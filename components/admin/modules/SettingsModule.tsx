@@ -595,6 +595,9 @@ function IntegrationsTab({ showToast }: { showToast: (msg: string, type?: 'succe
   })
   const [syncLog, setSyncLog] = useState<{ time: string; message: string; type: 'success' | 'error' | 'info' }[]>([])
   const [serverKeyConfigured, setServerKeyConfigured] = useState(false)
+  const [boardColumns, setBoardColumns] = useState<{ id: string; title: string; type: string }[]>([])
+  const [boardGroups, setBoardGroups] = useState<{ id: string; title: string }[]>([])
+  const [selectedGroup, setSelectedGroup] = useState('')
 
   // Load persisted state on mount
   useState(() => {
@@ -688,6 +691,31 @@ function IntegrationsTab({ showToast }: { showToast: (msg: string, type?: 'succe
     }
   }
 
+  // Load columns & groups when a board is selected
+  const handleBoardSelect = async (boardId: string) => {
+    setSelectedBoard(boardId)
+    if (!boardId) {
+      setBoardColumns([])
+      setBoardGroups([])
+      return
+    }
+    try {
+      const { fetchBoardColumns, fetchBoardGroups } = await import('@/lib/mondayService')
+      const [cols, grps] = await Promise.all([
+        fetchBoardColumns(boardId),
+        fetchBoardGroups(boardId),
+      ])
+      setBoardColumns(cols.map(c => ({ id: c.id, title: c.title, type: c.type })))
+      setBoardGroups(grps.map(g => ({ id: g.id, title: g.title })))
+      // Auto-select first group
+      if (grps.length > 0 && !selectedGroup) {
+        setSelectedGroup(grps[0].id)
+      }
+    } catch {
+      showToast('Failed to load board details', 'error')
+    }
+  }
+
   const handleSaveMapping = async () => {
     if (!selectedBoard) { showToast('Select a board first', 'error'); return }
     try {
@@ -698,6 +726,7 @@ function IntegrationsTab({ showToast }: { showToast: (msg: string, type?: 'succe
         boardName,
         mappingType: 'leads',
         columnMappings: mapping,
+        groupId: selectedGroup || undefined,
         syncDirection: 'push',
         lastSync: undefined,
       })
@@ -716,7 +745,7 @@ function IntegrationsTab({ showToast }: { showToast: (msg: string, type?: 'succe
     try {
       const { pushLeadsToMonday, saveBoardMapping, getSavedMappings } = await import('@/lib/mondayService')
       const { LEADS_DATA } = await import('@/lib/admin/adminMockData')
-      const result = await pushLeadsToMonday(LEADS_DATA, selectedBoard, mapping)
+      const result = await pushLeadsToMonday(LEADS_DATA, selectedBoard, mapping, selectedGroup || undefined)
       if (result.success) {
         log(`Synced ${result.synced} leads successfully`, 'success')
         showToast(`${result.synced} leads synced to Monday.com`, 'success')
@@ -827,7 +856,7 @@ function IntegrationsTab({ showToast }: { showToast: (msg: string, type?: 'succe
               <div className="flex gap-2">
                 <select
                   value={selectedBoard}
-                  onChange={e => setSelectedBoard(e.target.value)}
+                  onChange={e => handleBoardSelect(e.target.value)}
                   className="flex-1 bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-brand-red/40 focus:ring-1 focus:ring-brand-red/20"
                 >
                   <option value="">Select a board…</option>
@@ -846,10 +875,30 @@ function IntegrationsTab({ showToast }: { showToast: (msg: string, type?: 'succe
               </div>
             </div>
 
+            {/* Group Selector */}
+            {selectedBoard && boardGroups.length > 0 && (
+              <div>
+                <label className="block text-[11px] text-gray-500 uppercase tracking-wider font-medium mb-1.5">Target Group</label>
+                <select
+                  value={selectedGroup}
+                  onChange={e => setSelectedGroup(e.target.value)}
+                  className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-brand-red/40 focus:ring-1 focus:ring-brand-red/20"
+                >
+                  {boardGroups.map(g => (
+                    <option key={g.id} value={g.id}>{g.title}</option>
+                  ))}
+                </select>
+                <p className="text-[10px] text-gray-600 mt-1">Items will be created in this group.</p>
+              </div>
+            )}
+
             {/* Column Mapping Table */}
             {selectedBoard && (
               <div>
-                <label className="block text-[11px] text-gray-500 uppercase tracking-wider font-medium mb-2">Column Mapping (GHL Field → Monday.com Column ID)</label>
+                <label className="block text-[11px] text-gray-500 uppercase tracking-wider font-medium mb-2">
+                  Column Mapping (GHL Field → Monday.com Column)
+                  {boardColumns.length === 0 && <span className="text-gray-600 normal-case ml-1">— loading…</span>}
+                </label>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                   {[
                     { key: 'email', label: 'Email' },
@@ -861,16 +910,30 @@ function IntegrationsTab({ showToast }: { showToast: (msg: string, type?: 'succe
                   ].map(field => (
                     <div key={field.key} className="flex items-center gap-2">
                       <span className="text-xs text-gray-400 w-24 shrink-0">{field.label}</span>
-                      <input
-                        type="text"
-                        placeholder="column_id"
-                        value={mapping[field.key] || ''}
-                        onChange={e => setMapping(m => ({ ...m, [field.key]: e.target.value }))}
-                        className="flex-1 bg-white/[0.04] border border-white/[0.08] rounded-lg px-2.5 py-2 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-brand-red/40 font-mono"
-                      />
+                      {boardColumns.length > 0 ? (
+                        <select
+                          value={mapping[field.key] || ''}
+                          onChange={e => setMapping(m => ({ ...m, [field.key]: e.target.value }))}
+                          className="flex-1 bg-white/[0.04] border border-white/[0.08] rounded-lg px-2.5 py-2 text-xs text-white focus:outline-none focus:border-brand-red/40"
+                        >
+                          <option value="">— skip —</option>
+                          {boardColumns.filter(c => c.id !== 'name').map(col => (
+                            <option key={col.id} value={col.id}>{col.title} ({col.type})</option>
+                          ))}
+                        </select>
+                      ) : (
+                        <input
+                          type="text"
+                          placeholder="column_id"
+                          value={mapping[field.key] || ''}
+                          onChange={e => setMapping(m => ({ ...m, [field.key]: e.target.value }))}
+                          className="flex-1 bg-white/[0.04] border border-white/[0.08] rounded-lg px-2.5 py-2 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-brand-red/40 font-mono"
+                        />
+                      )}
                     </div>
                   ))}
                 </div>
+                <p className="text-[10px] text-gray-600 mt-2">Map GHL lead fields to your Monday.com board columns. Unmapped fields are skipped. The lead name is always used as the item name.</p>
                 <button
                   onClick={handleSaveMapping}
                   className="mt-3 flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-medium text-white bg-brand-red/20 border border-brand-red/30 hover:bg-brand-red/30 transition-colors admin-btn-press"
