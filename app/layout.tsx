@@ -162,7 +162,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       'https://instagram.com/ghl_india_venture/',
       'https://youtube.com/@GHLIndiaVentures',
       'https://facebook.com/GHLindiaVentures',
-      'https://t.me/ghlindia',
+      'https://t.me/ghlindiaventures',
       'https://g.page/ghl-india-ventures',
     ],
   }
