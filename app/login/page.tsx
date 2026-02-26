@@ -206,7 +206,7 @@ export default function LoginPage() {
 
           {/* SEBI badge */}
           <div className="mt-10 px-4 py-2 bg-white/5 border border-white/10 rounded-full">
-            <span className="text-xs text-gray-400">SEBI Reg: {BRAND.sebi}</span>
+            <a href={BRAND.sebiUrl} target="_blank" rel="noopener noreferrer" className="text-xs text-gray-400 hover:text-brand-red transition-colors">SEBI Reg: {BRAND.sebi}</a>
           </div>
         </div>
       </div>

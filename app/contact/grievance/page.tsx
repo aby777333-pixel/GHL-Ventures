@@ -113,7 +113,7 @@ export default function GrievancePage() {
             <div className="bg-brand-offwhite rounded-2xl p-6 md:p-8">
               <h2 className="font-bold text-brand-black text-lg mb-3">Our Commitment to Investors</h2>
               <p className="text-brand-grey text-sm leading-relaxed mb-4">
-                As a SEBI-registered Category II AIF (Registration No. {BRAND.sebi}), GHL India Ventures maintains a robust grievance redressal mechanism to protect investor interests. Every complaint is taken seriously and handled with the utmost urgency and confidentiality.
+                As a SEBI-registered Category II AIF (Registration No. <a href={BRAND.sebiUrl} target="_blank" rel="noopener noreferrer" className="text-brand-red hover:underline">{BRAND.sebi}</a>), GHL India Ventures maintains a robust grievance redressal mechanism to protect investor interests. Every complaint is taken seriously and handled with the utmost urgency and confidentiality.
               </p>
               <p className="text-brand-grey text-sm leading-relaxed">
                 We follow a structured 3-level escalation framework. If a complaint is not resolved satisfactorily at one level, investors can escalate to the next level, with SEBI&apos;s SCORES portal as the final recourse.
@@ -264,7 +264,7 @@ export default function GrievancePage() {
               <div className="grid md:grid-cols-3 gap-6 text-center">
                 <div>
                   <div className="text-brand-red font-bold text-sm mb-1">SEBI Registration</div>
-                  <div className="text-white text-xs">{BRAND.sebi}</div>
+                  <a href={BRAND.sebiUrl} target="_blank" rel="noopener noreferrer" className="text-white text-xs hover:text-brand-red transition-colors">{BRAND.sebi}</a>
                 </div>
                 <div>
                   <div className="text-brand-red font-bold text-sm mb-1">Office</div>

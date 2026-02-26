@@ -125,14 +125,8 @@ export default function Footer() {
         <div className="relative container-max mx-auto px-4 sm:px-6 lg:px-8 pt-12 md:pt-14 pb-6">
           {/* Logo + Tagline */}
           <div className="flex flex-col items-start mb-10">
-            <Link href="/" className="flex items-center space-x-3 mb-4">
+            <Link href="/" className="flex items-center mb-4">
               <Logo size={48} />
-              <span
-                className="font-bold text-white"
-                style={{ fontSize: '14px', letterSpacing: '0.08em' }}
-              >
-                GHL INDIA VENTURES
-              </span>
             </Link>
             <p className="text-white/50 text-sm italic tracking-wide">
               Creating Wealth. Building Trust. Inspiring Growth.
@@ -266,9 +260,9 @@ export default function Footer() {
                     SEBI Disclaimer
                   </p>
                   <p className="text-xs text-gray-500 leading-relaxed">
-                    <strong className="text-gray-400">
+                    <a href={BRAND.sebiUrl} target="_blank" rel="noopener noreferrer" className="text-gray-400 font-bold hover:text-brand-red transition-colors">
                       SEBI Registration No. {BRAND.sebi}
-                    </strong>{' '}
+                    </a>{' '}
                     | Category II Alternative Investment Fund. Investments in Alternative
                     Investment Funds (AIFs) involve risks, including the possible loss of
                     principal amount invested. Past performance is not indicative of future
@@ -320,7 +314,9 @@ export default function Footer() {
 
               {/* Right */}
               <p className="text-center lg:text-right">
-                SEBI Registration No. {BRAND.sebi}
+                <a href={BRAND.sebiUrl} target="_blank" rel="noopener noreferrer" className="hover:text-brand-red transition-colors">
+                  SEBI Registration No. {BRAND.sebi}
+                </a>
               </p>
             </div>
 

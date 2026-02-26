@@ -83,12 +83,8 @@ export default function AdminSidebar({
       >
         {/* Logo */}
         <div className="px-6 pt-5 pb-3 flex items-center justify-between">
-          <Link href="/" target="_blank" className="flex items-center gap-3 group">
+          <Link href="/" target="_blank" className="flex items-center group">
             <Logo size={36} />
-            <div>
-              <p className="text-sm font-bold tracking-tight text-white">GHL India</p>
-              <p className="text-[10px] text-brand-red font-medium tracking-widest uppercase">Admin</p>
-            </div>
           </Link>
           <button
             onClick={() => setSidebarOpen(false)}

@@ -35,7 +35,7 @@ export default function DisclaimerPage() {
             <div className="p-5 rounded-xl border border-white/10 bg-white/[0.03] border-l-[3px] border-l-blue-500/30">
               <p className="font-semibold text-white mb-2">SEBI Registration</p>
               <p>
-                GHL India Ventures is registered with the Securities and Exchange Board of India (SEBI) as a Category II Alternative Investment Fund under Registration Number {BRAND.sebi}. SEBI registration does not imply endorsement of the fund, its strategies, or guarantee of returns.
+                GHL India Ventures is registered with the Securities and Exchange Board of India (SEBI) as a Category II Alternative Investment Fund under Registration Number <a href={BRAND.sebiUrl} target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:text-brand-red transition-colors underline">{BRAND.sebi}</a>. SEBI registration does not imply endorsement of the fund, its strategies, or guarantee of returns.
               </p>
             </div>
 
@@ -77,7 +77,7 @@ export default function DisclaimerPage() {
             <div className="flex items-start gap-3 pt-4 border-t border-white/10">
               <Shield className="w-5 h-5 text-brand-red shrink-0 mt-0.5" />
               <p className="text-xs text-gray-500">
-                <strong className="text-gray-400">SEBI Registration No. {BRAND.sebi}</strong> | Category II Alternative Investment Fund | GHL India Ventures Private Limited, 2D, Queens Court, No. 6, Montieth Road, Egmore, Chennai 600008, Tamil Nadu, India.
+                <a href={BRAND.sebiUrl} target="_blank" rel="noopener noreferrer" className="text-gray-400 font-bold hover:text-brand-red transition-colors">SEBI Registration No. {BRAND.sebi}</a> | Category II Alternative Investment Fund | GHL India Ventures Private Limited, 2D, Queens Court, No. 6, Montieth Road, Egmore, Chennai 600008, Tamil Nadu, India.
               </p>
             </div>
           </div>

@@ -9,6 +9,7 @@ export const BRAND = {
   description:
     'A SEBI-registered Category II Alternative Investment Fund specialising in stressed real estate assets and early-stage startup investments, designed exclusively for High Net-Worth Individuals seeking superior risk-adjusted returns.',
   sebi: 'IN/AIF2/2425/1517',
+  sebiUrl: 'https://www.sebi.gov.in/sebiweb/other/OtherAction.do?doRecognisedFpi=yes&intmId=16&name=GHL%20INDIA%20VENTURES%20TRUST&regNo=IN/AIF2/24-25/1517',
   phone1: '+91 44 2843 1043',
   phone2: '+91 7200 255 252',
   mobile: '+91 7200255252',

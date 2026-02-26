@@ -485,12 +485,8 @@ export default function DashboardClient() {
         }}>
         {/* Logo */}
         <div className="px-6 pt-6 pb-4 flex items-center justify-between">
-          <Link href="/" target="_blank" className="flex items-center gap-3 group">
+          <Link href="/" target="_blank" className="flex items-center group">
             <Logo size={36} />
-            <div>
-              <p className={`text-sm font-bold tracking-tight ${t('text-white','text-gray-900')}`}>GHL India</p>
-              <p className="text-[10px] text-brand-red font-medium tracking-widest uppercase">Ventures</p>
-            </div>
           </Link>
           <button onClick={() => setSidebarOpen(false)} className={`lg:hidden ${t('text-gray-500 hover:text-white','text-gray-600 hover:text-gray-900')} transition-colors`}>
             <X className="w-5 h-5" />
@@ -2530,7 +2526,7 @@ export default function DashboardClient() {
         {renderTopBar()}
         <div className="flex-1 p-4 lg:p-6 pb-20 overflow-auto">{renderContent()}</div>
         <footer className="hidden sm:flex border-t px-4 lg:px-6 py-3 flex-col sm:flex-row items-center justify-between gap-2 text-[11px] border-white/[0.04] text-gray-600">
-          <p>&copy; 2025 GHL India Ventures. SEBI Reg: IN/AIF2/2425/1517</p>
+          <p>&copy; 2025 GHL India Ventures. <a href="https://www.sebi.gov.in/sebiweb/other/OtherAction.do?doRecognisedFpi=yes&intmId=16&name=GHL%20INDIA%20VENTURES%20TRUST&regNo=IN/AIF2/24-25/1517" target="_blank" rel="noopener noreferrer" className="hover:text-brand-red transition-colors">SEBI Reg: IN/AIF2/2425/1517</a></p>
           <div className="flex items-center gap-3">
             <button onClick={() => { setTermsOpen(true); setTermsScrolled(false) }} className="hover:underline hover:text-white transition-colors">Terms & Conditions</button>
             <span>&bull;</span>

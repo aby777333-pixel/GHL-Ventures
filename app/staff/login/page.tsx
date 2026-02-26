@@ -7,6 +7,7 @@ import { loginStaff as mockLoginStaff } from '@/lib/staff/staffAuth'
 import { loginStaff as supaLoginStaff } from '@/lib/supabase/staffAuthService'
 import { isSupabaseConfigured } from '@/lib/supabase/client'
 import Logo from '@/components/Logo'
+import { BRAND } from '@/lib/constants'
 
 export default function StaffLoginPage() {
   const router = useRouter()
@@ -52,7 +53,7 @@ export default function StaffLoginPage() {
           <div className="flex items-center justify-center mb-3">
             <Logo size={48} />
           </div>
-          <h1 className="text-white font-bold text-lg tracking-wider">GHL INDIA VENTURES</h1>
+          <h1 className="text-white font-bold text-lg tracking-wider">{BRAND.name}</h1>
           <div className="mt-2 inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-teal-500/10 border border-teal-500/20">
             <Shield className="w-3 h-3 text-teal-400" />
             <span className="text-[10px] text-teal-400 font-semibold uppercase tracking-wider">Staff Portal</span>

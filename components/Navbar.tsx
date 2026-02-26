@@ -152,18 +152,10 @@ export default function Navbar() {
             {/* ── Logo ── */}
             <Link
               href="/"
-              className="flex items-center space-x-2 group shrink-0"
+              className="flex items-center group shrink-0"
               aria-label="GHL India Ventures Home"
             >
               <Logo size={38} />
-              <span
-                className={`font-bold tracking-wide transition-colors duration-300 hidden sm:inline ${
-                  scrolled ? 'text-brand-black dark:text-white' : 'text-white'
-                }`}
-                style={{ fontSize: '12px', letterSpacing: '0.1em' }}
-              >
-                GHL INDIA VENTURES
-              </span>
             </Link>
 
             {/* ── Desktop Nav Links (centred) ── */}
@@ -454,11 +446,8 @@ export default function Navbar() {
           </button>
 
           {/* Logo in overlay */}
-          <div className="absolute top-5 left-5 flex items-center space-x-2">
+          <div className="absolute top-5 left-5">
             <Logo size={38} />
-            <span className="text-white font-bold" style={{ fontSize: '12px', letterSpacing: '0.1em' }}>
-              GHL INDIA VENTURES
-            </span>
           </div>
 
           {/* Nav Links — staggered animation with mobile About accordion */}

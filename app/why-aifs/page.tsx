@@ -385,7 +385,7 @@ function GHLApproach() {
           </AnimatedSection>
           <AnimatedSection delay={100}>
             <p className="text-brand-grey leading-relaxed">
-              As a SEBI-registered Category II AIF (Reg. No. {BRAND.sebi}), GHL India Ventures combines
+              As a SEBI-registered Category II AIF (Reg. No. <a href={BRAND.sebiUrl} target="_blank" rel="noopener noreferrer" className="text-brand-red hover:underline">{BRAND.sebi}</a>), GHL India Ventures combines
               deep market intelligence with disciplined risk management across two high-conviction
               strategies &mdash; both designed to capture value where conventional capital cannot reach.
             </p>
@@ -673,7 +673,7 @@ function Disclaimer() {
           Prospective investors must read the Private Placement Memorandum (PPM) and all scheme-related documents carefully
           before making any investment decisions. The industry statistics and data referenced are sourced from publicly available
           reports and are provided for illustrative purposes.{' '}
-          <strong className="text-brand-black">SEBI Registration No. {BRAND.sebi}.</strong> Category II AIF minimum investment is as per SEBI AIF Regulations. The fund does not guarantee any returns.
+          <a href={BRAND.sebiUrl} target="_blank" rel="noopener noreferrer" className="text-brand-black font-bold hover:text-brand-red transition-colors">SEBI Registration No. {BRAND.sebi}.</a> Category II AIF minimum investment is as per SEBI AIF Regulations. The fund does not guarantee any returns.
         </p>
       </div>
     </section>

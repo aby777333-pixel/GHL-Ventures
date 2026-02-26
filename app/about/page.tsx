@@ -150,17 +150,21 @@ function OurStoryTimeline() {
             <div className="bg-gradient-to-br from-brand-black to-brand-darkgrey rounded-3xl p-8 text-white">
               <div className="space-y-5">
                 {[
-                  { icon: Shield, text: 'SEBI Registered: ' + BRAND.sebi },
+                  { icon: Shield, text: 'SEBI Registered: ' + BRAND.sebi, href: BRAND.sebiUrl },
                   { icon: Briefcase, text: 'Category II Alternative Investment Fund' },
                   { icon: Globe, text: 'Headquartered in Chennai, investing across India' },
                   { icon: Building2, text: 'Stressed real estate resolution focus' },
                   { icon: Sparkles, text: 'Early-stage startup investment vertical' },
-                ].map((item) => (
+                ].map((item: any) => (
                   <div key={item.text} className="flex items-center space-x-4">
                     <div className="w-10 h-10 bg-brand-red/20 rounded-lg flex items-center justify-center shrink-0">
                       <item.icon className="w-5 h-5 text-brand-red" />
                     </div>
-                    <span className="text-gray-300 text-sm">{item.text}</span>
+                    {item.href ? (
+                      <a href={item.href} target="_blank" rel="noopener noreferrer" className="text-gray-300 text-sm hover:text-brand-red transition-colors">{item.text}</a>
+                    ) : (
+                      <span className="text-gray-300 text-sm">{item.text}</span>
+                    )}
                   </div>
                 ))}
               </div>
@@ -422,7 +426,7 @@ function RegulatoryCompliance() {
               <div className="bg-white rounded-xl p-6 space-y-4">
                 <div className="flex justify-between items-center border-b border-gray-100 pb-3">
                   <span className="text-brand-grey text-sm">Registration No.</span>
-                  <span className="font-bold text-brand-black">{BRAND.sebi}</span>
+                  <a href={BRAND.sebiUrl} target="_blank" rel="noopener noreferrer" className="font-bold text-brand-black hover:text-brand-red transition-colors">{BRAND.sebi}</a>
                 </div>
                 <div className="flex justify-between items-center border-b border-gray-100 pb-3">
                   <span className="text-brand-grey text-sm">Category</span>

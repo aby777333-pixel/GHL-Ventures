@@ -1257,7 +1257,7 @@ function ContactFormSection() {
 
                 <div className="flex items-center gap-2 text-gray-400 text-xs">
                   <Shield className="w-4 h-4 text-brand-red" />
-                  <span>SEBI Reg. No. {BRAND.sebi}</span>
+                  <a href={BRAND.sebiUrl} target="_blank" rel="noopener noreferrer" className="hover:text-brand-red transition-colors">SEBI Reg. No. {BRAND.sebi}</a>
                 </div>
               </div>
             </AnimatedSection>
@@ -1518,13 +1518,13 @@ export default function HomePage() {
         <div className="container-max mx-auto overflow-hidden">
           <div className="animate-marquee whitespace-nowrap py-1.5">
             <span className="inline-block text-white/80 mx-8" style={{ fontSize: '11px', letterSpacing: '0.02em' }}>
-              SEBI Registered AIF &nbsp;|&nbsp; Registration No. IN/AIF2/2425/1517
+              SEBI Registered AIF &nbsp;|&nbsp; Registration No. <a href={BRAND.sebiUrl} target="_blank" rel="noopener noreferrer" className="hover:text-brand-red transition-colors">IN/AIF2/2425/1517</a>
               &nbsp;|&nbsp; AIF: As per SEBI Regulations &nbsp;|&nbsp; SEBI Co-Invest Framework &nbsp;|&nbsp;
               Stressed Real Estate &amp; Early-Stage Startups &nbsp;|&nbsp;
               Chennai, India
             </span>
             <span className="inline-block text-white/80 mx-8" style={{ fontSize: '11px', letterSpacing: '0.02em' }}>
-              SEBI Registered AIF &nbsp;|&nbsp; Registration No. IN/AIF2/2425/1517
+              SEBI Registered AIF &nbsp;|&nbsp; Registration No. <a href={BRAND.sebiUrl} target="_blank" rel="noopener noreferrer" className="hover:text-brand-red transition-colors">IN/AIF2/2425/1517</a>
               &nbsp;|&nbsp; AIF: As per SEBI Regulations &nbsp;|&nbsp; SEBI Co-Invest Framework &nbsp;|&nbsp;
               Stressed Real Estate &amp; Early-Stage Startups &nbsp;|&nbsp;
               Chennai, India
