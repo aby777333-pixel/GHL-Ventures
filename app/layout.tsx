@@ -18,10 +18,13 @@ import SocialProofToasts from '@/components/SocialProofToasts'
 import LiveVisitorCount from '@/components/LiveVisitorCount'
 
 // Lazy-load heavy widgets (reduces initial page load by ~2s)
-const ChatWidget = dynamic(() => import('@/components/chat/ChatWidget'), { ssr: false })
+// ChatWidget (ARIA bot) hidden for now — uncomment to re-enable
+// const ChatWidget = dynamic(() => import('@/components/chat/ChatWidget'), { ssr: false })
 const CommandPalette = dynamic(() => import('@/components/CommandPalette'), { ssr: false })
-const VoiceCommandWidget = dynamic(() => import('@/components/VoiceCommandWidget'), { ssr: false })
-const SpeechTranslationWidget = dynamic(() => import('@/components/SpeechTranslationWidget'), { ssr: false })
+// VoiceCommandWidget hidden for now — uncomment to re-enable
+// const VoiceCommandWidget = dynamic(() => import('@/components/VoiceCommandWidget'), { ssr: false })
+// SpeechTranslationWidget hidden for now — uncomment to re-enable
+// const SpeechTranslationWidget = dynamic(() => import('@/components/SpeechTranslationWidget'), { ssr: false })
 // MarketNewsTicker removed
 // const MarketNewsTicker = dynamic(() => import('@/components/MarketNewsTicker'), { ssr: false })
 // EconomicCalendar removed
@@ -297,10 +300,13 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               {/* Floating widgets — always visible (useful for staff telecallers & CS) */}
               <VideoCallWidget />
               <DirectCallWidget />
-              <VoiceCommandWidget />
-              <SpeechTranslationWidget />
+              {/* VoiceCommandWidget hidden for now */}
+              {/* <VoiceCommandWidget /> */}
+              {/* SpeechTranslationWidget hidden for now */}
+              {/* <SpeechTranslationWidget /> */}
               <CommandPalette />
-              <ChatWidget />
+              {/* ChatWidget (ARIA bot) hidden for now */}
+              {/* <ChatWidget /> */}
             </ArticleReaderProvider>
           </LegalPopupProvider>
         </ThemeProvider>
