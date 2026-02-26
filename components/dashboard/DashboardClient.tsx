@@ -486,7 +486,7 @@ export default function DashboardClient() {
         {/* Logo */}
         <div className="px-6 pt-6 pb-4 flex items-center justify-between">
           <Link href="/" target="_blank" className="flex items-center group">
-            <Logo size={36} />
+            <Logo size={28} />
           </Link>
           <button onClick={() => setSidebarOpen(false)} className={`lg:hidden ${t('text-gray-500 hover:text-white','text-gray-600 hover:text-gray-900')} transition-colors`}>
             <X className="w-5 h-5" />

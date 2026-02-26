@@ -191,7 +191,7 @@ export default function LoginPage() {
         <div className="relative z-10 flex flex-col justify-center items-center w-full px-12">
           {/* Logo */}
           <div className="mb-8">
-            <Logo size={80} />
+            <Logo size={56} />
           </div>
 
           <h2 className="text-3xl font-bold text-white text-center mb-3">
@@ -217,7 +217,7 @@ export default function LoginPage() {
           {/* Mobile logo */}
           <div className="lg:hidden text-center mb-8">
             <div className="mx-auto mb-3 w-fit">
-              <Logo size={56} />
+              <Logo size={40} />
             </div>
           </div>
 

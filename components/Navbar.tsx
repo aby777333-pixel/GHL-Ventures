@@ -155,7 +155,7 @@ export default function Navbar() {
               className="flex items-center group shrink-0"
               aria-label="GHL India Ventures Home"
             >
-              <Logo size={38} />
+              <Logo size={32} />
             </Link>
 
             {/* ── Desktop Nav Links (centred) ── */}
@@ -447,7 +447,7 @@ export default function Navbar() {
 
           {/* Logo in overlay */}
           <div className="absolute top-5 left-5">
-            <Logo size={38} />
+            <Logo size={32} />
           </div>
 
           {/* Nav Links — staggered animation with mobile About accordion */}

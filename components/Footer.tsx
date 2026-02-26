@@ -126,7 +126,7 @@ export default function Footer() {
           {/* Logo + Tagline */}
           <div className="flex flex-col items-start mb-10">
             <Link href="/" className="flex items-center mb-4">
-              <Logo size={48} />
+              <Logo size={36} />
             </Link>
             <p className="text-white/50 text-sm italic tracking-wide">
               Creating Wealth. Building Trust. Inspiring Growth.

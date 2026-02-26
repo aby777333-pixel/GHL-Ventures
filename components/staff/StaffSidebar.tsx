@@ -70,7 +70,7 @@ export default function StaffSidebar({
         {/* Header */}
         <div className="flex items-center justify-between h-14 px-4 border-b border-white/[0.04]">
           <div className="flex items-center">
-            <Logo size={28} />
+            <Logo size={22} />
           </div>
           <button onClick={() => setSidebarOpen(false)} className="lg:hidden p-1.5 rounded-lg text-gray-500 hover:text-white hover:bg-white/[0.06] transition-colors">
             <X className="w-4 h-4" />
