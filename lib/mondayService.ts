@@ -92,13 +92,15 @@ async function mondayQuery<T = unknown>(
   variables?: Record<string, unknown>,
 ): Promise<{ data: T | null; errors?: { message: string }[] }> {
   try {
+    const clientKey = getMondayApiKey()
     const response = await fetch(PROXY_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         query,
         variables,
-        ...(getMondayApiKey() ? { apiKey: getMondayApiKey() } : {}),
+        // Only send client key if set — otherwise proxy uses server env var
+        ...(clientKey ? { apiKey: clientKey } : {}),
       }),
     })
 

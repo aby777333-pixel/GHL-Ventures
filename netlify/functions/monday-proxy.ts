@@ -35,11 +35,25 @@ export default async (request: Request) => {
 
   try {
     const body: MondayProxyBody = await request.json()
+    const { query, variables } = body
 
-    // Prefer user-provided key (from sessionStorage), fall back to server env
-    const apiKey = body.apiKey || process.env.MONDAY_API_KEY || ''
+    // ── Check-config request — tells the UI whether a server key exists ──
+    if (query === '__check_config__') {
+      return new Response(
+        JSON.stringify({ data: { serverKeyConfigured: Boolean(process.env.MONDAY_API_KEY) } }),
+        { status: 200, headers: { 'Content-Type': 'application/json', ...CORS_HEADERS } },
+      )
+    }
 
-    if (!apiKey) {
+    // Build ordered list of keys to try: client key first, then env var
+    const clientKey = body.apiKey?.trim() || ''
+    const serverKey = (process.env.MONDAY_API_KEY || '').trim()
+    const keysToTry = [clientKey, serverKey].filter(Boolean)
+
+    // De-duplicate if both keys are the same
+    const uniqueKeys = keysToTry.filter((k, i) => keysToTry.indexOf(k) === i)
+
+    if (uniqueKeys.length === 0) {
       return new Response(
         JSON.stringify({
           error: {
@@ -51,30 +65,39 @@ export default async (request: Request) => {
       )
     }
 
-    const { query, variables } = body
+    // Try each key — if the first one 401s, fall back to the next
+    let lastResponse: Response | null = null
 
-    // Forward to Monday.com GraphQL API
-    const mondayResponse = await fetch('https://api.monday.com/v2', {
-      method: 'POST',
-      headers: {
-        'Authorization': apiKey,
-        'Content-Type': 'application/json',
-        'API-Version': '2024-10',
-      },
-      body: JSON.stringify({
-        query,
-        variables: variables || {},
-      }),
-    })
+    for (const apiKey of uniqueKeys) {
+      const mondayResponse = await fetch('https://api.monday.com/v2', {
+        method: 'POST',
+        headers: {
+          'Authorization': apiKey,
+          'Content-Type': 'application/json',
+          'API-Version': '2024-10',
+        },
+        body: JSON.stringify({ query, variables: variables || {} }),
+      })
 
-    const responseText = await mondayResponse.text()
+      lastResponse = mondayResponse
 
+      // If success or non-auth error, return immediately
+      if (mondayResponse.status !== 401) {
+        const responseText = await mondayResponse.text()
+        return new Response(responseText, {
+          status: mondayResponse.status,
+          headers: { 'Content-Type': 'application/json', ...CORS_HEADERS },
+        })
+      }
+
+      // 401 — try the next key if available
+    }
+
+    // All keys failed with 401
+    const responseText = lastResponse ? await lastResponse.text() : JSON.stringify({ error: { message: 'Authentication failed' } })
     return new Response(responseText, {
-      status: mondayResponse.status,
-      headers: {
-        'Content-Type': 'application/json',
-        ...CORS_HEADERS,
-      },
+      status: 401,
+      headers: { 'Content-Type': 'application/json', ...CORS_HEADERS },
     })
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : 'Internal server error'
