@@ -75,17 +75,19 @@ export async function loginClient(email: string, password: string): Promise<Clie
     // (the auth callback page creates it, but in case of race conditions)
     const meta = data.user.user_metadata ?? {}
 
+    const safeName = String(profile?.full_name || meta.full_name || meta.name || data.user.email?.split('@')[0] || 'Investor')
+
     return {
       user: {
-        id: data.user.id,
-        name: profile?.full_name || meta.full_name || meta.name || data.user.email?.split('@')[0] || '',
-        email: data.user.email || '',
+        id: String(data.user.id),
+        name: safeName,
+        email: String(data.user.email || ''),
         phone: profile?.phone || client?.phone || meta.phone || null,
         avatar_url: profile?.avatar_url || meta.avatar_url || meta.picture || null,
-        kyc_status: client?.kyc_status || 'pending',
+        kyc_status: String(client?.kyc_status || 'pending'),
         account_status: client ? 'active' : 'pending',
-        risk_profile: client?.risk_profile || null,
-        aum: client?.total_invested || 0,
+        risk_profile: client?.risk_profile ? String(client.risk_profile) : null,
+        aum: Number(client?.total_invested) || 0,
         city: profile?.city || client?.city || null,
       },
       loginAt: Date.now(),
@@ -174,17 +176,20 @@ export async function getClientSession(): Promise<ClientSession | null> {
     // Don't reject OAuth users who haven't had their profile created yet
     const meta = session.user.user_metadata ?? {}
 
+    // Safety: coerce all values to primitives (prevents React #310 if a field is an object)
+    const safeName = String(profile?.full_name || meta.full_name || meta.name || session.user.email?.split('@')[0] || 'Investor')
+
     return {
       user: {
-        id: session.user.id,
-        name: profile?.full_name || meta.full_name || meta.name || session.user.email?.split('@')[0] || '',
-        email: session.user.email || '',
+        id: String(session.user.id),
+        name: safeName,
+        email: String(session.user.email || ''),
         phone: profile?.phone || client?.phone || meta.phone || null,
         avatar_url: profile?.avatar_url || meta.avatar_url || meta.picture || null,
-        kyc_status: client?.kyc_status || 'pending',
+        kyc_status: String(client?.kyc_status || 'pending'),
         account_status: client ? 'active' : 'pending',
-        risk_profile: client?.risk_profile || null,
-        aum: client?.total_invested || 0,
+        risk_profile: client?.risk_profile ? String(client.risk_profile) : null,
+        aum: Number(client?.total_invested) || 0,
         city: profile?.city || client?.city || null,
       },
       loginAt: Date.now(),

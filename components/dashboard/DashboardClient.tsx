@@ -346,35 +346,7 @@ export default function DashboardClient() {
   const userEmail = user?.email || ''
   const userKycStatus = user?.kyc_status || 'pending'
 
-  // ─── Realtime Subscriptions ─────────────────────────────
-  useEffect(() => {
-    if (!clientId) return
-    const unsub1 = onClientNotification(clientId, () => refetchNotifications())
-    const unsub2 = onClientTicketUpdate(clientId, () => refetchTickets())
-    const unsub3 = onNewMessage(clientId, () => refetchMessages())
-    const unsub4 = onInvestmentUpdate(clientId, () => refetchPortfolio())
-    return () => {
-      unsub1?.()
-      unsub2?.()
-      unsub3?.()
-      unsub4?.()
-    }
-  }, [clientId]) // eslint-disable-line react-hooks/exhaustive-deps
-
-  // ─── Auth Loading / Guard Render ────────────────────────
-  if (authLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-brand-black">
-        <div className="text-center">
-          <div className="w-10 h-10 border-2 border-brand-red border-t-transparent rounded-full animate-spin mx-auto mb-4" />
-          <p className="text-sm text-gray-500">Loading Investor Portal...</p>
-        </div>
-      </div>
-    )
-  }
-  if (!isAuthenticated || !user) return null
-
-  // ─── State ────────────────────────────────────────────────
+  // ─── State (ALL hooks must be before early returns) ─────
   const theme: Theme = 'dark'  // Dark mode only
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [notifOpen, setNotifOpen] = useState(false)
@@ -470,6 +442,34 @@ export default function DashboardClient() {
     if (!totalInvested) return '0.0'
     return ((totalCurrent - totalInvested) / totalInvested * 100).toFixed(1)
   }, [totalCurrent, totalInvested])
+
+  // ─── Realtime Subscriptions ─────────────────────────────
+  useEffect(() => {
+    if (!clientId) return
+    const unsub1 = onClientNotification(clientId, () => refetchNotifications())
+    const unsub2 = onClientTicketUpdate(clientId, () => refetchTickets())
+    const unsub3 = onNewMessage(clientId, () => refetchMessages())
+    const unsub4 = onInvestmentUpdate(clientId, () => refetchPortfolio())
+    return () => {
+      unsub1?.()
+      unsub2?.()
+      unsub3?.()
+      unsub4?.()
+    }
+  }, [clientId]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ─── Auth Loading / Guard Render (AFTER all hooks) ──────
+  if (authLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-brand-black">
+        <div className="text-center">
+          <div className="w-10 h-10 border-2 border-brand-red border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+          <p className="text-sm text-gray-500">Loading Investor Portal...</p>
+        </div>
+      </div>
+    )
+  }
+  if (!isAuthenticated || !user) return null
 
   // ═══════════════════════════════════════════════════════════
   // SIDEBAR
