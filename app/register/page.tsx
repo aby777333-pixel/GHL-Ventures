@@ -179,7 +179,7 @@ export default function RegisterPage() {
             type="button"
             onClick={async () => {
               if (!isSupabaseConfigured()) {
-                await loginClient('demo@ghlindiaventures.com', '')
+                await loginClient()
                 router.push('/dashboard')
                 return
               }
