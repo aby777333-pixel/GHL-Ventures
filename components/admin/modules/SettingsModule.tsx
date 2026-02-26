@@ -594,11 +594,29 @@ function IntegrationsTab({ showToast }: { showToast: (msg: string, type?: 'succe
     email: '', phone: '', source: '', stage: '', value: '', assignedTo: '',
   })
   const [syncLog, setSyncLog] = useState<{ time: string; message: string; type: 'success' | 'error' | 'info' }[]>([])
+  const [serverKeyConfigured, setServerKeyConfigured] = useState(false)
 
   // Load persisted state on mount
   useState(() => {
     if (typeof window === 'undefined') return
     const { getMondayApiKey, isMondayConfigured, getSavedMappings } = require('@/lib/mondayService')
+
+    // Check whether the server has MONDAY_API_KEY env var configured
+    fetch('/.netlify/functions/monday-proxy', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ query: '__check_config__' }),
+    })
+      .then(r => r.json())
+      .then(d => {
+        if (d?.data?.serverKeyConfigured) {
+          setServerKeyConfigured(true)
+          // Auto-test with server key (no client key needed)
+          handleTestConnection('__use_server_key__')
+        }
+      })
+      .catch(() => {})
+
     const key = getMondayApiKey()
     if (key) {
       setMondayKey(key)
@@ -615,11 +633,20 @@ function IntegrationsTab({ showToast }: { showToast: (msg: string, type?: 'succe
 
   const handleTestConnection = async (keyOverride?: string) => {
     const key = keyOverride || mondayKey
-    if (!key.trim()) { showToast('Please enter a Monday.com API key', 'error'); return }
+    const isServerKeyOnly = key === '__use_server_key__'
+    if (!isServerKeyOnly && !key.trim() && !serverKeyConfigured) {
+      showToast('Please enter a Monday.com API key', 'error')
+      return
+    }
     setTesting(true)
     try {
       const { setMondayApiKey, testConnection } = await import('@/lib/mondayService')
-      setMondayApiKey(key.trim())
+      // If using server key only, clear any stale session key so the proxy uses env var
+      if (isServerKeyOnly) {
+        setMondayApiKey('')
+      } else {
+        setMondayApiKey(key.trim())
+      }
       const result = await testConnection()
       if (result.success) {
         setConnected({ accountName: result.accountName || '', userName: result.userName || '' })
@@ -628,11 +655,11 @@ function IntegrationsTab({ showToast }: { showToast: (msg: string, type?: 'succe
         handleLoadBoards()
       } else {
         setConnected(null)
-        showToast(result.error || 'Connection failed', 'error')
+        if (!isServerKeyOnly) showToast(result.error || 'Connection failed', 'error')
       }
     } catch {
       setConnected(null)
-      showToast('Failed to connect to Monday.com', 'error')
+      if (!isServerKeyOnly) showToast('Failed to connect to Monday.com', 'error')
     } finally {
       setTesting(false)
     }
@@ -747,7 +774,7 @@ function IntegrationsTab({ showToast }: { showToast: (msg: string, type?: 'succe
               </div>
               <button
                 onClick={() => handleTestConnection()}
-                disabled={testing || !mondayKey.trim()}
+                disabled={testing || (!mondayKey.trim() && !serverKeyConfigured)}
                 className="flex items-center gap-1.5 px-4 py-2.5 text-xs font-medium text-white bg-brand-red/20 border border-brand-red/30 rounded-xl hover:bg-brand-red/30 transition-colors disabled:opacity-40 disabled:cursor-not-allowed admin-btn-press"
               >
                 {testing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <CheckCircle2 className="w-3.5 h-3.5" />}
@@ -764,7 +791,11 @@ function IntegrationsTab({ showToast }: { showToast: (msg: string, type?: 'succe
               )}
             </div>
             <p className="text-[10px] text-gray-600 mt-1.5">
-              Find your key at monday.com → Avatar → Developers → My Access Tokens. Stored in session only.
+              {serverKeyConfigured ? (
+                <span className="text-emerald-400/80">✓ Server API key configured via environment variable. This field is optional — leave blank to use the server key.</span>
+              ) : (
+                <>Find your key at monday.com → Avatar → Developers → My Access Tokens. Or set MONDAY_API_KEY in Netlify env vars.</>
+              )}
             </p>
           </div>
 

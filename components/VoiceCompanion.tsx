@@ -35,6 +35,8 @@ export default function VoiceCompanionWrapper() {
           // claudeApiKey: 'YOUR_KEY_HERE',
           // claudeProxyUrl: '/api/claude-proxy',
           ttsProvider: 'auto',
+          sarvamApiKey: process.env.NEXT_PUBLIC_SARVAM_API_KEY || '',
+          sarvamVoices: { abe: 'ratan', tina: 'priya' },
 
           navigationHandler: (path: string) => {
             router.push(path);
