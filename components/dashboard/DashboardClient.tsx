@@ -25,6 +25,7 @@ import {
   BarChart, Bar,
 } from 'recharts'
 import Logo from '@/components/Logo'
+import SocialLinks from '@/components/SocialLinks'
 
 // Auth
 import { useClientAuth } from '@/lib/supabase/clientHooks'
@@ -552,6 +553,10 @@ export default function DashboardClient() {
             <LogOut className="w-[18px] h-[18px]" />
             Sign Out
           </button>
+          {/* Social links */}
+          <div className="pt-2 border-t border-white/[0.06] mt-2">
+            <SocialLinks size="sm" variant="glass" />
+          </div>
         </div>
       </aside>
     </>

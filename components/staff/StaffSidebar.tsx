@@ -11,6 +11,7 @@ import { STAFF_SIDEBAR_ITEMS } from '@/lib/staff/staffConstants'
 import { isFieldRole, isCSRole } from '@/lib/staff/staffRBAC'
 import { STAFF_ROLE_LABELS } from '@/lib/staff/staffAuth'
 import Logo from '@/components/Logo'
+import SocialLinks from '@/components/SocialLinks'
 
 const ICON_MAP: Record<string, React.ComponentType<{ className?: string }>> = {
   Home, User, Headphones, MapPin, Users, CheckSquare, Sparkles,
@@ -169,6 +170,10 @@ export default function StaffSidebar({
             <button onClick={onLogout} className="p-1.5 rounded-lg text-gray-600 hover:text-red-400 hover:bg-red-500/10 transition-colors" title="Logout">
               <LogOut className="w-3.5 h-3.5" />
             </button>
+          </div>
+          {/* Social links */}
+          <div className="pt-2 border-t border-white/[0.04]">
+            <SocialLinks size="sm" variant="glass" />
           </div>
         </div>
       </aside>

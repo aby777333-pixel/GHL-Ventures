@@ -9,6 +9,7 @@ import {
   Building2, Megaphone, BadgeCheck,
 } from 'lucide-react'
 import Logo from '@/components/Logo'
+import SocialLinks from '@/components/SocialLinks'
 import { ADMIN_SIDEBAR_ITEMS, MODULE_LABELS } from '@/lib/admin/adminConstants'
 import type { AdminModule } from '@/lib/admin/adminTypes'
 import { hasModuleAccess } from '@/lib/admin/adminRBAC'
@@ -223,6 +224,10 @@ export default function AdminSidebar({
             <LogOut className="w-[18px] h-[18px]" />
             Sign Out
           </button>
+          {/* Social links */}
+          <div className="pt-2 border-t border-white/[0.06] mt-2">
+            <SocialLinks size="sm" variant="glass" />
+          </div>
         </div>
       </aside>
     </>

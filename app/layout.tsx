@@ -160,13 +160,12 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       ],
     },
     sameAs: [
-      'https://linkedin.com/company/ghl-india-ventures',
+      'https://www.instagram.com/ghl_india_venture/',
       'https://x.com/ghlindiaventure',
-      'https://instagram.com/ghl_india_venture/',
-      'https://youtube.com/@GHLIndiaVentures',
-      'https://facebook.com/GHLindiaVentures',
-      'https://t.me/ghlindiaventures',
-      'https://g.page/ghl-india-ventures',
+      'https://www.linkedin.com/company/103819089/',
+      'https://www.youtube.com/@GHLIndiaVentures',
+      'https://www.facebook.com/GHLindiaVentures',
+      'https://t.me/+QfQ9nVP5T4Y4ZmE1',
     ],
   }
 
@@ -243,6 +242,19 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         {/* hreflang for multilingual content (primary English-India, with x-default) */}
         <link rel="alternate" hrefLang="en-IN" href={SITE_URL} />
         <link rel="alternate" hrefLang="x-default" href={SITE_URL} />
+        {/* Google Analytics (GA4) */}
+        <Script
+          src="https://www.googletagmanager.com/gtag/js?id=G-2944C8HHTK"
+          strategy="afterInteractive"
+        />
+        <Script id="google-analytics" strategy="afterInteractive">
+          {`
+            window.dataLayer = window.dataLayer || [];
+            function gtag(){dataLayer.push(arguments);}
+            gtag('js', new Date());
+            gtag('config', 'G-2944C8HHTK');
+          `}
+        </Script>
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationSchema) }}

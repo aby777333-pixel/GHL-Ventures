@@ -204,6 +204,30 @@ export function getWebsiteTraffic() { return WEBSITE_TRAFFIC }
 export function getTrafficSources() { return TRAFFIC_SOURCES }
 export function getTopPages() { return TOP_PAGES }
 
+// ── Email Notification Helper ──────────────────────────────
+async function sendLeadNotification(payload: {
+  fullName: string
+  email?: string
+  phone?: string
+  source: string
+  message?: string
+  investmentInterest?: string
+  investmentRange?: string
+  city?: string
+  pageUrl?: string
+}) {
+  try {
+    await fetch('/.netlify/functions/lead-notification', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    })
+  } catch (err) {
+    // Email notification is best-effort — don't block form submission
+    console.warn('[reportsData] Lead notification email failed:', err)
+  }
+}
+
 // ── Contact Form Submissions ────────────────────────────────
 export async function submitContactForm(formData: {
   formType: string
@@ -218,6 +242,19 @@ export async function submitContactForm(formData: {
   investmentInterest?: string
   pageUrl?: string
 }) {
+  // Fire email notification (best-effort, non-blocking)
+  sendLeadNotification({
+    fullName: formData.fullName,
+    email: formData.email,
+    phone: formData.phone,
+    source: formData.formType,
+    message: formData.message,
+    investmentInterest: formData.investmentInterest,
+    investmentRange: formData.investmentRange,
+    city: formData.city,
+    pageUrl: formData.pageUrl || (typeof window !== 'undefined' ? window.location.href : ''),
+  })
+
   if (!isSupabaseConfigured()) {
     console.debug('[reportsData] Supabase not configured, form submission logged locally')
     return { success: true, local: true }
@@ -257,6 +294,18 @@ export async function submitLead(leadData: {
   investmentInterest?: string
   estimatedInvestment?: number
 }) {
+  // Fire email notification (best-effort, non-blocking)
+  sendLeadNotification({
+    fullName: [leadData.firstName, leadData.lastName].filter(Boolean).join(' '),
+    email: leadData.email,
+    phone: leadData.phone,
+    source: leadData.source || 'website',
+    investmentInterest: leadData.investmentInterest,
+    investmentRange: leadData.estimatedInvestment ? `${leadData.estimatedInvestment}` : undefined,
+    city: leadData.city,
+    pageUrl: typeof window !== 'undefined' ? window.location.href : '',
+  })
+
   if (!isSupabaseConfigured()) {
     console.debug('[reportsData] Supabase not configured, lead logged locally')
     return { success: true, local: true }

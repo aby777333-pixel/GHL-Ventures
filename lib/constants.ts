@@ -82,13 +82,12 @@ export const NAV_LINKS = [
 ] as const
 
 export const SOCIAL_LINKS = [
-  { label: 'LinkedIn', href: 'https://linkedin.com/company/ghl-india-ventures', icon: 'linkedin' },
-  { label: 'Twitter', href: 'https://x.com/ghlindia', icon: 'twitter' },
-  { label: 'Instagram', href: 'https://instagram.com/GHL_India_Venture', icon: 'instagram' },
-  { label: 'YouTube', href: 'https://youtube.com/@ghlindia', icon: 'youtube' },
-  { label: 'Facebook', href: 'https://facebook.com/ghlindia', icon: 'facebook' },
-  { label: 'Telegram', href: 'https://t.me/ghlindia', icon: 'telegram' },
-  { label: 'Google Business', href: 'https://g.page/ghl-india-ventures', icon: 'google' },
+  { label: 'Instagram', href: 'https://www.instagram.com/ghl_india_venture/', icon: 'instagram' },
+  { label: 'X (Twitter)', href: 'https://x.com/ghlindiaventure', icon: 'twitter' },
+  { label: 'LinkedIn', href: 'https://www.linkedin.com/company/103819089/', icon: 'linkedin' },
+  { label: 'YouTube', href: 'https://www.youtube.com/@GHLIndiaVentures', icon: 'youtube' },
+  { label: 'Facebook', href: 'https://www.facebook.com/GHLindiaVentures', icon: 'facebook' },
+  { label: 'Telegram', href: 'https://t.me/+QfQ9nVP5T4Y4ZmE1', icon: 'telegram' },
 ] as const
 
 // ============================================================

@@ -255,6 +255,29 @@ function CSDashboard({ navigate, showToast }: Pick<CSCenterModuleProps, 'navigat
         </div>
       </AdminGlass>
 
+      {/* Tawk.to Live Chat Dashboard */}
+      <AdminGlass padding="p-4">
+        <div className="flex items-center justify-between flex-wrap gap-3">
+          <div className="flex items-center gap-3">
+            <MessageCircle className="w-5 h-5 text-emerald-400" />
+            <div>
+              <span className="text-sm font-semibold text-white">Tawk.to Live Chat</span>
+              <p className="text-[11px] text-gray-500">Respond to website visitors in real-time</p>
+            </div>
+          </div>
+          <a
+            href="https://dashboard.tawk.to/"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-semibold text-white bg-emerald-500/20 border border-emerald-500/30 hover:bg-emerald-500/30 transition-colors"
+          >
+            <Globe className="w-4 h-4" />
+            Open Live Chat Dashboard
+            <ArrowUpRight className="w-3.5 h-3.5" />
+          </a>
+        </div>
+      </AdminGlass>
+
       {/* KPI Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <AdminKPICard title="Tickets Resolved" value={23} subtitle="Today" trend="up" trendValue="+12%" icon={CheckCircle2} color={ACCENT} delay={0} />
