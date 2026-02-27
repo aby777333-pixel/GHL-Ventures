@@ -12,12 +12,12 @@ import { PROACTIVE_MESSAGES } from '@/lib/chatProactive'
 import {
   createChatSession,
   sendChatMessage,
-  getChatMessages,
+  getVisitorChatMessages,
   getActiveSessionForVisitor,
   resolveChatSession,
+  pollNewMessages,
 } from '@/lib/supabase/chatService'
-import type { ChatSession } from '@/lib/supabase/chatService'
-import { onChatMessage } from '@/lib/supabase/realtimeSubscriptions'
+import type { ChatSession, ChatMessage } from '@/lib/supabase/chatService'
 
 type ChatMode = 'aria' | 'live' | 'connect'
 
@@ -65,7 +65,9 @@ export default function ChatWidget() {
 
   // Supabase-backed live chat session
   const [chatSession, setChatSession] = useState<ChatSession | null>(null)
-  const unsubRef = useRef<(() => void) | null>(null)
+  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const lastPollTimeRef = useRef<string>(new Date().toISOString())
+  const seenMsgIds = useRef<Set<string>>(new Set())
 
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
@@ -99,8 +101,8 @@ export default function ChatWidget() {
       const session = await getActiveSessionForVisitor()
       if (session) {
         setChatSession(session)
-        // Load message history from Supabase
-        const history = await getChatMessages(session.id)
+        // Load message history from Supabase via RPC (bypasses RLS)
+        const history = await getVisitorChatMessages(session.id)
         if (history.length > 0) {
           const uiMessages: ChatMessageUI[] = history.map(m => ({
             id: m.id,
@@ -111,43 +113,83 @@ export default function ChatWidget() {
               : 'system',
             timestamp: new Date(m.created_at),
           }))
+          // Track seen IDs to prevent duplicate display
+          history.forEach(m => seenMsgIds.current.add(m.id))
           setMessages(prev => prev.length > 0 ? prev : uiMessages)
+          // Set poll timestamp to last message
+          lastPollTimeRef.current = history[history.length - 1].created_at
         }
         if (session.assigned_rep_id) {
           setAgentConnected(true)
           setAgentName('Support Agent')
         }
+        // Start polling if in live mode
+        setChatMode('live')
       }
     }
     restoreSession()
   }, [])
 
-  // Subscribe to real-time messages when we have a live chat session
+  // Poll for new agent messages every 3 seconds (bypasses RLS via RPC)
   useEffect(() => {
-    if (!chatSession?.id || chatMode !== 'live') return
-
-    const unsub = onChatMessage(chatSession.id, (payload) => {
-      const msg = payload.new as any
-      // Only show messages from agents (we already show our own locally)
-      if (msg.sender_type === 'agent' || msg.sender_type === 'system') {
-        const uiMsg: ChatMessageUI = {
-          id: msg.id,
-          text: msg.message,
-          sender: msg.sender_type === 'agent' ? 'agent' : 'system',
-          timestamp: new Date(msg.created_at),
-        }
-        setMessages(prev => [...prev, uiMsg])
-        setIsTyping(false)
-        if (msg.sender_type === 'agent') {
-          setAgentConnected(true)
-          if (msg.sender_name) setAgentName(msg.sender_name)
-        }
-        if (!isOpen) setUnreadCount(prev => prev + 1)
+    if (!chatSession?.id || chatMode !== 'live') {
+      // Clear any existing poll
+      if (pollRef.current) {
+        clearInterval(pollRef.current)
+        pollRef.current = null
       }
-    })
+      return
+    }
 
-    unsubRef.current = unsub
-    return () => { unsub?.() }
+    const sessionId = chatSession.id
+
+    const poll = async () => {
+      const newMsgs = await pollNewMessages(sessionId, lastPollTimeRef.current)
+      if (newMsgs.length > 0) {
+        const unseen = newMsgs.filter(m => !seenMsgIds.current.has(m.id))
+        if (unseen.length > 0) {
+          unseen.forEach(m => seenMsgIds.current.add(m.id))
+          lastPollTimeRef.current = unseen[unseen.length - 1].created_at
+
+          const uiMsgs: ChatMessageUI[] = unseen.map(m => ({
+            id: m.id,
+            text: m.message,
+            sender: m.sender_type === 'agent' ? 'agent' as const : 'system' as const,
+            timestamp: new Date(m.created_at),
+          }))
+
+          setMessages(prev => [...prev, ...uiMsgs])
+          setIsTyping(false)
+
+          // Check if an agent responded
+          const agentMsg = unseen.find(m => m.sender_type === 'agent')
+          if (agentMsg) {
+            setAgentConnected(true)
+            if (agentMsg.sender_name) setAgentName(agentMsg.sender_name)
+          }
+          if (!isOpen) setUnreadCount(prev => prev + unseen.length)
+
+          // Play notification sound for new messages
+          try {
+            const audio = new Audio('data:audio/wav;base64,UklGRl9vT19teleXRlZm10IBAAAAABAAIAQB8AAEAfAAAAAAAAAAAAZGF0YQ==')
+            audio.volume = 0.3
+            audio.play().catch(() => {})
+          } catch {}
+        }
+      }
+    }
+
+    // Start polling every 3 seconds
+    pollRef.current = setInterval(poll, 3000)
+    // Also poll immediately
+    poll()
+
+    return () => {
+      if (pollRef.current) {
+        clearInterval(pollRef.current)
+        pollRef.current = null
+      }
+    }
   }, [chatSession?.id, chatMode, isOpen])
 
   // External open event (from dashboard support tab)

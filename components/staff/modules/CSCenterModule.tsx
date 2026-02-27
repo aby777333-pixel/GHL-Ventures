@@ -901,6 +901,52 @@ function ChatView({ showToast }: Pick<CSCenterModuleProps, 'showToast'>) {
     load()
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Request browser notification permission on mount
+  useEffect(() => {
+    if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'default') {
+      Notification.requestPermission()
+    }
+  }, [])
+
+  // Play alert sound helper
+  const playAlertSound = useCallback(() => {
+    try {
+      // Short beep notification sound
+      const ctx = new (window.AudioContext || (window as any).webkitAudioContext)()
+      const oscillator = ctx.createOscillator()
+      const gainNode = ctx.createGain()
+      oscillator.connect(gainNode)
+      gainNode.connect(ctx.destination)
+      oscillator.frequency.value = 800
+      oscillator.type = 'sine'
+      gainNode.gain.value = 0.3
+      oscillator.start()
+      gainNode.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.5)
+      oscillator.stop(ctx.currentTime + 0.5)
+    } catch {}
+  }, [])
+
+  // Send browser notification helper
+  const sendBrowserNotification = useCallback((title: string, body: string) => {
+    // Play sound regardless of notification permission
+    playAlertSound()
+
+    if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'granted') {
+      const notif = new Notification(title, {
+        body,
+        icon: '/icon.svg',
+        tag: 'ghl-cs-chat', // Prevents stacking duplicate notifications
+      })
+      // Auto-close after 5 seconds
+      setTimeout(() => notif.close(), 5000)
+      // Focus window on click
+      notif.onclick = () => {
+        window.focus()
+        notif.close()
+      }
+    }
+  }, [playAlertSound])
+
   // Subscribe to new chat sessions in real time
   useEffect(() => {
     const unsub = onNewChatSession((payload) => {
@@ -911,9 +957,13 @@ function ChatView({ showToast }: Pick<CSCenterModuleProps, 'showToast'>) {
         return [newSession, ...prev]
       })
       showToast(`New chat from ${newSession.visitor_name}`, 'info')
+      sendBrowserNotification(
+        'New Chat Incoming',
+        `${newSession.visitor_name} is waiting for assistance`
+      )
     })
     return () => { unsub?.() }
-  }, [showToast])
+  }, [showToast, sendBrowserNotification])
 
   // Load messages when a chat is selected
   useEffect(() => {
@@ -934,9 +984,16 @@ function ChatView({ showToast }: Pick<CSCenterModuleProps, 'showToast'>) {
         if (prev.find(m => m.id === msg.id)) return prev
         return [...prev, msg]
       })
+      // Notify when a visitor sends a message
+      if (msg.sender_type === 'visitor') {
+        sendBrowserNotification(
+          'New Message',
+          `${msg.sender_name || 'Visitor'}: ${msg.message.slice(0, 80)}`
+        )
+      }
     })
     return () => { unsub?.() }
-  }, [selectedChat])
+  }, [selectedChat, sendBrowserNotification])
 
   // Auto-scroll messages
   useEffect(() => {

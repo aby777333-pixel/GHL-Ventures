@@ -149,7 +149,7 @@ export async function createChatSession(input: {
   return session
 }
 
-/** Fetch active chat session for current visitor (if any) */
+/** Fetch active chat session for current visitor (if any) — uses RPC to bypass RLS */
 export async function getActiveSessionForVisitor(): Promise<ChatSession | null> {
   if (!isSupabaseConfigured()) {
     const visitorId = getOrCreateVisitorId()
@@ -157,16 +157,12 @@ export async function getActiveSessionForVisitor(): Promise<ChatSession | null> 
   }
 
   const visitorId = getOrCreateVisitorId()
-  const { data } = await db
-    .from('chat_sessions')
-    .select('*')
-    .eq('visitor_id', visitorId)
-    .in('status', ['waiting', 'assigned', 'active', 'queued'])
-    .order('created_at', { ascending: false })
-    .limit(1)
-    .single()
+  const { data, error } = await db.rpc('get_visitor_active_session', {
+    p_visitor_id: visitorId,
+  })
 
-  return (data as ChatSession) || null
+  if (error || !data || data.length === 0) return null
+  return (Array.isArray(data) ? data[0] : data) as ChatSession
 }
 
 /** Auto-assign a chat session to the least-busy available CS rep */
@@ -345,6 +341,41 @@ export async function getChatMessages(sessionId: string): Promise<ChatMessage[]>
 
   if (error) {
     console.error('[chatService] Failed to fetch messages:', error.message)
+    return []
+  }
+
+  return (data || []) as ChatMessage[]
+}
+
+/** Fetch message history using RPC — for anonymous visitors (bypasses RLS) */
+export async function getVisitorChatMessages(sessionId: string): Promise<ChatMessage[]> {
+  if (!isSupabaseConfigured()) {
+    return MOCK_MESSAGES.filter(m => m.session_id === sessionId)
+  }
+
+  const { data, error } = await db.rpc('get_visitor_chat_messages', {
+    p_session_id: sessionId,
+  })
+
+  if (error) {
+    console.error('[chatService] RPC get_visitor_chat_messages failed:', error.message)
+    return []
+  }
+
+  return (data || []) as ChatMessage[]
+}
+
+/** Poll for new agent messages since a timestamp — for visitor polling */
+export async function pollNewMessages(sessionId: string, since: string): Promise<ChatMessage[]> {
+  if (!isSupabaseConfigured()) return []
+
+  const { data, error } = await db.rpc('get_visitor_new_messages', {
+    p_session_id: sessionId,
+    p_since: since,
+  })
+
+  if (error) {
+    console.error('[chatService] Poll failed:', error.message)
     return []
   }
 
