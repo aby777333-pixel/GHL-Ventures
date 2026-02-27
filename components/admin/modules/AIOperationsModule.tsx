@@ -12,7 +12,7 @@ import AdminGlass from '../shared/AdminGlass'
 import AdminBadge from '../shared/AdminBadge'
 import AdminModal, { ModalButton } from '../shared/AdminModal'
 import AdminKPICard from '../shared/AdminKPICard'
-import { AI_TOOLS } from '@/lib/admin/adminMockData'
+import { getAITools } from '@/lib/supabase/adminDataService'
 import type { AITool } from '@/lib/admin/adminTypes'
 
 // ── Icon Map ─────────────────────────────────────────────────────
@@ -48,18 +48,19 @@ interface AIOperationsModuleProps {
 }
 
 export default function AIOperationsModule({ subTab, navigate, showToast }: AIOperationsModuleProps) {
+  const aiTools = getAITools() as AITool[]
   const [categoryFilter, setCategoryFilter] = useState<string>('all')
   const [selectedTool, setSelectedTool] = useState<AITool | null>(null)
   const [searchQuery, setSearchQuery] = useState('')
 
   // If subTab matches a tool ID, show that tool
   const activeTool = useMemo(() => {
-    if (subTab) return AI_TOOLS.find(t => t.id === subTab) || null
+    if (subTab) return aiTools.find(t => t.id === subTab) || null
     return null
   }, [subTab])
 
   const filteredTools = useMemo(() => {
-    let tools = AI_TOOLS
+    let tools = aiTools
     if (categoryFilter !== 'all') tools = tools.filter(t => t.category === categoryFilter)
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase()
@@ -69,8 +70,8 @@ export default function AIOperationsModule({ subTab, navigate, showToast }: AIOp
   }, [categoryFilter, searchQuery])
 
   const categoryCounts = useMemo(() => {
-    const counts: Record<string, number> = { all: AI_TOOLS.length }
-    AI_TOOLS.forEach(t => { counts[t.category] = (counts[t.category] || 0) + 1 })
+    const counts: Record<string, number> = { all: aiTools.length }
+    aiTools.forEach(t => { counts[t.category] = (counts[t.category] || 0) + 1 })
     return counts
   }, [])
 
@@ -94,7 +95,7 @@ export default function AIOperationsModule({ subTab, navigate, showToast }: AIOp
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         <AdminKPICard title="Total AI Runs" value={AI_USAGE_STATS.totalRuns.toLocaleString()} icon={Zap} color="#F59E0B" delay={0} />
         <AdminKPICard title="Avg Confidence" value={`${AI_USAGE_STATS.avgConfidence}%`} icon={Brain} color="#8B5CF6" delay={50} />
-        <AdminKPICard title="Active Tools" value={`${AI_USAGE_STATS.activeTools}/${AI_TOOLS.length}`} icon={Activity} color="#10B981" delay={100} />
+        <AdminKPICard title="Active Tools" value={`${AI_USAGE_STATS.activeTools}/${aiTools.length}`} icon={Activity} color="#10B981" delay={100} />
         <AdminKPICard title="Time Saved" value={AI_USAGE_STATS.timeSaved} icon={Clock} color="#DC2626" delay={150} />
       </div>
 

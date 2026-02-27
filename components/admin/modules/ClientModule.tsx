@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect, useCallback } from 'react'
 import {
   Users, UserPlus, Eye, Phone, Mail, Calendar, IndianRupee,
   ShieldCheck, AlertTriangle, FileText, Filter, CheckCircle2,
@@ -13,7 +13,7 @@ import AdminBadge, { getKYCBadgeVariant, getAccountBadgeVariant } from '../share
 import AdminModal, { ModalButton } from '../shared/AdminModal'
 import AdminEmptyState from '../shared/AdminEmptyState'
 import AdminKPICard from '../shared/AdminKPICard'
-import { CLIENTS_DATA, KYC_DOCUMENTS } from '@/lib/admin/adminMockData'
+import { fetchClients, fetchKYCDocuments } from '@/lib/supabase/adminDataService'
 import { formatINR, formatDate } from '@/lib/admin/adminHooks'
 import type { Client, KYCDocument, KYCStatus } from '@/lib/admin/adminTypes'
 import UploadWithFolderPicker from '@/components/shared/UploadWithFolderPicker'
@@ -41,14 +41,28 @@ export default function ClientModule({ subTab, navigate, showToast }: ClientModu
   const [addClientOpen, setAddClientOpen] = useState(false)
   const [folderPickerOpen, setFolderPickerOpen] = useState(false)
 
+  const [clients, setClients] = useState<any[]>([])
+  const [kycDocs, setKycDocs] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
+
+  const loadData = useCallback(async () => {
+    setLoading(true)
+    const [c, k] = await Promise.all([fetchClients(), fetchKYCDocuments()])
+    setClients(c)
+    setKycDocs(k)
+    setLoading(false)
+  }, [])
+
+  useEffect(() => { loadData() }, [loadData])
+
   // ── KPIs ──────────────────────────────────────────────────────
   const kpis = useMemo(() => {
-    const active = CLIENTS_DATA.filter(c => c.accountStatus === 'active').length
-    const totalAUM = CLIENTS_DATA.reduce((s, c) => s + c.aum, 0)
-    const pendingKYC = KYC_DOCUMENTS.filter(d => d.status === 'pending' || d.status === 'under-review').length
+    const active = clients.filter(c => c.accountStatus === 'active').length
+    const totalAUM = clients.reduce((s, c) => s + c.aum, 0)
+    const pendingKYC = kycDocs.filter(d => d.status === 'pending' || d.status === 'under-review').length
     const avgAUM = active > 0 ? totalAUM / active : 0
-    return { total: CLIENTS_DATA.length, active, totalAUM, pendingKYC, avgAUM }
-  }, [])
+    return { total: clients.length, active, totalAUM, pendingKYC, avgAUM }
+  }, [clients, kycDocs])
 
   // ── Tab Navigation ────────────────────────────────────────────
   const handleTabClick = (tabId: string) => {
@@ -107,18 +121,20 @@ export default function ClientModule({ subTab, navigate, showToast }: ClientModu
       <div className="admin-tab-switch">
         {activeTab === 'list' && (
           <ClientListTab
+            clients={clients}
             onViewClient={(c) => { setSelectedClient(c); setProfileModalOpen(true) }}
             showToast={showToast}
           />
         )}
         {activeTab === 'kyc-queue' && (
           <KYCQueueTab
+            kycDocs={kycDocs}
             filter={kycFilter}
             setFilter={setKycFilter}
             showToast={showToast}
           />
         )}
-        {activeTab === 'analytics' && <ClientAnalyticsTab />}
+        {activeTab === 'analytics' && <ClientAnalyticsTab clients={clients} />}
       </div>
 
       {/* Client Profile Modal */}
@@ -229,9 +245,11 @@ export default function ClientModule({ subTab, navigate, showToast }: ClientModu
 
 // ── Client List Tab ─────────────────────────────────────────────
 function ClientListTab({
+  clients,
   onViewClient,
   showToast,
 }: {
+  clients: any[]
   onViewClient: (c: Client) => void
   showToast: (msg: string, type?: 'success' | 'error' | 'info' | 'warning') => void
 }) {
@@ -304,7 +322,7 @@ function ClientListTab({
     <AdminGlass padding="p-4">
       <AdminDataTable<Client>
         columns={columns}
-        data={CLIENTS_DATA}
+        data={clients}
         searchKeys={['name', 'email', 'id', 'pan', 'assignedRM']}
         searchPlaceholder="Search clients by name, ID, PAN..."
         onRowClick={onViewClient}
@@ -318,24 +336,26 @@ function ClientListTab({
 
 // ── KYC Queue Tab ───────────────────────────────────────────────
 function KYCQueueTab({
+  kycDocs,
   filter,
   setFilter,
   showToast,
 }: {
+  kycDocs: any[]
   filter: KYCStatus | 'all'
   setFilter: (f: KYCStatus | 'all') => void
   showToast: (msg: string, type?: 'success' | 'error' | 'info' | 'warning') => void
 }) {
   const filteredDocs = useMemo(() => {
-    if (filter === 'all') return KYC_DOCUMENTS
-    return KYC_DOCUMENTS.filter(d => d.status === filter)
-  }, [filter])
+    if (filter === 'all') return kycDocs
+    return kycDocs.filter(d => d.status === filter)
+  }, [filter, kycDocs])
 
   const statusCounts = useMemo(() => {
-    const counts: Record<string, number> = { all: KYC_DOCUMENTS.length }
-    KYC_DOCUMENTS.forEach(d => { counts[d.status] = (counts[d.status] || 0) + 1 })
+    const counts: Record<string, number> = { all: kycDocs.length }
+    kycDocs.forEach(d => { counts[d.status] = (counts[d.status] || 0) + 1 })
     return counts
-  }, [])
+  }, [kycDocs])
 
   const columns: Column<KYCDocument>[] = [
     {
@@ -447,22 +467,22 @@ function KYCQueueTab({
 }
 
 // ── Client Analytics Tab ────────────────────────────────────────
-function ClientAnalyticsTab() {
+function ClientAnalyticsTab({ clients }: { clients: any[] }) {
   const riskBreakdown = useMemo(() => {
     const counts: Record<string, number> = {}
-    CLIENTS_DATA.forEach(c => { counts[c.riskProfile] = (counts[c.riskProfile] || 0) + 1 })
+    clients.forEach(c => { counts[c.riskProfile] = (counts[c.riskProfile] || 0) + 1 })
     return counts
-  }, [])
+  }, [clients])
 
   const statusBreakdown = useMemo(() => {
     const counts: Record<string, number> = {}
-    CLIENTS_DATA.forEach(c => { counts[c.accountStatus] = (counts[c.accountStatus] || 0) + 1 })
+    clients.forEach(c => { counts[c.accountStatus] = (counts[c.accountStatus] || 0) + 1 })
     return counts
-  }, [])
+  }, [clients])
 
   const topClients = useMemo(() =>
-    [...CLIENTS_DATA].sort((a, b) => b.aum - a.aum).slice(0, 5),
-  [])
+    [...clients].sort((a, b) => b.aum - a.aum).slice(0, 5),
+  [clients])
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
@@ -474,7 +494,7 @@ function ClientAnalyticsTab() {
         </h3>
         <div className="space-y-3">
           {Object.entries(riskBreakdown).map(([profile, count]) => {
-            const pct = Math.round((count / CLIENTS_DATA.length) * 100)
+            const pct = Math.round((count / (clients.length || 1)) * 100)
             const color = profile === 'conservative' ? '#10B981' : profile === 'moderate' ? '#3B82F6' : profile === 'aggressive' ? '#F59E0B' : '#EF4444'
             return (
               <div key={profile}>
@@ -502,7 +522,7 @@ function ClientAnalyticsTab() {
             <div key={status} className="p-3 rounded-xl bg-white/[0.03] border border-white/[0.04]">
               <AdminBadge label={status} variant={getAccountBadgeVariant(status)} />
               <p className="text-xl font-bold text-white mt-2">{count}</p>
-              <p className="text-[11px] text-gray-500">{Math.round((count / CLIENTS_DATA.length) * 100)}% of total</p>
+              <p className="text-[11px] text-gray-500">{Math.round((count / (clients.length || 1)) * 100)}% of total</p>
             </div>
           ))}
         </div>
@@ -522,7 +542,7 @@ function ClientAnalyticsTab() {
               <div key={c.id} className="flex items-center gap-3 p-3 rounded-xl bg-white/[0.02] hover:bg-white/[0.04] transition-colors">
                 <span className="text-xs font-bold text-gray-600 w-6">#{i + 1}</span>
                 <div className="w-8 h-8 rounded-full bg-gradient-to-br from-brand-red/30 to-purple-500/30 flex items-center justify-center text-[10px] font-bold text-white flex-shrink-0">
-                  {c.name.split(' ').map(n => n[0]).join('')}
+                  {c.name.split(' ').map((n: string) => n[0]).join('')}
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center justify-between mb-1">

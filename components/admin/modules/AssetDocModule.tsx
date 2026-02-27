@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect, useCallback } from 'react'
 import {
   FolderOpen, Monitor, FileText, Key, Award, Eye, Download,
   Upload, Plus, Search, Calendar, Tag, Lock, Globe,
@@ -13,13 +13,13 @@ import AdminBadge from '../shared/AdminBadge'
 import AdminModal, { ModalButton } from '../shared/AdminModal'
 import AdminKPICard from '../shared/AdminKPICard'
 import AdminEmptyState from '../shared/AdminEmptyState'
-import { ASSETS_DATA } from '@/lib/admin/adminMockData'
+import { fetchAssets, fetchDocuments } from '@/lib/supabase/adminDataService'
 import { formatINR, formatDate } from '@/lib/admin/adminHooks'
 import type { Asset, AssetCategory, AssetStatus } from '@/lib/admin/adminTypes'
 import { saveBlobAs } from '@/lib/supabase/storageService'
 import UploadWithFolderPicker from '@/components/shared/UploadWithFolderPicker'
 
-// ── Mock Documents ──────────────────────────────────────────────
+// ── Document type ───────────────────────────────────────────────
 interface AdminDocument {
   id: string
   name: string
@@ -31,17 +31,6 @@ interface AdminDocument {
   version: number
   tags: string[]
 }
-
-const DOCUMENTS_DATA: AdminDocument[] = [
-  { id: 'DOC-001', name: 'Q4 2024 Fund Performance Report', type: 'PDF', category: 'Reports', uploadedBy: 'Karthik Sundaram', uploadDate: '2025-03-19', size: '2.4 MB', version: 3, tags: ['fund', 'quarterly', 'performance'] },
-  { id: 'DOC-002', name: 'SEBI Annual Filing 2024-25', type: 'PDF', category: 'Compliance', uploadedBy: 'Meera Subramaniam', uploadDate: '2025-03-15', size: '5.1 MB', version: 1, tags: ['sebi', 'filing', 'annual'] },
-  { id: 'DOC-003', name: 'Investment Agreement Template v4', type: 'DOCX', category: 'Templates', uploadedBy: 'Sowmya Rajan', uploadDate: '2025-03-10', size: '180 KB', version: 4, tags: ['template', 'legal', 'agreement'] },
-  { id: 'DOC-004', name: 'Client Onboarding Checklist', type: 'PDF', category: 'Operations', uploadedBy: 'Divya Krishnamurthy', uploadDate: '2025-03-05', size: '450 KB', version: 2, tags: ['onboarding', 'checklist', 'client'] },
-  { id: 'DOC-005', name: 'Brand Guidelines 2025', type: 'PDF', category: 'Marketing', uploadedBy: 'Abe Thayil', uploadDate: '2025-02-20', size: '12.8 MB', version: 1, tags: ['brand', 'guidelines', 'marketing'] },
-  { id: 'DOC-006', name: 'NDA Template — Standard', type: 'DOCX', category: 'Templates', uploadedBy: 'Sowmya Rajan', uploadDate: '2025-02-15', size: '95 KB', version: 3, tags: ['nda', 'template', 'legal'] },
-  { id: 'DOC-007', name: 'Employee Handbook 2025', type: 'PDF', category: 'HR', uploadedBy: 'Abe Thayil', uploadDate: '2025-01-10', size: '3.2 MB', version: 5, tags: ['handbook', 'hr', 'policy'] },
-  { id: 'DOC-008', name: 'Risk Assessment Framework', type: 'XLSX', category: 'Compliance', uploadedBy: 'Meera Subramaniam', uploadDate: '2025-01-05', size: '780 KB', version: 2, tags: ['risk', 'framework', 'compliance'] },
-]
 
 // ── Sub-tabs ─────────────────────────────────────────────────────
 const ASSET_TABS = [
@@ -61,12 +50,26 @@ export default function AssetDocModule({ subTab, navigate, showToast }: AssetDoc
   const activeTab = (ASSET_TABS.some(t => t.id === subTab) ? subTab : 'assets') as AssetTab
   const [folderPickerOpen, setFolderPickerOpen] = useState(false)
 
-  const kpis = useMemo(() => {
-    const totalAssetValue = ASSETS_DATA.reduce((s, a) => s + a.value, 0)
-    const activeAssets = ASSETS_DATA.filter(a => a.status === 'active').length
-    const expiring = ASSETS_DATA.filter(a => a.expiryDate && new Date(a.expiryDate) < new Date('2025-06-01')).length
-    return { totalAssets: ASSETS_DATA.length, activeAssets, totalAssetValue, expiring, totalDocs: DOCUMENTS_DATA.length }
+  const [assets, setAssets] = useState<any[]>([])
+  const [documents, setDocuments] = useState<AdminDocument[]>([])
+  const [loading, setLoading] = useState(true)
+
+  const loadData = useCallback(async () => {
+    setLoading(true)
+    const [a, d] = await Promise.all([fetchAssets(), fetchDocuments()])
+    setAssets(a)
+    setDocuments(d as any)
+    setLoading(false)
   }, [])
+
+  useEffect(() => { loadData() }, [loadData])
+
+  const kpis = useMemo(() => {
+    const totalAssetValue = assets.reduce((s, a) => s + (a.value || 0), 0)
+    const activeAssets = assets.filter(a => a.status === 'active').length
+    const expiring = assets.filter(a => a.expiryDate && new Date(a.expiryDate) < new Date('2025-06-01')).length
+    return { totalAssets: assets.length, activeAssets, totalAssetValue, expiring, totalDocs: documents.length }
+  }, [assets, documents])
 
   const handleTabClick = (tabId: string) => {
     navigate(tabId === 'assets' ? 'assets' : `assets/${tabId}`)
@@ -129,15 +132,15 @@ export default function AssetDocModule({ subTab, navigate, showToast }: AssetDoc
       </div>
 
       <div className="admin-tab-switch">
-        {activeTab === 'assets' && <AssetInventoryTab showToast={showToast} />}
-        {activeTab === 'documents' && <DocumentsTab showToast={showToast} />}
+        {activeTab === 'assets' && <AssetInventoryTab assets={assets} showToast={showToast} />}
+        {activeTab === 'documents' && <DocumentsTab documents={documents} showToast={showToast} />}
       </div>
     </div>
   )
 }
 
 // ── Asset Inventory Tab ─────────────────────────────────────────
-function AssetInventoryTab({ showToast }: { showToast: (msg: string, type?: 'success' | 'error' | 'info' | 'warning') => void }) {
+function AssetInventoryTab({ assets, showToast }: { assets: any[]; showToast: (msg: string, type?: 'success' | 'error' | 'info' | 'warning') => void }) {
   const [addAssetOpen, setAddAssetOpen] = useState(false)
   const [assetFolderPickerOpen, setAssetFolderPickerOpen] = useState(false)
   const [assetForm, setAssetForm] = useState({
@@ -244,7 +247,7 @@ function AssetInventoryTab({ showToast }: { showToast: (msg: string, type?: 'suc
       <AdminGlass padding="p-4">
         <AdminDataTable<Asset>
           columns={columns}
-          data={ASSETS_DATA}
+          data={assets}
           searchKeys={['name', 'category', 'assignedTo']}
           searchPlaceholder="Search assets..."
           exportable
@@ -453,18 +456,18 @@ function AssetInventoryTab({ showToast }: { showToast: (msg: string, type?: 'suc
 }
 
 // ── Documents Tab ───────────────────────────────────────────────
-function DocumentsTab({ showToast }: { showToast: (msg: string, type?: 'success' | 'error' | 'info' | 'warning') => void }) {
+function DocumentsTab({ documents, showToast }: { documents: AdminDocument[]; showToast: (msg: string, type?: 'success' | 'error' | 'info' | 'warning') => void }) {
   const [categoryFilter, setCategoryFilter] = useState<string>('all')
 
   const categories = useMemo(() => {
-    const cats = new Set(DOCUMENTS_DATA.map(d => d.category))
+    const cats = new Set(documents.map(d => d.category))
     return ['all', ...Array.from(cats)]
-  }, [])
+  }, [documents])
 
   const filtered = useMemo(() => {
-    if (categoryFilter === 'all') return DOCUMENTS_DATA
-    return DOCUMENTS_DATA.filter(d => d.category === categoryFilter)
-  }, [categoryFilter])
+    if (categoryFilter === 'all') return documents
+    return documents.filter(d => d.category === categoryFilter)
+  }, [categoryFilter, documents])
 
   const getFileIcon = (type: string) => {
     switch (type) {

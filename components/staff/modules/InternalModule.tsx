@@ -1,9 +1,9 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import AdminGlass from '@/components/admin/shared/AdminGlass'
 import AdminBadge from '@/components/admin/shared/AdminBadge'
-import { ANNOUNCEMENTS_DATA } from '@/lib/staff/staffMockData'
+import { fetchAnnouncements } from '@/lib/supabase/staffDataService'
 import type { Announcement } from '@/lib/staff/staffTypes'
 import {
   MessageSquare, Send, Megaphone, FileText, MessageCircle, Heart, Smile,
@@ -20,9 +20,15 @@ interface InternalModuleProps {
 
 export default function InternalModule({ subTab, navigate, showToast }: InternalModuleProps) {
   const tab = subTab || 'chat'
+  const [announcements, setAnnouncements] = useState<any[]>([])
+
+  useEffect(() => {
+    fetchAnnouncements().then(data => setAnnouncements(data))
+  }, [])
+
   switch (tab) {
     case 'chat':        return <ChatView showToast={showToast} />
-    case 'noticeboard': return <NoticeboardView />
+    case 'noticeboard': return <NoticeboardView announcements={announcements} />
     case 'policies':    return <PoliciesView showToast={showToast} />
     case 'feedback':    return <FeedbackView showToast={showToast} />
     case 'wellness':    return <WellnessView showToast={showToast} />
@@ -45,52 +51,9 @@ function SectionHeader({ title, icon: Icon }: { title: string; icon: IconFC }) {
 // ================================================================
 //  1. INTERNAL CHAT
 // ================================================================
-const CHANNELS: { id: string; name: string; icon: IconFC; unread: number }[] = [
-  { id: 'general', name: 'General', icon: Hash, unread: 3 },
-  { id: 'cs-team', name: 'CS Team', icon: Users, unread: 1 },
-  { id: 'field-team', name: 'Field Team', icon: Zap, unread: 0 },
-  { id: 'management', name: 'Management', icon: ShieldCheck, unread: 2 },
-  { id: 'random', name: 'Random', icon: Smile, unread: 0 },
-]
+const CHANNELS: { id: string; name: string; icon: IconFC; unread: number }[] = []
 
-const MSG = (id: string, sender: string, message: string, timestamp: string) => ({ id, sender, message, timestamp })
-
-const MOCK_MESSAGES: Record<string, ReturnType<typeof MSG>[]> = {
-  general: [
-    MSG('m1', 'Rajesh Venkataraman', 'Good morning team! Reminder: Monthly all-hands at 3 PM today.', '09:12 AM'),
-    MSG('m2', 'Sowmya Parthasarathy', 'Annual Day RSVP is open. Please confirm attendance by March 10.', '09:30 AM'),
-    MSG('m3', 'Karthik Sundaram', 'Q4 investor report is now live on the document portal.', '10:05 AM'),
-    MSG('m4', 'Priya Venkatesh', 'Has anyone reviewed the new SEBI circular? Training link is in announcements.', '10:22 AM'),
-    MSG('m5', 'Meera Subramaniam', 'Lunch order is being placed at 12. Drop your preferences in the sheet!', '11:45 AM'),
-  ],
-  'cs-team': [
-    MSG('c1', 'Priya Venkatesh', 'Vikram Mehta KYC docs received. Forwarding to compliance.', '09:45 AM'),
-    MSG('c2', 'Ananya Reddy', 'Ticket TKT-2026-089 escalated to L2. Client not satisfied with NAV explanation.', '10:40 AM'),
-    MSG('c3', 'Karthik Sundaram', 'Let me take that escalation. I will call the client directly.', '10:55 AM'),
-    MSG('c4', 'Priya Venkatesh', 'Great, thanks Karthik. Assigning TKT-2026-089 to you now.', '11:00 AM'),
-    MSG('c5', 'Divya Krishnamurthy', 'Portfolio review sent to Sunita Agarwal and Kavitha Raman.', '11:30 AM'),
-  ],
-  'field-team': [
-    MSG('f1', 'Venkat Raman', 'Checked in at Phoenix Towers site. Construction on track, 78% complete.', '08:30 AM'),
-    MSG('f2', 'Suresh Kumar', 'Client meeting with Ganesh Iyer at 2 PM. Heading to T. Nagar office.', '09:00 AM'),
-    MSG('f3', 'Arun Balaji', 'Site photography done for Marina Heights. Uploading 42 images.', '11:15 AM'),
-    MSG('f4', 'Venkat Raman', 'Developer meeting rescheduled to Thursday. Updated in calendar.', '12:10 PM'),
-    MSG('f5', 'Suresh Kumar', 'Ganesh Iyer confirmed for Series C. Documents pending from his end.', '03:30 PM'),
-  ],
-  management: [
-    MSG('mg1', 'Rajesh Venkataraman', 'Board meeting prep: Please share updated AUM figures by EOD.', '08:00 AM'),
-    MSG('mg2', 'Arvind Krishnamurthy', 'Compliance audit scheduled for next week. All departments to prepare.', '09:15 AM'),
-    MSG('mg3', 'Sowmya Parthasarathy', 'HR budget for Q2 approved. Hiring 3 new CS agents and 1 field executive.', '10:00 AM'),
-    MSG('mg4', 'Rajesh Venkataraman', 'Investor sentiment report looks positive. NPS at 72 this month.', '11:30 AM'),
-  ],
-  random: [
-    MSG('r1', 'Meera Subramaniam', 'Anyone up for a cricket match this Saturday? Ground is booked!', '09:00 AM'),
-    MSG('r2', 'Ananya Reddy', 'Count me in! What time?', '09:05 AM'),
-    MSG('r3', 'Divya Krishnamurthy', 'The new cafe downstairs has amazing filter coffee. Highly recommend!', '10:30 AM'),
-    MSG('r4', 'Priya Venkatesh', 'Happy birthday Suresh! Cake cutting at 4 PM in the break room.', '11:00 AM'),
-    MSG('r5', 'Suresh Kumar', 'Thanks Priya! See everyone at 4!', '11:08 AM'),
-  ],
-}
+const MOCK_MESSAGES: Record<string, { id: string; sender: string; message: string; timestamp: string }[]> = {}
 
 function ChatView({ showToast }: { showToast: Toast }) {
   const [activeChannel, setActiveChannel] = useState('general')
@@ -167,12 +130,12 @@ const ANN_BADGE: Record<string, { label: string; variant: 'success' | 'warning' 
   general: { label: 'General', variant: 'neutral' },
 }
 
-function NoticeboardView() {
+function NoticeboardView({ announcements }: { announcements: any[] }) {
   return (
     <div className="space-y-4">
       <SectionHeader title="Company Noticeboard" icon={Megaphone} />
       <div className="space-y-3">
-        {ANNOUNCEMENTS_DATA.map(ann => {
+        {announcements.map(ann => {
           const badge = ANN_BADGE[ann.type] ?? { label: ann.type, variant: 'neutral' as const }
           return (
             <AdminGlass key={ann.id} padding="p-4">

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo, useEffect } from 'react'
+import { useState, useMemo, useEffect, useCallback } from 'react'
 import {
   UserCheck, Users, CalendarDays, Clock, Award, Eye,
   Mail, Phone, Building2, CheckCircle2, XCircle, Coffee,
@@ -13,30 +13,15 @@ import AdminBadge from '../shared/AdminBadge'
 import AdminModal, { ModalButton } from '../shared/AdminModal'
 import AdminKPICard from '../shared/AdminKPICard'
 import AdminEmptyState from '../shared/AdminEmptyState'
-import { EMPLOYEES_DATA } from '@/lib/admin/adminMockData'
+import { fetchEmployees } from '@/lib/supabase/adminDataService'
 import { formatDate } from '@/lib/admin/adminHooks'
 import type { Employee, EmployeeStatus, LeaveRequest, AttendanceRecord } from '@/lib/admin/adminTypes'
 import UploadWithFolderPicker from '@/components/shared/UploadWithFolderPicker'
 
-// ── Mock Leave & Attendance Data ─────────────────────────────────
-const LEAVE_REQUESTS: LeaveRequest[] = [
-  { id: 'LR-001', employeeId: 'EMP-007', employeeName: 'Rahul Menon', type: 'casual', from: '2025-03-17', to: '2025-03-21', days: 5, reason: 'Family event', status: 'approved', appliedDate: '2025-03-10' },
-  { id: 'LR-002', employeeId: 'EMP-004', employeeName: 'Priya Natarajan', type: 'sick', from: '2025-03-25', to: '2025-03-26', days: 2, reason: 'Medical appointment', status: 'pending', appliedDate: '2025-03-18' },
-  { id: 'LR-003', employeeId: 'EMP-006', employeeName: 'Divya Krishnamurthy', type: 'earned', from: '2025-04-01', to: '2025-04-05', days: 5, reason: 'Vacation', status: 'pending', appliedDate: '2025-03-19' },
-  { id: 'LR-004', employeeId: 'EMP-005', employeeName: 'Karthik Sundaram', type: 'comp-off', from: '2025-03-22', to: '2025-03-22', days: 1, reason: 'Worked weekend', status: 'approved', appliedDate: '2025-03-15' },
-]
+// ── Leave & Attendance placeholders (will be fetched from Supabase later) ──
+const LEAVE_REQUESTS: LeaveRequest[] = []
 
-const ATTENDANCE_SUMMARY = [
-  { name: 'Abe Thayil', present: 22, absent: 0, halfDay: 0, wfh: 3, total: 22 },
-  { name: 'Venkatesh Raghavan', present: 20, absent: 1, halfDay: 1, wfh: 4, total: 22 },
-  { name: 'Meera Subramaniam', present: 21, absent: 0, halfDay: 0, wfh: 2, total: 22 },
-  { name: 'Priya Natarajan', present: 19, absent: 2, halfDay: 1, wfh: 5, total: 22 },
-  { name: 'Karthik Sundaram', present: 21, absent: 1, halfDay: 0, wfh: 3, total: 22 },
-  { name: 'Divya Krishnamurthy', present: 20, absent: 1, halfDay: 1, wfh: 2, total: 22 },
-  { name: 'Rahul Menon', present: 17, absent: 5, halfDay: 0, wfh: 0, total: 22 },
-  { name: 'Sowmya Rajan', present: 22, absent: 0, halfDay: 0, wfh: 4, total: 22 },
-  { name: 'Arjun Menon', present: 18, absent: 2, halfDay: 2, wfh: 1, total: 22 },
-]
+const ATTENDANCE_SUMMARY: any[] = []
 
 // ── Sub-tabs ─────────────────────────────────────────────────────
 const EMPLOYEE_TABS = [
@@ -56,6 +41,18 @@ interface EmployeeModuleProps {
 
 export default function EmployeeModule({ subTab, navigate, showToast }: EmployeeModuleProps) {
   const activeTab = (EMPLOYEE_TABS.some(t => t.id === subTab) ? subTab : 'directory') as EmployeeTab
+  const [employees, setEmployees] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
+
+  const loadData = useCallback(async () => {
+    setLoading(true)
+    const data = await fetchEmployees()
+    setEmployees(data)
+    setLoading(false)
+  }, [])
+
+  useEffect(() => { loadData() }, [loadData])
+
   const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null)
   const [addEmployeeOpen, setAddEmployeeOpen] = useState(false)
   const [folderPickerOpen, setFolderPickerOpen] = useState(false)
@@ -87,12 +84,12 @@ export default function EmployeeModule({ subTab, navigate, showToast }: Employee
   }
 
   const kpis = useMemo(() => {
-    const active = EMPLOYEES_DATA.filter(e => e.status === 'active').length
-    const onLeave = EMPLOYEES_DATA.filter(e => e.status === 'on-leave').length
+    const active = employees.filter(e => e.status === 'active').length
+    const onLeave = employees.filter(e => e.status === 'on-leave').length
     const pendingLeaves = LEAVE_REQUESTS.filter(l => l.status === 'pending').length
-    const departments = new Set(EMPLOYEES_DATA.map(e => e.department)).size
-    return { total: EMPLOYEES_DATA.length, active, onLeave, pendingLeaves, departments }
-  }, [])
+    const departments = new Set(employees.map(e => e.department)).size
+    return { total: employees.length, active, onLeave, pendingLeaves, departments }
+  }, [employees])
 
   const handleTabClick = (tabId: string) => {
     navigate(tabId === 'directory' ? 'employees' : `employees/${tabId}`)
@@ -142,7 +139,7 @@ export default function EmployeeModule({ subTab, navigate, showToast }: Employee
       </div>
 
       <div className="admin-tab-switch">
-        {activeTab === 'directory' && <DirectoryTab onView={(e) => setSelectedEmployee(e)} showToast={showToast} />}
+        {activeTab === 'directory' && <DirectoryTab employees={employees} onView={(e) => setSelectedEmployee(e)} showToast={showToast} />}
         {activeTab === 'attendance' && <AttendanceTab />}
         {activeTab === 'leave' && <LeaveTab showToast={showToast} />}
         {activeTab === 'performance' && <PerformanceTab />}
@@ -356,7 +353,7 @@ export default function EmployeeModule({ subTab, navigate, showToast }: Employee
 }
 
 // ── Directory Tab ───────────────────────────────────────────────
-function DirectoryTab({ onView, showToast }: { onView: (e: Employee) => void; showToast: (msg: string, type?: 'success' | 'error' | 'info' | 'warning') => void }) {
+function DirectoryTab({ employees, onView, showToast }: { employees: any[]; onView: (e: Employee) => void; showToast: (msg: string, type?: 'success' | 'error' | 'info' | 'warning') => void }) {
   const columns: Column<Employee>[] = [
     {
       key: 'name',
@@ -405,7 +402,7 @@ function DirectoryTab({ onView, showToast }: { onView: (e: Employee) => void; sh
     <AdminGlass padding="p-4">
       <AdminDataTable<Employee>
         columns={columns}
-        data={EMPLOYEES_DATA}
+        data={employees}
         searchKeys={['name', 'role', 'department', 'email']}
         searchPlaceholder="Search employees..."
         onRowClick={onView}

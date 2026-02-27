@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import {
   ListTodo, Plus, Filter, Eye, Calendar, Tag,
   Columns3, Workflow, Clock, AlertCircle, CheckCircle2,
@@ -11,7 +11,7 @@ import AdminBadge from '@/components/admin/shared/AdminBadge'
 import AdminDataTable, { type Column } from '@/components/admin/shared/AdminDataTable'
 import AdminModal from '@/components/admin/shared/AdminModal'
 import UploadWithFolderPicker from '@/components/shared/UploadWithFolderPicker'
-import { TASKS_DATA } from '@/lib/staff/staffMockData'
+import { fetchTasks } from '@/lib/supabase/staffDataService'
 import type { StaffTask, TaskStatus, TaskPriority } from '@/lib/staff/staffTypes'
 
 // ── Props ──────────────────────────────────────────────────────
@@ -62,11 +62,16 @@ const STATUS_LABEL: Record<TaskStatus, string> = {
 // ── Main Component ─────────────────────────────────────────────
 export default function TasksModule({ subTab, navigate, showToast }: TasksModuleProps) {
   const tab = subTab || 'my-tasks'
+  const [tasks, setTasks] = useState<any[]>([])
+
+  useEffect(() => {
+    fetchTasks().then(data => setTasks(data))
+  }, [])
 
   return (
     <div className="space-y-6 admin-section-enter">
-      {tab === 'my-tasks' && <MyTasksView showToast={showToast} />}
-      {tab === 'board' && <BoardView showToast={showToast} />}
+      {tab === 'my-tasks' && <MyTasksView showToast={showToast} tasks={tasks} />}
+      {tab === 'board' && <BoardView showToast={showToast} tasks={tasks} />}
       {tab === 'workflows' && <WorkflowsView showToast={showToast} />}
     </div>
   )
@@ -75,7 +80,7 @@ export default function TasksModule({ subTab, navigate, showToast }: TasksModule
 // ================================================================
 //  1. MY TASKS (default)
 // ================================================================
-function MyTasksView({ showToast }: { showToast: TasksModuleProps['showToast'] }) {
+function MyTasksView({ showToast, tasks }: { showToast: TasksModuleProps['showToast']; tasks: any[] }) {
   const [statusFilter, setStatusFilter] = useState<TaskStatus | 'all'>('all')
   const [priorityFilter, setPriorityFilter] = useState<TaskPriority | 'all'>('all')
   const [newTaskOpen, setNewTaskOpen] = useState(false)
@@ -83,12 +88,12 @@ function MyTasksView({ showToast }: { showToast: TasksModuleProps['showToast'] }
   const [taskForm, setTaskForm] = useState({ title: '', description: '', priority: 'normal' as TaskPriority, status: 'todo' as TaskStatus, dueDate: '', assignedTo: '', tags: '' })
 
   const filtered = useMemo(() => {
-    return TASKS_DATA.filter(t => {
+    return tasks.filter(t => {
       if (statusFilter !== 'all' && t.status !== statusFilter) return false
       if (priorityFilter !== 'all' && t.priority !== priorityFilter) return false
       return true
     })
-  }, [statusFilter, priorityFilter])
+  }, [tasks, statusFilter, priorityFilter])
 
   const columns: Column<StaffTask>[] = [
     {
@@ -297,7 +302,7 @@ function MyTasksView({ showToast }: { showToast: TasksModuleProps['showToast'] }
 // ================================================================
 //  2. BOARD VIEW (Kanban)
 // ================================================================
-function BoardView({ showToast }: { showToast: TasksModuleProps['showToast'] }) {
+function BoardView({ showToast, tasks }: { showToast: TasksModuleProps['showToast']; tasks: any[] }) {
   const columns: { status: TaskStatus; label: string; icon: React.ComponentType<{ className?: string }>; color: string }[] = [
     { status: 'todo', label: 'To-Do', icon: Circle, color: 'text-gray-400 border-gray-500/20 bg-gray-500/10' },
     { status: 'in-progress', label: 'In Progress', icon: Clock, color: 'text-blue-400 border-blue-500/20 bg-blue-500/10' },
@@ -307,9 +312,9 @@ function BoardView({ showToast }: { showToast: TasksModuleProps['showToast'] }) 
 
   const grouped = useMemo(() => {
     const map: Record<TaskStatus, StaffTask[]> = { todo: [], 'in-progress': [], blocked: [], done: [] }
-    TASKS_DATA.forEach(t => map[t.status].push(t))
+    tasks.forEach(t => { if (t.status in map) map[t.status as TaskStatus].push(t) })
     return map
-  }, [])
+  }, [tasks])
 
   return (
     <>

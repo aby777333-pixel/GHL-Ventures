@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect, useCallback } from 'react'
 import {
   IndianRupee, TrendingUp, TrendingDown, Receipt, CreditCard,
   FileText, PieChart, ArrowUpRight, ArrowDownRight, Eye,
@@ -18,7 +18,7 @@ import AdminModal, { ModalButton } from '../shared/AdminModal'
 import AdminKPICard from '../shared/AdminKPICard'
 import AdminEmptyState from '../shared/AdminEmptyState'
 import UploadWithFolderPicker from '@/components/shared/UploadWithFolderPicker'
-import { INVOICES_DATA, EXPENSES_DATA, REVENUE_BREAKDOWN, OVERVIEW_KPIS, COMMISSIONS_DATA } from '@/lib/admin/adminMockData'
+import { fetchInvoices, fetchExpenses, fetchCommissions, getOverviewKPIs } from '@/lib/supabase/adminDataService'
 import { formatINR, formatDate } from '@/lib/admin/adminHooks'
 import type { Invoice, Expense, InvoiceStatus, ExpenseCategory } from '@/lib/admin/adminTypes'
 import { saveBlobAs } from '@/lib/supabase/storageService'
@@ -42,23 +42,42 @@ interface FinancialModuleProps {
 export default function FinancialModule({ subTab, navigate, showToast }: FinancialModuleProps) {
   const activeTab = (FINANCIAL_TABS.some(t => t.id === subTab) ? subTab : 'overview') as FinancialTab
 
+  // ── Live data state ────────────────────────────────────────────
+  const [invoices, setInvoices] = useState<any[]>([])
+  const [expenses, setExpenses] = useState<any[]>([])
+  const [commissions, setCommissions] = useState<any[]>([])
+  const [overviewKpis, setOverviewKpis] = useState({ totalAUM: 0, activeClients: 0, monthlyRevenue: 0, activeFunds: 0 })
+  const [loading, setLoading] = useState(true)
+
+  const loadData = useCallback(async () => {
+    setLoading(true)
+    const [inv, exp, com, kpi] = await Promise.all([fetchInvoices(), fetchExpenses(), fetchCommissions(), getOverviewKPIs()])
+    setInvoices(inv)
+    setExpenses(exp)
+    setCommissions(com)
+    setOverviewKpis(kpi)
+    setLoading(false)
+  }, [])
+
+  useEffect(() => { loadData() }, [loadData])
+
   // ── KPIs ──────────────────────────────────────────────────────
   const kpis = useMemo(() => {
-    const totalInvoiced = INVOICES_DATA.reduce((s, inv) => s + inv.total, 0)
-    const collected = INVOICES_DATA.filter(i => i.status === 'paid').reduce((s, inv) => s + inv.total, 0)
-    const overdue = INVOICES_DATA.filter(i => i.status === 'overdue').reduce((s, inv) => s + inv.total, 0)
-    const totalExpenses = EXPENSES_DATA.reduce((s, e) => s + e.amount, 0)
-    const pendingPayouts = COMMISSIONS_DATA.filter(c => c.status === 'pending' || c.status === 'approved').reduce((s, c) => s + c.commissionAmount, 0)
+    const totalInvoiced = invoices.reduce((s, inv) => s + inv.total, 0)
+    const collected = invoices.filter((i: any) => i.status === 'paid').reduce((s: number, inv: any) => s + inv.total, 0)
+    const overdue = invoices.filter((i: any) => i.status === 'overdue').reduce((s: number, inv: any) => s + inv.total, 0)
+    const totalExpenses = expenses.reduce((s, e) => s + e.amount, 0)
+    const pendingPayouts = commissions.filter((c: any) => c.status === 'pending' || c.status === 'approved').reduce((s: number, c: any) => s + c.commissionAmount, 0)
     return {
-      monthlyRevenue: OVERVIEW_KPIS.monthlyRevenue,
+      monthlyRevenue: overviewKpis.monthlyRevenue,
       totalInvoiced,
       collected,
       overdue,
       totalExpenses,
       pendingPayouts,
-      netIncome: OVERVIEW_KPIS.monthlyRevenue - totalExpenses,
+      netIncome: overviewKpis.monthlyRevenue - totalExpenses,
     }
-  }, [])
+  }, [invoices, expenses, commissions, overviewKpis])
 
   const handleTabClick = (tabId: string) => {
     navigate(tabId === 'overview' ? 'financial' : `financial/${tabId}`)
@@ -76,7 +95,7 @@ export default function FinancialModule({ subTab, navigate, showToast }: Financi
           onClick={async () => {
             showToast('Generating financial report...', 'info')
             const rows = ['Type,Client,Amount,GST,Total,Status,Date']
-            INVOICES_DATA.forEach(inv => rows.push(`${inv.type},${inv.clientName},${inv.amount},${inv.gst},${inv.total},${inv.status},${inv.date}`))
+            invoices.forEach(inv => rows.push(`${inv.type},${inv.clientName},${inv.amount},${inv.gst},${inv.total},${inv.status},${inv.date}`))
             const blob = new Blob([rows.join('\n')], { type: 'text/csv' })
             await saveBlobAs(blob, `GHL_Financial_Report_${new Date().toISOString().slice(0,10)}.csv`, showToast as any)
           }}
@@ -117,17 +136,17 @@ export default function FinancialModule({ subTab, navigate, showToast }: Financi
 
       {/* Tab Content */}
       <div className="admin-tab-switch">
-        {activeTab === 'overview' && <RevenueOverviewTab kpis={kpis} />}
-        {activeTab === 'invoices' && <InvoicesTab showToast={showToast} />}
-        {activeTab === 'expenses' && <ExpensesTab showToast={showToast} />}
-        {activeTab === 'payouts' && <PayoutsTab showToast={showToast} />}
+        {activeTab === 'overview' && <RevenueOverviewTab kpis={kpis} expenses={expenses} />}
+        {activeTab === 'invoices' && <InvoicesTab showToast={showToast} invoices={invoices} />}
+        {activeTab === 'expenses' && <ExpensesTab showToast={showToast} expenses={expenses} />}
+        {activeTab === 'payouts' && <PayoutsTab showToast={showToast} commissions={commissions} />}
       </div>
     </div>
   )
 }
 
 // ── Revenue Overview Tab ────────────────────────────────────────
-function RevenueOverviewTab({ kpis }: { kpis: { monthlyRevenue: number; totalInvoiced: number; collected: number; overdue: number; totalExpenses: number; netIncome: number; pendingPayouts: number } }) {
+function RevenueOverviewTab({ kpis, expenses }: { kpis: { monthlyRevenue: number; totalInvoiced: number; collected: number; overdue: number; totalExpenses: number; netIncome: number; pendingPayouts: number }; expenses: any[] }) {
   const CATEGORY_COLORS = ['#DC2626', '#3B82F6', '#10B981', '#8B5CF6']
 
   return (
@@ -140,7 +159,7 @@ function RevenueOverviewTab({ kpis }: { kpis: { monthlyRevenue: number; totalInv
         </h3>
         <div className="h-72">
           <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={REVENUE_BREAKDOWN} barGap={2}>
+            <BarChart data={[]} barGap={2}>
               <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" />
               <XAxis dataKey="month" tick={{ fill: '#6B7280', fontSize: 11 }} axisLine={false} tickLine={false} />
               <YAxis tick={{ fill: '#6B7280', fontSize: 11 }} axisLine={false} tickLine={false} tickFormatter={(v) => `${v}L`} />
@@ -205,7 +224,7 @@ function RevenueOverviewTab({ kpis }: { kpis: { monthlyRevenue: number; totalInv
         </h3>
         {(() => {
           const categories: Record<string, number> = {}
-          EXPENSES_DATA.forEach(e => { categories[e.category] = (categories[e.category] || 0) + e.amount })
+          expenses.forEach(e => { categories[e.category] = (categories[e.category] || 0) + e.amount })
           const total = Object.values(categories).reduce((s, v) => s + v, 0)
           const colors: Record<string, string> = {
             technology: '#3B82F6', legal: '#8B5CF6', marketing: '#DC2626',
@@ -242,14 +261,14 @@ function RevenueOverviewTab({ kpis }: { kpis: { monthlyRevenue: number; totalInv
 }
 
 // ── Invoices Tab ────────────────────────────────────────────────
-function InvoicesTab({ showToast }: { showToast: (msg: string, type?: 'success' | 'error' | 'info' | 'warning') => void }) {
+function InvoicesTab({ showToast, invoices }: { showToast: (msg: string, type?: 'success' | 'error' | 'info' | 'warning') => void; invoices: any[] }) {
   const [statusFilter, setStatusFilter] = useState<InvoiceStatus | 'all'>('all')
   const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null)
 
   const filtered = useMemo(() => {
-    if (statusFilter === 'all') return INVOICES_DATA
-    return INVOICES_DATA.filter(i => i.status === statusFilter)
-  }, [statusFilter])
+    if (statusFilter === 'all') return invoices
+    return invoices.filter(i => i.status === statusFilter)
+  }, [statusFilter, invoices])
 
   const getInvoiceVariant = (status: InvoiceStatus) => {
     switch (status) {
@@ -381,7 +400,7 @@ function InvoicesTab({ showToast }: { showToast: (msg: string, type?: 'success' 
 }
 
 // ── Expenses Tab ────────────────────────────────────────────────
-function ExpensesTab({ showToast }: { showToast: (msg: string, type?: 'success' | 'error' | 'info' | 'warning') => void }) {
+function ExpensesTab({ showToast, expenses }: { showToast: (msg: string, type?: 'success' | 'error' | 'info' | 'warning') => void; expenses: any[] }) {
   const [addExpenseOpen, setAddExpenseOpen] = useState(false)
   const [folderPickerOpen, setFolderPickerOpen] = useState(false)
   const [expenseForm, setExpenseForm] = useState({
@@ -494,7 +513,7 @@ function ExpensesTab({ showToast }: { showToast: (msg: string, type?: 'success' 
       <AdminGlass padding="p-4">
         <AdminDataTable<Expense>
           columns={columns}
-          data={EXPENSES_DATA}
+          data={expenses}
           searchKeys={['description', 'category', 'submittedBy']}
           searchPlaceholder="Search expenses..."
           exportable
@@ -682,13 +701,13 @@ function ExpensesTab({ showToast }: { showToast: (msg: string, type?: 'success' 
 }
 
 // ── Payouts Tab ─────────────────────────────────────────────────
-function PayoutsTab({ showToast }: { showToast: (msg: string, type?: 'success' | 'error' | 'info' | 'warning') => void }) {
+function PayoutsTab({ showToast, commissions }: { showToast: (msg: string, type?: 'success' | 'error' | 'info' | 'warning') => void; commissions: any[] }) {
   const payouts = useMemo(() => {
-    return COMMISSIONS_DATA.map(c => ({
+    return commissions.map(c => ({
       ...c,
       payoutType: 'Commission' as const,
     }))
-  }, [])
+  }, [commissions])
 
   const totalPending = payouts.filter(p => p.status === 'pending' || p.status === 'approved').reduce((s, p) => s + p.commissionAmount, 0)
   const totalPaid = payouts.filter(p => p.status === 'paid').reduce((s, p) => s + p.commissionAmount, 0)
@@ -715,7 +734,7 @@ function PayoutsTab({ showToast }: { showToast: (msg: string, type?: 'success' |
             <div key={p.id} className="flex items-center justify-between p-3 rounded-xl bg-white/[0.02] border border-white/[0.04] hover:bg-white/[0.04] transition-colors">
               <div className="flex items-center gap-3">
                 <div className="w-8 h-8 rounded-full bg-gradient-to-br from-brand-red/30 to-purple-500/30 flex items-center justify-center text-[10px] font-bold text-white">
-                  {p.salesRep.split(' ').map(n => n[0]).join('')}
+                  {p.salesRep.split(' ').map((n: string) => n[0]).join('')}
                 </div>
                 <div>
                   <p className="text-sm font-medium text-white">{p.salesRep}</p>

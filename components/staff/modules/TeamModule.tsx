@@ -1,11 +1,11 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import AdminGlass from '@/components/admin/shared/AdminGlass'
 import AdminBadge from '@/components/admin/shared/AdminBadge'
 import AdminDataTable, { type Column } from '@/components/admin/shared/AdminDataTable'
 import { STAFF_ROLE_LABELS } from '@/lib/staff/staffAuth'
-import { STAFF_EMPLOYEES, ANNOUNCEMENTS_DATA } from '@/lib/staff/staffMockData'
+import { fetchStaffEmployees, fetchAnnouncements } from '@/lib/supabase/staffDataService'
 import type { StaffRole, StaffEmployee, Announcement } from '@/lib/staff/staffTypes'
 import {
   Users, Search, Phone, Mail, MessageSquare, Filter,
@@ -55,40 +55,48 @@ const ANNOUNCEMENT_TYPE_COLORS: Record<string, { variant: 'error' | 'warning' | 
   'general': { variant: 'neutral', label: 'General' },
 }
 
-const departments = Array.from(new Set(STAFF_EMPLOYEES.map(e => e.department)))
-
 // ── Main Component ─────────────────────────────────────────────
 export default function TeamModule({ subTab, navigate, showToast, role }: TeamModuleProps) {
   const tab = subTab || 'directory'
+  const [employees, setEmployees] = useState<any[]>([])
+  const [announcements, setAnnouncements] = useState<any[]>([])
+
+  useEffect(() => {
+    fetchStaffEmployees().then(data => setEmployees(data))
+    fetchAnnouncements().then(data => setAnnouncements(data))
+  }, [])
+
   switch (tab) {
-    case 'directory':     return <DirectoryView showToast={showToast} />
-    case 'roster':        return <RosterView />
-    case 'announcements': return <AnnouncementsView />
-    default:              return <DirectoryView showToast={showToast} />
+    case 'directory':     return <DirectoryView showToast={showToast} employees={employees} />
+    case 'roster':        return <RosterView employees={employees} />
+    case 'announcements': return <AnnouncementsView announcements={announcements} />
+    default:              return <DirectoryView showToast={showToast} employees={employees} />
   }
 }
 
 // ================================================================
 //  1. DIRECTORY VIEW
 // ================================================================
-function DirectoryView({ showToast }: { showToast: TeamModuleProps['showToast'] }) {
+function DirectoryView({ showToast, employees }: { showToast: TeamModuleProps['showToast']; employees: any[] }) {
   const [search, setSearch] = useState('')
   const [deptFilter, setDeptFilter] = useState<string>('all')
 
+  const departments = useMemo(() => Array.from(new Set(employees.map((e: any) => e.department).filter(Boolean))), [employees])
+
   const filtered = useMemo(() => {
-    let list = STAFF_EMPLOYEES
+    let list = employees
     if (deptFilter !== 'all') list = list.filter(e => e.department === deptFilter)
     if (search.trim()) {
       const q = search.toLowerCase()
       list = list.filter(e =>
-        e.name.toLowerCase().includes(q) ||
-        e.designation.toLowerCase().includes(q) ||
-        e.email.toLowerCase().includes(q) ||
-        e.department.toLowerCase().includes(q)
+        (e.name || '').toLowerCase().includes(q) ||
+        (e.designation || '').toLowerCase().includes(q) ||
+        (e.email || '').toLowerCase().includes(q) ||
+        (e.department || '').toLowerCase().includes(q)
       )
     }
     return list
-  }, [search, deptFilter])
+  }, [employees, search, deptFilter])
 
   return (
     <div className="space-y-5">
@@ -214,7 +222,7 @@ function EmployeeCard({ employee: emp, showToast }: { employee: StaffEmployee; s
 // ================================================================
 //  2. ROSTER VIEW
 // ================================================================
-function RosterView() {
+function RosterView({ employees }: { employees: any[] }) {
   const columns: Column<StaffEmployee>[] = [
     {
       key: 'name',
@@ -293,7 +301,7 @@ function RosterView() {
       <AdminGlass hover={false} padding="p-4">
         <AdminDataTable
           columns={columns}
-          data={STAFF_EMPLOYEES}
+          data={employees}
           searchable
           searchPlaceholder="Search roster..."
           searchKeys={['name', 'role', 'department', 'location', 'status']}
@@ -308,14 +316,14 @@ function RosterView() {
 // ================================================================
 //  3. ANNOUNCEMENTS VIEW
 // ================================================================
-function AnnouncementsView() {
+function AnnouncementsView({ announcements }: { announcements: any[] }) {
   const sorted = useMemo(() => {
-    return [...ANNOUNCEMENTS_DATA].sort((a, b) => {
+    return [...announcements].sort((a, b) => {
       if (a.pinned && !b.pinned) return -1
       if (!a.pinned && b.pinned) return 1
       return new Date(b.postedDate).getTime() - new Date(a.postedDate).getTime()
     })
-  }, [])
+  }, [announcements])
 
   return (
     <div className="space-y-5">

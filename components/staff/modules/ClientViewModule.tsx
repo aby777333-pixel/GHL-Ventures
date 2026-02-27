@@ -1,7 +1,7 @@
 'use client'
 
-import { useState, useMemo } from 'react'
-import { TICKETS_DATA, CLIENT_INTERACTIONS_DATA } from '@/lib/staff/staffMockData'
+import { useState, useMemo, useEffect } from 'react'
+import { fetchTickets, fetchClientInteractions } from '@/lib/supabase/staffDataService'
 import type { Ticket, ClientInteraction, CommChannel } from '@/lib/staff/staffTypes'
 import AdminGlass from '../../admin/shared/AdminGlass'
 import AdminBadge from '../../admin/shared/AdminBadge'
@@ -26,9 +26,9 @@ interface ClientSummary {
   latestStatus: string
 }
 
-function buildClientList(): ClientSummary[] {
+function buildClientList(ticketsData: any[]): ClientSummary[] {
   const map = new Map<string, { name: string; tickets: Ticket[] }>()
-  for (const t of TICKETS_DATA) {
+  for (const t of ticketsData) {
     if (!map.has(t.clientId)) map.set(t.clientId, { name: t.clientName, tickets: [] })
     map.get(t.clientId)!.tickets.push(t)
   }
@@ -73,13 +73,21 @@ function fmtDateTime(iso: string) {
 
 export default function ClientViewModule({ subTab }: ClientViewModuleProps) {
   const tab = subTab || 'search'
-  if (tab === 'history') return <InteractionHistory />
-  return <ClientSearch />
+  const [tickets, setTickets] = useState<any[]>([])
+  const [interactions, setInteractions] = useState<any[]>([])
+
+  useEffect(() => {
+    fetchTickets().then(data => setTickets(data))
+    fetchClientInteractions().then(data => setInteractions(data))
+  }, [])
+
+  if (tab === 'history') return <InteractionHistory interactions={interactions} />
+  return <ClientSearch tickets={tickets} interactions={interactions} />
 }
 
 // ── Client Search ──────────────────────────────────────────────
-function ClientSearch() {
-  const clients = useMemo(buildClientList, [])
+function ClientSearch({ tickets, interactions }: { tickets: any[]; interactions: any[] }) {
+  const clients = useMemo(() => buildClientList(tickets), [tickets])
   const [query, setQuery] = useState('')
   const [selectedId, setSelectedId] = useState<string | null>(null)
 
@@ -90,8 +98,8 @@ function ClientSearch() {
   }, [clients, query])
 
   const selectedClient = selectedId ? clients.find(c => c.clientId === selectedId) : null
-  const clientTickets = selectedId ? TICKETS_DATA.filter(t => t.clientId === selectedId) : []
-  const clientInteractions = selectedId ? CLIENT_INTERACTIONS_DATA.filter(i => i.clientId === selectedId) : []
+  const clientTickets = selectedId ? tickets.filter(t => t.clientId === selectedId) : []
+  const clientInteractions = selectedId ? interactions.filter(i => i.clientId === selectedId) : []
 
   return (
     <div className="space-y-6">
@@ -249,13 +257,13 @@ function ClientSearch() {
 // ── Interaction History ─────────────────────────────────────────
 const ALL_CHANNELS: CommChannel[] = ['call', 'video', 'chat', 'whatsapp', 'telegram', 'email']
 
-function InteractionHistory() {
+function InteractionHistory({ interactions }: { interactions: any[] }) {
   const [channelFilter, setChannelFilter] = useState<CommChannel | 'all'>('all')
 
   const data = useMemo(() => {
-    if (channelFilter === 'all') return CLIENT_INTERACTIONS_DATA
-    return CLIENT_INTERACTIONS_DATA.filter(i => i.channel === channelFilter)
-  }, [channelFilter])
+    if (channelFilter === 'all') return interactions
+    return interactions.filter(i => i.channel === channelFilter)
+  }, [interactions, channelFilter])
 
   const columns: Column<ClientInteraction>[] = [
     { key: 'clientName', label: 'Client Name' },

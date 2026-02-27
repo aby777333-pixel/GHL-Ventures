@@ -9,7 +9,7 @@ import {
 } from 'lucide-react'
 import AdminGlass from '../../admin/shared/AdminGlass'
 import AdminBadge from '../../admin/shared/AdminBadge'
-import { STAFF_AI_TOOLS } from '@/lib/staff/staffMockData'
+import { getStaffAITools } from '@/lib/supabase/staffDataService'
 import type { StaffRole, StaffAITool } from '@/lib/staff/staffTypes'
 
 // ── Icon Map ─────────────────────────────────────────────────────
@@ -45,10 +45,12 @@ export default function AIToolsModule({ subTab, navigate, showToast, role }: AIT
   const [categoryFilter, setCategoryFilter] = useState<string>('all')
   const [searchQuery, setSearchQuery] = useState('')
 
+  const aiTools = getStaffAITools()
+
   // Tools visible to this role
   const roleTools = useMemo(
-    () => STAFF_AI_TOOLS.filter(t => t.forRoles.includes(role)),
-    [role],
+    () => aiTools.filter(t => t.forRoles.includes(role)),
+    [aiTools, role],
   )
 
   // If subTab matches a tool id, show the detail view

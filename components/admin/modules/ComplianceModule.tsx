@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect, useCallback } from 'react'
 import {
   Shield, CheckCircle2, XCircle, Clock, AlertTriangle,
   Eye, FileText, Scale, History, Flag, ArrowUpRight,
@@ -13,21 +13,9 @@ import AdminBadge, { getSeverityBadgeVariant } from '../shared/AdminBadge'
 import AdminModal, { ModalButton } from '../shared/AdminModal'
 import AdminKPICard from '../shared/AdminKPICard'
 import AdminEmptyState from '../shared/AdminEmptyState'
-import { APPROVALS_DATA, RISK_FLAGS_DATA, ACTIVITY_FEED } from '@/lib/admin/adminMockData'
+import { fetchApprovals, fetchRiskFlags, fetchAuditLog } from '@/lib/supabase/adminDataService'
 import { formatDate, formatTimeAgo } from '@/lib/admin/adminHooks'
 import type { Approval, RiskFlag, ApprovalStatus, AuditEntry } from '@/lib/admin/adminTypes'
-
-// ── Mock Audit Trail ─────────────────────────────────────────────
-const AUDIT_TRAIL: AuditEntry[] = [
-  { id: 'AUD-001', timestamp: '2025-03-20T10:15:00', userId: 'EMP-003', userName: 'Meera Subramaniam', action: 'Approved KYC', module: 'compliance', details: 'KYC documents approved for client Rajesh Krishnan (GHL-INV-001)' },
-  { id: 'AUD-002', timestamp: '2025-03-20T09:45:00', userId: 'EMP-004', userName: 'Priya Natarajan', action: 'Updated Lead Stage', module: 'sales', details: 'Lead Ramya Venkat moved from Qualified to Proposal' },
-  { id: 'AUD-003', timestamp: '2025-03-19T17:00:00', userId: 'EMP-005', userName: 'Karthik Sundaram', action: 'Uploaded Document', module: 'assets', details: 'Q4 2024 performance report uploaded for all funds' },
-  { id: 'AUD-004', timestamp: '2025-03-19T15:30:00', userId: 'EMP-006', userName: 'Divya Krishnamurthy', action: 'Sent Communication', module: 'comms', details: 'Portfolio review sent to Sunita Agarwal via email' },
-  { id: 'AUD-005', timestamp: '2025-03-18T16:45:00', userId: 'EMP-004', userName: 'Priya Natarajan', action: 'Closed Deal', module: 'sales', details: 'Deal with Nandini Rao closed at 1.5 Cr' },
-  { id: 'AUD-006', timestamp: '2025-03-18T14:00:00', userId: 'EMP-003', userName: 'Meera Subramaniam', action: 'Created Risk Flag', module: 'compliance', details: 'Flagged unusual transaction pattern for Deepak Patel' },
-  { id: 'AUD-007', timestamp: '2025-03-17T10:30:00', userId: 'EMP-001', userName: 'Abe Thayil', action: 'Modified Permissions', module: 'settings', details: 'Updated role permissions for Sales team' },
-  { id: 'AUD-008', timestamp: '2025-03-16T09:00:00', userId: 'EMP-002', userName: 'Venkatesh Raghavan', action: 'Updated NAV', module: 'financial', details: 'NAV updated for Phoenix Towers Fund — 1,247.50' },
-]
 
 // ── Sub-tabs ─────────────────────────────────────────────────────
 const COMPLIANCE_TABS = [
@@ -48,12 +36,28 @@ interface ComplianceModuleProps {
 export default function ComplianceModule({ subTab, navigate, showToast }: ComplianceModuleProps) {
   const activeTab = (COMPLIANCE_TABS.some(t => t.id === subTab) ? subTab : 'approvals') as ComplianceTab
 
-  const kpis = useMemo(() => {
-    const pending = APPROVALS_DATA.filter(a => a.status === 'pending').length
-    const openRisks = RISK_FLAGS_DATA.filter(r => r.status === 'open' || r.status === 'investigating').length
-    const critical = RISK_FLAGS_DATA.filter(r => r.severity === 'critical').length
-    return { pending, openRisks, critical, auditEntries: AUDIT_TRAIL.length, complianceScore: 94 }
+  const [approvals, setApprovals] = useState<any[]>([])
+  const [riskFlags, setRiskFlags] = useState<any[]>([])
+  const [auditLog, setAuditLog] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
+
+  const loadData = useCallback(async () => {
+    setLoading(true)
+    const [a, r, au] = await Promise.all([fetchApprovals(), fetchRiskFlags(), fetchAuditLog()])
+    setApprovals(a)
+    setRiskFlags(r)
+    setAuditLog(au)
+    setLoading(false)
   }, [])
+
+  useEffect(() => { loadData() }, [loadData])
+
+  const kpis = useMemo(() => {
+    const pending = approvals.filter(a => a.status === 'pending').length
+    const openRisks = riskFlags.filter(r => r.status === 'open' || r.status === 'investigating').length
+    const critical = riskFlags.filter(r => r.severity === 'critical').length
+    return { pending, openRisks, critical, auditEntries: auditLog.length, complianceScore: 94 }
+  }, [approvals, riskFlags, auditLog])
 
   const handleTabClick = (tabId: string) => {
     navigate(tabId === 'approvals' ? 'compliance' : `compliance/${tabId}`)
@@ -96,9 +100,9 @@ export default function ComplianceModule({ subTab, navigate, showToast }: Compli
       </div>
 
       <div className="admin-tab-switch">
-        {activeTab === 'approvals' && <ApprovalsTab showToast={showToast} />}
-        {activeTab === 'risk-flags' && <RiskFlagsTab showToast={showToast} />}
-        {activeTab === 'audit-trail' && <AuditTrailTab />}
+        {activeTab === 'approvals' && <ApprovalsTab approvals={approvals} showToast={showToast} />}
+        {activeTab === 'risk-flags' && <RiskFlagsTab riskFlags={riskFlags} showToast={showToast} />}
+        {activeTab === 'audit-trail' && <AuditTrailTab auditLog={auditLog} />}
         {activeTab === 'regulations' && <RegulationsTab />}
       </div>
     </div>
@@ -106,15 +110,15 @@ export default function ComplianceModule({ subTab, navigate, showToast }: Compli
 }
 
 // ── Approvals Tab ───────────────────────────────────────────────
-function ApprovalsTab({ showToast }: { showToast: (msg: string, type?: 'success' | 'error' | 'info' | 'warning') => void }) {
+function ApprovalsTab({ approvals, showToast }: { approvals: any[]; showToast: (msg: string, type?: 'success' | 'error' | 'info' | 'warning') => void }) {
   const [statusFilter, setStatusFilter] = useState<ApprovalStatus | 'all'>('all')
   const [reviewApproval, setReviewApproval] = useState<Approval | null>(null)
   const [reviewAction, setReviewAction] = useState<'approve' | 'reject' | null>(null)
 
   const filtered = useMemo(() => {
-    if (statusFilter === 'all') return APPROVALS_DATA
-    return APPROVALS_DATA.filter(a => a.status === statusFilter)
-  }, [statusFilter])
+    if (statusFilter === 'all') return approvals
+    return approvals.filter(a => a.status === statusFilter)
+  }, [statusFilter, approvals])
 
   const getTypeIcon = (type: string) => {
     switch (type) {
@@ -139,7 +143,7 @@ function ApprovalsTab({ showToast }: { showToast: (msg: string, type?: 'success'
                 : 'bg-white/[0.03] text-gray-500 border-white/[0.06] hover:bg-white/[0.06]'
             }`}
           >
-            {status === 'all' ? `All (${APPROVALS_DATA.length})` : `${status.charAt(0).toUpperCase() + status.slice(1)} (${APPROVALS_DATA.filter(a => a.status === status).length})`}
+            {status === 'all' ? `All (${approvals.length})` : `${status.charAt(0).toUpperCase() + status.slice(1)} (${approvals.filter(a => a.status === status).length})`}
           </button>
         ))}
       </div>
@@ -276,7 +280,7 @@ function ApprovalsTab({ showToast }: { showToast: (msg: string, type?: 'success'
 }
 
 // ── Risk Flags Tab ──────────────────────────────────────────────
-function RiskFlagsTab({ showToast }: { showToast: (msg: string, type?: 'success' | 'error' | 'info' | 'warning') => void }) {
+function RiskFlagsTab({ riskFlags, showToast }: { riskFlags: any[]; showToast: (msg: string, type?: 'success' | 'error' | 'info' | 'warning') => void }) {
   const columns: Column<RiskFlag>[] = [
     {
       key: 'severity',
@@ -327,7 +331,7 @@ function RiskFlagsTab({ showToast }: { showToast: (msg: string, type?: 'success'
     <AdminGlass padding="p-4">
       <AdminDataTable<RiskFlag>
         columns={columns}
-        data={RISK_FLAGS_DATA}
+        data={riskFlags}
         searchKeys={['title', 'description', 'affectedEntity']}
         searchPlaceholder="Search risk flags..."
         title="Active Risk Flags"
@@ -337,7 +341,7 @@ function RiskFlagsTab({ showToast }: { showToast: (msg: string, type?: 'success'
 }
 
 // ── Audit Trail Tab ─────────────────────────────────────────────
-function AuditTrailTab() {
+function AuditTrailTab({ auditLog }: { auditLog: any[] }) {
   const columns: Column<AuditEntry>[] = [
     {
       key: 'timestamp',
@@ -363,7 +367,7 @@ function AuditTrailTab() {
     <AdminGlass padding="p-4">
       <AdminDataTable<AuditEntry>
         columns={columns}
-        data={AUDIT_TRAIL}
+        data={auditLog}
         searchKeys={['userName', 'action', 'module', 'details']}
         searchPlaceholder="Search audit trail..."
         exportable

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import {
   Settings, Shield, Users, Key, Database, Bell, Globe,
   Lock, Eye, EyeOff, CheckCircle2, AlertTriangle, Clock,
@@ -13,7 +13,7 @@ import AdminGlass from '../shared/AdminGlass'
 import AdminBadge from '../shared/AdminBadge'
 import AdminKPICard from '../shared/AdminKPICard'
 import AdminEmptyState from '../shared/AdminEmptyState'
-import { EMPLOYEES_DATA, SYSTEM_HEALTH } from '@/lib/admin/adminMockData'
+import { fetchEmployees, getSystemHealth } from '@/lib/supabase/adminDataService'
 import { ROLE_PERMISSIONS } from '@/lib/admin/adminRBAC'
 import { ROLE_LABELS } from '@/lib/admin/adminAuth'
 import { formatDate } from '@/lib/admin/adminHooks'
@@ -39,6 +39,13 @@ interface SettingsModuleProps {
 
 export default function SettingsModule({ subTab, navigate, showToast }: SettingsModuleProps) {
   const activeTab = (SETTINGS_TABS.some(t => t.id === subTab) ? subTab : 'general') as SettingsTab
+
+  const [employees, setEmployees] = useState<any[]>([])
+  const [systemHealth, setSystemHealth] = useState<any>({ uptime: 0, responseTime: 0, errorRate: 0, apiCalls24h: 0, storageUsed: 0, storageTotal: 100 })
+
+  useEffect(() => {
+    fetchEmployees().then(data => setEmployees(data))
+  }, [])
 
   const handleTabClick = (tabId: string) => {
     navigate(tabId === 'general' ? 'settings' : `settings/${tabId}`)
@@ -75,7 +82,7 @@ export default function SettingsModule({ subTab, navigate, showToast }: Settings
         {activeTab === 'permissions' && <PermissionsTab />}
         {activeTab === 'security' && <SecurityTab showToast={showToast} />}
         {activeTab === 'integrations' && <IntegrationsTab showToast={showToast} />}
-        {activeTab === 'system' && <SystemTab showToast={showToast} />}
+        {activeTab === 'system' && <SystemTab showToast={showToast} systemHealth={systemHealth} />}
       </div>
     </div>
   )
@@ -744,8 +751,9 @@ function IntegrationsTab({ showToast }: { showToast: (msg: string, type?: 'succe
     log('Starting lead sync to Monday.com...', 'info')
     try {
       const { pushLeadsToMonday, saveBoardMapping, getSavedMappings } = await import('@/lib/mondayService')
-      const { LEADS_DATA } = await import('@/lib/admin/adminMockData')
-      const result = await pushLeadsToMonday(LEADS_DATA, selectedBoard, mapping, selectedGroup || undefined)
+      const { fetchLeads } = await import('@/lib/supabase/adminDataService')
+      const leadsData = await fetchLeads()
+      const result = await pushLeadsToMonday(leadsData, selectedBoard, mapping, selectedGroup || undefined)
       if (result.success) {
         log(`Synced ${result.synced} leads successfully`, 'success')
         showToast(`${result.synced} leads synced to Monday.com`, 'success')
@@ -1001,15 +1009,15 @@ function IntegrationsTab({ showToast }: { showToast: (msg: string, type?: 'succe
 }
 
 // ── System Tab ──────────────────────────────────────────────────
-function SystemTab({ showToast }: { showToast: (msg: string, type?: 'success' | 'error' | 'info' | 'warning') => void }) {
+function SystemTab({ showToast, systemHealth }: { showToast: (msg: string, type?: 'success' | 'error' | 'info' | 'warning') => void; systemHealth: any }) {
   return (
     <div className="space-y-4">
       {/* System Health */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        <AdminKPICard title="Uptime" value={`${SYSTEM_HEALTH.uptime}%`} icon={Wifi} color="#10B981" delay={0} />
-        <AdminKPICard title="Response Time" value={`${SYSTEM_HEALTH.responseTime}ms`} icon={Clock} color="#3B82F6" delay={50} />
-        <AdminKPICard title="Error Rate" value={`${SYSTEM_HEALTH.errorRate}%`} icon={AlertTriangle} color="#10B981" delay={100} />
-        <AdminKPICard title="API Calls (24h)" value={SYSTEM_HEALTH.apiCalls24h.toLocaleString()} icon={Server} color="#8B5CF6" delay={150} />
+        <AdminKPICard title="Uptime" value={`${systemHealth.uptime}%`} icon={Wifi} color="#10B981" delay={0} />
+        <AdminKPICard title="Response Time" value={`${systemHealth.responseTime}ms`} icon={Clock} color="#3B82F6" delay={50} />
+        <AdminKPICard title="Error Rate" value={`${systemHealth.errorRate}%`} icon={AlertTriangle} color="#10B981" delay={100} />
+        <AdminKPICard title="API Calls (24h)" value={systemHealth.apiCalls24h.toLocaleString()} icon={Server} color="#8B5CF6" delay={150} />
       </div>
 
       {/* Storage */}
@@ -1021,15 +1029,15 @@ function SystemTab({ showToast }: { showToast: (msg: string, type?: 'success' | 
         <div className="space-y-3">
           <div>
             <div className="flex items-center justify-between text-sm mb-2">
-              <span className="text-gray-400">Used: {SYSTEM_HEALTH.storageUsed} GB / {SYSTEM_HEALTH.storageTotal} GB</span>
-              <span className="text-white font-medium">{SYSTEM_HEALTH.storageUsed}%</span>
+              <span className="text-gray-400">Used: {systemHealth.storageUsed} GB / {systemHealth.storageTotal} GB</span>
+              <span className="text-white font-medium">{systemHealth.storageUsed}%</span>
             </div>
             <div className="h-3 bg-white/[0.06] rounded-full overflow-hidden">
               <div
                 className="h-full rounded-full transition-all duration-1000"
                 style={{
-                  width: `${SYSTEM_HEALTH.storageUsed}%`,
-                  background: SYSTEM_HEALTH.storageUsed > 80 ? '#EF4444' : SYSTEM_HEALTH.storageUsed > 60 ? '#F59E0B' : '#10B981',
+                  width: `${systemHealth.storageUsed}%`,
+                  background: systemHealth.storageUsed > 80 ? '#EF4444' : systemHealth.storageUsed > 60 ? '#F59E0B' : '#10B981',
                 }}
               />
             </div>

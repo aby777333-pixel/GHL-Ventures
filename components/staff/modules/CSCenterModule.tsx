@@ -90,152 +90,26 @@ function statusVariant(s: string) {
 }
 
 // ════════════════════════════════════════════════════════════════
-//  INLINE MOCK DATA
+//  PLACEHOLDER ARRAYS (mock data removed — wire to real data)
 // ════════════════════════════════════════════════════════════════
 
-// -- Queue Items
-const QUEUE_ITEMS = [
-  { id: 'Q-001', clientName: 'Rajesh Patel', channel: 'chat', waitTime: 12, priority: 'high', query: 'NAV discrepancy for Fund-A' },
-  { id: 'Q-002', clientName: 'Meena Iyer', channel: 'call', waitTime: 45, priority: 'critical', query: 'Redemption processing delay' },
-  { id: 'Q-003', clientName: 'Arun Nair', channel: 'whatsapp', waitTime: 8, priority: 'medium', query: 'KYC document re-upload' },
-  { id: 'Q-004', clientName: 'Priya Sharma', channel: 'email', waitTime: 120, priority: 'low', query: 'Statement request for FY25' },
-  { id: 'Q-005', clientName: 'Vikram Singh', channel: 'telegram', waitTime: 22, priority: 'high', query: 'SIP modification request' },
-  { id: 'Q-006', clientName: 'Deepa Menon', channel: 'chat', waitTime: 5, priority: 'medium', query: 'Nominee update query' },
-]
-
-// -- Active Sessions
-const ACTIVE_SESSIONS = [
-  { id: 'S-001', clientName: 'Anita Desai', channel: 'chat', duration: '04:32', topic: 'Portfolio rebalancing guidance', sentiment: 'positive' },
-  { id: 'S-002', clientName: 'Karthik Reddy', channel: 'call', duration: '12:15', topic: 'Complaint about delayed payout', sentiment: 'negative' },
-  { id: 'S-003', clientName: 'Lakshmi Bhat', channel: 'whatsapp', duration: '01:48', topic: 'New investment inquiry', sentiment: 'neutral' },
-]
-
-// -- Inbox Threads
-const INBOX_THREADS = [
-  { id: 'T-001', clientName: 'Rajesh Patel', channel: 'chat', lastMessage: 'I checked my dashboard and the NAV still looks wrong. Can you verify?', time: '2 min ago', priority: 'high', status: 'active', unread: true },
-  { id: 'T-002', clientName: 'Meena Iyer', channel: 'call', lastMessage: 'Missed call - Callback requested for redemption issue', time: '5 min ago', priority: 'critical', status: 'pending', unread: true },
-  { id: 'T-003', clientName: 'Suresh Kumar', channel: 'whatsapp', lastMessage: 'Thank you for the update! I will upload the documents today.', time: '12 min ago', priority: 'low', status: 'resolved', unread: false },
-  { id: 'T-004', clientName: 'Priya Sharma', channel: 'email', lastMessage: 'Please find attached my PAN card copy for the KYC update.', time: '25 min ago', priority: 'medium', status: 'active', unread: true },
-  { id: 'T-005', clientName: 'Vikram Singh', channel: 'telegram', lastMessage: 'Can I switch from Growth to Dividend option for my SIP?', time: '35 min ago', priority: 'medium', status: 'active', unread: false },
-  { id: 'T-006', clientName: 'Arun Nair', channel: 'whatsapp', lastMessage: 'My KYC is showing as pending since last week. Please check.', time: '1 hr ago', priority: 'high', status: 'active', unread: true },
-  { id: 'T-007', clientName: 'Deepa Menon', channel: 'chat', lastMessage: 'What is the process to add a nominee to my account?', time: '1.5 hr ago', priority: 'low', status: 'active', unread: false },
-  { id: 'T-008', clientName: 'Nitin Joshi', channel: 'email', lastMessage: 'Requesting updated capital gains statement for tax filing purposes.', time: '2 hr ago', priority: 'medium', status: 'pending', unread: true },
-]
-
-// -- Thread Messages (detail view)
-const THREAD_MESSAGES = [
-  { sender: 'client', message: 'Hi, I noticed my NAV for Fund-A seems off today. It shows 142.5 but the website says 145.2.', time: '10:15 AM' },
-  { sender: 'agent', message: 'Hello Rajesh! Let me check this for you right away. Could you confirm which folio number this is under?', time: '10:16 AM' },
-  { sender: 'client', message: 'It is folio GHL-2024-1847. I invested Rs 5 lakh last month.', time: '10:17 AM' },
-  { sender: 'agent', message: 'Thank you. I can see the folio. The NAV update is reflecting T+1 pricing. Your purchase NAV was correctly applied at 145.2. The display should update by EOD.', time: '10:19 AM' },
-  { sender: 'client', message: 'I checked my dashboard and the NAV still looks wrong. Can you verify?', time: '10:22 AM' },
-]
-
-// -- Tickets
-const TICKETS_DATA = [
-  { id: 'TK-1001', clientName: 'Rajesh Patel', subject: 'NAV mismatch in dashboard', category: 'nav', priority: 'high', status: 'open', assignedTo: 'Priya S.', age: '2h', createdDate: '2026-02-22' },
-  { id: 'TK-1002', clientName: 'Meena Iyer', subject: 'Redemption payout delayed', category: 'investment', priority: 'critical', status: 'in-progress', assignedTo: 'Amit K.', age: '1d', createdDate: '2026-02-21' },
-  { id: 'TK-1003', clientName: 'Suresh Kumar', subject: 'KYC re-verification needed', category: 'kyc', priority: 'medium', status: 'awaiting-client', assignedTo: 'Priya S.', age: '3d', createdDate: '2026-02-19' },
-  { id: 'TK-1004', clientName: 'Arun Nair', subject: 'Account access issue after password reset', category: 'account', priority: 'high', status: 'in-progress', assignedTo: 'Deepak R.', age: '6h', createdDate: '2026-02-22' },
-  { id: 'TK-1005', clientName: 'Priya Sharma', subject: 'FY25 statement not available', category: 'documents', priority: 'low', status: 'resolved', assignedTo: 'Priya S.', age: '5d', createdDate: '2026-02-17' },
-  { id: 'TK-1006', clientName: 'Vikram Singh', subject: 'SIP plan modification request', category: 'investment', priority: 'medium', status: 'open', assignedTo: 'Amit K.', age: '4h', createdDate: '2026-02-22' },
-  { id: 'TK-1007', clientName: 'Deepa Menon', subject: 'Nominee addition process query', category: 'general', priority: 'low', status: 'closed', assignedTo: 'Deepak R.', age: '7d', createdDate: '2026-02-15' },
-  { id: 'TK-1008', clientName: 'Nitin Joshi', subject: 'Capital gains report discrepancy', category: 'documents', priority: 'high', status: 'awaiting-internal', assignedTo: 'Amit K.', age: '1d', createdDate: '2026-02-21' },
-]
-
-// -- Calls
-const PENDING_CALLS = [
-  { id: 'CL-001', clientName: 'Meena Iyer', phone: '+91 98765 43210', waitTime: '2:15', priority: 'critical', reason: 'Redemption callback' },
-  { id: 'CL-002', clientName: 'Arun Nair', phone: '+91 87654 32109', waitTime: '1:03', priority: 'high', reason: 'KYC escalation' },
-  { id: 'CL-003', clientName: 'Suresh Kumar', phone: '+91 76543 21098', waitTime: '0:32', priority: 'medium', reason: 'General inquiry' },
-]
-
-const RECENT_CALLS = [
-  { id: 'RC-001', clientName: 'Rajesh Patel', direction: 'inbound', duration: '08:42', outcome: 'Resolved', time: '9:30 AM', sentiment: 'positive' },
-  { id: 'RC-002', clientName: 'Priya Sharma', direction: 'outbound', duration: '05:11', outcome: 'Follow-up', time: '9:15 AM', sentiment: 'neutral' },
-  { id: 'RC-003', clientName: 'Vikram Singh', direction: 'inbound', duration: '12:20', outcome: 'Escalated', time: '8:45 AM', sentiment: 'negative' },
-  { id: 'RC-004', clientName: 'Anita Desai', direction: 'outbound', duration: '03:05', outcome: 'Resolved', time: '8:20 AM', sentiment: 'positive' },
-  { id: 'RC-005', clientName: 'Karthik Reddy', direction: 'inbound', duration: '15:33', outcome: 'Escalated', time: 'Yesterday', sentiment: 'negative' },
-  { id: 'RC-006', clientName: 'Lakshmi Bhat', direction: 'outbound', duration: '06:48', outcome: 'Resolved', time: 'Yesterday', sentiment: 'positive' },
-]
-
-// -- Video
-const VIDEO_REQUESTS = [
-  { id: 'VR-001', clientName: 'Rajesh Patel', scheduledAt: '11:00 AM', purpose: 'Portfolio review discussion', status: 'pending' },
-  { id: 'VR-002', clientName: 'Anita Desai', scheduledAt: '2:30 PM', purpose: 'KYC video verification', status: 'pending' },
-]
-
-const VIDEO_SESSIONS = [
-  { id: 'VS-001', clientName: 'Vikram Singh', date: 'Today 9:00 AM', duration: '22 min', purpose: 'Investment consultation', rating: 5 },
-  { id: 'VS-002', clientName: 'Meena Iyer', date: 'Yesterday 3:00 PM', duration: '15 min', purpose: 'Complaint resolution', rating: 3 },
-  { id: 'VS-003', clientName: 'Suresh Kumar', date: 'Feb 20, 2:00 PM', duration: '30 min', purpose: 'New account onboarding', rating: 4 },
-  { id: 'VS-004', clientName: 'Priya Sharma', date: 'Feb 19, 11:30 AM', duration: '18 min', purpose: 'Document verification', rating: 5 },
-]
-
-// -- Chat
-const ACTIVE_CHATS = [
-  { id: 'CH-001', clientName: 'Rajesh Patel', lastMsg: 'Can you verify the NAV?', time: '2 min ago', unread: 2 },
-  { id: 'CH-002', clientName: 'Deepa Menon', lastMsg: 'What is the nominee process?', time: '8 min ago', unread: 0 },
-  { id: 'CH-003', clientName: 'Lakshmi Bhat', lastMsg: 'Thanks for the info!', time: '12 min ago', unread: 1 },
-]
-
-const CANNED_RESPONSES = [
-  { id: 'CR-01', label: 'Greeting', text: 'Hello! Thank you for contacting GHL India Ventures. How may I assist you today?' },
-  { id: 'CR-02', label: 'KYC Pending', text: 'Your KYC verification is currently in progress. It typically takes 2-3 business days.' },
-  { id: 'CR-03', label: 'NAV Info', text: 'NAV is updated on a T+1 basis. The current NAV will reflect by end of business day.' },
-  { id: 'CR-04', label: 'Escalation', text: 'I understand your concern. Let me escalate this to our senior team for immediate attention.' },
-  { id: 'CR-05', label: 'Closing', text: 'Is there anything else I can help you with? Thank you for choosing GHL India Ventures!' },
-]
-
-// -- WhatsApp
-const WHATSAPP_THREADS = [
-  { id: 'WA-001', clientName: 'Arun Nair', phone: '+91 87654 32109', lastMsg: 'KYC is showing pending since last week', time: '1 hr ago', unread: 2, status: 'active' },
-  { id: 'WA-002', clientName: 'Suresh Kumar', phone: '+91 76543 21098', lastMsg: 'Thank you for the update!', time: '3 hr ago', unread: 0, status: 'resolved' },
-  { id: 'WA-003', clientName: 'Priya Sharma', phone: '+91 65432 10987', lastMsg: 'Can I get my folio statement on WhatsApp?', time: '4 hr ago', unread: 1, status: 'active' },
-  { id: 'WA-004', clientName: 'Nitin Joshi', phone: '+91 54321 09876', lastMsg: 'When will my SIP be processed?', time: '5 hr ago', unread: 0, status: 'active' },
-  { id: 'WA-005', clientName: 'Deepa Menon', phone: '+91 43210 98765', lastMsg: 'Please share the nominee form', time: 'Yesterday', unread: 0, status: 'resolved' },
-]
-
-const WA_TEMPLATES = [
-  { id: 'WT-01', name: 'Welcome Message', preview: 'Welcome to GHL India Ventures! We are delighted to have you...' },
-  { id: 'WT-02', name: 'KYC Reminder', preview: 'Dear {{name}}, your KYC documents are pending. Please upload...' },
-  { id: 'WT-03', name: 'NAV Update', preview: 'Today\'s NAV for {{fund_name}} is {{nav_value}} as of {{date}}...' },
-  { id: 'WT-04', name: 'SIP Confirmation', preview: 'Your SIP of Rs {{amount}} for {{fund}} has been processed...' },
-]
-
-// -- Escalations
-const ESCALATION_ITEMS = [
-  { id: 'ESC-001', ticketId: 'TK-1002', clientName: 'Meena Iyer', subject: 'Redemption payout delayed beyond SLA', level: 2, slaRemaining: '1h 30m', assignedTo: 'CS Lead', priority: 'critical', escalatedAt: '10:00 AM' },
-  { id: 'ESC-002', ticketId: 'TK-1008', clientName: 'Nitin Joshi', subject: 'Capital gains report needs finance team input', level: 1, slaRemaining: '4h 15m', assignedTo: 'Amit K.', priority: 'high', escalatedAt: '9:15 AM' },
-  { id: 'ESC-003', ticketId: 'TK-1004', clientName: 'Arun Nair', subject: 'Account locked after multiple reset attempts', level: 1, slaRemaining: '2h 45m', assignedTo: 'Deepak R.', priority: 'high', escalatedAt: '8:45 AM' },
-  { id: 'ESC-004', ticketId: 'TK-1003', clientName: 'Suresh Kumar', subject: 'KYC documents rejected twice by compliance', level: 3, slaRemaining: '0h 45m', assignedTo: 'CS Lead', priority: 'critical', escalatedAt: 'Yesterday' },
-]
-
-// -- CSAT Data
-const CSAT_TREND = [
-  { month: 'Sep', score: 4.2, responses: 180 },
-  { month: 'Oct', score: 4.3, responses: 210 },
-  { month: 'Nov', score: 4.1, responses: 195 },
-  { month: 'Dec', score: 4.4, responses: 225 },
-  { month: 'Jan', score: 4.5, responses: 240 },
-  { month: 'Feb', score: 4.6, responses: 198 },
-]
-
-const CHANNEL_SATISFACTION = [
-  { channel: 'Chat', score: 4.7, color: '#14b8a6' },
-  { channel: 'Call', score: 4.3, color: '#8b5cf6' },
-  { channel: 'WhatsApp', score: 4.6, color: '#10b981' },
-  { channel: 'Email', score: 4.1, color: '#f59e0b' },
-  { channel: 'Video', score: 4.8, color: '#ec4899' },
-]
-
-const CLIENT_FEEDBACK = [
-  { id: 'FB-001', clientName: 'Rajesh Patel', score: 5, channel: 'chat', comment: 'Extremely helpful agent. Resolved my NAV query in minutes. Very professional service.', date: 'Today' },
-  { id: 'FB-002', clientName: 'Anita Desai', score: 4, channel: 'call', comment: 'Good support overall. Agent was knowledgeable about portfolio options.', date: 'Today' },
-  { id: 'FB-003', clientName: 'Vikram Singh', score: 3, channel: 'whatsapp', comment: 'Response was slightly delayed but the issue was eventually resolved.', date: 'Yesterday' },
-  { id: 'FB-004', clientName: 'Meena Iyer', score: 2, channel: 'call', comment: 'Redemption issue still not resolved after multiple follow-ups. Very disappointed.', date: 'Yesterday' },
-  { id: 'FB-005', clientName: 'Lakshmi Bhat', score: 5, channel: 'video', comment: 'Video call experience was seamless. The agent walked me through the entire process.', date: 'Feb 20' },
-]
+const QUEUE_ITEMS: { id: string; clientName: string; channel: string; waitTime: number; priority: string; query: string }[] = []
+const ACTIVE_SESSIONS: { id: string; clientName: string; channel: string; duration: string; topic: string; sentiment: string }[] = []
+const INBOX_THREADS: { id: string; clientName: string; channel: string; lastMessage: string; time: string; priority: string; status: string; unread: boolean }[] = []
+const THREAD_MESSAGES: { sender: string; message: string; time: string }[] = []
+const TICKETS_DATA: { id: string; clientName: string; subject: string; category: string; priority: string; status: string; assignedTo: string; age: string; createdDate: string }[] = []
+const PENDING_CALLS: { id: string; clientName: string; phone: string; waitTime: string; priority: string; reason: string }[] = []
+const RECENT_CALLS: { id: string; clientName: string; direction: string; duration: string; outcome: string; time: string; sentiment: string }[] = []
+const VIDEO_REQUESTS: { id: string; clientName: string; scheduledAt: string; purpose: string; status: string }[] = []
+const VIDEO_SESSIONS: { id: string; clientName: string; date: string; duration: string; purpose: string; rating: number }[] = []
+const ACTIVE_CHATS: { id: string; clientName: string; lastMsg: string; time: string; unread: number }[] = []
+const CANNED_RESPONSES: { id: string; label: string; text: string }[] = []
+const WHATSAPP_THREADS: { id: string; clientName: string; phone: string; lastMsg: string; time: string; unread: number; status: string }[] = []
+const WA_TEMPLATES: { id: string; name: string; preview: string }[] = []
+const ESCALATION_ITEMS: { id: string; ticketId: string; clientName: string; subject: string; level: number; slaRemaining: string; assignedTo: string; priority: string; escalatedAt: string }[] = []
+const CSAT_TREND: { month: string; score: number; responses: number }[] = []
+const CHANNEL_SATISFACTION: { channel: string; score: number; color: string }[] = []
+const CLIENT_FEEDBACK: { id: string; clientName: string; score: number; channel: string; comment: string; date: string }[] = []
 
 // ════════════════════════════════════════════════════════════════
 //  SUB-TAB COMPONENTS
@@ -1036,17 +910,8 @@ function ChatView({ showToast }: Pick<CSCenterModuleProps, 'showToast'>) {
 
   const selectedSession = chatSessions.find(s => s.id === selectedChat)
 
-  // Fallback to mock data when no Supabase sessions available
-  const displaySessions = chatSessions.length > 0 ? chatSessions : ACTIVE_CHATS.map(ch => ({
-    id: ch.id,
-    visitor_name: ch.clientName,
-    status: 'active' as const,
-    last_message_at: new Date().toISOString(),
-    visitor_id: null, visitor_email: null, client_id: null, assigned_rep_id: null,
-    channel: 'web_chat', priority: 0, page_url: null, assigned_at: null,
-    first_response_at: null, resolved_at: null, csat_rating: null,
-    metadata: {}, created_at: new Date().toISOString(), updated_at: new Date().toISOString(),
-  }))
+  // Display real Supabase sessions (no mock fallback)
+  const displaySessions = chatSessions
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">

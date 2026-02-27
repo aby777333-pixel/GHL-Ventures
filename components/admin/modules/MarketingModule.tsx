@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect, useCallback } from 'react'
 import {
   Megaphone, Target, Mail, Users, BarChart3, Sparkles, Link2,
   Settings, TrendingUp, Eye, Play, Pause, Copy, Edit3,
@@ -22,10 +22,10 @@ import AdminModal, { ModalButton } from '../shared/AdminModal'
 import AdminKPICard from '../shared/AdminKPICard'
 import AdminDataTable, { type Column } from '../shared/AdminDataTable'
 import {
-  MARKETING_KPIS, MARKETING_CAMPAIGNS_DATA, MARKETING_CONTENT_DATA,
-  AUDIENCE_SEGMENTS_DATA, OUTREACH_SEQUENCES_DATA, MARKETING_AI_TOOLS,
-  INTEGRATION_SERVICES_DATA, CHANNEL_PERFORMANCE_DATA,
-} from '@/lib/admin/adminMockData'
+  fetchMarketingCampaigns, getMarketingContent, getMarketingAudiences,
+  getMarketingSequences, getMarketingChannels, getMarketingAITools,
+  getMarketingIntegrations,
+} from '@/lib/supabase/adminDataService'
 import { formatINR } from '@/lib/admin/adminHooks'
 import type {
   MarketingCampaign, ContentItem, AudienceSegment,
@@ -160,16 +160,37 @@ interface MarketingModuleProps {
 //  MAIN COMPONENT
 // ══════════════════════════════════════════════════════════════════
 export default function MarketingModule({ subTab, navigate, showToast }: MarketingModuleProps) {
+  const [campaigns, setCampaigns] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
+
+  // Static config data (no real tables yet — return empty arrays)
+  const contentData: any[] = getMarketingContent()
+  const audienceSegments: any[] = getMarketingAudiences()
+  const outreachSequences: any[] = getMarketingSequences()
+  const marketingAITools: any[] = getMarketingAITools()
+  const integrationServices: any[] = getMarketingIntegrations()
+  const channelPerformance: any[] = getMarketingChannels()
+  const marketingKPIs = { totalLeads: 0, conversionRate: 0, campaignROI: 0, emailOpenRate: 0, websiteTraffic: 0, socialReach: 0, socialEngagement: 0, marketingSpend: 0, marketingBudget: 1, leadsTrend: 0, trafficTrend: 0 }
+
+  const loadData = useCallback(async () => {
+    setLoading(true)
+    const c = await fetchMarketingCampaigns()
+    setCampaigns(c)
+    setLoading(false)
+  }, [])
+
+  useEffect(() => { loadData() }, [loadData])
+
   return (
     <div className="space-y-6 admin-section-enter">
-      {subTab === null && <OverviewTab navigate={navigate} showToast={showToast} />}
-      {subTab === 'campaigns' && <CampaignsTab showToast={showToast} />}
-      {subTab === 'content' && <ContentTab showToast={showToast} />}
-      {subTab === 'audience' && <AudienceTab showToast={showToast} />}
-      {subTab === 'outreach' && <OutreachTab showToast={showToast} />}
+      {subTab === null && <OverviewTab navigate={navigate} showToast={showToast} campaigns={campaigns} marketingKPIs={marketingKPIs} channelPerformance={channelPerformance} />}
+      {subTab === 'campaigns' && <CampaignsTab showToast={showToast} campaigns={campaigns} />}
+      {subTab === 'content' && <ContentTab showToast={showToast} contentData={contentData} />}
+      {subTab === 'audience' && <AudienceTab showToast={showToast} audienceSegments={audienceSegments} />}
+      {subTab === 'outreach' && <OutreachTab showToast={showToast} outreachSequences={outreachSequences} />}
       {subTab === 'mkt-analytics' && <AnalyticsTab />}
-      {subTab === 'ai-tools' && <AIToolsTab navigate={navigate} showToast={showToast} />}
-      {subTab === 'integrations' && <IntegrationsTab showToast={showToast} />}
+      {subTab === 'ai-tools' && <AIToolsTab navigate={navigate} showToast={showToast} marketingAITools={marketingAITools} />}
+      {subTab === 'integrations' && <IntegrationsTab showToast={showToast} integrationServices={integrationServices} />}
       {subTab === 'mkt-settings' && <SettingsTab showToast={showToast} />}
     </div>
   )
@@ -178,10 +199,10 @@ export default function MarketingModule({ subTab, navigate, showToast }: Marketi
 // ══════════════════════════════════════════════════════════════════
 //  SUB-TAB 1: OVERVIEW
 // ══════════════════════════════════════════════════════════════════
-function OverviewTab({ navigate, showToast }: { navigate: (p: string) => void; showToast: (m: string, t?: 'success' | 'error' | 'info' | 'warning') => void }) {
+function OverviewTab({ navigate, showToast, campaigns, marketingKPIs, channelPerformance }: { navigate: (p: string) => void; showToast: (m: string, t?: 'success' | 'error' | 'info' | 'warning') => void; campaigns: any[]; marketingKPIs: any; channelPerformance: any[] }) {
   const [folderPickerOpen, setFolderPickerOpen] = useState(false)
-  const liveCampaigns = MARKETING_CAMPAIGNS_DATA.filter(c => c.status === 'live')
-  const spendPct = Math.round((MARKETING_KPIS.marketingSpend / MARKETING_KPIS.marketingBudget) * 100)
+  const liveCampaigns = campaigns.filter(c => c.status === 'live')
+  const spendPct = marketingKPIs.marketingBudget > 0 ? Math.round((marketingKPIs.marketingSpend / marketingKPIs.marketingBudget) * 100) : 0
 
   return (
     <div className="space-y-6">
@@ -196,12 +217,12 @@ function OverviewTab({ navigate, showToast }: { navigate: (p: string) => void; s
 
       {/* KPI Row */}
       <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3">
-        <AdminKPICard title="Total Leads" value={MARKETING_KPIS.totalLeads.toLocaleString()} trend="up" trendValue={`+${MARKETING_KPIS.leadsTrend}%`} icon={Users} color="#3B82F6" delay={0} />
-        <AdminKPICard title="Campaign ROI" value={`${MARKETING_KPIS.campaignROI}%`} icon={TrendingUp} color="#10B981" delay={50} />
-        <AdminKPICard title="Email Open Rate" value={`${MARKETING_KPIS.emailOpenRate}%`} icon={Mail} color="#8B5CF6" delay={100} />
-        <AdminKPICard title="Social Engagement" value={`${MARKETING_KPIS.socialEngagement}%`} icon={Globe} color="#F59E0B" delay={150} />
-        <AdminKPICard title="Marketing Spend" value={formatINR(MARKETING_KPIS.marketingSpend)} subtitle={`${spendPct}% of ${formatINR(MARKETING_KPIS.marketingBudget)} budget`} icon={Target} color="#DC2626" delay={200} />
-        <AdminKPICard title="Website Traffic" value={MARKETING_KPIS.websiteTraffic.toLocaleString()} trend="up" trendValue={`+${MARKETING_KPIS.trafficTrend}%`} icon={Activity} color="#06B6D4" delay={250} />
+        <AdminKPICard title="Total Leads" value={marketingKPIs.totalLeads.toLocaleString()} trend="up" trendValue={`+${marketingKPIs.leadsTrend}%`} icon={Users} color="#3B82F6" delay={0} />
+        <AdminKPICard title="Campaign ROI" value={`${marketingKPIs.campaignROI}%`} icon={TrendingUp} color="#10B981" delay={50} />
+        <AdminKPICard title="Email Open Rate" value={`${marketingKPIs.emailOpenRate}%`} icon={Mail} color="#8B5CF6" delay={100} />
+        <AdminKPICard title="Social Engagement" value={`${marketingKPIs.socialEngagement}%`} icon={Globe} color="#F59E0B" delay={150} />
+        <AdminKPICard title="Marketing Spend" value={formatINR(marketingKPIs.marketingSpend)} subtitle={`${spendPct}% of ${formatINR(marketingKPIs.marketingBudget)} budget`} icon={Target} color="#DC2626" delay={200} />
+        <AdminKPICard title="Website Traffic" value={marketingKPIs.websiteTraffic.toLocaleString()} trend="up" trendValue={`+${marketingKPIs.trafficTrend}%`} icon={Activity} color="#06B6D4" delay={250} />
       </div>
 
       {/* Charts Row */}
@@ -214,13 +235,13 @@ function OverviewTab({ navigate, showToast }: { navigate: (p: string) => void; s
           </h3>
           <div className="h-64">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={CHANNEL_PERFORMANCE_DATA} layout="vertical">
+              <BarChart data={channelPerformance} layout="vertical">
                 <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" />
                 <XAxis type="number" tick={{ fill: '#6B7280', fontSize: 11 }} axisLine={false} tickLine={false} />
                 <YAxis dataKey="channel" type="category" tick={{ fill: '#6B7280', fontSize: 11 }} axisLine={false} tickLine={false} width={90} />
                 <Tooltip contentStyle={CHART_TOOLTIP_STYLE} />
                 <Bar dataKey="leads" name="Leads" radius={[0, 4, 4, 0]}>
-                  {CHANNEL_PERFORMANCE_DATA.map((entry, i) => (
+                  {channelPerformance.map((entry, i) => (
                     <Cell key={i} fill={entry.color} />
                   ))}
                 </Bar>
@@ -302,7 +323,7 @@ function OverviewTab({ navigate, showToast }: { navigate: (p: string) => void; s
 // ══════════════════════════════════════════════════════════════════
 //  SUB-TAB 2: CAMPAIGNS
 // ══════════════════════════════════════════════════════════════════
-function CampaignsTab({ showToast }: { showToast: (m: string, t?: 'success' | 'error' | 'info' | 'warning') => void }) {
+function CampaignsTab({ showToast, campaigns }: { showToast: (m: string, t?: 'success' | 'error' | 'info' | 'warning') => void; campaigns: any[] }) {
   const [typeFilter, setTypeFilter] = useState<string>('all')
   const [viewMode, setViewMode] = useState<'cards' | 'table'>('cards')
   const [selectedCampaign, setSelectedCampaign] = useState<MarketingCampaign | null>(null)
@@ -324,9 +345,9 @@ function CampaignsTab({ showToast }: { showToast: (m: string, t?: 'success' | 'e
   }
 
   const filtered = useMemo(() => {
-    if (typeFilter === 'all') return MARKETING_CAMPAIGNS_DATA
-    return MARKETING_CAMPAIGNS_DATA.filter(c => c.type === typeFilter)
-  }, [typeFilter])
+    if (typeFilter === 'all') return campaigns
+    return campaigns.filter(c => c.type === typeFilter)
+  }, [typeFilter, campaigns])
 
   const typeFilters = ['all', 'email', 'social', 'google-ads', 'meta-ads', 'event', 'whatsapp', 'telegram', 'multi-channel']
 
@@ -648,7 +669,7 @@ function CampaignDetailContent({ campaign }: { campaign: MarketingCampaign }) {
 // ══════════════════════════════════════════════════════════════════
 //  SUB-TAB 3: CONTENT HUB
 // ══════════════════════════════════════════════════════════════════
-function ContentTab({ showToast }: { showToast: (m: string, t?: 'success' | 'error' | 'info' | 'warning') => void }) {
+function ContentTab({ showToast, contentData }: { showToast: (m: string, t?: 'success' | 'error' | 'info' | 'warning') => void; contentData: any[] }) {
   const [newContentOpen, setNewContentOpen] = useState(false)
   const [folderPickerOpen, setFolderPickerOpen] = useState(false)
   const contentStatuses = ['idea', 'draft', 'review', 'approved', 'scheduled', 'published'] as const
@@ -657,9 +678,9 @@ function ContentTab({ showToast }: { showToast: (m: string, t?: 'success' | 'err
   const contentTypes = ['all', 'blog', 'social-post', 'email', 'infographic', 'video', 'brochure', 'landing-page']
 
   const filtered = useMemo(() => {
-    if (typeFilter === 'all') return MARKETING_CONTENT_DATA
-    return MARKETING_CONTENT_DATA.filter(c => c.type === typeFilter)
-  }, [typeFilter])
+    if (typeFilter === 'all') return contentData
+    return contentData.filter(c => c.type === typeFilter)
+  }, [typeFilter, contentData])
 
   const grouped = useMemo(() => {
     const map: Record<string, ContentItem[]> = {}
@@ -822,11 +843,11 @@ function ContentTab({ showToast }: { showToast: (m: string, t?: 'success' | 'err
 // ══════════════════════════════════════════════════════════════════
 //  SUB-TAB 4: AUDIENCE
 // ══════════════════════════════════════════════════════════════════
-function AudienceTab({ showToast }: { showToast: (m: string, t?: 'success' | 'error' | 'info' | 'warning') => void }) {
+function AudienceTab({ showToast, audienceSegments }: { showToast: (m: string, t?: 'success' | 'error' | 'info' | 'warning') => void; audienceSegments: any[] }) {
   const [newSegmentOpen, setNewSegmentOpen] = useState(false)
-  const totalContacts = AUDIENCE_SEGMENTS_DATA.reduce((s, seg) => s + seg.contactCount, 0)
-  const dynamicSegments = AUDIENCE_SEGMENTS_DATA.filter(s => s.type === 'dynamic').length
-  const staticSegments = AUDIENCE_SEGMENTS_DATA.filter(s => s.type === 'static').length
+  const totalContacts = audienceSegments.reduce((s: number, seg: any) => s + (seg.contactCount || 0), 0)
+  const dynamicSegments = audienceSegments.filter((s: any) => s.type === 'dynamic').length
+  const staticSegments = audienceSegments.filter((s: any) => s.type === 'static').length
 
   return (
     <div className="space-y-4">
@@ -874,14 +895,14 @@ function AudienceTab({ showToast }: { showToast: (m: string, t?: 'success' | 'er
       {/* KPIs */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         <AdminKPICard title="Total Contacts" value={totalContacts.toLocaleString()} icon={Users} color="#3B82F6" delay={0} />
-        <AdminKPICard title="Segments" value={AUDIENCE_SEGMENTS_DATA.length} icon={Layers} color="#8B5CF6" delay={50} />
+        <AdminKPICard title="Segments" value={audienceSegments.length} icon={Layers} color="#8B5CF6" delay={50} />
         <AdminKPICard title="Dynamic" value={dynamicSegments} icon={Zap} color="#10B981" delay={100} />
         <AdminKPICard title="Static" value={staticSegments} icon={FileText} color="#F59E0B" delay={150} />
       </div>
 
       {/* Segment Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-        {AUDIENCE_SEGMENTS_DATA.map((seg, i) => (
+        {audienceSegments.map((seg, i) => (
           <AdminGlass key={seg.id} padding="p-4" className="cursor-pointer group admin-card-enter">
             <div style={{ animationDelay: `${i * 40}ms` }}>
               <div className="flex items-start justify-between mb-3">
@@ -949,7 +970,7 @@ function AudienceTab({ showToast }: { showToast: (m: string, t?: 'success' | 'er
 // ══════════════════════════════════════════════════════════════════
 //  SUB-TAB 5: OUTREACH
 // ══════════════════════════════════════════════════════════════════
-function OutreachTab({ showToast }: { showToast: (m: string, t?: 'success' | 'error' | 'info' | 'warning') => void }) {
+function OutreachTab({ showToast, outreachSequences }: { showToast: (m: string, t?: 'success' | 'error' | 'info' | 'warning') => void; outreachSequences: any[] }) {
   const [newSequenceOpen, setNewSequenceOpen] = useState(false)
   const channelIcons: Record<string, React.ComponentType<{ className?: string }>> = {
     email: Mail,
@@ -1008,7 +1029,7 @@ function OutreachTab({ showToast }: { showToast: (m: string, t?: 'success' | 'er
           Active Sequences
         </h3>
         <div className="space-y-3">
-          {OUTREACH_SEQUENCES_DATA.map(seq => {
+          {outreachSequences.map(seq => {
             const ChannelIcon = channelIcons[seq.channel] || Mail
             const completionPct = seq.enrolled > 0 ? Math.round((seq.completed / seq.enrolled) * 100) : 0
             return (
@@ -1260,25 +1281,25 @@ function AnalyticsTab() {
 // ══════════════════════════════════════════════════════════════════
 //  SUB-TAB 7: AI TOOLS
 // ══════════════════════════════════════════════════════════════════
-function AIToolsTab({ navigate, showToast }: { navigate: (p: string) => void; showToast: (m: string, t?: 'success' | 'error' | 'info' | 'warning') => void }) {
+function AIToolsTab({ navigate, showToast, marketingAITools }: { navigate: (p: string) => void; showToast: (m: string, t?: 'success' | 'error' | 'info' | 'warning') => void; marketingAITools: any[] }) {
   const [categoryFilter, setCategoryFilter] = useState<string>('all')
   const [searchQuery, setSearchQuery] = useState('')
 
   const filteredTools = useMemo(() => {
-    let tools = MARKETING_AI_TOOLS
+    let tools = marketingAITools
     if (categoryFilter !== 'all') tools = tools.filter(t => t.category === categoryFilter)
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase()
       tools = tools.filter(t => t.name.toLowerCase().includes(q) || t.description.toLowerCase().includes(q))
     }
     return tools
-  }, [categoryFilter, searchQuery])
+  }, [categoryFilter, searchQuery, marketingAITools])
 
   const categoryCounts = useMemo(() => {
-    const counts: Record<string, number> = { all: MARKETING_AI_TOOLS.length }
-    MARKETING_AI_TOOLS.forEach(t => { counts[t.category] = (counts[t.category] || 0) + 1 })
+    const counts: Record<string, number> = { all: marketingAITools.length }
+    marketingAITools.forEach(t => { counts[t.category] = (counts[t.category] || 0) + 1 })
     return counts
-  }, [])
+  }, [marketingAITools])
 
   return (
     <div className="space-y-4">
@@ -1292,7 +1313,7 @@ function AIToolsTab({ navigate, showToast }: { navigate: (p: string) => void; sh
 
       {/* KPIs */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        <AdminKPICard title="Active Tools" value={`${MARKETING_AI_TOOLS.filter(t => t.status === 'active').length}/${MARKETING_AI_TOOLS.length}`} icon={Zap} color="#10B981" delay={0} />
+        <AdminKPICard title="Active Tools" value={`${marketingAITools.filter(t => t.status === 'active').length}/${marketingAITools.length}`} icon={Zap} color="#10B981" delay={0} />
         <AdminKPICard title="Total AI Runs" value="2,340" icon={Activity} color="#3B82F6" delay={50} />
         <AdminKPICard title="Content Generated" value="186" icon={FileText} color="#8B5CF6" delay={100} />
         <AdminKPICard title="Time Saved" value="92 hrs" icon={Clock} color="#DC2626" delay={150} />
@@ -1388,16 +1409,16 @@ function AIToolsTab({ navigate, showToast }: { navigate: (p: string) => void; sh
 // ══════════════════════════════════════════════════════════════════
 //  SUB-TAB 8: INTEGRATIONS
 // ══════════════════════════════════════════════════════════════════
-function IntegrationsTab({ showToast }: { showToast: (m: string, t?: 'success' | 'error' | 'info' | 'warning') => void }) {
+function IntegrationsTab({ showToast, integrationServices }: { showToast: (m: string, t?: 'success' | 'error' | 'info' | 'warning') => void; integrationServices: any[] }) {
   const [categoryFilter, setCategoryFilter] = useState<string>('all')
 
   const filtered = useMemo(() => {
-    if (categoryFilter === 'all') return INTEGRATION_SERVICES_DATA
-    return INTEGRATION_SERVICES_DATA.filter(s => s.category === categoryFilter)
-  }, [categoryFilter])
+    if (categoryFilter === 'all') return integrationServices
+    return integrationServices.filter(s => s.category === categoryFilter)
+  }, [categoryFilter, integrationServices])
 
-  const connected = INTEGRATION_SERVICES_DATA.filter(s => s.status === 'connected').length
-  const pending = INTEGRATION_SERVICES_DATA.filter(s => s.status === 'pending').length
+  const connected = integrationServices.filter(s => s.status === 'connected').length
+  const pending = integrationServices.filter(s => s.status === 'pending').length
 
   return (
     <div className="space-y-4">
@@ -1417,7 +1438,7 @@ function IntegrationsTab({ showToast }: { showToast: (m: string, t?: 'success' |
 
       {/* KPIs */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        <AdminKPICard title="Total Integrations" value={INTEGRATION_SERVICES_DATA.length} icon={Link2} color="#3B82F6" delay={0} />
+        <AdminKPICard title="Total Integrations" value={integrationServices.length} icon={Link2} color="#3B82F6" delay={0} />
         <AdminKPICard title="Connected" value={connected} icon={CheckCircle2} color="#10B981" delay={50} />
         <AdminKPICard title="Pending" value={pending} icon={Clock} color="#F59E0B" delay={100} />
         <AdminKPICard title="Data Sync Rate" value="99.2%" icon={RefreshCw} color="#8B5CF6" delay={150} />

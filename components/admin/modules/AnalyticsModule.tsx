@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect, useCallback } from 'react'
 import {
   BarChart3, TrendingUp, PieChart, FileBarChart, Download,
   Calendar, Filter, Eye, ArrowUpRight, ArrowDownRight,
@@ -14,7 +14,7 @@ import {
 import AdminGlass from '../shared/AdminGlass'
 import AdminBadge from '../shared/AdminBadge'
 import AdminKPICard from '../shared/AdminKPICard'
-import { OVERVIEW_KPIS, AUM_GROWTH_DATA, REVENUE_BREAKDOWN, CLIENTS_DATA, LEADS_DATA } from '@/lib/admin/adminMockData'
+import { getOverviewKPIs, fetchClients, fetchLeads } from '@/lib/supabase/adminDataService'
 import { formatINR } from '@/lib/admin/adminHooks'
 import { saveBlobAs } from '@/lib/supabase/storageService'
 
@@ -27,29 +27,10 @@ const ANALYTICS_TABS = [
 
 type AnalyticsTab = typeof ANALYTICS_TABS[number]['id']
 
-// ── Mock data for analytics ──────────────────────────────────────
-const MONTHLY_METRICS = [
-  { month: 'Oct 24', clients: 310, leads: 38, conversions: 8, churn: 2 },
-  { month: 'Nov 24', clients: 318, leads: 42, conversions: 10, churn: 1 },
-  { month: 'Dec 24', clients: 326, leads: 35, conversions: 9, churn: 3 },
-  { month: 'Jan 25', clients: 332, leads: 44, conversions: 7, churn: 1 },
-  { month: 'Feb 25', clients: 338, leads: 40, conversions: 8, churn: 2 },
-  { month: 'Mar 25', clients: 342, leads: 47, conversions: 6, churn: 0 },
-]
-
-const FORECAST_DATA = [
-  { month: 'Apr 25', actual: null, forecast: 255, lower: 248, upper: 262 },
-  { month: 'May 25', actual: null, forecast: 263, lower: 253, upper: 273 },
-  { month: 'Jun 25', actual: null, forecast: 271, lower: 258, upper: 284 },
-  { month: 'Jul 25', actual: null, forecast: 280, lower: 264, upper: 296 },
-  { month: 'Aug 25', actual: null, forecast: 289, lower: 270, upper: 308 },
-  { month: 'Sep 25', actual: null, forecast: 298, lower: 276, upper: 320 },
-]
-
-const AUM_WITH_FORECAST = [
-  ...AUM_GROWTH_DATA.map(d => ({ ...d, forecast: null as number | null, lower: null as number | null, upper: null as number | null })),
-  ...FORECAST_DATA.map(d => ({ aum: null as number | null, target: null as number | null, ...d })),
-]
+// ── Data arrays (populated from Supabase when available) ─────────
+const MONTHLY_METRICS: any[] = []
+const FORECAST_DATA: any[] = []
+const AUM_WITH_FORECAST: any[] = []
 
 interface AnalyticsModuleProps {
   subTab: string | null
@@ -59,6 +40,16 @@ interface AnalyticsModuleProps {
 
 export default function AnalyticsModule({ subTab, navigate, showToast }: AnalyticsModuleProps) {
   const activeTab = (ANALYTICS_TABS.some(t => t.id === subTab) ? subTab : 'dashboard') as AnalyticsTab
+
+  const [overviewKpis, setOverviewKpis] = useState({
+    totalAUM: 0, activeClients: 0, monthlyRevenue: 0, activeFunds: 0,
+    aumChange: 0, revenueChange: 0, clientGrowth: 0, leadConversion: 0,
+    complianceScore: 0, tasksCompleted: 0,
+  })
+
+  useEffect(() => {
+    getOverviewKPIs().then(k => setOverviewKpis(prev => ({ ...prev, ...k })))
+  }, [])
 
   const handleTabClick = (tabId: string) => {
     navigate(tabId === 'dashboard' ? 'analytics' : `analytics/${tabId}`)
@@ -107,7 +98,7 @@ export default function AnalyticsModule({ subTab, navigate, showToast }: Analyti
       </div>
 
       <div className="admin-tab-switch">
-        {activeTab === 'dashboard' && <AnalyticsDashboard />}
+        {activeTab === 'dashboard' && <AnalyticsDashboard overviewKpis={overviewKpis} />}
         {activeTab === 'reports' && <ReportBuilder showToast={showToast} />}
         {activeTab === 'forecasting' && <ForecastingTab />}
       </div>
@@ -116,12 +107,14 @@ export default function AnalyticsModule({ subTab, navigate, showToast }: Analyti
 }
 
 // ── Analytics Dashboard ─────────────────────────────────────────
-function AnalyticsDashboard() {
+function AnalyticsDashboard({ overviewKpis }: { overviewKpis: Record<string, any> }) {
   const kpis = useMemo(() => {
     const clientGrowthRate = MONTHLY_METRICS.length >= 2
       ? ((MONTHLY_METRICS[MONTHLY_METRICS.length - 1].clients - MONTHLY_METRICS[0].clients) / MONTHLY_METRICS[0].clients * 100).toFixed(1)
       : '0'
-    const avgConversion = Math.round(MONTHLY_METRICS.reduce((s, m) => s + m.conversions, 0) / MONTHLY_METRICS.length)
+    const avgConversion = MONTHLY_METRICS.length > 0
+      ? Math.round(MONTHLY_METRICS.reduce((s, m) => s + m.conversions, 0) / MONTHLY_METRICS.length)
+      : 0
     const totalLeads = MONTHLY_METRICS.reduce((s, m) => s + m.leads, 0)
     return { clientGrowthRate, avgConversion, totalLeads }
   }, [])
@@ -130,7 +123,7 @@ function AnalyticsDashboard() {
     <div className="space-y-4">
       {/* KPI Row */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        <AdminKPICard title="Total AUM" value={formatINR(OVERVIEW_KPIS.totalAUM)} trend="up" trendValue={`+${OVERVIEW_KPIS.aumChange}%`} icon={IndianRupee} color="#DC2626" delay={0} />
+        <AdminKPICard title="Total AUM" value={formatINR(overviewKpis.totalAUM || 0)} trend="up" trendValue={`+${overviewKpis.aumChange || 0}%`} icon={IndianRupee} color="#DC2626" delay={0} />
         <AdminKPICard title="Client Growth" value={`${kpis.clientGrowthRate}%`} trend="up" trendValue="6 months" icon={Users} color="#3B82F6" delay={50} />
         <AdminKPICard title="Avg Conversions/Mo" value={kpis.avgConversion} icon={Target} color="#10B981" delay={100} />
         <AdminKPICard title="Total Leads (6mo)" value={kpis.totalLeads} icon={Activity} color="#8B5CF6" delay={150} />
@@ -193,12 +186,12 @@ function AnalyticsDashboard() {
         </h3>
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
           {[
-            { label: 'AUM Growth', value: `+${OVERVIEW_KPIS.aumChange}%`, color: 'text-emerald-400' },
-            { label: 'Revenue Growth', value: `+${OVERVIEW_KPIS.revenueChange}%`, color: 'text-emerald-400' },
-            { label: 'Client Growth', value: `+${OVERVIEW_KPIS.clientGrowth}%`, color: 'text-emerald-400' },
-            { label: 'Lead Conversion', value: `${OVERVIEW_KPIS.leadConversion}%`, color: 'text-blue-400' },
-            { label: 'Compliance Score', value: `${OVERVIEW_KPIS.complianceScore}%`, color: 'text-emerald-400' },
-            { label: 'Tasks Done', value: `${OVERVIEW_KPIS.tasksCompleted}%`, color: 'text-blue-400' },
+            { label: 'AUM Growth', value: `+${overviewKpis.aumChange || 0}%`, color: 'text-emerald-400' },
+            { label: 'Revenue Growth', value: `+${overviewKpis.revenueChange || 0}%`, color: 'text-emerald-400' },
+            { label: 'Client Growth', value: `+${overviewKpis.clientGrowth || 0}%`, color: 'text-emerald-400' },
+            { label: 'Lead Conversion', value: `${overviewKpis.leadConversion || 0}%`, color: 'text-blue-400' },
+            { label: 'Compliance Score', value: `${overviewKpis.complianceScore || 0}%`, color: 'text-emerald-400' },
+            { label: 'Tasks Done', value: `${overviewKpis.tasksCompleted || 0}%`, color: 'text-blue-400' },
           ].map(m => (
             <div key={m.label} className="p-3 rounded-xl bg-white/[0.02] border border-white/[0.04] text-center">
               <p className={`text-lg font-bold ${m.color}`}>{m.value}</p>

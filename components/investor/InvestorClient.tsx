@@ -24,52 +24,28 @@ const TABS: { id: InvestorTab; label: string; icon: any }[] = [
   { id: 'settings', label: 'Settings', icon: Settings },
 ]
 
-// ── Mock Investor Data ─────────────────────────────────────────
+// ── Investor Data (empty defaults — populated from real data) ──
 const MOCK_INVESTOR = {
-  id: 'INV-001',
-  name: 'Rajesh Sharma',
-  email: 'rajesh.sharma@email.com',
-  phone: '+91 98765 43210',
-  kycStatus: 'Approved' as const,
-  investorType: 'HNI',
-  totalInvested: 15000000,
-  currentValue: 18750000,
-  returns: 25.0,
-  unrealizedGain: 3750000,
-  xirr: 18.7,
+  id: '',
+  name: '',
+  email: '',
+  phone: '',
+  kycStatus: 'pending' as const,
+  investorType: '',
+  totalInvested: 0,
+  currentValue: 0,
+  returns: 0,
+  unrealizedGain: 0,
+  xirr: 0,
 }
 
-const MOCK_PORTFOLIO = [
-  { id: 'F001', name: 'GHL Growth Fund I', invested: 5000000, currentNav: 6250000, units: 5000, navPerUnit: 1250, returnPct: 25, status: 'Active' },
-  { id: 'F002', name: 'GHL Real Estate AIF II', invested: 3000000, currentNav: 3450000, units: 3000, navPerUnit: 1150, returnPct: 15, status: 'Active' },
-  { id: 'F003', name: 'GHL Balanced Opportunities', invested: 4000000, currentNav: 5200000, units: 4000, navPerUnit: 1300, returnPct: 30, status: 'Active' },
-  { id: 'F004', name: 'GHL Fixed Income Plus', invested: 3000000, currentNav: 3850000, units: 3000, navPerUnit: 1283, returnPct: 28.3, status: 'Active' },
-]
+const MOCK_PORTFOLIO: { id: string; name: string; invested: number; currentNav: number; units: number; navPerUnit: number; returnPct: number; status: string }[] = []
 
-const MOCK_DOCUMENTS = [
-  { id: 'D001', name: 'Investment Agreement - GHL Growth Fund I.pdf', type: 'Agreement', date: '2024-06-15', size: 2400000, category: 'Legal' },
-  { id: 'D002', name: 'KYC Verification Certificate.pdf', type: 'KYC', date: '2024-06-10', size: 540000, category: 'Compliance' },
-  { id: 'D003', name: 'NAV Report - March 2025.pdf', type: 'Report', date: '2025-04-01', size: 1200000, category: 'Reports' },
-  { id: 'D004', name: 'Capital Call Notice #3.pdf', type: 'Notice', date: '2025-02-15', size: 340000, category: 'Notices' },
-  { id: 'D005', name: 'Distribution Statement Q4 2024.pdf', type: 'Statement', date: '2025-01-15', size: 890000, category: 'Statements' },
-  { id: 'D006', name: 'Tax Certificate FY 2024-25.pdf', type: 'Tax', date: '2025-03-31', size: 450000, category: 'Tax' },
-  { id: 'D007', name: 'Annual Report FY 2024-25.pdf', type: 'Report', date: '2025-06-30', size: 5600000, category: 'Reports' },
-  { id: 'D008', name: 'PPM - GHL Real Estate AIF II.pdf', type: 'PPM', date: '2024-05-01', size: 8900000, category: 'Legal' },
-]
+const MOCK_DOCUMENTS: { id: string; name: string; type: string; date: string; size: number; category: string }[] = []
 
-const MOCK_REPORTS = [
-  { id: 'R001', name: 'Monthly Portfolio Statement - Feb 2026', date: '2026-03-01', type: 'Portfolio' },
-  { id: 'R002', name: 'NAV Report - January 2026', date: '2026-02-01', type: 'NAV' },
-  { id: 'R003', name: 'Capital Account Statement Q4 2025', date: '2026-01-15', type: 'Capital' },
-  { id: 'R004', name: 'Tax Computation FY 2025-26 (Provisional)', date: '2026-02-20', type: 'Tax' },
-]
+const MOCK_REPORTS: { id: string; name: string; date: string; type: string }[] = []
 
-const MOCK_MESSAGES = [
-  { id: 'M001', from: 'GHL Fund Management', subject: 'NAV Update: GHL Growth Fund I', date: '2026-02-20', read: false },
-  { id: 'M002', from: 'Compliance Team', subject: 'KYC Renewal Reminder', date: '2026-02-18', read: true },
-  { id: 'M003', from: 'Investor Relations', subject: 'Q4 Distribution Notice', date: '2026-02-15', read: true },
-  { id: 'M004', from: 'GHL Fund Management', subject: 'Annual Meeting Invitation', date: '2026-02-10', read: true },
-]
+const MOCK_MESSAGES: { id: string; from: string; subject: string; date: string; read: boolean }[] = []
 
 // ── Toast System ───────────────────────────────────────────────
 function useToast() {

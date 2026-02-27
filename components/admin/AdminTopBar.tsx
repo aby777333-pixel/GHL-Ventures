@@ -6,7 +6,7 @@ import {
   AlertCircle, CheckCircle, Info, AlertTriangle,
 } from 'lucide-react'
 import { MODULE_LABELS } from '@/lib/admin/adminConstants'
-import { ADMIN_NOTIFICATIONS } from '@/lib/admin/adminMockData'
+import { fetchNotifications } from '@/lib/supabase/adminDataService'
 import type { AdminModule, NotificationType } from '@/lib/admin/adminTypes'
 import { formatTimeAgo } from '@/lib/admin/adminHooks'
 
@@ -36,8 +36,13 @@ export default function AdminTopBar({ activeModule, activeSubTab, onMenuToggle, 
   const [searchFocused, setSearchFocused] = useState(false)
   const [readNotifs, setReadNotifs] = useState<Set<string>>(new Set())
   const notifRef = useRef<HTMLDivElement>(null)
+  const [notifications, setNotifications] = useState<any[]>([])
 
-  const unreadCount = ADMIN_NOTIFICATIONS.filter(n => !n.read && !readNotifs.has(n.id)).length
+  useEffect(() => {
+    fetchNotifications().then(data => setNotifications(data))
+  }, [])
+
+  const unreadCount = notifications.filter(n => !n.read && !readNotifs.has(n.id)).length
 
   // Close notification dropdown on outside click
   useEffect(() => {
@@ -153,7 +158,7 @@ export default function AdminTopBar({ activeModule, activeSubTab, onMenuToggle, 
                   <p className="text-sm font-semibold text-white">Notifications</p>
                   <button
                     onClick={() => {
-                      ADMIN_NOTIFICATIONS.forEach(n => markAsRead(n.id))
+                      notifications.forEach(n => markAsRead(n.id))
                     }}
                     className="text-[11px] text-brand-red hover:text-red-300 transition-colors"
                   >
@@ -161,8 +166,8 @@ export default function AdminTopBar({ activeModule, activeSubTab, onMenuToggle, 
                   </button>
                 </div>
                 <div className="max-h-72 overflow-y-auto">
-                  {ADMIN_NOTIFICATIONS.map(notif => {
-                    const NIcon = NOTIF_ICONS[notif.type]
+                  {notifications.map(notif => {
+                    const NIcon = NOTIF_ICONS[notif.type as NotificationType] || Info
                     const isRead = notif.read || readNotifs.has(notif.id)
                     return (
                       <button
@@ -177,7 +182,7 @@ export default function AdminTopBar({ activeModule, activeSubTab, onMenuToggle, 
                         }`}
                       >
                         <div className="flex gap-3">
-                          <NIcon className={`w-4 h-4 flex-shrink-0 mt-0.5 ${NOTIF_COLORS[notif.type]}`} />
+                          <NIcon className={`w-4 h-4 flex-shrink-0 mt-0.5 ${NOTIF_COLORS[notif.type as NotificationType] || 'text-gray-400'}`} />
                           <div className="flex-1 min-w-0">
                             <p className="text-xs font-semibold text-white truncate">{notif.title}</p>
                             <p className="text-[11px] text-gray-400 mt-0.5 line-clamp-2">{notif.message}</p>
