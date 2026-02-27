@@ -1,104 +1,14 @@
 /* ─────────────────────────────────────────────────────────────
-   Dashboard Data Service — Client portal data with mock fallback
+   Dashboard Data Service — Client portal data (production)
 
-   Extracts inline mock data from DashboardClient.tsx into a
-   service layer. When Supabase is configured, fetches real
-   data scoped to the logged-in client.
+   Fetches real data scoped to the logged-in client from Supabase.
+   Returns empty arrays/defaults when no data available.
    ───────────────────────────────────────────────────────────── */
 
 import { supabase, isSupabaseConfigured } from './client'
 
 // Untyped reference for queries
 const sb = supabase as any
-
-// ── Mock Data (extracted from DashboardClient.tsx) ──────────
-
-const MOCK_PORTFOLIO_ASSETS = [
-  { name: 'Phoenix Towers - NCLT Recovery', type: 'Stressed Real Estate', invested: 2500000, current: 3125000, returnPct: 25.0, status: 'active', milestone: 75 },
-  { name: 'GHL Co-Invest Series A', type: 'Startup Equity', invested: 1000000, current: 1320000, returnPct: 32.0, status: 'active', milestone: 40 },
-  { name: 'NBFC Debenture Pool', type: 'Fixed Income', invested: 3000000, current: 3180000, returnPct: 12.0, status: 'active', milestone: 90 },
-  { name: 'Emerald Bay - Goa', type: 'Direct Real Estate', invested: 5000000, current: 5500000, returnPct: 10.0, status: 'active', milestone: 55 },
-]
-
-const MOCK_NAV_HISTORY = [
-  { month: 'Apr 24', nav: 100.0, benchmark: 100.0 },
-  { month: 'May 24', nav: 102.3, benchmark: 101.5 },
-  { month: 'Jun 24', nav: 105.1, benchmark: 103.2 },
-  { month: 'Jul 24', nav: 103.8, benchmark: 102.8 },
-  { month: 'Aug 24', nav: 107.2, benchmark: 104.5 },
-  { month: 'Sep 24', nav: 109.5, benchmark: 106.0 },
-  { month: 'Oct 24', nav: 108.1, benchmark: 105.2 },
-  { month: 'Nov 24', nav: 111.3, benchmark: 107.8 },
-  { month: 'Dec 24', nav: 114.2, benchmark: 109.5 },
-  { month: 'Jan 25', nav: 112.8, benchmark: 108.2 },
-  { month: 'Feb 25', nav: 116.5, benchmark: 110.8 },
-  { month: 'Mar 25', nav: 118.9, benchmark: 112.3 },
-]
-
-const MOCK_ALLOCATION = [
-  { name: 'Stressed RE', value: 45, color: '#D0021B' },
-  { name: 'Startups', value: 20, color: '#F59E0B' },
-  { name: 'Fixed Income', value: 25, color: '#3B82F6' },
-  { name: 'Direct RE', value: 10, color: '#10B981' },
-]
-
-const MOCK_TRANSACTIONS = [
-  { id: 'T001', date: '15 Mar 2025', type: 'Investment', amount: 1500000, fund: 'GHL Co-Invest Series A', status: 'completed' },
-  { id: 'T002', date: '01 Mar 2025', type: 'Distribution', amount: -250000, fund: 'NBFC Debenture Pool', status: 'completed' },
-  { id: 'T003', date: '15 Feb 2025', type: 'Investment', amount: 2000000, fund: 'Emerald Bay - Goa', status: 'completed' },
-  { id: 'T004', date: '01 Feb 2025', type: 'Distribution', amount: -180000, fund: 'Phoenix Towers NCLT', status: 'completed' },
-  { id: 'T005', date: '20 Jan 2025', type: 'Investment', amount: 1000000, fund: 'Phoenix Towers NCLT', status: 'completed' },
-  { id: 'T006', date: '05 Jan 2025', type: 'Fee', amount: -62500, fund: 'Management Fee Q4', status: 'completed' },
-  { id: 'T007', date: '20 Dec 2024', type: 'Investment', amount: 500000, fund: 'GHL Co-Invest Series A', status: 'completed' },
-]
-
-const MOCK_MESSAGES = [
-  { id: 1, from: 'Relationship Manager', subject: 'Q4 Portfolio Review Summary', preview: 'Dear Investor, Your Q4 portfolio performance...', time: '2h ago', read: false, avatar: 'RM' },
-  { id: 2, from: 'Compliance Team', subject: 'KYC Annual Renewal Reminder', preview: 'Your KYC documents are due for renewal by...', time: '1d ago', read: false, avatar: 'CT' },
-  { id: 3, from: 'Fund Operations', subject: 'Distribution Notice - NBFC Pool', preview: 'We are pleased to inform you of a quarterly...', time: '3d ago', read: true, avatar: 'FO' },
-  { id: 4, from: 'GHL Research', subject: 'Market Insight: Real Estate Opportunities', preview: 'Our latest research report on stressed assets...', time: '5d ago', read: true, avatar: 'GR' },
-]
-
-const MOCK_SUPPORT_TICKETS = [
-  { id: 'TKT-001', subject: 'Tax Certificate for FY2024', status: 'resolved', date: '10 Mar 2025', priority: 'medium' },
-  { id: 'TKT-002', subject: 'Update bank account details', status: 'open', date: '18 Mar 2025', priority: 'high' },
-]
-
-const MOCK_NOTIFICATIONS = [
-  { id: 1, title: 'Q4 NAV Report Published', desc: 'Latest quarterly NAV report is now available', time: '2h ago', type: 'report', read: false },
-  { id: 2, title: 'Distribution Credited', desc: '₹2.5L credited to your bank account', time: '1d ago', type: 'finance', read: false },
-  { id: 3, title: 'New Investment Opportunity', desc: 'GHL Series B fund is now open for subscription', time: '2d ago', type: 'opportunity', read: true },
-  { id: 4, title: 'KYC Renewal Due', desc: 'Annual KYC verification due by April 30', time: '3d ago', type: 'compliance', read: true },
-  { id: 5, title: 'Tax Statement Ready', desc: 'FY2024 capital gains statement is ready', time: '5d ago', type: 'document', read: true },
-]
-
-const MOCK_KYC_STEPS = [
-  { id: 'personal', label: 'Personal Details', status: 'completed' },
-  { id: 'identity', label: 'Identity Verification', status: 'completed' },
-  { id: 'address', label: 'Address Proof', status: 'completed' },
-  { id: 'bank', label: 'Bank Verification', status: 'in-review' },
-  { id: 'risk', label: 'Risk Assessment', status: 'pending' },
-  { id: 'agreement', label: 'Agreement Signing', status: 'pending' },
-]
-
-const MOCK_DOCUMENTS = [
-  { name: 'PAN Card', status: 'verified', date: '15 Jan 2025', type: 'identity' },
-  { name: 'Aadhaar Card', status: 'verified', date: '15 Jan 2025', type: 'identity' },
-  { name: 'Bank Statement', status: 'verified', date: '01 Mar 2025', type: 'financial' },
-  { name: 'Passport Photo', status: 'verified', date: '15 Jan 2025', type: 'identity' },
-  { name: 'Cancelled Cheque', status: 'verified', date: '15 Jan 2025', type: 'financial' },
-  { name: 'Address Proof', status: 'pending', date: '-', type: 'address' },
-  { name: 'Q4 NAV Report', status: 'available', date: '18 Mar 2025', type: 'report' },
-  { name: 'Annual Statement FY24', status: 'available', date: '01 Apr 2025', type: 'report' },
-  { name: 'TDS Certificate', status: 'available', date: '15 Mar 2025', type: 'tax' },
-]
-
-const MOCK_ADMIN_NEWS = [
-  { id: 1, title: 'GHL Fund Manager Commentary - Q4 2024', excerpt: 'Our quarterly review of fund performance and market outlook...', date: '18 Mar 2025', pinned: true, category: 'Fund Update' },
-  { id: 2, title: 'New AIF Category II Fund Launch', excerpt: 'We are excited to announce our new stressed assets fund...', date: '15 Mar 2025', pinned: false, category: 'New Fund' },
-  { id: 3, title: 'Regulatory Update: SEBI AIF Guidelines', excerpt: 'Key changes to SEBI AIF regulations effective April 2025...', date: '10 Mar 2025', pinned: false, category: 'Regulatory' },
-  { id: 4, title: 'Investor Meet - Mumbai, April 12', excerpt: 'Join us for our quarterly investor meet and portfolio review...', date: '05 Mar 2025', pinned: false, category: 'Event' },
-]
 
 // ── Safe query helper (catches network/SSL/HTML errors) ─────
 async function safeFetch<T>(
@@ -122,64 +32,103 @@ async function safeFetch<T>(
 // ── Service Functions ───────────────────────────────────────
 
 export async function fetchPortfolioAssets(clientId?: string) {
-  if (!isSupabaseConfigured() || !clientId) return MOCK_PORTFOLIO_ASSETS
+  if (!isSupabaseConfigured() || !clientId) return []
   return safeFetch(
     () => sb.from('investments').select('*').eq('client_id', clientId),
-    MOCK_PORTFOLIO_ASSETS, 'fetchPortfolioAssets',
+    [], 'fetchPortfolioAssets',
   )
 }
 
 export async function fetchNAVHistory(clientId?: string) {
-  if (!isSupabaseConfigured()) return MOCK_NAV_HISTORY
-  // NAV history would come from a nav_history table — for now, mock
-  return MOCK_NAV_HISTORY
+  if (!isSupabaseConfigured() || !clientId) return []
+  return safeFetch(
+    () => sb.from('nav_history').select('*').eq('client_id', clientId).order('month', { ascending: true }),
+    [], 'fetchNAVHistory',
+  )
 }
 
-export function getAllocation() { return MOCK_ALLOCATION }
+export async function getAllocation(clientId?: string) {
+  if (!isSupabaseConfigured() || !clientId) return []
+  // Compute allocation from investments
+  try {
+    const { data } = await sb.from('investments').select('fund_type, current_value').eq('client_id', clientId)
+    if (!data || data.length === 0) return []
+    const totals: Record<string, number> = {}
+    let total = 0
+    for (const inv of data as any[]) {
+      const type = inv.fund_type || 'Other'
+      totals[type] = (totals[type] || 0) + (Number(inv.current_value) || 0)
+      total += Number(inv.current_value) || 0
+    }
+    const colors: Record<string, string> = { 'Stressed RE': '#D0021B', 'Startups': '#F59E0B', 'Fixed Income': '#3B82F6', 'Direct RE': '#10B981' }
+    return Object.entries(totals).map(([name, value]) => ({
+      name,
+      value: total > 0 ? Math.round((value / total) * 100) : 0,
+      color: colors[name] || '#6B7280',
+    }))
+  } catch { return [] }
+}
 
 export async function fetchTransactions(clientId?: string) {
-  if (!isSupabaseConfigured() || !clientId) return MOCK_TRANSACTIONS
+  if (!isSupabaseConfigured() || !clientId) return []
   return safeFetch(
     () => sb.from('transactions').select('*').eq('client_id', clientId).order('date', { ascending: false }),
-    MOCK_TRANSACTIONS, 'fetchTransactions',
+    [], 'fetchTransactions',
   )
 }
 
 export async function fetchMessages(clientId?: string) {
-  if (!isSupabaseConfigured() || !clientId) return MOCK_MESSAGES
+  if (!isSupabaseConfigured() || !clientId) return []
   return safeFetch(
     () => sb.from('messages').select('*').eq('to_id', clientId).order('created_at', { ascending: false }),
-    MOCK_MESSAGES, 'fetchMessages',
+    [], 'fetchMessages',
   )
 }
 
 export async function fetchSupportTickets(clientId?: string) {
-  if (!isSupabaseConfigured() || !clientId) return MOCK_SUPPORT_TICKETS
+  if (!isSupabaseConfigured() || !clientId) return []
   return safeFetch(
     () => sb.from('tickets').select('*').eq('client_id', clientId).order('created_at', { ascending: false }),
-    MOCK_SUPPORT_TICKETS, 'fetchSupportTickets',
+    [], 'fetchSupportTickets',
   )
 }
 
 export async function fetchNotifications(clientId?: string) {
-  if (!isSupabaseConfigured() || !clientId) return MOCK_NOTIFICATIONS
+  if (!isSupabaseConfigured() || !clientId) return []
   return safeFetch(
     () => sb.from('notifications').select('*').eq('user_id', clientId).order('created_at', { ascending: false }).limit(20),
-    MOCK_NOTIFICATIONS, 'fetchNotifications',
+    [], 'fetchNotifications',
   )
 }
 
-export function getKYCSteps() { return MOCK_KYC_STEPS }
+export async function getKYCSteps(clientId?: string) {
+  if (!isSupabaseConfigured() || !clientId) return []
+  try {
+    const { data } = await sb.from('kyc_documents').select('type, status').eq('client_id', clientId)
+    if (!data || data.length === 0) return []
+    return (data as any[]).map((d: any) => ({
+      id: d.type,
+      label: d.type?.replace(/_/g, ' ').replace(/\b\w/g, (c: string) => c.toUpperCase()),
+      status: d.status,
+    }))
+  } catch { return [] }
+}
 
 export async function fetchDocuments(clientId?: string) {
-  if (!isSupabaseConfigured() || !clientId) return MOCK_DOCUMENTS
+  if (!isSupabaseConfigured() || !clientId) return []
   return safeFetch(
     () => sb.from('documents').select('*').eq('client_id', clientId).order('uploaded_at', { ascending: false }),
-    MOCK_DOCUMENTS, 'fetchDocuments',
+    [], 'fetchDocuments',
   )
 }
 
-export function getAdminNews() { return MOCK_ADMIN_NEWS }
+export async function getAdminNews() {
+  if (!isSupabaseConfigured()) return []
+  try {
+    const { data } = await sb.from('announcements').select('*').order('created_at', { ascending: false }).limit(10)
+    return data || []
+  } catch { return [] }
+}
 
 // ── CRUD ────────────────────────────────────────────────────
 

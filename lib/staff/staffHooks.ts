@@ -6,7 +6,7 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import type { StaffSession, StaffRole, AgentStatus } from './staffTypes'
-import { getStaffSession, logoutStaff } from './staffAuth'
+import { getStaffSession, logoutStaff } from '@/lib/supabase/staffAuthService'
 
 // ── useStaffAuth ────────────────────────────────────────────────
 export function useStaffAuth() {
@@ -14,18 +14,18 @@ export function useStaffAuth() {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    const s = getStaffSession()
-    setSession(s)
-    setLoading(false)
+    getStaffSession().then(s => {
+      setSession(s)
+      setLoading(false)
+    })
   }, [])
 
   const logout = useCallback(() => {
-    logoutStaff()
-    setSession(null)
+    logoutStaff().then(() => setSession(null))
   }, [])
 
   const refreshSession = useCallback(() => {
-    setSession(getStaffSession())
+    getStaffSession().then(s => setSession(s))
   }, [])
 
   return {

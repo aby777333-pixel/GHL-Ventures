@@ -783,11 +783,34 @@ function ConsultationForm() {
   })
   const [submitted, setSubmitted] = useState(false)
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    // CRM integration scaffolding — log data, show success
-    console.log('NRI Consultation Form:', formData)
     setSubmitted(true)
+    try {
+      const { submitContactForm, submitLead } = await import('@/lib/supabase/reportsDataService')
+      await Promise.all([
+        submitContactForm({
+          formType: 'nri_invest',
+          fullName: formData.name,
+          email: formData.email,
+          phone: formData.phone,
+          city: formData.country,
+          message: `Route: ${formData.route}\nInvestment Range: ${formData.investmentRange}\n\n${formData.message}`,
+          investmentRange: formData.investmentRange,
+          investmentInterest: 'nri-investment',
+          pageUrl: typeof window !== 'undefined' ? window.location.href : '',
+        }),
+        submitLead({
+          firstName: formData.name.split(' ')[0] || '',
+          lastName: formData.name.split(' ').slice(1).join(' ') || '',
+          email: formData.email,
+          phone: formData.phone,
+          city: formData.country,
+          source: 'website',
+          investmentInterest: 'nri-investment',
+        }),
+      ])
+    } catch (err) { console.warn('NRI form Supabase error:', err) }
   }
 
   return (

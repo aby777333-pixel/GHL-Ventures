@@ -3,9 +3,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Eye, EyeOff, Shield, Lock, Fingerprint, AlertCircle } from 'lucide-react'
-import { loginStaff as mockLoginStaff } from '@/lib/staff/staffAuth'
-import { loginStaff as supaLoginStaff } from '@/lib/supabase/staffAuthService'
-import { isSupabaseConfigured } from '@/lib/supabase/client'
+import { loginStaff } from '@/lib/supabase/staffAuthService'
 import Logo from '@/components/Logo'
 import { BRAND } from '@/lib/constants'
 
@@ -24,9 +22,7 @@ export default function StaffLoginPage() {
     setLoading(true)
 
     try {
-      const session = isSupabaseConfigured()
-        ? await supaLoginStaff(email, password, staffCode)
-        : mockLoginStaff(email, password, staffCode)
+      const session = await loginStaff(email, password, staffCode)
 
       if (session) {
         router.push('/staff')
@@ -181,33 +177,6 @@ export default function StaffLoginPage() {
             <span>•</span>
             <span>IP Monitored</span>
           </div>
-        </div>
-
-        {/* Demo Credentials */}
-        <div className="mt-6">
-          <details className="group">
-            <summary className="text-[10px] text-gray-600 cursor-pointer hover:text-gray-400 transition-colors text-center">
-              Demo Credentials
-            </summary>
-            <div className="mt-2 rounded-xl bg-white/[0.03] border border-white/[0.06] p-3 space-y-1">
-              {[
-                { email: 'cs.lead@ghlindiaventures.com', code: 'GHL001', role: 'CS Lead' },
-                { email: 'agent1@ghlindiaventures.com', code: 'GHL010', role: 'CS Agent' },
-                { email: 'field1@ghlindiaventures.com', code: 'GHL026', role: 'Field Sales' },
-                { email: 'employee@ghlindiaventures.com', code: 'GHL050', role: 'Employee' },
-              ].map(d => (
-                <button
-                  key={d.email}
-                  onClick={() => { setEmail(d.email); setStaffCode(d.code) }}
-                  className="w-full flex items-center justify-between text-left px-2 py-1.5 rounded-lg hover:bg-white/[0.04] transition-colors"
-                >
-                  <span className="text-[10px] text-gray-500 truncate">{d.email}</span>
-                  <span className="text-[9px] text-teal-400/70 font-medium ml-2 shrink-0">{d.role}</span>
-                </button>
-              ))}
-              <p className="text-[9px] text-gray-600 mt-1">Password pattern: GHLX2025! (check docs)</p>
-            </div>
-          </details>
         </div>
       </div>
     </div>

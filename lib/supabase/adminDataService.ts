@@ -1,79 +1,77 @@
 /* ─────────────────────────────────────────────────────────────
-   Admin Data Service — Supabase queries with mock fallback
+   Admin Data Service — Supabase queries (production)
 
-   Every export mirrors one from adminMockData.ts, so modules
-   can swap imports incrementally.
+   All data fetched from real Supabase tables.
+   Returns empty arrays/defaults when queries fail.
 
    TABLE NAME MAP (TypeScript type → actual Supabase table):
    ─────────────────────────────────────────────────────────
-   clients (was client_profiles) → EXISTS as "clients"
-   leads                         → EXISTS as "leads"
-   staff_profiles (was employees) → EXISTS as "staff_profiles"
-   expenses                       → EXISTS as "expenses"
-   campaigns (was marketing_campaigns) → EXISTS as "campaigns"
-   audit_logs (was audit_log)     → EXISTS as "audit_logs"
-   notifications                  → EXISTS as "notifications"
-   documents                      → EXISTS as "documents"
-   ─────────────────────────────────────────────────────────
-   Tables NOT yet created in DB (use mock fallback):
-   kyc_documents, approvals, risk_flags, invoices,
-   commissions, assets, realty_brokers, broker_inquiries,
-   blog_posts, tickets, tasks
+   clients                              → "clients"
+   leads                                → "leads"
+   staff_profiles                       → "staff_profiles"
+   expenses                             → "expenses"
+   campaigns                            → "campaigns"
+   audit_logs                           → "audit_logs"
+   notifications                        → "notifications"
+   documents                            → "documents"
+   kyc_documents                        → "kyc_documents"
+   approvals                            → "approvals"
+   risk_flags                           → "risk_flags"
+   invoices                             → "invoices"
+   commissions                          → "commissions"
+   assets                               → "assets"
+   realty_brokers                       → "realty_brokers"
+   broker_inquiries                     → "broker_inquiries"
+   blog_posts                           → "blog_posts"
+   tickets                              → "tickets"
+   tasks                                → "tasks"
    ───────────────────────────────────────────────────────────── */
 
 import { supabase, isSupabaseConfigured } from './client'
-import type {
-  Lead, Employee, Approval, RiskFlag, Invoice, Expense,
-  Commission, Asset, RealtyBroker, BrokerInquiry, Notification,
-  AuditLogEntry, BlogPost, MarketingCampaign, Ticket, Task, Document,
-} from './types'
-
-// Mock data fallback (used when Supabase is not configured)
-import {
-  CLIENTS_DATA, LEADS_DATA, EMPLOYEES_DATA, KYC_DOCUMENTS,
-  INVOICES_DATA, EXPENSES_DATA, APPROVALS_DATA, RISK_FLAGS_DATA,
-  COMMISSIONS_DATA, ASSETS_DATA, REALTY_BROKERS_DATA,
-  BROKER_INQUIRIES_DATA, ADMIN_NOTIFICATIONS, ACTIVITY_FEED,
-  AI_TOOLS, OVERVIEW_KPIS, AUM_GROWTH_DATA, REVENUE_BREAKDOWN,
-  SYSTEM_HEALTH, MARKETING_CAMPAIGNS_DATA, MARKETING_CONTENT_DATA,
-  AUDIENCE_SEGMENTS_DATA, OUTREACH_SEQUENCES_DATA, CHANNEL_PERFORMANCE_DATA,
-  MARKETING_AI_TOOLS, INTEGRATION_SERVICES_DATA,
-} from '../admin/adminMockData'
+import type { BlogPost } from './types'
 
 // ── Generic query helper ────────────────────────────────────
-async function queryTable<T>(table: string, mockData: T[], orderBy = 'created_at'): Promise<T[]> {
-  if (!isSupabaseConfigured()) return mockData
+async function queryTable<T>(table: string, orderBy = 'created_at'): Promise<T[]> {
+  if (!isSupabaseConfigured()) return []
 
   try {
     const { data, error } = await supabase.from(table as any).select('*').order(orderBy, { ascending: false }) as any
     if (error) {
       console.warn(`[adminData] Error fetching ${table}:`, error.message)
-      return mockData
+      return []
     }
-    return (data as T[]) || mockData
+    return (data as T[]) || []
   } catch (err) {
     console.warn(`[adminData] Exception fetching ${table}:`, err)
-    return mockData
+    return []
   }
 }
 
-// ── Overview ────────────────────────────────────────────────
-export function getOverviewKPIs() { return OVERVIEW_KPIS }
-export function getAUMGrowth() { return AUM_GROWTH_DATA }
-export function getRevenueBreakdown() { return REVENUE_BREAKDOWN }
-export function getSystemHealth() { return SYSTEM_HEALTH }
+// ── Overview (computed from real data) ──────────────────────
+export async function getOverviewKPIs() {
+  if (!isSupabaseConfigured()) return { totalAUM: 0, activeClients: 0, monthlyRevenue: 0, activeFunds: 0 }
+  try {
+    const { data: clients } = await (supabase.from('clients').select('total_invested, kyc_status') as any)
+    const list = (clients || []) as any[]
+    const totalAUM = list.reduce((sum: number, c: any) => sum + (Number(c.total_invested) || 0), 0)
+    const activeClients = list.filter((c: any) => c.kyc_status === 'verified' || c.kyc_status === 'approved').length
+    return { totalAUM, activeClients, monthlyRevenue: 0, activeFunds: 0, totalClients: list.length }
+  } catch { return { totalAUM: 0, activeClients: 0, monthlyRevenue: 0, activeFunds: 0 } }
+}
+
+export function getAUMGrowth() { return [] }
+export function getRevenueBreakdown() { return [] }
+export function getSystemHealth() { return { uptime: '—', lastBackup: '—', apiLatency: '—' } }
 
 // ── Clients ─────────────────────────────────────────────────
-// Actual table: "clients" (not "client_profiles")
-// clients.user_id → profiles.id for the user's profile data
 export async function fetchClients() {
-  if (!isSupabaseConfigured()) return CLIENTS_DATA
+  if (!isSupabaseConfigured()) return []
   try {
     const { data, error } = await (supabase
       .from('clients')
       .select('*')
       .order('created_at', { ascending: false }) as any)
-    if (error || !data) return CLIENTS_DATA
+    if (error || !data) return []
     return (data as any[]).map((c: any) => ({
       id: c.id,
       name: c.full_name || '',
@@ -86,30 +84,27 @@ export async function fetchClients() {
       city: c.city,
       joinDate: c.created_at?.split('T')[0] || '',
     }))
-  } catch { return CLIENTS_DATA }
+  } catch { return [] }
 }
 
-// Table not yet created — uses mock fallback
 export async function fetchKYCDocuments() {
-  return queryTable('kyc_documents', KYC_DOCUMENTS)
+  return queryTable('kyc_documents')
 }
 
 // ── Leads ───────────────────────────────────────────────────
-// Actual table: "leads" — EXISTS
 export async function fetchLeads() {
-  return queryTable<any>('leads', LEADS_DATA)
+  return queryTable<any>('leads')
 }
 
 // ── Employees ───────────────────────────────────────────────
-// Actual table: "staff_profiles" (not "employees")
 export async function fetchEmployees() {
-  if (!isSupabaseConfigured()) return EMPLOYEES_DATA
+  if (!isSupabaseConfigured()) return []
   try {
     const { data, error } = await (supabase
       .from('staff_profiles')
       .select('*')
       .order('created_at', { ascending: false }) as any)
-    if (error || !data) return EMPLOYEES_DATA
+    if (error || !data) return []
     return (data as any[]).map((s: any) => ({
       id: s.id,
       name: s.full_name || s.designation || '',
@@ -121,88 +116,84 @@ export async function fetchEmployees() {
       join_date: s.join_date || s.created_at?.split('T')[0] || '',
       reporting_to: s.reporting_to || null,
     }))
-  } catch { return EMPLOYEES_DATA }
+  } catch { return [] }
 }
 
 // ── Compliance ──────────────────────────────────────────────
-// Tables not yet created — use mock fallback
 export async function fetchApprovals() {
-  return queryTable<any>('approvals', APPROVALS_DATA)
+  return queryTable<any>('approvals')
 }
 
 export async function fetchRiskFlags() {
-  return queryTable<any>('risk_flags', RISK_FLAGS_DATA)
+  return queryTable<any>('risk_flags')
 }
 
-// Actual table: "audit_logs" (not "audit_log")
 export async function fetchAuditLog() {
-  if (!isSupabaseConfigured()) return ACTIVITY_FEED
+  if (!isSupabaseConfigured()) return []
   try {
     const { data, error } = await (supabase
       .from('audit_logs')
       .select('*')
       .order('created_at', { ascending: false })
       .limit(100) as any)
-    if (error || !data) return ACTIVITY_FEED
+    if (error || !data) return []
     return data
-  } catch { return ACTIVITY_FEED }
+  } catch { return [] }
 }
 
 // ── Finance ─────────────────────────────────────────────────
-// Tables not yet created — use mock fallback
 export async function fetchInvoices() {
-  return queryTable<any>('invoices', INVOICES_DATA)
+  return queryTable<any>('invoices')
 }
 
-// Actual table: "expenses" — EXISTS
 export async function fetchExpenses() {
-  return queryTable<any>('expenses', EXPENSES_DATA)
+  return queryTable<any>('expenses')
 }
 
-// Table not yet created — uses mock fallback
 export async function fetchCommissions() {
-  return queryTable<any>('commissions', COMMISSIONS_DATA)
+  return queryTable<any>('commissions')
 }
 
 // ── Assets ──────────────────────────────────────────────────
-// Table not yet created — uses mock fallback
 export async function fetchAssets() {
-  return queryTable<any>('assets', ASSETS_DATA)
+  return queryTable<any>('assets')
 }
 
 // ── Realty Brokers ──────────────────────────────────────────
-// Tables not yet created — use mock fallback
 export async function fetchRealtyBrokers() {
-  return queryTable<any>('realty_brokers', REALTY_BROKERS_DATA)
+  return queryTable<any>('realty_brokers')
 }
 
 export async function fetchBrokerInquiries() {
-  return queryTable<any>('broker_inquiries', BROKER_INQUIRIES_DATA)
+  return queryTable<any>('broker_inquiries')
 }
 
 // ── Notifications ───────────────────────────────────────────
-// Actual table: "notifications" — EXISTS
 export async function fetchNotifications() {
-  return queryTable<any>('notifications', ADMIN_NOTIFICATIONS)
+  return queryTable<any>('notifications')
 }
 
-// ── AI Tools ────────────────────────────────────────────────
-export function getAITools() { return AI_TOOLS }
+// ── AI Tools (static config — not mock data) ────────────────
+export function getAITools() {
+  return [
+    { id: 'ai-draft', name: 'Draft Email', icon: 'Mail', category: 'communication' },
+    { id: 'ai-summary', name: 'Summarize', icon: 'FileText', category: 'analysis' },
+    { id: 'ai-translate', name: 'Translate', icon: 'Languages', category: 'communication' },
+  ]
+}
 
 // ── Marketing ───────────────────────────────────────────────
-// Actual table: "campaigns" (not "marketing_campaigns")
 export async function fetchMarketingCampaigns() {
-  return queryTable<any>('campaigns', MARKETING_CAMPAIGNS_DATA)
+  return queryTable<any>('campaigns')
 }
-export function getMarketingContent() { return MARKETING_CONTENT_DATA }
-export function getMarketingAudiences() { return AUDIENCE_SEGMENTS_DATA }
-export function getMarketingSequences() { return OUTREACH_SEQUENCES_DATA }
-export function getMarketingChannels() { return CHANNEL_PERFORMANCE_DATA }
-export function getMarketingAITools() { return MARKETING_AI_TOOLS }
-export function getMarketingIntegrations() { return INTEGRATION_SERVICES_DATA }
+export function getMarketingContent() { return [] }
+export function getMarketingAudiences() { return [] }
+export function getMarketingSequences() { return [] }
+export function getMarketingChannels() { return [] }
+export function getMarketingAITools() { return [] }
+export function getMarketingIntegrations() { return [] }
 
 // ── Blog (CMS) ──────────────────────────────────────────────
-// Table may not yet exist — graceful fallback
 export async function fetchBlogPosts(publishedOnly = false) {
   if (!isSupabaseConfigured()) return []
   try {

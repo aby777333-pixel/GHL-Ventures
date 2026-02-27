@@ -1,24 +1,19 @@
 /* ─────────────────────────────────────────────────────────────
-   Lead Service — Comprehensive lead management with auto-routing
+   Lead Service — Comprehensive lead management (production)
 
    Handles:
-   • Lead CRUD with auto-folder creation in Sales & Reports
-   • Lead assignment & routing to staff (employee portal)
-   • Document attachment per lead
-   • Source tracking (campaigns, website, landing pages, calls)
-   • Lead-to-client conversion
-   • Stats & analytics
+   - Lead CRUD with auto-folder creation in Sales & Reports
+   - Lead assignment & routing to staff (employee portal)
+   - Document attachment per lead
+   - Source tracking (campaigns, website, landing pages, calls)
+   - Lead-to-client conversion
+   - Stats & analytics
 
-   Falls back to mock data when Supabase is not configured.
+   All data from real Supabase tables.
    ───────────────────────────────────────────────────────────── */
 
 import { supabase, isSupabaseConfigured } from './client'
 import type { Lead, LeadStage, LeadSource } from '../admin/adminTypes'
-import { LEADS_DATA } from '../admin/adminMockData'
-
-// ── Constants ────────────────────────────────────────────────
-const SALES_FOLDER_ID  = '00000000-0000-0000-0001-000000000011'  // Sales & CRM root
-const REPORTS_FOLDER_ID = '00000000-0000-0000-0001-000000000010' // Reports & Analytics root
 
 // ── Types ────────────────────────────────────────────────────
 
@@ -30,11 +25,10 @@ export interface CreateLeadInput {
   stage?: LeadStage
   value?: number
   probability?: number
-  assignedTo?: string       // staff profile ID
+  assignedTo?: string
   notes?: string
   tags?: string[]
   preferredContactMethod?: 'phone' | 'email' | 'whatsapp' | 'in-person'
-  // Source tracking
   campaignId?: string
   utmSource?: string
   utmMedium?: string
@@ -106,59 +100,34 @@ export interface LeadFolderMapping {
   createdAt: string
 }
 
-// ── Mock data helpers ────────────────────────────────────────
-
-const MOCK_ACTIVITIES: LeadActivity[] = [
-  { id: 'la-1', leadId: 'L-001', type: 'call', description: 'Initial discovery call — discussed PMS interest', performedBy: 'staff-1', performedByName: 'Priya Natarajan', createdAt: '2025-03-18T10:30:00Z' },
-  { id: 'la-2', leadId: 'L-001', type: 'email', description: 'Sent PPM overview document', performedBy: 'staff-1', performedByName: 'Priya Natarajan', createdAt: '2025-03-16T14:00:00Z' },
-  { id: 'la-3', leadId: 'L-002', type: 'meeting', description: 'In-person meeting at Mumbai office, proposal presented', performedBy: 'staff-1', performedByName: 'Priya Natarajan', createdAt: '2025-03-19T11:00:00Z' },
-  { id: 'la-4', leadId: 'L-003', type: 'call', description: 'Follow-up call, client interested in AIF Cat-III', performedBy: 'staff-2', performedByName: 'Vikram Malhotra', createdAt: '2025-03-17T09:15:00Z' },
-  { id: 'la-5', leadId: 'L-004', type: 'whatsapp', description: 'WhatsApp follow-up with brochure link', performedBy: 'staff-2', performedByName: 'Vikram Malhotra', createdAt: '2025-03-15T16:45:00Z' },
-  { id: 'la-6', leadId: 'L-005', type: 'note', description: 'Lead went cold — no response in 2 weeks', performedBy: 'staff-3', performedByName: 'Arjun Reddy', createdAt: '2025-03-10T08:00:00Z' },
-]
-
-const MOCK_NOTIFICATIONS: LeadNotification[] = [
-  { id: 'sn-1', staffId: 'staff-1', leadId: 'L-001', notificationType: 'new_assignment', title: 'New Lead Assigned: Suresh Kumar', message: 'Lead Suresh Kumar (suresh.k@corp.com) has been assigned to you. Source: website.', isRead: true, readAt: '2025-03-01T09:00:00Z', createdAt: '2025-03-01T08:30:00Z' },
-  { id: 'sn-2', staffId: 'staff-1', leadId: 'L-002', notificationType: 'new_assignment', title: 'New Lead Assigned: Ramya Venkat', message: 'Lead Ramya Venkat (ramya.v@biz.com) has been assigned to you. Source: referral.', isRead: true, readAt: '2025-02-15T10:00:00Z', createdAt: '2025-02-15T09:00:00Z' },
-  { id: 'sn-3', staffId: 'staff-2', leadId: 'L-003', notificationType: 'new_assignment', title: 'New Lead Assigned: Anand Iyer', message: 'Lead Anand Iyer has been assigned to you. Source: event.', isRead: false, createdAt: '2025-03-10T11:00:00Z' },
-  { id: 'sn-4', staffId: 'staff-1', leadId: 'L-002', notificationType: 'status_change', title: 'Lead Status Changed: Ramya Venkat', message: 'Lead Ramya Venkat status changed from qualified to proposal.', isRead: false, createdAt: '2025-03-19T12:00:00Z' },
-]
-
-let mockLeadCounter = LEADS_DATA.length + 1
+// ── Helper: map DB row to Lead type ─────────────────────────
+function mapLead(l: any): Lead {
+  return {
+    id: l.id,
+    name: l.name,
+    email: l.email || '',
+    phone: l.phone || '',
+    source: l.source,
+    stage: l.status,
+    value: l.deal_value || 0,
+    probability: l.probability || 0,
+    aiScore: l.ai_score || 50,
+    assignedTo: l.assigned_to || 'Unassigned',
+    createdDate: l.created_at?.split('T')[0] || '',
+    lastTouched: l.updated_at?.split('T')[0] || '',
+    nextFollowUp: l.next_follow_up?.split('T')[0],
+    notes: l.notes,
+  }
+}
 
 // ── Create Lead ──────────────────────────────────────────────
-// Creates lead + auto-creates Sales & Reports folders + logs activity + source tracking
 
 export async function createLead(input: CreateLeadInput): Promise<{ success: boolean; lead?: Lead; error?: string }> {
   if (!isSupabaseConfigured()) {
-    // Mock mode — simulate creation
-    const newLead: Lead = {
-      id: `L-${String(mockLeadCounter++).padStart(3, '0')}`,
-      name: input.name,
-      email: input.email || '',
-      phone: input.phone || '',
-      source: input.source as LeadSource,
-      stage: input.stage || 'new',
-      value: input.value || 0,
-      probability: input.probability || 20,
-      aiScore: Math.floor(Math.random() * 40) + 50,
-      assignedTo: input.assignedTo || 'Unassigned',
-      createdDate: new Date().toISOString().split('T')[0],
-      lastTouched: new Date().toISOString().split('T')[0],
-      notes: input.notes,
-    }
-
-    // Mock folder creation log
-    console.debug(`[leadService] Mock: Created lead ${newLead.id} "${newLead.name}"`)
-    console.debug(`[leadService] Mock: Auto-created Sales folder /sales/lead-${newLead.name.toLowerCase().replace(/[^a-z0-9]/g, '-')}`)
-    console.debug(`[leadService] Mock: Auto-created Reports folder /reports/lead-${newLead.name.toLowerCase().replace(/[^a-z0-9]/g, '-')}`)
-
-    LEADS_DATA.push(newLead)
-    return { success: true, lead: newLead }
+    return { success: false, error: 'Service unavailable' }
   }
 
   try {
-    // Insert lead — trigger fn_create_lead_folders auto-creates folders
     const { data: lead, error } = await supabase
       .from('leads' as any)
       .insert({
@@ -211,24 +180,7 @@ export async function createLead(input: CreateLeadInput): Promise<{ success: boo
         description: `Lead created from ${input.source}${input.campaignId ? ' (campaign)' : ''}`,
       } as any)
 
-    // Map to front-end Lead shape
-    const mappedLead: Lead = {
-      id: lead.id,
-      name: lead.name,
-      email: lead.email || '',
-      phone: lead.phone || '',
-      source: lead.source,
-      stage: lead.status,
-      value: lead.deal_value || 0,
-      probability: lead.probability || 0,
-      aiScore: lead.ai_score || 50,
-      assignedTo: lead.assigned_to || 'Unassigned',
-      createdDate: lead.created_at?.split('T')[0] || '',
-      lastTouched: lead.updated_at?.split('T')[0] || '',
-      notes: lead.notes,
-    }
-
-    return { success: true, lead: mappedLead }
+    return { success: true, lead: mapLead(lead) }
   } catch (err: any) {
     console.error('[leadService] createLead error:', err)
     return { success: false, error: err.message || 'Failed to create lead' }
@@ -242,15 +194,7 @@ export async function updateLeadStatus(
   stage: LeadStage,
   notes?: string
 ): Promise<{ success: boolean; error?: string }> {
-  if (!isSupabaseConfigured()) {
-    const lead = LEADS_DATA.find(l => l.id === leadId)
-    if (lead) {
-      lead.stage = stage
-      lead.lastTouched = new Date().toISOString().split('T')[0]
-      if (notes) lead.notes = notes
-    }
-    return { success: true }
-  }
+  if (!isSupabaseConfigured()) return { success: false, error: 'Service unavailable' }
 
   try {
     const { error } = await (supabase
@@ -264,7 +208,6 @@ export async function updateLeadStatus(
 
     if (error) throw error
 
-    // Log activity
     await supabase.from('lead_activities' as any).insert({
       lead_id: leadId,
       type: 'status_change',
@@ -285,15 +228,7 @@ export async function assignLead(
   staffId: string,
   staffName: string
 ): Promise<{ success: boolean; error?: string }> {
-  if (!isSupabaseConfigured()) {
-    const lead = LEADS_DATA.find(l => l.id === leadId)
-    if (lead) {
-      lead.assignedTo = staffName
-      lead.lastTouched = new Date().toISOString().split('T')[0]
-    }
-    console.debug(`[leadService] Mock: Assigned lead ${leadId} to ${staffName} (${staffId})`)
-    return { success: true }
-  }
+  if (!isSupabaseConfigured()) return { success: false, error: 'Service unavailable' }
 
   try {
     const { error } = await (supabase
@@ -306,9 +241,6 @@ export async function assignLead(
 
     if (error) throw error
 
-    // Trigger fn_notify_staff_on_lead fires automatically on UPDATE
-
-    // Log activity
     await supabase.from('lead_activities' as any).insert({
       lead_id: leadId,
       type: 'assignment',
@@ -329,14 +261,9 @@ export async function uploadLeadDocument(
   file: File,
   metadata?: { description?: string; category?: string }
 ): Promise<{ success: boolean; fileUrl?: string; error?: string }> {
-  if (!isSupabaseConfigured()) {
-    const url = URL.createObjectURL(file)
-    console.debug(`[leadService] Mock: Uploaded ${file.name} to lead ${leadId} folder`)
-    return { success: true, fileUrl: url }
-  }
+  if (!isSupabaseConfigured()) return { success: false, error: 'Service unavailable' }
 
   try {
-    // Get lead's sales folder
     const { data: mapping } = await supabase
       .from('lead_folder_mappings' as any)
       .select('folder_id')
@@ -347,19 +274,16 @@ export async function uploadLeadDocument(
     const folderId = mapping?.folder_id
     const filePath = `leads/${leadId}/${Date.now()}-${file.name}`
 
-    // Upload to storage
     const { error: uploadError } = await supabase.storage
       .from('ghl-documents')
       .upload(filePath, file)
 
     if (uploadError) throw uploadError
 
-    // Get public URL
     const { data: urlData } = supabase.storage
       .from('ghl-documents')
       .getPublicUrl(filePath)
 
-    // Create document record
     await supabase.from('documents' as any).insert({
       title: file.name,
       file_url: urlData.publicUrl,
@@ -372,7 +296,6 @@ export async function uploadLeadDocument(
       description: metadata?.description,
     } as any)
 
-    // Log activity
     await supabase.from('lead_activities' as any).insert({
       lead_id: leadId,
       type: 'document_upload',
@@ -392,18 +315,9 @@ export async function convertLeadToClient(
   leadId: string,
   clientData?: { riskProfile?: string; initialAum?: number }
 ): Promise<{ success: boolean; clientId?: string; error?: string }> {
-  if (!isSupabaseConfigured()) {
-    const lead = LEADS_DATA.find(l => l.id === leadId)
-    if (lead) {
-      lead.stage = 'won'
-      lead.lastTouched = new Date().toISOString().split('T')[0]
-    }
-    console.debug(`[leadService] Mock: Converted lead ${leadId} to client`)
-    return { success: true, clientId: `C-${Date.now()}` }
-  }
+  if (!isSupabaseConfigured()) return { success: false, error: 'Service unavailable' }
 
   try {
-    // Get lead details
     const { data: lead, error: leadErr } = await supabase
       .from('leads' as any)
       .select('*')
@@ -412,22 +326,23 @@ export async function convertLeadToClient(
 
     if (leadErr || !lead) throw leadErr || new Error('Lead not found')
 
-    // Create client profile
     const { data: client, error: clientErr } = await supabase
-      .from('client_profiles' as any)
+      .from('clients' as any)
       .insert({
+        full_name: lead.name,
+        email: lead.email,
+        phone: lead.phone,
         kyc_status: 'pending',
-        account_status: 'active',
         risk_profile: clientData?.riskProfile || 'moderate',
-        aum: clientData?.initialAum || lead.deal_value || 0,
+        total_invested: clientData?.initialAum || lead.deal_value || 0,
         assigned_rm: lead.assigned_to,
+        acquisition_source: lead.source,
       } as any)
       .select()
       .single() as any
 
     if (clientErr) throw clientErr
 
-    // Update lead as converted
     await (supabase.from('leads' as any) as any).update({
       status: 'won',
       converted_client_id: client.id,
@@ -435,19 +350,6 @@ export async function convertLeadToClient(
       updated_at: new Date().toISOString(),
     }).eq('id', leadId)
 
-    // Create client folder
-    const leadSlug = lead.name.toLowerCase().replace(/[^a-z0-9]/g, '-')
-    await supabase.from('folders' as any).insert({
-      name: lead.name,
-      slug: `client-${leadSlug}`,
-      parent_id: '00000000-0000-0000-0001-000000000003', // Client Documents root
-      path: `/clients/client-${leadSlug}`,
-      description: `Converted from lead. Original source: ${lead.source}`,
-      icon: 'UserCheck',
-      color: '#3B82F6',
-    } as any)
-
-    // Log activity
     await supabase.from('lead_activities' as any).insert({
       lead_id: leadId,
       type: 'converted',
@@ -464,31 +366,7 @@ export async function convertLeadToClient(
 // ── Fetch Leads (with filters) ───────────────────────────────
 
 export async function fetchLeads(filters?: LeadFilters): Promise<Lead[]> {
-  if (!isSupabaseConfigured()) {
-    let results = [...LEADS_DATA]
-
-    if (filters?.stage) {
-      const stages = Array.isArray(filters.stage) ? filters.stage : [filters.stage]
-      results = results.filter(l => stages.includes(l.stage))
-    }
-    if (filters?.source) {
-      const sources = Array.isArray(filters.source) ? filters.source : [filters.source]
-      results = results.filter(l => sources.includes(l.source))
-    }
-    if (filters?.assignedTo) {
-      results = results.filter(l => l.assignedTo === filters.assignedTo)
-    }
-    if (filters?.search) {
-      const q = filters.search.toLowerCase()
-      results = results.filter(l =>
-        l.name.toLowerCase().includes(q) ||
-        l.email.toLowerCase().includes(q) ||
-        l.phone.includes(q)
-      )
-    }
-
-    return results
-  }
+  if (!isSupabaseConfigured()) return []
 
   try {
     let query = supabase.from('leads' as any).select('*').order('created_at', { ascending: false }) as any
@@ -523,34 +401,17 @@ export async function fetchLeads(filters?: LeadFilters): Promise<Lead[]> {
     const { data, error } = await query
     if (error) throw error
 
-    return (data || []).map((l: any) => ({
-      id: l.id,
-      name: l.name,
-      email: l.email || '',
-      phone: l.phone || '',
-      source: l.source,
-      stage: l.status,
-      value: l.deal_value || 0,
-      probability: l.probability || 0,
-      aiScore: l.ai_score || 50,
-      assignedTo: l.assigned_to || 'Unassigned',
-      createdDate: l.created_at?.split('T')[0] || '',
-      lastTouched: l.updated_at?.split('T')[0] || '',
-      nextFollowUp: l.next_follow_up?.split('T')[0],
-      notes: l.notes,
-    }))
+    return (data || []).map(mapLead)
   } catch (err: any) {
     console.warn('[leadService] fetchLeads error:', err.message)
-    return LEADS_DATA
+    return []
   }
 }
 
 // ── Fetch Lead Activities ────────────────────────────────────
 
 export async function fetchLeadActivities(leadId: string): Promise<LeadActivity[]> {
-  if (!isSupabaseConfigured()) {
-    return MOCK_ACTIVITIES.filter(a => a.leadId === leadId)
-  }
+  if (!isSupabaseConfigured()) return []
 
   try {
     const { data, error } = await supabase
@@ -573,7 +434,7 @@ export async function fetchLeadActivities(leadId: string): Promise<LeadActivity[
     }))
   } catch (err: any) {
     console.warn('[leadService] fetchLeadActivities error:', err.message)
-    return MOCK_ACTIVITIES.filter(a => a.leadId === leadId)
+    return []
   }
 }
 
@@ -589,11 +450,7 @@ export async function fetchStaffLeadNotifications(
   staffId: string,
   unreadOnly = false
 ): Promise<LeadNotification[]> {
-  if (!isSupabaseConfigured()) {
-    let results = MOCK_NOTIFICATIONS.filter(n => n.staffId === staffId)
-    if (unreadOnly) results = results.filter(n => !n.isRead)
-    return results
-  }
+  if (!isSupabaseConfigured()) return []
 
   try {
     let query = supabase
@@ -622,18 +479,14 @@ export async function fetchStaffLeadNotifications(
     }))
   } catch (err: any) {
     console.warn('[leadService] fetchStaffLeadNotifications error:', err.message)
-    return MOCK_NOTIFICATIONS.filter(n => n.staffId === staffId)
+    return []
   }
 }
 
 // ── Mark Notification Read ───────────────────────────────────
 
 export async function markNotificationRead(notificationId: string): Promise<void> {
-  if (!isSupabaseConfigured()) {
-    const n = MOCK_NOTIFICATIONS.find(x => x.id === notificationId)
-    if (n) { n.isRead = true; n.readAt = new Date().toISOString() }
-    return
-  }
+  if (!isSupabaseConfigured()) return
 
   await (supabase
     .from('staff_lead_notifications' as any) as any)
@@ -644,15 +497,7 @@ export async function markNotificationRead(notificationId: string): Promise<void
 // ── Get Lead Folder Mappings ─────────────────────────────────
 
 export async function getLeadFolderMappings(leadId: string): Promise<LeadFolderMapping[]> {
-  if (!isSupabaseConfigured()) {
-    // Mock — simulate folder mappings
-    const slug = (LEADS_DATA.find(l => l.id === leadId)?.name || 'unknown')
-      .toLowerCase().replace(/[^a-z0-9]/g, '-')
-    return [
-      { id: `lfm-${leadId}-s`, leadId, folderId: `mock-sales-${slug}`, folderType: 'sales', createdAt: new Date().toISOString() },
-      { id: `lfm-${leadId}-r`, leadId, folderId: `mock-reports-${slug}`, folderType: 'reports', createdAt: new Date().toISOString() },
-    ]
-  }
+  if (!isSupabaseConfigured()) return []
 
   try {
     const { data, error } = await supabase
@@ -678,38 +523,13 @@ export async function getLeadFolderMappings(leadId: string): Promise<LeadFolderM
 // ── Get Lead Stats ───────────────────────────────────────────
 
 export async function getLeadStats(): Promise<LeadStats> {
+  const empty: LeadStats = { total: 0, byStatus: {}, bySource: {}, byQuality: {}, thisMonth: 0, lastMonth: 0, conversionRate: 0, avgResponseTime: 0, totalValue: 0 }
+  if (!isSupabaseConfigured()) return empty
+
   const now = new Date()
   const thisMonthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString()
   const lastMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1).toISOString()
   const lastMonthEnd = new Date(now.getFullYear(), now.getMonth(), 0).toISOString()
-
-  if (!isSupabaseConfigured()) {
-    const leads = LEADS_DATA
-    const byStatus: Record<string, number> = {}
-    const bySource: Record<string, number> = {}
-    let totalValue = 0
-
-    leads.forEach(l => {
-      byStatus[l.stage] = (byStatus[l.stage] || 0) + 1
-      bySource[l.source] = (bySource[l.source] || 0) + 1
-      totalValue += l.value
-    })
-
-    const won = leads.filter(l => l.stage === 'won').length
-    const total = leads.length
-
-    return {
-      total,
-      byStatus,
-      bySource,
-      byQuality: { hot: 2, warm: 3, cold: 1, unknown: total - 6 },
-      thisMonth: Math.ceil(total * 0.4),
-      lastMonth: Math.ceil(total * 0.35),
-      conversionRate: total > 0 ? Math.round((won / total) * 100) : 0,
-      avgResponseTime: 45,
-      totalValue,
-    }
-  }
 
   try {
     const { data: leads, error } = await supabase
@@ -749,26 +569,14 @@ export async function getLeadStats(): Promise<LeadStats> {
     }
   } catch (err: any) {
     console.warn('[leadService] getLeadStats error:', err.message)
-    return { total: 0, byStatus: {}, bySource: {}, byQuality: {}, thisMonth: 0, lastMonth: 0, conversionRate: 0, avgResponseTime: 0, totalValue: 0 }
+    return empty
   }
 }
 
 // ── Get Lead Source Tracking ─────────────────────────────────
 
 export async function getLeadSourceTracking(leadId: string): Promise<Record<string, unknown> | null> {
-  if (!isSupabaseConfigured()) {
-    // Mock source tracking
-    return {
-      utmSource: 'google',
-      utmMedium: 'cpc',
-      utmCampaign: 'q1-pms-campaign',
-      landingPageUrl: 'https://ghlindia.com/pms-offering',
-      referrerUrl: 'https://www.google.com',
-      geoCity: 'Mumbai',
-      geoState: 'Maharashtra',
-      deviceType: 'desktop',
-    }
-  }
+  if (!isSupabaseConfigured()) return null
 
   try {
     const { data, error } = await supabase

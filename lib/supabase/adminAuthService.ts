@@ -1,5 +1,5 @@
 /* ─────────────────────────────────────────────────────────────
-   Admin Auth Service — Supabase auth with mock fallback
+   Admin Auth Service — Supabase authentication (production)
 
    Uses the new schema: profiles table has role field directly.
    No separate admin_profiles table needed.
@@ -7,14 +7,6 @@
 
 import { supabase, isSupabaseConfigured } from './client'
 import type { AdminSession } from '../admin/adminTypes'
-
-// ── Fallback to mock auth when Supabase not configured ──────
-import {
-  authenticateAdmin as mockAuth,
-  getAdminSession as mockGetSession,
-  logoutAdmin as mockLogout,
-  logAuditEvent as mockAudit,
-} from '../admin/adminAuth'
 
 // Re-export types for convenience
 export type { AdminSession } from '../admin/adminTypes'
@@ -25,12 +17,21 @@ function mapDbRoleToAdminRole(dbRole: string): string {
   const roleMap: Record<string, string> = {
     super_admin: 'super-admin',
     admin: 'admin',
-    staff: 'viewer',
-    client: 'viewer',
+    compliance_officer: 'compliance-officer',
+    fund_manager: 'fund-manager',
+    manager: 'manager',
+    marketing_manager: 'marketing-manager',
+    marketing_executive: 'marketing-executive',
+    sales: 'sales',
+    operations: 'operations',
+    hr: 'hr',
     viewer: 'viewer',
   }
   return roleMap[dbRole] || 'viewer'
 }
+
+// ── Admin role whitelist (roles allowed in admin portal) ────
+const ADMIN_ROLES = ['super_admin', 'admin', 'compliance_officer', 'fund_manager', 'manager', 'marketing_manager', 'marketing_executive', 'sales', 'operations', 'hr']
 
 // ── Auth Functions ──────────────────────────────────────────
 
@@ -39,15 +40,15 @@ export async function authenticateAdmin(
   password: string
 ): Promise<AdminSession | null> {
   if (!isSupabaseConfigured()) {
-    return mockAuth(email, password)
+    console.warn('[adminAuth] Supabase not configured — cannot authenticate')
+    return null
   }
 
   try {
     const { data, error } = await supabase.auth.signInWithPassword({ email, password })
     if (error || !data.user) {
-      // User doesn't exist in Supabase yet — fall back to mock/demo auth
-      console.info('[adminAuth] Supabase auth failed, falling back to demo credentials')
-      return mockAuth(email, password)
+      console.warn('[adminAuth] Authentication failed:', error?.message)
+      return null
     }
 
     // Fetch profile with role
@@ -65,7 +66,7 @@ export async function authenticateAdmin(
     const p = profile as any
 
     // Only allow admin-level roles
-    if (!['super_admin', 'admin'].includes(p.role)) {
+    if (!ADMIN_ROLES.includes(p.role)) {
       await supabase.auth.signOut()
       return null
     }
@@ -85,15 +86,13 @@ export async function authenticateAdmin(
     await logAuditEvent(session.user.name, 'login', 'auth', `Admin login: ${email}`)
     return session
   } catch (err) {
-    console.warn('[adminAuth] Supabase auth error, falling back to mock:', err)
-    return mockAuth(email, password)
+    console.error('[adminAuth] Authentication error:', err)
+    return null
   }
 }
 
 export async function getAdminSession(): Promise<AdminSession | null> {
-  if (!isSupabaseConfigured()) {
-    return mockGetSession()
-  }
+  if (!isSupabaseConfigured()) return null
 
   try {
     const { data: { session } } = await supabase.auth.getSession()
@@ -109,7 +108,7 @@ export async function getAdminSession(): Promise<AdminSession | null> {
 
     const p = profile as any
 
-    if (!['super_admin', 'admin'].includes(p.role)) return null
+    if (!ADMIN_ROLES.includes(p.role)) return null
 
     return {
       user: {
@@ -123,15 +122,12 @@ export async function getAdminSession(): Promise<AdminSession | null> {
       expiresAt: Date.now() + 8 * 60 * 60 * 1000,
     }
   } catch {
-    return mockGetSession()
+    return null
   }
 }
 
 export async function logoutAdmin(): Promise<void> {
-  if (!isSupabaseConfigured()) {
-    mockLogout()
-    return
-  }
+  if (!isSupabaseConfigured()) return
 
   try {
     const session = await getAdminSession()
@@ -140,7 +136,8 @@ export async function logoutAdmin(): Promise<void> {
     }
     await supabase.auth.signOut()
   } catch {
-    mockLogout()
+    // Best-effort signout
+    try { await supabase.auth.signOut() } catch { /* ignore */ }
   }
 }
 
@@ -150,10 +147,7 @@ export async function logAuditEvent(
   module: string,
   details?: string
 ): Promise<void> {
-  if (!isSupabaseConfigured()) {
-    mockAudit(userName, action, module, details || '')
-    return
-  }
+  if (!isSupabaseConfigured()) return
 
   try {
     const { data: { session } } = await supabase.auth.getSession()

@@ -5,9 +5,7 @@ import { useRouter } from 'next/navigation'
 import { BRAND } from '@/lib/constants'
 import { Shield, Lock, Eye, EyeOff, AlertTriangle, KeyRound, Loader2 } from 'lucide-react'
 import Logo from '@/components/Logo'
-import { authenticateAdmin as mockAuth, getAdminSession as mockGetSession } from '@/lib/admin/adminAuth'
-import { authenticateAdmin as supaAuth, getAdminSession as supaGetSession } from '@/lib/supabase/adminAuthService'
-import { isSupabaseConfigured } from '@/lib/supabase/client'
+import { authenticateAdmin, getAdminSession } from '@/lib/supabase/adminAuthService'
 
 export default function AdminLoginPage() {
   const router = useRouter()
@@ -22,9 +20,7 @@ export default function AdminLoginPage() {
   // Redirect if already logged in
   useEffect(() => {
     const checkSession = async () => {
-      const session = isSupabaseConfigured()
-        ? await supaGetSession()
-        : mockGetSession()
+      const session = await getAdminSession()
       if (session) {
         router.push('/admin')
       }
@@ -49,15 +45,9 @@ export default function AdminLoginPage() {
     setLoading(true)
 
     try {
-      const session = isSupabaseConfigured()
-        ? await supaAuth(email, password)
-        : mockAuth(email, password)
+      const session = await authenticateAdmin(email, password)
 
       if (session) {
-        // Also store in localStorage for mock-compatible session checks
-        if (!isSupabaseConfigured()) {
-          // mockAuth already stores it
-        }
         setLoading(false)
         router.push('/admin')
       } else {
@@ -213,17 +203,6 @@ export default function AdminLoginPage() {
               )}
             </button>
           </form>
-
-          {/* Demo Credentials Hint */}
-          <div className="mt-5 pt-4 border-t border-white/[0.06]">
-            <p className="text-[10px] text-gray-600 text-center mb-2">Demo Credentials</p>
-            <div className="text-[10px] text-gray-500 space-y-0.5">
-              <p><span className="text-gray-400">Super Admin:</span> admin@ghlindiaventures.com / GHL@dmin2025!</p>
-              <p><span className="text-gray-400">Compliance:</span> compliance@ghlindiaventures.com / GHLComply2025!</p>
-              <p><span className="text-gray-400">Sales:</span> sales@ghlindiaventures.com / GHLSales2025!</p>
-              <p className="text-gray-600 mt-1">2FA: any 6 digits (e.g., 123456)</p>
-            </div>
-          </div>
         </div>
 
         {/* Security footer */}

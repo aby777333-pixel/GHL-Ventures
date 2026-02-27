@@ -8,7 +8,7 @@ import { BRAND } from '@/lib/constants'
 import { Eye, EyeOff, Lock, ArrowLeft, Shield, Smartphone, Fingerprint, AlertTriangle, Loader2 } from 'lucide-react'
 import Logo from '@/components/Logo'
 import { supabase, isSupabaseConfigured } from '@/lib/supabase/client'
-import { loginClient } from '@/lib/supabase/clientAuthService'
+import { loginClient, getClientSession } from '@/lib/supabase/clientAuthService'
 
 export default function LoginPage() {
   const router = useRouter()
@@ -25,35 +25,18 @@ export default function LoginPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError('')
-
-    if (!isSupabaseConfigured()) {
-      // Demo mode — store mock session then navigate
-      const loginEmail = mobile.includes('@') ? mobile : `${mobile}@ghlindiaventures.com`
-      await loginClient(loginEmail, '')
-      router.push('/dashboard')
-      return
-    }
-
     setLoading(true)
+
     try {
-      // Use email = mobile@ghl.local pattern or actual email
       const loginEmail = mobile.includes('@') ? mobile : `${mobile}@ghlindiaventures.com`
-      const { data, error: authError } = await supabase.auth.signInWithPassword({
-        email: loginEmail,
-        password,
-      })
-      if (authError || !data.user) {
-        // Supabase user not found — fall back to demo mode
-        console.info('[clientAuth] Supabase auth failed, falling back to demo')
-        await loginClient(loginEmail, '')
+      const session = await loginClient(loginEmail, password)
+      if (session) {
         router.push('/dashboard')
-        setLoading(false)
-        return
       } else {
-        router.push('/dashboard')
+        setError('Invalid credentials. Please check your email/mobile and password.')
       }
     } catch {
-      setError('Authentication service unavailable.')
+      setError('Authentication service unavailable. Please try again.')
     }
     setLoading(false)
   }
@@ -84,8 +67,7 @@ export default function LoginPage() {
    */
   const handleSocialSignIn = async (provider: 'google' | 'facebook' | 'twitter' | 'linkedin_oidc') => {
     if (!isSupabaseConfigured()) {
-      await loginClient('demo@ghlindiaventures.com', '')
-      router.push('/dashboard')
+      setError('Authentication service unavailable. Please try again later.')
       return
     }
     setLoading(true)
@@ -151,8 +133,7 @@ export default function LoginPage() {
   const handleOtpLogin = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!isSupabaseConfigured()) {
-      await loginClient(`${mobile}@ghlindiaventures.com`, '')
-      router.push('/dashboard')
+      setError('Authentication service unavailable. Please try again later.')
       return
     }
     setLoading(true)

@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { submitContactForm } from '@/lib/supabase/reportsDataService'
+import { submitContactForm, submitLead } from '@/lib/supabase/reportsDataService'
 import { Send, Users, Target, TrendingUp, Lightbulb, Cpu, BarChart3, CheckCircle, ArrowRight, Clock } from 'lucide-react'
 import SpaceHero from '@/components/SpaceHero'
 import AnimatedSection from '@/components/AnimatedSection'
@@ -41,15 +41,26 @@ export default function StartupApplyPage() {
     e.preventDefault()
     setSubmitted(true)
     try {
-      await submitContactForm({
-        formType: 'startup_apply',
-        fullName: formData.founderName,
-        email: formData.email,
-        phone: formData.phone,
-        company: formData.companyName,
-        message: `${formData.pitch}\n\nSector: ${formData.sector}, Stage: ${formData.stage}, MRR: ${formData.mrr}, Seeking: ${formData.amountSeeking}`,
-        pageUrl: typeof window !== 'undefined' ? window.location.href : '',
-      })
+      await Promise.all([
+        submitContactForm({
+          formType: 'startup_apply',
+          fullName: formData.founderName,
+          email: formData.email,
+          phone: formData.phone,
+          company: formData.companyName,
+          message: `${formData.pitch}\n\nSector: ${formData.sector}, Stage: ${formData.stage}, MRR: ${formData.mrr}, Seeking: ${formData.amountSeeking}`,
+          pageUrl: typeof window !== 'undefined' ? window.location.href : '',
+        }),
+        submitLead({
+          firstName: formData.founderName.split(' ')[0] || '',
+          lastName: formData.founderName.split(' ').slice(1).join(' ') || '',
+          email: formData.email,
+          phone: formData.phone,
+          city: formData.city,
+          source: 'website',
+          investmentInterest: 'startup-funding',
+        }),
+      ])
     } catch (err) { console.warn('Startup form Supabase error:', err) }
   }
 

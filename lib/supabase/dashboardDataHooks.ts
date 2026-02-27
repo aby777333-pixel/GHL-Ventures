@@ -36,7 +36,7 @@ function useQuery<T>(fetcher: () => Promise<T>, fallback: T): UseQueryResult<T> 
       .catch(err => {
         if (!cancelled) {
           setError(err?.message || 'Unknown error')
-          setData(fallback) // Restore mock data on failure
+          setData(fallback)
           setLoading(false)
         }
       })
@@ -49,48 +49,48 @@ function useQuery<T>(fetcher: () => Promise<T>, fallback: T): UseQueryResult<T> 
 
 // ── Portfolio ───────────────────────────────────────────────
 export function usePortfolioAssets(clientId?: string) {
-  return useQuery(() => svc.fetchPortfolioAssets(clientId), [])
+  return useQuery<any[]>(() => svc.fetchPortfolioAssets(clientId), [])
 }
 
 export function useNAVHistory(clientId?: string) {
-  return useQuery(() => svc.fetchNAVHistory(clientId), [])
+  return useQuery<any[]>(() => svc.fetchNAVHistory(clientId), [])
 }
 
-export function useAllocation() {
-  return { data: svc.getAllocation(), loading: false, error: null, refetch: () => {} }
+export function useAllocation(clientId?: string) {
+  return useQuery<any[]>(() => svc.getAllocation(clientId), [])
 }
 
 // ── Transactions ────────────────────────────────────────────
 export function useTransactions(clientId?: string) {
-  return useQuery(() => svc.fetchTransactions(clientId), [])
+  return useQuery<any[]>(() => svc.fetchTransactions(clientId), [])
 }
 
 // ── Messages ────────────────────────────────────────────────
 export function useMessages(clientId?: string) {
-  return useQuery(() => svc.fetchMessages(clientId), [])
+  return useQuery<any[]>(() => svc.fetchMessages(clientId), [])
 }
 
 // ── Support ─────────────────────────────────────────────────
 export function useSupportTickets(clientId?: string) {
-  return useQuery(() => svc.fetchSupportTickets(clientId), [])
+  return useQuery<any[]>(() => svc.fetchSupportTickets(clientId), [])
 }
 
 // ── Notifications ───────────────────────────────────────────
 export function useNotifications(clientId?: string) {
-  return useQuery(() => svc.fetchNotifications(clientId), [])
+  return useQuery<any[]>(() => svc.fetchNotifications(clientId), [])
 }
 
 // ── KYC ─────────────────────────────────────────────────────
-export function useKYCSteps() {
-  return { data: svc.getKYCSteps(), loading: false, error: null, refetch: () => {} }
+export function useKYCSteps(clientId?: string) {
+  return useQuery<any[]>(() => svc.getKYCSteps(clientId), [])
 }
 
 // ── Documents ───────────────────────────────────────────────
 export function useDocuments(clientId?: string) {
-  return useQuery(() => svc.fetchDocuments(clientId), [])
+  return useQuery<any[]>(() => svc.fetchDocuments(clientId), [])
 }
 
 // ── News ────────────────────────────────────────────────────
 export function useAdminNews() {
-  return { data: svc.getAdminNews(), loading: false, error: null, refetch: () => {} }
+  return useQuery<any[]>(() => svc.getAdminNews(), [])
 }

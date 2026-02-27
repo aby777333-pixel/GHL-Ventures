@@ -334,12 +334,12 @@ export default function DashboardClient() {
   // ─── Data Hooks ─────────────────────────────────────────
   const { data: portfolioAssets, refetch: refetchPortfolio } = usePortfolioAssets(clientId ?? undefined)
   const { data: navHistory } = useNAVHistory(clientId ?? undefined)
-  const { data: allocationData } = useAllocation()
+  const { data: allocationData } = useAllocation(clientId ?? undefined)
   const { data: transactions } = useTransactions(clientId ?? undefined)
   const { data: messagesData, refetch: refetchMessages } = useMessages(clientId ?? undefined)
   const { data: supportTickets, refetch: refetchTickets } = useSupportTickets(clientId ?? undefined)
   const { data: notifications, refetch: refetchNotifications } = useNotifications(clientId ?? undefined)
-  const { data: kycSteps } = useKYCSteps()
+  const { data: kycSteps } = useKYCSteps(clientId ?? undefined)
   const { data: documents, refetch: refetchDocs } = useDocuments(clientId ?? undefined)
   const { data: adminNews } = useAdminNews()
 

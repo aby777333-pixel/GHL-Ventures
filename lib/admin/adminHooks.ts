@@ -6,7 +6,7 @@
 
 import { useState, useEffect, useCallback, useMemo } from 'react'
 import type { AdminSession, AdminRole, Permission } from './adminTypes'
-import { getAdminSession, logoutAdmin } from './adminAuth'
+import { getAdminSession, logoutAdmin } from '@/lib/supabase/adminAuthService'
 import { hasPermission, hasModuleAccess } from './adminRBAC'
 import type { PermissionModule } from './adminTypes'
 
@@ -16,18 +16,18 @@ export function useAdminAuth() {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    const s = getAdminSession()
-    setSession(s)
-    setLoading(false)
+    getAdminSession().then(s => {
+      setSession(s)
+      setLoading(false)
+    })
   }, [])
 
   const logout = useCallback(() => {
-    logoutAdmin()
-    setSession(null)
+    logoutAdmin().then(() => setSession(null))
   }, [])
 
   const refreshSession = useCallback(() => {
-    setSession(getAdminSession())
+    getAdminSession().then(s => setSession(s))
   }, [])
 
   return {

@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { submitContactForm } from '@/lib/supabase/reportsDataService'
+import { submitContactForm, submitLead } from '@/lib/supabase/reportsDataService'
 import { Send, Shield, AlertTriangle, Scale, CheckCircle, ArrowRight, ChevronDown, Mail, Phone, ExternalLink } from 'lucide-react'
 import SpaceHero from '@/components/SpaceHero'
 import AnimatedSection from '@/components/AnimatedSection'
@@ -50,14 +50,24 @@ export default function GrievancePage() {
     e.preventDefault()
     setSubmitted(true)
     try {
-      await submitContactForm({
-        formType: 'grievance',
-        fullName: formData.name,
-        email: formData.email,
-        phone: formData.phone,
-        message: `Complaint: ${formData.complaintType}\nDate: ${formData.incidentDate}\n\n${formData.description}\n\nDesired Resolution: ${formData.desiredResolution}`,
-        pageUrl: typeof window !== 'undefined' ? window.location.href : '',
-      })
+      await Promise.all([
+        submitContactForm({
+          formType: 'grievance',
+          fullName: formData.name,
+          email: formData.email,
+          phone: formData.phone,
+          message: `Complaint: ${formData.complaintType}\nDate: ${formData.incidentDate}\n\n${formData.description}\n\nDesired Resolution: ${formData.desiredResolution}`,
+          pageUrl: typeof window !== 'undefined' ? window.location.href : '',
+        }),
+        submitLead({
+          firstName: formData.name.split(' ')[0] || '',
+          lastName: formData.name.split(' ').slice(1).join(' ') || '',
+          email: formData.email,
+          phone: formData.phone,
+          source: 'website',
+          investmentInterest: 'grievance',
+        }),
+      ])
     } catch (err) { console.warn('Grievance form Supabase error:', err) }
   }
 

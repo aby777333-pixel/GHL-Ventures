@@ -1,18 +1,11 @@
 /* ─────────────────────────────────────────────────────────────
-   Staff Auth Service — Supabase auth with mock fallback
+   Staff Auth Service — Supabase authentication (production)
 
    Uses new schema: profiles (role) + staff_profiles (employee_id)
    ───────────────────────────────────────────────────────────── */
 
 import { supabase, isSupabaseConfigured } from './client'
 import type { StaffSession, StaffRole } from '../staff/staffTypes'
-
-// ── Fallback to mock auth ───────────────────────────────────
-import {
-  loginStaff as mockLogin,
-  getStaffSession as mockGetSession,
-  logoutStaff as mockLogout,
-} from '../staff/staffAuth'
 
 // Re-export types for convenience
 export type { StaffSession, StaffUser, StaffRole } from '../staff/staffTypes'
@@ -25,15 +18,15 @@ export async function loginStaff(
   staffCode: string
 ): Promise<StaffSession | null> {
   if (!isSupabaseConfigured()) {
-    return mockLogin(email, password, staffCode)
+    console.warn('[staffAuth] Supabase not configured — cannot authenticate')
+    return null
   }
 
   try {
     const { data, error } = await supabase.auth.signInWithPassword({ email, password })
     if (error || !data.user) {
-      // User doesn't exist in Supabase yet — fall back to mock/demo auth
-      console.info('[staffAuth] Supabase auth failed, falling back to demo credentials')
-      return mockLogin(email, password, staffCode)
+      console.warn('[staffAuth] Authentication failed:', error?.message)
+      return null
     }
 
     // Fetch profile
@@ -79,15 +72,13 @@ export async function loginStaff(
       expiresAt: new Date(Date.now() + SESSION_DURATION).toISOString(),
     }
   } catch (err) {
-    console.warn('[staffAuth] Supabase auth error, falling back to mock:', err)
-    return mockLogin(email, password, staffCode)
+    console.error('[staffAuth] Authentication error:', err)
+    return null
   }
 }
 
 export async function getStaffSession(): Promise<StaffSession | null> {
-  if (!isSupabaseConfigured()) {
-    return mockGetSession()
-  }
+  if (!isSupabaseConfigured()) return null
 
   try {
     const { data: { session } } = await supabase.auth.getSession()
@@ -131,18 +122,16 @@ export async function getStaffSession(): Promise<StaffSession | null> {
       expiresAt: new Date(Date.now() + SESSION_DURATION).toISOString(),
     }
   } catch {
-    return mockGetSession()
+    return null
   }
 }
 
 export async function logoutStaff(): Promise<void> {
-  if (!isSupabaseConfigured()) {
-    mockLogout()
-    return
-  }
+  if (!isSupabaseConfigured()) return
   try {
     await supabase.auth.signOut()
   } catch {
-    mockLogout()
+    // Best-effort signout
+    try { await supabase.auth.signOut() } catch { /* ignore */ }
   }
 }

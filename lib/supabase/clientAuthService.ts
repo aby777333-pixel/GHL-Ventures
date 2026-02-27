@@ -1,8 +1,8 @@
 /* ─────────────────────────────────────────────────────────────
-   Client Auth Service — Supabase auth with mock fallback
+   Client Auth Service — Supabase authentication (production)
 
-   Client portal uses its own session type since there's no
-   pre-existing mock auth module (unlike admin/staff).
+   Client portal authentication via Supabase Auth.
+   Supports email/password, OAuth (Google), and OTP login.
    ───────────────────────────────────────────────────────────── */
 
 import { supabase, isSupabaseConfigured } from './client'
@@ -31,23 +31,8 @@ export interface ClientSession {
 
 export async function loginClient(email: string, password: string): Promise<ClientSession | null> {
   if (!isSupabaseConfigured()) {
-    const mockSession: ClientSession = {
-      user: {
-        id: 'demo-client-001',
-        name: 'Rajesh Krishnan',
-        email,
-        kyc_status: 'approved',
-        account_status: 'active',
-        aum: 8542000,
-        city: 'Chennai',
-      },
-      loginAt: Date.now(),
-      expiresAt: Date.now() + 8 * 60 * 60 * 1000,
-    }
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('ghl-client-session', JSON.stringify(mockSession))
-    }
-    return mockSession
+    console.warn('[clientAuth] Supabase not configured — cannot authenticate')
+    return null
   }
 
   try {
@@ -106,7 +91,7 @@ export async function signupClient(
   phone?: string
 ): Promise<{ success: boolean; error?: string }> {
   if (!isSupabaseConfigured()) {
-    return { success: true }
+    return { success: false, error: 'Service unavailable. Please try again later.' }
   }
 
   try {
@@ -138,21 +123,7 @@ export async function signupClient(
 }
 
 export async function getClientSession(): Promise<ClientSession | null> {
-  if (!isSupabaseConfigured()) {
-    if (typeof window === 'undefined') return null
-    const stored = localStorage.getItem('ghl-client-session')
-    if (!stored) return null
-    try {
-      const session = JSON.parse(stored) as ClientSession
-      if (Date.now() > session.expiresAt) {
-        localStorage.removeItem('ghl-client-session')
-        return null
-      }
-      return session
-    } catch {
-      return null
-    }
-  }
+  if (!isSupabaseConfigured()) return null
 
   try {
     const { data: { session } } = await supabase.auth.getSession()
@@ -202,12 +173,7 @@ export async function getClientSession(): Promise<ClientSession | null> {
 }
 
 export async function logoutClient(): Promise<void> {
-  if (!isSupabaseConfigured()) {
-    if (typeof window !== 'undefined') {
-      localStorage.removeItem('ghl-client-session')
-    }
-    return
-  }
+  if (!isSupabaseConfigured()) return
   try {
     await supabase.auth.signOut()
   } catch (err) {
@@ -233,7 +199,7 @@ export async function loginWithOAuth(provider: 'google'): Promise<void> {
 
 export async function loginWithOTP(email: string): Promise<{ success: boolean; error?: string }> {
   if (!isSupabaseConfigured()) {
-    return { success: true }
+    return { success: false, error: 'Service unavailable. Please try again later.' }
   }
   try {
     const { error } = await supabase.auth.signInWithOtp({ email })

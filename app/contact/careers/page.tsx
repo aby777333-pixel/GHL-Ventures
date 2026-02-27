@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { submitContactForm } from '@/lib/supabase/reportsDataService'
+import { submitContactForm, submitLead } from '@/lib/supabase/reportsDataService'
 import { Send, Briefcase, GraduationCap, MapPin, Heart, CheckCircle, ArrowRight, ChevronDown, Mail, Clock, Upload } from 'lucide-react'
 import SpaceHero from '@/components/SpaceHero'
 import AnimatedSection from '@/components/AnimatedSection'
@@ -275,22 +275,32 @@ export default function CareersPage() {
     e.preventDefault()
     setSubmitted(true)
     try {
-      await submitContactForm({
-        formType: 'career_application',
-        fullName: formData.name,
-        email: formData.email,
-        phone: formData.phone,
-        message: JSON.stringify({
-          position: formData.position,
-          experience: formData.experience,
-          currentCompany: formData.currentCompany,
-          currentCTC: formData.currentCTC,
-          linkedin: formData.linkedin,
-          portfolio: formData.portfolio,
-          coverLetter: formData.coverLetter,
+      await Promise.all([
+        submitContactForm({
+          formType: 'career_application',
+          fullName: formData.name,
+          email: formData.email,
+          phone: formData.phone,
+          message: JSON.stringify({
+            position: formData.position,
+            experience: formData.experience,
+            currentCompany: formData.currentCompany,
+            currentCTC: formData.currentCTC,
+            linkedin: formData.linkedin,
+            portfolio: formData.portfolio,
+            coverLetter: formData.coverLetter,
+          }),
+          pageUrl: typeof window !== 'undefined' ? window.location.href : '',
         }),
-        pageUrl: typeof window !== 'undefined' ? window.location.href : '',
-      })
+        submitLead({
+          firstName: formData.name.split(' ')[0] || '',
+          lastName: formData.name.split(' ').slice(1).join(' ') || '',
+          email: formData.email,
+          phone: formData.phone,
+          source: 'website',
+          investmentInterest: 'career-application',
+        }),
+      ])
     } catch (err) { console.warn('Career form Supabase error:', err) }
   }
 
