@@ -289,24 +289,13 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                 <CookieConsent />
                 <SocialProofToasts />
                 <LiveVisitorCount />
-                {/* Tawk.to Live Chat */}
+                {/* Elfsight All-in-One Chat */}
                 <Script
-                  id="tawk-to"
+                  src="https://elfsightcdn.com/platform.js"
                   strategy="lazyOnload"
-                  dangerouslySetInnerHTML={{
-                    __html: `
-                      var Tawk_API=Tawk_API||{}, Tawk_LoadStart=new Date();
-                      (function(){
-                        var s1=document.createElement("script"),s0=document.getElementsByTagName("script")[0];
-                        s1.async=true;
-                        s1.src='https://embed.tawk.to/699f1c7dedd3e21c341593ce/1jiaoeitu';
-                        s1.charset='UTF-8';
-                        s1.setAttribute('crossorigin','*');
-                        s0.parentNode.insertBefore(s1,s0);
-                      })();
-                    `,
-                  }}
+                  async
                 />
+                <div className="elfsight-app-941b3074-36aa-4451-a4e2-be0f9b51ead0" data-elfsight-app-lazy></div>
               </MainSiteOnly>
               {/* Floating widgets — always visible (useful for staff telecallers & CS) */}
               <VideoCallWidget />
