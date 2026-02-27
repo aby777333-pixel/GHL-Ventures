@@ -18,6 +18,16 @@ import { supabase, isSupabaseConfigured } from './client'
 // migration 022 but not yet added to the generated TypeScript types.
 const db = supabase as any
 
+// ── Startup Diagnostic ───────────────────────────────────────
+// This logs once when the module loads so we can verify Supabase is connected
+if (typeof window !== 'undefined') {
+  const configured = isSupabaseConfigured()
+  console.log(
+    `[chatService] Supabase configured: ${configured}`,
+    configured ? '✅' : '❌ (using mock data — env vars missing in build)'
+  )
+}
+
 // ── Types ─────────────────────────────────────────────────────
 
 export interface ChatSession {

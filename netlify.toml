@@ -22,7 +22,7 @@
     X-Content-Type-Options = "nosniff"
     Referrer-Policy = "strict-origin-when-cross-origin"
     Permissions-Policy = "camera=(), microphone=(self), geolocation=()"
-    Content-Security-Policy = "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline' https://fonts.cdnfonts.com; font-src 'self' https://fonts.cdnfonts.com; img-src 'self' data: https: *.supabase.co; connect-src 'self' https: *.supabase.co *.supabase.in wss://*.supabase.co; media-src 'self' https:; frame-src 'self' https://www.google.com https://maps.google.com https://www.youtube.com https://youtube.com https://s.tradingview.com https://www.tradingview.com;"
+    Content-Security-Policy = "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://static.elfsight.com https://elfsightcdn.com https://core.service.elfsight.com; style-src 'self' 'unsafe-inline' https://fonts.cdnfonts.com https://fonts.googleapis.com https://static.elfsight.com; font-src 'self' https://fonts.cdnfonts.com https://fonts.gstatic.com https://static.elfsight.com data:; img-src 'self' data: blob: https: *.supabase.co; connect-src 'self' https: wss: *.supabase.co *.supabase.in wss://*.supabase.co; media-src 'self' https: data: blob:; frame-src 'self' https://www.google.com https://maps.google.com https://www.youtube.com https://youtube.com https://s.tradingview.com https://www.tradingview.com https://static.elfsight.com;"
 
 [[headers]]
   for = "/_next/static/*"

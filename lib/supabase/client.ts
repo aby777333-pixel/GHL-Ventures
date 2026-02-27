@@ -28,3 +28,9 @@ export const supabase = createClient<Database>(
 // Check if Supabase is configured (env vars set)
 export const isSupabaseConfigured = () =>
   Boolean(supabaseUrl !== PLACEHOLDER_URL && supabaseAnonKey !== PLACEHOLDER_KEY)
+
+// Diagnostic — runs once at module load
+if (typeof window !== 'undefined') {
+  console.log('[supabase/client] URL:', supabaseUrl.slice(0, 40) + '...')
+  console.log('[supabase/client] Configured:', isSupabaseConfigured())
+}
