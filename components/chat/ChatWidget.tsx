@@ -43,8 +43,11 @@ function renderFormatted(text: string) {
   })
 }
 
+const PORTAL_PREFIXES = ['/staff', '/admin', '/dashboard']
+
 export default function ChatWidget() {
   const pathname = usePathname()
+  const isPortal = PORTAL_PREFIXES.some(p => pathname.startsWith(p))
   const [isOpen, setIsOpen] = useState(false)
   const [chatState, setChatState] = useState<'pre-form' | 'active'>('pre-form')
   const [messages, setMessages] = useState<ChatMessageUI[]>([])
@@ -439,6 +442,9 @@ export default function ChatWidget() {
   }
 
   const isActiveChat = chatState === 'active' && chatMode !== 'connect'
+
+  // Don't render on staff/admin/dashboard portals
+  if (isPortal) return null
 
   return (
     <div id="ghl-chat-widget" data-ghl-widget="chat">

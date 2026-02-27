@@ -122,29 +122,34 @@ export async function createChatSession(input: {
     return mock
   }
 
-  const { data, error } = await db
-    .from('chat_sessions')
-    .insert({
-      visitor_id: getOrCreateVisitorId(),
-      visitor_name: input.visitorName,
-      visitor_email: input.visitorEmail || null,
-      client_id: input.clientId || null,
-      page_url: input.pageUrl || null,
-      channel: input.channel || 'web_chat',
-      status: 'waiting',
-    })
-    .select()
-    .single()
+  // Use RPC to create session — direct insert + .select() fails for
+  // anonymous visitors because RLS blocks the SELECT after INSERT
+  const { data, error } = await db.rpc('create_visitor_chat_session', {
+    p_visitor_id: getOrCreateVisitorId(),
+    p_visitor_name: input.visitorName,
+    p_visitor_email: input.visitorEmail || null,
+    p_client_id: input.clientId || null,
+    p_page_url: input.pageUrl || null,
+    p_channel: input.channel || 'web_chat',
+  })
 
-  if (error) {
-    console.error('[chatService] Failed to create session:', error.message)
+  if (error || !data || (Array.isArray(data) && data.length === 0)) {
+    console.error('[chatService] Failed to create session:', error?.message || 'no data returned')
     return null
   }
 
-  const session = data as any as ChatSession
+  const session = (Array.isArray(data) ? data[0] : data) as ChatSession
 
   // Trigger auto-assignment
   await autoAssignChat(session.id)
+
+  // Re-fetch session to get updated assignment info
+  const { data: updated } = await db.rpc('get_visitor_active_session', {
+    p_visitor_id: getOrCreateVisitorId(),
+  })
+  if (updated && (Array.isArray(updated) ? updated.length > 0 : updated)) {
+    return (Array.isArray(updated) ? updated[0] : updated) as ChatSession
+  }
 
   return session
 }
@@ -265,16 +270,11 @@ export async function reassignChat(sessionId: string, newRepId: string): Promise
 export async function resolveChatSession(sessionId: string, rating?: string): Promise<boolean> {
   if (!isSupabaseConfigured()) return true
 
-  const update: any = {
-    status: 'resolved',
-    resolved_at: new Date().toISOString(),
-  }
-  if (rating) update.csat_rating = rating
-
-  const { error } = await db
-    .from('chat_sessions')
-    .update(update)
-    .eq('id', sessionId)
+  // Use RPC for visitor-initiated resolve (anonymous can't UPDATE via RLS)
+  const { error } = await db.rpc('resolve_visitor_chat_session', {
+    p_session_id: sessionId,
+    p_rating: rating || null,
+  })
 
   return !error
 }
@@ -307,6 +307,25 @@ export async function sendChatMessage(input: {
     return mock
   }
 
+  // For visitor/system messages, use RPC to avoid RLS blocking the
+  // select-after-insert. Agent messages use direct insert (they're authenticated).
+  if (input.senderType === 'visitor' || input.senderType === 'system' || input.senderType === 'bot') {
+    const { data, error } = await db.rpc('send_visitor_chat_message', {
+      p_session_id: input.sessionId,
+      p_sender_type: input.senderType,
+      p_sender_name: input.senderName || null,
+      p_message: input.message,
+    })
+
+    if (error) {
+      console.error('[chatService] RPC send_visitor_chat_message failed:', error.message)
+      return null
+    }
+
+    return (Array.isArray(data) ? data[0] : data) as ChatMessage
+  }
+
+  // Agent messages — authenticated staff, RLS allows
   const { data, error } = await db
     .from('chat_messages')
     .insert({

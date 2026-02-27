@@ -1509,12 +1509,6 @@ export default function CSCenterModule({ subTab, navigate, showToast, role }: CS
 
       {/* Content Area */}
       {renderContent()}
-
-      {/* Elfsight All-in-One Chat — CS agents can manage live chats here */}
-      <div className="mt-6">
-        <script src="https://elfsightcdn.com/platform.js" async></script>
-        <div className="elfsight-app-941b3074-36aa-4451-a4e2-be0f9b51ead0" data-elfsight-app-lazy></div>
-      </div>
     </div>
   )
 }
