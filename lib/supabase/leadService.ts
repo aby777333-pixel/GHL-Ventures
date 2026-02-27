@@ -104,17 +104,17 @@ export interface LeadFolderMapping {
 function mapLead(l: any): Lead {
   return {
     id: l.id,
-    name: l.name,
+    name: [l.first_name, l.last_name].filter(Boolean).join(' ') || l.name || '',
     email: l.email || '',
     phone: l.phone || '',
-    source: l.source,
-    stage: l.status,
-    value: l.deal_value || 0,
-    probability: l.probability || 0,
-    aiScore: l.ai_score || 50,
+    source: l.source || 'website',
+    stage: l.status || 'new',
+    value: l.estimated_value || 0,
+    probability: Math.min(100, Math.max(0, l.score || 0)),
+    aiScore: l.score || 50,
     assignedTo: l.assigned_to || 'Unassigned',
     createdDate: l.created_at?.split('T')[0] || '',
-    lastTouched: l.updated_at?.split('T')[0] || '',
+    lastTouched: (l.last_contacted || l.updated_at)?.split('T')[0] || '',
     nextFollowUp: l.next_follow_up?.split('T')[0],
     notes: l.notes,
   }
@@ -128,16 +128,18 @@ export async function createLead(input: CreateLeadInput): Promise<{ success: boo
   }
 
   try {
+    const nameParts = input.name.split(' ')
     const { data: lead, error } = await supabase
       .from('leads' as any)
       .insert({
-        name: input.name,
+        first_name: nameParts[0] || input.name,
+        last_name: nameParts.slice(1).join(' ') || '',
         email: input.email,
         phone: input.phone,
         source: input.source,
         status: input.stage || 'new',
-        deal_value: input.value || 0,
-        probability: input.probability || 20,
+        estimated_value: input.value || 0,
+        score: input.probability || 20,
         assigned_to: input.assignedTo,
         notes: input.notes,
         tags: input.tags || [],

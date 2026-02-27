@@ -6,6 +6,7 @@ import {
   BarChart3, AlertTriangle, CheckCircle2, Clock, Users, Eye, Edit3,
   Plus, Filter, Search, ArrowRight, Zap, Star, TrendingUp,
   ArrowUpRight, ArrowDownRight, Smartphone, Hash, Shield, BellRing,
+  Loader2,
 } from 'lucide-react'
 import {
   AreaChart, Area, BarChart, Bar, Cell, XAxis, YAxis,
@@ -36,7 +37,11 @@ import {
   onMyChatSessionUpdate,
   onChatMessage,
   onRMRequest,
+  onNewLead,
+  onNewContactSubmission,
 } from '@/lib/supabase/realtimeSubscriptions'
+import { fetchLeads } from '@/lib/supabase/leadService'
+import type { Lead } from '@/lib/admin/adminTypes'
 
 // ════════════════════════════════════════════════════════════════
 //  PROPS
@@ -1456,6 +1461,205 @@ function SubTabPlaceholder({ name, navigate }: { name: string; navigate: (path: 
   )
 }
 
+// ── Lead Alerts View (Real-time form submissions) ──────────────
+function LeadAlertsView({ showToast }: { showToast: (msg: string, type?: 'success' | 'error' | 'info' | 'warning') => void }) {
+  const [leads, setLeads] = useState<Lead[]>([])
+  const [loading, setLoading] = useState(true)
+  const [newLeadFlash, setNewLeadFlash] = useState<string | null>(null)
+
+  const loadLeads = useCallback(async () => {
+    setLoading(true)
+    const data = await fetchLeads({ limit: 50 })
+    setLeads(data)
+    setLoading(false)
+  }, [])
+
+  useEffect(() => { loadLeads() }, [loadLeads])
+
+  // Realtime: new lead alarm
+  useEffect(() => {
+    const unsub = onNewLead((payload) => {
+      const row = payload.new as any
+      const name = [row?.first_name, row?.last_name].filter(Boolean).join(' ') || 'New Lead'
+      const source = row?.source || 'website'
+
+      // Play alarm sound (925 Hz beep)
+      try {
+        const ctx = new AudioContext()
+        const osc = ctx.createOscillator()
+        const gain = ctx.createGain()
+        osc.connect(gain)
+        gain.connect(ctx.destination)
+        osc.frequency.value = 925
+        gain.gain.value = 0.3
+        osc.start()
+        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.5)
+        osc.stop(ctx.currentTime + 0.5)
+      } catch {}
+
+      // Browser notification
+      if (Notification.permission === 'granted') {
+        new Notification('New Lead!', {
+          body: `${name} via ${source}`,
+          icon: '/icons/icon-192.png',
+          tag: 'ghl-new-lead',
+        })
+      }
+
+      showToast(`New lead: ${name} (${source})`, 'info')
+      setNewLeadFlash(row?.id || name)
+      setTimeout(() => setNewLeadFlash(null), 3000)
+      loadLeads()
+    })
+
+    // Also listen for contact form submissions
+    const unsub2 = onNewContactSubmission((payload) => {
+      const row = payload.new as any
+      const name = row?.full_name || 'Unknown'
+      const formType = row?.form_type || 'contact'
+
+      try {
+        const ctx = new AudioContext()
+        const osc = ctx.createOscillator()
+        const gain = ctx.createGain()
+        osc.connect(gain)
+        gain.connect(ctx.destination)
+        osc.frequency.value = 800
+        gain.gain.value = 0.2
+        osc.start()
+        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.4)
+        osc.stop(ctx.currentTime + 0.4)
+      } catch {}
+
+      if (Notification.permission === 'granted') {
+        new Notification('New Form Submission!', {
+          body: `${name} — ${formType}`,
+          icon: '/icons/icon-192.png',
+          tag: 'ghl-new-form',
+        })
+      }
+
+      showToast(`Form submission: ${name} (${formType})`, 'info')
+    })
+
+    // Request notification permission
+    if (typeof Notification !== 'undefined' && Notification.permission === 'default') {
+      Notification.requestPermission()
+    }
+
+    return () => { unsub?.(); unsub2?.() }
+  }, [loadLeads, showToast])
+
+  const SOURCE_COLORS: Record<string, string> = {
+    website: 'bg-blue-500/15 text-blue-400 border-blue-500/20',
+    referral: 'bg-emerald-500/15 text-emerald-400 border-emerald-500/20',
+    'cold-outreach': 'bg-purple-500/15 text-purple-400 border-purple-500/20',
+    event: 'bg-amber-500/15 text-amber-400 border-amber-500/20',
+    'social-media': 'bg-pink-500/15 text-pink-400 border-pink-500/20',
+    whatsapp: 'bg-green-500/15 text-green-400 border-green-500/20',
+  }
+
+  const STAGE_COLORS: Record<string, string> = {
+    new: 'bg-blue-500/15 text-blue-400',
+    contacted: 'bg-cyan-500/15 text-cyan-400',
+    qualified: 'bg-amber-500/15 text-amber-400',
+    proposal: 'bg-purple-500/15 text-purple-400',
+    negotiation: 'bg-orange-500/15 text-orange-400',
+    won: 'bg-emerald-500/15 text-emerald-400',
+    lost: 'bg-red-500/15 text-red-400',
+  }
+
+  return (
+    <div className="space-y-4">
+      {/* Header */}
+      <AdminGlass padding="p-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <BellRing className="w-5 h-5 text-teal-400" />
+            <div>
+              <h3 className="text-sm font-semibold text-white">Lead Alerts — Live Feed</h3>
+              <p className="text-[11px] text-gray-500">Real-time website form submissions &middot; {leads.length} total leads</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            {newLeadFlash && (
+              <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-red-500/20 border border-red-500/30 text-red-400 text-xs font-semibold animate-pulse">
+                <span className="w-2 h-2 rounded-full bg-red-500 animate-ping" />
+                NEW LEAD
+              </span>
+            )}
+            <button
+              onClick={loadLeads}
+              disabled={loading}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium text-gray-400 bg-white/[0.04] border border-white/[0.08] hover:bg-white/[0.08] hover:text-white transition-colors disabled:opacity-40"
+            >
+              {loading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <TrendingUp className="w-3.5 h-3.5" />}
+              Refresh
+            </button>
+          </div>
+        </div>
+      </AdminGlass>
+
+      {/* KPI Row */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <AdminKPICard title="Total Leads" value={leads.length} icon={Users} color={ACCENT} delay={0} />
+        <AdminKPICard title="New" value={leads.filter(l => l.stage === 'new').length} subtitle="Uncontacted" icon={Plus} color="#3b82f6" delay={50} />
+        <AdminKPICard title="In Pipeline" value={leads.filter(l => !['won', 'lost', 'new'].includes(l.stage)).length} icon={TrendingUp} color="#8b5cf6" delay={100} />
+        <AdminKPICard title="Won" value={leads.filter(l => l.stage === 'won').length} icon={CheckCircle2} color="#10b981" delay={150} />
+      </div>
+
+      {/* Lead List */}
+      <AdminGlass padding="p-0">
+        <div className="px-5 py-4 border-b border-white/[0.06] flex items-center justify-between">
+          <h3 className="text-sm font-semibold text-white">Recent Leads</h3>
+        </div>
+        {loading ? (
+          <div className="flex items-center justify-center py-16">
+            <Loader2 className="w-6 h-6 text-teal-400 animate-spin" />
+          </div>
+        ) : leads.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-16 text-center px-4">
+            <Users className="w-10 h-10 text-gray-600 mb-3" />
+            <p className="text-sm text-gray-400">No leads yet</p>
+            <p className="text-xs text-gray-600 mt-1">Leads from website forms will appear here in real-time</p>
+          </div>
+        ) : (
+          <div className="divide-y divide-white/[0.04]">
+            {leads.map(lead => (
+              <div
+                key={lead.id}
+                className={`flex items-center gap-3 px-5 py-3.5 hover:bg-white/[0.02] transition-all cursor-pointer ${
+                  newLeadFlash === lead.id ? 'bg-teal-500/[0.06] border-l-2 border-teal-400' : ''
+                }`}
+              >
+                <div className="w-9 h-9 rounded-full bg-gradient-to-br from-teal-500/20 to-blue-500/20 flex items-center justify-center flex-shrink-0">
+                  <span className="text-xs font-bold text-white">{lead.name.split(' ').map(n => n[0]).join('').slice(0, 2)}</span>
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <p className="text-sm font-medium text-white truncate">{lead.name}</p>
+                    <span className={`text-[10px] px-1.5 py-0.5 rounded border ${SOURCE_COLORS[lead.source] || 'bg-gray-500/15 text-gray-400 border-gray-500/20'}`}>
+                      {lead.source.replace('-', ' ')}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-3 mt-0.5">
+                    {lead.email && <span className="text-[11px] text-gray-500 truncate">{lead.email}</span>}
+                    {lead.phone && <span className="text-[11px] text-gray-500">{lead.phone}</span>}
+                  </div>
+                </div>
+                <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${STAGE_COLORS[lead.stage] || 'bg-gray-500/15 text-gray-400'}`}>
+                  {lead.stage}
+                </span>
+                <span className="text-[10px] text-gray-600 w-20 text-right">{lead.createdDate}</span>
+              </div>
+            ))}
+          </div>
+        )}
+      </AdminGlass>
+    </div>
+  )
+}
+
 // ════════════════════════════════════════════════════════════════
 //  MAIN EXPORT
 // ════════════════════════════════════════════════════════════════
@@ -1463,6 +1667,7 @@ export default function CSCenterModule({ subTab, navigate, showToast, role }: CS
   // Sub-tab navigation
   const SUB_TABS = [
     { key: null, label: 'Dashboard', icon: <BarChart3 className="w-3.5 h-3.5" /> },
+    { key: 'leads', label: 'Leads', icon: <BellRing className="w-3.5 h-3.5" /> },
     { key: 'inbox', label: 'Inbox', icon: <Mail className="w-3.5 h-3.5" /> },
     { key: 'tickets', label: 'Tickets', icon: <Hash className="w-3.5 h-3.5" /> },
     { key: 'calls', label: 'Calls', icon: <Phone className="w-3.5 h-3.5" /> },
@@ -1477,6 +1682,7 @@ export default function CSCenterModule({ subTab, navigate, showToast, role }: CS
 
   function renderContent() {
     if (subTab === null) return <CSDashboard navigate={navigate} showToast={showToast} />
+    if (subTab === 'leads') return <LeadAlertsView showToast={showToast} />
     if (subTab === 'inbox') return <UnifiedInbox showToast={showToast} />
     if (subTab === 'tickets') return <TicketManagement showToast={showToast} />
     if (subTab === 'calls') return <CallsView showToast={showToast} />

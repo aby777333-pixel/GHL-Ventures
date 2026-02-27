@@ -1,12 +1,12 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useEffect, useMemo, useCallback } from 'react'
 import {
   TrendingUp, Users, Target, IndianRupee, Phone, Mail,
   Calendar, ArrowUpRight, ArrowDownRight, Eye, MoreHorizontal,
   Trophy, Zap, Filter, Plus, Clock, CheckCircle2,
   Star, BarChart3, Percent, DollarSign, UserPlus, Upload,
-  ArrowRightLeft, Loader2,
+  ArrowRightLeft, Loader2, RefreshCw,
 } from 'lucide-react'
 import AdminGlass from '../shared/AdminGlass'
 import AdminDataTable, { type Column } from '../shared/AdminDataTable'
@@ -14,11 +14,11 @@ import AdminBadge from '../shared/AdminBadge'
 import AdminModal, { ModalButton } from '../shared/AdminModal'
 import AdminKPICard from '../shared/AdminKPICard'
 import AdminEmptyState from '../shared/AdminEmptyState'
-import { LEADS_DATA, COMMISSIONS_DATA } from '@/lib/admin/adminMockData'
 import { formatINR, formatDate } from '@/lib/admin/adminHooks'
 import type { Lead, LeadStage, LeadSource, Commission } from '@/lib/admin/adminTypes'
 import UploadWithFolderPicker from '@/components/shared/UploadWithFolderPicker'
-import { createLead } from '@/lib/supabase/leadService'
+import { createLead, fetchLeads } from '@/lib/supabase/leadService'
+import { onNewLead } from '@/lib/supabase/realtimeSubscriptions'
 
 // ── Sub-tabs ─────────────────────────────────────────────────────
 const SALES_TABS = [
@@ -56,12 +56,40 @@ export default function SalesModule({ subTab, navigate, showToast }: SalesModule
   const [mondaySyncing, setMondaySyncing] = useState(false)
   const [mondayAvailable, setMondayAvailable] = useState(false)
 
+  // ── Real leads from Supabase ─────────────────────────────────
+  const [leads, setLeads] = useState<Lead[]>([])
+  const [leadsLoading, setLeadsLoading] = useState(true)
+
+  const loadLeads = useCallback(async () => {
+    setLeadsLoading(true)
+    const data = await fetchLeads()
+    setLeads(data)
+    setLeadsLoading(false)
+  }, [])
+
+  useEffect(() => {
+    loadLeads()
+  }, [loadLeads])
+
+  // Realtime: auto-refresh when new lead arrives
+  useEffect(() => {
+    const unsub = onNewLead((payload) => {
+      loadLeads()
+      const newRow = payload.new as any
+      const name = [newRow?.first_name, newRow?.last_name].filter(Boolean).join(' ') || 'Unknown'
+      showToast(`New lead: ${name} (${newRow?.source || 'website'})`, 'info')
+    })
+    return () => { unsub?.() }
+  }, [loadLeads, showToast])
+
   // Check if Monday.com is configured on mount
-  useState(() => {
+  useEffect(() => {
     if (typeof window === 'undefined') return
-    const { isMondayConfigured } = require('@/lib/mondayService')
-    setMondayAvailable(isMondayConfigured())
-  })
+    try {
+      const { isMondayConfigured } = require('@/lib/mondayService')
+      setMondayAvailable(isMondayConfigured())
+    } catch {}
+  }, [])
 
   const handleSyncToMonday = async () => {
     setMondaySyncing(true)
@@ -73,7 +101,7 @@ export default function SalesModule({ subTab, navigate, showToast }: SalesModule
         return
       }
       const m = mappings[0]
-      const result = await pushLeadsToMonday(LEADS_DATA, m.boardId, m.columnMappings, m.groupId)
+      const result = await pushLeadsToMonday(leads, m.boardId, m.columnMappings, m.groupId)
       if (result.success) {
         showToast(`${result.synced} leads synced to Monday.com`, 'success')
       } else {
@@ -113,6 +141,7 @@ export default function SalesModule({ subTab, navigate, showToast }: SalesModule
         showToast(`Lead "${leadForm.name}" created — folder auto-created in Sales & Reports`, 'success')
         resetLeadForm()
         setAddLeadOpen(false)
+        loadLeads() // refresh list
       } else {
         showToast(result.error || 'Failed to create lead', 'error')
       }
@@ -125,15 +154,15 @@ export default function SalesModule({ subTab, navigate, showToast }: SalesModule
 
   // ── KPIs ──────────────────────────────────────────────────────
   const kpis = useMemo(() => {
-    const pipeline = LEADS_DATA.filter(l => l.stage !== 'won' && l.stage !== 'lost')
+    const pipeline = leads.filter(l => l.stage !== 'won' && l.stage !== 'lost')
     const pipelineValue = pipeline.reduce((s, l) => s + l.value, 0)
     const weightedValue = pipeline.reduce((s, l) => s + (l.value * l.probability / 100), 0)
-    const won = LEADS_DATA.filter(l => l.stage === 'won')
+    const won = leads.filter(l => l.stage === 'won')
     const wonValue = won.reduce((s, l) => s + l.value, 0)
-    const avgAIScore = Math.round(LEADS_DATA.reduce((s, l) => s + l.aiScore, 0) / LEADS_DATA.length)
-    const conversionRate = LEADS_DATA.length > 0 ? Math.round((won.length / LEADS_DATA.length) * 100) : 0
-    return { total: LEADS_DATA.length, pipelineValue, weightedValue, wonValue, avgAIScore, conversionRate, pipelineCount: pipeline.length }
-  }, [])
+    const avgAIScore = leads.length > 0 ? Math.round(leads.reduce((s, l) => s + l.aiScore, 0) / leads.length) : 0
+    const conversionRate = leads.length > 0 ? Math.round((won.length / leads.length) * 100) : 0
+    return { total: leads.length, pipelineValue, weightedValue, wonValue, avgAIScore, conversionRate, pipelineCount: pipeline.length }
+  }, [leads])
 
   const handleTabClick = (tabId: string) => {
     navigate(tabId === 'pipeline' ? 'sales' : `sales/${tabId}`)
@@ -148,6 +177,14 @@ export default function SalesModule({ subTab, navigate, showToast }: SalesModule
           <p className="text-sm text-gray-500 mt-1">Manage leads, pipeline, commissions, and sales performance</p>
         </div>
         <div className="flex items-center gap-2 self-start">
+          <button
+            onClick={loadLeads}
+            disabled={leadsLoading}
+            className="flex items-center gap-2 px-3 py-2.5 rounded-xl text-sm font-medium text-gray-400 bg-white/[0.04] border border-white/[0.08] hover:bg-white/[0.08] hover:text-white transition-colors disabled:opacity-40 admin-btn-press"
+            title="Refresh leads"
+          >
+            <RefreshCw className={`w-4 h-4 ${leadsLoading ? 'animate-spin' : ''}`} />
+          </button>
           {mondayAvailable && (
             <button
               onClick={handleSyncToMonday}
@@ -198,10 +235,10 @@ export default function SalesModule({ subTab, navigate, showToast }: SalesModule
 
       {/* Tab Content */}
       <div className="admin-tab-switch">
-        {activeTab === 'pipeline' && <PipelineTab leads={LEADS_DATA} onViewLead={(l) => { setSelectedLead(l); setLeadModalOpen(true) }} showToast={showToast} />}
-        {activeTab === 'leads' && <LeadListTab onViewLead={(l) => { setSelectedLead(l); setLeadModalOpen(true) }} showToast={showToast} />}
+        {activeTab === 'pipeline' && <PipelineTab leads={leads} onViewLead={(l) => { setSelectedLead(l); setLeadModalOpen(true) }} showToast={showToast} />}
+        {activeTab === 'leads' && <LeadListTab leads={leads} onViewLead={(l) => { setSelectedLead(l); setLeadModalOpen(true) }} showToast={showToast} />}
         {activeTab === 'commissions' && <CommissionsTab showToast={showToast} />}
-        {activeTab === 'leaderboard' && <LeaderboardTab />}
+        {activeTab === 'leaderboard' && <LeaderboardTab leads={leads} />}
       </div>
 
       {/* Lead Detail Modal */}
@@ -398,7 +435,7 @@ function PipelineTab({ leads, onViewLead, showToast }: { leads: Lead[]; onViewLe
 }
 
 // ── Lead List ───────────────────────────────────────────────────
-function LeadListTab({ onViewLead, showToast }: { onViewLead: (l: Lead) => void; showToast: (msg: string, type?: 'success' | 'error' | 'info' | 'warning') => void }) {
+function LeadListTab({ leads, onViewLead, showToast }: { leads: Lead[]; onViewLead: (l: Lead) => void; showToast: (msg: string, type?: 'success' | 'error' | 'info' | 'warning') => void }) {
   const columns: Column<Lead>[] = [
     {
       key: 'name',
@@ -477,7 +514,7 @@ function LeadListTab({ onViewLead, showToast }: { onViewLead: (l: Lead) => void;
     <AdminGlass padding="p-4">
       <AdminDataTable<Lead>
         columns={columns}
-        data={LEADS_DATA}
+        data={leads}
         searchKeys={['name', 'email', 'source', 'stage']}
         searchPlaceholder="Search leads..."
         onRowClick={onViewLead}
@@ -490,66 +527,37 @@ function LeadListTab({ onViewLead, showToast }: { onViewLead: (l: Lead) => void;
 
 // ── Commissions Tab ─────────────────────────────────────────────
 function CommissionsTab({ showToast }: { showToast: (msg: string, type?: 'success' | 'error' | 'info' | 'warning') => void }) {
-  const totalCommissions = COMMISSIONS_DATA.reduce((s, c) => s + c.commissionAmount, 0)
-  const paid = COMMISSIONS_DATA.filter(c => c.status === 'paid').reduce((s, c) => s + c.commissionAmount, 0)
-  const pending = COMMISSIONS_DATA.filter(c => c.status === 'pending').reduce((s, c) => s + c.commissionAmount, 0)
-
-  const columns: Column<Commission>[] = [
-    { key: 'salesRep', label: 'Sales Rep', render: (row) => <span className="text-white font-medium text-sm">{row.salesRep}</span> },
-    { key: 'clientName', label: 'Client' },
-    { key: 'dealValue', label: 'Deal Value', render: (row) => <span className="text-white">{formatINR(row.dealValue)}</span> },
-    { key: 'commissionRate', label: 'Rate', render: (row) => <span className="text-gray-400">{row.commissionRate}%</span> },
-    { key: 'commissionAmount', label: 'Commission', render: (row) => <span className="text-emerald-400 font-semibold">{formatINR(row.commissionAmount)}</span> },
-    {
-      key: 'status',
-      label: 'Status',
-      render: (row) => (
-        <AdminBadge
-          label={row.status}
-          variant={row.status === 'paid' ? 'success' : row.status === 'approved' ? 'info' : 'warning'}
-          dot
-        />
-      ),
-    },
-    { key: 'period', label: 'Period', render: (row) => <span className="text-xs text-gray-400">{row.period}</span> },
-  ]
-
+  // Commissions will be populated from real data once the commissions table is set up
+  // For now show empty state
   return (
     <div className="space-y-4">
       <div className="grid grid-cols-3 gap-3">
         <AdminGlass padding="p-4">
           <p className="text-[11px] text-gray-500 uppercase tracking-wider font-medium">Total Commissions</p>
-          <p className="text-xl font-bold text-white mt-1">{formatINR(totalCommissions)}</p>
+          <p className="text-xl font-bold text-white mt-1">{formatINR(0)}</p>
         </AdminGlass>
         <AdminGlass padding="p-4">
           <p className="text-[11px] text-gray-500 uppercase tracking-wider font-medium">Paid</p>
-          <p className="text-xl font-bold text-emerald-400 mt-1">{formatINR(paid)}</p>
+          <p className="text-xl font-bold text-emerald-400 mt-1">{formatINR(0)}</p>
         </AdminGlass>
         <AdminGlass padding="p-4">
           <p className="text-[11px] text-gray-500 uppercase tracking-wider font-medium">Pending</p>
-          <p className="text-xl font-bold text-amber-400 mt-1">{formatINR(pending)}</p>
+          <p className="text-xl font-bold text-amber-400 mt-1">{formatINR(0)}</p>
         </AdminGlass>
       </div>
 
       <AdminGlass padding="p-4">
-        <AdminDataTable<Commission>
-          columns={columns}
-          data={COMMISSIONS_DATA}
-          searchKeys={['salesRep', 'clientName']}
-          searchPlaceholder="Search commissions..."
-          exportable
-          title="Commission Ledger"
-        />
+        <AdminEmptyState title="No commissions yet" description="Commissions will appear here as deals are closed and payouts are processed." />
       </AdminGlass>
     </div>
   )
 }
 
 // ── Leaderboard Tab ─────────────────────────────────────────────
-function LeaderboardTab() {
+function LeaderboardTab({ leads }: { leads: Lead[] }) {
   const leaderboard = useMemo(() => {
     const reps: Record<string, { deals: number; value: number; avgScore: number; won: number }> = {}
-    LEADS_DATA.forEach(l => {
+    leads.forEach(l => {
       if (!reps[l.assignedTo]) reps[l.assignedTo] = { deals: 0, value: 0, avgScore: 0, won: 0 }
       reps[l.assignedTo].deals++
       reps[l.assignedTo].value += l.value
@@ -560,11 +568,11 @@ function LeaderboardTab() {
       name,
       deals: data.deals,
       value: data.value,
-      avgScore: Math.round(data.avgScore / data.deals),
+      avgScore: Math.round(data.avgScore / Math.max(data.deals, 1)),
       won: data.won,
-      winRate: Math.round((data.won / data.deals) * 100),
+      winRate: data.deals > 0 ? Math.round((data.won / data.deals) * 100) : 0,
     })).sort((a, b) => b.value - a.value)
-  }, [])
+  }, [leads])
 
   const medals = ['🥇', '🥈', '🥉']
 

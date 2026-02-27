@@ -105,6 +105,21 @@ export function onAuditEvent(handler: ChangeHandler) {
   return subscribeToTable('audit_log', 'INSERT', handler)
 }
 
+/** Admin/Staff: Subscribe to new leads (website form submissions) */
+export function onNewLead(handler: ChangeHandler) {
+  return subscribeToTable('leads', 'INSERT', handler)
+}
+
+/** Admin/Staff: Subscribe to all lead changes */
+export function onLeadChange(handler: ChangeHandler) {
+  return subscribeToTable('leads', '*', handler)
+}
+
+/** Admin/Staff: Subscribe to new contact form submissions */
+export function onNewContactSubmission(handler: ChangeHandler) {
+  return subscribeToTable('contact_submissions', 'INSERT', handler)
+}
+
 /** Admin: Subscribe to KYC document status changes */
 export function onKYCStatusChange(handler: ChangeHandler) {
   return subscribeToTable('kyc_documents', 'UPDATE', handler)

@@ -311,6 +311,7 @@ export async function submitLead(leadData: {
     return { success: true, local: true }
   }
   try {
+    // Insert lead with correct column names matching DB schema
     const { data, error } = await supabase.from('leads').insert({
       first_name: leadData.firstName,
       last_name: leadData.lastName || '',
@@ -318,16 +319,32 @@ export async function submitLead(leadData: {
       phone: leadData.phone,
       city: leadData.city,
       source: leadData.source || 'website',
-      landing_page: typeof window !== 'undefined' ? window.location.pathname : '',
-      utm_source: typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('utm_source') : null,
-      utm_medium: typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('utm_medium') : null,
-      utm_campaign: typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('utm_campaign') : null,
-      referrer_url: typeof document !== 'undefined' ? document.referrer : null,
       investment_interest: leadData.investmentInterest,
-      estimated_investment: leadData.estimatedInvestment,
-      stage: 'new',
-    } as any).select().single()
+      estimated_value: leadData.estimatedInvestment || 0,
+      status: 'new',
+    } as any).select().single() as any
     if (error) throw error
+
+    // Track UTM/source data in the dedicated tracking table
+    if (data?.id) {
+      const utmSource = typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('utm_source') : null
+      const utmMedium = typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('utm_medium') : null
+      const utmCampaign = typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('utm_campaign') : null
+      const landingPage = typeof window !== 'undefined' ? window.location.pathname : ''
+      const referrer = typeof document !== 'undefined' ? document.referrer : ''
+
+      if (utmSource || landingPage || referrer) {
+        await supabase.from('lead_source_tracking' as any).insert({
+          lead_id: (data as any).id,
+          utm_source: utmSource,
+          utm_medium: utmMedium,
+          utm_campaign: utmCampaign,
+          referrer_url: referrer || null,
+          landing_page_url: landingPage || null,
+        } as any)
+      }
+    }
+
     return { success: true, data }
   } catch (err) {
     console.warn('[reportsData] Lead submission error:', err)
