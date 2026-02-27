@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import {
   CheckCircle, Clock, Users, TrendingUp, Ticket,
   BarChart3, MapPin, UserCheck, CircleDollarSign,
@@ -12,9 +12,8 @@ import AdminGlass from '../../admin/shared/AdminGlass'
 import AdminBadge from '../../admin/shared/AdminBadge'
 import { getGreeting } from '@/lib/staff/staffHooks'
 import {
-  TASKS_DATA, ANNOUNCEMENTS_DATA, STAFF_DAILY_QUOTES,
-  CS_KPIS_DATA, TICKETS_DATA,
-} from '@/lib/staff/staffMockData'
+  fetchTasks, fetchAnnouncements, getCSKPIs, fetchTickets,
+} from '@/lib/supabase/staffDataService'
 import type { StaffRole, TaskPriority } from '@/lib/staff/staffTypes'
 import { isCSRole, isFieldRole } from '@/lib/staff/staffRBAC'
 
@@ -56,6 +55,14 @@ function getAnnouncementIcon(type: string) {
   }
 }
 
+const DAILY_QUOTES = [
+  'Excellence is not a destination but a continuous journey.',
+  'Every client interaction is an opportunity to build trust.',
+  'The best way to predict the future is to create it.',
+  'Small improvements every day lead to stunning results.',
+  'Success is the sum of small efforts repeated day in and day out.',
+]
+
 // ── Component ─────────────────────────────────────────────────────
 export default function HomeModule({ navigate, showToast, userName, role }: HomeModuleProps) {
   const firstName = userName.split(' ')[0]
@@ -64,23 +71,40 @@ export default function HomeModule({ navigate, showToast, userName, role }: Home
     weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
   })
 
+  const [tasks, setTasks] = useState<any[]>([])
+  const [announcements, setAnnouncements] = useState<any[]>([])
+  const [csKpis, setCsKpis] = useState(getCSKPIs())
+  const [tickets, setTickets] = useState<any[]>([])
+
+  const loadData = useCallback(async () => {
+    const [t, a, tk] = await Promise.all([
+      fetchTasks(), fetchAnnouncements(), fetchTickets(),
+    ])
+    setTasks(t)
+    setAnnouncements(a)
+    setTickets(tk)
+    setCsKpis(getCSKPIs())
+  }, [])
+
+  useEffect(() => { loadData() }, [loadData])
+
   const dailyQuote = useMemo(() => {
-    const idx = new Date().getDate() % STAFF_DAILY_QUOTES.length
-    return STAFF_DAILY_QUOTES[idx]
+    const idx = new Date().getDate() % DAILY_QUOTES.length
+    return DAILY_QUOTES[idx]
   }, [])
 
   // ── Role-based KPI stats ────────────────────────────────────────
   const openTicketCount = useMemo(() =>
-    TICKETS_DATA.filter(t => t.status !== 'resolved' && t.status !== 'closed').length,
-    []
+    tickets.filter(t => t.status !== 'resolved' && t.status !== 'closed').length,
+    [tickets]
   )
 
   const kpiCards = useMemo(() => {
     if (isCSRole(role)) {
       return [
-        { label: 'Tickets Resolved', value: CS_KPIS_DATA.ticketsResolved.toString(), icon: CheckCircle, color: 'text-emerald-400', bg: 'bg-emerald-500/15' },
-        { label: 'Avg Response Time', value: `${CS_KPIS_DATA.avgResponseTime}s`, icon: Clock, color: 'text-blue-400', bg: 'bg-blue-500/15' },
-        { label: 'CSAT Score', value: `${CS_KPIS_DATA.csatScore}/5`, icon: Star, color: 'text-amber-400', bg: 'bg-amber-500/15' },
+        { label: 'Tickets Resolved', value: csKpis.resolvedToday.toString(), icon: CheckCircle, color: 'text-emerald-400', bg: 'bg-emerald-500/15' },
+        { label: 'Avg Response Time', value: `${csKpis.avgResponseTime}`, icon: Clock, color: 'text-blue-400', bg: 'bg-blue-500/15' },
+        { label: 'CSAT Score', value: `${csKpis.satisfaction}`, icon: Star, color: 'text-amber-400', bg: 'bg-amber-500/15' },
         { label: 'Active Tickets', value: openTicketCount.toString(), icon: Ticket, color: 'text-teal-400', bg: 'bg-teal-500/15' },
       ]
     }
@@ -98,25 +122,25 @@ export default function HomeModule({ navigate, showToast, userName, role }: Home
       { label: 'Team Size', value: '18', icon: Users, color: 'text-amber-400', bg: 'bg-amber-500/15' },
       { label: 'Training Progress', value: '74%', icon: GraduationCap, color: 'text-teal-400', bg: 'bg-teal-500/15' },
     ]
-  }, [role])
+  }, [role, csKpis, tickets])
 
   // ── Top 5 tasks sorted by priority ──────────────────────────────
   const topTasks = useMemo(() =>
-    [...TASKS_DATA]
-      .sort((a, b) => PRIORITY_ORDER[a.priority] - PRIORITY_ORDER[b.priority])
+    [...tasks]
+      .sort((a, b) => (PRIORITY_ORDER[a.priority as TaskPriority] ?? 99) - (PRIORITY_ORDER[b.priority as TaskPriority] ?? 99))
       .slice(0, 5),
-    []
+    [tasks]
   )
 
   // ── Latest 3 announcements, pinned first ────────────────────────
   const latestAnnouncements = useMemo(() =>
-    [...ANNOUNCEMENTS_DATA]
+    [...announcements]
       .sort((a, b) => {
         if (a.pinned !== b.pinned) return a.pinned ? -1 : 1
         return new Date(b.postedDate).getTime() - new Date(a.postedDate).getTime()
       })
       .slice(0, 3),
-    []
+    [announcements]
   )
 
   // ── Quick Access items ──────────────────────────────────────────
@@ -239,7 +263,7 @@ export default function HomeModule({ navigate, showToast, userName, role }: Home
               <Megaphone className="w-4 h-4 text-teal-400" />
               Announcements
             </h3>
-            <span className="text-[10px] text-gray-500">{ANNOUNCEMENTS_DATA.length} total</span>
+            <span className="text-[10px] text-gray-500">{announcements.length} total</span>
           </div>
           <div className="space-y-3 max-h-72 overflow-y-auto admin-scrollbar">
             {latestAnnouncements.map((ann) => (

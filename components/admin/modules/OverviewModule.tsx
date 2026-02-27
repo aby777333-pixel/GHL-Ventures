@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import {
   IndianRupee, Users, TrendingUp, ClipboardCheck, Shield, Target,
   FileText, CheckSquare, ArrowUpRight, ArrowDownRight, Clock,
@@ -16,10 +16,10 @@ import AdminGlass from '../shared/AdminGlass'
 import AdminKPICard from '../shared/AdminKPICard'
 import AdminBadge, { getSeverityBadgeVariant } from '../shared/AdminBadge'
 import {
-  OVERVIEW_KPIS, AUM_GROWTH_DATA, REVENUE_BREAKDOWN,
-  ACTIVITY_FEED, RISK_FLAGS_DATA, SYSTEM_HEALTH, UPCOMING_DEADLINES,
-  ADMIN_NOTIFICATIONS,
-} from '@/lib/admin/adminMockData'
+  getOverviewKPIs, getAUMGrowth, getRevenueBreakdown,
+  fetchActivityFeed, fetchRiskFlags, getSystemHealth, getUpcomingDeadlines,
+  fetchNotifications,
+} from '@/lib/supabase/adminDataService'
 import { useAnimatedCounter, formatINR, formatTimeAgo } from '@/lib/admin/adminHooks'
 
 interface OverviewModuleProps {
@@ -44,19 +44,54 @@ function ChartTooltip({ active, payload, label }: any) {
 }
 
 export default function OverviewModule({ navigate, showToast }: OverviewModuleProps) {
-  const aumValue = useAnimatedCounter(OVERVIEW_KPIS.totalAUM)
-  const clientCount = useAnimatedCounter(OVERVIEW_KPIS.activeClients, 1500)
-  const revenueValue = useAnimatedCounter(OVERVIEW_KPIS.monthlyRevenue)
-  const leadsCount = useAnimatedCounter(OVERVIEW_KPIS.activeLeads, 1200)
+  // ── Live data ─────────────────────────────────────────────────
+  const [overviewKpis, setOverviewKpis] = useState({
+    totalAUM: 0, activeClients: 0, monthlyRevenue: 0, activeFunds: 0,
+    aumChange: 0, clientGrowth: 0, revenueChange: 0, pendingApprovals: 0,
+    complianceScore: 0, activeLeads: 0, leadConversion: 0,
+    documentsProcessed: 0, tasksCompleted: 0,
+  })
+  const [aumGrowthData, setAumGrowthData] = useState<any[]>([])
+  const [revenueBreakdown, setRevenueBreakdown] = useState<any[]>([])
+  const [activityFeed, setActivityFeed] = useState<any[]>([])
+  const [riskFlags, setRiskFlags] = useState<any[]>([])
+  const [systemHealth, setSystemHealth] = useState(getSystemHealth())
+  const [deadlines, setDeadlines] = useState<any[]>([])
+  const [notifications, setNotifications] = useState<any[]>([])
+
+  const loadData = useCallback(async () => {
+    const [kpis, aum, rev, feed, flags, notifs] = await Promise.all([
+      getOverviewKPIs(),
+      getAUMGrowth(),
+      getRevenueBreakdown(),
+      fetchActivityFeed(),
+      fetchRiskFlags(),
+      fetchNotifications(),
+    ])
+    setOverviewKpis(prev => ({ ...prev, ...kpis }))
+    setAumGrowthData(aum)
+    setRevenueBreakdown(rev)
+    setActivityFeed(feed)
+    setRiskFlags(flags)
+    setDeadlines(getUpcomingDeadlines())
+    setNotifications(notifs)
+  }, [])
+
+  useEffect(() => { loadData() }, [loadData])
+
+  const aumValue = useAnimatedCounter(overviewKpis.totalAUM)
+  const clientCount = useAnimatedCounter(overviewKpis.activeClients, 1500)
+  const revenueValue = useAnimatedCounter(overviewKpis.monthlyRevenue)
+  const leadsCount = useAnimatedCounter(overviewKpis.activeLeads, 1200)
 
   const activeAlerts = useMemo(() =>
-    RISK_FLAGS_DATA.filter(f => f.status === 'open' || f.status === 'investigating'),
-    []
+    riskFlags.filter(f => f.status === 'open' || f.status === 'investigating'),
+    [riskFlags]
   )
 
   const criticalNotifs = useMemo(() =>
-    ADMIN_NOTIFICATIONS.filter(n => n.type === 'critical' || n.type === 'warning'),
-    []
+    notifications.filter(n => n.type === 'critical' || n.type === 'warning'),
+    [notifications]
   )
 
   return (
@@ -75,7 +110,7 @@ export default function OverviewModule({ navigate, showToast }: OverviewModulePr
           icon={IndianRupee}
           color="#DC2626"
           trend="up"
-          trendValue={`+${OVERVIEW_KPIS.aumChange}%`}
+          trendValue={`+${overviewKpis.aumChange}%`}
           delay={0}
         />
         <AdminKPICard
@@ -84,7 +119,7 @@ export default function OverviewModule({ navigate, showToast }: OverviewModulePr
           icon={Users}
           color="#3B82F6"
           trend="up"
-          trendValue={`+${OVERVIEW_KPIS.clientGrowth}%`}
+          trendValue={`+${overviewKpis.clientGrowth}%`}
           delay={50}
         />
         <AdminKPICard
@@ -93,12 +128,12 @@ export default function OverviewModule({ navigate, showToast }: OverviewModulePr
           icon={TrendingUp}
           color="#10B981"
           trend="up"
-          trendValue={`+${OVERVIEW_KPIS.revenueChange}%`}
+          trendValue={`+${overviewKpis.revenueChange}%`}
           delay={100}
         />
         <AdminKPICard
           title="Pending Approvals"
-          value={OVERVIEW_KPIS.pendingApprovals.toString()}
+          value={overviewKpis.pendingApprovals.toString()}
           icon={ClipboardCheck}
           color="#F59E0B"
           subtitle="Action required"
@@ -106,7 +141,7 @@ export default function OverviewModule({ navigate, showToast }: OverviewModulePr
         />
         <AdminKPICard
           title="Compliance Score"
-          value={`${OVERVIEW_KPIS.complianceScore}/100`}
+          value={`${overviewKpis.complianceScore}/100`}
           icon={Shield}
           color="#8B5CF6"
           trend="up"
@@ -118,7 +153,7 @@ export default function OverviewModule({ navigate, showToast }: OverviewModulePr
           value={leadsCount.toString()}
           icon={Target}
           color="#F97316"
-          subtitle={`${OVERVIEW_KPIS.leadConversion}% conv.`}
+          subtitle={`${overviewKpis.leadConversion}% conv.`}
           delay={250}
         />
       </div>
@@ -140,7 +175,7 @@ export default function OverviewModule({ navigate, showToast }: OverviewModulePr
             </div>
           </div>
           <ResponsiveContainer width="100%" height={240}>
-            <AreaChart data={AUM_GROWTH_DATA} margin={{ top: 5, right: 20, bottom: 5, left: 0 }}>
+            <AreaChart data={aumGrowthData} margin={{ top: 5, right: 20, bottom: 5, left: 0 }}>
               <defs>
                 <linearGradient id="aumGrad" x1="0" y1="0" x2="0" y2="1">
                   <stop offset="5%" stopColor="#DC2626" stopOpacity={0.3} />
@@ -174,7 +209,7 @@ export default function OverviewModule({ navigate, showToast }: OverviewModulePr
             </div>
           </div>
           <ResponsiveContainer width="100%" height={240}>
-            <BarChart data={REVENUE_BREAKDOWN} margin={{ top: 5, right: 20, bottom: 5, left: 0 }}>
+            <BarChart data={revenueBreakdown} margin={{ top: 5, right: 20, bottom: 5, left: 0 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
               <XAxis dataKey="month" stroke="#666" fontSize={10} tickLine={false} />
               <YAxis stroke="#666" fontSize={10} tickLine={false} tickFormatter={v => `₹${v}L`} />
@@ -197,14 +232,14 @@ export default function OverviewModule({ navigate, showToast }: OverviewModulePr
               <Activity className="w-4 h-4 text-brand-red" />
               Live Activity Feed
             </h3>
-            <span className="text-[10px] text-gray-500">{ACTIVITY_FEED.length} recent</span>
+            <span className="text-[10px] text-gray-500">{activityFeed.length} recent</span>
           </div>
           <div className="space-y-3 max-h-72 overflow-y-auto admin-scrollbar">
-            {ACTIVITY_FEED.map(item => (
+            {activityFeed.map(item => (
               <div key={item.id} className="flex items-start gap-3 group">
                 <div className="w-7 h-7 rounded-full bg-white/[0.06] flex items-center justify-center flex-shrink-0 mt-0.5">
                   <span className="text-[10px] font-bold text-brand-red">
-                    {item.user.split(' ').map(w => w[0]).join('').slice(0, 2)}
+                    {item.user.split(' ').map((w: string) => w[0]).join('').slice(0, 2)}
                   </span>
                 </div>
                 <div className="flex-1 min-w-0">
@@ -230,7 +265,7 @@ export default function OverviewModule({ navigate, showToast }: OverviewModulePr
             <span className="text-[10px] text-gray-500">{activeAlerts.length} active</span>
           </div>
           <div className="space-y-3 max-h-72 overflow-y-auto admin-scrollbar">
-            {RISK_FLAGS_DATA.map(flag => {
+            {riskFlags.map(flag => {
               const FlagIcon = flag.severity === 'critical' ? AlertCircle : flag.severity === 'high' ? AlertTriangle : Info
               const iconColor = flag.severity === 'critical' ? 'text-red-400' : flag.severity === 'high' ? 'text-amber-400' : 'text-blue-400'
               return (
@@ -380,35 +415,35 @@ export default function OverviewModule({ navigate, showToast }: OverviewModulePr
               <span className="text-xs text-gray-400 flex items-center gap-2">
                 <Wifi className="w-3 h-3" /> Uptime
               </span>
-              <span className="text-xs font-semibold text-emerald-400">{SYSTEM_HEALTH.uptime}%</span>
+              <span className="text-xs font-semibold text-emerald-400">{systemHealth.uptime}%</span>
             </div>
             <div className="flex items-center justify-between">
               <span className="text-xs text-gray-400 flex items-center gap-2">
                 <Zap className="w-3 h-3" /> Response Time
               </span>
-              <span className="text-xs font-semibold text-white">{SYSTEM_HEALTH.responseTime}ms</span>
+              <span className="text-xs font-semibold text-white">{systemHealth.responseTime}ms</span>
             </div>
             <div>
               <div className="flex items-center justify-between mb-1">
                 <span className="text-xs text-gray-400 flex items-center gap-2">
                   <HardDrive className="w-3 h-3" /> Storage
                 </span>
-                <span className="text-xs text-gray-500">{SYSTEM_HEALTH.storageUsed}/{SYSTEM_HEALTH.storageTotal} GB</span>
+                <span className="text-xs text-gray-500">{systemHealth.storageUsed}/{systemHealth.storageTotal} GB</span>
               </div>
               <div className="w-full h-1.5 rounded-full bg-white/[0.06] overflow-hidden">
                 <div
                   className="h-full rounded-full bg-brand-red transition-all duration-1000"
-                  style={{ width: `${(SYSTEM_HEALTH.storageUsed / SYSTEM_HEALTH.storageTotal) * 100}%` }}
+                  style={{ width: `${(systemHealth.storageUsed / systemHealth.storageTotal) * 100}%` }}
                 />
               </div>
             </div>
             <div className="flex items-center justify-between">
               <span className="text-xs text-gray-400">Active Users</span>
-              <span className="text-xs font-semibold text-white">{SYSTEM_HEALTH.activeUsers}</span>
+              <span className="text-xs font-semibold text-white">{systemHealth.activeUsers}</span>
             </div>
             <div className="flex items-center justify-between">
               <span className="text-xs text-gray-400">API Calls (24h)</span>
-              <span className="text-xs font-semibold text-white">{SYSTEM_HEALTH.apiCalls24h.toLocaleString()}</span>
+              <span className="text-xs font-semibold text-white">{systemHealth.apiCalls24h.toLocaleString()}</span>
             </div>
           </div>
         </AdminGlass>
@@ -420,7 +455,7 @@ export default function OverviewModule({ navigate, showToast }: OverviewModulePr
             Upcoming Deadlines
           </h3>
           <div className="space-y-3">
-            {UPCOMING_DEADLINES.map(dl => {
+            {deadlines.map(dl => {
               const daysLeft = Math.ceil((new Date(dl.date).getTime() - Date.now()) / 86400000)
               const urgencyColor = daysLeft <= 7 ? 'text-red-400' : daysLeft <= 30 ? 'text-amber-400' : 'text-gray-400'
               return (
@@ -461,7 +496,7 @@ export default function OverviewModule({ navigate, showToast }: OverviewModulePr
                   <FileText className="w-4 h-4 text-blue-400" />
                 </div>
                 <div>
-                  <p className="text-xs font-semibold text-white">{OVERVIEW_KPIS.documentsProcessed}</p>
+                  <p className="text-xs font-semibold text-white">{overviewKpis.documentsProcessed}</p>
                   <p className="text-[10px] text-gray-500">Docs Processed</p>
                 </div>
               </div>
@@ -474,7 +509,7 @@ export default function OverviewModule({ navigate, showToast }: OverviewModulePr
                   <CheckSquare className="w-4 h-4 text-emerald-400" />
                 </div>
                 <div>
-                  <p className="text-xs font-semibold text-white">{OVERVIEW_KPIS.tasksCompleted}</p>
+                  <p className="text-xs font-semibold text-white">{overviewKpis.tasksCompleted}</p>
                   <p className="text-[10px] text-gray-500">Tasks Completed</p>
                 </div>
               </div>
@@ -487,7 +522,7 @@ export default function OverviewModule({ navigate, showToast }: OverviewModulePr
                   <Shield className="w-4 h-4 text-purple-400" />
                 </div>
                 <div>
-                  <p className="text-xs font-semibold text-white">{OVERVIEW_KPIS.pendingApprovals}</p>
+                  <p className="text-xs font-semibold text-white">{overviewKpis.pendingApprovals}</p>
                   <p className="text-[10px] text-gray-500">Pending Approvals</p>
                 </div>
               </div>

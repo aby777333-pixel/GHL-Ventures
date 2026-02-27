@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import {
   Building2, MapPin, Phone, Mail, Star, IndianRupee, TrendingUp,
   UserCheck, AlertCircle, Plus, Search, Filter, Eye, Edit3,
@@ -18,8 +18,8 @@ import AdminModal, { ModalButton } from '../shared/AdminModal'
 import AdminKPICard from '../shared/AdminKPICard'
 import AdminDataTable, { type Column } from '../shared/AdminDataTable'
 import {
-  REALTY_BROKERS_DATA, BROKER_INQUIRIES_DATA,
-} from '@/lib/admin/adminMockData'
+  fetchRealtyBrokers, fetchBrokerInquiries,
+} from '@/lib/supabase/adminDataService'
 import { formatINR } from '@/lib/admin/adminHooks'
 import UploadWithFolderPicker from '@/components/shared/UploadWithFolderPicker'
 import type { RealtyBroker, BrokerInquiry } from '@/lib/admin/adminTypes'
@@ -92,6 +92,17 @@ const SUB_TABS = [
 ]
 
 export default function RealtyBrokersModule({ subTab, navigate, showToast }: RealtyBrokersModuleProps) {
+  const [brokers, setBrokers] = useState<RealtyBroker[]>([])
+  const [inquiries, setInquiries] = useState<BrokerInquiry[]>([])
+
+  const loadData = useCallback(async () => {
+    const [b, i] = await Promise.all([fetchRealtyBrokers(), fetchBrokerInquiries()])
+    setBrokers(b as RealtyBroker[])
+    setInquiries(i as BrokerInquiry[])
+  }, [])
+
+  useEffect(() => { loadData() }, [loadData])
+
   const [selectedBroker, setSelectedBroker] = useState<RealtyBroker | null>(null)
   const [selectedInquiry, setSelectedInquiry] = useState<BrokerInquiry | null>(null)
   const [addBrokerOpen, setAddBrokerOpen] = useState(false)
@@ -136,15 +147,15 @@ export default function RealtyBrokersModule({ subTab, navigate, showToast }: Rea
 
   // ── KPIs ────────────────────────────────────────────────────────
   const kpis = useMemo(() => {
-    const totalBrokers = REALTY_BROKERS_DATA.length
-    const activeBrokers = REALTY_BROKERS_DATA.filter(b => b.status === 'active').length
-    const totalDeals = REALTY_BROKERS_DATA.reduce((s, b) => s + b.totalDeals, 0)
-    const totalValue = REALTY_BROKERS_DATA.reduce((s, b) => s + b.totalValue, 0)
-    const totalCommission = REALTY_BROKERS_DATA.reduce((s, b) => s + b.commission, 0)
-    const avgRating = REALTY_BROKERS_DATA.reduce((s, b) => s + b.rating, 0) / totalBrokers
-    const newInquiries = BROKER_INQUIRIES_DATA.filter(i => i.status === 'new').length
+    const totalBrokers = brokers.length
+    const activeBrokers = brokers.filter(b => b.status === 'active').length
+    const totalDeals = brokers.reduce((s, b) => s + b.totalDeals, 0)
+    const totalValue = brokers.reduce((s, b) => s + b.totalValue, 0)
+    const totalCommission = brokers.reduce((s, b) => s + b.commission, 0)
+    const avgRating = brokers.reduce((s, b) => s + b.rating, 0) / (totalBrokers || 1)
+    const newInquiries = inquiries.filter(i => i.status === 'new').length
     return { totalBrokers, activeBrokers, totalDeals, totalValue, totalCommission, avgRating, newInquiries }
-  }, [])
+  }, [brokers, inquiries])
 
   return (
     <div className="space-y-6">
@@ -194,9 +205,9 @@ export default function RealtyBrokersModule({ subTab, navigate, showToast }: Rea
       </div>
 
       {/* Content based on sub-tab */}
-      {subTab === null && <BrokerDirectory onSelect={setSelectedBroker} showToast={showToast} />}
-      {subTab === 'inquiries' && <InquiriesView onSelect={setSelectedInquiry} showToast={showToast} />}
-      {subTab === 'analytics' && <AnalyticsView />}
+      {subTab === null && <BrokerDirectory brokers={brokers} onSelect={setSelectedBroker} showToast={showToast} />}
+      {subTab === 'inquiries' && <InquiriesView inquiries={inquiries} brokers={brokers} onSelect={setSelectedInquiry} showToast={showToast} />}
+      {subTab === 'analytics' && <AnalyticsView brokers={brokers} inquiries={inquiries} />}
 
       {/* Broker Detail Modal */}
       {selectedBroker && (
@@ -532,7 +543,8 @@ export default function RealtyBrokersModule({ subTab, navigate, showToast }: Rea
 }
 
 // ── Broker Directory Sub-view ──────────────────────────────────────
-function BrokerDirectory({ onSelect, showToast }: {
+function BrokerDirectory({ brokers, onSelect, showToast }: {
+  brokers: RealtyBroker[]
   onSelect: (b: RealtyBroker) => void
   showToast: (msg: string, type?: 'success' | 'error' | 'info' | 'warning') => void
 }) {
@@ -641,7 +653,7 @@ function BrokerDirectory({ onSelect, showToast }: {
     <AdminGlass hover={false}>
       <AdminDataTable<RealtyBroker>
         columns={columns}
-        data={REALTY_BROKERS_DATA}
+        data={brokers}
         searchable
         searchPlaceholder="Search brokers by name, company, city..."
         searchKeys={['name', 'company', 'city', 'specialization']}
@@ -663,7 +675,9 @@ function BrokerDirectory({ onSelect, showToast }: {
 }
 
 // ── Inquiries Sub-view ─────────────────────────────────────────────
-function InquiriesView({ onSelect, showToast }: {
+function InquiriesView({ inquiries, brokers, onSelect, showToast }: {
+  inquiries: BrokerInquiry[]
+  brokers: RealtyBroker[]
   onSelect: (i: BrokerInquiry) => void
   showToast: (msg: string, type?: 'success' | 'error' | 'info' | 'warning') => void
 }) {
@@ -790,7 +804,7 @@ function InquiriesView({ onSelect, showToast }: {
       <AdminGlass hover={false}>
         <AdminDataTable<BrokerInquiry>
           columns={columns}
-          data={BROKER_INQUIRIES_DATA}
+          data={inquiries}
           searchable
           searchPlaceholder="Search inquiries..."
           searchKeys={['subject', 'brokerName', 'type', 'location']}
@@ -908,7 +922,7 @@ function InquiriesView({ onSelect, showToast }: {
               className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-brand-red/40 focus:ring-1 focus:ring-brand-red/20"
             >
               <option value="">Select a broker...</option>
-              {REALTY_BROKERS_DATA.map(broker => (
+              {brokers.map(broker => (
                 <option key={broker.id} value={broker.name}>{broker.name} — {broker.city}</option>
               ))}
             </select>
@@ -930,10 +944,10 @@ function InquiriesView({ onSelect, showToast }: {
 }
 
 // ── Analytics Sub-view ──────────────────────────────────────────────
-function AnalyticsView() {
-  const totalValue = REALTY_BROKERS_DATA.reduce((s, b) => s + b.totalValue, 0)
-  const totalCommission = REALTY_BROKERS_DATA.reduce((s, b) => s + b.commission, 0)
-  const avgRating = REALTY_BROKERS_DATA.reduce((s, b) => s + b.rating, 0) / REALTY_BROKERS_DATA.length
+function AnalyticsView({ brokers, inquiries }: { brokers: RealtyBroker[]; inquiries: BrokerInquiry[] }) {
+  const totalValue = brokers.reduce((s, b) => s + b.totalValue, 0)
+  const totalCommission = brokers.reduce((s, b) => s + b.commission, 0)
+  const avgRating = brokers.reduce((s, b) => s + b.rating, 0) / (brokers.length || 1)
 
   return (
     <div className="space-y-6">
@@ -942,7 +956,7 @@ function AnalyticsView() {
         <AdminKPICard title="Total Portfolio" value={formatINR(totalValue)} icon={IndianRupee} color="#10B981" />
         <AdminKPICard title="Total Commission" value={formatINR(totalCommission)} icon={TrendingUp} color="#F59E0B" />
         <AdminKPICard title="Avg Rating" value={avgRating.toFixed(1)} icon={Star} color="#3B82F6" subtitle="out of 5.0" />
-        <AdminKPICard title="Inquiry Pipeline" value={`${formatINR(BROKER_INQUIRIES_DATA.reduce((s, i) => s + (i.estimatedValue || 0), 0))}`} icon={BarChart3} color="#8B5CF6" />
+        <AdminKPICard title="Inquiry Pipeline" value={`${formatINR(inquiries.reduce((s, i) => s + (i.estimatedValue || 0), 0))}`} icon={BarChart3} color="#8B5CF6" />
       </div>
 
       {/* Charts Row */}
@@ -1005,7 +1019,7 @@ function AnalyticsView() {
       <AdminGlass>
         <h3 className="text-sm font-semibold text-white mb-4">Top Performing Brokers</h3>
         <div className="space-y-2">
-          {[...REALTY_BROKERS_DATA]
+          {[...brokers]
             .sort((a, b) => b.totalValue - a.totalValue)
             .slice(0, 5)
             .map((broker, i) => (

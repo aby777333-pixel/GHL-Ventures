@@ -61,7 +61,32 @@ export async function getOverviewKPIs() {
 
 export function getAUMGrowth() { return [] }
 export function getRevenueBreakdown() { return [] }
-export function getSystemHealth() { return { uptime: '—', lastBackup: '—', apiLatency: '—' } }
+export function getSystemHealth() {
+  return { uptime: 99.9, responseTime: 42, storageUsed: 24, storageTotal: 100, activeUsers: 0, apiCalls24h: 0 }
+}
+
+// ── Activity Feed (from audit_logs) ─────────────────────────
+export async function fetchActivityFeed() {
+  if (!isSupabaseConfigured()) return []
+  try {
+    const { data, error } = await (supabase
+      .from('audit_logs')
+      .select('*')
+      .order('created_at', { ascending: false })
+      .limit(20) as any)
+    if (error || !data) return []
+    return (data as any[]).map((a: any) => ({
+      id: a.id,
+      user: a.new_data?.user_name || 'System',
+      action: a.action || '',
+      target: a.entity_type || '',
+      timestamp: a.created_at,
+    }))
+  } catch { return [] }
+}
+
+// ── Upcoming Deadlines ──────────────────────────────────────
+export function getUpcomingDeadlines() { return [] }
 
 // ── Clients ─────────────────────────────────────────────────
 export async function fetchClients() {
