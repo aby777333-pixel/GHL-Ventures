@@ -292,8 +292,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                 {/* Elfsight All-in-One Chat */}
                 <Script
                   src="https://elfsightcdn.com/platform.js"
-                  strategy="lazyOnload"
-                  async
+                  strategy="afterInteractive"
                 />
                 <div className="elfsight-app-941b3074-36aa-4451-a4e2-be0f9b51ead0" data-elfsight-app-lazy></div>
               </MainSiteOnly>
