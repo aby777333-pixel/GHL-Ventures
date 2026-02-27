@@ -63,6 +63,9 @@ import {
   onInvestmentUpdate,
 } from '@/lib/supabase/realtimeSubscriptions'
 
+// Cross-portal: RM request routing (Client → CS Dashboard)
+import { createRMRequest } from '@/lib/supabase/chatService'
+
 /* ═══════════════════════════════════════════════════════════════
    TYPES
    ═══════════════════════════════════════════════════════════════ */
@@ -1336,13 +1339,21 @@ export default function DashboardClient() {
             </div>
           </div>
           <div className="grid grid-cols-2 gap-2">
-            <button onClick={() => { setActiveTab('support'); setTimeout(() => window.dispatchEvent(new CustomEvent('ghl-open-chat')), 300) }}
+            <button onClick={async () => {
+              showToast('Connecting you with your RM...', 'info')
+              await createRMRequest({ clientId: clientId || '', clientName: userName || 'Client', requestType: 'chat' })
+              window.dispatchEvent(new CustomEvent('ghl-open-chat'))
+            }}
               className="flex items-center justify-center gap-2 p-2.5 rounded-xl bg-white/[0.03] border border-white/[0.06] hover:border-brand-red/20 hover:bg-brand-red/[0.04] text-xs font-medium text-gray-300 hover:text-brand-red transition-all">
-              <MessageSquare className="w-3.5 h-3.5" /> Live Chat
+              <MessageSquare className="w-3.5 h-3.5" /> Talk with RM
             </button>
-            <button onClick={() => { window.open('tel:+917200255252'); showToast('Connecting to your RM...', 'info') }}
+            <button onClick={async () => {
+              showToast('Requesting callback from your RM...', 'info')
+              await createRMRequest({ clientId: clientId || '', clientName: userName || 'Client', requestType: 'callback' })
+              window.open('tel:+917200255252')
+            }}
               className="flex items-center justify-center gap-2 p-2.5 rounded-xl bg-white/[0.03] border border-white/[0.06] hover:border-emerald-500/20 hover:bg-emerald-500/[0.04] text-xs font-medium text-gray-300 hover:text-emerald-300 transition-all">
-              <Phone className="w-3.5 h-3.5" /> Call
+              <Phone className="w-3.5 h-3.5" /> Call RM
             </button>
           </div>
           <div className="flex items-center gap-2 mt-3 p-2 rounded-lg bg-emerald-500/[0.06] border border-emerald-500/10">

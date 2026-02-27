@@ -110,6 +110,43 @@ export function onKYCStatusChange(handler: ChangeHandler) {
   return subscribeToTable('kyc_documents', 'UPDATE', handler)
 }
 
+// ── Chat & RM Subscriptions (Cross-Portal Wiring) ───────────
+
+/** CS Dashboard: Subscribe to new chat sessions waiting for assignment */
+export function onNewChatSession(handler: ChangeHandler) {
+  return subscribeToTable('chat_sessions', 'INSERT', handler)
+}
+
+/** CS Dashboard: Subscribe to chat sessions assigned to a specific rep */
+export function onMyChatSessionUpdate(repId: string, handler: ChangeHandler) {
+  return subscribeToTable('chat_sessions', '*', handler, `assigned_rep_id=eq.${repId}`)
+}
+
+/** CS Dashboard: Subscribe to new chat messages in a specific session */
+export function onChatMessage(sessionId: string, handler: ChangeHandler) {
+  return subscribeToTable('chat_messages', 'INSERT', handler, `session_id=eq.${sessionId}`)
+}
+
+/** CS Dashboard: Subscribe to all new chat messages (for active rep) */
+export function onAnyChatMessage(handler: ChangeHandler) {
+  return subscribeToTable('chat_messages', 'INSERT', handler)
+}
+
+/** Staff/RM: Subscribe to RM requests assigned to this RM */
+export function onRMRequest(rmId: string, handler: ChangeHandler) {
+  return subscribeToTable('rm_requests', '*', handler, `rm_id=eq.${rmId}`)
+}
+
+/** Admin: Subscribe to all RM requests (oversight) */
+export function onAllRMRequests(handler: ChangeHandler) {
+  return subscribeToTable('rm_requests', 'INSERT', handler)
+}
+
+/** Admin: Subscribe to chat session status changes (oversight) */
+export function onChatSessionStatusChange(handler: ChangeHandler) {
+  return subscribeToTable('chat_sessions', 'UPDATE', handler)
+}
+
 // ── Cleanup ─────────────────────────────────────────────────
 
 /** Unsubscribe from all active channels */

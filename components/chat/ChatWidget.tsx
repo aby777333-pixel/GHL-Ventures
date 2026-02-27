@@ -9,10 +9,19 @@ import {
 } from 'lucide-react'
 import { findBestResponse } from '@/lib/chatKnowledge'
 import { PROACTIVE_MESSAGES } from '@/lib/chatProactive'
+import {
+  createChatSession,
+  sendChatMessage,
+  getChatMessages,
+  getActiveSessionForVisitor,
+  resolveChatSession,
+} from '@/lib/supabase/chatService'
+import type { ChatSession } from '@/lib/supabase/chatService'
+import { onChatMessage } from '@/lib/supabase/realtimeSubscriptions'
 
 type ChatMode = 'aria' | 'live' | 'connect'
 
-interface ChatMessage {
+interface ChatMessageUI {
   id: string
   text: string
   sender: 'user' | 'aria' | 'agent' | 'system'
@@ -34,28 +43,11 @@ function renderFormatted(text: string) {
   })
 }
 
-// Simulated live agent responses
-const LIVE_AGENT_GREETINGS = [
-  'Hi there! I\'m Priya from the GHL investment team. How can I help you today?',
-  'Hello! I\'m Karthik from GHL India Ventures. Thanks for reaching out — how can I assist you?',
-  'Welcome! I\'m Meena from the GHL advisory team. I\'d love to help you with your investment questions.',
-]
-
-const LIVE_AGENT_RESPONSES = [
-  'That\'s a great question! Let me look into this for you.\n\nOur team specializes in this area. To give you the most accurate information, could you share a bit more about your investment goals?',
-  'Thank you for sharing that. Based on what you\'ve described, I\'d recommend scheduling a **one-on-one consultation** with our senior advisor. They can walk you through the details specific to your situation.\n\nWould you like me to set that up?',
-  'I completely understand your concern. Let me connect you with the right person on our team who can provide detailed guidance.\n\nIn the meantime, you might find our **Investment Guide** helpful — it covers the most common questions investors have.',
-  'Great to hear you\'re interested! Our fund has two routes that might work for you.\n\nFor a **personalized recommendation**, I suggest we hop on a quick call. I can share my direct calendar link — would that work?',
-  'That\'s an important consideration. Our compliance team ensures everything is SEBI-regulated and transparent.\n\nI can arrange a call with our **Head of Compliance** if you\'d like more details on the regulatory framework.',
-]
-
-const AGENT_NAMES = ['Priya S.', 'Karthik R.', 'Meena V.']
-
 export default function ChatWidget() {
   const pathname = usePathname()
   const [isOpen, setIsOpen] = useState(false)
   const [chatState, setChatState] = useState<'pre-form' | 'active'>('pre-form')
-  const [messages, setMessages] = useState<ChatMessage[]>([])
+  const [messages, setMessages] = useState<ChatMessageUI[]>([])
   const [input, setInput] = useState('')
   const [isTyping, setIsTyping] = useState(false)
   const [quickReplies, setQuickReplies] = useState<string[]>([])
@@ -68,9 +60,12 @@ export default function ChatWidget() {
   const [chatMode, setChatMode] = useState<ChatMode>('aria')
   const [agentName, setAgentName] = useState('')
   const [agentConnected, setAgentConnected] = useState(false)
-  const [liveAgentMsgIndex, setLiveAgentMsgIndex] = useState(0)
   const [showRating, setShowRating] = useState(false)
   const [rated, setRated] = useState(false)
+
+  // Supabase-backed live chat session
+  const [chatSession, setChatSession] = useState<ChatSession | null>(null)
+  const unsubRef = useRef<(() => void) | null>(null)
 
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
@@ -89,7 +84,7 @@ export default function ChatWidget() {
       if (savedHistory) {
         const h = JSON.parse(savedHistory)
         if (h.timestamp && Date.now() - h.timestamp < 24 * 60 * 60 * 1000) {
-          setMessages(h.messages.map((m: ChatMessage) => ({ ...m, timestamp: new Date(m.timestamp) })))
+          setMessages(h.messages.map((m: ChatMessageUI) => ({ ...m, timestamp: new Date(m.timestamp) })))
           setChatState('active')
         } else {
           localStorage.removeItem('ghl-chat-history')
@@ -97,6 +92,63 @@ export default function ChatWidget() {
       }
     } catch { /* ignore */ }
   }, [])
+
+  // Restore active session on load
+  useEffect(() => {
+    async function restoreSession() {
+      const session = await getActiveSessionForVisitor()
+      if (session) {
+        setChatSession(session)
+        // Load message history from Supabase
+        const history = await getChatMessages(session.id)
+        if (history.length > 0) {
+          const uiMessages: ChatMessageUI[] = history.map(m => ({
+            id: m.id,
+            text: m.message,
+            sender: m.sender_type === 'visitor' ? 'user'
+              : m.sender_type === 'agent' ? 'agent'
+              : m.sender_type === 'bot' ? 'aria'
+              : 'system',
+            timestamp: new Date(m.created_at),
+          }))
+          setMessages(prev => prev.length > 0 ? prev : uiMessages)
+        }
+        if (session.assigned_rep_id) {
+          setAgentConnected(true)
+          setAgentName('Support Agent')
+        }
+      }
+    }
+    restoreSession()
+  }, [])
+
+  // Subscribe to real-time messages when we have a live chat session
+  useEffect(() => {
+    if (!chatSession?.id || chatMode !== 'live') return
+
+    const unsub = onChatMessage(chatSession.id, (payload) => {
+      const msg = payload.new as any
+      // Only show messages from agents (we already show our own locally)
+      if (msg.sender_type === 'agent' || msg.sender_type === 'system') {
+        const uiMsg: ChatMessageUI = {
+          id: msg.id,
+          text: msg.message,
+          sender: msg.sender_type === 'agent' ? 'agent' : 'system',
+          timestamp: new Date(msg.created_at),
+        }
+        setMessages(prev => [...prev, uiMsg])
+        setIsTyping(false)
+        if (msg.sender_type === 'agent') {
+          setAgentConnected(true)
+          if (msg.sender_name) setAgentName(msg.sender_name)
+        }
+        if (!isOpen) setUnreadCount(prev => prev + 1)
+      }
+    })
+
+    unsubRef.current = unsub
+    return () => { unsub?.() }
+  }, [chatSession?.id, chatMode, isOpen])
 
   // External open event (from dashboard support tab)
   useEffect(() => {
@@ -139,9 +191,9 @@ export default function ChatWidget() {
   }, [messages])
 
   const addWelcome = useCallback((name?: string) => {
-    const welcome: ChatMessage = {
+    const welcome: ChatMessageUI = {
       id: uid(),
-      text: `Hi${name ? `, ${name}` : ''}! 👋 I'm ARIA, your GHL investment assistant.\n\nI can help you with our investment routes, fund details, or connect you with an advisor.\n\nWhat would you like to know?`,
+      text: `Hi${name ? `, ${name}` : ''}! I'm ARIA, your GHL investment assistant.\n\nI can help you with our investment routes, fund details, or connect you with an advisor.\n\nWhat would you like to know?`,
       sender: 'aria',
       timestamp: new Date(),
     }
@@ -173,8 +225,28 @@ export default function ChatWidget() {
     addWelcome()
   }
 
+  // ── Start a live chat session via Supabase ──
+  const startLiveChatSession = useCallback(async () => {
+    const session = await createChatSession({
+      visitorName: visitorName || 'Visitor',
+      visitorEmail: visitorEmail || undefined,
+      pageUrl: typeof window !== 'undefined' ? window.location.href : undefined,
+      channel: 'web_chat',
+    })
+    if (session) {
+      setChatSession(session)
+      // Send a system message indicating the session started
+      await sendChatMessage({
+        sessionId: session.id,
+        senderType: 'system',
+        message: `${visitorName || 'Visitor'} started a live chat from ${pathname}`,
+      })
+    }
+    return session
+  }, [visitorName, visitorEmail, pathname])
+
   // ── Mode switching ──
-  const handleModeSwitch = useCallback((mode: ChatMode) => {
+  const handleModeSwitch = useCallback(async (mode: ChatMode) => {
     if (mode === chatMode) return
     setChatMode(mode)
     setQuickReplies([])
@@ -182,9 +254,9 @@ export default function ChatWidget() {
     setRated(false)
 
     if (mode === 'aria') {
-      const msg: ChatMessage = {
+      const msg: ChatMessageUI = {
         id: uid(),
-        text: `Switched to **ARIA Bot** — your AI assistant. 🤖\n\nHow can I help you?`,
+        text: `Switched to **ARIA Bot** — your AI assistant.\n\nHow can I help you?`,
         sender: 'system',
         timestamp: new Date(),
       }
@@ -193,14 +265,11 @@ export default function ChatWidget() {
       setChatState('active')
       setAgentConnected(false)
     } else if (mode === 'live') {
-      const agent = AGENT_NAMES[Math.floor(Math.random() * AGENT_NAMES.length)]
-      setAgentName(agent)
       setAgentConnected(false)
-      setLiveAgentMsgIndex(0)
 
-      const connectMsg: ChatMessage = {
+      const connectMsg: ChatMessageUI = {
         id: uid(),
-        text: `Connecting you to a live agent... 🟡`,
+        text: `Connecting you to a live agent...`,
         sender: 'system',
         timestamp: new Date(),
       }
@@ -208,29 +277,47 @@ export default function ChatWidget() {
       setChatState('active')
       setIsTyping(true)
 
-      // Simulate agent connecting
-      setTimeout(() => {
-        setAgentConnected(true)
-        setIsTyping(false)
-        const greeting = LIVE_AGENT_GREETINGS[Math.floor(Math.random() * LIVE_AGENT_GREETINGS.length)]
-        const agentMsg: ChatMessage = {
-          id: uid(),
-          text: greeting,
-          sender: 'agent',
-          timestamp: new Date(),
-        }
-        setMessages(prev => [...prev, agentMsg])
-        setQuickReplies(['Tell me about AIF', 'Investment options', 'Schedule a call', 'SEBI Co-Invest'])
-      }, 2500)
+      // Create a Supabase chat session for real-time routing
+      const session = await startLiveChatSession()
+
+      if (session && session.assigned_rep_id) {
+        // Rep was auto-assigned
+        setTimeout(() => {
+          setIsTyping(false)
+          setAgentConnected(true)
+          setAgentName('Support Agent')
+          const agentMsg: ChatMessageUI = {
+            id: uid(),
+            text: 'An agent has been assigned and will respond shortly. Please share your question!',
+            sender: 'system',
+            timestamp: new Date(),
+          }
+          setMessages(prev => [...prev, agentMsg])
+          setQuickReplies(['Tell me about AIF', 'Investment options', 'Schedule a call', 'SEBI Co-Invest'])
+        }, 1500)
+      } else {
+        // No reps available — queued
+        setTimeout(() => {
+          setIsTyping(false)
+          const queueMsg: ChatMessageUI = {
+            id: uid(),
+            text: `All our agents are currently busy. You've been placed in the queue and will be connected shortly.\n\nEstimated wait time: **~2 minutes**\n\nYou can also switch to ARIA Bot for instant answers.`,
+            sender: 'system',
+            timestamp: new Date(),
+          }
+          setMessages(prev => [...prev, queueMsg])
+          setQuickReplies(['Switch to ARIA Bot', 'I\'ll wait'])
+        }, 2500)
+      }
     }
     // 'connect' mode doesn't add messages — just shows the panel
-  }, [chatMode])
+  }, [chatMode, startLiveChatSession])
 
   // ── Send message ──
-  const handleSend = useCallback((text?: string) => {
+  const handleSend = useCallback(async (text?: string) => {
     const content = (text ?? input).trim()
     if (!content) return
-    const userMsg: ChatMessage = { id: uid(), text: content, sender: 'user', timestamp: new Date() }
+    const userMsg: ChatMessageUI = { id: uid(), text: content, sender: 'user', timestamp: new Date() }
     setMessages(prev => [...prev, userMsg])
     setInput('')
     setQuickReplies([])
@@ -240,42 +327,54 @@ export default function ChatWidget() {
       const { text: response, quickReplies: qr } = findBestResponse(content)
       const delay = Math.min(600 + response.length * 8, 2500)
       setTimeout(() => {
-        const botMsg: ChatMessage = { id: uid(), text: response, sender: 'aria', timestamp: new Date() }
+        const botMsg: ChatMessageUI = { id: uid(), text: response, sender: 'aria', timestamp: new Date() }
         setMessages(prev => [...prev, botMsg])
         setQuickReplies(qr)
         setIsTyping(false)
         if (!isOpen) setUnreadCount(prev => prev + 1)
       }, delay)
     } else if (chatMode === 'live') {
-      // Simulated live agent response
-      const delay = 2000 + Math.random() * 2000
-      setTimeout(() => {
-        const idx = liveAgentMsgIndex % LIVE_AGENT_RESPONSES.length
-        const response = LIVE_AGENT_RESPONSES[idx]
-        setLiveAgentMsgIndex(prev => prev + 1)
-        const agentMsg: ChatMessage = { id: uid(), text: response, sender: 'agent', timestamp: new Date() }
-        setMessages(prev => [...prev, agentMsg])
-        setIsTyping(false)
-        if (!isOpen) setUnreadCount(prev => prev + 1)
+      // Send to Supabase — agent will respond in real-time via subscription
+      if (chatSession?.id) {
+        await sendChatMessage({
+          sessionId: chatSession.id,
+          senderType: 'visitor',
+          senderName: visitorName || 'Visitor',
+          message: content,
+        })
+      }
 
-        // After 3 messages, show rating prompt
-        if (idx >= 2 && !showRating) {
-          setTimeout(() => setShowRating(true), 1500)
-        }
-      }, delay)
+      // If no agent connected yet, show a waiting message after a delay
+      if (!agentConnected) {
+        setTimeout(() => {
+          setIsTyping(false)
+          // Don't add a fake response — wait for real agent via realtime
+        }, 3000)
+      } else {
+        // Agent is connected — they'll respond via Supabase Realtime
+        // Set a timeout to stop typing indicator if no response comes
+        setTimeout(() => {
+          setIsTyping(false)
+        }, 10000)
+      }
     }
-  }, [input, isOpen, chatMode, liveAgentMsgIndex, showRating])
+  }, [input, isOpen, chatMode, chatSession, agentConnected, visitorName])
 
-  const handleRate = (rating: string) => {
+  const handleRate = async (rating: string) => {
     setRated(true)
     setShowRating(false)
-    const rateMsg: ChatMessage = {
+    const rateMsg: ChatMessageUI = {
       id: uid(),
-      text: `Thanks for the feedback! You rated this conversation: **${rating}** ⭐\n\nWe appreciate you chatting with us.`,
+      text: `Thanks for the feedback! You rated this conversation: **${rating}**\n\nWe appreciate you chatting with us.`,
       sender: 'system',
       timestamp: new Date(),
     }
     setMessages(prev => [...prev, rateMsg])
+
+    // Save rating to Supabase
+    if (chatSession?.id) {
+      await resolveChatSession(chatSession.id, rating)
+    }
   }
 
   // ── Determine accent color per mode ──
@@ -499,7 +598,7 @@ export default function ChatWidget() {
                 <ArrowRight className="w-4 h-4 text-gray-500" />
               </a>
 
-              {/* Video Call — opens the floating Video Call Widget via custom event */}
+              {/* Video Call */}
               <button
                 onClick={() => {
                   setIsOpen(false)
@@ -536,7 +635,7 @@ export default function ChatWidget() {
                 <ArrowRight className="w-4 h-4 text-gray-500" />
               </a>
 
-              {/* Phone — opens the floating Direct Call Widget via custom event */}
+              {/* Phone */}
               <button
                 onClick={() => {
                   setIsOpen(false)

@@ -1,11 +1,11 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import {
   Headphones, Phone, Video, MessageCircle, Mail, Send, Globe,
   BarChart3, AlertTriangle, CheckCircle2, Clock, Users, Eye, Edit3,
   Plus, Filter, Search, ArrowRight, Zap, Star, TrendingUp,
-  ArrowUpRight, ArrowDownRight, Smartphone, Hash, Shield,
+  ArrowUpRight, ArrowDownRight, Smartphone, Hash, Shield, BellRing,
 } from 'lucide-react'
 import {
   AreaChart, Area, BarChart, Bar, Cell, XAxis, YAxis,
@@ -17,6 +17,26 @@ import AdminKPICard from '@/components/admin/shared/AdminKPICard'
 import AdminDataTable, { type Column } from '@/components/admin/shared/AdminDataTable'
 import AdminModal from '@/components/admin/shared/AdminModal'
 import type { StaffRole } from '@/lib/staff/staffTypes'
+
+// Cross-portal: Real-time chat sessions & RM requests
+import {
+  getActiveChatSessions,
+  getChatMessages,
+  sendChatMessage,
+  getRMRequests,
+  acceptRMRequest,
+  completeRMRequest,
+  reassignChat,
+  type ChatSession,
+  type ChatMessage as ChatMsg,
+  type RMRequest,
+} from '@/lib/supabase/chatService'
+import {
+  onNewChatSession,
+  onMyChatSessionUpdate,
+  onChatMessage,
+  onRMRequest,
+} from '@/lib/supabase/realtimeSubscriptions'
 
 // ════════════════════════════════════════════════════════════════
 //  PROPS
@@ -854,39 +874,150 @@ function VideoView({ showToast }: Pick<CSCenterModuleProps, 'showToast'>) {
 }
 
 // ── 6. Chat ──────────────────────────────────────────────────
+/** ChatView — Real-time chat interface for CS agents.
+ *  Cross-portal wire: Website ChatWidget → chat_sessions → here.
+ *  Also surfaces RM requests from Client Dashboard. */
 function ChatView({ showToast }: Pick<CSCenterModuleProps, 'showToast'>) {
-  const [selectedChat, setSelectedChat] = useState<string>('CH-001')
+  const [selectedChat, setSelectedChat] = useState<string | null>(null)
   const [showCanned, setShowCanned] = useState(false)
+  const [chatSessions, setChatSessions] = useState<ChatSession[]>([])
+  const [chatMessages, setChatMessages] = useState<ChatMsg[]>([])
+  const [rmRequests, setRmRequests] = useState<RMRequest[]>([])
+  const [replyText, setReplyText] = useState('')
+  const [loadingSessions, setLoadingSessions] = useState(true)
+  const messagesEndRef = useRef<HTMLDivElement>(null)
+
+  // Load active chat sessions from Supabase
+  useEffect(() => {
+    async function load() {
+      setLoadingSessions(true)
+      const sessions = await getActiveChatSessions()
+      setChatSessions(sessions)
+      if (sessions.length > 0 && !selectedChat) {
+        setSelectedChat(sessions[0].id)
+      }
+      setLoadingSessions(false)
+    }
+    load()
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Subscribe to new chat sessions in real time
+  useEffect(() => {
+    const unsub = onNewChatSession((payload) => {
+      const newSession = payload.new as ChatSession
+      setChatSessions(prev => {
+        // Add to top if not already present
+        if (prev.find(s => s.id === newSession.id)) return prev
+        return [newSession, ...prev]
+      })
+      showToast(`New chat from ${newSession.visitor_name}`, 'info')
+    })
+    return () => { unsub?.() }
+  }, [showToast])
+
+  // Load messages when a chat is selected
+  useEffect(() => {
+    if (!selectedChat) return
+    async function loadMessages() {
+      const msgs = await getChatMessages(selectedChat!)
+      setChatMessages(msgs)
+    }
+    loadMessages()
+  }, [selectedChat])
+
+  // Subscribe to new messages in the selected chat
+  useEffect(() => {
+    if (!selectedChat) return
+    const unsub = onChatMessage(selectedChat, (payload) => {
+      const msg = payload.new as ChatMsg
+      setChatMessages(prev => {
+        if (prev.find(m => m.id === msg.id)) return prev
+        return [...prev, msg]
+      })
+    })
+    return () => { unsub?.() }
+  }, [selectedChat])
+
+  // Auto-scroll messages
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+  }, [chatMessages])
+
+  // Send a reply as agent
+  const handleSendReply = useCallback(async (text?: string) => {
+    const content = text || replyText.trim()
+    if (!content || !selectedChat) return
+    await sendChatMessage({
+      sessionId: selectedChat,
+      senderType: 'agent',
+      senderName: 'CS Agent',
+      message: content,
+    })
+    setReplyText('')
+    showToast('Message sent', 'success')
+  }, [replyText, selectedChat, showToast])
+
+  const selectedSession = chatSessions.find(s => s.id === selectedChat)
+
+  // Fallback to mock data when no Supabase sessions available
+  const displaySessions = chatSessions.length > 0 ? chatSessions : ACTIVE_CHATS.map(ch => ({
+    id: ch.id,
+    visitor_name: ch.clientName,
+    status: 'active' as const,
+    last_message_at: new Date().toISOString(),
+    visitor_id: null, visitor_email: null, client_id: null, assigned_rep_id: null,
+    channel: 'web_chat', priority: 0, page_url: null, assigned_at: null,
+    first_response_at: null, resolved_at: null, csat_rating: null,
+    metadata: {}, created_at: new Date().toISOString(), updated_at: new Date().toISOString(),
+  }))
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
-      {/* Active Chats Panel */}
+      {/* Active Chats Panel — sorted by priority then recency */}
       <AdminGlass padding="p-0">
         <div className="px-4 py-3 border-b border-white/[0.06]">
           <div className="flex items-center gap-2">
             <MessageCircle className="w-4 h-4 text-teal-400" />
             <h3 className="text-sm font-semibold text-white">Active Chats</h3>
+            {chatSessions.length > 0 && (
+              <span className="text-[10px] bg-teal-500/20 text-teal-400 px-2 py-0.5 rounded-full font-medium">
+                {chatSessions.filter(s => s.status === 'waiting' || s.status === 'queued').length} waiting
+              </span>
+            )}
           </div>
         </div>
-        <div className="divide-y divide-white/[0.04]">
-          {ACTIVE_CHATS.map(ch => (
-            <div
-              key={ch.id}
-              onClick={() => setSelectedChat(ch.id)}
-              className={`px-4 py-3 cursor-pointer transition-colors ${
-                selectedChat === ch.id ? 'bg-teal-500/[0.08]' : 'hover:bg-white/[0.02]'
-              }`}
-            >
-              <div className="flex items-center justify-between mb-1">
-                <span className="text-sm text-white font-medium">{ch.clientName}</span>
-                {ch.unread > 0 && (
-                  <span className="w-5 h-5 rounded-full bg-teal-500 text-white text-[10px] flex items-center justify-center font-bold">{ch.unread}</span>
-                )}
+        <div className="divide-y divide-white/[0.04] max-h-[500px] overflow-y-auto">
+          {loadingSessions ? (
+            <div className="px-4 py-8 text-center text-xs text-gray-500">Loading chats...</div>
+          ) : displaySessions.length === 0 ? (
+            <div className="px-4 py-8 text-center text-xs text-gray-500">No active chats</div>
+          ) : (
+            displaySessions.map(ch => (
+              <div
+                key={ch.id}
+                onClick={() => setSelectedChat(ch.id)}
+                className={`px-4 py-3 cursor-pointer transition-colors ${
+                  selectedChat === ch.id ? 'bg-teal-500/[0.08]' : 'hover:bg-white/[0.02]'
+                }`}
+              >
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-sm text-white font-medium">{ch.visitor_name}</span>
+                  {(ch.status === 'waiting' || ch.status === 'queued') && (
+                    <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse" title="Waiting for agent" />
+                  )}
+                  {ch.status === 'active' && (
+                    <span className="w-2 h-2 rounded-full bg-emerald-400" title="Active" />
+                  )}
+                </div>
+                <div className="flex items-center justify-between">
+                  <p className="text-xs text-gray-500 truncate">{ch.channel}</p>
+                  <p className="text-[10px] text-gray-600">
+                    {new Date(ch.last_message_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                  </p>
+                </div>
               </div>
-              <p className="text-xs text-gray-500 truncate">{ch.lastMsg}</p>
-              <p className="text-[10px] text-gray-600 mt-0.5">{ch.time}</p>
-            </div>
-          ))}
+            ))
+          )}
         </div>
       </AdminGlass>
 
@@ -895,10 +1026,13 @@ function ChatView({ showToast }: Pick<CSCenterModuleProps, 'showToast'>) {
         <AdminGlass padding="p-0">
           <div className="px-5 py-4 border-b border-white/[0.06] flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full bg-emerald-400" />
+              <span className={`w-2 h-2 rounded-full ${selectedSession?.status === 'active' ? 'bg-emerald-400' : 'bg-amber-400 animate-pulse'}`} />
               <span className="text-sm font-semibold text-white">
-                {ACTIVE_CHATS.find(c => c.id === selectedChat)?.clientName ?? 'Chat'}
+                {selectedSession?.visitor_name ?? 'Select a chat'}
               </span>
+              {selectedSession?.visitor_email && (
+                <span className="text-[10px] text-gray-500">{selectedSession.visitor_email}</span>
+              )}
             </div>
             <button
               onClick={() => setShowCanned(!showCanned)}
@@ -908,33 +1042,57 @@ function ChatView({ showToast }: Pick<CSCenterModuleProps, 'showToast'>) {
             </button>
           </div>
           <div className="px-5 py-4 space-y-3 min-h-[350px] max-h-[400px] overflow-y-auto">
-            {THREAD_MESSAGES.map((m, i) => (
-              <div key={i} className={`flex ${m.sender === 'agent' ? 'justify-end' : 'justify-start'}`}>
-                <div className={`max-w-[80%] rounded-xl px-4 py-2.5 ${
-                  m.sender === 'agent'
-                    ? 'bg-teal-500/15 border border-teal-500/20 text-teal-100'
-                    : 'bg-white/[0.06] border border-white/[0.08] text-gray-300'
-                }`}>
-                  <p className="text-xs">{m.message}</p>
-                  <p className="text-[10px] text-gray-600 mt-1">{m.time}</p>
-                </div>
+            {chatMessages.length === 0 && selectedChat ? (
+              <div className="flex items-center justify-center h-full text-xs text-gray-500 py-20">
+                No messages yet. The visitor is waiting for a response.
               </div>
-            ))}
+            ) : !selectedChat ? (
+              <div className="flex items-center justify-center h-full text-xs text-gray-500 py-20">
+                Select a chat from the panel to start responding.
+              </div>
+            ) : (
+              chatMessages.map((m) => (
+                <div key={m.id} className={`flex ${m.sender_type === 'agent' ? 'justify-end' : m.sender_type === 'system' ? 'justify-center' : 'justify-start'}`}>
+                  {m.sender_type === 'system' ? (
+                    <span className="px-3 py-1 rounded-full text-[10px] text-gray-500 bg-white/5">{m.message}</span>
+                  ) : (
+                    <div className={`max-w-[80%] rounded-xl px-4 py-2.5 ${
+                      m.sender_type === 'agent'
+                        ? 'bg-teal-500/15 border border-teal-500/20 text-teal-100'
+                        : 'bg-white/[0.06] border border-white/[0.08] text-gray-300'
+                    }`}>
+                      {m.sender_name && m.sender_type === 'visitor' && (
+                        <p className="text-[10px] text-teal-400 font-medium mb-0.5">{m.sender_name}</p>
+                      )}
+                      <p className="text-xs">{m.message}</p>
+                      <p className="text-[10px] text-gray-600 mt-1">
+                        {new Date(m.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                      </p>
+                    </div>
+                  )}
+                </div>
+              ))
+            )}
+            <div ref={messagesEndRef} />
           </div>
           <div className="px-5 py-3 border-t border-white/[0.06]">
-            <div className="flex items-center gap-2">
+            <form onSubmit={(e) => { e.preventDefault(); handleSendReply() }} className="flex items-center gap-2">
               <input
                 type="text"
-                placeholder="Type a message..."
-                className="flex-1 px-4 py-2 text-xs bg-white/[0.04] border border-white/[0.08] rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-teal-500/40"
+                value={replyText}
+                onChange={(e) => setReplyText(e.target.value)}
+                placeholder={selectedChat ? 'Type a reply...' : 'Select a chat first'}
+                disabled={!selectedChat}
+                className="flex-1 px-4 py-2 text-xs bg-white/[0.04] border border-white/[0.08] rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-teal-500/40 disabled:opacity-50"
               />
               <button
-                onClick={() => showToast('Message sent', 'success')}
-                className="p-2 rounded-xl bg-teal-500/20 text-teal-400 hover:bg-teal-500/30 transition-colors"
+                type="submit"
+                disabled={!replyText.trim() || !selectedChat}
+                className="p-2 rounded-xl bg-teal-500/20 text-teal-400 hover:bg-teal-500/30 transition-colors disabled:opacity-30"
               >
                 <Send className="w-4 h-4" />
               </button>
-            </div>
+            </form>
           </div>
         </AdminGlass>
       </div>
@@ -951,7 +1109,7 @@ function ChatView({ showToast }: Pick<CSCenterModuleProps, 'showToast'>) {
           {CANNED_RESPONSES.map(cr => (
             <div
               key={cr.id}
-              onClick={() => showToast(`Quick reply "${cr.label}" inserted`, 'info')}
+              onClick={() => { setReplyText(cr.text); showToast(`Quick reply "${cr.label}" inserted`, 'info') }}
               className="px-4 py-3 cursor-pointer hover:bg-white/[0.02] transition-colors"
             >
               <p className="text-xs text-teal-400 font-medium mb-1">{cr.label}</p>

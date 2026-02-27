@@ -18,8 +18,7 @@ import SocialProofToasts from '@/components/SocialProofToasts'
 import LiveVisitorCount from '@/components/LiveVisitorCount'
 
 // Lazy-load heavy widgets (reduces initial page load by ~2s)
-// ChatWidget (ARIA bot) hidden for now — uncomment to re-enable
-// const ChatWidget = dynamic(() => import('@/components/chat/ChatWidget'), { ssr: false })
+const ChatWidget = dynamic(() => import('@/components/chat/ChatWidget'), { ssr: false })
 const CommandPalette = dynamic(() => import('@/components/CommandPalette'), { ssr: false })
 // VoiceCommandWidget hidden for now — uncomment to re-enable
 // const VoiceCommandWidget = dynamic(() => import('@/components/VoiceCommandWidget'), { ssr: false })
@@ -317,8 +316,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               {/* SpeechTranslationWidget hidden for now */}
               {/* <SpeechTranslationWidget /> */}
               <CommandPalette />
-              {/* ChatWidget (ARIA bot) hidden for now */}
-              {/* <ChatWidget /> */}
+              <ChatWidget />
             </ArticleReaderProvider>
           </LegalPopupProvider>
         </ThemeProvider>
