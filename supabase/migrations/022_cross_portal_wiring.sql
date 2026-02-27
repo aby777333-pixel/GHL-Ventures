@@ -175,7 +175,7 @@ CREATE POLICY "tickets_select" ON tickets FOR SELECT
         client_id = auth.uid()
         OR assigned_to = auth.uid()
         OR is_admin_or_above()
-        OR get_user_role() IN ('cs-lead','senior-cs-agent','cs-agent','relationship-manager')
+        OR get_user_role() = 'staff'
     );
 
 CREATE POLICY "tickets_insert" ON tickets FOR INSERT
@@ -185,7 +185,7 @@ CREATE POLICY "tickets_update" ON tickets FOR UPDATE
     USING (
         assigned_to = auth.uid()
         OR is_admin_or_above()
-        OR get_user_role() IN ('cs-lead','senior-cs-agent','cs-agent')
+        OR get_user_role() = 'staff'
     );
 
 -- ── Tasks policies ──
@@ -193,7 +193,7 @@ CREATE POLICY "tasks_select" ON tasks FOR SELECT
     USING (assigned_to = auth.uid() OR assigned_by = auth.uid() OR is_admin_or_above());
 
 CREATE POLICY "tasks_insert" ON tasks FOR INSERT
-    WITH CHECK (is_admin_or_above() OR get_user_role() IN ('cs-lead','senior-cs-agent','manager'));
+    WITH CHECK (is_admin_or_above() OR get_user_role() = 'staff');
 
 CREATE POLICY "tasks_update" ON tasks FOR UPDATE
     USING (assigned_to = auth.uid() OR assigned_by = auth.uid() OR is_admin_or_above());
@@ -205,7 +205,7 @@ CREATE POLICY "chat_sessions_select" ON chat_sessions FOR SELECT
         client_id = auth.uid()
         OR assigned_rep_id = auth.uid()
         OR is_admin_or_above()
-        OR get_user_role() IN ('cs-lead','senior-cs-agent','cs-agent','relationship-manager')
+        OR get_user_role() = 'staff'
     );
 
 CREATE POLICY "chat_sessions_insert" ON chat_sessions FOR INSERT
@@ -215,7 +215,7 @@ CREATE POLICY "chat_sessions_update" ON chat_sessions FOR UPDATE
     USING (
         assigned_rep_id = auth.uid()
         OR is_admin_or_above()
-        OR get_user_role() IN ('cs-lead','senior-cs-agent','cs-agent')
+        OR get_user_role() = 'staff'
     );
 
 -- ── Chat Messages policies ──
@@ -228,7 +228,7 @@ CREATE POLICY "chat_messages_select" ON chat_messages FOR SELECT
                 cs.client_id = auth.uid()
                 OR cs.assigned_rep_id = auth.uid()
                 OR is_admin_or_above()
-                OR get_user_role() IN ('cs-lead','senior-cs-agent','cs-agent')
+                OR get_user_role() = 'staff'
             )
         )
     );
@@ -242,7 +242,7 @@ CREATE POLICY "rm_requests_select" ON rm_requests FOR SELECT
         client_id = auth.uid()
         OR rm_id = auth.uid()
         OR is_admin_or_above()
-        OR get_user_role() IN ('cs-lead','relationship-manager')
+        OR get_user_role() = 'staff'
     );
 
 CREATE POLICY "rm_requests_insert" ON rm_requests FOR INSERT
