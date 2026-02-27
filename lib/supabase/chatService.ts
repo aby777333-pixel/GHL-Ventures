@@ -124,6 +124,7 @@ export async function createChatSession(input: {
 
   // Use RPC to create session — direct insert + .select() fails for
   // anonymous visitors because RLS blocks the SELECT after INSERT
+  console.log('[chatService] Creating session via RPC...')
   const { data, error } = await db.rpc('create_visitor_chat_session', {
     p_visitor_id: getOrCreateVisitorId(),
     p_visitor_name: input.visitorName,
@@ -139,16 +140,27 @@ export async function createChatSession(input: {
   }
 
   const session = (Array.isArray(data) ? data[0] : data) as ChatSession
+  console.log('[chatService] Session created:', session.id, 'status:', session.status)
 
-  // Trigger auto-assignment
-  await autoAssignChat(session.id)
+  // Trigger auto-assignment via SECURITY DEFINER RPC
+  // (This runs server-side in Postgres, bypassing RLS)
+  const { data: repId, error: assignErr } = await db.rpc('auto_assign_visitor_chat', {
+    p_session_id: session.id,
+  })
+  if (assignErr) {
+    console.error('[chatService] Auto-assign RPC failed:', assignErr.message)
+  } else {
+    console.log('[chatService] Auto-assigned to rep:', repId)
+  }
 
   // Re-fetch session to get updated assignment info
   const { data: updated } = await db.rpc('get_visitor_active_session', {
     p_visitor_id: getOrCreateVisitorId(),
   })
   if (updated && (Array.isArray(updated) ? updated.length > 0 : updated)) {
-    return (Array.isArray(updated) ? updated[0] : updated) as ChatSession
+    const final = (Array.isArray(updated) ? updated[0] : updated) as ChatSession
+    console.log('[chatService] Final session:', final.id, 'assigned_rep:', final.assigned_rep_id, 'status:', final.status)
+    return final
   }
 
   return session
@@ -162,77 +174,39 @@ export async function getActiveSessionForVisitor(): Promise<ChatSession | null> 
   }
 
   const visitorId = getOrCreateVisitorId()
+  console.log('[chatService] Looking up active session for visitor:', visitorId)
   const { data, error } = await db.rpc('get_visitor_active_session', {
     p_visitor_id: visitorId,
   })
 
-  if (error || !data || data.length === 0) return null
-  return (Array.isArray(data) ? data[0] : data) as ChatSession
+  if (error) {
+    console.error('[chatService] get_visitor_active_session error:', error.message)
+    return null
+  }
+  if (!data || (Array.isArray(data) && data.length === 0)) {
+    console.log('[chatService] No active session found')
+    return null
+  }
+  const session = (Array.isArray(data) ? data[0] : data) as ChatSession
+  console.log('[chatService] Found active session:', session.id, 'status:', session.status)
+  return session
 }
 
-/** Auto-assign a chat session to the least-busy available CS rep */
+/** Auto-assign a chat session to the least-busy available CS rep.
+ *  Uses SECURITY DEFINER RPC — safe to call from anonymous visitor context. */
 export async function autoAssignChat(sessionId: string): Promise<string | null> {
   if (!isSupabaseConfigured()) return null
 
-  // Find available CS reps (online, below capacity)
-  // We look for staff_profiles with CS roles, then check assignment load
-  const { data: reps } = await db
-    .from('staff_profiles')
-    .select('id, user_id, full_name')
-    .in('designation', ['cs-agent', 'senior-cs-agent', 'cs-lead', 'relationship-manager'])
-    .eq('status', 'active')
-
-  if (!reps || reps.length === 0) {
-    // No reps available — set session to queued
-    await db
-      .from('chat_sessions')
-      .update({ status: 'queued' })
-      .eq('id', sessionId)
-    return null
-  }
-
-  // Count current active chats per rep (round-robin by least load)
-  const repLoads = await Promise.all(
-    reps.map(async (rep: any) => {
-      const { count } = await db
-        .from('chat_sessions')
-        .select('id', { count: 'exact', head: true })
-        .eq('assigned_rep_id', rep.user_id)
-        .in('status', ['assigned', 'active'])
-      return { ...rep, load: count || 0 }
-    })
-  )
-
-  // Sort by load ascending (least busy first)
-  repLoads.sort((a, b) => a.load - b.load)
-  const selectedRep = repLoads[0]
-
-  // Assign the session
-  const { error } = await db
-    .from('chat_sessions')
-    .update({
-      assigned_rep_id: selectedRep.user_id,
-      status: 'assigned',
-      assigned_at: new Date().toISOString(),
-    })
-    .eq('id', sessionId)
-
-  if (error) {
-    console.error('[chatService] Auto-assign failed:', error.message)
-    return null
-  }
-
-  // Create a notification for the assigned rep
-  await db.from('notifications').insert({
-    user_id: selectedRep.user_id,
-    type: 'action_required',
-    title: 'New Chat Assigned',
-    message: 'A website visitor is waiting for assistance.',
-    link: '/staff/cs/chat',
-    metadata: { session_id: sessionId },
+  const { data, error } = await db.rpc('auto_assign_visitor_chat', {
+    p_session_id: sessionId,
   })
 
-  return selectedRep.user_id
+  if (error) {
+    console.error('[chatService] Auto-assign RPC failed:', error.message)
+    return null
+  }
+
+  return data as string | null
 }
 
 /** Admin: manually reassign a chat to a different rep */
@@ -310,6 +284,7 @@ export async function sendChatMessage(input: {
   // For visitor/system messages, use RPC to avoid RLS blocking the
   // select-after-insert. Agent messages use direct insert (they're authenticated).
   if (input.senderType === 'visitor' || input.senderType === 'system' || input.senderType === 'bot') {
+    console.log('[chatService] Sending message via RPC:', input.senderType, 'session:', input.sessionId)
     const { data, error } = await db.rpc('send_visitor_chat_message', {
       p_session_id: input.sessionId,
       p_sender_type: input.senderType,
@@ -322,7 +297,9 @@ export async function sendChatMessage(input: {
       return null
     }
 
-    return (Array.isArray(data) ? data[0] : data) as ChatMessage
+    const msg = (Array.isArray(data) ? data[0] : data) as ChatMessage
+    console.log('[chatService] Message sent:', msg?.id)
+    return msg
   }
 
   // Agent messages — authenticated staff, RLS allows

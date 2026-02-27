@@ -887,18 +887,29 @@ function ChatView({ showToast }: Pick<CSCenterModuleProps, 'showToast'>) {
   const [loadingSessions, setLoadingSessions] = useState(true)
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
-  // Load active chat sessions from Supabase
+  // Load active chat sessions from Supabase + poll every 5s as Realtime fallback
   useEffect(() => {
+    let mounted = true
     async function load() {
-      setLoadingSessions(true)
       const sessions = await getActiveChatSessions()
-      setChatSessions(sessions)
-      if (sessions.length > 0 && !selectedChat) {
-        setSelectedChat(sessions[0].id)
+      if (!mounted) return
+      setChatSessions(prev => {
+        // Merge: keep new sessions, update existing ones
+        const ids = new Set(sessions.map(s => s.id))
+        const merged = [...sessions]
+        // Keep any locally-added sessions that Supabase hasn't returned yet
+        prev.forEach(p => { if (!ids.has(p.id)) merged.push(p) })
+        return merged
+      })
+      if (sessions.length > 0) {
+        setSelectedChat(prev => prev || sessions[0].id)
       }
       setLoadingSessions(false)
     }
     load()
+    // Poll every 5 seconds as a fallback for Realtime
+    const interval = setInterval(load, 5000)
+    return () => { mounted = false; clearInterval(interval) }
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Request browser notification permission on mount
@@ -965,14 +976,18 @@ function ChatView({ showToast }: Pick<CSCenterModuleProps, 'showToast'>) {
     return () => { unsub?.() }
   }, [showToast, sendBrowserNotification])
 
-  // Load messages when a chat is selected
+  // Load messages when a chat is selected + poll every 3s as Realtime fallback
   useEffect(() => {
     if (!selectedChat) return
+    let mounted = true
     async function loadMessages() {
       const msgs = await getChatMessages(selectedChat!)
+      if (!mounted) return
       setChatMessages(msgs)
     }
     loadMessages()
+    const interval = setInterval(loadMessages, 3000)
+    return () => { mounted = false; clearInterval(interval) }
   }, [selectedChat])
 
   // Subscribe to new messages in the selected chat
