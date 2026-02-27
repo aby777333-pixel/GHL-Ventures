@@ -36,6 +36,54 @@ export default function RegisterPage() {
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
 
+  // fetch auth settings from Supabase to know which external providers are enabled
+  const fetchAuthSettings = async () => {
+    const url = process.env.NEXT_PUBLIC_SUPABASE_URL
+    const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+    if (!url || !key) return null
+    try {
+      const res = await fetch(`${url}/auth/v1/settings`, { headers: { apikey: key } })
+      if (res.ok) {
+        const data = await res.json()
+        return data?.external ?? null
+      }
+    } catch { /* ignore */ }
+    return null
+  }
+
+  const handleGoogleSignUp = async () => {
+    setLoading(true)
+    setError('')
+
+    // callback URL should match Next route (no trailing slash)
+    const callbackUrl =
+      typeof window !== 'undefined'
+        ? new URL('/auth/callback', window.location.origin).toString()
+        : ''
+
+    try {
+      const settings = await fetchAuthSettings()
+      if (settings && !settings.google) {
+        setError('Google sign-up is not enabled. Please register with email.')
+        setLoading(false)
+        return
+      }
+    } catch { /* ignore */ }
+
+    try {
+      const { error: oauthError } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: { redirectTo: callbackUrl },
+      })
+      if (oauthError) {
+        setError('Google sign-up failed. Please try registering with email.')
+      }
+    } catch {
+      setError('Google sign-up unavailable. Please try registering with email.')
+    }
+    setLoading(false)
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError('')
@@ -45,11 +93,6 @@ export default function RegisterPage() {
       return
     }
 
-    if (!isSupabaseConfigured()) {
-      // Demo mode — show success
-      setSubmitted(true)
-      return
-    }
 
     setLoading(true)
     try {
@@ -177,27 +220,7 @@ export default function RegisterPage() {
           {/* Google OAuth */}
           <button
             type="button"
-            onClick={async () => {
-              if (!isSupabaseConfigured()) {
-                await loginClient('demo@ghlindiaventures.com', '')
-                router.push('/dashboard')
-                return
-              }
-              setLoading(true)
-              setError('')
-              try {
-                const { error: oauthError } = await supabase.auth.signInWithOAuth({
-                  provider: 'google',
-                  options: { redirectTo: `${typeof window !== 'undefined' ? window.location.origin : ''}/auth/callback/` },
-                })
-                if (oauthError) {
-                  setError('Google sign-up failed. Please try registering with email.')
-                }
-              } catch {
-                setError('Google sign-up unavailable. Please try registering with email.')
-              }
-              setLoading(false)
-            }}
+            onClick={handleGoogleSignUp}
             disabled={loading}
             className="w-full flex items-center justify-center space-x-3 px-5 py-2.5 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors mb-4 shadow-sm disabled:opacity-60 disabled:cursor-not-allowed"
           >

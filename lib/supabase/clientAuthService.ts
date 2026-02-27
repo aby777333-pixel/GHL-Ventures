@@ -218,9 +218,13 @@ export async function logoutClient(): Promise<void> {
 export async function loginWithOAuth(provider: 'google'): Promise<void> {
   if (!isSupabaseConfigured()) return
   try {
+    const callbackUrl =
+      typeof window !== 'undefined'
+        ? new URL('/auth/callback', window.location.origin).toString()
+        : ''
     await supabase.auth.signInWithOAuth({
       provider,
-      options: { redirectTo: `${typeof window !== 'undefined' ? window.location.origin : ''}/auth/callback/` },
+      options: { redirectTo: callbackUrl },
     })
   } catch (err) {
     console.warn('[clientAuth] loginWithOAuth exception:', err)

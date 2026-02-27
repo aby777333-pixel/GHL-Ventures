@@ -106,9 +106,14 @@ export default function LoginPage() {
         return
       }
 
+      // build callback URL without trailing slash to match routing rules
+      const callbackUrl =
+        typeof window !== 'undefined'
+          ? new URL('/auth/callback', window.location.origin).toString()
+          : ''
       const { error: oauthError } = await supabase.auth.signInWithOAuth({
         provider,
-        options: { redirectTo: `${typeof window !== 'undefined' ? window.location.origin : ''}/auth/callback/` },
+        options: { redirectTo: callbackUrl },
       })
       if (oauthError) {
         setError(`${providerNames[provider]} sign-in failed. Please try another method.`)
