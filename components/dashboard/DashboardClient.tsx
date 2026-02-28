@@ -423,12 +423,12 @@ export default function DashboardClient() {
           </button>
         </div>
 
-        {/* Investor badge */}
+        {/* Client info badge */}
         <div className="px-6 mb-4">
           <div className={`px-3 py-2.5 rounded-xl ${t('bg-white/[0.04] border border-white/[0.06]','bg-gray-100/60 border border-gray-200/40')}`}>
-            <p className={`text-[10px] uppercase tracking-widest mb-0.5 ${t('text-gray-500','text-gray-600')}`}>Investor</p>
+            <p className={`text-[10px] uppercase tracking-widest mb-0.5 ${t('text-gray-500','text-gray-600')}`}>{user?.risk_profile || user?.account_status || 'Client'}</p>
             <p className={`text-sm font-semibold ${t('text-white','text-gray-900')}`}>{userName}</p>
-            <p className={`text-[10px] mt-0.5 ${t('text-gray-500','text-gray-700')}`}>ID: {clientId || 'N/A'}</p>
+            <p className={`text-[10px] mt-0.5 ${t('text-gray-500','text-gray-700')}`}>{userEmail}</p>
           </div>
         </div>
 
