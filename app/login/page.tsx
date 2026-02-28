@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { LegalLink } from '@/components/LegalPopup'
@@ -21,6 +21,11 @@ export default function LoginPage() {
   const [otpTimer, setOtpTimer] = useState(0)
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+  const otpIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
+
+  useEffect(() => {
+    return () => { if (otpIntervalRef.current) clearInterval(otpIntervalRef.current) }
+  }, [])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -108,11 +113,12 @@ export default function LoginPage() {
 
   const handleSendOTP = () => {
     if (!mobile || mobile.length < 10) return
+    if (otpIntervalRef.current) clearInterval(otpIntervalRef.current)
     setOtpSent(true)
     setOtpTimer(30)
-    const interval = setInterval(() => {
+    otpIntervalRef.current = setInterval(() => {
       setOtpTimer(prev => {
-        if (prev <= 1) { clearInterval(interval); return 0 }
+        if (prev <= 1) { if (otpIntervalRef.current) clearInterval(otpIntervalRef.current); otpIntervalRef.current = null; return 0 }
         return prev - 1
       })
     }, 1000)
