@@ -31,14 +31,4 @@ DO $$ BEGIN
   END IF;
 END $$;
 
--- Staff lead notifications: ensure admin can view all
-DO $$ BEGIN
-  IF NOT EXISTS (
-    SELECT 1 FROM pg_policies WHERE tablename = 'staff_lead_notifications' AND policyname = 'staff_lead_notifications_admin_view'
-  ) THEN
-    CREATE POLICY "staff_lead_notifications_admin_view" ON staff_lead_notifications
-      FOR SELECT USING (
-        EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role IN ('super_admin','admin'))
-      );
-  END IF;
-END $$;
+-- Note: staff_lead_notifications table does not exist in production DB, skipped.
