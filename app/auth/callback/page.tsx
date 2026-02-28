@@ -39,11 +39,13 @@ export default function AuthCallbackPage() {
           }
 
           await ensureProfile(retrySession.user)
+          await handleReferral(retrySession.user)
           router.replace('/dashboard')
           return
         }
 
         await ensureProfile(session.user)
+        await handleReferral(session.user)
         router.replace('/dashboard')
       } catch {
         setError('Something went wrong. Redirecting to login...')
@@ -118,5 +120,29 @@ async function ensureProfile(user: { id: string; email?: string; user_metadata?:
   } catch {
     // Non-blocking — profile creation can fail due to RLS, but auth still works
     console.warn('[auth/callback] Could not ensure profile exists')
+  }
+}
+
+/**
+ * Check for referral code in URL params and record the referral.
+ * The ref code is passed from register page → Google OAuth → callback URL.
+ */
+async function handleReferral(user: { id: string; email?: string; user_metadata?: Record<string, any> }) {
+  try {
+    if (typeof window === 'undefined') return
+
+    // Check URL search params for ref code
+    const url = new URL(window.location.href)
+    const refCode = url.searchParams.get('ref')
+    if (!refCode || !refCode.startsWith('GHL-')) return
+
+    const meta = user.user_metadata ?? {}
+    const name = meta.full_name || meta.name || user.email?.split('@')[0] || 'New User'
+
+    const { recordReferral } = await import('@/lib/supabase/dashboardDataService')
+    await recordReferral(refCode, name, user.email || '')
+  } catch {
+    // Non-blocking
+    console.warn('[auth/callback] Could not record referral')
   }
 }

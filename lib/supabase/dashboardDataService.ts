@@ -134,8 +134,45 @@ export async function getAdminNews() {
 
 export async function createSupportTicket(ticket: Record<string, any>) {
   if (!isSupabaseConfigured()) return null
-  const { data, error } = await sb.from('tickets').insert(ticket).select().single()
+
+  // Auto-generate ticket_number (required NOT NULL field)
+  const ticketNumber = `TKT-${Date.now().toString(36).toUpperCase()}-${Math.random().toString(36).substring(2, 6).toUpperCase()}`
+
+  // Resolve client_name from profiles if not provided
+  let clientName = ticket.client_name || 'Client'
+  if (!ticket.client_name && ticket.client_id) {
+    try {
+      const { data: profile } = await sb.from('profiles').select('full_name').eq('id', ticket.client_id).single()
+      if (profile?.full_name) clientName = profile.full_name
+    } catch { /* use default */ }
+  }
+
+  const row = {
+    ...ticket,
+    ticket_number: ticketNumber,
+    client_name: clientName,
+  }
+
+  const { data, error } = await sb.from('tickets').insert(row).select().single()
   if (error) { console.warn('[dashboard] Create ticket error:', error.message); return null }
+
+  // Create notification for admins about new ticket
+  try {
+    const { data: admins } = await sb.from('profiles').select('id').eq('role', 'admin')
+    if (admins && admins.length > 0) {
+      const notifs = admins.map((a: any) => ({
+        user_id: a.id,
+        title: `New Support Ticket: ${ticket.subject || 'No subject'}`,
+        body: `${clientName} raised a ${ticket.category || 'General'} ticket. Priority: ${ticket.priority || 'medium'}`,
+        type: 'support',
+        priority: ticket.priority || 'medium',
+        action_url: '/admin?tab=support',
+        metadata: { ticket_id: data?.id, ticket_number: ticketNumber },
+      }))
+      await sb.from('notifications').insert(notifs)
+    }
+  } catch { /* non-blocking */ }
+
   return data
 }
 
@@ -230,5 +267,108 @@ export async function fetchAssignedRM(clientId?: string): Promise<{ name: string
   } catch (err) {
     console.warn('[dashboard] fetchAssignedRM exception:', err)
     return null
+  }
+}
+
+// ── Referral System ──────────────────────────────────────────
+
+/**
+ * Generate a unique, deterministic referral code from a user ID.
+ * Format: GHL-XXXXXXXX (first 8 chars of user UUID uppercased)
+ */
+export function generateReferralCode(userId: string): string {
+  if (!userId) return 'GHL-UNKNOWN'
+  return `GHL-${userId.replace(/-/g, '').substring(0, 8).toUpperCase()}`
+}
+
+/**
+ * Fetch referral stats for a user (how many referred, any rewards).
+ * Uses clients.referred_by or leads with source='referral' and metadata.
+ */
+export async function fetchReferralStats(userId?: string): Promise<{ referred: number; earned: number }> {
+  if (!isSupabaseConfigured() || !userId) return { referred: 0, earned: 0 }
+
+  const code = generateReferralCode(userId)
+
+  try {
+    // Count leads that came in with this referral code
+    const { data: referredLeads, error } = await sb
+      .from('leads')
+      .select('id', { count: 'exact' })
+      .eq('source', 'referral')
+      .like('metadata->>referral_code', code)
+
+    const count = referredLeads?.length || 0
+    return { referred: count, earned: 0 } // Earnings TBD by admin
+  } catch {
+    return { referred: 0, earned: 0 }
+  }
+}
+
+/**
+ * Record a referral when a new user signs up with a referral code.
+ * Creates a lead entry + sends notifications.
+ */
+export async function recordReferral(referralCode: string, referredName: string, referredEmail: string): Promise<boolean> {
+  if (!isSupabaseConfigured() || !referralCode) return false
+
+  try {
+    // Create lead with referral source
+    await sb.from('leads').insert({
+      name: referredName,
+      email: referredEmail,
+      source: 'referral',
+      status: 'new',
+      metadata: { referral_code: referralCode, referred_at: new Date().toISOString() },
+    })
+
+    // Find the referrer by matching code to user ID
+    const codePrefix = referralCode.replace('GHL-', '').toLowerCase()
+    const { data: allUsers } = await sb.from('profiles').select('id, full_name').eq('role', 'viewer')
+
+    let referrerId: string | null = null
+    let referrerName = 'A user'
+    if (allUsers) {
+      for (const u of allUsers) {
+        if (u.id.replace(/-/g, '').substring(0, 8).toLowerCase() === codePrefix) {
+          referrerId = u.id
+          referrerName = u.full_name || 'A user'
+          break
+        }
+      }
+    }
+
+    // Notify the referrer
+    if (referrerId) {
+      await sb.from('notifications').insert({
+        user_id: referrerId,
+        title: 'New Referral!',
+        body: `${referredName || referredEmail} signed up using your referral link.`,
+        type: 'referral',
+        priority: 'low',
+        action_url: '/dashboard?tab=referrals',
+        metadata: { referred_email: referredEmail, referral_code: referralCode },
+      })
+    }
+
+    // Notify admins
+    const { data: admins } = await sb.from('profiles').select('id').eq('role', 'admin')
+    if (admins && admins.length > 0) {
+      const notifs = admins.map((a: any) => ({
+        user_id: a.id,
+        title: 'New Referral Registration',
+        body: `${referredName || referredEmail} signed up via referral from ${referrerName}. Code: ${referralCode}`,
+        type: 'referral',
+        priority: 'low',
+        action_url: '/admin?tab=leads',
+        metadata: { referral_code: referralCode, referred_email: referredEmail, referrer_id: referrerId },
+      }))
+      await sb.from('notifications').insert(notifs)
+    }
+
+    return true
+  } catch (err) {
+    console.warn('[dashboard] recordReferral exception:', err)
+    return false
   }
 }

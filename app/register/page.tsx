@@ -1,7 +1,7 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
+import { useState, useEffect, Suspense } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { LegalLink } from '@/components/LegalPopup'
 import { BRAND } from '@/lib/constants'
@@ -11,8 +11,9 @@ import { supabase, isSupabaseConfigured } from '@/lib/supabase/client'
 import { submitContactForm } from '@/lib/supabase/reportsDataService'
 import { AUTH_ERRORS, mapSupabaseError } from '@/lib/auth/errorMessages'
 
-export default function RegisterPage() {
+function RegisterPageInner() {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const [showPassword, setShowPassword] = useState(false)
   const [showConfirm, setShowConfirm] = useState(false)
   const [submitted, setSubmitted] = useState(false)
@@ -22,6 +23,14 @@ export default function RegisterPage() {
   })
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+
+  // Capture referral code from URL (?ref=GHL-XXXXXXXX)
+  useEffect(() => {
+    const refCode = searchParams.get('ref')
+    if (refCode) {
+      setForm(prev => ({ ...prev, referral: refCode }))
+    }
+  }, [searchParams])
 
   // Redirect if already authenticated
   useEffect(() => {
@@ -44,10 +53,15 @@ export default function RegisterPage() {
     setLoading(true)
     setError('')
 
-    const callbackUrl =
-      typeof window !== 'undefined'
-        ? new URL('/auth/callback', window.location.origin).toString()
-        : ''
+    let callbackUrl = ''
+    if (typeof window !== 'undefined') {
+      const cb = new URL('/auth/callback', window.location.origin)
+      // Pass referral code to auth callback if present
+      if (form.referral && form.referral.startsWith('GHL-')) {
+        cb.searchParams.set('ref', form.referral)
+      }
+      callbackUrl = cb.toString()
+    }
 
     try {
       const { error: oauthError } = await supabase.auth.signInWithOAuth({
@@ -129,6 +143,14 @@ export default function RegisterPage() {
           pageUrl: typeof window !== 'undefined' ? window.location.href : '',
         })
       } catch { /* non-blocking */ }
+
+      // Record referral if a referral code was used (non-blocking)
+      if (form.referral && form.referral.startsWith('GHL-')) {
+        try {
+          const { recordReferral } = await import('@/lib/supabase/dashboardDataService')
+          await recordReferral(form.referral, form.name, form.email)
+        } catch { /* non-blocking */ }
+      }
 
       setSubmitted(true)
     } catch {
@@ -281,15 +303,25 @@ export default function RegisterPage() {
             </div>
 
             <div>
-              <label htmlFor="reg-referral" className="block text-xs font-medium text-brand-black mb-1">How did you hear about us?</label>
-              <select id="reg-referral" className="input-field" value={form.referral} onChange={(e) => handleChange('referral', e.target.value)}>
-                <option value="">Select an option</option>
-                <option value="linkedin">LinkedIn</option>
-                <option value="referral">Referral</option>
-                <option value="news">News Article</option>
-                <option value="social">Social Media</option>
-                <option value="other">Other</option>
-              </select>
+              <label htmlFor="reg-referral" className="block text-xs font-medium text-brand-black mb-1">
+                {form.referral && form.referral.startsWith('GHL-') ? 'Referral Code' : 'How did you hear about us?'}
+              </label>
+              {form.referral && form.referral.startsWith('GHL-') ? (
+                <div className="flex items-center gap-2">
+                  <input id="reg-referral" type="text" className="input-field" value={form.referral} readOnly
+                    style={{ background: '#f0fdf4', border: '1px solid #86efac', fontFamily: 'monospace', fontWeight: 600, color: '#16a34a' }} />
+                  <CheckCircle className="w-5 h-5 text-green-500 shrink-0" />
+                </div>
+              ) : (
+                <select id="reg-referral" className="input-field" value={form.referral} onChange={(e) => handleChange('referral', e.target.value)}>
+                  <option value="">Select an option</option>
+                  <option value="linkedin">LinkedIn</option>
+                  <option value="referral">Referral</option>
+                  <option value="news">News Article</option>
+                  <option value="social">Social Media</option>
+                  <option value="other">Other</option>
+                </select>
+              )}
             </div>
 
             <div className="space-y-3 pt-1">
@@ -341,5 +373,13 @@ export default function RegisterPage() {
         </div>
       </div>
     </section>
+  )
+}
+
+export default function RegisterPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-brand-black" />}>
+      <RegisterPageInner />
+    </Suspense>
   )
 }

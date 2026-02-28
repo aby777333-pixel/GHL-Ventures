@@ -304,6 +304,7 @@ export default function DashboardClient() {
   const [privacyScrolled, setPrivacyScrolled] = useState(false)
   const [docName, setDocName] = useState('')
   const [docCategory, setDocCategory] = useState('')
+  const [uploadedFiles, setUploadedFiles] = useState<string[]>([])
   const [investAmount, setInvestAmount] = useState(2500000)
   const [investVehicle, setInvestVehicle] = useState('AIF Direct')
   const [activeCalc, setActiveCalc] = useState('sip')
@@ -1454,41 +1455,39 @@ export default function DashboardClient() {
       {/* Document uploads */}
       <Glass className="p-6" hover theme={theme}>
         <h3 className={`text-base font-bold mb-4 ${t('text-white','text-gray-900')}`}>Your Documents</h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {[
-            { name: 'PAN Card', status: 'verified', date: '15 Nov 2023', type: 'Identity' },
-            { name: 'Aadhaar Card', status: 'verified', date: '15 Nov 2023', type: 'Identity' },
-            { name: 'Bank Statement', status: 'verified', date: '20 Dec 2023', type: 'Financial' },
-            { name: 'Photo (Passport Size)', status: 'verified', date: '15 Nov 2023', type: 'Identity' },
-            { name: 'Cancelled Cheque', status: 'pending', date: '10 Mar 2025', type: 'Financial' },
-            { name: 'Address Proof', status: 'verified', date: '15 Nov 2023', type: 'Identity' },
-            { name: 'Q4 NAV Report', status: 'available', date: '10 Mar 2025', type: 'Reports' },
-            { name: 'Annual Statement FY24', status: 'available', date: '15 Apr 2024', type: 'Statements' },
-            { name: 'TDS Certificate', status: 'available', date: '30 Jun 2024', type: 'Tax' },
-          ].map((doc, i) => (
-            <div key={i} className={`flex items-center gap-3 p-4 rounded-xl transition-all cursor-pointer group
-              ${t('bg-white/[0.02] border border-white/[0.04] hover:border-white/[0.08]','bg-gray-100/35 border border-gray-200/30 hover:border-gray-300/40')}`}>
-              <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0
-                ${doc.status === 'verified' ? 'bg-emerald-500/15' : doc.status === 'pending' ? 'bg-amber-500/15' : 'bg-blue-500/15'}`}>
-                {doc.status === 'verified' ? <CheckCircle className="w-5 h-5 text-emerald-400" /> :
-                 doc.status === 'pending' ? <Clock className="w-5 h-5 text-amber-400" /> :
-                 <FileText className="w-5 h-5 text-blue-400" />}
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className={`text-sm font-semibold truncate ${t('text-white','text-gray-900')}`}>{doc.name}</p>
-                <p className={`text-[11px] ${t('text-gray-500','text-gray-700')}`}>{doc.type} &bull; {doc.date}</p>
-              </div>
-              {doc.status === 'available' && <button onClick={async (e) => {
-                e.stopPropagation()
-                showToast(`Downloading ${doc.name}...`, 'info')
-                const filename = `${doc.name.replace(/[^a-zA-Z0-9 ]/g, '')}.pdf`
-                const content = `Document: ${doc.name}\nType: ${doc.type}\nDate: ${doc.date}\nStatus: ${doc.status}`
-                const blob = new Blob([content], { type: 'application/pdf' })
-                await saveBlobAs(blob, filename, showToast as any)
-              }}><Download className="w-4 h-4 shrink-0 text-gray-600 group-hover:text-brand-red transition-colors" /></button>}
-            </div>
-          ))}
-        </div>
+        {documents.length === 0 ? (
+          <div className={`text-center py-8 ${t('text-gray-500','text-gray-600')}`}>
+            <FileText className="w-10 h-10 mx-auto mb-3 opacity-40" />
+            <p className="text-sm font-medium mb-1">No documents uploaded yet</p>
+            <p className="text-xs">Click "Upload Document" above to submit your KYC documents.</p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {documents.map((doc: any, i: number) => {
+              const status = doc.status || 'pending'
+              const docDate = doc.created_at ? new Date(doc.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : ''
+              return (
+                <div key={doc.id || i} className={`flex items-center gap-3 p-4 rounded-xl transition-all cursor-pointer group
+                  ${t('bg-white/[0.02] border border-white/[0.04] hover:border-white/[0.08]','bg-gray-100/35 border border-gray-200/30 hover:border-gray-300/40')}`}>
+                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0
+                    ${status === 'verified' || status === 'approved' ? 'bg-emerald-500/15' : status === 'pending' || status === 'review' ? 'bg-amber-500/15' : 'bg-blue-500/15'}`}>
+                    {status === 'verified' || status === 'approved' ? <CheckCircle className="w-5 h-5 text-emerald-400" /> :
+                     status === 'pending' || status === 'review' ? <Clock className="w-5 h-5 text-amber-400" /> :
+                     <FileText className="w-5 h-5 text-blue-400" />}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className={`text-sm font-semibold truncate ${t('text-white','text-gray-900')}`}>{doc.title || doc.name || 'Document'}</p>
+                    <p className={`text-[11px] ${t('text-gray-500','text-gray-700')}`}>{doc.category || 'General'} &bull; {docDate}</p>
+                  </div>
+                  <span className={`text-[9px] font-semibold uppercase px-1.5 py-0.5 rounded-full shrink-0
+                    ${status === 'verified' || status === 'approved' ? 'text-emerald-400 bg-emerald-500/20' :
+                      status === 'pending' || status === 'review' ? 'text-amber-400 bg-amber-500/20' :
+                      'text-blue-400 bg-blue-500/20'}`}>{status}</span>
+                </div>
+              )
+            })}
+          </div>
+        )}
       </Glass>
 
       {/* Upload Modal */}
@@ -1528,33 +1527,47 @@ export default function DashboardClient() {
             )}
             {/* Drop zone */}
             <div className={`border-2 border-dashed rounded-xl p-6 text-center mb-4 cursor-pointer transition-colors ${t('border-white/10 hover:border-brand-red/30','border-gray-300 hover:border-brand-red/40')}`}
-              onClick={() => fileInputRef.current?.click()}>
+              onClick={(e) => {
+                e.stopPropagation()
+                // Use pickAndUploadFiles for reliable native file picker
+                import('@/lib/supabase/storageService').then(async (svc) => {
+                  const results = await svc.pickAndUploadFiles('client/kyc', {
+                    accept: '.pdf,.jpg,.jpeg,.png',
+                    multiple: true,
+                    portal: 'client',
+                    entityType: 'client',
+                    entityId: clientId || undefined,
+                    category: docCategory || 'general',
+                  })
+                  if (results.length > 0) {
+                    const ok = results.filter(r => r.success).length
+                    const fail = results.length - ok
+                    if (ok > 0) showToast(`${ok} file(s) uploaded successfully!`, 'success')
+                    if (fail > 0) showToast(`${fail} file(s) failed to upload.`, 'info')
+                    // Store the selected file names for the submit step
+                    setUploadedFiles(results.filter(r => r.success).map(r => r.file?.name || ''))
+                  }
+                })
+              }}>
               <Upload className={`w-8 h-8 mx-auto mb-2 ${t('text-gray-500','text-gray-600')}`} />
               <p className={`text-sm font-medium mb-1 ${t('text-white','text-gray-900')}`}>Click to upload or drag & drop</p>
               <p className={`text-xs ${t('text-gray-500','text-gray-700')}`}>PDF, JPG, PNG up to 10MB</p>
-              <input ref={fileInputRef} type="file" className="hidden" accept=".pdf,.jpg,.jpeg,.png" multiple
-                onChange={async (e) => {
-                  if (e.target.files && e.target.files.length > 0) {
-                    showToast(`Uploading ${e.target.files.length} file(s)...`, 'info')
-                    for (let i = 0; i < e.target.files.length; i++) {
-                      const result = await uploadFile(e.target.files[i], `clients/${clientId}/documents`)
-                      if (result.success) showToast(`Uploaded ${e.target.files[i].name}`, 'success')
-                      else showToast(`Failed: ${result.error}`, 'info')
-                    }
-                  }
-                }}
-              />
             </div>
+            {/* Show uploaded file names */}
+            {uploadedFiles.length > 0 && (
+              <div className={`mb-3 p-2.5 rounded-lg ${t('bg-emerald-500/10 border border-emerald-500/20','bg-emerald-50 border border-emerald-200')}`}>
+                <p className="text-xs font-semibold text-emerald-500 mb-1">{uploadedFiles.length} file(s) selected:</p>
+                {uploadedFiles.map((f, i) => (
+                  <p key={i} className={`text-xs ${t('text-gray-300','text-gray-700')}`}>• {f}</p>
+                ))}
+              </div>
+            )}
             <button onClick={async () => {
-              // Upload any selected files to Supabase Storage first
-              if (fileInputRef.current?.files && fileInputRef.current.files.length > 0) {
-                for (let i = 0; i < fileInputRef.current.files.length; i++) {
-                  await uploadFile(fileInputRef.current.files[i], `clients/${clientId}/documents`)
-                }
-              }
+              if (!docName.trim()) { showToast('Please enter a document name.', 'info'); return }
+              if (!docCategory) { showToast('Please select a folder.', 'info'); return }
               await uploadDocument({ client_id: clientId, title: docName, category: docCategory, entity_type: 'client', entity_id: clientId })
-              setUploadModalOpen(false); setDocName(''); setDocCategory(''); refetchDocs()
-              showToast('Document uploaded to Supabase Storage. Under review by compliance team.', 'success')
+              setUploadModalOpen(false); setDocName(''); setDocCategory(''); setUploadedFiles([]); refetchDocs()
+              showToast('Document submitted. Under review by compliance team.', 'success')
             }}
               className="w-full py-2.5 rounded-xl text-sm font-semibold text-white" style={{ background: 'linear-gradient(135deg, #D0021B, #8B0000)' }}>
               Upload & Submit
@@ -1721,19 +1734,32 @@ export default function DashboardClient() {
               <option>General Inquiry</option><option>Investment Query</option><option>KYC Issue</option><option>Technical Issue</option><option>Document Request</option>
             </select>
             <textarea rows={3} placeholder="Describe your issue..." value={ticketDesc} onChange={e => setTicketDesc(e.target.value)} className={`w-full px-4 py-2.5 rounded-xl text-sm resize-none ${t('bg-white/[0.04] border border-white/[0.06] text-white placeholder-gray-600','bg-gray-100/40 border border-gray-200/40 text-gray-900 placeholder-gray-400')}`} />
-            <button onClick={async () => { await createSupportTicket({ client_id: clientId, subject: ticketSubject, category: ticketCategory, description: ticketDesc, status: 'open', priority: 'medium' }); setTicketForm(false); setTicketSubject(''); setTicketCategory('General Inquiry'); setTicketDesc(''); refetchTickets(); showToast('Support ticket submitted. We\'ll respond within 24 hours.') }} className="px-5 py-2.5 rounded-xl text-sm font-semibold text-white" style={{ background: 'linear-gradient(135deg, #D0021B, #8B0000)' }}>Submit Ticket</button>
+            <button onClick={async () => {
+              if (!ticketSubject.trim()) { showToast('Please enter a subject for your ticket.', 'info'); return }
+              if (!ticketDesc.trim()) { showToast('Please describe your issue.', 'info'); return }
+              const result = await createSupportTicket({ client_id: clientId, subject: ticketSubject, category: ticketCategory, description: ticketDesc, status: 'open', priority: 'medium' })
+              if (result) {
+                setTicketForm(false); setTicketSubject(''); setTicketCategory('General Inquiry'); setTicketDesc(''); refetchTickets()
+                showToast('Support ticket submitted. We\'ll respond within 24 hours.', 'success')
+              } else {
+                showToast('Failed to submit ticket. Please try again or email info@ghlindiaventures.com', 'info')
+              }
+            }} className="px-5 py-2.5 rounded-xl text-sm font-semibold text-white" style={{ background: 'linear-gradient(135deg, #D0021B, #8B0000)' }}>Submit Ticket</button>
           </div>
         )}
         {/* Existing tickets */}
         <div className="space-y-2">
+          {supportTickets.length === 0 && !ticketForm && (
+            <p className={`text-sm text-center py-4 ${t('text-gray-500','text-gray-600')}`}>No tickets yet. Click "New Ticket" to get help.</p>
+          )}
           {supportTickets.map((tk: any) => (
             <div key={tk.id} className={`flex items-center gap-3 p-3 rounded-xl ${t('bg-white/[0.02] border border-white/[0.04]','bg-gray-100/60 border border-gray-200/40')}`}>
-              <Ticket className={`w-5 h-5 shrink-0 ${tk.status === 'resolved' ? 'text-emerald-400' : 'text-amber-400'}`} />
+              <Ticket className={`w-5 h-5 shrink-0 ${tk.status === 'resolved' || tk.status === 'closed' ? 'text-emerald-400' : 'text-amber-400'}`} />
               <div className="flex-1 min-w-0">
                 <p className={`text-sm font-semibold ${t('text-white','text-gray-900')}`}>{tk.subject}</p>
-                <p className={`text-[11px] ${t('text-gray-500','text-gray-700')}`}>{tk.id} &bull; {tk.date}</p>
+                <p className={`text-[11px] ${t('text-gray-500','text-gray-700')}`}>{tk.ticket_number || tk.id} &bull; {tk.created_at ? new Date(tk.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : ''}</p>
               </div>
-              <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${tk.status === 'resolved' ? 'bg-emerald-500/15 text-emerald-400' : 'bg-amber-500/15 text-amber-400'}`}>{tk.status}</span>
+              <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${tk.status === 'resolved' || tk.status === 'closed' ? 'bg-emerald-500/15 text-emerald-400' : 'bg-amber-500/15 text-amber-400'}`}>{tk.status}</span>
             </div>
           ))}
         </div>
@@ -1763,6 +1789,26 @@ export default function DashboardClient() {
   // ═══════════════════════════════════════════════════════════
   // REFERRALS TAB
   // ═══════════════════════════════════════════════════════════
+  const referralCode = useMemo(() => {
+    if (!user?.id) return 'GHL-UNKNOWN'
+    return `GHL-${user.id.replace(/-/g, '').substring(0, 8).toUpperCase()}`
+  }, [user?.id])
+
+  const referralLink = useMemo(() => {
+    if (typeof window === 'undefined') return ''
+    return `${window.location.origin}/register?ref=${referralCode}`
+  }, [referralCode])
+
+  const [referralStats, setReferralStats] = useState({ referred: 0, earned: 0 })
+  const [referralCopied, setReferralCopied] = useState(false)
+
+  useEffect(() => {
+    if (!user?.id) return
+    import('@/lib/supabase/dashboardDataService').then(svc => {
+      svc.fetchReferralStats(user.id).then(setReferralStats)
+    })
+  }, [user?.id])
+
   const renderReferralsTab = () => (
     <div className="space-y-6">
       <h2 className={`text-xl font-bold ${t('text-white','text-gray-900')}`}>Referral Program</h2>
@@ -1775,21 +1821,45 @@ export default function DashboardClient() {
                 <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-brand-red/20 to-red-900/20 flex items-center justify-center"><Gift className="w-5 h-5 text-brand-red" /></div>
                 <div><h3 className={`text-base font-bold ${t('text-white','text-gray-900')}`}>Refer & Earn</h3><p className={`text-xs ${t('text-gray-500','text-gray-700')}`}>Invite investors, earn rewards</p></div>
               </div>
+              <div className="mb-2">
+                <p className={`text-[11px] font-medium mb-1.5 ${t('text-gray-400','text-gray-600')}`}>Your unique referral code</p>
+                <div className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-lg ${t('bg-brand-red/10 border border-brand-red/20','bg-red-50 border border-red-200')}`}>
+                  <span className="text-sm font-bold text-brand-red font-mono">{referralCode}</span>
+                </div>
+              </div>
               <div className={`flex items-center gap-2 p-2.5 rounded-xl mb-4 ${t('bg-white/[0.03] border border-white/[0.06]','bg-gray-100/60 border border-gray-200/40')}`}>
-                <code className={`flex-1 text-xs font-mono truncate ${t('text-gray-300','text-gray-600')}`}>https://ghlindiaventures.com/ref/RK2024</code>
-                <button onClick={() => { navigator.clipboard.writeText('https://ghlindiaventures.com/ref/RK2024'); showToast('Referral link copied to clipboard!') }} className={`p-1.5 rounded-lg ${t('hover:bg-white/[0.06] text-gray-400','hover:bg-gray-200 text-gray-500')}`}><Copy className="w-3.5 h-3.5" /></button>
+                <code className={`flex-1 text-xs font-mono truncate ${t('text-gray-300','text-gray-600')}`}>{referralLink || 'Loading...'}</code>
+                <button onClick={() => {
+                  if (referralLink) {
+                    navigator.clipboard.writeText(referralLink)
+                    setReferralCopied(true)
+                    showToast('Referral link copied to clipboard!', 'success')
+                    setTimeout(() => setReferralCopied(false), 2000)
+                  }
+                }} className={`p-1.5 rounded-lg transition-colors ${referralCopied ? 'bg-emerald-500/20 text-emerald-400' : t('hover:bg-white/[0.06] text-gray-400','hover:bg-gray-200 text-gray-500')}`}>
+                  {referralCopied ? <CheckCircle className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
+                </button>
+              </div>
+              {/* Share buttons */}
+              <div className="flex items-center gap-2 mb-4">
+                <button onClick={() => { window.open(`https://wa.me/?text=Join%20me%20on%20GHL%20India%20Ventures%20for%20premium%20AIF%20investments!%20${encodeURIComponent(referralLink)}`, '_blank') }} className={`px-3 py-1.5 rounded-lg text-xs font-medium flex items-center gap-1.5 ${t('bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20','bg-emerald-50 text-emerald-600 hover:bg-emerald-100')}`}>
+                  <Send className="w-3 h-3" /> WhatsApp
+                </button>
+                <button onClick={() => { window.open(`mailto:?subject=Join%20GHL%20India%20Ventures&body=I%27d%20like%20to%20invite%20you%20to%20invest%20with%20GHL%20India%20Ventures.%20Sign%20up%20here:%20${encodeURIComponent(referralLink)}`, '_blank') }} className={`px-3 py-1.5 rounded-lg text-xs font-medium flex items-center gap-1.5 ${t('bg-blue-500/10 text-blue-400 hover:bg-blue-500/20','bg-blue-50 text-blue-600 hover:bg-blue-100')}`}>
+                  <Mail className="w-3 h-3" /> Email
+                </button>
               </div>
               <div className="flex items-center gap-6 text-xs">
-                <div><p className={t('text-gray-500','text-gray-700')}>Referred</p><p className={`text-lg font-bold ${t('text-white','text-gray-900')}`}>3</p></div>
+                <div><p className={t('text-gray-500','text-gray-700')}>Referred</p><p className={`text-lg font-bold ${t('text-white','text-gray-900')}`}>{referralStats.referred}</p></div>
                 <div className={`w-px h-8 ${t('bg-white/[0.06]','bg-gray-200')}`} />
-                <div><p className={t('text-gray-500','text-gray-700')}>Earned</p><p className="text-lg font-bold text-emerald-400">{'\u20B9'}75K</p></div>
+                <div><p className={t('text-gray-500','text-gray-700')}>Earned</p><p className="text-lg font-bold text-emerald-400">{referralStats.earned > 0 ? `\u20B9${(referralStats.earned / 1000).toFixed(0)}K` : '\u20B90'}</p></div>
               </div>
             </div>
           </Glass>
         </div>
         <Glass className="p-6" hover theme={theme}>
           <h4 className={`text-sm font-bold mb-4 ${t('text-white','text-gray-900')}`}>How It Works</h4>
-          {[{ step: '1', t: 'Share Link', d: 'Share your unique referral link' },{ step: '2', t: 'They Invest', d: 'Your referral completes investment' },{ step: '3', t: 'You Earn', d: 'Receive referral bonus' }].map((s, i) => (
+          {[{ step: '1', t: 'Share Link', d: 'Share your unique referral link with friends and family' },{ step: '2', t: 'They Register', d: 'Your referral signs up using your link' },{ step: '3', t: 'They Invest', d: 'Once they complete an investment, you get notified' },{ step: '4', t: 'You Earn', d: 'Receive referral bonus as per our reward policy' }].map((s, i) => (
             <div key={i} className="flex items-start gap-3 mb-3">
               <span className="w-7 h-7 rounded-full bg-brand-red/15 flex items-center justify-center text-xs font-bold text-brand-red shrink-0">{s.step}</span>
               <div><p className={`text-xs font-semibold ${t('text-white','text-gray-900')}`}>{s.t}</p><p className={`text-[11px] ${t('text-gray-500','text-gray-700')}`}>{s.d}</p></div>
@@ -1797,6 +1867,14 @@ export default function DashboardClient() {
           ))}
         </Glass>
       </div>
+
+      {/* Referral terms */}
+      <Glass className="p-4" theme={theme}>
+        <p className={`text-xs ${t('text-gray-500','text-gray-600')}`}>
+          <Info className="w-3.5 h-3.5 inline mr-1 -mt-0.5" />
+          Referral rewards are subject to the successful onboarding and investment by the referred party. Terms and conditions apply. Contact your relationship manager for details on reward structure.
+        </p>
+      </Glass>
     </div>
   )
 
