@@ -45,30 +45,10 @@ interface Alert {
   acknowledged: boolean
 }
 
-const BROADCASTS: Broadcast[] = [
-  { id: 'BC-001', title: 'Q4 2024 Performance Report — All Investors', channel: 'email', recipients: 'All Active Clients (342)', sentBy: 'Karthik Sundaram', sentDate: '2025-03-19T10:00:00', status: 'sent', openRate: 78, clickRate: 42 },
-  { id: 'BC-002', title: 'New Fund Launch — Phoenix Real Estate Series C', channel: 'email', recipients: 'Qualified Leads (47)', sentBy: 'Priya Natarajan', sentDate: '2025-03-20T09:00:00', status: 'sent', openRate: 65, clickRate: 35 },
-  { id: 'BC-003', title: 'KYC Renewal Reminder', channel: 'sms', recipients: '3 Clients', sentBy: 'Meera Subramaniam', sentDate: '2025-03-18T14:00:00', status: 'sent' },
-  { id: 'BC-004', title: 'April Newsletter — Market Outlook', channel: 'email', recipients: 'All Subscribers', sentBy: 'Abe Thayil', sentDate: '2025-04-01T08:00:00', status: 'scheduled' },
-  { id: 'BC-005', title: 'Investment Opportunity Alert', channel: 'whatsapp', recipients: 'Premium Investors (50)', sentBy: 'Priya Natarajan', sentDate: '', status: 'draft' },
-]
-
-const INTERNAL_MESSAGES: ChatMessage[] = [
-  { id: 'MSG-001', sender: 'Meera Subramaniam', channel: '#compliance', message: 'KYC for Vikram Mehta is under review. Need additional docs.', timestamp: '2025-03-20T10:30:00', read: false },
-  { id: 'MSG-002', sender: 'Priya Natarajan', channel: '#sales', message: 'Ganesh Iyer deal is almost closed. Final docs expected this week.', timestamp: '2025-03-20T09:45:00', read: false },
-  { id: 'MSG-003', sender: 'Venkatesh Raghavan', channel: '#investments', message: 'NAV updated for all funds. Phoenix Towers at 1,247.50.', timestamp: '2025-03-20T09:30:00', read: true },
-  { id: 'MSG-004', sender: 'Karthik Sundaram', channel: '#general', message: 'Q4 report has been uploaded to the document repository.', timestamp: '2025-03-19T17:00:00', read: true },
-  { id: 'MSG-005', sender: 'Sowmya Rajan', channel: '#legal', message: 'SEBI filing deadline is March 31. Please review the draft.', timestamp: '2025-03-19T15:00:00', read: true },
-  { id: 'MSG-006', sender: 'Divya Krishnamurthy', channel: '#client-services', message: 'Portfolio review sent to Sunita Agarwal and Kavitha Raman.', timestamp: '2025-03-19T14:30:00', read: true },
-]
-
-const SYSTEM_ALERTS: Alert[] = [
-  { id: 'ALT-001', type: 'compliance', title: 'KYC Expiry Warning', message: '3 client KYC documents expiring within 30 days', timestamp: '2025-03-20T09:00:00', severity: 'critical', acknowledged: false },
-  { id: 'ALT-002', type: 'security', title: 'Failed Login Attempts', message: '5 failed login attempts detected from unknown IP', timestamp: '2025-03-20T08:15:00', severity: 'high', acknowledged: false },
-  { id: 'ALT-003', type: 'finance', title: 'Overdue Invoice', message: 'Invoice INV-2025-003 for Deepak Patel is overdue', timestamp: '2025-03-19T16:00:00', severity: 'medium', acknowledged: true },
-  { id: 'ALT-004', type: 'system', title: 'Backup Completed', message: 'Daily backup completed successfully (2.4 GB)', timestamp: '2025-03-18T02:00:00', severity: 'low', acknowledged: true },
-  { id: 'ALT-005', type: 'compliance', title: 'Regulatory Update', message: 'New SEBI circular on AIF reporting requirements published', timestamp: '2025-03-17T10:00:00', severity: 'medium', acknowledged: false },
-]
+// Data — populated from Supabase when available (no mock data)
+const BROADCASTS: Broadcast[] = []
+const INTERNAL_MESSAGES: ChatMessage[] = []
+const SYSTEM_ALERTS: Alert[] = []
 
 // ── Sub-tabs ─────────────────────────────────────────────────────
 const COMMS_TABS = [
@@ -172,6 +152,10 @@ function BroadcastTab({ showToast }: { showToast: (msg: string, type?: 'success'
     'in-app': 'text-purple-400 bg-purple-500/15',
   }
 
+  if (BROADCASTS.length === 0) {
+    return <AdminEmptyState title="No broadcasts yet" description="Broadcasts you send to clients and leads will appear here. Use the 'New Broadcast' button to compose one." />
+  }
+
   return (
     <div className="space-y-3">
       {BROADCASTS.map(bc => {
@@ -234,6 +218,10 @@ function InternalChatTab({ showToast }: { showToast: (msg: string, type?: 'succe
   const channelMessages = useMemo(() => {
     return INTERNAL_MESSAGES.filter(m => m.channel === activeChannel)
   }, [activeChannel])
+
+  if (channels.length === 0) {
+    return <AdminEmptyState title="No internal messages" description="Internal team chat messages will appear here. Channels will be created when team members start communicating." />
+  }
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
@@ -333,6 +321,10 @@ function AlertCenterTab({ showToast }: { showToast: (msg: string, type?: 'succes
     compliance: 'warning',
     finance: 'success',
     security: 'error',
+  }
+
+  if (SYSTEM_ALERTS.length === 0) {
+    return <AdminEmptyState title="No alerts" description="System alerts, compliance warnings, and security notifications will appear here." />
   }
 
   return (

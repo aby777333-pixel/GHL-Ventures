@@ -7,13 +7,14 @@ import { Loader2 } from 'lucide-react'
 import Logo from '@/components/Logo'
 
 /**
- * OAuth callback page — processes the Supabase auth tokens from the URL
- * after Google/Facebook/Twitter/LinkedIn redirect, ensures a profile exists,
- * then navigates to /dashboard.
+ * Auth callback page — processes Supabase auth tokens from the URL
+ * after OAuth redirect (Google, etc.), email verification, or password recovery.
+ * Ensures a profile exists, then navigates to the appropriate page.
  */
 export default function AuthCallbackPage() {
   const router = useRouter()
   const [error, setError] = useState('')
+  const [mode, setMode] = useState<'auth' | 'recovery'>('auth')
 
   useEffect(() => {
     async function handleCallback() {
@@ -23,6 +24,24 @@ export default function AuthCallbackPage() {
       }
 
       try {
+        // Detect recovery (password reset) flow from URL hash
+        if (typeof window !== 'undefined') {
+          const hash = window.location.hash
+          if (hash.includes('type=recovery')) {
+            setMode('recovery')
+            // Supabase auto-exchanges the token — redirect to password update page
+            // For now, redirect to login with a message since we don't have a
+            // dedicated password-update page. The session is established so they
+            // can update their password from their profile.
+            const { data: { session } } = await supabase.auth.getSession()
+            if (session?.user) {
+              await ensureProfile(session.user)
+              router.replace('/dashboard?tab=settings&password_reset=true')
+              return
+            }
+          }
+        }
+
         // Supabase client with detectSessionInUrl: true will automatically
         // pick up the tokens from the URL hash fragment (#access_token=...)
         const { data: { session }, error: sessionError } = await supabase.auth.getSession()
@@ -70,7 +89,9 @@ export default function AuthCallbackPage() {
         ) : (
           <>
             <Loader2 className="w-8 h-8 animate-spin text-brand-red mx-auto mb-4" />
-            <p className="text-brand-grey text-sm">Completing sign-in...</p>
+            <p className="text-brand-grey text-sm">
+              {mode === 'recovery' ? 'Processing password reset...' : 'Completing sign-in...'}
+            </p>
           </>
         )}
       </div>

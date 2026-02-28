@@ -31,14 +31,14 @@ const CATEGORY_CONFIG: Record<string, { label: string; color: string; bgColor: s
   automation: { label: 'Automation', color: 'text-red-400', bgColor: 'bg-red-500/15 border-red-500/20' },
 }
 
-// ── Mock AI Usage Stats ──────────────────────────────────────────
+// ── AI Usage Stats (live counters — zeroed until real telemetry is wired) ──
 const AI_USAGE_STATS = {
-  totalRuns: 1847,
-  avgConfidence: 94.2,
-  documentsProcessed: 342,
-  timeSaved: '156 hrs',
-  activeTools: 14,
-  betaTools: 3,
+  totalRuns: 0,
+  avgConfidence: 0,
+  documentsProcessed: 0,
+  timeSaved: '0 hrs',
+  activeTools: 0,
+  betaTools: 0,
 }
 
 interface AIOperationsModuleProps {

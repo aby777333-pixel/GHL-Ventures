@@ -3,19 +3,44 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { BRAND } from '@/lib/constants'
-import { Shield, Lock, Eye, EyeOff, AlertTriangle, KeyRound, Loader2 } from 'lucide-react'
+import { Shield, Lock, Eye, EyeOff, AlertTriangle, Loader2, CheckCircle } from 'lucide-react'
 import Logo from '@/components/Logo'
 import { authenticateAdmin, getAdminSession } from '@/lib/supabase/adminAuthService'
+import { supabase, isSupabaseConfigured } from '@/lib/supabase/client'
 
 export default function AdminLoginPage() {
   const router = useRouter()
   const [showPassword, setShowPassword] = useState(false)
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
-  const [twoFaCode, setTwoFaCode] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
   const [attempts, setAttempts] = useState(0)
+  const [resetSent, setResetSent] = useState(false)
+
+  const handleForgotPassword = async () => {
+    if (!email) {
+      setError('Please enter your admin email first')
+      return
+    }
+    if (!isSupabaseConfigured()) {
+      setError('Authentication service not available')
+      return
+    }
+    try {
+      const { error: resetError } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${typeof window !== 'undefined' ? window.location.origin : ''}/auth/callback`,
+      })
+      if (resetError) {
+        setError(resetError.message)
+      } else {
+        setResetSent(true)
+        setError('')
+      }
+    } catch {
+      setError('Could not send reset email. Please try again.')
+    }
+  }
 
   // Redirect if already logged in
   useEffect(() => {
@@ -34,11 +59,6 @@ export default function AdminLoginPage() {
 
     if (attempts >= 5) {
       setError('Account locked. Too many failed attempts. Please wait 15 minutes.')
-      return
-    }
-
-    if (twoFaCode.length !== 6) {
-      setError('Please enter a valid 6-digit 2FA code')
       return
     }
 
@@ -114,6 +134,14 @@ export default function AdminLoginPage() {
               </div>
             )}
 
+            {/* Password Reset Success */}
+            {resetSent && (
+              <div className="flex items-center gap-2 p-3 rounded-lg bg-green-500/10 border border-green-500/20 animate-fade-in">
+                <CheckCircle className="w-4 h-4 text-green-400 flex-shrink-0" />
+                <p className="text-xs text-green-300">Password reset email sent. Check your inbox.</p>
+              </div>
+            )}
+
             {/* Email */}
             <div>
               <label htmlFor="admin-email" className="block text-sm font-medium text-gray-300 mb-2">
@@ -158,32 +186,6 @@ export default function AdminLoginPage() {
               </div>
             </div>
 
-            {/* 2FA Code */}
-            <div>
-              <label htmlFor="admin-2fa" className="block text-sm font-medium text-gray-300 mb-2">
-                <span className="flex items-center space-x-2">
-                  <KeyRound className="w-4 h-4 text-brand-red" />
-                  <span>Two-Factor Authentication Code</span>
-                </span>
-              </label>
-              <input
-                id="admin-2fa"
-                type="text"
-                inputMode="numeric"
-                pattern="[0-9]*"
-                maxLength={6}
-                required
-                disabled={loading}
-                className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-lg text-white placeholder-gray-500 focus:ring-2 focus:ring-brand-red focus:border-transparent outline-none tracking-[0.5em] text-center font-mono text-lg transition-all disabled:opacity-50"
-                placeholder="------"
-                value={twoFaCode}
-                onChange={(e) => setTwoFaCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
-              />
-              <p className="text-xs text-gray-500 mt-1.5">
-                Enter the 6-digit code from your authenticator app
-              </p>
-            </div>
-
             {/* Submit */}
             <button
               type="submit"
@@ -202,6 +204,17 @@ export default function AdminLoginPage() {
                 </>
               )}
             </button>
+
+            {/* Forgot Password */}
+            <div className="text-center pt-2">
+              <button
+                type="button"
+                onClick={handleForgotPassword}
+                className="text-xs text-gray-500 hover:text-brand-red transition-colors"
+              >
+                Forgot Password?
+              </button>
+            </div>
           </form>
         </div>
 
@@ -223,12 +236,12 @@ export default function AdminLoginPage() {
             <span className="text-gray-700">&bull;</span>
             <span className="flex items-center space-x-1">
               <Shield className="w-3 h-3" />
-              <span>2FA Enabled</span>
+              <span>Role Verified</span>
             </span>
             <span className="text-gray-700">&bull;</span>
             <span className="flex items-center space-x-1">
-              <KeyRound className="w-3 h-3" />
-              <span>IP Logged</span>
+              <Lock className="w-3 h-3" />
+              <span>Audit Logged</span>
             </span>
           </div>
         </div>

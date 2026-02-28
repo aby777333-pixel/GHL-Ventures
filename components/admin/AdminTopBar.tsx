@@ -6,7 +6,7 @@ import {
   AlertCircle, CheckCircle, Info, AlertTriangle,
 } from 'lucide-react'
 import { MODULE_LABELS } from '@/lib/admin/adminConstants'
-import { fetchNotifications } from '@/lib/supabase/adminDataService'
+import { fetchNotifications, updateRow } from '@/lib/supabase/adminDataService'
 import type { AdminModule, NotificationType } from '@/lib/admin/adminTypes'
 import { formatTimeAgo } from '@/lib/admin/adminHooks'
 
@@ -42,7 +42,7 @@ export default function AdminTopBar({ activeModule, activeSubTab, onMenuToggle, 
     fetchNotifications().then(data => setNotifications(data))
   }, [])
 
-  const unreadCount = notifications.filter(n => !n.read && !readNotifs.has(n.id)).length
+  const unreadCount = notifications.filter(n => !n.is_read && !readNotifs.has(n.id)).length
 
   // Close notification dropdown on outside click
   useEffect(() => {
@@ -57,6 +57,8 @@ export default function AdminTopBar({ activeModule, activeSubTab, onMenuToggle, 
 
   const markAsRead = (id: string) => {
     setReadNotifs(prev => new Set(prev).add(id))
+    // Persist to Supabase (non-blocking)
+    updateRow('notifications', id, { is_read: true, read_at: new Date().toISOString() })
   }
 
   // Current time
@@ -166,15 +168,24 @@ export default function AdminTopBar({ activeModule, activeSubTab, onMenuToggle, 
                   </button>
                 </div>
                 <div className="max-h-72 overflow-y-auto">
+                  {notifications.length === 0 && (
+                    <div className="py-8 text-center">
+                      <Bell className="w-6 h-6 text-gray-600 mx-auto mb-2" />
+                      <p className="text-xs text-gray-500">No notifications yet</p>
+                    </div>
+                  )}
                   {notifications.map(notif => {
-                    const NIcon = NOTIF_ICONS[notif.type as NotificationType] || Info
-                    const isRead = notif.read || readNotifs.has(notif.id)
+                    // Map DB types to admin display types (error → critical)
+                    const displayType = notif.type === 'error' ? 'critical' : notif.type === 'action_required' ? 'warning' : notif.type
+                    const NIcon = NOTIF_ICONS[displayType as NotificationType] || Info
+                    const isRead = notif.is_read || readNotifs.has(notif.id)
+                    const targetModule = notif.metadata?.module || notif.link || 'overview'
                     return (
                       <button
                         key={notif.id}
                         onClick={() => {
                           markAsRead(notif.id)
-                          navigate(notif.module)
+                          navigate(targetModule)
                           setNotifOpen(false)
                         }}
                         className={`w-full text-left px-4 py-3 border-b border-white/[0.03] hover:bg-white/[0.04] transition-colors ${
@@ -182,11 +193,11 @@ export default function AdminTopBar({ activeModule, activeSubTab, onMenuToggle, 
                         }`}
                       >
                         <div className="flex gap-3">
-                          <NIcon className={`w-4 h-4 flex-shrink-0 mt-0.5 ${NOTIF_COLORS[notif.type as NotificationType] || 'text-gray-400'}`} />
+                          <NIcon className={`w-4 h-4 flex-shrink-0 mt-0.5 ${NOTIF_COLORS[displayType as NotificationType] || 'text-gray-400'}`} />
                           <div className="flex-1 min-w-0">
                             <p className="text-xs font-semibold text-white truncate">{notif.title}</p>
                             <p className="text-[11px] text-gray-400 mt-0.5 line-clamp-2">{notif.message}</p>
-                            <p className="text-[10px] text-gray-600 mt-1">{formatTimeAgo(notif.timestamp)}</p>
+                            <p className="text-[10px] text-gray-600 mt-1">{formatTimeAgo(notif.created_at)}</p>
                           </div>
                           {!isRead && <span className="w-2 h-2 rounded-full bg-brand-red flex-shrink-0 mt-1" />}
                         </div>

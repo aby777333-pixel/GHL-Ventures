@@ -1,15 +1,16 @@
 'use client'
 
-import { useState, useMemo, useCallback } from 'react'
-import { usePathname } from 'next/navigation'
+import { useState, useMemo, useCallback, useEffect } from 'react'
+import { usePathname, useRouter } from 'next/navigation'
 import {
   LayoutDashboard, Handshake, IndianRupee, FileText, Users,
   User, Settings, LogOut, TrendingUp, Download, Upload,
   Eye, Calendar, Clock, Bell, Star, Menu, X, Search,
   Target, Award, Building2, MapPin, Phone, Mail, CheckCircle2,
-  AlertCircle, ArrowUpRight, Filter, BarChart3, Inbox,
+  AlertCircle, ArrowUpRight, Filter, BarChart3, Inbox, Loader2,
 } from 'lucide-react'
 import { pickAndUploadFiles, saveBlobAs, formatFileSize } from '@/lib/supabase/storageService'
+import { useClientAuth } from '@/lib/supabase/clientHooks'
 
 // ── Types ──────────────────────────────────────────────────────
 type AgentTab = 'overview' | 'deals' | 'commissions' | 'documents' | 'leads' | 'profile' | 'settings'
@@ -50,8 +51,16 @@ function EmptyState({ icon: Icon, title, subtitle }: { icon: any; title: string;
 // ── Main Component ─────────────────────────────────────────────
 export default function AgentClient() {
   const pathname = usePathname()
+  const router = useRouter()
   const { toast, showToast } = useToast()
   const [sidebarOpen, setSidebarOpen] = useState(false)
+
+  // ─── Auth Guard ─────────────────────────────────────────────
+  const { user, isAuthenticated, loading: authLoading, logout } = useClientAuth()
+
+  useEffect(() => {
+    if (!authLoading && !isAuthenticated) router.push('/login')
+  }, [authLoading, isAuthenticated, router])
 
   const activeTab = useMemo<AgentTab>(() => {
     const segments = pathname.split('/').filter(Boolean)
@@ -64,6 +73,21 @@ export default function AgentClient() {
     window.dispatchEvent(new PopStateEvent('popstate'))
     setSidebarOpen(false)
   }, [])
+
+  // Show loading spinner while auth check in progress
+  if (authLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 via-white to-amber-50/20">
+        <div className="text-center">
+          <Loader2 className="w-8 h-8 animate-spin text-amber-600 mx-auto mb-3" />
+          <p className="text-sm text-gray-500">Loading agent portal...</p>
+        </div>
+      </div>
+    )
+  }
+
+  // Don't render portal if not authenticated (redirect happening)
+  if (!isAuthenticated) return null
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-amber-50/20">
@@ -103,8 +127,8 @@ export default function AgentClient() {
               <User className="w-4 h-4 text-amber-600" />
             </div>
             <div>
-              <p className="text-sm font-medium text-gray-900">Agent</p>
-              <p className="text-xs text-gray-500">Logged In</p>
+              <p className="text-sm font-medium text-gray-900 truncate max-w-[150px]">{user?.name || 'Agent'}</p>
+              <p className="text-xs text-gray-500 truncate max-w-[150px]">{user?.email || 'Logged In'}</p>
             </div>
           </div>
         </div>
@@ -132,7 +156,7 @@ export default function AgentClient() {
 
         <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-gray-100">
           <button
-            onClick={() => { window.location.href = '/' }}
+            onClick={async () => { await logout(); router.push('/login') }}
             className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-gray-500 hover:bg-gray-50 hover:text-red-600 transition-colors"
           >
             <LogOut className="w-4 h-4" />

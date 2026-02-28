@@ -179,10 +179,10 @@ function CSDashboard({ navigate, showToast }: Pick<CSCenterModuleProps, 'navigat
 
       {/* KPI Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <AdminKPICard title="Tickets Resolved" value={23} subtitle="Today" trend="up" trendValue="+12%" icon={CheckCircle2} color={ACCENT} delay={0} />
-        <AdminKPICard title="Avg Response Time" value="45s" subtitle="Last 1 hour" trend="down" trendValue="-8s" icon={Clock} color="#8b5cf6" delay={100} />
-        <AdminKPICard title="CSAT Score" value="4.6" subtitle="This week" trend="up" trendValue="+0.2" icon={Star} color="#f59e0b" delay={200} />
-        <AdminKPICard title="Calls Handled" value={18} subtitle="Today" trend="up" trendValue="+5" icon={Phone} color="#ec4899" delay={300} />
+        <AdminKPICard title="Tickets Resolved" value={0} subtitle="Today" icon={CheckCircle2} color={ACCENT} delay={0} />
+        <AdminKPICard title="Avg Response Time" value="—" subtitle="Last 1 hour" icon={Clock} color="#8b5cf6" delay={100} />
+        <AdminKPICard title="CSAT Score" value="—" subtitle="This week" icon={Star} color="#f59e0b" delay={200} />
+        <AdminKPICard title="Calls Handled" value={0} subtitle="Today" icon={Phone} color="#ec4899" delay={300} />
       </div>
 
       {/* Live Queue + Active Sessions */}

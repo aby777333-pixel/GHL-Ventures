@@ -259,17 +259,20 @@ export default function DashboardClient() {
   }, [authLoading, isAuthenticated, router])
 
   // ─── Data Hooks ─────────────────────────────────────────
-  const { data: portfolioAssets, refetch: refetchPortfolio } = usePortfolioAssets(clientId ?? undefined)
+  const { data: portfolioAssets, loading: portfolioLoading, error: portfolioError, refetch: refetchPortfolio } = usePortfolioAssets(clientId ?? undefined)
   const { data: navHistory } = useNAVHistory(clientId ?? undefined)
   const { data: allocationData } = useAllocation(clientId ?? undefined)
   const { data: transactions } = useTransactions(clientId ?? undefined)
   const { data: messagesData, refetch: refetchMessages } = useMessages(clientId ?? undefined)
-  const { data: supportTickets, refetch: refetchTickets } = useSupportTickets(clientId ?? undefined)
+  const { data: supportTickets, loading: ticketsLoading, error: ticketsError, refetch: refetchTickets } = useSupportTickets(clientId ?? undefined)
   const { data: notifications, refetch: refetchNotifications } = useNotifications(clientId ?? undefined)
   const { data: kycSteps } = useKYCSteps(clientId ?? undefined)
-  const { data: documents, refetch: refetchDocs } = useDocuments(clientId ?? undefined)
+  const { data: documents, loading: docsLoading, error: docsError, refetch: refetchDocs } = useDocuments(clientId ?? undefined)
   const { data: adminNews } = useAdminNews()
   const { data: assignedRM } = useAssignedRM(clientId ?? undefined)
+
+  // Combined data error indicator (shows toast if any critical fetch fails)
+  const dataError = portfolioError || ticketsError || docsError
 
   // ─── Derived User Values ────────────────────────────────
   const userInitials = user?.name ? user.name.split(' ').map((n: string) => n[0]).join('').toUpperCase() : 'U'

@@ -1,8 +1,11 @@
 'use client'
 
-import { Search, Bell, Menu, ChevronRight } from 'lucide-react'
+import { useState, useRef, useEffect } from 'react'
+import { Search, Bell, Menu, ChevronRight, Info, AlertCircle, CheckCircle, AlertTriangle } from 'lucide-react'
 import type { StaffModule, AgentStatus } from '@/lib/staff/staffTypes'
 import { STAFF_MODULE_LABELS } from '@/lib/staff/staffConstants'
+import { fetchNotifications } from '@/lib/supabase/reportsDataService'
+import { updateRow } from '@/lib/supabase/adminDataService'
 
 const STATUS_CONFIG: Record<AgentStatus, { label: string; color: string; bg: string }> = {
   available: { label: 'Available', color: 'bg-emerald-400', bg: 'bg-emerald-500/15 text-emerald-400' },
@@ -22,10 +25,66 @@ interface StaffTopBarProps {
   userName: string
 }
 
+const NOTIF_ICONS: Record<string, React.ComponentType<{ className?: string }>> = {
+  error: AlertCircle,
+  warning: AlertTriangle,
+  success: CheckCircle,
+  info: Info,
+  action_required: AlertTriangle,
+  critical: AlertCircle,
+}
+
+const NOTIF_COLORS: Record<string, string> = {
+  error: 'text-red-400',
+  critical: 'text-red-400',
+  warning: 'text-amber-400',
+  action_required: 'text-amber-400',
+  success: 'text-emerald-400',
+  info: 'text-blue-400',
+}
+
+function formatNotifTime(ts: string): string {
+  if (!ts) return ''
+  const d = new Date(ts)
+  const now = Date.now()
+  const diff = now - d.getTime()
+  if (diff < 60000) return 'Just now'
+  if (diff < 3600000) return `${Math.floor(diff / 60000)}m ago`
+  if (diff < 86400000) return `${Math.floor(diff / 3600000)}h ago`
+  return d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })
+}
+
 export default function StaffTopBar({
   activeModule, activeSubTab, onMenuToggle, navigate, agentStatus, onStatusChange, userName,
 }: StaffTopBarProps) {
   const statusCfg = STATUS_CONFIG[agentStatus]
+  const [notifOpen, setNotifOpen] = useState(false)
+  const [notifications, setNotifications] = useState<any[]>([])
+  const [readNotifs, setReadNotifs] = useState<Set<string>>(new Set())
+  const notifRef = useRef<HTMLDivElement>(null)
+
+  // Fetch notifications on mount
+  useEffect(() => {
+    fetchNotifications().then(data => setNotifications(data || []))
+  }, [])
+
+  // Close on outside click
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (notifRef.current && !notifRef.current.contains(e.target as Node)) {
+        setNotifOpen(false)
+      }
+    }
+    if (notifOpen) document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [notifOpen])
+
+  const unreadCount = notifications.filter(n => !n.is_read && !readNotifs.has(n.id)).length
+
+  const markAsRead = (id: string) => {
+    setReadNotifs(prev => new Set(prev).add(id))
+    updateRow('notifications', id, { is_read: true, read_at: new Date().toISOString() })
+  }
 
   return (
     <header className="sticky top-0 z-[100] border-b border-white/[0.04]"
@@ -89,10 +148,71 @@ export default function StaffTopBar({
           </div>
 
           {/* Notifications */}
-          <button className="relative p-2 rounded-lg text-gray-400 hover:text-white hover:bg-white/[0.06] transition-colors">
-            <Bell className="w-4 h-4" />
-            <span className="absolute top-1 right-1 w-2 h-2 bg-brand-red rounded-full" />
-          </button>
+          <div className="relative" ref={notifRef}>
+            <button
+              onClick={() => setNotifOpen(!notifOpen)}
+              className="relative p-2 rounded-lg text-gray-400 hover:text-white hover:bg-white/[0.06] transition-colors"
+            >
+              <Bell className="w-4 h-4" />
+              {unreadCount > 0 && (
+                <span className="absolute -top-0.5 -right-0.5 w-4 h-4 rounded-full bg-brand-red text-[9px] text-white font-bold flex items-center justify-center">
+                  {unreadCount}
+                </span>
+              )}
+            </button>
+
+            {notifOpen && (
+              <div
+                className="absolute right-0 top-full mt-2 w-80 rounded-xl border border-white/[0.08] shadow-2xl overflow-hidden z-[200]"
+                style={{ background: 'rgba(18,18,26,0.98)', backdropFilter: 'blur(40px)' }}
+              >
+                <div className="px-4 py-3 border-b border-white/[0.06] flex items-center justify-between">
+                  <p className="text-sm font-semibold text-white">Notifications</p>
+                  {notifications.length > 0 && (
+                    <button
+                      onClick={() => notifications.forEach(n => markAsRead(n.id))}
+                      className="text-[11px] text-teal-400 hover:text-teal-300 transition-colors"
+                    >
+                      Mark all read
+                    </button>
+                  )}
+                </div>
+                <div className="max-h-72 overflow-y-auto">
+                  {notifications.length === 0 && (
+                    <div className="py-8 text-center">
+                      <Bell className="w-6 h-6 text-gray-600 mx-auto mb-2" />
+                      <p className="text-xs text-gray-500">No notifications yet</p>
+                    </div>
+                  )}
+                  {notifications.slice(0, 20).map(notif => {
+                    const NIcon = NOTIF_ICONS[notif.type] || Info
+                    const isRead = notif.is_read || readNotifs.has(notif.id)
+                    return (
+                      <button
+                        key={notif.id}
+                        onClick={() => {
+                          markAsRead(notif.id)
+                          if (notif.metadata?.module) navigate(notif.metadata.module)
+                          setNotifOpen(false)
+                        }}
+                        className={`w-full text-left px-4 py-3 border-b border-white/[0.03] hover:bg-white/[0.04] transition-colors ${isRead ? 'opacity-60' : ''}`}
+                      >
+                        <div className="flex gap-3">
+                          <NIcon className={`w-4 h-4 flex-shrink-0 mt-0.5 ${NOTIF_COLORS[notif.type] || 'text-gray-400'}`} />
+                          <div className="flex-1 min-w-0">
+                            <p className="text-xs font-semibold text-white truncate">{notif.title}</p>
+                            <p className="text-[11px] text-gray-400 mt-0.5 line-clamp-2">{notif.message}</p>
+                            <p className="text-[10px] text-gray-600 mt-1">{formatNotifTime(notif.created_at)}</p>
+                          </div>
+                          {!isRead && <span className="w-2 h-2 rounded-full bg-teal-400 flex-shrink-0 mt-1" />}
+                        </div>
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
+            )}
+          </div>
 
           {/* Profile */}
           <div className="hidden sm:flex items-center gap-2 pl-2 border-l border-white/[0.06]">

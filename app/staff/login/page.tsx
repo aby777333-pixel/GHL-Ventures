@@ -1,9 +1,10 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { Eye, EyeOff, Shield, Lock, Fingerprint, AlertCircle } from 'lucide-react'
-import { loginStaff } from '@/lib/supabase/staffAuthService'
+import { Eye, EyeOff, Shield, Lock, Fingerprint, AlertCircle, CheckCircle } from 'lucide-react'
+import { loginStaff, getStaffLoginLockout } from '@/lib/supabase/staffAuthService'
+import { supabase, isSupabaseConfigured } from '@/lib/supabase/client'
 import Logo from '@/components/Logo'
 import { BRAND } from '@/lib/constants'
 
@@ -15,10 +16,30 @@ export default function StaffLoginPage() {
   const [showPassword, setShowPassword] = useState(false)
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+  const [lockoutRemaining, setLockoutRemaining] = useState(0)
+  const [resetSent, setResetSent] = useState(false)
+
+  // Check lockout on mount and poll every 10s while locked
+  useEffect(() => {
+    const check = () => setLockoutRemaining(getStaffLoginLockout())
+    check()
+    const id = setInterval(check, 10_000)
+    return () => clearInterval(id)
+  }, [])
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
     setError('')
+
+    // Check rate limit before attempting
+    const lockout = getStaffLoginLockout()
+    if (lockout > 0) {
+      const mins = Math.ceil(lockout / 60000)
+      setError(`Too many failed attempts. Please wait ${mins} minute${mins > 1 ? 's' : ''} before trying again.`)
+      setLockoutRemaining(lockout)
+      return
+    }
+
     setLoading(true)
 
     try {
@@ -27,7 +48,15 @@ export default function StaffLoginPage() {
       if (session) {
         router.push('/staff')
       } else {
-        setError('Invalid credentials. Please check your email, password, and employee code.')
+        // Update lockout state after failed attempt
+        const newLockout = getStaffLoginLockout()
+        setLockoutRemaining(newLockout)
+        if (newLockout > 0) {
+          const mins = Math.ceil(newLockout / 60000)
+          setError(`Account locked. Too many failed attempts. Please wait ${mins} minutes.`)
+        } else {
+          setError('Invalid credentials. Please check your email, password, and employee code.')
+        }
       }
     } catch {
       setError('Authentication service unavailable. Please try again.')
@@ -128,7 +157,7 @@ export default function StaffLoginPage() {
             {/* Submit */}
             <button
               type="submit"
-              disabled={loading}
+              disabled={loading || lockoutRemaining > 0}
               className="w-full py-3 rounded-xl text-white font-semibold text-sm transition-all duration-300 disabled:opacity-60 disabled:cursor-not-allowed hover:opacity-90 hover:shadow-lg hover:shadow-teal-500/20"
               style={{ background: 'linear-gradient(135deg, #0D9488 0%, #0F766E 100%)' }}
             >
@@ -154,9 +183,31 @@ export default function StaffLoginPage() {
             </button>
           </div>
 
+          {/* Reset Success */}
+          {resetSent && (
+            <div className="mt-3 flex items-center gap-2 text-emerald-400 text-xs bg-emerald-500/10 border border-emerald-500/20 rounded-xl px-4 py-2.5">
+              <CheckCircle className="w-4 h-4 flex-shrink-0" />
+              <span>Password reset email sent. Check your inbox.</span>
+            </div>
+          )}
+
           {/* Forgot Password */}
           <div className="mt-3 text-center">
-            <button className="text-xs text-gray-500 hover:text-teal-400 transition-colors">
+            <button
+              type="button"
+              onClick={async () => {
+                if (!email) { setError('Please enter your employee email first'); return }
+                if (!isSupabaseConfigured()) { setError('Auth service not available'); return }
+                try {
+                  const { error: re } = await supabase.auth.resetPasswordForEmail(email, {
+                    redirectTo: `${typeof window !== 'undefined' ? window.location.origin : ''}/auth/callback`,
+                  })
+                  if (re) setError(re.message)
+                  else { setResetSent(true); setError('') }
+                } catch { setError('Could not send reset email') }
+              }}
+              className="text-xs text-gray-500 hover:text-teal-400 transition-colors"
+            >
               Forgot Password?
             </button>
           </div>
