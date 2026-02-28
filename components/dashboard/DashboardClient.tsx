@@ -325,6 +325,11 @@ export default function DashboardClient() {
   const termsRef = useRef<HTMLDivElement>(null)
   const privacyRef = useRef<HTMLDivElement>(null)
   const [profilePhoto, setProfilePhoto] = useState<string | null>(null)
+  const [editProfileOpen, setEditProfileOpen] = useState(false)
+  const [editForm, setEditForm] = useState({
+    full_name: '', phone: '', city: '', dob: '', occupation: '',
+    nominee_name: '', nominee_relation: '', nominee_pan: '', nominee_share: '',
+  })
 
   // Handle profile photo upload
   const handleProfilePhotoUpload = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
@@ -1798,12 +1803,6 @@ export default function DashboardClient() {
   // ═══════════════════════════════════════════════════════════
   // PROFILE TAB (Personal, Nominee, Bank) — with Edit Profile
   // ═══════════════════════════════════════════════════════════
-  const [editProfileOpen, setEditProfileOpen] = useState(false)
-  const [editForm, setEditForm] = useState({
-    full_name: '', phone: '', city: '', dob: '', occupation: '',
-    nominee_name: '', nominee_relation: '', nominee_pan: '', nominee_share: '',
-  })
-
   const openEditProfile = () => {
     setEditForm({
       full_name: user?.name || '', phone: user?.phone || '', city: user?.city || '',
