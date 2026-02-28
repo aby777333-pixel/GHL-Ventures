@@ -106,3 +106,12 @@ export function useDocuments(clientId?: string) {
 export function useAdminNews() {
   return useQuery<any[]>(() => svc.getAdminNews(), [])
 }
+
+// ── Assigned RM ─────────────────────────────────────────────
+export function useAssignedRM(clientId?: string) {
+  return useQuery<{ name: string; designation: string; department: string } | null>(
+    () => svc.fetchAssignedRM(clientId),
+    null,
+    [clientId],
+  )
+}

@@ -159,3 +159,44 @@ export async function uploadDocument(doc: Record<string, any>) {
   if (error) { console.warn('[dashboard] Upload doc error:', error.message); return null }
   return data
 }
+
+// ── Assigned RM ────────────────────────────────────────────
+export async function fetchAssignedRM(clientId?: string): Promise<{ name: string; designation: string; department: string } | null> {
+  if (!isSupabaseConfigured() || !clientId) return null
+
+  try {
+    // Get the client's assigned_rm (which is a staff_profiles.id)
+    const { data: clientData } = await sb
+      .from('clients')
+      .select('assigned_rm')
+      .eq('id', clientId)
+      .single()
+
+    if (!clientData?.assigned_rm) return null
+
+    // Get staff_profile to get user_id and designation
+    const { data: staffProfile } = await sb
+      .from('staff_profiles')
+      .select('user_id, designation, department')
+      .eq('id', clientData.assigned_rm)
+      .single()
+
+    if (!staffProfile?.user_id) return null
+
+    // Get the profile name
+    const { data: profile } = await sb
+      .from('profiles')
+      .select('full_name')
+      .eq('id', staffProfile.user_id)
+      .single()
+
+    return {
+      name: profile?.full_name || 'Your Relationship Manager',
+      designation: staffProfile.designation || 'Relationship Manager',
+      department: staffProfile.department || '',
+    }
+  } catch (err) {
+    console.warn('[dashboard] fetchAssignedRM exception:', err)
+    return null
+  }
+}

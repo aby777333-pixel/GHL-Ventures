@@ -43,7 +43,7 @@ function renderFormatted(text: string) {
   })
 }
 
-const PORTAL_PREFIXES = ['/staff', '/admin', '/dashboard']
+const PORTAL_PREFIXES = ['/staff', '/admin']
 
 export default function ChatWidget() {
   const pathname = usePathname()

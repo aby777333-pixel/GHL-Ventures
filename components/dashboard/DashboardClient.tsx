@@ -42,6 +42,7 @@ import {
   useKYCSteps,
   useDocuments,
   useAdminNews,
+  useAssignedRM,
 } from '@/lib/supabase/dashboardDataHooks'
 
 // Data service (for mutations)
@@ -268,6 +269,7 @@ export default function DashboardClient() {
   const { data: kycSteps } = useKYCSteps(clientId ?? undefined)
   const { data: documents, refetch: refetchDocs } = useDocuments(clientId ?? undefined)
   const { data: adminNews } = useAdminNews()
+  const { data: assignedRM } = useAssignedRM(clientId ?? undefined)
 
   // ─── Derived User Values ────────────────────────────────
   const userInitials = user?.name ? user.name.split(' ').map((n: string) => n[0]).join('').toUpperCase() : 'U'
@@ -1294,12 +1296,12 @@ export default function DashboardClient() {
           </div>
           <div className="flex items-center gap-4 mb-4">
             <div className="w-14 h-14 rounded-full bg-gradient-to-br from-blue-500/30 to-cyan-500/30 flex items-center justify-center text-lg font-bold text-blue-300 ring-2 ring-blue-500/20">
-              AK
+              {assignedRM ? assignedRM.name.split(' ').map((n: string) => n[0]).join('').toUpperCase() : 'RM'}
             </div>
             <div>
-              <p className="text-sm font-bold text-white">Arun Kumar</p>
-              <p className="text-xs text-gray-500">Senior Relationship Manager</p>
-              <p className="text-[10px] text-gray-600 mt-0.5">12+ years wealth management experience</p>
+              <p className="text-sm font-bold text-white">{assignedRM?.name || 'Not yet assigned'}</p>
+              <p className="text-xs text-gray-500">{assignedRM?.designation || 'Relationship Manager'}</p>
+              {!assignedRM && <p className="text-[10px] text-gray-600 mt-0.5">An RM will be assigned to you shortly</p>}
             </div>
           </div>
           <div className="grid grid-cols-2 gap-2">
@@ -1342,16 +1344,21 @@ export default function DashboardClient() {
         {[
           { title: 'Category II AIF - Direct', desc: 'Invest in SEBI-registered AIF with stressed RE and startup exposure.', min: 'As per SEBI AIF Regulations', target: '18-22% IRR', tenure: '5-7 Years', risk: 'High', color: '#D0021B', icon: Building2 },
           { title: 'SEBI Co-Invest Framework', desc: 'Regulated co-invest structure with fixed returns and same asset pool.', min: 'Contact for details', target: '12-15% p.a.', tenure: '3-5 Years', risk: 'Moderate', color: '#3B82F6', icon: FileText },
-          { title: 'NCLT Recovery Assets', desc: 'Stressed properties at 40-60% discount through IBC resolution.', min: '\u20B950 Lakhs', target: '25-35% IRR', tenure: '2-4 Years', risk: 'High', color: '#10B981', icon: Target },
-          { title: 'Early-Stage Startups', desc: 'Pre-Series A in high-growth Indian tech startups.', min: '\u20B925 Lakhs', target: '30-50% IRR', tenure: '5-8 Years', risk: 'Very High', color: '#F59E0B', icon: Rocket },
+          { title: 'NCLT Recovery Assets', desc: 'Stressed properties at 40-60% discount through IBC resolution.', min: '\u20B950 Lakhs', target: '25-35% IRR', tenure: '2-4 Years', risk: 'High', color: '#10B981', icon: Target, upcoming: true },
+          { title: 'Early-Stage Startups', desc: 'Pre-Series A in high-growth Indian tech startups.', min: '\u20B925 Lakhs', target: '30-50% IRR', tenure: '5-8 Years', risk: 'Very High', color: '#F59E0B', icon: Rocket, upcoming: true },
         ].map((opp, i) => (
           <Glass key={i} className="p-6" hover glow theme={theme}>
             <div className="flex items-start gap-4 mb-4">
               <div className="w-12 h-12 rounded-xl flex items-center justify-center shrink-0" style={{ background: `${opp.color}15` }}>
                 <opp.icon className="w-6 h-6" style={{ color: opp.color }} />
               </div>
-              <div>
-                <h4 className={`text-sm font-bold mb-1 ${t('text-white','text-gray-900')}`}>{opp.title}</h4>
+              <div className="flex-1">
+                <div className="flex items-center gap-2 mb-1">
+                  <h4 className={`text-sm font-bold ${t('text-white','text-gray-900')}`}>{opp.title}</h4>
+                  {(opp as any).upcoming && (
+                    <span className="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-amber-500/20 text-amber-400 border border-amber-500/30">Upcoming</span>
+                  )}
+                </div>
                 <p className={`text-xs leading-relaxed ${t('text-gray-500','text-gray-700')}`}>{opp.desc}</p>
               </div>
             </div>
