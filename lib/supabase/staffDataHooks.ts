@@ -2,11 +2,14 @@
    Staff Data Hooks — React hooks wrapping staffDataService
 
    Each hook provides { data, loading, error, refetch }
+
+   FIX: useQuery now accepts a `deps` array so it refetches when
+   staffId / assignedTo changes (same stale-closure fix as dashboard).
    ───────────────────────────────────────────────────────────── */
 
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import * as svc from './staffDataService'
 
 // ── Generic async-data hook ─────────────────────────────────
@@ -17,11 +20,18 @@ interface UseQueryResult<T> {
   refetch: () => void
 }
 
-function useQuery<T>(fetcher: () => Promise<T>, fallback: T): UseQueryResult<T> {
+function useQuery<T>(
+  fetcher: () => Promise<T>,
+  fallback: T,
+  deps: unknown[] = [],
+): UseQueryResult<T> {
   const [data, setData] = useState<T>(fallback)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [trigger, setTrigger] = useState(0)
+
+  const fetcherRef = useRef(fetcher)
+  fetcherRef.current = fetcher
 
   const refetch = useCallback(() => setTrigger(n => n + 1), [])
 
@@ -30,12 +40,12 @@ function useQuery<T>(fetcher: () => Promise<T>, fallback: T): UseQueryResult<T> 
     setLoading(true)
     setError(null)
 
-    fetcher()
+    fetcherRef.current()
       .then(result => { if (!cancelled) { setData(result); setLoading(false) } })
       .catch(err => { if (!cancelled) { setError(err?.message || 'Unknown error'); setLoading(false) } })
 
     return () => { cancelled = true }
-  }, [trigger]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [trigger, ...deps]) // eslint-disable-line react-hooks/exhaustive-deps
 
   return { data, loading, error, refetch }
 }
@@ -47,16 +57,16 @@ export function useStaffEmployees() {
 
 // ── HR / Employee Self-Service ──────────────────────────────
 export function useMyAttendance(staffId?: string) {
-  return useQuery(() => svc.fetchMyAttendance(staffId), [])
+  return useQuery(() => svc.fetchMyAttendance(staffId), [], [staffId])
 }
 export function useMyLeaveBalances() {
   return { data: svc.getMyLeaveBalances(), loading: false, error: null, refetch: () => {} }
 }
 export function useMyLeaveHistory(staffId?: string) {
-  return useQuery(() => svc.fetchMyLeaveHistory(staffId), [])
+  return useQuery(() => svc.fetchMyLeaveHistory(staffId), [], [staffId])
 }
 export function useMyPayslips(staffId?: string) {
-  return useQuery(() => svc.fetchMyPayslips(staffId), [])
+  return useQuery(() => svc.fetchMyPayslips(staffId), [], [staffId])
 }
 
 // ── Customer Service ────────────────────────────────────────
@@ -64,10 +74,10 @@ export function useCSKPIs() {
   return { data: svc.getCSKPIs(), loading: false, error: null, refetch: () => {} }
 }
 export function useTickets(assignedTo?: string) {
-  return useQuery(() => svc.fetchTickets(assignedTo), [])
+  return useQuery(() => svc.fetchTickets(assignedTo), [], [assignedTo])
 }
 export function useClientInteractions(staffId?: string) {
-  return useQuery(() => svc.fetchClientInteractions(staffId), [])
+  return useQuery(() => svc.fetchClientInteractions(staffId), [], [staffId])
 }
 export function useQueueData() {
   return { data: svc.getQueueData(), loading: false, error: null, refetch: () => {} }
@@ -75,15 +85,15 @@ export function useQueueData() {
 
 // ── Tasks ───────────────────────────────────────────────────
 export function useTasks(assignedTo?: string) {
-  return useQuery(() => svc.fetchTasks(assignedTo), [])
+  return useQuery(() => svc.fetchTasks(assignedTo), [], [assignedTo])
 }
 
 // ── Field Operations ────────────────────────────────────────
 export function useFieldCheckins(staffId?: string) {
-  return useQuery(() => svc.fetchFieldCheckins(staffId), [])
+  return useQuery(() => svc.fetchFieldCheckins(staffId), [], [staffId])
 }
 export function useSiteVisits(staffId?: string) {
-  return useQuery(() => svc.fetchSiteVisits(staffId), [])
+  return useQuery(() => svc.fetchSiteVisits(staffId), [], [staffId])
 }
 export function useFieldProspects() {
   return { data: svc.getFieldProspects(), loading: false, error: null, refetch: () => {} }
@@ -113,5 +123,5 @@ export function useDailyQuotes() {
 
 // ── Notifications ───────────────────────────────────────────
 export function useStaffNotifications(staffId?: string) {
-  return useQuery(() => svc.fetchStaffNotifications(staffId), [])
+  return useQuery(() => svc.fetchStaffNotifications(staffId), [], [staffId])
 }

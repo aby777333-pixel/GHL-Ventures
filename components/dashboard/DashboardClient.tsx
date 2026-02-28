@@ -73,56 +73,18 @@ type Theme = 'dark' | 'light'
 type TabId = 'dashboard' | 'investments' | 'invest-onboard' | 'portfolio' | 'kyc' | 'transactions' | 'messages' | 'support' | 'referrals' | 'calculators' | 'profile' | 'settings'
 
 /* ═══════════════════════════════════════════════════════════════
-   MOCK DATA — constants below are kept as fallbacks; hooks from
-   dashboardDataHooks.ts are used at runtime instead.
+   ICON MAP & TOUR — kept for UI chrome; personal data comes
+   exclusively from dashboardDataHooks (Supabase).
    ═══════════════════════════════════════════════════════════════ */
 
-// KYC icon map — service mock data doesn't include icon components
+// KYC icon map — service returns string types, map to icons here
 const KYC_ICON_MAP: Record<string, any> = {
   personal: User, identity: Fingerprint, address: MapPin,
   bank: Landmark, risk: Shield, agreement: FileCheck,
   business: Building2, demat: CreditCard, nominee: Users, documents: FileCheck,
 }
 
-const NAV_HISTORY = [
-  { month: 'Apr 24', nav: 100.0, benchmark: 100.0 },
-  { month: 'May 24', nav: 102.3, benchmark: 101.1 },
-  { month: 'Jun 24', nav: 105.8, benchmark: 102.5 },
-  { month: 'Jul 24', nav: 108.2, benchmark: 103.8 },
-  { month: 'Aug 24', nav: 107.1, benchmark: 104.2 },
-  { month: 'Sep 24', nav: 111.5, benchmark: 105.9 },
-  { month: 'Oct 24', nav: 114.7, benchmark: 106.3 },
-  { month: 'Nov 24', nav: 118.3, benchmark: 107.8 },
-  { month: 'Dec 24', nav: 121.9, benchmark: 108.5 },
-  { month: 'Jan 25', nav: 125.4, benchmark: 109.2 },
-  { month: 'Feb 25', nav: 128.7, benchmark: 110.1 },
-  { month: 'Mar 25', nav: 132.4, benchmark: 111.3 },
-]
-
-const ALLOCATION_DATA = [
-  { name: 'Stressed RE', value: 45, color: '#D0021B' },
-  { name: 'Early-Stage', value: 25, color: '#10B981' },
-  { name: 'Co-Invest', value: 20, color: '#3B82F6' },
-  { name: 'Cash/Liquid', value: 10, color: '#F59E0B' },
-]
-
-const PORTFOLIO_ASSETS = [
-  { name: 'Phoenix Towers - NCLT Recovery', type: 'Stressed Real Estate', invested: 2500000, current: 3125000, returnPct: 25.0, status: 'active', milestone: 75 },
-  { name: 'Meridian Heights - Chennai', type: 'Stressed Real Estate', invested: 1800000, current: 2340000, returnPct: 30.0, status: 'active', milestone: 60 },
-  { name: 'TechStar AI Solutions', type: 'Early-Stage Startup', invested: 1000000, current: 1450000, returnPct: 45.0, status: 'active', milestone: 40 },
-  { name: 'GHL Co-Invest Series A', type: 'Co-Invest Instrument', invested: 1500000, current: 1627500, returnPct: 8.5, status: 'active', milestone: 85 },
-]
-
-const RECENT_TRANSACTIONS = [
-  { id: 'T001', date: '15 Mar 2025', type: 'Investment', amount: 1500000, fund: 'GHL Co-Invest Series A', status: 'completed' },
-  { id: 'T002', date: '01 Mar 2025', type: 'Dividend', amount: 125000, fund: 'Phoenix Towers', status: 'completed' },
-  { id: 'T003', date: '15 Feb 2025', type: 'Investment', amount: 1000000, fund: 'TechStar AI', status: 'completed' },
-  { id: 'T004', date: '01 Feb 2025', type: 'NAV Update', amount: 0, fund: 'All Funds', status: 'info' },
-  { id: 'T005', date: '15 Jan 2025', type: 'Investment', amount: 2500000, fund: 'Phoenix Towers', status: 'completed' },
-  { id: 'T006', date: '01 Jan 2025', type: 'Dividend', amount: 95000, fund: 'Meridian Heights', status: 'completed' },
-  { id: 'T007', date: '15 Dec 2024', type: 'Investment', amount: 1800000, fund: 'Meridian Heights', status: 'completed' },
-]
-
+/* ── Market Reference Data (not client-specific; decorative) ─── */
 const MARKET_DATA = [
   { name: 'SENSEX', value: '73,842', change: '+1.24%', up: true },
   { name: 'NIFTY 50', value: '22,456', change: '+0.98%', up: true },
@@ -130,42 +92,18 @@ const MARKET_DATA = [
   { name: 'USD/INR', value: '83.12', change: '+0.15%', up: true },
 ]
 
-const KYC_STEPS = [
-  { id: 'personal', label: 'Personal Details', status: 'completed' as const, icon: User },
-  { id: 'business', label: 'Business Details', status: 'completed' as const, icon: Building2 },
-  { id: 'bank', label: 'Bank Details', status: 'completed' as const, icon: Landmark },
-  { id: 'demat', label: 'Demat Account', status: 'pending' as const, icon: CreditCard },
-  { id: 'nominee', label: 'Nominee Details', status: 'pending' as const, icon: Users },
-  { id: 'documents', label: 'Document Upload', status: 'in-review' as const, icon: FileCheck },
+const SENSEX_INTRADAY = [
+  { t: '9:15', v: 73200 }, { t: '9:45', v: 73380 }, { t: '10:15', v: 73520 },
+  { t: '10:45', v: 73450 }, { t: '11:15', v: 73610 }, { t: '11:45', v: 73580 },
+  { t: '12:15', v: 73720 }, { t: '12:45', v: 73690 }, { t: '1:15', v: 73750 },
+  { t: '1:45', v: 73800 }, { t: '2:15', v: 73770 }, { t: '2:45', v: 73842 },
 ]
 
-const MESSAGES_DATA = [
-  { id: 1, from: 'Relationship Manager', subject: 'Q4 Portfolio Review Summary', preview: 'Dear Rajesh, Your Q4 2024 portfolio has shown exceptional performance...', time: '2h ago', read: false, avatar: 'RM' },
-  { id: 2, from: 'GHL Compliance', subject: 'Annual KYC Re-verification', preview: 'As per SEBI regulations, please update your KYC documents by March 31...', time: '1d ago', read: false, avatar: 'GC' },
-  { id: 3, from: 'Investment Team', subject: 'New Opportunity: Bengaluru Stressed Asset', preview: 'We are excited to share a new stressed real estate opportunity in Bengaluru...', time: '3d ago', read: true, avatar: 'IT' },
-  { id: 4, from: 'Support Team', subject: 'Re: Tax Certificate Query', preview: 'Your TDS certificate for FY2024 has been uploaded to your documents section...', time: '5d ago', read: true, avatar: 'ST' },
-]
-
-const SUPPORT_TICKETS = [
-  { id: 'TKT-001', subject: 'Tax Certificate for FY2024', status: 'resolved', date: '10 Mar 2025', priority: 'medium' },
-  { id: 'TKT-002', subject: 'NAV Statement Download Issue', status: 'open', date: '15 Mar 2025', priority: 'low' },
-]
-
-const NOTIFICATIONS_DATA = [
-  { id: 1, title: 'Q4 NAV Report Published', desc: 'Latest quarterly NAV report is ready for download.', time: '2h ago', type: 'report', read: false },
-  { id: 2, title: 'New Investment Opportunity', desc: 'Stressed asset in Bengaluru at 40% discount.', time: '1d ago', type: 'opportunity', read: false },
-  { id: 3, title: 'KYC Re-verification Due', desc: 'Annual KYC update required by 31 March 2025.', time: '3d ago', type: 'alert', read: false },
-  { id: 4, title: 'Dividend Credited', desc: 'Dividend of \u20B91,25,000 from Phoenix Towers.', time: '5d ago', type: 'payment', read: true },
-  { id: 5, title: 'Portfolio Milestone', desc: 'Your portfolio has crossed \u20B985 Lakh mark!', time: '7d ago', type: 'milestone', read: true },
-]
-
-const TOUR_STEPS = [
-  { target: 'dashboard', title: 'Welcome to Your Dashboard', desc: 'Get a bird\u2019s-eye view of your portfolio, performance, and recent activity all in one place.' },
-  { target: 'investments', title: 'Explore Investments', desc: 'Browse available investment opportunities, express interest, and modify your allocations.' },
-  { target: 'portfolio', title: 'Track Performance', desc: 'View NAV trends, asset allocation, and milestone progress for each investment.' },
-  { target: 'kyc', title: 'KYC & Documents', desc: 'Upload documents, track your KYC status, and manage compliance requirements.' },
-  { target: 'messages', title: 'Secure Messages', desc: 'Communicate directly with your relationship manager and support team.' },
-  { target: 'support', title: 'Get Help Anytime', desc: 'Raise tickets, access FAQs, or connect via live chat and video call.' },
+const NIFTY_INTRADAY = [
+  { t: '9:15', v: 22200 }, { t: '9:45', v: 22280 }, { t: '10:15', v: 22350 },
+  { t: '10:45', v: 22310 }, { t: '11:15', v: 22380 }, { t: '11:45', v: 22360 },
+  { t: '12:15', v: 22410 }, { t: '12:45', v: 22390 }, { t: '1:15', v: 22430 },
+  { t: '1:45', v: 22440 }, { t: '2:15', v: 22420 }, { t: '2:45', v: 22456 },
 ]
 
 const GLOBAL_MARKETS = [
@@ -195,25 +133,13 @@ const ECONOMIC_CALENDAR = [
   { date: '30 Apr', event: 'ECB Rate Decision', region: 'Global', impact: 'high', icon: Globe },
 ]
 
-const ADMIN_NEWS = [
-  { id: 1, title: 'GHL Fund Manager Commentary - Q4 2024', excerpt: 'Our stressed real estate portfolio delivered 32.4% returns driven by NCLT resolution of Phoenix Towers and Meridian Heights projects in Chennai.', date: '18 Mar 2025', pinned: true, category: 'Fund Update' },
-  { id: 2, title: 'New Investment: Bengaluru Stressed Asset at 40% Discount', excerpt: 'We have identified a premium residential project through IBC resolution at 40% below market value in Whitefield, Bengaluru.', date: '15 Mar 2025', pinned: true, category: 'Opportunity' },
-  { id: 3, title: 'Annual Investor Meet - Save the Date', excerpt: 'Join us for the Annual Investor Meet on 15 May 2025 at The Leela Palace, Chennai. RSVP required.', date: '10 Mar 2025', pinned: false, category: 'Event' },
-  { id: 4, title: 'Tax Planning: Section 10(38) Benefits for AIF Investors', excerpt: 'Our compliance team has prepared a comprehensive guide on tax benefits available to Category II AIF investors.', date: '05 Mar 2025', pinned: false, category: 'Advisory' },
-]
-
-const SENSEX_INTRADAY = [
-  { t: '9:15', v: 73200 }, { t: '9:45', v: 73380 }, { t: '10:15', v: 73520 },
-  { t: '10:45', v: 73450 }, { t: '11:15', v: 73610 }, { t: '11:45', v: 73580 },
-  { t: '12:15', v: 73720 }, { t: '12:45', v: 73690 }, { t: '1:15', v: 73750 },
-  { t: '1:45', v: 73800 }, { t: '2:15', v: 73770 }, { t: '2:45', v: 73842 },
-]
-
-const NIFTY_INTRADAY = [
-  { t: '9:15', v: 22200 }, { t: '9:45', v: 22280 }, { t: '10:15', v: 22350 },
-  { t: '10:45', v: 22310 }, { t: '11:15', v: 22380 }, { t: '11:45', v: 22360 },
-  { t: '12:15', v: 22410 }, { t: '12:45', v: 22390 }, { t: '1:15', v: 22430 },
-  { t: '1:45', v: 22440 }, { t: '2:15', v: 22420 }, { t: '2:45', v: 22456 },
+const TOUR_STEPS = [
+  { target: 'dashboard', title: 'Welcome to Your Dashboard', desc: 'Get a bird\u2019s-eye view of your portfolio, performance, and recent activity all in one place.' },
+  { target: 'investments', title: 'Explore Investments', desc: 'Browse available investment opportunities, express interest, and modify your allocations.' },
+  { target: 'portfolio', title: 'Track Performance', desc: 'View NAV trends, asset allocation, and milestone progress for each investment.' },
+  { target: 'kyc', title: 'KYC & Documents', desc: 'Upload documents, track your KYC status, and manage compliance requirements.' },
+  { target: 'messages', title: 'Secure Messages', desc: 'Communicate directly with your relationship manager and support team.' },
+  { target: 'support', title: 'Get Help Anytime', desc: 'Raise tickets, access FAQs, or connect via live chat and video call.' },
 ]
 
 /* ═══════════════════════════════════════════════════════════════
@@ -757,11 +683,14 @@ export default function DashboardClient() {
           <h3 className={`text-base font-bold mb-0.5 ${t('text-white','text-gray-900')}`}>NAV Performance</h3>
           <p className={`text-xs ${t('text-gray-500','text-gray-700')}`}>Fund NAV vs NIFTY 50 Benchmark</p>
         </div>
+        {navHistory.length > 0 && (
         <div className="flex items-center gap-4 text-xs">
           <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-brand-red" /><span className={t('text-gray-400','text-gray-700')}>Fund NAV</span></span>
           <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-gray-500" /><span className={t('text-gray-400','text-gray-700')}>Benchmark</span></span>
         </div>
+        )}
       </div>
+      {navHistory.length > 0 ? (
       <div className="h-[280px] -ml-2">
         <ResponsiveContainer width="100%" height="100%">
           <AreaChart data={navHistory}>
@@ -775,6 +704,15 @@ export default function DashboardClient() {
           </AreaChart>
         </ResponsiveContainer>
       </div>
+      ) : (
+      <div className="h-[280px] flex items-center justify-center">
+        <div className="text-center">
+          <TrendingUp className={`w-10 h-10 mx-auto mb-3 ${t('text-gray-600','text-gray-400')}`} />
+          <p className={`text-sm font-medium ${t('text-gray-400','text-gray-600')}`}>NAV data will appear here</p>
+          <p className={`text-xs mt-1 ${t('text-gray-600','text-gray-500')}`}>Once your investments are processed</p>
+        </div>
+      </div>
+      )}
     </Glass>
   )
 
@@ -784,6 +722,7 @@ export default function DashboardClient() {
   const renderAllocationChart = () => (
     <Glass className="p-5 lg:p-6" hover theme={theme}>
       <h3 className={`text-base font-bold mb-5 ${t('text-white','text-gray-900')}`}>Allocation</h3>
+      {allocationData.length > 0 ? (<>
       <div className="h-[200px]">
         <ResponsiveContainer width="100%" height="100%">
           <PieChart>
@@ -801,6 +740,15 @@ export default function DashboardClient() {
           </div>
         ))}
       </div>
+      </>) : (
+      <div className="h-[200px] flex items-center justify-center">
+        <div className="text-center">
+          <PieIcon className={`w-10 h-10 mx-auto mb-3 ${t('text-gray-600','text-gray-400')}`} />
+          <p className={`text-sm font-medium ${t('text-gray-400','text-gray-600')}`}>Allocation breakdown</p>
+          <p className={`text-xs mt-1 ${t('text-gray-600','text-gray-500')}`}>Will appear after first investment</p>
+        </div>
+      </div>
+      )}
     </Glass>
   )
 
@@ -813,6 +761,14 @@ export default function DashboardClient() {
         <h3 className={`text-base font-bold ${t('text-white','text-gray-900')}`}>Portfolio Assets</h3>
         <button onClick={() => setActiveTab('portfolio')} className="text-xs text-brand-red font-semibold flex items-center gap-1">View All <ChevronRight className="w-3 h-3" /></button>
       </div>
+      {portfolioAssets.length === 0 ? (
+        <div className="py-8 text-center">
+          <Briefcase className={`w-10 h-10 mx-auto mb-3 ${t('text-gray-600','text-gray-400')}`} />
+          <p className={`text-sm font-medium ${t('text-gray-400','text-gray-600')}`}>No active investments yet</p>
+          <p className={`text-xs mt-1 ${t('text-gray-600','text-gray-500')}`}>Your portfolio will appear here once you invest</p>
+          <button onClick={() => setActiveTab('investments')} className="mt-3 text-xs text-brand-red font-semibold">Explore Opportunities</button>
+        </div>
+      ) : (
       <div className="space-y-3">
         {portfolioAssets.map((asset: any, i: number) => (
           <div key={i} onClick={() => setActiveTab('portfolio')} className={`p-3 rounded-xl transition-all duration-300 group cursor-pointer ${t('bg-white/[0.02] border border-white/[0.04] hover:border-white/[0.08]','bg-gray-100/35 border border-gray-200/30 hover:border-gray-300/40')}`}>
@@ -839,6 +795,7 @@ export default function DashboardClient() {
           </div>
         ))}
       </div>
+      )}
     </Glass>
   )
 
@@ -876,6 +833,12 @@ export default function DashboardClient() {
   const renderRecentActivity = () => (
     <Glass className="p-5 lg:p-6" hover theme={theme}>
       <h3 className={`text-base font-bold mb-5 ${t('text-white','text-gray-900')}`}>Recent Activity</h3>
+      {transactions.length === 0 ? (
+        <div className="py-6 text-center">
+          <ArrowLeftRight className={`w-8 h-8 mx-auto mb-2 ${t('text-gray-600','text-gray-400')}`} />
+          <p className={`text-xs ${t('text-gray-500','text-gray-600')}`}>No transactions yet</p>
+        </div>
+      ) : (
       <div className="space-y-2.5">
         {transactions.slice(0, 5).map((tx: any, i: number) => (
           <div key={i} className={`flex items-center gap-3 p-2.5 rounded-lg transition-colors ${t('hover:bg-white/[0.02]','hover:bg-gray-200/40')}`}>
@@ -893,6 +856,7 @@ export default function DashboardClient() {
           </div>
         ))}
       </div>
+      )}
     </Glass>
   )
 

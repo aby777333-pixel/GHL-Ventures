@@ -3,11 +3,14 @@
 
    Each hook provides { data, loading, error, refetch } so modules
    can swap from direct mock-data imports to reactive queries.
+
+   FIX: useQuery now accepts a `deps` array for consistent
+   refetching behaviour across all hook files.
    ───────────────────────────────────────────────────────────── */
 
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import * as svc from './adminDataService'
 
 // ── Generic async-data hook ─────────────────────────────────
@@ -18,11 +21,18 @@ interface UseQueryResult<T> {
   refetch: () => void
 }
 
-function useQuery<T>(fetcher: () => Promise<T>, fallback: T): UseQueryResult<T> {
+function useQuery<T>(
+  fetcher: () => Promise<T>,
+  fallback: T,
+  deps: unknown[] = [],
+): UseQueryResult<T> {
   const [data, setData] = useState<T>(fallback)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [trigger, setTrigger] = useState(0)
+
+  const fetcherRef = useRef(fetcher)
+  fetcherRef.current = fetcher
 
   const refetch = useCallback(() => setTrigger(n => n + 1), [])
 
@@ -31,7 +41,7 @@ function useQuery<T>(fetcher: () => Promise<T>, fallback: T): UseQueryResult<T> 
     setLoading(true)
     setError(null)
 
-    fetcher()
+    fetcherRef.current()
       .then(result => {
         if (!cancelled) {
           setData(result)
@@ -46,7 +56,7 @@ function useQuery<T>(fetcher: () => Promise<T>, fallback: T): UseQueryResult<T> 
       })
 
     return () => { cancelled = true }
-  }, [trigger]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [trigger, ...deps]) // eslint-disable-line react-hooks/exhaustive-deps
 
   return { data, loading, error, refetch }
 }
@@ -153,7 +163,7 @@ export function useMarketingIntegrations() {
 
 // ── Blog ────────────────────────────────────────────────────
 export function useBlogPosts(publishedOnly = false) {
-  return useQuery(() => svc.fetchBlogPosts(publishedOnly), [])
+  return useQuery(() => svc.fetchBlogPosts(publishedOnly), [], [publishedOnly])
 }
 
 // ── Tickets ─────────────────────────────────────────────────
