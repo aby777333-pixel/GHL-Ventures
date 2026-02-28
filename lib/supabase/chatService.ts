@@ -18,9 +18,8 @@ import { supabase, isSupabaseConfigured } from './client'
 // migration 022 but not yet added to the generated TypeScript types.
 const db = supabase as any
 
-// ── Startup Diagnostic ───────────────────────────────────────
-// This logs once when the module loads so we can verify Supabase is connected
-if (typeof window !== 'undefined') {
+// ── Startup Diagnostic (dev only) ─────────────────────────────
+if (typeof window !== 'undefined' && process.env.NODE_ENV === 'development') {
   const configured = isSupabaseConfigured()
   console.log(
     `[chatService] Supabase configured: ${configured}`,
@@ -134,7 +133,6 @@ export async function createChatSession(input: {
 
   // Use RPC to create session — direct insert + .select() fails for
   // anonymous visitors because RLS blocks the SELECT after INSERT
-  console.log('[chatService] Creating session via RPC...')
   const { data, error } = await db.rpc('create_visitor_chat_session', {
     p_visitor_id: getOrCreateVisitorId(),
     p_visitor_name: input.visitorName,
@@ -150,7 +148,6 @@ export async function createChatSession(input: {
   }
 
   const session = (Array.isArray(data) ? data[0] : data) as ChatSession
-  console.log('[chatService] Session created:', session.id, 'status:', session.status)
 
   // Trigger auto-assignment via SECURITY DEFINER RPC
   // (This runs server-side in Postgres, bypassing RLS)
@@ -159,8 +156,6 @@ export async function createChatSession(input: {
   })
   if (assignErr) {
     console.error('[chatService] Auto-assign RPC failed:', assignErr.message)
-  } else {
-    console.log('[chatService] Auto-assigned to rep:', repId)
   }
 
   // Re-fetch session to get updated assignment info
@@ -169,7 +164,6 @@ export async function createChatSession(input: {
   })
   if (updated && (Array.isArray(updated) ? updated.length > 0 : updated)) {
     const final = (Array.isArray(updated) ? updated[0] : updated) as ChatSession
-    console.log('[chatService] Final session:', final.id, 'assigned_rep:', final.assigned_rep_id, 'status:', final.status)
     return final
   }
 
@@ -184,7 +178,6 @@ export async function getActiveSessionForVisitor(): Promise<ChatSession | null> 
   }
 
   const visitorId = getOrCreateVisitorId()
-  console.log('[chatService] Looking up active session for visitor:', visitorId)
   const { data, error } = await db.rpc('get_visitor_active_session', {
     p_visitor_id: visitorId,
   })
@@ -194,11 +187,9 @@ export async function getActiveSessionForVisitor(): Promise<ChatSession | null> 
     return null
   }
   if (!data || (Array.isArray(data) && data.length === 0)) {
-    console.log('[chatService] No active session found')
     return null
   }
   const session = (Array.isArray(data) ? data[0] : data) as ChatSession
-  console.log('[chatService] Found active session:', session.id, 'status:', session.status)
   return session
 }
 
@@ -294,7 +285,6 @@ export async function sendChatMessage(input: {
   // For visitor/system messages, use RPC to avoid RLS blocking the
   // select-after-insert. Agent messages use direct insert (they're authenticated).
   if (input.senderType === 'visitor' || input.senderType === 'system' || input.senderType === 'bot') {
-    console.log('[chatService] Sending message via RPC:', input.senderType, 'session:', input.sessionId)
     const { data, error } = await db.rpc('send_visitor_chat_message', {
       p_session_id: input.sessionId,
       p_sender_type: input.senderType,
@@ -308,7 +298,6 @@ export async function sendChatMessage(input: {
     }
 
     const msg = (Array.isArray(data) ? data[0] : data) as ChatMessage
-    console.log('[chatService] Message sent:', msg?.id)
     return msg
   }
 

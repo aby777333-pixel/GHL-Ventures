@@ -175,11 +175,17 @@ export default function StaffLoginPage() {
             </button>
           </form>
 
-          {/* Biometric */}
+          {/* Biometric — Coming Soon */}
           <div className="mt-4 flex justify-center">
-            <button className="flex items-center gap-1.5 text-xs text-gray-500 hover:text-teal-400 transition-colors">
+            <button
+              type="button"
+              disabled
+              title="Biometric login coming soon"
+              className="flex items-center gap-1.5 text-xs text-gray-600 cursor-not-allowed opacity-50"
+            >
               <Fingerprint className="w-4 h-4" />
               Biometric Login
+              <span className="ml-1 px-1.5 py-0.5 rounded bg-white/[0.06] text-[9px] uppercase tracking-wider">Soon</span>
             </button>
           </div>
 

@@ -130,7 +130,6 @@ export async function autoAssignLead(leadId: string): Promise<{ success: boolean
       },
     })
 
-    console.log(`[leadAssign] Lead ${leadId} assigned to ${staffName} (${minCount} open leads)`)
     return { success: true, assignedTo: leastLoaded }
 
   } catch (err) {
