@@ -160,6 +160,38 @@ export async function uploadDocument(doc: Record<string, any>) {
   return data
 }
 
+// ── Update Profile ─────────────────────────────────────────
+export async function updateProfile(fields: Record<string, any>) {
+  if (!isSupabaseConfigured()) return null
+  const { data: { user } } = await sb.auth.getUser()
+  if (!user) return null
+
+  // Update profiles table
+  const profileUpdate: Record<string, any> = {}
+  if (fields.full_name) profileUpdate.full_name = fields.full_name
+  if (fields.phone) profileUpdate.phone = fields.phone
+  if (fields.city) profileUpdate.city = fields.city
+
+  if (Object.keys(profileUpdate).length > 0) {
+    await sb.from('profiles').update(profileUpdate).eq('id', user.id)
+  }
+
+  // Update clients table (nominee, dob, occupation stored here)
+  const clientUpdate: Record<string, any> = {}
+  if (fields.dob) clientUpdate.dob = fields.dob
+  if (fields.occupation) clientUpdate.occupation = fields.occupation
+  if (fields.nominee_name) clientUpdate.nominee_name = fields.nominee_name
+  if (fields.nominee_relation) clientUpdate.nominee_relation = fields.nominee_relation
+  if (fields.nominee_pan) clientUpdate.nominee_pan = fields.nominee_pan
+  if (fields.nominee_share) clientUpdate.nominee_share = fields.nominee_share
+
+  if (Object.keys(clientUpdate).length > 0) {
+    await sb.from('clients').update(clientUpdate).eq('user_id', user.id)
+  }
+
+  return true
+}
+
 // ── Assigned RM ────────────────────────────────────────────
 export async function fetchAssignedRM(clientId?: string): Promise<{ name: string; designation: string; department: string } | null> {
   if (!isSupabaseConfigured() || !clientId) return null

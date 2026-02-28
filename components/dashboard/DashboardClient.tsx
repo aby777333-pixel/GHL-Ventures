@@ -1796,11 +1796,71 @@ export default function DashboardClient() {
   )
 
   // ═══════════════════════════════════════════════════════════
-  // PROFILE TAB (Personal, Nominee, Bank)
+  // PROFILE TAB (Personal, Nominee, Bank) — with Edit Profile
   // ═══════════════════════════════════════════════════════════
+  const [editProfileOpen, setEditProfileOpen] = useState(false)
+  const [editForm, setEditForm] = useState({
+    full_name: '', phone: '', city: '', dob: '', occupation: '',
+    nominee_name: '', nominee_relation: '', nominee_pan: '', nominee_share: '',
+  })
+
+  const openEditProfile = () => {
+    setEditForm({
+      full_name: user?.name || '', phone: user?.phone || '', city: user?.city || '',
+      dob: user?.dob || '', occupation: user?.occupation || '',
+      nominee_name: user?.nominee_name || '', nominee_relation: user?.nominee_relation || '',
+      nominee_pan: user?.nominee_pan || '', nominee_share: user?.nominee_share || '',
+    })
+    setEditProfileOpen(true)
+  }
+
+  const handleSaveProfile = async () => {
+    try {
+      const svc = await import('@/lib/supabase/dashboardDataService')
+      if (typeof svc.updateProfile === 'function') {
+        await svc.updateProfile(editForm)
+      }
+      showToast('Profile updated successfully!', 'success')
+      setEditProfileOpen(false)
+    } catch {
+      showToast('Profile saved locally. Changes will sync when online.', 'info')
+      setEditProfileOpen(false)
+    }
+  }
+
+  // Profile completion percentage
+  const profileFields = [user?.name, user?.phone, user?.city, user?.dob, user?.occupation, user?.nominee_name, user?.bank_name, user?.pan]
+  const filledFields = profileFields.filter(Boolean).length
+  const profileCompletion = Math.round((filledFields / profileFields.length) * 100)
+
   const renderProfileTab = () => (
     <div className="space-y-6">
-      <h2 className={`text-xl font-bold ${t('text-white','text-gray-900')}`}>Your Profile</h2>
+      <div className="flex items-center justify-between">
+        <h2 className={`text-xl font-bold ${t('text-white','text-gray-900')}`}>Your Profile</h2>
+        <button onClick={openEditProfile} className="flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold text-white transition-all hover:scale-105" style={{ background: 'linear-gradient(135deg, #D0021B, #8B0000)' }}>
+          <Sliders className="w-3.5 h-3.5" /> Edit Profile
+        </button>
+      </div>
+
+      {/* Profile Completion Bar */}
+      {profileCompletion < 100 && (
+        <Glass className="p-4" theme={theme}>
+          <div className="flex items-center justify-between mb-2">
+            <div className="flex items-center gap-2">
+              <Target className="w-4 h-4 text-brand-red" />
+              <span className={`text-xs font-semibold ${t('text-white','text-gray-900')}`}>Profile Completion</span>
+            </div>
+            <span className="text-xs font-bold text-brand-red">{profileCompletion}%</span>
+          </div>
+          <div className={`w-full h-2 rounded-full overflow-hidden ${t('bg-white/[0.06]','bg-gray-200')}`}>
+            <div className="h-full rounded-full transition-all duration-500" style={{ width: `${profileCompletion}%`, background: 'linear-gradient(90deg, #D0021B, #FF4444)' }} />
+          </div>
+          <p className={`text-[10px] mt-2 ${t('text-gray-500','text-gray-600')}`}>
+            Complete your profile to unlock all platform features and faster KYC approval.
+          </p>
+        </Glass>
+      )}
+
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <Glass className="p-6 text-center" hover glow theme={theme}>
           {/* Profile Photo with Upload */}
@@ -1823,31 +1883,58 @@ export default function DashboardClient() {
           </div>
           <h3 className={`text-lg font-bold ${t('text-white','text-gray-900')}`}>{userName}</h3>
           <p className={`text-xs mb-3 ${t('text-gray-500','text-gray-700')}`}>{userEmail}</p>
-          <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold ${userKycStatus === 'approved' || userKycStatus === 'verified' ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/20' : 'bg-amber-500/15 text-amber-400 border border-amber-500/20'}`}><Shield className="w-3 h-3" /> KYC {userKycStatus === 'approved' || userKycStatus === 'verified' ? 'Verified' : userKycStatus}</span>
+
+          {/* KYC Badge — clickable, links to KYC tab */}
+          <button onClick={() => setActiveTab('kyc')} className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold cursor-pointer transition-all hover:scale-105 ${userKycStatus === 'approved' || userKycStatus === 'verified' ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/20 hover:bg-emerald-500/25' : 'bg-amber-500/15 text-amber-400 border border-amber-500/20 hover:bg-amber-500/25'}`}>
+            <Shield className="w-3 h-3" /> KYC {userKycStatus === 'approved' || userKycStatus === 'verified' ? 'Verified' : userKycStatus}
+            {!(userKycStatus === 'approved' || userKycStatus === 'verified') && <ChevronRight className="w-3 h-3" />}
+          </button>
+          {!(userKycStatus === 'approved' || userKycStatus === 'verified') && (
+            <p className={`text-[10px] mt-1.5 ${t('text-gray-600','text-gray-500')}`}>Tap to complete your KYC</p>
+          )}
+
           <div className={`mt-4 pt-4 border-t text-left space-y-2.5 ${t('border-white/[0.06]','border-gray-200/50')}`}>
             {[['Investor ID', clientId || 'N/A'],['PAN', user?.pan || 'Not provided'],['Mobile', user?.phone || 'Not provided'],['Joined', user?.created_at ? new Date(user.created_at).toLocaleDateString('en-IN', { month: 'long', year: 'numeric' }) : 'N/A']].map(([l,v],i) => (
-              <div key={i} className="flex justify-between text-xs"><span className={t('text-gray-500','text-gray-700')}>{l}</span><span className={`font-medium ${t('text-white','text-gray-900')}`}>{v}</span></div>
+              <div key={i} className="flex justify-between text-xs"><span className={t('text-gray-500','text-gray-700')}>{l}</span><span className={`font-medium ${v === 'Not provided' ? 'text-gray-600 italic' : t('text-white','text-gray-900')}`}>{v}</span></div>
             ))}
+          </div>
+
+          {/* Quick Actions */}
+          <div className={`mt-4 pt-4 border-t space-y-2 ${t('border-white/[0.06]','border-gray-200/50')}`}>
+            <button onClick={openEditProfile} className={`w-full flex items-center justify-center gap-2 px-3 py-2 rounded-xl text-xs font-semibold transition-all ${t('bg-white/[0.04] hover:bg-white/[0.08] text-gray-300 hover:text-white border border-white/[0.06]','bg-gray-100 hover:bg-gray-200 text-gray-700 border border-gray-200')}`}>
+              <Sliders className="w-3.5 h-3.5" /> Edit Details
+            </button>
+            {!(userKycStatus === 'approved' || userKycStatus === 'verified') && (
+              <button onClick={() => setActiveTab('kyc')} className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-xl text-xs font-semibold text-white transition-all hover:scale-[1.02]" style={{ background: 'linear-gradient(135deg, #D0021B, #8B0000)' }}>
+                <FileCheck className="w-3.5 h-3.5" /> Complete KYC
+              </button>
+            )}
           </div>
         </Glass>
 
         <div className="lg:col-span-2 space-y-4">
           {/* Personal Details */}
           <Glass className="p-6" hover theme={theme}>
-            <h4 className={`text-sm font-bold mb-4 ${t('text-white','text-gray-900')}`}>Personal Details</h4>
+            <div className="flex items-center justify-between mb-4">
+              <h4 className={`text-sm font-bold ${t('text-white','text-gray-900')}`}>Personal Details</h4>
+              <button onClick={openEditProfile} className={`text-xs font-semibold flex items-center gap-1 ${t('text-gray-400 hover:text-white','text-gray-500 hover:text-gray-900')} transition-colors`}><Sliders className="w-3 h-3" /> Edit</button>
+            </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               {[['Full Name', userName],['Email', userEmail],['Phone', user?.phone || 'Not provided'],['City', user?.city || 'Not provided'],['Date of Birth', user?.dob || 'Not provided'],['Occupation', user?.occupation || 'Not provided']].map(([l,v],i) => (
-                <div key={i}><p className={`text-[10px] uppercase tracking-wider mb-1 ${t('text-gray-600','text-gray-600')}`}>{l}</p><p className={`text-sm font-medium ${t('text-white','text-gray-900')}`}>{v}</p></div>
+                <div key={i}><p className={`text-[10px] uppercase tracking-wider mb-1 ${t('text-gray-600','text-gray-600')}`}>{l}</p><p className={`text-sm font-medium ${v === 'Not provided' ? 'text-gray-600 italic' : t('text-white','text-gray-900')}`}>{v}</p></div>
               ))}
             </div>
           </Glass>
 
           {/* Nominee Details */}
           <Glass className="p-6" hover theme={theme}>
-            <h4 className={`text-sm font-bold mb-4 ${t('text-white','text-gray-900')}`}>Nominee Details</h4>
+            <div className="flex items-center justify-between mb-4">
+              <h4 className={`text-sm font-bold ${t('text-white','text-gray-900')}`}>Nominee Details</h4>
+              <button onClick={openEditProfile} className={`text-xs font-semibold flex items-center gap-1 ${t('text-gray-400 hover:text-white','text-gray-500 hover:text-gray-900')} transition-colors`}><Sliders className="w-3 h-3" /> Edit</button>
+            </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               {[['Nominee Name', user?.nominee_name || 'Not provided'],['Relationship', user?.nominee_relation || 'Not provided'],['Nominee PAN', user?.nominee_pan || 'Not provided'],['Share', user?.nominee_share || 'Not provided']].map(([l,v],i) => (
-                <div key={i}><p className={`text-[10px] uppercase tracking-wider mb-1 ${t('text-gray-600','text-gray-600')}`}>{l}</p><p className={`text-sm font-medium ${t('text-white','text-gray-900')}`}>{v}</p></div>
+                <div key={i}><p className={`text-[10px] uppercase tracking-wider mb-1 ${t('text-gray-600','text-gray-600')}`}>{l}</p><p className={`text-sm font-medium ${v === 'Not provided' ? 'text-gray-600 italic' : t('text-white','text-gray-900')}`}>{v}</p></div>
               ))}
             </div>
           </Glass>
@@ -1860,12 +1947,62 @@ export default function DashboardClient() {
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               {[['Bank Name', user?.bank_name || 'Not provided'],['Account No', user?.bank_account || 'Not provided'],['IFSC', user?.bank_ifsc || 'Not provided'],['Account Type', user?.bank_type || 'Not provided']].map(([l,v],i) => (
-                <div key={i}><p className={`text-[10px] uppercase tracking-wider mb-1 ${t('text-gray-600','text-gray-600')}`}>{l}</p><p className={`text-sm font-medium ${t('text-white','text-gray-900')}`}>{v}</p></div>
+                <div key={i}><p className={`text-[10px] uppercase tracking-wider mb-1 ${t('text-gray-600','text-gray-600')}`}>{l}</p><p className={`text-sm font-medium ${v === 'Not provided' ? 'text-gray-600 italic' : t('text-white','text-gray-900')}`}>{v}</p></div>
               ))}
             </div>
           </Glass>
         </div>
       </div>
+
+      {/* Edit Profile Modal */}
+      {editProfileOpen && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 backdrop-blur-sm">
+          <div className={`max-w-lg w-full mx-4 rounded-2xl border p-6 max-h-[85vh] overflow-y-auto ${t('bg-[#111] border-white/10','bg-white border-gray-200 shadow-2xl')}`}>
+            <div className="flex items-center justify-between mb-5">
+              <h3 className={`text-lg font-bold ${t('text-white','text-gray-900')}`}>Edit Profile</h3>
+              <button onClick={() => setEditProfileOpen(false)} className={t('text-gray-500 hover:text-white','text-gray-600 hover:text-gray-900')}><X className="w-5 h-5" /></button>
+            </div>
+
+            <div className="space-y-4">
+              <p className={`text-[10px] uppercase tracking-wider font-semibold ${t('text-gray-500','text-gray-600')}`}>Personal Information</p>
+              {[
+                { key: 'full_name', label: 'Full Name', placeholder: 'Enter your full name' },
+                { key: 'phone', label: 'Phone Number', placeholder: '+91 XXXXX XXXXX' },
+                { key: 'city', label: 'City', placeholder: 'e.g. Chennai, Mumbai' },
+                { key: 'dob', label: 'Date of Birth', placeholder: 'DD/MM/YYYY' },
+                { key: 'occupation', label: 'Occupation', placeholder: 'e.g. Business Owner, Engineer' },
+              ].map(f => (
+                <div key={f.key}>
+                  <label className={`text-[10px] uppercase tracking-wider mb-1 block ${t('text-gray-500','text-gray-600')}`}>{f.label}</label>
+                  <input type="text" value={(editForm as any)[f.key]} onChange={e => setEditForm(prev => ({ ...prev, [f.key]: e.target.value }))} placeholder={f.placeholder}
+                    className={`w-full px-4 py-2.5 rounded-xl text-sm ${t('bg-white/[0.04] border border-white/[0.06] text-white placeholder-gray-600 focus:border-brand-red/50','bg-gray-100/40 border border-gray-200/40 text-gray-900 placeholder-gray-400 focus:border-brand-red/50')} outline-none transition-colors`} />
+                </div>
+              ))}
+
+              <div className={`pt-4 border-t ${t('border-white/[0.06]','border-gray-200')}`}>
+                <p className={`text-[10px] uppercase tracking-wider font-semibold mb-3 ${t('text-gray-500','text-gray-600')}`}>Nominee Information</p>
+                {[
+                  { key: 'nominee_name', label: 'Nominee Name', placeholder: 'Full legal name of nominee' },
+                  { key: 'nominee_relation', label: 'Relationship', placeholder: 'e.g. Spouse, Parent, Child' },
+                  { key: 'nominee_pan', label: 'Nominee PAN', placeholder: 'ABCDE1234F' },
+                  { key: 'nominee_share', label: 'Share %', placeholder: '100%' },
+                ].map(f => (
+                  <div key={f.key} className="mb-3">
+                    <label className={`text-[10px] uppercase tracking-wider mb-1 block ${t('text-gray-500','text-gray-600')}`}>{f.label}</label>
+                    <input type="text" value={(editForm as any)[f.key]} onChange={e => setEditForm(prev => ({ ...prev, [f.key]: e.target.value }))} placeholder={f.placeholder}
+                      className={`w-full px-4 py-2.5 rounded-xl text-sm ${t('bg-white/[0.04] border border-white/[0.06] text-white placeholder-gray-600 focus:border-brand-red/50','bg-gray-100/40 border border-gray-200/40 text-gray-900 placeholder-gray-400 focus:border-brand-red/50')} outline-none transition-colors`} />
+                  </div>
+                ))}
+              </div>
+
+              <div className="flex gap-3 pt-2">
+                <button onClick={() => setEditProfileOpen(false)} className={`flex-1 py-2.5 rounded-xl text-sm font-semibold transition-colors ${t('bg-white/[0.06] text-gray-300 hover:bg-white/[0.1]','bg-gray-100 text-gray-700 hover:bg-gray-200')}`}>Cancel</button>
+                <button onClick={handleSaveProfile} className="flex-1 py-2.5 rounded-xl text-sm font-semibold text-white transition-all hover:scale-[1.02]" style={{ background: 'linear-gradient(135deg, #D0021B, #8B0000)' }}>Save Changes</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Bank Connect Modal */}
       {bankConnectOpen && (

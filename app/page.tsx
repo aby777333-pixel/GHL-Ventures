@@ -131,35 +131,12 @@ const STARS = [
   { x: 28, y: 85, size: 'lg', delay: 0.8 }, { x: 62, y: 8, size: 'lg', delay: 1.5 },
 ]
 
-/* Live TV channel options — using @handle/live pattern for resilient live streams.
-   YouTube's @handle/live always redirects to the current live broadcast.
-   Falls back to channel ID-based live_stream embed, then direct video ID. */
-const LIVE_CHANNELS = [
-  { id: 'cnbc', label: 'CNBC-TV18', handle: 'CNBCTV18Digital', channelId: 'UCkKRiMm0fAqT0wLByp2_pqg', videoId: 'P857H4ej-MQ' },
-  { id: 'bloomberg', label: 'Bloomberg', handle: 'Bloomberg', channelId: 'UCIALMKvObZNtJ6AmdCLP7Lg', videoId: null },
-  { id: 'ndtv', label: 'NDTV Profit', handle: 'NDTVProfitIndia', channelId: 'UCfMGHZdTael1bVd3hMWJHOQ', videoId: null },
-  { id: 'zee', label: 'Zee Business', handle: 'ZeeBusiness', channelId: 'UCGe3sTPlHlCoXEOq2AhxQAg', videoId: null },
-  { id: 'etnow', label: 'ET Now', handle: 'ETNow', channelId: 'UCNqpmQ3HWb9HMqfNNESJPHg', videoId: null },
-]
-
-function getLiveEmbedUrl(ch: typeof LIVE_CHANNELS[0]) {
-  // Primary: channel live_stream embed (most reliable for current live broadcast)
-  if (ch.channelId) return `https://www.youtube.com/embed/live_stream?channel=${ch.channelId}&autoplay=0&rel=0&modestbranding=1`
-  // Fallback: direct video ID
-  if (ch.videoId) return `https://www.youtube.com/embed/${ch.videoId}?autoplay=0&rel=0&modestbranding=1`
-  // Last resort: handle-based
-  return `https://www.youtube.com/embed?listType=playlist&list=UU${ch.handle}&autoplay=0&rel=0`
-}
+/* Bloomberg TV — single live financial news stream on the home page */
+const BLOOMBERG_CHANNEL = { id: 'bloomberg', label: 'Bloomberg TV', channelId: 'UCIALMKvObZNtJ6AmdCLP7Lg' }
 
 function LiveFinancialTV() {
-  const [activeChannel, setActiveChannel] = useState(0)
   const [iframeError, setIframeError] = useState(false)
-  const ch = LIVE_CHANNELS[activeChannel]
-
-  const handleChannelSwitch = (idx: number) => {
-    setIframeError(false)
-    setActiveChannel(idx)
-  }
+  const embedUrl = `https://www.youtube.com/embed/live_stream?channel=${BLOOMBERG_CHANNEL.channelId}&autoplay=0&rel=0&modestbranding=1`
 
   return (
     <div className="relative rounded-2xl overflow-hidden border border-white/10 bg-black/40 backdrop-blur-sm">
@@ -177,9 +154,9 @@ function LiveFinancialTV() {
           </div>
         ) : (
           <iframe
-            key={`${ch.id}-${activeChannel}`}
-            src={getLiveEmbedUrl(ch)}
-            title={`${ch.label} Live - Financial News`}
+            key="bloomberg-live"
+            src={embedUrl}
+            title="Bloomberg TV Live - Financial News"
             className="w-full h-full absolute inset-0"
             allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
             allowFullScreen
@@ -196,22 +173,13 @@ function LiveFinancialTV() {
         </span>
         <span className="text-white text-[10px] font-bold uppercase tracking-wider">Live</span>
       </div>
-      {/* Channel switcher */}
+      {/* Bloomberg branding bar */}
       <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/90 via-black/70 to-transparent p-3 pt-8">
-        <div className="flex items-center gap-1.5 overflow-x-auto pb-0.5">
-          {LIVE_CHANNELS.map((c, i) => (
-            <button
-              key={c.id}
-              onClick={() => handleChannelSwitch(i)}
-              className={`shrink-0 px-2.5 py-1 rounded-full text-[9px] font-semibold uppercase tracking-wider transition-all ${
-                i === activeChannel
-                  ? 'bg-brand-red text-white'
-                  : 'bg-white/10 text-gray-400 hover:bg-white/20 hover:text-white'
-              }`}
-            >
-              {c.label}
-            </button>
-          ))}
+        <div className="flex items-center gap-2">
+          <span className="px-2.5 py-1 rounded-full text-[9px] font-semibold uppercase tracking-wider bg-brand-red text-white">
+            Bloomberg TV
+          </span>
+          <span className="text-[9px] text-gray-400 uppercase tracking-wider">Global Financial News</span>
         </div>
       </div>
     </div>
