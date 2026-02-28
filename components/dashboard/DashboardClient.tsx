@@ -2116,7 +2116,7 @@ export default function DashboardClient() {
       <Glass className="p-6" hover glow theme={theme}>
         <h3 className={`text-base font-bold mb-4 ${t('text-white','text-gray-900')}`}>3. Review & Submit</h3>
         <div className={`grid grid-cols-2 md:grid-cols-4 gap-3 mb-4`}>
-          {[{ l: 'Vehicle', v: investVehicle },{ l: 'Amount', v: `\u20B9${formatINR(investAmount)}` },{ l: 'Tenure', v: '5 Years' },{ l: 'Bank', v: 'HDFC ****4521' }].map((r,i) => (
+          {[{ l: 'Vehicle', v: investVehicle },{ l: 'Amount', v: `\u20B9${formatINR(investAmount)}` },{ l: 'Tenure', v: '5 Years' },{ l: 'Bank', v: user?.bank_name ? `${user.bank_name} ****${(user.bank_account || '').slice(-4)}` : 'Not linked' }].map((r,i) => (
             <div key={i} className={`p-3 rounded-xl ${t('bg-white/[0.03] border border-white/[0.04]','bg-gray-100/50 border border-gray-200/30')}`}>
               <p className={`text-[9px] uppercase tracking-wider ${t('text-gray-600','text-gray-600')}`}>{r.l}</p>
               <p className={`text-sm font-bold mt-0.5 ${t('text-white','text-gray-900')}`}>{r.v}</p>
