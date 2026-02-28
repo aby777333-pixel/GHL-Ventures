@@ -1490,7 +1490,7 @@ export default function DashboardClient() {
             {/* Document Name */}
             <div className="mb-3">
               <label className={`text-xs font-medium mb-1 block ${t('text-gray-400','text-gray-600')}`}>Document Name</label>
-              <input type="text" placeholder="e.g. Rajesh_PAN_2025" value={docName} onChange={e => setDocName(e.target.value)}
+              <input type="text" placeholder="e.g. PAN_Card_2025" value={docName} onChange={e => setDocName(e.target.value)}
                 className={`w-full px-4 py-2.5 rounded-xl text-sm ${t('bg-white/[0.04] border border-white/[0.06] text-white placeholder-gray-600','bg-gray-100/60 border border-gray-200/40 text-gray-900 placeholder-gray-400')}`} />
             </div>
             {/* Folder / Category */}
@@ -1818,7 +1818,7 @@ export default function DashboardClient() {
           <p className={`text-xs mb-3 ${t('text-gray-500','text-gray-700')}`}>{userEmail}</p>
           <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold ${userKycStatus === 'approved' || userKycStatus === 'verified' ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/20' : 'bg-amber-500/15 text-amber-400 border border-amber-500/20'}`}><Shield className="w-3 h-3" /> KYC {userKycStatus === 'approved' || userKycStatus === 'verified' ? 'Verified' : userKycStatus}</span>
           <div className={`mt-4 pt-4 border-t text-left space-y-2.5 ${t('border-white/[0.06]','border-gray-200/50')}`}>
-            {[['Investor ID', clientId || 'N/A'],['PAN','ABCPK****F'],['Mobile', user?.phone || '+91 98XXX XXXXX'],['Joined','December 2023']].map(([l,v],i) => (
+            {[['Investor ID', clientId || 'N/A'],['PAN', user?.pan || 'Not provided'],['Mobile', user?.phone || 'Not provided'],['Joined', user?.created_at ? new Date(user.created_at).toLocaleDateString('en-IN', { month: 'long', year: 'numeric' }) : 'N/A']].map(([l,v],i) => (
               <div key={i} className="flex justify-between text-xs"><span className={t('text-gray-500','text-gray-700')}>{l}</span><span className={`font-medium ${t('text-white','text-gray-900')}`}>{v}</span></div>
             ))}
           </div>
@@ -1829,7 +1829,7 @@ export default function DashboardClient() {
           <Glass className="p-6" hover theme={theme}>
             <h4 className={`text-sm font-bold mb-4 ${t('text-white','text-gray-900')}`}>Personal Details</h4>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {[['Full Name', userName],['Email', userEmail],['Phone', user?.phone || '+91 98765 43210'],['City', user?.city || 'Chennai, Tamil Nadu'],['Date of Birth','15 Aug 1978'],['Occupation','Business Owner']].map(([l,v],i) => (
+              {[['Full Name', userName],['Email', userEmail],['Phone', user?.phone || 'Not provided'],['City', user?.city || 'Not provided'],['Date of Birth', user?.dob || 'Not provided'],['Occupation', user?.occupation || 'Not provided']].map(([l,v],i) => (
                 <div key={i}><p className={`text-[10px] uppercase tracking-wider mb-1 ${t('text-gray-600','text-gray-600')}`}>{l}</p><p className={`text-sm font-medium ${t('text-white','text-gray-900')}`}>{v}</p></div>
               ))}
             </div>
@@ -1839,7 +1839,7 @@ export default function DashboardClient() {
           <Glass className="p-6" hover theme={theme}>
             <h4 className={`text-sm font-bold mb-4 ${t('text-white','text-gray-900')}`}>Nominee Details</h4>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {[['Nominee Name','Lakshmi Krishnan'],['Relationship','Spouse'],['Nominee PAN','ABCPL****G'],['Share','100%']].map(([l,v],i) => (
+              {[['Nominee Name', user?.nominee_name || 'Not provided'],['Relationship', user?.nominee_relation || 'Not provided'],['Nominee PAN', user?.nominee_pan || 'Not provided'],['Share', user?.nominee_share || 'Not provided']].map(([l,v],i) => (
                 <div key={i}><p className={`text-[10px] uppercase tracking-wider mb-1 ${t('text-gray-600','text-gray-600')}`}>{l}</p><p className={`text-sm font-medium ${t('text-white','text-gray-900')}`}>{v}</p></div>
               ))}
             </div>
@@ -1852,7 +1852,7 @@ export default function DashboardClient() {
               <button onClick={() => setBankConnectOpen(true)} className="text-xs text-brand-red font-semibold flex items-center gap-1"><Landmark className="w-3 h-3" /> Bank Connect</button>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {[['Bank Name','HDFC Bank'],['Account No','XXXX XXXX 4521'],['IFSC','HDFC0001234'],['Account Type','Savings']].map(([l,v],i) => (
+              {[['Bank Name', user?.bank_name || 'Not provided'],['Account No', user?.bank_account || 'Not provided'],['IFSC', user?.bank_ifsc || 'Not provided'],['Account Type', user?.bank_type || 'Not provided']].map(([l,v],i) => (
                 <div key={i}><p className={`text-[10px] uppercase tracking-wider mb-1 ${t('text-gray-600','text-gray-600')}`}>{l}</p><p className={`text-sm font-medium ${t('text-white','text-gray-900')}`}>{v}</p></div>
               ))}
             </div>

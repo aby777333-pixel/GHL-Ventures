@@ -1,7 +1,7 @@
 'use client'
 
-import { useState, useMemo, useCallback } from 'react'
-import { usePathname } from 'next/navigation'
+import { useState, useMemo, useCallback, useEffect } from 'react'
+import { usePathname, useRouter } from 'next/navigation'
 import {
   LayoutDashboard, Briefcase, FileText, BarChart3, MessageCircle,
   User, Settings, LogOut, ChevronRight, TrendingUp, TrendingDown,
@@ -10,6 +10,17 @@ import {
   Menu, X, Search, Filter, Star, ChevronDown,
 } from 'lucide-react'
 import { pickAndUploadFiles, saveBlobAs, formatFileSize } from '@/lib/supabase/storageService'
+import { useClientAuth } from '@/lib/supabase/clientHooks'
+import {
+  usePortfolioAssets,
+  useNAVHistory,
+  useAllocation,
+  useTransactions,
+  useMessages,
+  useDocuments,
+  useNotifications,
+  useKYCSteps,
+} from '@/lib/supabase/dashboardDataHooks'
 
 // ── Types ──────────────────────────────────────────────────────
 type InvestorTab = 'overview' | 'portfolio' | 'documents' | 'reports' | 'communications' | 'profile' | 'settings'
@@ -24,28 +35,7 @@ const TABS: { id: InvestorTab; label: string; icon: any }[] = [
   { id: 'settings', label: 'Settings', icon: Settings },
 ]
 
-// ── Investor Data (empty defaults — populated from real data) ──
-const MOCK_INVESTOR = {
-  id: '',
-  name: '',
-  email: '',
-  phone: '',
-  kycStatus: 'pending' as const,
-  investorType: '',
-  totalInvested: 0,
-  currentValue: 0,
-  returns: 0,
-  unrealizedGain: 0,
-  xirr: 0,
-}
-
-const MOCK_PORTFOLIO: { id: string; name: string; invested: number; currentNav: number; units: number; navPerUnit: number; returnPct: number; status: string }[] = []
-
-const MOCK_DOCUMENTS: { id: string; name: string; type: string; date: string; size: number; category: string }[] = []
-
-const MOCK_REPORTS: { id: string; name: string; date: string; type: string }[] = []
-
-const MOCK_MESSAGES: { id: string; from: string; subject: string; date: string; read: boolean }[] = []
+// (All investor data now comes from Supabase via hooks — no mock constants)
 
 // ── Toast System ───────────────────────────────────────────────
 function useToast() {
@@ -67,8 +57,34 @@ function formatINR(val: number) {
 // ── Main Component ─────────────────────────────────────────────
 export default function InvestorClient() {
   const pathname = usePathname()
+  const router = useRouter()
   const { toast, showToast } = useToast()
   const [sidebarOpen, setSidebarOpen] = useState(false)
+
+  // ─── Auth ───────────────────────────────────────────────
+  const { user, clientId, isAuthenticated, loading: authLoading, logout } = useClientAuth()
+
+  // Redirect to login if not authenticated
+  useEffect(() => {
+    if (!authLoading && !isAuthenticated) router.push('/login')
+  }, [authLoading, isAuthenticated, router])
+
+  // ─── Data from Supabase ─────────────────────────────────
+  const { data: portfolioAssets } = usePortfolioAssets(clientId ?? undefined)
+  const { data: messagesData } = useMessages(clientId ?? undefined)
+  const { data: documentsData } = useDocuments(clientId ?? undefined)
+  const { data: notificationsData } = useNotifications(clientId ?? undefined)
+
+  // Derived investor values
+  const investorName = user?.name || 'Investor'
+  const investorEmail = user?.email || ''
+  const investorPhone = user?.phone || 'Not provided'
+  const investorId = clientId || 'N/A'
+  const investorKycStatus = user?.kyc_status || 'pending'
+  const totalInvested = useMemo(() => portfolioAssets.reduce((s: number, a: any) => s + (a.invested || 0), 0), [portfolioAssets])
+  const totalCurrent = useMemo(() => portfolioAssets.reduce((s: number, a: any) => s + (a.current || 0), 0), [portfolioAssets])
+  const unrealizedGain = totalCurrent - totalInvested
+  const returnsPct = totalInvested > 0 ? ((unrealizedGain / totalInvested) * 100).toFixed(1) : '0.0'
 
   const activeTab = useMemo<InvestorTab>(() => {
     const segments = pathname.split('/').filter(Boolean)
@@ -120,8 +136,8 @@ export default function InvestorClient() {
               <User className="w-4 h-4 text-blue-600" />
             </div>
             <div>
-              <p className="text-sm font-medium text-gray-900">{MOCK_INVESTOR.name}</p>
-              <p className="text-xs text-gray-500">{MOCK_INVESTOR.investorType}</p>
+              <p className="text-sm font-medium text-gray-900">{investorName}</p>
+              <p className="text-xs text-gray-500">{user?.risk_profile || 'Individual'}</p>
             </div>
           </div>
         </div>
@@ -195,17 +211,33 @@ export default function InvestorClient() {
   )
 }
 
+// ── Shared hook for tab components ─────────────────────────────
+function useInvestorData() {
+  const { user, clientId } = useClientAuth()
+  const { data: portfolioAssets } = usePortfolioAssets(clientId ?? undefined)
+  const { data: messagesData } = useMessages(clientId ?? undefined)
+  const { data: documentsData } = useDocuments(clientId ?? undefined)
+
+  const totalInvested = portfolioAssets.reduce((s: number, a: any) => s + (a.invested || 0), 0)
+  const totalCurrent = portfolioAssets.reduce((s: number, a: any) => s + (a.current || 0), 0)
+  const unrealizedGain = totalCurrent - totalInvested
+  const returnsPct = totalInvested > 0 ? ((unrealizedGain / totalInvested) * 100).toFixed(1) : '0.0'
+
+  return { user, clientId, portfolioAssets, messagesData, documentsData, totalInvested, totalCurrent, unrealizedGain, returnsPct }
+}
+
 // ── Overview Tab ────────────────────────────────────────────────
 function OverviewTab({ showToast }: { showToast: (m: string, t?: string) => void }) {
+  const { portfolioAssets, messagesData, totalInvested, totalCurrent, unrealizedGain, returnsPct } = useInvestorData()
   return (
     <div className="space-y-6">
       {/* KPIs */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {[
-          { label: 'Total Invested', value: formatINR(MOCK_INVESTOR.totalInvested), icon: IndianRupee, color: 'blue', trend: null },
-          { label: 'Current Value', value: formatINR(MOCK_INVESTOR.currentValue), icon: TrendingUp, color: 'green', trend: `+${MOCK_INVESTOR.returns}%` },
-          { label: 'Unrealised Gain', value: formatINR(MOCK_INVESTOR.unrealizedGain), icon: ArrowUpRight, color: 'emerald', trend: null },
-          { label: 'XIRR', value: `${MOCK_INVESTOR.xirr}%`, icon: PieChart, color: 'purple', trend: null },
+          { label: 'Total Invested', value: formatINR(totalInvested), icon: IndianRupee, color: 'blue', trend: null },
+          { label: 'Current Value', value: formatINR(totalCurrent), icon: TrendingUp, color: 'green', trend: `+${returnsPct}%` },
+          { label: 'Unrealised Gain', value: formatINR(unrealizedGain), icon: ArrowUpRight, color: 'emerald', trend: null },
+          { label: 'XIRR', value: `${0}%`, icon: PieChart, color: 'purple', trend: null },
         ].map((kpi, i) => {
           const Icon = kpi.icon
           return (
@@ -227,7 +259,7 @@ function OverviewTab({ showToast }: { showToast: (m: string, t?: string) => void
       <div className="bg-white rounded-2xl border border-gray-200/60 p-6 shadow-sm">
         <h3 className="text-sm font-bold text-gray-900 mb-4">Portfolio Allocation</h3>
         <div className="space-y-3">
-          {MOCK_PORTFOLIO.map(fund => (
+          {portfolioAssets.map(fund => (
             <div key={fund.id} className="flex items-center justify-between p-3 rounded-xl bg-gray-50 hover:bg-gray-100 transition-colors">
               <div>
                 <p className="text-sm font-medium text-gray-900">{fund.name}</p>
@@ -248,7 +280,7 @@ function OverviewTab({ showToast }: { showToast: (m: string, t?: string) => void
       <div className="bg-white rounded-2xl border border-gray-200/60 p-6 shadow-sm">
         <h3 className="text-sm font-bold text-gray-900 mb-4">Recent Notifications</h3>
         <div className="space-y-3">
-          {MOCK_MESSAGES.slice(0, 3).map(msg => (
+          {messagesData.slice(0, 3).map(msg => (
             <div key={msg.id} className="flex items-center gap-3 p-3 rounded-xl bg-gray-50">
               <div className={`w-2 h-2 rounded-full ${msg.read ? 'bg-gray-300' : 'bg-red-500'}`} />
               <div className="flex-1 min-w-0">
@@ -265,14 +297,15 @@ function OverviewTab({ showToast }: { showToast: (m: string, t?: string) => void
 
 // ── Portfolio Tab ───────────────────────────────────────────────
 function PortfolioTab({ showToast }: { showToast: (m: string, t?: string) => void }) {
+  const { portfolioAssets } = useInvestorData()
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <p className="text-sm text-gray-500">{MOCK_PORTFOLIO.length} active investments</p>
+        <p className="text-sm text-gray-500">{portfolioAssets.length} active investments</p>
         <button
           onClick={async () => {
             const rows = ['Fund,Invested,Current Value,Units,NAV/Unit,Return %,Status']
-            MOCK_PORTFOLIO.forEach(f => rows.push(`${f.name},${f.invested},${f.currentNav},${f.units},${f.navPerUnit},${f.returnPct},${f.status}`))
+            portfolioAssets.forEach(f => rows.push(`${f.name},${f.invested},${f.currentNav},${f.units},${f.navPerUnit},${f.returnPct},${f.status}`))
             const blob = new Blob([rows.join('\n')], { type: 'text/csv' })
             await saveBlobAs(blob, 'GHL_Portfolio_Statement.csv', showToast)
           }}
@@ -283,7 +316,7 @@ function PortfolioTab({ showToast }: { showToast: (m: string, t?: string) => voi
         </button>
       </div>
 
-      {MOCK_PORTFOLIO.map(fund => (
+      {portfolioAssets.map(fund => (
         <div key={fund.id} className="bg-white rounded-2xl border border-gray-200/60 p-6 shadow-sm">
           <div className="flex items-center justify-between mb-4">
             <div>
@@ -318,13 +351,15 @@ function PortfolioTab({ showToast }: { showToast: (m: string, t?: string) => voi
 
 // ── Documents Tab ──────────────────────────────────────────────
 function DocumentsTab({ showToast }: { showToast: (m: string, t?: string) => void }) {
+  const { documentsData, clientId } = useInvestorData()
+  const investorId = clientId || ''
   const [searchQuery, setSearchQuery] = useState('')
   const [filterCategory, setFilterCategory] = useState('All')
 
   const categories = ['All', 'Legal', 'Compliance', 'Reports', 'Notices', 'Statements', 'Tax']
 
   const filtered = useMemo(() => {
-    return MOCK_DOCUMENTS.filter(doc => {
+    return documentsData.filter(doc => {
       if (filterCategory !== 'All' && doc.category !== filterCategory) return false
       if (searchQuery && !doc.name.toLowerCase().includes(searchQuery.toLowerCase())) return false
       return true
@@ -350,7 +385,7 @@ function DocumentsTab({ showToast }: { showToast: (m: string, t?: string) => voi
               accept: '.pdf,.jpg,.jpeg,.png,.docx',
               portal: 'investor',
               entityType: 'investor',
-              entityId: MOCK_INVESTOR.id,
+              entityId: investorId,
               category: 'investor-upload',
             })
             const count = results.filter(r => r.success).length
@@ -426,14 +461,15 @@ function DocumentsTab({ showToast }: { showToast: (m: string, t?: string) => voi
 
 // ── Reports Tab ────────────────────────────────────────────────
 function ReportsTab({ showToast }: { showToast: (m: string, t?: string) => void }) {
+  const { documentsData } = useInvestorData()
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <p className="text-sm text-gray-500">{MOCK_REPORTS.length} reports available</p>
+        <p className="text-sm text-gray-500">{documentsData.length} reports available</p>
         <button
           onClick={async () => {
             const rows = ['Report,Date,Type']
-            MOCK_REPORTS.forEach(r => rows.push(`${r.name},${r.date},${r.type}`))
+            documentsData.forEach(r => rows.push(`${r.name},${r.date},${r.type}`))
             const blob = new Blob([rows.join('\n')], { type: 'text/csv' })
             await saveBlobAs(blob, 'GHL_Investor_Reports_Index.csv', showToast)
           }}
@@ -445,7 +481,7 @@ function ReportsTab({ showToast }: { showToast: (m: string, t?: string) => void 
       </div>
 
       <div className="space-y-3">
-        {MOCK_REPORTS.map(report => (
+        {documentsData.map(report => (
           <div key={report.id} className="flex items-center justify-between p-4 bg-white rounded-xl border border-gray-200/60 hover:shadow-sm transition-all">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-lg bg-blue-50 flex items-center justify-center">
@@ -475,9 +511,10 @@ function ReportsTab({ showToast }: { showToast: (m: string, t?: string) => void 
 
 // ── Messages Tab ───────────────────────────────────────────────
 function MessagesTab({ showToast }: { showToast: (m: string, t?: string) => void }) {
+  const { messagesData } = useInvestorData()
   return (
     <div className="space-y-4">
-      {MOCK_MESSAGES.map(msg => (
+      {messagesData.map(msg => (
         <div key={msg.id} className={`p-4 bg-white rounded-xl border ${msg.read ? 'border-gray-200/60' : 'border-red-200 bg-red-50/30'} hover:shadow-sm transition-all cursor-pointer`}>
           <div className="flex items-center justify-between mb-2">
             <div className="flex items-center gap-2">
@@ -495,29 +532,35 @@ function MessagesTab({ showToast }: { showToast: (m: string, t?: string) => void
 
 // ── Profile Tab ────────────────────────────────────────────────
 function ProfileTab({ showToast }: { showToast: (m: string, t?: string) => void }) {
+  const { user, clientId } = useInvestorData()
+  const investorName = user?.name || 'Investor'
+  const investorEmail = user?.email || ''
+  const investorPhone = user?.phone || 'Not provided'
+  const investorId = clientId || 'N/A'
+  const investorKycStatus = user?.kyc_status || 'pending'
   return (
     <div className="max-w-2xl space-y-6">
       <div className="bg-white rounded-2xl border border-gray-200/60 p-6">
         <div className="flex items-center gap-4 mb-6">
           <div className="w-16 h-16 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center text-white text-xl font-bold">
-            {MOCK_INVESTOR.name.split(' ').map(n => n[0]).join('')}
+            {investorName.split(' ').map(n => n[0]).join('')}
           </div>
           <div>
-            <h3 className="text-lg font-bold text-gray-900">{MOCK_INVESTOR.name}</h3>
-            <p className="text-sm text-gray-500">{MOCK_INVESTOR.investorType} Investor</p>
+            <h3 className="text-lg font-bold text-gray-900">{investorName}</h3>
+            <p className="text-sm text-gray-500">{user?.risk_profile || 'Individual'} Investor</p>
           </div>
           <div className="ml-auto">
             <span className="px-3 py-1 rounded-full text-xs font-medium bg-green-100 text-green-700 flex items-center gap-1">
-              <Shield className="w-3 h-3" /> KYC {MOCK_INVESTOR.kycStatus}
+              <Shield className="w-3 h-3" /> KYC {investorKycStatus}
             </span>
           </div>
         </div>
         <div className="grid grid-cols-2 gap-4">
           {[
-            { label: 'Email', value: MOCK_INVESTOR.email },
-            { label: 'Phone', value: MOCK_INVESTOR.phone },
-            { label: 'Investor ID', value: MOCK_INVESTOR.id },
-            { label: 'Type', value: MOCK_INVESTOR.investorType },
+            { label: 'Email', value: investorEmail },
+            { label: 'Phone', value: investorPhone },
+            { label: 'Investor ID', value: investorId },
+            { label: 'Type', value: user?.risk_profile || 'Individual' },
           ].map((field, i) => (
             <div key={i} className="bg-gray-50 rounded-xl p-3">
               <p className="text-xs text-gray-500 mb-0.5">{field.label}</p>
@@ -533,7 +576,7 @@ function ProfileTab({ showToast }: { showToast: (m: string, t?: string) => void 
             accept: '.pdf,.jpg,.jpeg,.png',
             portal: 'investor',
             entityType: 'investor',
-            entityId: MOCK_INVESTOR.id,
+            entityId: investorId,
             category: 'kyc',
           })
           const count = results.filter(r => r.success).length

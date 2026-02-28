@@ -19,6 +19,18 @@ export interface ClientUser {
   risk_profile?: string | null
   aum: number
   city?: string | null
+  created_at?: string | null
+  pan?: string | null
+  dob?: string | null
+  occupation?: string | null
+  nominee_name?: string | null
+  nominee_relation?: string | null
+  nominee_pan?: string | null
+  nominee_share?: string | null
+  bank_name?: string | null
+  bank_account?: string | null
+  bank_ifsc?: string | null
+  bank_type?: string | null
 }
 
 export interface ClientSession {
@@ -74,6 +86,18 @@ export async function loginClient(email: string, password: string): Promise<Clie
         risk_profile: client?.risk_profile ? String(client.risk_profile) : null,
         aum: Number(client?.total_invested) || 0,
         city: profile?.city || client?.city || null,
+        created_at: data.user.created_at || null,
+        pan: client?.pan || null,
+        dob: client?.dob || profile?.dob || null,
+        occupation: client?.occupation || null,
+        nominee_name: client?.nominee_name || null,
+        nominee_relation: client?.nominee_relation || null,
+        nominee_pan: client?.nominee_pan || null,
+        nominee_share: client?.nominee_share || null,
+        bank_name: client?.bank_name || null,
+        bank_account: client?.bank_account || null,
+        bank_ifsc: client?.bank_ifsc || null,
+        bank_type: client?.bank_type || null,
       },
       loginAt: Date.now(),
       expiresAt: Date.now() + 8 * 60 * 60 * 1000,
@@ -162,6 +186,18 @@ export async function getClientSession(): Promise<ClientSession | null> {
         risk_profile: client?.risk_profile ? String(client.risk_profile) : null,
         aum: Number(client?.total_invested) || 0,
         city: profile?.city || client?.city || null,
+        created_at: session.user.created_at || null,
+        pan: client?.pan || null,
+        dob: client?.dob || profile?.dob || null,
+        occupation: client?.occupation || null,
+        nominee_name: client?.nominee_name || null,
+        nominee_relation: client?.nominee_relation || null,
+        nominee_pan: client?.nominee_pan || null,
+        nominee_share: client?.nominee_share || null,
+        bank_name: client?.bank_name || null,
+        bank_account: client?.bank_account || null,
+        bank_ifsc: client?.bank_ifsc || null,
+        bank_type: client?.bank_type || null,
       },
       loginAt: Date.now(),
       expiresAt: Date.now() + 8 * 60 * 60 * 1000,
