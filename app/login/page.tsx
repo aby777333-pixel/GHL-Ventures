@@ -21,6 +21,7 @@ export default function LoginPage() {
   const [otpTimer, setOtpTimer] = useState(0)
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+  const [resetSent, setResetSent] = useState(false)
   const otpIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
   useEffect(() => {
@@ -42,6 +43,29 @@ export default function LoginPage() {
       }
     } catch {
       setError('Authentication service unavailable. Please try again.')
+    }
+    setLoading(false)
+  }
+
+  // ── Forgot Password ────────────────────────────────────────
+  const handleForgotPassword = async () => {
+    const email = mobile.includes('@') ? mobile : ''
+    if (!email) {
+      setError('Please enter your email address first, then click Forgot Password.')
+      return
+    }
+    setError('')
+    setLoading(true)
+    try {
+      if (isSupabaseConfigured()) {
+        const { error: resetError } = await supabase.auth.resetPasswordForEmail(email, {
+          redirectTo: `${typeof window !== 'undefined' ? window.location.origin : ''}/auth/callback`,
+        })
+        if (resetError) throw resetError
+      }
+      setResetSent(true)
+    } catch (err: any) {
+      setError(err?.message || 'Failed to send reset email. Please try again.')
     }
     setLoading(false)
   }
@@ -183,7 +207,7 @@ export default function LoginPage() {
         <div className="relative z-10 flex flex-col justify-center items-center w-full px-12">
           {/* Logo */}
           <div className="mb-8">
-            <Logo size={56} />
+            <Logo size={76} />
           </div>
 
           <h2 className="text-3xl font-bold text-white text-center mb-3">
@@ -209,7 +233,7 @@ export default function LoginPage() {
           {/* Mobile logo */}
           <div className="lg:hidden text-center mb-8">
             <div className="mx-auto mb-3 w-fit">
-              <Logo size={40} />
+              <Logo size={54} />
             </div>
           </div>
 
@@ -357,9 +381,13 @@ export default function LoginPage() {
 
               {/* Forgot Password */}
               <div className="text-right">
-                <a href="#" className="text-sm text-brand-red hover:underline font-medium">
-                  Forgot Password?
-                </a>
+                {resetSent ? (
+                  <span className="text-sm text-green-600 font-medium">Password reset email sent! Check your inbox.</span>
+                ) : (
+                  <button type="button" onClick={handleForgotPassword} className="text-sm text-brand-red hover:underline font-medium">
+                    Forgot Password?
+                  </button>
+                )}
               </div>
 
               {/* Submit */}

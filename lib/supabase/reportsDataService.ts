@@ -343,6 +343,11 @@ export async function submitLead(leadData: {
           landing_page_url: landingPage || null,
         } as any)
       }
+
+      // Auto-assign lead to least-loaded staff (round-robin, non-blocking)
+      import('./leadAssignmentService').then(({ autoAssignLead }) => {
+        autoAssignLead((data as any).id).catch(() => {})
+      }).catch(() => {})
     }
 
     return { success: true, data }

@@ -84,7 +84,7 @@ export default function AdminLoginPage() {
         {/* Logo */}
         <div className="text-center mb-8">
           <div className="mx-auto mb-5 w-fit">
-            <Logo size={48} />
+            <Logo size={64} />
           </div>
           <h1 className="text-2xl font-bold text-white mb-3">
             {BRAND.name}

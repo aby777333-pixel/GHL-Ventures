@@ -174,8 +174,8 @@ export default function ChatWidget() {
 
           // Play notification sound for new messages
           try {
-            const audio = new Audio('data:audio/wav;base64,UklGRl9vT19teleXRlZm10IBAAAAABAAIAQB8AAEAfAAAAAAAAAAAAZGF0YQ==')
-            audio.volume = 0.3
+            const audio = new Audio('/sounds/new-chat.wav')
+            audio.volume = 0.4
             audio.play().catch(() => {})
           } catch {}
         }

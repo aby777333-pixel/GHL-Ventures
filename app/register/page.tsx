@@ -180,7 +180,7 @@ export default function RegisterPage() {
         <div className="relative z-10 flex flex-col justify-center items-center w-full px-12">
           {/* Logo */}
           <div className="mb-8">
-            <Logo size={56} />
+            <Logo size={76} />
           </div>
 
           <h2 className="text-3xl font-bold text-white text-center mb-3">
@@ -206,7 +206,7 @@ export default function RegisterPage() {
           {/* Mobile logo */}
           <div className="lg:hidden text-center mb-6">
             <div className="mx-auto mb-3 w-fit">
-              <Logo size={40} />
+              <Logo size={54} />
             </div>
           </div>
 

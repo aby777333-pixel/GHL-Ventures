@@ -47,7 +47,7 @@ export default function StaffLoginPage() {
         {/* Logo */}
         <div className="text-center mb-8">
           <div className="flex items-center justify-center mb-3">
-            <Logo size={36} />
+            <Logo size={48} />
           </div>
           <h1 className="text-white font-bold text-lg tracking-wider">{BRAND.name}</h1>
           <div className="mt-2 inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-teal-500/10 border border-teal-500/20">

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo, useCallback, useEffect } from 'react'
+import { useState, useMemo, useCallback, useEffect, useRef } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
 import StaffSidebar from './StaffSidebar'
 import StaffTopBar from './StaffTopBar'
@@ -64,6 +64,113 @@ export default function StaffClient() {
       router.push('/staff/login')
     }
   }, [loading, isAuthenticated, router])
+
+  // ── Browser Notification Permission ────────────────────────
+  useEffect(() => {
+    if (isAuthenticated && typeof window !== 'undefined' && 'Notification' in window) {
+      if (Notification.permission === 'default') {
+        Notification.requestPermission().catch(() => {})
+      }
+    }
+  }, [isAuthenticated])
+
+  // ── Incoming Chat/Call/Video Realtime Alerts ───────────────
+  const ringAudioRef = useRef<HTMLAudioElement | null>(null)
+  const [incomingAlert, setIncomingAlert] = useState<{ type: string; name: string; id: string } | null>(null)
+
+  useEffect(() => {
+    if (!isAuthenticated || !session?.user?.id) return
+
+    // Subscribe to new RM requests (call/video/chat) for this staff member
+    const { onRMRequest, onNewChatSession, unsubscribeAll } = require('@/lib/supabase/realtimeSubscriptions')
+    const staffUserId = session.user.id
+
+    const unsubRM = onRMRequest(staffUserId, (payload: any) => {
+      const req = payload.new
+      if (!req) return
+      const reqType = req.request_type || 'chat'
+      const clientName = req.client_name || 'Client'
+
+      // Show incoming alert overlay
+      setIncomingAlert({ type: reqType, name: clientName, id: req.id })
+
+      // Play ringtone for calls/video
+      if (reqType === 'call' || reqType === 'video' || reqType === 'callback') {
+        try {
+          const audio = new Audio('/sounds/ring.wav')
+          audio.loop = true
+          audio.volume = 0.6
+          audio.play().catch(() => {})
+          ringAudioRef.current = audio
+        } catch {}
+      } else {
+        // Chat notification sound
+        try {
+          const audio = new Audio('/sounds/new-chat.wav')
+          audio.volume = 0.5
+          audio.play().catch(() => {})
+        } catch {}
+      }
+
+      // Browser notification
+      if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'granted') {
+        new Notification(`Incoming ${reqType === 'video' ? 'Video Call' : reqType === 'call' || reqType === 'callback' ? 'Call' : 'Chat'} Request`, {
+          body: `${clientName} is requesting a ${reqType}`,
+          icon: '/images/brand/ghl-logo-full-red.png',
+          requireInteraction: true,
+        })
+      }
+
+      // Auto-dismiss after 60 seconds
+      setTimeout(() => {
+        setIncomingAlert(null)
+        if (ringAudioRef.current) {
+          ringAudioRef.current.pause()
+          ringAudioRef.current = null
+        }
+      }, 60000)
+    })
+
+    const unsubChat = onNewChatSession((payload: any) => {
+      const sess = payload.new
+      if (!sess) return
+      // Notification sound
+      try {
+        const audio = new Audio('/sounds/notification.wav')
+        audio.volume = 0.4
+        audio.play().catch(() => {})
+      } catch {}
+      // Browser notification
+      if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'granted') {
+        new Notification('New Chat Session', {
+          body: `${sess.visitor_name || 'Visitor'} started a new chat`,
+          icon: '/images/brand/ghl-logo-full-red.png',
+        })
+      }
+    })
+
+    return () => {
+      if (typeof unsubRM === 'function') unsubRM()
+      if (typeof unsubChat === 'function') unsubChat()
+      if (ringAudioRef.current) {
+        ringAudioRef.current.pause()
+        ringAudioRef.current = null
+      }
+    }
+  }, [isAuthenticated, session?.user?.id])
+
+  // Accept / dismiss incoming alert
+  const handleAcceptAlert = useCallback(() => {
+    if (ringAudioRef.current) { ringAudioRef.current.pause(); ringAudioRef.current = null }
+    setIncomingAlert(null)
+    navigate('cs')
+    showToast('Navigated to CS Center', 'success')
+  }, [navigate, showToast])
+
+  const handleDismissAlert = useCallback(() => {
+    if (ringAudioRef.current) { ringAudioRef.current.pause(); ringAudioRef.current = null }
+    setIncomingAlert(null)
+  }, [])
 
   if (loading) {
     return (
@@ -192,6 +299,43 @@ export default function StaffClient() {
       </div>
 
       {toast && <AdminToast msg={toast.msg} type={toast.type} onDismiss={dismissToast} />}
+
+      {/* Incoming Call/Chat Alert Overlay */}
+      {incomingAlert && (
+        <div className="fixed inset-0 z-[9999] bg-black/70 backdrop-blur-sm flex items-center justify-center">
+          <div className="bg-gray-900 border border-teal-500/30 rounded-3xl p-8 max-w-sm w-full mx-4 text-center shadow-2xl shadow-teal-500/10 animate-in fade-in zoom-in-95">
+            <div className={`w-20 h-20 rounded-full mx-auto mb-4 flex items-center justify-center ${
+              incomingAlert.type === 'video' ? 'bg-blue-500/20 animate-pulse' :
+              incomingAlert.type === 'call' || incomingAlert.type === 'callback' ? 'bg-green-500/20 animate-pulse' :
+              'bg-teal-500/20'
+            }`}>
+              <Headphones className={`w-10 h-10 ${
+                incomingAlert.type === 'video' ? 'text-blue-400' :
+                incomingAlert.type === 'call' || incomingAlert.type === 'callback' ? 'text-green-400' :
+                'text-teal-400'
+              }`} />
+            </div>
+            <h3 className="text-lg font-bold text-white mb-1">
+              Incoming {incomingAlert.type === 'video' ? 'Video Call' : incomingAlert.type === 'call' || incomingAlert.type === 'callback' ? 'Call' : 'Chat'} Request
+            </h3>
+            <p className="text-sm text-gray-400 mb-6">{incomingAlert.name} is waiting...</p>
+            <div className="flex gap-3">
+              <button
+                onClick={handleDismissAlert}
+                className="flex-1 py-3 rounded-xl text-sm font-semibold bg-red-500/20 text-red-400 border border-red-500/30 hover:bg-red-500/30 transition-colors"
+              >
+                Decline
+              </button>
+              <button
+                onClick={handleAcceptAlert}
+                className="flex-1 py-3 rounded-xl text-sm font-semibold bg-green-500/20 text-green-400 border border-green-500/30 hover:bg-green-500/30 transition-colors"
+              >
+                Accept
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
