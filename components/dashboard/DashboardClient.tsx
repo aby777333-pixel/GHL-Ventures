@@ -437,6 +437,27 @@ export default function DashboardClient() {
     }
   }, [clientId]) // eslint-disable-line react-hooks/exhaustive-deps
 
+  // ─── Referral Hooks (must be before early returns) ──────
+  const referralCode = useMemo(() => {
+    if (!user?.id) return 'GHL-UNKNOWN'
+    return `GHL-${user.id.replace(/-/g, '').substring(0, 8).toUpperCase()}`
+  }, [user?.id])
+
+  const referralLink = useMemo(() => {
+    if (typeof window === 'undefined') return ''
+    return `${window.location.origin}/register?ref=${referralCode}`
+  }, [referralCode])
+
+  const [referralStats, setReferralStats] = useState({ referred: 0, earned: 0 })
+  const [referralCopied, setReferralCopied] = useState(false)
+
+  useEffect(() => {
+    if (!user?.id) return
+    import('@/lib/supabase/dashboardDataService').then(svc => {
+      svc.fetchReferralStats(user.id).then(setReferralStats)
+    })
+  }, [user?.id])
+
   // ─── Auth Loading / Guard Render (AFTER all hooks) ──────
   if (authLoading) {
     return (
@@ -1843,26 +1864,6 @@ export default function DashboardClient() {
   // ═══════════════════════════════════════════════════════════
   // REFERRALS TAB
   // ═══════════════════════════════════════════════════════════
-  const referralCode = useMemo(() => {
-    if (!user?.id) return 'GHL-UNKNOWN'
-    return `GHL-${user.id.replace(/-/g, '').substring(0, 8).toUpperCase()}`
-  }, [user?.id])
-
-  const referralLink = useMemo(() => {
-    if (typeof window === 'undefined') return ''
-    return `${window.location.origin}/register?ref=${referralCode}`
-  }, [referralCode])
-
-  const [referralStats, setReferralStats] = useState({ referred: 0, earned: 0 })
-  const [referralCopied, setReferralCopied] = useState(false)
-
-  useEffect(() => {
-    if (!user?.id) return
-    import('@/lib/supabase/dashboardDataService').then(svc => {
-      svc.fetchReferralStats(user.id).then(setReferralStats)
-    })
-  }, [user?.id])
-
   const renderReferralsTab = () => (
     <div className="space-y-6">
       <h2 className={`text-xl font-bold ${t('text-white','text-gray-900')}`}>Referral Program</h2>

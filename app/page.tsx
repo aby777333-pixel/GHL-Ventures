@@ -10,7 +10,7 @@ import {
   ArrowRight, Shield, MapPin, BadgeCheck, IndianRupee,
   TrendingUp, Target, Users, BarChart3, Eye, Scale, Leaf,
   Building2, Quote, Star, Phone, Mail, Clock,
-  BookOpen, Video, FileText,
+  BookOpen, Video, FileText, ExternalLink,
   Landmark, LockKeyhole, Sparkles, Calculator, ChevronDown
 } from 'lucide-react'
 import { submitContactForm, submitLead } from '@/lib/supabase/reportsDataService'
@@ -137,37 +137,35 @@ const STARS = [
   { x: 28, y: 85, size: 'lg', delay: 0.8 }, { x: 62, y: 8, size: 'lg', delay: 1.5 },
 ]
 
-/* Bloomberg TV — single live financial news stream on the home page */
-const BLOOMBERG_CHANNEL = { id: 'bloomberg', label: 'Bloomberg TV', channelId: 'UCIALMKvObZNtJ6AmdCLP7Lg' }
-
+/* Live Financial Markets — TradingView real-time widget + Bloomberg TV link */
 function LiveFinancialTV() {
-  const [iframeError, setIframeError] = useState(false)
-  const embedUrl = `https://www.youtube.com/embed/live_stream?channel=${BLOOMBERG_CHANNEL.channelId}&autoplay=0&rel=0&modestbranding=1`
+  const [widgetLoaded, setWidgetLoaded] = useState(false)
+
+  useEffect(() => {
+    setWidgetLoaded(true)
+  }, [])
 
   return (
     <div className="relative rounded-2xl overflow-hidden border border-white/10 bg-black/40 backdrop-blur-sm">
       <div className="aspect-video relative bg-black">
-        {iframeError ? (
-          <div className="w-full h-full absolute inset-0 flex flex-col items-center justify-center bg-black/80">
-            <Video className="w-10 h-10 text-gray-600 mb-3" />
-            <p className="text-gray-400 text-xs mb-2">Stream temporarily unavailable</p>
-            <button
-              onClick={() => setIframeError(false)}
-              className="px-3 py-1 bg-brand-red/20 text-brand-red text-[10px] font-semibold rounded-full hover:bg-brand-red/30 transition-colors"
-            >
-              Retry
-            </button>
-          </div>
-        ) : (
+        {widgetLoaded && (
           <iframe
-            key="bloomberg-live"
-            src={embedUrl}
-            title="Bloomberg TV Live - Financial News"
-            className="w-full h-full absolute inset-0"
-            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-            allowFullScreen
+            key="tradingview-market"
+            src="https://s.tradingview.com/embed-widget/ticker-tape/?locale=en#%7B%22symbols%22%3A%5B%7B%22description%22%3A%22SENSEX%22%2C%22proName%22%3A%22BSE%3ASENSEX%22%7D%2C%7B%22description%22%3A%22NIFTY%2050%22%2C%22proName%22%3A%22NSE%3ANIFTY%22%7D%2C%7B%22description%22%3A%22GOLD%22%2C%22proName%22%3A%22MCX%3AGOLD1!%22%7D%2C%7B%22description%22%3A%22USD%2FINR%22%2C%22proName%22%3A%22FX_IDC%3AUSDINR%22%7D%2C%7B%22description%22%3A%22S%26P%20500%22%2C%22proName%22%3A%22FOREXCOM%3ASPXUSD%22%7D%5D%2C%22showSymbolLogo%22%3Atrue%2C%22colorTheme%22%3A%22dark%22%2C%22isTransparent%22%3Atrue%2C%22displayMode%22%3A%22adaptive%22%7D"
+            title="Live Market Ticker"
+            className="w-full absolute bottom-0 left-0 right-0"
+            style={{ height: '46px', border: 'none' }}
             loading="lazy"
-            onError={() => setIframeError(true)}
+          />
+        )}
+        {widgetLoaded && (
+          <iframe
+            key="tradingview-chart"
+            src="https://s.tradingview.com/widgetembed/?frameElementId=tradingview_chart&symbol=BSE%3ASENSEX&interval=D&hidesidetoolbar=1&symboledit=1&saveimage=0&toolbarbg=0a0a0a&studies=%5B%5D&theme=dark&style=1&timezone=Asia%2FKolkata&withdateranges=1&showpopupbutton=0&studies_overrides=%7B%7D&overrides=%7B%7D&enabled_features=%5B%5D&disabled_features=%5B%5D&showpopupbutton=0&locale=en&utm_source=localhost&utm_medium=widget_new&utm_campaign=chart"
+            title="Live SENSEX Chart - TradingView"
+            className="w-full absolute inset-0"
+            style={{ height: 'calc(100% - 46px)', border: 'none' }}
+            loading="lazy"
           />
         )}
       </div>
@@ -177,15 +175,22 @@ function LiveFinancialTV() {
           <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-500 opacity-75" />
           <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500" />
         </span>
-        <span className="text-white text-[10px] font-bold uppercase tracking-wider">Live</span>
+        <span className="text-white text-[10px] font-bold uppercase tracking-wider">Live Markets</span>
       </div>
-      {/* Bloomberg branding bar */}
-      <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/90 via-black/70 to-transparent p-3 pt-8">
+      {/* Branding bar with Bloomberg TV external link */}
+      <div className="absolute bottom-[46px] left-0 right-0 bg-gradient-to-t from-black/90 via-black/70 to-transparent p-3 pt-8">
         <div className="flex items-center gap-2">
           <span className="px-2.5 py-1 rounded-full text-[9px] font-semibold uppercase tracking-wider bg-brand-red text-white">
-            Bloomberg TV
+            Live Markets
           </span>
-          <span className="text-[9px] text-gray-400 uppercase tracking-wider">Global Financial News</span>
+          <a
+            href="https://www.bloomberg.com/live"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="px-2.5 py-1 rounded-full text-[9px] font-semibold uppercase tracking-wider bg-white/10 text-white hover:bg-white/20 transition-colors flex items-center gap-1"
+          >
+            Watch Bloomberg TV <ExternalLink className="w-2.5 h-2.5" />
+          </a>
         </div>
       </div>
     </div>
