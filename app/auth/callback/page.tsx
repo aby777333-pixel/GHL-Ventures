@@ -36,7 +36,7 @@ export default function AuthCallbackPage() {
             const { data: { session } } = await supabase.auth.getSession()
             if (session?.user) {
               await ensureProfile(session.user)
-              router.replace('/dashboard?tab=settings&password_reset=true')
+              router.replace('/dashboard/settings?password_reset=true')
               return
             }
           }

@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
-import { useRouter, usePathname } from 'next/navigation'
+import { useRouter, usePathname, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import {
   LayoutDashboard, TrendingUp, Briefcase, FileText, ArrowLeftRight,
@@ -247,6 +247,38 @@ export default function DashboardClient() {
     const url = tab === 'dashboard' ? '/dashboard' : `/dashboard/${tab}`
     router.push(url, { scroll: false })
   }, [router])
+
+  // ─── Password Reset Detection (from /auth/callback recovery flow) ──
+  const searchParams = useSearchParams()
+  const [showPasswordReset, setShowPasswordReset] = useState(false)
+  const [newPassword, setNewPassword] = useState('')
+  const [confirmNewPassword, setConfirmNewPassword] = useState('')
+  const [passwordResetDone, setPasswordResetDone] = useState(false)
+
+  useEffect(() => {
+    if (searchParams?.get('password_reset') === 'true' && activeTab === 'settings') {
+      setShowPasswordReset(true)
+    }
+  }, [searchParams, activeTab])
+
+  const handlePasswordUpdate = async () => {
+    if (newPassword.length < 8) { showToast('⚠ Password must be at least 8 characters', 'info'); return }
+    if (newPassword !== confirmNewPassword) { showToast('⚠ Passwords do not match', 'info'); return }
+    try {
+      const { isSupabaseConfigured } = await import('@/lib/supabase/client')
+      const { supabase } = await import('@/lib/supabase/client')
+      if (!isSupabaseConfigured()) { showToast('⚠ Auth service unavailable', 'info'); return }
+      const { error } = await supabase.auth.updateUser({ password: newPassword })
+      if (error) { showToast(`⚠ ${error.message}`, 'info'); return }
+      setPasswordResetDone(true)
+      setShowPasswordReset(false)
+      setNewPassword('')
+      setConfirmNewPassword('')
+      showToast('Password updated successfully!', 'success')
+    } catch {
+      showToast('⚠ Failed to update password', 'info')
+    }
+  }
 
   // ─── Auth ────────────────────────────────────────────────
   const { user, clientId, isAuthenticated, loading: authLoading, logout } = useClientAuth()
@@ -2203,14 +2235,66 @@ export default function DashboardClient() {
             <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${t('bg-white/[0.04]','bg-gray-200/40')}`}><Lock className="w-5 h-5 text-emerald-400" /></div>
             <div><h4 className={`text-sm font-bold ${t('text-white','text-gray-900')}`}>Security</h4><p className={`text-xs ${t('text-gray-500','text-gray-700')}`}>Password and authentication</p></div>
           </div>
+
+          {/* Password Reset Form — shown after recovery flow or manual trigger */}
+          {showPasswordReset && (
+            <div className={`mb-4 p-4 rounded-xl border ${t('bg-white/[0.03] border-white/[0.06]','bg-gray-50 border-gray-200')}`}>
+              <h5 className={`text-xs font-bold mb-3 ${t('text-white','text-gray-900')}`}>Set New Password</h5>
+              <div className="space-y-3">
+                <div>
+                  <label className={`text-[10px] font-medium mb-1 block ${t('text-gray-400','text-gray-600')}`}>New Password</label>
+                  <input
+                    type="password"
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                    placeholder="Min. 8 characters"
+                    className={`w-full px-3 py-2 rounded-lg text-sm ${t('bg-white/[0.04] border border-white/[0.06] text-white placeholder:text-gray-600','bg-white border border-gray-200 text-gray-900 placeholder:text-gray-400')} focus:outline-none focus:ring-1 focus:ring-brand-red`}
+                  />
+                </div>
+                <div>
+                  <label className={`text-[10px] font-medium mb-1 block ${t('text-gray-400','text-gray-600')}`}>Confirm Password</label>
+                  <input
+                    type="password"
+                    value={confirmNewPassword}
+                    onChange={(e) => setConfirmNewPassword(e.target.value)}
+                    placeholder="Re-enter password"
+                    className={`w-full px-3 py-2 rounded-lg text-sm ${t('bg-white/[0.04] border border-white/[0.06] text-white placeholder:text-gray-600','bg-white border border-gray-200 text-gray-900 placeholder:text-gray-400')} focus:outline-none focus:ring-1 focus:ring-brand-red`}
+                  />
+                </div>
+                <div className="flex gap-2">
+                  <button
+                    onClick={handlePasswordUpdate}
+                    className="flex-1 px-4 py-2 rounded-lg bg-brand-red text-white text-xs font-semibold hover:bg-red-700 transition-colors"
+                  >
+                    Update Password
+                  </button>
+                  <button
+                    onClick={() => { setShowPasswordReset(false); setNewPassword(''); setConfirmNewPassword('') }}
+                    className={`px-4 py-2 rounded-lg text-xs font-medium transition-colors ${t('bg-white/[0.04] text-gray-400 hover:text-white','bg-gray-100 text-gray-600 hover:text-gray-900')}`}
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Password reset success message */}
+          {passwordResetDone && !showPasswordReset && (
+            <div className="mb-4 p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center gap-2">
+              <CheckCircle className="w-4 h-4 text-emerald-400 shrink-0" />
+              <p className="text-[11px] text-emerald-400">Password updated successfully!</p>
+            </div>
+          )}
+
           {[
-            { label: 'Change Password', action: () => showToast(`Password reset link sent to ${userEmail}`, 'info') },
+            { label: 'Change Password', action: () => setShowPasswordReset(true) },
             { label: 'Enable 2FA', action: () => showToast('Two-factor authentication setup initiated. Check your email for the QR code.', 'info') },
             { label: 'Active Sessions', action: () => showToast('You have 1 active session: Chrome on Windows — Current Device', 'info') },
             { label: 'Login History', action: () => showToast('Last login: Today at 10:30 AM from Chennai, India (Chrome/Windows)', 'info') },
           ].map((opt, j) => (
-            <button key={j} onClick={opt.action} className="w-full flex items-center justify-between p-2.5 rounded-lg cursor-pointer group hover:bg-white/[0.02] transition-colors">
-              <span className="text-xs text-gray-400 group-hover:text-white transition-colors">{opt.label}</span>
+            <button key={j} onClick={opt.action} className={`w-full flex items-center justify-between p-2.5 rounded-lg cursor-pointer group transition-colors ${t('hover:bg-white/[0.02]','hover:bg-gray-100')}`}>
+              <span className={`text-xs transition-colors ${t('text-gray-400 group-hover:text-white','text-gray-600 group-hover:text-gray-900')}`}>{opt.label}</span>
               <ChevronRight className="w-3.5 h-3.5 text-gray-600" />
             </button>
           ))}

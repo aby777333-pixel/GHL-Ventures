@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import AnimatedSection from '@/components/AnimatedSection'
 import PlaceholderImage from '@/components/PlaceholderImage'
 import { BRAND } from '@/lib/constants'
+import { submitContactForm, submitLead } from '@/lib/supabase/reportsDataService'
 import {
   FileText, Download, Play, Calendar, HardDrive, File,
   CheckCircle, BookOpen, Map, BarChart3, Building2,
@@ -93,10 +94,32 @@ function DownloadCard({
   })
   const [downloaded, setDownloaded] = useState(false)
 
-  const handleDownload = (e: React.FormEvent) => {
+  const handleDownload = async (e: React.FormEvent) => {
     e.preventDefault()
     setDownloaded(true)
-    // In production, this would trigger file download + lead capture
+    try {
+      await Promise.all([
+        submitContactForm({
+          formType: 'document_download',
+          fullName: gateForm.name,
+          email: gateForm.email,
+          phone: gateForm.phone,
+          message: `Downloaded: ${section.document.title} (${section.document.fileType}, ${section.document.fileSize})`,
+          investmentInterest: section.id,
+          pageUrl: typeof window !== 'undefined' ? window.location.href : '',
+        }),
+        submitLead({
+          firstName: gateForm.name.split(' ')[0] || '',
+          lastName: gateForm.name.split(' ').slice(1).join(' ') || '',
+          email: gateForm.email,
+          phone: gateForm.phone,
+          source: 'website',
+          investmentInterest: `download-${section.id}`,
+        }),
+      ])
+    } catch (err) {
+      console.warn('Download lead capture failed (non-critical):', err)
+    }
   }
 
   return (

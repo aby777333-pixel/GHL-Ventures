@@ -13,6 +13,7 @@ import {
   BookOpen, Video, FileText,
   Landmark, LockKeyhole, Sparkles, Calculator, ChevronDown
 } from 'lucide-react'
+import { submitContactForm, submitLead } from '@/lib/supabase/reportsDataService'
 import MarketDataMarquee from '@/components/MarketDataMarquee'
 import CurrencyTicker from '@/components/CurrencyTicker'
 import RiskAssessmentQuiz from '@/components/RiskAssessmentQuiz'
@@ -940,6 +941,7 @@ function ContactFormSection() {
     accredited: false,
     privacy: false,
   })
+  const [submitted, setSubmitted] = useState(false)
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const target = e.target
@@ -947,9 +949,35 @@ function ContactFormSection() {
     setForm(prev => ({ ...prev, [target.name]: value }))
   }
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    // Form submission logic
+    setSubmitted(true)
+    try {
+      await Promise.all([
+        submitContactForm({
+          formType: 'homepage_consultation',
+          fullName: form.fullName,
+          email: form.email,
+          phone: `${form.isd} ${form.phone}`,
+          city: form.city,
+          message: form.message,
+          investmentRange: form.amount,
+          investmentInterest: 'consultation',
+          pageUrl: typeof window !== 'undefined' ? window.location.href : '',
+        }),
+        submitLead({
+          firstName: form.fullName.split(' ')[0] || '',
+          lastName: form.fullName.split(' ').slice(1).join(' ') || '',
+          email: form.email,
+          phone: `${form.isd} ${form.phone}`,
+          city: form.city,
+          source: 'website',
+          investmentInterest: 'consultation',
+        }),
+      ])
+    } catch (err) {
+      console.warn('Home form submission failed (non-critical):', err)
+    }
   }
 
   return (
@@ -958,6 +986,32 @@ function ContactFormSection() {
         <div className="grid lg:grid-cols-5 gap-12 items-start">
           {/* Left: Form */}
           <div className="lg:col-span-3">
+            {submitted ? (
+              <AnimatedSection>
+                <div className="bg-green-50 border border-green-200 rounded-2xl p-10 text-center">
+                  <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-5">
+                    <BadgeCheck className="w-8 h-8 text-green-600" />
+                  </div>
+                  <h3 className="text-2xl font-bold text-brand-black mb-3">Thank You!</h3>
+                  <p className="text-brand-grey text-base mb-2">
+                    Your consultation request has been received. Our investment advisory team will reach out within <strong>24-48 hours</strong>.
+                  </p>
+                  <p className="text-brand-grey text-sm mb-6">
+                    For immediate assistance, call us at <a href={`tel:${BRAND.phone2}`} className="text-brand-red font-semibold hover:underline">{BRAND.phone2}</a>
+                  </p>
+                  <button
+                    onClick={() => {
+                      setSubmitted(false)
+                      setForm({ fullName: '', email: '', phone: '', isd: '+91', city: '', amount: '', message: '', accredited: false, privacy: false })
+                    }}
+                    className="text-sm text-brand-red font-semibold hover:underline"
+                  >
+                    Submit another inquiry
+                  </button>
+                </div>
+              </AnimatedSection>
+            ) : (
+            <>
             <div className="border-l-4 border-brand-red pl-6 mb-10">
               <AnimatedSection>
                 <span className="eyebrow">Get Started</span>
@@ -1109,6 +1163,8 @@ function ContactFormSection() {
                 </button>
               </form>
             </AnimatedSection>
+            </>
+            )}
           </div>
 
           {/* Right: Contact info card */}
