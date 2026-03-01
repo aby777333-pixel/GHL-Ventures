@@ -7,7 +7,7 @@ import PlaceholderImage from '@/components/PlaceholderImage'
 import { useIntersectionObserver, useCountUp } from '@/lib/hooks'
 import { BRAND, PORTFOLIO_COMPANIES, BLOG_POSTS } from '@/lib/constants'
 import {
-  ArrowRight, Shield, Play, MapPin, BadgeCheck, IndianRupee,
+  ArrowRight, Shield, MapPin, BadgeCheck, IndianRupee,
   TrendingUp, Target, Users, BarChart3, Eye, Scale, Leaf,
   Building2, Quote, Star, Phone, Mail, Clock,
   BookOpen, Video, FileText,
@@ -23,6 +23,11 @@ import TaxImpactAnalyzer from '@/components/TaxImpactAnalyzer'
 import InflationProofChecker from '@/components/InflationProofChecker'
 import { AlertTriangle } from 'lucide-react'
 import SpaceHero from '@/components/SpaceHero'
+import dynamic from 'next/dynamic'
+const CinematicHeroVideo = dynamic(
+  () => import('@/components/webgl/video/CinematicHeroVideo'),
+  { ssr: false }
+)
 
 /* ================================================================
    HELPER: Animated Counter (standalone)
@@ -624,89 +629,23 @@ function InvestmentCapabilities() {
    SECTION 5: Video Feature (Full-Width, Dark)
    ================================================================ */
 function VideoFeature() {
-  const [isPlaying, setIsPlaying] = useState(false)
-  const videoRef = { current: null as HTMLVideoElement | null }
-
-  const handlePlay = () => {
-    setIsPlaying(true)
-    // Small delay to let state update and video element render
-    setTimeout(() => {
-      if (videoRef.current) {
-        videoRef.current.play().catch(() => {
-          // Autoplay blocked — user can manually click video controls
-        })
-      }
-    }, 100)
-  }
-
   return (
     <section className="relative py-16 md:py-20 overflow-hidden">
-      {/* Dark gradient + red radial bg */}
       <div className="absolute inset-0 hero-gradient" />
-      <div
-        className="absolute inset-0"
-        style={{ background: 'radial-gradient(ellipse at center, rgba(208,2,27,0.15) 0%, transparent 65%)' }}
-      />
+      <div className="absolute inset-0" style={{ background: 'radial-gradient(ellipse at center, rgba(208,2,27,0.15) 0%, transparent 65%)' }} />
 
       <div className="container-max mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
         <AnimatedSection className="text-center mb-10">
           <span className="eyebrow !text-brand-red">From Our Chairman</span>
           <h2 className="section-title mt-3 text-white">The GHL India Ventures Story</h2>
           <p className="text-gray-400 text-sm mt-3 max-w-lg mx-auto">
-            Watch our overview to understand how we create value through strategic alternative investments.
+            Experience our cinematic overview of India&apos;s alternative investment frontier.
           </p>
         </AnimatedSection>
 
         <AnimatedSection delay={200}>
-          <div className="relative max-w-4xl mx-auto">
-            {!isPlaying ? (
-              /* Poster / play button overlay */
-              <div
-                className="relative aspect-video rounded-3xl overflow-hidden border border-white/10 bg-black/60 group cursor-pointer"
-                onClick={handlePlay}
-              >
-                {/* Video preview frame — first frame as poster */}
-                <video
-                  src="/ghlbart.mp4"
-                  className="w-full h-full object-cover"
-                  muted
-                  playsInline
-                  preload="metadata"
-                />
-                {/* Gradient overlay */}
-                <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
-                {/* Play button */}
-                <div className="absolute inset-0 flex items-center justify-center z-10">
-                  <div className="relative">
-                    <div className="absolute -inset-4 w-28 h-28 rounded-full bg-brand-red/20 animate-ping" style={{ animationDuration: '2s' }} />
-                    <div className="relative w-20 h-20 bg-brand-red rounded-full flex items-center justify-center group-hover:scale-110 transition-transform duration-300 shadow-2xl shadow-brand-red/40">
-                      <Play className="w-9 h-9 text-white ml-1" />
-                    </div>
-                  </div>
-                </div>
-                {/* Duration badge */}
-                <div className="absolute bottom-4 right-4 z-10 px-3 py-1 bg-black/70 backdrop-blur-sm rounded-full border border-white/10">
-                  <span className="text-white text-[10px] font-semibold uppercase tracking-wider">
-                    Watch Overview
-                  </span>
-                </div>
-              </div>
-            ) : (
-              /* Active video player */
-              <div className="relative aspect-video rounded-3xl overflow-hidden border border-white/10 bg-black">
-                <video
-                  ref={(el) => { videoRef.current = el }}
-                  src="/ghlbart.mp4"
-                  className="w-full h-full object-contain"
-                  controls
-                  playsInline
-                  autoPlay
-                  controlsList="nodownload"
-                >
-                  Your browser does not support the video tag.
-                </video>
-              </div>
-            )}
+          <div className="relative max-w-5xl mx-auto">
+            <CinematicHeroVideo className="shadow-2xl shadow-brand-red/20" />
           </div>
         </AnimatedSection>
       </div>
