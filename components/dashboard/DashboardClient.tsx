@@ -283,24 +283,14 @@ export default function DashboardClient() {
   }
 
   // ─── Auth ────────────────────────────────────────────────
-  const { user, clientId, isAuthenticated, loading: authLoading, logout, refreshSession } = useClientAuth()
+  const { user, clientId, isAuthenticated, loading: authLoading, logout } = useClientAuth()
 
-  // Auth guard — redirect to login if not authenticated (with retry to prevent race condition)
-  const authRetried = useRef(false)
+  // Auth guard — redirect to login if not authenticated
   useEffect(() => {
     if (!authLoading && !isAuthenticated) {
-      // Retry once after 1.5s — session may still be loading from Supabase (OAuth, token refresh)
-      if (!authRetried.current) {
-        authRetried.current = true
-        const timer = setTimeout(() => {
-          refreshSession()
-        }, 1500)
-        return () => clearTimeout(timer)
-      }
-      // After retry, if still not authenticated, redirect
       router.push('/login')
     }
-  }, [authLoading, isAuthenticated, router, refreshSession])
+  }, [authLoading, isAuthenticated, router])
 
   // ─── Data Hooks ─────────────────────────────────────────
   const { data: portfolioAssets, loading: portfolioLoading, error: portfolioError, refetch: refetchPortfolio } = usePortfolioAssets(clientId ?? undefined)
