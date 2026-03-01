@@ -279,7 +279,7 @@ export default function DownloadsPage() {
           <AnimatedSection>
             <span className="eyebrow">Resources</span>
             <h1 className="text-2xl md:text-3xl lg:text-4xl font-bold text-white mt-4 mb-5">
-              <span className="text-gradient">Downloads</span> &amp; Resources
+              <span className="text-gradient-shimmer">Downloads</span> &amp; Resources
             </h1>
             <p className="text-base text-gray-300 max-w-3xl">
               Access our corporate materials, investment guides, and reports. Explore each document to learn more about {BRAND.name}.

@@ -41,13 +41,13 @@ function FundHero() {
             <span className="text-brand-red font-medium">Fund</span>
           </nav>
 
-          <div className="inline-flex items-center px-4 py-2 bg-brand-red/10 border border-brand-red/20 rounded-full mb-6">
+          <div className="inline-flex items-center px-4 py-2 bg-brand-red/10 border border-brand-red/20 rounded-full mb-6 trust-badge badge-bounce">
             <Shield className="w-4 h-4 text-brand-red mr-2" />
             <span className="text-brand-red text-sm font-medium">SEBI Reg: {BRAND.sebi}</span>
           </div>
           <h1 className="text-2xl md:text-3xl lg:text-4xl font-bold text-white mt-2 mb-5 leading-tight">
             Institutional Access.<br />
-            <span className="text-gradient">HNI Returns.</span>
+            <span className="text-gradient-shimmer">HNI Returns.</span>
           </h1>
           <p className="text-base text-gray-300 max-w-3xl leading-relaxed">
             A Category II Alternative Investment Fund designed to deliver superior risk-adjusted returns
@@ -88,8 +88,8 @@ function FundOverview() {
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-5xl mx-auto">
           {metrics.map((item, i) => (
             <AnimatedSection key={item.label} delay={i * 80}>
-              <div className="card text-center h-full group hover:-translate-y-1">
-                <div className="w-12 h-12 bg-brand-red/10 rounded-xl flex items-center justify-center mx-auto mb-4 group-hover:bg-brand-red transition-all">
+              <div className="card text-center h-full group hover-lift">
+                <div className="w-12 h-12 bg-brand-red/10 rounded-xl flex items-center justify-center mx-auto mb-4 group-hover:bg-brand-red transition-all icon-ring-hover">
                   <item.icon className="w-6 h-6 text-brand-red group-hover:text-white transition-colors" />
                 </div>
                 <p className="text-brand-grey text-xs uppercase tracking-wider mb-1">{item.label}</p>
@@ -157,7 +157,7 @@ function InvestmentRoutes() {
             <AnimatedSection key={route.title} delay={i * 150} direction={i === 0 ? 'left' : 'right'}>
               <div className="relative group h-full">
                 {/* Card */}
-                <div className="relative bg-white dark:bg-white/[0.07] rounded-2xl p-8 h-full flex flex-col overflow-hidden border border-gray-100 dark:border-white/10 shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-1">
+                <div className="relative bg-white dark:bg-white/[0.07] rounded-2xl p-8 h-full flex flex-col overflow-hidden border border-gray-100 dark:border-white/10 shadow-lg hover:shadow-xl transition-all duration-300 hover-lift">
                   {/* Top badge */}
                   <div className="flex items-center justify-between mb-5">
                     <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider ${
@@ -227,7 +227,7 @@ function InvestmentStrategy() {
             <div className="card h-full">
               {/* Image placeholder */}
               <PlaceholderImage theme="real-estate" aspectRatio="aspect-[16/9]" label="Stressed Real Estate Portfolio" className="rounded-xl mb-6" />
-              <div className="inline-flex items-center px-3 py-1 bg-brand-red/10 rounded-full mb-4">
+              <div className="inline-flex items-center px-3 py-1 bg-brand-red/10 rounded-full mb-4 trust-badge badge-bounce">
                 <Building2 className="w-3.5 h-3.5 text-brand-red mr-1.5" />
                 <span className="text-brand-red text-xs font-semibold uppercase tracking-wider">Pillar 1</span>
               </div>
@@ -261,7 +261,7 @@ function InvestmentStrategy() {
             <div className="card h-full">
               {/* Image placeholder */}
               <PlaceholderImage theme="startup" aspectRatio="aspect-[16/9]" label="Startup Portfolio Companies" className="rounded-xl mb-6" />
-              <div className="inline-flex items-center px-3 py-1 bg-brand-red/10 rounded-full mb-4">
+              <div className="inline-flex items-center px-3 py-1 bg-brand-red/10 rounded-full mb-4 trust-badge badge-bounce">
                 <Sparkles className="w-3.5 h-3.5 text-brand-red mr-1.5" />
                 <span className="text-brand-red text-xs font-semibold uppercase tracking-wider">Pillar 2</span>
               </div>
@@ -329,7 +329,7 @@ function FundStructure() {
 
               <div className="mt-8 flex flex-wrap justify-center gap-4">
                 {['Independent Custodian', 'SEBI-empanelled Auditor', 'Legal Counsel', 'Fund Administrator'].map((role) => (
-                  <span key={role} className="px-3 py-1.5 bg-white dark:bg-white/10 rounded-full text-xs font-medium text-brand-grey border border-gray-200 dark:border-white/10">
+                  <span key={role} className="px-3 py-1.5 bg-white dark:bg-white/10 rounded-full text-xs font-medium text-brand-grey border border-gray-200 dark:border-white/10 trust-badge badge-bounce">
                     {role}
                   </span>
                 ))}
@@ -386,8 +386,8 @@ function RiskFramework() {
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
           {protocols.map((p, i) => (
             <AnimatedSection key={p.title} delay={i * 100}>
-              <div className="card h-full group hover:-translate-y-1">
-                <div className="w-12 h-12 bg-brand-red/10 rounded-xl flex items-center justify-center mb-4 group-hover:bg-brand-red transition-all">
+              <div className="card h-full group hover-lift">
+                <div className="w-12 h-12 bg-brand-red/10 rounded-xl flex items-center justify-center mb-4 group-hover:bg-brand-red transition-all icon-ring-hover">
                   <p.icon className="w-6 h-6 text-brand-red group-hover:text-white transition-colors" />
                 </div>
                 <h3 className="font-bold text-brand-black mb-2">{p.title}</h3>
@@ -522,7 +522,7 @@ function FundArticles() {
         <div className="grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
           {FUND_ARTICLES.slice(0, 10).map((article, i) => (
             <AnimatedSection key={article.slug} delay={i * 60}>
-              <Link href={`/fund/${article.slug}`} className="card block group h-full hover:-translate-y-1">
+              <Link href={`/fund/${article.slug}`} className="card block group h-full hover-lift">
                 {/* Image placeholder */}
                 <PlaceholderImage
                   theme={article.category.toLowerCase().includes('real estate') ? 'real-estate' : article.category.toLowerCase().includes('startup') || article.category.toLowerCase().includes('fintech') ? 'startup' : article.category.toLowerCase().includes('regulation') ? 'compliance' : 'education'}
@@ -587,11 +587,14 @@ export default function FundPage() {
     <>
       <FundHero />
       <FundOverview />
+      <hr className="section-divider-animated" />
       <InvestmentRoutes />
       <InvestmentStrategy />
       <FundStructure />
+      <hr className="section-divider-animated" />
       <RiskFramework />
       <InvestmentProcess />
+      <hr className="section-divider-animated" />
       <ReturnsPerformance />
       <FundCalculatorSection mode="both" showComparison={true} showAdvantages={true} />
       <FundArticles />

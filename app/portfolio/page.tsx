@@ -156,7 +156,7 @@ export default function PortfolioPage() {
             </span>
             <h1 className="text-2xl md:text-3xl lg:text-4xl font-bold text-white mt-4 mb-5 leading-tight">
               Where We&apos;ve Placed Our{' '}
-              <span className="text-gradient">Conviction</span>
+              <span className="text-gradient-shimmer">Conviction</span>
             </h1>
             <p className="text-base text-gray-300 max-w-3xl leading-relaxed">
               A focused portfolio spanning stressed real estate resolution and high-growth startup
@@ -184,6 +184,8 @@ export default function PortfolioPage() {
           </div>
         </div>
       </section>
+
+      <hr className="section-divider-animated" />
 
       {/* Filter Tabs */}
       <section className="bg-white border-b border-gray-200 sticky top-20 z-30">
@@ -222,7 +224,7 @@ export default function PortfolioPage() {
 
                 return (
                   <AnimatedSection key={company.name} delay={i * 100}>
-                    <div className={"card group hover:-translate-y-2 h-full flex flex-col " + ['glow-card-amber','glow-card-blue','glow-card-violet','glow-card-emerald','glow-card-rose','glow-card-cyan'][i % 6]}>
+                    <div className={"card group hover-lift h-full flex flex-col " + ['glow-card-amber','glow-card-blue','glow-card-violet','glow-card-emerald','glow-card-rose','glow-card-cyan'][i % 6]}>
                       {/* Image placeholder */}
                       <div className="relative mb-5">
                         <PlaceholderImage
@@ -233,7 +235,7 @@ export default function PortfolioPage() {
                         />
                         {/* Status badge */}
                         <span
-                          className={`absolute top-3 right-3 px-3 py-1 text-xs font-bold rounded-full border ${statusColor} z-10`}
+                          className={`absolute top-3 right-3 px-3 py-1 text-xs font-bold rounded-full border trust-badge badge-bounce ${statusColor} z-10`}
                         >
                           {company.status}
                         </span>
@@ -247,7 +249,7 @@ export default function PortfolioPage() {
 
                       {/* Tag pills */}
                       <div className="flex flex-wrap gap-2 mb-4">
-                        <span className="px-2.5 py-0.5 bg-brand-red/10 text-brand-red text-xs font-semibold rounded-full">
+                        <span className="px-2.5 py-0.5 bg-brand-red/10 text-brand-red text-xs font-semibold rounded-full trust-badge badge-bounce">
                           {company.sector}
                         </span>
                         <span className="px-2.5 py-0.5 bg-gray-100 text-brand-grey text-xs font-medium rounded-full flex items-center">
@@ -283,6 +285,8 @@ export default function PortfolioPage() {
           )}
         </div>
       </section>
+
+      <hr className="section-divider-animated" />
 
       {/* How We Add Value */}
       <section className="section-padding bg-white">
@@ -323,9 +327,9 @@ export default function PortfolioPage() {
               },
             ].map((item, i) => (
               <AnimatedSection key={item.title} delay={i * 100}>
-                <div className={"card group hover:-translate-y-2 h-full text-center " + ['glow-card-amber','glow-card-blue','glow-card-violet','glow-card-emerald'][i % 4]}>
+                <div className={"card group hover-lift h-full text-center " + ['glow-card-amber','glow-card-blue','glow-card-violet','glow-card-emerald'][i % 4]}>
                   <div
-                    className={`w-16 h-16 bg-gradient-to-br ${item.gradient} rounded-2xl flex items-center justify-center mx-auto mb-5 group-hover:scale-110 transition-transform`}
+                    className={`w-16 h-16 bg-gradient-to-br ${item.gradient} rounded-2xl flex items-center justify-center mx-auto mb-5 group-hover:scale-110 transition-transform icon-ring-hover`}
                   >
                     <item.icon className="w-8 h-8 text-brand-red" />
                   </div>

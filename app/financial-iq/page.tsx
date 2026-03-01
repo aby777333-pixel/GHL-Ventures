@@ -255,7 +255,7 @@ export default function FinancialIQPage() {
               </div>
               <h1 className="text-2xl md:text-3xl lg:text-4xl font-bold text-white leading-tight mb-5">
                 The Intelligent Investor&apos;s{' '}
-                <span className="text-gradient">Resource Hub</span>
+                <span className="text-gradient-shimmer">Resource Hub</span>
               </h1>
               <p className="text-base text-gray-300 max-w-2xl leading-relaxed">
                 Knowledge is the best investment you can make.
@@ -286,6 +286,8 @@ export default function FinancialIQPage() {
         </div>
       </section>
 
+      <hr className="section-divider-animated" />
+
       {/* ────────────────────────────────────────
           2. Educational Articles
       ──────────────────────────────────────── */}
@@ -302,8 +304,8 @@ export default function FinancialIQPage() {
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
             {FINANCIAL_IQ_ARTICLES.map((article, i) => (
               <AnimatedSection key={article.slug} delay={i * 80}>
-                <div className={`card group h-full hover:-translate-y-1 ${['glow-card-orange', 'glow-card-pink', 'glow-card-teal', 'glow-card-rose', 'glow-card-blue', 'glow-card-violet', 'glow-card-emerald', 'glow-card-amber', 'glow-card-cyan', 'glow-card-red'][i % 10]}`}>
-                  <div className="w-12 h-12 bg-brand-red/10 rounded-xl flex items-center justify-center mb-4 group-hover:bg-brand-red transition-all">
+                <div className={`card group h-full hover-lift ${['glow-card-orange', 'glow-card-pink', 'glow-card-teal', 'glow-card-rose', 'glow-card-blue', 'glow-card-violet', 'glow-card-emerald', 'glow-card-amber', 'glow-card-cyan', 'glow-card-red'][i % 10]}`}>
+                  <div className="w-12 h-12 bg-brand-red/10 rounded-xl flex items-center justify-center mb-4 group-hover:bg-brand-red transition-all icon-ring-hover">
                     <BookOpen className="w-6 h-6 text-brand-red group-hover:text-white transition-colors" />
                   </div>
                   <div className="flex items-center space-x-2 mb-3">
@@ -336,6 +338,8 @@ export default function FinancialIQPage() {
           </div>
         </div>
       </section>
+
+      <hr className="section-divider-animated" />
 
       {/* ────────────────────────────────────────
           3. Financial Glossary
@@ -569,7 +573,7 @@ export default function FinancialIQPage() {
               const eventDate = new Date(event.date)
               return (
                 <AnimatedSection key={event.title} delay={i * 100}>
-                  <div className={`card group hover:-translate-y-1 h-full ${['glow-card-pink', 'glow-card-teal', 'glow-card-amber'][i % 3]}`}>
+                  <div className={`card group hover-lift h-full ${['glow-card-pink', 'glow-card-teal', 'glow-card-amber'][i % 3]}`}>
                     {/* Date badge */}
                     <div className="flex items-start gap-4 mb-4">
                       <div className="bg-brand-red/10 rounded-xl p-3 text-center flex-shrink-0 min-w-[60px]">
@@ -633,8 +637,8 @@ export default function FinancialIQPage() {
             ].map((guide, i) => (
               <AnimatedSection key={guide.title} delay={i * 100}>
                 <Link href="/downloads" className="block">
-                  <div className={`card group hover:-translate-y-1 h-full text-center ${['glow-card-rose', 'glow-card-cyan', 'glow-card-orange'][i % 3]}`}>
-                    <div className="w-14 h-14 bg-brand-red/10 rounded-xl flex items-center justify-center mx-auto mb-4 group-hover:bg-brand-red transition-all">
+                  <div className={`card group hover-lift h-full text-center ${['glow-card-rose', 'glow-card-cyan', 'glow-card-orange'][i % 3]}`}>
+                    <div className="w-14 h-14 bg-brand-red/10 rounded-xl flex items-center justify-center mx-auto mb-4 group-hover:bg-brand-red transition-all icon-ring-hover">
                       <guide.icon className="w-7 h-7 text-brand-red group-hover:text-white transition-colors" />
                     </div>
                     <h3 className="font-bold text-brand-black mb-2 group-hover:text-brand-red transition-colors">

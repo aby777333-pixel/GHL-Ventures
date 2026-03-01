@@ -44,7 +44,7 @@ function AboutHero() {
 
           <h1 className="text-2xl md:text-3xl lg:text-4xl font-bold text-white mb-5 leading-tight">
             Built on Trust.<br />
-            Driven by <span className="text-gradient">Intelligence.</span>
+            Driven by <span className="text-gradient-shimmer">Intelligence.</span>
           </h1>
           <p className="text-sm md:text-base text-gray-300 max-w-3xl leading-relaxed mb-8">
             GHL India Ventures is a SEBI-registered Category II Alternative Investment Fund
@@ -186,8 +186,8 @@ function MissionVision() {
 
         <div className="grid md:grid-cols-2 gap-10">
           <AnimatedSection direction="left">
-            <div className="card h-full group hover:-translate-y-2 glow-card-red">
-              <div className="w-16 h-16 bg-brand-red/10 rounded-2xl flex items-center justify-center mb-6 group-hover:bg-brand-red transition-all">
+            <div className="card h-full group hover-lift glow-card-red">
+              <div className="w-16 h-16 bg-brand-red/10 rounded-2xl flex items-center justify-center mb-6 group-hover:bg-brand-red transition-all icon-ring-hover">
                 <Target className="w-8 h-8 text-brand-red group-hover:text-white transition-colors" />
               </div>
               <h3 className="text-xl font-bold text-brand-black mb-3">Our Mission</h3>
@@ -201,8 +201,8 @@ function MissionVision() {
           </AnimatedSection>
 
           <AnimatedSection direction="right">
-            <div className="card h-full group hover:-translate-y-2 glow-card-blue">
-              <div className="w-16 h-16 bg-brand-red/10 rounded-2xl flex items-center justify-center mb-6 group-hover:bg-brand-red transition-all">
+            <div className="card h-full group hover-lift glow-card-blue">
+              <div className="w-16 h-16 bg-brand-red/10 rounded-2xl flex items-center justify-center mb-6 group-hover:bg-brand-red transition-all icon-ring-hover">
                 <Eye className="w-8 h-8 text-brand-red group-hover:text-white transition-colors" />
               </div>
               <h3 className="text-xl font-bold text-brand-black mb-3">Our Vision</h3>
@@ -240,7 +240,7 @@ function LeadershipTeam() {
             const isExpanded = expandedIndex === i
             return (
               <AnimatedSection key={member.name} delay={i * 100}>
-                <div className={`card text-center group hover:-translate-y-2 h-full flex flex-col ${['glow-card-red','glow-card-blue','glow-card-violet'][i % 3]}`}>
+                <div className={`card text-center group hover-lift h-full flex flex-col ${['glow-card-red','glow-card-blue','glow-card-violet'][i % 3]}`}>
                   {/* Photo placeholder */}
                   <div className="w-28 h-28 rounded-full mx-auto mb-6 overflow-hidden">
                     <PlaceholderImage theme="team" aspectRatio="w-28 h-28" className="rounded-full" />
@@ -308,8 +308,8 @@ function OurValues() {
         <div className="grid sm:grid-cols-2 lg:grid-cols-5 gap-6">
           {values.map((v, i) => (
             <AnimatedSection key={v.title} delay={i * 100}>
-              <div className={`card text-center h-full group hover:-translate-y-2 ${['glow-card-red','glow-card-blue','glow-card-violet','glow-card-emerald','glow-card-amber'][i % 5]}`}>
-                <div className="w-14 h-14 bg-brand-red/10 rounded-2xl flex items-center justify-center mx-auto mb-5 group-hover:bg-brand-red transition-all">
+              <div className={`card text-center h-full group hover-lift ${['glow-card-red','glow-card-blue','glow-card-violet','glow-card-emerald','glow-card-amber'][i % 5]}`}>
+                <div className="w-14 h-14 bg-brand-red/10 rounded-2xl flex items-center justify-center mx-auto mb-5 group-hover:bg-brand-red transition-all icon-ring-hover">
                   <v.icon className="w-7 h-7 text-brand-red group-hover:text-white transition-colors" />
                 </div>
                 <h3 className="font-bold text-brand-black mb-2">{v.title}</h3>
@@ -343,7 +343,7 @@ function AdvisoryBoardSection() {
             const isExpanded = expandedIndex === i
             return (
               <AnimatedSection key={member.name} delay={i * 120}>
-                <div className={`card text-center group hover:-translate-y-2 h-full flex flex-col ${['glow-card-amber','glow-card-emerald','glow-card-cyan'][i % 3]}`}>
+                <div className={`card text-center group hover-lift h-full flex flex-col ${['glow-card-amber','glow-card-emerald','glow-card-cyan'][i % 3]}`}>
                   <div className="w-24 h-24 rounded-full mx-auto mb-5 overflow-hidden">
                     <PlaceholderImage theme="team" aspectRatio="w-24 h-24" className="rounded-full" />
                   </div>
@@ -440,7 +440,7 @@ function RegulatoryCompliance() {
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-brand-grey text-sm">Status</span>
-                  <span className="font-bold text-green-600 flex items-center">
+                  <span className="font-bold text-green-600 flex items-center trust-badge badge-bounce">
                     <div className="w-2 h-2 bg-green-500 rounded-full mr-2 animate-pulse" />Active
                   </span>
                 </div>
@@ -545,7 +545,7 @@ function OfficeGallery() {
                 {/* Gradient overlay at bottom */}
                 <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent" />
                 <div className="absolute bottom-0 left-0 right-0 p-6">
-                  <span className="inline-block px-3 py-1 bg-brand-red/90 text-white text-[10px] font-bold uppercase tracking-wider rounded-full mb-2">
+                  <span className="inline-block px-3 py-1 bg-brand-red/90 text-white text-[10px] font-bold uppercase tracking-wider rounded-full mb-2 trust-badge badge-bounce">
                     {OFFICE_TABS[activeTab].label}
                   </span>
                   <h3 className="text-white text-xl font-bold">{OFFICE_TABS[activeTab].title}</h3>
@@ -643,11 +643,14 @@ export default function AboutPage() {
     <>
       <AboutHero />
       <OurStoryTimeline />
+      <hr className="section-divider-animated" />
       <MissionVision />
       <LeadershipTeam />
       <OurValues />
+      <hr className="section-divider-animated" />
       <AdvisoryBoardSection />
       <RegulatoryCompliance />
+      <hr className="section-divider-animated" />
       <OfficeGallery />
       <AboutCTA />
     </>

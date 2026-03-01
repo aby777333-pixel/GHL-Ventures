@@ -44,7 +44,7 @@ function CountUpStat({ end, prefix, suffix, label }: {
 
   return (
     <div ref={ref} className="text-center">
-      <div className="text-3xl md:text-4xl font-extrabold text-white mb-1 tracking-tight">
+      <div className="text-3xl md:text-4xl font-extrabold text-white mb-1 tracking-tight stat-glow">
         {prefix}{count}{suffix}
       </div>
       <div className="text-gray-400 text-sm font-medium uppercase tracking-widest">{label}</div>
@@ -306,7 +306,7 @@ function HeroSection() {
 
             <AnimatedSection delay={200}>
               <h1 className="text-3xl sm:text-4xl md:text-4xl lg:text-5xl font-extrabold text-white leading-[1.08] mb-5 tracking-tight" style={{ textShadow: '0 2px 16px rgba(0,0,0,0.8), 0 0 40px rgba(208,2,27,0.15)' }}>
-                SEBI Registered <span className="text-gradient">Alternative Investment Fund</span> — Where Bold Capital Meets Intelligence
+                SEBI Registered <span className="text-gradient-shimmer">Alternative Investment Fund</span> — Where Bold Capital Meets Intelligence
               </h1>
             </AnimatedSection>
 
@@ -610,8 +610,8 @@ function InvestmentCapabilities() {
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
           {pillars.map((p, i) => (
             <AnimatedSection key={p.title} delay={i * 120}>
-              <div className="card h-full group hover:-translate-y-2 hover:border-brand-red/20 border border-transparent">
-                <div className="w-14 h-14 bg-brand-red/10 rounded-2xl flex items-center justify-center mb-5 group-hover:bg-brand-red transition-all duration-300">
+              <div className="card h-full group hover-lift hover:border-brand-red/20 border border-transparent">
+                <div className="w-14 h-14 bg-brand-red/10 rounded-2xl flex items-center justify-center mb-5 group-hover:bg-brand-red transition-all duration-300 icon-ring-hover">
                   <p.icon className="w-7 h-7 text-brand-red group-hover:text-white transition-colors" />
                 </div>
                 <h3 className="text-xl font-bold text-brand-black mb-3">{p.title}</h3>
@@ -734,8 +734,8 @@ function PortfolioSpotlight() {
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-8">
           {PORTFOLIO_COMPANIES.slice(0, 6).map((company, i) => (
             <AnimatedSection key={company.name} delay={i * 100}>
-              <div className="card group hover:-translate-y-2 h-full">
-                <div className="w-14 h-14 bg-brand-offwhite rounded-xl flex items-center justify-center mb-5">
+              <div className="card group hover-lift h-full">
+                <div className="w-14 h-14 bg-brand-offwhite rounded-xl flex items-center justify-center mb-5 icon-ring-hover">
                   <Building2 className="w-7 h-7 text-brand-red" />
                 </div>
                 <div className="flex items-center justify-between mb-3">
@@ -778,7 +778,7 @@ function BlogSection() {
             const themes = ['analytics', 'real-estate', 'startup', 'finance', 'compliance', 'hero', 'portfolio', 'team'] as const
             return (
               <AnimatedSection key={post.slug} delay={i * 120}>
-                <Link href={`/blog#${post.slug}`} className="card group block h-full hover:-translate-y-2">
+                <Link href={`/blog#${post.slug}`} className="card group block h-full hover-lift">
                   {/* Image placeholder */}
                   <PlaceholderImage theme={themes[i % themes.length]} aspectRatio="h-48 w-full" label={post.category} className="rounded-xl mb-5" />
                   <span className="text-xs font-bold text-brand-red uppercase tracking-widest">{post.category}</span>
@@ -885,7 +885,7 @@ function TestimonialsSection() {
         <div className="grid md:grid-cols-3 gap-8 mb-10">
           {testimonials.map((t, i) => (
             <AnimatedSection key={i} delay={i * 150}>
-              <div className="card h-full flex flex-col">
+              <div className="card h-full flex flex-col quote-card">
                 <Quote className="w-8 h-8 text-brand-red mb-4 shrink-0" />
                 <p className="text-brand-grey leading-relaxed flex-1 mb-6 text-sm">
                   &ldquo;{t.quote}&rdquo;
@@ -913,7 +913,7 @@ function TestimonialsSection() {
               { icon: LockKeyhole, text: '256-bit Encryption' },
               { icon: Landmark, text: 'Custodian-Held Assets' },
             ].map(b => (
-              <div key={b.text} className="flex items-center gap-2 px-5 py-3 bg-brand-offwhite rounded-xl border border-gray-200">
+              <div key={b.text} className="flex items-center gap-2 px-5 py-3 bg-brand-offwhite rounded-xl border border-gray-200 trust-badge badge-bounce">
                 <b.icon className="w-5 h-5 text-brand-red" />
                 <span className="text-brand-black text-sm font-semibold">{b.text}</span>
               </div>
@@ -1442,8 +1442,10 @@ export default function HomePage() {
 
       <NewsScroller />
       <WhoWeAre />
+      <hr className="section-divider-animated" />
       <InvestmentCapabilities />
       <VideoFeature />
+      <hr className="section-divider-animated" />
       <WhyChooseUs />
       <InvestorToolsCTA
         onOpenQuiz={() => setQuizOpen(true)}
@@ -1453,7 +1455,9 @@ export default function HomePage() {
         onOpenTaxAnalyzer={() => setTaxAnalyzerOpen(true)}
         onOpenInflationCheck={() => setInflationCheckOpen(true)}
       />
+      <hr className="section-divider-animated" />
       <PortfolioSpotlight />
+      <hr className="section-divider-animated" />
       <BlogSection />
       <FinancialIQTeaser />
       <FAQSection />

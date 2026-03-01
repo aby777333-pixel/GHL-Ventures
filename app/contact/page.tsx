@@ -96,7 +96,7 @@ export default function ContactPage() {
           <AnimatedSection>
             <span className="eyebrow">Get In Touch</span>
             <h1 className="text-2xl md:text-3xl lg:text-4xl font-bold text-white mt-4 mb-5">
-              Contact <span className="text-gradient">GHL India Ventures</span>
+              Contact <span className="text-gradient-shimmer">GHL India Ventures</span>
             </h1>
             <p className="text-sm md:text-base text-gray-300 max-w-3xl">
               Schedule a consultation with our investment team. We&apos;re here to guide you through every step of your investment journey.
@@ -355,7 +355,7 @@ export default function ContactPage() {
 
                   {/* Office Address */}
                   <div className="flex items-start space-x-4">
-                    <div className="w-12 h-12 bg-brand-red/10 rounded-xl flex items-center justify-center shrink-0">
+                    <div className="w-12 h-12 bg-brand-red/10 rounded-xl flex items-center justify-center shrink-0 icon-ring-hover">
                       <MapPin className="w-6 h-6 text-brand-red" />
                     </div>
                     <div>
@@ -366,7 +366,7 @@ export default function ContactPage() {
 
                   {/* Phone */}
                   <div className="flex items-start space-x-4">
-                    <div className="w-12 h-12 bg-brand-red/10 rounded-xl flex items-center justify-center shrink-0">
+                    <div className="w-12 h-12 bg-brand-red/10 rounded-xl flex items-center justify-center shrink-0 icon-ring-hover">
                       <Phone className="w-6 h-6 text-brand-red" />
                     </div>
                     <div>
@@ -382,7 +382,7 @@ export default function ContactPage() {
 
                   {/* Email */}
                   <div className="flex items-start space-x-4">
-                    <div className="w-12 h-12 bg-brand-red/10 rounded-xl flex items-center justify-center shrink-0">
+                    <div className="w-12 h-12 bg-brand-red/10 rounded-xl flex items-center justify-center shrink-0 icon-ring-hover">
                       <Mail className="w-6 h-6 text-brand-red" />
                     </div>
                     <div>
@@ -395,7 +395,7 @@ export default function ContactPage() {
 
                   {/* Office Hours */}
                   <div className="flex items-start space-x-4">
-                    <div className="w-12 h-12 bg-brand-red/10 rounded-xl flex items-center justify-center shrink-0">
+                    <div className="w-12 h-12 bg-brand-red/10 rounded-xl flex items-center justify-center shrink-0 icon-ring-hover">
                       <Clock className="w-6 h-6 text-brand-red" />
                     </div>
                     <div>

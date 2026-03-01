@@ -148,7 +148,7 @@ export default function BlogPage() {
             </span>
             <h1 className="text-2xl md:text-3xl lg:text-4xl font-bold text-white mt-4 mb-5 leading-tight">
               Financial Intelligence.{' '}
-              <span className="text-gradient">Delivered.</span>
+              <span className="text-gradient-shimmer">Delivered.</span>
             </h1>
             <p className="text-base md:text-lg text-gray-300 max-w-3xl leading-relaxed">
               Market insights, sector deep-dives, and thought leadership from the GHL India Ventures
@@ -211,6 +211,8 @@ export default function BlogPage() {
         </div>
       </section>
 
+      <hr className="section-divider-animated" />
+
       {/* Filter Tabs + Search */}
       <section className="bg-white border-b border-gray-200 sticky top-20 z-30">
         <div className="container-max mx-auto px-4 sm:px-6 lg:px-8 py-4">
@@ -267,7 +269,7 @@ export default function BlogPage() {
                 return (
                   <AnimatedSection key={post.slug} delay={i * 80}>
                     <div
-                      className={`card group hover:-translate-y-1 break-inside-avoid ${glowColors[i % glowColors.length]}`}
+                      className={`card group hover-lift break-inside-avoid quote-card ${glowColors[i % glowColors.length]}`}
                       id={post.slug}
                     >
                       {/* 16:9 Image placeholder */}

@@ -2989,3 +2989,334 @@ body.admin-active #ghl-direct-widget {
     border-radius: 1rem;
   }
 }
+
+/* ============================================================
+   BEAUTIFICATION — Micro-Animations & Visual Polish
+   ============================================================ */
+
+/* ── 1. Button Shine Sweep — diagonal light sweep on hover ── */
+.btn-primary,
+.btn-lets-talk {
+  position: relative;
+  overflow: hidden;
+}
+.btn-primary::after,
+.btn-lets-talk::after {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -75%;
+  width: 50%;
+  height: 200%;
+  background: linear-gradient(
+    105deg,
+    transparent 40%,
+    rgba(255, 255, 255, 0.25) 45%,
+    rgba(255, 255, 255, 0.35) 50%,
+    rgba(255, 255, 255, 0.25) 55%,
+    transparent 60%
+  );
+  transform: skewX(-20deg);
+  transition: left 0.6s ease;
+  pointer-events: none;
+}
+.btn-primary:hover::after,
+.btn-lets-talk:hover::after {
+  left: 125%;
+}
+
+/* ── 2. Card Hover Glow — soft colored border glow ── */
+.card {
+  border: 1px solid transparent;
+  background-clip: padding-box;
+}
+.card:hover {
+  border-color: rgba(208, 2, 27, 0.08);
+}
+
+/* Colored glow variants for cards */
+.glow-card-red    { --glow-color: rgba(208, 2, 27, 0.15); }
+.glow-card-blue   { --glow-color: rgba(59, 130, 246, 0.15); }
+.glow-card-violet { --glow-color: rgba(139, 92, 246, 0.15); }
+.glow-card-emerald { --glow-color: rgba(16, 185, 129, 0.15); }
+.glow-card-amber  { --glow-color: rgba(245, 158, 11, 0.15); }
+.glow-card-cyan   { --glow-color: rgba(6, 182, 212, 0.15); }
+.glow-card-rose   { --glow-color: rgba(244, 63, 94, 0.15); }
+.glow-card-pink   { --glow-color: rgba(236, 72, 153, 0.15); }
+.glow-card-teal   { --glow-color: rgba(20, 184, 166, 0.15); }
+.glow-card-orange { --glow-color: rgba(249, 115, 22, 0.15); }
+
+[class*="glow-card-"]:hover {
+  box-shadow:
+    0 4px 12px rgba(0, 0, 0, 0.06),
+    0 8px 24px rgba(0, 0, 0, 0.04),
+    0 0 0 1px var(--glow-color),
+    0 0 20px var(--glow-color);
+}
+
+/* ── 3. Image Reveal on Load — fade + slight zoom ── */
+.img-reveal {
+  opacity: 0;
+  transform: scale(1.02);
+  transition: opacity 0.6s ease-out, transform 0.6s ease-out;
+}
+.img-reveal.loaded {
+  opacity: 1;
+  transform: scale(1);
+}
+
+/* ── 4. Card Image Zoom on Hover ── */
+.card-img-zoom {
+  overflow: hidden;
+}
+.card-img-zoom img {
+  transition: transform 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+.card-img-zoom:hover img {
+  transform: scale(1.05);
+}
+
+/* ── 5. Text Gradient Shimmer — subtle light sweep on gradient text ── */
+@keyframes textShimmer {
+  0% {
+    background-position: -200% center;
+  }
+  100% {
+    background-position: 200% center;
+  }
+}
+.text-gradient-shimmer {
+  background: linear-gradient(
+    110deg,
+    #D0021B 0%,
+    #D0021B 35%,
+    #ff6b6b 50%,
+    #D0021B 65%,
+    #D0021B 100%
+  );
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  animation: textShimmer 4s ease-in-out infinite;
+}
+
+/* ── 6. Animated Section Divider — grows from center ── */
+@keyframes growFromCenter {
+  0% {
+    transform: scaleX(0);
+    opacity: 0;
+  }
+  100% {
+    transform: scaleX(1);
+    opacity: 1;
+  }
+}
+.section-divider-animated {
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(208, 2, 27, 0.4), rgba(212, 168, 67, 0.3), rgba(208, 2, 27, 0.4), transparent);
+  border: none;
+  margin: 0;
+  transform-origin: center;
+  animation: growFromCenter 1s ease-out forwards;
+}
+
+/* ── 7. Staggered Grid Children Reveal ── */
+.stagger-children > * {
+  opacity: 0;
+  transform: translateY(20px);
+  animation: staggerReveal 0.5s ease-out forwards;
+}
+@keyframes staggerReveal {
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.stagger-children > *:nth-child(1) { animation-delay: 0.05s; }
+.stagger-children > *:nth-child(2) { animation-delay: 0.10s; }
+.stagger-children > *:nth-child(3) { animation-delay: 0.15s; }
+.stagger-children > *:nth-child(4) { animation-delay: 0.20s; }
+.stagger-children > *:nth-child(5) { animation-delay: 0.25s; }
+.stagger-children > *:nth-child(6) { animation-delay: 0.30s; }
+.stagger-children > *:nth-child(7) { animation-delay: 0.35s; }
+.stagger-children > *:nth-child(8) { animation-delay: 0.40s; }
+.stagger-children > *:nth-child(9) { animation-delay: 0.45s; }
+.stagger-children > *:nth-child(10) { animation-delay: 0.50s; }
+.stagger-children > *:nth-child(11) { animation-delay: 0.55s; }
+.stagger-children > *:nth-child(12) { animation-delay: 0.60s; }
+
+/* ── 8. Eyebrow — accent line before text ── */
+.eyebrow-line {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.eyebrow-line::before {
+  content: '';
+  display: inline-block;
+  width: 24px;
+  height: 2px;
+  background: var(--color-red);
+  border-radius: 1px;
+}
+
+/* ── 9. Enhanced Focus Rings ── */
+.btn-primary:focus-visible,
+.btn-secondary:focus-visible,
+.btn-outline-white:focus-visible,
+.btn-outline-red:focus-visible,
+.btn-lets-talk:focus-visible {
+  outline: 2px solid var(--color-red);
+  outline-offset: 3px;
+  box-shadow: 0 0 0 4px rgba(208, 2, 27, 0.15);
+}
+
+.input-field:focus-visible {
+  border-color: var(--color-red);
+  box-shadow: 0 0 0 3px rgba(208, 2, 27, 0.12), 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+/* ── 10. Testimonial Quote Decoration ── */
+.quote-card {
+  position: relative;
+}
+.quote-card::before {
+  content: '\201C';
+  position: absolute;
+  top: -6px;
+  left: 16px;
+  font-size: 72px;
+  line-height: 1;
+  color: rgba(208, 2, 27, 0.08);
+  font-family: Georgia, serif;
+  pointer-events: none;
+}
+
+/* ── 11. Subtle Hover Lift for interactive elements ── */
+.hover-lift {
+  transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.3s ease;
+}
+.hover-lift:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.08), 0 4px 8px rgba(0, 0, 0, 0.04);
+}
+
+/* ── 12. Pill / Badge micro-bounce on hover ── */
+.badge-bounce {
+  transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.badge-bounce:hover {
+  transform: scale(1.05);
+}
+
+/* ── 13. Icon Container — pulse ring on hover ── */
+.icon-ring-hover {
+  position: relative;
+}
+.icon-ring-hover::after {
+  content: '';
+  position: absolute;
+  inset: -4px;
+  border-radius: inherit;
+  border: 2px solid rgba(208, 2, 27, 0);
+  transition: border-color 0.3s ease, inset 0.3s ease;
+  pointer-events: none;
+}
+.icon-ring-hover:hover::after {
+  border-color: rgba(208, 2, 27, 0.2);
+  inset: -8px;
+}
+
+/* ── 14. Smooth Gradient Background Shift ── */
+@keyframes gradientShift {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+.gradient-animated {
+  background-size: 200% 200%;
+  animation: gradientShift 8s ease infinite;
+}
+
+/* ── 15. Enhanced Scrollbar — gradient thumb ── */
+::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, #D0021B 0%, #8B0000 100%);
+}
+
+/* ── 16. Section Entrance — blur to sharp ── */
+@keyframes blurReveal {
+  0% {
+    opacity: 0;
+    filter: blur(8px);
+    transform: translateY(16px);
+  }
+  100% {
+    opacity: 1;
+    filter: blur(0);
+    transform: translateY(0);
+  }
+}
+.blur-reveal {
+  animation: blurReveal 0.8s ease-out forwards;
+}
+
+/* ── 17. Underline Draw — for links ── */
+.underline-draw {
+  position: relative;
+  text-decoration: none;
+}
+.underline-draw::after {
+  content: '';
+  position: absolute;
+  bottom: -2px;
+  left: 0;
+  width: 0;
+  height: 1.5px;
+  background: var(--color-red);
+  transition: width 0.3s ease;
+}
+.underline-draw:hover::after {
+  width: 100%;
+}
+
+/* ── 18. CountUp number glow ── */
+.stat-glow {
+  text-shadow: 0 0 20px rgba(208, 2, 27, 0.3), 0 0 40px rgba(208, 2, 27, 0.1);
+}
+
+/* ── 19. Dark mode beautification additions ── */
+:root.dark [class*="glow-card-"]:hover {
+  box-shadow:
+    0 4px 12px rgba(0, 0, 0, 0.3),
+    0 8px 24px rgba(0, 0, 0, 0.2),
+    0 0 0 1px var(--glow-color),
+    0 0 24px var(--glow-color);
+}
+
+:root.dark .section-divider-animated {
+  background: linear-gradient(90deg, transparent, rgba(208, 2, 27, 0.3), rgba(212, 168, 67, 0.2), rgba(208, 2, 27, 0.3), transparent);
+}
+
+:root.dark .quote-card::before {
+  color: rgba(208, 2, 27, 0.12);
+}
+
+/* ── 20. Trust Badge hover shine ── */
+.trust-badge {
+  position: relative;
+  overflow: hidden;
+}
+.trust-badge::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(208, 2, 27, 0.06), transparent);
+  transition: left 0.5s ease;
+}
+.trust-badge:hover::before {
+  left: 100%;
+}
