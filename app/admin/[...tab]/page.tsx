@@ -1,3 +1,4 @@
+import { Suspense } from 'react'
 import dynamic from 'next/dynamic'
 import { ALL_ADMIN_TAB_PARAMS } from '@/lib/admin/adminConstants'
 import ErrorBoundary from '@/components/shared/ErrorBoundary'
@@ -14,7 +15,9 @@ export function generateStaticParams() {
 export default function AdminTabPage() {
   return (
     <ErrorBoundary theme="dark" fallbackTitle="Admin Portal Error">
-      <AdminClient />
+      <Suspense fallback={<div className="min-h-screen bg-[#0A0A0A]" />}>
+        <AdminClient />
+      </Suspense>
     </ErrorBoundary>
   )
 }
