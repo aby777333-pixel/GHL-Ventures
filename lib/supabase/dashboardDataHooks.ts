@@ -25,7 +25,7 @@ interface UseQueryResult<T> {
 function useQuery<T>(
   fetcher: () => Promise<T>,
   fallback: T,
-  deps: unknown[] = [],
+  dep?: unknown,
 ): UseQueryResult<T> {
   const [data, setData] = useState<T>(fallback)
   const [loading, setLoading] = useState(true)
@@ -35,6 +35,10 @@ function useQuery<T>(
   // Keep fetcher ref up-to-date so the effect always calls the latest closure
   const fetcherRef = useRef(fetcher)
   fetcherRef.current = fetcher
+
+  // Keep fallback ref stable to avoid stale closures
+  const fallbackRef = useRef(fallback)
+  fallbackRef.current = fallback
 
   const refetch = useCallback(() => setTrigger(n => n + 1), [])
 
@@ -48,58 +52,58 @@ function useQuery<T>(
       .catch(err => {
         if (!cancelled) {
           setError(err?.message || 'Unknown error')
-          setData(fallback)
+          setData(fallbackRef.current)
           setLoading(false)
         }
       })
 
     return () => { cancelled = true }
-  }, [trigger, ...deps]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [trigger, dep]) // fixed-length dependency array
 
   return { data, loading, error, refetch }
 }
 
 // ── Portfolio ───────────────────────────────────────────────
 export function usePortfolioAssets(clientId?: string) {
-  return useQuery<any[]>(() => svc.fetchPortfolioAssets(clientId), [], [clientId])
+  return useQuery<any[]>(() => svc.fetchPortfolioAssets(clientId), [], clientId)
 }
 
 export function useNAVHistory(clientId?: string) {
-  return useQuery<any[]>(() => svc.fetchNAVHistory(clientId), [], [clientId])
+  return useQuery<any[]>(() => svc.fetchNAVHistory(clientId), [], clientId)
 }
 
 export function useAllocation(clientId?: string) {
-  return useQuery<any[]>(() => svc.getAllocation(clientId), [], [clientId])
+  return useQuery<any[]>(() => svc.getAllocation(clientId), [], clientId)
 }
 
 // ── Transactions ────────────────────────────────────────────
 export function useTransactions(clientId?: string) {
-  return useQuery<any[]>(() => svc.fetchTransactions(clientId), [], [clientId])
+  return useQuery<any[]>(() => svc.fetchTransactions(clientId), [], clientId)
 }
 
 // ── Messages ────────────────────────────────────────────────
 export function useMessages(clientId?: string) {
-  return useQuery<any[]>(() => svc.fetchMessages(clientId), [], [clientId])
+  return useQuery<any[]>(() => svc.fetchMessages(clientId), [], clientId)
 }
 
 // ── Support ─────────────────────────────────────────────────
 export function useSupportTickets(clientId?: string) {
-  return useQuery<any[]>(() => svc.fetchSupportTickets(clientId), [], [clientId])
+  return useQuery<any[]>(() => svc.fetchSupportTickets(clientId), [], clientId)
 }
 
 // ── Notifications ───────────────────────────────────────────
 export function useNotifications(clientId?: string) {
-  return useQuery<any[]>(() => svc.fetchNotifications(clientId), [], [clientId])
+  return useQuery<any[]>(() => svc.fetchNotifications(clientId), [], clientId)
 }
 
 // ── KYC ─────────────────────────────────────────────────────
 export function useKYCSteps(clientId?: string) {
-  return useQuery<any[]>(() => svc.getKYCSteps(clientId), [], [clientId])
+  return useQuery<any[]>(() => svc.getKYCSteps(clientId), [], clientId)
 }
 
 // ── Documents ───────────────────────────────────────────────
 export function useDocuments(clientId?: string) {
-  return useQuery<any[]>(() => svc.fetchDocuments(clientId), [], [clientId])
+  return useQuery<any[]>(() => svc.fetchDocuments(clientId), [], clientId)
 }
 
 // ── News ────────────────────────────────────────────────────
@@ -112,6 +116,6 @@ export function useAssignedRM(clientId?: string) {
   return useQuery<{ name: string; designation: string; department: string } | null>(
     () => svc.fetchAssignedRM(clientId),
     null,
-    [clientId],
+    clientId,
   )
 }
