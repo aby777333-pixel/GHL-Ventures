@@ -63,12 +63,13 @@ export default function LoginPage() {
     try {
       const email = resolveEmail(emailOrMobile)
 
-      // Sign in via Supabase
-      const session = await loginClient(email, password)
-      if (session) {
+      // Sign in via Supabase — returns structured result with error differentiation
+      const result = await loginClient(email, password)
+      if (result.session) {
         router.push('/dashboard')
       } else {
-        setError(AUTH_ERRORS.INVALID_CREDENTIALS)
+        // Show specific error message based on failure type
+        setError(result.message || AUTH_ERRORS.INVALID_CREDENTIALS)
       }
     } catch (err: any) {
       setError(mapSupabaseError(err?.message))

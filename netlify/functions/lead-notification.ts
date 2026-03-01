@@ -22,10 +22,20 @@ interface LeadNotificationBody {
   formData?: Record<string, unknown>
 }
 
-const CORS_HEADERS = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'Content-Type',
-  'Access-Control-Allow-Methods': 'POST, OPTIONS',
+// Restrict CORS to our own domain for security
+const ALLOWED_ORIGINS = [
+  'https://ghl-india-ventures-2025.netlify.app',
+  'http://localhost:3000',
+]
+
+function getCorsHeaders(request?: Request) {
+  const origin = request?.headers?.get('origin') || ''
+  const allowedOrigin = ALLOWED_ORIGINS.includes(origin) ? origin : ALLOWED_ORIGINS[0]
+  return {
+    'Access-Control-Allow-Origin': allowedOrigin,
+    'Access-Control-Allow-Headers': 'Content-Type',
+    'Access-Control-Allow-Methods': 'POST, OPTIONS',
+  }
 }
 
 const NOTIFICATION_EMAILS = [
@@ -181,13 +191,13 @@ function getClientEmailSubject(source: string): string {
 export default async (request: Request) => {
   // Pre-flight
   if (request.method === 'OPTIONS') {
-    return new Response(null, { status: 204, headers: CORS_HEADERS })
+    return new Response(null, { status: 204, headers: getCorsHeaders(request) })
   }
 
   if (request.method !== 'POST') {
     return new Response(
       JSON.stringify({ error: 'Method not allowed' }),
-      { status: 405, headers: { 'Content-Type': 'application/json', ...CORS_HEADERS } },
+      { status: 405, headers: { 'Content-Type': 'application/json', ...getCorsHeaders(request) } },
     )
   }
 
@@ -205,7 +215,7 @@ export default async (request: Request) => {
       }))
       return new Response(
         JSON.stringify({ success: true, emailsSent: false, reason: 'No RESEND_API_KEY configured' }),
-        { status: 200, headers: { 'Content-Type': 'application/json', ...CORS_HEADERS } },
+        { status: 200, headers: { 'Content-Type': 'application/json', ...getCorsHeaders(request) } },
       )
     }
 
@@ -257,13 +267,13 @@ export default async (request: Request) => {
 
     return new Response(
       JSON.stringify({ success: true, emailsSent: true, sent, failed, clientNotified: clientEmails.length > 0 }),
-      { status: 200, headers: { 'Content-Type': 'application/json', ...CORS_HEADERS } },
+      { status: 200, headers: { 'Content-Type': 'application/json', ...getCorsHeaders(request) } },
     )
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : 'Internal server error'
     return new Response(
       JSON.stringify({ error: message }),
-      { status: 500, headers: { 'Content-Type': 'application/json', ...CORS_HEADERS } },
+      { status: 500, headers: { 'Content-Type': 'application/json', ...getCorsHeaders(request) } },
     )
   }
 }

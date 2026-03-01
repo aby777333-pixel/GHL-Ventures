@@ -14,22 +14,32 @@ interface MondayProxyBody {
   apiKey?: string
 }
 
-const CORS_HEADERS = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'Content-Type',
-  'Access-Control-Allow-Methods': 'POST, OPTIONS',
+// Restrict CORS to our own domain for security
+const ALLOWED_ORIGINS = [
+  'https://ghl-india-ventures-2025.netlify.app',
+  'http://localhost:3000',
+]
+
+function getCorsHeaders(request?: Request) {
+  const origin = request?.headers?.get('origin') || ''
+  const allowedOrigin = ALLOWED_ORIGINS.includes(origin) ? origin : ALLOWED_ORIGINS[0]
+  return {
+    'Access-Control-Allow-Origin': allowedOrigin,
+    'Access-Control-Allow-Headers': 'Content-Type',
+    'Access-Control-Allow-Methods': 'POST, OPTIONS',
+  }
 }
 
 export default async (request: Request) => {
   // ── Pre-flight ──
   if (request.method === 'OPTIONS') {
-    return new Response(null, { status: 204, headers: CORS_HEADERS })
+    return new Response(null, { status: 204, headers: getCorsHeaders(request) })
   }
 
   if (request.method !== 'POST') {
     return new Response(
       JSON.stringify({ error: { message: 'Method not allowed' } }),
-      { status: 405, headers: { 'Content-Type': 'application/json', ...CORS_HEADERS } },
+      { status: 405, headers: { 'Content-Type': 'application/json', ...getCorsHeaders(request) } },
     )
   }
 
@@ -41,7 +51,7 @@ export default async (request: Request) => {
     if (query === '__check_config__') {
       return new Response(
         JSON.stringify({ data: { serverKeyConfigured: Boolean(process.env.MONDAY_API_KEY) } }),
-        { status: 200, headers: { 'Content-Type': 'application/json', ...CORS_HEADERS } },
+        { status: 200, headers: { 'Content-Type': 'application/json', ...getCorsHeaders(request) } },
       )
     }
 
@@ -61,7 +71,7 @@ export default async (request: Request) => {
               'No Monday.com API key configured. Add MONDAY_API_KEY in Netlify environment variables, or paste your key in Admin > Settings > Integrations.',
           },
         }),
-        { status: 401, headers: { 'Content-Type': 'application/json', ...CORS_HEADERS } },
+        { status: 401, headers: { 'Content-Type': 'application/json', ...getCorsHeaders(request) } },
       )
     }
 
@@ -86,7 +96,7 @@ export default async (request: Request) => {
         const responseText = await mondayResponse.text()
         return new Response(responseText, {
           status: mondayResponse.status,
-          headers: { 'Content-Type': 'application/json', ...CORS_HEADERS },
+          headers: { 'Content-Type': 'application/json', ...getCorsHeaders(request) },
         })
       }
 
@@ -97,13 +107,13 @@ export default async (request: Request) => {
     const responseText = lastResponse ? await lastResponse.text() : JSON.stringify({ error: { message: 'Authentication failed' } })
     return new Response(responseText, {
       status: 401,
-      headers: { 'Content-Type': 'application/json', ...CORS_HEADERS },
+      headers: { 'Content-Type': 'application/json', ...getCorsHeaders(request) },
     })
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : 'Internal server error'
     return new Response(
       JSON.stringify({ error: { message } }),
-      { status: 500, headers: { 'Content-Type': 'application/json', ...CORS_HEADERS } },
+      { status: 500, headers: { 'Content-Type': 'application/json', ...getCorsHeaders(request) } },
     )
   }
 }

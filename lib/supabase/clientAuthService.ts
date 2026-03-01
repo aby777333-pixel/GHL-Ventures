@@ -39,72 +39,120 @@ export interface ClientSession {
   expiresAt: number
 }
 
+// Login result with proper error differentiation
+export interface LoginResult {
+  session: ClientSession | null
+  error?: 'invalid_credentials' | 'email_not_confirmed' | 'service_unavailable' | 'network_error'
+  message?: string
+}
+
+// ── Helper: build ClientUser from Supabase auth + optional profile/client rows ──
+function buildClientUser(
+  authUser: { id: string; email?: string; created_at?: string; user_metadata?: any },
+  profile: any | null,
+  client: any | null
+): ClientUser {
+  const meta = authUser.user_metadata ?? {}
+  const safeName = String(profile?.full_name || meta.full_name || meta.name || authUser.email?.split('@')[0] || 'Investor')
+
+  return {
+    id: String(authUser.id),
+    name: safeName,
+    email: String(authUser.email || ''),
+    phone: profile?.phone || client?.phone || meta.phone || null,
+    avatar_url: profile?.avatar_url || meta.avatar_url || meta.picture || null,
+    kyc_status: String(client?.kyc_status || 'pending'),
+    account_status: client ? 'active' : 'pending',
+    risk_profile: client?.risk_profile ? String(client.risk_profile) : null,
+    aum: Number(client?.total_invested) || 0,
+    city: profile?.city || client?.city || null,
+    created_at: authUser.created_at || null,
+    pan: client?.pan || null,
+    dob: client?.dob || profile?.dob || null,
+    occupation: client?.occupation || null,
+    nominee_name: client?.nominee_name || null,
+    nominee_relation: client?.nominee_relation || null,
+    nominee_pan: client?.nominee_pan || null,
+    nominee_share: client?.nominee_share || null,
+    bank_name: client?.bank_name || null,
+    bank_account: client?.bank_account || null,
+    bank_ifsc: client?.bank_ifsc || null,
+    bank_type: client?.bank_type || null,
+  }
+}
+
+// ── Helper: safely fetch profile & client rows (uses .maybeSingle() to avoid throw on missing) ──
+async function fetchProfileAndClient(userId: string): Promise<{ profile: any | null; client: any | null }> {
+  // .maybeSingle() returns null (no error) when row doesn't exist — avoids .single() throwing
+  const [profileRes, clientRes] = await Promise.all([
+    supabase.from('profiles').select('*').eq('id', userId).maybeSingle(),
+    supabase.from('clients').select('*').eq('user_id', userId).maybeSingle(),
+  ])
+  return {
+    profile: profileRes.data ?? null,
+    client: clientRes.data ?? null,
+  }
+}
+
 // ── Auth Functions ──────────────────────────────────────────
 
-export async function loginClient(email: string, password: string): Promise<ClientSession | null> {
+export async function loginClient(email: string, password: string): Promise<LoginResult> {
   if (!isSupabaseConfigured()) {
     console.warn('[clientAuth] Supabase not configured — cannot authenticate')
-    return null
+    return { session: null, error: 'service_unavailable', message: 'Authentication service unavailable. Please try again later.' }
   }
 
   try {
     const { data, error } = await supabase.auth.signInWithPassword({ email, password })
-    if (error || !data.user) return null
 
-    // profiles table has: full_name, avatar_url, phone, city (no email/portal column)
-    const { data: profileData } = await supabase
-      .from('profiles')
-      .select('*')
-      .eq('id', data.user.id)
-      .single()
+    // Differentiate auth errors properly
+    if (error) {
+      const msg = error.message?.toLowerCase() || ''
+      if (msg.includes('email not confirmed') || msg.includes('email_not_confirmed')) {
+        return { session: null, error: 'email_not_confirmed', message: 'Please verify your email address. Check your inbox for the confirmation link.' }
+      }
+      return { session: null, error: 'invalid_credentials', message: 'Incorrect email or password. Please try again.' }
+    }
+    if (!data.user) {
+      return { session: null, error: 'invalid_credentials', message: 'Incorrect email or password. Please try again.' }
+    }
 
-    // clients table stores KYC, AUM, risk_profile — linked via user_id
-    const { data: clientData } = await supabase
-      .from('clients')
-      .select('*')
-      .eq('user_id', data.user.id)
-      .single()
+    // Auth succeeded — now fetch profile/client rows (won't throw on missing)
+    const { profile, client } = await fetchProfileAndClient(data.user.id)
 
-    const profile = profileData as any
-    const client = clientData as any
-
-    // Don't reject OAuth users who haven't had their profile created yet
-    // (the auth callback page creates it, but in case of race conditions)
-    const meta = data.user.user_metadata ?? {}
-
-    const safeName = String(profile?.full_name || meta.full_name || meta.name || data.user.email?.split('@')[0] || 'Investor')
+    // If profile/client rows are missing, create them on the fly (auto-repair)
+    if (!profile) {
+      try {
+        const meta = data.user.user_metadata ?? {}
+        await supabase.from('profiles').insert({
+          id: data.user.id,
+          full_name: meta.full_name || meta.name || data.user.email?.split('@')[0] || 'Investor',
+          phone: meta.phone || null,
+          role: 'client',
+        } as any)
+      } catch { /* non-blocking auto-repair */ }
+    }
+    if (!client) {
+      try {
+        await supabase.from('clients').insert({
+          user_id: data.user.id,
+          full_name: data.user.user_metadata?.full_name || data.user.email?.split('@')[0] || 'Investor',
+          email: data.user.email || '',
+          phone: data.user.user_metadata?.phone || null,
+        } as any)
+      } catch { /* non-blocking auto-repair */ }
+    }
 
     return {
-      user: {
-        id: String(data.user.id),
-        name: safeName,
-        email: String(data.user.email || ''),
-        phone: profile?.phone || client?.phone || meta.phone || null,
-        avatar_url: profile?.avatar_url || meta.avatar_url || meta.picture || null,
-        kyc_status: String(client?.kyc_status || 'pending'),
-        account_status: client ? 'active' : 'pending',
-        risk_profile: client?.risk_profile ? String(client.risk_profile) : null,
-        aum: Number(client?.total_invested) || 0,
-        city: profile?.city || client?.city || null,
-        created_at: data.user.created_at || null,
-        pan: client?.pan || null,
-        dob: client?.dob || profile?.dob || null,
-        occupation: client?.occupation || null,
-        nominee_name: client?.nominee_name || null,
-        nominee_relation: client?.nominee_relation || null,
-        nominee_pan: client?.nominee_pan || null,
-        nominee_share: client?.nominee_share || null,
-        bank_name: client?.bank_name || null,
-        bank_account: client?.bank_account || null,
-        bank_ifsc: client?.bank_ifsc || null,
-        bank_type: client?.bank_type || null,
+      session: {
+        user: buildClientUser(data.user, profile, client),
+        loginAt: Date.now(),
+        expiresAt: Date.now() + 8 * 60 * 60 * 1000,
       },
-      loginAt: Date.now(),
-      expiresAt: Date.now() + 8 * 60 * 60 * 1000,
     }
   } catch (err) {
     console.warn('[clientAuth] loginClient exception:', err)
-    return null
+    return { session: null, error: 'network_error', message: 'Connection error. Please check your internet and try again.' }
   }
 }
 
@@ -153,52 +201,35 @@ export async function getClientSession(): Promise<ClientSession | null> {
     const { data: { session } } = await supabase.auth.getSession()
     if (!session?.user) return null
 
-    const { data: profileData } = await supabase
-      .from('profiles')
-      .select('*')
-      .eq('id', session.user.id)
-      .single()
+    // Use .maybeSingle() to avoid throwing on missing rows
+    const { profile, client } = await fetchProfileAndClient(session.user.id)
 
-    const { data: clientData } = await supabase
-      .from('clients')
-      .select('*')
-      .eq('user_id', session.user.id)
-      .single()
-
-    const profile = profileData as any
-    const client = clientData as any
-
-    // Don't reject OAuth users who haven't had their profile created yet
-    const meta = session.user.user_metadata ?? {}
-
-    // Safety: coerce all values to primitives (prevents React #310 if a field is an object)
-    const safeName = String(profile?.full_name || meta.full_name || meta.name || session.user.email?.split('@')[0] || 'Investor')
+    // Auto-repair: create missing profile/client rows for authenticated users
+    if (!profile) {
+      try {
+        const meta = session.user.user_metadata ?? {}
+        await supabase.from('profiles').insert({
+          id: session.user.id,
+          full_name: meta.full_name || meta.name || session.user.email?.split('@')[0] || 'Investor',
+          phone: meta.phone || null,
+          role: 'client',
+        } as any)
+      } catch { /* non-blocking auto-repair */ }
+    }
+    if (!client) {
+      try {
+        const meta = session.user.user_metadata ?? {}
+        await supabase.from('clients').insert({
+          user_id: session.user.id,
+          full_name: meta.full_name || meta.name || session.user.email?.split('@')[0] || 'Investor',
+          email: session.user.email || '',
+          phone: meta.phone || null,
+        } as any)
+      } catch { /* non-blocking auto-repair */ }
+    }
 
     return {
-      user: {
-        id: String(session.user.id),
-        name: safeName,
-        email: String(session.user.email || ''),
-        phone: profile?.phone || client?.phone || meta.phone || null,
-        avatar_url: profile?.avatar_url || meta.avatar_url || meta.picture || null,
-        kyc_status: String(client?.kyc_status || 'pending'),
-        account_status: client ? 'active' : 'pending',
-        risk_profile: client?.risk_profile ? String(client.risk_profile) : null,
-        aum: Number(client?.total_invested) || 0,
-        city: profile?.city || client?.city || null,
-        created_at: session.user.created_at || null,
-        pan: client?.pan || null,
-        dob: client?.dob || profile?.dob || null,
-        occupation: client?.occupation || null,
-        nominee_name: client?.nominee_name || null,
-        nominee_relation: client?.nominee_relation || null,
-        nominee_pan: client?.nominee_pan || null,
-        nominee_share: client?.nominee_share || null,
-        bank_name: client?.bank_name || null,
-        bank_account: client?.bank_account || null,
-        bank_ifsc: client?.bank_ifsc || null,
-        bank_type: client?.bank_type || null,
-      },
+      user: buildClientUser(session.user, profile, client),
       loginAt: Date.now(),
       expiresAt: Date.now() + 8 * 60 * 60 * 1000,
     }
