@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
-import { useRouter, usePathname, useSearchParams } from 'next/navigation'
+import { useRouter, usePathname } from 'next/navigation'
 import Link from 'next/link'
 import {
   LayoutDashboard, TrendingUp, Briefcase, FileText, ArrowLeftRight,
@@ -249,17 +249,19 @@ export default function DashboardClient() {
   }, [router])
 
   // ─── Password Reset Detection (from /auth/callback recovery flow) ──
-  const searchParams = useSearchParams()
   const [showPasswordReset, setShowPasswordReset] = useState(false)
   const [newPassword, setNewPassword] = useState('')
   const [confirmNewPassword, setConfirmNewPassword] = useState('')
   const [passwordResetDone, setPasswordResetDone] = useState(false)
 
   useEffect(() => {
-    if (searchParams?.get('password_reset') === 'true' && activeTab === 'settings') {
-      setShowPasswordReset(true)
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search)
+      if (params.get('password_reset') === 'true' && activeTab === 'settings') {
+        setShowPasswordReset(true)
+      }
     }
-  }, [searchParams, activeTab])
+  }, [activeTab])
 
   const handlePasswordUpdate = async () => {
     if (newPassword.length < 8) { showToast('⚠ Password must be at least 8 characters', 'info'); return }
