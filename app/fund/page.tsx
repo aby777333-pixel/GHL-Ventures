@@ -3,11 +3,16 @@
 import Link from 'next/link'
 import AnimatedSection from '@/components/AnimatedSection'
 import PlaceholderImage from '@/components/PlaceholderImage'
+import dynamic from 'next/dynamic'
+const WebGLVideoPresentation = dynamic(
+  () => import('@/components/webgl/video/WebGLVideoPresentation'),
+  { ssr: false }
+)
 import { BRAND, FUND_ARTICLES } from '@/lib/constants'
 import {
   ArrowRight, Shield, TrendingUp, Target, BarChart3, Clock,
   FileText, CheckCircle, DollarSign, Users, Briefcase, PieChart,
-  AlertTriangle, BookOpen, Play, Home, ChevronRight,
+  AlertTriangle, BookOpen, Home, ChevronRight,
   Search, ClipboardCheck, Gavel, Rocket, Eye,
   Building2, Sparkles, Layers, ShieldCheck, BarChart2
 } from 'lucide-react'
@@ -50,22 +55,10 @@ function FundHero() {
           </p>
         </AnimatedSection>
 
-        {/* Two video placeholders */}
+        {/* Investment Overview Video */}
         <AnimatedSection delay={200}>
-          <div className="grid md:grid-cols-2 gap-6 mt-10 max-w-4xl">
-            {[
-              { label: 'Fund Strategy Overview', theme: 'fund' },
-              { label: 'Real Estate Portfolio Deep Dive', theme: 'real-estate' },
-            ].map((item) => (
-              <div key={item.label} className="relative group cursor-pointer">
-                <PlaceholderImage theme={item.theme} aspectRatio="aspect-video" label={item.label} className="rounded-2xl border border-white/10" />
-                <div className="absolute inset-0 flex items-center justify-center z-10">
-                  <div className="w-16 h-16 bg-brand-red/20 rounded-full flex items-center justify-center group-hover:bg-brand-red/30 transition-all">
-                    <Play className="w-6 h-6 text-brand-red" />
-                  </div>
-                </div>
-              </div>
-            ))}
+          <div className="mt-10 max-w-4xl">
+            <WebGLVideoPresentation className="shadow-2xl shadow-brand-red/10" />
           </div>
         </AnimatedSection>
       </div>

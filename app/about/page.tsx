@@ -4,13 +4,18 @@ import { useState } from 'react'
 import Link from 'next/link'
 import AnimatedSection from '@/components/AnimatedSection'
 import PlaceholderImage from '@/components/PlaceholderImage'
+import dynamic from 'next/dynamic'
+const WebGLVideoPresentation = dynamic(
+  () => import('@/components/webgl/video/WebGLVideoPresentation'),
+  { ssr: false }
+)
 import { BRAND, TEAM_MEMBERS, ADVISORY_BOARD, MILESTONES } from '@/lib/constants'
 import Image from 'next/image'
 import {
   ArrowRight, Target, Eye, Heart, Shield, Users, Award,
   CheckCircle, TrendingUp, Globe, Briefcase, Star,
   Lightbulb, Lock, ChevronDown, ChevronUp, Linkedin,
-  Play, Home, ChevronRight, Building2, Sparkles, MapPin
+  Home, ChevronRight, Building2, Sparkles, MapPin
 } from 'lucide-react'
 import SpaceHero from '@/components/SpaceHero'
 
@@ -47,17 +52,10 @@ function AboutHero() {
           </p>
         </AnimatedSection>
 
-        {/* Video placeholder */}
+        {/* Investment Overview Video */}
         <AnimatedSection delay={200}>
           <div className="max-w-3xl mt-4">
-            <div className="relative group cursor-pointer">
-              <PlaceholderImage theme="hero" aspectRatio="aspect-video" label="About GHL India Ventures — Founder's Vision — 2 minutes" className="rounded-2xl border border-white/10" />
-              <div className="absolute inset-0 flex items-center justify-center z-10">
-                <div className="w-20 h-20 bg-brand-red/20 rounded-full flex items-center justify-center group-hover:bg-brand-red/30 transition-all">
-                  <Play className="w-8 h-8 text-brand-red" />
-                </div>
-              </div>
-            </div>
+            <WebGLVideoPresentation className="shadow-2xl shadow-brand-red/10" />
           </div>
         </AnimatedSection>
       </div>

@@ -3,6 +3,11 @@
 import Link from 'next/link'
 import AnimatedSection from '@/components/AnimatedSection'
 import PlaceholderImage from '@/components/PlaceholderImage'
+import dynamic from 'next/dynamic'
+const WebGLVideoPresentation = dynamic(
+  () => import('@/components/webgl/video/WebGLVideoPresentation'),
+  { ssr: false }
+)
 import { FINANCIAL_IQ_ARTICLES } from '@/lib/constants'
 import {
   BookOpen,
@@ -12,11 +17,9 @@ import {
   ArrowRight,
   Clock,
   Calendar,
-  Play,
   Search,
   Calculator,
   FileText,
-  Video,
   CalendarDays,
   Download,
   ChevronRight,
@@ -41,15 +44,6 @@ const GLOSSARY_TERMS: { term: string; definition: string }[] = [
   { term: 'SEBI', definition: 'Securities and Exchange Board of India -- the regulator for securities and capital markets in India.' },
 ]
 
-/* ─── Video Library Data ─── */
-const VIDEOS = [
-  { title: 'What is an AIF? Explained Simply', duration: '8:24', category: 'Basics', slug: 'what-is-aif' },
-  { title: 'Understanding Stressed Real Estate', duration: '12:05', category: 'Real Estate', slug: 'stressed-real-estate' },
-  { title: 'How IRR Actually Works', duration: '10:32', category: 'Finance', slug: 'how-irr-works' },
-  { title: 'SEBI Regulations for Cat II AIFs', duration: '15:18', category: 'Regulation', slug: 'sebi-cat-ii' },
-  { title: 'Startup Valuation Methods', duration: '11:45', category: 'Startups', slug: 'startup-valuation' },
-  { title: 'Building a Diversified Portfolio', duration: '9:50', category: 'Strategy', slug: 'diversified-portfolio' },
-]
 
 /* ─── Upcoming Events ─── */
 const EVENTS = [
@@ -272,42 +266,23 @@ export default function FinancialIQPage() {
       </section>
 
       {/* ────────────────────────────────────────
-          1. Video Library
+          1. Investment Overview Video
       ──────────────────────────────────────── */}
       <section className="section-padding bg-brand-offwhite">
         <div className="container-max mx-auto">
           <AnimatedSection className="text-center mb-12">
             <span className="text-brand-red font-semibold text-xs uppercase tracking-wider">Learn Visually</span>
-            <h2 className="section-title text-brand-black mt-2">Video Library</h2>
+            <h2 className="section-title text-brand-black mt-2">Investment Overview</h2>
             <p className="section-subtitle mx-auto mt-4">
-              Short, focused videos breaking down complex investment concepts.
+              An interactive overview of GHL India Ventures&apos; investment strategy, portfolio, and performance.
             </p>
           </AnimatedSection>
 
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {VIDEOS.map((video, i) => (
-              <AnimatedSection key={video.slug} delay={i * 80}>
-                <div className={`card group hover:-translate-y-1 h-full ${['glow-card-red', 'glow-card-blue', 'glow-card-violet', 'glow-card-emerald', 'glow-card-amber', 'glow-card-cyan'][i % 6]}`}>
-                  {/* Thumbnail placeholder */}
-                  <div className="relative w-full aspect-video rounded-xl mb-4 overflow-hidden">
-                    <PlaceholderImage theme="education" aspectRatio="aspect-video" className="rounded-xl" />
-                    <div className="absolute inset-0 flex items-center justify-center z-10">
-                      <div className="w-14 h-14 bg-brand-red/90 rounded-full flex items-center justify-center group-hover:scale-110 transition-transform shadow-lg shadow-brand-red/30">
-                        <Play className="w-6 h-6 text-white ml-1" />
-                      </div>
-                    </div>
-                    <span className="absolute bottom-2 right-2 px-2 py-0.5 bg-black/80 text-white text-xs rounded font-mono z-10">
-                      {video.duration}
-                    </span>
-                  </div>
-                  <span className="text-xs font-medium text-brand-red uppercase tracking-wider">{video.category}</span>
-                  <h3 className="font-bold text-brand-black mt-1 group-hover:text-brand-red transition-colors">
-                    {video.title}
-                  </h3>
-                </div>
-              </AnimatedSection>
-            ))}
-          </div>
+          <AnimatedSection delay={100}>
+            <div className="max-w-4xl mx-auto">
+              <WebGLVideoPresentation className="shadow-2xl shadow-brand-red/10" />
+            </div>
+          </AnimatedSection>
         </div>
       </section>
 
