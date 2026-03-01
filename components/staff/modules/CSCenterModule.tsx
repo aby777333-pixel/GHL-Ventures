@@ -1366,7 +1366,7 @@ function LeadAlertsView({ showToast }: { showToast: (msg: string, type?: 'succes
       if (Notification.permission === 'granted') {
         new Notification('New Lead!', {
           body: `${name} via ${source}`,
-          icon: '/icons/icon-192.png',
+          icon: '/images/brand/ghl-logo-full-red.png',
           tag: 'ghl-new-lead',
         })
       }
@@ -1399,7 +1399,7 @@ function LeadAlertsView({ showToast }: { showToast: (msg: string, type?: 'succes
       if (Notification.permission === 'granted') {
         new Notification('New Form Submission!', {
           body: `${name} — ${formType}`,
-          icon: '/icons/icon-192.png',
+          icon: '/images/brand/ghl-logo-full-red.png',
           tag: 'ghl-new-form',
         })
       }
