@@ -315,15 +315,19 @@ export default function DashboardClient() {
   const [notifPrefs, setNotifPrefs] = useState({ email: true, nav: true, invest: true, dividend: true })
   const [dashLang, setDashLang] = useState('English')
   const [toast, setToast] = useState<{ msg: string; type: 'success' | 'info' } | null>(null)
-  const [notifsRead, setNotifsRead] = useState<Set<number>>(new Set())
+  const [notifsRead, setNotifsRead] = useState<Set<string>>(new Set())
   const showToast = useCallback((msg: string, type: 'success' | 'info' = 'success') => {
     setToast({ msg, type })
     setTimeout(() => setToast(null), 3500)
   }, [])
-  const [taskReminders] = useState([
-    { id: 1, task: 'Complete KYC re-verification', due: '31 Mar 2025', urgent: true },
-    { id: 2, task: 'Review Q4 NAV report', due: '20 Mar 2025', urgent: false },
-  ])
+  // Task reminders derived from KYC status (no hardcoded mock data)
+  const taskReminders = useMemo(() => {
+    const reminders: { id: number; task: string; due: string; urgent: boolean }[] = []
+    if (userKycStatus !== 'verified' && userKycStatus !== 'approved') {
+      reminders.push({ id: 1, task: 'Complete KYC verification', due: 'Required', urgent: true })
+    }
+    return reminders
+  }, [userKycStatus])
   const fileInputRef = useRef<HTMLInputElement>(null)
   const profilePhotoRef = useRef<HTMLInputElement>(null)
   const termsRef = useRef<HTMLDivElement>(null)
@@ -554,9 +558,9 @@ export default function DashboardClient() {
           <div className="relative">
             <button onClick={() => setNotifOpen(!notifOpen)} className={`relative p-2 rounded-xl transition-colors ${t('text-gray-400 hover:text-white hover:bg-white/[0.04]','text-gray-700 hover:text-gray-900 hover:bg-gray-200/35')}`}>
               <Bell className="w-4 h-4" />
-              {notifications.filter((n: any) => !n.read && !notifsRead.has(n.id)).length > 0 && (
+              {notifications.filter((n: any) => !n.is_read && !notifsRead.has(n.id)).length > 0 && (
                 <span className="absolute -top-0.5 -right-0.5 w-4 h-4 rounded-full bg-brand-red text-[9px] font-bold text-white flex items-center justify-center">
-                  {notifications.filter((n: any) => !n.read && !notifsRead.has(n.id)).length}
+                  {notifications.filter((n: any) => !n.is_read && !notifsRead.has(n.id)).length}
                 </span>
               )}
             </button>
@@ -574,21 +578,22 @@ export default function DashboardClient() {
                   {notifications.map((n: any) => {
                     const notifTabMap: Record<string, TabId> = { report: 'kyc', opportunity: 'investments', alert: 'kyc', payment: 'transactions', milestone: 'portfolio' }
                     return (
-                    <div key={n.id} onClick={() => { setNotifsRead(prev => new Set(prev).add(n.id)); markNotificationRead(String(n.id)); setNotifOpen(false); setActiveTab(notifTabMap[n.type] || 'dashboard') }} className={`px-4 py-3 flex gap-3 cursor-pointer transition-colors ${!n.read && !notifsRead.has(n.id) ? 'bg-white/[0.02]' : ''} hover:bg-white/[0.04]`}>
+                    <div key={n.id} onClick={() => { setNotifsRead(prev => new Set(prev).add(n.id)); markNotificationRead(String(n.id)); setNotifOpen(false); setActiveTab(notifTabMap[n.type] || 'dashboard') }} className={`px-4 py-3 flex gap-3 cursor-pointer transition-colors ${!n.is_read && !notifsRead.has(n.id) ? 'bg-white/[0.02]' : ''} hover:bg-white/[0.04]`}>
                       <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0
-                        ${n.type === 'report' ? 'bg-blue-500/15' : n.type === 'opportunity' ? 'bg-emerald-500/15' : n.type === 'alert' ? 'bg-amber-500/15' : n.type === 'payment' ? 'bg-emerald-500/15' : 'bg-purple-500/15'}`}>
-                        {n.type === 'report' ? <FileText className="w-4 h-4 text-blue-400" /> :
-                         n.type === 'opportunity' ? <Star className="w-4 h-4 text-emerald-400" /> :
-                         n.type === 'alert' ? <AlertCircle className="w-4 h-4 text-amber-400" /> :
+                        ${n.type === 'report' || n.type === 'info' ? 'bg-blue-500/15' : n.type === 'opportunity' || n.type === 'success' ? 'bg-emerald-500/15' : n.type === 'alert' || n.type === 'warning' || n.type === 'action_required' ? 'bg-amber-500/15' : n.type === 'payment' ? 'bg-emerald-500/15' : n.type === 'error' ? 'bg-red-500/15' : 'bg-purple-500/15'}`}>
+                        {n.type === 'report' || n.type === 'info' ? <FileText className="w-4 h-4 text-blue-400" /> :
+                         n.type === 'opportunity' || n.type === 'success' ? <Star className="w-4 h-4 text-emerald-400" /> :
+                         n.type === 'alert' || n.type === 'warning' || n.type === 'action_required' ? <AlertCircle className="w-4 h-4 text-amber-400" /> :
                          n.type === 'payment' ? <IndianRupee className="w-4 h-4 text-emerald-400" /> :
+                         n.type === 'error' ? <AlertCircle className="w-4 h-4 text-red-400" /> :
                          <Award className="w-4 h-4 text-purple-400" />}
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className={`text-xs font-semibold ${t('text-white','text-gray-900')} ${!n.read ? '' : 'opacity-60'}`}>{n.title}</p>
-                        <p className={`text-[11px] mt-0.5 ${t('text-gray-500','text-gray-700')}`}>{n.desc}</p>
-                        <p className={`text-[10px] mt-1 ${t('text-gray-600','text-gray-600')}`}>{n.time}</p>
+                        <p className={`text-xs font-semibold ${t('text-white','text-gray-900')} ${!n.is_read ? '' : 'opacity-60'}`}>{String(n.title || '')}</p>
+                        <p className={`text-[11px] mt-0.5 ${t('text-gray-500','text-gray-700')}`}>{String(n.message || n.body || '')}</p>
+                        <p className={`text-[10px] mt-1 ${t('text-gray-600','text-gray-600')}`}>{n.created_at ? new Date(n.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }) : ''}</p>
                       </div>
-                      {!n.read && !notifsRead.has(n.id) && <div className="w-2 h-2 rounded-full bg-brand-red shrink-0 mt-1.5" />}
+                      {!n.is_read && !notifsRead.has(n.id) && <div className="w-2 h-2 rounded-full bg-brand-red shrink-0 mt-1.5" />}
                     </div>
                   )})}
 
@@ -1090,18 +1095,23 @@ export default function DashboardClient() {
         <span className={`text-[10px] font-semibold ${t('text-gray-500','text-gray-700')}`}>{adminNews.length} updates</span>
       </div>
       <div className="space-y-2.5">
-        {adminNews.map((news: any) => (
-          <div key={news.id} onClick={() => showToast(`${news.title} — Full article coming soon.`, 'info')} className={`p-3 rounded-xl cursor-pointer transition-all group ${news.pinned ? (isDark ? 'bg-brand-red/[0.06] border border-brand-red/15 hover:border-brand-red/30' : 'bg-red-50/60 border border-red-200/40 hover:border-red-300/60') : t('bg-white/[0.02] border border-white/[0.04] hover:border-white/[0.08]','bg-gray-100/50 border border-gray-200/30 hover:border-gray-300/40')}`}>
+        {adminNews.length === 0 ? (
+          <div className="py-4 text-center">
+            <Newspaper className={`w-8 h-8 mx-auto mb-2 ${t('text-gray-600','text-gray-400')}`} />
+            <p className={`text-xs ${t('text-gray-500','text-gray-600')}`}>No announcements yet</p>
+          </div>
+        ) : adminNews.map((news: any) => (
+          <div key={news.id} onClick={() => showToast(`${String(news.title || '')} — Full article coming soon.`, 'info')} className={`p-3 rounded-xl cursor-pointer transition-all group ${news.pinned ? (isDark ? 'bg-brand-red/[0.06] border border-brand-red/15 hover:border-brand-red/30' : 'bg-red-50/60 border border-red-200/40 hover:border-red-300/60') : t('bg-white/[0.02] border border-white/[0.04] hover:border-white/[0.08]','bg-gray-100/50 border border-gray-200/30 hover:border-gray-300/40')}`}>
             <div className="flex items-start gap-2 mb-1">
               {news.pinned && <Flame className="w-3 h-3 text-brand-red shrink-0 mt-0.5" />}
               <div className="flex-1 min-w-0">
-                <p className={`text-xs font-bold truncate ${t('text-white','text-gray-900')}`}>{news.title}</p>
-                <p className={`text-[11px] mt-0.5 line-clamp-2 leading-relaxed ${t('text-gray-500','text-gray-700')}`}>{news.excerpt}</p>
+                <p className={`text-xs font-bold truncate ${t('text-white','text-gray-900')}`}>{String(news.title || '')}</p>
+                <p className={`text-[11px] mt-0.5 line-clamp-2 leading-relaxed ${t('text-gray-500','text-gray-700')}`}>{String(news.excerpt || news.content || '')}</p>
               </div>
             </div>
             <div className="flex items-center justify-between mt-2">
-              <span className={`text-[9px] px-2 py-0.5 rounded-full font-semibold ${news.category === 'Opportunity' ? 'bg-emerald-500/15 text-emerald-400' : news.category === 'Fund Update' ? 'bg-blue-500/15 text-blue-400' : news.category === 'Event' ? 'bg-purple-500/15 text-purple-400' : 'bg-amber-500/15 text-amber-400'}`}>{news.category}</span>
-              <span className={`text-[10px] ${t('text-gray-600','text-gray-600')}`}>{news.date}</span>
+              <span className={`text-[9px] px-2 py-0.5 rounded-full font-semibold ${news.category === 'Opportunity' ? 'bg-emerald-500/15 text-emerald-400' : news.category === 'Fund Update' ? 'bg-blue-500/15 text-blue-400' : news.category === 'Event' ? 'bg-purple-500/15 text-purple-400' : 'bg-amber-500/15 text-amber-400'}`}>{String(news.category || 'Update')}</span>
+              <span className={`text-[10px] ${t('text-gray-600','text-gray-600')}`}>{news.date || (news.created_at ? new Date(news.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }) : '')}</span>
             </div>
           </div>
         ))}
@@ -1123,11 +1133,14 @@ export default function DashboardClient() {
           <h4 className={`text-sm font-bold ${t('text-white','text-gray-900')}`}>Smart Insights</h4>
         </div>
         <div className="space-y-2.5">
-          {[
-            { icon: TrendingUp, text: 'Your portfolio outperformed the NIFTY 50 benchmark by 21.3% this year.', color: 'text-emerald-400' },
-            { icon: Shield, text: 'Diversification score is strong. Real estate exposure provides stability.', color: 'text-blue-400' },
-            { icon: Target, text: 'Phoenix Towers NCLT resolution at 75% milestone \u2014 ahead of schedule.', color: 'text-amber-400' },
-          ].map((insight,i) => (
+          {(portfolioAssets.length > 0 ? [
+            { icon: TrendingUp, text: `Your portfolio contains ${portfolioAssets.length} active investment(s) valued at \u20B9${formatINR(portfolioValue)}.`, color: 'text-emerald-400' },
+            { icon: Shield, text: allocationData.length > 1 ? `Diversification across ${allocationData.length} asset classes provides portfolio stability.` : 'Consider diversifying across multiple asset classes for stability.', color: 'text-blue-400' },
+            { icon: Target, text: 'Contact your Relationship Manager for personalized investment insights.', color: 'text-amber-400' },
+          ] : [
+            { icon: Info, text: 'Smart insights will appear once you make your first investment.', color: 'text-gray-500' },
+            { icon: Target, text: 'Explore our AIF opportunities in the Investments tab.', color: 'text-amber-400' },
+          ]).map((insight,i) => (
             <div key={i} className={`flex items-start gap-2.5 p-2 rounded-lg ${t('bg-white/[0.02]','bg-gray-100/30')}`}>
               <insight.icon className={`w-3.5 h-3.5 mt-0.5 shrink-0 ${insight.color}`} />
               <p className={`text-[11px] leading-relaxed ${t('text-gray-400','text-gray-600')}`}>{insight.text}</p>
@@ -1149,11 +1162,15 @@ export default function DashboardClient() {
       </div>
       <div className="space-y-3">
         {[
-          { label: '\u20B950 Lakh Portfolio', achieved: true, date: 'Mar 2024' },
-          { label: '\u20B975 Lakh Portfolio', achieved: true, date: 'Sep 2024' },
-          { label: '\u20B985 Lakh Portfolio', achieved: true, date: 'Feb 2025' },
-          { label: '\u20B91 Crore Portfolio', achieved: false, progress: 85 },
-        ].map((m,i) => (
+          { label: '\u20B925 Lakh Portfolio', threshold: 2500000 },
+          { label: '\u20B950 Lakh Portfolio', threshold: 5000000 },
+          { label: '\u20B975 Lakh Portfolio', threshold: 7500000 },
+          { label: '\u20B91 Crore Portfolio', threshold: 10000000 },
+        ].map(({ label, threshold }) => {
+          const achieved = portfolioValue >= threshold
+          const progress = achieved ? 100 : Math.min(99, Math.round((portfolioValue / threshold) * 100))
+          return { label, achieved, progress }
+        }).map((m,i) => (
           <div key={i} className="flex items-center gap-3">
             <div className={`w-7 h-7 rounded-full flex items-center justify-center shrink-0 ${m.achieved ? 'bg-amber-500/20' : t('bg-white/[0.04]','bg-gray-200/40')}`}>
               {m.achieved ? <CheckCircle className="w-4 h-4 text-amber-400" /> : <CircleDot className={`w-4 h-4 ${t('text-gray-600','text-gray-600')}`} />}
@@ -1161,7 +1178,7 @@ export default function DashboardClient() {
             <div className="flex-1 min-w-0">
               <p className={`text-xs font-semibold ${m.achieved ? t('text-white','text-gray-900') : t('text-gray-500','text-gray-700')}`}>{m.label}</p>
               {m.achieved ? (
-                <p className={`text-[10px] ${t('text-gray-600','text-gray-600')}`}>{m.date}</p>
+                <p className={`text-[10px] ${t('text-gray-600','text-gray-600')}`}>Achieved</p>
               ) : (
                 <div className="flex items-center gap-2 mt-1">
                   <div className={`flex-1 h-1 rounded-full overflow-hidden ${t('bg-white/[0.06]','bg-gray-200/40')}`}>

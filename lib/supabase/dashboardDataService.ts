@@ -95,10 +95,17 @@ export async function fetchSupportTickets(clientId?: string) {
 
 export async function fetchNotifications(clientId?: string) {
   if (!isSupabaseConfigured() || !clientId) return []
-  return safeFetch(
+  const rows = await safeFetch(
     () => sb.from('notifications').select('*').eq('user_id', clientId).order('created_at', { ascending: false }).limit(20),
     [], 'fetchNotifications',
   )
+  // Sanitize: ensure no JSONB objects are rendered as React children (prevents React #310)
+  return (rows as any[]).map((r: any) => ({
+    ...r,
+    title: typeof r.title === 'object' ? JSON.stringify(r.title) : r.title,
+    message: typeof r.message === 'object' ? JSON.stringify(r.message) : r.message,
+    metadata: r.metadata, // keep as object but never render directly
+  }))
 }
 
 export async function getKYCSteps(clientId?: string) {
@@ -163,10 +170,9 @@ export async function createSupportTicket(ticket: Record<string, any>) {
       const notifs = admins.map((a: any) => ({
         user_id: a.id,
         title: `New Support Ticket: ${ticket.subject || 'No subject'}`,
-        body: `${clientName} raised a ${ticket.category || 'General'} ticket. Priority: ${ticket.priority || 'medium'}`,
-        type: 'support',
-        priority: ticket.priority || 'medium',
-        action_url: '/admin?tab=support',
+        message: `${clientName} raised a ${ticket.category || 'General'} ticket. Priority: ${ticket.priority || 'medium'}`,
+        type: 'info',
+        link: '/admin?tab=support',
         metadata: { ticket_id: data?.id, ticket_number: ticketNumber },
       }))
       await sb.from('notifications').insert(notifs)
@@ -185,7 +191,7 @@ export async function sendMessage(message: Record<string, any>) {
 
 export async function markNotificationRead(notificationId: string) {
   if (!isSupabaseConfigured()) return false
-  const { error } = await sb.from('notifications').update({ read: true }).eq('id', notificationId)
+  const { error } = await sb.from('notifications').update({ is_read: true, read_at: new Date().toISOString() }).eq('id', notificationId)
   if (error) return false
   return true
 }
@@ -343,10 +349,9 @@ export async function recordReferral(referralCode: string, referredName: string,
       await sb.from('notifications').insert({
         user_id: referrerId,
         title: 'New Referral!',
-        body: `${referredName || referredEmail} signed up using your referral link.`,
-        type: 'referral',
-        priority: 'low',
-        action_url: '/dashboard?tab=referrals',
+        message: `${referredName || referredEmail} signed up using your referral link.`,
+        type: 'success',
+        link: '/dashboard?tab=referrals',
         metadata: { referred_email: referredEmail, referral_code: referralCode },
       })
     }
@@ -357,10 +362,9 @@ export async function recordReferral(referralCode: string, referredName: string,
       const notifs = admins.map((a: any) => ({
         user_id: a.id,
         title: 'New Referral Registration',
-        body: `${referredName || referredEmail} signed up via referral from ${referrerName}. Code: ${referralCode}`,
-        type: 'referral',
-        priority: 'low',
-        action_url: '/admin?tab=leads',
+        message: `${referredName || referredEmail} signed up via referral from ${referrerName}. Code: ${referralCode}`,
+        type: 'info',
+        link: '/admin?tab=leads',
         metadata: { referral_code: referralCode, referred_email: referredEmail, referrer_id: referrerId },
       }))
       await sb.from('notifications').insert(notifs)

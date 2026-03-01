@@ -12,7 +12,6 @@ export default function StaffLoginPage() {
   const router = useRouter()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
-  const [staffCode, setStaffCode] = useState('')
   const [showPassword, setShowPassword] = useState(false)
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
@@ -43,7 +42,7 @@ export default function StaffLoginPage() {
     setLoading(true)
 
     try {
-      const session = await loginStaff(email, password, staffCode)
+      const session = await loginStaff(email, password)
 
       if (session) {
         router.push('/staff')
@@ -55,7 +54,7 @@ export default function StaffLoginPage() {
           const mins = Math.ceil(newLockout / 60000)
           setError(`Account locked. Too many failed attempts. Please wait ${mins} minutes.`)
         } else {
-          setError('Invalid credentials. Please check your email, password, and employee code.')
+          setError('Invalid credentials. Please check your email and password.')
         }
       }
     } catch {
@@ -130,20 +129,6 @@ export default function StaffLoginPage() {
                   {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
               </div>
-            </div>
-
-            {/* Staff Code */}
-            <div>
-              <label className="block text-[11px] text-gray-500 uppercase tracking-wider font-medium mb-1.5">Employee Code</label>
-              <input
-                type="text"
-                value={staffCode}
-                onChange={e => setStaffCode(e.target.value.toUpperCase())}
-                placeholder="GHL001"
-                required
-                maxLength={6}
-                className="w-full px-4 py-2.5 rounded-xl bg-white/[0.04] border border-white/[0.08] text-white text-sm placeholder:text-gray-600 focus:outline-none focus:border-teal-500/40 focus:ring-1 focus:ring-teal-500/20 transition-all font-mono tracking-widest"
-              />
             </div>
 
             {/* Error */}

@@ -155,23 +155,24 @@ export function useReportsLiveData(): ReportsData {
             ? result.value
             : fallback
 
+        // Use real data when available; fall back to empty states (not mock data)
         setData({
-          REPORT_KPIS: resolve(kpis, STATIC_KPIS) as any,
-          MONTHLY_REVENUE: resolve(monthlyRev, STATIC_MONTHLY_REVENUE) as any,
-          REVENUE_BY_TYPE: resolve(revenueStreams, STATIC_REVENUE_BY_TYPE) as any,
-          AI_INSIGHTS: resolve(insights, STATIC_AI_INSIGHTS) as any,
-          STAFF_ACTIVITY: resolve(staffActivity, STATIC_STAFF_ACTIVITY) as any,
-          SCHEDULED_REPORTS: resolve(scheduledReports, STATIC_SCHEDULED_REPORTS) as any,
-          GENERATED_REPORTS: resolve(generatedReports, STATIC_GENERATED_REPORTS) as any,
+          REPORT_KPIS: resolve(kpis, STATIC_KPIS) as any, // KPI structure needed for layout
+          MONTHLY_REVENUE: resolve(monthlyRev, []) as any,
+          REVENUE_BY_TYPE: resolve(revenueStreams, []) as any,
+          AI_INSIGHTS: resolve(insights, []) as any,
+          STAFF_ACTIVITY: resolve(staffActivity, []) as any,
+          SCHEDULED_REPORTS: resolve(scheduledReports, []) as any,
+          GENERATED_REPORTS: resolve(generatedReports, []) as any,
           LEAD_FUNNEL: STATIC_LEAD_FUNNEL, // derived from leads
-          CAMPAIGN_METRICS: resolve(campaigns, STATIC_CAMPAIGN_METRICS) as any,
-          REVENUE_FORECAST: resolve(forecasts, STATIC_REVENUE_FORECAST) as any,
-          REPORT_CLIENTS: resolve(clients, STATIC_REPORT_CLIENTS) as any,
-          REPORT_LEADS: resolve(leads, STATIC_REPORT_LEADS) as any,
-          EXPENSE_SUMMARY: resolve(expenses, STATIC_EXPENSE_SUMMARY) as any,
+          CAMPAIGN_METRICS: resolve(campaigns, []) as any,
+          REVENUE_FORECAST: resolve(forecasts, []) as any,
+          REPORT_CLIENTS: resolve(clients, []) as any,
+          REPORT_LEADS: resolve(leads, []) as any,
+          EXPENSE_SUMMARY: resolve(expenses, []) as any,
           REVENUE_BY_CITY: STATIC_REVENUE_BY_CITY, // keep as-is (derived)
-          CALL_LOGS: resolve(callLogs, STATIC_CALL_LOGS) as any,
-          DOCUMENT_VAULT: resolve(documents, STATIC_DOCUMENT_VAULT) as any,
+          CALL_LOGS: resolve(callLogs, []) as any,
+          DOCUMENT_VAULT: resolve(documents, []) as any,
           EMAIL_TEMPLATES: STATIC_EMAIL_TEMPLATES, // templates are static config
           TRAFFIC_SOURCES: STATIC_TRAFFIC_SOURCES, // analytics pending
           TOP_PAGES: STATIC_TOP_PAGES, // analytics pending

@@ -4,6 +4,12 @@
 
 import type { AdminModule, Permission } from './adminTypes'
 
+// ── Feature Flags ─────────────────────────────────────────────────
+// AI_SUITE: Hidden per business decision. Set to true to re-enable.
+export const FEATURE_FLAGS = {
+  AI_SUITE_ENABLED: false,
+}
+
 // ── Sidebar Navigation Config ─────────────────────────────────────
 export interface SidebarItem {
   id: AdminModule

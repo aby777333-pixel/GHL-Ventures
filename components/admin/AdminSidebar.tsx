@@ -10,7 +10,7 @@ import {
 } from 'lucide-react'
 import Logo from '@/components/Logo'
 import SocialLinks from '@/components/SocialLinks'
-import { ADMIN_SIDEBAR_ITEMS, MODULE_LABELS } from '@/lib/admin/adminConstants'
+import { ADMIN_SIDEBAR_ITEMS, MODULE_LABELS, FEATURE_FLAGS } from '@/lib/admin/adminConstants'
 import type { AdminModule } from '@/lib/admin/adminTypes'
 import { hasModuleAccess } from '@/lib/admin/adminRBAC'
 import type { AdminRole } from '@/lib/admin/adminTypes'
@@ -115,6 +115,8 @@ export default function AdminSidebar({
         {/* Navigation */}
         <nav className="flex-1 px-3 overflow-y-auto space-y-0.5 admin-scrollbar">
           {ADMIN_SIDEBAR_ITEMS.map(item => {
+            // AI_SUITE: Hidden per business decision. Re-enable via FEATURE_FLAGS.AI_SUITE_ENABLED
+            if (item.id === 'ai-ops' && !FEATURE_FLAGS.AI_SUITE_ENABLED) return null
             // Check role access
             if (!hasModuleAccess(userRole, item.id)) return null
 

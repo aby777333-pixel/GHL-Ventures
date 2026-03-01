@@ -134,3 +134,145 @@
 - `npx next build` → **PASS** (zero errors, zero warnings)
 - All 38 routes compile successfully
 - Static export intact
+
+---
+---
+
+# FIXES LOG — Phase 3: Critical Bug Fixes + Security Hardening
+
+**Date:** 2026-03-01
+**Build Status:** PASS (zero errors)
+
+---
+
+## P0 — Critical Fixes
+
+### React #310 Dashboard Crash (CRITICAL)
+**Files:** `components/dashboard/DashboardClient.tsx`, `lib/supabase/dashboardDataService.ts`
+**Issue:** Client dashboard crashed with React Error #310 ("Objects are not valid as a React child"). Root cause: notification field names in the component didn't match the database schema.
+
+**Schema mismatch discovered:**
+| Component Used | DB Column | Fix |
+|---------------|-----------|-----|
+| `n.desc` | `message` | `String(n.message \|\| n.body \|\| '')` |
+| `n.read` | `is_read` | `n.is_read` |
+| `n.time` | `created_at` | Date formatting with fallback |
+| `{ read: true }` | `{ is_read: true }` | Fixed in `markNotificationRead()` |
+
+**Fixes applied:**
+- Fixed `Set<number>` → `Set<string>` for notification IDs (UUIDs are strings)
+- Corrected all notification field references throughout DashboardClient.tsx
+- Wrapped all rendered notification/news fields in `String()` for JSONB safety
+- Added empty state for admin news section (`announcements` table doesn't exist yet)
+- Fixed `markNotificationRead()` to use `is_read` + `read_at` columns
+- Added sanitization in `fetchNotifications()` to coerce JSONB objects to strings
+
+### Notification Column Mismatch Across Services
+**Files:** `lib/supabase/dashboardDataService.ts`, `lib/supabase/leadAssignmentService.ts`
+**Issue:** Multiple services used non-existent notification columns (`body`, `action_url`, `priority`) and invalid type values (`'support'`, `'lead'`, `'assignment'`, `'referral'`).
+
+**DB CHECK constraint:** `type IN ('info','success','warning','error','action_required')`
+
+**Fixes applied:**
+- `dashboardDataService.ts` — Fixed `createSupportTicket()` and `recordReferral()` notification inserts
+- `leadAssignmentService.ts` — Fixed all notification inserts (lead assignment, round-robin, etc.)
+- All services now use: `message` (not `body`), `link` (not `action_url`), valid `type` values, no `priority` field
+
+---
+
+## P1 — High Priority Fixes
+
+### Issue #2: Remove Employee Code from Staff Login
+**Files:** `app/staff/login/page.tsx`, `lib/supabase/staffAuthService.ts`
+**Issue:** Staff login required an "Employee Code" field. Business directive: "The employees are given a GHL email, and they should login with the email and password. Take off the CODE field."
+**Fix:**
+- Removed `staffCode` state variable and input field from login page
+- `loginStaff()` now accepts optional `staffCode` param (backward compatible) but login works with just email + password
+- Removed staff code validation step (was rejecting valid logins)
+
+### Issue #6: Test Credentials & Seeding Script
+**Files:** `docs/SETUP_CREDENTIALS.sql` (rewritten), `docs/TEST_CREDENTIALS.md` (new)
+**Fix:** Created comprehensive seeding script with 6 test accounts:
+
+| Portal | Email | Role |
+|--------|-------|------|
+| Admin | `superadmin@ghlindia.com` | super_admin |
+| Staff | `staff1@ghlindia.com` | CS Lead |
+| Staff | `staff2@ghlindia.com` | Relationship Manager |
+| Staff | `staff3@ghlindia.com` | Field Sales |
+| Client | `client1@ghlindia.com` | Verified (₹25L invested) |
+| Client | `client2@ghlindia.com` | Pending KYC |
+
+- Client 1 assigned to Staff 2 as Relationship Manager
+- TEST_CREDENTIALS.md documents all accounts with login flows
+
+### Issue #3: Contact Us → CRM Pipeline (Verified Working)
+**Status:** No code changes needed — pipeline already functional.
+- `app/contact/page.tsx` submits to both `contact_submissions` AND `leads` tables
+- Admin CRM reads from `leads` via `fetchLeads()`
+- RLS policies allow anonymous INSERT on both tables
+
+### Issue #2b: Admin → Client Portal Navigation
+**Status:** Fixed by React #310 fix above.
+- AdminSidebar `<Link href="/dashboard" target="_blank">` opens client dashboard in new tab
+- With #310 fixes, admin users see empty dashboard without crashing
+
+---
+
+## P2 — Medium Priority Fixes
+
+### Issue #4: Hide AI Suite Section
+**File:** `lib/admin/adminConstants.ts`
+**Issue:** AI Operations module visible in sidebar despite being unfinished.
+**Fix:** Set `FEATURE_FLAGS.AI_SUITE_ENABLED = false` — module hidden from sidebar and renders disabled state if accessed directly.
+
+### Issue #5: Full 404 Audit + Route Fixes
+**File:** `components/staff/modules/FieldOpsModule.tsx`
+**Issue:** FieldOpsModule used `field-ops/` prefix for navigation but staff router expects `field/` prefix.
+**Fix:** Changed all navigate calls:
+- `navigate('field-ops/capture')` → `navigate('field/capture')`
+- `navigate('field-ops/check-in')` → `navigate('field/check-in')`
+- `navigate('field-ops/reports')` → `navigate('field/reports')`
+- `navigate('field-ops/expenses')` → `navigate('field/expenses')`
+
+Full 404 audit results documented in `docs/404_AUDIT.md`.
+
+### Issue #7: Remove Mock/Dummy Data
+**Files:** `components/dashboard/DashboardClient.tsx`, `lib/admin/useReportsLiveData.ts`
+
+**Client Dashboard:**
+- Replaced hardcoded `taskReminders` with KYC-derived dynamic data (shows "Complete KYC verification" only when KYC is incomplete)
+- Made AI Insights section data-driven (shows real portfolio info when available, guidance text when empty)
+- Made Wealth Milestones derived from actual `portfolioValue` with real progress calculation
+
+**Admin Reports:**
+- Changed all Supabase fetch fallbacks from static mock arrays to empty arrays `[]`
+- Affected: MONTHLY_REVENUE, REVENUE_BY_TYPE, AI_INSIGHTS, STAFF_ACTIVITY, SCHEDULED_REPORTS, GENERATED_REPORTS, CAMPAIGN_METRICS, REVENUE_FORECAST, REPORT_CLIENTS, REPORT_LEADS, EXPENSE_SUMMARY, CALL_LOGS, DOCUMENT_VAULT
+
+---
+
+## Files Modified (11 total)
+
+| File | Change |
+|------|--------|
+| `components/dashboard/DashboardClient.tsx` | React #310 fix, notification field mapping, mock data removal |
+| `lib/supabase/dashboardDataService.ts` | Notification column fixes, JSONB sanitization |
+| `lib/supabase/leadAssignmentService.ts` | Notification column fixes |
+| `app/staff/login/page.tsx` | Remove Employee Code field |
+| `lib/supabase/staffAuthService.ts` | Make staffCode optional |
+| `components/admin/AdminClient.tsx` | AI Suite feature flag check |
+| `components/admin/AdminSidebar.tsx` | AI Suite sidebar hide |
+| `lib/admin/adminConstants.ts` | Feature flag: AI_SUITE_ENABLED = false |
+| `lib/admin/useReportsLiveData.ts` | Empty array fallbacks instead of mock data |
+| `components/staff/modules/FieldOpsModule.tsx` | Fix route prefix field-ops → field |
+| `docs/SETUP_CREDENTIALS.sql` | Expanded test seeding script (6 accounts) |
+
+**New files:** `docs/TEST_CREDENTIALS.md`
+
+---
+
+## Verification
+- `npm run build` → **PASS** (zero errors)
+- All routes compile successfully
+- Static export intact
+- No React #310 errors in notification rendering

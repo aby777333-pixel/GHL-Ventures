@@ -90,10 +90,9 @@ export async function autoAssignLead(leadId: string): Promise<{ success: boolean
     await sb.from('notifications').insert({
       user_id: leastLoaded,
       title: 'New Lead Assigned',
-      body: `A new lead has been assigned to you. Check your lead queue.`,
-      type: 'lead',
-      priority: 'high',
-      action_url: '/staff/leads',
+      message: `A new lead has been assigned to you. Check your lead queue.`,
+      type: 'action_required',
+      link: '/staff/leads',
       metadata: { lead_id: leadId },
     })
 
@@ -108,10 +107,9 @@ export async function autoAssignLead(leadId: string): Promise<{ success: boolean
       const adminNotifs = admins.map((a: any) => ({
         user_id: a.id,
         title: 'New Lead Received',
-        body: `New lead auto-assigned to ${staffName}`,
-        type: 'lead',
-        priority: 'normal',
-        action_url: '/admin/leads',
+        message: `New lead auto-assigned to ${staffName}`,
+        type: 'info',
+        link: '/admin/leads',
         metadata: { lead_id: leadId, assigned_to: leastLoaded },
       }))
       await sb.from('notifications').insert(adminNotifs)
@@ -181,10 +179,9 @@ export async function reassignLead(
     await sb.from('notifications').insert({
       user_id: newAssigneeId,
       title: 'Lead Reassigned to You',
-      body: `Lead "${leadName}" has been reassigned to you by ${byProfile?.full_name || 'Admin'}.`,
-      type: 'assignment',
-      priority: 'high',
-      action_url: '/staff/leads',
+      message: `Lead "${leadName}" has been reassigned to you by ${byProfile?.full_name || 'Admin'}.`,
+      type: 'action_required',
+      link: '/staff/leads',
       metadata: { lead_id: leadId },
     })
 
@@ -193,9 +190,8 @@ export async function reassignLead(
       await sb.from('notifications').insert({
         user_id: oldAssignee,
         title: 'Lead Reassigned',
-        body: `Lead "${leadName}" has been reassigned to ${newProfile?.full_name || 'another team member'}.`,
-        type: 'assignment',
-        priority: 'normal',
+        message: `Lead "${leadName}" has been reassigned to ${newProfile?.full_name || 'another team member'}.`,
+        type: 'info',
         metadata: { lead_id: leadId },
       })
     }

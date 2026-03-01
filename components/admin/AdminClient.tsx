@@ -23,7 +23,7 @@ import ReportsModule from './modules/ReportsModule'
 import { useAdminAuth, useAdminToast } from '@/lib/admin/adminHooks'
 import { getAdminSession } from '@/lib/supabase/adminAuthService'
 import type { AdminModule } from '@/lib/admin/adminTypes'
-import { MODULE_LABELS } from '@/lib/admin/adminConstants'
+import { MODULE_LABELS, FEATURE_FLAGS } from '@/lib/admin/adminConstants'
 import { hasModuleAccess } from '@/lib/admin/adminRBAC'
 import {
   LayoutDashboard, Users, TrendingUp, UserCheck, FolderOpen, Sparkles,
@@ -202,6 +202,21 @@ export default function AdminClient() {
       case 'assets':
         return <AssetDocModule subTab={activeSubTab} navigate={navigate} showToast={showToast} />
       case 'ai-ops':
+        // AI_SUITE: Hidden per business decision. Re-enable via FEATURE_FLAGS.AI_SUITE_ENABLED
+        if (!FEATURE_FLAGS.AI_SUITE_ENABLED) {
+          return (
+            <AdminGlass className="flex flex-col items-center justify-center py-16">
+              <Sparkles className="w-10 h-10 text-gray-600 mb-4" />
+              <h2 className="text-lg font-semibold text-white mb-2">AI Operations</h2>
+              <p className="text-sm text-gray-400 text-center max-w-md mb-4">
+                This module is currently unavailable. It will be enabled in a future update.
+              </p>
+              <button onClick={() => navigate('overview')} className="px-4 py-2 rounded-xl text-sm font-medium text-white bg-brand-red/20 border border-brand-red/30 hover:bg-brand-red/30 transition-colors">
+                Back to Overview
+              </button>
+            </AdminGlass>
+          )
+        }
         return <AIOperationsModule subTab={activeSubTab} navigate={navigate} showToast={showToast} />
       case 'analytics':
         return <AnalyticsModule subTab={activeSubTab} navigate={navigate} showToast={showToast} />

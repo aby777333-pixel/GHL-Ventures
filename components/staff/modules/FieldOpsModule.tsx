@@ -159,11 +159,11 @@ function SOSButton({ showToast }: { showToast: FieldOpsModuleProps['showToast'] 
 // ══════════════════════════════════════════════════════════════════
 function FieldDashboard({ navigate, showToast }: FieldOpsModuleProps) {
   const quickActions = [
-    { label: 'Quick Capture', icon: Camera, color: 'text-teal-400', bg: 'bg-teal-500/15', action: () => navigate('field-ops/capture') },
+    { label: 'Quick Capture', icon: Camera, color: 'text-teal-400', bg: 'bg-teal-500/15', action: () => navigate('field/capture') },
     { label: 'Voice Note', icon: Mic, color: 'text-amber-400', bg: 'bg-amber-500/15', action: () => showToast('Recording voice note...', 'info') },
-    { label: 'Check In', icon: LogIn, color: 'text-blue-400', bg: 'bg-blue-500/15', action: () => navigate('field-ops/check-in') },
-    { label: 'New Report', icon: FileText, color: 'text-purple-400', bg: 'bg-purple-500/15', action: () => navigate('field-ops/reports') },
-    { label: 'Log Expense', icon: Receipt, color: 'text-emerald-400', bg: 'bg-emerald-500/15', action: () => navigate('field-ops/expenses') },
+    { label: 'Check In', icon: LogIn, color: 'text-blue-400', bg: 'bg-blue-500/15', action: () => navigate('field/check-in') },
+    { label: 'New Report', icon: FileText, color: 'text-purple-400', bg: 'bg-purple-500/15', action: () => navigate('field/reports') },
+    { label: 'Log Expense', icon: Receipt, color: 'text-emerald-400', bg: 'bg-emerald-500/15', action: () => navigate('field/expenses') },
     { label: 'SOS', icon: AlertTriangle, color: 'text-red-400', bg: 'bg-red-500/20 border border-red-500/30', action: () => showToast('SOS Alert sent to HQ with GPS!', 'error') },
   ]
 

@@ -88,7 +88,7 @@ function recordFailedAttempt(): LoginAttemptRecord {
 export async function loginStaff(
   email: string,
   password: string,
-  staffCode: string
+  staffCode?: string
 ): Promise<StaffSession | null> {
   if (!isSupabaseConfigured()) {
     console.warn('[staffAuth] Supabase not configured — cannot authenticate')
@@ -128,7 +128,14 @@ export async function loginStaff(
     const p = profile as any
     const sp = staffProfile as any
 
-    if (!p || !sp || sp.employee_id !== staffCode) {
+    if (!p || !sp) {
+      await supabase.auth.signOut()
+      recordFailedAttempt()
+      return null
+    }
+
+    // If staffCode provided, verify employee_id match
+    if (staffCode && sp.employee_id !== staffCode) {
       await supabase.auth.signOut()
       recordFailedAttempt()
       return null
