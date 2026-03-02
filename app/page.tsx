@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import Link from 'next/link'
 import AnimatedSection from '@/components/AnimatedSection'
 import PlaceholderImage from '@/components/PlaceholderImage'
@@ -10,7 +10,7 @@ import {
   ArrowRight, Shield, MapPin, BadgeCheck, IndianRupee,
   TrendingUp, Target, Users, BarChart3, Eye, Scale, Leaf,
   Building2, Quote, Star, Phone, Mail, Clock,
-  BookOpen, Video, FileText, ExternalLink,
+  BookOpen, Video, FileText, ExternalLink, Play,
   Landmark, LockKeyhole, Sparkles, Calculator, ChevronDown
 } from 'lucide-react'
 import { submitContactForm, submitLead } from '@/lib/supabase/reportsDataService'
@@ -24,11 +24,60 @@ import TaxImpactAnalyzer from '@/components/TaxImpactAnalyzer'
 import InflationProofChecker from '@/components/InflationProofChecker'
 import { AlertTriangle } from 'lucide-react'
 import SpaceHero from '@/components/SpaceHero'
-import dynamic from 'next/dynamic'
-const CinematicHeroVideo = dynamic(
-  () => import('@/components/webgl/video/CinematicHeroVideo'),
-  { ssr: false }
-)
+/* ================================================================
+   HELPER: VideoPlayer — HTML5 video with cinematic styling
+   ================================================================ */
+function VideoPlayer() {
+  const videoRef = useRef<HTMLVideoElement>(null)
+  const [playing, setPlaying] = useState(false)
+  const [started, setStarted] = useState(false)
+
+  const toggle = useCallback(() => {
+    const v = videoRef.current
+    if (!v) return
+    if (v.paused) { v.play(); setPlaying(true); setStarted(true) }
+    else { v.pause(); setPlaying(false) }
+  }, [])
+
+  return (
+    <div className="relative aspect-video rounded-3xl overflow-hidden border border-white/10 bg-black shadow-2xl shadow-brand-red/20">
+      <video
+        ref={videoRef}
+        src="/videos/ghl-story.mp4"
+        className="absolute inset-0 w-full h-full object-cover"
+        playsInline
+        preload="metadata"
+        onClick={toggle}
+        onEnded={() => setPlaying(false)}
+      />
+
+      {/* Cinematic vignette */}
+      {!started && (
+        <div className="absolute inset-0 pointer-events-none" style={{
+          background: 'radial-gradient(ellipse at center, transparent 30%, rgba(0,0,0,0.5) 100%)',
+        }} />
+      )}
+
+      {/* Big play button — before start */}
+      {!playing && (
+        <div
+          className="absolute inset-0 flex items-center justify-center z-30 bg-black/40 cursor-pointer group"
+          onClick={toggle}
+        >
+          <div className="relative">
+            <div className="absolute -inset-5 w-32 h-32 rounded-full bg-brand-red/15 animate-ping" style={{ animationDuration: '2.5s' }} />
+            <div className="relative w-24 h-24 bg-brand-red/20 backdrop-blur-md rounded-full flex items-center justify-center group-hover:bg-brand-red/30 group-hover:scale-110 transition-all duration-300 shadow-2xl shadow-brand-red/30 border border-brand-red/20">
+              <Play className="w-10 h-10 text-brand-red ml-1" />
+            </div>
+          </div>
+          <p className="absolute bottom-8 text-white/40 text-xs tracking-widest uppercase">
+            {started ? 'Resume Playback' : 'Watch the GHL India Ventures Story'}
+          </p>
+        </div>
+      )}
+    </div>
+  )
+}
 
 /* ================================================================
    HELPER: Animated Counter (standalone)
@@ -656,7 +705,7 @@ function VideoFeature() {
 
         <AnimatedSection delay={200}>
           <div className="relative max-w-5xl mx-auto">
-            <CinematicHeroVideo className="shadow-2xl shadow-brand-red/20" />
+            <VideoPlayer />
           </div>
         </AnimatedSection>
       </div>
