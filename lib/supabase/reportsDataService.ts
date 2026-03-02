@@ -283,6 +283,24 @@ export async function submitContactForm(formData: {
   }
 }
 
+// ── Investment Range → Numeric Value Converter ──────────────
+function parseInvestmentRange(range?: string): number {
+  if (!range) return 0
+  const r = range.toLowerCase().replace(/[₹,\s]/g, '')
+  if (r.includes('under') || r === 'under-1' || r.includes('<1')) return 5000000      // ₹50L
+  if (r.includes('1-5') || r === '1-5cr') return 30000000     // ₹3Cr midpoint
+  if (r.includes('5-10') || r === '5-10cr') return 75000000   // ₹7.5Cr midpoint
+  if (r.includes('10-25')) return 175000000                     // ₹17.5Cr midpoint
+  if (r.includes('25+') || r.includes('25cr+')) return 250000000 // ₹25Cr
+  if (r.includes('10cr+') || r.includes('10+')) return 100000000 // ₹10Cr
+  // Try to parse a plain number (e.g. "2cr" → 20000000)
+  const numMatch = r.match(/(\d+(?:\.\d+)?)\s*cr/)
+  if (numMatch) return Math.round(parseFloat(numMatch[1]) * 10000000)
+  const lakhMatch = r.match(/(\d+(?:\.\d+)?)\s*l/)
+  if (lakhMatch) return Math.round(parseFloat(lakhMatch[1]) * 100000)
+  return 0
+}
+
 // ── Lead Submission (from website forms) ────────────────────
 export async function submitLead(leadData: {
   firstName: string
@@ -293,6 +311,7 @@ export async function submitLead(leadData: {
   source?: string
   investmentInterest?: string
   estimatedInvestment?: number
+  investmentRange?: string
   message?: string
 }) {
   // Fire email notification (best-effort, non-blocking)
@@ -302,7 +321,7 @@ export async function submitLead(leadData: {
     phone: leadData.phone,
     source: leadData.source || 'website',
     investmentInterest: leadData.investmentInterest,
-    investmentRange: leadData.estimatedInvestment ? `${leadData.estimatedInvestment}` : undefined,
+    investmentRange: leadData.investmentRange || (leadData.estimatedInvestment ? `${leadData.estimatedInvestment}` : undefined),
     city: leadData.city,
     pageUrl: typeof window !== 'undefined' ? window.location.href : '',
   })
@@ -321,7 +340,7 @@ export async function submitLead(leadData: {
       city: leadData.city,
       source: leadData.source || 'website',
       investment_interest: leadData.investmentInterest,
-      estimated_value: leadData.estimatedInvestment || 0,
+      estimated_value: leadData.estimatedInvestment || parseInvestmentRange(leadData.investmentRange) || 0,
       status: 'new',
       notes: leadData.message || null,
     } as any).select().single() as any

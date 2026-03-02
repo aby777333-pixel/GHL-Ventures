@@ -808,6 +808,7 @@ function ConsultationForm() {
           city: formData.country,
           source: 'website',
           investmentInterest: 'nri-investment',
+          investmentRange: formData.investmentRange,
           message: formData.message,
         }),
       ])

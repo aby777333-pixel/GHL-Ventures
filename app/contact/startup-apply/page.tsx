@@ -59,6 +59,7 @@ export default function StartupApplyPage() {
           city: formData.city,
           source: 'website',
           investmentInterest: 'startup-funding',
+          investmentRange: formData.amountSeeking,
           message: formData.pitch,
         }),
       ])
