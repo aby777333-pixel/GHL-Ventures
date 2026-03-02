@@ -1,10 +1,16 @@
 /* ─────────────────────────────────────────────────────────────
-   Seed Admin Data — Populates Supabase with existing mock data
+   Seed Admin Data — Populates Supabase with demo users & data
 
    Run manually after setting up Supabase:
    npx ts-node --esm scripts/seed-admin-data.ts
 
    Requires SUPABASE_SERVICE_ROLE_KEY env var for admin access.
+
+   Schema reference:
+   - profiles: id (FK auth.users), role (user_role enum), full_name, phone, city, department, job_title
+   - staff_profiles: id (UUID PK), user_id (FK auth.users), employee_id, department, designation
+   - clients: id (UUID PK), user_id (FK auth.users), full_name, email, phone, city, kyc_status, risk_profile, total_invested
+   - No admin_profiles table — admins use profiles.role = 'admin' or 'super_admin'
    ───────────────────────────────────────────────────────────── */
 
 import { createClient } from '@supabase/supabase-js'
@@ -23,22 +29,6 @@ const supabase = createClient(url, serviceKey, {
   auth: { autoRefreshToken: false, persistSession: false },
 })
 
-// ── Seed Functions ──────────────────────────────────────────
-
-async function seedTable(table: string, data: any[]) {
-  if (data.length === 0) {
-    console.log(`  ⏭  ${table}: no data to seed`)
-    return
-  }
-
-  const { error } = await supabase.from(table).upsert(data, { onConflict: 'id' })
-  if (error) {
-    console.error(`  ❌ ${table}:`, error.message)
-  } else {
-    console.log(`  ✅ ${table}: ${data.length} rows`)
-  }
-}
-
 // ── Demo Users ──────────────────────────────────────────────
 
 const DEMO_ADMIN_USERS = [
@@ -46,22 +36,25 @@ const DEMO_ADMIN_USERS = [
     email: 'admin@ghlindia.com',
     password: 'admin123',
     name: 'Rajesh Kumar',
-    role: 'super_admin',
+    role: 'super_admin' as const,
     department: 'Management',
+    jobTitle: 'Super Administrator',
   },
   {
     email: 'ceo@ghlindia.com',
     password: 'ceo123',
     name: 'Vikram Mehta',
-    role: 'ceo',
+    role: 'admin' as const,
     department: 'Executive',
+    jobTitle: 'CEO',
   },
   {
     email: 'compliance@ghlindia.com',
     password: 'comp123',
     name: 'Priya Sharma',
-    role: 'compliance_officer',
+    role: 'admin' as const,
     department: 'Compliance',
+    jobTitle: 'Compliance Officer',
   },
 ]
 
@@ -70,17 +63,17 @@ const DEMO_STAFF_USERS = [
     email: 'staff@ghlindia.com',
     password: 'staff123',
     name: 'Ananya Singh',
-    role: 'senior_cs',
+    designation: 'senior_cs',
     department: 'Customer Service',
-    staffCode: 'GHL-CS-001',
+    employeeId: 'GHL-CS-001',
   },
   {
     email: 'field@ghlindia.com',
     password: 'field123',
     name: 'Rahul Patel',
-    role: 'field_agent',
+    designation: 'field_agent',
     department: 'Field Operations',
-    staffCode: 'GHL-FO-001',
+    employeeId: 'GHL-FO-001',
   },
 ]
 
@@ -91,7 +84,7 @@ const DEMO_CLIENT_USERS = [
     name: 'Arun Mehta',
     riskProfile: 'moderate',
     kycStatus: 'verified',
-    aum: 25000000,
+    totalInvested: 25000000,
     city: 'Mumbai',
   },
   {
@@ -100,71 +93,157 @@ const DEMO_CLIENT_USERS = [
     name: 'Sneha Kapoor',
     riskProfile: 'aggressive',
     kycStatus: 'verified',
-    aum: 50000000,
+    totalInvested: 50000000,
     city: 'Delhi',
   },
 ]
 
-async function seedDemoUsers() {
-  console.log('\n📌 Creating demo users in Supabase Auth…')
+// ── Helper: create or get existing user ──────────────────────
 
-  for (const user of [...DEMO_ADMIN_USERS, ...DEMO_STAFF_USERS, ...DEMO_CLIENT_USERS]) {
-    const { data, error } = await supabase.auth.admin.createUser({
-      email: user.email,
-      password: user.password,
-      email_confirm: true,
-      user_metadata: { name: user.name },
-    })
+async function ensureAuthUser(email: string, password: string, name: string): Promise<string | null> {
+  // Try to create the user
+  const { data, error } = await supabase.auth.admin.createUser({
+    email,
+    password,
+    email_confirm: true,
+    user_metadata: { name, full_name: name },
+  })
 
-    if (error) {
-      if (error.message.includes('already been registered')) {
-        console.log(`  ⏭  ${user.email}: already exists`)
-      } else {
-        console.error(`  ❌ ${user.email}:`, error.message)
-      }
-      continue
+  if (data?.user) return data.user.id
+
+  if (error?.message?.includes('already been registered') || error?.message?.includes('already exists')) {
+    // User exists — look up their ID
+    const { data: listData } = await supabase.auth.admin.listUsers()
+    const existing = listData?.users?.find(u => u.email === email)
+    if (existing) {
+      console.log(`  ♻️  ${email}: exists (id: ${existing.id.substring(0, 8)}…) — updating password & profiles`)
+      // Update password to ensure it matches
+      await supabase.auth.admin.updateUserById(existing.id, {
+        password,
+        email_confirm: true,
+        user_metadata: { name, full_name: name },
+      })
+      return existing.id
     }
+    console.error(`  ❌ ${email}: registered but could not find user ID`)
+    return null
+  }
 
-    if (!data.user) continue
-    const userId = data.user.id
+  console.error(`  ❌ ${email}: ${error?.message}`)
+  return null
+}
 
-    // Insert profile
-    await supabase.from('profiles').upsert({
+// ── Seed Demo Users ─────────────────────────────────────────
+
+async function seedDemoUsers() {
+  console.log('\n📌 Creating/refreshing demo users…')
+
+  // ── Admin Users ──
+  for (const u of DEMO_ADMIN_USERS) {
+    const userId = await ensureAuthUser(u.email, u.password, u.name)
+    if (!userId) continue
+
+    // Upsert profile (profiles table — PK is auth.users.id)
+    const { error: pErr } = await supabase.from('profiles').upsert({
       id: userId,
-      email: user.email,
-      name: user.name,
-      portal: DEMO_ADMIN_USERS.includes(user as any) ? 'admin'
-        : DEMO_STAFF_USERS.includes(user as any) ? 'staff' : 'client',
-    })
+      full_name: u.name,
+      role: u.role,
+      department: u.department,
+      job_title: u.jobTitle,
+      is_active: true,
+    }, { onConflict: 'id' })
+    if (pErr) console.error(`    ❌ profiles for ${u.email}:`, pErr.message)
+    else console.log(`  ✅ Admin: ${u.email} (${u.role})`)
+  }
 
-    // Insert portal-specific profile
-    if (DEMO_ADMIN_USERS.includes(user as any)) {
-      const u = user as typeof DEMO_ADMIN_USERS[0]
-      await supabase.from('admin_profiles').upsert({
-        id: userId,
-        role: u.role,
+  // ── Staff Users ──
+  for (const u of DEMO_STAFF_USERS) {
+    const userId = await ensureAuthUser(u.email, u.password, u.name)
+    if (!userId) continue
+
+    // Upsert profile
+    const { error: pErr } = await supabase.from('profiles').upsert({
+      id: userId,
+      full_name: u.name,
+      role: 'staff',
+      department: u.department,
+      is_active: true,
+    }, { onConflict: 'id' })
+    if (pErr) console.error(`    ❌ profiles for ${u.email}:`, pErr.message)
+
+    // Upsert staff_profiles (PK is auto UUID, unique on user_id)
+    // First check if a staff_profile already exists
+    const { data: existingSp } = await supabase.from('staff_profiles')
+      .select('id').eq('user_id', userId).maybeSingle()
+
+    if (existingSp) {
+      // Update existing
+      const { error: spErr } = await supabase.from('staff_profiles').update({
+        employee_id: u.employeeId,
         department: u.department,
-      })
-      console.log(`  ✅ Admin: ${u.email} (${u.role})`)
-    } else if (DEMO_STAFF_USERS.includes(user as any)) {
-      const u = user as typeof DEMO_STAFF_USERS[0]
-      await supabase.from('staff_profiles').upsert({
-        id: userId,
-        role: u.role,
-        department: u.department,
-        staff_code: u.staffCode,
-      })
-      console.log(`  ✅ Staff: ${u.email} (${u.role})`)
+        designation: u.designation,
+        is_active: true,
+      }).eq('user_id', userId)
+      if (spErr) console.error(`    ❌ staff_profiles update for ${u.email}:`, spErr.message)
+      else console.log(`  ✅ Staff: ${u.email} (${u.designation}) — updated`)
     } else {
-      const u = user as typeof DEMO_CLIENT_USERS[0]
-      await supabase.from('client_profiles').upsert({
-        id: userId,
-        risk_profile: u.riskProfile,
-        kyc_status: u.kycStatus,
-        aum: u.aum,
-        city: u.city,
+      // Insert new
+      const { error: spErr } = await supabase.from('staff_profiles').insert({
+        user_id: userId,
+        employee_id: u.employeeId,
+        department: u.department,
+        designation: u.designation,
+        is_active: true,
       })
-      console.log(`  ✅ Client: ${u.email} (${u.kycStatus})`)
+      if (spErr) console.error(`    ❌ staff_profiles insert for ${u.email}:`, spErr.message)
+      else console.log(`  ✅ Staff: ${u.email} (${u.designation}) — created`)
+    }
+  }
+
+  // ── Client Users ──
+  for (const u of DEMO_CLIENT_USERS) {
+    const userId = await ensureAuthUser(u.email, u.password, u.name)
+    if (!userId) continue
+
+    // Upsert profile
+    const { error: pErr } = await supabase.from('profiles').upsert({
+      id: userId,
+      full_name: u.name,
+      role: 'client',
+      city: u.city,
+      is_active: true,
+    }, { onConflict: 'id' })
+    if (pErr) console.error(`    ❌ profiles for ${u.email}:`, pErr.message)
+
+    // Upsert clients table (PK is auto UUID, unique on user_id)
+    const { data: existingClient } = await supabase.from('clients')
+      .select('id').eq('user_id', userId).maybeSingle()
+
+    if (existingClient) {
+      const { error: cErr } = await supabase.from('clients').update({
+        full_name: u.name,
+        email: u.email,
+        city: u.city,
+        kyc_status: u.kycStatus,
+        risk_profile: u.riskProfile,
+        total_invested: u.totalInvested,
+        is_active: true,
+      }).eq('user_id', userId)
+      if (cErr) console.error(`    ❌ clients update for ${u.email}:`, cErr.message)
+      else console.log(`  ✅ Client: ${u.email} (${u.kycStatus}) — updated`)
+    } else {
+      const { error: cErr } = await supabase.from('clients').insert({
+        user_id: userId,
+        full_name: u.name,
+        email: u.email,
+        city: u.city,
+        kyc_status: u.kycStatus,
+        risk_profile: u.riskProfile,
+        total_invested: u.totalInvested,
+        is_active: true,
+      })
+      if (cErr) console.error(`    ❌ clients insert for ${u.email}:`, cErr.message)
+      else console.log(`  ✅ Client: ${u.email} (${u.kycStatus}) — created`)
     }
   }
 }
@@ -206,12 +285,15 @@ async function main() {
   await seedDemoUsers()
   await seedSiteSettings()
 
-  console.log('\n═'.repeat(50))
+  console.log('\n' + '═'.repeat(50))
   console.log('✅ Seeding complete!')
   console.log('\nDemo credentials:')
-  console.log('  Admin: admin@ghlindia.com / admin123')
-  console.log('  Staff: staff@ghlindia.com / staff123')
+  console.log('  Admin:  admin@ghlindia.com / admin123')
+  console.log('  CEO:    ceo@ghlindia.com / ceo123')
+  console.log('  Staff:  staff@ghlindia.com / staff123')
+  console.log('  Field:  field@ghlindia.com / field123')
   console.log('  Client: client@ghlindia.com / client123')
+  console.log('  Client: client2@ghlindia.com / client123')
 }
 
 main().catch(console.error)
