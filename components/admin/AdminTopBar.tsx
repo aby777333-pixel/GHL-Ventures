@@ -1,12 +1,13 @@
 'use client'
 
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, useCallback } from 'react'
 import {
   Menu, Search, Bell, ChevronRight, Clock, X,
   AlertCircle, CheckCircle, Info, AlertTriangle,
 } from 'lucide-react'
 import { MODULE_LABELS } from '@/lib/admin/adminConstants'
-import { fetchNotifications, updateRow } from '@/lib/supabase/adminDataService'
+import { fetchNotifications, updateRow, insertRow } from '@/lib/supabase/adminDataService'
+import { onNewChatSession } from '@/lib/supabase/realtimeSubscriptions'
 import type { AdminModule, NotificationType } from '@/lib/admin/adminTypes'
 import { formatTimeAgo } from '@/lib/admin/adminHooks'
 
@@ -41,6 +42,80 @@ export default function AdminTopBar({ activeModule, activeSubTab, onMenuToggle, 
   useEffect(() => {
     fetchNotifications().then(data => setNotifications(data))
   }, [])
+
+  // Play ring sound for incoming chats (two-tone ascending ring)
+  const playRingSound = useCallback(() => {
+    try {
+      const ctx = new (window.AudioContext || (window as any).webkitAudioContext)()
+      const now = ctx.currentTime
+      const tones = [
+        { freq: 800, start: 0, dur: 0.15 },
+        { freq: 1000, start: 0.18, dur: 0.15 },
+        { freq: 800, start: 0.5, dur: 0.15 },
+        { freq: 1000, start: 0.68, dur: 0.15 },
+      ]
+      tones.forEach(t => {
+        const osc = ctx.createOscillator()
+        const gain = ctx.createGain()
+        osc.connect(gain)
+        gain.connect(ctx.destination)
+        osc.frequency.value = t.freq
+        osc.type = 'sine'
+        gain.gain.setValueAtTime(0.25, now + t.start)
+        gain.gain.exponentialRampToValueAtTime(0.001, now + t.start + t.dur)
+        osc.start(now + t.start)
+        osc.stop(now + t.start + t.dur + 0.05)
+      })
+    } catch {}
+  }, [])
+
+  // Send browser notification for admin
+  const sendAdminBrowserNotification = useCallback((title: string, body: string) => {
+    playRingSound()
+    if (typeof window !== 'undefined' && 'Notification' in window) {
+      if (Notification.permission === 'default') Notification.requestPermission()
+      if (Notification.permission === 'granted') {
+        const notif = new Notification(title, { body, icon: '/icon.svg', tag: 'ghl-admin-chat' })
+        setTimeout(() => notif.close(), 5000)
+        notif.onclick = () => { window.focus(); notif.close() }
+      }
+    }
+  }, [playRingSound])
+
+  // Subscribe to new visitor chat sessions — ring + inject notification
+  useEffect(() => {
+    const unsub = onNewChatSession((payload) => {
+      const session = payload.new as any
+      const visitorName = session.visitor_name || 'Visitor'
+
+      // Inject into local notification state immediately
+      const liveNotif = {
+        id: `chat-${session.id || Date.now()}`,
+        title: '🔔 New Live Chat',
+        message: `${visitorName} is waiting for assistance`,
+        type: 'info',
+        severity: 'high',
+        is_read: false,
+        created_at: new Date().toISOString(),
+        metadata: { module: 'comms' },
+      }
+      setNotifications(prev => [liveNotif, ...prev])
+
+      // Play ring + browser notification
+      sendAdminBrowserNotification('New Live Chat', `${visitorName} is waiting for assistance`)
+
+      // Persist to Supabase (non-blocking)
+      insertRow('notifications', {
+        title: 'New Live Chat',
+        message: `${visitorName} started a chat from the website`,
+        type: 'info',
+        severity: 'high',
+        is_read: false,
+        metadata: { module: 'comms', chat_session_id: session.id },
+      }).catch(() => {}) // silent if table doesn't exist
+    })
+    return () => { unsub?.() }
+  }, [sendAdminBrowserNotification])
 
   const unreadCount = notifications.filter(n => !n.is_read && !readNotifs.has(n.id)).length
 

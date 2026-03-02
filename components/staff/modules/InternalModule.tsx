@@ -1,9 +1,17 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import AdminGlass from '@/components/admin/shared/AdminGlass'
 import AdminBadge from '@/components/admin/shared/AdminBadge'
 import { fetchAnnouncements } from '@/lib/supabase/staffDataService'
+import {
+  getChannels,
+  getChannelMessages,
+  sendInternalMessage,
+  onInternalMessage,
+  type InternalChannel,
+  type InternalMessage,
+} from '@/lib/supabase/internalChatService'
 import type { Announcement } from '@/lib/staff/staffTypes'
 import {
   MessageSquare, Send, Megaphone, FileText, MessageCircle, Heart, Smile,
@@ -49,17 +57,66 @@ function SectionHeader({ title, icon: Icon }: { title: string; icon: IconFC }) {
 }
 
 // ================================================================
-//  1. INTERNAL CHAT
+//  1. INTERNAL CHAT (wired to shared internalChatService)
 // ================================================================
-const CHANNELS: { id: string; name: string; icon: IconFC; unread: number }[] = []
-
-const MOCK_MESSAGES: Record<string, { id: string; sender: string; message: string; timestamp: string }[]> = {}
-
 function ChatView({ showToast }: { showToast: Toast }) {
+  const channels = getChannels()
   const [activeChannel, setActiveChannel] = useState('general')
+  const [messages, setMessages] = useState<InternalMessage[]>([])
   const [msgInput, setMsgInput] = useState('')
-  const messages = MOCK_MESSAGES[activeChannel] || []
-  const channelName = CHANNELS.find(c => c.id === activeChannel)?.name ?? 'channel'
+  const [sending, setSending] = useState(false)
+  const messagesEndRef = useRef<HTMLDivElement>(null)
+  const channelName = channels.find(c => c.id === activeChannel)?.name ?? 'channel'
+
+  // Load messages when channel changes
+  useEffect(() => {
+    let mounted = true
+    getChannelMessages(activeChannel).then(msgs => {
+      if (mounted) setMessages(msgs)
+    })
+    return () => { mounted = false }
+  }, [activeChannel])
+
+  // Subscribe to realtime messages in the active channel
+  useEffect(() => {
+    const unsub = onInternalMessage(activeChannel, (payload) => {
+      const msg = payload.new as InternalMessage
+      setMessages(prev => {
+        if (prev.find(m => m.id === msg.id)) return prev
+        return [...prev, msg]
+      })
+    })
+    return () => { unsub?.() }
+  }, [activeChannel])
+
+  // Auto-scroll to bottom
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+  }, [messages])
+
+  const handleSend = useCallback(async () => {
+    if (!msgInput.trim() || sending) return
+    setSending(true)
+    const text = msgInput.trim()
+    setMsgInput('')
+    // Use a generic staff identity (in production, pull from auth context)
+    const result = await sendInternalMessage(activeChannel, 'staff-user', 'Staff Member', 'staff', text)
+    if (result) {
+      setMessages(prev => {
+        if (prev.find(m => m.id === result.id)) return prev
+        return [...prev, result]
+      })
+      showToast('Message sent!', 'success')
+    }
+    setSending(false)
+  }, [msgInput, sending, activeChannel, showToast])
+
+  const formatTime = (ts: string) => {
+    try {
+      const d = new Date(ts)
+      return d.toLocaleString('en-IN', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', hour12: true })
+    } catch { return ts }
+  }
 
   return (
     <div className="space-y-4">
@@ -69,13 +126,12 @@ function ChatView({ showToast }: { showToast: Toast }) {
           {/* Channel List */}
           <div className="w-52 border-r border-white/[0.06] p-3 space-y-1 shrink-0">
             <p className="text-[10px] font-semibold text-white/40 uppercase tracking-widest px-2 mb-2">Channels</p>
-            {CHANNELS.map(ch => {
-              const Icon = ch.icon
+            {channels.map(ch => {
               const active = activeChannel === ch.id
               return (
                 <button key={ch.id} onClick={() => setActiveChannel(ch.id)}
                   className={`w-full flex items-center gap-2 px-2.5 py-2 rounded-lg text-xs transition-all ${active ? 'bg-teal-500/15 text-teal-300' : 'text-white/50 hover:text-white/80 hover:bg-white/[0.04]'}`}>
-                  <Icon className="w-3.5 h-3.5 shrink-0" />
+                  <Hash className="w-3.5 h-3.5 shrink-0" />
                   <span className="truncate font-medium">{ch.name}</span>
                   {ch.unread > 0 && (
                     <span className="ml-auto bg-teal-500 text-white text-[9px] font-bold rounded-full w-4 h-4 flex items-center justify-center">{ch.unread}</span>
@@ -92,23 +148,32 @@ function ChatView({ showToast }: { showToast: Toast }) {
               <span className="text-[10px] text-white/30 ml-auto">{messages.length} messages</span>
             </div>
             <div className="flex-1 overflow-y-auto px-4 py-3 space-y-3">
+              {messages.length === 0 && (
+                <div className="flex items-center justify-center h-full">
+                  <p className="text-xs text-white/25">No messages yet. Start the conversation!</p>
+                </div>
+              )}
               {messages.map(msg => (
                 <div key={msg.id}>
                   <div className="flex items-baseline gap-2">
-                    <span className="text-xs font-semibold text-teal-300">{msg.sender}</span>
-                    <span className="text-[10px] text-white/25">{msg.timestamp}</span>
+                    <span className="text-xs font-semibold text-teal-300">{msg.user_name}</span>
+                    <span className="text-[10px] text-white/25">{formatTime(msg.created_at)}</span>
+                    {msg.user_role === 'admin' && (
+                      <span className="text-[9px] bg-brand-red/20 text-red-400 px-1.5 py-0.5 rounded font-medium">Admin</span>
+                    )}
                   </div>
                   <p className="text-xs text-white/70 mt-0.5 leading-relaxed">{msg.message}</p>
                 </div>
               ))}
+              <div ref={messagesEndRef} />
             </div>
             <div className="px-4 py-3 border-t border-white/[0.06] flex items-center gap-2">
               <input type="text" value={msgInput} onChange={e => setMsgInput(e.target.value)}
                 placeholder={`Message #${channelName}...`}
                 className="flex-1 bg-white/[0.04] border border-white/[0.08] rounded-lg px-3 py-2 text-xs text-white placeholder-white/25 focus:outline-none focus:border-teal-500/40"
-                onKeyDown={e => { if (e.key === 'Enter' && msgInput.trim()) { showToast('Message sent!', 'success'); setMsgInput('') } }} />
-              <button onClick={() => { msgInput.trim() ? (showToast('Message sent!', 'success'), setMsgInput('')) : showToast('Type a message first', 'info') }}
-                className="bg-teal-500/20 hover:bg-teal-500/30 text-teal-300 p-2 rounded-lg transition-colors">
+                onKeyDown={e => { if (e.key === 'Enter') handleSend() }} />
+              <button onClick={handleSend} disabled={sending}
+                className="bg-teal-500/20 hover:bg-teal-500/30 text-teal-300 p-2 rounded-lg transition-colors disabled:opacity-50">
                 <Send className="w-3.5 h-3.5" />
               </button>
             </div>

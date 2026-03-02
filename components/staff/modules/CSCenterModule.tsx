@@ -103,7 +103,20 @@ const RECENT_CALLS: { id: string; clientName: string; direction: string; duratio
 const VIDEO_REQUESTS: { id: string; clientName: string; scheduledAt: string; purpose: string; status: string }[] = []
 const VIDEO_SESSIONS: { id: string; clientName: string; date: string; duration: string; purpose: string; rating: number }[] = []
 const ACTIVE_CHATS: { id: string; clientName: string; lastMsg: string; time: string; unread: number }[] = []
-const CANNED_RESPONSES: { id: string; label: string; text: string }[] = []
+const CANNED_RESPONSES: { id: string; label: string; text: string }[] = [
+  { id: 'greet', label: 'Welcome Greeting', text: 'Hello! Welcome to GHL India Ventures. How can I assist you today?' },
+  { id: 'kyc-docs', label: 'KYC Documents', text: 'For KYC verification, please keep the following ready:\n• PAN Card\n• Aadhaar Card\n• Address Proof (utility bill / bank statement)\n• Passport-size photograph\n• Cancelled cheque or bank statement' },
+  { id: 'kyc-status', label: 'KYC Status Check', text: 'Let me check your KYC verification status. Could you please share your registered email or client ID?' },
+  { id: 'aif-explain', label: 'AIF Overview', text: 'GHL India Ventures manages SEBI-registered Alternative Investment Funds (AIFs). Our funds focus on real estate, venture capital, and growth equity. The minimum investment is ₹1 Crore as per SEBI guidelines. Would you like more details on a specific fund?' },
+  { id: 'fee-structure', label: 'Fee Structure', text: 'Our fee structure includes:\n• Management Fee: 2% per annum\n• Performance Fee: 20% above hurdle rate\n• Entry Load: Nil\n• Exit Load: Applicable if redeemed before lock-in period\nShall I connect you with a Relationship Manager for detailed terms?' },
+  { id: 'nri-process', label: 'NRI Investment', text: 'NRI investors can invest through:\n• NRE/NRO bank account\n• FEMA-compliant documentation\n• PIS permission from RBI (if applicable)\nPlease share your country of residence and I can guide you through the specific process.' },
+  { id: 'complaint-ack', label: 'Complaint Acknowledgement', text: 'I sincerely apologize for the inconvenience. Your concern has been noted and will be escalated to the relevant team. As per our grievance policy, you will receive a resolution update within 3 working days. Your reference number will be shared shortly.' },
+  { id: 'rm-connect', label: 'Connect to RM', text: 'I will connect you with your dedicated Relationship Manager. Please allow a moment while I check their availability. In the meantime, is there anything else I can help you with?' },
+  { id: 'nav-update', label: 'NAV Update', text: 'NAV updates are published on the 5th of every month for all our AIF schemes. You can view the latest NAV in your Client Dashboard under Portfolio > Fund Performance. Would you like me to check a specific fund?' },
+  { id: 'hold', label: 'Please Hold', text: 'Thank you for your patience. I am looking into this and will get back to you shortly. Please stay on the chat.' },
+  { id: 'closing', label: 'Chat Closing', text: 'Thank you for reaching out to GHL India Ventures! If you have any further questions, feel free to chat with us anytime. Have a great day!' },
+  { id: 'disclaimer', label: 'Risk Disclaimer', text: 'Please note: Investments in AIFs are subject to market risks. Past performance does not guarantee future returns. Please read the Private Placement Memorandum (PPM) carefully before investing. GHL India Ventures is a SEBI-registered AIF manager.' },
+]
 const WHATSAPP_THREADS: { id: string; clientName: string; phone: string; lastMsg: string; time: string; unread: number; status: string }[] = []
 const WA_TEMPLATES: { id: string; name: string; preview: string }[] = []
 const ESCALATION_ITEMS: { id: string; ticketId: string; clientName: string; subject: string; level: number; slaRemaining: string; assignedTo: string; priority: string; escalatedAt: string }[] = []
@@ -798,21 +811,30 @@ function ChatView({ showToast }: Pick<CSCenterModuleProps, 'showToast'>) {
     }
   }, [])
 
-  // Play alert sound helper
+  // Play alert ring sound helper (two-tone ring pattern)
   const playAlertSound = useCallback(() => {
     try {
-      // Short beep notification sound
       const ctx = new (window.AudioContext || (window as any).webkitAudioContext)()
-      const oscillator = ctx.createOscillator()
-      const gainNode = ctx.createGain()
-      oscillator.connect(gainNode)
-      gainNode.connect(ctx.destination)
-      oscillator.frequency.value = 800
-      oscillator.type = 'sine'
-      gainNode.gain.value = 0.3
-      oscillator.start()
-      gainNode.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.5)
-      oscillator.stop(ctx.currentTime + 0.5)
+      const now = ctx.currentTime
+      // Ring pattern: two short ascending tones repeated twice
+      const tones = [
+        { freq: 800, start: 0, dur: 0.15 },
+        { freq: 1000, start: 0.18, dur: 0.15 },
+        { freq: 800, start: 0.5, dur: 0.15 },
+        { freq: 1000, start: 0.68, dur: 0.15 },
+      ]
+      tones.forEach(t => {
+        const osc = ctx.createOscillator()
+        const gain = ctx.createGain()
+        osc.connect(gain)
+        gain.connect(ctx.destination)
+        osc.frequency.value = t.freq
+        osc.type = 'sine'
+        gain.gain.setValueAtTime(0.25, now + t.start)
+        gain.gain.exponentialRampToValueAtTime(0.001, now + t.start + t.dur)
+        osc.start(now + t.start)
+        osc.stop(now + t.start + t.dur + 0.05)
+      })
     } catch {}
   }, [])
 
