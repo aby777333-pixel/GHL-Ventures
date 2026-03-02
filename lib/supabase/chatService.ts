@@ -333,8 +333,6 @@ export async function sendChatMessage(input: {
     return null
   }
 
-  const msg = (Array.isArray(data) ? data[0] : data) as ChatMessage
-
   // Also update last_message_at on the session (the DB trigger handles this,
   // but update status to 'active' if agent sent the first reply)
   if (input.senderType === 'agent') {
@@ -343,7 +341,10 @@ export async function sendChatMessage(input: {
     }).catch(() => {}) // Non-critical — trigger handles the core update
   }
 
-  return msg
+  // The RPC may return the inserted row or null/void — either way,
+  // no error means the message was inserted successfully.
+  const msg = data ? (Array.isArray(data) ? data[0] : data) as ChatMessage : null
+  return msg || { id: crypto.randomUUID(), session_id: input.sessionId, sender_type: input.senderType, sender_name: input.senderName || '', message: input.message, created_at: new Date().toISOString() } as ChatMessage
 }
 
 /** Fetch message history for a chat session.

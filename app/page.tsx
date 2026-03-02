@@ -1083,7 +1083,7 @@ function ContactFormSection() {
             <div className="border-l-4 border-brand-red pl-6 mb-10">
               <AnimatedSection>
                 <span className="eyebrow">Get Started</span>
-                <h2 className="section-title mt-3 text-brand-black">Start Your Investment Journey</h2>
+                <h2 className="section-title mt-3 text-brand-black dark:text-white">Start Your Investment Journey</h2>
                 <p className="text-brand-grey text-base mt-2">
                   Request a private consultation with our investment advisory team.
                 </p>
@@ -1094,7 +1094,7 @@ function ContactFormSection() {
               <form onSubmit={handleSubmit} className="space-y-5">
                 <div className="grid sm:grid-cols-2 gap-5">
                   <div>
-                    <label className="block text-sm font-semibold text-brand-black mb-1.5">Full Name *</label>
+                    <label className="block text-sm font-semibold text-brand-black dark:text-white mb-1.5">Full Name *</label>
                     <input
                       type="text"
                       name="fullName"
@@ -1106,7 +1106,7 @@ function ContactFormSection() {
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-semibold text-brand-black mb-1.5">Email *</label>
+                    <label className="block text-sm font-semibold text-brand-black dark:text-white mb-1.5">Email *</label>
                     <input
                       type="email"
                       name="email"
@@ -1121,7 +1121,7 @@ function ContactFormSection() {
 
                 <div className="grid sm:grid-cols-2 gap-5">
                   <div>
-                    <label className="block text-sm font-semibold text-brand-black mb-1.5">Phone *</label>
+                    <label className="block text-sm font-semibold text-brand-black dark:text-white mb-1.5">Phone *</label>
                     <div className="flex gap-2">
                       <select
                         name="isd"
@@ -1147,7 +1147,7 @@ function ContactFormSection() {
                     </div>
                   </div>
                   <div>
-                    <label className="block text-sm font-semibold text-brand-black mb-1.5">City</label>
+                    <label className="block text-sm font-semibold text-brand-black dark:text-white mb-1.5">City</label>
                     <input
                       type="text"
                       name="city"
@@ -1160,7 +1160,7 @@ function ContactFormSection() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-semibold text-brand-black mb-1.5">Investment Amount *</label>
+                  <label className="block text-sm font-semibold text-brand-black dark:text-white mb-1.5">Investment Amount *</label>
                   <select
                     name="amount"
                     value={form.amount}
@@ -1179,7 +1179,7 @@ function ContactFormSection() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-semibold text-brand-black mb-1.5">Message</label>
+                  <label className="block text-sm font-semibold text-brand-black dark:text-white mb-1.5">Message</label>
                   <textarea
                     name="message"
                     value={form.message}
