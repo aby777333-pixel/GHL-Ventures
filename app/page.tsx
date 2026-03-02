@@ -795,7 +795,7 @@ function BlogSection() {
 
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
           {BLOG_POSTS.slice(0, 6).map((post, i) => {
-            const themes = ['analytics', 'real-estate', 'startup', 'finance', 'compliance', 'hero', 'portfolio', 'team'] as const
+            const themes = ['analytics', 'real-estate', 'startup', 'finance', 'compliance', 'fund', 'portfolio', 'team'] as const
             return (
               <AnimatedSection key={post.slug} delay={i * 120}>
                 <Link href={`/blog#${post.slug}`} className="card group block h-full hover-lift">
