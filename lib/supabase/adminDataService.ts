@@ -92,11 +92,33 @@ export function getUpcomingDeadlines() { return [] }
 export async function fetchClients() {
   if (!isSupabaseConfigured()) return []
   try {
+    // Join with staff_profiles + profiles to get the RM's name
     const { data, error } = await (supabase
       .from('clients')
-      .select('*')
+      .select('*, staff_profiles!clients_assigned_rm_fkey(id, designation, profiles!inner(full_name))')
       .order('created_at', { ascending: false }) as any)
-    if (error || !data) return []
+    if (error || !data) {
+      // Fallback: no join
+      const { data: plain } = await (supabase
+        .from('clients')
+        .select('*')
+        .order('created_at', { ascending: false }) as any)
+      if (!plain) return []
+      return (plain as any[]).map((c: any) => ({
+        id: c.id,
+        name: c.full_name || '',
+        email: c.email || '',
+        phone: c.phone || '',
+        kycStatus: c.kyc_status,
+        accountStatus: c.kyc_status === 'verified' ? 'active' : 'pending',
+        aum: c.total_invested || 0,
+        riskProfile: c.risk_profile,
+        city: c.city,
+        joinDate: c.created_at?.split('T')[0] || '',
+        assignedRM: c.assigned_rm ? 'Assigned' : 'Not assigned',
+        assignedRMId: c.assigned_rm || null,
+      }))
+    }
     return (data as any[]).map((c: any) => ({
       id: c.id,
       name: c.full_name || '',
@@ -108,6 +130,8 @@ export async function fetchClients() {
       riskProfile: c.risk_profile,
       city: c.city,
       joinDate: c.created_at?.split('T')[0] || '',
+      assignedRM: c.staff_profiles?.profiles?.full_name || 'Not assigned',
+      assignedRMId: c.assigned_rm || null,
     }))
   } catch { return [] }
 }
@@ -122,24 +146,45 @@ export async function fetchLeads() {
 }
 
 // ── Employees ───────────────────────────────────────────────
+// NOTE: EmployeeModule now uses getEmployeeDirectory() from employeeService.ts
+// which properly JOINs staff_profiles + profiles. This fallback function
+// corrects the column references for any other callers.
 export async function fetchEmployees() {
   if (!isSupabaseConfigured()) return []
   try {
+    // Try RPC first (properly joins profiles for name/email)
+    const db = supabase as any
+    const { data: rpcData, error: rpcErr } = await db.rpc('get_employee_directory')
+    if (!rpcErr && rpcData && Array.isArray(rpcData)) {
+      return rpcData.map((e: any) => ({
+        id: e.employee_id || e.id,
+        name: e.name || '',
+        email: e.email || '',
+        phone: e.phone || '',
+        role: e.role || '',
+        department: e.department || '',
+        status: e.status || 'active',
+        joinDate: e.join_date || '',
+        reportingTo: e.reporting_to_name || '',
+      }))
+    }
+
+    // Fallback: direct query with correct column names
     const { data, error } = await (supabase
       .from('staff_profiles')
-      .select('*')
+      .select('*, profiles!inner(full_name, phone)')
       .order('created_at', { ascending: false }) as any)
     if (error || !data) return []
     return (data as any[]).map((s: any) => ({
-      id: s.id,
-      name: s.full_name || s.designation || '',
+      id: s.employee_id || s.id,
+      name: s.profiles?.full_name || s.designation || '',
       email: '',
-      phone: '',
-      role_title: s.designation || s.role || '',
+      phone: s.profiles?.phone || '',
+      role: s.designation || '',
       department: s.department || '',
-      status: s.status === 'active' ? 'active' : 'inactive',
-      join_date: s.join_date || s.created_at?.split('T')[0] || '',
-      reporting_to: s.reporting_to || null,
+      status: s.is_active ? 'active' : 'inactive',
+      joinDate: s.date_of_joining || s.created_at?.split('T')[0] || '',
+      reportingTo: s.reporting_to || null,
     }))
   } catch { return [] }
 }

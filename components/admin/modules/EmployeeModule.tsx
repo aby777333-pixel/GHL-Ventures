@@ -13,7 +13,7 @@ import AdminBadge from '../shared/AdminBadge'
 import AdminModal, { ModalButton } from '../shared/AdminModal'
 import AdminKPICard from '../shared/AdminKPICard'
 import AdminEmptyState from '../shared/AdminEmptyState'
-import { fetchEmployees } from '@/lib/supabase/adminDataService'
+import { createEmployee, getEmployeeDirectory, type EmployeeRecord } from '@/lib/supabase/employeeService'
 import { formatDate } from '@/lib/admin/adminHooks'
 import type { Employee, EmployeeStatus, LeaveRequest, AttendanceRecord } from '@/lib/admin/adminTypes'
 import UploadWithFolderPicker from '@/components/shared/UploadWithFolderPicker'
@@ -43,11 +43,23 @@ export default function EmployeeModule({ subTab, navigate, showToast }: Employee
   const activeTab = (EMPLOYEE_TABS.some(t => t.id === subTab) ? subTab : 'directory') as EmployeeTab
   const [employees, setEmployees] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
+  const [creating, setCreating] = useState(false)
 
   const loadData = useCallback(async () => {
     setLoading(true)
-    const data = await fetchEmployees()
-    setEmployees(data)
+    const data = await getEmployeeDirectory()
+    setEmployees(data.map((e: EmployeeRecord) => ({
+      id: e.employee_id || e.id,
+      name: e.name,
+      email: e.email,
+      phone: e.phone,
+      role: e.role,
+      department: e.department,
+      status: e.status as EmployeeStatus,
+      joinDate: e.join_date,
+      reportingTo: e.reporting_to_name || e.reporting_to || '',
+      _raw: e,
+    })))
     setLoading(false)
   }, [])
 
@@ -58,7 +70,7 @@ export default function EmployeeModule({ subTab, navigate, showToast }: Employee
   const [folderPickerOpen, setFolderPickerOpen] = useState(false)
   const [editEmployee, setEditEmployee] = useState<Employee | null>(null)
   const [empForm, setEmpForm] = useState({
-    name: '', email: '', phone: '', department: 'Operations', role: '',
+    name: '', email: '', phone: '', password: '', department: 'Operations', role: 'cs-agent',
     employeeType: 'full-time' as 'full-time' | 'contract' | 'intern',
     reportingTo: '', joiningDate: '', status: 'active' as EmployeeStatus
   })
@@ -67,20 +79,54 @@ export default function EmployeeModule({ subTab, navigate, showToast }: Employee
     if (editEmployee && addEmployeeOpen) {
       setEmpForm({
         name: editEmployee.name, email: editEmployee.email, phone: editEmployee.phone || '',
-        department: editEmployee.department, role: editEmployee.role,
+        password: '', department: editEmployee.department, role: editEmployee.role,
         employeeType: 'full-time', reportingTo: editEmployee.reportingTo || '',
         joiningDate: editEmployee.joinDate || '', status: editEmployee.status
       })
     } else if (!editEmployee && addEmployeeOpen) {
-      setEmpForm({ name: '', email: '', phone: '', department: 'Operations', role: '', employeeType: 'full-time', reportingTo: '', joiningDate: '', status: 'active' })
+      setEmpForm({ name: '', email: '', phone: '', password: '', department: 'Operations', role: 'cs-agent', employeeType: 'full-time', reportingTo: '', joiningDate: '', status: 'active' })
     }
   }, [editEmployee, addEmployeeOpen])
 
-  const handleEmployeeSubmit = () => {
-    showToast(editEmployee ? 'Employee updated successfully' : 'Employee added successfully', 'success')
-    setAddEmployeeOpen(false)
-    setEditEmployee(null)
-    setEmpForm({ name: '', email: '', phone: '', department: 'Operations', role: '', employeeType: 'full-time', reportingTo: '', joiningDate: '', status: 'active' })
+  const handleEmployeeSubmit = async () => {
+    if (editEmployee) {
+      showToast('Employee updated successfully', 'success')
+      setAddEmployeeOpen(false)
+      setEditEmployee(null)
+      return
+    }
+
+    // Create new employee via Netlify function → Supabase Admin API
+    if (!empForm.email || !empForm.password || !empForm.name) {
+      showToast('Please fill in name, email, and password', 'error')
+      return
+    }
+    if (empForm.password.length < 8) {
+      showToast('Password must be at least 8 characters', 'error')
+      return
+    }
+
+    setCreating(true)
+    const result = await createEmployee({
+      email: empForm.email,
+      password: empForm.password,
+      fullName: empForm.name,
+      phone: empForm.phone || undefined,
+      department: empForm.department,
+      designation: empForm.role,
+      dateOfJoining: empForm.joiningDate || undefined,
+    })
+    setCreating(false)
+
+    if (result.success) {
+      showToast(`Employee ${empForm.name} created with GHL credentials (${empForm.email})`, 'success')
+      setAddEmployeeOpen(false)
+      setEditEmployee(null)
+      setEmpForm({ name: '', email: '', phone: '', password: '', department: 'Operations', role: 'cs-agent', employeeType: 'full-time', reportingTo: '', joiningDate: '', status: 'active' })
+      loadData() // Refresh the directory
+    } else {
+      showToast(result.error || 'Failed to create employee', 'error')
+    }
   }
 
   const kpis = useMemo(() => {
@@ -217,24 +263,39 @@ export default function EmployeeModule({ subTab, navigate, showToast }: Employee
                 className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-brand-red/40 focus:ring-1 focus:ring-brand-red/20"
               />
             </div>
-            {/* Email */}
+            {/* Email (GHL official) */}
             <div>
-              <label className="block text-xs font-medium text-gray-400 mb-1.5">Email</label>
+              <label className="block text-xs font-medium text-gray-400 mb-1.5">GHL Email ID</label>
               <input
                 type="email"
                 required
                 value={empForm.email}
                 onChange={(e) => setEmpForm(f => ({ ...f, email: e.target.value }))}
-                placeholder="employee@company.com"
+                placeholder="name@ghlindia.com"
                 className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-brand-red/40 focus:ring-1 focus:ring-brand-red/20"
               />
             </div>
+            {/* Password */}
+            {!editEmployee && (
+              <div>
+                <label className="block text-xs font-medium text-gray-400 mb-1.5">Login Password</label>
+                <input
+                  type="password"
+                  required
+                  value={empForm.password}
+                  onChange={(e) => setEmpForm(f => ({ ...f, password: e.target.value }))}
+                  placeholder="Min 8 characters"
+                  minLength={8}
+                  className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-brand-red/40 focus:ring-1 focus:ring-brand-red/20"
+                />
+                <p className="text-[10px] text-gray-600 mt-1">Employee will use this to login at /staff/login</p>
+              </div>
+            )}
             {/* Phone */}
             <div>
               <label className="block text-xs font-medium text-gray-400 mb-1.5">Phone</label>
               <input
                 type="tel"
-                required
                 value={empForm.phone}
                 onChange={(e) => setEmpForm(f => ({ ...f, phone: e.target.value }))}
                 placeholder="+91 98765 43210"
@@ -257,14 +318,33 @@ export default function EmployeeModule({ subTab, navigate, showToast }: Employee
             {/* Role / Designation */}
             <div>
               <label className="block text-xs font-medium text-gray-400 mb-1.5">Role / Designation</label>
-              <input
-                type="text"
-                required
+              <select
                 value={empForm.role}
                 onChange={(e) => setEmpForm(f => ({ ...f, role: e.target.value }))}
-                placeholder="e.g. Senior Fund Analyst"
                 className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-brand-red/40 focus:ring-1 focus:ring-brand-red/20"
-              />
+              >
+                <optgroup label="Customer Service" className="bg-neutral-900">
+                  <option value="cs-lead" className="bg-neutral-900">CS Lead</option>
+                  <option value="senior-cs-agent" className="bg-neutral-900">Senior CS Agent</option>
+                  <option value="cs-agent" className="bg-neutral-900">CS Agent</option>
+                </optgroup>
+                <optgroup label="Relationship Management" className="bg-neutral-900">
+                  <option value="relationship-manager" className="bg-neutral-900">Relationship Manager</option>
+                  <option value="team-leader" className="bg-neutral-900">Team Leader</option>
+                </optgroup>
+                <optgroup label="Sales & Field" className="bg-neutral-900">
+                  <option value="field-sales-manager" className="bg-neutral-900">Field Sales Manager</option>
+                  <option value="field-sales-executive" className="bg-neutral-900">Field Sales Executive</option>
+                  <option value="site-inspector" className="bg-neutral-900">Site Inspector</option>
+                </optgroup>
+                <optgroup label="Operations" className="bg-neutral-900">
+                  <option value="kyc-officer" className="bg-neutral-900">KYC Officer</option>
+                  <option value="operations-executive" className="bg-neutral-900">Operations Executive</option>
+                  <option value="hr-executive" className="bg-neutral-900">HR Executive</option>
+                  <option value="general-employee" className="bg-neutral-900">General Employee</option>
+                  <option value="intern" className="bg-neutral-900">Intern / Trainee</option>
+                </optgroup>
+              </select>
             </div>
             {/* Employee Type */}
             <div>
@@ -329,8 +409,9 @@ export default function EmployeeModule({ subTab, navigate, showToast }: Employee
           </div>
           <div className="flex justify-end gap-3 mt-6 pt-4 border-t border-white/[0.06]">
             <button type="button" onClick={() => { setAddEmployeeOpen(false); setEditEmployee(null) }} className="px-4 py-2 rounded-xl text-sm font-medium text-gray-400 hover:text-white hover:bg-white/[0.06] transition-colors">Cancel</button>
-            <button type="submit" className="px-5 py-2 rounded-xl text-sm font-medium text-white bg-brand-red hover:bg-red-600 transition-colors">
-              {editEmployee ? 'Update Employee' : 'Add Employee'}
+            <button type="submit" disabled={creating} className="px-5 py-2 rounded-xl text-sm font-medium text-white bg-brand-red hover:bg-red-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2">
+              {creating && <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />}
+              {creating ? 'Creating Account...' : editEmployee ? 'Update Employee' : 'Create Employee Account'}
             </button>
           </div>
         </form>

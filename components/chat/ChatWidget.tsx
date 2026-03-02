@@ -7,7 +7,7 @@ import {
   ArrowRight, Mail, Video, Bot, Headphones, PhoneCall,
   User, Clock, Smile, Meh, Frown
 } from 'lucide-react'
-import { findBestResponse } from '@/lib/chatKnowledge'
+import { findBestResponse, getAIResponse } from '@/lib/chatKnowledge'
 import { PROACTIVE_MESSAGES } from '@/lib/chatProactive'
 import {
   createChatSession,
@@ -369,15 +369,28 @@ export default function ChatWidget() {
     setIsTyping(true)
 
     if (chatMode === 'aria') {
-      const { text: response, quickReplies: qr } = findBestResponse(content)
-      const delay = Math.min(600 + response.length * 8, 2500)
-      setTimeout(() => {
-        const botMsg: ChatMessageUI = { id: uid(), text: response, sender: 'aria', timestamp: new Date() }
-        setMessages(prev => [...prev, botMsg])
-        setQuickReplies(qr)
-        setIsTyping(false)
-        if (!isOpen) setUnreadCount(prev => prev + 1)
-      }, delay)
+      const result = findBestResponse(content)
+
+      if (result.text === '__USE_AI__') {
+        // No keyword match → use Claude AI for a smart response
+        getAIResponse(content).then((aiText) => {
+          const botMsg: ChatMessageUI = { id: uid(), text: aiText, sender: 'aria', timestamp: new Date() }
+          setMessages(prev => [...prev, botMsg])
+          setQuickReplies(result.quickReplies)
+          setIsTyping(false)
+          if (!isOpen) setUnreadCount(prev => prev + 1)
+        })
+      } else {
+        // Knowledge base match — respond quickly
+        const delay = Math.min(600 + result.text.length * 8, 2500)
+        setTimeout(() => {
+          const botMsg: ChatMessageUI = { id: uid(), text: result.text, sender: 'aria', timestamp: new Date() }
+          setMessages(prev => [...prev, botMsg])
+          setQuickReplies(result.quickReplies)
+          setIsTyping(false)
+          if (!isOpen) setUnreadCount(prev => prev + 1)
+        }, delay)
+      }
     } else if (chatMode === 'live') {
       // Send to Supabase — agent will respond in real-time via subscription
       if (chatSession?.id) {

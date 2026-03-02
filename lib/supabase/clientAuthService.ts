@@ -7,6 +7,17 @@
 
 import { supabase, isSupabaseConfigured } from './client'
 
+// Lazy import to avoid circular dependencies
+async function tryAutoAssignRM(userId: string) {
+  try {
+    const { autoAssignRMToClient } = await import('./employeeService')
+    await autoAssignRMToClient(userId)
+  } catch {
+    // Non-blocking — RM assignment is best-effort
+    console.warn('[clientAuth] RM auto-assignment skipped')
+  }
+}
+
 // ── Types ───────────────────────────────────────────────────
 export interface ClientUser {
   id: string
@@ -140,6 +151,8 @@ export async function loginClient(email: string, password: string): Promise<Logi
           email: data.user.email || '',
           phone: data.user.user_metadata?.phone || null,
         } as any)
+        // Auto-assign RM for newly created client record
+        tryAutoAssignRM(data.user.id)
       } catch { /* non-blocking auto-repair */ }
     }
 
@@ -186,6 +199,9 @@ export async function signupClient(
       email,
       phone: phone || null,
     } as any)
+
+    // Auto-assign an RM to the new client (non-blocking)
+    tryAutoAssignRM(data.user.id)
 
     return { success: true }
   } catch (err) {

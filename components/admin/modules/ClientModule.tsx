@@ -14,6 +14,7 @@ import AdminModal, { ModalButton } from '../shared/AdminModal'
 import AdminEmptyState from '../shared/AdminEmptyState'
 import AdminKPICard from '../shared/AdminKPICard'
 import { fetchClients, fetchKYCDocuments } from '@/lib/supabase/adminDataService'
+import { getActiveRMs, assignRMToClient, type ActiveRM } from '@/lib/supabase/employeeService'
 import { formatINR, formatDate } from '@/lib/admin/adminHooks'
 import type { Client, KYCDocument, KYCStatus } from '@/lib/admin/adminTypes'
 import UploadWithFolderPicker from '@/components/shared/UploadWithFolderPicker'
@@ -44,16 +45,31 @@ export default function ClientModule({ subTab, navigate, showToast }: ClientModu
   const [clients, setClients] = useState<any[]>([])
   const [kycDocs, setKycDocs] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
+  const [activeRMs, setActiveRMs] = useState<ActiveRM[]>([])
+  const [assigningRM, setAssigningRM] = useState(false)
 
   const loadData = useCallback(async () => {
     setLoading(true)
-    const [c, k] = await Promise.all([fetchClients(), fetchKYCDocuments()])
+    const [c, k, rms] = await Promise.all([fetchClients(), fetchKYCDocuments(), getActiveRMs()])
     setClients(c)
     setKycDocs(k)
+    setActiveRMs(rms)
     setLoading(false)
   }, [])
 
   useEffect(() => { loadData() }, [loadData])
+
+  const handleAssignRM = async (clientId: string, rmStaffId: string) => {
+    setAssigningRM(true)
+    const result = await assignRMToClient(clientId, rmStaffId)
+    setAssigningRM(false)
+    if (result.success) {
+      showToast('Relationship Manager assigned successfully', 'success')
+      loadData() // Refresh client data
+    } else {
+      showToast(result.error || 'Failed to assign RM', 'error')
+    }
+  }
 
   // ── KPIs ──────────────────────────────────────────────────────
   const kpis = useMemo(() => {
@@ -152,7 +168,7 @@ export default function ClientModule({ subTab, navigate, showToast }: ClientModu
             </>
           }
         >
-          <ClientProfileContent client={selectedClient} />
+          <ClientProfileContent client={selectedClient} activeRMs={activeRMs} onAssignRM={handleAssignRM} />
         </AdminModal>
       )}
 
@@ -204,7 +220,14 @@ export default function ClientModule({ subTab, navigate, showToast }: ClientModu
               </div>
               <div>
                 <label className="block text-xs font-medium text-gray-400 mb-1.5">Assigned RM</label>
-                <input type="text" placeholder="Relationship Manager" className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-brand-red/40 focus:ring-1 focus:ring-brand-red/20" />
+                <select className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-brand-red/40 focus:ring-1 focus:ring-brand-red/20">
+                  <option value="" className="bg-neutral-900">Auto-assign (least loaded)</option>
+                  {activeRMs.map(rm => (
+                    <option key={rm.staff_id} value={rm.staff_id} className="bg-neutral-900">
+                      {rm.full_name} — {rm.designation} ({rm.client_count} clients)
+                    </option>
+                  ))}
+                </select>
               </div>
             </div>
             <div>
@@ -563,7 +586,7 @@ function ClientAnalyticsTab({ clients }: { clients: any[] }) {
 }
 
 // ── Client Profile Modal Content ────────────────────────────────
-function ClientProfileContent({ client }: { client: Client }) {
+function ClientProfileContent({ client, activeRMs, onAssignRM }: { client: Client; activeRMs: ActiveRM[]; onAssignRM: (clientId: string, rmStaffId: string) => void }) {
   const returns = client.investedAmount > 0
     ? ((client.currentValue - client.investedAmount) / client.investedAmount * 100).toFixed(1)
     : '0'
@@ -624,9 +647,25 @@ function ClientProfileContent({ client }: { client: Client }) {
 
       {/* Details */}
       <div className="grid grid-cols-2 gap-4 text-xs">
-        <div>
+        <div className="col-span-2">
           <span className="text-gray-500">Relationship Manager</span>
-          <p className="text-gray-300 mt-0.5">{client.assignedRM}</p>
+          <p className="text-gray-300 mt-0.5 mb-1.5">{client.assignedRM || 'Not assigned'}</p>
+          <select
+            className="w-full bg-white/[0.04] border border-white/[0.08] rounded-lg px-2.5 py-1.5 text-xs text-gray-300 focus:outline-none focus:border-brand-red/40"
+            defaultValue=""
+            onChange={(e) => {
+              if (e.target.value && client.id) {
+                onAssignRM(client.id, e.target.value)
+              }
+            }}
+          >
+            <option value="" className="bg-neutral-900">— Reassign RM —</option>
+            {activeRMs.map((rm: ActiveRM) => (
+              <option key={rm.staff_id} value={rm.staff_id} className="bg-neutral-900">
+                {rm.full_name} — {rm.designation} ({rm.client_count} clients)
+              </option>
+            ))}
+          </select>
         </div>
         <div>
           <span className="text-gray-500">Joined</span>

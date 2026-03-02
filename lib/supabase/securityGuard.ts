@@ -43,32 +43,42 @@ export async function getUserContext(): Promise<UserContext | null> {
     const p = profile as any
     if (!p) return null
 
-    // Determine role based on portal
-    let role = 'viewer'
-    if (p.portal === 'admin') {
-      const { data: adminProfile } = await supabase
-        .from('admin_profiles')
-        .select('role')
-        .eq('id', session.user.id)
-        .single()
-      role = (adminProfile as any)?.role || 'viewer'
-    } else if (p.portal === 'staff') {
+    // Determine portal + role from profiles.role field:
+    // super_admin, admin → admin portal
+    // staff → staff portal (resolve designation from staff_profiles)
+    // client, viewer → client portal
+    const profileRole = p.role || 'client'
+    let portal: Portal = 'client'
+    let role = profileRole
+
+    if (['super_admin', 'admin', 'compliance_officer', 'fund_manager', 'manager',
+         'marketing_manager', 'marketing_executive', 'sales', 'operations', 'hr'].includes(profileRole)) {
+      portal = 'admin'
+      // Map DB role to admin role format (underscores to hyphens)
+      role = profileRole.replace(/_/g, '-')
+    } else {
+      // Check if this user has a staff_profiles row
       const { data: staffProfile } = await supabase
         .from('staff_profiles')
-        .select('role')
-        .eq('id', session.user.id)
+        .select('designation, is_active')
+        .eq('user_id', session.user.id)
         .single()
-      role = (staffProfile as any)?.role || 'general-employee'
-    } else {
-      role = 'client'
+
+      if (staffProfile) {
+        portal = 'staff'
+        role = (staffProfile as any)?.designation || 'general-employee'
+      } else {
+        portal = 'client'
+        role = 'client'
+      }
     }
 
     return {
       id: session.user.id,
-      portal: p.portal as Portal,
+      portal,
       role,
-      name: p.name,
-      email: p.email,
+      name: p.full_name || '',
+      email: session.user.email || '',
     }
   } catch {
     return getUserContextFromLocalStorage()

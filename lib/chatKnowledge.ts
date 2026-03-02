@@ -309,9 +309,48 @@ export function findBestResponse(
     }
   }
 
-  // Fallback
+  // If no good match, try Claude AI (async — returns a flag for the caller)
   return {
-    text: 'That\u2019s a great question! Let me make sure I give you the right answer.\n\nI can help with:\n\u2022 Our **investment routes** (AIF & Co-Invest)\n\u2022 **Fund details** & performance\n\u2022 **How to start** investing\n\u2022 **SEBI registration** & safety\n\nOr I can connect you with a human advisor right away.',
+    text: '__USE_AI__',
     quickReplies: ['Investment Routes', 'How to Invest', 'Safety & Risk', 'Talk to Advisor'],
+  }
+}
+
+// ─── Claude AI Fallback for ARIA ───
+const ARIA_SYSTEM_PROMPT = `You are ARIA, the AI assistant for GHL India Ventures — a SEBI-registered Category II Alternative Investment Fund (AIF) based in Chennai, India. SEBI Registration: IN/AIF2/2425/1517.
+
+Key facts:
+• GHL invests in stressed real estate (NCLT-acquired at 40-60% discounts) and early-stage startups
+• Two routes: Direct AIF (for HNIs) and SEBI Co-Invest Framework (for salaried professionals)
+• Target returns: 15-25% IRR for Direct AIF
+• Office: 2D, Queens Court, No. 6, Montieth Road, Egmore, Chennai – 600 008
+• Phone: +91 44 2843 1043 | +91 72002 55252
+• Email: info@ghlindiaventures.com
+
+Keep responses concise (2-4 sentences), friendly, and professional. Use **bold** for key terms. Always recommend speaking with an advisor for specific investment amounts or personalized advice. Never give specific financial advice. Include the disclaimer when discussing returns.`
+
+export async function getAIResponse(input: string): Promise<string> {
+  try {
+    const response = await fetch('/.netlify/functions/claude-proxy', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        system: ARIA_SYSTEM_PROMPT,
+        messages: [{ role: 'user', content: input }],
+        max_tokens: 300,
+        model: 'claude-3-haiku-20240307', // Fast & cheap for visitor chat
+      }),
+    })
+
+    if (!response.ok) throw new Error('API error')
+
+    const data = await response.json()
+    const text = data?.content?.[0]?.text
+    if (text) return text
+
+    throw new Error('No text in response')
+  } catch {
+    // Final fallback if AI also fails
+    return 'That\u2019s a great question! Let me make sure I give you the right answer.\n\nI can help with:\n\u2022 Our **investment routes** (AIF & Co-Invest)\n\u2022 **Fund details** & performance\n\u2022 **How to start** investing\n\u2022 **SEBI registration** & safety\n\nOr I can connect you with a human advisor right away.'
   }
 }

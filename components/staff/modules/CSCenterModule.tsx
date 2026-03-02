@@ -42,6 +42,7 @@ import {
   onNewContactSubmission,
 } from '@/lib/supabase/realtimeSubscriptions'
 import { fetchLeads } from '@/lib/supabase/leadService'
+import { fetchTickets } from '@/lib/supabase/staffDataService'
 import type { Lead } from '@/lib/admin/adminTypes'
 
 // ════════════════════════════════════════════════════════════════
@@ -132,6 +133,25 @@ const CLIENT_FEEDBACK: { id: string; clientName: string; score: number; channel:
 // ── 1. CS Dashboard ──────────────────────────────────────────
 function CSDashboard({ navigate, showToast }: Pick<CSCenterModuleProps, 'navigate' | 'showToast'>) {
   const [agentStatus, setAgentStatus] = useState<string>('available')
+  const [chatSessions, setChatSessions] = useState<ChatSession[]>([])
+  const [loadingSessions, setLoadingSessions] = useState(true)
+
+  // Load live chat sessions for queue + active panels
+  useEffect(() => {
+    let mounted = true
+    async function load() {
+      const sessions = await getActiveChatSessions()
+      if (!mounted) return
+      setChatSessions(sessions)
+      setLoadingSessions(false)
+    }
+    load()
+    const interval = setInterval(load, 6000)
+    return () => { mounted = false; clearInterval(interval) }
+  }, [])
+
+  const waitingSessions = useMemo(() => chatSessions.filter(s => s.status === 'waiting' || s.status === 'queued'), [chatSessions])
+  const activeSessions = useMemo(() => chatSessions.filter(s => s.status === 'active'), [chatSessions])
 
   const statuses = [
     { key: 'available', label: 'Available', color: 'bg-emerald-500' },
@@ -170,9 +190,9 @@ function CSDashboard({ navigate, showToast }: Pick<CSCenterModuleProps, 'navigat
 
       {/* KPI Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <AdminKPICard title="Tickets Resolved" value={0} subtitle="Today" icon={CheckCircle2} color={ACCENT} delay={0} />
-        <AdminKPICard title="Avg Response Time" value="—" subtitle="Last 1 hour" icon={Clock} color="#8b5cf6" delay={100} />
-        <AdminKPICard title="CSAT Score" value="—" subtitle="This week" icon={Star} color="#f59e0b" delay={200} />
+        <AdminKPICard title="Chats in Queue" value={waitingSessions.length} subtitle="Waiting for agent" icon={Users} color={ACCENT} delay={0} />
+        <AdminKPICard title="Active Sessions" value={activeSessions.length} subtitle="Currently active" icon={CheckCircle2} color="#8b5cf6" delay={100} />
+        <AdminKPICard title="Total Sessions" value={chatSessions.length} subtitle="All channels" icon={MessageCircle} color="#f59e0b" delay={200} />
         <AdminKPICard title="Calls Handled" value={0} subtitle="Today" icon={Phone} color="#ec4899" delay={300} />
       </div>
 
@@ -185,21 +205,29 @@ function CSDashboard({ navigate, showToast }: Pick<CSCenterModuleProps, 'navigat
               <div className="flex items-center gap-2">
                 <Users className="w-4 h-4 text-teal-400" />
                 <h3 className="text-sm font-semibold text-white">Live Queue</h3>
-                <span className="text-[10px] bg-teal-500/20 text-teal-400 px-2 py-0.5 rounded-full font-medium">{QUEUE_ITEMS.length} waiting</span>
+                <span className="text-[10px] bg-teal-500/20 text-teal-400 px-2 py-0.5 rounded-full font-medium">{waitingSessions.length} waiting</span>
               </div>
             </div>
             <div className="divide-y divide-white/[0.04]">
-              {QUEUE_ITEMS.map(q => (
-                <div key={q.id} className="flex items-center gap-3 px-5 py-3 hover:bg-white/[0.02] transition-colors cursor-pointer">
-                  <div className="flex-shrink-0">{channelIcon(q.channel)}</div>
+              {loadingSessions ? (
+                <div className="px-5 py-8 text-center text-xs text-gray-500">Loading queue...</div>
+              ) : waitingSessions.length === 0 ? (
+                <div className="px-5 py-8 text-center text-xs text-gray-500">No visitors waiting — queue is clear</div>
+              ) : waitingSessions.map(q => (
+                <div
+                  key={q.id}
+                  onClick={() => navigate('cs/chat')}
+                  className="flex items-center gap-3 px-5 py-3 hover:bg-white/[0.02] transition-colors cursor-pointer"
+                >
+                  <div className="flex-shrink-0">{channelIcon(q.channel || 'chat')}</div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm text-white font-medium truncate">{q.clientName}</p>
-                    <p className="text-xs text-gray-500 truncate">{q.query}</p>
+                    <p className="text-sm text-white font-medium truncate">{q.visitor_name}</p>
+                    <p className="text-xs text-gray-500 truncate">{q.channel || 'website chat'}</p>
                   </div>
-                  <AdminBadge label={q.priority} variant={priorityVariant(q.priority)} size="sm" />
+                  <AdminBadge label="waiting" variant="warning" size="sm" />
                   <div className="flex items-center gap-1 text-xs text-gray-500">
                     <Clock className="w-3 h-3" />
-                    <span>{q.waitTime}s</span>
+                    <span>{Math.round((Date.now() - new Date(q.created_at).getTime()) / 1000)}s</span>
                   </div>
                 </div>
               ))}
@@ -212,26 +240,32 @@ function CSDashboard({ navigate, showToast }: Pick<CSCenterModuleProps, 'navigat
           <div className="px-5 py-4 border-b border-white/[0.06]">
             <div className="flex items-center gap-2">
               <Zap className="w-4 h-4 text-teal-400" />
-              <h3 className="text-sm font-semibold text-white">My Active Sessions</h3>
+              <h3 className="text-sm font-semibold text-white">Active Sessions</h3>
             </div>
           </div>
           <div className="divide-y divide-white/[0.04]">
-            {ACTIVE_SESSIONS.map(s => (
-              <div key={s.id} className="px-5 py-3 hover:bg-white/[0.02] transition-colors cursor-pointer">
+            {loadingSessions ? (
+              <div className="px-5 py-8 text-center text-xs text-gray-500">Loading...</div>
+            ) : activeSessions.length === 0 ? (
+              <div className="px-5 py-8 text-center text-xs text-gray-500">No active sessions</div>
+            ) : activeSessions.map(s => (
+              <div
+                key={s.id}
+                onClick={() => navigate('cs/chat')}
+                className="px-5 py-3 hover:bg-white/[0.02] transition-colors cursor-pointer"
+              >
                 <div className="flex items-center justify-between mb-1">
                   <div className="flex items-center gap-2">
-                    {channelIcon(s.channel)}
-                    <span className="text-sm text-white font-medium">{s.clientName}</span>
+                    {channelIcon(s.channel || 'chat')}
+                    <span className="text-sm text-white font-medium">{s.visitor_name}</span>
                   </div>
-                  <span className="text-[10px] text-gray-500 font-mono">{s.duration}</span>
+                  <span className="text-[10px] text-gray-500 font-mono">
+                    {new Date(s.last_message_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                  </span>
                 </div>
-                <p className="text-xs text-gray-500 truncate">{s.topic}</p>
+                <p className="text-xs text-gray-500 truncate">{s.channel || 'website chat'}</p>
                 <div className="mt-1">
-                  <span className={`text-[10px] px-1.5 py-0.5 rounded ${
-                    s.sentiment === 'positive' ? 'bg-emerald-500/10 text-emerald-400' :
-                    s.sentiment === 'negative' ? 'bg-red-500/10 text-red-400' :
-                    'bg-gray-500/10 text-gray-400'
-                  }`}>{s.sentiment}</span>
+                  <span className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-400">active</span>
                 </div>
               </div>
             ))}
@@ -244,18 +278,18 @@ function CSDashboard({ navigate, showToast }: Pick<CSCenterModuleProps, 'navigat
         <div className="flex items-center gap-3 flex-wrap">
           <span className="text-xs text-gray-500 font-medium uppercase tracking-wider">Quick Actions</span>
           <button
-            onClick={() => showToast('Accepting next item from queue...', 'info')}
+            onClick={() => navigate('cs/chat')}
             className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-medium bg-teal-500/20 text-teal-400 border border-teal-500/30 hover:bg-teal-500/30 transition-colors"
           >
             <Zap className="w-3.5 h-3.5" />
-            Accept Next
+            Open Live Chat
           </button>
           <button
-            onClick={() => navigate('cs/inbox')}
+            onClick={() => navigate('cs/leads')}
             className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-medium bg-white/[0.04] text-gray-300 border border-white/[0.08] hover:bg-white/[0.08] hover:text-white transition-colors"
           >
-            <Mail className="w-3.5 h-3.5" />
-            Go to Inbox
+            <BellRing className="w-3.5 h-3.5" />
+            View Leads
           </button>
           <button
             onClick={() => navigate('cs/tickets')}
@@ -310,6 +344,13 @@ function UnifiedInbox({ showToast }: Pick<CSCenterModuleProps, 'showToast'>) {
         <div className="lg:col-span-2">
           <AdminGlass padding="p-0">
             <div className="divide-y divide-white/[0.04]">
+              {filtered.length === 0 && (
+                <div className="flex flex-col items-center justify-center py-12 text-center px-4">
+                  <Mail className="w-8 h-8 text-gray-600 mb-3" />
+                  <p className="text-sm text-gray-400">Inbox is empty</p>
+                  <p className="text-xs text-gray-600 mt-1">New conversations will appear here across all channels</p>
+                </div>
+              )}
               {filtered.map(t => (
                 <div
                   key={t.id}
@@ -401,9 +442,42 @@ function UnifiedInbox({ showToast }: Pick<CSCenterModuleProps, 'showToast'>) {
 }
 
 // ── 3. Ticket Management ─────────────────────────────────────
+interface TicketRow { id: string; clientName: string; subject: string; category: string; priority: string; status: string; assignedTo: string; age: string; createdDate: string }
+
 function TicketManagement({ showToast }: Pick<CSCenterModuleProps, 'showToast'>) {
   const [statusTab, setStatusTab] = useState<string>('all')
-  const [selectedTicket, setSelectedTicket] = useState<typeof TICKETS_DATA[0] | null>(null)
+  const [selectedTicket, setSelectedTicket] = useState<TicketRow | null>(null)
+  const [tickets, setTickets] = useState<TicketRow[]>([])
+  const [loading, setLoading] = useState(true)
+
+  // Load tickets from Supabase
+  useEffect(() => {
+    let mounted = true
+    async function load() {
+      setLoading(true)
+      const raw = await fetchTickets()
+      if (!mounted) return
+      const mapped: TicketRow[] = (raw as any[]).map((t: any) => {
+        const created = t.created_at ? new Date(t.created_at) : new Date()
+        const ageDays = Math.max(0, Math.round((Date.now() - created.getTime()) / 86400000))
+        return {
+          id: t.id?.slice(0, 8) || t.id,
+          clientName: t.client_name || t.requester_name || '—',
+          subject: t.subject || t.title || t.description?.slice(0, 60) || '—',
+          category: t.category || 'general',
+          priority: t.priority || 'medium',
+          status: t.status || 'open',
+          assignedTo: t.assigned_to_name || t.assigned_to || '—',
+          age: ageDays > 0 ? `${ageDays}d` : '<1d',
+          createdDate: created.toISOString().split('T')[0],
+        }
+      })
+      setTickets(mapped)
+      setLoading(false)
+    }
+    load()
+    return () => { mounted = false }
+  }, [])
 
   const statusTabs = [
     { key: 'all', label: 'All' },
@@ -415,12 +489,12 @@ function TicketManagement({ showToast }: Pick<CSCenterModuleProps, 'showToast'>)
   ]
 
   const filteredTickets = useMemo(() => {
-    if (statusTab === 'all') return TICKETS_DATA
-    if (statusTab === 'awaiting') return TICKETS_DATA.filter(t => t.status.startsWith('awaiting'))
-    return TICKETS_DATA.filter(t => t.status === statusTab)
-  }, [statusTab])
+    if (statusTab === 'all') return tickets
+    if (statusTab === 'awaiting') return tickets.filter(t => t.status.startsWith('awaiting'))
+    return tickets.filter(t => t.status === statusTab)
+  }, [statusTab, tickets])
 
-  const columns: Column<typeof TICKETS_DATA[0]>[] = [
+  const columns: Column<TicketRow>[] = [
     { key: 'id', label: 'ID', width: '90px', render: (row) => <span className="text-teal-400 font-mono text-xs">{row.id}</span> },
     { key: 'clientName', label: 'Client', render: (row) => <span className="text-white font-medium">{row.clientName}</span> },
     { key: 'subject', label: 'Subject', render: (row) => <span className="text-gray-300 truncate block max-w-[200px]">{row.subject}</span> },
@@ -436,9 +510,9 @@ function TicketManagement({ showToast }: Pick<CSCenterModuleProps, 'showToast'>)
       {/* Status Tabs */}
       <div className="flex items-center gap-2 flex-wrap">
         {statusTabs.map(s => {
-          const count = s.key === 'all' ? TICKETS_DATA.length
-            : s.key === 'awaiting' ? TICKETS_DATA.filter(t => t.status.startsWith('awaiting')).length
-            : TICKETS_DATA.filter(t => t.status === s.key).length
+          const count = s.key === 'all' ? tickets.length
+            : s.key === 'awaiting' ? tickets.filter(t => t.status.startsWith('awaiting')).length
+            : tickets.filter(t => t.status === s.key).length
           return (
             <button
               key={s.key}
@@ -456,18 +530,34 @@ function TicketManagement({ showToast }: Pick<CSCenterModuleProps, 'showToast'>)
         })}
       </div>
 
-      <AdminGlass padding="p-0">
-        <AdminDataTable
-          columns={columns}
-          data={filteredTickets}
-          searchable
-          searchPlaceholder="Search tickets..."
-          searchKeys={['id', 'clientName', 'subject', 'assignedTo']}
-          onRowClick={(row) => setSelectedTicket(row)}
-          exportable
-          title="Support Tickets"
-        />
-      </AdminGlass>
+      {loading ? (
+        <AdminGlass padding="p-0">
+          <div className="flex items-center justify-center py-16">
+            <Loader2 className="w-6 h-6 text-teal-400 animate-spin" />
+          </div>
+        </AdminGlass>
+      ) : tickets.length === 0 ? (
+        <AdminGlass padding="p-0">
+          <div className="flex flex-col items-center justify-center py-16 text-center px-4">
+            <Hash className="w-10 h-10 text-gray-600 mb-3" />
+            <p className="text-sm text-gray-400">No tickets found</p>
+            <p className="text-xs text-gray-600 mt-1">Support tickets will appear here when created</p>
+          </div>
+        </AdminGlass>
+      ) : (
+        <AdminGlass padding="p-0">
+          <AdminDataTable
+            columns={columns}
+            data={filteredTickets}
+            searchable
+            searchPlaceholder="Search tickets..."
+            searchKeys={['id', 'clientName', 'subject', 'assignedTo']}
+            onRowClick={(row) => setSelectedTicket(row)}
+            exportable
+            title="Support Tickets"
+          />
+        </AdminGlass>
+      )}
 
       {/* Ticket Detail Modal */}
       <AdminModal
@@ -542,7 +632,9 @@ function CallsView({ showToast }: Pick<CSCenterModuleProps, 'showToast'>) {
             </div>
           </div>
           <div className="divide-y divide-white/[0.04]">
-            {PENDING_CALLS.map(c => (
+            {PENDING_CALLS.length === 0 ? (
+              <div className="px-5 py-8 text-center text-xs text-gray-500">No pending calls</div>
+            ) : PENDING_CALLS.map(c => (
               <div key={c.id} className="px-5 py-3 flex items-center justify-between">
                 <div>
                   <p className="text-sm text-white font-medium">{c.clientName}</p>
@@ -624,7 +716,9 @@ function CallsView({ showToast }: Pick<CSCenterModuleProps, 'showToast'>) {
           <h3 className="text-sm font-semibold text-white">Recent Calls</h3>
         </div>
         <div className="divide-y divide-white/[0.04]">
-          {RECENT_CALLS.map(c => (
+          {RECENT_CALLS.length === 0 ? (
+            <div className="px-5 py-8 text-center text-xs text-gray-500">No recent call history</div>
+          ) : RECENT_CALLS.map(c => (
             <div key={c.id} className="flex items-center gap-4 px-5 py-3">
               <div className={`p-2 rounded-lg ${c.direction === 'inbound' ? 'bg-teal-500/10' : 'bg-violet-500/10'}`}>
                 {c.direction === 'inbound'
@@ -689,7 +783,9 @@ function VideoView({ showToast }: Pick<CSCenterModuleProps, 'showToast'>) {
             <span className="text-[10px] bg-pink-500/20 text-pink-400 px-2 py-0.5 rounded-full font-medium">{VIDEO_REQUESTS.length}</span>
           </div>
           <div className="divide-y divide-white/[0.04]">
-            {VIDEO_REQUESTS.map(vr => (
+            {VIDEO_REQUESTS.length === 0 ? (
+              <div className="px-5 py-8 text-center text-xs text-gray-500">No pending video requests</div>
+            ) : VIDEO_REQUESTS.map(vr => (
               <div key={vr.id} className="px-5 py-4">
                 <div className="flex items-center justify-between mb-2">
                   <p className="text-sm text-white font-medium">{vr.clientName}</p>
@@ -722,7 +818,9 @@ function VideoView({ showToast }: Pick<CSCenterModuleProps, 'showToast'>) {
             <h3 className="text-sm font-semibold text-white">Recent Video Sessions</h3>
           </div>
           <div className="divide-y divide-white/[0.04]">
-            {VIDEO_SESSIONS.map(vs => (
+            {VIDEO_SESSIONS.length === 0 ? (
+              <div className="px-5 py-8 text-center text-xs text-gray-500">No recent video sessions</div>
+            ) : VIDEO_SESSIONS.map(vs => (
               <div key={vs.id} className="px-5 py-3 flex items-center justify-between">
                 <div>
                   <p className="text-sm text-white font-medium">{vs.clientName}</p>
@@ -903,14 +1001,24 @@ function ChatView({ showToast }: Pick<CSCenterModuleProps, 'showToast'>) {
   const handleSendReply = useCallback(async (text?: string) => {
     const content = text || replyText.trim()
     if (!content || !selectedChat) return
-    await sendChatMessage({
-      sessionId: selectedChat,
-      senderType: 'agent',
-      senderName: 'CS Agent',
-      message: content,
-    })
+    // Clear input immediately for responsive UX (like ChatWidget)
     setReplyText('')
-    showToast('Message sent', 'success')
+    try {
+      const sent = await sendChatMessage({
+        sessionId: selectedChat,
+        senderType: 'agent',
+        senderName: 'CS Agent',
+        message: content,
+      })
+      if (!sent) {
+        showToast('Message may not have been delivered — check connection', 'warning')
+      } else {
+        showToast('Message sent', 'success')
+      }
+    } catch (err) {
+      console.error('[CSCenter] Failed to send reply:', err)
+      showToast('Failed to send message', 'error')
+    }
   }, [replyText, selectedChat, showToast])
 
   // Transfer chat to an RM (Relationship Manager / Team Leader)
@@ -1137,7 +1245,13 @@ function WhatsAppView({ showToast }: Pick<CSCenterModuleProps, 'showToast'>) {
               </button>
             </div>
             <div className="divide-y divide-white/[0.04]">
-              {WHATSAPP_THREADS.map(wa => (
+              {WHATSAPP_THREADS.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-12 text-center px-4">
+                  <Smartphone className="w-8 h-8 text-gray-600 mb-3" />
+                  <p className="text-sm text-gray-400">No WhatsApp conversations</p>
+                  <p className="text-xs text-gray-600 mt-1">WhatsApp Business API integration coming soon</p>
+                </div>
+              ) : WHATSAPP_THREADS.map(wa => (
                 <div
                   key={wa.id}
                   onClick={() => setSelectedWA(wa.id)}
@@ -1175,7 +1289,9 @@ function WhatsAppView({ showToast }: Pick<CSCenterModuleProps, 'showToast'>) {
             </div>
           </div>
           <div className="divide-y divide-white/[0.04]">
-            {WA_TEMPLATES.map(tpl => (
+            {WA_TEMPLATES.length === 0 ? (
+              <div className="px-5 py-8 text-center text-xs text-gray-500">No templates configured yet</div>
+            ) : WA_TEMPLATES.map(tpl => (
               <div
                 key={tpl.id}
                 onClick={() => showToast(`Template "${tpl.name}" selected`, 'info')}
@@ -1205,7 +1321,13 @@ function EscalationsView({ showToast }: Pick<CSCenterModuleProps, 'showToast'>) 
           </div>
         </div>
         <div className="divide-y divide-white/[0.04]">
-          {ESCALATION_ITEMS.map(esc => (
+          {ESCALATION_ITEMS.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-12 text-center px-4">
+              <CheckCircle2 className="w-8 h-8 text-emerald-500/50 mb-3" />
+              <p className="text-sm text-gray-400">No active escalations</p>
+              <p className="text-xs text-gray-600 mt-1">All clear — no tickets are currently escalated</p>
+            </div>
+          ) : ESCALATION_ITEMS.map(esc => (
             <div key={esc.id} className="px-5 py-4">
               <div className="flex items-center justify-between mb-2">
                 <div className="flex items-center gap-2">
@@ -1256,96 +1378,113 @@ function EscalationsView({ showToast }: Pick<CSCenterModuleProps, 'showToast'>) 
 function CSATDashboard() {
   return (
     <div className="space-y-4">
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        {/* CSAT Trend */}
-        <AdminGlass padding="p-0">
-          <div className="px-5 py-4 border-b border-white/[0.06]">
-            <div className="flex items-center gap-2">
-              <TrendingUp className="w-4 h-4 text-teal-400" />
-              <h3 className="text-sm font-semibold text-white">CSAT Score Trend</h3>
+      {CSAT_TREND.length === 0 && CHANNEL_SATISFACTION.length === 0 && CLIENT_FEEDBACK.length === 0 ? (
+        <AdminGlass>
+          <div className="flex flex-col items-center justify-center py-16 text-center">
+            <div className="w-16 h-16 rounded-2xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center mb-4">
+              <Star className="w-8 h-8 text-amber-400" />
             </div>
-          </div>
-          <div className="px-5 py-4">
-            <ResponsiveContainer width="100%" height={220}>
-              <AreaChart data={CSAT_TREND}>
-                <defs>
-                  <linearGradient id="csatGrad" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor={ACCENT} stopOpacity={0.3} />
-                    <stop offset="95%" stopColor={ACCENT} stopOpacity={0} />
-                  </linearGradient>
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" />
-                <XAxis dataKey="month" tick={{ fill: '#6b7280', fontSize: 11 }} axisLine={false} tickLine={false} />
-                <YAxis domain={[3.5, 5]} tick={{ fill: '#6b7280', fontSize: 11 }} axisLine={false} tickLine={false} />
-                <Tooltip
-                  contentStyle={{ background: 'rgba(0,0,0,0.85)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 12, fontSize: 12 } as any}
-                  formatter={((v: number) => [v.toFixed(1), 'Score']) as any}
-                />
-                <Area type="monotone" dataKey="score" stroke={ACCENT} fill="url(#csatGrad)" strokeWidth={2} dot={{ r: 4, fill: ACCENT }} />
-              </AreaChart>
-            </ResponsiveContainer>
+            <h3 className="text-lg font-semibold text-white mb-2">CSAT Analytics</h3>
+            <p className="text-sm text-gray-500 mb-2 max-w-md">
+              Customer satisfaction data will populate here as feedback is collected from resolved tickets and chat sessions.
+            </p>
+            <p className="text-xs text-gray-600">No feedback data available yet</p>
           </div>
         </AdminGlass>
-
-        {/* Per-Channel Satisfaction */}
-        <AdminGlass padding="p-0">
-          <div className="px-5 py-4 border-b border-white/[0.06]">
-            <div className="flex items-center gap-2">
-              <BarChart3 className="w-4 h-4 text-teal-400" />
-              <h3 className="text-sm font-semibold text-white">Satisfaction by Channel</h3>
-            </div>
-          </div>
-          <div className="px-5 py-4">
-            <ResponsiveContainer width="100%" height={220}>
-              <BarChart data={CHANNEL_SATISFACTION} layout="vertical">
-                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" />
-                <XAxis type="number" domain={[0, 5]} tick={{ fill: '#6b7280', fontSize: 11 }} axisLine={false} tickLine={false} />
-                <YAxis dataKey="channel" type="category" tick={{ fill: '#6b7280', fontSize: 11 }} axisLine={false} tickLine={false} width={70} />
-                <Tooltip
-                  contentStyle={{ background: 'rgba(0,0,0,0.85)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 12, fontSize: 12 } as any}
-                  formatter={((v: number) => [v.toFixed(1), 'Score']) as any}
-                />
-                <Bar dataKey="score" radius={[0, 6, 6, 0]} barSize={20}>
-                  {CHANNEL_SATISFACTION.map((entry, index) => (
-                    <Cell key={index} fill={entry.color} />
-                  ))}
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-        </AdminGlass>
-      </div>
-
-      {/* Client Feedback Verbatims */}
-      <AdminGlass padding="p-0">
-        <div className="px-5 py-4 border-b border-white/[0.06]">
-          <div className="flex items-center gap-2">
-            <Star className="w-4 h-4 text-amber-400" />
-            <h3 className="text-sm font-semibold text-white">Client Feedback</h3>
-          </div>
-        </div>
-        <div className="divide-y divide-white/[0.04]">
-          {CLIENT_FEEDBACK.map(fb => (
-            <div key={fb.id} className="px-5 py-4">
-              <div className="flex items-center justify-between mb-2">
+      ) : (
+        <>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            {/* CSAT Trend */}
+            <AdminGlass padding="p-0">
+              <div className="px-5 py-4 border-b border-white/[0.06]">
                 <div className="flex items-center gap-2">
-                  <span className="text-sm text-white font-medium">{fb.clientName}</span>
-                  {channelIcon(fb.channel)}
-                </div>
-                <div className="flex items-center gap-2">
-                  <div className="flex items-center gap-0.5">
-                    {Array.from({ length: 5 }, (_, i) => (
-                      <Star key={i} className={`w-3 h-3 ${i < fb.score ? 'text-amber-400 fill-amber-400' : 'text-gray-700'}`} />
-                    ))}
-                  </div>
-                  <span className="text-[10px] text-gray-600">{fb.date}</span>
+                  <TrendingUp className="w-4 h-4 text-teal-400" />
+                  <h3 className="text-sm font-semibold text-white">CSAT Score Trend</h3>
                 </div>
               </div>
-              <p className="text-xs text-gray-400 italic leading-relaxed">&ldquo;{fb.comment}&rdquo;</p>
+              <div className="px-5 py-4">
+                <ResponsiveContainer width="100%" height={220}>
+                  <AreaChart data={CSAT_TREND}>
+                    <defs>
+                      <linearGradient id="csatGrad" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor={ACCENT} stopOpacity={0.3} />
+                        <stop offset="95%" stopColor={ACCENT} stopOpacity={0} />
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" />
+                    <XAxis dataKey="month" tick={{ fill: '#6b7280', fontSize: 11 }} axisLine={false} tickLine={false} />
+                    <YAxis domain={[3.5, 5]} tick={{ fill: '#6b7280', fontSize: 11 }} axisLine={false} tickLine={false} />
+                    <Tooltip
+                      contentStyle={{ background: 'rgba(0,0,0,0.85)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 12, fontSize: 12 } as any}
+                      formatter={((v: number) => [v.toFixed(1), 'Score']) as any}
+                    />
+                    <Area type="monotone" dataKey="score" stroke={ACCENT} fill="url(#csatGrad)" strokeWidth={2} dot={{ r: 4, fill: ACCENT }} />
+                  </AreaChart>
+                </ResponsiveContainer>
+              </div>
+            </AdminGlass>
+
+            {/* Per-Channel Satisfaction */}
+            <AdminGlass padding="p-0">
+              <div className="px-5 py-4 border-b border-white/[0.06]">
+                <div className="flex items-center gap-2">
+                  <BarChart3 className="w-4 h-4 text-teal-400" />
+                  <h3 className="text-sm font-semibold text-white">Satisfaction by Channel</h3>
+                </div>
+              </div>
+              <div className="px-5 py-4">
+                <ResponsiveContainer width="100%" height={220}>
+                  <BarChart data={CHANNEL_SATISFACTION} layout="vertical">
+                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" />
+                    <XAxis type="number" domain={[0, 5]} tick={{ fill: '#6b7280', fontSize: 11 }} axisLine={false} tickLine={false} />
+                    <YAxis dataKey="channel" type="category" tick={{ fill: '#6b7280', fontSize: 11 }} axisLine={false} tickLine={false} width={70} />
+                    <Tooltip
+                      contentStyle={{ background: 'rgba(0,0,0,0.85)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 12, fontSize: 12 } as any}
+                      formatter={((v: number) => [v.toFixed(1), 'Score']) as any}
+                    />
+                    <Bar dataKey="score" radius={[0, 6, 6, 0]} barSize={20}>
+                      {CHANNEL_SATISFACTION.map((entry, index) => (
+                        <Cell key={index} fill={entry.color} />
+                      ))}
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            </AdminGlass>
+          </div>
+
+          {/* Client Feedback Verbatims */}
+          <AdminGlass padding="p-0">
+            <div className="px-5 py-4 border-b border-white/[0.06]">
+              <div className="flex items-center gap-2">
+                <Star className="w-4 h-4 text-amber-400" />
+                <h3 className="text-sm font-semibold text-white">Client Feedback</h3>
+              </div>
             </div>
-          ))}
-        </div>
-      </AdminGlass>
+            <div className="divide-y divide-white/[0.04]">
+              {CLIENT_FEEDBACK.map(fb => (
+                <div key={fb.id} className="px-5 py-4">
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm text-white font-medium">{fb.clientName}</span>
+                      {channelIcon(fb.channel)}
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-0.5">
+                        {Array.from({ length: 5 }, (_, i) => (
+                          <Star key={i} className={`w-3 h-3 ${i < fb.score ? 'text-amber-400 fill-amber-400' : 'text-gray-700'}`} />
+                        ))}
+                      </div>
+                      <span className="text-[10px] text-gray-600">{fb.date}</span>
+                    </div>
+                  </div>
+                  <p className="text-xs text-gray-400 italic leading-relaxed">&ldquo;{fb.comment}&rdquo;</p>
+                </div>
+              ))}
+            </div>
+          </AdminGlass>
+        </>
+      )}
     </div>
   )
 }

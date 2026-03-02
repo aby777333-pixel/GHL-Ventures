@@ -137,6 +137,12 @@ async function ensureProfile(user: { id: string; email?: string; user_metadata?:
         email: user.email || '',
         phone: meta.phone || null,
       } as any)
+
+      // Auto-assign an RM to the new client (non-blocking)
+      try {
+        const { autoAssignRMToClient } = await import('@/lib/supabase/employeeService')
+        autoAssignRMToClient(user.id)
+      } catch { /* non-blocking */ }
     }
   } catch {
     // Non-blocking — profile creation can fail due to RLS, but auth still works
