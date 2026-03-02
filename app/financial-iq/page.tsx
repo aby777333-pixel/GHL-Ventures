@@ -3,11 +3,6 @@
 import Link from 'next/link'
 import AnimatedSection from '@/components/AnimatedSection'
 import PlaceholderImage from '@/components/PlaceholderImage'
-import dynamic from 'next/dynamic'
-const WebGLVideoPresentation = dynamic(
-  () => import('@/components/webgl/video/WebGLVideoPresentation'),
-  { ssr: false }
-)
 import { FINANCIAL_IQ_ARTICLES } from '@/lib/constants'
 import {
   BookOpen,
@@ -26,9 +21,56 @@ import {
   Plus,
   Minus,
   RotateCcw,
+  Play,
 } from 'lucide-react'
-import { useState } from 'react'
+import { useState, useRef, useCallback } from 'react'
 import SpaceHero from '@/components/SpaceHero'
+
+/* ─── Video Player ─── */
+function FinancialIQVideoPlayer() {
+  const videoRef = useRef<HTMLVideoElement>(null)
+  const [playing, setPlaying] = useState(false)
+  const [started, setStarted] = useState(false)
+
+  const toggle = useCallback(() => {
+    const v = videoRef.current
+    if (!v) return
+    if (v.paused) { v.play(); setPlaying(true); setStarted(true) }
+    else { v.pause(); setPlaying(false) }
+  }, [])
+
+  return (
+    <div className="relative aspect-video rounded-3xl overflow-hidden border border-white/10 bg-black shadow-2xl shadow-brand-red/10">
+      <video
+        ref={videoRef}
+        src="/videos/dreams-come-true.mp4"
+        className="absolute inset-0 w-full h-full object-cover"
+        playsInline
+        preload="metadata"
+        onClick={toggle}
+        onEnded={() => setPlaying(false)}
+      />
+      {!started && (
+        <div className="absolute inset-0 pointer-events-none" style={{
+          background: 'radial-gradient(ellipse at center, transparent 30%, rgba(0,0,0,0.5) 100%)',
+        }} />
+      )}
+      {!playing && (
+        <div className="absolute inset-0 flex items-center justify-center z-30 bg-black/40 cursor-pointer group" onClick={toggle}>
+          <div className="relative">
+            <div className="absolute -inset-5 w-32 h-32 rounded-full bg-brand-red/15 animate-ping" style={{ animationDuration: '2.5s' }} />
+            <div className="relative w-20 h-20 bg-brand-red/20 backdrop-blur-md rounded-full flex items-center justify-center group-hover:bg-brand-red/30 group-hover:scale-110 transition-all duration-300 shadow-2xl shadow-brand-red/30 border border-brand-red/20">
+              <Play className="w-8 h-8 text-brand-red ml-1" />
+            </div>
+          </div>
+          <p className="absolute bottom-6 text-white/40 text-xs tracking-widest uppercase">
+            {started ? 'Resume Playback' : 'Watch Investment Overview'}
+          </p>
+        </div>
+      )}
+    </div>
+  )
+}
 
 /* ─── Glossary Data ─── */
 const GLOSSARY_TERMS: { term: string; definition: string }[] = [
@@ -280,7 +322,7 @@ export default function FinancialIQPage() {
 
           <AnimatedSection delay={100}>
             <div className="max-w-4xl mx-auto">
-              <WebGLVideoPresentation className="shadow-2xl shadow-brand-red/10" />
+              <FinancialIQVideoPlayer />
             </div>
           </AnimatedSection>
         </div>
