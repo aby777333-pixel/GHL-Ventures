@@ -593,3 +593,19 @@ export async function getLeadSourceTracking(leadId: string): Promise<Record<stri
     return null
   }
 }
+
+// ── Delete Lead ─────────────────────────────────────────────
+
+export async function deleteLead(leadId: string): Promise<boolean> {
+  if (!isSupabaseConfigured()) return true
+
+  try {
+    const { error } = await supabase
+      .from('leads' as any)
+      .delete()
+      .eq('id', leadId)
+    return !error
+  } catch {
+    return false
+  }
+}

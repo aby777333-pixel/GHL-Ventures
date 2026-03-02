@@ -6,7 +6,7 @@ import {
   Calendar, ArrowUpRight, ArrowDownRight, Eye, MoreHorizontal,
   Trophy, Zap, Filter, Plus, Clock, CheckCircle2,
   Star, BarChart3, Percent, DollarSign, UserPlus, Upload,
-  ArrowRightLeft, Loader2, RefreshCw,
+  ArrowRightLeft, Loader2, RefreshCw, Trash2,
 } from 'lucide-react'
 import AdminGlass from '../shared/AdminGlass'
 import AdminDataTable, { type Column } from '../shared/AdminDataTable'
@@ -17,7 +17,7 @@ import AdminEmptyState from '../shared/AdminEmptyState'
 import { formatINR, formatDate } from '@/lib/admin/adminHooks'
 import type { Lead, LeadStage, LeadSource, Commission } from '@/lib/admin/adminTypes'
 import UploadWithFolderPicker from '@/components/shared/UploadWithFolderPicker'
-import { createLead, fetchLeads } from '@/lib/supabase/leadService'
+import { createLead, fetchLeads, deleteLead } from '@/lib/supabase/leadService'
 import { onNewLead } from '@/lib/supabase/realtimeSubscriptions'
 
 // ── Sub-tabs ─────────────────────────────────────────────────────
@@ -152,6 +152,19 @@ export default function SalesModule({ subTab, navigate, showToast }: SalesModule
     }
   }
 
+  // ── Delete Lead ────────────────────────────────────────────────
+  const handleDeleteLead = useCallback(async (lead: Lead) => {
+    if (!window.confirm(`Delete lead "${lead.name}"? This cannot be undone.`)) return
+    const ok = await deleteLead(lead.id)
+    if (ok) {
+      showToast(`Lead "${lead.name}" deleted`, 'success')
+      if (selectedLead?.id === lead.id) { setLeadModalOpen(false); setSelectedLead(null) }
+      loadLeads()
+    } else {
+      showToast('Failed to delete lead', 'error')
+    }
+  }, [showToast, selectedLead, loadLeads])
+
   // ── KPIs ──────────────────────────────────────────────────────
   const kpis = useMemo(() => {
     const pipeline = leads.filter(l => l.stage !== 'won' && l.stage !== 'lost')
@@ -235,8 +248,8 @@ export default function SalesModule({ subTab, navigate, showToast }: SalesModule
 
       {/* Tab Content */}
       <div className="admin-tab-switch">
-        {activeTab === 'pipeline' && <PipelineTab leads={leads} onViewLead={(l) => { setSelectedLead(l); setLeadModalOpen(true) }} showToast={showToast} />}
-        {activeTab === 'leads' && <LeadListTab leads={leads} onViewLead={(l) => { setSelectedLead(l); setLeadModalOpen(true) }} showToast={showToast} />}
+        {activeTab === 'pipeline' && <PipelineTab leads={leads} onViewLead={(l) => { setSelectedLead(l); setLeadModalOpen(true) }} onDeleteLead={handleDeleteLead} showToast={showToast} />}
+        {activeTab === 'leads' && <LeadListTab leads={leads} onViewLead={(l) => { setSelectedLead(l); setLeadModalOpen(true) }} onDeleteLead={handleDeleteLead} showToast={showToast} />}
         {activeTab === 'commissions' && <CommissionsTab showToast={showToast} />}
         {activeTab === 'leaderboard' && <LeaderboardTab leads={leads} />}
       </div>
@@ -250,6 +263,9 @@ export default function SalesModule({ subTab, navigate, showToast }: SalesModule
           subtitle={`${selectedLead.id} • ${STAGE_CONFIG[selectedLead.stage].label} • AI Score: ${selectedLead.aiScore}`}
           footer={
             <>
+              <ModalButton variant="danger" onClick={() => handleDeleteLead(selectedLead)}>
+                <Trash2 className="w-3.5 h-3.5 mr-1.5" /> Delete
+              </ModalButton>
               <ModalButton onClick={() => { setLeadModalOpen(false); setSelectedLead(null) }}>Close</ModalButton>
               <ModalButton variant="primary" onClick={() => { setLeadModalOpen(false); setSelectedLead(null); setAddLeadOpen(true) }}>Edit Lead</ModalButton>
             </>
@@ -363,7 +379,7 @@ export default function SalesModule({ subTab, navigate, showToast }: SalesModule
 }
 
 // ── Pipeline (Kanban-style) ─────────────────────────────────────
-function PipelineTab({ leads, onViewLead, showToast }: { leads: Lead[]; onViewLead: (l: Lead) => void; showToast: (msg: string, type?: 'success' | 'error' | 'info' | 'warning') => void }) {
+function PipelineTab({ leads, onViewLead, onDeleteLead, showToast }: { leads: Lead[]; onViewLead: (l: Lead) => void; onDeleteLead: (l: Lead) => void; showToast: (msg: string, type?: 'success' | 'error' | 'info' | 'warning') => void }) {
   const stages: LeadStage[] = ['new', 'contacted', 'qualified', 'proposal', 'negotiation', 'won', 'lost']
 
   const grouped = useMemo(() => {
@@ -401,7 +417,12 @@ function PipelineTab({ leads, onViewLead, showToast }: { leads: Lead[]; onViewLe
                   >
                     <div className="flex items-start justify-between mb-2">
                       <p className="text-xs font-medium text-white">{lead.name}</p>
-                      <Eye className="w-3 h-3 text-gray-600 opacity-0 group-hover:opacity-100 transition-opacity" />
+                      <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <Eye className="w-3 h-3 text-gray-600" />
+                        <button onClick={(e) => { e.stopPropagation(); onDeleteLead(lead) }} className="p-0.5 rounded hover:bg-red-500/20 transition-colors">
+                          <Trash2 className="w-3 h-3 text-gray-600 hover:text-red-400" />
+                        </button>
+                      </div>
                     </div>
                     <p className="text-sm font-bold text-white">{formatINR(lead.value)}</p>
                     <div className="flex items-center justify-between mt-2">
@@ -435,7 +456,7 @@ function PipelineTab({ leads, onViewLead, showToast }: { leads: Lead[]; onViewLe
 }
 
 // ── Lead List ───────────────────────────────────────────────────
-function LeadListTab({ leads, onViewLead, showToast }: { leads: Lead[]; onViewLead: (l: Lead) => void; showToast: (msg: string, type?: 'success' | 'error' | 'info' | 'warning') => void }) {
+function LeadListTab({ leads, onViewLead, onDeleteLead, showToast }: { leads: Lead[]; onViewLead: (l: Lead) => void; onDeleteLead: (l: Lead) => void; showToast: (msg: string, type?: 'success' | 'error' | 'info' | 'warning') => void }) {
   const columns: Column<Lead>[] = [
     {
       key: 'name',
@@ -498,14 +519,22 @@ function LeadListTab({ leads, onViewLead, showToast }: { leads: Lead[]; onViewLe
       key: 'actions',
       label: '',
       sortable: false,
-      width: '50px',
+      width: '80px',
       render: (row) => (
-        <button
-          onClick={(e) => { e.stopPropagation(); onViewLead(row) }}
-          className="p-1.5 rounded-lg hover:bg-white/[0.06] text-gray-500 hover:text-white transition-colors"
-        >
-          <Eye className="w-4 h-4" />
-        </button>
+        <div className="flex items-center gap-1">
+          <button
+            onClick={(e) => { e.stopPropagation(); onViewLead(row) }}
+            className="p-1.5 rounded-lg hover:bg-white/[0.06] text-gray-500 hover:text-white transition-colors"
+          >
+            <Eye className="w-4 h-4" />
+          </button>
+          <button
+            onClick={(e) => { e.stopPropagation(); onDeleteLead(row) }}
+            className="p-1.5 rounded-lg hover:bg-red-500/20 text-gray-500 hover:text-red-400 transition-colors"
+          >
+            <Trash2 className="w-4 h-4" />
+          </button>
+        </div>
       ),
     },
   ]
