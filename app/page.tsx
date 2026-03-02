@@ -554,7 +554,12 @@ function WhoWeAre() {
         <div className="grid lg:grid-cols-2 gap-10 items-center">
           {/* Left: Image placeholder */}
           <AnimatedSection direction="left">
-            <PlaceholderImage theme="team" aspectRatio="aspect-[4/3]" label="GHL India Ventures Team / Chennai Office" className="rounded-3xl" />
+            <div className="relative aspect-[4/3] bg-gray-900 overflow-hidden card-img-zoom group/img rounded-3xl">
+              <img src="/images/home/team-professionals.jpg" alt="GHL India Ventures Team / Chennai Office" className="w-full h-full object-cover transition-transform duration-500" loading="lazy" />
+              <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent p-4 translate-y-1 opacity-90 group-hover/img:translate-y-0 group-hover/img:opacity-100 transition-all duration-300">
+                <p className="text-white/90 text-xs font-medium">GHL India Ventures Team / Chennai Office</p>
+              </div>
+            </div>
           </AnimatedSection>
 
           {/* Right: Stats + copy */}
@@ -668,21 +673,25 @@ function WhyChooseUs() {
       title: 'SEBI-Regulated Trust',
       desc: 'Our registration as a Category II Alternative Investment Fund (IN/AIF2/2425/1517) guarantees full regulatory compliance, third-party audits, and custodial safeguards for every rupee you commit.',
       icon: Shield,
+      img: '/images/home/sebi-regulated.jpg',
     },
     {
       title: 'Diversified Portfolio',
       desc: 'We balance high-conviction plays in stressed real estate recovery with early-stage startup exposure, offering built-in diversification across asset types, geographies, and time horizons.',
       icon: BarChart3,
+      img: '/images/home/diversified-portfolio.jpg',
     },
     {
       title: 'Expert-Led Strategy',
       desc: 'Our investment committee brings 25+ years of experience spanning private equity, structured finance, and entrepreneurial growth. Every decision is backed by rigorous analysis.',
       icon: Target,
+      img: '/images/home/expert-strategy.jpg',
     },
     {
       title: 'Investor-First Approach',
       desc: 'Quarterly NAV reporting, transparent fee structures, dedicated relationship managers, and a governance framework that places investor interests at the absolute centre of every decision.',
       icon: Users,
+      img: '/images/home/investor-first.jpg',
     },
   ]
 
@@ -704,7 +713,12 @@ function WhyChooseUs() {
               >
                 {/* Image placeholder */}
                 <AnimatedSection direction={isEven ? 'left' : 'right'} className={isEven ? '' : 'lg:order-2'}>
-                  <PlaceholderImage theme={i === 0 ? 'compliance' : i === 1 ? 'portfolio' : i === 2 ? 'finance' : 'team'} aspectRatio="aspect-[4/3]" label={f.title} className="rounded-3xl" />
+                  <div className="relative aspect-[4/3] bg-gray-900 overflow-hidden card-img-zoom group/img rounded-3xl">
+                    <img src={f.img} alt={f.title} className="w-full h-full object-cover transition-transform duration-500" loading="lazy" />
+                    <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent p-4 translate-y-1 opacity-90 group-hover/img:translate-y-0 group-hover/img:opacity-100 transition-all duration-300">
+                      <p className="text-white/90 text-xs font-medium">{f.title}</p>
+                    </div>
+                  </div>
                 </AnimatedSection>
 
                 {/* Text */}
