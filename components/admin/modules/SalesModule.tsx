@@ -436,6 +436,9 @@ function PipelineTab({ leads, onViewLead, onDeleteLead, showToast }: { leads: Le
                         }`}>{lead.aiScore}</span>
                       </div>
                     </div>
+                    {lead.notes && (
+                      <p className="text-[10px] text-gray-500 mt-1.5 line-clamp-2 italic">&ldquo;{lead.notes}&rdquo;</p>
+                    )}
                     {lead.probability > 0 && (
                       <div className="mt-2 h-1 bg-white/[0.04] rounded-full overflow-hidden">
                         <div className="h-full bg-brand-red/60 rounded-full" style={{ width: `${lead.probability}%` }} />
@@ -511,6 +514,13 @@ function LeadListTab({ leads, onViewLead, onDeleteLead, showToast }: { leads: Le
       key: 'source',
       label: 'Source',
       render: (row) => <span className="text-xs text-gray-400 capitalize">{row.source.replace('-', ' ')}</span>,
+    },
+    {
+      key: 'notes',
+      label: 'Message',
+      render: (row) => row.notes
+        ? <span className="text-xs text-gray-400 line-clamp-2 max-w-[200px]" title={row.notes}>{row.notes}</span>
+        : <span className="text-xs text-gray-600">—</span>,
     },
     {
       key: 'lastTouched',

@@ -17,6 +17,7 @@ export function generateStaticParams() {
     { tab: ['messages'] },
     { tab: ['support'] },
     { tab: ['calculators'] },
+    { tab: ['ai-advisor'] },
     { tab: ['referrals'] },
     { tab: ['profile'] },
     { tab: ['settings'] },
