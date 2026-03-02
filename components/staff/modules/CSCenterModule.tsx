@@ -24,6 +24,7 @@ import {
   getActiveChatSessions,
   getChatMessages,
   sendChatMessage,
+  transferChatToRM,
   getRMRequests,
   acceptRMRequest,
   completeRMRequest,
@@ -164,29 +165,6 @@ function CSDashboard({ navigate, showToast }: Pick<CSCenterModuleProps, 'navigat
               </button>
             ))}
           </div>
-        </div>
-      </AdminGlass>
-
-      {/* Tawk.to Live Chat Dashboard */}
-      <AdminGlass padding="p-4">
-        <div className="flex items-center justify-between flex-wrap gap-3">
-          <div className="flex items-center gap-3">
-            <MessageCircle className="w-5 h-5 text-emerald-400" />
-            <div>
-              <span className="text-sm font-semibold text-white">Tawk.to Live Chat</span>
-              <p className="text-[11px] text-gray-500">Respond to website visitors in real-time</p>
-            </div>
-          </div>
-          <a
-            href="https://dashboard.tawk.to/"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-semibold text-white bg-emerald-500/20 border border-emerald-500/30 hover:bg-emerald-500/30 transition-colors"
-          >
-            <Globe className="w-4 h-4" />
-            Open Live Chat Dashboard
-            <ArrowUpRight className="w-3.5 h-3.5" />
-          </a>
         </div>
       </AdminGlass>
 
@@ -777,7 +755,9 @@ function ChatView({ showToast }: Pick<CSCenterModuleProps, 'showToast'>) {
   const [rmRequests, setRmRequests] = useState<RMRequest[]>([])
   const [replyText, setReplyText] = useState('')
   const [loadingSessions, setLoadingSessions] = useState(true)
+  const [transferring, setTransferring] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
+  const messagesContainerRef = useRef<HTMLDivElement>(null)
 
   // Load active chat sessions from Supabase + poll every 5s as Realtime fallback
   useEffect(() => {
@@ -911,9 +891,12 @@ function ChatView({ showToast }: Pick<CSCenterModuleProps, 'showToast'>) {
     return () => { unsub?.() }
   }, [selectedChat, sendBrowserNotification])
 
-  // Auto-scroll messages
+  // Auto-scroll messages — scroll within the container only, not the page
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+    const container = messagesContainerRef.current
+    if (container) {
+      container.scrollTop = container.scrollHeight
+    }
   }, [chatMessages])
 
   // Send a reply as agent
@@ -929,6 +912,33 @@ function ChatView({ showToast }: Pick<CSCenterModuleProps, 'showToast'>) {
     setReplyText('')
     showToast('Message sent', 'success')
   }, [replyText, selectedChat, showToast])
+
+  // Transfer chat to an RM (Relationship Manager / Team Leader)
+  const handleTransferToRM = useCallback(async () => {
+    if (!selectedChat || transferring) return
+    setTransferring(true)
+
+    // First send the canned "connecting to RM" message
+    await sendChatMessage({
+      sessionId: selectedChat,
+      senderType: 'agent',
+      senderName: 'CS Agent',
+      message: 'I will connect you with your dedicated Relationship Manager. Please allow a moment while I check their availability.',
+    })
+
+    // Transfer the session to an available RM
+    const { success, rmName } = await transferChatToRM(selectedChat, 'CS Agent')
+    setTransferring(false)
+
+    if (success) {
+      showToast(`Chat transferred to ${rmName || 'Relationship Manager'}`, 'success')
+      // Reload sessions to reflect the transfer
+      const sessions = await getActiveChatSessions()
+      setChatSessions(sessions)
+    } else {
+      showToast('No RM available right now. Please try again later.', 'warning')
+    }
+  }, [selectedChat, transferring, showToast])
 
   const selectedSession = chatSessions.find(s => s.id === selectedChat)
 
@@ -1005,7 +1015,7 @@ function ChatView({ showToast }: Pick<CSCenterModuleProps, 'showToast'>) {
               Canned Responses
             </button>
           </div>
-          <div className="px-5 py-4 space-y-3 min-h-[350px] max-h-[400px] overflow-y-auto">
+          <div ref={messagesContainerRef} className="px-5 py-4 space-y-3 min-h-[350px] max-h-[400px] overflow-y-auto">
             {chatMessages.length === 0 && selectedChat ? (
               <div className="flex items-center justify-center h-full text-xs text-gray-500 py-20">
                 No messages yet. The visitor is waiting for a response.
@@ -1073,11 +1083,27 @@ function ChatView({ showToast }: Pick<CSCenterModuleProps, 'showToast'>) {
           {CANNED_RESPONSES.map(cr => (
             <div
               key={cr.id}
-              onClick={() => { setReplyText(cr.text); showToast(`Quick reply "${cr.label}" inserted`, 'info') }}
-              className="px-4 py-3 cursor-pointer hover:bg-white/[0.02] transition-colors"
+              onClick={() => {
+                if (cr.id === 'rm-connect') {
+                  // "Connect to RM" triggers an actual transfer
+                  handleTransferToRM()
+                } else {
+                  setReplyText(cr.text)
+                  showToast(`Quick reply "${cr.label}" inserted`, 'info')
+                }
+              }}
+              className={`px-4 py-3 cursor-pointer transition-colors ${
+                cr.id === 'rm-connect'
+                  ? 'hover:bg-amber-500/[0.08] border-l-2 border-l-amber-500/40'
+                  : 'hover:bg-white/[0.02]'
+              } ${cr.id === 'rm-connect' && transferring ? 'opacity-50 pointer-events-none' : ''}`}
             >
-              <p className="text-xs text-teal-400 font-medium mb-1">{cr.label}</p>
-              <p className="text-[11px] text-gray-500 line-clamp-2">{cr.text}</p>
+              <p className={`text-xs font-medium mb-1 ${cr.id === 'rm-connect' ? 'text-amber-400' : 'text-teal-400'}`}>
+                {cr.id === 'rm-connect' && transferring ? 'Transferring...' : cr.label}
+              </p>
+              <p className="text-[11px] text-gray-500 line-clamp-2">
+                {cr.id === 'rm-connect' ? 'Transfer this chat to an available Relationship Manager' : cr.text}
+              </p>
             </div>
           ))}
         </div>

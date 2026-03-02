@@ -289,12 +289,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                 <CookieConsent />
                 <SocialProofToasts />
                 <LiveVisitorCount />
-                {/* Elfsight All-in-One Chat */}
-                <Script
-                  src="https://elfsightcdn.com/platform.js"
-                  strategy="afterInteractive"
-                />
-                <div className="elfsight-app-941b3074-36aa-4451-a4e2-be0f9b51ead0" data-elfsight-app-lazy></div>
+                {/* Third-party chat removed — using built-in GHL ChatWidget instead */}
               </MainSiteOnly>
               {/* Floating widgets — always visible (useful for staff telecallers & CS) */}
               <VideoCallWidget />

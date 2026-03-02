@@ -241,6 +241,42 @@ export async function reassignChat(sessionId: string, newRepId: string): Promise
   return true
 }
 
+/** Transfer a chat session to an RM (Relationship Manager).
+ *  Called when agent clicks "Connect to RM" — finds an available RM
+ *  (team leader / relationship manager), reassigns the session,
+ *  and sends a system message. */
+export async function transferChatToRM(sessionId: string, agentName: string): Promise<{ success: boolean; rmName: string | null }> {
+  if (!isSupabaseConfigured()) return { success: false, rmName: null }
+
+  // Find an available RM (team leader or relationship manager)
+  const { data: rmData, error: rmErr } = await db.rpc('find_available_rm_for_transfer')
+
+  if (rmErr || !rmData) {
+    console.error('[chatService] find_available_rm_for_transfer failed:', rmErr?.message)
+    return { success: false, rmName: null }
+  }
+
+  const rm = Array.isArray(rmData) ? rmData[0] : rmData
+  if (!rm || !rm.user_id) {
+    return { success: false, rmName: null }
+  }
+
+  // Reassign the session to the RM
+  const { error: updateErr } = await db.rpc('transfer_chat_to_rm', {
+    p_session_id: sessionId,
+    p_rm_user_id: rm.user_id,
+    p_agent_name: agentName,
+    p_rm_name: rm.full_name,
+  })
+
+  if (updateErr) {
+    console.error('[chatService] transfer_chat_to_rm failed:', updateErr.message)
+    return { success: false, rmName: null }
+  }
+
+  return { success: true, rmName: rm.full_name }
+}
+
 /** Resolve/close a chat session */
 export async function resolveChatSession(sessionId: string, rating?: string): Promise<boolean> {
   if (!isSupabaseConfigured()) return true
@@ -282,57 +318,46 @@ export async function sendChatMessage(input: {
     return mock
   }
 
-  // For visitor/system messages, use RPC to avoid RLS blocking the
-  // select-after-insert. Agent messages use direct insert (they're authenticated).
-  if (input.senderType === 'visitor' || input.senderType === 'system' || input.senderType === 'bot') {
-    const { data, error } = await db.rpc('send_visitor_chat_message', {
-      p_session_id: input.sessionId,
-      p_sender_type: input.senderType,
-      p_sender_name: input.senderName || null,
-      p_message: input.message,
-    })
-
-    if (error) {
-      console.error('[chatService] RPC send_visitor_chat_message failed:', error.message)
-      return null
-    }
-
-    const msg = (Array.isArray(data) ? data[0] : data) as ChatMessage
-    return msg
-  }
-
-  // Agent messages — authenticated staff, RLS allows
-  const { data, error } = await db
-    .from('chat_messages')
-    .insert({
-      session_id: input.sessionId,
-      sender_type: input.senderType,
-      sender_id: input.senderId || null,
-      sender_name: input.senderName || null,
-      message: input.message,
-    })
-    .select()
-    .single()
+  // All messages (visitor, agent, system, bot) go through the SECURITY DEFINER
+  // RPC to bypass RLS. Direct inserts fail when the staff user's SELECT policy
+  // blocks the RETURNING clause, rolling back the INSERT entirely.
+  const { data, error } = await db.rpc('send_visitor_chat_message', {
+    p_session_id: input.sessionId,
+    p_sender_type: input.senderType,
+    p_sender_name: input.senderName || null,
+    p_message: input.message,
+  })
 
   if (error) {
-    console.error('[chatService] Failed to send message:', error.message)
+    console.error('[chatService] RPC send_visitor_chat_message failed:', error.message)
     return null
   }
 
-  return data as ChatMessage
+  const msg = (Array.isArray(data) ? data[0] : data) as ChatMessage
+
+  // Also update last_message_at on the session (the DB trigger handles this,
+  // but update status to 'active' if agent sent the first reply)
+  if (input.senderType === 'agent') {
+    await db.rpc('mark_chat_session_active', {
+      p_session_id: input.sessionId,
+    }).catch(() => {}) // Non-critical — trigger handles the core update
+  }
+
+  return msg
 }
 
-/** Fetch message history for a chat session */
+/** Fetch message history for a chat session.
+ *  Uses RPC (SECURITY DEFINER) to bypass RLS — works for both
+ *  anonymous visitors and staff regardless of auth state. */
 export async function getChatMessages(sessionId: string): Promise<ChatMessage[]> {
   if (!isSupabaseConfigured()) {
     return MOCK_MESSAGES.filter(m => m.session_id === sessionId)
   }
 
-  const { data, error } = await db
-    .from('chat_messages')
-    .select('*')
-    .eq('session_id', sessionId)
-    .order('created_at', { ascending: true })
+  // Use the same RPC as visitors — it's SECURITY DEFINER and returns all messages
+  const { data, error } = await db.rpc('get_visitor_chat_messages', {
+    p_session_id: sessionId,
+  })
 
   if (error) {
     console.error('[chatService] Failed to fetch messages:', error.message)
@@ -513,26 +538,31 @@ export async function getRMRequests(rmId: string): Promise<RMRequest[]> {
 // CS DASHBOARD QUERIES
 // ════════════════════════════════════════════════════════════════
 
-/** Fetch all active chat sessions (for CS Dashboard overview) */
+/** Fetch all active chat sessions (for CS Dashboard overview).
+ *  Uses SECURITY DEFINER RPC to bypass RLS — ensures staff
+ *  always see incoming chats regardless of auth state. */
 export async function getActiveChatSessions(repId?: string): Promise<ChatSession[]> {
   if (!isSupabaseConfigured()) return MOCK_SESSIONS
 
-  let query = db
-    .from('chat_sessions')
-    .select('*')
-    .in('status', ['waiting', 'assigned', 'active', 'queued'])
-    .order('priority', { ascending: false })
-    .order('last_message_at', { ascending: false })
-
-  if (repId) {
-    query = query.eq('assigned_rep_id', repId)
-  }
-
-  const { data, error } = await query
+  const { data, error } = await db.rpc('get_active_chat_sessions_staff', {
+    p_rep_id: repId || null,
+  })
 
   if (error) {
-    console.error('[chatService] Failed to fetch sessions:', error.message)
-    return []
+    console.error('[chatService] RPC get_active_chat_sessions_staff failed:', error.message)
+    // Fallback to direct query (works when staff IS authenticated)
+    const { data: fallback, error: fbErr } = await db
+      .from('chat_sessions')
+      .select('*')
+      .in('status', ['waiting', 'assigned', 'active', 'queued'])
+      .order('priority', { ascending: false })
+      .order('last_message_at', { ascending: false })
+
+    if (fbErr) {
+      console.error('[chatService] Fallback also failed:', fbErr.message)
+      return []
+    }
+    return (fallback || []) as ChatSession[]
   }
 
   return (data || []) as ChatSession[]

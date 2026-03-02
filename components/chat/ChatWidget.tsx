@@ -216,9 +216,9 @@ export default function ChatWidget() {
     }
   }, [pathname, isOpen])
 
-  // Auto-scroll
+  // Auto-scroll — use block:'nearest' to prevent scrolling the entire page
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
   }, [messages, isTyping])
 
   // Focus input
