@@ -87,17 +87,8 @@ export const STAFF_SIDEBAR_ITEMS: StaffNavItem[] = [
     ],
   },
   {
-    id: 'ai', label: 'AI Tools', iconName: 'Sparkles', href: '/staff/ai',
-    subItems: [
-      { id: 'ai-hub', label: 'AI Hub', href: '/staff/ai' },
-      { id: 'copilot', label: 'Copilot', href: '/staff/ai/copilot' },
-      { id: 'summarizer', label: 'Summarizer', href: '/staff/ai/summarizer' },
-      { id: 'response-gen', label: 'Response Gen', href: '/staff/ai/response-gen' },
-      { id: 'sentiment', label: 'Sentiment', href: '/staff/ai/sentiment' },
-      { id: 'quality-scorer', label: 'Quality Scorer', href: '/staff/ai/quality-scorer' },
-      { id: 'client-360', label: 'Client 360°', href: '/staff/ai/client-360' },
-      { id: 'compliance-guard', label: 'Compliance', href: '/staff/ai/compliance-guard' },
-    ],
+    id: 'ai', label: 'AI Advisor', iconName: 'Sparkles', href: '/staff/ai',
+    subItems: [],
   },
   {
     id: 'team', label: 'Team', iconName: 'UsersRound', href: '/staff/team',
@@ -127,7 +118,7 @@ export const STAFF_MODULE_LABELS: Record<StaffModule, string> = {
   clients: 'Clients',
   tasks: 'Tasks',
   team: 'Team',
-  ai: 'AI Tools',
+  ai: 'AI Advisor',
   internal: 'Internal',
   field: 'Field Operations',
 }
