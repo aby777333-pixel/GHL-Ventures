@@ -241,7 +241,7 @@ export default function DashboardClient() {
   // ─── Routing ─────────────────────────────────────────────
   const router = useRouter()
   const pathname = usePathname()
-  const VALID_TABS: TabId[] = ['dashboard','investments','invest-onboard','portfolio','kyc','transactions','messages','support','referrals','calculators','profile','settings']
+  const VALID_TABS: TabId[] = ['dashboard','investments','invest-onboard','portfolio','kyc','transactions','messages','support','calculators','ai-advisor','referrals','profile','settings']
   const activeTab: TabId = useMemo(() => {
     const segments = pathname.split('/').filter(Boolean)
     const tabSegment = segments[1] as TabId | undefined
