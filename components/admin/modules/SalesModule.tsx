@@ -262,13 +262,15 @@ export default function SalesModule({ subTab, navigate, showToast }: SalesModule
           title={selectedLead.name}
           subtitle={`${selectedLead.id} • ${STAGE_CONFIG[selectedLead.stage].label} • AI Score: ${selectedLead.aiScore}`}
           footer={
-            <>
+            <div className="flex items-center w-full">
               <ModalButton variant="danger" onClick={() => handleDeleteLead(selectedLead)}>
-                <Trash2 className="w-3.5 h-3.5 mr-1.5" /> Delete
+                <span className="flex items-center gap-1.5"><Trash2 className="w-3.5 h-3.5" /> Delete</span>
               </ModalButton>
-              <ModalButton onClick={() => { setLeadModalOpen(false); setSelectedLead(null) }}>Close</ModalButton>
-              <ModalButton variant="primary" onClick={() => { setLeadModalOpen(false); setSelectedLead(null); setAddLeadOpen(true) }}>Edit Lead</ModalButton>
-            </>
+              <div className="ml-auto flex items-center gap-2">
+                <ModalButton onClick={() => { setLeadModalOpen(false); setSelectedLead(null) }}>Close</ModalButton>
+                <ModalButton variant="primary" onClick={() => { setLeadModalOpen(false); setSelectedLead(null); setAddLeadOpen(true) }}>Edit Lead</ModalButton>
+              </div>
+            </div>
           }
         >
           <LeadDetailContent lead={selectedLead} />
@@ -417,10 +419,10 @@ function PipelineTab({ leads, onViewLead, onDeleteLead, showToast }: { leads: Le
                   >
                     <div className="flex items-start justify-between mb-2">
                       <p className="text-xs font-medium text-white">{lead.name}</p>
-                      <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <Eye className="w-3 h-3 text-gray-600" />
-                        <button onClick={(e) => { e.stopPropagation(); onDeleteLead(lead) }} className="p-0.5 rounded hover:bg-red-500/20 transition-colors">
-                          <Trash2 className="w-3 h-3 text-gray-600 hover:text-red-400" />
+                      <div className="flex items-center gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <Eye className="w-3 h-3 text-gray-500" />
+                        <button onClick={(e) => { e.stopPropagation(); onDeleteLead(lead) }} className="p-0.5 rounded-md hover:bg-red-500/20 transition-colors" title="Delete lead">
+                          <Trash2 className="w-3 h-3 text-red-400/60 hover:text-red-400" />
                         </button>
                       </div>
                     </div>
@@ -519,20 +521,23 @@ function LeadListTab({ leads, onViewLead, onDeleteLead, showToast }: { leads: Le
       key: 'actions',
       label: '',
       sortable: false,
-      width: '80px',
+      width: '90px',
       render: (row) => (
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-0.5">
           <button
             onClick={(e) => { e.stopPropagation(); onViewLead(row) }}
             className="p-1.5 rounded-lg hover:bg-white/[0.06] text-gray-500 hover:text-white transition-colors"
+            title="View lead"
           >
             <Eye className="w-4 h-4" />
           </button>
+          <div className="w-px h-4 bg-white/[0.06]" />
           <button
             onClick={(e) => { e.stopPropagation(); onDeleteLead(row) }}
-            className="p-1.5 rounded-lg hover:bg-red-500/20 text-gray-500 hover:text-red-400 transition-colors"
+            className="p-1.5 rounded-lg hover:bg-red-500/15 text-gray-600 hover:text-red-400 transition-colors"
+            title="Delete lead"
           >
-            <Trash2 className="w-4 h-4" />
+            <Trash2 className="w-3.5 h-3.5" />
           </button>
         </div>
       ),
