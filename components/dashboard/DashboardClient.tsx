@@ -17,7 +17,7 @@ import {
   Home, Mail, BellRing, Archive, Trash2, ImageIcon, Flag,
   Activity, Gauge, Timer, Newspaper, AlarmClock, TrendingDown,
   Flame, DollarSign, Megaphone, Trophy, Heart, Banknote,
-  Calculator, FolderOpen, FileUp, Sliders, ScrollText
+  Calculator, FolderOpen, FileUp, Sliders, ScrollText, Brain
 } from 'lucide-react'
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip,
@@ -67,11 +67,14 @@ import {
 // Cross-portal: RM request routing (Client → CS Dashboard)
 import { createRMRequest } from '@/lib/supabase/chatService'
 
+// AI Advisor
+import ClientAIAdvisor from './ClientAIAdvisor'
+
 /* ═══════════════════════════════════════════════════════════════
    TYPES
    ═══════════════════════════════════════════════════════════════ */
 type Theme = 'dark' | 'light'
-type TabId = 'dashboard' | 'investments' | 'invest-onboard' | 'portfolio' | 'kyc' | 'transactions' | 'messages' | 'support' | 'referrals' | 'calculators' | 'profile' | 'settings'
+type TabId = 'dashboard' | 'investments' | 'invest-onboard' | 'portfolio' | 'kyc' | 'transactions' | 'messages' | 'support' | 'referrals' | 'calculators' | 'ai-advisor' | 'profile' | 'settings'
 
 /* ═══════════════════════════════════════════════════════════════
    ICON MAP & TOUR — kept for UI chrome; personal data comes
@@ -155,7 +158,8 @@ const SIDEBAR_ITEMS: { id: TabId; label: string; icon: any; badge?: string }[] =
   { id: 'messages', label: 'Messages', icon: MessageSquare, badge: '2' },
   { id: 'support', label: 'Support', icon: HeadphonesIcon },
   { id: 'calculators', label: 'Calculators', icon: BarChart3 },
-  { id: 'referrals', label: 'Referrals', icon: Gift, badge: 'NEW' },
+  { id: 'ai-advisor', label: 'AI Advisor', icon: Brain, badge: 'NEW' },
+  { id: 'referrals', label: 'Referrals', icon: Gift },
 ]
 const SIDEBAR_BOTTOM: { id: TabId; label: string; icon: any }[] = [
   { id: 'profile', label: 'Profile', icon: User },
@@ -2784,6 +2788,13 @@ export default function DashboardClient() {
   }
 
   // ═══════════════════════════════════════════════════════════
+  // AI ADVISOR TAB
+  // ═══════════════════════════════════════════════════════════
+  const renderAIAdvisorTab = () => {
+    return <ClientAIAdvisor theme={theme} t={t} />
+  }
+
+  // ═══════════════════════════════════════════════════════════
   // TAB ROUTER
   // ═══════════════════════════════════════════════════════════
   const renderContent = () => {
@@ -2798,6 +2809,7 @@ export default function DashboardClient() {
       case 'support': return renderSupportTab()
       case 'calculators': return renderCalculatorsTab()
       case 'referrals': return renderReferralsTab()
+      case 'ai-advisor': return renderAIAdvisorTab()
       case 'profile': return renderProfileTab()
       case 'settings': return renderSettingsTab()
       default: return renderDashboardHome()

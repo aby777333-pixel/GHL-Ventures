@@ -75,6 +75,7 @@ export default function ContactPage() {
           city: formData.city,
           source: 'website',
           investmentInterest: formData.inquiryType,
+          message: formData.message,
         }),
       ])
     } catch (err) {

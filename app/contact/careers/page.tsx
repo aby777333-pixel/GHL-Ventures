@@ -299,6 +299,7 @@ export default function CareersPage() {
           phone: formData.phone,
           source: 'website',
           investmentInterest: 'career-application',
+          message: formData.coverLetter,
         }),
       ])
     } catch (err) { console.warn('Career form Supabase error:', err) }

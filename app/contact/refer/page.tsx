@@ -52,6 +52,7 @@ export default function ReferPage() {
           city: formData.theirCity,
           source: 'referral',
           investmentInterest: formData.investableSurplus,
+          message: formData.message,
         }),
       ])
     } catch (err) { console.warn('Referral form Supabase error:', err) }

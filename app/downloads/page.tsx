@@ -115,6 +115,7 @@ function DownloadCard({
           phone: gateForm.phone,
           source: 'website',
           investmentInterest: `download-${section.id}`,
+          message: `Downloaded: ${section.document.title}`,
         }),
       ])
     } catch (err) {

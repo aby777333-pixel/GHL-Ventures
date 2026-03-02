@@ -293,6 +293,7 @@ export async function submitLead(leadData: {
   source?: string
   investmentInterest?: string
   estimatedInvestment?: number
+  message?: string
 }) {
   // Fire email notification (best-effort, non-blocking)
   sendLeadNotification({
@@ -322,6 +323,7 @@ export async function submitLead(leadData: {
       investment_interest: leadData.investmentInterest,
       estimated_value: leadData.estimatedInvestment || 0,
       status: 'new',
+      notes: leadData.message || null,
     } as any).select().single() as any
     if (error) throw error
 

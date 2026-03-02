@@ -808,6 +808,7 @@ function ConsultationForm() {
           city: formData.country,
           source: 'website',
           investmentInterest: 'nri-investment',
+          message: formData.message,
         }),
       ])
     } catch (err) { console.warn('NRI form Supabase error:', err) }

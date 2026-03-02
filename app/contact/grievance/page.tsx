@@ -66,6 +66,7 @@ export default function GrievancePage() {
           phone: formData.phone,
           source: 'website',
           investmentInterest: 'grievance',
+          message: `Complaint: ${formData.complaintType}\n${formData.description}`,
         }),
       ])
     } catch (err) { console.warn('Grievance form Supabase error:', err) }

@@ -59,6 +59,7 @@ export default function StartupApplyPage() {
           city: formData.city,
           source: 'website',
           investmentInterest: 'startup-funding',
+          message: formData.pitch,
         }),
       ])
     } catch (err) { console.warn('Startup form Supabase error:', err) }
