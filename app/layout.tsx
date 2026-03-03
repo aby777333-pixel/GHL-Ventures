@@ -161,10 +161,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     sameAs: [
       'https://www.instagram.com/ghl_india_venture/',
       'https://x.com/ghlindiaventure',
-      'https://www.linkedin.com/company/103819089/',
-      'https://www.youtube.com/@GHLIndiaVentures',
-      'https://www.facebook.com/GHLindiaVentures',
-      'https://t.me/+QfQ9nVP5T4Y4ZmE1',
+      'https://www.linkedin.com/company/ghl-india-ventures-fund/',
+      'https://www.youtube.com/channel/UC3FRz4MujgTigVUlu4KJ-QQ',
+      'https://www.facebook.com/ghlindiaofficial/',
     ],
   }
 

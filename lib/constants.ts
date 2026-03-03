@@ -86,7 +86,7 @@ export const SOCIAL_LINKS = [
   { label: 'X (Twitter)', href: 'https://x.com/ghlindiaventure', icon: 'twitter' },
   { label: 'LinkedIn', href: 'https://www.linkedin.com/company/ghl-india-ventures-fund/', icon: 'linkedin' },
   { label: 'YouTube', href: 'https://www.youtube.com/channel/UC3FRz4MujgTigVUlu4KJ-QQ', icon: 'youtube' },
-  { label: 'Facebook', href: 'https://www.facebook.com/GHLindiaVentures', icon: 'facebook' },
+  { label: 'Facebook', href: 'https://www.facebook.com/ghlindiaofficial/', icon: 'facebook' },
 ] as const
 
 // ============================================================
