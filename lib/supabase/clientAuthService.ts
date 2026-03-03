@@ -198,10 +198,26 @@ export async function signupClient(
       full_name: name,
       email,
       phone: phone || null,
+      acquisition_source: 'website',
     } as any)
 
     // Auto-assign an RM to the new client (non-blocking)
     tryAutoAssignRM(data.user.id)
+
+    // Create lead entry so client appears in CRM pipeline (trigger backup)
+    try {
+      const nameParts = name.split(' ')
+      await supabase.from('leads').insert({
+        first_name: nameParts[0] || name,
+        last_name: nameParts.slice(1).join(' ') || null,
+        email,
+        phone: phone || null,
+        source: 'website',
+        status: 'won',
+        investment_interest: 'AIF Investment',
+        metadata: { auto_created: true, source: 'email_signup' },
+      } as any)
+    } catch { /* non-blocking — DB trigger may handle this */ }
 
     return { success: true }
   } catch (err) {

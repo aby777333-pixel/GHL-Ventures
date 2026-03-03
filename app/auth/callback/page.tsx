@@ -131,18 +131,40 @@ async function ensureProfile(user: { id: string; email?: string; user_metadata?:
 
     if (!existingClient) {
       const meta = user.user_metadata ?? {}
-      await supabase.from('clients').insert({
+      const clientName = meta.full_name || meta.name || user.email?.split('@')[0] || ''
+
+      const { data: newClient } = await (supabase.from('clients') as any).insert({
         user_id: user.id,
-        full_name: meta.full_name || meta.name || user.email?.split('@')[0] || '',
+        full_name: clientName,
         email: user.email || '',
         phone: meta.phone || null,
-      } as any)
+        acquisition_source: 'google_oauth',
+      }).select('id').single()
 
       // Auto-assign an RM to the new client (non-blocking)
       try {
         const { autoAssignRMToClient } = await import('@/lib/supabase/employeeService')
-        autoAssignRMToClient(user.id)
+        await autoAssignRMToClient(user.id)
       } catch { /* non-blocking */ }
+
+      // Create a lead entry so client appears in CRM pipeline
+      // (The DB trigger trg_auto_create_lead_for_client handles this,
+      //  but if it doesn't fire due to RLS, we create it manually)
+      try {
+        const nameParts = clientName.split(' ')
+        await (supabase.from('leads') as any).insert({
+          first_name: nameParts[0] || clientName,
+          last_name: nameParts.slice(1).join(' ') || null,
+          email: user.email || '',
+          phone: meta.phone || null,
+          source: 'website',
+          status: 'won',
+          investment_interest: 'AIF Investment',
+          converted_client_id: (newClient as any)?.id || null,
+          converted_at: new Date().toISOString(),
+          metadata: { auto_created: true, source: 'google_oauth' },
+        })
+      } catch { /* non-blocking — trigger may have already created it */ }
     }
   } catch {
     // Non-blocking — profile creation can fail due to RLS, but auth still works

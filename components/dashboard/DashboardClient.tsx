@@ -51,6 +51,15 @@ import {
   sendMessage,
   markNotificationRead,
   uploadDocument,
+  addBankAccount,
+  deleteBankAccount,
+  fetchBankAccounts,
+  validateIFSC,
+  submitInvestmentApplication,
+  fetchInvestmentApplications,
+  registerInterest,
+  requestReallocation,
+  uploadClientDocument,
 } from '@/lib/supabase/dashboardDataService'
 
 // Supabase Storage
@@ -127,14 +136,14 @@ const INDIA_INDICATORS = [
 ]
 
 const ECONOMIC_CALENDAR = [
-  { date: '25 Mar', event: 'RBI MPC Meeting', region: 'India', impact: 'high', icon: Landmark },
-  { date: '28 Mar', event: 'US GDP Q4 Final', region: 'Global', impact: 'high', icon: Globe },
+  { date: '05 Mar', event: 'RBI MPC Meeting', region: 'India', impact: 'high', icon: Landmark },
+  { date: '07 Mar', event: 'US Non-Farm Payrolls', region: 'Global', impact: 'high', icon: Globe },
+  { date: '15 Mar', event: 'GHL Q4 NAV Update', region: 'GHL', impact: 'high', icon: Star },
+  { date: '20 Mar', event: 'US Fed Rate Decision', region: 'Global', impact: 'high', icon: Globe },
   { date: '01 Apr', event: 'GST Revenue Data', region: 'India', impact: 'medium', icon: IndianRupee },
-  { date: '02 Apr', event: 'US Non-Farm Payrolls', region: 'Global', impact: 'high', icon: Globe },
-  { date: '10 Apr', event: 'RBI Policy Decision', region: 'India', impact: 'high', icon: Landmark },
-  { date: '15 Apr', event: 'GHL Q4 NAV Update', region: 'GHL', impact: 'high', icon: Star },
+  { date: '09 Apr', event: 'RBI Policy Decision', region: 'India', impact: 'high', icon: Landmark },
+  { date: '17 Apr', event: 'ECB Rate Decision', region: 'Global', impact: 'high', icon: Globe },
   { date: '22 Apr', event: 'India PMI Manufacturing', region: 'India', impact: 'medium', icon: Activity },
-  { date: '30 Apr', event: 'ECB Rate Decision', region: 'Global', impact: 'high', icon: Globe },
 ]
 
 const TOUR_STEPS = [
@@ -347,7 +356,36 @@ export default function DashboardClient() {
   const [docCategory, setDocCategory] = useState('')
   const [uploadedFiles, setUploadedFiles] = useState<string[]>([])
   const [investAmount, setInvestAmount] = useState(2500000)
-  const [investVehicle, setInvestVehicle] = useState('AIF Direct')
+  const [investVehicle, setInvestVehicle] = useState('AIF Direct - Category II')
+  const [investTenure, setInvestTenure] = useState('5 Years')
+  const [investTermsAccepted, setInvestTermsAccepted] = useState(false)
+  const [investSubmitting, setInvestSubmitting] = useState(false)
+  const [investFormErrors, setInvestFormErrors] = useState<Record<string, string>>({})
+
+  // Bank accounts state
+  const [bankAccounts, setBankAccounts] = useState<Array<{
+    id?: string
+    account_holder_name: string
+    account_number: string
+    account_number_confirm: string
+    ifsc_code: string
+    bank_name: string
+    account_type: string
+    is_primary: boolean
+    cancelled_cheque_url: string
+    ifsc_valid?: boolean
+    ifsc_validating?: boolean
+  }>>([{
+    account_holder_name: '',
+    account_number: '',
+    account_number_confirm: '',
+    ifsc_code: '',
+    bank_name: '',
+    account_type: 'savings',
+    is_primary: true,
+    cancelled_cheque_url: '',
+  }])
+
   const [activeCalc, setActiveCalc] = useState('sip')
   const [calcInputs, setCalcInputs] = useState({ amount: 100000, rate: 15, years: 5 })
   const [notifPrefs, setNotifPrefs] = useState({ email: true, nav: true, invest: true, dividend: true })
@@ -1460,7 +1498,12 @@ export default function DashboardClient() {
                 </div>
               ))}
             </div>
-            <button onClick={() => showToast(`Interest registered for ${opp.title}. Our team will contact you shortly.`)}
+            <button onClick={async () => {
+              if (clientId && user) {
+                await registerInterest({ client_id: clientId, user_id: user.id, fund_title: opp.title, fund_type: opp.title })
+                showToast(`Interest registered for ${opp.title}. Our team will contact you shortly.`)
+              } else { showToast('Please log in to express interest', 'info') }
+            }}
               className="w-full py-2.5 rounded-xl text-sm font-semibold text-white transition-all duration-300 hover:scale-[1.02]"
               style={{ background: 'linear-gradient(135deg, #D0021B, #8B0000)' }}>Express Interest</button>
             <button onClick={() => setActiveTab('invest-onboard')} className="w-full py-2.5 rounded-xl text-xs font-bold mt-2 transition-all duration-300 hover:scale-[1.02] text-white"
@@ -1485,7 +1528,12 @@ export default function DashboardClient() {
             </div>
           ))}
         </div>
-        <button onClick={() => showToast('Reallocation request submitted. Your advisory team will review within 48 hours.')}
+        <button onClick={async () => {
+          if (clientId && user) {
+            await requestReallocation({ client_id: clientId, user_id: user.id, current_allocation: allocationData })
+            showToast('Reallocation request submitted. Your advisory team will review within 48 hours.')
+          } else { showToast('Please log in to request reallocation', 'info') }
+        }}
           className="px-5 py-2.5 rounded-xl text-sm font-semibold text-white" style={{ background: 'linear-gradient(135deg, #D0021B, #8B0000)' }}>
           Request Reallocation
         </button>
@@ -1644,7 +1692,16 @@ export default function DashboardClient() {
             <button onClick={async () => {
               if (!docName.trim()) { showToast('Please enter a document name.', 'info'); return }
               if (!docCategory) { showToast('Please select a folder.', 'info'); return }
-              await uploadDocument({ client_id: clientId, title: docName, category: docCategory, entity_type: 'client', entity_id: clientId })
+              if (uploadedFiles.length === 0) { showToast('Please upload at least one file.', 'info'); return }
+              // Save document record to DB (linked to client's CRM folder)
+              await uploadClientDocument({
+                client_id: clientId || '',
+                user_id: user?.id || '',
+                title: docName,
+                category: docCategory === 'pan' || docCategory === 'aadhaar' || docCategory === 'bank' || docCategory === 'cheque' || docCategory === 'address' || docCategory === 'demat' ? 'kyc' : docCategory === 'tax' ? 'compliance' : 'general',
+                file_url: `client/kyc/clients/${clientId}/${uploadedFiles[0]}`,
+                file_name: uploadedFiles[0],
+              })
               setUploadModalOpen(false); setDocName(''); setDocCategory(''); setUploadedFiles([]); refetchDocs()
               showToast('Document submitted. Under review by compliance team.', 'success')
             }}
@@ -2372,6 +2429,145 @@ export default function DashboardClient() {
   // ═══════════════════════════════════════════════════════════
   // INVESTMENT ONBOARDING TAB
   // ═══════════════════════════════════════════════════════════
+
+  const updateBankAccount = (index: number, field: string, value: string) => {
+    setBankAccounts(prev => prev.map((acc, i) => i === index ? { ...acc, [field]: value } : acc))
+    // Clear error for this field
+    setInvestFormErrors(prev => { const n = { ...prev }; delete n[`bank_${index}_${field}`]; return n })
+  }
+
+  const handleIFSCValidation = async (index: number, ifsc: string) => {
+    if (ifsc.length !== 11) return
+    setBankAccounts(prev => prev.map((acc, i) => i === index ? { ...acc, ifsc_validating: true } : acc))
+    const result = await validateIFSC(ifsc)
+    setBankAccounts(prev => prev.map((acc, i) => i === index ? {
+      ...acc,
+      ifsc_valid: result.valid,
+      ifsc_validating: false,
+      bank_name: result.bank || acc.bank_name,
+    } : acc))
+    if (!result.valid) {
+      setInvestFormErrors(prev => ({ ...prev, [`bank_${index}_ifsc_code`]: 'Invalid IFSC code' }))
+    }
+  }
+
+  const addNewBankAccount = () => {
+    if (bankAccounts.length >= 3) { showToast('Maximum 3 bank accounts allowed', 'info'); return }
+    setBankAccounts(prev => [...prev, {
+      account_holder_name: '',
+      account_number: '',
+      account_number_confirm: '',
+      ifsc_code: '',
+      bank_name: '',
+      account_type: 'savings',
+      is_primary: false,
+      cancelled_cheque_url: '',
+    }])
+  }
+
+  const removeBankAccount = (index: number) => {
+    if (bankAccounts.length <= 1) { showToast('At least one bank account is required', 'info'); return }
+    setBankAccounts(prev => {
+      const next = prev.filter((_, i) => i !== index)
+      if (!next.some(a => a.is_primary) && next.length > 0) next[0].is_primary = true
+      return next
+    })
+  }
+
+  const validateInvestmentForm = (): boolean => {
+    const errors: Record<string, string> = {}
+
+    // Validate bank accounts
+    bankAccounts.forEach((acc, i) => {
+      if (!acc.account_holder_name.trim()) errors[`bank_${i}_account_holder_name`] = 'Account holder name is required'
+      if (!acc.account_number.trim()) errors[`bank_${i}_account_number`] = 'Account number is required'
+      else if (acc.account_number.length < 9 || acc.account_number.length > 18) errors[`bank_${i}_account_number`] = 'Invalid account number (9-18 digits)'
+      else if (!/^\d+$/.test(acc.account_number)) errors[`bank_${i}_account_number`] = 'Account number must contain only digits'
+      if (acc.account_number !== acc.account_number_confirm) errors[`bank_${i}_account_number_confirm`] = 'Account numbers do not match'
+      if (!acc.ifsc_code.trim()) errors[`bank_${i}_ifsc_code`] = 'IFSC code is required'
+      else if (!/^[A-Z]{4}0[A-Z0-9]{6}$/.test(acc.ifsc_code.toUpperCase())) errors[`bank_${i}_ifsc_code`] = 'Invalid IFSC format (e.g., SBIN0001234)'
+    })
+
+    if (!investTermsAccepted) errors['terms'] = 'You must accept the terms to proceed'
+    if (investAmount < 500000) errors['amount'] = 'Minimum investment is Rs. 5 Lakhs'
+
+    setInvestFormErrors(errors)
+    if (Object.keys(errors).length > 0) {
+      showToast('Please fill in all required fields correctly', 'info')
+      return false
+    }
+    return true
+  }
+
+  const handleInvestmentSubmit = async () => {
+    if (!validateInvestmentForm()) return
+    if (!clientId || !user) { showToast('Please log in to submit', 'info'); return }
+
+    setInvestSubmitting(true)
+    try {
+      // 1. Save bank account(s) first
+      const primaryAcc = bankAccounts.find(a => a.is_primary) || bankAccounts[0]
+      let savedBankId: string | null = null
+
+      for (const acc of bankAccounts) {
+        const result = await addBankAccount({
+          client_id: clientId,
+          user_id: user.id,
+          account_holder_name: acc.account_holder_name,
+          account_number: acc.account_number,
+          ifsc_code: acc.ifsc_code.toUpperCase(),
+          bank_name: acc.bank_name,
+          account_type: acc.account_type.toLowerCase(),
+          is_primary: acc.is_primary,
+          cancelled_cheque_url: acc.cancelled_cheque_url,
+        })
+        if (result && acc.is_primary) savedBankId = result.id
+      }
+
+      // 2. Submit the investment application
+      const appResult = await submitInvestmentApplication({
+        client_id: clientId,
+        user_id: user.id,
+        fund_vehicle: investVehicle,
+        investment_amount: investAmount,
+        tenure_preference: investTenure,
+        bank_account_id: savedBankId || undefined,
+        terms_accepted: investTermsAccepted,
+      })
+
+      if (appResult) {
+        showToast('Investment application submitted successfully! Our team will contact you within 24 hours for verification.')
+        // Reset form
+        setInvestTermsAccepted(false)
+        setBankAccounts([{
+          account_holder_name: '',
+          account_number: '',
+          account_number_confirm: '',
+          ifsc_code: '',
+          bank_name: '',
+          account_type: 'savings',
+          is_primary: true,
+          cancelled_cheque_url: '',
+        }])
+        setInvestAmount(2500000)
+        refetchPortfolio()
+      } else {
+        showToast('Submission failed. Please try again or contact support.', 'info')
+      }
+    } catch {
+      showToast('An error occurred. Please try again.', 'info')
+    } finally {
+      setInvestSubmitting(false)
+    }
+  }
+
+  const inputCls = (errKey: string) => {
+    const base = `px-3 py-2.5 rounded-xl text-sm ${t('bg-white/[0.04] border text-white placeholder-gray-600','bg-gray-100/60 border text-gray-900 placeholder-gray-400')}`
+    return investFormErrors[errKey]
+      ? `${base} border-red-500/60 focus:border-red-500`
+      : `${base} ${t('border-white/[0.06]','border-gray-200/40')}`
+  }
+
   const renderInvestOnboard = () => (
     <div className="space-y-6">
       <div>
@@ -2384,7 +2580,7 @@ export default function DashboardClient() {
         <h3 className={`text-base font-bold mb-4 ${t('text-white','text-gray-900')}`}>1. Investment Selection</h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-5">
           <div>
-            <label className={`text-xs font-medium mb-1.5 block ${t('text-gray-400','text-gray-600')}`}>Investment Vehicle</label>
+            <label className={`text-xs font-medium mb-1.5 block ${t('text-gray-400','text-gray-600')}`}>Investment Vehicle <span className="text-red-400">*</span></label>
             <select value={investVehicle} onChange={e => setInvestVehicle(e.target.value)}
               className={`w-full px-4 py-3 rounded-xl text-sm ${t('bg-white/[0.04] border border-white/[0.06] text-white','bg-gray-100/60 border border-gray-200/40 text-gray-900')}`}>
               <option>AIF Direct - Category II</option>
@@ -2394,15 +2590,16 @@ export default function DashboardClient() {
             </select>
           </div>
           <div>
-            <label className={`text-xs font-medium mb-1.5 block ${t('text-gray-400','text-gray-600')}`}>Tenure Preference</label>
-            <select className={`w-full px-4 py-3 rounded-xl text-sm ${t('bg-white/[0.04] border border-white/[0.06] text-white','bg-gray-100/60 border border-gray-200/40 text-gray-900')}`}>
+            <label className={`text-xs font-medium mb-1.5 block ${t('text-gray-400','text-gray-600')}`}>Tenure Preference <span className="text-red-400">*</span></label>
+            <select value={investTenure} onChange={e => setInvestTenure(e.target.value)}
+              className={`w-full px-4 py-3 rounded-xl text-sm ${t('bg-white/[0.04] border border-white/[0.06] text-white','bg-gray-100/60 border border-gray-200/40 text-gray-900')}`}>
               <option>3 Years</option><option>5 Years</option><option>7 Years</option>
             </select>
           </div>
         </div>
         <div>
           <div className="flex items-center justify-between mb-2">
-            <label className={`text-xs font-medium ${t('text-gray-400','text-gray-600')}`}>Investment Amount</label>
+            <label className={`text-xs font-medium ${t('text-gray-400','text-gray-600')}`}>Investment Amount <span className="text-red-400">*</span></label>
             <span className={`text-lg font-black text-brand-red`}>{'\u20B9'}{formatINR(investAmount)}</span>
           </div>
           <input type="range" min={500000} max={50000000} step={100000} value={investAmount}
@@ -2412,56 +2609,119 @@ export default function DashboardClient() {
           <div className={`flex justify-between text-[10px] mt-1 ${t('text-gray-600','text-gray-600')}`}>
             <span>{'\u20B9'}5L</span><span>{'\u20B9'}1Cr</span><span>{'\u20B9'}2.5Cr</span><span>{'\u20B9'}5Cr</span>
           </div>
+          {investFormErrors['amount'] && <p className="text-[10px] text-red-400 mt-1">{investFormErrors['amount']}</p>}
         </div>
       </Glass>
 
       {/* Step 2: Bank Details */}
       <Glass className="p-6" hover theme={theme}>
         <h3 className={`text-base font-bold mb-4 ${t('text-white','text-gray-900')}`}>2. Bank Account Details</h3>
-        <p className={`text-xs mb-4 ${t('text-gray-500','text-gray-700')}`}>Add one or more bank accounts for fund transfer. Primary account will be used for dividends.</p>
-        {[1].map(idx => (
+        <p className={`text-xs mb-4 ${t('text-gray-500','text-gray-700')}`}>Add one or more bank accounts for fund transfer. Primary account will be used for dividends and distributions.</p>
+        {bankAccounts.map((acc, idx) => (
           <div key={idx} className={`p-4 rounded-xl mb-3 ${t('bg-white/[0.02] border border-white/[0.04]','bg-gray-100/50 border border-gray-200/30')}`}>
             <div className="flex items-center justify-between mb-3">
-              <span className={`text-xs font-bold ${t('text-white','text-gray-900')}`}>Bank Account {idx}</span>
-              <span className="text-[9px] px-2 py-0.5 rounded-full bg-brand-red/15 text-brand-red font-bold">Primary</span>
+              <span className={`text-xs font-bold ${t('text-white','text-gray-900')}`}>Bank Account {idx + 1}</span>
+              <div className="flex items-center gap-2">
+                {acc.is_primary && <span className="text-[9px] px-2 py-0.5 rounded-full bg-brand-red/15 text-brand-red font-bold">Primary</span>}
+                {!acc.is_primary && <button onClick={() => setBankAccounts(prev => prev.map((a, i) => ({ ...a, is_primary: i === idx })))} className="text-[9px] px-2 py-0.5 rounded-full bg-blue-500/15 text-blue-400 font-bold hover:bg-blue-500/25 transition-colors">Set Primary</button>}
+                {bankAccounts.length > 1 && <button onClick={() => removeBankAccount(idx)} className="text-[9px] px-2 py-0.5 rounded-full bg-red-500/15 text-red-400 font-bold hover:bg-red-500/25 transition-colors">Remove</button>}
+              </div>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <input placeholder="Account Holder Name" className={`px-3 py-2.5 rounded-xl text-sm ${t('bg-white/[0.04] border border-white/[0.06] text-white placeholder-gray-600','bg-gray-100/60 border border-gray-200/40 text-gray-900 placeholder-gray-400')}`} />
-              <input placeholder="Account Number" className={`px-3 py-2.5 rounded-xl text-sm ${t('bg-white/[0.04] border border-white/[0.06] text-white placeholder-gray-600','bg-gray-100/60 border border-gray-200/40 text-gray-900 placeholder-gray-400')}`} />
-              <input placeholder="IFSC Code" className={`px-3 py-2.5 rounded-xl text-sm ${t('bg-white/[0.04] border border-white/[0.06] text-white placeholder-gray-600','bg-gray-100/60 border border-gray-200/40 text-gray-900 placeholder-gray-400')}`} />
-              <select className={`px-3 py-2.5 rounded-xl text-sm ${t('bg-white/[0.04] border border-white/[0.06] text-white','bg-gray-100/60 border border-gray-200/40 text-gray-900')}`}>
-                <option>Savings</option><option>Current</option><option>NRO</option><option>NRE</option>
+              <div>
+                <input placeholder="Account Holder Name *" value={acc.account_holder_name}
+                  onChange={e => updateBankAccount(idx, 'account_holder_name', e.target.value)}
+                  className={inputCls(`bank_${idx}_account_holder_name`)} />
+                {investFormErrors[`bank_${idx}_account_holder_name`] && <p className="text-[10px] text-red-400 mt-1">{investFormErrors[`bank_${idx}_account_holder_name`]}</p>}
+              </div>
+              <div>
+                <input placeholder="Account Number *" value={acc.account_number} type="password"
+                  onChange={e => updateBankAccount(idx, 'account_number', e.target.value.replace(/\D/g, ''))}
+                  className={inputCls(`bank_${idx}_account_number`)} />
+                {investFormErrors[`bank_${idx}_account_number`] && <p className="text-[10px] text-red-400 mt-1">{investFormErrors[`bank_${idx}_account_number`]}</p>}
+              </div>
+              <div>
+                <input placeholder="Confirm Account Number *" value={acc.account_number_confirm} type="password"
+                  onChange={e => updateBankAccount(idx, 'account_number_confirm', e.target.value.replace(/\D/g, ''))}
+                  className={inputCls(`bank_${idx}_account_number_confirm`)} />
+                {investFormErrors[`bank_${idx}_account_number_confirm`] && <p className="text-[10px] text-red-400 mt-1">{investFormErrors[`bank_${idx}_account_number_confirm`]}</p>}
+              </div>
+              <div>
+                <div className="relative">
+                  <input placeholder="IFSC Code *" value={acc.ifsc_code}
+                    onChange={e => { const v = e.target.value.toUpperCase().slice(0, 11); updateBankAccount(idx, 'ifsc_code', v); if (v.length === 11) handleIFSCValidation(idx, v) }}
+                    className={inputCls(`bank_${idx}_ifsc_code`)} />
+                  {acc.ifsc_validating && <div className="absolute right-3 top-1/2 -translate-y-1/2"><RefreshCw className="w-3.5 h-3.5 animate-spin text-gray-400" /></div>}
+                  {acc.ifsc_valid === true && <div className="absolute right-3 top-1/2 -translate-y-1/2"><CheckCircle className="w-3.5 h-3.5 text-emerald-400" /></div>}
+                  {acc.ifsc_valid === false && <div className="absolute right-3 top-1/2 -translate-y-1/2"><AlertCircle className="w-3.5 h-3.5 text-red-400" /></div>}
+                </div>
+                {acc.bank_name && <p className="text-[10px] text-emerald-400 mt-1">{acc.bank_name}</p>}
+                {investFormErrors[`bank_${idx}_ifsc_code`] && <p className="text-[10px] text-red-400 mt-1">{investFormErrors[`bank_${idx}_ifsc_code`]}</p>}
+              </div>
+              <select value={acc.account_type} onChange={e => updateBankAccount(idx, 'account_type', e.target.value)}
+                className={`px-3 py-2.5 rounded-xl text-sm ${t('bg-white/[0.04] border border-white/[0.06] text-white','bg-gray-100/60 border border-gray-200/40 text-gray-900')}`}>
+                <option value="savings">Savings</option><option value="current">Current</option><option value="nro">NRO</option><option value="nre">NRE</option>
               </select>
             </div>
-            <div onClick={() => showToast('File picker opened. Select your cancelled cheque or bank statement.', 'info')} className="mt-3 p-3 rounded-lg border-2 border-dashed cursor-pointer text-center border-white/[0.08] hover:border-brand-red/20 transition-colors">
-              <FileUp className="w-5 h-5 mx-auto mb-1 text-gray-500" />
-              <p className="text-[11px] text-gray-500">Upload cancelled cheque / bank statement</p>
+            <div onClick={async () => {
+              try {
+                const { pickAndUploadFiles } = await import('@/lib/supabase/storageService')
+                const results = await pickAndUploadFiles(`client/kyc/clients/${clientId}`, {
+                  accept: '.pdf,.jpg,.jpeg,.png',
+                  portal: 'client',
+                  entityType: 'client',
+                  entityId: clientId || undefined,
+                  category: 'kyc',
+                })
+                if (results && results.length > 0) {
+                  const successFiles = results.filter((r: any) => r.success)
+                  if (successFiles.length > 0) {
+                    updateBankAccount(idx, 'cancelled_cheque_url', successFiles[0].file?.url || successFiles[0].file?.path || 'uploaded')
+                    showToast('Document uploaded successfully')
+                  }
+                }
+              } catch { showToast('Upload failed. Please try again.', 'info') }
+            }} className={`mt-3 p-3 rounded-lg border-2 border-dashed cursor-pointer text-center transition-colors ${acc.cancelled_cheque_url ? 'border-emerald-500/30 bg-emerald-500/5' : 'border-white/[0.08] hover:border-brand-red/20'}`}>
+              {acc.cancelled_cheque_url ? (
+                <><CheckCircle className="w-5 h-5 mx-auto mb-1 text-emerald-400" /><p className="text-[11px] text-emerald-400 font-medium">Document uploaded</p></>
+              ) : (
+                <><FileUp className="w-5 h-5 mx-auto mb-1 text-gray-500" /><p className="text-[11px] text-gray-500">Upload cancelled cheque / bank statement</p></>
+              )}
             </div>
           </div>
         ))}
-        <button onClick={() => showToast('Additional bank account fields will appear here. For demo, use the primary account.', 'info')} className="flex items-center gap-2 text-xs font-semibold text-blue-400 hover:text-blue-300 transition-colors">
-          <Plus className="w-3.5 h-3.5" /> Add Another Bank Account
+        <button onClick={addNewBankAccount} className="flex items-center gap-2 text-xs font-semibold text-blue-400 hover:text-blue-300 transition-colors">
+          <Plus className="w-3.5 h-3.5" /> Add Another Bank Account {bankAccounts.length >= 3 && '(max 3)'}
         </button>
       </Glass>
 
-      {/* Step 3: Confirm */}
+      {/* Step 3: Review & Submit */}
       <Glass className="p-6" hover glow theme={theme}>
         <h3 className={`text-base font-bold mb-4 ${t('text-white','text-gray-900')}`}>3. Review & Submit</h3>
         <div className={`grid grid-cols-2 md:grid-cols-4 gap-3 mb-4`}>
-          {[{ l: 'Vehicle', v: investVehicle },{ l: 'Amount', v: `\u20B9${formatINR(investAmount)}` },{ l: 'Tenure', v: '5 Years' },{ l: 'Bank', v: user?.bank_name ? `${user.bank_name} ****${(user.bank_account || '').slice(-4)}` : 'Not linked' }].map((r,i) => (
+          {[
+            { l: 'Vehicle', v: investVehicle },
+            { l: 'Amount', v: `\u20B9${formatINR(investAmount)}` },
+            { l: 'Tenure', v: investTenure },
+            { l: 'Bank', v: bankAccounts[0]?.bank_name ? `${bankAccounts[0].bank_name} ****${bankAccounts[0].account_number.slice(-4)}` : bankAccounts[0]?.account_number ? `****${bankAccounts[0].account_number.slice(-4)}` : 'Not entered' },
+          ].map((r,i) => (
             <div key={i} className={`p-3 rounded-xl ${t('bg-white/[0.03] border border-white/[0.04]','bg-gray-100/50 border border-gray-200/30')}`}>
               <p className={`text-[9px] uppercase tracking-wider ${t('text-gray-600','text-gray-600')}`}>{r.l}</p>
               <p className={`text-sm font-bold mt-0.5 ${t('text-white','text-gray-900')}`}>{r.v}</p>
             </div>
           ))}
         </div>
-        <label className="flex items-start gap-2 mb-4 cursor-pointer">
-          <input type="checkbox" className="mt-0.5 w-4 h-4 rounded border-gray-300 text-brand-red focus:ring-brand-red" />
-          <span className={`text-xs ${t('text-gray-400','text-gray-600')}`}>I confirm the details above and agree to the investment terms. I understand that AIF investments involve risk and are subject to SEBI regulations.</span>
+        <label className={`flex items-start gap-2 mb-4 cursor-pointer ${investFormErrors['terms'] ? '' : ''}`}>
+          <input type="checkbox" checked={investTermsAccepted} onChange={e => { setInvestTermsAccepted(e.target.checked); setInvestFormErrors(prev => { const n = { ...prev }; delete n['terms']; return n }) }}
+            className="mt-0.5 w-4 h-4 rounded border-gray-300 text-brand-red focus:ring-brand-red" />
+          <span className={`text-xs ${t('text-gray-400','text-gray-600')}`}>I confirm the details above and agree to the investment terms. I understand that AIF investments involve risk and are subject to SEBI regulations. <span className="text-red-400">*</span></span>
         </label>
-        <button onClick={() => showToast('Investment application submitted successfully! Our team will contact you within 24 hours for verification.')}
-          className="w-full py-3 rounded-xl text-sm font-bold text-white transition-all hover:scale-[1.01]"
-          style={{ background: 'linear-gradient(135deg, #D0021B, #8B0000)' }}>Submit Investment Application</button>
+        {investFormErrors['terms'] && <p className="text-[10px] text-red-400 mb-3 -mt-2">{investFormErrors['terms']}</p>}
+        <button onClick={handleInvestmentSubmit} disabled={investSubmitting}
+          className={`w-full py-3 rounded-xl text-sm font-bold text-white transition-all hover:scale-[1.01] ${investSubmitting ? 'opacity-60 cursor-not-allowed' : ''}`}
+          style={{ background: 'linear-gradient(135deg, #D0021B, #8B0000)' }}>
+          {investSubmitting ? 'Submitting...' : 'Submit Investment Application'}
+        </button>
       </Glass>
     </div>
   )

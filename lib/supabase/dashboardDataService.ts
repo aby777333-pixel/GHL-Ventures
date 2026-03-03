@@ -376,3 +376,221 @@ export async function recordReferral(referralCode: string, referredName: string,
     return false
   }
 }
+
+// ── Bank Accounts ──────────────────────────────────────────
+
+export interface BankAccountInput {
+  client_id: string
+  user_id: string
+  account_holder_name: string
+  account_number: string
+  ifsc_code: string
+  bank_name?: string
+  account_type: string
+  is_primary: boolean
+  cancelled_cheque_url?: string
+}
+
+export async function fetchBankAccounts(clientId?: string) {
+  if (!isSupabaseConfigured() || !clientId) return []
+  return safeFetch(
+    () => sb.from('bank_accounts').select('*').eq('client_id', clientId).order('is_primary', { ascending: false }),
+    [], 'fetchBankAccounts',
+  )
+}
+
+export async function addBankAccount(account: BankAccountInput) {
+  if (!isSupabaseConfigured()) return null
+
+  // If this is marked as primary, unset other primaries first
+  if (account.is_primary) {
+    await sb.from('bank_accounts').update({ is_primary: false }).eq('client_id', account.client_id)
+  }
+
+  const { data, error } = await sb.from('bank_accounts').insert(account).select().single()
+  if (error) { console.warn('[dashboard] Add bank account error:', error.message); return null }
+  return data
+}
+
+export async function deleteBankAccount(accountId: string) {
+  if (!isSupabaseConfigured()) return false
+  const { error } = await sb.from('bank_accounts').delete().eq('id', accountId)
+  return !error
+}
+
+// ── IFSC Validation (via public RBI API) ───────────────────
+
+export async function validateIFSC(ifsc: string): Promise<{ valid: boolean; bank?: string; branch?: string }> {
+  try {
+    const res = await fetch(`https://ifsc.razorpay.com/${ifsc}`)
+    if (!res.ok) return { valid: false }
+    const data = await res.json()
+    return { valid: true, bank: data.BANK, branch: data.BRANCH }
+  } catch {
+    return { valid: false }
+  }
+}
+
+// ── Investment Applications ────────────────────────────────
+
+export interface InvestmentApplicationInput {
+  client_id: string
+  user_id: string
+  fund_vehicle: string
+  investment_amount: number
+  tenure_preference: string
+  bank_account_id?: string
+  terms_accepted: boolean
+  document_urls?: string[]
+}
+
+export async function submitInvestmentApplication(app: InvestmentApplicationInput) {
+  if (!isSupabaseConfigured()) return null
+
+  // Get the client's assigned RM
+  let assignedRM: string | null = null
+  try {
+    const { data: clientData } = await sb.from('clients').select('assigned_rm').eq('id', app.client_id).single()
+    assignedRM = clientData?.assigned_rm || null
+  } catch { /* non-blocking */ }
+
+  const row = {
+    ...app,
+    assigned_rm: assignedRM,
+    status: 'pending',
+  }
+
+  const { data, error } = await sb.from('investment_applications').insert(row).select().single()
+  if (error) { console.warn('[dashboard] Submit investment error:', error.message); return null }
+
+  // Update client total_invested (pending amount tracked)
+  try {
+    const { data: client } = await sb.from('clients').select('total_invested').eq('id', app.client_id).single()
+    const currentTotal = Number(client?.total_invested) || 0
+    await sb.from('clients').update({ total_invested: currentTotal + app.investment_amount }).eq('id', app.client_id)
+  } catch { /* non-blocking */ }
+
+  return data
+}
+
+export async function fetchInvestmentApplications(clientId?: string) {
+  if (!isSupabaseConfigured() || !clientId) return []
+  return safeFetch(
+    () => sb.from('investment_applications').select('*').eq('client_id', clientId).order('created_at', { ascending: false }),
+    [], 'fetchInvestmentApplications',
+  )
+}
+
+// ── Interest Registration ──────────────────────────────────
+
+export async function registerInterest(data: {
+  client_id: string
+  user_id: string
+  fund_title: string
+  fund_type?: string
+}) {
+  if (!isSupabaseConfigured()) return null
+
+  const { data: result, error } = await sb.from('interest_registrations').insert({
+    ...data,
+    status: 'new',
+  }).select().single()
+
+  if (error) { console.warn('[dashboard] Register interest error:', error.message); return null }
+
+  // Notify admins
+  try {
+    const { data: clientData } = await sb.from('clients').select('full_name, assigned_rm').eq('id', data.client_id).single()
+    const clientName = clientData?.full_name || 'A client'
+    const { data: admins } = await sb.from('profiles').select('id').in('role', ['admin', 'super_admin'])
+    if (admins && admins.length > 0) {
+      const notifs = admins.map((a: any) => ({
+        user_id: a.id,
+        title: `Interest Registered: ${data.fund_title}`,
+        message: `${clientName} expressed interest in ${data.fund_title}. Follow up required.`,
+        type: 'info',
+        link: '/admin?tab=clients',
+        metadata: { interest_id: result?.id, client_id: data.client_id, fund_title: data.fund_title },
+      }))
+      await sb.from('notifications').insert(notifs)
+    }
+
+    // Notify assigned RM
+    if (clientData?.assigned_rm) {
+      const { data: rmProfile } = await sb.from('staff_profiles').select('user_id').eq('id', clientData.assigned_rm).single()
+      if (rmProfile?.user_id) {
+        await sb.from('notifications').insert({
+          user_id: rmProfile.user_id,
+          title: `Client Interest: ${data.fund_title}`,
+          message: `${clientName} expressed interest in ${data.fund_title}.`,
+          type: 'info',
+          link: '/staff?tab=clients',
+          metadata: { interest_id: result?.id, client_id: data.client_id },
+        })
+      }
+    }
+  } catch { /* non-blocking */ }
+
+  return result
+}
+
+// ── Reallocation Request ───────────────────────────────────
+
+export async function requestReallocation(data: {
+  client_id: string
+  user_id: string
+  current_allocation: any[]
+  notes?: string
+}) {
+  if (!isSupabaseConfigured()) return null
+
+  // Create a support ticket for reallocation
+  const ticketNumber = `REALLOC-${Date.now().toString(36).toUpperCase()}`
+  const { data: ticket, error } = await sb.from('tickets').insert({
+    ticket_number: ticketNumber,
+    client_id: data.user_id,
+    client_name: 'Client',
+    subject: 'Portfolio Reallocation Request',
+    description: `Reallocation request. Current allocation: ${JSON.stringify(data.current_allocation)}. Notes: ${data.notes || 'None'}`,
+    category: 'Investment',
+    priority: 'medium',
+    status: 'open',
+    metadata: { type: 'reallocation', allocation: data.current_allocation },
+  }).select().single()
+
+  if (error) { console.warn('[dashboard] Reallocation request error:', error.message); return null }
+  return ticket
+}
+
+// ── Upload Document to Client Folder ──────────────────────
+
+export async function uploadClientDocument(doc: {
+  client_id: string
+  user_id: string
+  title: string
+  category: string
+  file_url: string
+  file_name: string
+  file_size?: number
+  file_type?: string
+  mime_type?: string
+}) {
+  if (!isSupabaseConfigured()) return null
+
+  const { data, error } = await sb.from('documents').insert({
+    title: doc.title,
+    file_url: doc.file_url,
+    file_name: doc.file_name,
+    file_size: doc.file_size || 0,
+    file_type: doc.file_type || '',
+    mime_type: doc.mime_type || '',
+    category: doc.category,
+    entity_type: 'client',
+    entity_id: doc.client_id,
+    uploaded_by: doc.user_id,
+    access_level: 'restricted',
+  }).select().single()
+
+  if (error) { console.warn('[dashboard] Upload client doc error:', error.message); return null }
+  return data
+}

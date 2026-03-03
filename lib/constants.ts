@@ -84,10 +84,9 @@ export const NAV_LINKS = [
 export const SOCIAL_LINKS = [
   { label: 'Instagram', href: 'https://www.instagram.com/ghl_india_venture/', icon: 'instagram' },
   { label: 'X (Twitter)', href: 'https://x.com/ghlindiaventure', icon: 'twitter' },
-  { label: 'LinkedIn', href: 'https://www.linkedin.com/company/103819089/', icon: 'linkedin' },
-  { label: 'YouTube', href: 'https://www.youtube.com/@GHLIndiaVentures', icon: 'youtube' },
+  { label: 'LinkedIn', href: 'https://www.linkedin.com/company/ghl-india-ventures-fund/', icon: 'linkedin' },
+  { label: 'YouTube', href: 'https://www.youtube.com/channel/UC3FRz4MujgTigVUlu4KJ-QQ', icon: 'youtube' },
   { label: 'Facebook', href: 'https://www.facebook.com/GHLindiaVentures', icon: 'facebook' },
-  { label: 'Telegram', href: 'https://t.me/+QfQ9nVP5T4Y4ZmE1', icon: 'telegram' },
 ] as const
 
 // ============================================================
