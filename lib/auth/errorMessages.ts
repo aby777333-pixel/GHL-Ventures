@@ -8,6 +8,7 @@ export const AUTH_ERRORS = {
   // Sign-in errors
   NO_ACCOUNT: 'No account found. Please sign up first.',
   INVALID_CREDENTIALS: 'Incorrect email or password. Please try again.',
+  EMAIL_NOT_REGISTERED: 'Email is not registered. Use the registered email to sign in.',
   ACCOUNT_UNVERIFIED: 'Your account is pending verification. Please check your email to verify your account.',
   ACCOUNT_INACTIVE: 'Your account is currently inactive. Please contact support.',
   ACCOUNT_LOCKED: 'Your account has been temporarily locked due to too many failed attempts. Please try again in 15 minutes.',

@@ -21,10 +21,7 @@ const db = supabase as any
 // ── Startup Diagnostic (dev only) ─────────────────────────────
 if (typeof window !== 'undefined' && process.env.NODE_ENV === 'development') {
   const configured = isSupabaseConfigured()
-  console.log(
-    `[chatService] Supabase configured: ${configured}`,
-    configured ? '✅' : '❌ (using mock data — env vars missing in build)'
-  )
+  if (!configured) console.warn('[chatService] Supabase not configured — chat features unavailable')
 }
 
 // ── Types ─────────────────────────────────────────────────────
@@ -77,11 +74,6 @@ export interface RMRequest {
   updated_at: string
 }
 
-// ── Mock Data (fallback when Supabase unavailable) ────────────
-
-const MOCK_SESSIONS: ChatSession[] = []
-const MOCK_MESSAGES: ChatMessage[] = []
-
 // ── Helper: generate visitor ID ───────────────────────────────
 
 function getOrCreateVisitorId(): string {
@@ -106,30 +98,7 @@ export async function createChatSession(input: {
   pageUrl?: string
   channel?: string
 }): Promise<ChatSession | null> {
-  if (!isSupabaseConfigured()) {
-    const mock: ChatSession = {
-      id: `mock-session-${Date.now()}`,
-      visitor_id: getOrCreateVisitorId(),
-      visitor_name: input.visitorName,
-      visitor_email: input.visitorEmail || null,
-      client_id: input.clientId || null,
-      assigned_rep_id: null,
-      status: 'waiting',
-      channel: input.channel || 'web_chat',
-      priority: 0,
-      page_url: input.pageUrl || null,
-      assigned_at: null,
-      first_response_at: null,
-      resolved_at: null,
-      last_message_at: new Date().toISOString(),
-      csat_rating: null,
-      metadata: {},
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-    }
-    MOCK_SESSIONS.push(mock)
-    return mock
-  }
+  if (!isSupabaseConfigured()) return null
 
   // Use RPC to create session — direct insert + .select() fails for
   // anonymous visitors because RLS blocks the SELECT after INSERT
@@ -172,10 +141,7 @@ export async function createChatSession(input: {
 
 /** Fetch active chat session for current visitor (if any) — uses RPC to bypass RLS */
 export async function getActiveSessionForVisitor(): Promise<ChatSession | null> {
-  if (!isSupabaseConfigured()) {
-    const visitorId = getOrCreateVisitorId()
-    return MOCK_SESSIONS.find(s => s.visitor_id === visitorId && !['resolved', 'closed'].includes(s.status)) || null
-  }
+  if (!isSupabaseConfigured()) return null
 
   const visitorId = getOrCreateVisitorId()
   const { data, error } = await db.rpc('get_visitor_active_session', {
@@ -302,21 +268,7 @@ export async function sendChatMessage(input: {
   senderName?: string
   message: string
 }): Promise<ChatMessage | null> {
-  if (!isSupabaseConfigured()) {
-    const mock: ChatMessage = {
-      id: `mock-msg-${Date.now()}`,
-      session_id: input.sessionId,
-      sender_type: input.senderType,
-      sender_id: input.senderId || null,
-      sender_name: input.senderName || null,
-      message: input.message,
-      attachments: [],
-      metadata: {},
-      created_at: new Date().toISOString(),
-    }
-    MOCK_MESSAGES.push(mock)
-    return mock
-  }
+  if (!isSupabaseConfigured()) return null
 
   // All messages (visitor, agent, system, bot) go through the SECURITY DEFINER
   // RPC to bypass RLS. Direct inserts fail when the staff user's SELECT policy
@@ -351,9 +303,7 @@ export async function sendChatMessage(input: {
  *  Uses RPC (SECURITY DEFINER) to bypass RLS — works for both
  *  anonymous visitors and staff regardless of auth state. */
 export async function getChatMessages(sessionId: string): Promise<ChatMessage[]> {
-  if (!isSupabaseConfigured()) {
-    return MOCK_MESSAGES.filter(m => m.session_id === sessionId)
-  }
+  if (!isSupabaseConfigured()) return []
 
   // Use the same RPC as visitors — it's SECURITY DEFINER and returns all messages
   const { data, error } = await db.rpc('get_visitor_chat_messages', {
@@ -370,9 +320,7 @@ export async function getChatMessages(sessionId: string): Promise<ChatMessage[]>
 
 /** Fetch message history using RPC — for anonymous visitors (bypasses RLS) */
 export async function getVisitorChatMessages(sessionId: string): Promise<ChatMessage[]> {
-  if (!isSupabaseConfigured()) {
-    return MOCK_MESSAGES.filter(m => m.session_id === sessionId)
-  }
+  if (!isSupabaseConfigured()) return []
 
   const { data, error } = await db.rpc('get_visitor_chat_messages', {
     p_session_id: sessionId,
@@ -543,7 +491,7 @@ export async function getRMRequests(rmId: string): Promise<RMRequest[]> {
  *  Uses SECURITY DEFINER RPC to bypass RLS — ensures staff
  *  always see incoming chats regardless of auth state. */
 export async function getActiveChatSessions(repId?: string): Promise<ChatSession[]> {
-  if (!isSupabaseConfigured()) return MOCK_SESSIONS
+  if (!isSupabaseConfigured()) return []
 
   const { data, error } = await db.rpc('get_active_chat_sessions_staff', {
     p_rep_id: repId || null,

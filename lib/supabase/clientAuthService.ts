@@ -53,7 +53,7 @@ export interface ClientSession {
 // Login result with proper error differentiation
 export interface LoginResult {
   session: ClientSession | null
-  error?: 'invalid_credentials' | 'email_not_confirmed' | 'service_unavailable' | 'network_error'
+  error?: 'invalid_credentials' | 'email_not_confirmed' | 'email_not_registered' | 'service_unavailable' | 'network_error'
   message?: string
 }
 
@@ -122,6 +122,13 @@ export async function loginClient(email: string, password: string): Promise<Logi
       if (msg.includes('email not confirmed') || msg.includes('email_not_confirmed')) {
         return { session: null, error: 'email_not_confirmed', message: 'Please verify your email address. Check your inbox for the confirmation link.' }
       }
+      // Check if email exists in clients table to distinguish "not registered" vs "wrong password"
+      try {
+        const { data: clientRow } = await (supabase.from('clients') as any).select('user_id').eq('email', email).maybeSingle()
+        if (!clientRow?.user_id) {
+          return { session: null, error: 'email_not_registered', message: 'Email is not registered. Use the registered email to sign in.' }
+        }
+      } catch { /* fall through to generic invalid_credentials */ }
       return { session: null, error: 'invalid_credentials', message: 'Incorrect email or password. Please try again.' }
     }
     if (!data.user) {

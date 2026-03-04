@@ -2631,26 +2631,26 @@ export default function DashboardClient() {
               <div>
                 <input placeholder="Account Holder Name *" value={acc.account_holder_name}
                   onChange={e => updateBankAccount(idx, 'account_holder_name', e.target.value)}
-                  className={inputCls(`bank_${idx}_account_holder_name`)} />
+                  autoComplete="off" className={inputCls(`bank_${idx}_account_holder_name`)} />
                 {investFormErrors[`bank_${idx}_account_holder_name`] && <p className="text-[10px] text-red-400 mt-1">{investFormErrors[`bank_${idx}_account_holder_name`]}</p>}
               </div>
               <div>
                 <input placeholder="Account Number *" value={acc.account_number} type="password"
                   onChange={e => updateBankAccount(idx, 'account_number', e.target.value.replace(/\D/g, ''))}
-                  className={inputCls(`bank_${idx}_account_number`)} />
+                  autoComplete="new-password" className={inputCls(`bank_${idx}_account_number`)} />
                 {investFormErrors[`bank_${idx}_account_number`] && <p className="text-[10px] text-red-400 mt-1">{investFormErrors[`bank_${idx}_account_number`]}</p>}
               </div>
               <div>
                 <input placeholder="Confirm Account Number *" value={acc.account_number_confirm} type="password"
                   onChange={e => updateBankAccount(idx, 'account_number_confirm', e.target.value.replace(/\D/g, ''))}
-                  className={inputCls(`bank_${idx}_account_number_confirm`)} />
+                  autoComplete="new-password" className={inputCls(`bank_${idx}_account_number_confirm`)} />
                 {investFormErrors[`bank_${idx}_account_number_confirm`] && <p className="text-[10px] text-red-400 mt-1">{investFormErrors[`bank_${idx}_account_number_confirm`]}</p>}
               </div>
               <div>
                 <div className="relative">
                   <input placeholder="IFSC Code *" value={acc.ifsc_code}
                     onChange={e => { const v = e.target.value.toUpperCase().slice(0, 11); updateBankAccount(idx, 'ifsc_code', v); if (v.length === 11) handleIFSCValidation(idx, v) }}
-                    className={inputCls(`bank_${idx}_ifsc_code`)} />
+                    autoComplete="off" className={inputCls(`bank_${idx}_ifsc_code`)} />
                   {acc.ifsc_validating && <div className="absolute right-3 top-1/2 -translate-y-1/2"><RefreshCw className="w-3.5 h-3.5 animate-spin text-gray-400" /></div>}
                   {acc.ifsc_valid === true && <div className="absolute right-3 top-1/2 -translate-y-1/2"><CheckCircle className="w-3.5 h-3.5 text-emerald-400" /></div>}
                   {acc.ifsc_valid === false && <div className="absolute right-3 top-1/2 -translate-y-1/2"><AlertCircle className="w-3.5 h-3.5 text-red-400" /></div>}

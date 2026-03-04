@@ -79,7 +79,7 @@ export default function SettingsModule({ subTab, navigate, showToast }: Settings
 
       <div className="admin-tab-switch">
         {activeTab === 'general' && <GeneralTab showToast={showToast} />}
-        {activeTab === 'permissions' && <PermissionsTab />}
+        {activeTab === 'permissions' && <PermissionsTab employees={employees} />}
         {activeTab === 'security' && <SecurityTab showToast={showToast} />}
         {activeTab === 'integrations' && <IntegrationsTab showToast={showToast} />}
         {activeTab === 'system' && <SystemTab showToast={showToast} systemHealth={systemHealth} />}
@@ -193,33 +193,47 @@ function GeneralTab({ showToast }: { showToast: (msg: string, type?: 'success' |
 }
 
 // ── Permissions Matrix ──────────────────────────────────────────
-function PermissionsTab() {
+function PermissionsTab({ employees }: { employees: any[] }) {
   const [permView, setPermView] = useState<'roles' | 'users' | 'matrix' | 'audit' | 'presets'>('roles')
   const roles = Object.keys(ROLE_LABELS) as AdminRole[]
   const allModules = ['overview', 'clients', 'sales', 'realty-brokers', 'employees', 'assets', 'ai-ops', 'compliance', 'financial', 'analytics', 'comms', 'marketing', 'reports', 'settings']
   const allActions = ['view', 'create', 'edit', 'approve', 'delete', 'export', 'configure']
   const [expandedRole, setExpandedRole] = useState<AdminRole | null>(null)
 
-  const userAssignments = [
-    { email: 'admin@ghlindiaventures.com', name: 'Abe Thayil', role: 'super-admin' as AdminRole, dept: 'Executive', lastActive: '2026-02-24T10:00:00' },
-    { email: 'compliance@ghlindiaventures.com', name: 'Meera Subramaniam', role: 'compliance-officer' as AdminRole, dept: 'Compliance', lastActive: '2026-02-24T09:30:00' },
-    { email: 'manager@ghlindiaventures.com', name: 'Venkatesh Raghavan', role: 'fund-manager' as AdminRole, dept: 'Investments', lastActive: '2026-02-23T18:00:00' },
-    { email: 'sales@ghlindiaventures.com', name: 'Priya Natarajan', role: 'sales' as AdminRole, dept: 'Sales', lastActive: '2026-02-24T08:45:00' },
-    { email: 'viewer@ghlindiaventures.com', name: 'Rajiv Kumar', role: 'viewer' as AdminRole, dept: 'Reporting', lastActive: '2026-02-22T15:00:00' },
-    { email: 'mktmgr@ghlindiaventures.com', name: 'Kavitha Rangan', role: 'marketing-manager' as AdminRole, dept: 'Marketing', lastActive: '2026-02-24T11:00:00' },
-    { email: 'mktexec@ghlindiaventures.com', name: 'Arun Selvam', role: 'marketing-executive' as AdminRole, dept: 'Marketing', lastActive: '2026-02-24T07:30:00' },
-  ]
+  // Derive user assignments from live employee data
+  const userAssignments = useMemo(() =>
+    employees
+      .filter((e: any) => e.role && e.email)
+      .map((e: any) => ({
+        email: e.email,
+        name: e.full_name || e.name || e.email,
+        role: (e.role || 'viewer').replace(/_/g, '-') as AdminRole,
+        dept: e.department || 'General',
+        lastActive: e.updated_at || e.created_at || new Date().toISOString(),
+      }))
+  , [employees])
 
-  const permAuditLog = [
-    { id: 'PA-001', timestamp: '2026-02-24T10:15:00', user: 'Abe Thayil', action: 'Granted', target: 'Priya Natarajan', detail: 'Added create:realty-brokers permission', module: 'Realty Brokers' },
-    { id: 'PA-002', timestamp: '2026-02-23T16:40:00', user: 'Abe Thayil', action: 'Role Changed', target: 'Arun Selvam', detail: 'Changed from viewer to marketing-executive', module: 'User Roles' },
-    { id: 'PA-003', timestamp: '2026-02-22T14:20:00', user: 'Abe Thayil', action: 'Revoked', target: 'Rajiv Kumar', detail: 'Removed export:financial permission', module: 'Financial' },
-    { id: 'PA-004', timestamp: '2026-02-21T09:00:00', user: 'Abe Thayil', action: 'Created', target: 'Custom Role', detail: 'Created Marketing Manager role preset', module: 'System' },
-    { id: 'PA-005', timestamp: '2026-02-20T11:30:00', user: 'Abe Thayil', action: 'Granted', target: 'Meera Subramaniam', detail: 'Added view:marketing permission', module: 'Marketing' },
-    { id: 'PA-006', timestamp: '2026-02-19T15:10:00', user: 'Abe Thayil', action: 'Bulk Update', target: '3 users', detail: 'Applied Read-Only Analyst preset', module: 'System' },
-    { id: 'PA-007', timestamp: '2026-02-18T08:45:00', user: 'Abe Thayil', action: 'Role Changed', target: 'Kavitha Rangan', detail: 'Changed from sales to marketing-manager', module: 'User Roles' },
-    { id: 'PA-008', timestamp: '2026-02-17T17:00:00', user: 'System', action: 'Auto-Revoked', target: 'Former Employee', detail: 'Session expired and permissions cleared', module: 'System' },
-  ]
+  const [permAuditLog, setPermAuditLog] = useState<{ id: string; timestamp: string; user: string; action: string; target: string; detail: string; module: string }[]>([])
+
+  useEffect(() => {
+    import('@/lib/supabase/client').then(({ supabase, isSupabaseConfigured }) => {
+      if (!isSupabaseConfigured()) return
+      ;(supabase as any).from('audit_logs').select('*').order('created_at', { ascending: false }).limit(20)
+        .then(({ data }: any) => {
+          if (data) {
+            setPermAuditLog(data.map((d: any) => ({
+              id: d.id,
+              timestamp: d.created_at,
+              user: d.new_data?.user_name || 'System',
+              action: d.action?.split(':')[0] || 'Action',
+              target: d.new_data?.details || d.entity_type || '',
+              detail: d.action || '',
+              module: d.entity_type || 'System',
+            })))
+          }
+        })
+    })
+  }, [])
 
   const presets = [
     { id: 'PR-001', name: 'Read-Only Analyst', description: 'View-only access to all reports and analytics modules', permCount: 6, usedBy: 2 },
@@ -357,7 +371,7 @@ function PermissionsTab() {
               <div key={user.email} className="flex items-center justify-between p-3 rounded-xl bg-white/[0.02] border border-white/[0.04] hover:bg-white/[0.03] transition-colors">
                 <div className="flex items-center gap-3">
                   <div className="w-8 h-8 rounded-full bg-brand-red/10 flex items-center justify-center text-white text-xs font-bold">
-                    {user.name.split(' ').map(n => n[0]).join('')}
+                    {user.name.split(' ').map((n: string) => n[0]).join('')}
                   </div>
                   <div>
                     <p className="text-sm text-white font-medium">{user.name}</p>
@@ -516,13 +530,26 @@ function PermissionsTab() {
 
 // ── Security Settings ───────────────────────────────────────────
 function SecurityTab({ showToast }: { showToast: (msg: string, type?: 'success' | 'error' | 'info' | 'warning') => void }) {
-  const securityEvents = [
-    { id: 'SE-001', event: 'Successful Login', user: 'admin@ghlindiaventures.com', ip: '103.42.xx.xx', time: '2025-03-20T10:00:00', status: 'success' },
-    { id: 'SE-002', event: 'Failed Login Attempt', user: 'unknown@test.com', ip: '185.220.xx.xx', time: '2025-03-20T08:15:00', status: 'failed' },
-    { id: 'SE-003', event: 'Password Changed', user: 'sales@ghlindiaventures.com', ip: '103.42.xx.xx', time: '2025-03-19T16:30:00', status: 'success' },
-    { id: 'SE-004', event: 'Session Expired', user: 'compliance@ghlindiaventures.com', ip: '103.42.xx.xx', time: '2025-03-19T14:00:00', status: 'info' },
-    { id: 'SE-005', event: 'Failed Login (3 attempts)', user: 'unknown@domain.com', ip: '45.33.xx.xx', time: '2025-03-18T22:45:00', status: 'failed' },
-  ]
+  const [securityEvents, setSecurityEvents] = useState<{ id: string; event: string; user: string; ip: string; time: string; status: string }[]>([])
+
+  useEffect(() => {
+    import('@/lib/supabase/client').then(({ supabase, isSupabaseConfigured }) => {
+      if (!isSupabaseConfigured()) return
+      ;(supabase as any).from('audit_logs').select('*').like('action', '%login%').order('created_at', { ascending: false }).limit(20)
+        .then(({ data }: any) => {
+          if (data) {
+            setSecurityEvents(data.map((d: any) => ({
+              id: d.id,
+              event: d.action?.includes('login') ? (d.action?.includes('logout') ? 'Logout' : 'Login') : d.action || 'Event',
+              user: d.new_data?.user_name || d.new_data?.details || 'Unknown',
+              ip: '-',
+              time: d.created_at,
+              status: d.action?.includes('login') ? 'success' : 'info',
+            })))
+          }
+        })
+    })
+  }, [])
 
   return (
     <div className="space-y-4">
