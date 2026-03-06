@@ -142,7 +142,7 @@ export default function Navbar() {
       <nav
         className={`transition-all duration-300 ${
           scrolled
-            ? 'navbar-scrolled backdrop-blur-[20px] shadow-lg'
+            ? 'navbar-scrolled backdrop-blur-[20px] shadow-lg bg-white/90 dark:bg-[#0A0A0A]/90'
             : 'bg-[#0A0A0A]'
         }`}
         aria-label="Main navigation"
@@ -343,28 +343,7 @@ export default function Navbar() {
                   <UserPlus className="w-2.5 h-2.5" />
                   <span>Sign Up</span>
                 </Link>
-                <Link
-                  href="/admin/login"
-                  className={`inline-flex items-center justify-center w-6 h-6 rounded-full transition-all duration-200 ${
-                    scrolled
-                      ? 'text-gray-400 dark:text-white/40 hover:text-brand-red hover:bg-red-50 dark:hover:bg-white/10'
-                      : 'text-white/40 hover:text-brand-red hover:bg-white/10'
-                  }`}
-                  title="Admin Portal"
-                >
-                  <ShieldCheck className="w-3 h-3" />
-                </Link>
-                <Link
-                  href="/staff/login"
-                  className={`inline-flex items-center justify-center w-6 h-6 rounded-full transition-all duration-200 ${
-                    scrolled
-                      ? 'text-gray-400 dark:text-white/40 hover:text-amber-500 hover:bg-amber-50 dark:hover:bg-white/10'
-                      : 'text-white/40 hover:text-amber-500 hover:bg-white/10'
-                  }`}
-                  title="Employee & Support Staff Portal"
-                >
-                  <BadgeCheck className="w-3 h-3" />
-                </Link>
+                {/* Admin & Staff portal icons removed from public website */}
               </div>
 
               {/* Theme Controls & Notification Center — desktop */}
@@ -591,30 +570,7 @@ export default function Navbar() {
               <span>Sign Up</span>
             </Link>
           </div>
-          <div
-            className="mt-3 flex items-center space-x-4"
-            style={{
-              transitionDelay: isOpen ? `${NAV_LINKS.length * 50 + 150}ms` : '0ms',
-              opacity: isOpen ? 1 : 0,
-            }}
-          >
-            <Link
-              href="/admin/login"
-              onClick={() => setIsOpen(false)}
-              className="inline-flex items-center space-x-1.5 text-white/40 text-xs hover:text-brand-red transition-colors"
-            >
-              <ShieldCheck className="w-3 h-3" />
-              <span>Admin Portal</span>
-            </Link>
-            <Link
-              href="/staff/login"
-              onClick={() => setIsOpen(false)}
-              className="inline-flex items-center space-x-1.5 text-white/40 text-xs hover:text-amber-500 transition-colors"
-            >
-              <BadgeCheck className="w-3 h-3" />
-              <span>Staff Portal</span>
-            </Link>
-          </div>
+          {/* Admin & Staff portal links removed from public mobile menu */}
 
           {/* Phone at bottom of overlay */}
           <div

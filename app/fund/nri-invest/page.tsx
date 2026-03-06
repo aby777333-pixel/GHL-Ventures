@@ -753,7 +753,7 @@ function ComplianceAccordion() {
                     {item.content.map((line, i) => (
                       <div key={i} className="flex items-start gap-2">
                         <CheckCircle className="w-4 h-4 text-green-500 mt-0.5 shrink-0" />
-                        <span className="text-sm text-brand-grey leading-snug">{line}</span>
+                        <span className="text-sm text-brand-grey leading-relaxed">{line}</span>
                       </div>
                     ))}
                   </div>

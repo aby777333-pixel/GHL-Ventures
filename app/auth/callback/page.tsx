@@ -79,7 +79,7 @@ export default function AuthCallbackPage() {
     <section className="min-h-screen flex items-center justify-center bg-white pt-32">
       <div className="text-center">
         <div className="mx-auto mb-6 w-fit">
-          <Logo size={54} />
+          <Logo size={72} />
         </div>
         {error ? (
           <>

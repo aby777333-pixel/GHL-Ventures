@@ -121,6 +121,25 @@ function DownloadCard({
     } catch (err) {
       console.warn('Download lead capture failed (non-critical):', err)
     }
+    // Attempt actual file download from Supabase Storage
+    try {
+      const { supabase, isSupabaseConfigured } = await import('@/lib/supabase/client')
+      if (isSupabaseConfigured()) {
+        const { data } = supabase.storage.from('downloads').getPublicUrl(`${section.id}.pdf`)
+        if (data?.publicUrl) {
+          const a = document.createElement('a')
+          a.href = data.publicUrl
+          a.download = `${section.document.title}.pdf`
+          a.target = '_blank'
+          a.rel = 'noopener noreferrer'
+          document.body.appendChild(a)
+          a.click()
+          document.body.removeChild(a)
+        }
+      }
+    } catch {
+      // File may not be uploaded yet — email delivery fallback
+    }
   }
 
   return (
@@ -169,9 +188,9 @@ function DownloadCard({
           {downloaded ? (
             <div className={`bg-green-50 border border-green-200 rounded-xl p-8 text-center h-full flex flex-col items-center justify-center ${GLOW_COLORS[(index + 4) % GLOW_COLORS.length]}`}>
               <CheckCircle className="w-12 h-12 text-green-600 mb-4" />
-              <h4 className="text-lg font-bold text-brand-black mb-2">Download Starting</h4>
+              <h4 className="text-lg font-bold text-brand-black mb-2">Request Submitted</h4>
               <p className="text-sm text-brand-grey mb-4">
-                Your download will begin shortly. We&apos;ve also sent a copy to your email.
+                Your download should begin automatically. If it doesn&apos;t start, a copy will be sent to your email shortly.
               </p>
               <button
                 onClick={() => setDownloaded(false)}

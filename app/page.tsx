@@ -94,10 +94,10 @@ function CountUpStat({ end, prefix, suffix, label }: {
 
   return (
     <div ref={ref} className="text-center">
-      <div className="text-3xl md:text-4xl font-extrabold text-white mb-1 tracking-tight stat-glow">
+      <div className="text-3xl md:text-4xl font-extrabold text-brand-black dark:text-white mb-1 tracking-tight stat-glow">
         {prefix}{count}{suffix}
       </div>
-      <div className="text-gray-400 text-sm font-medium uppercase tracking-widest">{label}</div>
+      <div className="text-brand-grey dark:text-gray-400 text-sm font-medium uppercase tracking-widest">{label}</div>
     </div>
   )
 }

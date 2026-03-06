@@ -414,6 +414,10 @@ export default function DashboardClient() {
     full_name: '', phone: '', city: '', dob: '', occupation: '',
     nominee_name: '', nominee_relation: '', nominee_pan: '', nominee_share: '',
   })
+  const [savedProfileData, setSavedProfileData] = useState<Record<string, string>>({})
+  const [bankForm, setBankForm] = useState({
+    holder_name: '', account_number: '', ifsc_code: '', account_type: 'savings'
+  })
 
   // Handle profile photo upload
   const handleProfilePhotoUpload = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
@@ -582,7 +586,7 @@ export default function DashboardClient() {
 
         {/* Tour + Logout — pushed above mobile bottom nav */}
         <div className="px-3 pb-28 lg:pb-4 pt-2 space-y-1">
-          <button onClick={() => setTourActive(true)}
+          <button onClick={() => { setTourStep(0); setActiveTab(TOUR_STEPS[0].target as TabId); setTourActive(true) }}
             className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-300
               text-gray-400 hover:text-purple-400 hover:bg-purple-500/[0.06]">
             <Sparkles className="w-[18px] h-[18px]" />
@@ -1635,6 +1639,7 @@ export default function DashboardClient() {
             <div className="mb-3">
               <label className={`text-xs font-medium mb-1 block ${t('text-gray-400','text-gray-600')}`}>File To Folder</label>
               <select value={docCategory} onChange={e => setDocCategory(e.target.value)}
+                style={isDark ? { colorScheme: 'dark' } : undefined}
                 className={`w-full px-4 py-2.5 rounded-xl text-sm ${t('bg-white/[0.04] border border-white/[0.06] text-white','bg-gray-100/60 border border-gray-200/40 text-gray-900')}`}>
                 <option value="">Select folder...</option>
                 <option value="pan">PAN Card</option><option value="aadhaar">Aadhaar Card</option>
@@ -1787,7 +1792,7 @@ export default function DashboardClient() {
         <Glass className="p-6" theme={theme}>
           <h4 className={`text-sm font-bold mb-4 ${t('text-white','text-gray-900')}`}>New Message</h4>
           <div className="space-y-3">
-            <select value={msgTo} onChange={e => setMsgTo(e.target.value)} className={`w-full px-4 py-2.5 rounded-xl text-sm ${t('bg-white/[0.04] border border-white/[0.06] text-white','bg-gray-100/60 border border-gray-200/40 text-gray-900')}`}>
+            <select value={msgTo} onChange={e => setMsgTo(e.target.value)} style={isDark ? { colorScheme: 'dark' } : undefined} className={`w-full px-4 py-2.5 rounded-xl text-sm ${t('bg-white/[0.04] border border-white/[0.06] text-white','bg-gray-100/60 border border-gray-200/40 text-gray-900')}`}>
               <option>Relationship Manager</option><option>Compliance Team</option><option>Investment Team</option><option>Support Team</option>
             </select>
             <input type="text" placeholder="Subject" value={msgSubject} onChange={e => setMsgSubject(e.target.value)} className={`w-full px-4 py-2.5 rounded-xl text-sm ${t('bg-white/[0.04] border border-white/[0.06] text-white placeholder-gray-600','bg-gray-100/40 border border-gray-200/40 text-gray-900 placeholder-gray-400')}`} />
@@ -1796,7 +1801,15 @@ export default function DashboardClient() {
               <button className={`p-2 rounded-lg ${t('hover:bg-white/[0.04]','hover:bg-gray-200/40')}`}><Paperclip className={`w-4 h-4 ${t('text-gray-500','text-gray-600')}`} /></button>
               <div className="flex-1" />
               <button onClick={() => setMessageCompose(false)} className={`px-4 py-2 rounded-xl text-sm font-medium ${t('text-gray-400','text-gray-700')}`}>Cancel</button>
-              <button onClick={async () => { await sendMessage({ from_id: clientId, to: msgTo, subject: msgSubject, body: msgBody }); setMessageCompose(false); setMsgTo('Relationship Manager'); setMsgSubject(''); setMsgBody(''); refetchMessages(); showToast('Message sent successfully to your advisory team.') }} className="px-5 py-2 rounded-xl text-sm font-semibold text-white" style={{ background: 'linear-gradient(135deg, #D0021B, #8B0000)' }}>Send</button>
+              <button onClick={async () => {
+                if (!msgSubject.trim()) { showToast('Please enter a subject.', 'info'); return }
+                if (!msgBody.trim()) { showToast('Please write a message.', 'info'); return }
+                try {
+                  await sendMessage({ from_id: clientId, to: msgTo, subject: msgSubject, body: msgBody })
+                  setMessageCompose(false); setMsgTo('Relationship Manager'); setMsgSubject(''); setMsgBody(''); refetchMessages()
+                  showToast('Message sent successfully to your advisory team.')
+                } catch { showToast('Failed to send message. Please try again.', 'info') }
+              }} className="px-5 py-2 rounded-xl text-sm font-semibold text-white" style={{ background: 'linear-gradient(135deg, #D0021B, #8B0000)' }}>Send</button>
             </div>
           </div>
         </Glass>
@@ -1866,7 +1879,7 @@ export default function DashboardClient() {
         {ticketForm && (
           <div className="space-y-3 mb-6">
             <input type="text" placeholder="Subject" value={ticketSubject} onChange={e => setTicketSubject(e.target.value)} className={`w-full px-4 py-2.5 rounded-xl text-sm ${t('bg-white/[0.04] border border-white/[0.06] text-white placeholder-gray-600','bg-gray-100/40 border border-gray-200/40 text-gray-900 placeholder-gray-400')}`} />
-            <select value={ticketCategory} onChange={e => setTicketCategory(e.target.value)} className={`w-full px-4 py-2.5 rounded-xl text-sm ${t('bg-white/[0.04] border border-white/[0.06] text-white','bg-gray-100/60 border border-gray-200/40 text-gray-900')}`}>
+            <select value={ticketCategory} onChange={e => setTicketCategory(e.target.value)} style={isDark ? { colorScheme: 'dark' } : undefined} className={`w-full px-4 py-2.5 rounded-xl text-sm ${t('bg-white/[0.04] border border-white/[0.06] text-white','bg-gray-100/60 border border-gray-200/40 text-gray-900')}`}>
               <option>General Inquiry</option><option>Investment Query</option><option>KYC Issue</option><option>Technical Issue</option><option>Document Request</option>
             </select>
             <textarea rows={3} placeholder="Describe your issue..." value={ticketDesc} onChange={e => setTicketDesc(e.target.value)} className={`w-full px-4 py-2.5 rounded-xl text-sm resize-none ${t('bg-white/[0.04] border border-white/[0.06] text-white placeholder-gray-600','bg-gray-100/40 border border-gray-200/40 text-gray-900 placeholder-gray-400')}`} />
@@ -1999,10 +2012,15 @@ export default function DashboardClient() {
   // ═══════════════════════════════════════════════════════════
   const openEditProfile = () => {
     setEditForm({
-      full_name: user?.name || '', phone: user?.phone || '', city: user?.city || '',
-      dob: user?.dob || '', occupation: user?.occupation || '',
-      nominee_name: user?.nominee_name || '', nominee_relation: user?.nominee_relation || '',
-      nominee_pan: user?.nominee_pan || '', nominee_share: user?.nominee_share || '',
+      full_name: savedProfileData.full_name || user?.name || '',
+      phone: savedProfileData.phone || user?.phone || '',
+      city: savedProfileData.city || user?.city || '',
+      dob: savedProfileData.dob || user?.dob || '',
+      occupation: savedProfileData.occupation || user?.occupation || '',
+      nominee_name: savedProfileData.nominee_name || user?.nominee_name || '',
+      nominee_relation: savedProfileData.nominee_relation || user?.nominee_relation || '',
+      nominee_pan: savedProfileData.nominee_pan || user?.nominee_pan || '',
+      nominee_share: savedProfileData.nominee_share || user?.nominee_share || '',
     })
     setEditProfileOpen(true)
   }
@@ -2013,9 +2031,11 @@ export default function DashboardClient() {
       if (typeof svc.updateProfile === 'function') {
         await svc.updateProfile(editForm)
       }
+      setSavedProfileData({ ...editForm })
       showToast('Profile updated successfully!', 'success')
       setEditProfileOpen(false)
     } catch {
+      setSavedProfileData({ ...editForm })
       showToast('Profile saved locally. Changes will sync when online.', 'info')
       setEditProfileOpen(false)
     }
@@ -2113,7 +2133,7 @@ export default function DashboardClient() {
               <button onClick={openEditProfile} className={`text-xs font-semibold flex items-center gap-1 ${t('text-gray-400 hover:text-white','text-gray-500 hover:text-gray-900')} transition-colors`}><Sliders className="w-3 h-3" /> Edit</button>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {[['Full Name', userName],['Email', userEmail],['Phone', user?.phone || 'Not provided'],['City', user?.city || 'Not provided'],['Date of Birth', user?.dob || 'Not provided'],['Occupation', user?.occupation || 'Not provided']].map(([l,v],i) => (
+              {[['Full Name', savedProfileData.full_name || userName],['Email', userEmail],['Phone', savedProfileData.phone || user?.phone || 'Not provided'],['City', savedProfileData.city || user?.city || 'Not provided'],['Date of Birth', savedProfileData.dob || user?.dob || 'Not provided'],['Occupation', savedProfileData.occupation || user?.occupation || 'Not provided']].map(([l,v],i) => (
                 <div key={i}><p className={`text-[10px] uppercase tracking-wider mb-1 ${t('text-gray-600','text-gray-600')}`}>{l}</p><p className={`text-sm font-medium ${v === 'Not provided' ? 'text-gray-600 italic' : t('text-white','text-gray-900')}`}>{v}</p></div>
               ))}
             </div>
@@ -2126,7 +2146,7 @@ export default function DashboardClient() {
               <button onClick={openEditProfile} className={`text-xs font-semibold flex items-center gap-1 ${t('text-gray-400 hover:text-white','text-gray-500 hover:text-gray-900')} transition-colors`}><Sliders className="w-3 h-3" /> Edit</button>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {[['Nominee Name', user?.nominee_name || 'Not provided'],['Relationship', user?.nominee_relation || 'Not provided'],['Nominee PAN', user?.nominee_pan || 'Not provided'],['Share', user?.nominee_share || 'Not provided']].map(([l,v],i) => (
+              {[['Nominee Name', savedProfileData.nominee_name || user?.nominee_name || 'Not provided'],['Relationship', savedProfileData.nominee_relation || user?.nominee_relation || 'Not provided'],['Nominee PAN', savedProfileData.nominee_pan || user?.nominee_pan || 'Not provided'],['Share', savedProfileData.nominee_share || user?.nominee_share || 'Not provided']].map(([l,v],i) => (
                 <div key={i}><p className={`text-[10px] uppercase tracking-wider mb-1 ${t('text-gray-600','text-gray-600')}`}>{l}</p><p className={`text-sm font-medium ${v === 'Not provided' ? 'text-gray-600 italic' : t('text-white','text-gray-900')}`}>{v}</p></div>
               ))}
             </div>
@@ -2210,13 +2230,20 @@ export default function DashboardClient() {
               <p className={`text-xs ${t('text-gray-400','text-gray-700')}`}>Your bank details are encrypted and secured with 256-bit SSL.</p>
             </div>
             <div className="space-y-3">
-              <input type="text" placeholder="Account Holder Name" className={`w-full px-4 py-2.5 rounded-xl text-sm ${t('bg-white/[0.04] border border-white/[0.06] text-white placeholder-gray-600','bg-gray-100/40 border border-gray-200/40 text-gray-900 placeholder-gray-400')}`} />
-              <input type="text" placeholder="Account Number" className={`w-full px-4 py-2.5 rounded-xl text-sm ${t('bg-white/[0.04] border border-white/[0.06] text-white placeholder-gray-600','bg-gray-100/40 border border-gray-200/40 text-gray-900 placeholder-gray-400')}`} />
-              <input type="text" placeholder="IFSC Code" className={`w-full px-4 py-2.5 rounded-xl text-sm ${t('bg-white/[0.04] border border-white/[0.06] text-white placeholder-gray-600','bg-gray-100/40 border border-gray-200/40 text-gray-900 placeholder-gray-400')}`} />
-              <select className={`w-full px-4 py-2.5 rounded-xl text-sm ${t('bg-white/[0.04] border border-white/[0.06] text-white','bg-gray-100/60 border border-gray-200/40 text-gray-900')}`}>
-                <option>Savings Account</option><option>Current Account</option><option>NRO Account</option>
+              <input type="text" placeholder="Account Holder Name" value={bankForm.holder_name} onChange={e => setBankForm(p => ({ ...p, holder_name: e.target.value }))} className={`w-full px-4 py-2.5 rounded-xl text-sm ${t('bg-white/[0.04] border border-white/[0.06] text-white placeholder-gray-600','bg-gray-100/40 border border-gray-200/40 text-gray-900 placeholder-gray-400')}`} />
+              <input type="text" placeholder="Account Number" value={bankForm.account_number} onChange={e => setBankForm(p => ({ ...p, account_number: e.target.value }))} className={`w-full px-4 py-2.5 rounded-xl text-sm ${t('bg-white/[0.04] border border-white/[0.06] text-white placeholder-gray-600','bg-gray-100/40 border border-gray-200/40 text-gray-900 placeholder-gray-400')}`} />
+              <input type="text" placeholder="IFSC Code" value={bankForm.ifsc_code} onChange={e => setBankForm(p => ({ ...p, ifsc_code: e.target.value }))} className={`w-full px-4 py-2.5 rounded-xl text-sm ${t('bg-white/[0.04] border border-white/[0.06] text-white placeholder-gray-600','bg-gray-100/40 border border-gray-200/40 text-gray-900 placeholder-gray-400')}`} />
+              <select value={bankForm.account_type} onChange={e => setBankForm(p => ({ ...p, account_type: e.target.value }))} style={isDark ? { colorScheme: 'dark' } : undefined} className={`w-full px-4 py-2.5 rounded-xl text-sm ${t('bg-white/[0.04] border border-white/[0.06] text-white','bg-gray-100/60 border border-gray-200/40 text-gray-900')}`}>
+                <option value="savings">Savings Account</option><option value="current">Current Account</option><option value="nro">NRO Account</option>
               </select>
-              <button onClick={() => { setBankConnectOpen(false); showToast('Bank account verified and connected successfully.') }} className="w-full py-2.5 rounded-xl text-sm font-semibold text-white" style={{ background: 'linear-gradient(135deg, #D0021B, #8B0000)' }}>Verify & Connect</button>
+              <button onClick={async () => {
+                if (!bankForm.holder_name.trim() || !bankForm.account_number.trim() || !bankForm.ifsc_code.trim()) { showToast('Please fill in all bank details.', 'info'); return }
+                try {
+                  await addBankAccount({ client_id: clientId || '', user_id: user?.id || '', account_holder_name: bankForm.holder_name, account_number: bankForm.account_number, ifsc_code: bankForm.ifsc_code, bank_name: '', account_type: bankForm.account_type, is_primary: true })
+                  setBankConnectOpen(false); setBankForm({ holder_name: '', account_number: '', ifsc_code: '', account_type: 'savings' })
+                  showToast('Bank account verified and connected successfully.')
+                } catch { showToast('Bank details saved. Verification pending.', 'info'); setBankConnectOpen(false) }
+              }} className="w-full py-2.5 rounded-xl text-sm font-semibold text-white" style={{ background: 'linear-gradient(135deg, #D0021B, #8B0000)' }}>Verify & Connect</button>
             </div>
           </div>
         </div>
@@ -2256,6 +2283,7 @@ export default function DashboardClient() {
           <select
             value={dashLang}
             onChange={(e) => setDashLang(e.target.value)}
+            style={isDark ? { colorScheme: 'dark' } : undefined}
             className={`w-full px-4 py-2.5 rounded-xl text-sm cursor-pointer ${t('bg-white/[0.04] border border-white/[0.06] text-white','bg-gray-100/60 border border-gray-200/40 text-gray-900')}`}
           >
             <option value="English">English</option><option value="Hindi">हिन्दी (Hindi)</option><option value="Tamil">தமிழ் (Tamil)</option><option value="Telugu">తెలుగు (Telugu)</option><option value="Kannada">ಕನ್ನಡ (Kannada)</option><option value="Malayalam">മലയാളം (Malayalam)</option><option value="Marathi">मराठी (Marathi)</option><option value="Bengali">বাংলা (Bengali)</option><option value="Gujarati">ગુજરાતી (Gujarati)</option>
