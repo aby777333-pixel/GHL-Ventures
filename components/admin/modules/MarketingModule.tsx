@@ -105,41 +105,14 @@ const INTEGRATION_CATEGORY_CONFIG: Record<string, string> = {
   automation: 'Automation',
 }
 
-// ── Chart Mock Data ────────────────────────────────────────────────
-const LEAD_TREND_DATA = [
-  { month: 'Oct', leads: 142, spend: 320000 },
-  { month: 'Nov', leads: 158, spend: 345000 },
-  { month: 'Dec', leads: 175, spend: 310000 },
-  { month: 'Jan', leads: 198, spend: 380000 },
-  { month: 'Feb', leads: 215, spend: 420000 },
-  { month: 'Mar', leads: 234, spend: 450000 },
-]
+// ── Chart Data (populated from Supabase in production) ────────────
+const LEAD_TREND_DATA: { month: string; leads: number; spend: number }[] = []
 
-const CAMPAIGN_TYPE_DIST = [
-  { name: 'Email', value: 35, color: '#3B82F6' },
-  { name: 'Google Ads', value: 25, color: '#F59E0B' },
-  { name: 'Social', value: 18, color: '#8B5CF6' },
-  { name: 'Events', value: 12, color: '#10B981' },
-  { name: 'Messaging', value: 10, color: '#06B6D4' },
-]
+const CAMPAIGN_TYPE_DIST: { name: string; value: number; color: string }[] = []
 
-const FUNNEL_DATA = [
-  { stage: 'Awareness', count: 24680, pct: 100 },
-  { stage: 'Interest', count: 8420, pct: 34.1 },
-  { stage: 'Consideration', count: 3150, pct: 12.8 },
-  { stage: 'Intent', count: 890, pct: 3.6 },
-  { stage: 'Decision', count: 234, pct: 0.95 },
-]
+const FUNNEL_DATA: { stage: string; count: number; pct: number }[] = []
 
-const CHANNEL_ROI_DATA = [
-  { channel: 'WhatsApp', roi: 450 },
-  { channel: 'Telegram', roi: 520 },
-  { channel: 'Email', roi: 340 },
-  { channel: 'Google Ads', roi: 310 },
-  { channel: 'LinkedIn', roi: 220 },
-  { channel: 'Meta Ads', roi: 180 },
-  { channel: 'Events', roi: 150 },
-]
+const CHANNEL_ROI_DATA: { channel: string; roi: number }[] = []
 
 // ── Chart Tooltip Style ────────────────────────────────────────────
 const CHART_TOOLTIP_STYLE = {

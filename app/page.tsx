@@ -23,6 +23,7 @@ import WealthGrowthMap from '@/components/WealthGrowthMap'
 import TaxImpactAnalyzer from '@/components/TaxImpactAnalyzer'
 import InflationProofChecker from '@/components/InflationProofChecker'
 import { AlertTriangle } from 'lucide-react'
+import VoiceInput from '@/components/shared/VoiceInput'
 import SpaceHero from '@/components/SpaceHero'
 /* ================================================================
    HELPER: VideoPlayer — HTML5 video with cinematic styling
@@ -1179,13 +1180,20 @@ function ContactFormSection() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-semibold text-brand-black dark:text-white mb-1.5">Message</label>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <label className="block text-sm font-semibold text-brand-black dark:text-white">Message</label>
+                    <VoiceInput
+                      compact
+                      onTranscript={(text) => setForm(prev => ({ ...prev, message: (prev.message ? prev.message + ' ' : '') + text }))}
+                      showLanguageSelector
+                    />
+                  </div>
                   <textarea
                     name="message"
                     value={form.message}
                     onChange={handleChange}
                     rows={4}
-                    placeholder="Tell us about your investment goals..."
+                    placeholder="Tell us about your investment goals... (or use voice input)"
                     className="input-field resize-none"
                   />
                 </div>

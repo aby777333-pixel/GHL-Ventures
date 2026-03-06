@@ -79,6 +79,9 @@ import { createRMRequest } from '@/lib/supabase/chatService'
 // AI Advisor
 import ClientAIAdvisor from './ClientAIAdvisor'
 
+// Voice Input (Sarvam AI STT)
+import VoiceInput from '@/components/shared/VoiceInput'
+
 /* ═══════════════════════════════════════════════════════════════
    TYPES
    ═══════════════════════════════════════════════════════════════ */
@@ -1796,9 +1799,10 @@ export default function DashboardClient() {
               <option>Relationship Manager</option><option>Compliance Team</option><option>Investment Team</option><option>Support Team</option>
             </select>
             <input type="text" placeholder="Subject" value={msgSubject} onChange={e => setMsgSubject(e.target.value)} className={`w-full px-4 py-2.5 rounded-xl text-sm ${t('bg-white/[0.04] border border-white/[0.06] text-white placeholder-gray-600','bg-gray-100/40 border border-gray-200/40 text-gray-900 placeholder-gray-400')}`} />
-            <textarea rows={4} placeholder="Write your message..." value={msgBody} onChange={e => setMsgBody(e.target.value)} className={`w-full px-4 py-2.5 rounded-xl text-sm resize-none ${t('bg-white/[0.04] border border-white/[0.06] text-white placeholder-gray-600','bg-gray-100/40 border border-gray-200/40 text-gray-900 placeholder-gray-400')}`} />
+            <textarea rows={4} placeholder="Write your message... (or use voice input)" value={msgBody} onChange={e => setMsgBody(e.target.value)} className={`w-full px-4 py-2.5 rounded-xl text-sm resize-none ${t('bg-white/[0.04] border border-white/[0.06] text-white placeholder-gray-600','bg-gray-100/40 border border-gray-200/40 text-gray-900 placeholder-gray-400')}`} />
             <div className="flex items-center gap-3">
               <button className={`p-2 rounded-lg ${t('hover:bg-white/[0.04]','hover:bg-gray-200/40')}`}><Paperclip className={`w-4 h-4 ${t('text-gray-500','text-gray-600')}`} /></button>
+              <VoiceInput compact onTranscript={(text) => setMsgBody(prev => (prev ? prev + ' ' : '') + text)} showLanguageSelector />
               <div className="flex-1" />
               <button onClick={() => setMessageCompose(false)} className={`px-4 py-2 rounded-xl text-sm font-medium ${t('text-gray-400','text-gray-700')}`}>Cancel</button>
               <button onClick={async () => {
@@ -1882,7 +1886,11 @@ export default function DashboardClient() {
             <select value={ticketCategory} onChange={e => setTicketCategory(e.target.value)} style={isDark ? { colorScheme: 'dark' } : undefined} className={`w-full px-4 py-2.5 rounded-xl text-sm ${t('bg-white/[0.04] border border-white/[0.06] text-white','bg-gray-100/60 border border-gray-200/40 text-gray-900')}`}>
               <option>General Inquiry</option><option>Investment Query</option><option>KYC Issue</option><option>Technical Issue</option><option>Document Request</option>
             </select>
-            <textarea rows={3} placeholder="Describe your issue..." value={ticketDesc} onChange={e => setTicketDesc(e.target.value)} className={`w-full px-4 py-2.5 rounded-xl text-sm resize-none ${t('bg-white/[0.04] border border-white/[0.06] text-white placeholder-gray-600','bg-gray-100/40 border border-gray-200/40 text-gray-900 placeholder-gray-400')}`} />
+            <textarea rows={3} placeholder="Describe your issue... (or use voice input)" value={ticketDesc} onChange={e => setTicketDesc(e.target.value)} className={`w-full px-4 py-2.5 rounded-xl text-sm resize-none ${t('bg-white/[0.04] border border-white/[0.06] text-white placeholder-gray-600','bg-gray-100/40 border border-gray-200/40 text-gray-900 placeholder-gray-400')}`} />
+            <div className="flex items-center gap-2">
+              <VoiceInput compact onTranscript={(text) => setTicketDesc(prev => (prev ? prev + ' ' : '') + text)} showLanguageSelector />
+              <span className={`text-[10px] ${t('text-gray-600','text-gray-500')}`}>Speak in 23 Indian languages</span>
+            </div>
             <button onClick={async () => {
               if (!ticketSubject.trim()) { showToast('Please enter a subject for your ticket.', 'info'); return }
               if (!ticketDesc.trim()) { showToast('Please describe your issue.', 'info'); return }
