@@ -692,8 +692,8 @@ function InvestmentCapabilities() {
 function VideoFeature() {
   return (
     <section className="relative py-16 md:py-20 overflow-hidden">
-      <div className="absolute inset-0 hero-gradient" />
-      <div className="absolute inset-0" style={{ background: 'radial-gradient(ellipse at center, rgba(208,2,27,0.15) 0%, transparent 65%)' }} />
+      <div className="absolute inset-0 hero-gradient pointer-events-none" />
+      <div className="absolute inset-0 pointer-events-none" style={{ background: 'radial-gradient(ellipse at center, rgba(208,2,27,0.15) 0%, transparent 65%)' }} />
 
       <div className="container-max mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
         <AnimatedSection className="text-center mb-10">
@@ -888,8 +888,8 @@ function FinancialIQTeaser() {
 
   return (
     <section className="relative py-14 md:py-20 overflow-hidden">
-      <div className="absolute inset-0 hero-gradient" />
-      <div className="absolute top-0 right-0 w-96 h-96 bg-brand-red/20 rounded-full blur-[120px]" />
+      <div className="absolute inset-0 hero-gradient pointer-events-none" />
+      <div className="absolute top-0 right-0 w-96 h-96 bg-brand-red/20 rounded-full blur-[120px] pointer-events-none" />
 
       <div className="container-max mx-auto px-4 sm:px-6 lg:px-8 relative z-10 text-center">
         <AnimatedSection>
@@ -1313,9 +1313,9 @@ function ContactFormSection() {
 function InvestorToolsCTA({ onOpenQuiz, onOpenCalc, onOpenAllCalc, onOpenWealthMap, onOpenTaxAnalyzer, onOpenInflationCheck }: { onOpenQuiz: () => void; onOpenCalc: () => void; onOpenAllCalc: () => void; onOpenWealthMap: () => void; onOpenTaxAnalyzer: () => void; onOpenInflationCheck: () => void }) {
   return (
     <section className="relative py-14 md:py-20 overflow-hidden">
-      <div className="absolute inset-0 hero-gradient" />
+      <div className="absolute inset-0 hero-gradient pointer-events-none" />
       <div
-        className="absolute inset-0"
+        className="absolute inset-0 pointer-events-none"
         style={{ background: 'radial-gradient(ellipse at 70% 50%, rgba(208,2,27,0.12) 0%, transparent 65%)' }}
       />
 
