@@ -1049,7 +1049,7 @@ function ContactFormSection() {
   }
 
   return (
-    <section className="section-padding" style={{ backgroundColor: '#F8F7F5' }}>
+    <section className="section-padding bg-brand-offwhite dark:!bg-[#111111]">
       <div className="container-max mx-auto">
         <div className="grid lg:grid-cols-5 gap-12 items-start">
           {/* Left: Form */}
