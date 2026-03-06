@@ -29,100 +29,19 @@ interface FieldOpsModuleProps {
   showToast: (msg: string, type?: 'success' | 'error' | 'info' | 'warning') => void
 }
 
-// ── Inline Mock Data ──────────────────────────────────────────────
-const CHECKINS = [
-  { id: 'CI-001', location: 'Prestige Towers, OMR Road, Chennai', lat: 12.9600, lng: 80.2494, time: '09:15 AM', date: '2026-02-22', duration: '2h 10m', status: 'completed' },
-  { id: 'CI-002', location: 'DLF IT Park, Whitefield, Bangalore', lat: 12.9698, lng: 77.7500, time: '11:45 AM', date: '2026-02-22', duration: '1h 30m', status: 'completed' },
-  { id: 'CI-003', location: 'Thoraipakkam Signal, Chennai', lat: 12.9352, lng: 80.2282, time: '02:30 PM', date: '2026-02-21', duration: '45m', status: 'completed' },
-  { id: 'CI-004', location: 'Manyata Tech Park, Bangalore', lat: 13.0468, lng: 77.6217, time: '10:00 AM', date: '2026-02-21', duration: '3h 20m', status: 'completed' },
-  { id: 'CI-005', location: 'Tidel Park, Taramani, Chennai', lat: 12.9862, lng: 80.2442, time: '04:00 PM', date: '2026-02-20', duration: '1h 05m', status: 'completed' },
-  { id: 'CI-006', location: 'Koramangala 4th Block, Bangalore', lat: 12.9352, lng: 77.6245, time: '09:30 AM', date: '2026-02-20', duration: '2h 45m', status: 'completed' },
-  { id: 'CI-007', location: 'Anna Salai, Guindy, Chennai', lat: 13.0100, lng: 80.2121, time: '01:15 PM', date: '2026-02-19', duration: '1h 50m', status: 'missed' },
-  { id: 'CI-008', location: 'Electronic City Phase 1, Bangalore', lat: 12.8456, lng: 77.6603, time: '11:00 AM', date: '2026-02-19', duration: '2h 00m', status: 'completed' },
-]
-
-const SITE_VISITS = [
-  { id: 'SV-001', date: '2026-02-22', site: 'Prestige Towers, OMR Road', purpose: 'Client demo & walkthrough', status: 'Completed', duration: '2h 10m', media: 8, report: 'Submitted' },
-  { id: 'SV-002', date: '2026-02-22', site: 'DLF IT Park, Whitefield', purpose: 'Site inspection', status: 'Completed', duration: '1h 30m', media: 5, report: 'Submitted' },
-  { id: 'SV-003', date: '2026-02-22', site: 'Thoraipakkam Signal Tower', purpose: 'Prospect meeting', status: 'Scheduled', duration: '—', media: 0, report: 'Pending' },
-  { id: 'SV-004', date: '2026-02-23', site: 'Manyata Tech Park, Hebbal', purpose: 'Contract signing', status: 'Scheduled', duration: '—', media: 0, report: 'Pending' },
-  { id: 'SV-005', date: '2026-02-21', site: 'Tidel Park, Taramani', purpose: 'Infrastructure review', status: 'Completed', duration: '1h 05m', media: 12, report: 'Submitted' },
-  { id: 'SV-006', date: '2026-02-20', site: 'Koramangala 4th Block', purpose: 'Market survey', status: 'Completed', duration: '2h 45m', media: 9, report: 'Draft' },
-  { id: 'SV-007', date: '2026-02-19', site: 'Anna Salai, Guindy', purpose: 'Vendor evaluation', status: 'Cancelled', duration: '—', media: 0, report: '—' },
-  { id: 'SV-008', date: '2026-02-18', site: 'Electronic City Phase 1', purpose: 'Land survey', status: 'Completed', duration: '2h 00m', media: 15, report: 'Submitted' },
-  { id: 'SV-009', date: '2026-02-17', site: 'Sholinganallur Junction', purpose: 'Prospect follow-up', status: 'Overdue', duration: '—', media: 0, report: 'Missing' },
-  { id: 'SV-010', date: '2026-02-16', site: 'HSR Layout Sector 2', purpose: 'Competitor analysis', status: 'Completed', duration: '1h 40m', media: 6, report: 'Submitted' },
-]
-
-const MEDIA_ITEMS = [
-  { id: 'M-001', name: 'Site entrance panorama', tag: 'Exterior', site: 'Prestige Towers', date: '2026-02-22', synced: true },
-  { id: 'M-002', name: 'Lobby interiors', tag: 'Interior', site: 'Prestige Towers', date: '2026-02-22', synced: true },
-  { id: 'M-003', name: 'Floor plan layout', tag: 'Document', site: 'DLF IT Park', date: '2026-02-22', synced: true },
-  { id: 'M-004', name: 'Parking area overview', tag: 'Infrastructure', site: 'DLF IT Park', date: '2026-02-22', synced: false },
-  { id: 'M-005', name: 'Client meeting notes', tag: 'Document', site: 'Tidel Park', date: '2026-02-21', synced: true },
-  { id: 'M-006', name: 'Building facade shot', tag: 'Exterior', site: 'Koramangala', date: '2026-02-20', synced: true },
-  { id: 'M-007', name: 'Road access view', tag: 'Infrastructure', site: 'Electronic City', date: '2026-02-18', synced: true },
-  { id: 'M-008', name: 'Competitor signage', tag: 'Market Intel', site: 'HSR Layout', date: '2026-02-16', synced: true },
-  { id: 'M-009', name: 'Water supply meter', tag: 'Infrastructure', site: 'Manyata Tech Park', date: '2026-02-21', synced: false },
-  { id: 'M-010', name: 'Electrical panel', tag: 'Infrastructure', site: 'Anna Salai', date: '2026-02-19', synced: true },
-  { id: 'M-011', name: 'Green area shot', tag: 'Amenity', site: 'Prestige Towers', date: '2026-02-22', synced: true },
-  { id: 'M-012', name: 'Security booth', tag: 'Security', site: 'DLF IT Park', date: '2026-02-22', synced: true },
-]
-
-const REPORTS = [
-  { id: 'R-001', title: 'Weekly Site Summary — Whitefield', type: 'Weekly', status: 'Submitted', date: '2026-02-21', pages: 8 },
-  { id: 'R-002', title: 'Prospect Pipeline Update', type: 'CRM', status: 'Draft', date: '2026-02-20', pages: 4 },
-  { id: 'R-003', title: 'Site Inspection — Prestige Towers', type: 'Inspection', status: 'Submitted', date: '2026-02-19', pages: 12 },
-  { id: 'R-004', title: 'Competitor Landscape — OMR Corridor', type: 'Market Intel', status: 'Under Review', date: '2026-02-18', pages: 6 },
-  { id: 'R-005', title: 'Monthly Expense Summary', type: 'Expense', status: 'Approved', date: '2026-02-15', pages: 3 },
-  { id: 'R-006', title: 'Client Meeting Notes — Feb Batch', type: 'Meeting', status: 'Draft', date: '2026-02-22', pages: 5 },
-]
-
-const ROUTE_STOPS = [
-  { seq: 1, location: 'Prestige Towers, OMR Road', time: '09:00 AM', eta: '—', distance: '—', type: 'Client Meeting' },
-  { seq: 2, location: 'Thoraipakkam Junction', time: '11:30 AM', eta: '25 min', distance: '8.2 km', type: 'Prospect Visit' },
-  { seq: 3, location: 'Tidel Park, Taramani', time: '01:30 PM', eta: '15 min', distance: '4.1 km', type: 'Site Inspection' },
-  { seq: 4, location: 'Sholinganallur IT Hub', time: '03:00 PM', eta: '20 min', distance: '6.5 km', type: 'Follow-up' },
-  { seq: 5, location: 'Velachery Main Road', time: '04:30 PM', eta: '30 min', distance: '9.8 km', type: 'New Prospect' },
-]
-
-const PROSPECTS = [
-  { id: 'P-001', name: 'Rajesh Venkataraman', company: 'Infosys BPO', phone: '+91 98401 12345', deal: 4500000, probability: 75, stage: 'Proposal', nextAction: 'Send revised quote', lastMeet: '2026-02-20' },
-  { id: 'P-002', name: 'Priya Subramanian', company: 'HCL Technologies', phone: '+91 98765 43210', deal: 8200000, probability: 60, stage: 'Site Visit', nextAction: 'Schedule 2nd visit', lastMeet: '2026-02-18' },
-  { id: 'P-003', name: 'Anand Krishnamurthy', company: 'Wipro Enterprises', phone: '+91 94442 56789', deal: 3200000, probability: 85, stage: 'Negotiation', nextAction: 'Final pricing call', lastMeet: '2026-02-21' },
-  { id: 'P-004', name: 'Meena Sundaram', company: 'Zoho Corp', phone: '+91 87654 32100', deal: 6700000, probability: 40, stage: 'Initial Contact', nextAction: 'Intro meeting', lastMeet: '—' },
-  { id: 'P-005', name: 'Vikram Natarajan', company: 'TCS Innovation Labs', phone: '+91 99001 11223', deal: 12500000, probability: 50, stage: 'Site Visit', nextAction: 'Technical walkthrough', lastMeet: '2026-02-19' },
-  { id: 'P-006', name: 'Deepa Raghavan', company: 'Cognizant', phone: '+91 96001 44556', deal: 2800000, probability: 90, stage: 'Confirmed', nextAction: 'Contract signing', lastMeet: '2026-02-22' },
-  { id: 'P-007', name: 'Suresh Balaji', company: 'Freshworks', phone: '+91 93456 78901', deal: 5500000, probability: 30, stage: 'Initial Contact', nextAction: 'Send brochure', lastMeet: '—' },
-  { id: 'P-008', name: 'Kavitha Raman', company: 'Ola Fleet Tech', phone: '+91 91234 56780', deal: 7800000, probability: 65, stage: 'Proposal', nextAction: 'Presentation to board', lastMeet: '2026-02-17' },
-]
-
-const EXPENSES = [
-  { id: 'E-001', date: '2026-02-22', category: 'Travel', description: 'Cab — OMR to Whitefield', amount: 1450, status: 'Pending', receipt: true },
-  { id: 'E-002', date: '2026-02-21', category: 'Meals', description: 'Client lunch — Rajesh V.', amount: 2200, status: 'Approved', receipt: true },
-  { id: 'E-003', date: '2026-02-20', category: 'Fuel', description: 'Petrol — field visits', amount: 3500, status: 'Approved', receipt: true },
-  { id: 'E-004', date: '2026-02-19', category: 'Stay', description: 'Hotel — Bangalore overnight', amount: 4800, status: 'Under Review', receipt: true },
-  { id: 'E-005', date: '2026-02-18', category: 'Misc', description: 'Printing — site docs', amount: 350, status: 'Approved', receipt: false },
-  { id: 'E-006', date: '2026-02-17', category: 'Travel', description: 'Train — Chennai to Bangalore', amount: 1850, status: 'Approved', receipt: true },
-]
-
-const LEADERBOARD = [
-  { rank: 1, name: 'Arjun Mehta', visits: 48, prospects: 22, pipeline: 42000000, closed: 18500000, score: 965, badges: ['Road Warrior', 'Closer'] },
-  { rank: 2, name: 'Priya Subramanian', visits: 45, prospects: 19, pipeline: 38000000, closed: 16200000, score: 920, badges: ['Sharpshooter', 'Marathon'] },
-  { rank: 3, name: 'Vikram Natarajan', visits: 42, prospects: 25, pipeline: 35000000, closed: 14800000, score: 885, badges: ['Explorer', 'Road Warrior'] },
-  { rank: 4, name: 'Deepa Raghavan', visits: 38, prospects: 17, pipeline: 31000000, closed: 13500000, score: 840, badges: ['Closer'] },
-  { rank: 5, name: 'Suresh Balaji', visits: 35, prospects: 15, pipeline: 28000000, closed: 11200000, score: 790, badges: ['Marathon'] },
-  { rank: 6, name: 'Kavitha Raman', visits: 32, prospects: 20, pipeline: 26000000, closed: 10800000, score: 755, badges: ['Sharpshooter', 'Explorer'] },
-  { rank: 7, name: 'Rajesh Kumar', visits: 28, prospects: 12, pipeline: 22000000, closed: 9200000, score: 710, badges: ['Road Warrior'] },
-  { rank: 8, name: 'Meena Sundaram', visits: 25, prospects: 14, pipeline: 19000000, closed: 7800000, score: 665, badges: [] },
-]
+// ── Data (fetched from Supabase at runtime) ─────────────────────
+const CHECKINS: any[] = []
+const SITE_VISITS: any[] = []
+const MEDIA_ITEMS: any[] = []
+const REPORTS: any[] = []
+const ROUTE_STOPS: any[] = []
+const PROSPECTS: any[] = []
+const EXPENSES: any[] = []
+const LEADERBOARD: any[] = []
 
 const PIPELINE_STAGES = ['Initial Contact', 'Site Visit', 'Proposal', 'Negotiation', 'Confirmed'] as const
 
-const VISIT_CHART = [
-  { day: 'Mon', visits: 4 }, { day: 'Tue', visits: 6 }, { day: 'Wed', visits: 3 },
-  { day: 'Thu', visits: 5 }, { day: 'Fri', visits: 7 }, { day: 'Sat', visits: 2 },
-]
+const VISIT_CHART: any[] = []
 
 // ── Helpers ───────────────────────────────────────────────────────
 const fmtINR = (n: number) => {
@@ -932,7 +851,7 @@ function LeaderboardPanel({ showToast }: FieldOpsModuleProps) {
             <p className="text-2xl font-bold text-teal-400 mt-1">{p.score}</p>
             <p className="text-[10px] text-gray-500 uppercase mt-0.5">Points</p>
             <div className="flex items-center justify-center gap-1 mt-2 flex-wrap">
-              {p.badges.map(b => {
+              {p.badges.map((b: any) => {
                 const bc = BADGE_CONFIG[b]
                 if (!bc) return null
                 return (

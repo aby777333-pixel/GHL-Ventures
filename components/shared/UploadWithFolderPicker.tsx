@@ -1,7 +1,7 @@
 'use client'
 
-import { useState, useMemo } from 'react'
-import { FolderOpen, ChevronRight, Upload, Search, X } from 'lucide-react'
+import { useState, useMemo, useRef } from 'react'
+import { FolderOpen, ChevronRight, Upload, Search, X, AlertTriangle } from 'lucide-react'
 import { MOCK_FOLDERS } from '@/lib/admin/fileRepositoryData'
 import type { RepoFolder } from '@/lib/admin/fileRepositoryTypes'
 import { uploadFile } from '@/lib/supabase/storageService'
@@ -38,7 +38,7 @@ interface UploadWithFolderPickerProps {
   /** Allow multiple files */
   multiple?: boolean
   /** Toast function */
-  showToast?: (msg: string, type?: string) => void
+  showToast?: (msg: string, type?: 'success' | 'error' | 'info' | 'warning') => void
   /** Called after upload completes */
   onUploadComplete?: (results: { success: boolean; fileName: string }[]) => void
   /** Theme: 'dark' (admin) or 'teal' (staff) */
@@ -62,11 +62,11 @@ export default function UploadWithFolderPicker({
   const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set())
   const [searchQuery, setSearchQuery] = useState('')
   const [uploading, setUploading] = useState(false)
-  const [step, setStep] = useState<'folder' | 'uploading'>('folder')
+  const [step, setStep] = useState<'folder' | 'confirm' | 'uploading'>('folder')
+  const pendingFilesRef = useRef<FileList | null>(null)
 
   const folderTree = useMemo(() => buildTree(MOCK_FOLDERS), [])
 
-  const accentColor = theme === 'teal' ? 'teal' : 'red'
   const accentBg = theme === 'teal' ? 'bg-teal-600' : 'bg-brand-red'
   const accentHover = theme === 'teal' ? 'hover:bg-teal-700' : 'hover:bg-red-600'
   const accentBorder = theme === 'teal' ? 'border-teal-500/30' : 'border-brand-red/30'
@@ -94,56 +94,74 @@ export default function UploadWithFolderPicker({
     setExpandedFolders(next)
   }
 
-  const handleUpload = async () => {
-    setStep('uploading')
+  // Step 1: Open file picker, then move to confirmation step
+  const handleChooseFiles = () => {
     const input = document.createElement('input')
     input.type = 'file'
     input.accept = accept
     if (multiple) input.multiple = true
 
-    input.onchange = async () => {
+    input.onchange = () => {
       const files = input.files
       if (!files || files.length === 0) {
-        setStep('folder')
         return
       }
-
-      setUploading(true)
-      showToast?.(`Uploading ${files.length} file(s)...`, 'info')
-
-      const folderPath = selectedFolderData?.path || ''
-      const routeKey = folderPath
-        ? `${portal}/${folderPath.replace(/^\//, '').split('/')[0]}`
-        : defaultRoute
-
-      const results: { success: boolean; fileName: string }[] = []
-
-      for (let i = 0; i < files.length; i++) {
-        const file = files[i]
-        const result = await uploadFile(file, routeKey)
-        results.push({ success: result.success, fileName: file.name })
-      }
-
-      const okCount = results.filter(r => r.success).length
-      const failCount = results.filter(r => !r.success).length
-
-      if (okCount > 0) {
-        const folderName = selectedFolderData?.name || 'selected folder'
-        showToast?.(`${okCount} file(s) uploaded to "${folderName}"`, 'success')
-      }
-      if (failCount > 0) showToast?.(`${failCount} file(s) failed to upload`, 'error')
-
-      onUploadComplete?.(results)
-      setUploading(false)
-      setStep('folder')
-      onClose()
+      pendingFilesRef.current = files
+      setStep('confirm')
     }
 
     input.oncancel = () => {
-      setStep('folder')
+      // User cancelled the file picker, stay on folder step
     }
 
     input.click()
+  }
+
+  // Step 2: User confirmed — actually upload
+  const handleConfirmUpload = async () => {
+    const files = pendingFilesRef.current
+    if (!files || files.length === 0) {
+      setStep('folder')
+      return
+    }
+
+    setStep('uploading')
+    setUploading(true)
+    showToast?.(`Uploading ${files.length} file(s)...`, 'info')
+
+    const folderPath = selectedFolderData?.path || ''
+    const routeKey = folderPath
+      ? `${portal}/${folderPath.replace(/^\//, '').split('/')[0]}`
+      : defaultRoute
+
+    const results: { success: boolean; fileName: string }[] = []
+
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i]
+      const result = await uploadFile(file, routeKey)
+      results.push({ success: result.success, fileName: file.name })
+    }
+
+    const okCount = results.filter(r => r.success).length
+    const failCount = results.filter(r => !r.success).length
+
+    if (okCount > 0) {
+      const folderName = selectedFolderData?.name || 'selected folder'
+      showToast?.(`${okCount} file(s) uploaded to "${folderName}"`, 'success')
+    }
+    if (failCount > 0) showToast?.(`${failCount} file(s) failed to upload`, 'error')
+
+    onUploadComplete?.(results)
+    pendingFilesRef.current = null
+    setUploading(false)
+    setStep('folder')
+    onClose()
+  }
+
+  // Cancel confirmation — go back to folder selection
+  const handleCancelConfirm = () => {
+    pendingFilesRef.current = null
+    setStep('folder')
   }
 
   const renderFolder = (node: FolderNode, depth: number = 0) => {
@@ -270,7 +288,7 @@ export default function UploadWithFolderPicker({
             Cancel
           </button>
           <button
-            onClick={handleUpload}
+            onClick={handleChooseFiles}
             disabled={!selectedFolder || uploading}
             className={`flex items-center gap-2 px-5 py-2 rounded-xl text-sm font-medium text-white transition-colors disabled:opacity-40 disabled:cursor-not-allowed ${accentBg} ${accentHover}`}
           >
@@ -278,6 +296,65 @@ export default function UploadWithFolderPicker({
             {uploading ? 'Uploading...' : 'Choose Files & Upload'}
           </button>
         </div>
+
+        {/* ── Confirmation Overlay ─────────────────────────────── */}
+        {step === 'confirm' && pendingFilesRef.current && (
+          <div className="absolute inset-0 z-10 flex items-center justify-center bg-black/80 backdrop-blur-sm rounded-2xl">
+            <div className="w-full max-w-sm mx-6 bg-[#111] border border-white/[0.10] rounded-2xl shadow-2xl p-6">
+              <div className="flex items-center gap-3 mb-4">
+                <div className={`p-2.5 rounded-xl ${accentBgLight}`}>
+                  <AlertTriangle className={`w-5 h-5 ${accentText}`} />
+                </div>
+                <h3 className="text-base font-semibold text-white">Confirm Upload</h3>
+              </div>
+
+              <p className="text-sm text-gray-300 mb-2">
+                Are you sure you want to save {pendingFilesRef.current.length === 1 ? 'this file' : `these ${pendingFilesRef.current.length} files`} in this repository?
+              </p>
+
+              <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-white/[0.04] border border-white/[0.06] mb-1">
+                <FolderOpen className="w-4 h-4 shrink-0" style={{ color: selectedFolderData?.color }} />
+                <span className="text-sm font-medium text-white truncate">{selectedFolderData?.name}</span>
+              </div>
+
+              <div className="mb-5 mt-3 space-y-1 max-h-[120px] overflow-y-auto">
+                {Array.from(pendingFilesRef.current).map((file, i) => (
+                  <div key={i} className="flex items-center gap-2 text-xs text-gray-400">
+                    <Upload className="w-3 h-3 shrink-0" />
+                    <span className="truncate">{file.name}</span>
+                    <span className="text-gray-600 shrink-0">({(file.size / 1024).toFixed(0)} KB)</span>
+                  </div>
+                ))}
+              </div>
+
+              <div className="flex justify-end gap-3">
+                <button
+                  onClick={handleCancelConfirm}
+                  className="px-4 py-2 rounded-xl text-sm font-medium text-gray-400 hover:text-white hover:bg-white/[0.06] transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleConfirmUpload}
+                  className={`flex items-center gap-2 px-5 py-2 rounded-xl text-sm font-medium text-white transition-colors ${accentBg} ${accentHover}`}
+                >
+                  <Upload className="w-4 h-4" />
+                  Save
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ── Uploading Overlay ────────────────────────────────── */}
+        {step === 'uploading' && (
+          <div className="absolute inset-0 z-10 flex items-center justify-center bg-black/80 backdrop-blur-sm rounded-2xl">
+            <div className="flex flex-col items-center gap-3">
+              <div className="animate-spin rounded-full h-8 w-8 border-2 border-brand-red border-t-transparent" />
+              <p className="text-sm text-gray-400">Uploading files...</p>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   )

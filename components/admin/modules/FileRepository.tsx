@@ -21,9 +21,10 @@ import {
   formatFileSize, getFileTypeColor, buildFolderTree, MOCK_FOLDERS,
 } from '@/lib/admin/fileRepositoryData'
 import * as svc from '@/lib/supabase/fileRepositoryService'
-import { uploadFile, uploadFiles, saveFileAs, saveBlobAs, checkStorageConnection } from '@/lib/supabase/storageService'
+import { saveFileAs, saveBlobAs, checkStorageConnection } from '@/lib/supabase/storageService'
 import { isSupabaseConfigured } from '@/lib/supabase/client'
 import type { FolderNode, RepoFile, ViewMode, SortField, SortDir } from '@/lib/admin/fileRepositoryTypes'
+import UploadWithFolderPicker from '@/components/shared/UploadWithFolderPicker'
 
 // ── Icon Map for folder icons ───────────────────────────────
 const FOLDER_ICONS: Record<string, LucideIcon> = {
@@ -76,7 +77,7 @@ export default function FileRepository({ showToast, navigate }: Props) {
   const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set())
   const [filterOpen, setFilterOpen] = useState(false)
   const [activeFilters, setActiveFilters] = useState<{ type?: string[]; access?: string[] }>({})
-  const [uploadProgress, setUploadProgress] = useState<{ done: number; total: number } | null>(null)
+
 
   // ── Data hooks ────────────────────────────────────────────
   const { data: folderTree, loading: foldersLoading } = useFolderTree()
@@ -593,92 +594,15 @@ export default function FileRepository({ showToast, navigate }: Props) {
         )}
       </div>
 
-      {/* ── Upload Modal ──────────────────────────────────────── */}
-      <AdminModal
-        isOpen={uploadModalOpen}
-        onClose={() => { setUploadModalOpen(false); setUploadProgress(null) }}
-        title="Upload Files"
-        maxWidth="max-w-3xl"
-      >
-        <div className="space-y-4">
-          <div
-            className="rounded-2xl border-2 border-dashed border-white/[0.08] bg-white/[0.01] p-8 text-center hover:border-brand-red/20 transition-colors cursor-pointer"
-            onDragOver={e => { e.preventDefault(); e.currentTarget.classList.add('border-brand-red/40', 'bg-brand-red/5') }}
-            onDragLeave={e => { e.currentTarget.classList.remove('border-brand-red/40', 'bg-brand-red/5') }}
-            onDrop={async e => {
-              e.preventDefault()
-              e.currentTarget.classList.remove('border-brand-red/40', 'bg-brand-red/5')
-              const droppedFiles = e.dataTransfer.files
-              if (droppedFiles.length > 0) {
-                const folder = currentFolder ? `admin/documents/${currentFolder.slug}` : 'admin/documents'
-                setUploadProgress({ done: 0, total: droppedFiles.length })
-                const results = await uploadFiles(Array.from(droppedFiles), folder, (done, total) => setUploadProgress({ done, total }))
-                const successes = results.filter(r => r.success)
-                const failures = results.filter(r => !r.success)
-                if (successes.length > 0) showToast(`Uploaded ${successes.length} file(s) to Supabase Storage`, 'success')
-                if (failures.length > 0) showToast(`${failures.length} file(s) failed: ${failures[0].error}`, 'error')
-                setUploadProgress(null)
-                setUploadModalOpen(false)
-                refetchFiles()
-              }
-            }}
-            onClick={() => {
-              const input = document.createElement('input')
-              input.type = 'file'
-              input.multiple = true
-              input.accept = '.pdf,.xlsx,.xls,.docx,.doc,.pptx,.ppt,.csv,.jpg,.jpeg,.png,.gif,.webp,.svg,.zip'
-              input.onchange = async () => {
-                if (input.files && input.files.length > 0) {
-                  const folder = currentFolder ? `admin/documents/${currentFolder.slug}` : 'admin/documents'
-                  setUploadProgress({ done: 0, total: input.files.length })
-                  const results = await uploadFiles(Array.from(input.files), folder, (done, total) => setUploadProgress({ done, total }))
-                  const successes = results.filter(r => r.success)
-                  const failures = results.filter(r => !r.success)
-                  if (successes.length > 0) showToast(`Uploaded ${successes.length} file(s) to Supabase Storage`, 'success')
-                  if (failures.length > 0) showToast(`${failures.length} file(s) failed: ${failures[0].error}`, 'error')
-                  setUploadProgress(null)
-                  setUploadModalOpen(false)
-                  refetchFiles()
-                }
-              }
-              input.click()
-            }}
-          >
-            {uploadProgress ? (
-              <div className="flex flex-col items-center gap-2">
-                <div className="animate-spin rounded-full h-8 w-8 border-2 border-brand-red border-t-transparent" />
-                <p className="text-sm text-gray-400">Uploading {uploadProgress.done}/{uploadProgress.total} files…</p>
-                <div className="w-48 h-1.5 rounded-full bg-white/[0.04] overflow-hidden">
-                  <div className="h-full rounded-full bg-brand-red transition-all" style={{ width: `${(uploadProgress.done / uploadProgress.total) * 100}%` }} />
-                </div>
-              </div>
-            ) : (
-              <>
-                <Upload className="w-8 h-8 text-gray-600 mx-auto mb-3" />
-                <p className="text-sm text-gray-400">Drag & drop files here, or click to browse</p>
-                <p className="text-xs text-gray-600 mt-1">PDF, XLSX, DOCX, PPTX, images up to 50MB</p>
-                <span className="inline-block mt-3 px-4 py-2 rounded-xl text-xs font-medium text-brand-red bg-brand-red/10 border border-brand-red/20 hover:bg-brand-red/20 transition-colors">
-                  Browse Files
-                </span>
-              </>
-            )}
-          </div>
-
-          {currentFolder && (
-            <div className="flex items-center gap-2 text-xs text-gray-400">
-              <FolderOpen className="w-3.5 h-3.5" />
-              <span>Uploading to: <span className="text-white">{currentFolder.name}</span></span>
-            </div>
-          )}
-
-          {isSupabaseConfigured() && (
-            <div className="flex items-center gap-2 text-[10px] text-emerald-500">
-              <CheckCircle className="w-3 h-3" />
-              <span>Supabase Storage connected — files will be stored in cloud</span>
-            </div>
-          )}
-        </div>
-      </AdminModal>
+      {/* ── Upload Modal (with folder picker) ─────────────────── */}
+      <UploadWithFolderPicker
+        open={uploadModalOpen}
+        onClose={() => setUploadModalOpen(false)}
+        showToast={showToast}
+        onUploadComplete={() => { refetchFiles() }}
+        theme="dark"
+        portal="admin"
+      />
 
       {/* ── New Folder Modal ──────────────────────────────────── */}
       <AdminModal

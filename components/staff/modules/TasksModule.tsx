@@ -394,13 +394,7 @@ interface WorkflowTemplate {
   description: string
 }
 
-const MOCK_WORKFLOWS: WorkflowTemplate[] = [
-  { id: 'wf-001', name: 'New Client Onboarding', steps: 6, status: 'active', description: 'End-to-end workflow for onboarding new investment clients with KYC, docs, and account setup.' },
-  { id: 'wf-002', name: 'KYC Verification', steps: 4, status: 'active', description: 'Automated KYC document collection, verification, and approval pipeline.' },
-  { id: 'wf-003', name: 'Complaint Escalation', steps: 5, status: 'active', description: 'Multi-tier escalation workflow for client complaints with SLA tracking.' },
-  { id: 'wf-004', name: 'Monthly Report Generation', steps: 3, status: 'paused', description: 'Automated monthly investor report compilation, review, and distribution.' },
-  { id: 'wf-005', name: 'Investment Maturity Processing', steps: 7, status: 'active', description: 'Full lifecycle processing for maturing investments including payout calculations and reinvestment options.' },
-]
+const MOCK_WORKFLOWS: WorkflowTemplate[] = []
 
 function WorkflowsView({ showToast }: { showToast: TasksModuleProps['showToast'] }) {
   return (

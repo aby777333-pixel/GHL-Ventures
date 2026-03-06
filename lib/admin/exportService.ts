@@ -142,17 +142,16 @@ export async function copyToClipboard(text: string): Promise<boolean> {
   }
 }
 
-// ── Google Sheets (mock — shows toast in the UI) ──────────────
+// ── Google Sheets ─────────────────────────────────────────────
 export function exportToGoogleSheets(title: string): string {
-  // In production this would use Google Sheets API
-  // For now, return a mock URL
-  return `https://docs.google.com/spreadsheets/d/mock-${Date.now()}/edit`
+  // TODO: Integrate Google Sheets API
+  return ''
 }
 
-// ── Google Drive (mock — shows toast in the UI) ───────────────
+// ── Google Drive ──────────────────────────────────────────────
 export function exportToGoogleDrive(title: string): string {
-  // In production this would use Google Drive API
-  return `https://drive.google.com/file/d/mock-${Date.now()}/view`
+  // TODO: Integrate Google Drive API
+  return ''
 }
 
 // ── Generate Share Link ────────────────────────────────────────
