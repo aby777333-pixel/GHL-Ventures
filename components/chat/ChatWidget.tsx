@@ -5,7 +5,7 @@ import { usePathname } from 'next/navigation'
 import {
   MessageCircle, X, Send, Minus, Paperclip, CheckCheck,
   ArrowRight, Mail, Video, Bot, Headphones, PhoneCall,
-  User, Clock, Smile, Meh, Frown
+  User, Clock, Star
 } from 'lucide-react'
 import { findBestResponse, getAIResponse } from '@/lib/chatKnowledge'
 import { PROACTIVE_MESSAGES } from '@/lib/chatProactive'
@@ -56,6 +56,7 @@ export default function ChatWidget() {
   const [quickReplies, setQuickReplies] = useState<string[]>([])
   const [visitorName, setVisitorName] = useState('')
   const [visitorEmail, setVisitorEmail] = useState('')
+  const [visitorPhone, setVisitorPhone] = useState('')
   const [showProactive, setShowProactive] = useState(false)
   const [proactiveMsg, setProactiveMsg] = useState('')
   const [unreadCount, setUnreadCount] = useState(0)
@@ -83,6 +84,7 @@ export default function ChatWidget() {
         const v = JSON.parse(savedVisitor)
         setVisitorName(v.name || '')
         setVisitorEmail(v.email || '')
+        setVisitorPhone(v.phone || '')
         setChatState('active')
       }
       const savedHistory = localStorage.getItem('ghl-chat-history')
@@ -260,7 +262,7 @@ export default function ChatWidget() {
     e.preventDefault()
     const name = visitorName.trim()
     if (!name) return
-    localStorage.setItem('ghl-chat-visitor', JSON.stringify({ name, email: visitorEmail }))
+    localStorage.setItem('ghl-chat-visitor', JSON.stringify({ name, email: visitorEmail, phone: visitorPhone }))
     setChatState('active')
     addWelcome(name)
   }
@@ -275,6 +277,7 @@ export default function ChatWidget() {
     const session = await createChatSession({
       visitorName: visitorName || 'Visitor',
       visitorEmail: visitorEmail || undefined,
+      visitorPhone: visitorPhone || undefined,
       pageUrl: typeof window !== 'undefined' ? window.location.href : undefined,
       channel: 'web_chat',
     })
@@ -421,17 +424,20 @@ export default function ChatWidget() {
   const handleRate = async (rating: string) => {
     setRated(true)
     setShowRating(false)
+    const score = parseInt(rating, 10)
+    const labels: Record<number, string> = { 1: 'Poor', 2: 'Fair', 3: 'Good', 4: 'Very Good', 5: 'Excellent' }
     const rateMsg: ChatMessageUI = {
       id: uid(),
-      text: `Thanks for the feedback! You rated this conversation: **${rating}**\n\nWe appreciate you chatting with us.`,
+      text: `Thanks for rating us **${score}/5 (${labels[score] || rating})**!\n\nWe appreciate your feedback.`,
       sender: 'system',
       timestamp: new Date(),
     }
     setMessages(prev => [...prev, rateMsg])
 
-    // Save rating to Supabase
+    // Save CSAT score to Supabase
     if (chatSession?.id) {
-      await resolveChatSession(chatSession.id, rating)
+      const { saveCsatRating } = await import('@/lib/supabase/chatService')
+      await saveCsatRating(chatSession.id, score)
     }
   }
 
@@ -604,6 +610,12 @@ export default function ChatWidget() {
                   <input
                     type="email" value={visitorEmail} onChange={(e) => setVisitorEmail(e.target.value)}
                     placeholder="Email (optional)"
+                    className="w-full px-4 py-2.5 rounded-xl text-sm text-white placeholder-gray-500 outline-none"
+                    style={{ background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.1)' }}
+                  />
+                  <input
+                    type="tel" value={visitorPhone} onChange={(e) => setVisitorPhone(e.target.value)}
+                    placeholder="Phone (optional)"
                     className="w-full px-4 py-2.5 rounded-xl text-sm text-white placeholder-gray-500 outline-none"
                     style={{ background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.1)' }}
                   />
@@ -823,19 +835,20 @@ export default function ChatWidget() {
                 {/* Satisfaction rating */}
                 {showRating && !rated && chatMode === 'live' && (
                   <div className="animate-fade-in rounded-xl p-3 text-center" style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)' }}>
-                    <p className="text-gray-400 text-[11px] mb-2">How is your experience so far?</p>
-                    <div className="flex items-center justify-center gap-4">
-                      {[
-                        { icon: <Smile className="w-5 h-5" />, label: 'Great', color: 'text-emerald-400 hover:text-emerald-300' },
-                        { icon: <Meh className="w-5 h-5" />, label: 'Okay', color: 'text-amber-400 hover:text-amber-300' },
-                        { icon: <Frown className="w-5 h-5" />, label: 'Poor', color: 'text-red-400 hover:text-red-300' },
-                      ].map(({ icon, label, color }) => (
-                        <button key={label} onClick={() => handleRate(label)} className={`flex flex-col items-center gap-1 transition-all ${color}`}>
-                          {icon}
-                          <span className="text-[9px]">{label}</span>
+                    <p className="text-gray-400 text-[11px] mb-2">Rate your experience</p>
+                    <div className="flex items-center justify-center gap-2">
+                      {[1, 2, 3, 4, 5].map((star) => (
+                        <button
+                          key={star}
+                          onClick={() => handleRate(String(star))}
+                          className="transition-all hover:scale-125 text-gray-600 hover:text-amber-400"
+                          title={`${star} star${star > 1 ? 's' : ''}`}
+                        >
+                          <Star className="w-6 h-6" fill="currentColor" />
                         </button>
                       ))}
                     </div>
+                    <p className="text-[9px] text-gray-600 mt-1.5">1 = Poor · 5 = Excellent</p>
                   </div>
                 )}
 

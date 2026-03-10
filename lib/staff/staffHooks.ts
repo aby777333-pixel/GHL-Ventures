@@ -4,9 +4,10 @@
 
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import type { StaffSession, StaffRole, AgentStatus } from './staffTypes'
 import { getStaffSession, logoutStaff } from '@/lib/supabase/staffAuthService'
+import { upsertStaffPresence, updateStaffStatus, staffHeartbeat } from '@/lib/supabase/chatService'
 
 // ── useStaffAuth ────────────────────────────────────────────────
 export function useStaffAuth() {
@@ -113,6 +114,44 @@ export function useClock() {
   }, [])
 
   return { clockedIn, clockInTime, elapsed, onBreak, clockIn, clockOut, toggleBreak }
+}
+
+
+// ── useStaffPresence ──────────────────────────────────────────
+/** Manages staff presence in Supabase: online on mount, heartbeat, offline on unmount */
+export function useStaffPresence(userId: string | null, displayName?: string, role?: string) {
+  const heartbeatRef = useRef<ReturnType<typeof setInterval> | null>(null)
+
+  useEffect(() => {
+    if (!userId) return
+
+    // Set online on mount
+    upsertStaffPresence({ userId, status: 'online', displayName, role })
+
+    // Heartbeat every 30 seconds
+    heartbeatRef.current = setInterval(() => {
+      staffHeartbeat(userId)
+    }, 30000)
+
+    // Set offline on unmount / tab close
+    const handleBeforeUnload = () => {
+      updateStaffStatus(userId, 'offline')
+    }
+    window.addEventListener('beforeunload', handleBeforeUnload)
+
+    return () => {
+      if (heartbeatRef.current) clearInterval(heartbeatRef.current)
+      window.removeEventListener('beforeunload', handleBeforeUnload)
+      updateStaffStatus(userId, 'offline')
+    }
+  }, [userId, displayName, role])
+
+  const setPresenceStatus = useCallback((status: string) => {
+    if (!userId) return
+    updateStaffStatus(userId, status)
+  }, [userId])
+
+  return { setPresenceStatus }
 }
 
 // ── Format Helpers ──────────────────────────────────────────────

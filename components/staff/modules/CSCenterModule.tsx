@@ -29,9 +29,14 @@ import {
   acceptRMRequest,
   completeRMRequest,
   reassignChat,
+  getCannedResponses,
+  getOnlineStaff,
+  resolveSessionFromStaff,
   type ChatSession,
   type ChatMessage as ChatMsg,
   type RMRequest,
+  type CannedResponse,
+  type StaffPresence,
 } from '@/lib/supabase/chatService'
 import {
   onNewChatSession,
@@ -856,6 +861,11 @@ function ChatView({ showToast }: Pick<CSCenterModuleProps, 'showToast'>) {
   const [transferring, setTransferring] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const messagesContainerRef = useRef<HTMLDivElement>(null)
+  const [dbCannedResponses, setDbCannedResponses] = useState<CannedResponse[]>([])
+  const [onlineStaff, setOnlineStaff] = useState<StaffPresence[]>([])
+  const [cannedFilter, setCannedFilter] = useState('')
+  const [showCannedPicker, setShowCannedPicker] = useState(false)
+  const replyInputRef = useRef<HTMLInputElement>(null)
 
   // Load active chat sessions from Supabase + poll every 5s as Realtime fallback
   useEffect(() => {
@@ -881,6 +891,31 @@ function ChatView({ showToast }: Pick<CSCenterModuleProps, 'showToast'>) {
     const interval = setInterval(load, 5000)
     return () => { mounted = false; clearInterval(interval) }
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Load canned responses from database (with fallback to hardcoded)
+  useEffect(() => {
+    let mounted = true
+    async function loadCanned() {
+      const responses = await getCannedResponses()
+      if (mounted && responses.length > 0) {
+        setDbCannedResponses(responses)
+      }
+    }
+    loadCanned()
+    return () => { mounted = false }
+  }, [])
+
+  // Load online staff for RM transfer dropdown
+  useEffect(() => {
+    let mounted = true
+    async function loadStaff() {
+      const staff = await getOnlineStaff()
+      if (mounted) setOnlineStaff(staff)
+    }
+    loadStaff()
+    const interval = setInterval(loadStaff, 15000) // Refresh every 15s
+    return () => { mounted = false; clearInterval(interval) }
+  }, [])
 
   // Request browser notification permission on mount
   useEffect(() => {
@@ -1048,6 +1083,21 @@ function ChatView({ showToast }: Pick<CSCenterModuleProps, 'showToast'>) {
     }
   }, [selectedChat, transferring, showToast])
 
+  // Resolve/close a chat session
+  const handleResolveChat = useCallback(async () => {
+    if (!selectedChat) return
+    const success = await resolveSessionFromStaff(selectedChat)
+    if (success) {
+      showToast('Chat resolved successfully', 'success')
+      // Remove from active list
+      setChatSessions(prev => prev.filter(s => s.id !== selectedChat))
+      setSelectedChat(null)
+      setChatMessages([])
+    } else {
+      showToast('Failed to resolve chat', 'error')
+    }
+  }, [selectedChat, showToast])
+
   const selectedSession = chatSessions.find(s => s.id === selectedChat)
 
   // Display real Supabase sessions (no mock fallback)
@@ -1084,12 +1134,24 @@ function ChatView({ showToast }: Pick<CSCenterModuleProps, 'showToast'>) {
               >
                 <div className="flex items-center justify-between mb-1">
                   <span className="text-sm text-white font-medium">{ch.visitor_name}</span>
-                  {(ch.status === 'waiting' || ch.status === 'queued') && (
-                    <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse" title="Waiting for agent" />
-                  )}
-                  {ch.status === 'active' && (
-                    <span className="w-2 h-2 rounded-full bg-emerald-400" title="Active" />
-                  )}
+                  <div className="flex items-center gap-1.5">
+                    {(ch.status === 'waiting' || ch.status === 'queued') && (() => {
+                      const waitMs = Date.now() - new Date(ch.created_at).getTime()
+                      const waitMin = Math.floor(waitMs / 60000)
+                      const color = waitMin > 3 ? 'bg-red-500 text-red-100' : waitMin > 1 ? 'bg-amber-500 text-amber-100' : 'bg-emerald-500 text-emerald-100'
+                      return (
+                        <span className={`text-[9px] px-1.5 py-0.5 rounded-full font-medium ${color}`}>
+                          {waitMin}m
+                        </span>
+                      )
+                    })()}
+                    {(ch.status === 'waiting' || ch.status === 'queued') && (
+                      <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse" title="Waiting for agent" />
+                    )}
+                    {ch.status === 'active' && (
+                      <span className="w-2 h-2 rounded-full bg-emerald-400" title="Active" />
+                    )}
+                  </div>
                 </div>
                 <div className="flex items-center justify-between">
                   <p className="text-xs text-gray-500 truncate">{ch.channel}</p>
@@ -1116,12 +1178,23 @@ function ChatView({ showToast }: Pick<CSCenterModuleProps, 'showToast'>) {
                 <span className="text-[10px] text-gray-500">{selectedSession.visitor_email}</span>
               )}
             </div>
-            <button
-              onClick={() => setShowCanned(!showCanned)}
-              className="px-3 py-1 rounded-lg text-xs bg-white/[0.04] border border-white/[0.08] text-gray-400 hover:bg-white/[0.08] transition-colors"
-            >
-              Canned Responses
-            </button>
+            <div className="flex items-center gap-2">
+              {selectedSession && selectedSession.status !== 'resolved' && (
+                <button
+                  onClick={handleResolveChat}
+                  className="px-3 py-1 rounded-lg text-xs bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 hover:bg-emerald-500/20 transition-colors"
+                >
+                  <CheckCircle2 className="w-3 h-3 inline mr-1" />
+                  Resolve
+                </button>
+              )}
+              <button
+                onClick={() => setShowCanned(!showCanned)}
+                className="px-3 py-1 rounded-lg text-xs bg-white/[0.04] border border-white/[0.08] text-gray-400 hover:bg-white/[0.08] transition-colors"
+              >
+                Canned Responses
+              </button>
+            </div>
           </div>
           <div ref={messagesContainerRef} className="px-5 py-4 space-y-3 min-h-[350px] max-h-[400px] overflow-y-auto">
             {chatMessages.length === 0 && selectedChat ? (
@@ -1158,12 +1231,49 @@ function ChatView({ showToast }: Pick<CSCenterModuleProps, 'showToast'>) {
             <div ref={messagesEndRef} />
           </div>
           <div className="px-5 py-3 border-t border-white/[0.06]">
+            {/* Canned response picker (triggered by /) */}
+            {showCannedPicker && (
+              <div className="mb-2 max-h-[180px] overflow-y-auto rounded-lg border border-white/[0.08] bg-black/60 backdrop-blur-sm">
+                {(dbCannedResponses.length > 0 ? dbCannedResponses : CANNED_RESPONSES.map(c => ({ id: c.id, shortcut: c.id, title: c.label, message: c.text, category: null as string | null })))
+                  .filter(cr => !cannedFilter || cr.shortcut.includes(cannedFilter) || cr.title.toLowerCase().includes(cannedFilter))
+                  .map(cr => (
+                    <button
+                      key={cr.id}
+                      onClick={() => {
+                        setReplyText(cr.message)
+                        setShowCannedPicker(false)
+                        replyInputRef.current?.focus()
+                      }}
+                      className="w-full px-3 py-2 text-left hover:bg-white/[0.06] transition-colors border-b border-white/[0.04] last:border-b-0"
+                    >
+                      <span className="text-[10px] text-teal-400 font-mono">/{cr.shortcut}</span>
+                      <span className="text-xs text-white ml-2">{cr.title}</span>
+                    </button>
+                  ))
+                }
+                {(dbCannedResponses.length > 0 ? dbCannedResponses : CANNED_RESPONSES.map(c => ({ id: c.id, shortcut: c.id, title: c.label, message: c.text, category: null as string | null })))
+                  .filter(cr => !cannedFilter || cr.shortcut.includes(cannedFilter) || cr.title.toLowerCase().includes(cannedFilter)).length === 0 && (
+                  <p className="px-3 py-2 text-xs text-gray-500">No matching responses</p>
+                )}
+              </div>
+            )}
             <form onSubmit={(e) => { e.preventDefault(); handleSendReply() }} className="flex items-center gap-2">
               <input
                 type="text"
                 value={replyText}
-                onChange={(e) => setReplyText(e.target.value)}
-                placeholder={selectedChat ? 'Type a reply...' : 'Select a chat first'}
+                onChange={(e) => {
+                  const val = e.target.value
+                  setReplyText(val)
+                  // Show canned response picker when typing "/"
+                  if (val === '/' || (val.startsWith('/') && val.length <= 20)) {
+                    setShowCannedPicker(true)
+                    setCannedFilter(val.slice(1).toLowerCase())
+                  } else {
+                    setShowCannedPicker(false)
+                  }
+                }}
+                ref={replyInputRef}
+                placeholder={selectedChat ? 'Type a reply or / for quick responses...' : 'Select a chat first'}
                 disabled={!selectedChat}
                 className="flex-1 px-4 py-2 text-xs bg-white/[0.04] border border-white/[0.08] rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-teal-500/40 disabled:opacity-50"
               />
@@ -1176,6 +1286,17 @@ function ChatView({ showToast }: Pick<CSCenterModuleProps, 'showToast'>) {
               </button>
             </form>
           </div>
+          {/* Visitor Info Bar */}
+          {selectedSession && (
+            <div className="px-5 py-2 border-t border-white/[0.06] flex items-center gap-4 text-[10px] text-gray-500">
+              <span title="Email">{selectedSession.visitor_email || 'No email'}</span>
+              <span title="Channel" className="capitalize">{selectedSession.channel}</span>
+              <span title="Page">{selectedSession.page_url ? new URL(selectedSession.page_url).pathname : '—'}</span>
+              {onlineStaff.length > 0 && (
+                <span className="ml-auto text-emerald-400">{onlineStaff.length} staff online</span>
+              )}
+            </div>
+          )}
         </AdminGlass>
       </div>
 

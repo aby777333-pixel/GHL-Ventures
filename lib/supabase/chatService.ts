@@ -94,6 +94,7 @@ function getOrCreateVisitorId(): string {
 export async function createChatSession(input: {
   visitorName: string
   visitorEmail?: string
+  visitorPhone?: string
   clientId?: string
   pageUrl?: string
   channel?: string
@@ -544,4 +545,110 @@ export async function getChatOverviewStats(): Promise<{
     avgWaitTime: 0, // Would need time-series calculation
     repLoads: [],
   }
+}
+
+
+// ════════════════════════════════════════════════════════════════
+// STAFF PRESENCE OPERATIONS
+// ════════════════════════════════════════════════════════════════
+
+export interface StaffPresence {
+  user_id: string
+  status: 'online' | 'away' | 'busy' | 'offline'
+  display_name: string | null
+  role: string | null
+  active_chats: number
+  max_chats: number
+  last_seen: string
+}
+
+export interface CannedResponse {
+  id: string
+  shortcut: string
+  title: string
+  message: string
+  category: string | null
+}
+
+/** Set staff presence status (online/away/busy/offline) */
+export async function upsertStaffPresence(input: {
+  userId: string
+  status?: string
+  displayName?: string
+  role?: string
+}): Promise<void> {
+  if (!isSupabaseConfigured()) return
+  await db.rpc('upsert_staff_presence', {
+    p_user_id: input.userId,
+    p_status: input.status || 'online',
+    p_display_name: input.displayName || null,
+    p_role: input.role || null,
+  }).catch((e: any) => console.error('[chatService] upsertStaffPresence:', e.message))
+}
+
+/** Update staff status only */
+export async function updateStaffStatus(userId: string, status: string): Promise<void> {
+  if (!isSupabaseConfigured()) return
+  await db.rpc('update_staff_status', { p_user_id: userId, p_status: status })
+    .catch((e: any) => console.error('[chatService] updateStaffStatus:', e.message))
+}
+
+/** Staff heartbeat — update last_seen */
+export async function staffHeartbeat(userId: string): Promise<void> {
+  if (!isSupabaseConfigured()) return
+  await db.rpc('staff_heartbeat', { p_user_id: userId })
+    .catch(() => {}) // Silent — non-critical
+}
+
+/** Get all online staff members */
+export async function getOnlineStaff(): Promise<StaffPresence[]> {
+  if (!isSupabaseConfigured()) return []
+  const { data, error } = await db.rpc('get_online_staff')
+  if (error) {
+    console.error('[chatService] get_online_staff failed:', error.message)
+    return []
+  }
+  return (data || []) as StaffPresence[]
+}
+
+/** Get canned responses from database */
+export async function getCannedResponses(): Promise<CannedResponse[]> {
+  if (!isSupabaseConfigured()) return []
+  const { data, error } = await db.rpc('get_canned_responses')
+  if (error) {
+    console.error('[chatService] get_canned_responses failed:', error.message)
+    return []
+  }
+  return (data || []) as CannedResponse[]
+}
+
+/** Save CSAT rating for a chat session */
+export async function saveCsatRating(sessionId: string, score: number, feedback?: string): Promise<boolean> {
+  if (!isSupabaseConfigured()) return true
+  const { error } = await db.rpc('save_csat_rating', {
+    p_session_id: sessionId,
+    p_score: score,
+    p_feedback: feedback || null,
+  })
+  if (error) console.error('[chatService] saveCsatRating:', error.message)
+  return !error
+}
+
+/** Resolve a chat session from the staff side */
+export async function resolveSessionFromStaff(sessionId: string): Promise<boolean> {
+  if (!isSupabaseConfigured()) return true
+  const { error } = await db
+    .from('chat_sessions')
+    .update({ status: 'resolved', resolved_at: new Date().toISOString() })
+    .eq('id', sessionId)
+  if (error) {
+    console.error('[chatService] resolveSessionFromStaff:', error.message)
+    return false
+  }
+  await sendChatMessage({
+    sessionId,
+    senderType: 'system',
+    message: 'This chat has been resolved by the agent. Thank you for contacting GHL India Ventures.',
+  })
+  return true
 }

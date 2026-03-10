@@ -90,14 +90,9 @@ function getResponse(input: string): string {
     return "Opening our **Web Calling Solutions** panel for you!\n\nYou can make calls directly from your browser using:\n\n**JustCall** — Cloud phone with WebRTC, 100+ integrations\n**Aircall** — Cloud-based VoIP with real-time analytics\n**Toky** — Click-to-call widget with SMS & CRM integration\n**Telnyx** — Developer-friendly SIP/WebRTC APIs\n**Vonage** — Programmable voice with global coverage\n**Exotel** — India-focused cloud telephony\n\n*The calling solutions panel should now be open.*"
   }
 
-  // Live chat widgets / free chat solutions
+  // Live chat — redirect to GHL built-in chat
   if (lower.includes('live chat') || lower.includes('chat widget') || lower.includes('free chat') || lower.includes('live support') || lower.includes('chat solution') || lower.includes('customer chat') || lower.includes('chat tool')) {
-    return "Here are the **best free live chat widgets** you can embed:\n\n**Tawk.to** — 100% free, unlimited agents & chats. Just add one script tag to go live instantly.\n**Crisp** — Free for 2 agents, built-in chatbot, shared inbox. Embed with a single JS snippet.\n**Tidio** — Free for 50 chats/month, AI chatbot (Lyro). One-click install for any site.\n**HubSpot Free Chat** — Free live chat with full CRM. Embed via HubSpot tracking code.\n**Smartsupp** — Free plan with video recordings, 3 agents. Simple embed code.\n**Chatwoot** — Open-source, self-hosted. Unlimited agents, full API access.\n\nAll embed with a single JavaScript snippet \u2014 no backend needed.\n\nSay **\"Tawk\"**, **\"Crisp\"**, or **\"Tidio\"** for setup details, or say **\"Web Call\"** for browser-based calling."
-  }
-
-  // Tawk.to specific
-  if (lower.includes('tawk') || lower.includes('tawk.to')) {
-    return "**Tawk.to** is the world's most popular free live chat platform.\n\n• **100% free** — no limits on agents, chats, or history\n• Real-time visitor monitoring\n• Customizable widget with branding\n• Mobile apps for iOS & Android\n• Ticketing system included\n• 45+ languages supported\n\nVisit: **tawk.to** to set up in minutes."
+    return "GHL India Ventures has a **built-in live chat** system powered by our own platform.\n\nYou can switch to **Live Chat** mode using the toggle above to connect with a real agent instantly.\n\nOur system includes:\n• **Real-time messaging** with typing indicators\n• **Relationship Manager** transfer\n• **Customer satisfaction** ratings\n• **Full chat history** persistence\n\nSay **Live Chat** to connect with an agent now, or say **Web Call** for browser-based calling."
   }
 
   // Crisp specific
