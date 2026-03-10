@@ -3,13 +3,14 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase, isSupabaseConfigured } from '@/lib/supabase/client'
-import { Loader2 } from 'lucide-react'
+import { Loader2, AlertTriangle } from 'lucide-react'
 import Logo from '@/components/Logo'
+import Link from 'next/link'
 
 /**
  * Auth callback page — processes Supabase auth tokens from the URL
  * after OAuth redirect (Google, etc.), email verification, or password recovery.
- * Ensures a profile exists, then navigates to the appropriate page.
+ * Validates flow type (signin vs signup) and ensures proper handling.
  */
 export default function AuthCallbackPage() {
   const router = useRouter()
@@ -19,7 +20,8 @@ export default function AuthCallbackPage() {
   useEffect(() => {
     async function handleCallback() {
       if (!isSupabaseConfigured()) {
-        router.replace('/dashboard')
+        setError('Authentication service unavailable. Please try again later.')
+        setTimeout(() => router.replace('/login'), 3000)
         return
       }
 
@@ -29,10 +31,6 @@ export default function AuthCallbackPage() {
           const hash = window.location.hash
           if (hash.includes('type=recovery')) {
             setMode('recovery')
-            // Supabase auto-exchanges the token — redirect to password update page
-            // For now, redirect to login with a message since we don't have a
-            // dedicated password-update page. The session is established so they
-            // can update their password from their profile.
             const { data: { session } } = await supabase.auth.getSession()
             if (session?.user) {
               await ensureProfile(session.user)
@@ -42,13 +40,18 @@ export default function AuthCallbackPage() {
           }
         }
 
+        // Get the flow type from URL params (signin or signup)
+        const flow = typeof window !== 'undefined'
+          ? new URL(window.location.href).searchParams.get('flow')
+          : null
+
         // Supabase client with detectSessionInUrl: true will automatically
         // pick up the tokens from the URL hash fragment (#access_token=...)
         const { data: { session }, error: sessionError } = await supabase.auth.getSession()
 
         if (sessionError || !session?.user) {
           // Retry once — sometimes the session takes a moment to be established
-          await new Promise(r => setTimeout(r, 1000))
+          await new Promise(r => setTimeout(r, 1500))
           const { data: { session: retrySession }, error: retryError } = await supabase.auth.getSession()
 
           if (retryError || !retrySession?.user) {
@@ -57,11 +60,19 @@ export default function AuthCallbackPage() {
             return
           }
 
+          // Validate with retry session
+          const valid = await validateFlow(retrySession.user, flow)
+          if (!valid) return // validateFlow sets error and handles redirect
+
           await ensureProfile(retrySession.user)
           await handleReferral(retrySession.user)
           router.replace('/dashboard')
           return
         }
+
+        // Validate flow before proceeding
+        const valid = await validateFlow(session.user, flow)
+        if (!valid) return // validateFlow sets error and handles redirect
 
         await ensureProfile(session.user)
         await handleReferral(session.user)
@@ -73,18 +84,67 @@ export default function AuthCallbackPage() {
     }
 
     handleCallback()
-  }, [router])
+  }, [router]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  /**
+   * Validate OAuth flow based on flow type parameter.
+   * - signin: user must already have a clients row (registered)
+   * - signup: user must NOT already have a clients row (new user)
+   */
+  async function validateFlow(
+    user: { id: string; email?: string; user_metadata?: Record<string, any> },
+    flow: string | null
+  ): Promise<boolean> {
+    if (!flow) return true // No flow param = legacy/direct flow, allow
+
+    try {
+      const { data: existingClient } = await supabase
+        .from('clients')
+        .select('id')
+        .eq('user_id', user.id)
+        .maybeSingle()
+
+      if (flow === 'signin' && !existingClient) {
+        // User is trying to sign in but has no registered account
+        // Sign them out so they don't stay logged in
+        await supabase.auth.signOut()
+        setError('No account found for this email. Please sign up first.')
+        setTimeout(() => router.replace('/register'), 4000)
+        return false
+      }
+
+      if (flow === 'signup' && existingClient) {
+        // User is trying to sign up but already has an account
+        setError('This email is already registered. Redirecting to sign in...')
+        setTimeout(() => router.replace('/login'), 4000)
+        return false
+      }
+    } catch {
+      // If validation fails, allow through (don't block auth on transient errors)
+      console.warn('[auth/callback] Flow validation failed, allowing through')
+    }
+
+    return true
+  }
 
   return (
     <section className="min-h-screen flex items-center justify-center bg-white pt-32">
-      <div className="text-center">
+      <div className="text-center max-w-md px-6">
         <div className="mx-auto mb-6 w-fit">
           <Logo size={72} />
         </div>
         {error ? (
           <>
-            <p className="text-red-600 text-sm mb-2">{error}</p>
-            <p className="text-brand-grey text-xs">Redirecting to login...</p>
+            <div className="flex items-center justify-center gap-2 mb-3">
+              <AlertTriangle className="w-5 h-5 text-red-500" />
+              <p className="text-red-600 text-sm font-medium">{error}</p>
+            </div>
+            <p className="text-brand-grey text-xs mb-4">Redirecting...</p>
+            <div className="flex gap-3 justify-center">
+              <Link href="/login" className="text-sm text-brand-red font-semibold hover:underline">Sign In</Link>
+              <span className="text-gray-300">|</span>
+              <Link href="/register" className="text-sm text-brand-red font-semibold hover:underline">Sign Up</Link>
+            </div>
           </>
         ) : (
           <>
@@ -148,8 +208,6 @@ async function ensureProfile(user: { id: string; email?: string; user_metadata?:
       } catch { /* non-blocking */ }
 
       // Create a lead entry so client appears in CRM pipeline
-      // (The DB trigger trg_auto_create_lead_for_client handles this,
-      //  but if it doesn't fire due to RLS, we create it manually)
       try {
         const nameParts = clientName.split(' ')
         await (supabase.from('leads') as any).insert({
@@ -167,20 +225,16 @@ async function ensureProfile(user: { id: string; email?: string; user_metadata?:
       } catch { /* non-blocking — trigger may have already created it */ }
     }
   } catch {
-    // Non-blocking — profile creation can fail due to RLS, but auth still works
     console.warn('[auth/callback] Could not ensure profile exists')
   }
 }
 
 /**
  * Check for referral code in URL params and record the referral.
- * The ref code is passed from register page → Google OAuth → callback URL.
  */
 async function handleReferral(user: { id: string; email?: string; user_metadata?: Record<string, any> }) {
   try {
     if (typeof window === 'undefined') return
-
-    // Check URL search params for ref code
     const url = new URL(window.location.href)
     const refCode = url.searchParams.get('ref')
     if (!refCode || !refCode.startsWith('GHL-')) return
@@ -191,7 +245,6 @@ async function handleReferral(user: { id: string; email?: string; user_metadata?
     const { recordReferral } = await import('@/lib/supabase/dashboardDataService')
     await recordReferral(refCode, name, user.email || '')
   } catch {
-    // Non-blocking
     console.warn('[auth/callback] Could not record referral')
   }
 }

@@ -595,7 +595,7 @@ export default function DashboardClient() {
             <Sparkles className="w-[18px] h-[18px]" />
             Virtual Tour
           </button>
-          <button onClick={async () => { await logout(); router.push('/login') }}
+          <button onClick={async () => { await logout(); router.push('/login?logged_out=true') }}
             className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-300
               text-gray-500 hover:text-red-400 hover:bg-red-500/[0.06]">
             <LogOut className="w-[18px] h-[18px]" />

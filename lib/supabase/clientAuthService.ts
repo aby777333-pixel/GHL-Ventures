@@ -281,7 +281,12 @@ export async function getClientSession(): Promise<ClientSession | null> {
 export async function logoutClient(): Promise<void> {
   if (!isSupabaseConfigured()) return
   try {
-    await supabase.auth.signOut()
+    await supabase.auth.signOut({ scope: 'global' })
+    // Clear any cached session data
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('ghl-chat-visitor')
+      localStorage.removeItem('ghl-chat-history')
+    }
   } catch (err) {
     console.warn('[clientAuth] logoutClient exception:', err)
   }

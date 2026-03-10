@@ -55,7 +55,7 @@ function RegisterPageInner() {
 
     let callbackUrl = ''
     if (typeof window !== 'undefined') {
-      const cb = new URL('/auth/callback', window.location.origin)
+      const cb = new URL('/auth/callback?flow=signup', window.location.origin)
       // Pass referral code to auth callback if present
       if (form.referral && form.referral.startsWith('GHL-')) {
         cb.searchParams.set('ref', form.referral)
