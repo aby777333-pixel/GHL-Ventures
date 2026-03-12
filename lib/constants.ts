@@ -218,52 +218,40 @@ export const FUND_ARTICLES = [
 
 export const TEAM_MEMBERS = [
   {
-    name: 'Gopal H. Lakshmi',
-    initials: 'GL',
-    role: 'Founder & Managing Director',
-    bio: 'Over 25 years of experience in financial services, private equity, and strategic investments across India and Southeast Asia. Visionary behind GHL India Ventures\' dual-focus strategy on stressed real estate and early-stage startups.',
-    image: '/team/founder.jpg', // placeholder
-    linkedin: 'https://linkedin.com',
+    name: 'Bennet J',
+    role: 'VP Sales & Marketing',
+    quote: 'At GHL, we don\'t just sell investments — we build lasting relationships rooted in trust, transparency, and shared success.',
+    image: '/images/team/bennet-j.jpg',
   },
   {
-    name: 'Venkatesh Ramachandran',
-    initials: 'VR',
-    role: 'Chief Investment Officer',
-    bio: 'Former VP at a leading investment bank with 18 years of expertise in deal structuring, portfolio construction, and risk management across alternative asset classes.',
-    image: '/team/cio.jpg', // placeholder
-    linkedin: 'https://linkedin.com',
+    name: 'P Harish Kumar',
+    role: 'General Partner',
+    quote: 'Our strength lies in identifying undervalued opportunities and turning them into high-impact investments that drive real growth.',
+    image: '/images/team/p-harish-kumar.jpg',
   },
   {
-    name: 'Meenakshi Sundaram',
-    initials: 'MS',
-    role: 'Head of Real Estate',
-    bio: 'Specialist in stressed and distressed real estate with a track record of resolving NCLT assets. Previously led acquisitions at a top-5 Indian NBFC.',
-    image: '/team/head-re.jpg', // placeholder
-    linkedin: 'https://linkedin.com',
+    name: 'Padmanabhan N',
+    role: 'General Partner',
+    quote: 'We believe in the power of strategic partnerships and disciplined execution to create value that stands the test of time.',
+    image: '/images/team/padmanabhan-n.jpg',
   },
   {
-    name: 'Arvind Natarajan',
-    initials: 'AN',
-    role: 'Head of Startups',
-    bio: 'Serial entrepreneur turned investor with deep roots in Chennai\'s startup ecosystem. Advisor to 20+ early-stage companies across fintech, healthtech, and SaaS.',
-    image: '/team/head-startups.jpg', // placeholder
-    linkedin: 'https://linkedin.com',
+    name: 'Raj Kumar',
+    role: 'COO',
+    quote: 'Operational excellence is the backbone of every successful venture — we ensure every moving part works in harmony toward our investors\' goals.',
+    image: '/images/team/raj-kumar.jpg',
   },
   {
-    name: 'Priya Venkatesh',
-    initials: 'PV',
-    role: 'Chief Financial Officer',
-    bio: 'Chartered Accountant with 15 years in fund accounting, NAV computation, and investor reporting for Category II and III AIFs.',
-    image: '/team/cfo.jpg', // placeholder
-    linkedin: 'https://linkedin.com',
+    name: 'Senthil Kumar',
+    role: 'Head of Legal',
+    quote: 'In every deal, compliance and integrity come first. We protect our investors by building a legal framework that\'s as strong as our ambitions.',
+    image: '/images/team/senthil-kumar.jpg',
   },
   {
-    name: 'Karthik Srinivasan',
-    initials: 'KS',
-    role: 'Head of Compliance',
-    bio: 'Former SEBI examiner with extensive experience in AIF regulations, anti-money laundering frameworks, and investor protection compliance.',
-    image: '/team/head-compliance.jpg', // placeholder
-    linkedin: 'https://linkedin.com',
+    name: 'Abe Abrams',
+    role: 'IT Head',
+    quote: 'Technology is the silent engine behind smart investing — we leverage innovation to give our stakeholders an edge in every market.',
+    image: '/images/team/abe-abrams.jpg',
   },
 ] as const
 

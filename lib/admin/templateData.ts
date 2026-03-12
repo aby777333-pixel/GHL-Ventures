@@ -57,7 +57,7 @@ export const DOCUMENT_TEMPLATES: DocumentTemplate[] = [
       { key: 'totalAUM', label: 'Total AUM', type: 'currency', required: true, placeholder: 'e.g. 250000000' },
       { key: 'commentary', label: 'Market Commentary', type: 'multiline', required: false, placeholder: 'Brief market overview...' },
     ],
-    lastUpdated: '2026-02-15', version: '3.2', usageCount: 24, isActive: true,
+    lastUpdated: '2026-02-15', version: '3.2', usageCount: 0, isActive: true,
   },
   {
     id: 'TPL-002', name: 'Annual Fund Performance Report', description: 'Comprehensive annual report covering fund metrics, IRR, portfolio holdings, and risk analytics.',
@@ -68,7 +68,7 @@ export const DOCUMENT_TEMPLATES: DocumentTemplate[] = [
       { key: 'benchmark', label: 'Benchmark Return (%)', type: 'number', required: true },
       { key: 'totalInvestors', label: 'Total Investors', type: 'number', required: true },
     ],
-    lastUpdated: '2026-01-20', version: '2.0', usageCount: 8, isActive: true,
+    lastUpdated: '2026-01-20', version: '2.0', usageCount: 0, isActive: true,
   },
   {
     id: 'TPL-003', name: 'Investor Statement', description: 'Individual investor account statement with capital account, distributions, and fee breakdown.',
@@ -80,7 +80,7 @@ export const DOCUMENT_TEMPLATES: DocumentTemplate[] = [
       { key: 'commitment', label: 'Capital Commitment', type: 'currency', required: true },
       { key: 'drawdown', label: 'Total Drawdown', type: 'currency', required: true },
     ],
-    lastUpdated: '2026-02-01', version: '4.1', usageCount: 156, isActive: true,
+    lastUpdated: '2026-02-01', version: '4.1', usageCount: 0, isActive: true,
   },
 
   // Contracts
@@ -93,7 +93,7 @@ export const DOCUMENT_TEMPLATES: DocumentTemplate[] = [
       { key: 'commitmentAmount', label: 'Commitment Amount', type: 'currency', required: true },
       { key: 'investorClass', label: 'Investor Class', type: 'select', required: true, options: ['Individual', 'HUF', 'Corporate', 'Trust', 'NRI'] },
     ],
-    lastUpdated: '2026-01-10', version: '5.0', usageCount: 42, isActive: true,
+    lastUpdated: '2026-01-10', version: '5.0', usageCount: 0, isActive: true,
   },
   {
     id: 'TPL-005', name: 'Non-Disclosure Agreement', description: 'Mutual NDA for potential investors and business partners.',
@@ -103,7 +103,7 @@ export const DOCUMENT_TEMPLATES: DocumentTemplate[] = [
       { key: 'partyAddress', label: 'Registered Address', type: 'multiline', required: true },
       { key: 'duration', label: 'Duration (months)', type: 'number', required: true, defaultValue: '24' },
     ],
-    lastUpdated: '2025-12-01', version: '2.3', usageCount: 18, isActive: true,
+    lastUpdated: '2025-12-01', version: '2.3', usageCount: 0, isActive: true,
   },
   {
     id: 'TPL-006', name: 'Side Letter Agreement', description: 'Side letter for special terms with anchor/strategic investors.',
@@ -113,7 +113,7 @@ export const DOCUMENT_TEMPLATES: DocumentTemplate[] = [
       { key: 'specialTerms', label: 'Special Terms', type: 'multiline', required: true },
       { key: 'managementFee', label: 'Management Fee (%)', type: 'number', required: true },
     ],
-    lastUpdated: '2025-11-15', version: '1.5', usageCount: 6, isActive: true,
+    lastUpdated: '2025-11-15', version: '1.5', usageCount: 0, isActive: true,
   },
 
   // Proposals
@@ -125,7 +125,7 @@ export const DOCUMENT_TEMPLATES: DocumentTemplate[] = [
       { key: 'meetingDate', label: 'Meeting Date', type: 'date', required: false },
       { key: 'focusStrategy', label: 'Focus Strategy', type: 'select', required: true, options: ['Stressed Real Estate', 'Early-Stage Startups', 'Both'] },
     ],
-    lastUpdated: '2026-02-20', version: '6.0', usageCount: 67, isActive: true,
+    lastUpdated: '2026-02-20', version: '6.0', usageCount: 0, isActive: true,
   },
   {
     id: 'TPL-008', name: 'Deal Memo', description: 'Internal deal evaluation memo for investment committee review.',
@@ -137,7 +137,7 @@ export const DOCUMENT_TEMPLATES: DocumentTemplate[] = [
       { key: 'targetIRR', label: 'Target IRR (%)', type: 'number', required: true },
       { key: 'riskRating', label: 'Risk Rating', type: 'select', required: true, options: ['Low', 'Medium', 'High', 'Very High'] },
     ],
-    lastUpdated: '2026-02-10', version: '3.0', usageCount: 29, isActive: true,
+    lastUpdated: '2026-02-10', version: '3.0', usageCount: 0, isActive: true,
   },
 
   // Emails
@@ -149,7 +149,7 @@ export const DOCUMENT_TEMPLATES: DocumentTemplate[] = [
       { key: 'email', label: 'Email Address', type: 'text', required: true },
       { key: 'portalUrl', label: 'Portal URL', type: 'text', required: true, defaultValue: 'https://ghlindiaventures.com/dashboard' },
     ],
-    lastUpdated: '2026-02-01', version: '2.1', usageCount: 34, isActive: true,
+    lastUpdated: '2026-02-01', version: '2.1', usageCount: 0, isActive: true,
   },
   {
     id: 'TPL-010', name: 'Capital Call Notice', description: 'Formal drawdown notice to investors with payment instructions and deadline.',
@@ -160,7 +160,7 @@ export const DOCUMENT_TEMPLATES: DocumentTemplate[] = [
       { key: 'dueDate', label: 'Due Date', type: 'date', required: true },
       { key: 'purpose', label: 'Purpose', type: 'multiline', required: true },
     ],
-    lastUpdated: '2026-01-25', version: '3.0', usageCount: 12, isActive: true,
+    lastUpdated: '2026-01-25', version: '3.0', usageCount: 0, isActive: true,
   },
   {
     id: 'TPL-011', name: 'Distribution Notice', description: 'Distribution payout notification to investors with tax details.',
@@ -170,7 +170,7 @@ export const DOCUMENT_TEMPLATES: DocumentTemplate[] = [
       { key: 'totalAmount', label: 'Total Distribution', type: 'currency', required: true },
       { key: 'taxWithheld', label: 'Tax Withheld', type: 'currency', required: true },
     ],
-    lastUpdated: '2025-12-15', version: '2.0', usageCount: 8, isActive: true,
+    lastUpdated: '2025-12-15', version: '2.0', usageCount: 0, isActive: true,
   },
 
   // Compliance
@@ -182,7 +182,7 @@ export const DOCUMENT_TEMPLATES: DocumentTemplate[] = [
       { key: 'totalCorpus', label: 'Total Corpus', type: 'currency', required: true },
       { key: 'investorCount', label: 'Number of Investors', type: 'number', required: true },
     ],
-    lastUpdated: '2026-01-30', version: '4.0', usageCount: 4, isActive: true,
+    lastUpdated: '2026-01-30', version: '4.0', usageCount: 0, isActive: true,
   },
   {
     id: 'TPL-013', name: 'KYC Verification Report', description: 'Client KYC documentation and verification status report.',
@@ -192,7 +192,7 @@ export const DOCUMENT_TEMPLATES: DocumentTemplate[] = [
       { key: 'verificationType', label: 'Verification Type', type: 'select', required: true, options: ['Individual KYC', 'Corporate KYC', 'NRI KYC', 'Trust KYC'] },
       { key: 'status', label: 'Status', type: 'select', required: true, options: ['Approved', 'Pending', 'Rejected', 'Under Review'] },
     ],
-    lastUpdated: '2026-02-12', version: '3.1', usageCount: 89, isActive: true,
+    lastUpdated: '2026-02-12', version: '3.1', usageCount: 0, isActive: true,
   },
   {
     id: 'TPL-014', name: 'AML/CFT Compliance Report', description: 'Anti-Money Laundering and Counter-Terrorism Financing periodic report.',
@@ -201,7 +201,7 @@ export const DOCUMENT_TEMPLATES: DocumentTemplate[] = [
       { key: 'reportPeriod', label: 'Reporting Period', type: 'text', required: true },
       { key: 'suspiciousTransactions', label: 'STR Count', type: 'number', required: true, defaultValue: '0' },
     ],
-    lastUpdated: '2026-01-15', version: '2.0', usageCount: 4, isActive: true,
+    lastUpdated: '2026-01-15', version: '2.0', usageCount: 0, isActive: true,
   },
 
   // Financial
@@ -215,7 +215,7 @@ export const DOCUMENT_TEMPLATES: DocumentTemplate[] = [
       { key: 'gstRate', label: 'GST Rate (%)', type: 'number', required: true, defaultValue: '18' },
       { key: 'dueDate', label: 'Due Date', type: 'date', required: true },
     ],
-    lastUpdated: '2026-02-18', version: '4.2', usageCount: 145, isActive: true,
+    lastUpdated: '2026-02-18', version: '4.2', usageCount: 0, isActive: true,
   },
   {
     id: 'TPL-016', name: 'Expense Report', description: 'Monthly fund expense report with detailed breakdown by category.',
@@ -224,7 +224,7 @@ export const DOCUMENT_TEMPLATES: DocumentTemplate[] = [
       { key: 'month', label: 'Month', type: 'text', required: true },
       { key: 'year', label: 'Year', type: 'text', required: true },
     ],
-    lastUpdated: '2026-02-05', version: '2.5', usageCount: 24, isActive: true,
+    lastUpdated: '2026-02-05', version: '2.5', usageCount: 0, isActive: true,
   },
   {
     id: 'TPL-017', name: 'TDS Certificate (Form 16A)', description: 'Tax Deducted at Source certificate for investor distributions.',
@@ -235,7 +235,7 @@ export const DOCUMENT_TEMPLATES: DocumentTemplate[] = [
       { key: 'financialYear', label: 'Financial Year', type: 'text', required: true },
       { key: 'tdsAmount', label: 'TDS Amount', type: 'currency', required: true },
     ],
-    lastUpdated: '2025-12-01', version: '1.0', usageCount: 56, isActive: true,
+    lastUpdated: '2025-12-01', version: '1.0', usageCount: 0, isActive: true,
   },
 
   // Marketing
@@ -246,7 +246,7 @@ export const DOCUMENT_TEMPLATES: DocumentTemplate[] = [
       { key: 'edition', label: 'Edition', type: 'text', required: true, defaultValue: 'February 2026' },
       { key: 'highlights', label: 'Key Highlights', type: 'multiline', required: false },
     ],
-    lastUpdated: '2026-02-20', version: '6.1', usageCount: 15, isActive: true,
+    lastUpdated: '2026-02-20', version: '6.1', usageCount: 0, isActive: true,
   },
   {
     id: 'TPL-019', name: 'Campaign Performance Report', description: 'Digital marketing campaign metrics and ROI analysis.',
@@ -257,7 +257,7 @@ export const DOCUMENT_TEMPLATES: DocumentTemplate[] = [
       { key: 'spend', label: 'Total Spend', type: 'currency', required: true },
       { key: 'leads', label: 'Leads Generated', type: 'number', required: true },
     ],
-    lastUpdated: '2026-02-10', version: '2.0', usageCount: 8, isActive: true,
+    lastUpdated: '2026-02-10', version: '2.0', usageCount: 0, isActive: true,
   },
   {
     id: 'TPL-020', name: 'Event Invitation', description: 'Branded email invitation for investor events and webinars.',
@@ -268,7 +268,7 @@ export const DOCUMENT_TEMPLATES: DocumentTemplate[] = [
       { key: 'venue', label: 'Venue / Link', type: 'text', required: true },
       { key: 'rsvpDeadline', label: 'RSVP Deadline', type: 'date', required: true },
     ],
-    lastUpdated: '2026-02-15', version: '3.0', usageCount: 12, isActive: true,
+    lastUpdated: '2026-02-15', version: '3.0', usageCount: 0, isActive: true,
   },
 
   // HR
@@ -282,7 +282,7 @@ export const DOCUMENT_TEMPLATES: DocumentTemplate[] = [
       { key: 'ctc', label: 'Annual CTC', type: 'currency', required: true },
       { key: 'joiningDate', label: 'Joining Date', type: 'date', required: true },
     ],
-    lastUpdated: '2026-01-20', version: '3.5', usageCount: 9, isActive: true,
+    lastUpdated: '2026-01-20', version: '3.5', usageCount: 0, isActive: true,
   },
   {
     id: 'TPL-022', name: 'Experience Certificate', description: 'Employment experience and relieving certificate.',
@@ -293,7 +293,7 @@ export const DOCUMENT_TEMPLATES: DocumentTemplate[] = [
       { key: 'joiningDate', label: 'Date of Joining', type: 'date', required: true },
       { key: 'relievingDate', label: 'Date of Relieving', type: 'date', required: true },
     ],
-    lastUpdated: '2025-11-01', version: '2.0', usageCount: 5, isActive: true,
+    lastUpdated: '2025-11-01', version: '2.0', usageCount: 0, isActive: true,
   },
   {
     id: 'TPL-023', name: 'Appraisal Form', description: 'Annual performance appraisal form with self-assessment and manager review.',
@@ -304,7 +304,7 @@ export const DOCUMENT_TEMPLATES: DocumentTemplate[] = [
       { key: 'department', label: 'Department', type: 'text', required: true },
       { key: 'rating', label: 'Overall Rating', type: 'select', required: true, options: ['Outstanding', 'Exceeds Expectations', 'Meets Expectations', 'Below Expectations'] },
     ],
-    lastUpdated: '2026-01-05', version: '2.0', usageCount: 14, isActive: true,
+    lastUpdated: '2026-01-05', version: '2.0', usageCount: 0, isActive: true,
   },
   {
     id: 'TPL-024', name: 'Leave Application', description: 'Standard leave application form for all leave types.',
@@ -316,7 +316,7 @@ export const DOCUMENT_TEMPLATES: DocumentTemplate[] = [
       { key: 'toDate', label: 'To Date', type: 'date', required: true },
       { key: 'reason', label: 'Reason', type: 'multiline', required: true },
     ],
-    lastUpdated: '2025-10-15', version: '1.5', usageCount: 45, isActive: true,
+    lastUpdated: '2025-10-15', version: '1.5', usageCount: 0, isActive: true,
   },
   {
     id: 'TPL-025', name: 'Board Resolution Template', description: 'Standard board resolution format for corporate actions and approvals.',
@@ -327,7 +327,7 @@ export const DOCUMENT_TEMPLATES: DocumentTemplate[] = [
       { key: 'resolutionType', label: 'Type', type: 'select', required: true, options: ['Ordinary', 'Special', 'Circular'] },
       { key: 'description', label: 'Resolution Description', type: 'multiline', required: true },
     ],
-    lastUpdated: '2026-01-30', version: '2.0', usageCount: 7, isActive: true,
+    lastUpdated: '2026-01-30', version: '2.0', usageCount: 0, isActive: true,
   },
 ]
 

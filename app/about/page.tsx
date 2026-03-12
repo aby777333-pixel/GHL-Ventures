@@ -268,8 +268,6 @@ function MissionVision() {
 
 /* ───────────────────────────── 4. LEADERSHIP TEAM ───────────────────────────── */
 function LeadershipTeam() {
-  const [expandedIndex, setExpandedIndex] = useState<number | null>(null)
-
   return (
     <section className="section-padding bg-brand-offwhite">
       <div className="container-max mx-auto">
@@ -281,52 +279,28 @@ function LeadershipTeam() {
           </p>
         </AnimatedSection>
 
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
-          {TEAM_MEMBERS.map((member, i) => {
-            const isExpanded = expandedIndex === i
-            return (
-              <AnimatedSection key={member.name} delay={i * 100}>
-                <div className={`card text-center group hover-lift h-full flex flex-col ${['glow-card-red','glow-card-blue','glow-card-violet'][i % 3]}`}>
-                  {/* Photo placeholder */}
-                  <div className="w-28 h-28 rounded-full mx-auto mb-6 overflow-hidden">
-                    <PlaceholderImage theme="team" aspectRatio="w-28 h-28" className="rounded-full" />
-                  </div>
-                  <h3 className="font-bold text-lg text-brand-black">{member.name}</h3>
-                  <p className="text-brand-red text-sm font-medium mb-3">{member.role}</p>
-
-                  {/* Bio - collapsed / expanded */}
-                  <p className={`text-brand-grey text-sm leading-relaxed flex-grow ${
-                    isExpanded ? '' : 'line-clamp-3'
-                  }`}>
-                    {member.bio}
-                  </p>
-
-                  {/* Expand toggle */}
-                  <button
-                    onClick={() => setExpandedIndex(isExpanded ? null : i)}
-                    className="inline-flex items-center justify-center mt-3 text-brand-red text-xs font-medium hover:text-red-700 transition-colors"
-                  >
-                    {isExpanded ? (
-                      <>Show Less <ChevronUp className="w-3 h-3 ml-1" /></>
-                    ) : (
-                      <>Read More <ChevronDown className="w-3 h-3 ml-1" /></>
-                    )}
-                  </button>
-
-                  {/* LinkedIn */}
-                  <a
-                    href={member.linkedin}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center justify-center mt-4 text-brand-grey hover:text-brand-red transition-colors"
-                    aria-label={`${member.name} LinkedIn`}
-                  >
-                    <Linkedin className="w-5 h-5" />
-                  </a>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+          {TEAM_MEMBERS.map((member, i) => (
+            <AnimatedSection key={member.name} delay={i * 100}>
+              <div className={`card text-center group hover-lift h-full flex flex-col ${['glow-card-red','glow-card-blue','glow-card-violet'][i % 3]}`}>
+                {/* Portrait photo — 4:5 aspect ratio, rounded rectangle */}
+                <div className="w-full aspect-[4/5] rounded-xl overflow-hidden mb-6">
+                  <Image
+                    src={member.image}
+                    alt={member.name}
+                    width={320}
+                    height={400}
+                    className="w-full h-full object-cover transition-transform duration-300 ease-in-out group-hover:scale-[1.03]"
+                  />
                 </div>
-              </AnimatedSection>
-            )
-          })}
+                <h3 className="font-bold text-lg text-brand-black">{member.name}</h3>
+                <p className="text-brand-red text-sm font-medium mb-3">{member.role}</p>
+                <p className="text-brand-grey text-sm leading-relaxed flex-grow italic line-clamp-3">
+                  &ldquo;{member.quote}&rdquo;
+                </p>
+              </div>
+            </AnimatedSection>
+          ))}
         </div>
       </div>
     </section>

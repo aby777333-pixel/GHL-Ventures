@@ -11,6 +11,7 @@ import {
   Briefcase, Heart, BarChart3, MessageSquare, Play, FileCheck,
 } from 'lucide-react'
 import { saveBlobAs, pickAndUploadFiles } from '@/lib/supabase/storageService'
+import { insertRow } from '@/lib/supabase/adminDataService'
 
 // ── Props ──────────────────────────────────────────────────────
 interface SelfServiceModuleProps {
@@ -53,25 +54,15 @@ function SectionHeader({ title, icon: Icon }: { title: string; icon: React.Compo
 // ================================================================
 function ProfileOverview({ showToast }: { showToast: SelfServiceModuleProps['showToast'] }) {
   const profile = {
-    name: 'Priya Natarajan', code: 'GHL001', designation: 'Customer Service Lead',
-    status: 'Active', department: 'Customer Service', reportingTo: 'Rajesh Iyer (VP Operations)',
-    shift: 'General (09:30 - 18:30)', pfNumber: 'TN/CHN/0012345/001', uan: '100987654321',
-    dob: '15 March 1994', gender: 'Female', bloodGroup: 'O+', phone: '+91 98765 43210',
-    email: 'priya.n@ghlindia.com', address: '42, Lakeview Apartments, Thiruvanmiyur, Chennai 600041',
-    emergencyContact: 'Suresh Natarajan (Father) — +91 94432 11234',
+    name: '—', code: '—', designation: '—',
+    status: 'Active', department: '—', reportingTo: '—',
+    shift: '—', pfNumber: '—', uan: '—',
+    dob: '—', gender: '—', bloodGroup: '—', phone: '—',
+    email: '—', address: '—',
+    emergencyContact: '—',
   }
-  const skills = [
-    { name: 'Customer Service', level: 'Expert' }, { name: 'CRM Tools', level: 'Advanced' },
-    { name: 'Financial Products', level: 'Advanced' }, { name: 'Conflict Resolution', level: 'Expert' },
-    { name: 'Team Leadership', level: 'Intermediate' }, { name: 'Hindi', level: 'Fluent' },
-    { name: 'Tamil', level: 'Native' }, { name: 'English', level: 'Fluent' },
-  ]
-  const documents = [
-    { name: 'Aadhaar Card', type: 'ID Proof', uploaded: '12 Jan 2024', status: 'Verified' },
-    { name: 'PAN Card', type: 'ID Proof', uploaded: '12 Jan 2024', status: 'Verified' },
-    { name: 'B.Com Degree Certificate', type: 'Education', uploaded: '15 Jan 2024', status: 'Verified' },
-    { name: 'Previous Experience Letter', type: 'Experience', uploaded: '15 Jan 2024', status: 'Pending' },
-  ]
+  const skills: { name: string; level: string }[] = []
+  const documents: { name: string; type: string; uploaded: string; status: string }[] = []
   const personalFields = [
     { label: 'Date of Birth', value: profile.dob }, { label: 'Gender', value: profile.gender },
     { label: 'Blood Group', value: profile.bloodGroup }, { label: 'Phone', value: profile.phone },
@@ -165,21 +156,13 @@ function ProfileOverview({ showToast }: { showToast: SelfServiceModuleProps['sho
 //  2. ATTENDANCE
 // ================================================================
 function AttendanceView({ showToast }: { showToast: SelfServiceModuleProps['showToast'] }) {
-  const [clockedIn, setClockedIn] = useState(true)
-  const clockInTime = '09:28 AM'
-  const hoursWorked = 5.4
+  const [clockedIn, setClockedIn] = useState(false)
+  const clockInTime = '—'
+  const hoursWorked = 0
   const totalHoursTarget = 9
 
-  const summary = { present: 18, leave: 1, holiday: 1, late: 2, avgHours: 8.2, totalDays: 22 }
-  const attendanceDays: { day: number; status: string }[] = [
-    { day: 1, status: 'present' }, { day: 2, status: 'present' }, { day: 3, status: 'present' },
-    { day: 4, status: 'present' }, { day: 5, status: 'present' }, { day: 6, status: 'present' },
-    { day: 7, status: 'holiday' }, { day: 8, status: 'weekend' }, { day: 9, status: 'present' },
-    { day: 10, status: 'present' }, { day: 11, status: 'present' }, { day: 12, status: 'leave' },
-    { day: 13, status: 'present' }, { day: 14, status: 'present' }, { day: 15, status: 'weekend' },
-    { day: 16, status: 'present' }, { day: 17, status: 'present' }, { day: 18, status: 'present' },
-    { day: 19, status: 'present' }, { day: 20, status: 'present' },
-  ]
+  const summary = { present: 0, leave: 0, holiday: 0, late: 0, avgHours: 0, totalDays: 0 }
+  const attendanceDays: { day: number; status: string }[] = []
 
   const statusColors: Record<string, string> = {
     present: 'bg-emerald-500/20 text-emerald-400 border-emerald-500/20', absent: 'bg-red-500/20 text-red-400 border-red-500/20',
@@ -279,20 +262,9 @@ function AttendanceView({ showToast }: { showToast: SelfServiceModuleProps['show
 //  3. LEAVE
 // ================================================================
 function LeaveView({ showToast }: { showToast: SelfServiceModuleProps['showToast'] }) {
-  const balances = [
-    { type: 'Casual Leave', total: 12, used: 4, available: 8 },
-    { type: 'Sick Leave', total: 8, used: 2, available: 6 },
-    { type: 'Earned Leave', total: 15, used: 5, available: 10 },
-    { type: 'Comp-off', total: 3, used: 1, available: 2 },
-  ]
-  const history = [
-    { id: 'LV001', type: 'Casual', from: '10 Feb 2026', to: '10 Feb 2026', days: 1, reason: 'Personal work', status: 'Approved' },
-    { id: 'LV002', type: 'Sick', from: '28 Jan 2026', to: '29 Jan 2026', days: 2, reason: 'Fever and cold', status: 'Approved' },
-    { id: 'LV003', type: 'Casual', from: '15 Jan 2026', to: '15 Jan 2026', days: 1, reason: 'Family function', status: 'Approved' },
-    { id: 'LV004', type: 'Earned', from: '25 Mar 2026', to: '28 Mar 2026', days: 4, reason: 'Planned vacation to Kerala', status: 'Pending' },
-    { id: 'LV005', type: 'Comp-off', from: '05 Jan 2026', to: '05 Jan 2026', days: 1, reason: 'Worked on Sunday (28 Dec)', status: 'Approved' },
-    { id: 'LV006', type: 'Casual', from: '20 Dec 2025', to: '20 Dec 2025', days: 1, reason: 'Bank visit', status: 'Rejected' },
-  ]
+  const [leaveForm, setLeaveForm] = useState({ type: '', fromDate: '', toDate: '', halfDay: 'Full Day', reason: '' })
+  const balances: { type: string; total: number; used: number; available: number }[] = []
+  const history: { id: string; type: string; from: string; to: string; days: number; reason: string; status: string }[] = []
   const holidays = [
     { date: '14 Mar 2026', name: 'Holi', day: 'Saturday' },
     { date: '02 Apr 2026', name: 'Ram Navami', day: 'Thursday' },
@@ -328,7 +300,7 @@ function LeaveView({ showToast }: { showToast: SelfServiceModuleProps['showToast
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
           <div>
             <label className="block text-[10px] text-gray-500 uppercase tracking-wider mb-1">Leave Type</label>
-            <select className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-teal-500/40">
+            <select value={leaveForm.type} onChange={e => setLeaveForm({ ...leaveForm, type: e.target.value })} className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-teal-500/40">
               <option value="">Select type</option>
               <option>Casual Leave</option><option>Sick Leave</option>
               <option>Earned Leave</option><option>Comp-off</option>
@@ -336,25 +308,30 @@ function LeaveView({ showToast }: { showToast: SelfServiceModuleProps['showToast
           </div>
           <div>
             <label className="block text-[10px] text-gray-500 uppercase tracking-wider mb-1">From Date</label>
-            <input type="date" className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-teal-500/40" />
+            <input type="date" value={leaveForm.fromDate} onChange={e => setLeaveForm({ ...leaveForm, fromDate: e.target.value })} className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-teal-500/40" />
           </div>
           <div>
             <label className="block text-[10px] text-gray-500 uppercase tracking-wider mb-1">To Date</label>
-            <input type="date" className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-teal-500/40" />
+            <input type="date" value={leaveForm.toDate} onChange={e => setLeaveForm({ ...leaveForm, toDate: e.target.value })} className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-teal-500/40" />
           </div>
           <div>
             <label className="block text-[10px] text-gray-500 uppercase tracking-wider mb-1">Half Day?</label>
-            <select className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-teal-500/40">
+            <select value={leaveForm.halfDay} onChange={e => setLeaveForm({ ...leaveForm, halfDay: e.target.value })} className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-teal-500/40">
               <option>Full Day</option><option>First Half</option><option>Second Half</option>
             </select>
           </div>
         </div>
         <div className="mt-3">
           <label className="block text-[10px] text-gray-500 uppercase tracking-wider mb-1">Reason</label>
-          <textarea rows={2} placeholder="Enter reason for leave..." className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-teal-500/40 resize-none" />
+          <textarea rows={2} value={leaveForm.reason} onChange={e => setLeaveForm({ ...leaveForm, reason: e.target.value })} placeholder="Enter reason for leave..." className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-teal-500/40 resize-none" />
         </div>
         <div className="mt-3 flex justify-end">
-          <button onClick={() => showToast('Leave application submitted', 'success')}
+          <button onClick={async () => {
+            if (!leaveForm.type || !leaveForm.fromDate || !leaveForm.reason.trim()) { showToast('Please fill in leave type, dates, and reason', 'warning'); return }
+            const row = await insertRow('tickets', { title: `Leave Request: ${leaveForm.type}`, description: leaveForm.reason, type: 'leave_request', category: leaveForm.type, status: 'open', priority: 'normal', metadata: { from_date: leaveForm.fromDate, to_date: leaveForm.toDate || leaveForm.fromDate, half_day: leaveForm.halfDay } })
+            if (row) { showToast('Leave application submitted', 'success') } else { showToast('Failed to submit leave application', 'error') }
+            setLeaveForm({ type: '', fromDate: '', toDate: '', halfDay: 'Full Day', reason: '' })
+          }}
             className="px-5 py-2 rounded-xl text-xs font-semibold bg-teal-500/15 text-teal-400 border border-teal-500/25 hover:bg-teal-500/25 transition-colors">
             Submit Application
           </button>
@@ -416,12 +393,8 @@ function LeaveView({ showToast }: { showToast: SelfServiceModuleProps['showToast
 function PayslipsView({ showToast }: { showToast: SelfServiceModuleProps['showToast'] }) {
   const [expanded, setExpanded] = useState<string | null>(null)
 
-  const base = { basic: 25000, hra: 12500, special: 10000, conveyance: 1600, medical: 1250, pf: 3000, esi: 750, pt: 200 }
-  const payslips = [
-    { id: 'PS-2026-01', month: 'January 2026', payDate: '01 Feb 2026', ...base, tds: 2500, gross: 50350, deductions: 6450, net: 43900 },
-    { id: 'PS-2025-12', month: 'December 2025', payDate: '01 Jan 2026', ...base, tds: 2500, gross: 50350, deductions: 6450, net: 43900 },
-    { id: 'PS-2025-11', month: 'November 2025', payDate: '01 Dec 2025', ...base, tds: 2300, gross: 50350, deductions: 6250, net: 44100 },
-  ]
+  const base = { basic: 0, hra: 0, special: 0, conveyance: 0, medical: 0, pf: 0, esi: 0, pt: 0 }
+  const payslips: { id: string; month: string; payDate: string; basic: number; hra: number; special: number; conveyance: number; medical: number; pf: number; esi: number; pt: number; tds: number; gross: number; deductions: number; net: number }[] = []
   const fmt = (n: number) => `₹${n.toLocaleString('en-IN')}`
 
   return (
@@ -519,21 +492,8 @@ function PayslipsView({ showToast }: { showToast: SelfServiceModuleProps['showTo
 //  5. DOCUMENTS
 // ================================================================
 function DocumentsView({ showToast }: { showToast: SelfServiceModuleProps['showToast'] }) {
-  const folders = [
-    { name: 'Offer Letter', icon: FileText, count: 1 }, { name: 'ID Proofs', icon: Shield, count: 2 },
-    { name: 'Education', icon: GraduationCap, count: 2 }, { name: 'Experience', icon: Briefcase, count: 1 },
-    { name: 'Certifications', icon: Award, count: 2 },
-  ]
-  const documents = [
-    { name: 'Offer Letter — GHL India', folder: 'Offer Letter', date: '05 Jan 2024', size: '245 KB', status: 'Verified' as const },
-    { name: 'Aadhaar Card', folder: 'ID Proofs', date: '12 Jan 2024', size: '1.2 MB', status: 'Verified' as const },
-    { name: 'PAN Card', folder: 'ID Proofs', date: '12 Jan 2024', size: '480 KB', status: 'Verified' as const },
-    { name: 'B.Com Degree — University of Madras', folder: 'Education', date: '15 Jan 2024', size: '3.1 MB', status: 'Verified' as const },
-    { name: 'HSC Marksheet', folder: 'Education', date: '15 Jan 2024', size: '2.4 MB', status: 'Pending' as const },
-    { name: 'Experience Letter — Kotak AMC', folder: 'Experience', date: '15 Jan 2024', size: '310 KB', status: 'Pending' as const },
-    { name: 'NISM Series V-A Mutual Fund Cert', folder: 'Certifications', date: '20 Feb 2024', size: '180 KB', status: 'Verified' as const },
-    { name: 'CRM Professional Certification', folder: 'Certifications', date: '10 Jun 2024', size: '210 KB', status: 'Verified' as const },
-  ]
+  const folders: { name: string; icon: any; count: number }[] = []
+  const documents: { name: string; folder: string; date: string; size: string; status: 'Verified' | 'Pending' }[] = []
   const requestLetters = ['Employment Verification', 'Salary Certificate', 'Experience Letter', 'Bonafide Certificate']
 
   return (
@@ -613,19 +573,8 @@ function DocumentsView({ showToast }: { showToast: SelfServiceModuleProps['showT
 //  6. TRAINING
 // ================================================================
 function TrainingView({ showToast }: { showToast: SelfServiceModuleProps['showToast'] }) {
-  const modules = [
-    { id: 'T01', name: 'SEBI AIF Regulations 2024-25', category: 'Compliance', type: 'Document + Quiz', progress: 100, status: 'Completed', score: 92 as number | undefined, mandatory: true, duration: '4 hours' },
-    { id: 'T02', name: 'Anti-Money Laundering (AML/KYC)', category: 'Compliance', type: 'Video + Quiz', progress: 100, status: 'Completed', score: 88 as number | undefined, mandatory: true, duration: '3 hours' },
-    { id: 'T03', name: 'GHL Product Suite — AIF Cat II', category: 'Product Knowledge', type: 'Live Session', progress: 75, status: 'In Progress', score: undefined, mandatory: true, duration: '6 hours' },
-    { id: 'T04', name: 'Advanced Communication Skills', category: 'CS Skills', type: 'Video Series', progress: 60, status: 'In Progress', score: undefined, mandatory: false, duration: '5 hours' },
-    { id: 'T05', name: 'CRM Platform — Salesforce Basics', category: 'Technical', type: 'Interactive Module', progress: 40, status: 'In Progress', score: undefined, mandatory: false, duration: '8 hours' },
-    { id: 'T06', name: 'Data Privacy & Information Security', category: 'Compliance', type: 'Document + Quiz', progress: 0, status: 'Not Started', score: undefined, mandatory: true, duration: '2 hours' },
-  ]
-  const certifications = [
-    { name: 'NISM Series V-A — Mutual Fund Distributors', issuer: 'NISM', date: 'Feb 2024', valid: 'Feb 2027' },
-    { name: 'SEBI AIF Compliance Associate', issuer: 'GHL Academy', date: 'Nov 2024', valid: 'Nov 2025' },
-    { name: 'CRM Professional — Salesforce Trailhead', issuer: 'Salesforce', date: 'Jun 2024', valid: 'Jun 2026' },
-  ]
+  const modules: { id: string; name: string; category: string; type: string; progress: number; status: string; score: number | undefined; mandatory: boolean; duration: string }[] = []
+  const certifications: { name: string; issuer: string; date: string; valid: string }[] = []
   const statusVariant = (s: string) => s === 'Completed' ? 'success' : s === 'In Progress' ? 'info' : 'neutral'
 
   return (
@@ -683,25 +632,9 @@ function TrainingView({ showToast }: { showToast: SelfServiceModuleProps['showTo
 //  7. PERFORMANCE
 // ================================================================
 function PerformanceView({ showToast }: { showToast: SelfServiceModuleProps['showToast'] }) {
-  const kras = [
-    { goal: 'Customer Satisfaction (CSAT)', target: '90%+', actual: '92.5%', weight: 30, selfRating: 4.5 },
-    { goal: 'Ticket Resolution Rate', target: '95%+', actual: '96.2%', weight: 25, selfRating: 4.0 },
-    { goal: 'Average Handling Time', target: '<8 min', actual: '7.2 min', weight: 20, selfRating: 4.0 },
-    { goal: 'Team Mentorship & Training', target: '4 sessions/quarter', actual: '3 done', weight: 25, selfRating: 3.5 },
-  ]
-  const csMetrics = [
-    { label: 'Tickets Resolved (Feb)', value: '142', icon: CheckCircle2, color: 'text-emerald-400' },
-    { label: 'CSAT Score', value: '92.5%', icon: Star, color: 'text-amber-400' },
-    { label: 'Avg Handling Time', value: '7.2 min', icon: Timer, color: 'text-teal-400' },
-    { label: 'First Call Resolution', value: '88%', icon: Phone, color: 'text-blue-400' },
-    { label: 'Escalation Rate', value: '3.1%', icon: TrendingUp, color: 'text-purple-400' },
-    { label: 'Quality Score', value: '4.2/5', icon: Award, color: 'text-teal-400' },
-  ]
-  const feedbacks = [
-    { from: 'Rajesh Iyer (VP Ops)', date: 'Jan 2026', text: 'Priya continues to demonstrate strong leadership in the CS team. Her proactive handling of escalations has improved team morale.' },
-    { from: 'Anil Mehta (HR)', date: 'Dec 2025', text: 'Excellent participation in the SEBI compliance training. Scored among the top 5 in the department.' },
-    { from: 'Client Feedback', date: 'Feb 2026', text: 'Very professional and patient. Resolved my NAV query within minutes. Highly satisfied.' },
-  ]
+  const kras: { goal: string; target: string; actual: string; weight: number; selfRating: number }[] = []
+  const csMetrics: { label: string; value: string; icon: any; color: string }[] = []
+  const feedbacks: { from: string; date: string; text: string }[] = []
 
   return (
     <div className="space-y-5">
@@ -742,10 +675,7 @@ function PerformanceView({ showToast }: { showToast: SelfServiceModuleProps['sho
       <AdminGlass>
         <SectionHeader title="Performance Score Trend" icon={TrendingUp} />
         <div className="flex items-end gap-3 h-32 px-2">
-          {[
-            { quarter: 'Q1', score: 3.8 }, { quarter: 'Q2', score: 4.0 },
-            { quarter: 'Q3', score: 4.2 }, { quarter: 'Q4*', score: 4.3 },
-          ].map(q => (
+          {([] as { quarter: string; score: number }[]).map(q => (
             <div key={q.quarter} className="flex-1 flex flex-col items-center gap-1">
               <span className="text-[10px] text-teal-400 font-semibold">{q.score}</span>
               <div className="w-full rounded-t-lg bg-teal-500/20 border border-teal-500/15 transition-all"
@@ -794,13 +724,8 @@ function PerformanceView({ showToast }: { showToast: SelfServiceModuleProps['sho
 //  8. EXPENSES
 // ================================================================
 function ExpensesView({ showToast }: { showToast: SelfServiceModuleProps['showToast'] }) {
-  const recentClaims = [
-    { id: 'EXP-2026-018', date: '18 Feb 2026', category: 'Travel', description: 'Client visit — Uber to Adyar & back', amount: 680, status: 'Pending' as const },
-    { id: 'EXP-2026-012', date: '10 Feb 2026', category: 'Meals', description: 'Team lunch — client escalation meeting', amount: 1250, status: 'Approved' as const },
-    { id: 'EXP-2026-005', date: '03 Feb 2026', category: 'Supplies', description: 'Headset replacement for CS desk', amount: 2100, status: 'Approved' as const },
-    { id: 'EXP-2026-001', date: '22 Jan 2026', category: 'Travel', description: 'Auto fare — OMR to T. Nagar branch', amount: 450, status: 'Reimbursed' as const },
-  ]
-  const monthlySummary = { submitted: 4, approved: 2, reimbursed: 1, pending: 1, totalAmount: 4480 }
+  const recentClaims: { id: string; date: string; category: string; description: string; amount: number; status: 'Pending' | 'Approved' | 'Reimbursed' | 'Rejected' }[] = []
+  const monthlySummary = { submitted: 0, approved: 0, reimbursed: 0, pending: 0, totalAmount: 0 }
 
   const statusVariant = (s: string) => s === 'Approved' ? 'success' : s === 'Pending' ? 'warning' : s === 'Reimbursed' ? 'info' : 'error'
 

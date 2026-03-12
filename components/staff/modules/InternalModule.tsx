@@ -4,6 +4,7 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import AdminGlass from '@/components/admin/shared/AdminGlass'
 import AdminBadge from '@/components/admin/shared/AdminBadge'
 import { fetchAnnouncements } from '@/lib/supabase/staffDataService'
+import { insertRow } from '@/lib/supabase/adminDataService'
 import {
   getChannels,
   getChannelMessages,
@@ -276,11 +277,7 @@ function PoliciesView({ showToast }: { showToast: Toast }) {
 type FeedbackCategory = 'Workplace' | 'Process' | 'Tools' | 'HR' | 'General'
 type FeedbackStatus = 'submitted' | 'acknowledged' | 'resolved'
 
-const RECENT_FEEDBACK: { id: string; category: FeedbackCategory; subject: string; status: FeedbackStatus; date: string }[] = [
-  { id: 'fb-1', category: 'Workplace', subject: 'AC not working properly on 3rd floor', status: 'acknowledged', date: '2026-02-19' },
-  { id: 'fb-2', category: 'Tools', subject: 'CRM search is slow with large datasets', status: 'submitted', date: '2026-02-20' },
-  { id: 'fb-3', category: 'Process', subject: 'Simplify monthly expense claim workflow', status: 'resolved', date: '2026-02-10' },
-]
+const RECENT_FEEDBACK: { id: string; category: FeedbackCategory; subject: string; status: FeedbackStatus; date: string }[] = []
 
 const FB_STATUS: Record<FeedbackStatus, { label: string; variant: 'success' | 'warning' | 'info' }> = {
   submitted: { label: 'Submitted', variant: 'info' },
@@ -294,9 +291,10 @@ function FeedbackView({ showToast }: { showToast: Toast }) {
   const [description, setDescription] = useState('')
   const [anonymous, setAnonymous] = useState(false)
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!subject.trim() || !description.trim()) { showToast('Please fill in all required fields', 'warning'); return }
-    showToast('Feedback submitted successfully!', 'success')
+    const row = await insertRow('tickets', { title: subject, description, type: 'feedback', category, status: 'open', priority: 'normal', is_anonymous: anonymous })
+    if (row) { showToast('Feedback submitted successfully!', 'success') } else { showToast('Failed to submit feedback', 'error') }
     setSubject(''); setDescription(''); setAnonymous(false); setCategory('General')
   }
 

@@ -157,25 +157,25 @@ export function useReportsLiveData(): ReportsData {
 
         // Use real data when available; fall back to empty states (not mock data)
         setData({
-          REPORT_KPIS: resolve(kpis, STATIC_KPIS) as any, // KPI structure needed for layout
+          REPORT_KPIS: resolve(kpis, {}) as any,
           MONTHLY_REVENUE: resolve(monthlyRev, []) as any,
           REVENUE_BY_TYPE: resolve(revenueStreams, []) as any,
           AI_INSIGHTS: resolve(insights, []) as any,
           STAFF_ACTIVITY: resolve(staffActivity, []) as any,
           SCHEDULED_REPORTS: resolve(scheduledReports, []) as any,
           GENERATED_REPORTS: resolve(generatedReports, []) as any,
-          LEAD_FUNNEL: STATIC_LEAD_FUNNEL, // derived from leads
+          LEAD_FUNNEL: [],
           CAMPAIGN_METRICS: resolve(campaigns, []) as any,
           REVENUE_FORECAST: resolve(forecasts, []) as any,
           REPORT_CLIENTS: resolve(clients, []) as any,
           REPORT_LEADS: resolve(leads, []) as any,
           EXPENSE_SUMMARY: resolve(expenses, []) as any,
-          REVENUE_BY_CITY: STATIC_REVENUE_BY_CITY, // keep as-is (derived)
+          REVENUE_BY_CITY: [],
           CALL_LOGS: resolve(callLogs, []) as any,
           DOCUMENT_VAULT: resolve(documents, []) as any,
-          EMAIL_TEMPLATES: STATIC_EMAIL_TEMPLATES, // templates are static config
-          TRAFFIC_SOURCES: STATIC_TRAFFIC_SOURCES, // analytics pending
-          TOP_PAGES: STATIC_TOP_PAGES, // analytics pending
+          EMAIL_TEMPLATES: STATIC_EMAIL_TEMPLATES,
+          TRAFFIC_SOURCES: [],
+          TOP_PAGES: [],
           isLiveData: true,
           loading: false,
         })

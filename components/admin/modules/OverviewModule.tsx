@@ -144,8 +144,6 @@ export default function OverviewModule({ navigate, showToast }: OverviewModulePr
           value={`${overviewKpis.complianceScore}/100`}
           icon={Shield}
           color="#8B5CF6"
-          trend="up"
-          trendValue="+2 pts"
           delay={200}
         />
         <AdminKPICard
@@ -308,33 +306,10 @@ export default function OverviewModule({ navigate, showToast }: OverviewModulePr
             </h3>
             <span className="text-[10px] text-gray-500">India & Global</span>
           </div>
-          <div className="space-y-3 max-h-64 overflow-y-auto admin-scrollbar">
-            {[
-              { title: 'SEBI tightens AIF investment norms for Category II funds', source: 'Economic Times', time: '2h ago', tag: 'Regulatory', tagColor: 'text-red-400 bg-red-500/15' },
-              { title: 'India real estate sector sees 18% growth in Q4 2024', source: 'Livemint', time: '4h ago', tag: 'Real Estate', tagColor: 'text-emerald-400 bg-emerald-500/15' },
-              { title: 'RBI holds repo rate steady at 6.5% in Feb policy', source: 'Reuters', time: '6h ago', tag: 'Economy', tagColor: 'text-blue-400 bg-blue-500/15' },
-              { title: 'Alternative investments AUM crosses ₹12L Cr in India', source: 'Business Standard', time: '8h ago', tag: 'Industry', tagColor: 'text-purple-400 bg-purple-500/15' },
-              { title: 'Chennai commercial real estate demand surges 22% YoY', source: 'The Hindu', time: '12h ago', tag: 'Real Estate', tagColor: 'text-emerald-400 bg-emerald-500/15' },
-              { title: 'US Fed signals potential rate cuts in H2 2025', source: 'Bloomberg', time: '1d ago', tag: 'Global', tagColor: 'text-amber-400 bg-amber-500/15' },
-            ].map((news, i) => (
-              <button
-                key={i}
-                onClick={() => showToast(`Opening: ${news.title}`, 'info')}
-                className="w-full text-left p-3 rounded-xl bg-white/[0.02] border border-white/[0.04] hover:bg-white/[0.05] hover:border-white/[0.08] transition-all group"
-              >
-                <div className="flex items-start gap-3">
-                  <Globe className="w-4 h-4 text-gray-600 flex-shrink-0 mt-0.5 group-hover:text-blue-400 transition-colors" />
-                  <div className="flex-1 min-w-0">
-                    <p className="text-xs font-medium text-white line-clamp-2 group-hover:text-blue-300 transition-colors">{news.title}</p>
-                    <div className="flex items-center gap-2 mt-1.5">
-                      <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${news.tagColor}`}>{news.tag}</span>
-                      <span className="text-[10px] text-gray-600">{news.source} · {news.time}</span>
-                    </div>
-                  </div>
-                  <ExternalLink className="w-3 h-3 text-gray-700 group-hover:text-gray-400 flex-shrink-0 mt-1 transition-colors" />
-                </div>
-              </button>
-            ))}
+          <div className="flex flex-col items-center justify-center py-8 text-center">
+            <Globe className="w-8 h-8 text-gray-700 mb-2" />
+            <p className="text-xs text-gray-500">No market news available</p>
+            <p className="text-[10px] text-gray-600 mt-1">News feed will appear here when connected</p>
           </div>
         </AdminGlass>
 
@@ -347,33 +322,10 @@ export default function OverviewModule({ navigate, showToast }: OverviewModulePr
             </h3>
             <span className="text-[10px] text-gray-500">Upcoming events</span>
           </div>
-          <div className="space-y-3 max-h-64 overflow-y-auto admin-scrollbar">
-            {[
-              { date: 'Mar 25', event: 'RBI MPC Minutes Release', impact: 'high', country: '🇮🇳 India' },
-              { date: 'Mar 28', event: 'India Q3 GDP Final Estimate', impact: 'high', country: '🇮🇳 India' },
-              { date: 'Mar 31', event: 'SEBI AIF Quarterly Filing Deadline', impact: 'critical', country: '🇮🇳 India' },
-              { date: 'Apr 01', event: 'India FY26 Budget Implementation', impact: 'high', country: '🇮🇳 India' },
-              { date: 'Apr 05', event: 'US Non-Farm Payrolls', impact: 'medium', country: '🇺🇸 USA' },
-              { date: 'Apr 10', event: 'India CPI Inflation Data', impact: 'high', country: '🇮🇳 India' },
-              { date: 'Apr 15', event: 'China GDP Q1 2025', impact: 'medium', country: '🇨🇳 China' },
-              { date: 'Apr 20', event: 'India WPI Data Release', impact: 'medium', country: '🇮🇳 India' },
-            ].map((cal, i) => {
-              const impactColor = cal.impact === 'critical' ? 'bg-red-500' : cal.impact === 'high' ? 'bg-amber-500' : 'bg-blue-500'
-              return (
-                <div key={i} className="flex items-center gap-3 p-2.5 rounded-lg hover:bg-white/[0.03] transition-colors">
-                  <div className="text-center min-w-[48px]">
-                    <p className="text-[10px] text-gray-500 uppercase">{cal.date.split(' ')[0]}</p>
-                    <p className="text-sm font-bold text-white">{cal.date.split(' ')[1]}</p>
-                  </div>
-                  <div className={`w-1 h-8 rounded-full ${impactColor}`} />
-                  <div className="flex-1 min-w-0">
-                    <p className="text-xs font-medium text-white truncate">{cal.event}</p>
-                    <p className="text-[10px] text-gray-500 mt-0.5">{cal.country}</p>
-                  </div>
-                  <span className={`w-2 h-2 rounded-full ${impactColor} flex-shrink-0`} />
-                </div>
-              )
-            })}
+          <div className="flex flex-col items-center justify-center py-8 text-center">
+            <Calendar className="w-8 h-8 text-gray-700 mb-2" />
+            <p className="text-xs text-gray-500">No upcoming events</p>
+            <p className="text-[10px] text-gray-600 mt-1">Economic calendar events will appear here</p>
           </div>
         </AdminGlass>
       </div>
@@ -383,22 +335,22 @@ export default function OverviewModule({ navigate, showToast }: OverviewModulePr
         <button onClick={() => navigate('realty-brokers')} className="p-4 rounded-xl bg-white/[0.03] border border-white/[0.06] hover:bg-white/[0.06] hover:border-brand-red/20 transition-all group text-left">
           <Building2 className="w-5 h-5 text-amber-400 mb-2 group-hover:text-brand-red transition-colors" />
           <p className="text-xs font-semibold text-white">Realty Brokers</p>
-          <p className="text-[10px] text-gray-500 mt-0.5">6 active brokers · 4 new inquiries</p>
+          <p className="text-[10px] text-gray-500 mt-0.5">Manage broker network</p>
         </button>
         <button onClick={() => navigate('marketing')} className="p-4 rounded-xl bg-white/[0.03] border border-white/[0.06] hover:bg-white/[0.06] hover:border-brand-red/20 transition-all group text-left">
           <Megaphone className="w-5 h-5 text-pink-400 mb-2 group-hover:text-brand-red transition-colors" />
           <p className="text-xs font-semibold text-white">Marketing Hub</p>
-          <p className="text-[10px] text-gray-500 mt-0.5">8 campaigns · 285% avg ROI</p>
+          <p className="text-[10px] text-gray-500 mt-0.5">Campaigns & outreach</p>
         </button>
         <button onClick={() => navigate('ai-ops')} className="p-4 rounded-xl bg-white/[0.03] border border-white/[0.06] hover:bg-white/[0.06] hover:border-brand-red/20 transition-all group text-left">
           <Sparkles className="w-5 h-5 text-purple-400 mb-2 group-hover:text-brand-red transition-colors" />
           <p className="text-xs font-semibold text-white">AI Operations</p>
-          <p className="text-[10px] text-gray-500 mt-0.5">18 tools · 1,847 total runs</p>
+          <p className="text-[10px] text-gray-500 mt-0.5">AI-powered tools</p>
         </button>
         <button onClick={() => navigate('compliance')} className="p-4 rounded-xl bg-white/[0.03] border border-white/[0.06] hover:bg-white/[0.06] hover:border-brand-red/20 transition-all group text-left">
           <Shield className="w-5 h-5 text-emerald-400 mb-2 group-hover:text-brand-red transition-colors" />
           <p className="text-xs font-semibold text-white">Compliance</p>
-          <p className="text-[10px] text-gray-500 mt-0.5">94/100 score · 5 pending</p>
+          <p className="text-[10px] text-gray-500 mt-0.5">Regulatory & risk management</p>
         </button>
       </div>
 

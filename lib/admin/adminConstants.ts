@@ -31,7 +31,6 @@ export const ADMIN_SIDEBAR_ITEMS: SidebarItem[] = [
     id: 'clients',
     label: 'Clients',
     iconName: 'Users',
-    badge: 3,
     permission: 'view:clients',
     subItems: [
       { id: 'clients', label: 'All Clients' },
@@ -55,7 +54,6 @@ export const ADMIN_SIDEBAR_ITEMS: SidebarItem[] = [
     id: 'realty-brokers',
     label: 'Realty Brokers',
     iconName: 'Building2',
-    badge: 4,
     permission: 'view:realty-brokers',
     subItems: [
       { id: 'realty-brokers', label: 'Broker Directory' },
@@ -117,7 +115,6 @@ export const ADMIN_SIDEBAR_ITEMS: SidebarItem[] = [
     id: 'compliance',
     label: 'Compliance',
     iconName: 'Shield',
-    badge: 5,
     permission: 'view:compliance',
     subItems: [
       { id: 'compliance', label: 'Dashboard' },
@@ -154,7 +151,6 @@ export const ADMIN_SIDEBAR_ITEMS: SidebarItem[] = [
     id: 'comms',
     label: 'Communications',
     iconName: 'MessageSquare',
-    badge: 2,
     permission: 'view:comms',
     subItems: [
       { id: 'comms', label: 'Hub' },

@@ -56,7 +56,7 @@ function buildBusinessContext(): string {
   ).join('\n')
 
   return `
-=== GHL INDIA VENTURES — LIVE BUSINESS DATA (Feb 2025) ===
+=== GHL INDIA VENTURES — LIVE BUSINESS DATA (${new Date().toLocaleDateString('en-IN', { month: 'long', year: 'numeric' })}) ===
 
 COMPANY: GHL India Ventures (SEBI-registered Category II AIF)
 LOCATION: Chennai, India | Sectors: Stressed Real Estate, Startup Equity, NRI Investments

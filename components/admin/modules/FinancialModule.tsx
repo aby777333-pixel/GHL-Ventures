@@ -18,7 +18,7 @@ import AdminModal, { ModalButton } from '../shared/AdminModal'
 import AdminKPICard from '../shared/AdminKPICard'
 import AdminEmptyState from '../shared/AdminEmptyState'
 import UploadWithFolderPicker from '@/components/shared/UploadWithFolderPicker'
-import { fetchInvoices, fetchExpenses, fetchCommissions, getOverviewKPIs } from '@/lib/supabase/adminDataService'
+import { fetchInvoices, fetchExpenses, fetchCommissions, getOverviewKPIs, insertRow, updateRow } from '@/lib/supabase/adminDataService'
 import { formatINR, formatDate } from '@/lib/admin/adminHooks'
 import type { Invoice, Expense, InvoiceStatus, ExpenseCategory } from '@/lib/admin/adminTypes'
 import { saveBlobAs } from '@/lib/supabase/storageService'
@@ -108,7 +108,7 @@ export default function FinancialModule({ subTab, navigate, showToast }: Financi
 
       {/* KPI Row */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        <AdminKPICard title="Monthly Revenue" value={formatINR(kpis.monthlyRevenue)} trend="up" trendValue="+15.7%" icon={IndianRupee} color="#10B981" delay={0} />
+        <AdminKPICard title="Monthly Revenue" value={formatINR(kpis.monthlyRevenue)} icon={IndianRupee} color="#10B981" delay={0} />
         <AdminKPICard title="Total Invoiced" value={formatINR(kpis.totalInvoiced)} icon={Receipt} color="#3B82F6" delay={50} />
         <AdminKPICard title="Overdue Amount" value={formatINR(kpis.overdue)} icon={AlertCircle} color="#EF4444" delay={100} />
         <AdminKPICard title="Net Income" value={formatINR(kpis.netIncome)} trend={kpis.netIncome > 0 ? 'up' : 'down'} trendValue={kpis.netIncome > 0 ? 'Profitable' : 'Loss'} icon={TrendingUp} color="#8B5CF6" delay={150} />
@@ -414,9 +414,23 @@ function ExpensesTab({ showToast, expenses }: { showToast: (msg: string, type?: 
     notes: '',
   })
 
-  const handleExpenseSubmit = () => {
+  const handleExpenseSubmit = async () => {
     if (!expenseForm.description || !expenseForm.amount || !expenseForm.date) {
       showToast('Please fill in all required fields', 'error')
+      return
+    }
+    const result = await insertRow('expenses', {
+      description: expenseForm.description,
+      category: expenseForm.category,
+      amount: parseFloat(expenseForm.amount),
+      date: expenseForm.date,
+      vendor: expenseForm.vendor,
+      payment_method: expenseForm.paymentMethod,
+      status: 'pending',
+      notes: expenseForm.notes,
+    })
+    if (!result) {
+      showToast('Failed to save expense', 'error')
       return
     }
     showToast('Expense recorded successfully', 'success')
@@ -481,14 +495,14 @@ function ExpensesTab({ showToast, expenses }: { showToast: (msg: string, type?: 
           {row.status === 'pending' && (
             <>
               <button
-                onClick={(e) => { e.stopPropagation(); showToast(`Expense ${row.id} approved`, 'success') }}
+                onClick={async (e) => { e.stopPropagation(); const ok = await updateRow('expenses', row.id, { status: 'approved' }); showToast(ok ? `Expense ${row.id} approved` : 'Failed to approve', ok ? 'success' : 'error') }}
                 className="p-1.5 rounded-lg hover:bg-emerald-500/10 text-gray-500 hover:text-emerald-400 transition-colors"
                 title="Approve"
               >
                 <CheckCircle2 className="w-4 h-4" />
               </button>
               <button
-                onClick={(e) => { e.stopPropagation(); showToast(`Expense ${row.id} rejected`, 'error') }}
+                onClick={async (e) => { e.stopPropagation(); const ok = await updateRow('expenses', row.id, { status: 'rejected' }); showToast(ok ? `Expense ${row.id} rejected` : 'Failed to reject', ok ? 'success' : 'error') }}
                 className="p-1.5 rounded-lg hover:bg-red-500/10 text-gray-500 hover:text-red-400 transition-colors"
                 title="Reject"
               >
@@ -750,7 +764,7 @@ function PayoutsTab({ showToast, commissions }: { showToast: (msg: string, type?
                 />
                 {p.status === 'approved' && (
                   <button
-                    onClick={() => showToast(`Payout of ${formatINR(p.commissionAmount)} processed for ${p.salesRep}`, 'success')}
+                    onClick={async () => { const ok = await updateRow('commissions', p.id, { status: 'paid' }); showToast(ok ? `Payout of ${formatINR(p.commissionAmount)} processed for ${p.salesRep}` : 'Failed to process payout', ok ? 'success' : 'error') }}
                     className="px-3 py-1 rounded-lg text-[11px] font-medium text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 hover:bg-emerald-500/20 transition-colors"
                   >
                     Process

@@ -62,7 +62,7 @@ export async function getOverviewKPIs() {
 export function getAUMGrowth() { return [] }
 export function getRevenueBreakdown() { return [] }
 export function getSystemHealth() {
-  return { uptime: 99.9, responseTime: 42, storageUsed: 24, storageTotal: 100, activeUsers: 0, apiCalls24h: 0 }
+  return { uptime: 0, responseTime: 0, storageUsed: 0, storageTotal: 100, activeUsers: 0, apiCalls24h: 0 }
 }
 
 // ── Activity Feed (from audit_logs) ─────────────────────────

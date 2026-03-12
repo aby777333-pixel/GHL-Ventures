@@ -110,19 +110,21 @@ export default function HomeModule({ navigate, showToast, userName, role }: Home
     }
     if (isFieldRole(role)) {
       return [
-        { label: 'Site Visits', value: '8', icon: MapPin, color: 'text-emerald-400', bg: 'bg-emerald-500/15' },
-        { label: 'Prospects', value: '14', icon: UserCheck, color: 'text-blue-400', bg: 'bg-blue-500/15' },
-        { label: 'Pipeline Value', value: '₹4.2 Cr', icon: CircleDollarSign, color: 'text-amber-400', bg: 'bg-amber-500/15' },
-        { label: 'Check-ins', value: '5', icon: BarChart3, color: 'text-teal-400', bg: 'bg-teal-500/15' },
+        { label: 'Site Visits', value: '—', icon: MapPin, color: 'text-emerald-400', bg: 'bg-emerald-500/15' },
+        { label: 'Prospects', value: '—', icon: UserCheck, color: 'text-blue-400', bg: 'bg-blue-500/15' },
+        { label: 'Pipeline Value', value: '—', icon: CircleDollarSign, color: 'text-amber-400', bg: 'bg-amber-500/15' },
+        { label: 'Check-ins', value: '—', icon: BarChart3, color: 'text-teal-400', bg: 'bg-teal-500/15' },
       ]
     }
+    const doneTasks = tasks.filter(t => t.status === 'done').length
+    const pendingTasks = tasks.filter(t => t.status !== 'done').length
     return [
-      { label: 'Tasks Done', value: '12', icon: CheckCircle, color: 'text-emerald-400', bg: 'bg-emerald-500/15' },
-      { label: 'Pending Tasks', value: '6', icon: ClipboardList, color: 'text-blue-400', bg: 'bg-blue-500/15' },
-      { label: 'Team Size', value: '18', icon: Users, color: 'text-amber-400', bg: 'bg-amber-500/15' },
-      { label: 'Training Progress', value: '74%', icon: GraduationCap, color: 'text-teal-400', bg: 'bg-teal-500/15' },
+      { label: 'Tasks Done', value: doneTasks.toString(), icon: CheckCircle, color: 'text-emerald-400', bg: 'bg-emerald-500/15' },
+      { label: 'Pending Tasks', value: pendingTasks.toString(), icon: ClipboardList, color: 'text-blue-400', bg: 'bg-blue-500/15' },
+      { label: 'Team Size', value: '—', icon: Users, color: 'text-amber-400', bg: 'bg-amber-500/15' },
+      { label: 'Training Progress', value: '—', icon: GraduationCap, color: 'text-teal-400', bg: 'bg-teal-500/15' },
     ]
-  }, [role, csKpis, tickets])
+  }, [role, csKpis, tickets, tasks])
 
   // ── Top 5 tasks sorted by priority ──────────────────────────────
   const topTasks = useMemo(() =>

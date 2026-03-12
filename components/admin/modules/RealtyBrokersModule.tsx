@@ -55,20 +55,9 @@ const SPECIALIZATION_ICONS: Record<string, React.ComponentType<{ className?: str
 }
 
 // ── Chart Data ─────────────────────────────────────────────────────
-const DEAL_VALUE_BY_CITY = [
-  { city: 'Chennai', value: 253 },
-  { city: 'Bangalore', value: 65 },
-  { city: 'Coimbatore', value: 32 },
-  { city: 'Hosur', value: 22 },
-]
+const DEAL_VALUE_BY_CITY: { city: string; value: number }[] = []
 
-const SPECIALIZATION_DIST = [
-  { name: 'Residential', value: 35, color: '#3B82F6' },
-  { name: 'Commercial', value: 25, color: '#F59E0B' },
-  { name: 'Land', value: 20, color: '#10B981' },
-  { name: 'Industrial', value: 12, color: '#8B5CF6' },
-  { name: 'Mixed-Use', value: 8, color: '#06B6D4' },
-]
+const SPECIALIZATION_DIST: { name: string; value: number; color: string }[] = []
 
 const CHART_TOOLTIP_STYLE = {
   background: 'rgba(10,10,10,0.95)',
@@ -199,9 +188,9 @@ export default function RealtyBrokersModule({ subTab, navigate, showToast }: Rea
       {/* KPI Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         <AdminKPICard title="Total Brokers" value={kpis.totalBrokers} icon={Building2} color="#3B82F6" trend="up" trendValue={`${kpis.activeBrokers} active`} />
-        <AdminKPICard title="Total Deals" value={kpis.totalDeals} icon={TrendingUp} color="#10B981" trend="up" trendValue="53 this quarter" />
+        <AdminKPICard title="Total Deals" value={kpis.totalDeals} icon={TrendingUp} color="#10B981" />
         <AdminKPICard title="Portfolio Value" value={formatINR(kpis.totalValue)} icon={IndianRupee} color="#F59E0B" />
-        <AdminKPICard title="New Inquiries" value={kpis.newInquiries} icon={AlertCircle} color="#DC2626" trend="up" trendValue="2 this week" />
+        <AdminKPICard title="New Inquiries" value={kpis.newInquiries} icon={AlertCircle} color="#DC2626" />
       </div>
 
       {/* Content based on sub-tab */}

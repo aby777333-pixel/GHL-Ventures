@@ -14,6 +14,7 @@ import {
 import AdminGlass from '../shared/AdminGlass'
 import AdminBadge from '../shared/AdminBadge'
 import AdminKPICard from '../shared/AdminKPICard'
+import AdminEmptyState from '../shared/AdminEmptyState'
 import { getOverviewKPIs, fetchClients, fetchLeads } from '@/lib/supabase/adminDataService'
 import { formatINR } from '@/lib/admin/adminHooks'
 import { saveBlobAs } from '@/lib/supabase/storageService'
@@ -206,49 +207,11 @@ function AnalyticsDashboard({ overviewKpis }: { overviewKpis: Record<string, any
 
 // ── Report Builder ──────────────────────────────────────────────
 function ReportBuilder({ showToast }: { showToast: (msg: string, type?: 'success' | 'error' | 'info' | 'warning') => void }) {
-  const reports = [
-    { id: 'RPT-001', name: 'Monthly Investor Report', type: 'Scheduled', frequency: 'Monthly', lastRun: '2025-03-01', status: 'ready' },
-    { id: 'RPT-002', name: 'Quarterly Performance Summary', type: 'Scheduled', frequency: 'Quarterly', lastRun: '2025-01-15', status: 'ready' },
-    { id: 'RPT-003', name: 'Client Portfolio Analysis', type: 'On-Demand', frequency: '—', lastRun: '2025-03-18', status: 'ready' },
-    { id: 'RPT-004', name: 'Compliance Audit Report', type: 'Scheduled', frequency: 'Quarterly', lastRun: '2025-01-20', status: 'ready' },
-    { id: 'RPT-005', name: 'Sales Pipeline Report', type: 'On-Demand', frequency: '—', lastRun: '2025-03-15', status: 'ready' },
-    { id: 'RPT-006', name: 'Employee Attendance Summary', type: 'Scheduled', frequency: 'Monthly', lastRun: '2025-03-01', status: 'ready' },
-    { id: 'RPT-007', name: 'Risk Assessment Report', type: 'On-Demand', frequency: '—', lastRun: '2025-03-10', status: 'generating' },
-    { id: 'RPT-008', name: 'Revenue Forecast Model', type: 'AI-Generated', frequency: 'Weekly', lastRun: '2025-03-17', status: 'ready' },
-  ]
-
   return (
     <div className="space-y-4">
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-        {reports.map(report => (
-          <AdminGlass key={report.id} padding="p-4" className="group cursor-pointer">
-            <div className="flex items-start justify-between mb-3">
-              <div className="p-2 rounded-xl bg-brand-red/10">
-                <FileBarChart className="w-4 h-4 text-brand-red" />
-              </div>
-              <AdminBadge
-                label={report.status === 'ready' ? 'Ready' : 'Generating'}
-                variant={report.status === 'ready' ? 'success' : 'warning'}
-                dot
-              />
-            </div>
-            <h4 className="text-sm font-medium text-white group-hover:text-brand-red transition-colors">{report.name}</h4>
-            <div className="flex items-center gap-2 mt-2 text-[11px] text-gray-500">
-              <AdminBadge label={report.type} variant={report.type === 'AI-Generated' ? 'purple' : report.type === 'Scheduled' ? 'info' : 'neutral'} />
-              {report.frequency !== '—' && <span>{report.frequency}</span>}
-            </div>
-            <div className="flex items-center justify-between mt-3 pt-3 border-t border-white/[0.04]">
-              <span className="text-[10px] text-gray-600">Last: {report.lastRun}</span>
-              <button
-                onClick={() => showToast(`Downloading ${report.name}...`, 'success')}
-                className="p-1.5 rounded-lg hover:bg-white/[0.06] text-gray-500 hover:text-white transition-colors"
-              >
-                <Download className="w-3.5 h-3.5" />
-              </button>
-            </div>
-          </AdminGlass>
-        ))}
-      </div>
+      <AdminGlass>
+        <AdminEmptyState title="No reports configured" description="Reports will appear here once the reporting engine is set up." />
+      </AdminGlass>
     </div>
   )
 }
@@ -295,28 +258,9 @@ function ForecastingTab() {
       </AdminGlass>
 
       {/* Forecast Metrics */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        <AdminGlass padding="p-4">
-          <p className="text-[11px] text-gray-500 uppercase tracking-wider font-medium">Projected AUM (Sep 25)</p>
-          <p className="text-xl font-bold text-purple-400 mt-1">₹298 Cr</p>
-          <p className="text-[11px] text-gray-500 mt-1">Range: ₹276 – ₹320 Cr</p>
-        </AdminGlass>
-        <AdminGlass padding="p-4">
-          <p className="text-[11px] text-gray-500 uppercase tracking-wider font-medium">Growth Rate</p>
-          <p className="text-xl font-bold text-emerald-400 mt-1">+20.6%</p>
-          <p className="text-[11px] text-gray-500 mt-1">Next 6 months projected</p>
-        </AdminGlass>
-        <AdminGlass padding="p-4">
-          <p className="text-[11px] text-gray-500 uppercase tracking-wider font-medium">Model Confidence</p>
-          <p className="text-xl font-bold text-amber-400 mt-1">92.4%</p>
-          <p className="text-[11px] text-gray-500 mt-1">ARIMA + ML ensemble</p>
-        </AdminGlass>
-        <AdminGlass padding="p-4">
-          <p className="text-[11px] text-gray-500 uppercase tracking-wider font-medium">Target Achievement</p>
-          <p className="text-xl font-bold text-emerald-400 mt-1">On Track</p>
-          <p className="text-[11px] text-gray-500 mt-1">₹300 Cr FY26 target</p>
-        </AdminGlass>
-      </div>
+      <AdminGlass>
+        <AdminEmptyState title="No forecast data" description="AI forecasting metrics will appear here when sufficient historical data is available." />
+      </AdminGlass>
     </div>
   )
 }

@@ -18,9 +18,9 @@ import AdminBadge from '@/components/admin/shared/AdminBadge'
 import AdminKPICard from '@/components/admin/shared/AdminKPICard'
 import AdminDataTable, { type Column } from '@/components/admin/shared/AdminDataTable'
 import AdminModal from '@/components/admin/shared/AdminModal'
+import AdminEmptyState from '@/components/admin/shared/AdminEmptyState'
 import UploadWithFolderPicker from '@/components/shared/UploadWithFolderPicker'
-// Lead service — when Supabase is live, replace PROSPECTS mock with fetchLeadsForStaff()
-// import { fetchLeadsForStaff, fetchStaffLeadNotifications } from '@/lib/supabase/leadService'
+import { insertRow } from '@/lib/supabase/adminDataService'
 
 // ── Props ─────────────────────────────────────────────────────────
 interface FieldOpsModuleProps {
@@ -29,100 +29,19 @@ interface FieldOpsModuleProps {
   showToast: (msg: string, type?: 'success' | 'error' | 'info' | 'warning') => void
 }
 
-// ── Inline Mock Data ──────────────────────────────────────────────
-const CHECKINS = [
-  { id: 'CI-001', location: 'Prestige Towers, OMR Road, Chennai', lat: 12.9600, lng: 80.2494, time: '09:15 AM', date: '2026-02-22', duration: '2h 10m', status: 'completed' },
-  { id: 'CI-002', location: 'DLF IT Park, Whitefield, Bangalore', lat: 12.9698, lng: 77.7500, time: '11:45 AM', date: '2026-02-22', duration: '1h 30m', status: 'completed' },
-  { id: 'CI-003', location: 'Thoraipakkam Signal, Chennai', lat: 12.9352, lng: 80.2282, time: '02:30 PM', date: '2026-02-21', duration: '45m', status: 'completed' },
-  { id: 'CI-004', location: 'Manyata Tech Park, Bangalore', lat: 13.0468, lng: 77.6217, time: '10:00 AM', date: '2026-02-21', duration: '3h 20m', status: 'completed' },
-  { id: 'CI-005', location: 'Tidel Park, Taramani, Chennai', lat: 12.9862, lng: 80.2442, time: '04:00 PM', date: '2026-02-20', duration: '1h 05m', status: 'completed' },
-  { id: 'CI-006', location: 'Koramangala 4th Block, Bangalore', lat: 12.9352, lng: 77.6245, time: '09:30 AM', date: '2026-02-20', duration: '2h 45m', status: 'completed' },
-  { id: 'CI-007', location: 'Anna Salai, Guindy, Chennai', lat: 13.0100, lng: 80.2121, time: '01:15 PM', date: '2026-02-19', duration: '1h 50m', status: 'missed' },
-  { id: 'CI-008', location: 'Electronic City Phase 1, Bangalore', lat: 12.8456, lng: 77.6603, time: '11:00 AM', date: '2026-02-19', duration: '2h 00m', status: 'completed' },
-]
-
-const SITE_VISITS = [
-  { id: 'SV-001', date: '2026-02-22', site: 'Prestige Towers, OMR Road', purpose: 'Client demo & walkthrough', status: 'Completed', duration: '2h 10m', media: 8, report: 'Submitted' },
-  { id: 'SV-002', date: '2026-02-22', site: 'DLF IT Park, Whitefield', purpose: 'Site inspection', status: 'Completed', duration: '1h 30m', media: 5, report: 'Submitted' },
-  { id: 'SV-003', date: '2026-02-22', site: 'Thoraipakkam Signal Tower', purpose: 'Prospect meeting', status: 'Scheduled', duration: '—', media: 0, report: 'Pending' },
-  { id: 'SV-004', date: '2026-02-23', site: 'Manyata Tech Park, Hebbal', purpose: 'Contract signing', status: 'Scheduled', duration: '—', media: 0, report: 'Pending' },
-  { id: 'SV-005', date: '2026-02-21', site: 'Tidel Park, Taramani', purpose: 'Infrastructure review', status: 'Completed', duration: '1h 05m', media: 12, report: 'Submitted' },
-  { id: 'SV-006', date: '2026-02-20', site: 'Koramangala 4th Block', purpose: 'Market survey', status: 'Completed', duration: '2h 45m', media: 9, report: 'Draft' },
-  { id: 'SV-007', date: '2026-02-19', site: 'Anna Salai, Guindy', purpose: 'Vendor evaluation', status: 'Cancelled', duration: '—', media: 0, report: '—' },
-  { id: 'SV-008', date: '2026-02-18', site: 'Electronic City Phase 1', purpose: 'Land survey', status: 'Completed', duration: '2h 00m', media: 15, report: 'Submitted' },
-  { id: 'SV-009', date: '2026-02-17', site: 'Sholinganallur Junction', purpose: 'Prospect follow-up', status: 'Overdue', duration: '—', media: 0, report: 'Missing' },
-  { id: 'SV-010', date: '2026-02-16', site: 'HSR Layout Sector 2', purpose: 'Competitor analysis', status: 'Completed', duration: '1h 40m', media: 6, report: 'Submitted' },
-]
-
-const MEDIA_ITEMS = [
-  { id: 'M-001', name: 'Site entrance panorama', tag: 'Exterior', site: 'Prestige Towers', date: '2026-02-22', synced: true },
-  { id: 'M-002', name: 'Lobby interiors', tag: 'Interior', site: 'Prestige Towers', date: '2026-02-22', synced: true },
-  { id: 'M-003', name: 'Floor plan layout', tag: 'Document', site: 'DLF IT Park', date: '2026-02-22', synced: true },
-  { id: 'M-004', name: 'Parking area overview', tag: 'Infrastructure', site: 'DLF IT Park', date: '2026-02-22', synced: false },
-  { id: 'M-005', name: 'Client meeting notes', tag: 'Document', site: 'Tidel Park', date: '2026-02-21', synced: true },
-  { id: 'M-006', name: 'Building facade shot', tag: 'Exterior', site: 'Koramangala', date: '2026-02-20', synced: true },
-  { id: 'M-007', name: 'Road access view', tag: 'Infrastructure', site: 'Electronic City', date: '2026-02-18', synced: true },
-  { id: 'M-008', name: 'Competitor signage', tag: 'Market Intel', site: 'HSR Layout', date: '2026-02-16', synced: true },
-  { id: 'M-009', name: 'Water supply meter', tag: 'Infrastructure', site: 'Manyata Tech Park', date: '2026-02-21', synced: false },
-  { id: 'M-010', name: 'Electrical panel', tag: 'Infrastructure', site: 'Anna Salai', date: '2026-02-19', synced: true },
-  { id: 'M-011', name: 'Green area shot', tag: 'Amenity', site: 'Prestige Towers', date: '2026-02-22', synced: true },
-  { id: 'M-012', name: 'Security booth', tag: 'Security', site: 'DLF IT Park', date: '2026-02-22', synced: true },
-]
-
-const REPORTS = [
-  { id: 'R-001', title: 'Weekly Site Summary — Whitefield', type: 'Weekly', status: 'Submitted', date: '2026-02-21', pages: 8 },
-  { id: 'R-002', title: 'Prospect Pipeline Update', type: 'CRM', status: 'Draft', date: '2026-02-20', pages: 4 },
-  { id: 'R-003', title: 'Site Inspection — Prestige Towers', type: 'Inspection', status: 'Submitted', date: '2026-02-19', pages: 12 },
-  { id: 'R-004', title: 'Competitor Landscape — OMR Corridor', type: 'Market Intel', status: 'Under Review', date: '2026-02-18', pages: 6 },
-  { id: 'R-005', title: 'Monthly Expense Summary', type: 'Expense', status: 'Approved', date: '2026-02-15', pages: 3 },
-  { id: 'R-006', title: 'Client Meeting Notes — Feb Batch', type: 'Meeting', status: 'Draft', date: '2026-02-22', pages: 5 },
-]
-
-const ROUTE_STOPS = [
-  { seq: 1, location: 'Prestige Towers, OMR Road', time: '09:00 AM', eta: '—', distance: '—', type: 'Client Meeting' },
-  { seq: 2, location: 'Thoraipakkam Junction', time: '11:30 AM', eta: '25 min', distance: '8.2 km', type: 'Prospect Visit' },
-  { seq: 3, location: 'Tidel Park, Taramani', time: '01:30 PM', eta: '15 min', distance: '4.1 km', type: 'Site Inspection' },
-  { seq: 4, location: 'Sholinganallur IT Hub', time: '03:00 PM', eta: '20 min', distance: '6.5 km', type: 'Follow-up' },
-  { seq: 5, location: 'Velachery Main Road', time: '04:30 PM', eta: '30 min', distance: '9.8 km', type: 'New Prospect' },
-]
-
-const PROSPECTS = [
-  { id: 'P-001', name: 'Rajesh Venkataraman', company: 'Infosys BPO', phone: '+91 98401 12345', deal: 4500000, probability: 75, stage: 'Proposal', nextAction: 'Send revised quote', lastMeet: '2026-02-20' },
-  { id: 'P-002', name: 'Priya Subramanian', company: 'HCL Technologies', phone: '+91 98765 43210', deal: 8200000, probability: 60, stage: 'Site Visit', nextAction: 'Schedule 2nd visit', lastMeet: '2026-02-18' },
-  { id: 'P-003', name: 'Anand Krishnamurthy', company: 'Wipro Enterprises', phone: '+91 94442 56789', deal: 3200000, probability: 85, stage: 'Negotiation', nextAction: 'Final pricing call', lastMeet: '2026-02-21' },
-  { id: 'P-004', name: 'Meena Sundaram', company: 'Zoho Corp', phone: '+91 87654 32100', deal: 6700000, probability: 40, stage: 'Initial Contact', nextAction: 'Intro meeting', lastMeet: '—' },
-  { id: 'P-005', name: 'Vikram Natarajan', company: 'TCS Innovation Labs', phone: '+91 99001 11223', deal: 12500000, probability: 50, stage: 'Site Visit', nextAction: 'Technical walkthrough', lastMeet: '2026-02-19' },
-  { id: 'P-006', name: 'Deepa Raghavan', company: 'Cognizant', phone: '+91 96001 44556', deal: 2800000, probability: 90, stage: 'Confirmed', nextAction: 'Contract signing', lastMeet: '2026-02-22' },
-  { id: 'P-007', name: 'Suresh Balaji', company: 'Freshworks', phone: '+91 93456 78901', deal: 5500000, probability: 30, stage: 'Initial Contact', nextAction: 'Send brochure', lastMeet: '—' },
-  { id: 'P-008', name: 'Kavitha Raman', company: 'Ola Fleet Tech', phone: '+91 91234 56780', deal: 7800000, probability: 65, stage: 'Proposal', nextAction: 'Presentation to board', lastMeet: '2026-02-17' },
-]
-
-const EXPENSES = [
-  { id: 'E-001', date: '2026-02-22', category: 'Travel', description: 'Cab — OMR to Whitefield', amount: 1450, status: 'Pending', receipt: true },
-  { id: 'E-002', date: '2026-02-21', category: 'Meals', description: 'Client lunch — Rajesh V.', amount: 2200, status: 'Approved', receipt: true },
-  { id: 'E-003', date: '2026-02-20', category: 'Fuel', description: 'Petrol — field visits', amount: 3500, status: 'Approved', receipt: true },
-  { id: 'E-004', date: '2026-02-19', category: 'Stay', description: 'Hotel — Bangalore overnight', amount: 4800, status: 'Under Review', receipt: true },
-  { id: 'E-005', date: '2026-02-18', category: 'Misc', description: 'Printing — site docs', amount: 350, status: 'Approved', receipt: false },
-  { id: 'E-006', date: '2026-02-17', category: 'Travel', description: 'Train — Chennai to Bangalore', amount: 1850, status: 'Approved', receipt: true },
-]
-
-const LEADERBOARD = [
-  { rank: 1, name: 'Arjun Mehta', visits: 48, prospects: 22, pipeline: 42000000, closed: 18500000, score: 965, badges: ['Road Warrior', 'Closer'] },
-  { rank: 2, name: 'Priya Subramanian', visits: 45, prospects: 19, pipeline: 38000000, closed: 16200000, score: 920, badges: ['Sharpshooter', 'Marathon'] },
-  { rank: 3, name: 'Vikram Natarajan', visits: 42, prospects: 25, pipeline: 35000000, closed: 14800000, score: 885, badges: ['Explorer', 'Road Warrior'] },
-  { rank: 4, name: 'Deepa Raghavan', visits: 38, prospects: 17, pipeline: 31000000, closed: 13500000, score: 840, badges: ['Closer'] },
-  { rank: 5, name: 'Suresh Balaji', visits: 35, prospects: 15, pipeline: 28000000, closed: 11200000, score: 790, badges: ['Marathon'] },
-  { rank: 6, name: 'Kavitha Raman', visits: 32, prospects: 20, pipeline: 26000000, closed: 10800000, score: 755, badges: ['Sharpshooter', 'Explorer'] },
-  { rank: 7, name: 'Rajesh Kumar', visits: 28, prospects: 12, pipeline: 22000000, closed: 9200000, score: 710, badges: ['Road Warrior'] },
-  { rank: 8, name: 'Meena Sundaram', visits: 25, prospects: 14, pipeline: 19000000, closed: 7800000, score: 665, badges: [] },
-]
+// ── Data arrays (populated from Supabase when available) ─────────
+const CHECKINS: { id: string; location: string; lat: number; lng: number; time: string; date: string; duration: string; status: string }[] = []
+const SITE_VISITS: { id: string; date: string; site: string; purpose: string; status: string; duration: string; media: number; report: string }[] = []
+const MEDIA_ITEMS: { id: string; name: string; tag: string; site: string; date: string; synced: boolean }[] = []
+const REPORTS: { id: string; title: string; type: string; status: string; date: string; pages: number }[] = []
+const ROUTE_STOPS: { seq: number; location: string; time: string; eta: string; distance: string; type: string }[] = []
+const PROSPECTS: { id: string; name: string; company: string; phone: string; deal: number; probability: number; stage: string; nextAction: string; lastMeet: string }[] = []
+const EXPENSES: { id: string; date: string; category: string; description: string; amount: number; status: string; receipt: boolean }[] = []
+const LEADERBOARD: { rank: number; name: string; visits: number; prospects: number; pipeline: number; closed: number; score: number; badges: string[] }[] = []
 
 const PIPELINE_STAGES = ['Initial Contact', 'Site Visit', 'Proposal', 'Negotiation', 'Confirmed'] as const
 
-const VISIT_CHART = [
-  { day: 'Mon', visits: 4 }, { day: 'Tue', visits: 6 }, { day: 'Wed', visits: 3 },
-  { day: 'Thu', visits: 5 }, { day: 'Fri', visits: 7 }, { day: 'Sat', visits: 2 },
-]
+const VISIT_CHART: { day: string; visits: number }[] = []
 
 // ── Helpers ───────────────────────────────────────────────────────
 const fmtINR = (n: number) => {
@@ -167,20 +86,8 @@ function FieldDashboard({ navigate, showToast }: FieldOpsModuleProps) {
     { label: 'SOS', icon: AlertTriangle, color: 'text-red-400', bg: 'bg-red-500/20 border border-red-500/30', action: () => showToast('SOS Alert sent to HQ with GPS!', 'error') },
   ]
 
-  const schedule = [
-    { time: '09:00 AM', title: 'Client Demo — Prestige Towers', status: 'done' },
-    { time: '11:30 AM', title: 'Site Inspection — DLF IT Park', status: 'done' },
-    { time: '02:00 PM', title: 'Prospect Meeting — Thoraipakkam', status: 'current' },
-    { time: '04:30 PM', title: 'Follow-up — Sholinganallur Hub', status: 'upcoming' },
-  ]
-
-  const recentActivity = [
-    { time: '11:52 AM', text: 'Checked out from DLF IT Park', icon: LogIn },
-    { time: '11:45 AM', text: 'Uploaded 5 photos — DLF IT Park', icon: Camera },
-    { time: '10:30 AM', text: 'Report submitted — Prestige Towers', icon: FileText },
-    { time: '09:15 AM', text: 'Checked in at Prestige Towers, OMR', icon: MapPin },
-    { time: '08:45 AM', text: 'Route optimized — 5 stops, 42km', icon: Route },
-  ]
+  const schedule: { time: string; title: string; status: string }[] = []
+  const recentActivity: { time: string; text: string; icon: typeof LogIn }[] = []
 
   return (
     <div className="space-y-6">
@@ -189,8 +96,8 @@ function FieldDashboard({ navigate, showToast }: FieldOpsModuleProps) {
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <MapPin className="w-5 h-5 text-teal-400" />
-            <span className="text-white font-medium">Whitefield, Bangalore</span>
-            <span className="text-xs text-gray-500">Last updated 2m ago</span>
+            <span className="text-white font-medium">Location unavailable</span>
+            <span className="text-xs text-gray-500">Enable GPS to track</span>
           </div>
           <div className="flex items-center gap-2">
             <Wifi className="w-4 h-4 text-emerald-400" />
@@ -215,10 +122,10 @@ function FieldDashboard({ navigate, showToast }: FieldOpsModuleProps) {
 
       {/* KPI Strip */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        <AdminKPICard title="Visits Today" value="3/5" icon={MapPinned} color="#14B8A6" trend="up" trendValue="60%" />
-        <AdminKPICard title="Prospects Met" value="7" icon={Users} color="#F59E0B" trend="up" trendValue="+2" />
-        <AdminKPICard title="Pipeline" value="₹4.2Cr" icon={TrendingUp} color="#8B5CF6" trend="up" trendValue="12%" />
-        <AdminKPICard title="Distance" value="42 km" icon={Navigation} color="#3B82F6" />
+        <AdminKPICard title="Visits Today" value="—" icon={MapPinned} color="#14B8A6" />
+        <AdminKPICard title="Prospects Met" value="—" icon={Users} color="#F59E0B" />
+        <AdminKPICard title="Pipeline" value="—" icon={TrendingUp} color="#8B5CF6" />
+        <AdminKPICard title="Distance" value="—" icon={Navigation} color="#3B82F6" />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -227,17 +134,21 @@ function FieldDashboard({ navigate, showToast }: FieldOpsModuleProps) {
           <h3 className="text-sm font-semibold text-white mb-4 flex items-center gap-2">
             <Calendar className="w-4 h-4 text-teal-400" /> Today&apos;s Schedule
           </h3>
-          <div className="space-y-1">
-            {schedule.map((s, i) => (
-              <div key={i} className="flex items-center gap-3 py-2">
-                <span className="text-xs text-gray-500 w-16 shrink-0">{s.time}</span>
-                <div className={`w-2.5 h-2.5 rounded-full shrink-0 ${s.status === 'done' ? 'bg-emerald-400' : s.status === 'current' ? 'bg-amber-400 animate-pulse' : 'bg-gray-600'}`} />
-                <span className={`text-sm ${s.status === 'done' ? 'text-gray-500 line-through' : s.status === 'current' ? 'text-white font-medium' : 'text-gray-400'}`}>
-                  {s.title}
-                </span>
-              </div>
-            ))}
-          </div>
+          {schedule.length === 0 ? (
+            <AdminEmptyState title="No schedule" description="Today's schedule will appear here." />
+          ) : (
+            <div className="space-y-1">
+              {schedule.map((s, i) => (
+                <div key={i} className="flex items-center gap-3 py-2">
+                  <span className="text-xs text-gray-500 w-16 shrink-0">{s.time}</span>
+                  <div className={`w-2.5 h-2.5 rounded-full shrink-0 ${s.status === 'done' ? 'bg-emerald-400' : s.status === 'current' ? 'bg-amber-400 animate-pulse' : 'bg-gray-600'}`} />
+                  <span className={`text-sm ${s.status === 'done' ? 'text-gray-500 line-through' : s.status === 'current' ? 'text-white font-medium' : 'text-gray-400'}`}>
+                    {s.title}
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
         </AdminGlass>
 
         {/* Recent Activity */}
@@ -245,17 +156,21 @@ function FieldDashboard({ navigate, showToast }: FieldOpsModuleProps) {
           <h3 className="text-sm font-semibold text-white mb-4 flex items-center gap-2">
             <Clock className="w-4 h-4 text-amber-400" /> Recent Activity
           </h3>
-          <div className="space-y-3">
-            {recentActivity.map((a, i) => (
-              <div key={i} className="flex items-start gap-3">
-                <a.icon className="w-4 h-4 text-gray-500 mt-0.5 shrink-0" />
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm text-gray-300">{a.text}</p>
-                  <p className="text-[11px] text-gray-600">{a.time}</p>
+          {recentActivity.length === 0 ? (
+            <AdminEmptyState title="No recent activity" description="Your field activity will appear here." />
+          ) : (
+            <div className="space-y-3">
+              {recentActivity.map((a, i) => (
+                <div key={i} className="flex items-start gap-3">
+                  <a.icon className="w-4 h-4 text-gray-500 mt-0.5 shrink-0" />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm text-gray-300">{a.text}</p>
+                    <p className="text-[11px] text-gray-600">{a.time}</p>
+                  </div>
                 </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
         </AdminGlass>
       </div>
     </div>
@@ -282,9 +197,8 @@ function GPSCheckIn({ showToast }: FieldOpsModuleProps) {
           </div>
         </button>
         <p className="text-gray-400 text-sm mt-4">
-          {checkedIn ? 'Currently checked in at DLF IT Park, Whitefield' : 'Tap to check in at your current location'}
+          {checkedIn ? 'Currently checked in at your location' : 'Tap to check in at your current location'}
         </p>
-        {checkedIn && <p className="text-xs text-gray-600 mt-1">Duration: 1h 23m</p>}
       </AdminGlass>
 
       {/* Map Placeholder */}
@@ -296,7 +210,7 @@ function GPSCheckIn({ showToast }: FieldOpsModuleProps) {
           <div className="text-center text-gray-500">
             <MapPinned className="w-8 h-8 mx-auto mb-2 opacity-40" />
             <p className="text-xs">Interactive map showing check-in points</p>
-            <p className="text-[10px] text-gray-600 mt-1">8 locations across Chennai & Bangalore</p>
+            <p className="text-[10px] text-gray-600 mt-1">Check-in locations will appear here</p>
           </div>
         </div>
       </AdminGlass>
@@ -352,7 +266,7 @@ function SiteVisits({ showToast }: FieldOpsModuleProps) {
             <div key={d} className={`text-center py-3 rounded-lg ${i === 6 ? 'bg-teal-500/10 border border-teal-500/20' : 'bg-white/[0.03]'}`}>
               <p className="text-[10px] text-gray-500 uppercase">{d}</p>
               <p className={`text-lg font-bold mt-1 ${i === 6 ? 'text-teal-400' : 'text-gray-400'}`}>{16 + i}</p>
-              <p className="text-[10px] text-gray-600 mt-0.5">{[2, 3, 1, 2, 3, 1, 2][i]} visits</p>
+              <p className="text-[10px] text-gray-600 mt-0.5">—</p>
             </div>
           ))}
         </div>
@@ -408,8 +322,8 @@ function MediaCapture({ showToast }: FieldOpsModuleProps) {
           </div>
           {/* Watermark overlay concept */}
           <div className="absolute bottom-3 left-3 text-[10px] text-teal-400/60 font-mono">
-            <p>12.9698°N, 77.7500°E</p>
-            <p>2026-02-22 14:32:15 IST</p>
+            <p>GPS coordinates</p>
+            <p>Timestamp overlay</p>
           </div>
           <div className="absolute bottom-3 right-3">
             <button onClick={() => showToast('Photo captured with GPS watermark!', 'success')} className="w-14 h-14 rounded-full bg-white/20 border-2 border-white flex items-center justify-center hover:bg-white/30 transition-colors">
@@ -427,9 +341,9 @@ function MediaCapture({ showToast }: FieldOpsModuleProps) {
             <span className="text-sm text-white">Sync Status</span>
           </div>
           <div className="flex items-center gap-3">
-            <span className="text-xs text-gray-400">10/12 synced</span>
+            <span className="text-xs text-gray-400">{MEDIA_ITEMS.filter(m => m.synced).length}/{MEDIA_ITEMS.length} synced</span>
             <div className="w-24 h-1.5 bg-white/[0.06] rounded-full overflow-hidden">
-              <div className="h-full bg-teal-500 rounded-full" style={{ width: '83%' }} />
+              <div className="h-full bg-teal-500 rounded-full" style={{ width: MEDIA_ITEMS.length > 0 ? `${Math.round((MEDIA_ITEMS.filter(m => m.synced).length / MEDIA_ITEMS.length) * 100)}%` : '0%' }} />
             </div>
           </div>
         </div>
@@ -552,10 +466,10 @@ function RoutePlanner({ showToast }: FieldOpsModuleProps) {
     <div className="space-y-6">
       {/* Route Summary */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        <AdminKPICard title="Total Stops" value="5" icon={MapPin} color="#14B8A6" />
-        <AdminKPICard title="Total Distance" value="28.6 km" icon={Navigation} color="#3B82F6" />
-        <AdminKPICard title="Est. Drive Time" value="1h 30m" icon={Timer} color="#F59E0B" />
-        <AdminKPICard title="Est. Completion" value="5:15 PM" icon={Clock} color="#8B5CF6" />
+        <AdminKPICard title="Total Stops" value={ROUTE_STOPS.length.toString() || '—'} icon={MapPin} color="#14B8A6" />
+        <AdminKPICard title="Total Distance" value="—" icon={Navigation} color="#3B82F6" />
+        <AdminKPICard title="Est. Drive Time" value="—" icon={Timer} color="#F59E0B" />
+        <AdminKPICard title="Est. Completion" value="—" icon={Clock} color="#8B5CF6" />
       </div>
 
       {/* AI Optimize Button */}
@@ -603,8 +517,8 @@ function RoutePlanner({ showToast }: FieldOpsModuleProps) {
           <div className="h-72 rounded-xl bg-white/[0.03] border border-white/[0.06] flex items-center justify-center">
             <div className="text-center text-gray-500">
               <Route className="w-10 h-10 mx-auto mb-2 opacity-40" />
-              <p className="text-xs">Optimized route with 5 stops</p>
-              <p className="text-[10px] text-gray-600 mt-1">Chennai South — OMR Corridor</p>
+              <p className="text-xs">Route map will appear here</p>
+              <p className="text-[10px] text-gray-600 mt-1">Add stops to plan your route</p>
             </div>
           </div>
         </AdminGlass>
@@ -883,7 +797,7 @@ function ExpensesPanel({ showToast }: FieldOpsModuleProps) {
         </div>
         <div className="flex justify-end gap-3 mt-6 pt-4 border-t border-white/[0.06]">
           <button onClick={() => setAddExpenseOpen(false)} className="px-4 py-2 rounded-xl text-sm font-medium text-gray-400 hover:text-white hover:bg-white/[0.06] transition-colors">Cancel</button>
-          <button onClick={() => { if (!expForm.description.trim() || !expForm.amount) { showToast('Description and amount are required', 'error'); return } showToast('Expense submitted successfully', 'success'); setAddExpenseOpen(false); setExpForm({ type: 'Travel', description: '', amount: '', date: '', notes: '' }) }} className="px-5 py-2 rounded-xl text-sm font-medium text-white bg-teal-600 hover:bg-teal-700 transition-colors">Submit Expense</button>
+          <button onClick={async () => { if (!expForm.description.trim() || !expForm.amount) { showToast('Description and amount are required', 'error'); return } const row = await insertRow('expenses', { category: expForm.type, description: expForm.description, amount: Number(expForm.amount), date: expForm.date || new Date().toISOString().slice(0, 10), notes: expForm.notes, status: 'pending' }); if (row) { showToast('Expense submitted successfully', 'success') } else { showToast('Failed to submit expense', 'error') } setAddExpenseOpen(false); setExpForm({ type: 'Travel', description: '', amount: '', date: '', notes: '' }) }} className="px-5 py-2 rounded-xl text-sm font-medium text-white bg-teal-600 hover:bg-teal-700 transition-colors">Submit Expense</button>
         </div>
       </AdminModal>
       <UploadWithFolderPicker
@@ -953,21 +867,21 @@ function LeaderboardPanel({ showToast }: FieldOpsModuleProps) {
             </div>
             <div>
               <p className="text-sm text-white font-medium">Current Streak</p>
-              <p className="text-xs text-gray-500">14 consecutive days in the field</p>
+              <p className="text-xs text-gray-500">Consecutive days in the field</p>
             </div>
           </div>
           <div className="text-right">
-            <p className="text-2xl font-bold text-orange-400">14</p>
+            <p className="text-2xl font-bold text-orange-400">—</p>
             <p className="text-[10px] text-gray-500">days</p>
           </div>
         </div>
         <div className="mt-3 pt-3 border-t border-white/[0.06]">
           <div className="flex items-center justify-between mb-1.5">
-            <span className="text-xs text-gray-400 flex items-center gap-1"><Star className="w-3.5 h-3.5 text-amber-400" /> Level 7 — Field Commander</span>
-            <span className="text-[11px] text-gray-500">2,850 / 3,500 XP</span>
+            <span className="text-xs text-gray-400 flex items-center gap-1"><Star className="w-3.5 h-3.5 text-amber-400" /> Level — —</span>
+            <span className="text-[11px] text-gray-500">— / — XP</span>
           </div>
           <div className="h-2 bg-white/[0.06] rounded-full overflow-hidden">
-            <div className="h-full bg-gradient-to-r from-amber-500 to-teal-500 rounded-full" style={{ width: '81%' }} />
+            <div className="h-full bg-gradient-to-r from-amber-500 to-teal-500 rounded-full" style={{ width: '0%' }} />
           </div>
         </div>
       </AdminGlass>
@@ -975,7 +889,7 @@ function LeaderboardPanel({ showToast }: FieldOpsModuleProps) {
       {/* Full Rankings */}
       <AdminGlass>
         <h3 className="text-sm font-semibold text-white mb-4 flex items-center gap-2">
-          <Trophy className="w-4 h-4 text-amber-400" /> Full Rankings — February 2026
+          <Trophy className="w-4 h-4 text-amber-400" /> Full Rankings
         </h3>
         <div className="space-y-1">
           {LEADERBOARD.map(p => (

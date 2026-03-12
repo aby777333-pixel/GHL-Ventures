@@ -13,7 +13,7 @@ import AdminBadge, { getSeverityBadgeVariant } from '../shared/AdminBadge'
 import AdminModal, { ModalButton } from '../shared/AdminModal'
 import AdminKPICard from '../shared/AdminKPICard'
 import AdminEmptyState from '../shared/AdminEmptyState'
-import { fetchApprovals, fetchRiskFlags, fetchAuditLog } from '@/lib/supabase/adminDataService'
+import { fetchApprovals, fetchRiskFlags, fetchAuditLog, updateRow } from '@/lib/supabase/adminDataService'
 import { formatDate, formatTimeAgo } from '@/lib/admin/adminHooks'
 import type { Approval, RiskFlag, ApprovalStatus, AuditEntry } from '@/lib/admin/adminTypes'
 
@@ -56,7 +56,10 @@ export default function ComplianceModule({ subTab, navigate, showToast }: Compli
     const pending = approvals.filter(a => a.status === 'pending').length
     const openRisks = riskFlags.filter(r => r.status === 'open' || r.status === 'investigating').length
     const critical = riskFlags.filter(r => r.severity === 'critical').length
-    return { pending, openRisks, critical, auditEntries: auditLog.length, complianceScore: 94 }
+    const total = approvals.length
+    const approved = approvals.filter(a => a.status === 'approved').length
+    const complianceScore = total > 0 ? Math.round((approved / total) * 100) : 0
+    return { pending, openRisks, critical, auditEntries: auditLog.length, complianceScore }
   }, [approvals, riskFlags, auditLog])
 
   const handleTabClick = (tabId: string) => {
@@ -253,12 +256,14 @@ function ApprovalsTab({ approvals, showToast }: { approvals: any[]; showToast: (
                 Cancel
               </button>
               <button
-                onClick={() => {
+                onClick={async () => {
+                  const newStatus = reviewAction === 'approve' ? 'approved' : 'rejected'
+                  const ok = await updateRow('approvals', reviewApproval.id, { status: newStatus })
                   showToast(
-                    reviewAction === 'approve'
-                      ? `${reviewApproval.id} approved successfully`
-                      : `${reviewApproval.id} rejected`,
-                    reviewAction === 'approve' ? 'success' : 'error'
+                    ok
+                      ? (reviewAction === 'approve' ? `${reviewApproval.id} approved successfully` : `${reviewApproval.id} rejected`)
+                      : `Failed to update ${reviewApproval.id}`,
+                    ok ? (reviewAction === 'approve' ? 'success' : 'error') : 'error'
                   )
                   setReviewApproval(null)
                   setReviewAction(null)
@@ -380,50 +385,13 @@ function AuditTrailTab({ auditLog }: { auditLog: any[] }) {
 
 // ── Regulations Tab ─────────────────────────────────────────────
 function RegulationsTab() {
-  const regulations = [
-    { id: 'REG-001', title: 'SEBI (AIF) Regulations 2012', status: 'Compliant', lastReview: '2025-02-15', nextReview: '2025-05-15', icon: Scale },
-    { id: 'REG-002', title: 'Prevention of Money Laundering Act (PMLA)', status: 'Compliant', lastReview: '2025-01-20', nextReview: '2025-04-20', icon: Shield },
-    { id: 'REG-003', title: 'Companies Act 2013 — Section 185/186', status: 'Review Due', lastReview: '2024-12-10', nextReview: '2025-03-31', icon: Gavel },
-    { id: 'REG-004', title: 'RBI Master Directions on KYC', status: 'Compliant', lastReview: '2025-02-01', nextReview: '2025-05-01', icon: BookOpen },
-    { id: 'REG-005', title: 'SEBI Circular on Investor Grievance Redressal', status: 'Compliant', lastReview: '2025-01-15', nextReview: '2025-04-15', icon: ShieldAlert },
-    { id: 'REG-006', title: 'Income Tax Act — Section 115UB (AIF Taxation)', status: 'Compliant', lastReview: '2025-03-01', nextReview: '2025-06-01', icon: FileText },
-  ]
-
   return (
     <AdminGlass>
       <h3 className="text-sm font-semibold text-white mb-4 flex items-center gap-2">
         <Gavel className="w-4 h-4 text-brand-red" />
         Regulatory Compliance Status
       </h3>
-      <div className="space-y-3">
-        {regulations.map(reg => {
-          const Icon = reg.icon
-          const isReviewDue = reg.status === 'Review Due'
-          return (
-            <div key={reg.id} className={`flex items-center justify-between p-4 rounded-xl border transition-colors ${
-              isReviewDue ? 'bg-amber-500/[0.05] border-amber-500/20' : 'bg-white/[0.02] border-white/[0.04]'
-            } hover:bg-white/[0.04]`}>
-              <div className="flex items-center gap-3">
-                <div className={`p-2 rounded-xl ${isReviewDue ? 'bg-amber-500/15' : 'bg-emerald-500/10'}`}>
-                  <Icon className={`w-4 h-4 ${isReviewDue ? 'text-amber-400' : 'text-emerald-400'}`} />
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-white">{reg.title}</p>
-                  <div className="flex items-center gap-3 text-[11px] text-gray-500 mt-0.5">
-                    <span>Last reviewed: {formatDate(reg.lastReview)}</span>
-                    <span>Next review: {formatDate(reg.nextReview)}</span>
-                  </div>
-                </div>
-              </div>
-              <AdminBadge
-                label={reg.status}
-                variant={isReviewDue ? 'warning' : 'success'}
-                dot
-              />
-            </div>
-          )
-        })}
-      </div>
+      <AdminEmptyState title="No regulations tracked" description="Regulatory compliance entries will appear here once configured." />
     </AdminGlass>
   )
 }

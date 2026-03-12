@@ -500,7 +500,7 @@ function AttendanceTab() {
     <AdminGlass>
       <h3 className="text-sm font-semibold text-white mb-4 flex items-center gap-2">
         <Clock className="w-4 h-4 text-brand-red" />
-        Monthly Attendance Summary — March 2025
+        Monthly Attendance Summary
       </h3>
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
@@ -625,23 +625,13 @@ function LeaveTab({ showToast }: { showToast: (msg: string, type?: 'success' | '
 
 // ── Performance Tab ─────────────────────────────────────────────
 function PerformanceTab() {
-  const PERFORMANCE_DATA = useMemo(() => [
-    { name: 'Abe Thayil', role: 'Founder & CEO', kpiScore: 98, goals: 12, goalsCompleted: 12, rating: 5.0 },
-    { name: 'Venkatesh Raghavan', role: 'CIO', kpiScore: 95, goals: 10, goalsCompleted: 9, rating: 4.8 },
-    { name: 'Meera Subramaniam', role: 'Head of Compliance', kpiScore: 96, goals: 8, goalsCompleted: 8, rating: 4.9 },
-    { name: 'Priya Natarajan', role: 'VP Sales', kpiScore: 92, goals: 15, goalsCompleted: 13, rating: 4.7 },
-    { name: 'Karthik Sundaram', role: 'Senior Fund Analyst', kpiScore: 88, goals: 8, goalsCompleted: 7, rating: 4.4 },
-    { name: 'Divya Krishnamurthy', role: 'Relationship Manager', kpiScore: 85, goals: 10, goalsCompleted: 8, rating: 4.2 },
-    { name: 'Rahul Menon', role: 'Operations Manager', kpiScore: 72, goals: 8, goalsCompleted: 5, rating: 3.6 },
-    { name: 'Sowmya Rajan', role: 'Legal Counsel', kpiScore: 91, goals: 6, goalsCompleted: 6, rating: 4.6 },
-    { name: 'Arjun Menon', role: 'External Auditor', kpiScore: 80, goals: 5, goalsCompleted: 4, rating: 4.0 },
-  ], [])
+  const PERFORMANCE_DATA = useMemo<{ name: string; role: string; kpiScore: number; goals: number; goalsCompleted: number; rating: number }[]>(() => [], [])
 
   return (
     <AdminGlass>
       <h3 className="text-sm font-semibold text-white mb-4 flex items-center gap-2">
         <Award className="w-4 h-4 text-amber-400" />
-        Q1 2025 Performance Review
+        Performance Review
       </h3>
       <div className="space-y-3">
         {PERFORMANCE_DATA.sort((a, b) => b.kpiScore - a.kpiScore).map((emp, i) => (

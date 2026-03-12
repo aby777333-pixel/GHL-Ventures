@@ -24,7 +24,7 @@ import AdminDataTable, { type Column } from '../shared/AdminDataTable'
 import {
   fetchMarketingCampaigns, getMarketingContent, getMarketingAudiences,
   getMarketingSequences, getMarketingChannels, getMarketingAITools,
-  getMarketingIntegrations,
+  getMarketingIntegrations, insertRow,
 } from '@/lib/supabase/adminDataService'
 import { formatINR } from '@/lib/admin/adminHooks'
 import type {
@@ -105,41 +105,11 @@ const INTEGRATION_CATEGORY_CONFIG: Record<string, string> = {
   automation: 'Automation',
 }
 
-// ── Chart Mock Data ────────────────────────────────────────────────
-const LEAD_TREND_DATA = [
-  { month: 'Oct', leads: 142, spend: 320000 },
-  { month: 'Nov', leads: 158, spend: 345000 },
-  { month: 'Dec', leads: 175, spend: 310000 },
-  { month: 'Jan', leads: 198, spend: 380000 },
-  { month: 'Feb', leads: 215, spend: 420000 },
-  { month: 'Mar', leads: 234, spend: 450000 },
-]
-
-const CAMPAIGN_TYPE_DIST = [
-  { name: 'Email', value: 35, color: '#3B82F6' },
-  { name: 'Google Ads', value: 25, color: '#F59E0B' },
-  { name: 'Social', value: 18, color: '#8B5CF6' },
-  { name: 'Events', value: 12, color: '#10B981' },
-  { name: 'Messaging', value: 10, color: '#06B6D4' },
-]
-
-const FUNNEL_DATA = [
-  { stage: 'Awareness', count: 24680, pct: 100 },
-  { stage: 'Interest', count: 8420, pct: 34.1 },
-  { stage: 'Consideration', count: 3150, pct: 12.8 },
-  { stage: 'Intent', count: 890, pct: 3.6 },
-  { stage: 'Decision', count: 234, pct: 0.95 },
-]
-
-const CHANNEL_ROI_DATA = [
-  { channel: 'WhatsApp', roi: 450 },
-  { channel: 'Telegram', roi: 520 },
-  { channel: 'Email', roi: 340 },
-  { channel: 'Google Ads', roi: 310 },
-  { channel: 'LinkedIn', roi: 220 },
-  { channel: 'Meta Ads', roi: 180 },
-  { channel: 'Events', roi: 150 },
-]
+// ── Chart Data (populated from Supabase when available) ───────────
+const LEAD_TREND_DATA: any[] = []
+const CAMPAIGN_TYPE_DIST: any[] = []
+const FUNNEL_DATA: any[] = []
+const CHANNEL_ROI_DATA: any[] = []
 
 // ── Chart Tooltip Style ────────────────────────────────────────────
 const CHART_TOOLTIP_STYLE = {
@@ -335,11 +305,18 @@ function CampaignsTab({ showToast, campaigns }: { showToast: (m: string, t?: 'su
 
   const handleCreateCampaign = async () => {
     if (!campaignForm.name.trim()) { showToast('Campaign name is required', 'error'); return }
-    // Create campaign record (mock)
-    const campaignId = `MC-${Date.now().toString(36).toUpperCase()}`
-    showToast(`Campaign "${campaignForm.name}" created (ID: ${campaignId})`, 'success')
-    // If campaign is live, auto-track lead source for any leads generated from it
-    console.debug(`[Marketing] Campaign ${campaignId} created. Leads from this campaign will be auto-tracked via leadService.createLead({ campaignId: "${campaignId}", utmCampaign: "${campaignForm.name}" })`)
+    const result = await insertRow('campaigns', {
+      name: campaignForm.name,
+      type: campaignForm.type,
+      status: campaignForm.status,
+      budget: parseFloat(campaignForm.budget) || 0,
+      start_date: campaignForm.startDate || null,
+      end_date: campaignForm.endDate || null,
+      audience: campaignForm.audience || null,
+      description: campaignForm.description || null,
+    })
+    if (!result) { showToast('Failed to create campaign', 'error'); return }
+    showToast(`Campaign "${campaignForm.name}" created`, 'success')
     resetCampaignForm()
     setNewCampaignOpen(false)
   }
@@ -980,14 +957,7 @@ function OutreachTab({ showToast, outreachSequences }: { showToast: (m: string, 
     'multi-channel': Layers,
   }
 
-  const channelStats = [
-    { channel: 'Email', icon: Mail, sent: 4520, delivered: 4380, opened: 1420, replied: 348, color: '#3B82F6' },
-    { channel: 'WhatsApp', icon: MessageCircle, sent: 1890, delivered: 1870, opened: 1650, replied: 892, color: '#25D366' },
-    { channel: 'Telegram', icon: Send, sent: 980, delivered: 975, opened: 890, replied: 456, color: '#0088CC' },
-    { channel: 'SMS', icon: Smartphone, sent: 2340, delivered: 2290, opened: 2050, replied: 125, color: '#F59E0B' },
-    { channel: 'LinkedIn', icon: Linkedin, sent: 560, delivered: 545, opened: 312, replied: 89, color: '#0A66C2' },
-    { channel: 'Push', icon: Bell, sent: 3200, delivered: 3100, opened: 1240, replied: 0, color: '#8B5CF6' },
-  ]
+  const channelStats: { channel: string; icon: any; sent: number; delivered: number; opened: number; replied: number; color: string }[] = []
 
   return (
     <div className="space-y-4">
@@ -1308,15 +1278,15 @@ function AIToolsTab({ navigate, showToast, marketingAITools }: { navigate: (p: s
           <Sparkles className="w-6 h-6 text-brand-red" />
           Marketing AI Tools
         </h1>
-        <p className="text-sm text-gray-500 mt-1">18 AI-powered tools for marketing intelligence and automation</p>
+        <p className="text-sm text-gray-500 mt-1">{marketingAITools.length} AI-powered tools for marketing intelligence and automation</p>
       </div>
 
       {/* KPIs */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         <AdminKPICard title="Active Tools" value={`${marketingAITools.filter(t => t.status === 'active').length}/${marketingAITools.length}`} icon={Zap} color="#10B981" delay={0} />
-        <AdminKPICard title="Total AI Runs" value="2,340" icon={Activity} color="#3B82F6" delay={50} />
-        <AdminKPICard title="Content Generated" value="186" icon={FileText} color="#8B5CF6" delay={100} />
-        <AdminKPICard title="Time Saved" value="92 hrs" icon={Clock} color="#DC2626" delay={150} />
+        <AdminKPICard title="Total AI Runs" value="0" icon={Activity} color="#3B82F6" delay={50} />
+        <AdminKPICard title="Content Generated" value="0" icon={FileText} color="#8B5CF6" delay={100} />
+        <AdminKPICard title="Time Saved" value="0 hrs" icon={Clock} color="#DC2626" delay={150} />
       </div>
 
       {/* Search + Filters */}
@@ -1441,7 +1411,7 @@ function IntegrationsTab({ showToast, integrationServices }: { showToast: (m: st
         <AdminKPICard title="Total Integrations" value={integrationServices.length} icon={Link2} color="#3B82F6" delay={0} />
         <AdminKPICard title="Connected" value={connected} icon={CheckCircle2} color="#10B981" delay={50} />
         <AdminKPICard title="Pending" value={pending} icon={Clock} color="#F59E0B" delay={100} />
-        <AdminKPICard title="Data Sync Rate" value="99.2%" icon={RefreshCw} color="#8B5CF6" delay={150} />
+        <AdminKPICard title="Data Sync Rate" value="—" icon={RefreshCw} color="#8B5CF6" delay={150} />
       </div>
 
       {/* Category Filters */}
