@@ -55,7 +55,7 @@ function RegisterPageInner() {
 
     let callbackUrl = ''
     if (typeof window !== 'undefined') {
-      const cb = new URL('/auth/callback', window.location.origin)
+      const cb = new URL('/auth/callback?flow=signup', window.location.origin)
       // Pass referral code to auth callback if present
       if (form.referral && form.referral.startsWith('GHL-')) {
         cb.searchParams.set('ref', form.referral)
@@ -243,10 +243,23 @@ function RegisterPageInner() {
 
           {/* Error Message */}
           {error && (
-            <div className="flex items-center gap-2 p-3 rounded-lg bg-red-50 border border-red-200 mb-4">
-              <AlertTriangle className="w-4 h-4 text-red-500 flex-shrink-0" />
-              <p className="text-xs text-red-600">{error}</p>
-            </div>
+            error === AUTH_ERRORS.EMAIL_EXISTS ? (
+              <div className="p-4 rounded-lg bg-amber-50 border border-amber-300 mb-4">
+                <div className="flex items-center gap-2 mb-2">
+                  <AlertTriangle className="w-4 h-4 text-amber-600 flex-shrink-0" />
+                  <p className="text-sm font-medium text-amber-800">{error}</p>
+                </div>
+                <Link href="/login"
+                  className="inline-flex items-center justify-center w-full mt-1 px-4 py-2 bg-brand-red text-white text-sm font-semibold rounded-lg hover:bg-red-700 transition-colors">
+                  Sign In
+                </Link>
+              </div>
+            ) : (
+              <div className="flex items-center gap-2 p-3 rounded-lg bg-red-50 border border-red-200 mb-4">
+                <AlertTriangle className="w-4 h-4 text-red-500 flex-shrink-0" />
+                <p className="text-xs text-red-600">{error}</p>
+              </div>
+            )
           )}
 
           {/* Form */}

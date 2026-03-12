@@ -15,7 +15,7 @@ import TeamModule from './modules/TeamModule'
 import InternalModule from './modules/InternalModule'
 import AdminGlass from '../admin/shared/AdminGlass'
 import AdminToast from '../admin/shared/AdminToast'
-import { useStaffAuth, useStaffToast, useAgentStatus } from '@/lib/staff/staffHooks'
+import { useStaffAuth, useStaffToast, useAgentStatus, useStaffPresence } from '@/lib/staff/staffHooks'
 import { getStaffSession } from '@/lib/supabase/staffAuthService'
 import { hasStaffModuleAccess } from '@/lib/staff/staffRBAC'
 import { STAFF_MODULE_LABELS } from '@/lib/staff/staffConstants'
@@ -39,6 +39,12 @@ export default function StaffClient() {
   const { session, user, role, isAuthenticated, loading, logout } = useStaffAuth()
   const { toast, showToast, dismissToast } = useStaffToast()
   const { status: agentStatus, updateStatus: setAgentStatus } = useAgentStatus()
+  // Staff presence management — syncs online/offline status to Supabase
+  useStaffPresence(
+    session?.user?.id ?? null,
+    session?.user?.name ?? session?.user?.email ?? undefined,
+    role ?? undefined
+  )
   const [sidebarOpen, setSidebarOpen] = useState(false)
 
   // ── Routing ─────────────────────────────────────────────────

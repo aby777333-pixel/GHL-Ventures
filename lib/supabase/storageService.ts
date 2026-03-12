@@ -256,43 +256,7 @@ export async function uploadFile(
   const resolvedFolder = options?.bucket ? folder : route.folder
 
   if (!isSupabaseConfigured()) {
-    // Demo fallback: return a local blob URL
-    const demoResult: UploadResult = {
-      success: true,
-      file: {
-        name: file.name,
-        path: `demo/${resolvedFolder}/${file.name}`,
-        url: URL.createObjectURL(file),
-        size: file.size,
-        type: file.type,
-        bucket: 'local',
-      },
-    }
-
-    // Track in file_records even in demo mode (if Supabase available later)
-    if (options?.trackRecord !== false) {
-      await trackFileRecord({
-        fileName: sanitizeFileName(file.name),
-        originalName: file.name,
-        filePath: `demo/${resolvedFolder}/${file.name}`,
-        bucket: 'local',
-        fileSize: file.size,
-        mimeType: file.type,
-        folderId: options?.folderId,
-        category: options?.category,
-        tags: options?.tags,
-        description: options?.description,
-        entityType: options?.entityType,
-        entityId: options?.entityId,
-        portal: options?.portal || 'admin',
-        uploadedBy: options?.uploadedBy,
-        uploadedByName: options?.uploadedByName,
-        accessLevel: options?.accessLevel,
-        isConfidential: options?.isConfidential,
-      })
-    }
-
-    return demoResult
+    return { success: false, error: 'Supabase not configured — file upload unavailable' }
   }
 
   try {

@@ -668,7 +668,8 @@ export default function AboutPage() {
       <LeadershipTeam />
       <OurValues />
       <hr className="section-divider-animated" />
-      <AdvisoryBoardSection />
+      {/* Advisory Board section hidden — uncomment to restore */}
+      {/* <AdvisoryBoardSection /> */}
       <RegulatoryCompliance />
       <hr className="section-divider-animated" />
       <OfficeGallery />

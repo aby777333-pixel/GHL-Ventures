@@ -23,6 +23,7 @@ import WealthGrowthMap from '@/components/WealthGrowthMap'
 import TaxImpactAnalyzer from '@/components/TaxImpactAnalyzer'
 import InflationProofChecker from '@/components/InflationProofChecker'
 import { AlertTriangle } from 'lucide-react'
+import VoiceInput from '@/components/shared/VoiceInput'
 import SpaceHero from '@/components/SpaceHero'
 /* ================================================================
    HELPER: VideoPlayer — HTML5 video with cinematic styling
@@ -94,10 +95,10 @@ function CountUpStat({ end, prefix, suffix, label }: {
 
   return (
     <div ref={ref} className="text-center">
-      <div className="text-3xl md:text-4xl font-extrabold text-white mb-1 tracking-tight stat-glow">
+      <div className="text-3xl md:text-4xl font-extrabold text-brand-black dark:text-white mb-1 tracking-tight stat-glow">
         {prefix}{count}{suffix}
       </div>
-      <div className="text-gray-400 text-sm font-medium uppercase tracking-widest">{label}</div>
+      <div className="text-brand-grey dark:text-gray-400 text-sm font-medium uppercase tracking-widest">{label}</div>
     </div>
   )
 }
@@ -691,8 +692,8 @@ function InvestmentCapabilities() {
 function VideoFeature() {
   return (
     <section className="relative py-16 md:py-20 overflow-hidden">
-      <div className="absolute inset-0 hero-gradient" />
-      <div className="absolute inset-0" style={{ background: 'radial-gradient(ellipse at center, rgba(208,2,27,0.15) 0%, transparent 65%)' }} />
+      <div className="absolute inset-0 hero-gradient pointer-events-none" />
+      <div className="absolute inset-0 pointer-events-none" style={{ background: 'radial-gradient(ellipse at center, rgba(208,2,27,0.15) 0%, transparent 65%)' }} />
 
       <div className="container-max mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
         <AnimatedSection className="text-center mb-10">
@@ -887,8 +888,8 @@ function FinancialIQTeaser() {
 
   return (
     <section className="relative py-14 md:py-20 overflow-hidden">
-      <div className="absolute inset-0 hero-gradient" />
-      <div className="absolute top-0 right-0 w-96 h-96 bg-brand-red/20 rounded-full blur-[120px]" />
+      <div className="absolute inset-0 hero-gradient pointer-events-none" />
+      <div className="absolute top-0 right-0 w-96 h-96 bg-brand-red/20 rounded-full blur-[120px] pointer-events-none" />
 
       <div className="container-max mx-auto px-4 sm:px-6 lg:px-8 relative z-10 text-center">
         <AnimatedSection>
@@ -1049,7 +1050,7 @@ function ContactFormSection() {
   }
 
   return (
-    <section className="section-padding" style={{ backgroundColor: '#F8F7F5' }}>
+    <section className="section-padding bg-brand-offwhite dark:!bg-[#111111]">
       <div className="container-max mx-auto">
         <div className="grid lg:grid-cols-5 gap-12 items-start">
           {/* Left: Form */}
@@ -1179,13 +1180,20 @@ function ContactFormSection() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-semibold text-brand-black dark:text-white mb-1.5">Message</label>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <label className="block text-sm font-semibold text-brand-black dark:text-white">Message</label>
+                    <VoiceInput
+                      compact
+                      onTranscript={(text) => setForm(prev => ({ ...prev, message: (prev.message ? prev.message + ' ' : '') + text }))}
+                      showLanguageSelector
+                    />
+                  </div>
                   <textarea
                     name="message"
                     value={form.message}
                     onChange={handleChange}
                     rows={4}
-                    placeholder="Tell us about your investment goals..."
+                    placeholder="Tell us about your investment goals... (or use voice input)"
                     className="input-field resize-none"
                   />
                 </div>
@@ -1305,9 +1313,9 @@ function ContactFormSection() {
 function InvestorToolsCTA({ onOpenQuiz, onOpenCalc, onOpenAllCalc, onOpenWealthMap, onOpenTaxAnalyzer, onOpenInflationCheck }: { onOpenQuiz: () => void; onOpenCalc: () => void; onOpenAllCalc: () => void; onOpenWealthMap: () => void; onOpenTaxAnalyzer: () => void; onOpenInflationCheck: () => void }) {
   return (
     <section className="relative py-14 md:py-20 overflow-hidden">
-      <div className="absolute inset-0 hero-gradient" />
+      <div className="absolute inset-0 hero-gradient pointer-events-none" />
       <div
-        className="absolute inset-0"
+        className="absolute inset-0 pointer-events-none"
         style={{ background: 'radial-gradient(ellipse at 70% 50%, rgba(208,2,27,0.12) 0%, transparent 65%)' }}
       />
 

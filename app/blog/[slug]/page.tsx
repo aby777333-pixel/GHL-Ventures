@@ -143,25 +143,15 @@ export default function BlogArticlePage({ params }: { params: { slug: string } }
 
   if (RichComponent) {
     // Get related articles
-    const allArticles = [
-      ...BLOG_POSTS.map((p) => ({
-        slug: p.slug,
-        title: p.title,
-        excerpt: p.excerpt,
-        date: p.date,
-        category: p.category,
-        readTime: p.readTime,
-      })),
-      ...FUND_ARTICLES.slice(0, 3).map((a) => ({
-        slug: a.slug,
-        title: a.title,
-        excerpt: a.excerpt,
-        date: a.date,
-        category: a.category,
-        readTime: a.readTime,
-      })),
-    ]
-    const relatedArticles = allArticles.filter((a) => a.slug !== params.slug).slice(0, 3)
+    const blogArticles = BLOG_POSTS.filter((p) => p.slug !== params.slug).map((p) => ({
+      slug: p.slug,
+      title: p.title,
+      excerpt: p.excerpt,
+      date: p.date,
+      category: p.category,
+      readTime: p.readTime,
+    }))
+    const relatedArticles = blogArticles.slice(0, 3)
 
     // Enhanced Article Schema for rich blogs
     const articleSchema = {
@@ -282,26 +272,16 @@ export default function BlogArticlePage({ params }: { params: { slug: string } }
     `This article explores important aspects of alternative investing that every sophisticated investor should understand. At GHL India Ventures, we believe that informed investors make better decisions, which is why we produce educational content spanning investment strategies, market analysis, and personal finance.`,
   ]
 
-  // Get 3 related articles (from blog posts, excluding current)
-  const allArticles = [
-    ...BLOG_POSTS.map((p) => ({
-      slug: p.slug,
-      title: p.title,
-      excerpt: p.excerpt,
-      date: p.date,
-      category: p.category,
-      readTime: p.readTime,
-    })),
-    ...FUND_ARTICLES.slice(0, 3).map((a) => ({
-      slug: a.slug,
-      title: a.title,
-      excerpt: a.excerpt,
-      date: a.date,
-      category: a.category,
-      readTime: a.readTime,
-    })),
-  ]
-  const relatedArticles = allArticles.filter((a) => a.slug !== params.slug).slice(0, 3)
+  // Get 3 related blog articles (excluding current)
+  const blogArticles = BLOG_POSTS.filter((p) => p.slug !== params.slug).map((p) => ({
+    slug: p.slug,
+    title: p.title,
+    excerpt: p.excerpt,
+    date: p.date,
+    category: p.category,
+    readTime: p.readTime,
+  }))
+  const relatedArticles = blogArticles.slice(0, 3)
 
   // Article/BlogPosting structured data for Google rich results
   const articleSchema = {

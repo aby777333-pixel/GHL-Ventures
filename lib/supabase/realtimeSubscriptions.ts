@@ -162,6 +162,12 @@ export function onChatSessionStatusChange(handler: ChangeHandler) {
   return subscribeToTable('chat_sessions', 'UPDATE', handler)
 }
 
+
+/** Staff: Subscribe to staff presence changes */
+export function onStaffPresenceChange(handler: ChangeHandler) {
+  return subscribeToTable('staff_presence', '*', handler)
+}
+
 // ── Cleanup ─────────────────────────────────────────────────
 
 /** Unsubscribe from all active channels */

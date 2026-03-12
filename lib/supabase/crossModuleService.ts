@@ -216,7 +216,7 @@ export async function verifySuperAdminPrivileges(userId: string): Promise<{
 }> {
   if (userId === SUPER_ADMIN_UUID) {
     if (!isSupabaseConfigured()) {
-      return { isSuperAdmin: true, role: 'super-admin', name: 'Super Admin' }
+      return { isSuperAdmin: false }
     }
 
     try {
@@ -250,16 +250,7 @@ export interface UserProfile {
 }
 
 export async function getUserProfile(userId: string): Promise<UserProfile | null> {
-  if (!isSupabaseConfigured()) {
-    // Mock profiles
-    const mockProfiles: Record<string, UserProfile> = {
-      [SUPER_ADMIN_UUID]: { id: SUPER_ADMIN_UUID, name: 'Abhishek Tریخ', email: 'admin@ghlindia.com', role: 'super-admin', department: 'Management', portal: 'admin' },
-      'staff-1': { id: 'staff-1', name: 'Priya Natarajan', email: 'priya@ghlindia.com', role: 'sales', department: 'Sales', portal: 'staff' },
-      'staff-2': { id: 'staff-2', name: 'Vikram Malhotra', email: 'vikram@ghlindia.com', role: 'sales', department: 'Sales', portal: 'staff' },
-      'staff-3': { id: 'staff-3', name: 'Arjun Reddy', email: 'arjun@ghlindia.com', role: 'operations', department: 'Operations', portal: 'staff' },
-    }
-    return mockProfiles[userId] || null
-  }
+  if (!isSupabaseConfigured()) return null
 
   try {
     const { data, error } = await supabase
@@ -337,9 +328,7 @@ export async function getEntityFileRecords(
 // ── Client-Staff Assignments ─────────────────────────────────
 
 export async function getClientStaffAssignments(clientId: string): Promise<any[]> {
-  if (!isSupabaseConfigured()) {
-    return [{ staffId: 'staff-1', staffName: 'Priya Natarajan', role: 'Relationship Manager', assignedAt: '2025-01-15' }]
-  }
+  if (!isSupabaseConfigured()) return []
 
   try {
     const { data, error } = await supabase
@@ -363,12 +352,7 @@ export async function getClientStaffAssignments(clientId: string): Promise<any[]
 }
 
 export async function getStaffClientAssignments(staffId: string): Promise<any[]> {
-  if (!isSupabaseConfigured()) {
-    return [
-      { clientId: 'C-001', clientName: 'Rajesh Patel', aum: 2500000, kycStatus: 'approved' },
-      { clientId: 'C-002', clientName: 'Meera Sharma', aum: 1800000, kycStatus: 'approved' },
-    ]
-  }
+  if (!isSupabaseConfigured()) return []
 
   try {
     const { data, error } = await supabase
@@ -408,27 +392,7 @@ export interface FolderNode {
 }
 
 export async function getFolderTree(): Promise<FolderNode[]> {
-  if (!isSupabaseConfigured()) {
-    // Return mock folder tree from migration 016 seeds
-    const roots: FolderNode[] = [
-      { id: '00000000-0000-0000-0001-000000000001', name: 'Fund Documents', slug: 'fund', parentId: null, path: '/fund', description: 'PPMs, NAV reports, capital calls, side letters', icon: 'Briefcase', color: '#DC2626', isSystem: true, children: [], fileCount: 12 },
-      { id: '00000000-0000-0000-0001-000000000002', name: 'Compliance & Regulatory', slug: 'compliance', parentId: null, path: '/compliance', description: 'SEBI filings, AML/KYC master, RBI submissions', icon: 'Shield', color: '#F59E0B', isSystem: true, children: [], fileCount: 8 },
-      { id: '00000000-0000-0000-0001-000000000003', name: 'Client Documents', slug: 'clients', parentId: null, path: '/clients', description: 'Per-client KYC, agreements, correspondence', icon: 'Users', color: '#3B82F6', isSystem: true, children: [], fileCount: 15 },
-      { id: '00000000-0000-0000-0001-000000000004', name: 'Employee Records', slug: 'employees', parentId: null, path: '/employees', description: 'Offer letters, ID proofs, appraisals, exits', icon: 'UserCircle', color: '#10B981', isSystem: true, children: [], fileCount: 6 },
-      { id: '00000000-0000-0000-0001-000000000005', name: 'Financial Records', slug: 'financial', parentId: null, path: '/financial', description: 'Invoices, receipts, tax filings, bank statements', icon: 'IndianRupee', color: '#8B5CF6', isSystem: true, children: [], fileCount: 10 },
-      { id: '00000000-0000-0000-0001-000000000006', name: 'Marketing Assets', slug: 'marketing', parentId: null, path: '/marketing', description: 'Brochures, pitch decks, ad creatives, brand guidelines', icon: 'Megaphone', color: '#EC4899', isSystem: true, children: [], fileCount: 7 },
-      { id: '00000000-0000-0000-0001-000000000007', name: 'Legal', slug: 'legal', parentId: null, path: '/legal', description: 'Contracts, MOUs, NDAs, litigation files', icon: 'Scale', color: '#6366F1', isSystem: true, children: [], fileCount: 5 },
-      { id: '00000000-0000-0000-0001-000000000008', name: 'Board & Governance', slug: 'board', parentId: null, path: '/board', description: 'Board minutes, resolutions, committee agendas', icon: 'Building2', color: '#D4AF37', isSystem: true, children: [], fileCount: 3 },
-      { id: '00000000-0000-0000-0001-000000000009', name: 'Internal Operations', slug: 'internal', parentId: null, path: '/internal', description: 'SOPs, templates, training materials, handbooks', icon: 'Settings', color: '#06B6D4', isSystem: true, children: [], fileCount: 9 },
-      { id: '00000000-0000-0000-0001-000000000010', name: 'Reports & Analytics', slug: 'reports', parentId: null, path: '/reports', description: 'Generated reports, scheduled exports, custom analytics', icon: 'FileBarChart', color: '#F97316', isSystem: true, children: [], fileCount: 4 },
-      { id: '00000000-0000-0000-0001-000000000011', name: 'Sales & CRM', slug: 'sales', parentId: null, path: '/sales', description: 'Proposals, term sheets, deal memos', icon: 'TrendingUp', color: '#EF4444', isSystem: true, children: [], fileCount: 8 },
-      { id: '00000000-0000-0000-0001-000000000012', name: 'Technology', slug: 'technology', parentId: null, path: '/technology', description: 'Architecture docs, API specs, security audits', icon: 'Code', color: '#14B8A6', isSystem: true, children: [], fileCount: 2 },
-      { id: '00000000-0000-0000-0001-000000000013', name: 'Insurance & Risk', slug: 'insurance', parentId: null, path: '/insurance', description: 'Policies, claims, coverage documentation', icon: 'ShieldCheck', color: '#A855F7', isSystem: true, children: [], fileCount: 3 },
-      { id: '00000000-0000-0000-0001-000000000014', name: 'Correspondence', slug: 'correspondence', parentId: null, path: '/correspondence', description: 'Regulatory letters, client communications, notices', icon: 'Mail', color: '#0EA5E9', isSystem: true, children: [], fileCount: 4 },
-      { id: '00000000-0000-0000-0001-000000000015', name: 'Archives', slug: 'archives', parentId: null, path: '/archives', description: 'Closed funds, former clients, legacy records', icon: 'Archive', color: '#78716C', isSystem: true, children: [], fileCount: 1 },
-    ]
-    return roots
-  }
+  if (!isSupabaseConfigured()) return []
 
   try {
     const { data, error } = await supabase
@@ -487,9 +451,7 @@ export async function createFolder(data: {
   const slug = data.name.toLowerCase().replace(/[^a-z0-9]/g, '-')
 
   if (!isSupabaseConfigured()) {
-    const id = `mock-folder-${Date.now()}`
-    console.debug(`[crossModule] Mock: Created folder "${data.name}" (${id})`)
-    return { success: true, folderId: id }
+    return { success: false, error: 'Storage service unavailable' }
   }
 
   try {
@@ -546,26 +508,10 @@ export async function validateIntegrity(): Promise<IntegrityReport> {
   const checks: IntegrityCheck[] = []
 
   if (!isSupabaseConfigured()) {
-    // Mock checks based on known mock data state
     checks.push(
-      { name: 'Profiles table', table: 'profiles', status: 'pass', message: 'Mock data loaded (10 profiles)', count: 10 },
-      { name: 'Client profiles', table: 'client_profiles', status: 'pass', message: 'Mock data loaded (8 clients)', count: 8 },
-      { name: 'Staff profiles', table: 'staff_profiles', status: 'pass', message: 'Mock data loaded (6 staff)', count: 6 },
-      { name: 'Leads', table: 'leads', status: 'pass', message: 'Mock data loaded (10 leads)', count: 10 },
-      { name: 'Lead activities', table: 'lead_activities', status: 'pass', message: 'Mock data loaded (6 activities)', count: 6 },
-      { name: 'Folders', table: 'folders', status: 'pass', message: '15 root folders seeded', count: 15 },
-      { name: 'Documents', table: 'documents', status: 'pass', message: 'Mock data loaded (8 documents)', count: 8 },
-      { name: 'Campaigns', table: 'campaigns', status: 'pass', message: 'Mock data loaded (5 campaigns)', count: 5 },
-      { name: 'Storage buckets', table: 'storage.buckets', status: 'warn', message: 'Supabase not configured — using blob URLs', count: 0 },
-      { name: 'RLS policies', table: 'pg_policies', status: 'warn', message: 'Supabase not configured — RLS not enforced', count: 0 },
-      { name: 'Super Admin', table: 'profiles', status: 'pass', message: `Super Admin UUID verified: ${SUPER_ADMIN_UUID.slice(0, 8)}...`, count: 1 },
+      { name: 'Database connection', table: 'system', status: 'fail', message: 'Supabase not configured — cannot run integrity checks', count: 0 },
     )
-
-    return {
-      timestamp: new Date().toISOString(),
-      checks,
-      overallStatus: 'warn',
-    }
+    return { timestamp: new Date().toISOString(), checks, overallStatus: 'fail' }
   }
 
   // Live Supabase checks

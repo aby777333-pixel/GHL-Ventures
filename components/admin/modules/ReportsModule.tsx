@@ -5,10 +5,10 @@ import {
   FileBarChart, BarChart3, TrendingUp, PieChart, Download, Calendar, Filter,
   ArrowUpRight, ArrowDownRight, IndianRupee, Users, Target, Clock, Activity,
   Brain, Star, Globe, Sparkles, Mail, Phone, FolderOpen, Settings, Plus,
-  Search, Send, ChevronRight, AlertTriangle, CheckCircle, XCircle, Eye,
+  Search, Send, ChevronRight, ChevronDown, AlertTriangle, CheckCircle, XCircle, Eye,
   FileText, Layers, Zap, GripVertical, Save, Share2, Play, Pause,
   MessageSquare, PhoneCall, PhoneIncoming, PhoneOutgoing, Upload, File,
-  Shield, Bell, Gauge, Mic, type LucideIcon,
+  Shield, Bell, Gauge, Mic, Paperclip, type LucideIcon,
 } from 'lucide-react'
 import {
   AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid,
@@ -24,6 +24,9 @@ import {
 import { callClaudeAPI, type ClaudeMessage } from '@/lib/admin/claudeApi'
 import { useReportsLiveData, ReportsDataContext, useReportsDataContext } from '@/lib/admin/useReportsLiveData'
 import { saveBlobAs } from '@/lib/supabase/storageService'
+import { useFolderTree, useRepoFiles } from '@/lib/admin/fileRepositoryHooks'
+import { buildFolderTree, formatFileSize, getFileTypeColor } from '@/lib/admin/fileRepositoryData'
+import type { FolderNode, RepoFile } from '@/lib/admin/fileRepositoryTypes'
 
 // ── Constants ────────────────────────────────────────────────
 const CHART_COLORS = ['#DC2626', '#D4AF37', '#3B82F6', '#10B981', '#8B5CF6', '#F59E0B', '#EC4899', '#06B6D4']
@@ -303,7 +306,7 @@ function DashboardTab({ navigate, showToast }: { navigate: (p: string) => void; 
 // TAB 2: REPORT BUILDER
 // ═══════════════════════════════════════════════════════════════
 
-interface BuilderBlock { id: string; type: string; label: string; icon: LucideIcon; category: string }
+interface BuilderBlock { id: string; type: string; label: string; icon: LucideIcon; category: string; fileRef?: { id: string; title: string; fileUrl: string; fileType: string; fileSize: number } }
 
 const PALETTE_BLOCKS: BuilderBlock[] = [
   { id: 'kpi', type: 'kpi', label: 'KPI Card', icon: Gauge, category: 'Data' },
@@ -324,11 +327,94 @@ const REPORT_TEMPLATES = [
   'Compliance Audit Report', 'Annual Review Pack',
 ]
 
+// ── Folder icon map for repo browser tree ────────────────────
+const REPO_FOLDER_ICONS: Record<string, LucideIcon> = {
+  Briefcase: Target, Shield, Users, IndianRupee, Mail, Settings,
+  TrendingUp, FolderOpen, FileText, File, Star, Clock,
+  Folder: FolderOpen, FolderClosed: FolderOpen, Archive: File,
+}
+
+// ── Recursive folder tree item for repo browser ──────────────
+function RepoTreeItem({
+  node, depth, currentFolderId, expandedFolders, onNavigate, onToggle,
+}: {
+  node: FolderNode
+  depth: number
+  currentFolderId: string | null
+  expandedFolders: Set<string>
+  onNavigate: (id: string) => void
+  onToggle: (id: string) => void
+}) {
+  const isActive = currentFolderId === node.id
+  const isExpanded = expandedFolders.has(node.id)
+  const hasChildren = node.children.length > 0
+  const FIcon = REPO_FOLDER_ICONS[node.icon] || FolderOpen
+
+  return (
+    <div>
+      <div className="flex items-center group" style={{ paddingLeft: `${depth * 12}px` }}>
+        {hasChildren ? (
+          <button onClick={() => onToggle(node.id)} className="p-0.5 text-gray-600 hover:text-gray-400 transition-colors">
+            {isExpanded ? <ChevronDown className="w-3 h-3" /> : <ChevronRight className="w-3 h-3" />}
+          </button>
+        ) : (
+          <span className="w-4" />
+        )}
+        <button
+          onClick={() => onNavigate(node.id)}
+          className={`flex-1 flex items-center gap-2 px-1.5 py-1 rounded-md text-[11px] transition-colors truncate ${
+            isActive ? 'bg-brand-red/20 text-white font-medium' : 'text-gray-400 hover:text-gray-200 hover:bg-white/[0.04]'
+          }`}
+        >
+          <FIcon className="w-3 h-3 flex-shrink-0" style={{ color: isActive ? undefined : node.color }} />
+          <span className="truncate">{node.name}</span>
+          {node.fileCount > 0 && (
+            <span className="ml-auto text-[9px] text-gray-600 flex-shrink-0">{node.fileCount}</span>
+          )}
+        </button>
+      </div>
+      {isExpanded && hasChildren && (
+        <div>
+          {node.children.map(child => (
+            <RepoTreeItem
+              key={child.id}
+              node={child}
+              depth={depth + 1}
+              currentFolderId={currentFolderId}
+              expandedFolders={expandedFolders}
+              onNavigate={onNavigate}
+              onToggle={onToggle}
+            />
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
 function BuilderTab({ showToast }: { showToast: Props['showToast'] }) {
   const [canvasBlocks, setCanvasBlocks] = useState<{ id: string; block: BuilderBlock }[]>([])
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [reportTitle, setReportTitle] = useState('Untitled Report')
   const [draggedBlock, setDraggedBlock] = useState<BuilderBlock | null>(null)
+
+  // ── Repository Browser state ──────────────────────────────
+  const [showRepoBrowser, setShowRepoBrowser] = useState(false)
+  const [repoBrowserFolderId, setRepoBrowserFolderId] = useState<string | null>(null)
+  const [expandedRepoFolders, setExpandedRepoFolders] = useState<Set<string>>(new Set())
+
+  const { data: rawFolders, loading: foldersLoading } = useFolderTree()
+  const folderTree = useMemo(() => buildFolderTree(rawFolders), [rawFolders])
+  const { data: repoFiles, loading: filesLoading } = useRepoFiles(repoBrowserFolderId)
+
+  const toggleRepoFolder = useCallback((id: string) => {
+    setExpandedRepoFolders(prev => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }, [])
 
   const categories = useMemo(() => {
     const cats = new Map<string, BuilderBlock[]>()
@@ -338,6 +424,33 @@ function BuilderTab({ showToast }: { showToast: Props['showToast'] }) {
 
   const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault()
+
+    // Check if the drop is a repo file
+    const repoFileData = e.dataTransfer.getData('application/repo-file')
+    if (repoFileData) {
+      try {
+        const file: RepoFile = JSON.parse(repoFileData)
+        const fileBlock: BuilderBlock = {
+          id: `attachment-${file.id}`,
+          type: 'attachment',
+          label: file.title,
+          icon: Paperclip,
+          category: 'Attachment',
+          fileRef: {
+            id: file.id,
+            title: file.title,
+            fileUrl: file.fileUrl,
+            fileType: file.fileType,
+            fileSize: file.fileSize,
+          },
+        }
+        setCanvasBlocks(prev => [...prev, { id: `attachment-${file.id}-${Date.now()}`, block: fileBlock }])
+        showToast(`Attached: ${file.title}`, 'success')
+      } catch { /* invalid data */ }
+      return
+    }
+
+    // Regular palette block drop
     if (draggedBlock) {
       setCanvasBlocks(prev => [...prev, { id: `${draggedBlock.id}-${Date.now()}`, block: draggedBlock }])
       setDraggedBlock(null)
@@ -350,6 +463,15 @@ function BuilderTab({ showToast }: { showToast: Props['showToast'] }) {
     if (selectedId === id) setSelectedId(null)
   }
 
+  // Render helper for file type icon in attachment blocks
+  const getFileIcon = (fileType: string) => {
+    const t = fileType.toLowerCase()
+    if (['pdf', 'doc', 'docx'].includes(t)) return FileText
+    if (['png', 'jpg', 'jpeg'].includes(t)) return File
+    if (['xlsx', 'xls', 'csv'].includes(t)) return Layers
+    return File
+  }
+
   return (
     <div className="space-y-4">
       {/* Toolbar */}
@@ -359,6 +481,16 @@ function BuilderTab({ showToast }: { showToast: Props['showToast'] }) {
             <input value={reportTitle} onChange={e => setReportTitle(e.target.value)} className="bg-transparent border-none text-white font-semibold text-sm focus:outline-none focus:ring-0 w-48" />
           </div>
           <div className="flex gap-2">
+            <button
+              onClick={() => setShowRepoBrowser(prev => !prev)}
+              className={`flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors admin-btn-press ${
+                showRepoBrowser
+                  ? 'text-white bg-brand-red/20 border border-brand-red/40'
+                  : 'text-gray-400 bg-white/[0.04] border border-white/[0.06] hover:bg-white/[0.08]'
+              }`}
+            >
+              <FolderOpen className="w-3 h-3" /> Repository
+            </button>
             {[{ label: 'Save', icon: Save }, { label: 'Preview', icon: Eye }, { label: 'Export', icon: Download }, { label: 'Share', icon: Share2 }].map(a => (
               <button key={a.label} onClick={() => showToast(`${a.label}: ${reportTitle}`, 'info')} className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-medium text-gray-400 bg-white/[0.04] border border-white/[0.06] hover:bg-white/[0.08] transition-colors admin-btn-press">
                 <a.icon className="w-3 h-3" /> {a.label}
@@ -400,7 +532,7 @@ function BuilderTab({ showToast }: { showToast: Props['showToast'] }) {
         </div>
 
         {/* Center: Canvas */}
-        <div className="col-span-12 lg:col-span-7">
+        <div className={`col-span-12 ${showRepoBrowser ? 'lg:col-span-10' : 'lg:col-span-7'}`}>
           <div onDragOver={e => e.preventDefault()} onDrop={handleDrop} className="min-h-[600px] rounded-2xl border-2 border-dashed border-white/[0.08] bg-white/[0.01] p-6 transition-colors hover:border-brand-red/20">
             {canvasBlocks.length === 0 ? (
               <div className="flex flex-col items-center justify-center h-full text-center py-20">
@@ -421,9 +553,28 @@ function BuilderTab({ showToast }: { showToast: Props['showToast'] }) {
                       </div>
                       <button onClick={e => { e.stopPropagation(); removeBlock(id) }} className="opacity-0 group-hover:opacity-100 text-gray-500 hover:text-red-400 transition-all"><XCircle className="w-4 h-4" /></button>
                     </div>
-                    <div className="mt-3 h-16 rounded-lg bg-white/[0.02] border border-white/[0.04] flex items-center justify-center">
-                      <span className="text-xs text-gray-600">{block.type === 'chart' ? '📊 Chart Preview' : block.type === 'kpi' ? '📈 KPI Data' : block.type === 'table' ? '📋 Table Data' : `${block.label} content`}</span>
-                    </div>
+                    {/* Attachment block rendering */}
+                    {block.type === 'attachment' && block.fileRef ? (
+                      <div className="mt-3 rounded-lg bg-white/[0.02] border border-white/[0.04] p-3">
+                        <div className="flex items-center gap-3">
+                          {(() => { const FI = getFileIcon(block.fileRef.fileType); const tc = getFileTypeColor(block.fileRef.fileType); return (
+                            <div className={`p-2 rounded-lg ${tc.bg}`}><FI className={`w-5 h-5 ${tc.text}`} /></div>
+                          ) })()}
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm text-white font-medium truncate">{block.fileRef.title}</p>
+                            <div className="flex items-center gap-2 mt-0.5">
+                              <span className={`px-1.5 py-0.5 rounded text-[9px] font-semibold uppercase ${getFileTypeColor(block.fileRef.fileType).bg} ${getFileTypeColor(block.fileRef.fileType).text}`}>{block.fileRef.fileType}</span>
+                              <span className="text-[10px] text-gray-500">{formatFileSize(block.fileRef.fileSize)}</span>
+                            </div>
+                          </div>
+                          <Paperclip className="w-4 h-4 text-gray-600 flex-shrink-0" />
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="mt-3 h-16 rounded-lg bg-white/[0.02] border border-white/[0.04] flex items-center justify-center">
+                        <span className="text-xs text-gray-600">{block.type === 'chart' ? 'Chart Preview' : block.type === 'kpi' ? 'KPI Data' : block.type === 'table' ? 'Table Data' : `${block.label} content`}</span>
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>
@@ -431,23 +582,127 @@ function BuilderTab({ showToast }: { showToast: Props['showToast'] }) {
           </div>
         </div>
 
-        {/* Right: Properties Inspector */}
-        <div className="col-span-12 lg:col-span-3">
-          <AdminGlass>
-            <h4 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Properties</h4>
-            {selectedId ? (
-              <div className="space-y-4">
-                <div><label className="text-[10px] text-gray-500 uppercase">Block Title</label><input className="w-full mt-1 px-3 py-2 rounded-lg bg-white/[0.04] border border-white/[0.08] text-sm text-white focus:outline-none focus:border-brand-red/40" placeholder="Enter title..." /></div>
-                <div><label className="text-[10px] text-gray-500 uppercase">Data Source</label><select className="w-full mt-1 px-3 py-2 rounded-lg bg-white/[0.04] border border-white/[0.08] text-sm text-gray-300 focus:outline-none"><option>Revenue Data</option><option>Client Data</option><option>Campaign Data</option><option>Staff Data</option></select></div>
-                <div><label className="text-[10px] text-gray-500 uppercase">Date Range</label><select className="w-full mt-1 px-3 py-2 rounded-lg bg-white/[0.04] border border-white/[0.08] text-sm text-gray-300 focus:outline-none"><option>This Month</option><option>This Quarter</option><option>This Year</option><option>Last 12 Months</option></select></div>
-                <div><label className="text-[10px] text-gray-500 uppercase">Chart Type</label><select className="w-full mt-1 px-3 py-2 rounded-lg bg-white/[0.04] border border-white/[0.08] text-sm text-gray-300 focus:outline-none"><option>Area Chart</option><option>Bar Chart</option><option>Line Chart</option><option>Pie Chart</option><option>Donut Chart</option></select></div>
-              </div>
-            ) : (
-              <div className="text-center py-8"><Eye className="w-6 h-6 text-gray-600 mx-auto mb-2" /><p className="text-xs text-gray-500">Select a block on the canvas to edit its properties</p></div>
-            )}
-          </AdminGlass>
-        </div>
+        {/* Right: Properties Inspector (hidden when repo browser is open) */}
+        {!showRepoBrowser && (
+          <div className="col-span-12 lg:col-span-3">
+            <AdminGlass>
+              <h4 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Properties</h4>
+              {selectedId ? (
+                <div className="space-y-4">
+                  <div><label className="text-[10px] text-gray-500 uppercase">Block Title</label><input className="w-full mt-1 px-3 py-2 rounded-lg bg-white/[0.04] border border-white/[0.08] text-sm text-white focus:outline-none focus:border-brand-red/40" placeholder="Enter title..." /></div>
+                  <div><label className="text-[10px] text-gray-500 uppercase">Data Source</label><select className="w-full mt-1 px-3 py-2 rounded-lg bg-white/[0.04] border border-white/[0.08] text-sm text-gray-300 focus:outline-none"><option>Revenue Data</option><option>Client Data</option><option>Campaign Data</option><option>Staff Data</option></select></div>
+                  <div><label className="text-[10px] text-gray-500 uppercase">Date Range</label><select className="w-full mt-1 px-3 py-2 rounded-lg bg-white/[0.04] border border-white/[0.08] text-sm text-gray-300 focus:outline-none"><option>This Month</option><option>This Quarter</option><option>This Year</option><option>Last 12 Months</option></select></div>
+                  <div><label className="text-[10px] text-gray-500 uppercase">Chart Type</label><select className="w-full mt-1 px-3 py-2 rounded-lg bg-white/[0.04] border border-white/[0.08] text-sm text-gray-300 focus:outline-none"><option>Area Chart</option><option>Bar Chart</option><option>Line Chart</option><option>Pie Chart</option><option>Donut Chart</option></select></div>
+                </div>
+              ) : (
+                <div className="text-center py-8"><Eye className="w-6 h-6 text-gray-600 mx-auto mb-2" /><p className="text-xs text-gray-500">Select a block on the canvas to edit its properties</p></div>
+              )}
+            </AdminGlass>
+          </div>
+        )}
       </div>
+
+      {/* Repository Browser Panel (below canvas) */}
+      {showRepoBrowser && (
+        <AdminGlass>
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2">
+              <FolderOpen className="w-4 h-4 text-brand-red" />
+              <h4 className="text-xs font-semibold text-white uppercase tracking-wider">Repository Browser</h4>
+              <span className="text-[10px] text-gray-500">Drag files onto the canvas to attach</span>
+            </div>
+            <button onClick={() => setShowRepoBrowser(false)} className="p-1 rounded-lg text-gray-500 hover:text-white hover:bg-white/[0.06] transition-colors">
+              <XCircle className="w-4 h-4" />
+            </button>
+          </div>
+
+          <div className="grid grid-cols-12 gap-4 min-h-[240px] max-h-[360px]">
+            {/* Folder tree */}
+            <div className="col-span-12 md:col-span-4 lg:col-span-3 overflow-y-auto pr-2 border-r border-white/[0.06]" style={{ maxHeight: '340px' }}>
+              <p className="text-[10px] text-gray-500 uppercase tracking-wider mb-2">Folders</p>
+              {foldersLoading ? (
+                <div className="flex items-center justify-center py-8">
+                  <div className="w-5 h-5 border-2 border-brand-red/30 border-t-brand-red rounded-full animate-spin" />
+                </div>
+              ) : folderTree.length === 0 ? (
+                <p className="text-xs text-gray-600 py-4 text-center">No folders found</p>
+              ) : (
+                <div className="space-y-0.5">
+                  {/* All Files root option */}
+                  <button
+                    onClick={() => setRepoBrowserFolderId(null)}
+                    className={`w-full flex items-center gap-2 px-1.5 py-1 rounded-md text-[11px] transition-colors ${
+                      repoBrowserFolderId === null ? 'bg-brand-red/20 text-white font-medium' : 'text-gray-400 hover:text-gray-200 hover:bg-white/[0.04]'
+                    }`}
+                  >
+                    <FolderOpen className="w-3 h-3 flex-shrink-0" />
+                    <span>All Files</span>
+                  </button>
+                  {folderTree.map(node => (
+                    <RepoTreeItem
+                      key={node.id}
+                      node={node}
+                      depth={0}
+                      currentFolderId={repoBrowserFolderId}
+                      expandedFolders={expandedRepoFolders}
+                      onNavigate={setRepoBrowserFolderId}
+                      onToggle={toggleRepoFolder}
+                    />
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* File list */}
+            <div className="col-span-12 md:col-span-8 lg:col-span-9 overflow-y-auto" style={{ maxHeight: '340px' }}>
+              <p className="text-[10px] text-gray-500 uppercase tracking-wider mb-2">
+                Files {repoFiles.length > 0 && <span className="text-gray-600">({repoFiles.length})</span>}
+              </p>
+              {filesLoading ? (
+                <div className="flex items-center justify-center py-8">
+                  <div className="w-5 h-5 border-2 border-brand-red/30 border-t-brand-red rounded-full animate-spin" />
+                </div>
+              ) : repoFiles.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-8 text-center">
+                  <File className="w-6 h-6 text-gray-600 mb-2" />
+                  <p className="text-xs text-gray-500">No files in this folder</p>
+                  <p className="text-[10px] text-gray-600 mt-1">Select a folder or upload files in the File Repository tab</p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+                  {repoFiles.map((file: RepoFile) => {
+                    const tc = getFileTypeColor(file.fileType)
+                    const FI = getFileIcon(file.fileType)
+                    return (
+                      <div
+                        key={file.id}
+                        draggable
+                        onDragStart={e => {
+                          e.dataTransfer.setData('application/repo-file', JSON.stringify(file))
+                          e.dataTransfer.effectAllowed = 'copy'
+                        }}
+                        className="flex items-center gap-2.5 p-2.5 rounded-lg bg-white/[0.02] border border-white/[0.06] hover:border-brand-red/30 hover:bg-white/[0.05] transition-all cursor-grab active:cursor-grabbing group"
+                      >
+                        <div className={`p-1.5 rounded-md ${tc.bg} flex-shrink-0`}>
+                          <FI className={`w-3.5 h-3.5 ${tc.text}`} />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <p className="text-xs text-white truncate font-medium">{file.title}</p>
+                          <div className="flex items-center gap-1.5 mt-0.5">
+                            <span className={`text-[9px] font-semibold uppercase ${tc.text}`}>{file.fileType}</span>
+                            <span className="text-[9px] text-gray-600">{formatFileSize(file.fileSize)}</span>
+                          </div>
+                        </div>
+                        <GripVertical className="w-3 h-3 text-gray-700 group-hover:text-gray-400 transition-colors flex-shrink-0" />
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
+            </div>
+          </div>
+        </AdminGlass>
+      )}
     </div>
   )
 }

@@ -21,10 +21,7 @@ const db = supabase as any
 // ── Startup Diagnostic (dev only) ─────────────────────────────
 if (typeof window !== 'undefined' && process.env.NODE_ENV === 'development') {
   const configured = isSupabaseConfigured()
-  console.log(
-    `[chatService] Supabase configured: ${configured}`,
-    configured ? '✅' : '❌ (using mock data — env vars missing in build)'
-  )
+  if (!configured) console.warn('[chatService] Supabase not configured — chat features unavailable')
 }
 
 // ── Types ─────────────────────────────────────────────────────
@@ -77,11 +74,6 @@ export interface RMRequest {
   updated_at: string
 }
 
-// ── Mock Data (fallback when Supabase unavailable) ────────────
-
-const MOCK_SESSIONS: ChatSession[] = []
-const MOCK_MESSAGES: ChatMessage[] = []
-
 // ── Helper: generate visitor ID ───────────────────────────────
 
 function getOrCreateVisitorId(): string {
@@ -102,34 +94,12 @@ function getOrCreateVisitorId(): string {
 export async function createChatSession(input: {
   visitorName: string
   visitorEmail?: string
+  visitorPhone?: string
   clientId?: string
   pageUrl?: string
   channel?: string
 }): Promise<ChatSession | null> {
-  if (!isSupabaseConfigured()) {
-    const mock: ChatSession = {
-      id: `mock-session-${Date.now()}`,
-      visitor_id: getOrCreateVisitorId(),
-      visitor_name: input.visitorName,
-      visitor_email: input.visitorEmail || null,
-      client_id: input.clientId || null,
-      assigned_rep_id: null,
-      status: 'waiting',
-      channel: input.channel || 'web_chat',
-      priority: 0,
-      page_url: input.pageUrl || null,
-      assigned_at: null,
-      first_response_at: null,
-      resolved_at: null,
-      last_message_at: new Date().toISOString(),
-      csat_rating: null,
-      metadata: {},
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-    }
-    MOCK_SESSIONS.push(mock)
-    return mock
-  }
+  if (!isSupabaseConfigured()) return null
 
   // Use RPC to create session — direct insert + .select() fails for
   // anonymous visitors because RLS blocks the SELECT after INSERT
@@ -172,10 +142,7 @@ export async function createChatSession(input: {
 
 /** Fetch active chat session for current visitor (if any) — uses RPC to bypass RLS */
 export async function getActiveSessionForVisitor(): Promise<ChatSession | null> {
-  if (!isSupabaseConfigured()) {
-    const visitorId = getOrCreateVisitorId()
-    return MOCK_SESSIONS.find(s => s.visitor_id === visitorId && !['resolved', 'closed'].includes(s.status)) || null
-  }
+  if (!isSupabaseConfigured()) return null
 
   const visitorId = getOrCreateVisitorId()
   const { data, error } = await db.rpc('get_visitor_active_session', {
@@ -302,21 +269,7 @@ export async function sendChatMessage(input: {
   senderName?: string
   message: string
 }): Promise<ChatMessage | null> {
-  if (!isSupabaseConfigured()) {
-    const mock: ChatMessage = {
-      id: `mock-msg-${Date.now()}`,
-      session_id: input.sessionId,
-      sender_type: input.senderType,
-      sender_id: input.senderId || null,
-      sender_name: input.senderName || null,
-      message: input.message,
-      attachments: [],
-      metadata: {},
-      created_at: new Date().toISOString(),
-    }
-    MOCK_MESSAGES.push(mock)
-    return mock
-  }
+  if (!isSupabaseConfigured()) return null
 
   // All messages (visitor, agent, system, bot) go through the SECURITY DEFINER
   // RPC to bypass RLS. Direct inserts fail when the staff user's SELECT policy
@@ -351,9 +304,7 @@ export async function sendChatMessage(input: {
  *  Uses RPC (SECURITY DEFINER) to bypass RLS — works for both
  *  anonymous visitors and staff regardless of auth state. */
 export async function getChatMessages(sessionId: string): Promise<ChatMessage[]> {
-  if (!isSupabaseConfigured()) {
-    return MOCK_MESSAGES.filter(m => m.session_id === sessionId)
-  }
+  if (!isSupabaseConfigured()) return []
 
   // Use the same RPC as visitors — it's SECURITY DEFINER and returns all messages
   const { data, error } = await db.rpc('get_visitor_chat_messages', {
@@ -370,9 +321,7 @@ export async function getChatMessages(sessionId: string): Promise<ChatMessage[]>
 
 /** Fetch message history using RPC — for anonymous visitors (bypasses RLS) */
 export async function getVisitorChatMessages(sessionId: string): Promise<ChatMessage[]> {
-  if (!isSupabaseConfigured()) {
-    return MOCK_MESSAGES.filter(m => m.session_id === sessionId)
-  }
+  if (!isSupabaseConfigured()) return []
 
   const { data, error } = await db.rpc('get_visitor_chat_messages', {
     p_session_id: sessionId,
@@ -543,7 +492,7 @@ export async function getRMRequests(rmId: string): Promise<RMRequest[]> {
  *  Uses SECURITY DEFINER RPC to bypass RLS — ensures staff
  *  always see incoming chats regardless of auth state. */
 export async function getActiveChatSessions(repId?: string): Promise<ChatSession[]> {
-  if (!isSupabaseConfigured()) return MOCK_SESSIONS
+  if (!isSupabaseConfigured()) return []
 
   const { data, error } = await db.rpc('get_active_chat_sessions_staff', {
     p_rep_id: repId || null,
@@ -596,4 +545,110 @@ export async function getChatOverviewStats(): Promise<{
     avgWaitTime: 0, // Would need time-series calculation
     repLoads: [],
   }
+}
+
+
+// ════════════════════════════════════════════════════════════════
+// STAFF PRESENCE OPERATIONS
+// ════════════════════════════════════════════════════════════════
+
+export interface StaffPresence {
+  user_id: string
+  status: 'online' | 'away' | 'busy' | 'offline'
+  display_name: string | null
+  role: string | null
+  active_chats: number
+  max_chats: number
+  last_seen: string
+}
+
+export interface CannedResponse {
+  id: string
+  shortcut: string
+  title: string
+  message: string
+  category: string | null
+}
+
+/** Set staff presence status (online/away/busy/offline) */
+export async function upsertStaffPresence(input: {
+  userId: string
+  status?: string
+  displayName?: string
+  role?: string
+}): Promise<void> {
+  if (!isSupabaseConfigured()) return
+  await db.rpc('upsert_staff_presence', {
+    p_user_id: input.userId,
+    p_status: input.status || 'online',
+    p_display_name: input.displayName || null,
+    p_role: input.role || null,
+  }).catch((e: any) => console.error('[chatService] upsertStaffPresence:', e.message))
+}
+
+/** Update staff status only */
+export async function updateStaffStatus(userId: string, status: string): Promise<void> {
+  if (!isSupabaseConfigured()) return
+  await db.rpc('update_staff_status', { p_user_id: userId, p_status: status })
+    .catch((e: any) => console.error('[chatService] updateStaffStatus:', e.message))
+}
+
+/** Staff heartbeat — update last_seen */
+export async function staffHeartbeat(userId: string): Promise<void> {
+  if (!isSupabaseConfigured()) return
+  await db.rpc('staff_heartbeat', { p_user_id: userId })
+    .catch(() => {}) // Silent — non-critical
+}
+
+/** Get all online staff members */
+export async function getOnlineStaff(): Promise<StaffPresence[]> {
+  if (!isSupabaseConfigured()) return []
+  const { data, error } = await db.rpc('get_online_staff')
+  if (error) {
+    console.error('[chatService] get_online_staff failed:', error.message)
+    return []
+  }
+  return (data || []) as StaffPresence[]
+}
+
+/** Get canned responses from database */
+export async function getCannedResponses(): Promise<CannedResponse[]> {
+  if (!isSupabaseConfigured()) return []
+  const { data, error } = await db.rpc('get_canned_responses')
+  if (error) {
+    console.error('[chatService] get_canned_responses failed:', error.message)
+    return []
+  }
+  return (data || []) as CannedResponse[]
+}
+
+/** Save CSAT rating for a chat session */
+export async function saveCsatRating(sessionId: string, score: number, feedback?: string): Promise<boolean> {
+  if (!isSupabaseConfigured()) return true
+  const { error } = await db.rpc('save_csat_rating', {
+    p_session_id: sessionId,
+    p_score: score,
+    p_feedback: feedback || null,
+  })
+  if (error) console.error('[chatService] saveCsatRating:', error.message)
+  return !error
+}
+
+/** Resolve a chat session from the staff side */
+export async function resolveSessionFromStaff(sessionId: string): Promise<boolean> {
+  if (!isSupabaseConfigured()) return true
+  const { error } = await db
+    .from('chat_sessions')
+    .update({ status: 'resolved', resolved_at: new Date().toISOString() })
+    .eq('id', sessionId)
+  if (error) {
+    console.error('[chatService] resolveSessionFromStaff:', error.message)
+    return false
+  }
+  await sendChatMessage({
+    sessionId,
+    senderType: 'system',
+    message: 'This chat has been resolved by the agent. Thank you for contacting GHL India Ventures.',
+  })
+  return true
 }

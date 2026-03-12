@@ -53,7 +53,7 @@ export interface ClientSession {
 // Login result with proper error differentiation
 export interface LoginResult {
   session: ClientSession | null
-  error?: 'invalid_credentials' | 'email_not_confirmed' | 'service_unavailable' | 'network_error'
+  error?: 'invalid_credentials' | 'email_not_confirmed' | 'email_not_registered' | 'service_unavailable' | 'network_error'
   message?: string
 }
 
@@ -122,6 +122,13 @@ export async function loginClient(email: string, password: string): Promise<Logi
       if (msg.includes('email not confirmed') || msg.includes('email_not_confirmed')) {
         return { session: null, error: 'email_not_confirmed', message: 'Please verify your email address. Check your inbox for the confirmation link.' }
       }
+      // Check if email exists in clients table to distinguish "not registered" vs "wrong password"
+      try {
+        const { data: clientRow } = await (supabase.from('clients') as any).select('user_id').eq('email', email).maybeSingle()
+        if (!clientRow?.user_id) {
+          return { session: null, error: 'email_not_registered', message: 'Email is not registered. Use the registered email to sign in.' }
+        }
+      } catch { /* fall through to generic invalid_credentials */ }
       return { session: null, error: 'invalid_credentials', message: 'Incorrect email or password. Please try again.' }
     }
     if (!data.user) {
@@ -198,10 +205,26 @@ export async function signupClient(
       full_name: name,
       email,
       phone: phone || null,
+      acquisition_source: 'website',
     } as any)
 
     // Auto-assign an RM to the new client (non-blocking)
     tryAutoAssignRM(data.user.id)
+
+    // Create lead entry so client appears in CRM pipeline (trigger backup)
+    try {
+      const nameParts = name.split(' ')
+      await supabase.from('leads').insert({
+        first_name: nameParts[0] || name,
+        last_name: nameParts.slice(1).join(' ') || null,
+        email,
+        phone: phone || null,
+        source: 'website',
+        status: 'won',
+        investment_interest: 'AIF Investment',
+        metadata: { auto_created: true, source: 'email_signup' },
+      } as any)
+    } catch { /* non-blocking — DB trigger may handle this */ }
 
     return { success: true }
   } catch (err) {
@@ -258,7 +281,12 @@ export async function getClientSession(): Promise<ClientSession | null> {
 export async function logoutClient(): Promise<void> {
   if (!isSupabaseConfigured()) return
   try {
-    await supabase.auth.signOut()
+    await supabase.auth.signOut({ scope: 'global' })
+    // Clear any cached session data
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('ghl-chat-visitor')
+      localStorage.removeItem('ghl-chat-history')
+    }
   } catch (err) {
     console.warn('[clientAuth] logoutClient exception:', err)
   }

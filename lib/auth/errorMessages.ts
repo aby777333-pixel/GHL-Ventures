@@ -8,12 +8,13 @@ export const AUTH_ERRORS = {
   // Sign-in errors
   NO_ACCOUNT: 'No account found. Please sign up first.',
   INVALID_CREDENTIALS: 'Incorrect email or password. Please try again.',
+  EMAIL_NOT_REGISTERED: 'Please sign in using your registered email address.',
   ACCOUNT_UNVERIFIED: 'Your account is pending verification. Please check your email to verify your account.',
   ACCOUNT_INACTIVE: 'Your account is currently inactive. Please contact support.',
   ACCOUNT_LOCKED: 'Your account has been temporarily locked due to too many failed attempts. Please try again in 15 minutes.',
 
   // Sign-up errors
-  EMAIL_EXISTS: 'An account already exists with this email. Please sign in instead.',
+  EMAIL_EXISTS: 'This email is already registered. Please sign in to continue.',
   PHONE_EXISTS: 'This phone number is already linked to another account.',
   SIGNUP_FAILED: 'Registration failed. Please check your details and try again.',
   WEAK_PASSWORD: 'Password must be at least 8 characters with a mix of letters and numbers.',

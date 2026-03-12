@@ -164,6 +164,16 @@ UPDATE clients SET assigned_rm = (
 )
 WHERE user_id = (SELECT id FROM auth.users WHERE email = 'client1@ghlindia.com');
 
+-- ─── Create CRM Leads for Clients (backup — DB trigger should handle this) ──
+
+INSERT INTO leads (first_name, last_name, email, phone, source, status, investment_interest, metadata)
+VALUES
+  ('Vikram', 'Patel', 'client1@ghlindia.com', '+91 98765 43001', 'website', 'won', 'AIF Investment',
+   '{"auto_created": true, "source": "test_setup"}'),
+  ('Anjali', 'Deshmukh', 'client2@ghlindia.com', '+91 98765 43002', 'website', 'new', 'AIF Investment',
+   '{"auto_created": true, "source": "test_setup"}')
+ON CONFLICT DO NOTHING;
+
 -- ─── Verification Queries ────────────────────────────────────
 -- Run these to verify setup:
 

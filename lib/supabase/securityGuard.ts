@@ -26,9 +26,7 @@ export interface UserContext {
 
 // ── Get User Context from Supabase ──────────────────────────
 export async function getUserContext(): Promise<UserContext | null> {
-  if (!isSupabaseConfigured()) {
-    return getUserContextFromLocalStorage()
-  }
+  if (!isSupabaseConfigured()) return null
 
   try {
     const { data: { session } } = await supabase.auth.getSession()

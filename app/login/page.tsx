@@ -27,8 +27,13 @@ export default function LoginPage() {
   const otpIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
   // Check if already authenticated — redirect to dashboard
+  // Skip redirect if user just logged out (indicated by URL param)
   useEffect(() => {
     if (!isSupabaseConfigured()) return
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search)
+      if (params.get('logged_out') === 'true') return
+    }
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session?.user) router.replace('/dashboard')
     })
@@ -117,7 +122,7 @@ export default function LoginPage() {
     try {
       const callbackUrl =
         typeof window !== 'undefined'
-          ? new URL('/auth/callback', window.location.origin).toString()
+          ? new URL('/auth/callback?flow=signin', window.location.origin).toString()
           : ''
       const { error: oauthError } = await supabase.auth.signInWithOAuth({
         provider: 'google',

@@ -41,7 +41,7 @@ export default function CurrencyTicker() {
     <div
       className="w-full py-1.5"
       style={{
-        background: 'rgba(0,0,0,0.3)',
+        background: '#0d0d0d',
         borderBottom: '1px solid rgba(255,255,255,0.05)',
       }}
     >

@@ -594,7 +594,7 @@ function FAQ() {
         </AnimatedSection>
 
         <AnimatedSection delay={150}>
-          <div className="mt-8 max-w-3xl">
+          <div className="mt-8 max-w-4xl mx-auto">
             {faqs.map((faq, i) => (
               <div key={i} className="border-b border-gray-200">
                 <button
