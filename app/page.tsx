@@ -187,10 +187,10 @@ const STARS = [
   { x: 28, y: 85, size: 'lg', delay: 0.8 }, { x: 62, y: 8, size: 'lg', delay: 1.5 },
 ]
 
-/* Business TV — Bloomberg Quicktake live (default) + NDTV Profit + News feed */
+/* Business TV — Bloomberg Quicktake live (default) + India Markets + News feed */
 function LiveFinancialTV() {
   const [widgetLoaded, setWidgetLoaded] = useState(false)
-  const [tvTab, setTvTab] = useState<'bloomberg' | 'ndtv' | 'news'>('bloomberg')
+  const [tvTab, setTvTab] = useState<'bloomberg' | 'india' | 'news'>('bloomberg')
 
   useEffect(() => {
     setWidgetLoaded(true)
@@ -214,16 +214,16 @@ function LiveFinancialTV() {
             Bloomberg
           </button>
           <button
-            onClick={() => setTvTab('ndtv')}
+            onClick={() => setTvTab('india')}
             className={`px-2.5 py-1.5 rounded-full text-[9px] font-bold uppercase tracking-wider transition-all flex items-center gap-1.5 ${
-              tvTab === 'ndtv' ? 'bg-brand-red text-white' : 'text-gray-400 hover:text-white'
+              tvTab === 'india' ? 'bg-brand-red text-white' : 'text-gray-400 hover:text-white'
             }`}
           >
             <span className="relative flex h-1.5 w-1.5">
-              <span className={`absolute inline-flex h-full w-full rounded-full bg-red-500 opacity-75 ${tvTab === 'ndtv' ? 'animate-ping' : ''}`} />
-              <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-red-500" />
+              <span className={`absolute inline-flex h-full w-full rounded-full bg-green-500 opacity-75 ${tvTab === 'india' ? 'animate-ping' : ''}`} />
+              <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-green-500" />
             </span>
-            NDTV Profit
+            India Markets
           </button>
           <button
             onClick={() => setTvTab('news')}
@@ -250,15 +250,51 @@ function LiveFinancialTV() {
           />
         )}
 
-        {/* NDTV Profit — Indian business TV live via channel ID */}
-        {tvTab === 'ndtv' && widgetLoaded && (
+        {/* India Markets — Live TradingView Market Overview (SENSEX, NIFTY, Indian stocks) */}
+        {tvTab === 'india' && widgetLoaded && (
           <iframe
-            key="ndtv-profit-live"
-            src="https://www.youtube.com/embed/live_stream?channel=UC3uJIdRFTGgLWrUziaHbzrg&autoplay=1&mute=1&modestbranding=1&rel=0"
-            title="NDTV Profit — Live"
+            key="india-market-overview"
+            src={`https://s.tradingview.com/embed-widget/market-overview/?locale=en#${encodeURIComponent(JSON.stringify({
+              colorTheme: 'dark',
+              dateRange: '1D',
+              showChart: true,
+              isTransparent: true,
+              width: '100%',
+              height: '100%',
+              plotLineColorGrowing: 'rgba(233, 30, 99, 1)',
+              plotLineColorFalling: 'rgba(233, 30, 99, 1)',
+              gridLineColor: 'rgba(240, 243, 250, 0)',
+              scaleFontColor: 'rgba(209, 212, 220, 1)',
+              belowLineFillColorGrowing: 'rgba(233, 30, 99, 0.12)',
+              belowLineFillColorFalling: 'rgba(233, 30, 99, 0.12)',
+              belowLineFillColorGrowingBottom: 'rgba(41, 98, 255, 0)',
+              belowLineFillColorFallingBottom: 'rgba(41, 98, 255, 0)',
+              symbolActiveColor: 'rgba(233, 30, 99, 0.12)',
+              tabs: [
+                {
+                  title: 'Indices',
+                  symbols: [
+                    { s: 'BSE:SENSEX', d: 'SENSEX' },
+                    { s: 'NSE:NIFTY', d: 'NIFTY 50' },
+                    { s: 'NSE:BANKNIFTY', d: 'Bank Nifty' },
+                    { s: 'BSE:SMLCAP', d: 'Small Cap' },
+                    { s: 'BSE:MIDCAP', d: 'Mid Cap' },
+                  ],
+                },
+                {
+                  title: 'Top Stocks',
+                  symbols: [
+                    { s: 'BSE:RELIANCE', d: 'Reliance' },
+                    { s: 'BSE:TCS', d: 'TCS' },
+                    { s: 'BSE:HDFCBANK', d: 'HDFC Bank' },
+                    { s: 'BSE:INFY', d: 'Infosys' },
+                    { s: 'BSE:ICICIBANK', d: 'ICICI Bank' },
+                  ],
+                },
+              ],
+            }))}`}
+            title="India Markets — Live Overview"
             className="w-full h-full border-0"
-            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-            allowFullScreen
             loading="lazy"
           />
         )}
