@@ -48,8 +48,8 @@ export default async (request: Request) => {
   try {
     const body: ProxyRequestBody = await request.json()
 
-    // Prefer user-provided key (from sessionStorage), fall back to server env
-    const apiKey = body.apiKey || process.env.CLAUDE_API_KEY || ''
+    // Use server-side API key only — never accept client-provided keys
+    const apiKey = process.env.CLAUDE_API_KEY || ''
 
     if (!apiKey) {
       return new Response(

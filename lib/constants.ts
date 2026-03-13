@@ -250,7 +250,7 @@ export const TEAM_MEMBERS = [
     name: 'Abe Abrams',
     role: 'IT Head',
     quote: 'Technology is the silent engine behind smart investing — we leverage innovation to give our stakeholders an edge in every market.',
-    image: '/images/team/abe-abrams.jpg',
+    image: '/images/team/Abe-Abrams.jpg',
   },
 ] as const
 

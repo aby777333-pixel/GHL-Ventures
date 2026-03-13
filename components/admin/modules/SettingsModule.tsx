@@ -13,7 +13,7 @@ import AdminGlass from '../shared/AdminGlass'
 import AdminBadge from '../shared/AdminBadge'
 import AdminKPICard from '../shared/AdminKPICard'
 import AdminEmptyState from '../shared/AdminEmptyState'
-import { fetchEmployees, getSystemHealth } from '@/lib/supabase/adminDataService'
+import { fetchEmployees, getSystemHealth, fetchActivityFeed } from '@/lib/supabase/adminDataService'
 import { ROLE_PERMISSIONS } from '@/lib/admin/adminRBAC'
 import { ROLE_LABELS } from '@/lib/admin/adminAuth'
 import { formatDate } from '@/lib/admin/adminHooks'
@@ -491,13 +491,22 @@ function PermissionsTab() {
 
 // ── Security Settings ───────────────────────────────────────────
 function SecurityTab({ showToast }: { showToast: (msg: string, type?: 'success' | 'error' | 'info' | 'warning') => void }) {
-  const securityEvents = [
-    { id: 'SE-001', event: 'Successful Login', user: 'admin@ghlindiaventures.com', ip: '103.42.xx.xx', time: '2025-03-20T10:00:00', status: 'success' },
-    { id: 'SE-002', event: 'Failed Login Attempt', user: 'unknown@test.com', ip: '185.220.xx.xx', time: '2025-03-20T08:15:00', status: 'failed' },
-    { id: 'SE-003', event: 'Password Changed', user: 'sales@ghlindiaventures.com', ip: '103.42.xx.xx', time: '2025-03-19T16:30:00', status: 'success' },
-    { id: 'SE-004', event: 'Session Expired', user: 'compliance@ghlindiaventures.com', ip: '103.42.xx.xx', time: '2025-03-19T14:00:00', status: 'info' },
-    { id: 'SE-005', event: 'Failed Login (3 attempts)', user: 'unknown@domain.com', ip: '45.33.xx.xx', time: '2025-03-18T22:45:00', status: 'failed' },
-  ]
+  const [securityEvents, setSecurityEvents] = useState<{ id: string; event: string; user: string; ip: string; time: string; status: string }[]>([])
+
+  useEffect(() => {
+    fetchActivityFeed().then(logs => {
+      if (logs && logs.length > 0) {
+        setSecurityEvents(logs.slice(0, 10).map((l: any) => ({
+          id: l.id || `SE-${Math.random().toString(36).slice(2, 8)}`,
+          event: l.action || 'System Event',
+          user: l.user || 'system',
+          ip: '-',
+          time: l.timestamp || new Date().toISOString(),
+          status: (l.action || '').toLowerCase().includes('fail') || (l.action || '').toLowerCase().includes('error') ? 'failed' : (l.action || '').toLowerCase().includes('logout') || (l.action || '').toLowerCase().includes('expire') ? 'info' : 'success',
+        })))
+      }
+    }).catch(() => {})
+  }, [])
 
   return (
     <div className="space-y-4">
@@ -542,6 +551,9 @@ function SecurityTab({ showToast }: { showToast: (msg: string, type?: 'success' 
           Recent Security Events
         </h3>
         <div className="space-y-2">
+          {securityEvents.length === 0 && (
+            <p className="text-xs text-gray-500 py-4 text-center">No recent security events</p>
+          )}
           {securityEvents.map(event => (
             <div key={event.id} className="flex items-center justify-between p-3 rounded-xl bg-white/[0.02] border border-white/[0.04]">
               <div className="flex items-center gap-3">
