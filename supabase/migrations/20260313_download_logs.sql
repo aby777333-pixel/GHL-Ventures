@@ -51,7 +51,7 @@ CREATE POLICY download_logs_read_admin ON download_logs
     EXISTS (
       SELECT 1 FROM profiles
       WHERE profiles.id = auth.uid()
-      AND profiles.role IN ('admin', 'super_admin', 'manager', 'compliance_officer', 'fund_manager')
+      AND profiles.role IN ('admin', 'super_admin', 'staff')
     )
   );
 
@@ -105,7 +105,7 @@ CREATE POLICY storage_downloads_upload ON storage.objects
     AND EXISTS (
       SELECT 1 FROM profiles
       WHERE profiles.id = auth.uid()
-      AND profiles.role IN ('admin', 'super_admin', 'manager', 'compliance_officer')
+      AND profiles.role IN ('admin', 'super_admin')
     )
   );
 
