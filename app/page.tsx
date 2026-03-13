@@ -1007,6 +1007,8 @@ function ContactFormSection() {
     privacy: false,
   })
   const [submitted, setSubmitted] = useState(false)
+  const [submitting, setSubmitting] = useState(false)
+  const [formError, setFormError] = useState('')
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const target = e.target
@@ -1016,7 +1018,8 @@ function ContactFormSection() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    setSubmitted(true)
+    setSubmitting(true)
+    setFormError('')
     try {
       await Promise.all([
         submitContactForm({
@@ -1040,8 +1043,12 @@ function ContactFormSection() {
           investmentInterest: 'consultation',
         }),
       ])
+      setSubmitted(true)
     } catch (err) {
       console.warn('Home form submission failed (non-critical):', err)
+      setFormError('Something went wrong. Please try again or call us directly.')
+    } finally {
+      setSubmitting(false)
     }
   }
 
@@ -1089,6 +1096,12 @@ function ContactFormSection() {
 
             <AnimatedSection delay={200}>
               <form onSubmit={handleSubmit} className="space-y-5">
+                {formError && (
+                  <div className="bg-red-50 border border-red-200 text-red-700 text-sm rounded-lg p-3 flex items-start gap-2">
+                    <AlertTriangle className="w-4 h-4 mt-0.5 shrink-0" />
+                    <span>{formError}</span>
+                  </div>
+                )}
                 <div className="grid sm:grid-cols-2 gap-5">
                   <div>
                     <label className="block text-sm font-semibold text-brand-black dark:text-white mb-1.5">Full Name *</label>
@@ -1138,6 +1151,8 @@ function ContactFormSection() {
                         value={form.phone}
                         onChange={handleChange}
                         required
+                        pattern="[0-9]{10}"
+                        title="Enter a 10-digit phone number"
                         placeholder="98765 43210"
                         className="input-field flex-1"
                       />
@@ -1225,13 +1240,21 @@ function ContactFormSection() {
 
                 <button
                   type="submit"
-                  className="w-full sm:w-auto inline-flex items-center justify-center px-8 py-3 text-white font-bold text-base rounded-full transition-all duration-300 transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-offset-2"
+                  disabled={submitting}
+                  className="w-full sm:w-auto inline-flex items-center justify-center px-8 py-3 text-white font-bold text-base rounded-full transition-all duration-300 transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-60 disabled:cursor-not-allowed disabled:transform-none"
                   style={{
                     background: 'linear-gradient(135deg, #D0021B 0%, #8B0000 100%)',
                     boxShadow: '0 6px 30px rgba(208,2,27,0.4)',
                   }}
                 >
-                  Request a Consultation <ArrowRight className="ml-2 w-5 h-5" />
+                  {submitting ? (
+                    <>
+                      <svg className="animate-spin w-5 h-5 mr-2" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"/></svg>
+                      Submitting…
+                    </>
+                  ) : (
+                    <>Request a Consultation <ArrowRight className="ml-2 w-5 h-5" /></>
+                  )}
                 </button>
               </form>
             </AnimatedSection>

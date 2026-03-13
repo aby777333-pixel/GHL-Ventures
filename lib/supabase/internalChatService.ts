@@ -10,6 +10,11 @@
 import { supabase, isSupabaseConfigured } from './client'
 import { subscribeToTable } from './realtimeSubscriptions'
 
+/** Encode HTML entities to prevent stored XSS */
+function sanitizeStr(s: string): string {
+  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#x27;')
+}
+
 // ── Types ────────────────────────────────────────────────────
 export interface InternalChannel {
   id: string
@@ -89,13 +94,14 @@ export async function sendInternalMessage(
   userRole: string,
   message: string
 ): Promise<InternalMessage | null> {
+  const safeMessage = sanitizeStr(message)
   const newMsg: InternalMessage = {
     id: `msg-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
     channel_id: channelId,
     user_id: userId,
-    user_name: userName,
+    user_name: sanitizeStr(userName),
     user_role: userRole,
-    message,
+    message: safeMessage,
     created_at: new Date().toISOString(),
   }
 
@@ -112,9 +118,9 @@ export async function sendInternalMessage(
       .insert({
         channel_id: channelId,
         user_id: userId,
-        user_name: userName,
+        user_name: sanitizeStr(userName),
         user_role: userRole,
-        message,
+        message: safeMessage,
       })
       .select()
       .single()

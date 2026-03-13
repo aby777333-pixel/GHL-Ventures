@@ -13,6 +13,11 @@
 
 import { supabase, isSupabaseConfigured } from './client'
 
+/** Encode HTML entities to prevent stored XSS */
+function sanitizeStr(s: string): string {
+  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#x27;')
+}
+
 // Helper: bypass Supabase strict types for new tables not yet in types.ts
 // These tables (chat_sessions, chat_messages, rm_requests) are defined in
 // migration 022 but not yet added to the generated TypeScript types.
@@ -105,8 +110,8 @@ export async function createChatSession(input: {
   // anonymous visitors because RLS blocks the SELECT after INSERT
   const { data, error } = await db.rpc('create_visitor_chat_session', {
     p_visitor_id: getOrCreateVisitorId(),
-    p_visitor_name: input.visitorName,
-    p_visitor_email: input.visitorEmail || null,
+    p_visitor_name: sanitizeStr(input.visitorName),
+    p_visitor_email: input.visitorEmail ? sanitizeStr(input.visitorEmail) : null,
     p_client_id: input.clientId || null,
     p_page_url: input.pageUrl || null,
     p_channel: input.channel || 'web_chat',
@@ -277,8 +282,8 @@ export async function sendChatMessage(input: {
   const { data, error } = await db.rpc('send_visitor_chat_message', {
     p_session_id: input.sessionId,
     p_sender_type: input.senderType,
-    p_sender_name: input.senderName || null,
-    p_message: input.message,
+    p_sender_name: input.senderName ? sanitizeStr(input.senderName) : null,
+    p_message: sanitizeStr(input.message),
   })
 
   if (error) {
