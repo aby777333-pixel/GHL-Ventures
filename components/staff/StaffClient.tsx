@@ -228,7 +228,7 @@ export default function StaffClient() {
       case 'home':
         return <HomeModule navigate={navigate} showToast={showToast} userName={user?.name || ''} role={role} />
       case 'me':
-        return <SelfServiceModule subTab={activeSubTab} navigate={navigate} showToast={showToast} />
+        return <SelfServiceModule subTab={activeSubTab} navigate={navigate} showToast={showToast} userId={session?.user?.id} userName={user?.name || ''} userEmail={user?.email || ''} userPhone={user?.phone || ''} userRole={role} userDepartment={user?.department || ''} userDesignation={user?.designation || ''} userStaffCode={user?.staffCode || ''} userJoinDate={user?.joinDate || ''} userStatus={user?.status || 'active'} />
       case 'cs':
         return <CSCenterModule subTab={activeSubTab} navigate={navigate} showToast={showToast} role={role} />
       case 'field':

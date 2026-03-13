@@ -62,6 +62,8 @@ export default function StaffTopBar({
   const [notifications, setNotifications] = useState<any[]>([])
   const [readNotifs, setReadNotifs] = useState<Set<string>>(new Set())
   const notifRef = useRef<HTMLDivElement>(null)
+  const [statusOpen, setStatusOpen] = useState(false)
+  const statusRef = useRef<HTMLDivElement>(null)
 
   // Fetch notifications on mount
   useEffect(() => {
@@ -74,10 +76,13 @@ export default function StaffTopBar({
       if (notifRef.current && !notifRef.current.contains(e.target as Node)) {
         setNotifOpen(false)
       }
+      if (statusRef.current && !statusRef.current.contains(e.target as Node)) {
+        setStatusOpen(false)
+      }
     }
-    if (notifOpen) document.addEventListener('mousedown', handler)
+    if (notifOpen || statusOpen) document.addEventListener('mousedown', handler)
     return () => document.removeEventListener('mousedown', handler)
-  }, [notifOpen])
+  }, [notifOpen, statusOpen])
 
   const unreadCount = notifications.filter(n => !n.is_read && !readNotifs.has(n.id)).length
 
@@ -126,25 +131,30 @@ export default function StaffTopBar({
         {/* Right */}
         <div className="flex items-center gap-2">
           {/* Agent Status */}
-          <div className="relative group">
-            <button className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-semibold border transition-colors ${statusCfg.bg} border-current/20`}>
+          <div className="relative" ref={statusRef}>
+            <button
+              onClick={() => setStatusOpen(!statusOpen)}
+              className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-semibold border transition-colors ${statusCfg.bg} border-current/20`}
+            >
               <span className={`w-2 h-2 rounded-full ${statusCfg.color} ${agentStatus === 'available' ? 'animate-pulse' : ''}`} />
               {statusCfg.label}
             </button>
-            <div className="absolute right-0 top-full mt-1 hidden group-hover:block z-50">
-              <div className="rounded-xl bg-[#111]/95 border border-white/[0.08] shadow-2xl py-1 min-w-[120px]" style={{ backdropFilter: 'blur(20px)' }}>
-                {(Object.keys(STATUS_CONFIG) as AgentStatus[]).map(s => (
-                  <button
-                    key={s}
-                    onClick={() => onStatusChange(s)}
-                    className={`w-full flex items-center gap-2 px-3 py-1.5 text-[11px] hover:bg-white/[0.06] transition-colors ${agentStatus === s ? 'text-white' : 'text-gray-400'}`}
-                  >
-                    <span className={`w-2 h-2 rounded-full ${STATUS_CONFIG[s].color}`} />
-                    {STATUS_CONFIG[s].label}
-                  </button>
-                ))}
+            {statusOpen && (
+              <div className="absolute right-0 top-full mt-1 z-50">
+                <div className="rounded-xl bg-[#111]/95 border border-white/[0.08] shadow-2xl py-1 min-w-[120px]" style={{ backdropFilter: 'blur(20px)' }}>
+                  {(Object.keys(STATUS_CONFIG) as AgentStatus[]).map(s => (
+                    <button
+                      key={s}
+                      onClick={() => { onStatusChange(s); setStatusOpen(false) }}
+                      className={`w-full flex items-center gap-2 px-3 py-1.5 text-[11px] hover:bg-white/[0.06] transition-colors ${agentStatus === s ? 'text-white' : 'text-gray-400'}`}
+                    >
+                      <span className={`w-2 h-2 rounded-full ${STATUS_CONFIG[s].color}`} />
+                      {STATUS_CONFIG[s].label}
+                    </button>
+                  ))}
+                </div>
               </div>
-            </div>
+            )}
           </div>
 
           {/* Notifications */}
