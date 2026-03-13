@@ -22,7 +22,7 @@ interface CreateEmployeeBody {
 
 const ALLOWED_ORIGINS = [
   'https://ghl-india-ventures-2025.netlify.app',
-  'http://localhost:3000',
+  // 'http://localhost:3000', // disabled for production
 ]
 
 function getCorsHeaders(request?: Request) {

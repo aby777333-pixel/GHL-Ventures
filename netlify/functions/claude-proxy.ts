@@ -19,7 +19,7 @@ interface ProxyRequestBody {
 // Restrict CORS to our own domain for security
 const ALLOWED_ORIGINS = [
   'https://ghl-india-ventures-2025.netlify.app',
-  'http://localhost:3000', // dev only
+  // 'http://localhost:3000', // disabled for production
 ]
 
 function getCorsHeaders(request?: Request) {

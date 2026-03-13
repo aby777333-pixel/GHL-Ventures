@@ -307,7 +307,7 @@ function RegisterPageInner() {
             <div className="grid md:grid-cols-2 gap-3">
               <div>
                 <label htmlFor="reg-pan" className="block text-xs font-medium text-brand-black mb-1">PAN Number <span className="text-xs text-brand-grey">(for KYC)</span></label>
-                <input id="reg-pan" type="text" className="input-field uppercase" placeholder="ABCDE1234F" maxLength={10} value={form.pan} onChange={(e) => handleChange('pan', e.target.value.toUpperCase())} />
+                <input id="reg-pan" type="text" className="input-field uppercase" placeholder="ABCDE1234F" maxLength={10} pattern="[A-Z]{5}[0-9]{4}[A-Z]" title="Enter a valid PAN (e.g. ABCDE1234F)" value={form.pan} onChange={(e) => handleChange('pan', e.target.value.toUpperCase())} />
               </div>
               <div>
                 <label htmlFor="reg-city" className="block text-xs font-medium text-brand-black mb-1">City of Residence</label>
