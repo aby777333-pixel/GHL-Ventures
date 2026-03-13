@@ -187,10 +187,10 @@ const STARS = [
   { x: 28, y: 85, size: 'lg', delay: 0.8 }, { x: 62, y: 8, size: 'lg', delay: 1.5 },
 ]
 
-/* Business TV — Bloomberg TV livestream (default) + Business News tab */
+/* Business TV — Bloomberg Quicktake live (default) + NDTV Profit + News feed */
 function LiveFinancialTV() {
   const [widgetLoaded, setWidgetLoaded] = useState(false)
-  const [tvTab, setTvTab] = useState<'bloomberg' | 'news'>('bloomberg')
+  const [tvTab, setTvTab] = useState<'bloomberg' | 'ndtv' | 'news'>('bloomberg')
 
   useEffect(() => {
     setWidgetLoaded(true)
@@ -200,10 +200,10 @@ function LiveFinancialTV() {
     <div className="relative rounded-2xl overflow-hidden border border-white/10 bg-black/40 backdrop-blur-sm">
       {/* Tab switcher */}
       <div className="flex items-center gap-1 px-3 pt-3 pb-1 relative z-20">
-        <div className="flex items-center gap-0.5 bg-white/5 rounded-full p-0.5">
+        <div className="flex items-center gap-0.5 bg-white/5 rounded-full p-0.5 flex-wrap">
           <button
             onClick={() => setTvTab('bloomberg')}
-            className={`px-3 py-1.5 rounded-full text-[9px] font-bold uppercase tracking-wider transition-all flex items-center gap-1.5 ${
+            className={`px-2.5 py-1.5 rounded-full text-[9px] font-bold uppercase tracking-wider transition-all flex items-center gap-1.5 ${
               tvTab === 'bloomberg' ? 'bg-brand-red text-white' : 'text-gray-400 hover:text-white'
             }`}
           >
@@ -211,26 +211,51 @@ function LiveFinancialTV() {
               <span className={`absolute inline-flex h-full w-full rounded-full bg-red-500 opacity-75 ${tvTab === 'bloomberg' ? 'animate-ping' : ''}`} />
               <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-red-500" />
             </span>
-            Bloomberg TV
+            Bloomberg
+          </button>
+          <button
+            onClick={() => setTvTab('ndtv')}
+            className={`px-2.5 py-1.5 rounded-full text-[9px] font-bold uppercase tracking-wider transition-all flex items-center gap-1.5 ${
+              tvTab === 'ndtv' ? 'bg-brand-red text-white' : 'text-gray-400 hover:text-white'
+            }`}
+          >
+            <span className="relative flex h-1.5 w-1.5">
+              <span className={`absolute inline-flex h-full w-full rounded-full bg-red-500 opacity-75 ${tvTab === 'ndtv' ? 'animate-ping' : ''}`} />
+              <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-red-500" />
+            </span>
+            NDTV Profit
           </button>
           <button
             onClick={() => setTvTab('news')}
-            className={`px-3 py-1.5 rounded-full text-[9px] font-bold uppercase tracking-wider transition-all ${
+            className={`px-2.5 py-1.5 rounded-full text-[9px] font-bold uppercase tracking-wider transition-all ${
               tvTab === 'news' ? 'bg-brand-red text-white' : 'text-gray-400 hover:text-white'
             }`}
           >
-            Business News
+            Headlines
           </button>
         </div>
       </div>
 
       <div className="relative bg-black" style={{ height: '340px' }}>
-        {/* Bloomberg TV Livestream — YouTube embed */}
+        {/* Bloomberg Quicktake — 24/7 live via channel ID */}
         {tvTab === 'bloomberg' && widgetLoaded && (
           <iframe
-            key="bloomberg-tv-live"
-            src="https://www.youtube.com/embed/dp8PhLsUcFE?autoplay=1&mute=1&loop=1&controls=1&modestbranding=1&rel=0&showinfo=0"
-            title="Bloomberg TV — Live"
+            key="bloomberg-quicktake-live"
+            src="https://www.youtube.com/embed/live_stream?channel=UChirEOpgFCupRAk5etXqPaA&autoplay=1&mute=1&modestbranding=1&rel=0"
+            title="Bloomberg Quicktake — Live"
+            className="w-full h-full border-0"
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+            allowFullScreen
+            loading="lazy"
+          />
+        )}
+
+        {/* NDTV Profit — Indian business TV live via channel ID */}
+        {tvTab === 'ndtv' && widgetLoaded && (
+          <iframe
+            key="ndtv-profit-live"
+            src="https://www.youtube.com/embed/live_stream?channel=UC3uJIdRFTGgLWrUziaHbzrg&autoplay=1&mute=1&modestbranding=1&rel=0"
+            title="NDTV Profit — Live"
             className="w-full h-full border-0"
             allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
             allowFullScreen
