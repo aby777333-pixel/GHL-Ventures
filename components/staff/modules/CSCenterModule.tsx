@@ -156,7 +156,7 @@ function CSDashboard({ navigate, showToast }: Pick<CSCenterModuleProps, 'navigat
   }, [])
 
   const waitingSessions = useMemo(() => chatSessions.filter(s => s.status === 'waiting' || s.status === 'queued'), [chatSessions])
-  const activeSessions = useMemo(() => chatSessions.filter(s => s.status === 'active'), [chatSessions])
+  const activeSessions = useMemo(() => chatSessions.filter(s => s.status === 'active' || s.status === 'assigned'), [chatSessions])
 
   const statuses = [
     { key: 'available', label: 'Available', color: 'bg-emerald-500' },

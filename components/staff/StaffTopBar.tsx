@@ -1,11 +1,12 @@
 'use client'
 
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, useCallback } from 'react'
 import { Search, Bell, Menu, ChevronRight, Info, AlertCircle, CheckCircle, AlertTriangle } from 'lucide-react'
 import type { StaffModule, AgentStatus } from '@/lib/staff/staffTypes'
 import { STAFF_MODULE_LABELS } from '@/lib/staff/staffConstants'
 import { fetchNotifications } from '@/lib/supabase/reportsDataService'
-import { updateRow } from '@/lib/supabase/adminDataService'
+import { updateRow, insertRow } from '@/lib/supabase/adminDataService'
+import { onNewChatSession, onNewLead, onNewContactSubmission } from '@/lib/supabase/realtimeSubscriptions'
 
 const STATUS_CONFIG: Record<AgentStatus, { label: string; color: string; bg: string }> = {
   available: { label: 'Available', color: 'bg-emerald-400', bg: 'bg-emerald-500/15 text-emerald-400' },
@@ -83,6 +84,116 @@ export default function StaffTopBar({
     if (notifOpen || statusOpen) document.addEventListener('mousedown', handler)
     return () => document.removeEventListener('mousedown', handler)
   }, [notifOpen, statusOpen])
+
+  // Play alert sound for incoming chats/leads (two-tone ascending ring)
+  const playAlertSound = useCallback(() => {
+    try {
+      const ctx = new (window.AudioContext || (window as any).webkitAudioContext)()
+      const now = ctx.currentTime
+      const tones = [
+        { freq: 800, start: 0, dur: 0.15 },
+        { freq: 1000, start: 0.18, dur: 0.15 },
+        { freq: 800, start: 0.5, dur: 0.15 },
+        { freq: 1000, start: 0.68, dur: 0.15 },
+      ]
+      tones.forEach(t => {
+        const osc = ctx.createOscillator()
+        const gain = ctx.createGain()
+        osc.connect(gain)
+        gain.connect(ctx.destination)
+        osc.frequency.value = t.freq
+        osc.type = 'sine'
+        gain.gain.setValueAtTime(0.25, now + t.start)
+        gain.gain.exponentialRampToValueAtTime(0.001, now + t.start + t.dur)
+        osc.start(now + t.start)
+        osc.stop(now + t.start + t.dur + 0.05)
+      })
+    } catch {}
+  }, [])
+
+  // Send browser notification for staff
+  const sendStaffBrowserNotification = useCallback((title: string, body: string) => {
+    playAlertSound()
+    if (typeof window !== 'undefined' && 'Notification' in window) {
+      if (Notification.permission === 'default') Notification.requestPermission()
+      if (Notification.permission === 'granted') {
+        const notif = new Notification(title, { body, icon: '/icon.svg', tag: 'ghl-staff' })
+        setTimeout(() => notif.close(), 5000)
+        notif.onclick = () => { window.focus(); notif.close() }
+      }
+    }
+  }, [playAlertSound])
+
+  // Subscribe to new visitor chat sessions — ring + inject notification
+  useEffect(() => {
+    const unsub = onNewChatSession((payload) => {
+      const session = payload.new as any
+      const visitorName = session.visitor_name || 'Visitor'
+      const liveNotif = {
+        id: `chat-${session.id || Date.now()}`,
+        title: '🔔 New Live Chat',
+        message: `${visitorName} is waiting for assistance`,
+        type: 'info',
+        severity: 'high',
+        is_read: false,
+        created_at: new Date().toISOString(),
+        metadata: { module: 'cs-center' },
+      }
+      setNotifications(prev => [liveNotif, ...prev])
+      sendStaffBrowserNotification('New Live Chat', `${visitorName} is waiting for assistance`)
+      insertRow('notifications', {
+        title: 'New Live Chat',
+        message: `${visitorName} started a chat from the website`,
+        type: 'info',
+        severity: 'high',
+        is_read: false,
+        metadata: { module: 'cs-center', chat_session_id: session.id },
+      }).catch(() => {})
+    })
+    return () => { unsub?.() }
+  }, [sendStaffBrowserNotification])
+
+  // Subscribe to new leads — alert staff
+  useEffect(() => {
+    const unsub = onNewLead((payload) => {
+      const lead = payload.new as any
+      const name = lead.full_name || lead.name || 'New Lead'
+      const liveNotif = {
+        id: `lead-${lead.id || Date.now()}`,
+        title: 'New Lead Captured',
+        message: `${name} — ${lead.source || 'website'}`,
+        type: 'success',
+        severity: 'medium',
+        is_read: false,
+        created_at: new Date().toISOString(),
+        metadata: { module: 'leads' },
+      }
+      setNotifications(prev => [liveNotif, ...prev])
+      sendStaffBrowserNotification('New Lead', `${name} submitted via ${lead.source || 'website'}`)
+    })
+    return () => { unsub?.() }
+  }, [sendStaffBrowserNotification])
+
+  // Subscribe to new contact form submissions — alert staff
+  useEffect(() => {
+    const unsub = onNewContactSubmission((payload) => {
+      const sub = payload.new as any
+      const name = sub.name || sub.full_name || 'Website Visitor'
+      const liveNotif = {
+        id: `contact-${sub.id || Date.now()}`,
+        title: 'New Form Submission',
+        message: `${name} — ${sub.form_type || sub.subject || 'contact form'}`,
+        type: 'info',
+        severity: 'medium',
+        is_read: false,
+        created_at: new Date().toISOString(),
+        metadata: { module: 'leads' },
+      }
+      setNotifications(prev => [liveNotif, ...prev])
+      sendStaffBrowserNotification('New Form Submission', `${name} submitted a ${sub.form_type || 'contact'} form`)
+    })
+    return () => { unsub?.() }
+  }, [sendStaffBrowserNotification])
 
   const unreadCount = notifications.filter(n => !n.is_read && !readNotifs.has(n.id)).length
 
