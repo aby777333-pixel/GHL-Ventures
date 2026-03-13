@@ -6,7 +6,7 @@ import PlaceholderImage from '@/components/PlaceholderImage'
 import { BRAND } from '@/lib/constants'
 import { submitContactForm, submitLead } from '@/lib/supabase/reportsDataService'
 import {
-  FileText, Download, Play, Calendar, HardDrive, File,
+  FileText, Download, Calendar, HardDrive, File,
   CheckCircle, BookOpen, Map, BarChart3, Building2,
 } from 'lucide-react'
 import SpaceHero from '@/components/SpaceHero'
@@ -21,10 +21,9 @@ const SECTIONS = [
       title: 'GHL India Ventures Corporate Brochure',
       desc: 'A comprehensive overview of our firm, our team, and our investment philosophy. Learn about our mission to invest in India\'s future through stressed real estate and high-growth startups.',
       lastUpdated: 'January 2025',
-      fileSize: '4.2 MB',
+      fileSize: '6.3 MB',
       fileType: 'PDF',
     },
-    videoLabel: '[VIDEO: Corporate Brochure Walkthrough]',
   },
   {
     id: 'roadmap',
@@ -35,10 +34,9 @@ const SECTIONS = [
       title: 'Fund Investment Roadmap',
       desc: 'Our strategic blueprint covering fund deployment timelines, sector allocation targets, key milestones, and the 5-year vision for capital deployment and returns.',
       lastUpdated: 'December 2024',
-      fileSize: '3.8 MB',
+      fileSize: '12.0 MB',
       fileType: 'PDF',
     },
-    videoLabel: '[VIDEO: Investment Roadmap Walkthrough]',
   },
   {
     id: 'guide',
@@ -52,7 +50,6 @@ const SECTIONS = [
       fileSize: '2.9 MB',
       fileType: 'PDF',
     },
-    videoLabel: '[VIDEO: Investment Guide Walkthrough]',
   },
   {
     id: 'nav',
@@ -66,7 +63,6 @@ const SECTIONS = [
       fileSize: '6.1 MB',
       fileType: 'PDF',
     },
-    videoLabel: '[VIDEO: NAV Report Walkthrough]',
   },
 ]
 
@@ -121,24 +117,18 @@ function DownloadCard({
     } catch (err) {
       console.warn('Download lead capture failed (non-critical):', err)
     }
-    // Attempt actual file download from Supabase Storage
+    // Download the PDF file
     try {
-      const { supabase, isSupabaseConfigured } = await import('@/lib/supabase/client')
-      if (isSupabaseConfigured()) {
-        const { data } = supabase.storage.from('downloads').getPublicUrl(`${section.id}.pdf`)
-        if (data?.publicUrl) {
-          const a = document.createElement('a')
-          a.href = data.publicUrl
-          a.download = `${section.document.title}.pdf`
-          a.target = '_blank'
-          a.rel = 'noopener noreferrer'
-          document.body.appendChild(a)
-          a.click()
-          document.body.removeChild(a)
-        }
-      }
+      const a = document.createElement('a')
+      a.href = `/downloads/${section.id}.pdf`
+      a.download = `${section.document.title}.pdf`
+      a.target = '_blank'
+      a.rel = 'noopener noreferrer'
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
     } catch {
-      // File may not be uploaded yet — email delivery fallback
+      // Fallback — email delivery
     }
   }
 
@@ -171,16 +161,7 @@ function DownloadCard({
             </span>
           </div>
 
-          {/* Video placeholder */}
-          <div className={`mt-6 rounded-xl bg-gray-100 border border-gray-200 p-4 flex items-center space-x-3 ${GLOW_COLORS[(index + 3) % GLOW_COLORS.length]}`}>
-            <div className="w-10 h-10 rounded-full bg-brand-red/10 flex items-center justify-center shrink-0">
-              <Play className="w-5 h-5 text-brand-red ml-0.5" />
-            </div>
-            <div>
-              <p className="text-sm font-medium text-brand-black">{section.videoLabel}</p>
-              <p className="text-xs text-brand-grey">Watch a guided walkthrough of this document</p>
-            </div>
-          </div>
+
         </div>
 
         {/* Right: Download Gate Form */}
