@@ -3,9 +3,12 @@
 
    Routes all API calls through /.netlify/functions/monday-proxy
    so the API key stays server-side.
+   Passes Supabase auth token for server-side verification.
 
    Falls back gracefully when Monday.com is not configured.
    ───────────────────────────────────────────────────────────── */
+
+import { getAuthToken } from '@/lib/supabase/client'
 
 // ── Config ──────────────────────────────────────────────────
 
@@ -93,9 +96,10 @@ async function mondayQuery<T = unknown>(
 ): Promise<{ data: T | null; errors?: { message: string }[] }> {
   try {
     const clientKey = getMondayApiKey()
+    const authToken = await getAuthToken()
     const response = await fetch(PROXY_URL, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', ...(authToken ? { 'Authorization': `Bearer ${authToken}` } : {}) },
       body: JSON.stringify({
         query,
         variables,

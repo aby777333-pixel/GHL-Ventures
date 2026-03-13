@@ -83,57 +83,11 @@ export async function getUserContext(): Promise<UserContext | null> {
   }
 }
 
-// ── Fallback: Read from localStorage sessions ───────────────
+// ── Fallback: localStorage is NOT trusted for security decisions ──
+// Previously read role/portal from localStorage, which is trivially
+// spoofable via DevTools. Now returns null — only Supabase auth is
+// authoritative for permissions.
 function getUserContextFromLocalStorage(): UserContext | null {
-  if (typeof window === 'undefined') return null
-
-  // Try admin session
-  try {
-    const adminRaw = localStorage.getItem('ghl-admin-session')
-    if (adminRaw) {
-      const session = JSON.parse(adminRaw)
-      if (session.expiresAt > Date.now()) {
-        return {
-          id: session.user.email,
-          portal: 'admin',
-          role: session.user.role,
-          name: session.user.name,
-          email: session.user.email,
-        }
-      }
-    }
-  } catch { /* ignore */ }
-
-  // Try staff session
-  try {
-    const staffRaw = localStorage.getItem('ghl-staff-session')
-    if (staffRaw) {
-      const session = JSON.parse(staffRaw)
-      return {
-        id: session.user?.email || 'staff',
-        portal: 'staff',
-        role: session.user?.role || 'general-employee',
-        name: session.user?.name || 'Staff',
-        email: session.user?.email || '',
-      }
-    }
-  } catch { /* ignore */ }
-
-  // Try client session
-  try {
-    const clientRaw = localStorage.getItem('ghl-client-session')
-    if (clientRaw) {
-      const session = JSON.parse(clientRaw)
-      return {
-        id: session.user?.id || session.user?.email || 'client',
-        portal: 'client',
-        role: 'client',
-        name: session.user?.name || 'Client',
-        email: session.user?.email || '',
-      }
-    }
-  } catch { /* ignore */ }
-
   return null
 }
 

@@ -29,3 +29,11 @@ export const supabase = createClient<Database>(
 export const isSupabaseConfigured = () =>
   Boolean(supabaseUrl !== PLACEHOLDER_URL && supabaseAnonKey !== PLACEHOLDER_KEY)
 
+/** Get current Supabase auth token for passing to Netlify functions */
+export async function getAuthToken(): Promise<string> {
+  try {
+    const { data: { session } } = await supabase.auth.getSession()
+    return session?.access_token || ''
+  } catch { return '' }
+}
+

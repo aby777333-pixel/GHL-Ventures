@@ -9,7 +9,7 @@
 
 'use client'
 
-import { supabase, isSupabaseConfigured } from './client'
+import { supabase, isSupabaseConfigured, getAuthToken } from './client'
 
 const db = supabase as any
 
@@ -57,9 +57,10 @@ export async function createEmployee(input: {
   reportingTo?: string | null
 }): Promise<{ success: boolean; userId?: string; error?: string }> {
   try {
+    const token = await getAuthToken()
     const response = await fetch('/.netlify/functions/create-employee', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
       body: JSON.stringify(input),
     })
 

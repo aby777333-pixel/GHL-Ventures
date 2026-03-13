@@ -58,6 +58,47 @@ export default async (request: Request) => {
     )
   }
 
+  // ── Auth Check: Verify caller is an authenticated admin ──
+  const authHeader = request.headers.get('Authorization') || ''
+  const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
+  if (!authHeader.startsWith('Bearer ') || !authHeader.slice(7).trim()) {
+    return new Response(
+      JSON.stringify({ error: 'Unauthorized: missing Authorization header' }),
+      { status: 401, headers: { 'Content-Type': 'application/json', ...getCorsHeaders(request) } },
+    )
+  }
+  try {
+    const userToken = authHeader.slice(7).trim()
+    const verifyRes = await fetch(`${supabaseUrl}/auth/v1/user`, {
+      headers: { 'Authorization': `Bearer ${userToken}`, 'apikey': anonKey || serviceRoleKey },
+    })
+    if (!verifyRes.ok) {
+      return new Response(
+        JSON.stringify({ error: 'Unauthorized: invalid token' }),
+        { status: 401, headers: { 'Content-Type': 'application/json', ...getCorsHeaders(request) } },
+      )
+    }
+    const authUser = await verifyRes.json()
+    // Verify caller has admin role via profiles table
+    const profileRes = await fetch(`${supabaseUrl}/rest/v1/profiles?id=eq.${authUser.id}&select=role`, {
+      headers: { 'Authorization': `Bearer ${serviceRoleKey}`, 'apikey': serviceRoleKey },
+    })
+    const profiles = profileRes.ok ? await profileRes.json() : []
+    const callerRole = profiles?.[0]?.role || ''
+    const adminRoles = ['super_admin', 'admin', 'compliance_officer', 'fund_manager', 'manager']
+    if (!adminRoles.includes(callerRole)) {
+      return new Response(
+        JSON.stringify({ error: 'Forbidden: admin role required' }),
+        { status: 403, headers: { 'Content-Type': 'application/json', ...getCorsHeaders(request) } },
+      )
+    }
+  } catch (authErr) {
+    return new Response(
+      JSON.stringify({ error: 'Auth verification failed' }),
+      { status: 401, headers: { 'Content-Type': 'application/json', ...getCorsHeaders(request) } },
+    )
+  }
+
   try {
     const body: CreateEmployeeBody = await request.json()
 

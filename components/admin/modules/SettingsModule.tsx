@@ -599,13 +599,14 @@ function IntegrationsTab({ showToast }: { showToast: (msg: string, type?: 'succe
     const { getMondayApiKey, isMondayConfigured, getSavedMappings } = require('@/lib/mondayService')
 
     // Check whether the server has MONDAY_API_KEY env var configured
-    fetch('/.netlify/functions/monday-proxy', {
+    const { getAuthToken } = require('@/lib/supabase/client')
+    getAuthToken().then((token: string) => fetch('/.netlify/functions/monday-proxy', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', ...(token ? { 'Authorization': `Bearer ${token}` } : {}) },
       body: JSON.stringify({ query: '__check_config__' }),
-    })
-      .then(r => r.json())
-      .then(d => {
+    }))
+      .then((r: any) => r.json())
+      .then((d: any) => {
         if (d?.data?.serverKeyConfigured) {
           setServerKeyConfigured(true)
           // Auto-test with server key (no client key needed)

@@ -14,6 +14,7 @@ import {
   CAMPAIGN_METRICS, AI_INSIGHTS, LEAD_FUNNEL, MONTHLY_REVENUE,
   formatINRCompact,
 } from './reportsData'
+import { getAuthToken } from '@/lib/supabase/client'
 
 // ─────────────────────────────────────────────────────────────
 // SYSTEM PROMPT — Injects live business data as context
@@ -138,18 +139,17 @@ export async function callClaudeAPI(
 ): Promise<string> {
   let lastError = ''
 
+  const authToken = await getAuthToken()
   for (const model of CLAUDE_MODELS) {
     try {
       const response = await fetch(PROXY_URL, {
         method: 'POST',
-        headers: { 'content-type': 'application/json' },
+        headers: { 'content-type': 'application/json', ...(authToken ? { 'Authorization': `Bearer ${authToken}` } : {}) },
         body: JSON.stringify({
           model,
           max_tokens: 1024,
           system: SYSTEM_PROMPT,
           messages,
-          // Only forward if the user pasted their own key in settings
-          ...(apiKey ? { apiKey } : {}),
         }),
       })
 

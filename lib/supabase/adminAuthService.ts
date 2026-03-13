@@ -138,6 +138,9 @@ export async function logoutAdmin(): Promise<void> {
   } catch {
     // Best-effort signout
     try { await supabase.auth.signOut() } catch { /* ignore */ }
+  } finally {
+    // Clear localStorage session to prevent stale data / impersonation
+    try { localStorage.removeItem('ghl-admin-session') } catch { /* ignore */ }
   }
 }
 

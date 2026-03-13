@@ -43,6 +43,30 @@ export default async (request: Request) => {
     )
   }
 
+  // ── Auth Check: Require valid Supabase session ──
+  const authHeader = request.headers.get('Authorization') || ''
+  if (!authHeader.startsWith('Bearer ') || !authHeader.slice(7).trim()) {
+    return new Response(
+      JSON.stringify({ error: { message: 'Unauthorized' } }),
+      { status: 401, headers: { 'Content-Type': 'application/json', ...getCorsHeaders(request) } },
+    )
+  }
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || ''
+  const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
+  if (supabaseUrl && anonKey) {
+    try {
+      const verifyRes = await fetch(`${supabaseUrl}/auth/v1/user`, {
+        headers: { 'Authorization': authHeader, 'apikey': anonKey },
+      })
+      if (!verifyRes.ok) {
+        return new Response(
+          JSON.stringify({ error: { message: 'Unauthorized: invalid token' } }),
+          { status: 401, headers: { 'Content-Type': 'application/json', ...getCorsHeaders(request) } },
+        )
+      }
+    } catch { /* If Supabase is unreachable, allow through — proxy has its own key check */ }
+  }
+
   try {
     const body: MondayProxyBody = await request.json()
     const { query, variables } = body
