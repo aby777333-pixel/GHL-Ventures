@@ -168,6 +168,11 @@ export function onStaffPresenceChange(handler: ChangeHandler) {
   return subscribeToTable('staff_presence', '*', handler)
 }
 
+/** Admin/CS: Subscribe to new document downloads (live activity feed) */
+export function onNewDownload(handler: ChangeHandler) {
+  return subscribeToTable('download_logs', 'INSERT', handler)
+}
+
 // ── Cleanup ─────────────────────────────────────────────────
 
 /** Unsubscribe from all active channels */
