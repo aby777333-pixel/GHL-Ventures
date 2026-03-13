@@ -301,8 +301,19 @@ export async function sendChatMessage(input: {
 
   // The RPC may return the inserted row or null/void — either way,
   // no error means the message was inserted successfully.
-  const msg = data ? (Array.isArray(data) ? data[0] : data) as ChatMessage : null
-  return msg || { id: crypto.randomUUID(), session_id: input.sessionId, sender_type: input.senderType, sender_name: input.senderName || '', message: input.message, created_at: new Date().toISOString() } as ChatMessage
+  // Build a local echo so the UI can render immediately
+  const row = data ? (Array.isArray(data) ? data[0] : data) as ChatMessage : null
+  return row ?? {
+    id: `local-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    session_id: input.sessionId,
+    sender_type: input.senderType,
+    sender_id: null,
+    sender_name: input.senderName || null,
+    message: input.message,
+    attachments: [],
+    metadata: {},
+    created_at: new Date().toISOString(),
+  } as ChatMessage
 }
 
 /** Fetch message history for a chat session.

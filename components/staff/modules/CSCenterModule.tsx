@@ -309,19 +309,58 @@ function CSDashboard({ navigate, showToast }: Pick<CSCenterModuleProps, 'navigat
   )
 }
 
-// ── 2. Unified Inbox ─────────────────────────────────────────
+// ── 2. Unified Inbox (live from Supabase) ────────────────────
 function UnifiedInbox({ showToast }: Pick<CSCenterModuleProps, 'showToast'>) {
   const [channelFilter, setChannelFilter] = useState<string>('all')
   const [selectedThread, setSelectedThread] = useState<string | null>(null)
+  const [sessions, setSessions] = useState<ChatSession[]>([])
+  const [threadMsgs, setThreadMsgs] = useState<ChatMsg[]>([])
+  const [loadingInbox, setLoadingInbox] = useState(true)
+  const [inboxReply, setInboxReply] = useState('')
 
-  const channels = ['all', 'chat', 'whatsapp', 'telegram', 'email', 'call']
+  // Load all chat sessions (active + recent resolved)
+  useEffect(() => {
+    let mounted = true
+    async function load() {
+      const data = await getActiveChatSessions()
+      if (mounted) { setSessions(data); setLoadingInbox(false) }
+    }
+    load()
+    const interval = setInterval(load, 8000)
+    return () => { mounted = false; clearInterval(interval) }
+  }, [])
+
+  // Load messages when a thread is selected
+  useEffect(() => {
+    if (!selectedThread) { setThreadMsgs([]); return }
+    let mounted = true
+    async function load() {
+      const msgs = await getChatMessages(selectedThread!)
+      if (mounted) setThreadMsgs(msgs)
+    }
+    load()
+    const interval = setInterval(load, 3000)
+    return () => { mounted = false; clearInterval(interval) }
+  }, [selectedThread])
+
+  const channels = ['all', 'chat', 'whatsapp', 'email']
 
   const filtered = useMemo(() => {
-    if (channelFilter === 'all') return INBOX_THREADS
-    return INBOX_THREADS.filter(t => t.channel === channelFilter)
-  }, [channelFilter])
+    if (channelFilter === 'all') return sessions
+    return sessions.filter(s => s.channel.includes(channelFilter))
+  }, [channelFilter, sessions])
 
-  const activeThread = selectedThread ? INBOX_THREADS.find(t => t.id === selectedThread) : null
+  const activeThread = selectedThread ? sessions.find(s => s.id === selectedThread) : null
+
+  // Send reply from inbox
+  const handleInboxReply = useCallback(async () => {
+    if (!inboxReply.trim() || !selectedThread) return
+    const text = inboxReply.trim()
+    setInboxReply('')
+    const sent = await sendChatMessage({ sessionId: selectedThread, senderType: 'agent', senderName: 'CS Agent', message: text })
+    if (!sent) showToast('Message may not have been delivered', 'warning')
+    else { showToast('Reply sent', 'success'); setThreadMsgs(prev => [...prev, sent]) }
+  }, [inboxReply, selectedThread, showToast])
 
   return (
     <div className="space-y-4">
@@ -348,15 +387,19 @@ function UnifiedInbox({ showToast }: Pick<CSCenterModuleProps, 'showToast'>) {
         {/* Thread List */}
         <div className="lg:col-span-2">
           <AdminGlass padding="p-0">
-            <div className="divide-y divide-white/[0.04]">
-              {filtered.length === 0 && (
+            <div className="divide-y divide-white/[0.04] max-h-[500px] overflow-y-auto">
+              {loadingInbox ? (
+                <div className="flex items-center justify-center py-12 gap-2 text-xs text-gray-500">
+                  <Loader2 className="w-4 h-4 animate-spin" /> Loading inbox…
+                </div>
+              ) : filtered.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-12 text-center px-4">
                   <Mail className="w-8 h-8 text-gray-600 mb-3" />
                   <p className="text-sm text-gray-400">Inbox is empty</p>
                   <p className="text-xs text-gray-600 mt-1">New conversations will appear here across all channels</p>
                 </div>
-              )}
-              {filtered.map(t => (
+              ) : (
+              filtered.map(t => (
                 <div
                   key={t.id}
                   onClick={() => setSelectedThread(t.id)}
@@ -366,19 +409,19 @@ function UnifiedInbox({ showToast }: Pick<CSCenterModuleProps, 'showToast'>) {
                 >
                   <div className="flex items-center justify-between mb-1">
                     <div className="flex items-center gap-2">
-                      {channelIcon(t.channel)}
-                      <span className={`text-sm font-medium ${t.unread ? 'text-white' : 'text-gray-400'}`}>{t.clientName}</span>
-                      {t.unread && <span className="w-2 h-2 rounded-full bg-teal-400" />}
+                      {channelIcon(t.channel.replace('web_', ''))}
+                      <span className="text-sm font-medium text-white">{t.visitor_name || 'Visitor'}</span>
+                      {(t.status === 'waiting' || t.status === 'queued') && <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse" />}
                     </div>
-                    <span className="text-[10px] text-gray-600">{t.time}</span>
+                    <span className="text-[10px] text-gray-600">{new Date(t.last_message_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
                   </div>
-                  <p className="text-xs text-gray-500 truncate">{t.lastMessage}</p>
+                  <p className="text-xs text-gray-500 truncate">{t.visitor_email || t.channel}</p>
                   <div className="flex items-center gap-2 mt-1.5">
-                    <AdminBadge label={t.priority} variant={priorityVariant(t.priority)} size="sm" />
-                    <AdminBadge label={t.status} variant={statusVariant(t.status)} size="sm" />
+                    <AdminBadge label={t.status} variant={t.status === 'waiting' || t.status === 'queued' ? 'warning' as const : t.status === 'active' ? 'success' as const : 'info' as const} size="sm" />
                   </div>
                 </div>
-              ))}
+              ))
+              )}
             </div>
           </AdminGlass>
         </div>
@@ -390,47 +433,52 @@ function UnifiedInbox({ showToast }: Pick<CSCenterModuleProps, 'showToast'>) {
               <div>
                 <div className="px-5 py-4 border-b border-white/[0.06] flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    {channelIcon(activeThread.channel)}
-                    <span className="text-sm font-semibold text-white">{activeThread.clientName}</span>
-                    <AdminBadge label={activeThread.priority} variant={priorityVariant(activeThread.priority)} size="sm" />
+                    {channelIcon(activeThread.channel.replace('web_', ''))}
+                    <span className="text-sm font-semibold text-white">{activeThread.visitor_name || 'Visitor'}</span>
+                    <AdminBadge label={activeThread.status} variant={activeThread.status === 'active' ? 'success' as const : 'warning' as const} size="sm" />
                   </div>
                   <div className="flex items-center gap-2">
-                    <button onClick={() => showToast('Ticket created from thread', 'success')} className="p-1.5 rounded-lg hover:bg-white/[0.06] text-gray-500 hover:text-white transition-colors">
-                      <Plus className="w-4 h-4" />
-                    </button>
-                    <button className="p-1.5 rounded-lg hover:bg-white/[0.06] text-gray-500 hover:text-white transition-colors">
-                      <Edit3 className="w-4 h-4" />
-                    </button>
+                    {activeThread.visitor_email && <span className="text-[10px] text-gray-500">{activeThread.visitor_email}</span>}
                   </div>
                 </div>
                 <div className="px-5 py-4 space-y-3 max-h-[400px] overflow-y-auto">
-                  {THREAD_MESSAGES.map((m, i) => (
-                    <div key={i} className={`flex ${m.sender === 'agent' ? 'justify-end' : 'justify-start'}`}>
+                  {threadMsgs.length === 0 ? (
+                    <div className="flex items-center justify-center py-12 text-xs text-gray-500">No messages yet</div>
+                  ) : threadMsgs.map((m) => (
+                    <div key={m.id} className={`flex ${m.sender_type === 'agent' ? 'justify-end' : m.sender_type === 'system' ? 'justify-center' : 'justify-start'}`}>
+                      {m.sender_type === 'system' ? (
+                        <span className="px-3 py-1 rounded-full text-[10px] text-gray-500 bg-white/5">{m.message}</span>
+                      ) : (
                       <div className={`max-w-[80%] rounded-xl px-4 py-2.5 ${
-                        m.sender === 'agent'
+                        m.sender_type === 'agent'
                           ? 'bg-teal-500/15 border border-teal-500/20 text-teal-100'
                           : 'bg-white/[0.06] border border-white/[0.08] text-gray-300'
                       }`}>
+                        {m.sender_name && m.sender_type === 'visitor' && <p className="text-[10px] text-teal-400 font-medium mb-0.5">{m.sender_name}</p>}
                         <p className="text-xs">{m.message}</p>
-                        <p className="text-[10px] text-gray-600 mt-1">{m.time}</p>
+                        <p className="text-[10px] text-gray-600 mt-1">{new Date(m.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p>
                       </div>
+                      )}
                     </div>
                   ))}
                 </div>
                 <div className="px-5 py-3 border-t border-white/[0.06]">
-                  <div className="flex items-center gap-2">
+                  <form onSubmit={(e) => { e.preventDefault(); handleInboxReply() }} className="flex items-center gap-2">
                     <input
                       type="text"
+                      value={inboxReply}
+                      onChange={(e) => setInboxReply(e.target.value)}
                       placeholder="Type a reply..."
                       className="flex-1 px-4 py-2 text-xs bg-white/[0.04] border border-white/[0.08] rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-teal-500/40"
                     />
                     <button
-                      onClick={() => showToast('Message sent', 'success')}
-                      className="p-2 rounded-xl bg-teal-500/20 text-teal-400 hover:bg-teal-500/30 transition-colors"
+                      type="submit"
+                      disabled={!inboxReply.trim()}
+                      className="p-2 rounded-xl bg-teal-500/20 text-teal-400 hover:bg-teal-500/30 transition-colors disabled:opacity-30"
                     >
                       <Send className="w-4 h-4" />
                     </button>
-                  </div>
+                  </form>
                 </div>
               </div>
             ) : (
@@ -924,17 +972,19 @@ function ChatView({ showToast }: Pick<CSCenterModuleProps, 'showToast'>) {
     }
   }, [])
 
-  // Play alert ring sound helper (two-tone ring pattern)
+  // Play alert ring sound helper — loud 3-ring pattern for incoming chats
   const playAlertSound = useCallback(() => {
     try {
       const ctx = new (window.AudioContext || (window as any).webkitAudioContext)()
       const now = ctx.currentTime
-      // Ring pattern: two short ascending tones repeated twice
+      // 3 ascending ring bursts — louder & longer so agents notice
       const tones = [
-        { freq: 800, start: 0, dur: 0.15 },
-        { freq: 1000, start: 0.18, dur: 0.15 },
-        { freq: 800, start: 0.5, dur: 0.15 },
-        { freq: 1000, start: 0.68, dur: 0.15 },
+        { freq: 880, start: 0, dur: 0.18 },
+        { freq: 1100, start: 0.22, dur: 0.18 },
+        { freq: 880, start: 0.6, dur: 0.18 },
+        { freq: 1100, start: 0.82, dur: 0.18 },
+        { freq: 880, start: 1.2, dur: 0.18 },
+        { freq: 1100, start: 1.42, dur: 0.18 },
       ]
       tones.forEach(t => {
         const osc = ctx.createOscillator()
@@ -943,7 +993,7 @@ function ChatView({ showToast }: Pick<CSCenterModuleProps, 'showToast'>) {
         gain.connect(ctx.destination)
         osc.frequency.value = t.freq
         osc.type = 'sine'
-        gain.gain.setValueAtTime(0.25, now + t.start)
+        gain.gain.setValueAtTime(0.6, now + t.start)
         gain.gain.exponentialRampToValueAtTime(0.001, now + t.start + t.dur)
         osc.start(now + t.start)
         osc.stop(now + t.start + t.dur + 0.05)
@@ -1656,18 +1706,19 @@ function LeadAlertsView({ showToast }: { showToast: (msg: string, type?: 'succes
       const name = [row?.first_name, row?.last_name].filter(Boolean).join(' ') || 'New Lead'
       const source = row?.source || 'website'
 
-      // Play alarm sound (925 Hz beep)
+      // Play alarm sound — louder 3-beep pattern
       try {
         const ctx = new AudioContext()
-        const osc = ctx.createOscillator()
-        const gain = ctx.createGain()
-        osc.connect(gain)
-        gain.connect(ctx.destination)
-        osc.frequency.value = 925
-        gain.gain.value = 0.3
-        osc.start()
-        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.5)
-        osc.stop(ctx.currentTime + 0.5)
+        const now = ctx.currentTime
+        ;[0, 0.35, 0.7].forEach(offset => {
+          const osc = ctx.createOscillator()
+          const gain = ctx.createGain()
+          osc.connect(gain); gain.connect(ctx.destination)
+          osc.frequency.value = 925
+          gain.gain.setValueAtTime(0.55, now + offset)
+          gain.gain.exponentialRampToValueAtTime(0.001, now + offset + 0.25)
+          osc.start(now + offset); osc.stop(now + offset + 0.3)
+        })
       } catch {}
 
       // Browser notification
@@ -1691,17 +1742,19 @@ function LeadAlertsView({ showToast }: { showToast: (msg: string, type?: 'succes
       const name = row?.full_name || 'Unknown'
       const formType = row?.form_type || 'contact'
 
+      // Louder 2-beep pattern for form submissions
       try {
         const ctx = new AudioContext()
-        const osc = ctx.createOscillator()
-        const gain = ctx.createGain()
-        osc.connect(gain)
-        gain.connect(ctx.destination)
-        osc.frequency.value = 800
-        gain.gain.value = 0.2
-        osc.start()
-        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.4)
-        osc.stop(ctx.currentTime + 0.4)
+        const now = ctx.currentTime
+        ;[0, 0.3].forEach(offset => {
+          const osc = ctx.createOscillator()
+          const gain = ctx.createGain()
+          osc.connect(gain); gain.connect(ctx.destination)
+          osc.frequency.value = 800
+          gain.gain.setValueAtTime(0.5, now + offset)
+          gain.gain.exponentialRampToValueAtTime(0.001, now + offset + 0.2)
+          osc.start(now + offset); osc.stop(now + offset + 0.25)
+        })
       } catch {}
 
       if (Notification.permission === 'granted') {
