@@ -37,6 +37,8 @@ const FAQ_ITEMS = [
 
 export default function ContactPage() {
   const [submitted, setSubmitted] = useState(false)
+  const [submitting, setSubmitting] = useState(false)
+  const [error, setError] = useState('')
   const [openFaq, setOpenFaq] = useState<number | null>(null)
   const [formData, setFormData] = useState({
     name: '',
@@ -53,8 +55,8 @@ export default function ContactPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    // Save to Supabase (non-blocking — shows success immediately)
-    setSubmitted(true)
+    setError('')
+    setSubmitting(true)
     try {
       await Promise.all([
         submitContactForm({
@@ -79,8 +81,12 @@ export default function ContactPage() {
           message: formData.message,
         }),
       ])
+      setSubmitted(true)
     } catch (err) {
-      console.warn('Form submission to Supabase failed (non-critical):', err)
+      console.warn('Form submission to Supabase failed:', err)
+      setError('Something went wrong. Please try again.')
+    } finally {
+      setSubmitting(false)
     }
   }
 
@@ -199,6 +205,8 @@ export default function ContactPage() {
                                 id="contact-phone"
                                 type="tel"
                                 required
+                                pattern="[0-9]{10}"
+                                title="Please enter a valid 10-digit mobile number"
                                 className="input-field pl-14"
                                 placeholder="XXXXX XXXXX"
                                 value={formData.phone}
@@ -335,10 +343,17 @@ export default function ContactPage() {
                           </label>
                         </div>
 
+                        {/* Error Message */}
+                        {error && (
+                          <div className="text-red-600 text-sm font-medium bg-red-50 border border-red-200 rounded-lg px-4 py-3">
+                            {error}
+                          </div>
+                        )}
+
                         {/* Submit */}
-                        <button type="submit" className="btn-primary w-full text-center">
+                        <button type="submit" disabled={submitting} className="btn-primary w-full text-center disabled:opacity-60 disabled:cursor-not-allowed">
                           <Send className="w-4 h-4 mr-2" />
-                          Request a Consultation
+                          {submitting ? 'Submitting...' : 'Request a Consultation'}
                         </button>
                       </form>
                     </>

@@ -40,6 +40,8 @@ export default function GrievancePage() {
     privacy: false,
   })
   const [submitted, setSubmitted] = useState(false)
+  const [submitting, setSubmitting] = useState(false)
+  const [error, setError] = useState('')
   const [openEscalation, setOpenEscalation] = useState<number | null>(null)
 
   const handleChange = (field: string, value: string | boolean) => {
@@ -48,7 +50,8 @@ export default function GrievancePage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    setSubmitted(true)
+    setError('')
+    setSubmitting(true)
     try {
       await Promise.all([
         submitContactForm({
@@ -69,7 +72,13 @@ export default function GrievancePage() {
           message: `Complaint: ${formData.complaintType}\n${formData.description}`,
         }),
       ])
-    } catch (err) { console.warn('Grievance form Supabase error:', err) }
+      setSubmitted(true)
+    } catch (err) {
+      console.warn('Grievance form Supabase error:', err)
+      setError('Something went wrong. Please try again.')
+    } finally {
+      setSubmitting(false)
+    }
   }
 
   return (
@@ -152,7 +161,7 @@ export default function GrievancePage() {
                       <input type="email" placeholder="Email *" required className="input-field" value={formData.email} onChange={(e) => handleChange('email', e.target.value)} />
                       <div className="relative">
                         <span className="absolute left-4 top-1/2 -translate-y-1/2 text-brand-grey text-sm">+91</span>
-                        <input type="tel" placeholder="Phone *" required className="input-field pl-14" value={formData.phone} onChange={(e) => handleChange('phone', e.target.value)} />
+                        <input type="tel" placeholder="Phone *" required pattern="[0-9]{10}" title="Please enter a valid 10-digit mobile number" className="input-field pl-14" value={formData.phone} onChange={(e) => handleChange('phone', e.target.value)} />
                       </div>
                       <input type="text" placeholder="Folio / Account Number (if known)" className="input-field" value={formData.folioNumber} onChange={(e) => handleChange('folioNumber', e.target.value)} />
                     </div>
@@ -201,8 +210,14 @@ export default function GrievancePage() {
                     <span className="text-xs text-brand-grey">I certify that the information provided is accurate to the best of my knowledge and consent to GHL India Ventures processing this complaint.</span>
                   </label>
 
-                  <button type="submit" className="btn-primary w-full text-center flex items-center justify-center gap-2">
-                    <Send className="w-4 h-4" /> Submit Grievance
+                  {error && (
+                    <div className="text-red-600 text-sm font-medium bg-red-50 border border-red-200 rounded-lg px-4 py-3">
+                      {error}
+                    </div>
+                  )}
+
+                  <button type="submit" disabled={submitting} className="btn-primary w-full text-center flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed">
+                    <Send className="w-4 h-4" /> {submitting ? 'Submitting...' : 'Submit Grievance'}
                   </button>
                 </form>
               ) : (

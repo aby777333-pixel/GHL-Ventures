@@ -94,10 +94,13 @@ function DownloadCard({
     accredited: false,
   })
   const [downloaded, setDownloaded] = useState(false)
+  const [submitting, setSubmitting] = useState(false)
+  const [error, setError] = useState('')
 
   const handleDownload = async (e: React.FormEvent) => {
     e.preventDefault()
-    setDownloaded(true)
+    setError('')
+    setSubmitting(true)
 
     // 1. Capture lead + contact submission (feeds Admin Sales Pipeline & CS Lead Queue)
     let contactResult: any = null
@@ -124,7 +127,10 @@ function DownloadCard({
         }),
       ])
     } catch (err) {
-      console.warn('Download lead capture failed (non-critical):', err)
+      console.warn('Download lead capture failed:', err)
+      setError('Something went wrong. Please try again.')
+      setSubmitting(false)
+      return
     }
 
     // 2. Log download activity (feeds Admin Analytics & CS Follow-up)
@@ -158,6 +164,9 @@ function DownloadCard({
     } catch {
       // Fallback — email delivery
     }
+
+    setDownloaded(true)
+    setSubmitting(false)
   }
 
   return (
@@ -256,6 +265,8 @@ function DownloadCard({
                       id={`${section.id}-phone`}
                       type="tel"
                       required
+                      pattern="[0-9]{10}"
+                      title="Please enter a valid 10-digit mobile number"
                       className="input-field text-sm pl-12"
                       placeholder="XXXXX XXXXX"
                       value={gateForm.phone}
@@ -276,9 +287,15 @@ function DownloadCard({
                   </span>
                 </label>
 
-                <button type="submit" className="btn-primary w-full text-center">
+                {error && (
+                  <div className="text-red-600 text-sm font-medium bg-red-50 border border-red-200 rounded-lg px-4 py-3">
+                    {error}
+                  </div>
+                )}
+
+                <button type="submit" disabled={submitting} className="btn-primary w-full text-center disabled:opacity-60 disabled:cursor-not-allowed">
                   <Download className="w-4 h-4 mr-2" />
-                  Download Now
+                  {submitting ? 'Processing...' : 'Download Now'}
                 </button>
 
                 <p className="text-[11px] text-brand-grey text-center">
