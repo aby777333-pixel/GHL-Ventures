@@ -294,9 +294,10 @@ export async function sendChatMessage(input: {
   // Also update last_message_at on the session (the DB trigger handles this,
   // but update status to 'active' if agent sent the first reply)
   if (input.senderType === 'agent') {
-    await db.rpc('mark_chat_session_active', {
+    const { error: markErr } = await db.rpc('mark_chat_session_active', {
       p_session_id: input.sessionId,
-    }).catch(() => {}) // Non-critical — trigger handles the core update
+    })
+    if (markErr) console.warn('[chatService] mark_chat_session_active:', markErr.message)
   }
 
   // The RPC may return the inserted row or null/void — either way,
@@ -594,26 +595,27 @@ export async function upsertStaffPresence(input: {
   role?: string
 }): Promise<void> {
   if (!isSupabaseConfigured()) return
-  await db.rpc('upsert_staff_presence', {
+  const { error: presErr } = await db.rpc('upsert_staff_presence', {
     p_user_id: input.userId,
     p_status: input.status || 'online',
     p_display_name: input.displayName || null,
     p_role: input.role || null,
-  }).catch((e: any) => console.error('[chatService] upsertStaffPresence:', e.message))
+  })
+  if (presErr) console.error('[chatService] upsertStaffPresence:', presErr.message)
 }
 
 /** Update staff status only */
 export async function updateStaffStatus(userId: string, status: string): Promise<void> {
   if (!isSupabaseConfigured()) return
-  await db.rpc('update_staff_status', { p_user_id: userId, p_status: status })
-    .catch((e: any) => console.error('[chatService] updateStaffStatus:', e.message))
+  const { error: statusErr } = await db.rpc('update_staff_status', { p_user_id: userId, p_status: status })
+  if (statusErr) console.error('[chatService] updateStaffStatus:', statusErr.message)
 }
 
 /** Staff heartbeat — update last_seen */
 export async function staffHeartbeat(userId: string): Promise<void> {
   if (!isSupabaseConfigured()) return
-  await db.rpc('staff_heartbeat', { p_user_id: userId })
-    .catch(() => {}) // Silent — non-critical
+  const { error: hbErr } = await db.rpc('staff_heartbeat', { p_user_id: userId })
+  if (hbErr) { /* silent — non-critical */ }
 }
 
 /** Get all online staff members */
