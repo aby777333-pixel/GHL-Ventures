@@ -138,6 +138,7 @@ export const ALL_STAFF_TAB_PARAMS = [
   { tab: ['cs', 'whatsapp'] }, { tab: ['cs', 'telegram'] }, { tab: ['cs', 'email'] },
   { tab: ['cs', 'social'] }, { tab: ['cs', 'knowledge-base'] }, { tab: ['cs', 'scripts'] },
   { tab: ['cs', 'quality'] }, { tab: ['cs', 'escalations'] }, { tab: ['cs', 'csat'] },
+  { tab: ['cs', 'leads'] },
   // Field
   { tab: ['field'] }, { tab: ['field', 'check-in'] }, { tab: ['field', 'visits'] },
   { tab: ['field', 'capture'] }, { tab: ['field', 'reports'] }, { tab: ['field', 'route'] },
