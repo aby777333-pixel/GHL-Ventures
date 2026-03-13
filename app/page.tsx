@@ -187,9 +187,10 @@ const STARS = [
   { x: 28, y: 85, size: 'lg', delay: 0.8 }, { x: 62, y: 8, size: 'lg', delay: 1.5 },
 ]
 
-/* Business TV — TradingView Timeline (financial news & analysis feed) */
+/* Business TV — Bloomberg TV livestream (default) + Business News tab */
 function LiveFinancialTV() {
   const [widgetLoaded, setWidgetLoaded] = useState(false)
+  const [tvTab, setTvTab] = useState<'bloomberg' | 'news'>('bloomberg')
 
   useEffect(() => {
     setWidgetLoaded(true)
@@ -197,8 +198,48 @@ function LiveFinancialTV() {
 
   return (
     <div className="relative rounded-2xl overflow-hidden border border-white/10 bg-black/40 backdrop-blur-sm">
-      <div className="relative bg-black" style={{ height: '380px' }}>
-        {widgetLoaded && (
+      {/* Tab switcher */}
+      <div className="flex items-center gap-1 px-3 pt-3 pb-1 relative z-20">
+        <div className="flex items-center gap-0.5 bg-white/5 rounded-full p-0.5">
+          <button
+            onClick={() => setTvTab('bloomberg')}
+            className={`px-3 py-1.5 rounded-full text-[9px] font-bold uppercase tracking-wider transition-all flex items-center gap-1.5 ${
+              tvTab === 'bloomberg' ? 'bg-brand-red text-white' : 'text-gray-400 hover:text-white'
+            }`}
+          >
+            <span className="relative flex h-1.5 w-1.5">
+              <span className={`absolute inline-flex h-full w-full rounded-full bg-red-500 opacity-75 ${tvTab === 'bloomberg' ? 'animate-ping' : ''}`} />
+              <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-red-500" />
+            </span>
+            Bloomberg TV
+          </button>
+          <button
+            onClick={() => setTvTab('news')}
+            className={`px-3 py-1.5 rounded-full text-[9px] font-bold uppercase tracking-wider transition-all ${
+              tvTab === 'news' ? 'bg-brand-red text-white' : 'text-gray-400 hover:text-white'
+            }`}
+          >
+            Business News
+          </button>
+        </div>
+      </div>
+
+      <div className="relative bg-black" style={{ height: '340px' }}>
+        {/* Bloomberg TV Livestream — YouTube embed */}
+        {tvTab === 'bloomberg' && widgetLoaded && (
+          <iframe
+            key="bloomberg-tv-live"
+            src="https://www.youtube.com/embed/dp8PhLsUcFE?autoplay=1&mute=1&loop=1&controls=1&modestbranding=1&rel=0&showinfo=0"
+            title="Bloomberg TV — Live"
+            className="w-full h-full border-0"
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+            allowFullScreen
+            loading="lazy"
+          />
+        )}
+
+        {/* Business News Feed — TradingView Timeline */}
+        {tvTab === 'news' && widgetLoaded && (
           <iframe
             key="tradingview-timeline"
             src={`https://s.tradingview.com/embed-widget/timeline/?locale=en#${encodeURIComponent(JSON.stringify({
@@ -215,30 +256,6 @@ function LiveFinancialTV() {
             loading="lazy"
           />
         )}
-      </div>
-      {/* Business TV badge */}
-      <div className="absolute top-3 left-3 z-10 flex items-center gap-2 px-3 py-1 bg-black/70 backdrop-blur-sm rounded-full border border-white/10">
-        <span className="relative flex h-2 w-2">
-          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-500 opacity-75" />
-          <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500" />
-        </span>
-        <span className="text-white text-[10px] font-bold uppercase tracking-wider">Business TV</span>
-      </div>
-      {/* Branding bar with Bloomberg TV external link */}
-      <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/90 via-black/70 to-transparent p-3 pt-8">
-        <div className="flex items-center gap-2">
-          <span className="px-2.5 py-1 rounded-full text-[9px] font-semibold uppercase tracking-wider bg-brand-red text-white">
-            Business News
-          </span>
-          <a
-            href="https://www.bloomberg.com/live"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="px-2.5 py-1 rounded-full text-[9px] font-semibold uppercase tracking-wider bg-white/10 text-white hover:bg-white/20 transition-colors flex items-center gap-1"
-          >
-            Watch Bloomberg TV <ExternalLink className="w-2.5 h-2.5" />
-          </a>
-        </div>
       </div>
     </div>
   )
@@ -393,17 +410,17 @@ function HeroSection() {
               <LiveFinancialTV />
             </AnimatedSection>
 
-            {/* Market Hotlists — Top Gainers, Losers, Most Active */}
+            {/* Market Hotlists — Top Gainers, Losers, Most Active (compact + scrollable) */}
             <AnimatedSection delay={600} direction="right">
               <div className="relative rounded-2xl overflow-hidden border border-white/10 bg-black/40 backdrop-blur-sm">
-                <div className="overflow-hidden" style={{ height: '290px' }}>
+                <div className="overflow-y-auto scrollbar-hide" style={{ height: '200px' }}>
                   <iframe
                     key="hotlists-widget"
                     src={`https://s.tradingview.com/embed-widget/hotlists/?locale=en#${encodeURIComponent(JSON.stringify({
                       colorTheme: 'dark',
                       dateRange: '12M',
                       exchange: 'BSE',
-                      showChart: true,
+                      showChart: false,
                       showSymbolLogo: true,
                       width: '100%',
                       height: '100%',
@@ -420,18 +437,20 @@ function HeroSection() {
                     }))}`}
                     title="Market Hotlists — Top Movers"
                     className="w-full border-0"
-                    style={{ height: '350px' }}
+                    style={{ height: '460px' }}
                     loading="lazy"
                   />
                 </div>
                 {/* Live badge */}
-                <div className="absolute top-3 right-3 z-10 flex items-center gap-1.5">
+                <div className="absolute top-2 right-3 z-10 flex items-center gap-1.5">
                   <span className="relative flex h-2 w-2">
                     <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-500 opacity-75" />
                     <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500" />
                   </span>
                   <span className="text-green-400 text-[9px] font-semibold uppercase tracking-wider">Live</span>
                 </div>
+                {/* Scroll hint gradient at bottom */}
+                <div className="absolute bottom-0 left-0 right-0 h-6 bg-gradient-to-t from-black/80 to-transparent pointer-events-none" />
               </div>
             </AnimatedSection>
           </div>
