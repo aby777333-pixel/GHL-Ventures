@@ -190,7 +190,7 @@ const STARS = [
 /* Business TV — Bloomberg Quicktake live (default) + India Markets + News feed */
 function LiveFinancialTV() {
   const [widgetLoaded, setWidgetLoaded] = useState(false)
-  const [tvTab, setTvTab] = useState<'bloomberg' | 'ndtv' | 'india' | 'news'>('bloomberg')
+  const [tvTab, setTvTab] = useState<'bloomberg' | 'india' | 'news'>('bloomberg')
 
   useEffect(() => {
     setWidgetLoaded(true)
@@ -212,18 +212,6 @@ function LiveFinancialTV() {
               <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-red-500" />
             </span>
             Bloomberg
-          </button>
-          <button
-            onClick={() => setTvTab('ndtv')}
-            className={`px-2.5 py-1.5 rounded-full text-[9px] font-bold uppercase tracking-wider transition-all flex items-center gap-1.5 ${
-              tvTab === 'ndtv' ? 'bg-brand-red text-white' : 'text-gray-400 hover:text-white'
-            }`}
-          >
-            <span className="relative flex h-1.5 w-1.5">
-              <span className={`absolute inline-flex h-full w-full rounded-full bg-blue-500 opacity-75 ${tvTab === 'ndtv' ? 'animate-ping' : ''}`} />
-              <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-blue-500" />
-            </span>
-            NDTV Profit
           </button>
           <button
             onClick={() => setTvTab('india')}
@@ -255,19 +243,6 @@ function LiveFinancialTV() {
             key="bloomberg-quicktake-live"
             src="https://www.youtube.com/embed/live_stream?channel=UChirEOpgFCupRAk5etXqPaA&autoplay=1&mute=1&modestbranding=1&rel=0"
             title="Bloomberg Quicktake — Live"
-            className="w-full h-full border-0"
-            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-            allowFullScreen
-            loading="lazy"
-          />
-        )}
-
-        {/* NDTV Profit — Live Business News */}
-        {tvTab === 'ndtv' && widgetLoaded && (
-          <iframe
-            key="ndtv-profit-live"
-            src="https://www.youtube.com/embed/live_stream?channel=UC3uJIdRFTGgLWrUziaHbzrg&autoplay=1&mute=1&modestbranding=1&rel=0"
-            title="NDTV Profit — Live"
             className="w-full h-full border-0"
             allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
             allowFullScreen
@@ -825,7 +800,7 @@ function PortfolioSpotlight() {
             <div className="card group hover-lift h-full overflow-hidden glow-card-amber relative">
               <div className="relative aspect-[16/9] -mx-6 -mt-6 mb-6 overflow-hidden">
                 <img
-                  src="https://images.unsplash.com/photo-1509391366360-2e959784a276?w=900&q=80&fit=crop&auto=format"
+                  src="https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=900&q=80&fit=crop&auto=format"
                   alt="Solar energy farm — Narikudi, Madurai"
                   className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
                   loading="lazy"
@@ -862,7 +837,7 @@ function PortfolioSpotlight() {
             <div className="card group hover-lift h-full overflow-hidden glow-card-blue relative">
               <div className="relative aspect-[16/9] -mx-6 -mt-6 mb-6 overflow-hidden">
                 <img
-                  src="https://images.unsplash.com/photo-1590274853856-f22d5ee3d228?w=900&q=80&fit=crop&auto=format"
+                  src="https://images.unsplash.com/photo-1560518883-ce09059eeffa?w=900&q=80&fit=crop&auto=format"
                   alt="Strategic land development — Karadivavi, Coimbatore"
                   className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
                   loading="lazy"
