@@ -677,6 +677,39 @@
   color: #9CA3AF !important;
 }
 
+/* Blog & article dark mode fixes */
+:root.dark .bg-gray-50 {
+  background-color: rgba(255,255,255,0.04) !important;
+}
+
+:root.dark .bg-gray-100 {
+  background-color: rgba(255,255,255,0.06) !important;
+}
+
+:root.dark .bg-gradient-to-t.from-white {
+  --tw-gradient-from: #111111 !important;
+}
+
+:root.dark .from-brand-red\/5 {
+  --tw-gradient-from: rgba(208, 2, 27, 0.1) !important;
+}
+
+:root.dark .to-red-50 {
+  --tw-gradient-to: rgba(208, 2, 27, 0.08) !important;
+}
+
+:root.dark .text-gray-700 {
+  color: #D1D5DB !important;
+}
+
+:root.dark .text-gray-800 {
+  color: #E5E7EB !important;
+}
+
+:root.dark .hover\:bg-gray-50:hover {
+  background-color: rgba(255,255,255,0.06) !important;
+}
+
 :root.dark ::-webkit-scrollbar-track {
   background: #111;
 }

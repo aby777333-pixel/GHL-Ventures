@@ -190,7 +190,7 @@ const STARS = [
 /* Business TV — Bloomberg Quicktake live (default) + India Markets + News feed */
 function LiveFinancialTV() {
   const [widgetLoaded, setWidgetLoaded] = useState(false)
-  const [tvTab, setTvTab] = useState<'bloomberg' | 'india' | 'news'>('bloomberg')
+  const [tvTab, setTvTab] = useState<'bloomberg' | 'ndtv' | 'india' | 'news'>('bloomberg')
 
   useEffect(() => {
     setWidgetLoaded(true)
@@ -212,6 +212,18 @@ function LiveFinancialTV() {
               <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-red-500" />
             </span>
             Bloomberg
+          </button>
+          <button
+            onClick={() => setTvTab('ndtv')}
+            className={`px-2.5 py-1.5 rounded-full text-[9px] font-bold uppercase tracking-wider transition-all flex items-center gap-1.5 ${
+              tvTab === 'ndtv' ? 'bg-brand-red text-white' : 'text-gray-400 hover:text-white'
+            }`}
+          >
+            <span className="relative flex h-1.5 w-1.5">
+              <span className={`absolute inline-flex h-full w-full rounded-full bg-blue-500 opacity-75 ${tvTab === 'ndtv' ? 'animate-ping' : ''}`} />
+              <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-blue-500" />
+            </span>
+            NDTV Profit
           </button>
           <button
             onClick={() => setTvTab('india')}
@@ -243,6 +255,19 @@ function LiveFinancialTV() {
             key="bloomberg-quicktake-live"
             src="https://www.youtube.com/embed/live_stream?channel=UChirEOpgFCupRAk5etXqPaA&autoplay=1&mute=1&modestbranding=1&rel=0"
             title="Bloomberg Quicktake — Live"
+            className="w-full h-full border-0"
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+            allowFullScreen
+            loading="lazy"
+          />
+        )}
+
+        {/* NDTV Profit — Live Business News */}
+        {tvTab === 'ndtv' && widgetLoaded && (
+          <iframe
+            key="ndtv-profit-live"
+            src="https://www.youtube.com/embed/live_stream?channel=UCRhdkx4aF2Jv6q_q0FHlIig&autoplay=1&mute=1&modestbranding=1&rel=0"
+            title="NDTV Profit — Live"
             className="w-full h-full border-0"
             allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
             allowFullScreen
@@ -788,36 +813,86 @@ function PortfolioSpotlight() {
   return (
     <section className="section-padding bg-white">
       <div className="container-max mx-auto">
-        <AnimatedSection className="text-center mb-10">
-          <span className="eyebrow">Portfolio</span>
-          <h2 className="section-title mt-3 text-brand-black">Companies We Back</h2>
-          <p className="section-subtitle mx-auto mt-4">Partnering with visionary founders building transformative businesses across India.</p>
+        <AnimatedSection className="text-center mb-12">
+          <span className="eyebrow">Strategic Acquisitions</span>
+          <h2 className="section-title mt-3 text-brand-black">High-Value Land Assets</h2>
+          <p className="section-subtitle mx-auto mt-4">Acquired at ~40% below market value &mdash; strategically positioned for renewable energy and industrial expansion across Tamil Nadu.</p>
         </AnimatedSection>
 
-        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-8">
-          {PORTFOLIO_COMPANIES.slice(0, 6).map((company, i) => (
-            <AnimatedSection key={company.name} delay={i * 100}>
-              <div className="card group hover-lift h-full">
-                <div className="w-14 h-14 bg-brand-offwhite rounded-xl flex items-center justify-center mb-5 icon-ring-hover">
-                  <Building2 className="w-7 h-7 text-brand-red" />
+        <div className="grid lg:grid-cols-2 gap-10">
+          {/* Project 1: Narikudi Solar */}
+          <AnimatedSection delay={100}>
+            <div className="card group hover-lift h-full overflow-hidden glow-card-amber relative">
+              <div className="relative aspect-[16/9] -mx-6 -mt-6 mb-6 overflow-hidden">
+                <img
+                  src="https://images.unsplash.com/photo-1509391366360-2e959784a276?w=900&q=80&fit=crop&auto=format"
+                  alt="Solar energy farm — Narikudi, Madurai"
+                  className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+                  loading="lazy"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
+                <div className="absolute bottom-4 left-5 right-5">
+                  <span className="inline-block px-3 py-1 bg-brand-red/90 text-white text-[10px] font-bold uppercase tracking-wider rounded-full mb-2 trust-badge badge-bounce">Renewable Energy</span>
+                  <h3 className="text-white text-xl font-bold">Narikudi, Madurai</h3>
                 </div>
-                <div className="flex items-center justify-between mb-3">
-                  <h3 className="font-bold text-lg text-brand-black">{company.name}</h3>
-                  <span className="text-[11px] bg-brand-red/10 text-brand-red px-2.5 py-1 rounded-full font-semibold">
-                    {company.stage}
-                  </span>
-                </div>
-                <p className="text-brand-grey text-sm mb-4 leading-relaxed">{company.description}</p>
-                <span className="text-xs font-semibold text-brand-grey uppercase tracking-widest">{company.sector}</span>
               </div>
-            </AnimatedSection>
-          ))}
-        </div>
+              <p className="text-brand-grey text-sm leading-relaxed mb-5">
+                ~145 acres of contiguous land ideal for large-scale solar power development. Situated close to a major power substation and near the Greenko Group&apos;s existing solar infrastructure. A Dubai-based buyer has expressed strong interest.
+              </p>
+              <div className="grid grid-cols-2 gap-4 mb-5">
+                <div className="bg-brand-offwhite rounded-xl p-4 text-center">
+                  <div className="text-xl font-bold text-brand-red">{'\u20B9'}22.5 Cr</div>
+                  <div className="text-[11px] text-brand-grey font-medium mt-1">Acquisition Cost</div>
+                </div>
+                <div className="bg-brand-offwhite rounded-xl p-4 text-center">
+                  <div className="text-xl font-bold text-brand-red">{'\u20B9'}25 Cr</div>
+                  <div className="text-[11px] text-brand-grey font-medium mt-1">Projected Value</div>
+                </div>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <span className="px-3 py-1 bg-green-500/10 text-green-700 text-xs font-semibold rounded-full">40% Below Market</span>
+                <span className="px-3 py-1 bg-amber-500/10 text-amber-700 text-xs font-semibold rounded-full flex items-center"><MapPin className="w-3 h-3 mr-1" />~145 Acres</span>
+                <span className="px-3 py-1 bg-blue-500/10 text-blue-700 text-xs font-semibold rounded-full">Grid Connected</span>
+              </div>
+            </div>
+          </AnimatedSection>
 
-        <div className="text-center mt-10">
-          <Link href="/portfolio" className="btn-outline-red">
-            View Full Portfolio <ArrowRight className="ml-2 w-4 h-4" />
-          </Link>
+          {/* Project 2: Karadivavi Industrial */}
+          <AnimatedSection delay={250}>
+            <div className="card group hover-lift h-full overflow-hidden glow-card-blue relative">
+              <div className="relative aspect-[16/9] -mx-6 -mt-6 mb-6 overflow-hidden">
+                <img
+                  src="https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?w=900&q=80&fit=crop&auto=format"
+                  alt="Industrial corridor — Karadivavi, Coimbatore"
+                  className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+                  loading="lazy"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
+                <div className="absolute bottom-4 left-5 right-5">
+                  <span className="inline-block px-3 py-1 bg-brand-red/90 text-white text-[10px] font-bold uppercase tracking-wider rounded-full mb-2 trust-badge badge-bounce">Industrial &amp; Defence</span>
+                  <h3 className="text-white text-xl font-bold">Karadivavi, Coimbatore</h3>
+                </div>
+              </div>
+              <p className="text-brand-grey text-sm leading-relaxed mb-5">
+                30-acre strategic land parcel near the Defence Corridor and Sulur Airbase. The surrounding area is rapidly evolving into a major industrial and logistics hub with growing defence and manufacturing investments.
+              </p>
+              <div className="grid grid-cols-2 gap-4 mb-5">
+                <div className="bg-brand-offwhite rounded-xl p-4 text-center">
+                  <div className="text-xl font-bold text-brand-red">{'\u20B9'}45 Cr</div>
+                  <div className="text-[11px] text-brand-grey font-medium mt-1">Acquisition Cost</div>
+                </div>
+                <div className="bg-brand-offwhite rounded-xl p-4 text-center">
+                  <div className="text-xl font-bold text-brand-red">{'\u20B9'}75 Cr</div>
+                  <div className="text-[11px] text-brand-grey font-medium mt-1">Projected Value</div>
+                </div>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <span className="px-3 py-1 bg-green-500/10 text-green-700 text-xs font-semibold rounded-full">40% Below Market</span>
+                <span className="px-3 py-1 bg-amber-500/10 text-amber-700 text-xs font-semibold rounded-full flex items-center"><MapPin className="w-3 h-3 mr-1" />~30 Acres</span>
+                <span className="px-3 py-1 bg-purple-500/10 text-purple-700 text-xs font-semibold rounded-full">Defence Corridor</span>
+              </div>
+            </div>
+          </AnimatedSection>
         </div>
       </div>
     </section>

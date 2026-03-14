@@ -59,7 +59,7 @@ export const NAV_LINKS = [
   },
   { label: 'Blog', href: '/blog' },
   { label: 'Financial IQ', href: '/financial-iq' },
-  { label: 'Portfolio', href: '/portfolio' },
+  // { label: 'Portfolio', href: '/portfolio' },
   {
     label: 'Education',
     href: '#',
@@ -288,64 +288,36 @@ export const ADVISORY_BOARD = [
 
 export const PORTFOLIO_COMPANIES = [
   {
-    name: 'Montieth Square Residences',
-    sector: 'Stressed Real Estate',
+    name: 'Narikudi Solar Land, Madurai',
+    sector: 'Renewable Energy',
     description:
-      'Revitalisation of a stalled 120-unit residential project in Egmore, Chennai, acquired through NCLT resolution at a significant discount to replacement cost.',
+      'Approximately 145 acres of contiguous land in Narikudi, ~50 km from Madurai, ideal for large-scale solar power development. Situated close to a major power substation and near the Greenko Group\'s SEI Aadhavan & Kathiravan plants. A Dubai-based buyer has expressed strong interest in developing a solar power plant on this site.',
     stage: 'Active',
     status: 'Active' as const,
-    investmentYear: 2024,
-    logo: '/portfolio/montieth-square.svg', // placeholder
+    investmentYear: 2025,
+    logo: '/portfolio/narikudi-solar.svg',
+    landArea: '~145 Acres',
+    location: 'Narikudi, Madurai, Tamil Nadu',
+    acquisitionValue: '\u20B922.5 Cr',
+    projectedValue: '\u20B925 Cr',
+    discount: '40% below market value',
+    highlight: 'Renewable energy hub with grid connectivity',
   },
   {
-    name: 'Nungambakkam Heights',
-    sector: 'Stressed Real Estate',
+    name: 'Karadivavi Industrial Land, Coimbatore',
+    sector: 'Industrial & Defence Corridor',
     description:
-      'Premium commercial redevelopment of a distressed Grade-A office tower in Nungambakkam, Chennai, targeting IT/ITES tenants.',
+      'A 30-acre strategic land parcel in Karadivavi, ~35 km from Coimbatore, near the Defence Corridor and Sulur Airbase. The surrounding area is rapidly evolving into a major industrial and logistics hub supported by growing defence and manufacturing investments. Excellent prospects for capital appreciation.',
     stage: 'Active',
     status: 'Active' as const,
-    investmentYear: 2024,
-    logo: '/portfolio/nungambakkam-heights.svg', // placeholder
-  },
-  {
-    name: 'Coimbatore Gateway',
-    sector: 'Stressed Real Estate',
-    description:
-      'Mixed-use township project on the Coimbatore-Avinashi corridor acquired from a distressed developer, with RERA approvals reinstated.',
-    stage: 'Pipeline',
-    status: 'Pipeline' as const,
     investmentYear: 2025,
-    logo: '/portfolio/coimbatore-gateway.svg', // placeholder
-  },
-  {
-    name: 'FinStack Technologies',
-    sector: 'Fintech Startup',
-    description:
-      'AI-powered lending infrastructure platform enabling NBFCs and banks to underwrite loans for MSMEs across Tier 2 and Tier 3 cities in India.',
-    stage: 'Pre-Series A',
-    status: 'Active' as const,
-    investmentYear: 2024,
-    logo: '/portfolio/finstack.svg', // placeholder
-  },
-  {
-    name: 'MedBridge Health',
-    sector: 'HealthTech Startup',
-    description:
-      'Telemedicine and diagnostic platform connecting rural Tamil Nadu communities with specialist doctors through AI-assisted triage.',
-    stage: 'Seed',
-    status: 'Active' as const,
-    investmentYear: 2025,
-    logo: '/portfolio/medbridge.svg', // placeholder
-  },
-  {
-    name: 'GreenGrid Logistics',
-    sector: 'CleanTech Startup',
-    description:
-      'Electric last-mile delivery network for Chennai and Bengaluru, replacing diesel-powered fleets with EV-powered micro-hubs.',
-    stage: 'Series A',
-    status: 'Exited' as const,
-    investmentYear: 2023,
-    logo: '/portfolio/greengrid.svg', // placeholder
+    logo: '/portfolio/karadivavi-industrial.svg',
+    landArea: '~30 Acres',
+    location: 'Karadivavi, Coimbatore, Tamil Nadu',
+    acquisitionValue: '\u20B945 Cr',
+    projectedValue: '\u20B975 Cr',
+    discount: '40% below market value',
+    highlight: 'Defence Corridor proximity, industrial expansion',
   },
 ] as const
 
