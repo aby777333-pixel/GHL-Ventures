@@ -42,7 +42,7 @@ const PROJECTS = [
     stats: [
       { label: 'Land Area', value: '~145 Acres' },
       { label: 'Acquisition', value: '\u20B922.5 Cr' },
-      { label: 'Post-Dev Value', value: '\u20B925 Cr' },
+      { label: 'Investment Projected', value: '\u20B925 Cr' },
       { label: 'Below Market', value: '40%' },
     ],
     gradient: 'from-amber-500/20 to-orange-500/10',
@@ -56,7 +56,7 @@ const PROJECTS = [
     landArea: '~30 Acres',
     sector: 'Industrial & Defence Corridor',
     sectorIcon: Factory,
-    image: 'https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?w=1200&q=80&fit=crop&auto=format',
+    image: 'https://images.unsplash.com/photo-1590274853856-f22d5ee3d228?w=1200&q=80&fit=crop&auto=format',
     acquisitionCost: '\u20B945 Cr',
     projectedValue: '\u20B975 Cr',
     discount: '40%',
@@ -72,7 +72,7 @@ const PROJECTS = [
     stats: [
       { label: 'Land Area', value: '~30 Acres' },
       { label: 'Acquisition', value: '\u20B945 Cr' },
-      { label: 'Fair Market Value', value: '\u20B975 Cr' },
+      { label: 'Investment Projected', value: '\u20B975 Cr' },
       { label: 'Below Market', value: '40%' },
     ],
     gradient: 'from-blue-500/20 to-cyan-500/10',

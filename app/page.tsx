@@ -266,7 +266,7 @@ function LiveFinancialTV() {
         {tvTab === 'ndtv' && widgetLoaded && (
           <iframe
             key="ndtv-profit-live"
-            src="https://www.youtube.com/embed/live_stream?channel=UCRhdkx4aF2Jv6q_q0FHlIig&autoplay=1&mute=1&modestbranding=1&rel=0"
+            src="https://www.youtube.com/embed/live_stream?channel=UC3uJIdRFTGgLWrUziaHbzrg&autoplay=1&mute=1&modestbranding=1&rel=0"
             title="NDTV Profit — Live"
             className="w-full h-full border-0"
             allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
@@ -846,7 +846,7 @@ function PortfolioSpotlight() {
                 </div>
                 <div className="bg-brand-offwhite rounded-xl p-4 text-center">
                   <div className="text-xl font-bold text-brand-red">{'\u20B9'}25 Cr</div>
-                  <div className="text-[11px] text-brand-grey font-medium mt-1">Projected Value</div>
+                  <div className="text-[11px] text-brand-grey font-medium mt-1">Investment Projected</div>
                 </div>
               </div>
               <div className="flex flex-wrap gap-2">
@@ -862,8 +862,8 @@ function PortfolioSpotlight() {
             <div className="card group hover-lift h-full overflow-hidden glow-card-blue relative">
               <div className="relative aspect-[16/9] -mx-6 -mt-6 mb-6 overflow-hidden">
                 <img
-                  src="https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?w=900&q=80&fit=crop&auto=format"
-                  alt="Industrial corridor — Karadivavi, Coimbatore"
+                  src="https://images.unsplash.com/photo-1590274853856-f22d5ee3d228?w=900&q=80&fit=crop&auto=format"
+                  alt="Strategic land development — Karadivavi, Coimbatore"
                   className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
                   loading="lazy"
                 />
@@ -883,7 +883,7 @@ function PortfolioSpotlight() {
                 </div>
                 <div className="bg-brand-offwhite rounded-xl p-4 text-center">
                   <div className="text-xl font-bold text-brand-red">{'\u20B9'}75 Cr</div>
-                  <div className="text-[11px] text-brand-grey font-medium mt-1">Projected Value</div>
+                  <div className="text-[11px] text-brand-grey font-medium mt-1">Investment Projected</div>
                 </div>
               </div>
               <div className="flex flex-wrap gap-2">
