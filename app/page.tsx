@@ -843,7 +843,7 @@ function BlogSection() {
               <AnimatedSection key={post.slug} delay={i * 120}>
                 <Link href={`/blog#${post.slug}`} className="card group block h-full hover-lift">
                   {/* Image placeholder */}
-                  <PlaceholderImage theme={themes[i % themes.length]} aspectRatio="h-48 w-full" label={post.category} className="rounded-xl mb-5" />
+                  <PlaceholderImage theme={themes[i % themes.length]} aspectRatio="h-48 w-full" label={post.title} className="rounded-xl mb-5" />
                   <span className="text-xs font-bold text-brand-red uppercase tracking-widest">{post.category}</span>
                   <h3 className="text-lg font-bold text-brand-black mt-2 mb-2 group-hover:text-brand-red transition-colors leading-snug">
                     {post.title}
