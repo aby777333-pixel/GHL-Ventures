@@ -450,7 +450,7 @@ function HeroSection() {
                   { icon: BadgeCheck, text: 'SEBI Reg.' },
                   { icon: MapPin, text: 'Egmore, Chennai' },
                   { icon: Landmark, text: 'Category II AIF' },
-                  { icon: IndianRupee, text: 'SEBI Regulated' },
+                  { icon: IndianRupee, text: 'Managed by Trustee' },
                 ].map(b => (
                   <span
                     key={b.text}
@@ -601,10 +601,7 @@ function WhoWeAre() {
           {/* Left: Image placeholder */}
           <AnimatedSection direction="left">
             <div className="relative aspect-[4/3] bg-gray-900 overflow-hidden card-img-zoom group/img rounded-3xl">
-              <img src="/images/home/team-professionals.jpg" alt="GHL India Ventures Team / Chennai Office" className="w-full h-full object-cover transition-transform duration-500" loading="lazy" />
-              <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent p-4 translate-y-1 opacity-90 group-hover/img:translate-y-0 group-hover/img:opacity-100 transition-all duration-300">
-                <p className="text-white/90 text-xs font-medium">GHL India Ventures Team / Chennai Office</p>
-              </div>
+              <img src="/images/home/team-professionals.jpg" alt="GHL India Ventures Team" className="w-full h-full object-cover transition-transform duration-500" loading="lazy" />
             </div>
           </AnimatedSection>
 
@@ -618,8 +615,8 @@ function WhoWeAre() {
             {/* Animated counter stats */}
             <div className="grid grid-cols-2 gap-6 my-10">
               <CountUpStat end={25} suffix="+" label="Years of Experience" />
-              <CountUpStat end={500} prefix="₹" suffix=" Cr+" label="Value Created" />
-              <CountUpStat end={1000} suffix="+" label="Pitch Decks Analyzed" />
+              <CountUpStat end={100} suffix="+" label="Years of Man Experience" />
+              <CountUpStat end={300} prefix="₹" suffix=" Cr+" label="Value Created" />
               <CountUpStat end={50} suffix="+" label="Strong Support Team" />
             </div>
 
