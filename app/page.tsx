@@ -800,14 +800,13 @@ function PortfolioSpotlight() {
             <div className="card group hover-lift h-full overflow-hidden glow-card-amber relative">
               <div className="relative aspect-[16/9] -mx-6 -mt-6 mb-6 overflow-hidden">
                 <img
-                  src="https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=900&q=80&fit=crop&auto=format"
-                  alt="Solar energy farm — Narikudi, Madurai"
+                  src="/images/portfolio/narikudi-bridge.jpg"
+                  alt="Narikudi, Madurai — Strategic Land Asset"
                   className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
                   loading="lazy"
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
                 <div className="absolute bottom-4 left-5 right-5">
-                  <span className="inline-block px-3 py-1 bg-brand-red/90 text-white text-[10px] font-bold uppercase tracking-wider rounded-full mb-2 trust-badge badge-bounce">Renewable Energy</span>
                   <h3 className="text-white text-xl font-bold">Narikudi, Madurai</h3>
                 </div>
               </div>
@@ -837,14 +836,13 @@ function PortfolioSpotlight() {
             <div className="card group hover-lift h-full overflow-hidden glow-card-blue relative">
               <div className="relative aspect-[16/9] -mx-6 -mt-6 mb-6 overflow-hidden">
                 <img
-                  src="https://images.unsplash.com/photo-1560518883-ce09059eeffa?w=900&q=80&fit=crop&auto=format"
-                  alt="Strategic land development — Karadivavi, Coimbatore"
+                  src="/images/portfolio/karadivavi-palace.jpg"
+                  alt="Karadivavi, Coimbatore — Strategic Land Asset"
                   className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
                   loading="lazy"
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
                 <div className="absolute bottom-4 left-5 right-5">
-                  <span className="inline-block px-3 py-1 bg-brand-red/90 text-white text-[10px] font-bold uppercase tracking-wider rounded-full mb-2 trust-badge badge-bounce">Industrial &amp; Defence</span>
                   <h3 className="text-white text-xl font-bold">Karadivavi, Coimbatore</h3>
                 </div>
               </div>

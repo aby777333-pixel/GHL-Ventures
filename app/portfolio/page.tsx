@@ -26,7 +26,7 @@ const PROJECTS = [
     landArea: '~145 Acres',
     sector: 'Renewable Energy',
     sectorIcon: Sun,
-    image: 'https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=1200&q=80&fit=crop&auto=format',
+    image: '/images/portfolio/narikudi-bridge.jpg',
     acquisitionCost: '\u20B922.5 Cr',
     projectedValue: '\u20B925 Cr',
     discount: '40%',
@@ -56,7 +56,7 @@ const PROJECTS = [
     landArea: '~30 Acres',
     sector: 'Industrial & Defence Corridor',
     sectorIcon: Factory,
-    image: 'https://images.unsplash.com/photo-1560518883-ce09059eeffa?w=1200&q=80&fit=crop&auto=format',
+    image: '/images/portfolio/karadivavi-palace.jpg',
     acquisitionCost: '\u20B945 Cr',
     projectedValue: '\u20B975 Cr',
     discount: '40%',
@@ -150,10 +150,6 @@ export default function PortfolioPage() {
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
                   <div className="absolute bottom-6 left-6 right-6">
-                    <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-brand-red/90 text-white text-[10px] font-bold uppercase tracking-wider rounded-full mb-3 trust-badge badge-bounce">
-                      <project.sectorIcon className="w-3.5 h-3.5" />
-                      {project.sector}
-                    </span>
                     <h2 className="text-2xl md:text-3xl font-bold text-white">{project.name}</h2>
                     <p className="text-white/80 text-sm mt-1">{project.subtitle}</p>
                   </div>
