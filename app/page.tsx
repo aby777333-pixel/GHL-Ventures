@@ -800,7 +800,7 @@ function PortfolioSpotlight() {
             <div className="card group hover-lift h-full overflow-hidden glow-card-amber relative">
               <div className="relative aspect-[16/9] -mx-6 -mt-6 mb-6 overflow-hidden">
                 <img
-                  src="/images/portfolio/karadivavi-palace.jpg"
+                  src="/images/portfolio/narikudi-palace.jpg"
                   alt="Narikudi, Madurai — Strategic Land Asset"
                   className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
                   loading="lazy"
@@ -836,7 +836,7 @@ function PortfolioSpotlight() {
             <div className="card group hover-lift h-full overflow-hidden glow-card-blue relative">
               <div className="relative aspect-[16/9] -mx-6 -mt-6 mb-6 overflow-hidden">
                 <img
-                  src="/images/portfolio/narikudi-bridge.jpg"
+                  src="/images/portfolio/karadivavi-bridge.jpg"
                   alt="Karadivavi, Coimbatore — Strategic Land Asset"
                   className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
                   loading="lazy"
