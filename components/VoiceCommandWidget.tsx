@@ -1207,7 +1207,7 @@ export default function VoiceCommandWidget() {
         break
       }
       case 'emailaddress': {
-        setFeedback('info@ghlindia.com')
+        setFeedback('info@ghlindiaventures.com')
         speak('info at ghlindiaventures dot com')
         break
       }

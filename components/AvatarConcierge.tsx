@@ -502,7 +502,7 @@ export default function AvatarConcierge() {
           } else if (resp.action === 'call') {
             setTimeout(() => window.open('tel:+917200255252', '_self'), 800)
           } else if (resp.action === 'email') {
-            setTimeout(() => window.open('mailto:info@ghlindia.com', '_self'), 800)
+            setTimeout(() => window.open('mailto:info@ghlindiaventures.com', '_self'), 800)
           } else if (resp.action === 'quiz') {
             setTimeout(() => {
               const quizBtn = document.querySelector('[data-quiz-trigger]') as HTMLButtonElement

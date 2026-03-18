@@ -60,7 +60,7 @@ function getResponse(input: string): string {
 
   // Contact
   if (lower.includes('contact') || lower.includes('phone') || lower.includes('email') || lower.includes('address')) {
-    return "Here\u2019s how to reach us:\n\n**Phone:** +91 44 2843 1043 | +91 7200 255 252\n**Email:** info@ghlindia.com\n**Office:** 2D, Queens Court, No. 6, Montieth Road, Egmore, Chennai \u2013 600 008\n**Hours:** Mon\u2013Fri, 9:30 AM \u2013 6:30 PM IST\n\nYou can also chat with us on WhatsApp. Would you like me to connect you?"
+    return "Here\u2019s how to reach us:\n\n**Phone:** +91 44 2843 1043 | +91 7200 255 252\n**Email:** info@ghlindiaventures.com\n**Office:** 2D, Queens Court, No. 6, Montieth Road, Egmore, Chennai \u2013 600 008\n**Hours:** Mon\u2013Fri, 9:30 AM \u2013 6:30 PM IST\n\nYou can also chat with us on WhatsApp. Would you like me to connect you?"
   }
 
   // SEBI / registration
@@ -70,7 +70,7 @@ function getResponse(input: string): string {
 
   // Complaints
   if (lower.includes('complaint') || lower.includes('issue') || lower.includes('problem')) {
-    return "I\u2019m sorry to hear that. Our team takes concerns very seriously.\n\n+91 44 2843 1043 | +91 7200 255 252\ninfo@ghlindia.com\n2D, Queens Court, Egmore, Chennai \u2013 600 008\n\nAs a SEBI-registered entity, you can also escalate to **SEBI SCORES** at scores.gov.in.\n\nI hope we can resolve this quickly."
+    return "I\u2019m sorry to hear that. Our team takes concerns very seriously.\n\n+91 44 2843 1043 | +91 7200 255 252\ninfo@ghlindiaventures.com\n2D, Queens Court, Egmore, Chennai \u2013 600 008\n\nAs a SEBI-registered entity, you can also escalate to **SEBI SCORES** at scores.gov.in.\n\nI hope we can resolve this quickly."
   }
 
   // Video call — handled by component (dispatches event + minimizes ARIA so widget is visible)
@@ -117,7 +117,7 @@ Say **"Live Chat"** to connect with an agent now, or say **"Web Call"** for brow
 
   // Human / advisor
   if (lower.includes('human') || lower.includes('speak') || lower.includes('advisor') || lower.includes('call') || lower.includes('talk to')) {
-    return "Of course! Our advisors are ready to help.\n\n**Call:** +91 7200 255 252\n**Email:** info@ghlindia.com\n**WhatsApp:** +91 7200 255 252\n\nYou can also say **\"video call\"** to open our Video Call widget right here!\n\nOr visit our Contact page to schedule a consultation at your convenience.\n\nThey typically respond within 2 business hours."
+    return "Of course! Our advisors are ready to help.\n\n**Call:** +91 7200 255 252\n**Email:** info@ghlindiaventures.com\n**WhatsApp:** +91 7200 255 252\n\nYou can also say **\"video call\"** to open our Video Call widget right here!\n\nOr visit our Contact page to schedule a consultation at your convenience.\n\nThey typically respond within 2 business hours."
   }
 
   // Default

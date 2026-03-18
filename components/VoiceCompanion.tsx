@@ -51,7 +51,7 @@ export default function VoiceCompanionWrapper() {
                 window.open('tel:+917200255252', '_self');
                 break;
               case 'email':
-                window.open('mailto:info@ghlindia.com', '_self');
+                window.open('mailto:info@ghlindiaventures.com', '_self');
                 break;
               case 'scroll':
                 if (data === 'top') window.scrollTo({ top: 0, behavior: 'smooth' });

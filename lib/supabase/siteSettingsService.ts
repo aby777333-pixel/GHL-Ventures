@@ -28,7 +28,7 @@ const DEFAULT_SETTINGS: Record<string, string> = {
   'meta_title': 'GHL India Ventures — Wealth Management & Investment Solutions',
   'meta_description': 'GHL India Ventures offers expert wealth management, real estate investment, and financial planning services across India.',
   'og_image': '/og-image.jpg',
-  'contact_email': 'info@ghlindia.com',
+  'contact_email': 'info@ghlindiaventures.com',
   'contact_phone': '+91 22 4000 1234',
   'contact_address': 'One BKC, Bandra Kurla Complex, Mumbai 400051',
   'social_linkedin': 'https://www.linkedin.com/company/ghl-india-ventures-fund/',

@@ -54,7 +54,7 @@ export const AUTH_ERRORS = {
   CONNECTION_ERROR: 'Unable to connect. Please check your internet and try again.',
 
   // Fallback (should rarely be used)
-  GENERIC: 'Unable to process your request. Please try again or contact support at info@ghlindia.com.',
+  GENERIC: 'Unable to process your request. Please try again or contact support at info@ghlindiaventures.com.',
 } as const
 
 /**

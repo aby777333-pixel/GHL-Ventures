@@ -39,7 +39,7 @@ export default function VoiceNavigator() {
     { keywords: ['financial', 'learn', 'education', 'iq'], action: 'Financial IQ', description: 'Financial education', icon: HelpCircle, handler: () => router.push('/financial-iq') },
     { keywords: ['calculator', 'calculate', 'returns', 'how much'], action: 'Calculator', description: 'Open calculator', icon: Calculator, handler: () => { document.dispatchEvent(new KeyboardEvent('keydown', { key: 'k', ctrlKey: true })) } },
     { keywords: ['call', 'phone', 'ring'], action: 'Call Us', description: 'Phone call', icon: Phone, handler: () => { window.open('tel:+917200255252', '_self') } },
-    { keywords: ['email', 'mail', 'write to'], action: 'Email', description: 'Send email', icon: Mail, handler: () => { window.open('mailto:info@ghlindia.com', '_self') } },
+    { keywords: ['email', 'mail', 'write to'], action: 'Email', description: 'Send email', icon: Mail, handler: () => { window.open('mailto:info@ghlindiaventures.com', '_self') } },
     { keywords: ['whatsapp', 'chat', 'message'], action: 'WhatsApp', description: 'Open WhatsApp', icon: Phone, handler: () => { window.open('https://wa.me/917200255252', '_blank') } },
     { keywords: ['dark', 'dark mode', 'night mode'], action: 'Dark Mode', description: 'Toggle theme', icon: Navigation, handler: () => { document.querySelector<HTMLButtonElement>('[aria-label="Toggle theme"]')?.click() } },
     { keywords: ['search', 'find', 'look for'], action: 'Search', description: 'Open search', icon: Search, handler: () => { document.dispatchEvent(new KeyboardEvent('keydown', { key: 'k', ctrlKey: true })) } },

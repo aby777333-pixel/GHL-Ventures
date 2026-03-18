@@ -264,10 +264,10 @@ function PrivacyContent() {
 
       <SectionTitle>9. Your Rights</SectionTitle>
       <Para>Subject to applicable law and regulatory requirements, you have the following rights: Right of Access (request a copy of the personal information we hold about you); Right to Correction (request correction of inaccurate or incomplete personal information); Right to Erasure (request deletion, subject to legal and regulatory retention obligations); Right to Withdraw Consent (where processing is based on consent); Right to Grievance Redressal (lodge a complaint with our Grievance Officer or the relevant Data Protection Authority); and Right to Nomination (as an investor, nominate a person to receive your investment in the event of your death).</Para>
-      <Para>To exercise any of these rights, please contact our Grievance Officer at info@ghlindia.com. We will respond within 30 days.</Para>
+      <Para>To exercise any of these rights, please contact our Grievance Officer at info@ghlindiaventures.com. We will respond within 30 days.</Para>
 
       <SectionTitle>10. Children&apos;s Privacy</SectionTitle>
-      <Para>The Platform is not intended for individuals under the age of 18. We do not knowingly collect personal information from children under 18 years of age. If we become aware that we have inadvertently collected such information, we will take steps to delete it promptly. If you are a parent or guardian and believe your child has provided personal information to us, please contact us immediately at info@ghlindia.com.</Para>
+      <Para>The Platform is not intended for individuals under the age of 18. We do not knowingly collect personal information from children under 18 years of age. If we become aware that we have inadvertently collected such information, we will take steps to delete it promptly. If you are a parent or guardian and believe your child has provided personal information to us, please contact us immediately at info@ghlindiaventures.com.</Para>
 
       <SectionTitle>11. International Data Transfers</SectionTitle>
       <Para>Your personal information is primarily stored and processed in India. In certain circumstances, your data may be transferred to jurisdictions outside India&mdash;for example, where we use cloud infrastructure or technology service providers located in other countries. Where such transfers occur, we ensure that appropriate safeguards are in place, including contractual data processing agreements. For NRI investors, data may also be processed in accordance with the regulations of your country of residence, including applicable DTAA provisions.</Para>
@@ -278,7 +278,7 @@ function PrivacyContent() {
       <SectionTitle>13. Grievance Redressal &amp; Contact</SectionTitle>
       <Para>In accordance with the Information Technology Act, 2000 and applicable SEBI regulations, GHL India Ventures has appointed a Grievance Officer to address your concerns regarding data privacy:</Para>
       <Para>Grievance Officer, GHL India Ventures Trust, 2D, Queens Court, No. 6, Montieth Road, Egmore, Chennai, Tamil Nadu &ndash; 600 008, India.</Para>
-      <Para>Email: info@ghlindia.com | Phone: +91 44 2843 1043 | +91 7200 255 252 | Office Hours: Monday to Saturday, 10:00 AM to 6:00 PM IST.</Para>
+      <Para>Email: info@ghlindiaventures.com | Phone: +91 44 2843 1043 | +91 7200 255 252 | Office Hours: Monday to Saturday, 10:00 AM to 6:00 PM IST.</Para>
       <Para>We will acknowledge receipt of your privacy-related grievance within 48 hours and endeavor to resolve it within thirty (30) business days. If you are not satisfied with our response, you may escalate your complaint to the relevant Data Protection Authority or approach SEBI through the SCORES portal (scores.gov.in) for investment-related grievances.</Para>
 
       <div className="mt-6 pt-4 border-t border-gray-200">
@@ -326,7 +326,7 @@ function TermsContent() {
       <Para><strong>IMPORTANT:</strong> Account creation on this platform does not constitute an investment, commitment, or subscription to any fund or scheme managed by GHL India Ventures. Investments can only be made pursuant to the Private Placement Memorandum (PPM) and applicable scheme documents, after completing mandatory KYC verification.</Para>
 
       <SectionTitle>4. Account Responsibilities</SectionTitle>
-      <Para>You are solely responsible for: maintaining the confidentiality of your login credentials, including your email, password, and any multi-factor authentication details; all activities that occur under your account, whether or not authorized by you; and immediately notifying GHL India Ventures at info@ghlindia.com or +91 7200 255 252 of any unauthorized use of your account or any other breach of security.</Para>
+      <Para>You are solely responsible for: maintaining the confidentiality of your login credentials, including your email, password, and any multi-factor authentication details; all activities that occur under your account, whether or not authorized by you; and immediately notifying GHL India Ventures at info@ghlindiaventures.com or +91 7200 255 252 of any unauthorized use of your account or any other breach of security.</Para>
       <Para>GHL India Ventures shall not be liable for any loss or damage arising from your failure to safeguard your account credentials. We reserve the right to suspend or terminate accounts that we reasonably believe have been compromised or are being used in violation of these Terms.</Para>
 
       <SectionTitle>5. Investor Portal Services</SectionTitle>
@@ -370,7 +370,7 @@ function TermsContent() {
 
       <SectionTitle>13. Termination &amp; Suspension</SectionTitle>
       <Para>GHL India Ventures may, at its sole discretion and without prior notice, suspend or terminate your account and access to the Platform for any reason, including but not limited to: breach of these terms; failure to complete or maintain KYC requirements; suspicious activity, including potential fraud or money laundering; upon request by law enforcement or regulatory authorities; or extended inactivity of the account.</Para>
-      <Para>You may terminate your account at any time by contacting us at info@ghlindia.com. Termination of your account does not affect any existing investment commitments or obligations. Sections relating to Investment Disclaimers, Limitation of Liability, Indemnification, Intellectual Property, and Governing Law shall survive termination.</Para>
+      <Para>You may terminate your account at any time by contacting us at info@ghlindiaventures.com. Termination of your account does not affect any existing investment commitments or obligations. Sections relating to Investment Disclaimers, Limitation of Liability, Indemnification, Intellectual Property, and Governing Law shall survive termination.</Para>
 
       <SectionTitle>14. Modifications to Terms</SectionTitle>
       <Para>GHL India Ventures reserves the right to modify, amend, or update these terms at any time. Changes will be effective upon posting the revised terms on the platform with an updated &ldquo;Last Updated&rdquo; date. For material changes, we will make reasonable efforts to notify registered users via email or a prominent notice on the Platform. We recommend reviewing these terms periodically.</Para>
@@ -381,7 +381,7 @@ function TermsContent() {
       <SectionTitle>16. Grievance Redressal &amp; Contact</SectionTitle>
       <Para>For any questions, concerns, grievances, or complaints regarding these Terms or the Platform, please contact:</Para>
       <Para>Compliance Officer / Grievance Officer, GHL India Ventures Trust, 2D, Queens Court, No. 6, Montieth Road, Egmore, Chennai, Tamil Nadu &ndash; 600 008, India.</Para>
-      <Para>Email: info@ghlindia.com | Phone: +91 44 2843 1043 | +91 7200 255 252 | Office Hours: Monday to Saturday, 10:00 AM to 6:00 PM IST.</Para>
+      <Para>Email: info@ghlindiaventures.com | Phone: +91 44 2843 1043 | +91 7200 255 252 | Office Hours: Monday to Saturday, 10:00 AM to 6:00 PM IST.</Para>
       <Para>We will acknowledge receipt of your grievance within 48 hours and endeavor to resolve it within thirty (30) business days, in accordance with applicable SEBI guidelines on investor grievance redressal.</Para>
 
       <div className="mt-6 pt-4 border-t border-gray-200">
@@ -443,10 +443,10 @@ function DisclaimerContent() {
 
       <SectionTitle>SEBI Grievance Redressal</SectionTitle>
       <Para>
-        In case of any grievances related to securities market activities, investors may lodge complaints with SEBI through the SEBI SCORES platform at scores.gov.in or contact SEBI&apos;s toll-free helpline at 1800 22 7575. Investors may also contact GHL India Ventures directly at info@ghlindia.com or call +91 7200 255 252.
+        In case of any grievances related to securities market activities, investors may lodge complaints with SEBI through the SEBI SCORES platform at scores.gov.in or contact SEBI&apos;s toll-free helpline at 1800 22 7575. Investors may also contact GHL India Ventures directly at info@ghlindiaventures.com or call +91 7200 255 252.
       </Para>
       <Para>
-        For formal complaints, please write to: Compliance Officer, GHL India Ventures Trust, 2D, Queens Court, No. 6, Montieth Road, Egmore, Chennai, Tamil Nadu &ndash; 600 008. Email: info@ghlindia.com
+        For formal complaints, please write to: Compliance Officer, GHL India Ventures Trust, 2D, Queens Court, No. 6, Montieth Road, Egmore, Chennai, Tamil Nadu &ndash; 600 008. Email: info@ghlindiaventures.com
       </Para>
 
       <SectionTitle>Limitation of Liability</SectionTitle>

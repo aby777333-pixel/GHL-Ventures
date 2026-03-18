@@ -37,7 +37,7 @@ const PALETTE_ITEMS: PaletteItem[] = [
 
   // Actions
   { id: 'whatsapp', label: 'Chat on WhatsApp', description: '+91 7200 255 252', action: 'open-whatsapp', icon: Phone, category: 'Actions' },
-  { id: 'email', label: 'Email Us', description: 'info@ghlindia.com', action: 'open-email', icon: FileText, category: 'Actions' },
+  { id: 'email', label: 'Email Us', description: 'info@ghlindiaventures.com', action: 'open-email', icon: FileText, category: 'Actions' },
 ]
 
 interface CommandPaletteProps {
@@ -122,7 +122,7 @@ export default function CommandPalette({ onOpenQuiz, onOpenCalc }: CommandPalett
     } else if (item.action === 'open-whatsapp') {
       window.open('https://wa.me/917200255252?text=Hi%2C%20I%27d%20like%20to%20learn%20more%20about%20GHL%20India%20Ventures.', '_blank')
     } else if (item.action === 'open-email') {
-      window.location.href = 'mailto:info@ghlindia.com?subject=Investment%20Inquiry'
+      window.location.href = 'mailto:info@ghlindiaventures.com?subject=Investment%20Inquiry'
     }
   }
 

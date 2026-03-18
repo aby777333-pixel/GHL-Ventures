@@ -145,7 +145,7 @@ const KNOWLEDGE_BASE: KnowledgeEntry[] = [
     id: 'contact',
     category: 'contact',
     keywords: ['contact', 'phone', 'email', 'address', 'office', 'reach', 'call', 'whatsapp'],
-    response: '**Contact GHL India Ventures:**\n\n**Phone:** +91 44 2843 1043 | +91 72002 55252\n**Email:** info@ghlindia.com\n**WhatsApp:** +91 72002 55252\n\n**Office:**\n2D, Queens Court, No. 6, Montieth Road\nEgmore, Chennai \u2013 600 008\n\n**Hours:** Mon\u2013Fri, 9:30 AM \u2013 6:30 PM IST\n\nWant me to connect you with an advisor right away?',
+    response: '**Contact GHL India Ventures:**\n\n**Phone:** +91 44 2843 1043 | +91 72002 55252\n**Email:** info@ghlindiaventures.com\n**WhatsApp:** +91 72002 55252\n\n**Office:**\n2D, Queens Court, No. 6, Montieth Road\nEgmore, Chennai \u2013 600 008\n\n**Hours:** Mon\u2013Fri, 9:30 AM \u2013 6:30 PM IST\n\nWant me to connect you with an advisor right away?',
     followUp: ['Schedule Consultation', 'WhatsApp Chat', 'Investment Process'],
     priority: 8,
   },
@@ -207,7 +207,7 @@ const KNOWLEDGE_BASE: KnowledgeEntry[] = [
     id: 'complaint',
     category: 'compliance',
     keywords: ['complaint', 'issue', 'problem', 'grievance', 'unhappy', 'concern'],
-    response: 'I\u2019m sorry to hear you have a concern. Our team takes all grievances seriously.\n\n**Grievance Redressal:**\n\u2022 **Phone:** +91 44 2843 1043\n\u2022 **Email:** info@ghlindia.com\n\u2022 **Office:** 2D, Queens Court, Egmore, Chennai\n\nAs a SEBI-registered entity, you can also escalate to **SEBI SCORES** at scores.gov.in.\n\nWe aim to resolve all complaints within **30 business days**.',
+    response: 'I\u2019m sorry to hear you have a concern. Our team takes all grievances seriously.\n\n**Grievance Redressal:**\n\u2022 **Phone:** +91 44 2843 1043\n\u2022 **Email:** info@ghlindiaventures.com\n\u2022 **Office:** 2D, Queens Court, Egmore, Chennai\n\nAs a SEBI-registered entity, you can also escalate to **SEBI SCORES** at scores.gov.in.\n\nWe aim to resolve all complaints within **30 business days**.',
     followUp: ['Contact Info', 'SEBI Registration'],
     priority: 7,
   },
@@ -216,7 +216,7 @@ const KNOWLEDGE_BASE: KnowledgeEntry[] = [
     id: 'human-advisor',
     category: 'contact',
     keywords: ['human', 'speak', 'advisor', 'talk to', 'person', 'real', 'agent', 'schedule', 'call'],
-    response: 'Of course! Our advisors are ready to help.\n\n**Reach out via:**\n\u2022 **Call:** +91 72002 55252\n\u2022 **Email:** info@ghlindia.com\n\u2022 **WhatsApp:** +91 72002 55252\n\nOr visit our **Contact page** to schedule a video consultation at your convenience.\n\nThey typically respond within **2 business hours**.',
+    response: 'Of course! Our advisors are ready to help.\n\n**Reach out via:**\n\u2022 **Call:** +91 72002 55252\n\u2022 **Email:** info@ghlindiaventures.com\n\u2022 **WhatsApp:** +91 72002 55252\n\nOr visit our **Contact page** to schedule a video consultation at your convenience.\n\nThey typically respond within **2 business hours**.',
     followUp: ['WhatsApp Chat', 'Contact Page', 'Email Us'],
     priority: 8,
   },
@@ -243,7 +243,7 @@ const KNOWLEDGE_BASE: KnowledgeEntry[] = [
     id: 'goodbye',
     category: 'general',
     keywords: ['bye', 'goodbye', 'thank', 'thanks', 'that\'s all', 'done', 'great'],
-    response: 'Thank you for chatting with ARIA! \ud83d\ude4f\n\nIf you have more questions later, I\u2019m always here. You can also:\n\u2022 **Call:** +91 72002 55252\n\u2022 **Email:** info@ghlindia.com\n\u2022 **Visit:** Our Contact page\n\nWishing you a great investment journey with GHL! \ud83d\ude80',
+    response: 'Thank you for chatting with ARIA! \ud83d\ude4f\n\nIf you have more questions later, I\u2019m always here. You can also:\n\u2022 **Call:** +91 72002 55252\n\u2022 **Email:** info@ghlindiaventures.com\n\u2022 **Visit:** Our Contact page\n\nWishing you a great investment journey with GHL! \ud83d\ude80',
     followUp: ['Investment Routes', 'Contact Info'],
     priority: 3,
   },
@@ -325,7 +325,7 @@ Key facts:
 • Target returns: 15-25% IRR for Direct AIF
 • Office: 2D, Queens Court, No. 6, Montieth Road, Egmore, Chennai – 600 008
 • Phone: +91 44 2843 1043 | +91 72002 55252
-• Email: info@ghlindia.com
+• Email: info@ghlindiaventures.com
 
 Keep responses concise (2-4 sentences), friendly, and professional. Use **bold** for key terms. Always recommend speaking with an advisor for specific investment amounts or personalized advice. Never give specific financial advice. Include the disclaimer when discussing returns.`
 

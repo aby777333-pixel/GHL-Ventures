@@ -13,7 +13,7 @@ export const BRAND: BrandData = {
   sebiRegistration: 'IN/AIF2/2425/1517',
   phone: '+91 44 2843 1043',
   altPhone: '+91 7200 255 252',
-  email: 'info@ghlindia.com',
+  email: 'info@ghlindiaventures.com',
   whatsapp: '+917200255252',
   address: '2D, Queens Court, No. 6, Montieth Road, Egmore, Chennai 600008',
   officeHours: 'Mon-Sat, 10:00 AM - 6:00 PM IST',
@@ -80,7 +80,7 @@ export const KNOWLEDGE_BASE: KnowledgeEntry[] = [
   { id: 'tenure', category: 'fund', keywords: ['tenure', 'lock in', 'how long', 'duration', 'period', 'maturity'], response: 'The Direct AIF has a typical tenure of 5-7 years with potential extension. The SEBI Co-Invest Framework has shorter tenures. For the AIF, partial exits may be possible after 3 years depending on portfolio liquidity. The Co-Invest Framework offers more predictable maturity dates. Contact our team for details.', followUp: ['Can I exit early?', 'What happens at maturity?'], priority: 3, speaker: 'abe' },
   { id: 'nri', category: 'process', keywords: ['nri', 'non resident', 'abroad', 'overseas', 'international'], response: 'Yes, NRIs can invest in our fund subject to FEMA regulations. The process involves additional documentation including NRE/NRO account details and FIPB approval for certain routes. Our compliance team specializes in NRI investments and will guide you through the regulatory requirements.', followUp: ['What documents do NRIs need?', 'Which account should I use?'], priority: 3, speaker: 'tina' },
   { id: 'tax', category: 'compliance', keywords: ['tax', 'taxation', 'capital gains', 'tax benefit'], response: 'AIF investments have pass-through taxation, meaning gains are taxed at the investor level, not the fund level. Long-term capital gains on equity exits attract 12.5% tax after 1 year. Real estate gains follow standard LTCG provisions. Co-invest returns are taxed as per your income slab. We recommend consulting your tax advisor for personalized guidance.', followUp: ['Do you provide tax certificates?', 'What about TDS?'], priority: 3, speaker: 'abe' },
-  { id: 'contact', category: 'contact', keywords: ['contact', 'reach', 'office', 'address', 'location', 'get in touch'], response: 'You can reach us at our Chennai office: 2D, Queens Court, No. 6, Montieth Road, Egmore, Chennai 600008. Call us at +91 44 2843 1043 or +91 7200 255 252. Email: info@ghlindia.com. Office hours: Mon-Sat, 10 AM - 6 PM IST. Or WhatsApp us anytime!', followUp: ['WhatsApp us', 'Schedule a call'], priority: 4, speaker: 'tina', actions: [{ type: 'whatsapp' }] },
+  { id: 'contact', category: 'contact', keywords: ['contact', 'reach', 'office', 'address', 'location', 'get in touch'], response: 'You can reach us at our Chennai office: 2D, Queens Court, No. 6, Montieth Road, Egmore, Chennai 600008. Call us at +91 44 2843 1043 or +91 7200 255 252. Email: info@ghlindiaventures.com. Office hours: Mon-Sat, 10 AM - 6 PM IST. Or WhatsApp us anytime!', followUp: ['WhatsApp us', 'Schedule a call'], priority: 4, speaker: 'tina', actions: [{ type: 'whatsapp' }] },
   { id: 'eligibility', category: 'process', keywords: ['eligible', 'who can invest', 'can i invest', 'qualification', 'hni'], response: 'For the Direct AIF, minimum investment is as per SEBI AIF Regulations, suitable for High Net Worth Individuals. The SEBI Co-Invest Framework offers a more accessible entry for professionals. Both Indian residents and NRIs can invest. There is no maximum age limit. Institutional investors are also welcome.', followUp: ['Am I eligible?', 'What is an HNI?'], priority: 3, speaker: 'tina' },
 ];
 

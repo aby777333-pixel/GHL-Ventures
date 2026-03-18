@@ -1391,7 +1391,7 @@ export default function DashboardClient() {
               {[
                 { label: 'Chennai HQ', number: '+91 44 2843 1043', href: 'tel:+914428431043', icon: Building2, toast: 'Calling Chennai HQ...' },
                 { label: 'Sales & Support', number: '+91 7200 255 252', href: 'tel:+917200255252', icon: Phone, toast: 'Calling Sales & Support...' },
-                { label: 'Email', number: 'info@ghlindia.com', href: 'mailto:info@ghlindia.com', icon: Mail, toast: 'Opening email client...' },
+                { label: 'Email', number: 'info@ghlindiaventures.com', href: 'mailto:info@ghlindiaventures.com', icon: Mail, toast: 'Opening email client...' },
                 { label: 'Live Chat', number: 'Chat with ARIA', href: '#', icon: MessageSquare, toast: 'Opening live chat...' },
               ].map((line, i) => (
                 <button key={i} onClick={() => {
@@ -1856,7 +1856,7 @@ export default function DashboardClient() {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {[
           { title: 'Chat with ARIA', desc: 'AI assistant & live advisor.', icon: MessageSquare, color: '#D0021B', action: () => window.dispatchEvent(new CustomEvent('ghl-open-chat')) },
-          { title: 'Email Us', desc: 'info@ghlindia.com', icon: Mail, color: '#3B82F6', action: () => { window.open('mailto:info@ghlindia.com', '_blank'); showToast('Opening email client...', 'info') } },
+          { title: 'Email Us', desc: 'info@ghlindiaventures.com', icon: Mail, color: '#3B82F6', action: () => { window.open('mailto:info@ghlindiaventures.com', '_blank'); showToast('Opening email client...', 'info') } },
           { title: 'Message Us', desc: 'Live chat with our team', icon: Send, color: '#10B981', action: () => { window.dispatchEvent(new CustomEvent('ghl-open-chat')); showToast('Opening live chat...', 'info') } },
           { title: 'Direct Call', desc: 'Chennai HQ: +91 44 2843 1043', icon: PhoneCall, color: '#8B5CF6', action: () => { window.open('tel:+914428431043'); showToast('Connecting to GHL Chennai HQ...', 'info') } },
         ].map((item, i) => (
@@ -1899,7 +1899,7 @@ export default function DashboardClient() {
                 setTicketForm(false); setTicketSubject(''); setTicketCategory('General Inquiry'); setTicketDesc(''); refetchTickets()
                 showToast('Support ticket submitted. We\'ll respond within 24 hours.', 'success')
               } else {
-                showToast('Failed to submit ticket. Please try again or email info@ghlindia.com', 'info')
+                showToast('Failed to submit ticket. Please try again or email info@ghlindiaventures.com', 'info')
               }
             }} className="px-5 py-2.5 rounded-xl text-sm font-semibold text-white" style={{ background: 'linear-gradient(135deg, #D0021B, #8B0000)' }}>Submit Ticket</button>
           </div>
