@@ -3353,3 +3353,16 @@ body.admin-active #ghl-direct-widget {
 .trust-badge:hover::before {
   left: 100%;
 }
+
+/* ── Fix white dropdown options in dark mode ── */
+select option {
+  background-color: #1A1A1A;
+  color: #FFFFFF;
+}
+select option:checked {
+  background-color: #D0021B;
+  color: #FFFFFF;
+}
+select option:hover {
+  background-color: #2A2A2A;
+}

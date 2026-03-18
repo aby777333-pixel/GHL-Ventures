@@ -41,10 +41,16 @@ export async function fetchPortfolioAssets(clientId?: string) {
 
 export async function fetchNAVHistory(clientId?: string) {
   if (!isSupabaseConfigured() || !clientId) return []
-  return safeFetch(
+  const rows = await safeFetch(
     () => sb.from('nav_history').select('*').eq('client_id', clientId).order('month', { ascending: true }),
     [], 'fetchNAVHistory',
   )
+  // Normalize: DB has nav_value, chart expects nav
+  return (rows as any[]).map((r: any) => ({
+    ...r,
+    nav: r.nav_value ?? r.nav ?? 0,
+    month: r.month ? new Date(r.month).toLocaleDateString('en-IN', { month: 'short', year: '2-digit' }) : r.month,
+  }))
 }
 
 export async function getAllocation(clientId?: string) {
@@ -71,18 +77,39 @@ export async function getAllocation(clientId?: string) {
 
 export async function fetchTransactions(clientId?: string) {
   if (!isSupabaseConfigured() || !clientId) return []
-  return safeFetch(
+  const rows = await safeFetch(
     () => sb.from('transactions').select('*').eq('client_id', clientId).order('date', { ascending: false }),
     [], 'fetchTransactions',
+  )
+  // Normalize: ensure date is formatted for display
+  return (rows as any[]).map((r: any) => ({
+    ...r,
+    date: r.date ? new Date(r.date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : r.date,
+  }))
+}
+
+export async function fetchPayoutHistory(clientId?: string) {
+  if (!isSupabaseConfigured() || !clientId) return []
+  return safeFetch(
+    () => sb.from('transactions').select('*').eq('client_id', clientId).eq('type', 'Dividend').order('date', { ascending: false }),
+    [], 'fetchPayoutHistory',
   )
 }
 
 export async function fetchMessages(clientId?: string) {
   if (!isSupabaseConfigured() || !clientId) return []
-  return safeFetch(
-    () => sb.from('messages').select('*').eq('to_id', clientId).order('created_at', { ascending: false }),
+  const rows = await safeFetch(
+    () => sb.from('messages').select('*').or(`to_id.eq.${clientId},from_id.eq.${clientId}`).order('created_at', { ascending: false }),
     [], 'fetchMessages',
   )
+  // Normalize field names for display
+  return (rows as any[]).map((r: any) => ({
+    ...r,
+    from: r.from_name || 'Advisory Team',
+    avatar: (r.from_name || 'A')[0]?.toUpperCase() || 'A',
+    time: r.created_at ? new Date(r.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }) : '',
+    preview: r.body?.substring(0, 80) || '',
+  }))
 }
 
 export async function fetchSupportTickets(clientId?: string) {
@@ -408,7 +435,7 @@ export async function addBankAccount(account: BankAccountInput) {
   }
 
   const { data, error } = await sb.from('bank_accounts').insert(account).select().single()
-  if (error) { console.warn('[dashboard] Add bank account error:', error.message); return null }
+  if (error) { console.error('[dashboard] Add bank account error:', error.message, error.details, error.hint); return null }
   return data
 }
 
@@ -461,7 +488,7 @@ export async function submitInvestmentApplication(app: InvestmentApplicationInpu
   }
 
   const { data, error } = await sb.from('investment_applications').insert(row).select().single()
-  if (error) { console.warn('[dashboard] Submit investment error:', error.message); return null }
+  if (error) { console.error('[dashboard] Submit investment error:', error.message, error.details, error.hint, JSON.stringify(row)); return null }
 
   // Update client total_invested (pending amount tracked)
   try {

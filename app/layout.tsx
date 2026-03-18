@@ -108,7 +108,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     logo: `${SITE_URL}/icon.svg`,
     image: `${SITE_URL}/og-image.jpg`,
     telephone: ['+914428431043', '+917200255252'],
-    email: 'info@ghlindiaventures.com',
+    email: 'info@ghlindia.com',
     foundingDate: '2024',
     numberOfEmployees: { '@type': 'QuantitativeValue', value: 50 },
     address: {

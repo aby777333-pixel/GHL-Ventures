@@ -13,7 +13,7 @@ export const BRAND = {
   phone1: '+91 44 2843 1043',
   phone2: '+91 7200 255 252',
   mobile: '+91 7200255252',
-  email: 'info@ghlindiaventures.com',
+  email: 'info@ghlindia.com',
   whatsapp: '+917200255252',
   whatsappMessage:
     'Hi GHL India Ventures team, I\'d like to learn more about your AIF fund.',

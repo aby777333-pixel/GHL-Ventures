@@ -694,7 +694,7 @@ export default function ChatWidget() {
 
               {/* Email */}
               <a
-                href="mailto:info@ghlindiaventures.com?subject=Investment%20Inquiry%20-%20GHL%20India%20Ventures"
+                href="mailto:info@ghlindia.com?subject=Investment%20Inquiry%20-%20GHL%20India%20Ventures"
                 className="flex items-center space-x-3 p-3 rounded-xl transition-all hover:scale-[1.02] mb-2.5"
                 style={{ background: 'rgba(245,158,11,0.12)', border: '1px solid rgba(245,158,11,0.25)' }}
               >
@@ -703,7 +703,7 @@ export default function ChatWidget() {
                 </div>
                 <div className="flex-1">
                   <p className="text-white text-sm font-medium">Email Us</p>
-                  <p className="text-gray-400 text-[11px]">info@ghlindiaventures.com</p>
+                  <p className="text-gray-400 text-[11px]">info@ghlindia.com</p>
                 </div>
                 <ArrowRight className="w-4 h-4 text-gray-500" />
               </a>

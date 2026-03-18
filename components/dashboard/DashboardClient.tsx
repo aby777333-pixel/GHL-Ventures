@@ -447,12 +447,12 @@ export default function DashboardClient() {
   const t = (dark: string, light: string) => isDark ? dark : light
 
   // Animated counters — derive from user/portfolio data
-  const totalCurrent = useMemo(() => portfolioAssets.reduce((s: number, a: any) => s + (a.current || 0), 0), [portfolioAssets])
-  const totalInvested = useMemo(() => portfolioAssets.reduce((s: number, a: any) => s + (a.invested || 0), 0), [portfolioAssets])
+  const totalCurrent = useMemo(() => portfolioAssets.reduce((s: number, a: any) => s + (Number(a.current_value) || 0), 0), [portfolioAssets])
+  const totalInvested = useMemo(() => portfolioAssets.reduce((s: number, a: any) => s + (Number(a.invested_amount) || 0), 0), [portfolioAssets])
   const portfolioValue = useAnimatedCounter(user?.aum || totalCurrent || 0)
   const aifInvestment = useAnimatedCounter(totalInvested || 0)
   const coInvestValue = useAnimatedCounter(totalCurrent - totalInvested || 0)
-  const currentNAV = useAnimatedCounter(navHistory.length ? navHistory[navHistory.length - 1]?.nav * 100 || 0 : 0)
+  const currentNAV = useAnimatedCounter(navHistory.length ? (navHistory[navHistory.length - 1]?.nav_value || navHistory[navHistory.length - 1]?.nav || 0) * 100 : 0)
 
   useEffect(() => {
     const updateTime = () => {
@@ -894,23 +894,23 @@ export default function DashboardClient() {
           <div key={i} onClick={() => setActiveTab('portfolio')} className={`p-3 rounded-xl transition-all duration-300 group cursor-pointer ${t('bg-white/[0.02] border border-white/[0.04] hover:border-white/[0.08]','bg-gray-100/35 border border-gray-200/30 hover:border-gray-300/40')}`}>
             <div className="flex items-center gap-4 mb-2">
               <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${t('bg-white/[0.04]','bg-gray-200/40')}`}>
-                {asset.type.includes('Real Estate') ? <Building2 className="w-5 h-5 text-brand-red" /> : asset.type.includes('Startup') ? <Rocket className="w-5 h-5 text-amber-400" /> : <FileText className="w-5 h-5 text-blue-400" />}
+                {(asset.fund_type || asset.type || '').includes('Real Estate') ? <Building2 className="w-5 h-5 text-brand-red" /> : (asset.fund_type || asset.type || '').includes('Startup') ? <Rocket className="w-5 h-5 text-amber-400" /> : <FileText className="w-5 h-5 text-blue-400" />}
               </div>
               <div className="flex-1 min-w-0">
-                <p className={`text-sm font-semibold truncate ${t('text-white','text-gray-900')}`}>{asset.name}</p>
-                <p className={`text-xs ${t('text-gray-500','text-gray-700')}`}>{asset.type}</p>
+                <p className={`text-sm font-semibold truncate ${t('text-white','text-gray-900')}`}>{asset.fund_name || asset.name || 'Investment'}</p>
+                <p className={`text-xs ${t('text-gray-500','text-gray-700')}`}>{asset.fund_type || asset.type || ''}</p>
               </div>
               <div className="text-right shrink-0">
-                <p className={`text-sm font-bold ${t('text-white','text-gray-900')}`}>{'\u20B9'}{formatINR(asset.current)}</p>
-                <p className={`text-xs font-semibold ${asset.returnPct >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>+{asset.returnPct}%</p>
+                <p className={`text-sm font-bold ${t('text-white','text-gray-900')}`}>{'\u20B9'}{formatINR(Number(asset.current_value) || Number(asset.current) || 0)}</p>
+                <p className={`text-xs font-semibold ${(Number(asset.return_pct) || Number(asset.returnPct) || 0) >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>+{Number(asset.return_pct) || Number(asset.returnPct) || 0}%</p>
               </div>
             </div>
             {/* Milestone progress bar */}
             <div className="flex items-center gap-2">
               <div className={`flex-1 h-1.5 rounded-full overflow-hidden ${t('bg-white/[0.06]','bg-gray-200')}`}>
-                <div className="h-full rounded-full bg-gradient-to-r from-brand-red to-red-400 transition-all duration-1000" style={{ width: `${asset.milestone}%` }} />
+                <div className="h-full rounded-full bg-gradient-to-r from-brand-red to-red-400 transition-all duration-1000" style={{ width: `${Number(asset.milestone) || 0}%` }} />
               </div>
-              <span className={`text-[10px] font-medium ${t('text-gray-500','text-gray-600')}`}>{asset.milestone}%</span>
+              <span className={`text-[10px] font-medium ${t('text-gray-500','text-gray-600')}`}>{Number(asset.milestone) || 0}%</span>
             </div>
           </div>
         ))}
@@ -1809,7 +1809,7 @@ export default function DashboardClient() {
                 if (!msgSubject.trim()) { showToast('Please enter a subject.', 'info'); return }
                 if (!msgBody.trim()) { showToast('Please write a message.', 'info'); return }
                 try {
-                  await sendMessage({ from_id: clientId, to: msgTo, subject: msgSubject, body: msgBody })
+                  await sendMessage({ from_id: user?.id || clientId, to_id: clientId, subject: `[${msgTo}] ${msgSubject}`, body: msgBody })
                   setMessageCompose(false); setMsgTo('Relationship Manager'); setMsgSubject(''); setMsgBody(''); refetchMessages()
                   showToast('Message sent successfully to your advisory team.')
                 } catch { showToast('Failed to send message. Please try again.', 'info') }
@@ -1899,7 +1899,7 @@ export default function DashboardClient() {
                 setTicketForm(false); setTicketSubject(''); setTicketCategory('General Inquiry'); setTicketDesc(''); refetchTickets()
                 showToast('Support ticket submitted. We\'ll respond within 24 hours.', 'success')
               } else {
-                showToast('Failed to submit ticket. Please try again or email info@ghlindiaventures.com', 'info')
+                showToast('Failed to submit ticket. Please try again or email info@ghlindia.com', 'info')
               }
             }} className="px-5 py-2.5 rounded-xl text-sm font-semibold text-white" style={{ background: 'linear-gradient(135deg, #D0021B, #8B0000)' }}>Submit Ticket</button>
           </div>
@@ -2151,7 +2151,6 @@ export default function DashboardClient() {
           <Glass className="p-6" hover theme={theme}>
             <div className="flex items-center justify-between mb-4">
               <h4 className={`text-sm font-bold ${t('text-white','text-gray-900')}`}>Nominee Details</h4>
-              <button onClick={openEditProfile} className={`text-xs font-semibold flex items-center gap-1 ${t('text-gray-400 hover:text-white','text-gray-500 hover:text-gray-900')} transition-colors`}><Sliders className="w-3 h-3" /> Edit</button>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               {[['Nominee Name', savedProfileData.nominee_name || user?.nominee_name || 'Not provided'],['Relationship', savedProfileData.nominee_relation || user?.nominee_relation || 'Not provided'],['Nominee PAN', savedProfileData.nominee_pan || user?.nominee_pan || 'Not provided'],['Share', savedProfileData.nominee_share || user?.nominee_share || 'Not provided']].map(([l,v],i) => (
@@ -2546,17 +2545,18 @@ export default function DashboardClient() {
       let savedBankId: string | null = null
 
       for (const acc of bankAccounts) {
-        const result = await addBankAccount({
+        const bankPayload: any = {
           client_id: clientId,
           user_id: user.id,
           account_holder_name: acc.account_holder_name,
           account_number: acc.account_number,
           ifsc_code: acc.ifsc_code.toUpperCase(),
-          bank_name: acc.bank_name,
+          bank_name: acc.bank_name || undefined,
           account_type: acc.account_type.toLowerCase(),
           is_primary: acc.is_primary,
-          cancelled_cheque_url: acc.cancelled_cheque_url,
-        })
+        }
+        if (acc.cancelled_cheque_url) bankPayload.cancelled_cheque_url = acc.cancelled_cheque_url
+        const result = await addBankAccount(bankPayload)
         if (result && acc.is_primary) savedBankId = result.id
       }
 
@@ -2572,6 +2572,23 @@ export default function DashboardClient() {
       })
 
       if (appResult) {
+        // Create acknowledgement document for this application
+        try {
+          await uploadDocument({
+            title: `Investment Application - ${investVehicle}`,
+            name: `investment_ack_${appResult.id}.pdf`,
+            category: 'investment',
+            status: 'active',
+            entity_type: 'client',
+            entity_id: clientId,
+            client_id: clientId,
+            uploaded_by: user.id,
+            description: `Investment application for ${investVehicle}, Amount: ₹${formatINR(investAmount)}, Tenure: ${investTenure}. Status: Pending Review.`,
+            file_url: '',
+            access_level: 'restricted',
+          })
+          refetchDocs()
+        } catch { /* non-blocking */ }
         showToast('Investment application submitted successfully! Our team will contact you within 24 hours for verification.')
         // Reset form
         setInvestTermsAccepted(false)

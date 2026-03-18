@@ -205,12 +205,13 @@ export default function ContactPage() {
                                 id="contact-phone"
                                 type="tel"
                                 required
+                                maxLength={10}
                                 pattern="[0-9]{10}"
                                 title="Please enter a valid 10-digit mobile number"
                                 className="input-field pl-14"
                                 placeholder="XXXXX XXXXX"
                                 value={formData.phone}
-                                onChange={(e) => handleChange('phone', e.target.value)}
+                                onChange={(e) => { const v = e.target.value.replace(/\D/g, '').slice(0, 10); handleChange('phone', v) }}
                               />
                             </div>
                           </div>

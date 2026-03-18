@@ -316,7 +316,7 @@ export function generateResponse(input: string, visitorName?: string, pageContex
     }
 
     case 'contact':
-      return [{ speaker: 'tina', text: `Our office is at 2D, Queens Court, No. 6, Montieth Road, Egmore, Chennai — 600008. Office hours: Mon-Sat, 10 AM - 6 PM IST. Phone: +91 44 2843 1043 / +91 7200 255 252. Email: info@ghlindiaventures.com. Want me to take you to the contact page?`, action: 'navigate', actionData: '/contact' }]
+      return [{ speaker: 'tina', text: `Our office is at 2D, Queens Court, No. 6, Montieth Road, Egmore, Chennai — 600008. Office hours: Mon-Sat, 10 AM - 6 PM IST. Phone: +91 44 2843 1043 / +91 7200 255 252. Email: info@ghlindia.com. Want me to take you to the contact page?`, action: 'navigate', actionData: '/contact' }]
 
     case 'whatsapp':
       return [{ speaker: 'tina', text: `Opening WhatsApp for you right now! You'll be connected directly with our team.`, action: 'whatsapp' }]
@@ -325,10 +325,10 @@ export function generateResponse(input: string, visitorName?: string, pageContex
       return [{ speaker: 'tina', text: `Connecting you to +91 7200 255 252 now!`, action: 'call' }]
 
     case 'email':
-      return [{ speaker: 'tina', text: `Opening your email client to info@ghlindiaventures.com!`, action: 'email' }]
+      return [{ speaker: 'tina', text: `Opening your email client to info@ghlindia.com!`, action: 'email' }]
 
     case 'human':
-      return [{ speaker: 'tina', text: `Of course! Our office hours are Mon-Sat, 10 AM - 6 PM IST. You can call +91 7200 255 252, WhatsApp us at wa.me/917200255252, or email info@ghlindiaventures.com. Someone will be happy to help!` }]
+      return [{ speaker: 'tina', text: `Of course! Our office hours are Mon-Sat, 10 AM - 6 PM IST. You can call +91 7200 255 252, WhatsApp us at wa.me/917200255252, or email info@ghlindia.com. Someone will be happy to help!` }]
 
     case 'blog':
       return [{ speaker: 'tina', text: `Our blog has great insights on AIFs, investment strategies, and market trends. Let me take you there!`, action: 'navigate', actionData: '/blog' }]

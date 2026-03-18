@@ -81,6 +81,10 @@ export function useTransactions(clientId?: string) {
   return useQuery<any[]>(() => svc.fetchTransactions(clientId), [], clientId)
 }
 
+export function usePayoutHistory(clientId?: string) {
+  return useQuery<any[]>(() => svc.fetchPayoutHistory(clientId), [], clientId)
+}
+
 // ── Messages ────────────────────────────────────────────────
 export function useMessages(clientId?: string) {
   return useQuery<any[]>(() => svc.fetchMessages(clientId), [], clientId)
