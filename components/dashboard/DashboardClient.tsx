@@ -1664,6 +1664,40 @@ export default function DashboardClient() {
             )}
             {/* Drop zone */}
             <div className={`border-2 border-dashed rounded-xl p-6 text-center mb-4 cursor-pointer transition-colors ${t('border-white/10 hover:border-brand-red/30','border-gray-300 hover:border-brand-red/40')}`}
+              onDragOver={(e) => { e.preventDefault(); e.stopPropagation() }}
+              onDragEnter={(e) => { e.preventDefault(); e.stopPropagation() }}
+              onDrop={async (e) => {
+                e.preventDefault()
+                e.stopPropagation()
+                const droppedFiles = e.dataTransfer.files
+                if (!droppedFiles || droppedFiles.length === 0) return
+                const allowed = ['application/pdf', 'image/jpeg', 'image/jpg', 'image/png']
+                const validFiles: File[] = []
+                for (let i = 0; i < droppedFiles.length; i++) {
+                  if (allowed.includes(droppedFiles[i].type) && droppedFiles[i].size <= 10 * 1024 * 1024) {
+                    validFiles.push(droppedFiles[i])
+                  }
+                }
+                if (validFiles.length === 0) { showToast('Only PDF, JPG, PNG files up to 10MB are allowed.', 'info'); return }
+                try {
+                  const svc = await import('@/lib/supabase/storageService')
+                  const results = await svc.uploadFiles(validFiles, 'client/kyc', undefined, {
+                    portal: 'client',
+                    entityType: 'client',
+                    entityId: clientId || undefined,
+                    category: docCategory || 'general',
+                    trackRecord: true,
+                  })
+                  const ok = results.filter(r => r.success).length
+                  const fail = results.length - ok
+                  if (ok > 0) showToast(`${ok} file(s) uploaded successfully!`, 'success')
+                  if (fail > 0) showToast(`${fail} file(s) failed. Please try a smaller file or different format.`, 'info')
+                  setUploadedFiles(prev => [...prev, ...results.filter(r => r.success).map(r => r.file?.name || '')])
+                } catch (err) {
+                  console.error('[kyc] Drop upload error:', err)
+                  showToast('Upload failed. Please try again.', 'info')
+                }
+              }}
               onClick={(e) => {
                 e.stopPropagation()
                 // Use pickAndUploadFiles for reliable native file picker
@@ -1682,8 +1716,7 @@ export default function DashboardClient() {
                       const fail = results.length - ok
                       if (ok > 0) showToast(`${ok} file(s) uploaded successfully!`, 'success')
                       if (fail > 0) showToast(`${fail} file(s) failed to upload. Please try a smaller file or different format.`, 'info')
-                      // Store the selected file names for the submit step
-                      setUploadedFiles(results.filter(r => r.success).map(r => r.file?.name || ''))
+                      setUploadedFiles(prev => [...prev, ...results.filter(r => r.success).map(r => r.file?.name || '')])
                     }
                   } catch (uploadErr) {
                     console.error('[kyc] File upload error:', uploadErr)

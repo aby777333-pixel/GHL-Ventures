@@ -151,7 +151,7 @@ export async function getKYCSteps(clientId?: string) {
 export async function fetchDocuments(clientId?: string) {
   if (!isSupabaseConfigured() || !clientId) return []
   return safeFetch(
-    () => sb.from('documents').select('*').eq('client_id', clientId).order('uploaded_at', { ascending: false }),
+    () => sb.from('documents').select('*').or(`client_id.eq.${clientId},entity_id.eq.${clientId}`).order('uploaded_at', { ascending: false }),
     [], 'fetchDocuments',
   )
 }
@@ -614,6 +614,7 @@ export async function uploadClientDocument(doc: {
     category: doc.category,
     entity_type: 'client',
     entity_id: doc.client_id,
+    client_id: doc.client_id,
     uploaded_by: doc.user_id,
     access_level: 'restricted',
   }).select().single()
