@@ -357,7 +357,7 @@ export default function DashboardClient() {
   const [privacyScrolled, setPrivacyScrolled] = useState(false)
   const [docName, setDocName] = useState('')
   const [docCategory, setDocCategory] = useState('')
-  const [uploadedFiles, setUploadedFiles] = useState<string[]>([])
+  const [uploadedFiles, setUploadedFiles] = useState<{ name: string; url: string; path: string; bucket: string; size: number; type: string }[]>([])
   const [investAmount, setInvestAmount] = useState(2500000)
   const [investVehicle, setInvestVehicle] = useState('AIF Direct - Category II')
   const [investTenure, setInvestTenure] = useState('5 Years')
@@ -421,6 +421,23 @@ export default function DashboardClient() {
   const [bankForm, setBankForm] = useState({
     holder_name: '', account_number: '', ifsc_code: '', account_type: 'savings'
   })
+
+  // Initialize savedProfileData from user object on load (so data persists across refresh)
+  useEffect(() => {
+    if (user && Object.keys(savedProfileData).length === 0) {
+      const fromUser: Record<string, string> = {}
+      if (user.name) fromUser.full_name = user.name
+      if (user.phone) fromUser.phone = user.phone
+      if (user.city) fromUser.city = user.city
+      if ((user as any).dob) fromUser.dob = (user as any).dob
+      if ((user as any).occupation) fromUser.occupation = (user as any).occupation
+      if ((user as any).nominee_name) fromUser.nominee_name = (user as any).nominee_name
+      if ((user as any).nominee_relation) fromUser.nominee_relation = (user as any).nominee_relation
+      if ((user as any).nominee_pan) fromUser.nominee_pan = (user as any).nominee_pan
+      if ((user as any).nominee_share) fromUser.nominee_share = String((user as any).nominee_share || '')
+      if (Object.keys(fromUser).length > 0) setSavedProfileData(fromUser)
+    }
+  }, [user])
 
   // Handle profile photo upload
   const handleProfilePhotoUpload = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
@@ -1692,7 +1709,7 @@ export default function DashboardClient() {
                   const fail = results.length - ok
                   if (ok > 0) showToast(`${ok} file(s) uploaded successfully!`, 'success')
                   if (fail > 0) showToast(`${fail} file(s) failed. Please try a smaller file or different format.`, 'info')
-                  setUploadedFiles(prev => [...prev, ...results.filter(r => r.success).map(r => r.file?.name || '')])
+                  setUploadedFiles(prev => [...prev, ...results.filter(r => r.success).map(r => ({ name: r.file?.name || '', url: r.file?.url || '', path: r.file?.path || '', bucket: r.file?.bucket || '', size: r.file?.size || 0, type: r.file?.type || '' }))])
                 } catch (err) {
                   console.error('[kyc] Drop upload error:', err)
                   showToast('Upload failed. Please try again.', 'info')
@@ -1716,7 +1733,7 @@ export default function DashboardClient() {
                       const fail = results.length - ok
                       if (ok > 0) showToast(`${ok} file(s) uploaded successfully!`, 'success')
                       if (fail > 0) showToast(`${fail} file(s) failed to upload. Please try a smaller file or different format.`, 'info')
-                      setUploadedFiles(prev => [...prev, ...results.filter(r => r.success).map(r => r.file?.name || '')])
+                      setUploadedFiles(prev => [...prev, ...results.filter(r => r.success).map(r => ({ name: r.file?.name || '', url: r.file?.url || '', path: r.file?.path || '', bucket: r.file?.bucket || '', size: r.file?.size || 0, type: r.file?.type || '' }))])
                     }
                   } catch (uploadErr) {
                     console.error('[kyc] File upload error:', uploadErr)
@@ -1736,7 +1753,7 @@ export default function DashboardClient() {
               <div className={`mb-3 p-2.5 rounded-lg ${t('bg-emerald-500/10 border border-emerald-500/20','bg-emerald-50 border border-emerald-200')}`}>
                 <p className="text-xs font-semibold text-emerald-500 mb-1">{uploadedFiles.length} file(s) selected:</p>
                 {uploadedFiles.map((f, i) => (
-                  <p key={i} className={`text-xs ${t('text-gray-300','text-gray-700')}`}>• {f}</p>
+                  <p key={i} className={`text-xs ${t('text-gray-300','text-gray-700')}`}>• {f.name}</p>
                 ))}
               </div>
             )}
@@ -1745,15 +1762,34 @@ export default function DashboardClient() {
               if (!docCategory) { showToast('Please select a folder.', 'info'); return }
               if (uploadedFiles.length === 0) { showToast('Please upload at least one file.', 'info'); return }
               try {
-                // Save document record to DB (linked to client's CRM folder)
+                const firstFile = uploadedFiles[0]
+                // Save document record to DB with actual storage URL/path
                 await uploadClientDocument({
                   client_id: clientId || '',
                   user_id: user?.id || '',
                   title: docName,
                   category: docCategory === 'pan' || docCategory === 'aadhaar' || docCategory === 'bank' || docCategory === 'cheque' || docCategory === 'address' || docCategory === 'demat' ? 'kyc' : docCategory === 'tax' ? 'compliance' : 'general',
-                  file_url: `client/kyc/clients/${clientId}/${uploadedFiles[0]}`,
-                  file_name: uploadedFiles[0],
+                  file_url: firstFile.url || firstFile.path || `client/kyc/clients/${clientId}/${firstFile.name}`,
+                  file_name: firstFile.name,
+                  file_size: firstFile.size,
+                  file_type: firstFile.type?.split('/').pop() || '',
+                  mime_type: firstFile.type,
                 })
+                // Save additional files if multiple uploaded
+                for (let fi = 1; fi < uploadedFiles.length; fi++) {
+                  const f = uploadedFiles[fi]
+                  await uploadClientDocument({
+                    client_id: clientId || '',
+                    user_id: user?.id || '',
+                    title: `${docName} (${fi + 1})`,
+                    category: docCategory === 'pan' || docCategory === 'aadhaar' || docCategory === 'bank' || docCategory === 'cheque' || docCategory === 'address' || docCategory === 'demat' ? 'kyc' : docCategory === 'tax' ? 'compliance' : 'general',
+                    file_url: f.url || f.path || `client/kyc/clients/${clientId}/${f.name}`,
+                    file_name: f.name,
+                    file_size: f.size,
+                    file_type: f.type?.split('/').pop() || '',
+                    mime_type: f.type,
+                  })
+                }
                 setUploadModalOpen(false); setDocName(''); setDocCategory(''); setUploadedFiles([]); refetchDocs()
                 showToast('Document submitted. Under review by compliance team.', 'success')
               } catch (err) {

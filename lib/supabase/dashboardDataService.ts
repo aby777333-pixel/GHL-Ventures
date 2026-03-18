@@ -238,25 +238,39 @@ export async function updateProfile(fields: Record<string, any>) {
 
   // Update profiles table
   const profileUpdate: Record<string, any> = {}
-  if (fields.full_name) profileUpdate.full_name = fields.full_name
-  if (fields.phone) profileUpdate.phone = fields.phone
-  if (fields.city) profileUpdate.city = fields.city
+  if ('full_name' in fields && fields.full_name) profileUpdate.full_name = fields.full_name
+  if ('phone' in fields && fields.phone) profileUpdate.phone = fields.phone
+  if ('city' in fields && fields.city) profileUpdate.city = fields.city
 
   if (Object.keys(profileUpdate).length > 0) {
-    await sb.from('profiles').update(profileUpdate).eq('id', user.id)
+    const { error: pErr } = await sb.from('profiles').update(profileUpdate).eq('id', user.id)
+    if (pErr) console.warn('[dashboard] Profile update error:', pErr.message)
   }
 
   // Update clients table (nominee, dob, occupation stored here)
+  // Use 'in' check so empty strings don't prevent fields from being saved
+  const clientFields = ['dob', 'occupation', 'nominee_name', 'nominee_relation', 'nominee_pan', 'nominee_share']
   const clientUpdate: Record<string, any> = {}
-  if (fields.dob) clientUpdate.dob = fields.dob
-  if (fields.occupation) clientUpdate.occupation = fields.occupation
-  if (fields.nominee_name) clientUpdate.nominee_name = fields.nominee_name
-  if (fields.nominee_relation) clientUpdate.nominee_relation = fields.nominee_relation
-  if (fields.nominee_pan) clientUpdate.nominee_pan = fields.nominee_pan
-  if (fields.nominee_share) clientUpdate.nominee_share = fields.nominee_share
+  for (const key of clientFields) {
+    if (key in fields && fields[key] !== undefined && fields[key] !== '') {
+      clientUpdate[key] = fields[key]
+    }
+  }
 
   if (Object.keys(clientUpdate).length > 0) {
-    await sb.from('clients').update(clientUpdate).eq('user_id', user.id)
+    clientUpdate.updated_at = new Date().toISOString()
+    const { error: cErr } = await sb.from('clients').update(clientUpdate).eq('user_id', user.id)
+    if (cErr) {
+      console.warn('[dashboard] Client update error:', cErr.message)
+      // Fallback: try upsert via insert if no row exists
+      const { error: iErr } = await sb.from('clients').upsert({
+        user_id: user.id,
+        email: user.email || '',
+        full_name: fields.full_name || '',
+        ...clientUpdate,
+      }, { onConflict: 'user_id' })
+      if (iErr) console.warn('[dashboard] Client upsert fallback error:', iErr.message)
+    }
   }
 
   return true

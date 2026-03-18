@@ -167,6 +167,7 @@ export default async (request: Request) => {
       body: JSON.stringify({
         p_user_id: userId,
         p_full_name: body.fullName,
+        p_email: body.email,
         p_phone: body.phone || null,
         p_employee_id: body.employeeId || null,
         p_department: body.department,
