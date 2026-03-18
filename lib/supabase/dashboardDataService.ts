@@ -172,12 +172,12 @@ export async function createSupportTicket(ticket: Record<string, any>) {
   // Auto-generate ticket_number (required NOT NULL field)
   const ticketNumber = `TKT-${Date.now().toString(36).toUpperCase()}-${Math.random().toString(36).substring(2, 6).toUpperCase()}`
 
-  // Resolve client_name from profiles if not provided
+  // Resolve client_name from clients table (client_id = clients.id, NOT profiles.id)
   let clientName = ticket.client_name || 'Client'
   if (!ticket.client_name && ticket.client_id) {
     try {
-      const { data: profile } = await sb.from('profiles').select('full_name').eq('id', ticket.client_id).single()
-      if (profile?.full_name) clientName = profile.full_name
+      const { data: clientRow } = await sb.from('clients').select('full_name').eq('id', ticket.client_id).maybeSingle()
+      if (clientRow?.full_name) clientName = clientRow.full_name
     } catch { /* use default */ }
   }
 

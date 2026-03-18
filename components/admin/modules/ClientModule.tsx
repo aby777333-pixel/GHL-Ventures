@@ -41,6 +41,7 @@ export default function ClientModule({ subTab, navigate, showToast }: ClientModu
   const [kycFilter, setKycFilter] = useState<KYCStatus | 'all'>('all')
   const [addClientOpen, setAddClientOpen] = useState(false)
   const [folderPickerOpen, setFolderPickerOpen] = useState(false)
+  const [clientForm, setClientForm] = useState({ full_name: '', email: '', phone: '', pan: '', risk_profile: 'moderate', assigned_rm: '', total_invested: '' })
 
   const [clients, setClients] = useState<any[]>([])
   const [kycDocs, setKycDocs] = useState<any[]>([])
@@ -183,7 +184,36 @@ export default function ClientModule({ subTab, navigate, showToast }: ClientModu
           footer={
             <>
               <ModalButton onClick={() => setAddClientOpen(false)}>Cancel</ModalButton>
-              <ModalButton variant="primary" onClick={() => { setAddClientOpen(false); showToast('Client registered successfully', 'success') }}>Save Client</ModalButton>
+              <ModalButton variant="primary" onClick={async () => {
+                if (!clientForm.full_name.trim() || !clientForm.email.trim()) { showToast('Name and email are required', 'info'); return }
+                try {
+                  const { insertRow } = await import('@/lib/supabase/adminDataService')
+                  const clientCode = `GHL-C-${Date.now().toString(36).toUpperCase()}`
+                  const result = await insertRow('clients', {
+                    full_name: clientForm.full_name,
+                    email: clientForm.email,
+                    phone: clientForm.phone || null,
+                    pan: clientForm.pan || null,
+                    risk_profile: clientForm.risk_profile || 'moderate',
+                    assigned_rm: clientForm.assigned_rm || null,
+                    total_invested: parseFloat(clientForm.total_invested) || 0,
+                    client_code: clientCode,
+                    kyc_status: 'pending',
+                    is_active: true,
+                  })
+                  if (result) {
+                    setAddClientOpen(false)
+                    setClientForm({ full_name: '', email: '', phone: '', pan: '', risk_profile: 'moderate', assigned_rm: '', total_invested: '' })
+                    showToast(`Client ${clientForm.full_name} registered (${clientCode})`, 'success')
+                    loadData()
+                  } else {
+                    showToast('Database error — check if email already exists or contact support.', 'error')
+                  }
+                } catch (err: any) {
+                  console.error('[admin] Add client error:', err)
+                  showToast(err?.message || 'Failed to register client', 'error')
+                }
+              }}>Save Client</ModalButton>
             </>
           }
         >
@@ -191,27 +221,27 @@ export default function ClientModule({ subTab, navigate, showToast }: ClientModu
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="block text-xs font-medium text-gray-400 mb-1.5">Full Name *</label>
-                <input type="text" placeholder="Enter full name" className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-brand-red/40 focus:ring-1 focus:ring-brand-red/20" />
+                <input type="text" placeholder="Enter full name" value={clientForm.full_name} onChange={e => setClientForm(f => ({ ...f, full_name: e.target.value }))} className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-brand-red/40 focus:ring-1 focus:ring-brand-red/20" />
               </div>
               <div>
                 <label className="block text-xs font-medium text-gray-400 mb-1.5">Email *</label>
-                <input type="email" placeholder="email@example.com" className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-brand-red/40 focus:ring-1 focus:ring-brand-red/20" />
+                <input type="email" placeholder="email@example.com" value={clientForm.email} onChange={e => setClientForm(f => ({ ...f, email: e.target.value }))} className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-brand-red/40 focus:ring-1 focus:ring-brand-red/20" />
               </div>
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="block text-xs font-medium text-gray-400 mb-1.5">Phone *</label>
-                <input type="tel" placeholder="+91 98765 43210" className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-brand-red/40 focus:ring-1 focus:ring-brand-red/20" />
+                <input type="tel" placeholder="+91 98765 43210" value={clientForm.phone} onChange={e => setClientForm(f => ({ ...f, phone: e.target.value }))} className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-brand-red/40 focus:ring-1 focus:ring-brand-red/20" />
               </div>
               <div>
                 <label className="block text-xs font-medium text-gray-400 mb-1.5">PAN Number *</label>
-                <input type="text" placeholder="ABCDE1234F" maxLength={10} className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-brand-red/40 focus:ring-1 focus:ring-brand-red/20 uppercase" />
+                <input type="text" placeholder="ABCDE1234F" maxLength={10} value={clientForm.pan} onChange={e => setClientForm(f => ({ ...f, pan: e.target.value.toUpperCase() }))} className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-brand-red/40 focus:ring-1 focus:ring-brand-red/20 uppercase" />
               </div>
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="block text-xs font-medium text-gray-400 mb-1.5">Risk Profile</label>
-                <select className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-brand-red/40 focus:ring-1 focus:ring-brand-red/20">
+                <select value={clientForm.risk_profile} onChange={e => setClientForm(f => ({ ...f, risk_profile: e.target.value }))} className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-brand-red/40 focus:ring-1 focus:ring-brand-red/20">
                   <option value="conservative">Conservative</option>
                   <option value="moderate">Moderate</option>
                   <option value="aggressive">Aggressive</option>
@@ -220,7 +250,7 @@ export default function ClientModule({ subTab, navigate, showToast }: ClientModu
               </div>
               <div>
                 <label className="block text-xs font-medium text-gray-400 mb-1.5">Assigned RM</label>
-                <select className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-brand-red/40 focus:ring-1 focus:ring-brand-red/20">
+                <select value={clientForm.assigned_rm} onChange={e => setClientForm(f => ({ ...f, assigned_rm: e.target.value }))} className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-brand-red/40 focus:ring-1 focus:ring-brand-red/20">
                   <option value="" className="bg-neutral-900">Auto-assign (least loaded)</option>
                   {activeRMs.map(rm => (
                     <option key={rm.staff_id} value={rm.staff_id} className="bg-neutral-900">
@@ -232,7 +262,7 @@ export default function ClientModule({ subTab, navigate, showToast }: ClientModu
             </div>
             <div>
               <label className="block text-xs font-medium text-gray-400 mb-1.5">Initial Investment Amount (₹)</label>
-              <input type="number" placeholder="0" className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-brand-red/40 focus:ring-1 focus:ring-brand-red/20" />
+              <input type="number" placeholder="0" value={clientForm.total_invested} onChange={e => setClientForm(f => ({ ...f, total_invested: e.target.value }))} className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-brand-red/40 focus:ring-1 focus:ring-brand-red/20" />
             </div>
             <div className="sm:col-span-2">
               <label className="block text-xs font-medium text-gray-400 mb-1.5">Attach KYC / Documents</label>
