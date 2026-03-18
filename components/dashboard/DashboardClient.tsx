@@ -492,9 +492,11 @@ export default function DashboardClient() {
     return `GHL-${user.id.replace(/-/g, '').substring(0, 8).toUpperCase()}`
   }, [user?.id])
 
-  const referralLink = useMemo(() => {
-    if (typeof window === 'undefined') return ''
-    return `${window.location.origin}/register?ref=${referralCode}`
+  const [referralLink, setReferralLink] = useState('')
+  useEffect(() => {
+    if (typeof window !== 'undefined' && referralCode) {
+      setReferralLink(`${window.location.origin}/register?ref=${referralCode}`)
+    }
   }, [referralCode])
 
   const [referralStats, setReferralStats] = useState({ referred: 0, earned: 0 })
@@ -1666,22 +1668,30 @@ export default function DashboardClient() {
                 e.stopPropagation()
                 // Use pickAndUploadFiles for reliable native file picker
                 import('@/lib/supabase/storageService').then(async (svc) => {
-                  const results = await svc.pickAndUploadFiles('client/kyc', {
-                    accept: '.pdf,.jpg,.jpeg,.png',
-                    multiple: true,
-                    portal: 'client',
-                    entityType: 'client',
-                    entityId: clientId || undefined,
-                    category: docCategory || 'general',
-                  })
-                  if (results.length > 0) {
-                    const ok = results.filter(r => r.success).length
-                    const fail = results.length - ok
-                    if (ok > 0) showToast(`${ok} file(s) uploaded successfully!`, 'success')
-                    if (fail > 0) showToast(`${fail} file(s) failed to upload.`, 'info')
-                    // Store the selected file names for the submit step
-                    setUploadedFiles(results.filter(r => r.success).map(r => r.file?.name || ''))
+                  try {
+                    const results = await svc.pickAndUploadFiles('client/kyc', {
+                      accept: '.pdf,.jpg,.jpeg,.png',
+                      multiple: true,
+                      portal: 'client',
+                      entityType: 'client',
+                      entityId: clientId || undefined,
+                      category: docCategory || 'general',
+                    })
+                    if (results.length > 0) {
+                      const ok = results.filter(r => r.success).length
+                      const fail = results.length - ok
+                      if (ok > 0) showToast(`${ok} file(s) uploaded successfully!`, 'success')
+                      if (fail > 0) showToast(`${fail} file(s) failed to upload. Please try a smaller file or different format.`, 'info')
+                      // Store the selected file names for the submit step
+                      setUploadedFiles(results.filter(r => r.success).map(r => r.file?.name || ''))
+                    }
+                  } catch (uploadErr) {
+                    console.error('[kyc] File upload error:', uploadErr)
+                    showToast('Upload failed. Please try again or email documents to info@ghlindiaventures.com', 'info')
                   }
+                }).catch(err => {
+                  console.error('[kyc] Storage service import error:', err)
+                  showToast('Upload service unavailable. Please email documents to info@ghlindiaventures.com', 'info')
                 })
               }}>
               <Upload className={`w-8 h-8 mx-auto mb-2 ${t('text-gray-500','text-gray-600')}`} />
@@ -1701,17 +1711,22 @@ export default function DashboardClient() {
               if (!docName.trim()) { showToast('Please enter a document name.', 'info'); return }
               if (!docCategory) { showToast('Please select a folder.', 'info'); return }
               if (uploadedFiles.length === 0) { showToast('Please upload at least one file.', 'info'); return }
-              // Save document record to DB (linked to client's CRM folder)
-              await uploadClientDocument({
-                client_id: clientId || '',
-                user_id: user?.id || '',
-                title: docName,
-                category: docCategory === 'pan' || docCategory === 'aadhaar' || docCategory === 'bank' || docCategory === 'cheque' || docCategory === 'address' || docCategory === 'demat' ? 'kyc' : docCategory === 'tax' ? 'compliance' : 'general',
-                file_url: `client/kyc/clients/${clientId}/${uploadedFiles[0]}`,
-                file_name: uploadedFiles[0],
-              })
-              setUploadModalOpen(false); setDocName(''); setDocCategory(''); setUploadedFiles([]); refetchDocs()
-              showToast('Document submitted. Under review by compliance team.', 'success')
+              try {
+                // Save document record to DB (linked to client's CRM folder)
+                await uploadClientDocument({
+                  client_id: clientId || '',
+                  user_id: user?.id || '',
+                  title: docName,
+                  category: docCategory === 'pan' || docCategory === 'aadhaar' || docCategory === 'bank' || docCategory === 'cheque' || docCategory === 'address' || docCategory === 'demat' ? 'kyc' : docCategory === 'tax' ? 'compliance' : 'general',
+                  file_url: `client/kyc/clients/${clientId}/${uploadedFiles[0]}`,
+                  file_name: uploadedFiles[0],
+                })
+                setUploadModalOpen(false); setDocName(''); setDocCategory(''); setUploadedFiles([]); refetchDocs()
+                showToast('Document submitted. Under review by compliance team.', 'success')
+              } catch (err) {
+                console.error('[kyc] Document save error:', err)
+                showToast('Failed to save document record. Please try again.', 'info')
+              }
             }}
               className="w-full py-2.5 rounded-xl text-sm font-semibold text-white" style={{ background: 'linear-gradient(135deg, #D0021B, #8B0000)' }}>
               Upload & Submit
@@ -2540,28 +2555,31 @@ export default function DashboardClient() {
 
     setInvestSubmitting(true)
     try {
-      // 1. Save bank account(s) first
-      const primaryAcc = bankAccounts.find(a => a.is_primary) || bankAccounts[0]
+      // 1. Save bank account(s) first (non-blocking — investment can proceed even if bank save fails)
       let savedBankId: string | null = null
 
       for (const acc of bankAccounts) {
-        const bankPayload: any = {
-          client_id: clientId,
-          user_id: user.id,
-          account_holder_name: acc.account_holder_name,
-          account_number: acc.account_number,
-          ifsc_code: acc.ifsc_code.toUpperCase(),
-          bank_name: acc.bank_name || undefined,
-          account_type: acc.account_type.toLowerCase(),
-          is_primary: acc.is_primary,
+        try {
+          const bankPayload: any = {
+            client_id: clientId,
+            user_id: user.id,
+            account_holder_name: acc.account_holder_name,
+            account_number: acc.account_number,
+            ifsc_code: acc.ifsc_code.toUpperCase(),
+            bank_name: acc.bank_name || undefined,
+            account_type: acc.account_type.toLowerCase(),
+            is_primary: acc.is_primary,
+          }
+          if (acc.cancelled_cheque_url) bankPayload.cancelled_cheque_url = acc.cancelled_cheque_url
+          const result = await addBankAccount(bankPayload)
+          if (result && acc.is_primary) savedBankId = result.id
+        } catch (bankErr) {
+          console.warn('[invest] Bank account save failed (non-blocking):', bankErr)
         }
-        if (acc.cancelled_cheque_url) bankPayload.cancelled_cheque_url = acc.cancelled_cheque_url
-        const result = await addBankAccount(bankPayload)
-        if (result && acc.is_primary) savedBankId = result.id
       }
 
       // 2. Submit the investment application
-      const appResult = await submitInvestmentApplication({
+      const appPayload = {
         client_id: clientId,
         user_id: user.id,
         fund_vehicle: investVehicle,
@@ -2569,10 +2587,12 @@ export default function DashboardClient() {
         tenure_preference: investTenure,
         bank_account_id: savedBankId || undefined,
         terms_accepted: investTermsAccepted,
-      })
+      }
+      console.log('[invest] Submitting application:', JSON.stringify(appPayload))
+      const appResult = await submitInvestmentApplication(appPayload)
 
       if (appResult) {
-        // Create acknowledgement document for this application
+        // Create acknowledgement document for this application (non-blocking)
         try {
           await uploadDocument({
             title: `Investment Application - ${investVehicle}`,
@@ -2605,10 +2625,11 @@ export default function DashboardClient() {
         setInvestAmount(2500000)
         refetchPortfolio()
       } else {
-        showToast('Submission failed. Please try again or contact support.', 'info')
+        showToast('Submission failed. Please try again or contact support at info@ghlindiaventures.com', 'info')
       }
-    } catch {
-      showToast('An error occurred. Please try again.', 'info')
+    } catch (err) {
+      console.error('[invest] Submission error:', err)
+      showToast('An error occurred. Please try again or contact support at info@ghlindiaventures.com', 'info')
     } finally {
       setInvestSubmitting(false)
     }
