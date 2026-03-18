@@ -75,6 +75,7 @@ export default function ChatWidget() {
 
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   // Load saved state
   useEffect(() => {
@@ -874,7 +875,31 @@ export default function ChatWidget() {
               {/* Input */}
               <div className="shrink-0 px-4 pt-2 pb-2">
                 <form onSubmit={(e) => { e.preventDefault(); handleSend() }} className="flex items-center space-x-2">
-                  <button type="button" className="text-gray-600 hover:text-gray-400 transition-colors" title="Attachments coming soon">
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.csv,.txt"
+                    className="hidden"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0]
+                      if (file) {
+                        const maxSize = 5 * 1024 * 1024 // 5MB
+                        if (file.size > maxSize) {
+                          const sysMsg: ChatMessageUI = { id: uid(), text: 'File size must be under 5 MB. Please choose a smaller file.', sender: 'system', timestamp: new Date() }
+                          setMessages(prev => [...prev, sysMsg])
+                        } else {
+                          const userMsg: ChatMessageUI = { id: uid(), text: `📎 Attached: ${file.name} (${(file.size / 1024).toFixed(1)} KB)`, sender: 'user', timestamp: new Date() }
+                          setMessages(prev => [...prev, userMsg])
+                          setTimeout(() => {
+                            const botMsg: ChatMessageUI = { id: uid(), text: `Thank you for sharing **${file.name}**. Our team will review your attachment. For immediate assistance, please email it to **info@ghlindiaventures.com** or call us at **+91 7200 255 252**.`, sender: chatMode === 'aria' ? 'aria' : 'agent', timestamp: new Date() }
+                            setMessages(prev => [...prev, botMsg])
+                          }, 800)
+                        }
+                      }
+                      e.target.value = ''
+                    }}
+                  />
+                  <button type="button" className="text-gray-600 hover:text-gray-400 transition-colors" title="Attach a file" onClick={() => fileInputRef.current?.click()}>
                     <Paperclip className="w-4 h-4" />
                   </button>
                   <input

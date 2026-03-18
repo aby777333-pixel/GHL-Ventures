@@ -331,6 +331,7 @@ export default function BlogArticlePage({ params }: { params: { slug: string } }
         content={content}
         relatedArticles={relatedArticles}
         sebiReg={BRAND.sebi}
+        basePath="/blog"
       />
     </>
   )
