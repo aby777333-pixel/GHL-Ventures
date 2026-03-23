@@ -148,7 +148,7 @@ function DashboardTab({ navigate, showToast }: { navigate: (p: string) => void; 
           <div className="p-2 rounded-xl bg-brand-red/20"><Brain className="w-5 h-5 text-brand-red" /></div>
           <div className="flex-1 min-w-0">
             <p className="text-xs text-brand-red font-semibold uppercase tracking-wider mb-1">AI Insight</p>
-            <p className="text-sm text-gray-300 truncate">{AI_INSIGHTS[0].summary}</p>
+            <p className="text-sm text-gray-300 truncate">{AI_INSIGHTS?.[0]?.summary || 'Analyzing your data...'}</p>
           </div>
           <button onClick={() => navigate('reports/ai-advisor')} className="flex-shrink-0 px-3 py-1.5 rounded-lg text-xs font-medium text-brand-red bg-brand-red/10 border border-brand-red/20 hover:bg-brand-red/20 transition-colors">
             View All <ChevronRight className="w-3 h-3 inline" />
