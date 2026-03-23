@@ -600,7 +600,7 @@ function IntegrationsTab({ showToast }: { showToast: (msg: string, type?: 'succe
 
     // Check whether the server has MONDAY_API_KEY env var configured
     const { getAuthToken } = require('@/lib/supabase/client')
-    getAuthToken().then((token: string) => fetch('/.netlify/functions/monday-proxy', {
+    getAuthToken().then((token: string) => fetch('/api/monday-proxy', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', ...(token ? { 'Authorization': `Bearer ${token}` } : {}) },
       body: JSON.stringify({ query: '__check_config__' }),

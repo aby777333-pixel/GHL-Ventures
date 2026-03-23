@@ -12,7 +12,7 @@ import { getAuthToken } from '@/lib/supabase/client'
 
 // ── Config ──────────────────────────────────────────────────
 
-const PROXY_URL = '/.netlify/functions/monday-proxy'
+const PROXY_URL = '/api/monday-proxy'
 const MONDAY_KEY_STORAGE = 'ghl_monday_api_key'
 
 export function getMondayApiKey(): string {

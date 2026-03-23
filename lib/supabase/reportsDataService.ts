@@ -217,7 +217,7 @@ async function sendLeadNotification(payload: {
   pageUrl?: string
 }) {
   try {
-    await fetch('/.netlify/functions/lead-notification', {
+    await fetch('/api/lead-notification', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),

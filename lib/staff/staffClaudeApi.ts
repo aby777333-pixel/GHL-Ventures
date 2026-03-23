@@ -63,7 +63,7 @@ const CLAUDE_MODELS = [
   'claude-3-haiku-20240307',
 ]
 
-const PROXY_URL = '/.netlify/functions/claude-proxy'
+const PROXY_URL = '/api/claude-proxy'
 
 export async function callStaffClaudeAPI(
   messages: ClaudeMessage[],

@@ -8,7 +8,7 @@ import Blog3EarlyStageGrowth from '@/components/blog/Blog3EarlyStageGrowth'
 import Blog4GovernanceTransparency from '@/components/blog/Blog4GovernanceTransparency'
 import Blog5PillarGuide from '@/components/blog/Blog5PillarGuide'
 
-const SITE_URL = 'https://ghl-india-ventures-2025.netlify.app'
+const SITE_URL = 'https://ghlindiaventures.com'
 
 export function generateStaticParams() {
   return BLOG_POSTS.map((post) => ({ slug: post.slug }))

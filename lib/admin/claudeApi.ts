@@ -123,7 +123,7 @@ const CLAUDE_MODELS = [
 ]
 
 // Proxy endpoint — Netlify function keeps the API key server-side
-const PROXY_URL = '/.netlify/functions/claude-proxy'
+const PROXY_URL = '/api/claude-proxy'
 
 /**
  * Calls the Claude API through the server-side proxy.

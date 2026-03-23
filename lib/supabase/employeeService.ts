@@ -58,7 +58,7 @@ export async function createEmployee(input: {
 }): Promise<{ success: boolean; userId?: string; error?: string }> {
   try {
     const token = await getAuthToken()
-    const response = await fetch('/.netlify/functions/create-employee', {
+    const response = await fetch('/api/create-employee', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
       body: JSON.stringify(input),
