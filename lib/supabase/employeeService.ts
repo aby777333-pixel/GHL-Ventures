@@ -204,12 +204,17 @@ export async function getEmployeeDirectory(): Promise<EmployeeRecord[]> {
 // ── Get Active RMs (for assignment dropdowns) ─────────────
 
 export async function getActiveRMs(): Promise<ActiveRM[]> {
-  if (!isSupabaseConfigured()) return []
+  if (!isSupabaseConfigured()) {
+    console.warn('[employeeService] getActiveRMs: Supabase not configured')
+    return []
+  }
 
   try {
+    // Try RPC first
     const { data, error } = await db.rpc('get_active_rms')
+    console.log('[employeeService] getActiveRMs RPC result:', { count: data?.length, error: error?.message })
 
-    if (!error && data && Array.isArray(data)) {
+    if (!error && data && Array.isArray(data) && data.length > 0) {
       return data.map((rm: any) => ({
         staff_id: rm.staff_id,
         user_id: rm.user_id,
@@ -220,20 +225,31 @@ export async function getActiveRMs(): Promise<ActiveRM[]> {
       }))
     }
 
-    // Fallback: direct query
-    console.warn('[employeeService] get_active_rms RPC failed:', error?.message)
-    const { data: rmData } = await (supabase
+    // Fallback: direct query if RPC fails or returns empty
+    console.warn('[employeeService] get_active_rms RPC failed or empty, using fallback:', error?.message)
+    const { data: rmData, error: fbErr } = await db
       .from('staff_profiles')
-      .select('id, user_id, designation, department, profiles!inner(full_name)')
-      .in('designation', ['relationship-manager', 'team-leader', 'cs-lead', 'senior-cs-agent'])
+      .select('id, user_id, designation, department')
+      .in('designation', ['relationship-manager', 'team-leader', 'cs-lead', 'senior-cs-agent', 'field-sales-executive', 'field-sales-manager'])
       .eq('is_active', true)
-      .order('created_at', { ascending: false }) as any)
+      .order('created_at', { ascending: false })
 
-    if (!rmData) return []
+    console.log('[employeeService] Fallback query result:', { count: rmData?.length, error: fbErr?.message })
+    if (!rmData || rmData.length === 0) return []
+
+    // Get profile names separately
+    const userIds = (rmData as any[]).map((r: any) => r.user_id).filter(Boolean)
+    const { data: profileData } = await db
+      .from('profiles')
+      .select('id, full_name')
+      .in('id', userIds)
+    const nameMap: Record<string, string> = {}
+    ;(profileData || []).forEach((p: any) => { nameMap[p.id] = p.full_name || '' })
+
     return (rmData as any[]).map((rm: any) => ({
       staff_id: rm.id,
       user_id: rm.user_id,
-      full_name: rm.profiles?.full_name || '',
+      full_name: nameMap[rm.user_id] || '',
       designation: rm.designation || '',
       department: rm.department || '',
       client_count: 0,

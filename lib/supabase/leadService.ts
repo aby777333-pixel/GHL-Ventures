@@ -189,6 +189,52 @@ export async function createLead(input: CreateLeadInput): Promise<{ success: boo
   }
 }
 
+// ── Update Lead (full edit) ──────────────────────────────────
+
+export async function updateLead(
+  leadId: string,
+  input: Partial<CreateLeadInput>
+): Promise<{ success: boolean; error?: string }> {
+  if (!isSupabaseConfigured()) return { success: false, error: 'Service unavailable' }
+
+  try {
+    const updates: Record<string, any> = { updated_at: new Date().toISOString() }
+
+    if (input.name !== undefined) {
+      const parts = input.name.split(' ')
+      updates.first_name = parts[0] || input.name
+      updates.last_name = parts.slice(1).join(' ') || ''
+    }
+    if (input.email !== undefined) updates.email = input.email
+    if (input.phone !== undefined) updates.phone = input.phone
+    if (input.source !== undefined) updates.source = input.source
+    if (input.stage !== undefined) updates.status = input.stage
+    if (input.value !== undefined) updates.estimated_value = input.value
+    if (input.probability !== undefined) updates.score = input.probability
+    if (input.assignedTo !== undefined) updates.assigned_to = input.assignedTo
+    if (input.notes !== undefined) updates.notes = input.notes
+
+    const db = supabase as any
+    const { error } = await db
+      .from('leads')
+      .update(updates)
+      .eq('id', leadId)
+
+    if (error) throw error
+
+    await db.from('lead_activities').insert({
+      lead_id: leadId,
+      type: 'updated',
+      description: `Lead details updated`,
+    })
+
+    return { success: true }
+  } catch (err: any) {
+    console.error('[leadService] updateLead error:', err)
+    return { success: false, error: err.message || 'Failed to update lead' }
+  }
+}
+
 // ── Update Lead Status ───────────────────────────────────────
 
 export async function updateLeadStatus(
