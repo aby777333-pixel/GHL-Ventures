@@ -101,10 +101,10 @@ export async function updateEmployee(
     if (updates.phone !== undefined) profileUpdates.phone = updates.phone
 
     if (Object.keys(profileUpdates).length > 0) {
-      const { error: profileErr } = await supabase
+      const { error: profileErr } = await (supabase
         .from('profiles')
         .update(profileUpdates)
-        .eq('id', userId)
+        .eq('id', userId) as any)
       if (profileErr) {
         console.error('[employeeService] updateEmployee profiles failed:', profileErr.message)
         return { success: false, error: profileErr.message }
@@ -121,10 +121,10 @@ export async function updateEmployee(
     if (updates.reportingTo !== undefined) staffUpdates.reporting_to = updates.reportingTo
 
     if (Object.keys(staffUpdates).length > 0) {
-      const { error: staffErr } = await supabase
+      const { error: staffErr } = await (supabase
         .from('staff_profiles')
         .update(staffUpdates)
-        .eq('id', staffProfileId)
+        .eq('id', staffProfileId) as any)
       if (staffErr) {
         console.error('[employeeService] updateEmployee staff_profiles failed:', staffErr.message)
         return { success: false, error: staffErr.message }
