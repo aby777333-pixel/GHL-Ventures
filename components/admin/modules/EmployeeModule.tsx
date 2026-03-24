@@ -421,6 +421,7 @@ export default function EmployeeModule({ subTab, navigate, showToast }: Employee
         open={folderPickerOpen}
         onClose={() => setFolderPickerOpen(false)}
         defaultRoute="admin/employees"
+        defaultBucket="ghl-documents"
         showToast={showToast as any}
         onUploadComplete={(results) => {
           const ok = results.filter(r => r.success).length

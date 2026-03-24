@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { Upload, X, AlertTriangle, ChevronDown, Database, FileText } from 'lucide-react'
 import { BUCKETS } from '@/lib/supabase/storageService'
 import { uploadFile } from '@/lib/supabase/storageService'
@@ -24,6 +24,7 @@ interface UploadWithFolderPickerProps {
   open: boolean
   onClose: () => void
   defaultRoute?: string
+  defaultBucket?: string
   accept?: string
   multiple?: boolean
   showToast?: (msg: string, type?: 'success' | 'error' | 'info' | 'warning') => void
@@ -36,6 +37,7 @@ export default function UploadWithFolderPicker({
   open,
   onClose,
   defaultRoute = 'admin/documents',
+  defaultBucket,
   accept = '.pdf,.xlsx,.xls,.docx,.doc,.pptx,.ppt,.csv,.jpg,.jpeg,.png,.gif,.webp,.svg,.zip',
   multiple = true,
   showToast,
@@ -43,10 +45,17 @@ export default function UploadWithFolderPicker({
   theme = 'dark',
   portal = 'admin',
 }: UploadWithFolderPickerProps) {
-  const [selectedBucket, setSelectedBucket] = useState<string | null>(null)
+  const [selectedBucket, setSelectedBucket] = useState<string | null>(defaultBucket || null)
   const [dropdownOpen, setDropdownOpen] = useState(false)
   const [step, setStep] = useState<'bucket' | 'confirm' | 'uploading'>('bucket')
   const pendingFilesRef = useRef<FileList | null>(null)
+
+  // Auto-select bucket when opened with a defaultBucket
+  useEffect(() => {
+    if (open && defaultBucket) {
+      setSelectedBucket(defaultBucket)
+    }
+  }, [open, defaultBucket])
 
   const accentBg = theme === 'teal' ? 'bg-teal-600' : 'bg-brand-red'
   const accentHover = theme === 'teal' ? 'hover:bg-teal-700' : 'hover:bg-red-600'
@@ -126,7 +135,7 @@ export default function UploadWithFolderPicker({
   if (!open) return null
 
   return (
-    <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-sm">
+    <div className="fixed inset-0 z-[10010] flex items-center justify-center bg-black/60 backdrop-blur-sm">
       <div className="relative w-full max-w-lg mx-4 bg-[#0a0a0a] border border-white/[0.08] rounded-2xl shadow-2xl">
         {/* Header */}
         <div className="flex items-center justify-between p-4 border-b border-white/[0.06]">
