@@ -77,6 +77,67 @@ export async function createEmployee(input: {
   }
 }
 
+// ── Update Employee ───────────────────────────────────────
+
+export async function updateEmployee(
+  staffProfileId: string,
+  userId: string,
+  updates: {
+    fullName?: string
+    phone?: string
+    department?: string
+    designation?: string
+    dateOfJoining?: string
+    status?: string
+    reportingTo?: string | null
+  }
+): Promise<{ success: boolean; error?: string }> {
+  if (!isSupabaseConfigured()) return { success: false, error: 'Service unavailable' }
+
+  try {
+    // Update profiles table (name, phone)
+    const profileUpdates: Record<string, any> = {}
+    if (updates.fullName) profileUpdates.full_name = updates.fullName
+    if (updates.phone !== undefined) profileUpdates.phone = updates.phone
+
+    if (Object.keys(profileUpdates).length > 0) {
+      const { error: profileErr } = await supabase
+        .from('profiles')
+        .update(profileUpdates)
+        .eq('id', userId)
+      if (profileErr) {
+        console.error('[employeeService] updateEmployee profiles failed:', profileErr.message)
+        return { success: false, error: profileErr.message }
+      }
+    }
+
+    // Update staff_profiles table (department, designation, etc.)
+    const staffUpdates: Record<string, any> = {}
+    if (updates.department) staffUpdates.department = updates.department
+    if (updates.designation) staffUpdates.designation = updates.designation
+    if (updates.dateOfJoining) staffUpdates.date_of_joining = updates.dateOfJoining
+    if (updates.status) staffUpdates.status = updates.status
+    if (updates.status) staffUpdates.is_active = updates.status === 'active'
+    if (updates.reportingTo !== undefined) staffUpdates.reporting_to = updates.reportingTo
+
+    if (Object.keys(staffUpdates).length > 0) {
+      const { error: staffErr } = await supabase
+        .from('staff_profiles')
+        .update(staffUpdates)
+        .eq('id', staffProfileId)
+      if (staffErr) {
+        console.error('[employeeService] updateEmployee staff_profiles failed:', staffErr.message)
+        return { success: false, error: staffErr.message }
+      }
+    }
+
+    return { success: true }
+  } catch (err) {
+    console.error('[employeeService] updateEmployee failed:', err)
+    return { success: false, error: 'Network error' }
+  }
+}
+
 // ── Get Employee Directory ────────────────────────────────
 
 export async function getEmployeeDirectory(): Promise<EmployeeRecord[]> {
