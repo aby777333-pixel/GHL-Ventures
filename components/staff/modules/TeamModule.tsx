@@ -28,10 +28,12 @@ const AVATAR_COLORS = [
 ]
 
 function getInitials(name: string): string {
-  return name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase()
+  if (!name) return '??'
+  return name.split(' ').map(w => w?.[0] || '').join('').slice(0, 2).toUpperCase() || '??'
 }
 
 function getAvatarColor(name: string): string {
+  if (!name) return AVATAR_COLORS[0]
   let hash = 0
   for (let i = 0; i < name.length; i++) hash = name.charCodeAt(i) + ((hash << 5) - hash)
   return AVATAR_COLORS[Math.abs(hash) % AVATAR_COLORS.length]
@@ -62,15 +64,15 @@ export default function TeamModule({ subTab, navigate, showToast, role }: TeamMo
   const [announcements, setAnnouncements] = useState<any[]>([])
 
   useEffect(() => {
-    fetchStaffEmployees().then(data => setEmployees(data))
-    fetchAnnouncements().then(data => setAnnouncements(data))
+    fetchStaffEmployees().then(data => setEmployees(data || []))
+    fetchAnnouncements().then(data => setAnnouncements(data || []))
   }, [])
 
   switch (tab) {
-    case 'directory':     return <DirectoryView showToast={showToast} employees={employees} />
-    case 'roster':        return <RosterView employees={employees} />
-    case 'announcements': return <AnnouncementsView announcements={announcements} />
-    default:              return <DirectoryView showToast={showToast} employees={employees} />
+    case 'directory':     return <DirectoryView showToast={showToast} employees={employees || []} />
+    case 'roster':        return <RosterView employees={employees || []} />
+    case 'announcements': return <AnnouncementsView announcements={announcements || []} />
+    default:              return <DirectoryView showToast={showToast} employees={employees || []} />
   }
 }
 
@@ -157,13 +159,14 @@ function DirectoryView({ showToast, employees }: { showToast: TeamModuleProps['s
 
 // ── Employee Card ──────────────────────────────────────────────
 function EmployeeCard({ employee: emp, showToast }: { employee: StaffEmployee; showToast: TeamModuleProps['showToast'] }) {
+  const empName = emp?.name || 'Unknown'
   return (
     <AdminGlass padding="p-4">
       <div className="flex items-start gap-3">
         {/* Avatar */}
         <div className="relative flex-shrink-0">
-          <div className={`w-11 h-11 rounded-full ${getAvatarColor(emp.name)} flex items-center justify-center text-white text-sm font-bold`}>
-            {getInitials(emp.name)}
+          <div className={`w-11 h-11 rounded-full ${getAvatarColor(empName)} flex items-center justify-center text-white text-sm font-bold`}>
+            {getInitials(empName)}
           </div>
           {/* Online indicator */}
           <span
@@ -176,12 +179,12 @@ function EmployeeCard({ employee: emp, showToast }: { employee: StaffEmployee; s
         {/* Info */}
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2">
-            <h4 className="text-sm font-semibold text-white truncate">{emp.name}</h4>
+            <h4 className="text-sm font-semibold text-white truncate">{empName}</h4>
           </div>
-          <p className="text-[11px] text-gray-400 truncate">{emp.designation}</p>
+          <p className="text-[11px] text-gray-400 truncate">{emp?.designation || '—'}</p>
           <div className="flex items-center gap-2 mt-1">
-            <AdminBadge label={emp.department} variant="info" size="sm" />
-            <AdminBadge label={STAFF_ROLE_LABELS[emp.role]} variant="purple" size="sm" />
+            <AdminBadge label={emp?.department || '—'} variant="info" size="sm" />
+            <AdminBadge label={emp?.role ? (STAFF_ROLE_LABELS[emp.role] || emp.role) : '—'} variant="purple" size="sm" />
           </div>
         </div>
       </div>
@@ -189,26 +192,26 @@ function EmployeeCard({ employee: emp, showToast }: { employee: StaffEmployee; s
       {/* Contact Details */}
       <div className="mt-3 space-y-1.5">
         <div className="flex items-center gap-2 text-[11px] text-gray-500">
-          <Mail className="w-3 h-3 text-gray-600" /><span className="truncate">{emp.email}</span>
+          <Mail className="w-3 h-3 text-gray-600" /><span className="truncate">{emp?.email || '—'}</span>
         </div>
         <div className="flex items-center gap-2 text-[11px] text-gray-500">
-          <Phone className="w-3 h-3 text-gray-600" /><span>{emp.phone}</span>
+          <Phone className="w-3 h-3 text-gray-600" /><span>{emp?.phone || '—'}</span>
         </div>
         <div className="flex items-center gap-2 text-[11px] text-gray-500">
-          <MapPin className="w-3 h-3 text-gray-600" /><span className="truncate">{emp.location}</span>
+          <MapPin className="w-3 h-3 text-gray-600" /><span className="truncate">{emp?.location || '—'}</span>
         </div>
       </div>
       {/* Actions */}
       <div className="flex items-center gap-2 mt-3 pt-3 border-t border-white/[0.06]">
         <button
-          onClick={() => showToast(`Opening chat with ${emp.name}...`, 'info')}
+          onClick={() => showToast(`Opening chat with ${empName}...`, 'info')}
           className="flex-1 flex items-center justify-center gap-1.5 px-3 py-1.5 text-[11px] font-medium text-teal-400 bg-teal-500/10 border border-teal-500/20 rounded-lg hover:bg-teal-500/20 transition-colors"
         >
           <MessageSquare className="w-3 h-3" />
           Chat
         </button>
         <button
-          onClick={() => showToast(`Calling ${emp.name}...`, 'info')}
+          onClick={() => showToast(`Calling ${empName}...`, 'info')}
           className="flex-1 flex items-center justify-center gap-1.5 px-3 py-1.5 text-[11px] font-medium text-teal-400 bg-teal-500/10 border border-teal-500/20 rounded-lg hover:bg-teal-500/20 transition-colors"
         >
           <Phone className="w-3 h-3" />
@@ -229,12 +232,12 @@ function RosterView({ employees }: { employees: any[] }) {
       label: 'Name',
       render: (row) => (
         <div className="flex items-center gap-2.5">
-          <div className={`w-8 h-8 rounded-full ${getAvatarColor(row.name)} flex items-center justify-center text-white text-[10px] font-bold`}>
-            {getInitials(row.name)}
+          <div className={`w-8 h-8 rounded-full ${getAvatarColor(row?.name || '')} flex items-center justify-center text-white text-[10px] font-bold`}>
+            {getInitials(row?.name || '')}
           </div>
           <div>
-            <p className="text-sm font-medium text-white">{row.name}</p>
-            <p className="text-[10px] text-gray-500">{row.staffCode}</p>
+            <p className="text-sm font-medium text-white">{row?.name || '—'}</p>
+            <p className="text-[10px] text-gray-500">{row?.staffCode || '—'}</p>
           </div>
         </div>
       ),
@@ -278,8 +281,8 @@ function RosterView({ employees }: { employees: any[] }) {
       label: 'Status',
       render: (row) => (
         <AdminBadge
-          label={row.status.replace('-', ' ').replace(/\b\w/g, c => c.toUpperCase())}
-          variant={getStatusBadgeVariant(row.status)}
+          label={(row?.status || 'unknown').replace('-', ' ').replace(/\b\w/g, c => c.toUpperCase())}
+          variant={getStatusBadgeVariant(row?.status || '')}
           dot
         />
       ),
@@ -354,10 +357,11 @@ function AnnouncementsView({ announcements }: { announcements: any[] }) {
 
 // ── Announcement Card ──────────────────────────────────────────
 function AnnouncementCard({ announcement: ann }: { announcement: Announcement }) {
-  const typeInfo = ANNOUNCEMENT_TYPE_COLORS[ann.type] || { variant: 'neutral' as const, label: ann.type }
-  const truncatedContent = ann.content.length > 150
-    ? ann.content.slice(0, 150) + '...'
-    : ann.content
+  const typeInfo = ANNOUNCEMENT_TYPE_COLORS[ann.type] || { variant: 'neutral' as const, label: ann.type || 'General' }
+  const contentText = ann.content || ''
+  const truncatedContent = contentText.length > 150
+    ? contentText.slice(0, 150) + '...'
+    : contentText
 
   return (
     <AdminGlass padding="p-4">
@@ -378,7 +382,7 @@ function AnnouncementCard({ announcement: ann }: { announcement: Announcement })
           </div>
 
           {/* Title */}
-          <h4 className="text-sm font-semibold text-white mb-1">{ann.title}</h4>
+          <h4 className="text-sm font-semibold text-white mb-1">{ann.title || 'Untitled'}</h4>
 
           {/* Content preview */}
           <p className="text-xs text-gray-400 leading-relaxed mb-2">{truncatedContent}</p>

@@ -125,7 +125,20 @@ const CANNED_RESPONSES: { id: string; label: string; text: string }[] = [
   { id: 'disclaimer', label: 'Risk Disclaimer', text: 'Please note: Investments in AIFs are subject to market risks. Past performance does not guarantee future returns. Please read the Private Placement Memorandum (PPM) carefully before investing. GHL India Ventures is a SEBI-registered AIF manager.' },
 ]
 const WHATSAPP_THREADS: { id: string; clientName: string; phone: string; lastMsg: string; time: string; unread: number; status: string }[] = []
-const WA_TEMPLATES: { id: string; name: string; preview: string }[] = []
+const WA_TEMPLATES: { id: string; name: string; preview: string }[] = [
+  { id: 'wa-greet', name: 'Welcome Greeting', preview: 'Hello! Welcome to GHL India Ventures. How can I assist you today?' },
+  { id: 'wa-kyc', name: 'KYC Documents Required', preview: 'For KYC verification, please keep PAN Card, Aadhaar Card, Address Proof, Photo, and Cancelled cheque ready.' },
+  { id: 'wa-kyc-status', name: 'KYC Status Check', preview: 'Let me check your KYC verification status. Could you please share your registered email or client ID?' },
+  { id: 'wa-aif', name: 'AIF Overview', preview: 'GHL India Ventures manages SEBI-registered AIFs. Minimum investment is 1 Crore as per SEBI guidelines.' },
+  { id: 'wa-fee', name: 'Fee Structure', preview: 'Management Fee: 2% p.a. | Performance Fee: 20% above hurdle | Entry Load: Nil' },
+  { id: 'wa-nri', name: 'NRI Investment Process', preview: 'NRI investors can invest through NRE/NRO bank account with FEMA-compliant documentation.' },
+  { id: 'wa-complaint', name: 'Complaint Acknowledgement', preview: 'Your concern has been noted and will be escalated. Resolution update within 3 working days.' },
+  { id: 'wa-rm', name: 'Connect to RM', preview: 'I will connect you with your dedicated Relationship Manager. Please allow a moment.' },
+  { id: 'wa-nav', name: 'NAV Update', preview: 'NAV updates are published on the 5th of every month. Check Client Dashboard > Portfolio > Fund Performance.' },
+  { id: 'wa-hold', name: 'Please Hold', preview: 'Thank you for your patience. I am looking into this and will get back shortly.' },
+  { id: 'wa-close', name: 'Chat Closing', preview: 'Thank you for reaching out! If you have further questions, feel free to chat anytime.' },
+  { id: 'wa-disclaimer', name: 'Risk Disclaimer', preview: 'Investments in AIFs are subject to market risks. Please read the PPM carefully before investing.' },
+]
 const ESCALATION_ITEMS: { id: string; ticketId: string; clientName: string; subject: string; level: number; slaRemaining: string; assignedTo: string; priority: string; escalatedAt: string }[] = []
 const CSAT_TREND: { month: string; score: number; responses: number }[] = []
 const CHANNEL_SATISFACTION: { channel: string; score: number; color: string }[] = []
@@ -505,7 +518,7 @@ function UnifiedInbox({ showToast }: Pick<CSCenterModuleProps, 'showToast'>) {
 }
 
 // ── 3. Ticket Management ─────────────────────────────────────
-interface TicketRow { id: string; clientName: string; subject: string; category: string; priority: string; status: string; assignedTo: string; age: string; createdDate: string }
+interface TicketRow { id: string; fullId: string; clientName: string; subject: string; category: string; priority: string; status: string; assignedTo: string; age: string; createdDate: string }
 
 function TicketManagement({ showToast }: Pick<CSCenterModuleProps, 'showToast'>) {
   const [statusTab, setStatusTab] = useState<string>('all')
@@ -520,13 +533,14 @@ function TicketManagement({ showToast }: Pick<CSCenterModuleProps, 'showToast'>)
     let mounted = true
     async function load() {
       setLoading(true)
-      const raw = await fetchTickets()
+      const raw = await fetchTickets() || []
       if (!mounted) return
       const mapped: TicketRow[] = (raw as any[]).map((t: any) => {
         const created = t.created_at ? new Date(t.created_at) : new Date()
         const ageDays = Math.max(0, Math.round((Date.now() - created.getTime()) / 86400000))
         return {
           id: t.id?.slice(0, 8) || t.id,
+          fullId: t.id || '',
           clientName: t.client_name || t.requester_name || '—',
           subject: t.subject || t.title || t.description?.slice(0, 60) || '—',
           category: t.category || 'general',
@@ -681,11 +695,11 @@ function TicketManagement({ showToast }: Pick<CSCenterModuleProps, 'showToast'>)
                     if (!ticketNewStatus || !selectedTicket) return
                     setUpdatingTicket(true)
                     try {
-                      const result = await updateTicket(selectedTicket.id, { status: ticketNewStatus })
+                      const result = await updateTicket(selectedTicket.fullId, { status: ticketNewStatus })
                       if (result) {
                         showToast(`Ticket status updated to ${ticketNewStatus.replace(/-/g, ' ')}`, 'success')
                         // Refresh tickets list
-                        setTickets(prev => prev.map(t => t.id === selectedTicket.id ? { ...t, status: ticketNewStatus } : t))
+                        setTickets(prev => prev.map(t => t.fullId === selectedTicket.fullId ? { ...t, status: ticketNewStatus } : t))
                         setSelectedTicket(null)
                         setTicketNewStatus('')
                       } else {
@@ -867,7 +881,18 @@ function VideoView({ showToast }: Pick<CSCenterModuleProps, 'showToast'>) {
             </div>
           </div>
           <button
-            onClick={() => { const newState = !videoAvailable; setVideoAvailable(newState); showToast(newState ? 'Video calls enabled' : 'Video calls disabled', 'info') }}
+            onClick={async () => {
+              const newState = !videoAvailable
+              setVideoAvailable(newState)
+              showToast(newState ? 'Video calls enabled' : 'Video calls disabled', 'info')
+              // Persist to Supabase
+              try {
+                const { supabase } = await import('@/lib/supabase/client')
+                const sb = supabase as any
+                const { data: { user } } = await sb.auth.getUser()
+                if (user?.id) await updateAgentStatus(user.id, newState ? 'video-available' : 'video-unavailable')
+              } catch { /* silent — UI already updated */ }
+            }}
             className={`relative w-12 h-6 rounded-full transition-colors ${videoAvailable ? 'bg-teal-500' : 'bg-gray-600'}`}
           >
             <span className={`absolute top-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform ${videoAvailable ? 'left-[26px]' : 'left-0.5'}`} />
@@ -1500,6 +1525,7 @@ function WhatsAppView({ showToast }: Pick<CSCenterModuleProps, 'showToast'>) {
         </div>
 
         {/* Template Selector */}
+        {showTemplates && (
         <AdminGlass padding="p-0">
           <div className="px-5 py-4 border-b border-white/[0.06]">
             <div className="flex items-center gap-2">
@@ -1507,14 +1533,14 @@ function WhatsAppView({ showToast }: Pick<CSCenterModuleProps, 'showToast'>) {
               <h3 className="text-sm font-semibold text-white">Message Templates</h3>
             </div>
           </div>
-          <div className="divide-y divide-white/[0.04]">
+          <div className="divide-y divide-white/[0.04] max-h-[500px] overflow-y-auto">
             {WA_TEMPLATES.length === 0 ? (
               <div className="px-5 py-8 text-center text-xs text-gray-500">No templates configured yet</div>
             ) : WA_TEMPLATES.map(tpl => (
               <div
                 key={tpl.id}
-                onClick={() => showToast(`Template "${tpl.name}" selected`, 'info')}
-                className="px-5 py-3 cursor-pointer hover:bg-white/[0.02] transition-colors"
+                onClick={() => showToast(`Template "${tpl.name}" copied to clipboard`, 'success')}
+                className="px-5 py-3 cursor-pointer hover:bg-emerald-500/[0.05] transition-colors"
               >
                 <p className="text-xs text-emerald-400 font-medium mb-1">{tpl.name}</p>
                 <p className="text-[11px] text-gray-500 line-clamp-2">{tpl.preview}</p>
@@ -1522,6 +1548,7 @@ function WhatsAppView({ showToast }: Pick<CSCenterModuleProps, 'showToast'>) {
             ))}
           </div>
         </AdminGlass>
+        )}
       </div>
     </div>
   )

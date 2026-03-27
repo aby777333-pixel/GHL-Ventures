@@ -65,7 +65,7 @@ export default function TasksModule({ subTab, navigate, showToast }: TasksModule
   const tab = subTab || 'my-tasks'
   const [tasks, setTasks] = useState<any[]>([])
 
-  const loadTasks = () => fetchTasks().then(data => setTasks(data))
+  const loadTasks = () => fetchTasks().then(data => setTasks(data || []))
 
   useEffect(() => {
     loadTasks()

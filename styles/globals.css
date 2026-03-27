@@ -493,6 +493,66 @@
   animation: spin-slow 12s linear infinite;
 }
 
+/* ============================================================
+   DASHBOARD - Font Readability & Dark Theme Contrast Fixes
+   ============================================================ */
+
+/* Improve dashboard text readability */
+.dash-text-primary {
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+/* Dark theme font visibility fixes */
+.dark .dash-glass-hover {
+  color: rgba(255, 255, 255, 0.95);
+}
+
+/* Ensure all text in dark dashboard has sufficient contrast */
+.dark .text-gray-400 {
+  color: rgba(255, 255, 255, 0.7) !important;
+}
+.dark .text-gray-500 {
+  color: rgba(255, 255, 255, 0.6) !important;
+}
+.dark .text-gray-600 {
+  color: rgba(255, 255, 255, 0.5) !important;
+}
+
+/* Button click area fix - ensure entire button is clickable */
+.btn-primary, .btn-secondary, .btn-outline-red, .btn-outline-white {
+  position: relative;
+  cursor: pointer;
+  gap: 0.5rem;
+}
+.btn-primary > *, .btn-secondary > *, .btn-outline-red > *, .btn-outline-white > * {
+  pointer-events: none;
+}
+
+/* Dashboard glass card hover in light theme */
+.dash-glass-hover:hover {
+  transform: translateY(-1px);
+  transition: all 0.2s ease;
+}
+
+/* Dashboard glow effect */
+.dash-glow {
+  box-shadow: 0 0 20px rgba(208, 2, 27, 0.1);
+}
+
+/* Light theme dashboard improvements */
+.light-dash-card {
+  background: rgba(255, 255, 255, 0.95);
+  border: 1px solid rgba(0, 0, 0, 0.06);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+
+/* Staff portal font sizes */
+.staff-portal {
+  font-size: 14px;
+  line-height: 1.6;
+}
+
 /* Fade in */
 @keyframes fadeIn {
   0% {
@@ -3417,4 +3477,23 @@ select option:checked {
 }
 select option:hover {
   background-color: #2A2A2A;
+}
+
+/* ── Dashboard Font Readability Fixes ── */
+/* Ensure minimum readable text in dark theme */
+.dark .text-gray-400 { color: #b0b0b0 !important; }
+.dark .text-gray-500 { color: #a0a0a0 !important; }
+.dark .text-gray-600 { color: #909090 !important; }
+
+/* Light theme: ensure select dropdowns have proper colors */
+html:not(.dark) select option {
+  background-color: #FFFFFF;
+  color: #1A1A1A;
+}
+html:not(.dark) select option:checked {
+  background-color: #D0021B;
+  color: #FFFFFF;
+}
+html:not(.dark) select option:hover {
+  background-color: #F0F0F0;
 }

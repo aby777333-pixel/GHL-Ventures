@@ -33,7 +33,7 @@ export default function InternalModule({ subTab, navigate, showToast }: Internal
   const [announcements, setAnnouncements] = useState<any[]>([])
 
   useEffect(() => {
-    fetchAnnouncements().then(data => setAnnouncements(data))
+    fetchAnnouncements().then(data => setAnnouncements(data || []))
   }, [])
 
   switch (tab) {
@@ -457,8 +457,17 @@ function WellnessView({ showToast }: { showToast: Toast }) {
                     {isExpanded ? 'Show Less' : 'Learn More'} <ChevronRight className={`w-3 h-3 transition-transform ${isExpanded ? 'rotate-90' : ''}`} />
                   </button>
                   {isExpanded && (
-                    <div className="mt-3 pt-3 border-t border-white/[0.06]">
+                    <div className="mt-3 pt-3 border-t border-white/[0.06] space-y-2">
                       <p className="text-xs text-white/60 leading-relaxed">{card.desc}</p>
+                      <p className="text-xs text-white/40 leading-relaxed">
+                        For more resources, contact HR or visit the employee wellness portal. You can also reach out to the EAP helpline for confidential support.
+                      </p>
+                      <button
+                        onClick={(e) => { e.stopPropagation(); showToast(`Opening full resource for "${card.title}"`, 'info') }}
+                        className="text-[10px] font-semibold text-teal-400 hover:text-teal-300 transition-colors"
+                      >
+                        Open Full Resource
+                      </button>
                     </div>
                   )}
                 </div>

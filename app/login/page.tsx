@@ -159,8 +159,9 @@ export default function LoginPage() {
       })
       if (otpError) {
         const msg = otpError.message?.toLowerCase() || ''
-        if (msg.includes('unsupported') || msg.includes('phone') && msg.includes('provider')) {
-          setError('OTP login via SMS is not yet available. Please use email and password to sign in.')
+        if (msg.includes('unsupported') || (msg.includes('phone') && msg.includes('provider'))) {
+          setError('OTP login via SMS is not yet available. The phone provider needs to be enabled by the administrator. Please use the Password tab with your email and password to sign in.')
+          setLoginMode('password')
         } else {
           setError(mapSupabaseError(otpError.message))
         }
@@ -368,6 +369,10 @@ export default function LoginPage() {
           ) : (
             /* OTP Form */
             <form onSubmit={handleOtpLogin} className="space-y-5">
+              <div className="flex items-center gap-2 p-3 rounded-lg bg-amber-50 border border-amber-200 mb-2">
+                <AlertTriangle className="w-4 h-4 text-amber-500 flex-shrink-0" />
+                <p className="text-xs text-amber-700">OTP via SMS requires phone provider setup by admin. If OTP fails, please use <button type="button" onClick={() => { setLoginMode('password'); setError('') }} className="text-brand-red font-semibold underline">Password login</button> instead.</p>
+              </div>
               <div>
                 <label htmlFor="otp-mobile" className="block text-sm font-medium text-brand-black mb-2">Registered Mobile Number</label>
                 <div className="relative">

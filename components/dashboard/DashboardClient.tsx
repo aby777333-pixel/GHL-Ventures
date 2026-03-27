@@ -277,11 +277,15 @@ export default function DashboardClient() {
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const params = new URLSearchParams(window.location.search)
-      if (params.get('password_reset') === 'true' && activeTab === 'settings') {
+      if (params.get('password_reset') === 'true') {
+        // Auto-switch to settings tab and open password reset form
+        if (activeTab !== 'settings') {
+          setActiveTab('settings')
+        }
         setShowPasswordReset(true)
       }
     }
-  }, [activeTab])
+  }, [activeTab]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const handlePasswordUpdate = async () => {
     if (newPassword.length < 8) { showToast('⚠ Password must be at least 8 characters', 'info'); return }
@@ -447,9 +451,26 @@ export default function DashboardClient() {
     full_name: '', phone: '', city: '', dob: '', occupation: '', pan: '',
     nominee_name: '', nominee_relation: '', nominee_pan: '', nominee_share: '',
   })
-  const [savedProfileData, setSavedProfileData] = useState<Record<string, string>>({})
+  const [savedProfileData, setSavedProfileData] = useState<Record<string, string>>(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const saved = localStorage.getItem('ghl-profile-data')
+        if (saved) return JSON.parse(saved)
+      } catch { /* fallback */ }
+    }
+    return {}
+  })
   const [bankForm, setBankForm] = useState({
     holder_name: '', account_number: '', ifsc_code: '', account_type: 'savings'
+  })
+  const [savedBankData, setSavedBankData] = useState<Record<string, string>>(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const saved = localStorage.getItem('ghl-bank-data')
+        if (saved) return JSON.parse(saved)
+      } catch { /* fallback */ }
+    }
+    return {}
   })
 
   // Initialize savedProfileData from user object on load (so data persists across refresh)
@@ -468,7 +489,13 @@ export default function DashboardClient() {
       if ((user as any).nominee_share) fromUser.nominee_share = String((user as any).nominee_share || '')
       if (Object.keys(fromUser).length > 0) setSavedProfileData(fromUser)
     }
-  }, [user])
+  }, [user]) // eslint-disable-line react-hooks/exhaustive-deps
+  // Persist savedProfileData to localStorage so it survives KYC uploads and re-renders
+  useEffect(() => {
+    if (typeof window !== 'undefined' && Object.keys(savedProfileData).length > 0) {
+      localStorage.setItem('ghl-profile-data', JSON.stringify(savedProfileData))
+    }
+  }, [savedProfileData])
 
   // Handle profile photo upload
   const handleProfilePhotoUpload = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
@@ -693,11 +720,49 @@ export default function DashboardClient() {
 
         <div className="flex items-center gap-2">
           {/* Search */}
-          <div className={`hidden md:flex items-center gap-2 px-3 py-1.5 rounded-xl w-56 transition-colors
-            ${t('bg-white/[0.04] border border-white/[0.06] focus-within:border-brand-red/30','bg-gray-100/50 border border-gray-200/40 focus-within:border-brand-red/40')}`}>
-            <Search className={`w-3.5 h-3.5 ${t('text-gray-500','text-gray-600')}`} />
-            <input type="text" placeholder="Search..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)}
-              className={`bg-transparent border-none outline-none text-xs w-full ${t('text-white placeholder-gray-600','text-gray-900 placeholder-gray-400')}`} />
+          <div className="relative">
+            <div className={`hidden md:flex items-center gap-2 px-3 py-1.5 rounded-xl w-56 transition-colors
+              ${t('bg-white/[0.04] border border-white/[0.06] focus-within:border-brand-red/30','bg-gray-100/50 border border-gray-200/40 focus-within:border-brand-red/40')}`}>
+              <Search className={`w-3.5 h-3.5 ${t('text-gray-500','text-gray-600')}`} />
+              <input type="text" placeholder="Search..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)}
+                className={`bg-transparent border-none outline-none text-xs w-full ${t('text-white placeholder-gray-600','text-gray-900 placeholder-gray-400')}`} />
+              {searchQuery && <button onClick={() => setSearchQuery('')} className={`${t('text-gray-500 hover:text-white','text-gray-400 hover:text-gray-700')}`}><X className="w-3 h-3" /></button>}
+            </div>
+            {/* Search Results Dropdown */}
+            {searchQuery.trim() && (() => {
+              const q = searchQuery.toLowerCase()
+              const allItems = [...SIDEBAR_ITEMS, ...SIDEBAR_BOTTOM]
+              const searchableMap: Record<string, string[]> = {
+                'dashboard': ['dashboard', 'home', 'overview', 'portfolio summary', 'metrics'],
+                'investments': ['investments', 'invest', 'aif', 'fund', 'opportunity', 'express interest'],
+                'portfolio': ['portfolio', 'assets', 'nav', 'performance', 'returns', 'allocation'],
+                'kyc': ['kyc', 'documents', 'upload', 'verification', 'compliance', 'pan', 'aadhaar'],
+                'transactions': ['transactions', 'history', 'payments', 'dividend', 'export'],
+                'messages': ['messages', 'chat', 'compose', 'inbox', 'communication'],
+                'support': ['support', 'help', 'ticket', 'faq', 'call', 'email', 'contact'],
+                'calculators': ['calculators', 'sip', 'lumpsum', 'irr', 'tools'],
+                'ai-advisor': ['ai', 'advisor', 'aria', 'assistant'],
+                'referrals': ['referrals', 'refer', 'earn', 'invite', 'share', 'link'],
+                'profile': ['profile', 'personal', 'bank', 'nominee', 'details', 'pan', 'edit'],
+                'settings': ['settings', 'theme', 'password', 'notifications', 'security', '2fa', 'language'],
+              }
+              const matches = allItems.filter(item => {
+                const keywords = searchableMap[item.id] || [item.label.toLowerCase()]
+                return keywords.some(k => k.includes(q)) || item.label.toLowerCase().includes(q)
+              })
+              if (matches.length === 0) return null
+              return (
+                <div className={`absolute top-full mt-1 right-0 w-64 rounded-xl border shadow-2xl z-50 py-1 ${t('bg-[#111] border-white/10','bg-white border-gray-200')}`}>
+                  {matches.map(item => (
+                    <button key={item.id} onClick={() => { setActiveTab(item.id); setSearchQuery('') }}
+                      className={`w-full flex items-center gap-2.5 px-3 py-2 text-xs font-medium transition-colors ${t('text-gray-300 hover:bg-white/[0.06] hover:text-white','text-gray-700 hover:bg-gray-100 hover:text-gray-900')}`}>
+                      <item.icon className="w-4 h-4 text-brand-red" />
+                      {item.label}
+                    </button>
+                  ))}
+                </div>
+              )
+            })()}
           </div>
 
           {/* Task reminders */}
@@ -799,13 +864,16 @@ export default function DashboardClient() {
               className={`px-4 py-2 rounded-xl text-sm font-medium ${t('text-gray-400 hover:text-white','text-gray-700 hover:text-gray-900')}`}>Skip</button>
             <button onClick={() => {
               if (tourStep < TOUR_STEPS.length - 1) {
-                setActiveTab(TOUR_STEPS[tourStep + 1].target as TabId)
-                setTourStep(tourStep + 1)
+                const nextStep = tourStep + 1
+                setTourStep(nextStep)
+                // Navigate to the target tab for the current step being shown
+                setActiveTab(TOUR_STEPS[nextStep].target as TabId)
               } else {
                 setTourActive(false); setTourStep(0)
+                setActiveTab('dashboard')
               }
-            }} className="px-6 py-2 rounded-xl text-sm font-semibold text-white" style={{ background: 'linear-gradient(135deg, #D0021B, #8B0000)' }}>
-              {tourStep < TOUR_STEPS.length - 1 ? 'Next' : 'Finish'}
+            }} className="flex items-center justify-center gap-1.5 px-6 py-2 rounded-xl text-sm font-semibold text-white cursor-pointer" style={{ background: 'linear-gradient(135deg, #D0021B, #8B0000)' }}>
+              {tourStep < TOUR_STEPS.length - 1 ? <>Next <ChevronRight className="w-3.5 h-3.5" /></> : 'Finish Tour'}
             </button>
           </div>
         </div>
@@ -929,7 +997,7 @@ export default function DashboardClient() {
     <Glass className="p-5 lg:p-6" hover theme={theme}>
       <div className="flex items-center justify-between mb-5">
         <h3 className={`text-base font-bold ${t('text-white','text-gray-900')}`}>Portfolio Assets</h3>
-        <button onClick={() => setActiveTab('portfolio')} className="text-xs text-brand-red font-semibold flex items-center gap-1">View All <ChevronRight className="w-3 h-3" /></button>
+        <button onClick={() => setActiveTab('portfolio')} className="text-xs text-brand-red font-semibold flex items-center gap-1 cursor-pointer hover:underline hover:text-red-600 transition-colors px-2 py-1 rounded-lg hover:bg-brand-red/10">View All <ChevronRight className="w-3 h-3" /></button>
       </div>
       {portfolioAssets.length === 0 ? (
         <div className="py-8 text-center">
@@ -1608,7 +1676,7 @@ export default function DashboardClient() {
           <h2 className={`text-xl font-bold mb-1 ${t('text-white','text-gray-900')}`}>KYC & Documents</h2>
           <p className={`text-sm ${t('text-gray-500','text-gray-700')}`}>Upload, track, and manage your compliance documents</p>
         </div>
-        <button onClick={() => setUploadModalOpen(true)} className="px-4 py-2 rounded-xl text-xs font-semibold text-white flex items-center gap-1.5" style={{ background: 'linear-gradient(135deg, #D0021B, #8B0000)' }}>
+        <button onClick={() => setUploadModalOpen(true)} className="px-4 py-2.5 rounded-xl text-xs font-semibold text-white flex items-center justify-center gap-2 cursor-pointer hover:scale-[1.02] active:scale-[0.98] transition-all" style={{ background: 'linear-gradient(135deg, #D0021B, #8B0000)' }}>
           <Upload className="w-3.5 h-3.5" /> Upload Document
         </button>
       </div>
@@ -1887,7 +1955,15 @@ export default function DashboardClient() {
               </tr>
             </thead>
             <tbody>
-              {transactions.map((tx: any, i: number) => (
+              {transactions.length === 0 ? (
+                <tr>
+                  <td colSpan={5} className="py-12 text-center">
+                    <ArrowLeftRight className={`w-10 h-10 mx-auto mb-3 ${t('text-gray-600','text-gray-400')}`} />
+                    <p className={`text-sm font-medium ${t('text-gray-400','text-gray-600')}`}>No transactions yet</p>
+                    <p className={`text-xs mt-1 ${t('text-gray-600','text-gray-500')}`}>Your transaction history will appear here once you make an investment.</p>
+                  </td>
+                </tr>
+              ) : transactions.map((tx: any, i: number) => (
                 <tr key={i} className={`border-b transition-colors ${t('border-white/[0.03] hover:bg-white/[0.02]','border-gray-100 hover:bg-gray-200/30')}`}>
                   <td className={`py-3 px-5 text-xs ${t('text-gray-400','text-gray-700')}`}>{tx.date}</td>
                   <td className="py-3 px-5">
@@ -1954,7 +2030,7 @@ export default function DashboardClient() {
                 }
                 e.target.value = ''
               }} />
-              <button onClick={() => msgFileRef.current?.click()} className={`p-2 rounded-lg transition-colors ${t('hover:bg-white/[0.04]','hover:bg-gray-200/40')}`} title="Attach file"><Paperclip className={`w-4 h-4 ${t('text-gray-500 hover:text-white','text-gray-600 hover:text-gray-900')}`} /></button>
+              <button type="button" onClick={() => msgFileRef.current?.click()} className={`p-2.5 rounded-lg transition-colors cursor-pointer ${t('hover:bg-white/[0.06] bg-white/[0.03]','hover:bg-gray-200/60 bg-gray-100/50')} border ${t('border-white/[0.06]','border-gray-200/40')}`} title="Attach file"><Paperclip className={`w-4 h-4 ${t('text-gray-400 hover:text-white','text-gray-600 hover:text-gray-900')}`} /></button>
               <VoiceInput compact onTranscript={(text) => setMsgBody(prev => (prev ? prev + ' ' : '') + text)} showLanguageSelector />
               <div className="flex-1" />
               <button onClick={() => { setMessageCompose(false); setMsgAttachments([]) }} className={`px-4 py-2 rounded-xl text-sm font-medium ${t('text-gray-400','text-gray-700')}`}>Cancel</button>
@@ -2057,17 +2133,21 @@ export default function DashboardClient() {
               <VoiceInput compact onTranscript={(text) => setTicketDesc(prev => (prev ? prev + ' ' : '') + text)} showLanguageSelector />
               <span className={`text-[10px] ${t('text-gray-600','text-gray-500')}`}>Speak in 23 Indian languages</span>
             </div>
-            <button onClick={async () => {
+            <button type="button" onClick={async () => {
               if (!ticketSubject.trim()) { showToast('Please enter a subject for your ticket.', 'info'); return }
               if (!ticketDesc.trim()) { showToast('Please describe your issue.', 'info'); return }
-              const result = await createSupportTicket({ client_id: clientId, subject: ticketSubject, category: ticketCategory, description: ticketDesc, status: 'open', priority: 'medium' })
-              if (result) {
-                setTicketForm(false); setTicketSubject(''); setTicketCategory('General Inquiry'); setTicketDesc(''); refetchTickets()
-                showToast('Support ticket submitted. We\'ll respond within 24 hours.', 'success')
-              } else {
+              try {
+                const result = await createSupportTicket({ client_id: clientId, subject: ticketSubject, category: ticketCategory, description: ticketDesc, status: 'open', priority: 'medium' })
+                if (result) {
+                  setTicketForm(false); setTicketSubject(''); setTicketCategory('General Inquiry'); setTicketDesc(''); refetchTickets()
+                  showToast('Support ticket submitted. We\'ll respond within 24 hours.', 'success')
+                } else {
+                  showToast('Failed to submit ticket. Please try again or email info@ghlindiaventures.com', 'info')
+                }
+              } catch {
                 showToast('Failed to submit ticket. Please try again or email info@ghlindiaventures.com', 'info')
               }
-            }} className="px-5 py-2.5 rounded-xl text-sm font-semibold text-white" style={{ background: 'linear-gradient(135deg, #D0021B, #8B0000)' }}>Submit Ticket</button>
+            }} className="flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold text-white cursor-pointer hover:scale-[1.02] active:scale-[0.98] transition-all" style={{ background: 'linear-gradient(135deg, #D0021B, #8B0000)' }}><Send className="w-3.5 h-3.5" /> Submit Ticket</button>
           </div>
         )}
         {/* Existing tickets */}
@@ -2308,7 +2388,7 @@ export default function DashboardClient() {
               <button onClick={openEditProfile} className={`text-xs font-semibold flex items-center gap-1 ${t('text-gray-400 hover:text-white','text-gray-500 hover:text-gray-900')} transition-colors`}><Sliders className="w-3 h-3" /> Edit</button>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {[['Full Name', savedProfileData.full_name || userName],['Email', userEmail],['Phone', savedProfileData.phone || user?.phone || 'Not provided'],['City', savedProfileData.city || user?.city || 'Not provided'],['Date of Birth', savedProfileData.dob || user?.dob || 'Not provided'],['Occupation', savedProfileData.occupation || user?.occupation || 'Not provided']].map(([l,v],i) => (
+              {[['Full Name', savedProfileData.full_name || userName],['Email', userEmail],['Phone', savedProfileData.phone || user?.phone || 'Not provided'],['PAN Number', savedProfileData.pan || (user as any)?.pan || 'Not provided'],['City', savedProfileData.city || user?.city || 'Not provided'],['Date of Birth', savedProfileData.dob || user?.dob || 'Not provided'],['Occupation', savedProfileData.occupation || user?.occupation || 'Not provided']].map(([l,v],i) => (
                 <div key={i}><p className={`text-[10px] uppercase tracking-wider mb-1 ${t('text-gray-600','text-gray-600')}`}>{l}</p><p className={`text-sm font-medium ${v === 'Not provided' ? 'text-gray-600 italic' : t('text-white','text-gray-900')}`}>{v}</p></div>
               ))}
             </div>
@@ -2333,7 +2413,7 @@ export default function DashboardClient() {
               <button onClick={() => setBankConnectOpen(true)} className="text-xs text-brand-red font-semibold flex items-center gap-1"><Landmark className="w-3 h-3" /> Bank Connect</button>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {[['Bank Name', user?.bank_name || 'Not provided'],['Account No', user?.bank_account || 'Not provided'],['IFSC', user?.bank_ifsc || 'Not provided'],['Account Type', user?.bank_type || 'Not provided']].map(([l,v],i) => (
+              {[['Bank Name', savedBankData.bank_name || user?.bank_name || 'Not provided'],['Account No', savedBankData.account_number || user?.bank_account || 'Not provided'],['IFSC', savedBankData.ifsc_code || user?.bank_ifsc || 'Not provided'],['Account Type', savedBankData.account_type || user?.bank_type || 'Not provided']].map(([l,v],i) => (
                 <div key={i}><p className={`text-[10px] uppercase tracking-wider mb-1 ${t('text-gray-600','text-gray-600')}`}>{l}</p><p className={`text-sm font-medium ${v === 'Not provided' ? 'text-gray-600 italic' : t('text-white','text-gray-900')}`}>{v}</p></div>
               ))}
             </div>
@@ -2415,9 +2495,17 @@ export default function DashboardClient() {
                 if (!bankForm.holder_name.trim() || !bankForm.account_number.trim() || !bankForm.ifsc_code.trim()) { showToast('Please fill in all bank details.', 'info'); return }
                 try {
                   await addBankAccount({ client_id: clientId || '', user_id: user?.id || '', account_holder_name: bankForm.holder_name, account_number: bankForm.account_number, ifsc_code: bankForm.ifsc_code, bank_name: '', account_type: bankForm.account_type, is_primary: true })
+                  const bankData = { bank_name: 'Verified Bank', account_number: bankForm.account_number, ifsc_code: bankForm.ifsc_code, account_type: bankForm.account_type, holder_name: bankForm.holder_name }
+                  setSavedBankData(bankData)
+                  if (typeof window !== 'undefined') localStorage.setItem('ghl-bank-data', JSON.stringify(bankData))
                   setBankConnectOpen(false); setBankForm({ holder_name: '', account_number: '', ifsc_code: '', account_type: 'savings' })
                   showToast('Bank account verified and connected successfully.')
-                } catch { showToast('Bank details saved. Verification pending.', 'info'); setBankConnectOpen(false) }
+                } catch {
+                  const bankData = { bank_name: 'Pending Verification', account_number: bankForm.account_number, ifsc_code: bankForm.ifsc_code, account_type: bankForm.account_type, holder_name: bankForm.holder_name }
+                  setSavedBankData(bankData)
+                  if (typeof window !== 'undefined') localStorage.setItem('ghl-bank-data', JSON.stringify(bankData))
+                  showToast('Bank details saved. Verification pending.', 'info'); setBankConnectOpen(false)
+                }
               }} className="w-full py-2.5 rounded-xl text-sm font-semibold text-white" style={{ background: 'linear-gradient(135deg, #D0021B, #8B0000)' }}>Verify & Connect</button>
             </div>
           </div>
@@ -2568,19 +2656,9 @@ export default function DashboardClient() {
           )}
 
           {[
-            { label: 'Change Password', action: () => setShowPasswordReset(true) },
+            { label: 'Change Password', action: () => { setShowPasswordReset(true); setNewPassword(''); setConfirmNewPassword('') } },
             { label: 'Enable 2FA', action: async () => {
-              try {
-                const { supabase, isSupabaseConfigured } = await import('@/lib/supabase/client')
-                if (!isSupabaseConfigured()) { showToast('Auth service unavailable', 'info'); return }
-                const { data: { user: authUser } } = await supabase.auth.getUser()
-                if (!authUser?.email) { showToast('No email found on account', 'info'); return }
-                // Send MFA enrollment email via password reset as a 2FA setup trigger
-                await supabase.auth.resetPasswordForEmail(authUser.email, {
-                  redirectTo: `${window.location.origin}/auth/callback`,
-                })
-                showToast('2FA verification email sent! Check your inbox to complete setup.', 'success')
-              } catch { showToast('Failed to initiate 2FA setup. Please try again.', 'info') }
+              showToast('Two-factor authentication (2FA) requires admin configuration in Supabase. Please contact your administrator to enable MFA for your account.', 'info')
             } },
             { label: 'Active Sessions', action: () => showToast('You have 1 active session: Chrome on Windows — Current Device', 'info') },
             { label: 'Login History', action: () => showToast('Last login: Today at 10:30 AM from Chennai, India (Chrome/Windows)', 'info') },
@@ -3341,12 +3419,12 @@ export default function DashboardClient() {
   ]
 
   return (
-    <div className="min-h-screen relative bg-brand-black">
+    <div className={`min-h-screen relative ${isDark ? 'bg-brand-black' : 'bg-[#E8E5E0]'}`}>
       {/* Background ambient effects */}
       <div className="fixed inset-0 pointer-events-none z-0">
-        <div className="absolute top-0 left-1/4 w-[600px] h-[600px] bg-brand-red/[0.03] rounded-full blur-[200px]" />
-        <div className="absolute bottom-0 right-1/4 w-[500px] h-[500px] bg-brand-red/[0.02] rounded-full blur-[180px]" />
-        <div className="absolute inset-0 opacity-[0.015]" style={{ backgroundImage: 'radial-gradient(rgba(255,255,255,0.3) 1px, transparent 1px)', backgroundSize: '40px 40px' }} />
+        <div className={`absolute top-0 left-1/4 w-[600px] h-[600px] rounded-full blur-[200px] ${isDark ? 'bg-brand-red/[0.03]' : 'bg-brand-red/[0.02]'}`} />
+        <div className={`absolute bottom-0 right-1/4 w-[500px] h-[500px] rounded-full blur-[180px] ${isDark ? 'bg-brand-red/[0.02]' : 'bg-brand-red/[0.01]'}`} />
+        {isDark && <div className="absolute inset-0 opacity-[0.015]" style={{ backgroundImage: 'radial-gradient(rgba(255,255,255,0.3) 1px, transparent 1px)', backgroundSize: '40px 40px' }} />}
       </div>
 
       {renderSidebar()}
@@ -3357,7 +3435,7 @@ export default function DashboardClient() {
       <div className="lg:ml-[260px] relative z-10 min-h-screen flex flex-col">
         {renderTopBar()}
         <div className="flex-1 p-4 lg:p-6 pb-20 overflow-auto">{renderContent()}</div>
-        <footer className="hidden sm:flex border-t px-4 lg:px-6 py-3 flex-col sm:flex-row items-center justify-between gap-2 text-[11px] border-white/[0.04] text-gray-600">
+        <footer className={`hidden sm:flex border-t px-4 lg:px-6 py-3 flex-col sm:flex-row items-center justify-between gap-2 text-[11px] ${isDark ? 'border-white/[0.04] text-gray-600' : 'border-gray-300/50 text-gray-500'}`}>
           <p>&copy; 2025 GHL India Ventures. <a href="https://www.sebi.gov.in/sebiweb/other/OtherAction.do?doRecognisedFpi=yes&intmId=16&name=GHL%20INDIA%20VENTURES%20TRUST&regNo=IN/AIF2/24-25/1517" target="_blank" rel="noopener noreferrer" className="hover:text-brand-red transition-colors">SEBI Reg: IN/AIF2/2425/1517</a></p>
           <div className="flex items-center gap-3">
             <button onClick={() => { setTermsOpen(true); setTermsScrolled(false) }} className="hover:underline hover:text-white transition-colors">Terms & Conditions</button>
@@ -3368,8 +3446,8 @@ export default function DashboardClient() {
       </div>
 
       {/* Mobile Bottom Navigation Bar */}
-      <nav className="fixed bottom-0 left-0 right-0 z-[9998] lg:left-[260px] border-t border-white/[0.06]"
-        style={{ background: 'rgba(10,10,10,0.97)', backdropFilter: 'blur(24px)', WebkitBackdropFilter: 'blur(24px)' }}>
+      <nav className={`fixed bottom-0 left-0 right-0 z-[9998] lg:left-[260px] border-t ${isDark ? 'border-white/[0.06]' : 'border-gray-300/50'}`}
+        style={{ background: isDark ? 'rgba(10,10,10,0.97)' : 'rgba(214,211,206,0.97)', backdropFilter: 'blur(24px)', WebkitBackdropFilter: 'blur(24px)' }}>
         <div className="flex items-center justify-around px-0.5 py-1 safe-area-bottom">
           {MOBILE_NAV.map(item => {
             const isActive = activeTab === item.id

@@ -17,7 +17,7 @@ export const AUTH_ERRORS = {
   EMAIL_EXISTS: 'This email is already registered. Please sign in to continue.',
   PHONE_EXISTS: 'This phone number is already linked to another account.',
   SIGNUP_FAILED: 'Registration failed. Please check your details and try again.',
-  WEAK_PASSWORD: 'Password must be at least 8 characters long.',
+  WEAK_PASSWORD: 'Password must be at least 8 characters and include both letters and numbers.',
   PASSWORDS_MISMATCH: 'Passwords do not match.',
 
   // OAuth / Google errors

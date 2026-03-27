@@ -87,6 +87,11 @@ function RegisterPageInner() {
       setError(AUTH_ERRORS.WEAK_PASSWORD)
       return
     }
+    // Supabase requires password to contain both letters and numbers
+    if (!/[a-zA-Z]/.test(form.password) || !/[0-9]/.test(form.password)) {
+      setError(AUTH_ERRORS.WEAK_PASSWORD)
+      return
+    }
     if (form.password !== form.confirm) {
       setError(AUTH_ERRORS.PASSWORDS_MISMATCH)
       return
