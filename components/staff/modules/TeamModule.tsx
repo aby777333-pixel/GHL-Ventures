@@ -396,7 +396,7 @@ function AnnouncementCard({ announcement: ann }: { announcement: Announcement })
               })}
             </span>
             <span className="text-gray-700">
-              {ann.readBy.length} read
+              {(ann.readBy?.length ?? 0)} read
             </span>
           </div>
         </div>

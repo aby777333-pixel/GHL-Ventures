@@ -17,7 +17,7 @@ export const AUTH_ERRORS = {
   EMAIL_EXISTS: 'This email is already registered. Please sign in to continue.',
   PHONE_EXISTS: 'This phone number is already linked to another account.',
   SIGNUP_FAILED: 'Registration failed. Please check your details and try again.',
-  WEAK_PASSWORD: 'Password must be at least 8 characters with a mix of letters and numbers.',
+  WEAK_PASSWORD: 'Password must be at least 8 characters long.',
   PASSWORDS_MISMATCH: 'Passwords do not match.',
 
   // OAuth / Google errors
@@ -105,6 +105,11 @@ export function mapSupabaseError(error: string | null | undefined): string {
   // Provider not enabled
   if (e.includes('provider') && e.includes('not enabled'))
     return AUTH_ERRORS.GOOGLE_DISABLED
+  // Phone provider not configured (OTP)
+  if (e.includes('unsupported') && e.includes('phone'))
+    return 'OTP login via SMS is not yet available. Please use email and password to sign in.'
+  if (e.includes('phone') && e.includes('provider'))
+    return 'OTP login via SMS is not yet available. Please use email and password to sign in.'
 
   // Return the original error if it's reasonably user-friendly, otherwise generic
   if (error.length < 100 && !e.includes('unexpected') && !e.includes('internal'))

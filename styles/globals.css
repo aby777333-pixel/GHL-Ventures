@@ -613,6 +613,58 @@
   color: #9CA3AF !important;
 }
 
+/* ============================================================
+   DASHBOARD BUTTON CLICKABILITY FIX
+   Ensure entire button area is clickable, not just the icon edge
+   ============================================================ */
+button {
+  cursor: pointer;
+  position: relative;
+}
+
+/* Ensure icons inside buttons don't steal pointer events */
+button > svg,
+button > span > svg,
+a > svg {
+  pointer-events: none;
+}
+
+/* Fix button hit area — ensure padding and flex centering */
+button.flex,
+a.flex {
+  align-items: center;
+  justify-content: center;
+}
+
+/* ============================================================
+   FONT READABILITY IMPROVEMENTS
+   ============================================================ */
+
+/* Increase minimum text sizes in dashboard for readability */
+.text-\[9px\] { font-size: 10px !important; }
+.text-\[10px\] { font-size: 11px !important; }
+.text-\[11px\] { font-size: 12px !important; }
+
+/* Improve text contrast in dark mode dashboard */
+:root.dark .text-gray-500,
+:root.dark [class*="text-gray-500"] {
+  color: #9CA3AF !important; /* Brighter gray for better readability */
+}
+
+:root.dark .text-gray-600,
+:root.dark [class*="text-gray-600"] {
+  color: #D1D5DB !important; /* Much brighter for readability */
+}
+
+:root.dark .text-gray-400,
+:root.dark [class*="text-gray-400"] {
+  color: #9CA3AF !important;
+}
+
+:root.dark .placeholder-gray-600::placeholder {
+  color: #6B7280 !important;
+}
+
 /* Fund pages & submenus: headings, labels, table cells */
 :root.dark .text-brand-black\/80 {
   color: rgba(255,255,255,0.8) !important;

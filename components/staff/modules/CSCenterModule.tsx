@@ -47,7 +47,7 @@ import {
   onNewContactSubmission,
 } from '@/lib/supabase/realtimeSubscriptions'
 import { fetchLeads } from '@/lib/supabase/leadService'
-import { fetchTickets } from '@/lib/supabase/staffDataService'
+import { fetchTickets, updateTicket, updateAgentStatus } from '@/lib/supabase/staffDataService'
 import type { Lead } from '@/lib/admin/adminTypes'
 
 // ════════════════════════════════════════════════════════════════
@@ -178,7 +178,17 @@ function CSDashboard({ navigate, showToast }: Pick<CSCenterModuleProps, 'navigat
             {statuses.map(s => (
               <button
                 key={s.key}
-                onClick={() => { setAgentStatus(s.key); showToast(`Status changed to ${s.label}`, 'info') }}
+                onClick={async () => {
+                  setAgentStatus(s.key)
+                  showToast(`Status changed to ${s.label}`, 'info')
+                  // Persist to Supabase if possible
+                  try {
+                    const { supabase } = await import('@/lib/supabase/client')
+                    const sb = supabase as any
+                    const { data: { user } } = await sb.auth.getUser()
+                    if (user?.id) await updateAgentStatus(user.id, s.key)
+                  } catch { /* silent — UI already updated */ }
+                }}
                 className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border transition-all ${
                   agentStatus === s.key
                     ? 'bg-white/[0.1] border-white/[0.15] text-white'
@@ -502,6 +512,8 @@ function TicketManagement({ showToast }: Pick<CSCenterModuleProps, 'showToast'>)
   const [selectedTicket, setSelectedTicket] = useState<TicketRow | null>(null)
   const [tickets, setTickets] = useState<TicketRow[]>([])
   const [loading, setLoading] = useState(true)
+  const [ticketNewStatus, setTicketNewStatus] = useState<string>('')
+  const [updatingTicket, setUpdatingTicket] = useState(false)
 
   // Load tickets from Supabase
   useEffect(() => {
@@ -650,8 +662,44 @@ function TicketManagement({ showToast }: Pick<CSCenterModuleProps, 'showToast'>)
             <div className="border-t border-white/[0.06] pt-4">
               <p className="text-[10px] text-gray-500 uppercase tracking-wider mb-2">Actions</p>
               <div className="flex items-center gap-2 flex-wrap">
-                <button onClick={() => { showToast('Ticket status updated', 'success'); setSelectedTicket(null) }} className="px-3 py-1.5 rounded-lg text-xs font-medium bg-teal-500/20 text-teal-400 border border-teal-500/30 hover:bg-teal-500/30 transition-colors">
-                  Update Status
+                <select
+                  value={ticketNewStatus}
+                  onChange={e => setTicketNewStatus(e.target.value)}
+                  className="px-3 py-1.5 rounded-lg text-xs font-medium bg-white/[0.04] text-white border border-white/[0.08] focus:outline-none focus:border-teal-500/40"
+                >
+                  <option value="" className="bg-neutral-900">Change status...</option>
+                  <option value="open" className="bg-neutral-900">Open</option>
+                  <option value="in-progress" className="bg-neutral-900">In Progress</option>
+                  <option value="awaiting-client" className="bg-neutral-900">Awaiting Client</option>
+                  <option value="awaiting-internal" className="bg-neutral-900">Awaiting Internal</option>
+                  <option value="resolved" className="bg-neutral-900">Resolved</option>
+                  <option value="closed" className="bg-neutral-900">Closed</option>
+                </select>
+                <button
+                  disabled={!ticketNewStatus || updatingTicket}
+                  onClick={async () => {
+                    if (!ticketNewStatus || !selectedTicket) return
+                    setUpdatingTicket(true)
+                    try {
+                      const result = await updateTicket(selectedTicket.id, { status: ticketNewStatus })
+                      if (result) {
+                        showToast(`Ticket status updated to ${ticketNewStatus.replace(/-/g, ' ')}`, 'success')
+                        // Refresh tickets list
+                        setTickets(prev => prev.map(t => t.id === selectedTicket.id ? { ...t, status: ticketNewStatus } : t))
+                        setSelectedTicket(null)
+                        setTicketNewStatus('')
+                      } else {
+                        showToast('Failed to update ticket status', 'error')
+                      }
+                    } catch (err: any) {
+                      showToast(`Error: ${err?.message || 'Unknown error'}`, 'error')
+                    } finally {
+                      setUpdatingTicket(false)
+                    }
+                  }}
+                  className="px-3 py-1.5 rounded-lg text-xs font-medium bg-teal-500/20 text-teal-400 border border-teal-500/30 hover:bg-teal-500/30 transition-colors disabled:opacity-50"
+                >
+                  {updatingTicket ? 'Updating...' : 'Update Status'}
                 </button>
                 <button onClick={() => { showToast('Ticket reassigned', 'info'); setSelectedTicket(null) }} className="px-3 py-1.5 rounded-lg text-xs font-medium bg-white/[0.04] text-gray-300 border border-white/[0.08] hover:bg-white/[0.08] transition-colors">
                   Reassign
@@ -819,7 +867,7 @@ function VideoView({ showToast }: Pick<CSCenterModuleProps, 'showToast'>) {
             </div>
           </div>
           <button
-            onClick={() => { setVideoAvailable(!videoAvailable); showToast(videoAvailable ? 'Video calls disabled' : 'Video calls enabled', 'info') }}
+            onClick={() => { const newState = !videoAvailable; setVideoAvailable(newState); showToast(newState ? 'Video calls enabled' : 'Video calls disabled', 'info') }}
             className={`relative w-12 h-6 rounded-full transition-colors ${videoAvailable ? 'bg-teal-500' : 'bg-gray-600'}`}
           >
             <span className={`absolute top-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform ${videoAvailable ? 'left-[26px]' : 'left-0.5'}`} />

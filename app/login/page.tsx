@@ -158,7 +158,12 @@ export default function LoginPage() {
         phone: `+91${digits}`,
       })
       if (otpError) {
-        setError(mapSupabaseError(otpError.message))
+        const msg = otpError.message?.toLowerCase() || ''
+        if (msg.includes('unsupported') || msg.includes('phone') && msg.includes('provider')) {
+          setError('OTP login via SMS is not yet available. Please use email and password to sign in.')
+        } else {
+          setError(mapSupabaseError(otpError.message))
+        }
         setLoading(false)
         return
       }

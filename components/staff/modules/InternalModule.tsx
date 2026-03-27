@@ -5,6 +5,7 @@ import AdminGlass from '@/components/admin/shared/AdminGlass'
 import AdminBadge from '@/components/admin/shared/AdminBadge'
 import { fetchAnnouncements } from '@/lib/supabase/staffDataService'
 import { insertRow } from '@/lib/supabase/adminDataService'
+import { supabase } from '@/lib/supabase/client'
 import {
   getChannels,
   getChannelMessages,
@@ -216,7 +217,7 @@ function NoticeboardView({ announcements }: { announcements: any[] }) {
               <p className="text-xs text-white/60 leading-relaxed mb-3">{ann.content}</p>
               <div className="flex items-center justify-between">
                 <span className="text-[10px] text-white/30">Posted by {ann.postedBy}</span>
-                <span className="text-[10px] text-white/25">{ann.readBy.length} read</span>
+                <span className="text-[10px] text-white/25">{(ann.readBy?.length ?? 0)} read</span>
               </div>
             </AdminGlass>
           )
@@ -239,12 +240,48 @@ const POLICIES: { id: string; title: string; lastUpdated: string; version: strin
 ]
 
 function PoliciesView({ showToast }: { showToast: Toast }) {
+  const [loadingPolicy, setLoadingPolicy] = useState<string | null>(null)
+
+  const handleViewDocument = async (pol: typeof POLICIES[number]) => {
+    setLoadingPolicy(pol.id)
+    try {
+      // Try to find the policy document in Supabase storage
+      const fileName = pol.title.toLowerCase().replace(/\s+/g, '-')
+      const possiblePaths = [
+        `policies/${fileName}.pdf`,
+        `policies/${pol.id}.pdf`,
+        `documents/policies/${fileName}.pdf`,
+      ]
+
+      let publicUrl: string | null = null
+      for (const path of possiblePaths) {
+        const { data } = supabase.storage.from('documents').getPublicUrl(path)
+        if (data?.publicUrl) {
+          publicUrl = data.publicUrl
+          break
+        }
+      }
+
+      if (publicUrl) {
+        window.open(publicUrl, '_blank', 'noopener,noreferrer')
+      } else {
+        showToast(`Document for "${pol.title}" is not yet available in storage`, 'warning')
+      }
+    } catch (err) {
+      console.error('Error fetching policy document:', err)
+      showToast(`Failed to open ${pol.title}`, 'error')
+    } finally {
+      setLoadingPolicy(null)
+    }
+  }
+
   return (
     <div className="space-y-4">
       <SectionHeader title="Company Policies" icon={FileText} />
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
         {POLICIES.map(pol => {
           const Icon = pol.icon
+          const isLoading = loadingPolicy === pol.id
           return (
             <AdminGlass key={pol.id} padding="p-4">
               <div className="flex items-start gap-3">
@@ -257,9 +294,9 @@ function PoliciesView({ showToast }: { showToast: Toast }) {
                     <span>Last updated: {pol.lastUpdated}</span>
                     <span>{pol.version}</span>
                   </div>
-                  <button onClick={() => showToast(`Opening ${pol.title}...`, 'info')}
-                    className="flex items-center gap-1 text-[10px] font-semibold text-teal-400 hover:text-teal-300 transition-colors">
-                    <Eye className="w-3 h-3" /> View Document
+                  <button onClick={() => handleViewDocument(pol)} disabled={isLoading}
+                    className="flex items-center gap-1 text-[10px] font-semibold text-teal-400 hover:text-teal-300 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+                    <Eye className="w-3 h-3" /> {isLoading ? 'Opening...' : 'View Document'}
                   </button>
                 </div>
               </div>
@@ -290,12 +327,21 @@ function FeedbackView({ showToast }: { showToast: Toast }) {
   const [subject, setSubject] = useState('')
   const [description, setDescription] = useState('')
   const [anonymous, setAnonymous] = useState(false)
+  const [submitting, setSubmitting] = useState(false)
 
   const handleSubmit = async () => {
     if (!subject.trim() || !description.trim()) { showToast('Please fill in all required fields', 'warning'); return }
-    const row = await insertRow('tickets', { title: subject, description, type: 'feedback', category, status: 'open', priority: 'normal', is_anonymous: anonymous })
-    if (row) { showToast('Feedback submitted successfully!', 'success') } else { showToast('Failed to submit feedback', 'error') }
-    setSubject(''); setDescription(''); setAnonymous(false); setCategory('General')
+    setSubmitting(true)
+    try {
+      const row = await insertRow('tickets', { title: subject, description, type: 'feedback', category, status: 'open', priority: 'normal', is_anonymous: anonymous })
+      if (row) { showToast('Feedback submitted successfully!', 'success') } else { showToast('Failed to submit feedback', 'error') }
+      setSubject(''); setDescription(''); setAnonymous(false); setCategory('General')
+    } catch (err) {
+      console.error('Feedback submission error:', err)
+      showToast('An unexpected error occurred while submitting feedback', 'error')
+    } finally {
+      setSubmitting(false)
+    }
   }
 
   return (
@@ -329,9 +375,9 @@ function FeedbackView({ showToast }: { showToast: Toast }) {
                 className="w-3.5 h-3.5 rounded border-white/20 bg-white/[0.04] accent-teal-500" />
               <span className="text-[11px] text-white/50">Submit anonymously</span>
             </label>
-            <button onClick={handleSubmit}
-              className="flex items-center gap-1.5 bg-teal-500/20 hover:bg-teal-500/30 text-teal-300 px-4 py-2 rounded-lg text-xs font-semibold transition-colors">
-              <Send className="w-3 h-3" /> Submit Feedback
+            <button onClick={handleSubmit} disabled={submitting}
+              className="flex items-center gap-1.5 bg-teal-500/20 hover:bg-teal-500/30 text-teal-300 px-4 py-2 rounded-lg text-xs font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+              <Send className="w-3 h-3" /> {submitting ? 'Submitting...' : 'Submit Feedback'}
             </button>
           </div>
         </div>
@@ -380,12 +426,23 @@ const MOODS = [
 ]
 
 function WellnessView({ showToast }: { showToast: Toast }) {
+  const [expandedCards, setExpandedCards] = useState<Set<string>>(new Set())
+
+  const toggleCard = (id: string) => {
+    setExpandedCards(prev => {
+      const next = new Set(prev)
+      if (next.has(id)) { next.delete(id) } else { next.add(id) }
+      return next
+    })
+  }
+
   return (
     <div className="space-y-4">
       <SectionHeader title="Wellness Hub" icon={Activity} />
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
         {WELLNESS_CARDS.map(card => {
           const Icon = card.icon
+          const isExpanded = expandedCards.has(card.id)
           return (
             <AdminGlass key={card.id} padding="p-4">
               <div className="flex items-start gap-3">
@@ -395,10 +452,15 @@ function WellnessView({ showToast }: { showToast: Toast }) {
                 <div className="flex-1 min-w-0">
                   <h4 className="text-sm font-semibold text-white mb-1">{card.title}</h4>
                   <p className="text-[11px] text-white/50 leading-relaxed mb-3">{card.desc}</p>
-                  <button onClick={() => showToast(`Opening ${card.title}...`, 'info')}
+                  <button onClick={() => toggleCard(card.id)}
                     className="flex items-center gap-1 text-[10px] font-semibold text-teal-400 hover:text-teal-300 transition-colors">
-                    Learn More <ChevronRight className="w-3 h-3" />
+                    {isExpanded ? 'Show Less' : 'Learn More'} <ChevronRight className={`w-3 h-3 transition-transform ${isExpanded ? 'rotate-90' : ''}`} />
                   </button>
+                  {isExpanded && (
+                    <div className="mt-3 pt-3 border-t border-white/[0.06]">
+                      <p className="text-xs text-white/60 leading-relaxed">{card.desc}</p>
+                    </div>
+                  )}
                 </div>
               </div>
             </AdminGlass>
