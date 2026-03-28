@@ -519,7 +519,7 @@ function DocumentsTab({ documents, showToast }: { documents: AdminDocument[]; sh
                   <p className="text-sm font-medium text-white truncate group-hover:text-brand-red transition-colors">{doc.name}</p>
                   <p className="text-[11px] text-gray-500 mt-0.5">{doc.type} • {doc.size} • v{doc.version}</p>
                   <div className="flex flex-wrap gap-1 mt-2">
-                    {doc.tags.slice(0, 3).map(tag => (
+                    {(doc.tags ?? []).slice(0, 3).map(tag => (
                       <span key={tag} className="text-[9px] px-1.5 py-0.5 rounded bg-white/[0.04] text-gray-500 border border-white/[0.06]">
                         {tag}
                       </span>

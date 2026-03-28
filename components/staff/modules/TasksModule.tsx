@@ -289,12 +289,13 @@ function MyTasksView({ showToast, tasks, onRefresh }: { showToast: TasksModulePr
             try {
               const row = await insertRow('tasks', {
                 title: taskForm.title,
-                description: taskForm.description,
+                description: taskForm.description || null,
                 priority: taskForm.priority,
                 status: taskForm.status,
                 due_date: taskForm.dueDate || null,
                 assigned_to: taskForm.assignedTo || null,
-                tags: taskForm.tags ? taskForm.tags.split(',').map(t => t.trim()) : [],
+                tags: taskForm.tags ? taskForm.tags.split(',').map(t => t.trim()).filter(Boolean) : [],
+                source: 'manual',
               })
               if (row) {
                 showToast('Task created successfully', 'success')
@@ -486,6 +487,8 @@ function WorkflowsView({ showToast }: { showToast: TasksModuleProps['showToast']
 
 // ── Helpers ────────────────────────────────────────────────────
 function formatDate(dateStr: string): string {
+  if (!dateStr) return '—'
   const d = new Date(dateStr)
+  if (isNaN(d.getTime())) return '—'
   return d.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })
 }

@@ -41,6 +41,7 @@ export default function ClientModule({ subTab, navigate, showToast }: ClientModu
   const [kycFilter, setKycFilter] = useState<KYCStatus | 'all'>('all')
   const [addClientOpen, setAddClientOpen] = useState(false)
   const [folderPickerOpen, setFolderPickerOpen] = useState(false)
+  const [editingClient, setEditingClient] = useState<Client | null>(null)
   const [clientForm, setClientForm] = useState({ full_name: '', email: '', phone: '', pan: '', risk_profile: 'moderate', assigned_rm: '', total_invested: '' })
 
   const [clients, setClients] = useState<any[]>([])
@@ -95,7 +96,7 @@ export default function ClientModule({ subTab, navigate, showToast }: ClientModu
           <p className="text-sm text-gray-500 mt-1">Manage investors, KYC verification, and client relationships</p>
         </div>
         <button
-          onClick={() => setAddClientOpen(true)}
+          onClick={() => { setEditingClient(null); setClientForm({ full_name: '', email: '', phone: '', pan: '', risk_profile: 'moderate', assigned_rm: '', total_invested: '' }); setAddClientOpen(true) }}
           className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium text-white bg-brand-red/20 border border-brand-red/30 hover:bg-brand-red/30 transition-colors self-start admin-btn-press"
         >
           <UserPlus className="w-4 h-4" />
@@ -165,7 +166,22 @@ export default function ClientModule({ subTab, navigate, showToast }: ClientModu
           footer={
             <>
               <ModalButton onClick={() => { setProfileModalOpen(false); setSelectedClient(null) }}>Close</ModalButton>
-              <ModalButton variant="primary" onClick={() => { setProfileModalOpen(false); setSelectedClient(null); setAddClientOpen(true) }}>Edit Client</ModalButton>
+              <ModalButton variant="primary" onClick={() => {
+                const c = selectedClient!
+                setEditingClient(c)
+                setClientForm({
+                  full_name: c.name || '',
+                  email: c.email || '',
+                  phone: c.phone || '',
+                  pan: (c as any).pan || '',
+                  risk_profile: c.riskProfile || 'moderate',
+                  assigned_rm: (c as any).assignedRM || '',
+                  total_invested: String(c.aum || ''),
+                })
+                setProfileModalOpen(false)
+                setSelectedClient(null)
+                setAddClientOpen(true)
+              }}>Edit Client</ModalButton>
             </>
           }
         >
@@ -177,9 +193,9 @@ export default function ClientModule({ subTab, navigate, showToast }: ClientModu
       {addClientOpen && (
         <AdminModal
           isOpen={addClientOpen}
-          onClose={() => setAddClientOpen(false)}
-          title="New Client"
-          subtitle="Register a new investment client"
+          onClose={() => { setAddClientOpen(false); setEditingClient(null) }}
+          title={editingClient ? 'Edit Client' : 'New Client'}
+          subtitle={editingClient ? `Update ${editingClient.name}` : 'Register a new investment client'}
           maxWidth="max-w-xl"
           footer={
             <>
@@ -187,33 +203,55 @@ export default function ClientModule({ subTab, navigate, showToast }: ClientModu
               <ModalButton variant="primary" onClick={async () => {
                 if (!clientForm.full_name.trim() || !clientForm.email.trim()) { showToast('Name and email are required', 'info'); return }
                 try {
-                  const { insertRow } = await import('@/lib/supabase/adminDataService')
-                  const clientCode = `GHL-C-${Date.now().toString(36).toUpperCase()}`
-                  const result = await insertRow('clients', {
-                    full_name: clientForm.full_name,
-                    email: clientForm.email,
-                    phone: clientForm.phone || null,
-                    pan: clientForm.pan || null,
-                    risk_profile: clientForm.risk_profile || 'moderate',
-                    assigned_rm: clientForm.assigned_rm || null,
-                    total_invested: parseFloat(clientForm.total_invested) || 0,
-                    client_code: clientCode,
-                    kyc_status: 'pending',
-                    is_active: true,
-                  })
-                  if (result) {
+                  if (editingClient) {
+                    // Update existing client
+                    const { supabase } = await import('@/lib/supabase/client')
+                    const sb = supabase as any
+                    const { error } = await sb.from('clients').update({
+                      full_name: clientForm.full_name,
+                      email: clientForm.email,
+                      phone: clientForm.phone || null,
+                      pan: clientForm.pan || null,
+                      risk_profile: clientForm.risk_profile || 'moderate',
+                      assigned_rm: clientForm.assigned_rm || null,
+                      total_invested: parseFloat(clientForm.total_invested) || 0,
+                    }).eq('id', editingClient.id)
+                    if (error) throw error
                     setAddClientOpen(false)
+                    setEditingClient(null)
                     setClientForm({ full_name: '', email: '', phone: '', pan: '', risk_profile: 'moderate', assigned_rm: '', total_invested: '' })
-                    showToast(`Client ${clientForm.full_name} registered (${clientCode})`, 'success')
+                    showToast(`Client ${clientForm.full_name} updated successfully`, 'success')
                     loadData()
                   } else {
-                    showToast('Database error — check if email already exists or contact support.', 'error')
+                    // Create new client
+                    const { insertRow } = await import('@/lib/supabase/adminDataService')
+                    const clientCode = `GHL-C-${Date.now().toString(36).toUpperCase()}`
+                    const result = await insertRow('clients', {
+                      full_name: clientForm.full_name,
+                      email: clientForm.email,
+                      phone: clientForm.phone || null,
+                      pan: clientForm.pan || null,
+                      risk_profile: clientForm.risk_profile || 'moderate',
+                      assigned_rm: clientForm.assigned_rm || null,
+                      total_invested: parseFloat(clientForm.total_invested) || 0,
+                      client_code: clientCode,
+                      kyc_status: 'pending',
+                      is_active: true,
+                    })
+                    if (result) {
+                      setAddClientOpen(false)
+                      setClientForm({ full_name: '', email: '', phone: '', pan: '', risk_profile: 'moderate', assigned_rm: '', total_invested: '' })
+                      showToast(`Client ${clientForm.full_name} registered (${clientCode})`, 'success')
+                      loadData()
+                    } else {
+                      showToast('Database error — check if email already exists or contact support.', 'error')
+                    }
                   }
                 } catch (err: any) {
-                  console.error('[admin] Add client error:', err)
-                  showToast(err?.message || 'Failed to register client', 'error')
+                  console.error('[admin] Save client error:', err)
+                  showToast(err?.message || 'Failed to save client', 'error')
                 }
-              }}>Save Client</ModalButton>
+              }}>{editingClient ? 'Update Client' : 'Save Client'}</ModalButton>
             </>
           }
         >

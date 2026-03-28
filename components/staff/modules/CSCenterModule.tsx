@@ -1539,7 +1539,7 @@ function WhatsAppView({ showToast }: Pick<CSCenterModuleProps, 'showToast'>) {
             ) : WA_TEMPLATES.map(tpl => (
               <div
                 key={tpl.id}
-                onClick={() => showToast(`Template "${tpl.name}" copied to clipboard`, 'success')}
+                onClick={() => { navigator.clipboard?.writeText(tpl.preview).catch(() => {}); showToast(`Template "${tpl.name}" copied to clipboard`, 'success') }}
                 className="px-5 py-3 cursor-pointer hover:bg-emerald-500/[0.05] transition-colors"
               >
                 <p className="text-xs text-emerald-400 font-medium mb-1">{tpl.name}</p>

@@ -140,7 +140,7 @@ export async function createLead(input: CreateLeadInput): Promise<{ success: boo
         status: input.stage || 'new',
         estimated_value: input.value || 0,
         score: input.probability || 20,
-        assigned_to: input.assignedTo,
+        assigned_to: (input.assignedTo === 'Unassigned' || !input.assignedTo) ? null : input.assignedTo,
         notes: input.notes,
         tags: input.tags || [],
         preferred_contact_method: input.preferredContactMethod || 'phone',
@@ -211,7 +211,7 @@ export async function updateLead(
     if (input.stage !== undefined) updates.status = input.stage
     if (input.value !== undefined) updates.estimated_value = input.value
     if (input.probability !== undefined) updates.score = input.probability
-    if (input.assignedTo !== undefined) updates.assigned_to = input.assignedTo
+    if (input.assignedTo !== undefined) updates.assigned_to = (input.assignedTo === 'Unassigned' || !input.assignedTo) ? null : input.assignedTo
     if (input.notes !== undefined) updates.notes = input.notes
 
     const db = supabase as any

@@ -485,6 +485,7 @@ function DirectoryTab({ employees, onView, showToast }: { employees: any[]; onVi
         />
       ),
     },
+    { key: 'phone', label: 'Phone', render: (row) => <span className="text-xs text-gray-400">{row.phone || '—'}</span> },
     { key: 'email', label: 'Email', render: (row) => <span className="text-xs text-gray-400 truncate max-w-[180px] block">{row.email}</span> },
     { key: 'joinDate', label: 'Joined', render: (row) => <span className="text-xs text-gray-400">{formatDate(row.joinDate)}</span> },
     {

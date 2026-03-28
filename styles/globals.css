@@ -3497,3 +3497,75 @@ html:not(.dark) select option:checked {
 html:not(.dark) select option:hover {
   background-color: #F0F0F0;
 }
+
+/* ============================================================
+   QA FIX: Common UI Issues (March 2026)
+   ============================================================ */
+
+/* 1. Button clickability - ensure entire button area is clickable, not just the icon */
+button {
+  position: relative;
+}
+button > svg,
+button > span > svg,
+a > svg {
+  pointer-events: none;
+}
+
+/* Dashboard action buttons - ensure icons + text are centered and fully clickable */
+button[class*="rounded-xl"],
+button[class*="rounded-lg"] {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.375rem;
+}
+
+/* 2. Font readability - improve minimum sizes in dashboard */
+/* Dashboard minimum font size */
+[class*="text-\\[10px\\]"] {
+  font-size: 11px !important;
+  line-height: 1.4;
+}
+[class*="text-\\[11px\\]"] {
+  font-size: 12px !important;
+  line-height: 1.4;
+}
+
+/* 3. Dark theme font visibility - stronger contrast for all dashboard text */
+.dark [class*="text-gray-500"],
+[class*="bg-brand-black"] [class*="text-gray-500"],
+[class*="bg-\\[\\#111\\]"] [class*="text-gray-500"] {
+  color: rgba(255, 255, 255, 0.65) !important;
+}
+.dark [class*="text-gray-400"],
+[class*="bg-brand-black"] [class*="text-gray-400"],
+[class*="bg-\\[\\#111\\]"] [class*="text-gray-400"] {
+  color: rgba(255, 255, 255, 0.75) !important;
+}
+.dark [class*="text-gray-300"],
+[class*="bg-brand-black"] [class*="text-gray-300"] {
+  color: rgba(255, 255, 255, 0.85) !important;
+}
+.dark [class*="text-gray-600"] {
+  color: rgba(255, 255, 255, 0.55) !important;
+}
+
+/* Dark theme placeholder visibility */
+.dark input::placeholder,
+.dark textarea::placeholder,
+.dark select::placeholder {
+  color: rgba(255, 255, 255, 0.4) !important;
+}
+
+/* Dark theme form input text */
+.dark input,
+.dark textarea,
+.dark select {
+  color: rgba(255, 255, 255, 0.9);
+}
+
+/* Dashboard sidebar text visibility in dark mode */
+.dark [class*="text-brand-grey"] {
+  color: rgba(255, 255, 255, 0.6) !important;
+}

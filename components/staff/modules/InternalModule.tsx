@@ -255,17 +255,33 @@ function PoliciesView({ showToast }: { showToast: Toast }) {
 
       let publicUrl: string | null = null
       for (const path of possiblePaths) {
-        const { data } = supabase.storage.from('documents').getPublicUrl(path)
+        const { data } = supabase.storage.from('ghl-documents').getPublicUrl(path)
         if (data?.publicUrl) {
-          publicUrl = data.publicUrl
-          break
+          // Verify the file actually exists by doing a HEAD request
+          try {
+            const res = await fetch(data.publicUrl, { method: 'HEAD' })
+            if (res.ok) { publicUrl = data.publicUrl; break }
+          } catch { /* continue to next path */ }
+        }
+      }
+
+      // Also try the 'documents' bucket
+      if (!publicUrl) {
+        for (const path of possiblePaths) {
+          const { data } = supabase.storage.from('documents').getPublicUrl(path)
+          if (data?.publicUrl) {
+            try {
+              const res = await fetch(data.publicUrl, { method: 'HEAD' })
+              if (res.ok) { publicUrl = data.publicUrl; break }
+            } catch { /* continue */ }
+          }
         }
       }
 
       if (publicUrl) {
         window.open(publicUrl, '_blank', 'noopener,noreferrer')
       } else {
-        showToast(`Document for "${pol.title}" is not yet available in storage`, 'warning')
+        showToast(`Document for "${pol.title}" is not yet uploaded to storage. Please contact HR.`, 'warning')
       }
     } catch (err) {
       console.error('Error fetching policy document:', err)
@@ -333,8 +349,10 @@ function FeedbackView({ showToast }: { showToast: Toast }) {
     if (!subject.trim() || !description.trim()) { showToast('Please fill in all required fields', 'warning'); return }
     setSubmitting(true)
     try {
-      const row = await insertRow('tickets', { title: subject, description, type: 'feedback', category, status: 'open', priority: 'normal', is_anonymous: anonymous })
-      if (row) { showToast('Feedback submitted successfully!', 'success') } else { showToast('Failed to submit feedback', 'error') }
+      const feedbackData: Record<string, any> = { title: subject, description, type: 'feedback', category, status: 'open', priority: 'normal' }
+      if (anonymous) feedbackData.is_anonymous = true
+      const row = await insertRow('tickets', feedbackData)
+      if (row) { showToast('Feedback submitted successfully!', 'success') } else { showToast('Failed to submit feedback — please try again', 'error') }
       setSubject(''); setDescription(''); setAnonymous(false); setCategory('General')
     } catch (err) {
       console.error('Feedback submission error:', err)

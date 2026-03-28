@@ -289,6 +289,7 @@ export default function DashboardClient() {
 
   const handlePasswordUpdate = async () => {
     if (newPassword.length < 8) { showToast('⚠ Password must be at least 8 characters', 'info'); return }
+    if (!/[a-zA-Z]/.test(newPassword) || !/[0-9]/.test(newPassword)) { showToast('⚠ Password must contain both letters and numbers', 'info'); return }
     if (newPassword !== confirmNewPassword) { showToast('⚠ Passwords do not match', 'info'); return }
     try {
       const { isSupabaseConfigured } = await import('@/lib/supabase/client')
@@ -1724,12 +1725,17 @@ export default function DashboardClient() {
                   const filePath = doc.file_path || doc.url || doc.file_url
                   if (filePath) {
                     try {
-                      const { getDownloadUrl } = await import('@/lib/supabase/storageService')
-                      const result = await getDownloadUrl(filePath, doc.bucket || 'ghl-documents')
-                      if (result?.url) {
-                        window.open(result.url, '_blank')
+                      // If filePath is already a full URL, open directly
+                      if (filePath.startsWith('http://') || filePath.startsWith('https://')) {
+                        window.open(filePath, '_blank')
                       } else {
-                        showToast('Document preview not available. Please contact support.', 'info')
+                        const { getDownloadUrl } = await import('@/lib/supabase/storageService')
+                        const result = await getDownloadUrl(filePath, doc.bucket || 'ghl-documents')
+                        if (result?.success && result?.url) {
+                          window.open(result.url, '_blank')
+                        } else {
+                          showToast('Document preview not available. Please contact support.', 'info')
+                        }
                       }
                     } catch {
                       showToast('Unable to load document. Please try again.', 'info')

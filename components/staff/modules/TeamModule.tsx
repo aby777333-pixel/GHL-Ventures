@@ -83,7 +83,7 @@ function DirectoryView({ showToast, employees }: { showToast: TeamModuleProps['s
   const [search, setSearch] = useState('')
   const [deptFilter, setDeptFilter] = useState<string>('all')
 
-  const departments = useMemo(() => Array.from(new Set(employees.map((e: any) => e.department).filter(Boolean))), [employees])
+  const departments = useMemo(() => Array.from(new Set((employees || []).map((e: any) => e.department).filter(Boolean))), [employees])
 
   const filtered = useMemo(() => {
     let list = employees
@@ -321,7 +321,7 @@ function RosterView({ employees }: { employees: any[] }) {
 // ================================================================
 function AnnouncementsView({ announcements }: { announcements: any[] }) {
   const sorted = useMemo(() => {
-    return [...announcements].sort((a, b) => {
+    return [...(announcements || [])].sort((a, b) => {
       if (a.pinned && !b.pinned) return -1
       if (!a.pinned && b.pinned) return 1
       return new Date(b.postedDate).getTime() - new Date(a.postedDate).getTime()

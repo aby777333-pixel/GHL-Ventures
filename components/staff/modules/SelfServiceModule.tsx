@@ -769,7 +769,7 @@ function DocumentsView({ showToast }: { showToast: SelfServiceModuleProps['showT
       if (!isSupabaseConfigured()) return
       try {
         const sb = supabase as any
-        const { data, error } = await sb.storage.from('uploads').list('staff/documents', { limit: 100, sortBy: { column: 'created_at', order: 'desc' } })
+        const { data, error } = await sb.storage.from('ghl-documents').list('staff/documents', { limit: 100, sortBy: { column: 'created_at', order: 'desc' } })
         if (!error && data) {
           setDocuments(data.map((f: any) => ({
             name: f.name,
@@ -836,7 +836,7 @@ function DocumentsView({ showToast }: { showToast: SelfServiceModuleProps['showT
               // Refresh the documents list
               try {
                 const sb = supabase as any
-                const { data, error } = await sb.storage.from('uploads').list('staff/documents', { limit: 100, sortBy: { column: 'created_at', order: 'desc' } })
+                const { data, error } = await sb.storage.from('ghl-documents').list('staff/documents', { limit: 100, sortBy: { column: 'created_at', order: 'desc' } })
                 if (!error && data) {
                   setDocuments(data.map((f: any) => ({
                     name: f.name,
