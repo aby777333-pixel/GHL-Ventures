@@ -177,10 +177,10 @@ function RegisterPageInner() {
           </div>
           <h1 className="text-3xl font-bold text-white mb-4">Registration Successful</h1>
           <p className="text-gray-400 mb-4">
-            Thank you for registering with {BRAND.name}. Please check your email to verify your account.
+            Thank you for registering with {BRAND.name}. Your account is ready.
           </p>
           <p className="text-gray-500 text-sm mb-8">
-            After verification, you can sign in to access your investor dashboard.
+            You can now sign in to access your investor dashboard.
           </p>
           <Link href="/login" className="btn-primary">Go to Login</Link>
         </div>
