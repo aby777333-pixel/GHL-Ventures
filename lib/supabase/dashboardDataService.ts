@@ -138,14 +138,149 @@ export async function fetchNotifications(clientId?: string) {
 export async function getKYCSteps(clientId?: string) {
   if (!isSupabaseConfigured() || !clientId) return []
   try {
-    const { data } = await sb.from('kyc_documents').select('type, status').eq('client_id', clientId)
-    if (!data || data.length === 0) return []
-    return (data as any[]).map((d: any) => ({
-      id: d.type,
-      label: d.type?.replace(/_/g, ' ').replace(/\b\w/g, (c: string) => c.toUpperCase()),
-      status: d.status,
-    }))
+    // Check each structured KYC table for completion
+    const steps = [
+      { id: 'basic', label: 'Basic Details', table: 'kyc_basic_details' },
+      { id: 'identity', label: 'Identity Details', table: 'kyc_identity_details' },
+      { id: 'bank', label: 'Bank Details', table: 'kyc_bank_details' },
+      { id: 'demat', label: 'Demat Account', table: 'kyc_demat_details' },
+      { id: 'nominee', label: 'Nominee Details', table: 'nominees' },
+    ]
+    const results = []
+    for (const step of steps) {
+      if (step.id === 'nominee') {
+        const { data } = await sb.from(step.table).select('id, status').eq('client_id', clientId).eq('status', 'active')
+        results.push({ id: step.id, label: step.label, status: data && data.length > 0 ? 'submitted' : 'pending' })
+      } else {
+        const { data } = await sb.from(step.table).select('status').eq('client_id', clientId).maybeSingle()
+        results.push({ id: step.id, label: step.label, status: data?.status || 'pending' })
+      }
+    }
+    return results
   } catch { return [] }
+}
+
+// ── Structured KYC CRUD ─────────────────────────────────────
+
+export async function fetchKYCBasicDetails(clientId?: string) {
+  if (!isSupabaseConfigured() || !clientId) return null
+  return safeFetch(() => sb.from('kyc_basic_details').select('*').eq('client_id', clientId).maybeSingle(), null, 'fetchKYCBasic')
+}
+
+export async function upsertKYCBasicDetails(clientId: string, userId: string, data: Record<string, any>) {
+  if (!isSupabaseConfigured()) return null
+  const row = { ...data, client_id: clientId, user_id: userId, status: 'submitted' }
+  const { data: result, error } = await sb.from('kyc_basic_details').upsert(row, { onConflict: 'client_id' }).select().single()
+  if (error) { console.warn('[kyc] upsert basic error:', error.message); return null }
+  await sb.from('clients').update({ kyc_step: Math.max(1, data.kyc_step || 1) }).eq('id', clientId)
+  return result
+}
+
+export async function fetchKYCIdentityDetails(clientId?: string) {
+  if (!isSupabaseConfigured() || !clientId) return null
+  return safeFetch(() => sb.from('kyc_identity_details').select('*').eq('client_id', clientId).maybeSingle(), null, 'fetchKYCIdentity')
+}
+
+export async function upsertKYCIdentityDetails(clientId: string, userId: string, data: Record<string, any>) {
+  if (!isSupabaseConfigured()) return null
+  const row = { ...data, client_id: clientId, user_id: userId, status: 'submitted' }
+  const { data: result, error } = await sb.from('kyc_identity_details').upsert(row, { onConflict: 'client_id' }).select().single()
+  if (error) { console.warn('[kyc] upsert identity error:', error.message); return null }
+  await sb.from('clients').update({ kyc_step: Math.max(2, data.kyc_step || 2) }).eq('id', clientId)
+  return result
+}
+
+export async function fetchKYCBankDetails(clientId?: string) {
+  if (!isSupabaseConfigured() || !clientId) return null
+  return safeFetch(() => sb.from('kyc_bank_details').select('*').eq('client_id', clientId).maybeSingle(), null, 'fetchKYCBank')
+}
+
+export async function upsertKYCBankDetails(clientId: string, userId: string, data: Record<string, any>) {
+  if (!isSupabaseConfigured()) return null
+  const row = { ...data, client_id: clientId, user_id: userId, status: 'submitted' }
+  const { data: result, error } = await sb.from('kyc_bank_details').upsert(row, { onConflict: 'client_id' }).select().single()
+  if (error) { console.warn('[kyc] upsert bank error:', error.message); return null }
+  await sb.from('clients').update({ kyc_step: Math.max(3, data.kyc_step || 3) }).eq('id', clientId)
+  return result
+}
+
+export async function fetchKYCDematDetails(clientId?: string) {
+  if (!isSupabaseConfigured() || !clientId) return null
+  return safeFetch(() => sb.from('kyc_demat_details').select('*').eq('client_id', clientId).maybeSingle(), null, 'fetchKYCDemat')
+}
+
+export async function upsertKYCDematDetails(clientId: string, userId: string, data: Record<string, any>) {
+  if (!isSupabaseConfigured()) return null
+  const row = { ...data, client_id: clientId, user_id: userId, status: data.skipped ? 'skipped' : 'submitted' }
+  const { data: result, error } = await sb.from('kyc_demat_details').upsert(row, { onConflict: 'client_id' }).select().single()
+  if (error) { console.warn('[kyc] upsert demat error:', error.message); return null }
+  await sb.from('clients').update({ kyc_step: Math.max(4, data.kyc_step || 4) }).eq('id', clientId)
+  return result
+}
+
+export async function fetchNominees(clientId?: string) {
+  if (!isSupabaseConfigured() || !clientId) return []
+  return safeFetch(() => sb.from('nominees').select('*').eq('client_id', clientId).eq('status', 'active').order('created_at'), [], 'fetchNominees')
+}
+
+export async function addNominee(clientId: string, userId: string, data: Record<string, any>) {
+  if (!isSupabaseConfigured()) return null
+  const row = { ...data, client_id: clientId, user_id: userId, status: 'active' }
+  const { data: result, error } = await sb.from('nominees').insert(row).select().single()
+  if (error) { console.warn('[kyc] add nominee error:', error.message); return null }
+  return result
+}
+
+export async function updateNominee(nomineeId: string, data: Record<string, any>) {
+  if (!isSupabaseConfigured()) return null
+  const { data: result, error } = await sb.from('nominees').update(data).eq('id', nomineeId).select().single()
+  if (error) { console.warn('[kyc] update nominee error:', error.message); return null }
+  return result
+}
+
+export async function deleteNominee(nomineeId: string) {
+  if (!isSupabaseConfigured()) return false
+  const { error } = await sb.from('nominees').update({ status: 'inactive' }).eq('id', nomineeId)
+  return !error
+}
+
+export async function submitKYCForReview(clientId: string) {
+  if (!isSupabaseConfigured()) return false
+  try {
+    // Update all step statuses to submitted
+    await Promise.all([
+      sb.from('kyc_basic_details').update({ status: 'submitted' }).eq('client_id', clientId),
+      sb.from('kyc_identity_details').update({ status: 'submitted' }).eq('client_id', clientId),
+      sb.from('kyc_bank_details').update({ status: 'submitted' }).eq('client_id', clientId),
+    ])
+    // Update client kyc_status
+    await sb.from('clients').update({ kyc_status: 'submitted', kyc_step: 5 }).eq('id', clientId)
+    // Notify admins
+    try {
+      const { data: admins } = await sb.from('profiles').select('id').in('role', ['admin', 'super_admin'])
+      const { data: clientData } = await sb.from('clients').select('full_name').eq('id', clientId).single()
+      if (admins && admins.length > 0) {
+        const notifs = admins.map((a: any) => ({
+          user_id: a.id,
+          title: 'New KYC Submission',
+          message: `${clientData?.full_name || 'A client'} has submitted KYC for review.`,
+          type: 'info',
+          link: '/admin?tab=kyc-queue',
+          metadata: { client_id: clientId },
+        }))
+        await sb.from('notifications').insert(notifs)
+      }
+    } catch { /* non-blocking */ }
+    return true
+  } catch { return false }
+}
+
+export async function fetchKYCOverallStatus(clientId?: string) {
+  if (!isSupabaseConfigured() || !clientId) return { step: 0, status: 'pending' }
+  try {
+    const { data: client } = await sb.from('clients').select('kyc_step, kyc_status').eq('id', clientId).maybeSingle()
+    return { step: client?.kyc_step || 0, status: client?.kyc_status || 'pending' }
+  } catch { return { step: 0, status: 'pending' } }
 }
 
 export async function fetchDocuments(clientId?: string) {

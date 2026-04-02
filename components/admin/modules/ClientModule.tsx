@@ -13,7 +13,7 @@ import AdminBadge, { getKYCBadgeVariant, getAccountBadgeVariant } from '../share
 import AdminModal, { ModalButton } from '../shared/AdminModal'
 import AdminEmptyState from '../shared/AdminEmptyState'
 import AdminKPICard from '../shared/AdminKPICard'
-import { fetchClients, fetchKYCDocuments } from '@/lib/supabase/adminDataService'
+import { fetchClients, fetchKYCDocuments, approveKYCStep, rejectKYCStep, approveClientKYC, rejectClientKYC } from '@/lib/supabase/adminDataService'
 import { getActiveRMs, assignRMToClient, type ActiveRM } from '@/lib/supabase/employeeService'
 import { formatINR, formatDate } from '@/lib/admin/adminHooks'
 import type { Client, KYCDocument, KYCStatus } from '@/lib/admin/adminTypes'
@@ -150,6 +150,7 @@ export default function ClientModule({ subTab, navigate, showToast }: ClientModu
             filter={kycFilter}
             setFilter={setKycFilter}
             showToast={showToast}
+            onRefresh={loadData}
           />
         )}
         {activeTab === 'analytics' && <ClientAnalyticsTab clients={clients} />}
@@ -431,11 +432,13 @@ function KYCQueueTab({
   filter,
   setFilter,
   showToast,
+  onRefresh,
 }: {
   kycDocs: any[]
   filter: KYCStatus | 'all'
   setFilter: (f: KYCStatus | 'all') => void
   showToast: (msg: string, type?: 'success' | 'error' | 'info' | 'warning') => void
+  onRefresh?: () => void
 }) {
   const filteredDocs = useMemo(() => {
     if (filter === 'all') return kycDocs
@@ -490,14 +493,37 @@ function KYCQueueTab({
           {(row.status === 'pending' || row.status === 'under-review') && (
             <>
               <button
-                onClick={(e) => { e.stopPropagation(); showToast(`KYC ${row.id} approved`, 'success') }}
+                onClick={async (e) => {
+                  e.stopPropagation()
+                  if (row.table) {
+                    const ok = await approveKYCStep(row.table, row.id, 'admin')
+                    if (ok) { showToast(`${row.type} approved for ${row.clientName}`, 'success'); onRefresh?.() }
+                    else showToast('Approval failed', 'error')
+                  } else {
+                    // Legacy fallback: approve entire client KYC
+                    const ok = await approveClientKYC(row.clientId, 'admin')
+                    if (ok) { showToast(`Full KYC approved for ${row.clientName}`, 'success'); onRefresh?.() }
+                    else showToast('Approval failed', 'error')
+                  }
+                }}
                 className="p-1.5 rounded-lg hover:bg-emerald-500/10 text-gray-500 hover:text-emerald-400 transition-colors"
                 title="Approve"
               >
                 <CheckCircle2 className="w-4 h-4" />
               </button>
               <button
-                onClick={(e) => { e.stopPropagation(); showToast(`KYC ${row.id} rejected`, 'error') }}
+                onClick={async (e) => {
+                  e.stopPropagation()
+                  if (row.table) {
+                    const ok = await rejectKYCStep(row.table, row.id, 'admin')
+                    if (ok) { showToast(`${row.type} rejected for ${row.clientName}`, 'success'); onRefresh?.() }
+                    else showToast('Rejection failed', 'error')
+                  } else {
+                    const ok = await rejectClientKYC(row.clientId, 'admin')
+                    if (ok) { showToast(`KYC rejected for ${row.clientName}`, 'success'); onRefresh?.() }
+                    else showToast('Rejection failed', 'error')
+                  }
+                }}
                 className="p-1.5 rounded-lg hover:bg-red-500/10 text-gray-500 hover:text-red-400 transition-colors"
                 title="Reject"
               >

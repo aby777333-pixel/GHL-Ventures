@@ -92,6 +92,7 @@ export interface KYCDocument {
   clientId: string
   clientName: string
   type: string
+  table?: string
   fileName: string
   uploadDate: string
   status: KYCStatus

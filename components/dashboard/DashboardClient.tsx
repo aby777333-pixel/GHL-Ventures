@@ -79,6 +79,10 @@ import { createRMRequest } from '@/lib/supabase/chatService'
 // AI Advisor
 import ClientAIAdvisor from './ClientAIAdvisor'
 
+// KYC Wizard & Documents Tab
+import KYCWizard from './KYCWizard'
+import DocumentsTab from './DocumentsTab'
+
 // Voice Input (Sarvam AI STT)
 import VoiceInput from '@/components/shared/VoiceInput'
 
@@ -86,7 +90,7 @@ import VoiceInput from '@/components/shared/VoiceInput'
    TYPES
    ═══════════════════════════════════════════════════════════════ */
 type Theme = 'dark' | 'light'
-type TabId = 'dashboard' | 'investments' | 'invest-onboard' | 'portfolio' | 'kyc' | 'transactions' | 'messages' | 'support' | 'referrals' | 'calculators' | 'ai-advisor' | 'profile' | 'settings'
+type TabId = 'dashboard' | 'investments' | 'invest-onboard' | 'portfolio' | 'kyc' | 'documents' | 'transactions' | 'messages' | 'support' | 'referrals' | 'calculators' | 'ai-advisor' | 'profile' | 'settings'
 
 /* ═══════════════════════════════════════════════════════════════
    ICON MAP & TOUR — kept for UI chrome; personal data comes
@@ -163,15 +167,16 @@ const TOUR_STEPS = [
    ═══════════════════════════════════════════════════════════════ */
 const SIDEBAR_ITEMS: { id: TabId; label: string; icon: any; badge?: string }[] = [
   { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
-  { id: 'investments', label: 'Investments', icon: TrendingUp },
+  { id: 'investments', label: 'Invest', icon: TrendingUp },
   { id: 'portfolio', label: 'Portfolio', icon: Briefcase },
-  { id: 'kyc', label: 'KYC & Documents', icon: FileCheck },
-  { id: 'transactions', label: 'Transactions', icon: ArrowLeftRight },
-  { id: 'messages', label: 'Messages', icon: MessageSquare, badge: '2' },
-  { id: 'support', label: 'Support', icon: HeadphonesIcon },
+  { id: 'kyc', label: 'KYC', icon: FileCheck },
+  { id: 'documents', label: 'Documents', icon: FileText },
+  { id: 'transactions', label: 'Transaction', icon: ArrowLeftRight },
+  { id: 'support', label: 'Support Tickets', icon: HeadphonesIcon },
+  { id: 'referrals', label: 'Referral System', icon: Gift },
+  { id: 'messages', label: 'Messages', icon: MessageSquare },
   { id: 'calculators', label: 'Calculators', icon: BarChart3 },
   { id: 'ai-advisor', label: 'AI Advisor', icon: Brain, badge: 'NEW' },
-  { id: 'referrals', label: 'Referrals', icon: Gift },
 ]
 const SIDEBAR_BOTTOM: { id: TabId; label: string; icon: any }[] = [
   { id: 'profile', label: 'Profile', icon: User },
@@ -253,7 +258,7 @@ export default function DashboardClient() {
   // ─── Routing ─────────────────────────────────────────────
   const router = useRouter()
   const pathname = usePathname()
-  const VALID_TABS: TabId[] = ['dashboard','investments','invest-onboard','portfolio','kyc','transactions','messages','support','calculators','ai-advisor','referrals','profile','settings']
+  const VALID_TABS: TabId[] = ['dashboard','investments','invest-onboard','portfolio','kyc','documents','transactions','messages','support','calculators','ai-advisor','referrals','profile','settings']
   const activeTab: TabId = useMemo(() => {
     const segments = pathname.split('/').filter(Boolean)
     const tabSegment = segments[1] as TabId | undefined
@@ -3399,7 +3404,12 @@ export default function DashboardClient() {
       case 'investments': return renderInvestmentsTab()
       case 'invest-onboard': return renderInvestOnboard()
       case 'portfolio': return renderPortfolioTab()
-      case 'kyc': return renderKYCTab()
+      case 'kyc': return (
+        <KYCWizard clientId={clientId || ''} userId={user?.id || ''} userName={userName} userEmail={userEmail} userPhone={user?.phone || ''} theme={theme} onToast={showToast} />
+      )
+      case 'documents': return (
+        <DocumentsTab clientId={clientId || ''} userId={user?.id || ''} theme={theme} onToast={showToast} />
+      )
       case 'transactions': return renderTransactionsTab()
       case 'messages': return renderMessagesTab()
       case 'support': return renderSupportTab()
