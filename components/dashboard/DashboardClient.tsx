@@ -2054,16 +2054,32 @@ export default function DashboardClient() {
                   if (msgAttachments.length > 0) {
                     for (const file of msgAttachments) {
                       try {
-                        const result = await uploadFile(file, `messages/${clientId}`)
+                        const result = await uploadFile(file, 'client/kyc', { entityType: 'message', entityId: clientId || '' })
                         if (result?.file?.url) attachmentUrls.push(result.file.url)
                       } catch { /* continue with other files */ }
                     }
                   }
+                  // Resolve recipient: find an admin user to route the message to
+                  const { supabase: sb } = await import('@/lib/supabase/client')
+                  let recipientId = user?.id || '' // fallback
+                  // Try assigned RM first
+                  if (clientId) {
+                    const { data: clientRow } = await (sb as any).from('clients').select('assigned_rm').eq('id', clientId).maybeSingle()
+                    if (clientRow?.assigned_rm) {
+                      const { data: rmStaff } = await (sb as any).from('staff_profiles').select('user_id').eq('id', clientRow.assigned_rm).maybeSingle()
+                      if (rmStaff?.user_id) recipientId = rmStaff.user_id
+                    }
+                  }
+                  // If no RM found, send to first admin
+                  if (recipientId === user?.id) {
+                    const { data: admins } = await (sb as any).from('profiles').select('id').eq('role', 'admin').limit(1)
+                    if (admins?.[0]?.id) recipientId = admins[0].id
+                  }
                   const body = attachmentUrls.length > 0 ? `${msgBody}\n\n📎 Attachments: ${attachmentUrls.length} file(s)` : msgBody
-                  await sendMessage({ from_id: user?.id || clientId, to_id: clientId, subject: `[${msgTo}] ${msgSubject}`, body, attachments: attachmentUrls.length > 0 ? JSON.stringify(attachmentUrls) : null })
+                  await sendMessage({ from_id: user?.id, to_id: recipientId, subject: `[${msgTo}] ${msgSubject}`, body, attachments: attachmentUrls.length > 0 ? attachmentUrls : [] })
                   setMessageCompose(false); setMsgTo('Relationship Manager'); setMsgSubject(''); setMsgBody(''); setMsgAttachments([]); refetchMessages()
-                  showToast('Message sent successfully to your advisory team.')
-                } catch { showToast('Failed to send message. Please try again.', 'info') }
+                  showToast('Message sent successfully to your advisory team.', 'success')
+                } catch (err) { console.error('Send message error:', err); showToast('Failed to send message. Please try again.', 'info') }
               }} className="px-5 py-2.5 rounded-xl text-sm font-semibold text-white transition-all hover:scale-[1.02] active:scale-[0.98]" style={{ background: 'linear-gradient(135deg, #D0021B, #8B0000)' }}>
                 <span className="flex items-center gap-1.5"><Send className="w-3.5 h-3.5" /> Send</span>
               </button>
