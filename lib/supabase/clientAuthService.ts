@@ -152,11 +152,13 @@ export async function loginClient(email: string, password: string): Promise<Logi
     }
     if (!client) {
       try {
+        const meta = data.user.user_metadata ?? {}
         await supabase.from('clients').insert({
           user_id: data.user.id,
-          full_name: data.user.user_metadata?.full_name || data.user.email?.split('@')[0] || 'Investor',
+          full_name: meta.full_name || data.user.email?.split('@')[0] || 'Investor',
           email: data.user.email || '',
-          phone: data.user.user_metadata?.phone || null,
+          phone: meta.phone || null,
+          referred_by: meta.referral_source || null,
         } as any)
         // Auto-assign RM for newly created client record
         tryAutoAssignRM(data.user.id)
@@ -263,6 +265,7 @@ export async function getClientSession(): Promise<ClientSession | null> {
           full_name: meta.full_name || meta.name || session.user.email?.split('@')[0] || 'Investor',
           email: session.user.email || '',
           phone: meta.phone || null,
+          referred_by: meta.referral_source || null,
         } as any)
       } catch { /* non-blocking auto-repair */ }
     }
