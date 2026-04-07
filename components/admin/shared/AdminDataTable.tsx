@@ -51,9 +51,10 @@ export default function AdminDataTable<T extends Record<string, any>>({
 
   // ── Search ───────────────────────────────────────────────────
   const filtered = useMemo(() => {
-    if (!search.trim()) return data
+    const safeData = data || []
+    if (!search.trim()) return safeData
     const q = search.toLowerCase()
-    return data.filter(row => {
+    return safeData.filter(row => {
       const keys = searchKeys.length > 0 ? searchKeys : columns.map(c => c.key)
       return keys.some(k => {
         const val = row[k]

@@ -494,14 +494,14 @@ function DocumentsTab({ documents, showToast }: { documents: AdminDocument[]; sh
   const [categoryFilter, setCategoryFilter] = useState<string>('all')
 
   const categories = useMemo(() => {
-    const cats = new Set((documents || []).map(d => d.category))
+    const cats = new Set((documents || []).map(d => d?.category || 'general').filter(Boolean))
     return ['all', ...Array.from(cats)]
   }, [documents])
 
   const filtered = useMemo(() => {
-    const docs = documents || []
+    const docs = (documents || []).filter(Boolean)
     if (categoryFilter === 'all') return docs
-    return docs.filter(d => d.category === categoryFilter)
+    return docs.filter(d => (d?.category || 'general') === categoryFilter)
   }, [categoryFilter, documents])
 
   const getFileIcon = (type: string) => {
@@ -542,8 +542,8 @@ function DocumentsTab({ documents, showToast }: { documents: AdminDocument[]; sh
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
         {filtered.map(doc => {
-          const Icon = getFileIcon(doc.type)
-          const colorClasses = getFileColor(doc.type)
+          const Icon = getFileIcon(doc.type || '')
+          const colorClasses = getFileColor(doc.type || '')
           return (
             <AdminGlass key={doc.id} padding="p-4" className="group cursor-pointer">
               <div className="flex items-start gap-3">
@@ -551,8 +551,8 @@ function DocumentsTab({ documents, showToast }: { documents: AdminDocument[]; sh
                   <Icon className="w-5 h-5" />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-white truncate group-hover:text-brand-red transition-colors">{doc.name}</p>
-                  <p className="text-[11px] text-gray-500 mt-0.5">{doc.type} • {doc.size} • v{doc.version}</p>
+                  <p className="text-sm font-medium text-white truncate group-hover:text-brand-red transition-colors">{doc.name || 'Untitled'}</p>
+                  <p className="text-[11px] text-gray-500 mt-0.5">{doc.type || 'FILE'} • {doc.size || '—'} • v{doc.version || 1}</p>
                   <div className="flex flex-wrap gap-1 mt-2">
                     {(Array.isArray(doc.tags) ? doc.tags : []).slice(0, 3).map(tag => (
                       <span key={tag} className="text-[9px] px-1.5 py-0.5 rounded bg-white/[0.04] text-gray-500 border border-white/[0.06]">
@@ -577,8 +577,8 @@ function DocumentsTab({ documents, showToast }: { documents: AdminDocument[]; sh
                 <button
                   onClick={async () => {
                     showToast(`Downloading ${doc.name}...`, 'info')
-                    const ext = doc.type.toLowerCase() === 'pdf' ? 'pdf' : doc.type.toLowerCase() === 'xlsx' ? 'xlsx' : doc.type.toLowerCase() === 'docx' ? 'docx' : 'txt'
-                    const filename = `${doc.name.replace(/[^a-zA-Z0-9 ]/g, '')}.${ext}`
+                    const ext = (doc.type || 'txt').toLowerCase() === 'pdf' ? 'pdf' : (doc.type || '').toLowerCase() === 'xlsx' ? 'xlsx' : (doc.type || '').toLowerCase() === 'docx' ? 'docx' : 'txt'
+                    const filename = `${(doc.name || 'document').replace(/[^a-zA-Z0-9 ]/g, '')}.${ext}`
                     const content = `Document: ${doc.name}\nType: ${doc.type}\nCategory: ${doc.category}\nVersion: ${doc.version}\nUploaded by: ${doc.uploadedBy}\nDate: ${doc.uploadDate}\nSize: ${doc.size}`
                     const blob = new Blob([content], { type: 'application/octet-stream' })
                     await saveBlobAs(blob, filename, showToast as any)
