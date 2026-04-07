@@ -2520,9 +2520,9 @@ body.dashboard-active #ghl-chat-widget {
   position: relative;
   z-index: 10000;
 }
-body.dashboard-active #ghl-chat-widget .fixed,
-body.dashboard-active #ghl-chat-widget .fixed *,
-body.dashboard-active #ghl-chat-widget [class*="fixed"] {
+/* Only force pointer-events on trigger buttons, NOT closed panels */
+body.dashboard-active #ghl-chat-widget .pointer-events-auto,
+body.dashboard-active #ghl-chat-widget .pointer-events-auto * {
   visibility: visible !important;
   pointer-events: auto !important;
 }
@@ -2538,14 +2538,14 @@ body.dashboard-active #ghl-direct-widget {
   position: relative;
   z-index: 10000;
 }
-body.dashboard-active #ghl-direct-widget .fixed,
-body.dashboard-active #ghl-direct-widget .fixed *,
-body.dashboard-active #ghl-direct-widget [class*="fixed"] {
+/* Only force pointer-events on trigger buttons, NOT closed panels */
+body.dashboard-active #ghl-direct-widget .pointer-events-auto,
+body.dashboard-active #ghl-direct-widget .pointer-events-auto * {
   visibility: visible !important;
   pointer-events: auto !important;
 }
-/* Push Direct Call widget above the bottom nav bar on all screens */
-body.dashboard-active #ghl-direct-widget .fixed {
+/* Push Direct Call widget trigger above the bottom nav bar */
+body.dashboard-active #ghl-direct-widget .pointer-events-auto {
   bottom: 68px !important;
   left: auto !important;
   right: 16px !important;
