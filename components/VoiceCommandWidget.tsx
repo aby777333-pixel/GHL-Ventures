@@ -1392,7 +1392,7 @@ export default function VoiceCommandWidget() {
   const currentLang = LANGUAGES.find(l => l.code === language)
 
   return (
-    <div id="ghl-voice-widget" data-ghl-widget="voice">
+    <div id="ghl-voice-widget" data-ghl-widget="voice" style={{ pointerEvents: 'none' }}>
       {/* ── "Speak to navigate" floating prompt ── */}
       {showPrompt && !isOpen && (
         <div
