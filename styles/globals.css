@@ -510,22 +510,47 @@
 
 /* Ensure all text in dark dashboard has sufficient contrast */
 .dark .text-gray-400 {
-  color: rgba(255, 255, 255, 0.7) !important;
+  color: rgba(255, 255, 255, 0.75) !important;
 }
 .dark .text-gray-500 {
-  color: rgba(255, 255, 255, 0.6) !important;
+  color: rgba(255, 255, 255, 0.65) !important;
 }
 .dark .text-gray-600 {
-  color: rgba(255, 255, 255, 0.5) !important;
+  color: rgba(255, 255, 255, 0.55) !important;
+}
+.dark .text-gray-700 {
+  color: rgba(255, 255, 255, 0.7) !important;
+}
+.dark p, .dark span, .dark td, .dark th, .dark label, .dark li {
+  color: inherit;
+}
+.dark .text-xs, .dark .text-sm {
+  font-weight: 400;
 }
 
-/* Button click area fix - ensure entire button is clickable */
+/* Global font readability improvement — minimum base sizes */
+.text-xs { font-size: 0.8125rem !important; line-height: 1.5 !important; }
+.text-\[10px\] { font-size: 0.6875rem !important; line-height: 1.4 !important; }
+.text-\[11px\] { font-size: 0.75rem !important; line-height: 1.4 !important; }
+.text-\[8px\] { font-size: 0.625rem !important; line-height: 1.3 !important; }
+
+/* Button click area fix - ensure entire button is clickable with proper hit zones */
 .btn-primary, .btn-secondary, .btn-outline-red, .btn-outline-white {
   position: relative;
   cursor: pointer;
   gap: 0.5rem;
+  min-height: 40px;
+  min-width: 40px;
 }
 .btn-primary > *, .btn-secondary > *, .btn-outline-red > *, .btn-outline-white > * {
+  pointer-events: none;
+}
+/* Ensure all interactive elements have minimum touch target size */
+button, a, [role="button"] {
+  position: relative;
+}
+/* Fix link icons inside buttons — prevent icon edge click from navigating */
+button svg, button .lucide, [role="button"] svg {
   pointer-events: none;
 }
 

@@ -287,7 +287,7 @@ function RegisterPageInner() {
             <div>
               <label htmlFor="reg-password" className="block text-xs font-medium text-brand-black mb-1">Password</label>
               <div className="relative">
-                <input id="reg-password" type={showPassword ? 'text' : 'password'} required className="input-field pr-12" placeholder="Min 8 characters (letters + numbers)" minLength={8} value={form.password} onChange={(e) => handleChange('password', e.target.value)} />
+                <input id="reg-password" type={showPassword ? 'text' : 'password'} required className="input-field pr-12" placeholder="Min 8 characters (letters + numbers)" value={form.password} onChange={(e) => handleChange('password', e.target.value)} />
                 <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-brand-grey hover:text-brand-black" aria-label="Toggle password visibility">
                   {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                 </button>

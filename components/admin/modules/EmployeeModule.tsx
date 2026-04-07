@@ -247,7 +247,7 @@ export default function EmployeeModule({ subTab, navigate, showToast }: Employee
               </div>
               <div className="flex items-center gap-2 p-3 rounded-xl bg-white/[0.03] border border-white/[0.04]">
                 <Phone className="w-4 h-4 text-gray-500" />
-                <span className="text-xs text-gray-300">{selectedEmployee.phone}</span>
+                <span className="text-xs text-gray-300">{selectedEmployee.phone || (selectedEmployee as any)._raw?.phone || 'Not provided'}</span>
               </div>
               <div className="flex items-center gap-2 p-3 rounded-xl bg-white/[0.03] border border-white/[0.04]">
                 <Briefcase className="w-4 h-4 text-gray-500" />

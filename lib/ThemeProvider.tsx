@@ -142,10 +142,10 @@ export default function ThemeProvider({ children }: { children: ReactNode }) {
     const savedColor = localStorage.getItem('ghl-color-theme') as ColorTheme | null
     const savedCustom = localStorage.getItem('ghl-custom-accent')
 
-    if (savedTheme) {
-      setTheme(savedTheme)
-      document.documentElement.classList.toggle('dark', savedTheme === 'dark')
-    }
+    // Default to light theme — only use dark if explicitly saved
+    const resolvedTheme = savedTheme || 'light'
+    setTheme(resolvedTheme)
+    document.documentElement.classList.toggle('dark', resolvedTheme === 'dark')
     if (savedColor) {
       setColorThemeState(savedColor)
       applyColorTheme(savedColor, savedCustom || '#D0021B')

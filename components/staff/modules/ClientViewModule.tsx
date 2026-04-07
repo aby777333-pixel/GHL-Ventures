@@ -28,14 +28,27 @@ interface ClientSummary {
 
 function buildClientList(ticketsData: any[]): ClientSummary[] {
   if (!ticketsData || !Array.isArray(ticketsData)) return []
-  const map = new Map<string, { name: string; tickets: Ticket[] }>()
+  const map = new Map<string, { name: string; tickets: any[] }>()
   for (const t of ticketsData) {
-    const cid = t?.clientId || 'unknown'
-    if (!map.has(cid)) map.set(cid, { name: t?.clientName || 'Unknown', tickets: [] })
-    map.get(cid)!.tickets.push(t)
+    // Support both camelCase (typed) and snake_case (raw DB) field names
+    const cid = t?.clientId || t?.client_id || t?.requester_id || 'unknown'
+    const cname = t?.clientName || t?.client_name || t?.requester_name || 'Unknown'
+    if (!map.has(cid)) map.set(cid, { name: cname, tickets: [] })
+    // Normalize ticket fields for display
+    const normalized = {
+      ...t,
+      id: t?.id?.slice?.(0, 8) || t?.id || '—',
+      subject: t?.subject || t?.title || t?.description?.slice?.(0, 60) || '—',
+      status: t?.status || 'open',
+      priority: t?.priority || 'medium',
+      updatedDate: t?.updatedDate || t?.updated_at || t?.created_at || '',
+      clientId: cid,
+      clientName: cname,
+    }
+    map.get(cid)!.tickets.push(normalized)
   }
   return Array.from(map.entries()).map(([id, { name, tickets }]) => {
-    const sorted = [...tickets].sort((a, b) => new Date(b.updatedDate).getTime() - new Date(a.updatedDate).getTime())
+    const sorted = [...tickets].sort((a, b) => new Date(b.updatedDate || 0).getTime() - new Date(a.updatedDate || 0).getTime())
     return {
       clientId: id,
       clientName: name,

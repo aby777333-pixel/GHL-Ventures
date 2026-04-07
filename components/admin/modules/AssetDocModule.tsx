@@ -13,7 +13,7 @@ import AdminBadge from '../shared/AdminBadge'
 import AdminModal, { ModalButton } from '../shared/AdminModal'
 import AdminKPICard from '../shared/AdminKPICard'
 import AdminEmptyState from '../shared/AdminEmptyState'
-import { fetchAssets, fetchDocuments } from '@/lib/supabase/adminDataService'
+import { fetchAssets, fetchDocuments, insertRow } from '@/lib/supabase/adminDataService'
 import { formatINR, formatDate } from '@/lib/admin/adminHooks'
 import type { Asset, AssetCategory, AssetStatus } from '@/lib/admin/adminTypes'
 import { saveBlobAs } from '@/lib/supabase/storageService'
@@ -132,7 +132,7 @@ export default function AssetDocModule({ subTab, navigate, showToast }: AssetDoc
       </div>
 
       <div className="admin-tab-switch">
-        {activeTab === 'assets' && <AssetInventoryTab assets={assets} showToast={showToast} />}
+        {activeTab === 'assets' && <AssetInventoryTab assets={assets} showToast={showToast} onRefresh={loadData} />}
         {activeTab === 'documents' && <DocumentsTab documents={documents} showToast={showToast} />}
       </div>
     </div>
@@ -140,7 +140,7 @@ export default function AssetDocModule({ subTab, navigate, showToast }: AssetDoc
 }
 
 // ── Asset Inventory Tab ─────────────────────────────────────────
-function AssetInventoryTab({ assets, showToast }: { assets: any[]; showToast: (msg: string, type?: 'success' | 'error' | 'info' | 'warning') => void }) {
+function AssetInventoryTab({ assets, showToast, onRefresh }: { assets: any[]; showToast: (msg: string, type?: 'success' | 'error' | 'info' | 'warning') => void; onRefresh?: () => void }) {
   const [addAssetOpen, setAddAssetOpen] = useState(false)
   const [assetFolderPickerOpen, setAssetFolderPickerOpen] = useState(false)
   const [assetForm, setAssetForm] = useState({
@@ -160,25 +160,47 @@ function AssetInventoryTab({ assets, showToast }: { assets: any[]; showToast: (m
     setAssetForm(prev => ({ ...prev, [field]: value }))
   }
 
-  const handleAssetSubmit = () => {
+  const handleAssetSubmit = async () => {
     if (!assetForm.name.trim()) {
       showToast('Asset name is required', 'error')
       return
     }
-    showToast('Asset registered successfully', 'success')
-    setAddAssetOpen(false)
-    setAssetForm({
-      name: '',
-      category: 'laptop',
-      serialNumber: '',
-      assignedTo: '',
-      purchaseValue: '',
-      purchaseDate: '',
-      warrantyExpiry: '',
-      status: 'active',
-      location: '',
-      notes: '',
-    })
+    try {
+      const result = await insertRow('assets', {
+        name: assetForm.name.trim(),
+        category: assetForm.category || 'physical',
+        serial_number: assetForm.serialNumber || null,
+        assigned_to: assetForm.assignedTo || null,
+        value: parseFloat(assetForm.purchaseValue) || 0,
+        purchase_date: assetForm.purchaseDate || null,
+        expiry_date: assetForm.warrantyExpiry || null,
+        status: assetForm.status || 'active',
+        location: assetForm.location || null,
+        notes: assetForm.notes || null,
+      })
+      if (result) {
+        showToast('Asset registered successfully', 'success')
+        setAddAssetOpen(false)
+        setAssetForm({
+          name: '',
+          category: 'laptop',
+          serialNumber: '',
+          assignedTo: '',
+          purchaseValue: '',
+          purchaseDate: '',
+          warrantyExpiry: '',
+          status: 'active',
+          location: '',
+          notes: '',
+        })
+        onRefresh?.()
+      } else {
+        showToast('Failed to register asset — check console for details', 'error')
+      }
+    } catch (err: any) {
+      console.error('[AssetDocModule] handleAssetSubmit error:', err)
+      showToast(err?.message || 'Failed to register asset', 'error')
+    }
   }
 
   const getCategoryIcon = (cat: AssetCategory) => {
@@ -460,13 +482,14 @@ function DocumentsTab({ documents, showToast }: { documents: AdminDocument[]; sh
   const [categoryFilter, setCategoryFilter] = useState<string>('all')
 
   const categories = useMemo(() => {
-    const cats = new Set(documents.map(d => d.category))
+    const cats = new Set((documents || []).map(d => d.category))
     return ['all', ...Array.from(cats)]
   }, [documents])
 
   const filtered = useMemo(() => {
-    if (categoryFilter === 'all') return documents
-    return documents.filter(d => d.category === categoryFilter)
+    const docs = documents || []
+    if (categoryFilter === 'all') return docs
+    return docs.filter(d => d.category === categoryFilter)
   }, [categoryFilter, documents])
 
   const getFileIcon = (type: string) => {
@@ -519,7 +542,7 @@ function DocumentsTab({ documents, showToast }: { documents: AdminDocument[]; sh
                   <p className="text-sm font-medium text-white truncate group-hover:text-brand-red transition-colors">{doc.name}</p>
                   <p className="text-[11px] text-gray-500 mt-0.5">{doc.type} • {doc.size} • v{doc.version}</p>
                   <div className="flex flex-wrap gap-1 mt-2">
-                    {(doc.tags ?? []).slice(0, 3).map(tag => (
+                    {(Array.isArray(doc.tags) ? doc.tags : []).slice(0, 3).map(tag => (
                       <span key={tag} className="text-[9px] px-1.5 py-0.5 rounded bg-white/[0.04] text-gray-500 border border-white/[0.06]">
                         {tag}
                       </span>

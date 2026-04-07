@@ -121,10 +121,22 @@ function ProfileOverview({ showToast, userId, userName, userEmail, userPhone, us
       if (form.phone && form.phone !== userPhone) profileUpdates.phone = form.phone
       if (form.city) profileUpdates.city = form.city
 
+      // Also include additional fields that may have been changed
+      if (form.address) profileUpdates.address = form.address
+      if (form.emergency_contact) profileUpdates.emergency_contact = form.emergency_contact
+      if (form.blood_group) profileUpdates.blood_group = form.blood_group
+      if (form.gender) profileUpdates.gender = form.gender
+      if (form.dob) profileUpdates.dob = form.dob
+
       if (Object.keys(profileUpdates).length > 0) {
         const sb = supabase as any
-        const { error } = await sb.from('profiles').update(profileUpdates).eq('id', userId)
-        if (error) throw error
+        // Try staff_profiles first (staff portal), then fallback to profiles
+        const { error } = await sb.from('staff_profiles').update(profileUpdates).eq('id', userId)
+        if (error) {
+          // Fallback to profiles table
+          const { error: err2 } = await sb.from('profiles').update(profileUpdates).eq('id', userId)
+          if (err2) throw err2
+        }
       }
 
       showToast('Profile updated successfully!', 'success')
@@ -368,11 +380,43 @@ function AttendanceView({ showToast }: { showToast: SelfServiceModuleProps['show
   const [clockedIn, setClockedIn] = useState(false)
   const [clockLoading, setClockLoading] = useState(false)
   const [clockInTime, setClockInTime] = useState('—')
+  const [clockInTimestamp, setClockInTimestamp] = useState<Date | null>(null)
   const [hoursWorked, setHoursWorked] = useState(0)
   const totalHoursTarget = 9
 
   const summary = { present: 0, leave: 0, holiday: 0, late: 0, avgHours: 0, totalDays: 0 }
   const attendanceDays: { day: number; status: string }[] = []
+
+  // Check if already clocked in today on mount
+  useEffect(() => {
+    async function checkExisting() {
+      if (!isSupabaseConfigured()) return
+      try {
+        const sb = supabase as any
+        const today = new Date().toISOString().split('T')[0]
+        const { data } = await sb.from('attendance').select('*').eq('date', today).is('clock_out', null).order('created_at', { ascending: false }).limit(1)
+        if (data && data.length > 0 && data[0].clock_in) {
+          const clockIn = new Date(data[0].clock_in)
+          setClockedIn(true)
+          setClockInTime(clockIn.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }))
+          setClockInTimestamp(clockIn)
+        }
+      } catch { /* silent */ }
+    }
+    checkExisting()
+  }, [])
+
+  // Update hours worked every minute when clocked in
+  useEffect(() => {
+    if (!clockedIn || !clockInTimestamp) return
+    const updateHours = () => {
+      const diff = (Date.now() - clockInTimestamp.getTime()) / (1000 * 60 * 60)
+      setHoursWorked(Math.round(diff * 10) / 10)
+    }
+    updateHours()
+    const interval = setInterval(updateHours, 60000)
+    return () => clearInterval(interval)
+  }, [clockedIn, clockInTimestamp])
 
   const statusColors: Record<string, string> = {
     present: 'bg-emerald-500/20 text-emerald-400 border-emerald-500/20', absent: 'bg-red-500/20 text-red-400 border-red-500/20',
@@ -396,6 +440,7 @@ function AttendanceView({ showToast }: { showToast: SelfServiceModuleProps['show
         if (record) {
           setClockedIn(true)
           setClockInTime(now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }))
+          setClockInTimestamp(now)
           showToast('Clocked in successfully', 'success')
         } else {
           showToast('Failed to record clock-in. Please try again.', 'error')
@@ -413,10 +458,15 @@ function AttendanceView({ showToast }: { showToast: SelfServiceModuleProps['show
         if (error) {
           showToast(`Clock-out failed: ${error.message}`, 'error')
         } else {
+          // Calculate total hours worked before resetting
+          const totalHrs = clockInTimestamp
+            ? Math.round(((now.getTime() - clockInTimestamp.getTime()) / (1000 * 60 * 60)) * 10) / 10
+            : 0
           setClockedIn(false)
           setClockInTime('—')
-          setHoursWorked(0)
-          showToast('Clocked out successfully', 'success')
+          setClockInTimestamp(null)
+          setHoursWorked(totalHrs)
+          showToast(`Clocked out successfully. Hours worked: ${totalHrs}h`, 'success')
         }
       }
     } catch (err: any) {
@@ -580,6 +630,13 @@ function LeaveView({ showToast }: { showToast: SelfServiceModuleProps['showToast
             if (!leaveForm.fromDate) { showToast('Please select a start date', 'error'); return }
             if (!leaveForm.reason.trim()) { showToast('Please provide a reason for leave', 'error'); return }
             try {
+              // Get current user for the leave request
+              let staffId: string | null = null
+              try {
+                const sb = supabase as any
+                const { data: { user } } = await sb.auth.getUser()
+                staffId = user?.id || null
+              } catch { /* continue */ }
               const row = await submitLeaveRequest({
                 leave_type: leaveForm.type,
                 from_date: leaveForm.fromDate,
@@ -587,6 +644,8 @@ function LeaveView({ showToast }: { showToast: SelfServiceModuleProps['showToast
                 half_day: leaveForm.halfDay !== 'Full Day' ? leaveForm.halfDay : null,
                 reason: leaveForm.reason.trim(),
                 status: 'pending',
+                staff_id: staffId,
+                requested_by: staffId,
               })
               if (row) {
                 showToast('Leave application submitted successfully', 'success')
@@ -833,20 +892,8 @@ function DocumentsView({ showToast }: { showToast: SelfServiceModuleProps['showT
             const successCount = results.filter(r => r.success).length
             if (successCount > 0) {
               showToast(`Uploaded ${successCount} document(s) successfully`, 'success')
-              // Refresh the documents list
-              try {
-                const sb = supabase as any
-                const { data, error } = await sb.storage.from('ghl-documents').list('staff/documents', { limit: 100, sortBy: { column: 'created_at', order: 'desc' } })
-                if (!error && data) {
-                  setDocuments(data.map((f: any) => ({
-                    name: f.name,
-                    folder: 'Staff Documents',
-                    date: f.created_at ? new Date(f.created_at).toLocaleDateString('en-IN') : '—',
-                    size: f.metadata?.size ? `${(f.metadata.size / 1024).toFixed(1)} KB` : '—',
-                    status: 'Pending' as const,
-                  })))
-                }
-              } catch { /* silent fallback */ }
+              // Small delay to allow storage to propagate, then refresh
+              await new Promise(r => setTimeout(r, 500))
               setRefreshKey(prev => prev + 1)
             }
             else if (results.length > 0) showToast('Upload failed — please try again', 'error')

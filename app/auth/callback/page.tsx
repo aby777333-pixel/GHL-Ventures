@@ -31,10 +31,13 @@ export default function AuthCallbackPage() {
           const hash = window.location.hash
           if (hash.includes('type=recovery')) {
             setMode('recovery')
+            // Wait for Supabase to process the recovery token
+            await new Promise(r => setTimeout(r, 500))
             const { data: { session } } = await supabase.auth.getSession()
             if (session?.user) {
               await ensureProfile(session.user)
-              router.replace('/dashboard/settings?password_reset=true')
+              // Redirect to settings with mandatory password reset flag
+              router.replace('/dashboard?tab=settings&password_reset=required')
               return
             }
           }

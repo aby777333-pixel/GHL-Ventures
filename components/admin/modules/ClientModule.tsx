@@ -176,7 +176,7 @@ export default function ClientModule({ subTab, navigate, showToast }: ClientModu
                   phone: c.phone || '',
                   pan: (c as any).pan || '',
                   risk_profile: c.riskProfile || 'moderate',
-                  assigned_rm: (c as any).assignedRM || '',
+                  assigned_rm: (c as any).assignedRMId || '',
                   total_invested: String(c.aum || ''),
                 })
                 setProfileModalOpen(false)
@@ -203,6 +203,10 @@ export default function ClientModule({ subTab, navigate, showToast }: ClientModu
               <ModalButton onClick={() => setAddClientOpen(false)}>Cancel</ModalButton>
               <ModalButton variant="primary" onClick={async () => {
                 if (!clientForm.full_name.trim() || !clientForm.email.trim()) { showToast('Name and email are required', 'info'); return }
+                const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+                if (!emailRegex.test(clientForm.email.trim())) { showToast('Please enter a valid email address', 'error'); return }
+                // Sanitize assigned_rm: send null if empty or non-UUID string like "Unassigned"
+                const sanitizedRM = clientForm.assigned_rm && clientForm.assigned_rm !== 'Unassigned' && clientForm.assigned_rm !== 'Not assigned' ? clientForm.assigned_rm : null
                 try {
                   if (editingClient) {
                     // Update existing client
@@ -214,7 +218,7 @@ export default function ClientModule({ subTab, navigate, showToast }: ClientModu
                       phone: clientForm.phone || null,
                       pan: clientForm.pan || null,
                       risk_profile: clientForm.risk_profile || 'moderate',
-                      assigned_rm: clientForm.assigned_rm || null,
+                      assigned_rm: sanitizedRM,
                       total_invested: parseFloat(clientForm.total_invested) || 0,
                     }).eq('id', editingClient.id)
                     if (error) throw error
@@ -233,7 +237,7 @@ export default function ClientModule({ subTab, navigate, showToast }: ClientModu
                       phone: clientForm.phone || null,
                       pan: clientForm.pan || null,
                       risk_profile: clientForm.risk_profile || 'moderate',
-                      assigned_rm: clientForm.assigned_rm || null,
+                      assigned_rm: sanitizedRM,
                       total_invested: parseFloat(clientForm.total_invested) || 0,
                       client_code: clientCode,
                       kyc_status: 'pending',
