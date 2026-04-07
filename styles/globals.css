@@ -534,14 +534,15 @@
 .text-\[11px\] { font-size: 0.75rem !important; line-height: 1.4 !important; }
 .text-\[8px\] { font-size: 0.625rem !important; line-height: 1.3 !important; }
 
-/* Floating widget wrappers must not block page interactions */
-[data-ghl-widget] { pointer-events: none !important; }
-[data-ghl-widget] > .fixed,
-[data-ghl-widget] > div > .fixed,
-[data-ghl-widget] button,
-[data-ghl-widget] a,
-[data-ghl-widget] input,
-[data-ghl-widget] [role="button"] {
+/* Floating widget wrappers must not block page interactions.
+   All descendants inherit none; only Tailwind pointer-events-auto restores it. */
+[data-ghl-widget],
+[data-ghl-widget] * {
+  pointer-events: none !important;
+}
+/* Restore pointer-events on elements that explicitly opt in */
+[data-ghl-widget] .pointer-events-auto,
+[data-ghl-widget] .pointer-events-auto * {
   pointer-events: auto !important;
 }
 

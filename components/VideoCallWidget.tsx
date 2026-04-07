@@ -126,7 +126,7 @@ export default function VideoCallWidget() {
   return (
     <div id="ghl-video-widget" data-ghl-widget="video" style={{ pointerEvents: 'none' }}>
       {/* ── Floating Trigger Button — bottom center ── */}
-      <div className="fixed z-[9996] group" style={{ bottom: '24px', left: '50%', transform: 'translateX(-50%)', pointerEvents: 'auto' }}>
+      <div className="fixed z-[9996] group pointer-events-auto" style={{ bottom: '24px', left: '50%', transform: 'translateX(-50%)' }}>
         {/* Pulse rings */}
         {!isOpen && (
           <>

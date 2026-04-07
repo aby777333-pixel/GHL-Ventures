@@ -469,7 +469,7 @@ export default function ChatWidget() {
   return (
     <div id="ghl-chat-widget" data-ghl-widget="chat" style={{ pointerEvents: 'none' }}>
       {/* ── Collapsed: Avatar Button ── */}
-      <div className="fixed z-[9999]" style={{ bottom: '24px', right: '24px', pointerEvents: 'auto' }}>
+      <div className="fixed z-[9999] pointer-events-auto" style={{ bottom: '24px', right: '24px' }}>
         {/* Proactive bubble */}
         {showProactive && !isOpen && (
           <div className="absolute bottom-[84px] right-0 animate-fade-in" style={{ width: '280px' }}>
