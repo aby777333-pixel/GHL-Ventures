@@ -57,8 +57,20 @@ export default function AssetDocModule({ subTab, navigate, showToast }: AssetDoc
   const loadData = useCallback(async () => {
     setLoading(true)
     const [a, d] = await Promise.all([fetchAssets(), fetchDocuments()])
-    setAssets(a)
-    setDocuments(d as any)
+    setAssets(a || [])
+    // Map raw DB documents to AdminDocument shape
+    const mapped: AdminDocument[] = ((d || []) as any[]).map((raw: any) => ({
+      id: raw.id || String(Math.random()),
+      name: raw.title || raw.file_name || raw.name || 'Untitled',
+      type: (raw.file_type || raw.mime_type || raw.type || 'PDF').toUpperCase().replace('.',''),
+      category: raw.category || 'general',
+      uploadedBy: raw.uploaded_by_name || raw.uploaded_by || 'System',
+      uploadDate: raw.created_at || raw.uploaded_at || raw.uploadDate || new Date().toISOString(),
+      size: raw.file_size ? `${Math.round(Number(raw.file_size) / 1024)} KB` : (raw.size || '—'),
+      version: raw.version || 1,
+      tags: Array.isArray(raw.tags) ? raw.tags : [],
+    }))
+    setDocuments(mapped)
     setLoading(false)
   }, [])
 
