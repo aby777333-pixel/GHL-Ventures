@@ -57,21 +57,23 @@ function RegisterPageInner() {
     return () => clearTimeout(t)
   }, [otpCooldown])
 
-  // ── Send Email OTP ────────────────────────────────────────
+  // ── Send Email OTP (via custom Netlify function + Resend) ──
   const handleSendOTP = async () => {
     if (!form.email || otpCooldown > 0) return
-    if (!isSupabaseConfigured()) { setError(AUTH_ERRORS.SERVICE_UNAVAILABLE); return }
 
     setOtpSending(true)
     setError('')
     try {
-      const { error: otpErr } = await supabase.auth.signInWithOtp({
-        email: form.email,
-        options: { shouldCreateUser: false },
+      const res = await fetch('/.netlify/functions/send-otp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: form.email }),
       })
-      if (otpErr) {
-        const { error: otpErr2 } = await supabase.auth.signInWithOtp({ email: form.email })
-        if (otpErr2) { setError(mapSupabaseError(otpErr2.message)); setOtpSending(false); return }
+      const data = await res.json()
+      if (!res.ok) {
+        setError(data.error || AUTH_ERRORS.OTP_SEND_FAILED)
+        setOtpSending(false)
+        return
       }
 
       setOtpStep(true)
@@ -83,7 +85,7 @@ function RegisterPageInner() {
     setOtpSending(false)
   }
 
-  // ── Verify Email OTP ──────────────────────────────────────
+  // ── Verify Email OTP (via custom Netlify function) ────────
   const handleVerifyOTP = async () => {
     const code = otpCode.join('')
     if (code.length !== 6) { setError('Please enter the complete 6-digit code.'); return }
@@ -91,17 +93,17 @@ function RegisterPageInner() {
     setLoading(true)
     setError('')
     try {
-      const { error: verifyErr } = await supabase.auth.verifyOtp({
-        email: form.email,
-        token: code,
-        type: 'email',
+      const res = await fetch('/.netlify/functions/verify-otp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: form.email, code }),
       })
-      if (verifyErr) {
-        setError(mapSupabaseError(verifyErr.message))
+      const data = await res.json()
+      if (!res.ok) {
+        setError(data.error || AUTH_ERRORS.OTP_INVALID)
         setLoading(false)
         return
       }
-      await supabase.auth.signOut()
       setEmailVerified(true)
       setOtpStep(false)
     } catch {
