@@ -24,6 +24,13 @@ function RegisterPageInner() {
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
 
+  // ── Email OTP Verification State ──────────────────────────
+  const [otpStep, setOtpStep] = useState(false)       // show OTP input screen
+  const [otpCode, setOtpCode] = useState(['', '', '', '', '', ''])
+  const [otpSending, setOtpSending] = useState(false)
+  const [otpCooldown, setOtpCooldown] = useState(0)
+  const [emailVerified, setEmailVerified] = useState(false)
+
   // Capture referral code from URL (?ref=GHL-XXXXXXXX)
   useEffect(() => {
     const refCode = searchParams.get('ref')
@@ -42,6 +49,97 @@ function RegisterPageInner() {
 
   const handleChange = (field: string, value: string | boolean) => {
     setForm(prev => ({ ...prev, [field]: value }))
+    // Reset verified state if email changes
+    if (field === 'email') { setEmailVerified(false); setOtpStep(false) }
+  }
+
+  // ── OTP Cooldown Timer ────────────────────────────────────
+  useEffect(() => {
+    if (otpCooldown <= 0) return
+    const t = setTimeout(() => setOtpCooldown(c => c - 1), 1000)
+    return () => clearTimeout(t)
+  }, [otpCooldown])
+
+  // ── Send Email OTP ────────────────────────────────────────
+  const handleSendOTP = async () => {
+    if (!form.email || otpCooldown > 0) return
+    if (!isSupabaseConfigured()) { setError(AUTH_ERRORS.SERVICE_UNAVAILABLE); return }
+
+    setOtpSending(true)
+    setError('')
+    try {
+      const { error: otpErr } = await supabase.auth.signInWithOtp({
+        email: form.email,
+        options: { shouldCreateUser: false },
+      })
+      // Supabase may return error if user doesn't exist yet — that's fine for verification
+      // We'll also try with shouldCreateUser: true as fallback
+      if (otpErr && otpErr.message?.toLowerCase().includes('signups not allowed')) {
+        // Try allowing user creation via OTP
+        const { error: otpErr2 } = await supabase.auth.signInWithOtp({ email: form.email })
+        if (otpErr2) { setError(mapSupabaseError(otpErr2.message)); setOtpSending(false); return }
+      } else if (otpErr) {
+        // If the error is "user not found" type, send OTP allowing creation
+        const { error: otpErr2 } = await supabase.auth.signInWithOtp({ email: form.email })
+        if (otpErr2) { setError(mapSupabaseError(otpErr2.message)); setOtpSending(false); return }
+      }
+
+      setOtpStep(true)
+      setOtpCode(['', '', '', '', '', ''])
+      setOtpCooldown(60)
+    } catch {
+      setError(AUTH_ERRORS.OTP_SEND_FAILED)
+    }
+    setOtpSending(false)
+  }
+
+  // ── Verify Email OTP ──────────────────────────────────────
+  const handleVerifyOTP = async () => {
+    const code = otpCode.join('')
+    if (code.length !== 6) { setError('Please enter the complete 6-digit code.'); return }
+
+    setLoading(true)
+    setError('')
+    try {
+      const { error: verifyErr } = await supabase.auth.verifyOtp({
+        email: form.email,
+        token: code,
+        type: 'email',
+      })
+      if (verifyErr) {
+        setError(mapSupabaseError(verifyErr.message))
+        setLoading(false)
+        return
+      }
+      // OTP verified — sign out the OTP session so we can do a proper signUp with password
+      await supabase.auth.signOut()
+      setEmailVerified(true)
+      setOtpStep(false)
+    } catch {
+      setError(AUTH_ERRORS.OTP_INVALID)
+    }
+    setLoading(false)
+  }
+
+  // ── OTP Input Handler ─────────────────────────────────────
+  const handleOTPChange = (index: number, value: string) => {
+    if (value.length > 1) value = value.slice(-1)
+    if (value && !/^\d$/.test(value)) return
+    const next = [...otpCode]
+    next[index] = value
+    setOtpCode(next)
+    // Auto-focus next input
+    if (value && index < 5) {
+      const el = document.getElementById(`otp-${index + 1}`)
+      el?.focus()
+    }
+  }
+
+  const handleOTPKeyDown = (index: number, e: React.KeyboardEvent) => {
+    if (e.key === 'Backspace' && !otpCode[index] && index > 0) {
+      const el = document.getElementById(`otp-${index - 1}`)
+      el?.focus()
+    }
   }
 
   // ── Google OAuth Sign-Up ───────────────────────────────────
@@ -87,7 +185,6 @@ function RegisterPageInner() {
       setError(AUTH_ERRORS.WEAK_PASSWORD)
       return
     }
-    // Supabase requires password to contain both letters and numbers
     if (!/[a-zA-Z]/.test(form.password) || !/[0-9]/.test(form.password)) {
       setError('Password must contain both letters and numbers.')
       return
@@ -102,6 +199,12 @@ function RegisterPageInner() {
       return
     }
 
+    // Email OTP verification required
+    if (!emailVerified) {
+      handleSendOTP()
+      return
+    }
+
     if (!isSupabaseConfigured()) {
       setError(AUTH_ERRORS.SERVICE_UNAVAILABLE)
       return
@@ -109,16 +212,19 @@ function RegisterPageInner() {
 
     setLoading(true)
     try {
+      // Email is already verified via OTP — sign up with email_confirm disabled
       const { data, error: signupError } = await supabase.auth.signUp({
         email: form.email,
         password: form.password,
         options: {
+          emailRedirectTo: typeof window !== 'undefined' ? `${window.location.origin}/auth/callback?flow=signup` : undefined,
           data: {
             full_name: form.name,
             phone: mobileDigits,
             city: form.city,
             pan: form.pan,
             referral_source: form.referral,
+            email_verified_via_otp: true,
           },
         },
       })
@@ -129,7 +235,7 @@ function RegisterPageInner() {
         return
       }
 
-      // If Supabase returns a user but identities is empty, it means email already exists
+      // If Supabase returns a user but identities is empty, email already exists
       if (data?.user && data.user.identities && data.user.identities.length === 0) {
         setError(AUTH_ERRORS.EMAIL_EXISTS)
         setLoading(false)
@@ -164,6 +270,85 @@ function RegisterPageInner() {
     setLoading(false)
   }
 
+  // ── OTP Verification Screen ─────────────────────────────────
+  if (otpStep) {
+    return (
+      <section className="min-h-screen flex items-center justify-center bg-brand-black pt-36 pb-20">
+        <div className="max-w-md mx-auto text-center px-6">
+          <div className="relative w-20 h-20 mx-auto mb-6">
+            <div className="relative w-20 h-20 rounded-full bg-brand-red/10 flex items-center justify-center">
+              <Shield className="w-10 h-10 text-brand-red" />
+            </div>
+          </div>
+          <h1 className="text-2xl font-bold text-white mb-2">Verify Your Email</h1>
+          <p className="text-gray-400 mb-1">We&apos;ve sent a 6-digit code to</p>
+          <p className="text-white font-medium mb-6">{form.email}</p>
+
+          {error && (
+            <div className="flex items-center gap-2 p-3 rounded-lg bg-red-500/10 border border-red-500/20 mb-4">
+              <AlertTriangle className="w-4 h-4 text-red-400 flex-shrink-0" />
+              <p className="text-xs text-red-400">{error}</p>
+            </div>
+          )}
+
+          {/* OTP Input */}
+          <div className="flex justify-center gap-3 mb-6">
+            {otpCode.map((digit, i) => (
+              <input
+                key={i}
+                id={`otp-${i}`}
+                type="text"
+                inputMode="numeric"
+                maxLength={1}
+                value={digit}
+                onChange={(e) => handleOTPChange(i, e.target.value)}
+                onKeyDown={(e) => handleOTPKeyDown(i, e)}
+                onPaste={(e) => {
+                  e.preventDefault()
+                  const pasted = e.clipboardData.getData('text').replace(/\D/g, '').slice(0, 6)
+                  if (pasted.length > 0) {
+                    const next = [...otpCode]
+                    pasted.split('').forEach((ch, idx) => { if (idx < 6) next[idx] = ch })
+                    setOtpCode(next)
+                    const focusIdx = Math.min(pasted.length, 5)
+                    document.getElementById(`otp-${focusIdx}`)?.focus()
+                  }
+                }}
+                className="w-12 h-14 text-center text-xl font-bold text-white bg-white/[0.06] border border-white/[0.12] rounded-xl focus:border-brand-red focus:ring-1 focus:ring-brand-red/50 outline-none transition-colors"
+                autoFocus={i === 0}
+              />
+            ))}
+          </div>
+
+          <button
+            onClick={handleVerifyOTP}
+            disabled={loading || otpCode.join('').length !== 6}
+            className="w-full py-3 rounded-xl text-sm font-semibold text-white bg-brand-red hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors mb-4"
+          >
+            {loading ? <><Loader2 className="w-4 h-4 mr-2 animate-spin inline" /> Verifying...</> : 'Verify Email'}
+          </button>
+
+          <div className="flex items-center justify-center gap-4 text-sm">
+            <button
+              onClick={handleSendOTP}
+              disabled={otpCooldown > 0 || otpSending}
+              className="text-brand-red hover:underline disabled:text-gray-600 disabled:no-underline disabled:cursor-not-allowed"
+            >
+              {otpCooldown > 0 ? `Resend in ${otpCooldown}s` : otpSending ? 'Sending...' : 'Resend Code'}
+            </button>
+            <span className="text-gray-600">|</span>
+            <button
+              onClick={() => { setOtpStep(false); setError('') }}
+              className="text-gray-400 hover:text-white"
+            >
+              Change Email
+            </button>
+          </div>
+        </div>
+      </section>
+    )
+  }
+
   // ── Success Screen ─────────────────────────────────────────
   if (submitted) {
     return (
@@ -177,10 +362,10 @@ function RegisterPageInner() {
           </div>
           <h1 className="text-3xl font-bold text-white mb-4">Registration Successful</h1>
           <p className="text-gray-400 mb-4">
-            Thank you for registering with {BRAND.name}. Please check your email to verify your account.
+            Your email has been verified and your account is ready.
           </p>
           <p className="text-gray-500 text-sm mb-8">
-            After verification, you can sign in to access your investor dashboard.
+            Sign in now to access your investor dashboard.
           </p>
           <Link href="/login" className="btn-primary">Go to Login</Link>
         </div>
@@ -277,7 +462,14 @@ function RegisterPageInner() {
             <div className="grid md:grid-cols-2 gap-3">
               <div>
                 <label htmlFor="reg-email" className="block text-xs font-medium text-brand-black mb-1">Email Address <span className="text-brand-red">*</span></label>
-                <input id="reg-email" type="email" required className="input-field" placeholder="you@email.com" value={form.email} onChange={(e) => handleChange('email', e.target.value)} />
+                <div className="relative">
+                  <input id="reg-email" type="email" required className={`input-field ${emailVerified ? 'pr-20 border-green-400 bg-green-50' : ''}`} placeholder="you@email.com" value={form.email} onChange={(e) => handleChange('email', e.target.value)} />
+                  {emailVerified && (
+                    <span className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1 text-green-600 text-xs font-medium">
+                      <CheckCircle className="w-3.5 h-3.5" /> Verified
+                    </span>
+                  )}
+                </div>
               </div>
               <div>
                 <label htmlFor="reg-mobile" className="block text-xs font-medium text-brand-black mb-1">Mobile Number <span className="text-brand-red">*</span></label>
@@ -364,8 +556,16 @@ function RegisterPageInner() {
               </label>
             </div>
 
-            <button type="submit" disabled={loading} className="btn-primary w-full text-center disabled:opacity-60">
-              {loading ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Creating Account...</> : <><UserPlus className="w-4 h-4 mr-2" /> Create Account</>}
+            <button type="submit" disabled={loading || otpSending} className="btn-primary w-full text-center disabled:opacity-60">
+              {loading ? (
+                <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Creating Account...</>
+              ) : otpSending ? (
+                <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Sending OTP...</>
+              ) : !emailVerified ? (
+                <><Shield className="w-4 h-4 mr-2" /> Verify Email &amp; Create Account</>
+              ) : (
+                <><UserPlus className="w-4 h-4 mr-2" /> Create Account</>
+              )}
             </button>
           </form>
 

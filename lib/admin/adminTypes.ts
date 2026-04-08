@@ -65,7 +65,7 @@ export interface AdminNavItem {
 }
 
 // ── Client Data ───────────────────────────────────────────────────
-export type KYCStatus = 'pending' | 'under-review' | 'approved' | 'rejected' | 'expired'
+export type KYCStatus = 'pending' | 'submitted' | 'under-review' | 'approved' | 'rejected' | 'expired'
 export type AccountStatus = 'active' | 'frozen' | 'suspended' | 'closed'
 export type RiskProfile = 'conservative' | 'moderate' | 'aggressive' | 'speculative'
 

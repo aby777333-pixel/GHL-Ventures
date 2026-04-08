@@ -145,7 +145,109 @@ export async function fetchClients() {
 }
 
 export async function fetchKYCDocuments() {
-  return queryTable('kyc_documents')
+  if (!isSupabaseConfigured()) return []
+  try {
+    // KYC docs are in the 'documents' table (where clients upload them)
+    // Join with clients to get client name
+    const { data, error } = await (supabase
+      .from('documents')
+      .select('*, clients!documents_client_id_fkey(full_name)')
+      .eq('entity_type', 'client')
+      .in('category', ['kyc', 'compliance'])
+      .order('created_at', { ascending: false }) as any)
+
+    if (error) {
+      // Fallback: no join (client_id FK may not exist)
+      const { data: plain, error: err2 } = await (supabase
+        .from('documents')
+        .select('*')
+        .eq('entity_type', 'client')
+        .in('category', ['kyc', 'compliance'])
+        .order('created_at', { ascending: false }) as any)
+
+      if (err2 || !plain) return []
+
+      // Fetch client names separately
+      const clientIds = Array.from(new Set((plain as any[]).map((d: any) => d.client_id || d.entity_id).filter(Boolean))) as string[]
+      let clientMap: Record<string, string> = {}
+      if (clientIds.length > 0) {
+        const { data: clients } = await (supabase
+          .from('clients')
+          .select('id, full_name')
+          .in('id', clientIds) as any)
+        if (clients) {
+          clientMap = Object.fromEntries((clients as any[]).map((c: any) => [c.id, c.full_name]))
+        }
+      }
+
+      return (plain as any[]).map((d: any) => {
+        const cid = d.client_id || d.entity_id
+        return {
+          id: d.id,
+          clientId: cid,
+          clientName: clientMap[cid] || 'Unknown',
+          type: d.title || d.category || 'KYC Document',
+          fileName: d.file_name || d.title || '',
+          fileUrl: d.file_url || '',
+          uploadDate: d.uploaded_at || d.created_at || '',
+          status: d.status === 'active' ? 'submitted' : (d.status || 'submitted'),
+          reviewer: null,
+          notes: null,
+        }
+      })
+    }
+
+    return (data as any[]).map((d: any) => {
+      const cid = d.client_id || d.entity_id
+      return {
+        id: d.id,
+        clientId: cid,
+        clientName: d.clients?.full_name || 'Unknown',
+        type: d.title || d.category || 'KYC Document',
+        fileName: d.file_name || d.title || '',
+        fileUrl: d.file_url || '',
+        uploadDate: d.uploaded_at || d.created_at || '',
+        status: d.status === 'active' ? 'submitted' : (d.status || 'submitted'),
+        reviewer: null,
+        notes: null,
+      }
+    })
+  } catch (err) {
+    console.warn('[adminData] fetchKYCDocuments error:', err)
+    return []
+  }
+}
+
+// ── KYC Document Actions ───────────────────────────────────
+export async function approveKYCDocument(docId: string, reviewerId?: string) {
+  if (!isSupabaseConfigured()) return null
+  try {
+    const sb = supabase as any
+    const { data, error } = await sb.from('documents').update({
+      status: 'approved',
+      approved_by: reviewerId || null,
+      approved_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    }).eq('id', docId).select().single()
+    if (error) { console.warn('[kyc] Approve error:', error.message); return null }
+    return data
+  } catch { return null }
+}
+
+export async function rejectKYCDocument(docId: string, reviewerId?: string, notes?: string) {
+  if (!isSupabaseConfigured()) return null
+  try {
+    const sb = supabase as any
+    const updates: Record<string, any> = {
+      status: 'rejected',
+      updated_at: new Date().toISOString(),
+    }
+    if (reviewerId) updates.approved_by = reviewerId
+    if (notes) updates.metadata = { rejection_reason: notes }
+    const { data, error } = await sb.from('documents').update(updates).eq('id', docId).select().single()
+    if (error) { console.warn('[kyc] Reject error:', error.message); return null }
+    return data
+  } catch { return null }
 }
 
 // ── Leads ───────────────────────────────────────────────────

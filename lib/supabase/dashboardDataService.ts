@@ -618,6 +618,9 @@ export async function uploadClientDocument(doc: {
 }) {
   if (!isSupabaseConfigured()) return null
 
+  // KYC and compliance docs get 'submitted' status so admin can review them
+  const isKYC = doc.category === 'kyc' || doc.category === 'compliance'
+
   const { data, error } = await sb.from('documents').insert({
     title: doc.title,
     file_url: doc.file_url,
@@ -631,6 +634,7 @@ export async function uploadClientDocument(doc: {
     client_id: doc.client_id,
     uploaded_by: doc.user_id,
     access_level: 'restricted',
+    status: isKYC ? 'submitted' : 'active',
   }).select().single()
 
   if (error) { console.warn('[dashboard] Upload client doc error:', error.message); return null }

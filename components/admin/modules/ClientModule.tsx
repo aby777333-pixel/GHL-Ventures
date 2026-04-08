@@ -13,7 +13,7 @@ import AdminBadge, { getKYCBadgeVariant, getAccountBadgeVariant } from '../share
 import AdminModal, { ModalButton } from '../shared/AdminModal'
 import AdminEmptyState from '../shared/AdminEmptyState'
 import AdminKPICard from '../shared/AdminKPICard'
-import { fetchClients, fetchKYCDocuments } from '@/lib/supabase/adminDataService'
+import { fetchClients, fetchKYCDocuments, approveKYCDocument, rejectKYCDocument } from '@/lib/supabase/adminDataService'
 import { getActiveRMs, assignRMToClient, type ActiveRM } from '@/lib/supabase/employeeService'
 import { formatINR, formatDate } from '@/lib/admin/adminHooks'
 import type { Client, KYCDocument, KYCStatus } from '@/lib/admin/adminTypes'
@@ -77,7 +77,7 @@ export default function ClientModule({ subTab, navigate, showToast }: ClientModu
   const kpis = useMemo(() => {
     const active = clients.filter(c => c.accountStatus === 'active').length
     const totalAUM = clients.reduce((s, c) => s + c.aum, 0)
-    const pendingKYC = kycDocs.filter(d => d.status === 'pending' || d.status === 'under-review').length
+    const pendingKYC = kycDocs.filter(d => d.status === 'pending' || d.status === 'under-review' || d.status === 'submitted').length
     const avgAUM = active > 0 ? totalAUM / active : 0
     return { total: clients.length, active, totalAUM, pendingKYC, avgAUM }
   }, [clients, kycDocs])
@@ -150,6 +150,7 @@ export default function ClientModule({ subTab, navigate, showToast }: ClientModu
             filter={kycFilter}
             setFilter={setKycFilter}
             showToast={showToast}
+            onRefresh={loadData}
           />
         )}
         {activeTab === 'analytics' && <ClientAnalyticsTab clients={clients} />}
@@ -431,12 +432,17 @@ function KYCQueueTab({
   filter,
   setFilter,
   showToast,
+  onRefresh,
 }: {
   kycDocs: any[]
   filter: KYCStatus | 'all'
   setFilter: (f: KYCStatus | 'all') => void
   showToast: (msg: string, type?: 'success' | 'error' | 'info' | 'warning') => void
+  onRefresh: () => void
 }) {
+  const [actionLoading, setActionLoading] = useState<string | null>(null)
+  const [previewDoc, setPreviewDoc] = useState<any | null>(null)
+
   const filteredDocs = useMemo(() => {
     if (filter === 'all') return kycDocs
     return kycDocs.filter(d => d.status === filter)
@@ -447,6 +453,38 @@ function KYCQueueTab({
     kycDocs.forEach(d => { counts[d.status] = (counts[d.status] || 0) + 1 })
     return counts
   }, [kycDocs])
+
+  const handleApprove = async (doc: any) => {
+    setActionLoading(doc.id)
+    const result = await approveKYCDocument(doc.id)
+    setActionLoading(null)
+    if (result) {
+      showToast(`${doc.type} for ${doc.clientName} approved`, 'success')
+      onRefresh()
+    } else {
+      showToast('Failed to approve document', 'error')
+    }
+  }
+
+  const handleReject = async (doc: any) => {
+    setActionLoading(doc.id)
+    const result = await rejectKYCDocument(doc.id)
+    setActionLoading(null)
+    if (result) {
+      showToast(`${doc.type} for ${doc.clientName} rejected`, 'info')
+      onRefresh()
+    } else {
+      showToast('Failed to reject document', 'error')
+    }
+  }
+
+  const handleView = (doc: any) => {
+    if (doc.fileUrl) {
+      setPreviewDoc(doc)
+    } else {
+      showToast('No file URL available for this document', 'warning')
+    }
+  }
 
   const columns: Column<KYCDocument>[] = [
     {
@@ -462,7 +500,7 @@ function KYCQueueTab({
     { key: 'type', label: 'Document Type' },
     { key: 'fileName', label: 'File', render: (row) => (
       <span className="flex items-center gap-1.5 text-xs text-gray-400">
-        <FileText className="w-3.5 h-3.5" />{row.fileName}
+        <FileText className="w-3.5 h-3.5" />{(row as any).fileName}
       </span>
     )},
     {
@@ -473,7 +511,11 @@ function KYCQueueTab({
     {
       key: 'status',
       label: 'Status',
-      render: (row) => <AdminBadge label={row.status.replace('-', ' ')} variant={getKYCBadgeVariant(row.status)} dot />,
+      render: (row) => {
+        const label = row.status === 'submitted' ? 'submitted' : row.status.replace('-', ' ')
+        const variant = row.status === 'submitted' ? 'warning' as const : getKYCBadgeVariant(row.status)
+        return <AdminBadge label={label} variant={variant} dot />
+      },
     },
     {
       key: 'reviewer',
@@ -484,36 +526,41 @@ function KYCQueueTab({
       key: 'actions',
       label: 'Actions',
       sortable: false,
-      width: '120px',
-      render: (row) => (
-        <div className="flex items-center gap-1">
-          {(row.status === 'pending' || row.status === 'under-review') && (
-            <>
-              <button
-                onClick={(e) => { e.stopPropagation(); showToast(`KYC ${row.id} approved`, 'success') }}
-                className="p-1.5 rounded-lg hover:bg-emerald-500/10 text-gray-500 hover:text-emerald-400 transition-colors"
-                title="Approve"
-              >
-                <CheckCircle2 className="w-4 h-4" />
-              </button>
-              <button
-                onClick={(e) => { e.stopPropagation(); showToast(`KYC ${row.id} rejected`, 'error') }}
-                className="p-1.5 rounded-lg hover:bg-red-500/10 text-gray-500 hover:text-red-400 transition-colors"
-                title="Reject"
-              >
-                <XCircle className="w-4 h-4" />
-              </button>
-            </>
-          )}
-          <button
-            onClick={(e) => { e.stopPropagation(); showToast('Opening document preview...', 'info') }}
-            className="p-1.5 rounded-lg hover:bg-white/[0.06] text-gray-500 hover:text-white transition-colors"
-            title="View"
-          >
-            <Eye className="w-4 h-4" />
-          </button>
-        </div>
-      ),
+      width: '140px',
+      render: (row) => {
+        const isLoading = actionLoading === row.id
+        return (
+          <div className="flex items-center gap-1">
+            {(row.status === 'pending' || row.status === 'under-review' || row.status === 'submitted') && (
+              <>
+                <button
+                  onClick={(e) => { e.stopPropagation(); handleApprove(row) }}
+                  disabled={isLoading}
+                  className="p-1.5 rounded-lg hover:bg-emerald-500/10 text-gray-500 hover:text-emerald-400 transition-colors disabled:opacity-40"
+                  title="Approve"
+                >
+                  <CheckCircle2 className="w-4 h-4" />
+                </button>
+                <button
+                  onClick={(e) => { e.stopPropagation(); handleReject(row) }}
+                  disabled={isLoading}
+                  className="p-1.5 rounded-lg hover:bg-red-500/10 text-gray-500 hover:text-red-400 transition-colors disabled:opacity-40"
+                  title="Reject"
+                >
+                  <XCircle className="w-4 h-4" />
+                </button>
+              </>
+            )}
+            <button
+              onClick={(e) => { e.stopPropagation(); handleView(row) }}
+              className="p-1.5 rounded-lg hover:bg-white/[0.06] text-gray-500 hover:text-white transition-colors"
+              title="View Document"
+            >
+              <Eye className="w-4 h-4" />
+            </button>
+          </div>
+        )
+      },
     },
   ]
 
@@ -525,34 +572,107 @@ function KYCQueueTab({
     { id: 'rejected', label: `Rejected (${statusCounts.rejected || 0})` },
   ]
 
+  // Also count "submitted" under pending for display
+  const submittedCount = kycDocs.filter(d => d.status === 'submitted').length
+
   return (
     <div className="space-y-4">
       {/* Filters */}
       <div className="flex flex-wrap gap-2">
-        {filters.map(f => (
-          <button
-            key={f.id}
-            onClick={() => setFilter(f.id)}
-            className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors ${
-              filter === f.id
-                ? 'bg-brand-red/20 text-white border-brand-red/30'
-                : 'bg-white/[0.03] text-gray-500 border-white/[0.06] hover:bg-white/[0.06] hover:text-gray-300'
-            }`}
-          >
-            {f.label}
-          </button>
-        ))}
+        {filters.map(f => {
+          // Show submitted count in the Pending filter
+          let label = f.label
+          if (f.id === 'pending') {
+            const total = (statusCounts.pending || 0) + submittedCount
+            label = `Pending (${total})`
+          }
+          return (
+            <button
+              key={f.id}
+              onClick={() => setFilter(f.id)}
+              className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors ${
+                filter === f.id
+                  ? 'bg-brand-red/20 text-white border-brand-red/30'
+                  : 'bg-white/[0.03] text-gray-500 border-white/[0.06] hover:bg-white/[0.06] hover:text-gray-300'
+              }`}
+            >
+              {label}
+            </button>
+          )
+        })}
       </div>
 
       <AdminGlass padding="p-4">
         <AdminDataTable<KYCDocument>
           columns={columns}
-          data={filteredDocs}
+          data={filter === 'pending' ? kycDocs.filter(d => d.status === 'pending' || d.status === 'submitted') : filteredDocs}
           searchKeys={['clientName', 'type', 'fileName']}
           searchPlaceholder="Search KYC documents..."
           emptyMessage="No KYC documents match the selected filter"
         />
       </AdminGlass>
+
+      {/* Document Preview Modal */}
+      {previewDoc && (
+        <AdminModal
+          isOpen={true}
+          onClose={() => setPreviewDoc(null)}
+          title={`${previewDoc.type} — ${previewDoc.clientName}`}
+          maxWidth="max-w-3xl"
+          footer={
+            <>
+              {(previewDoc.status === 'submitted' || previewDoc.status === 'pending' || previewDoc.status === 'under-review') && (
+                <>
+                  <ModalButton variant="primary" onClick={() => { handleApprove(previewDoc); setPreviewDoc(null) }}>
+                    Approve
+                  </ModalButton>
+                  <ModalButton variant="danger" onClick={() => { handleReject(previewDoc); setPreviewDoc(null) }}>
+                    Reject
+                  </ModalButton>
+                </>
+              )}
+              <ModalButton onClick={() => setPreviewDoc(null)}>Close</ModalButton>
+            </>
+          }
+        >
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-3 text-sm">
+              <div><span className="text-gray-500">Client:</span> <span className="text-white ml-2">{previewDoc.clientName}</span></div>
+              <div><span className="text-gray-500">Status:</span> <span className="ml-2"><AdminBadge label={previewDoc.status} variant={previewDoc.status === 'submitted' ? 'warning' : getKYCBadgeVariant(previewDoc.status)} dot /></span></div>
+              <div><span className="text-gray-500">Type:</span> <span className="text-white ml-2">{previewDoc.type}</span></div>
+              <div><span className="text-gray-500">Uploaded:</span> <span className="text-white ml-2">{formatDate(previewDoc.uploadDate)}</span></div>
+            </div>
+
+            {/* File Preview */}
+            {previewDoc.fileUrl && (
+              <div className="border border-white/[0.08] rounded-xl overflow-hidden bg-black/30">
+                {previewDoc.fileName?.match(/\.(jpg|jpeg|png|gif|webp)$/i) || previewDoc.fileUrl?.match(/\.(jpg|jpeg|png|gif|webp)/i) ? (
+                  <img src={previewDoc.fileUrl} alt={previewDoc.fileName} className="w-full max-h-[500px] object-contain" />
+                ) : previewDoc.fileName?.match(/\.pdf$/i) || previewDoc.fileUrl?.match(/\.pdf/i) ? (
+                  <iframe src={previewDoc.fileUrl} className="w-full h-[500px]" title="Document Preview" />
+                ) : (
+                  <div className="p-8 text-center text-gray-400">
+                    <FileText className="w-12 h-12 mx-auto mb-3 opacity-40" />
+                    <p className="text-sm mb-3">Preview not available for this file type</p>
+                    <a href={previewDoc.fileUrl} target="_blank" rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-medium text-white bg-brand-red/20 border border-brand-red/30 rounded-lg hover:bg-brand-red/30 transition-colors">
+                      <ArrowUpRight className="w-3.5 h-3.5" /> Open in New Tab
+                    </a>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Open in new tab link */}
+            {previewDoc.fileUrl && (
+              <a href={previewDoc.fileUrl} target="_blank" rel="noopener noreferrer"
+                className="inline-flex items-center gap-1.5 text-xs text-brand-red hover:underline">
+                <ArrowUpRight className="w-3.5 h-3.5" /> Open file in new tab
+              </a>
+            )}
+          </div>
+        </AdminModal>
+      )}
     </div>
   )
 }

@@ -36,6 +36,7 @@ export function getKYCBadgeVariant(status: string): BadgeVariant {
   switch (status) {
     case 'approved': return 'success'
     case 'under-review': return 'warning'
+    case 'submitted': return 'warning'
     case 'pending': return 'info'
     case 'rejected': return 'error'
     case 'expired': return 'error'
