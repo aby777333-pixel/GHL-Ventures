@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { LegalLink } from '@/components/LegalPopup'
 import { BRAND } from '@/lib/constants'
-import { Eye, EyeOff, UserPlus, ArrowLeft, Shield, CheckCircle, AlertTriangle, Loader2 } from 'lucide-react'
+import { Eye, EyeOff, UserPlus, ArrowLeft, Shield, CheckCircle, AlertTriangle, Loader2, Mail } from 'lucide-react'
 import Logo from '@/components/Logo'
 import { supabase, isSupabaseConfigured } from '@/lib/supabase/client'
 import { submitContactForm } from '@/lib/supabase/reportsDataService'
@@ -21,13 +21,6 @@ function RegisterPageInner() {
   })
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
-
-  // ── Email OTP Verification State ──────────────────────────
-  const [otpStep, setOtpStep] = useState(false)
-  const [otpCode, setOtpCode] = useState(['', '', '', '', '', ''])
-  const [otpSending, setOtpSending] = useState(false)
-  const [otpCooldown, setOtpCooldown] = useState(0)
-  const [emailVerified, setEmailVerified] = useState(false)
 
   // Capture referral code from URL (?ref=GHL-XXXXXXXX)
   useEffect(() => {
@@ -47,89 +40,6 @@ function RegisterPageInner() {
 
   const handleChange = (field: string, value: string | boolean) => {
     setForm(prev => ({ ...prev, [field]: value }))
-    if (field === 'email') { setEmailVerified(false); setOtpStep(false) }
-  }
-
-  // ── OTP Cooldown Timer ────────────────────────────────────
-  useEffect(() => {
-    if (otpCooldown <= 0) return
-    const t = setTimeout(() => setOtpCooldown(c => c - 1), 1000)
-    return () => clearTimeout(t)
-  }, [otpCooldown])
-
-  // ── Send Email OTP (via custom Netlify function + Resend) ──
-  const handleSendOTP = async () => {
-    if (!form.email || otpCooldown > 0) return
-
-    setOtpSending(true)
-    setError('')
-    try {
-      const res = await fetch('/.netlify/functions/send-otp', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: form.email }),
-      })
-      const data = await res.json()
-      if (!res.ok) {
-        setError(data.error || AUTH_ERRORS.OTP_SEND_FAILED)
-        setOtpSending(false)
-        return
-      }
-
-      setOtpStep(true)
-      setOtpCode(['', '', '', '', '', ''])
-      setOtpCooldown(60)
-    } catch {
-      setError(AUTH_ERRORS.OTP_SEND_FAILED)
-    }
-    setOtpSending(false)
-  }
-
-  // ── Verify Email OTP (via custom Netlify function) ────────
-  const handleVerifyOTP = async () => {
-    const code = otpCode.join('')
-    if (code.length !== 6) { setError('Please enter the complete 6-digit code.'); return }
-
-    setLoading(true)
-    setError('')
-    try {
-      const res = await fetch('/.netlify/functions/verify-otp', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: form.email, code }),
-      })
-      const data = await res.json()
-      if (!res.ok) {
-        setError(data.error || AUTH_ERRORS.OTP_INVALID)
-        setLoading(false)
-        return
-      }
-      setEmailVerified(true)
-      setOtpStep(false)
-    } catch {
-      setError(AUTH_ERRORS.OTP_INVALID)
-    }
-    setLoading(false)
-  }
-
-  // ── OTP Input Handler ─────────────────────────────────────
-  const handleOTPChange = (index: number, value: string) => {
-    if (value.length > 1) value = value.slice(-1)
-    if (value && !/^\d$/.test(value)) return
-    const next = [...otpCode]
-    next[index] = value
-    setOtpCode(next)
-    if (value && index < 5) {
-      const el = document.getElementById(`otp-${index + 1}`)
-      el?.focus()
-    }
-  }
-
-  const handleOTPKeyDown = (index: number, e: React.KeyboardEvent) => {
-    if (e.key === 'Backspace' && !otpCode[index] && index > 0) {
-      const el = document.getElementById(`otp-${index - 1}`)
-      el?.focus()
-    }
   }
 
   // ── Google OAuth Sign-Up ───────────────────────────────────
@@ -182,12 +92,6 @@ function RegisterPageInner() {
       return
     }
 
-    // Email OTP verification required
-    if (!emailVerified) {
-      handleSendOTP()
-      return
-    }
-
     if (!isSupabaseConfigured()) {
       setError(AUTH_ERRORS.SERVICE_UNAVAILABLE)
       return
@@ -204,7 +108,6 @@ function RegisterPageInner() {
             full_name: form.name,
             phone: mobileDigits,
             referral_source: form.referral,
-            email_verified_via_otp: true,
           },
         },
       })
@@ -256,103 +159,59 @@ function RegisterPageInner() {
     setLoading(false)
   }
 
-  // ── OTP Verification Screen ─────────────────────────────────
-  if (otpStep) {
-    return (
-      <section className="min-h-screen flex items-center justify-center bg-brand-black pt-36 pb-20">
-        <div className="max-w-md mx-auto text-center px-6">
-          <div className="relative w-20 h-20 mx-auto mb-6">
-            <div className="relative w-20 h-20 rounded-full bg-brand-red/10 flex items-center justify-center">
-              <Shield className="w-10 h-10 text-brand-red" />
-            </div>
-          </div>
-          <h1 className="text-2xl font-bold text-white mb-2">Verify Your Email</h1>
-          <p className="text-gray-400 mb-1">We&apos;ve sent a 6-digit code to</p>
-          <p className="text-white font-medium mb-6">{form.email}</p>
-
-          {error && (
-            <div className="flex items-center gap-2 p-3 rounded-lg bg-red-500/10 border border-red-500/20 mb-4">
-              <AlertTriangle className="w-4 h-4 text-red-400 flex-shrink-0" />
-              <p className="text-xs text-red-400">{error}</p>
-            </div>
-          )}
-
-          <div className="flex justify-center gap-3 mb-6">
-            {otpCode.map((digit, i) => (
-              <input
-                key={i}
-                id={`otp-${i}`}
-                type="text"
-                inputMode="numeric"
-                maxLength={1}
-                value={digit}
-                onChange={(e) => handleOTPChange(i, e.target.value)}
-                onKeyDown={(e) => handleOTPKeyDown(i, e)}
-                onPaste={(e) => {
-                  e.preventDefault()
-                  const pasted = e.clipboardData.getData('text').replace(/\D/g, '').slice(0, 6)
-                  if (pasted.length > 0) {
-                    const next = [...otpCode]
-                    pasted.split('').forEach((ch, idx) => { if (idx < 6) next[idx] = ch })
-                    setOtpCode(next)
-                    const focusIdx = Math.min(pasted.length, 5)
-                    document.getElementById(`otp-${focusIdx}`)?.focus()
-                  }
-                }}
-                className="w-12 h-14 text-center text-xl font-bold text-white bg-white/[0.06] border border-white/[0.12] rounded-xl focus:border-brand-red focus:ring-1 focus:ring-brand-red/50 outline-none transition-colors"
-                autoFocus={i === 0}
-              />
-            ))}
-          </div>
-
-          <button
-            onClick={handleVerifyOTP}
-            disabled={loading || otpCode.join('').length !== 6}
-            className="w-full py-3 rounded-xl text-sm font-semibold text-white bg-brand-red hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors mb-4"
-          >
-            {loading ? <><Loader2 className="w-4 h-4 mr-2 animate-spin inline" /> Verifying...</> : 'Verify Email'}
-          </button>
-
-          <div className="flex items-center justify-center gap-4 text-sm">
-            <button
-              onClick={handleSendOTP}
-              disabled={otpCooldown > 0 || otpSending}
-              className="text-brand-red hover:underline disabled:text-gray-600 disabled:no-underline disabled:cursor-not-allowed"
-            >
-              {otpCooldown > 0 ? `Resend in ${otpCooldown}s` : otpSending ? 'Sending...' : 'Resend Code'}
-            </button>
-            <span className="text-gray-600">|</span>
-            <button
-              onClick={() => { setOtpStep(false); setError('') }}
-              className="text-gray-400 hover:text-white"
-            >
-              Change Email
-            </button>
-          </div>
-        </div>
-      </section>
-    )
-  }
-
-  // ── Success Screen ─────────────────────────────────────────
+  // ── Email Confirmation Screen ─────────────────────────────
   if (submitted) {
     return (
       <section className="min-h-screen flex items-center justify-center bg-brand-black pt-36 pb-20">
         <div className="max-w-md mx-auto text-center px-6">
           <div className="relative w-20 h-20 mx-auto mb-6">
-            <div className="absolute inset-0 rounded-full bg-green-500/20 animate-ping opacity-30" />
-            <div className="relative w-20 h-20 rounded-full bg-green-500/10 flex items-center justify-center">
-              <CheckCircle className="w-10 h-10 text-green-500" />
+            <div className="absolute inset-0 rounded-full bg-brand-red/20 animate-ping opacity-30" />
+            <div className="relative w-20 h-20 rounded-full bg-brand-red/10 flex items-center justify-center">
+              <Mail className="w-10 h-10 text-brand-red" />
             </div>
           </div>
-          <h1 className="text-3xl font-bold text-white mb-4">Registration Successful</h1>
-          <p className="text-gray-400 mb-4">
-            Your email has been verified and your account is ready.
+          <h1 className="text-3xl font-bold text-white mb-4">Verify Your Email</h1>
+          <p className="text-gray-400 mb-2">
+            We&apos;ve sent a confirmation link to
           </p>
-          <p className="text-gray-500 text-sm mb-8">
-            Sign in now to access your investor dashboard.
+          <p className="text-white font-semibold text-lg mb-6">{form.email}</p>
+
+          <div className="bg-white/[0.04] border border-white/[0.08] rounded-xl p-5 mb-6 text-left">
+            <div className="flex items-start gap-3 mb-3">
+              <div className="w-7 h-7 rounded-full bg-brand-red/20 flex items-center justify-center flex-shrink-0 mt-0.5">
+                <span className="text-brand-red text-sm font-bold">1</span>
+              </div>
+              <p className="text-gray-300 text-sm">Open your email inbox and find the message from <span className="text-white font-medium">Supabase Auth</span></p>
+            </div>
+            <div className="flex items-start gap-3 mb-3">
+              <div className="w-7 h-7 rounded-full bg-brand-red/20 flex items-center justify-center flex-shrink-0 mt-0.5">
+                <span className="text-brand-red text-sm font-bold">2</span>
+              </div>
+              <p className="text-gray-300 text-sm">Click the <span className="text-white font-medium">confirmation link</span> in the email</p>
+            </div>
+            <div className="flex items-start gap-3">
+              <div className="w-7 h-7 rounded-full bg-brand-red/20 flex items-center justify-center flex-shrink-0 mt-0.5">
+                <span className="text-brand-red text-sm font-bold">3</span>
+              </div>
+              <p className="text-gray-300 text-sm">Once verified, you&apos;ll be redirected to your <span className="text-white font-medium">investor dashboard</span></p>
+            </div>
+          </div>
+
+          <p className="text-gray-500 text-xs mb-6">
+            Didn&apos;t receive the email? Check your spam folder or wait a minute.
           </p>
-          <Link href="/login" className="btn-primary">Go to Login</Link>
+
+          <div className="flex flex-col gap-3">
+            <Link href="/login" className="inline-flex items-center justify-center px-6 py-3 rounded-xl text-sm font-semibold text-white bg-brand-red hover:bg-red-700 transition-colors">
+              Go to Login
+            </Link>
+            <button
+              onClick={() => setSubmitted(false)}
+              className="text-sm text-gray-500 hover:text-white transition-colors"
+            >
+              Back to registration form
+            </button>
+          </div>
         </div>
       </section>
     )
@@ -436,15 +295,13 @@ function RegisterPageInner() {
             )
           )}
 
-          {/* Form — Simplified */}
+          {/* Form */}
           <form onSubmit={handleSubmit} className="space-y-4">
-            {/* Name */}
             <div>
               <label htmlFor="reg-name" className="block text-xs font-medium text-brand-black mb-1">Name</label>
               <input id="reg-name" type="text" required className="input-field" placeholder="Enter Your Name" value={form.name} onChange={(e) => handleChange('name', e.target.value)} />
             </div>
 
-            {/* Mobile */}
             <div>
               <label htmlFor="reg-mobile" className="block text-xs font-medium text-brand-black mb-1">Mobile</label>
               <div className="relative">
@@ -453,20 +310,11 @@ function RegisterPageInner() {
               </div>
             </div>
 
-            {/* Email with OTP verification badge */}
             <div>
               <label htmlFor="reg-email" className="block text-xs font-medium text-brand-black mb-1">Email Address</label>
-              <div className="relative">
-                <input id="reg-email" type="email" required className={`input-field ${emailVerified ? 'pr-20 border-green-400 bg-green-50' : ''}`} placeholder="your@email.com" value={form.email} onChange={(e) => handleChange('email', e.target.value)} />
-                {emailVerified && (
-                  <span className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1 text-green-600 text-xs font-medium">
-                    <CheckCircle className="w-3.5 h-3.5" /> Verified
-                  </span>
-                )}
-              </div>
+              <input id="reg-email" type="email" required className="input-field" placeholder="your@email.com" value={form.email} onChange={(e) => handleChange('email', e.target.value)} />
             </div>
 
-            {/* Password */}
             <div>
               <label htmlFor="reg-password" className="block text-xs font-medium text-brand-black mb-1">Password</label>
               <div className="relative">
@@ -477,7 +325,6 @@ function RegisterPageInner() {
               </div>
             </div>
 
-            {/* Referred By */}
             <div>
               <label htmlFor="reg-referral" className="block text-xs font-medium text-brand-black mb-1">Referred By</label>
               {form.referral && form.referral.startsWith('GHL-') ? (
@@ -491,7 +338,6 @@ function RegisterPageInner() {
               )}
             </div>
 
-            {/* Terms */}
             <label className="flex items-start space-x-3 cursor-pointer pt-1">
               <input type="checkbox" required checked={form.terms} onChange={(e) => handleChange('terms', e.target.checked)}
                 className="w-4 h-4 text-brand-red rounded border-gray-300 mt-0.5 focus:ring-brand-red" />
@@ -504,16 +350,8 @@ function RegisterPageInner() {
               </span>
             </label>
 
-            <button type="submit" disabled={loading || otpSending} className="btn-primary w-full text-center disabled:opacity-60">
-              {loading ? (
-                <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Creating Account...</>
-              ) : otpSending ? (
-                <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Sending OTP...</>
-              ) : !emailVerified ? (
-                <><Shield className="w-4 h-4 mr-2" /> Verify Email &amp; Register</>
-              ) : (
-                <><UserPlus className="w-4 h-4 mr-2" /> Register</>
-              )}
+            <button type="submit" disabled={loading} className="btn-primary w-full text-center disabled:opacity-60">
+              {loading ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Registering...</> : <><UserPlus className="w-4 h-4 mr-2" /> Register</>}
             </button>
           </form>
 
