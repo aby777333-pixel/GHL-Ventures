@@ -58,22 +58,30 @@ export async function createEmployee(input: {
 }): Promise<{ success: boolean; userId?: string; error?: string }> {
   try {
     const token = await getAuthToken()
+    if (!token) {
+      return { success: false, error: 'Authentication required — please log in again' }
+    }
     const response = await fetch('/api/create-employee', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
       body: JSON.stringify(input),
     })
 
-    const data = await response.json()
+    let data: any
+    try {
+      data = await response.json()
+    } catch {
+      return { success: false, error: `Server error (${response.status}) — could not parse response` }
+    }
 
     if (!response.ok) {
-      return { success: false, error: data.error || 'Failed to create employee' }
+      return { success: false, error: data.error || `Failed to create employee (${response.status})` }
     }
 
     return { success: true, userId: data.userId }
-  } catch (err) {
+  } catch (err: any) {
     console.error('[employeeService] createEmployee failed:', err)
-    return { success: false, error: 'Network error — could not reach server' }
+    return { success: false, error: `Network error: ${err?.message || 'could not reach server'}. Check your connection and try again.` }
   }
 }
 

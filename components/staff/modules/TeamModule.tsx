@@ -79,7 +79,7 @@ export default function TeamModule({ subTab, navigate, showToast, role }: TeamMo
 // ================================================================
 //  1. DIRECTORY VIEW
 // ================================================================
-function DirectoryView({ showToast, employees }: { showToast: TeamModuleProps['showToast']; employees: any[] }) {
+function DirectoryView({ showToast, employees = [] }: { showToast: TeamModuleProps['showToast']; employees: any[] }) {
   const [search, setSearch] = useState('')
   const [deptFilter, setDeptFilter] = useState<string>('all')
 
@@ -225,7 +225,7 @@ function EmployeeCard({ employee: emp, showToast }: { employee: StaffEmployee; s
 // ================================================================
 //  2. ROSTER VIEW
 // ================================================================
-function RosterView({ employees }: { employees: any[] }) {
+function RosterView({ employees = [] }: { employees: any[] }) {
   const columns: Column<StaffEmployee>[] = [
     {
       key: 'name',
@@ -246,14 +246,14 @@ function RosterView({ employees }: { employees: any[] }) {
       key: 'role',
       label: 'Role',
       render: (row) => (
-        <span className="text-xs text-gray-300">{STAFF_ROLE_LABELS[row.role]}</span>
+        <span className="text-xs text-gray-300">{row?.role ? (STAFF_ROLE_LABELS[row.role] || row.role) : '—'}</span>
       ),
     },
     {
       key: 'department',
       label: 'Department',
       render: (row) => (
-        <span className="text-xs text-gray-300">{row.department}</span>
+        <span className="text-xs text-gray-300">{row?.department || '—'}</span>
       ),
     },
     {
@@ -262,7 +262,7 @@ function RosterView({ employees }: { employees: any[] }) {
       render: (row) => (
         <div className="flex items-center gap-1.5">
           <Clock className="w-3 h-3 text-gray-600" />
-          <span className="text-xs text-gray-400">{row.shift}</span>
+          <span className="text-xs text-gray-400">{row?.shift || '—'}</span>
         </div>
       ),
     },
@@ -272,7 +272,7 @@ function RosterView({ employees }: { employees: any[] }) {
       render: (row) => (
         <div className="flex items-center gap-1.5">
           <MapPin className="w-3 h-3 text-gray-600" />
-          <span className="text-xs text-gray-400 truncate max-w-[160px]">{row.location}</span>
+          <span className="text-xs text-gray-400 truncate max-w-[160px]">{row?.location || '—'}</span>
         </div>
       ),
     },
@@ -319,7 +319,7 @@ function RosterView({ employees }: { employees: any[] }) {
 // ================================================================
 //  3. ANNOUNCEMENTS VIEW
 // ================================================================
-function AnnouncementsView({ announcements }: { announcements: any[] }) {
+function AnnouncementsView({ announcements = [] }: { announcements: any[] }) {
   const sorted = useMemo(() => {
     return [...(announcements || [])].sort((a, b) => {
       if (a.pinned && !b.pinned) return -1
@@ -358,8 +358,8 @@ function AnnouncementsView({ announcements }: { announcements: any[] }) {
 // ── Announcement Card ──────────────────────────────────────────
 function AnnouncementCard({ announcement: ann }: { announcement: Announcement }) {
   const typeInfo = ANNOUNCEMENT_TYPE_COLORS[ann.type] || { variant: 'neutral' as const, label: ann.type || 'General' }
-  const contentText = ann.content || ''
-  const truncatedContent = contentText.length > 150
+  const contentText = ann?.content || ''
+  const truncatedContent = (contentText?.length || 0) > 150
     ? contentText.slice(0, 150) + '...'
     : contentText
 

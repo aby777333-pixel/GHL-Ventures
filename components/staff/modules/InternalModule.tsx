@@ -349,7 +349,24 @@ function FeedbackView({ showToast }: { showToast: Toast }) {
     if (!subject.trim() || !description.trim()) { showToast('Please fill in all required fields', 'warning'); return }
     setSubmitting(true)
     try {
-      const feedbackData: Record<string, any> = { title: subject, description, type: 'feedback', category, status: 'open', priority: 'normal' }
+      // Get current user for created_by field
+      let userId: string | null = null
+      try {
+        const sb = supabase as any
+        const { data: { user } } = await sb.auth.getUser()
+        userId = user?.id || null
+      } catch { /* continue */ }
+      const feedbackData: Record<string, any> = {
+        title: subject,
+        subject: subject,
+        description,
+        type: 'feedback',
+        category,
+        status: 'open',
+        priority: 'normal',
+        created_by: userId,
+        source: 'internal-feedback',
+      }
       if (anonymous) feedbackData.is_anonymous = true
       const row = await insertRow('tickets', feedbackData)
       if (row) { showToast('Feedback submitted successfully!', 'success') } else { showToast('Failed to submit feedback — please try again', 'error') }
@@ -481,7 +498,23 @@ function WellnessView({ showToast }: { showToast: Toast }) {
                         For more resources, contact HR or visit the employee wellness portal. You can also reach out to the EAP helpline for confidential support.
                       </p>
                       <button
-                        onClick={(e) => { e.stopPropagation(); showToast(`Opening full resource for "${card.title}"`, 'info') }}
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          // Try to open relevant wellness resources
+                          const urls: Record<string, string> = {
+                            w1: 'https://www.who.int/news-room/fact-sheets/detail/mental-health-at-work',
+                            w2: 'https://www.who.int/news-room/fact-sheets/detail/mental-health-strengthening-our-response',
+                            w3: 'https://www.nimhans.ac.in/',
+                            w4: 'https://fit.google.com/',
+                          }
+                          const url = urls[card.id]
+                          if (url) {
+                            window.open(url, '_blank', 'noopener,noreferrer')
+                            showToast(`Opening resource for "${card.title}"`, 'info')
+                          } else {
+                            showToast(`Resource for "${card.title}" — contact HR for more details`, 'info')
+                          }
+                        }}
                         className="text-[10px] font-semibold text-teal-400 hover:text-teal-300 transition-colors"
                       >
                         Open Full Resource

@@ -30,6 +30,8 @@
 import { supabase, isSupabaseConfigured } from './client'
 import type { BlogPost } from './types'
 
+const sb = supabase as any
+
 // ── Generic query helper ────────────────────────────────────
 async function queryTable<T>(table: string, orderBy = 'created_at'): Promise<T[]> {
   if (!isSupabaseConfigured()) return []
@@ -117,6 +119,7 @@ export async function fetchClients() {
         currentValue: c.current_value || 0,
         riskProfile: c.risk_profile,
         city: c.city,
+        referredBy: c.referred_by || '',
         joinDate: c.created_at?.split('T')[0] || '',
         lastActive: c.updated_at?.split('T')[0] || '',
         assignedRM: c.assigned_rm ? 'Assigned' : 'Not assigned',
@@ -136,6 +139,7 @@ export async function fetchClients() {
       currentValue: c.current_value || 0,
       riskProfile: c.risk_profile,
       city: c.city,
+      referredBy: c.referred_by || '',
       joinDate: c.created_at?.split('T')[0] || '',
       lastActive: c.updated_at?.split('T')[0] || '',
       assignedRM: c.staff_profiles?.profiles?.full_name || 'Not assigned',
@@ -145,109 +149,121 @@ export async function fetchClients() {
 }
 
 export async function fetchKYCDocuments() {
-  if (!isSupabaseConfigured()) return []
+  // Fetch structured KYC submissions from new tables + client info
   try {
-    // KYC docs are in the 'documents' table (where clients upload them)
-    // Join with clients to get client name
-    const { data, error } = await (supabase
-      .from('documents')
-      .select('*, clients!documents_client_id_fkey(full_name)')
-      .eq('entity_type', 'client')
-      .in('category', ['kyc', 'compliance'])
-      .order('created_at', { ascending: false }) as any)
-
-    if (error) {
-      // Fallback: no join (client_id FK may not exist)
-      const { data: plain, error: err2 } = await (supabase
-        .from('documents')
-        .select('*')
-        .eq('entity_type', 'client')
-        .in('category', ['kyc', 'compliance'])
-        .order('created_at', { ascending: false }) as any)
-
-      if (err2 || !plain) return []
-
-      // Fetch client names separately
-      const clientIds = Array.from(new Set((plain as any[]).map((d: any) => d.client_id || d.entity_id).filter(Boolean))) as string[]
-      let clientMap: Record<string, string> = {}
-      if (clientIds.length > 0) {
-        const { data: clients } = await (supabase
-          .from('clients')
-          .select('id, full_name')
-          .in('id', clientIds) as any)
-        if (clients) {
-          clientMap = Object.fromEntries((clients as any[]).map((c: any) => [c.id, c.full_name]))
+    const { data: clients } = await sb.from('clients').select('id, full_name, kyc_status, kyc_step').in('kyc_status', ['submitted', 'pending', 'rejected'])
+    if (!clients || clients.length === 0) return []
+    const kycItems: any[] = []
+    for (const c of clients) {
+      const tables = [
+        { table: 'kyc_basic_details', type: 'Basic Details' },
+        { table: 'kyc_identity_details', type: 'Identity Details' },
+        { table: 'kyc_bank_details', type: 'Bank Details' },
+        { table: 'kyc_demat_details', type: 'Demat Account' },
+      ]
+      for (const t of tables) {
+        const { data: row } = await sb.from(t.table).select('*').eq('client_id', c.id).maybeSingle()
+        if (row) {
+          kycItems.push({
+            id: row.id,
+            clientId: c.id,
+            clientName: c.full_name,
+            type: t.type,
+            table: t.table,
+            fileName: t.type,
+            uploadDate: row.created_at,
+            status: row.status || 'pending',
+            reviewer: row.reviewed_by || null,
+            notes: row.admin_notes || '',
+          })
         }
       }
-
-      return (plain as any[]).map((d: any) => {
-        const cid = d.client_id || d.entity_id
-        return {
-          id: d.id,
-          clientId: cid,
-          clientName: clientMap[cid] || 'Unknown',
-          type: d.title || d.category || 'KYC Document',
-          fileName: d.file_name || d.title || '',
-          fileUrl: d.file_url || '',
-          uploadDate: d.uploaded_at || d.created_at || '',
-          status: d.status === 'active' ? 'submitted' : (d.status || 'submitted'),
+      // Nominees count
+      const { data: nominees } = await sb.from('nominees').select('id').eq('client_id', c.id).eq('status', 'active')
+      if (nominees && nominees.length > 0) {
+        kycItems.push({
+          id: `nominee-${c.id}`,
+          clientId: c.id,
+          clientName: c.full_name,
+          type: 'Nominee Details',
+          table: 'nominees',
+          fileName: `${nominees.length} nominee(s)`,
+          uploadDate: '',
+          status: 'submitted',
           reviewer: null,
-          notes: null,
-        }
-      })
-    }
-
-    return (data as any[]).map((d: any) => {
-      const cid = d.client_id || d.entity_id
-      return {
-        id: d.id,
-        clientId: cid,
-        clientName: d.clients?.full_name || 'Unknown',
-        type: d.title || d.category || 'KYC Document',
-        fileName: d.file_name || d.title || '',
-        fileUrl: d.file_url || '',
-        uploadDate: d.uploaded_at || d.created_at || '',
-        status: d.status === 'active' ? 'submitted' : (d.status || 'submitted'),
-        reviewer: null,
-        notes: null,
+          notes: '',
+        })
       }
-    })
+    }
+    return kycItems
   } catch (err) {
-    console.warn('[adminData] fetchKYCDocuments error:', err)
+    console.warn('[admin] fetchKYCDocuments error:', err)
     return []
   }
 }
 
-// ── KYC Document Actions ───────────────────────────────────
-export async function approveKYCDocument(docId: string, reviewerId?: string) {
-  if (!isSupabaseConfigured()) return null
+// ── KYC Approval/Rejection ────────────────────────────────
+export async function approveKYCStep(table: string, rowId: string, adminUserId: string) {
   try {
-    const sb = supabase as any
-    const { data, error } = await sb.from('documents').update({
+    const { error } = await sb.from(table).update({
       status: 'approved',
-      approved_by: reviewerId || null,
-      approved_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-    }).eq('id', docId).select().single()
-    if (error) { console.warn('[kyc] Approve error:', error.message); return null }
-    return data
-  } catch { return null }
+      reviewed_by: adminUserId,
+      reviewed_at: new Date().toISOString(),
+    }).eq('id', rowId)
+    if (error) { console.warn('[admin] approve KYC error:', error.message); return false }
+    return true
+  } catch { return false }
 }
 
-export async function rejectKYCDocument(docId: string, reviewerId?: string, notes?: string) {
-  if (!isSupabaseConfigured()) return null
+export async function rejectKYCStep(table: string, rowId: string, adminUserId: string, notes?: string) {
   try {
-    const sb = supabase as any
-    const updates: Record<string, any> = {
+    const { error } = await sb.from(table).update({
       status: 'rejected',
-      updated_at: new Date().toISOString(),
+      reviewed_by: adminUserId,
+      reviewed_at: new Date().toISOString(),
+      admin_notes: notes || 'Rejected by admin',
+    }).eq('id', rowId)
+    if (error) { console.warn('[admin] reject KYC error:', error.message); return false }
+    return true
+  } catch { return false }
+}
+
+export async function approveClientKYC(clientId: string, adminUserId: string) {
+  try {
+    await sb.from('kyc_basic_details').update({ status: 'approved', reviewed_by: adminUserId, reviewed_at: new Date().toISOString() }).eq('client_id', clientId)
+    await sb.from('kyc_identity_details').update({ status: 'approved', reviewed_by: adminUserId, reviewed_at: new Date().toISOString() }).eq('client_id', clientId)
+    await sb.from('kyc_bank_details').update({ status: 'approved', reviewed_by: adminUserId, reviewed_at: new Date().toISOString() }).eq('client_id', clientId)
+    await sb.from('kyc_demat_details').update({ status: 'approved', reviewed_by: adminUserId, reviewed_at: new Date().toISOString() }).eq('client_id', clientId)
+    await sb.from('clients').update({ kyc_status: 'verified' }).eq('id', clientId)
+    const { data: client } = await sb.from('clients').select('user_id').eq('id', clientId).single()
+    if (client?.user_id) {
+      await sb.from('notifications').insert({
+        user_id: client.user_id,
+        title: 'KYC Approved!',
+        message: 'Your KYC has been approved. You can now invest.',
+        type: 'success',
+        link: '/dashboard/investments',
+      })
     }
-    if (reviewerId) updates.approved_by = reviewerId
-    if (notes) updates.metadata = { rejection_reason: notes }
-    const { data, error } = await sb.from('documents').update(updates).eq('id', docId).select().single()
-    if (error) { console.warn('[kyc] Reject error:', error.message); return null }
-    return data
-  } catch { return null }
+    return true
+  } catch { return false }
+}
+
+export async function rejectClientKYC(clientId: string, adminUserId: string, reason?: string) {
+  try {
+    await sb.from('clients').update({ kyc_status: 'rejected' }).eq('id', clientId)
+    const { data: client } = await sb.from('clients').select('user_id').eq('id', clientId).single()
+    if (client?.user_id) {
+      await sb.from('notifications').insert({
+        user_id: client.user_id,
+        title: 'KYC Rejected',
+        message: reason || 'Your KYC has been rejected. Please update your details and resubmit.',
+        type: 'info',
+        link: '/dashboard/kyc',
+      })
+    }
+    return true
+  } catch { return false }
 }
 
 // ── Leads ───────────────────────────────────────────────────

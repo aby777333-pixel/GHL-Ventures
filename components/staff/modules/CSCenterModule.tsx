@@ -154,6 +154,22 @@ function CSDashboard({ navigate, showToast }: Pick<CSCenterModuleProps, 'navigat
   const [chatSessions, setChatSessions] = useState<ChatSession[]>([])
   const [loadingSessions, setLoadingSessions] = useState(true)
 
+  // Load current agent status on mount
+  useEffect(() => {
+    async function loadStatus() {
+      try {
+        const { supabase } = await import('@/lib/supabase/client')
+        const sb = supabase as any
+        const { data: { user } } = await sb.auth.getUser()
+        if (user?.id) {
+          const { data } = await sb.from('staff_profiles').select('agent_status').eq('id', user.id).single()
+          if (data?.agent_status) setAgentStatus(data.agent_status)
+        }
+      } catch { /* silent */ }
+    }
+    loadStatus()
+  }, [])
+
   // Load live chat sessions for queue + active panels
   useEffect(() => {
     let mounted = true
@@ -693,9 +709,11 @@ function TicketManagement({ showToast }: Pick<CSCenterModuleProps, 'showToast'>)
                   disabled={!ticketNewStatus || updatingTicket}
                   onClick={async () => {
                     if (!ticketNewStatus || !selectedTicket) return
+                    const ticketId = selectedTicket.fullId || selectedTicket.id
+                    if (!ticketId) { showToast('Cannot identify ticket to update', 'error'); return }
                     setUpdatingTicket(true)
                     try {
-                      const result = await updateTicket(selectedTicket.fullId, { status: ticketNewStatus })
+                      const result = await updateTicket(ticketId, { status: ticketNewStatus })
                       if (result) {
                         showToast(`Ticket status updated to ${ticketNewStatus.replace(/-/g, ' ')}`, 'success')
                         // Refresh tickets list
@@ -867,6 +885,22 @@ function CallsView({ showToast }: Pick<CSCenterModuleProps, 'showToast'>) {
 // ── 5. Video ─────────────────────────────────────────────────
 function VideoView({ showToast }: Pick<CSCenterModuleProps, 'showToast'>) {
   const [videoAvailable, setVideoAvailable] = useState(true)
+
+  // Load saved video availability on mount
+  useEffect(() => {
+    async function load() {
+      try {
+        const { supabase } = await import('@/lib/supabase/client')
+        const sb = supabase as any
+        const { data: { user } } = await sb.auth.getUser()
+        if (user?.id) {
+          const { data } = await sb.from('staff_profiles').select('agent_status').eq('id', user.id).single()
+          if (data?.agent_status === 'video-unavailable') setVideoAvailable(false)
+        }
+      } catch { /* silent */ }
+    }
+    load()
+  }, [])
 
   return (
     <div className="space-y-4">

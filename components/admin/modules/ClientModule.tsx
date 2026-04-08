@@ -13,7 +13,7 @@ import AdminBadge, { getKYCBadgeVariant, getAccountBadgeVariant } from '../share
 import AdminModal, { ModalButton } from '../shared/AdminModal'
 import AdminEmptyState from '../shared/AdminEmptyState'
 import AdminKPICard from '../shared/AdminKPICard'
-import { fetchClients, fetchKYCDocuments, approveKYCDocument, rejectKYCDocument } from '@/lib/supabase/adminDataService'
+import { fetchClients, fetchKYCDocuments, approveKYCStep, rejectKYCStep, approveClientKYC, rejectClientKYC } from '@/lib/supabase/adminDataService'
 import { getActiveRMs, assignRMToClient, type ActiveRM } from '@/lib/supabase/employeeService'
 import { formatINR, formatDate } from '@/lib/admin/adminHooks'
 import type { Client, KYCDocument, KYCStatus } from '@/lib/admin/adminTypes'
@@ -176,7 +176,7 @@ export default function ClientModule({ subTab, navigate, showToast }: ClientModu
                   phone: c.phone || '',
                   pan: (c as any).pan || '',
                   risk_profile: c.riskProfile || 'moderate',
-                  assigned_rm: (c as any).assignedRM || '',
+                  assigned_rm: (c as any).assignedRMId || '',
                   total_invested: String(c.aum || ''),
                 })
                 setProfileModalOpen(false)
@@ -203,6 +203,10 @@ export default function ClientModule({ subTab, navigate, showToast }: ClientModu
               <ModalButton onClick={() => setAddClientOpen(false)}>Cancel</ModalButton>
               <ModalButton variant="primary" onClick={async () => {
                 if (!clientForm.full_name.trim() || !clientForm.email.trim()) { showToast('Name and email are required', 'info'); return }
+                const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+                if (!emailRegex.test(clientForm.email.trim())) { showToast('Please enter a valid email address', 'error'); return }
+                // Sanitize assigned_rm: send null if empty or non-UUID string like "Unassigned"
+                const sanitizedRM = clientForm.assigned_rm && clientForm.assigned_rm !== 'Unassigned' && clientForm.assigned_rm !== 'Not assigned' ? clientForm.assigned_rm : null
                 try {
                   if (editingClient) {
                     // Update existing client
@@ -214,7 +218,7 @@ export default function ClientModule({ subTab, navigate, showToast }: ClientModu
                       phone: clientForm.phone || null,
                       pan: clientForm.pan || null,
                       risk_profile: clientForm.risk_profile || 'moderate',
-                      assigned_rm: clientForm.assigned_rm || null,
+                      assigned_rm: sanitizedRM,
                       total_invested: parseFloat(clientForm.total_invested) || 0,
                     }).eq('id', editingClient.id)
                     if (error) throw error
@@ -233,7 +237,7 @@ export default function ClientModule({ subTab, navigate, showToast }: ClientModu
                       phone: clientForm.phone || null,
                       pan: clientForm.pan || null,
                       risk_profile: clientForm.risk_profile || 'moderate',
-                      assigned_rm: clientForm.assigned_rm || null,
+                      assigned_rm: sanitizedRM,
                       total_invested: parseFloat(clientForm.total_invested) || 0,
                       client_code: clientCode,
                       kyc_status: 'pending',
@@ -438,7 +442,7 @@ function KYCQueueTab({
   filter: KYCStatus | 'all'
   setFilter: (f: KYCStatus | 'all') => void
   showToast: (msg: string, type?: 'success' | 'error' | 'info' | 'warning') => void
-  onRefresh: () => void
+  onRefresh?: () => void
 }) {
   const [actionLoading, setActionLoading] = useState<string | null>(null)
   const [previewDoc, setPreviewDoc] = useState<any | null>(null)
@@ -453,38 +457,6 @@ function KYCQueueTab({
     kycDocs.forEach(d => { counts[d.status] = (counts[d.status] || 0) + 1 })
     return counts
   }, [kycDocs])
-
-  const handleApprove = async (doc: any) => {
-    setActionLoading(doc.id)
-    const result = await approveKYCDocument(doc.id)
-    setActionLoading(null)
-    if (result) {
-      showToast(`${doc.type} for ${doc.clientName} approved`, 'success')
-      onRefresh()
-    } else {
-      showToast('Failed to approve document', 'error')
-    }
-  }
-
-  const handleReject = async (doc: any) => {
-    setActionLoading(doc.id)
-    const result = await rejectKYCDocument(doc.id)
-    setActionLoading(null)
-    if (result) {
-      showToast(`${doc.type} for ${doc.clientName} rejected`, 'info')
-      onRefresh()
-    } else {
-      showToast('Failed to reject document', 'error')
-    }
-  }
-
-  const handleView = (doc: any) => {
-    if (doc.fileUrl) {
-      setPreviewDoc(doc)
-    } else {
-      showToast('No file URL available for this document', 'warning')
-    }
-  }
 
   const columns: Column<KYCDocument>[] = [
     {
@@ -526,41 +498,58 @@ function KYCQueueTab({
       key: 'actions',
       label: 'Actions',
       sortable: false,
-      width: '140px',
-      render: (row) => {
-        const isLoading = actionLoading === row.id
-        return (
-          <div className="flex items-center gap-1">
-            {(row.status === 'pending' || row.status === 'under-review' || row.status === 'submitted') && (
-              <>
-                <button
-                  onClick={(e) => { e.stopPropagation(); handleApprove(row) }}
-                  disabled={isLoading}
-                  className="p-1.5 rounded-lg hover:bg-emerald-500/10 text-gray-500 hover:text-emerald-400 transition-colors disabled:opacity-40"
-                  title="Approve"
-                >
-                  <CheckCircle2 className="w-4 h-4" />
-                </button>
-                <button
-                  onClick={(e) => { e.stopPropagation(); handleReject(row) }}
-                  disabled={isLoading}
-                  className="p-1.5 rounded-lg hover:bg-red-500/10 text-gray-500 hover:text-red-400 transition-colors disabled:opacity-40"
-                  title="Reject"
-                >
-                  <XCircle className="w-4 h-4" />
-                </button>
-              </>
-            )}
-            <button
-              onClick={(e) => { e.stopPropagation(); handleView(row) }}
-              className="p-1.5 rounded-lg hover:bg-white/[0.06] text-gray-500 hover:text-white transition-colors"
-              title="View Document"
-            >
-              <Eye className="w-4 h-4" />
-            </button>
-          </div>
-        )
-      },
+      width: '120px',
+      render: (row) => (
+        <div className="flex items-center gap-1">
+          {(row.status === 'pending' || row.status === 'under-review' || row.status === 'submitted') && (
+            <>
+              <button
+                onClick={async (e) => {
+                  e.stopPropagation()
+                  if (row.table) {
+                    const ok = await approveKYCStep(row.table, row.id, 'admin')
+                    if (ok) { showToast(`${row.type} approved for ${row.clientName}`, 'success'); onRefresh?.() }
+                    else showToast('Approval failed', 'error')
+                  } else {
+                    const ok = await approveClientKYC(row.clientId, 'admin')
+                    if (ok) { showToast(`Full KYC approved for ${row.clientName}`, 'success'); onRefresh?.() }
+                    else showToast('Approval failed', 'error')
+                  }
+                }}
+                className="p-1.5 rounded-lg hover:bg-emerald-500/10 text-gray-500 hover:text-emerald-400 transition-colors"
+                title="Approve"
+              >
+                <CheckCircle2 className="w-4 h-4" />
+              </button>
+              <button
+                onClick={async (e) => {
+                  e.stopPropagation()
+                  if (row.table) {
+                    const ok = await rejectKYCStep(row.table, row.id, 'admin')
+                    if (ok) { showToast(`${row.type} rejected for ${row.clientName}`, 'success'); onRefresh?.() }
+                    else showToast('Rejection failed', 'error')
+                  } else {
+                    const ok = await rejectClientKYC(row.clientId, 'admin')
+                    if (ok) { showToast(`KYC rejected for ${row.clientName}`, 'success'); onRefresh?.() }
+                    else showToast('Rejection failed', 'error')
+                  }
+                }}
+                className="p-1.5 rounded-lg hover:bg-red-500/10 text-gray-500 hover:text-red-400 transition-colors"
+                title="Reject"
+              >
+                <XCircle className="w-4 h-4" />
+              </button>
+            </>
+          )}
+          <button
+            onClick={(e) => { e.stopPropagation(); setPreviewDoc(row) }}
+            className="p-1.5 rounded-lg hover:bg-white/[0.06] text-gray-500 hover:text-white transition-colors"
+            title="View"
+          >
+            <Eye className="w-4 h-4" />
+          </button>
+        </div>
+      ),
     },
   ]
 
@@ -623,10 +612,32 @@ function KYCQueueTab({
             <>
               {(previewDoc.status === 'submitted' || previewDoc.status === 'pending' || previewDoc.status === 'under-review') && (
                 <>
-                  <ModalButton variant="primary" onClick={() => { handleApprove(previewDoc); setPreviewDoc(null) }}>
+                  <ModalButton variant="primary" onClick={async () => {
+                    if (previewDoc.table) {
+                      const ok = await approveKYCStep(previewDoc.table, previewDoc.id, 'admin')
+                      if (ok) { showToast(`${previewDoc.type} approved`, 'success'); onRefresh?.() }
+                      else showToast('Approval failed', 'error')
+                    } else {
+                      const ok = await approveClientKYC(previewDoc.clientId, 'admin')
+                      if (ok) { showToast('KYC approved', 'success'); onRefresh?.() }
+                      else showToast('Approval failed', 'error')
+                    }
+                    setPreviewDoc(null)
+                  }}>
                     Approve
                   </ModalButton>
-                  <ModalButton variant="danger" onClick={() => { handleReject(previewDoc); setPreviewDoc(null) }}>
+                  <ModalButton variant="danger" onClick={async () => {
+                    if (previewDoc.table) {
+                      const ok = await rejectKYCStep(previewDoc.table, previewDoc.id, 'admin')
+                      if (ok) { showToast(`${previewDoc.type} rejected`, 'info'); onRefresh?.() }
+                      else showToast('Rejection failed', 'error')
+                    } else {
+                      const ok = await rejectClientKYC(previewDoc.clientId, 'admin')
+                      if (ok) { showToast('KYC rejected', 'info'); onRefresh?.() }
+                      else showToast('Rejection failed', 'error')
+                    }
+                    setPreviewDoc(null)
+                  }}>
                     Reject
                   </ModalButton>
                 </>

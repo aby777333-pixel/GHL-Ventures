@@ -287,15 +287,23 @@ function MyTasksView({ showToast, tasks, onRefresh }: { showToast: TasksModulePr
             if (!taskForm.title.trim()) { showToast('Task title is required', 'error'); return }
             setCreating(true)
             try {
+              // Get current user for created_by field
+              let userId: string | null = null
+              try {
+                const { supabase } = await import('@/lib/supabase/client')
+                const { data: { user } } = await (supabase as any).auth.getUser()
+                userId = user?.id || null
+              } catch { /* continue without user id */ }
               const row = await insertRow('tasks', {
                 title: taskForm.title,
                 description: taskForm.description || null,
                 priority: taskForm.priority,
                 status: taskForm.status,
                 due_date: taskForm.dueDate || null,
-                assigned_to: taskForm.assignedTo || null,
+                assigned_to: taskForm.assignedTo || userId || null,
                 tags: taskForm.tags ? taskForm.tags.split(',').map(t => t.trim()).filter(Boolean) : [],
                 source: 'manual',
+                created_by: userId,
               })
               if (row) {
                 showToast('Task created successfully', 'success')

@@ -1152,12 +1152,12 @@ function AIAdvisorTab({ showToast }: { showToast: Props['showToast'] }) {
         <AdminGlass>
           <h4 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Growth Opportunities</h4>
           <div className="space-y-3">
-            {AI_INSIGHTS.filter(i => i.type === 'growth' || i.type === 'opportunity').slice(0, 3).map(ins => (
+            {(AI_INSIGHTS || []).filter(i => i.type === 'growth' || i.type === 'opportunity').slice(0, 3).map(ins => (
               <div key={ins.id} className="p-2.5 rounded-lg bg-emerald-500/5 border border-emerald-500/10">
-                <p className="text-xs text-gray-300 leading-relaxed">{ins.summary.slice(0, 120)}...</p>
+                <p className="text-xs text-gray-300 leading-relaxed">{ins.summary?.slice(0, 120) || 'Analyzing...'}...</p>
                 <div className="flex items-center justify-between mt-2">
                   <span className="text-[10px] text-emerald-400">{ins.impact || 'High impact'}</span>
-                  <span className="text-[10px] text-gray-500">{(ins.confidence * 100).toFixed(0)}% confidence</span>
+                  <span className="text-[10px] text-gray-500">{((ins.confidence || 0) * 100).toFixed(0)}% confidence</span>
                 </div>
               </div>
             ))}
@@ -1167,11 +1167,11 @@ function AIAdvisorTab({ showToast }: { showToast: Props['showToast'] }) {
         <AdminGlass>
           <h4 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Risk Radar</h4>
           <div className="space-y-3">
-            {AI_INSIGHTS.filter(i => i.type === 'risk' || i.type === 'anomaly').slice(0, 3).map(ins => (
+            {(AI_INSIGHTS || []).filter(i => i.type === 'risk' || i.type === 'anomaly').slice(0, 3).map(ins => (
               <div key={ins.id} className="p-2.5 rounded-lg bg-red-500/5 border border-red-500/10">
                 <div className="flex items-start gap-2">
                   <AlertTriangle className="w-3 h-3 text-red-400 mt-0.5 flex-shrink-0" />
-                  <p className="text-xs text-gray-300 leading-relaxed">{ins.summary.slice(0, 120)}...</p>
+                  <p className="text-xs text-gray-300 leading-relaxed">{ins.summary?.slice(0, 120) || 'Analyzing...'}...</p>
                 </div>
                 <span className={`text-[10px] mt-1 inline-block px-1.5 py-0.5 rounded ${ins.priority === 'high' ? 'bg-red-500/20 text-red-300' : 'bg-amber-500/20 text-amber-300'}`}>{ins.priority}</span>
               </div>

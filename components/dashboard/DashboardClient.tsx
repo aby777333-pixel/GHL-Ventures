@@ -79,6 +79,10 @@ import { createRMRequest } from '@/lib/supabase/chatService'
 // AI Advisor
 import ClientAIAdvisor from './ClientAIAdvisor'
 
+// KYC Wizard & Documents Tab
+import KYCWizard from './KYCWizard'
+import DocumentsTab from './DocumentsTab'
+
 // Voice Input (Sarvam AI STT)
 import VoiceInput from '@/components/shared/VoiceInput'
 
@@ -86,7 +90,7 @@ import VoiceInput from '@/components/shared/VoiceInput'
    TYPES
    ═══════════════════════════════════════════════════════════════ */
 type Theme = 'dark' | 'light'
-type TabId = 'dashboard' | 'investments' | 'invest-onboard' | 'portfolio' | 'kyc' | 'transactions' | 'messages' | 'support' | 'referrals' | 'calculators' | 'ai-advisor' | 'profile' | 'settings'
+type TabId = 'dashboard' | 'investments' | 'invest-onboard' | 'portfolio' | 'kyc' | 'documents' | 'transactions' | 'messages' | 'support' | 'referrals' | 'calculators' | 'ai-advisor' | 'profile' | 'settings'
 
 /* ═══════════════════════════════════════════════════════════════
    ICON MAP & TOUR — kept for UI chrome; personal data comes
@@ -163,15 +167,16 @@ const TOUR_STEPS = [
    ═══════════════════════════════════════════════════════════════ */
 const SIDEBAR_ITEMS: { id: TabId; label: string; icon: any; badge?: string }[] = [
   { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
-  { id: 'investments', label: 'Investments', icon: TrendingUp },
+  { id: 'investments', label: 'Invest', icon: TrendingUp },
   { id: 'portfolio', label: 'Portfolio', icon: Briefcase },
-  { id: 'kyc', label: 'KYC & Documents', icon: FileCheck },
-  { id: 'transactions', label: 'Transactions', icon: ArrowLeftRight },
-  { id: 'messages', label: 'Messages', icon: MessageSquare, badge: '2' },
-  { id: 'support', label: 'Support', icon: HeadphonesIcon },
+  { id: 'kyc', label: 'KYC', icon: FileCheck },
+  { id: 'documents', label: 'Documents', icon: FileText },
+  { id: 'transactions', label: 'Transaction', icon: ArrowLeftRight },
+  { id: 'support', label: 'Support Tickets', icon: HeadphonesIcon },
+  { id: 'referrals', label: 'Referral System', icon: Gift },
+  { id: 'messages', label: 'Messages', icon: MessageSquare },
   { id: 'calculators', label: 'Calculators', icon: BarChart3 },
   { id: 'ai-advisor', label: 'AI Advisor', icon: Brain, badge: 'NEW' },
-  { id: 'referrals', label: 'Referrals', icon: Gift },
 ]
 const SIDEBAR_BOTTOM: { id: TabId; label: string; icon: any }[] = [
   { id: 'profile', label: 'Profile', icon: User },
@@ -253,7 +258,7 @@ export default function DashboardClient() {
   // ─── Routing ─────────────────────────────────────────────
   const router = useRouter()
   const pathname = usePathname()
-  const VALID_TABS: TabId[] = ['dashboard','investments','invest-onboard','portfolio','kyc','transactions','messages','support','calculators','ai-advisor','referrals','profile','settings']
+  const VALID_TABS: TabId[] = ['dashboard','investments','invest-onboard','portfolio','kyc','documents','transactions','messages','support','calculators','ai-advisor','referrals','profile','settings']
   const activeTab: TabId = useMemo(() => {
     const segments = pathname.split('/').filter(Boolean)
     const tabSegment = segments[1] as TabId | undefined
@@ -266,6 +271,7 @@ export default function DashboardClient() {
 
   // ─── Password Reset Detection (from /auth/callback recovery flow) ──
   const [showPasswordReset, setShowPasswordReset] = useState(false)
+  const [passwordResetMandatory, setPasswordResetMandatory] = useState(false)
   const [newPassword, setNewPassword] = useState('')
   const [confirmNewPassword, setConfirmNewPassword] = useState('')
   const [passwordResetDone, setPasswordResetDone] = useState(false)
@@ -277,12 +283,17 @@ export default function DashboardClient() {
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const params = new URLSearchParams(window.location.search)
-      if (params.get('password_reset') === 'true') {
+      const resetParam = params.get('password_reset')
+      if (resetParam === 'required' || resetParam === 'true') {
         // Auto-switch to settings tab and open password reset form
         if (activeTab !== 'settings') {
           setActiveTab('settings')
         }
         setShowPasswordReset(true)
+        // If 'required', make it mandatory — user MUST set a new password
+        if (resetParam === 'required') {
+          setPasswordResetMandatory(true)
+        }
       }
     }
   }, [activeTab]) // eslint-disable-line react-hooks/exhaustive-deps
@@ -299,8 +310,15 @@ export default function DashboardClient() {
       if (error) { showToast(`⚠ ${error.message}`, 'info'); return }
       setPasswordResetDone(true)
       setShowPasswordReset(false)
+      setPasswordResetMandatory(false)
       setNewPassword('')
       setConfirmNewPassword('')
+      // Remove password_reset from URL
+      if (typeof window !== 'undefined') {
+        const url = new URL(window.location.href)
+        url.searchParams.delete('password_reset')
+        window.history.replaceState({}, '', url.toString())
+      }
       showToast('Password updated successfully!', 'success')
     } catch {
       showToast('⚠ Failed to update password', 'info')
@@ -998,7 +1016,7 @@ export default function DashboardClient() {
     <Glass className="p-5 lg:p-6" hover theme={theme}>
       <div className="flex items-center justify-between mb-5">
         <h3 className={`text-base font-bold ${t('text-white','text-gray-900')}`}>Portfolio Assets</h3>
-        <button onClick={() => setActiveTab('portfolio')} className="text-xs text-brand-red font-semibold flex items-center gap-1 cursor-pointer hover:underline hover:text-red-600 transition-colors px-2 py-1 rounded-lg hover:bg-brand-red/10">View All <ChevronRight className="w-3 h-3" /></button>
+        <button onClick={() => setActiveTab('portfolio')} className="relative z-10 text-xs text-brand-red font-semibold flex items-center gap-1 cursor-pointer hover:underline hover:text-red-600 transition-colors px-2 py-1 rounded-lg hover:bg-brand-red/10">View All <ChevronRight className="w-3 h-3" /></button>
       </div>
       {portfolioAssets.length === 0 ? (
         <div className="py-8 text-center">
@@ -2049,16 +2067,32 @@ export default function DashboardClient() {
                   if (msgAttachments.length > 0) {
                     for (const file of msgAttachments) {
                       try {
-                        const result = await uploadFile(file, `messages/${clientId}`)
+                        const result = await uploadFile(file, 'client/kyc', { entityType: 'message', entityId: clientId || '' })
                         if (result?.file?.url) attachmentUrls.push(result.file.url)
                       } catch { /* continue with other files */ }
                     }
                   }
+                  // Resolve recipient: find an admin user to route the message to
+                  const { supabase: sb } = await import('@/lib/supabase/client')
+                  let recipientId = user?.id || '' // fallback
+                  // Try assigned RM first
+                  if (clientId) {
+                    const { data: clientRow } = await (sb as any).from('clients').select('assigned_rm').eq('id', clientId).maybeSingle()
+                    if (clientRow?.assigned_rm) {
+                      const { data: rmStaff } = await (sb as any).from('staff_profiles').select('user_id').eq('id', clientRow.assigned_rm).maybeSingle()
+                      if (rmStaff?.user_id) recipientId = rmStaff.user_id
+                    }
+                  }
+                  // If no RM found, send to first admin
+                  if (recipientId === user?.id) {
+                    const { data: admins } = await (sb as any).from('profiles').select('id').eq('role', 'admin').limit(1)
+                    if (admins?.[0]?.id) recipientId = admins[0].id
+                  }
                   const body = attachmentUrls.length > 0 ? `${msgBody}\n\n📎 Attachments: ${attachmentUrls.length} file(s)` : msgBody
-                  await sendMessage({ from_id: user?.id || clientId, to_id: clientId, subject: `[${msgTo}] ${msgSubject}`, body, attachments: attachmentUrls.length > 0 ? JSON.stringify(attachmentUrls) : null })
+                  await sendMessage({ from_id: user?.id, to_id: recipientId, subject: `[${msgTo}] ${msgSubject}`, body, attachments: attachmentUrls.length > 0 ? attachmentUrls : [] })
                   setMessageCompose(false); setMsgTo('Relationship Manager'); setMsgSubject(''); setMsgBody(''); setMsgAttachments([]); refetchMessages()
-                  showToast('Message sent successfully to your advisory team.')
-                } catch { showToast('Failed to send message. Please try again.', 'info') }
+                  showToast('Message sent successfully to your advisory team.', 'success')
+                } catch (err) { console.error('Send message error:', err); showToast('Failed to send message. Please try again.', 'info') }
               }} className="px-5 py-2.5 rounded-xl text-sm font-semibold text-white transition-all hover:scale-[1.02] active:scale-[0.98]" style={{ background: 'linear-gradient(135deg, #D0021B, #8B0000)' }}>
                 <span className="flex items-center gap-1.5"><Send className="w-3.5 h-3.5" /> Send</span>
               </button>
@@ -2642,12 +2676,14 @@ export default function DashboardClient() {
                   >
                     Update Password
                   </button>
-                  <button
-                    onClick={() => { setShowPasswordReset(false); setNewPassword(''); setConfirmNewPassword('') }}
-                    className={`px-4 py-2 rounded-lg text-xs font-medium transition-colors ${t('bg-white/[0.04] text-gray-400 hover:text-white','bg-gray-100 text-gray-600 hover:text-gray-900')}`}
-                  >
-                    Cancel
-                  </button>
+                  {!passwordResetMandatory && (
+                    <button
+                      onClick={() => { setShowPasswordReset(false); setNewPassword(''); setConfirmNewPassword('') }}
+                      className={`px-4 py-2 rounded-lg text-xs font-medium transition-colors ${t('bg-white/[0.04] text-gray-400 hover:text-white','bg-gray-100 text-gray-600 hover:text-gray-900')}`}
+                    >
+                      Cancel
+                    </button>
+                  )}
                 </div>
               </div>
             </div>
@@ -3399,7 +3435,12 @@ export default function DashboardClient() {
       case 'investments': return renderInvestmentsTab()
       case 'invest-onboard': return renderInvestOnboard()
       case 'portfolio': return renderPortfolioTab()
-      case 'kyc': return renderKYCTab()
+      case 'kyc': return (
+        <KYCWizard clientId={clientId || ''} userId={user?.id || ''} userName={userName} userEmail={userEmail} userPhone={user?.phone || ''} theme={theme} onToast={showToast} />
+      )
+      case 'documents': return (
+        <DocumentsTab clientId={clientId || ''} userId={user?.id || ''} theme={theme} onToast={showToast} />
+      )
       case 'transactions': return renderTransactionsTab()
       case 'messages': return renderMessagesTab()
       case 'support': return renderSupportTab()
@@ -3435,6 +3476,40 @@ export default function DashboardClient() {
 
       {renderSidebar()}
       {renderTourOverlay()}
+
+      {/* Mandatory Password Reset Overlay — blocks entire UI until password is set */}
+      {passwordResetMandatory && showPasswordReset && !passwordResetDone && (
+        <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/80 backdrop-blur-sm">
+          <div className={`max-w-md w-full mx-4 rounded-2xl border p-8 ${t('bg-[#111] border-white/10','bg-white border-gray-200 shadow-2xl')}`}>
+            <div className="w-14 h-14 rounded-xl bg-red-500/15 flex items-center justify-center mx-auto mb-5">
+              <Lock className="w-7 h-7 text-red-500" />
+            </div>
+            <h3 className={`text-lg font-bold mb-2 text-center ${t('text-white','text-gray-900')}`}>Set Your New Password</h3>
+            <p className={`text-sm mb-6 text-center ${t('text-gray-400','text-gray-700')}`}>
+              You must set a new password before accessing your dashboard. This is required for your account security.
+            </p>
+            <div className="space-y-3">
+              <div className="relative">
+                <input type={showNewPw ? 'text' : 'password'} value={newPassword} onChange={(e) => setNewPassword(e.target.value)} placeholder="New password (min. 8 chars, letters + numbers)"
+                  className={`w-full px-4 py-3 pr-12 rounded-xl text-sm ${t('bg-white/[0.06] border border-white/[0.08] text-white placeholder:text-gray-500','bg-gray-50 border border-gray-200 text-gray-900 placeholder:text-gray-400')} focus:outline-none focus:ring-2 focus:ring-brand-red`} />
+                <button type="button" onClick={() => setShowNewPw(!showNewPw)} className={`absolute right-3 top-1/2 -translate-y-1/2 ${t('text-gray-500','text-gray-400')}`}>
+                  {showNewPw ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
+              <div className="relative">
+                <input type={showConfirmPw ? 'text' : 'password'} value={confirmNewPassword} onChange={(e) => setConfirmNewPassword(e.target.value)} placeholder="Confirm new password"
+                  className={`w-full px-4 py-3 pr-12 rounded-xl text-sm ${t('bg-white/[0.06] border border-white/[0.08] text-white placeholder:text-gray-500','bg-gray-50 border border-gray-200 text-gray-900 placeholder:text-gray-400')} focus:outline-none focus:ring-2 focus:ring-brand-red`} />
+                <button type="button" onClick={() => setShowConfirmPw(!showConfirmPw)} className={`absolute right-3 top-1/2 -translate-y-1/2 ${t('text-gray-500','text-gray-400')}`}>
+                  {showConfirmPw ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
+              <button onClick={handlePasswordUpdate} className="w-full px-6 py-3 rounded-xl text-sm font-semibold text-white" style={{ background: 'linear-gradient(135deg, #D0021B, #8B0000)' }}>
+                Update Password
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       {renderTermsPopup()}
       {renderPrivacyPopup()}
 

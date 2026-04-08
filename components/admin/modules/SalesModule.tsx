@@ -135,7 +135,7 @@ export default function SalesModule({ subTab, navigate, showToast }: SalesModule
         stage: leadForm.stage,
         value: leadForm.value ? Number(leadForm.value) : 0,
         probability: leadForm.probability ? Number(leadForm.probability) : 50,
-        assignedTo: leadForm.assignedTo.trim() || undefined,
+        assignedTo: (leadForm.assignedTo.trim() === 'Unassigned' ? undefined : leadForm.assignedTo.trim()) || undefined,
         notes: leadForm.notes.trim() || undefined,
       }
 
@@ -293,7 +293,7 @@ export default function SalesModule({ subTab, navigate, showToast }: SalesModule
                     stage: selectedLead.stage || 'new',
                     value: selectedLead.value ? String(selectedLead.value) : '',
                     probability: selectedLead.aiScore ? String(selectedLead.aiScore) : '50',
-                    assignedTo: selectedLead.assignedTo || '',
+                    assignedTo: (selectedLead.assignedTo === 'Unassigned' ? '' : selectedLead.assignedTo) || '',
                     notes: selectedLead.notes || '',
                   })
                   setEditingLeadId(selectedLead.id)
