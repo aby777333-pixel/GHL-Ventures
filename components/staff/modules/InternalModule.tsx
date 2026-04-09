@@ -356,18 +356,29 @@ function FeedbackView({ showToast }: { showToast: Toast }) {
         const { data: { user } } = await sb.auth.getUser()
         userId = user?.id || null
       } catch { /* continue */ }
+      // Get user name for ticket
+      let userName = 'Staff Member'
+      try {
+        const sb2 = supabase as any
+        if (userId) {
+          const { data: prof } = await sb2.from('profiles').select('full_name').eq('id', userId).maybeSingle()
+          if (prof?.full_name) userName = prof.full_name
+        }
+      } catch { /* use default */ }
+      const ticketNumber = `FB-${Date.now().toString(36).toUpperCase()}-${Math.random().toString(36).substring(2, 5).toUpperCase()}`
       const feedbackData: Record<string, any> = {
-        title: subject,
+        ticket_number: ticketNumber,
+        client_name: anonymous ? 'Anonymous Staff' : userName,
         subject: subject,
         description,
         type: 'feedback',
         category,
         status: 'open',
-        priority: 'normal',
+        priority: 'medium',
         created_by: userId,
         source: 'internal-feedback',
+        is_anonymous: anonymous,
       }
-      if (anonymous) feedbackData.is_anonymous = true
       const row = await insertRow('tickets', feedbackData)
       if (row) { showToast('Feedback submitted successfully!', 'success') } else { showToast('Failed to submit feedback — please try again', 'error') }
       setSubject(''); setDescription(''); setAnonymous(false); setCategory('General')

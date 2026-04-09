@@ -116,17 +116,22 @@ function ProfileOverview({ showToast, userId, userName, userEmail, userPhone, us
     }
     setSaving(true)
     try {
-      const profileUpdates: Record<string, string> = {}
+      const profileUpdates: Record<string, any> = {}
       if (form.full_name && form.full_name !== userName) profileUpdates.full_name = form.full_name
       if (form.phone && form.phone !== userPhone) profileUpdates.phone = form.phone
       if (form.city) profileUpdates.city = form.city
 
       // Also include additional fields that may have been changed
-      if (form.address) profileUpdates.address = form.address
-      if (form.emergency_contact) profileUpdates.emergency_contact = form.emergency_contact
-      if (form.blood_group) profileUpdates.blood_group = form.blood_group
-      if (form.gender) profileUpdates.gender = form.gender
-      if (form.dob) profileUpdates.dob = form.dob
+      // Store extended fields as metadata JSON since columns may not exist
+      const extendedFields: Record<string, string> = {}
+      if (form.address) extendedFields.address = form.address
+      if (form.emergency_contact) extendedFields.emergency_contact = form.emergency_contact
+      if (form.blood_group) extendedFields.blood_group = form.blood_group
+      if (form.gender) extendedFields.gender = form.gender
+      if (form.dob) extendedFields.dob = form.dob
+      if (Object.keys(extendedFields).length > 0) {
+        profileUpdates.metadata = extendedFields
+      }
 
       if (Object.keys(profileUpdates).length > 0) {
         const sb = supabase as any
@@ -394,9 +399,9 @@ function AttendanceView({ showToast }: { showToast: SelfServiceModuleProps['show
       try {
         const sb = supabase as any
         const today = new Date().toISOString().split('T')[0]
-        const { data } = await sb.from('attendance').select('*').eq('date', today).is('clock_out', null).order('created_at', { ascending: false }).limit(1)
-        if (data && data.length > 0 && data[0].clock_in) {
-          const clockIn = new Date(data[0].clock_in)
+        const { data } = await sb.from('attendance').select('*').eq('date', today).is('check_out', null).order('created_at', { ascending: false }).limit(1)
+        if (data && data.length > 0 && data[0].check_in) {
+          const clockIn = new Date(data[0].check_in)
           setClockedIn(true)
           setClockInTime(clockIn.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }))
           setClockInTimestamp(clockIn)
@@ -429,12 +434,21 @@ function AttendanceView({ showToast }: { showToast: SelfServiceModuleProps['show
   const handleClockToggle = async () => {
     setClockLoading(true)
     try {
+      // Get current user id for staff_id
+      let staffId: string | null = null
+      try {
+        const sb = supabase as any
+        const { data: { user } } = await sb.auth.getUser()
+        staffId = user?.id || null
+      } catch { /* continue */ }
+
       const now = new Date()
       if (!clockedIn) {
         // Clock In
         const record = await recordAttendance({
+          staff_id: staffId,
           date: now.toISOString().split('T')[0],
-          clock_in: now.toISOString(),
+          check_in: now.toISOString(),
           status: 'present',
         })
         if (record) {
@@ -450,9 +464,9 @@ function AttendanceView({ showToast }: { showToast: SelfServiceModuleProps['show
         const sb = supabase as any
         const today = now.toISOString().split('T')[0]
         const { error } = await sb.from('attendance')
-          .update({ clock_out: now.toISOString() })
+          .update({ check_out: now.toISOString() })
           .eq('date', today)
-          .is('clock_out', null)
+          .is('check_out', null)
           .order('created_at', { ascending: false })
           .limit(1)
         if (error) {
@@ -639,9 +653,9 @@ function LeaveView({ showToast }: { showToast: SelfServiceModuleProps['showToast
               } catch { /* continue */ }
               const row = await submitLeaveRequest({
                 leave_type: leaveForm.type,
-                from_date: leaveForm.fromDate,
-                to_date: leaveForm.toDate || leaveForm.fromDate,
-                half_day: leaveForm.halfDay !== 'Full Day' ? leaveForm.halfDay : null,
+                start_date: leaveForm.fromDate,
+                end_date: leaveForm.toDate || leaveForm.fromDate,
+                half_day: leaveForm.halfDay !== 'Full Day',
                 reason: leaveForm.reason.trim(),
                 status: 'pending',
                 staff_id: staffId,
@@ -871,8 +885,15 @@ function DocumentsView({ showToast }: { showToast: SelfServiceModuleProps['showT
                 <p className="text-[10px] text-gray-500">{d.folder} &middot; {d.date} &middot; {d.size}</p>
               </div>
               <AdminBadge label={d.status} variant={d.status === 'Verified' ? 'success' : 'warning'} />
-              <button className="p-1.5 rounded-lg hover:bg-white/[0.06] transition-colors">
-                <Download className="w-3.5 h-3.5 text-gray-500" />
+              <button onClick={async () => {
+                try {
+                  const sb = supabase as any
+                  const { data, error } = await sb.storage.from('ghl-documents').download(`staff/documents/${d.name}`)
+                  if (error || !data) { showToast('Failed to download file', 'error'); return }
+                  await saveBlobAs(data, d.name, showToast as any)
+                } catch { showToast('Download failed', 'error') }
+              }} className="p-1.5 rounded-lg hover:bg-white/[0.06] transition-colors" title="Download">
+                <Download className="w-3.5 h-3.5 text-gray-500 hover:text-teal-400" />
               </button>
             </div>
           ))}

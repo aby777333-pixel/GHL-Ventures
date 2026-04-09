@@ -285,18 +285,23 @@ export default function DashboardClient() {
       const params = new URLSearchParams(window.location.search)
       const resetParam = params.get('password_reset')
       if (resetParam === 'required' || resetParam === 'true') {
-        // Auto-switch to settings tab and open password reset form
-        if (activeTab !== 'settings') {
-          setActiveTab('settings')
-        }
+        // Force settings tab and open password reset form
         setShowPasswordReset(true)
-        // If 'required', make it mandatory — user MUST set a new password
         if (resetParam === 'required') {
           setPasswordResetMandatory(true)
+          // Force to settings tab — block all navigation until password is changed
+          if (activeTab !== 'settings') setActiveTab('settings')
         }
       }
     }
-  }, [activeTab]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Block navigation if password reset is mandatory
+  useEffect(() => {
+    if (passwordResetMandatory && activeTab !== 'settings') {
+      setActiveTab('settings')
+    }
+  }, [activeTab, passwordResetMandatory]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const handlePasswordUpdate = async () => {
     if (newPassword.length < 8) { showToast('⚠ Password must be at least 8 characters', 'info'); return }
@@ -2450,7 +2455,18 @@ export default function DashboardClient() {
           <Glass className="p-6" hover theme={theme}>
             <div className="flex items-center justify-between mb-4">
               <h4 className={`text-sm font-bold ${t('text-white','text-gray-900')}`}>Bank Details</h4>
-              <button onClick={() => setBankConnectOpen(true)} className="text-xs text-brand-red font-semibold flex items-center gap-1"><Landmark className="w-3 h-3" /> Bank Connect</button>
+              <button onClick={() => {
+                // Pre-populate form from saved data so user doesn't have to re-enter everything
+                if (savedBankData.holder_name || savedBankData.account_number) {
+                  setBankForm({
+                    holder_name: savedBankData.holder_name || '',
+                    account_number: savedBankData.account_number || '',
+                    ifsc_code: savedBankData.ifsc_code || '',
+                    account_type: savedBankData.account_type || 'savings',
+                  })
+                }
+                setBankConnectOpen(true)
+              }} className="text-xs text-brand-red font-semibold flex items-center gap-1"><Landmark className="w-3 h-3" /> Bank Connect</button>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               {[['Bank Name', savedBankData.bank_name || user?.bank_name || 'Not provided'],['Account No', savedBankData.account_number || user?.bank_account || 'Not provided'],['IFSC', savedBankData.ifsc_code || user?.bank_ifsc || 'Not provided'],['Account Type', savedBankData.account_type || user?.bank_type || 'Not provided']].map(([l,v],i) => (

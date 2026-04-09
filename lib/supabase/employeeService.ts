@@ -61,7 +61,7 @@ export async function createEmployee(input: {
     if (!token) {
       return { success: false, error: 'Authentication required — please log in again' }
     }
-    const response = await fetch('/api/create-employee', {
+    const response = await fetch('/.netlify/functions/create-employee', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
       body: JSON.stringify(input),

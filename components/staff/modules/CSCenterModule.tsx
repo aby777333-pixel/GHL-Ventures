@@ -894,8 +894,8 @@ function VideoView({ showToast }: Pick<CSCenterModuleProps, 'showToast'>) {
         const sb = supabase as any
         const { data: { user } } = await sb.auth.getUser()
         if (user?.id) {
-          const { data } = await sb.from('staff_profiles').select('agent_status').eq('id', user.id).single()
-          if (data?.agent_status === 'video-unavailable') setVideoAvailable(false)
+          const { data } = await sb.from('staff_profiles').select('agent_status, video_call_available').eq('id', user.id).single()
+          if (data?.video_call_available === false) setVideoAvailable(false)
         }
       } catch { /* silent */ }
     }
@@ -924,7 +924,10 @@ function VideoView({ showToast }: Pick<CSCenterModuleProps, 'showToast'>) {
                 const { supabase } = await import('@/lib/supabase/client')
                 const sb = supabase as any
                 const { data: { user } } = await sb.auth.getUser()
-                if (user?.id) await updateAgentStatus(user.id, newState ? 'video-available' : 'video-unavailable')
+                if (user?.id) {
+                  // Use dedicated video_call_available column
+                  await sb.from('staff_profiles').update({ video_call_available: newState }).eq('id', user.id)
+                }
               } catch { /* silent — UI already updated */ }
             }}
             className={`relative w-12 h-6 rounded-full transition-colors ${videoAvailable ? 'bg-teal-500' : 'bg-gray-600'}`}

@@ -503,24 +503,33 @@
   line-height: 1.6;
 }
 
-/* Dark theme font visibility fixes */
+/* ── LIGHT THEME: boost base text contrast & weight ── */
+body {
+  font-weight: 400;
+}
+p, span, td, th, label, li, div {
+  -webkit-font-smoothing: antialiased;
+}
+/* Light theme text readability — ensure sufficient contrast */
+.text-gray-400 { color: #6B7280 !important; }
+.text-gray-500 { color: #4B5563 !important; }
+.text-gray-600 { color: #374151 !important; }
+.text-gray-700 { color: #1F2937 !important; }
+
+/* Light theme small text needs more weight */
+.text-xs, .text-sm {
+  font-weight: 450;
+}
+
+/* ── DARK THEME: ensure contrast for all grays ── */
 .dark .dash-glass-hover {
   color: rgba(255, 255, 255, 0.95);
 }
-
-/* Ensure all text in dark dashboard has sufficient contrast */
-.dark .text-gray-400 {
-  color: rgba(255, 255, 255, 0.75) !important;
-}
-.dark .text-gray-500 {
-  color: rgba(255, 255, 255, 0.65) !important;
-}
-.dark .text-gray-600 {
-  color: rgba(255, 255, 255, 0.55) !important;
-}
-.dark .text-gray-700 {
-  color: rgba(255, 255, 255, 0.7) !important;
-}
+.dark .text-gray-300 { color: rgba(255, 255, 255, 0.85) !important; }
+.dark .text-gray-400 { color: rgba(255, 255, 255, 0.75) !important; }
+.dark .text-gray-500 { color: rgba(255, 255, 255, 0.65) !important; }
+.dark .text-gray-600 { color: rgba(255, 255, 255, 0.55) !important; }
+.dark .text-gray-700 { color: rgba(255, 255, 255, 0.50) !important; }
 .dark p, .dark span, .dark td, .dark th, .dark label, .dark li {
   color: inherit;
 }

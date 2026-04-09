@@ -178,17 +178,22 @@ function AssetInventoryTab({ assets, showToast, onRefresh }: { assets: any[]; sh
       return
     }
     try {
+      // Map form categories to DB enum: digital, physical, license, certificate
+      const catMap: Record<string, string> = { laptop: 'physical', desktop: 'physical', phone: 'physical', server: 'physical', monitor: 'physical', printer: 'physical', software: 'digital', domain: 'digital', license: 'license', certificate: 'certificate' }
+      const dbCategory = catMap[assetForm.category] || 'physical'
+      // assigned_to is UUID — if name string, set null
+      const assignedToVal = (assetForm.assignedTo && /^[0-9a-f-]{36}$/i.test(assetForm.assignedTo)) ? assetForm.assignedTo : null
       const result = await insertRow('assets', {
         name: assetForm.name.trim(),
-        category: assetForm.category || 'physical',
+        category: dbCategory,
         serial_number: assetForm.serialNumber || null,
-        assigned_to: assetForm.assignedTo || null,
+        assigned_to: assignedToVal,
         value: parseFloat(assetForm.purchaseValue) || 0,
         purchase_date: assetForm.purchaseDate || null,
         expiry_date: assetForm.warrantyExpiry || null,
         status: assetForm.status || 'active',
         location: assetForm.location || null,
-        notes: assetForm.notes || null,
+        notes: `[${assetForm.category}] ${assetForm.notes || ''}`.trim(),
       })
       if (result) {
         showToast('Asset registered successfully', 'success')

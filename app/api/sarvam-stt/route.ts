@@ -10,16 +10,30 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'No Sarvam API key configured' }, { status: 500 })
     }
 
-    const body = await request.arrayBuffer()
-    const contentType = request.headers.get('content-type') || 'multipart/form-data'
+    // Parse incoming FormData and rebuild it for Sarvam API
+    const formData = await request.formData()
+    const outForm = new FormData()
+
+    const file = formData.get('file')
+    if (file && file instanceof Blob) {
+      outForm.append('file', file, 'recording.wav')
+    } else {
+      // Fallback: treat entire body as audio
+      const body = await request.arrayBuffer()
+      outForm.append('file', new Blob([body], { type: 'audio/webm' }), 'recording.wav')
+    }
+
+    const model = formData.get('model')
+    if (model) outForm.append('model', model.toString())
+    const langCode = formData.get('language_code')
+    if (langCode) outForm.append('language_code', langCode.toString())
 
     const response = await fetch(SARVAM_STT_URL, {
       method: 'POST',
       headers: {
         'api-subscription-key': sarvamKey,
-        'Content-Type': contentType,
       },
-      body,
+      body: outForm,
     })
 
     const data = await response.json()
