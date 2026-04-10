@@ -134,9 +134,9 @@ export default function Footer() {
           </div>
 
           {/* ── Four-Column Grid ── */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 lg:gap-10 mb-12">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 lg:gap-10 mb-12 text-left">
             {/* Col 1: About GHL */}
-            <div>
+            <div className="text-left">
               <h3 className="text-sm font-semibold uppercase tracking-wider text-white/40 mb-5">
                 About GHL
               </h3>
@@ -206,7 +206,7 @@ export default function Footer() {
             </div>
 
             {/* Col 4: Contact & Social */}
-            <div>
+            <div className="text-left">
               <h3 className="text-sm font-semibold uppercase tracking-wider text-white/40 mb-5">
                 Contact Us
               </h3>
