@@ -284,10 +284,12 @@ export default function DashboardClient() {
     if (typeof window !== 'undefined') {
       const params = new URLSearchParams(window.location.search)
       const resetParam = params.get('password_reset')
-      if (resetParam === 'required' || resetParam === 'true') {
+      // Check URL param OR sessionStorage (survives page refresh)
+      const sessionFlag = typeof sessionStorage !== 'undefined' && sessionStorage.getItem('ghl_password_reset_mandatory') === '1'
+      if (resetParam === 'required' || resetParam === 'true' || sessionFlag) {
         // Force settings tab and open password reset form
         setShowPasswordReset(true)
-        if (resetParam === 'required') {
+        if (resetParam === 'required' || sessionFlag) {
           setPasswordResetMandatory(true)
           // Force to settings tab — block all navigation until password is changed
           if (activeTab !== 'settings') setActiveTab('settings')
@@ -318,11 +320,14 @@ export default function DashboardClient() {
       setPasswordResetMandatory(false)
       setNewPassword('')
       setConfirmNewPassword('')
-      // Remove password_reset from URL
+      // Remove password_reset from URL and sessionStorage
       if (typeof window !== 'undefined') {
         const url = new URL(window.location.href)
         url.searchParams.delete('password_reset')
         window.history.replaceState({}, '', url.toString())
+      }
+      if (typeof sessionStorage !== 'undefined') {
+        sessionStorage.removeItem('ghl_password_reset_mandatory')
       }
       showToast('Password updated successfully!', 'success')
     } catch {
@@ -583,6 +588,24 @@ export default function DashboardClient() {
       unsub3?.()
       unsub4?.()
     }
+  }, [clientId]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ─── Load Bank Data from Supabase (populate form on re-visit) ──
+  useEffect(() => {
+    if (!clientId) return
+    fetchBankAccounts(clientId).then((accounts: any[]) => {
+      if (accounts?.length > 0) {
+        const primary = accounts[0]
+        const data = {
+          bank_name: primary.bank_name || 'Verified Bank',
+          account_number: primary.account_number || '',
+          ifsc_code: primary.ifsc_code || '',
+          account_type: primary.account_type || 'savings',
+          holder_name: primary.account_holder_name || '',
+        }
+        setSavedBankData(prev => (prev.account_number ? prev : data))
+      }
+    }).catch(() => {})
   }, [clientId]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // ─── Referral Hooks (must be before early returns) ──────
@@ -2182,7 +2205,7 @@ export default function DashboardClient() {
               if (!ticketSubject.trim()) { showToast('Please enter a subject for your ticket.', 'info'); return }
               if (!ticketDesc.trim()) { showToast('Please describe your issue.', 'info'); return }
               try {
-                const result = await createSupportTicket({ client_id: clientId, subject: ticketSubject, category: ticketCategory, description: ticketDesc, status: 'open', priority: 'medium' })
+                const result = await createSupportTicket({ client_id: clientId || undefined, created_by: user?.id, subject: ticketSubject, category: ticketCategory, description: ticketDesc, status: 'open', priority: 'medium', source: 'dashboard' })
                 if (result) {
                   setTicketForm(false); setTicketSubject(''); setTicketCategory('General Inquiry'); setTicketDesc(''); refetchTickets()
                   showToast('Support ticket submitted. We\'ll respond within 24 hours.', 'success')

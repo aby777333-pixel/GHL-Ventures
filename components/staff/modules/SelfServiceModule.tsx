@@ -136,7 +136,7 @@ function ProfileOverview({ showToast, userId, userName, userEmail, userPhone, us
       if (Object.keys(profileUpdates).length > 0) {
         const sb = supabase as any
         // Try staff_profiles first (staff portal), then fallback to profiles
-        const { error } = await sb.from('staff_profiles').update(profileUpdates).eq('id', userId)
+        const { error } = await sb.from('staff_profiles').update(profileUpdates).eq('user_id', userId)
         if (error) {
           // Fallback to profiles table
           const { error: err2 } = await sb.from('profiles').update(profileUpdates).eq('id', userId)

@@ -110,11 +110,11 @@
     line-height: 1.7;
   }
 
-  /* Captions: 12px light */
+  /* Captions: 12px regular (was 300/light — too faint) */
   small,
   .caption {
     font-size: 12px;
-    font-weight: 300;
+    font-weight: 400;
     line-height: 1.5;
   }
 
@@ -3526,10 +3526,23 @@ select option:hover {
 }
 
 /* ── Dashboard Font Readability Fixes ── */
-/* Ensure minimum readable text in dark theme */
-.dark .text-gray-400 { color: #b0b0b0 !important; }
-.dark .text-gray-500 { color: #a0a0a0 !important; }
-.dark .text-gray-600 { color: #909090 !important; }
+/* Light theme: improve body text weight for readability */
+html:not(.dark) p, html:not(.dark) span, html:not(.dark) td, html:not(.dark) li {
+  font-weight: 420;
+}
+html:not(.dark) .text-xs, html:not(.dark) .text-sm {
+  font-weight: 450;
+}
+html:not(.dark) .text-gray-500 { color: #4B5563 !important; }
+html:not(.dark) .text-gray-600 { color: #374151 !important; }
+html:not(.dark) .text-gray-700 { color: #1F2937 !important; }
+
+/* Dark theme: boost contrast for readable text */
+.dark .text-gray-300 { color: #d4d4d4 !important; }
+.dark .text-gray-400 { color: #bfbfbf !important; }
+.dark .text-gray-500 { color: #a8a8a8 !important; }
+.dark .text-gray-600 { color: #969696 !important; }
+.dark .text-gray-700 { color: #858585 !important; }
 
 /* Light theme: ensure select dropdowns have proper colors */
 html:not(.dark) select option {

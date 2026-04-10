@@ -245,43 +245,29 @@ function PoliciesView({ showToast }: { showToast: Toast }) {
   const handleViewDocument = async (pol: typeof POLICIES[number]) => {
     setLoadingPolicy(pol.id)
     try {
-      // Try to find the policy document in Supabase storage
+      const sb = supabase as any
       const fileName = pol.title.toLowerCase().replace(/\s+/g, '-')
       const possiblePaths = [
-        `policies/${fileName}.pdf`,
-        `policies/${pol.id}.pdf`,
-        `documents/policies/${fileName}.pdf`,
+        { bucket: 'ghl-documents', path: `policies/${fileName}.pdf` },
+        { bucket: 'ghl-documents', path: `policies/${pol.id}.pdf` },
+        { bucket: 'documents', path: `policies/${fileName}.pdf` },
+        { bucket: 'ghl-documents', path: `documents/policies/${fileName}.pdf` },
       ]
 
       let publicUrl: string | null = null
-      for (const path of possiblePaths) {
-        const { data } = supabase.storage.from('ghl-documents').getPublicUrl(path)
-        if (data?.publicUrl) {
-          // Verify the file actually exists by doing a HEAD request
-          try {
-            const res = await fetch(data.publicUrl, { method: 'HEAD' })
-            if (res.ok) { publicUrl = data.publicUrl; break }
-          } catch { /* continue to next path */ }
-        }
-      }
-
-      // Also try the 'documents' bucket
-      if (!publicUrl) {
-        for (const path of possiblePaths) {
-          const { data } = supabase.storage.from('documents').getPublicUrl(path)
-          if (data?.publicUrl) {
-            try {
-              const res = await fetch(data.publicUrl, { method: 'HEAD' })
-              if (res.ok) { publicUrl = data.publicUrl; break }
-            } catch { /* continue */ }
-          }
+      for (const { bucket, path } of possiblePaths) {
+        // Use download to verify file exists (HEAD requests may fail due to CORS)
+        const { data: blob, error } = await sb.storage.from(bucket).download(path)
+        if (!error && blob) {
+          const { data: urlData } = sb.storage.from(bucket).getPublicUrl(path)
+          if (urlData?.publicUrl) { publicUrl = urlData.publicUrl; break }
         }
       }
 
       if (publicUrl) {
         window.open(publicUrl, '_blank', 'noopener,noreferrer')
       } else {
-        showToast(`Document for "${pol.title}" is not yet uploaded to storage. Please contact HR.`, 'warning')
+        showToast(`"${pol.title}" document is not yet uploaded. Please contact HR to upload it.`, 'warning')
       }
     } catch (err) {
       console.error('Error fetching policy document:', err)
@@ -365,21 +351,15 @@ function FeedbackView({ showToast }: { showToast: Toast }) {
           if (prof?.full_name) userName = prof.full_name
         }
       } catch { /* use default */ }
-      const ticketNumber = `FB-${Date.now().toString(36).toUpperCase()}-${Math.random().toString(36).substring(2, 5).toUpperCase()}`
       const feedbackData: Record<string, any> = {
-        ticket_number: ticketNumber,
-        client_name: anonymous ? 'Anonymous Staff' : userName,
-        subject: subject,
-        description,
-        type: 'feedback',
+        staff_id: userId,
         category,
-        status: 'open',
-        priority: 'medium',
-        created_by: userId,
-        source: 'internal-feedback',
+        subject,
+        description,
         is_anonymous: anonymous,
+        status: 'submitted',
       }
-      const row = await insertRow('tickets', feedbackData)
+      const row = await insertRow('feedback', feedbackData)
       if (row) { showToast('Feedback submitted successfully!', 'success') } else { showToast('Failed to submit feedback — please try again', 'error') }
       setSubject(''); setDescription(''); setAnonymous(false); setCategory('General')
     } catch (err) {

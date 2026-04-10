@@ -4,7 +4,7 @@
    API proxied through Netlify function for security
    ───────────────────────────────────────────────────────────── */
 
-const STT_ENDPOINT = '/api/sarvam-stt'
+const STT_ENDPOINT = '/.netlify/functions/sarvam-stt'
 
 export interface SarvamSTTResult {
   transcript: string

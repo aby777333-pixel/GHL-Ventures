@@ -183,6 +183,13 @@ function AssetInventoryTab({ assets, showToast, onRefresh }: { assets: any[]; sh
       const dbCategory = catMap[assetForm.category] || 'physical'
       // assigned_to is UUID — if name string, set null
       const assignedToVal = (assetForm.assignedTo && /^[0-9a-f-]{36}$/i.test(assetForm.assignedTo)) ? assetForm.assignedTo : null
+      // Get current user for created_by
+      let createdBy: string | null = null
+      try {
+        const { supabase: sb } = await import('@/lib/supabase/client')
+        const { data: { user } } = await (sb as any).auth.getUser()
+        createdBy = user?.id || null
+      } catch { /* continue */ }
       const result = await insertRow('assets', {
         name: assetForm.name.trim(),
         category: dbCategory,
@@ -194,6 +201,7 @@ function AssetInventoryTab({ assets, showToast, onRefresh }: { assets: any[]; sh
         status: assetForm.status || 'active',
         location: assetForm.location || null,
         notes: `[${assetForm.category}] ${assetForm.notes || ''}`.trim(),
+        created_by: createdBy,
       })
       if (result) {
         showToast('Asset registered successfully', 'success')

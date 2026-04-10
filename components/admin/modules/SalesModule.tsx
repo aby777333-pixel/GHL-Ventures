@@ -293,7 +293,7 @@ export default function SalesModule({ subTab, navigate, showToast }: SalesModule
                     stage: selectedLead.stage || 'new',
                     value: selectedLead.value ? String(selectedLead.value) : '',
                     probability: selectedLead.aiScore ? String(selectedLead.aiScore) : '50',
-                    assignedTo: (selectedLead.assignedTo === 'Unassigned' ? '' : selectedLead.assignedTo) || '',
+                    assignedTo: selectedLead.assignedTo || '',
                     notes: selectedLead.notes || '',
                   })
                   setEditingLeadId(selectedLead.id)
@@ -725,7 +725,7 @@ function LeadDetailContent({ lead }: { lead: Lead }) {
         {[
           { label: 'Deal Value', value: formatINR(lead.value) },
           { label: 'Source', value: lead.source.replace('-', ' ') },
-          { label: 'Assigned To', value: lead.assignedTo },
+          { label: 'Assigned To', value: lead.assignedTo || 'Unassigned' },
           { label: 'Created', value: formatDate(lead.createdDate) },
         ].map(item => (
           <div key={item.label} className="p-3 rounded-xl bg-white/[0.03] border border-white/[0.04]">

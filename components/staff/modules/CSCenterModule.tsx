@@ -162,7 +162,7 @@ function CSDashboard({ navigate, showToast }: Pick<CSCenterModuleProps, 'navigat
         const sb = supabase as any
         const { data: { user } } = await sb.auth.getUser()
         if (user?.id) {
-          const { data } = await sb.from('staff_profiles').select('agent_status').eq('id', user.id).single()
+          const { data } = await sb.from('staff_profiles').select('agent_status').eq('user_id', user.id).single()
           if (data?.agent_status) setAgentStatus(data.agent_status)
         }
       } catch { /* silent */ }
@@ -894,7 +894,7 @@ function VideoView({ showToast }: Pick<CSCenterModuleProps, 'showToast'>) {
         const sb = supabase as any
         const { data: { user } } = await sb.auth.getUser()
         if (user?.id) {
-          const { data } = await sb.from('staff_profiles').select('agent_status, video_call_available').eq('id', user.id).single()
+          const { data } = await sb.from('staff_profiles').select('agent_status, video_call_available').eq('user_id', user.id).single()
           if (data?.video_call_available === false) setVideoAvailable(false)
         }
       } catch { /* silent */ }
@@ -926,7 +926,7 @@ function VideoView({ showToast }: Pick<CSCenterModuleProps, 'showToast'>) {
                 const { data: { user } } = await sb.auth.getUser()
                 if (user?.id) {
                   // Use dedicated video_call_available column
-                  await sb.from('staff_profiles').update({ video_call_available: newState }).eq('id', user.id)
+                  await sb.from('staff_profiles').update({ video_call_available: newState }).eq('user_id', user.id)
                 }
               } catch { /* silent — UI already updated */ }
             }}

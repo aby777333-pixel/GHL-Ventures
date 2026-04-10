@@ -98,8 +98,15 @@ export async function fetchPayoutHistory(clientId?: string) {
 
 export async function fetchMessages(clientId?: string) {
   if (!isSupabaseConfigured() || !clientId) return []
+  // Messages use auth user IDs for from_id/to_id, not client record IDs.
+  // Resolve the auth user_id from the clients table first.
+  let userId = clientId
+  try {
+    const { data: clientRow } = await sb.from('clients').select('user_id').eq('id', clientId).maybeSingle()
+    if (clientRow?.user_id) userId = clientRow.user_id
+  } catch { /* use clientId as fallback */ }
   const rows = await safeFetch(
-    () => sb.from('messages').select('*').or(`to_id.eq.${clientId},from_id.eq.${clientId}`).order('created_at', { ascending: false }),
+    () => sb.from('messages').select('*').or(`to_id.eq.${userId},from_id.eq.${userId}`).order('created_at', { ascending: false }),
     [], 'fetchMessages',
   )
   // Normalize field names for display

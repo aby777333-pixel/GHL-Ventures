@@ -237,7 +237,7 @@ export async function recordAttendance(record: Record<string, any>) {
 export async function updateAgentStatus(staffId: string, status: string) {
   if (!isSupabaseConfigured() || !staffId) return null
   try {
-    const { data, error } = await sb.from('staff_profiles').update({ agent_status: status }).eq('id', staffId).select().single()
+    const { data, error } = await sb.from('staff_profiles').update({ agent_status: status }).eq('user_id', staffId).select().single()
     if (error) { console.warn('[staff] Agent status error:', error.message); return null }
     return data
   } catch { return null }

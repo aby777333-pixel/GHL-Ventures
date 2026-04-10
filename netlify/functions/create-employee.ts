@@ -24,11 +24,13 @@ const ALLOWED_ORIGINS = [
   'https://ghl-india-ventures-2025.netlify.app',
   'https://ghlindiaventures.com',
   'https://www.ghlindiaventures.com',
+  'http://localhost:3000',
 ]
 
 function getCorsHeaders(request?: Request) {
   const origin = request?.headers?.get('origin') || ''
-  const allowedOrigin = ALLOWED_ORIGINS.includes(origin) ? origin : ALLOWED_ORIGINS[0]
+  // For same-origin requests on Netlify, origin may be empty — allow it
+  const allowedOrigin = !origin || ALLOWED_ORIGINS.includes(origin) ? (origin || '*') : ALLOWED_ORIGINS[0]
   return {
     'Access-Control-Allow-Origin': allowedOrigin,
     'Access-Control-Allow-Headers': 'Content-Type, Authorization',

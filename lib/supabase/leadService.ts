@@ -112,7 +112,7 @@ function mapLead(l: any): Lead {
     value: l.estimated_value || 0,
     probability: Math.min(100, Math.max(0, l.score || 0)),
     aiScore: l.score || 50,
-    assignedTo: l.assigned_to || 'Unassigned',
+    assignedTo: l.assigned_to || '',
     createdDate: l.created_at?.split('T')[0] || '',
     lastTouched: (l.last_contacted || l.updated_at)?.split('T')[0] || '',
     nextFollowUp: l.next_follow_up?.split('T')[0],
