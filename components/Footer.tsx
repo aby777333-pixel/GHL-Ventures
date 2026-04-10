@@ -210,39 +210,39 @@ export default function Footer() {
               <h3 className="text-sm font-semibold uppercase tracking-wider text-white/40 mb-5">
                 Contact Us
               </h3>
-              <ul className="space-y-4">
-                <li>
+              <ul className="space-y-4 text-left">
+                <li className="text-left">
                   <a
                     href={`tel:${BRAND.phone1.replace(/\s/g, '')}`}
-                    className="flex items-start space-x-3 text-gray-400 hover:text-brand-red transition-colors duration-200 text-sm"
+                    className="inline-flex items-start gap-3 text-gray-400 hover:text-brand-red transition-colors duration-200 text-sm"
                   >
                     <Phone className="w-4 h-4 mt-0.5 shrink-0" />
                     <span>{BRAND.phone1}</span>
                   </a>
                 </li>
-                <li>
+                <li className="text-left">
                   <a
                     href={`tel:${BRAND.phone2.replace(/\s/g, '')}`}
-                    className="flex items-start space-x-3 text-gray-400 hover:text-brand-red transition-colors duration-200 text-sm"
+                    className="inline-flex items-start gap-3 text-gray-400 hover:text-brand-red transition-colors duration-200 text-sm"
                   >
                     <Phone className="w-4 h-4 mt-0.5 shrink-0" />
                     <span>{BRAND.phone2}</span>
                   </a>
                 </li>
-                <li>
+                <li className="text-left">
                   <a
                     href={`mailto:${BRAND.email}`}
-                    className="flex items-start space-x-3 text-gray-400 hover:text-brand-red transition-colors duration-200 text-sm"
+                    className="inline-flex items-start gap-3 text-gray-400 hover:text-brand-red transition-colors duration-200 text-sm"
                   >
                     <Mail className="w-4 h-4 mt-0.5 shrink-0" />
                     <span>{BRAND.email}</span>
                   </a>
                 </li>
-                <li className="flex items-start space-x-3 text-gray-400 text-sm">
+                <li className="inline-flex items-start gap-3 text-gray-400 text-sm text-left">
                   <MapPin className="w-4 h-4 mt-0.5 shrink-0" />
                   <span>{BRAND.address}</span>
                 </li>
-                <li className="flex items-start space-x-3 text-gray-400 text-sm">
+                <li className="inline-flex items-start gap-3 text-gray-400 text-sm text-left">
                   <Clock className="w-4 h-4 mt-0.5 shrink-0" />
                   <span>Mon - Sat: 9:30 AM - 6:30 PM IST</span>
                 </li>
