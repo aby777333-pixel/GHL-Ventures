@@ -1682,7 +1682,11 @@ export default function DashboardClient() {
             }}
               className="w-full py-2.5 rounded-xl text-sm font-semibold text-white transition-all duration-300 hover:scale-[1.02]"
               style={{ background: 'linear-gradient(135deg, #D0021B, #8B0000)' }}>Express Interest</button>
-            <button onClick={() => setActiveTab('invest-onboard')} className="w-full py-2.5 rounded-xl text-xs font-bold mt-2 transition-all duration-300 hover:scale-[1.02] text-white"
+            <button onClick={() => {
+              const kycOk = userKycStatus === 'verified' || userKycStatus === 'approved'
+              if (!kycOk) { showToast('Please complete and get your KYC verified before investing', 'info'); setActiveTab('kyc'); return }
+              setActiveTab('invest-onboard')
+            }} className="w-full py-2.5 rounded-xl text-xs font-bold mt-2 transition-all duration-300 hover:scale-[1.02] text-white"
               style={{ background: 'linear-gradient(135deg, #228B22, #1B6B1B)' }}>
               Proceed to Invest &rarr;</button>
           </Glass>
@@ -3056,7 +3060,52 @@ export default function DashboardClient() {
       : `${base} ${t('border-white/[0.06]','border-gray-200/40')}`
   }
 
-  const renderInvestOnboard = () => (
+  const renderInvestOnboard = () => {
+    // KYC Gate — must be verified before investing
+    const kycVerified = userKycStatus === 'verified' || userKycStatus === 'approved'
+    if (!kycVerified) {
+      return (
+        <div className="space-y-6">
+          <div>
+            <h2 className={`text-xl font-bold mb-1 ${t('text-white','text-gray-900')}`}>Complete Your KYC First</h2>
+            <p className={`text-sm ${t('text-gray-500','text-gray-700')}`}>KYC verification is required before you can invest</p>
+          </div>
+          <Glass className="p-8 text-center" hover glow theme={theme}>
+            <Shield className={`w-12 h-12 mx-auto mb-4 ${t('text-amber-400','text-amber-500')}`} />
+            <h3 className={`text-lg font-bold mb-2 ${t('text-white','text-gray-900')}`}>KYC Not Verified</h3>
+            <p className={`text-sm mb-6 max-w-md mx-auto ${t('text-gray-500','text-gray-700')}`}>
+              As per SEBI regulations, your KYC must be approved before you can make any investment. Please complete your KYC documents and submit them for review.
+            </p>
+            <div className="flex items-center justify-center gap-3">
+              <button onClick={() => setActiveTab('kyc')} className="px-6 py-3 rounded-xl text-sm font-bold text-white" style={{ background: 'linear-gradient(135deg, #D0021B, #8B0000)' }}>
+                Complete KYC →
+              </button>
+            </div>
+            <p className={`text-xs mt-4 ${t('text-gray-600','text-gray-500')}`}>
+              Current KYC Status: <span className="font-semibold text-amber-400 capitalize">{userKycStatus}</span>
+            </p>
+          </Glass>
+        </div>
+      )
+    }
+
+    // Calculate live returns based on selected vehicle, amount, tenure
+    const tenureYears = parseInt(investTenure) || 5
+    const FUND_DETAILS: Record<string, { interest: number; appreciation: number; tds: number; minInv: string; focus: string }> = {
+      'AIF Direct - Category II': { interest: 12, appreciation: 12, tds: 10, minInv: 'As per SEBI AIF Regulations', focus: 'Stressed and special situation real estate assets' },
+      'SEBI Co-Invest Framework': { interest: 12, appreciation: 12, tds: 10, minInv: 'Contact for details', focus: 'Stressed real estate via regulated co-invest structure' },
+      'NCLT Recovery Assets': { interest: 15, appreciation: 15, tds: 10, minInv: '₹50 Lakhs', focus: 'Stressed properties at 40-60% discount through IBC resolution' },
+      'Early-Stage Startups': { interest: 0, appreciation: 30, tds: 0, minInv: '₹25 Lakhs', focus: 'Pre-Series A in high-growth Indian tech startups' },
+    }
+    const fundInfo = FUND_DETAILS[investVehicle] || FUND_DETAILS['AIF Direct - Category II']
+    const monthlyInterest = Math.round(investAmount * (fundInfo.interest / 100 / 12))
+    const monthlyTDS = Math.round(monthlyInterest * (fundInfo.tds / 100))
+    const netMonthly = monthlyInterest - monthlyTDS
+    const yearlyReturns = monthlyInterest * 12
+    const yearlyAppreciation = Math.round(investAmount * (fundInfo.appreciation / 100))
+    const totalReturns = (yearlyReturns * tenureYears) + (yearlyAppreciation * tenureYears)
+
+    return (
     <div className="space-y-6">
       <div>
         <h2 className={`text-xl font-bold mb-1 ${t('text-white','text-gray-900')}`}>Complete Your Investment</h2>
@@ -3085,6 +3134,34 @@ export default function DashboardClient() {
             </select>
           </div>
         </div>
+
+        {/* Fund Details & Term Sheet */}
+        <div className={`p-4 rounded-xl mb-5 ${t('bg-white/[0.02] border border-white/[0.04]','bg-gray-50 border border-gray-200')}`}>
+          <div className="flex items-center justify-between mb-3">
+            <h4 className={`text-sm font-bold ${t('text-white','text-gray-900')}`}>{investVehicle}</h4>
+            <a href="/downloads" target="_blank" className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-white bg-brand-red/80 hover:bg-brand-red transition-colors">
+              <Download className="w-3 h-3" /> Download Terms
+            </a>
+          </div>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            <div className={`p-2.5 rounded-lg ${t('bg-white/[0.02]','bg-white')}`}>
+              <p className={`text-[10px] uppercase tracking-wider ${t('text-gray-600','text-gray-500')}`}>Focus</p>
+              <p className={`text-xs font-medium mt-0.5 ${t('text-gray-300','text-gray-800')}`}>{fundInfo.focus}</p>
+            </div>
+            <div className={`p-2.5 rounded-lg ${t('bg-white/[0.02]','bg-white')}`}>
+              <p className={`text-[10px] uppercase tracking-wider ${t('text-gray-600','text-gray-500')}`}>Interest</p>
+              <p className={`text-sm font-bold text-emerald-400 mt-0.5`}>{fundInfo.interest}% p.a.</p>
+            </div>
+            <div className={`p-2.5 rounded-lg ${t('bg-white/[0.02]','bg-white')}`}>
+              <p className={`text-[10px] uppercase tracking-wider ${t('text-gray-600','text-gray-500')}`}>Appreciation</p>
+              <p className={`text-sm font-bold text-blue-400 mt-0.5`}>{fundInfo.appreciation}% p.a.</p>
+            </div>
+            <div className={`p-2.5 rounded-lg ${t('bg-white/[0.02]','bg-white')}`}>
+              <p className={`text-[10px] uppercase tracking-wider ${t('text-gray-600','text-gray-500')}`}>TDS</p>
+              <p className={`text-sm font-bold text-amber-400 mt-0.5`}>{fundInfo.tds}%</p>
+            </div>
+          </div>
+        </div>
         <div>
           <div className="flex items-center justify-between mb-2">
             <label className={`text-xs font-medium ${t('text-gray-400','text-gray-600')}`}>Investment Amount <span className="text-red-400">*</span></label>
@@ -3099,6 +3176,43 @@ export default function DashboardClient() {
           </div>
           {investFormErrors['amount'] && <p className="text-[10px] text-red-400 mt-1">{investFormErrors['amount']}</p>}
         </div>
+
+        {/* Live Return Calculator */}
+        {fundInfo.interest > 0 && (
+          <div className={`mt-5 p-4 rounded-xl ${t('bg-emerald-500/[0.04] border border-emerald-500/10','bg-emerald-50 border border-emerald-200')}`}>
+            <h4 className={`text-xs font-bold mb-3 flex items-center gap-2 ${t('text-emerald-400','text-emerald-700')}`}>
+              <BarChart3 className="w-3.5 h-3.5" /> Estimated Returns
+            </h4>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+              <div className={`p-3 rounded-xl ${t('bg-white/[0.03]','bg-white')}`}>
+                <p className={`text-[10px] uppercase tracking-wider ${t('text-gray-600','text-gray-500')}`}>Monthly Returns</p>
+                <p className={`text-sm font-bold ${t('text-white','text-gray-900')}`}>₹{formatINR(monthlyInterest)}</p>
+              </div>
+              <div className={`p-3 rounded-xl ${t('bg-white/[0.03]','bg-white')}`}>
+                <p className={`text-[10px] uppercase tracking-wider ${t('text-gray-600','text-gray-500')}`}>TDS (Monthly)</p>
+                <p className={`text-sm font-bold text-amber-400`}>₹{formatINR(monthlyTDS)}</p>
+              </div>
+              <div className={`p-3 rounded-xl ${t('bg-white/[0.03]','bg-white')}`}>
+                <p className={`text-[10px] uppercase tracking-wider ${t('text-gray-600','text-gray-500')}`}>Net Monthly</p>
+                <p className={`text-sm font-bold text-emerald-400`}>₹{formatINR(netMonthly)}</p>
+              </div>
+              <div className={`p-3 rounded-xl ${t('bg-white/[0.03]','bg-white')}`}>
+                <p className={`text-[10px] uppercase tracking-wider ${t('text-gray-600','text-gray-500')}`}>Yearly Appreciation</p>
+                <p className={`text-sm font-bold text-blue-400`}>₹{formatINR(yearlyAppreciation)}</p>
+              </div>
+            </div>
+            <div className={`mt-3 p-3 rounded-xl flex items-center justify-between ${t('bg-white/[0.03]','bg-white')}`}>
+              <div>
+                <p className={`text-[10px] uppercase tracking-wider ${t('text-gray-600','text-gray-500')}`}>Sum of Capital & ROI ({tenureYears} Years)</p>
+                <p className={`text-lg font-black ${t('text-white','text-gray-900')}`}>₹{formatINR(investAmount + totalReturns)}</p>
+              </div>
+              <div className="text-right">
+                <p className={`text-[10px] uppercase tracking-wider ${t('text-gray-600','text-gray-500')}`}>Total Returns</p>
+                <p className={`text-lg font-black text-emerald-400`}>₹{formatINR(totalReturns)}</p>
+              </div>
+            </div>
+          </div>
+        )}
       </Glass>
 
       {/* Step 2: Bank Details */}
@@ -3212,7 +3326,8 @@ export default function DashboardClient() {
         </button>
       </Glass>
     </div>
-  )
+    )
+  }
 
   // ═══════════════════════════════════════════════════════════
   // CALCULATORS TAB
