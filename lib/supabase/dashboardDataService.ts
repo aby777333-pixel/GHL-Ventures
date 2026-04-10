@@ -480,6 +480,148 @@ export async function fetchAssignedRM(clientId?: string): Promise<{ name: string
   }
 }
 
+// ── Investment Documents (post-approval) ────────────────────
+
+export async function fetchInvestmentDocuments(clientId?: string) {
+  if (!isSupabaseConfigured() || !clientId) return []
+  return safeFetch(
+    () => sb.from('investment_documents').select('*').eq('client_id', clientId).order('created_at', { ascending: false }),
+    [], 'fetchInvestmentDocuments',
+  )
+}
+
+export async function uploadSignedDocument(docId: string, signedUrl: string) {
+  if (!isSupabaseConfigured()) return null
+  const { data, error } = await sb.from('investment_documents').update({
+    signed_copy_url: signedUrl,
+    signed_at: new Date().toISOString(),
+    status: 'signed',
+  }).eq('id', docId).select().single()
+  if (error) { console.warn('[dashboard] Upload signed doc error:', error.message); return null }
+  return data
+}
+
+// ── Investment Transactions (capital submissions) ───────────
+
+export async function fetchInvestmentTransactions(clientId?: string) {
+  if (!isSupabaseConfigured() || !clientId) return []
+  return safeFetch(
+    () => sb.from('investment_transactions').select('*').eq('client_id', clientId).order('created_at', { ascending: false }),
+    [], 'fetchInvestmentTransactions',
+  )
+}
+
+export async function submitInvestmentTransaction(txn: {
+  investment_app_id: string
+  client_id: string
+  capital_amount: number
+  transaction_amount: number
+  transaction_id?: string
+  transaction_proof_url?: string
+  bank_account_id?: string
+}) {
+  if (!isSupabaseConfigured()) return null
+  const { data, error } = await sb.from('investment_transactions').insert({
+    ...txn,
+    status: 'pending',
+  }).select().single()
+  if (error) { console.warn('[dashboard] Submit txn error:', error.message); return null }
+
+  // Notify admins
+  try {
+    const { data: admins } = await sb.from('profiles').select('id').in('role', ['admin', 'super_admin'])
+    if (admins?.length) {
+      await sb.from('notifications').insert(admins.map((a: any) => ({
+        user_id: a.id,
+        title: 'New Investment Transaction',
+        message: `Transaction of ₹${txn.transaction_amount.toLocaleString('en-IN')} submitted for approval.`,
+        type: 'action_required',
+        link: '/admin?tab=financial',
+        metadata: { transaction_id: data?.id, investment_app_id: txn.investment_app_id },
+      })))
+    }
+  } catch { /* non-blocking */ }
+
+  return data
+}
+
+// ── Payment Schedule Calculator ─────────────────────────────
+
+export interface PaymentScheduleRow {
+  date: string
+  grossInterest: number
+  tds: number
+  netInterest: number
+  appreciation: number
+  debentureValue: number
+  paymentStatus: string
+}
+
+export function calculatePaymentSchedule(
+  investmentAmount: number,
+  investmentDate: string,
+  tenureYears: number = 3,
+  interestRate: number = 12.0,
+  appreciationRate: number = 12.0,
+  tdsRate: number = 10.0,
+): PaymentScheduleRow[] {
+  const schedule: PaymentScheduleRow[] = []
+  const monthlyRate = interestRate / 100 / 12
+  const monthlyInterest = investmentAmount * monthlyRate
+  const yearlyAppreciation = investmentAmount * (appreciationRate / 100)
+
+  const startDate = new Date(investmentDate)
+  const startDay = startDate.getDate()
+  const totalMonths = tenureYears * 12
+
+  let debentureValue = investmentAmount
+
+  for (let m = 0; m < totalMonths; m++) {
+    const payDate = new Date(startDate)
+    payDate.setMonth(payDate.getMonth() + m + 1)
+    payDate.setDate(1) // 1st of each month
+
+    // First month pro-rata if not invested on 1st
+    let grossInterest = monthlyInterest
+    if (m === 0 && startDay > 1) {
+      const daysInMonth = new Date(startDate.getFullYear(), startDate.getMonth() + 1, 0).getDate()
+      const remainingDays = daysInMonth - startDay + 1
+      grossInterest = Math.round(monthlyInterest * (remainingDays / daysInMonth))
+    }
+
+    // Last month adds pro-rata remainder from first month
+    if (m === totalMonths - 1 && startDay > 1) {
+      const daysInStartMonth = new Date(startDate.getFullYear(), startDate.getMonth() + 1, 0).getDate()
+      const usedDays = daysInStartMonth - startDay + 1
+      const remainder = monthlyInterest - Math.round(monthlyInterest * (usedDays / daysInStartMonth))
+      grossInterest = monthlyInterest + remainder
+    }
+
+    grossInterest = Math.round(grossInterest)
+    const tds = Math.round(grossInterest * (tdsRate / 100))
+    const netInterest = grossInterest - tds
+
+    // Appreciation every 12 months
+    let appreciation = 0
+    if ((m + 1) % 12 === 0) {
+      appreciation = yearlyAppreciation
+      debentureValue += appreciation
+    }
+
+    schedule.push({
+      date: payDate.toISOString().split('T')[0],
+      grossInterest,
+      tds,
+      netInterest,
+      appreciation,
+      debentureValue: (m + 1) % 12 === 0 ? debentureValue : 0,
+      paymentStatus: 'Due',
+    })
+  }
+
+  return schedule
+}
+
 // ── Referral System ──────────────────────────────────────────
 
 /**

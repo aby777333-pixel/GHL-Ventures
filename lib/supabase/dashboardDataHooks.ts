@@ -139,6 +139,21 @@ export function useAdminNews() {
   return useQuery<any[]>(() => svc.getAdminNews(), [])
 }
 
+// ── Investment Applications ────────────────────────────────
+export function useInvestmentApplications(clientId?: string) {
+  return useQuery<any[]>(() => svc.fetchInvestmentApplications(clientId), [], clientId)
+}
+
+// ── Investment Documents (post-approval) ───────────────────
+export function useInvestmentDocuments(clientId?: string) {
+  return useQuery<any[]>(() => svc.fetchInvestmentDocuments(clientId), [], clientId)
+}
+
+// ── Investment Transactions ────────────────────────────────
+export function useInvestmentTransactions(clientId?: string) {
+  return useQuery<any[]>(() => svc.fetchInvestmentTransactions(clientId), [], clientId)
+}
+
 // ── Assigned RM ─────────────────────────────────────────────
 export function useAssignedRM(clientId?: string) {
   return useQuery<{ name: string; designation: string; department: string } | null>(

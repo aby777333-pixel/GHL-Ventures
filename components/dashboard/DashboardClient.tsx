@@ -43,6 +43,9 @@ import {
   useDocuments,
   useAdminNews,
   useAssignedRM,
+  useInvestmentApplications,
+  useInvestmentDocuments,
+  useInvestmentTransactions,
 } from '@/lib/supabase/dashboardDataHooks'
 
 // Data service (for mutations)
@@ -82,6 +85,9 @@ import ClientAIAdvisor from './ClientAIAdvisor'
 // KYC Wizard & Documents Tab
 import KYCWizard from './KYCWizard'
 import DocumentsTab from './DocumentsTab'
+
+// Investment Features (history, documents, payment schedule, transaction form)
+import { InvestmentHistory, InvestmentDetail, InvestmentDocumentsSection } from './InvestmentFeatures'
 
 // Voice Input (Sarvam AI STT)
 import VoiceInput from '@/components/shared/VoiceInput'
@@ -357,6 +363,10 @@ export default function DashboardClient() {
   const { data: documents, loading: docsLoading, error: docsError, refetch: refetchDocs } = useDocuments(clientId ?? undefined)
   const { data: adminNews } = useAdminNews()
   const { data: assignedRM } = useAssignedRM(clientId ?? undefined)
+  const { data: investmentApps } = useInvestmentApplications(clientId ?? undefined)
+  const { data: investmentDocs } = useInvestmentDocuments(clientId ?? undefined)
+  const { data: investmentTxns } = useInvestmentTransactions(clientId ?? undefined)
+  const [selectedInvestmentApp, setSelectedInvestmentApp] = useState<any>(null)
 
   // Combined data error indicator (shows toast if any critical fetch fails)
   const dataError = portfolioError || ticketsError || docsError
@@ -1685,6 +1695,44 @@ export default function DashboardClient() {
         ))}
       </div>
 
+      {/* Investment History */}
+      <div>
+        <h3 className={`text-base font-bold mb-3 ${t('text-white','text-gray-900')}`}>My Investments</h3>
+        <p className={`text-xs mb-4 ${t('text-gray-500','text-gray-700')}`}>Your investment applications and commitments</p>
+        <InvestmentHistory
+          applications={investmentApps}
+          theme={theme}
+          onViewDetails={(app) => setSelectedInvestmentApp(app)}
+          showToast={showToast as any}
+        />
+      </div>
+
+      {/* Investment Documents (post-approval) */}
+      {investmentDocs.length > 0 && (
+        <div>
+          <h3 className={`text-base font-bold mb-3 ${t('text-white','text-gray-900')}`}>Investment Documents</h3>
+          <p className={`text-xs mb-4 ${t('text-gray-500','text-gray-700')}`}>View, download, and upload signed copies of your investment documents</p>
+          <InvestmentDocumentsSection
+            documents={investmentDocs}
+            theme={theme}
+            showToast={showToast as any}
+            clientId={clientId || ''}
+          />
+        </div>
+      )}
+
+      {/* Investment Detail Modal */}
+      {selectedInvestmentApp && (
+        <InvestmentDetail
+          application={selectedInvestmentApp}
+          bankAccounts={bankAccounts}
+          theme={theme}
+          clientId={clientId || ''}
+          showToast={showToast as any}
+          onClose={() => setSelectedInvestmentApp(null)}
+        />
+      )}
+
       {/* Modify Allocation Section */}
       <Glass className="p-6" hover theme={theme}>
         <h3 className={`text-base font-bold mb-4 ${t('text-white','text-gray-900')}`}>Modify Allocation</h3>
@@ -1984,7 +2032,7 @@ export default function DashboardClient() {
       <div className="flex items-center justify-between">
         <div>
           <h2 className={`text-xl font-bold mb-1 ${t('text-white','text-gray-900')}`}>Transactions</h2>
-          <p className={`text-sm ${t('text-gray-500','text-gray-700')}`}>Complete transaction history</p>
+          <p className={`text-sm ${t('text-gray-500','text-gray-700')}`}>Complete transaction history including investment submissions</p>
         </div>
         <button onClick={async () => {
           showToast('Exporting transactions...', 'info')
@@ -2035,6 +2083,41 @@ export default function DashboardClient() {
           </table>
         </div>
       </Glass>
+
+      {/* Investment Transaction Submissions */}
+      {investmentTxns.length > 0 && (
+        <>
+          <h3 className={`text-base font-bold mb-3 mt-6 ${t('text-white','text-gray-900')}`}>Investment Transaction Submissions</h3>
+          <Glass className="overflow-hidden" hover={false} theme={theme}>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className={`border-b ${t('border-white/[0.06]','border-gray-200/50')}`}>
+                    {['Date', 'Capital Amount', 'Transaction Amount', 'Transaction ID', 'Status'].map(h => (
+                      <th key={h} className={`text-left text-xs font-medium py-3 px-5 ${t('text-gray-500','text-gray-600')}`}>{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {investmentTxns.map((txn: any, i: number) => (
+                    <tr key={txn.id || i} className={`border-b ${t('border-white/[0.03] hover:bg-white/[0.02]','border-gray-100 hover:bg-gray-50')}`}>
+                      <td className={`py-3 px-5 text-xs ${t('text-gray-400','text-gray-700')}`}>{txn.created_at ? new Date(txn.created_at).toLocaleDateString('en-IN') : '—'}</td>
+                      <td className={`py-3 px-5 text-xs font-semibold ${t('text-white','text-gray-900')}`}>₹{new Intl.NumberFormat('en-IN').format(Number(txn.capital_amount) || 0)}</td>
+                      <td className={`py-3 px-5 text-xs font-semibold ${t('text-white','text-gray-900')}`}>₹{new Intl.NumberFormat('en-IN').format(Number(txn.transaction_amount) || 0)}</td>
+                      <td className={`py-3 px-5 text-xs font-mono ${t('text-gray-400','text-gray-600')}`}>{txn.transaction_id || '—'}</td>
+                      <td className="py-3 px-5">
+                        <span className={`inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full ${txn.status === 'approved' ? 'text-emerald-400 bg-emerald-500/15' : txn.status === 'rejected' ? 'text-red-400 bg-red-500/15' : 'text-amber-400 bg-amber-500/15'}`}>
+                          {(txn.status || 'pending').charAt(0).toUpperCase() + (txn.status || 'pending').slice(1)}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </Glass>
+        </>
+      )}
     </div>
   )
 
