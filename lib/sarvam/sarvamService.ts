@@ -55,18 +55,29 @@ export async function speechToText(
 ): Promise<SarvamSTTResult> {
   const formData = new FormData()
   formData.append('file', audioBlob, 'recording.wav')
-  formData.append('model', options.model || 'saaras:v2')
+  formData.append('model', options.model || 'saaras:v3')
   if (options.language_code) {
     formData.append('language_code', options.language_code)
   }
 
-  const response = await fetch(STT_ENDPOINT, {
-    method: 'POST',
-    body: formData,
-  })
+  let response: Response
+  try {
+    response = await fetch(STT_ENDPOINT, {
+      method: 'POST',
+      body: formData,
+    })
+  } catch (networkErr) {
+    throw new Error('Sarvam STT service unavailable. The speech-to-text feature requires a Netlify function (sarvam-stt) with a valid SARVAM_API_KEY configured in environment variables.')
+  }
 
   if (!response.ok) {
     const errorData = await response.json().catch(() => ({}))
+    if (response.status === 404) {
+      throw new Error('Sarvam STT endpoint not found. Please deploy the sarvam-stt Netlify function and set the SARVAM_API_KEY environment variable.')
+    }
+    if (errorData.error?.includes('API Key') || errorData.error?.includes('not configured')) {
+      throw new Error('Sarvam API Key not configured. Set SARVAM_API_KEY in your Netlify environment variables.')
+    }
     throw new Error(errorData.error || `STT request failed: ${response.status}`)
   }
 

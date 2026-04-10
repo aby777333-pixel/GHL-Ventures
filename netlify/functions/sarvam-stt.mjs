@@ -16,21 +16,36 @@ export const handler = async (event) => {
     return { statusCode: 405, headers, body: JSON.stringify({ error: 'Method not allowed' }) }
   }
 
+  if (!SARVAM_API_KEY) {
+    return {
+      statusCode: 500,
+      headers: { ...headers, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ error: 'Sarvam API Key not configured. Set SARVAM_API_KEY in environment variables.' }),
+    }
+  }
+
   try {
     const body = event.isBase64Encoded
       ? Buffer.from(event.body || '', 'base64')
       : event.body
 
+    // Forward the exact content-type (must include boundary for multipart)
+    const contentType = event.headers['content-type'] || event.headers['Content-Type'] || 'multipart/form-data'
+
     const response = await fetch(SARVAM_STT_URL, {
       method: 'POST',
       headers: {
         'api-subscription-key': SARVAM_API_KEY,
-        'Content-Type': event.headers['content-type'] || 'multipart/form-data',
+        'Content-Type': contentType,
       },
       body,
     })
 
     const data = await response.json()
+
+    if (!response.ok) {
+      console.warn('[sarvam-stt] API error:', response.status, JSON.stringify(data))
+    }
 
     return {
       statusCode: response.ok ? 200 : response.status,
@@ -38,6 +53,7 @@ export const handler = async (event) => {
       body: JSON.stringify(data),
     }
   } catch (error) {
+    console.error('[sarvam-stt] Function error:', error)
     return {
       statusCode: 500,
       headers: { ...headers, 'Content-Type': 'application/json' },

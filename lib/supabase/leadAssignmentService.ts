@@ -32,12 +32,13 @@ export async function autoAssignLead(leadId: string): Promise<{ success: boolean
     }
 
     // 2. Count open leads per staff member (status not in closed_won, closed_lost)
-    const staffIds = staffProfiles.map((s: any) => s.user_id)
+    // NOTE: leads.assigned_to references staff_profiles.id (NOT user_id)
+    const staffIds = staffProfiles.map((s: any) => s.id)
     const { data: leadCounts, error: countErr } = await sb
       .from('leads')
       .select('assigned_to')
       .in('assigned_to', staffIds)
-      .not('status', 'in', '("closed_won","closed_lost")')
+      .not('status', 'in', '("won","lost")')
 
     // Build count map
     const countMap: Record<string, number> = {}
@@ -78,17 +79,18 @@ export async function autoAssignLead(leadId: string): Promise<{ success: boolean
     }
 
     // 5. Get the staff member's name for notifications
-    const staff = staffProfiles.find((s: any) => s.user_id === leastLoaded)
-    const { data: staffProfile } = await sb
+    const staff = staffProfiles.find((s: any) => s.id === leastLoaded)
+    const staffUserId = staff?.user_id
+    const { data: staffProfileData } = await sb
       .from('profiles')
       .select('full_name')
-      .eq('id', leastLoaded)
+      .eq('id', staffUserId)
       .single()
-    const staffName = staffProfile?.full_name || 'Staff Member'
+    const staffName = staffProfileData?.full_name || 'Staff Member'
 
-    // 6. Create notification for assigned staff
+    // 6. Create notification for assigned staff (use user_id for notifications table)
     await sb.from('notifications').insert({
-      user_id: leastLoaded,
+      user_id: staffUserId,
       title: 'New Lead Assigned',
       message: `A new lead has been assigned to you. Check your lead queue.`,
       type: 'action_required',

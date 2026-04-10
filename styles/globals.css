@@ -51,9 +51,10 @@
   body {
     font-family: var(--font-primary);
     color: var(--color-black);
-    background-color: var(--color-offwhite);
+    background-color: #FFFFFF;
     font-size: 15px;
     line-height: 1.7;
+    font-weight: 450;
   }
 
   ::selection {
@@ -108,13 +109,14 @@
   p {
     font-size: 15px;
     line-height: 1.7;
+    font-weight: 450;
   }
 
-  /* Captions: 12px light */
+  /* Captions: 12px — increased weight for readability */
   small,
   .caption {
     font-size: 12px;
-    font-weight: 300;
+    font-weight: 450;
     line-height: 1.5;
   }
 
@@ -563,8 +565,24 @@
 }
 
 :root.dark body {
-  background-color: #0A0A0A;
+  background-color: #000000;
+  color: #F3F4F6;
+  font-weight: 450;
+}
+
+:root.dark p,
+:root.dark span,
+:root.dark li,
+:root.dark td,
+:root.dark th,
+:root.dark label {
   color: #E5E7EB;
+}
+
+:root.dark small,
+:root.dark .caption {
+  color: #D1D5DB;
+  font-weight: 450;
 }
 
 :root.dark .bg-white {
@@ -602,7 +620,7 @@
 }
 
 :root.dark .section-subtitle {
-  color: #9CA3AF;
+  color: #D1D5DB;
 }
 
 :root.dark .text-brand-black {
@@ -610,7 +628,7 @@
 }
 
 :root.dark .text-brand-grey {
-  color: #9CA3AF !important;
+  color: #D1D5DB !important;
 }
 
 /* Fund pages & submenus: headings, labels, table cells */

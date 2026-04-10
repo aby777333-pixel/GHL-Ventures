@@ -160,12 +160,41 @@ function AssetInventoryTab({ assets, showToast }: { assets: any[]; showToast: (m
     setAssetForm(prev => ({ ...prev, [field]: value }))
   }
 
-  const handleAssetSubmit = () => {
+  const handleAssetSubmit = async () => {
     if (!assetForm.name.trim()) {
       showToast('Asset name is required', 'error')
       return
     }
-    showToast('Asset registered successfully', 'success')
+    try {
+      const { insertRow } = await import('@/lib/supabase/adminDataService')
+      const { supabase } = await import('@/lib/supabase/client')
+      const { data: { user } } = await supabase.auth.getUser()
+
+      const assetData: Record<string, any> = {
+        name: assetForm.name,
+        category: assetForm.category === 'laptop' || assetForm.category === 'phone' || assetForm.category === 'monitor' ? 'physical' : assetForm.category,
+        serial_number: assetForm.serialNumber || null,
+        status: assetForm.status || 'active',
+        purchase_date: assetForm.purchaseDate || null,
+        expiry_date: assetForm.warrantyExpiry || null,
+        value: assetForm.purchaseValue ? Number(assetForm.purchaseValue) : 0,
+        location: assetForm.location || null,
+        notes: assetForm.notes || null,
+        created_by: user?.id || null,
+      }
+
+      const result = await insertRow('assets', assetData)
+      if (result) {
+        showToast('Asset registered successfully', 'success')
+        // Trigger reload
+        window.location.reload()
+      } else {
+        showToast('Failed to register asset', 'error')
+      }
+    } catch (err) {
+      console.warn('[assets] Submit error:', err)
+      showToast('Failed to register asset', 'error')
+    }
     setAddAssetOpen(false)
     setAssetForm({
       name: '',

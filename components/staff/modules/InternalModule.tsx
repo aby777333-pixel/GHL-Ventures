@@ -277,12 +277,16 @@ function PoliciesView({ showToast }: { showToast: Toast }) {
 type FeedbackCategory = 'Workplace' | 'Process' | 'Tools' | 'HR' | 'General'
 type FeedbackStatus = 'submitted' | 'acknowledged' | 'resolved'
 
-const RECENT_FEEDBACK: { id: string; category: FeedbackCategory; subject: string; status: FeedbackStatus; date: string }[] = []
-
 const FB_STATUS: Record<FeedbackStatus, { label: string; variant: 'success' | 'warning' | 'info' }> = {
   submitted: { label: 'Submitted', variant: 'info' },
   acknowledged: { label: 'Acknowledged', variant: 'warning' },
   resolved: { label: 'Resolved', variant: 'success' },
+}
+
+function mapTicketToFeedbackStatus(status: string): FeedbackStatus {
+  if (status === 'resolved' || status === 'closed') return 'resolved'
+  if (status === 'in-progress' || status === 'acknowledged') return 'acknowledged'
+  return 'submitted'
 }
 
 function FeedbackView({ showToast }: { showToast: Toast }) {
@@ -290,11 +294,97 @@ function FeedbackView({ showToast }: { showToast: Toast }) {
   const [subject, setSubject] = useState('')
   const [description, setDescription] = useState('')
   const [anonymous, setAnonymous] = useState(false)
+  const [recentFeedback, setRecentFeedback] = useState<{ id: string; category: FeedbackCategory; subject: string; status: FeedbackStatus; date: string }[]>([])
+
+  // Fetch feedback from both tickets (type=feedback) and feedback table
+  useEffect(() => {
+    async function loadFeedback() {
+      try {
+        const { supabase } = await import('@/lib/supabase/client')
+        // Fetch from tickets table (where feedback is saved)
+        const { data: ticketFb } = await supabase
+          .from('tickets')
+          .select('id, title, category, status, created_at')
+          .eq('type', 'feedback')
+          .order('created_at', { ascending: false })
+          .limit(20) as any
+        // Also fetch from dedicated feedback table
+        const { data: directFb } = await supabase
+          .from('feedback')
+          .select('id, subject, category, status, created_at')
+          .order('created_at', { ascending: false })
+          .limit(20) as any
+
+        const items: typeof recentFeedback = []
+        if (ticketFb) {
+          for (const t of ticketFb) {
+            items.push({
+              id: t.id,
+              category: (t.category || 'General') as FeedbackCategory,
+              subject: t.title || '—',
+              status: mapTicketToFeedbackStatus(t.status),
+              date: t.created_at?.split('T')[0] || '—',
+            })
+          }
+        }
+        if (directFb) {
+          for (const f of directFb) {
+            items.push({
+              id: f.id,
+              category: (f.category || 'General') as FeedbackCategory,
+              subject: f.subject || '—',
+              status: mapTicketToFeedbackStatus(f.status),
+              date: f.created_at?.split('T')[0] || '—',
+            })
+          }
+        }
+        setRecentFeedback(items)
+      } catch { /* ignore */ }
+    }
+    loadFeedback()
+  }, [])
 
   const handleSubmit = async () => {
     if (!subject.trim() || !description.trim()) { showToast('Please fill in all required fields', 'warning'); return }
-    const row = await insertRow('tickets', { title: subject, description, type: 'feedback', category, status: 'open', priority: 'normal', is_anonymous: anonymous })
-    if (row) { showToast('Feedback submitted successfully!', 'success') } else { showToast('Failed to submit feedback', 'error') }
+    // Save to the dedicated feedback table AND to tickets for cross-module visibility
+    const { supabase } = await import('@/lib/supabase/client')
+    const { data: { user } } = await supabase.auth.getUser()
+
+    const feedbackRow = await insertRow('feedback', {
+      staff_id: user?.id || null,
+      subject,
+      description,
+      category,
+      is_anonymous: anonymous,
+      status: 'pending',
+    })
+    // Also create a ticket entry for admin visibility
+    await insertRow('tickets', {
+      ticket_number: `FB-${Date.now().toString(36).toUpperCase()}`,
+      subject,
+      description,
+      type: 'feedback',
+      category,
+      status: 'open',
+      priority: 'normal',
+      is_anonymous: anonymous,
+      created_by: user?.id || null,
+      client_name: anonymous ? 'Anonymous Staff' : 'Staff Member',
+    })
+
+    if (feedbackRow) {
+      showToast('Feedback submitted successfully!', 'success')
+      // Add to local list immediately
+      setRecentFeedback(prev => [{
+        id: feedbackRow.id,
+        category: category as FeedbackCategory,
+        subject,
+        status: 'submitted',
+        date: new Date().toISOString().split('T')[0],
+      }, ...prev])
+    } else {
+      showToast('Failed to submit feedback', 'error')
+    }
     setSubject(''); setDescription(''); setAnonymous(false); setCategory('General')
   }
 
@@ -340,7 +430,10 @@ function FeedbackView({ showToast }: { showToast: Toast }) {
       <div>
         <h4 className="text-xs font-semibold text-white/50 mb-3">Recent Feedback</h4>
         <div className="space-y-2">
-          {RECENT_FEEDBACK.map(fb => {
+          {recentFeedback.length === 0 && (
+            <p className="text-xs text-white/25 text-center py-4">No feedback submitted yet</p>
+          )}
+          {recentFeedback.map(fb => {
             const badge = FB_STATUS[fb.status]
             return (
               <AdminGlass key={fb.id} padding="p-3">

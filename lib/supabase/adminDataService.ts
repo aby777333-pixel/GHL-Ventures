@@ -226,7 +226,16 @@ export async function fetchCommissions() {
 
 // ── Assets ──────────────────────────────────────────────────
 export async function fetchAssets() {
-  return queryTable<any>('assets')
+  const raw = await queryTable<any>('assets')
+  // Map snake_case DB columns to camelCase expected by UI components
+  return raw.map((a: any) => ({
+    ...a,
+    serialNumber: a.serial_number || a.serialNumber || '',
+    assignedTo: a.assigned_to || a.assignedTo || '',
+    expiryDate: a.expiry_date || a.expiryDate || '',
+    purchaseDate: a.purchase_date || a.purchaseDate || '',
+    value: Number(a.value) || 0,
+  }))
 }
 
 // ── Realty Brokers ──────────────────────────────────────────
@@ -299,6 +308,20 @@ export async function upsertBlogPost(post: Partial<BlogPost> & { slug: string; t
     if (error) { console.warn('[blog] Upsert error:', error.message); return null }
     return data
   } catch { return null }
+}
+
+// ── Messages (admin view — all client messages) ────────────
+export async function fetchAllMessages() {
+  if (!isSupabaseConfigured()) return []
+  try {
+    const { data, error } = await (supabase
+      .from('messages')
+      .select('*')
+      .order('created_at', { ascending: false })
+      .limit(100) as any)
+    if (error || !data) return []
+    return data
+  } catch { return [] }
 }
 
 // ── Tickets ─────────────────────────────────────────────────

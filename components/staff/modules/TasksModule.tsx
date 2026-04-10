@@ -280,7 +280,42 @@ function MyTasksView({ showToast, tasks }: { showToast: TasksModuleProps['showTo
         </div>
         <div className="flex justify-end gap-3 mt-6 pt-4 border-t border-white/[0.06]">
           <button onClick={() => setNewTaskOpen(false)} className="px-4 py-2 rounded-xl text-sm font-medium text-gray-400 hover:text-white hover:bg-white/[0.06] transition-colors">Cancel</button>
-          <button onClick={async () => { if (!taskForm.title.trim()) { showToast('Task title is required', 'error'); return } const row = await insertRow('tasks', { title: taskForm.title, description: taskForm.description, priority: taskForm.priority, status: taskForm.status, due_date: taskForm.dueDate || null, assigned_to: taskForm.assignedTo || null, tags: taskForm.tags ? taskForm.tags.split(',').map(t => t.trim()) : [] }); if (row) { showToast('Task created successfully', 'success') } else { showToast('Failed to create task', 'error') } setNewTaskOpen(false); setTaskForm({ title: '', description: '', priority: 'normal', status: 'todo', dueDate: '', assignedTo: '', tags: '' }) }} className="px-5 py-2 rounded-xl text-sm font-medium text-white bg-teal-600 hover:bg-teal-700 transition-colors">Create Task</button>
+          <button onClick={async () => {
+            if (!taskForm.title.trim()) { showToast('Task title is required', 'error'); return }
+            try {
+              // Get current user ID for assigned_by and default assigned_to
+              const { supabase } = await import('@/lib/supabase/client')
+              const { data: { user } } = await supabase.auth.getUser()
+              const userId = user?.id || null
+
+              const taskData: Record<string, any> = {
+                title: taskForm.title,
+                description: taskForm.description || null,
+                priority: taskForm.priority,
+                status: taskForm.status,
+                due_date: taskForm.dueDate || null,
+                assigned_to: userId, // always use current user UUID
+                assigned_by: userId,
+                source: 'manual',
+                tags: taskForm.tags ? taskForm.tags.split(',').map(t => t.trim()) : [],
+              }
+
+              const row = await insertRow('tasks', taskData)
+              if (row) {
+                showToast('Task created successfully', 'success')
+                // Refresh tasks list
+                fetchTasks().then(data => { /* parent will re-render */ })
+                window.location.reload()
+              } else {
+                showToast('Failed to create task', 'error')
+              }
+            } catch (err) {
+              console.warn('[tasks] Create error:', err)
+              showToast('Failed to create task', 'error')
+            }
+            setNewTaskOpen(false)
+            setTaskForm({ title: '', description: '', priority: 'normal', status: 'todo', dueDate: '', assignedTo: '', tags: '' })
+          }} className="px-5 py-2 rounded-xl text-sm font-medium text-white bg-teal-600 hover:bg-teal-700 transition-colors">Create Task</button>
         </div>
       </AdminModal>
 

@@ -31,10 +31,22 @@ export default function AuthCallbackPage() {
           const hash = window.location.hash
           if (hash.includes('type=recovery')) {
             setMode('recovery')
+            // Wait a moment for Supabase to process the recovery token
+            await new Promise(r => setTimeout(r, 1000))
             const { data: { session } } = await supabase.auth.getSession()
             if (session?.user) {
               await ensureProfile(session.user)
-              router.replace('/dashboard/settings?password_reset=true')
+              // Check if user is staff (has staff_profiles row) → redirect to staff settings
+              const { data: staffRow } = await supabase
+                .from('staff_profiles')
+                .select('id')
+                .eq('user_id', session.user.id)
+                .maybeSingle()
+              if (staffRow) {
+                router.replace('/staff?tab=me&sub=profile&password_reset=true')
+              } else {
+                router.replace('/dashboard?tab=settings&password_reset=true')
+              }
               return
             }
           }

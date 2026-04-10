@@ -141,6 +141,20 @@ function CSDashboard({ navigate, showToast }: Pick<CSCenterModuleProps, 'navigat
   const [chatSessions, setChatSessions] = useState<ChatSession[]>([])
   const [loadingSessions, setLoadingSessions] = useState(true)
 
+  // Load saved agent status from Supabase on mount
+  useEffect(() => {
+    async function loadStatus() {
+      try {
+        const { supabase } = await import('@/lib/supabase/client')
+        const { data: { user } } = await supabase.auth.getUser()
+        if (!user) return
+        const { data: sp } = await (supabase as any).from('staff_profiles').select('agent_status').eq('user_id', user.id).single()
+        if (sp?.agent_status) setAgentStatus(sp.agent_status)
+      } catch { /* use default */ }
+    }
+    loadStatus()
+  }, [])
+
   // Load live chat sessions for queue + active panels
   useEffect(() => {
     let mounted = true
@@ -178,7 +192,17 @@ function CSDashboard({ navigate, showToast }: Pick<CSCenterModuleProps, 'navigat
             {statuses.map(s => (
               <button
                 key={s.key}
-                onClick={() => { setAgentStatus(s.key); showToast(`Status changed to ${s.label}`, 'info') }}
+                onClick={async () => {
+                  setAgentStatus(s.key)
+                  try {
+                    const { supabase } = await import('@/lib/supabase/client')
+                    const { data: { user } } = await supabase.auth.getUser()
+                    if (user) {
+                      await (supabase as any).from('staff_profiles').update({ agent_status: s.key }).eq('user_id', user.id)
+                    }
+                  } catch { /* non-blocking */ }
+                  showToast(`Status changed to ${s.label}`, 'success')
+                }}
                 className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border transition-all ${
                   agentStatus === s.key
                     ? 'bg-white/[0.1] border-white/[0.15] text-white'
@@ -454,6 +478,10 @@ function TicketManagement({ showToast }: Pick<CSCenterModuleProps, 'showToast'>)
   const [selectedTicket, setSelectedTicket] = useState<TicketRow | null>(null)
   const [tickets, setTickets] = useState<TicketRow[]>([])
   const [loading, setLoading] = useState(true)
+  const [newTicketStatus, setNewTicketStatus] = useState<string>('')
+  const [updatingStatus, setUpdatingStatus] = useState(false)
+  // Keep a map of truncated-id → full-id for updates
+  const [ticketIdMap, setTicketIdMap] = useState<Record<string, string>>({})
 
   // Load tickets from Supabase
   useEffect(() => {
@@ -462,11 +490,14 @@ function TicketManagement({ showToast }: Pick<CSCenterModuleProps, 'showToast'>)
       setLoading(true)
       const raw = await fetchTickets()
       if (!mounted) return
+      const idMap: Record<string, string> = {}
       const mapped: TicketRow[] = (raw as any[]).map((t: any) => {
         const created = t.created_at ? new Date(t.created_at) : new Date()
         const ageDays = Math.max(0, Math.round((Date.now() - created.getTime()) / 86400000))
+        const shortId = t.id?.slice(0, 8) || t.id
+        idMap[shortId] = t.id // store full ID for updates
         return {
-          id: t.id?.slice(0, 8) || t.id,
+          id: shortId,
           clientName: t.client_name || t.requester_name || '—',
           subject: t.subject || t.title || t.description?.slice(0, 60) || '—',
           category: t.category || 'general',
@@ -477,6 +508,7 @@ function TicketManagement({ showToast }: Pick<CSCenterModuleProps, 'showToast'>)
           createdDate: created.toISOString().split('T')[0],
         }
       })
+      setTicketIdMap(idMap)
       setTickets(mapped)
       setLoading(false)
     }
@@ -600,14 +632,47 @@ function TicketManagement({ showToast }: Pick<CSCenterModuleProps, 'showToast'>)
               </div>
             </div>
             <div className="border-t border-white/[0.06] pt-4">
-              <p className="text-[10px] text-gray-500 uppercase tracking-wider mb-2">Actions</p>
+              <p className="text-[10px] text-gray-500 uppercase tracking-wider mb-2">Update Status</p>
+              <div className="flex items-center gap-2 flex-wrap mb-3">
+                <select
+                  value={newTicketStatus || selectedTicket.status}
+                  onChange={e => setNewTicketStatus(e.target.value)}
+                  className="bg-white/[0.04] border border-white/[0.08] rounded-lg px-3 py-1.5 text-xs text-white focus:outline-none focus:border-teal-500/40"
+                >
+                  <option value="open" className="bg-neutral-900">Open</option>
+                  <option value="in-progress" className="bg-neutral-900">In Progress</option>
+                  <option value="awaiting-client" className="bg-neutral-900">Awaiting Client</option>
+                  <option value="resolved" className="bg-neutral-900">Resolved</option>
+                  <option value="closed" className="bg-neutral-900">Closed</option>
+                </select>
+                <button
+                  disabled={updatingStatus}
+                  onClick={async () => {
+                    const statusToSet = newTicketStatus || selectedTicket.status
+                    const fullId = ticketIdMap[selectedTicket.id] || selectedTicket.id
+                    setUpdatingStatus(true)
+                    try {
+                      const { updateTicket } = await import('@/lib/supabase/staffDataService')
+                      const result = await updateTicket(fullId, { status: statusToSet, updated_at: new Date().toISOString() })
+                      if (result) {
+                        setTickets(prev => prev.map(t => t.id === selectedTicket.id ? { ...t, status: statusToSet } : t))
+                        showToast('Ticket status updated', 'success')
+                      } else {
+                        showToast('Failed to update ticket status', 'error')
+                      }
+                    } catch {
+                      showToast('Failed to update ticket status', 'error')
+                    }
+                    setUpdatingStatus(false)
+                    setSelectedTicket(null)
+                    setNewTicketStatus('')
+                  }}
+                  className="px-3 py-1.5 rounded-lg text-xs font-medium bg-teal-500/20 text-teal-400 border border-teal-500/30 hover:bg-teal-500/30 transition-colors disabled:opacity-50"
+                >
+                  {updatingStatus ? 'Saving...' : 'Save Status'}
+                </button>
+              </div>
               <div className="flex items-center gap-2 flex-wrap">
-                <button onClick={() => { showToast('Ticket status updated', 'success'); setSelectedTicket(null) }} className="px-3 py-1.5 rounded-lg text-xs font-medium bg-teal-500/20 text-teal-400 border border-teal-500/30 hover:bg-teal-500/30 transition-colors">
-                  Update Status
-                </button>
-                <button onClick={() => { showToast('Ticket reassigned', 'info'); setSelectedTicket(null) }} className="px-3 py-1.5 rounded-lg text-xs font-medium bg-white/[0.04] text-gray-300 border border-white/[0.08] hover:bg-white/[0.08] transition-colors">
-                  Reassign
-                </button>
                 <button onClick={() => { showToast('Ticket escalated', 'warning'); setSelectedTicket(null) }} className="px-3 py-1.5 rounded-lg text-xs font-medium bg-amber-500/20 text-amber-400 border border-amber-500/30 hover:bg-amber-500/30 transition-colors">
                   Escalate
                 </button>

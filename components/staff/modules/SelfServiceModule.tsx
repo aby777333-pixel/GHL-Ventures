@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import AdminGlass from '@/components/admin/shared/AdminGlass'
 import AdminBadge from '@/components/admin/shared/AdminBadge'
 import {
@@ -11,7 +11,8 @@ import {
   Briefcase, Heart, BarChart3, MessageSquare, Play, FileCheck,
 } from 'lucide-react'
 import { saveBlobAs, pickAndUploadFiles } from '@/lib/supabase/storageService'
-import { insertRow } from '@/lib/supabase/adminDataService'
+import { insertRow, updateRow } from '@/lib/supabase/adminDataService'
+import { supabase, isSupabaseConfigured } from '@/lib/supabase/client'
 
 // ── Props ──────────────────────────────────────────────────────
 interface SelfServiceModuleProps {
@@ -53,16 +54,63 @@ function SectionHeader({ title, icon: Icon }: { title: string; icon: React.Compo
 //  1. PROFILE OVERVIEW
 // ================================================================
 function ProfileOverview({ showToast }: { showToast: SelfServiceModuleProps['showToast'] }) {
-  const profile = {
+  const [profile, setProfile] = useState({
     name: '—', code: '—', designation: '—',
     status: 'Active', department: '—', reportingTo: '—',
     shift: '—', pfNumber: '—', uan: '—',
     dob: '—', gender: '—', bloodGroup: '—', phone: '—',
     email: '—', address: '—',
     emergencyContact: '—',
-  }
+  })
+  const [editing, setEditing] = useState(false)
+  const [editAddress, setEditAddress] = useState('')
+  const [editPhone, setEditPhone] = useState('')
   const skills: { name: string; level: string }[] = []
   const documents: { name: string; type: string; uploaded: string; status: string }[] = []
+
+  // Fetch real profile data from Supabase
+  useEffect(() => {
+    if (!isSupabaseConfigured()) return
+    async function loadProfile() {
+      try {
+        const { data: { user } } = await supabase.auth.getUser()
+        if (!user) return
+
+        const [{ data: p }, { data: sp }] = await Promise.all([
+          supabase.from('profiles').select('*').eq('id', user.id).single(),
+          supabase.from('staff_profiles').select('*').eq('user_id', user.id).single(),
+        ])
+
+        if (p || sp) {
+          const pp = (p || {}) as any
+          const spp = (sp || {}) as any
+          setProfile({
+            name: pp.full_name || user.email || '—',
+            code: spp.employee_id || '—',
+            designation: spp.designation || '—',
+            status: spp.is_active ? 'Active' : 'Inactive',
+            department: spp.department || '—',
+            reportingTo: spp.reporting_to || '—',
+            shift: spp.metadata?.shift || 'General',
+            pfNumber: spp.metadata?.pf_number || '—',
+            uan: spp.metadata?.uan || '—',
+            dob: pp.dob || spp.metadata?.dob || '—',
+            gender: pp.gender || spp.metadata?.gender || '—',
+            bloodGroup: spp.metadata?.blood_group || '—',
+            phone: pp.phone || '—',
+            email: user.email || '—',
+            address: pp.address || pp.city || spp.metadata?.address || '—',
+            emergencyContact: spp.metadata?.emergency_contact || '—',
+          })
+          setEditAddress(pp.address || pp.city || spp.metadata?.address || '')
+          setEditPhone(pp.phone || '')
+        }
+      } catch (err) {
+        console.warn('[profile] Load error:', err)
+      }
+    }
+    loadProfile()
+  }, [])
   const personalFields = [
     { label: 'Date of Birth', value: profile.dob }, { label: 'Gender', value: profile.gender },
     { label: 'Blood Group', value: profile.bloodGroup }, { label: 'Phone', value: profile.phone },

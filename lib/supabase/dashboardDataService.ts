@@ -158,10 +158,14 @@ export async function createSupportTicket(ticket: Record<string, any>) {
     ...ticket,
     ticket_number: ticketNumber,
     client_name: clientName,
+    created_by: ticket.client_id || ticket.created_by || null,
+    status: ticket.status || 'open',
+    priority: ticket.priority || 'medium',
+    channel: ticket.channel || 'web',
   }
 
   const { data, error } = await sb.from('tickets').insert(row).select().single()
-  if (error) { console.warn('[dashboard] Create ticket error:', error.message); return null }
+  if (error) { console.warn('[dashboard] Create ticket error:', error.message, JSON.stringify(error)); return null }
 
   // Create notification for admins about new ticket
   try {
@@ -186,6 +190,23 @@ export async function sendMessage(message: Record<string, any>) {
   if (!isSupabaseConfigured()) return null
   const { data, error } = await sb.from('messages').insert(message).select().single()
   if (error) { console.warn('[dashboard] Send message error:', error.message); return null }
+
+  // Notify all admins about the new message
+  try {
+    const { data: admins } = await sb.from('profiles').select('id').in('role', ['admin', 'super_admin'])
+    if (admins && admins.length > 0) {
+      const notifs = admins.map((a: any) => ({
+        user_id: a.id,
+        title: `New Message from Investor`,
+        message: `Subject: ${message.subject || 'No subject'}`,
+        type: 'info',
+        link: '/admin?tab=comms',
+        metadata: { message_id: data?.id, from_id: message.from_id },
+      }))
+      await sb.from('notifications').insert(notifs)
+    }
+  } catch { /* non-blocking */ }
+
   return data
 }
 
