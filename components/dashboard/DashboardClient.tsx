@@ -89,6 +89,9 @@ import DocumentsTab from './DocumentsTab'
 // Investment Features (history, documents, payment schedule, transaction form)
 import { InvestmentHistory, InvestmentDetail, InvestmentDocumentsSection } from './InvestmentFeatures'
 
+// Full Investment Flow Tab (matching PDF specification)
+import InvestmentFlowTab from './InvestmentFlowTab'
+
 // Voice Input (Sarvam AI STT)
 import VoiceInput from '@/components/shared/VoiceInput'
 
@@ -3663,7 +3666,7 @@ export default function DashboardClient() {
   const renderContent = () => {
     switch (activeTab) {
       case 'dashboard': return renderDashboardHome()
-      case 'investments': return renderInvestmentsTab()
+      case 'investments': return <InvestmentFlowTab theme={theme} clientId={clientId} userId={user?.id ?? null} userName={(user as any)?.full_name || (user as any)?.name || user?.email || ''} userEmail={user?.email || ''} userPhone={(user as any)?.phone || ''} kycStatus={userKycStatus} showToast={showToast as any} navigateTab={(tab) => setActiveTab(tab as TabId)} />
       case 'invest-onboard': return renderInvestOnboard()
       case 'portfolio': return renderPortfolioTab()
       case 'kyc': return (
