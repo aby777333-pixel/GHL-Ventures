@@ -723,12 +723,6 @@ export default function DashboardClient() {
 
         {/* Tour + Logout — pushed above mobile bottom nav */}
         <div className="px-3 pb-28 lg:pb-4 pt-2 space-y-1">
-          <button onClick={() => { setTourStep(0); setActiveTab(TOUR_STEPS[0].target as TabId); setTourActive(true) }}
-            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-300
-              text-gray-400 hover:text-purple-400 hover:bg-purple-500/[0.06]">
-            <Sparkles className="w-[18px] h-[18px]" />
-            Virtual Tour
-          </button>
           <button onClick={async () => { await logout(); router.push('/login?logged_out=true') }}
             className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-300
               text-gray-500 hover:text-red-400 hover:bg-red-500/[0.06]">

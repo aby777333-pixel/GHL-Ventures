@@ -87,7 +87,7 @@ export default function Footer() {
         className="w-full"
         style={{ background: 'linear-gradient(135deg, #25D366 0%, #128C7E 100%)' }}
       >
-        <div className="container-max mx-auto px-4 sm:px-6 lg:px-8 py-4 flex flex-col sm:flex-row items-center justify-between gap-3">
+        <div className="container-max mx-auto px-4 sm:px-6 lg:px-8 py-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
           <div className="flex items-center space-x-3 text-white">
             <MessageCircle className="w-5 h-5" />
             <span className="font-semibold text-sm sm:text-base">
