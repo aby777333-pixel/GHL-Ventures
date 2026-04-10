@@ -117,7 +117,7 @@ export const ADMIN_SIDEBAR_ITEMS: SidebarItem[] = [
     iconName: 'Shield',
     permission: 'view:compliance',
     subItems: [
-      { id: 'compliance', label: 'Dashboard' },
+      { id: 'compliance', label: 'KYC Queue' },
       { id: 'compliance/approvals', label: 'Approvals' },
       { id: 'compliance/risk-flags', label: 'Risk Flags' },
       { id: 'compliance/audit', label: 'Audit Trail' },
@@ -268,6 +268,7 @@ export const ALL_ADMIN_TAB_PARAMS = [
   { tab: ['ai-ops', 'auto-reporter'] },
   { tab: ['ai-ops', 'knowledge-base'] },
   { tab: ['compliance'] },
+  { tab: ['compliance', 'kyc-queue'] },
   { tab: ['compliance', 'approvals'] },
   { tab: ['compliance', 'risk-flags'] },
   { tab: ['compliance', 'audit'] },

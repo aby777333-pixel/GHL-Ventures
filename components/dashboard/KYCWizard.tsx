@@ -58,7 +58,7 @@ export default function KYCWizard({ clientId, userId, userName, userEmail, userP
     dob: '', address: '', courier_address: '', country: 'India', state: '', city: '', pincode: '',
   })
   const [bank, setBank] = useState({
-    account_type: 'savings', account_number: '', swift_iban_code: '', account_holder_name: '', bank_name: '',
+    account_type: 'savings', account_number: '', swift_iban_code: '', ifsc_code: '', branch_name: '', account_holder_name: '', bank_name: '',
   })
   const [demat, setDemat] = useState({ demat_account_number: '', skipped: false })
   const [nomineeForm, setNomineeForm] = useState({ name: '', dob: '', phone: '', relationship: '', percentage: '' })
@@ -93,7 +93,7 @@ export default function KYCWizard({ clientId, userId, userName, userEmail, userP
 
   useEffect(() => {
     if (bankData) {
-      setBank({ account_type: bankData.account_type || 'savings', account_number: bankData.account_number || '', swift_iban_code: bankData.swift_iban_code || '', account_holder_name: bankData.account_holder_name || '', bank_name: bankData.bank_name || '' })
+      setBank({ account_type: bankData.account_type || 'savings', account_number: bankData.account_number || '', swift_iban_code: bankData.swift_iban_code || '', ifsc_code: bankData.ifsc_code || '', branch_name: bankData.branch_name || '', account_holder_name: bankData.account_holder_name || '', bank_name: bankData.bank_name || '' })
       setBankDocUrl(bankData.bank_doc_url || '')
     }
   }, [bankData])
@@ -155,6 +155,9 @@ export default function KYCWizard({ clientId, userId, userName, userEmail, userP
 
   const saveBank = async () => {
     if (!bank.account_number || !bank.account_holder_name || !bank.bank_name) { onToast('Please fill all required fields', 'info'); return }
+    if (basic.resident_type === 'indian' && (!bank.ifsc_code || bank.ifsc_code.length !== 11)) { onToast('IFSC code is required for Indian residents (11 characters)', 'info'); return }
+    if (basic.resident_type !== 'indian' && !bank.swift_iban_code) { onToast('SWIFT/IBAN code is required for NRI/Foreign residents', 'info'); return }
+    if (bank.account_number.length < 8) { onToast('Account number must be at least 8 digits', 'info'); return }
     setSaving(true)
     const result = await upsertKYCBankDetails(clientId, userId, { ...bank, bank_doc_url: bankDocUrl })
     setSaving(false)
@@ -315,9 +318,9 @@ export default function KYCWizard({ clientId, userId, userName, userEmail, userP
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {(basic.resident_type === 'indian' || basicData?.resident_type === 'indian') ? (
                   <>
-                    <div><label className={labelCls}>PAN Number *</label><input className={inputCls} value={identity.pan_number} onChange={e => setIdentity({ ...identity, pan_number: e.target.value.toUpperCase() })} placeholder="ABCDE1234F" /></div>
+                    <div><label className={labelCls}>PAN Number *</label><input className={inputCls} value={identity.pan_number} onChange={e => setIdentity({ ...identity, pan_number: e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '') })} placeholder="ABCDE1234F" maxLength={10} />{identity.pan_number && !/^[A-Z]{5}[0-9]{4}[A-Z]$/.test(identity.pan_number) && <p className={`text-xs mt-1 ${isDark ? 'text-amber-400' : 'text-amber-600'}`}>PAN must be 10 chars: 5 letters, 4 digits, 1 letter (e.g. ABCDE1234F)</p>}{identity.pan_number && /^[A-Z]{5}[0-9]{4}[A-Z]$/.test(identity.pan_number) && <p className={`text-xs mt-1 ${isDark ? 'text-emerald-400' : 'text-emerald-600'}`}>✓ Valid PAN format</p>}</div>
                     <div><label className={labelCls}>Name *</label><input className={inputCls} value={identity.name_on_document} onChange={e => setIdentity({ ...identity, name_on_document: e.target.value })} /></div>
-                    <div><label className={labelCls}>Aadhar Number *</label><input className={inputCls} value={identity.aadhar_number} onChange={e => setIdentity({ ...identity, aadhar_number: e.target.value })} placeholder="1234 5678 9012" /></div>
+                    <div><label className={labelCls}>Aadhaar Number *</label><input className={inputCls} value={identity.aadhar_number} onChange={e => { const v = e.target.value.replace(/\D/g, ''); setIdentity({ ...identity, aadhar_number: v.length <= 12 ? v.replace(/(\d{4})(?=\d)/g, '$1 ').trim() : identity.aadhar_number }) }} placeholder="1234 5678 9012" maxLength={14} />{identity.aadhar_number && identity.aadhar_number.replace(/\s/g, '').length !== 12 && <p className={`text-xs mt-1 ${isDark ? 'text-amber-400' : 'text-amber-600'}`}>Aadhaar must be exactly 12 digits</p>}{identity.aadhar_number && identity.aadhar_number.replace(/\s/g, '').length === 12 && <p className={`text-xs mt-1 ${isDark ? 'text-emerald-400' : 'text-emerald-600'}`}>✓ Valid Aadhaar format</p>}</div>
                   </>
                 ) : (
                   <>
@@ -359,10 +362,12 @@ export default function KYCWizard({ clientId, userId, userName, userEmail, userP
                     <option value="savings">Savings</option><option value="current">Current</option><option value="nro">NRO</option><option value="nre">NRE</option>
                   </select>
                 </div>
-                <div><label className={labelCls}>Account Number *</label><input className={inputCls} value={bank.account_number} onChange={e => setBank({ ...bank, account_number: e.target.value })} /></div>
-                <div><label className={labelCls}>SWIFT/IBAN Code *</label><input className={inputCls} value={bank.swift_iban_code} onChange={e => setBank({ ...bank, swift_iban_code: e.target.value })} /></div>
+                <div><label className={labelCls}>Account Number *</label><input className={inputCls} value={bank.account_number} onChange={e => setBank({ ...bank, account_number: e.target.value.replace(/\D/g, '') })} placeholder="Enter account number" maxLength={18} /></div>
+                <div><label className={labelCls}>IFSC Code {basic.resident_type === 'indian' ? '*' : ''}</label><input className={inputCls} value={bank.ifsc_code} onChange={e => setBank({ ...bank, ifsc_code: e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '') })} placeholder="e.g. SBIN0001234" maxLength={11} />{bank.ifsc_code && bank.ifsc_code.length === 11 && <p className={`text-xs mt-1 ${isDark ? 'text-emerald-400' : 'text-emerald-600'}`}>✓ Valid IFSC format</p>}{bank.ifsc_code && bank.ifsc_code.length > 0 && bank.ifsc_code.length < 11 && <p className={`text-xs mt-1 ${isDark ? 'text-amber-400' : 'text-amber-600'}`}>IFSC must be 11 characters (e.g. SBIN0001234)</p>}</div>
+                <div><label className={labelCls}>SWIFT/IBAN Code {basic.resident_type !== 'indian' ? '*' : ''}</label><input className={inputCls} value={bank.swift_iban_code} onChange={e => setBank({ ...bank, swift_iban_code: e.target.value.toUpperCase() })} placeholder={basic.resident_type === 'indian' ? 'Optional for Indian residents' : 'Required for NRI/Foreign'} /></div>
                 <div><label className={labelCls}>Account Holder Name *</label><input className={inputCls} value={bank.account_holder_name} onChange={e => setBank({ ...bank, account_holder_name: e.target.value })} /></div>
                 <div><label className={labelCls}>Bank Name *</label><input className={inputCls} value={bank.bank_name} onChange={e => setBank({ ...bank, bank_name: e.target.value })} /></div>
+                <div><label className={labelCls}>Branch Name</label><input className={inputCls} value={bank.branch_name} onChange={e => setBank({ ...bank, branch_name: e.target.value })} placeholder="Branch name (auto-filled from IFSC)" /></div>
                 {renderFileUpload('Upload Document (Bank Statement/Cancelled Cheque/Passbook)', bankDocUrl, setBankDocUrl)}
               </div>
               <div className="flex justify-between mt-6">

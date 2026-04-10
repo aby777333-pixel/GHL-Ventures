@@ -282,14 +282,14 @@ export default function Footer() {
 
           {/* ── Bottom Bar ── */}
           <div className="border-t border-white/10 pt-6">
-            <div className="flex flex-col lg:flex-row items-center justify-between gap-4 text-xs text-gray-500">
+            <div className="flex flex-col lg:flex-row items-start justify-between gap-4 text-xs text-gray-500">
               {/* Left */}
-              <p>
+              <p className="text-left">
                 &copy; 2026 GHL India Ventures Trust. All Rights Reserved.
               </p>
 
               {/* Center */}
-              <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1">
+              <div className="flex flex-wrap items-center justify-start lg:justify-center gap-x-4 gap-y-1">
                 <LegalLink
                   type="privacy"
                   className="hover:text-brand-red transition-colors duration-200"
@@ -313,7 +313,7 @@ export default function Footer() {
               </div>
 
               {/* Right */}
-              <p className="text-center lg:text-right">
+              <p className="text-left lg:text-right">
                 <a href={BRAND.sebiUrl} target="_blank" rel="noopener noreferrer" className="hover:text-brand-red transition-colors">
                   SEBI Registration No. {BRAND.sebi}
                 </a>
@@ -321,7 +321,7 @@ export default function Footer() {
             </div>
 
             {/* Sub-bottom risk warning */}
-            <p className="text-center text-[11px] text-gray-600 mt-4 leading-relaxed">
+            <p className="text-left text-[11px] text-gray-600 mt-4 leading-relaxed">
               Investments in AIFs are subject to market risks. Past performance is not
               indicative of future returns.
             </p>

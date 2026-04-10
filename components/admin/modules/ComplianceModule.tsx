@@ -13,12 +13,13 @@ import AdminBadge, { getSeverityBadgeVariant } from '../shared/AdminBadge'
 import AdminModal, { ModalButton } from '../shared/AdminModal'
 import AdminKPICard from '../shared/AdminKPICard'
 import AdminEmptyState from '../shared/AdminEmptyState'
-import { fetchApprovals, fetchRiskFlags, fetchAuditLog, updateRow } from '@/lib/supabase/adminDataService'
+import { fetchApprovals, fetchRiskFlags, fetchAuditLog, updateRow, fetchKYCDocuments, approveClientKYC, rejectClientKYC, approveKYCStep, rejectKYCStep } from '@/lib/supabase/adminDataService'
 import { formatDate, formatTimeAgo } from '@/lib/admin/adminHooks'
 import type { Approval, RiskFlag, ApprovalStatus, AuditEntry } from '@/lib/admin/adminTypes'
 
 // ── Sub-tabs ─────────────────────────────────────────────────────
 const COMPLIANCE_TABS = [
+  { id: 'kyc-queue', label: 'KYC Queue', icon: ShieldCheck },
   { id: 'approvals', label: 'Approvals', icon: CheckCircle2 },
   { id: 'risk-flags', label: 'Risk Flags', icon: Flag },
   { id: 'audit-trail', label: 'Audit Trail', icon: History },
@@ -34,26 +35,28 @@ interface ComplianceModuleProps {
 }
 
 export default function ComplianceModule({ subTab, navigate, showToast }: ComplianceModuleProps) {
-  const activeTab = (COMPLIANCE_TABS.some(t => t.id === subTab) ? subTab : 'approvals') as ComplianceTab
+  const activeTab = (COMPLIANCE_TABS.some(t => t.id === subTab) ? subTab : 'kyc-queue') as ComplianceTab
 
   const [approvals, setApprovals] = useState<any[]>([])
   const [riskFlags, setRiskFlags] = useState<any[]>([])
   const [auditLog, setAuditLog] = useState<any[]>([])
+  const [kycQueue, setKycQueue] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
 
   const loadData = useCallback(async () => {
     setLoading(true)
-    const [a, r, au] = await Promise.all([fetchApprovals(), fetchRiskFlags(), fetchAuditLog()])
+    const [a, r, au, kyc] = await Promise.all([fetchApprovals(), fetchRiskFlags(), fetchAuditLog(), fetchKYCDocuments()])
     setApprovals(a)
     setRiskFlags(r)
     setAuditLog(au)
+    setKycQueue(kyc)
     setLoading(false)
   }, [])
 
   useEffect(() => { loadData() }, [loadData])
 
   const kpis = useMemo(() => {
-    const pending = approvals.filter(a => a.status === 'pending').length
+    const pending = approvals.filter(a => a.status === 'pending').length + kycQueue.filter(k => k.status === 'submitted' || k.status === 'pending').length
     const openRisks = riskFlags.filter(r => r.status === 'open' || r.status === 'investigating').length
     const critical = riskFlags.filter(r => r.severity === 'critical').length
     const total = approvals.length
@@ -63,7 +66,7 @@ export default function ComplianceModule({ subTab, navigate, showToast }: Compli
   }, [approvals, riskFlags, auditLog])
 
   const handleTabClick = (tabId: string) => {
-    navigate(tabId === 'approvals' ? 'compliance' : `compliance/${tabId}`)
+    navigate(tabId === 'kyc-queue' ? 'compliance' : `compliance/${tabId}`)
   }
 
   return (
@@ -103,11 +106,205 @@ export default function ComplianceModule({ subTab, navigate, showToast }: Compli
       </div>
 
       <div className="admin-tab-switch">
+        {activeTab === 'kyc-queue' && <KYCQueueTab kycQueue={kycQueue} showToast={showToast} onRefresh={loadData} />}
         {activeTab === 'approvals' && <ApprovalsTab approvals={approvals} showToast={showToast} />}
         {activeTab === 'risk-flags' && <RiskFlagsTab riskFlags={riskFlags} showToast={showToast} />}
         {activeTab === 'audit-trail' && <AuditTrailTab auditLog={auditLog} />}
         {activeTab === 'regulations' && <RegulationsTab />}
       </div>
+    </div>
+  )
+}
+
+// ── KYC Queue Tab ───────────────────────────────────────────────
+function KYCQueueTab({ kycQueue, showToast, onRefresh }: { kycQueue: any[]; showToast: (msg: string, type?: 'success' | 'error' | 'info' | 'warning') => void; onRefresh: () => void }) {
+  const [statusFilter, setStatusFilter] = useState<string>('all')
+  const [selectedKYC, setSelectedKYC] = useState<any | null>(null)
+  const [processing, setProcessing] = useState(false)
+  const [rejectReason, setRejectReason] = useState('')
+
+  // Group KYC items by client
+  const clientGroups = useMemo(() => {
+    const map: Record<string, { clientId: string; clientName: string; items: any[] }> = {}
+    for (const item of kycQueue) {
+      if (!map[item.clientId]) {
+        map[item.clientId] = { clientId: item.clientId, clientName: item.clientName, items: [] }
+      }
+      map[item.clientId].items.push(item)
+    }
+    return Object.values(map)
+  }, [kycQueue])
+
+  const filtered = useMemo(() => {
+    if (statusFilter === 'all') return clientGroups
+    return clientGroups.filter(g => g.items.some(i => i.status === statusFilter))
+  }, [statusFilter, clientGroups])
+
+  const pendingCount = kycQueue.filter(k => k.status === 'submitted' || k.status === 'pending').length
+
+  const handleApproveAll = async (clientId: string) => {
+    setProcessing(true)
+    try {
+      const { supabase } = await import('@/lib/supabase/client')
+      const { data: { user } } = await supabase.auth.getUser()
+      const ok = await approveClientKYC(clientId, user?.id || '')
+      if (ok) {
+        showToast('KYC approved successfully! Investor has been notified.', 'success')
+        onRefresh()
+      } else {
+        showToast('Failed to approve KYC', 'error')
+      }
+    } catch { showToast('Failed to approve KYC', 'error') }
+    setProcessing(false)
+    setSelectedKYC(null)
+  }
+
+  const handleRejectAll = async (clientId: string) => {
+    setProcessing(true)
+    try {
+      const { supabase } = await import('@/lib/supabase/client')
+      const { data: { user } } = await supabase.auth.getUser()
+      const ok = await rejectClientKYC(clientId, user?.id || '', rejectReason || 'KYC documents rejected by admin.')
+      if (ok) {
+        showToast('KYC rejected. Investor has been notified.', 'info')
+        onRefresh()
+      } else {
+        showToast('Failed to reject KYC', 'error')
+      }
+    } catch { showToast('Failed to reject KYC', 'error') }
+    setProcessing(false)
+    setSelectedKYC(null)
+    setRejectReason('')
+  }
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <div className="flex flex-wrap gap-2">
+          {(['all', 'submitted', 'pending', 'approved', 'rejected'] as const).map(status => (
+            <button
+              key={status}
+              onClick={() => setStatusFilter(status)}
+              className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors ${
+                statusFilter === status
+                  ? 'bg-brand-red/20 text-white border-brand-red/30'
+                  : 'bg-white/[0.03] text-gray-500 border-white/[0.06] hover:bg-white/[0.06]'
+              }`}
+            >
+              {status === 'all' ? `All (${clientGroups.length})` : `${status.charAt(0).toUpperCase() + status.slice(1)}`}
+            </button>
+          ))}
+        </div>
+        {pendingCount > 0 && (
+          <span className="px-3 py-1 rounded-full text-xs font-semibold bg-amber-500/20 text-amber-400 border border-amber-500/30">
+            {pendingCount} pending review
+          </span>
+        )}
+      </div>
+
+      {filtered.length === 0 ? (
+        <AdminGlass>
+          <AdminEmptyState
+            title="No KYC submissions"
+            description="When investors submit KYC documents, they will appear here for your review and approval."
+          />
+        </AdminGlass>
+      ) : (
+        <div className="space-y-4">
+          {filtered.map(group => (
+            <AdminGlass key={group.clientId} padding="p-5">
+              <div className="flex items-start justify-between mb-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-blue-500/15 border border-blue-500/20 flex items-center justify-center">
+                    <User className="w-5 h-5 text-blue-400" />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-semibold text-white">{group.clientName}</h3>
+                    <p className="text-[11px] text-gray-500">{group.items.length} KYC step(s) submitted</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    disabled={processing}
+                    onClick={() => handleApproveAll(group.clientId)}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 hover:bg-emerald-500/30 transition-colors disabled:opacity-50"
+                  >
+                    <CheckCircle2 className="w-3.5 h-3.5" />
+                    Approve All
+                  </button>
+                  <button
+                    onClick={() => setSelectedKYC(group)}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-red-500/20 text-red-400 border border-red-500/30 hover:bg-red-500/30 transition-colors"
+                  >
+                    <XCircle className="w-3.5 h-3.5" />
+                    Reject
+                  </button>
+                </div>
+              </div>
+
+              {/* KYC Steps Grid */}
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                {group.items.map((item: any) => (
+                  <div
+                    key={item.id}
+                    className="px-3 py-2.5 rounded-xl bg-white/[0.03] border border-white/[0.06]"
+                  >
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-xs font-medium text-white">{item.type}</span>
+                      <AdminBadge
+                        label={item.status}
+                        variant={item.status === 'approved' ? 'success' : item.status === 'rejected' ? 'error' : item.status === 'submitted' ? 'warning' : 'neutral'}
+                        size="sm"
+                        dot
+                      />
+                    </div>
+                    <p className="text-[10px] text-gray-500">{item.fileName}</p>
+                    {item.uploadDate && <p className="text-[10px] text-gray-600 mt-0.5">{formatDate(item.uploadDate)}</p>}
+                    {item.notes && <p className="text-[10px] text-amber-400 mt-1">Note: {item.notes}</p>}
+                  </div>
+                ))}
+              </div>
+            </AdminGlass>
+          ))}
+        </div>
+      )}
+
+      {/* Reject Modal */}
+      <AdminModal
+        isOpen={!!selectedKYC}
+        onClose={() => { setSelectedKYC(null); setRejectReason('') }}
+        title="Reject KYC"
+        maxWidth="max-w-md"
+      >
+        {selectedKYC && (
+          <div className="space-y-4">
+            <p className="text-sm text-gray-300">
+              Rejecting KYC for <strong className="text-white">{selectedKYC.clientName}</strong>.
+              The investor will be notified to update their documents.
+            </p>
+            <div>
+              <label className="block text-xs font-medium text-gray-400 mb-1.5">Reason for rejection *</label>
+              <textarea
+                rows={3}
+                value={rejectReason}
+                onChange={e => setRejectReason(e.target.value)}
+                placeholder="Please provide a reason (e.g. blurry document, mismatch in name, etc.)"
+                className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-brand-red/40 focus:ring-1 focus:ring-brand-red/20 resize-none"
+              />
+            </div>
+            <div className="flex justify-end gap-3 pt-4 border-t border-white/[0.06]">
+              <button onClick={() => { setSelectedKYC(null); setRejectReason('') }} className="px-4 py-2 rounded-xl text-sm font-medium text-gray-400 hover:text-white hover:bg-white/[0.06] transition-colors">Cancel</button>
+              <button
+                disabled={processing || !rejectReason.trim()}
+                onClick={() => handleRejectAll(selectedKYC.clientId)}
+                className="px-5 py-2 rounded-xl text-sm font-medium text-white bg-red-600 hover:bg-red-700 transition-colors disabled:opacity-50"
+              >
+                {processing ? 'Rejecting...' : 'Confirm Rejection'}
+              </button>
+            </div>
+          </div>
+        )}
+      </AdminModal>
     </div>
   )
 }
