@@ -13,6 +13,7 @@ export function generateStaticParams() {
     { tab: ['invest-onboard'] },
     { tab: ['portfolio'] },
     { tab: ['kyc'] },
+    { tab: ['documents'] },
     { tab: ['transactions'] },
     { tab: ['messages'] },
     { tab: ['support'] },

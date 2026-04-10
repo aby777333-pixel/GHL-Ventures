@@ -111,15 +111,19 @@ export function useCommandPalette() {
 }
 
 // ── formatINR ─────────────────────────────────────────────────────
-export function formatINR(n: number): string {
+export function formatINR(n: number | null | undefined): string {
+  if (n == null || isNaN(n)) return '0'
   if (n >= 10000000) return `${(n / 10000000).toFixed(2)} Cr`
   if (n >= 100000) return `${(n / 100000).toFixed(2)} L`
   return new Intl.NumberFormat('en-IN').format(n)
 }
 
 // ── formatDate ────────────────────────────────────────────────────
-export function formatDate(dateStr: string): string {
-  return new Date(dateStr).toLocaleDateString('en-IN', {
+export function formatDate(dateStr: string | null | undefined): string {
+  if (!dateStr) return '—'
+  const d = new Date(dateStr)
+  if (isNaN(d.getTime())) return '—'
+  return d.toLocaleDateString('en-IN', {
     day: '2-digit',
     month: 'short',
     year: 'numeric',

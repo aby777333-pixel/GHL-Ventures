@@ -26,6 +26,8 @@ export default function ReferPage() {
     investableSurplus: '', message: '', privacy: false,
   })
   const [submitted, setSubmitted] = useState(false)
+  const [submitting, setSubmitting] = useState(false)
+  const [error, setError] = useState('')
 
   const handleChange = (field: string, value: string | boolean) => {
     setFormData((prev) => ({ ...prev, [field]: value }))
@@ -33,7 +35,8 @@ export default function ReferPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    setSubmitted(true)
+    setError('')
+    setSubmitting(true)
     try {
       await Promise.all([
         submitContactForm({
@@ -56,7 +59,13 @@ export default function ReferPage() {
           message: formData.message,
         }),
       ])
-    } catch (err) { console.warn('Referral form Supabase error:', err) }
+      setSubmitted(true)
+    } catch (err) {
+      console.warn('Referral form Supabase error:', err)
+      setError('Something went wrong. Please try again.')
+    } finally {
+      setSubmitting(false)
+    }
   }
 
   return (
@@ -119,7 +128,7 @@ export default function ReferPage() {
                       <input type="email" placeholder="Your Email *" required className="input-field" value={formData.yourEmail} onChange={(e) => handleChange('yourEmail', e.target.value)} />
                       <div className="relative">
                         <span className="absolute left-4 top-1/2 -translate-y-1/2 text-brand-grey text-sm">+91</span>
-                        <input type="tel" placeholder="Your Phone *" required className="input-field pl-14" value={formData.yourPhone} onChange={(e) => handleChange('yourPhone', e.target.value)} />
+                        <input type="tel" placeholder="Your Phone *" required pattern="[0-9]{10}" title="Please enter a valid 10-digit mobile number" className="input-field pl-14" value={formData.yourPhone} onChange={(e) => handleChange('yourPhone', e.target.value)} />
                       </div>
                       <select className="input-field" value={formData.relationship} onChange={(e) => handleChange('relationship', e.target.value)} required>
                         <option value="">Relationship *</option>
@@ -140,7 +149,7 @@ export default function ReferPage() {
                       <input type="email" placeholder="Their Email (Optional)" className="input-field" value={formData.theirEmail} onChange={(e) => handleChange('theirEmail', e.target.value)} />
                       <div className="relative">
                         <span className="absolute left-4 top-1/2 -translate-y-1/2 text-brand-grey text-sm">+91</span>
-                        <input type="tel" placeholder="Their Phone *" required className="input-field pl-14" value={formData.theirPhone} onChange={(e) => handleChange('theirPhone', e.target.value)} />
+                        <input type="tel" placeholder="Their Phone *" required pattern="[0-9]{10}" title="Please enter a valid 10-digit mobile number" className="input-field pl-14" value={formData.theirPhone} onChange={(e) => handleChange('theirPhone', e.target.value)} />
                       </div>
                       <input type="text" placeholder="Their City" className="input-field" value={formData.theirCity} onChange={(e) => handleChange('theirCity', e.target.value)} />
                     </div>
@@ -167,8 +176,14 @@ export default function ReferPage() {
                     <span className="text-xs text-brand-grey">I confirm that the person I am referring is aware I am sharing their contact details and consent to being contacted by GHL India Ventures.</span>
                   </label>
 
-                  <button type="submit" className="btn-primary w-full text-center flex items-center justify-center gap-2">
-                    <Send className="w-4 h-4" /> Submit Referral
+                  {error && (
+                    <div className="text-red-600 text-sm font-medium bg-red-50 border border-red-200 rounded-lg px-4 py-3">
+                      {error}
+                    </div>
+                  )}
+
+                  <button type="submit" disabled={submitting} className="btn-primary w-full text-center flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed">
+                    <Send className="w-4 h-4" /> {submitting ? 'Submitting...' : 'Submit Referral'}
                   </button>
                 </form>
               ) : (

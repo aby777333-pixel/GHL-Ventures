@@ -109,7 +109,7 @@ export function BlogImage({ src, alt, caption }: { src: string; alt: string; cap
         loading="lazy"
       />
       {caption && (
-        <figcaption className="text-xs text-brand-grey text-center py-3 px-4 bg-gray-50 italic">
+        <figcaption className="text-xs text-brand-grey text-center py-3 px-4 bg-gray-50 dark:bg-white/[0.04] italic">
           {caption}
         </figcaption>
       )}
@@ -128,7 +128,7 @@ export function BlogTable({ headers, rows, caption }: { headers: string[]; rows:
       )}
       <table className="w-full text-sm">
         <thead>
-          <tr className="bg-gray-100">
+          <tr className="bg-gray-100 dark:bg-white/[0.06]">
             {headers.map((h, i) => (
               <th key={i} className="px-4 py-3 text-left font-bold text-brand-black border-b border-gray-200">
                 {h}
@@ -138,7 +138,7 @@ export function BlogTable({ headers, rows, caption }: { headers: string[]; rows:
         </thead>
         <tbody>
           {rows.map((row, ri) => (
-            <tr key={ri} className={ri % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
+            <tr key={ri} className={ri % 2 === 0 ? 'bg-white dark:bg-transparent' : 'bg-gray-50 dark:bg-white/[0.03]'}>
               {row.map((cell, ci) => (
                 <td key={ci} className="px-4 py-3 text-brand-grey border-b border-gray-100">
                   {cell}
@@ -204,7 +204,7 @@ export function NumberedList({ items }: { items: { title: string; desc: string }
 /* ─── Highlight Box ─── */
 export function HighlightBox({ children, title }: { children: React.ReactNode; title?: string }) {
   return (
-    <div className="my-8 bg-gradient-to-br from-brand-red/5 to-red-50 border border-brand-red/20 rounded-xl p-6">
+    <div className="my-8 bg-gradient-to-br from-brand-red/5 to-red-50 dark:from-brand-red/10 dark:to-brand-red/[0.06] border border-brand-red/20 rounded-xl p-6">
       {title && <h4 className="font-bold text-brand-black mb-3 text-lg">{title}</h4>}
       <div className="text-brand-grey text-base leading-relaxed">{children}</div>
     </div>
@@ -231,7 +231,7 @@ export function FAQSection({ faqs }: { faqs: { q: string; a: string }[] }) {
           <div key={i} className="border border-gray-200 rounded-xl overflow-hidden">
             <button
               onClick={() => setOpenIndex(openIndex === i ? null : i)}
-              className="w-full flex items-center justify-between px-6 py-4 text-left hover:bg-gray-50 transition-colors"
+              className="w-full flex items-center justify-between px-6 py-4 text-left hover:bg-gray-50 dark:hover:bg-white/[0.04] transition-colors"
             >
               <span className="font-semibold text-brand-black text-base pr-4">{faq.q}</span>
               <span className={`text-brand-red transition-transform ${openIndex === i ? 'rotate-45' : ''}`}>
@@ -271,7 +271,7 @@ export default function RichBlogArticle({ article, children, relatedArticles, se
           label={article.category}
           className="rounded-none"
         />
-        <div className="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-white to-transparent" />
+        <div className="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-white dark:from-[#111111] to-transparent" />
       </section>
 
       {/* ─── Article Header ─── */}

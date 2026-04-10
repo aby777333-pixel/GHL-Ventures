@@ -17,7 +17,7 @@ import AdminEmptyState from '../shared/AdminEmptyState'
 import { formatINR, formatDate } from '@/lib/admin/adminHooks'
 import type { Lead, LeadStage, LeadSource, Commission } from '@/lib/admin/adminTypes'
 import UploadWithFolderPicker from '@/components/shared/UploadWithFolderPicker'
-import { createLead, fetchLeads, deleteLead } from '@/lib/supabase/leadService'
+import { createLead, updateLead, fetchLeads, deleteLead } from '@/lib/supabase/leadService'
 import { onNewLead } from '@/lib/supabase/realtimeSubscriptions'
 
 // ── Sub-tabs ─────────────────────────────────────────────────────
@@ -51,6 +51,7 @@ export default function SalesModule({ subTab, navigate, showToast }: SalesModule
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null)
   const [leadModalOpen, setLeadModalOpen] = useState(false)
   const [addLeadOpen, setAddLeadOpen] = useState(false)
+  const [editingLeadId, setEditingLeadId] = useState<string | null>(null)
   const [folderPickerOpen, setFolderPickerOpen] = useState(false)
   const [savingLead, setSavingLead] = useState(false)
   const [mondaySyncing, setMondaySyncing] = useState(false)
@@ -126,7 +127,7 @@ export default function SalesModule({ subTab, navigate, showToast }: SalesModule
     if (!leadForm.name.trim()) { showToast('Lead name is required', 'error'); return }
     setSavingLead(true)
     try {
-      const result = await createLead({
+      const payload = {
         name: leadForm.name.trim(),
         email: leadForm.email.trim() || undefined,
         phone: leadForm.phone.trim() || undefined,
@@ -134,19 +135,33 @@ export default function SalesModule({ subTab, navigate, showToast }: SalesModule
         stage: leadForm.stage,
         value: leadForm.value ? Number(leadForm.value) : 0,
         probability: leadForm.probability ? Number(leadForm.probability) : 50,
-        assignedTo: leadForm.assignedTo.trim() || undefined,
+        assignedTo: undefined, // assigned_to is UUID column — use undefined for unassigned; RM assignment handled separately
         notes: leadForm.notes.trim() || undefined,
-      })
-      if (result.success) {
-        showToast(`Lead "${leadForm.name}" created — folder auto-created in Sales & Reports`, 'success')
-        resetLeadForm()
-        setAddLeadOpen(false)
-        loadLeads() // refresh list
+      }
+
+      if (editingLeadId) {
+        // ── UPDATE existing lead ──
+        const result = await updateLead(editingLeadId, payload)
+        if (result.success) {
+          showToast(`Lead "${leadForm.name}" updated`, 'success')
+          resetLeadForm(); setEditingLeadId(null); setAddLeadOpen(false)
+          loadLeads()
+        } else {
+          showToast(result.error || 'Failed to update lead', 'error')
+        }
       } else {
-        showToast(result.error || 'Failed to create lead', 'error')
+        // ── CREATE new lead ──
+        const result = await createLead(payload)
+        if (result.success) {
+          showToast(`Lead "${leadForm.name}" created — folder auto-created in Sales & Reports`, 'success')
+          resetLeadForm(); setAddLeadOpen(false)
+          loadLeads()
+        } else {
+          showToast(result.error || 'Failed to create lead', 'error')
+        }
       }
     } catch (err: any) {
-      showToast(err.message || 'Error creating lead', 'error')
+      showToast(err.message || 'Error saving lead', 'error')
     } finally {
       setSavingLead(false)
     }
@@ -209,7 +224,7 @@ export default function SalesModule({ subTab, navigate, showToast }: SalesModule
             </button>
           )}
           <button
-            onClick={() => setAddLeadOpen(true)}
+            onClick={() => { resetLeadForm(); setEditingLeadId(null); setAddLeadOpen(true) }}
             className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium text-white bg-brand-red/20 border border-brand-red/30 hover:bg-brand-red/30 transition-colors admin-btn-press"
           >
             <UserPlus className="w-4 h-4" />
@@ -268,7 +283,24 @@ export default function SalesModule({ subTab, navigate, showToast }: SalesModule
               </ModalButton>
               <div className="ml-auto flex items-center gap-2">
                 <ModalButton onClick={() => { setLeadModalOpen(false); setSelectedLead(null) }}>Close</ModalButton>
-                <ModalButton variant="primary" onClick={() => { setLeadModalOpen(false); setSelectedLead(null); setAddLeadOpen(true) }}>Edit Lead</ModalButton>
+                <ModalButton variant="primary" onClick={() => {
+                  // Pre-populate form from selected lead
+                  setLeadForm({
+                    name: selectedLead.name || '',
+                    email: selectedLead.email || '',
+                    phone: selectedLead.phone || '',
+                    source: selectedLead.source || 'website',
+                    stage: selectedLead.stage || 'new',
+                    value: selectedLead.value ? String(selectedLead.value) : '',
+                    probability: selectedLead.aiScore ? String(selectedLead.aiScore) : '50',
+                    assignedTo: selectedLead.assignedTo || '',
+                    notes: selectedLead.notes || '',
+                  })
+                  setEditingLeadId(selectedLead.id)
+                  setLeadModalOpen(false)
+                  setSelectedLead(null)
+                  setAddLeadOpen(true)
+                }}>Edit Lead</ModalButton>
               </div>
             </div>
           }
@@ -282,13 +314,13 @@ export default function SalesModule({ subTab, navigate, showToast }: SalesModule
         <AdminModal
           isOpen={addLeadOpen}
           onClose={() => setAddLeadOpen(false)}
-          title="New Lead"
-          subtitle="Register a new sales lead"
+          title={editingLeadId ? 'Edit Lead' : 'New Lead'}
+          subtitle={editingLeadId ? 'Update lead details' : 'Register a new sales lead'}
           maxWidth="max-w-xl"
           footer={
             <>
-              <ModalButton onClick={() => { resetLeadForm(); setAddLeadOpen(false) }}>Cancel</ModalButton>
-              <ModalButton variant="primary" onClick={handleSaveLead} disabled={savingLead}>{savingLead ? 'Creating…' : 'Save Lead'}</ModalButton>
+              <ModalButton onClick={() => { resetLeadForm(); setEditingLeadId(null); setAddLeadOpen(false) }}>Cancel</ModalButton>
+              <ModalButton variant="primary" onClick={handleSaveLead} disabled={savingLead}>{savingLead ? 'Saving…' : editingLeadId ? 'Update Lead' : 'Save Lead'}</ModalButton>
             </>
           }
         >
@@ -693,7 +725,7 @@ function LeadDetailContent({ lead }: { lead: Lead }) {
         {[
           { label: 'Deal Value', value: formatINR(lead.value) },
           { label: 'Source', value: lead.source.replace('-', ' ') },
-          { label: 'Assigned To', value: lead.assignedTo },
+          { label: 'Assigned To', value: lead.assignedTo || 'Unassigned' },
           { label: 'Created', value: formatDate(lead.createdDate) },
         ].map(item => (
           <div key={item.label} className="p-3 rounded-xl bg-white/[0.03] border border-white/[0.04]">

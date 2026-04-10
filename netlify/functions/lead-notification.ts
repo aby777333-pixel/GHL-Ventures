@@ -25,7 +25,7 @@ interface LeadNotificationBody {
 // Restrict CORS to our own domain for security
 const ALLOWED_ORIGINS = [
   'https://ghl-india-ventures-2025.netlify.app',
-  'http://localhost:3000',
+  // 'http://localhost:3000', // disabled for production
 ]
 
 function getCorsHeaders(request?: Request) {
@@ -207,12 +207,7 @@ export default async (request: Request) => {
 
     if (!resendKey) {
       // No Resend API key configured — log and return success
-      console.log('[lead-notification] No RESEND_API_KEY configured. Lead received:', JSON.stringify({
-        name: lead.fullName,
-        email: lead.email,
-        source: lead.source,
-        timestamp: new Date().toISOString(),
-      }))
+      console.log('[lead-notification] No RESEND_API_KEY configured. Lead received from source:', lead.source)
       return new Response(
         JSON.stringify({ success: true, emailsSent: false, reason: 'No RESEND_API_KEY configured' }),
         { status: 200, headers: { 'Content-Type': 'application/json', ...getCorsHeaders(request) } },

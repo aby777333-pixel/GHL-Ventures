@@ -41,10 +41,16 @@ export async function fetchPortfolioAssets(clientId?: string) {
 
 export async function fetchNAVHistory(clientId?: string) {
   if (!isSupabaseConfigured() || !clientId) return []
-  return safeFetch(
+  const rows = await safeFetch(
     () => sb.from('nav_history').select('*').eq('client_id', clientId).order('month', { ascending: true }),
     [], 'fetchNAVHistory',
   )
+  // Normalize: DB has nav_value, chart expects nav
+  return (rows as any[]).map((r: any) => ({
+    ...r,
+    nav: r.nav_value ?? r.nav ?? 0,
+    month: r.month ? new Date(r.month).toLocaleDateString('en-IN', { month: 'short', year: '2-digit' }) : r.month,
+  }))
 }
 
 export async function getAllocation(clientId?: string) {
@@ -71,18 +77,46 @@ export async function getAllocation(clientId?: string) {
 
 export async function fetchTransactions(clientId?: string) {
   if (!isSupabaseConfigured() || !clientId) return []
-  return safeFetch(
+  const rows = await safeFetch(
     () => sb.from('transactions').select('*').eq('client_id', clientId).order('date', { ascending: false }),
     [], 'fetchTransactions',
+  )
+  // Normalize: ensure date is formatted for display
+  return (rows as any[]).map((r: any) => ({
+    ...r,
+    date: r.date ? new Date(r.date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : r.date,
+  }))
+}
+
+export async function fetchPayoutHistory(clientId?: string) {
+  if (!isSupabaseConfigured() || !clientId) return []
+  return safeFetch(
+    () => sb.from('transactions').select('*').eq('client_id', clientId).eq('type', 'Dividend').order('date', { ascending: false }),
+    [], 'fetchPayoutHistory',
   )
 }
 
 export async function fetchMessages(clientId?: string) {
   if (!isSupabaseConfigured() || !clientId) return []
-  return safeFetch(
-    () => sb.from('messages').select('*').eq('to_id', clientId).order('created_at', { ascending: false }),
+  // Messages use auth user IDs for from_id/to_id, not client record IDs.
+  // Resolve the auth user_id from the clients table first.
+  let userId = clientId
+  try {
+    const { data: clientRow } = await sb.from('clients').select('user_id').eq('id', clientId).maybeSingle()
+    if (clientRow?.user_id) userId = clientRow.user_id
+  } catch { /* use clientId as fallback */ }
+  const rows = await safeFetch(
+    () => sb.from('messages').select('*').or(`to_id.eq.${userId},from_id.eq.${userId}`).order('created_at', { ascending: false }),
     [], 'fetchMessages',
   )
+  // Normalize field names for display
+  return (rows as any[]).map((r: any) => ({
+    ...r,
+    from: r.from_name || 'Advisory Team',
+    avatar: (r.from_name || 'A')[0]?.toUpperCase() || 'A',
+    time: r.created_at ? new Date(r.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }) : '',
+    preview: r.body?.substring(0, 80) || '',
+  }))
 }
 
 export async function fetchSupportTickets(clientId?: string) {
@@ -111,20 +145,155 @@ export async function fetchNotifications(clientId?: string) {
 export async function getKYCSteps(clientId?: string) {
   if (!isSupabaseConfigured() || !clientId) return []
   try {
-    const { data } = await sb.from('kyc_documents').select('type, status').eq('client_id', clientId)
-    if (!data || data.length === 0) return []
-    return (data as any[]).map((d: any) => ({
-      id: d.type,
-      label: d.type?.replace(/_/g, ' ').replace(/\b\w/g, (c: string) => c.toUpperCase()),
-      status: d.status,
-    }))
+    // Check each structured KYC table for completion
+    const steps = [
+      { id: 'basic', label: 'Basic Details', table: 'kyc_basic_details' },
+      { id: 'identity', label: 'Identity Details', table: 'kyc_identity_details' },
+      { id: 'bank', label: 'Bank Details', table: 'kyc_bank_details' },
+      { id: 'demat', label: 'Demat Account', table: 'kyc_demat_details' },
+      { id: 'nominee', label: 'Nominee Details', table: 'nominees' },
+    ]
+    const results = []
+    for (const step of steps) {
+      if (step.id === 'nominee') {
+        const { data } = await sb.from(step.table).select('id, status').eq('client_id', clientId).eq('status', 'active')
+        results.push({ id: step.id, label: step.label, status: data && data.length > 0 ? 'submitted' : 'pending' })
+      } else {
+        const { data } = await sb.from(step.table).select('status').eq('client_id', clientId).maybeSingle()
+        results.push({ id: step.id, label: step.label, status: data?.status || 'pending' })
+      }
+    }
+    return results
   } catch { return [] }
+}
+
+// ── Structured KYC CRUD ─────────────────────────────────────
+
+export async function fetchKYCBasicDetails(clientId?: string) {
+  if (!isSupabaseConfigured() || !clientId) return null
+  return safeFetch(() => sb.from('kyc_basic_details').select('*').eq('client_id', clientId).maybeSingle(), null, 'fetchKYCBasic')
+}
+
+export async function upsertKYCBasicDetails(clientId: string, userId: string, data: Record<string, any>) {
+  if (!isSupabaseConfigured()) return null
+  const row = { ...data, client_id: clientId, user_id: userId, status: 'submitted' }
+  const { data: result, error } = await sb.from('kyc_basic_details').upsert(row, { onConflict: 'client_id' }).select().single()
+  if (error) { console.warn('[kyc] upsert basic error:', error.message); return null }
+  await sb.from('clients').update({ kyc_step: Math.max(1, data.kyc_step || 1) }).eq('id', clientId)
+  return result
+}
+
+export async function fetchKYCIdentityDetails(clientId?: string) {
+  if (!isSupabaseConfigured() || !clientId) return null
+  return safeFetch(() => sb.from('kyc_identity_details').select('*').eq('client_id', clientId).maybeSingle(), null, 'fetchKYCIdentity')
+}
+
+export async function upsertKYCIdentityDetails(clientId: string, userId: string, data: Record<string, any>) {
+  if (!isSupabaseConfigured()) return null
+  const row = { ...data, client_id: clientId, user_id: userId, status: 'submitted' }
+  const { data: result, error } = await sb.from('kyc_identity_details').upsert(row, { onConflict: 'client_id' }).select().single()
+  if (error) { console.warn('[kyc] upsert identity error:', error.message); return null }
+  await sb.from('clients').update({ kyc_step: Math.max(2, data.kyc_step || 2) }).eq('id', clientId)
+  return result
+}
+
+export async function fetchKYCBankDetails(clientId?: string) {
+  if (!isSupabaseConfigured() || !clientId) return null
+  return safeFetch(() => sb.from('kyc_bank_details').select('*').eq('client_id', clientId).maybeSingle(), null, 'fetchKYCBank')
+}
+
+export async function upsertKYCBankDetails(clientId: string, userId: string, data: Record<string, any>) {
+  if (!isSupabaseConfigured()) return null
+  const row = { ...data, client_id: clientId, user_id: userId, status: 'submitted' }
+  const { data: result, error } = await sb.from('kyc_bank_details').upsert(row, { onConflict: 'client_id' }).select().single()
+  if (error) { console.warn('[kyc] upsert bank error:', error.message); return null }
+  await sb.from('clients').update({ kyc_step: Math.max(3, data.kyc_step || 3) }).eq('id', clientId)
+  return result
+}
+
+export async function fetchKYCDematDetails(clientId?: string) {
+  if (!isSupabaseConfigured() || !clientId) return null
+  return safeFetch(() => sb.from('kyc_demat_details').select('*').eq('client_id', clientId).maybeSingle(), null, 'fetchKYCDemat')
+}
+
+export async function upsertKYCDematDetails(clientId: string, userId: string, data: Record<string, any>) {
+  if (!isSupabaseConfigured()) return null
+  const row = { ...data, client_id: clientId, user_id: userId, status: data.skipped ? 'skipped' : 'submitted' }
+  const { data: result, error } = await sb.from('kyc_demat_details').upsert(row, { onConflict: 'client_id' }).select().single()
+  if (error) { console.warn('[kyc] upsert demat error:', error.message); return null }
+  await sb.from('clients').update({ kyc_step: Math.max(4, data.kyc_step || 4) }).eq('id', clientId)
+  return result
+}
+
+export async function fetchNominees(clientId?: string) {
+  if (!isSupabaseConfigured() || !clientId) return []
+  return safeFetch(() => sb.from('nominees').select('*').eq('client_id', clientId).eq('status', 'active').order('created_at'), [], 'fetchNominees')
+}
+
+export async function addNominee(clientId: string, userId: string, data: Record<string, any>) {
+  if (!isSupabaseConfigured()) return null
+  const row = { ...data, client_id: clientId, user_id: userId, status: 'active' }
+  const { data: result, error } = await sb.from('nominees').insert(row).select().single()
+  if (error) { console.warn('[kyc] add nominee error:', error.message); return null }
+  return result
+}
+
+export async function updateNominee(nomineeId: string, data: Record<string, any>) {
+  if (!isSupabaseConfigured()) return null
+  const { data: result, error } = await sb.from('nominees').update(data).eq('id', nomineeId).select().single()
+  if (error) { console.warn('[kyc] update nominee error:', error.message); return null }
+  return result
+}
+
+export async function deleteNominee(nomineeId: string) {
+  if (!isSupabaseConfigured()) return false
+  const { error } = await sb.from('nominees').update({ status: 'inactive' }).eq('id', nomineeId)
+  return !error
+}
+
+export async function submitKYCForReview(clientId: string) {
+  if (!isSupabaseConfigured()) return false
+  try {
+    // Update all step statuses to submitted
+    await Promise.all([
+      sb.from('kyc_basic_details').update({ status: 'submitted' }).eq('client_id', clientId),
+      sb.from('kyc_identity_details').update({ status: 'submitted' }).eq('client_id', clientId),
+      sb.from('kyc_bank_details').update({ status: 'submitted' }).eq('client_id', clientId),
+    ])
+    // Update client kyc_status
+    await sb.from('clients').update({ kyc_status: 'submitted', kyc_step: 5 }).eq('id', clientId)
+    // Notify admins
+    try {
+      const { data: admins } = await sb.from('profiles').select('id').in('role', ['admin', 'super_admin'])
+      const { data: clientData } = await sb.from('clients').select('full_name').eq('id', clientId).single()
+      if (admins && admins.length > 0) {
+        const notifs = admins.map((a: any) => ({
+          user_id: a.id,
+          title: 'New KYC Submission',
+          message: `${clientData?.full_name || 'A client'} has submitted KYC for review.`,
+          type: 'info',
+          link: '/admin?tab=kyc-queue',
+          metadata: { client_id: clientId },
+        }))
+        await sb.from('notifications').insert(notifs)
+      }
+    } catch { /* non-blocking */ }
+    return true
+  } catch { return false }
+}
+
+export async function fetchKYCOverallStatus(clientId?: string) {
+  if (!isSupabaseConfigured() || !clientId) return { step: 0, status: 'pending' }
+  try {
+    const { data: client } = await sb.from('clients').select('kyc_step, kyc_status').eq('id', clientId).maybeSingle()
+    return { step: client?.kyc_step || 0, status: client?.kyc_status || 'pending' }
+  } catch { return { step: 0, status: 'pending' } }
 }
 
 export async function fetchDocuments(clientId?: string) {
   if (!isSupabaseConfigured() || !clientId) return []
   return safeFetch(
-    () => sb.from('documents').select('*').eq('client_id', clientId).order('uploaded_at', { ascending: false }),
+    () => sb.from('documents').select('*').or(`client_id.eq.${clientId},entity_id.eq.${clientId}`).order('uploaded_at', { ascending: false }),
     [], 'fetchDocuments',
   )
 }
@@ -145,12 +314,12 @@ export async function createSupportTicket(ticket: Record<string, any>) {
   // Auto-generate ticket_number (required NOT NULL field)
   const ticketNumber = `TKT-${Date.now().toString(36).toUpperCase()}-${Math.random().toString(36).substring(2, 6).toUpperCase()}`
 
-  // Resolve client_name from profiles if not provided
+  // Resolve client_name from clients table (client_id = clients.id, NOT profiles.id)
   let clientName = ticket.client_name || 'Client'
   if (!ticket.client_name && ticket.client_id) {
     try {
-      const { data: profile } = await sb.from('profiles').select('full_name').eq('id', ticket.client_id).single()
-      if (profile?.full_name) clientName = profile.full_name
+      const { data: clientRow } = await sb.from('clients').select('full_name').eq('id', ticket.client_id).maybeSingle()
+      if (clientRow?.full_name) clientName = clientRow.full_name
     } catch { /* use default */ }
   }
 
@@ -232,25 +401,39 @@ export async function updateProfile(fields: Record<string, any>) {
 
   // Update profiles table
   const profileUpdate: Record<string, any> = {}
-  if (fields.full_name) profileUpdate.full_name = fields.full_name
-  if (fields.phone) profileUpdate.phone = fields.phone
-  if (fields.city) profileUpdate.city = fields.city
+  if ('full_name' in fields && fields.full_name) profileUpdate.full_name = fields.full_name
+  if ('phone' in fields && fields.phone) profileUpdate.phone = fields.phone
+  if ('city' in fields && fields.city) profileUpdate.city = fields.city
 
   if (Object.keys(profileUpdate).length > 0) {
-    await sb.from('profiles').update(profileUpdate).eq('id', user.id)
+    const { error: pErr } = await sb.from('profiles').update(profileUpdate).eq('id', user.id)
+    if (pErr) console.warn('[dashboard] Profile update error:', pErr.message)
   }
 
   // Update clients table (nominee, dob, occupation stored here)
+  // Use 'in' check so empty strings don't prevent fields from being saved
+  const clientFields = ['dob', 'occupation', 'nominee_name', 'nominee_relation', 'nominee_pan', 'nominee_share']
   const clientUpdate: Record<string, any> = {}
-  if (fields.dob) clientUpdate.dob = fields.dob
-  if (fields.occupation) clientUpdate.occupation = fields.occupation
-  if (fields.nominee_name) clientUpdate.nominee_name = fields.nominee_name
-  if (fields.nominee_relation) clientUpdate.nominee_relation = fields.nominee_relation
-  if (fields.nominee_pan) clientUpdate.nominee_pan = fields.nominee_pan
-  if (fields.nominee_share) clientUpdate.nominee_share = fields.nominee_share
+  for (const key of clientFields) {
+    if (key in fields && fields[key] !== undefined && fields[key] !== '') {
+      clientUpdate[key] = fields[key]
+    }
+  }
 
   if (Object.keys(clientUpdate).length > 0) {
-    await sb.from('clients').update(clientUpdate).eq('user_id', user.id)
+    clientUpdate.updated_at = new Date().toISOString()
+    const { error: cErr } = await sb.from('clients').update(clientUpdate).eq('user_id', user.id)
+    if (cErr) {
+      console.warn('[dashboard] Client update error:', cErr.message)
+      // Fallback: try upsert via insert if no row exists
+      const { error: iErr } = await sb.from('clients').upsert({
+        user_id: user.id,
+        email: user.email || '',
+        full_name: fields.full_name || '',
+        ...clientUpdate,
+      }, { onConflict: 'user_id' })
+      if (iErr) console.warn('[dashboard] Client upsert fallback error:', iErr.message)
+    }
   }
 
   return true
@@ -429,7 +612,7 @@ export async function addBankAccount(account: BankAccountInput) {
   }
 
   const { data, error } = await sb.from('bank_accounts').insert(account).select().single()
-  if (error) { console.warn('[dashboard] Add bank account error:', error.message); return null }
+  if (error) { console.error('[dashboard] Add bank account error:', error.message, error.details, error.hint); return null }
   return data
 }
 
@@ -482,7 +665,7 @@ export async function submitInvestmentApplication(app: InvestmentApplicationInpu
   }
 
   const { data, error } = await sb.from('investment_applications').insert(row).select().single()
-  if (error) { console.warn('[dashboard] Submit investment error:', error.message); return null }
+  if (error) { console.error('[dashboard] Submit investment error:', error.message, error.details, error.hint, JSON.stringify(row)); return null }
 
   // Update client total_invested (pending amount tracked)
   try {
@@ -598,6 +781,9 @@ export async function uploadClientDocument(doc: {
 }) {
   if (!isSupabaseConfigured()) return null
 
+  // KYC and compliance docs get 'submitted' status so admin can review them
+  const isKYC = doc.category === 'kyc' || doc.category === 'compliance'
+
   const { data, error } = await sb.from('documents').insert({
     title: doc.title,
     file_url: doc.file_url,
@@ -608,8 +794,10 @@ export async function uploadClientDocument(doc: {
     category: doc.category,
     entity_type: 'client',
     entity_id: doc.client_id,
+    client_id: doc.client_id,
     uploaded_by: doc.user_id,
     access_level: 'restricted',
+    status: isKYC ? 'submitted' : 'active',
   }).select().single()
 
   if (error) { console.warn('[dashboard] Upload client doc error:', error.message); return null }

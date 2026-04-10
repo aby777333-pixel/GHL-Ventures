@@ -7,7 +7,7 @@ import {
   LayoutDashboard, TrendingUp, Briefcase, FileText, ArrowLeftRight,
   HeadphonesIcon, Gift, User, Settings, LogOut, Search, Bell, ChevronDown,
   ChevronRight, ArrowUpRight, ArrowDownRight, Shield, Zap, Download,
-  Plus, Eye, Calendar, Clock, Star, Award, Target, PieChart as PieIcon,
+  Plus, Eye, EyeOff, Calendar, Clock, Star, Award, Target, PieChart as PieIcon,
   BarChart3, Wallet, IndianRupee, Percent, Building2, Rocket,
   Menu, X, ExternalLink, Copy, CheckCircle, AlertCircle, Info,
   Upload, Camera, MessageSquare, Ticket, Phone, PhoneCall, Video, Globe,
@@ -79,6 +79,10 @@ import { createRMRequest } from '@/lib/supabase/chatService'
 // AI Advisor
 import ClientAIAdvisor from './ClientAIAdvisor'
 
+// KYC Wizard & Documents Tab
+import KYCWizard from './KYCWizard'
+import DocumentsTab from './DocumentsTab'
+
 // Voice Input (Sarvam AI STT)
 import VoiceInput from '@/components/shared/VoiceInput'
 
@@ -86,7 +90,7 @@ import VoiceInput from '@/components/shared/VoiceInput'
    TYPES
    ═══════════════════════════════════════════════════════════════ */
 type Theme = 'dark' | 'light'
-type TabId = 'dashboard' | 'investments' | 'invest-onboard' | 'portfolio' | 'kyc' | 'transactions' | 'messages' | 'support' | 'referrals' | 'calculators' | 'ai-advisor' | 'profile' | 'settings'
+type TabId = 'dashboard' | 'investments' | 'invest-onboard' | 'portfolio' | 'kyc' | 'documents' | 'transactions' | 'messages' | 'support' | 'referrals' | 'calculators' | 'ai-advisor' | 'profile' | 'settings'
 
 /* ═══════════════════════════════════════════════════════════════
    ICON MAP & TOUR — kept for UI chrome; personal data comes
@@ -163,15 +167,16 @@ const TOUR_STEPS = [
    ═══════════════════════════════════════════════════════════════ */
 const SIDEBAR_ITEMS: { id: TabId; label: string; icon: any; badge?: string }[] = [
   { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
-  { id: 'investments', label: 'Investments', icon: TrendingUp },
+  { id: 'investments', label: 'Invest', icon: TrendingUp },
   { id: 'portfolio', label: 'Portfolio', icon: Briefcase },
-  { id: 'kyc', label: 'KYC & Documents', icon: FileCheck },
-  { id: 'transactions', label: 'Transactions', icon: ArrowLeftRight },
-  { id: 'messages', label: 'Messages', icon: MessageSquare, badge: '2' },
-  { id: 'support', label: 'Support', icon: HeadphonesIcon },
+  { id: 'kyc', label: 'KYC', icon: FileCheck },
+  { id: 'documents', label: 'Documents', icon: FileText },
+  { id: 'transactions', label: 'Transaction', icon: ArrowLeftRight },
+  { id: 'support', label: 'Support Tickets', icon: HeadphonesIcon },
+  { id: 'referrals', label: 'Referral System', icon: Gift },
+  { id: 'messages', label: 'Messages', icon: MessageSquare },
   { id: 'calculators', label: 'Calculators', icon: BarChart3 },
   { id: 'ai-advisor', label: 'AI Advisor', icon: Brain, badge: 'NEW' },
-  { id: 'referrals', label: 'Referrals', icon: Gift },
 ]
 const SIDEBAR_BOTTOM: { id: TabId; label: string; icon: any }[] = [
   { id: 'profile', label: 'Profile', icon: User },
@@ -253,7 +258,7 @@ export default function DashboardClient() {
   // ─── Routing ─────────────────────────────────────────────
   const router = useRouter()
   const pathname = usePathname()
-  const VALID_TABS: TabId[] = ['dashboard','investments','invest-onboard','portfolio','kyc','transactions','messages','support','calculators','ai-advisor','referrals','profile','settings']
+  const VALID_TABS: TabId[] = ['dashboard','investments','invest-onboard','portfolio','kyc','documents','transactions','messages','support','calculators','ai-advisor','referrals','profile','settings']
   const activeTab: TabId = useMemo(() => {
     const segments = pathname.split('/').filter(Boolean)
     const tabSegment = segments[1] as TabId | undefined
@@ -266,21 +271,43 @@ export default function DashboardClient() {
 
   // ─── Password Reset Detection (from /auth/callback recovery flow) ──
   const [showPasswordReset, setShowPasswordReset] = useState(false)
+  const [passwordResetMandatory, setPasswordResetMandatory] = useState(false)
   const [newPassword, setNewPassword] = useState('')
   const [confirmNewPassword, setConfirmNewPassword] = useState('')
   const [passwordResetDone, setPasswordResetDone] = useState(false)
+  const [showNewPw, setShowNewPw] = useState(false)
+  const [showConfirmPw, setShowConfirmPw] = useState(false)
+  const [msgAttachments, setMsgAttachments] = useState<File[]>([])
+  const msgFileRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const params = new URLSearchParams(window.location.search)
-      if (params.get('password_reset') === 'true' && activeTab === 'settings') {
+      const resetParam = params.get('password_reset')
+      // Check URL param OR sessionStorage (survives page refresh)
+      const sessionFlag = typeof sessionStorage !== 'undefined' && sessionStorage.getItem('ghl_password_reset_mandatory') === '1'
+      if (resetParam === 'required' || resetParam === 'true' || sessionFlag) {
+        // Force settings tab and open password reset form
         setShowPasswordReset(true)
+        if (resetParam === 'required' || sessionFlag) {
+          setPasswordResetMandatory(true)
+          // Force to settings tab — block all navigation until password is changed
+          if (activeTab !== 'settings') setActiveTab('settings')
+        }
       }
     }
-  }, [activeTab])
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Block navigation if password reset is mandatory
+  useEffect(() => {
+    if (passwordResetMandatory && activeTab !== 'settings') {
+      setActiveTab('settings')
+    }
+  }, [activeTab, passwordResetMandatory]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const handlePasswordUpdate = async () => {
     if (newPassword.length < 8) { showToast('⚠ Password must be at least 8 characters', 'info'); return }
+    if (!/[a-zA-Z]/.test(newPassword) || !/[0-9]/.test(newPassword)) { showToast('⚠ Password must contain both letters and numbers', 'info'); return }
     if (newPassword !== confirmNewPassword) { showToast('⚠ Passwords do not match', 'info'); return }
     try {
       const { isSupabaseConfigured } = await import('@/lib/supabase/client')
@@ -290,8 +317,18 @@ export default function DashboardClient() {
       if (error) { showToast(`⚠ ${error.message}`, 'info'); return }
       setPasswordResetDone(true)
       setShowPasswordReset(false)
+      setPasswordResetMandatory(false)
       setNewPassword('')
       setConfirmNewPassword('')
+      // Remove password_reset from URL and sessionStorage
+      if (typeof window !== 'undefined') {
+        const url = new URL(window.location.href)
+        url.searchParams.delete('password_reset')
+        window.history.replaceState({}, '', url.toString())
+      }
+      if (typeof sessionStorage !== 'undefined') {
+        sessionStorage.removeItem('ghl_password_reset_mandatory')
+      }
       showToast('Password updated successfully!', 'success')
     } catch {
       showToast('⚠ Failed to update password', 'info')
@@ -332,7 +369,19 @@ export default function DashboardClient() {
   const userKycStatus = user?.kyc_status || 'pending'
 
   // ─── State (ALL hooks must be before early returns) ─────
-  const theme: Theme = 'dark'  // Dark mode only
+  const [theme, setTheme] = useState<Theme>(() => {
+    if (typeof window !== 'undefined') {
+      return (localStorage.getItem('ghl-theme') as Theme) || 'light'
+    }
+    return 'light'
+  })
+  // Persist theme to localStorage
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('ghl-theme', theme)
+      document.documentElement.classList.toggle('dark', theme === 'dark')
+    }
+  }, [theme])
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [notifOpen, setNotifOpen] = useState(false)
   const [currentTime, setCurrentTime] = useState('')
@@ -357,7 +406,7 @@ export default function DashboardClient() {
   const [privacyScrolled, setPrivacyScrolled] = useState(false)
   const [docName, setDocName] = useState('')
   const [docCategory, setDocCategory] = useState('')
-  const [uploadedFiles, setUploadedFiles] = useState<string[]>([])
+  const [uploadedFiles, setUploadedFiles] = useState<{ name: string; url: string; path: string; bucket: string; size: number; type: string }[]>([])
   const [investAmount, setInvestAmount] = useState(2500000)
   const [investVehicle, setInvestVehicle] = useState('AIF Direct - Category II')
   const [investTenure, setInvestTenure] = useState('5 Years')
@@ -391,7 +440,21 @@ export default function DashboardClient() {
 
   const [activeCalc, setActiveCalc] = useState('sip')
   const [calcInputs, setCalcInputs] = useState({ amount: 100000, rate: 15, years: 5 })
-  const [notifPrefs, setNotifPrefs] = useState({ email: true, nav: true, invest: true, dividend: true })
+  const [notifPrefs, setNotifPrefs] = useState(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const saved = localStorage.getItem('ghl-notif-prefs')
+        if (saved) return JSON.parse(saved)
+      } catch { /* fallback */ }
+    }
+    return { email: true, nav: true, invest: true, dividend: true }
+  })
+  // Persist notification preferences
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('ghl-notif-prefs', JSON.stringify(notifPrefs))
+    }
+  }, [notifPrefs])
   const [dashLang, setDashLang] = useState('English')
   const [toast, setToast] = useState<{ msg: string; type: 'success' | 'info' } | null>(null)
   const [notifsRead, setNotifsRead] = useState<Set<string>>(new Set())
@@ -414,13 +477,54 @@ export default function DashboardClient() {
   const [profilePhoto, setProfilePhoto] = useState<string | null>(null)
   const [editProfileOpen, setEditProfileOpen] = useState(false)
   const [editForm, setEditForm] = useState({
-    full_name: '', phone: '', city: '', dob: '', occupation: '',
+    full_name: '', phone: '', city: '', dob: '', occupation: '', pan: '',
     nominee_name: '', nominee_relation: '', nominee_pan: '', nominee_share: '',
   })
-  const [savedProfileData, setSavedProfileData] = useState<Record<string, string>>({})
+  const [savedProfileData, setSavedProfileData] = useState<Record<string, string>>(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const saved = localStorage.getItem('ghl-profile-data')
+        if (saved) return JSON.parse(saved)
+      } catch { /* fallback */ }
+    }
+    return {}
+  })
   const [bankForm, setBankForm] = useState({
     holder_name: '', account_number: '', ifsc_code: '', account_type: 'savings'
   })
+  const [savedBankData, setSavedBankData] = useState<Record<string, string>>(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const saved = localStorage.getItem('ghl-bank-data')
+        if (saved) return JSON.parse(saved)
+      } catch { /* fallback */ }
+    }
+    return {}
+  })
+
+  // Initialize savedProfileData from user object on load (so data persists across refresh)
+  useEffect(() => {
+    if (user && Object.keys(savedProfileData).length === 0) {
+      const fromUser: Record<string, string> = {}
+      if (user.name) fromUser.full_name = user.name
+      if (user.phone) fromUser.phone = user.phone
+      if (user.city) fromUser.city = user.city
+      if ((user as any).dob) fromUser.dob = (user as any).dob
+      if ((user as any).occupation) fromUser.occupation = (user as any).occupation
+      if ((user as any).pan) fromUser.pan = (user as any).pan
+      if ((user as any).nominee_name) fromUser.nominee_name = (user as any).nominee_name
+      if ((user as any).nominee_relation) fromUser.nominee_relation = (user as any).nominee_relation
+      if ((user as any).nominee_pan) fromUser.nominee_pan = (user as any).nominee_pan
+      if ((user as any).nominee_share) fromUser.nominee_share = String((user as any).nominee_share || '')
+      if (Object.keys(fromUser).length > 0) setSavedProfileData(fromUser)
+    }
+  }, [user]) // eslint-disable-line react-hooks/exhaustive-deps
+  // Persist savedProfileData to localStorage so it survives KYC uploads and re-renders
+  useEffect(() => {
+    if (typeof window !== 'undefined' && Object.keys(savedProfileData).length > 0) {
+      localStorage.setItem('ghl-profile-data', JSON.stringify(savedProfileData))
+    }
+  }, [savedProfileData])
 
   // Handle profile photo upload
   const handleProfilePhotoUpload = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
@@ -447,12 +551,12 @@ export default function DashboardClient() {
   const t = (dark: string, light: string) => isDark ? dark : light
 
   // Animated counters — derive from user/portfolio data
-  const totalCurrent = useMemo(() => portfolioAssets.reduce((s: number, a: any) => s + (a.current || 0), 0), [portfolioAssets])
-  const totalInvested = useMemo(() => portfolioAssets.reduce((s: number, a: any) => s + (a.invested || 0), 0), [portfolioAssets])
+  const totalCurrent = useMemo(() => portfolioAssets.reduce((s: number, a: any) => s + (Number(a.current_value) || 0), 0), [portfolioAssets])
+  const totalInvested = useMemo(() => portfolioAssets.reduce((s: number, a: any) => s + (Number(a.invested_amount) || 0), 0), [portfolioAssets])
   const portfolioValue = useAnimatedCounter(user?.aum || totalCurrent || 0)
   const aifInvestment = useAnimatedCounter(totalInvested || 0)
   const coInvestValue = useAnimatedCounter(totalCurrent - totalInvested || 0)
-  const currentNAV = useAnimatedCounter(navHistory.length ? navHistory[navHistory.length - 1]?.nav * 100 || 0 : 0)
+  const currentNAV = useAnimatedCounter(navHistory.length ? (navHistory[navHistory.length - 1]?.nav_value || navHistory[navHistory.length - 1]?.nav || 0) * 100 : 0)
 
   useEffect(() => {
     const updateTime = () => {
@@ -486,15 +590,35 @@ export default function DashboardClient() {
     }
   }, [clientId]) // eslint-disable-line react-hooks/exhaustive-deps
 
+  // ─── Load Bank Data from Supabase (populate form on re-visit) ──
+  useEffect(() => {
+    if (!clientId) return
+    fetchBankAccounts(clientId).then((accounts: any[]) => {
+      if (accounts?.length > 0) {
+        const primary = accounts[0]
+        const data = {
+          bank_name: primary.bank_name || 'Verified Bank',
+          account_number: primary.account_number || '',
+          ifsc_code: primary.ifsc_code || '',
+          account_type: primary.account_type || 'savings',
+          holder_name: primary.account_holder_name || '',
+        }
+        setSavedBankData(prev => (prev.account_number ? prev : data))
+      }
+    }).catch(() => {})
+  }, [clientId]) // eslint-disable-line react-hooks/exhaustive-deps
+
   // ─── Referral Hooks (must be before early returns) ──────
   const referralCode = useMemo(() => {
     if (!user?.id) return 'GHL-UNKNOWN'
     return `GHL-${user.id.replace(/-/g, '').substring(0, 8).toUpperCase()}`
   }, [user?.id])
 
-  const referralLink = useMemo(() => {
-    if (typeof window === 'undefined') return ''
-    return `${window.location.origin}/register?ref=${referralCode}`
+  const [referralLink, setReferralLink] = useState('')
+  useEffect(() => {
+    if (typeof window !== 'undefined' && referralCode) {
+      setReferralLink(`${window.location.origin}/register?ref=${referralCode}`)
+    }
   }, [referralCode])
 
   const [referralStats, setReferralStats] = useState({ referred: 0, earned: 0 })
@@ -643,11 +767,49 @@ export default function DashboardClient() {
 
         <div className="flex items-center gap-2">
           {/* Search */}
-          <div className={`hidden md:flex items-center gap-2 px-3 py-1.5 rounded-xl w-56 transition-colors
-            ${t('bg-white/[0.04] border border-white/[0.06] focus-within:border-brand-red/30','bg-gray-100/50 border border-gray-200/40 focus-within:border-brand-red/40')}`}>
-            <Search className={`w-3.5 h-3.5 ${t('text-gray-500','text-gray-600')}`} />
-            <input type="text" placeholder="Search..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)}
-              className={`bg-transparent border-none outline-none text-xs w-full ${t('text-white placeholder-gray-600','text-gray-900 placeholder-gray-400')}`} />
+          <div className="relative">
+            <div className={`hidden md:flex items-center gap-2 px-3 py-1.5 rounded-xl w-56 transition-colors
+              ${t('bg-white/[0.04] border border-white/[0.06] focus-within:border-brand-red/30','bg-gray-100/50 border border-gray-200/40 focus-within:border-brand-red/40')}`}>
+              <Search className={`w-3.5 h-3.5 ${t('text-gray-500','text-gray-600')}`} />
+              <input type="text" placeholder="Search..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)}
+                className={`bg-transparent border-none outline-none text-xs w-full ${t('text-white placeholder-gray-600','text-gray-900 placeholder-gray-400')}`} />
+              {searchQuery && <button onClick={() => setSearchQuery('')} className={`${t('text-gray-500 hover:text-white','text-gray-400 hover:text-gray-700')}`}><X className="w-3 h-3" /></button>}
+            </div>
+            {/* Search Results Dropdown */}
+            {searchQuery.trim() && (() => {
+              const q = searchQuery.toLowerCase()
+              const allItems = [...SIDEBAR_ITEMS, ...SIDEBAR_BOTTOM]
+              const searchableMap: Record<string, string[]> = {
+                'dashboard': ['dashboard', 'home', 'overview', 'portfolio summary', 'metrics'],
+                'investments': ['investments', 'invest', 'aif', 'fund', 'opportunity', 'express interest'],
+                'portfolio': ['portfolio', 'assets', 'nav', 'performance', 'returns', 'allocation'],
+                'kyc': ['kyc', 'documents', 'upload', 'verification', 'compliance', 'pan', 'aadhaar'],
+                'transactions': ['transactions', 'history', 'payments', 'dividend', 'export'],
+                'messages': ['messages', 'chat', 'compose', 'inbox', 'communication'],
+                'support': ['support', 'help', 'ticket', 'faq', 'call', 'email', 'contact'],
+                'calculators': ['calculators', 'sip', 'lumpsum', 'irr', 'tools'],
+                'ai-advisor': ['ai', 'advisor', 'aria', 'assistant'],
+                'referrals': ['referrals', 'refer', 'earn', 'invite', 'share', 'link'],
+                'profile': ['profile', 'personal', 'bank', 'nominee', 'details', 'pan', 'edit'],
+                'settings': ['settings', 'theme', 'password', 'notifications', 'security', '2fa', 'language'],
+              }
+              const matches = allItems.filter(item => {
+                const keywords = searchableMap[item.id] || [item.label.toLowerCase()]
+                return keywords.some(k => k.includes(q)) || item.label.toLowerCase().includes(q)
+              })
+              if (matches.length === 0) return null
+              return (
+                <div className={`absolute top-full mt-1 right-0 w-64 rounded-xl border shadow-2xl z-50 py-1 ${t('bg-[#111] border-white/10','bg-white border-gray-200')}`}>
+                  {matches.map(item => (
+                    <button key={item.id} onClick={() => { setActiveTab(item.id); setSearchQuery('') }}
+                      className={`w-full flex items-center gap-2.5 px-3 py-2 text-xs font-medium transition-colors ${t('text-gray-300 hover:bg-white/[0.06] hover:text-white','text-gray-700 hover:bg-gray-100 hover:text-gray-900')}`}>
+                      <item.icon className="w-4 h-4 text-brand-red" />
+                      {item.label}
+                    </button>
+                  ))}
+                </div>
+              )
+            })()}
           </div>
 
           {/* Task reminders */}
@@ -749,13 +911,16 @@ export default function DashboardClient() {
               className={`px-4 py-2 rounded-xl text-sm font-medium ${t('text-gray-400 hover:text-white','text-gray-700 hover:text-gray-900')}`}>Skip</button>
             <button onClick={() => {
               if (tourStep < TOUR_STEPS.length - 1) {
-                setActiveTab(TOUR_STEPS[tourStep + 1].target as TabId)
-                setTourStep(tourStep + 1)
+                const nextStep = tourStep + 1
+                setTourStep(nextStep)
+                // Navigate to the target tab for the current step being shown
+                setActiveTab(TOUR_STEPS[nextStep].target as TabId)
               } else {
                 setTourActive(false); setTourStep(0)
+                setActiveTab('dashboard')
               }
-            }} className="px-6 py-2 rounded-xl text-sm font-semibold text-white" style={{ background: 'linear-gradient(135deg, #D0021B, #8B0000)' }}>
-              {tourStep < TOUR_STEPS.length - 1 ? 'Next' : 'Finish'}
+            }} className="flex items-center justify-center gap-1.5 px-6 py-2 rounded-xl text-sm font-semibold text-white cursor-pointer" style={{ background: 'linear-gradient(135deg, #D0021B, #8B0000)' }}>
+              {tourStep < TOUR_STEPS.length - 1 ? <>Next <ChevronRight className="w-3.5 h-3.5" /></> : 'Finish Tour'}
             </button>
           </div>
         </div>
@@ -879,7 +1044,7 @@ export default function DashboardClient() {
     <Glass className="p-5 lg:p-6" hover theme={theme}>
       <div className="flex items-center justify-between mb-5">
         <h3 className={`text-base font-bold ${t('text-white','text-gray-900')}`}>Portfolio Assets</h3>
-        <button onClick={() => setActiveTab('portfolio')} className="text-xs text-brand-red font-semibold flex items-center gap-1">View All <ChevronRight className="w-3 h-3" /></button>
+        <button onClick={() => setActiveTab('portfolio')} className="relative z-10 text-xs text-brand-red font-semibold flex items-center gap-1 cursor-pointer hover:underline hover:text-red-600 transition-colors px-2 py-1 rounded-lg hover:bg-brand-red/10">View All <ChevronRight className="w-3 h-3" /></button>
       </div>
       {portfolioAssets.length === 0 ? (
         <div className="py-8 text-center">
@@ -894,23 +1059,23 @@ export default function DashboardClient() {
           <div key={i} onClick={() => setActiveTab('portfolio')} className={`p-3 rounded-xl transition-all duration-300 group cursor-pointer ${t('bg-white/[0.02] border border-white/[0.04] hover:border-white/[0.08]','bg-gray-100/35 border border-gray-200/30 hover:border-gray-300/40')}`}>
             <div className="flex items-center gap-4 mb-2">
               <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${t('bg-white/[0.04]','bg-gray-200/40')}`}>
-                {asset.type.includes('Real Estate') ? <Building2 className="w-5 h-5 text-brand-red" /> : asset.type.includes('Startup') ? <Rocket className="w-5 h-5 text-amber-400" /> : <FileText className="w-5 h-5 text-blue-400" />}
+                {(asset.fund_type || asset.type || '').includes('Real Estate') ? <Building2 className="w-5 h-5 text-brand-red" /> : (asset.fund_type || asset.type || '').includes('Startup') ? <Rocket className="w-5 h-5 text-amber-400" /> : <FileText className="w-5 h-5 text-blue-400" />}
               </div>
               <div className="flex-1 min-w-0">
-                <p className={`text-sm font-semibold truncate ${t('text-white','text-gray-900')}`}>{asset.name}</p>
-                <p className={`text-xs ${t('text-gray-500','text-gray-700')}`}>{asset.type}</p>
+                <p className={`text-sm font-semibold truncate ${t('text-white','text-gray-900')}`}>{asset.fund_name || asset.name || 'Investment'}</p>
+                <p className={`text-xs ${t('text-gray-500','text-gray-700')}`}>{asset.fund_type || asset.type || ''}</p>
               </div>
               <div className="text-right shrink-0">
-                <p className={`text-sm font-bold ${t('text-white','text-gray-900')}`}>{'\u20B9'}{formatINR(asset.current)}</p>
-                <p className={`text-xs font-semibold ${asset.returnPct >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>+{asset.returnPct}%</p>
+                <p className={`text-sm font-bold ${t('text-white','text-gray-900')}`}>{'\u20B9'}{formatINR(Number(asset.current_value) || Number(asset.current) || 0)}</p>
+                <p className={`text-xs font-semibold ${(Number(asset.return_pct) || Number(asset.returnPct) || 0) >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>+{Number(asset.return_pct) || Number(asset.returnPct) || 0}%</p>
               </div>
             </div>
             {/* Milestone progress bar */}
             <div className="flex items-center gap-2">
               <div className={`flex-1 h-1.5 rounded-full overflow-hidden ${t('bg-white/[0.06]','bg-gray-200')}`}>
-                <div className="h-full rounded-full bg-gradient-to-r from-brand-red to-red-400 transition-all duration-1000" style={{ width: `${asset.milestone}%` }} />
+                <div className="h-full rounded-full bg-gradient-to-r from-brand-red to-red-400 transition-all duration-1000" style={{ width: `${Number(asset.milestone) || 0}%` }} />
               </div>
-              <span className={`text-[10px] font-medium ${t('text-gray-500','text-gray-600')}`}>{asset.milestone}%</span>
+              <span className={`text-[10px] font-medium ${t('text-gray-500','text-gray-600')}`}>{Number(asset.milestone) || 0}%</span>
             </div>
           </div>
         ))}
@@ -1391,7 +1556,7 @@ export default function DashboardClient() {
               {[
                 { label: 'Chennai HQ', number: '+91 44 2843 1043', href: 'tel:+914428431043', icon: Building2, toast: 'Calling Chennai HQ...' },
                 { label: 'Sales & Support', number: '+91 7200 255 252', href: 'tel:+917200255252', icon: Phone, toast: 'Calling Sales & Support...' },
-                { label: 'Email', number: 'info@ghlindia.com', href: 'mailto:info@ghlindia.com', icon: Mail, toast: 'Opening email client...' },
+                { label: 'Email', number: 'info@ghlindiaventures.com', href: 'mailto:info@ghlindiaventures.com', icon: Mail, toast: 'Opening email client...' },
                 { label: 'Live Chat', number: 'Chat with ARIA', href: '#', icon: MessageSquare, toast: 'Opening live chat...' },
               ].map((line, i) => (
                 <button key={i} onClick={() => {
@@ -1558,7 +1723,7 @@ export default function DashboardClient() {
           <h2 className={`text-xl font-bold mb-1 ${t('text-white','text-gray-900')}`}>KYC & Documents</h2>
           <p className={`text-sm ${t('text-gray-500','text-gray-700')}`}>Upload, track, and manage your compliance documents</p>
         </div>
-        <button onClick={() => setUploadModalOpen(true)} className="px-4 py-2 rounded-xl text-xs font-semibold text-white flex items-center gap-1.5" style={{ background: 'linear-gradient(135deg, #D0021B, #8B0000)' }}>
+        <button onClick={() => setUploadModalOpen(true)} className="px-4 py-2.5 rounded-xl text-xs font-semibold text-white flex items-center justify-center gap-2 cursor-pointer hover:scale-[1.02] active:scale-[0.98] transition-all" style={{ background: 'linear-gradient(135deg, #D0021B, #8B0000)' }}>
           <Upload className="w-3.5 h-3.5" /> Upload Document
         </button>
       </div>
@@ -1601,7 +1766,30 @@ export default function DashboardClient() {
               const status = doc.status || 'pending'
               const docDate = doc.created_at ? new Date(doc.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : ''
               return (
-                <div key={doc.id || i} className={`flex items-center gap-3 p-4 rounded-xl transition-all cursor-pointer group
+                <div key={doc.id || i} onClick={async () => {
+                  // View/download the document
+                  const filePath = doc.file_path || doc.url || doc.file_url
+                  if (filePath) {
+                    try {
+                      // If filePath is already a full URL, open directly
+                      if (filePath.startsWith('http://') || filePath.startsWith('https://')) {
+                        window.open(filePath, '_blank')
+                      } else {
+                        const { getDownloadUrl } = await import('@/lib/supabase/storageService')
+                        const result = await getDownloadUrl(filePath, doc.bucket || 'ghl-documents')
+                        if (result?.success && result?.url) {
+                          window.open(result.url, '_blank')
+                        } else {
+                          showToast('Document preview not available. Please contact support.', 'info')
+                        }
+                      }
+                    } catch {
+                      showToast('Unable to load document. Please try again.', 'info')
+                    }
+                  } else {
+                    showToast('Document preview not available for this file.', 'info')
+                  }
+                }} className={`flex items-center gap-3 p-4 rounded-xl transition-all cursor-pointer group
                   ${t('bg-white/[0.02] border border-white/[0.04] hover:border-white/[0.08]','bg-gray-100/35 border border-gray-200/30 hover:border-gray-300/40')}`}>
                   <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0
                     ${status === 'verified' || status === 'approved' ? 'bg-emerald-500/15' : status === 'pending' || status === 'review' ? 'bg-amber-500/15' : 'bg-blue-500/15'}`}>
@@ -1613,6 +1801,7 @@ export default function DashboardClient() {
                     <p className={`text-sm font-semibold truncate ${t('text-white','text-gray-900')}`}>{doc.title || doc.name || 'Document'}</p>
                     <p className={`text-[11px] ${t('text-gray-500','text-gray-700')}`}>{doc.category || 'General'} &bull; {docDate}</p>
                   </div>
+                  <Eye className={`w-4 h-4 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity ${t('text-gray-400','text-gray-500')}`} />
                   <span className={`text-[9px] font-semibold uppercase px-1.5 py-0.5 rounded-full shrink-0
                     ${status === 'verified' || status === 'approved' ? 'text-emerald-400 bg-emerald-500/20' :
                       status === 'pending' || status === 'review' ? 'text-amber-400 bg-amber-500/20' :
@@ -1662,26 +1851,67 @@ export default function DashboardClient() {
             )}
             {/* Drop zone */}
             <div className={`border-2 border-dashed rounded-xl p-6 text-center mb-4 cursor-pointer transition-colors ${t('border-white/10 hover:border-brand-red/30','border-gray-300 hover:border-brand-red/40')}`}
-              onClick={(e) => {
+              onDragOver={(e) => { e.preventDefault(); e.stopPropagation() }}
+              onDragEnter={(e) => { e.preventDefault(); e.stopPropagation() }}
+              onDrop={async (e) => {
+                e.preventDefault()
                 e.stopPropagation()
-                // Use pickAndUploadFiles for reliable native file picker
-                import('@/lib/supabase/storageService').then(async (svc) => {
-                  const results = await svc.pickAndUploadFiles('client/kyc', {
-                    accept: '.pdf,.jpg,.jpeg,.png',
-                    multiple: true,
+                const droppedFiles = e.dataTransfer.files
+                if (!droppedFiles || droppedFiles.length === 0) return
+                const allowed = ['application/pdf', 'image/jpeg', 'image/jpg', 'image/png']
+                const validFiles: File[] = []
+                for (let i = 0; i < droppedFiles.length; i++) {
+                  if (allowed.includes(droppedFiles[i].type) && droppedFiles[i].size <= 10 * 1024 * 1024) {
+                    validFiles.push(droppedFiles[i])
+                  }
+                }
+                if (validFiles.length === 0) { showToast('Only PDF, JPG, PNG files up to 10MB are allowed.', 'info'); return }
+                try {
+                  const svc = await import('@/lib/supabase/storageService')
+                  const results = await svc.uploadFiles(validFiles, 'client/kyc', undefined, {
                     portal: 'client',
                     entityType: 'client',
                     entityId: clientId || undefined,
                     category: docCategory || 'general',
+                    trackRecord: true,
                   })
-                  if (results.length > 0) {
-                    const ok = results.filter(r => r.success).length
-                    const fail = results.length - ok
-                    if (ok > 0) showToast(`${ok} file(s) uploaded successfully!`, 'success')
-                    if (fail > 0) showToast(`${fail} file(s) failed to upload.`, 'info')
-                    // Store the selected file names for the submit step
-                    setUploadedFiles(results.filter(r => r.success).map(r => r.file?.name || ''))
+                  const ok = results.filter(r => r.success).length
+                  const fail = results.length - ok
+                  if (ok > 0) showToast(`${ok} file(s) uploaded successfully!`, 'success')
+                  if (fail > 0) showToast(`${fail} file(s) failed. Please try a smaller file or different format.`, 'info')
+                  setUploadedFiles(prev => [...prev, ...results.filter(r => r.success).map(r => ({ name: r.file?.name || '', url: r.file?.url || '', path: r.file?.path || '', bucket: r.file?.bucket || '', size: r.file?.size || 0, type: r.file?.type || '' }))])
+                } catch (err) {
+                  console.error('[kyc] Drop upload error:', err)
+                  showToast('Upload failed. Please try again.', 'info')
+                }
+              }}
+              onClick={(e) => {
+                e.stopPropagation()
+                // Use pickAndUploadFiles for reliable native file picker
+                import('@/lib/supabase/storageService').then(async (svc) => {
+                  try {
+                    const results = await svc.pickAndUploadFiles('client/kyc', {
+                      accept: '.pdf,.jpg,.jpeg,.png',
+                      multiple: true,
+                      portal: 'client',
+                      entityType: 'client',
+                      entityId: clientId || undefined,
+                      category: docCategory || 'general',
+                    })
+                    if (results.length > 0) {
+                      const ok = results.filter(r => r.success).length
+                      const fail = results.length - ok
+                      if (ok > 0) showToast(`${ok} file(s) uploaded successfully!`, 'success')
+                      if (fail > 0) showToast(`${fail} file(s) failed to upload. Please try a smaller file or different format.`, 'info')
+                      setUploadedFiles(prev => [...prev, ...results.filter(r => r.success).map(r => ({ name: r.file?.name || '', url: r.file?.url || '', path: r.file?.path || '', bucket: r.file?.bucket || '', size: r.file?.size || 0, type: r.file?.type || '' }))])
+                    }
+                  } catch (uploadErr) {
+                    console.error('[kyc] File upload error:', uploadErr)
+                    showToast('Upload failed. Please try again or email documents to info@ghlindiaventures.com', 'info')
                   }
+                }).catch(err => {
+                  console.error('[kyc] Storage service import error:', err)
+                  showToast('Upload service unavailable. Please email documents to info@ghlindiaventures.com', 'info')
                 })
               }}>
               <Upload className={`w-8 h-8 mx-auto mb-2 ${t('text-gray-500','text-gray-600')}`} />
@@ -1693,7 +1923,7 @@ export default function DashboardClient() {
               <div className={`mb-3 p-2.5 rounded-lg ${t('bg-emerald-500/10 border border-emerald-500/20','bg-emerald-50 border border-emerald-200')}`}>
                 <p className="text-xs font-semibold text-emerald-500 mb-1">{uploadedFiles.length} file(s) selected:</p>
                 {uploadedFiles.map((f, i) => (
-                  <p key={i} className={`text-xs ${t('text-gray-300','text-gray-700')}`}>• {f}</p>
+                  <p key={i} className={`text-xs ${t('text-gray-300','text-gray-700')}`}>• {f.name}</p>
                 ))}
               </div>
             )}
@@ -1701,17 +1931,41 @@ export default function DashboardClient() {
               if (!docName.trim()) { showToast('Please enter a document name.', 'info'); return }
               if (!docCategory) { showToast('Please select a folder.', 'info'); return }
               if (uploadedFiles.length === 0) { showToast('Please upload at least one file.', 'info'); return }
-              // Save document record to DB (linked to client's CRM folder)
-              await uploadClientDocument({
-                client_id: clientId || '',
-                user_id: user?.id || '',
-                title: docName,
-                category: docCategory === 'pan' || docCategory === 'aadhaar' || docCategory === 'bank' || docCategory === 'cheque' || docCategory === 'address' || docCategory === 'demat' ? 'kyc' : docCategory === 'tax' ? 'compliance' : 'general',
-                file_url: `client/kyc/clients/${clientId}/${uploadedFiles[0]}`,
-                file_name: uploadedFiles[0],
-              })
-              setUploadModalOpen(false); setDocName(''); setDocCategory(''); setUploadedFiles([]); refetchDocs()
-              showToast('Document submitted. Under review by compliance team.', 'success')
+              try {
+                const firstFile = uploadedFiles[0]
+                // Save document record to DB with actual storage URL/path
+                await uploadClientDocument({
+                  client_id: clientId || '',
+                  user_id: user?.id || '',
+                  title: docName,
+                  category: docCategory === 'pan' || docCategory === 'aadhaar' || docCategory === 'bank' || docCategory === 'cheque' || docCategory === 'address' || docCategory === 'demat' ? 'kyc' : docCategory === 'tax' ? 'compliance' : 'general',
+                  file_url: firstFile.url || firstFile.path || `client/kyc/clients/${clientId}/${firstFile.name}`,
+                  file_name: firstFile.name,
+                  file_size: firstFile.size,
+                  file_type: firstFile.type?.split('/').pop() || '',
+                  mime_type: firstFile.type,
+                })
+                // Save additional files if multiple uploaded
+                for (let fi = 1; fi < uploadedFiles.length; fi++) {
+                  const f = uploadedFiles[fi]
+                  await uploadClientDocument({
+                    client_id: clientId || '',
+                    user_id: user?.id || '',
+                    title: `${docName} (${fi + 1})`,
+                    category: docCategory === 'pan' || docCategory === 'aadhaar' || docCategory === 'bank' || docCategory === 'cheque' || docCategory === 'address' || docCategory === 'demat' ? 'kyc' : docCategory === 'tax' ? 'compliance' : 'general',
+                    file_url: f.url || f.path || `client/kyc/clients/${clientId}/${f.name}`,
+                    file_name: f.name,
+                    file_size: f.size,
+                    file_type: f.type?.split('/').pop() || '',
+                    mime_type: f.type,
+                  })
+                }
+                setUploadModalOpen(false); setDocName(''); setDocCategory(''); setUploadedFiles([]); refetchDocs()
+                showToast('Document submitted. Under review by compliance team.', 'success')
+              } catch (err) {
+                console.error('[kyc] Document save error:', err)
+                showToast('Failed to save document record. Please try again.', 'info')
+              }
             }}
               className="w-full py-2.5 rounded-xl text-sm font-semibold text-white" style={{ background: 'linear-gradient(135deg, #D0021B, #8B0000)' }}>
               Upload & Submit
@@ -1753,7 +2007,15 @@ export default function DashboardClient() {
               </tr>
             </thead>
             <tbody>
-              {transactions.map((tx: any, i: number) => (
+              {transactions.length === 0 ? (
+                <tr>
+                  <td colSpan={5} className="py-12 text-center">
+                    <ArrowLeftRight className={`w-10 h-10 mx-auto mb-3 ${t('text-gray-600','text-gray-400')}`} />
+                    <p className={`text-sm font-medium ${t('text-gray-400','text-gray-600')}`}>No transactions yet</p>
+                    <p className={`text-xs mt-1 ${t('text-gray-600','text-gray-500')}`}>Your transaction history will appear here once you make an investment.</p>
+                  </td>
+                </tr>
+              ) : transactions.map((tx: any, i: number) => (
                 <tr key={i} className={`border-b transition-colors ${t('border-white/[0.03] hover:bg-white/[0.02]','border-gray-100 hover:bg-gray-200/30')}`}>
                   <td className={`py-3 px-5 text-xs ${t('text-gray-400','text-gray-700')}`}>{tx.date}</td>
                   <td className="py-3 px-5">
@@ -1800,20 +2062,68 @@ export default function DashboardClient() {
             </select>
             <input type="text" placeholder="Subject" value={msgSubject} onChange={e => setMsgSubject(e.target.value)} className={`w-full px-4 py-2.5 rounded-xl text-sm ${t('bg-white/[0.04] border border-white/[0.06] text-white placeholder-gray-600','bg-gray-100/40 border border-gray-200/40 text-gray-900 placeholder-gray-400')}`} />
             <textarea rows={4} placeholder="Write your message... (or use voice input)" value={msgBody} onChange={e => setMsgBody(e.target.value)} className={`w-full px-4 py-2.5 rounded-xl text-sm resize-none ${t('bg-white/[0.04] border border-white/[0.06] text-white placeholder-gray-600','bg-gray-100/40 border border-gray-200/40 text-gray-900 placeholder-gray-400')}`} />
+            {/* Attachments display */}
+            {msgAttachments.length > 0 && (
+              <div className="flex flex-wrap gap-2 mb-2">
+                {msgAttachments.map((f, i) => (
+                  <span key={i} className={`inline-flex items-center gap-1 px-2 py-1 rounded-lg text-xs ${t('bg-white/[0.06] text-gray-300','bg-gray-100 text-gray-700')}`}>
+                    <Paperclip className="w-3 h-3" /> {f.name}
+                    <button onClick={() => setMsgAttachments(prev => prev.filter((_, idx) => idx !== i))} className="ml-1 text-red-400 hover:text-red-300"><X className="w-3 h-3" /></button>
+                  </span>
+                ))}
+              </div>
+            )}
             <div className="flex items-center gap-3">
-              <button className={`p-2 rounded-lg ${t('hover:bg-white/[0.04]','hover:bg-gray-200/40')}`}><Paperclip className={`w-4 h-4 ${t('text-gray-500','text-gray-600')}`} /></button>
+              <input ref={msgFileRef} type="file" multiple className="hidden" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.xlsx,.csv" onChange={(e) => {
+                const files = Array.from(e.target.files || [])
+                if (files.length > 0) {
+                  setMsgAttachments(prev => [...prev, ...files])
+                  showToast(`${files.length} file(s) attached`, 'success')
+                }
+                e.target.value = ''
+              }} />
+              <button type="button" onClick={() => msgFileRef.current?.click()} className={`p-2.5 rounded-lg transition-colors cursor-pointer ${t('hover:bg-white/[0.06] bg-white/[0.03]','hover:bg-gray-200/60 bg-gray-100/50')} border ${t('border-white/[0.06]','border-gray-200/40')}`} title="Attach file"><Paperclip className={`w-4 h-4 ${t('text-gray-400 hover:text-white','text-gray-600 hover:text-gray-900')}`} /></button>
               <VoiceInput compact onTranscript={(text) => setMsgBody(prev => (prev ? prev + ' ' : '') + text)} showLanguageSelector />
               <div className="flex-1" />
-              <button onClick={() => setMessageCompose(false)} className={`px-4 py-2 rounded-xl text-sm font-medium ${t('text-gray-400','text-gray-700')}`}>Cancel</button>
+              <button onClick={() => { setMessageCompose(false); setMsgAttachments([]) }} className={`px-4 py-2 rounded-xl text-sm font-medium ${t('text-gray-400','text-gray-700')}`}>Cancel</button>
               <button onClick={async () => {
                 if (!msgSubject.trim()) { showToast('Please enter a subject.', 'info'); return }
                 if (!msgBody.trim()) { showToast('Please write a message.', 'info'); return }
                 try {
-                  await sendMessage({ from_id: clientId, to: msgTo, subject: msgSubject, body: msgBody })
-                  setMessageCompose(false); setMsgTo('Relationship Manager'); setMsgSubject(''); setMsgBody(''); refetchMessages()
-                  showToast('Message sent successfully to your advisory team.')
-                } catch { showToast('Failed to send message. Please try again.', 'info') }
-              }} className="px-5 py-2 rounded-xl text-sm font-semibold text-white" style={{ background: 'linear-gradient(135deg, #D0021B, #8B0000)' }}>Send</button>
+                  // Upload attachments first if any
+                  let attachmentUrls: string[] = []
+                  if (msgAttachments.length > 0) {
+                    for (const file of msgAttachments) {
+                      try {
+                        const result = await uploadFile(file, 'client/kyc', { entityType: 'message', entityId: clientId || '' })
+                        if (result?.file?.url) attachmentUrls.push(result.file.url)
+                      } catch { /* continue with other files */ }
+                    }
+                  }
+                  // Resolve recipient: find an admin user to route the message to
+                  const { supabase: sb } = await import('@/lib/supabase/client')
+                  let recipientId = user?.id || '' // fallback
+                  // Try assigned RM first
+                  if (clientId) {
+                    const { data: clientRow } = await (sb as any).from('clients').select('assigned_rm').eq('id', clientId).maybeSingle()
+                    if (clientRow?.assigned_rm) {
+                      const { data: rmStaff } = await (sb as any).from('staff_profiles').select('user_id').eq('id', clientRow.assigned_rm).maybeSingle()
+                      if (rmStaff?.user_id) recipientId = rmStaff.user_id
+                    }
+                  }
+                  // If no RM found, send to first admin
+                  if (recipientId === user?.id) {
+                    const { data: admins } = await (sb as any).from('profiles').select('id').eq('role', 'admin').limit(1)
+                    if (admins?.[0]?.id) recipientId = admins[0].id
+                  }
+                  const body = attachmentUrls.length > 0 ? `${msgBody}\n\n📎 Attachments: ${attachmentUrls.length} file(s)` : msgBody
+                  await sendMessage({ from_id: user?.id, to_id: recipientId, subject: `[${msgTo}] ${msgSubject}`, body, attachments: attachmentUrls.length > 0 ? attachmentUrls : [] })
+                  setMessageCompose(false); setMsgTo('Relationship Manager'); setMsgSubject(''); setMsgBody(''); setMsgAttachments([]); refetchMessages()
+                  showToast('Message sent successfully to your advisory team.', 'success')
+                } catch (err) { console.error('Send message error:', err); showToast('Failed to send message. Please try again.', 'info') }
+              }} className="px-5 py-2.5 rounded-xl text-sm font-semibold text-white transition-all hover:scale-[1.02] active:scale-[0.98]" style={{ background: 'linear-gradient(135deg, #D0021B, #8B0000)' }}>
+                <span className="flex items-center gap-1.5"><Send className="w-3.5 h-3.5" /> Send</span>
+              </button>
             </div>
           </div>
         </Glass>
@@ -1856,7 +2166,7 @@ export default function DashboardClient() {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {[
           { title: 'Chat with ARIA', desc: 'AI assistant & live advisor.', icon: MessageSquare, color: '#D0021B', action: () => window.dispatchEvent(new CustomEvent('ghl-open-chat')) },
-          { title: 'Email Us', desc: 'info@ghlindia.com', icon: Mail, color: '#3B82F6', action: () => { window.open('mailto:info@ghlindia.com', '_blank'); showToast('Opening email client...', 'info') } },
+          { title: 'Email Us', desc: 'info@ghlindiaventures.com', icon: Mail, color: '#3B82F6', action: () => { window.open('mailto:info@ghlindiaventures.com', '_blank'); showToast('Opening email client...', 'info') } },
           { title: 'Message Us', desc: 'Live chat with our team', icon: Send, color: '#10B981', action: () => { window.dispatchEvent(new CustomEvent('ghl-open-chat')); showToast('Opening live chat...', 'info') } },
           { title: 'Direct Call', desc: 'Chennai HQ: +91 44 2843 1043', icon: PhoneCall, color: '#8B5CF6', action: () => { window.open('tel:+914428431043'); showToast('Connecting to GHL Chennai HQ...', 'info') } },
         ].map((item, i) => (
@@ -1891,17 +2201,21 @@ export default function DashboardClient() {
               <VoiceInput compact onTranscript={(text) => setTicketDesc(prev => (prev ? prev + ' ' : '') + text)} showLanguageSelector />
               <span className={`text-[10px] ${t('text-gray-600','text-gray-500')}`}>Speak in 23 Indian languages</span>
             </div>
-            <button onClick={async () => {
+            <button type="button" onClick={async () => {
               if (!ticketSubject.trim()) { showToast('Please enter a subject for your ticket.', 'info'); return }
               if (!ticketDesc.trim()) { showToast('Please describe your issue.', 'info'); return }
-              const result = await createSupportTicket({ client_id: clientId, subject: ticketSubject, category: ticketCategory, description: ticketDesc, status: 'open', priority: 'medium' })
-              if (result) {
-                setTicketForm(false); setTicketSubject(''); setTicketCategory('General Inquiry'); setTicketDesc(''); refetchTickets()
-                showToast('Support ticket submitted. We\'ll respond within 24 hours.', 'success')
-              } else {
+              try {
+                const result = await createSupportTicket({ client_id: clientId || undefined, created_by: user?.id, subject: ticketSubject, category: ticketCategory, description: ticketDesc, status: 'open', priority: 'medium', source: 'dashboard' })
+                if (result) {
+                  setTicketForm(false); setTicketSubject(''); setTicketCategory('General Inquiry'); setTicketDesc(''); refetchTickets()
+                  showToast('Support ticket submitted. We\'ll respond within 24 hours.', 'success')
+                } else {
+                  showToast('Failed to submit ticket. Please try again or email info@ghlindiaventures.com', 'info')
+                }
+              } catch {
                 showToast('Failed to submit ticket. Please try again or email info@ghlindiaventures.com', 'info')
               }
-            }} className="px-5 py-2.5 rounded-xl text-sm font-semibold text-white" style={{ background: 'linear-gradient(135deg, #D0021B, #8B0000)' }}>Submit Ticket</button>
+            }} className="flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold text-white cursor-pointer hover:scale-[1.02] active:scale-[0.98] transition-all" style={{ background: 'linear-gradient(135deg, #D0021B, #8B0000)' }}><Send className="w-3.5 h-3.5" /> Submit Ticket</button>
           </div>
         )}
         {/* Existing tickets */}
@@ -2022,13 +2336,14 @@ export default function DashboardClient() {
     setEditForm({
       full_name: savedProfileData.full_name || user?.name || '',
       phone: savedProfileData.phone || user?.phone || '',
+      pan: savedProfileData.pan || (user as any)?.pan || '',
       city: savedProfileData.city || user?.city || '',
-      dob: savedProfileData.dob || user?.dob || '',
-      occupation: savedProfileData.occupation || user?.occupation || '',
-      nominee_name: savedProfileData.nominee_name || user?.nominee_name || '',
-      nominee_relation: savedProfileData.nominee_relation || user?.nominee_relation || '',
-      nominee_pan: savedProfileData.nominee_pan || user?.nominee_pan || '',
-      nominee_share: savedProfileData.nominee_share || user?.nominee_share || '',
+      dob: savedProfileData.dob || (user as any)?.dob || '',
+      occupation: savedProfileData.occupation || (user as any)?.occupation || '',
+      nominee_name: savedProfileData.nominee_name || (user as any)?.nominee_name || '',
+      nominee_relation: savedProfileData.nominee_relation || (user as any)?.nominee_relation || '',
+      nominee_pan: savedProfileData.nominee_pan || (user as any)?.nominee_pan || '',
+      nominee_share: savedProfileData.nominee_share || (user as any)?.nominee_share || '',
     })
     setEditProfileOpen(true)
   }
@@ -2141,7 +2456,7 @@ export default function DashboardClient() {
               <button onClick={openEditProfile} className={`text-xs font-semibold flex items-center gap-1 ${t('text-gray-400 hover:text-white','text-gray-500 hover:text-gray-900')} transition-colors`}><Sliders className="w-3 h-3" /> Edit</button>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {[['Full Name', savedProfileData.full_name || userName],['Email', userEmail],['Phone', savedProfileData.phone || user?.phone || 'Not provided'],['City', savedProfileData.city || user?.city || 'Not provided'],['Date of Birth', savedProfileData.dob || user?.dob || 'Not provided'],['Occupation', savedProfileData.occupation || user?.occupation || 'Not provided']].map(([l,v],i) => (
+              {[['Full Name', savedProfileData.full_name || userName],['Email', userEmail],['Phone', savedProfileData.phone || user?.phone || 'Not provided'],['PAN Number', savedProfileData.pan || (user as any)?.pan || 'Not provided'],['City', savedProfileData.city || user?.city || 'Not provided'],['Date of Birth', savedProfileData.dob || user?.dob || 'Not provided'],['Occupation', savedProfileData.occupation || user?.occupation || 'Not provided']].map(([l,v],i) => (
                 <div key={i}><p className={`text-[10px] uppercase tracking-wider mb-1 ${t('text-gray-600','text-gray-600')}`}>{l}</p><p className={`text-sm font-medium ${v === 'Not provided' ? 'text-gray-600 italic' : t('text-white','text-gray-900')}`}>{v}</p></div>
               ))}
             </div>
@@ -2151,7 +2466,6 @@ export default function DashboardClient() {
           <Glass className="p-6" hover theme={theme}>
             <div className="flex items-center justify-between mb-4">
               <h4 className={`text-sm font-bold ${t('text-white','text-gray-900')}`}>Nominee Details</h4>
-              <button onClick={openEditProfile} className={`text-xs font-semibold flex items-center gap-1 ${t('text-gray-400 hover:text-white','text-gray-500 hover:text-gray-900')} transition-colors`}><Sliders className="w-3 h-3" /> Edit</button>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               {[['Nominee Name', savedProfileData.nominee_name || user?.nominee_name || 'Not provided'],['Relationship', savedProfileData.nominee_relation || user?.nominee_relation || 'Not provided'],['Nominee PAN', savedProfileData.nominee_pan || user?.nominee_pan || 'Not provided'],['Share', savedProfileData.nominee_share || user?.nominee_share || 'Not provided']].map(([l,v],i) => (
@@ -2164,10 +2478,21 @@ export default function DashboardClient() {
           <Glass className="p-6" hover theme={theme}>
             <div className="flex items-center justify-between mb-4">
               <h4 className={`text-sm font-bold ${t('text-white','text-gray-900')}`}>Bank Details</h4>
-              <button onClick={() => setBankConnectOpen(true)} className="text-xs text-brand-red font-semibold flex items-center gap-1"><Landmark className="w-3 h-3" /> Bank Connect</button>
+              <button onClick={() => {
+                // Pre-populate form from saved data so user doesn't have to re-enter everything
+                if (savedBankData.holder_name || savedBankData.account_number) {
+                  setBankForm({
+                    holder_name: savedBankData.holder_name || '',
+                    account_number: savedBankData.account_number || '',
+                    ifsc_code: savedBankData.ifsc_code || '',
+                    account_type: savedBankData.account_type || 'savings',
+                  })
+                }
+                setBankConnectOpen(true)
+              }} className="text-xs text-brand-red font-semibold flex items-center gap-1"><Landmark className="w-3 h-3" /> Bank Connect</button>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {[['Bank Name', user?.bank_name || 'Not provided'],['Account No', user?.bank_account || 'Not provided'],['IFSC', user?.bank_ifsc || 'Not provided'],['Account Type', user?.bank_type || 'Not provided']].map(([l,v],i) => (
+              {[['Bank Name', savedBankData.bank_name || user?.bank_name || 'Not provided'],['Account No', savedBankData.account_number || user?.bank_account || 'Not provided'],['IFSC', savedBankData.ifsc_code || user?.bank_ifsc || 'Not provided'],['Account Type', savedBankData.account_type || user?.bank_type || 'Not provided']].map(([l,v],i) => (
                 <div key={i}><p className={`text-[10px] uppercase tracking-wider mb-1 ${t('text-gray-600','text-gray-600')}`}>{l}</p><p className={`text-sm font-medium ${v === 'Not provided' ? 'text-gray-600 italic' : t('text-white','text-gray-900')}`}>{v}</p></div>
               ))}
             </div>
@@ -2189,6 +2514,7 @@ export default function DashboardClient() {
               {[
                 { key: 'full_name', label: 'Full Name', placeholder: 'Enter your full name' },
                 { key: 'phone', label: 'Phone Number', placeholder: '+91 XXXXX XXXXX' },
+                { key: 'pan', label: 'PAN Number', placeholder: 'ABCDE1234F' },
                 { key: 'city', label: 'City', placeholder: 'e.g. Chennai, Mumbai' },
                 { key: 'dob', label: 'Date of Birth', placeholder: 'DD/MM/YYYY' },
                 { key: 'occupation', label: 'Occupation', placeholder: 'e.g. Business Owner, Engineer' },
@@ -2248,9 +2574,17 @@ export default function DashboardClient() {
                 if (!bankForm.holder_name.trim() || !bankForm.account_number.trim() || !bankForm.ifsc_code.trim()) { showToast('Please fill in all bank details.', 'info'); return }
                 try {
                   await addBankAccount({ client_id: clientId || '', user_id: user?.id || '', account_holder_name: bankForm.holder_name, account_number: bankForm.account_number, ifsc_code: bankForm.ifsc_code, bank_name: '', account_type: bankForm.account_type, is_primary: true })
+                  const bankData = { bank_name: 'Verified Bank', account_number: bankForm.account_number, ifsc_code: bankForm.ifsc_code, account_type: bankForm.account_type, holder_name: bankForm.holder_name }
+                  setSavedBankData(bankData)
+                  if (typeof window !== 'undefined') localStorage.setItem('ghl-bank-data', JSON.stringify(bankData))
                   setBankConnectOpen(false); setBankForm({ holder_name: '', account_number: '', ifsc_code: '', account_type: 'savings' })
                   showToast('Bank account verified and connected successfully.')
-                } catch { showToast('Bank details saved. Verification pending.', 'info'); setBankConnectOpen(false) }
+                } catch {
+                  const bankData = { bank_name: 'Pending Verification', account_number: bankForm.account_number, ifsc_code: bankForm.ifsc_code, account_type: bankForm.account_type, holder_name: bankForm.holder_name }
+                  setSavedBankData(bankData)
+                  if (typeof window !== 'undefined') localStorage.setItem('ghl-bank-data', JSON.stringify(bankData))
+                  showToast('Bank details saved. Verification pending.', 'info'); setBankConnectOpen(false)
+                }
               }} className="w-full py-2.5 rounded-xl text-sm font-semibold text-white" style={{ background: 'linear-gradient(135deg, #D0021B, #8B0000)' }}>Verify & Connect</button>
             </div>
           </div>
@@ -2269,17 +2603,20 @@ export default function DashboardClient() {
         {/* Appearance */}
         <Glass className="p-6" hover theme={theme}>
           <div className="flex items-center gap-3 mb-4">
-            <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-white/[0.04]">
-              <Moon className="w-5 h-5 text-indigo-400" />
+            <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${t('bg-white/[0.04]','bg-gray-200/40')}`}>
+              {isDark ? <Moon className="w-5 h-5 text-indigo-400" /> : <Sun className="w-5 h-5 text-amber-500" />}
             </div>
-            <div><h4 className="text-sm font-bold text-white">Appearance</h4><p className="text-xs text-gray-500">Theme and display preferences</p></div>
+            <div><h4 className={`text-sm font-bold ${t('text-white','text-gray-900')}`}>Appearance</h4><p className={`text-xs ${t('text-gray-500','text-gray-700')}`}>Theme and display preferences</p></div>
           </div>
           <div className="flex gap-3">
-            <div className="flex-1 p-3 rounded-xl text-center text-sm font-medium bg-brand-red/15 text-white border border-brand-red/20">
+            <button onClick={() => setTheme('light')} className={`flex-1 p-3 rounded-xl text-center text-sm font-medium transition-all ${theme === 'light' ? 'bg-brand-red/15 text-brand-red border border-brand-red/20' : t('bg-white/[0.04] text-gray-400 border border-white/[0.06] hover:border-white/[0.1]','bg-gray-100 text-gray-600 border border-gray-200 hover:border-gray-300')}`}>
+              <Sun className="w-5 h-5 mx-auto mb-1" /> Light Mode
+            </button>
+            <button onClick={() => setTheme('dark')} className={`flex-1 p-3 rounded-xl text-center text-sm font-medium transition-all ${theme === 'dark' ? 'bg-brand-red/15 text-white border border-brand-red/20' : t('bg-white/[0.04] text-gray-400 border border-white/[0.06] hover:border-white/[0.1]','bg-gray-100 text-gray-600 border border-gray-200 hover:border-gray-300')}`}>
               <Moon className="w-5 h-5 mx-auto mb-1" /> Dark Mode
-            </div>
+            </button>
           </div>
-          <p className="text-[10px] text-gray-600 mt-3 flex items-center gap-1"><Shield className="w-3 h-3" /> Optimized for low-light, premium viewing experience</p>
+          <p className={`text-[10px] mt-3 flex items-center gap-1 ${t('text-gray-600','text-gray-500')}`}><Shield className="w-3 h-3" /> {isDark ? 'Optimized for low-light, premium viewing experience' : 'Clean, bright interface for daytime use'}</p>
         </Glass>
 
         {/* Language */}
@@ -2320,7 +2657,7 @@ export default function DashboardClient() {
             return (
               <div key={opt.key} className={`flex items-center justify-between p-2.5 rounded-lg ${t('hover:bg-white/[0.02]','hover:bg-gray-200/40')} transition-colors`}>
                 <span className={`text-xs ${t('text-gray-400','text-gray-600')}`}>{opt.label}</span>
-                <button onClick={() => setNotifPrefs(p => ({ ...p, [opt.key]: !p[opt.key] }))}
+                <button onClick={() => setNotifPrefs((p: Record<string, boolean>) => ({ ...p, [opt.key]: !p[opt.key] }))}
                   className={`w-10 h-[22px] rounded-full relative cursor-pointer transition-all duration-300 ${isOn ? 'bg-brand-red' : t('bg-white/[0.08]','bg-gray-300')}`}>
                   <div className={`absolute top-[3px] w-4 h-4 rounded-full bg-white shadow-md transition-all duration-300 ${isOn ? 'left-[22px]' : 'left-[3px]'}`} />
                 </button>
@@ -2343,23 +2680,33 @@ export default function DashboardClient() {
               <div className="space-y-3">
                 <div>
                   <label className={`text-[10px] font-medium mb-1 block ${t('text-gray-400','text-gray-600')}`}>New Password</label>
-                  <input
-                    type="password"
-                    value={newPassword}
-                    onChange={(e) => setNewPassword(e.target.value)}
-                    placeholder="Min. 8 characters"
-                    className={`w-full px-3 py-2 rounded-lg text-sm ${t('bg-white/[0.04] border border-white/[0.06] text-white placeholder:text-gray-600','bg-white border border-gray-200 text-gray-900 placeholder:text-gray-400')} focus:outline-none focus:ring-1 focus:ring-brand-red`}
-                  />
+                  <div className="relative">
+                    <input
+                      type={showNewPw ? 'text' : 'password'}
+                      value={newPassword}
+                      onChange={(e) => setNewPassword(e.target.value)}
+                      placeholder="Min. 8 characters"
+                      className={`w-full px-3 py-2 pr-10 rounded-lg text-sm ${t('bg-white/[0.04] border border-white/[0.06] text-white placeholder:text-gray-600','bg-white border border-gray-200 text-gray-900 placeholder:text-gray-400')} focus:outline-none focus:ring-1 focus:ring-brand-red`}
+                    />
+                    <button type="button" onClick={() => setShowNewPw(!showNewPw)} className={`absolute right-2.5 top-1/2 -translate-y-1/2 ${t('text-gray-500 hover:text-white','text-gray-400 hover:text-gray-700')}`}>
+                      {showNewPw ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
+                  </div>
                 </div>
                 <div>
                   <label className={`text-[10px] font-medium mb-1 block ${t('text-gray-400','text-gray-600')}`}>Confirm Password</label>
-                  <input
-                    type="password"
-                    value={confirmNewPassword}
-                    onChange={(e) => setConfirmNewPassword(e.target.value)}
-                    placeholder="Re-enter password"
-                    className={`w-full px-3 py-2 rounded-lg text-sm ${t('bg-white/[0.04] border border-white/[0.06] text-white placeholder:text-gray-600','bg-white border border-gray-200 text-gray-900 placeholder:text-gray-400')} focus:outline-none focus:ring-1 focus:ring-brand-red`}
-                  />
+                  <div className="relative">
+                    <input
+                      type={showConfirmPw ? 'text' : 'password'}
+                      value={confirmNewPassword}
+                      onChange={(e) => setConfirmNewPassword(e.target.value)}
+                      placeholder="Re-enter password"
+                      className={`w-full px-3 py-2 pr-10 rounded-lg text-sm ${t('bg-white/[0.04] border border-white/[0.06] text-white placeholder:text-gray-600','bg-white border border-gray-200 text-gray-900 placeholder:text-gray-400')} focus:outline-none focus:ring-1 focus:ring-brand-red`}
+                    />
+                    <button type="button" onClick={() => setShowConfirmPw(!showConfirmPw)} className={`absolute right-2.5 top-1/2 -translate-y-1/2 ${t('text-gray-500 hover:text-white','text-gray-400 hover:text-gray-700')}`}>
+                      {showConfirmPw ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
+                  </div>
                 </div>
                 <div className="flex gap-2">
                   <button
@@ -2368,12 +2715,14 @@ export default function DashboardClient() {
                   >
                     Update Password
                   </button>
-                  <button
-                    onClick={() => { setShowPasswordReset(false); setNewPassword(''); setConfirmNewPassword('') }}
-                    className={`px-4 py-2 rounded-lg text-xs font-medium transition-colors ${t('bg-white/[0.04] text-gray-400 hover:text-white','bg-gray-100 text-gray-600 hover:text-gray-900')}`}
-                  >
-                    Cancel
-                  </button>
+                  {!passwordResetMandatory && (
+                    <button
+                      onClick={() => { setShowPasswordReset(false); setNewPassword(''); setConfirmNewPassword('') }}
+                      className={`px-4 py-2 rounded-lg text-xs font-medium transition-colors ${t('bg-white/[0.04] text-gray-400 hover:text-white','bg-gray-100 text-gray-600 hover:text-gray-900')}`}
+                    >
+                      Cancel
+                    </button>
+                  )}
                 </div>
               </div>
             </div>
@@ -2388,8 +2737,10 @@ export default function DashboardClient() {
           )}
 
           {[
-            { label: 'Change Password', action: () => setShowPasswordReset(true) },
-            { label: 'Enable 2FA', action: () => showToast('Two-factor authentication setup initiated. Check your email for the QR code.', 'info') },
+            { label: 'Change Password', action: () => { setShowPasswordReset(true); setNewPassword(''); setConfirmNewPassword('') } },
+            { label: 'Enable 2FA', action: async () => {
+              showToast('Two-factor authentication (2FA) requires admin configuration in Supabase. Please contact your administrator to enable MFA for your account.', 'info')
+            } },
             { label: 'Active Sessions', action: () => showToast('You have 1 active session: Chrome on Windows — Current Device', 'info') },
             { label: 'Login History', action: () => showToast('Last login: Today at 10:30 AM from Chennai, India (Chrome/Windows)', 'info') },
           ].map((opt, j) => (
@@ -2541,27 +2892,31 @@ export default function DashboardClient() {
 
     setInvestSubmitting(true)
     try {
-      // 1. Save bank account(s) first
-      const primaryAcc = bankAccounts.find(a => a.is_primary) || bankAccounts[0]
+      // 1. Save bank account(s) first (non-blocking — investment can proceed even if bank save fails)
       let savedBankId: string | null = null
 
       for (const acc of bankAccounts) {
-        const result = await addBankAccount({
-          client_id: clientId,
-          user_id: user.id,
-          account_holder_name: acc.account_holder_name,
-          account_number: acc.account_number,
-          ifsc_code: acc.ifsc_code.toUpperCase(),
-          bank_name: acc.bank_name,
-          account_type: acc.account_type.toLowerCase(),
-          is_primary: acc.is_primary,
-          cancelled_cheque_url: acc.cancelled_cheque_url,
-        })
-        if (result && acc.is_primary) savedBankId = result.id
+        try {
+          const bankPayload: any = {
+            client_id: clientId,
+            user_id: user.id,
+            account_holder_name: acc.account_holder_name,
+            account_number: acc.account_number,
+            ifsc_code: acc.ifsc_code.toUpperCase(),
+            bank_name: acc.bank_name || undefined,
+            account_type: acc.account_type.toLowerCase(),
+            is_primary: acc.is_primary,
+          }
+          if (acc.cancelled_cheque_url) bankPayload.cancelled_cheque_url = acc.cancelled_cheque_url
+          const result = await addBankAccount(bankPayload)
+          if (result && acc.is_primary) savedBankId = result.id
+        } catch (bankErr) {
+          console.warn('[invest] Bank account save failed (non-blocking):', bankErr)
+        }
       }
 
       // 2. Submit the investment application
-      const appResult = await submitInvestmentApplication({
+      const appPayload = {
         client_id: clientId,
         user_id: user.id,
         fund_vehicle: investVehicle,
@@ -2569,9 +2924,28 @@ export default function DashboardClient() {
         tenure_preference: investTenure,
         bank_account_id: savedBankId || undefined,
         terms_accepted: investTermsAccepted,
-      })
+      }
+      console.log('[invest] Submitting application:', JSON.stringify(appPayload))
+      const appResult = await submitInvestmentApplication(appPayload)
 
       if (appResult) {
+        // Create acknowledgement document for this application (non-blocking)
+        try {
+          await uploadDocument({
+            title: `Investment Application - ${investVehicle}`,
+            name: `investment_ack_${appResult.id}.pdf`,
+            category: 'investment',
+            status: 'active',
+            entity_type: 'client',
+            entity_id: clientId,
+            client_id: clientId,
+            uploaded_by: user.id,
+            description: `Investment application for ${investVehicle}, Amount: ₹${formatINR(investAmount)}, Tenure: ${investTenure}. Status: Pending Review.`,
+            file_url: '',
+            access_level: 'restricted',
+          })
+          refetchDocs()
+        } catch { /* non-blocking */ }
         showToast('Investment application submitted successfully! Our team will contact you within 24 hours for verification.')
         // Reset form
         setInvestTermsAccepted(false)
@@ -2588,10 +2962,11 @@ export default function DashboardClient() {
         setInvestAmount(2500000)
         refetchPortfolio()
       } else {
-        showToast('Submission failed. Please try again or contact support.', 'info')
+        showToast('Submission failed. Please try again or contact support at info@ghlindiaventures.com', 'info')
       }
-    } catch {
-      showToast('An error occurred. Please try again.', 'info')
+    } catch (err) {
+      console.error('[invest] Submission error:', err)
+      showToast('An error occurred. Please try again or contact support at info@ghlindiaventures.com', 'info')
     } finally {
       setInvestSubmitting(false)
     }
@@ -3099,7 +3474,12 @@ export default function DashboardClient() {
       case 'investments': return renderInvestmentsTab()
       case 'invest-onboard': return renderInvestOnboard()
       case 'portfolio': return renderPortfolioTab()
-      case 'kyc': return renderKYCTab()
+      case 'kyc': return (
+        <KYCWizard clientId={clientId || ''} userId={user?.id || ''} userName={userName} userEmail={userEmail} userPhone={user?.phone || ''} theme={theme} onToast={showToast} />
+      )
+      case 'documents': return (
+        <DocumentsTab clientId={clientId || ''} userId={user?.id || ''} theme={theme} onToast={showToast} />
+      )
       case 'transactions': return renderTransactionsTab()
       case 'messages': return renderMessagesTab()
       case 'support': return renderSupportTab()
@@ -3125,23 +3505,57 @@ export default function DashboardClient() {
   ]
 
   return (
-    <div className="min-h-screen relative bg-brand-black">
+    <div className={`min-h-screen relative ${isDark ? 'bg-brand-black' : 'bg-[#E8E5E0]'}`}>
       {/* Background ambient effects */}
       <div className="fixed inset-0 pointer-events-none z-0">
-        <div className="absolute top-0 left-1/4 w-[600px] h-[600px] bg-brand-red/[0.03] rounded-full blur-[200px]" />
-        <div className="absolute bottom-0 right-1/4 w-[500px] h-[500px] bg-brand-red/[0.02] rounded-full blur-[180px]" />
-        <div className="absolute inset-0 opacity-[0.015]" style={{ backgroundImage: 'radial-gradient(rgba(255,255,255,0.3) 1px, transparent 1px)', backgroundSize: '40px 40px' }} />
+        <div className={`absolute top-0 left-1/4 w-[600px] h-[600px] rounded-full blur-[200px] ${isDark ? 'bg-brand-red/[0.03]' : 'bg-brand-red/[0.02]'}`} />
+        <div className={`absolute bottom-0 right-1/4 w-[500px] h-[500px] rounded-full blur-[180px] ${isDark ? 'bg-brand-red/[0.02]' : 'bg-brand-red/[0.01]'}`} />
+        {isDark && <div className="absolute inset-0 opacity-[0.015]" style={{ backgroundImage: 'radial-gradient(rgba(255,255,255,0.3) 1px, transparent 1px)', backgroundSize: '40px 40px' }} />}
       </div>
 
       {renderSidebar()}
       {renderTourOverlay()}
+
+      {/* Mandatory Password Reset Overlay — blocks entire UI until password is set */}
+      {passwordResetMandatory && showPasswordReset && !passwordResetDone && (
+        <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/80 backdrop-blur-sm">
+          <div className={`max-w-md w-full mx-4 rounded-2xl border p-8 ${t('bg-[#111] border-white/10','bg-white border-gray-200 shadow-2xl')}`}>
+            <div className="w-14 h-14 rounded-xl bg-red-500/15 flex items-center justify-center mx-auto mb-5">
+              <Lock className="w-7 h-7 text-red-500" />
+            </div>
+            <h3 className={`text-lg font-bold mb-2 text-center ${t('text-white','text-gray-900')}`}>Set Your New Password</h3>
+            <p className={`text-sm mb-6 text-center ${t('text-gray-400','text-gray-700')}`}>
+              You must set a new password before accessing your dashboard. This is required for your account security.
+            </p>
+            <div className="space-y-3">
+              <div className="relative">
+                <input type={showNewPw ? 'text' : 'password'} value={newPassword} onChange={(e) => setNewPassword(e.target.value)} placeholder="New password (min. 8 chars, letters + numbers)"
+                  className={`w-full px-4 py-3 pr-12 rounded-xl text-sm ${t('bg-white/[0.06] border border-white/[0.08] text-white placeholder:text-gray-500','bg-gray-50 border border-gray-200 text-gray-900 placeholder:text-gray-400')} focus:outline-none focus:ring-2 focus:ring-brand-red`} />
+                <button type="button" onClick={() => setShowNewPw(!showNewPw)} className={`absolute right-3 top-1/2 -translate-y-1/2 ${t('text-gray-500','text-gray-400')}`}>
+                  {showNewPw ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
+              <div className="relative">
+                <input type={showConfirmPw ? 'text' : 'password'} value={confirmNewPassword} onChange={(e) => setConfirmNewPassword(e.target.value)} placeholder="Confirm new password"
+                  className={`w-full px-4 py-3 pr-12 rounded-xl text-sm ${t('bg-white/[0.06] border border-white/[0.08] text-white placeholder:text-gray-500','bg-gray-50 border border-gray-200 text-gray-900 placeholder:text-gray-400')} focus:outline-none focus:ring-2 focus:ring-brand-red`} />
+                <button type="button" onClick={() => setShowConfirmPw(!showConfirmPw)} className={`absolute right-3 top-1/2 -translate-y-1/2 ${t('text-gray-500','text-gray-400')}`}>
+                  {showConfirmPw ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
+              <button onClick={handlePasswordUpdate} className="w-full px-6 py-3 rounded-xl text-sm font-semibold text-white" style={{ background: 'linear-gradient(135deg, #D0021B, #8B0000)' }}>
+                Update Password
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       {renderTermsPopup()}
       {renderPrivacyPopup()}
 
       <div className="lg:ml-[260px] relative z-10 min-h-screen flex flex-col">
         {renderTopBar()}
         <div className="flex-1 p-4 lg:p-6 pb-20 overflow-auto">{renderContent()}</div>
-        <footer className="hidden sm:flex border-t px-4 lg:px-6 py-3 flex-col sm:flex-row items-center justify-between gap-2 text-[11px] border-white/[0.04] text-gray-600">
+        <footer className={`hidden sm:flex border-t px-4 lg:px-6 py-3 flex-col sm:flex-row items-center justify-between gap-2 text-[11px] ${isDark ? 'border-white/[0.04] text-gray-600' : 'border-gray-300/50 text-gray-500'}`}>
           <p>&copy; 2025 GHL India Ventures. <a href="https://www.sebi.gov.in/sebiweb/other/OtherAction.do?doRecognisedFpi=yes&intmId=16&name=GHL%20INDIA%20VENTURES%20TRUST&regNo=IN/AIF2/24-25/1517" target="_blank" rel="noopener noreferrer" className="hover:text-brand-red transition-colors">SEBI Reg: IN/AIF2/2425/1517</a></p>
           <div className="flex items-center gap-3">
             <button onClick={() => { setTermsOpen(true); setTermsScrolled(false) }} className="hover:underline hover:text-white transition-colors">Terms & Conditions</button>
@@ -3152,8 +3566,8 @@ export default function DashboardClient() {
       </div>
 
       {/* Mobile Bottom Navigation Bar */}
-      <nav className="fixed bottom-0 left-0 right-0 z-[9998] lg:left-[260px] border-t border-white/[0.06]"
-        style={{ background: 'rgba(10,10,10,0.97)', backdropFilter: 'blur(24px)', WebkitBackdropFilter: 'blur(24px)' }}>
+      <nav className={`fixed bottom-0 left-0 right-0 z-[9998] lg:left-[260px] border-t ${isDark ? 'border-white/[0.06]' : 'border-gray-300/50'}`}
+        style={{ background: isDark ? 'rgba(10,10,10,0.97)' : 'rgba(214,211,206,0.97)', backdropFilter: 'blur(24px)', WebkitBackdropFilter: 'blur(24px)' }}>
         <div className="flex items-center justify-around px-0.5 py-1 safe-area-bottom">
           {MOBILE_NAV.map(item => {
             const isActive = activeTab === item.id

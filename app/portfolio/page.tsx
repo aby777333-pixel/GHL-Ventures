@@ -2,147 +2,89 @@
 
 import Link from 'next/link'
 import AnimatedSection from '@/components/AnimatedSection'
-import PlaceholderImage from '@/components/PlaceholderImage'
 import {
-  Building2,
   ArrowRight,
-  TrendingUp,
-  Target,
   MapPin,
-  ExternalLink,
-  Lightbulb,
-  Users,
-  Network,
-  Settings,
-  Cpu,
-  HeartPulse,
+  Sun,
+  Factory,
+  TrendingUp,
   Landmark,
-  Calendar,
+  Shield,
+  Zap,
+  Target,
+  BarChart3,
 } from 'lucide-react'
-import { useState } from 'react'
 import SpaceHero from '@/components/SpaceHero'
 
-/* ─── Portfolio Data ─── */
-
-type PortfolioStatus = 'Active' | 'Exited' | 'Pipeline'
-type PortfolioSector = 'Real Estate' | 'Startups'
-
-interface PortfolioCompany {
-  name: string
-  tagline: string
-  sector: PortfolioSector
-  type: string
-  city: string
-  description: string
-  investmentYear: number
-  status: PortfolioStatus
-  icon: React.ElementType
-}
-
-const PORTFOLIO: PortfolioCompany[] = [
-  // Real Estate
+/* ─── Project Data ─── */
+const PROJECTS = [
   {
-    name: 'Egmore Heights',
-    tagline: 'Premium residential revival in the heart of Chennai',
-    sector: 'Real Estate',
-    type: 'Stressed RE',
-    city: 'Chennai',
-    description: 'Distressed residential tower project acquired and restructured. Construction restart, new approvals obtained, and sales relaunch executed under GHL oversight.',
-    investmentYear: 2024,
-    status: 'Active',
-    icon: Building2,
+    id: 'narikudi',
+    name: 'Narikudi Solar Land',
+    subtitle: 'Renewable Energy Development Opportunity',
+    location: 'Narikudi, ~50 km from Madurai, Tamil Nadu',
+    landArea: '~145 Acres',
+    sector: 'Renewable Energy',
+    sectorIcon: Sun,
+    image: '/images/portfolio/narikudi-madurai.jpg',
+    acquisitionCost: '\u20B922.5 Cr',
+    projectedValue: '\u20B925 Cr',
+    discount: '40%',
+    description:
+      'Approximately 145 acres of contiguous land ideal for large-scale solar power development. The site leverages the region\u2019s abundant sunlight, favourable terrain, and existing infrastructure.',
+    highlights: [
+      'Situated close to a major power substation for seamless grid connectivity',
+      'Near Greenko Group\u2019s SEI Aadhavan & SEI Kathiravan Power Plants',
+      'Prospective Dubai-based buyer showing strong development interest',
+      'Region\u2019s growing prominence as a renewable energy hub',
+      'Acquired at 40% discount to current market value',
+    ],
+    stats: [
+      { label: 'Land Area', value: '~145 Acres' },
+      { label: 'Acquisition', value: '\u20B922.5 Cr' },
+      { label: 'Investment Projected', value: '\u20B925 Cr' },
+      { label: 'Below Market', value: '40%' },
+    ],
+    gradient: 'from-amber-500/20 to-orange-500/10',
+    glowClass: 'glow-card-amber',
   },
   {
-    name: 'Velachery Commercial Hub',
-    tagline: 'Grade-A office space repositioning',
-    sector: 'Real Estate',
-    type: 'Stressed RE',
-    city: 'Chennai',
-    description: 'Stalled commercial office complex in Velachery. Restructured developer debt, secured occupancy certificates, and initiated tenant fit-outs for IT/ITES occupiers.',
-    investmentYear: 2024,
-    status: 'Active',
-    icon: Building2,
-  },
-  {
-    name: 'Coimbatore Township',
-    tagline: 'Integrated township on the outskirts of Coimbatore',
-    sector: 'Real Estate',
-    type: 'Stressed RE',
-    city: 'Coimbatore',
-    description: 'Mixed-use township project with residential plots and commercial zones. Resolved RERA compliance issues and relaunched phased development.',
-    investmentYear: 2025,
-    status: 'Pipeline',
-    icon: Building2,
-  },
-  // Startups
-  {
-    name: 'TechVista Solutions',
-    tagline: 'AI-powered enterprise supply chain SaaS',
-    sector: 'Startups',
-    type: 'SaaS',
-    city: 'Chennai',
-    description: 'Enterprise software platform leveraging AI for supply chain optimization. Serving 40+ mid-market and enterprise clients across India and SEA.',
-    investmentYear: 2023,
-    status: 'Active',
-    icon: Cpu,
-  },
-  {
-    name: 'MedConnect Health',
-    tagline: 'Rural telemedicine for Bharat',
-    sector: 'Startups',
-    type: 'HealthTech',
-    city: 'Bangalore',
-    description: 'Digital health platform connecting rural communities to specialist doctors through telemedicine kiosks and an AI triage engine.',
-    investmentYear: 2023,
-    status: 'Active',
-    icon: HeartPulse,
-  },
-  {
-    name: 'FinEdge Capital',
-    tagline: 'Next-gen MSME lending platform',
-    sector: 'Startups',
-    type: 'Fintech',
-    city: 'Mumbai',
-    description: 'Technology-driven lending platform providing collateral-free working capital to SMEs and MSMEs with sub-24-hour disbursement.',
-    investmentYear: 2022,
-    status: 'Exited',
-    icon: Landmark,
+    id: 'karadivavi',
+    name: 'Karadivavi Industrial Land',
+    subtitle: 'Industrial and Strategic Development Asset',
+    location: 'Karadivavi, ~35 km from Coimbatore, Tamil Nadu',
+    landArea: '~30 Acres',
+    sector: 'Industrial & Defence Corridor',
+    sectorIcon: Factory,
+    image: '/images/portfolio/karadivavi-coimbatore.jpg',
+    acquisitionCost: '\u20B945 Cr',
+    projectedValue: '\u20B975 Cr',
+    discount: '40%',
+    description:
+      'A 30-acre strategic land parcel offering prime potential for industrial and infrastructure expansion, near the Defence Corridor and Sulur Airbase.',
+    highlights: [
+      'Proximity to the Defence Corridor and Sulur Airbase',
+      'Rapidly evolving industrial and logistics hub',
+      'Growing defence and manufacturing investments in the region',
+      'Post-development fair market value of approximately \u20B975 Cr',
+      'Acquired at 40% discount to prevailing market rates',
+    ],
+    stats: [
+      { label: 'Land Area', value: '~30 Acres' },
+      { label: 'Acquisition', value: '\u20B945 Cr' },
+      { label: 'Investment Projected', value: '\u20B975 Cr' },
+      { label: 'Below Market', value: '40%' },
+    ],
+    gradient: 'from-blue-500/20 to-cyan-500/10',
+    glowClass: 'glow-card-blue',
   },
 ]
 
-const FILTER_TABS = ['All', 'Real Estate', 'Startups', 'Exited'] as const
-
-function getStatusColor(status: PortfolioStatus) {
-  switch (status) {
-    case 'Active':
-      return 'bg-emerald-500/10 text-emerald-700 border-emerald-500/20'
-    case 'Exited':
-      return 'bg-blue-500/10 text-blue-700 border-blue-500/20'
-    case 'Pipeline':
-      return 'bg-amber-500/10 text-amber-700 border-amber-500/20'
-  }
-}
-
-function getCardGradient(sector: PortfolioSector) {
-  return sector === 'Real Estate'
-    ? 'from-amber-500/15 to-orange-500/10'
-    : 'from-violet-500/15 to-purple-500/10'
-}
-
 export default function PortfolioPage() {
-  const [activeFilter, setActiveFilter] = useState<string>('All')
-
-  const filtered = PORTFOLIO.filter((c) => {
-    if (activeFilter === 'All') return true
-    if (activeFilter === 'Exited') return c.status === 'Exited'
-    return c.sector === activeFilter
-  })
-
   return (
     <>
       {/* Hero */}
       <section className="pt-40 pb-20 gradient-dark relative overflow-hidden">
-        {/* Space: Satellite theme */}
         <SpaceHero variant="satellite" />
         <div className="absolute inset-0 overflow-hidden pointer-events-none">
           <div className="absolute -top-40 -right-40 w-80 h-80 bg-brand-red/5 rounded-full blur-3xl" />
@@ -152,15 +94,15 @@ export default function PortfolioPage() {
           <AnimatedSection>
             <span className="inline-flex items-center px-4 py-1.5 bg-brand-red/10 border border-brand-red/20 rounded-full text-brand-red text-sm font-semibold uppercase tracking-wider mb-6">
               <Target className="w-4 h-4 mr-2" />
-              Our Investments
+              Strategic Acquisitions
             </span>
             <h1 className="text-2xl md:text-3xl lg:text-4xl font-bold text-white mt-4 mb-5 leading-tight">
-              Where We&apos;ve Placed Our{' '}
-              <span className="text-gradient-shimmer">Conviction</span>
+              High-Value Assets with{' '}
+              <span className="text-gradient-shimmer">Strong Appreciation Potential</span>
             </h1>
             <p className="text-base text-gray-300 max-w-3xl leading-relaxed">
-              A focused portfolio spanning stressed real estate resolution and high-growth startup
-              investments across India&apos;s most dynamic markets.
+              GHL India Ventures acquires strategically selected land parcels at significant discounts
+              to market value, positioned in high-growth corridors for renewable energy and industrial expansion.
             </p>
           </AnimatedSection>
         </div>
@@ -171,14 +113,19 @@ export default function PortfolioPage() {
         <div className="container-max mx-auto">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
             {[
-              { value: '6', label: 'Portfolio Companies' },
-              { value: '4', label: 'Cities' },
-              { value: '₹200Cr+', label: 'Capital Deployed' },
-              { value: '1', label: 'Successful Exit' },
+              { value: '2', label: 'Strategic Assets', icon: Landmark },
+              { value: '~175', label: 'Total Acres', icon: MapPin },
+              { value: '\u20B967.5 Cr', label: 'Capital Deployed', icon: BarChart3 },
+              { value: '40%', label: 'Below Market Value', icon: TrendingUp },
             ].map((stat, i) => (
               <AnimatedSection key={stat.label} delay={i * 100}>
-                <div className="text-2xl md:text-3xl font-bold text-brand-red mb-1">{stat.value}</div>
-                <div className="text-brand-grey text-sm">{stat.label}</div>
+                <div className="flex flex-col items-center">
+                  <div className="w-12 h-12 rounded-full bg-brand-red/10 flex items-center justify-center mb-3">
+                    <stat.icon className="w-6 h-6 text-brand-red" />
+                  </div>
+                  <div className="text-2xl md:text-3xl font-bold text-brand-red mb-1">{stat.value}</div>
+                  <div className="text-brand-grey text-sm">{stat.label}</div>
+                </div>
               </AnimatedSection>
             ))}
           </div>
@@ -187,150 +134,113 @@ export default function PortfolioPage() {
 
       <hr className="section-divider-animated" />
 
-      {/* Filter Tabs */}
-      <section className="bg-white border-b border-gray-200 sticky top-20 z-30">
-        <div className="container-max mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <div className="flex flex-wrap gap-2 justify-center">
-            {FILTER_TABS.map((tab) => (
-              <button
-                key={tab}
-                onClick={() => setActiveFilter(tab)}
-                className={`px-5 py-2 rounded-full text-sm font-medium transition-all ${
-                  activeFilter === tab
-                    ? 'bg-brand-red text-white shadow-lg shadow-brand-red/25'
-                    : 'bg-gray-100 text-brand-grey hover:bg-gray-200'
-                }`}
-              >
-                {tab}
-              </button>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Portfolio Grid */}
+      {/* Project Cards — Full Detail */}
       <section className="section-padding bg-brand-offwhite">
-        <div className="container-max mx-auto">
-          {filtered.length === 0 ? (
-            <div className="text-center py-20">
-              <Building2 className="w-16 h-16 text-brand-grey/40 mx-auto mb-4" />
-              <h3 className="text-xl font-bold text-brand-black mb-2">No investments match this filter</h3>
-              <p className="text-brand-grey">Try selecting a different category.</p>
-            </div>
-          ) : (
-            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
-              {filtered.map((company, i) => {
-                const statusColor = getStatusColor(company.status)
+        <div className="container-max mx-auto space-y-20">
+          {PROJECTS.map((project, pi) => (
+            <AnimatedSection key={project.id} delay={pi * 150}>
+              <div className={`card overflow-hidden ${project.glowClass}`}>
+                {/* Full-width hero image */}
+                <div className="relative aspect-[21/9] -mx-6 -mt-6 mb-0 overflow-hidden">
+                  <img
+                    src={project.image}
+                    alt={`${project.name} — ${project.location}`}
+                    className="w-full h-full object-cover"
+                    loading={pi === 0 ? 'eager' : 'lazy'}
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
+                  <div className="absolute bottom-6 left-6 right-6">
+                    <h2 className="text-2xl md:text-3xl font-bold text-white">{project.name}</h2>
+                    <p className="text-white/80 text-sm mt-1">{project.subtitle}</p>
+                  </div>
+                </div>
 
-                return (
-                  <AnimatedSection key={company.name} delay={i * 100}>
-                    <div className={"card group hover-lift h-full flex flex-col " + ['glow-card-amber','glow-card-blue','glow-card-violet','glow-card-emerald','glow-card-rose','glow-card-cyan'][i % 6]}>
-                      {/* Image placeholder */}
-                      <div className="relative mb-5">
-                        <PlaceholderImage
-                          theme={company.sector === 'Real Estate' ? 'real-estate' : 'startup'}
-                          aspectRatio="aspect-[16/10]"
-                          label={company.name}
-                          className="rounded-xl"
-                        />
-                        {/* Status badge */}
-                        <span
-                          className={`absolute top-3 right-3 px-3 py-1 text-xs font-bold rounded-full border trust-badge badge-bounce ${statusColor} z-10`}
-                        >
-                          {company.status}
-                        </span>
+                {/* Content */}
+                <div className="pt-8 pb-2">
+                  {/* Stats Row */}
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+                    {project.stats.map((stat) => (
+                      <div key={stat.label} className="bg-brand-offwhite rounded-xl p-4 text-center">
+                        <div className="text-xl md:text-2xl font-bold text-brand-red">{stat.value}</div>
+                        <div className="text-[11px] text-brand-grey font-medium mt-1 uppercase tracking-wider">{stat.label}</div>
                       </div>
+                    ))}
+                  </div>
 
-                      {/* Name + tagline */}
-                      <h3 className="font-bold text-xl text-brand-black mb-1 group-hover:text-brand-red transition-colors">
-                        {company.name}
-                      </h3>
-                      <p className="text-brand-grey text-sm italic mb-3">{company.tagline}</p>
-
-                      {/* Tag pills */}
-                      <div className="flex flex-wrap gap-2 mb-4">
-                        <span className="px-2.5 py-0.5 bg-brand-red/10 text-brand-red text-xs font-semibold rounded-full trust-badge badge-bounce">
-                          {company.sector}
-                        </span>
-                        <span className="px-2.5 py-0.5 bg-gray-100 text-brand-grey text-xs font-medium rounded-full flex items-center">
-                          <MapPin className="w-3 h-3 mr-1" />
-                          {company.city}
-                        </span>
-                        <span className="px-2.5 py-0.5 bg-gray-100 text-brand-grey text-xs font-medium rounded-full">
-                          {company.type}
-                        </span>
-                      </div>
-
-                      {/* Description (2 lines) */}
-                      <p className="text-brand-grey text-sm mb-4 line-clamp-2 leading-relaxed">
-                        {company.description}
-                      </p>
-
-                      {/* Investment year + View Details */}
-                      <div className="flex items-center justify-between mt-auto pt-4 border-t border-gray-100">
-                        <span className="text-xs text-brand-grey flex items-center">
-                          <Calendar className="w-3.5 h-3.5 mr-1.5" />
-                          Invested {company.investmentYear}
-                        </span>
-                        <button className="text-brand-red text-sm font-semibold flex items-center group/btn hover:underline cursor-pointer">
-                          View Details
-                          <ArrowRight className="w-3.5 h-3.5 ml-1 group-hover/btn:translate-x-1 transition-transform" />
-                        </button>
+                  {/* Description + Location */}
+                  <div className="grid lg:grid-cols-5 gap-8">
+                    <div className="lg:col-span-3">
+                      <p className="text-brand-grey text-base leading-relaxed mb-6">{project.description}</p>
+                      <div className="flex items-center gap-2 text-brand-grey text-sm mb-2">
+                        <MapPin className="w-4 h-4 text-brand-red shrink-0" />
+                        <span>{project.location}</span>
                       </div>
                     </div>
-                  </AnimatedSection>
-                )
-              })}
-            </div>
-          )}
+
+                    {/* Highlights */}
+                    <div className="lg:col-span-2">
+                      <h4 className="text-sm font-bold text-brand-black uppercase tracking-wider mb-4">Key Highlights</h4>
+                      <ul className="space-y-3">
+                        {project.highlights.map((h, hi) => (
+                          <li key={hi} className="flex items-start gap-3">
+                            <Shield className="w-4 h-4 text-brand-red mt-0.5 shrink-0" />
+                            <span className="text-brand-grey text-sm leading-relaxed">{h}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </AnimatedSection>
+          ))}
         </div>
       </section>
 
       <hr className="section-divider-animated" />
 
-      {/* How We Add Value */}
+      {/* Investment Philosophy */}
       <section className="section-padding bg-white">
         <div className="container-max mx-auto">
           <AnimatedSection className="text-center mb-10">
-            <span className="text-brand-red font-semibold text-xs uppercase tracking-wider">Our Edge</span>
-            <h2 className="section-title text-brand-black mt-2">How We Add Value</h2>
+            <span className="text-brand-red font-semibold text-xs uppercase tracking-wider">Our Approach</span>
+            <h2 className="section-title text-brand-black mt-2">Why These Acquisitions</h2>
             <p className="section-subtitle mx-auto mt-4">
-              Beyond capital, we bring hands-on expertise and an extensive network to every investment.
+              Every acquisition reflects strategic selection, inherent growth potential, and synergy with
+              GHL&apos;s core investment focus.
             </p>
           </AnimatedSection>
 
           <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
             {[
               {
-                icon: Lightbulb,
-                title: 'Strategic Guidance',
-                desc: 'We work closely with founders and developers to refine go-to-market strategy, product-market fit, and growth roadmaps.',
+                icon: TrendingUp,
+                title: 'Below Market Acquisition',
+                desc: 'Both properties acquired at approximately 40% below prevailing market value, creating immediate equity cushion.',
                 gradient: 'from-amber-500/10 to-yellow-500/5',
               },
               {
-                icon: Users,
-                title: 'Board Governance',
-                desc: 'Active board participation ensuring disciplined execution, financial accountability, and alignment with investor interests.',
+                icon: Zap,
+                title: 'High-Growth Corridors',
+                desc: 'Positioned in Tamil Nadu\u2019s fastest-growing renewable energy and defence manufacturing corridors.',
                 gradient: 'from-blue-500/10 to-cyan-500/5',
               },
               {
-                icon: Network,
-                title: 'Network Access',
-                desc: 'Introductions to strategic partners, enterprise clients, distribution channels, and top-tier talent across our ecosystem.',
+                icon: Shield,
+                title: 'Strategic Value',
+                desc: 'Proximity to existing infrastructure — power substations, airbases, and industrial zones — amplifies inherent value.',
                 gradient: 'from-violet-500/10 to-purple-500/5',
               },
               {
-                icon: Settings,
-                title: 'Operational Support',
-                desc: 'Process optimization, compliance frameworks, and operational excellence programs to accelerate scaling.',
+                icon: BarChart3,
+                title: 'Capital Appreciation',
+                desc: 'Strong prospects for diversified project development and high-value appreciation driven by macro tailwinds.',
                 gradient: 'from-emerald-500/10 to-green-500/5',
               },
             ].map((item, i) => (
               <AnimatedSection key={item.title} delay={i * 100}>
-                <div className={"card group hover-lift h-full text-center " + ['glow-card-amber','glow-card-blue','glow-card-violet','glow-card-emerald'][i % 4]}>
-                  <div
-                    className={`w-16 h-16 bg-gradient-to-br ${item.gradient} rounded-2xl flex items-center justify-center mx-auto mb-5 group-hover:scale-110 transition-transform icon-ring-hover`}
-                  >
+                <div className={'card group hover-lift h-full text-center ' + ['glow-card-amber', 'glow-card-blue', 'glow-card-violet', 'glow-card-emerald'][i % 4]}>
+                  <div className={`w-16 h-16 bg-gradient-to-br ${item.gradient} rounded-2xl flex items-center justify-center mx-auto mb-5 group-hover:scale-110 transition-transform icon-ring-hover`}>
                     <item.icon className="w-8 h-8 text-brand-red" />
                   </div>
                   <h3 className="font-bold text-lg text-brand-black mb-3">{item.title}</h3>
@@ -351,11 +261,11 @@ export default function PortfolioPage() {
         <div className="container-max mx-auto relative z-10">
           <AnimatedSection>
             <h2 className="text-2xl md:text-3xl font-bold text-white mb-3">
-              Are You a Founder? Have a Distressed Asset?
+              Interested in Strategic Land Investments?
             </h2>
             <p className="text-white/80 text-base max-w-2xl mx-auto mb-6">
-              Whether you&apos;re building a high-growth startup or hold a stressed real estate asset,
-              we&apos;d love to explore how we can partner together.
+              Explore how GHL India Ventures identifies and acquires high-value assets at significant
+              discounts for superior capital appreciation.
             </p>
             <div className="flex flex-col sm:flex-row justify-center gap-4">
               <Link
@@ -368,7 +278,7 @@ export default function PortfolioPage() {
                 href="/fund"
                 className="inline-flex items-center justify-center px-6 py-2.5 text-sm border-2 border-white/30 text-white font-bold rounded-lg hover:bg-white/10 transition-all"
               >
-                Learn About Our Fund <ExternalLink className="ml-2 w-4 h-4" />
+                Learn About Our Fund <ArrowRight className="ml-2 w-4 h-4" />
               </Link>
             </div>
           </AnimatedSection>

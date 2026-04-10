@@ -10,6 +10,11 @@
 import { supabase, isSupabaseConfigured } from './client'
 import { subscribeToTable } from './realtimeSubscriptions'
 
+/** Encode HTML entities to prevent stored XSS */
+function sanitizeStr(s: string): string {
+  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#x27;')
+}
+
 // ── Types ────────────────────────────────────────────────────
 export interface InternalChannel {
   id: string
@@ -37,29 +42,13 @@ const INTERNAL_CHANNELS: InternalChannel[] = [
   { id: 'support', name: 'Support', description: 'Client support discussions', unread: 0 },
 ]
 
-// ── Mock seed messages (shown when DB is empty) ──────────────
+// ── Empty channel defaults (no fake seed messages in production) ──
 const SEED_MESSAGES: Record<string, InternalMessage[]> = {
-  general: [
-    { id: 'seed-g1', channel_id: 'general', user_id: 'sys', user_name: 'Rajesh Kumar', user_role: 'admin', message: 'Welcome to GHL Internal Chat! Use this channel for general discussions across the team.', created_at: '2026-02-28T09:00:00Z' },
-    { id: 'seed-g2', channel_id: 'general', user_id: 'sys', user_name: 'Priya Sharma', user_role: 'admin', message: 'Reminder: Monthly all-hands meeting is scheduled for this Friday at 3 PM IST.', created_at: '2026-03-01T10:30:00Z' },
-    { id: 'seed-g3', channel_id: 'general', user_id: 'sys', user_name: 'Ananya Singh', user_role: 'staff', message: 'Noted! Will the meeting be on Google Meet or in-person?', created_at: '2026-03-01T10:45:00Z' },
-  ],
-  announcements: [
-    { id: 'seed-a1', channel_id: 'announcements', user_id: 'sys', user_name: 'Vikram Mehta', user_role: 'admin', message: '📢 Q4 results are out — GHL AIF Fund I delivered 18.2% returns. Congratulations to the entire team!', created_at: '2026-02-25T11:00:00Z' },
-    { id: 'seed-a2', channel_id: 'announcements', user_id: 'sys', user_name: 'Rajesh Kumar', user_role: 'admin', message: 'New SEBI circular on AIF reporting — compliance team will brief everyone by EOD Friday.', created_at: '2026-03-01T14:00:00Z' },
-  ],
-  compliance: [
-    { id: 'seed-c1', channel_id: 'compliance', user_id: 'sys', user_name: 'Priya Sharma', user_role: 'admin', message: 'Updated KYC checklist has been uploaded to the Policies section. Please review before next week.', created_at: '2026-02-27T09:15:00Z' },
-    { id: 'seed-c2', channel_id: 'compliance', user_id: 'sys', user_name: 'Priya Sharma', user_role: 'admin', message: 'Reminder: All client communications must include the standard risk disclaimer. No exceptions.', created_at: '2026-03-01T16:00:00Z' },
-  ],
-  'sales-team': [
-    { id: 'seed-s1', channel_id: 'sales-team', user_id: 'sys', user_name: 'Rahul Patel', user_role: 'staff', message: 'Just closed a ₹5 Cr commitment from a new HNI client in Pune. Documentation in progress.', created_at: '2026-02-28T15:30:00Z' },
-    { id: 'seed-s2', channel_id: 'sales-team', user_id: 'sys', user_name: 'Ananya Singh', user_role: 'staff', message: 'Great work Rahul! I will start the KYC process for them today.', created_at: '2026-02-28T15:45:00Z' },
-  ],
-  support: [
-    { id: 'seed-sup1', channel_id: 'support', user_id: 'sys', user_name: 'Ananya Singh', user_role: 'staff', message: 'Heads up — we have 3 pending KYC verifications that are past the 48-hour SLA. Prioritizing these today.', created_at: '2026-03-01T09:00:00Z' },
-    { id: 'seed-sup2', channel_id: 'support', user_id: 'sys', user_name: 'Rajesh Kumar', user_role: 'admin', message: 'Please escalate any KYC delays beyond 72 hours to compliance directly.', created_at: '2026-03-01T09:30:00Z' },
-  ],
+  general: [],
+  announcements: [],
+  compliance: [],
+  'sales-team': [],
+  support: [],
 }
 
 // ── Local message store (fallback when Supabase unavailable) ──
@@ -105,13 +94,14 @@ export async function sendInternalMessage(
   userRole: string,
   message: string
 ): Promise<InternalMessage | null> {
+  const safeMessage = sanitizeStr(message)
   const newMsg: InternalMessage = {
     id: `msg-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
     channel_id: channelId,
     user_id: userId,
-    user_name: userName,
+    user_name: sanitizeStr(userName),
     user_role: userRole,
-    message,
+    message: safeMessage,
     created_at: new Date().toISOString(),
   }
 
@@ -128,9 +118,9 @@ export async function sendInternalMessage(
       .insert({
         channel_id: channelId,
         user_id: userId,
-        user_name: userName,
+        user_name: sanitizeStr(userName),
         user_role: userRole,
-        message,
+        message: safeMessage,
       })
       .select()
       .single()

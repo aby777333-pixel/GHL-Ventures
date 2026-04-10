@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 
-const SITE_URL = 'https://ghl-india-ventures-2025.netlify.app';
+const SITE_URL = 'https://ghlindiaventures.com';
 
 export const metadata: Metadata = {
   title: 'Downloads — Brochures, PPM & Reports | GHL India Ventures',

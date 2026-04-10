@@ -17,7 +17,7 @@ interface MondayProxyBody {
 // Restrict CORS to our own domain for security
 const ALLOWED_ORIGINS = [
   'https://ghl-india-ventures-2025.netlify.app',
-  'http://localhost:3000',
+  // 'http://localhost:3000', // disabled for production
 ]
 
 function getCorsHeaders(request?: Request) {
@@ -41,6 +41,30 @@ export default async (request: Request) => {
       JSON.stringify({ error: { message: 'Method not allowed' } }),
       { status: 405, headers: { 'Content-Type': 'application/json', ...getCorsHeaders(request) } },
     )
+  }
+
+  // ── Auth Check: Require valid Supabase session ──
+  const authHeader = request.headers.get('Authorization') || ''
+  if (!authHeader.startsWith('Bearer ') || !authHeader.slice(7).trim()) {
+    return new Response(
+      JSON.stringify({ error: { message: 'Unauthorized' } }),
+      { status: 401, headers: { 'Content-Type': 'application/json', ...getCorsHeaders(request) } },
+    )
+  }
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || ''
+  const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
+  if (supabaseUrl && anonKey) {
+    try {
+      const verifyRes = await fetch(`${supabaseUrl}/auth/v1/user`, {
+        headers: { 'Authorization': authHeader, 'apikey': anonKey },
+      })
+      if (!verifyRes.ok) {
+        return new Response(
+          JSON.stringify({ error: { message: 'Unauthorized: invalid token' } }),
+          { status: 401, headers: { 'Content-Type': 'application/json', ...getCorsHeaders(request) } },
+        )
+      }
+    } catch { /* If Supabase is unreachable, allow through — proxy has its own key check */ }
   }
 
   try {

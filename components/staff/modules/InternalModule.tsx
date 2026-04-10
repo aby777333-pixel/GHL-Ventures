@@ -5,6 +5,7 @@ import AdminGlass from '@/components/admin/shared/AdminGlass'
 import AdminBadge from '@/components/admin/shared/AdminBadge'
 import { fetchAnnouncements } from '@/lib/supabase/staffDataService'
 import { insertRow } from '@/lib/supabase/adminDataService'
+import { supabase } from '@/lib/supabase/client'
 import {
   getChannels,
   getChannelMessages,
@@ -32,7 +33,7 @@ export default function InternalModule({ subTab, navigate, showToast }: Internal
   const [announcements, setAnnouncements] = useState<any[]>([])
 
   useEffect(() => {
-    fetchAnnouncements().then(data => setAnnouncements(data))
+    fetchAnnouncements().then(data => setAnnouncements(data || []))
   }, [])
 
   switch (tab) {
@@ -216,7 +217,7 @@ function NoticeboardView({ announcements }: { announcements: any[] }) {
               <p className="text-xs text-white/60 leading-relaxed mb-3">{ann.content}</p>
               <div className="flex items-center justify-between">
                 <span className="text-[10px] text-white/30">Posted by {ann.postedBy}</span>
-                <span className="text-[10px] text-white/25">{ann.readBy.length} read</span>
+                <span className="text-[10px] text-white/25">{(ann.readBy?.length ?? 0)} read</span>
               </div>
             </AdminGlass>
           )
@@ -239,12 +240,50 @@ const POLICIES: { id: string; title: string; lastUpdated: string; version: strin
 ]
 
 function PoliciesView({ showToast }: { showToast: Toast }) {
+  const [loadingPolicy, setLoadingPolicy] = useState<string | null>(null)
+
+  const handleViewDocument = async (pol: typeof POLICIES[number]) => {
+    setLoadingPolicy(pol.id)
+    try {
+      const sb = supabase as any
+      const fileName = pol.title.toLowerCase().replace(/\s+/g, '-')
+      const possiblePaths = [
+        { bucket: 'ghl-documents', path: `policies/${fileName}.pdf` },
+        { bucket: 'ghl-documents', path: `policies/${pol.id}.pdf` },
+        { bucket: 'documents', path: `policies/${fileName}.pdf` },
+        { bucket: 'ghl-documents', path: `documents/policies/${fileName}.pdf` },
+      ]
+
+      let publicUrl: string | null = null
+      for (const { bucket, path } of possiblePaths) {
+        // Use download to verify file exists (HEAD requests may fail due to CORS)
+        const { data: blob, error } = await sb.storage.from(bucket).download(path)
+        if (!error && blob) {
+          const { data: urlData } = sb.storage.from(bucket).getPublicUrl(path)
+          if (urlData?.publicUrl) { publicUrl = urlData.publicUrl; break }
+        }
+      }
+
+      if (publicUrl) {
+        window.open(publicUrl, '_blank', 'noopener,noreferrer')
+      } else {
+        showToast(`"${pol.title}" document is not yet uploaded. Please contact HR to upload it.`, 'warning')
+      }
+    } catch (err) {
+      console.error('Error fetching policy document:', err)
+      showToast(`Failed to open ${pol.title}`, 'error')
+    } finally {
+      setLoadingPolicy(null)
+    }
+  }
+
   return (
     <div className="space-y-4">
       <SectionHeader title="Company Policies" icon={FileText} />
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
         {POLICIES.map(pol => {
           const Icon = pol.icon
+          const isLoading = loadingPolicy === pol.id
           return (
             <AdminGlass key={pol.id} padding="p-4">
               <div className="flex items-start gap-3">
@@ -257,9 +296,9 @@ function PoliciesView({ showToast }: { showToast: Toast }) {
                     <span>Last updated: {pol.lastUpdated}</span>
                     <span>{pol.version}</span>
                   </div>
-                  <button onClick={() => showToast(`Opening ${pol.title}...`, 'info')}
-                    className="flex items-center gap-1 text-[10px] font-semibold text-teal-400 hover:text-teal-300 transition-colors">
-                    <Eye className="w-3 h-3" /> View Document
+                  <button onClick={() => handleViewDocument(pol)} disabled={isLoading}
+                    className="flex items-center gap-1 text-[10px] font-semibold text-teal-400 hover:text-teal-300 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+                    <Eye className="w-3 h-3" /> {isLoading ? 'Opening...' : 'View Document'}
                   </button>
                 </div>
               </div>
@@ -277,16 +316,12 @@ function PoliciesView({ showToast }: { showToast: Toast }) {
 type FeedbackCategory = 'Workplace' | 'Process' | 'Tools' | 'HR' | 'General'
 type FeedbackStatus = 'submitted' | 'acknowledged' | 'resolved'
 
+const RECENT_FEEDBACK: { id: string; category: FeedbackCategory; subject: string; status: FeedbackStatus; date: string }[] = []
+
 const FB_STATUS: Record<FeedbackStatus, { label: string; variant: 'success' | 'warning' | 'info' }> = {
   submitted: { label: 'Submitted', variant: 'info' },
   acknowledged: { label: 'Acknowledged', variant: 'warning' },
   resolved: { label: 'Resolved', variant: 'success' },
-}
-
-function mapTicketToFeedbackStatus(status: string): FeedbackStatus {
-  if (status === 'resolved' || status === 'closed') return 'resolved'
-  if (status === 'in-progress' || status === 'acknowledged') return 'acknowledged'
-  return 'submitted'
 }
 
 function FeedbackView({ showToast }: { showToast: Toast }) {
@@ -294,98 +329,45 @@ function FeedbackView({ showToast }: { showToast: Toast }) {
   const [subject, setSubject] = useState('')
   const [description, setDescription] = useState('')
   const [anonymous, setAnonymous] = useState(false)
-  const [recentFeedback, setRecentFeedback] = useState<{ id: string; category: FeedbackCategory; subject: string; status: FeedbackStatus; date: string }[]>([])
-
-  // Fetch feedback from both tickets (type=feedback) and feedback table
-  useEffect(() => {
-    async function loadFeedback() {
-      try {
-        const { supabase } = await import('@/lib/supabase/client')
-        // Fetch from tickets table (where feedback is saved)
-        const { data: ticketFb } = await supabase
-          .from('tickets')
-          .select('id, title, category, status, created_at')
-          .eq('type', 'feedback')
-          .order('created_at', { ascending: false })
-          .limit(20) as any
-        // Also fetch from dedicated feedback table
-        const { data: directFb } = await supabase
-          .from('feedback')
-          .select('id, subject, category, status, created_at')
-          .order('created_at', { ascending: false })
-          .limit(20) as any
-
-        const items: typeof recentFeedback = []
-        if (ticketFb) {
-          for (const t of ticketFb) {
-            items.push({
-              id: t.id,
-              category: (t.category || 'General') as FeedbackCategory,
-              subject: t.title || '—',
-              status: mapTicketToFeedbackStatus(t.status),
-              date: t.created_at?.split('T')[0] || '—',
-            })
-          }
-        }
-        if (directFb) {
-          for (const f of directFb) {
-            items.push({
-              id: f.id,
-              category: (f.category || 'General') as FeedbackCategory,
-              subject: f.subject || '—',
-              status: mapTicketToFeedbackStatus(f.status),
-              date: f.created_at?.split('T')[0] || '—',
-            })
-          }
-        }
-        setRecentFeedback(items)
-      } catch { /* ignore */ }
-    }
-    loadFeedback()
-  }, [])
+  const [submitting, setSubmitting] = useState(false)
 
   const handleSubmit = async () => {
     if (!subject.trim() || !description.trim()) { showToast('Please fill in all required fields', 'warning'); return }
-    // Save to the dedicated feedback table AND to tickets for cross-module visibility
-    const { supabase } = await import('@/lib/supabase/client')
-    const { data: { user } } = await supabase.auth.getUser()
-
-    const feedbackRow = await insertRow('feedback', {
-      staff_id: user?.id || null,
-      subject,
-      description,
-      category,
-      is_anonymous: anonymous,
-      status: 'pending',
-    })
-    // Also create a ticket entry for admin visibility
-    await insertRow('tickets', {
-      ticket_number: `FB-${Date.now().toString(36).toUpperCase()}`,
-      subject,
-      description,
-      type: 'feedback',
-      category,
-      status: 'open',
-      priority: 'normal',
-      is_anonymous: anonymous,
-      created_by: user?.id || null,
-      client_name: anonymous ? 'Anonymous Staff' : 'Staff Member',
-    })
-
-    if (feedbackRow) {
-      showToast('Feedback submitted successfully!', 'success')
-      // Add to local list immediately
-      setRecentFeedback(prev => [{
-        id: feedbackRow.id,
-        category: category as FeedbackCategory,
+    setSubmitting(true)
+    try {
+      // Get current user for created_by field
+      let userId: string | null = null
+      try {
+        const sb = supabase as any
+        const { data: { user } } = await sb.auth.getUser()
+        userId = user?.id || null
+      } catch { /* continue */ }
+      // Get user name for ticket
+      let userName = 'Staff Member'
+      try {
+        const sb2 = supabase as any
+        if (userId) {
+          const { data: prof } = await sb2.from('profiles').select('full_name').eq('id', userId).maybeSingle()
+          if (prof?.full_name) userName = prof.full_name
+        }
+      } catch { /* use default */ }
+      const feedbackData: Record<string, any> = {
+        staff_id: userId,
+        category,
         subject,
+        description,
+        is_anonymous: anonymous,
         status: 'submitted',
-        date: new Date().toISOString().split('T')[0],
-      }, ...prev])
-    } else {
-      showToast('Failed to submit feedback', 'error')
+      }
+      const row = await insertRow('feedback', feedbackData)
+      if (row) { showToast('Feedback submitted successfully!', 'success') } else { showToast('Failed to submit feedback — please try again', 'error') }
+      setSubject(''); setDescription(''); setAnonymous(false); setCategory('General')
+    } catch (err) {
+      console.error('Feedback submission error:', err)
+      showToast('An unexpected error occurred while submitting feedback', 'error')
+    } finally {
+      setSubmitting(false)
     }
-    setSubject(''); setDescription(''); setAnonymous(false); setCategory('General')
   }
 
   return (
@@ -419,9 +401,9 @@ function FeedbackView({ showToast }: { showToast: Toast }) {
                 className="w-3.5 h-3.5 rounded border-white/20 bg-white/[0.04] accent-teal-500" />
               <span className="text-[11px] text-white/50">Submit anonymously</span>
             </label>
-            <button onClick={handleSubmit}
-              className="flex items-center gap-1.5 bg-teal-500/20 hover:bg-teal-500/30 text-teal-300 px-4 py-2 rounded-lg text-xs font-semibold transition-colors">
-              <Send className="w-3 h-3" /> Submit Feedback
+            <button onClick={handleSubmit} disabled={submitting}
+              className="flex items-center gap-1.5 bg-teal-500/20 hover:bg-teal-500/30 text-teal-300 px-4 py-2 rounded-lg text-xs font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+              <Send className="w-3 h-3" /> {submitting ? 'Submitting...' : 'Submit Feedback'}
             </button>
           </div>
         </div>
@@ -430,10 +412,7 @@ function FeedbackView({ showToast }: { showToast: Toast }) {
       <div>
         <h4 className="text-xs font-semibold text-white/50 mb-3">Recent Feedback</h4>
         <div className="space-y-2">
-          {recentFeedback.length === 0 && (
-            <p className="text-xs text-white/25 text-center py-4">No feedback submitted yet</p>
-          )}
-          {recentFeedback.map(fb => {
+          {RECENT_FEEDBACK.map(fb => {
             const badge = FB_STATUS[fb.status]
             return (
               <AdminGlass key={fb.id} padding="p-3">
@@ -473,12 +452,23 @@ const MOODS = [
 ]
 
 function WellnessView({ showToast }: { showToast: Toast }) {
+  const [expandedCards, setExpandedCards] = useState<Set<string>>(new Set())
+
+  const toggleCard = (id: string) => {
+    setExpandedCards(prev => {
+      const next = new Set(prev)
+      if (next.has(id)) { next.delete(id) } else { next.add(id) }
+      return next
+    })
+  }
+
   return (
     <div className="space-y-4">
       <SectionHeader title="Wellness Hub" icon={Activity} />
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
         {WELLNESS_CARDS.map(card => {
           const Icon = card.icon
+          const isExpanded = expandedCards.has(card.id)
           return (
             <AdminGlass key={card.id} padding="p-4">
               <div className="flex items-start gap-3">
@@ -488,10 +478,40 @@ function WellnessView({ showToast }: { showToast: Toast }) {
                 <div className="flex-1 min-w-0">
                   <h4 className="text-sm font-semibold text-white mb-1">{card.title}</h4>
                   <p className="text-[11px] text-white/50 leading-relaxed mb-3">{card.desc}</p>
-                  <button onClick={() => showToast(`Opening ${card.title}...`, 'info')}
+                  <button onClick={() => toggleCard(card.id)}
                     className="flex items-center gap-1 text-[10px] font-semibold text-teal-400 hover:text-teal-300 transition-colors">
-                    Learn More <ChevronRight className="w-3 h-3" />
+                    {isExpanded ? 'Show Less' : 'Learn More'} <ChevronRight className={`w-3 h-3 transition-transform ${isExpanded ? 'rotate-90' : ''}`} />
                   </button>
+                  {isExpanded && (
+                    <div className="mt-3 pt-3 border-t border-white/[0.06] space-y-2">
+                      <p className="text-xs text-white/60 leading-relaxed">{card.desc}</p>
+                      <p className="text-xs text-white/40 leading-relaxed">
+                        For more resources, contact HR or visit the employee wellness portal. You can also reach out to the EAP helpline for confidential support.
+                      </p>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          // Try to open relevant wellness resources
+                          const urls: Record<string, string> = {
+                            w1: 'https://www.who.int/news-room/fact-sheets/detail/mental-health-at-work',
+                            w2: 'https://www.who.int/news-room/fact-sheets/detail/mental-health-strengthening-our-response',
+                            w3: 'https://www.nimhans.ac.in/',
+                            w4: 'https://fit.google.com/',
+                          }
+                          const url = urls[card.id]
+                          if (url) {
+                            window.open(url, '_blank', 'noopener,noreferrer')
+                            showToast(`Opening resource for "${card.title}"`, 'info')
+                          } else {
+                            showToast(`Resource for "${card.title}" — contact HR for more details`, 'info')
+                          }
+                        }}
+                        className="text-[10px] font-semibold text-teal-400 hover:text-teal-300 transition-colors"
+                      >
+                        Open Full Resource
+                      </button>
+                    </div>
+                  )}
                 </div>
               </div>
             </AdminGlass>

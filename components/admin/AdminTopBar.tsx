@@ -7,7 +7,7 @@ import {
 } from 'lucide-react'
 import { MODULE_LABELS } from '@/lib/admin/adminConstants'
 import { fetchNotifications, updateRow, insertRow } from '@/lib/supabase/adminDataService'
-import { onNewChatSession } from '@/lib/supabase/realtimeSubscriptions'
+import { onNewChatSession, onNewLead, onNewContactSubmission } from '@/lib/supabase/realtimeSubscriptions'
 import type { AdminModule, NotificationType } from '@/lib/admin/adminTypes'
 import { formatTimeAgo } from '@/lib/admin/adminHooks'
 
@@ -113,6 +113,48 @@ export default function AdminTopBar({ activeModule, activeSubTab, onMenuToggle, 
         is_read: false,
         metadata: { module: 'comms', chat_session_id: session.id },
       }).catch(() => {}) // silent if table doesn't exist
+    })
+    return () => { unsub?.() }
+  }, [sendAdminBrowserNotification])
+
+  // Subscribe to new leads — alert admin
+  useEffect(() => {
+    const unsub = onNewLead((payload) => {
+      const lead = payload.new as any
+      const name = lead.full_name || lead.name || 'New Lead'
+      const liveNotif = {
+        id: `lead-${lead.id || Date.now()}`,
+        title: 'New Lead Captured',
+        message: `${name} — ${lead.source || 'website'}`,
+        type: 'success',
+        severity: 'medium',
+        is_read: false,
+        created_at: new Date().toISOString(),
+        metadata: { module: 'sales' },
+      }
+      setNotifications(prev => [liveNotif, ...prev])
+      sendAdminBrowserNotification('New Lead', `${name} submitted via ${lead.source || 'website'}`)
+    })
+    return () => { unsub?.() }
+  }, [sendAdminBrowserNotification])
+
+  // Subscribe to new contact form submissions — alert admin
+  useEffect(() => {
+    const unsub = onNewContactSubmission((payload) => {
+      const sub = payload.new as any
+      const name = sub.name || sub.full_name || 'Website Visitor'
+      const liveNotif = {
+        id: `contact-${sub.id || Date.now()}`,
+        title: 'New Form Submission',
+        message: `${name} — ${sub.form_type || sub.subject || 'contact form'}`,
+        type: 'info',
+        severity: 'medium',
+        is_read: false,
+        created_at: new Date().toISOString(),
+        metadata: { module: 'sales' },
+      }
+      setNotifications(prev => [liveNotif, ...prev])
+      sendAdminBrowserNotification('New Form Submission', `${name} submitted a ${sub.form_type || 'contact'} form`)
     })
     return () => { unsub?.() }
   }, [sendAdminBrowserNotification])

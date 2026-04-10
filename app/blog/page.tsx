@@ -273,7 +273,7 @@ export default function BlogPage() {
                       id={post.slug}
                     >
                       {/* 16:9 Image placeholder */}
-                      <PlaceholderImage theme={getPlaceholderTheme(mappedCat)} aspectRatio="aspect-video" label={mappedCat} className="rounded-xl mb-4" />
+                      <PlaceholderImage theme={getPlaceholderTheme(mappedCat)} aspectRatio="aspect-video" label={post.title} className="rounded-xl mb-4" />
 
                       {/* Category tag pill */}
                       <span className="inline-block px-3 py-1 bg-brand-red/10 text-brand-red text-xs font-bold uppercase tracking-wider rounded-full mb-3">

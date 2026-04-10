@@ -187,9 +187,10 @@ const STARS = [
   { x: 28, y: 85, size: 'lg', delay: 0.8 }, { x: 62, y: 8, size: 'lg', delay: 1.5 },
 ]
 
-/* Live Financial Markets — TradingView real-time widget + Bloomberg TV link */
+/* Business TV — Bloomberg Quicktake live (default) + India Markets + News feed */
 function LiveFinancialTV() {
   const [widgetLoaded, setWidgetLoaded] = useState(false)
+  const [tvTab, setTvTab] = useState<'bloomberg' | 'india' | 'news'>('bloomberg')
 
   useEffect(() => {
     setWidgetLoaded(true)
@@ -197,72 +198,131 @@ function LiveFinancialTV() {
 
   return (
     <div className="relative rounded-2xl overflow-hidden border border-white/10 bg-black/40 backdrop-blur-sm">
-      <div className="aspect-video relative bg-black">
-        {widgetLoaded && (
-          <iframe
-            key="tradingview-market"
-            src="https://s.tradingview.com/embed-widget/ticker-tape/?locale=en#%7B%22symbols%22%3A%5B%7B%22description%22%3A%22SENSEX%22%2C%22proName%22%3A%22BSE%3ASENSEX%22%7D%2C%7B%22description%22%3A%22NIFTY%2050%22%2C%22proName%22%3A%22NSE%3ANIFTY%22%7D%2C%7B%22description%22%3A%22GOLD%22%2C%22proName%22%3A%22MCX%3AGOLD1!%22%7D%2C%7B%22description%22%3A%22USD%2FINR%22%2C%22proName%22%3A%22FX_IDC%3AUSDINR%22%7D%2C%7B%22description%22%3A%22S%26P%20500%22%2C%22proName%22%3A%22FOREXCOM%3ASPXUSD%22%7D%5D%2C%22showSymbolLogo%22%3Atrue%2C%22colorTheme%22%3A%22dark%22%2C%22isTransparent%22%3Atrue%2C%22displayMode%22%3A%22adaptive%22%7D"
-            title="Live Market Ticker"
-            className="w-full absolute bottom-0 left-0 right-0"
-            style={{ height: '46px', border: 'none' }}
-            loading="lazy"
-          />
-        )}
-        {widgetLoaded && (
-          <iframe
-            key="tradingview-chart"
-            src="https://s.tradingview.com/widgetembed/?frameElementId=tradingview_chart&symbol=BSE%3ASENSEX&interval=D&hidesidetoolbar=1&symboledit=1&saveimage=0&toolbarbg=0a0a0a&studies=%5B%5D&theme=dark&style=1&timezone=Asia%2FKolkata&withdateranges=1&showpopupbutton=0&studies_overrides=%7B%7D&overrides=%7B%7D&enabled_features=%5B%5D&disabled_features=%5B%5D&showpopupbutton=0&locale=en&utm_source=localhost&utm_medium=widget_new&utm_campaign=chart"
-            title="Live SENSEX Chart - TradingView"
-            className="w-full absolute inset-0"
-            style={{ height: 'calc(100% - 46px)', border: 'none' }}
-            loading="lazy"
-          />
-        )}
-      </div>
-      {/* Live indicator badge */}
-      <div className="absolute top-3 left-3 z-10 flex items-center gap-2 px-3 py-1 bg-black/70 backdrop-blur-sm rounded-full border border-white/10">
-        <span className="relative flex h-2 w-2">
-          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-500 opacity-75" />
-          <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500" />
-        </span>
-        <span className="text-white text-[10px] font-bold uppercase tracking-wider">Live Markets</span>
-      </div>
-      {/* Branding bar with Bloomberg TV external link */}
-      <div className="absolute bottom-[46px] left-0 right-0 bg-gradient-to-t from-black/90 via-black/70 to-transparent p-3 pt-8">
-        <div className="flex items-center gap-2">
-          <span className="px-2.5 py-1 rounded-full text-[9px] font-semibold uppercase tracking-wider bg-brand-red text-white">
-            Live Markets
-          </span>
-          <a
-            href="https://www.bloomberg.com/live"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="px-2.5 py-1 rounded-full text-[9px] font-semibold uppercase tracking-wider bg-white/10 text-white hover:bg-white/20 transition-colors flex items-center gap-1"
+      {/* Tab switcher */}
+      <div className="flex items-center gap-1 px-3 pt-3 pb-1 relative z-20">
+        <div className="flex items-center gap-0.5 bg-white/5 rounded-full p-0.5 flex-wrap">
+          <button
+            onClick={() => setTvTab('bloomberg')}
+            className={`px-2.5 py-1.5 rounded-full text-[9px] font-bold uppercase tracking-wider transition-all flex items-center gap-1.5 ${
+              tvTab === 'bloomberg' ? 'bg-brand-red text-white' : 'text-gray-400 hover:text-white'
+            }`}
           >
-            Watch Bloomberg TV <ExternalLink className="w-2.5 h-2.5" />
-          </a>
+            <span className="relative flex h-1.5 w-1.5">
+              <span className={`absolute inline-flex h-full w-full rounded-full bg-red-500 opacity-75 ${tvTab === 'bloomberg' ? 'animate-ping' : ''}`} />
+              <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-red-500" />
+            </span>
+            Bloomberg
+          </button>
+          <button
+            onClick={() => setTvTab('india')}
+            className={`px-2.5 py-1.5 rounded-full text-[9px] font-bold uppercase tracking-wider transition-all flex items-center gap-1.5 ${
+              tvTab === 'india' ? 'bg-brand-red text-white' : 'text-gray-400 hover:text-white'
+            }`}
+          >
+            <span className="relative flex h-1.5 w-1.5">
+              <span className={`absolute inline-flex h-full w-full rounded-full bg-green-500 opacity-75 ${tvTab === 'india' ? 'animate-ping' : ''}`} />
+              <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-green-500" />
+            </span>
+            India Markets
+          </button>
+          <button
+            onClick={() => setTvTab('news')}
+            className={`px-2.5 py-1.5 rounded-full text-[9px] font-bold uppercase tracking-wider transition-all ${
+              tvTab === 'news' ? 'bg-brand-red text-white' : 'text-gray-400 hover:text-white'
+            }`}
+          >
+            Headlines
+          </button>
         </div>
+      </div>
+
+      <div className="relative bg-black" style={{ height: '340px' }}>
+        {/* Bloomberg Quicktake — 24/7 live via channel ID */}
+        {tvTab === 'bloomberg' && widgetLoaded && (
+          <iframe
+            key="bloomberg-quicktake-live"
+            src="https://www.youtube.com/embed/live_stream?channel=UChirEOpgFCupRAk5etXqPaA&autoplay=1&mute=1&modestbranding=1&rel=0"
+            title="Bloomberg Quicktake — Live"
+            className="w-full h-full border-0"
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+            allowFullScreen
+            loading="lazy"
+          />
+        )}
+
+        {/* India Markets — Live TradingView Market Overview (SENSEX, NIFTY, Indian stocks) */}
+        {tvTab === 'india' && widgetLoaded && (
+          <iframe
+            key="india-market-overview"
+            src={`https://s.tradingview.com/embed-widget/market-overview/?locale=en#${encodeURIComponent(JSON.stringify({
+              colorTheme: 'dark',
+              dateRange: '1D',
+              showChart: true,
+              isTransparent: true,
+              width: '100%',
+              height: '100%',
+              plotLineColorGrowing: 'rgba(233, 30, 99, 1)',
+              plotLineColorFalling: 'rgba(233, 30, 99, 1)',
+              gridLineColor: 'rgba(240, 243, 250, 0)',
+              scaleFontColor: 'rgba(209, 212, 220, 1)',
+              belowLineFillColorGrowing: 'rgba(233, 30, 99, 0.12)',
+              belowLineFillColorFalling: 'rgba(233, 30, 99, 0.12)',
+              belowLineFillColorGrowingBottom: 'rgba(41, 98, 255, 0)',
+              belowLineFillColorFallingBottom: 'rgba(41, 98, 255, 0)',
+              symbolActiveColor: 'rgba(233, 30, 99, 0.12)',
+              tabs: [
+                {
+                  title: 'Indices',
+                  symbols: [
+                    { s: 'BSE:SENSEX', d: 'SENSEX' },
+                    { s: 'NSE:NIFTY', d: 'NIFTY 50' },
+                    { s: 'NSE:BANKNIFTY', d: 'Bank Nifty' },
+                    { s: 'BSE:SMLCAP', d: 'Small Cap' },
+                    { s: 'BSE:MIDCAP', d: 'Mid Cap' },
+                  ],
+                },
+                {
+                  title: 'Top Stocks',
+                  symbols: [
+                    { s: 'BSE:RELIANCE', d: 'Reliance' },
+                    { s: 'BSE:TCS', d: 'TCS' },
+                    { s: 'BSE:HDFCBANK', d: 'HDFC Bank' },
+                    { s: 'BSE:INFY', d: 'Infosys' },
+                    { s: 'BSE:ICICIBANK', d: 'ICICI Bank' },
+                  ],
+                },
+              ],
+            }))}`}
+            title="India Markets — Live Overview"
+            className="w-full h-full border-0"
+            loading="lazy"
+          />
+        )}
+
+        {/* Business News Feed — TradingView Timeline */}
+        {tvTab === 'news' && widgetLoaded && (
+          <iframe
+            key="tradingview-timeline"
+            src={`https://s.tradingview.com/embed-widget/timeline/?locale=en#${encodeURIComponent(JSON.stringify({
+              feedMode: 'market',
+              market: 'stock',
+              colorTheme: 'dark',
+              isTransparent: true,
+              displayMode: 'regular',
+              width: '100%',
+              height: '100%',
+            }))}`}
+            title="Business News — TradingView"
+            className="w-full h-full border-0"
+            loading="lazy"
+          />
+        )}
       </div>
     </div>
   )
 }
 
 function HeroSection() {
-  const [marketTab, setMarketTab] = useState<'india' | 'us' | 'chart'>('india')
-  const [chartSymbol, setChartSymbol] = useState('NSE:NIFTY')
-  const [chartDropdownOpen, setChartDropdownOpen] = useState(false)
-
-  const CHART_OPTIONS = [
-    { label: 'NIFTY 50', symbol: 'NSE:NIFTY' },
-    { label: 'SENSEX', symbol: 'BSE:SENSEX' },
-    { label: 'BANK NIFTY', symbol: 'NSE:BANKNIFTY' },
-    { label: 'S&P 500', symbol: 'FOREXCOM:SPXUSD' },
-    { label: 'NASDAQ', symbol: 'FOREXCOM:NSXUSD' },
-    { label: 'Dow Jones', symbol: 'FOREXCOM:DJI' },
-    { label: 'Gold', symbol: 'TVC:GOLD' },
-    { label: 'Crude Oil', symbol: 'TVC:USOIL' },
-    { label: 'USD/INR', symbol: 'FX_IDC:USDINR' },
-  ]
 
   return (
     <section className="relative min-h-screen flex items-center overflow-hidden" style={{ background: 'linear-gradient(180deg, #020012 0%, #060020 20%, #08001a 40%, #0a0014 60%, #0c0a10 80%, #0a0a0a 100%)' }}>
@@ -390,7 +450,7 @@ function HeroSection() {
                   { icon: BadgeCheck, text: 'SEBI Reg.' },
                   { icon: MapPin, text: 'Egmore, Chennai' },
                   { icon: Landmark, text: 'Category II AIF' },
-                  { icon: IndianRupee, text: 'SEBI Regulated' },
+                  { icon: IndianRupee, text: 'Managed by Trustee' },
                 ].map(b => (
                   <span
                     key={b.text}
@@ -411,111 +471,47 @@ function HeroSection() {
               <LiveFinancialTV />
             </AnimatedSection>
 
-            {/* Live Market Data — Indian & US Indices + Live Chart */}
+            {/* Market Hotlists — Top Gainers, Losers, Most Active (compact + scrollable) */}
             <AnimatedSection delay={600} direction="right">
               <div className="relative rounded-2xl overflow-hidden border border-white/10 bg-black/40 backdrop-blur-sm">
-                {/* Tab switcher: India / US / Chart */}
-                <div className="flex items-center gap-1 px-3 pt-3 pb-1">
-                  <div className="flex items-center gap-0.5 bg-white/5 rounded-full p-0.5 flex-wrap">
-                    <button
-                      onClick={() => setMarketTab('india')}
-                      className={`px-2.5 py-1 rounded-full text-[9px] font-bold uppercase tracking-wider transition-all ${
-                        marketTab === 'india' ? 'bg-brand-red text-white' : 'text-gray-400 hover:text-white'
-                      }`}
-                    >
-                      🇮🇳 India
-                    </button>
-                    <button
-                      onClick={() => setMarketTab('us')}
-                      className={`px-2.5 py-1 rounded-full text-[9px] font-bold uppercase tracking-wider transition-all ${
-                        marketTab === 'us' ? 'bg-brand-red text-white' : 'text-gray-400 hover:text-white'
-                      }`}
-                    >
-                      🇺🇸 US
-                    </button>
-                    <button
-                      onClick={() => setMarketTab('chart')}
-                      className={`px-2.5 py-1 rounded-full text-[9px] font-bold uppercase tracking-wider transition-all ${
-                        marketTab === 'chart' ? 'bg-brand-red text-white' : 'text-gray-400 hover:text-white'
-                      }`}
-                    >
-                      📈 Chart
-                    </button>
-                  </div>
-                  <div className="flex items-center gap-1.5 ml-auto">
-                    <span className="relative flex h-2 w-2">
-                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-500 opacity-75" />
-                      <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500" />
-                    </span>
-                    <span className="text-green-400 text-[9px] font-semibold uppercase tracking-wider">Live</span>
-                  </div>
+                <div className="overflow-y-auto scrollbar-hide" style={{ height: '200px' }}>
+                  <iframe
+                    key="hotlists-widget"
+                    src={`https://s.tradingview.com/embed-widget/hotlists/?locale=en#${encodeURIComponent(JSON.stringify({
+                      colorTheme: 'dark',
+                      dateRange: '12M',
+                      exchange: 'BSE',
+                      showChart: false,
+                      showSymbolLogo: true,
+                      width: '100%',
+                      height: '100%',
+                      isTransparent: true,
+                      plotLineColorGrowing: 'rgba(0,200,100,1)',
+                      plotLineColorFalling: 'rgba(255,23,68,1)',
+                      gridLineColor: 'rgba(255,255,255,0.06)',
+                      scaleFontColor: 'rgba(255,255,255,0.5)',
+                      belowLineFillColorGrowing: 'rgba(0,200,100,0.05)',
+                      belowLineFillColorFalling: 'rgba(255,23,68,0.05)',
+                      belowLineFillColorGrowingBottom: 'rgba(0,0,0,0)',
+                      belowLineFillColorFallingBottom: 'rgba(0,0,0,0)',
+                      symbolActiveColor: 'rgba(208,2,27,0.15)',
+                    }))}`}
+                    title="Market Hotlists — Top Movers"
+                    className="w-full border-0"
+                    style={{ height: '460px' }}
+                    loading="lazy"
+                  />
                 </div>
-
-                {/* Chart symbol selector — only visible on chart tab */}
-                {marketTab === 'chart' && (
-                  <div className="px-3 pb-1">
-                    <div className="relative">
-                      <button
-                        onClick={() => setChartDropdownOpen(!chartDropdownOpen)}
-                        className="flex items-center gap-1.5 px-2.5 py-1 bg-white/5 rounded-full border border-white/10 text-white text-[9px] font-semibold uppercase tracking-wider hover:bg-white/10 transition-all"
-                      >
-                        <TrendingUp className="w-2.5 h-2.5 text-brand-red" />
-                        {CHART_OPTIONS.find(c => c.symbol === chartSymbol)?.label || 'NIFTY 50'}
-                        <ChevronDown className={`w-2.5 h-2.5 transition-transform ${chartDropdownOpen ? 'rotate-180' : ''}`} />
-                      </button>
-                      {chartDropdownOpen && (
-                        <div className="absolute top-full left-0 mt-1 w-44 bg-[#111]/95 backdrop-blur-xl border border-white/10 rounded-xl shadow-2xl overflow-hidden z-50">
-                          {CHART_OPTIONS.map((opt) => (
-                            <button
-                              key={opt.symbol}
-                              onClick={() => { setChartSymbol(opt.symbol); setChartDropdownOpen(false) }}
-                              className={`w-full text-left px-3 py-2 text-[10px] font-medium transition-all ${
-                                opt.symbol === chartSymbol ? 'bg-white/10 text-brand-red' : 'text-white/70 hover:bg-white/5 hover:text-white'
-                              }`}
-                            >
-                              {opt.label}
-                            </button>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                )}
-
-                {/* Widget content — clipped to hide TradingView branding below timeframe */}
-                <div className="overflow-hidden" style={{ height: '258px' }}>
-                  {marketTab === 'india' && (
-                    <iframe
-                      key="india-overview"
-                      src="https://s.tradingview.com/embed-widget/market-overview/?locale=en#%7B%22colorTheme%22%3A%22dark%22%2C%22dateRange%22%3A%2212M%22%2C%22showChart%22%3Atrue%2C%22width%22%3A%22100%25%22%2C%22height%22%3A%22100%25%22%2C%22isTransparent%22%3Atrue%2C%22showSymbolLogo%22%3Atrue%2C%22showFloatingTooltip%22%3Atrue%2C%22plotLineColorGrowing%22%3A%22rgba(0%2C200%2C100%2C1)%22%2C%22plotLineColorFalling%22%3A%22rgba(255%2C23%2C68%2C1)%22%2C%22gridLineColor%22%3A%22rgba(255%2C255%2C255%2C0.06)%22%2C%22scaleFontColor%22%3A%22rgba(255%2C255%2C255%2C0.5)%22%2C%22belowLineFillColorGrowing%22%3A%22rgba(0%2C200%2C100%2C0.05)%22%2C%22belowLineFillColorFalling%22%3A%22rgba(255%2C23%2C68%2C0.05)%22%2C%22belowLineFillColorGrowingBottom%22%3A%22rgba(0%2C0%2C0%2C0)%22%2C%22belowLineFillColorFallingBottom%22%3A%22rgba(0%2C0%2C0%2C0)%22%2C%22symbolActiveColor%22%3A%22rgba(208%2C2%2C27%2C0.15)%22%2C%22tabs%22%3A%5B%7B%22title%22%3A%22Indices%22%2C%22symbols%22%3A%5B%7B%22s%22%3A%22BSE%3ASENSEX%22%2C%22d%22%3A%22SENSEX%22%7D%2C%7B%22s%22%3A%22NSE%3ANIFTY%22%2C%22d%22%3A%22NIFTY%2050%22%7D%2C%7B%22s%22%3A%22NSE%3ABANKNIFTY%22%2C%22d%22%3A%22BANK%20NIFTY%22%7D%5D%7D%2C%7B%22title%22%3A%22Stocks%22%2C%22symbols%22%3A%5B%7B%22s%22%3A%22NSE%3ARELIANCE%22%2C%22d%22%3A%22Reliance%22%7D%2C%7B%22s%22%3A%22NSE%3ATCS%22%2C%22d%22%3A%22TCS%22%7D%2C%7B%22s%22%3A%22NSE%3AHDFCBANK%22%2C%22d%22%3A%22HDFC%20Bank%22%7D%5D%7D%2C%7B%22title%22%3A%22Commodities%22%2C%22symbols%22%3A%5B%7B%22s%22%3A%22TVC%3AGOLD%22%2C%22d%22%3A%22Gold%22%7D%2C%7B%22s%22%3A%22TVC%3ASILVER%22%2C%22d%22%3A%22Silver%22%7D%2C%7B%22s%22%3A%22FX_IDC%3AUSDINR%22%2C%22d%22%3A%22USD%2FINR%22%7D%5D%7D%5D%7D"
-                      title="Indian Market Overview"
-                      className="w-full border-0"
-                      style={{ height: '320px' }}
-                      loading="lazy"
-                    />
-                  )}
-                  {marketTab === 'us' && (
-                    <iframe
-                      key="us-overview"
-                      src="https://s.tradingview.com/embed-widget/market-overview/?locale=en#%7B%22colorTheme%22%3A%22dark%22%2C%22dateRange%22%3A%2212M%22%2C%22showChart%22%3Atrue%2C%22width%22%3A%22100%25%22%2C%22height%22%3A%22100%25%22%2C%22isTransparent%22%3Atrue%2C%22showSymbolLogo%22%3Atrue%2C%22showFloatingTooltip%22%3Atrue%2C%22plotLineColorGrowing%22%3A%22rgba(0%2C200%2C100%2C1)%22%2C%22plotLineColorFalling%22%3A%22rgba(255%2C23%2C68%2C1)%22%2C%22gridLineColor%22%3A%22rgba(255%2C255%2C255%2C0.06)%22%2C%22scaleFontColor%22%3A%22rgba(255%2C255%2C255%2C0.5)%22%2C%22belowLineFillColorGrowing%22%3A%22rgba(0%2C200%2C100%2C0.05)%22%2C%22belowLineFillColorFalling%22%3A%22rgba(255%2C23%2C68%2C0.05)%22%2C%22belowLineFillColorGrowingBottom%22%3A%22rgba(0%2C0%2C0%2C0)%22%2C%22belowLineFillColorFallingBottom%22%3A%22rgba(0%2C0%2C0%2C0)%22%2C%22symbolActiveColor%22%3A%22rgba(208%2C2%2C27%2C0.15)%22%2C%22tabs%22%3A%5B%7B%22title%22%3A%22Indices%22%2C%22symbols%22%3A%5B%7B%22s%22%3A%22FOREXCOM%3ASPXUSD%22%2C%22d%22%3A%22S%26P%20500%22%7D%2C%7B%22s%22%3A%22FOREXCOM%3ANSXUSD%22%2C%22d%22%3A%22NASDAQ%22%7D%2C%7B%22s%22%3A%22FOREXCOM%3ADJI%22%2C%22d%22%3A%22Dow%20Jones%22%7D%5D%7D%2C%7B%22title%22%3A%22Stocks%22%2C%22symbols%22%3A%5B%7B%22s%22%3A%22NASDAQ%3AAAPL%22%2C%22d%22%3A%22Apple%22%7D%2C%7B%22s%22%3A%22NASDAQ%3AMSFT%22%2C%22d%22%3A%22Microsoft%22%7D%2C%7B%22s%22%3A%22NASDAQ%3ANVDA%22%2C%22d%22%3A%22NVIDIA%22%7D%5D%7D%2C%7B%22title%22%3A%22Forex%22%2C%22symbols%22%3A%5B%7B%22s%22%3A%22FX_IDC%3AUSDINR%22%2C%22d%22%3A%22USD%2FINR%22%7D%2C%7B%22s%22%3A%22TVC%3AGOLD%22%2C%22d%22%3A%22Gold%22%7D%2C%7B%22s%22%3A%22TVC%3AUSOIL%22%2C%22d%22%3A%22Crude%20Oil%22%7D%5D%7D%5D%7D"
-                      title="US Market Overview"
-                      className="w-full border-0"
-                      style={{ height: '320px' }}
-                      loading="lazy"
-                    />
-                  )}
-                  {marketTab === 'chart' && (
-                    <iframe
-                      key={`chart-${chartSymbol}`}
-                      src={`https://s.tradingview.com/widgetembed/?symbol=${encodeURIComponent(chartSymbol)}&interval=D&hidesidetoolbar=1&symboledit=0&saveimage=0&toolbarbg=000000&theme=dark&style=1&timezone=Asia%2FKolkata&withdateranges=1&showpopupbutton=0&hideideas=1&overrides=%7B%22paneProperties.background%22%3A%22%23000000%22%2C%22paneProperties.backgroundType%22%3A%22solid%22%2C%22scalesProperties.textColor%22%3A%22%23AAA%22%2C%22mainSeriesProperties.candleStyle.upColor%22%3A%22%2300C853%22%2C%22mainSeriesProperties.candleStyle.downColor%22%3A%22%23FF1744%22%2C%22mainSeriesProperties.candleStyle.borderUpColor%22%3A%22%2300C853%22%2C%22mainSeriesProperties.candleStyle.borderDownColor%22%3A%22%23FF1744%22%2C%22mainSeriesProperties.candleStyle.wickUpColor%22%3A%22%2300C853%22%2C%22mainSeriesProperties.candleStyle.wickDownColor%22%3A%22%23FF1744%22%7D&locale=en`}
-                      title={`Live Chart — ${CHART_OPTIONS.find(c => c.symbol === chartSymbol)?.label}`}
-                      className="w-full border-0"
-                      style={{ height: '320px' }}
-                      loading="lazy"
-                      allow="encrypted-media"
-                    />
-                  )}
+                {/* Live badge */}
+                <div className="absolute top-2 right-3 z-10 flex items-center gap-1.5">
+                  <span className="relative flex h-2 w-2">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-500 opacity-75" />
+                    <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500" />
+                  </span>
+                  <span className="text-green-400 text-[9px] font-semibold uppercase tracking-wider">Live</span>
                 </div>
+                {/* Scroll hint gradient at bottom */}
+                <div className="absolute bottom-0 left-0 right-0 h-6 bg-gradient-to-t from-black/80 to-transparent pointer-events-none" />
               </div>
             </AnimatedSection>
           </div>
@@ -605,10 +601,7 @@ function WhoWeAre() {
           {/* Left: Image placeholder */}
           <AnimatedSection direction="left">
             <div className="relative aspect-[4/3] bg-gray-900 overflow-hidden card-img-zoom group/img rounded-3xl">
-              <img src="/images/home/team-professionals.jpg" alt="GHL India Ventures Team / Chennai Office" className="w-full h-full object-cover transition-transform duration-500" loading="lazy" />
-              <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent p-4 translate-y-1 opacity-90 group-hover/img:translate-y-0 group-hover/img:opacity-100 transition-all duration-300">
-                <p className="text-white/90 text-xs font-medium">GHL India Ventures Team / Chennai Office</p>
-              </div>
+              <img src="/images/home/team-professionals.jpg" alt="GHL India Ventures Team" className="w-full h-full object-cover transition-transform duration-500" loading="lazy" />
             </div>
           </AnimatedSection>
 
@@ -622,8 +615,8 @@ function WhoWeAre() {
             {/* Animated counter stats */}
             <div className="grid grid-cols-2 gap-6 my-10">
               <CountUpStat end={25} suffix="+" label="Years of Experience" />
-              <CountUpStat end={500} prefix="₹" suffix=" Cr+" label="Value Created" />
-              <CountUpStat end={1000} suffix="+" label="Pitch Decks Analyzed" />
+              <CountUpStat end={100} suffix="+" label="Years of Man Experience" />
+              <CountUpStat end={300} prefix="₹" suffix=" Cr+" label="Value Created" />
               <CountUpStat end={50} suffix="+" label="Strong Support Team" />
             </div>
 
@@ -795,36 +788,84 @@ function PortfolioSpotlight() {
   return (
     <section className="section-padding bg-white">
       <div className="container-max mx-auto">
-        <AnimatedSection className="text-center mb-10">
-          <span className="eyebrow">Portfolio</span>
-          <h2 className="section-title mt-3 text-brand-black">Companies We Back</h2>
-          <p className="section-subtitle mx-auto mt-4">Partnering with visionary founders building transformative businesses across India.</p>
+        <AnimatedSection className="text-center mb-12">
+          <span className="eyebrow">Strategic Acquisitions</span>
+          <h2 className="section-title mt-3 text-brand-black">High-Value Land Assets</h2>
+          <p className="section-subtitle mx-auto mt-4">Acquired at ~40% below market value &mdash; strategically positioned for renewable energy and industrial expansion across Tamil Nadu.</p>
         </AnimatedSection>
 
-        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-8">
-          {PORTFOLIO_COMPANIES.slice(0, 6).map((company, i) => (
-            <AnimatedSection key={company.name} delay={i * 100}>
-              <div className="card group hover-lift h-full">
-                <div className="w-14 h-14 bg-brand-offwhite rounded-xl flex items-center justify-center mb-5 icon-ring-hover">
-                  <Building2 className="w-7 h-7 text-brand-red" />
+        <div className="grid lg:grid-cols-2 gap-10">
+          {/* Project 1: Narikudi Solar */}
+          <AnimatedSection delay={100}>
+            <div className="card group hover-lift h-full overflow-hidden glow-card-amber relative">
+              <div className="relative aspect-[16/9] -mx-6 -mt-6 mb-6 overflow-hidden">
+                <img
+                  src="/images/portfolio/narikudi-madurai.jpg"
+                  alt="Meenakshi Temple — Narikudi, Madurai"
+                  className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+                  loading="lazy"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
+                <div className="absolute bottom-4 left-5 right-5">
+                  <h3 className="text-white text-xl font-bold">Narikudi, Madurai</h3>
                 </div>
-                <div className="flex items-center justify-between mb-3">
-                  <h3 className="font-bold text-lg text-brand-black">{company.name}</h3>
-                  <span className="text-[11px] bg-brand-red/10 text-brand-red px-2.5 py-1 rounded-full font-semibold">
-                    {company.stage}
-                  </span>
-                </div>
-                <p className="text-brand-grey text-sm mb-4 leading-relaxed">{company.description}</p>
-                <span className="text-xs font-semibold text-brand-grey uppercase tracking-widest">{company.sector}</span>
               </div>
-            </AnimatedSection>
-          ))}
-        </div>
+              <p className="text-brand-grey text-sm leading-relaxed mb-5">
+                ~145 acres of contiguous land ideal for large-scale solar power development. Situated close to a major power substation and near the Greenko Group&apos;s existing solar infrastructure. A Dubai-based buyer has expressed strong interest.
+              </p>
+              <div className="grid grid-cols-2 gap-4 mb-5">
+                <div className="bg-brand-offwhite rounded-xl p-4 text-center">
+                  <div className="text-xl font-bold text-brand-red">{'\u20B9'}22.5 Cr</div>
+                  <div className="text-[11px] text-brand-grey font-medium mt-1">Acquisition Cost</div>
+                </div>
+                <div className="bg-brand-offwhite rounded-xl p-4 text-center">
+                  <div className="text-xl font-bold text-brand-red">{'\u20B9'}25 Cr</div>
+                  <div className="text-[11px] text-brand-grey font-medium mt-1">Investment Projected</div>
+                </div>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <span className="px-3 py-1 bg-green-500/10 text-green-700 text-xs font-semibold rounded-full">40% Below Market</span>
+                <span className="px-3 py-1 bg-amber-500/10 text-amber-700 text-xs font-semibold rounded-full flex items-center"><MapPin className="w-3 h-3 mr-1" />~145 Acres</span>
+                <span className="px-3 py-1 bg-blue-500/10 text-blue-700 text-xs font-semibold rounded-full">Grid Connected</span>
+              </div>
+            </div>
+          </AnimatedSection>
 
-        <div className="text-center mt-10">
-          <Link href="/portfolio" className="btn-outline-red">
-            View Full Portfolio <ArrowRight className="ml-2 w-4 h-4" />
-          </Link>
+          {/* Project 2: Karadivavi Industrial */}
+          <AnimatedSection delay={250}>
+            <div className="card group hover-lift h-full overflow-hidden glow-card-blue relative">
+              <div className="relative aspect-[16/9] -mx-6 -mt-6 mb-6 overflow-hidden">
+                <img
+                  src="/images/portfolio/karadivavi-coimbatore.jpg"
+                  alt="Adiyogi Shiva — Karadivavi, Coimbatore"
+                  className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+                  loading="lazy"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
+                <div className="absolute bottom-4 left-5 right-5">
+                  <h3 className="text-white text-xl font-bold">Karadivavi, Coimbatore</h3>
+                </div>
+              </div>
+              <p className="text-brand-grey text-sm leading-relaxed mb-5">
+                30-acre strategic land parcel near the Defence Corridor and Sulur Airbase. The surrounding area is rapidly evolving into a major industrial and logistics hub with growing defence and manufacturing investments.
+              </p>
+              <div className="grid grid-cols-2 gap-4 mb-5">
+                <div className="bg-brand-offwhite rounded-xl p-4 text-center">
+                  <div className="text-xl font-bold text-brand-red">{'\u20B9'}45 Cr</div>
+                  <div className="text-[11px] text-brand-grey font-medium mt-1">Acquisition Cost</div>
+                </div>
+                <div className="bg-brand-offwhite rounded-xl p-4 text-center">
+                  <div className="text-xl font-bold text-brand-red">{'\u20B9'}75 Cr</div>
+                  <div className="text-[11px] text-brand-grey font-medium mt-1">Investment Projected</div>
+                </div>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <span className="px-3 py-1 bg-green-500/10 text-green-700 text-xs font-semibold rounded-full">40% Below Market</span>
+                <span className="px-3 py-1 bg-amber-500/10 text-amber-700 text-xs font-semibold rounded-full flex items-center"><MapPin className="w-3 h-3 mr-1" />~30 Acres</span>
+                <span className="px-3 py-1 bg-purple-500/10 text-purple-700 text-xs font-semibold rounded-full">Defence Corridor</span>
+              </div>
+            </div>
+          </AnimatedSection>
         </div>
       </div>
     </section>
@@ -850,7 +891,7 @@ function BlogSection() {
               <AnimatedSection key={post.slug} delay={i * 120}>
                 <Link href={`/blog#${post.slug}`} className="card group block h-full hover-lift">
                   {/* Image placeholder */}
-                  <PlaceholderImage theme={themes[i % themes.length]} aspectRatio="h-48 w-full" label={post.category} className="rounded-xl mb-5" />
+                  <PlaceholderImage theme={themes[i % themes.length]} aspectRatio="h-48 w-full" label={post.title} className="rounded-xl mb-5" />
                   <span className="text-xs font-bold text-brand-red uppercase tracking-widest">{post.category}</span>
                   <h3 className="text-lg font-bold text-brand-black mt-2 mb-2 group-hover:text-brand-red transition-colors leading-snug">
                     {post.title}
@@ -1011,6 +1052,8 @@ function ContactFormSection() {
     privacy: false,
   })
   const [submitted, setSubmitted] = useState(false)
+  const [submitting, setSubmitting] = useState(false)
+  const [formError, setFormError] = useState('')
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const target = e.target
@@ -1020,7 +1063,8 @@ function ContactFormSection() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    setSubmitted(true)
+    setSubmitting(true)
+    setFormError('')
     try {
       await Promise.all([
         submitContactForm({
@@ -1044,8 +1088,12 @@ function ContactFormSection() {
           investmentInterest: 'consultation',
         }),
       ])
+      setSubmitted(true)
     } catch (err) {
       console.warn('Home form submission failed (non-critical):', err)
+      setFormError('Something went wrong. Please try again or call us directly.')
+    } finally {
+      setSubmitting(false)
     }
   }
 
@@ -1093,6 +1141,12 @@ function ContactFormSection() {
 
             <AnimatedSection delay={200}>
               <form onSubmit={handleSubmit} className="space-y-5">
+                {formError && (
+                  <div className="bg-red-50 border border-red-200 text-red-700 text-sm rounded-lg p-3 flex items-start gap-2">
+                    <AlertTriangle className="w-4 h-4 mt-0.5 shrink-0" />
+                    <span>{formError}</span>
+                  </div>
+                )}
                 <div className="grid sm:grid-cols-2 gap-5">
                   <div>
                     <label className="block text-sm font-semibold text-brand-black dark:text-white mb-1.5">Full Name *</label>
@@ -1142,6 +1196,8 @@ function ContactFormSection() {
                         value={form.phone}
                         onChange={handleChange}
                         required
+                        pattern="[0-9]{10}"
+                        title="Enter a 10-digit phone number"
                         placeholder="98765 43210"
                         className="input-field flex-1"
                       />
@@ -1229,13 +1285,21 @@ function ContactFormSection() {
 
                 <button
                   type="submit"
-                  className="w-full sm:w-auto inline-flex items-center justify-center px-8 py-3 text-white font-bold text-base rounded-full transition-all duration-300 transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-offset-2"
+                  disabled={submitting}
+                  className="w-full sm:w-auto inline-flex items-center justify-center px-8 py-3 text-white font-bold text-base rounded-full transition-all duration-300 transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-60 disabled:cursor-not-allowed disabled:transform-none"
                   style={{
                     background: 'linear-gradient(135deg, #D0021B 0%, #8B0000 100%)',
                     boxShadow: '0 6px 30px rgba(208,2,27,0.4)',
                   }}
                 >
-                  Request a Consultation <ArrowRight className="ml-2 w-5 h-5" />
+                  {submitting ? (
+                    <>
+                      <svg className="animate-spin w-5 h-5 mr-2" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"/></svg>
+                      Submitting…
+                    </>
+                  ) : (
+                    <>Request a Consultation <ArrowRight className="ml-2 w-5 h-5" /></>
+                  )}
                 </button>
               </form>
             </AnimatedSection>

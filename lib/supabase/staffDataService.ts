@@ -224,3 +224,21 @@ export async function submitExpense(expense: Record<string, any>) {
     return data
   } catch { return null }
 }
+
+export async function recordAttendance(record: Record<string, any>) {
+  if (!isSupabaseConfigured()) return null
+  try {
+    const { data, error } = await sb.from('attendance').insert(record).select().single()
+    if (error) { console.warn('[staff] Attendance error:', error.message); return null }
+    return data
+  } catch { return null }
+}
+
+export async function updateAgentStatus(staffId: string, status: string) {
+  if (!isSupabaseConfigured() || !staffId) return null
+  try {
+    const { data, error } = await sb.from('staff_profiles').update({ agent_status: status }).eq('user_id', staffId).select().single()
+    if (error) { console.warn('[staff] Agent status error:', error.message); return null }
+    return data
+  } catch { return null }
+}

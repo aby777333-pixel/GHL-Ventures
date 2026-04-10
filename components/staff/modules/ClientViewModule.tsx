@@ -27,13 +27,28 @@ interface ClientSummary {
 }
 
 function buildClientList(ticketsData: any[]): ClientSummary[] {
-  const map = new Map<string, { name: string; tickets: Ticket[] }>()
+  if (!ticketsData || !Array.isArray(ticketsData)) return []
+  const map = new Map<string, { name: string; tickets: any[] }>()
   for (const t of ticketsData) {
-    if (!map.has(t.clientId)) map.set(t.clientId, { name: t.clientName, tickets: [] })
-    map.get(t.clientId)!.tickets.push(t)
+    // Support both camelCase (typed) and snake_case (raw DB) field names
+    const cid = t?.clientId || t?.client_id || t?.requester_id || 'unknown'
+    const cname = t?.clientName || t?.client_name || t?.requester_name || 'Unknown'
+    if (!map.has(cid)) map.set(cid, { name: cname, tickets: [] })
+    // Normalize ticket fields for display
+    const normalized = {
+      ...t,
+      id: t?.id?.slice?.(0, 8) || t?.id || '—',
+      subject: t?.subject || t?.title || t?.description?.slice?.(0, 60) || '—',
+      status: t?.status || 'open',
+      priority: t?.priority || 'medium',
+      updatedDate: t?.updatedDate || t?.updated_at || t?.created_at || '',
+      clientId: cid,
+      clientName: cname,
+    }
+    map.get(cid)!.tickets.push(normalized)
   }
   return Array.from(map.entries()).map(([id, { name, tickets }]) => {
-    const sorted = [...tickets].sort((a, b) => new Date(b.updatedDate).getTime() - new Date(a.updatedDate).getTime())
+    const sorted = [...tickets].sort((a, b) => new Date(b.updatedDate || 0).getTime() - new Date(a.updatedDate || 0).getTime())
     return {
       clientId: id,
       clientName: name,
@@ -71,22 +86,22 @@ function fmtDateTime(iso: string) {
   return new Date(iso).toLocaleString('en-IN', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })
 }
 
-export default function ClientViewModule({ subTab }: ClientViewModuleProps) {
+export default function ClientViewModule({ subTab, navigate, showToast }: ClientViewModuleProps) {
   const tab = subTab || 'search'
   const [tickets, setTickets] = useState<any[]>([])
   const [interactions, setInteractions] = useState<any[]>([])
 
   useEffect(() => {
-    fetchTickets().then(data => setTickets(data))
-    fetchClientInteractions().then(data => setInteractions(data))
+    fetchTickets().then(data => setTickets(data || []))
+    fetchClientInteractions().then(data => setInteractions(data || []))
   }, [])
 
   if (tab === 'history') return <InteractionHistory interactions={interactions} />
-  return <ClientSearch tickets={tickets} interactions={interactions} />
+  return <ClientSearch tickets={tickets} interactions={interactions} navigate={navigate} showToast={showToast} />
 }
 
 // ── Client Search ──────────────────────────────────────────────
-function ClientSearch({ tickets, interactions }: { tickets: any[]; interactions: any[] }) {
+function ClientSearch({ tickets, interactions, navigate, showToast }: { tickets: any[]; interactions: any[]; navigate: (path: string) => void; showToast: (msg: string, type?: 'success' | 'error' | 'info' | 'warning') => void }) {
   const clients = useMemo(() => buildClientList(tickets), [tickets])
   const [query, setQuery] = useState('')
   const [selectedId, setSelectedId] = useState<string | null>(null)
@@ -197,7 +212,12 @@ function ClientSearch({ tickets, interactions }: { tickets: any[]; interactions:
                   </thead>
                   <tbody>
                     {clientTickets.map(t => (
-                      <tr key={t.id} className="border-b border-white/[0.04]">
+                      <tr key={t.id} className="border-b border-white/[0.04] cursor-pointer hover:bg-white/[0.03] transition-colors"
+                        onClick={() => {
+                          showToast(`Opening ticket ${t.id}: ${t.subject}`, 'info')
+                          navigate('cs/tickets')
+                        }}
+                      >
                         <td className="px-3 py-2 text-teal-400 font-mono">{t.id}</td>
                         <td className="px-3 py-2 text-gray-300 max-w-[200px] truncate">{t.subject}</td>
                         <td className="px-3 py-2">

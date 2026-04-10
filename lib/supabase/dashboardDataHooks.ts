@@ -81,6 +81,10 @@ export function useTransactions(clientId?: string) {
   return useQuery<any[]>(() => svc.fetchTransactions(clientId), [], clientId)
 }
 
+export function usePayoutHistory(clientId?: string) {
+  return useQuery<any[]>(() => svc.fetchPayoutHistory(clientId), [], clientId)
+}
+
 // ── Messages ────────────────────────────────────────────────
 export function useMessages(clientId?: string) {
   return useQuery<any[]>(() => svc.fetchMessages(clientId), [], clientId)
@@ -99,6 +103,30 @@ export function useNotifications(clientId?: string) {
 // ── KYC ─────────────────────────────────────────────────────
 export function useKYCSteps(clientId?: string) {
   return useQuery<any[]>(() => svc.getKYCSteps(clientId), [], clientId)
+}
+
+export function useKYCBasicDetails(clientId?: string) {
+  return useQuery<any>(() => svc.fetchKYCBasicDetails(clientId), null, clientId)
+}
+
+export function useKYCIdentityDetails(clientId?: string) {
+  return useQuery<any>(() => svc.fetchKYCIdentityDetails(clientId), null, clientId)
+}
+
+export function useKYCBankDetails(clientId?: string) {
+  return useQuery<any>(() => svc.fetchKYCBankDetails(clientId), null, clientId)
+}
+
+export function useKYCDematDetails(clientId?: string) {
+  return useQuery<any>(() => svc.fetchKYCDematDetails(clientId), null, clientId)
+}
+
+export function useNominees(clientId?: string) {
+  return useQuery<any[]>(() => svc.fetchNominees(clientId), [], clientId)
+}
+
+export function useKYCOverallStatus(clientId?: string) {
+  return useQuery<{ step: number; status: string }>(() => svc.fetchKYCOverallStatus(clientId), { step: 0, status: 'pending' }, clientId)
 }
 
 // ── Documents ───────────────────────────────────────────────

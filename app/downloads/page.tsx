@@ -5,8 +5,9 @@ import AnimatedSection from '@/components/AnimatedSection'
 import PlaceholderImage from '@/components/PlaceholderImage'
 import { BRAND } from '@/lib/constants'
 import { submitContactForm, submitLead } from '@/lib/supabase/reportsDataService'
+import { logDownload } from '@/lib/supabase/downloadTrackingService'
 import {
-  FileText, Download, Play, Calendar, HardDrive, File,
+  FileText, Download, Calendar, HardDrive, File,
   CheckCircle, BookOpen, Map, BarChart3, Building2,
 } from 'lucide-react'
 import SpaceHero from '@/components/SpaceHero'
@@ -17,56 +18,56 @@ const SECTIONS = [
     icon: Building2,
     title: 'Corporate Brochure',
     description: 'Company overview, leadership team, investment philosophy, and fund positioning.',
+    imageTheme: 'team',
     document: {
       title: 'GHL India Ventures Corporate Brochure',
       desc: 'A comprehensive overview of our firm, our team, and our investment philosophy. Learn about our mission to invest in India\'s future through stressed real estate and high-growth startups.',
       lastUpdated: 'January 2025',
-      fileSize: '4.2 MB',
+      fileSize: '6.3 MB',
       fileType: 'PDF',
     },
-    videoLabel: '[VIDEO: Corporate Brochure Walkthrough]',
   },
   {
     id: 'roadmap',
     icon: Map,
     title: 'Investment Roadmap',
     description: 'Fund strategy, deployment milestones, sector allocation, and 5-year vision.',
+    imageTheme: 'finance',
     document: {
       title: 'Fund Investment Roadmap',
       desc: 'Our strategic blueprint covering fund deployment timelines, sector allocation targets, key milestones, and the 5-year vision for capital deployment and returns.',
       lastUpdated: 'December 2024',
-      fileSize: '3.8 MB',
+      fileSize: '12.0 MB',
       fileType: 'PDF',
     },
-    videoLabel: '[VIDEO: Investment Roadmap Walkthrough]',
   },
   {
     id: 'guide',
     icon: BookOpen,
     title: 'Investment Guide',
     description: 'HNI investment guide, AIF explained, how to invest step by step.',
+    imageTheme: 'education',
     document: {
-      title: 'HNI Investment Guide to AIFs',
+      title: 'HNI Investment Guide to AIFs 2026',
       desc: 'A detailed guide designed for High Net-worth Individuals explaining what AIFs are, the regulatory framework, how to evaluate funds, and a step-by-step process to invest with GHL India Ventures.',
-      lastUpdated: 'November 2024',
-      fileSize: '2.9 MB',
+      lastUpdated: 'March 2026',
+      fileSize: '262 KB',
       fileType: 'PDF',
     },
-    videoLabel: '[VIDEO: Investment Guide Walkthrough]',
   },
   {
     id: 'nav',
     icon: BarChart3,
-    title: 'NAV',
+    title: 'NAV Report',
     description: 'Net Asset Value reports, fund performance, portfolio snapshot, and compliance updates.',
+    imageTheme: 'analytics',
     document: {
-      title: 'NAV Report 2024',
-      desc: 'Comprehensive NAV report including portfolio company updates, NAV progression, sector-wise performance analysis, compliance disclosures, and the outlook for the upcoming year.',
-      lastUpdated: 'March 2025',
-      fileSize: '6.1 MB',
+      title: 'NAV Report FY2026 Q1',
+      desc: 'Comprehensive NAV report including portfolio company updates, NAV progression, sector-wise performance analysis, compliance disclosures, and the outlook for the upcoming quarter.',
+      lastUpdated: 'March 2026',
+      fileSize: '372 KB',
       fileType: 'PDF',
     },
-    videoLabel: '[VIDEO: NAV Report Walkthrough]',
   },
 ]
 
@@ -93,12 +94,19 @@ function DownloadCard({
     accredited: false,
   })
   const [downloaded, setDownloaded] = useState(false)
+  const [submitting, setSubmitting] = useState(false)
+  const [error, setError] = useState('')
 
   const handleDownload = async (e: React.FormEvent) => {
     e.preventDefault()
-    setDownloaded(true)
+    setError('')
+    setSubmitting(true)
+
+    // 1. Capture lead + contact submission (feeds Admin Sales Pipeline & CS Lead Queue)
+    let contactResult: any = null
+    let leadResult: any = null
     try {
-      await Promise.all([
+      ;[contactResult, leadResult] = await Promise.all([
         submitContactForm({
           formType: 'document_download',
           fullName: gateForm.name,
@@ -119,27 +127,46 @@ function DownloadCard({
         }),
       ])
     } catch (err) {
-      console.warn('Download lead capture failed (non-critical):', err)
+      console.warn('Download lead capture failed:', err)
+      setError('Something went wrong. Please try again.')
+      setSubmitting(false)
+      return
     }
-    // Attempt actual file download from Supabase Storage
+
+    // 2. Log download activity (feeds Admin Analytics & CS Follow-up)
     try {
-      const { supabase, isSupabaseConfigured } = await import('@/lib/supabase/client')
-      if (isSupabaseConfigured()) {
-        const { data } = supabase.storage.from('downloads').getPublicUrl(`${section.id}.pdf`)
-        if (data?.publicUrl) {
-          const a = document.createElement('a')
-          a.href = data.publicUrl
-          a.download = `${section.document.title}.pdf`
-          a.target = '_blank'
-          a.rel = 'noopener noreferrer'
-          document.body.appendChild(a)
-          a.click()
-          document.body.removeChild(a)
-        }
-      }
+      await logDownload({
+        documentId: section.id,
+        documentTitle: section.document.title,
+        documentType: section.document.fileType,
+        fileSize: section.document.fileSize,
+        downloaderName: gateForm.name,
+        downloaderEmail: gateForm.email,
+        downloaderPhone: gateForm.phone,
+        isAccredited: gateForm.accredited,
+        leadId: leadResult?.data?.id || undefined,
+        contactSubmissionId: contactResult?.data?.id || undefined,
+      })
     } catch {
-      // File may not be uploaded yet — email delivery fallback
+      // Non-critical — don't block download
     }
+
+    // 3. Trigger the actual PDF download
+    try {
+      const a = document.createElement('a')
+      a.href = `/downloads/${section.id}.pdf`
+      a.download = `${section.document.title}.pdf`
+      a.target = '_blank'
+      a.rel = 'noopener noreferrer'
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
+    } catch {
+      // Fallback — email delivery
+    }
+
+    setDownloaded(true)
+    setSubmitting(false)
   }
 
   return (
@@ -149,7 +176,7 @@ function DownloadCard({
         <div>
           {/* Document preview mockup */}
           <div className="relative rounded-xl overflow-hidden mb-6">
-            <PlaceholderImage theme="fund" aspectRatio="aspect-[4/3]" label={`${section.document.title} — ${section.document.fileType}`} className="rounded-xl" />
+            <PlaceholderImage theme={section.imageTheme || 'fund'} aspectRatio="aspect-[4/3]" label={`${section.document.title} — ${section.document.fileType}`} className="rounded-xl" />
           </div>
 
           <h3 className="text-xl font-bold text-brand-black mb-2">{section.document.title}</h3>
@@ -171,16 +198,7 @@ function DownloadCard({
             </span>
           </div>
 
-          {/* Video placeholder */}
-          <div className={`mt-6 rounded-xl bg-gray-100 border border-gray-200 p-4 flex items-center space-x-3 ${GLOW_COLORS[(index + 3) % GLOW_COLORS.length]}`}>
-            <div className="w-10 h-10 rounded-full bg-brand-red/10 flex items-center justify-center shrink-0">
-              <Play className="w-5 h-5 text-brand-red ml-0.5" />
-            </div>
-            <div>
-              <p className="text-sm font-medium text-brand-black">{section.videoLabel}</p>
-              <p className="text-xs text-brand-grey">Watch a guided walkthrough of this document</p>
-            </div>
-          </div>
+
         </div>
 
         {/* Right: Download Gate Form */}
@@ -247,6 +265,8 @@ function DownloadCard({
                       id={`${section.id}-phone`}
                       type="tel"
                       required
+                      pattern="[0-9]{10}"
+                      title="Please enter a valid 10-digit mobile number"
                       className="input-field text-sm pl-12"
                       placeholder="XXXXX XXXXX"
                       value={gateForm.phone}
@@ -267,9 +287,15 @@ function DownloadCard({
                   </span>
                 </label>
 
-                <button type="submit" className="btn-primary w-full text-center">
+                {error && (
+                  <div className="text-red-600 text-sm font-medium bg-red-50 border border-red-200 rounded-lg px-4 py-3">
+                    {error}
+                  </div>
+                )}
+
+                <button type="submit" disabled={submitting} className="btn-primary w-full text-center disabled:opacity-60 disabled:cursor-not-allowed">
                   <Download className="w-4 h-4 mr-2" />
-                  Download Now
+                  {submitting ? 'Processing...' : 'Download Now'}
                 </button>
 
                 <p className="text-[11px] text-brand-grey text-center">

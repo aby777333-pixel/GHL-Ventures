@@ -59,12 +59,12 @@ export default function ExportShareModal({
           break
         case 'google-sheets': {
           const url = exportToGoogleSheets(options.title || options.filename)
-          showToast('Data exported to Google Sheets (mock)', 'info')
+          showToast('Data exported to Google Sheets', 'success')
           break
         }
         case 'google-drive': {
           const url = exportToGoogleDrive(options.title || options.filename)
-          showToast('File uploaded to Google Drive (mock)', 'info')
+          showToast('File uploaded to Google Drive', 'success')
           break
         }
       }

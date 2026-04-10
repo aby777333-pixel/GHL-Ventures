@@ -13,7 +13,7 @@ import AdminBadge from '../shared/AdminBadge'
 import AdminModal, { ModalButton } from '../shared/AdminModal'
 import AdminKPICard from '../shared/AdminKPICard'
 import AdminEmptyState from '../shared/AdminEmptyState'
-import { fetchAssets, fetchDocuments } from '@/lib/supabase/adminDataService'
+import { fetchAssets, fetchDocuments, insertRow } from '@/lib/supabase/adminDataService'
 import { formatINR, formatDate } from '@/lib/admin/adminHooks'
 import type { Asset, AssetCategory, AssetStatus } from '@/lib/admin/adminTypes'
 import { saveBlobAs } from '@/lib/supabase/storageService'
@@ -57,8 +57,20 @@ export default function AssetDocModule({ subTab, navigate, showToast }: AssetDoc
   const loadData = useCallback(async () => {
     setLoading(true)
     const [a, d] = await Promise.all([fetchAssets(), fetchDocuments()])
-    setAssets(a)
-    setDocuments(d as any)
+    setAssets(a || [])
+    // Map raw DB documents to AdminDocument shape
+    const mapped: AdminDocument[] = ((d || []) as any[]).map((raw: any) => ({
+      id: raw.id || String(Math.random()),
+      name: raw.title || raw.file_name || raw.name || 'Untitled',
+      type: (raw.file_type || raw.mime_type || raw.type || 'PDF').toUpperCase().replace('.',''),
+      category: raw.category || 'general',
+      uploadedBy: raw.uploaded_by_name || raw.uploaded_by || 'System',
+      uploadDate: raw.created_at || raw.uploaded_at || raw.uploadDate || new Date().toISOString(),
+      size: raw.file_size ? `${Math.round(Number(raw.file_size) / 1024)} KB` : (raw.size || '—'),
+      version: raw.version || 1,
+      tags: Array.isArray(raw.tags) ? raw.tags : [],
+    }))
+    setDocuments(mapped)
     setLoading(false)
   }, [])
 
@@ -132,7 +144,7 @@ export default function AssetDocModule({ subTab, navigate, showToast }: AssetDoc
       </div>
 
       <div className="admin-tab-switch">
-        {activeTab === 'assets' && <AssetInventoryTab assets={assets} showToast={showToast} />}
+        {activeTab === 'assets' && <AssetInventoryTab assets={assets} showToast={showToast} onRefresh={loadData} />}
         {activeTab === 'documents' && <DocumentsTab documents={documents} showToast={showToast} />}
       </div>
     </div>
@@ -140,7 +152,7 @@ export default function AssetDocModule({ subTab, navigate, showToast }: AssetDoc
 }
 
 // ── Asset Inventory Tab ─────────────────────────────────────────
-function AssetInventoryTab({ assets, showToast }: { assets: any[]; showToast: (msg: string, type?: 'success' | 'error' | 'info' | 'warning') => void }) {
+function AssetInventoryTab({ assets, showToast, onRefresh }: { assets: any[]; showToast: (msg: string, type?: 'success' | 'error' | 'info' | 'warning') => void; onRefresh?: () => void }) {
   const [addAssetOpen, setAddAssetOpen] = useState(false)
   const [assetFolderPickerOpen, setAssetFolderPickerOpen] = useState(false)
   const [assetForm, setAssetForm] = useState({
@@ -166,48 +178,54 @@ function AssetInventoryTab({ assets, showToast }: { assets: any[]; showToast: (m
       return
     }
     try {
-      const { insertRow } = await import('@/lib/supabase/adminDataService')
-      const { supabase } = await import('@/lib/supabase/client')
-      const { data: { user } } = await supabase.auth.getUser()
-
-      const assetData: Record<string, any> = {
-        name: assetForm.name,
-        category: assetForm.category === 'laptop' || assetForm.category === 'phone' || assetForm.category === 'monitor' ? 'physical' : assetForm.category,
+      // Map form categories to DB enum: digital, physical, license, certificate
+      const catMap: Record<string, string> = { laptop: 'physical', desktop: 'physical', phone: 'physical', server: 'physical', monitor: 'physical', printer: 'physical', software: 'digital', domain: 'digital', license: 'license', certificate: 'certificate' }
+      const dbCategory = catMap[assetForm.category] || 'physical'
+      // assigned_to is UUID — if name string, set null
+      const assignedToVal = (assetForm.assignedTo && /^[0-9a-f-]{36}$/i.test(assetForm.assignedTo)) ? assetForm.assignedTo : null
+      // Get current user for created_by
+      let createdBy: string | null = null
+      try {
+        const { supabase: sb } = await import('@/lib/supabase/client')
+        const { data: { user } } = await (sb as any).auth.getUser()
+        createdBy = user?.id || null
+      } catch { /* continue */ }
+      const result = await insertRow('assets', {
+        name: assetForm.name.trim(),
+        category: dbCategory,
         serial_number: assetForm.serialNumber || null,
-        status: assetForm.status || 'active',
+        assigned_to: assignedToVal,
+        value: parseFloat(assetForm.purchaseValue) || 0,
         purchase_date: assetForm.purchaseDate || null,
         expiry_date: assetForm.warrantyExpiry || null,
-        value: assetForm.purchaseValue ? Number(assetForm.purchaseValue) : 0,
+        status: assetForm.status || 'active',
         location: assetForm.location || null,
-        notes: assetForm.notes || null,
-        created_by: user?.id || null,
-      }
-
-      const result = await insertRow('assets', assetData)
+        notes: `[${assetForm.category}] ${assetForm.notes || ''}`.trim(),
+        created_by: createdBy,
+      })
       if (result) {
         showToast('Asset registered successfully', 'success')
-        // Trigger reload
-        window.location.reload()
+        setAddAssetOpen(false)
+        setAssetForm({
+          name: '',
+          category: 'laptop',
+          serialNumber: '',
+          assignedTo: '',
+          purchaseValue: '',
+          purchaseDate: '',
+          warrantyExpiry: '',
+          status: 'active',
+          location: '',
+          notes: '',
+        })
+        onRefresh?.()
       } else {
-        showToast('Failed to register asset', 'error')
+        showToast('Failed to register asset — check console for details', 'error')
       }
-    } catch (err) {
-      console.warn('[assets] Submit error:', err)
-      showToast('Failed to register asset', 'error')
+    } catch (err: any) {
+      console.error('[AssetDocModule] handleAssetSubmit error:', err)
+      showToast(err?.message || 'Failed to register asset', 'error')
     }
-    setAddAssetOpen(false)
-    setAssetForm({
-      name: '',
-      category: 'laptop',
-      serialNumber: '',
-      assignedTo: '',
-      purchaseValue: '',
-      purchaseDate: '',
-      warrantyExpiry: '',
-      status: 'active',
-      location: '',
-      notes: '',
-    })
   }
 
   const getCategoryIcon = (cat: AssetCategory) => {
@@ -489,13 +507,14 @@ function DocumentsTab({ documents, showToast }: { documents: AdminDocument[]; sh
   const [categoryFilter, setCategoryFilter] = useState<string>('all')
 
   const categories = useMemo(() => {
-    const cats = new Set(documents.map(d => d.category))
+    const cats = new Set((documents || []).map(d => d?.category || 'general').filter(Boolean))
     return ['all', ...Array.from(cats)]
   }, [documents])
 
   const filtered = useMemo(() => {
-    if (categoryFilter === 'all') return documents
-    return documents.filter(d => d.category === categoryFilter)
+    const docs = (documents || []).filter(Boolean)
+    if (categoryFilter === 'all') return docs
+    return docs.filter(d => (d?.category || 'general') === categoryFilter)
   }, [categoryFilter, documents])
 
   const getFileIcon = (type: string) => {
@@ -536,8 +555,8 @@ function DocumentsTab({ documents, showToast }: { documents: AdminDocument[]; sh
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
         {filtered.map(doc => {
-          const Icon = getFileIcon(doc.type)
-          const colorClasses = getFileColor(doc.type)
+          const Icon = getFileIcon(doc.type || '')
+          const colorClasses = getFileColor(doc.type || '')
           return (
             <AdminGlass key={doc.id} padding="p-4" className="group cursor-pointer">
               <div className="flex items-start gap-3">
@@ -545,10 +564,10 @@ function DocumentsTab({ documents, showToast }: { documents: AdminDocument[]; sh
                   <Icon className="w-5 h-5" />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-white truncate group-hover:text-brand-red transition-colors">{doc.name}</p>
-                  <p className="text-[11px] text-gray-500 mt-0.5">{doc.type} • {doc.size} • v{doc.version}</p>
+                  <p className="text-sm font-medium text-white truncate group-hover:text-brand-red transition-colors">{doc.name || 'Untitled'}</p>
+                  <p className="text-[11px] text-gray-500 mt-0.5">{doc.type || 'FILE'} • {doc.size || '—'} • v{doc.version || 1}</p>
                   <div className="flex flex-wrap gap-1 mt-2">
-                    {doc.tags.slice(0, 3).map(tag => (
+                    {(Array.isArray(doc.tags) ? doc.tags : []).slice(0, 3).map(tag => (
                       <span key={tag} className="text-[9px] px-1.5 py-0.5 rounded bg-white/[0.04] text-gray-500 border border-white/[0.06]">
                         {tag}
                       </span>
@@ -571,8 +590,8 @@ function DocumentsTab({ documents, showToast }: { documents: AdminDocument[]; sh
                 <button
                   onClick={async () => {
                     showToast(`Downloading ${doc.name}...`, 'info')
-                    const ext = doc.type.toLowerCase() === 'pdf' ? 'pdf' : doc.type.toLowerCase() === 'xlsx' ? 'xlsx' : doc.type.toLowerCase() === 'docx' ? 'docx' : 'txt'
-                    const filename = `${doc.name.replace(/[^a-zA-Z0-9 ]/g, '')}.${ext}`
+                    const ext = (doc.type || 'txt').toLowerCase() === 'pdf' ? 'pdf' : (doc.type || '').toLowerCase() === 'xlsx' ? 'xlsx' : (doc.type || '').toLowerCase() === 'docx' ? 'docx' : 'txt'
+                    const filename = `${(doc.name || 'document').replace(/[^a-zA-Z0-9 ]/g, '')}.${ext}`
                     const content = `Document: ${doc.name}\nType: ${doc.type}\nCategory: ${doc.category}\nVersion: ${doc.version}\nUploaded by: ${doc.uploadedBy}\nDate: ${doc.uploadDate}\nSize: ${doc.size}`
                     const blob = new Blob([content], { type: 'application/octet-stream' })
                     await saveBlobAs(blob, filename, showToast as any)

@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 
-const SITE_URL = 'https://ghl-india-ventures-2025.netlify.app';
+const SITE_URL = 'https://ghlindiaventures.com';
 
 export const metadata: Metadata = {
   title: 'About GHL India Ventures | SEBI Registered Category II AIF Chennai',

@@ -13,7 +13,7 @@ import AdminBadge, { getKYCBadgeVariant, getAccountBadgeVariant } from '../share
 import AdminModal, { ModalButton } from '../shared/AdminModal'
 import AdminEmptyState from '../shared/AdminEmptyState'
 import AdminKPICard from '../shared/AdminKPICard'
-import { fetchClients, fetchKYCDocuments } from '@/lib/supabase/adminDataService'
+import { fetchClients, fetchKYCDocuments, approveKYCStep, rejectKYCStep, approveClientKYC, rejectClientKYC } from '@/lib/supabase/adminDataService'
 import { getActiveRMs, assignRMToClient, type ActiveRM } from '@/lib/supabase/employeeService'
 import { formatINR, formatDate } from '@/lib/admin/adminHooks'
 import type { Client, KYCDocument, KYCStatus } from '@/lib/admin/adminTypes'
@@ -41,6 +41,8 @@ export default function ClientModule({ subTab, navigate, showToast }: ClientModu
   const [kycFilter, setKycFilter] = useState<KYCStatus | 'all'>('all')
   const [addClientOpen, setAddClientOpen] = useState(false)
   const [folderPickerOpen, setFolderPickerOpen] = useState(false)
+  const [editingClient, setEditingClient] = useState<Client | null>(null)
+  const [clientForm, setClientForm] = useState({ full_name: '', email: '', phone: '', pan: '', risk_profile: 'moderate', assigned_rm: '', total_invested: '' })
 
   const [clients, setClients] = useState<any[]>([])
   const [kycDocs, setKycDocs] = useState<any[]>([])
@@ -75,7 +77,7 @@ export default function ClientModule({ subTab, navigate, showToast }: ClientModu
   const kpis = useMemo(() => {
     const active = clients.filter(c => c.accountStatus === 'active').length
     const totalAUM = clients.reduce((s, c) => s + c.aum, 0)
-    const pendingKYC = kycDocs.filter(d => d.status === 'pending' || d.status === 'under-review').length
+    const pendingKYC = kycDocs.filter(d => d.status === 'pending' || d.status === 'under-review' || d.status === 'submitted').length
     const avgAUM = active > 0 ? totalAUM / active : 0
     return { total: clients.length, active, totalAUM, pendingKYC, avgAUM }
   }, [clients, kycDocs])
@@ -94,7 +96,7 @@ export default function ClientModule({ subTab, navigate, showToast }: ClientModu
           <p className="text-sm text-gray-500 mt-1">Manage investors, KYC verification, and client relationships</p>
         </div>
         <button
-          onClick={() => setAddClientOpen(true)}
+          onClick={() => { setEditingClient(null); setClientForm({ full_name: '', email: '', phone: '', pan: '', risk_profile: 'moderate', assigned_rm: '', total_invested: '' }); setAddClientOpen(true) }}
           className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium text-white bg-brand-red/20 border border-brand-red/30 hover:bg-brand-red/30 transition-colors self-start admin-btn-press"
         >
           <UserPlus className="w-4 h-4" />
@@ -148,6 +150,7 @@ export default function ClientModule({ subTab, navigate, showToast }: ClientModu
             filter={kycFilter}
             setFilter={setKycFilter}
             showToast={showToast}
+            onRefresh={loadData}
           />
         )}
         {activeTab === 'analytics' && <ClientAnalyticsTab clients={clients} />}
@@ -164,7 +167,22 @@ export default function ClientModule({ subTab, navigate, showToast }: ClientModu
           footer={
             <>
               <ModalButton onClick={() => { setProfileModalOpen(false); setSelectedClient(null) }}>Close</ModalButton>
-              <ModalButton variant="primary" onClick={() => { setProfileModalOpen(false); setSelectedClient(null); setAddClientOpen(true) }}>Edit Client</ModalButton>
+              <ModalButton variant="primary" onClick={() => {
+                const c = selectedClient!
+                setEditingClient(c)
+                setClientForm({
+                  full_name: c.name || '',
+                  email: c.email || '',
+                  phone: c.phone || '',
+                  pan: (c as any).pan || '',
+                  risk_profile: c.riskProfile || 'moderate',
+                  assigned_rm: (c as any).assignedRMId || '',
+                  total_invested: String(c.aum || ''),
+                })
+                setProfileModalOpen(false)
+                setSelectedClient(null)
+                setAddClientOpen(true)
+              }}>Edit Client</ModalButton>
             </>
           }
         >
@@ -176,14 +194,69 @@ export default function ClientModule({ subTab, navigate, showToast }: ClientModu
       {addClientOpen && (
         <AdminModal
           isOpen={addClientOpen}
-          onClose={() => setAddClientOpen(false)}
-          title="New Client"
-          subtitle="Register a new investment client"
+          onClose={() => { setAddClientOpen(false); setEditingClient(null) }}
+          title={editingClient ? 'Edit Client' : 'New Client'}
+          subtitle={editingClient ? `Update ${editingClient.name}` : 'Register a new investment client'}
           maxWidth="max-w-xl"
           footer={
             <>
               <ModalButton onClick={() => setAddClientOpen(false)}>Cancel</ModalButton>
-              <ModalButton variant="primary" onClick={() => { setAddClientOpen(false); showToast('Client registered successfully', 'success') }}>Save Client</ModalButton>
+              <ModalButton variant="primary" onClick={async () => {
+                if (!clientForm.full_name.trim() || !clientForm.email.trim()) { showToast('Name and email are required', 'info'); return }
+                const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+                if (!emailRegex.test(clientForm.email.trim())) { showToast('Please enter a valid email address', 'error'); return }
+                // Sanitize assigned_rm: send null if empty or non-UUID string like "Unassigned"
+                const sanitizedRM = clientForm.assigned_rm && clientForm.assigned_rm !== 'Unassigned' && clientForm.assigned_rm !== 'Not assigned' ? clientForm.assigned_rm : null
+                try {
+                  if (editingClient) {
+                    // Update existing client
+                    const { supabase } = await import('@/lib/supabase/client')
+                    const sb = supabase as any
+                    const { error } = await sb.from('clients').update({
+                      full_name: clientForm.full_name,
+                      email: clientForm.email,
+                      phone: clientForm.phone || null,
+                      pan: clientForm.pan || null,
+                      risk_profile: clientForm.risk_profile || 'moderate',
+                      assigned_rm: sanitizedRM,
+                      total_invested: parseFloat(clientForm.total_invested) || 0,
+                    }).eq('id', editingClient.id)
+                    if (error) throw error
+                    setAddClientOpen(false)
+                    setEditingClient(null)
+                    setClientForm({ full_name: '', email: '', phone: '', pan: '', risk_profile: 'moderate', assigned_rm: '', total_invested: '' })
+                    showToast(`Client ${clientForm.full_name} updated successfully`, 'success')
+                    loadData()
+                  } else {
+                    // Create new client
+                    const { insertRow } = await import('@/lib/supabase/adminDataService')
+                    const clientCode = `GHL-C-${Date.now().toString(36).toUpperCase()}`
+                    const result = await insertRow('clients', {
+                      full_name: clientForm.full_name,
+                      email: clientForm.email,
+                      phone: clientForm.phone || null,
+                      pan: clientForm.pan || null,
+                      risk_profile: clientForm.risk_profile || 'moderate',
+                      assigned_rm: sanitizedRM,
+                      total_invested: parseFloat(clientForm.total_invested) || 0,
+                      client_code: clientCode,
+                      kyc_status: 'pending',
+                      is_active: true,
+                    })
+                    if (result) {
+                      setAddClientOpen(false)
+                      setClientForm({ full_name: '', email: '', phone: '', pan: '', risk_profile: 'moderate', assigned_rm: '', total_invested: '' })
+                      showToast(`Client ${clientForm.full_name} registered (${clientCode})`, 'success')
+                      loadData()
+                    } else {
+                      showToast('Database error — check if email already exists or contact support.', 'error')
+                    }
+                  }
+                } catch (err: any) {
+                  console.error('[admin] Save client error:', err)
+                  showToast(err?.message || 'Failed to save client', 'error')
+                }
+              }}>{editingClient ? 'Update Client' : 'Save Client'}</ModalButton>
             </>
           }
         >
@@ -191,27 +264,27 @@ export default function ClientModule({ subTab, navigate, showToast }: ClientModu
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="block text-xs font-medium text-gray-400 mb-1.5">Full Name *</label>
-                <input type="text" placeholder="Enter full name" className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-brand-red/40 focus:ring-1 focus:ring-brand-red/20" />
+                <input type="text" placeholder="Enter full name" value={clientForm.full_name} onChange={e => setClientForm(f => ({ ...f, full_name: e.target.value }))} className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-brand-red/40 focus:ring-1 focus:ring-brand-red/20" />
               </div>
               <div>
                 <label className="block text-xs font-medium text-gray-400 mb-1.5">Email *</label>
-                <input type="email" placeholder="email@example.com" className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-brand-red/40 focus:ring-1 focus:ring-brand-red/20" />
+                <input type="email" placeholder="email@example.com" value={clientForm.email} onChange={e => setClientForm(f => ({ ...f, email: e.target.value }))} className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-brand-red/40 focus:ring-1 focus:ring-brand-red/20" />
               </div>
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="block text-xs font-medium text-gray-400 mb-1.5">Phone *</label>
-                <input type="tel" placeholder="+91 98765 43210" className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-brand-red/40 focus:ring-1 focus:ring-brand-red/20" />
+                <input type="tel" placeholder="+91 98765 43210" value={clientForm.phone} onChange={e => setClientForm(f => ({ ...f, phone: e.target.value }))} className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-brand-red/40 focus:ring-1 focus:ring-brand-red/20" />
               </div>
               <div>
                 <label className="block text-xs font-medium text-gray-400 mb-1.5">PAN Number *</label>
-                <input type="text" placeholder="ABCDE1234F" maxLength={10} className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-brand-red/40 focus:ring-1 focus:ring-brand-red/20 uppercase" />
+                <input type="text" placeholder="ABCDE1234F" maxLength={10} value={clientForm.pan} onChange={e => setClientForm(f => ({ ...f, pan: e.target.value.toUpperCase() }))} className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-brand-red/40 focus:ring-1 focus:ring-brand-red/20 uppercase" />
               </div>
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="block text-xs font-medium text-gray-400 mb-1.5">Risk Profile</label>
-                <select className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-brand-red/40 focus:ring-1 focus:ring-brand-red/20">
+                <select value={clientForm.risk_profile} onChange={e => setClientForm(f => ({ ...f, risk_profile: e.target.value }))} className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-brand-red/40 focus:ring-1 focus:ring-brand-red/20">
                   <option value="conservative">Conservative</option>
                   <option value="moderate">Moderate</option>
                   <option value="aggressive">Aggressive</option>
@@ -220,7 +293,7 @@ export default function ClientModule({ subTab, navigate, showToast }: ClientModu
               </div>
               <div>
                 <label className="block text-xs font-medium text-gray-400 mb-1.5">Assigned RM</label>
-                <select className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-brand-red/40 focus:ring-1 focus:ring-brand-red/20">
+                <select value={clientForm.assigned_rm} onChange={e => setClientForm(f => ({ ...f, assigned_rm: e.target.value }))} className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-brand-red/40 focus:ring-1 focus:ring-brand-red/20">
                   <option value="" className="bg-neutral-900">Auto-assign (least loaded)</option>
                   {activeRMs.map(rm => (
                     <option key={rm.staff_id} value={rm.staff_id} className="bg-neutral-900">
@@ -232,7 +305,7 @@ export default function ClientModule({ subTab, navigate, showToast }: ClientModu
             </div>
             <div>
               <label className="block text-xs font-medium text-gray-400 mb-1.5">Initial Investment Amount (₹)</label>
-              <input type="number" placeholder="0" className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-brand-red/40 focus:ring-1 focus:ring-brand-red/20" />
+              <input type="number" placeholder="0" value={clientForm.total_invested} onChange={e => setClientForm(f => ({ ...f, total_invested: e.target.value }))} className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-brand-red/40 focus:ring-1 focus:ring-brand-red/20" />
             </div>
             <div className="sm:col-span-2">
               <label className="block text-xs font-medium text-gray-400 mb-1.5">Attach KYC / Documents</label>
@@ -363,12 +436,17 @@ function KYCQueueTab({
   filter,
   setFilter,
   showToast,
+  onRefresh,
 }: {
   kycDocs: any[]
   filter: KYCStatus | 'all'
   setFilter: (f: KYCStatus | 'all') => void
   showToast: (msg: string, type?: 'success' | 'error' | 'info' | 'warning') => void
+  onRefresh?: () => void
 }) {
+  const [actionLoading, setActionLoading] = useState<string | null>(null)
+  const [previewDoc, setPreviewDoc] = useState<any | null>(null)
+
   const filteredDocs = useMemo(() => {
     if (filter === 'all') return kycDocs
     return kycDocs.filter(d => d.status === filter)
@@ -394,7 +472,7 @@ function KYCQueueTab({
     { key: 'type', label: 'Document Type' },
     { key: 'fileName', label: 'File', render: (row) => (
       <span className="flex items-center gap-1.5 text-xs text-gray-400">
-        <FileText className="w-3.5 h-3.5" />{row.fileName}
+        <FileText className="w-3.5 h-3.5" />{(row as any).fileName}
       </span>
     )},
     {
@@ -405,7 +483,11 @@ function KYCQueueTab({
     {
       key: 'status',
       label: 'Status',
-      render: (row) => <AdminBadge label={row.status.replace('-', ' ')} variant={getKYCBadgeVariant(row.status)} dot />,
+      render: (row) => {
+        const label = row.status === 'submitted' ? 'submitted' : row.status.replace('-', ' ')
+        const variant = row.status === 'submitted' ? 'warning' as const : getKYCBadgeVariant(row.status)
+        return <AdminBadge label={label} variant={variant} dot />
+      },
     },
     {
       key: 'reviewer',
@@ -419,17 +501,39 @@ function KYCQueueTab({
       width: '120px',
       render: (row) => (
         <div className="flex items-center gap-1">
-          {(row.status === 'pending' || row.status === 'under-review') && (
+          {(row.status === 'pending' || row.status === 'under-review' || row.status === 'submitted') && (
             <>
               <button
-                onClick={(e) => { e.stopPropagation(); showToast(`KYC ${row.id} approved`, 'success') }}
+                onClick={async (e) => {
+                  e.stopPropagation()
+                  if (row.table) {
+                    const ok = await approveKYCStep(row.table, row.id, 'admin')
+                    if (ok) { showToast(`${row.type} approved for ${row.clientName}`, 'success'); onRefresh?.() }
+                    else showToast('Approval failed', 'error')
+                  } else {
+                    const ok = await approveClientKYC(row.clientId, 'admin')
+                    if (ok) { showToast(`Full KYC approved for ${row.clientName}`, 'success'); onRefresh?.() }
+                    else showToast('Approval failed', 'error')
+                  }
+                }}
                 className="p-1.5 rounded-lg hover:bg-emerald-500/10 text-gray-500 hover:text-emerald-400 transition-colors"
                 title="Approve"
               >
                 <CheckCircle2 className="w-4 h-4" />
               </button>
               <button
-                onClick={(e) => { e.stopPropagation(); showToast(`KYC ${row.id} rejected`, 'error') }}
+                onClick={async (e) => {
+                  e.stopPropagation()
+                  if (row.table) {
+                    const ok = await rejectKYCStep(row.table, row.id, 'admin')
+                    if (ok) { showToast(`${row.type} rejected for ${row.clientName}`, 'success'); onRefresh?.() }
+                    else showToast('Rejection failed', 'error')
+                  } else {
+                    const ok = await rejectClientKYC(row.clientId, 'admin')
+                    if (ok) { showToast(`KYC rejected for ${row.clientName}`, 'success'); onRefresh?.() }
+                    else showToast('Rejection failed', 'error')
+                  }
+                }}
                 className="p-1.5 rounded-lg hover:bg-red-500/10 text-gray-500 hover:text-red-400 transition-colors"
                 title="Reject"
               >
@@ -438,7 +542,7 @@ function KYCQueueTab({
             </>
           )}
           <button
-            onClick={(e) => { e.stopPropagation(); showToast('Opening document preview...', 'info') }}
+            onClick={(e) => { e.stopPropagation(); setPreviewDoc(row) }}
             className="p-1.5 rounded-lg hover:bg-white/[0.06] text-gray-500 hover:text-white transition-colors"
             title="View"
           >
@@ -457,34 +561,129 @@ function KYCQueueTab({
     { id: 'rejected', label: `Rejected (${statusCounts.rejected || 0})` },
   ]
 
+  // Also count "submitted" under pending for display
+  const submittedCount = kycDocs.filter(d => d.status === 'submitted').length
+
   return (
     <div className="space-y-4">
       {/* Filters */}
       <div className="flex flex-wrap gap-2">
-        {filters.map(f => (
-          <button
-            key={f.id}
-            onClick={() => setFilter(f.id)}
-            className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors ${
-              filter === f.id
-                ? 'bg-brand-red/20 text-white border-brand-red/30'
-                : 'bg-white/[0.03] text-gray-500 border-white/[0.06] hover:bg-white/[0.06] hover:text-gray-300'
-            }`}
-          >
-            {f.label}
-          </button>
-        ))}
+        {filters.map(f => {
+          // Show submitted count in the Pending filter
+          let label = f.label
+          if (f.id === 'pending') {
+            const total = (statusCounts.pending || 0) + submittedCount
+            label = `Pending (${total})`
+          }
+          return (
+            <button
+              key={f.id}
+              onClick={() => setFilter(f.id)}
+              className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors ${
+                filter === f.id
+                  ? 'bg-brand-red/20 text-white border-brand-red/30'
+                  : 'bg-white/[0.03] text-gray-500 border-white/[0.06] hover:bg-white/[0.06] hover:text-gray-300'
+              }`}
+            >
+              {label}
+            </button>
+          )
+        })}
       </div>
 
       <AdminGlass padding="p-4">
         <AdminDataTable<KYCDocument>
           columns={columns}
-          data={filteredDocs}
+          data={filter === 'pending' ? kycDocs.filter(d => d.status === 'pending' || d.status === 'submitted') : filteredDocs}
           searchKeys={['clientName', 'type', 'fileName']}
           searchPlaceholder="Search KYC documents..."
           emptyMessage="No KYC documents match the selected filter"
         />
       </AdminGlass>
+
+      {/* Document Preview Modal */}
+      {previewDoc && (
+        <AdminModal
+          isOpen={true}
+          onClose={() => setPreviewDoc(null)}
+          title={`${previewDoc.type} — ${previewDoc.clientName}`}
+          maxWidth="max-w-3xl"
+          footer={
+            <>
+              {(previewDoc.status === 'submitted' || previewDoc.status === 'pending' || previewDoc.status === 'under-review') && (
+                <>
+                  <ModalButton variant="primary" onClick={async () => {
+                    if (previewDoc.table) {
+                      const ok = await approveKYCStep(previewDoc.table, previewDoc.id, 'admin')
+                      if (ok) { showToast(`${previewDoc.type} approved`, 'success'); onRefresh?.() }
+                      else showToast('Approval failed', 'error')
+                    } else {
+                      const ok = await approveClientKYC(previewDoc.clientId, 'admin')
+                      if (ok) { showToast('KYC approved', 'success'); onRefresh?.() }
+                      else showToast('Approval failed', 'error')
+                    }
+                    setPreviewDoc(null)
+                  }}>
+                    Approve
+                  </ModalButton>
+                  <ModalButton variant="danger" onClick={async () => {
+                    if (previewDoc.table) {
+                      const ok = await rejectKYCStep(previewDoc.table, previewDoc.id, 'admin')
+                      if (ok) { showToast(`${previewDoc.type} rejected`, 'info'); onRefresh?.() }
+                      else showToast('Rejection failed', 'error')
+                    } else {
+                      const ok = await rejectClientKYC(previewDoc.clientId, 'admin')
+                      if (ok) { showToast('KYC rejected', 'info'); onRefresh?.() }
+                      else showToast('Rejection failed', 'error')
+                    }
+                    setPreviewDoc(null)
+                  }}>
+                    Reject
+                  </ModalButton>
+                </>
+              )}
+              <ModalButton onClick={() => setPreviewDoc(null)}>Close</ModalButton>
+            </>
+          }
+        >
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-3 text-sm">
+              <div><span className="text-gray-500">Client:</span> <span className="text-white ml-2">{previewDoc.clientName}</span></div>
+              <div><span className="text-gray-500">Status:</span> <span className="ml-2"><AdminBadge label={previewDoc.status} variant={previewDoc.status === 'submitted' ? 'warning' : getKYCBadgeVariant(previewDoc.status)} dot /></span></div>
+              <div><span className="text-gray-500">Type:</span> <span className="text-white ml-2">{previewDoc.type}</span></div>
+              <div><span className="text-gray-500">Uploaded:</span> <span className="text-white ml-2">{formatDate(previewDoc.uploadDate)}</span></div>
+            </div>
+
+            {/* File Preview */}
+            {previewDoc.fileUrl && (
+              <div className="border border-white/[0.08] rounded-xl overflow-hidden bg-black/30">
+                {previewDoc.fileName?.match(/\.(jpg|jpeg|png|gif|webp)$/i) || previewDoc.fileUrl?.match(/\.(jpg|jpeg|png|gif|webp)/i) ? (
+                  <img src={previewDoc.fileUrl} alt={previewDoc.fileName} className="w-full max-h-[500px] object-contain" />
+                ) : previewDoc.fileName?.match(/\.pdf$/i) || previewDoc.fileUrl?.match(/\.pdf/i) ? (
+                  <iframe src={previewDoc.fileUrl} className="w-full h-[500px]" title="Document Preview" />
+                ) : (
+                  <div className="p-8 text-center text-gray-400">
+                    <FileText className="w-12 h-12 mx-auto mb-3 opacity-40" />
+                    <p className="text-sm mb-3">Preview not available for this file type</p>
+                    <a href={previewDoc.fileUrl} target="_blank" rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-medium text-white bg-brand-red/20 border border-brand-red/30 rounded-lg hover:bg-brand-red/30 transition-colors">
+                      <ArrowUpRight className="w-3.5 h-3.5" /> Open in New Tab
+                    </a>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Open in new tab link */}
+            {previewDoc.fileUrl && (
+              <a href={previewDoc.fileUrl} target="_blank" rel="noopener noreferrer"
+                className="inline-flex items-center gap-1.5 text-xs text-brand-red hover:underline">
+                <ArrowUpRight className="w-3.5 h-3.5" /> Open file in new tab
+              </a>
+            )}
+          </div>
+        </AdminModal>
+      )}
     </div>
   )
 }

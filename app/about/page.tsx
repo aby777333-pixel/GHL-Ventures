@@ -487,14 +487,14 @@ const OFFICE_TABS = [
   {
     id: 'reception',
     label: 'Reception',
-    image: 'https://images.unsplash.com/photo-1497366216548-37526070297c?w=1000&q=80&fit=crop&auto=format',
+    image: 'https://images.unsplash.com/photo-1564069114553-7215e1ff1890?w=1000&q=80&fit=crop&auto=format',
     title: 'Welcome Lounge',
     description: 'Our warm reception area greets every visitor with the refined elegance that mirrors GHL\u2019s commitment to excellence. A first impression designed to inspire confidence.',
   },
   {
     id: 'conference',
     label: 'Conference Room',
-    image: 'https://images.unsplash.com/photo-1431540015161-0bf868a2d407?w=1000&q=80&fit=crop&auto=format',
+    image: 'https://images.unsplash.com/photo-1606857521015-7f9fcf423740?w=1000&q=80&fit=crop&auto=format',
     title: 'Executive Boardroom',
     description: 'Where investment strategies take shape. Our state-of-the-art conference room is equipped for high-level presentations, investor meetings, and deal closings.',
   },
@@ -508,7 +508,7 @@ const OFFICE_TABS = [
   {
     id: 'meeting',
     label: 'Meeting Area',
-    image: 'https://images.unsplash.com/photo-1600880292203-757bb62b4baf?w=1000&q=80&fit=crop&auto=format',
+    image: 'https://images.unsplash.com/photo-1577412647305-991150c7d163?w=1000&q=80&fit=crop&auto=format',
     title: 'Consultation Suite',
     description: 'Private meeting spaces designed for one-on-one investor consultations, portfolio reviews, and confidential discussions about your investment journey.',
   },

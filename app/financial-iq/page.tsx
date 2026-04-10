@@ -597,66 +597,7 @@ export default function FinancialIQPage() {
         </div>
       </section>
 
-      {/* ────────────────────────────────────────
-          5. Upcoming Events
-      ──────────────────────────────────────── */}
-      <section className="section-padding bg-brand-offwhite">
-        <div className="container-max mx-auto">
-          <AnimatedSection className="text-center mb-12">
-            <span className="text-brand-red font-semibold text-xs uppercase tracking-wider">Events</span>
-            <h2 className="section-title text-brand-black mt-2">Upcoming Webinars &amp; Sessions</h2>
-            <p className="section-subtitle mx-auto mt-4">
-              Join our live sessions to learn directly from investment professionals.
-            </p>
-          </AnimatedSection>
-
-          <div className="grid md:grid-cols-3 gap-8 max-w-5xl mx-auto">
-            {EVENTS.map((event, i) => {
-              const eventDate = new Date(event.date)
-              return (
-                <AnimatedSection key={event.title} delay={i * 100}>
-                  <div className={`card group hover-lift h-full ${['glow-card-pink', 'glow-card-teal', 'glow-card-amber'][i % 3]}`}>
-                    {/* Date badge */}
-                    <div className="flex items-start gap-4 mb-4">
-                      <div className="bg-brand-red/10 rounded-xl p-3 text-center flex-shrink-0 min-w-[60px]">
-                        <span className="block text-2xl font-bold text-brand-red leading-none">
-                          {eventDate.getDate()}
-                        </span>
-                        <span className="block text-xs font-medium text-brand-red/70 uppercase mt-1">
-                          {eventDate.toLocaleDateString('en-IN', { month: 'short' })}
-                        </span>
-                      </div>
-                      <div>
-                        <span className="inline-block px-2.5 py-0.5 bg-brand-red text-white text-xs font-bold rounded-full uppercase mb-2">
-                          {event.type}
-                        </span>
-                        <h3 className="font-bold text-brand-black group-hover:text-brand-red transition-colors leading-snug">
-                          {event.title}
-                        </h3>
-                      </div>
-                    </div>
-                    <p className="text-brand-grey text-sm mb-4 leading-relaxed">{event.description}</p>
-                    <div className="flex items-center text-xs text-brand-grey mt-auto pt-4 border-t border-gray-100">
-                      <CalendarDays className="w-3.5 h-3.5 mr-1.5" />
-                      <span>
-                        {eventDate.toLocaleDateString('en-IN', {
-                          weekday: 'long',
-                          year: 'numeric',
-                          month: 'long',
-                          day: 'numeric',
-                        })}
-                      </span>
-                      <span className="mx-2 text-gray-300">|</span>
-                      <Clock className="w-3.5 h-3.5 mr-1.5" />
-                      <span>{event.time}</span>
-                    </div>
-                  </div>
-                </AnimatedSection>
-              )
-            })}
-          </div>
-        </div>
-      </section>
+      {/* Webinars & Sessions section hidden per request */}
 
       {/* ────────────────────────────────────────
           6. Downloadable Guides

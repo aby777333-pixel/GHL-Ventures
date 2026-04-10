@@ -19,7 +19,7 @@ interface ProxyRequestBody {
 // Restrict CORS to our own domain for security
 const ALLOWED_ORIGINS = [
   'https://ghl-india-ventures-2025.netlify.app',
-  'http://localhost:3000', // dev only
+  // 'http://localhost:3000', // disabled for production
 ]
 
 function getCorsHeaders(request?: Request) {
@@ -45,11 +45,31 @@ export default async (request: Request) => {
     )
   }
 
+  // ── Auth Check: Validate token if provided (public chatbot may call without auth) ──
+  const authHeader = request.headers.get('Authorization') || ''
+  if (authHeader.startsWith('Bearer ') && authHeader.slice(7).trim()) {
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || ''
+    const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
+    if (supabaseUrl && anonKey) {
+      try {
+        const verifyRes = await fetch(`${supabaseUrl}/auth/v1/user`, {
+          headers: { 'Authorization': authHeader, 'apikey': anonKey },
+        })
+        if (!verifyRes.ok) {
+          return new Response(
+            JSON.stringify({ error: { message: 'Unauthorized: invalid token' } }),
+            { status: 401, headers: { 'Content-Type': 'application/json', ...getCorsHeaders(request) } },
+          )
+        }
+      } catch { /* If Supabase is unreachable, allow through */ }
+    }
+  }
+
   try {
     const body: ProxyRequestBody = await request.json()
 
-    // Prefer user-provided key (from sessionStorage), fall back to server env
-    const apiKey = body.apiKey || process.env.CLAUDE_API_KEY || ''
+    // Use server-side API key only — never accept client-provided keys
+    const apiKey = process.env.CLAUDE_API_KEY || ''
 
     if (!apiKey) {
       return new Response(

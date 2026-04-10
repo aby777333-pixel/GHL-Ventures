@@ -146,9 +146,34 @@ export async function fetchAuditLog(documentId?: string): Promise<RepoAuditEntry
 /** Fetch storage statistics */
 export async function fetchStorageStats(): Promise<StorageStats> {
   if (!isSupabaseConfigured()) return MOCK_STORAGE_STATS
-  // In production, this would aggregate from storage.objects
-  // For now, return mock stats
-  return MOCK_STORAGE_STATS
+  try {
+    const { data: files, error } = await supabase.from('file_records').select('file_size, mime_type')
+    if (error || !files || files.length === 0) return MOCK_STORAGE_STATS
+    const usedBytes = files.reduce((sum: number, f: any) => sum + (f.file_size || 0), 0)
+    const totalBytes = 5 * 1024 * 1024 * 1024 // 5 GB default
+    const typeMap: Record<string, { bytes: number; count: number }> = {}
+    files.forEach((f: any) => {
+      const cat = (f.mime_type || 'other').split('/')[0]
+      if (!typeMap[cat]) typeMap[cat] = { bytes: 0, count: 0 }
+      typeMap[cat].bytes += (f.file_size || 0)
+      typeMap[cat].count += 1
+    })
+    const { count: folderCount } = await supabase.from('folders').select('id', { count: 'exact', head: true }) as any
+    return {
+      usedBytes,
+      totalBytes,
+      fileCount: files.length,
+      folderCount: folderCount || 0,
+      byCategory: [],
+      byType: Object.entries(typeMap).map(([type, stats]) => ({
+        type,
+        bytes: stats.bytes,
+        count: stats.count,
+      })),
+    }
+  } catch {
+    return MOCK_STORAGE_STATS
+  }
 }
 
 /** Search files across all folders */

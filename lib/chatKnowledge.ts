@@ -331,7 +331,7 @@ Keep responses concise (2-4 sentences), friendly, and professional. Use **bold**
 
 export async function getAIResponse(input: string): Promise<string> {
   try {
-    const response = await fetch('/.netlify/functions/claude-proxy', {
+    const response = await fetch('/api/claude-proxy', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({

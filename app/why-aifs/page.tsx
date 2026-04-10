@@ -469,37 +469,37 @@ function ComparisonTable() {
   ]
 
   return (
-    <section className="section-padding bg-brand-offwhite">
+    <section className="section-padding bg-brand-black">
       <div className="container-max mx-auto">
         <AnimatedSection>
           <span className="text-brand-red font-semibold text-xs uppercase tracking-wider">Compare</span>
-          <h2 className="section-title mt-2 text-brand-black">AIF vs Traditional Investments</h2>
-          <p className="section-subtitle mt-4 max-w-3xl">
+          <h2 className="section-title mt-2 text-white">AIF vs Traditional Investments</h2>
+          <p className="text-gray-400 mt-4 max-w-3xl">
             See how Alternative Investment Funds stack up against conventional instruments on the
             parameters that matter most to sophisticated investors.
           </p>
         </AnimatedSection>
 
         <AnimatedSection delay={150}>
-          <div className="mt-8 overflow-x-auto rounded-2xl border border-gray-200 bg-white shadow-sm">
+          <div className="mt-8 overflow-x-auto rounded-2xl border border-white/10 bg-brand-black/90 shadow-xl backdrop-blur-sm">
             <table className="w-full text-sm">
               <thead>
-                <tr className="bg-gray-50 border-b border-gray-200">
-                  <th className="text-left px-5 py-4 font-bold text-brand-black text-xs uppercase tracking-wider whitespace-nowrap">Parameter</th>
-                  <th className="text-left px-5 py-4 font-bold text-brand-red text-xs uppercase tracking-wider bg-brand-red/5 whitespace-nowrap">Category II AIF</th>
-                  <th className="text-left px-5 py-4 font-semibold text-brand-grey text-xs uppercase tracking-wider whitespace-nowrap">PMS</th>
-                  <th className="text-left px-5 py-4 font-semibold text-brand-grey text-xs uppercase tracking-wider whitespace-nowrap">Mutual Funds</th>
-                  <th className="text-left px-5 py-4 font-semibold text-brand-grey text-xs uppercase tracking-wider whitespace-nowrap">Fixed Deposits</th>
+                <tr className="bg-white/5 border-b border-white/10">
+                  <th className="text-left px-5 py-4 font-bold text-white text-xs uppercase tracking-wider whitespace-nowrap">Parameter</th>
+                  <th className="text-left px-5 py-4 font-bold text-brand-red text-xs uppercase tracking-wider bg-brand-red/10 whitespace-nowrap">Category II AIF</th>
+                  <th className="text-left px-5 py-4 font-semibold text-gray-300 text-xs uppercase tracking-wider whitespace-nowrap">PMS</th>
+                  <th className="text-left px-5 py-4 font-semibold text-gray-300 text-xs uppercase tracking-wider whitespace-nowrap">Mutual Funds</th>
+                  <th className="text-left px-5 py-4 font-semibold text-gray-300 text-xs uppercase tracking-wider whitespace-nowrap">Fixed Deposits</th>
                 </tr>
               </thead>
               <tbody>
                 {rows.map((row, i) => (
-                  <tr key={row.param} className={`border-b border-gray-100 ${i % 2 === 0 ? '' : 'bg-gray-50/50'} hover:bg-gray-50 transition-colors`}>
-                    <td className="px-5 py-3.5 font-semibold text-brand-black whitespace-nowrap">{row.param}</td>
-                    <td className="px-5 py-3.5 text-brand-red font-medium bg-brand-red/[0.03]">{row.aif}</td>
-                    <td className="px-5 py-3.5 text-brand-grey">{row.pms}</td>
-                    <td className="px-5 py-3.5 text-brand-grey">{row.mf}</td>
-                    <td className="px-5 py-3.5 text-brand-grey">{row.fd}</td>
+                  <tr key={row.param} className={`border-b border-white/5 ${i % 2 === 0 ? '' : 'bg-white/[0.03]'} hover:bg-white/[0.06] transition-colors`}>
+                    <td className="px-5 py-3.5 font-semibold text-white whitespace-nowrap">{row.param}</td>
+                    <td className="px-5 py-3.5 text-brand-red font-medium bg-brand-red/[0.05]">{row.aif}</td>
+                    <td className="px-5 py-3.5 text-gray-300">{row.pms}</td>
+                    <td className="px-5 py-3.5 text-gray-300">{row.mf}</td>
+                    <td className="px-5 py-3.5 text-gray-300">{row.fd}</td>
                   </tr>
                 ))}
               </tbody>

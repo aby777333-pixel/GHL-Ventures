@@ -65,13 +65,15 @@ export default function TasksModule({ subTab, navigate, showToast }: TasksModule
   const tab = subTab || 'my-tasks'
   const [tasks, setTasks] = useState<any[]>([])
 
+  const loadTasks = () => fetchTasks().then(data => setTasks(data || []))
+
   useEffect(() => {
-    fetchTasks().then(data => setTasks(data))
+    loadTasks()
   }, [])
 
   return (
     <div className="space-y-6 admin-section-enter">
-      {tab === 'my-tasks' && <MyTasksView showToast={showToast} tasks={tasks} />}
+      {tab === 'my-tasks' && <MyTasksView showToast={showToast} tasks={tasks} onRefresh={loadTasks} />}
       {tab === 'board' && <BoardView showToast={showToast} tasks={tasks} />}
       {tab === 'workflows' && <WorkflowsView showToast={showToast} />}
     </div>
@@ -81,11 +83,12 @@ export default function TasksModule({ subTab, navigate, showToast }: TasksModule
 // ================================================================
 //  1. MY TASKS (default)
 // ================================================================
-function MyTasksView({ showToast, tasks }: { showToast: TasksModuleProps['showToast']; tasks: any[] }) {
+function MyTasksView({ showToast, tasks, onRefresh }: { showToast: TasksModuleProps['showToast']; tasks: any[]; onRefresh: () => void }) {
   const [statusFilter, setStatusFilter] = useState<TaskStatus | 'all'>('all')
   const [priorityFilter, setPriorityFilter] = useState<TaskPriority | 'all'>('all')
   const [newTaskOpen, setNewTaskOpen] = useState(false)
   const [folderPickerOpen, setFolderPickerOpen] = useState(false)
+  const [creating, setCreating] = useState(false)
   const [taskForm, setTaskForm] = useState({ title: '', description: '', priority: 'normal' as TaskPriority, status: 'todo' as TaskStatus, dueDate: '', assignedTo: '', tags: '' })
 
   const filtered = useMemo(() => {
@@ -280,42 +283,45 @@ function MyTasksView({ showToast, tasks }: { showToast: TasksModuleProps['showTo
         </div>
         <div className="flex justify-end gap-3 mt-6 pt-4 border-t border-white/[0.06]">
           <button onClick={() => setNewTaskOpen(false)} className="px-4 py-2 rounded-xl text-sm font-medium text-gray-400 hover:text-white hover:bg-white/[0.06] transition-colors">Cancel</button>
-          <button onClick={async () => {
+          <button disabled={creating} onClick={async () => {
             if (!taskForm.title.trim()) { showToast('Task title is required', 'error'); return }
+            setCreating(true)
             try {
-              // Get current user ID for assigned_by and default assigned_to
-              const { supabase } = await import('@/lib/supabase/client')
-              const { data: { user } } = await supabase.auth.getUser()
-              const userId = user?.id || null
-
-              const taskData: Record<string, any> = {
+              // Get current user for created_by field
+              let userId: string | null = null
+              try {
+                const { supabase } = await import('@/lib/supabase/client')
+                const { data: { user } } = await (supabase as any).auth.getUser()
+                userId = user?.id || null
+              } catch { /* continue without user id */ }
+              // assigned_to is UUID — if form has a name string, use current user instead
+              const assigneeId = (taskForm.assignedTo && /^[0-9a-f-]{36}$/i.test(taskForm.assignedTo))
+                ? taskForm.assignedTo : userId || null
+              const row = await insertRow('tasks', {
                 title: taskForm.title,
                 description: taskForm.description || null,
                 priority: taskForm.priority,
                 status: taskForm.status,
                 due_date: taskForm.dueDate || null,
-                assigned_to: userId, // always use current user UUID
+                assigned_to: assigneeId,
                 assigned_by: userId,
+                tags: taskForm.tags ? taskForm.tags.split(',').map(t => t.trim()).filter(Boolean) : [],
                 source: 'manual',
-                tags: taskForm.tags ? taskForm.tags.split(',').map(t => t.trim()) : [],
-              }
-
-              const row = await insertRow('tasks', taskData)
+              })
               if (row) {
                 showToast('Task created successfully', 'success')
-                // Refresh tasks list
-                fetchTasks().then(data => { /* parent will re-render */ })
-                window.location.reload()
+                setNewTaskOpen(false)
+                setTaskForm({ title: '', description: '', priority: 'normal', status: 'todo', dueDate: '', assignedTo: '', tags: '' })
+                onRefresh()
               } else {
                 showToast('Failed to create task', 'error')
               }
-            } catch (err) {
-              console.warn('[tasks] Create error:', err)
-              showToast('Failed to create task', 'error')
+            } catch (err: any) {
+              showToast(`Error creating task: ${err?.message || 'Unknown error'}`, 'error')
+            } finally {
+              setCreating(false)
             }
-            setNewTaskOpen(false)
-            setTaskForm({ title: '', description: '', priority: 'normal', status: 'todo', dueDate: '', assignedTo: '', tags: '' })
-          }} className="px-5 py-2 rounded-xl text-sm font-medium text-white bg-teal-600 hover:bg-teal-700 transition-colors">Create Task</button>
+          }} className="px-5 py-2 rounded-xl text-sm font-medium text-white bg-teal-600 hover:bg-teal-700 transition-colors disabled:opacity-50">{creating ? 'Creating...' : 'Create Task'}</button>
         </div>
       </AdminModal>
 
@@ -492,6 +498,8 @@ function WorkflowsView({ showToast }: { showToast: TasksModuleProps['showToast']
 
 // ── Helpers ────────────────────────────────────────────────────
 function formatDate(dateStr: string): string {
+  if (!dateStr) return '—'
   const d = new Date(dateStr)
+  if (isNaN(d.getTime())) return '—'
   return d.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })
 }

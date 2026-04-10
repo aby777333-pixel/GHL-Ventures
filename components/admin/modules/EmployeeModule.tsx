@@ -13,7 +13,7 @@ import AdminBadge from '../shared/AdminBadge'
 import AdminModal, { ModalButton } from '../shared/AdminModal'
 import AdminKPICard from '../shared/AdminKPICard'
 import AdminEmptyState from '../shared/AdminEmptyState'
-import { createEmployee, getEmployeeDirectory, type EmployeeRecord } from '@/lib/supabase/employeeService'
+import { createEmployee, updateEmployee, getEmployeeDirectory, type EmployeeRecord } from '@/lib/supabase/employeeService'
 import { formatDate } from '@/lib/admin/adminHooks'
 import type { Employee, EmployeeStatus, LeaveRequest, AttendanceRecord } from '@/lib/admin/adminTypes'
 import UploadWithFolderPicker from '@/components/shared/UploadWithFolderPicker'
@@ -90,9 +90,29 @@ export default function EmployeeModule({ subTab, navigate, showToast }: Employee
 
   const handleEmployeeSubmit = async () => {
     if (editEmployee) {
-      showToast('Employee updated successfully', 'success')
-      setAddEmployeeOpen(false)
-      setEditEmployee(null)
+      setCreating(true)
+      const raw = (editEmployee as any)._raw as EmployeeRecord | undefined
+      const staffProfileId = raw?.id || editEmployee.id
+      const userId = raw?.user_id || ''
+
+      const result = await updateEmployee(staffProfileId, userId, {
+        fullName: empForm.name,
+        phone: empForm.phone || undefined,
+        department: empForm.department,
+        designation: empForm.role,
+        dateOfJoining: empForm.joiningDate || undefined,
+        status: empForm.status,
+      })
+      setCreating(false)
+
+      if (result.success) {
+        showToast(`Employee ${empForm.name} updated successfully`, 'success')
+        setAddEmployeeOpen(false)
+        setEditEmployee(null)
+        loadData()
+      } else {
+        showToast(result.error || 'Failed to update employee', 'error')
+      }
       return
     }
 
@@ -227,7 +247,7 @@ export default function EmployeeModule({ subTab, navigate, showToast }: Employee
               </div>
               <div className="flex items-center gap-2 p-3 rounded-xl bg-white/[0.03] border border-white/[0.04]">
                 <Phone className="w-4 h-4 text-gray-500" />
-                <span className="text-xs text-gray-300">{selectedEmployee.phone}</span>
+                <span className="text-xs text-gray-300">{selectedEmployee.phone || (selectedEmployee as any)._raw?.phone || 'Not provided'}</span>
               </div>
               <div className="flex items-center gap-2 p-3 rounded-xl bg-white/[0.03] border border-white/[0.04]">
                 <Briefcase className="w-4 h-4 text-gray-500" />
@@ -421,6 +441,7 @@ export default function EmployeeModule({ subTab, navigate, showToast }: Employee
         open={folderPickerOpen}
         onClose={() => setFolderPickerOpen(false)}
         defaultRoute="admin/employees"
+        defaultBucket="ghl-documents"
         showToast={showToast as any}
         onUploadComplete={(results) => {
           const ok = results.filter(r => r.success).length
@@ -464,6 +485,7 @@ function DirectoryTab({ employees, onView, showToast }: { employees: any[]; onVi
         />
       ),
     },
+    { key: 'phone', label: 'Phone', render: (row) => <span className="text-xs text-gray-400">{row.phone || '—'}</span> },
     { key: 'email', label: 'Email', render: (row) => <span className="text-xs text-gray-400 truncate max-w-[180px] block">{row.email}</span> },
     { key: 'joinDate', label: 'Joined', render: (row) => <span className="text-xs text-gray-400">{formatDate(row.joinDate)}</span> },
     {

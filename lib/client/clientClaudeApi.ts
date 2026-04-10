@@ -6,6 +6,8 @@
    but with a client-focused system prompt.
    ================================================================ */
 
+import { getAuthToken } from '@/lib/supabase/client'
+
 // ─────────────────────────────────────────────────────────────
 // SYSTEM PROMPT — Client-facing investment advisor
 // ─────────────────────────────────────────────────────────────
@@ -58,7 +60,7 @@ const CLAUDE_MODELS = [
   'claude-3-haiku-20240307',
 ]
 
-const PROXY_URL = '/.netlify/functions/claude-proxy'
+const PROXY_URL = '/api/claude-proxy'
 
 export async function callClientClaudeAPI(
   messages: ClaudeMessage[],
@@ -66,17 +68,17 @@ export async function callClientClaudeAPI(
 ): Promise<string> {
   let lastError = ''
 
+  const authToken = await getAuthToken()
   for (const model of CLAUDE_MODELS) {
     try {
       const response = await fetch(PROXY_URL, {
         method: 'POST',
-        headers: { 'content-type': 'application/json' },
+        headers: { 'content-type': 'application/json', ...(authToken ? { 'Authorization': `Bearer ${authToken}` } : {}) },
         body: JSON.stringify({
           model,
           max_tokens: 1024,
           system: CLIENT_SYSTEM_PROMPT,
           messages,
-          ...(apiKey ? { apiKey } : {}),
         }),
       })
 

@@ -42,7 +42,7 @@ const CommandPalette = dynamic(() => import('@/components/CommandPalette'), { ss
 // const BusinessRadioWidget = dynamic(() => import('@/components/BusinessRadioWidget'), { ssr: false })
 // const MusicRadioWidget = dynamic(() => import('@/components/MusicRadioWidget'), { ssr: false })
 
-const SITE_URL = 'https://ghl-india-ventures-2025.netlify.app'
+const SITE_URL = 'https://ghlindiaventures.com'
 
 export const metadata: Metadata = {
   title: {

@@ -259,12 +259,13 @@ async function seedSiteSettings() {
     { key: 'site_description', value: "India's premier wealth management, real estate, and investment firm.", category: 'general', label: 'Description' },
     { key: 'meta_title', value: 'GHL India Ventures — Wealth Management & Investment Solutions', category: 'seo', label: 'Meta Title' },
     { key: 'meta_description', value: 'GHL India Ventures offers expert wealth management, real estate investment, and financial planning services across India.', category: 'seo', label: 'Meta Description' },
-    { key: 'contact_email', value: 'info@ghlindia.com', category: 'contact', label: 'Contact Email' },
+    { key: 'contact_email', value: 'info@ghlindiaventures.com', category: 'contact', label: 'Contact Email' },
     { key: 'contact_phone', value: '+91 22 4000 1234', category: 'contact', label: 'Contact Phone' },
     { key: 'contact_address', value: 'One BKC, Bandra Kurla Complex, Mumbai 400051', category: 'contact', label: 'Address' },
-    { key: 'social_linkedin', value: 'https://linkedin.com/company/ghlindia', category: 'social', label: 'LinkedIn' },
-    { key: 'social_twitter', value: 'https://twitter.com/ghlindia', category: 'social', label: 'Twitter' },
-    { key: 'social_instagram', value: 'https://instagram.com/ghlindia', category: 'social', label: 'Instagram' },
+    { key: 'social_linkedin', value: 'https://www.linkedin.com/company/ghl-india-ventures-fund/', category: 'social', label: 'LinkedIn' },
+    { key: 'social_twitter', value: 'https://x.com/ghlindiaventure', category: 'social', label: 'Twitter' },
+    { key: 'social_instagram', value: 'https://www.instagram.com/ghl_india_venture/', category: 'social', label: 'Instagram' },
+    { key: 'social_facebook', value: 'https://www.facebook.com/ghlindiaofficial/', category: 'social', label: 'Facebook' },
   ]
 
   const { error } = await supabase.from('site_settings').upsert(settings, { onConflict: 'key' })

@@ -47,7 +47,7 @@ import {
   onNewContactSubmission,
 } from '@/lib/supabase/realtimeSubscriptions'
 import { fetchLeads } from '@/lib/supabase/leadService'
-import { fetchTickets } from '@/lib/supabase/staffDataService'
+import { fetchTickets, updateTicket, updateAgentStatus } from '@/lib/supabase/staffDataService'
 import type { Lead } from '@/lib/admin/adminTypes'
 
 // ════════════════════════════════════════════════════════════════
@@ -125,7 +125,20 @@ const CANNED_RESPONSES: { id: string; label: string; text: string }[] = [
   { id: 'disclaimer', label: 'Risk Disclaimer', text: 'Please note: Investments in AIFs are subject to market risks. Past performance does not guarantee future returns. Please read the Private Placement Memorandum (PPM) carefully before investing. GHL India Ventures is a SEBI-registered AIF manager.' },
 ]
 const WHATSAPP_THREADS: { id: string; clientName: string; phone: string; lastMsg: string; time: string; unread: number; status: string }[] = []
-const WA_TEMPLATES: { id: string; name: string; preview: string }[] = []
+const WA_TEMPLATES: { id: string; name: string; preview: string }[] = [
+  { id: 'wa-greet', name: 'Welcome Greeting', preview: 'Hello! Welcome to GHL India Ventures. How can I assist you today?' },
+  { id: 'wa-kyc', name: 'KYC Documents Required', preview: 'For KYC verification, please keep PAN Card, Aadhaar Card, Address Proof, Photo, and Cancelled cheque ready.' },
+  { id: 'wa-kyc-status', name: 'KYC Status Check', preview: 'Let me check your KYC verification status. Could you please share your registered email or client ID?' },
+  { id: 'wa-aif', name: 'AIF Overview', preview: 'GHL India Ventures manages SEBI-registered AIFs. Minimum investment is 1 Crore as per SEBI guidelines.' },
+  { id: 'wa-fee', name: 'Fee Structure', preview: 'Management Fee: 2% p.a. | Performance Fee: 20% above hurdle | Entry Load: Nil' },
+  { id: 'wa-nri', name: 'NRI Investment Process', preview: 'NRI investors can invest through NRE/NRO bank account with FEMA-compliant documentation.' },
+  { id: 'wa-complaint', name: 'Complaint Acknowledgement', preview: 'Your concern has been noted and will be escalated. Resolution update within 3 working days.' },
+  { id: 'wa-rm', name: 'Connect to RM', preview: 'I will connect you with your dedicated Relationship Manager. Please allow a moment.' },
+  { id: 'wa-nav', name: 'NAV Update', preview: 'NAV updates are published on the 5th of every month. Check Client Dashboard > Portfolio > Fund Performance.' },
+  { id: 'wa-hold', name: 'Please Hold', preview: 'Thank you for your patience. I am looking into this and will get back shortly.' },
+  { id: 'wa-close', name: 'Chat Closing', preview: 'Thank you for reaching out! If you have further questions, feel free to chat anytime.' },
+  { id: 'wa-disclaimer', name: 'Risk Disclaimer', preview: 'Investments in AIFs are subject to market risks. Please read the PPM carefully before investing.' },
+]
 const ESCALATION_ITEMS: { id: string; ticketId: string; clientName: string; subject: string; level: number; slaRemaining: string; assignedTo: string; priority: string; escalatedAt: string }[] = []
 const CSAT_TREND: { month: string; score: number; responses: number }[] = []
 const CHANNEL_SATISFACTION: { channel: string; score: number; color: string }[] = []
@@ -141,16 +154,18 @@ function CSDashboard({ navigate, showToast }: Pick<CSCenterModuleProps, 'navigat
   const [chatSessions, setChatSessions] = useState<ChatSession[]>([])
   const [loadingSessions, setLoadingSessions] = useState(true)
 
-  // Load saved agent status from Supabase on mount
+  // Load current agent status on mount
   useEffect(() => {
     async function loadStatus() {
       try {
         const { supabase } = await import('@/lib/supabase/client')
-        const { data: { user } } = await supabase.auth.getUser()
-        if (!user) return
-        const { data: sp } = await (supabase as any).from('staff_profiles').select('agent_status').eq('user_id', user.id).single()
-        if (sp?.agent_status) setAgentStatus(sp.agent_status)
-      } catch { /* use default */ }
+        const sb = supabase as any
+        const { data: { user } } = await sb.auth.getUser()
+        if (user?.id) {
+          const { data } = await sb.from('staff_profiles').select('agent_status').eq('user_id', user.id).single()
+          if (data?.agent_status) setAgentStatus(data.agent_status)
+        }
+      } catch { /* silent */ }
     }
     loadStatus()
   }, [])
@@ -170,7 +185,7 @@ function CSDashboard({ navigate, showToast }: Pick<CSCenterModuleProps, 'navigat
   }, [])
 
   const waitingSessions = useMemo(() => chatSessions.filter(s => s.status === 'waiting' || s.status === 'queued'), [chatSessions])
-  const activeSessions = useMemo(() => chatSessions.filter(s => s.status === 'active'), [chatSessions])
+  const activeSessions = useMemo(() => chatSessions.filter(s => s.status === 'active' || s.status === 'assigned'), [chatSessions])
 
   const statuses = [
     { key: 'available', label: 'Available', color: 'bg-emerald-500' },
@@ -194,14 +209,14 @@ function CSDashboard({ navigate, showToast }: Pick<CSCenterModuleProps, 'navigat
                 key={s.key}
                 onClick={async () => {
                   setAgentStatus(s.key)
+                  showToast(`Status changed to ${s.label}`, 'info')
+                  // Persist to Supabase if possible
                   try {
                     const { supabase } = await import('@/lib/supabase/client')
-                    const { data: { user } } = await supabase.auth.getUser()
-                    if (user) {
-                      await (supabase as any).from('staff_profiles').update({ agent_status: s.key }).eq('user_id', user.id)
-                    }
-                  } catch { /* non-blocking */ }
-                  showToast(`Status changed to ${s.label}`, 'success')
+                    const sb = supabase as any
+                    const { data: { user } } = await sb.auth.getUser()
+                    if (user?.id) await updateAgentStatus(user.id, s.key)
+                  } catch { /* silent — UI already updated */ }
                 }}
                 className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border transition-all ${
                   agentStatus === s.key
@@ -333,19 +348,58 @@ function CSDashboard({ navigate, showToast }: Pick<CSCenterModuleProps, 'navigat
   )
 }
 
-// ── 2. Unified Inbox ─────────────────────────────────────────
+// ── 2. Unified Inbox (live from Supabase) ────────────────────
 function UnifiedInbox({ showToast }: Pick<CSCenterModuleProps, 'showToast'>) {
   const [channelFilter, setChannelFilter] = useState<string>('all')
   const [selectedThread, setSelectedThread] = useState<string | null>(null)
+  const [sessions, setSessions] = useState<ChatSession[]>([])
+  const [threadMsgs, setThreadMsgs] = useState<ChatMsg[]>([])
+  const [loadingInbox, setLoadingInbox] = useState(true)
+  const [inboxReply, setInboxReply] = useState('')
 
-  const channels = ['all', 'chat', 'whatsapp', 'telegram', 'email', 'call']
+  // Load all chat sessions (active + recent resolved)
+  useEffect(() => {
+    let mounted = true
+    async function load() {
+      const data = await getActiveChatSessions()
+      if (mounted) { setSessions(data); setLoadingInbox(false) }
+    }
+    load()
+    const interval = setInterval(load, 8000)
+    return () => { mounted = false; clearInterval(interval) }
+  }, [])
+
+  // Load messages when a thread is selected
+  useEffect(() => {
+    if (!selectedThread) { setThreadMsgs([]); return }
+    let mounted = true
+    async function load() {
+      const msgs = await getChatMessages(selectedThread!)
+      if (mounted) setThreadMsgs(msgs)
+    }
+    load()
+    const interval = setInterval(load, 3000)
+    return () => { mounted = false; clearInterval(interval) }
+  }, [selectedThread])
+
+  const channels = ['all', 'chat', 'whatsapp', 'email']
 
   const filtered = useMemo(() => {
-    if (channelFilter === 'all') return INBOX_THREADS
-    return INBOX_THREADS.filter(t => t.channel === channelFilter)
-  }, [channelFilter])
+    if (channelFilter === 'all') return sessions
+    return sessions.filter(s => s.channel.includes(channelFilter))
+  }, [channelFilter, sessions])
 
-  const activeThread = selectedThread ? INBOX_THREADS.find(t => t.id === selectedThread) : null
+  const activeThread = selectedThread ? sessions.find(s => s.id === selectedThread) : null
+
+  // Send reply from inbox
+  const handleInboxReply = useCallback(async () => {
+    if (!inboxReply.trim() || !selectedThread) return
+    const text = inboxReply.trim()
+    setInboxReply('')
+    const sent = await sendChatMessage({ sessionId: selectedThread, senderType: 'agent', senderName: 'CS Agent', message: text })
+    if (!sent) showToast('Message may not have been delivered', 'warning')
+    else { showToast('Reply sent', 'success'); setThreadMsgs(prev => [...prev, sent]) }
+  }, [inboxReply, selectedThread, showToast])
 
   return (
     <div className="space-y-4">
@@ -372,15 +426,19 @@ function UnifiedInbox({ showToast }: Pick<CSCenterModuleProps, 'showToast'>) {
         {/* Thread List */}
         <div className="lg:col-span-2">
           <AdminGlass padding="p-0">
-            <div className="divide-y divide-white/[0.04]">
-              {filtered.length === 0 && (
+            <div className="divide-y divide-white/[0.04] max-h-[500px] overflow-y-auto">
+              {loadingInbox ? (
+                <div className="flex items-center justify-center py-12 gap-2 text-xs text-gray-500">
+                  <Loader2 className="w-4 h-4 animate-spin" /> Loading inbox…
+                </div>
+              ) : filtered.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-12 text-center px-4">
                   <Mail className="w-8 h-8 text-gray-600 mb-3" />
                   <p className="text-sm text-gray-400">Inbox is empty</p>
                   <p className="text-xs text-gray-600 mt-1">New conversations will appear here across all channels</p>
                 </div>
-              )}
-              {filtered.map(t => (
+              ) : (
+              filtered.map(t => (
                 <div
                   key={t.id}
                   onClick={() => setSelectedThread(t.id)}
@@ -390,19 +448,19 @@ function UnifiedInbox({ showToast }: Pick<CSCenterModuleProps, 'showToast'>) {
                 >
                   <div className="flex items-center justify-between mb-1">
                     <div className="flex items-center gap-2">
-                      {channelIcon(t.channel)}
-                      <span className={`text-sm font-medium ${t.unread ? 'text-white' : 'text-gray-400'}`}>{t.clientName}</span>
-                      {t.unread && <span className="w-2 h-2 rounded-full bg-teal-400" />}
+                      {channelIcon(t.channel.replace('web_', ''))}
+                      <span className="text-sm font-medium text-white">{t.visitor_name || 'Visitor'}</span>
+                      {(t.status === 'waiting' || t.status === 'queued') && <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse" />}
                     </div>
-                    <span className="text-[10px] text-gray-600">{t.time}</span>
+                    <span className="text-[10px] text-gray-600">{new Date(t.last_message_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
                   </div>
-                  <p className="text-xs text-gray-500 truncate">{t.lastMessage}</p>
+                  <p className="text-xs text-gray-500 truncate">{t.visitor_email || t.channel}</p>
                   <div className="flex items-center gap-2 mt-1.5">
-                    <AdminBadge label={t.priority} variant={priorityVariant(t.priority)} size="sm" />
-                    <AdminBadge label={t.status} variant={statusVariant(t.status)} size="sm" />
+                    <AdminBadge label={t.status} variant={t.status === 'waiting' || t.status === 'queued' ? 'warning' as const : t.status === 'active' ? 'success' as const : 'info' as const} size="sm" />
                   </div>
                 </div>
-              ))}
+              ))
+              )}
             </div>
           </AdminGlass>
         </div>
@@ -414,47 +472,52 @@ function UnifiedInbox({ showToast }: Pick<CSCenterModuleProps, 'showToast'>) {
               <div>
                 <div className="px-5 py-4 border-b border-white/[0.06] flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    {channelIcon(activeThread.channel)}
-                    <span className="text-sm font-semibold text-white">{activeThread.clientName}</span>
-                    <AdminBadge label={activeThread.priority} variant={priorityVariant(activeThread.priority)} size="sm" />
+                    {channelIcon(activeThread.channel.replace('web_', ''))}
+                    <span className="text-sm font-semibold text-white">{activeThread.visitor_name || 'Visitor'}</span>
+                    <AdminBadge label={activeThread.status} variant={activeThread.status === 'active' ? 'success' as const : 'warning' as const} size="sm" />
                   </div>
                   <div className="flex items-center gap-2">
-                    <button onClick={() => showToast('Ticket created from thread', 'success')} className="p-1.5 rounded-lg hover:bg-white/[0.06] text-gray-500 hover:text-white transition-colors">
-                      <Plus className="w-4 h-4" />
-                    </button>
-                    <button className="p-1.5 rounded-lg hover:bg-white/[0.06] text-gray-500 hover:text-white transition-colors">
-                      <Edit3 className="w-4 h-4" />
-                    </button>
+                    {activeThread.visitor_email && <span className="text-[10px] text-gray-500">{activeThread.visitor_email}</span>}
                   </div>
                 </div>
                 <div className="px-5 py-4 space-y-3 max-h-[400px] overflow-y-auto">
-                  {THREAD_MESSAGES.map((m, i) => (
-                    <div key={i} className={`flex ${m.sender === 'agent' ? 'justify-end' : 'justify-start'}`}>
+                  {threadMsgs.length === 0 ? (
+                    <div className="flex items-center justify-center py-12 text-xs text-gray-500">No messages yet</div>
+                  ) : threadMsgs.map((m) => (
+                    <div key={m.id} className={`flex ${m.sender_type === 'agent' ? 'justify-end' : m.sender_type === 'system' ? 'justify-center' : 'justify-start'}`}>
+                      {m.sender_type === 'system' ? (
+                        <span className="px-3 py-1 rounded-full text-[10px] text-gray-500 bg-white/5">{m.message}</span>
+                      ) : (
                       <div className={`max-w-[80%] rounded-xl px-4 py-2.5 ${
-                        m.sender === 'agent'
+                        m.sender_type === 'agent'
                           ? 'bg-teal-500/15 border border-teal-500/20 text-teal-100'
                           : 'bg-white/[0.06] border border-white/[0.08] text-gray-300'
                       }`}>
+                        {m.sender_name && m.sender_type === 'visitor' && <p className="text-[10px] text-teal-400 font-medium mb-0.5">{m.sender_name}</p>}
                         <p className="text-xs">{m.message}</p>
-                        <p className="text-[10px] text-gray-600 mt-1">{m.time}</p>
+                        <p className="text-[10px] text-gray-600 mt-1">{new Date(m.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p>
                       </div>
+                      )}
                     </div>
                   ))}
                 </div>
                 <div className="px-5 py-3 border-t border-white/[0.06]">
-                  <div className="flex items-center gap-2">
+                  <form onSubmit={(e) => { e.preventDefault(); handleInboxReply() }} className="flex items-center gap-2">
                     <input
                       type="text"
+                      value={inboxReply}
+                      onChange={(e) => setInboxReply(e.target.value)}
                       placeholder="Type a reply..."
                       className="flex-1 px-4 py-2 text-xs bg-white/[0.04] border border-white/[0.08] rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-teal-500/40"
                     />
                     <button
-                      onClick={() => showToast('Message sent', 'success')}
-                      className="p-2 rounded-xl bg-teal-500/20 text-teal-400 hover:bg-teal-500/30 transition-colors"
+                      type="submit"
+                      disabled={!inboxReply.trim()}
+                      className="p-2 rounded-xl bg-teal-500/20 text-teal-400 hover:bg-teal-500/30 transition-colors disabled:opacity-30"
                     >
                       <Send className="w-4 h-4" />
                     </button>
-                  </div>
+                  </form>
                 </div>
               </div>
             ) : (
@@ -471,33 +534,29 @@ function UnifiedInbox({ showToast }: Pick<CSCenterModuleProps, 'showToast'>) {
 }
 
 // ── 3. Ticket Management ─────────────────────────────────────
-interface TicketRow { id: string; clientName: string; subject: string; category: string; priority: string; status: string; assignedTo: string; age: string; createdDate: string }
+interface TicketRow { id: string; fullId: string; clientName: string; subject: string; category: string; priority: string; status: string; assignedTo: string; age: string; createdDate: string }
 
 function TicketManagement({ showToast }: Pick<CSCenterModuleProps, 'showToast'>) {
   const [statusTab, setStatusTab] = useState<string>('all')
   const [selectedTicket, setSelectedTicket] = useState<TicketRow | null>(null)
   const [tickets, setTickets] = useState<TicketRow[]>([])
   const [loading, setLoading] = useState(true)
-  const [newTicketStatus, setNewTicketStatus] = useState<string>('')
-  const [updatingStatus, setUpdatingStatus] = useState(false)
-  // Keep a map of truncated-id → full-id for updates
-  const [ticketIdMap, setTicketIdMap] = useState<Record<string, string>>({})
+  const [ticketNewStatus, setTicketNewStatus] = useState<string>('')
+  const [updatingTicket, setUpdatingTicket] = useState(false)
 
   // Load tickets from Supabase
   useEffect(() => {
     let mounted = true
     async function load() {
       setLoading(true)
-      const raw = await fetchTickets()
+      const raw = await fetchTickets() || []
       if (!mounted) return
-      const idMap: Record<string, string> = {}
       const mapped: TicketRow[] = (raw as any[]).map((t: any) => {
         const created = t.created_at ? new Date(t.created_at) : new Date()
         const ageDays = Math.max(0, Math.round((Date.now() - created.getTime()) / 86400000))
-        const shortId = t.id?.slice(0, 8) || t.id
-        idMap[shortId] = t.id // store full ID for updates
         return {
-          id: shortId,
+          id: t.id?.slice(0, 8) || t.id,
+          fullId: t.id || '',
           clientName: t.client_name || t.requester_name || '—',
           subject: t.subject || t.title || t.description?.slice(0, 60) || '—',
           category: t.category || 'general',
@@ -508,7 +567,6 @@ function TicketManagement({ showToast }: Pick<CSCenterModuleProps, 'showToast'>)
           createdDate: created.toISOString().split('T')[0],
         }
       })
-      setTicketIdMap(idMap)
       setTickets(mapped)
       setLoading(false)
     }
@@ -632,47 +690,52 @@ function TicketManagement({ showToast }: Pick<CSCenterModuleProps, 'showToast'>)
               </div>
             </div>
             <div className="border-t border-white/[0.06] pt-4">
-              <p className="text-[10px] text-gray-500 uppercase tracking-wider mb-2">Update Status</p>
-              <div className="flex items-center gap-2 flex-wrap mb-3">
+              <p className="text-[10px] text-gray-500 uppercase tracking-wider mb-2">Actions</p>
+              <div className="flex items-center gap-2 flex-wrap">
                 <select
-                  value={newTicketStatus || selectedTicket.status}
-                  onChange={e => setNewTicketStatus(e.target.value)}
-                  className="bg-white/[0.04] border border-white/[0.08] rounded-lg px-3 py-1.5 text-xs text-white focus:outline-none focus:border-teal-500/40"
+                  value={ticketNewStatus}
+                  onChange={e => setTicketNewStatus(e.target.value)}
+                  className="px-3 py-1.5 rounded-lg text-xs font-medium bg-white/[0.04] text-white border border-white/[0.08] focus:outline-none focus:border-teal-500/40"
                 >
+                  <option value="" className="bg-neutral-900">Change status...</option>
                   <option value="open" className="bg-neutral-900">Open</option>
                   <option value="in-progress" className="bg-neutral-900">In Progress</option>
                   <option value="awaiting-client" className="bg-neutral-900">Awaiting Client</option>
+                  <option value="awaiting-internal" className="bg-neutral-900">Awaiting Internal</option>
                   <option value="resolved" className="bg-neutral-900">Resolved</option>
                   <option value="closed" className="bg-neutral-900">Closed</option>
                 </select>
                 <button
-                  disabled={updatingStatus}
+                  disabled={!ticketNewStatus || updatingTicket}
                   onClick={async () => {
-                    const statusToSet = newTicketStatus || selectedTicket.status
-                    const fullId = ticketIdMap[selectedTicket.id] || selectedTicket.id
-                    setUpdatingStatus(true)
+                    if (!ticketNewStatus || !selectedTicket) return
+                    const ticketId = selectedTicket.fullId || selectedTicket.id
+                    if (!ticketId) { showToast('Cannot identify ticket to update', 'error'); return }
+                    setUpdatingTicket(true)
                     try {
-                      const { updateTicket } = await import('@/lib/supabase/staffDataService')
-                      const result = await updateTicket(fullId, { status: statusToSet, updated_at: new Date().toISOString() })
+                      const result = await updateTicket(ticketId, { status: ticketNewStatus })
                       if (result) {
-                        setTickets(prev => prev.map(t => t.id === selectedTicket.id ? { ...t, status: statusToSet } : t))
-                        showToast('Ticket status updated', 'success')
+                        showToast(`Ticket status updated to ${ticketNewStatus.replace(/-/g, ' ')}`, 'success')
+                        // Refresh tickets list
+                        setTickets(prev => prev.map(t => t.fullId === selectedTicket.fullId ? { ...t, status: ticketNewStatus } : t))
+                        setSelectedTicket(null)
+                        setTicketNewStatus('')
                       } else {
                         showToast('Failed to update ticket status', 'error')
                       }
-                    } catch {
-                      showToast('Failed to update ticket status', 'error')
+                    } catch (err: any) {
+                      showToast(`Error: ${err?.message || 'Unknown error'}`, 'error')
+                    } finally {
+                      setUpdatingTicket(false)
                     }
-                    setUpdatingStatus(false)
-                    setSelectedTicket(null)
-                    setNewTicketStatus('')
                   }}
                   className="px-3 py-1.5 rounded-lg text-xs font-medium bg-teal-500/20 text-teal-400 border border-teal-500/30 hover:bg-teal-500/30 transition-colors disabled:opacity-50"
                 >
-                  {updatingStatus ? 'Saving...' : 'Save Status'}
+                  {updatingTicket ? 'Updating...' : 'Update Status'}
                 </button>
-              </div>
-              <div className="flex items-center gap-2 flex-wrap">
+                <button onClick={() => { showToast('Ticket reassigned', 'info'); setSelectedTicket(null) }} className="px-3 py-1.5 rounded-lg text-xs font-medium bg-white/[0.04] text-gray-300 border border-white/[0.08] hover:bg-white/[0.08] transition-colors">
+                  Reassign
+                </button>
                 <button onClick={() => { showToast('Ticket escalated', 'warning'); setSelectedTicket(null) }} className="px-3 py-1.5 rounded-lg text-xs font-medium bg-amber-500/20 text-amber-400 border border-amber-500/30 hover:bg-amber-500/30 transition-colors">
                   Escalate
                 </button>
@@ -823,6 +886,22 @@ function CallsView({ showToast }: Pick<CSCenterModuleProps, 'showToast'>) {
 function VideoView({ showToast }: Pick<CSCenterModuleProps, 'showToast'>) {
   const [videoAvailable, setVideoAvailable] = useState(true)
 
+  // Load saved video availability on mount
+  useEffect(() => {
+    async function load() {
+      try {
+        const { supabase } = await import('@/lib/supabase/client')
+        const sb = supabase as any
+        const { data: { user } } = await sb.auth.getUser()
+        if (user?.id) {
+          const { data } = await sb.from('staff_profiles').select('agent_status, video_call_available').eq('user_id', user.id).single()
+          if (data?.video_call_available === false) setVideoAvailable(false)
+        }
+      } catch { /* silent */ }
+    }
+    load()
+  }, [])
+
   return (
     <div className="space-y-4">
       {/* Availability Toggle */}
@@ -836,7 +915,21 @@ function VideoView({ showToast }: Pick<CSCenterModuleProps, 'showToast'>) {
             </div>
           </div>
           <button
-            onClick={() => { setVideoAvailable(!videoAvailable); showToast(videoAvailable ? 'Video calls disabled' : 'Video calls enabled', 'info') }}
+            onClick={async () => {
+              const newState = !videoAvailable
+              setVideoAvailable(newState)
+              showToast(newState ? 'Video calls enabled' : 'Video calls disabled', 'info')
+              // Persist to Supabase
+              try {
+                const { supabase } = await import('@/lib/supabase/client')
+                const sb = supabase as any
+                const { data: { user } } = await sb.auth.getUser()
+                if (user?.id) {
+                  // Use dedicated video_call_available column
+                  await sb.from('staff_profiles').update({ video_call_available: newState }).eq('user_id', user.id)
+                }
+              } catch { /* silent — UI already updated */ }
+            }}
             className={`relative w-12 h-6 rounded-full transition-colors ${videoAvailable ? 'bg-teal-500' : 'bg-gray-600'}`}
           >
             <span className={`absolute top-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform ${videoAvailable ? 'left-[26px]' : 'left-0.5'}`} />
@@ -989,17 +1082,19 @@ function ChatView({ showToast }: Pick<CSCenterModuleProps, 'showToast'>) {
     }
   }, [])
 
-  // Play alert ring sound helper (two-tone ring pattern)
+  // Play alert ring sound helper — loud 3-ring pattern for incoming chats
   const playAlertSound = useCallback(() => {
     try {
       const ctx = new (window.AudioContext || (window as any).webkitAudioContext)()
       const now = ctx.currentTime
-      // Ring pattern: two short ascending tones repeated twice
+      // 3 ascending ring bursts — louder & longer so agents notice
       const tones = [
-        { freq: 800, start: 0, dur: 0.15 },
-        { freq: 1000, start: 0.18, dur: 0.15 },
-        { freq: 800, start: 0.5, dur: 0.15 },
-        { freq: 1000, start: 0.68, dur: 0.15 },
+        { freq: 880, start: 0, dur: 0.18 },
+        { freq: 1100, start: 0.22, dur: 0.18 },
+        { freq: 880, start: 0.6, dur: 0.18 },
+        { freq: 1100, start: 0.82, dur: 0.18 },
+        { freq: 880, start: 1.2, dur: 0.18 },
+        { freq: 1100, start: 1.42, dur: 0.18 },
       ]
       tones.forEach(t => {
         const osc = ctx.createOscillator()
@@ -1008,7 +1103,7 @@ function ChatView({ showToast }: Pick<CSCenterModuleProps, 'showToast'>) {
         gain.connect(ctx.destination)
         osc.frequency.value = t.freq
         osc.type = 'sine'
-        gain.gain.setValueAtTime(0.25, now + t.start)
+        gain.gain.setValueAtTime(0.6, now + t.start)
         gain.gain.exponentialRampToValueAtTime(0.001, now + t.start + t.dur)
         osc.start(now + t.start)
         osc.stop(now + t.start + t.dur + 0.05)
@@ -1467,6 +1562,7 @@ function WhatsAppView({ showToast }: Pick<CSCenterModuleProps, 'showToast'>) {
         </div>
 
         {/* Template Selector */}
+        {showTemplates && (
         <AdminGlass padding="p-0">
           <div className="px-5 py-4 border-b border-white/[0.06]">
             <div className="flex items-center gap-2">
@@ -1474,14 +1570,14 @@ function WhatsAppView({ showToast }: Pick<CSCenterModuleProps, 'showToast'>) {
               <h3 className="text-sm font-semibold text-white">Message Templates</h3>
             </div>
           </div>
-          <div className="divide-y divide-white/[0.04]">
+          <div className="divide-y divide-white/[0.04] max-h-[500px] overflow-y-auto">
             {WA_TEMPLATES.length === 0 ? (
               <div className="px-5 py-8 text-center text-xs text-gray-500">No templates configured yet</div>
             ) : WA_TEMPLATES.map(tpl => (
               <div
                 key={tpl.id}
-                onClick={() => showToast(`Template "${tpl.name}" selected`, 'info')}
-                className="px-5 py-3 cursor-pointer hover:bg-white/[0.02] transition-colors"
+                onClick={() => { navigator.clipboard?.writeText(tpl.preview).catch(() => {}); showToast(`Template "${tpl.name}" copied to clipboard`, 'success') }}
+                className="px-5 py-3 cursor-pointer hover:bg-emerald-500/[0.05] transition-colors"
               >
                 <p className="text-xs text-emerald-400 font-medium mb-1">{tpl.name}</p>
                 <p className="text-[11px] text-gray-500 line-clamp-2">{tpl.preview}</p>
@@ -1489,6 +1585,7 @@ function WhatsAppView({ showToast }: Pick<CSCenterModuleProps, 'showToast'>) {
             ))}
           </div>
         </AdminGlass>
+        )}
       </div>
     </div>
   )
@@ -1721,18 +1818,19 @@ function LeadAlertsView({ showToast }: { showToast: (msg: string, type?: 'succes
       const name = [row?.first_name, row?.last_name].filter(Boolean).join(' ') || 'New Lead'
       const source = row?.source || 'website'
 
-      // Play alarm sound (925 Hz beep)
+      // Play alarm sound — louder 3-beep pattern
       try {
         const ctx = new AudioContext()
-        const osc = ctx.createOscillator()
-        const gain = ctx.createGain()
-        osc.connect(gain)
-        gain.connect(ctx.destination)
-        osc.frequency.value = 925
-        gain.gain.value = 0.3
-        osc.start()
-        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.5)
-        osc.stop(ctx.currentTime + 0.5)
+        const now = ctx.currentTime
+        ;[0, 0.35, 0.7].forEach(offset => {
+          const osc = ctx.createOscillator()
+          const gain = ctx.createGain()
+          osc.connect(gain); gain.connect(ctx.destination)
+          osc.frequency.value = 925
+          gain.gain.setValueAtTime(0.55, now + offset)
+          gain.gain.exponentialRampToValueAtTime(0.001, now + offset + 0.25)
+          osc.start(now + offset); osc.stop(now + offset + 0.3)
+        })
       } catch {}
 
       // Browser notification
@@ -1756,17 +1854,19 @@ function LeadAlertsView({ showToast }: { showToast: (msg: string, type?: 'succes
       const name = row?.full_name || 'Unknown'
       const formType = row?.form_type || 'contact'
 
+      // Louder 2-beep pattern for form submissions
       try {
         const ctx = new AudioContext()
-        const osc = ctx.createOscillator()
-        const gain = ctx.createGain()
-        osc.connect(gain)
-        gain.connect(ctx.destination)
-        osc.frequency.value = 800
-        gain.gain.value = 0.2
-        osc.start()
-        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.4)
-        osc.stop(ctx.currentTime + 0.4)
+        const now = ctx.currentTime
+        ;[0, 0.3].forEach(offset => {
+          const osc = ctx.createOscillator()
+          const gain = ctx.createGain()
+          osc.connect(gain); gain.connect(ctx.destination)
+          osc.frequency.value = 800
+          gain.gain.setValueAtTime(0.5, now + offset)
+          gain.gain.exponentialRampToValueAtTime(0.001, now + offset + 0.2)
+          osc.start(now + offset); osc.stop(now + offset + 0.25)
+        })
       } catch {}
 
       if (Notification.permission === 'granted') {

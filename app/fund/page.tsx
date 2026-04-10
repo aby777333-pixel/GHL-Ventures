@@ -527,7 +527,7 @@ function FundArticles() {
                 <PlaceholderImage
                   theme={article.category.toLowerCase().includes('real estate') ? 'real-estate' : article.category.toLowerCase().includes('startup') || article.category.toLowerCase().includes('fintech') ? 'startup' : article.category.toLowerCase().includes('regulation') ? 'compliance' : 'education'}
                   aspectRatio="aspect-[16/10]"
-                  label={article.category}
+                  label={article.title}
                   className="rounded-lg mb-4"
                 />
 

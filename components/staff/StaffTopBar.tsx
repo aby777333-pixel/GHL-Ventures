@@ -1,11 +1,12 @@
 'use client'
 
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, useCallback } from 'react'
 import { Search, Bell, Menu, ChevronRight, Info, AlertCircle, CheckCircle, AlertTriangle } from 'lucide-react'
 import type { StaffModule, AgentStatus } from '@/lib/staff/staffTypes'
 import { STAFF_MODULE_LABELS } from '@/lib/staff/staffConstants'
 import { fetchNotifications } from '@/lib/supabase/reportsDataService'
-import { updateRow } from '@/lib/supabase/adminDataService'
+import { updateRow, insertRow } from '@/lib/supabase/adminDataService'
+import { onNewChatSession, onNewLead, onNewContactSubmission } from '@/lib/supabase/realtimeSubscriptions'
 
 const STATUS_CONFIG: Record<AgentStatus, { label: string; color: string; bg: string }> = {
   available: { label: 'Available', color: 'bg-emerald-400', bg: 'bg-emerald-500/15 text-emerald-400' },
@@ -62,6 +63,8 @@ export default function StaffTopBar({
   const [notifications, setNotifications] = useState<any[]>([])
   const [readNotifs, setReadNotifs] = useState<Set<string>>(new Set())
   const notifRef = useRef<HTMLDivElement>(null)
+  const [statusOpen, setStatusOpen] = useState(false)
+  const statusRef = useRef<HTMLDivElement>(null)
 
   // Fetch notifications on mount
   useEffect(() => {
@@ -74,10 +77,123 @@ export default function StaffTopBar({
       if (notifRef.current && !notifRef.current.contains(e.target as Node)) {
         setNotifOpen(false)
       }
+      if (statusRef.current && !statusRef.current.contains(e.target as Node)) {
+        setStatusOpen(false)
+      }
     }
-    if (notifOpen) document.addEventListener('mousedown', handler)
+    if (notifOpen || statusOpen) document.addEventListener('mousedown', handler)
     return () => document.removeEventListener('mousedown', handler)
-  }, [notifOpen])
+  }, [notifOpen, statusOpen])
+
+  // Play alert sound for incoming chats/leads (two-tone ascending ring)
+  const playAlertSound = useCallback(() => {
+    try {
+      const ctx = new (window.AudioContext || (window as any).webkitAudioContext)()
+      const now = ctx.currentTime
+      const tones = [
+        { freq: 800, start: 0, dur: 0.15 },
+        { freq: 1000, start: 0.18, dur: 0.15 },
+        { freq: 800, start: 0.5, dur: 0.15 },
+        { freq: 1000, start: 0.68, dur: 0.15 },
+      ]
+      tones.forEach(t => {
+        const osc = ctx.createOscillator()
+        const gain = ctx.createGain()
+        osc.connect(gain)
+        gain.connect(ctx.destination)
+        osc.frequency.value = t.freq
+        osc.type = 'sine'
+        gain.gain.setValueAtTime(0.25, now + t.start)
+        gain.gain.exponentialRampToValueAtTime(0.001, now + t.start + t.dur)
+        osc.start(now + t.start)
+        osc.stop(now + t.start + t.dur + 0.05)
+      })
+    } catch {}
+  }, [])
+
+  // Send browser notification for staff
+  const sendStaffBrowserNotification = useCallback((title: string, body: string) => {
+    playAlertSound()
+    if (typeof window !== 'undefined' && 'Notification' in window) {
+      if (Notification.permission === 'default') Notification.requestPermission()
+      if (Notification.permission === 'granted') {
+        const notif = new Notification(title, { body, icon: '/icon.svg', tag: 'ghl-staff' })
+        setTimeout(() => notif.close(), 5000)
+        notif.onclick = () => { window.focus(); notif.close() }
+      }
+    }
+  }, [playAlertSound])
+
+  // Subscribe to new visitor chat sessions — ring + inject notification
+  useEffect(() => {
+    const unsub = onNewChatSession((payload) => {
+      const session = payload.new as any
+      const visitorName = session.visitor_name || 'Visitor'
+      const liveNotif = {
+        id: `chat-${session.id || Date.now()}`,
+        title: '🔔 New Live Chat',
+        message: `${visitorName} is waiting for assistance`,
+        type: 'info',
+        severity: 'high',
+        is_read: false,
+        created_at: new Date().toISOString(),
+        metadata: { module: 'cs-center' },
+      }
+      setNotifications(prev => [liveNotif, ...prev])
+      sendStaffBrowserNotification('New Live Chat', `${visitorName} is waiting for assistance`)
+      insertRow('notifications', {
+        title: 'New Live Chat',
+        message: `${visitorName} started a chat from the website`,
+        type: 'info',
+        severity: 'high',
+        is_read: false,
+        metadata: { module: 'cs-center', chat_session_id: session.id },
+      }).catch(() => {})
+    })
+    return () => { unsub?.() }
+  }, [sendStaffBrowserNotification])
+
+  // Subscribe to new leads — alert staff
+  useEffect(() => {
+    const unsub = onNewLead((payload) => {
+      const lead = payload.new as any
+      const name = lead.full_name || lead.name || 'New Lead'
+      const liveNotif = {
+        id: `lead-${lead.id || Date.now()}`,
+        title: 'New Lead Captured',
+        message: `${name} — ${lead.source || 'website'}`,
+        type: 'success',
+        severity: 'medium',
+        is_read: false,
+        created_at: new Date().toISOString(),
+        metadata: { module: 'leads' },
+      }
+      setNotifications(prev => [liveNotif, ...prev])
+      sendStaffBrowserNotification('New Lead', `${name} submitted via ${lead.source || 'website'}`)
+    })
+    return () => { unsub?.() }
+  }, [sendStaffBrowserNotification])
+
+  // Subscribe to new contact form submissions — alert staff
+  useEffect(() => {
+    const unsub = onNewContactSubmission((payload) => {
+      const sub = payload.new as any
+      const name = sub.name || sub.full_name || 'Website Visitor'
+      const liveNotif = {
+        id: `contact-${sub.id || Date.now()}`,
+        title: 'New Form Submission',
+        message: `${name} — ${sub.form_type || sub.subject || 'contact form'}`,
+        type: 'info',
+        severity: 'medium',
+        is_read: false,
+        created_at: new Date().toISOString(),
+        metadata: { module: 'leads' },
+      }
+      setNotifications(prev => [liveNotif, ...prev])
+      sendStaffBrowserNotification('New Form Submission', `${name} submitted a ${sub.form_type || 'contact'} form`)
+    })
+    return () => { unsub?.() }
+  }, [sendStaffBrowserNotification])
 
   const unreadCount = notifications.filter(n => !n.is_read && !readNotifs.has(n.id)).length
 
@@ -126,25 +242,30 @@ export default function StaffTopBar({
         {/* Right */}
         <div className="flex items-center gap-2">
           {/* Agent Status */}
-          <div className="relative group">
-            <button className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-semibold border transition-colors ${statusCfg.bg} border-current/20`}>
+          <div className="relative" ref={statusRef}>
+            <button
+              onClick={() => setStatusOpen(!statusOpen)}
+              className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-semibold border transition-colors ${statusCfg.bg} border-current/20`}
+            >
               <span className={`w-2 h-2 rounded-full ${statusCfg.color} ${agentStatus === 'available' ? 'animate-pulse' : ''}`} />
               {statusCfg.label}
             </button>
-            <div className="absolute right-0 top-full mt-1 hidden group-hover:block z-50">
-              <div className="rounded-xl bg-[#111]/95 border border-white/[0.08] shadow-2xl py-1 min-w-[120px]" style={{ backdropFilter: 'blur(20px)' }}>
-                {(Object.keys(STATUS_CONFIG) as AgentStatus[]).map(s => (
-                  <button
-                    key={s}
-                    onClick={() => onStatusChange(s)}
-                    className={`w-full flex items-center gap-2 px-3 py-1.5 text-[11px] hover:bg-white/[0.06] transition-colors ${agentStatus === s ? 'text-white' : 'text-gray-400'}`}
-                  >
-                    <span className={`w-2 h-2 rounded-full ${STATUS_CONFIG[s].color}`} />
-                    {STATUS_CONFIG[s].label}
-                  </button>
-                ))}
+            {statusOpen && (
+              <div className="absolute right-0 top-full mt-1 z-50">
+                <div className="rounded-xl bg-[#111]/95 border border-white/[0.08] shadow-2xl py-1 min-w-[120px]" style={{ backdropFilter: 'blur(20px)' }}>
+                  {(Object.keys(STATUS_CONFIG) as AgentStatus[]).map(s => (
+                    <button
+                      key={s}
+                      onClick={() => { onStatusChange(s); setStatusOpen(false) }}
+                      className={`w-full flex items-center gap-2 px-3 py-1.5 text-[11px] hover:bg-white/[0.06] transition-colors ${agentStatus === s ? 'text-white' : 'text-gray-400'}`}
+                    >
+                      <span className={`w-2 h-2 rounded-full ${STATUS_CONFIG[s].color}`} />
+                      {STATUS_CONFIG[s].label}
+                    </button>
+                  ))}
+                </div>
               </div>
-            </div>
+            )}
           </div>
 
           {/* Notifications */}

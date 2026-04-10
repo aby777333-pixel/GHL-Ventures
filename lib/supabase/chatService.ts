@@ -13,6 +13,11 @@
 
 import { supabase, isSupabaseConfigured } from './client'
 
+/** Encode HTML entities to prevent stored XSS */
+function sanitizeStr(s: string): string {
+  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#x27;')
+}
+
 // Helper: bypass Supabase strict types for new tables not yet in types.ts
 // These tables (chat_sessions, chat_messages, rm_requests) are defined in
 // migration 022 but not yet added to the generated TypeScript types.
@@ -105,8 +110,8 @@ export async function createChatSession(input: {
   // anonymous visitors because RLS blocks the SELECT after INSERT
   const { data, error } = await db.rpc('create_visitor_chat_session', {
     p_visitor_id: getOrCreateVisitorId(),
-    p_visitor_name: input.visitorName,
-    p_visitor_email: input.visitorEmail || null,
+    p_visitor_name: sanitizeStr(input.visitorName),
+    p_visitor_email: input.visitorEmail ? sanitizeStr(input.visitorEmail) : null,
     p_client_id: input.clientId || null,
     p_page_url: input.pageUrl || null,
     p_channel: input.channel || 'web_chat',
@@ -277,8 +282,8 @@ export async function sendChatMessage(input: {
   const { data, error } = await db.rpc('send_visitor_chat_message', {
     p_session_id: input.sessionId,
     p_sender_type: input.senderType,
-    p_sender_name: input.senderName || null,
-    p_message: input.message,
+    p_sender_name: input.senderName ? sanitizeStr(input.senderName) : null,
+    p_message: sanitizeStr(input.message),
   })
 
   if (error) {
@@ -289,15 +294,27 @@ export async function sendChatMessage(input: {
   // Also update last_message_at on the session (the DB trigger handles this,
   // but update status to 'active' if agent sent the first reply)
   if (input.senderType === 'agent') {
-    await db.rpc('mark_chat_session_active', {
+    const { error: markErr } = await db.rpc('mark_chat_session_active', {
       p_session_id: input.sessionId,
-    }).catch(() => {}) // Non-critical — trigger handles the core update
+    })
+    if (markErr) console.warn('[chatService] mark_chat_session_active:', markErr.message)
   }
 
   // The RPC may return the inserted row or null/void — either way,
   // no error means the message was inserted successfully.
-  const msg = data ? (Array.isArray(data) ? data[0] : data) as ChatMessage : null
-  return msg || { id: crypto.randomUUID(), session_id: input.sessionId, sender_type: input.senderType, sender_name: input.senderName || '', message: input.message, created_at: new Date().toISOString() } as ChatMessage
+  // Build a local echo so the UI can render immediately
+  const row = data ? (Array.isArray(data) ? data[0] : data) as ChatMessage : null
+  return row ?? {
+    id: `local-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    session_id: input.sessionId,
+    sender_type: input.senderType,
+    sender_id: null,
+    sender_name: input.senderName || null,
+    message: input.message,
+    attachments: [],
+    metadata: {},
+    created_at: new Date().toISOString(),
+  } as ChatMessage
 }
 
 /** Fetch message history for a chat session.
@@ -578,26 +595,27 @@ export async function upsertStaffPresence(input: {
   role?: string
 }): Promise<void> {
   if (!isSupabaseConfigured()) return
-  await db.rpc('upsert_staff_presence', {
+  const { error: presErr } = await db.rpc('upsert_staff_presence', {
     p_user_id: input.userId,
     p_status: input.status || 'online',
     p_display_name: input.displayName || null,
     p_role: input.role || null,
-  }).catch((e: any) => console.error('[chatService] upsertStaffPresence:', e.message))
+  })
+  if (presErr) console.error('[chatService] upsertStaffPresence:', presErr.message)
 }
 
 /** Update staff status only */
 export async function updateStaffStatus(userId: string, status: string): Promise<void> {
   if (!isSupabaseConfigured()) return
-  await db.rpc('update_staff_status', { p_user_id: userId, p_status: status })
-    .catch((e: any) => console.error('[chatService] updateStaffStatus:', e.message))
+  const { error: statusErr } = await db.rpc('update_staff_status', { p_user_id: userId, p_status: status })
+  if (statusErr) console.error('[chatService] updateStaffStatus:', statusErr.message)
 }
 
 /** Staff heartbeat — update last_seen */
 export async function staffHeartbeat(userId: string): Promise<void> {
   if (!isSupabaseConfigured()) return
-  await db.rpc('staff_heartbeat', { p_user_id: userId })
-    .catch(() => {}) // Silent — non-critical
+  const { error: hbErr } = await db.rpc('staff_heartbeat', { p_user_id: userId })
+  if (hbErr) { /* silent — non-critical */ }
 }
 
 /** Get all online staff members */

@@ -217,7 +217,7 @@ async function sendLeadNotification(payload: {
   pageUrl?: string
 }) {
   try {
-    await fetch('/.netlify/functions/lead-notification', {
+    await fetch('/api/lead-notification', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
@@ -226,6 +226,12 @@ async function sendLeadNotification(payload: {
     // Email notification is best-effort — don't block form submission
     console.warn('[reportsData] Lead notification email failed:', err)
   }
+}
+
+// ── XSS Sanitization ────────────────────────────────────────
+function sanitizeStr(s: string | undefined | null): string | undefined | null {
+  if (!s) return s
+  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#x27;')
 }
 
 // ── Contact Form Submissions ────────────────────────────────
@@ -261,14 +267,14 @@ export async function submitContactForm(formData: {
   }
   try {
     const { data, error } = await supabase.from('contact_submissions').insert({
-      form_type: formData.formType,
-      full_name: formData.fullName,
-      email: formData.email,
-      phone: formData.phone,
-      company: formData.company,
-      city: formData.city,
-      subject: formData.subject,
-      message: formData.message,
+      form_type: sanitizeStr(formData.formType),
+      full_name: sanitizeStr(formData.fullName),
+      email: sanitizeStr(formData.email),
+      phone: sanitizeStr(formData.phone),
+      company: sanitizeStr(formData.company),
+      city: sanitizeStr(formData.city),
+      subject: sanitizeStr(formData.subject),
+      message: sanitizeStr(formData.message),
       page_url: formData.pageUrl || (typeof window !== 'undefined' ? window.location.href : ''),
       utm_source: typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('utm_source') : null,
       utm_medium: typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('utm_medium') : null,

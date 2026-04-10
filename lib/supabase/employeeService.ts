@@ -9,7 +9,7 @@
 
 'use client'
 
-import { supabase, isSupabaseConfigured } from './client'
+import { supabase, isSupabaseConfigured, getAuthToken } from './client'
 
 const db = supabase as any
 
@@ -57,22 +57,92 @@ export async function createEmployee(input: {
   reportingTo?: string | null
 }): Promise<{ success: boolean; userId?: string; error?: string }> {
   try {
+    const token = await getAuthToken()
+    if (!token) {
+      return { success: false, error: 'Authentication required — please log in again' }
+    }
     const response = await fetch('/.netlify/functions/create-employee', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
       body: JSON.stringify(input),
     })
 
-    const data = await response.json()
+    let data: any
+    try {
+      data = await response.json()
+    } catch {
+      return { success: false, error: `Server error (${response.status}) — could not parse response` }
+    }
 
     if (!response.ok) {
-      return { success: false, error: data.error || 'Failed to create employee' }
+      return { success: false, error: data.error || `Failed to create employee (${response.status})` }
     }
 
     return { success: true, userId: data.userId }
-  } catch (err) {
+  } catch (err: any) {
     console.error('[employeeService] createEmployee failed:', err)
-    return { success: false, error: 'Network error — could not reach server' }
+    return { success: false, error: `Network error: ${err?.message || 'could not reach server'}. Check your connection and try again.` }
+  }
+}
+
+// ── Update Employee ───────────────────────────────────────
+
+export async function updateEmployee(
+  staffProfileId: string,
+  userId: string,
+  updates: {
+    fullName?: string
+    phone?: string
+    department?: string
+    designation?: string
+    dateOfJoining?: string
+    status?: string
+    reportingTo?: string | null
+  }
+): Promise<{ success: boolean; error?: string }> {
+  if (!isSupabaseConfigured()) return { success: false, error: 'Service unavailable' }
+
+  try {
+    // Update profiles table (name, phone)
+    const profileUpdates: Record<string, any> = {}
+    if (updates.fullName) profileUpdates.full_name = updates.fullName
+    if (updates.phone !== undefined) profileUpdates.phone = updates.phone
+
+    if (Object.keys(profileUpdates).length > 0) {
+      const { error: profileErr } = await db
+        .from('profiles')
+        .update(profileUpdates)
+        .eq('id', userId)
+      if (profileErr) {
+        console.error('[employeeService] updateEmployee profiles failed:', profileErr.message)
+        return { success: false, error: profileErr.message }
+      }
+    }
+
+    // Update staff_profiles table (department, designation, etc.)
+    const staffUpdates: Record<string, any> = {}
+    if (updates.department) staffUpdates.department = updates.department
+    if (updates.designation) staffUpdates.designation = updates.designation
+    if (updates.dateOfJoining) staffUpdates.date_of_joining = updates.dateOfJoining
+    if (updates.status) staffUpdates.status = updates.status
+    if (updates.status) staffUpdates.is_active = updates.status === 'active'
+    if (updates.reportingTo !== undefined) staffUpdates.reporting_to = updates.reportingTo
+
+    if (Object.keys(staffUpdates).length > 0) {
+      const { error: staffErr } = await db
+        .from('staff_profiles')
+        .update(staffUpdates)
+        .eq('id', staffProfileId)
+      if (staffErr) {
+        console.error('[employeeService] updateEmployee staff_profiles failed:', staffErr.message)
+        return { success: false, error: staffErr.message }
+      }
+    }
+
+    return { success: true }
+  } catch (err) {
+    console.error('[employeeService] updateEmployee failed:', err)
+    return { success: false, error: 'Network error' }
   }
 }
 
@@ -142,12 +212,17 @@ export async function getEmployeeDirectory(): Promise<EmployeeRecord[]> {
 // ── Get Active RMs (for assignment dropdowns) ─────────────
 
 export async function getActiveRMs(): Promise<ActiveRM[]> {
-  if (!isSupabaseConfigured()) return []
+  if (!isSupabaseConfigured()) {
+    console.warn('[employeeService] getActiveRMs: Supabase not configured')
+    return []
+  }
 
   try {
+    // Try RPC first
     const { data, error } = await db.rpc('get_active_rms')
+    console.log('[employeeService] getActiveRMs RPC result:', { count: data?.length, error: error?.message })
 
-    if (!error && data && Array.isArray(data)) {
+    if (!error && data && Array.isArray(data) && data.length > 0) {
       return data.map((rm: any) => ({
         staff_id: rm.staff_id,
         user_id: rm.user_id,
@@ -158,20 +233,31 @@ export async function getActiveRMs(): Promise<ActiveRM[]> {
       }))
     }
 
-    // Fallback: direct query
-    console.warn('[employeeService] get_active_rms RPC failed:', error?.message)
-    const { data: rmData } = await (supabase
+    // Fallback: direct query if RPC fails or returns empty
+    console.warn('[employeeService] get_active_rms RPC failed or empty, using fallback:', error?.message)
+    const { data: rmData, error: fbErr } = await db
       .from('staff_profiles')
-      .select('id, user_id, designation, department, profiles!inner(full_name)')
-      .in('designation', ['relationship-manager', 'team-leader', 'cs-lead', 'senior-cs-agent'])
+      .select('id, user_id, designation, department')
+      .in('designation', ['relationship-manager', 'team-leader', 'cs-lead', 'senior-cs-agent', 'field-sales-executive', 'field-sales-manager'])
       .eq('is_active', true)
-      .order('created_at', { ascending: false }) as any)
+      .order('created_at', { ascending: false })
 
-    if (!rmData) return []
+    console.log('[employeeService] Fallback query result:', { count: rmData?.length, error: fbErr?.message })
+    if (!rmData || rmData.length === 0) return []
+
+    // Get profile names separately
+    const userIds = (rmData as any[]).map((r: any) => r.user_id).filter(Boolean)
+    const { data: profileData } = await db
+      .from('profiles')
+      .select('id, full_name')
+      .in('id', userIds)
+    const nameMap: Record<string, string> = {}
+    ;(profileData || []).forEach((p: any) => { nameMap[p.id] = p.full_name || '' })
+
     return (rmData as any[]).map((rm: any) => ({
       staff_id: rm.id,
       user_id: rm.user_id,
-      full_name: rm.profiles?.full_name || '',
+      full_name: nameMap[rm.user_id] || '',
       designation: rm.designation || '',
       department: rm.department || '',
       client_count: 0,

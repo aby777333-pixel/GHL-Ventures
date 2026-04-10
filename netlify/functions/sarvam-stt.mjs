@@ -1,63 +1,61 @@
-const SARVAM_API_KEY = process.env.SARVAM_API_KEY || 'sk_qlvx1qvk_00N5DAg22VRNdDrzOb3f7TPc'
+const SARVAM_API_KEY = process.env.SARVAM_API_KEY || ''
 const SARVAM_STT_URL = 'https://api.sarvam.ai/speech-to-text-translate'
 
-export const handler = async (event) => {
+export default async (request) => {
   const headers = {
     'Access-Control-Allow-Origin': '*',
     'Access-Control-Allow-Headers': 'Content-Type',
     'Access-Control-Allow-Methods': 'POST, OPTIONS',
+    'Content-Type': 'application/json',
   }
 
-  if (event.httpMethod === 'OPTIONS') {
-    return { statusCode: 200, headers, body: '' }
+  if (request.method === 'OPTIONS') {
+    return new Response(null, { status: 204, headers })
   }
 
-  if (event.httpMethod !== 'POST') {
-    return { statusCode: 405, headers, body: JSON.stringify({ error: 'Method not allowed' }) }
+  if (request.method !== 'POST') {
+    return new Response(JSON.stringify({ error: 'Method not allowed' }), { status: 405, headers })
   }
 
   if (!SARVAM_API_KEY) {
-    return {
-      statusCode: 500,
-      headers: { ...headers, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ error: 'Sarvam API Key not configured. Set SARVAM_API_KEY in environment variables.' }),
-    }
+    return new Response(JSON.stringify({ error: 'Sarvam API key not configured' }), { status: 500, headers })
   }
 
   try {
-    const body = event.isBase64Encoded
-      ? Buffer.from(event.body || '', 'base64')
-      : event.body
+    // The client sends FormData with file, model, language_code
+    // Forward it directly to Sarvam API
+    const formData = await request.formData()
 
-    // Forward the exact content-type (must include boundary for multipart)
-    const contentType = event.headers['content-type'] || event.headers['Content-Type'] || 'multipart/form-data'
+    // Rebuild FormData for Sarvam (ensure correct field names)
+    const sarvamForm = new FormData()
+    const audioFile = formData.get('file')
+    if (!audioFile) {
+      return new Response(JSON.stringify({ error: 'No audio file provided' }), { status: 400, headers })
+    }
+    sarvamForm.append('file', audioFile, 'recording.wav')
+    const model = formData.get('model') || 'saaras:v2'
+    sarvamForm.append('model', model)
+    const langCode = formData.get('language_code')
+    if (langCode) sarvamForm.append('language_code', langCode)
 
     const response = await fetch(SARVAM_STT_URL, {
       method: 'POST',
       headers: {
         'api-subscription-key': SARVAM_API_KEY,
-        'Content-Type': contentType,
       },
-      body,
+      body: sarvamForm,
     })
 
     const data = await response.json()
 
-    if (!response.ok) {
-      console.warn('[sarvam-stt] API error:', response.status, JSON.stringify(data))
-    }
-
-    return {
-      statusCode: response.ok ? 200 : response.status,
-      headers: { ...headers, 'Content-Type': 'application/json' },
-      body: JSON.stringify(data),
-    }
+    return new Response(JSON.stringify(data), {
+      status: response.ok ? 200 : response.status,
+      headers,
+    })
   } catch (error) {
-    console.error('[sarvam-stt] Function error:', error)
-    return {
-      statusCode: 500,
-      headers: { ...headers, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ error: error.message || 'Internal server error' }),
-    }
+    return new Response(
+      JSON.stringify({ error: error.message || 'Internal server error' }),
+      { status: 500, headers },
+    )
   }
 }

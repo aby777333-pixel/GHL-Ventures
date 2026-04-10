@@ -43,16 +43,21 @@ type InputDef = {
    UTILITY FUNCTIONS
    ================================================================ */
 function fmt(n: number): string {
-  if (isNaN(n) || !isFinite(n)) return '0'
+  if (n === null || n === undefined || isNaN(n) || !isFinite(n)) return '0'
   return n.toLocaleString('en-IN', { maximumFractionDigits: 2 })
 }
 function fmtCur(n: number): string {
-  if (isNaN(n) || !isFinite(n)) return '\u20B90'
+  if (n === null || n === undefined || isNaN(n) || !isFinite(n)) return '\u20B90'
   return '\u20B9' + fmt(n)
 }
 function fmtPct(n: number): string {
-  if (isNaN(n) || !isFinite(n)) return '0%'
+  if (n === null || n === undefined || isNaN(n) || !isFinite(n)) return '0%'
   return n.toFixed(2) + '%'
+}
+function safeDiv(a: number, b: number): number {
+  if (!b || isNaN(b) || !isFinite(b)) return 0
+  const result = a / b
+  return isNaN(result) || !isFinite(result) ? 0 : result
 }
 
 /* ================================================================
@@ -70,13 +75,13 @@ const investmentTools: ToolDef[] = [
     ],
     compute: (v) => {
       const r = v.rate / 100 / 12; const n = v.years * 12
-      const fv = v.monthly * (((1 + r) ** n - 1) / r) * (1 + r)
       const invested = v.monthly * n
+      const fv = r > 0 ? v.monthly * (((1 + r) ** n - 1) / r) * (1 + r) : invested
       return [
         { label: 'Total Invested', value: fmtCur(invested) },
         { label: 'Est. Returns', value: fmtCur(fv - invested) },
         { label: 'Total Value', value: fmtCur(fv) },
-        { label: 'Wealth Gain', value: fmtPct(((fv / invested) - 1) * 100) },
+        { label: 'Wealth Gain', value: fmtPct(invested > 0 ? ((fv / invested) - 1) * 100 : 0) },
       ]
     },
   },
@@ -1454,7 +1459,13 @@ function CalculatorCard({ tool, accentColor }: { tool: ToolDef; accentColor: str
   const [expanded, setExpanded] = useState(false)
 
   const results = useMemo(() => {
-    try { return tool.compute(values) } catch { return [] }
+    try {
+      const res = tool.compute(values)
+      return res.map(r => ({
+        label: r.label,
+        value: (r.value === 'NaN' || r.value === 'Infinity' || r.value === '₹NaN' || r.value === 'NaN%') ? '—' : r.value,
+      }))
+    } catch { return [] }
   }, [values, tool])
 
   return (

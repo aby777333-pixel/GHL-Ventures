@@ -26,31 +26,49 @@ export default function AuthCallbackPage() {
       }
 
       try {
-        // Detect recovery (password reset) flow from URL hash
+        // Detect recovery (password reset) flow from URL hash OR query params
+        // Supabase PKCE flow uses query params (?type=recovery), implicit flow uses hash
         if (typeof window !== 'undefined') {
           const hash = window.location.hash
-          if (hash.includes('type=recovery')) {
+          const params = new URLSearchParams(window.location.search)
+          const isRecovery = hash.includes('type=recovery') || params.get('type') === 'recovery'
+
+          if (isRecovery) {
             setMode('recovery')
-            // Wait a moment for Supabase to process the recovery token
-            await new Promise(r => setTimeout(r, 1000))
+
+            // If PKCE flow sent a ?code= param, exchange it for a session
+            const code = params.get('code')
+            if (code) {
+              await supabase.auth.exchangeCodeForSession(code)
+            } else {
+              // Implicit flow — wait for Supabase to process the hash token
+              await new Promise(r => setTimeout(r, 500))
+            }
+
             const { data: { session } } = await supabase.auth.getSession()
             if (session?.user) {
               await ensureProfile(session.user)
-              // Check if user is staff (has staff_profiles row) → redirect to staff settings
-              const { data: staffRow } = await supabase
-                .from('staff_profiles')
-                .select('id')
-                .eq('user_id', session.user.id)
-                .maybeSingle()
-              if (staffRow) {
-                router.replace('/staff?tab=me&sub=profile&password_reset=true')
-              } else {
-                router.replace('/dashboard?tab=settings&password_reset=true')
+              // Persist mandatory flag so it survives page refresh
+              if (typeof sessionStorage !== 'undefined') {
+                sessionStorage.setItem('ghl_password_reset_mandatory', '1')
               }
+              router.replace('/dashboard?tab=settings&password_reset=required')
               return
             }
           }
         }
+
+        // Also listen for PASSWORD_RECOVERY event (catches all Supabase recovery flows)
+        const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+          if (event === 'PASSWORD_RECOVERY' && session?.user) {
+            subscription.unsubscribe()
+            await ensureProfile(session.user)
+            if (typeof sessionStorage !== 'undefined') {
+              sessionStorage.setItem('ghl_password_reset_mandatory', '1')
+            }
+            router.replace('/dashboard?tab=settings&password_reset=required')
+          }
+        })
 
         // Get the flow type from URL params (signin or signup)
         const flow = typeof window !== 'undefined'

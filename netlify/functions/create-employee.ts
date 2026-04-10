@@ -22,12 +22,15 @@ interface CreateEmployeeBody {
 
 const ALLOWED_ORIGINS = [
   'https://ghl-india-ventures-2025.netlify.app',
+  'https://ghlindiaventures.com',
+  'https://www.ghlindiaventures.com',
   'http://localhost:3000',
 ]
 
 function getCorsHeaders(request?: Request) {
   const origin = request?.headers?.get('origin') || ''
-  const allowedOrigin = ALLOWED_ORIGINS.includes(origin) ? origin : ALLOWED_ORIGINS[0]
+  // For same-origin requests on Netlify, origin may be empty — allow it
+  const allowedOrigin = !origin || ALLOWED_ORIGINS.includes(origin) ? (origin || '*') : ALLOWED_ORIGINS[0]
   return {
     'Access-Control-Allow-Origin': allowedOrigin,
     'Access-Control-Allow-Headers': 'Content-Type, Authorization',
@@ -55,6 +58,47 @@ export default async (request: Request) => {
     return new Response(
       JSON.stringify({ error: 'Server configuration error: missing Supabase credentials' }),
       { status: 500, headers: { 'Content-Type': 'application/json', ...getCorsHeaders(request) } },
+    )
+  }
+
+  // ── Auth Check: Verify caller is an authenticated admin ──
+  const authHeader = request.headers.get('Authorization') || ''
+  const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
+  if (!authHeader.startsWith('Bearer ') || !authHeader.slice(7).trim()) {
+    return new Response(
+      JSON.stringify({ error: 'Unauthorized: missing Authorization header' }),
+      { status: 401, headers: { 'Content-Type': 'application/json', ...getCorsHeaders(request) } },
+    )
+  }
+  try {
+    const userToken = authHeader.slice(7).trim()
+    const verifyRes = await fetch(`${supabaseUrl}/auth/v1/user`, {
+      headers: { 'Authorization': `Bearer ${userToken}`, 'apikey': anonKey || serviceRoleKey },
+    })
+    if (!verifyRes.ok) {
+      return new Response(
+        JSON.stringify({ error: 'Unauthorized: invalid token' }),
+        { status: 401, headers: { 'Content-Type': 'application/json', ...getCorsHeaders(request) } },
+      )
+    }
+    const authUser = await verifyRes.json()
+    // Verify caller has admin role via profiles table
+    const profileRes = await fetch(`${supabaseUrl}/rest/v1/profiles?id=eq.${authUser.id}&select=role`, {
+      headers: { 'Authorization': `Bearer ${serviceRoleKey}`, 'apikey': serviceRoleKey },
+    })
+    const profiles = profileRes.ok ? await profileRes.json() : []
+    const callerRole = profiles?.[0]?.role || ''
+    const adminRoles = ['super_admin', 'admin', 'compliance_officer', 'fund_manager', 'manager']
+    if (!adminRoles.includes(callerRole)) {
+      return new Response(
+        JSON.stringify({ error: 'Forbidden: admin role required' }),
+        { status: 403, headers: { 'Content-Type': 'application/json', ...getCorsHeaders(request) } },
+      )
+    }
+  } catch (authErr) {
+    return new Response(
+      JSON.stringify({ error: 'Auth verification failed' }),
+      { status: 401, headers: { 'Content-Type': 'application/json', ...getCorsHeaders(request) } },
     )
   }
 
@@ -126,6 +170,7 @@ export default async (request: Request) => {
       body: JSON.stringify({
         p_user_id: userId,
         p_full_name: body.fullName,
+        p_email: body.email,
         p_phone: body.phone || null,
         p_employee_id: body.employeeId || null,
         p_department: body.department,

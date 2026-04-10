@@ -8,25 +8,37 @@ import {
   AlertTriangle, LogOut, Download, Upload, ChevronRight, Phone, Mail,
   MapPin, Shield, Award, BookOpen, TrendingUp, IndianRupee, Folder,
   CheckCircle2, XCircle, Timer, Coffee, Star, Send, Plus, Eye,
-  Briefcase, Heart, BarChart3, MessageSquare, Play, FileCheck,
+  Briefcase, Heart, BarChart3, MessageSquare, Play, FileCheck, Edit3, Save, X,
 } from 'lucide-react'
 import { saveBlobAs, pickAndUploadFiles } from '@/lib/supabase/storageService'
-import { insertRow, updateRow } from '@/lib/supabase/adminDataService'
+import { insertRow } from '@/lib/supabase/adminDataService'
+import { recordAttendance, submitLeaveRequest } from '@/lib/supabase/staffDataService'
 import { supabase, isSupabaseConfigured } from '@/lib/supabase/client'
+import AdminModal from '@/components/admin/shared/AdminModal'
 
 // ── Props ──────────────────────────────────────────────────────
 interface SelfServiceModuleProps {
   subTab: string | null
   navigate: (path: string) => void
   showToast: (msg: string, type?: 'success' | 'error' | 'info' | 'warning') => void
+  userId?: string
+  userName?: string
+  userEmail?: string
+  userPhone?: string
+  userRole?: string
+  userDepartment?: string
+  userDesignation?: string
+  userStaffCode?: string
+  userJoinDate?: string
+  userStatus?: string
 }
 
 // ── Main Component ─────────────────────────────────────────────
-export default function SelfServiceModule({ subTab, navigate, showToast }: SelfServiceModuleProps) {
+export default function SelfServiceModule({ subTab, navigate, showToast, ...userProps }: SelfServiceModuleProps) {
   const tab = subTab || 'profile'
 
   switch (tab) {
-    case 'profile':     return <ProfileOverview showToast={showToast} />
+    case 'profile':     return <ProfileOverview showToast={showToast} {...userProps} />
     case 'attendance':  return <AttendanceView showToast={showToast} />
     case 'leave':       return <LeaveView showToast={showToast} />
     case 'payslips':    return <PayslipsView showToast={showToast} />
@@ -36,7 +48,7 @@ export default function SelfServiceModule({ subTab, navigate, showToast }: SelfS
     case 'expenses':    return <ExpensesView showToast={showToast} />
     case 'grievance':   return <PlaceholderView title="Grievance Portal" icon={AlertTriangle} description="File and track workplace grievances confidentially. This module is under development." />
     case 'exit':        return <PlaceholderView title="Exit Management" icon={LogOut} description="Resignation, clearance, and full-and-final settlement tracking. This module is under development." />
-    default:            return <ProfileOverview showToast={showToast} />
+    default:            return <ProfileOverview showToast={showToast} {...userProps} />
   }
 }
 
@@ -51,76 +63,113 @@ function SectionHeader({ title, icon: Icon }: { title: string; icon: React.Compo
 }
 
 // ================================================================
-//  1. PROFILE OVERVIEW
+//  1. PROFILE OVERVIEW (with Edit Profile)
 // ================================================================
-function ProfileOverview({ showToast }: { showToast: SelfServiceModuleProps['showToast'] }) {
-  const [profile, setProfile] = useState({
-    name: '—', code: '—', designation: '—',
-    status: 'Active', department: '—', reportingTo: '—',
-    shift: '—', pfNumber: '—', uan: '—',
-    dob: '—', gender: '—', bloodGroup: '—', phone: '—',
-    email: '—', address: '—',
-    emergencyContact: '—',
-  })
+interface ProfileProps {
+  showToast: SelfServiceModuleProps['showToast']
+  userId?: string
+  userName?: string
+  userEmail?: string
+  userPhone?: string
+  userRole?: string
+  userDepartment?: string
+  userDesignation?: string
+  userStaffCode?: string
+  userJoinDate?: string
+  userStatus?: string
+}
+
+function ProfileOverview({ showToast, userId, userName, userEmail, userPhone, userRole, userDepartment, userDesignation, userStaffCode, userJoinDate, userStatus }: ProfileProps) {
   const [editing, setEditing] = useState(false)
-  const [editAddress, setEditAddress] = useState('')
-  const [editPhone, setEditPhone] = useState('')
-  const skills: { name: string; level: string }[] = []
-  const documents: { name: string; type: string; uploaded: string; status: string }[] = []
+  const [saving, setSaving] = useState(false)
+  const [emailModalOpen, setEmailModalOpen] = useState(false)
+  const [passwordModalOpen, setPasswordModalOpen] = useState(false)
+  const [newEmail, setNewEmail] = useState('')
+  const [newPassword, setNewPassword] = useState('')
+  const [confirmPassword, setConfirmPassword] = useState('')
+  const [form, setForm] = useState({
+    full_name: userName || '',
+    phone: userPhone || '',
+    city: '',
+    address: '',
+    emergency_contact: '',
+    blood_group: '',
+    gender: '',
+    dob: '',
+  })
 
-  // Fetch real profile data from Supabase
-  useEffect(() => {
-    if (!isSupabaseConfigured()) return
-    async function loadProfile() {
-      try {
-        const { data: { user } } = await supabase.auth.getUser()
-        if (!user) return
+  const initials = (userName || '?').split(' ').map(n => n[0]).join('').toUpperCase()
+  const statusLabel = (userStatus || 'active').replace(/-/g, ' ').replace(/^\w/, c => c.toUpperCase())
+  const statusVariant = userStatus === 'active' ? 'success' as const : 'warning' as const
 
-        const [{ data: p }, { data: sp }] = await Promise.all([
-          supabase.from('profiles').select('*').eq('id', user.id).single(),
-          supabase.from('staff_profiles').select('*').eq('user_id', user.id).single(),
-        ])
-
-        if (p || sp) {
-          const pp = (p || {}) as any
-          const spp = (sp || {}) as any
-          setProfile({
-            name: pp.full_name || user.email || '—',
-            code: spp.employee_id || '—',
-            designation: spp.designation || '—',
-            status: spp.is_active ? 'Active' : 'Inactive',
-            department: spp.department || '—',
-            reportingTo: spp.reporting_to || '—',
-            shift: spp.metadata?.shift || 'General',
-            pfNumber: spp.metadata?.pf_number || '—',
-            uan: spp.metadata?.uan || '—',
-            dob: pp.dob || spp.metadata?.dob || '—',
-            gender: pp.gender || spp.metadata?.gender || '—',
-            bloodGroup: spp.metadata?.blood_group || '—',
-            phone: pp.phone || '—',
-            email: user.email || '—',
-            address: pp.address || pp.city || spp.metadata?.address || '—',
-            emergencyContact: spp.metadata?.emergency_contact || '—',
-          })
-          setEditAddress(pp.address || pp.city || spp.metadata?.address || '')
-          setEditPhone(pp.phone || '')
-        }
-      } catch (err) {
-        console.warn('[profile] Load error:', err)
-      }
+  const handleEditToggle = () => {
+    if (!editing) {
+      setForm(prev => ({ ...prev, full_name: userName || '', phone: userPhone || '' }))
     }
-    loadProfile()
-  }, [])
+    setEditing(!editing)
+  }
+
+  const handleSave = async () => {
+    if (!userId || !isSupabaseConfigured()) {
+      showToast('Unable to save — not connected', 'error')
+      return
+    }
+    setSaving(true)
+    try {
+      const profileUpdates: Record<string, any> = {}
+      if (form.full_name && form.full_name !== userName) profileUpdates.full_name = form.full_name
+      if (form.phone && form.phone !== userPhone) profileUpdates.phone = form.phone
+      if (form.city) profileUpdates.city = form.city
+
+      // Also include additional fields that may have been changed
+      // Store extended fields as metadata JSON since columns may not exist
+      const extendedFields: Record<string, string> = {}
+      if (form.address) extendedFields.address = form.address
+      if (form.emergency_contact) extendedFields.emergency_contact = form.emergency_contact
+      if (form.blood_group) extendedFields.blood_group = form.blood_group
+      if (form.gender) extendedFields.gender = form.gender
+      if (form.dob) extendedFields.dob = form.dob
+      if (Object.keys(extendedFields).length > 0) {
+        profileUpdates.metadata = extendedFields
+      }
+
+      if (Object.keys(profileUpdates).length > 0) {
+        const sb = supabase as any
+        // Try staff_profiles first (staff portal), then fallback to profiles
+        const { error } = await sb.from('staff_profiles').update(profileUpdates).eq('user_id', userId)
+        if (error) {
+          // Fallback to profiles table
+          const { error: err2 } = await sb.from('profiles').update(profileUpdates).eq('id', userId)
+          if (err2) throw err2
+        }
+      }
+
+      showToast('Profile updated successfully!', 'success')
+      setEditing(false)
+    } catch (err: any) {
+      showToast(`Save failed: ${err?.message || 'Unknown error'}`, 'error')
+    } finally {
+      setSaving(false)
+    }
+  }
+
   const personalFields = [
-    { label: 'Date of Birth', value: profile.dob }, { label: 'Gender', value: profile.gender },
-    { label: 'Blood Group', value: profile.bloodGroup }, { label: 'Phone', value: profile.phone },
-    { label: 'Email', value: profile.email }, { label: 'Address', value: profile.address },
-    { label: 'Emergency Contact', value: profile.emergencyContact },
+    { label: 'Phone', value: userPhone || '—', key: 'phone', editable: true },
+    { label: 'Email', value: userEmail || '—', key: 'email', editable: false },
+    { label: 'City', value: form.city || '—', key: 'city', editable: true },
+    { label: 'Date of Birth', value: form.dob || '—', key: 'dob', editable: true },
+    { label: 'Gender', value: form.gender || '—', key: 'gender', editable: true },
+    { label: 'Blood Group', value: form.blood_group || '—', key: 'blood_group', editable: true },
+    { label: 'Address', value: form.address || '—', key: 'address', editable: true },
+    { label: 'Emergency Contact', value: form.emergency_contact || '—', key: 'emergency_contact', editable: true },
   ]
+
   const professionalFields = [
-    { label: 'Department', value: profile.department }, { label: 'Reporting To', value: profile.reportingTo },
-    { label: 'Shift', value: profile.shift }, { label: 'PF Number', value: profile.pfNumber },
-    { label: 'UAN', value: profile.uan },
+    { label: 'Employee Code', value: userStaffCode || '—' },
+    { label: 'Department', value: userDepartment || '—' },
+    { label: 'Designation', value: (userDesignation || '—').replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase()) },
+    { label: 'Role', value: (userRole || '—').replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase()) },
+    { label: 'Joined', value: userJoinDate ? new Date(userJoinDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : '—' },
   ]
 
   return (
@@ -129,14 +178,52 @@ function ProfileOverview({ showToast }: { showToast: SelfServiceModuleProps['sho
       <AdminGlass>
         <div className="flex flex-col sm:flex-row items-center gap-5">
           <div className="w-20 h-20 rounded-full bg-gradient-to-br from-teal-500/30 to-blue-500/30 border-2 border-teal-500/30 flex items-center justify-center flex-shrink-0">
-            <span className="text-2xl font-bold text-teal-300">PN</span>
+            <span className="text-2xl font-bold text-teal-300">{initials}</span>
           </div>
           <div className="flex-1 text-center sm:text-left">
-            <h2 className="text-xl font-bold text-white">{profile.name}</h2>
-            <p className="text-sm text-gray-400 mt-0.5">{profile.code} &middot; {profile.designation}</p>
-            <div className="mt-2">
-              <AdminBadge label={profile.status} variant="success" dot size="md" />
+            {editing ? (
+              <input
+                type="text"
+                value={form.full_name}
+                onChange={e => setForm(prev => ({ ...prev, full_name: e.target.value }))}
+                className="text-xl font-bold text-white bg-white/[0.06] border border-white/[0.1] rounded-lg px-3 py-1.5 w-full max-w-xs focus:outline-none focus:border-teal-500/50"
+              />
+            ) : (
+              <h2 className="text-xl font-bold text-white">{userName || '—'}</h2>
+            )}
+            <p className="text-sm text-gray-400 mt-0.5">{userStaffCode || '—'} &middot; {(userDesignation || '—').replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase())}</p>
+            <div className="mt-2 flex items-center gap-3 justify-center sm:justify-start">
+              <AdminBadge label={statusLabel} variant={statusVariant} dot size="md" />
             </div>
+          </div>
+          <div className="flex gap-2">
+            {editing ? (
+              <>
+                <button
+                  onClick={handleSave}
+                  disabled={saving}
+                  className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold text-white bg-teal-500/20 border border-teal-500/30 hover:bg-teal-500/30 transition-colors disabled:opacity-50"
+                >
+                  <Save className="w-3.5 h-3.5" />
+                  {saving ? 'Saving...' : 'Save'}
+                </button>
+                <button
+                  onClick={() => setEditing(false)}
+                  className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold text-gray-400 bg-white/[0.04] border border-white/[0.08] hover:bg-white/[0.08] transition-colors"
+                >
+                  <X className="w-3.5 h-3.5" />
+                  Cancel
+                </button>
+              </>
+            ) : (
+              <button
+                onClick={handleEditToggle}
+                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold text-teal-300 bg-teal-500/10 border border-teal-500/20 hover:bg-teal-500/20 transition-colors"
+              >
+                <Edit3 className="w-3.5 h-3.5" />
+                Edit Profile
+              </button>
+            )}
           </div>
         </div>
       </AdminGlass>
@@ -148,13 +235,23 @@ function ProfileOverview({ showToast }: { showToast: SelfServiceModuleProps['sho
           {personalFields.map(f => (
             <div key={f.label} className="px-3 py-2.5 rounded-xl bg-white/[0.03] border border-white/[0.05]">
               <p className="text-[10px] text-gray-500 uppercase tracking-wider">{f.label}</p>
-              <p className="text-sm text-white mt-0.5">{f.value}</p>
+              {editing && f.editable ? (
+                <input
+                  type={f.key === 'dob' ? 'date' : 'text'}
+                  value={(form as any)[f.key] || ''}
+                  onChange={e => setForm(prev => ({ ...prev, [f.key]: e.target.value }))}
+                  placeholder={f.label}
+                  className="w-full text-sm text-white mt-0.5 bg-white/[0.06] border border-white/[0.1] rounded-lg px-2 py-1 focus:outline-none focus:border-teal-500/50"
+                />
+              ) : (
+                <p className="text-sm text-white mt-0.5">{f.key === 'phone' && editing ? form.phone : f.value}</p>
+              )}
             </div>
           ))}
         </div>
       </AdminGlass>
 
-      {/* Professional Info */}
+      {/* Professional Info (read-only) */}
       <AdminGlass>
         <SectionHeader title="Professional Details" icon={Briefcase} />
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
@@ -165,37 +262,118 @@ function ProfileOverview({ showToast }: { showToast: SelfServiceModuleProps['sho
             </div>
           ))}
         </div>
+        {editing && (
+          <p className="text-[10px] text-gray-600 mt-3 italic">Professional details can only be updated by HR or your manager.</p>
+        )}
       </AdminGlass>
 
-      {/* Skills */}
+      {/* Quick Actions */}
       <AdminGlass>
-        <SectionHeader title="Skills & Languages" icon={Award} />
-        <div className="flex flex-wrap gap-2">
-          {skills.map(s => (
-            <span key={s.name} className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border bg-teal-500/10 text-teal-300 border-teal-500/20">
-              {s.name}
-              <span className="text-[9px] text-teal-500/70">({s.level})</span>
-            </span>
-          ))}
-        </div>
-      </AdminGlass>
-
-      {/* Documents */}
-      <AdminGlass>
-        <SectionHeader title="Uploaded Documents" icon={FileText} />
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          {documents.map(d => (
-            <div key={d.name} className="flex items-center gap-3 px-3 py-3 rounded-xl bg-white/[0.03] border border-white/[0.05]">
-              <FileCheck className="w-4 h-4 text-gray-500 flex-shrink-0" />
-              <div className="flex-1 min-w-0">
-                <p className="text-xs font-medium text-white truncate">{d.name}</p>
-                <p className="text-[10px] text-gray-500">{d.type} &middot; {d.uploaded}</p>
-              </div>
-              <AdminBadge label={d.status} variant={d.status === 'Verified' ? 'success' : 'warning'} />
+        <SectionHeader title="Quick Actions" icon={Shield} />
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <button onClick={() => setEmailModalOpen(true)} className="flex items-center gap-3 px-4 py-3 rounded-xl bg-white/[0.03] border border-white/[0.05] hover:bg-white/[0.06] transition-colors text-left">
+            <Mail className="w-4 h-4 text-blue-400" />
+            <div>
+              <p className="text-xs font-medium text-white">Change Email</p>
+              <p className="text-[10px] text-gray-500">Update login email</p>
             </div>
-          ))}
+          </button>
+          <button onClick={() => setPasswordModalOpen(true)} className="flex items-center gap-3 px-4 py-3 rounded-xl bg-white/[0.03] border border-white/[0.05] hover:bg-white/[0.06] transition-colors text-left">
+            <Shield className="w-4 h-4 text-amber-400" />
+            <div>
+              <p className="text-xs font-medium text-white">Change Password</p>
+              <p className="text-[10px] text-gray-500">Update your password</p>
+            </div>
+          </button>
+          <button onClick={async () => {
+            const cardContent = `
+╔══════════════════════════════════════╗
+║     GHL INDIA VENTURES PVT. LTD.    ║
+║          EMPLOYEE ID CARD            ║
+╠══════════════════════════════════════╣
+║                                      ║
+║  Name:        ${userName || '—'}
+║  Code:        ${userStaffCode || '—'}
+║  Designation: ${(userDesignation || '—').replace(/-/g, ' ').replace(/\\b\\w/g, (c: string) => c.toUpperCase())}
+║  Department:  ${userDepartment || '—'}
+║  Email:       ${userEmail || '—'}
+║  Phone:       ${userPhone || '—'}
+║  Joined:      ${userJoinDate ? new Date(userJoinDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : '—'}
+║                                      ║
+╚══════════════════════════════════════╝
+`
+            const blob = new Blob([cardContent], { type: 'text/plain' })
+            const filename = `GHL_ID_Card_${(userStaffCode || 'staff').replace(/\s/g, '_')}.txt`
+            await saveBlobAs(blob, filename, showToast as any)
+            showToast('ID Card downloaded', 'success')
+          }} className="flex items-center gap-3 px-4 py-3 rounded-xl bg-white/[0.03] border border-white/[0.05] hover:bg-white/[0.06] transition-colors text-left">
+            <Download className="w-4 h-4 text-teal-400" />
+            <div>
+              <p className="text-xs font-medium text-white">Download ID Card</p>
+              <p className="text-[10px] text-gray-500">Get digital ID card</p>
+            </div>
+          </button>
         </div>
       </AdminGlass>
+
+      {/* Change Email Modal */}
+      <AdminModal isOpen={emailModalOpen} onClose={() => { setEmailModalOpen(false); setNewEmail('') }} title="Change Email Address">
+        <div className="space-y-4">
+          <div>
+            <label className="block text-xs font-medium text-gray-400 mb-1.5">Current Email</label>
+            <p className="text-sm text-white bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2.5">{userEmail || '—'}</p>
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-gray-400 mb-1.5">New Email Address</label>
+            <input type="email" value={newEmail} onChange={e => setNewEmail(e.target.value)} placeholder="Enter new email" className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-teal-500/40 focus:ring-1 focus:ring-teal-500/20" />
+          </div>
+          <div className="flex justify-end gap-3 pt-2">
+            <button onClick={() => { setEmailModalOpen(false); setNewEmail('') }} className="px-4 py-2 rounded-xl text-sm font-medium text-gray-400 hover:text-white hover:bg-white/[0.06] transition-colors">Cancel</button>
+            <button onClick={async () => {
+              if (!newEmail.trim() || !newEmail.includes('@')) { showToast('Please enter a valid email address', 'error'); return }
+              try {
+                const sb = supabase as any
+                const { error } = await sb.auth.updateUser({ email: newEmail.trim() })
+                if (error) throw error
+                showToast('Confirmation email sent to your new address. Please verify to complete the change.', 'success')
+                setEmailModalOpen(false); setNewEmail('')
+              } catch (err: any) {
+                showToast(`Failed to update email: ${err?.message || 'Unknown error'}`, 'error')
+              }
+            }} className="px-5 py-2 rounded-xl text-sm font-medium text-white bg-teal-600 hover:bg-teal-700 transition-colors">Update Email</button>
+          </div>
+        </div>
+      </AdminModal>
+
+      {/* Change Password Modal */}
+      <AdminModal isOpen={passwordModalOpen} onClose={() => { setPasswordModalOpen(false); setNewPassword(''); setConfirmPassword('') }} title="Change Password">
+        <div className="space-y-4">
+          <div>
+            <label className="block text-xs font-medium text-gray-400 mb-1.5">New Password</label>
+            <input type="password" value={newPassword} onChange={e => setNewPassword(e.target.value)} placeholder="Enter new password" className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-teal-500/40 focus:ring-1 focus:ring-teal-500/20" />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-gray-400 mb-1.5">Confirm Password</label>
+            <input type="password" value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} placeholder="Confirm new password" className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-teal-500/40 focus:ring-1 focus:ring-teal-500/20" />
+          </div>
+          <div className="flex justify-end gap-3 pt-2">
+            <button onClick={() => { setPasswordModalOpen(false); setNewPassword(''); setConfirmPassword('') }} className="px-4 py-2 rounded-xl text-sm font-medium text-gray-400 hover:text-white hover:bg-white/[0.06] transition-colors">Cancel</button>
+            <button onClick={async () => {
+              if (!newPassword || newPassword.length < 6) { showToast('Password must be at least 6 characters', 'error'); return }
+              if (newPassword !== confirmPassword) { showToast('Passwords do not match', 'error'); return }
+              try {
+                const sb = supabase as any
+                const { error } = await sb.auth.updateUser({ password: newPassword })
+                if (error) throw error
+                showToast('Password updated successfully!', 'success')
+                setPasswordModalOpen(false); setNewPassword(''); setConfirmPassword('')
+              } catch (err: any) {
+                showToast(`Failed to update password: ${err?.message || 'Unknown error'}`, 'error')
+              }
+            }} className="px-5 py-2 rounded-xl text-sm font-medium text-white bg-teal-600 hover:bg-teal-700 transition-colors">Update Password</button>
+          </div>
+        </div>
+      </AdminModal>
     </div>
   )
 }
@@ -205,12 +383,45 @@ function ProfileOverview({ showToast }: { showToast: SelfServiceModuleProps['sho
 // ================================================================
 function AttendanceView({ showToast }: { showToast: SelfServiceModuleProps['showToast'] }) {
   const [clockedIn, setClockedIn] = useState(false)
-  const clockInTime = '—'
-  const hoursWorked = 0
+  const [clockLoading, setClockLoading] = useState(false)
+  const [clockInTime, setClockInTime] = useState('—')
+  const [clockInTimestamp, setClockInTimestamp] = useState<Date | null>(null)
+  const [hoursWorked, setHoursWorked] = useState(0)
   const totalHoursTarget = 9
 
   const summary = { present: 0, leave: 0, holiday: 0, late: 0, avgHours: 0, totalDays: 0 }
   const attendanceDays: { day: number; status: string }[] = []
+
+  // Check if already clocked in today on mount
+  useEffect(() => {
+    async function checkExisting() {
+      if (!isSupabaseConfigured()) return
+      try {
+        const sb = supabase as any
+        const today = new Date().toISOString().split('T')[0]
+        const { data } = await sb.from('attendance').select('*').eq('date', today).is('check_out', null).order('created_at', { ascending: false }).limit(1)
+        if (data && data.length > 0 && data[0].check_in) {
+          const clockIn = new Date(data[0].check_in)
+          setClockedIn(true)
+          setClockInTime(clockIn.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }))
+          setClockInTimestamp(clockIn)
+        }
+      } catch { /* silent */ }
+    }
+    checkExisting()
+  }, [])
+
+  // Update hours worked every minute when clocked in
+  useEffect(() => {
+    if (!clockedIn || !clockInTimestamp) return
+    const updateHours = () => {
+      const diff = (Date.now() - clockInTimestamp.getTime()) / (1000 * 60 * 60)
+      setHoursWorked(Math.round(diff * 10) / 10)
+    }
+    updateHours()
+    const interval = setInterval(updateHours, 60000)
+    return () => clearInterval(interval)
+  }, [clockedIn, clockInTimestamp])
 
   const statusColors: Record<string, string> = {
     present: 'bg-emerald-500/20 text-emerald-400 border-emerald-500/20', absent: 'bg-red-500/20 text-red-400 border-red-500/20',
@@ -220,9 +431,63 @@ function AttendanceView({ showToast }: { showToast: SelfServiceModuleProps['show
   const progress = Math.min((hoursWorked / totalHoursTarget) * 100, 100)
   const circumference = 2 * Math.PI * 52
 
-  const handleClockToggle = () => {
-    setClockedIn(!clockedIn)
-    showToast(clockedIn ? 'Clocked out successfully' : 'Clocked in successfully', 'success')
+  const handleClockToggle = async () => {
+    setClockLoading(true)
+    try {
+      // Get current user id for staff_id
+      let staffId: string | null = null
+      try {
+        const sb = supabase as any
+        const { data: { user } } = await sb.auth.getUser()
+        staffId = user?.id || null
+      } catch { /* continue */ }
+
+      const now = new Date()
+      if (!clockedIn) {
+        // Clock In
+        const record = await recordAttendance({
+          staff_id: staffId,
+          date: now.toISOString().split('T')[0],
+          check_in: now.toISOString(),
+          status: 'present',
+        })
+        if (record) {
+          setClockedIn(true)
+          setClockInTime(now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }))
+          setClockInTimestamp(now)
+          showToast('Clocked in successfully', 'success')
+        } else {
+          showToast('Failed to record clock-in. Please try again.', 'error')
+        }
+      } else {
+        // Clock Out — update the attendance record with clock_out time
+        const sb = supabase as any
+        const today = now.toISOString().split('T')[0]
+        const { error } = await sb.from('attendance')
+          .update({ check_out: now.toISOString() })
+          .eq('date', today)
+          .is('check_out', null)
+          .order('created_at', { ascending: false })
+          .limit(1)
+        if (error) {
+          showToast(`Clock-out failed: ${error.message}`, 'error')
+        } else {
+          // Calculate total hours worked before resetting
+          const totalHrs = clockInTimestamp
+            ? Math.round(((now.getTime() - clockInTimestamp.getTime()) / (1000 * 60 * 60)) * 10) / 10
+            : 0
+          setClockedIn(false)
+          setClockInTime('—')
+          setClockInTimestamp(null)
+          setHoursWorked(totalHrs)
+          showToast(`Clocked out successfully. Hours worked: ${totalHrs}h`, 'success')
+        }
+      }
+    } catch (err: any) {
+      showToast(`Attendance error: ${err?.message || 'Unknown error'}`, 'error')
+    } finally {
+      setClockLoading(false)
+    }
   }
 
   return (
@@ -243,14 +508,14 @@ function AttendanceView({ showToast }: { showToast: SelfServiceModuleProps['show
             </div>
           </div>
           <p className="text-xs text-gray-400 mb-1">Clocked in at <span className="text-white font-medium">{clockInTime}</span></p>
-          <button onClick={handleClockToggle}
-            className={`mt-3 px-6 py-2.5 rounded-xl text-sm font-semibold transition-all ${
+          <button onClick={handleClockToggle} disabled={clockLoading}
+            className={`mt-3 px-6 py-2.5 rounded-xl text-sm font-semibold transition-all disabled:opacity-50 ${
               clockedIn
                 ? 'bg-red-500/15 text-red-400 border border-red-500/25 hover:bg-red-500/25'
                 : 'bg-teal-500/15 text-teal-400 border border-teal-500/25 hover:bg-teal-500/25'
             }`}
           >
-            {clockedIn ? 'Clock Out' : 'Clock In'}
+            {clockLoading ? 'Processing...' : clockedIn ? 'Clock Out' : 'Clock In'}
           </button>
         </AdminGlass>
 
@@ -375,10 +640,36 @@ function LeaveView({ showToast }: { showToast: SelfServiceModuleProps['showToast
         </div>
         <div className="mt-3 flex justify-end">
           <button onClick={async () => {
-            if (!leaveForm.type || !leaveForm.fromDate || !leaveForm.reason.trim()) { showToast('Please fill in leave type, dates, and reason', 'warning'); return }
-            const row = await insertRow('tickets', { title: `Leave Request: ${leaveForm.type}`, description: leaveForm.reason, type: 'leave_request', category: leaveForm.type, status: 'open', priority: 'normal', metadata: { from_date: leaveForm.fromDate, to_date: leaveForm.toDate || leaveForm.fromDate, half_day: leaveForm.halfDay } })
-            if (row) { showToast('Leave application submitted', 'success') } else { showToast('Failed to submit leave application', 'error') }
-            setLeaveForm({ type: '', fromDate: '', toDate: '', halfDay: 'Full Day', reason: '' })
+            if (!leaveForm.type) { showToast('Please select a leave type', 'error'); return }
+            if (!leaveForm.fromDate) { showToast('Please select a start date', 'error'); return }
+            if (!leaveForm.reason.trim()) { showToast('Please provide a reason for leave', 'error'); return }
+            try {
+              // Get current user for the leave request
+              let staffId: string | null = null
+              try {
+                const sb = supabase as any
+                const { data: { user } } = await sb.auth.getUser()
+                staffId = user?.id || null
+              } catch { /* continue */ }
+              const row = await submitLeaveRequest({
+                leave_type: leaveForm.type,
+                start_date: leaveForm.fromDate,
+                end_date: leaveForm.toDate || leaveForm.fromDate,
+                half_day: leaveForm.halfDay !== 'Full Day',
+                reason: leaveForm.reason.trim(),
+                status: 'pending',
+                staff_id: staffId,
+                requested_by: staffId,
+              })
+              if (row) {
+                showToast('Leave application submitted successfully', 'success')
+                setLeaveForm({ type: '', fromDate: '', toDate: '', halfDay: 'Full Day', reason: '' })
+              } else {
+                showToast('Failed to submit leave application. Please try again.', 'error')
+              }
+            } catch (err: any) {
+              showToast(`Leave submission error: ${err?.message || 'Unknown error'}`, 'error')
+            }
           }}
             className="px-5 py-2 rounded-xl text-xs font-semibold bg-teal-500/15 text-teal-400 border border-teal-500/25 hover:bg-teal-500/25 transition-colors">
             Submit Application
@@ -541,8 +832,30 @@ function PayslipsView({ showToast }: { showToast: SelfServiceModuleProps['showTo
 // ================================================================
 function DocumentsView({ showToast }: { showToast: SelfServiceModuleProps['showToast'] }) {
   const folders: { name: string; icon: any; count: number }[] = []
-  const documents: { name: string; folder: string; date: string; size: string; status: 'Verified' | 'Pending' }[] = []
+  const [documents, setDocuments] = useState<{ name: string; folder: string; date: string; size: string; status: 'Verified' | 'Pending' }[]>([])
+  const [refreshKey, setRefreshKey] = useState(0)
   const requestLetters = ['Employment Verification', 'Salary Certificate', 'Experience Letter', 'Bonafide Certificate']
+
+  // Fetch documents from storage on mount and after uploads
+  useEffect(() => {
+    async function loadDocs() {
+      if (!isSupabaseConfigured()) return
+      try {
+        const sb = supabase as any
+        const { data, error } = await sb.storage.from('ghl-documents').list('staff/documents', { limit: 100, sortBy: { column: 'created_at', order: 'desc' } })
+        if (!error && data) {
+          setDocuments(data.map((f: any) => ({
+            name: f.name,
+            folder: 'Staff Documents',
+            date: f.created_at ? new Date(f.created_at).toLocaleDateString('en-IN') : '—',
+            size: f.metadata?.size ? `${(f.metadata.size / 1024).toFixed(1)} KB` : '—',
+            status: 'Pending' as const,
+          })))
+        }
+      } catch { /* silent */ }
+    }
+    loadDocs()
+  }, [refreshKey])
 
   return (
     <div className="space-y-5">
@@ -572,8 +885,15 @@ function DocumentsView({ showToast }: { showToast: SelfServiceModuleProps['showT
                 <p className="text-[10px] text-gray-500">{d.folder} &middot; {d.date} &middot; {d.size}</p>
               </div>
               <AdminBadge label={d.status} variant={d.status === 'Verified' ? 'success' : 'warning'} />
-              <button className="p-1.5 rounded-lg hover:bg-white/[0.06] transition-colors">
-                <Download className="w-3.5 h-3.5 text-gray-500" />
+              <button onClick={async () => {
+                try {
+                  const sb = supabase as any
+                  const { data, error } = await sb.storage.from('ghl-documents').download(`staff/documents/${d.name}`)
+                  if (error || !data) { showToast('Failed to download file', 'error'); return }
+                  await saveBlobAs(data, d.name, showToast as any)
+                } catch { showToast('Download failed', 'error') }
+              }} className="p-1.5 rounded-lg hover:bg-white/[0.06] transition-colors" title="Download">
+                <Download className="w-3.5 h-3.5 text-gray-500 hover:text-teal-400" />
               </button>
             </div>
           ))}
@@ -591,8 +911,13 @@ function DocumentsView({ showToast }: { showToast: SelfServiceModuleProps['showT
               category: 'employee-document',
             })
             const successCount = results.filter(r => r.success).length
-            if (successCount > 0) showToast(`Uploaded ${successCount} document(s) successfully`, 'success')
-            else if (results.length > 0) showToast('Upload failed — please try again', 'info')
+            if (successCount > 0) {
+              showToast(`Uploaded ${successCount} document(s) successfully`, 'success')
+              // Small delay to allow storage to propagate, then refresh
+              await new Promise(r => setTimeout(r, 500))
+              setRefreshKey(prev => prev + 1)
+            }
+            else if (results.length > 0) showToast('Upload failed — please try again', 'error')
           }}>
           <Upload className="w-8 h-8 text-gray-600 mx-auto mb-3" />
           <p className="text-sm text-gray-400">Drag and drop files here or <span className="text-teal-400 font-medium">browse</span></p>

@@ -782,10 +782,13 @@ function ConsultationForm() {
     message: '',
   })
   const [submitted, setSubmitted] = useState(false)
+  const [submitting, setSubmitting] = useState(false)
+  const [formError, setFormError] = useState('')
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    setSubmitted(true)
+    setSubmitting(true)
+    setFormError('')
     try {
       const { submitContactForm, submitLead } = await import('@/lib/supabase/reportsDataService')
       await Promise.all([
@@ -812,7 +815,13 @@ function ConsultationForm() {
           message: formData.message,
         }),
       ])
-    } catch (err) { console.warn('NRI form Supabase error:', err) }
+      setSubmitted(true)
+    } catch (err) {
+      console.warn('NRI form Supabase error:', err)
+      setFormError('Something went wrong. Please try again or contact us directly.')
+    } finally {
+      setSubmitting(false)
+    }
   }
 
   return (
@@ -861,6 +870,12 @@ function ConsultationForm() {
               </div>
             ) : (
               <form onSubmit={handleSubmit} className="card p-6 sm:p-8 rounded-2xl space-y-4">
+                {formError && (
+                  <div className="bg-red-50 border border-red-200 text-red-700 text-sm rounded-lg p-3 flex items-start gap-2">
+                    <AlertTriangle className="w-4 h-4 mt-0.5 shrink-0" />
+                    <span>{formError}</span>
+                  </div>
+                )}
                 <div className="grid sm:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-xs font-bold text-brand-black mb-1.5">Full Name *</label>
@@ -968,10 +983,19 @@ function ConsultationForm() {
                   />
                 </div>
 
-                <button type="submit" className="btn-primary w-full flex items-center justify-center gap-2">
-                  <Plane className="w-4 h-4" />
-                  Request NRI Consultation
-                  <ArrowRight className="w-4 h-4" />
+                <button type="submit" disabled={submitting} className="btn-primary w-full flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed">
+                  {submitting ? (
+                    <>
+                      <svg className="animate-spin w-4 h-4" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"/></svg>
+                      Submitting…
+                    </>
+                  ) : (
+                    <>
+                      <Plane className="w-4 h-4" />
+                      Request NRI Consultation
+                      <ArrowRight className="w-4 h-4" />
+                    </>
+                  )}
                 </button>
 
                 <p className="text-[10px] text-brand-grey/60 text-center">

@@ -854,7 +854,7 @@ function AudienceTab({ showToast, audienceSegments }: { showToast: (m: string, t
           <button onClick={async () => {
             showToast('Exporting contacts...', 'info')
             const bom = '\uFEFF'
-            const csv = `${bom}Name,Email,Phone,Segment,Status\nSample Contact,sample@email.com,+91 99999 00000,High Value,Active`
+            const csv = `${bom}Name,Email,Phone,Segment,Status`
             const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' })
             const filename = `GHL_Contacts_Export_${new Date().toISOString().slice(0,10)}.csv`
             await saveBlobAs(blob, filename, showToast as any)

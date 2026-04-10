@@ -24,6 +24,7 @@ interface Props {
   content: string[]
   relatedArticles: readonly Article[]
   sebiReg: string
+  basePath?: string
 }
 
 /* ─── Floating Share Sidebar ─── */
@@ -86,7 +87,7 @@ function ShareSidebar({ title, slug }: { title: string; slug: string }) {
   )
 }
 
-export default function FundArticleClient({ article, content, relatedArticles, sebiReg }: Props) {
+export default function FundArticleClient({ article, content, relatedArticles, sebiReg, basePath = '/fund' }: Props) {
   return (
     <>
       {/* ─── Full-Width Hero Image Placeholder ─── */}
@@ -275,7 +276,7 @@ export default function FundArticleClient({ article, content, relatedArticles, s
           <div className="grid md:grid-cols-3 gap-8 max-w-5xl mx-auto">
             {relatedArticles.map((ra, i) => (
               <AnimatedSection key={ra.slug} delay={i * 100}>
-                <Link href={`/fund/${ra.slug}`} className="card block group h-full hover:-translate-y-1">
+                <Link href={`${basePath}/${ra.slug}`} className="card block group h-full hover:-translate-y-1">
                   {/* Image placeholder */}
                   <PlaceholderImage
                     theme={ra.category.toLowerCase().includes('real estate') ? 'real-estate' : ra.category.toLowerCase().includes('startup') || ra.category.toLowerCase().includes('fintech') ? 'startup' : 'education'}
