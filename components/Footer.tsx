@@ -164,17 +164,17 @@ export default function Footer() {
             </div>
 
             {/* Col 2: Quick Links */}
-            <div>
+            <div className="text-left">
               <h3 className="text-sm font-semibold uppercase tracking-wider text-white/40 mb-5">
                 Quick Links
               </h3>
               <ul className="space-y-3">
                 {QUICK_LINKS.map((link) => (
-                  <li key={link.href}>
+                  <li key={link.href} className="text-left">
                     <Link
                       href={link.href}
                       className="text-gray-400 hover:text-brand-red transition-colors duration-200
-                        text-sm flex items-center group"
+                        text-sm inline-flex items-center group"
                     >
                       <ArrowUpRight className="w-3.5 h-3.5 mr-2 opacity-0 -translate-x-1 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-200" />
                       {link.label}
@@ -185,17 +185,17 @@ export default function Footer() {
             </div>
 
             {/* Col 3: Downloads */}
-            <div>
+            <div className="text-left">
               <h3 className="text-sm font-semibold uppercase tracking-wider text-white/40 mb-5">
                 Downloads
               </h3>
               <ul className="space-y-3">
                 {DOWNLOAD_LINKS.map((link) => (
-                  <li key={link.href}>
+                  <li key={link.href} className="text-left">
                     <Link
                       href={link.href}
                       className="text-gray-400 hover:text-brand-red transition-colors duration-200
-                        text-sm flex items-center group"
+                        text-sm inline-flex items-center group"
                     >
                       <Download className="w-3.5 h-3.5 mr-2 opacity-60 group-hover:opacity-100 transition-opacity duration-200" />
                       {link.label}
