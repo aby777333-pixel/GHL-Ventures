@@ -81,11 +81,10 @@ function RegisterPageInner() {
 
     if (!form.name.trim()) { setError('Please enter your name.'); return }
     if (!form.email.trim()) { setError('Please enter your email.'); return }
-    if (form.password.length < 8) { setError(AUTH_ERRORS.WEAK_PASSWORD); return }
-    if (!/[a-zA-Z]/.test(form.password) || !/[0-9]/.test(form.password)) {
-      setError('Password must contain both letters and numbers.')
-      return
-    }
+    if (form.password.length < 8) { setError('Password must be at least 8 characters long.'); return }
+    if (!/[a-zA-Z]/.test(form.password)) { setError('Password must contain at least one letter (a-z, A-Z).'); return }
+    if (!/[0-9]/.test(form.password)) { setError('Password must contain at least one number (0-9).'); return }
+    if (!/[!@#$%^&*(),.?":{}|<>]/.test(form.password)) { setError('Password must contain at least one special character (!@#$%...).'); return }
     const mobileDigits = form.mobile.replace(/\D/g, '')
     if (mobileDigits.length !== 10) {
       setError('Please enter a valid 10-digit mobile number.')
@@ -318,10 +317,29 @@ function RegisterPageInner() {
             <div>
               <label htmlFor="reg-password" className="block text-xs font-medium text-brand-black mb-1">Password</label>
               <div className="relative">
-                <input id="reg-password" type={showPassword ? 'text' : 'password'} required className="input-field pr-12" placeholder="Min 8 characters (letters + numbers)" value={form.password} onChange={(e) => handleChange('password', e.target.value)} />
+                <input id="reg-password" type={showPassword ? 'text' : 'password'} required className="input-field pr-12" placeholder="Create a strong password" value={form.password} onChange={(e) => handleChange('password', e.target.value)} />
                 <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-brand-grey hover:text-brand-black" aria-label="Toggle password visibility">
                   {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                 </button>
+              </div>
+              {/* Password requirements checklist */}
+              <div className="mt-2 space-y-1">
+                <p className={`text-xs flex items-center gap-1.5 ${form.password.length >= 8 ? 'text-green-600' : 'text-gray-400'}`}>
+                  {form.password.length >= 8 ? <CheckCircle className="w-3 h-3" /> : <span className="w-3 h-3 rounded-full border border-gray-300 inline-block" />}
+                  Minimum 8 characters
+                </p>
+                <p className={`text-xs flex items-center gap-1.5 ${/[a-zA-Z]/.test(form.password) ? 'text-green-600' : 'text-gray-400'}`}>
+                  {/[a-zA-Z]/.test(form.password) ? <CheckCircle className="w-3 h-3" /> : <span className="w-3 h-3 rounded-full border border-gray-300 inline-block" />}
+                  At least one letter (a-z, A-Z)
+                </p>
+                <p className={`text-xs flex items-center gap-1.5 ${/[0-9]/.test(form.password) ? 'text-green-600' : 'text-gray-400'}`}>
+                  {/[0-9]/.test(form.password) ? <CheckCircle className="w-3 h-3" /> : <span className="w-3 h-3 rounded-full border border-gray-300 inline-block" />}
+                  At least one number (0-9)
+                </p>
+                <p className={`text-xs flex items-center gap-1.5 ${/[!@#$%^&*(),.?":{}|<>]/.test(form.password) ? 'text-green-600' : 'text-gray-400'}`}>
+                  {/[!@#$%^&*(),.?":{}|<>]/.test(form.password) ? <CheckCircle className="w-3 h-3" /> : <span className="w-3 h-3 rounded-full border border-gray-300 inline-block" />}
+                  At least one special character (!@#$%...)
+                </p>
               </div>
             </div>
 

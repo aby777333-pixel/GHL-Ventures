@@ -345,7 +345,7 @@ export default function DashboardClient() {
   }
 
   // ─── Auth ────────────────────────────────────────────────
-  const { user, clientId, isAuthenticated, loading: authLoading, logout } = useClientAuth()
+  const { user, clientId, isAuthenticated, emailVerified, loading: authLoading, logout } = useClientAuth()
 
   // Auth guard — redirect to login if not authenticated
   useEffect(() => {
@@ -656,6 +656,46 @@ export default function DashboardClient() {
     )
   }
   if (!isAuthenticated || !user) return null
+
+  // ═══════════════════════════════════════════════════════════
+  // EMAIL VERIFICATION GATE — block unverified users
+  // ═══════════════════════════════════════════════════════════
+  if (!emailVerified) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-white dark:bg-black">
+        <div className="max-w-md mx-auto text-center px-6">
+          <div className="w-16 h-16 mx-auto mb-6 rounded-full bg-amber-100 flex items-center justify-center">
+            <AlertCircle className="w-8 h-8 text-amber-600" />
+          </div>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-3">Email Verification Required</h1>
+          <p className="text-gray-600 dark:text-gray-400 mb-6">
+            Please verify your email address before accessing the dashboard. Check your inbox for the confirmation link we sent during registration.
+          </p>
+          <div className="space-y-3">
+            <button
+              onClick={async () => {
+                try {
+                  const { data: { session: authSession } } = await (await import('@/lib/supabase/client')).supabase.auth.getSession()
+                  if (authSession?.user?.email) {
+                    await (await import('@/lib/supabase/client')).supabase.auth.resend({ type: 'signup', email: authSession.user.email })
+                    showToast('Verification email resent. Please check your inbox.', 'success')
+                  }
+                } catch { showToast('Failed to resend. Please try again.', 'info') }
+              }}
+              className="w-full px-6 py-3 bg-red-600 hover:bg-red-700 text-white rounded-xl text-sm font-semibold transition-colors"
+            >
+              Resend Verification Email
+            </button>
+            <button onClick={async () => { await logout(); router.push('/login?logged_out=true') }}
+              className="w-full px-6 py-3 border border-gray-300 text-gray-700 dark:text-gray-300 dark:border-gray-600 rounded-xl text-sm font-semibold hover:bg-gray-50 dark:hover:bg-white/5 transition-colors"
+            >
+              Sign Out
+            </button>
+          </div>
+        </div>
+      </div>
+    )
+  }
 
   // ═══════════════════════════════════════════════════════════
   // SIDEBAR
