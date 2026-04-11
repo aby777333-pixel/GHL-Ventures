@@ -156,6 +156,7 @@ export const ADMIN_SIDEBAR_ITEMS: SidebarItem[] = [
       { id: 'comms', label: 'Hub' },
       { id: 'comms/broadcast', label: 'Broadcast' },
       { id: 'comms/internal', label: 'Internal Chat' },
+      { id: 'comms/alerts', label: 'Alert Center' },
     ],
   },
   {
@@ -283,6 +284,7 @@ export const ALL_ADMIN_TAB_PARAMS = [
   { tab: ['comms'] },
   { tab: ['comms', 'broadcast'] },
   { tab: ['comms', 'internal'] },
+  { tab: ['comms', 'alerts'] },
   { tab: ['marketing'] },
   { tab: ['marketing', 'campaigns'] },
   { tab: ['marketing', 'content'] },

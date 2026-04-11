@@ -909,12 +909,12 @@ function MarketingTab({ showToast }: { showToast: Props['showToast'] }) {
                   <td className="py-2.5 px-2 text-white font-medium">{c.name}</td>
                   <td className="py-2.5 px-2"><span className={`px-2 py-0.5 rounded-full text-[10px] font-medium ${c.platform === 'Google' ? 'bg-blue-500/20 text-blue-300' : c.platform === 'Meta' ? 'bg-pink-500/20 text-pink-300' : c.platform === 'LinkedIn' ? 'bg-cyan-500/20 text-cyan-300' : 'bg-red-500/20 text-red-300'}`}>{c.platform}</span></td>
                   <td className="py-2.5 px-2 text-gray-300">{formatINRCompact(c.spend)}</td>
-                  <td className="py-2.5 px-2 text-gray-300">{c.impressions.toLocaleString()}</td>
-                  <td className="py-2.5 px-2 text-gray-300">{c.clicks.toLocaleString()}</td>
-                  <td className="py-2.5 px-2 text-gray-300">{((c.clicks / c.impressions) * 100).toFixed(1)}%</td>
-                  <td className="py-2.5 px-2 text-white font-medium">{c.conversions}</td>
-                  <td className="py-2.5 px-2 text-emerald-400">{formatINRCompact(c.revenueGenerated)}</td>
-                  <td className="py-2.5 px-2 text-white font-bold">{(c.revenueGenerated / c.spend).toFixed(1)}x</td>
+                  <td className="py-2.5 px-2 text-gray-300">{(c.impressions ?? 0).toLocaleString()}</td>
+                  <td className="py-2.5 px-2 text-gray-300">{(c.clicks ?? 0).toLocaleString()}</td>
+                  <td className="py-2.5 px-2 text-gray-300">{c.impressions ? ((c.clicks / c.impressions) * 100).toFixed(1) : '0.0'}%</td>
+                  <td className="py-2.5 px-2 text-white font-medium">{c.conversions ?? 0}</td>
+                  <td className="py-2.5 px-2 text-emerald-400">{formatINRCompact(c.revenueGenerated ?? 0)}</td>
+                  <td className="py-2.5 px-2 text-white font-bold">{c.spend ? (c.revenueGenerated / c.spend).toFixed(1) : '0.0'}x</td>
                 </tr>
               ))}
             </tbody>
@@ -993,7 +993,7 @@ function MarketingTab({ showToast }: { showToast: Props['showToast'] }) {
               {TOP_PAGES.map(p => (
                 <tr key={p.page} className="border-b border-white/[0.03]">
                   <td className="py-2 px-2"><span className="text-white">{p.title}</span><br /><span className="text-gray-600">{p.page}</span></td>
-                  <td className="py-2 px-2 text-gray-300">{p.views.toLocaleString()}</td>
+                  <td className="py-2 px-2 text-gray-300">{(p.views ?? 0).toLocaleString()}</td>
                   <td className="py-2 px-2 text-gray-300">{p.avgTime}</td>
                   <td className="py-2 px-2"><span className={p.bounceRate > 40 ? 'text-amber-400' : 'text-emerald-400'}>{p.bounceRate}%</span></td>
                 </tr>
@@ -1201,6 +1201,7 @@ function AIAdvisorTab({ showToast }: { showToast: Props['showToast'] }) {
 
 function EmailerTab({ showToast }: { showToast: Props['showToast'] }) {
   const { EMAIL_TEMPLATES } = useReportsDataContext()
+  const [recipients, setRecipients] = useState('')
   const [subject, setSubject] = useState('')
   const [body, setBody] = useState('')
   const [selectedTemplate, setSelectedTemplate] = useState<string | null>(null)
@@ -1221,6 +1222,7 @@ function EmailerTab({ showToast }: { showToast: Props['showToast'] }) {
           <AdminGlass>
             <h3 className="text-sm font-semibold text-white mb-4">Email Composer</h3>
             <div className="space-y-3">
+              <input value={recipients} onChange={e => setRecipients(e.target.value)} placeholder="Recipient email(s) — separate multiple with commas..." className="w-full px-4 py-2.5 rounded-xl bg-white/[0.04] border border-white/[0.08] text-sm text-white placeholder:text-gray-600 focus:outline-none focus:border-brand-red/40" />
               <input value={subject} onChange={e => setSubject(e.target.value)} placeholder="Subject line..." className="w-full px-4 py-2.5 rounded-xl bg-white/[0.04] border border-white/[0.08] text-sm text-white placeholder:text-gray-600 focus:outline-none focus:border-brand-red/40" />
               <div className="flex gap-1.5 flex-wrap">
                 {['{{client_name}}', '{{portfolio_value}}', '{{next_action}}', '{{fund_name}}'].map(f => (
@@ -1229,8 +1231,8 @@ function EmailerTab({ showToast }: { showToast: Props['showToast'] }) {
               </div>
               <textarea value={body} onChange={e => setBody(e.target.value)} rows={8} placeholder="Compose your email..." className="w-full px-4 py-3 rounded-xl bg-white/[0.04] border border-white/[0.08] text-sm text-white placeholder:text-gray-600 focus:outline-none focus:border-brand-red/40 resize-none" />
               <div className="flex gap-2">
-                <button onClick={() => showToast('Email queued for sending', 'success')} className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium text-white bg-brand-red/20 border border-brand-red/30 hover:bg-brand-red/30 transition-colors admin-btn-press"><Send className="w-3.5 h-3.5" /> Send Now</button>
-                <button onClick={() => showToast('Email scheduled', 'info')} className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium text-gray-400 bg-white/[0.04] border border-white/[0.06] hover:bg-white/[0.08] transition-colors admin-btn-press"><Calendar className="w-3.5 h-3.5" /> Schedule</button>
+                <button onClick={() => { if (!recipients.trim()) { showToast('Please enter recipient email(s)', 'error'); return } if (!subject.trim()) { showToast('Please enter a subject', 'error'); return } showToast(`Email queued for ${recipients.split(',').length} recipient(s)`, 'success') }} className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium text-white bg-brand-red/20 border border-brand-red/30 hover:bg-brand-red/30 transition-colors admin-btn-press"><Send className="w-3.5 h-3.5" /> Send Now</button>
+                <button onClick={() => { if (!recipients.trim()) { showToast('Please enter recipient email(s)', 'error'); return } showToast(`Email scheduled for ${recipients.split(',').length} recipient(s)`, 'info') }} className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium text-gray-400 bg-white/[0.04] border border-white/[0.06] hover:bg-white/[0.08] transition-colors admin-btn-press"><Calendar className="w-3.5 h-3.5" /> Schedule</button>
               </div>
             </div>
             <p className="text-[10px] text-gray-600 mt-3">// BACKEND_HOOK: In production, connects to SendGrid/Mailchimp API</p>

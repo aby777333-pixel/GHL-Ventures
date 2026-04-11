@@ -49,7 +49,7 @@ function FileTypeIcon({ type, className }: { type: string; className?: string })
     docx: FileText, doc: FileText, pptx: Presentation, ppt: Presentation,
     png: Image, jpg: Image, jpeg: Image,
   }
-  const Icon = iconMap[type.toLowerCase()] || File
+  const Icon = (type ? iconMap[type.toLowerCase()] : null) || File
   return <Icon className={className} />
 }
 
