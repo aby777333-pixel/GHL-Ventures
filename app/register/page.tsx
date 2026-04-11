@@ -173,47 +173,43 @@ function RegisterPageInner() {
     setLoading(false)
   }
 
-  // ── Email Confirmation Screen ─────────────────────────────
+  // ── Registration Success Screen ─────────────────────────────
   if (submitted) {
     return (
       <section className="min-h-screen flex items-center justify-center bg-brand-black pt-36 pb-20">
         <div className="max-w-md mx-auto text-center px-6">
           <div className="relative w-20 h-20 mx-auto mb-6">
-            <div className="absolute inset-0 rounded-full bg-brand-red/20 animate-ping opacity-30" />
-            <div className="relative w-20 h-20 rounded-full bg-brand-red/10 flex items-center justify-center">
-              <Mail className="w-10 h-10 text-brand-red" />
+            <div className="absolute inset-0 rounded-full bg-emerald-500/20 animate-ping opacity-30" />
+            <div className="relative w-20 h-20 rounded-full bg-emerald-500/10 flex items-center justify-center">
+              <CheckCircle className="w-10 h-10 text-emerald-400" />
             </div>
           </div>
-          <h1 className="text-3xl font-bold text-white mb-4">Verify Your Email</h1>
+          <h1 className="text-3xl font-bold text-white mb-4">Registration Successful!</h1>
           <p className="text-gray-400 mb-2">
-            We&apos;ve sent a confirmation link to
+            Your account has been created for
           </p>
           <p className="text-white font-semibold text-lg mb-6">{form.email}</p>
 
           <div className="bg-white/[0.04] border border-white/[0.08] rounded-xl p-5 mb-6 text-left">
             <div className="flex items-start gap-3 mb-3">
-              <div className="w-7 h-7 rounded-full bg-brand-red/20 flex items-center justify-center flex-shrink-0 mt-0.5">
-                <span className="text-brand-red text-sm font-bold">1</span>
+              <div className="w-7 h-7 rounded-full bg-emerald-500/20 flex items-center justify-center flex-shrink-0 mt-0.5">
+                <span className="text-emerald-400 text-sm font-bold">1</span>
               </div>
-              <p className="text-gray-300 text-sm">Open your email inbox and find the message from <span className="text-white font-medium">Supabase Auth</span></p>
+              <p className="text-gray-300 text-sm">Log in with your <span className="text-white font-medium">email and password</span></p>
             </div>
             <div className="flex items-start gap-3 mb-3">
-              <div className="w-7 h-7 rounded-full bg-brand-red/20 flex items-center justify-center flex-shrink-0 mt-0.5">
-                <span className="text-brand-red text-sm font-bold">2</span>
+              <div className="w-7 h-7 rounded-full bg-emerald-500/20 flex items-center justify-center flex-shrink-0 mt-0.5">
+                <span className="text-emerald-400 text-sm font-bold">2</span>
               </div>
-              <p className="text-gray-300 text-sm">Click the <span className="text-white font-medium">confirmation link</span> in the email</p>
+              <p className="text-gray-300 text-sm">Complete your <span className="text-white font-medium">KYC verification</span> to unlock all features</p>
             </div>
             <div className="flex items-start gap-3">
-              <div className="w-7 h-7 rounded-full bg-brand-red/20 flex items-center justify-center flex-shrink-0 mt-0.5">
-                <span className="text-brand-red text-sm font-bold">3</span>
+              <div className="w-7 h-7 rounded-full bg-emerald-500/20 flex items-center justify-center flex-shrink-0 mt-0.5">
+                <span className="text-emerald-400 text-sm font-bold">3</span>
               </div>
-              <p className="text-gray-300 text-sm">Once verified, you&apos;ll be redirected to your <span className="text-white font-medium">investor dashboard</span></p>
+              <p className="text-gray-300 text-sm">A <span className="text-white font-medium">Relationship Manager</span> will be assigned to assist you</p>
             </div>
           </div>
-
-          <p className="text-gray-500 text-xs mb-6">
-            Didn&apos;t receive the email? Check your spam folder or wait a minute.
-          </p>
 
           <div className="flex flex-col gap-3">
             <Link href="/login" className="inline-flex items-center justify-center px-6 py-3 rounded-xl text-sm font-semibold text-white bg-brand-red hover:bg-red-700 transition-colors">

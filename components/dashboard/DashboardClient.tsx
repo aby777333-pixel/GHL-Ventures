@@ -515,21 +515,32 @@ export default function DashboardClient() {
     return {}
   })
 
-  // Initialize savedProfileData from user object on load (so data persists across refresh)
+  // Initialize/merge savedProfileData from user object on load
+  // Always merge user data so that DB updates (e.g., KYC approval adding nominee details) are reflected
   useEffect(() => {
-    if (user && Object.keys(savedProfileData).length === 0) {
-      const fromUser: Record<string, string> = {}
-      if (user.name) fromUser.full_name = user.name
-      if (user.phone) fromUser.phone = user.phone
-      if (user.city) fromUser.city = user.city
-      if ((user as any).dob) fromUser.dob = (user as any).dob
-      if ((user as any).occupation) fromUser.occupation = (user as any).occupation
-      if ((user as any).pan) fromUser.pan = (user as any).pan
-      if ((user as any).nominee_name) fromUser.nominee_name = (user as any).nominee_name
-      if ((user as any).nominee_relation) fromUser.nominee_relation = (user as any).nominee_relation
-      if ((user as any).nominee_pan) fromUser.nominee_pan = (user as any).nominee_pan
-      if ((user as any).nominee_share) fromUser.nominee_share = String((user as any).nominee_share || '')
-      if (Object.keys(fromUser).length > 0) setSavedProfileData(fromUser)
+    if (!user) return
+    const fromUser: Record<string, string> = {}
+    if (user.name) fromUser.full_name = user.name
+    if (user.phone) fromUser.phone = user.phone
+    if (user.city) fromUser.city = user.city
+    if ((user as any).dob) fromUser.dob = (user as any).dob
+    if ((user as any).occupation) fromUser.occupation = (user as any).occupation
+    if ((user as any).pan) fromUser.pan = (user as any).pan
+    if ((user as any).nominee_name) fromUser.nominee_name = (user as any).nominee_name
+    if ((user as any).nominee_relation) fromUser.nominee_relation = (user as any).nominee_relation
+    if ((user as any).nominee_pan) fromUser.nominee_pan = (user as any).nominee_pan
+    if ((user as any).nominee_share) fromUser.nominee_share = String((user as any).nominee_share || '')
+    if (Object.keys(fromUser).length > 0) {
+      setSavedProfileData(prev => {
+        // Merge: user data fills in any missing fields, but existing saved data takes priority
+        const merged = { ...fromUser, ...prev }
+        // However, for nominee fields, always prefer the latest DB data over stale localStorage
+        if ((user as any).nominee_name) merged.nominee_name = (user as any).nominee_name
+        if ((user as any).nominee_relation) merged.nominee_relation = (user as any).nominee_relation
+        if ((user as any).nominee_pan) merged.nominee_pan = (user as any).nominee_pan
+        if ((user as any).nominee_share) merged.nominee_share = String((user as any).nominee_share || '')
+        return merged
+      })
     }
   }, [user]) // eslint-disable-line react-hooks/exhaustive-deps
   // Persist savedProfileData to localStorage so it survives KYC uploads and re-renders

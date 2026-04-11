@@ -143,6 +143,8 @@ const UPLOAD_ROUTES: Record<string, RouteConfig> = {
   'client/kyc':            { bucket: BUCKETS.KYC,       folder: 'clients' },
   'client/support':        { bucket: BUCKETS.DOCUMENTS, folder: 'clients/support' },
   'client/profile':        { bucket: BUCKETS.AVATARS,   folder: 'clients' },
+  'client/transactions':   { bucket: BUCKETS.DOCUMENTS, folder: 'clients/transactions' },
+  'client/signed':         { bucket: BUCKETS.DOCUMENTS, folder: 'clients/signed' },
 
   // Investor portal routes
   'investor/documents':    { bucket: BUCKETS.DOCUMENTS, folder: 'investors' },
