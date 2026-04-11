@@ -13,7 +13,7 @@ import AdminBadge, { getKYCBadgeVariant, getAccountBadgeVariant } from '../share
 import AdminModal, { ModalButton } from '../shared/AdminModal'
 import AdminEmptyState from '../shared/AdminEmptyState'
 import AdminKPICard from '../shared/AdminKPICard'
-import { fetchClients, fetchKYCDocuments, approveKYCStep, rejectKYCStep, approveClientKYC, rejectClientKYC } from '@/lib/supabase/adminDataService'
+import { fetchClients, fetchKYCDocuments, fetchKYCByClient, fetchClientKYCDetails, approveKYCStep, rejectKYCStep, approveClientKYC, rejectClientKYC, deleteUserComplete } from '@/lib/supabase/adminDataService'
 import { getActiveRMs, assignRMToClient, type ActiveRM } from '@/lib/supabase/employeeService'
 import { formatINR, formatDate } from '@/lib/admin/adminHooks'
 import type { Client, KYCDocument, KYCStatus } from '@/lib/admin/adminTypes'
@@ -601,7 +601,7 @@ function KYCQueueTab({
         />
       </AdminGlass>
 
-      {/* Document Preview Modal */}
+      {/* Document Preview Modal — shows actual KYC data (Bug #10 fix) */}
       {previewDoc && (
         <AdminModal
           isOpen={true}
@@ -654,33 +654,79 @@ function KYCQueueTab({
               <div><span className="text-gray-500">Uploaded:</span> <span className="text-white ml-2">{formatDate(previewDoc.uploadDate)}</span></div>
             </div>
 
-            {/* File Preview */}
-            {previewDoc.fileUrl && (
-              <div className="border border-white/[0.08] rounded-xl overflow-hidden bg-black/30">
-                {previewDoc.fileName?.match(/\.(jpg|jpeg|png|gif|webp)$/i) || previewDoc.fileUrl?.match(/\.(jpg|jpeg|png|gif|webp)/i) ? (
-                  <img src={previewDoc.fileUrl} alt={previewDoc.fileName} className="w-full max-h-[500px] object-contain" />
-                ) : previewDoc.fileName?.match(/\.pdf$/i) || previewDoc.fileUrl?.match(/\.pdf/i) ? (
-                  <iframe src={previewDoc.fileUrl} className="w-full h-[500px]" title="Document Preview" />
-                ) : (
-                  <div className="p-8 text-center text-gray-400">
-                    <FileText className="w-12 h-12 mx-auto mb-3 opacity-40" />
-                    <p className="text-sm mb-3">Preview not available for this file type</p>
-                    <a href={previewDoc.fileUrl} target="_blank" rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-medium text-white bg-brand-red/20 border border-brand-red/30 rounded-lg hover:bg-brand-red/30 transition-colors">
-                      <ArrowUpRight className="w-3.5 h-3.5" /> Open in New Tab
-                    </a>
-                  </div>
-                )}
+            {/* Show actual KYC submitted data */}
+            {previewDoc.data && previewDoc.table !== 'nominees' && (
+              <div className="border border-white/[0.08] rounded-xl p-4 bg-black/20">
+                <h4 className="text-xs font-semibold text-gray-400 uppercase mb-3">Submitted Details</h4>
+                <div className="grid grid-cols-2 gap-2 text-sm">
+                  {Object.entries(previewDoc.data as Record<string, any>)
+                    .filter(([k]) => !['id', 'client_id', 'user_id', 'created_at', 'updated_at', 'reviewed_by', 'reviewed_at', 'admin_notes', 'status'].includes(k))
+                    .map(([key, val]) => {
+                      if (!val) return null
+                      const label = key.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())
+                      const isUrl = typeof val === 'string' && (val.startsWith('http') || val.startsWith('/'))
+                      return (
+                        <div key={key} className={key.includes('address') || key.includes('url') ? 'col-span-2' : ''}>
+                          <span className="text-gray-500 text-xs">{label}:</span>
+                          {isUrl ? (
+                            <a href={val} target="_blank" rel="noopener noreferrer" className="ml-2 text-brand-red text-xs hover:underline inline-flex items-center gap-1">
+                              <Eye className="w-3 h-3" /> View Document
+                            </a>
+                          ) : (
+                            <span className="text-white ml-2 text-xs">{String(val)}</span>
+                          )}
+                        </div>
+                      )
+                    })}
+                </div>
               </div>
             )}
 
-            {/* Open in new tab link */}
-            {previewDoc.fileUrl && (
-              <a href={previewDoc.fileUrl} target="_blank" rel="noopener noreferrer"
-                className="inline-flex items-center gap-1.5 text-xs text-brand-red hover:underline">
-                <ArrowUpRight className="w-3.5 h-3.5" /> Open file in new tab
-              </a>
+            {/* Show nominee data */}
+            {previewDoc.data && previewDoc.table === 'nominees' && Array.isArray(previewDoc.data) && (
+              <div className="border border-white/[0.08] rounded-xl p-4 bg-black/20">
+                <h4 className="text-xs font-semibold text-gray-400 uppercase mb-3">Nominee Details</h4>
+                <div className="space-y-3">
+                  {(previewDoc.data as any[]).map((n: any, i: number) => (
+                    <div key={n.id || i} className="grid grid-cols-2 gap-2 text-sm border-b border-white/5 pb-2 last:border-0">
+                      <div><span className="text-gray-500 text-xs">Name:</span> <span className="text-white ml-1 text-xs">{n.name}</span></div>
+                      <div><span className="text-gray-500 text-xs">DOB:</span> <span className="text-white ml-1 text-xs">{n.dob || '-'}</span></div>
+                      <div><span className="text-gray-500 text-xs">Phone:</span> <span className="text-white ml-1 text-xs">{n.phone || '-'}</span></div>
+                      <div><span className="text-gray-500 text-xs">Relationship:</span> <span className="text-white ml-1 text-xs">{n.relationship || '-'}</span></div>
+                      <div><span className="text-gray-500 text-xs">Percentage:</span> <span className="text-white ml-1 text-xs">{n.percentage}%</span></div>
+                      {n.proof_url && <div><a href={n.proof_url} target="_blank" rel="noopener noreferrer" className="text-brand-red text-xs hover:underline inline-flex items-center gap-1"><Eye className="w-3 h-3" /> View Proof</a></div>}
+                    </div>
+                  ))}
+                </div>
+              </div>
             )}
+
+            {/* File Preview (for doc URLs in data) */}
+            {previewDoc.data && !Array.isArray(previewDoc.data) && (() => {
+              const docUrls = Object.entries(previewDoc.data as Record<string, any>).filter(([k, v]) => k.endsWith('_url') && v && typeof v === 'string' && v.startsWith('http'))
+              if (docUrls.length === 0) return null
+              return (
+                <div className="space-y-2">
+                  <h4 className="text-xs font-semibold text-gray-400 uppercase">Uploaded Documents</h4>
+                  {docUrls.map(([key, url]) => {
+                    const label = key.replace(/_url$/, '').replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())
+                    return (
+                      <div key={key} className="border border-white/[0.08] rounded-lg overflow-hidden bg-black/30">
+                        <div className="flex items-center justify-between px-3 py-2 border-b border-white/5">
+                          <span className="text-xs text-gray-400">{label}</span>
+                          <a href={url as string} target="_blank" rel="noopener noreferrer" className="text-xs text-brand-red hover:underline inline-flex items-center gap-1"><ArrowUpRight className="w-3 h-3" /> Open</a>
+                        </div>
+                        {(url as string).match(/\.(jpg|jpeg|png|gif|webp)/i) ? (
+                          <img src={url as string} alt={label} className="w-full max-h-[300px] object-contain" />
+                        ) : (url as string).match(/\.pdf/i) ? (
+                          <iframe src={url as string} className="w-full h-[300px]" title={label} />
+                        ) : null}
+                      </div>
+                    )
+                  })}
+                </div>
+              )
+            })()}
           </div>
         </AdminModal>
       )}

@@ -8,6 +8,7 @@ import { BRAND } from '@/lib/constants'
 import { Eye, EyeOff, UserPlus, ArrowLeft, Shield, CheckCircle, AlertTriangle, Loader2, Mail } from 'lucide-react'
 import Logo from '@/components/Logo'
 import { supabase, isSupabaseConfigured } from '@/lib/supabase/client'
+import { signupClient } from '@/lib/supabase/clientAuthService'
 import { submitContactForm } from '@/lib/supabase/reportsDataService'
 import { AUTH_ERRORS, mapSupabaseError } from '@/lib/auth/errorMessages'
 
@@ -84,7 +85,7 @@ function RegisterPageInner() {
     if (form.password.length < 8) { setError('Password must be at least 8 characters long.'); return }
     if (!/[a-zA-Z]/.test(form.password)) { setError('Password must contain at least one letter (a-z, A-Z).'); return }
     if (!/[0-9]/.test(form.password)) { setError('Password must contain at least one number (0-9).'); return }
-    if (!/[!@#$%^&*(),.?":{}|<>]/.test(form.password)) { setError('Password must contain at least one special character (!@#$%...).'); return }
+    if (!/[^a-zA-Z0-9\s]/.test(form.password)) { setError('Password must contain at least one special character (!@#$%...).'); return }
     const mobileDigits = form.mobile.replace(/\D/g, '')
     if (mobileDigits.length !== 10) {
       setError('Please enter a valid 10-digit mobile number.')
@@ -98,6 +99,7 @@ function RegisterPageInner() {
 
     setLoading(true)
     try {
+      // Use signupClient which creates auth user + profile + client rows
       const { data, error: signupError } = await supabase.auth.signUp({
         email: form.email,
         password: form.password,
@@ -123,11 +125,24 @@ function RegisterPageInner() {
         return
       }
 
-      // Store referral code in the clients table (non-blocking)
-      if (form.referral && data?.user?.id) {
+      // Create profile and client rows so user data persists (non-blocking)
+      if (data?.user?.id) {
         try {
-          await (supabase as any).from('clients').update({ referred_by: form.referral }).eq('user_id', data.user.id)
-        } catch { /* non-blocking */ }
+          await supabase.from('profiles').upsert({
+            id: data.user.id,
+            full_name: form.name,
+            phone: mobileDigits,
+            role: 'client',
+          } as any, { onConflict: 'id' })
+          await supabase.from('clients').upsert({
+            user_id: data.user.id,
+            full_name: form.name,
+            email: form.email,
+            phone: mobileDigits,
+            acquisition_source: 'website',
+            referred_by: form.referral || null,
+          } as any, { onConflict: 'user_id' })
+        } catch { /* non-blocking — auto-repair on login will handle */ }
       }
 
       // Save as lead (non-blocking)
@@ -336,8 +351,8 @@ function RegisterPageInner() {
                   {/[0-9]/.test(form.password) ? <CheckCircle className="w-3 h-3" /> : <span className="w-3 h-3 rounded-full border border-gray-300 inline-block" />}
                   At least one number (0-9)
                 </p>
-                <p className={`text-xs flex items-center gap-1.5 ${/[!@#$%^&*(),.?":{}|<>]/.test(form.password) ? 'text-green-600' : 'text-gray-400'}`}>
-                  {/[!@#$%^&*(),.?":{}|<>]/.test(form.password) ? <CheckCircle className="w-3 h-3" /> : <span className="w-3 h-3 rounded-full border border-gray-300 inline-block" />}
+                <p className={`text-xs flex items-center gap-1.5 ${/[^a-zA-Z0-9\s]/.test(form.password) ? 'text-green-600' : 'text-gray-400'}`}>
+                  {/[^a-zA-Z0-9\s]/.test(form.password) ? <CheckCircle className="w-3 h-3" /> : <span className="w-3 h-3 rounded-full border border-gray-300 inline-block" />}
                   At least one special character (!@#$%...)
                 </p>
               </div>

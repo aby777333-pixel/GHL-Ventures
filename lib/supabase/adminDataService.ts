@@ -149,57 +149,128 @@ export async function fetchClients() {
 }
 
 export async function fetchKYCDocuments() {
-  // Fetch structured KYC submissions from new tables + client info
+  // Fetch structured KYC submissions — batched queries for performance (Bug #11 fix)
   try {
     const { data: clients } = await sb.from('clients').select('id, full_name, kyc_status, kyc_step').in('kyc_status', ['submitted', 'pending', 'rejected'])
     if (!clients || clients.length === 0) return []
+    const clientIds = clients.map((c: any) => c.id)
+    const clientMap = new Map(clients.map((c: any) => [c.id, c.full_name]))
+
+    // Batch fetch all KYC data in parallel instead of per-client loops
+    const [basicRes, identityRes, bankRes, dematRes, nomineesRes] = await Promise.all([
+      sb.from('kyc_basic_details').select('*').in('client_id', clientIds),
+      sb.from('kyc_identity_details').select('*').in('client_id', clientIds),
+      sb.from('kyc_bank_details').select('*').in('client_id', clientIds),
+      sb.from('kyc_demat_details').select('*').in('client_id', clientIds),
+      sb.from('nominees').select('*').in('client_id', clientIds).eq('status', 'active'),
+    ])
+
     const kycItems: any[] = []
-    for (const c of clients) {
-      const tables = [
-        { table: 'kyc_basic_details', type: 'Basic Details' },
-        { table: 'kyc_identity_details', type: 'Identity Details' },
-        { table: 'kyc_bank_details', type: 'Bank Details' },
-        { table: 'kyc_demat_details', type: 'Demat Account' },
-      ]
-      for (const t of tables) {
-        const { data: row } = await sb.from(t.table).select('*').eq('client_id', c.id).maybeSingle()
-        if (row) {
-          kycItems.push({
-            id: row.id,
-            clientId: c.id,
-            clientName: c.full_name,
-            type: t.type,
-            table: t.table,
-            fileName: t.type,
-            uploadDate: row.created_at,
-            status: row.status || 'pending',
-            reviewer: row.reviewed_by || null,
-            notes: row.admin_notes || '',
-          })
-        }
-      }
-      // Nominees count
-      const { data: nominees } = await sb.from('nominees').select('id').eq('client_id', c.id).eq('status', 'active')
-      if (nominees && nominees.length > 0) {
+    const tableData: { table: string; type: string; rows: any[] }[] = [
+      { table: 'kyc_basic_details', type: 'Basic Details', rows: basicRes.data || [] },
+      { table: 'kyc_identity_details', type: 'Identity Details', rows: identityRes.data || [] },
+      { table: 'kyc_bank_details', type: 'Bank Details', rows: bankRes.data || [] },
+      { table: 'kyc_demat_details', type: 'Demat Account', rows: dematRes.data || [] },
+    ]
+
+    for (const t of tableData) {
+      for (const row of t.rows) {
         kycItems.push({
-          id: `nominee-${c.id}`,
-          clientId: c.id,
-          clientName: c.full_name,
-          type: 'Nominee Details',
-          table: 'nominees',
-          fileName: `${nominees.length} nominee(s)`,
-          uploadDate: '',
-          status: 'submitted',
-          reviewer: null,
-          notes: '',
+          id: row.id,
+          clientId: row.client_id,
+          clientName: clientMap.get(row.client_id) || 'Unknown',
+          type: t.type,
+          table: t.table,
+          fileName: t.type,
+          uploadDate: row.created_at,
+          status: row.status || 'pending',
+          reviewer: row.reviewed_by || null,
+          notes: row.admin_notes || '',
+          // Include full data for detail view (Bug #10 fix)
+          data: row,
         })
       }
+    }
+
+    // Group nominees by client
+    const nomineesByClient: Record<string, any[]> = {}
+    for (const n of (nomineesRes.data || [])) {
+      if (!nomineesByClient[n.client_id]) nomineesByClient[n.client_id] = []
+      nomineesByClient[n.client_id].push(n)
+    }
+    for (const cid of Object.keys(nomineesByClient)) {
+      const nominees = nomineesByClient[cid]
+      kycItems.push({
+        id: `nominee-${cid}`,
+        clientId: cid,
+        clientName: clientMap.get(cid) || 'Unknown',
+        type: 'Nominee Details',
+        table: 'nominees',
+        fileName: `${nominees.length} nominee(s)`,
+        uploadDate: nominees[0]?.created_at || '',
+        status: 'submitted',
+        reviewer: null,
+        notes: '',
+        data: nominees,
+      })
     }
     return kycItems
   } catch (err) {
     console.warn('[admin] fetchKYCDocuments error:', err)
     return []
   }
+}
+
+// Fetch KYC documents grouped by client for consolidated view (Bug #7 fix)
+export async function fetchKYCByClient() {
+  try {
+    const docs = await fetchKYCDocuments()
+    const grouped: Record<string, { clientId: string; clientName: string; docs: any[]; overallStatus: string }> = {}
+    for (const doc of docs) {
+      if (!grouped[doc.clientId]) {
+        grouped[doc.clientId] = { clientId: doc.clientId, clientName: doc.clientName, docs: [], overallStatus: 'pending' }
+      }
+      grouped[doc.clientId].docs.push(doc)
+    }
+    // Determine overall status per client
+    for (const cid of Object.keys(grouped)) {
+      const statuses = grouped[cid].docs.map(d => d.status)
+      if (statuses.every(s => s === 'approved')) grouped[cid].overallStatus = 'approved'
+      else if (statuses.some(s => s === 'rejected')) grouped[cid].overallStatus = 'rejected'
+      else if (statuses.some(s => s === 'submitted')) grouped[cid].overallStatus = 'submitted'
+      else grouped[cid].overallStatus = 'pending'
+    }
+    return Object.values(grouped)
+  } catch { return [] }
+}
+
+// Fetch detailed KYC data for a specific client (Bug #10 fix)
+export async function fetchClientKYCDetails(clientId: string) {
+  try {
+    const [basic, identity, bank, demat, nominees] = await Promise.all([
+      sb.from('kyc_basic_details').select('*').eq('client_id', clientId).maybeSingle(),
+      sb.from('kyc_identity_details').select('*').eq('client_id', clientId).maybeSingle(),
+      sb.from('kyc_bank_details').select('*').eq('client_id', clientId).maybeSingle(),
+      sb.from('kyc_demat_details').select('*').eq('client_id', clientId).maybeSingle(),
+      sb.from('nominees').select('*').eq('client_id', clientId).eq('status', 'active'),
+    ])
+    return {
+      basic: basic.data || null,
+      identity: identity.data || null,
+      bank: bank.data || null,
+      demat: demat.data || null,
+      nominees: nominees.data || [],
+    }
+  } catch { return null }
+}
+
+// Delete user completely (auth + all data) — Bug #9 fix
+export async function deleteUserComplete(userId: string) {
+  try {
+    const { data, error } = await sb.rpc('delete_user_complete', { target_user_id: userId })
+    if (error) { console.warn('[admin] deleteUserComplete error:', error.message); return false }
+    return data === true
+  } catch { return false }
 }
 
 // ── KYC Approval/Rejection ────────────────────────────────

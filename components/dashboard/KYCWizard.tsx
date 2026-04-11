@@ -161,6 +161,7 @@ export default function KYCWizard({ clientId, userId, userName, userEmail, userP
       if (!passportDocUrl) { onToast('Please upload your Passport document', 'info'); return }
     }
     if (!identity.name_on_document || !identity.father_name || !identity.dob) { onToast('Please fill all required fields', 'info'); return }
+    if (!isValidDOB(identity.dob)) { onToast('Please enter a valid date of birth (year must be 4 digits between 1900 and current year)', 'info'); return }
     if (!identity.address) { onToast('Address is required', 'info'); return }
     if (!identity.city || !identity.state || !identity.pincode) { onToast('City, State, and Pincode are required', 'info'); return }
     setSaving(true)
@@ -170,14 +171,48 @@ export default function KYCWizard({ clientId, userId, userName, userEmail, userP
     else onToast('Failed to save', 'info')
   }
 
+  // Helper: validate IFSC code via Razorpay API
+  const verifyIFSC = async (ifsc: string): Promise<{ valid: boolean; bankName?: string; branchName?: string }> => {
+    try {
+      const res = await fetch(`https://ifsc.razorpay.com/${ifsc}`)
+      if (!res.ok) return { valid: false }
+      const data = await res.json()
+      return { valid: true, bankName: data.BANK || '', branchName: data.BRANCH || '' }
+    } catch { return { valid: false } }
+  }
+
+  // Helper: validate date year is 4 digits and reasonable
+  const isValidDOB = (dateStr: string): boolean => {
+    if (!dateStr) return false
+    const parts = dateStr.split('-')
+    if (parts.length !== 3) return false
+    const year = parseInt(parts[0], 10)
+    if (isNaN(year) || year < 1900 || year > new Date().getFullYear()) return false
+    return true
+  }
+
+  // Helper: letters-only validation (allows spaces)
+  const lettersOnly = (val: string) => val.replace(/[^a-zA-Z\s.]/g, '')
+
   const saveBank = async () => {
     if (!bank.account_number || !bank.account_holder_name || !bank.bank_name) { onToast('Please fill all required fields', 'info'); return }
+    // Validate letters-only fields
+    if (!/^[a-zA-Z\s.]+$/.test(bank.account_holder_name)) { onToast('Account holder name should contain only letters', 'info'); return }
+    if (!/^[a-zA-Z\s.]+$/.test(bank.bank_name)) { onToast('Bank name should contain only letters', 'info'); return }
+    if (bank.branch_name && !/^[a-zA-Z\s.,-]+$/.test(bank.branch_name)) { onToast('Branch name should contain only letters', 'info'); return }
     // IFSC / SWIFT validation based on resident type
     const isIndianBank = basic.resident_type === 'indian' || basicData?.resident_type === 'indian'
     if (isIndianBank) {
       if (!bank.ifsc_code || bank.ifsc_code.length !== 11) { onToast('IFSC code is required for Indian residents (11 characters)', 'info'); return }
       const ifscRegex = /^[A-Z]{4}0[A-Z0-9]{6}$/
       if (!ifscRegex.test(bank.ifsc_code.toUpperCase())) { onToast('Invalid IFSC code format. Expected: 4 letters, 0, then 6 characters (e.g., SBIN0001234)', 'info'); return }
+      // Verify IFSC code exists via Razorpay API
+      onToast('Verifying IFSC code...', 'info')
+      const ifscResult = await verifyIFSC(bank.ifsc_code.toUpperCase())
+      if (!ifscResult.valid) { onToast('IFSC code not found. Please check and re-enter a valid IFSC code.', 'info'); return }
+      // Auto-fill bank name and branch if API returned data
+      if (ifscResult.bankName && !bank.bank_name) setBank(b => ({ ...b, bank_name: ifscResult.bankName! }))
+      if (ifscResult.branchName && !bank.branch_name) setBank(b => ({ ...b, branch_name: ifscResult.branchName! }))
     } else {
       if (!bank.swift_iban_code) { onToast('SWIFT/IBAN code is required for NRI/Foreign residents', 'info'); return }
     }
@@ -205,6 +240,7 @@ export default function KYCWizard({ clientId, userId, userName, userEmail, userP
   const saveNominee = async () => {
     if (!nomineeForm.name || !nomineeForm.phone || !nomineeForm.relationship || !nomineeForm.percentage) { onToast('Fill all nominee fields', 'info'); return }
     if (!nomineeForm.dob) { onToast('Nominee date of birth is required', 'info'); return }
+    if (!isValidDOB(nomineeForm.dob)) { onToast('Please enter a valid nominee date of birth (year must be 4 digits between 1900 and current year)', 'info'); return }
     // Validate nominee phone: must be 10 digits (Indian mobile)
     const phoneDigits = nomineeForm.phone.replace(/\D/g, '')
     if (phoneDigits.length !== 10) { onToast('Nominee phone must be a valid 10-digit mobile number', 'info'); return }
@@ -366,7 +402,7 @@ export default function KYCWizard({ clientId, userId, userName, userEmail, userP
                   </>
                 )}
                 <div><label className={labelCls}>Father Name *</label><input className={inputCls} value={identity.father_name} onChange={e => setIdentity({ ...identity, father_name: e.target.value })} /></div>
-                <div><label className={labelCls}>DOB *</label><input className={inputCls} type="date" value={identity.dob} onChange={e => setIdentity({ ...identity, dob: e.target.value })} /></div>
+                <div><label className={labelCls}>DOB *</label><input className={inputCls} type="date" value={identity.dob} max={new Date().toISOString().split('T')[0]} min="1900-01-01" onChange={e => setIdentity({ ...identity, dob: e.target.value })} />{identity.dob && !isValidDOB(identity.dob) && <p className="text-xs text-amber-500 mt-1">Year must be 4 digits (1900-{new Date().getFullYear()})</p>}</div>
                 <div className="md:col-span-2"><label className={labelCls}>Address *</label><textarea className={inputCls} rows={2} value={identity.address} onChange={e => setIdentity({ ...identity, address: e.target.value })} /></div>
                 <div className="md:col-span-2"><label className={labelCls}>Courier Address (Current Address) *</label><textarea className={inputCls} rows={2} value={identity.courier_address} onChange={e => setIdentity({ ...identity, courier_address: e.target.value })} /></div>
                 <div><label className={labelCls}>Country *</label><input className={inputCls} value={identity.country} onChange={e => setIdentity({ ...identity, country: e.target.value })} /></div>
@@ -402,9 +438,9 @@ export default function KYCWizard({ clientId, userId, userName, userEmail, userP
                 <div><label className={labelCls}>Account Number *</label><input className={inputCls} value={bank.account_number} onChange={e => setBank({ ...bank, account_number: e.target.value.replace(/\D/g, '') })} placeholder="Enter account number" maxLength={18} /></div>
                 <div><label className={labelCls}>IFSC Code {(basic.resident_type === 'indian' || basicData?.resident_type === 'indian') ? '*' : ''}</label><input className={inputCls} value={bank.ifsc_code} onChange={e => setBank({ ...bank, ifsc_code: e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '') })} placeholder="e.g. SBIN0001234" maxLength={11} />{bank.ifsc_code && /^[A-Z]{4}0[A-Z0-9]{6}$/.test(bank.ifsc_code) && <p className={`text-xs mt-1 ${isDark ? 'text-emerald-400' : 'text-emerald-600'}`}>Valid IFSC format</p>}{bank.ifsc_code && bank.ifsc_code.length > 0 && !/^[A-Z]{4}0[A-Z0-9]{6}$/.test(bank.ifsc_code) && <p className={`text-xs mt-1 ${isDark ? 'text-amber-400' : 'text-amber-600'}`}>IFSC: 4 letters + 0 + 6 chars (e.g. SBIN0001234)</p>}</div>
                 <div><label className={labelCls}>SWIFT/IBAN Code {(basic.resident_type !== 'indian' && basicData?.resident_type !== 'indian') ? '*' : ''}</label><input className={inputCls} value={bank.swift_iban_code} onChange={e => setBank({ ...bank, swift_iban_code: e.target.value.toUpperCase() })} placeholder={(basic.resident_type === 'indian' || basicData?.resident_type === 'indian') ? 'Optional for Indian residents' : 'Required for NRI/Foreign'} /></div>
-                <div><label className={labelCls}>Account Holder Name *</label><input className={inputCls} value={bank.account_holder_name} onChange={e => setBank({ ...bank, account_holder_name: e.target.value })} /></div>
-                <div><label className={labelCls}>Bank Name *</label><input className={inputCls} value={bank.bank_name} onChange={e => setBank({ ...bank, bank_name: e.target.value })} /></div>
-                <div><label className={labelCls}>Branch Name</label><input className={inputCls} value={bank.branch_name} onChange={e => setBank({ ...bank, branch_name: e.target.value })} placeholder="Branch name (auto-filled from IFSC)" /></div>
+                <div><label className={labelCls}>Account Holder Name *</label><input className={inputCls} value={bank.account_holder_name} onChange={e => setBank({ ...bank, account_holder_name: lettersOnly(e.target.value) })} />{bank.account_holder_name && !/^[a-zA-Z\s.]+$/.test(bank.account_holder_name) && <p className="text-xs text-amber-500 mt-1">Only letters allowed</p>}</div>
+                <div><label className={labelCls}>Bank Name *</label><input className={inputCls} value={bank.bank_name} onChange={e => setBank({ ...bank, bank_name: lettersOnly(e.target.value) })} />{bank.bank_name && !/^[a-zA-Z\s.]+$/.test(bank.bank_name) && <p className="text-xs text-amber-500 mt-1">Only letters allowed</p>}</div>
+                <div><label className={labelCls}>Branch Name</label><input className={inputCls} value={bank.branch_name} onChange={e => setBank({ ...bank, branch_name: e.target.value.replace(/[^a-zA-Z\s.,-]/g, '') })} placeholder="Branch name (auto-filled from IFSC)" /></div>
                 {renderFileUpload('Upload Document (Bank Statement/Cancelled Cheque/Passbook)', bankDocUrl, setBankDocUrl)}
               </div>
               <div className="flex justify-between mt-6">
@@ -486,7 +522,7 @@ export default function KYCWizard({ clientId, userId, userName, userEmail, userP
                   <h4 className={`font-semibold mb-4 ${isDark ? 'text-white' : 'text-gray-900'}`}>{editingNomineeId ? 'Edit Nominee' : 'Add Nominee'}</h4>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div><label className={labelCls}>Nominee Name *</label><input className={inputCls} value={nomineeForm.name} onChange={e => setNomineeForm({ ...nomineeForm, name: e.target.value })} /></div>
-                    <div><label className={labelCls}>Nominee DOB *</label><input className={inputCls} type="date" value={nomineeForm.dob} onChange={e => setNomineeForm({ ...nomineeForm, dob: e.target.value })} /></div>
+                    <div><label className={labelCls}>Nominee DOB *</label><input className={inputCls} type="date" value={nomineeForm.dob} max={new Date().toISOString().split('T')[0]} min="1900-01-01" onChange={e => setNomineeForm({ ...nomineeForm, dob: e.target.value })} />{nomineeForm.dob && !isValidDOB(nomineeForm.dob) && <p className="text-xs text-amber-500 mt-1">Year must be 4 digits (1900-{new Date().getFullYear()})</p>}</div>
                     <div><label className={labelCls}>Nominee Phone *</label><input className={inputCls} value={nomineeForm.phone} onChange={e => setNomineeForm({ ...nomineeForm, phone: e.target.value })} placeholder="10-digit mobile number" maxLength={10} />
                       {nomineeForm.phone && nomineeForm.phone.replace(/\D/g, '').length !== 10 && <p className="text-xs text-red-500 mt-1">Must be a valid 10-digit mobile number</p>}
                     </div>
