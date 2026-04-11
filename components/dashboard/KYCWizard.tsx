@@ -203,16 +203,20 @@ export default function KYCWizard({ clientId, userId, userName, userEmail, userP
     // IFSC / SWIFT validation based on resident type
     const isIndianBank = basic.resident_type === 'indian' || basicData?.resident_type === 'indian'
     if (isIndianBank) {
-      if (!bank.ifsc_code || bank.ifsc_code.length !== 11) { onToast('IFSC code is required for Indian residents (11 characters)', 'info'); return }
-      const ifscRegex = /^[A-Z]{4}0[A-Z0-9]{6}$/
-      if (!ifscRegex.test(bank.ifsc_code.toUpperCase())) { onToast('Invalid IFSC code format. Expected: 4 letters, 0, then 6 characters (e.g., SBIN0001234)', 'info'); return }
+      if (!bank.ifsc_code) { onToast('IFSC code is required for Indian residents', 'info'); return }
+      // IFSC: 4 letters followed by 7 alphanumeric characters (total 11)
+      const ifscClean = bank.ifsc_code.toUpperCase().replace(/\s/g, '')
+      if (ifscClean.length !== 11) { onToast('IFSC code must be exactly 11 characters', 'info'); return }
+      if (!/^[A-Z]{4}[A-Z0-9]{7}$/.test(ifscClean)) { onToast('Invalid IFSC format. Must start with 4 letters followed by 7 alphanumeric characters.', 'info'); return }
       // Verify IFSC code exists via Razorpay API
+      setSaving(true)
       onToast('Verifying IFSC code...', 'info')
-      const ifscResult = await verifyIFSC(bank.ifsc_code.toUpperCase())
-      if (!ifscResult.valid) { onToast('IFSC code not found. Please check and re-enter a valid IFSC code.', 'info'); return }
-      // Auto-fill bank name and branch if API returned data
-      if (ifscResult.bankName && !bank.bank_name) setBank(b => ({ ...b, bank_name: ifscResult.bankName! }))
-      if (ifscResult.branchName && !bank.branch_name) setBank(b => ({ ...b, branch_name: ifscResult.branchName! }))
+      const ifscResult = await verifyIFSC(ifscClean)
+      if (!ifscResult.valid) { setSaving(false); onToast('IFSC code not found in RBI database. Please check and re-enter a valid IFSC code.', 'info'); return }
+      // Auto-fill bank name and branch from verified data
+      if (ifscResult.bankName) setBank(b => ({ ...b, bank_name: lettersOnly(ifscResult.bankName!), ifsc_code: ifscClean }))
+      if (ifscResult.branchName) setBank(b => ({ ...b, branch_name: ifscResult.branchName!.replace(/[^a-zA-Z\s.,-]/g, '') }))
+      setSaving(false)
     } else {
       if (!bank.swift_iban_code) { onToast('SWIFT/IBAN code is required for NRI/Foreign residents', 'info'); return }
     }
@@ -436,7 +440,7 @@ export default function KYCWizard({ clientId, userId, userName, userEmail, userP
                   </select>
                 </div>
                 <div><label className={labelCls}>Account Number *</label><input className={inputCls} value={bank.account_number} onChange={e => setBank({ ...bank, account_number: e.target.value.replace(/\D/g, '') })} placeholder="Enter account number" maxLength={18} /></div>
-                <div><label className={labelCls}>IFSC Code {(basic.resident_type === 'indian' || basicData?.resident_type === 'indian') ? '*' : ''}</label><input className={inputCls} value={bank.ifsc_code} onChange={e => setBank({ ...bank, ifsc_code: e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '') })} placeholder="e.g. SBIN0001234" maxLength={11} />{bank.ifsc_code && /^[A-Z]{4}0[A-Z0-9]{6}$/.test(bank.ifsc_code) && <p className={`text-xs mt-1 ${isDark ? 'text-emerald-400' : 'text-emerald-600'}`}>Valid IFSC format</p>}{bank.ifsc_code && bank.ifsc_code.length > 0 && !/^[A-Z]{4}0[A-Z0-9]{6}$/.test(bank.ifsc_code) && <p className={`text-xs mt-1 ${isDark ? 'text-amber-400' : 'text-amber-600'}`}>IFSC: 4 letters + 0 + 6 chars (e.g. SBIN0001234)</p>}</div>
+                <div><label className={labelCls}>IFSC Code {(basic.resident_type === 'indian' || basicData?.resident_type === 'indian') ? '*' : ''}</label><input className={inputCls} value={bank.ifsc_code} onChange={e => setBank({ ...bank, ifsc_code: e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '') })} placeholder="e.g. SBIN0001234" maxLength={11} />{bank.ifsc_code && bank.ifsc_code.length === 11 && /^[A-Z]{4}[A-Z0-9]{7}$/.test(bank.ifsc_code) && <p className={`text-xs mt-1 ${isDark ? 'text-emerald-400' : 'text-emerald-600'}`}>✓ Valid IFSC format (will be verified on save)</p>}{bank.ifsc_code && bank.ifsc_code.length > 0 && (bank.ifsc_code.length !== 11 || !/^[A-Z]{4}[A-Z0-9]{7}$/.test(bank.ifsc_code)) && <p className={`text-xs mt-1 ${isDark ? 'text-amber-400' : 'text-amber-600'}`}>IFSC must be 11 characters: 4 letters + 7 alphanumeric</p>}</div>
                 <div><label className={labelCls}>SWIFT/IBAN Code {(basic.resident_type !== 'indian' && basicData?.resident_type !== 'indian') ? '*' : ''}</label><input className={inputCls} value={bank.swift_iban_code} onChange={e => setBank({ ...bank, swift_iban_code: e.target.value.toUpperCase() })} placeholder={(basic.resident_type === 'indian' || basicData?.resident_type === 'indian') ? 'Optional for Indian residents' : 'Required for NRI/Foreign'} /></div>
                 <div><label className={labelCls}>Account Holder Name *</label><input className={inputCls} value={bank.account_holder_name} onChange={e => setBank({ ...bank, account_holder_name: lettersOnly(e.target.value) })} />{bank.account_holder_name && !/^[a-zA-Z\s.]+$/.test(bank.account_holder_name) && <p className="text-xs text-amber-500 mt-1">Only letters allowed</p>}</div>
                 <div><label className={labelCls}>Bank Name *</label><input className={inputCls} value={bank.bank_name} onChange={e => setBank({ ...bank, bank_name: lettersOnly(e.target.value) })} />{bank.bank_name && !/^[a-zA-Z\s.]+$/.test(bank.bank_name) && <p className="text-xs text-amber-500 mt-1">Only letters allowed</p>}</div>

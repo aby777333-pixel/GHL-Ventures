@@ -122,13 +122,7 @@ export async function loginClient(email: string, password: string): Promise<Logi
       if (msg.includes('email not confirmed') || msg.includes('email_not_confirmed')) {
         return { session: null, error: 'email_not_confirmed', message: 'Please verify your email address. Check your inbox for the confirmation link.' }
       }
-      // Check if email exists in clients table to distinguish "not registered" vs "wrong password"
-      try {
-        const { data: clientRow } = await (supabase.from('clients') as any).select('user_id').eq('email', email).maybeSingle()
-        if (!clientRow?.user_id) {
-          return { session: null, error: 'email_not_registered', message: 'Email is not registered. Use the registered email to sign in.' }
-        }
-      } catch { /* fall through to generic invalid_credentials */ }
+      // For invalid credentials: just show generic error (don't leak if email exists)
       return { session: null, error: 'invalid_credentials', message: 'Incorrect email or password. Please try again.' }
     }
     if (!data.user) {

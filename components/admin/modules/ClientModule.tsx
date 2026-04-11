@@ -46,15 +46,17 @@ export default function ClientModule({ subTab, navigate, showToast }: ClientModu
 
   const [clients, setClients] = useState<any[]>([])
   const [kycDocs, setKycDocs] = useState<any[]>([])
+  const [kycByClient, setKycByClient] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [activeRMs, setActiveRMs] = useState<ActiveRM[]>([])
   const [assigningRM, setAssigningRM] = useState(false)
 
   const loadData = useCallback(async () => {
     setLoading(true)
-    const [c, k, rms] = await Promise.all([fetchClients(), fetchKYCDocuments(), getActiveRMs()])
+    const [c, k, byClient, rms] = await Promise.all([fetchClients(), fetchKYCDocuments(), fetchKYCByClient(), getActiveRMs()])
     setClients(c)
     setKycDocs(k)
+    setKycByClient(byClient)
     setActiveRMs(rms)
     setLoading(false)
   }, [])
@@ -147,6 +149,7 @@ export default function ClientModule({ subTab, navigate, showToast }: ClientModu
         {activeTab === 'kyc-queue' && (
           <KYCQueueTab
             kycDocs={kycDocs}
+            kycByClient={kycByClient}
             filter={kycFilter}
             setFilter={setKycFilter}
             showToast={showToast}
@@ -433,106 +436,117 @@ function ClientListTab({
 // ── KYC Queue Tab ───────────────────────────────────────────────
 function KYCQueueTab({
   kycDocs,
+  kycByClient,
   filter,
   setFilter,
   showToast,
   onRefresh,
 }: {
   kycDocs: any[]
+  kycByClient: any[]
   filter: KYCStatus | 'all'
   setFilter: (f: KYCStatus | 'all') => void
   showToast: (msg: string, type?: 'success' | 'error' | 'info' | 'warning') => void
   onRefresh?: () => void
 }) {
-  const [actionLoading, setActionLoading] = useState<string | null>(null)
   const [previewDoc, setPreviewDoc] = useState<any | null>(null)
+  const [selectedClientKYC, setSelectedClientKYC] = useState<any | null>(null)
+  const [clientKYCDetails, setClientKYCDetails] = useState<any | null>(null)
+  const [loadingDetails, setLoadingDetails] = useState(false)
 
-  const filteredDocs = useMemo(() => {
-    if (filter === 'all') return kycDocs
-    return kycDocs.filter(d => d.status === filter)
-  }, [filter, kycDocs])
+  // View detailed KYC for a client
+  const handleViewClient = async (clientGroup: any) => {
+    setSelectedClientKYC(clientGroup)
+    setLoadingDetails(true)
+    const details = await fetchClientKYCDetails(clientGroup.clientId)
+    setClientKYCDetails(details)
+    setLoadingDetails(false)
+  }
+
+  // Filter consolidated client rows
+  const filteredClients = useMemo(() => {
+    if (filter === 'all') return kycByClient
+    if (filter === 'pending') return kycByClient.filter(g => g.overallStatus === 'pending' || g.overallStatus === 'submitted')
+    return kycByClient.filter(g => g.overallStatus === filter)
+  }, [filter, kycByClient])
 
   const statusCounts = useMemo(() => {
-    const counts: Record<string, number> = { all: kycDocs.length }
-    kycDocs.forEach(d => { counts[d.status] = (counts[d.status] || 0) + 1 })
+    const counts: Record<string, number> = { all: kycByClient.length }
+    kycByClient.forEach(g => { counts[g.overallStatus] = (counts[g.overallStatus] || 0) + 1 })
     return counts
-  }, [kycDocs])
+  }, [kycByClient])
 
-  const columns: Column<KYCDocument>[] = [
+  // Consolidated per-client columns (Bug #8 fix)
+  const columns: Column<any>[] = [
     {
       key: 'clientName',
       label: 'Client',
       render: (row) => (
         <div>
           <p className="text-sm font-medium text-white">{row.clientName}</p>
-          <p className="text-[11px] text-gray-500">{row.clientId}</p>
+          <p className="text-[11px] text-gray-500 font-mono">{row.clientId?.slice(0, 8)}</p>
         </div>
       ),
     },
-    { key: 'type', label: 'Document Type' },
-    { key: 'fileName', label: 'File', render: (row) => (
-      <span className="flex items-center gap-1.5 text-xs text-gray-400">
-        <FileText className="w-3.5 h-3.5" />{(row as any).fileName}
-      </span>
-    )},
     {
-      key: 'uploadDate',
-      label: 'Uploaded',
-      render: (row) => <span className="text-xs text-gray-400">{formatDate(row.uploadDate)}</span>,
-    },
-    {
-      key: 'status',
-      label: 'Status',
+      key: 'docs',
+      label: 'KYC Steps',
       render: (row) => {
-        const label = row.status === 'submitted' ? 'submitted' : row.status.replace('-', ' ')
-        const variant = row.status === 'submitted' ? 'warning' as const : getKYCBadgeVariant(row.status)
-        return <AdminBadge label={label} variant={variant} dot />
+        const steps = row.docs?.length || 0
+        const approved = row.docs?.filter((d: any) => d.status === 'approved').length || 0
+        return <span className="text-xs text-gray-400">{approved}/{steps} steps completed</span>
       },
     },
     {
-      key: 'reviewer',
-      label: 'Reviewer',
-      render: (row) => <span className="text-xs text-gray-400">{row.reviewer || '—'}</span>,
+      key: 'overallStatus',
+      label: 'Status',
+      render: (row) => {
+        const variant = row.overallStatus === 'submitted' ? 'warning' as const : getKYCBadgeVariant(row.overallStatus)
+        return <AdminBadge label={row.overallStatus} variant={variant} dot />
+      },
+    },
+    {
+      key: 'uploadDate',
+      label: 'Submitted',
+      render: (row) => {
+        const latestDate = row.docs?.map((d: any) => d.uploadDate).filter(Boolean).sort().pop()
+        return <span className="text-xs text-gray-400">{formatDate(latestDate)}</span>
+      },
     },
     {
       key: 'actions',
       label: 'Actions',
       sortable: false,
-      width: '120px',
+      width: '180px',
       render: (row) => (
         <div className="flex items-center gap-1">
-          {(row.status === 'pending' || row.status === 'under-review' || row.status === 'submitted') && (
+          <button
+            onClick={(e) => { e.stopPropagation(); handleViewClient(row) }}
+            className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-white/[0.06] hover:bg-white/[0.1] text-gray-300 hover:text-white text-xs transition-colors"
+            title="View Details"
+          >
+            <Eye className="w-3.5 h-3.5" /> View
+          </button>
+          {(row.overallStatus === 'submitted' || row.overallStatus === 'pending') && (
             <>
               <button
                 onClick={async (e) => {
                   e.stopPropagation()
-                  if (row.table) {
-                    const ok = await approveKYCStep(row.table, row.id, 'admin')
-                    if (ok) { showToast(`${row.type} approved for ${row.clientName}`, 'success'); onRefresh?.() }
-                    else showToast('Approval failed', 'error')
-                  } else {
-                    const ok = await approveClientKYC(row.clientId, 'admin')
-                    if (ok) { showToast(`Full KYC approved for ${row.clientName}`, 'success'); onRefresh?.() }
-                    else showToast('Approval failed', 'error')
-                  }
+                  const ok = await approveClientKYC(row.clientId, 'admin')
+                  if (ok) { showToast(`KYC approved for ${row.clientName}`, 'success'); onRefresh?.() }
+                  else showToast('Approval failed', 'error')
                 }}
                 className="p-1.5 rounded-lg hover:bg-emerald-500/10 text-gray-500 hover:text-emerald-400 transition-colors"
-                title="Approve"
+                title="Approve All"
               >
                 <CheckCircle2 className="w-4 h-4" />
               </button>
               <button
                 onClick={async (e) => {
                   e.stopPropagation()
-                  if (row.table) {
-                    const ok = await rejectKYCStep(row.table, row.id, 'admin')
-                    if (ok) { showToast(`${row.type} rejected for ${row.clientName}`, 'success'); onRefresh?.() }
-                    else showToast('Rejection failed', 'error')
-                  } else {
-                    const ok = await rejectClientKYC(row.clientId, 'admin')
-                    if (ok) { showToast(`KYC rejected for ${row.clientName}`, 'success'); onRefresh?.() }
-                    else showToast('Rejection failed', 'error')
-                  }
+                  const ok = await rejectClientKYC(row.clientId, 'admin')
+                  if (ok) { showToast(`KYC rejected for ${row.clientName}`, 'success'); onRefresh?.() }
+                  else showToast('Rejection failed', 'error')
                 }}
                 className="p-1.5 rounded-lg hover:bg-red-500/10 text-gray-500 hover:text-red-400 transition-colors"
                 title="Reject"
@@ -541,13 +555,6 @@ function KYCQueueTab({
               </button>
             </>
           )}
-          <button
-            onClick={(e) => { e.stopPropagation(); setPreviewDoc(row) }}
-            className="p-1.5 rounded-lg hover:bg-white/[0.06] text-gray-500 hover:text-white transition-colors"
-            title="View"
-          >
-            <Eye className="w-4 h-4" />
-          </button>
         </div>
       ),
     },
@@ -555,181 +562,173 @@ function KYCQueueTab({
 
   const filters: { id: KYCStatus | 'all'; label: string }[] = [
     { id: 'all', label: `All (${statusCounts.all || 0})` },
-    { id: 'pending', label: `Pending (${statusCounts.pending || 0})` },
-    { id: 'under-review', label: `Review (${statusCounts['under-review'] || 0})` },
+    { id: 'pending', label: `Pending (${(statusCounts.pending || 0) + (statusCounts.submitted || 0)})` },
     { id: 'approved', label: `Approved (${statusCounts.approved || 0})` },
     { id: 'rejected', label: `Rejected (${statusCounts.rejected || 0})` },
   ]
-
-  // Also count "submitted" under pending for display
-  const submittedCount = kycDocs.filter(d => d.status === 'submitted').length
 
   return (
     <div className="space-y-4">
       {/* Filters */}
       <div className="flex flex-wrap gap-2">
-        {filters.map(f => {
-          // Show submitted count in the Pending filter
-          let label = f.label
-          if (f.id === 'pending') {
-            const total = (statusCounts.pending || 0) + submittedCount
-            label = `Pending (${total})`
-          }
-          return (
-            <button
-              key={f.id}
-              onClick={() => setFilter(f.id)}
-              className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors ${
-                filter === f.id
-                  ? 'bg-brand-red/20 text-white border-brand-red/30'
-                  : 'bg-white/[0.03] text-gray-500 border-white/[0.06] hover:bg-white/[0.06] hover:text-gray-300'
-              }`}
-            >
-              {label}
-            </button>
-          )
-        })}
+        {filters.map(f => (
+          <button
+            key={f.id}
+            onClick={() => setFilter(f.id)}
+            className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors ${
+              filter === f.id
+                ? 'bg-brand-red/20 text-white border-brand-red/30'
+                : 'bg-white/[0.03] text-gray-500 border-white/[0.06] hover:bg-white/[0.06] hover:text-gray-300'
+            }`}
+          >
+            {f.label}
+          </button>
+        ))}
       </div>
 
+      {/* Consolidated client list — one row per client */}
       <AdminGlass padding="p-4">
-        <AdminDataTable<KYCDocument>
+        <AdminDataTable<any>
           columns={columns}
-          data={filter === 'pending' ? kycDocs.filter(d => d.status === 'pending' || d.status === 'submitted') : filteredDocs}
-          searchKeys={['clientName', 'type', 'fileName']}
-          searchPlaceholder="Search KYC documents..."
-          emptyMessage="No KYC documents match the selected filter"
+          data={filteredClients}
+          searchKeys={['clientName']}
+          searchPlaceholder="Search clients..."
+          emptyMessage="No KYC submissions match the selected filter"
         />
       </AdminGlass>
 
-      {/* Document Preview Modal — shows actual KYC data (Bug #10 fix) */}
-      {previewDoc && (
+      {/* Detailed KYC View Modal — opens when "View" is clicked */}
+      {selectedClientKYC && (
         <AdminModal
           isOpen={true}
-          onClose={() => setPreviewDoc(null)}
-          title={`${previewDoc.type} — ${previewDoc.clientName}`}
-          maxWidth="max-w-3xl"
+          onClose={() => { setSelectedClientKYC(null); setClientKYCDetails(null) }}
+          title={`KYC Details — ${selectedClientKYC.clientName}`}
+          maxWidth="max-w-4xl"
           footer={
             <>
-              {(previewDoc.status === 'submitted' || previewDoc.status === 'pending' || previewDoc.status === 'under-review') && (
+              {(selectedClientKYC.overallStatus === 'submitted' || selectedClientKYC.overallStatus === 'pending') && (
                 <>
                   <ModalButton variant="primary" onClick={async () => {
-                    if (previewDoc.table) {
-                      const ok = await approveKYCStep(previewDoc.table, previewDoc.id, 'admin')
-                      if (ok) { showToast(`${previewDoc.type} approved`, 'success'); onRefresh?.() }
-                      else showToast('Approval failed', 'error')
-                    } else {
-                      const ok = await approveClientKYC(previewDoc.clientId, 'admin')
-                      if (ok) { showToast('KYC approved', 'success'); onRefresh?.() }
-                      else showToast('Approval failed', 'error')
-                    }
-                    setPreviewDoc(null)
-                  }}>
-                    Approve
-                  </ModalButton>
+                    const ok = await approveClientKYC(selectedClientKYC.clientId, 'admin')
+                    if (ok) { showToast('KYC approved', 'success'); onRefresh?.() }
+                    else showToast('Approval failed', 'error')
+                    setSelectedClientKYC(null); setClientKYCDetails(null)
+                  }}>Approve All</ModalButton>
                   <ModalButton variant="danger" onClick={async () => {
-                    if (previewDoc.table) {
-                      const ok = await rejectKYCStep(previewDoc.table, previewDoc.id, 'admin')
-                      if (ok) { showToast(`${previewDoc.type} rejected`, 'info'); onRefresh?.() }
-                      else showToast('Rejection failed', 'error')
-                    } else {
-                      const ok = await rejectClientKYC(previewDoc.clientId, 'admin')
-                      if (ok) { showToast('KYC rejected', 'info'); onRefresh?.() }
-                      else showToast('Rejection failed', 'error')
-                    }
-                    setPreviewDoc(null)
-                  }}>
-                    Reject
-                  </ModalButton>
+                    const ok = await rejectClientKYC(selectedClientKYC.clientId, 'admin')
+                    if (ok) { showToast('KYC rejected', 'info'); onRefresh?.() }
+                    else showToast('Rejection failed', 'error')
+                    setSelectedClientKYC(null); setClientKYCDetails(null)
+                  }}>Reject</ModalButton>
                 </>
               )}
-              <ModalButton onClick={() => setPreviewDoc(null)}>Close</ModalButton>
+              <ModalButton onClick={() => { setSelectedClientKYC(null); setClientKYCDetails(null) }}>Close</ModalButton>
             </>
           }
         >
-          <div className="space-y-4">
-            <div className="grid grid-cols-2 gap-3 text-sm">
-              <div><span className="text-gray-500">Client:</span> <span className="text-white ml-2">{previewDoc.clientName}</span></div>
-              <div><span className="text-gray-500">Status:</span> <span className="ml-2"><AdminBadge label={previewDoc.status} variant={previewDoc.status === 'submitted' ? 'warning' : getKYCBadgeVariant(previewDoc.status)} dot /></span></div>
-              <div><span className="text-gray-500">Type:</span> <span className="text-white ml-2">{previewDoc.type}</span></div>
-              <div><span className="text-gray-500">Uploaded:</span> <span className="text-white ml-2">{formatDate(previewDoc.uploadDate)}</span></div>
-            </div>
-
-            {/* Show actual KYC submitted data */}
-            {previewDoc.data && previewDoc.table !== 'nominees' && (
-              <div className="border border-white/[0.08] rounded-xl p-4 bg-black/20">
-                <h4 className="text-xs font-semibold text-gray-400 uppercase mb-3">Submitted Details</h4>
-                <div className="grid grid-cols-2 gap-2 text-sm">
-                  {Object.entries(previewDoc.data as Record<string, any>)
-                    .filter(([k]) => !['id', 'client_id', 'user_id', 'created_at', 'updated_at', 'reviewed_by', 'reviewed_at', 'admin_notes', 'status'].includes(k))
-                    .map(([key, val]) => {
-                      if (!val) return null
-                      const label = key.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())
-                      const isUrl = typeof val === 'string' && (val.startsWith('http') || val.startsWith('/'))
-                      return (
-                        <div key={key} className={key.includes('address') || key.includes('url') ? 'col-span-2' : ''}>
-                          <span className="text-gray-500 text-xs">{label}:</span>
-                          {isUrl ? (
-                            <a href={val} target="_blank" rel="noopener noreferrer" className="ml-2 text-brand-red text-xs hover:underline inline-flex items-center gap-1">
-                              <Eye className="w-3 h-3" /> View Document
-                            </a>
-                          ) : (
-                            <span className="text-white ml-2 text-xs">{String(val)}</span>
-                          )}
-                        </div>
-                      )
-                    })}
+          {loadingDetails ? (
+            <div className="text-center py-12 text-gray-400"><Clock className="w-8 h-8 mx-auto mb-2 animate-spin" /> Loading KYC details...</div>
+          ) : clientKYCDetails ? (
+            <div className="space-y-4 max-h-[70vh] overflow-y-auto">
+              {/* Basic Details */}
+              {clientKYCDetails.basic && (
+                <div className="border border-white/[0.08] rounded-xl p-4 bg-black/20">
+                  <div className="flex items-center justify-between mb-3">
+                    <h4 className="text-sm font-semibold text-white">Basic Details</h4>
+                    <AdminBadge label={clientKYCDetails.basic.status || 'pending'} variant={clientKYCDetails.basic.status === 'submitted' ? 'warning' : getKYCBadgeVariant(clientKYCDetails.basic.status)} dot />
+                  </div>
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-2 text-xs">
+                    <div><span className="text-gray-500">Name:</span> <span className="text-white ml-1">{clientKYCDetails.basic.investor_name}</span></div>
+                    <div><span className="text-gray-500">Phone:</span> <span className="text-white ml-1">{clientKYCDetails.basic.phone}</span></div>
+                    <div><span className="text-gray-500">Email:</span> <span className="text-white ml-1">{clientKYCDetails.basic.email}</span></div>
+                    <div><span className="text-gray-500">Gender:</span> <span className="text-white ml-1">{clientKYCDetails.basic.gender}</span></div>
+                    <div><span className="text-gray-500">Type:</span> <span className="text-white ml-1">{clientKYCDetails.basic.investor_type}</span></div>
+                    <div><span className="text-gray-500">Resident:</span> <span className="text-white ml-1">{clientKYCDetails.basic.resident_type}</span></div>
+                  </div>
                 </div>
-              </div>
-            )}
-
-            {/* Show nominee data */}
-            {previewDoc.data && previewDoc.table === 'nominees' && Array.isArray(previewDoc.data) && (
-              <div className="border border-white/[0.08] rounded-xl p-4 bg-black/20">
-                <h4 className="text-xs font-semibold text-gray-400 uppercase mb-3">Nominee Details</h4>
-                <div className="space-y-3">
-                  {(previewDoc.data as any[]).map((n: any, i: number) => (
-                    <div key={n.id || i} className="grid grid-cols-2 gap-2 text-sm border-b border-white/5 pb-2 last:border-0">
-                      <div><span className="text-gray-500 text-xs">Name:</span> <span className="text-white ml-1 text-xs">{n.name}</span></div>
-                      <div><span className="text-gray-500 text-xs">DOB:</span> <span className="text-white ml-1 text-xs">{n.dob || '-'}</span></div>
-                      <div><span className="text-gray-500 text-xs">Phone:</span> <span className="text-white ml-1 text-xs">{n.phone || '-'}</span></div>
-                      <div><span className="text-gray-500 text-xs">Relationship:</span> <span className="text-white ml-1 text-xs">{n.relationship || '-'}</span></div>
-                      <div><span className="text-gray-500 text-xs">Percentage:</span> <span className="text-white ml-1 text-xs">{n.percentage}%</span></div>
-                      {n.proof_url && <div><a href={n.proof_url} target="_blank" rel="noopener noreferrer" className="text-brand-red text-xs hover:underline inline-flex items-center gap-1"><Eye className="w-3 h-3" /> View Proof</a></div>}
-                    </div>
-                  ))}
+              )}
+              {/* Identity Details */}
+              {clientKYCDetails.identity && (
+                <div className="border border-white/[0.08] rounded-xl p-4 bg-black/20">
+                  <div className="flex items-center justify-between mb-3">
+                    <h4 className="text-sm font-semibold text-white">Identity Details</h4>
+                    <AdminBadge label={clientKYCDetails.identity.status || 'pending'} variant={clientKYCDetails.identity.status === 'submitted' ? 'warning' : getKYCBadgeVariant(clientKYCDetails.identity.status)} dot />
+                  </div>
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-2 text-xs">
+                    <div><span className="text-gray-500">PAN:</span> <span className="text-white ml-1">{clientKYCDetails.identity.pan_number || '-'}</span></div>
+                    <div><span className="text-gray-500">Aadhaar:</span> <span className="text-white ml-1">{clientKYCDetails.identity.aadhar_number || '-'}</span></div>
+                    <div><span className="text-gray-500">Name:</span> <span className="text-white ml-1">{clientKYCDetails.identity.name_on_document}</span></div>
+                    <div><span className="text-gray-500">Father:</span> <span className="text-white ml-1">{clientKYCDetails.identity.father_name}</span></div>
+                    <div><span className="text-gray-500">DOB:</span> <span className="text-white ml-1">{clientKYCDetails.identity.dob}</span></div>
+                    <div><span className="text-gray-500">City:</span> <span className="text-white ml-1">{clientKYCDetails.identity.city}</span></div>
+                    <div><span className="text-gray-500">State:</span> <span className="text-white ml-1">{clientKYCDetails.identity.state}</span></div>
+                    <div><span className="text-gray-500">Pincode:</span> <span className="text-white ml-1">{clientKYCDetails.identity.pincode}</span></div>
+                    <div className="col-span-2"><span className="text-gray-500">Address:</span> <span className="text-white ml-1">{clientKYCDetails.identity.address}</span></div>
+                  </div>
+                  <div className="flex gap-3 mt-3">
+                    {clientKYCDetails.identity.aadhar_doc_url && <a href={clientKYCDetails.identity.aadhar_doc_url} target="_blank" rel="noopener noreferrer" className="text-xs text-brand-red hover:underline inline-flex items-center gap-1"><Eye className="w-3 h-3" /> Aadhaar Doc</a>}
+                    {clientKYCDetails.identity.pan_doc_url && <a href={clientKYCDetails.identity.pan_doc_url} target="_blank" rel="noopener noreferrer" className="text-xs text-brand-red hover:underline inline-flex items-center gap-1"><Eye className="w-3 h-3" /> PAN Doc</a>}
+                    {clientKYCDetails.identity.passport_doc_url && <a href={clientKYCDetails.identity.passport_doc_url} target="_blank" rel="noopener noreferrer" className="text-xs text-brand-red hover:underline inline-flex items-center gap-1"><Eye className="w-3 h-3" /> Passport Doc</a>}
+                  </div>
                 </div>
-              </div>
-            )}
-
-            {/* File Preview (for doc URLs in data) */}
-            {previewDoc.data && !Array.isArray(previewDoc.data) && (() => {
-              const docUrls = Object.entries(previewDoc.data as Record<string, any>).filter(([k, v]) => k.endsWith('_url') && v && typeof v === 'string' && v.startsWith('http'))
-              if (docUrls.length === 0) return null
-              return (
-                <div className="space-y-2">
-                  <h4 className="text-xs font-semibold text-gray-400 uppercase">Uploaded Documents</h4>
-                  {docUrls.map(([key, url]) => {
-                    const label = key.replace(/_url$/, '').replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())
-                    return (
-                      <div key={key} className="border border-white/[0.08] rounded-lg overflow-hidden bg-black/30">
-                        <div className="flex items-center justify-between px-3 py-2 border-b border-white/5">
-                          <span className="text-xs text-gray-400">{label}</span>
-                          <a href={url as string} target="_blank" rel="noopener noreferrer" className="text-xs text-brand-red hover:underline inline-flex items-center gap-1"><ArrowUpRight className="w-3 h-3" /> Open</a>
-                        </div>
-                        {(url as string).match(/\.(jpg|jpeg|png|gif|webp)/i) ? (
-                          <img src={url as string} alt={label} className="w-full max-h-[300px] object-contain" />
-                        ) : (url as string).match(/\.pdf/i) ? (
-                          <iframe src={url as string} className="w-full h-[300px]" title={label} />
-                        ) : null}
+              )}
+              {/* Bank Details */}
+              {clientKYCDetails.bank && (
+                <div className="border border-white/[0.08] rounded-xl p-4 bg-black/20">
+                  <div className="flex items-center justify-between mb-3">
+                    <h4 className="text-sm font-semibold text-white">Bank Details</h4>
+                    <AdminBadge label={clientKYCDetails.bank.status || 'pending'} variant={clientKYCDetails.bank.status === 'submitted' ? 'warning' : getKYCBadgeVariant(clientKYCDetails.bank.status)} dot />
+                  </div>
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-2 text-xs">
+                    <div><span className="text-gray-500">Holder:</span> <span className="text-white ml-1">{clientKYCDetails.bank.account_holder_name}</span></div>
+                    <div><span className="text-gray-500">Bank:</span> <span className="text-white ml-1">{clientKYCDetails.bank.bank_name}</span></div>
+                    <div><span className="text-gray-500">A/C No:</span> <span className="text-white ml-1">{clientKYCDetails.bank.account_number}</span></div>
+                    <div><span className="text-gray-500">Type:</span> <span className="text-white ml-1">{clientKYCDetails.bank.account_type}</span></div>
+                    <div><span className="text-gray-500">IFSC:</span> <span className="text-white ml-1">{clientKYCDetails.bank.ifsc_code || '-'}</span></div>
+                    <div><span className="text-gray-500">Branch:</span> <span className="text-white ml-1">{clientKYCDetails.bank.branch_name || '-'}</span></div>
+                  </div>
+                  {clientKYCDetails.bank.bank_doc_url && <a href={clientKYCDetails.bank.bank_doc_url} target="_blank" rel="noopener noreferrer" className="text-xs text-brand-red hover:underline inline-flex items-center gap-1 mt-3"><Eye className="w-3 h-3" /> Bank Proof</a>}
+                </div>
+              )}
+              {/* Demat Details */}
+              {clientKYCDetails.demat && (
+                <div className="border border-white/[0.08] rounded-xl p-4 bg-black/20">
+                  <div className="flex items-center justify-between mb-3">
+                    <h4 className="text-sm font-semibold text-white">Demat Account</h4>
+                    <AdminBadge label={clientKYCDetails.demat.status || 'pending'} variant={clientKYCDetails.demat.status === 'skipped' ? 'info' : clientKYCDetails.demat.status === 'submitted' ? 'warning' : getKYCBadgeVariant(clientKYCDetails.demat.status)} dot />
+                  </div>
+                  <div className="text-xs">
+                    {clientKYCDetails.demat.skipped ? <span className="text-gray-400">Skipped — No demat account</span> :
+                      <div><span className="text-gray-500">Demat No:</span> <span className="text-white ml-1">{clientKYCDetails.demat.demat_account_number}</span></div>}
+                  </div>
+                  {clientKYCDetails.demat.demat_doc_url && <a href={clientKYCDetails.demat.demat_doc_url} target="_blank" rel="noopener noreferrer" className="text-xs text-brand-red hover:underline inline-flex items-center gap-1 mt-2"><Eye className="w-3 h-3" /> Demat Statement</a>}
+                </div>
+              )}
+              {/* Nominees */}
+              {clientKYCDetails.nominees && clientKYCDetails.nominees.length > 0 && (
+                <div className="border border-white/[0.08] rounded-xl p-4 bg-black/20">
+                  <h4 className="text-sm font-semibold text-white mb-3">Nominees ({clientKYCDetails.nominees.length})</h4>
+                  <div className="space-y-2">
+                    {clientKYCDetails.nominees.map((n: any, i: number) => (
+                      <div key={n.id || i} className="grid grid-cols-2 md:grid-cols-5 gap-2 text-xs border-b border-white/5 pb-2 last:border-0">
+                        <div><span className="text-gray-500">Name:</span> <span className="text-white ml-1">{n.name}</span></div>
+                        <div><span className="text-gray-500">DOB:</span> <span className="text-white ml-1">{n.dob || '-'}</span></div>
+                        <div><span className="text-gray-500">Phone:</span> <span className="text-white ml-1">{n.phone || '-'}</span></div>
+                        <div><span className="text-gray-500">Relation:</span> <span className="text-white ml-1">{n.relationship}</span></div>
+                        <div><span className="text-gray-500">Share:</span> <span className="text-white ml-1">{n.percentage}%</span></div>
                       </div>
-                    )
-                  })}
+                    ))}
+                  </div>
                 </div>
-              )
-            })()}
-          </div>
+              )}
+            </div>
+          ) : (
+            <div className="text-center py-8 text-gray-400">No KYC data found</div>
+          )}
         </AdminModal>
       )}
+
+      {/* Old preview modal removed — replaced by consolidated per-client detail view above */}
     </div>
   )
 }
