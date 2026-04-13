@@ -149,16 +149,17 @@ export default async (request: Request) => {
     let successResponse = ''
     const errors: string[] = []
 
-    // ── Attempt 1: MSG91 Send SMS v2 API (supports DLT_TE_ID explicitly) ──
+    // ── Attempt 1: MSG91 Send SMS v2 API with PE_ID + DLT_TE_ID ──
     try {
       const payload = {
         sender: senderId,
         route: '4',
         country: '91',
         DLT_TE_ID: templateId,
+        PE_ID: entityId,
         sms: [{
           message: smsMessage,
-          to: [cleanMobile],
+          to: [`91${cleanMobile}`],
         }],
       }
       console.log('[send-sms-otp] MSG91 v2 request:', JSON.stringify(payload))
@@ -175,10 +176,24 @@ export default async (request: Request) => {
       const bodyStr = JSON.stringify(body)
       console.log('[send-sms-otp] MSG91 v2 response:', bodyStr)
 
-      if (body.type === 'success' || body.message === '1 SMS sent successfully') {
+      if (body.type === 'success') {
+        // Check delivery report after a short delay
+        const reqId = body.message || body.request_id
+        if (reqId) {
+          await new Promise(resolve => setTimeout(resolve, 3000))
+          try {
+            const reportRes = await fetch(`https://api.msg91.com/api/report.php?authkey=${authKey}&id=${reqId}`)
+            const reportText = await reportRes.text()
+            console.log('[send-sms-otp] MSG91 delivery report:', reportText)
+            successResponse = `${bodyStr} | delivery_report: ${reportText}`
+          } catch {
+            successResponse = bodyStr
+          }
+        } else {
+          successResponse = bodyStr
+        }
         smsSuccess = true
         successProvider = 'MSG91 v2 SMS'
-        successResponse = bodyStr
       } else {
         errors.push(`MSG91 v2: ${body.message || bodyStr}`)
       }
@@ -186,7 +201,7 @@ export default async (request: Request) => {
       errors.push(`MSG91 v2: ${err instanceof Error ? err.message : String(err)}`)
     }
 
-    // ── Attempt 2: MSG91 SendHTTP (legacy, explicit DLT_TE_ID in URL) ─────
+    // ── Attempt 2: MSG91 SendHTTP with PE_ID ──────────────────────────
     if (!smsSuccess) {
       try {
         const params = new URLSearchParams({
@@ -197,12 +212,12 @@ export default async (request: Request) => {
           route: '4',
           country: '91',
           DLT_TE_ID: templateId,
+          PE_ID: entityId,
         })
         const res = await fetch(`https://api.msg91.com/api/sendhttp.php?${params.toString()}`)
         const text = await res.text()
         console.log('[send-sms-otp] MSG91 sendhttp response:', text)
 
-        // sendhttp returns a numeric request ID on success, error messages otherwise
         if (res.ok && text && /^[a-f0-9]{20,}$/i.test(text.trim())) {
           smsSuccess = true
           successProvider = 'MSG91 sendhttp'
@@ -215,7 +230,7 @@ export default async (request: Request) => {
       }
     }
 
-    // ── Attempt 3: MSG91 OTP API (may use MSG91's internal template) ──────
+    // ── Attempt 3: MSG91 OTP API ──────────────────────────────────────
     if (!smsSuccess) {
       try {
         const otpUrl = new URL('https://control.msg91.com/api/v5/otp')
