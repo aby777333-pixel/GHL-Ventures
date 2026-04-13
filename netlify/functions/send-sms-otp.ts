@@ -135,29 +135,33 @@ export default async (request: Request) => {
       })
     }
 
-    // DLT Template: "Dear customer, Your OTP is {#var#}. Please do not share this code with anyone."
-    const smsMessage = `Dear customer, Your OTP is ${code}. Please do not share this code with anyone.`
+    // DLT Template: "Dear customer, Your OTP is {#var#} . Please do not share this code with anyone."
+    // DLT Template ID: 1407175818803308914 | Sender: GHLAIF | Entity: 1401499410000070879
+    const smsMessage = `Dear customer, Your OTP is ${code} . Please do not share this code with anyone.`
 
     let smsSuccess = false
-    const errors: string[] = []
+    let smsError = ''
 
-    // ── Fast2SMS DLT Manual Route ─────────────────────────────
+    // ── Fast2SMS DLT Manual Route (branded as GHLAIF) ─────────
     try {
+      const payload = {
+        route: 'dlt_manual',
+        sender_id: senderId,
+        message: smsMessage,
+        language: 'english',
+        flash: 0,
+        numbers: cleanMobile,
+        DLT_TE_ID: templateId,
+      }
+      console.log('[send-sms-otp] Fast2SMS DLT payload:', JSON.stringify(payload))
+
       const res = await fetch('https://www.fast2sms.com/dev/bulkV2', {
         method: 'POST',
         headers: {
           'authorization': fast2smsKey,
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          route: 'dlt_manual',
-          sender_id: senderId,
-          message: smsMessage,
-          language: 'english',
-          flash: 0,
-          numbers: cleanMobile,
-          DLT_TE_ID: templateId,
-        }),
+        body: JSON.stringify(payload),
       })
       const body = await res.json()
       console.log('[send-sms-otp] Fast2SMS DLT response:', JSON.stringify(body))
@@ -165,83 +169,23 @@ export default async (request: Request) => {
       if (body.return === true) {
         smsSuccess = true
       } else {
-        errors.push(`DLT: ${body.message || JSON.stringify(body)}`)
+        smsError = typeof body.message === 'string' ? body.message : JSON.stringify(body.message || body)
       }
     } catch (err) {
-      errors.push(`DLT: ${err instanceof Error ? err.message : String(err)}`)
-    }
-
-    // ── Fallback: Fast2SMS OTP Route ──────────────────────────
-    if (!smsSuccess) {
-      try {
-        const res = await fetch('https://www.fast2sms.com/dev/bulkV2', {
-          method: 'POST',
-          headers: {
-            'authorization': fast2smsKey,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            route: 'otp',
-            variables_values: code,
-            flash: 0,
-            numbers: cleanMobile,
-          }),
-        })
-        const body = await res.json()
-        console.log('[send-sms-otp] Fast2SMS OTP response:', JSON.stringify(body))
-
-        if (body.return === true) {
-          smsSuccess = true
-        } else {
-          errors.push(`OTP route: ${body.message || JSON.stringify(body)}`)
-        }
-      } catch (err) {
-        errors.push(`OTP route: ${err instanceof Error ? err.message : String(err)}`)
-      }
-    }
-
-    // ── Fallback: Fast2SMS Quick Route ────────────────────────
-    if (!smsSuccess) {
-      try {
-        const res = await fetch('https://www.fast2sms.com/dev/bulkV2', {
-          method: 'POST',
-          headers: {
-            'authorization': fast2smsKey,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            route: 'q',
-            message: smsMessage,
-            language: 'english',
-            flash: 0,
-            numbers: cleanMobile,
-          }),
-        })
-        const body = await res.json()
-        console.log('[send-sms-otp] Fast2SMS Quick response:', JSON.stringify(body))
-
-        if (body.return === true) {
-          smsSuccess = true
-        } else {
-          errors.push(`Quick: ${body.message || JSON.stringify(body)}`)
-        }
-      } catch (err) {
-        errors.push(`Quick: ${err instanceof Error ? err.message : String(err)}`)
-      }
+      smsError = err instanceof Error ? err.message : String(err)
     }
 
     if (!smsSuccess) {
+      // DLT route failed — clean up OTP and return the exact error
       await supabase
         .from('sms_otp_codes')
         .delete()
         .eq('mobile', cleanMobile)
         .eq('code', code)
 
-      const debugInfo = errors.join(' | ')
-      console.error('[send-sms-otp] All attempts failed:', debugInfo)
+      console.error('[send-sms-otp] DLT route failed:', smsError)
       return new Response(JSON.stringify({
-        error: 'Failed to send OTP. Please try again later.',
-        debug: debugInfo,
+        error: `SMS failed: ${smsError}. Please ensure DLT template and sender ID are configured in Fast2SMS.`,
       }), {
         status: 500, headers: { 'Content-Type': 'application/json', ...getCorsHeaders(request) },
       })
