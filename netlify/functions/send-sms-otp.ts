@@ -151,7 +151,8 @@ export default async (request: Request) => {
         language: 'english',
         flash: 0,
         numbers: cleanMobile,
-        DLT_TE_ID: templateId,
+        template_id: templateId,
+        entity_id: process.env.MSG91_ENTITY_ID || '',
       }
       console.log('[SMS OTP] Sending to:', cleanMobile, 'via Fast2SMS DLT route')
 
@@ -212,7 +213,7 @@ export default async (request: Request) => {
         .eq('code', code)
 
       console.error('[send-sms-otp] All attempts failed:', smsError)
-      return new Response(JSON.stringify({ error: 'Failed to send OTP. Please try again later.' }), {
+      return new Response(JSON.stringify({ error: 'Failed to send OTP. Please try again later.', debug: smsError }), {
         status: 500, headers: { 'Content-Type': 'application/json', ...getCorsHeaders(request) },
       })
     }
