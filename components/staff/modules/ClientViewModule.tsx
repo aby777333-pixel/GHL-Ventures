@@ -113,8 +113,8 @@ function ClientSearch({ tickets, interactions, navigate, showToast }: { tickets:
   }, [clients, query])
 
   const selectedClient = selectedId ? clients.find(c => c.clientId === selectedId) : null
-  const clientTickets = selectedId ? tickets.filter(t => t.clientId === selectedId) : []
-  const clientInteractions = selectedId ? interactions.filter(i => i.clientId === selectedId) : []
+  const clientTickets = selectedId ? tickets.filter(t => (t.clientId || t.client_id) === selectedId) : []
+  const clientInteractions = selectedId ? interactions.filter(i => (i.clientId || i.client_id) === selectedId) : []
 
   return (
     <div className="space-y-6">
