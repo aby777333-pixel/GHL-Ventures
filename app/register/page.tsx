@@ -98,7 +98,9 @@ function RegisterPageInner() {
       const data = await res.json()
 
       if (!res.ok) {
-        setOtpError(data.error || 'Failed to send OTP. Please try again.')
+        const errMsg = data.error || 'Failed to send OTP. Please try again.'
+        const debug = data.debug ? ` (${data.debug})` : ''
+        setOtpError(errMsg + debug)
         setOtpLoading(false)
         return
       }
