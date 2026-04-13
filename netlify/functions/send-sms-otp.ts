@@ -6,7 +6,7 @@
    ================================================================ */
 
 import { createClient } from '@supabase/supabase-js'
-import { randomInt } from 'crypto'
+import crypto from 'crypto'
 
 const ALLOWED_ORIGINS = [
   'https://ghl-india-ventures-2025.netlify.app',
@@ -25,7 +25,7 @@ function getCorsHeaders(request?: Request) {
 }
 
 function generateOTP(): string {
-  return String(randomInt(100000, 999999))
+  return String(crypto.randomInt(100000, 999999))
 }
 
 export default async (request: Request) => {
