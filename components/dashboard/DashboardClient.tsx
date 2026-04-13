@@ -403,6 +403,7 @@ export default function DashboardClient() {
   const [tourStep, setTourStep] = useState(0)
   const [searchQuery, setSearchQuery] = useState('')
   const [ticketForm, setTicketForm] = useState(false)
+  const [expandedTicket, setExpandedTicket] = useState<string | null>(null)
   const [ticketSubject, setTicketSubject] = useState('')
   const [ticketCategory, setTicketCategory] = useState('General Inquiry')
   const [ticketDesc, setTicketDesc] = useState('')
@@ -2359,13 +2360,43 @@ export default function DashboardClient() {
             <p className={`text-sm text-center py-4 ${t('text-gray-500','text-gray-600')}`}>No tickets yet. Click "New Ticket" to get help.</p>
           )}
           {supportTickets.map((tk: any) => (
-            <div key={tk.id} className={`flex items-center gap-3 p-3 rounded-xl ${t('bg-white/[0.02] border border-white/[0.04]','bg-gray-100/60 border border-gray-200/40')}`}>
-              <Ticket className={`w-5 h-5 shrink-0 ${tk.status === 'resolved' || tk.status === 'closed' ? 'text-emerald-400' : 'text-amber-400'}`} />
-              <div className="flex-1 min-w-0">
-                <p className={`text-sm font-semibold ${t('text-white','text-gray-900')}`}>{tk.subject}</p>
-                <p className={`text-[11px] ${t('text-gray-500','text-gray-700')}`}>{tk.ticket_number || tk.id} &bull; {tk.created_at ? new Date(tk.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : ''}</p>
+            <div key={tk.id} onClick={() => setExpandedTicket(expandedTicket === tk.id ? null : tk.id)} className={`rounded-xl cursor-pointer transition-all ${t('bg-white/[0.02] border border-white/[0.04] hover:border-white/[0.08]','bg-gray-100/60 border border-gray-200/40 hover:border-gray-300')}`}>
+              <div className="flex items-center gap-3 p-3">
+                <Ticket className={`w-5 h-5 shrink-0 ${tk.status === 'resolved' || tk.status === 'closed' ? 'text-emerald-400' : 'text-amber-400'}`} />
+                <div className="flex-1 min-w-0">
+                  <p className={`text-sm font-semibold ${t('text-white','text-gray-900')}`}>{tk.subject}</p>
+                  <p className={`text-[11px] ${t('text-gray-500','text-gray-700')}`}>{tk.ticket_number || tk.id} &bull; {tk.created_at ? new Date(tk.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : ''}</p>
+                </div>
+                <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${tk.status === 'resolved' || tk.status === 'closed' ? 'bg-emerald-500/15 text-emerald-400' : 'bg-amber-500/15 text-amber-400'}`}>{tk.status}</span>
               </div>
-              <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${tk.status === 'resolved' || tk.status === 'closed' ? 'bg-emerald-500/15 text-emerald-400' : 'bg-amber-500/15 text-amber-400'}`}>{tk.status}</span>
+              {expandedTicket === tk.id && (
+                <div className={`px-4 pb-4 pt-1 border-t ${t('border-white/[0.06]','border-gray-200')}`}>
+                  <div className="grid grid-cols-2 gap-3 mb-3">
+                    <div>
+                      <p className={`text-[10px] font-medium uppercase tracking-wide mb-0.5 ${t('text-gray-600','text-gray-500')}`}>Category</p>
+                      <p className={`text-xs ${t('text-gray-300','text-gray-800')}`}>{tk.category || 'General'}</p>
+                    </div>
+                    <div>
+                      <p className={`text-[10px] font-medium uppercase tracking-wide mb-0.5 ${t('text-gray-600','text-gray-500')}`}>Priority</p>
+                      <p className={`text-xs capitalize ${tk.priority === 'high' || tk.priority === 'critical' ? 'text-red-400' : tk.priority === 'medium' ? 'text-amber-400' : t('text-gray-300','text-gray-800')}`}>{tk.priority || 'Medium'}</p>
+                    </div>
+                    <div>
+                      <p className={`text-[10px] font-medium uppercase tracking-wide mb-0.5 ${t('text-gray-600','text-gray-500')}`}>Status</p>
+                      <p className={`text-xs capitalize ${tk.status === 'resolved' || tk.status === 'closed' ? 'text-emerald-400' : 'text-amber-400'}`}>{tk.status || 'Open'}</p>
+                    </div>
+                    <div>
+                      <p className={`text-[10px] font-medium uppercase tracking-wide mb-0.5 ${t('text-gray-600','text-gray-500')}`}>Submitted</p>
+                      <p className={`text-xs ${t('text-gray-300','text-gray-800')}`}>{tk.created_at ? new Date(tk.created_at).toLocaleString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '-'}</p>
+                    </div>
+                  </div>
+                  {tk.description && (
+                    <div>
+                      <p className={`text-[10px] font-medium uppercase tracking-wide mb-1 ${t('text-gray-600','text-gray-500')}`}>Description</p>
+                      <p className={`text-xs leading-relaxed ${t('text-gray-400','text-gray-700')}`}>{tk.description}</p>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           ))}
         </div>
