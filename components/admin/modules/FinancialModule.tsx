@@ -6,6 +6,7 @@ import {
   FileText, PieChart, ArrowUpRight, ArrowDownRight, Eye,
   CheckCircle2, Clock, AlertCircle, Calendar, Download,
   BarChart3, Wallet, Banknote, CircleDollarSign, Building, Upload,
+  Plus, Trash2, Send, XCircle,
 } from 'lucide-react'
 import {
   AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid,
@@ -18,7 +19,7 @@ import AdminModal, { ModalButton } from '../shared/AdminModal'
 import AdminKPICard from '../shared/AdminKPICard'
 import AdminEmptyState from '../shared/AdminEmptyState'
 import UploadWithFolderPicker from '@/components/shared/UploadWithFolderPicker'
-import { fetchInvoices, fetchExpenses, fetchCommissions, getOverviewKPIs, insertRow, updateRow } from '@/lib/supabase/adminDataService'
+import { fetchInvoices, fetchExpenses, fetchCommissions, getOverviewKPIs, insertRow, updateRow, deleteRow } from '@/lib/supabase/adminDataService'
 import { formatINR, formatDate, useAdminAuth } from '@/lib/admin/adminHooks'
 import type { Invoice, Expense, InvoiceStatus, ExpenseCategory } from '@/lib/admin/adminTypes'
 import { saveBlobAs } from '@/lib/supabase/storageService'
@@ -137,7 +138,7 @@ export default function FinancialModule({ subTab, navigate, showToast }: Financi
       {/* Tab Content */}
       <div className="admin-tab-switch">
         {activeTab === 'overview' && <RevenueOverviewTab kpis={kpis} expenses={expenses} />}
-        {activeTab === 'invoices' && <InvoicesTab showToast={showToast} invoices={invoices} />}
+        {activeTab === 'invoices' && <InvoicesTab showToast={showToast} invoices={invoices} refetch={loadData} />}
         {activeTab === 'expenses' && <ExpensesTab showToast={showToast} expenses={expenses} />}
         {activeTab === 'payouts' && <PayoutsTab showToast={showToast} commissions={commissions} />}
       </div>
@@ -261,9 +262,44 @@ function RevenueOverviewTab({ kpis, expenses }: { kpis: { monthlyRevenue: number
 }
 
 // ── Invoices Tab ────────────────────────────────────────────────
-function InvoicesTab({ showToast, invoices }: { showToast: (msg: string, type?: 'success' | 'error' | 'info' | 'warning') => void; invoices: any[] }) {
+function InvoicesTab({ showToast, invoices, refetch }: { showToast: (msg: string, type?: 'success' | 'error' | 'info' | 'warning') => void; invoices: any[]; refetch: () => void }) {
   const [statusFilter, setStatusFilter] = useState<InvoiceStatus | 'all'>('all')
   const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null)
+  const [addInvoiceOpen, setAddInvoiceOpen] = useState(false)
+  const [folderPickerOpen, setFolderPickerOpen] = useState(false)
+  const [invoiceForm, setInvoiceForm] = useState({ clientName: '', amount: '', type: 'management_fee', date: '', dueDate: '', status: 'draft', notes: '' })
+  const resetInvoiceForm = () => setInvoiceForm({ clientName: '', amount: '', type: 'management_fee', date: '', dueDate: '', status: 'draft', notes: '' })
+  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null)
+
+  const handleInvoiceSubmit = async () => {
+    if (!invoiceForm.clientName.trim()) { showToast('Client name is required', 'error'); return }
+    if (!invoiceForm.amount || parseFloat(invoiceForm.amount) <= 0) { showToast('Valid amount is required', 'error'); return }
+    const amount = parseFloat(invoiceForm.amount)
+    const gst = Math.round(amount * 0.18 * 100) / 100
+    const total = Math.round((amount + gst) * 100) / 100
+    const result = await insertRow('invoices', {
+      clientName: invoiceForm.clientName,
+      amount,
+      gst,
+      total,
+      type: invoiceForm.type,
+      date: invoiceForm.date || new Date().toISOString().split('T')[0],
+      dueDate: invoiceForm.dueDate || null,
+      status: invoiceForm.status,
+      notes: invoiceForm.notes || null,
+    })
+    if (!result) { showToast('Failed to create invoice', 'error'); return }
+    showToast('Invoice created successfully', 'success')
+    resetInvoiceForm()
+    setAddInvoiceOpen(false)
+    refetch()
+  }
+
+  const handleDelete = async (id: string) => {
+    const ok = await deleteRow('invoices', id)
+    showToast(ok ? 'Invoice deleted' : 'Failed to delete invoice', ok ? 'success' : 'error')
+    if (ok) { setDeleteConfirmId(null); setSelectedInvoice(null); refetch() }
+  }
 
   const filtered = useMemo(() => {
     if (statusFilter === 'all') return invoices
@@ -305,14 +341,44 @@ function InvoicesTab({ showToast, invoices }: { showToast: (msg: string, type?: 
       key: 'actions',
       label: '',
       sortable: false,
-      width: '50px',
+      width: '120px',
       render: (row) => (
-        <button
-          onClick={(e) => { e.stopPropagation(); setSelectedInvoice(row) }}
-          className="p-1.5 rounded-lg hover:bg-white/[0.06] text-gray-500 hover:text-white transition-colors"
-        >
-          <Eye className="w-4 h-4" />
-        </button>
+        <div className="flex items-center gap-1">
+          <button
+            onClick={(e) => { e.stopPropagation(); setSelectedInvoice(row) }}
+            className="p-1.5 rounded-lg hover:bg-white/[0.06] text-gray-500 hover:text-white transition-colors"
+            title="View"
+          >
+            <Eye className="w-4 h-4" />
+          </button>
+          {row.status === 'draft' && (
+            <button
+              onClick={async (e) => { e.stopPropagation(); const ok = await updateRow('invoices', row.id, { status: 'sent' }); showToast(ok ? 'Marked as Sent' : 'Failed', ok ? 'success' : 'error'); if (ok) refetch() }}
+              className="p-1.5 rounded-lg hover:bg-blue-500/10 text-gray-500 hover:text-blue-400 transition-colors"
+              title="Mark as Sent"
+            >
+              <Send className="w-4 h-4" />
+            </button>
+          )}
+          {(row.status === 'sent' || row.status === 'overdue') && (
+            <button
+              onClick={async (e) => { e.stopPropagation(); const ok = await updateRow('invoices', row.id, { status: 'paid' }); showToast(ok ? 'Marked as Paid' : 'Failed', ok ? 'success' : 'error'); if (ok) refetch() }}
+              className="p-1.5 rounded-lg hover:bg-emerald-500/10 text-gray-500 hover:text-emerald-400 transition-colors"
+              title="Mark as Paid"
+            >
+              <CheckCircle2 className="w-4 h-4" />
+            </button>
+          )}
+          {row.status === 'draft' && (
+            <button
+              onClick={(e) => { e.stopPropagation(); setDeleteConfirmId(row.id) }}
+              className="p-1.5 rounded-lg hover:bg-red-500/10 text-gray-500 hover:text-red-400 transition-colors"
+              title="Delete"
+            >
+              <Trash2 className="w-4 h-4" />
+            </button>
+          )}
+        </div>
       ),
     },
   ]
@@ -327,6 +393,17 @@ function InvoicesTab({ showToast, invoices }: { showToast: (msg: string, type?: 
 
   return (
     <div className="space-y-4">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <div>
+          <h2 className="text-xl font-bold text-white">Invoices</h2>
+          <p className="text-sm text-gray-500 mt-0.5">Create and manage client invoices</p>
+        </div>
+        <button onClick={() => setAddInvoiceOpen(true)} className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium text-white bg-brand-red/20 border border-brand-red/30 hover:bg-brand-red/30 transition-colors admin-btn-press">
+          <Plus className="w-4 h-4" />
+          New Invoice
+        </button>
+      </div>
+
       <div className="flex flex-wrap gap-2">
         {filters.map(f => (
           <button
@@ -392,6 +469,92 @@ function InvoicesTab({ showToast, invoices }: { showToast: (msg: string, type?: 
                 </div>
               ))}
             </div>
+          </div>
+        </AdminModal>
+      )}
+
+      {/* New Invoice Modal */}
+      <AdminModal isOpen={addInvoiceOpen} onClose={() => { resetInvoiceForm(); setAddInvoiceOpen(false) }} title="New Invoice" maxWidth="max-w-2xl">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="sm:col-span-2">
+            <label className="block text-xs font-medium text-gray-400 mb-1.5">Client Name *</label>
+            <input type="text" required placeholder="e.g. Harish Kumar" value={invoiceForm.clientName} onChange={e => setInvoiceForm(f => ({ ...f, clientName: e.target.value }))} className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-brand-red/40 focus:ring-1 focus:ring-brand-red/20" />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-gray-400 mb-1.5">Amount (INR) *</label>
+            <div className="relative">
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 text-sm">{'\u20B9'}</span>
+              <input type="number" required placeholder="0.00" value={invoiceForm.amount} onChange={e => setInvoiceForm(f => ({ ...f, amount: e.target.value }))} className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl pl-7 pr-3 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-brand-red/40 focus:ring-1 focus:ring-brand-red/20" />
+            </div>
+            {invoiceForm.amount && parseFloat(invoiceForm.amount) > 0 && (
+              <p className="text-[10px] text-gray-500 mt-1">GST (18%): {'\u20B9'}{(parseFloat(invoiceForm.amount) * 0.18).toLocaleString('en-IN', { maximumFractionDigits: 2 })} | Total: {'\u20B9'}{(parseFloat(invoiceForm.amount) * 1.18).toLocaleString('en-IN', { maximumFractionDigits: 2 })}</p>
+            )}
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-gray-400 mb-1.5">Invoice Type</label>
+            <select value={invoiceForm.type} onChange={e => setInvoiceForm(f => ({ ...f, type: e.target.value }))} className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-brand-red/40 focus:ring-1 focus:ring-brand-red/20">
+              <option value="management_fee">Management Fee</option>
+              <option value="performance_fee">Performance Fee</option>
+              <option value="advisory">Advisory Fee</option>
+              <option value="subscription">Subscription</option>
+              <option value="other">Other</option>
+            </select>
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-gray-400 mb-1.5">Issue Date</label>
+            <input type="date" value={invoiceForm.date} onChange={e => setInvoiceForm(f => ({ ...f, date: e.target.value }))} className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-brand-red/40 focus:ring-1 focus:ring-brand-red/20" />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-gray-400 mb-1.5">Due Date</label>
+            <input type="date" value={invoiceForm.dueDate} onChange={e => setInvoiceForm(f => ({ ...f, dueDate: e.target.value }))} className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-brand-red/40 focus:ring-1 focus:ring-brand-red/20" />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-gray-400 mb-1.5">Status</label>
+            <select value={invoiceForm.status} onChange={e => setInvoiceForm(f => ({ ...f, status: e.target.value }))} className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-brand-red/40 focus:ring-1 focus:ring-brand-red/20">
+              <option value="draft">Draft</option>
+              <option value="sent">Sent</option>
+              <option value="paid">Paid</option>
+              <option value="overdue">Overdue</option>
+            </select>
+          </div>
+          <div className="sm:col-span-2">
+            <label className="block text-xs font-medium text-gray-400 mb-1.5">Notes</label>
+            <textarea rows={2} placeholder="Optional notes..." value={invoiceForm.notes} onChange={e => setInvoiceForm(f => ({ ...f, notes: e.target.value }))} className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-brand-red/40 focus:ring-1 focus:ring-brand-red/20" />
+          </div>
+          <div className="sm:col-span-2">
+            <label className="block text-xs font-medium text-gray-400 mb-1.5">Attach Document</label>
+            <button type="button" onClick={() => setFolderPickerOpen(true)} className="flex items-center gap-2 px-3 py-2.5 rounded-xl text-sm font-medium text-gray-400 bg-white/[0.04] border border-dashed border-white/[0.12] hover:bg-white/[0.08] hover:border-white/[0.2] transition-colors w-full justify-center">
+              <Upload className="w-4 h-4" /> Upload Invoice Document
+            </button>
+          </div>
+        </div>
+        <div className="flex justify-end gap-3 mt-6 pt-4 border-t border-white/[0.06]">
+          <button onClick={() => { resetInvoiceForm(); setAddInvoiceOpen(false) }} className="px-4 py-2 rounded-xl text-sm font-medium text-gray-400 hover:text-white hover:bg-white/[0.06] transition-colors">Cancel</button>
+          <button onClick={handleInvoiceSubmit} className="px-5 py-2 rounded-xl text-sm font-medium text-white bg-brand-red hover:bg-red-600 transition-colors">Create Invoice</button>
+        </div>
+      </AdminModal>
+
+      {/* Upload for Invoice Documents */}
+      <UploadWithFolderPicker
+        open={folderPickerOpen}
+        onClose={() => setFolderPickerOpen(false)}
+        defaultRoute="admin/invoices"
+        showToast={showToast as any}
+        onUploadComplete={(results) => {
+          const ok = results.filter((r: any) => r.success).length
+          if (ok > 0) showToast(`${ok} document(s) uploaded`, 'success')
+        }}
+        theme="dark"
+        portal="admin"
+      />
+
+      {/* Delete Confirmation */}
+      {deleteConfirmId && (
+        <AdminModal isOpen={!!deleteConfirmId} onClose={() => setDeleteConfirmId(null)} title="Delete Invoice?" maxWidth="max-w-sm">
+          <p className="text-sm text-gray-400">This action cannot be undone. Are you sure you want to delete this draft invoice?</p>
+          <div className="flex justify-end gap-3 mt-6 pt-4 border-t border-white/[0.06]">
+            <button onClick={() => setDeleteConfirmId(null)} className="px-4 py-2 rounded-xl text-sm font-medium text-gray-400 hover:text-white hover:bg-white/[0.06] transition-colors">Cancel</button>
+            <button onClick={() => handleDelete(deleteConfirmId)} className="px-5 py-2 rounded-xl text-sm font-medium text-white bg-red-600 hover:bg-red-700 transition-colors">Delete</button>
           </div>
         </AdminModal>
       )}

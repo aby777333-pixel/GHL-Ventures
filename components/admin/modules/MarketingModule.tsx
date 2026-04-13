@@ -24,7 +24,7 @@ import AdminDataTable, { type Column } from '../shared/AdminDataTable'
 import {
   fetchMarketingCampaigns, getMarketingContent, getMarketingAudiences,
   getMarketingSequences, getMarketingChannels, getMarketingAITools,
-  getMarketingIntegrations, insertRow,
+  getMarketingIntegrations, insertRow, updateRow,
 } from '@/lib/supabase/adminDataService'
 import { formatINR } from '@/lib/admin/adminHooks'
 import type {
@@ -154,7 +154,7 @@ export default function MarketingModule({ subTab, navigate, showToast }: Marketi
   return (
     <div className="space-y-6 admin-section-enter">
       {subTab === null && <OverviewTab navigate={navigate} showToast={showToast} campaigns={campaigns} marketingKPIs={marketingKPIs} channelPerformance={channelPerformance} />}
-      {subTab === 'campaigns' && <CampaignsTab showToast={showToast} campaigns={campaigns} />}
+      {subTab === 'campaigns' && <CampaignsTab showToast={showToast} campaigns={campaigns} refetch={loadData} />}
       {subTab === 'content' && <ContentTab showToast={showToast} contentData={contentData} />}
       {subTab === 'audience' && <AudienceTab showToast={showToast} audienceSegments={audienceSegments} />}
       {subTab === 'outreach' && <OutreachTab showToast={showToast} outreachSequences={outreachSequences} />}
@@ -293,7 +293,7 @@ function OverviewTab({ navigate, showToast, campaigns, marketingKPIs, channelPer
 // ══════════════════════════════════════════════════════════════════
 //  SUB-TAB 2: CAMPAIGNS
 // ══════════════════════════════════════════════════════════════════
-function CampaignsTab({ showToast, campaigns }: { showToast: (m: string, t?: 'success' | 'error' | 'info' | 'warning') => void; campaigns: any[] }) {
+function CampaignsTab({ showToast, campaigns, refetch }: { showToast: (m: string, t?: 'success' | 'error' | 'info' | 'warning') => void; campaigns: any[]; refetch: () => void }) {
   const [typeFilter, setTypeFilter] = useState<string>('all')
   const [viewMode, setViewMode] = useState<'cards' | 'table'>('cards')
   const [selectedCampaign, setSelectedCampaign] = useState<MarketingCampaign | null>(null)
@@ -302,6 +302,22 @@ function CampaignsTab({ showToast, campaigns }: { showToast: (m: string, t?: 'su
   const [folderPickerOpen, setFolderPickerOpen] = useState(false)
   const [campaignForm, setCampaignForm] = useState({ name: '', type: 'email', status: 'draft', budget: '', startDate: '', endDate: '', audience: '', description: '' })
   const resetCampaignForm = () => setCampaignForm({ name: '', type: 'email', status: 'draft', budget: '', startDate: '', endDate: '', audience: '', description: '' })
+  const [editingCampaign, setEditingCampaign] = useState<any>(null)
+
+  const handleEditOpen = (c: any) => {
+    setCampaignForm({
+      name: c.name || '',
+      type: c.type || 'email',
+      status: c.status || 'draft',
+      budget: String(c.budget || ''),
+      startDate: c.start_date || '',
+      endDate: c.end_date || '',
+      audience: c.audience || '',
+      description: c.description || '',
+    })
+    setEditingCampaign(c)
+    setNewCampaignOpen(true)
+  }
 
   const handleCreateCampaign = async () => {
     if (!campaignForm.name.trim()) { showToast('Campaign name is required', 'error'); return }
@@ -319,6 +335,28 @@ function CampaignsTab({ showToast, campaigns }: { showToast: (m: string, t?: 'su
     showToast(`Campaign "${campaignForm.name}" created`, 'success')
     resetCampaignForm()
     setNewCampaignOpen(false)
+    refetch()
+  }
+
+  const handleUpdateCampaign = async () => {
+    if (!editingCampaign?.id) return
+    if (!campaignForm.name.trim()) { showToast('Campaign name is required', 'error'); return }
+    const result = await updateRow('campaigns', editingCampaign.id, {
+      name: campaignForm.name,
+      type: campaignForm.type,
+      status: campaignForm.status,
+      budget: parseFloat(campaignForm.budget) || 0,
+      start_date: campaignForm.startDate || null,
+      end_date: campaignForm.endDate || null,
+      audience: campaignForm.audience || null,
+      description: campaignForm.description || null,
+    })
+    if (!result) { showToast('Failed to update campaign', 'error'); return }
+    showToast(`Campaign "${campaignForm.name}" updated`, 'success')
+    resetCampaignForm()
+    setEditingCampaign(null)
+    setNewCampaignOpen(false)
+    refetch()
   }
 
   const filtered = useMemo(() => {
@@ -469,19 +507,19 @@ function CampaignsTab({ showToast, campaigns }: { showToast: (m: string, t?: 'su
                   </div>
                   <div className="flex items-center gap-2 mt-3 pt-3 border-t border-white/[0.04]">
                     {c.status === 'draft' && (
-                      <button onClick={(e) => { e.stopPropagation(); showToast(`${c.name} launched`, 'success') }} className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-medium text-emerald-400 bg-emerald-500/10 hover:bg-emerald-500/20 transition-colors">
+                      <button onClick={async (e) => { e.stopPropagation(); const ok = await updateRow('campaigns', c.id, { status: 'live' }); showToast(ok ? `${c.name} launched` : 'Failed to launch', ok ? 'success' : 'error'); if (ok) refetch() }} className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-medium text-emerald-400 bg-emerald-500/10 hover:bg-emerald-500/20 transition-colors">
                         <Play className="w-3 h-3" /> Launch
                       </button>
                     )}
                     {c.status === 'live' && (
-                      <button onClick={(e) => { e.stopPropagation(); showToast(`${c.name} paused`, 'warning') }} className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-medium text-amber-400 bg-amber-500/10 hover:bg-amber-500/20 transition-colors">
+                      <button onClick={async (e) => { e.stopPropagation(); const ok = await updateRow('campaigns', c.id, { status: 'paused' }); showToast(ok ? `${c.name} paused` : 'Failed to pause', ok ? 'warning' : 'error'); if (ok) refetch() }} className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-medium text-amber-400 bg-amber-500/10 hover:bg-amber-500/20 transition-colors">
                         <Pause className="w-3 h-3" /> Pause
                       </button>
                     )}
-                    <button onClick={(e) => { e.stopPropagation(); showToast(`Editing ${c.name}`, 'info') }} className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-medium text-gray-400 bg-white/[0.04] hover:bg-white/[0.08] transition-colors">
+                    <button onClick={(e) => { e.stopPropagation(); handleEditOpen(c) }} className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-medium text-gray-400 bg-white/[0.04] hover:bg-white/[0.08] transition-colors">
                       <Edit3 className="w-3 h-3" /> Edit
                     </button>
-                    <button onClick={(e) => { e.stopPropagation(); showToast(`${c.name} duplicated`, 'success') }} className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-medium text-gray-400 bg-white/[0.04] hover:bg-white/[0.08] transition-colors">
+                    <button onClick={async (e) => { e.stopPropagation(); const { id, ...rest } = c; const ok = await insertRow('campaigns', { ...rest, name: c.name + ' (Copy)', status: 'draft' }); showToast(ok ? `${c.name} duplicated` : 'Failed to duplicate', ok ? 'success' : 'error'); if (ok) refetch() }} className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-medium text-gray-400 bg-white/[0.04] hover:bg-white/[0.08] transition-colors">
                       <Copy className="w-3 h-3" /> Duplicate
                     </button>
                   </div>
@@ -502,7 +540,7 @@ function CampaignsTab({ showToast, campaigns }: { showToast: (m: string, t?: 'su
           footer={
             <>
               <ModalButton onClick={() => { setModalOpen(false); setSelectedCampaign(null) }}>Close</ModalButton>
-              <ModalButton variant="primary" onClick={() => showToast('Campaign editor opened', 'info')}>Edit Campaign</ModalButton>
+              <ModalButton variant="primary" onClick={() => { setModalOpen(false); handleEditOpen(selectedCampaign) }}>Edit Campaign</ModalButton>
             </>
           }
         >
@@ -511,7 +549,7 @@ function CampaignsTab({ showToast, campaigns }: { showToast: (m: string, t?: 'su
       )}
 
       {/* New Campaign Modal */}
-      <AdminModal isOpen={newCampaignOpen} onClose={() => setNewCampaignOpen(false)} title="New Campaign" maxWidth="max-w-2xl">
+      <AdminModal isOpen={newCampaignOpen} onClose={() => setNewCampaignOpen(false)} title={editingCampaign ? 'Edit Campaign' : 'New Campaign'} maxWidth="max-w-2xl">
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <label className="block text-xs font-medium text-gray-400 mb-1.5">Campaign Name *</label>
@@ -573,8 +611,8 @@ function CampaignsTab({ showToast, campaigns }: { showToast: (m: string, t?: 'su
           </div>
         </div>
         <div className="flex justify-end gap-3 mt-6 pt-4 border-t border-white/[0.06]">
-          <button onClick={() => { resetCampaignForm(); setNewCampaignOpen(false) }} className="px-4 py-2 rounded-xl text-sm font-medium text-gray-400 hover:text-white hover:bg-white/[0.06] transition-colors">Cancel</button>
-          <button onClick={handleCreateCampaign} className="px-5 py-2 rounded-xl text-sm font-medium text-white bg-brand-red hover:bg-red-600 transition-colors">Create</button>
+          <button onClick={() => { resetCampaignForm(); setEditingCampaign(null); setNewCampaignOpen(false) }} className="px-4 py-2 rounded-xl text-sm font-medium text-gray-400 hover:text-white hover:bg-white/[0.06] transition-colors">Cancel</button>
+          <button onClick={editingCampaign ? handleUpdateCampaign : handleCreateCampaign} className="px-5 py-2 rounded-xl text-sm font-medium text-white bg-brand-red hover:bg-red-600 transition-colors">{editingCampaign ? 'Save Changes' : 'Create'}</button>
         </div>
       </AdminModal>
       <UploadWithFolderPicker

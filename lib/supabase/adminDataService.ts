@@ -579,7 +579,7 @@ const ALLOWED_TABLES = [
   'audit_logs', 'expenses', 'payouts', 'assets', 'leads', 'tasks',
   'compliance_items', 'reports', 'roles', 'funds', 'bank_accounts',
   'investment_applications', 'kyc_documents', 'leave_requests',
-  'invoices', 'commissions', 'approvals',
+  'invoices', 'commissions', 'approvals', 'campaigns', 'staff_checkins',
 ]
 
 export async function insertRow(table: string, row: Record<string, any>) {
