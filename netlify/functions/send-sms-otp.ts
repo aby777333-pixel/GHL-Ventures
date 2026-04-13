@@ -24,11 +24,12 @@ function getCorsHeaders(request?: Request) {
 }
 
 function generateOTP(): string {
-  // Use Node.js crypto via require (compatible with Netlify esbuild + Node 18)
-  const { randomBytes } = require('crypto')
-  const bytes = randomBytes(4)
-  const num = (bytes[0] << 24 | bytes[1] << 16 | bytes[2] << 8 | bytes[3]) >>> 0
-  return String(100000 + (num % 900000))
+  const digits = '0123456789'
+  let code = ''
+  for (let i = 0; i < 6; i++) {
+    code += digits[Math.floor(Math.random() * 10)]
+  }
+  return code
 }
 
 export default async (request: Request) => {

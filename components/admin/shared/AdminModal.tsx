@@ -55,11 +55,11 @@ export default function AdminModal({
     <div
       ref={overlayRef}
       onClick={handleOverlayClick}
-      className="fixed inset-0 z-[10002] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
+      className="fixed inset-0 z-[10002] flex items-start justify-center overflow-y-auto py-8 px-4 bg-black/60 backdrop-blur-sm"
       style={{ animation: 'adminFadeIn 0.2s ease-out' }}
     >
       <div
-        className={`w-full ${maxWidth} rounded-2xl border border-white/[0.1] overflow-hidden shadow-2xl`}
+        className={`w-full ${maxWidth} rounded-2xl border border-white/[0.1] overflow-hidden shadow-2xl shrink-0`}
         style={{
           background: 'linear-gradient(135deg, rgba(20,20,20,0.98) 0%, rgba(10,10,10,0.98) 100%)',
           animation: 'adminSlideUp 0.3s ease-out',
