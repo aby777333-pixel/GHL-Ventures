@@ -175,18 +175,44 @@ export default async (request: Request) => {
       smsError = err instanceof Error ? err.message : String(err)
     }
 
+    // ── Fallback: Fast2SMS OTP Route (works immediately, default branding) ──
     if (!smsSuccess) {
-      // DLT route failed — clean up OTP and return the exact error
+      console.warn('[send-sms-otp] DLT failed:', smsError, '— trying OTP route')
+      try {
+        const res = await fetch('https://www.fast2sms.com/dev/bulkV2', {
+          method: 'POST',
+          headers: {
+            'authorization': fast2smsKey,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            route: 'otp',
+            variables_values: code,
+            flash: 0,
+            numbers: cleanMobile,
+          }),
+        })
+        const body = await res.json()
+        console.log('[send-sms-otp] Fast2SMS OTP response:', JSON.stringify(body))
+        if (body.return === true) {
+          smsSuccess = true
+        } else {
+          smsError += ` | OTP route: ${body.message || JSON.stringify(body)}`
+        }
+      } catch (err) {
+        smsError += ` | OTP route: ${err instanceof Error ? err.message : String(err)}`
+      }
+    }
+
+    if (!smsSuccess) {
       await supabase
         .from('sms_otp_codes')
         .delete()
         .eq('mobile', cleanMobile)
         .eq('code', code)
 
-      console.error('[send-sms-otp] DLT route failed:', smsError)
-      return new Response(JSON.stringify({
-        error: `SMS failed: ${smsError}. Please ensure DLT template and sender ID are configured in Fast2SMS.`,
-      }), {
+      console.error('[send-sms-otp] All attempts failed:', smsError)
+      return new Response(JSON.stringify({ error: 'Failed to send OTP. Please try again later.' }), {
         status: 500, headers: { 'Content-Type': 'application/json', ...getCorsHeaders(request) },
       })
     }
