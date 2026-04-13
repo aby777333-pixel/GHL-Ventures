@@ -900,7 +900,7 @@ export default function DashboardClient() {
                 </div>
                 <div className="max-h-80 overflow-y-auto">
                   {notifications.map((n: any) => {
-                    const notifTabMap: Record<string, TabId> = { report: 'kyc', opportunity: 'investments', alert: 'kyc', payment: 'transactions', milestone: 'portfolio' }
+                    const notifTabMap: Record<string, TabId> = { report: 'documents', opportunity: 'investments', alert: 'kyc', payment: 'transactions', milestone: 'portfolio' }
                     return (
                     <div key={n.id} onClick={() => { setNotifsRead(prev => new Set(prev).add(n.id)); markNotificationRead(String(n.id)); setNotifOpen(false); setActiveTab(notifTabMap[n.type] || 'dashboard') }} className={`px-4 py-3 flex gap-3 cursor-pointer transition-colors ${!n.is_read && !notifsRead.has(n.id) ? 'bg-white/[0.02]' : ''} hover:bg-white/[0.04]`}>
                       <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0
@@ -1149,7 +1149,7 @@ export default function DashboardClient() {
     <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
       {[
         { icon: Plus, label: 'New Investment', desc: 'Explore opportunities', color: '#D0021B', action: () => setActiveTab('investments') },
-        { icon: Download, label: 'Statements', desc: 'Download reports', color: '#3B82F6', action: () => setActiveTab('kyc') },
+        { icon: Download, label: 'Statements', desc: 'Download reports', color: '#3B82F6', action: () => setActiveTab('documents') },
         { icon: Ticket, label: 'Raise Ticket', desc: 'Get support', color: '#F59E0B', action: () => { setActiveTab('support'); setTicketForm(true) } },
         { icon: PhoneCall, label: 'Direct Call', desc: 'Call GHL directly', color: '#8B5CF6', action: () => { setActiveTab('support'); window.open('tel:+914428431043') } },
         { icon: Briefcase, label: 'Portfolio', desc: 'Track performance', color: '#10B981', action: () => setActiveTab('portfolio') },
