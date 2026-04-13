@@ -23,10 +23,11 @@ function getCorsHeaders(request?: Request) {
 }
 
 function generateOTP(): string {
-  // Secure random OTP using Web Crypto API (available in all modern runtimes)
-  const arr = new Uint32Array(1)
-  globalThis.crypto.getRandomValues(arr)
-  return String(100000 + (arr[0] % 900000))
+  // Use Node.js crypto via require (compatible with Netlify esbuild + Node 18)
+  const { randomBytes } = require('crypto')
+  const bytes = randomBytes(4)
+  const num = (bytes[0] << 24 | bytes[1] << 16 | bytes[2] << 8 | bytes[3]) >>> 0
+  return String(100000 + (num % 900000))
 }
 
 function formatOTPEmailHtml(code: string): string {

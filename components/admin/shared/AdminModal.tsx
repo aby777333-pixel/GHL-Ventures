@@ -80,7 +80,7 @@ export default function AdminModal({
         </div>
 
         {/* Body */}
-        <div className="px-6 py-5 max-h-[60vh] overflow-y-auto admin-scroll">
+        <div className="px-6 py-5 max-h-[75vh] overflow-y-auto admin-scroll" ref={(el) => { if (el) el.scrollTop = 0 }}>
           {children}
         </div>
 
