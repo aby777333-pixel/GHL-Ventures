@@ -292,7 +292,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               </MainSiteOnly>
               {/* Floating widgets — always visible (useful for staff telecallers & CS) */}
               <VideoCallWidget />
-              <DirectCallWidget />
+              {/* <DirectCallWidget /> — hidden, keeping only ARIA and live chat */}
               {/* VoiceCommandWidget hidden for now */}
               {/* <VoiceCommandWidget /> */}
               {/* SpeechTranslationWidget hidden for now */}

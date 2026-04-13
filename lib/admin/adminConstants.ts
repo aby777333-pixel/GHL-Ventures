@@ -168,7 +168,7 @@ export const ADMIN_SIDEBAR_ITEMS: SidebarItem[] = [
     subItems: [
       { id: 'marketing', label: 'Overview' },
       { id: 'marketing/campaigns', label: 'Campaigns' },
-      { id: 'marketing/content', label: 'Content Hub' },
+      // { id: 'marketing/content', label: 'Content Hub' }, // Hidden for now
       { id: 'marketing/audience', label: 'Audience' },
       { id: 'marketing/outreach', label: 'Outreach' },
       { id: 'marketing/mkt-analytics', label: 'Analytics' },
