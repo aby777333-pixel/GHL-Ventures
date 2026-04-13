@@ -200,10 +200,18 @@ export default function ChatWidget() {
 
   // External open event (from dashboard support tab)
   useEffect(() => {
-    const handleExternalOpen = () => setIsOpen(true)
+    const handleExternalOpen = () => {
+      setShowProactive(false)
+      setShowPulse(false)
+      setUnreadCount(0)
+      if (messages.length === 0 && chatState === 'active') {
+        addWelcome(visitorName)
+      }
+      setIsOpen(true)
+    }
     window.addEventListener('ghl-open-chat', handleExternalOpen)
     return () => window.removeEventListener('ghl-open-chat', handleExternalOpen)
-  }, [])
+  }, [messages.length, chatState, visitorName])
 
   // Proactive message based on page
   useEffect(() => {
