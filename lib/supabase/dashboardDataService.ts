@@ -362,24 +362,94 @@ export async function createSupportTicket(ticket: Record<string, any>) {
 
 export async function sendMessage(message: Record<string, any>) {
   if (!isSupabaseConfigured()) return null
+
+  // Route "Support Team" messages as tickets → staff dashboard
+  // Route RM / Compliance / Investment messages → admin dashboard
+  const subject = message.subject || ''
+  const isSupport = subject.startsWith('[Support Team]')
+
+  if (isSupport) {
+    // Create a support ticket instead of a message
+    const cleanSubject = subject.replace('[Support Team] ', '')
+    let clientId = null
+    let clientName = 'Client'
+    if (message.from_id) {
+      try {
+        const { data: cl } = await sb.from('clients').select('id, full_name').eq('user_id', message.from_id).maybeSingle()
+        if (cl) { clientId = cl.id; clientName = cl.full_name || 'Client' }
+      } catch { /* use defaults */ }
+    }
+    const ticketNumber = `TKT-${Date.now().toString(36).toUpperCase()}-${Math.random().toString(36).substring(2, 6).toUpperCase()}`
+    const { data: ticketData, error: ticketError } = await sb.from('tickets').insert({
+      ticket_number: ticketNumber,
+      client_id: clientId,
+      client_name: clientName,
+      subject: cleanSubject,
+      description: message.body || null,
+      category: 'General',
+      priority: 'medium',
+      status: 'open',
+      channel: 'web',
+      source: 'dashboard',
+      created_by: message.from_id || null,
+    }).select().single()
+    if (ticketError) { console.warn('[dashboard] Support ticket error:', ticketError.message); return null }
+
+    // Notify staff (not admins) — staff roles: support, operations, sales, cs agents
+    try {
+      const { data: staffUsers } = await sb.from('profiles').select('id').in('role', ['admin', 'super_admin', 'support', 'operations', 'sales'])
+      if (staffUsers && staffUsers.length > 0) {
+        const notifs = staffUsers.map((s: any) => ({
+          user_id: s.id,
+          title: `New Support Ticket: ${cleanSubject}`,
+          message: `${clientName} submitted a support request.`,
+          type: 'info',
+          link: '/staff/cs/tickets',
+          metadata: { ticket_id: ticketData?.id, ticket_number: ticketNumber },
+        }))
+        await sb.from('notifications').insert(notifs)
+      }
+    } catch { /* non-blocking */ }
+
+    return ticketData
+  }
+
+  // Non-support messages → messages table → notify admins
   const { data, error } = await sb.from('messages').insert(message).select().single()
   if (error) { console.warn('[dashboard] Send message error:', error.message); return null }
 
-  // Notify all admins about the new message
+  // Parse recipient type from subject for targeted notification
+  const recipientType = subject.match(/^\[(.+?)\]/)?.[1] || 'Advisory Team'
+
+  // Notify admins about the new message
   try {
     const { data: admins } = await sb.from('profiles').select('id').in('role', ['admin', 'super_admin'])
     if (admins && admins.length > 0) {
       const notifs = admins.map((a: any) => ({
         user_id: a.id,
-        title: `New Message from Investor`,
-        message: `Subject: ${message.subject || 'No subject'}`,
+        title: `New ${recipientType} Message from Investor`,
+        message: `Subject: ${subject.replace(/^\[.+?\]\s*/, '') || 'No subject'}`,
         type: 'info',
-        link: '/admin?tab=comms',
+        link: '/admin?tab=comms/messages',
         metadata: { message_id: data?.id, from_id: message.from_id },
       }))
       await sb.from('notifications').insert(notifs)
     }
   } catch { /* non-blocking */ }
+
+  // Also notify assigned RM if message is for RM
+  if (message.to_id && subject.startsWith('[Relationship Manager]')) {
+    try {
+      await sb.from('notifications').insert({
+        user_id: message.to_id,
+        title: 'New Message from Your Client',
+        message: `Subject: ${subject.replace(/^\[.+?\]\s*/, '')}`,
+        type: 'info',
+        link: '/staff/cs/inbox',
+        metadata: { message_id: data?.id, from_id: message.from_id },
+      })
+    } catch { /* non-blocking */ }
+  }
 
   return data
 }

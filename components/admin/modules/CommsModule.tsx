@@ -5,7 +5,8 @@ import {
   MessageSquare, Send, Bell, Users, Mail, MessageCircle,
   Megaphone, AlertTriangle, CheckCircle2, Clock, Eye,
   Plus, Search, Filter, Hash, AtSign, Paperclip,
-  Video, Phone, Star, Archive, Trash2, Reply,
+  Video, Phone, Star, Archive, Trash2, Reply, Inbox,
+  User, RefreshCw,
 } from 'lucide-react'
 import AdminGlass from '../shared/AdminGlass'
 import AdminBadge from '../shared/AdminBadge'
@@ -20,6 +21,7 @@ import {
   type InternalChannel,
   type InternalMessage,
 } from '@/lib/supabase/internalChatService'
+import { fetchAllMessages } from '@/lib/supabase/adminDataService'
 
 // ── Mock Data ────────────────────────────────────────────────────
 interface Broadcast {
@@ -60,6 +62,7 @@ const SYSTEM_ALERTS: Alert[] = []
 
 // ── Sub-tabs ─────────────────────────────────────────────────────
 const COMMS_TABS = [
+  { id: 'messages', label: 'Investor Messages', icon: Inbox },
   { id: 'broadcast', label: 'Broadcast', icon: Megaphone },
   { id: 'internal', label: 'Internal Chat', icon: MessageCircle },
   { id: 'alerts', label: 'Alert Center', icon: Bell },
@@ -74,7 +77,7 @@ interface CommsModuleProps {
 }
 
 export default function CommsModule({ subTab, navigate, showToast }: CommsModuleProps) {
-  const activeTab = (COMMS_TABS.some(t => t.id === subTab) ? subTab : 'broadcast') as CommsTab
+  const activeTab = (COMMS_TABS.some(t => t.id === subTab) ? subTab : 'messages') as CommsTab
 
   const kpis = useMemo(() => ({
     totalBroadcasts: BROADCASTS.filter(b => b.status === 'sent').length,
@@ -84,7 +87,7 @@ export default function CommsModule({ subTab, navigate, showToast }: CommsModule
   }), [])
 
   const handleTabClick = (tabId: string) => {
-    navigate(tabId === 'broadcast' ? 'comms' : `comms/${tabId}`)
+    navigate(tabId === 'messages' ? 'comms' : `comms/${tabId}`)
   }
 
   return (
@@ -136,10 +139,149 @@ export default function CommsModule({ subTab, navigate, showToast }: CommsModule
       </div>
 
       <div className="admin-tab-switch">
+        {activeTab === 'messages' && <InvestorMessagesTab showToast={showToast} />}
         {activeTab === 'broadcast' && <BroadcastTab showToast={showToast} />}
         {activeTab === 'internal' && <InternalChatTab showToast={showToast} />}
         {activeTab === 'alerts' && <AlertCenterTab showToast={showToast} />}
       </div>
+    </div>
+  )
+}
+
+// ── Investor Messages Tab ───────────────────────────────────────
+function InvestorMessagesTab({ showToast }: { showToast: (msg: string, type?: 'success' | 'error' | 'info' | 'warning') => void }) {
+  const [messages, setMessages] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
+  const [selectedMsg, setSelectedMsg] = useState<any | null>(null)
+  const [filterType, setFilterType] = useState<string>('all')
+
+  const loadMessages = useCallback(async () => {
+    setLoading(true)
+    try {
+      const data = await fetchAllMessages()
+      setMessages(data || [])
+    } catch { setMessages([]) }
+    setLoading(false)
+  }, [])
+
+  useEffect(() => { loadMessages() }, [loadMessages])
+
+  // Parse recipient type from subject like "[Relationship Manager] Subject here"
+  const parseSubject = (subject: string) => {
+    const match = subject?.match(/^\[(.+?)\]\s*(.*)$/)
+    return match ? { type: match[1], clean: match[2] } : { type: 'General', clean: subject || 'No subject' }
+  }
+
+  const filtered = useMemo(() => {
+    if (filterType === 'all') return messages
+    return messages.filter(m => {
+      const { type } = parseSubject(m.subject)
+      return type === filterType
+    })
+  }, [messages, filterType])
+
+  const typeCounts = useMemo(() => {
+    const counts: Record<string, number> = { all: messages.length }
+    messages.forEach(m => {
+      const { type } = parseSubject(m.subject)
+      counts[type] = (counts[type] || 0) + 1
+    })
+    return counts
+  }, [messages])
+
+  const typeColors: Record<string, string> = {
+    'Relationship Manager': 'text-blue-400 bg-blue-500/15 border-blue-500/20',
+    'Compliance Team': 'text-amber-400 bg-amber-500/15 border-amber-500/20',
+    'Investment Team': 'text-emerald-400 bg-emerald-500/15 border-emerald-500/20',
+    'General': 'text-gray-400 bg-gray-500/15 border-gray-500/20',
+  }
+
+  if (loading) {
+    return (
+      <AdminGlass>
+        <div className="flex items-center justify-center py-16">
+          <RefreshCw className="w-5 h-5 animate-spin text-gray-500 mr-2" />
+          <span className="text-sm text-gray-500">Loading investor messages...</span>
+        </div>
+      </AdminGlass>
+    )
+  }
+
+  return (
+    <div className="space-y-4">
+      {/* Filter chips */}
+      <div className="flex flex-wrap gap-2">
+        {['all', 'Relationship Manager', 'Compliance Team', 'Investment Team'].map(f => (
+          <button
+            key={f}
+            onClick={() => setFilterType(f)}
+            className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all border ${
+              filterType === f
+                ? 'bg-brand-red/20 text-white border-brand-red/30'
+                : 'text-gray-500 hover:text-gray-300 border-white/[0.06] hover:bg-white/[0.04]'
+            }`}
+          >
+            {f === 'all' ? 'All Messages' : f}
+            <span className="ml-1.5 opacity-60">({typeCounts[f] || 0})</span>
+          </button>
+        ))}
+        <button
+          onClick={loadMessages}
+          className="ml-auto px-3 py-1.5 rounded-lg text-xs font-medium text-gray-500 hover:text-white border border-white/[0.06] hover:bg-white/[0.04] transition-all flex items-center gap-1"
+        >
+          <RefreshCw className="w-3 h-3" /> Refresh
+        </button>
+      </div>
+
+      {filtered.length === 0 ? (
+        <AdminEmptyState
+          icon={Inbox}
+          title="No investor messages"
+          description={filterType === 'all' ? 'Messages from investors will appear here when they write to your team.' : `No messages for ${filterType}.`}
+        />
+      ) : (
+        <div className="grid gap-3">
+          {filtered.map((msg: any) => {
+            const { type, clean } = parseSubject(msg.subject)
+            const colorClass = typeColors[type] || typeColors['General']
+            const isSelected = selectedMsg?.id === msg.id
+            return (
+              <AdminGlass key={msg.id} className={`cursor-pointer transition-all hover:border-white/[0.12] ${isSelected ? 'border-brand-red/30 bg-brand-red/[0.03]' : ''}`}>
+                <div onClick={() => setSelectedMsg(isSelected ? null : msg)} className="p-4">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex items-start gap-3 flex-1 min-w-0">
+                      <div className="w-9 h-9 rounded-full bg-white/[0.06] flex items-center justify-center flex-shrink-0">
+                        <User className="w-4 h-4 text-gray-400" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-1 flex-wrap">
+                          <span className="text-sm font-semibold text-white truncate">{msg.from_name || 'Investor'}</span>
+                          <span className={`px-2 py-0.5 rounded-full text-[10px] font-medium border ${colorClass}`}>{type}</span>
+                          {!msg.read && <span className="w-2 h-2 rounded-full bg-brand-red flex-shrink-0" />}
+                        </div>
+                        <p className="text-sm text-gray-300 font-medium truncate">{clean}</p>
+                        {isSelected && msg.body && (
+                          <div className="mt-3 p-3 rounded-lg bg-white/[0.03] border border-white/[0.06]">
+                            <p className="text-sm text-gray-400 whitespace-pre-wrap">{msg.body}</p>
+                            {msg.attachments && msg.attachments.length > 0 && (
+                              <div className="mt-2 flex items-center gap-1 text-xs text-gray-500">
+                                <Paperclip className="w-3 h-3" /> {msg.attachments.length} attachment(s)
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                    <span className="text-[11px] text-gray-600 whitespace-nowrap flex-shrink-0">
+                      {msg.created_at ? formatTimeAgo(msg.created_at) : ''}
+                    </span>
+                  </div>
+                </div>
+              </AdminGlass>
+            )
+          })}
+        </div>
+      )}
     </div>
   )
 }

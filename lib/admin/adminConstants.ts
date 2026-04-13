@@ -153,7 +153,7 @@ export const ADMIN_SIDEBAR_ITEMS: SidebarItem[] = [
     iconName: 'MessageSquare',
     permission: 'view:comms',
     subItems: [
-      { id: 'comms', label: 'Hub' },
+      { id: 'comms', label: 'Investor Messages' },
       { id: 'comms/broadcast', label: 'Broadcast' },
       { id: 'comms/internal', label: 'Internal Chat' },
       { id: 'comms/alerts', label: 'Alert Center' },
@@ -282,6 +282,7 @@ export const ALL_ADMIN_TAB_PARAMS = [
   { tab: ['analytics', 'reports'] },
   { tab: ['analytics', 'forecasting'] },
   { tab: ['comms'] },
+  { tab: ['comms', 'messages'] },
   { tab: ['comms', 'broadcast'] },
   { tab: ['comms', 'internal'] },
   { tab: ['comms', 'alerts'] },
