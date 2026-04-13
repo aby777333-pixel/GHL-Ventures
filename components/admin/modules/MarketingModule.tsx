@@ -131,10 +131,10 @@ interface MarketingModuleProps {
 // ══════════════════════════════════════════════════════════════════
 export default function MarketingModule({ subTab, navigate, showToast }: MarketingModuleProps) {
   const [campaigns, setCampaigns] = useState<any[]>([])
+  const [contentData, setContentData] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
 
   // Static config data (no real tables yet — return empty arrays)
-  const contentData: any[] = getMarketingContent()
   const audienceSegments: any[] = getMarketingAudiences()
   const outreachSequences: any[] = getMarketingSequences()
   const marketingAITools: any[] = getMarketingAITools()
@@ -144,8 +144,9 @@ export default function MarketingModule({ subTab, navigate, showToast }: Marketi
 
   const loadData = useCallback(async () => {
     setLoading(true)
-    const c = await fetchMarketingCampaigns()
+    const [c, cd] = await Promise.all([fetchMarketingCampaigns(), getMarketingContent()])
     setCampaigns(c)
+    setContentData(cd)
     setLoading(false)
   }, [])
 
@@ -155,7 +156,7 @@ export default function MarketingModule({ subTab, navigate, showToast }: Marketi
     <div className="space-y-6 admin-section-enter">
       {subTab === null && <OverviewTab navigate={navigate} showToast={showToast} campaigns={campaigns} marketingKPIs={marketingKPIs} channelPerformance={channelPerformance} />}
       {subTab === 'campaigns' && <CampaignsTab showToast={showToast} campaigns={campaigns} refetch={loadData} />}
-      {subTab === 'content' && <ContentTab showToast={showToast} contentData={contentData} />}
+      {subTab === 'content' && <ContentTab showToast={showToast} contentData={contentData} refetch={loadData} />}
       {subTab === 'audience' && <AudienceTab showToast={showToast} audienceSegments={audienceSegments} />}
       {subTab === 'outreach' && <OutreachTab showToast={showToast} outreachSequences={outreachSequences} />}
       {subTab === 'mkt-analytics' && <AnalyticsTab />}
@@ -684,9 +685,11 @@ function CampaignDetailContent({ campaign }: { campaign: MarketingCampaign }) {
 // ══════════════════════════════════════════════════════════════════
 //  SUB-TAB 3: CONTENT HUB
 // ══════════════════════════════════════════════════════════════════
-function ContentTab({ showToast, contentData }: { showToast: (m: string, t?: 'success' | 'error' | 'info' | 'warning') => void; contentData: any[] }) {
+function ContentTab({ showToast, contentData, refetch }: { showToast: (m: string, t?: 'success' | 'error' | 'info' | 'warning') => void; contentData: any[]; refetch: () => void }) {
   const [newContentOpen, setNewContentOpen] = useState(false)
   const [folderPickerOpen, setFolderPickerOpen] = useState(false)
+  const [contentForm, setContentForm] = useState({ title: '', type: 'blog-post', author: '', status: 'idea', publishDate: '', tags: '', description: '' })
+  const resetContentForm = () => setContentForm({ title: '', type: 'blog-post', author: '', status: 'idea', publishDate: '', tags: '', description: '' })
   const contentStatuses = ['idea', 'draft', 'review', 'approved', 'scheduled', 'published'] as const
   const [typeFilter, setTypeFilter] = useState<string>('all')
 
@@ -780,15 +783,15 @@ function ContentTab({ showToast, contentData }: { showToast: (m: string, t?: 'su
       </div>
 
       {/* New Content Modal */}
-      <AdminModal isOpen={newContentOpen} onClose={() => setNewContentOpen(false)} title="Create Content" maxWidth="max-w-2xl">
+      <AdminModal isOpen={newContentOpen} onClose={() => { resetContentForm(); setNewContentOpen(false) }} title="Create Content" maxWidth="max-w-2xl">
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <label className="block text-xs font-medium text-gray-400 mb-1.5">Title *</label>
-            <input type="text" required placeholder="e.g. Q1 Investment Insights Blog" className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-brand-red/40 focus:ring-1 focus:ring-brand-red/20" />
+            <input type="text" required placeholder="e.g. Q1 Investment Insights Blog" value={contentForm.title} onChange={e => setContentForm(f => ({ ...f, title: e.target.value }))} className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-brand-red/40 focus:ring-1 focus:ring-brand-red/20" />
           </div>
           <div>
             <label className="block text-xs font-medium text-gray-400 mb-1.5">Content Type</label>
-            <select className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-brand-red/40 focus:ring-1 focus:ring-brand-red/20">
+            <select value={contentForm.type} onChange={e => setContentForm(f => ({ ...f, type: e.target.value }))} className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-brand-red/40 focus:ring-1 focus:ring-brand-red/20">
               <option value="blog-post">Blog Post</option>
               <option value="social-post">Social Post</option>
               <option value="email-template">Email Template</option>
@@ -801,11 +804,11 @@ function ContentTab({ showToast, contentData }: { showToast: (m: string, t?: 'su
           </div>
           <div>
             <label className="block text-xs font-medium text-gray-400 mb-1.5">Author</label>
-            <input type="text" placeholder="e.g. Priya Sharma" className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-brand-red/40 focus:ring-1 focus:ring-brand-red/20" />
+            <input type="text" placeholder="e.g. Priya Sharma" value={contentForm.author} onChange={e => setContentForm(f => ({ ...f, author: e.target.value }))} className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-brand-red/40 focus:ring-1 focus:ring-brand-red/20" />
           </div>
           <div>
             <label className="block text-xs font-medium text-gray-400 mb-1.5">Status</label>
-            <select className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-brand-red/40 focus:ring-1 focus:ring-brand-red/20">
+            <select value={contentForm.status} onChange={e => setContentForm(f => ({ ...f, status: e.target.value }))} className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-brand-red/40 focus:ring-1 focus:ring-brand-red/20">
               <option value="idea">Idea</option>
               <option value="draft">Draft</option>
               <option value="review">Review</option>
@@ -816,15 +819,15 @@ function ContentTab({ showToast, contentData }: { showToast: (m: string, t?: 'su
           </div>
           <div>
             <label className="block text-xs font-medium text-gray-400 mb-1.5">Publish Date</label>
-            <input type="date" className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-brand-red/40 focus:ring-1 focus:ring-brand-red/20" />
+            <input type="date" value={contentForm.publishDate} onChange={e => setContentForm(f => ({ ...f, publishDate: e.target.value }))} className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-brand-red/40 focus:ring-1 focus:ring-brand-red/20" />
           </div>
           <div>
             <label className="block text-xs font-medium text-gray-400 mb-1.5">Tags (comma-separated)</label>
-            <input type="text" placeholder="e.g. investing, mutual-funds, Q1" className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-brand-red/40 focus:ring-1 focus:ring-brand-red/20" />
+            <input type="text" placeholder="e.g. investing, mutual-funds, Q1" value={contentForm.tags} onChange={e => setContentForm(f => ({ ...f, tags: e.target.value }))} className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-brand-red/40 focus:ring-1 focus:ring-brand-red/20" />
           </div>
           <div className="sm:col-span-2">
             <label className="block text-xs font-medium text-gray-400 mb-1.5">Brief / Description</label>
-            <textarea rows={3} placeholder="Content brief or description..." className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-brand-red/40 focus:ring-1 focus:ring-brand-red/20" />
+            <textarea rows={3} placeholder="Content brief or description..." value={contentForm.description} onChange={e => setContentForm(f => ({ ...f, description: e.target.value }))} className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-brand-red/40 focus:ring-1 focus:ring-brand-red/20" />
           </div>
           <div className="sm:col-span-2">
             <label className="block text-xs font-medium text-gray-400 mb-1.5">Attach Media</label>
@@ -835,8 +838,24 @@ function ContentTab({ showToast, contentData }: { showToast: (m: string, t?: 'su
           </div>
         </div>
         <div className="flex justify-end gap-3 mt-6 pt-4 border-t border-white/[0.06]">
-          <button onClick={() => setNewContentOpen(false)} className="px-4 py-2 rounded-xl text-sm font-medium text-gray-400 hover:text-white hover:bg-white/[0.06] transition-colors">Cancel</button>
-          <button onClick={() => { showToast('Content created successfully', 'success'); setNewContentOpen(false) }} className="px-5 py-2 rounded-xl text-sm font-medium text-white bg-brand-red hover:bg-red-600 transition-colors">Create</button>
+          <button onClick={() => { resetContentForm(); setNewContentOpen(false) }} className="px-4 py-2 rounded-xl text-sm font-medium text-gray-400 hover:text-white hover:bg-white/[0.06] transition-colors">Cancel</button>
+          <button onClick={async () => {
+            if (!contentForm.title.trim()) { showToast('Title is required', 'error'); return }
+            const result = await insertRow('marketing_content', {
+              title: contentForm.title,
+              type: contentForm.type,
+              author: contentForm.author || null,
+              status: contentForm.status,
+              scheduledDate: contentForm.publishDate || null,
+              tags: contentForm.tags || null,
+              description: contentForm.description || null,
+            })
+            if (!result) { showToast('Failed to create content', 'error'); return }
+            showToast(`"${contentForm.title}" created`, 'success')
+            resetContentForm()
+            setNewContentOpen(false)
+            refetch()
+          }} className="px-5 py-2 rounded-xl text-sm font-medium text-white bg-brand-red hover:bg-red-600 transition-colors">Create</button>
         </div>
       </AdminModal>
       <UploadWithFolderPicker

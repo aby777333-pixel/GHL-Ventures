@@ -6,7 +6,6 @@
    ================================================================ */
 
 import { createClient } from '@supabase/supabase-js'
-import crypto from 'crypto'
 
 const ALLOWED_ORIGINS = [
   'https://ghl-india-ventures-2025.netlify.app',
@@ -25,7 +24,10 @@ function getCorsHeaders(request?: Request) {
 }
 
 function generateOTP(): string {
-  return String(crypto.randomInt(100000, 999999))
+  // Secure random OTP using Web Crypto API (available in all modern runtimes)
+  const arr = new Uint32Array(1)
+  globalThis.crypto.getRandomValues(arr)
+  return String(100000 + (arr[0] % 900000))
 }
 
 export default async (request: Request) => {

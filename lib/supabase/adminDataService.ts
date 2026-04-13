@@ -474,7 +474,12 @@ export function getAITools() {
 export async function fetchMarketingCampaigns() {
   return queryTable<any>('campaigns')
 }
-export function getMarketingContent() { return [] }
+export async function getMarketingContent() {
+  try {
+    const { data } = await supabase.from('marketing_content').select('*').order('created_at', { ascending: false })
+    return data || []
+  } catch { return [] }
+}
 export function getMarketingAudiences() { return [] }
 export function getMarketingSequences() { return [] }
 export function getMarketingChannels() { return [] }
@@ -579,7 +584,7 @@ const ALLOWED_TABLES = [
   'audit_logs', 'expenses', 'payouts', 'assets', 'leads', 'tasks',
   'compliance_items', 'reports', 'roles', 'funds', 'bank_accounts',
   'investment_applications', 'kyc_documents', 'leave_requests',
-  'invoices', 'commissions', 'approvals', 'campaigns', 'staff_checkins',
+  'invoices', 'commissions', 'approvals', 'campaigns', 'staff_checkins', 'marketing_content',
 ]
 
 export async function insertRow(table: string, row: Record<string, any>) {
