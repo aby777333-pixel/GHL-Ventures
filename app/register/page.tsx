@@ -108,6 +108,10 @@ function RegisterPageInner() {
       setOtpSent(true)
       setOtpCooldown(60)
       setOtpCode('')
+      // Show debug info temporarily
+      if (data._provider) {
+        console.log('[OTP Debug] Provider:', data._provider, 'Response:', data._response, 'Errors:', data._errors)
+      }
     } catch {
       setOtpError('Network error. Please check your connection and try again.')
     }

@@ -144,78 +144,82 @@ export default async (request: Request) => {
     const smsMessage = `Dear customer, Your OTP is ${code}. Please do not share this code with anyone.`
 
     let smsSuccess = false
+    let successProvider = ''
+    let successResponse = ''
     const errors: string[] = []
 
     // ── Attempt 1: Fast2SMS DLT Manual Route ───────────────────
     try {
+      const payload = {
+        route: 'dlt_manual',
+        sender_id: senderId,
+        message: smsMessage,
+        language: 'english',
+        flash: 0,
+        numbers: cleanMobile,
+        DLT_TE_ID: templateId,
+      }
+      console.log('[send-sms-otp] Fast2SMS DLT request:', JSON.stringify(payload))
+
       const res = await fetch('https://www.fast2sms.com/dev/bulkV2', {
         method: 'POST',
         headers: {
           'authorization': authKey,
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          route: 'dlt_manual',
-          sender_id: senderId,
+        body: JSON.stringify(payload),
+      })
+      const body = await res.json()
+      const bodyStr = JSON.stringify(body)
+      console.log('[send-sms-otp] Fast2SMS DLT response:', bodyStr)
+
+      if (body.return === true) {
+        smsSuccess = true
+        successProvider = 'Fast2SMS DLT'
+        successResponse = bodyStr
+      } else {
+        errors.push(`Fast2SMS DLT: ${body.message || bodyStr}`)
+      }
+    } catch (err) {
+      errors.push(`Fast2SMS DLT: ${err instanceof Error ? err.message : String(err)}`)
+    }
+
+    // ── Attempt 2: Fast2SMS Quick Transactional ────────────────
+    if (!smsSuccess) {
+      try {
+        const payload = {
+          route: 'q',
           message: smsMessage,
           language: 'english',
           flash: 0,
           numbers: cleanMobile,
-        }),
-      })
-      const body = await res.json()
-      console.log('[send-sms-otp] Fast2SMS response:', JSON.stringify(body))
-
-      if (body.return === true || body.status_code === 200 || body.message?.includes('SMS sent')) {
-        smsSuccess = true
-        console.log('[send-sms-otp] Fast2SMS SUCCESS')
-      } else {
-        const errMsg = `Fast2SMS: ${body.message || body.status_code || JSON.stringify(body)}`
-        errors.push(errMsg)
-        console.error('[send-sms-otp]', errMsg)
-      }
-    } catch (err) {
-      const errMsg = `Fast2SMS exception: ${err instanceof Error ? err.message : String(err)}`
-      errors.push(errMsg)
-      console.error('[send-sms-otp]', errMsg)
-    }
-
-    // ── Attempt 2: Fast2SMS OTP Route (auto-DLT) ───────────────
-    if (!smsSuccess) {
-      try {
+        }
         const res = await fetch('https://www.fast2sms.com/dev/bulkV2', {
           method: 'POST',
           headers: {
             'authorization': authKey,
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify({
-            route: 'otp',
-            variables_values: code,
-            flash: 0,
-            numbers: cleanMobile,
-          }),
+          body: JSON.stringify(payload),
         })
         const body = await res.json()
-        console.log('[send-sms-otp] Fast2SMS OTP route response:', JSON.stringify(body))
+        const bodyStr = JSON.stringify(body)
+        console.log('[send-sms-otp] Fast2SMS Quick response:', bodyStr)
 
-        if (body.return === true || body.status_code === 200) {
+        if (body.return === true) {
           smsSuccess = true
-          console.log('[send-sms-otp] Fast2SMS OTP route SUCCESS')
+          successProvider = 'Fast2SMS Quick'
+          successResponse = bodyStr
         } else {
-          const errMsg = `Fast2SMS OTP: ${body.message || JSON.stringify(body)}`
-          errors.push(errMsg)
-          console.error('[send-sms-otp]', errMsg)
+          errors.push(`Fast2SMS Quick: ${body.message || bodyStr}`)
         }
       } catch (err) {
-        const errMsg = `Fast2SMS OTP exception: ${err instanceof Error ? err.message : String(err)}`
-        errors.push(errMsg)
-        console.error('[send-sms-otp]', errMsg)
+        errors.push(`Fast2SMS Quick: ${err instanceof Error ? err.message : String(err)}`)
       }
     }
 
     // ── Attempt 3: MSG91 OTP API ──────────────────────────────
-    if (!smsSuccess && templateId) {
+    if (!smsSuccess) {
       try {
         const otpUrl = new URL('https://control.msg91.com/api/v5/otp')
         otpUrl.searchParams.set('template_id', templateId)
@@ -226,25 +230,23 @@ export default async (request: Request) => {
 
         const res = await fetch(otpUrl.toString(), { method: 'POST' })
         const body = await res.json()
-        console.log('[send-sms-otp] MSG91 OTP response:', JSON.stringify(body))
+        const bodyStr = JSON.stringify(body)
+        console.log('[send-sms-otp] MSG91 OTP response:', bodyStr)
 
         if (res.ok && body.type === 'success') {
           smsSuccess = true
-          console.log('[send-sms-otp] MSG91 OTP SUCCESS')
+          successProvider = 'MSG91 OTP'
+          successResponse = bodyStr
         } else {
-          const errMsg = `MSG91 OTP: ${body.message || JSON.stringify(body)}`
-          errors.push(errMsg)
-          console.error('[send-sms-otp]', errMsg)
+          errors.push(`MSG91 OTP: ${body.message || bodyStr}`)
         }
       } catch (err) {
-        const errMsg = `MSG91 OTP exception: ${err instanceof Error ? err.message : String(err)}`
-        errors.push(errMsg)
-        console.error('[send-sms-otp]', errMsg)
+        errors.push(`MSG91 OTP: ${err instanceof Error ? err.message : String(err)}`)
       }
     }
 
     // ── Attempt 4: MSG91 Flow API ─────────────────────────────
-    if (!smsSuccess && templateId) {
+    if (!smsSuccess) {
       try {
         const res = await fetch('https://control.msg91.com/api/v5/flow/', {
           method: 'POST',
@@ -262,20 +264,18 @@ export default async (request: Request) => {
           }),
         })
         const body = await res.json()
-        console.log('[send-sms-otp] MSG91 Flow response:', JSON.stringify(body))
+        const bodyStr = JSON.stringify(body)
+        console.log('[send-sms-otp] MSG91 Flow response:', bodyStr)
 
         if (res.ok && (body.type === 'success' || body.message === 'success')) {
           smsSuccess = true
-          console.log('[send-sms-otp] MSG91 Flow SUCCESS')
+          successProvider = 'MSG91 Flow'
+          successResponse = bodyStr
         } else {
-          const errMsg = `MSG91 Flow: ${body.message || JSON.stringify(body)}`
-          errors.push(errMsg)
-          console.error('[send-sms-otp]', errMsg)
+          errors.push(`MSG91 Flow: ${body.message || bodyStr}`)
         }
       } catch (err) {
-        const errMsg = `MSG91 Flow exception: ${err instanceof Error ? err.message : String(err)}`
-        errors.push(errMsg)
-        console.error('[send-sms-otp]', errMsg)
+        errors.push(`MSG91 Flow: ${err instanceof Error ? err.message : String(err)}`)
       }
     }
 
@@ -298,7 +298,14 @@ export default async (request: Request) => {
       })
     }
 
-    return new Response(JSON.stringify({ success: true }), {
+    // Return success with debug info (temporary — helps diagnose delivery issues)
+    console.log(`[send-sms-otp] SUCCESS via ${successProvider}: ${successResponse}`)
+    return new Response(JSON.stringify({
+      success: true,
+      _provider: successProvider,
+      _response: successResponse,
+      _errors: errors.length > 0 ? errors : undefined,
+    }), {
       status: 200, headers: { 'Content-Type': 'application/json', ...getCorsHeaders(request) },
     })
   } catch (err: unknown) {
