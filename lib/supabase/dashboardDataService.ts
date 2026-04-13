@@ -121,8 +121,14 @@ export async function fetchMessages(clientId?: string) {
 
 export async function fetchSupportTickets(clientId?: string) {
   if (!isSupabaseConfigured() || !clientId) return []
+  // Resolve auth user_id from clients table (client_id in tickets = auth.users.id)
+  let userId = clientId
+  try {
+    const { data: clientRow } = await sb.from('clients').select('user_id').eq('id', clientId).maybeSingle()
+    if (clientRow?.user_id) userId = clientRow.user_id
+  } catch { /* use clientId as fallback */ }
   return safeFetch(
-    () => sb.from('tickets').select('*').eq('client_id', clientId).order('created_at', { ascending: false }),
+    () => sb.from('tickets').select('*').or(`client_id.eq.${userId},client_id.eq.${clientId},created_by.eq.${userId}`).order('created_at', { ascending: false }),
     [], 'fetchSupportTickets',
   )
 }
@@ -314,12 +320,18 @@ export async function createSupportTicket(ticket: Record<string, any>) {
   // Auto-generate ticket_number (required NOT NULL field)
   const ticketNumber = `TKT-${Date.now().toString(36).toUpperCase()}-${Math.random().toString(36).substring(2, 6).toUpperCase()}`
 
-  // Resolve client_name from clients table (client_id = clients.id, NOT profiles.id)
+  // Resolve client_name — client_id is auth.users.id (FK references auth.users)
   let clientName = ticket.client_name || 'Client'
   if (!ticket.client_name && ticket.client_id) {
     try {
-      const { data: clientRow } = await sb.from('clients').select('full_name').eq('id', ticket.client_id).maybeSingle()
-      if (clientRow?.full_name) clientName = clientRow.full_name
+      // Try clients table first (user_id = auth user ID)
+      const { data: clientRow } = await sb.from('clients').select('full_name').eq('user_id', ticket.client_id).maybeSingle()
+      if (clientRow?.full_name) { clientName = clientRow.full_name }
+      else {
+        // Fallback to profiles table
+        const { data: profile } = await sb.from('profiles').select('full_name').eq('id', ticket.client_id).maybeSingle()
+        if (profile?.full_name) clientName = profile.full_name
+      }
     } catch { /* use default */ }
   }
 
@@ -371,18 +383,17 @@ export async function sendMessage(message: Record<string, any>) {
   if (isSupport) {
     // Create a support ticket instead of a message
     const cleanSubject = subject.replace('[Support Team] ', '')
-    let clientId = null
     let clientName = 'Client'
     if (message.from_id) {
       try {
-        const { data: cl } = await sb.from('clients').select('id, full_name').eq('user_id', message.from_id).maybeSingle()
-        if (cl) { clientId = cl.id; clientName = cl.full_name || 'Client' }
+        const { data: cl } = await sb.from('clients').select('full_name').eq('user_id', message.from_id).maybeSingle()
+        if (cl?.full_name) clientName = cl.full_name
       } catch { /* use defaults */ }
     }
     const ticketNumber = `TKT-${Date.now().toString(36).toUpperCase()}-${Math.random().toString(36).substring(2, 6).toUpperCase()}`
     const { data: ticketData, error: ticketError } = await sb.from('tickets').insert({
       ticket_number: ticketNumber,
-      client_id: clientId,
+      client_id: message.from_id || null,
       client_name: clientName,
       subject: cleanSubject,
       description: message.body || null,

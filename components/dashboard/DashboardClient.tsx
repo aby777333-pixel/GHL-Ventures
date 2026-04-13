@@ -2340,7 +2340,7 @@ export default function DashboardClient() {
               if (!ticketSubject.trim()) { showToast('Please enter a subject for your ticket.', 'info'); return }
               if (!ticketDesc.trim()) { showToast('Please describe your issue.', 'info'); return }
               try {
-                const result = await createSupportTicket({ client_id: clientId || undefined, created_by: user?.id, subject: ticketSubject, category: ticketCategory, description: ticketDesc, status: 'open', priority: 'medium', source: 'dashboard' })
+                const result = await createSupportTicket({ client_id: user?.id || undefined, created_by: user?.id, subject: ticketSubject, category: ticketCategory, description: ticketDesc, status: 'open', priority: 'medium', source: 'dashboard' })
                 if (result) {
                   setTicketForm(false); setTicketSubject(''); setTicketCategory('General Inquiry'); setTicketDesc(''); refetchTickets()
                   showToast('Support ticket submitted. We\'ll respond within 24 hours.', 'success')
