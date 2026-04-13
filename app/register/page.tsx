@@ -1,16 +1,22 @@
 'use client'
 
-import { useState, useEffect, Suspense } from 'react'
+import { useState, useEffect, useCallback, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { LegalLink } from '@/components/LegalPopup'
 import { BRAND } from '@/lib/constants'
-import { Eye, EyeOff, UserPlus, ArrowLeft, Shield, CheckCircle, AlertTriangle, Loader2, Mail } from 'lucide-react'
+import { Eye, EyeOff, UserPlus, ArrowLeft, Shield, CheckCircle, AlertTriangle, Loader2, Smartphone } from 'lucide-react'
 import Logo from '@/components/Logo'
 import { supabase, isSupabaseConfigured } from '@/lib/supabase/client'
-import { signupClient } from '@/lib/supabase/clientAuthService'
-import { submitContactForm } from '@/lib/supabase/reportsDataService'
 import { AUTH_ERRORS, mapSupabaseError } from '@/lib/auth/errorMessages'
+import { submitContactForm } from '@/lib/supabase/reportsDataService'
+
+// Netlify function base URL
+function getFunctionBase(): string {
+  if (typeof window === 'undefined') return ''
+  const origin = window.location.origin
+  return origin.includes('localhost') ? 'http://localhost:8888' : origin
+}
 
 function RegisterPageInner() {
   const router = useRouter()
@@ -22,6 +28,14 @@ function RegisterPageInner() {
   })
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+
+  // OTP state
+  const [otpSent, setOtpSent] = useState(false)
+  const [otpCode, setOtpCode] = useState('')
+  const [otpVerified, setOtpVerified] = useState(false)
+  const [otpLoading, setOtpLoading] = useState(false)
+  const [otpError, setOtpError] = useState('')
+  const [otpCooldown, setOtpCooldown] = useState(0)
 
   // Capture referral code from URL (?ref=GHL-XXXXXXXX)
   useEffect(() => {
@@ -39,8 +53,95 @@ function RegisterPageInner() {
     })
   }, [router])
 
+  // OTP cooldown timer
+  useEffect(() => {
+    if (otpCooldown <= 0) return
+    const timer = setTimeout(() => setOtpCooldown(prev => prev - 1), 1000)
+    return () => clearTimeout(timer)
+  }, [otpCooldown])
+
+  // Reset OTP state when mobile changes
+  const handleMobileChange = useCallback((value: string) => {
+    setForm(prev => ({ ...prev, mobile: value }))
+    if (otpSent || otpVerified) {
+      setOtpSent(false)
+      setOtpVerified(false)
+      setOtpCode('')
+      setOtpError('')
+    }
+  }, [otpSent, otpVerified])
+
   const handleChange = (field: string, value: string | boolean) => {
+    if (field === 'mobile') {
+      handleMobileChange(value as string)
+      return
+    }
     setForm(prev => ({ ...prev, [field]: value }))
+  }
+
+  // ── Send SMS OTP ──────────────────────────────────────────
+  const handleSendOtp = async () => {
+    setOtpError('')
+    const mobileDigits = form.mobile.replace(/\D/g, '')
+    if (mobileDigits.length !== 10) {
+      setOtpError('Please enter a valid 10-digit mobile number.')
+      return
+    }
+
+    setOtpLoading(true)
+    try {
+      const res = await fetch(`${getFunctionBase()}/.netlify/functions/send-sms-otp`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ mobile: mobileDigits }),
+      })
+      const data = await res.json()
+
+      if (!res.ok) {
+        setOtpError(data.error || 'Failed to send OTP. Please try again.')
+        setOtpLoading(false)
+        return
+      }
+
+      setOtpSent(true)
+      setOtpCooldown(60)
+      setOtpCode('')
+    } catch {
+      setOtpError('Network error. Please check your connection and try again.')
+    }
+    setOtpLoading(false)
+  }
+
+  // ── Verify SMS OTP ────────────────────────────────────────
+  const handleVerifyOtp = async () => {
+    setOtpError('')
+    if (otpCode.length !== 6) {
+      setOtpError('Please enter the 6-digit OTP.')
+      return
+    }
+
+    setOtpLoading(true)
+    try {
+      const mobileDigits = form.mobile.replace(/\D/g, '')
+      const res = await fetch(`${getFunctionBase()}/.netlify/functions/verify-sms-otp`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ mobile: mobileDigits, code: otpCode }),
+      })
+      const data = await res.json()
+
+      if (!res.ok) {
+        setOtpError(data.error || 'Verification failed. Please try again.')
+        setOtpLoading(false)
+        return
+      }
+
+      setOtpVerified(true)
+      setOtpError('')
+    } catch {
+      setOtpError('Network error. Please check your connection and try again.')
+    }
+    setOtpLoading(false)
   }
 
   // ── Google OAuth Sign-Up ───────────────────────────────────
@@ -82,15 +183,23 @@ function RegisterPageInner() {
 
     if (!form.name.trim()) { setError('Please enter your name.'); return }
     if (!form.email.trim()) { setError('Please enter your email.'); return }
-    if (form.password.length < 8) { setError('Password must be at least 8 characters long.'); return }
-    if (!/[a-zA-Z]/.test(form.password)) { setError('Password must contain at least one letter (a-z, A-Z).'); return }
-    if (!/[0-9]/.test(form.password)) { setError('Password must contain at least one number (0-9).'); return }
-    if (!/[^a-zA-Z0-9\s]/.test(form.password)) { setError('Password must contain at least one special character (!@#$%...).'); return }
+
     const mobileDigits = form.mobile.replace(/\D/g, '')
     if (mobileDigits.length !== 10) {
       setError('Please enter a valid 10-digit mobile number.')
       return
     }
+
+    // Mobile OTP must be verified before registration
+    if (!otpVerified) {
+      setError('Please verify your mobile number with OTP before registering.')
+      return
+    }
+
+    if (form.password.length < 8) { setError('Password must be at least 8 characters long.'); return }
+    if (!/[a-zA-Z]/.test(form.password)) { setError('Password must contain at least one letter (a-z, A-Z).'); return }
+    if (!/[0-9]/.test(form.password)) { setError('Password must contain at least one number (0-9).'); return }
+    if (!/[^a-zA-Z0-9\s]/.test(form.password)) { setError('Password must contain at least one special character (!@#$%...).'); return }
 
     if (!isSupabaseConfigured()) {
       setError(AUTH_ERRORS.SERVICE_UNAVAILABLE)
@@ -99,7 +208,6 @@ function RegisterPageInner() {
 
     setLoading(true)
     try {
-      // Use signupClient which creates auth user + profile + client rows
       const { data, error: signupError } = await supabase.auth.signUp({
         email: form.email,
         password: form.password,
@@ -142,7 +250,7 @@ function RegisterPageInner() {
             acquisition_source: 'website',
             referred_by: form.referral || null,
           } as any, { onConflict: 'user_id' })
-        } catch { /* non-blocking — auto-repair on login will handle */ }
+        } catch { /* non-blocking -- auto-repair on login will handle */ }
       }
 
       // Save as lead (non-blocking)
@@ -312,12 +420,98 @@ function RegisterPageInner() {
               <input id="reg-name" type="text" required className="input-field" placeholder="Enter Your Name" value={form.name} onChange={(e) => handleChange('name', e.target.value)} />
             </div>
 
+            {/* Mobile + OTP Section */}
             <div>
-              <label htmlFor="reg-mobile" className="block text-xs font-medium text-brand-black mb-1">Mobile</label>
-              <div className="relative">
-                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-brand-grey text-sm font-medium">+91</span>
-                <input id="reg-mobile" type="tel" required className="input-field pl-14" placeholder="XXXXX XXXXX" value={form.mobile} onChange={(e) => handleChange('mobile', e.target.value)} />
+              <label htmlFor="reg-mobile" className="block text-xs font-medium text-brand-black mb-1">
+                Mobile <span className="text-brand-red">*</span>
+              </label>
+              <div className="flex gap-2">
+                <div className="relative flex-1">
+                  <span className="absolute left-4 top-1/2 -translate-y-1/2 text-brand-grey text-sm font-medium">+91</span>
+                  <input
+                    id="reg-mobile"
+                    type="tel"
+                    required
+                    className={`input-field pl-14 ${otpVerified ? 'border-green-400 bg-green-50' : ''}`}
+                    placeholder="XXXXX XXXXX"
+                    value={form.mobile}
+                    onChange={(e) => handleChange('mobile', e.target.value)}
+                    disabled={otpVerified}
+                    maxLength={12}
+                  />
+                </div>
+                {!otpVerified ? (
+                  <button
+                    type="button"
+                    onClick={handleSendOtp}
+                    disabled={otpLoading || otpCooldown > 0 || form.mobile.replace(/\D/g, '').length !== 10}
+                    className="px-4 py-2 rounded-lg text-xs font-semibold whitespace-nowrap transition-colors disabled:opacity-50 disabled:cursor-not-allowed bg-brand-red text-white hover:bg-red-700"
+                  >
+                    {otpLoading ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : otpCooldown > 0 ? (
+                      `Resend (${otpCooldown}s)`
+                    ) : otpSent ? (
+                      'Resend OTP'
+                    ) : (
+                      'Send OTP'
+                    )}
+                  </button>
+                ) : (
+                  <div className="flex items-center gap-1 px-3">
+                    <CheckCircle className="w-5 h-5 text-green-500" />
+                    <span className="text-xs font-semibold text-green-600">Verified</span>
+                  </div>
+                )}
               </div>
+
+              {/* OTP Error */}
+              {otpError && (
+                <div className="flex items-center gap-1.5 mt-2">
+                  <AlertTriangle className="w-3 h-3 text-red-500 flex-shrink-0" />
+                  <p className="text-xs text-red-600">{otpError}</p>
+                </div>
+              )}
+
+              {/* OTP Input (shown after OTP sent, hidden after verified) */}
+              {otpSent && !otpVerified && (
+                <div className="mt-3 p-3 bg-gray-50 border border-gray-200 rounded-lg">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Smartphone className="w-4 h-4 text-brand-red" />
+                    <p className="text-xs text-gray-600">
+                      Enter the 6-digit OTP sent to <span className="font-semibold">+91 {form.mobile.replace(/\D/g, '')}</span>
+                    </p>
+                  </div>
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      inputMode="numeric"
+                      maxLength={6}
+                      className="input-field flex-1 text-center text-lg font-mono tracking-[0.5em] font-bold"
+                      placeholder="------"
+                      value={otpCode}
+                      onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                      autoFocus
+                    />
+                    <button
+                      type="button"
+                      onClick={handleVerifyOtp}
+                      disabled={otpLoading || otpCode.length !== 6}
+                      className="px-5 py-2 rounded-lg text-xs font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed bg-green-600 text-white hover:bg-green-700"
+                    >
+                      {otpLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Verify'}
+                    </button>
+                  </div>
+                  <p className="text-[10px] text-gray-400 mt-1.5">OTP is valid for 10 minutes. Max 5 attempts.</p>
+                </div>
+              )}
+
+              {/* Verified confirmation */}
+              {otpVerified && (
+                <p className="text-xs text-green-600 mt-1.5 flex items-center gap-1">
+                  <CheckCircle className="w-3 h-3" /> Mobile number verified successfully
+                </p>
+              )}
             </div>
 
             <div>
@@ -379,9 +573,15 @@ function RegisterPageInner() {
               </span>
             </label>
 
-            <button type="submit" disabled={loading} className="btn-primary w-full text-center disabled:opacity-60">
+            <button type="submit" disabled={loading || !otpVerified} className="btn-primary w-full text-center disabled:opacity-60">
               {loading ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Registering...</> : <><UserPlus className="w-4 h-4 mr-2" /> Register</>}
             </button>
+
+            {!otpVerified && (
+              <p className="text-xs text-center text-amber-600">
+                Please verify your mobile number with OTP to enable registration.
+              </p>
+            )}
           </form>
 
           <div className="mt-5 text-center">
