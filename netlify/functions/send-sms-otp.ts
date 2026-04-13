@@ -140,7 +140,8 @@ export default async (request: Request) => {
     }
 
     // DLT Template: "Dear customer, Your OTP is {#var#}. Please do not share this code with anyone."
-    // DLT Template ID: 1407175818803308914
+    // BSNL DLT Template ID: 1407175818803308914
+    // BSNL DLT Entity ID: 1401499410000070879
     const smsMessage = `Dear customer, Your OTP is ${code}. Please do not share this code with anyone.`
 
     let smsSuccess = false
@@ -148,77 +149,73 @@ export default async (request: Request) => {
     let successResponse = ''
     const errors: string[] = []
 
-    // ── Attempt 1: Fast2SMS DLT Manual Route ───────────────────
+    // ── Attempt 1: MSG91 Send SMS v2 API (supports DLT_TE_ID explicitly) ──
     try {
       const payload = {
-        route: 'dlt_manual',
-        sender_id: senderId,
-        message: smsMessage,
-        language: 'english',
-        flash: 0,
-        numbers: cleanMobile,
+        sender: senderId,
+        route: '4',
+        country: '91',
         DLT_TE_ID: templateId,
+        sms: [{
+          message: smsMessage,
+          to: [cleanMobile],
+        }],
       }
-      console.log('[send-sms-otp] Fast2SMS DLT request:', JSON.stringify(payload))
+      console.log('[send-sms-otp] MSG91 v2 request:', JSON.stringify(payload))
 
-      const res = await fetch('https://www.fast2sms.com/dev/bulkV2', {
+      const res = await fetch('https://api.msg91.com/api/v2/sendsms', {
         method: 'POST',
         headers: {
-          'authorization': authKey,
+          'authkey': authKey,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify(payload),
       })
       const body = await res.json()
       const bodyStr = JSON.stringify(body)
-      console.log('[send-sms-otp] Fast2SMS DLT response:', bodyStr)
+      console.log('[send-sms-otp] MSG91 v2 response:', bodyStr)
 
-      if (body.return === true) {
+      if (body.type === 'success' || body.message === '1 SMS sent successfully') {
         smsSuccess = true
-        successProvider = 'Fast2SMS DLT'
+        successProvider = 'MSG91 v2 SMS'
         successResponse = bodyStr
       } else {
-        errors.push(`Fast2SMS DLT: ${body.message || bodyStr}`)
+        errors.push(`MSG91 v2: ${body.message || bodyStr}`)
       }
     } catch (err) {
-      errors.push(`Fast2SMS DLT: ${err instanceof Error ? err.message : String(err)}`)
+      errors.push(`MSG91 v2: ${err instanceof Error ? err.message : String(err)}`)
     }
 
-    // ── Attempt 2: Fast2SMS Quick Transactional ────────────────
+    // ── Attempt 2: MSG91 SendHTTP (legacy, explicit DLT_TE_ID in URL) ─────
     if (!smsSuccess) {
       try {
-        const payload = {
-          route: 'q',
+        const params = new URLSearchParams({
+          authkey: authKey,
+          mobiles: `91${cleanMobile}`,
           message: smsMessage,
-          language: 'english',
-          flash: 0,
-          numbers: cleanMobile,
-        }
-        const res = await fetch('https://www.fast2sms.com/dev/bulkV2', {
-          method: 'POST',
-          headers: {
-            'authorization': authKey,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(payload),
+          sender: senderId,
+          route: '4',
+          country: '91',
+          DLT_TE_ID: templateId,
         })
-        const body = await res.json()
-        const bodyStr = JSON.stringify(body)
-        console.log('[send-sms-otp] Fast2SMS Quick response:', bodyStr)
+        const res = await fetch(`https://api.msg91.com/api/sendhttp.php?${params.toString()}`)
+        const text = await res.text()
+        console.log('[send-sms-otp] MSG91 sendhttp response:', text)
 
-        if (body.return === true) {
+        // sendhttp returns a numeric request ID on success, error messages otherwise
+        if (res.ok && text && /^[a-f0-9]{20,}$/i.test(text.trim())) {
           smsSuccess = true
-          successProvider = 'Fast2SMS Quick'
-          successResponse = bodyStr
+          successProvider = 'MSG91 sendhttp'
+          successResponse = text.trim()
         } else {
-          errors.push(`Fast2SMS Quick: ${body.message || bodyStr}`)
+          errors.push(`MSG91 sendhttp: ${text}`)
         }
       } catch (err) {
-        errors.push(`Fast2SMS Quick: ${err instanceof Error ? err.message : String(err)}`)
+        errors.push(`MSG91 sendhttp: ${err instanceof Error ? err.message : String(err)}`)
       }
     }
 
-    // ── Attempt 3: MSG91 OTP API ──────────────────────────────
+    // ── Attempt 3: MSG91 OTP API (may use MSG91's internal template) ──────
     if (!smsSuccess) {
       try {
         const otpUrl = new URL('https://control.msg91.com/api/v5/otp')
@@ -245,43 +242,8 @@ export default async (request: Request) => {
       }
     }
 
-    // ── Attempt 4: MSG91 Flow API ─────────────────────────────
-    if (!smsSuccess) {
-      try {
-        const res = await fetch('https://control.msg91.com/api/v5/flow/', {
-          method: 'POST',
-          headers: {
-            'authkey': authKey,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            template_id: templateId,
-            sender: senderId,
-            short_url: '0',
-            mobiles: `91${cleanMobile}`,
-            OTP: code,
-            var1: code,
-          }),
-        })
-        const body = await res.json()
-        const bodyStr = JSON.stringify(body)
-        console.log('[send-sms-otp] MSG91 Flow response:', bodyStr)
-
-        if (res.ok && (body.type === 'success' || body.message === 'success')) {
-          smsSuccess = true
-          successProvider = 'MSG91 Flow'
-          successResponse = bodyStr
-        } else {
-          errors.push(`MSG91 Flow: ${body.message || bodyStr}`)
-        }
-      } catch (err) {
-        errors.push(`MSG91 Flow: ${err instanceof Error ? err.message : String(err)}`)
-      }
-    }
-
     // ── All attempts failed ───────────────────────────────────
     if (!smsSuccess) {
-      // Clean up the stored OTP since SMS failed
       await supabase
         .from('sms_otp_codes')
         .delete()
@@ -298,7 +260,6 @@ export default async (request: Request) => {
       })
     }
 
-    // Return success with debug info (temporary — helps diagnose delivery issues)
     console.log(`[send-sms-otp] SUCCESS via ${successProvider}: ${successResponse}`)
     return new Response(JSON.stringify({
       success: true,
