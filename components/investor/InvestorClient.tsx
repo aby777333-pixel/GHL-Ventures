@@ -93,10 +93,9 @@ export default function InvestorClient() {
   }, [pathname])
 
   const navigate = useCallback((tab: string) => {
-    window.history.pushState(null, '', `/investor/${tab}`)
-    window.dispatchEvent(new PopStateEvent('popstate'))
+    router.push(`/investor/${tab}`)
     setSidebarOpen(false)
-  }, [])
+  }, [router])
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-blue-50/30">
@@ -165,7 +164,7 @@ export default function InvestorClient() {
 
         <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-gray-100">
           <button
-            onClick={() => { window.location.href = '/' }}
+            onClick={async () => { try { await logout() } catch {} window.location.href = '/' }}
             className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-gray-500 hover:bg-gray-50 hover:text-red-600 transition-colors"
           >
             <LogOut className="w-4 h-4" />
@@ -364,7 +363,7 @@ function DocumentsTab({ showToast }: { showToast: (m: string, t?: string) => voi
       if (searchQuery && !doc.name.toLowerCase().includes(searchQuery.toLowerCase())) return false
       return true
     })
-  }, [searchQuery, filterCategory])
+  }, [searchQuery, filterCategory, documentsData])
 
   return (
     <div className="space-y-6">
@@ -435,10 +434,12 @@ function DocumentsTab({ showToast }: { showToast: (m: string, t?: string) => voi
                 <Eye className="w-4 h-4" />
               </button>
               <button
-                onClick={async () => {
-                  showToast(`Downloading ${doc.name}...`, 'info')
-                  const blob = new Blob([`Document: ${doc.name}\nType: ${doc.type}\nDate: ${doc.date}\nCategory: ${doc.category}`], { type: 'application/pdf' })
-                  await saveBlobAs(blob, doc.name, showToast)
+                onClick={() => {
+                  if (doc.file_url) {
+                    window.open(doc.file_url, '_blank')
+                  } else {
+                    showToast('Download link not available', 'info')
+                  }
                 }}
                 className="p-2 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors"
                 title="Download"

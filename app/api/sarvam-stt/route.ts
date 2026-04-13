@@ -4,7 +4,7 @@ const SARVAM_STT_URL = 'https://api.sarvam.ai/speech-to-text-translate'
 
 export async function POST(request: NextRequest) {
   try {
-    const sarvamKey = process.env.SARVAM_API_KEY || process.env.NEXT_PUBLIC_SARVAM_API_KEY || ''
+    const sarvamKey = process.env.SARVAM_API_KEY || ''
 
     if (!sarvamKey) {
       return NextResponse.json({ error: 'No Sarvam API key configured' }, { status: 500 })
@@ -15,13 +15,10 @@ export async function POST(request: NextRequest) {
     const outForm = new FormData()
 
     const file = formData.get('file')
-    if (file && file instanceof Blob) {
-      outForm.append('file', file, 'recording.wav')
-    } else {
-      // Fallback: treat entire body as audio
-      const body = await request.arrayBuffer()
-      outForm.append('file', new Blob([body], { type: 'audio/webm' }), 'recording.wav')
+    if (!file || !(file instanceof Blob)) {
+      return NextResponse.json({ error: 'No audio file provided in form data' }, { status: 400 })
     }
+    outForm.append('file', file, 'recording.wav')
 
     const model = formData.get('model')
     if (model) outForm.append('model', model.toString())

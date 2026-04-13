@@ -12,7 +12,7 @@ const PORTAL_PREFIXES = ['/staff', '/admin', '/dashboard']
 
 export default function CookieConsent() {
   const pathname = usePathname()
-  if (PORTAL_PREFIXES.some(p => pathname.startsWith(p))) return null
+  const isPortal = PORTAL_PREFIXES.some(p => pathname.startsWith(p))
   const [visible, setVisible] = useState(false)
   const [showPreferences, setShowPreferences] = useState(false)
   const [preferences, setPreferences] = useState({
@@ -64,7 +64,7 @@ export default function CookieConsent() {
     setVisible(false)
   }
 
-  if (!visible) return null
+  if (isPortal || !visible) return null
 
   return (
     <div className="fixed bottom-0 left-0 right-0 z-[9997] px-4 pb-4 animate-slide-up">

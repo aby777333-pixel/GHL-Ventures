@@ -35,7 +35,7 @@ export default function Navbar() {
   const pathname = usePathname()
 
   // Hide on portal routes (staff, admin, dashboard)
-  if (PORTAL_PREFIXES.some(p => pathname.startsWith(p))) return null
+  const isPortal = PORTAL_PREFIXES.some(p => pathname.startsWith(p))
 
   const handleScroll = useCallback(() => {
     setScrolled(window.scrollY > 20)
@@ -135,6 +135,8 @@ export default function Navbar() {
   const handleContactLeave = () => {
     contactTimeout.current = setTimeout(() => setContactOpen(false), 200)
   }
+
+  if (isPortal) return null
 
   return (
     <header className="fixed top-0 left-0 right-0 z-50" role="banner">

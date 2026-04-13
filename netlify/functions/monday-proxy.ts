@@ -64,7 +64,13 @@ export default async (request: Request) => {
           { status: 401, headers: { 'Content-Type': 'application/json', ...getCorsHeaders(request) } },
         )
       }
-    } catch { /* If Supabase is unreachable, allow through — proxy has its own key check */ }
+    } catch (e) {
+      console.error('Auth verification failed:', e)
+      return new Response(
+        JSON.stringify({ error: 'Authentication service unavailable' }),
+        { status: 503, headers: { 'Content-Type': 'application/json', ...getCorsHeaders(request) } },
+      )
+    }
   }
 
   try {

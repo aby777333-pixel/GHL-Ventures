@@ -102,9 +102,9 @@ export default function HomeModule({ navigate, showToast, userName, role }: Home
   const kpiCards = useMemo(() => {
     if (isCSRole(role)) {
       return [
-        { label: 'Tickets Resolved', value: csKpis.resolvedToday.toString(), icon: CheckCircle, color: 'text-emerald-400', bg: 'bg-emerald-500/15' },
-        { label: 'Avg Response Time', value: `${csKpis.avgResponseTime}`, icon: Clock, color: 'text-blue-400', bg: 'bg-blue-500/15' },
-        { label: 'CSAT Score', value: `${csKpis.satisfaction}`, icon: Star, color: 'text-amber-400', bg: 'bg-amber-500/15' },
+        { label: 'Tickets Resolved', value: csKpis.ticketsResolved.toString(), icon: CheckCircle, color: 'text-emerald-400', bg: 'bg-emerald-500/15' },
+        { label: 'Avg Response Time', value: csKpis.avgResponseTime ? `${csKpis.avgResponseTime}m` : '—', icon: Clock, color: 'text-blue-400', bg: 'bg-blue-500/15' },
+        { label: 'CSAT Score', value: csKpis.csatScore ? `${csKpis.csatScore}%` : '—', icon: Star, color: 'text-amber-400', bg: 'bg-amber-500/15' },
         { label: 'Active Tickets', value: openTicketCount.toString(), icon: Ticket, color: 'text-teal-400', bg: 'bg-teal-500/15' },
       ]
     }

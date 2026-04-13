@@ -79,7 +79,7 @@ export default function AssetDocModule({ subTab, navigate, showToast }: AssetDoc
   const kpis = useMemo(() => {
     const totalAssetValue = assets.reduce((s, a) => s + (a.value || 0), 0)
     const activeAssets = assets.filter(a => a.status === 'active').length
-    const expiring = assets.filter(a => a.expiryDate && new Date(a.expiryDate) < new Date('2025-06-01')).length
+    const expiring = assets.filter(a => a.expiryDate && new Date(a.expiryDate) < new Date()).length
     return { totalAssets: assets.length, activeAssets, totalAssetValue, expiring, totalDocs: documents.length }
   }, [assets, documents])
 
@@ -181,8 +181,8 @@ function AssetInventoryTab({ assets, showToast, onRefresh }: { assets: any[]; sh
       // Map form categories to DB enum: digital, physical, license, certificate
       const catMap: Record<string, string> = { laptop: 'physical', desktop: 'physical', phone: 'physical', server: 'physical', monitor: 'physical', printer: 'physical', software: 'digital', domain: 'digital', license: 'license', certificate: 'certificate' }
       const dbCategory = catMap[assetForm.category] || 'physical'
-      // assigned_to is UUID — if name string, set null
-      const assignedToVal = (assetForm.assignedTo && /^[0-9a-f-]{36}$/i.test(assetForm.assignedTo)) ? assetForm.assignedTo : null
+      // assigned_to accepts text name or UUID
+      const assignedToVal = assetForm.assignedTo?.trim() || null
       // Get current user for created_by
       let createdBy: string | null = null
       try {
@@ -278,7 +278,7 @@ function AssetInventoryTab({ assets, showToast, onRefresh }: { assets: any[]; sh
       label: 'Expiry',
       render: (row) => {
         if (!row.expiryDate) return <span className="text-xs text-gray-600">—</span>
-        const isExpiringSoon = new Date(row.expiryDate) < new Date('2025-06-01')
+        const isExpiringSoon = new Date(row.expiryDate) < new Date()
         return (
           <span className={`text-xs ${isExpiringSoon ? 'text-amber-400 font-medium' : 'text-gray-400'}`}>
             {formatDate(row.expiryDate)}

@@ -8,7 +8,7 @@ const PORTAL_PREFIXES = ['/staff', '/admin', '/dashboard']
 
 export default function LiveVisitorCount() {
   const pathname = usePathname()
-  if (PORTAL_PREFIXES.some(p => pathname.startsWith(p))) return null
+  const isPortal = PORTAL_PREFIXES.some(p => pathname.startsWith(p))
   const [count, setCount] = useState(0)
   const [show, setShow] = useState(false)
 
@@ -30,7 +30,7 @@ export default function LiveVisitorCount() {
     return () => clearInterval(interval)
   }, [])
 
-  if (!show) return null
+  if (isPortal || !show) return null
 
   return (
     <div className="fixed z-[9990] flex items-center gap-2 px-3 py-1.5 rounded-full text-[11px] font-medium transition-all duration-500"

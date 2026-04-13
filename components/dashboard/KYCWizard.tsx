@@ -202,6 +202,7 @@ export default function KYCWizard({ clientId, userId, userName, userEmail, userP
     if (bank.branch_name && !/^[a-zA-Z\s.,-]+$/.test(bank.branch_name)) { onToast('Branch name should contain only letters', 'info'); return }
     // IFSC / SWIFT validation based on resident type
     const isIndianBank = basic.resident_type === 'indian' || basicData?.resident_type === 'indian'
+    let bankToSave = bank
     if (isIndianBank) {
       if (!bank.ifsc_code) { onToast('IFSC code is required for Indian residents', 'info'); return }
       // IFSC: 4 letters followed by 7 alphanumeric characters (total 11)
@@ -213,18 +214,21 @@ export default function KYCWizard({ clientId, userId, userName, userEmail, userP
       onToast('Verifying IFSC code...', 'info')
       const ifscResult = await verifyIFSC(ifscClean)
       if (!ifscResult.valid) { setSaving(false); onToast('IFSC code not found in RBI database. Please check and re-enter a valid IFSC code.', 'info'); return }
-      // Auto-fill bank name and branch from verified data
-      if (ifscResult.bankName) setBank(b => ({ ...b, bank_name: lettersOnly(ifscResult.bankName!), ifsc_code: ifscClean }))
-      if (ifscResult.branchName) setBank(b => ({ ...b, branch_name: ifscResult.branchName!.replace(/[^a-zA-Z\s.,-]/g, '') }))
+      // Auto-fill bank name and branch from verified data using local variable to avoid stale state
+      const updatedBank = { ...bank, ifsc_code: ifscClean }
+      if (ifscResult.bankName) updatedBank.bank_name = lettersOnly(ifscResult.bankName!)
+      if (ifscResult.branchName) updatedBank.branch_name = ifscResult.branchName!.replace(/[^a-zA-Z\s.,-]/g, '')
+      setBank(updatedBank)
+      bankToSave = updatedBank
       setSaving(false)
     } else {
       if (!bank.swift_iban_code) { onToast('SWIFT/IBAN code is required for NRI/Foreign residents', 'info'); return }
     }
-    if (bank.account_number.length < 8) { onToast('Account number must be at least 8 digits', 'info'); return }
+    if (bankToSave.account_number.length < 8) { onToast('Account number must be at least 8 digits', 'info'); return }
     // Require bank proof document
     if (!bankDocUrl) { onToast('Please upload bank proof (Bank Statement / Cancelled Cheque / Passbook)', 'info'); return }
     setSaving(true)
-    const result = await upsertKYCBankDetails(clientId, userId, { ...bank, bank_doc_url: bankDocUrl })
+    const result = await upsertKYCBankDetails(clientId, userId, { ...bankToSave, bank_doc_url: bankDocUrl })
     setSaving(false)
     if (result) { onToast('Bank details saved', 'success'); refetchBank(); refetchOverall(); setActiveStep(3) }
     else onToast('Failed to save', 'info')

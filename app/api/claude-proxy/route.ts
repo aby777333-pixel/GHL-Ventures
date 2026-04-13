@@ -22,7 +22,10 @@ export async function POST(request: NextRequest) {
         if (!verifyRes.ok) {
           return NextResponse.json({ error: { message: 'Unauthorized: invalid token' } }, { status: 401 })
         }
-      } catch { /* If Supabase is unreachable, allow through */ }
+      } catch (e) {
+        console.error('Auth verification failed:', e)
+        return new Response(JSON.stringify({ error: 'Authentication service unavailable' }), { status: 503 })
+      }
     }
   }
 

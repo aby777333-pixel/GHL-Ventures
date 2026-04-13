@@ -62,9 +62,48 @@ const visitStatusVariant = (s: string) => {
 
 // ── SOS Floating Button ───────────────────────────────────────────
 function SOSButton({ showToast }: { showToast: FieldOpsModuleProps['showToast'] }) {
+  const handleSOS = () => {
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          const { latitude, longitude } = pos.coords
+          insertRow('notifications', {
+            type: 'error',
+            title: 'SOS ALERT',
+            message: `Emergency SOS from staff member. Location: ${latitude.toFixed(6)}, ${longitude.toFixed(6)}`,
+            is_read: false,
+            created_at: new Date().toISOString()
+          }).catch(() => {})
+          showToast('SOS Alert sent to HQ with your GPS coordinates!', 'error')
+        },
+        () => {
+          // Even without GPS, send the alert
+          insertRow('notifications', {
+            type: 'error',
+            title: 'SOS ALERT',
+            message: 'Emergency SOS from staff member. GPS unavailable.',
+            is_read: false,
+            created_at: new Date().toISOString()
+          }).catch(() => {})
+          showToast('SOS Alert sent to HQ (GPS unavailable)', 'error')
+        },
+        { enableHighAccuracy: true, timeout: 5000 }
+      )
+    } else {
+      insertRow('notifications', {
+        type: 'error',
+        title: 'SOS ALERT',
+        message: 'Emergency SOS from staff member. Geolocation not supported.',
+        is_read: false,
+        created_at: new Date().toISOString()
+      }).catch(() => {})
+      showToast('SOS Alert sent to HQ', 'error')
+    }
+  }
+
   return (
     <button
-      onClick={() => showToast('SOS Alert sent to HQ with GPS coordinates!', 'error')}
+      onClick={handleSOS}
       className="fixed bottom-6 right-6 z-50 w-14 h-14 rounded-full bg-red-600 hover:bg-red-500 text-white shadow-lg shadow-red-600/40 flex items-center justify-center transition-all hover:scale-110 animate-pulse"
       title="Emergency SOS"
     >
@@ -188,7 +227,30 @@ function GPSCheckIn({ showToast }: FieldOpsModuleProps) {
       {/* Check In/Out Button */}
       <AdminGlass padding="p-8" className="text-center">
         <button
-          onClick={() => { setCheckedIn(!checkedIn); showToast(checkedIn ? 'Checked out successfully' : 'Checked in at current location', 'success') }}
+          onClick={() => {
+            if (navigator.geolocation) {
+              navigator.geolocation.getCurrentPosition(
+                (pos) => {
+                  const { latitude, longitude } = pos.coords
+                  // Store the check-in
+                  insertRow('staff_checkins', {
+                    latitude,
+                    longitude,
+                    type: checkedIn ? 'checkout' : 'checkin',
+                    timestamp: new Date().toISOString()
+                  }).catch(() => {})
+                  setCheckedIn(!checkedIn)
+                  showToast(checkedIn ? 'Checked out successfully' : `Checked in at ${latitude.toFixed(4)}, ${longitude.toFixed(4)}`, 'success')
+                },
+                (err) => {
+                  showToast('GPS access denied. Please enable location services.', 'error')
+                },
+                { enableHighAccuracy: true, timeout: 10000 }
+              )
+            } else {
+              showToast('Geolocation not supported by your browser', 'error')
+            }
+          }}
           className={`w-32 h-32 mx-auto rounded-full flex items-center justify-center text-white text-lg font-bold transition-all hover:scale-105 ${checkedIn ? 'bg-red-600 hover:bg-red-500 shadow-lg shadow-red-600/30' : 'bg-teal-600 hover:bg-teal-500 shadow-lg shadow-teal-600/30'}`}
         >
           <div className="text-center">

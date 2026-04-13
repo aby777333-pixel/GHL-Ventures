@@ -108,9 +108,11 @@ function RegisterPageInner() {
       setOtpSent(true)
       setOtpCooldown(60)
       setOtpCode('')
-      // Show debug info temporarily
-      if (data._provider) {
-        console.log('[OTP Debug] Provider:', data._provider, 'Response:', data._response, 'Errors:', data._errors)
+      // Show debug info in development only
+      if (process.env.NODE_ENV === 'development') {
+        if (data._provider) {
+          console.log('[OTP Debug] Provider:', data._provider, 'Response:', data._response, 'Errors:', data._errors)
+        }
       }
     } catch {
       setOtpError('Network error. Please check your connection and try again.')
@@ -239,8 +241,8 @@ function RegisterPageInner() {
         return
       }
 
-      // Create profile and client rows so user data persists (non-blocking)
-      if (data?.user?.id) {
+      // Only create profile/client rows if session is immediately available (no email confirmation required)
+      if (data?.session && data?.user?.id) {
         try {
           await supabase.from('profiles').upsert({
             id: data.user.id,

@@ -267,6 +267,18 @@ export async function fetchClientKYCDetails(clientId: string) {
 // Delete user completely (auth + all data) — Bug #9 fix
 export async function deleteUserComplete(userId: string) {
   try {
+    // Audit the deletion before executing
+    try {
+      await sb.from('audit_logs').insert({
+        action: 'delete_user_complete',
+        target_user_id: userId,
+        performed_at: new Date().toISOString(),
+        details: JSON.stringify({ action: 'permanent_user_deletion' })
+      })
+    } catch (e) {
+      console.error('Failed to log user deletion audit:', e)
+    }
+
     const { data, error } = await sb.rpc('delete_user_complete', { target_user_id: userId })
     if (error) { console.warn('[admin] deleteUserComplete error:', error.message); return false }
     return data === true
@@ -561,7 +573,20 @@ export async function fetchDocuments() {
 }
 
 // ── CRUD Helpers ────────────────────────────────────────────
+const ALLOWED_TABLES = [
+  'profiles', 'clients', 'staff_profiles', 'portfolio_assets', 'transactions',
+  'documents', 'notifications', 'tickets', 'messages', 'nav_history',
+  'audit_logs', 'expenses', 'payouts', 'assets', 'leads', 'tasks',
+  'compliance_items', 'reports', 'roles', 'funds', 'bank_accounts',
+  'investment_applications', 'kyc_documents', 'leave_requests',
+  'invoices', 'commissions', 'approvals',
+]
+
 export async function insertRow(table: string, row: Record<string, any>) {
+  if (!ALLOWED_TABLES.includes(table)) {
+    console.error(`[AdminData] Blocked access to unauthorized table: ${table}`)
+    return null
+  }
   if (!isSupabaseConfigured()) return null
   try {
     const sb = supabase as any
@@ -572,6 +597,10 @@ export async function insertRow(table: string, row: Record<string, any>) {
 }
 
 export async function updateRow(table: string, id: string, updates: Record<string, any>) {
+  if (!ALLOWED_TABLES.includes(table)) {
+    console.error(`[AdminData] Blocked access to unauthorized table: ${table}`)
+    return null
+  }
   if (!isSupabaseConfigured()) return null
   try {
     const sb = supabase as any
@@ -582,6 +611,10 @@ export async function updateRow(table: string, id: string, updates: Record<strin
 }
 
 export async function deleteRow(table: string, id: string) {
+  if (!ALLOWED_TABLES.includes(table)) {
+    console.error(`[AdminData] Blocked access to unauthorized table: ${table}`)
+    return false
+  }
   if (!isSupabaseConfigured()) return false
   try {
     const sb = supabase as any

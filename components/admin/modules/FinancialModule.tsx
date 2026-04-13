@@ -19,7 +19,7 @@ import AdminKPICard from '../shared/AdminKPICard'
 import AdminEmptyState from '../shared/AdminEmptyState'
 import UploadWithFolderPicker from '@/components/shared/UploadWithFolderPicker'
 import { fetchInvoices, fetchExpenses, fetchCommissions, getOverviewKPIs, insertRow, updateRow } from '@/lib/supabase/adminDataService'
-import { formatINR, formatDate } from '@/lib/admin/adminHooks'
+import { formatINR, formatDate, useAdminAuth } from '@/lib/admin/adminHooks'
 import type { Invoice, Expense, InvoiceStatus, ExpenseCategory } from '@/lib/admin/adminTypes'
 import { saveBlobAs } from '@/lib/supabase/storageService'
 
@@ -366,13 +366,13 @@ function InvoicesTab({ showToast, invoices }: { showToast: (msg: string, type?: 
             <>
               <ModalButton onClick={() => setSelectedInvoice(null)}>Close</ModalButton>
               <ModalButton variant="primary" onClick={async () => {
-                showToast('Generating invoice PDF...', 'info')
                 const inv = selectedInvoice
                 const content = `INVOICE: ${inv.id}\nClient: ${inv.clientName}\nType: ${inv.type}\nAmount: ${inv.amount}\nGST: ${inv.gst}\nTotal: ${inv.total}\nStatus: ${inv.status}\nDate: ${inv.date}\nDue Date: ${inv.dueDate}`
-                const blob = new Blob([content], { type: 'application/pdf' })
-                await saveBlobAs(blob, `Invoice_${inv.id}.pdf`, showToast as any)
+                const blob = new Blob([content], { type: 'text/plain' })
+                await saveBlobAs(blob, `Invoice_${inv.id}.txt`, showToast as any)
+                showToast('Invoice downloaded as text. PDF export coming soon.', 'info')
                 setSelectedInvoice(null)
-              }}>Download PDF</ModalButton>
+              }}>Download Invoice</ModalButton>
             </>
           }
         >
@@ -401,6 +401,7 @@ function InvoicesTab({ showToast, invoices }: { showToast: (msg: string, type?: 
 
 // ── Expenses Tab ────────────────────────────────────────────────
 function ExpensesTab({ showToast, expenses }: { showToast: (msg: string, type?: 'success' | 'error' | 'info' | 'warning') => void; expenses: any[] }) {
+  const { role } = useAdminAuth()
   const [addExpenseOpen, setAddExpenseOpen] = useState(false)
   const [folderPickerOpen, setFolderPickerOpen] = useState(false)
   const [expenseForm, setExpenseForm] = useState({
@@ -495,14 +496,14 @@ function ExpensesTab({ showToast, expenses }: { showToast: (msg: string, type?: 
           {row.status === 'pending' && (
             <>
               <button
-                onClick={async (e) => { e.stopPropagation(); const ok = await updateRow('expenses', row.id, { status: 'approved' }); showToast(ok ? `Expense ${row.id} approved` : 'Failed to approve', ok ? 'success' : 'error') }}
+                onClick={async (e) => { e.stopPropagation(); if (!['super_admin', 'admin', 'finance_head'].includes(role || '')) { showToast?.('You do not have permission to perform this action', 'error'); return } const ok = await updateRow('expenses', row.id, { status: 'approved' }); showToast(ok ? `Expense ${row.id} approved` : 'Failed to approve', ok ? 'success' : 'error') }}
                 className="p-1.5 rounded-lg hover:bg-emerald-500/10 text-gray-500 hover:text-emerald-400 transition-colors"
                 title="Approve"
               >
                 <CheckCircle2 className="w-4 h-4" />
               </button>
               <button
-                onClick={async (e) => { e.stopPropagation(); const ok = await updateRow('expenses', row.id, { status: 'rejected' }); showToast(ok ? `Expense ${row.id} rejected` : 'Failed to reject', ok ? 'success' : 'error') }}
+                onClick={async (e) => { e.stopPropagation(); if (!['super_admin', 'admin', 'finance_head'].includes(role || '')) { showToast?.('You do not have permission to perform this action', 'error'); return } const ok = await updateRow('expenses', row.id, { status: 'rejected' }); showToast(ok ? `Expense ${row.id} rejected` : 'Failed to reject', ok ? 'success' : 'error') }}
                 className="p-1.5 rounded-lg hover:bg-red-500/10 text-gray-500 hover:text-red-400 transition-colors"
                 title="Reject"
               >
@@ -573,16 +574,16 @@ function ExpensesTab({ showToast, expenses }: { showToast: (msg: string, type?: 
                 onChange={(e) => setExpenseForm(f => ({ ...f, category: e.target.value as ExpenseCategory }))}
                 className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-brand-red/40 focus:ring-1 focus:ring-brand-red/20"
               >
-                <option value="operations">Office Supplies</option>
+                <option value="office_supplies">Office Supplies</option>
                 <option value="travel">Travel</option>
                 <option value="technology">Software &amp; Licenses</option>
                 <option value="legal">Professional Services</option>
                 <option value="marketing">Marketing &amp; Advertising</option>
-                <option value="hr">Utilities</option>
-                <option value="operations">Rent</option>
-                <option value="legal">Insurance</option>
-                <option value="hr">Training &amp; Development</option>
-                <option value="operations">Miscellaneous</option>
+                <option value="utilities">Utilities</option>
+                <option value="rent">Rent</option>
+                <option value="insurance">Insurance</option>
+                <option value="training">Training &amp; Development</option>
+                <option value="miscellaneous">Miscellaneous</option>
               </select>
             </div>
             <div>
@@ -716,6 +717,7 @@ function ExpensesTab({ showToast, expenses }: { showToast: (msg: string, type?: 
 
 // ── Payouts Tab ─────────────────────────────────────────────────
 function PayoutsTab({ showToast, commissions }: { showToast: (msg: string, type?: 'success' | 'error' | 'info' | 'warning') => void; commissions: any[] }) {
+  const { role } = useAdminAuth()
   const payouts = useMemo(() => {
     return commissions.map(c => ({
       ...c,
@@ -764,7 +766,7 @@ function PayoutsTab({ showToast, commissions }: { showToast: (msg: string, type?
                 />
                 {p.status === 'approved' && (
                   <button
-                    onClick={async () => { const ok = await updateRow('commissions', p.id, { status: 'paid' }); showToast(ok ? `Payout of ${formatINR(p.commissionAmount)} processed for ${p.salesRep}` : 'Failed to process payout', ok ? 'success' : 'error') }}
+                    onClick={async () => { if (!['super_admin', 'admin', 'finance_head'].includes(role || '')) { showToast?.('You do not have permission to perform this action', 'error'); return } const ok = await updateRow('commissions', p.id, { status: 'paid' }); showToast(ok ? `Payout of ${formatINR(p.commissionAmount)} processed for ${p.salesRep}` : 'Failed to process payout', ok ? 'success' : 'error') }}
                     className="px-3 py-1 rounded-lg text-[11px] font-medium text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 hover:bg-emerald-500/20 transition-colors"
                   >
                     Process

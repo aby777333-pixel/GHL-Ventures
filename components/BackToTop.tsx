@@ -8,7 +8,7 @@ const PORTAL_PREFIXES = ['/staff', '/admin', '/dashboard']
 
 export default function BackToTop() {
   const pathname = usePathname()
-  if (PORTAL_PREFIXES.some(p => pathname.startsWith(p))) return null
+  const isPortal = PORTAL_PREFIXES.some(p => pathname.startsWith(p))
   const [show, setShow] = useState(false)
 
   useEffect(() => {
@@ -30,6 +30,8 @@ export default function BackToTop() {
     document.documentElement.scrollTop = 0
     document.body.scrollTop = 0
   }, [])
+
+  if (isPortal) return null
 
   return (
     <button

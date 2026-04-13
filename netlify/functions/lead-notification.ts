@@ -9,6 +9,11 @@
    Without it, the function logs the submission and returns success.
    ================================================================ */
 
+function escapeHtml(str: string): string {
+  if (!str) return ''
+  return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;')
+}
+
 interface LeadNotificationBody {
   fullName: string
   email?: string
@@ -78,17 +83,17 @@ function formatTeamEmailHtml(lead: LeadNotificationBody): string {
         <p style="color: #888; margin: 4px 0 0; font-size: 12px;">New Lead Notification</p>
       </div>
       <div style="padding: 24px;">
-        <h2 style="color: #333; font-size: 16px; margin-top: 0;">New ${SOURCE_LABELS[lead.source] || lead.source} Submission</h2>
+        <h2 style="color: #333; font-size: 16px; margin-top: 0;">New ${escapeHtml(SOURCE_LABELS[lead.source] || lead.source)} Submission</h2>
         <table style="width: 100%; border-collapse: collapse; font-size: 14px;">
-          <tr><td style="padding: 8px 0; color: #666; width: 140px;">Name</td><td style="padding: 8px 0; color: #333; font-weight: 600;">${lead.fullName}</td></tr>
-          ${lead.email ? `<tr><td style="padding: 8px 0; color: #666;">Email</td><td style="padding: 8px 0;"><a href="mailto:${lead.email}" style="color: #D0021B;">${lead.email}</a></td></tr>` : ''}
-          ${lead.phone ? `<tr><td style="padding: 8px 0; color: #666;">Phone</td><td style="padding: 8px 0;"><a href="tel:${lead.phone}" style="color: #D0021B;">${lead.phone}</a></td></tr>` : ''}
-          ${lead.city ? `<tr><td style="padding: 8px 0; color: #666;">City</td><td style="padding: 8px 0; color: #333;">${lead.city}</td></tr>` : ''}
-          <tr><td style="padding: 8px 0; color: #666;">Source</td><td style="padding: 8px 0; color: #333;">${SOURCE_LABELS[lead.source] || lead.source}</td></tr>
-          ${lead.investmentInterest ? `<tr><td style="padding: 8px 0; color: #666;">Interest</td><td style="padding: 8px 0; color: #333;">${lead.investmentInterest}</td></tr>` : ''}
-          ${lead.investmentRange ? `<tr><td style="padding: 8px 0; color: #666;">Investment Range</td><td style="padding: 8px 0; color: #333;">${lead.investmentRange}</td></tr>` : ''}
-          ${lead.message ? `<tr><td style="padding: 8px 0; color: #666; vertical-align: top;">Message</td><td style="padding: 8px 0; color: #333;">${lead.message}</td></tr>` : ''}
-          ${lead.pageUrl ? `<tr><td style="padding: 8px 0; color: #666;">Page URL</td><td style="padding: 8px 0;"><a href="${lead.pageUrl}" style="color: #D0021B; font-size: 12px;">${lead.pageUrl}</a></td></tr>` : ''}
+          <tr><td style="padding: 8px 0; color: #666; width: 140px;">Name</td><td style="padding: 8px 0; color: #333; font-weight: 600;">${escapeHtml(lead.fullName)}</td></tr>
+          ${lead.email ? `<tr><td style="padding: 8px 0; color: #666;">Email</td><td style="padding: 8px 0;"><a href="mailto:${escapeHtml(lead.email)}" style="color: #D0021B;">${escapeHtml(lead.email)}</a></td></tr>` : ''}
+          ${lead.phone ? `<tr><td style="padding: 8px 0; color: #666;">Phone</td><td style="padding: 8px 0;"><a href="tel:${escapeHtml(lead.phone)}" style="color: #D0021B;">${escapeHtml(lead.phone)}</a></td></tr>` : ''}
+          ${lead.city ? `<tr><td style="padding: 8px 0; color: #666;">City</td><td style="padding: 8px 0; color: #333;">${escapeHtml(lead.city)}</td></tr>` : ''}
+          <tr><td style="padding: 8px 0; color: #666;">Source</td><td style="padding: 8px 0; color: #333;">${escapeHtml(SOURCE_LABELS[lead.source] || lead.source)}</td></tr>
+          ${lead.investmentInterest ? `<tr><td style="padding: 8px 0; color: #666;">Interest</td><td style="padding: 8px 0; color: #333;">${escapeHtml(lead.investmentInterest)}</td></tr>` : ''}
+          ${lead.investmentRange ? `<tr><td style="padding: 8px 0; color: #666;">Investment Range</td><td style="padding: 8px 0; color: #333;">${escapeHtml(lead.investmentRange)}</td></tr>` : ''}
+          ${lead.message ? `<tr><td style="padding: 8px 0; color: #666; vertical-align: top;">Message</td><td style="padding: 8px 0; color: #333;">${escapeHtml(lead.message)}</td></tr>` : ''}
+          ${lead.pageUrl ? `<tr><td style="padding: 8px 0; color: #666;">Page URL</td><td style="padding: 8px 0;"><a href="${escapeHtml(lead.pageUrl)}" style="color: #D0021B; font-size: 12px;">${escapeHtml(lead.pageUrl)}</a></td></tr>` : ''}
           <tr><td style="padding: 8px 0; color: #666;">Submitted At</td><td style="padding: 8px 0; color: #333;">${timestamp}</td></tr>
         </table>
       </div>
@@ -101,8 +106,8 @@ function formatTeamEmailHtml(lead: LeadNotificationBody): string {
 
 // ── Client confirmation email ──────────────────────────────
 function formatClientConfirmationHtml(lead: LeadNotificationBody): string {
-  const firstName = lead.fullName.split(' ')[0] || 'there'
-  const sourceLabel = SOURCE_LABELS[lead.source] || 'inquiry'
+  const firstName = escapeHtml(lead.fullName.split(' ')[0] || 'there')
+  const sourceLabel = escapeHtml(SOURCE_LABELS[lead.source] || 'inquiry')
 
   return `
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background: #ffffff; border-radius: 8px; overflow: hidden; border: 1px solid #e5e5e5;">
@@ -216,7 +221,7 @@ export default async (request: Request) => {
 
     // ── 1. Send notification to GHL team ──────────────────────
     const teamHtml = formatTeamEmailHtml(lead)
-    const teamSubject = `New Lead: ${lead.fullName} — ${SOURCE_LABELS[lead.source] || lead.source}`
+    const teamSubject = `New Lead: ${escapeHtml(lead.fullName)} — ${escapeHtml(SOURCE_LABELS[lead.source] || lead.source)}`
 
     const teamEmails = NOTIFICATION_EMAILS.map(to =>
       fetch('https://api.resend.com/emails', {

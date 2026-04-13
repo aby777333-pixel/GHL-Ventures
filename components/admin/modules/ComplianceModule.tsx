@@ -314,6 +314,7 @@ function ApprovalsTab({ approvals, showToast }: { approvals: any[]; showToast: (
   const [statusFilter, setStatusFilter] = useState<ApprovalStatus | 'all'>('all')
   const [reviewApproval, setReviewApproval] = useState<Approval | null>(null)
   const [reviewAction, setReviewAction] = useState<'approve' | 'reject' | null>(null)
+  const [reviewerNotes, setReviewerNotes] = useState('')
 
   const filtered = useMemo(() => {
     if (statusFilter === 'all') return approvals
@@ -440,6 +441,8 @@ function ApprovalsTab({ approvals, showToast }: { approvals: any[]; showToast: (
               <label className="block text-xs font-medium text-gray-400 mb-1.5">Reviewer Notes</label>
               <textarea
                 rows={3}
+                value={reviewerNotes}
+                onChange={e => setReviewerNotes(e.target.value)}
                 placeholder="Add notes about this decision..."
                 className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-brand-red/40 focus:ring-1 focus:ring-brand-red/20 resize-none"
               />
@@ -447,7 +450,7 @@ function ApprovalsTab({ approvals, showToast }: { approvals: any[]; showToast: (
 
             <div className="flex justify-end gap-3 pt-4 border-t border-white/[0.06]">
               <button
-                onClick={() => { setReviewApproval(null); setReviewAction(null) }}
+                onClick={() => { setReviewApproval(null); setReviewAction(null); setReviewerNotes('') }}
                 className="px-4 py-2 rounded-xl text-sm font-medium text-gray-400 hover:text-white hover:bg-white/[0.06] transition-colors"
               >
                 Cancel
@@ -455,7 +458,7 @@ function ApprovalsTab({ approvals, showToast }: { approvals: any[]; showToast: (
               <button
                 onClick={async () => {
                   const newStatus = reviewAction === 'approve' ? 'approved' : 'rejected'
-                  const ok = await updateRow('approvals', reviewApproval.id, { status: newStatus })
+                  const ok = await updateRow('approvals', reviewApproval.id, { status: newStatus, reviewer_notes: reviewerNotes })
                   showToast(
                     ok
                       ? (reviewAction === 'approve' ? `${reviewApproval.id} approved successfully` : `${reviewApproval.id} rejected`)
@@ -464,6 +467,7 @@ function ApprovalsTab({ approvals, showToast }: { approvals: any[]; showToast: (
                   )
                   setReviewApproval(null)
                   setReviewAction(null)
+                  setReviewerNotes('')
                 }}
                 className={`px-5 py-2 rounded-xl text-sm font-medium text-white transition-colors ${
                   reviewAction === 'approve'

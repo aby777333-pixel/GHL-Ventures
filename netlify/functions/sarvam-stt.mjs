@@ -1,9 +1,19 @@
 const SARVAM_API_KEY = process.env.SARVAM_API_KEY || ''
 const SARVAM_STT_URL = 'https://api.sarvam.ai/speech-to-text-translate'
 
+const ALLOWED_ORIGINS = [
+  'https://ghl-india-ventures-2025.netlify.app',
+  // 'http://localhost:3000', // disabled for production
+]
+
+function getCorsOrigin(request) {
+  const origin = request?.headers?.get('origin') || ''
+  return ALLOWED_ORIGINS.includes(origin) ? origin : ALLOWED_ORIGINS[0]
+}
+
 export default async (request) => {
   const headers = {
-    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Origin': getCorsOrigin(request),
     'Access-Control-Allow-Headers': 'Content-Type',
     'Access-Control-Allow-Methods': 'POST, OPTIONS',
     'Content-Type': 'application/json',

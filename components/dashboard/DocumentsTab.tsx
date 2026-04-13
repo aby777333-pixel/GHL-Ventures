@@ -70,8 +70,8 @@ export default function DocumentsTab({ clientId, userId, theme, onToast }: Props
                   <td className="py-3 font-medium">{doc.title}</td>
                   <td className="py-3">
                     <div className="flex items-center gap-2">
-                      <button onClick={() => handleView(doc.file_url)} className="p-1.5 rounded bg-red-600 text-white hover:bg-red-700"><Eye className="w-3.5 h-3.5" /></button>
-                      <button onClick={() => handleDownload(doc.file_url, doc.file_name || doc.title)} className="p-1.5 rounded bg-red-600 text-white hover:bg-red-700"><Download className="w-3.5 h-3.5" /></button>
+                      <button onClick={() => { if (doc.file_url) handleView(doc.file_url) }} className="p-1.5 rounded bg-red-600 text-white hover:bg-red-700"><Eye className="w-3.5 h-3.5" /></button>
+                      <button onClick={() => { if (doc.file_url) handleDownload(doc.file_url, doc.file_name || doc.title) }} className="p-1.5 rounded bg-red-600 text-white hover:bg-red-700"><Download className="w-3.5 h-3.5" /></button>
                     </div>
                   </td>
                   <td className="py-3">

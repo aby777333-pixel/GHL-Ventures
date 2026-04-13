@@ -41,7 +41,7 @@ const PORTAL_PREFIXES = ['/staff', '/admin', '/dashboard']
 
 export default function SocialProofToasts() {
   const pathname = usePathname()
-  if (PORTAL_PREFIXES.some(p => pathname.startsWith(p))) return null
+  const isPortal = PORTAL_PREFIXES.some(p => pathname.startsWith(p))
 
   const [currentIndex, setCurrentIndex] = useState(0)
   const [isVisible, setIsVisible] = useState(false)
@@ -125,7 +125,7 @@ export default function SocialProofToasts() {
     hideToast()
   }
 
-  if (!isVisible || shuffledData.length === 0) return null
+  if (isPortal || !isVisible || shuffledData.length === 0) return null
 
   const entry = shuffledData[currentIndex]
   if (!entry || dismissed) return null

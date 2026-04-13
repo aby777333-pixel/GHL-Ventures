@@ -264,21 +264,21 @@ export const ADVISORY_BOARD = [
     initials: 'SI',
     role: 'Advisory Board Member',
     bio: 'Retired IAS officer and former Secretary of Commerce. Brings policy insight and a deep understanding of India\'s regulatory environment across real estate and startup sectors.',
-    linkedin: 'https://linkedin.com',
+    linkedin: '#', // LinkedIn profile URL pending
   },
   {
     name: 'Kavitha Raghavan',
     initials: 'KR',
     role: 'Advisory Board Member',
     bio: 'Veteran real estate developer and former Chairperson of CREDAI Tamil Nadu. Advisor on stressed asset identification and resolution strategies.',
-    linkedin: 'https://linkedin.com',
+    linkedin: '#', // LinkedIn profile URL pending
   },
   {
     name: 'Suresh Balakrishnan',
     initials: 'SB',
     role: 'Advisory Board Member',
     bio: 'Serial entrepreneur and angel investor with exits in SaaS and fintech. Provides strategic counsel on the startup investment thesis and portfolio company mentorship.',
-    linkedin: 'https://linkedin.com',
+    linkedin: '#', // LinkedIn profile URL pending
   },
 ] as const
 

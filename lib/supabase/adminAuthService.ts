@@ -95,6 +95,23 @@ export async function getAdminSession(): Promise<AdminSession | null> {
   if (!isSupabaseConfigured()) return null
 
   try {
+    // Check for existing stored session and validate expiry (BUG C7)
+    const storedRaw = typeof window !== 'undefined'
+      ? (sessionStorage.getItem('ghl_admin_session') || localStorage.getItem('ghl-admin-session'))
+      : null
+    if (storedRaw) {
+      try {
+        const parsed = JSON.parse(storedRaw)
+        if (parsed.expiresAt && Date.now() > parsed.expiresAt) {
+          // Session expired — sign out
+          await supabase.auth.signOut()
+          try { sessionStorage.removeItem('ghl_admin_session') } catch { /* ignore */ }
+          try { localStorage.removeItem('ghl-admin-session') } catch { /* ignore */ }
+          return null
+        }
+      } catch { /* ignore parse errors, continue to re-validate */ }
+    }
+
     const { data: { session } } = await supabase.auth.getSession()
     if (!session?.user) return null
 
@@ -110,6 +127,23 @@ export async function getAdminSession(): Promise<AdminSession | null> {
 
     if (!ADMIN_ROLES.includes(p.role)) return null
 
+    // Reuse stored timestamps if available, else create fresh ones
+    let loginAt: number
+    let expiresAt: number
+    if (storedRaw) {
+      try {
+        const parsed = JSON.parse(storedRaw)
+        loginAt = parsed.loginAt || Date.now()
+        expiresAt = parsed.expiresAt || Date.now() + 8 * 60 * 60 * 1000
+      } catch {
+        loginAt = Date.now()
+        expiresAt = Date.now() + 8 * 60 * 60 * 1000
+      }
+    } else {
+      loginAt = Date.now()
+      expiresAt = Date.now() + 8 * 60 * 60 * 1000
+    }
+
     return {
       user: {
         name: p.full_name || session.user.email || '',
@@ -118,8 +152,8 @@ export async function getAdminSession(): Promise<AdminSession | null> {
         department: p.department || undefined,
         phone: p.phone || undefined,
       },
-      loginAt: Date.now(),
-      expiresAt: Date.now() + 8 * 60 * 60 * 1000,
+      loginAt,
+      expiresAt,
     }
   } catch {
     return null

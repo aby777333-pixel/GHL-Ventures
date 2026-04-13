@@ -150,8 +150,12 @@ export default function AuthCallbackPage() {
         return false
       }
     } catch {
-      // If validation fails, allow through (don't block auth on transient errors)
-      console.warn('[auth/callback] Flow validation failed, allowing through')
+      // If validation fails, deny access (fail-closed for security)
+      console.warn('[auth/callback] Flow validation failed, denying access')
+      await supabase.auth.signOut()
+      setError('Could not verify your account. Please try again.')
+      setTimeout(() => router.replace('/login'), 3000)
+      return false
     }
 
     return true

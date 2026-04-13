@@ -437,7 +437,7 @@ export interface Database {
       tickets: { Row: Ticket; Insert: Partial<Ticket> & Pick<Ticket, 'ticket_number' | 'client_name' | 'subject'>; Update: Partial<Ticket> }
       tasks: { Row: Task; Insert: Partial<Task> & Pick<Task, 'title'>; Update: Partial<Task> }
       notifications: { Row: Notification; Insert: Partial<Notification> & Pick<Notification, 'user_id' | 'title'>; Update: Partial<Notification> }
-      audit_log: { Row: AuditLogEntry; Insert: Partial<AuditLogEntry> & Pick<AuditLogEntry, 'user_name' | 'action' | 'module'>; Update: Partial<AuditLogEntry> }
+      audit_logs: { Row: AuditLogEntry; Insert: Partial<AuditLogEntry> & Pick<AuditLogEntry, 'user_name' | 'action' | 'module'>; Update: Partial<AuditLogEntry> }
       investments: { Row: Investment; Insert: Partial<Investment> & Pick<Investment, 'client_id' | 'fund_name' | 'fund_type' | 'invested_amount' | 'current_value'>; Update: Partial<Investment> }
       transactions: { Row: Transaction; Insert: Partial<Transaction> & Pick<Transaction, 'client_id' | 'date' | 'type' | 'amount'>; Update: Partial<Transaction> }
       messages: { Row: Message; Insert: Partial<Message> & Pick<Message, 'from_id' | 'to_id' | 'subject' | 'body'>; Update: Partial<Message> }

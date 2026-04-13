@@ -993,9 +993,9 @@ export default function DashboardClient() {
   const renderHeroMetrics = () => {
     const metrics = [
       { label: 'Total Portfolio', value: `\u20B9${formatINR(portfolioValue)}`, change: `+${totalReturn}%`, up: true, icon: Wallet, gradient: 'from-brand-red/20 to-red-900/20', iconColor: '#D0021B' },
-      { label: 'AIF Investment', value: `\u20B9${formatINR(aifInvestment)}`, change: '+32.4%', up: true, icon: Building2, gradient: 'from-emerald-500/20 to-emerald-900/20', iconColor: '#10B981' },
-      { label: 'Co-Invest Value', value: `\u20B9${formatINR(coInvestValue)}`, change: '+8.5%', up: true, icon: FileText, gradient: 'from-blue-500/20 to-blue-900/20', iconColor: '#3B82F6' },
-      { label: 'Current NAV', value: `\u20B9${(currentNAV / 100).toFixed(2)}`, change: '+32.4%', up: true, icon: TrendingUp, gradient: 'from-amber-500/20 to-amber-900/20', iconColor: '#F59E0B' },
+      { label: 'AIF Investment', value: `\u20B9${formatINR(aifInvestment)}`, change: '\u2014', up: true, icon: Building2, gradient: 'from-emerald-500/20 to-emerald-900/20', iconColor: '#10B981' },
+      { label: 'Co-Invest Value', value: `\u20B9${formatINR(coInvestValue)}`, change: '\u2014', up: true, icon: FileText, gradient: 'from-blue-500/20 to-blue-900/20', iconColor: '#3B82F6' },
+      { label: 'Current NAV', value: `\u20B9${(currentNAV / 100).toFixed(2)}`, change: '\u2014', up: true, icon: TrendingUp, gradient: 'from-amber-500/20 to-amber-900/20', iconColor: '#F59E0B' },
     ]
     return (
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
@@ -1208,13 +1208,14 @@ export default function DashboardClient() {
   // PORTFOLIO HEALTH SCORE (Animated Gauge)
   // ═══════════════════════════════════════════════════════════
   const renderHealthScore = () => {
+    {/* TODO: Calculate from actual portfolio data */}
     const score = 87
     const circumference = 2 * Math.PI * 45
     const offset = circumference - (score / 100) * circumference
     return (
       <Glass className="p-5" hover glow theme={theme}>
         <div className="flex items-center justify-between mb-3">
-          <h4 className={`text-sm font-bold ${t('text-white','text-gray-900')}`}>Portfolio Health</h4>
+          <h4 className={`text-sm font-bold ${t('text-white','text-gray-900')}`}>Portfolio Health <span className="text-[9px] font-normal text-gray-500">(Placeholder)</span></h4>
           <Gauge className="w-4 h-4 text-emerald-400" />
         </div>
         <div className="flex items-center gap-4">
@@ -1246,11 +1247,17 @@ export default function DashboardClient() {
   // COUNTDOWN TO NEXT NAV UPDATE
   // ═══════════════════════════════════════════════════════════
   const renderCountdown = () => {
-    const navDate = new Date('2025-04-15T00:00:00+05:30')
     const now = new Date()
+    const quarter = Math.floor(now.getMonth() / 3)
+    const nextQuarterMonth = (quarter + 1) * 3
+    const navDate = nextQuarterMonth > 11
+      ? new Date(now.getFullYear() + 1, 0, 15, 0, 0, 0)
+      : new Date(now.getFullYear(), nextQuarterMonth, 15, 0, 0, 0)
     const diff = Math.max(0, navDate.getTime() - now.getTime())
     const days = Math.floor(diff / 86400000)
     const hours = Math.floor((diff % 86400000) / 3600000)
+    const navQuarter = `Q${navDate.getMonth() < 3 ? 4 : Math.floor(navDate.getMonth() / 3)} ${navDate.getMonth() < 3 ? navDate.getFullYear() - 1 : navDate.getFullYear()}`
+    const navLabel = `${navQuarter} \u2022 ${navDate.toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' })}`
     return (
       <Glass className="p-5" hover glow theme={theme}>
         <div className="flex items-center gap-2 mb-3">
@@ -1265,7 +1272,7 @@ export default function DashboardClient() {
             </div>
           ))}
         </div>
-        <p className={`text-[11px] text-center ${t('text-gray-600','text-gray-700')}`}>Q4 2024 &bull; 15 April 2025</p>
+        <p className={`text-[11px] text-center ${t('text-gray-600','text-gray-700')}`}>{navLabel}</p>
       </Glass>
     )
   }
@@ -1277,7 +1284,7 @@ export default function DashboardClient() {
     <Glass className="p-5" hover theme={theme}>
       <div className="flex items-center gap-2 mb-3">
         <Activity className="w-4 h-4 text-blue-400" />
-        <h4 className={`text-sm font-bold ${t('text-white','text-gray-900')}`}>Market Sentiment</h4>
+        <h4 className={`text-sm font-bold ${t('text-white','text-gray-900')}`}>Market Sentiment <span className="text-[9px] font-normal text-gray-500">(Sample Data)</span></h4>
       </div>
       <div className="flex items-center gap-3 mb-3">
         <div className="flex-1 h-2.5 rounded-full bg-gradient-to-r from-red-500 via-amber-400 to-emerald-500 relative">
@@ -1301,7 +1308,7 @@ export default function DashboardClient() {
     <Glass className="p-5" hover theme={theme}>
       <div className="flex items-center justify-between mb-4">
         <h4 className={`text-sm font-bold ${t('text-white','text-gray-900')}`}>India Live Markets</h4>
-        <span className="flex items-center gap-1 text-[10px] text-emerald-400 font-semibold"><span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" /> Live</span>
+        <span className="flex items-center gap-1 text-[10px] text-gray-400 font-semibold">Indicative</span>
       </div>
       <div className="grid grid-cols-2 gap-3">
         {[{ label: 'SENSEX', val: '73,842', chg: '+1.24%', data: SENSEX_INTRADAY, color: '#D0021B' },

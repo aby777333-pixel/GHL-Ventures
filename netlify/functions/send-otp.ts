@@ -5,6 +5,7 @@
    ================================================================ */
 
 import { createClient } from '@supabase/supabase-js'
+import { randomInt } from 'crypto'
 
 const ALLOWED_ORIGINS = [
   'https://ghl-india-ventures-2025.netlify.app',
@@ -23,12 +24,7 @@ function getCorsHeaders(request?: Request) {
 }
 
 function generateOTP(): string {
-  const digits = '0123456789'
-  let code = ''
-  for (let i = 0; i < 6; i++) {
-    code += digits[Math.floor(Math.random() * 10)]
-  }
-  return code
+  return String(randomInt(100000, 999999))
 }
 
 function formatOTPEmailHtml(code: string): string {
@@ -149,7 +145,7 @@ export default async (request: Request) => {
       body: JSON.stringify({
         from: 'GHL India Ventures <noreply@ghlindiaventures.com>',
         to: email,
-        subject: `${code} — Your GHL Verification Code`,
+        subject: 'Your GHL India Ventures Verification Code',
         html: formatOTPEmailHtml(code),
       }),
     })

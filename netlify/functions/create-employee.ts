@@ -24,7 +24,7 @@ const ALLOWED_ORIGINS = [
   'https://ghl-india-ventures-2025.netlify.app',
   'https://ghlindiaventures.com',
   'https://www.ghlindiaventures.com',
-  'http://localhost:3000',
+  ...(process.env.NODE_ENV === 'development' ? ['http://localhost:3000'] : []),
 ]
 
 function getCorsHeaders(request?: Request) {

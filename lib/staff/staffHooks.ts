@@ -142,6 +142,8 @@ export function useStaffPresence(userId: string | null, displayName?: string, ro
     return () => {
       if (heartbeatRef.current) clearInterval(heartbeatRef.current)
       window.removeEventListener('beforeunload', handleBeforeUnload)
+      // Best-effort offline update — async in cleanup is fire-and-forget;
+      // the beforeunload handler above covers the tab-close case.
       updateStaffStatus(userId, 'offline')
     }
   }, [userId, displayName, role])

@@ -1,3 +1,5 @@
+'use client'
+
 /* ─────────────────────────────────────────────────────────────
    Realtime Subscriptions — Supabase Realtime for live updates
 
@@ -7,8 +9,6 @@
    - Client creates ticket → Staff gets it → Admin monitors
    - Staff updates KYC → Client dashboard reflects
    ───────────────────────────────────────────────────────────── */
-
-'use client'
 
 import { supabase, isSupabaseConfigured } from './client'
 import type { RealtimeChannel } from '@supabase/supabase-js'
@@ -102,7 +102,7 @@ export function onInvestmentUpdate(clientId: string, handler: ChangeHandler) {
 
 /** Admin: Subscribe to audit log entries */
 export function onAuditEvent(handler: ChangeHandler) {
-  return subscribeToTable('audit_log', 'INSERT', handler)
+  return subscribeToTable('audit_logs', 'INSERT', handler)
 }
 
 /** Admin/Staff: Subscribe to new leads (website form submissions) */

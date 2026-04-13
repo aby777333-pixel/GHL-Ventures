@@ -166,7 +166,7 @@ function isOfficeHours(): boolean {
   const hour = ist.getHours()
   const minute = ist.getMinutes()
   const timeVal = hour * 60 + minute
-  return day >= 1 && day <= 5 && timeVal >= 570 && timeVal <= 1110
+  return day >= 1 && day <= 6 && timeVal >= 570 && timeVal <= 1110
 }
 
 function detectMobile(): boolean {

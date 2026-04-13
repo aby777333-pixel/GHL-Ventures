@@ -300,7 +300,7 @@ export default function ChatWidget() {
       })
     }
     return session
-  }, [visitorName, visitorEmail, pathname])
+  }, [visitorName, visitorEmail, visitorPhone, pathname])
 
   // ── Mode switching ──
   const handleModeSwitch = useCallback(async (mode: ChatMode) => {

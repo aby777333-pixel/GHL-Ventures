@@ -263,7 +263,7 @@ function MyTasksView({ showToast, tasks, onRefresh }: { showToast: TasksModulePr
           </div>
           <div>
             <label className="block text-xs font-medium text-gray-400 mb-1.5">Assigned To</label>
-            <input value={taskForm.assignedTo} onChange={e => setTaskForm({ ...taskForm, assignedTo: e.target.value })} placeholder="Team member name" className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-teal-500/40 focus:ring-1 focus:ring-teal-500/20" />
+            <input value={taskForm.assignedTo} onChange={e => setTaskForm({ ...taskForm, assignedTo: e.target.value })} placeholder="Enter team member name or ID" className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-teal-500/40 focus:ring-1 focus:ring-teal-500/20" />
           </div>
           <div className="sm:col-span-2">
             <label className="block text-xs font-medium text-gray-400 mb-1.5">Tags</label>
@@ -294,9 +294,7 @@ function MyTasksView({ showToast, tasks, onRefresh }: { showToast: TasksModulePr
                 const { data: { user } } = await (supabase as any).auth.getUser()
                 userId = user?.id || null
               } catch { /* continue without user id */ }
-              // assigned_to is UUID — if form has a name string, use current user instead
-              const assigneeId = (taskForm.assignedTo && /^[0-9a-f-]{36}$/i.test(taskForm.assignedTo))
-                ? taskForm.assignedTo : userId || null
+              const assigneeId = taskForm.assignedTo?.trim() || userId || null
               const row = await insertRow('tasks', {
                 title: taskForm.title,
                 description: taskForm.description || null,

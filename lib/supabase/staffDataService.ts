@@ -63,7 +63,20 @@ export async function fetchMyPayslips(staffId?: string) {
 }
 
 // ── Customer Service ────────────────────────────────────────
-export function getCSKPIs() { return { totalTickets: 0, avgResponseTime: '—', satisfaction: '—', resolvedToday: 0 } }
+export function getCSKPIs() {
+  return {
+    ticketsResolved: 0,
+    avgResponseTime: 0,
+    csatScore: 0,
+    callsHandled: 0,
+    chatsHandled: 0,
+    firstCallResolution: 0,
+    queueWaitTime: 0,
+    activeTickets: 0,
+    escalations: 0,
+    totalInteractions: 0,
+  }
+}
 
 export async function fetchTickets(assignedTo?: string) {
   if (!isSupabaseConfigured()) return []

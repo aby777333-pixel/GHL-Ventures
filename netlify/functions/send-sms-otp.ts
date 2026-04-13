@@ -6,6 +6,7 @@
    ================================================================ */
 
 import { createClient } from '@supabase/supabase-js'
+import { randomInt } from 'crypto'
 
 const ALLOWED_ORIGINS = [
   'https://ghl-india-ventures-2025.netlify.app',
@@ -24,12 +25,7 @@ function getCorsHeaders(request?: Request) {
 }
 
 function generateOTP(): string {
-  const digits = '0123456789'
-  let code = ''
-  for (let i = 0; i < 6; i++) {
-    code += digits[Math.floor(Math.random() * 10)]
-  }
-  return code
+  return String(randomInt(100000, 999999))
 }
 
 export default async (request: Request) => {
@@ -153,7 +149,7 @@ export default async (request: Request) => {
         numbers: cleanMobile,
         DLT_TE_ID: templateId,
       }
-      console.log('[send-sms-otp] Fast2SMS DLT payload:', JSON.stringify(payload))
+      console.log('[SMS OTP] Sending to:', cleanMobile, 'via Fast2SMS DLT route')
 
       const res = await fetch('https://www.fast2sms.com/dev/bulkV2', {
         method: 'POST',

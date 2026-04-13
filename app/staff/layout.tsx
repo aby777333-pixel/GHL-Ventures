@@ -9,7 +9,7 @@ export default function StaffLayout({ children }: { children: React.ReactNode })
   return (
     <>
       {/* Hide main-website Navbar, Footer, etc. from first paint (no JS needed) */}
-      <style dangerouslySetInnerHTML={{ __html: '.main-site-shell{display:none!important}' }} />
+      <style>{'.main-site-shell{display:none!important}'}</style>
       {children}
     </>
   )
