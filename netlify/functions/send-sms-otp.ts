@@ -136,36 +136,36 @@ export default async (request: Request) => {
       })
     }
 
-    // Send SMS via MSG91 OTP API
+    // Send SMS via MSG91 API
+    // DLT Template: "Dear customer, Your OTP is {#var#}. Please do not share this code with anyone."
+    // DLT Template ID: 1407175818803308914
     let smsSuccess = false
     let smsError = ''
 
-    if (msg91TemplateId) {
-      // MSG91 OTP API with template
-      try {
-        const otpUrl = new URL('https://control.msg91.com/api/v5/otp')
-        otpUrl.searchParams.set('template_id', msg91TemplateId)
-        otpUrl.searchParams.set('mobile', `91${cleanMobile}`)
-        otpUrl.searchParams.set('authkey', msg91AuthKey)
-        otpUrl.searchParams.set('otp', code)
-        otpUrl.searchParams.set('otp_expiry', '10')
+    // Attempt 1: MSG91 OTP API (dedicated OTP endpoint)
+    try {
+      const otpUrl = new URL('https://control.msg91.com/api/v5/otp')
+      otpUrl.searchParams.set('template_id', msg91TemplateId)
+      otpUrl.searchParams.set('mobile', `91${cleanMobile}`)
+      otpUrl.searchParams.set('authkey', msg91AuthKey)
+      otpUrl.searchParams.set('otp', code)
+      otpUrl.searchParams.set('otp_expiry', '10')
 
-        const smsRes = await fetch(otpUrl.toString(), { method: 'POST' })
-        const smsBody = await smsRes.json()
+      const smsRes = await fetch(otpUrl.toString(), { method: 'POST' })
+      const smsBody = await smsRes.json()
+      console.log('[send-sms-otp] MSG91 OTP response:', JSON.stringify(smsBody))
 
-        if (smsRes.ok && smsBody.type === 'success') {
-          smsSuccess = true
-        } else {
-          smsError = smsBody.message || 'MSG91 OTP API failed'
-          console.error('[send-sms-otp] MSG91 OTP error:', JSON.stringify(smsBody))
-        }
-      } catch (err) {
-        smsError = err instanceof Error ? err.message : 'MSG91 OTP API error'
-        console.error('[send-sms-otp] MSG91 OTP exception:', smsError)
+      if (smsRes.ok && smsBody.type === 'success') {
+        smsSuccess = true
+      } else {
+        smsError = smsBody.message || 'MSG91 OTP API failed'
       }
+    } catch (err) {
+      smsError = err instanceof Error ? err.message : 'MSG91 OTP API error'
+      console.error('[send-sms-otp] MSG91 OTP exception:', smsError)
     }
 
-    // Fallback: MSG91 Send SMS API (v2)
+    // Attempt 2: MSG91 Flow API with DLT template variable
     if (!smsSuccess) {
       try {
         const smsRes = await fetch('https://control.msg91.com/api/v5/flow/', {
@@ -175,7 +175,7 @@ export default async (request: Request) => {
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
-            template_id: msg91TemplateId || undefined,
+            template_id: msg91TemplateId,
             sender: process.env.MSG91_SENDER_ID || 'GHLAIF',
             short_url: '0',
             mobiles: `91${cleanMobile}`,
@@ -184,16 +184,38 @@ export default async (request: Request) => {
           }),
         })
         const smsBody = await smsRes.json()
+        console.log('[send-sms-otp] MSG91 Flow response:', JSON.stringify(smsBody))
 
         if (smsRes.ok && (smsBody.type === 'success' || smsBody.message === 'success')) {
           smsSuccess = true
         } else {
           smsError = smsBody.message || 'MSG91 Flow API failed'
-          console.error('[send-sms-otp] MSG91 Flow error:', JSON.stringify(smsBody))
         }
       } catch (err) {
         smsError = err instanceof Error ? err.message : 'MSG91 Flow API error'
         console.error('[send-sms-otp] MSG91 Flow exception:', smsError)
+      }
+    }
+
+    // Attempt 3: MSG91 SendHTTP API (legacy, broadest compatibility)
+    if (!smsSuccess) {
+      try {
+        const message = encodeURIComponent(`Dear customer, Your OTP is ${code}. Please do not share this code with anyone.`)
+        const httpUrl = `https://api.msg91.com/api/sendhttp.php?authkey=${msg91AuthKey}&mobiles=91${cleanMobile}&message=${message}&sender=${process.env.MSG91_SENDER_ID || 'GHLAIF'}&route=4&country=91&DLT_TE_ID=${msg91TemplateId}`
+
+        const smsRes = await fetch(httpUrl, { method: 'GET' })
+        const smsText = await smsRes.text()
+        console.log('[send-sms-otp] MSG91 HTTP response:', smsText)
+
+        // sendhttp returns a request ID string on success, or error JSON
+        if (smsRes.ok && smsText && !smsText.includes('error') && !smsText.includes('Error')) {
+          smsSuccess = true
+        } else {
+          smsError = smsText || 'MSG91 HTTP API failed'
+        }
+      } catch (err) {
+        smsError = err instanceof Error ? err.message : 'MSG91 HTTP API error'
+        console.error('[send-sms-otp] MSG91 HTTP exception:', smsError)
       }
     }
 
