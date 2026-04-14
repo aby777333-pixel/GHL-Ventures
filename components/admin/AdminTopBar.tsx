@@ -270,7 +270,7 @@ export default function AdminTopBar({ activeModule, activeSubTab, onMenuToggle, 
             {/* Dropdown */}
             {notifOpen && (
               <div
-                className="absolute right-0 top-full mt-2 w-80 rounded-xl border border-white/[0.08] shadow-2xl overflow-hidden"
+                className="absolute right-0 top-full mt-2 w-80 rounded-xl border border-white/[0.08] shadow-2xl overflow-hidden z-[50]"
                 style={{ background: 'rgba(18,18,26,0.98)', backdropFilter: 'blur(40px)' }}
               >
                 <div className="px-4 py-3 border-b border-white/[0.06] flex items-center justify-between">

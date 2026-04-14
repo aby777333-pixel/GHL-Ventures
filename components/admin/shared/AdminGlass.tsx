@@ -17,7 +17,7 @@ export default function AdminGlass({
 }: AdminGlassProps) {
   return (
     <div
-      className={`relative rounded-2xl border border-white/[0.08] overflow-hidden transition-all duration-500
+      className={`relative rounded-2xl border border-white/[0.08] transition-all duration-500
         ${hover ? 'hover:border-white/[0.14] hover:shadow-lg hover:shadow-black/20 hover:-translate-y-0.5' : ''}
         ${glow ? 'shadow-brand-red/5 shadow-lg' : ''} ${padding} ${className}`}
       style={{

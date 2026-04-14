@@ -3112,7 +3112,7 @@ body.admin-active #ghl-direct-widget {
 }
 
 /* ── Admin Tab Switch Animation ── */
-.admin-root .flex-1.overflow-auto {
+.admin-root .flex-1.overflow-visible {
   animation: adminTabSwitch 0.35s ease-out;
 }
 @keyframes adminTabSwitch {

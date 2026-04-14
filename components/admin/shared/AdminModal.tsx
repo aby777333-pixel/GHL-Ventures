@@ -59,7 +59,7 @@ export default function AdminModal({
       style={{ animation: 'adminFadeIn 0.2s ease-out' }}
     >
       <div
-        className={`w-full ${maxWidth} rounded-2xl border border-white/[0.1] overflow-hidden shadow-2xl shrink-0`}
+        className={`w-full ${maxWidth} rounded-2xl border border-white/[0.1] shadow-2xl shrink-0`}
         style={{
           background: 'linear-gradient(135deg, rgba(20,20,20,0.98) 0%, rgba(10,10,10,0.98) 100%)',
           animation: 'adminSlideUp 0.3s ease-out',
