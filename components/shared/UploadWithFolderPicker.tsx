@@ -1,6 +1,7 @@
 'use client'
 
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, useMemo } from 'react'
+import { createPortal } from 'react-dom'
 import { Upload, X, AlertTriangle, ChevronDown, Database, FileText } from 'lucide-react'
 import { BUCKETS } from '@/lib/supabase/storageService'
 import { uploadFile } from '@/lib/supabase/storageService'
@@ -132,10 +133,13 @@ export default function UploadWithFolderPicker({
     onClose()
   }
 
-  if (!open) return null
+  // eslint-disable-next-line react-hooks/rules-of-hooks
+  const portalTarget = useMemo(() => typeof window !== 'undefined' ? document.body : null, [])
 
-  return (
-    <div className="fixed inset-0 z-[10010] flex items-center justify-center bg-black/60 backdrop-blur-sm">
+  if (!open || !portalTarget) return null
+
+  return createPortal(
+    <div className="admin-portal fixed inset-0 z-[10010] flex items-center justify-center bg-black/60 backdrop-blur-sm">
       <div className="relative w-full max-w-lg mx-4 bg-[#0a0a0a] border border-white/[0.08] rounded-2xl shadow-2xl">
         {/* Header */}
         <div className="flex items-center justify-between p-4 border-b border-white/[0.06]">
@@ -301,6 +305,7 @@ export default function UploadWithFolderPicker({
           </div>
         )}
       </div>
-    </div>
+    </div>,
+    portalTarget,
   )
 }

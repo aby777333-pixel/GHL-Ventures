@@ -830,71 +830,75 @@ function generateInvestmentDocument(
     </div>
   </div>`
 
-  const header = `<div class="header">
-    <h1>GHL INDIA VENTURES</h1>
-    <div class="sub">Invest &bull; Earn &bull; Repeat</div>
+  const numberToWordsJS = `function numberToWords(n){if(n===0)return'Zero';var ones=['','One','Two','Three','Four','Five','Six','Seven','Eight','Nine','Ten','Eleven','Twelve','Thirteen','Fourteen','Fifteen','Sixteen','Seventeen','Eighteen','Nineteen'];var tens=['','','Twenty','Thirty','Forty','Fifty','Sixty','Seventy','Eighty','Ninety'];function tw(x){if(x<20)return ones[x];return tens[Math.floor(x/10)]+(x%10?' '+ones[x%10]:'');}function th(x){if(x>=100)return ones[Math.floor(x/100)]+' Hundred'+(x%100?' '+tw(x%100):'');return tw(x);}var cr=Math.floor(n/10000000),lk=Math.floor((n%10000000)/100000),tk=Math.floor((n%100000)/1000),r=n%1000,w='';if(cr)w+=th(cr)+' Crore ';if(lk)w+=tw(lk)+' Lakh ';if(tk)w+=tw(tk)+' Thousand ';if(r)w+=th(r);return w.trim();}`
+
+  const logo = `<div style="text-align:center;margin-bottom:8px;">
+    <div style="font-size:32px;font-weight:900;color:#2d6a2e;letter-spacing:4px;font-family:Arial,sans-serif;">LANDMA<span style="color:#E8A317;">X</span>O</div>
+    <div style="font-size:10px;color:#666;letter-spacing:3px;margin-top:-2px;">Invest&bull; Earn&bull; Repeat</div>
   </div>`
 
-  const footer = `<div class="footer">
-    <h2>GHL INDIA VENTURES PRIVATE LIMITED</h2>
-    <div>CIN: U67190TN2024PTC172000</div>
-    <div>Email: info@ghlindiaventures.com</div>
-    <div>Queens Court, Montieth Road, Egmore, Chennai - 600008</div>
+  const header = `${logo}`
+
+  const footer = `<div class="footer" style="background:#fffde8;padding:16px;margin-top:40px;border-top:3px solid #2d6a2e;">
+    <h2 style="color:#2d6a2e;font-size:16px;margin:0 0 4px;">LANDMAXO PROPERTIES PRIVATE LIMITED</h2>
+    <div>CIN: U70109TN2022PTC151180</div>
+    <div>Email: info@landmaxo.com</div>
+    <div>Desk No 12, 2D, Queens Court, Montieth Road, Egmore, Chennai-600008.</div>
   </div>`
 
   const templates: Record<string, string> = {
-    acknowledgement: `${css}<body>${toolbar}${header}
-      <p class="right">Date: ${ed(dateStr)}</p>
-      <p>Ref: ${ed(refNo)}<br/>${ed(clientName)}<br/>${clientEmail ? 'Email: ' + ed(clientEmail) : ''}</p>
+    acknowledgement: `${css}<body>${header}
+      <p class="right">Date: [DATE]</p>
+      <p>Ref: [REF]<br/>[NAME]<br/>[ADDRESS]<br/>[PHONE]<br/>Email: [EMAIL]</p>
       <p><strong>Subject: Acknowledgement of investment receipt</strong></p>
-      <p>Dear ${ed(clientName)},</p>
+      <p>Dear [NAME],</p>
       <p><strong>GHL India Ventures welcomes you to the new Dawn of Wealth Creation and prosperity</strong></p>
       <p>We are delighted to welcome you to <strong>GHL India Ventures</strong>, where your financial aspirations take shape and transform into lasting success. By joining us, you have become an integral part of our <strong>prestigious family of visionary investors</strong> &mdash; individuals who believe in creating wealth with wisdom and foresight.</p>
       <p>Your decision to partner with GHL India Ventures marks a <strong>powerful first step toward true financial freedom</strong>. Together, let us shape a future defined by prosperity, stability, and enduring success.</p>
       <p>Welcome once again to GHL India Ventures &mdash; <strong>where your prosperity is our purpose</strong>.</p>
-      <p>We acknowledge receipt of your investment towards the <strong>subscription of debentures in GHL India Ventures Private Limited</strong>, as detailed below:</p>
+      <p>We acknowledge receipt of your investment towards the <strong>subscription of debentures in Landmaxo Properties Private Limited</strong>, as detailed below:</p>
       <table class="mb">
         <tr><th>S.No</th><th>Date of Receipt</th><th>Amount (&#8377;)</th><th>Amount in Words</th></tr>
-        <tr><td>1</td><td>${ed(dateStr)}</td><td>${ed(amount.toLocaleString('en-IN'))}</td><td>${ed(amountWords + ' Rupees Only')}</td></tr>
+        <tr><td>1</td><td>[DATE]</td><td>[AMOUNT]</td><td>[AMOUNT_WORDS] Rupees Only</td></tr>
       </table>
       <p>The debentures carry an <strong>interest rate of 1% per month</strong> along with an <strong>annual appreciation of 12%</strong>, for a <strong>minimum tenure of three (3) years</strong> from the date of investment. Interest will be paid on or before the <strong>10th of each month</strong>, after deduction of applicable <strong>TDS (currently 10%)</strong> under the Income Tax Act, 1961.</p>
       <p>Debentures may be <strong>redeemed at the investor's option</strong> after completion of the 3-year tenure. <strong>TDS credits</strong> will be reflected in the investor's PAN account on a <strong>quarterly basis</strong>.</p>
       <p class="note">* This is system generated document. Signature authentication is not required. *</p>
       ${footer}</body>`,
 
-    allotment: `${css}<body>${toolbar}
-      <div class="header">
-        <h1>GHL INDIA VENTURES PRIVATE LIMITED</h1>
-        <div class="sub">{ CIN: U67190TN2024PTC172000 }</div>
-        <div class="sub">Queens Court, Montieth Road, Egmore, Chennai - 600008</div>
+    allotment: `${css}<body>${logo}
+      <div class="header" style="border-bottom:none;">
+        <h1 style="color:#2d6a2e;">LANDMAXO PROPERTIES PRIVATE LIMITED</h1>
+        <div class="sub">{ CIN: U70109TN2022PTC151180 }</div>
+        <div class="sub">No.2D, Queens Court, Montieth Road, Egmore, Chennai - 600008</div>
       </div>
-      <p class="right">Date: ${ed(dateStr)}</p>
-      <p>To<br/><strong>${ed(clientName)}</strong><br/>${clientEmail ? ed(clientEmail) : ''}</p>
+      <p class="right">Date: [DATE]</p>
+      <p>To<br/><strong>[NAME]</strong><br/>[ADDRESS]<br/>[EMAIL]</p>
       <p class="center bold">Sub: Allotment of Secured, Non &ndash; Convertible Debentures</p>
       <p>Dear Investor,</p>
-      <p>This is with reference to your Investment, I am directed by the Board of Directors to inform you that you have been allotted <strong>${ed(numDebentures.toLocaleString('en-IN'))}</strong> Secured, Non-Convertible debentures of Rs.10/- each. The tenure of debentures is for ${ed(tenure)}.</p>
-      <p>These debentures are allotted to you as per the resolution passed at the Board meeting held on ${ed(dateStr)} and as per the terms and conditions of Articles of Association of the company.</p>
+      <p>This is with reference to your Investment, I am directed by the Board of Directors to inform you that you have been allotted <strong>[NUM_DEB]</strong> Secured, Non-Convertible debentures of Rs.10/- each. The tenure of debentures is for [TENURE].</p>
+      <p>These debentures are allotted to you as per the resolution passed at the Board meeting held on [DATE] and as per the terms and conditions of Articles of Association of the company.</p>
       <p>Details of allotment are as follows:</p>
       <table>
         <tr><th>Folio No.</th><th>Number of Debentures</th><th colspan="2">Distinctive Nos.</th><th>Amount Received in Rs</th><th>Type</th><th>Rate of Interest</th><th>Tenure/ Maturity Date</th></tr>
         <tr><th></th><th></th><th>From</th><th>To</th><th></th><th></th><th></th><th></th></tr>
-        <tr><td>${ed(folioNo)}</td><td>${ed(numDebentures.toLocaleString('en-IN'))}</td><td>1</td><td>${ed(numDebentures)}</td><td>${ed(amount.toLocaleString('en-IN'))}</td><td>Secured, Non-Convertible</td><td>${ed('1% (per month)')}</td><td>${ed(tenure)}</td></tr>
+        <tr><td>[FOLIO]</td><td>[NUM_DEB]</td><td>1</td><td>[NUM_DEB_RAW]</td><td>[AMOUNT]</td><td>Secured, Non-Convertible</td><td>[RATE]</td><td>[TENURE]</td></tr>
       </table>
       <p class="mt">Duly signed and executed debenture certificate will be sent to you.</p>
       <p class="mt bold">This is a computer generated document and does not require signature</p>
       ${footer}</body>`,
 
-    certificate: `${css}${toolbar}
+    certificate: `${css}
       <style>.cert-border{border:4px double #C8A951;padding:28px;margin:10px;background:#fff;}.cert-title{text-align:center;font-size:24px;font-weight:800;letter-spacing:3px;margin-bottom:8px;color:#333;}.cert-company{text-align:center;font-size:18px;font-weight:700;margin-bottom:4px;}.cert-sub{text-align:center;font-size:10px;color:#555;margin-bottom:20px;}.cert-body{line-height:1.8;font-size:12px;}.cert-highlight{text-align:center;background:#f8f8f0;border:1px solid #C8A951;padding:10px;margin:16px 0;font-weight:700;font-size:13px;}.cert-fields td{padding:6px 12px;font-size:12px;border:none;}.cert-fields td:first-child{color:#666;width:220px;}</style>
       <body>
       <div class="cert-border">
         <div class="cert-title">DEBENTURE CERTIFICATE</div>
-        <div class="header" style="border-bottom:2px solid #C8A951;">
-          <h1>GHL INDIA VENTURES</h1>
-          <div class="sub">Invest &bull; Earn &bull; Repeat</div>
+        <div style="text-align:center;margin-bottom:8px;">
+          <div style="font-size:28px;font-weight:900;color:#2d6a2e;letter-spacing:3px;">LANDMA<span style="color:#E8A317;">X</span>O</div>
+          <div style="font-size:9px;color:#666;letter-spacing:2px;">Invest&bull; Earn&bull; Repeat</div>
         </div>
-        <div class="cert-company">GHL INDIA VENTURES PRIVATE LIMITED</div>
-        <div class="cert-sub">(CIN: U67190TN2024PTC172000) &nbsp;|&nbsp; (Incorporated under the Companies Act, 2013)<br/>Reg. Office: Queens Court, Montieth Road, Egmore, Chennai - 600008, Tamil Nadu, India</div>
+        <div class="cert-company">LANDMAXO PROPERTIES PRIVATE LIMITED</div>
+        <div class="cert-sub">(CIN: U70109TN2022PTC151180) &nbsp;|&nbsp; (Incorporated under the Companies Act, 2013)<br/>Reg. Office: 2D, 2nd Floor, Queens Court, No. 6 Montieth Road, Egmore, Chennai - 600008, Tamil Nadu, India</div>
         <div class="cert-body">
           <p>This is to certify that the person(s) named in this Certificate is/are the Registered/Beneficial Holder(s) of the within mentioned debenture(s) bearing the distinctive number(s) herein specified in the above-named Company subject to the Memorandum and Articles of Association of the Company and that the amount endorsed herein has been paid up on each such share.</p>
           <div class="cert-highlight">
@@ -902,15 +906,15 @@ function generateInvestmentDocument(
             AMOUNT PAID-UPPER DEBENTURE RUPEES 10/-[Rupees Ten Only]
           </div>
           <table class="cert-fields" style="width:100%;">
-            <tr><td>Regd. Folio No. ${ed(folioNo)}</td><td class="right">Certificate No. ${ed(certNo)}</td></tr>
+            <tr><td>Regd. Folio No. [FOLIO]</td><td class="right">Certificate No. [CERT_NO]</td></tr>
           </table>
           <table class="cert-fields" style="width:100%;margin-top:12px;">
-            <tr><td>Name(s) of the Registered<br/>Debenture holder(s)</td><td class="bold">${ed(clientName)}</td></tr>
-            <tr><td>No. of Debenture(s) held</td><td class="bold">${ed(numDebentures.toLocaleString('en-IN') + ' (' + amountWords + ' Only)')}</td></tr>
-            <tr><td>Distinctive No.(s)</td><td class="bold">${ed('1 to ' + numDebentures + ' (Both inclusive)')}</td></tr>
-            <tr><td>Total Value of debenture(s)</td><td class="bold">${ed(amount.toLocaleString('en-IN') + ' (' + amountWords + ' Only)')}</td></tr>
+            <tr><td>Name(s) of the Registered<br/>Debenture holder(s)</td><td class="bold">[NAME]</td></tr>
+            <tr><td>No. of Debenture(s) held</td><td class="bold">[NUM_DEB] ([AMOUNT_WORDS] Only)</td></tr>
+            <tr><td>Distinctive No.(s)</td><td class="bold">1 to [NUM_DEB_RAW] (Both inclusive)</td></tr>
+            <tr><td>Total Value of debenture(s)</td><td class="bold">[AMOUNT] ([AMOUNT_WORDS] Only)</td></tr>
           </table>
-          <p class="mt">GIVEN under the common seal of the Company this ${ed(dateStr)}</p>
+          <p class="mt">GIVEN under the common seal of the Company this [DATE]</p>
           <div style="display:flex;justify-content:space-between;margin-top:48px;">
             <div style="text-align:center;"><div style="border-top:1px solid #333;padding-top:4px;width:120px;">Director</div></div>
             <div style="text-align:center;"><div style="width:80px;height:80px;border:2px solid #C8A951;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:8px;color:#999;">Company<br/>Seal</div></div>
@@ -920,30 +924,31 @@ function generateInvestmentDocument(
       </div>
       ${footer}</body>`,
 
-    agreement: `${css}${toolbar}
+    agreement: `${css}
       <style>.clause{margin-bottom:8px;}.clause-title{font-weight:700;margin-top:16px;margin-bottom:6px;font-size:13px;}.schedule-table td,.schedule-table th{border:1px solid #999;padding:5px 8px;font-size:10px;}</style>
       <body>
-      <div class="header">
-        <h1>GHL INDIA VENTURES PRIVATE LIMITED</h1>
-        <div class="sub">CIN: U67190TN2024PTC172000 | Queens Court, Egmore, Chennai - 600008</div>
+      ${logo}
+      <div class="header" style="border-bottom:none;">
+        <h1 style="color:#2d6a2e;">LANDMAXO PROPERTIES PRIVATE LIMITED</h1>
+        <div class="sub">CIN: U70109TN2022PTC151180 | Queens Court, Egmore, Chennai - 600008</div>
       </div>
       <h2 class="center" style="color:#D0021B;">DEBENTURE SUBSCRIPTION AGREEMENT</h2>
-      <p class="right">Date: ${dateStr}</p>
-      <p>This Debenture Subscription Agreement (&ldquo;Agreement&rdquo;) is made and entered into on <strong>${ed(dateStr)}</strong></p>
+      <p class="right">Date: [DATE]</p>
+      <p>This Debenture Subscription Agreement (&ldquo;Agreement&rdquo;) is made and entered into on <strong>[DATE]</strong></p>
       <p><strong>BETWEEN:</strong></p>
-      <p class="clause"><strong>GHL India Ventures Private Limited</strong>, a company incorporated under the Companies Act, 2013, having its registered office at Queens Court, Montieth Road, Egmore, Chennai &ndash; 600008, Tamil Nadu (CIN: U67190TN2024PTC172000), hereinafter referred to as the &ldquo;<strong>Company</strong>&rdquo; / &ldquo;<strong>Issuer</strong>&rdquo; (which expression shall include its successors and assigns) of the <strong>FIRST PART</strong>;</p>
+      <p class="clause"><strong>Landmaxo Properties Private Limited</strong>, a company incorporated under the Companies Act, 2013, having its registered office at No.2D, Queens Court, Montieth Road, Egmore, Chennai &ndash; 600008, Tamil Nadu (CIN: U70109TN2022PTC151180), hereinafter referred to as the &ldquo;<strong>Company</strong>&rdquo; / &ldquo;<strong>Issuer</strong>&rdquo; (which expression shall include its successors and assigns) of the <strong>FIRST PART</strong>;</p>
       <p><strong>AND</strong></p>
-      <p class="clause"><strong>${ed(clientName)}</strong>, hereinafter referred to as the &ldquo;<strong>Subscriber</strong>&rdquo; / &ldquo;<strong>Debenture Holder</strong>&rdquo; of the <strong>SECOND PART</strong>.</p>
+      <p class="clause"><strong>[NAME]</strong>, hereinafter referred to as the &ldquo;<strong>Subscriber</strong>&rdquo; / &ldquo;<strong>Debenture Holder</strong>&rdquo; of the <strong>SECOND PART</strong>.</p>
       <p>(The Company and the Subscriber are hereinafter individually referred to as &ldquo;Party&rdquo; and collectively as &ldquo;Parties&rdquo;.)</p>
 
       <div class="clause-title">1. DEFINITIONS AND INTERPRETATION</div>
       <p class="clause">1.1 &ldquo;<strong>Debentures</strong>&rdquo; means Secured, Non-Convertible Debentures of face value of Rs. 10/- each issued by the Company.</p>
-      <p class="clause">1.2 &ldquo;<strong>Subscription Amount</strong>&rdquo; means Rs. ${ed(amount.toLocaleString('en-IN'))}/- (Rupees ${ed(amountWords)} Only).</p>
-      <p class="clause">1.3 &ldquo;<strong>Tenure</strong>&rdquo; means ${ed(tenure)} from the date of allotment unless redeemed earlier as per Clause 6.</p>
+      <p class="clause">1.2 &ldquo;<strong>Subscription Amount</strong>&rdquo; means Rs. [AMOUNT]/- (Rupees [AMOUNT_WORDS] Only).</p>
+      <p class="clause">1.3 &ldquo;<strong>Tenure</strong>&rdquo; means [TENURE] from the date of allotment unless redeemed earlier as per Clause 6.</p>
       <p class="clause">1.4 &ldquo;<strong>Interest Rate</strong>&rdquo; means 1% per month (12% per annum) payable monthly.</p>
 
       <div class="clause-title">2. SUBSCRIPTION</div>
-      <p class="clause">2.1 The Subscriber agrees to subscribe to ${ed(numDebentures.toLocaleString('en-IN'))} Secured, Non-Convertible Debentures of Rs. 10/- each, aggregating to Rs. ${ed(amount.toLocaleString('en-IN'))}/- (Rupees ${ed(amountWords)} Only).</p>
+      <p class="clause">2.1 The Subscriber agrees to subscribe to [NUM_DEB] Secured, Non-Convertible Debentures of Rs. 10/- each, aggregating to Rs. [AMOUNT]/- (Rupees [AMOUNT_WORDS] Only).</p>
       <p class="clause">2.2 The Company agrees to allot the said Debentures to the Subscriber upon receipt of the Subscription Amount.</p>
 
       <div class="clause-title">3. INTEREST AND PAYMENTS</div>
@@ -957,7 +962,7 @@ function generateInvestmentDocument(
       <p class="clause">4.2 A Debenture Trust Deed shall be executed in favour of the Debenture Trustee for the benefit of the Debenture Holders.</p>
 
       <div class="clause-title">5. TENURE AND LOCK-IN</div>
-      <p class="clause">5.1 The minimum lock-in period for the Debentures shall be ${tenure} from the date of allotment.</p>
+      <p class="clause">5.1 The minimum lock-in period for the Debentures shall be [TENURE] from the date of allotment.</p>
       <p class="clause">5.2 The Debentures shall not be transferable during the lock-in period except with the prior written consent of the Company.</p>
 
       <div class="clause-title">6. REDEMPTION</div>
@@ -986,16 +991,16 @@ function generateInvestmentDocument(
 
       <div style="display:flex;justify-content:space-between;margin-top:40px;">
         <div style="width:45%;">
-          <p class="bold">For GHL India Ventures Private Limited</p>
+          <p class="bold">For Landmaxo Properties Private Limited</p>
           <div style="height:60px;"></div>
           <div style="border-top:1px solid #333;padding-top:4px;font-size:11px;">Authorised Signatory<br/>Director</div>
-          <p style="font-size:10px;margin-top:8px;">Name: ___________________<br/>Designation: ___________________<br/>Date: ${dateStr}</p>
+          <p style="font-size:10px;margin-top:8px;">Name: ___________________<br/>Designation: ___________________<br/>Date: [DATE]</p>
         </div>
         <div style="width:45%;text-align:right;">
           <p class="bold">Subscriber / Debenture Holder</p>
           <div style="height:60px;"></div>
-          <div style="border-top:1px solid #333;padding-top:4px;font-size:11px;">${ed(clientName)}</div>
-          <p style="font-size:10px;margin-top:8px;">PAN: ___________________<br/>Address: ___________________<br/>Date: ${dateStr}</p>
+          <div style="border-top:1px solid #333;padding-top:4px;font-size:11px;">[NAME]</div>
+          <p style="font-size:10px;margin-top:8px;">PAN: ___________________<br/>Address: ___________________<br/>Date: [DATE]</p>
         </div>
       </div>
 
@@ -1007,13 +1012,69 @@ function generateInvestmentDocument(
       ${footer}</body>`,
   }
 
-  const html = templates[type]
-  if (!html) return
+  // Build the input form that appears first
+  const titles: Record<string, string> = { acknowledgement: 'Acknowledgement Letter', allotment: 'Allotment Letter', certificate: 'Debenture Certificate', agreement: 'Debenture Agreement' }
+  const inputForm = `
+    <div id="inputForm" style="max-width:600px;margin:60px auto 20px;padding:28px;background:#fff;border:1px solid #ddd;border-radius:12px;font-family:Arial,sans-serif;">
+      <h2 style="margin:0 0 4px;color:#2d6a2e;font-size:20px;">${titles[type]}</h2>
+      <p style="color:#888;font-size:12px;margin:0 0 20px;">Fill in the details below and click Generate</p>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+        <div><label style="font-size:11px;color:#666;display:block;margin-bottom:3px;">Full Name *</label><input id="f_name" value="${clientName}" style="width:100%;padding:8px 10px;border:1px solid #ccc;border-radius:6px;font-size:13px;"/></div>
+        <div><label style="font-size:11px;color:#666;display:block;margin-bottom:3px;">Email</label><input id="f_email" value="${clientEmail}" style="width:100%;padding:8px 10px;border:1px solid #ccc;border-radius:6px;font-size:13px;"/></div>
+        <div><label style="font-size:11px;color:#666;display:block;margin-bottom:3px;">Phone</label><input id="f_phone" value="" placeholder="+91 98765 43210" style="width:100%;padding:8px 10px;border:1px solid #ccc;border-radius:6px;font-size:13px;"/></div>
+        <div><label style="font-size:11px;color:#666;display:block;margin-bottom:3px;">Date</label><input id="f_date" value="${dateStr}" style="width:100%;padding:8px 10px;border:1px solid #ccc;border-radius:6px;font-size:13px;"/></div>
+        <div style="grid-column:1/-1;"><label style="font-size:11px;color:#666;display:block;margin-bottom:3px;">Address</label><textarea id="f_address" rows="2" placeholder="Full address..." style="width:100%;padding:8px 10px;border:1px solid #ccc;border-radius:6px;font-size:13px;resize:vertical;"></textarea></div>
+        <div><label style="font-size:11px;color:#666;display:block;margin-bottom:3px;">Investment Amount (&#8377;)</label><input id="f_amount" type="number" value="${amount}" style="width:100%;padding:8px 10px;border:1px solid #ccc;border-radius:6px;font-size:13px;"/></div>
+        <div><label style="font-size:11px;color:#666;display:block;margin-bottom:3px;">Tenure</label><input id="f_tenure" value="${tenure}" style="width:100%;padding:8px 10px;border:1px solid #ccc;border-radius:6px;font-size:13px;"/></div>
+        <div><label style="font-size:11px;color:#666;display:block;margin-bottom:3px;">Reference No</label><input id="f_ref" value="${refNo}" style="width:100%;padding:8px 10px;border:1px solid #ccc;border-radius:6px;font-size:13px;"/></div>
+        <div><label style="font-size:11px;color:#666;display:block;margin-bottom:3px;">Folio No</label><input id="f_folio" value="${folioNo}" style="width:100%;padding:8px 10px;border:1px solid #ccc;border-radius:6px;font-size:13px;"/></div>
+        <div><label style="font-size:11px;color:#666;display:block;margin-bottom:3px;">Interest Rate</label><input id="f_rate" value="1% per month" style="width:100%;padding:8px 10px;border:1px solid #ccc;border-radius:6px;font-size:13px;"/></div>
+        <div><label style="font-size:11px;color:#666;display:block;margin-bottom:3px;">Fund Type</label><input id="f_fund" value="${fund}" style="width:100%;padding:8px 10px;border:1px solid #ccc;border-radius:6px;font-size:13px;"/></div>
+      </div>
+      <div style="margin-top:20px;text-align:right;">
+        <button onclick="window.close()" style="padding:10px 20px;border:1px solid #ccc;border-radius:6px;background:#fff;color:#666;cursor:pointer;margin-right:8px;font-size:13px;">Cancel</button>
+        <button onclick="generateDoc()" style="padding:10px 24px;border:none;border-radius:6px;background:#2d6a2e;color:#fff;cursor:pointer;font-weight:600;font-size:13px;">Generate &amp; Print</button>
+      </div>
+    </div>`
+
+  // Build the full page with form + hidden document
+  const fullPage = `<!DOCTYPE html><html><head><title>${titles[type]} - GHL India Ventures</title>${css}
+  <style>#docContent{display:none;}</style>
+  </head><body style="background:#f5f5f5;padding-top:0!important;">
+  ${inputForm}
+  <div id="docContent">${templates[type].replace(css, '').replace(/\$\{toolbar\}/g, '')}</div>
+  <script>
+  ${numberToWordsJS}
+  function generateDoc(){
+    var n=document.getElementById('f_name').value;
+    var em=document.getElementById('f_email').value;
+    var ph=document.getElementById('f_phone').value;
+    var dt=document.getElementById('f_date').value;
+    var addr=document.getElementById('f_address').value;
+    var amt=parseInt(document.getElementById('f_amount').value)||0;
+    var tn=document.getElementById('f_tenure').value;
+    var ref=document.getElementById('f_ref').value;
+    var fol=document.getElementById('f_folio').value;
+    var rate=document.getElementById('f_rate').value;
+    var fund=document.getElementById('f_fund').value;
+    var numDeb=Math.floor(amt/10);
+    var amtW=numberToWords(amt);
+    var doc=document.getElementById('docContent');
+    var html=doc.innerHTML;
+    html=html.replace(/\\[NAME\\]/g,n).replace(/\\[EMAIL\\]/g,em).replace(/\\[PHONE\\]/g,ph).replace(/\\[DATE\\]/g,dt).replace(/\\[ADDRESS\\]/g,addr).replace(/\\[AMOUNT\\]/g,amt.toLocaleString('en-IN')).replace(/\\[AMOUNT_WORDS\\]/g,amtW).replace(/\\[TENURE\\]/g,tn).replace(/\\[REF\\]/g,ref).replace(/\\[FOLIO\\]/g,fol).replace(/\\[RATE\\]/g,rate).replace(/\\[FUND\\]/g,fund).replace(/\\[NUM_DEB\\]/g,numDeb.toLocaleString('en-IN')).replace(/\\[NUM_DEB_RAW\\]/g,numDeb.toString()).replace(/\\[CERT_NO\\]/g,ref.split('/')[1]||'001');
+    document.getElementById('inputForm').style.display='none';
+    doc.style.display='block';
+    doc.innerHTML=html;
+    document.body.style.background='#fff';
+    document.body.style.paddingTop='0';
+    setTimeout(function(){window.print();},400);
+  }
+  <\/script></body></html>`
+
   const win = window.open('', '_blank')
   if (!win) return
-  win.document.write(html)
+  win.document.write(fullPage)
   win.document.close()
-  setTimeout(() => win.print(), 600)
 }
 
 /** Convert number to Indian words (Lakh/Crore system) */
