@@ -30,6 +30,7 @@ interface AdminDocument {
   size: string
   version: number
   tags: string[]
+  fileUrl: string
 }
 
 // ── Sub-tabs ─────────────────────────────────────────────────────
@@ -69,6 +70,7 @@ export default function AssetDocModule({ subTab, navigate, showToast }: AssetDoc
       size: raw.file_size ? `${Math.round(Number(raw.file_size) / 1024)} KB` : (raw.size || '—'),
       version: raw.version || 1,
       tags: Array.isArray(raw.tags) ? raw.tags : [],
+      fileUrl: raw.file_url || '',
     }))
     setDocuments(mapped)
     setLoading(false)
@@ -581,7 +583,13 @@ function DocumentsTab({ documents, showToast }: { documents: AdminDocument[]; sh
               </div>
               <div className="flex gap-2 mt-3 pt-3 border-t border-white/[0.04]">
                 <button
-                  onClick={() => showToast('Opening document preview...', 'info')}
+                  onClick={() => {
+                    if (doc.fileUrl) {
+                      window.open(doc.fileUrl, '_blank', 'noopener,noreferrer')
+                    } else {
+                      showToast('No file URL available for this document', 'error')
+                    }
+                  }}
                   className="flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-[11px] font-medium text-gray-400 bg-white/[0.03] hover:bg-white/[0.06] transition-colors"
                 >
                   <Eye className="w-3 h-3" />
@@ -589,12 +597,18 @@ function DocumentsTab({ documents, showToast }: { documents: AdminDocument[]; sh
                 </button>
                 <button
                   onClick={async () => {
-                    showToast(`Downloading ${doc.name}...`, 'info')
-                    const ext = (doc.type || 'txt').toLowerCase() === 'pdf' ? 'pdf' : (doc.type || '').toLowerCase() === 'xlsx' ? 'xlsx' : (doc.type || '').toLowerCase() === 'docx' ? 'docx' : 'txt'
-                    const filename = `${(doc.name || 'document').replace(/[^a-zA-Z0-9 ]/g, '')}.${ext}`
-                    const content = `Document: ${doc.name}\nType: ${doc.type}\nCategory: ${doc.category}\nVersion: ${doc.version}\nUploaded by: ${doc.uploadedBy}\nDate: ${doc.uploadDate}\nSize: ${doc.size}`
-                    const blob = new Blob([content], { type: 'application/octet-stream' })
-                    await saveBlobAs(blob, filename, showToast as any)
+                    if (doc.fileUrl) {
+                      showToast(`Downloading ${doc.name}...`, 'info')
+                      const link = document.createElement('a')
+                      link.href = doc.fileUrl
+                      link.download = doc.name || 'document'
+                      link.target = '_blank'
+                      document.body.appendChild(link)
+                      link.click()
+                      document.body.removeChild(link)
+                    } else {
+                      showToast('No file available for download', 'error')
+                    }
                   }}
                   className="flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-[11px] font-medium text-gray-400 bg-white/[0.03] hover:bg-white/[0.06] transition-colors"
                 >

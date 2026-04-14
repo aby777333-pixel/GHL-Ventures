@@ -535,28 +535,25 @@ export default function InvestmentFlowTab({
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {/* Bank Account Details */}
+              {/* Company Bank Account Details — for investor to transfer funds */}
               <div>
                 <h4 className={`text-sm font-bold mb-3 ${t('text-white','text-gray-900')}`}>Bank Account Details</h4>
-                {selectedBankDetails ? (
-                  <div className={`p-4 rounded-xl ${t('bg-white/[0.02] border border-white/[0.06]','bg-gray-50 border border-gray-200')}`}>
-                    <p className={`text-xs font-bold mb-3 ${t('text-blue-400','text-blue-600')}`}>{selectedBankDetails.bank_name || 'Bank'}</p>
-                    {[
-                      { label: 'Account Holder Name', val: selectedBankDetails.account_holder_name },
-                      { label: 'Account Number', val: selectedBankDetails.account_number },
-                      { label: 'IFSC Code', val: selectedBankDetails.ifsc_code || selectedBankDetails.swift_iban_code },
-                      { label: 'Branch Name', val: selectedBankDetails.branch_name || '—' },
-                      { label: 'Bank Name', val: selectedBankDetails.bank_name },
-                    ].map((f, i) => (
-                      <div key={i} className={`flex justify-between py-2 border-b last:border-0 ${t('border-white/[0.04]','border-gray-200')}`}>
-                        <span className={`text-xs font-medium ${t('text-gray-500','text-gray-600')}`}>{f.label}</span>
-                        <span className={`text-xs font-semibold ${t('text-white','text-gray-900')}`}>{f.val || '—'}</span>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <p className={`text-xs ${t('text-gray-500','text-gray-600')}`}>No bank account on file. Please add one in KYC.</p>
-                )}
+                <div className={`p-4 rounded-xl ${t('bg-white/[0.02] border border-white/[0.06]','bg-gray-50 border border-gray-200')}`}>
+                  <p className={`text-xs font-bold mb-3 ${t('text-blue-400','text-blue-600')}`}>Transfer funds to the following account</p>
+                  {[
+                    { label: 'Account Name', val: 'GHL India Ventures Private Limited' },
+                    { label: 'Account Number', val: '50200095363498' },
+                    { label: 'IFSC Code', val: 'HDFC0000043' },
+                    { label: 'Bank Name', val: 'HDFC Bank' },
+                    { label: 'Branch', val: 'Egmore, Chennai' },
+                    { label: 'Account Type', val: 'Current Account' },
+                  ].map((f, i) => (
+                    <div key={i} className={`flex justify-between py-2 border-b last:border-0 ${t('border-white/[0.04]','border-gray-200')}`}>
+                      <span className={`text-xs font-medium ${t('text-gray-500','text-gray-600')}`}>{f.label}</span>
+                      <span className={`text-xs font-semibold ${t('text-white','text-gray-900')}`}>{f.val}</span>
+                    </div>
+                  ))}
+                </div>
               </div>
 
               {/* Transaction Form */}

@@ -526,7 +526,7 @@ export async function updateProfile(fields: Record<string, any>) {
 }
 
 // ── Assigned RM ────────────────────────────────────────────
-export async function fetchAssignedRM(clientId?: string): Promise<{ name: string; designation: string; department: string } | null> {
+export async function fetchAssignedRM(clientId?: string): Promise<{ name: string; designation: string; department: string; phone: string } | null> {
   if (!isSupabaseConfigured() || !clientId) return null
 
   try {
@@ -539,6 +539,7 @@ export async function fetchAssignedRM(clientId?: string): Promise<{ name: string
         name: data[0].name || 'Your Relationship Manager',
         designation: data[0].designation || 'Relationship Manager',
         department: data[0].department || '',
+        phone: data[0].phone || '+917200255252',
       }
     }
 
@@ -561,7 +562,7 @@ export async function fetchAssignedRM(clientId?: string): Promise<{ name: string
 
     const { data: profile } = await sb
       .from('profiles')
-      .select('full_name')
+      .select('full_name, phone')
       .eq('id', staffProfile.user_id)
       .maybeSingle()
 
@@ -569,6 +570,7 @@ export async function fetchAssignedRM(clientId?: string): Promise<{ name: string
       name: profile?.full_name || 'Your Relationship Manager',
       designation: staffProfile.designation || 'Relationship Manager',
       department: staffProfile.department || '',
+      phone: profile?.phone || '+917200255252',
     }
   } catch (err) {
     console.warn('[dashboard] fetchAssignedRM exception:', err)
@@ -755,6 +757,29 @@ export async function fetchReferralStats(userId?: string): Promise<{ referred: n
     return { referred: Number(data[0]?.referred) || 0, earned: Number(data[0]?.earned) || 0 }
   } catch {
     return { referred: 0, earned: 0 }
+  }
+}
+
+/**
+ * Fetch the list of referred clients for the referral list UI.
+ */
+export async function fetchReferralList(userId?: string): Promise<{ name: string; date: string; status: string }[]> {
+  if (!isSupabaseConfigured() || !userId) return []
+  const code = generateReferralCode(userId)
+  try {
+    const { data } = await sb
+      .from('clients')
+      .select('full_name, email, created_at, kyc_status')
+      .eq('referred_by', code)
+      .order('created_at', { ascending: false })
+    if (!data || data.length === 0) return []
+    return data.map((c: any) => ({
+      name: c.full_name || c.email || 'Referred User',
+      date: c.created_at ? new Date(c.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : '—',
+      status: c.kyc_status === 'verified' ? 'Verified' : 'Pending',
+    }))
+  } catch (_e) {
+    return []
   }
 }
 

@@ -647,12 +647,14 @@ export default function DashboardClient() {
   }, [referralCode])
 
   const [referralStats, setReferralStats] = useState({ referred: 0, earned: 0 })
+  const [referralList, setReferralList] = useState<{ name: string; date: string; status: string }[]>([])
   const [referralCopied, setReferralCopied] = useState(false)
 
   useEffect(() => {
     if (!user?.id) return
     import('@/lib/supabase/dashboardDataService').then(svc => {
       svc.fetchReferralStats(user.id).then(setReferralStats)
+      svc.fetchReferralList(user.id).then(setReferralList)
     })
   }, [user?.id])
 
@@ -1677,7 +1679,7 @@ export default function DashboardClient() {
             <button onClick={async () => {
               showToast('Requesting callback from your RM...', 'info')
               await createRMRequest({ clientId: clientId || '', clientName: userName || 'Client', requestType: 'callback' })
-              window.open('tel:+917200255252')
+              window.open(`tel:${assignedRM?.phone || '+917200255252'}`)
             }}
               className="flex items-center justify-center gap-2 p-2.5 rounded-xl bg-white/[0.03] border border-white/[0.06] hover:border-emerald-500/20 hover:bg-emerald-500/[0.04] text-xs font-medium text-gray-300 hover:text-emerald-300 transition-all">
               <Phone className="w-3.5 h-3.5" /> Call RM
@@ -2491,6 +2493,28 @@ export default function DashboardClient() {
           ))}
         </Glass>
       </div>
+
+      {/* Referral List */}
+      {referralList.length > 0 && (
+        <Glass className="p-5" hover theme={theme}>
+          <h4 className={`text-sm font-bold mb-3 ${t('text-white','text-gray-900')}`}>Your Referrals</h4>
+          <div className={`rounded-xl overflow-hidden border ${t('border-white/[0.06]','border-gray-200')}`}>
+            <div className={`grid grid-cols-3 px-4 py-2.5 text-[11px] font-semibold uppercase tracking-wider ${t('bg-white/[0.03] text-gray-500','bg-gray-100 text-gray-600')}`}>
+              <span>Name</span><span>Joined</span><span>Status</span>
+            </div>
+            {referralList.map((r, i) => (
+              <div key={i} className={`grid grid-cols-3 px-4 py-3 text-xs border-t ${t('border-white/[0.04] text-gray-300','border-gray-200 text-gray-700')}`}>
+                <span className={`font-medium ${t('text-white','text-gray-900')}`}>{r.name}</span>
+                <span>{r.date}</span>
+                <span className={`inline-flex items-center gap-1 ${r.status === 'Verified' ? 'text-emerald-400' : 'text-amber-400'}`}>
+                  <span className={`w-1.5 h-1.5 rounded-full ${r.status === 'Verified' ? 'bg-emerald-400' : 'bg-amber-400'}`} />
+                  {r.status}
+                </span>
+              </div>
+            ))}
+          </div>
+        </Glass>
+      )}
 
       {/* Referral terms */}
       <Glass className="p-4" theme={theme}>
