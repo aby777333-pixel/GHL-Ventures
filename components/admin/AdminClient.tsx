@@ -18,7 +18,7 @@ import AnalyticsModule from './modules/AnalyticsModule'
 import CommsModule from './modules/CommsModule'
 import SettingsModule from './modules/SettingsModule'
 import RealtyBrokersModule from './modules/RealtyBrokersModule'
-import MarketingModule from './modules/MarketingModule'
+// import MarketingModule from './modules/MarketingModule' // Hidden for later use
 import ReportsModule from './modules/ReportsModule'
 import { useAdminAuth, useAdminToast } from '@/lib/admin/adminHooks'
 import { getAdminSession } from '@/lib/supabase/adminAuthService'
@@ -222,8 +222,8 @@ export default function AdminClient() {
         return <AnalyticsModule subTab={activeSubTab} navigate={navigate} showToast={showToast} />
       case 'comms':
         return <CommsModule subTab={activeSubTab} navigate={navigate} showToast={showToast} />
-      case 'marketing':
-        return <MarketingModule subTab={activeSubTab} navigate={navigate} showToast={showToast} />
+      // case 'marketing': // Hidden for later use
+      //   return <MarketingModule subTab={activeSubTab} navigate={navigate} showToast={showToast} />
       case 'reports':
         return <ReportsModule subTab={activeSubTab} navigate={navigate} showToast={showToast} />
       case 'settings':
