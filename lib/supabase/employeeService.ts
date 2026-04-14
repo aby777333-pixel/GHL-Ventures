@@ -301,14 +301,24 @@ export async function assignRMToClient(
   }
 
   try {
+    // Try RPC first
     const { error } = await db.rpc('assign_rm_to_client', {
       p_client_id: clientId,
       p_rm_staff_id: rmStaffId,
     })
 
-    if (error) {
-      console.error('[employeeService] assign_rm_to_client failed:', error.message)
-      return { success: false, error: error.message }
+    if (!error) return { success: true }
+
+    // Fallback: direct update if RPC doesn't exist
+    console.warn('[employeeService] RPC failed, using direct update:', error.message)
+    const { error: updateErr } = await db
+      .from('clients')
+      .update({ assigned_rm: rmStaffId, updated_at: new Date().toISOString() })
+      .eq('id', clientId)
+
+    if (updateErr) {
+      console.error('[employeeService] direct assign failed:', updateErr.message)
+      return { success: false, error: updateErr.message }
     }
 
     return { success: true }

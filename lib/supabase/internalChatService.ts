@@ -132,8 +132,22 @@ export async function sendInternalMessage(
       return newMsg
     }
 
+    // Bridge: if posting to announcements channel, also insert into announcements table
+    if (channelId === 'announcements' && data) {
+      try {
+        await (supabase as any).from('announcements').insert({
+          title: safeMessage.length > 80 ? safeMessage.slice(0, 80) + '...' : safeMessage,
+          content: safeMessage,
+          type: 'general',
+          priority: 'normal',
+          author: sanitizeStr(userName),
+          active: true,
+        })
+      } catch (_e) { /* non-blocking */ }
+    }
+
     return data as InternalMessage
-  } catch {
+  } catch (_e) {
     if (!localMessages[channelId]) localMessages[channelId] = []
     localMessages[channelId].push(newMsg)
     return newMsg
