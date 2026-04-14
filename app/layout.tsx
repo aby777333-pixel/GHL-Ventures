@@ -291,7 +291,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                 {/* Third-party chat removed — using built-in GHL ChatWidget instead */}
               </MainSiteOnly>
               {/* Floating widgets — always visible (useful for staff telecallers & CS) */}
-              <VideoCallWidget />
+              {/* <VideoCallWidget /> — hidden for later use */}
               {/* <DirectCallWidget /> — hidden, keeping only ARIA and live chat */}
               {/* VoiceCommandWidget hidden for now */}
               {/* <VoiceCommandWidget /> */}
