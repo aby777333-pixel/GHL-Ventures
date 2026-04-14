@@ -767,13 +767,23 @@ export async function fetchReferralList(userId?: string): Promise<{ name: string
   if (!isSupabaseConfigured() || !userId) return []
   const code = generateReferralCode(userId)
   try {
-    const { data } = await sb
+    // Use SECURITY DEFINER RPC to bypass client RLS
+    const { data, error } = await sb.rpc('get_referral_list', { p_referral_code: code })
+    if (!error && data && data.length > 0) {
+      return data.map((c: any) => ({
+        name: c.name || c.email || 'Referred User',
+        date: c.joined_date ? new Date(c.joined_date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : '—',
+        status: c.kyc_status === 'verified' ? 'Verified' : 'Pending',
+      }))
+    }
+    // Fallback: direct query (works for admin/staff users)
+    const { data: fallback } = await sb
       .from('clients')
       .select('full_name, email, created_at, kyc_status')
       .eq('referred_by', code)
       .order('created_at', { ascending: false })
-    if (!data || data.length === 0) return []
-    return data.map((c: any) => ({
+    if (!fallback || fallback.length === 0) return []
+    return fallback.map((c: any) => ({
       name: c.full_name || c.email || 'Referred User',
       date: c.created_at ? new Date(c.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : '—',
       status: c.kyc_status === 'verified' ? 'Verified' : 'Pending',

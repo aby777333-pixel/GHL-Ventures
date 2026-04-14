@@ -544,17 +544,24 @@ function TicketManagement({ showToast }: Pick<CSCenterModuleProps, 'showToast'>)
   const [ticketNewStatus, setTicketNewStatus] = useState<string>('')
   const [updatingTicket, setUpdatingTicket] = useState(false)
   const [reassignTo, setReassignTo] = useState<string>('')
-  const [staffList, setStaffList] = useState<{ id: string; name: string }[]>([])
+  const [staffList, setStaffList] = useState<{ id: string; userId: string; name: string }[]>([])
 
   // Load staff list for reassignment
   useEffect(() => {
     async function loadStaff() {
       try {
         const { supabase: sb } = await import('@/lib/supabase/client')
-        const { data } = await (sb as any).from('staff_profiles').select('id, designation, department, profiles:user_id(full_name)').eq('is_active', true)
-        if (data) {
-          setStaffList(data.map((s: any) => ({ id: s.id, name: s.profiles?.full_name || s.designation || s.id.slice(0, 8) })))
-        }
+        const { data: staffRows } = await (sb as any).from('staff_profiles').select('id, user_id, designation, department').eq('is_active', true)
+        if (!staffRows || staffRows.length === 0) return
+        const userIds = (staffRows as any[]).map((s: any) => s.user_id).filter(Boolean)
+        const { data: profiles } = await (sb as any).from('profiles').select('id, full_name').in('id', userIds)
+        const nameMap: Record<string, string> = {}
+        ;(profiles || []).forEach((p: any) => { nameMap[p.id] = p.full_name || '' })
+        setStaffList((staffRows as any[]).map((s: any) => ({
+          id: s.id,
+          userId: s.user_id || s.id,
+          name: nameMap[s.user_id] || s.designation || s.id.slice(0, 8),
+        })))
       } catch (_e) { /* non-blocking */ }
     }
     loadStaff()
@@ -759,7 +766,8 @@ function TicketManagement({ showToast }: Pick<CSCenterModuleProps, 'showToast'>)
                     if (!reassignTo || !selectedTicket) return
                     setUpdatingTicket(true)
                     try {
-                      const result = await updateTicket(selectedTicket.fullId, { assigned_to: reassignTo })
+                      const staffUser = staffList.find(s => s.id === reassignTo)
+                      const result = await updateTicket(selectedTicket.fullId, { assigned_to: staffUser?.userId || reassignTo })
                       if (result) {
                         const staffName = staffList.find(s => s.id === reassignTo)?.name || 'staff'
                         showToast(`Ticket reassigned to ${staffName}`, 'success')
