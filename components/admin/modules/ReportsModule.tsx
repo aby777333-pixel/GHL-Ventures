@@ -1205,6 +1205,46 @@ function EmailerTab({ showToast }: { showToast: Props['showToast'] }) {
   const [subject, setSubject] = useState('')
   const [body, setBody] = useState('')
   const [selectedTemplate, setSelectedTemplate] = useState<string | null>(null)
+  const [sending, setSending] = useState(false)
+
+  const handleSendEmail = async () => {
+    if (!recipients.trim()) { showToast('Please enter recipient email(s)', 'error'); return }
+    if (!subject.trim()) { showToast('Please enter a subject', 'error'); return }
+    if (!body.trim()) { showToast('Please enter email body', 'error'); return }
+
+    const recipientList = recipients.split(',').map(e => e.trim()).filter(Boolean)
+    if (recipientList.length === 0) { showToast('Please enter valid recipient email(s)', 'error'); return }
+
+    setSending(true)
+    try {
+      const res = await fetch('/.netlify/functions/send-email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          recipients: recipientList,
+          subject: subject.trim(),
+          body: body.trim(),
+        }),
+      })
+
+      const data = await res.json()
+
+      if (res.ok && data.success) {
+        showToast(`Email sent successfully to ${data.sent} recipient(s)${data.failed > 0 ? ` (${data.failed} failed)` : ''}`, 'success')
+        setRecipients('')
+        setSubject('')
+        setBody('')
+        setSelectedTemplate(null)
+      } else {
+        showToast(data.error || 'Failed to send email', 'error')
+      }
+    } catch (err) {
+      showToast('Network error — please try again', 'error')
+      console.error('[Emailer] Send error:', err)
+    } finally {
+      setSending(false)
+    }
+  }
 
   return (
     <div className="space-y-6">
@@ -1231,11 +1271,11 @@ function EmailerTab({ showToast }: { showToast: Props['showToast'] }) {
               </div>
               <textarea value={body} onChange={e => setBody(e.target.value)} rows={8} placeholder="Compose your email..." className="w-full px-4 py-3 rounded-xl bg-white/[0.04] border border-white/[0.08] text-sm text-white placeholder:text-gray-600 focus:outline-none focus:border-brand-red/40 resize-none" />
               <div className="flex gap-2">
-                <button onClick={() => { if (!recipients.trim()) { showToast('Please enter recipient email(s)', 'error'); return } if (!subject.trim()) { showToast('Please enter a subject', 'error'); return } showToast(`Email queued for ${recipients.split(',').length} recipient(s)`, 'success') }} className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium text-white bg-brand-red/20 border border-brand-red/30 hover:bg-brand-red/30 transition-colors admin-btn-press"><Send className="w-3.5 h-3.5" /> Send Now</button>
+                <button onClick={handleSendEmail} disabled={sending} className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium text-white bg-brand-red/20 border border-brand-red/30 hover:bg-brand-red/30 transition-colors admin-btn-press disabled:opacity-50 disabled:cursor-not-allowed"><Send className="w-3.5 h-3.5" /> {sending ? 'Sending...' : 'Send Now'}</button>
                 <button onClick={() => { if (!recipients.trim()) { showToast('Please enter recipient email(s)', 'error'); return } showToast(`Email scheduled for ${recipients.split(',').length} recipient(s)`, 'info') }} className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium text-gray-400 bg-white/[0.04] border border-white/[0.06] hover:bg-white/[0.08] transition-colors admin-btn-press"><Calendar className="w-3.5 h-3.5" /> Schedule</button>
               </div>
             </div>
-            <p className="text-[10px] text-gray-600 mt-3">// BACKEND_HOOK: In production, connects to SendGrid/Mailchimp API</p>
+            <p className="text-[10px] text-emerald-500/60 mt-3">✓ Connected to Resend Email API</p>
           </AdminGlass>
         </div>
 
