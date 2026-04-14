@@ -151,7 +151,7 @@ export async function fetchClients() {
 export async function fetchKYCDocuments() {
   // Fetch structured KYC submissions — batched queries for performance (Bug #11 fix)
   try {
-    const { data: clients } = await sb.from('clients').select('id, full_name, kyc_status, kyc_step').in('kyc_status', ['submitted', 'pending', 'rejected'])
+    const { data: clients } = await sb.from('clients').select('id, full_name, kyc_status, kyc_step').in('kyc_status', ['submitted', 'pending', 'rejected', 'verified', 'approved'])
     if (!clients || clients.length === 0) return []
     const clientIds = clients.map((c: any) => c.id)
     const clientMap = new Map(clients.map((c: any) => [c.id, c.full_name]))
@@ -225,6 +225,10 @@ export async function fetchKYCDocuments() {
 export async function fetchKYCByClient() {
   try {
     const docs = await fetchKYCDocuments()
+    // Also fetch client-level kyc_status for accurate filtering
+    const { data: allClients } = await sb.from('clients').select('id, kyc_status').in('kyc_status', ['submitted', 'pending', 'rejected', 'verified', 'approved'])
+    const clientStatusMap = new Map((allClients || []).map((c: any) => [c.id, c.kyc_status]))
+
     const grouped: Record<string, { clientId: string; clientName: string; docs: any[]; overallStatus: string }> = {}
     for (const doc of docs) {
       if (!grouped[doc.clientId]) {
@@ -232,16 +236,23 @@ export async function fetchKYCByClient() {
       }
       grouped[doc.clientId].docs.push(doc)
     }
-    // Determine overall status per client
+    // Use client's kyc_status as the source of truth, with doc-level fallback
     for (const cid of Object.keys(grouped)) {
-      const statuses = grouped[cid].docs.map(d => d.status)
-      if (statuses.every(s => s === 'approved')) grouped[cid].overallStatus = 'approved'
-      else if (statuses.some(s => s === 'rejected')) grouped[cid].overallStatus = 'rejected'
-      else if (statuses.some(s => s === 'submitted')) grouped[cid].overallStatus = 'submitted'
-      else grouped[cid].overallStatus = 'pending'
+      const clientKYC = clientStatusMap.get(cid)
+      if (clientKYC === 'verified' || clientKYC === 'approved') {
+        grouped[cid].overallStatus = 'approved'
+      } else if (clientKYC === 'rejected') {
+        grouped[cid].overallStatus = 'rejected'
+      } else {
+        const statuses = grouped[cid].docs.map(d => d.status)
+        if (statuses.every(s => s === 'approved')) grouped[cid].overallStatus = 'approved'
+        else if (statuses.some(s => s === 'rejected')) grouped[cid].overallStatus = 'rejected'
+        else if (statuses.some(s => s === 'submitted')) grouped[cid].overallStatus = 'submitted'
+        else grouped[cid].overallStatus = (clientKYC as string) || 'pending'
+      }
     }
     return Object.values(grouped)
-  } catch { return [] }
+  } catch (_e) { return [] }
 }
 
 // Fetch detailed KYC data for a specific client (Bug #10 fix)
