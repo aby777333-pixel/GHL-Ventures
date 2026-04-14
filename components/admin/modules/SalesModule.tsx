@@ -778,102 +778,209 @@ function generateInvestmentDocument(
   app: any
 ) {
   const clientName = app._client?.full_name || 'Investor'
+  const clientEmail = app._client?.email || ''
   const amount = Number(app.investment_amount) || 0
-  const amountWords = amount >= 10000000 ? `${(amount / 10000000).toFixed(2)} Crore` : amount >= 100000 ? `${(amount / 100000).toFixed(2)} Lakh` : amount.toLocaleString('en-IN')
-  const fund = app.fund_vehicle || 'GHL India Ventures AIF'
-  const date = new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'long', year: 'numeric' })
-  const refNo = `GHL/${(app.id || '').slice(0, 8).toUpperCase()}/${new Date().getFullYear()}`
-  const tenure = app.tenure_preference || '5 Years'
+  const numDebentures = Math.floor(amount / 10)
+  const amountWords = numberToWords(amount)
+  const fund = app.fund_vehicle || 'Alternate route to Invest in AIF via Debenture'
+  const dateStr = new Date().toLocaleDateString('en-IN', { day: '2-digit', month: '2-digit', year: 'numeric' })
+  const refNo = `GHLVEN/${(app.id || '').replace(/-/g,'').slice(0, 3).toUpperCase()}/${new Date().getFullYear()}`
+  const folioNo = `D${(app.id || '').replace(/-/g,'').slice(0,4).toUpperCase()}`
+  const certNo = `${(app.id || '').replace(/-/g,'').slice(0, 3).toUpperCase()}`
+  const tenure = app.tenure_preference || '3 years'
 
-  const letterhead = `
-    <div style="text-align:center;border-bottom:3px solid #D0021B;padding-bottom:16px;margin-bottom:24px;">
-      <h1 style="color:#D0021B;margin:0;font-size:28px;font-weight:800;letter-spacing:1px;">GHL INDIA VENTURES</h1>
-      <p style="color:#666;margin:4px 0 0;font-size:11px;letter-spacing:2px;">SEBI Registered Category II AIF &bull; Reg: IN/AIF2/24-25/1517</p>
-      <p style="color:#888;margin:2px 0 0;font-size:10px;">Queens Court, Egmore, Chennai 600008 &bull; +91 7200 255 252 &bull; info@ghlindiaventures.com</p>
-    </div>`
+  const css = `<style>
+    @page{size:A4;margin:18mm 20mm;}
+    body{font-family:'Segoe UI',Arial,sans-serif;color:#222;line-height:1.6;font-size:12px;margin:0;padding:0;}
+    table{width:100%;border-collapse:collapse;}
+    th,td{border:1px solid #333;padding:6px 10px;text-align:left;font-size:11px;}
+    th{background:#f5f5f5;font-weight:700;}
+    .header{text-align:center;padding:16px 0 12px;border-bottom:3px solid #D0021B;margin-bottom:20px;}
+    .header h1{color:#D0021B;margin:0;font-size:26px;font-weight:800;letter-spacing:2px;}
+    .header .sub{color:#555;font-size:10px;margin:4px 0 0;}
+    .footer{margin-top:40px;border-top:2px solid #D0021B;padding:12px 0;text-align:center;font-size:9px;color:#666;}
+    .footer h2{color:#D0021B;font-size:16px;margin:0 0 4px;}
+    .bold{font-weight:700;}
+    .right{text-align:right;}
+    .center{text-align:center;}
+    .mt{margin-top:16px;} .mb{margin-bottom:16px;}
+    .note{font-size:10px;color:#666;font-style:italic;}
+    @media print{body{-webkit-print-color-adjust:exact;print-color-adjust:exact;}}
+  </style>`
 
-  const footer = `
-    <div style="margin-top:48px;border-top:1px solid #ddd;padding-top:16px;text-align:center;">
-      <p style="color:#999;font-size:9px;margin:0;">GHL India Ventures Private Limited &bull; CIN: U67190TN2024PTC172000</p>
-      <p style="color:#999;font-size:9px;margin:2px 0 0;">Queens Court, Egmore, Chennai 600008 &bull; www.ghlindiaventures.com</p>
-    </div>`
+  const header = `<div class="header">
+    <h1>GHL INDIA VENTURES</h1>
+    <div class="sub">Invest &bull; Earn &bull; Repeat</div>
+  </div>`
 
-  const css = `<style>@page{size:A4;margin:20mm;}body{font-family:Georgia,'Times New Roman',serif;color:#222;line-height:1.7;font-size:13px;}@media print{body{-webkit-print-color-adjust:exact;print-color-adjust:exact;}}</style>`
+  const footer = `<div class="footer">
+    <h2>GHL INDIA VENTURES PRIVATE LIMITED</h2>
+    <div>CIN: U67190TN2024PTC172000</div>
+    <div>Email: info@ghlindiaventures.com</div>
+    <div>Queens Court, Montieth Road, Egmore, Chennai - 600008</div>
+  </div>`
 
   const templates: Record<string, string> = {
-    acknowledgement: `${css}<body>${letterhead}
-      <p style="text-align:right;color:#666;font-size:12px;">Date: ${date}<br/>Ref: ${refNo}</p>
-      <p>To,<br/><strong>${clientName}</strong></p>
-      <h2 style="text-align:center;color:#D0021B;margin:24px 0;">ACKNOWLEDGEMENT LETTER</h2>
-      <p>Dear <strong>${clientName}</strong>,</p>
-      <p>We hereby acknowledge the receipt of your investment application for <strong>${fund}</strong> for an amount of <strong>₹${amount.toLocaleString('en-IN')}</strong> (Rupees ${amountWords} Only).</p>
-      <p>Your application has been registered under reference number <strong>${refNo}</strong> and is currently under review by our investment committee.</p>
-      <p>Upon successful verification and approval, we shall issue the relevant allotment letter and debenture certificate.</p>
-      <p>Should you have any queries, please do not hesitate to contact your designated Relationship Manager or reach us at the details mentioned above.</p>
-      <p style="margin-top:32px;">Warm Regards,</p>
-      <p><strong>For GHL India Ventures Private Limited</strong><br/><br/><br/>Authorised Signatory</p>
-      ${footer}</body>`,
-
-    allotment: `${css}<body>${letterhead}
-      <p style="text-align:right;color:#666;font-size:12px;">Date: ${date}<br/>Ref: ${refNo}/ALLOT</p>
-      <p>To,<br/><strong>${clientName}</strong></p>
-      <h2 style="text-align:center;color:#D0021B;margin:24px 0;">ALLOTMENT LETTER</h2>
-      <p>Dear <strong>${clientName}</strong>,</p>
-      <p>Pursuant to your investment application dated ${app.created_at ? new Date(app.created_at).toLocaleDateString('en-IN') : date}, we are pleased to inform you that the Board of Directors has approved the allotment in your favour.</p>
-      <table style="width:100%;border-collapse:collapse;margin:20px 0;">
-        <tr style="border-bottom:1px solid #ddd;"><td style="padding:8px;color:#666;">Fund / Vehicle</td><td style="padding:8px;font-weight:600;">${fund}</td></tr>
-        <tr style="border-bottom:1px solid #ddd;"><td style="padding:8px;color:#666;">Investment Amount</td><td style="padding:8px;font-weight:600;">₹${amount.toLocaleString('en-IN')}</td></tr>
-        <tr style="border-bottom:1px solid #ddd;"><td style="padding:8px;color:#666;">Tenure</td><td style="padding:8px;font-weight:600;">${tenure}</td></tr>
-        <tr style="border-bottom:1px solid #ddd;"><td style="padding:8px;color:#666;">Allotment Date</td><td style="padding:8px;font-weight:600;">${date}</td></tr>
-        <tr><td style="padding:8px;color:#666;">Reference</td><td style="padding:8px;font-weight:600;">${refNo}</td></tr>
+    acknowledgement: `${css}<body>${header}
+      <p class="right">Date: ${dateStr}</p>
+      <p>Ref: ${refNo}<br/>${clientName}<br/>${clientEmail ? 'Email: ' + clientEmail : ''}</p>
+      <p><strong>Subject: Acknowledgement of investment receipt</strong></p>
+      <p>Dear ${clientName},</p>
+      <p><strong>GHL India Ventures welcomes you to the new Dawn of Wealth Creation and prosperity</strong></p>
+      <p>We are delighted to welcome you to <strong>GHL India Ventures</strong>, where your financial aspirations take shape and transform into lasting success. By joining us, you have become an integral part of our <strong>prestigious family of visionary investors</strong> &mdash; individuals who believe in creating wealth with wisdom and foresight.</p>
+      <p>Your decision to partner with GHL India Ventures marks a <strong>powerful first step toward true financial freedom</strong>. Together, let us shape a future defined by prosperity, stability, and enduring success.</p>
+      <p>Welcome once again to GHL India Ventures &mdash; <strong>where your prosperity is our purpose</strong>.</p>
+      <p>We acknowledge receipt of your investment towards the <strong>subscription of debentures in GHL India Ventures Private Limited</strong>, as detailed below:</p>
+      <table class="mb">
+        <tr><th>S.No</th><th>Date of Receipt</th><th>Amount (&#8377;)</th><th>Amount in Words</th></tr>
+        <tr><td>1</td><td>${dateStr}</td><td>${amount.toLocaleString('en-IN')}</td><td>${amountWords} Rupees Only</td></tr>
       </table>
-      <p>Please find the Debenture Certificate enclosed herewith. Kindly sign and return the Debenture Agreement at your earliest convenience.</p>
-      <p style="margin-top:32px;">For <strong>GHL India Ventures Private Limited</strong><br/><br/><br/>Authorised Signatory</p>
+      <p>The debentures carry an <strong>interest rate of 1% per month</strong> along with an <strong>annual appreciation of 12%</strong>, for a <strong>minimum tenure of three (3) years</strong> from the date of investment. Interest will be paid on or before the <strong>10th of each month</strong>, after deduction of applicable <strong>TDS (currently 10%)</strong> under the Income Tax Act, 1961.</p>
+      <p>Debentures may be <strong>redeemed at the investor's option</strong> after completion of the 3-year tenure. <strong>TDS credits</strong> will be reflected in the investor's PAN account on a <strong>quarterly basis</strong>.</p>
+      <p class="note">* This is system generated document. Signature authentication is not required. *</p>
       ${footer}</body>`,
 
-    certificate: `${css}<body>${letterhead}
-      <h2 style="text-align:center;color:#D0021B;margin:24px 0;font-size:22px;">DEBENTURE CERTIFICATE</h2>
-      <p style="text-align:center;color:#666;font-size:12px;">Certificate No: ${refNo}/DC</p>
-      <div style="border:2px solid #D0021B;border-radius:8px;padding:24px;margin:24px 0;">
-        <p>This is to certify that <strong>${clientName}</strong> is the registered holder of debentures of <strong>GHL India Ventures Private Limited</strong> as per the details below:</p>
-        <table style="width:100%;border-collapse:collapse;margin:16px 0;">
-          <tr style="border-bottom:1px solid #eee;"><td style="padding:10px;color:#666;width:40%;">Face Value</td><td style="padding:10px;font-weight:700;font-size:16px;">₹${amount.toLocaleString('en-IN')}</td></tr>
-          <tr style="border-bottom:1px solid #eee;"><td style="padding:10px;color:#666;">Fund / Vehicle</td><td style="padding:10px;font-weight:600;">${fund}</td></tr>
-          <tr style="border-bottom:1px solid #eee;"><td style="padding:10px;color:#666;">Tenure</td><td style="padding:10px;font-weight:600;">${tenure}</td></tr>
-          <tr style="border-bottom:1px solid #eee;"><td style="padding:10px;color:#666;">Issue Date</td><td style="padding:10px;font-weight:600;">${date}</td></tr>
-          <tr><td style="padding:10px;color:#666;">Certificate No</td><td style="padding:10px;font-weight:600;">${refNo}/DC</td></tr>
-        </table>
+    allotment: `${css}<body>
+      <div class="header">
+        <h1>GHL INDIA VENTURES PRIVATE LIMITED</h1>
+        <div class="sub">{ CIN: U67190TN2024PTC172000 }</div>
+        <div class="sub">Queens Court, Montieth Road, Egmore, Chennai - 600008</div>
       </div>
-      <p>This certificate is issued subject to the terms and conditions of the Debenture Agreement.</p>
-      <div style="display:flex;justify-content:space-between;margin-top:48px;">
-        <div><p style="border-top:1px solid #333;padding-top:4px;font-size:11px;">Authorised Signatory</p></div>
-        <div style="text-align:center;"><p style="font-size:10px;color:#999;">Company Seal</p></div>
-        <div style="text-align:right;"><p style="border-top:1px solid #333;padding-top:4px;font-size:11px;">Director</p></div>
-      </div>
-      ${footer}</body>`,
-
-    agreement: `${css}<body>${letterhead}
-      <h2 style="text-align:center;color:#D0021B;margin:24px 0;">DEBENTURE AGREEMENT</h2>
-      <p style="text-align:center;color:#666;font-size:12px;">Agreement Ref: ${refNo}/DA</p>
-      <p>This Debenture Agreement ("Agreement") is entered into on this <strong>${date}</strong> between:</p>
-      <p><strong>Party A (Issuer):</strong> GHL India Ventures Private Limited, a company incorporated under the Companies Act, 2013, having its registered office at Queens Court, Egmore, Chennai 600008, SEBI Reg: IN/AIF2/24-25/1517 (hereinafter referred to as "the Company").</p>
-      <p><strong>Party B (Investor):</strong> <strong>${clientName}</strong> (hereinafter referred to as "the Debenture Holder").</p>
-      <h3 style="color:#D0021B;margin-top:24px;">1. INVESTMENT DETAILS</h3>
-      <table style="width:100%;border-collapse:collapse;margin:12px 0;">
-        <tr style="border-bottom:1px solid #ddd;"><td style="padding:8px;color:#666;">Investment Amount</td><td style="padding:8px;font-weight:600;">₹${amount.toLocaleString('en-IN')}</td></tr>
-        <tr style="border-bottom:1px solid #ddd;"><td style="padding:8px;color:#666;">Fund / Vehicle</td><td style="padding:8px;font-weight:600;">${fund}</td></tr>
-        <tr><td style="padding:8px;color:#666;">Tenure</td><td style="padding:8px;font-weight:600;">${tenure}</td></tr>
+      <p class="right">Date: ${dateStr}</p>
+      <p>To<br/><strong>${clientName}</strong><br/>${clientEmail ? clientEmail : ''}</p>
+      <p class="center bold">Sub: Allotment of Secured, Non &ndash; Convertible Debentures</p>
+      <p>Dear Investor,</p>
+      <p>This is with reference to your Investment, I am directed by the Board of Directors to inform you that you have been allotted <strong>${numDebentures.toLocaleString('en-IN')}</strong> Secured, Non-Convertible debentures of Rs.10/- each. The tenure of debentures is for ${tenure}.</p>
+      <p>These debentures are allotted to you as per the resolution passed at the Board meeting held on ${dateStr} and as per the terms and conditions of Articles of Association of the company.</p>
+      <p>Details of allotment are as follows:</p>
+      <table>
+        <tr><th>Folio No.</th><th>Number of Debentures</th><th colspan="2">Distinctive Nos.</th><th>Amount Received in Rs</th><th>Type</th><th>Rate of Interest</th><th>Tenure/ Maturity Date</th></tr>
+        <tr><th></th><th></th><th>From</th><th>To</th><th></th><th></th><th></th><th></th></tr>
+        <tr><td>${folioNo}</td><td>${numDebentures.toLocaleString('en-IN')}</td><td>1</td><td>${numDebentures}</td><td>${amount.toLocaleString('en-IN')}</td><td>Secured, Non-Convertible</td><td>1% (per month)</td><td>${tenure}</td></tr>
       </table>
-      <h3 style="color:#D0021B;">2. TERMS & CONDITIONS</h3>
-      <p>2.1 The Company agrees to issue debentures to the Debenture Holder for the investment amount stated above.</p>
-      <p>2.2 Interest shall be paid as per the agreed schedule and rate communicated at the time of investment.</p>
-      <p>2.3 The principal amount shall be redeemed at the end of the tenure period unless renewed by mutual agreement.</p>
-      <p>2.4 All investments are subject to market risks and the terms outlined in the Private Placement Memorandum (PPM).</p>
-      <h3 style="color:#D0021B;">3. GOVERNING LAW</h3>
-      <p>This Agreement shall be governed by the laws of India. Any disputes shall be subject to the jurisdiction of courts in Chennai.</p>
-      <div style="display:flex;justify-content:space-between;margin-top:48px;">
-        <div><p style="margin-bottom:48px;">For <strong>GHL India Ventures Pvt Ltd</strong></p><p style="border-top:1px solid #333;padding-top:4px;font-size:11px;">Authorised Signatory</p></div>
-        <div style="text-align:right;"><p style="margin-bottom:48px;"><strong>Debenture Holder</strong></p><p style="border-top:1px solid #333;padding-top:4px;font-size:11px;">${clientName}</p></div>
+      <p class="mt">Duly signed and executed debenture certificate will be sent to you.</p>
+      <p class="mt bold">This is a computer generated document and does not require signature</p>
+      ${footer}</body>`,
+
+    certificate: `${css}
+      <style>.cert-border{border:4px double #C8A951;padding:28px;margin:10px;background:#fff;}.cert-title{text-align:center;font-size:24px;font-weight:800;letter-spacing:3px;margin-bottom:8px;color:#333;}.cert-company{text-align:center;font-size:18px;font-weight:700;margin-bottom:4px;}.cert-sub{text-align:center;font-size:10px;color:#555;margin-bottom:20px;}.cert-body{line-height:1.8;font-size:12px;}.cert-highlight{text-align:center;background:#f8f8f0;border:1px solid #C8A951;padding:10px;margin:16px 0;font-weight:700;font-size:13px;}.cert-fields td{padding:6px 12px;font-size:12px;border:none;}.cert-fields td:first-child{color:#666;width:220px;}</style>
+      <body>
+      <div class="cert-border">
+        <div class="cert-title">DEBENTURE CERTIFICATE</div>
+        <div class="header" style="border-bottom:2px solid #C8A951;">
+          <h1>GHL INDIA VENTURES</h1>
+          <div class="sub">Invest &bull; Earn &bull; Repeat</div>
+        </div>
+        <div class="cert-company">GHL INDIA VENTURES PRIVATE LIMITED</div>
+        <div class="cert-sub">(CIN: U67190TN2024PTC172000) &nbsp;|&nbsp; (Incorporated under the Companies Act, 2013)<br/>Reg. Office: Queens Court, Montieth Road, Egmore, Chennai - 600008, Tamil Nadu, India</div>
+        <div class="cert-body">
+          <p>This is to certify that the person(s) named in this Certificate is/are the Registered/Beneficial Holder(s) of the within mentioned debenture(s) bearing the distinctive number(s) herein specified in the above-named Company subject to the Memorandum and Articles of Association of the Company and that the amount endorsed herein has been paid up on each such share.</p>
+          <div class="cert-highlight">
+            DEBENTURE EACH OF RUPEES 10/-(Nominal Value)<br/>
+            AMOUNT PAID-UPPER DEBENTURE RUPEES 10/-[Rupees Ten Only]
+          </div>
+          <table class="cert-fields" style="width:100%;">
+            <tr><td>Regd. Folio No. ${folioNo}</td><td class="right">Certificate No. ${certNo}</td></tr>
+          </table>
+          <table class="cert-fields" style="width:100%;margin-top:12px;">
+            <tr><td>Name(s) of the Registered<br/>Debenture holder(s)</td><td class="bold">${clientName}</td></tr>
+            <tr><td>No. of Debenture(s) held</td><td class="bold">${numDebentures.toLocaleString('en-IN')} (${amountWords} Only)</td></tr>
+            <tr><td>Distinctive No.(s)</td><td class="bold">1 to ${numDebentures} (Both inclusive)</td></tr>
+            <tr><td>Total Value of debenture(s)</td><td class="bold">${amount.toLocaleString('en-IN')} (${amountWords} Only)</td></tr>
+          </table>
+          <p class="mt">GIVEN under the common seal of the Company this ${dateStr}</p>
+          <div style="display:flex;justify-content:space-between;margin-top:48px;">
+            <div style="text-align:center;"><div style="border-top:1px solid #333;padding-top:4px;width:120px;">Director</div></div>
+            <div style="text-align:center;"><div style="width:80px;height:80px;border:2px solid #C8A951;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:8px;color:#999;">Company<br/>Seal</div></div>
+            <div style="text-align:center;"><div style="border-top:1px solid #333;padding-top:4px;width:150px;">Authorised Signatory</div></div>
+          </div>
+        </div>
+      </div>
+      ${footer}</body>`,
+
+    agreement: `${css}
+      <style>.clause{margin-bottom:8px;}.clause-title{font-weight:700;margin-top:16px;margin-bottom:6px;font-size:13px;}.schedule-table td,.schedule-table th{border:1px solid #999;padding:5px 8px;font-size:10px;}</style>
+      <body>
+      <div class="header">
+        <h1>GHL INDIA VENTURES PRIVATE LIMITED</h1>
+        <div class="sub">CIN: U67190TN2024PTC172000 | Queens Court, Egmore, Chennai - 600008</div>
+      </div>
+      <h2 class="center" style="color:#D0021B;">DEBENTURE SUBSCRIPTION AGREEMENT</h2>
+      <p class="right">Date: ${dateStr}</p>
+      <p>This Debenture Subscription Agreement (&ldquo;Agreement&rdquo;) is made and entered into on <strong>${dateStr}</strong></p>
+      <p><strong>BETWEEN:</strong></p>
+      <p class="clause"><strong>GHL India Ventures Private Limited</strong>, a company incorporated under the Companies Act, 2013, having its registered office at Queens Court, Montieth Road, Egmore, Chennai &ndash; 600008, Tamil Nadu (CIN: U67190TN2024PTC172000), hereinafter referred to as the &ldquo;<strong>Company</strong>&rdquo; / &ldquo;<strong>Issuer</strong>&rdquo; (which expression shall include its successors and assigns) of the <strong>FIRST PART</strong>;</p>
+      <p><strong>AND</strong></p>
+      <p class="clause"><strong>${clientName}</strong>, hereinafter referred to as the &ldquo;<strong>Subscriber</strong>&rdquo; / &ldquo;<strong>Debenture Holder</strong>&rdquo; of the <strong>SECOND PART</strong>.</p>
+      <p>(The Company and the Subscriber are hereinafter individually referred to as &ldquo;Party&rdquo; and collectively as &ldquo;Parties&rdquo;.)</p>
+
+      <div class="clause-title">1. DEFINITIONS AND INTERPRETATION</div>
+      <p class="clause">1.1 &ldquo;<strong>Debentures</strong>&rdquo; means Secured, Non-Convertible Debentures of face value of Rs. 10/- each issued by the Company.</p>
+      <p class="clause">1.2 &ldquo;<strong>Subscription Amount</strong>&rdquo; means Rs. ${amount.toLocaleString('en-IN')}/- (Rupees ${amountWords} Only).</p>
+      <p class="clause">1.3 &ldquo;<strong>Tenure</strong>&rdquo; means ${tenure} from the date of allotment unless redeemed earlier as per Clause 6.</p>
+      <p class="clause">1.4 &ldquo;<strong>Interest Rate</strong>&rdquo; means 1% per month (12% per annum) payable monthly.</p>
+
+      <div class="clause-title">2. SUBSCRIPTION</div>
+      <p class="clause">2.1 The Subscriber agrees to subscribe to ${numDebentures.toLocaleString('en-IN')} Secured, Non-Convertible Debentures of Rs. 10/- each, aggregating to Rs. ${amount.toLocaleString('en-IN')}/- (Rupees ${amountWords} Only).</p>
+      <p class="clause">2.2 The Company agrees to allot the said Debentures to the Subscriber upon receipt of the Subscription Amount.</p>
+
+      <div class="clause-title">3. INTEREST AND PAYMENTS</div>
+      <p class="clause">3.1 The Debentures shall carry interest at the rate of <strong>1% per month</strong> on the face value of the Debentures.</p>
+      <p class="clause">3.2 Interest shall be paid monthly, on or before the 10th of each calendar month, by way of direct bank transfer to the Subscriber&rsquo;s designated bank account.</p>
+      <p class="clause">3.3 An annual appreciation of <strong>12% per annum</strong> shall be applicable on the principal investment amount.</p>
+      <p class="clause">3.4 Tax Deducted at Source (TDS) at the rate of 10% (or as applicable under the Income Tax Act, 1961) shall be deducted before disbursement of interest.</p>
+
+      <div class="clause-title">4. SECURITY</div>
+      <p class="clause">4.1 The Debentures are secured by a charge on the assets of the Company as determined by the Board of Directors from time to time.</p>
+      <p class="clause">4.2 A Debenture Trust Deed shall be executed in favour of the Debenture Trustee for the benefit of the Debenture Holders.</p>
+
+      <div class="clause-title">5. TENURE AND LOCK-IN</div>
+      <p class="clause">5.1 The minimum lock-in period for the Debentures shall be ${tenure} from the date of allotment.</p>
+      <p class="clause">5.2 The Debentures shall not be transferable during the lock-in period except with the prior written consent of the Company.</p>
+
+      <div class="clause-title">6. REDEMPTION</div>
+      <p class="clause">6.1 Upon completion of the tenure, the Subscriber may opt for redemption of the Debentures at face value plus accrued appreciation.</p>
+      <p class="clause">6.2 Early redemption may be permitted at the sole discretion of the Company, subject to applicable exit load/charges if any.</p>
+      <p class="clause">6.3 The Subscriber may also opt for renewal of the Debentures for a further term on mutually agreed terms.</p>
+
+      <div class="clause-title">7. REPRESENTATIONS AND WARRANTIES</div>
+      <p class="clause">7.1 The Subscriber represents that the funds invested are from legitimate sources and are not proceeds of any illegal activity.</p>
+      <p class="clause">7.2 The Company represents that it is duly incorporated and authorized to issue the Debentures.</p>
+
+      <div class="clause-title">8. EVENTS OF DEFAULT</div>
+      <p class="clause">8.1 Non-payment of interest for a continuous period of 3 months shall constitute an event of default.</p>
+      <p class="clause">8.2 Upon occurrence of an event of default, the Subscriber shall have the right to demand immediate redemption of the Debentures.</p>
+
+      <div class="clause-title">9. GOVERNING LAW AND JURISDICTION</div>
+      <p class="clause">9.1 This Agreement shall be governed by and construed in accordance with the laws of India.</p>
+      <p class="clause">9.2 Any disputes arising under this Agreement shall be subject to the exclusive jurisdiction of the courts in Chennai, Tamil Nadu.</p>
+
+      <div class="clause-title">10. GENERAL</div>
+      <p class="clause">10.1 This Agreement constitutes the entire understanding between the Parties with respect to the subject matter hereof.</p>
+      <p class="clause">10.2 No amendment or modification of this Agreement shall be valid unless made in writing and signed by both Parties.</p>
+      <p class="clause">10.3 All notices under this Agreement shall be in writing and delivered to the registered addresses of the respective Parties.</p>
+
+      <p class="mt"><strong>IN WITNESS WHEREOF</strong>, the Parties have executed this Agreement on the date first written above.</p>
+
+      <div style="display:flex;justify-content:space-between;margin-top:40px;">
+        <div style="width:45%;">
+          <p class="bold">For GHL India Ventures Private Limited</p>
+          <div style="height:60px;"></div>
+          <div style="border-top:1px solid #333;padding-top:4px;font-size:11px;">Authorised Signatory<br/>Director</div>
+          <p style="font-size:10px;margin-top:8px;">Name: ___________________<br/>Designation: ___________________<br/>Date: ${dateStr}</p>
+        </div>
+        <div style="width:45%;text-align:right;">
+          <p class="bold">Subscriber / Debenture Holder</p>
+          <div style="height:60px;"></div>
+          <div style="border-top:1px solid #333;padding-top:4px;font-size:11px;">${clientName}</div>
+          <p style="font-size:10px;margin-top:8px;">PAN: ___________________<br/>Address: ___________________<br/>Date: ${dateStr}</p>
+        </div>
+      </div>
+
+      <div class="clause-title mt">WITNESS:</div>
+      <div style="display:flex;justify-content:space-between;margin-top:12px;">
+        <div style="width:45%;font-size:10px;">1. Name: ___________________<br/>Address: ___________________<br/>Signature: ___________________</div>
+        <div style="width:45%;font-size:10px;">2. Name: ___________________<br/>Address: ___________________<br/>Signature: ___________________</div>
       </div>
       ${footer}</body>`,
   }
@@ -885,6 +992,31 @@ function generateInvestmentDocument(
   win.document.write(html)
   win.document.close()
   setTimeout(() => win.print(), 600)
+}
+
+/** Convert number to Indian words (Lakh/Crore system) */
+function numberToWords(n: number): string {
+  if (n === 0) return 'Zero'
+  const ones = ['','One','Two','Three','Four','Five','Six','Seven','Eight','Nine','Ten','Eleven','Twelve','Thirteen','Fourteen','Fifteen','Sixteen','Seventeen','Eighteen','Nineteen']
+  const tens = ['','','Twenty','Thirty','Forty','Fifty','Sixty','Seventy','Eighty','Ninety']
+  function twoDigit(x: number): string {
+    if (x < 20) return ones[x]
+    return tens[Math.floor(x / 10)] + (x % 10 ? ' ' + ones[x % 10] : '')
+  }
+  function threeDigit(x: number): string {
+    if (x >= 100) return ones[Math.floor(x / 100)] + ' Hundred' + (x % 100 ? ' ' + twoDigit(x % 100) : '')
+    return twoDigit(x)
+  }
+  const crore = Math.floor(n / 10000000)
+  const lakh = Math.floor((n % 10000000) / 100000)
+  const thousand = Math.floor((n % 100000) / 1000)
+  const rest = n % 1000
+  let words = ''
+  if (crore) words += threeDigit(crore) + ' Crore '
+  if (lakh) words += twoDigit(lakh) + ' Lakh '
+  if (thousand) words += twoDigit(thousand) + ' Thousand '
+  if (rest) words += threeDigit(rest)
+  return words.trim()
 }
 
 const INV_STATUS_MAP: Record<string, { label: string; variant: 'success' | 'warning' | 'info' | 'error' | 'purple' }> = {
