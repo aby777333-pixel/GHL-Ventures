@@ -157,7 +157,7 @@ export default function MarketingModule({ subTab, navigate, showToast }: Marketi
       {subTab === null && <OverviewTab navigate={navigate} showToast={showToast} campaigns={campaigns} marketingKPIs={marketingKPIs} channelPerformance={channelPerformance} />}
       {subTab === 'campaigns' && <CampaignsTab showToast={showToast} campaigns={campaigns} refetch={loadData} />}
       {subTab === 'content' && <ContentTab showToast={showToast} contentData={contentData} refetch={loadData} />}
-      {subTab === 'audience' && <AudienceTab showToast={showToast} audienceSegments={audienceSegments} />}
+      {/* {subTab === 'audience' && <AudienceTab showToast={showToast} audienceSegments={audienceSegments} />} */}{/* Hidden for later use */}
       {subTab === 'outreach' && <OutreachTab showToast={showToast} outreachSequences={outreachSequences} />}
       {subTab === 'mkt-analytics' && <AnalyticsTab />}
       {subTab === 'ai-tools' && <AIToolsTab navigate={navigate} showToast={showToast} marketingAITools={marketingAITools} />}
@@ -263,7 +263,7 @@ function OverviewTab({ navigate, showToast, campaigns, marketingKPIs, channelPer
             { label: '+ Schedule Post', action: () => navigate('marketing/content') },
             { label: '+ Create Email', action: () => showToast('Email composer launched', 'success') },
             { label: '+ Upload Asset', action: () => setFolderPickerOpen(true) },
-            { label: '+ Import Contacts', action: () => navigate('marketing/audience') },
+            // { label: '+ Import Contacts', action: () => navigate('marketing/audience') }, // Hidden for later use
           ].map(item => (
             <button
               key={item.label}

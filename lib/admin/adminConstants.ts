@@ -169,7 +169,7 @@ export const ADMIN_SIDEBAR_ITEMS: SidebarItem[] = [
       { id: 'marketing', label: 'Overview' },
       { id: 'marketing/campaigns', label: 'Campaigns' },
       // { id: 'marketing/content', label: 'Content Hub' }, // Hidden for now
-      { id: 'marketing/audience', label: 'Audience' },
+      // { id: 'marketing/audience', label: 'Audience' }, // Hidden for later use
       { id: 'marketing/outreach', label: 'Outreach' },
       { id: 'marketing/mkt-analytics', label: 'Analytics' },
       { id: 'marketing/ai-tools', label: 'AI Tools' },
@@ -289,7 +289,7 @@ export const ALL_ADMIN_TAB_PARAMS = [
   { tab: ['marketing'] },
   { tab: ['marketing', 'campaigns'] },
   { tab: ['marketing', 'content'] },
-  { tab: ['marketing', 'audience'] },
+  // { tab: ['marketing', 'audience'] }, // Hidden for later use
   { tab: ['marketing', 'outreach'] },
   { tab: ['marketing', 'mkt-analytics'] },
   { tab: ['marketing', 'ai-tools'] },
