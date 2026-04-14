@@ -267,7 +267,7 @@ export default function AdminClient() {
       />
 
       {/* Main Content Area */}
-      <div className="lg:ml-[280px] relative z-10 min-h-screen flex flex-col">
+      <div className="lg:ml-[280px] relative min-h-screen flex flex-col">
         {/* Top Bar */}
         <AdminTopBar
           activeModule={activeModule}
