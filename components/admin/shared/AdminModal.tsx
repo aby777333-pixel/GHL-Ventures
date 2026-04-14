@@ -59,7 +59,7 @@ export default function AdminModal({
     <div
       ref={overlayRef}
       onClick={handleOverlayClick}
-      className="fixed inset-0 z-[10002] flex items-start justify-center overflow-y-auto py-8 px-4 bg-black/60 backdrop-blur-sm"
+      className="admin-portal fixed inset-0 z-[10002] flex items-start justify-center overflow-y-auto py-8 px-4 bg-black/60 backdrop-blur-sm"
       style={{ animation: 'adminFadeIn 0.2s ease-out' }}
     >
       <div

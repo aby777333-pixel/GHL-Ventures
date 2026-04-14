@@ -3022,14 +3022,20 @@ body.admin-active main {
   margin: 0 !important;
 }
 
-/* Hide all floating widgets in admin mode */
-body.admin-active .fixed {
+/* Hide all floating widgets in admin mode (except portaled elements) */
+body.admin-active .fixed:not(.admin-portal) {
   visibility: hidden !important;
   pointer-events: none !important;
 }
 
 /* But keep fixed elements inside admin root */
 body.admin-active .admin-root .fixed {
+  visibility: visible !important;
+  pointer-events: auto !important;
+}
+
+/* Keep portaled modals & toasts visible (rendered outside admin-root via createPortal) */
+body.admin-active .admin-portal {
   visibility: visible !important;
   pointer-events: auto !important;
 }
