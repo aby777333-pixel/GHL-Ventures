@@ -277,7 +277,7 @@ export default function AdminClient() {
         />
 
         {/* Content */}
-        <div className="flex-1 p-4 lg:p-6 overflow-visible">
+        <div className="flex-1 p-4 lg:p-6 overflow-auto">
           {renderModule()}
         </div>
 

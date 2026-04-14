@@ -1,6 +1,7 @@
 'use client'
 
-import { useEffect, useRef, useCallback } from 'react'
+import { useEffect, useRef, useCallback, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { X } from 'lucide-react'
 
 interface AdminModalProps {
@@ -23,6 +24,9 @@ export default function AdminModal({
   footer,
 }: AdminModalProps) {
   const overlayRef = useRef<HTMLDivElement>(null)
+  const [mounted, setMounted] = useState(false)
+
+  useEffect(() => { setMounted(true) }, [])
 
   // Close on Escape
   useEffect(() => {
@@ -49,9 +53,9 @@ export default function AdminModal({
     return () => { document.body.style.overflow = '' }
   }, [isOpen])
 
-  if (!isOpen) return null
+  if (!isOpen || !mounted) return null
 
-  return (
+  const modal = (
     <div
       ref={overlayRef}
       onClick={handleOverlayClick}
@@ -93,6 +97,8 @@ export default function AdminModal({
       </div>
     </div>
   )
+
+  return createPortal(modal, document.body)
 }
 
 // ── Reusable Modal Buttons ──────────────────────────────────────
