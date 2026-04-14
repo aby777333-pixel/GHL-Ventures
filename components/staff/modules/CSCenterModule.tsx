@@ -139,7 +139,7 @@ const WA_TEMPLATES: { id: string; name: string; preview: string }[] = [
   { id: 'wa-close', name: 'Chat Closing', preview: 'Thank you for reaching out! If you have further questions, feel free to chat anytime.' },
   { id: 'wa-disclaimer', name: 'Risk Disclaimer', preview: 'Investments in AIFs are subject to market risks. Please read the PPM carefully before investing.' },
 ]
-const ESCALATION_ITEMS: { id: string; ticketId: string; clientName: string; subject: string; level: number; slaRemaining: string; assignedTo: string; priority: string; escalatedAt: string }[] = []
+// ESCALATION_ITEMS now loaded from Supabase in EscalationsView — see below
 const CSAT_TREND: { month: string; score: number; responses: number }[] = []
 const CHANNEL_SATISFACTION: { channel: string; score: number; color: string }[] = []
 const CLIENT_FEEDBACK: { id: string; clientName: string; score: number; channel: string; comment: string; date: string }[] = []
@@ -543,6 +543,22 @@ function TicketManagement({ showToast }: Pick<CSCenterModuleProps, 'showToast'>)
   const [loading, setLoading] = useState(true)
   const [ticketNewStatus, setTicketNewStatus] = useState<string>('')
   const [updatingTicket, setUpdatingTicket] = useState(false)
+  const [reassignTo, setReassignTo] = useState<string>('')
+  const [staffList, setStaffList] = useState<{ id: string; name: string }[]>([])
+
+  // Load staff list for reassignment
+  useEffect(() => {
+    async function loadStaff() {
+      try {
+        const { supabase: sb } = await import('@/lib/supabase/client')
+        const { data } = await (sb as any).from('staff_profiles').select('id, designation, department, profiles:user_id(full_name)').eq('is_active', true)
+        if (data) {
+          setStaffList(data.map((s: any) => ({ id: s.id, name: s.profiles?.full_name || s.designation || s.id.slice(0, 8) })))
+        }
+      } catch (_e) { /* non-blocking */ }
+    }
+    loadStaff()
+  }, [])
 
   // Load tickets from Supabase
   useEffect(() => {
@@ -733,10 +749,51 @@ function TicketManagement({ showToast }: Pick<CSCenterModuleProps, 'showToast'>)
                 >
                   {updatingTicket ? 'Updating...' : 'Update Status'}
                 </button>
-                <button onClick={() => { showToast('Ticket reassigned', 'info'); setSelectedTicket(null) }} className="px-3 py-1.5 rounded-lg text-xs font-medium bg-white/[0.04] text-gray-300 border border-white/[0.08] hover:bg-white/[0.08] transition-colors">
+                <select value={reassignTo} onChange={e => setReassignTo(e.target.value)} className="px-2 py-1.5 rounded-lg text-xs bg-neutral-900 text-gray-300 border border-white/[0.08] outline-none">
+                  <option value="">Reassign to...</option>
+                  {staffList.map(s => <option key={s.id} value={s.id} className="bg-neutral-900">{s.name}</option>)}
+                </select>
+                <button
+                  disabled={!reassignTo || updatingTicket}
+                  onClick={async () => {
+                    if (!reassignTo || !selectedTicket) return
+                    setUpdatingTicket(true)
+                    try {
+                      const result = await updateTicket(selectedTicket.fullId, { assigned_to: reassignTo })
+                      if (result) {
+                        const staffName = staffList.find(s => s.id === reassignTo)?.name || 'staff'
+                        showToast(`Ticket reassigned to ${staffName}`, 'success')
+                        setTickets(prev => prev.map(t => t.fullId === selectedTicket.fullId ? { ...t, assignedTo: staffName } : t))
+                        setSelectedTicket(null); setReassignTo('')
+                      } else { showToast('Failed to reassign ticket', 'error') }
+                    } catch (err: any) { showToast(`Error: ${err?.message || 'Unknown'}`, 'error') }
+                    finally { setUpdatingTicket(false) }
+                  }}
+                  className="px-3 py-1.5 rounded-lg text-xs font-medium bg-white/[0.04] text-gray-300 border border-white/[0.08] hover:bg-white/[0.08] transition-colors disabled:opacity-50"
+                >
                   Reassign
                 </button>
-                <button onClick={() => { showToast('Ticket escalated', 'warning'); setSelectedTicket(null) }} className="px-3 py-1.5 rounded-lg text-xs font-medium bg-amber-500/20 text-amber-400 border border-amber-500/30 hover:bg-amber-500/30 transition-colors">
+                <button
+                  disabled={updatingTicket}
+                  onClick={async () => {
+                    if (!selectedTicket) return
+                    setUpdatingTicket(true)
+                    try {
+                      const result = await updateTicket(selectedTicket.fullId, {
+                        escalation_level: ((selectedTicket as any).escalation_level || 0) + 1,
+                        priority: selectedTicket.priority === 'low' ? 'medium' : selectedTicket.priority === 'medium' ? 'high' : 'critical',
+                        status: 'open',
+                      })
+                      if (result) {
+                        showToast(`Ticket escalated to Level ${(result.escalation_level || 1)}`, 'warning')
+                        setTickets(prev => prev.map(t => t.fullId === selectedTicket.fullId ? { ...t, priority: result.priority, status: 'open' } : t))
+                        setSelectedTicket(null)
+                      } else { showToast('Failed to escalate ticket', 'error') }
+                    } catch (err: any) { showToast(`Error: ${err?.message || 'Unknown'}`, 'error') }
+                    finally { setUpdatingTicket(false) }
+                  }}
+                  className="px-3 py-1.5 rounded-lg text-xs font-medium bg-amber-500/20 text-amber-400 border border-amber-500/30 hover:bg-amber-500/30 transition-colors disabled:opacity-50"
+                >
                   Escalate
                 </button>
               </div>
@@ -1593,6 +1650,45 @@ function WhatsAppView({ showToast }: Pick<CSCenterModuleProps, 'showToast'>) {
 
 // ── 8. Escalations ───────────────────────────────────────────
 function EscalationsView({ showToast }: Pick<CSCenterModuleProps, 'showToast'>) {
+  const [escalations, setEscalations] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    async function loadEscalations() {
+      setLoading(true)
+      try {
+        const raw = await fetchTickets() || []
+        const escalated = (raw as any[]).filter((t: any) => (t.escalation_level || 0) > 0 && t.status !== 'closed' && t.status !== 'resolved')
+        setEscalations(escalated)
+      } catch (_e) { setEscalations([]) }
+      setLoading(false)
+    }
+    loadEscalations()
+  }, [])
+
+  const handleDeescalate = async (ticket: any) => {
+    try {
+      const newLevel = Math.max(0, (ticket.escalation_level || 1) - 1)
+      const result = await updateTicket(ticket.id, {
+        escalation_level: newLevel,
+        priority: newLevel === 0 ? 'medium' : ticket.priority,
+      })
+      if (result) {
+        if (newLevel === 0) {
+          showToast('Ticket de-escalated and returned to normal queue', 'success')
+          setEscalations(prev => prev.filter(e => e.id !== ticket.id))
+        } else {
+          showToast('Ticket de-escalated to Level ' + newLevel, 'success')
+          setEscalations(prev => prev.map(e => e.id === ticket.id ? { ...e, escalation_level: newLevel } : e))
+        }
+      } else {
+        showToast('Failed to de-escalate', 'error')
+      }
+    } catch (_err) {
+      showToast('Error de-escalating ticket', 'error')
+    }
+  }
+
   return (
     <div className="space-y-4">
       <AdminGlass padding="p-0">
@@ -1600,57 +1696,57 @@ function EscalationsView({ showToast }: Pick<CSCenterModuleProps, 'showToast'>) 
           <div className="flex items-center gap-2">
             <AlertTriangle className="w-4 h-4 text-amber-400" />
             <h3 className="text-sm font-semibold text-white">Escalation Queue</h3>
-            <span className="text-[10px] bg-amber-500/20 text-amber-400 px-2 py-0.5 rounded-full font-medium">{ESCALATION_ITEMS.length} active</span>
+            <span className="text-[10px] bg-amber-500/20 text-amber-400 px-2 py-0.5 rounded-full font-medium">{escalations.length} active</span>
           </div>
         </div>
         <div className="divide-y divide-white/[0.04]">
-          {ESCALATION_ITEMS.length === 0 ? (
+          {loading ? (
+            <div className="flex items-center justify-center py-12"><div className="w-5 h-5 border-2 border-teal-500/30 border-t-teal-400 rounded-full animate-spin" /></div>
+          ) : escalations.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-12 text-center px-4">
               <CheckCircle2 className="w-8 h-8 text-emerald-500/50 mb-3" />
               <p className="text-sm text-gray-400">No active escalations</p>
               <p className="text-xs text-gray-600 mt-1">All clear — no tickets are currently escalated</p>
             </div>
-          ) : ESCALATION_ITEMS.map(esc => (
+          ) : escalations.map(esc => {
+            const created = esc.created_at ? new Date(esc.created_at) : new Date()
+            const ageDays = Math.max(0, Math.round((Date.now() - created.getTime()) / 86400000))
+            const level = esc.escalation_level || 1
+            return (
             <div key={esc.id} className="px-5 py-4">
               <div className="flex items-center justify-between mb-2">
                 <div className="flex items-center gap-2">
-                  <span className="text-xs text-teal-400 font-mono">{esc.ticketId}</span>
-                  <span className="text-sm text-white font-medium">{esc.clientName}</span>
-                  <AdminBadge label={esc.priority} variant={priorityVariant(esc.priority)} size="sm" dot />
+                  <span className="text-xs text-teal-400 font-mono">{(esc.ticket_number || esc.id?.slice(0, 8))}</span>
+                  <span className="text-sm text-white font-medium">{esc.client_name || '—'}</span>
+                  <AdminBadge label={esc.priority || 'medium'} variant={priorityVariant(esc.priority || 'medium')} size="sm" dot />
                 </div>
                 <div className="flex items-center gap-2">
                   <span className={`text-[10px] px-2 py-0.5 rounded-full font-semibold border ${
-                    esc.level >= 3 ? 'bg-red-500/15 text-red-400 border-red-500/20' :
-                    esc.level >= 2 ? 'bg-amber-500/15 text-amber-400 border-amber-500/20' :
+                    level >= 3 ? 'bg-red-500/15 text-red-400 border-red-500/20' :
+                    level >= 2 ? 'bg-amber-500/15 text-amber-400 border-amber-500/20' :
                     'bg-blue-500/15 text-blue-400 border-blue-500/20'
                   }`}>
-                    Level {esc.level}
+                    Level {level}
                   </span>
                 </div>
               </div>
-              <p className="text-xs text-gray-400 mb-2">{esc.subject}</p>
+              <p className="text-xs text-gray-400 mb-2">{esc.subject || esc.description?.slice(0, 80) || '—'}</p>
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3 text-xs text-gray-500">
-                  <span>Assigned: <span className="text-gray-300">{esc.assignedTo}</span></span>
-                  <span>Escalated: <span className="text-gray-400">{esc.escalatedAt}</span></span>
+                  <span>Status: <span className="text-gray-300">{esc.status}</span></span>
+                  <span>Age: <span className="text-gray-400">{ageDays > 0 ? `${ageDays}d` : '<1d'}</span></span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <div className={`flex items-center gap-1 text-xs font-medium ${
-                    esc.slaRemaining.startsWith('0') ? 'text-red-400' : 'text-amber-400'
-                  }`}>
-                    <Clock className="w-3 h-3" />
-                    SLA: {esc.slaRemaining}
-                  </div>
                   <button
-                    onClick={() => showToast(`Taking over ${esc.ticketId}`, 'success')}
-                    className="px-3 py-1 rounded-lg text-xs font-medium bg-teal-500/20 text-teal-400 border border-teal-500/30 hover:bg-teal-500/30 transition-colors"
+                    onClick={() => handleDeescalate(esc)}
+                    className="px-3 py-1 rounded-lg text-xs font-medium bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 hover:bg-emerald-500/30 transition-colors"
                   >
-                    Take Over
+                    De-escalate
                   </button>
                 </div>
               </div>
             </div>
-          ))}
+          )})}
         </div>
       </AdminGlass>
     </div>
