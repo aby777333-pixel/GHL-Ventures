@@ -524,6 +524,27 @@ export async function upsertBlogPost(post: Partial<BlogPost> & { slug: string; t
   } catch { return null }
 }
 
+// ── Investment Applications (admin view — all) ──────────────
+export async function fetchAllInvestmentApplications() {
+  if (!isSupabaseConfigured()) return []
+  try {
+    const { data, error } = await (supabase
+      .from('investment_applications')
+      .select('*')
+      .order('created_at', { ascending: false })
+      .limit(500) as any)
+    if (error || !data) return []
+    // Enrich with client names
+    const clientIds = Array.from(new Set((data as any[]).map((d: any) => d.client_id).filter(Boolean)))
+    if (clientIds.length > 0) {
+      const { data: clients } = await (supabase.from('clients').select('id, full_name, email').in('id', clientIds) as any)
+      const clientMap = new Map((clients || []).map((c: any) => [c.id, c]))
+      return (data as any[]).map((app: any) => ({ ...app, _client: clientMap.get(app.client_id) || null }))
+    }
+    return data as any[]
+  } catch (_e) { return [] }
+}
+
 // ── Messages (admin view — all client messages) ────────────
 export async function fetchAllMessages() {
   if (!isSupabaseConfigured()) return []

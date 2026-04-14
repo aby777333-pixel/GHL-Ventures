@@ -19,6 +19,7 @@ import type { Lead, LeadStage, LeadSource, Commission } from '@/lib/admin/adminT
 import UploadWithFolderPicker from '@/components/shared/UploadWithFolderPicker'
 import { createLead, updateLead, fetchLeads, deleteLead } from '@/lib/supabase/leadService'
 import { onNewLead } from '@/lib/supabase/realtimeSubscriptions'
+import { fetchAllInvestmentApplications } from '@/lib/supabase/adminDataService'
 
 // ── Sub-tabs ─────────────────────────────────────────────────────
 const SALES_TABS = [
@@ -26,6 +27,7 @@ const SALES_TABS = [
   { id: 'leads', label: 'Lead List', icon: Users },
   { id: 'commissions', label: 'Commissions', icon: IndianRupee },
   { id: 'leaderboard', label: 'Leaderboard', icon: Trophy },
+  { id: 'investments', label: 'Investments', icon: BarChart3 },
 ] as const
 
 type SalesTab = typeof SALES_TABS[number]['id']
@@ -267,6 +269,7 @@ export default function SalesModule({ subTab, navigate, showToast }: SalesModule
         {activeTab === 'leads' && <LeadListTab leads={leads} onViewLead={(l) => { setSelectedLead(l); setLeadModalOpen(true) }} onDeleteLead={handleDeleteLead} showToast={showToast} />}
         {activeTab === 'commissions' && <CommissionsTab showToast={showToast} />}
         {activeTab === 'leaderboard' && <LeaderboardTab leads={leads} />}
+        {activeTab === 'investments' && <InvestmentsTab showToast={showToast} />}
       </div>
 
       {/* Lead Detail Modal */}
@@ -761,6 +764,285 @@ function LeadDetailContent({ lead }: { lead: Lead }) {
           <h4 className="text-xs text-gray-500 uppercase tracking-wider font-medium mb-2">Notes</h4>
           <p className="text-sm text-gray-300 bg-white/[0.03] p-3 rounded-xl border border-white/[0.04]">{lead.notes}</p>
         </div>
+      )}
+    </div>
+  )
+}
+
+// ═══════════════════════════════════════════════════════════════
+// INVESTMENTS TAB
+// ═══════════════════════════════════════════════════════════════
+
+function generateInvestmentDocument(
+  type: 'acknowledgement' | 'allotment' | 'certificate' | 'agreement',
+  app: any
+) {
+  const clientName = app._client?.full_name || 'Investor'
+  const amount = Number(app.investment_amount) || 0
+  const amountWords = amount >= 10000000 ? `${(amount / 10000000).toFixed(2)} Crore` : amount >= 100000 ? `${(amount / 100000).toFixed(2)} Lakh` : amount.toLocaleString('en-IN')
+  const fund = app.fund_vehicle || 'GHL India Ventures AIF'
+  const date = new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'long', year: 'numeric' })
+  const refNo = `GHL/${(app.id || '').slice(0, 8).toUpperCase()}/${new Date().getFullYear()}`
+  const tenure = app.tenure_preference || '5 Years'
+
+  const letterhead = `
+    <div style="text-align:center;border-bottom:3px solid #D0021B;padding-bottom:16px;margin-bottom:24px;">
+      <h1 style="color:#D0021B;margin:0;font-size:28px;font-weight:800;letter-spacing:1px;">GHL INDIA VENTURES</h1>
+      <p style="color:#666;margin:4px 0 0;font-size:11px;letter-spacing:2px;">SEBI Registered Category II AIF &bull; Reg: IN/AIF2/24-25/1517</p>
+      <p style="color:#888;margin:2px 0 0;font-size:10px;">Queens Court, Egmore, Chennai 600008 &bull; +91 7200 255 252 &bull; info@ghlindiaventures.com</p>
+    </div>`
+
+  const footer = `
+    <div style="margin-top:48px;border-top:1px solid #ddd;padding-top:16px;text-align:center;">
+      <p style="color:#999;font-size:9px;margin:0;">GHL India Ventures Private Limited &bull; CIN: U67190TN2024PTC172000</p>
+      <p style="color:#999;font-size:9px;margin:2px 0 0;">Queens Court, Egmore, Chennai 600008 &bull; www.ghlindiaventures.com</p>
+    </div>`
+
+  const css = `<style>@page{size:A4;margin:20mm;}body{font-family:Georgia,'Times New Roman',serif;color:#222;line-height:1.7;font-size:13px;}@media print{body{-webkit-print-color-adjust:exact;print-color-adjust:exact;}}</style>`
+
+  const templates: Record<string, string> = {
+    acknowledgement: `${css}<body>${letterhead}
+      <p style="text-align:right;color:#666;font-size:12px;">Date: ${date}<br/>Ref: ${refNo}</p>
+      <p>To,<br/><strong>${clientName}</strong></p>
+      <h2 style="text-align:center;color:#D0021B;margin:24px 0;">ACKNOWLEDGEMENT LETTER</h2>
+      <p>Dear <strong>${clientName}</strong>,</p>
+      <p>We hereby acknowledge the receipt of your investment application for <strong>${fund}</strong> for an amount of <strong>₹${amount.toLocaleString('en-IN')}</strong> (Rupees ${amountWords} Only).</p>
+      <p>Your application has been registered under reference number <strong>${refNo}</strong> and is currently under review by our investment committee.</p>
+      <p>Upon successful verification and approval, we shall issue the relevant allotment letter and debenture certificate.</p>
+      <p>Should you have any queries, please do not hesitate to contact your designated Relationship Manager or reach us at the details mentioned above.</p>
+      <p style="margin-top:32px;">Warm Regards,</p>
+      <p><strong>For GHL India Ventures Private Limited</strong><br/><br/><br/>Authorised Signatory</p>
+      ${footer}</body>`,
+
+    allotment: `${css}<body>${letterhead}
+      <p style="text-align:right;color:#666;font-size:12px;">Date: ${date}<br/>Ref: ${refNo}/ALLOT</p>
+      <p>To,<br/><strong>${clientName}</strong></p>
+      <h2 style="text-align:center;color:#D0021B;margin:24px 0;">ALLOTMENT LETTER</h2>
+      <p>Dear <strong>${clientName}</strong>,</p>
+      <p>Pursuant to your investment application dated ${app.created_at ? new Date(app.created_at).toLocaleDateString('en-IN') : date}, we are pleased to inform you that the Board of Directors has approved the allotment in your favour.</p>
+      <table style="width:100%;border-collapse:collapse;margin:20px 0;">
+        <tr style="border-bottom:1px solid #ddd;"><td style="padding:8px;color:#666;">Fund / Vehicle</td><td style="padding:8px;font-weight:600;">${fund}</td></tr>
+        <tr style="border-bottom:1px solid #ddd;"><td style="padding:8px;color:#666;">Investment Amount</td><td style="padding:8px;font-weight:600;">₹${amount.toLocaleString('en-IN')}</td></tr>
+        <tr style="border-bottom:1px solid #ddd;"><td style="padding:8px;color:#666;">Tenure</td><td style="padding:8px;font-weight:600;">${tenure}</td></tr>
+        <tr style="border-bottom:1px solid #ddd;"><td style="padding:8px;color:#666;">Allotment Date</td><td style="padding:8px;font-weight:600;">${date}</td></tr>
+        <tr><td style="padding:8px;color:#666;">Reference</td><td style="padding:8px;font-weight:600;">${refNo}</td></tr>
+      </table>
+      <p>Please find the Debenture Certificate enclosed herewith. Kindly sign and return the Debenture Agreement at your earliest convenience.</p>
+      <p style="margin-top:32px;">For <strong>GHL India Ventures Private Limited</strong><br/><br/><br/>Authorised Signatory</p>
+      ${footer}</body>`,
+
+    certificate: `${css}<body>${letterhead}
+      <h2 style="text-align:center;color:#D0021B;margin:24px 0;font-size:22px;">DEBENTURE CERTIFICATE</h2>
+      <p style="text-align:center;color:#666;font-size:12px;">Certificate No: ${refNo}/DC</p>
+      <div style="border:2px solid #D0021B;border-radius:8px;padding:24px;margin:24px 0;">
+        <p>This is to certify that <strong>${clientName}</strong> is the registered holder of debentures of <strong>GHL India Ventures Private Limited</strong> as per the details below:</p>
+        <table style="width:100%;border-collapse:collapse;margin:16px 0;">
+          <tr style="border-bottom:1px solid #eee;"><td style="padding:10px;color:#666;width:40%;">Face Value</td><td style="padding:10px;font-weight:700;font-size:16px;">₹${amount.toLocaleString('en-IN')}</td></tr>
+          <tr style="border-bottom:1px solid #eee;"><td style="padding:10px;color:#666;">Fund / Vehicle</td><td style="padding:10px;font-weight:600;">${fund}</td></tr>
+          <tr style="border-bottom:1px solid #eee;"><td style="padding:10px;color:#666;">Tenure</td><td style="padding:10px;font-weight:600;">${tenure}</td></tr>
+          <tr style="border-bottom:1px solid #eee;"><td style="padding:10px;color:#666;">Issue Date</td><td style="padding:10px;font-weight:600;">${date}</td></tr>
+          <tr><td style="padding:10px;color:#666;">Certificate No</td><td style="padding:10px;font-weight:600;">${refNo}/DC</td></tr>
+        </table>
+      </div>
+      <p>This certificate is issued subject to the terms and conditions of the Debenture Agreement.</p>
+      <div style="display:flex;justify-content:space-between;margin-top:48px;">
+        <div><p style="border-top:1px solid #333;padding-top:4px;font-size:11px;">Authorised Signatory</p></div>
+        <div style="text-align:center;"><p style="font-size:10px;color:#999;">Company Seal</p></div>
+        <div style="text-align:right;"><p style="border-top:1px solid #333;padding-top:4px;font-size:11px;">Director</p></div>
+      </div>
+      ${footer}</body>`,
+
+    agreement: `${css}<body>${letterhead}
+      <h2 style="text-align:center;color:#D0021B;margin:24px 0;">DEBENTURE AGREEMENT</h2>
+      <p style="text-align:center;color:#666;font-size:12px;">Agreement Ref: ${refNo}/DA</p>
+      <p>This Debenture Agreement ("Agreement") is entered into on this <strong>${date}</strong> between:</p>
+      <p><strong>Party A (Issuer):</strong> GHL India Ventures Private Limited, a company incorporated under the Companies Act, 2013, having its registered office at Queens Court, Egmore, Chennai 600008, SEBI Reg: IN/AIF2/24-25/1517 (hereinafter referred to as "the Company").</p>
+      <p><strong>Party B (Investor):</strong> <strong>${clientName}</strong> (hereinafter referred to as "the Debenture Holder").</p>
+      <h3 style="color:#D0021B;margin-top:24px;">1. INVESTMENT DETAILS</h3>
+      <table style="width:100%;border-collapse:collapse;margin:12px 0;">
+        <tr style="border-bottom:1px solid #ddd;"><td style="padding:8px;color:#666;">Investment Amount</td><td style="padding:8px;font-weight:600;">₹${amount.toLocaleString('en-IN')}</td></tr>
+        <tr style="border-bottom:1px solid #ddd;"><td style="padding:8px;color:#666;">Fund / Vehicle</td><td style="padding:8px;font-weight:600;">${fund}</td></tr>
+        <tr><td style="padding:8px;color:#666;">Tenure</td><td style="padding:8px;font-weight:600;">${tenure}</td></tr>
+      </table>
+      <h3 style="color:#D0021B;">2. TERMS & CONDITIONS</h3>
+      <p>2.1 The Company agrees to issue debentures to the Debenture Holder for the investment amount stated above.</p>
+      <p>2.2 Interest shall be paid as per the agreed schedule and rate communicated at the time of investment.</p>
+      <p>2.3 The principal amount shall be redeemed at the end of the tenure period unless renewed by mutual agreement.</p>
+      <p>2.4 All investments are subject to market risks and the terms outlined in the Private Placement Memorandum (PPM).</p>
+      <h3 style="color:#D0021B;">3. GOVERNING LAW</h3>
+      <p>This Agreement shall be governed by the laws of India. Any disputes shall be subject to the jurisdiction of courts in Chennai.</p>
+      <div style="display:flex;justify-content:space-between;margin-top:48px;">
+        <div><p style="margin-bottom:48px;">For <strong>GHL India Ventures Pvt Ltd</strong></p><p style="border-top:1px solid #333;padding-top:4px;font-size:11px;">Authorised Signatory</p></div>
+        <div style="text-align:right;"><p style="margin-bottom:48px;"><strong>Debenture Holder</strong></p><p style="border-top:1px solid #333;padding-top:4px;font-size:11px;">${clientName}</p></div>
+      </div>
+      ${footer}</body>`,
+  }
+
+  const html = templates[type]
+  if (!html) return
+  const win = window.open('', '_blank')
+  if (!win) return
+  win.document.write(html)
+  win.document.close()
+  setTimeout(() => win.print(), 600)
+}
+
+const INV_STATUS_MAP: Record<string, { label: string; variant: 'success' | 'warning' | 'info' | 'error' | 'purple' }> = {
+  pending: { label: 'Pending', variant: 'info' },
+  under_review: { label: 'Under Review', variant: 'warning' },
+  approved: { label: 'Approved', variant: 'success' },
+  rejected: { label: 'Rejected', variant: 'error' },
+  completed: { label: 'Completed', variant: 'purple' },
+}
+
+function InvestmentsTab({ showToast }: { showToast: (m: string, t?: 'success' | 'error' | 'info' | 'warning') => void }) {
+  const [applications, setApplications] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
+  const [selectedApp, setSelectedApp] = useState<any | null>(null)
+  const [detailOpen, setDetailOpen] = useState(false)
+  const [updating, setUpdating] = useState(false)
+
+  const loadData = useCallback(async () => {
+    setLoading(true)
+    const data = await fetchAllInvestmentApplications()
+    setApplications(data || [])
+    setLoading(false)
+  }, [])
+
+  useEffect(() => { loadData() }, [loadData])
+
+  const totalAUM = useMemo(() => applications.filter(a => a.status === 'approved' || a.status === 'completed').reduce((s, a) => s + (Number(a.investment_amount) || 0), 0), [applications])
+  const pendingCount = useMemo(() => applications.filter(a => a.status === 'pending' || a.status === 'under_review').length, [applications])
+  const approvedCount = useMemo(() => applications.filter(a => a.status === 'approved' || a.status === 'completed').length, [applications])
+
+  const columns: Column<any>[] = [
+    { key: 'client', label: 'Client', render: (row) => <span className="text-white font-medium">{row._client?.full_name || row._client?.email || '—'}</span> },
+    { key: 'fund_vehicle', label: 'Fund / Vehicle', render: (row) => <span className="text-gray-300 text-xs">{row.fund_vehicle || '—'}</span> },
+    { key: 'investment_amount', label: 'Amount', sortable: true, render: (row) => <span className="text-white font-semibold">{formatINR(row.investment_amount)}</span> },
+    { key: 'tenure_preference', label: 'Tenure', render: (row) => <span className="text-gray-400 text-xs">{row.tenure_preference || '—'}</span> },
+    { key: 'status', label: 'Status', render: (row) => {
+      const s = INV_STATUS_MAP[row.status] || { label: row.status, variant: 'info' as const }
+      return <AdminBadge label={s.label} variant={s.variant} size="sm" dot />
+    }},
+    { key: 'created_at', label: 'Date', sortable: true, render: (row) => <span className="text-gray-500 text-xs">{formatDate(row.created_at)}</span> },
+    { key: 'actions', label: '', width: '48px', render: (row) => (
+      <button onClick={() => { setSelectedApp(row); setDetailOpen(true) }} className="p-1.5 rounded-lg hover:bg-white/[0.06] text-gray-500 hover:text-white transition-colors">
+        <Eye className="w-3.5 h-3.5" />
+      </button>
+    )},
+  ]
+
+  const handleStatusUpdate = async (newStatus: string) => {
+    if (!selectedApp) return
+    setUpdating(true)
+    try {
+      const { updateRow } = await import('@/lib/supabase/adminDataService')
+      const result = await updateRow('investment_applications', selectedApp.id, {
+        status: newStatus,
+        reviewed_at: new Date().toISOString(),
+      })
+      if (result) {
+        showToast(`Application ${newStatus}`, 'success')
+        setApplications(prev => prev.map(a => a.id === selectedApp.id ? { ...a, status: newStatus } : a))
+        setDetailOpen(false)
+        setSelectedApp(null)
+      } else { showToast('Failed to update', 'error') }
+    } catch (_e) { showToast('Error updating application', 'error') }
+    finally { setUpdating(false) }
+  }
+
+  return (
+    <div className="space-y-6">
+      {/* KPIs */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <AdminKPICard title="Total Applications" value={applications.length} icon={BarChart3} color="#3B82F6" />
+        <AdminKPICard title="Total AUM" value={formatINR(totalAUM)} icon={IndianRupee} color="#10B981" />
+        <AdminKPICard title="Pending Review" value={pendingCount} icon={Clock} color="#F59E0B" />
+        <AdminKPICard title="Approved" value={approvedCount} icon={CheckCircle2} color="#8B5CF6" />
+      </div>
+
+      {/* Table */}
+      <AdminGlass padding="p-0">
+        <div className="px-5 py-4 border-b border-white/[0.06] flex items-center justify-between">
+          <h3 className="text-sm font-semibold text-white">All Investment Applications</h3>
+          <button onClick={loadData} className="p-1.5 rounded-lg hover:bg-white/[0.06] text-gray-500 hover:text-white transition-colors"><RefreshCw className="w-3.5 h-3.5" /></button>
+        </div>
+        {loading ? (
+          <div className="flex items-center justify-center py-16"><Loader2 className="w-5 h-5 text-brand-red animate-spin" /></div>
+        ) : applications.length === 0 ? (
+          <AdminEmptyState icon={BarChart3} title="No investment applications" description="Investment applications from clients will appear here." />
+        ) : (
+          <AdminDataTable columns={columns} data={applications} onRowClick={(row) => { setSelectedApp(row); setDetailOpen(true) }} />
+        )}
+      </AdminGlass>
+
+      {/* Detail Modal */}
+      {selectedApp && (
+        <AdminModal isOpen={detailOpen} onClose={() => { setDetailOpen(false); setSelectedApp(null) }} title="Investment Application" subtitle={`Ref: ${selectedApp.id?.slice(0, 8).toUpperCase()}`} maxWidth="max-w-3xl" footer={
+          <>
+            <ModalButton onClick={() => { setDetailOpen(false); setSelectedApp(null) }}>Close</ModalButton>
+            {selectedApp.status === 'pending' || selectedApp.status === 'under_review' ? (
+              <>
+                <ModalButton variant="danger" onClick={() => handleStatusUpdate('rejected')} disabled={updating}>Reject</ModalButton>
+                <ModalButton variant="primary" onClick={() => handleStatusUpdate('approved')} disabled={updating}>{updating ? 'Updating...' : 'Approve'}</ModalButton>
+              </>
+            ) : null}
+          </>
+        }>
+          <div className="space-y-5">
+            {/* Application Details */}
+            <div className="grid grid-cols-2 gap-4">
+              {[
+                { label: 'Client', val: selectedApp._client?.full_name || '—' },
+                { label: 'Email', val: selectedApp._client?.email || '—' },
+                { label: 'Fund / Vehicle', val: selectedApp.fund_vehicle || '—' },
+                { label: 'Amount', val: formatINR(selectedApp.investment_amount) },
+                { label: 'Tenure', val: selectedApp.tenure_preference || '—' },
+                { label: 'Status', val: (INV_STATUS_MAP[selectedApp.status] || { label: selectedApp.status }).label },
+                { label: 'Applied On', val: formatDate(selectedApp.created_at) },
+                { label: 'Terms Accepted', val: selectedApp.terms_accepted ? 'Yes' : 'No' },
+              ].map((f, i) => (
+                <div key={i}>
+                  <p className="text-[10px] text-gray-500 uppercase tracking-wider mb-1">{f.label}</p>
+                  <p className="text-sm text-white font-medium">{f.val}</p>
+                </div>
+              ))}
+            </div>
+
+            {selectedApp.admin_notes && (
+              <div>
+                <p className="text-[10px] text-gray-500 uppercase tracking-wider mb-1">Admin Notes</p>
+                <p className="text-sm text-gray-300 bg-white/[0.03] p-3 rounded-xl border border-white/[0.04]">{selectedApp.admin_notes}</p>
+              </div>
+            )}
+
+            {/* Document Generation */}
+            <div className="border-t border-white/[0.06] pt-4">
+              <h4 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Generate Documents</h4>
+              <div className="grid grid-cols-2 gap-2">
+                {[
+                  { type: 'acknowledgement' as const, label: 'Acknowledgement Letter' },
+                  { type: 'allotment' as const, label: 'Allotment Letter' },
+                  { type: 'certificate' as const, label: 'Debenture Certificate' },
+                  { type: 'agreement' as const, label: 'Debenture Agreement' },
+                ].map(doc => (
+                  <button
+                    key={doc.type}
+                    onClick={() => {
+                      generateInvestmentDocument(doc.type, selectedApp)
+                      showToast(`Generating ${doc.label}...`, 'info')
+                    }}
+                    className="flex items-center gap-2 px-3 py-2.5 rounded-xl text-xs font-medium text-gray-300 bg-white/[0.03] border border-white/[0.06] hover:bg-white/[0.06] hover:text-white transition-colors"
+                  >
+                    <Upload className="w-3.5 h-3.5 text-brand-red" />
+                    {doc.label}
+                  </button>
+                ))}
+              </div>
+              <p className="text-[10px] text-gray-600 mt-2">Documents open in a new window for printing to PDF. Please allow popups if prompted.</p>
+            </div>
+          </div>
+        </AdminModal>
       )}
     </div>
   )

@@ -48,6 +48,7 @@ export const ADMIN_SIDEBAR_ITEMS: SidebarItem[] = [
       { id: 'sales/leads', label: 'Leads' },
       { id: 'sales/commissions', label: 'Commissions' },
       { id: 'sales/leaderboard', label: 'Leaderboard' },
+      { id: 'sales/investments', label: 'Investments' },
     ],
   },
   {
@@ -241,6 +242,7 @@ export const ALL_ADMIN_TAB_PARAMS = [
   { tab: ['sales', 'leads'] },
   { tab: ['sales', 'commissions'] },
   { tab: ['sales', 'leaderboard'] },
+  { tab: ['sales', 'investments'] },
   { tab: ['realty-brokers'] },
   { tab: ['realty-brokers', 'inquiries'] },
   { tab: ['realty-brokers', 'analytics'] },
