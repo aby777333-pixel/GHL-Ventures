@@ -124,77 +124,60 @@ export default function ContentManagerModule({ subTab, navigate, showToast }: Co
   const [formSortOrder, setFormSortOrder] = useState(0)
   const [formActive, setFormActive] = useState(true)
 
-  // ── Data Fetching ──────────────────────────────────────────
-  const fetchBlogs = useCallback(async () => {
-    if (!isSupabaseConfigured()) return
+  // ── Data Fetching — single bulk loader ─────────────────────
+  const loadAllContent = useCallback(async () => {
+    if (!isSupabaseConfigured()) { setLoading(false); return }
     setLoading(true)
-    const { data, error } = await supabase
-      .from('blog_posts')
-      .select('*')
-      .order('created_at', { ascending: false })
-    if (error) { showToast(`Failed to load blogs: ${error.message}`, 'error') }
-    else {
-      // Map DB column 'published' to interface field 'is_published'
-      const mapped = (data || []).map((b: any) => ({ ...b, is_published: b.published ?? b.is_published ?? false }))
-      setBlogs(mapped as BlogPost[])
+    try {
+      const [blogRes, fiqRes, faqRes, ticketRes] = await Promise.all([
+        supabase.from('blog_posts').select('*').order('created_at', { ascending: false }),
+        supabase.from('financial_iq_posts').select('*').order('created_at', { ascending: false }),
+        supabase.from('faqs').select('*').order('sort_order', { ascending: true }),
+        supabase.from('tickets').select('*').order('created_at', { ascending: false }),
+      ])
+      if (blogRes.data) {
+        const mapped = blogRes.data.map((b: any) => ({ ...b, is_published: b.published ?? b.is_published ?? false }))
+        setBlogs(mapped as BlogPost[])
+      }
+      if (fiqRes.data) setFiqPosts(fiqRes.data as FinancialIQPost[])
+      if (faqRes.data) setFaqs(faqRes.data as FAQ[])
+      if (ticketRes.data) setTickets(ticketRes.data as SupportTicket[])
+    } catch (e) {
+      console.error('Content load error:', e)
     }
     setLoading(false)
-  }, [showToast])
+  }, [])
+
+  // Convenience single-table reloaders (for after CRUD ops)
+  const fetchBlogs = useCallback(async () => {
+    if (!isSupabaseConfigured()) return
+    const { data } = await supabase.from('blog_posts').select('*').order('created_at', { ascending: false })
+    if (data) {
+      const mapped = data.map((b: any) => ({ ...b, is_published: b.published ?? b.is_published ?? false }))
+      setBlogs(mapped as BlogPost[])
+    }
+  }, [])
 
   const fetchFIQ = useCallback(async () => {
     if (!isSupabaseConfigured()) return
-    setLoading(true)
-    const { data, error } = await supabase
-      .from('financial_iq_posts')
-      .select('*')
-      .order('created_at', { ascending: false })
-    if (error) { showToast(`Failed to load Financial IQ posts: ${error.message}`, 'error') }
-    else { setFiqPosts((data as FinancialIQPost[]) ?? []) }
-    setLoading(false)
-  }, [showToast])
+    const { data } = await supabase.from('financial_iq_posts').select('*').order('created_at', { ascending: false })
+    if (data) setFiqPosts(data as FinancialIQPost[])
+  }, [])
 
   const fetchFAQs = useCallback(async () => {
     if (!isSupabaseConfigured()) return
-    setLoading(true)
-    const { data, error } = await supabase
-      .from('faqs')
-      .select('*')
-      .order('sort_order', { ascending: true })
-    if (error) { showToast(`Failed to load FAQs: ${error.message}`, 'error') }
-    else { setFaqs((data as FAQ[]) ?? []) }
-    setLoading(false)
-  }, [showToast])
+    const { data } = await supabase.from('faqs').select('*').order('sort_order', { ascending: true })
+    if (data) setFaqs(data as FAQ[])
+  }, [])
 
   const fetchTickets = useCallback(async () => {
     if (!isSupabaseConfigured()) return
-    setLoading(true)
-    let ticketData: any[] = []
-    const { data, error } = await supabase
-      .from('tickets')
-      .select('*, profiles(full_name, email)')
-      .order('created_at', { ascending: false })
-    if (error) {
-      // Fallback: fetch without join
-      const { data: plain, error: e2 } = await supabase.from('tickets').select('*').order('created_at', { ascending: false })
-      if (e2) { showToast(`Failed to load tickets: ${e2.message}`, 'error') }
-      else { ticketData = plain || [] }
-    } else { ticketData = data || [] }
-    setTickets(ticketData as SupportTicket[])
-    setLoading(false)
-  }, [showToast])
-
-  // Load ALL data on mount for KPI counts, then reload active tab on switch
-  useEffect(() => {
-    fetchBlogs(); fetchFIQ(); fetchFAQs(); fetchTickets()
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    const { data } = await supabase.from('tickets').select('*').order('created_at', { ascending: false })
+    if (data) setTickets(data as SupportTicket[])
   }, [])
 
-  useEffect(() => {
-    if (activeTab === 'blog') fetchBlogs()
-    else if (activeTab === 'fiq') fetchFIQ()
-    else if (activeTab === 'faq') fetchFAQs()
-    else if (activeTab === 'tickets') fetchTickets()
-  }, [activeTab, fetchBlogs, fetchFIQ, fetchFAQs, fetchTickets])
+  // Load everything on mount
+  useEffect(() => { loadAllContent() }, [loadAllContent])
 
   // ── Editor Helpers ─────────────────────────────────────────
   const resetForm = () => {
