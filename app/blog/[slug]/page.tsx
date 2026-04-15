@@ -1,5 +1,7 @@
 import { BLOG_POSTS, FUND_ARTICLES, BRAND } from '@/lib/constants'
 import { notFound } from 'next/navigation'
+import { Suspense } from 'react'
+import dynamic from 'next/dynamic'
 import FundArticleClient from '@/app/fund/[slug]/FundArticleClient'
 import RichBlogArticle from '@/components/RichBlogArticle'
 import Blog1CategoryIIAIF from '@/components/blog/Blog1CategoryIIAIF'
@@ -8,10 +10,26 @@ import Blog3EarlyStageGrowth from '@/components/blog/Blog3EarlyStageGrowth'
 import Blog4GovernanceTransparency from '@/components/blog/Blog4GovernanceTransparency'
 import Blog5PillarGuide from '@/components/blog/Blog5PillarGuide'
 
+// Dynamic blog post viewer for Supabase-sourced posts
+const DynamicBlogViewer = dynamic(() => import('./DynamicBlogViewer'), { ssr: false })
+
 const SITE_URL = 'https://ghlindiaventures.com'
 
+// Pre-generated static blog slugs + dynamic DB slugs
+const DYNAMIC_BLOG_SLUGS = [
+  'stressed-real-estate-best-kept-secret',
+  'understanding-category-ii-aifs',
+  'tax-benefits-aif-investing',
+  'rise-of-debenture-investments',
+  'evaluate-real-estate-fund-metrics',
+  'india-startup-ecosystem-2025',
+]
+
 export function generateStaticParams() {
-  return BLOG_POSTS.map((post) => ({ slug: post.slug }))
+  return [
+    ...BLOG_POSTS.map((post) => ({ slug: post.slug })),
+    ...DYNAMIC_BLOG_SLUGS.map((slug) => ({ slug })),
+  ]
 }
 
 export function generateMetadata({ params }: { params: { slug: string } }) {
@@ -136,7 +154,15 @@ const BLOG_CONTENT: Record<string, string[]> = {
 
 export default function BlogArticlePage({ params }: { params: { slug: string } }) {
   const post = BLOG_POSTS.find((p) => p.slug === params.slug)
-  if (!post) notFound()
+
+  // If not a static blog post, render the dynamic viewer (loads from Supabase)
+  if (!post) {
+    return (
+      <Suspense fallback={<div className="min-h-screen bg-brand-black flex items-center justify-center"><div className="w-8 h-8 border-2 border-brand-red border-t-transparent rounded-full animate-spin" /></div>}>
+        <DynamicBlogViewer slug={params.slug} />
+      </Suspense>
+    )
+  }
 
   // Check if this is a rich blog post
   const RichComponent = RICH_BLOG_COMPONENTS[params.slug]
