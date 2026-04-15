@@ -345,7 +345,7 @@ export default function DashboardClient() {
   }
 
   // ─── Auth ────────────────────────────────────────────────
-  const { user, clientId, isAuthenticated, emailVerified, loading: authLoading, logout } = useClientAuth()
+  const { user, clientId, ghlId, isAuthenticated, emailVerified, loading: authLoading, logout } = useClientAuth()
 
   // Auth guard — redirect to login if not authenticated
   useEffect(() => {
@@ -649,6 +649,17 @@ export default function DashboardClient() {
   const [referralStats, setReferralStats] = useState({ referred: 0, earned: 0 })
   const [referralList, setReferralList] = useState<{ name: string; date: string; status: string }[]>([])
   const [referralCopied, setReferralCopied] = useState(false)
+
+  // Dynamic FAQs from database
+  const [dynamicFAQs, setDynamicFAQs] = useState<{ question: string; answer: string }[]>([])
+  useEffect(() => {
+    import('@/lib/supabase/client').then(({ supabase, isSupabaseConfigured }) => {
+      if (!isSupabaseConfigured()) return
+      ;(supabase as any).from('faqs').select('question, answer').eq('is_active', true).order('sort_order', { ascending: true }).then(({ data }: any) => {
+        if (data && data.length > 0) setDynamicFAQs(data)
+      })
+    })
+  }, [])
 
   useEffect(() => {
     if (!user?.id) return
@@ -2411,20 +2422,20 @@ export default function DashboardClient() {
         </div>
       </Glass>
 
-      {/* FAQ */}
+      {/* FAQ — loads from database, falls back to defaults */}
       <Glass className="p-6" hover theme={theme}>
         <h3 className={`text-base font-bold mb-4 ${t('text-white','text-gray-900')}`}>Frequently Asked Questions</h3>
         <div className="space-y-3">
-          {[
-            { q: 'How do I track my investment performance?', a: 'Navigate to the Portfolio tab for real-time NAV updates, allocation breakdown, and asset-level milestone progress.' },
-            { q: 'When is the next NAV update?', a: 'NAV is updated quarterly. The next update will be available by 15 April 2025.' },
-            { q: 'How do I increase my investment?', a: 'Go to the Investments tab and click "Express Interest" on your preferred vehicle.' },
-            { q: 'How can I download my tax certificate?', a: 'Visit KYC & Documents tab and look for TDS Certificate under the available documents.' },
-            { q: 'What are the exit options?', a: 'Exit options depend on the fund strategy. Contact your relationship manager for details.' },
-          ].map((faq, i) => (
+          {(dynamicFAQs.length > 0 ? dynamicFAQs : [
+            { question: 'How do I track my investment performance?', answer: 'Navigate to the Portfolio tab for real-time NAV updates, allocation breakdown, and asset-level milestone progress.' },
+            { question: 'When is the next NAV update?', answer: 'NAV is updated quarterly. The next update will be available by 15 April 2025.' },
+            { question: 'How do I increase my investment?', answer: 'Go to the Investments tab and click "Express Interest" on your preferred vehicle.' },
+            { question: 'How can I download my tax certificate?', answer: 'Visit KYC & Documents tab and look for TDS Certificate under the available documents.' },
+            { question: 'What are the exit options?', answer: 'Exit options depend on the fund strategy. Contact your relationship manager for details.' },
+          ]).map((faq, i) => (
             <div key={i} className={`p-4 rounded-xl ${t('bg-white/[0.02] border border-white/[0.04]','bg-gray-100/60 border border-gray-200/40')}`}>
-              <p className={`text-sm font-semibold mb-1.5 ${t('text-white','text-gray-900')}`}>{faq.q}</p>
-              <p className={`text-xs leading-relaxed ${t('text-gray-500','text-gray-700')}`}>{faq.a}</p>
+              <p className={`text-sm font-semibold mb-1.5 ${t('text-white','text-gray-900')}`}>{faq.question}</p>
+              <p className={`text-xs leading-relaxed ${t('text-gray-500','text-gray-700')}`}>{faq.answer}</p>
             </div>
           ))}
         </div>
@@ -2627,7 +2638,7 @@ export default function DashboardClient() {
           )}
 
           <div className={`mt-4 pt-4 border-t text-left space-y-2.5 ${t('border-white/[0.06]','border-gray-200/50')}`}>
-            {[['Investor ID', clientId || 'N/A'],['PAN', user?.pan || 'Not provided'],['Mobile', user?.phone || 'Not provided'],['Joined', user?.created_at ? new Date(user.created_at).toLocaleDateString('en-IN', { month: 'long', year: 'numeric' }) : 'N/A']].map(([l,v],i) => (
+            {[['GHL ID', ghlId || 'N/A'],['PAN', user?.pan || 'Not provided'],['Mobile', user?.phone || 'Not provided'],['Joined', user?.created_at ? new Date(user.created_at).toLocaleDateString('en-IN', { month: 'long', year: 'numeric' }) : 'N/A']].map(([l,v],i) => (
               <div key={i} className="flex justify-between text-xs"><span className={t('text-gray-500','text-gray-700')}>{l}</span><span className={`font-medium ${v === 'Not provided' ? 'text-gray-600 italic' : t('text-white','text-gray-900')}`}>{v}</span></div>
             ))}
           </div>

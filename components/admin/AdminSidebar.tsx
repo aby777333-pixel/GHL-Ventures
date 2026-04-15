@@ -6,7 +6,8 @@ import {
   LayoutDashboard, Users, TrendingUp, UserCheck, FolderOpen, Sparkles,
   Shield, IndianRupee, BarChart3, MessageSquare, Settings, ChevronDown,
   ChevronRight, LogOut, HelpCircle, ExternalLink, X, Menu,
-  Building2, Megaphone, BadgeCheck,
+  Building2, Megaphone, BadgeCheck, FileCheck, Banknote, Newspaper,
+  FileBarChart,
 } from 'lucide-react'
 import Logo from '@/components/Logo'
 import SocialLinks from '@/components/SocialLinks'
@@ -20,7 +21,7 @@ import { ROLE_LABELS, ROLE_COLORS } from '@/lib/admin/adminAuth'
 const ICON_MAP: Record<string, React.ComponentType<{ className?: string }>> = {
   LayoutDashboard, Users, TrendingUp, UserCheck, FolderOpen, Sparkles,
   Shield, IndianRupee, BarChart3, MessageSquare, Settings,
-  Building2, Megaphone,
+  Building2, Megaphone, FileCheck, Banknote, Newspaper, FileBarChart,
 }
 
 interface AdminSidebarProps {

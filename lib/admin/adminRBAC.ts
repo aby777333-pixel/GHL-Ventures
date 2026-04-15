@@ -38,6 +38,9 @@ export const ROLE_PERMISSIONS: Record<AdminRole, Permission[]> = {
     'view:marketing', 'create:marketing', 'edit:marketing', 'approve:marketing', 'export:marketing',
     'view:reports', 'create:reports', 'edit:reports', 'delete:reports', 'export:reports',
     'view:settings',
+    'view:allotments', 'create:allotments', 'edit:allotments', 'export:allotments',
+    'view:payouts', 'create:payouts', 'edit:payouts', 'export:payouts',
+    'view:content', 'create:content', 'edit:content', 'delete:content',
   ],
 
   'compliance-officer': [
@@ -50,6 +53,8 @@ export const ROLE_PERMISSIONS: Record<AdminRole, Permission[]> = {
     'view:realty-brokers',
     'view:marketing',
     'view:reports', 'export:reports',
+    'view:allotments', 'view:payouts', 'export:payouts',
+    'view:content',
   ],
 
   'fund-manager': [
@@ -161,6 +166,7 @@ export function getVisibleModules(role: AdminRole): PermissionModule[] {
   const all: PermissionModule[] = [
     'overview', 'clients', 'sales', 'realty-brokers', 'employees', 'assets',
     'ai-ops', 'compliance', 'financial', 'analytics', 'comms', 'marketing', 'reports', 'settings',
+    'allotments', 'payouts', 'content',
   ]
   return all.filter(mod => hasModuleAccess(role, mod))
 }

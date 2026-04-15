@@ -108,6 +108,7 @@ export async function fetchClients() {
       if (!plain) return []
       return (plain as any[]).map((c: any) => ({
         id: c.id,
+        ghlId: c.ghl_id || '',
         name: c.full_name || '',
         email: c.email || '',
         phone: c.phone || '',
@@ -120,6 +121,7 @@ export async function fetchClients() {
         riskProfile: c.risk_profile,
         city: c.city,
         referredBy: c.referred_by || '',
+        referralCode: c.referral_code || '',
         joinDate: c.created_at?.split('T')[0] || '',
         lastActive: c.updated_at?.split('T')[0] || '',
         assignedRM: c.assigned_rm ? 'Assigned' : 'Not assigned',
@@ -128,6 +130,7 @@ export async function fetchClients() {
     }
     return (data as any[]).map((c: any) => ({
       id: c.id,
+      ghlId: c.ghl_id || '',
       name: c.full_name || '',
       email: c.email || '',
       phone: c.phone || '',
@@ -140,6 +143,7 @@ export async function fetchClients() {
       riskProfile: c.risk_profile,
       city: c.city,
       referredBy: c.referred_by || '',
+      referralCode: c.referral_code || '',
       joinDate: c.created_at?.split('T')[0] || '',
       lastActive: c.updated_at?.split('T')[0] || '',
       assignedRM: c.staff_profiles?.profiles?.full_name || 'Not assigned',

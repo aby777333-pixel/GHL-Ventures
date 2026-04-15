@@ -20,6 +20,9 @@ import SettingsModule from './modules/SettingsModule'
 import RealtyBrokersModule from './modules/RealtyBrokersModule'
 // import MarketingModule from './modules/MarketingModule' // Hidden for later use
 import ReportsModule from './modules/ReportsModule'
+import AllotmentModule from './modules/AllotmentModule'
+import PayoutModule from './modules/PayoutModule'
+import ContentManagerModule from './modules/ContentManagerModule'
 import { useAdminAuth, useAdminToast } from '@/lib/admin/adminHooks'
 import { getAdminSession } from '@/lib/supabase/adminAuthService'
 import type { AdminModule } from '@/lib/admin/adminTypes'
@@ -28,13 +31,14 @@ import { hasModuleAccess } from '@/lib/admin/adminRBAC'
 import {
   LayoutDashboard, Users, TrendingUp, UserCheck, FolderOpen, Sparkles,
   Shield, IndianRupee, BarChart3, MessageSquare, Settings, Construction,
-  Lock, Building2, Megaphone, FileBarChart,
+  Lock, Building2, Megaphone, FileBarChart, FileCheck, Banknote, Newspaper,
 } from 'lucide-react'
 
 // ── Valid Modules ──────────────────────────────────────────────────
 const VALID_MODULES: AdminModule[] = [
   'overview', 'clients', 'sales', 'realty-brokers', 'employees', 'assets',
   'ai-ops', 'compliance', 'financial', 'analytics', 'comms', 'marketing', 'reports', 'settings',
+  'allotments', 'payouts', 'content',
 ]
 
 const MODULE_ICONS: Record<AdminModule, React.ComponentType<{ className?: string }>> = {
@@ -52,6 +56,9 @@ const MODULE_ICONS: Record<AdminModule, React.ComponentType<{ className?: string
   marketing: Megaphone,
   reports: FileBarChart,
   settings: Settings,
+  allotments: FileCheck,
+  payouts: Banknote,
+  content: Newspaper,
 }
 
 // ── Placeholder Module ────────────────────────────────────────────
@@ -228,6 +235,12 @@ export default function AdminClient() {
         return <ReportsModule subTab={activeSubTab} navigate={navigate} showToast={showToast} />
       case 'settings':
         return <SettingsModule subTab={activeSubTab} navigate={navigate} showToast={showToast} />
+      case 'allotments':
+        return <AllotmentModule subTab={activeSubTab} navigate={navigate} showToast={showToast} />
+      case 'payouts':
+        return <PayoutModule subTab={activeSubTab} navigate={navigate} showToast={showToast} />
+      case 'content':
+        return <ContentManagerModule subTab={activeSubTab} navigate={navigate} showToast={showToast} />
       default:
         return (
           <ModulePlaceholder

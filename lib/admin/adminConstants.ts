@@ -180,6 +180,40 @@ export const ADMIN_SIDEBAR_ITEMS: SidebarItem[] = [
   //   ],
   // },
   {
+    id: 'allotments',
+    label: 'Allotments',
+    iconName: 'FileCheck',
+    permission: 'view:allotments',
+    subItems: [
+      { id: 'allotments', label: 'Create Allotment' },
+      { id: 'allotments/history', label: 'Allotment History' },
+      { id: 'allotments/debenture-certificates', label: 'Debenture Certificates' },
+    ],
+  },
+  {
+    id: 'payouts',
+    label: 'Monthly Payouts',
+    iconName: 'Banknote',
+    permission: 'view:payouts',
+    subItems: [
+      { id: 'payouts', label: 'Current Month' },
+      { id: 'payouts/history', label: 'Payout History' },
+      { id: 'payouts/export', label: 'Export' },
+    ],
+  },
+  {
+    id: 'content',
+    label: 'Content & Support',
+    iconName: 'Newspaper',
+    permission: 'view:content',
+    subItems: [
+      { id: 'content', label: 'Blog Posts' },
+      { id: 'content/financial-iq', label: 'Financial IQ' },
+      { id: 'content/faq', label: 'FAQ Management' },
+      { id: 'content/tickets', label: 'Support Tickets' },
+    ],
+  },
+  {
     id: 'reports',
     label: 'Reports & Intel',
     iconName: 'FileBarChart',
@@ -229,6 +263,9 @@ export const MODULE_LABELS: Record<AdminModule, string> = {
   marketing: 'Marketing Command Center',
   reports: 'Reports & Intelligence',
   settings: 'System Settings',
+  allotments: 'Allotment Management',
+  payouts: 'Monthly Payouts',
+  content: 'Content & Support',
 }
 
 // ── All Admin Tab Slugs (for static generation) ───────────────────
@@ -299,6 +336,16 @@ export const ALL_ADMIN_TAB_PARAMS = [
   // { tab: ['marketing', 'ai-tools'] },
   // { tab: ['marketing', 'integrations'] },
   // { tab: ['marketing', 'mkt-settings'] },
+  { tab: ['allotments'] },
+  { tab: ['allotments', 'history'] },
+  { tab: ['allotments', 'debenture-certificates'] },
+  { tab: ['payouts'] },
+  { tab: ['payouts', 'history'] },
+  { tab: ['payouts', 'export'] },
+  { tab: ['content'] },
+  { tab: ['content', 'financial-iq'] },
+  { tab: ['content', 'faq'] },
+  { tab: ['content', 'tickets'] },
   { tab: ['reports'] },
   { tab: ['reports', 'builder'] },
   { tab: ['reports', 'financial'] },
