@@ -183,6 +183,12 @@ export default function ContentManagerModule({ subTab, navigate, showToast }: Co
     setLoading(false)
   }, [showToast])
 
+  // Load ALL data on mount for KPI counts, then reload active tab on switch
+  useEffect(() => {
+    fetchBlogs(); fetchFIQ(); fetchFAQs(); fetchTickets()
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
   useEffect(() => {
     if (activeTab === 'blog') fetchBlogs()
     else if (activeTab === 'fiq') fetchFIQ()
