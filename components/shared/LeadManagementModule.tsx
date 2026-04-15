@@ -104,6 +104,17 @@ export default function LeadManagementModule({
 }: LeadManagementModuleProps) {
   const activeTab = (LEAD_TABS.some(t => t.id === subTab) ? subTab : 'leads') as LeadTab
 
+  // ── Auto-detect user ID for IRM scope ───────────────────────
+  const [resolvedUserId, setResolvedUserId] = useState<string | undefined>(currentUserId)
+  useEffect(() => {
+    if (currentUserId) { setResolvedUserId(currentUserId); return }
+    if (scope === 'irm' && isSupabaseConfigured()) {
+      (supabase as any).auth.getUser().then(({ data }: any) => {
+        if (data?.user?.id) setResolvedUserId(data.user.id)
+      })
+    }
+  }, [currentUserId, scope])
+
   // ── Shared state ─────────────────────────────────────────────
   const [leads, setLeads] = useState<Lead[]>([])
   const [statuses, setStatuses] = useState<LeadStatus[]>([])
@@ -120,7 +131,7 @@ export default function LeadManagementModule({
       const [leadsRes, statusRes, sourceRes, companyRes, staffRes] = await Promise.all([
         (() => {
           let q = (supabase as any).from('leads').select('*').order('created_at', { ascending: false })
-          if (scope === 'irm' && currentUserId) q = q.eq('assigned_to', currentUserId)
+          if (scope === 'irm' && resolvedUserId) q = q.eq('assigned_to', resolvedUserId)
           return q
         })(),
         (supabase as any).from('lead_statuses').select('*').order('sort_order', { ascending: true }),
@@ -137,7 +148,7 @@ export default function LeadManagementModule({
       console.error('Failed to load lead data:', e)
     }
     setLoading(false)
-  }, [scope, currentUserId])
+  }, [scope, resolvedUserId])
 
   useEffect(() => { loadAllData() }, [loadAllData])
 
@@ -172,7 +183,7 @@ export default function LeadManagementModule({
           leads={leads} statuses={statuses} sources={sources} companies={companies}
           staffList={staffList} loading={loading} showToast={showToast}
           navigate={navigate} basePath={basePath} reload={loadAllData}
-          scope={scope} currentUserId={currentUserId}
+          scope={scope} currentUserId={resolvedUserId}
         />
       )}
       {activeTab === 'lead-statuses' && (
@@ -188,7 +199,7 @@ export default function LeadManagementModule({
         <BulkUploadTab
           statuses={statuses} sources={sources} companies={companies}
           leads={leads} showToast={showToast} reload={loadAllData}
-          scope={scope} currentUserId={currentUserId}
+          scope={scope} currentUserId={resolvedUserId}
         />
       )}
       {activeTab === 'create' && (
@@ -196,7 +207,7 @@ export default function LeadManagementModule({
           statuses={statuses} sources={sources} companies={companies}
           staffList={staffList} showToast={showToast} reload={loadAllData}
           navigate={navigate} basePath={basePath}
-          scope={scope} currentUserId={currentUserId}
+          scope={scope} currentUserId={resolvedUserId}
         />
       )}
     </div>

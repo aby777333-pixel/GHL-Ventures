@@ -18,6 +18,7 @@ import AdminKPICard from '@/components/admin/shared/AdminKPICard'
 import AdminDataTable, { type Column } from '@/components/admin/shared/AdminDataTable'
 import AdminModal from '@/components/admin/shared/AdminModal'
 import type { StaffRole } from '@/lib/staff/staffTypes'
+import LeadManagementModule from '@/components/shared/LeadManagementModule'
 
 // Cross-portal: Real-time chat sessions & RM requests
 import {
@@ -2124,7 +2125,7 @@ export default function CSCenterModule({ subTab, navigate, showToast, role }: CS
 
   function renderContent() {
     if (subTab === null) return <CSDashboard navigate={navigate} showToast={showToast} />
-    if (subTab === 'leads') return <LeadAlertsView showToast={showToast} />
+    if (subTab === 'leads') return <LeadManagementModule subTab={null} navigate={navigate} showToast={showToast} scope="irm" basePath="/staff/cs" />
     if (subTab === 'inbox') return <UnifiedInbox showToast={showToast} />
     if (subTab === 'tickets') return <TicketManagement showToast={showToast} />
     if (subTab === 'calls') return <CallsView showToast={showToast} />
