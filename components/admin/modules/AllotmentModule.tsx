@@ -162,40 +162,35 @@ export default function AllotmentModule({ subTab, navigate, showToast }: Allotme
     setLoading(true)
     setPreviewMode(false)
     try {
-      const { data, error } = await supabase
+      // Fetch investment applications
+      const { data: invData, error } = await supabase
         .from('investment_applications')
-        .select(`
-          id,
-          client_id,
-          amount,
-          fund_type,
-          investment_date,
-          folio_number,
-          clients!inner (
-            id,
-            full_name,
-            email,
-            pan
-          )
-        `)
+        .select('id, client_id, amount, fund_type, investment_date, folio_number, status')
         .eq('fund_type', fundType)
         .gte('investment_date', fromDate)
         .lte('investment_date', toDate)
-        .eq('status', 'approved')
+        .in('status', ['approved', 'credited'])
 
       if (error) throw error
 
-      if (!data || data.length === 0) {
+      if (!invData || invData.length === 0) {
         setInvestments([])
         showToast('No matching investments found for the selected criteria', 'info')
         setLoading(false)
         return
       }
 
+      // Batch-fetch client details
+      const clientIds = Array.from(new Set(invData.map((r: any) => r.client_id).filter(Boolean)))
+      const { data: clientRows } = clientIds.length > 0
+        ? await supabase.from('clients').select('id, full_name, email, pan').in('id', clientIds)
+        : { data: [] }
+      const clientMap = new Map((clientRows || []).map((c: any) => [c.id, c]))
+
       // Group by client_id and sum amounts
       const grouped: Record<string, InvestmentRow> = {}
-      for (const inv of data) {
-        const client = inv.clients as any
+      for (const inv of invData) {
+        const client = clientMap.get(inv.client_id) || {} as any
         const cid = inv.client_id
         if (!grouped[cid]) {
           grouped[cid] = {
@@ -210,7 +205,6 @@ export default function AllotmentModule({ subTab, navigate, showToast }: Allotme
         }
         grouped[cid].total_investment += Number(inv.amount) || 0
         grouped[cid].investment_count += 1
-        // Use existing folio if available (first non-empty wins)
         if (inv.folio_number && !grouped[cid].folio_number) {
           grouped[cid].folio_number = inv.folio_number
         }
@@ -226,7 +220,7 @@ export default function AllotmentModule({ subTab, navigate, showToast }: Allotme
       }
       setFolioEntries(folios)
 
-      showToast(`Found ${result.length} investor(s) with ${data.length} investment(s)`, 'success')
+      showToast(`Found ${result.length} investor(s) with ${invData.length} investment(s)`, 'success')
     } catch (err: any) {
       showToast(err.message || 'Failed to fetch investments', 'error')
     } finally {

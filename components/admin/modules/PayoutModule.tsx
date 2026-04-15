@@ -102,55 +102,57 @@ export default function PayoutModule({ subTab, navigate, showToast }: PayoutModu
     setLoading(true)
     try {
       const { start, end } = getMonthRange(selectedMonth)
-      const { data, error } = await supabase
+
+      // Step 1: Fetch payouts for the month
+      const { data: payoutRows, error } = await supabase
         .from('monthly_payouts')
-        .select(`
-          *,
-          clients:client_id (
-            ghl_id,
-            full_name,
-            email,
-            phone
-          ),
-          kyc_bank_details:client_id (
-            account_number,
-            account_holder_name,
-            bank_name,
-            ifsc_code
-          ),
-          kyc_identity_details:client_id (
-            pan_number,
-            aadhar_number
-          )
-        `)
+        .select('*')
         .gte('due_date', start)
         .lte('due_date', end)
         .order('due_date', { ascending: true })
 
       if (error) throw error
+      if (!payoutRows || payoutRows.length === 0) { setPayouts([]); setLoading(false); return }
 
-      const mapped: PayoutRecord[] = (data || []).map((row: any) => ({
-        id: row.id,
-        investment_date: row.investment_date,
-        ghl_id: row.clients?.ghl_id || '-',
-        client_name: row.clients?.full_name || '-',
-        email: row.clients?.email || '-',
-        phone: row.clients?.phone || '-',
-        fund_type: row.fund_type || '-',
-        due_date: row.due_date,
-        investment_amount: row.investment_amount || 0,
-        gross_interest: row.gross_interest || 0,
-        tds_amount: row.tds_amount || 0,
-        net_interest: row.net_interest || 0,
-        payment_status: row.payment_status || 'pending',
-        payment_date: row.payment_date,
-        account_number: row.kyc_bank_details?.account_number || '-',
-        account_holder_name: row.kyc_bank_details?.account_holder_name || '-',
-        bank_name: row.kyc_bank_details?.bank_name || '-',
-        ifsc_code: row.kyc_bank_details?.ifsc_code || '-',
-        aadhar_number: row.kyc_identity_details?.aadhar_number || '-',
-        pan_number: row.kyc_identity_details?.pan_number || '-',
-      }))
+      // Step 2: Batch-fetch client, bank, and identity details
+      const clientIds = Array.from(new Set(payoutRows.map((r: any) => r.client_id).filter(Boolean)))
+      const [clientsRes, bankRes, identityRes] = await Promise.all([
+        clientIds.length > 0 ? supabase.from('clients').select('id, ghl_id, full_name, email, phone').in('id', clientIds) : { data: [] },
+        clientIds.length > 0 ? supabase.from('kyc_bank_details').select('client_id, account_number, account_holder_name, bank_name, ifsc_code').in('client_id', clientIds) : { data: [] },
+        clientIds.length > 0 ? supabase.from('kyc_identity_details').select('client_id, pan_number, aadhar_number').in('client_id', clientIds) : { data: [] },
+      ])
+
+      const clientMap = new Map((clientsRes.data || []).map((c: any) => [c.id, c]))
+      const bankMap = new Map((bankRes.data || []).map((b: any) => [b.client_id, b]))
+      const idMap = new Map((identityRes.data || []).map((i: any) => [i.client_id, i]))
+
+      const mapped: PayoutRecord[] = payoutRows.map((row: any) => {
+        const client: any = clientMap.get(row.client_id) || {}
+        const bank: any = bankMap.get(row.client_id) || {}
+        const identity: any = idMap.get(row.client_id) || {}
+        return {
+          id: row.id,
+          investment_date: row.investment_date,
+          ghl_id: row.ghl_id || client.ghl_id || '-',
+          client_name: client.full_name || '-',
+          email: client.email || '-',
+          phone: client.phone || '-',
+          fund_type: row.fund_type || '-',
+          due_date: row.due_date,
+          investment_amount: row.investment_amount || 0,
+          gross_interest: row.gross_amount || 0,
+          tds_amount: row.tds_amount || 0,
+          net_interest: row.net_interest || 0,
+          payment_status: row.payment_status || 'pending',
+          payment_date: row.payment_date,
+          account_number: row.account_number || bank.account_number || '-',
+          account_holder_name: row.account_holder_name || bank.account_holder_name || '-',
+          bank_name: row.bank_name || bank.bank_name || '-',
+          ifsc_code: row.ifsc_code || bank.ifsc_code || '-',
+          aadhar_number: identity.aadhar_number || '-',
+          pan_number: identity.pan_number || '-',
+        }
+      })
 
       setPayouts(mapped)
     } catch (err) {

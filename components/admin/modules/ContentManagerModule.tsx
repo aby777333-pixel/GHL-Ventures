@@ -164,12 +164,18 @@ export default function ContentManagerModule({ subTab, navigate, showToast }: Co
   const fetchTickets = useCallback(async () => {
     if (!isSupabaseConfigured()) return
     setLoading(true)
+    let ticketData: any[] = []
     const { data, error } = await supabase
       .from('tickets')
       .select('*, profiles(full_name, email)')
       .order('created_at', { ascending: false })
-    if (error) { showToast(`Failed to load tickets: ${error.message}`, 'error') }
-    else { setTickets((data as SupportTicket[]) ?? []) }
+    if (error) {
+      // Fallback: fetch without join
+      const { data: plain, error: e2 } = await supabase.from('tickets').select('*').order('created_at', { ascending: false })
+      if (e2) { showToast(`Failed to load tickets: ${e2.message}`, 'error') }
+      else { ticketData = plain || [] }
+    } else { ticketData = data || [] }
+    setTickets(ticketData as SupportTicket[])
     setLoading(false)
   }, [showToast])
 
