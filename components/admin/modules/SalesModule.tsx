@@ -13,6 +13,12 @@ import AdminDataTable, { type Column } from '../shared/AdminDataTable'
 import AdminBadge from '../shared/AdminBadge'
 import AdminModal, { ModalButton } from '../shared/AdminModal'
 import AdminKPICard from '../shared/AdminKPICard'
+import LeadManagementModule from '../../shared/LeadManagementModule'
+
+// Wrapper to render LeadManagementModule for specific sub-tabs within Sales
+function LeadMgmtWrapper({ subTab, navigate, showToast }: { subTab: string; navigate: (p: string) => void; showToast: (m: string, t?: any) => void }) {
+  return <LeadManagementModule subTab={subTab} navigate={navigate} showToast={showToast} scope="admin" basePath="/admin/sales" />
+}
 import AdminEmptyState from '../shared/AdminEmptyState'
 import { formatINR, formatDate } from '@/lib/admin/adminHooks'
 import type { Lead, LeadStage, LeadSource, Commission } from '@/lib/admin/adminTypes'
@@ -28,6 +34,10 @@ const SALES_TABS = [
   { id: 'commissions', label: 'Commissions', icon: IndianRupee },
   { id: 'leaderboard', label: 'Leaderboard', icon: Trophy },
   { id: 'investments', label: 'Investments', icon: BarChart3 },
+  { id: 'lead-statuses', label: 'Lead Statuses', icon: CheckCircle2 },
+  { id: 'lead-sources', label: 'Lead Sources', icon: Zap },
+  { id: 'lead-companies', label: 'Companies', icon: Target },
+  { id: 'bulk-upload', label: 'Bulk Upload', icon: Upload },
 ] as const
 
 type SalesTab = typeof SALES_TABS[number]['id']
@@ -270,6 +280,10 @@ export default function SalesModule({ subTab, navigate, showToast }: SalesModule
         {activeTab === 'commissions' && <CommissionsTab showToast={showToast} />}
         {activeTab === 'leaderboard' && <LeaderboardTab leads={leads} />}
         {activeTab === 'investments' && <InvestmentsTab showToast={showToast} />}
+        {activeTab === 'lead-statuses' && <LeadMgmtWrapper subTab="lead-statuses" navigate={navigate} showToast={showToast} />}
+        {activeTab === 'lead-sources' && <LeadMgmtWrapper subTab="lead-sources" navigate={navigate} showToast={showToast} />}
+        {activeTab === 'lead-companies' && <LeadMgmtWrapper subTab="lead-companies" navigate={navigate} showToast={showToast} />}
+        {activeTab === 'bulk-upload' && <LeadMgmtWrapper subTab="bulk-upload" navigate={navigate} showToast={showToast} />}
       </div>
 
       {/* Lead Detail Modal */}

@@ -13,6 +13,7 @@ import TasksModule from './modules/TasksModule'
 import AIToolsModule from './modules/AIToolsModule'
 import TeamModule from './modules/TeamModule'
 import InternalModule from './modules/InternalModule'
+import LeadManagementModule from '../shared/LeadManagementModule'
 import AdminGlass from '../admin/shared/AdminGlass'
 import AdminToast from '../admin/shared/AdminToast'
 import { useStaffAuth, useStaffToast, useAgentStatus, useStaffPresence } from '@/lib/staff/staffHooks'
@@ -22,14 +23,14 @@ import { STAFF_MODULE_LABELS } from '@/lib/staff/staffConstants'
 import type { StaffModule, AgentStatus } from '@/lib/staff/staffTypes'
 import {
   Home, User, Headphones, MapPin, Users, CheckSquare, Sparkles,
-  UsersRound, MessageCircle, Lock, Construction,
+  UsersRound, MessageCircle, Lock, Construction, Target,
 } from 'lucide-react'
 
 // ── Valid Modules ──────────────────────────────────────────────
-const VALID_MODULES: StaffModule[] = ['home', 'me', 'cs', 'field', 'clients', 'tasks', 'ai', 'team', 'internal']
+const VALID_MODULES: StaffModule[] = ['home', 'me', 'cs', 'field', 'leads', 'clients', 'tasks', 'ai', 'team', 'internal']
 
 const MODULE_ICONS: Record<StaffModule, React.ComponentType<{ className?: string }>> = {
-  home: Home, me: User, cs: Headphones, field: MapPin, clients: Users,
+  home: Home, me: User, cs: Headphones, field: MapPin, leads: Target, clients: Users,
   tasks: CheckSquare, ai: Sparkles, team: UsersRound, internal: MessageCircle,
 }
 
@@ -233,6 +234,8 @@ export default function StaffClient() {
         return <CSCenterModule subTab={activeSubTab} navigate={navigate} showToast={showToast} role={role} />
       case 'field':
         return <FieldOpsModule subTab={activeSubTab} navigate={navigate} showToast={showToast} />
+      case 'leads':
+        return <LeadManagementModule subTab={activeSubTab} navigate={navigate} showToast={showToast} scope="irm" currentUserId={user?.id} basePath="/staff/leads" />
       case 'clients':
         return <ClientViewModule subTab={activeSubTab} navigate={navigate} showToast={showToast} />
       case 'tasks':

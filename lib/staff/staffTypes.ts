@@ -28,6 +28,7 @@ export type StaffModule =
   | 'ai'
   | 'internal'
   | 'field'
+  | 'leads'
 
 // ── Permission Types ────────────────────────────────────────────
 export type StaffPermission = 'view' | 'create' | 'edit' | 'escalate' | 'close' | 'export' | 'manage'

@@ -71,6 +71,16 @@ export const STAFF_SIDEBAR_ITEMS: StaffNavItem[] = [
     ],
   },
   {
+    id: 'leads', label: 'Lead Management', iconName: 'Target', href: '/staff/leads',
+    subItems: [
+      { id: 'lead-list', label: 'All Leads', href: '/staff/leads' },
+      { id: 'lead-statuses', label: 'Lead Statuses', href: '/staff/leads/lead-statuses' },
+      { id: 'lead-sources', label: 'Lead Sources', href: '/staff/leads/lead-sources' },
+      { id: 'lead-companies', label: 'Lead Companies', href: '/staff/leads/lead-companies' },
+      { id: 'bulk-upload', label: 'Bulk Upload', href: '/staff/leads/bulk-upload' },
+    ],
+  },
+  {
     id: 'clients', label: 'Clients', iconName: 'Users', href: '/staff/clients',
     subItems: [
       { id: 'client-search', label: 'Search', href: '/staff/clients/search' },
@@ -121,6 +131,7 @@ export const STAFF_MODULE_LABELS: Record<StaffModule, string> = {
   ai: 'AI Advisor',
   internal: 'Internal',
   field: 'Field Operations',
+  leads: 'Lead Management',
 }
 
 // ── All Tab Params (for Next.js static generation) ──────────────
@@ -144,6 +155,9 @@ export const ALL_STAFF_TAB_PARAMS = [
   { tab: ['field', 'capture'] }, { tab: ['field', 'reports'] }, { tab: ['field', 'route'] },
   { tab: ['field', 'prospects'] }, { tab: ['field', 'expenses'] }, { tab: ['field', 'pipeline'] },
   { tab: ['field', 'leaderboard'] }, { tab: ['field', 'safety'] }, { tab: ['field', 'offline'] },
+  // Lead Management
+  { tab: ['leads'] }, { tab: ['leads', 'lead-statuses'] }, { tab: ['leads', 'lead-sources'] },
+  { tab: ['leads', 'lead-companies'] }, { tab: ['leads', 'bulk-upload'] }, { tab: ['leads', 'create'] },
   // Clients
   { tab: ['clients'] }, { tab: ['clients', 'search'] }, { tab: ['clients', 'history'] },
   // Tasks

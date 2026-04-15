@@ -103,6 +103,20 @@ const MODULE_PERMISSIONS: Record<StaffModule, Record<StaffRole, StaffPermission[
     'kyc-officer': [], 'operations-executive': [],
     'hr-executive': [], 'general-employee': [], 'intern': [],
   },
+  leads: {
+    'cs-lead': ['view', 'create', 'edit', 'manage', 'export'],
+    'senior-cs-agent': ['view', 'create', 'edit', 'export'],
+    'cs-agent': ['view', 'create', 'edit'],
+    'relationship-manager': ['view', 'create', 'edit', 'export'],
+    'field-sales-manager': ['view', 'create', 'edit', 'manage', 'export'],
+    'field-sales-executive': ['view', 'create', 'edit'],
+    'site-inspector': ['view'],
+    'kyc-officer': ['view'],
+    'operations-executive': ['view', 'create'],
+    'hr-executive': ['view'],
+    'general-employee': ['view'],
+    'intern': ['view'],
+  },
 }
 
 // ── Access Check Functions ──────────────────────────────────────

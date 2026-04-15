@@ -4,7 +4,7 @@ import { useState } from 'react'
 import {
   Home, User, Headphones, MapPin, Users, CheckSquare, Sparkles,
   UsersRound, MessageCircle, ChevronDown, LogOut, X, ArrowLeft,
-  Shield,
+  Shield, Target,
 } from 'lucide-react'
 import type { StaffModule, StaffRole } from '@/lib/staff/staffTypes'
 import { STAFF_SIDEBAR_ITEMS } from '@/lib/staff/staffConstants'
@@ -15,7 +15,7 @@ import SocialLinks from '@/components/SocialLinks'
 
 const ICON_MAP: Record<string, React.ComponentType<{ className?: string }>> = {
   Home, User, Headphones, MapPin, Users, CheckSquare, Sparkles,
-  UsersRound, MessageCircle,
+  UsersRound, MessageCircle, Target,
 }
 
 interface StaffSidebarProps {
