@@ -251,9 +251,22 @@ function LeadListingTab({
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null)
 
   // ── Lookups ──────────────────────────────────────────────────
-  const statusMap = useMemo(() => Object.fromEntries(statuses.map(s => [s.id, s])), [statuses])
-  const sourceMap = useMemo(() => Object.fromEntries(sources.map(s => [s.id, s])), [sources])
-  const companyMap = useMemo(() => Object.fromEntries(companies.map(c => [c.id, c])), [companies])
+  // Map by name for display (DB stores names, not IDs)
+  const statusMap = useMemo(() => {
+    const m: Record<string, LeadStatus> = {}
+    for (const s of statuses) { m[s.id] = s; m[s.name] = s; m[s.name.toLowerCase().replace(/\s+/g, '-')] = s }
+    return m
+  }, [statuses])
+  const sourceMap = useMemo(() => {
+    const m: Record<string, LeadSource> = {}
+    for (const s of sources) { m[s.id] = s; m[s.name] = s; m[s.name.toLowerCase().replace(/\s+/g, '-')] = s }
+    return m
+  }, [sources])
+  const companyMap = useMemo(() => {
+    const m: Record<string, LeadCompany> = {}
+    for (const c of companies) { m[c.id] = c; m[c.name] = c }
+    return m
+  }, [companies])
   const staffMap = useMemo(() => Object.fromEntries(staffList.map(s => [s.id, s])), [staffList])
 
   // ── Filtered leads ───────────────────────────────────────────
@@ -268,47 +281,41 @@ function LeadListingTab({
         staffMap[l.assigned_to || '']?.full_name?.toLowerCase().includes(s)
       )
     }
-    if (filterStatus) result = result.filter(l => l.lead_status_id === filterStatus)
-    if (filterSource) result = result.filter(l => l.lead_source_id === filterSource)
-    if (filterCompany) result = result.filter(l => l.lead_company_id === filterCompany)
+    if (filterStatus) result = result.filter(l => l.lead_status_name === filterStatus || l.stage === filterStatus)
+    if (filterSource) result = result.filter(l => l.source === filterSource)
+    if (filterCompany) result = result.filter(l => l.company_name === filterCompany)
     if (filterAssigned) result = result.filter(l => l.assigned_to === filterAssigned)
     if (dateFrom) result = result.filter(l => l.created_at >= dateFrom)
     if (dateTo) result = result.filter(l => l.created_at <= dateTo + 'T23:59:59')
     return result
   }, [leads, search, filterStatus, filterSource, filterCompany, filterAssigned, dateFrom, dateTo, staffMap])
 
+  // ── Helper to match lead status ──────────────────────────────
+  const matchStatus = (l: Lead, statusName: string) =>
+    (l.lead_status_name || '').toLowerCase() === statusName.toLowerCase() ||
+    (l.stage || '').toLowerCase() === statusName.toLowerCase().replace(/\s+/g, '-')
+
   // ── KPIs ─────────────────────────────────────────────────────
   const kpis = useMemo(() => {
     const total = leads.length
     const todayLeads = leads.filter(l => isToday(l.created_at)).length
-    const callScheduledStatus = statuses.find(s => s.name?.toLowerCase().includes('call'))
-    const todayCalls = callScheduledStatus
-      ? leads.filter(l => l.lead_status_id === callScheduledStatus.id && isToday(l.updated_at)).length
-      : 0
-    const interestedStatus = statuses.find(s => s.name?.toLowerCase().includes('interested'))
-    const todayInterested = interestedStatus
-      ? leads.filter(l => l.lead_status_id === interestedStatus.id && isToday(l.updated_at)).length
-      : 0
+    const todayCalls = leads.filter(l => matchStatus(l, 'Call Scheduled') && isToday(l.updated_at)).length
+    const todayInterested = leads.filter(l => matchStatus(l, 'Interested') && isToday(l.updated_at)).length
     return { total, todayLeads, todayCalls, todayInterested }
-  }, [leads, statuses])
+  }, [leads])
 
   // ── Quick nav helpers ────────────────────────────────────────
   const quickNavItems = useMemo(() => {
-    const wonStatus = statuses.find(s => s.name?.toLowerCase() === 'won')
-    const lostStatus = statuses.find(s => s.name?.toLowerCase() === 'lost')
-    const newStatus = statuses.find(s => s.name?.toLowerCase() === 'new')
-    const callStatus = statuses.find(s => s.name?.toLowerCase().includes('call'))
-    const intStatus = statuses.find(s => s.name?.toLowerCase().includes('interested'))
     return [
-      { label: 'All Leads', count: leads.length, action: () => { setFilterStatus(''); setSearch('') } },
-      { label: "Today's Leads", count: leads.filter(l => isToday(l.created_at)).length, action: () => { const d = new Date().toISOString().split('T')[0]; setDateFrom(d); setDateTo(d) } },
-      { label: 'Call Rescheduled', count: callStatus ? leads.filter(l => l.lead_status_id === callStatus.id && isToday(l.updated_at)).length : 0, action: () => callStatus && setFilterStatus(callStatus.id) },
-      { label: 'Interested Today', count: intStatus ? leads.filter(l => l.lead_status_id === intStatus.id && isToday(l.updated_at)).length : 0, action: () => intStatus && setFilterStatus(intStatus.id) },
-      { label: 'New Leads', count: newStatus ? leads.filter(l => l.lead_status_id === newStatus.id).length : 0, action: () => newStatus && setFilterStatus(newStatus.id) },
-      { label: 'Won', count: wonStatus ? leads.filter(l => l.lead_status_id === wonStatus.id).length : 0, action: () => wonStatus && setFilterStatus(wonStatus.id) },
-      { label: 'Lost', count: lostStatus ? leads.filter(l => l.lead_status_id === lostStatus.id).length : 0, action: () => lostStatus && setFilterStatus(lostStatus.id) },
+      { label: 'All Leads', count: leads.length, action: () => { setFilterStatus(''); setSearch(''); setDateFrom(''); setDateTo('') } },
+      { label: "Today's Leads", count: leads.filter(l => isToday(l.created_at)).length, action: () => { const d = new Date().toISOString().split('T')[0]; setDateFrom(d); setDateTo(d); setFilterStatus('') } },
+      { label: 'Call Rescheduled', count: leads.filter(l => matchStatus(l, 'Call Rescheduled')).length, action: () => setFilterStatus('Call Rescheduled') },
+      { label: 'Interested Today', count: leads.filter(l => matchStatus(l, 'Interested') && isToday(l.updated_at)).length, action: () => setFilterStatus('Interested') },
+      { label: 'New Leads', count: leads.filter(l => matchStatus(l, 'New') || (l.stage || '').toLowerCase() === 'new').length, action: () => setFilterStatus('New') },
+      { label: 'Won', count: leads.filter(l => matchStatus(l, 'Won')).length, action: () => setFilterStatus('Won') },
+      { label: 'Lost', count: leads.filter(l => matchStatus(l, 'Lost')).length, action: () => setFilterStatus('Lost') },
     ]
-  }, [leads, statuses])
+  }, [leads])
 
   // ── Delete ───────────────────────────────────────────────────
   const handleDelete = async (id: string) => {
@@ -325,8 +332,9 @@ function LeadListingTab({
     const rows = filtered.map(l => [
       formatDate(l.created_at), l.name, l.email, l.phone, l.income_bracket || '',
       l.planning || '', staffMap[l.assigned_to || '']?.full_name || '',
-      statusMap[l.lead_status_id || '']?.name || '', sourceMap[l.lead_source_id || '']?.name || '',
-      companyMap[l.lead_company_id || '']?.name || '',
+      (statusMap[l.lead_status_name || ''] || statusMap[l.stage || ''])?.name || l.lead_status_name || l.stage || '',
+      (sourceMap[l.source || ''])?.name || l.source || '',
+      (companyMap[l.company_name || ''])?.name || l.company_name || '',
     ])
     const csv = [headers, ...rows].map(r => r.map(c => `"${(c || '').replace(/"/g, '""')}"`).join(',')).join('\n')
     downloadFile(csv, 'leads-export.csv', 'text/csv')
@@ -337,8 +345,9 @@ function LeadListingTab({
     const rows = filtered.map(l => [
       formatDate(l.created_at), l.name, l.email, l.phone, l.income_bracket || '',
       l.planning || '', staffMap[l.assigned_to || '']?.full_name || '',
-      statusMap[l.lead_status_id || '']?.name || '', sourceMap[l.lead_source_id || '']?.name || '',
-      companyMap[l.lead_company_id || '']?.name || '',
+      (statusMap[l.lead_status_name || ''] || statusMap[l.stage || ''])?.name || l.lead_status_name || l.stage || '',
+      (sourceMap[l.source || ''])?.name || l.source || '',
+      (companyMap[l.company_name || ''])?.name || l.company_name || '',
     ])
     const csv = [headers, ...rows].map(r => r.map(c => `"${(c || '').replace(/"/g, '""')}"`).join(',')).join('\n')
     downloadFile(csv, 'leads-export.xlsx', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
@@ -444,17 +453,17 @@ function LeadListingTab({
             <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)}
               className="bg-white/[0.04] border border-white/[0.08] rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-[#D0021B]/50">
               <option value="">All Statuses</option>
-              {statuses.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+              {statuses.map(s => <option key={s.id} value={s.name}>{s.name}</option>)}
             </select>
             <select value={filterSource} onChange={e => setFilterSource(e.target.value)}
               className="bg-white/[0.04] border border-white/[0.08] rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-[#D0021B]/50">
               <option value="">All Sources</option>
-              {sources.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+              {sources.map(s => <option key={s.id} value={s.name.toLowerCase().replace(/\s+/g, '-')}>{s.name}</option>)}
             </select>
             <select value={filterCompany} onChange={e => setFilterCompany(e.target.value)}
               className="bg-white/[0.04] border border-white/[0.08] rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-[#D0021B]/50">
               <option value="">All Companies</option>
-              {companies.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+              {companies.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}
             </select>
             <select value={filterAssigned} onChange={e => setFilterAssigned(e.target.value)}
               className="bg-white/[0.04] border border-white/[0.08] rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-[#D0021B]/50">
@@ -493,9 +502,9 @@ function LeadListingTab({
               </thead>
               <tbody>
                 {filtered.map(lead => {
-                  const status = statusMap[lead.lead_status_id || '']
-                  const source = sourceMap[lead.lead_source_id || '']
-                  const company = companyMap[lead.lead_company_id || '']
+                  const status = statusMap[lead.lead_status_name || ''] || statusMap[lead.stage || '']
+                  const source = sourceMap[lead.source || '']
+                  const company = companyMap[lead.company_name || '']
                   const staff = staffMap[lead.assigned_to || '']
                   return (
                     <tr key={lead.id} className="border-b border-white/[0.04] hover:bg-white/[0.03] transition-colors">
@@ -576,11 +585,15 @@ function LeadEditModal({
   staffList: StaffProfile[]; onClose: () => void;
   showToast: (m: string, t?: any) => void; reload: () => void;
 }) {
+  // Map DB values to form — use actual column names
+  const initStatus = lead.lead_status_name || lead.stage || ''
+  const initSource = lead.source || ''
+  const initCompany = lead.company_name || ''
   const [form, setForm] = useState({
     name: lead.name || '', email: lead.email || '', phone: lead.phone || '',
     income_bracket: lead.income_bracket || '', planning: lead.planning || '',
-    assigned_to: lead.assigned_to || '', lead_status_id: lead.lead_status_id || '',
-    lead_source_id: lead.lead_source_id || '', lead_company_id: lead.lead_company_id || '',
+    assigned_to: lead.assigned_to || '', status_name: initStatus,
+    source_name: initSource, company_name: initCompany,
     notes: lead.notes || '',
   })
   const [saving, setSaving] = useState(false)
@@ -592,7 +605,7 @@ function LeadEditModal({
     if (!form.email.trim()) e.email = 'Email is required'
     else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) e.email = 'Invalid email'
     if (!form.phone.trim()) e.phone = 'Phone is required'
-    else if (!/^\d{10}$/.test(form.phone)) e.phone = 'Phone must be exactly 10 digits'
+    else if (!/^\d{10}$/.test(form.phone.replace(/\D/g, ''))) e.phone = 'Phone must be exactly 10 digits'
     setErrors(e)
     return Object.keys(e).length === 0
   }
@@ -600,10 +613,39 @@ function LeadEditModal({
   const handleSave = async () => {
     if (!validate()) return
     setSaving(true)
-    const payload: any = { ...form, updated_at: new Date().toISOString() }
-    // Clear empty strings to null
-    for (const k of ['income_bracket', 'planning', 'assigned_to', 'lead_status_id', 'lead_source_id', 'lead_company_id', 'notes']) {
-      if (!payload[k]) payload[k] = null
+    // Build payload using ACTUAL DB column names
+    const payload: any = {
+      name: form.name,
+      email: form.email,
+      phone: form.phone,
+      income_bracket: form.income_bracket || null,
+      planning: form.planning || null,
+      assigned_to: form.assigned_to || null,
+      notes: form.notes || null,
+      updated_at: new Date().toISOString(),
+    }
+    // Map status by name
+    if (form.status_name) {
+      payload.lead_status_name = form.status_name
+      const matched = statuses.find(s => s.name === form.status_name)
+      if (matched) payload.stage = matched.name.toLowerCase().replace(/\s+/g, '-')
+    } else {
+      payload.lead_status_name = null
+    }
+    // Map source by name
+    if (form.source_name) {
+      payload.source = form.source_name.toLowerCase().replace(/\s+/g, '-')
+    } else {
+      payload.source = null
+    }
+    // Map company by name
+    if (form.company_name) {
+      payload.company_name = form.company_name
+      const matchedCompany = companies.find(c => c.name === form.company_name)
+      if (matchedCompany) payload.company_id = matchedCompany.id
+    } else {
+      payload.company_name = null
+      payload.company_id = null
     }
     const { error } = await (supabase as any).from('leads').update(payload).eq('id', lead.id)
     setSaving(false)
@@ -651,21 +693,21 @@ function LeadEditModal({
               </select>
             </FormField>
             <FormField label="Lead Status">
-              <select value={form.lead_status_id} onChange={e => setForm({ ...form, lead_status_id: e.target.value })} className="form-input-dark">
+              <select value={form.status_name} onChange={e => setForm({ ...form, status_name: e.target.value })} className="form-input-dark">
                 <option value="">Select Status</option>
-                {statuses.filter(s => s.is_active).map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                {statuses.filter(s => s.is_active).map(s => <option key={s.id} value={s.name}>{s.name}</option>)}
               </select>
             </FormField>
             <FormField label="Lead Source">
-              <select value={form.lead_source_id} onChange={e => setForm({ ...form, lead_source_id: e.target.value })} className="form-input-dark">
+              <select value={form.source_name} onChange={e => setForm({ ...form, source_name: e.target.value })} className="form-input-dark">
                 <option value="">Select Source</option>
-                {sources.filter(s => s.is_active).map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                {sources.filter(s => s.is_active).map(s => <option key={s.id} value={s.name}>{s.name}</option>)}
               </select>
             </FormField>
             <FormField label="Company">
-              <select value={form.lead_company_id} onChange={e => setForm({ ...form, lead_company_id: e.target.value })} className="form-input-dark">
+              <select value={form.company_name} onChange={e => setForm({ ...form, company_name: e.target.value })} className="form-input-dark">
                 <option value="">Select Company</option>
-                {companies.filter(c => c.is_active).map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                {companies.filter(c => c.is_active).map(c => <option key={c.id} value={c.name}>{c.name}</option>)}
               </select>
             </FormField>
           </div>
@@ -720,8 +762,8 @@ function LeadFormTab({
     name: editingLead?.name || '', email: editingLead?.email || '', phone: editingLead?.phone || '',
     income_bracket: editingLead?.income_bracket || '', planning: editingLead?.planning || '',
     assigned_to: editingLead?.assigned_to || (scope === 'irm' && currentUserId ? currentUserId : ''),
-    lead_status_id: editingLead?.lead_status_name || '', lead_source_id: editingLead?.source || '',
-    lead_company_id: editingLead?.company_name || '', notes: editingLead?.notes || '',
+    status_name: editingLead?.lead_status_name || '', source_name: editingLead?.source || '',
+    company_name: editingLead?.company_name || '', notes: editingLead?.notes || '',
   })
   const [saving, setSaving] = useState(false)
   const [errors, setErrors] = useState<Record<string, string>>({})
@@ -746,14 +788,19 @@ function LeadFormTab({
     if (form.assigned_to) payload.assigned_to = form.assigned_to
     if (form.notes) payload.notes = form.notes
     // Map status/source/company by name to the DB columns
-    if (form.lead_status_id) payload.lead_status_name = form.lead_status_id
-    const matchedStatus = statuses.find(s => s.name === form.lead_status_id || s.id === form.lead_status_id)
-    if (matchedStatus) { payload.stage = matchedStatus.name.toLowerCase().replace(/\s+/g, '-') }
-    if (form.lead_source_id) {
-      const matchedSource = sources.find(s => s.name === form.lead_source_id || s.id === form.lead_source_id)
-      if (matchedSource) payload.source = matchedSource.name.toLowerCase().replace(/\s+/g, '-')
+    if (form.status_name) {
+      payload.lead_status_name = form.status_name
+      const matchedStatus = statuses.find(s => s.name === form.status_name)
+      if (matchedStatus) payload.stage = matchedStatus.name.toLowerCase().replace(/\s+/g, '-')
     }
-    if (form.lead_company_id) payload.company_name = form.lead_company_id
+    if (form.source_name) {
+      payload.source = form.source_name.toLowerCase().replace(/\s+/g, '-')
+    }
+    if (form.company_name) {
+      payload.company_name = form.company_name
+      const matchedCompany = companies.find(c => c.name === form.company_name)
+      if (matchedCompany) payload.company_id = matchedCompany.id
+    }
 
     if (isEditing && editingLead) {
       const { error } = await (supabase as any).from('leads').update(payload).eq('id', editingLead.id)
@@ -821,24 +868,24 @@ function LeadFormTab({
             </select>
           </FormField>
           <FormField label="Lead Status">
-            <select value={form.lead_status_id} onChange={e => setForm({ ...form, lead_status_id: e.target.value })}
+            <select value={form.status_name} onChange={e => setForm({ ...form, status_name: e.target.value })}
               className="w-full px-3 py-2 bg-white/[0.04] border border-white/[0.08] rounded-lg text-sm text-white focus:outline-none focus:border-[#D0021B]/50">
               <option value="">Select Status</option>
-              {statuses.filter(s => s.is_active).map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+              {statuses.filter(s => s.is_active).map(s => <option key={s.id} value={s.name}>{s.name}</option>)}
             </select>
           </FormField>
           <FormField label="Lead Source">
-            <select value={form.lead_source_id} onChange={e => setForm({ ...form, lead_source_id: e.target.value })}
+            <select value={form.source_name} onChange={e => setForm({ ...form, source_name: e.target.value })}
               className="w-full px-3 py-2 bg-white/[0.04] border border-white/[0.08] rounded-lg text-sm text-white focus:outline-none focus:border-[#D0021B]/50">
               <option value="">Select Source</option>
-              {sources.filter(s => s.is_active).map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+              {sources.filter(s => s.is_active).map(s => <option key={s.id} value={s.name}>{s.name}</option>)}
             </select>
           </FormField>
           <FormField label="Company">
-            <select value={form.lead_company_id} onChange={e => setForm({ ...form, lead_company_id: e.target.value })}
+            <select value={form.company_name} onChange={e => setForm({ ...form, company_name: e.target.value })}
               className="w-full px-3 py-2 bg-white/[0.04] border border-white/[0.08] rounded-lg text-sm text-white focus:outline-none focus:border-[#D0021B]/50">
               <option value="">Select Company</option>
-              {companies.filter(c => c.is_active).map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+              {companies.filter(c => c.is_active).map(c => <option key={c.id} value={c.name}>{c.name}</option>)}
             </select>
           </FormField>
         </div>
@@ -1314,24 +1361,31 @@ function BulkUploadTab({
     if (validRows.length === 0) { showToast('No valid rows to upload', 'error'); return }
     setUploading(true)
 
-    const sourceMap = Object.fromEntries(sources.map(s => [s.name.toLowerCase(), s.id]))
-    const statusMap = Object.fromEntries(statuses.map(s => [s.name.toLowerCase(), s.id]))
-    const companyMap = Object.fromEntries(companies.map(c => [c.name.toLowerCase(), c.id]))
+    const sourceNameMap = Object.fromEntries(sources.map(s => [s.name.toLowerCase(), s]))
+    const statusNameMap = Object.fromEntries(statuses.map(s => [s.name.toLowerCase(), s]))
+    const companyNameMap = Object.fromEntries(companies.map(c => [c.name.toLowerCase(), c]))
 
-    const payload = validRows.map(r => ({
-      name: r['Name'] || '',
-      email: r['Email'] || '',
-      phone: r['Phone'] || '',
-      lead_source_id: sourceMap[(r['Source'] || '').toLowerCase()] || null,
-      lead_status_id: statusMap[(r['Status'] || '').toLowerCase()] || null,
-      lead_company_id: companyMap[(r['Company'] || '').toLowerCase()] || null,
-      income_bracket: r['Income Bracket'] || null,
-      planning: r['Planning'] || null,
-      notes: r['Notes'] || null,
-      assigned_to: scope === 'irm' && currentUserId ? currentUserId : null,
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-    }))
+    const payload = validRows.map(r => {
+      const matchedSource = sourceNameMap[(r['Source'] || '').toLowerCase()]
+      const matchedStatus = statusNameMap[(r['Status'] || '').toLowerCase()]
+      const matchedCompany = companyNameMap[(r['Company'] || '').toLowerCase()]
+      return {
+        name: r['Name'] || '',
+        email: r['Email'] || '',
+        phone: r['Phone'] || '',
+        source: matchedSource ? matchedSource.name.toLowerCase().replace(/\s+/g, '-') : null,
+        stage: matchedStatus ? matchedStatus.name.toLowerCase().replace(/\s+/g, '-') : 'new',
+        lead_status_name: matchedStatus?.name || null,
+        company_name: matchedCompany?.name || null,
+        company_id: matchedCompany?.id || null,
+        income_bracket: r['Income Bracket'] || null,
+        planning: r['Planning'] || null,
+        notes: r['Notes'] || null,
+        assigned_to: scope === 'irm' && currentUserId ? currentUserId : null,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      }
+    })
 
     // Insert in batches of 50
     let successCount = 0
