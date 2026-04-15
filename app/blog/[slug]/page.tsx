@@ -17,12 +17,16 @@ const SITE_URL = 'https://ghlindiaventures.com'
 
 // Pre-generated static blog slugs + dynamic DB slugs
 const DYNAMIC_BLOG_SLUGS = [
-  'stressed-real-estate-best-kept-secret',
-  'understanding-category-ii-aifs',
+  'why-stressed-real-estate-is-india-s-best-kept-investment-secret',
+  'understanding-category-ii-aifs-a-complete-guide-for-indian-investors',
   'tax-benefits-aif-investing',
   'rise-of-debenture-investments',
   'evaluate-real-estate-fund-metrics',
   'india-startup-ecosystem-2025',
+  '5-tax-benefits-of-investing-in-alternative-investment-funds',
+  'the-rise-of-debenture-investments-fixed-returns-in-uncertain-markets',
+  'how-to-evaluate-a-real-estate-fund-key-metrics-every-investor-should-know',
+  'india-s-startup-ecosystem-2025-where-smart-money-is-flowing',
 ]
 
 export function generateStaticParams() {
