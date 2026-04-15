@@ -791,9 +791,10 @@ function generateInvestmentDocument(
 
   const css = `<style>
     @page{size:A4;margin:18mm 20mm;}
-    body{font-family:'Segoe UI',Arial,sans-serif;color:#222;line-height:1.6;font-size:12px;margin:0;padding:0;}
-    table{width:100%;border-collapse:collapse;}
-    th,td{border:1px solid #333;padding:6px 10px;text-align:left;font-size:11px;}
+    *{box-sizing:border-box;}
+    body{font-family:'Segoe UI',Arial,sans-serif;color:#222;line-height:1.6;font-size:12px;margin:0;padding:0;max-width:210mm;margin-left:auto;margin-right:auto;padding:20mm;overflow-wrap:break-word;word-wrap:break-word;}
+    table{width:100%;border-collapse:collapse;table-layout:fixed;}
+    th,td{border:1px solid #333;padding:6px 10px;text-align:left;font-size:11px;overflow-wrap:break-word;word-wrap:break-word;}
     th{background:#f5f5f5;font-weight:700;}
     .header{text-align:center;padding:16px 0 12px;border-bottom:3px solid #D0021B;margin-bottom:20px;}
     .header h1{color:#D0021B;margin:0;font-size:26px;font-weight:800;letter-spacing:2px;}
@@ -815,8 +816,8 @@ function generateInvestmentDocument(
     .btn-print:hover{background:#b00218;}
     .btn-close{background:#333;color:#ccc;}
     .btn-close:hover{background:#444;}
-    @media print{.toolbar{display:none!important;}.e{border-bottom:none!important;background:transparent!important;}body{padding-top:0!important;}-webkit-print-color-adjust:exact;print-color-adjust:exact;}
-    body{padding-top:50px;}
+    @media print{.toolbar{display:none!important;}.e{border-bottom:none!important;background:transparent!important;}body{padding:0!important;max-width:none;}-webkit-print-color-adjust:exact;print-color-adjust:exact;}
+    @media screen{body{padding-top:50px;background:#f5f5f5;}#docContent{background:#fff;padding:20mm;max-width:210mm;margin:0 auto;box-shadow:0 2px 20px rgba(0,0,0,0.1);}}
   </style>`
 
   /** Helper: wraps a value in a contenteditable span */
@@ -879,10 +880,10 @@ function generateInvestmentDocument(
       <p>This is with reference to your Investment, I am directed by the Board of Directors to inform you that you have been allotted <strong>[NUM_DEB]</strong> Secured, Non-Convertible debentures of Rs.10/- each. The tenure of debentures is for [TENURE].</p>
       <p>These debentures are allotted to you as per the resolution passed at the Board meeting held on [DATE] and as per the terms and conditions of Articles of Association of the company.</p>
       <p>Details of allotment are as follows:</p>
-      <table>
-        <tr><th>Folio No.</th><th>Number of Debentures</th><th colspan="2">Distinctive Nos.</th><th>Amount Received in Rs</th><th>Type</th><th>Rate of Interest</th><th>Tenure/ Maturity Date</th></tr>
+      <table style="font-size:10px;">
+        <tr><th>Folio No.</th><th>No. of Debentures</th><th colspan="2">Distinctive Nos.</th><th>Amount (Rs)</th><th>Type</th><th>Rate</th><th>Tenure</th></tr>
         <tr><th></th><th></th><th>From</th><th>To</th><th></th><th></th><th></th><th></th></tr>
-        <tr><td>[FOLIO]</td><td>[NUM_DEB]</td><td>1</td><td>[NUM_DEB_RAW]</td><td>[AMOUNT]</td><td>Secured, Non-Convertible</td><td>[RATE]</td><td>[TENURE]</td></tr>
+        <tr><td>[FOLIO]</td><td>[NUM_DEB]</td><td>1</td><td>[NUM_DEB_RAW]</td><td>[AMOUNT]</td><td style="font-size:9px;">Secured, Non-Convertible</td><td>[RATE]</td><td>[TENURE]</td></tr>
       </table>
       <p class="mt">Duly signed and executed debenture certificate will be sent to you.</p>
       <p class="mt bold">This is a computer generated document and does not require signature</p>
@@ -1039,8 +1040,8 @@ function generateInvestmentDocument(
 
   // Build the full page with form + hidden document
   const fullPage = `<!DOCTYPE html><html><head><title>${titles[type]} - GHL India Ventures</title>${css}
-  <style>#docContent{display:none;}</style>
-  </head><body style="background:#f5f5f5;padding-top:0!important;">
+  <style>#docContent{display:none;max-width:210mm;margin:0 auto;background:#fff;padding:20mm;box-shadow:0 2px 20px rgba(0,0,0,0.1);}@media print{#docContent{max-width:none;padding:0;box-shadow:none;}}</style>
+  </head><body style="background:#f5f5f5;margin:0;padding:20px 0;">
   ${inputForm}
   <div id="docContent">${templates[type].replace(css, '').replace(/\$\{toolbar\}/g, '')}</div>
   <script>
@@ -1065,8 +1066,8 @@ function generateInvestmentDocument(
     document.getElementById('inputForm').style.display='none';
     doc.style.display='block';
     doc.innerHTML=html;
-    document.body.style.background='#fff';
-    document.body.style.paddingTop='0';
+    document.body.style.background='#f5f5f5';
+    document.body.style.paddingTop='20px';
     setTimeout(function(){window.print();},400);
   }
   <\/script></body></html>`
