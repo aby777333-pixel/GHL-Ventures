@@ -133,7 +133,11 @@ export default function ContentManagerModule({ subTab, navigate, showToast }: Co
       .select('*')
       .order('created_at', { ascending: false })
     if (error) { showToast(`Failed to load blogs: ${error.message}`, 'error') }
-    else { setBlogs((data as BlogPost[]) ?? []) }
+    else {
+      // Map DB column 'published' to interface field 'is_published'
+      const mapped = (data || []).map((b: any) => ({ ...b, is_published: b.published ?? b.is_published ?? false }))
+      setBlogs(mapped as BlogPost[])
+    }
     setLoading(false)
   }, [showToast])
 
@@ -232,15 +236,18 @@ export default function ContentManagerModule({ subTab, navigate, showToast }: Co
   // ── CRUD: Blog ─────────────────────────────────────────────
   const saveBlog = async () => {
     if (!isSupabaseConfigured()) return
+    const slug = formTitle.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '')
     const payload = {
       title: formTitle,
+      slug,
       content: formContent,
       excerpt: formExcerpt,
       category: formCategory,
-      cover_image: formCoverImage,
-      author: formAuthor,
+      cover_image: formCoverImage || `https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=800&q=80`,
+      author: formAuthor || 'GHL Research Team',
       tags: formTags.split(',').map(t => t.trim()).filter(Boolean),
-      is_published: formPublished,
+      published: formPublished,
+      read_time: Math.max(3, Math.ceil((formContent || '').split(/\s+/).length / 200)),
       published_at: formPublished ? new Date().toISOString() : null,
     }
     if (editingItem) {

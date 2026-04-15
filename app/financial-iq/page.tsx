@@ -4,6 +4,7 @@ import Link from 'next/link'
 import AnimatedSection from '@/components/AnimatedSection'
 import PlaceholderImage from '@/components/PlaceholderImage'
 import { FINANCIAL_IQ_ARTICLES } from '@/lib/constants'
+import { supabase as _sb, isSupabaseConfigured } from '@/lib/supabase/client'
 import {
   BookOpen,
   GraduationCap,
@@ -23,7 +24,7 @@ import {
   RotateCcw,
   Play,
 } from 'lucide-react'
-import { useState, useRef, useCallback } from 'react'
+import { useState, useRef, useCallback, useEffect } from 'react'
 import SpaceHero from '@/components/SpaceHero'
 
 /* ─── Video Player ─── */
@@ -248,8 +249,33 @@ function IrrCalculator() {
   )
 }
 
+const _fiqSb = _sb as any
+
 export default function FinancialIQPage() {
   const [glossarySearch, setGlossarySearch] = useState('')
+  const [dynamicFIQArticles, setDynamicFIQArticles] = useState<any[]>([])
+
+  // Fetch dynamic Financial IQ articles from Supabase
+  useEffect(() => {
+    if (!isSupabaseConfigured()) return
+    _fiqSb.from('financial_iq_posts')
+      .select('*')
+      .eq('is_published', true)
+      .order('published_at', { ascending: false })
+      .then(({ data }: any) => {
+        if (data && data.length > 0) {
+          setDynamicFIQArticles(data.map((p: any) => ({
+            slug: p.slug,
+            title: p.title,
+            excerpt: p.excerpt || '',
+            category: p.category || 'General',
+            date: p.published_at || p.created_at,
+            readTime: '5 min read',
+            coverImage: p.cover_image || '',
+          })))
+        }
+      })
+  }, [])
   const [activeLetter, setActiveLetter] = useState<string | null>(null)
   const [sipMonthly, setSipMonthly] = useState(25000)
   const [sipYears, setSipYears] = useState(10)
@@ -344,6 +370,34 @@ export default function FinancialIQPage() {
           </AnimatedSection>
 
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+            {/* Dynamic articles from database first */}
+            {dynamicFIQArticles.map((article, i) => (
+              <AnimatedSection key={`dyn-${article.slug}`} delay={i * 80}>
+                <div className={`card group h-full hover-lift ${['glow-card-orange', 'glow-card-pink', 'glow-card-teal', 'glow-card-rose', 'glow-card-blue'][i % 5]}`}>
+                  {article.coverImage && (
+                    <div className="aspect-video relative rounded-xl mb-4 overflow-hidden bg-gray-100">
+                      <img src={article.coverImage} alt={article.title} className="w-full h-full object-cover" loading="lazy" />
+                    </div>
+                  )}
+                  {!article.coverImage && (
+                    <div className="w-12 h-12 bg-brand-red/10 rounded-xl flex items-center justify-center mb-4 group-hover:bg-brand-red transition-all icon-ring-hover">
+                      <BookOpen className="w-6 h-6 text-brand-red group-hover:text-white transition-colors" />
+                    </div>
+                  )}
+                  <div className="flex items-center space-x-2 mb-3">
+                    <GraduationCap className="w-4 h-4 text-brand-red" />
+                    <span className="text-xs font-medium text-brand-red uppercase tracking-wider">{article.category}</span>
+                  </div>
+                  <h3 className="font-bold text-lg text-brand-black mb-2 group-hover:text-brand-red transition-colors">{article.title}</h3>
+                  <p className="text-brand-grey text-sm mb-4 line-clamp-2">{article.excerpt}</p>
+                  <div className="flex items-center justify-between text-xs text-brand-grey mt-auto pt-4 border-t border-gray-100">
+                    <span className="flex items-center"><Calendar className="w-3 h-3 mr-1" />{new Date(article.date).toLocaleDateString('en-IN', { year: 'numeric', month: 'short', day: 'numeric' })}</span>
+                    <span className="flex items-center"><Clock className="w-3 h-3 mr-1" />{article.readTime}</span>
+                  </div>
+                </div>
+              </AnimatedSection>
+            ))}
+            {/* Static articles from constants */}
             {FINANCIAL_IQ_ARTICLES.map((article, i) => (
               <AnimatedSection key={article.slug} delay={i * 80}>
                 <div className={`card group h-full hover-lift ${['glow-card-orange', 'glow-card-pink', 'glow-card-teal', 'glow-card-rose', 'glow-card-blue', 'glow-card-violet', 'glow-card-emerald', 'glow-card-amber', 'glow-card-cyan', 'glow-card-red'][i % 10]}`}>

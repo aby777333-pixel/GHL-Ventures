@@ -1,6 +1,7 @@
 'use client'
 
 import Link from 'next/link'
+import Image from 'next/image'
 import AnimatedSection from '@/components/AnimatedSection'
 import PlaceholderImage from '@/components/PlaceholderImage'
 import { BLOG_POSTS, FUND_ARTICLES } from '@/lib/constants'
@@ -20,19 +21,27 @@ import {
   Mail,
   User,
 } from 'lucide-react'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { supabase as _sb, isSupabaseConfigured } from '@/lib/supabase/client'
 
-const allPosts = [
+const sb = _sb as any
+
+// Static posts from constants
+const staticPosts = [
   ...BLOG_POSTS.map((p) => ({
     ...p,
     author: 'GHL Research Team',
     linkPrefix: '/blog' as const,
+    coverImage: '',
+    source: 'static' as const,
   })),
   ...FUND_ARTICLES.map((a) => ({
     ...a,
     image: '/blog/default.jpg',
     author: 'GHL Editorial',
     linkPrefix: '/fund' as const,
+    coverImage: '',
+    source: 'static' as const,
   })),
 ]
 
@@ -54,7 +63,7 @@ const categoryIcons: Record<string, React.ElementType> = {
   'Fund News': Newspaper,
 }
 
-function getCategoryForPost(post: (typeof allPosts)[number]): string {
+function getCategoryForPost(post: any): string {
   const cat = post.category.toLowerCase()
   if (cat.includes('education') || cat.includes('basics') || cat.includes('fundamentals') || cat.includes('strategy'))
     return 'Investor Education'
@@ -115,8 +124,49 @@ function getPlaceholderTheme(mappedCategory: string): string {
 export default function BlogPage() {
   const [search, setSearch] = useState('')
   const [activeCategory, setActiveCategory] = useState<string>('All')
+  const [dynamicPosts, setDynamicPosts] = useState<any[]>([])
 
-  const filtered = allPosts.filter((post) => {
+  // Fetch dynamic blog posts from Supabase
+  useEffect(() => {
+    if (!isSupabaseConfigured()) return
+    sb.from('blog_posts')
+      .select('*')
+      .eq('published', true)
+      .order('published_at', { ascending: false })
+      .then(({ data }: any) => {
+        if (data && data.length > 0) {
+          const mapped = data.map((p: any) => ({
+            slug: p.slug,
+            title: p.title,
+            excerpt: p.excerpt || '',
+            content: p.content || '',
+            date: p.published_at || p.created_at,
+            readTime: p.read_time ? `${p.read_time} min read` : '5 min read',
+            category: p.category || 'Market Analysis',
+            author: p.author || 'GHL Research Team',
+            linkPrefix: '/blog' as const,
+            coverImage: p.cover_image || '',
+            source: 'dynamic' as const,
+          }))
+          setDynamicPosts(mapped)
+        }
+      })
+  }, [])
+
+  // Merge dynamic posts (first) with static posts, deduplicate by slug
+  const allPosts = (() => {
+    const seenSlugs = new Set<string>()
+    const merged: any[] = []
+    for (const p of [...dynamicPosts, ...staticPosts]) {
+      if (!seenSlugs.has(p.slug)) {
+        seenSlugs.add(p.slug)
+        merged.push(p)
+      }
+    }
+    return merged
+  })()
+
+  const filtered = allPosts.filter((post: any) => {
     const matchesSearch =
       search === '' ||
       post.title.toLowerCase().includes(search.toLowerCase()) ||
@@ -164,9 +214,15 @@ export default function BlogPage() {
           <AnimatedSection>
             <div className="relative rounded-2xl overflow-hidden bg-gradient-to-r from-brand-black via-gray-900 to-brand-black border border-gray-800 group glow-card-red">
               <div className="grid lg:grid-cols-2 gap-0">
-                {/* Image placeholder */}
+                {/* Image — cover or placeholder */}
                 <div className="min-h-[280px]">
-                  <PlaceholderImage theme={getPlaceholderTheme(featuredCategory)} aspectRatio="h-64 lg:h-full w-full" label="Featured Article" className="rounded-none" />
+                  {featuredPost.coverImage ? (
+                    <div className="h-64 lg:h-full w-full relative overflow-hidden">
+                      <img src={featuredPost.coverImage} alt={featuredPost.title} className="w-full h-full object-cover" loading="lazy" />
+                    </div>
+                  ) : (
+                    <PlaceholderImage theme={getPlaceholderTheme(featuredCategory)} aspectRatio="h-64 lg:h-full w-full" label="Featured Article" className="rounded-none" />
+                  )}
                 </div>
                 {/* Content */}
                 <div className="p-8 lg:p-12 flex flex-col justify-center">
@@ -182,7 +238,7 @@ export default function BlogPage() {
                   <div className="flex items-center gap-4 mb-6 text-sm text-gray-500">
                     <span className="flex items-center">
                       <User className="w-4 h-4 mr-1.5" />
-                      {(featuredPost as typeof allPosts[number]).author}
+                      {(featuredPost as any).author}
                     </span>
                     <span className="flex items-center">
                       <Calendar className="w-4 h-4 mr-1.5" />
@@ -198,7 +254,7 @@ export default function BlogPage() {
                     </span>
                   </div>
                   <Link
-                    href={`${(featuredPost as typeof allPosts[number]).linkPrefix}/${featuredPost.slug}`}
+                    href={`${(featuredPost as any).linkPrefix}/${featuredPost.slug}`}
                     className="inline-flex items-center text-brand-red font-bold hover:underline group/link"
                   >
                     Read Full Article
@@ -272,8 +328,14 @@ export default function BlogPage() {
                       className={`card group hover-lift break-inside-avoid quote-card ${glowColors[i % glowColors.length]}`}
                       id={post.slug}
                     >
-                      {/* 16:9 Image placeholder */}
-                      <PlaceholderImage theme={getPlaceholderTheme(mappedCat)} aspectRatio="aspect-video" label={post.title} className="rounded-xl mb-4" />
+                      {/* 16:9 Image — use cover image if available, fallback to placeholder */}
+                      {post.coverImage ? (
+                        <div className="aspect-video relative rounded-xl mb-4 overflow-hidden bg-gray-100">
+                          <img src={post.coverImage} alt={post.title} className="w-full h-full object-cover" loading="lazy" />
+                        </div>
+                      ) : (
+                        <PlaceholderImage theme={getPlaceholderTheme(mappedCat)} aspectRatio="aspect-video" label={post.title} className="rounded-xl mb-4" />
+                      )}
 
                       {/* Category tag pill */}
                       <span className="inline-block px-3 py-1 bg-brand-red/10 text-brand-red text-xs font-bold uppercase tracking-wider rounded-full mb-3">
@@ -293,7 +355,7 @@ export default function BlogPage() {
                         </div>
                         <div className="flex items-center gap-2 text-xs text-brand-grey">
                           <span className="font-medium text-gray-700 dark:text-gray-300">
-                            {(post as typeof allPosts[number]).author}
+                            {(post as any).author}
                           </span>
                           <span className="text-gray-300">|</span>
                           <span className="flex items-center">
@@ -318,7 +380,7 @@ export default function BlogPage() {
 
                       {/* Read Article link */}
                       <Link
-                        href={`${(post as typeof allPosts[number]).linkPrefix}/${post.slug}`}
+                        href={`${(post as any).linkPrefix}/${post.slug}`}
                         className="inline-flex items-center text-brand-red text-sm font-semibold hover:underline group/link mt-auto"
                       >
                         Read Article
