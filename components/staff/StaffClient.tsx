@@ -235,7 +235,7 @@ export default function StaffClient() {
       case 'field':
         return <FieldOpsModule subTab={activeSubTab} navigate={navigate} showToast={showToast} />
       case 'leads':
-        return <LeadManagementModule subTab={activeSubTab} navigate={navigate} showToast={showToast} scope="irm" currentUserId={user?.id} basePath="/staff/leads" />
+        return <LeadManagementModule subTab={activeSubTab} navigate={navigate} showToast={showToast} scope="admin" currentUserId={user?.id} basePath="/staff/leads" />
       case 'clients':
         return <ClientViewModule subTab={activeSubTab} navigate={navigate} showToast={showToast} />
       case 'tasks':
