@@ -32,6 +32,10 @@ interface Lead {
   lead_status_id: string | null
   lead_source_id: string | null
   lead_company_id: string | null
+  lead_status_name: string | null
+  company_name: string | null
+  source: string | null
+  stage: string | null
   notes: string | null
   created_at: string
   updated_at: string
@@ -102,7 +106,11 @@ function isToday(d: string | null) {
 export default function LeadManagementModule({
   subTab, navigate, showToast, scope, currentUserId, basePath,
 }: LeadManagementModuleProps) {
-  const activeTab = (LEAD_TABS.some(t => t.id === subTab) ? subTab : 'leads') as LeadTab
+  // Use internal state for tab switching (works inside embedded views like CS Center)
+  const initialTab = (LEAD_TABS.some(t => t.id === subTab) ? subTab : 'leads') as LeadTab
+  const [activeTab, setActiveTab] = useState<LeadTab>(initialTab)
+  // Also track editing lead for inline edit
+  const [editingLead, setEditingLead] = useState<Lead | null>(null)
 
   // ── Auto-detect user ID for IRM scope ───────────────────────
   const [resolvedUserId, setResolvedUserId] = useState<string | undefined>(currentUserId)
@@ -163,7 +171,7 @@ export default function LeadManagementModule({
           return (
             <button
               key={tab.id}
-              onClick={() => navigate(`${basePath}/${tab.id}`)}
+              onClick={() => { setActiveTab(tab.id); setEditingLead(null) }}
               className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all
                 ${isActive
                   ? 'bg-[#D0021B] text-white shadow-lg shadow-red-900/30'
@@ -184,6 +192,8 @@ export default function LeadManagementModule({
           staffList={staffList} loading={loading} showToast={showToast}
           navigate={navigate} basePath={basePath} reload={loadAllData}
           scope={scope} currentUserId={resolvedUserId}
+          onNewLead={() => { setEditingLead(null); setActiveTab('create') }}
+          onEditLead={(lead) => { setEditingLead(lead); setActiveTab('create') }}
         />
       )}
       {activeTab === 'lead-statuses' && (
@@ -208,6 +218,8 @@ export default function LeadManagementModule({
           staffList={staffList} showToast={showToast} reload={loadAllData}
           navigate={navigate} basePath={basePath}
           scope={scope} currentUserId={resolvedUserId}
+          editingLead={editingLead}
+          onBack={() => { setEditingLead(null); setActiveTab('leads') }}
         />
       )}
     </div>
@@ -219,12 +231,13 @@ export default function LeadManagementModule({
 // ═══════════════════════════════════════════════════════════════════
 function LeadListingTab({
   leads, statuses, sources, companies, staffList, loading, showToast,
-  navigate, basePath, reload, scope, currentUserId,
+  navigate, basePath, reload, scope, currentUserId, onNewLead, onEditLead,
 }: {
   leads: Lead[]; statuses: LeadStatus[]; sources: LeadSource[]; companies: LeadCompany[];
   staffList: StaffProfile[]; loading: boolean;
   showToast: (m: string, t?: any) => void; navigate: (p: string) => void;
   basePath: string; reload: () => void; scope: string; currentUserId?: string;
+  onNewLead: () => void; onEditLead: (lead: Lead) => void;
 }) {
   const [search, setSearch] = useState('')
   const [filterStatus, setFilterStatus] = useState('')
@@ -419,7 +432,7 @@ function LeadListingTab({
           </div>
 
           {/* Create button */}
-          <button onClick={() => navigate(`${basePath}/create`)}
+          <button onClick={onNewLead}
             className="flex items-center gap-1.5 px-4 py-2 bg-[#D0021B] text-white rounded-lg text-sm font-medium hover:bg-[#B0011A] transition-all">
             <Plus size={14} /> New Lead
           </button>
@@ -694,16 +707,21 @@ function LeadEditModal({
 // ═══════════════════════════════════════════════════════════════════
 function LeadFormTab({
   statuses, sources, companies, staffList, showToast, reload, navigate, basePath, scope, currentUserId,
+  editingLead, onBack,
 }: {
   statuses: LeadStatus[]; sources: LeadSource[]; companies: LeadCompany[];
   staffList: StaffProfile[];
   showToast: (m: string, t?: any) => void; reload: () => void;
   navigate: (p: string) => void; basePath: string; scope: string; currentUserId?: string;
+  editingLead?: Lead | null; onBack?: () => void;
 }) {
+  const isEditing = !!editingLead
   const [form, setForm] = useState({
-    name: '', email: '', phone: '', income_bracket: '', planning: '',
-    assigned_to: scope === 'irm' && currentUserId ? currentUserId : '',
-    lead_status_id: '', lead_source_id: '', lead_company_id: '', notes: '',
+    name: editingLead?.name || '', email: editingLead?.email || '', phone: editingLead?.phone || '',
+    income_bracket: editingLead?.income_bracket || '', planning: editingLead?.planning || '',
+    assigned_to: editingLead?.assigned_to || (scope === 'irm' && currentUserId ? currentUserId : ''),
+    lead_status_id: editingLead?.lead_status_name || '', lead_source_id: editingLead?.source || '',
+    lead_company_id: editingLead?.company_name || '', notes: editingLead?.notes || '',
   })
   const [saving, setSaving] = useState(false)
   const [errors, setErrors] = useState<Record<string, string>>({})
@@ -719,26 +737,52 @@ function LeadFormTab({
     return Object.keys(e).length === 0
   }
 
-  const handleCreate = async () => {
+  const handleSave = async () => {
     if (!validate()) return
     setSaving(true)
-    const payload: any = { ...form, created_at: new Date().toISOString(), updated_at: new Date().toISOString() }
-    for (const k of ['income_bracket', 'planning', 'assigned_to', 'lead_status_id', 'lead_source_id', 'lead_company_id', 'notes']) {
-      if (!payload[k]) payload[k] = null
+    const payload: any = { name: form.name, email: form.email, phone: form.phone, updated_at: new Date().toISOString() }
+    if (form.income_bracket) payload.income_bracket = form.income_bracket
+    if (form.planning) payload.planning = form.planning
+    if (form.assigned_to) payload.assigned_to = form.assigned_to
+    if (form.notes) payload.notes = form.notes
+    // Map status/source/company by name to the DB columns
+    if (form.lead_status_id) payload.lead_status_name = form.lead_status_id
+    const matchedStatus = statuses.find(s => s.name === form.lead_status_id || s.id === form.lead_status_id)
+    if (matchedStatus) { payload.stage = matchedStatus.name.toLowerCase().replace(/\s+/g, '-') }
+    if (form.lead_source_id) {
+      const matchedSource = sources.find(s => s.name === form.lead_source_id || s.id === form.lead_source_id)
+      if (matchedSource) payload.source = matchedSource.name.toLowerCase().replace(/\s+/g, '-')
     }
-    const { error } = await (supabase as any).from('leads').insert(payload)
-    setSaving(false)
-    if (error) { showToast('Failed to create lead: ' + error.message, 'error'); return }
-    showToast('Lead created successfully', 'success')
+    if (form.lead_company_id) payload.company_name = form.lead_company_id
+
+    if (isEditing && editingLead) {
+      const { error } = await (supabase as any).from('leads').update(payload).eq('id', editingLead.id)
+      setSaving(false)
+      if (error) { showToast('Failed to update lead: ' + error.message, 'error'); return }
+      showToast('Lead updated successfully', 'success')
+    } else {
+      payload.created_at = new Date().toISOString()
+      const { error } = await (supabase as any).from('leads').insert(payload)
+      setSaving(false)
+      if (error) { showToast('Failed to create lead: ' + error.message, 'error'); return }
+      showToast('Lead created successfully', 'success')
+    }
     reload()
-    navigate(`${basePath}/leads`)
+    if (onBack) onBack()
   }
 
   return (
     <div className={GLASS_CARD + ' max-w-3xl'} style={GLASS_BG}>
-      <h3 className="text-lg font-semibold text-white mb-6 flex items-center gap-2">
-        <UserPlus size={20} className="text-[#D0021B]" /> Create New Lead
-      </h3>
+      <div className="flex items-center justify-between mb-6">
+        <h3 className="text-lg font-semibold text-white flex items-center gap-2">
+          <UserPlus size={20} className="text-[#D0021B]" /> {isEditing ? 'Edit Lead' : 'Create New Lead'}
+        </h3>
+        {onBack && (
+          <button onClick={onBack} className="text-sm text-gray-400 hover:text-white transition-colors">
+            &larr; Back to Leads
+          </button>
+        )}
+      </div>
       <div className="space-y-4">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <FormField label="Name *" error={errors.name}>
@@ -804,11 +848,11 @@ function LeadFormTab({
             placeholder="Additional notes..." rows={3} />
         </FormField>
         <div className="flex justify-end gap-3 pt-4">
-          <button onClick={() => navigate(`${basePath}/leads`)}
+          <button onClick={() => onBack ? onBack() : navigate(`${basePath}/leads`)}
             className="px-4 py-2 text-sm text-gray-400 hover:text-white transition-colors">Cancel</button>
-          <button onClick={handleCreate} disabled={saving}
+          <button onClick={handleSave} disabled={saving}
             className="px-6 py-2 bg-[#D0021B] text-white rounded-lg text-sm font-medium hover:bg-[#B0011A] disabled:opacity-50 transition-all flex items-center gap-2">
-            {saving ? <><RefreshCw size={14} className="animate-spin" /> Creating...</> : <><Plus size={14} /> Create Lead</>}
+            {saving ? <><RefreshCw size={14} className="animate-spin" /> Saving...</> : <><Plus size={14} /> {isEditing ? 'Update Lead' : 'Create Lead'}</>}
           </button>
         </div>
       </div>
