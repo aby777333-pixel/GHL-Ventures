@@ -99,7 +99,7 @@ export default function StartupApplyPage() {
         <div className="container-max mx-auto">
           <AnimatedSection className="text-center mb-12">
             <span className="text-brand-red font-semibold text-xs uppercase tracking-wider">Selection Criteria</span>
-            <h2 className="section-title mt-2 text-brand-black">What We Look For</h2>
+            <h2 className="section-title mt-2 text-brand-black dark:text-white">What We Look For</h2>
           </AnimatedSection>
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
             {CRITERIA.map((item, i) => (
@@ -108,7 +108,7 @@ export default function StartupApplyPage() {
                   <div className="w-12 h-12 bg-brand-red/10 rounded-xl flex items-center justify-center mb-4">
                     <item.icon className="w-6 h-6 text-brand-red" />
                   </div>
-                  <h3 className="font-bold text-brand-black mb-2">{item.title}</h3>
+                  <h3 className="font-bold text-brand-black dark:text-white mb-2">{item.title}</h3>
                   <p className="text-brand-grey text-sm leading-relaxed">{item.desc}</p>
                 </div>
               </AnimatedSection>
@@ -152,12 +152,12 @@ export default function StartupApplyPage() {
             <div className="card glow-card-violet">
               {!submitted ? (
                 <form onSubmit={handleSubmit} className="space-y-6">
-                  <h2 className="text-xl font-bold text-brand-black mb-2">Application Form</h2>
+                  <h2 className="text-xl font-bold text-brand-black dark:text-white mb-2">Application Form</h2>
                   <p className="text-brand-grey text-sm mb-6">All submissions are reviewed by our investment team. We respond within 5 working days.</p>
 
                   {/* Founder Info */}
                   <div>
-                    <h3 className="font-semibold text-brand-black text-sm uppercase tracking-wider mb-3">Founder Information</h3>
+                    <h3 className="font-semibold text-brand-black dark:text-white text-sm uppercase tracking-wider mb-3">Founder Information</h3>
                     <div className="grid md:grid-cols-2 gap-4">
                       <input type="text" placeholder="Full Name *" required className="input-field" value={formData.founderName} onChange={(e) => handleChange('founderName', e.target.value)} />
                       <input type="email" placeholder="Email *" required className="input-field" value={formData.email} onChange={(e) => handleChange('email', e.target.value)} />
@@ -171,7 +171,7 @@ export default function StartupApplyPage() {
 
                   {/* Startup Info */}
                   <div>
-                    <h3 className="font-semibold text-brand-black text-sm uppercase tracking-wider mb-3">Startup Information</h3>
+                    <h3 className="font-semibold text-brand-black dark:text-white text-sm uppercase tracking-wider mb-3">Startup Information</h3>
                     <div className="grid md:grid-cols-2 gap-4">
                       <input type="text" placeholder="Company Name *" required className="input-field" value={formData.companyName} onChange={(e) => handleChange('companyName', e.target.value)} />
                       <input type="text" placeholder="Founding Year *" required className="input-field" value={formData.foundingYear} onChange={(e) => handleChange('foundingYear', e.target.value)} />
@@ -197,7 +197,7 @@ export default function StartupApplyPage() {
 
                   {/* Traction */}
                   <div>
-                    <h3 className="font-semibold text-brand-black text-sm uppercase tracking-wider mb-3">Traction</h3>
+                    <h3 className="font-semibold text-brand-black dark:text-white text-sm uppercase tracking-wider mb-3">Traction</h3>
                     <div className="grid md:grid-cols-2 gap-4">
                       <input type="text" placeholder="Current MRR / ARR (if any)" className="input-field" value={formData.mrr} onChange={(e) => handleChange('mrr', e.target.value)} />
                       <input type="text" placeholder="Monthly Active Users (if any)" className="input-field" value={formData.mau} onChange={(e) => handleChange('mau', e.target.value)} />
@@ -207,7 +207,7 @@ export default function StartupApplyPage() {
 
                   {/* Funding Ask */}
                   <div>
-                    <h3 className="font-semibold text-brand-black text-sm uppercase tracking-wider mb-3">Funding Ask</h3>
+                    <h3 className="font-semibold text-brand-black dark:text-white text-sm uppercase tracking-wider mb-3">Funding Ask</h3>
                     <div className="grid md:grid-cols-2 gap-4">
                       <input type="text" placeholder="Amount Seeking (₹) *" required className="input-field" value={formData.amountSeeking} onChange={(e) => handleChange('amountSeeking', e.target.value)} />
                     </div>
@@ -216,7 +216,7 @@ export default function StartupApplyPage() {
 
                   {/* Pitch */}
                   <div>
-                    <h3 className="font-semibold text-brand-black text-sm uppercase tracking-wider mb-3">Your Pitch</h3>
+                    <h3 className="font-semibold text-brand-black dark:text-white text-sm uppercase tracking-wider mb-3">Your Pitch</h3>
                     <textarea placeholder="Tell us your story in 3 sentences — what problem are you solving and why now? *" required className="input-field resize-none" rows={4} maxLength={500} value={formData.pitch} onChange={(e) => handleChange('pitch', e.target.value)} />
                     <p className="text-xs text-brand-grey mt-1">{formData.pitch.length}/500 characters</p>
                   </div>
@@ -241,7 +241,7 @@ export default function StartupApplyPage() {
                   <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
                     <CheckCircle className="w-8 h-8 text-green-600" />
                   </div>
-                  <h3 className="text-xl font-bold text-brand-black mb-2">Application Submitted!</h3>
+                  <h3 className="text-xl font-bold text-brand-black dark:text-white mb-2">Application Submitted!</h3>
                   <p className="text-brand-grey text-sm mb-6">Thank you for applying. Our investment team will review your submission and respond within 5 working days.</p>
                   <button onClick={() => { setSubmitted(false); setFormData({ founderName: '', email: '', phone: '', linkedin: '', companyName: '', foundingYear: '', website: '', stage: '', sector: '', city: '', mrr: '', mau: '', metrics: '', amountSeeking: '', useOfFunds: '', pitch: '', privacy: false }) }} className="text-brand-red font-semibold text-sm hover:underline">
                     Submit Another Application
@@ -258,7 +258,7 @@ export default function StartupApplyPage() {
         <div className="container-max mx-auto max-w-3xl">
           <AnimatedSection className="text-center mb-12">
             <span className="text-brand-red font-semibold text-xs uppercase tracking-wider">What Happens Next</span>
-            <h2 className="section-title mt-2 text-brand-black">Our Process</h2>
+            <h2 className="section-title mt-2 text-brand-black dark:text-white">Our Process</h2>
           </AnimatedSection>
           <div className="space-y-6">
             {PROCESS.map((item, i) => (
@@ -270,7 +270,7 @@ export default function StartupApplyPage() {
                     </div>
                   </div>
                   <div>
-                    <h3 className="font-bold text-brand-black mb-1">{item.title}</h3>
+                    <h3 className="font-bold text-brand-black dark:text-white mb-1">{item.title}</h3>
                     <div className="flex items-center gap-1.5 mb-2">
                       <Clock className="w-3.5 h-3.5 text-brand-red" />
                       <span className="text-brand-red text-xs font-semibold">{item.timeline}</span>

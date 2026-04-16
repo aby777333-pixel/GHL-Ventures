@@ -178,7 +178,7 @@ function IrrCalculator() {
           <TrendingUp className="w-6 h-6 text-blue-600" />
         </div>
         <div>
-          <h3 className="font-bold text-brand-black text-lg">IRR Calculator</h3>
+          <h3 className="font-bold text-brand-black dark:text-white text-lg">IRR Calculator</h3>
           <p className="text-brand-grey text-xs">Internal Rate of Return (Newton-Raphson)</p>
         </div>
       </div>
@@ -198,7 +198,7 @@ function IrrCalculator() {
                 type="number"
                 value={f.amount}
                 onChange={e => updateAmount(i, e.target.value)}
-                className="w-full pl-7 pr-2 py-2 bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-lg text-brand-black text-sm font-mono focus:ring-1 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
+                className="w-full pl-7 pr-2 py-2 bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-lg text-brand-black dark:text-white text-sm font-mono focus:ring-1 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
                 placeholder="e.g. -1000000"
               />
             </div>
@@ -340,7 +340,7 @@ export default function FinancialIQPage() {
         <div className="container-max mx-auto">
           <AnimatedSection className="text-center mb-12">
             <span className="text-brand-red font-semibold text-xs uppercase tracking-wider">Learn Visually</span>
-            <h2 className="section-title text-brand-black mt-2">Investment Overview</h2>
+            <h2 className="section-title text-brand-black dark:text-white mt-2">Investment Overview</h2>
             <p className="section-subtitle mx-auto mt-4">
               An interactive overview of GHL India Ventures&apos; investment strategy, portfolio, and performance.
             </p>
@@ -363,7 +363,7 @@ export default function FinancialIQPage() {
         <div className="container-max mx-auto">
           <AnimatedSection className="text-center mb-12">
             <span className="text-brand-red font-semibold text-xs uppercase tracking-wider">Read &amp; Learn</span>
-            <h2 className="section-title text-brand-black mt-2">Educational Articles</h2>
+            <h2 className="section-title text-brand-black dark:text-white mt-2">Educational Articles</h2>
             <p className="section-subtitle mx-auto mt-4">
               Build your financial knowledge one article at a time.
             </p>
@@ -388,7 +388,7 @@ export default function FinancialIQPage() {
                     <GraduationCap className="w-4 h-4 text-brand-red" />
                     <span className="text-xs font-medium text-brand-red uppercase tracking-wider">{article.category}</span>
                   </div>
-                  <h3 className="font-bold text-lg text-brand-black mb-2 group-hover:text-brand-red transition-colors">{article.title}</h3>
+                  <h3 className="font-bold text-lg text-brand-black dark:text-white mb-2 group-hover:text-brand-red transition-colors">{article.title}</h3>
                   <p className="text-brand-grey text-sm mb-4 line-clamp-2">{article.excerpt}</p>
                   <div className="flex items-center justify-between text-xs text-brand-grey mt-auto pt-4 border-t border-gray-100">
                     <span className="flex items-center"><Calendar className="w-3 h-3 mr-1" />{new Date(article.date).toLocaleDateString('en-IN', { year: 'numeric', month: 'short', day: 'numeric' })}</span>
@@ -410,7 +410,7 @@ export default function FinancialIQPage() {
                       {article.category}
                     </span>
                   </div>
-                  <h3 className="font-bold text-lg text-brand-black mb-2 group-hover:text-brand-red transition-colors">
+                  <h3 className="font-bold text-lg text-brand-black dark:text-white mb-2 group-hover:text-brand-red transition-colors">
                     {article.title}
                   </h3>
                   <p className="text-brand-grey text-sm mb-4 line-clamp-2">{article.excerpt}</p>
@@ -444,7 +444,7 @@ export default function FinancialIQPage() {
         <div className="container-max mx-auto">
           <AnimatedSection className="text-center mb-12">
             <span className="text-brand-red font-semibold text-xs uppercase tracking-wider">Reference</span>
-            <h2 className="section-title text-brand-black mt-2">Financial Glossary</h2>
+            <h2 className="section-title text-brand-black dark:text-white mt-2">Financial Glossary</h2>
             <p className="section-subtitle mx-auto mt-4">
               Key terms every alternative investment investor should know.
             </p>
@@ -510,7 +510,7 @@ export default function FinancialIQPage() {
                           {item.term.slice(0, 3)}
                         </span>
                         <div>
-                          <h4 className="font-bold text-brand-black text-lg">{item.term}</h4>
+                          <h4 className="font-bold text-brand-black dark:text-white text-lg">{item.term}</h4>
                           <p className="text-brand-grey text-sm mt-1 leading-relaxed">{item.definition}</p>
                         </div>
                       </div>
@@ -530,7 +530,7 @@ export default function FinancialIQPage() {
         <div className="container-max mx-auto">
           <AnimatedSection className="text-center mb-12">
             <span className="text-brand-red font-semibold text-xs uppercase tracking-wider">Tools</span>
-            <h2 className="section-title text-brand-black mt-2">Investment Calculators</h2>
+            <h2 className="section-title text-brand-black dark:text-white mt-2">Investment Calculators</h2>
             <p className="section-subtitle mx-auto mt-4">
               Run quick calculations to visualize the power of disciplined investing.
             </p>
@@ -545,7 +545,7 @@ export default function FinancialIQPage() {
                     <Calculator className="w-6 h-6 text-emerald-600" />
                   </div>
                   <div>
-                    <h3 className="font-bold text-brand-black text-lg">SIP Calculator</h3>
+                    <h3 className="font-bold text-brand-black dark:text-white text-lg">SIP Calculator</h3>
                     <p className="text-brand-grey text-xs">Systematic Investment Plan returns</p>
                   </div>
                 </div>
@@ -555,7 +555,7 @@ export default function FinancialIQPage() {
                   <div>
                     <div className="flex justify-between text-sm mb-1.5">
                       <span className="text-brand-grey font-medium">Monthly Investment</span>
-                      <span className="font-bold text-brand-black">
+                      <span className="font-bold text-brand-black dark:text-white">
                         {new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(sipMonthly)}
                       </span>
                     </div>
@@ -578,7 +578,7 @@ export default function FinancialIQPage() {
                   <div>
                     <div className="flex justify-between text-sm mb-1.5">
                       <span className="text-brand-grey font-medium">Investment Period</span>
-                      <span className="font-bold text-brand-black">{sipYears} years</span>
+                      <span className="font-bold text-brand-black dark:text-white">{sipYears} years</span>
                     </div>
                     <input
                       type="range"
@@ -599,7 +599,7 @@ export default function FinancialIQPage() {
                   <div>
                     <div className="flex justify-between text-sm mb-1.5">
                       <span className="text-brand-grey font-medium">Expected Annual Return</span>
-                      <span className="font-bold text-brand-black">{sipReturn}%</span>
+                      <span className="font-bold text-brand-black dark:text-white">{sipReturn}%</span>
                     </div>
                     <input
                       type="range"
@@ -621,7 +621,7 @@ export default function FinancialIQPage() {
                     <div className="grid grid-cols-3 gap-4 text-center">
                       <div>
                         <p className="text-xs text-brand-grey mb-1">Total Invested</p>
-                        <p className="font-bold text-brand-black text-sm">
+                        <p className="font-bold text-brand-black dark:text-white text-sm">
                           {new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(sipTotalInvested)}
                         </p>
                       </div>
@@ -660,7 +660,7 @@ export default function FinancialIQPage() {
         <div className="container-max mx-auto">
           <AnimatedSection className="text-center mb-12">
             <span className="text-brand-red font-semibold text-xs uppercase tracking-wider">Resources</span>
-            <h2 className="section-title text-brand-black mt-2">Downloadable Guides</h2>
+            <h2 className="section-title text-brand-black dark:text-white mt-2">Downloadable Guides</h2>
             <p className="section-subtitle mx-auto mt-4">
               In-depth guides to accelerate your investment knowledge.
             </p>
@@ -678,7 +678,7 @@ export default function FinancialIQPage() {
                     <div className="w-14 h-14 bg-brand-red/10 rounded-xl flex items-center justify-center mx-auto mb-4 group-hover:bg-brand-red transition-all icon-ring-hover">
                       <guide.icon className="w-7 h-7 text-brand-red group-hover:text-white transition-colors" />
                     </div>
-                    <h3 className="font-bold text-brand-black mb-2 group-hover:text-brand-red transition-colors">
+                    <h3 className="font-bold text-brand-black dark:text-white mb-2 group-hover:text-brand-red transition-colors">
                       {guide.title}
                     </h3>
                     <p className="text-brand-grey text-sm mb-4">{guide.desc}</p>

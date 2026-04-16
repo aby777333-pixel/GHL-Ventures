@@ -311,7 +311,7 @@ export default function BlogPage() {
           {filtered.length === 0 ? (
             <div className="text-center py-20">
               <BookOpen className="w-16 h-16 text-brand-grey/40 mx-auto mb-4" />
-              <h3 className="text-xl font-bold text-brand-black mb-2">No articles found</h3>
+              <h3 className="text-xl font-bold text-brand-black dark:text-white mb-2">No articles found</h3>
               <p className="text-brand-grey">
                 Try adjusting your search or filter criteria.
               </p>
@@ -343,7 +343,7 @@ export default function BlogPage() {
                       </span>
 
                       {/* Title (max 2 lines) */}
-                      <h3 className="font-bold text-lg text-brand-black mb-2 group-hover:text-brand-red transition-colors line-clamp-2 leading-snug">
+                      <h3 className="font-bold text-lg text-brand-black dark:text-white mb-2 group-hover:text-brand-red transition-colors line-clamp-2 leading-snug">
                         {post.title}
                       </h3>
 

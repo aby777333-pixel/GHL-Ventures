@@ -179,7 +179,7 @@ export default function PortfolioPage() {
 
                     {/* Highlights */}
                     <div className="lg:col-span-2">
-                      <h4 className="text-sm font-bold text-brand-black uppercase tracking-wider mb-4">Key Highlights</h4>
+                      <h4 className="text-sm font-bold text-brand-black dark:text-white uppercase tracking-wider mb-4">Key Highlights</h4>
                       <ul className="space-y-3">
                         {project.highlights.map((h, hi) => (
                           <li key={hi} className="flex items-start gap-3">
@@ -204,7 +204,7 @@ export default function PortfolioPage() {
         <div className="container-max mx-auto">
           <AnimatedSection className="text-center mb-10">
             <span className="text-brand-red font-semibold text-xs uppercase tracking-wider">Our Approach</span>
-            <h2 className="section-title text-brand-black mt-2">Why These Acquisitions</h2>
+            <h2 className="section-title text-brand-black dark:text-white mt-2">Why These Acquisitions</h2>
             <p className="section-subtitle mx-auto mt-4">
               Every acquisition reflects strategic selection, inherent growth potential, and synergy with
               GHL&apos;s core investment focus.
@@ -243,7 +243,7 @@ export default function PortfolioPage() {
                   <div className={`w-16 h-16 bg-gradient-to-br ${item.gradient} rounded-2xl flex items-center justify-center mx-auto mb-5 group-hover:scale-110 transition-transform icon-ring-hover`}>
                     <item.icon className="w-8 h-8 text-brand-red" />
                   </div>
-                  <h3 className="font-bold text-lg text-brand-black mb-3">{item.title}</h3>
+                  <h3 className="font-bold text-lg text-brand-black dark:text-white mb-3">{item.title}</h3>
                   <p className="text-brand-grey text-sm leading-relaxed">{item.desc}</p>
                 </div>
               </AnimatedSection>

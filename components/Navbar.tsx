@@ -223,7 +223,7 @@ export default function Navbar() {
 
                         {/* Dropdown panel */}
                         <div
-                          className={`absolute top-full left-1/2 -translate-x-1/2 mt-1 transition-all duration-200 ${
+                          className={`absolute top-full left-0 mt-1 transition-all duration-200 ${
                             dropdownOpen
                               ? 'opacity-100 translate-y-0 pointer-events-auto'
                               : 'opacity-0 -translate-y-2 pointer-events-none'

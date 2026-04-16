@@ -338,7 +338,7 @@ export default function CareersPage() {
         <div className="container-max mx-auto">
           <AnimatedSection className="text-center mb-12">
             <span className="text-brand-red font-semibold text-xs uppercase tracking-wider">Culture & Benefits</span>
-            <h2 className="section-title mt-2 text-brand-black">Why Work With Us</h2>
+            <h2 className="section-title mt-2 text-brand-black dark:text-white">Why Work With Us</h2>
           </AnimatedSection>
           <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
             {BENEFITS.map((item, i) => (
@@ -347,7 +347,7 @@ export default function CareersPage() {
                   <div className="w-12 h-12 bg-brand-red/10 rounded-xl flex items-center justify-center mb-4">
                     <item.icon className="w-6 h-6 text-brand-red" />
                   </div>
-                  <h3 className="font-bold text-brand-black mb-2 text-sm">{item.title}</h3>
+                  <h3 className="font-bold text-brand-black dark:text-white mb-2 text-sm">{item.title}</h3>
                   <p className="text-brand-grey text-xs leading-relaxed">{item.desc}</p>
                 </div>
               </AnimatedSection>
@@ -361,13 +361,13 @@ export default function CareersPage() {
         <div className="container-max mx-auto max-w-3xl">
           <AnimatedSection className="text-center mb-10">
             <span className="text-brand-red font-semibold text-xs uppercase tracking-wider">Current Openings</span>
-            <h2 className="section-title mt-2 text-brand-black">Open Positions</h2>
+            <h2 className="section-title mt-2 text-brand-black dark:text-white">Open Positions</h2>
             <p className="text-brand-grey text-sm mt-3 max-w-xl mx-auto">{POSITIONS.length} open roles across investment, operations, and technology teams</p>
           </AnimatedSection>
 
           {/* Full-Time Roles */}
           <AnimatedSection className="mb-3">
-            <h3 className="text-sm font-bold text-brand-black uppercase tracking-wider flex items-center gap-2 mb-4">
+            <h3 className="text-sm font-bold text-brand-black dark:text-white uppercase tracking-wider flex items-center gap-2 mb-4">
               <Briefcase className="w-4 h-4 text-brand-red" /> Full-Time Positions
               <span className="text-xs font-normal text-brand-grey">({fullTimeRoles.length})</span>
             </h3>
@@ -383,7 +383,7 @@ export default function CareersPage() {
                     className="w-full flex items-center justify-between p-5 text-left hover:bg-gray-50 dark:hover:bg-white/5 transition-colors"
                   >
                     <div>
-                      <h3 className="font-bold text-brand-black text-base">{role.title}</h3>
+                      <h3 className="font-bold text-brand-black dark:text-white text-base">{role.title}</h3>
                       <div className="flex flex-wrap items-center gap-2 mt-1.5">
                         <span className="text-xs bg-brand-red/10 text-brand-red px-2 py-0.5 rounded-full font-medium">{role.department}</span>
                         <span className="text-xs bg-gray-100 text-brand-grey px-2 py-0.5 rounded-full">{role.location}</span>
@@ -396,9 +396,9 @@ export default function CareersPage() {
                     <div className="px-5 pb-5">
                       <div className="flex items-center gap-2 text-xs text-brand-grey mb-4 bg-gray-50 px-3 py-2 rounded-lg">
                         <Clock className="w-3.5 h-3.5 text-brand-red shrink-0" />
-                        <span><strong className="text-brand-black">Experience:</strong> {role.experience}</span>
+                        <span><strong className="text-brand-black dark:text-white">Experience:</strong> {role.experience}</span>
                       </div>
-                      <h4 className="font-semibold text-brand-black text-sm mb-2">Key Responsibilities</h4>
+                      <h4 className="font-semibold text-brand-black dark:text-white text-sm mb-2">Key Responsibilities</h4>
                       <ul className="space-y-1.5 mb-4">
                         {role.responsibilities.map((resp, j) => (
                           <li key={j} className="text-brand-grey text-sm flex items-start gap-2">
@@ -407,7 +407,7 @@ export default function CareersPage() {
                           </li>
                         ))}
                       </ul>
-                      <h4 className="font-semibold text-brand-black text-sm mb-2">Qualifications</h4>
+                      <h4 className="font-semibold text-brand-black dark:text-white text-sm mb-2">Qualifications</h4>
                       <ul className="space-y-1.5 mb-5">
                         {role.qualifications.map((qual, j) => (
                           <li key={j} className="text-brand-grey text-sm flex items-start gap-2">
@@ -431,7 +431,7 @@ export default function CareersPage() {
 
           {/* Contract Roles */}
           <AnimatedSection className="mb-3">
-            <h3 className="text-sm font-bold text-brand-black uppercase tracking-wider flex items-center gap-2 mb-4">
+            <h3 className="text-sm font-bold text-brand-black dark:text-white uppercase tracking-wider flex items-center gap-2 mb-4">
               <Briefcase className="w-4 h-4 text-blue-600" /> Contract / Part-Time
               <span className="text-xs font-normal text-brand-grey">({contractRoles.length})</span>
             </h3>
@@ -447,7 +447,7 @@ export default function CareersPage() {
                     className="w-full flex items-center justify-between p-5 text-left hover:bg-gray-50 dark:hover:bg-white/5 transition-colors"
                   >
                     <div>
-                      <h3 className="font-bold text-brand-black text-base">{role.title}</h3>
+                      <h3 className="font-bold text-brand-black dark:text-white text-base">{role.title}</h3>
                       <div className="flex flex-wrap items-center gap-2 mt-1.5">
                         <span className="text-xs bg-brand-red/10 text-brand-red px-2 py-0.5 rounded-full font-medium">{role.department}</span>
                         <span className="text-xs bg-gray-100 text-brand-grey px-2 py-0.5 rounded-full">{role.location}</span>
@@ -460,9 +460,9 @@ export default function CareersPage() {
                     <div className="px-5 pb-5">
                       <div className="flex items-center gap-2 text-xs text-brand-grey mb-4 bg-gray-50 px-3 py-2 rounded-lg">
                         <Clock className="w-3.5 h-3.5 text-blue-600 shrink-0" />
-                        <span><strong className="text-brand-black">Experience:</strong> {role.experience}</span>
+                        <span><strong className="text-brand-black dark:text-white">Experience:</strong> {role.experience}</span>
                       </div>
-                      <h4 className="font-semibold text-brand-black text-sm mb-2">Key Responsibilities</h4>
+                      <h4 className="font-semibold text-brand-black dark:text-white text-sm mb-2">Key Responsibilities</h4>
                       <ul className="space-y-1.5 mb-4">
                         {role.responsibilities.map((resp, j) => (
                           <li key={j} className="text-brand-grey text-sm flex items-start gap-2">
@@ -471,7 +471,7 @@ export default function CareersPage() {
                           </li>
                         ))}
                       </ul>
-                      <h4 className="font-semibold text-brand-black text-sm mb-2">Qualifications</h4>
+                      <h4 className="font-semibold text-brand-black dark:text-white text-sm mb-2">Qualifications</h4>
                       <ul className="space-y-1.5 mb-5">
                         {role.qualifications.map((qual, j) => (
                           <li key={j} className="text-brand-grey text-sm flex items-start gap-2">
@@ -495,7 +495,7 @@ export default function CareersPage() {
 
           {/* Internship Roles */}
           <AnimatedSection className="mb-3">
-            <h3 className="text-sm font-bold text-brand-black uppercase tracking-wider flex items-center gap-2 mb-4">
+            <h3 className="text-sm font-bold text-brand-black dark:text-white uppercase tracking-wider flex items-center gap-2 mb-4">
               <GraduationCap className="w-4 h-4 text-purple-600" /> Internship & Trainee Programmes
               <span className="text-xs font-normal text-brand-grey">({internRoles.length})</span>
             </h3>
@@ -511,7 +511,7 @@ export default function CareersPage() {
                     className="w-full flex items-center justify-between p-5 text-left hover:bg-gray-50 dark:hover:bg-white/5 transition-colors"
                   >
                     <div>
-                      <h3 className="font-bold text-brand-black text-base">{role.title}</h3>
+                      <h3 className="font-bold text-brand-black dark:text-white text-base">{role.title}</h3>
                       <div className="flex flex-wrap items-center gap-2 mt-1.5">
                         <span className="text-xs bg-brand-red/10 text-brand-red px-2 py-0.5 rounded-full font-medium">{role.department}</span>
                         <span className="text-xs bg-gray-100 text-brand-grey px-2 py-0.5 rounded-full">{role.location}</span>
@@ -524,9 +524,9 @@ export default function CareersPage() {
                     <div className="px-5 pb-5">
                       <div className="flex items-center gap-2 text-xs text-brand-grey mb-4 bg-purple-50 px-3 py-2 rounded-lg">
                         <GraduationCap className="w-3.5 h-3.5 text-purple-600 shrink-0" />
-                        <span><strong className="text-brand-black">Ideal Candidate:</strong> {role.experience}</span>
+                        <span><strong className="text-brand-black dark:text-white">Ideal Candidate:</strong> {role.experience}</span>
                       </div>
-                      <h4 className="font-semibold text-brand-black text-sm mb-2">What You&apos;ll Do</h4>
+                      <h4 className="font-semibold text-brand-black dark:text-white text-sm mb-2">What You&apos;ll Do</h4>
                       <ul className="space-y-1.5 mb-4">
                         {role.responsibilities.map((resp, j) => (
                           <li key={j} className="text-brand-grey text-sm flex items-start gap-2">
@@ -535,7 +535,7 @@ export default function CareersPage() {
                           </li>
                         ))}
                       </ul>
-                      <h4 className="font-semibold text-brand-black text-sm mb-2">What We&apos;re Looking For</h4>
+                      <h4 className="font-semibold text-brand-black dark:text-white text-sm mb-2">What We&apos;re Looking For</h4>
                       <ul className="space-y-1.5 mb-5">
                         {role.qualifications.map((qual, j) => (
                           <li key={j} className="text-brand-grey text-sm flex items-start gap-2">
@@ -566,7 +566,7 @@ export default function CareersPage() {
             <div className="card glow-card-red">
               {!submitted ? (
                 <form onSubmit={handleSubmit} className="space-y-6">
-                  <h2 className="text-xl font-bold text-brand-black mb-2">Apply Now</h2>
+                  <h2 className="text-xl font-bold text-brand-black dark:text-white mb-2">Apply Now</h2>
                   <p className="text-brand-grey text-sm mb-6">Fill out the form below and our HR team will get back to you within 5 working days.</p>
 
                   <div className="grid md:grid-cols-2 gap-4">
@@ -612,11 +612,11 @@ export default function CareersPage() {
 
                   {/* Resume Upload */}
                   <div>
-                    <label className="block text-xs font-medium text-brand-black mb-1.5">Upload Resume / CV <span className="text-brand-red">*</span></label>
+                    <label className="block text-xs font-medium text-brand-black dark:text-white mb-1.5">Upload Resume / CV <span className="text-brand-red">*</span></label>
                     <label className="flex items-center justify-center gap-3 px-4 py-4 border-2 border-dashed border-gray-300 rounded-xl cursor-pointer hover:border-brand-red hover:bg-brand-red/5 transition-all duration-200 group">
                       <Upload className="w-5 h-5 text-brand-grey group-hover:text-brand-red transition-colors" />
                       <div className="text-center">
-                        <span className="text-sm font-medium text-brand-black group-hover:text-brand-red transition-colors">
+                        <span className="text-sm font-medium text-brand-black dark:text-white group-hover:text-brand-red transition-colors">
                           {resumeFile ? resumeFile.name : 'Click to upload your resume'}
                         </span>
                         <p className="text-xs text-brand-grey mt-0.5">PDF, DOC, DOCX — Max 5 MB</p>
@@ -669,7 +669,7 @@ export default function CareersPage() {
                   <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
                     <CheckCircle className="w-8 h-8 text-green-600" />
                   </div>
-                  <h3 className="text-xl font-bold text-brand-black mb-2">Application Submitted!</h3>
+                  <h3 className="text-xl font-bold text-brand-black dark:text-white mb-2">Application Submitted!</h3>
                   <p className="text-brand-grey text-sm mb-6">Thank you for your interest in joining GHL India Ventures. Our HR team will review your application and reach out within 5 working days.</p>
                   <button onClick={() => { setSubmitted(false); setResumeFile(null); setFormData({ name: '', email: '', phone: '', position: '', experience: '', currentCompany: '', currentCTC: '', linkedin: '', portfolio: '', coverLetter: '', privacy: false }) }} className="text-brand-red font-semibold text-sm hover:underline">
                     Submit Another Application

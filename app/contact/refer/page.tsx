@@ -92,7 +92,7 @@ export default function ReferPage() {
         <div className="container-max mx-auto">
           <AnimatedSection className="text-center mb-12">
             <span className="text-brand-red font-semibold text-xs uppercase tracking-wider">Simple Process</span>
-            <h2 className="section-title mt-2 text-brand-black">How It Works</h2>
+            <h2 className="section-title mt-2 text-brand-black dark:text-white">How It Works</h2>
           </AnimatedSection>
           <div className="grid md:grid-cols-3 gap-8">
             {STEPS.map((step, i) => (
@@ -101,7 +101,7 @@ export default function ReferPage() {
                   <div className="w-14 h-14 bg-brand-red/10 rounded-2xl flex items-center justify-center mx-auto mb-4">
                     <span className="text-brand-red font-bold text-lg">{step.step}</span>
                   </div>
-                  <h3 className="font-bold text-brand-black text-lg mb-2">{step.title}</h3>
+                  <h3 className="font-bold text-brand-black dark:text-white text-lg mb-2">{step.title}</h3>
                   <p className="text-brand-grey text-sm leading-relaxed">{step.desc}</p>
                 </div>
               </AnimatedSection>
@@ -117,12 +117,12 @@ export default function ReferPage() {
             <div className="card glow-card-red">
               {!submitted ? (
                 <form onSubmit={handleSubmit} className="space-y-6">
-                  <h2 className="text-xl font-bold text-brand-black mb-2">Referral Form</h2>
+                  <h2 className="text-xl font-bold text-brand-black dark:text-white mb-2">Referral Form</h2>
                   <p className="text-brand-grey text-sm mb-6">All information is kept strictly confidential and used only to reach out to your referral.</p>
 
                   {/* Your Details */}
                   <div>
-                    <h3 className="font-semibold text-brand-black text-sm uppercase tracking-wider mb-3">Your Details</h3>
+                    <h3 className="font-semibold text-brand-black dark:text-white text-sm uppercase tracking-wider mb-3">Your Details</h3>
                     <div className="grid md:grid-cols-2 gap-4">
                       <input type="text" placeholder="Your Full Name *" required className="input-field" value={formData.yourName} onChange={(e) => handleChange('yourName', e.target.value)} />
                       <input type="email" placeholder="Your Email *" required className="input-field" value={formData.yourEmail} onChange={(e) => handleChange('yourEmail', e.target.value)} />
@@ -143,7 +143,7 @@ export default function ReferPage() {
 
                   {/* Investee Details */}
                   <div>
-                    <h3 className="font-semibold text-brand-black text-sm uppercase tracking-wider mb-3">Investee Details</h3>
+                    <h3 className="font-semibold text-brand-black dark:text-white text-sm uppercase tracking-wider mb-3">Investee Details</h3>
                     <div className="grid md:grid-cols-2 gap-4">
                       <input type="text" placeholder="Their Full Name *" required className="input-field" value={formData.theirName} onChange={(e) => handleChange('theirName', e.target.value)} />
                       <input type="email" placeholder="Their Email (Optional)" className="input-field" value={formData.theirEmail} onChange={(e) => handleChange('theirEmail', e.target.value)} />
@@ -191,7 +191,7 @@ export default function ReferPage() {
                   <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
                     <CheckCircle className="w-8 h-8 text-green-600" />
                   </div>
-                  <h3 className="text-xl font-bold text-brand-black mb-2">Referral Submitted!</h3>
+                  <h3 className="text-xl font-bold text-brand-black dark:text-white mb-2">Referral Submitted!</h3>
                   <p className="text-brand-grey text-sm mb-6">Thank you for your referral. Our team will reach out to your contact within 48 business hours.</p>
                   <button onClick={() => { setSubmitted(false); setFormData({ yourName: '', yourEmail: '', yourPhone: '', relationship: '', theirName: '', theirEmail: '', theirPhone: '', theirCity: '', investableSurplus: '', message: '', privacy: false }) }} className="text-brand-red font-semibold text-sm hover:underline">
                     Submit Another Referral
@@ -208,7 +208,7 @@ export default function ReferPage() {
         <div className="container-max mx-auto">
           <AnimatedSection className="text-center mb-12">
             <span className="text-brand-red font-semibold text-xs uppercase tracking-wider">Benefits</span>
-            <h2 className="section-title mt-2 text-brand-black">Why Refer?</h2>
+            <h2 className="section-title mt-2 text-brand-black dark:text-white">Why Refer?</h2>
           </AnimatedSection>
           <div className="grid md:grid-cols-3 gap-6">
             {BENEFITS.map((item, i) => (
@@ -217,7 +217,7 @@ export default function ReferPage() {
                   <div className="w-12 h-12 bg-brand-red/10 rounded-xl flex items-center justify-center mb-4">
                     <item.icon className="w-6 h-6 text-brand-red" />
                   </div>
-                  <h3 className="font-bold text-brand-black mb-2">{item.title}</h3>
+                  <h3 className="font-bold text-brand-black dark:text-white mb-2">{item.title}</h3>
                   <p className="text-brand-grey text-sm leading-relaxed">{item.desc}</p>
                 </div>
               </AnimatedSection>

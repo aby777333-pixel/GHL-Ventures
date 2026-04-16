@@ -118,7 +118,7 @@ function OurStoryTimeline() {
       <div className="container-max mx-auto">
         <AnimatedSection className="text-center mb-12">
           <span className="text-brand-red font-semibold text-xs uppercase tracking-wider">Our Story</span>
-          <h2 className="section-title mt-2 text-brand-black">Born From Conviction</h2>
+          <h2 className="section-title mt-2 text-brand-black dark:text-white">Born From Conviction</h2>
           <p className="section-subtitle mx-auto mt-4 max-w-3xl">
             GHL India Ventures was founded from a deep conviction that India&apos;s stressed real estate market
             and burgeoning startup ecosystem represent generational investment opportunities. With roots in Chennai
@@ -165,7 +165,7 @@ function OurStoryTimeline() {
           <div className="max-w-2xl mx-auto">
             <div className="card text-center glow-card-red">
               <span className="text-brand-red font-bold text-3xl">{MILESTONES[activeYear].year}</span>
-              <h3 className="font-bold text-xl text-brand-black mt-3 mb-3">{MILESTONES[activeYear].title}</h3>
+              <h3 className="font-bold text-xl text-brand-black dark:text-white mt-3 mb-3">{MILESTONES[activeYear].title}</h3>
               <p className="text-brand-grey leading-relaxed">{MILESTONES[activeYear].description}</p>
             </div>
           </div>
@@ -227,7 +227,7 @@ function MissionVision() {
       <div className="container-max mx-auto">
         <AnimatedSection className="text-center mb-10">
           <span className="text-brand-red font-semibold text-xs uppercase tracking-wider">Purpose</span>
-          <h2 className="section-title mt-2 text-brand-black">Mission & Vision</h2>
+          <h2 className="section-title mt-2 text-brand-black dark:text-white">Mission & Vision</h2>
         </AnimatedSection>
 
         <div className="grid md:grid-cols-2 gap-10">
@@ -236,7 +236,7 @@ function MissionVision() {
               <div className="w-16 h-16 bg-brand-red/10 rounded-2xl flex items-center justify-center mb-6 group-hover:bg-brand-red transition-all icon-ring-hover">
                 <Target className="w-8 h-8 text-brand-red group-hover:text-white transition-colors" />
               </div>
-              <h3 className="text-xl font-bold text-brand-black mb-3">Our Mission</h3>
+              <h3 className="text-xl font-bold text-brand-black dark:text-white mb-3">Our Mission</h3>
               <p className="text-brand-grey leading-relaxed">
                 To identify and invest in high-growth Indian enterprises across two compelling verticals:
                 stressed real estate assets ripe for resolution and early-stage startups poised for
@@ -251,7 +251,7 @@ function MissionVision() {
               <div className="w-16 h-16 bg-brand-red/10 rounded-2xl flex items-center justify-center mb-6 group-hover:bg-brand-red transition-all icon-ring-hover">
                 <Eye className="w-8 h-8 text-brand-red group-hover:text-white transition-colors" />
               </div>
-              <h3 className="text-xl font-bold text-brand-black mb-3">Our Vision</h3>
+              <h3 className="text-xl font-bold text-brand-black dark:text-white mb-3">Our Vision</h3>
               <p className="text-brand-grey leading-relaxed">
                 To be India&apos;s most trusted alternative investment partner, recognised for
                 superior risk-adjusted returns, ethical governance, and transformative impact.
@@ -273,7 +273,7 @@ function LeadershipTeam() {
       <div className="container-max mx-auto">
         <AnimatedSection className="text-center mb-10">
           <span className="text-brand-red font-semibold text-xs uppercase tracking-wider">Leadership</span>
-          <h2 className="section-title mt-2 text-brand-black">Our Team</h2>
+          <h2 className="section-title mt-2 text-brand-black dark:text-white">Our Team</h2>
           <p className="section-subtitle mx-auto mt-4">
             Experienced professionals united by a shared passion for investing in India&apos;s future.
           </p>
@@ -293,7 +293,7 @@ function LeadershipTeam() {
                     className="w-full h-full object-cover transition-transform duration-300 ease-in-out group-hover:scale-[1.03]"
                   />
                 </div>
-                <h3 className="font-bold text-lg text-brand-black">{member.name}</h3>
+                <h3 className="font-bold text-lg text-brand-black dark:text-white">{member.name}</h3>
                 <p className="text-brand-red text-sm font-medium mb-3">{member.role}</p>
                 <p className="text-brand-grey text-sm leading-relaxed flex-grow italic line-clamp-3">
                   &ldquo;{member.quote}&rdquo;
@@ -322,7 +322,7 @@ function OurValues() {
       <div className="container-max mx-auto">
         <AnimatedSection className="text-center mb-10">
           <span className="text-brand-red font-semibold text-xs uppercase tracking-wider">Principles</span>
-          <h2 className="section-title mt-2 text-brand-black">Our Values</h2>
+          <h2 className="section-title mt-2 text-brand-black dark:text-white">Our Values</h2>
         </AnimatedSection>
 
         <div className="grid sm:grid-cols-2 lg:grid-cols-5 gap-6">
@@ -332,7 +332,7 @@ function OurValues() {
                 <div className="w-14 h-14 bg-brand-red/10 rounded-2xl flex items-center justify-center mx-auto mb-5 group-hover:bg-brand-red transition-all icon-ring-hover">
                   <v.icon className="w-7 h-7 text-brand-red group-hover:text-white transition-colors" />
                 </div>
-                <h3 className="font-bold text-brand-black mb-2">{v.title}</h3>
+                <h3 className="font-bold text-brand-black dark:text-white mb-2">{v.title}</h3>
                 <p className="text-brand-grey text-sm leading-relaxed">{v.desc}</p>
               </div>
             </AnimatedSection>
@@ -352,7 +352,7 @@ function AdvisoryBoardSection() {
       <div className="container-max mx-auto">
         <AnimatedSection className="text-center mb-10">
           <span className="text-brand-red font-semibold text-xs uppercase tracking-wider">Advisors</span>
-          <h2 className="section-title mt-2 text-brand-black">Advisory Board</h2>
+          <h2 className="section-title mt-2 text-brand-black dark:text-white">Advisory Board</h2>
           <p className="section-subtitle mx-auto mt-4">
             Distinguished professionals who provide strategic counsel to our investment team.
           </p>
@@ -367,7 +367,7 @@ function AdvisoryBoardSection() {
                   <div className="w-24 h-24 rounded-full mx-auto mb-5 overflow-hidden">
                     <PlaceholderImage theme="team" aspectRatio="w-24 h-24" className="rounded-full" />
                   </div>
-                  <h3 className="font-bold text-lg text-brand-black">{member.name}</h3>
+                  <h3 className="font-bold text-lg text-brand-black dark:text-white">{member.name}</h3>
                   <p className="text-brand-red text-sm font-medium mb-3">{member.role}</p>
                   <p className={`text-brand-grey text-sm leading-relaxed flex-grow ${
                     isExpanded ? '' : 'line-clamp-3'
@@ -411,7 +411,7 @@ function RegulatoryCompliance() {
         <div className="grid lg:grid-cols-2 gap-10 items-center">
           <AnimatedSection direction="left">
             <span className="text-brand-red font-semibold text-xs uppercase tracking-wider">Governance</span>
-            <h2 className="section-title mt-2 text-brand-black">Regulatory Compliance</h2>
+            <h2 className="section-title mt-2 text-brand-black dark:text-white">Regulatory Compliance</h2>
             <p className="text-brand-grey text-base mt-3 leading-relaxed">
               As a SEBI-registered entity, we adhere to the highest standards of corporate governance,
               transparency, and regulatory compliance in all our operations. Our compliance framework
@@ -429,7 +429,7 @@ function RegulatoryCompliance() {
               ].map((item) => (
                 <div key={item} className="flex items-center space-x-3">
                   <CheckCircle className="w-5 h-5 text-brand-red shrink-0" />
-                  <span className="text-brand-black text-sm font-medium">{item}</span>
+                  <span className="text-brand-black dark:text-white text-sm font-medium">{item}</span>
                 </div>
               ))}
             </div>
@@ -439,24 +439,24 @@ function RegulatoryCompliance() {
             <div className="bg-brand-offwhite rounded-3xl p-8">
               <div className="text-center mb-8">
                 <Shield className="w-16 h-16 text-brand-red mx-auto mb-4" />
-                <h3 className="text-xl font-bold text-brand-black">SEBI Registration</h3>
+                <h3 className="text-xl font-bold text-brand-black dark:text-white">SEBI Registration</h3>
               </div>
               <div className="bg-white rounded-xl p-6 space-y-4">
                 <div className="flex justify-between items-center border-b border-gray-100 pb-3">
                   <span className="text-brand-grey text-sm">Registration No.</span>
-                  <a href={BRAND.sebiUrl} target="_blank" rel="noopener noreferrer" className="font-bold text-brand-black hover:text-brand-red transition-colors">{BRAND.sebi}</a>
+                  <a href={BRAND.sebiUrl} target="_blank" rel="noopener noreferrer" className="font-bold text-brand-black dark:text-white hover:text-brand-red transition-colors">{BRAND.sebi}</a>
                 </div>
                 <div className="flex justify-between items-center border-b border-gray-100 pb-3">
                   <span className="text-brand-grey text-sm">Category</span>
-                  <span className="font-bold text-brand-black">Category II AIF</span>
+                  <span className="font-bold text-brand-black dark:text-white">Category II AIF</span>
                 </div>
                 <div className="flex justify-between items-center border-b border-gray-100 pb-3">
                   <span className="text-brand-grey text-sm">Regulation</span>
-                  <span className="font-bold text-brand-black">SEBI (AIF) Regulations, 2012</span>
+                  <span className="font-bold text-brand-black dark:text-white">SEBI (AIF) Regulations, 2012</span>
                 </div>
                 <div className="flex justify-between items-center border-b border-gray-100 pb-3">
                   <span className="text-brand-grey text-sm">Regulator</span>
-                  <span className="font-bold text-brand-black">SEBI</span>
+                  <span className="font-bold text-brand-black dark:text-white">SEBI</span>
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-brand-grey text-sm">Status</span>
@@ -469,7 +469,7 @@ function RegulatoryCompliance() {
               {/* Investor protection note */}
               <div className="mt-6 bg-brand-red/5 rounded-xl p-4 border border-brand-red/10">
                 <p className="text-xs text-brand-grey leading-relaxed">
-                  <strong className="text-brand-black">Investor Protection:</strong> All investments are
+                  <strong className="text-brand-black dark:text-white">Investor Protection:</strong> All investments are
                   held by an independent custodian. Fund operations are audited annually by a
                   SEBI-empanelled auditor. Investors receive quarterly NAV statements and annual reports.
                 </p>
@@ -522,7 +522,7 @@ function OfficeGallery() {
       <div className="container-max mx-auto">
         <AnimatedSection className="text-center mb-10">
           <span className="text-brand-red font-semibold text-xs uppercase tracking-wider">Our Space</span>
-          <h2 className="section-title mt-2 text-brand-black">Our Office</h2>
+          <h2 className="section-title mt-2 text-brand-black dark:text-white">Our Office</h2>
           <div className="flex items-center justify-center gap-2 mt-2 text-brand-grey text-sm">
             <MapPin className="w-4 h-4 text-brand-red" />
             <span>{BRAND.address}</span>
@@ -576,7 +576,7 @@ function OfficeGallery() {
             {/* Description + Thumbnail Grid */}
             <div className="lg:col-span-2 space-y-6">
               <div>
-                <h3 className="text-xl font-bold text-brand-black mb-3">{OFFICE_TABS[activeTab].title}</h3>
+                <h3 className="text-xl font-bold text-brand-black dark:text-white mb-3">{OFFICE_TABS[activeTab].title}</h3>
                 <p className="text-brand-grey text-sm leading-relaxed">{OFFICE_TABS[activeTab].description}</p>
               </div>
 
@@ -612,7 +612,7 @@ function OfficeGallery() {
                   <Building2 className="w-5 h-5 text-brand-red" />
                 </div>
                 <div className="flex-1">
-                  <p className="text-xs font-bold text-brand-black">Visit Our Office</p>
+                  <p className="text-xs font-bold text-brand-black dark:text-white">Visit Our Office</p>
                   <p className="text-[10px] text-brand-grey">Queens Court, Egmore, Chennai</p>
                 </div>
                 <a

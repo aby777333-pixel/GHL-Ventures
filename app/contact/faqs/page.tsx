@@ -155,7 +155,7 @@ export default function FaqsPage() {
                 <div className="w-10 h-10 bg-brand-red/10 rounded-xl flex items-center justify-center">
                   <category.icon className="w-5 h-5 text-brand-red" />
                 </div>
-                <h2 className="text-xl md:text-2xl font-bold text-brand-black">{category.title}</h2>
+                <h2 className="text-xl md:text-2xl font-bold text-brand-black dark:text-white">{category.title}</h2>
               </div>
 
               {/* Questions */}
@@ -171,7 +171,7 @@ export default function FaqsPage() {
                         onClick={() => toggleItem(category.title, idx)}
                         className="w-full flex items-center justify-between p-5 text-left hover:bg-gray-50 dark:hover:bg-white/5 transition-colors"
                       >
-                        <span className="font-semibold text-brand-black pr-4 text-sm md:text-base">{item.q}</span>
+                        <span className="font-semibold text-brand-black dark:text-white pr-4 text-sm md:text-base">{item.q}</span>
                         <ChevronDown
                           className={`w-5 h-5 text-brand-grey shrink-0 transition-transform duration-300 ${
                             isOpen ? 'rotate-180 text-brand-red' : ''

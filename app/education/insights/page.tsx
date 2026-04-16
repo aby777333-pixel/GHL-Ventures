@@ -235,7 +235,7 @@ export default function InsightsPage() {
                   <BookOpen className="absolute inset-0 m-auto w-5 h-5 text-brand-grey" />
                 </div>
                 <div>
-                  <p className="text-2xl font-bold text-brand-black">{mounted ? readCount : 0}<span className="text-brand-grey text-sm font-normal"> / 53</span></p>
+                  <p className="text-2xl font-bold text-brand-black dark:text-white">{mounted ? readCount : 0}<span className="text-brand-grey text-sm font-normal"> / 53</span></p>
                   <p className="text-xs text-brand-grey">Articles Completed</p>
                 </div>
               </div>
@@ -246,7 +246,7 @@ export default function InsightsPage() {
                   <Trophy className="w-6 h-6 text-amber-400" />
                 </div>
                 <div>
-                  <p className="text-2xl font-bold text-brand-black">{mounted ? knowledgeScore : 0}<span className="text-brand-grey text-sm font-normal"> / {maxScore}</span></p>
+                  <p className="text-2xl font-bold text-brand-black dark:text-white">{mounted ? knowledgeScore : 0}<span className="text-brand-grey text-sm font-normal"> / {maxScore}</span></p>
                   <p className="text-xs text-brand-grey">Knowledge Score</p>
                 </div>
               </div>
@@ -257,7 +257,7 @@ export default function InsightsPage() {
                   <BookmarkCheck className="w-6 h-6 text-rose-400" />
                 </div>
                 <div>
-                  <p className="text-2xl font-bold text-brand-black">{mounted ? bookmarks.length : 0}</p>
+                  <p className="text-2xl font-bold text-brand-black dark:text-white">{mounted ? bookmarks.length : 0}</p>
                   <p className="text-xs text-brand-grey">Saved Bookmarks</p>
                 </div>
               </div>
@@ -277,7 +277,7 @@ export default function InsightsPage() {
                     <button
                       key={art.id}
                       onClick={() => openArticle(art.id)}
-                      className="inline-flex items-center gap-1.5 px-3 py-1.5 card rounded-lg text-xs text-brand-grey hover:text-brand-black transition-colors"
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 card rounded-lg text-xs text-brand-grey hover:text-brand-black dark:text-white transition-colors"
                     >
                       <span>{art.title}</span>
                       <ArrowRight className="w-3 h-3" />
@@ -307,7 +307,7 @@ export default function InsightsPage() {
               {searchQuery && (
                 <button
                   onClick={() => setSearchQuery('')}
-                  className="absolute right-4 top-1/2 -translate-y-1/2 text-brand-grey hover:text-brand-black"
+                  className="absolute right-4 top-1/2 -translate-y-1/2 text-brand-grey hover:text-brand-black dark:text-white"
                 >
                   <X className="w-5 h-5" />
                 </button>
@@ -455,7 +455,7 @@ export default function InsightsPage() {
                         </div>
 
                         {/* Title */}
-                        <h3 className="text-sm font-semibold text-brand-black group-hover:text-brand-red transition-colors mb-2 line-clamp-2 leading-snug">
+                        <h3 className="text-sm font-semibold text-brand-black dark:text-white group-hover:text-brand-red transition-colors mb-2 line-clamp-2 leading-snug">
                           {art.title}
                         </h3>
 
@@ -502,7 +502,7 @@ export default function InsightsPage() {
                 <div className="w-20 h-20 rounded-2xl card flex items-center justify-center mx-auto mb-6">
                   <FileText className="w-10 h-10 text-brand-grey" />
                 </div>
-                <h3 className="text-xl font-bold text-brand-black mb-3">Complete Education Compendium</h3>
+                <h3 className="text-xl font-bold text-brand-black dark:text-white mb-3">Complete Education Compendium</h3>
                 <p className="text-sm text-brand-grey mb-2">
                   All 53 articles compiled into a single PDF document for offline reading and reference.
                 </p>
@@ -529,7 +529,7 @@ export default function InsightsPage() {
         <div className="container-max">
           <AnimatedSection>
             <div className="text-center mb-10">
-              <h2 className="text-2xl font-bold text-brand-black mb-2">Your Learning Path</h2>
+              <h2 className="text-2xl font-bold text-brand-black dark:text-white mb-2">Your Learning Path</h2>
               <p className="text-sm text-brand-grey">Progress through each category from beginner to advanced</p>
             </div>
           </AnimatedSection>
@@ -552,7 +552,7 @@ export default function InsightsPage() {
                         {Icon && <Icon className={`w-5 h-5 text-${cat.color}-400`} />}
                       </div>
                       <div className="flex-1">
-                        <p className="text-sm font-medium text-brand-black">{cat.name}</p>
+                        <p className="text-sm font-medium text-brand-black dark:text-white">{cat.name}</p>
                         <p className="text-[10px] text-brand-grey">
                           {mounted ? comp?.done || 0 : 0} / {comp?.total || 0} articles
                         </p>
@@ -586,7 +586,7 @@ export default function InsightsPage() {
         <div className="container-max">
           <AnimatedSection>
             <div className="text-center max-w-2xl mx-auto">
-              <h2 className="text-2xl font-bold text-brand-black mb-3">
+              <h2 className="text-2xl font-bold text-brand-black dark:text-white mb-3">
                 Ready to Put Your Knowledge Into Action?
               </h2>
               <p className="text-sm text-brand-grey mb-8">
@@ -602,7 +602,7 @@ export default function InsightsPage() {
                 </Link>
                 <Link
                   href="/contact"
-                  className="px-8 py-3 border border-brand-black/20 rounded-xl text-sm text-brand-grey hover:text-brand-black hover:bg-brand-black/5 transition-all inline-flex items-center gap-2"
+                  className="px-8 py-3 border border-brand-black/20 rounded-xl text-sm text-brand-grey hover:text-brand-black dark:text-white hover:bg-brand-black/5 transition-all inline-flex items-center gap-2"
                 >
                   Talk to Our Team <ChevronRight className="w-4 h-4" />
                 </Link>

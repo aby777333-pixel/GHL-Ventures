@@ -109,21 +109,21 @@ export default function GrievancePage() {
                 <div className="w-12 h-12 bg-brand-red/10 rounded-xl flex items-center justify-center mx-auto mb-3">
                   <Shield className="w-6 h-6 text-brand-red" />
                 </div>
-                <h3 className="font-bold text-brand-black mb-1 text-sm">SEBI Mandated</h3>
+                <h3 className="font-bold text-brand-black dark:text-white mb-1 text-sm">SEBI Mandated</h3>
                 <p className="text-brand-grey text-xs">Compliant with SEBI AIF grievance redressal guidelines</p>
               </div>
               <div className="card glow-card-emerald text-center">
                 <div className="w-12 h-12 bg-brand-red/10 rounded-xl flex items-center justify-center mx-auto mb-3">
                   <AlertTriangle className="w-6 h-6 text-brand-red" />
                 </div>
-                <h3 className="font-bold text-brand-black mb-1 text-sm">2-Day Acknowledgement</h3>
+                <h3 className="font-bold text-brand-black dark:text-white mb-1 text-sm">2-Day Acknowledgement</h3>
                 <p className="text-brand-grey text-xs">All complaints acknowledged within 2 working days</p>
               </div>
               <div className="card glow-card-violet text-center">
                 <div className="w-12 h-12 bg-brand-red/10 rounded-xl flex items-center justify-center mx-auto mb-3">
                   <Scale className="w-6 h-6 text-brand-red" />
                 </div>
-                <h3 className="font-bold text-brand-black mb-1 text-sm">30-Day Resolution</h3>
+                <h3 className="font-bold text-brand-black dark:text-white mb-1 text-sm">30-Day Resolution</h3>
                 <p className="text-brand-grey text-xs">Target resolution within 30 calendar days per SEBI norms</p>
               </div>
             </div>
@@ -131,7 +131,7 @@ export default function GrievancePage() {
 
           <AnimatedSection delay={100}>
             <div className="bg-brand-offwhite rounded-2xl p-6 md:p-8">
-              <h2 className="font-bold text-brand-black text-lg mb-3">Our Commitment to Investors</h2>
+              <h2 className="font-bold text-brand-black dark:text-white text-lg mb-3">Our Commitment to Investors</h2>
               <p className="text-brand-grey text-sm leading-relaxed mb-4">
                 As a SEBI-registered Category II AIF (Registration No. <a href={BRAND.sebiUrl} target="_blank" rel="noopener noreferrer" className="text-brand-red hover:underline">{BRAND.sebi}</a>), GHL India Ventures maintains a robust grievance redressal mechanism to protect investor interests. Every complaint is taken seriously and handled with the utmost urgency and confidentiality.
               </p>
@@ -150,12 +150,12 @@ export default function GrievancePage() {
             <div className="card glow-card-blue">
               {!submitted ? (
                 <form onSubmit={handleSubmit} className="space-y-6">
-                  <h2 className="text-xl font-bold text-brand-black mb-2">Lodge a Grievance</h2>
+                  <h2 className="text-xl font-bold text-brand-black dark:text-white mb-2">Lodge a Grievance</h2>
                   <p className="text-brand-grey text-sm mb-6">Please provide as much detail as possible to help us resolve your concern quickly.</p>
 
                   {/* Investor Details */}
                   <div>
-                    <h3 className="font-semibold text-brand-black text-sm uppercase tracking-wider mb-3">Investor Details</h3>
+                    <h3 className="font-semibold text-brand-black dark:text-white text-sm uppercase tracking-wider mb-3">Investor Details</h3>
                     <div className="grid md:grid-cols-2 gap-4">
                       <input type="text" placeholder="Full Name *" required className="input-field" value={formData.name} onChange={(e) => handleChange('name', e.target.value)} />
                       <input type="email" placeholder="Email *" required className="input-field" value={formData.email} onChange={(e) => handleChange('email', e.target.value)} />
@@ -169,7 +169,7 @@ export default function GrievancePage() {
 
                   {/* Complaint Details */}
                   <div>
-                    <h3 className="font-semibold text-brand-black text-sm uppercase tracking-wider mb-3">Complaint Details</h3>
+                    <h3 className="font-semibold text-brand-black dark:text-white text-sm uppercase tracking-wider mb-3">Complaint Details</h3>
                     <div className="grid md:grid-cols-2 gap-4">
                       <select className="input-field" value={formData.complaintType} onChange={(e) => handleChange('complaintType', e.target.value)} required>
                         <option value="">Complaint Type *</option>
@@ -188,16 +188,16 @@ export default function GrievancePage() {
 
                   {/* Previous Contact */}
                   <div>
-                    <h3 className="font-semibold text-brand-black text-sm uppercase tracking-wider mb-3">Previous Communication</h3>
+                    <h3 className="font-semibold text-brand-black dark:text-white text-sm uppercase tracking-wider mb-3">Previous Communication</h3>
                     <div className="flex items-center gap-6 mb-4">
-                      <span className="text-sm text-brand-black">Have you contacted us about this before?</span>
+                      <span className="text-sm text-brand-black dark:text-white">Have you contacted us about this before?</span>
                       <label className="flex items-center gap-2 cursor-pointer">
                         <input type="radio" name="contactedBefore" value="Yes" checked={formData.contactedBefore === 'Yes'} onChange={(e) => handleChange('contactedBefore', e.target.value)} className="w-4 h-4 text-brand-red border-gray-300 focus:ring-brand-red" />
-                        <span className="text-sm text-brand-black">Yes</span>
+                        <span className="text-sm text-brand-black dark:text-white">Yes</span>
                       </label>
                       <label className="flex items-center gap-2 cursor-pointer">
                         <input type="radio" name="contactedBefore" value="No" checked={formData.contactedBefore === 'No'} onChange={(e) => handleChange('contactedBefore', e.target.value)} className="w-4 h-4 text-brand-red border-gray-300 focus:ring-brand-red" />
-                        <span className="text-sm text-brand-black">No</span>
+                        <span className="text-sm text-brand-black dark:text-white">No</span>
                       </label>
                     </div>
                     {formData.contactedBefore === 'Yes' && (
@@ -225,7 +225,7 @@ export default function GrievancePage() {
                   <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
                     <CheckCircle className="w-8 h-8 text-green-600" />
                   </div>
-                  <h3 className="text-xl font-bold text-brand-black mb-2">Grievance Submitted</h3>
+                  <h3 className="text-xl font-bold text-brand-black dark:text-white mb-2">Grievance Submitted</h3>
                   <p className="text-brand-grey text-sm mb-2">Your complaint has been received. You will receive an acknowledgement within 2 working days.</p>
                   <p className="text-brand-grey text-xs mb-6">We aim to resolve all grievances within 30 calendar days.</p>
                   <button onClick={() => { setSubmitted(false); setFormData({ name: '', email: '', phone: '', folioNumber: '', complaintType: '', incidentDate: '', description: '', desiredResolution: '', contactedBefore: 'No', referenceNumber: '', privacy: false }) }} className="text-brand-red font-semibold text-sm hover:underline">
@@ -243,7 +243,7 @@ export default function GrievancePage() {
         <div className="container-max mx-auto max-w-3xl">
           <AnimatedSection className="text-center mb-10">
             <span className="text-brand-red font-semibold text-xs uppercase tracking-wider">Resolution Framework</span>
-            <h2 className="section-title mt-2 text-brand-black">Escalation Path</h2>
+            <h2 className="section-title mt-2 text-brand-black dark:text-white">Escalation Path</h2>
           </AnimatedSection>
 
           <div className="space-y-4">
@@ -256,7 +256,7 @@ export default function GrievancePage() {
                   >
                     <div className="flex items-center gap-3">
                       <span className="bg-brand-red text-white text-xs font-bold px-2.5 py-1 rounded-full">{item.level}</span>
-                      <span className="font-semibold text-brand-black">{item.title}</span>
+                      <span className="font-semibold text-brand-black dark:text-white">{item.title}</span>
                     </div>
                     <ChevronDown className={`w-5 h-5 text-brand-grey shrink-0 transition-transform duration-300 ${openEscalation === i ? 'rotate-180 text-brand-red' : ''}`} />
                   </button>

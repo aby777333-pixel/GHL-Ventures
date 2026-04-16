@@ -132,7 +132,7 @@ export default function FundArticleClient({ article, content, relatedArticles, s
                 </span>
               </div>
 
-              <h1 className="text-2xl md:text-3xl lg:text-4xl font-bold text-brand-black leading-tight">
+              <h1 className="text-2xl md:text-3xl lg:text-4xl font-bold text-brand-black dark:text-white leading-tight">
                 {article.title}
               </h1>
               <p className="text-base text-brand-grey mt-3">{article.excerpt}</p>
@@ -152,7 +152,7 @@ export default function FundArticleClient({ article, content, relatedArticles, s
                   <PlaceholderImage theme="team" aspectRatio="w-14 h-14" className="rounded-full" />
                 </div>
                 <div className="flex-grow">
-                  <p className="font-bold text-brand-black text-sm">GHL India Ventures Research Team</p>
+                  <p className="font-bold text-brand-black dark:text-white text-sm">GHL India Ventures Research Team</p>
                   <p className="text-brand-grey text-xs leading-relaxed mt-0.5">
                     Our research team combines expertise in stressed real estate analysis, startup due diligence,
                     and SEBI regulatory frameworks to produce actionable insights for sophisticated investors.
@@ -247,13 +247,13 @@ export default function FundArticleClient({ article, content, relatedArticles, s
                     <Shield className="w-5 h-5 text-brand-red shrink-0 mt-0.5" />
                     <div>
                       <p className="text-xs text-brand-grey leading-relaxed">
-                        <strong className="text-brand-black">Disclaimer:</strong> This article is for informational purposes only
+                        <strong className="text-brand-black dark:text-white">Disclaimer:</strong> This article is for informational purposes only
                         and does not constitute investment advice or an offer to invest. Investments in AIFs are subject to
                         market risks. Past performance is not indicative of future results. Please read the Private Placement
                         Memorandum carefully and consult your financial advisor before making any investment decisions.
                       </p>
                       <p className="text-xs text-brand-grey mt-2">
-                        <strong className="text-brand-black">SEBI Registration:</strong> {sebiReg} | Category II AIF |
+                        <strong className="text-brand-black dark:text-white">SEBI Registration:</strong> {sebiReg} | Category II AIF |
                         SEBI (AIF) Regulations, 2012
                       </p>
                     </div>
@@ -270,7 +270,7 @@ export default function FundArticleClient({ article, content, relatedArticles, s
         <div className="container-max mx-auto">
           <AnimatedSection className="text-center mb-12">
             <span className="text-brand-red font-semibold text-sm uppercase tracking-wider">Keep Reading</span>
-            <h2 className="text-2xl font-bold text-brand-black mt-2">Related Articles</h2>
+            <h2 className="text-2xl font-bold text-brand-black dark:text-white mt-2">Related Articles</h2>
           </AnimatedSection>
 
           <div className="grid md:grid-cols-3 gap-8 max-w-5xl mx-auto">
@@ -288,7 +288,7 @@ export default function FundArticleClient({ article, content, relatedArticles, s
                   <div className="flex items-center space-x-2 mb-2">
                     <span className="text-xs font-semibold text-brand-red uppercase">{ra.category}</span>
                   </div>
-                  <h3 className="font-bold text-brand-black mb-2 group-hover:text-brand-red transition-colors line-clamp-2">
+                  <h3 className="font-bold text-brand-black dark:text-white mb-2 group-hover:text-brand-red transition-colors line-clamp-2">
                     {ra.title}
                   </h3>
                   <p className="text-brand-grey text-sm line-clamp-2">{ra.excerpt}</p>

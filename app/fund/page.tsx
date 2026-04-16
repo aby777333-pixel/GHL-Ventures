@@ -82,7 +82,7 @@ function FundOverview() {
       <div className="container-max mx-auto">
         <AnimatedSection className="text-center mb-10">
           <span className="text-brand-red font-semibold text-xs uppercase tracking-wider">Overview</span>
-          <h2 className="section-title mt-2 text-brand-black">Fund at a Glance</h2>
+          <h2 className="section-title mt-2 text-brand-black dark:text-white">Fund at a Glance</h2>
         </AnimatedSection>
 
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-5xl mx-auto">
@@ -93,7 +93,7 @@ function FundOverview() {
                   <item.icon className="w-6 h-6 text-brand-red group-hover:text-white transition-colors" />
                 </div>
                 <p className="text-brand-grey text-xs uppercase tracking-wider mb-1">{item.label}</p>
-                <p className="font-bold text-brand-black text-lg">{item.value}</p>
+                <p className="font-bold text-brand-black dark:text-white text-lg">{item.value}</p>
               </div>
             </AnimatedSection>
           ))}
@@ -180,7 +180,7 @@ function InvestmentRoutes() {
                   {/* Features */}
                   <ul className="space-y-3 mb-8 flex-1">
                     {route.features.map((feature) => (
-                      <li key={feature} className="flex items-start text-sm text-brand-black/80 dark:text-gray-300">
+                      <li key={feature} className="flex items-start text-sm text-brand-black dark:text-white/80 dark:text-gray-300">
                         <CheckCircle className="w-4 h-4 text-brand-red mr-2.5 mt-0.5 shrink-0" />
                         {feature}
                       </li>
@@ -215,7 +215,7 @@ function InvestmentStrategy() {
       <div className="container-max mx-auto">
         <AnimatedSection className="text-center mb-10">
           <span className="text-brand-red font-semibold text-xs uppercase tracking-wider">Strategy</span>
-          <h2 className="section-title mt-2 text-brand-black">Two Investment Pillars</h2>
+          <h2 className="section-title mt-2 text-brand-black dark:text-white">Two Investment Pillars</h2>
           <p className="section-subtitle mx-auto mt-4">
             Our dual-vertical approach captures value across India&apos;s most compelling alternative asset classes.
           </p>
@@ -231,7 +231,7 @@ function InvestmentStrategy() {
                 <Building2 className="w-3.5 h-3.5 text-brand-red mr-1.5" />
                 <span className="text-brand-red text-xs font-semibold uppercase tracking-wider">Pillar 1</span>
               </div>
-              <h3 className="text-xl font-bold text-brand-black mb-3">Stressed Real Estate</h3>
+              <h3 className="text-xl font-bold text-brand-black dark:text-white mb-3">Stressed Real Estate</h3>
               <p className="text-brand-grey leading-relaxed mb-6">
                 India&apos;s stressed real estate market represents a multi-trillion-rupee opportunity.
                 We acquire distressed properties and incomplete projects at significant discounts, then apply
@@ -249,7 +249,7 @@ function InvestmentStrategy() {
                 ].map((item) => (
                   <div key={item} className="flex items-start space-x-3">
                     <CheckCircle className="w-4 h-4 text-brand-red shrink-0 mt-0.5" />
-                    <span className="text-brand-black text-sm">{item}</span>
+                    <span className="text-brand-black dark:text-white text-sm">{item}</span>
                   </div>
                 ))}
               </div>
@@ -265,7 +265,7 @@ function InvestmentStrategy() {
                 <Sparkles className="w-3.5 h-3.5 text-brand-red mr-1.5" />
                 <span className="text-brand-red text-xs font-semibold uppercase tracking-wider">Pillar 2</span>
               </div>
-              <h3 className="text-xl font-bold text-brand-black mb-3">Early-Stage Startups</h3>
+              <h3 className="text-xl font-bold text-brand-black dark:text-white mb-3">Early-Stage Startups</h3>
               <p className="text-brand-grey leading-relaxed mb-6">
                 India&apos;s startup ecosystem is the third largest globally, producing world-class founders
                 across technology, healthcare, fintech, and climate. We invest in pre-Series A and Series A
@@ -282,7 +282,7 @@ function InvestmentStrategy() {
                 ].map((item) => (
                   <div key={item} className="flex items-start space-x-3">
                     <CheckCircle className="w-4 h-4 text-brand-red shrink-0 mt-0.5" />
-                    <span className="text-brand-black text-sm">{item}</span>
+                    <span className="text-brand-black dark:text-white text-sm">{item}</span>
                   </div>
                 ))}
               </div>
@@ -301,7 +301,7 @@ function FundStructure() {
       <div className="container-max mx-auto">
         <AnimatedSection className="text-center mb-10">
           <span className="text-brand-red font-semibold text-xs uppercase tracking-wider">Structure</span>
-          <h2 className="section-title mt-2 text-brand-black">Fund Structure</h2>
+          <h2 className="section-title mt-2 text-brand-black dark:text-white">Fund Structure</h2>
         </AnimatedSection>
 
         <AnimatedSection>
@@ -314,7 +314,7 @@ function FundStructure() {
               {/* Simplified text-based structure */}
               <div className="grid md:grid-cols-3 gap-6 text-left">
                 <div className="card rounded-xl p-6">
-                  <h4 className="font-bold text-brand-black mb-2 text-sm">Investors (LPs)</h4>
+                  <h4 className="font-bold text-brand-black dark:text-white mb-2 text-sm">Investors (LPs)</h4>
                   <p className="text-brand-grey text-xs">HNIs, Family Offices, Institutional Investors contribute capital to the Fund.</p>
                 </div>
                 <div className="card rounded-xl p-6 border-2 border-brand-red/20">
@@ -322,7 +322,7 @@ function FundStructure() {
                   <p className="text-brand-grey text-xs">Category II AIF registered with SEBI. Managed by GHL India Ventures as Investment Manager.</p>
                 </div>
                 <div className="card rounded-xl p-6">
-                  <h4 className="font-bold text-brand-black mb-2 text-sm">Portfolio Assets</h4>
+                  <h4 className="font-bold text-brand-black dark:text-white mb-2 text-sm">Portfolio Assets</h4>
                   <p className="text-brand-grey text-xs">Stressed Real Estate Projects + Early-Stage Startup Equity positions.</p>
                 </div>
               </div>
@@ -377,7 +377,7 @@ function RiskFramework() {
       <div className="container-max mx-auto">
         <AnimatedSection className="text-center mb-10">
           <span className="text-brand-red font-semibold text-xs uppercase tracking-wider">Risk Management</span>
-          <h2 className="section-title mt-2 text-brand-black">Risk Framework</h2>
+          <h2 className="section-title mt-2 text-brand-black dark:text-white">Risk Framework</h2>
           <p className="section-subtitle mx-auto mt-4">
             Five institutional-grade protocols that protect capital at every stage of the investment lifecycle.
           </p>
@@ -390,7 +390,7 @@ function RiskFramework() {
                 <div className="w-12 h-12 bg-brand-red/10 rounded-xl flex items-center justify-center mb-4 group-hover:bg-brand-red transition-all icon-ring-hover">
                   <p.icon className="w-6 h-6 text-brand-red group-hover:text-white transition-colors" />
                 </div>
-                <h3 className="font-bold text-brand-black mb-2">{p.title}</h3>
+                <h3 className="font-bold text-brand-black dark:text-white mb-2">{p.title}</h3>
                 <p className="text-brand-grey text-sm leading-relaxed">{p.desc}</p>
               </div>
             </AnimatedSection>
@@ -416,7 +416,7 @@ function InvestmentProcess() {
       <div className="container-max mx-auto">
         <AnimatedSection className="text-center mb-10">
           <span className="text-brand-red font-semibold text-xs uppercase tracking-wider">Process</span>
-          <h2 className="section-title mt-2 text-brand-black">Investment Process</h2>
+          <h2 className="section-title mt-2 text-brand-black dark:text-white">Investment Process</h2>
         </AnimatedSection>
 
         <div className="max-w-4xl mx-auto">
@@ -444,7 +444,7 @@ function InvestmentProcess() {
                   <div className="lg:hidden w-10 h-10 bg-brand-red rounded-full flex items-center justify-center mx-auto mb-3">
                     <s.icon className="w-5 h-5 text-white" />
                   </div>
-                  <h4 className="font-bold text-brand-black text-sm mb-2">{s.title}</h4>
+                  <h4 className="font-bold text-brand-black dark:text-white text-sm mb-2">{s.title}</h4>
                   <p className="text-brand-grey text-xs leading-relaxed">{s.desc}</p>
                 </div>
               </AnimatedSection>
@@ -463,7 +463,7 @@ function ReturnsPerformance() {
       <div className="container-max mx-auto">
         <AnimatedSection className="text-center mb-10">
           <span className="text-brand-red font-semibold text-xs uppercase tracking-wider">Performance</span>
-          <h2 className="section-title mt-2 text-brand-black">Returns & Performance</h2>
+          <h2 className="section-title mt-2 text-brand-black dark:text-white">Returns & Performance</h2>
         </AnimatedSection>
 
         <AnimatedSection>
@@ -482,7 +482,7 @@ function ReturnsPerformance() {
                 <AlertTriangle className="w-5 h-5 text-brand-red shrink-0 mt-0.5" />
                 <div className="text-xs text-brand-grey leading-relaxed space-y-2">
                   <p>
-                    <strong className="text-brand-black">Important Disclosures:</strong> Investments in AIFs are subject to market risks.
+                    <strong className="text-brand-black dark:text-white">Important Disclosures:</strong> Investments in AIFs are subject to market risks.
                     Past performance is not indicative of future results. The value of investments may go down as well as up.
                     Investors may not receive the full amount invested.
                   </p>
@@ -513,7 +513,7 @@ function FundArticles() {
       <div className="container-max mx-auto">
         <AnimatedSection className="text-center mb-10">
           <span className="text-brand-red font-semibold text-xs uppercase tracking-wider">Resources</span>
-          <h2 className="section-title mt-2 text-brand-black">Fund Insights</h2>
+          <h2 className="section-title mt-2 text-brand-black dark:text-white">Fund Insights</h2>
           <p className="section-subtitle mx-auto mt-4">
             Educational articles and analysis to help you make informed investment decisions.
           </p>
@@ -538,7 +538,7 @@ function FundArticles() {
                   </span>
                 </div>
 
-                <h3 className="font-bold text-sm text-brand-black mb-2 group-hover:text-brand-red transition-colors line-clamp-2">
+                <h3 className="font-bold text-sm text-brand-black dark:text-white mb-2 group-hover:text-brand-red transition-colors line-clamp-2">
                   {article.title}
                 </h3>
                 <p className="text-brand-grey text-xs mb-3 line-clamp-2">{article.excerpt}</p>

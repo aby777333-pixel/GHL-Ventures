@@ -117,7 +117,7 @@ function NRIInvestContent() {
           <AnimatedSection>
             <div className="text-center mb-12">
               <p className="text-brand-red text-sm font-bold uppercase tracking-wider mb-2">Built for NRI Confidence</p>
-              <h2 className="text-2xl md:text-3xl font-bold text-brand-black mb-4">
+              <h2 className="text-2xl md:text-3xl font-bold text-brand-black dark:text-white mb-4">
                 Why NRIs Trust GHL India Ventures
               </h2>
               <p className="text-brand-grey max-w-2xl mx-auto">
@@ -165,7 +165,7 @@ function NRIInvestContent() {
                   <div className="w-12 h-12 rounded-xl bg-brand-red/10 flex items-center justify-center text-brand-red mb-4 group-hover:bg-brand-red group-hover:text-white transition-colors">
                     {item.icon}
                   </div>
-                  <h3 className="text-base font-bold text-brand-black mb-2">{item.title}</h3>
+                  <h3 className="text-base font-bold text-brand-black dark:text-white mb-2">{item.title}</h3>
                   <p className="text-sm text-brand-grey leading-relaxed">{item.desc}</p>
                 </div>
               </AnimatedSection>
@@ -182,7 +182,7 @@ function NRIInvestContent() {
           <AnimatedSection>
             <div className="text-center mb-12">
               <p className="text-brand-red text-sm font-bold uppercase tracking-wider mb-2">The India Opportunity</p>
-              <h2 className="text-2xl md:text-3xl font-bold text-brand-black mb-4">
+              <h2 className="text-2xl md:text-3xl font-bold text-brand-black dark:text-white mb-4">
                 Why India? Why Now?
               </h2>
             </div>
@@ -202,7 +202,7 @@ function NRIInvestContent() {
                       <span className="text-brand-red font-bold text-sm text-center leading-tight">{item.stat}</span>
                     </div>
                     <div>
-                      <h4 className="font-bold text-brand-black text-sm">{item.label}</h4>
+                      <h4 className="font-bold text-brand-black dark:text-white text-sm">{item.label}</h4>
                       <p className="text-xs text-brand-grey">{item.detail}</p>
                     </div>
                   </div>
@@ -212,7 +212,7 @@ function NRIInvestContent() {
 
             <AnimatedSection direction="right">
               <div className="card p-6 sm:p-8 rounded-2xl h-full">
-                <h3 className="text-lg font-bold text-brand-black mb-4">NRI-Specific Advantages</h3>
+                <h3 className="text-lg font-bold text-brand-black dark:text-white mb-4">NRI-Specific Advantages</h3>
                 <div className="space-y-3">
                   {[
                     'Favourable INR dynamics amplify USD/GBP/AED returns on conversion',
@@ -249,7 +249,7 @@ function NRIInvestContent() {
           <AnimatedSection>
             <div className="text-center mb-12">
               <p className="text-brand-red text-sm font-bold uppercase tracking-wider mb-2">Investment Routes</p>
-              <h2 className="text-2xl md:text-3xl font-bold text-brand-black mb-4">
+              <h2 className="text-2xl md:text-3xl font-bold text-brand-black dark:text-white mb-4">
                 Choose Your NRI Investment Pathway
               </h2>
               <p className="text-brand-grey max-w-2xl mx-auto">
@@ -364,7 +364,7 @@ function NRIInvestContent() {
           <AnimatedSection>
             <div className="text-center mb-12">
               <p className="text-brand-red text-sm font-bold uppercase tracking-wider mb-2">Your Journey</p>
-              <h2 className="text-2xl md:text-3xl font-bold text-brand-black mb-4">
+              <h2 className="text-2xl md:text-3xl font-bold text-brand-black dark:text-white mb-4">
                 How It Works: 5 Simple Steps
               </h2>
               <p className="text-brand-grey max-w-2xl mx-auto">
@@ -428,7 +428,7 @@ function NRIInvestContent() {
                     <div className="flex items-center justify-between mb-2">
                       <div className="flex items-center gap-2">
                         <div className="text-brand-red">{item.icon}</div>
-                        <h3 className="font-bold text-brand-black text-sm sm:text-base">{item.title}</h3>
+                        <h3 className="font-bold text-brand-black dark:text-white text-sm sm:text-base">{item.title}</h3>
                       </div>
                       <span className="text-[10px] font-medium text-brand-red bg-brand-red/10 px-2 py-1 rounded-full shrink-0">
                         {item.time}
@@ -451,7 +451,7 @@ function NRIInvestContent() {
           <AnimatedSection>
             <div className="text-center mb-12">
               <p className="text-brand-red text-sm font-bold uppercase tracking-wider mb-2">Global NRI Network</p>
-              <h2 className="text-2xl md:text-3xl font-bold text-brand-black mb-4">
+              <h2 className="text-2xl md:text-3xl font-bold text-brand-black dark:text-white mb-4">
                 Serving NRIs Across 15+ Countries
               </h2>
             </div>
@@ -478,7 +478,7 @@ function NRIInvestContent() {
               ].map((item) => (
                 <div key={item.country} className="card p-3 rounded-xl text-center hover:shadow-md transition-all">
                   <div className="text-2xl mb-1">{item.flag}</div>
-                  <div className="text-xs font-bold text-brand-black">{item.country}</div>
+                  <div className="text-xs font-bold text-brand-black dark:text-white">{item.country}</div>
                   <div className="text-[10px] text-brand-grey">{item.city}</div>
                 </div>
               ))}
@@ -518,7 +518,7 @@ function NRIInvestContent() {
                     &ldquo;{item.quote}&rdquo;
                   </p>
                   <div>
-                    <p className="text-sm font-bold text-brand-black">{item.name}</p>
+                    <p className="text-sm font-bold text-brand-black dark:text-white">{item.name}</p>
                     <p className="text-xs text-brand-grey">{item.location}</p>
                     <p className="text-[10px] text-brand-grey/60">{item.role}</p>
                   </div>
@@ -543,7 +543,7 @@ function NRIInvestContent() {
                     <BookOpen className="w-3.5 h-3.5 text-brand-red mr-1.5" />
                     <span className="text-brand-red text-xs font-bold">Free Download</span>
                   </div>
-                  <h3 className="text-xl sm:text-2xl font-bold text-brand-black mb-3">
+                  <h3 className="text-xl sm:text-2xl font-bold text-brand-black dark:text-white mb-3">
                     NRI Investment Handbook
                   </h3>
                   <p className="text-sm text-brand-grey mb-4 leading-relaxed">
@@ -579,7 +579,7 @@ function NRIInvestContent() {
                   <div className="text-center">
                     <div className="w-24 h-32 mx-auto rounded-lg bg-white shadow-xl border border-brand-black/10 flex flex-col items-center justify-center mb-4 relative">
                       <BookOpen className="w-8 h-8 text-brand-red mb-2" />
-                      <p className="text-[8px] font-bold text-brand-black leading-tight text-center px-2">NRI Investment Handbook</p>
+                      <p className="text-[8px] font-bold text-brand-black dark:text-white leading-tight text-center px-2">NRI Investment Handbook</p>
                       <div className="absolute -top-2 -right-2 w-6 h-6 rounded-full bg-brand-red text-white text-[8px] font-bold flex items-center justify-center">
                         PDF
                       </div>
@@ -722,7 +722,7 @@ function ComplianceAccordion() {
         <AnimatedSection>
           <div className="text-center mb-12">
             <p className="text-brand-red text-sm font-bold uppercase tracking-wider mb-2">Compliance & Tax</p>
-            <h2 className="text-2xl md:text-3xl font-bold text-brand-black mb-4">
+            <h2 className="text-2xl md:text-3xl font-bold text-brand-black dark:text-white mb-4">
               NRI Regulatory Framework
             </h2>
             <p className="text-brand-grey max-w-2xl mx-auto">
@@ -744,7 +744,7 @@ function ComplianceAccordion() {
                     <div className="w-10 h-10 rounded-lg bg-brand-red/10 flex items-center justify-center text-brand-red shrink-0">
                       {item.icon}
                     </div>
-                    <h3 className="font-bold text-brand-black text-sm sm:text-base">{item.title}</h3>
+                    <h3 className="font-bold text-brand-black dark:text-white text-sm sm:text-base">{item.title}</h3>
                   </div>
                   <ChevronDown className={`w-5 h-5 text-brand-grey transition-transform duration-300 shrink-0 ${openIdx === idx ? 'rotate-180' : ''}`} />
                 </button>
@@ -830,7 +830,7 @@ function ConsultationForm() {
         <AnimatedSection>
           <div className="text-center mb-12">
             <p className="text-brand-red text-sm font-bold uppercase tracking-wider mb-2">Get Started</p>
-            <h2 className="text-2xl md:text-3xl font-bold text-brand-black mb-4">
+            <h2 className="text-2xl md:text-3xl font-bold text-brand-black dark:text-white mb-4">
               Book Your Free NRI Consultation
             </h2>
             <p className="text-brand-grey max-w-2xl mx-auto">
@@ -847,7 +847,7 @@ function ConsultationForm() {
                 <div className="w-16 h-16 rounded-full bg-green-100 flex items-center justify-center mx-auto mb-4">
                   <CheckCircle className="w-8 h-8 text-green-600" />
                 </div>
-                <h3 className="text-xl font-bold text-brand-black mb-2">
+                <h3 className="text-xl font-bold text-brand-black dark:text-white mb-2">
                   Consultation Request Received
                 </h3>
                 <p className="text-sm text-brand-grey mb-6">
@@ -878,7 +878,7 @@ function ConsultationForm() {
                 )}
                 <div className="grid sm:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-xs font-bold text-brand-black mb-1.5">Full Name *</label>
+                    <label className="block text-xs font-bold text-brand-black dark:text-white mb-1.5">Full Name *</label>
                     <input
                       type="text"
                       required
@@ -889,7 +889,7 @@ function ConsultationForm() {
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-bold text-brand-black mb-1.5">Email *</label>
+                    <label className="block text-xs font-bold text-brand-black dark:text-white mb-1.5">Email *</label>
                     <input
                       type="email"
                       required
@@ -903,7 +903,7 @@ function ConsultationForm() {
 
                 <div className="grid sm:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-xs font-bold text-brand-black mb-1.5">Phone (with country code) *</label>
+                    <label className="block text-xs font-bold text-brand-black dark:text-white mb-1.5">Phone (with country code) *</label>
                     <input
                       type="tel"
                       required
@@ -914,7 +914,7 @@ function ConsultationForm() {
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-bold text-brand-black mb-1.5">Country of Residence *</label>
+                    <label className="block text-xs font-bold text-brand-black dark:text-white mb-1.5">Country of Residence *</label>
                     <select
                       required
                       value={formData.country}
@@ -943,7 +943,7 @@ function ConsultationForm() {
 
                 <div className="grid sm:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-xs font-bold text-brand-black mb-1.5">Investment Range</label>
+                    <label className="block text-xs font-bold text-brand-black dark:text-white mb-1.5">Investment Range</label>
                     <select
                       value={formData.investmentRange}
                       onChange={(e) => setFormData({ ...formData, investmentRange: e.target.value })}
@@ -957,7 +957,7 @@ function ConsultationForm() {
                     </select>
                   </div>
                   <div>
-                    <label className="block text-xs font-bold text-brand-black mb-1.5">Preferred Route</label>
+                    <label className="block text-xs font-bold text-brand-black dark:text-white mb-1.5">Preferred Route</label>
                     <select
                       value={formData.route}
                       onChange={(e) => setFormData({ ...formData, route: e.target.value })}
@@ -972,7 +972,7 @@ function ConsultationForm() {
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold text-brand-black mb-1.5">
+                  <label className="block text-xs font-bold text-brand-black dark:text-white mb-1.5">
                     Additional Notes <span className="text-brand-grey font-normal">(optional)</span>
                   </label>
                   <textarea

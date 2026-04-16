@@ -75,21 +75,21 @@ function WhatIsAIF() {
       <div className="container-max mx-auto">
         <AnimatedSection>
           <span className="text-brand-red font-semibold text-xs uppercase tracking-wider">Fundamentals</span>
-          <h2 className="section-title mt-2 text-brand-black">What Is an Alternative Investment Fund?</h2>
+          <h2 className="section-title mt-2 text-brand-black dark:text-white">What Is an Alternative Investment Fund?</h2>
         </AnimatedSection>
 
         <div className="grid lg:grid-cols-2 gap-10 mt-8">
           <AnimatedSection direction="left">
             <div className="space-y-5 text-brand-grey leading-relaxed">
               <p>
-                An <strong className="text-brand-black">Alternative Investment Fund (AIF)</strong> is a privately
+                An <strong className="text-brand-black dark:text-white">Alternative Investment Fund (AIF)</strong> is a privately
                 pooled investment vehicle established in India that collects funds from sophisticated
                 investors for investing in accordance with a defined investment policy. Unlike publicly
                 available instruments such as mutual funds, AIFs offer access to
-                <strong className="text-brand-black"> high-growth, institutional-grade strategies</strong>.
+                <strong className="text-brand-black dark:text-white"> high-growth, institutional-grade strategies</strong>.
               </p>
               <p>
-                Governed by the <strong className="text-brand-black">SEBI (Alternative Investment Funds) Regulations, 2012</strong>,
+                Governed by the <strong className="text-brand-black dark:text-white">SEBI (Alternative Investment Funds) Regulations, 2012</strong>,
                 AIFs operate under a rigorous regulatory framework that mandates transparent governance,
                 periodic disclosures, and custodial safeguards. They can be structured as trusts, companies,
                 LLPs, or body corporates.
@@ -97,7 +97,7 @@ function WhatIsAIF() {
               <p>
                 AIFs encompass private equity, venture capital, real estate, distressed assets, structured credit,
                 infrastructure, and hedge fund strategies. The Indian AIF ecosystem manages commitments
-                exceeding <strong className="text-brand-black">&nbsp;&#x20B9;15 lakh crore</strong> &mdash; a testament to the growing
+                exceeding <strong className="text-brand-black dark:text-white">&nbsp;&#x20B9;15 lakh crore</strong> &mdash; a testament to the growing
                 institutional appetite for alternative strategies.
               </p>
             </div>
@@ -181,7 +181,7 @@ function Categories() {
       <div className="container-max mx-auto">
         <AnimatedSection>
           <span className="text-brand-red font-semibold text-xs uppercase tracking-wider">SEBI Classification</span>
-          <h2 className="section-title mt-2 text-brand-black">The Three Categories of AIFs</h2>
+          <h2 className="section-title mt-2 text-brand-black dark:text-white">The Three Categories of AIFs</h2>
           <p className="section-subtitle mt-4 max-w-3xl">
             SEBI classifies Alternative Investment Funds into three distinct categories, each with
             specific investment mandates, regulatory constraints, and risk-return profiles.
@@ -193,7 +193,7 @@ function Categories() {
             <AnimatedSection key={cat.num} delay={i * 120}>
               <div className={`card h-full border-t-[3px] ${cat.borderColor} hover:-translate-y-2`}>
                 <span className={`text-xs font-mono font-bold uppercase tracking-wider ${cat.numColor}`}>{cat.num}</span>
-                <h3 className="font-bold text-lg text-brand-black mt-2 mb-3">{cat.title}</h3>
+                <h3 className="font-bold text-lg text-brand-black dark:text-white mt-2 mb-3">{cat.title}</h3>
                 <p className="text-brand-grey text-sm leading-relaxed mb-4">{cat.desc}</p>
                 <div className="flex flex-wrap gap-1.5">
                   {cat.tags.map((tag) => (
@@ -233,7 +233,7 @@ function Advantages() {
       <div className="container-max mx-auto">
         <AnimatedSection>
           <span className="text-brand-red font-semibold text-xs uppercase tracking-wider">Why AIFs</span>
-          <h2 className="section-title mt-2 text-brand-black">Advantages of Investing in Alternative Investment Funds</h2>
+          <h2 className="section-title mt-2 text-brand-black dark:text-white">Advantages of Investing in Alternative Investment Funds</h2>
           <p className="section-subtitle mt-4 max-w-3xl">
             AIFs offer sophisticated investors access to strategies, asset classes, and return profiles
             that are simply not available through conventional instruments.
@@ -248,7 +248,7 @@ function Advantages() {
                   <adv.icon className="w-6 h-6 text-brand-red" />
                 </div>
                 <div>
-                  <h3 className="font-bold text-brand-black mb-1.5">{adv.title}</h3>
+                  <h3 className="font-bold text-brand-black dark:text-white mb-1.5">{adv.title}</h3>
                   <p className="text-brand-grey text-sm leading-relaxed">{adv.desc}</p>
                 </div>
               </div>
@@ -274,7 +274,7 @@ function IndustryStats() {
       <div className="container-max mx-auto">
         <AnimatedSection>
           <span className="text-brand-red font-semibold text-xs uppercase tracking-wider">India&apos;s AIF Industry</span>
-          <h2 className="section-title mt-2 text-brand-black">A Market in Unprecedented Growth</h2>
+          <h2 className="section-title mt-2 text-brand-black dark:text-white">A Market in Unprecedented Growth</h2>
           <p className="section-subtitle mt-4 max-w-3xl">
             India&apos;s alternative investment ecosystem has entered a defining phase &mdash; with commitments
             growing at a 49% CAGR over the last decade, AIFs are now a cornerstone of sophisticated
@@ -318,7 +318,7 @@ function HowItWorks() {
       <div className="container-max mx-auto">
         <AnimatedSection>
           <span className="text-brand-red font-semibold text-xs uppercase tracking-wider">The Process</span>
-          <h2 className="section-title mt-2 text-brand-black">How an AIF Investment Works</h2>
+          <h2 className="section-title mt-2 text-brand-black dark:text-white">How an AIF Investment Works</h2>
           <p className="section-subtitle mt-4 max-w-3xl">
             From commitment to exit &mdash; a structured, transparent journey managed by experienced
             professionals under SEBI oversight.
@@ -335,7 +335,7 @@ function HowItWorks() {
                 <div className="w-16 h-16 rounded-full bg-brand-offwhite border-2 border-gray-200 flex items-center justify-center mx-auto mb-4 z-10 relative hover:border-brand-red hover:bg-brand-red/5 transition-all">
                   <span className="text-brand-red font-mono font-bold text-sm">{step.num}</span>
                 </div>
-                <h4 className="font-bold text-brand-black text-sm mb-2">{step.title}</h4>
+                <h4 className="font-bold text-brand-black dark:text-white text-sm mb-2">{step.title}</h4>
                 <p className="text-brand-grey text-xs leading-relaxed">{step.desc}</p>
               </div>
             </AnimatedSection>
@@ -381,7 +381,7 @@ function GHLApproach() {
         <div className="grid lg:grid-cols-2 gap-10 items-center mb-8">
           <AnimatedSection>
             <span className="text-brand-red font-semibold text-xs uppercase tracking-wider">Our Approach</span>
-            <h2 className="section-title mt-2 text-brand-black">What GHL India Ventures Does Differently</h2>
+            <h2 className="section-title mt-2 text-brand-black dark:text-white">What GHL India Ventures Does Differently</h2>
           </AnimatedSection>
           <AnimatedSection delay={100}>
             <p className="text-brand-grey leading-relaxed">
@@ -397,7 +397,7 @@ function GHLApproach() {
             <AnimatedSection key={s.num} delay={i * 100}>
               <div className="card h-full hover:-translate-y-2 relative overflow-hidden group">
                 <span className="absolute top-4 right-5 text-4xl font-bold text-brand-red/5 font-mono">{s.num}</span>
-                <h3 className="font-bold text-brand-black text-lg mb-3 pr-12">{s.title}</h3>
+                <h3 className="font-bold text-brand-black dark:text-white text-lg mb-3 pr-12">{s.title}</h3>
                 <p className="text-brand-grey text-sm leading-relaxed mb-4">{s.desc}</p>
                 <div className="flex flex-wrap gap-1.5">
                   {s.tags.map((tag) => (
@@ -429,7 +429,7 @@ function SEBIFramework() {
       <div className="container-max mx-auto">
         <AnimatedSection>
           <span className="text-brand-red font-semibold text-xs uppercase tracking-wider">Regulatory Framework</span>
-          <h2 className="section-title mt-2 text-brand-black">How SEBI Protects AIF Investors</h2>
+          <h2 className="section-title mt-2 text-brand-black dark:text-white">How SEBI Protects AIF Investors</h2>
           <p className="section-subtitle mt-4 max-w-3xl">
             India&apos;s AIF regulatory framework is among the most robust globally, ensuring investor
             protection, transparency, and institutional accountability at every stage.
@@ -443,7 +443,7 @@ function SEBIFramework() {
                 <div className="w-10 h-10 bg-brand-red/10 rounded-lg flex items-center justify-center mb-4">
                   <card.icon className="w-5 h-5 text-brand-red" />
                 </div>
-                <h3 className="font-bold text-brand-black mb-2">{card.title}</h3>
+                <h3 className="font-bold text-brand-black dark:text-white mb-2">{card.title}</h3>
                 <p className="text-brand-grey text-sm leading-relaxed">{card.desc}</p>
               </div>
             </AnimatedSection>
@@ -527,7 +527,7 @@ function Insights() {
       <div className="container-max mx-auto">
         <AnimatedSection>
           <span className="text-brand-red font-semibold text-xs uppercase tracking-wider">Insights</span>
-          <h2 className="section-title mt-2 text-brand-black">Why Now Is the Right Time for AIFs</h2>
+          <h2 className="section-title mt-2 text-brand-black dark:text-white">Why Now Is the Right Time for AIFs</h2>
           <p className="section-subtitle mt-4 max-w-3xl">
             Macro tailwinds, regulatory reforms, and a maturing ecosystem make this a defining moment
             for alternative capital in India.
@@ -539,7 +539,7 @@ function Insights() {
             <AnimatedSection key={ins.title} delay={i * 80}>
               <div className="card h-full hover:-translate-y-2">
                 <span className="inline-block px-2.5 py-1 bg-brand-red/10 text-brand-red text-xs font-semibold rounded-full mb-3">{ins.tag}</span>
-                <h3 className="font-bold text-brand-black mb-2 leading-snug">{ins.title}</h3>
+                <h3 className="font-bold text-brand-black dark:text-white mb-2 leading-snug">{ins.title}</h3>
                 <p className="text-brand-grey text-sm leading-relaxed">{ins.desc}</p>
               </div>
             </AnimatedSection>
@@ -590,7 +590,7 @@ function FAQ() {
       <div className="container-max mx-auto">
         <AnimatedSection>
           <span className="text-brand-red font-semibold text-xs uppercase tracking-wider">Frequently Asked Questions</span>
-          <h2 className="section-title mt-2 text-brand-black">AIF Questions, Answered</h2>
+          <h2 className="section-title mt-2 text-brand-black dark:text-white">AIF Questions, Answered</h2>
         </AnimatedSection>
 
         <AnimatedSection delay={150}>
@@ -601,7 +601,7 @@ function FAQ() {
                   onClick={() => setOpenIndex(openIndex === i ? null : i)}
                   className="flex justify-between items-center w-full py-5 text-left group"
                 >
-                  <span className="font-semibold text-brand-black group-hover:text-brand-red transition-colors pr-4">{faq.q}</span>
+                  <span className="font-semibold text-brand-black dark:text-white group-hover:text-brand-red transition-colors pr-4">{faq.q}</span>
                   {openIndex === i ? (
                     <ChevronUp className="w-5 h-5 text-brand-red shrink-0" />
                   ) : (
@@ -666,14 +666,14 @@ function Disclaimer() {
     <section className="py-8 px-4 bg-gray-50 border-t border-gray-200">
       <div className="container-max mx-auto">
         <p className="text-xs text-brand-grey leading-relaxed opacity-70">
-          <strong className="text-brand-black">Important Disclaimer:</strong> Investments in Alternative Investment Funds (AIFs) and
+          <strong className="text-brand-black dark:text-white">Important Disclaimer:</strong> Investments in Alternative Investment Funds (AIFs) and
           Non-Convertible Debentures (NCDs) are subject to market risks including the possible loss of principal amount invested.
           Past performance is not indicative of future results. The information on this page is for educational and general
           informational purposes only and does not constitute an offer, invitation, solicitation, or investment advice.
           Prospective investors must read the Private Placement Memorandum (PPM) and all scheme-related documents carefully
           before making any investment decisions. The industry statistics and data referenced are sourced from publicly available
           reports and are provided for illustrative purposes.{' '}
-          <a href={BRAND.sebiUrl} target="_blank" rel="noopener noreferrer" className="text-brand-black font-bold hover:text-brand-red transition-colors">SEBI Registration No. {BRAND.sebi}.</a> Category II AIF minimum investment is as per SEBI AIF Regulations. The fund does not guarantee any returns.
+          <a href={BRAND.sebiUrl} target="_blank" rel="noopener noreferrer" className="text-brand-black dark:text-white font-bold hover:text-brand-red transition-colors">SEBI Registration No. {BRAND.sebi}.</a> Category II AIF minimum investment is as per SEBI AIF Regulations. The fund does not guarantee any returns.
         </p>
       </div>
     </section>

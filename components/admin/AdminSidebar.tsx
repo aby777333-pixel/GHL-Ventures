@@ -78,7 +78,7 @@ export default function AdminSidebar({
         className={`fixed top-0 left-0 h-full z-[10000] w-[280px] flex flex-col transition-transform duration-500 ease-out
           lg:translate-x-0 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}
         style={{
-          backgroundColor: '#ac0d0d',
+          background: 'linear-gradient(180deg, #2e1515 0%, #4a1a1a 100%)',
         }}
       >
         {/* Logo */}

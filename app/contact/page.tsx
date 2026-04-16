@@ -130,7 +130,7 @@ export default function ContactPage() {
                           <CheckCircle className="w-10 h-10 text-green-600" />
                         </div>
                       </div>
-                      <h3 className="text-2xl font-bold text-brand-black mb-3">Thank You!</h3>
+                      <h3 className="text-2xl font-bold text-brand-black dark:text-white mb-3">Thank You!</h3>
                       <p className="text-brand-grey mb-2 max-w-md mx-auto">
                         Your consultation request has been received. Our investment team will reach out within 24&ndash;48 business hours.
                       </p>
@@ -155,7 +155,7 @@ export default function ContactPage() {
                     </div>
                   ) : (
                     <>
-                      <h2 className="text-2xl font-bold text-brand-black mb-2">Request a Consultation</h2>
+                      <h2 className="text-2xl font-bold text-brand-black dark:text-white mb-2">Request a Consultation</h2>
                       <p className="text-brand-grey text-sm mb-8">
                         Fill in your details and our team will schedule a call at your convenience.
                       </p>
@@ -163,7 +163,7 @@ export default function ContactPage() {
                       <form onSubmit={handleSubmit} className="space-y-4">
                         {/* Full Name */}
                         <div>
-                          <label htmlFor="contact-name" className="block text-sm font-medium text-brand-black mb-2">
+                          <label htmlFor="contact-name" className="block text-sm font-medium text-brand-black dark:text-white mb-2">
                             Full Name <span className="text-brand-red">*</span>
                           </label>
                           <input
@@ -180,7 +180,7 @@ export default function ContactPage() {
                         {/* Email + Phone */}
                         <div className="grid md:grid-cols-2 gap-5">
                           <div>
-                            <label htmlFor="contact-email" className="block text-sm font-medium text-brand-black mb-2">
+                            <label htmlFor="contact-email" className="block text-sm font-medium text-brand-black dark:text-white mb-2">
                               Email Address <span className="text-brand-red">*</span>
                             </label>
                             <input
@@ -194,7 +194,7 @@ export default function ContactPage() {
                             />
                           </div>
                           <div>
-                            <label htmlFor="contact-phone" className="block text-sm font-medium text-brand-black mb-2">
+                            <label htmlFor="contact-phone" className="block text-sm font-medium text-brand-black dark:text-white mb-2">
                               Phone Number <span className="text-brand-red">*</span>
                             </label>
                             <div className="relative">
@@ -220,7 +220,7 @@ export default function ContactPage() {
                         {/* Inquiry Type + City */}
                         <div className="grid md:grid-cols-2 gap-5">
                           <div>
-                            <label htmlFor="contact-inquiry" className="block text-sm font-medium text-brand-black mb-2">
+                            <label htmlFor="contact-inquiry" className="block text-sm font-medium text-brand-black dark:text-white mb-2">
                               Inquiry Type
                             </label>
                             <select
@@ -241,7 +241,7 @@ export default function ContactPage() {
                             </select>
                           </div>
                           <div>
-                            <label htmlFor="contact-city" className="block text-sm font-medium text-brand-black mb-2">
+                            <label htmlFor="contact-city" className="block text-sm font-medium text-brand-black dark:text-white mb-2">
                               City of Residence
                             </label>
                             <input
@@ -257,7 +257,7 @@ export default function ContactPage() {
 
                         {/* Investment Range */}
                         <div>
-                          <label htmlFor="contact-range" className="block text-sm font-medium text-brand-black mb-2">
+                          <label htmlFor="contact-range" className="block text-sm font-medium text-brand-black dark:text-white mb-2">
                             Investment Amount Range
                           </label>
                           <select
@@ -277,7 +277,7 @@ export default function ContactPage() {
 
                         {/* Preferred Contact Method */}
                         <div>
-                          <label className="block text-sm font-medium text-brand-black mb-3">
+                          <label className="block text-sm font-medium text-brand-black dark:text-white mb-3">
                             Preferred Contact Method
                           </label>
                           <div className="flex flex-wrap gap-6">
@@ -291,7 +291,7 @@ export default function ContactPage() {
                                   onChange={(e) => handleChange('contactMethod', e.target.value)}
                                   className="w-4 h-4 text-brand-red border-gray-300 focus:ring-brand-red"
                                 />
-                                <span className="text-sm text-brand-grey group-hover:text-brand-black transition-colors">
+                                <span className="text-sm text-brand-grey group-hover:text-brand-black dark:text-white transition-colors">
                                   {method}
                                 </span>
                               </label>
@@ -301,7 +301,7 @@ export default function ContactPage() {
 
                         {/* Message */}
                         <div>
-                          <label htmlFor="contact-message" className="block text-sm font-medium text-brand-black mb-2">
+                          <label htmlFor="contact-message" className="block text-sm font-medium text-brand-black dark:text-white mb-2">
                             Message
                           </label>
                           <textarea
@@ -368,7 +368,7 @@ export default function ContactPage() {
               <AnimatedSection direction="right">
                 <div className="space-y-8">
                   <div>
-                    <h2 className="text-2xl font-bold text-brand-black mb-6">Contact Information</h2>
+                    <h2 className="text-2xl font-bold text-brand-black dark:text-white mb-6">Contact Information</h2>
                   </div>
 
                   {/* Office Address */}
@@ -377,7 +377,7 @@ export default function ContactPage() {
                       <MapPin className="w-6 h-6 text-brand-red" />
                     </div>
                     <div>
-                      <h3 className="font-bold text-brand-black text-base mb-1">Office Address</h3>
+                      <h3 className="font-bold text-brand-black dark:text-white text-base mb-1">Office Address</h3>
                       <p className="text-brand-grey text-sm leading-relaxed">{BRAND.address}</p>
                     </div>
                   </div>
@@ -388,7 +388,7 @@ export default function ContactPage() {
                       <Phone className="w-6 h-6 text-brand-red" />
                     </div>
                     <div>
-                      <h3 className="font-bold text-brand-black text-base mb-1">Phone</h3>
+                      <h3 className="font-bold text-brand-black dark:text-white text-base mb-1">Phone</h3>
                       <a href={`tel:${BRAND.phone1.replace(/\s/g, '')}`} className="text-brand-grey text-sm hover:text-brand-red transition-colors block">
                         {BRAND.phone1}
                       </a>
@@ -404,7 +404,7 @@ export default function ContactPage() {
                       <Mail className="w-6 h-6 text-brand-red" />
                     </div>
                     <div>
-                      <h3 className="font-bold text-brand-black text-base mb-1">Email</h3>
+                      <h3 className="font-bold text-brand-black dark:text-white text-base mb-1">Email</h3>
                       <a href={`mailto:${BRAND.email}`} className="text-brand-red text-sm hover:underline">
                         {BRAND.email}
                       </a>
@@ -417,7 +417,7 @@ export default function ContactPage() {
                       <Clock className="w-6 h-6 text-brand-red" />
                     </div>
                     <div>
-                      <h3 className="font-bold text-brand-black text-base mb-1">Office Hours</h3>
+                      <h3 className="font-bold text-brand-black dark:text-white text-base mb-1">Office Hours</h3>
                       <p className="text-brand-grey text-sm">Mon &ndash; Fri, 9:30 AM &ndash; 6:30 PM IST</p>
                       <p className="text-brand-grey text-sm">Saturday &ndash; Sunday: Closed</p>
                     </div>
@@ -439,7 +439,7 @@ export default function ContactPage() {
 
                   {/* ── Connect With Us — Channel Buttons ── */}
                   <div>
-                    <h3 className="font-bold text-brand-black text-base mb-4">Connect With Us</h3>
+                    <h3 className="font-bold text-brand-black dark:text-white text-base mb-4">Connect With Us</h3>
                     <div className="grid grid-cols-2 gap-3">
                       {/* Video Call — opens floating video widget */}
                       <button
@@ -510,7 +510,7 @@ export default function ContactPage() {
           <AnimatedSection>
             <div className="text-center mb-8">
               <span className="eyebrow">FAQ</span>
-              <h2 className="text-2xl md:text-3xl font-bold text-brand-black mt-3">
+              <h2 className="text-2xl md:text-3xl font-bold text-brand-black dark:text-white mt-3">
                 Frequently Asked Questions
               </h2>
             </div>
@@ -525,7 +525,7 @@ export default function ContactPage() {
                     className="w-full flex items-center justify-between p-5 text-left hover:bg-gray-50 dark:hover:bg-white/5 transition-colors"
                     aria-expanded={openFaq === index}
                   >
-                    <span className="font-semibold text-brand-black pr-4">{item.q}</span>
+                    <span className="font-semibold text-brand-black dark:text-white pr-4">{item.q}</span>
                     <ChevronDown
                       className={`w-5 h-5 text-brand-grey shrink-0 transition-transform duration-300 ${
                         openFaq === index ? 'rotate-180' : ''

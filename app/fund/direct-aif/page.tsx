@@ -63,7 +63,7 @@ export default function DirectAIFPage() {
         <div className="container-max mx-auto">
           <AnimatedSection className="text-center mb-10">
             <span className="text-brand-red font-semibold text-xs uppercase tracking-wider">Overview</span>
-            <h2 className="section-title mt-2 text-brand-black">Why Choose the Direct AIF Route?</h2>
+            <h2 className="section-title mt-2 text-brand-black dark:text-white">Why Choose the Direct AIF Route?</h2>
           </AnimatedSection>
 
           <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 max-w-5xl mx-auto">
@@ -79,7 +79,7 @@ export default function DirectAIFPage() {
                     <item.icon className="w-6 h-6 text-brand-red group-hover:text-white transition-all" />
                   </div>
                   <div className="text-xl font-bold text-brand-red mb-1">{item.value}</div>
-                  <h3 className="text-sm font-bold text-brand-black mb-2">{item.title}</h3>
+                  <h3 className="text-sm font-bold text-brand-black dark:text-white mb-2">{item.title}</h3>
                   <p className="text-xs text-brand-grey">{item.desc}</p>
                 </div>
               </AnimatedSection>
@@ -93,7 +93,7 @@ export default function DirectAIFPage() {
         <div className="container-max mx-auto">
           <AnimatedSection className="text-center mb-10">
             <span className="text-brand-red font-semibold text-xs uppercase tracking-wider">Details</span>
-            <h2 className="section-title mt-2 text-brand-black">Fund Parameters</h2>
+            <h2 className="section-title mt-2 text-brand-black dark:text-white">Fund Parameters</h2>
           </AnimatedSection>
 
           <div className="max-w-3xl mx-auto">
@@ -114,7 +114,7 @@ export default function DirectAIFPage() {
                       i % 2 === 0 ? 'bg-white dark:bg-white/[0.03]' : 'bg-brand-offwhite/50 dark:bg-white/[0.06]'
                     } ${i < 6 ? 'border-b border-gray-100 dark:border-white/5' : ''}`}>
                       <span className="text-sm text-brand-grey">{item.label}</span>
-                      <span className="text-sm font-bold text-brand-black">{item.value}</span>
+                      <span className="text-sm font-bold text-brand-black dark:text-white">{item.value}</span>
                     </div>
                   ))}
                 </div>
@@ -129,7 +129,7 @@ export default function DirectAIFPage() {
         <div className="container-max mx-auto">
           <AnimatedSection className="text-center mb-10">
             <span className="text-brand-red font-semibold text-xs uppercase tracking-wider">Benefits</span>
-            <h2 className="section-title mt-2 text-brand-black">What You Get</h2>
+            <h2 className="section-title mt-2 text-brand-black dark:text-white">What You Get</h2>
           </AnimatedSection>
 
           <div className="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto">
@@ -145,7 +145,7 @@ export default function DirectAIFPage() {
                     <item.icon className="w-5 h-5 text-brand-red" />
                   </div>
                   <div>
-                    <h3 className="text-base font-bold text-brand-black mb-2">{item.title}</h3>
+                    <h3 className="text-base font-bold text-brand-black dark:text-white mb-2">{item.title}</h3>
                     <p className="text-sm text-brand-grey leading-relaxed">{item.desc}</p>
                   </div>
                 </div>
@@ -163,7 +163,7 @@ export default function DirectAIFPage() {
         <div className="container-max mx-auto">
           <AnimatedSection className="text-center mb-10">
             <span className="text-brand-red font-semibold text-xs uppercase tracking-wider">Eligibility</span>
-            <h2 className="section-title mt-2 text-brand-black">Who Is This For?</h2>
+            <h2 className="section-title mt-2 text-brand-black dark:text-white">Who Is This For?</h2>
           </AnimatedSection>
 
           <div className="max-w-3xl mx-auto">
@@ -179,7 +179,7 @@ export default function DirectAIFPage() {
                   ].map((item) => (
                     <li key={item} className="flex items-start">
                       <CheckCircle className="w-5 h-5 text-brand-red mr-3 mt-0.5 shrink-0" />
-                      <span className="text-sm text-brand-black/80 dark:text-gray-300">{item}</span>
+                      <span className="text-sm text-brand-black dark:text-white/80 dark:text-gray-300">{item}</span>
                     </li>
                   ))}
                 </ul>

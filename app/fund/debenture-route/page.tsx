@@ -64,7 +64,7 @@ export default function DebentureRoutePage() {
         <div className="container-max mx-auto">
           <AnimatedSection className="text-center mb-10">
             <span className="text-brand-red font-semibold text-xs uppercase tracking-wider">At a Glance</span>
-            <h2 className="section-title mt-2 text-brand-black">Why the SEBI Co-Invest Framework?</h2>
+            <h2 className="section-title mt-2 text-brand-black dark:text-white">Why the SEBI Co-Invest Framework?</h2>
           </AnimatedSection>
 
           <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 max-w-5xl mx-auto">
@@ -80,7 +80,7 @@ export default function DebentureRoutePage() {
                     <item.icon className="w-6 h-6 text-brand-red group-hover:text-white transition-all" />
                   </div>
                   <div className="text-xl font-bold text-brand-red mb-1">{item.value}</div>
-                  <h3 className="text-sm font-bold text-brand-black mb-2">{item.title}</h3>
+                  <h3 className="text-sm font-bold text-brand-black dark:text-white mb-2">{item.title}</h3>
                   <p className="text-xs text-brand-grey">{item.desc}</p>
                 </div>
               </AnimatedSection>
@@ -94,7 +94,7 @@ export default function DebentureRoutePage() {
         <div className="container-max mx-auto">
           <AnimatedSection className="text-center mb-10">
             <span className="text-brand-red font-semibold text-xs uppercase tracking-wider">Process</span>
-            <h2 className="section-title mt-2 text-brand-black">How It Works</h2>
+            <h2 className="section-title mt-2 text-brand-black dark:text-white">How It Works</h2>
           </AnimatedSection>
 
           <div className="max-w-4xl mx-auto">
@@ -109,7 +109,7 @@ export default function DebentureRoutePage() {
                     <div className="w-10 h-10 bg-brand-red text-white rounded-full flex items-center justify-center mx-auto mb-4 text-sm font-bold">
                       {item.step}
                     </div>
-                    <h3 className="text-base font-bold text-brand-black mb-2">{item.title}</h3>
+                    <h3 className="text-base font-bold text-brand-black dark:text-white mb-2">{item.title}</h3>
                     <p className="text-sm text-brand-grey leading-relaxed">{item.desc}</p>
                   </div>
                 </AnimatedSection>
@@ -124,7 +124,7 @@ export default function DebentureRoutePage() {
         <div className="container-max mx-auto">
           <AnimatedSection className="text-center mb-10">
             <span className="text-brand-red font-semibold text-xs uppercase tracking-wider">Benefits</span>
-            <h2 className="section-title mt-2 text-brand-black">Built for Working Families</h2>
+            <h2 className="section-title mt-2 text-brand-black dark:text-white">Built for Working Families</h2>
           </AnimatedSection>
 
           <div className="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto">
@@ -142,7 +142,7 @@ export default function DebentureRoutePage() {
                     <item.icon className="w-5 h-5 text-brand-red" />
                   </div>
                   <div>
-                    <h3 className="text-base font-bold text-brand-black mb-2">{item.title}</h3>
+                    <h3 className="text-base font-bold text-brand-black dark:text-white mb-2">{item.title}</h3>
                     <p className="text-sm text-brand-grey leading-relaxed">{item.desc}</p>
                   </div>
                 </div>
@@ -160,7 +160,7 @@ export default function DebentureRoutePage() {
         <div className="container-max mx-auto">
           <AnimatedSection className="text-center mb-10">
             <span className="text-brand-red font-semibold text-xs uppercase tracking-wider">Comparison</span>
-            <h2 className="section-title mt-2 text-brand-black">SEBI Co-Invest Framework vs Fixed Deposits</h2>
+            <h2 className="section-title mt-2 text-brand-black dark:text-white">SEBI Co-Invest Framework vs Fixed Deposits</h2>
           </AnimatedSection>
 
           <div className="max-w-3xl mx-auto">
@@ -182,7 +182,7 @@ export default function DebentureRoutePage() {
                   { param: 'DICGC Insurance', ghl: '✗ Not applicable', fd: '✓ Up to ₹5 Lakhs' },
                 ].map((row, i) => (
                   <div key={row.param} className={`grid grid-cols-3 ${i % 2 === 0 ? 'bg-white dark:bg-white/[0.03]' : 'bg-brand-offwhite/50 dark:bg-white/[0.06]'} border-b border-gray-100 dark:border-white/5 last:border-0`}>
-                    <div className="px-4 py-3 text-xs font-medium text-brand-black">{row.param}</div>
+                    <div className="px-4 py-3 text-xs font-medium text-brand-black dark:text-white">{row.param}</div>
                     <div className="px-4 py-3 text-xs text-center font-semibold text-brand-red">{row.ghl}</div>
                     <div className="px-4 py-3 text-xs text-center text-brand-grey">{row.fd}</div>
                   </div>
@@ -201,7 +201,7 @@ export default function DebentureRoutePage() {
         <div className="container-max mx-auto">
           <AnimatedSection className="text-center mb-10">
             <span className="text-brand-red font-semibold text-xs uppercase tracking-wider">Ideal For</span>
-            <h2 className="section-title mt-2 text-brand-black">Is the SEBI Co-Invest Framework Right for You?</h2>
+            <h2 className="section-title mt-2 text-brand-black dark:text-white">Is the SEBI Co-Invest Framework Right for You?</h2>
           </AnimatedSection>
 
           <div className="max-w-3xl mx-auto">
@@ -218,7 +218,7 @@ export default function DebentureRoutePage() {
                   ].map((item) => (
                     <li key={item} className="flex items-start">
                       <CheckCircle className="w-5 h-5 text-brand-red mr-3 mt-0.5 shrink-0" />
-                      <span className="text-sm text-brand-black/80 dark:text-gray-300">{item}</span>
+                      <span className="text-sm text-brand-black dark:text-white/80 dark:text-gray-300">{item}</span>
                     </li>
                   ))}
                 </ul>

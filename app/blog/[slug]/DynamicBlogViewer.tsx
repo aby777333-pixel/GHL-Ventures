@@ -179,7 +179,7 @@ export default function DynamicBlogViewer({ slug }: { slug: string }) {
       {relatedPosts.length > 0 && (
         <section className="bg-brand-offwhite py-12">
           <div className="container-max mx-auto px-4 sm:px-6 lg:px-8">
-            <h2 className="text-xl font-bold text-brand-black mb-6">Related Articles</h2>
+            <h2 className="text-xl font-bold text-brand-black dark:text-white mb-6">Related Articles</h2>
             <div className="grid md:grid-cols-3 gap-6">
               {relatedPosts.map((rp) => (
                 <Link key={rp.id} href={`/blog/${rp.slug}`} className="group">
@@ -191,7 +191,7 @@ export default function DynamicBlogViewer({ slug }: { slug: string }) {
                     )}
                     <div className="p-4">
                       <span className="text-xs font-medium text-brand-red uppercase">{rp.category}</span>
-                      <h3 className="font-semibold text-brand-black mt-1 mb-2 line-clamp-2 group-hover:text-brand-red transition-colors">
+                      <h3 className="font-semibold text-brand-black dark:text-white mt-1 mb-2 line-clamp-2 group-hover:text-brand-red transition-colors">
                         {rp.title}
                       </h3>
                       <p className="text-sm text-gray-600 line-clamp-2">{rp.excerpt}</p>
