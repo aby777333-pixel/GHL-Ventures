@@ -18,7 +18,7 @@ import AdminBadge, { getSeverityBadgeVariant } from '../shared/AdminBadge'
 import {
   getOverviewKPIs, getAUMGrowth, getRevenueBreakdown,
   fetchActivityFeed, fetchRiskFlags, getSystemHealth, getUpcomingDeadlines,
-  fetchNotifications,
+  fetchNotifications, getOperationalStats,
 } from '@/lib/supabase/adminDataService'
 import { useAnimatedCounter, formatINR, formatTimeAgo } from '@/lib/admin/adminHooks'
 
@@ -58,15 +58,17 @@ export default function OverviewModule({ navigate, showToast }: OverviewModulePr
   const [systemHealth, setSystemHealth] = useState(getSystemHealth())
   const [deadlines, setDeadlines] = useState<any[]>([])
   const [notifications, setNotifications] = useState<any[]>([])
+  const [opStats, setOpStats] = useState<any>(null)
 
   const loadData = useCallback(async () => {
-    const [kpis, aum, rev, feed, flags, notifs] = await Promise.all([
+    const [kpis, aum, rev, feed, flags, notifs, ops] = await Promise.all([
       getOverviewKPIs(),
       getAUMGrowth(),
       getRevenueBreakdown(),
       fetchActivityFeed(),
       fetchRiskFlags(),
       fetchNotifications(),
+      getOperationalStats(),
     ])
     setOverviewKpis(prev => ({ ...prev, ...kpis }))
     setAumGrowthData(aum)
@@ -75,6 +77,7 @@ export default function OverviewModule({ navigate, showToast }: OverviewModulePr
     setRiskFlags(flags)
     setDeadlines(getUpcomingDeadlines())
     setNotifications(notifs)
+    if (ops) setOpStats(ops)
   }, [])
 
   useEffect(() => { loadData() }, [loadData])
@@ -101,6 +104,90 @@ export default function OverviewModule({ navigate, showToast }: OverviewModulePr
         <h1 className="text-2xl font-bold text-white">Command Center</h1>
         <p className="text-sm text-gray-500 mt-1">Real-time operational overview of GHL India Ventures</p>
       </div>
+
+      {/* Operational Stats Section (per PHP admin.php reference) */}
+      {opStats && (
+        <div className="space-y-4">
+          {/* Users */}
+          <div>
+            <h3 className="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-2">Users</h3>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+              <button onClick={() => navigate('clients')} className="p-4 rounded-xl text-left transition-all hover:scale-[1.02]" style={{ background: 'linear-gradient(135deg, #ac0d0d 0%, #d41919 100%)' }}>
+                <p className="text-xs text-white/80 font-medium">Total Users</p>
+                <div className="flex items-center justify-between mt-2"><Users className="w-5 h-5 text-white/60" /><p className="text-xl font-bold text-white">{opStats.totalUsers}</p></div>
+              </button>
+              <button onClick={() => navigate('clients')} className="p-4 rounded-xl text-left transition-all hover:scale-[1.02]" style={{ background: 'linear-gradient(135deg, #ac0d0d 0%, #d41919 100%)' }}>
+                <p className="text-xs text-white/80 font-medium">Invested Users</p>
+                <div className="flex items-center justify-between mt-2"><Users className="w-5 h-5 text-white/60" /><p className="text-xl font-bold text-white">{opStats.investedUsers}</p></div>
+              </button>
+            </div>
+          </div>
+          {/* KYC */}
+          <div>
+            <h3 className="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-2">KYC</h3>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+              {[
+                { label: 'Total KYC', value: opStats.totalKyc, nav: 'compliance/kyc-queue' },
+                { label: 'Pending', value: opStats.pendingKyc, nav: 'compliance/kyc-queue' },
+                { label: 'Approved', value: opStats.approvedKyc, nav: 'compliance/kyc-queue' },
+                { label: 'Rejected', value: opStats.rejectedKyc, nav: 'compliance/kyc-queue' },
+              ].map(item => (
+                <button key={item.label} onClick={() => navigate(item.nav)} className="p-4 rounded-xl text-left transition-all hover:scale-[1.02]" style={{ background: 'linear-gradient(135deg, #ac0d0d 0%, #d41919 100%)' }}>
+                  <p className="text-xs text-white/80 font-medium">{item.label}</p>
+                  <div className="flex items-center justify-between mt-2"><Users className="w-5 h-5 text-white/60" /><p className="text-xl font-bold text-white">{item.value}</p></div>
+                </button>
+              ))}
+            </div>
+          </div>
+          {/* Investment */}
+          <div>
+            <h3 className="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-2">Investment</h3>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+              {[
+                { label: 'Total Investment', value: opStats.totalInvestment, currency: true, nav: 'finance' },
+                { label: 'AIF', value: opStats.aifInvestment, currency: true, nav: 'finance' },
+                { label: 'Debenture', value: opStats.debentureInvestment, currency: true, nav: 'finance' },
+                { label: 'This Month', value: opStats.monthInvestment, currency: true, nav: 'finance' },
+              ].map(item => (
+                <button key={item.label} onClick={() => navigate(item.nav)} className="p-4 rounded-xl text-left transition-all hover:scale-[1.02]" style={{ background: 'linear-gradient(135deg, #ac0d0d 0%, #d41919 100%)' }}>
+                  <p className="text-xs text-white/80 font-medium">{item.label}</p>
+                  <div className="flex items-center justify-between mt-2"><IndianRupee className="w-5 h-5 text-white/60" /><p className="text-lg font-bold text-white">{item.currency ? `₹${formatINR(item.value)}` : item.value}</p></div>
+                </button>
+              ))}
+            </div>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-3">
+              {[
+                { label: 'Total Payout', value: opStats.totalPayout },
+                { label: 'This Month Payout', value: opStats.monthPayout },
+                { label: 'Total TDS', value: opStats.totalTds },
+                { label: 'This Month TDS', value: opStats.monthTds },
+              ].map(item => (
+                <div key={item.label} className="p-4 rounded-xl text-left" style={{ background: 'linear-gradient(135deg, #ac0d0d 0%, #d41919 100%)' }}>
+                  <p className="text-xs text-white/80 font-medium">{item.label}</p>
+                  <div className="flex items-center justify-between mt-2"><IndianRupee className="w-5 h-5 text-white/60" /><p className="text-lg font-bold text-white">₹{formatINR(item.value)}</p></div>
+                </div>
+              ))}
+            </div>
+          </div>
+          {/* Support Tickets */}
+          <div>
+            <h3 className="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-2">Support Tickets</h3>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+              {[
+                { label: 'Total Tickets', value: opStats.totalTickets, nav: 'content-support/support-tickets' },
+                { label: 'Pending', value: opStats.pendingTickets, nav: 'content-support/support-tickets' },
+                { label: 'Opened', value: opStats.openTickets, nav: 'content-support/support-tickets' },
+                { label: 'Closed', value: opStats.closedTickets, nav: 'content-support/support-tickets' },
+              ].map(item => (
+                <button key={item.label} onClick={() => navigate(item.nav)} className="p-4 rounded-xl text-left transition-all hover:scale-[1.02]" style={{ background: 'linear-gradient(135deg, #ac0d0d 0%, #d41919 100%)' }}>
+                  <p className="text-xs text-white/80 font-medium">{item.label}</p>
+                  <div className="flex items-center justify-between mt-2"><ClipboardCheck className="w-5 h-5 text-white/60" /><p className="text-xl font-bold text-white">{item.value}</p></div>
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Row 1: KPI Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3">

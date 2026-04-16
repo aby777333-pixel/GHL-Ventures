@@ -1005,10 +1005,10 @@ export default function DashboardClient() {
   // ═══════════════════════════════════════════════════════════
   const renderHeroMetrics = () => {
     const metrics = [
-      { label: 'Total Portfolio', value: `\u20B9${formatINR(portfolioValue)}`, change: `+${totalReturn}%`, up: true, icon: Wallet, gradient: 'from-brand-red/20 to-red-900/20', iconColor: '#D0021B' },
+      { label: 'Total Investment', value: `\u20B9${formatINR(portfolioValue)}`, change: `+${totalReturn}%`, up: true, icon: Wallet, gradient: 'from-brand-red/20 to-red-900/20', iconColor: '#D0021B' },
+      { label: 'Total Payout', value: `\u20B9${formatINR(coInvestValue)}`, change: '\u2014', up: true, icon: IndianRupee, gradient: 'from-purple-500/20 to-purple-900/20', iconColor: '#8B5CF6' },
       { label: 'AIF Investment', value: `\u20B9${formatINR(aifInvestment)}`, change: '\u2014', up: true, icon: Building2, gradient: 'from-emerald-500/20 to-emerald-900/20', iconColor: '#10B981' },
-      { label: 'Co-Invest Value', value: `\u20B9${formatINR(coInvestValue)}`, change: '\u2014', up: true, icon: FileText, gradient: 'from-blue-500/20 to-blue-900/20', iconColor: '#3B82F6' },
-      { label: 'Current NAV', value: `\u20B9${(currentNAV / 100).toFixed(2)}`, change: '\u2014', up: true, icon: TrendingUp, gradient: 'from-amber-500/20 to-amber-900/20', iconColor: '#F59E0B' },
+      { label: 'Debenture', value: `\u20B9${formatINR(Math.max(0, totalCurrent - totalInvested))}`, change: '\u2014', up: true, icon: FileText, gradient: 'from-blue-500/20 to-blue-900/20', iconColor: '#3B82F6' },
     ]
     return (
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
@@ -3875,7 +3875,7 @@ export default function DashboardClient() {
         {renderTopBar()}
         <div className="flex-1 p-4 lg:p-6 pb-20 overflow-auto">{renderContent()}</div>
         <footer className={`hidden sm:flex border-t px-4 lg:px-6 py-3 flex-col sm:flex-row items-center justify-between gap-2 text-[11px] ${isDark ? 'border-white/[0.04] text-gray-600' : 'border-gray-300/50 text-gray-500'}`}>
-          <p>&copy; 2025 GHL India Ventures. <a href="https://www.sebi.gov.in/sebiweb/other/OtherAction.do?doRecognisedFpi=yes&intmId=16&name=GHL%20INDIA%20VENTURES%20TRUST&regNo=IN/AIF2/24-25/1517" target="_blank" rel="noopener noreferrer" className="hover:text-brand-red transition-colors">SEBI Reg: IN/AIF2/2425/1517</a></p>
+          <p>&copy; 2026 GHL India Ventures. <a href="https://www.sebi.gov.in/sebiweb/other/OtherAction.do?doRecognisedFpi=yes&intmId=16&name=GHL%20INDIA%20VENTURES%20TRUST&regNo=IN/AIF2/24-25/1517" target="_blank" rel="noopener noreferrer" className="hover:text-brand-red transition-colors">SEBI Reg: IN/AIF2/2425/1517</a></p>
           <div className="flex items-center gap-3">
             <button onClick={() => { setTermsOpen(true); setTermsScrolled(false) }} className="hover:underline hover:text-white transition-colors">Terms & Conditions</button>
             <span>&bull;</span>

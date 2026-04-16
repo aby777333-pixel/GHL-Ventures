@@ -61,6 +61,64 @@ export async function getOverviewKPIs() {
   } catch { return { totalAUM: 0, activeClients: 0, monthlyRevenue: 0, activeFunds: 0 } }
 }
 
+// ── Operational Stats (matches PHP admin.php reference) ─────
+export async function getOperationalStats() {
+  if (!isSupabaseConfigured()) return null
+  try {
+    const now = new Date()
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString()
+
+    const [
+      clientsResult, investedClientsResult,
+      kycAllResult, kycPendingResult, kycApprovedResult, kycRejectedResult,
+      investmentsResult, payoutsResult, monthPayoutsResult,
+      ticketsResult, ticketsPendingResult, ticketsOpenResult, ticketsClosedResult,
+    ] = await Promise.all([
+      sb.from('clients').select('*', { count: 'exact', head: true }),
+      sb.from('clients').select('*', { count: 'exact', head: true }).gt('total_invested', 0),
+      sb.from('kyc_basic_details').select('*', { count: 'exact', head: true }),
+      sb.from('kyc_basic_details').select('*', { count: 'exact', head: true }).eq('status', 'pending'),
+      sb.from('kyc_basic_details').select('*', { count: 'exact', head: true }).eq('status', 'approved'),
+      sb.from('kyc_basic_details').select('*', { count: 'exact', head: true }).eq('status', 'rejected'),
+      sb.from('investment_applications').select('investment_amount, fund_vehicle, created_at').in('status', ['approved', 'active']),
+      sb.from('monthly_payouts').select('gross_amount, tds_amount, net_interest, created_at'),
+      sb.from('monthly_payouts').select('gross_amount, tds_amount, net_interest, created_at').gte('created_at', startOfMonth),
+      sb.from('tickets').select('*', { count: 'exact', head: true }),
+      sb.from('tickets').select('*', { count: 'exact', head: true }).eq('status', 'pending'),
+      sb.from('tickets').select('*', { count: 'exact', head: true }).eq('status', 'open'),
+      sb.from('tickets').select('*', { count: 'exact', head: true }).eq('status', 'closed'),
+    ])
+
+    const invRows = (investmentsResult.data || []) as any[]
+    const payRows = (payoutsResult.data || []) as any[]
+    const monthPayRows = (monthPayoutsResult.data || []) as any[]
+
+    return {
+      totalUsers: clientsResult.count ?? 0,
+      investedUsers: investedClientsResult.count ?? 0,
+      totalKyc: kycAllResult.count ?? 0,
+      pendingKyc: kycPendingResult.count ?? 0,
+      approvedKyc: kycApprovedResult.count ?? 0,
+      rejectedKyc: kycRejectedResult.count ?? 0,
+      totalInvestment: invRows.reduce((s: number, r: any) => s + (Number(r.investment_amount) || 0), 0),
+      aifInvestment: invRows.filter((r: any) => r.fund_vehicle === 'AIF').reduce((s: number, r: any) => s + (Number(r.investment_amount) || 0), 0),
+      debentureInvestment: invRows.filter((r: any) => r.fund_vehicle === 'Debenture').reduce((s: number, r: any) => s + (Number(r.investment_amount) || 0), 0),
+      monthInvestment: invRows.filter((r: any) => r.created_at >= startOfMonth).reduce((s: number, r: any) => s + (Number(r.investment_amount) || 0), 0),
+      totalPayout: payRows.reduce((s: number, r: any) => s + (Number(r.net_interest) || 0), 0),
+      monthPayout: monthPayRows.reduce((s: number, r: any) => s + (Number(r.net_interest) || 0), 0),
+      totalTds: payRows.reduce((s: number, r: any) => s + (Number(r.tds_amount) || 0), 0),
+      monthTds: monthPayRows.reduce((s: number, r: any) => s + (Number(r.tds_amount) || 0), 0),
+      totalTickets: ticketsResult.count ?? 0,
+      pendingTickets: ticketsPendingResult.count ?? 0,
+      openTickets: ticketsOpenResult.count ?? 0,
+      closedTickets: ticketsClosedResult.count ?? 0,
+    }
+  } catch (err) {
+    console.warn('[adminData] getOperationalStats error:', err)
+    return null
+  }
+}
+
 export function getAUMGrowth() { return [] }
 export function getRevenueBreakdown() { return [] }
 export function getSystemHealth() {
