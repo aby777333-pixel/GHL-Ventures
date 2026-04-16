@@ -73,14 +73,14 @@ export default function OverviewModule({ navigate, showToast }: OverviewModulePr
   return (
     <div>
       {/* Users Section */}
-      <h4 className="text-lg font-semibold text-gray-800">Users</h4>
+      <h4 className="text-lg font-semibold text-white">Users</h4>
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
         <StatCard title="Total Users" value={stats.totalUsers} icon="las la-user" href="clients" navigate={navigate} />
         <StatCard title="Invested Users" value={stats.investedUsers} icon="las la-user" href="clients" navigate={navigate} />
       </div>
 
       {/* KYC Section */}
-      <h4 className="text-lg font-semibold text-gray-800 mt-8">KYC</h4>
+      <h4 className="text-lg font-semibold text-white mt-8">KYC</h4>
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
         <StatCard title="Total KYC" value={stats.totalKyc} icon="las la-user" href="compliance/kyc-queue" navigate={navigate} />
         <StatCard title="Pending" value={stats.pendingKyc} icon="las la-user" href="compliance/kyc-queue" navigate={navigate} />
@@ -89,7 +89,7 @@ export default function OverviewModule({ navigate, showToast }: OverviewModulePr
       </div>
 
       {/* Investment Section */}
-      <h4 className="text-lg font-semibold text-gray-800 mt-8">Investment</h4>
+      <h4 className="text-lg font-semibold text-white mt-8">Investment</h4>
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
         <StatCard title="Total Investment" value={stats.totalInvestment} icon="las la-wallet" href="finance" navigate={navigate} isCurrency />
         <StatCard title="AIF" value={stats.aifInvestment} icon="las la-wallet" href="finance" navigate={navigate} isCurrency />
@@ -104,7 +104,7 @@ export default function OverviewModule({ navigate, showToast }: OverviewModulePr
       </div>
 
       {/* Support Ticket Section */}
-      <h4 className="text-lg font-semibold text-gray-800 mt-8">Support Ticket</h4>
+      <h4 className="text-lg font-semibold text-white mt-8">Support Ticket</h4>
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
         <StatCard title="Total Tickets" value={stats.totalTickets} icon="las la-ticket-alt" href="content/tickets" navigate={navigate} />
         <StatCard title="Pending" value={stats.pendingTickets} icon="las la-ticket-alt" href="content/tickets" navigate={navigate} />

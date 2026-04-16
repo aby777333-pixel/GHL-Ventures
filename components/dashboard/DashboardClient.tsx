@@ -1555,19 +1555,19 @@ export default function DashboardClient() {
       {/* 3 Welcome Cards Row (matches investor.php) */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {/* Welcome Card */}
-        <div className="rounded-xl shadow-sm" style={{ background: 'linear-gradient(rgba(208,203,203,0.72),#ffffff)' }}>
+        <div className="rounded-xl shadow-sm" style={{ background: 'linear-gradient(135deg, #2e1515, #4a1a1a)' }}>
           <div className="p-6 text-center">
-            <i className="las la-user text-2xl mb-3" style={{ color: '#ac0d0d' }} />
-            <h3 className="text-lg font-semibold text-gray-800">Welcome</h3>
-            <h5 className="text-gray-700 mt-1">{userName}</h5>
-            {ghlId && <p className="text-sm text-gray-500">({ghlId})</p>}
+            <i className="las la-user text-2xl mb-3 text-white/70" />
+            <h3 className="text-lg font-semibold text-white">Welcome</h3>
+            <h5 className="text-white/80 mt-1">{userName}</h5>
+            {ghlId && <p className="text-sm text-white/50">({ghlId})</p>}
           </div>
         </div>
         {/* KYC Status Card */}
-        <div className="rounded-xl shadow-sm" style={{ background: 'linear-gradient(rgba(208,203,203,0.72),#ffffff)' }}>
+        <div className="rounded-xl shadow-sm" style={{ background: 'linear-gradient(135deg, #2e1515, #4a1a1a)' }}>
           <div className="p-6 text-center">
-            <i className="las la-user text-2xl mb-3" style={{ color: '#ac0d0d' }} />
-            <h3 className="text-lg font-semibold text-gray-800">KYC Status</h3>
+            <i className="las la-user text-2xl mb-3 text-white/70" />
+            <h3 className="text-lg font-semibold text-white">KYC Status</h3>
             <span className={`inline-block mt-2 px-4 py-1.5 rounded-full text-sm font-medium ${
               userKycStatus === 'approved' || userKycStatus === 'verified'
                 ? 'bg-green-100 text-green-700'
@@ -1580,10 +1580,10 @@ export default function DashboardClient() {
           </div>
         </div>
         {/* My Investments Card */}
-        <div className="rounded-xl shadow-sm" style={{ background: 'linear-gradient(rgba(208,203,203,0.72),#ffffff)' }}>
+        <div className="rounded-xl shadow-sm" style={{ background: 'linear-gradient(135deg, #2e1515, #4a1a1a)' }}>
           <div className="p-6 text-center">
-            <i className="las la-coins text-2xl mb-3" style={{ color: '#ac0d0d' }} />
-            <h3 className="text-lg font-semibold text-gray-800">My Investments</h3>
+            <i className="las la-coins text-2xl mb-3 text-white/70" />
+            <h3 className="text-lg font-semibold text-white">My Investments</h3>
             <button onClick={() => setActiveTab('investments')} className="mt-3 px-5 py-2 text-sm rounded-lg text-white font-medium" style={{ backgroundColor: '#ac0d0d' }}>View</button>
           </div>
         </div>
