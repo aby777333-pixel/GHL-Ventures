@@ -681,9 +681,7 @@ button svg, button .lucide, [role="button"] svg {
   background-color: #111111 !important;
   color: #D1D5DB !important;
 }
-:root.dark .bg-white .text-brand-black {
-  color: #FFFFFF !important;
-}
+/* removed: was forcing white text inside white-bg cards */
 
 /* Navbar scrolled state dark mode */
 .navbar-scrolled {
@@ -794,10 +792,7 @@ a.flex {
   color: #6B7280 !important;
 }
 
-/* Fund pages & submenus: headings, labels, table cells */
-:root.dark .text-brand-black\/80 {
-  color: rgba(255,255,255,0.8) !important;
-}
+/* removed: text-brand-black/80 override — handled by Tailwind dark: prefix */
 
 :root.dark .section-title {
   color: #FFFFFF !important;
