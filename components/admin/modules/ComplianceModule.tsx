@@ -125,10 +125,10 @@ function KYCQueueTab({ kycQueue, showToast, onRefresh }: { kycQueue: any[]; show
 
   // Group KYC items by client
   const clientGroups = useMemo(() => {
-    const map: Record<string, { clientId: string; clientName: string; items: any[] }> = {}
+    const map: Record<string, { clientId: string; clientName: string; clientEmail: string; items: any[] }> = {}
     for (const item of kycQueue) {
       if (!map[item.clientId]) {
-        map[item.clientId] = { clientId: item.clientId, clientName: item.clientName, items: [] }
+        map[item.clientId] = { clientId: item.clientId, clientName: item.clientName, clientEmail: item.clientEmail || '', items: [] }
       }
       map[item.clientId].items.push(item)
     }
@@ -220,6 +220,7 @@ function KYCQueueTab({ kycQueue, showToast, onRefresh }: { kycQueue: any[]; show
                   </div>
                   <div>
                     <h3 className="text-sm font-semibold text-white">{group.clientName}</h3>
+                    {group.clientEmail && <p className="text-[11px] text-gray-400">{group.clientEmail}</p>}
                     <p className="text-[11px] text-gray-500">{group.items.length} KYC step(s) submitted</p>
                   </div>
                 </div>

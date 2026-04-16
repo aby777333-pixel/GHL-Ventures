@@ -17,10 +17,13 @@ export default function AdminGlass({
 }: AdminGlassProps) {
   return (
     <div
-      className={`relative rounded-xl border border-gray-200 transition-all duration-300 bg-white
-        ${hover ? 'hover:shadow-md hover:-translate-y-0.5' : ''}
+      className={`relative rounded-xl border border-white/[0.08] transition-all duration-300
+        ${hover ? 'hover:border-white/[0.14] hover:shadow-lg hover:-translate-y-0.5' : ''}
         ${glow ? 'shadow-sm' : ''} ${padding} ${className}`}
-      style={{ boxShadow: '0 1px 3px rgba(0,0,0,0.08)' }}
+      style={{
+        background: 'rgba(20, 16, 16, 0.85)',
+        backdropFilter: 'blur(20px)',
+      }}
     >
       <div className="relative">{children}</div>
     </div>

@@ -245,10 +245,11 @@ export async function fetchClients() {
 export async function fetchKYCDocuments() {
   // Fetch structured KYC submissions — batched queries for performance (Bug #11 fix)
   try {
-    const { data: clients } = await sb.from('clients').select('id, full_name, kyc_status, kyc_step').in('kyc_status', ['submitted', 'pending', 'rejected', 'verified', 'approved'])
+    const { data: clients } = await sb.from('clients').select('id, full_name, email, kyc_status, kyc_step').in('kyc_status', ['submitted', 'pending', 'rejected', 'verified', 'approved'])
     if (!clients || clients.length === 0) return []
     const clientIds = clients.map((c: any) => c.id)
     const clientMap = new Map(clients.map((c: any) => [c.id, c.full_name]))
+    const clientEmailMap = new Map(clients.map((c: any) => [c.id, c.email || '']))
 
     // Batch fetch all KYC data in parallel instead of per-client loops
     const [basicRes, identityRes, bankRes, dematRes, nomineesRes] = await Promise.all([
@@ -273,6 +274,7 @@ export async function fetchKYCDocuments() {
           id: row.id,
           clientId: row.client_id,
           clientName: clientMap.get(row.client_id) || 'Unknown',
+          clientEmail: clientEmailMap.get(row.client_id) || '',
           type: t.type,
           table: t.table,
           fileName: t.type,

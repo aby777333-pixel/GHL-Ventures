@@ -143,8 +143,8 @@ export default function LeadManagementModule({
           return q
         })(),
         (supabase as any).from('lead_statuses').select('*').order('sort_order', { ascending: true }),
-        (supabase as any).from('lead_sources').select('*').order('name', { ascending: true }),
-        (supabase as any).from('lead_companies').select('*').order('name', { ascending: true }),
+        (supabase as any).from('lead_sources').select('*').order('created_at', { ascending: false }),
+        (supabase as any).from('lead_companies').select('*').order('created_at', { ascending: false }),
         (supabase as any).from('staff_profiles').select('id, full_name, email'),
       ])
       setLeads(leadsRes.data || [])
@@ -602,8 +602,8 @@ function LeadEditModal({
   const validate = () => {
     const e: Record<string, string> = {}
     if (!form.name.trim()) e.name = 'Name is required'
-    if (!form.email.trim()) e.email = 'Email is required'
-    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) e.email = 'Invalid email'
+    // Email is optional (Bug #4)
+    if (form.email.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) e.email = 'Invalid email format'
     if (!form.phone.trim()) e.phone = 'Phone is required'
     else if (!/^\d{10}$/.test(form.phone.replace(/\D/g, ''))) e.phone = 'Phone must be exactly 10 digits'
     setErrors(e)
@@ -771,8 +771,7 @@ function LeadFormTab({
   const validate = () => {
     const e: Record<string, string> = {}
     if (!form.name.trim()) e.name = 'Name is required'
-    if (!form.email.trim()) e.email = 'Email is required'
-    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) e.email = 'Invalid email format'
+    if (form.email.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) e.email = 'Invalid email format'
     if (!form.phone.trim()) e.phone = 'Phone is required'
     else if (!/^\d{10}$/.test(form.phone)) e.phone = 'Phone must be exactly 10 digits'
     setErrors(e)
@@ -1334,7 +1333,8 @@ function BulkUploadTab({
         const name = row['Name'] || ''
 
         if (!name) errs.push('Name is required')
-        if (!email) errs.push('Email is required')
+        // Email is optional for bulk upload (Bug #4)
+        if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) errs.push('Invalid email format')
         if (!phone) errs.push('Phone is required')
         else if (!/^\d{10}$/.test(phone)) errs.push('Phone must be 10 digits')
 
@@ -1359,6 +1359,8 @@ function BulkUploadTab({
 
   const handleUpload = async () => {
     if (validRows.length === 0) { showToast('No valid rows to upload', 'error'); return }
+    // Bug #5: Confirmation before bulk upload
+    if (!window.confirm(`Are you sure you want to upload ${validRows.length} lead(s)? This action cannot be undone.`)) return
     setUploading(true)
 
     const sourceNameMap = Object.fromEntries(sources.map(s => [s.name.toLowerCase(), s]))
@@ -1418,6 +1420,21 @@ function BulkUploadTab({
               ))}
             </div>
           </div>
+
+          {/* Bug #5: Download template button */}
+          <button
+            onClick={() => {
+              const csv = expectedCols.join(',') + '\nJohn Doe,john@example.com,9876543210,website,new,Company Name,50L-1Cr,Short Term,Notes here'
+              const blob = new Blob([csv], { type: 'text/csv' })
+              const url = URL.createObjectURL(blob)
+              const a = document.createElement('a')
+              a.href = url; a.download = 'lead_upload_template.csv'; a.click()
+              URL.revokeObjectURL(url)
+            }}
+            className="flex items-center gap-2 px-3 py-1.5 bg-white/[0.06] border border-white/[0.08] rounded-lg text-xs text-gray-300 hover:bg-white/[0.10] transition-all"
+          >
+            <Download size={14} /> Download Template
+          </button>
 
           <div className="flex items-center gap-4">
             <label className="flex items-center gap-2 px-4 py-2 bg-white/[0.06] border border-white/[0.08] rounded-lg text-sm text-gray-300 hover:bg-white/[0.10] cursor-pointer transition-all">

@@ -127,8 +127,8 @@ export default function AdminSidebar({
                 <button
                   onClick={() => {
                     if (hasSubItems) {
+                      // Bug #15: Parent should ONLY toggle dropdown, not navigate
                       toggleModule(item.id)
-                      if (!isActive) handleNavClick(item.subItems![0].id)
                     } else {
                       handleNavClick(item.id)
                     }
