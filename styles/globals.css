@@ -729,27 +729,20 @@ button svg, button .lucide, [role="button"] svg {
 }
 
 /* ============================================================
-   LIGHT MODE TEXT SAFETY NET
-   Any element with bg-white MUST have dark text so children are readable.
-   This prevents inherited white text from dark parent sections.
+   TEXT VISIBILITY SAFETY NET
+   Ensures text is always readable on its background.
+   Light mode: dark text on white/light backgrounds.
+   Dark mode: light text on dark backgrounds.
    ============================================================ */
-.bg-white {
+:root:not(.dark) .bg-white,
+:root:not(.dark) .card,
+:root:not(.dark) .bg-brand-offwhite {
   color: #1F2937 !important;
 }
-.bg-white .text-white {
-  color: #FFFFFF !important;
-}
-.bg-white .text-brand-red {
-  color: #D0021B !important;
-}
-.bg-white .text-gray-400 {
-  color: #9CA3AF !important;
-}
-.bg-white .text-gray-500 {
-  color: #6B7280 !important;
-}
-.bg-brand-offwhite {
-  color: #1F2937;
+:root.dark .bg-white,
+:root.dark .card,
+:root.dark .bg-brand-offwhite {
+  color: #D1D5DB !important;
 }
 
 /* ============================================================
