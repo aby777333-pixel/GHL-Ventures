@@ -104,13 +104,13 @@ export async function getOperationalStats() {
     ])
 
     const allInvRows = (investmentsResult.data || []) as any[]
-    // Filter for approved investments (Laravel: status=2)
-    const approvedInvRows = allInvRows.filter((r: any) => r.status === 'approved' || r.status === 'active')
+    // Include all non-rejected investments for totals (pending + approved + active)
+    const activeInvRows = allInvRows.filter((r: any) => r.status !== 'rejected')
     const payRows = (payoutsResult.data || []) as any[]
     const monthPayRows = (monthPayoutsResult.data || []) as any[]
 
-    // AIF classification: fund_vehicle contains "AIF" and "Direct" (maps to Laravel fund_id=10)
-    const isAIF = (fv: string) => fv && (fv.includes('AIF Direct') || fv === 'Direct AIF Route')
+    // AIF classification: fund_vehicle contains "AIF Direct" or "Direct AIF Route" (maps to Laravel fund_id=10)
+    const isAIF = (fv: string) => fv && (fv.includes('AIF Direct') || fv === 'Direct AIF Route' || (fv.includes('AIF') && !fv.toLowerCase().includes('debenture') && !fv.toLowerCase().includes('llp')))
     // Debenture classification: fund_vehicle contains "Debenture" (maps to Laravel fund_id=11)
     const isDebenture = (fv: string) => fv && fv.toLowerCase().includes('debenture')
 
@@ -127,14 +127,14 @@ export async function getOperationalStats() {
       pendingKyc: kycPendingResult.count ?? 0,
       approvedKyc: kycApprovedResult.count ?? 0,
       rejectedKyc: kycRejectedResult.count ?? 0,
-      // Investment totals — all approved/active applications
-      totalInvestment: approvedInvRows.reduce((s: number, r: any) => s + (Number(r.investment_amount) || 0), 0),
-      // AIF count (Laravel shows count, not amount for AIF)
-      aifInvestment: allInvRows.filter((r: any) => isAIF(r.fund_vehicle)).length,
-      // Debenture total amount
-      debentureInvestment: approvedInvRows.filter((r: any) => isDebenture(r.fund_vehicle)).reduce((s: number, r: any) => s + (Number(r.investment_amount) || 0), 0),
+      // Investment totals — all non-rejected applications (matching Laravel: Investment::where('status','!=',3))
+      totalInvestment: activeInvRows.reduce((s: number, r: any) => s + (Number(r.investment_amount) || 0), 0),
+      // AIF total amount (Laravel: fund_id=10)
+      aifInvestment: activeInvRows.filter((r: any) => isAIF(r.fund_vehicle)).reduce((s: number, r: any) => s + (Number(r.investment_amount) || 0), 0),
+      // Debenture total amount (Laravel: fund_id=11)
+      debentureInvestment: activeInvRows.filter((r: any) => isDebenture(r.fund_vehicle)).reduce((s: number, r: any) => s + (Number(r.investment_amount) || 0), 0),
       // This month investment
-      monthInvestment: approvedInvRows.filter((r: any) => r.created_at >= startOfMonth).reduce((s: number, r: any) => s + (Number(r.investment_amount) || 0), 0),
+      monthInvestment: activeInvRows.filter((r: any) => r.created_at >= startOfMonth).reduce((s: number, r: any) => s + (Number(r.investment_amount) || 0), 0),
       // Payout totals
       totalPayout: payRows.reduce((s: number, r: any) => s + (Number(r.net_interest) || 0), 0),
       monthPayout: monthPayRows.reduce((s: number, r: any) => s + (Number(r.net_interest) || 0), 0),
