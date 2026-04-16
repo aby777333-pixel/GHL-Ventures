@@ -1570,10 +1570,10 @@ export default function DashboardClient() {
             <h3 className="text-lg font-semibold text-white">KYC Status</h3>
             <span className={`inline-block mt-2 px-4 py-1.5 rounded-full text-sm font-medium ${
               userKycStatus === 'approved' || userKycStatus === 'verified'
-                ? 'bg-green-100 text-green-700'
+                ? 'bg-green-700 text-white'
                 : userKycStatus === 'rejected'
-                ? 'bg-red-100 text-red-700'
-                : 'bg-yellow-100 text-yellow-700'
+                ? 'bg-red-700 text-white'
+                : 'bg-yellow-600 text-white'
             }`}>
               {userKycStatus === 'approved' || userKycStatus === 'verified' ? 'Approved' : userKycStatus === 'rejected' ? 'Rejected' : 'Pending'}
             </span>
