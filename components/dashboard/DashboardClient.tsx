@@ -397,6 +397,20 @@ export default function DashboardClient() {
   const [ticketSubject, setTicketSubject] = useState('')
   const [ticketCategory, setTicketCategory] = useState('General Inquiry')
   const [ticketDesc, setTicketDesc] = useState('')
+  const [openFaqId, setOpenFaqId] = useState<string | number | null>(null)
+  const [faqs, setFaqs] = useState<any[]>([])
+
+  // Load FAQs for dashboard
+  useEffect(() => {
+    (async () => {
+      try {
+        const { supabase, isSupabaseConfigured } = await import('@/lib/supabase/client')
+        if (!isSupabaseConfigured()) return
+        const { data } = await (supabase as any).from('faqs').select('*').eq('is_active', true).order('sort_order', { ascending: true }).limit(5)
+        if (data) setFaqs(data)
+      } catch {}
+    })()
+  }, [])
   const [messageCompose, setMessageCompose] = useState(false)
   const [msgTo, setMsgTo] = useState('Relationship Manager')
   const [msgSubject, setMsgSubject] = useState('')
@@ -1538,161 +1552,90 @@ export default function DashboardClient() {
   // ═══════════════════════════════════════════════════════════
   const renderDashboardHome = () => (
     <div className="space-y-6">
-      {/* Welcome + Task reminders */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-        <div>
-          <h2 className={`text-xl font-bold mb-0.5 ${t('text-white','text-gray-900')}`}>{greeting}, <span className="text-brand-red">{firstName}</span></h2>
-          <p className={`text-sm flex items-center gap-2 ${t('text-gray-500','text-gray-700')}`}>
-            Welcome to your investor portal
-            <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold ${userKycStatus === 'approved' || userKycStatus === 'verified' ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/20' : 'bg-amber-500/15 text-amber-400 border border-amber-500/20'}`}>
-              <Shield className="w-3 h-3" /> KYC {userKycStatus === 'approved' || userKycStatus === 'verified' ? 'Verified' : userKycStatus}
-            </span>
-          </p>
+      {/* 3 Welcome Cards Row (matches investor.php) */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        {/* Welcome Card */}
+        <div className="rounded-xl shadow-sm" style={{ background: 'linear-gradient(rgba(208,203,203,0.72),#ffffff)' }}>
+          <div className="p-6 text-center">
+            <i className="las la-user text-2xl mb-3" style={{ color: '#ac0d0d' }} />
+            <h3 className="text-lg font-semibold text-gray-800">Welcome</h3>
+            <h5 className="text-gray-700 mt-1">{userName}</h5>
+            {ghlId && <p className="text-sm text-gray-500">({ghlId})</p>}
+          </div>
         </div>
-        <div className="flex items-center gap-2">
-          <button onClick={() => setActiveTab('investments')} className="px-4 py-2 rounded-xl text-xs font-semibold text-white transition-all hover:scale-105" style={{ background: 'linear-gradient(135deg, #D0021B, #8B0000)' }}>
-            <Plus className="w-3.5 h-3.5 inline mr-1.5" /> New Investment
-          </button>
+        {/* KYC Status Card */}
+        <div className="rounded-xl shadow-sm" style={{ background: 'linear-gradient(rgba(208,203,203,0.72),#ffffff)' }}>
+          <div className="p-6 text-center">
+            <i className="las la-user text-2xl mb-3" style={{ color: '#ac0d0d' }} />
+            <h3 className="text-lg font-semibold text-gray-800">KYC Status</h3>
+            <span className={`inline-block mt-2 px-4 py-1.5 rounded-full text-sm font-medium ${
+              userKycStatus === 'approved' || userKycStatus === 'verified'
+                ? 'bg-green-100 text-green-700'
+                : userKycStatus === 'rejected'
+                ? 'bg-red-100 text-red-700'
+                : 'bg-yellow-100 text-yellow-700'
+            }`}>
+              {userKycStatus === 'approved' || userKycStatus === 'verified' ? 'Approved' : userKycStatus === 'rejected' ? 'Rejected' : 'Pending'}
+            </span>
+          </div>
+        </div>
+        {/* My Investments Card */}
+        <div className="rounded-xl shadow-sm" style={{ background: 'linear-gradient(rgba(208,203,203,0.72),#ffffff)' }}>
+          <div className="p-6 text-center">
+            <i className="las la-coins text-2xl mb-3" style={{ color: '#ac0d0d' }} />
+            <h3 className="text-lg font-semibold text-gray-800">My Investments</h3>
+            <button onClick={() => setActiveTab('investments')} className="mt-3 px-5 py-2 text-sm rounded-lg text-white font-medium" style={{ backgroundColor: '#ac0d0d' }}>View</button>
+          </div>
         </div>
       </div>
 
-      {/* Task reminders bar */}
-      {taskReminders.length > 0 && (
-        <Glass className="p-4" theme={theme}>
-          <div className="flex items-center gap-3 flex-wrap">
-            <BellRing className="w-4 h-4 text-amber-400 shrink-0" />
-            <span className={`text-xs font-semibold ${t('text-white','text-gray-900')}`}>Reminders:</span>
-            {taskReminders.map(r => (
-              <span key={r.id} className={`text-xs px-2.5 py-1 rounded-lg ${r.urgent ? 'bg-amber-500/15 text-amber-400 border border-amber-500/20' : t('bg-white/[0.04] text-gray-400','bg-gray-100/40 text-gray-600')}`}>
-                {r.task} &bull; {r.due}
-              </span>
-            ))}
-          </div>
-        </Glass>
-      )}
-
+      {/* 4 Crimson Stats Cards (matches investor.php) */}
       {renderHeroMetrics()}
 
-      {/* Portfolio Health + Countdown + Sentiment */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        {renderHealthScore()}
-        {renderCountdown()}
-        {renderSentiment()}
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        <div className="lg:col-span-2">{renderNAVChart()}</div>
-        <div>{renderAllocationChart()}</div>
-      </div>
-
-      {renderQuickActions()}
-
-      {/* Live Charts + Global Markets + India Economy */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        {renderLiveCharts()}
-        {renderGlobalMarkets()}
-        {renderIndiaIndicators()}
-      </div>
-
-      {/* GHL Admin News + AI Insights + Economic Calendar */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        {renderAdminNews()}
-        <div className="space-y-4">
-          {renderAIInsights()}
-          {renderMilestones()}
-        </div>
-        {renderEconomicCalendar()}
-      </div>
-
-      {/* Portfolio Assets + Recent Activity */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        {renderPortfolioAssets()}
-        {renderRecentActivity()}
-      </div>
-
-      {/* Contact GHL + Relationship Manager */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        {/* Contact GHL Card */}
-        <Glass className="p-5 relative overflow-hidden" hover glow theme={theme}>
-          <div className="absolute -right-8 -bottom-8 w-28 h-28 bg-purple-500/10 rounded-full blur-[50px]" />
-          <div className="relative">
-            <div className="flex items-center gap-2 mb-4">
-              <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-purple-500/20 to-indigo-500/20 flex items-center justify-center">
-                <PhoneCall className="w-4 h-4 text-purple-400" />
-              </div>
-              <h4 className="text-sm font-bold text-white">Contact GHL</h4>
-            </div>
-            <div className="space-y-2">
-              {[
-                { label: 'Chennai HQ', number: '+91 44 2843 1043', href: 'tel:+914428431043', icon: Building2, toast: 'Calling Chennai HQ...' },
-                { label: 'Sales & Support', number: '+91 7200 255 252', href: 'tel:+917200255252', icon: Phone, toast: 'Calling Sales & Support...' },
-                { label: 'Email', number: 'info@ghlindiaventures.com', href: 'mailto:info@ghlindiaventures.com', icon: Mail, toast: 'Opening email client...' },
-                { label: 'Live Chat', number: 'Chat with ARIA', href: '#', icon: MessageSquare, toast: 'Opening live chat...' },
-              ].map((line, i) => (
-                <button key={i} onClick={() => {
-                  if (line.href === '#') { window.dispatchEvent(new CustomEvent('ghl-open-chat')) }
-                  else { window.open(line.href, line.href.startsWith('mailto') ? '_blank' : '_self') }
-                  showToast(line.toast, 'info')
-                }}
-                  className="w-full flex items-center gap-3 p-2.5 rounded-xl bg-white/[0.02] border border-white/[0.04] hover:border-purple-500/20 hover:bg-purple-500/[0.04] transition-all group cursor-pointer text-left">
-                  <line.icon className="w-4 h-4 text-gray-500 group-hover:text-purple-400 transition-colors" />
-                  <div className="flex-1 min-w-0">
-                    <p className="text-[10px] text-gray-500">{line.label}</p>
-                    <p className="text-xs font-semibold text-white">{line.number}</p>
-                  </div>
-                  <ExternalLink className="w-3 h-3 text-gray-600 group-hover:text-purple-400 transition-colors" />
-                </button>
-              ))}
-            </div>
-            <button onClick={() => setActiveTab('support')}
-              className="w-full mt-3 py-2 rounded-xl text-xs font-semibold text-purple-300 bg-purple-500/10 border border-purple-500/15 hover:bg-purple-500/20 transition-all">
-              Open Support Center &rarr;
-            </button>
-          </div>
-        </Glass>
-
-        {/* Relationship Manager Card */}
-        <Glass className="p-5" hover theme={theme}>
-          <div className="flex items-center gap-2 mb-4">
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-blue-500/20 to-cyan-500/20 flex items-center justify-center">
-              <Users className="w-4 h-4 text-blue-400" />
-            </div>
-            <h4 className="text-sm font-bold text-white">Your RM</h4>
-          </div>
-          <div className="flex items-center gap-4 mb-4">
-            <div className="w-14 h-14 rounded-full bg-gradient-to-br from-blue-500/30 to-cyan-500/30 flex items-center justify-center text-lg font-bold text-blue-300 ring-2 ring-blue-500/20">
-              {assignedRM ? assignedRM.name.split(' ').map((n: string) => n[0]).join('').toUpperCase() : 'RM'}
+      {/* Portfolio Section (matches investor.php) */}
+      {totalInvested > 0 && (
+        <div className="bg-white rounded-2xl shadow-sm p-6">
+          <h3 className="text-lg font-semibold text-gray-800 mb-4">Portfolio</h3>
+          <div className="grid grid-cols-2 gap-6">
+            <div>
+              <h6 className="text-sm text-gray-500">Commitment</h6>
+              <h5 className="text-xl font-bold text-gray-800">₹{formatINR(totalInvested)}</h5>
             </div>
             <div>
-              <p className="text-sm font-bold text-white">{assignedRM?.name || 'Not yet assigned'}</p>
-              <p className="text-xs text-gray-500">{assignedRM?.designation || 'Relationship Manager'}</p>
-              {!assignedRM && <p className="text-[10px] text-gray-600 mt-0.5">An RM will be assigned to you shortly</p>}
+              <h6 className="text-sm text-gray-500">Investment</h6>
+              <h5 className="text-xl font-bold text-gray-800">₹{formatINR(totalCurrent)}</h5>
             </div>
           </div>
-          <div className="grid grid-cols-2 gap-2">
-            <button onClick={async () => {
-              showToast('Connecting you with your RM...', 'info')
-              await createRMRequest({ clientId: clientId || '', clientName: userName || 'Client', requestType: 'chat' })
-              window.dispatchEvent(new CustomEvent('ghl-open-chat'))
-            }}
-              className="flex items-center justify-center gap-2 p-2.5 rounded-xl bg-white/[0.03] border border-white/[0.06] hover:border-brand-red/20 hover:bg-brand-red/[0.04] text-xs font-medium text-gray-300 hover:text-brand-red transition-all">
-              <MessageSquare className="w-3.5 h-3.5" /> Talk with RM
-            </button>
-            <button onClick={async () => {
-              showToast('Requesting callback from your RM...', 'info')
-              await createRMRequest({ clientId: clientId || '', clientName: userName || 'Client', requestType: 'callback' })
-              window.open(`tel:${assignedRM?.phone || '+917200255252'}`)
-            }}
-              className="flex items-center justify-center gap-2 p-2.5 rounded-xl bg-white/[0.03] border border-white/[0.06] hover:border-emerald-500/20 hover:bg-emerald-500/[0.04] text-xs font-medium text-gray-300 hover:text-emerald-300 transition-all">
-              <Phone className="w-3.5 h-3.5" /> Call RM
-            </button>
+        </div>
+      )}
+
+      {/* FAQ Section (matches investor.php) */}
+      {faqs.length > 0 && (
+        <div className="bg-white rounded-2xl shadow-sm p-6">
+          <h4 className="text-center font-semibold mb-4" style={{ color: '#ac0d0d' }}>Frequently Asked Questions</h4>
+          <div className="space-y-2">
+            {faqs.map((faq: any, idx: number) => (
+              <div key={faq.id || idx} className="border border-gray-200 rounded-lg overflow-hidden">
+                <button
+                  onClick={() => setOpenFaqId(openFaqId === (faq.id || idx) ? null : (faq.id || idx))}
+                  className="w-full flex items-center justify-between px-4 py-3 text-left hover:bg-gray-50 transition-colors"
+                >
+                  <span className="font-medium text-gray-800 text-sm">{faq.question}</span>
+                  <i className={`las la-angle-${openFaqId === (faq.id || idx) ? 'up' : 'down'} text-gray-400`} />
+                </button>
+                {openFaqId === (faq.id || idx) && (
+                  <div className="px-4 pb-3">
+                    <p className="text-sm text-gray-600">{faq.answer}</p>
+                  </div>
+                )}
+              </div>
+            ))}
           </div>
-          <div className="flex items-center gap-2 mt-3 p-2 rounded-lg bg-emerald-500/[0.06] border border-emerald-500/10">
-            <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-            <span className="text-[10px] text-emerald-400 font-medium">Available now &bull; Mon-Sat 9:30 AM - 6:30 PM IST</span>
+          <div className="text-center mt-4">
+            <a href="/contact/faqs" className="text-sm font-semibold" style={{ color: '#ac0d0d' }}>View More</a>
           </div>
-        </Glass>
-      </div>
+        </div>
+      )}
     </div>
   )
 
