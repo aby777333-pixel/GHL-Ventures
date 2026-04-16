@@ -21,7 +21,7 @@ function StatCard({ title, value, icon, href, navigate, isCurrency }: {
   const display = isCurrency ? formatINR(value) : value.toLocaleString('en-IN')
   const card = (
     <div className="rounded-lg mt-4 shadow-md transition-transform hover:scale-[1.02] cursor-pointer"
-      style={{ background: 'linear-gradient(135deg, #ac0d0d 0%, #d41919 100%)' }}>
+      style={{ background: 'linear-gradient(135deg, #2e1515 0%, #6b1a1a 100%)' }}>
       <div className="p-5">
         <h5 className="text-white text-sm font-medium opacity-90">{title}</h5>
         <div className="flex items-center justify-between mt-3">

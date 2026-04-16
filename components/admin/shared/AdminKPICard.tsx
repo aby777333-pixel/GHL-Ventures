@@ -27,7 +27,7 @@ export default function AdminKPICard({
     <div
       className="rounded-xl p-5 transition-all duration-300 hover:scale-[1.02] admin-card-enter"
       style={{
-        background: 'linear-gradient(135deg, #ac0d0d 0%, #d41919 100%)',
+        background: 'linear-gradient(135deg, #2e1515 0%, #6b1a1a 100%)',
         animationDelay: `${delay}ms`,
       }}
     >
