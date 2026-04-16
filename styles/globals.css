@@ -720,13 +720,10 @@ button svg, button .lucide, [role="button"] svg {
   color: #9CA3AF;
 }
 
-:root.dark .text-brand-black {
-  color: #FFFFFF !important;
-}
-
-:root.dark .text-brand-grey {
-  color: #9CA3AF !important;
-}
+/* text-brand-black and text-brand-grey dark overrides removed —
+   each element now uses Tailwind dark:text-white directly in JSX.
+   The global !important override was making text white even inside
+   white-background cards, causing invisible text. */
 
 /* ============================================================
    TEXT VISIBILITY SAFETY NET
