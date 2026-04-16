@@ -33,10 +33,42 @@ async function safeFetch<T>(
 
 export async function fetchPortfolioAssets(clientId?: string) {
   if (!isSupabaseConfigured() || !clientId) return []
-  return safeFetch(
+  // Try investments table first (structured portfolio data)
+  const primary = await safeFetch(
     () => sb.from('investments').select('*').eq('client_id', clientId),
-    [], 'fetchPortfolioAssets',
+    [], 'fetchPortfolioAssets:investments',
   )
+  if ((primary as any[]).length > 0) return primary
+
+  // Fallback: derive portfolio from investment_applications (Laravel: investments table)
+  // Maps fund_vehicle to fund types matching the PHP source
+  const apps = await safeFetch(
+    () => sb.from('investment_applications')
+      .select('id, client_id, fund_vehicle, investment_amount, status, created_at')
+      .eq('client_id', clientId)
+      .in('status', ['approved', 'active']),
+    [], 'fetchPortfolioAssets:applications',
+  )
+  // Map to the shape expected by the dashboard (invested_amount, current_value, fund_type, fund_name)
+  return (apps as any[]).map((a: any) => {
+    const fv = a.fund_vehicle || ''
+    let fundType = 'Other'
+    if (fv.includes('AIF Direct') || fv === 'Direct AIF Route') fundType = 'AIF'
+    else if (fv.toLowerCase().includes('debenture')) fundType = 'Debenture'
+    else if (fv.toLowerCase().includes('llp')) fundType = 'LLP'
+    else if (fv.toLowerCase().includes('co-invest')) fundType = 'Co-Invest'
+    return {
+      id: a.id,
+      client_id: a.client_id,
+      fund_name: fv,
+      fund_type: fundType,
+      invested_amount: Number(a.investment_amount) || 0,
+      current_value: Number(a.investment_amount) || 0, // No mark-to-market yet
+      return_pct: 0,
+      status: a.status === 'approved' ? 'active' : a.status,
+      invested_at: a.created_at,
+    }
+  })
 }
 
 export async function fetchNAVHistory(clientId?: string) {
@@ -55,18 +87,39 @@ export async function fetchNAVHistory(clientId?: string) {
 
 export async function getAllocation(clientId?: string) {
   if (!isSupabaseConfigured() || !clientId) return []
-  // Compute allocation from investments
   try {
+    // Try investments table first
+    let rows: any[] = []
     const { data } = await sb.from('investments').select('fund_type, current_value').eq('client_id', clientId)
-    if (!data || data.length === 0) return []
+    if (data && data.length > 0) {
+      rows = data
+    } else {
+      // Fallback: derive from investment_applications
+      const { data: apps } = await sb.from('investment_applications')
+        .select('fund_vehicle, investment_amount')
+        .eq('client_id', clientId)
+        .in('status', ['approved', 'active'])
+      if (apps && apps.length > 0) {
+        rows = (apps as any[]).map((a: any) => {
+          const fv = a.fund_vehicle || ''
+          let fundType = 'Other'
+          if (fv.includes('AIF Direct') || fv === 'Direct AIF Route') fundType = 'AIF'
+          else if (fv.toLowerCase().includes('debenture')) fundType = 'Debenture'
+          else if (fv.toLowerCase().includes('llp')) fundType = 'LLP'
+          else if (fv.toLowerCase().includes('co-invest')) fundType = 'Co-Invest'
+          return { fund_type: fundType, current_value: Number(a.investment_amount) || 0 }
+        })
+      }
+    }
+    if (rows.length === 0) return []
     const totals: Record<string, number> = {}
     let total = 0
-    for (const inv of data as any[]) {
+    for (const inv of rows) {
       const type = inv.fund_type || 'Other'
       totals[type] = (totals[type] || 0) + (Number(inv.current_value) || 0)
       total += Number(inv.current_value) || 0
     }
-    const colors: Record<string, string> = { 'Stressed RE': '#D0021B', 'Startups': '#F59E0B', 'Fixed Income': '#3B82F6', 'Direct RE': '#10B981' }
+    const colors: Record<string, string> = { 'AIF': '#D0021B', 'Debenture': '#F59E0B', 'LLP': '#3B82F6', 'Co-Invest': '#10B981', 'Stressed RE': '#D0021B', 'Startups': '#F59E0B', 'Fixed Income': '#3B82F6', 'Direct RE': '#10B981' }
     return Object.entries(totals).map(([name, value]) => ({
       name,
       value: total > 0 ? Math.round((value / total) * 100) : 0,

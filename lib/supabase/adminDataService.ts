@@ -62,6 +62,9 @@ export async function getOverviewKPIs() {
 }
 
 // ── Operational Stats (matches PHP admin.php reference) ─────
+// Laravel uses: users table (kyc_status int 0-3), investments (fund_id 10=AIF, 11=Debenture, status 2=approved),
+// paymentschedules (net_interest, tds, status 1=paid), supports (status 0/1/2)
+// Supabase maps: clients, kyc_basic_details, investment_applications, monthly_payouts, tickets
 export async function getOperationalStats() {
   if (!isSupabaseConfigured()) return null
   try {
@@ -72,26 +75,50 @@ export async function getOperationalStats() {
       clientsResult, investedClientsResult,
       kycAllResult, kycPendingResult, kycApprovedResult, kycRejectedResult,
       investmentsResult, payoutsResult, monthPayoutsResult,
-      ticketsResult, ticketsPendingResult, ticketsOpenResult, ticketsClosedResult,
+      ticketsResult, ticketsOpenResult, ticketsClosedResult,
     ] = await Promise.all([
+      // Users — count all clients
       sb.from('clients').select('*', { count: 'exact', head: true }),
+      // Invested users — those with total_invested > 0
       sb.from('clients').select('*', { count: 'exact', head: true }).gt('total_invested', 0),
+      // KYC — total submissions (maps to Laravel: users where kyc_status != 0)
       sb.from('kyc_basic_details').select('*', { count: 'exact', head: true }),
-      sb.from('kyc_basic_details').select('*', { count: 'exact', head: true }).eq('status', 'pending'),
+      // KYC Pending — Supabase uses 'submitted' (Laravel status=1)
+      sb.from('kyc_basic_details').select('*', { count: 'exact', head: true }).eq('status', 'submitted'),
+      // KYC Approved (Laravel status=2)
       sb.from('kyc_basic_details').select('*', { count: 'exact', head: true }).eq('status', 'approved'),
+      // KYC Rejected (Laravel status=3)
       sb.from('kyc_basic_details').select('*', { count: 'exact', head: true }).eq('status', 'rejected'),
-      sb.from('investment_applications').select('investment_amount, fund_vehicle, created_at').in('status', ['approved', 'active']),
-      sb.from('monthly_payouts').select('gross_amount, tds_amount, net_interest, created_at'),
-      sb.from('monthly_payouts').select('gross_amount, tds_amount, net_interest, created_at').gte('created_at', startOfMonth),
+      // All investment applications — fetch all to compute totals client-side
+      // Laravel: Investment::where('status',2)->sum('amount') — Supabase approved status = 'approved'
+      sb.from('investment_applications').select('investment_amount, fund_vehicle, status, created_at'),
+      // Payouts — maps to Laravel paymentschedules (net_interest, tds, status=1 paid)
+      sb.from('monthly_payouts').select('gross_amount, tds_amount, net_interest, payment_status, created_at'),
+      sb.from('monthly_payouts').select('gross_amount, tds_amount, net_interest, payment_status, created_at').gte('created_at', startOfMonth),
+      // Tickets — maps to Laravel supports table
       sb.from('tickets').select('*', { count: 'exact', head: true }),
-      sb.from('tickets').select('*', { count: 'exact', head: true }).eq('status', 'pending'),
+      // Open tickets (Laravel status=1)
       sb.from('tickets').select('*', { count: 'exact', head: true }).eq('status', 'open'),
+      // Closed tickets (Laravel status=2)
       sb.from('tickets').select('*', { count: 'exact', head: true }).eq('status', 'closed'),
     ])
 
-    const invRows = (investmentsResult.data || []) as any[]
+    const allInvRows = (investmentsResult.data || []) as any[]
+    // Filter for approved investments (Laravel: status=2)
+    const approvedInvRows = allInvRows.filter((r: any) => r.status === 'approved' || r.status === 'active')
     const payRows = (payoutsResult.data || []) as any[]
     const monthPayRows = (monthPayoutsResult.data || []) as any[]
+
+    // AIF classification: fund_vehicle contains "AIF" and "Direct" (maps to Laravel fund_id=10)
+    const isAIF = (fv: string) => fv && (fv.includes('AIF Direct') || fv === 'Direct AIF Route')
+    // Debenture classification: fund_vehicle contains "Debenture" (maps to Laravel fund_id=11)
+    const isDebenture = (fv: string) => fv && fv.toLowerCase().includes('debenture')
+
+    // Pending tickets = total - open - closed (Laravel status=0)
+    const totalTix = ticketsResult.count ?? 0
+    const openTix = ticketsOpenResult.count ?? 0
+    const closedTix = ticketsClosedResult.count ?? 0
+    const pendingTix = Math.max(0, totalTix - openTix - closedTix)
 
     return {
       totalUsers: clientsResult.count ?? 0,
@@ -100,18 +127,23 @@ export async function getOperationalStats() {
       pendingKyc: kycPendingResult.count ?? 0,
       approvedKyc: kycApprovedResult.count ?? 0,
       rejectedKyc: kycRejectedResult.count ?? 0,
-      totalInvestment: invRows.reduce((s: number, r: any) => s + (Number(r.investment_amount) || 0), 0),
-      aifInvestment: invRows.filter((r: any) => r.fund_vehicle === 'AIF').reduce((s: number, r: any) => s + (Number(r.investment_amount) || 0), 0),
-      debentureInvestment: invRows.filter((r: any) => r.fund_vehicle === 'Debenture').reduce((s: number, r: any) => s + (Number(r.investment_amount) || 0), 0),
-      monthInvestment: invRows.filter((r: any) => r.created_at >= startOfMonth).reduce((s: number, r: any) => s + (Number(r.investment_amount) || 0), 0),
+      // Investment totals — all approved/active applications
+      totalInvestment: approvedInvRows.reduce((s: number, r: any) => s + (Number(r.investment_amount) || 0), 0),
+      // AIF count (Laravel shows count, not amount for AIF)
+      aifInvestment: allInvRows.filter((r: any) => isAIF(r.fund_vehicle)).length,
+      // Debenture total amount
+      debentureInvestment: approvedInvRows.filter((r: any) => isDebenture(r.fund_vehicle)).reduce((s: number, r: any) => s + (Number(r.investment_amount) || 0), 0),
+      // This month investment
+      monthInvestment: approvedInvRows.filter((r: any) => r.created_at >= startOfMonth).reduce((s: number, r: any) => s + (Number(r.investment_amount) || 0), 0),
+      // Payout totals
       totalPayout: payRows.reduce((s: number, r: any) => s + (Number(r.net_interest) || 0), 0),
       monthPayout: monthPayRows.reduce((s: number, r: any) => s + (Number(r.net_interest) || 0), 0),
       totalTds: payRows.reduce((s: number, r: any) => s + (Number(r.tds_amount) || 0), 0),
       monthTds: monthPayRows.reduce((s: number, r: any) => s + (Number(r.tds_amount) || 0), 0),
-      totalTickets: ticketsResult.count ?? 0,
-      pendingTickets: ticketsPendingResult.count ?? 0,
-      openTickets: ticketsOpenResult.count ?? 0,
-      closedTickets: ticketsClosedResult.count ?? 0,
+      totalTickets: totalTix,
+      pendingTickets: pendingTix,
+      openTickets: openTix,
+      closedTickets: closedTix,
     }
   } catch (err) {
     console.warn('[adminData] getOperationalStats error:', err)

@@ -576,11 +576,16 @@ export default function DashboardClient() {
   const t = (dark: string, light: string) => isDark ? dark : light
 
   // Animated counters — derive from user/portfolio data
+  // Maps to Laravel: Investment::where('user_id',...)->where('status',2)->sum('amount')
   const totalCurrent = useMemo(() => portfolioAssets.reduce((s: number, a: any) => s + (Number(a.current_value) || 0), 0), [portfolioAssets])
   const totalInvested = useMemo(() => portfolioAssets.reduce((s: number, a: any) => s + (Number(a.invested_amount) || 0), 0), [portfolioAssets])
-  const portfolioValue = useAnimatedCounter(user?.aum || totalCurrent || 0)
-  const aifInvestment = useAnimatedCounter(totalInvested || 0)
-  const coInvestValue = useAnimatedCounter(totalCurrent - totalInvested || 0)
+  // AIF amount (Laravel: fund_id=10)
+  const aifTotal = useMemo(() => portfolioAssets.filter((a: any) => a.fund_type === 'AIF').reduce((s: number, a: any) => s + (Number(a.invested_amount) || 0), 0), [portfolioAssets])
+  // Debenture amount (Laravel: fund_id=11)
+  const debentureTotal = useMemo(() => portfolioAssets.filter((a: any) => a.fund_type === 'Debenture').reduce((s: number, a: any) => s + (Number(a.invested_amount) || 0), 0), [portfolioAssets])
+  const portfolioValue = useAnimatedCounter(user?.aum || totalInvested || 0)
+  const aifInvestment = useAnimatedCounter(aifTotal || 0)
+  const coInvestValue = useAnimatedCounter(debentureTotal || 0)
   const currentNAV = useAnimatedCounter(navHistory.length ? (navHistory[navHistory.length - 1]?.nav_value || navHistory[navHistory.length - 1]?.nav || 0) * 100 : 0)
 
   useEffect(() => {
@@ -1006,9 +1011,9 @@ export default function DashboardClient() {
   const renderHeroMetrics = () => {
     const metrics = [
       { label: 'Total Investment', value: `\u20B9${formatINR(portfolioValue)}`, change: `+${totalReturn}%`, up: true, icon: Wallet, gradient: 'from-brand-red/20 to-red-900/20', iconColor: '#D0021B' },
-      { label: 'Total Payout', value: `\u20B9${formatINR(coInvestValue)}`, change: '\u2014', up: true, icon: IndianRupee, gradient: 'from-purple-500/20 to-purple-900/20', iconColor: '#8B5CF6' },
+      { label: 'Total Payout', value: `\u20B9${formatINR(0)}`, change: '\u2014', up: true, icon: IndianRupee, gradient: 'from-purple-500/20 to-purple-900/20', iconColor: '#8B5CF6' },
       { label: 'AIF Investment', value: `\u20B9${formatINR(aifInvestment)}`, change: '\u2014', up: true, icon: Building2, gradient: 'from-emerald-500/20 to-emerald-900/20', iconColor: '#10B981' },
-      { label: 'Debenture', value: `\u20B9${formatINR(Math.max(0, totalCurrent - totalInvested))}`, change: '\u2014', up: true, icon: FileText, gradient: 'from-blue-500/20 to-blue-900/20', iconColor: '#3B82F6' },
+      { label: 'Debenture', value: `\u20B9${formatINR(coInvestValue)}`, change: '\u2014', up: true, icon: FileText, gradient: 'from-blue-500/20 to-blue-900/20', iconColor: '#3B82F6' },
     ]
     return (
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
