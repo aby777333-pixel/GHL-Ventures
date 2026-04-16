@@ -91,16 +91,16 @@ export default function OverviewModule({ navigate, showToast }: OverviewModulePr
       {/* Investment Section */}
       <h4 className="text-lg font-semibold text-white mt-8">Investment</h4>
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
-        <StatCard title="Total Investment" value={stats.totalInvestment} icon="las la-wallet" href="finance" navigate={navigate} isCurrency />
-        <StatCard title="AIF" value={stats.aifInvestment} icon="las la-wallet" href="finance" navigate={navigate} isCurrency />
-        <StatCard title="Debenture" value={stats.debentureInvestment} icon="las la-wallet" href="finance" navigate={navigate} isCurrency />
-        <StatCard title="This Month" value={stats.monthInvestment} icon="las la-wallet" href="finance" navigate={navigate} isCurrency />
+        <StatCard title="Total Investment" value={stats.totalInvestment} icon="las la-wallet" href="financial" navigate={navigate} isCurrency />
+        <StatCard title="AIF" value={stats.aifInvestment} icon="las la-wallet" href="financial" navigate={navigate} isCurrency />
+        <StatCard title="Debenture" value={stats.debentureInvestment} icon="las la-wallet" href="financial" navigate={navigate} isCurrency />
+        <StatCard title="This Month" value={stats.monthInvestment} icon="las la-wallet" href="financial" navigate={navigate} isCurrency />
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
-        <StatCard title="Total Payout" value={stats.totalPayout} icon="las la-wallet" isCurrency />
-        <StatCard title="This Month Payout" value={stats.monthPayout} icon="las la-wallet" isCurrency />
-        <StatCard title="Total TDS" value={stats.totalTds} icon="las la-wallet" isCurrency />
-        <StatCard title="This Month TDS" value={stats.monthTds} icon="las la-wallet" isCurrency />
+        <StatCard title="Total Payout" value={stats.totalPayout} icon="las la-wallet" href="payouts" navigate={navigate} isCurrency />
+        <StatCard title="This Month Payout" value={stats.monthPayout} icon="las la-wallet" href="payouts" navigate={navigate} isCurrency />
+        <StatCard title="Total TDS" value={stats.totalTds} icon="las la-wallet" href="payouts" navigate={navigate} isCurrency />
+        <StatCard title="This Month TDS" value={stats.monthTds} icon="las la-wallet" href="payouts" navigate={navigate} isCurrency />
       </div>
 
       {/* Support Ticket Section */}
