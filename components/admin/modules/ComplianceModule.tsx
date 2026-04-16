@@ -262,6 +262,23 @@ function KYCQueueTab({ kycQueue, showToast, onRefresh }: { kycQueue: any[]; show
                     <p className="text-[10px] text-gray-500">{item.fileName}</p>
                     {item.uploadDate && <p className="text-[10px] text-gray-600 mt-0.5">{formatDate(item.uploadDate)}</p>}
                     {item.notes && <p className="text-[10px] text-amber-400 mt-1">Note: {item.notes}</p>}
+                    {/* View Proof links — extract doc URLs from full data */}
+                    {item.data && (() => {
+                      const urls = Object.entries(item.data)
+                        .filter(([k, v]) => k.endsWith('_url') && v && typeof v === 'string' && (v as string).startsWith('http'))
+                        .map(([k, v]) => ({ label: k.replace(/_url$/, '').replace(/_/g, ' '), url: v as string }))
+                      if (urls.length === 0) return null
+                      return (
+                        <div className="flex flex-wrap gap-1 mt-1.5">
+                          {urls.map(u => (
+                            <a key={u.label} href={u.url} target="_blank" rel="noopener noreferrer"
+                              className="text-[9px] px-2 py-0.5 rounded bg-blue-500/20 text-blue-400 hover:bg-blue-500/30 transition-colors">
+                              View {u.label}
+                            </a>
+                          ))}
+                        </div>
+                      )
+                    })()}
                   </div>
                 ))}
               </div>
