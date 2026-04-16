@@ -274,6 +274,7 @@
   .card {
     @apply bg-white rounded-xl p-5 md:p-6 transition-all duration-300;
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06), 0 4px 12px rgba(0, 0, 0, 0.04);
+    color: #1F2937;
   }
   .card:hover {
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08), 0 8px 24px rgba(0, 0, 0, 0.06);
@@ -678,6 +679,7 @@ button svg, button .lucide, [role="button"] svg {
 
 :root.dark .bg-white {
   background-color: #111111 !important;
+  color: #E5E7EB !important;
 }
 
 /* Navbar scrolled state dark mode */
@@ -693,6 +695,7 @@ button svg, button .lucide, [role="button"] svg {
 
 :root.dark .card {
   background-color: #1A1A1A;
+  color: #E5E7EB;
   box-shadow: 0 1px 3px rgba(0,0,0,0.3), 0 4px 12px rgba(0,0,0,0.2);
 }
 
