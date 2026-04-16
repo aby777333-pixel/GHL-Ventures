@@ -17,20 +17,12 @@ export default function AdminGlass({
 }: AdminGlassProps) {
   return (
     <div
-      className={`relative rounded-2xl border border-white/[0.08] transition-all duration-500
-        ${hover ? 'hover:border-white/[0.14] hover:shadow-lg hover:shadow-black/20 hover:-translate-y-0.5' : ''}
-        ${glow ? 'shadow-brand-red/5 shadow-lg' : ''} ${padding} ${className}`}
-      style={{
-        background: 'linear-gradient(135deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.02) 100%)',
-        backdropFilter: 'blur(40px) saturate(180%)',
-        WebkitBackdropFilter: 'blur(40px) saturate(180%)',
-      }}
+      className={`relative rounded-xl border border-gray-200 transition-all duration-300 bg-white
+        ${hover ? 'hover:shadow-md hover:-translate-y-0.5' : ''}
+        ${glow ? 'shadow-sm' : ''} ${padding} ${className}`}
+      style={{ boxShadow: '0 1px 3px rgba(0,0,0,0.08)' }}
     >
-      <div
-        className="absolute inset-0 pointer-events-none opacity-[0.04]"
-        style={{ background: 'linear-gradient(135deg, rgba(255,255,255,0.3) 0%, transparent 50%)' }}
-      />
-      <div className="relative z-10">{children}</div>
+      <div className="relative">{children}</div>
     </div>
   )
 }

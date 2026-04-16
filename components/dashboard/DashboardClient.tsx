@@ -223,23 +223,13 @@ function useAnimatedCounter(end: number, duration = 2000) {
 function Glass({ children, className = '', hover = true, glow = false, theme = 'dark' as Theme }: {
   children: React.ReactNode; className?: string; hover?: boolean; glow?: boolean; theme?: Theme
 }) {
-  const isDark = theme === 'dark'
   return (
     <div
-      className={`relative rounded-2xl border overflow-hidden transition-all duration-500
-        ${isDark ? 'border-white/[0.08]' : 'border-gray-200/50 shadow-sm shadow-gray-200/30'}
-        ${hover ? 'dash-glass-hover' : ''} ${glow ? 'dash-glow' : ''} ${className}`}
-      style={{
-        background: isDark
-          ? 'linear-gradient(135deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.02) 100%)'
-          : 'linear-gradient(135deg, rgba(228,225,220,0.92) 0%, rgba(222,219,214,0.96) 100%)',
-        backdropFilter: 'blur(40px) saturate(180%)',
-        WebkitBackdropFilter: 'blur(40px) saturate(180%)',
-      }}
+      className={`relative rounded-xl border border-gray-200 overflow-hidden transition-all duration-300 bg-white
+        ${hover ? 'hover:shadow-md hover:-translate-y-0.5' : ''} ${glow ? 'shadow-sm' : ''} ${className}`}
+      style={{ boxShadow: '0 1px 3px rgba(0,0,0,0.08)' }}
     >
-      <div className="absolute inset-0 pointer-events-none opacity-[0.04]"
-        style={{ background: isDark ? 'linear-gradient(135deg, rgba(255,255,255,0.3) 0%, transparent 50%)' : 'linear-gradient(135deg, rgba(255,255,255,0.8) 0%, transparent 50%)' }} />
-      <div className="relative z-10">{children}</div>
+      <div className="relative">{children}</div>
     </div>
   )
 }
@@ -1016,20 +1006,16 @@ export default function DashboardClient() {
       { label: 'Debenture', value: `\u20B9${formatINR(coInvestValue)}`, change: '\u2014', up: true, icon: FileText, gradient: 'from-blue-500/20 to-blue-900/20', iconColor: '#3B82F6' },
     ]
     return (
-      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         {metrics.map((m, i) => (
-          <Glass key={i} className="p-5" hover glow theme={theme}>
-            <div className="flex items-start justify-between mb-3">
-              <div className={`w-11 h-11 rounded-xl bg-gradient-to-br ${m.gradient} flex items-center justify-center`}>
-                <m.icon className="w-5 h-5" style={{ color: m.iconColor }} />
-              </div>
-              <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${m.up ? 'bg-emerald-500/15 text-emerald-400' : 'bg-red-500/15 text-red-400'}`}>
-                {m.up ? <ArrowUpRight className="w-3 h-3 inline mr-0.5" /> : <ArrowDownRight className="w-3 h-3 inline mr-0.5" />}{m.change}
-              </span>
+          <div key={i} className="rounded-xl p-5 transition-all duration-300 hover:scale-[1.02]"
+            style={{ background: 'linear-gradient(to right, #2e2222, #a70e0e)' }}>
+            <div className="flex items-center gap-3 mb-3">
+              <m.icon className="w-5 h-5 text-white" />
+              <h5 className="text-white text-sm font-medium">{m.label}</h5>
             </div>
-            <p className={`text-2xl font-extrabold tracking-tight mb-0.5 ${t('text-white','text-gray-900')}`}>{m.value}</p>
-            <p className={`text-xs ${t('text-gray-500','text-gray-700')}`}>{m.label}</p>
-          </Glass>
+            <h5 className="text-white text-xl font-bold">{m.value}</h5>
+          </div>
         ))}
       </div>
     )

@@ -197,19 +197,14 @@ export default function AdminTopBar({ activeModule, activeSubTab, onMenuToggle, 
 
   return (
     <header
-      className="sticky top-0 z-30 border-b border-white/[0.06]"
-      style={{
-        background: 'rgba(10,10,15,0.85)',
-        backdropFilter: 'blur(20px)',
-        WebkitBackdropFilter: 'blur(20px)',
-      }}
+      className="sticky top-0 z-30 border-b border-gray-200 bg-white shadow-sm"
     >
       <div className="flex items-center justify-between px-4 lg:px-6 h-14">
         {/* Left: menu + breadcrumb */}
         <div className="flex items-center gap-3">
           <button
             onClick={onMenuToggle}
-            className="lg:hidden text-gray-400 hover:text-white transition-colors"
+            className="lg:hidden text-gray-500 hover:text-gray-800 transition-colors"
           >
             <Menu className="w-5 h-5" />
           </button>
@@ -218,7 +213,7 @@ export default function AdminTopBar({ activeModule, activeSubTab, onMenuToggle, 
           <div className="flex items-center gap-1.5 text-sm">
             <span className="text-gray-500 hidden sm:inline">Admin</span>
             <ChevronRight className="w-3 h-3 text-gray-600 hidden sm:inline" />
-            <span className="text-white font-medium">{moduleLabel}</span>
+            <span className="text-gray-800 font-medium">{moduleLabel}</span>
             {subTabLabel && (
               <>
                 <ChevronRight className="w-3 h-3 text-gray-600" />
@@ -232,17 +227,17 @@ export default function AdminTopBar({ activeModule, activeSubTab, onMenuToggle, 
         <div className="flex items-center gap-3">
           {/* Search */}
           <div className={`hidden md:flex items-center gap-2 px-3 py-1.5 rounded-lg border transition-all duration-300 ${
-            searchFocused ? 'border-brand-red/40 bg-white/[0.06]' : 'border-white/[0.06] bg-white/[0.03]'
+            searchFocused ? 'border-red-300 bg-red-50/30' : 'border-gray-300 bg-gray-50'
           }`}>
-            <Search className="w-3.5 h-3.5 text-gray-500" />
+            <Search className="w-3.5 h-3.5 text-gray-400" />
             <input
               type="text"
               placeholder="Search... (Ctrl+K)"
-              className="bg-transparent text-sm text-white placeholder-gray-600 outline-none w-40 lg:w-56"
+              className="bg-transparent text-sm text-gray-800 placeholder-gray-400 outline-none w-40 lg:w-56"
               onFocus={() => setSearchFocused(true)}
               onBlur={() => setSearchFocused(false)}
             />
-            <kbd className="hidden lg:inline text-[9px] text-gray-600 px-1.5 py-0.5 rounded border border-white/[0.08] bg-white/[0.03]">
+            <kbd className="hidden lg:inline text-[9px] text-gray-400 px-1.5 py-0.5 rounded border border-gray-200 bg-gray-100">
               ⌘K
             </kbd>
           </div>
@@ -257,7 +252,7 @@ export default function AdminTopBar({ activeModule, activeSubTab, onMenuToggle, 
           <div className="relative" ref={notifRef}>
             <button
               onClick={() => setNotifOpen(!notifOpen)}
-              className="relative p-2 rounded-lg text-gray-400 hover:text-white hover:bg-white/[0.06] transition-all"
+              className="relative p-2 rounded-lg text-gray-500 hover:text-gray-800 hover:bg-gray-100 transition-all"
             >
               <Bell className="w-4.5 h-4.5" />
               {unreadCount > 0 && (
@@ -270,11 +265,10 @@ export default function AdminTopBar({ activeModule, activeSubTab, onMenuToggle, 
             {/* Dropdown */}
             {notifOpen && (
               <div
-                className="absolute right-0 top-full mt-2 w-80 rounded-xl border border-white/[0.08] shadow-2xl overflow-hidden z-[50]"
-                style={{ background: 'rgba(18,18,26,0.98)', backdropFilter: 'blur(40px)' }}
+                className="absolute right-0 top-full mt-2 w-80 rounded-xl border border-gray-200 shadow-xl overflow-hidden z-[50] bg-white"
               >
-                <div className="px-4 py-3 border-b border-white/[0.06] flex items-center justify-between">
-                  <p className="text-sm font-semibold text-white">Notifications</p>
+                <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
+                  <p className="text-sm font-semibold text-gray-800">Notifications</p>
                   <button
                     onClick={() => {
                       notifications.forEach(n => markAsRead(n.id))
@@ -305,16 +299,16 @@ export default function AdminTopBar({ activeModule, activeSubTab, onMenuToggle, 
                           navigate(targetModule)
                           setNotifOpen(false)
                         }}
-                        className={`w-full text-left px-4 py-3 border-b border-white/[0.03] hover:bg-white/[0.04] transition-colors ${
+                        className={`w-full text-left px-4 py-3 border-b border-gray-100 hover:bg-gray-50 transition-colors ${
                           isRead ? 'opacity-60' : ''
                         }`}
                       >
                         <div className="flex gap-3">
                           <NIcon className={`w-4 h-4 flex-shrink-0 mt-0.5 ${NOTIF_COLORS[displayType as NotificationType] || 'text-gray-400'}`} />
                           <div className="flex-1 min-w-0">
-                            <p className="text-xs font-semibold text-white truncate">{notif.title}</p>
-                            <p className="text-[11px] text-gray-400 mt-0.5 line-clamp-2">{notif.message}</p>
-                            <p className="text-[10px] text-gray-600 mt-1">{formatTimeAgo(notif.created_at)}</p>
+                            <p className="text-xs font-semibold text-gray-800 truncate">{notif.title}</p>
+                            <p className="text-[11px] text-gray-500 mt-0.5 line-clamp-2">{notif.message}</p>
+                            <p className="text-[10px] text-gray-400 mt-1">{formatTimeAgo(notif.created_at)}</p>
                           </div>
                           {!isRead && <span className="w-2 h-2 rounded-full bg-brand-red flex-shrink-0 mt-1" />}
                         </div>

@@ -78,9 +78,7 @@ export default function AdminSidebar({
         className={`fixed top-0 left-0 h-full z-[10000] w-[280px] flex flex-col transition-transform duration-500 ease-out
           lg:translate-x-0 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}
         style={{
-          background: 'linear-gradient(180deg, rgba(10,10,15,0.98) 0%, rgba(15,5,8,0.98) 100%)',
-          borderRight: '1px solid rgba(255,255,255,0.06)',
-          backdropFilter: 'blur(40px)',
+          backgroundColor: '#ac0d0d',
         }}
       >
         {/* Logo */}
@@ -98,15 +96,12 @@ export default function AdminSidebar({
 
         {/* Admin badge */}
         <div className="px-5 mb-3">
-          <div className="px-3 py-2.5 rounded-xl bg-white/[0.04] border border-white/[0.06]">
-            <p className="text-[10px] uppercase tracking-widest mb-0.5 text-gray-500">Command Center</p>
+          <div className="px-3 py-2.5 rounded-xl bg-white/10 border border-white/20">
+            <p className="text-[10px] uppercase tracking-widest mb-0.5 text-white/60">Welcome Admin!</p>
             <p className="text-sm font-semibold text-white">{userName}</p>
             <div className="flex items-center gap-1.5 mt-1">
-              <span
-                className="w-2 h-2 rounded-full"
-                style={{ backgroundColor: roleColor }}
-              />
-              <p className="text-[10px]" style={{ color: roleColor }}>
+              <span className="w-2 h-2 rounded-full bg-green-400" />
+              <p className="text-[10px] text-white/70">
                 {ROLE_LABELS[userRole]}
               </p>
             </div>
@@ -140,20 +135,20 @@ export default function AdminSidebar({
                   }}
                   className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-300 group relative
                     ${isActive
-                      ? 'text-white bg-brand-red/15 border border-brand-red/20'
-                      : 'text-gray-400 hover:text-white hover:bg-white/[0.04] border border-transparent'
+                      ? 'text-white bg-white/20 border border-white/20'
+                      : 'text-white/80 hover:text-white hover:bg-white/10 border border-transparent'
                     }`}
                 >
                   {isActive && (
-                    <div className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-5 rounded-r-full bg-brand-red" />
+                    <div className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-5 rounded-r-full bg-white" />
                   )}
-                  <Icon className={`w-[18px] h-[18px] flex-shrink-0 ${isActive ? 'text-brand-red' : 'text-gray-500 group-hover:text-gray-300'}`} />
+                  <Icon className={`w-[18px] h-[18px] flex-shrink-0 ${isActive ? 'text-white' : 'text-white/60 group-hover:text-white'}`} />
                   <span className="flex-1 text-left">{item.label}</span>
 
                   {/* Badge */}
                   {item.badge && (
                     <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-bold ${
-                      typeof item.badge === 'number' ? 'bg-brand-red/20 text-brand-red' : 'bg-purple-500/20 text-purple-400'
+                      typeof item.badge === 'number' ? 'bg-white/20 text-white' : 'bg-yellow-400/30 text-yellow-200'
                     }`}>
                       {item.badge}
                     </span>
@@ -161,7 +156,7 @@ export default function AdminSidebar({
 
                   {/* Expand arrow */}
                   {hasSubItems && (
-                    <span className="text-gray-600">
+                    <span className="text-white/50">
                       {isExpanded ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}
                     </span>
                   )}
@@ -182,8 +177,8 @@ export default function AdminSidebar({
                           onClick={() => handleNavClick(sub.id)}
                           className={`w-full text-left px-3 py-1.5 rounded-lg text-[13px] transition-all duration-200
                             ${isSubActive
-                              ? 'text-brand-red font-semibold bg-brand-red/10'
-                              : 'text-gray-500 hover:text-gray-300 hover:bg-white/[0.03]'
+                              ? 'text-white font-semibold bg-white/15'
+                              : 'text-white/60 hover:text-white hover:bg-white/10'
                             }`}
                         >
                           {sub.label}
@@ -196,16 +191,16 @@ export default function AdminSidebar({
             )
           })}
 
-          <div className="my-4 border-t border-white/[0.06]" />
+          <div className="my-4 border-t border-white/20" />
         </nav>
 
         {/* Bottom section */}
-        <div className="px-3 pb-4 pt-2 space-y-1">
+        <div className="px-3 pb-4 pt-2 space-y-1 border-t border-white/20">
           <Link
             href="/dashboard"
             target="_blank"
             className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-300
-              text-gray-500 hover:text-blue-400 hover:bg-blue-500/[0.06]"
+              text-white/70 hover:text-white hover:bg-white/10"
           >
             <ExternalLink className="w-[18px] h-[18px]" />
             Client Dashboard
@@ -214,7 +209,7 @@ export default function AdminSidebar({
             href="/staff/login"
             target="_blank"
             className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-300
-              text-gray-500 hover:text-teal-400 hover:bg-teal-500/[0.06]"
+              text-white/70 hover:text-white hover:bg-white/10"
           >
             <BadgeCheck className="w-[18px] h-[18px]" />
             Staff Portal
@@ -222,15 +217,11 @@ export default function AdminSidebar({
           <button
             onClick={onLogout}
             className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-300
-              text-gray-500 hover:text-red-400 hover:bg-red-500/[0.06]"
+              text-white/70 hover:text-white hover:bg-white/10"
           >
             <LogOut className="w-[18px] h-[18px]" />
             Sign Out
           </button>
-          {/* Social links */}
-          <div className="pt-2 border-t border-white/[0.06] mt-2">
-            <SocialLinks size="sm" variant="glass" />
-          </div>
         </div>
       </aside>
     </>

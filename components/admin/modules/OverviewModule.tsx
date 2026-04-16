@@ -101,7 +101,7 @@ export default function OverviewModule({ navigate, showToast }: OverviewModulePr
     <div className="space-y-6">
       {/* Page Header */}
       <div>
-        <h1 className="text-2xl font-bold text-white">Command Center</h1>
+        <h1 className="text-2xl font-bold text-gray-800">Dashboard</h1>
         <p className="text-sm text-gray-500 mt-1">Real-time operational overview of GHL India Ventures</p>
       </div>
 
@@ -250,7 +250,7 @@ export default function OverviewModule({ navigate, showToast }: OverviewModulePr
           <div className="p-5 pb-0">
             <div className="flex items-center justify-between mb-4">
               <div>
-                <h3 className="text-sm font-semibold text-white">AUM Growth</h3>
+                <h3 className="text-sm font-semibold text-gray-800">AUM Growth</h3>
                 <p className="text-xs text-gray-500 mt-0.5">12-month trailing performance</p>
               </div>
               <div className="flex items-center gap-3 text-[10px]">
@@ -282,7 +282,7 @@ export default function OverviewModule({ navigate, showToast }: OverviewModulePr
           <div className="p-5 pb-0">
             <div className="flex items-center justify-between mb-4">
               <div>
-                <h3 className="text-sm font-semibold text-white">Revenue Breakdown</h3>
+                <h3 className="text-sm font-semibold text-gray-800">Revenue Breakdown</h3>
                 <p className="text-xs text-gray-500 mt-0.5">Monthly revenue by source (₹ Lakhs)</p>
               </div>
               <div className="flex items-center gap-3 text-[10px] flex-wrap">
@@ -313,7 +313,7 @@ export default function OverviewModule({ navigate, showToast }: OverviewModulePr
         {/* Activity Feed */}
         <AdminGlass>
           <div className="flex items-center justify-between mb-4">
-            <h3 className="text-sm font-semibold text-white flex items-center gap-2">
+            <h3 className="text-sm font-semibold text-gray-800 flex items-center gap-2">
               <Activity className="w-4 h-4 text-brand-red" />
               Live Activity Feed
             </h3>
@@ -328,7 +328,7 @@ export default function OverviewModule({ navigate, showToast }: OverviewModulePr
                   </span>
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-xs text-gray-300">
+                  <p className="text-xs text-gray-700">
                     <span className="font-semibold text-white">{item.user}</span>
                     {' '}{item.action}{' '}
                     <span className="font-medium text-brand-red">{item.target}</span>
@@ -343,7 +343,7 @@ export default function OverviewModule({ navigate, showToast }: OverviewModulePr
         {/* Alert Center */}
         <AdminGlass>
           <div className="flex items-center justify-between mb-4">
-            <h3 className="text-sm font-semibold text-white flex items-center gap-2">
+            <h3 className="text-sm font-semibold text-gray-800 flex items-center gap-2">
               <AlertCircle className="w-4 h-4 text-amber-400" />
               Alert Center
             </h3>
@@ -366,7 +366,7 @@ export default function OverviewModule({ navigate, showToast }: OverviewModulePr
                     <FlagIcon className={`w-4 h-4 flex-shrink-0 mt-0.5 ${iconColor}`} />
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-1">
-                        <p className="text-xs font-semibold text-white truncate">{flag.title}</p>
+                        <p className="text-xs font-semibold text-gray-800 truncate">{flag.title}</p>
                         <AdminBadge label={flag.severity} variant={getSeverityBadgeVariant(flag.severity)} />
                       </div>
                       <p className="text-[11px] text-gray-400 line-clamp-1">{flag.description}</p>
@@ -387,7 +387,7 @@ export default function OverviewModule({ navigate, showToast }: OverviewModulePr
         {/* Market News */}
         <AdminGlass>
           <div className="flex items-center justify-between mb-4">
-            <h3 className="text-sm font-semibold text-white flex items-center gap-2">
+            <h3 className="text-sm font-semibold text-gray-800 flex items-center gap-2">
               <Newspaper className="w-4 h-4 text-blue-400" />
               Market News
             </h3>
@@ -403,7 +403,7 @@ export default function OverviewModule({ navigate, showToast }: OverviewModulePr
         {/* Economic Calendar */}
         <AdminGlass>
           <div className="flex items-center justify-between mb-4">
-            <h3 className="text-sm font-semibold text-white flex items-center gap-2">
+            <h3 className="text-sm font-semibold text-gray-800 flex items-center gap-2">
               <Calendar className="w-4 h-4 text-amber-400" />
               Economic Calendar
             </h3>
@@ -421,22 +421,22 @@ export default function OverviewModule({ navigate, showToast }: OverviewModulePr
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         <button onClick={() => navigate('realty-brokers')} className="p-4 rounded-xl bg-white/[0.03] border border-white/[0.06] hover:bg-white/[0.06] hover:border-brand-red/20 transition-all group text-left">
           <Building2 className="w-5 h-5 text-amber-400 mb-2 group-hover:text-brand-red transition-colors" />
-          <p className="text-xs font-semibold text-white">Realty Brokers</p>
+          <p className="text-xs font-semibold text-gray-800">Realty Brokers</p>
           <p className="text-[10px] text-gray-500 mt-0.5">Manage broker network</p>
         </button>
         <button onClick={() => navigate('marketing')} className="p-4 rounded-xl bg-white/[0.03] border border-white/[0.06] hover:bg-white/[0.06] hover:border-brand-red/20 transition-all group text-left">
           <Megaphone className="w-5 h-5 text-pink-400 mb-2 group-hover:text-brand-red transition-colors" />
-          <p className="text-xs font-semibold text-white">Marketing Hub</p>
+          <p className="text-xs font-semibold text-gray-800">Marketing Hub</p>
           <p className="text-[10px] text-gray-500 mt-0.5">Campaigns & outreach</p>
         </button>
         <button onClick={() => navigate('ai-ops')} className="p-4 rounded-xl bg-white/[0.03] border border-white/[0.06] hover:bg-white/[0.06] hover:border-brand-red/20 transition-all group text-left">
           <Sparkles className="w-5 h-5 text-purple-400 mb-2 group-hover:text-brand-red transition-colors" />
-          <p className="text-xs font-semibold text-white">AI Operations</p>
+          <p className="text-xs font-semibold text-gray-800">AI Operations</p>
           <p className="text-[10px] text-gray-500 mt-0.5">AI-powered tools</p>
         </button>
         <button onClick={() => navigate('compliance')} className="p-4 rounded-xl bg-white/[0.03] border border-white/[0.06] hover:bg-white/[0.06] hover:border-brand-red/20 transition-all group text-left">
           <Shield className="w-5 h-5 text-emerald-400 mb-2 group-hover:text-brand-red transition-colors" />
-          <p className="text-xs font-semibold text-white">Compliance</p>
+          <p className="text-xs font-semibold text-gray-800">Compliance</p>
           <p className="text-[10px] text-gray-500 mt-0.5">Regulatory & risk management</p>
         </button>
       </div>
@@ -445,7 +445,7 @@ export default function OverviewModule({ navigate, showToast }: OverviewModulePr
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {/* System Health */}
         <AdminGlass>
-          <h3 className="text-sm font-semibold text-white flex items-center gap-2 mb-4">
+          <h3 className="text-sm font-semibold text-gray-800 flex items-center gap-2 mb-4">
             <Server className="w-4 h-4 text-emerald-400" />
             System Health
           </h3>
@@ -460,7 +460,7 @@ export default function OverviewModule({ navigate, showToast }: OverviewModulePr
               <span className="text-xs text-gray-400 flex items-center gap-2">
                 <Zap className="w-3 h-3" /> Response Time
               </span>
-              <span className="text-xs font-semibold text-white">{systemHealth.responseTime}ms</span>
+              <span className="text-xs font-semibold text-gray-800">{systemHealth.responseTime}ms</span>
             </div>
             <div>
               <div className="flex items-center justify-between mb-1">
@@ -478,18 +478,18 @@ export default function OverviewModule({ navigate, showToast }: OverviewModulePr
             </div>
             <div className="flex items-center justify-between">
               <span className="text-xs text-gray-400">Active Users</span>
-              <span className="text-xs font-semibold text-white">{systemHealth.activeUsers}</span>
+              <span className="text-xs font-semibold text-gray-800">{systemHealth.activeUsers}</span>
             </div>
             <div className="flex items-center justify-between">
               <span className="text-xs text-gray-400">API Calls (24h)</span>
-              <span className="text-xs font-semibold text-white">{systemHealth.apiCalls24h.toLocaleString()}</span>
+              <span className="text-xs font-semibold text-gray-800">{systemHealth.apiCalls24h.toLocaleString()}</span>
             </div>
           </div>
         </AdminGlass>
 
         {/* Upcoming Deadlines */}
         <AdminGlass>
-          <h3 className="text-sm font-semibold text-white flex items-center gap-2 mb-4">
+          <h3 className="text-sm font-semibold text-gray-800 flex items-center gap-2 mb-4">
             <Clock className="w-4 h-4 text-amber-400" />
             Upcoming Deadlines
           </h3>
@@ -524,7 +524,7 @@ export default function OverviewModule({ navigate, showToast }: OverviewModulePr
 
         {/* Quick Stats */}
         <AdminGlass>
-          <h3 className="text-sm font-semibold text-white flex items-center gap-2 mb-4">
+          <h3 className="text-sm font-semibold text-gray-800 flex items-center gap-2 mb-4">
             <Zap className="w-4 h-4 text-brand-red" />
             Today&apos;s Activity
           </h3>
@@ -535,7 +535,7 @@ export default function OverviewModule({ navigate, showToast }: OverviewModulePr
                   <FileText className="w-4 h-4 text-blue-400" />
                 </div>
                 <div>
-                  <p className="text-xs font-semibold text-white">{overviewKpis.documentsProcessed}</p>
+                  <p className="text-xs font-semibold text-gray-800">{overviewKpis.documentsProcessed}</p>
                   <p className="text-[10px] text-gray-500">Docs Processed</p>
                 </div>
               </div>
@@ -548,7 +548,7 @@ export default function OverviewModule({ navigate, showToast }: OverviewModulePr
                   <CheckSquare className="w-4 h-4 text-emerald-400" />
                 </div>
                 <div>
-                  <p className="text-xs font-semibold text-white">{overviewKpis.tasksCompleted}</p>
+                  <p className="text-xs font-semibold text-gray-800">{overviewKpis.tasksCompleted}</p>
                   <p className="text-[10px] text-gray-500">Tasks Completed</p>
                 </div>
               </div>
@@ -561,7 +561,7 @@ export default function OverviewModule({ navigate, showToast }: OverviewModulePr
                   <Shield className="w-4 h-4 text-purple-400" />
                 </div>
                 <div>
-                  <p className="text-xs font-semibold text-white">{overviewKpis.pendingApprovals}</p>
+                  <p className="text-xs font-semibold text-gray-800">{overviewKpis.pendingApprovals}</p>
                   <p className="text-[10px] text-gray-500">Pending Approvals</p>
                 </div>
               </div>
