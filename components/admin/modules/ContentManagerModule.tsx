@@ -70,9 +70,11 @@ interface SupportTicket {
 }
 
 // ── Sub-tabs ────────────────────────────────────────────────────
+// Tab IDs MUST match sidebar navigation sub-item IDs from adminConstants.ts:
+// 'content' → blog, 'content/financial-iq' → financial-iq, 'content/faq' → faq, 'content/tickets' → tickets
 const CONTENT_TABS = [
   { id: 'blog', label: 'Blog Posts', icon: FileText },
-  { id: 'fiq', label: 'Financial IQ', icon: BookOpen },
+  { id: 'financial-iq', label: 'Financial IQ', icon: BookOpen },
   { id: 'faq', label: 'FAQ', icon: HelpCircle },
   { id: 'tickets', label: 'Support Tickets', icon: Ticket },
 ] as const
@@ -447,8 +449,8 @@ export default function ContentManagerModule({ subTab, navigate, showToast }: Co
     )},
     { key: 'user', label: 'Investor', sortable: true, render: (r) => (
       <div>
-        <p className="text-sm text-white">{r.profiles?.full_name || 'Unknown'}</p>
-        <p className="text-[11px] text-gray-500">{r.profiles?.email || ''}</p>
+        <p className="text-sm text-white">{(r as any).client_name || r.profiles?.full_name || 'Unknown'}</p>
+        <p className="text-[11px] text-gray-500">{(r as any).ticket_number || r.profiles?.email || ''}</p>
       </div>
     )},
     { key: 'status', label: 'Status', sortable: true, render: (r) => {
@@ -493,7 +495,7 @@ export default function ContentManagerModule({ subTab, navigate, showToast }: Co
   const labelClass = 'block text-xs text-gray-400 font-medium mb-1.5'
 
   // ── Blog/FIQ Editor Form ───────────────────────────────────
-  const renderArticleEditor = (type: 'blog' | 'fiq') => {
+  const renderArticleEditor = (type: 'blog' | 'financial-iq') => {
     const categories = type === 'blog' ? BLOG_CATEGORIES : FIQ_CATEGORIES
     return (
       <div className="space-y-4">
@@ -502,7 +504,7 @@ export default function ContentManagerModule({ subTab, navigate, showToast }: Co
           <input value={formTitle} onChange={e => setFormTitle(e.target.value)}
             placeholder="Enter post title..." className={inputClass} />
         </div>
-        {type === 'fiq' && (
+        {type === 'financial-iq' && (
           <div>
             <label className={labelClass}>Slug</label>
             <input value={formSlug} onChange={e => setFormSlug(e.target.value)}
@@ -611,7 +613,7 @@ export default function ContentManagerModule({ subTab, navigate, showToast }: Co
           return (
             <button
               key={tab.id}
-              onClick={() => navigate(`/admin/content-manager/${tab.id}`)}
+              onClick={() => navigate(tab.id === 'blog' ? 'content' : `content/${tab.id}`)}
               className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
                 isActive
                   ? 'bg-brand-red/20 text-brand-red border border-brand-red/30'
@@ -661,7 +663,7 @@ export default function ContentManagerModule({ subTab, navigate, showToast }: Co
         )}
 
         {/* Financial IQ Tab */}
-        {activeTab === 'fiq' && (
+        {activeTab === 'financial-iq' && (
           <>
             {fiqPosts.length === 0 && !loading ? (
               <AdminEmptyState icon={BookOpen} title="No Financial IQ posts yet" description="Create educational content for your investors."
@@ -751,7 +753,7 @@ export default function ContentManagerModule({ subTab, navigate, showToast }: Co
       )}
 
       {/* Editor Modal: Financial IQ */}
-      {activeTab === 'fiq' && (
+      {activeTab === 'financial-iq' && (
         <AdminModal
           isOpen={editorOpen}
           onClose={() => { setEditorOpen(false); resetForm() }}
@@ -767,7 +769,7 @@ export default function ContentManagerModule({ subTab, navigate, showToast }: Co
             </>
           }
         >
-          {renderArticleEditor('fiq')}
+          {renderArticleEditor('financial-iq')}
         </AdminModal>
       )}
 
@@ -804,7 +806,7 @@ export default function ContentManagerModule({ subTab, navigate, showToast }: Co
             <ModalButton variant="danger" onClick={() => {
               if (!deleteConfirmId) return
               if (activeTab === 'blog') deleteBlog(deleteConfirmId)
-              else if (activeTab === 'fiq') deleteFIQ(deleteConfirmId)
+              else if (activeTab === 'financial-iq') deleteFIQ(deleteConfirmId)
               else if (activeTab === 'faq') deleteFAQ(deleteConfirmId)
               else if (activeTab === 'tickets') deleteTicket(deleteConfirmId)
             }}>
@@ -814,7 +816,7 @@ export default function ContentManagerModule({ subTab, navigate, showToast }: Co
         }
       >
         <p className="text-sm text-gray-300">
-          Are you sure you want to delete this {activeTab === 'blog' ? 'blog post' : activeTab === 'fiq' ? 'Financial IQ post' : activeTab === 'faq' ? 'FAQ' : 'ticket'}?
+          Are you sure you want to delete this {activeTab === 'blog' ? 'blog post' : activeTab === 'financial-iq' ? 'Financial IQ post' : activeTab === 'faq' ? 'FAQ' : 'ticket'}?
           This will permanently remove it from the database.
         </p>
       </AdminModal>
