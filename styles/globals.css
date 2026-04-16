@@ -19,6 +19,9 @@
   --color-offwhite: #F8F7F5;
   --color-grey: #6B7280;
   --color-darkgrey: #1A1A1A;
+  --text-heading: #111827;
+  --text-body: #374151;
+  --text-muted: #6B7280;
 
   --hero-gradient: linear-gradient(135deg, #0A0A0A 0%, #1a0000 50%, #0A0A0A 100%);
   --red-burst: radial-gradient(circle at 30% 50%, rgba(208, 2, 27, 0.3) 0%, transparent 60%);
@@ -274,7 +277,7 @@
   .card {
     @apply bg-white rounded-xl p-5 md:p-6 transition-all duration-300;
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06), 0 4px 12px rgba(0, 0, 0, 0.04);
-    color: #1F2937;
+    color: var(--text-body);
   }
   .card:hover {
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08), 0 8px 24px rgba(0, 0, 0, 0.06);
@@ -669,6 +672,9 @@ button svg, button .lucide, [role="button"] svg {
   --color-offwhite: #0A0A0A;
   --color-black: #FFFFFF;
   --hero-gradient: linear-gradient(135deg, #0A0A0A 0%, #1a0000 50%, #0A0A0A 100%);
+  --text-heading: #FFFFFF;
+  --text-body: #D1D5DB;
+  --text-muted: #9CA3AF;
 }
 
 :root.dark body {

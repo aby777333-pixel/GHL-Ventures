@@ -165,12 +165,12 @@ function InvestmentRoutes() {
                     }`}>
                       {route.badge}
                     </span>
-                    <span className="text-xs" style={{ color: '#6B7280' }}>Min. Investment</span>
+                    <span className="text-xs" style={{ color: 'var(--text-muted)' }}>Min. Investment</span>
                   </div>
 
                   {/* Title */}
-                  <h3 className="text-xl font-bold mb-1" style={{ color: '#111827' }}>{route.title}</h3>
-                  <p className="text-sm mb-4" style={{ color: '#6B7280' }}>{route.subtitle}</p>
+                  <h3 className="text-xl font-bold mb-1" style={{ color: 'var(--text-heading)' }}>{route.title}</h3>
+                  <p className="text-sm mb-4" style={{ color: 'var(--text-muted)' }}>{route.subtitle}</p>
 
                   {/* Min Investment — prominent */}
                   <div className={`text-3xl font-extrabold mb-6 bg-gradient-to-r ${route.gradient} bg-clip-text text-transparent`}>
@@ -180,7 +180,7 @@ function InvestmentRoutes() {
                   {/* Features */}
                   <ul className="space-y-3 mb-8 flex-1">
                     {route.features.map((feature) => (
-                      <li key={feature} className="flex items-start text-sm" style={{ color: '#374151' }}>
+                      <li key={feature} className="flex items-start text-sm" style={{ color: 'var(--text-body)' }}>
                         <CheckCircle className="w-4 h-4 text-brand-red mr-2.5 mt-0.5 shrink-0" />
                         {feature}
                       </li>
@@ -444,8 +444,8 @@ function InvestmentProcess() {
                   <div className="lg:hidden w-10 h-10 bg-brand-red rounded-full flex items-center justify-center mx-auto mb-3">
                     <s.icon className="w-5 h-5 text-white" />
                   </div>
-                  <h4 className="font-bold text-sm mb-2" style={{ color: '#111827' }}>{s.title}</h4>
-                  <p className="text-xs leading-relaxed" style={{ color: '#6B7280' }}>{s.desc}</p>
+                  <h4 className="font-bold text-sm mb-2" style={{ color: 'var(--text-heading)' }}>{s.title}</h4>
+                  <p className="text-xs leading-relaxed" style={{ color: 'var(--text-muted)' }}>{s.desc}</p>
                 </div>
               </AnimatedSection>
             ))}
