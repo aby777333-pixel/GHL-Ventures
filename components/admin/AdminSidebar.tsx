@@ -109,7 +109,7 @@ export default function AdminSidebar({
         </div>
 
         {/* Navigation */}
-        <nav className="flex-1 px-3 overflow-y-auto space-y-0.5 admin-scrollbar">
+        <nav className="flex-1 px-2 overflow-y-auto space-y-0.5 admin-scrollbar text-left">
           {ADMIN_SIDEBAR_ITEMS.map(item => {
             // AI_SUITE: Hidden per business decision. Re-enable via FEATURE_FLAGS.AI_SUITE_ENABLED
             if (item.id === 'ai-ops' && !FEATURE_FLAGS.AI_SUITE_ENABLED) return null

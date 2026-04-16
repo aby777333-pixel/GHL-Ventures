@@ -781,19 +781,28 @@ function LeadFormTab({
   const handleSave = async () => {
     if (!validate()) return
     setSaving(true)
-    const payload: any = { name: form.name, email: form.email, phone: form.phone, updated_at: new Date().toISOString() }
+    // first_name is NOT NULL in DB, so split name into first/last
+    const nameParts = form.name.trim().split(/\s+/)
+    const payload: any = {
+      name: form.name,
+      first_name: nameParts[0] || form.name,
+      last_name: nameParts.slice(1).join(' ') || '',
+      email: form.email || null,
+      phone: form.phone,
+      updated_at: new Date().toISOString(),
+    }
     if (form.income_bracket) payload.income_bracket = form.income_bracket
     if (form.planning) payload.planning = form.planning
     if (form.assigned_to) payload.assigned_to = form.assigned_to
     if (form.notes) payload.notes = form.notes
-    // Map status/source/company by name to the DB columns
+    // Map status/source/company — use underscore format for DB enums
     if (form.status_name) {
       payload.lead_status_name = form.status_name
       const matchedStatus = statuses.find(s => s.name === form.status_name)
-      if (matchedStatus) payload.stage = matchedStatus.name.toLowerCase().replace(/\s+/g, '-')
+      if (matchedStatus) payload.stage = matchedStatus.name.toLowerCase().replace(/\s+/g, '_')
     }
     if (form.source_name) {
-      payload.source = form.source_name.toLowerCase().replace(/\s+/g, '-')
+      payload.source = form.source_name.toLowerCase().replace(/\s+/g, '_')
     }
     if (form.company_name) {
       payload.company_name = form.company_name
@@ -1371,12 +1380,15 @@ function BulkUploadTab({
       const matchedSource = sourceNameMap[(r['Source'] || '').toLowerCase()]
       const matchedStatus = statusNameMap[(r['Status'] || '').toLowerCase()]
       const matchedCompany = companyNameMap[(r['Company'] || '').toLowerCase()]
+      const nameParts = (r['Name'] || '').trim().split(/\s+/)
       return {
         name: r['Name'] || '',
-        email: r['Email'] || '',
+        first_name: nameParts[0] || r['Name'] || '',
+        last_name: nameParts.slice(1).join(' ') || '',
+        email: r['Email'] || null,
         phone: r['Phone'] || '',
-        source: matchedSource ? matchedSource.name.toLowerCase().replace(/\s+/g, '-') : null,
-        stage: matchedStatus ? matchedStatus.name.toLowerCase().replace(/\s+/g, '-') : 'new',
+        source: matchedSource ? matchedSource.name.toLowerCase().replace(/\s+/g, '_') : null,
+        stage: matchedStatus ? matchedStatus.name.toLowerCase().replace(/\s+/g, '_') : 'new',
         lead_status_name: matchedStatus?.name || null,
         company_name: matchedCompany?.name || null,
         company_id: matchedCompany?.id || null,

@@ -3070,16 +3070,16 @@ body.admin-active #ghl-direct-widget {
 }
 .admin-root ::-webkit-scrollbar-thumb,
 .admin-scrollbar::-webkit-scrollbar-thumb {
-  background: rgba(0, 0, 0, 0.12);
+  background: rgba(255, 255, 255, 0.06);
   border-radius: 3px;
 }
 .admin-root ::-webkit-scrollbar-thumb:hover,
 .admin-scrollbar::-webkit-scrollbar-thumb:hover {
-  background: rgba(0, 0, 0, 0.2);
+  background: rgba(255, 255, 255, 0.12);
 }
 .admin-root * {
   scrollbar-width: thin;
-  scrollbar-color: rgba(0,0,0,0.12) transparent;
+  scrollbar-color: rgba(255,255,255,0.06) transparent;
 }
 
 /* ── Admin Card Staggered Entrance ── */

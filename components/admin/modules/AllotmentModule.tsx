@@ -95,9 +95,9 @@ export default function AllotmentModule({ subTab, navigate, showToast }: Allotme
     const loadFundTypes = async () => {
       const { data } = await supabase
         .from('investment_applications')
-        .select('fund_type')
+        .select('fund_vehicle')
       if (data) {
-        const unique = Array.from(new Set(data.map((d: any) => d.fund_type).filter(Boolean)))
+        const unique = Array.from(new Set(data.map((d: any) => d.fund_vehicle).filter(Boolean)))
         setFundTypes(unique as string[])
       }
     }

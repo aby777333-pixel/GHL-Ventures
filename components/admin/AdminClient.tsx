@@ -156,10 +156,10 @@ export default function AdminClient() {
   // Not authenticated
   if (!isAuthenticated || !role) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+      <div className="min-h-screen flex items-center justify-center" style={{ background: '#0A0A0F' }}>
         <AdminGlass className="text-center p-8 max-w-sm">
           <Lock className="w-8 h-8 text-brand-red mx-auto mb-3" />
-          <p className="text-sm text-gray-500">Redirecting to login...</p>
+          <p className="text-sm text-gray-400">Redirecting to login...</p>
         </AdminGlass>
       </div>
     )
@@ -175,8 +175,8 @@ export default function AdminClient() {
       return (
         <AdminGlass className="flex flex-col items-center justify-center py-16">
           <Shield className="w-10 h-10 text-red-400 mb-4" />
-          <h2 className="text-lg font-semibold text-gray-800 mb-2">Access Restricted</h2>
-          <p className="text-sm text-gray-500 text-center max-w-md mb-4">
+          <h2 className="text-lg font-semibold text-white mb-2">Access Restricted</h2>
+          <p className="text-sm text-gray-400 text-center max-w-md mb-4">
             Your role ({role}) does not have permission to access the {MODULE_LABELS[activeModule]} module.
             Contact your administrator for access.
           </p>
@@ -260,7 +260,7 @@ export default function AdminClient() {
   }
 
   return (
-    <div className="min-h-screen relative bg-gray-50">
+    <div className="min-h-screen relative" style={{ background: '#0A0A0F' }}>
 
       {/* Sidebar */}
       <AdminSidebar
@@ -290,7 +290,7 @@ export default function AdminClient() {
         </div>
 
         {/* Footer */}
-        <footer className="border-t border-gray-200 bg-white px-4 lg:px-6 py-3 flex flex-col sm:flex-row items-center justify-between gap-2 text-[11px] text-gray-500">
+        <footer className="border-t border-white/[0.04] px-4 lg:px-6 py-3 flex flex-col sm:flex-row items-center justify-between gap-2 text-[11px] text-gray-600">
           <span>Copyright &copy; 2026 GHL India Ventures, All rights reserved.</span>
           <span>Crafted with extra &hearts;</span>
         </footer>
