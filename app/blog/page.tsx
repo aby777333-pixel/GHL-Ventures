@@ -275,7 +275,7 @@ export default function BlogPage() {
           <div className="flex flex-col md:flex-row items-center gap-4">
             {/* Search bar */}
             <div className="relative flex-1 w-full md:max-w-sm">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-brand-grey" />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-brand-grey dark:text-gray-300" />
               <input
                 type="text"
                 placeholder="Search articles..."
@@ -310,9 +310,9 @@ export default function BlogPage() {
         <div className="container-max mx-auto">
           {filtered.length === 0 ? (
             <div className="text-center py-20">
-              <BookOpen className="w-16 h-16 text-brand-grey/40 mx-auto mb-4" />
+              <BookOpen className="w-16 h-16 text-brand-grey dark:text-gray-300/40 mx-auto mb-4" />
               <h3 className="text-xl font-bold text-brand-black dark:text-white mb-2">No articles found</h3>
-              <p className="text-brand-grey">
+              <p className="text-brand-grey dark:text-gray-300">
                 Try adjusting your search or filter criteria.
               </p>
             </div>
@@ -353,7 +353,7 @@ export default function BlogPage() {
                         <div className="w-7 h-7 rounded-full bg-gradient-to-br from-brand-red/20 to-brand-red/10 flex items-center justify-center flex-shrink-0">
                           <User className="w-3.5 h-3.5 text-brand-red/60" />
                         </div>
-                        <div className="flex items-center gap-2 text-xs text-brand-grey">
+                        <div className="flex items-center gap-2 text-xs text-brand-grey dark:text-gray-300">
                           <span className="font-medium text-gray-700 dark:text-gray-300">
                             {(post as any).author}
                           </span>
@@ -374,7 +374,7 @@ export default function BlogPage() {
                       </div>
 
                       {/* Excerpt (2 lines) */}
-                      <p className="text-brand-grey text-sm mb-4 line-clamp-2 leading-relaxed">
+                      <p className="text-brand-grey dark:text-gray-300 text-sm mb-4 line-clamp-2 leading-relaxed">
                         {post.excerpt}
                       </p>
 

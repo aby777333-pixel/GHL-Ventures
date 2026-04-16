@@ -80,7 +80,7 @@ export default function DirectAIFPage() {
                   </div>
                   <div className="text-xl font-bold text-brand-red mb-1">{item.value}</div>
                   <h3 className="text-sm font-bold text-brand-black dark:text-white mb-2">{item.title}</h3>
-                  <p className="text-xs text-brand-grey">{item.desc}</p>
+                  <p className="text-xs text-brand-grey dark:text-gray-300">{item.desc}</p>
                 </div>
               </AnimatedSection>
             ))}
@@ -113,7 +113,7 @@ export default function DirectAIFPage() {
                     <div key={item.label} className={`flex justify-between items-center px-5 py-3.5 ${
                       i % 2 === 0 ? 'bg-white dark:bg-white/[0.03]' : 'bg-brand-offwhite/50 dark:bg-white/[0.06]'
                     } ${i < 6 ? 'border-b border-gray-100 dark:border-white/5' : ''}`}>
-                      <span className="text-sm text-brand-grey">{item.label}</span>
+                      <span className="text-sm text-brand-grey dark:text-gray-300">{item.label}</span>
                       <span className="text-sm font-bold text-brand-black dark:text-white">{item.value}</span>
                     </div>
                   ))}
@@ -146,7 +146,7 @@ export default function DirectAIFPage() {
                   </div>
                   <div>
                     <h3 className="text-base font-bold text-brand-black dark:text-white mb-2">{item.title}</h3>
-                    <p className="text-sm text-brand-grey leading-relaxed">{item.desc}</p>
+                    <p className="text-sm text-brand-grey dark:text-gray-300 leading-relaxed">{item.desc}</p>
                   </div>
                 </div>
               </AnimatedSection>

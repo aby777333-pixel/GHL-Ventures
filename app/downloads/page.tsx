@@ -180,10 +180,10 @@ function DownloadCard({
           </div>
 
           <h3 className="text-xl font-bold text-brand-black dark:text-white mb-2">{section.document.title}</h3>
-          <p className="text-brand-grey text-sm leading-relaxed mb-4">{section.document.desc}</p>
+          <p className="text-brand-grey dark:text-gray-300 text-sm leading-relaxed mb-4">{section.document.desc}</p>
 
           {/* Metadata */}
-          <div className="flex flex-wrap items-center gap-4 text-xs text-brand-grey">
+          <div className="flex flex-wrap items-center gap-4 text-xs text-brand-grey dark:text-gray-300">
             <span className="inline-flex items-center gap-1.5">
               <Calendar className="w-3.5 h-3.5" />
               {section.document.lastUpdated}
@@ -207,7 +207,7 @@ function DownloadCard({
             <div className={`bg-green-50 border border-green-200 rounded-xl p-8 text-center h-full flex flex-col items-center justify-center ${GLOW_COLORS[(index + 4) % GLOW_COLORS.length]}`}>
               <CheckCircle className="w-12 h-12 text-green-600 mb-4" />
               <h4 className="text-lg font-bold text-brand-black dark:text-white mb-2">Request Submitted</h4>
-              <p className="text-sm text-brand-grey mb-4">
+              <p className="text-sm text-brand-grey dark:text-gray-300 mb-4">
                 Your download should begin automatically. If it doesn&apos;t start, a copy will be sent to your email shortly.
               </p>
               <button
@@ -220,7 +220,7 @@ function DownloadCard({
           ) : (
             <div className={`bg-gray-50 rounded-xl p-6 border border-gray-100 ${GLOW_COLORS[(index + 2) % GLOW_COLORS.length]}`}>
               <h4 className="text-base font-bold text-brand-black dark:text-white mb-1">Download This Document</h4>
-              <p className="text-xs text-brand-grey mb-5">
+              <p className="text-xs text-brand-grey dark:text-gray-300 mb-5">
                 Fill in your details to access the document instantly.
               </p>
 
@@ -260,7 +260,7 @@ function DownloadCard({
                     Phone Number <span className="text-brand-red">*</span>
                   </label>
                   <div className="relative">
-                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-brand-grey text-sm">+91</span>
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-brand-grey dark:text-gray-300 text-sm">+91</span>
                     <input
                       id={`${section.id}-phone`}
                       type="tel"
@@ -282,7 +282,7 @@ function DownloadCard({
                     onChange={(e) => setGateForm({ ...gateForm, accredited: e.target.checked })}
                     className="w-4 h-4 text-brand-red rounded border-gray-300 mt-0.5 focus:ring-brand-red"
                   />
-                  <span className="text-xs text-brand-grey">
+                  <span className="text-xs text-brand-grey dark:text-gray-300">
                     I am an accredited / qualified investor
                   </span>
                 </label>
@@ -298,7 +298,7 @@ function DownloadCard({
                   {submitting ? 'Processing...' : 'Download Now'}
                 </button>
 
-                <p className="text-[11px] text-brand-grey text-center">
+                <p className="text-[11px] text-brand-grey dark:text-gray-300 text-center">
                   By downloading, you agree to our Privacy Policy.
                 </p>
               </form>
@@ -364,7 +364,7 @@ export default function DownloadsPage() {
             {/* Sticky sidebar nav (desktop) */}
             <aside className="hidden lg:block">
               <div className="sticky top-28">
-                <h3 className="text-xs font-semibold text-brand-grey uppercase tracking-wider mb-4">
+                <h3 className="text-xs font-semibold text-brand-grey dark:text-gray-300 uppercase tracking-wider mb-4">
                   Documents
                 </h3>
                 <nav className="space-y-1">
@@ -424,7 +424,7 @@ export default function DownloadsPage() {
                           <h2 className="text-2xl font-bold text-brand-black dark:text-white">{section.title}</h2>
                         </div>
                       </div>
-                      <p className="text-brand-grey text-sm ml-[52px]">{section.description}</p>
+                      <p className="text-brand-grey dark:text-gray-300 text-sm ml-[52px]">{section.description}</p>
                     </div>
 
                     <DownloadCard section={section} index={index} />

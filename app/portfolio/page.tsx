@@ -124,7 +124,7 @@ export default function PortfolioPage() {
                     <stat.icon className="w-6 h-6 text-brand-red" />
                   </div>
                   <div className="text-2xl md:text-3xl font-bold text-brand-red mb-1">{stat.value}</div>
-                  <div className="text-brand-grey text-sm">{stat.label}</div>
+                  <div className="text-brand-grey dark:text-gray-300 text-sm">{stat.label}</div>
                 </div>
               </AnimatedSection>
             ))}
@@ -162,7 +162,7 @@ export default function PortfolioPage() {
                     {project.stats.map((stat) => (
                       <div key={stat.label} className="bg-brand-offwhite rounded-xl p-4 text-center">
                         <div className="text-xl md:text-2xl font-bold text-brand-red">{stat.value}</div>
-                        <div className="text-[11px] text-brand-grey font-medium mt-1 uppercase tracking-wider">{stat.label}</div>
+                        <div className="text-[11px] text-brand-grey dark:text-gray-300 font-medium mt-1 uppercase tracking-wider">{stat.label}</div>
                       </div>
                     ))}
                   </div>
@@ -170,8 +170,8 @@ export default function PortfolioPage() {
                   {/* Description + Location */}
                   <div className="grid lg:grid-cols-5 gap-8">
                     <div className="lg:col-span-3">
-                      <p className="text-brand-grey text-base leading-relaxed mb-6">{project.description}</p>
-                      <div className="flex items-center gap-2 text-brand-grey text-sm mb-2">
+                      <p className="text-brand-grey dark:text-gray-300 text-base leading-relaxed mb-6">{project.description}</p>
+                      <div className="flex items-center gap-2 text-brand-grey dark:text-gray-300 text-sm mb-2">
                         <MapPin className="w-4 h-4 text-brand-red shrink-0" />
                         <span>{project.location}</span>
                       </div>
@@ -184,7 +184,7 @@ export default function PortfolioPage() {
                         {project.highlights.map((h, hi) => (
                           <li key={hi} className="flex items-start gap-3">
                             <Shield className="w-4 h-4 text-brand-red mt-0.5 shrink-0" />
-                            <span className="text-brand-grey text-sm leading-relaxed">{h}</span>
+                            <span className="text-brand-grey dark:text-gray-300 text-sm leading-relaxed">{h}</span>
                           </li>
                         ))}
                       </ul>
@@ -244,7 +244,7 @@ export default function PortfolioPage() {
                     <item.icon className="w-8 h-8 text-brand-red" />
                   </div>
                   <h3 className="font-bold text-lg text-brand-black dark:text-white mb-3">{item.title}</h3>
-                  <p className="text-brand-grey text-sm leading-relaxed">{item.desc}</p>
+                  <p className="text-brand-grey dark:text-gray-300 text-sm leading-relaxed">{item.desc}</p>
                 </div>
               </AnimatedSection>
             ))}

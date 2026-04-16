@@ -81,7 +81,7 @@ export default function DebentureRoutePage() {
                   </div>
                   <div className="text-xl font-bold text-brand-red mb-1">{item.value}</div>
                   <h3 className="text-sm font-bold text-brand-black dark:text-white mb-2">{item.title}</h3>
-                  <p className="text-xs text-brand-grey">{item.desc}</p>
+                  <p className="text-xs text-brand-grey dark:text-gray-300">{item.desc}</p>
                 </div>
               </AnimatedSection>
             ))}
@@ -110,7 +110,7 @@ export default function DebentureRoutePage() {
                       {item.step}
                     </div>
                     <h3 className="text-base font-bold text-brand-black dark:text-white mb-2">{item.title}</h3>
-                    <p className="text-sm text-brand-grey leading-relaxed">{item.desc}</p>
+                    <p className="text-sm text-brand-grey dark:text-gray-300 leading-relaxed">{item.desc}</p>
                   </div>
                 </AnimatedSection>
               ))}
@@ -143,7 +143,7 @@ export default function DebentureRoutePage() {
                   </div>
                   <div>
                     <h3 className="text-base font-bold text-brand-black dark:text-white mb-2">{item.title}</h3>
-                    <p className="text-sm text-brand-grey leading-relaxed">{item.desc}</p>
+                    <p className="text-sm text-brand-grey dark:text-gray-300 leading-relaxed">{item.desc}</p>
                   </div>
                 </div>
               </AnimatedSection>
@@ -184,10 +184,10 @@ export default function DebentureRoutePage() {
                   <div key={row.param} className={`grid grid-cols-3 ${i % 2 === 0 ? 'bg-white dark:bg-white/[0.03]' : 'bg-brand-offwhite/50 dark:bg-white/[0.06]'} border-b border-gray-100 dark:border-white/5 last:border-0`}>
                     <div className="px-4 py-3 text-xs font-medium text-brand-black dark:text-white">{row.param}</div>
                     <div className="px-4 py-3 text-xs text-center font-semibold text-brand-red">{row.ghl}</div>
-                    <div className="px-4 py-3 text-xs text-center text-brand-grey">{row.fd}</div>
+                    <div className="px-4 py-3 text-xs text-center text-brand-grey dark:text-gray-300">{row.fd}</div>
                   </div>
                 ))}
-                <div className="px-4 py-3 bg-gray-50 text-[10px] text-brand-grey">
+                <div className="px-4 py-3 bg-gray-50 text-[10px] text-brand-grey dark:text-gray-300">
                   *Returns are not guaranteed and depend on fund performance. Past performance is not indicative of future results. Investment in co-invest instruments involves risks including potential loss of capital.
                 </div>
               </div>

@@ -131,10 +131,10 @@ export default function ContactPage() {
                         </div>
                       </div>
                       <h3 className="text-2xl font-bold text-brand-black dark:text-white mb-3">Thank You!</h3>
-                      <p className="text-brand-grey mb-2 max-w-md mx-auto">
+                      <p className="text-brand-grey dark:text-gray-300 mb-2 max-w-md mx-auto">
                         Your consultation request has been received. Our investment team will reach out within 24&ndash;48 business hours.
                       </p>
-                      <p className="text-sm text-brand-grey mb-8">
+                      <p className="text-sm text-brand-grey dark:text-gray-300 mb-8">
                         In the meantime, explore our{' '}
                         <Link href="/downloads" className="text-brand-red hover:underline">downloads</Link>{' '}
                         or{' '}
@@ -156,7 +156,7 @@ export default function ContactPage() {
                   ) : (
                     <>
                       <h2 className="text-2xl font-bold text-brand-black dark:text-white mb-2">Request a Consultation</h2>
-                      <p className="text-brand-grey text-sm mb-8">
+                      <p className="text-brand-grey dark:text-gray-300 text-sm mb-8">
                         Fill in your details and our team will schedule a call at your convenience.
                       </p>
 
@@ -198,7 +198,7 @@ export default function ContactPage() {
                               Phone Number <span className="text-brand-red">*</span>
                             </label>
                             <div className="relative">
-                              <span className="absolute left-4 top-1/2 -translate-y-1/2 text-brand-grey text-sm font-medium">
+                              <span className="absolute left-4 top-1/2 -translate-y-1/2 text-brand-grey dark:text-gray-300 text-sm font-medium">
                                 +91
                               </span>
                               <input
@@ -291,7 +291,7 @@ export default function ContactPage() {
                                   onChange={(e) => handleChange('contactMethod', e.target.value)}
                                   className="w-4 h-4 text-brand-red border-gray-300 focus:ring-brand-red"
                                 />
-                                <span className="text-sm text-brand-grey group-hover:text-brand-black dark:text-white transition-colors">
+                                <span className="text-sm text-brand-grey dark:text-gray-300 group-hover:text-brand-black dark:text-white transition-colors">
                                   {method}
                                 </span>
                               </label>
@@ -323,7 +323,7 @@ export default function ContactPage() {
                               onChange={(e) => handleChange('accredited', e.target.checked)}
                               className="w-4 h-4 text-brand-red rounded border-gray-300 mt-0.5 focus:ring-brand-red"
                             />
-                            <span className="text-sm text-brand-grey">
+                            <span className="text-sm text-brand-grey dark:text-gray-300">
                               I am an accredited / qualified investor as defined by SEBI regulations
                             </span>
                           </label>
@@ -336,7 +336,7 @@ export default function ContactPage() {
                               onChange={(e) => handleChange('privacy', e.target.checked)}
                               className="w-4 h-4 text-brand-red rounded border-gray-300 mt-0.5 focus:ring-brand-red"
                             />
-                            <span className="text-sm text-brand-grey">
+                            <span className="text-sm text-brand-grey dark:text-gray-300">
                               I agree to the{' '}
                               <LegalLink type="privacy" className="text-brand-red hover:underline">Privacy Policy</LegalLink>{' '}
                               and consent to being contacted. <span className="text-brand-red">*</span>
@@ -378,7 +378,7 @@ export default function ContactPage() {
                     </div>
                     <div>
                       <h3 className="font-bold text-brand-black dark:text-white text-base mb-1">Office Address</h3>
-                      <p className="text-brand-grey text-sm leading-relaxed">{BRAND.address}</p>
+                      <p className="text-brand-grey dark:text-gray-300 text-sm leading-relaxed">{BRAND.address}</p>
                     </div>
                   </div>
 
@@ -389,10 +389,10 @@ export default function ContactPage() {
                     </div>
                     <div>
                       <h3 className="font-bold text-brand-black dark:text-white text-base mb-1">Phone</h3>
-                      <a href={`tel:${BRAND.phone1.replace(/\s/g, '')}`} className="text-brand-grey text-sm hover:text-brand-red transition-colors block">
+                      <a href={`tel:${BRAND.phone1.replace(/\s/g, '')}`} className="text-brand-grey dark:text-gray-300 text-sm hover:text-brand-red transition-colors block">
                         {BRAND.phone1}
                       </a>
-                      <a href={`tel:${BRAND.phone2.replace(/\s/g, '')}`} className="text-brand-grey text-sm hover:text-brand-red transition-colors block">
+                      <a href={`tel:${BRAND.phone2.replace(/\s/g, '')}`} className="text-brand-grey dark:text-gray-300 text-sm hover:text-brand-red transition-colors block">
                         {BRAND.phone2}
                       </a>
                     </div>
@@ -418,8 +418,8 @@ export default function ContactPage() {
                     </div>
                     <div>
                       <h3 className="font-bold text-brand-black dark:text-white text-base mb-1">Office Hours</h3>
-                      <p className="text-brand-grey text-sm">Mon &ndash; Fri, 9:30 AM &ndash; 6:30 PM IST</p>
-                      <p className="text-brand-grey text-sm">Saturday &ndash; Sunday: Closed</p>
+                      <p className="text-brand-grey dark:text-gray-300 text-sm">Mon &ndash; Fri, 9:30 AM &ndash; 6:30 PM IST</p>
+                      <p className="text-brand-grey dark:text-gray-300 text-sm">Saturday &ndash; Sunday: Closed</p>
                     </div>
                   </div>
 
@@ -538,7 +538,7 @@ export default function ContactPage() {
                     }`}
                   >
                     <div className="px-5 pb-5">
-                      <p className="text-brand-grey text-sm leading-relaxed">{item.a}</p>
+                      <p className="text-brand-grey dark:text-gray-300 text-sm leading-relaxed">{item.a}</p>
                     </div>
                   </div>
                 </div>

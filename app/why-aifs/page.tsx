@@ -80,7 +80,7 @@ function WhatIsAIF() {
 
         <div className="grid lg:grid-cols-2 gap-10 mt-8">
           <AnimatedSection direction="left">
-            <div className="space-y-5 text-brand-grey leading-relaxed">
+            <div className="space-y-5 text-brand-grey dark:text-gray-300 leading-relaxed">
               <p>
                 An <strong className="text-brand-black dark:text-white">Alternative Investment Fund (AIF)</strong> is a privately
                 pooled investment vehicle established in India that collects funds from sophisticated
@@ -194,16 +194,16 @@ function Categories() {
               <div className={`card h-full border-t-[3px] ${cat.borderColor} hover:-translate-y-2`}>
                 <span className={`text-xs font-mono font-bold uppercase tracking-wider ${cat.numColor}`}>{cat.num}</span>
                 <h3 className="font-bold text-lg text-brand-black dark:text-white mt-2 mb-3">{cat.title}</h3>
-                <p className="text-brand-grey text-sm leading-relaxed mb-4">{cat.desc}</p>
+                <p className="text-brand-grey dark:text-gray-300 text-sm leading-relaxed mb-4">{cat.desc}</p>
                 <div className="flex flex-wrap gap-1.5">
                   {cat.tags.map((tag) => (
-                    <span key={tag} className="px-2.5 py-1 bg-gray-100 text-brand-grey text-xs rounded-full font-medium">{tag}</span>
+                    <span key={tag} className="px-2.5 py-1 bg-gray-100 text-brand-grey dark:text-gray-300 text-xs rounded-full font-medium">{tag}</span>
                   ))}
                 </div>
                 {cat.highlight && (
                   <div className="mt-4 pt-4 border-t border-gray-100 flex items-center space-x-2">
                     <div className="w-2 h-2 bg-brand-red rounded-full animate-pulse" />
-                    <span className="text-xs text-brand-grey font-medium">{cat.highlight}</span>
+                    <span className="text-xs text-brand-grey dark:text-gray-300 font-medium">{cat.highlight}</span>
                   </div>
                 )}
               </div>
@@ -249,7 +249,7 @@ function Advantages() {
                 </div>
                 <div>
                   <h3 className="font-bold text-brand-black dark:text-white mb-1.5">{adv.title}</h3>
-                  <p className="text-brand-grey text-sm leading-relaxed">{adv.desc}</p>
+                  <p className="text-brand-grey dark:text-gray-300 text-sm leading-relaxed">{adv.desc}</p>
                 </div>
               </div>
             </AnimatedSection>
@@ -336,7 +336,7 @@ function HowItWorks() {
                   <span className="text-brand-red font-mono font-bold text-sm">{step.num}</span>
                 </div>
                 <h4 className="font-bold text-brand-black dark:text-white text-sm mb-2">{step.title}</h4>
-                <p className="text-brand-grey text-xs leading-relaxed">{step.desc}</p>
+                <p className="text-brand-grey dark:text-gray-300 text-xs leading-relaxed">{step.desc}</p>
               </div>
             </AnimatedSection>
           ))}
@@ -384,7 +384,7 @@ function GHLApproach() {
             <h2 className="section-title mt-2 text-brand-black dark:text-white">What GHL India Ventures Does Differently</h2>
           </AnimatedSection>
           <AnimatedSection delay={100}>
-            <p className="text-brand-grey leading-relaxed">
+            <p className="text-brand-grey dark:text-gray-300 leading-relaxed">
               As a SEBI-registered Category II AIF (Reg. No. <a href={BRAND.sebiUrl} target="_blank" rel="noopener noreferrer" className="text-brand-red hover:underline">{BRAND.sebi}</a>), GHL India Ventures combines
               deep market intelligence with disciplined risk management across two high-conviction
               strategies &mdash; both designed to capture value where conventional capital cannot reach.
@@ -398,7 +398,7 @@ function GHLApproach() {
               <div className="card h-full hover:-translate-y-2 relative overflow-hidden group">
                 <span className="absolute top-4 right-5 text-4xl font-bold text-brand-red/5 font-mono">{s.num}</span>
                 <h3 className="font-bold text-brand-black dark:text-white text-lg mb-3 pr-12">{s.title}</h3>
-                <p className="text-brand-grey text-sm leading-relaxed mb-4">{s.desc}</p>
+                <p className="text-brand-grey dark:text-gray-300 text-sm leading-relaxed mb-4">{s.desc}</p>
                 <div className="flex flex-wrap gap-1.5">
                   {s.tags.map((tag) => (
                     <span key={tag} className="px-2.5 py-1 bg-brand-red/5 text-brand-red text-xs rounded-full font-medium border border-brand-red/10">{tag}</span>
@@ -444,7 +444,7 @@ function SEBIFramework() {
                   <card.icon className="w-5 h-5 text-brand-red" />
                 </div>
                 <h3 className="font-bold text-brand-black dark:text-white mb-2">{card.title}</h3>
-                <p className="text-brand-grey text-sm leading-relaxed">{card.desc}</p>
+                <p className="text-brand-grey dark:text-gray-300 text-sm leading-relaxed">{card.desc}</p>
               </div>
             </AnimatedSection>
           ))}
@@ -540,7 +540,7 @@ function Insights() {
               <div className="card h-full hover:-translate-y-2">
                 <span className="inline-block px-2.5 py-1 bg-brand-red/10 text-brand-red text-xs font-semibold rounded-full mb-3">{ins.tag}</span>
                 <h3 className="font-bold text-brand-black dark:text-white mb-2 leading-snug">{ins.title}</h3>
-                <p className="text-brand-grey text-sm leading-relaxed">{ins.desc}</p>
+                <p className="text-brand-grey dark:text-gray-300 text-sm leading-relaxed">{ins.desc}</p>
               </div>
             </AnimatedSection>
           ))}
@@ -605,11 +605,11 @@ function FAQ() {
                   {openIndex === i ? (
                     <ChevronUp className="w-5 h-5 text-brand-red shrink-0" />
                   ) : (
-                    <ChevronDown className="w-5 h-5 text-brand-grey shrink-0" />
+                    <ChevronDown className="w-5 h-5 text-brand-grey dark:text-gray-300 shrink-0" />
                   )}
                 </button>
                 <div className={`overflow-hidden transition-all duration-300 ${openIndex === i ? 'max-h-[400px] pb-5' : 'max-h-0'}`}>
-                  <p className="text-brand-grey text-sm leading-relaxed">{faq.a}</p>
+                  <p className="text-brand-grey dark:text-gray-300 text-sm leading-relaxed">{faq.a}</p>
                 </div>
               </div>
             ))}
@@ -665,7 +665,7 @@ function Disclaimer() {
   return (
     <section className="py-8 px-4 bg-gray-50 border-t border-gray-200">
       <div className="container-max mx-auto">
-        <p className="text-xs text-brand-grey leading-relaxed opacity-70">
+        <p className="text-xs text-brand-grey dark:text-gray-300 leading-relaxed opacity-70">
           <strong className="text-brand-black dark:text-white">Important Disclaimer:</strong> Investments in Alternative Investment Funds (AIFs) and
           Non-Convertible Debentures (NCDs) are subject to market risks including the possible loss of principal amount invested.
           Past performance is not indicative of future results. The information on this page is for educational and general

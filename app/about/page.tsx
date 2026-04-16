@@ -166,7 +166,7 @@ function OurStoryTimeline() {
             <div className="card text-center glow-card-red">
               <span className="text-brand-red font-bold text-3xl">{MILESTONES[activeYear].year}</span>
               <h3 className="font-bold text-xl text-brand-black dark:text-white mt-3 mb-3">{MILESTONES[activeYear].title}</h3>
-              <p className="text-brand-grey leading-relaxed">{MILESTONES[activeYear].description}</p>
+              <p className="text-brand-grey dark:text-gray-300 leading-relaxed">{MILESTONES[activeYear].description}</p>
             </div>
           </div>
         </AnimatedSection>
@@ -174,7 +174,7 @@ function OurStoryTimeline() {
         {/* Narrative paragraphs */}
         <div className="grid lg:grid-cols-2 gap-6 mt-10">
           <AnimatedSection direction="left">
-            <div className="space-y-4 text-brand-grey leading-relaxed">
+            <div className="space-y-4 text-brand-grey dark:text-gray-300 leading-relaxed">
               <p>
                 India&apos;s stressed real estate market is worth lakhs of crores, yet
                 most of it sits locked in disputes, incomplete projects, and distressed assets.
@@ -237,7 +237,7 @@ function MissionVision() {
                 <Target className="w-8 h-8 text-brand-red group-hover:text-white transition-colors" />
               </div>
               <h3 className="text-xl font-bold text-brand-black dark:text-white mb-3">Our Mission</h3>
-              <p className="text-brand-grey leading-relaxed">
+              <p className="text-brand-grey dark:text-gray-300 leading-relaxed">
                 To identify and invest in high-growth Indian enterprises across two compelling verticals:
                 stressed real estate assets ripe for resolution and early-stage startups poised for
                 exponential growth. We combine institutional discipline with entrepreneurial agility
@@ -252,7 +252,7 @@ function MissionVision() {
                 <Eye className="w-8 h-8 text-brand-red group-hover:text-white transition-colors" />
               </div>
               <h3 className="text-xl font-bold text-brand-black dark:text-white mb-3">Our Vision</h3>
-              <p className="text-brand-grey leading-relaxed">
+              <p className="text-brand-grey dark:text-gray-300 leading-relaxed">
                 To be India&apos;s most trusted alternative investment partner, recognised for
                 superior risk-adjusted returns, ethical governance, and transformative impact.
                 We aspire to set the benchmark for how alternative capital can responsibly
@@ -295,7 +295,7 @@ function LeadershipTeam() {
                 </div>
                 <h3 className="font-bold text-lg text-brand-black dark:text-white">{member.name}</h3>
                 <p className="text-brand-red text-sm font-medium mb-3">{member.role}</p>
-                <p className="text-brand-grey text-sm leading-relaxed flex-grow italic line-clamp-3">
+                <p className="text-brand-grey dark:text-gray-300 text-sm leading-relaxed flex-grow italic line-clamp-3">
                   &ldquo;{member.quote}&rdquo;
                 </p>
               </div>
@@ -333,7 +333,7 @@ function OurValues() {
                   <v.icon className="w-7 h-7 text-brand-red group-hover:text-white transition-colors" />
                 </div>
                 <h3 className="font-bold text-brand-black dark:text-white mb-2">{v.title}</h3>
-                <p className="text-brand-grey text-sm leading-relaxed">{v.desc}</p>
+                <p className="text-brand-grey dark:text-gray-300 text-sm leading-relaxed">{v.desc}</p>
               </div>
             </AnimatedSection>
           ))}
@@ -388,7 +388,7 @@ function AdvisoryBoardSection() {
                     href={member.linkedin}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="inline-flex items-center justify-center mt-4 text-brand-grey hover:text-brand-red transition-colors"
+                    className="inline-flex items-center justify-center mt-4 text-brand-grey dark:text-gray-300 hover:text-brand-red transition-colors"
                     aria-label={`${member.name} LinkedIn`}
                   >
                     <Linkedin className="w-5 h-5" />
@@ -412,7 +412,7 @@ function RegulatoryCompliance() {
           <AnimatedSection direction="left">
             <span className="text-brand-red font-semibold text-xs uppercase tracking-wider">Governance</span>
             <h2 className="section-title mt-2 text-brand-black dark:text-white">Regulatory Compliance</h2>
-            <p className="text-brand-grey text-base mt-3 leading-relaxed">
+            <p className="text-brand-grey dark:text-gray-300 text-base mt-3 leading-relaxed">
               As a SEBI-registered entity, we adhere to the highest standards of corporate governance,
               transparency, and regulatory compliance in all our operations. Our compliance framework
               is designed to protect investors at every stage.
@@ -443,23 +443,23 @@ function RegulatoryCompliance() {
               </div>
               <div className="bg-white rounded-xl p-6 space-y-4">
                 <div className="flex justify-between items-center border-b border-gray-100 pb-3">
-                  <span className="text-brand-grey text-sm">Registration No.</span>
+                  <span className="text-brand-grey dark:text-gray-300 text-sm">Registration No.</span>
                   <a href={BRAND.sebiUrl} target="_blank" rel="noopener noreferrer" className="font-bold text-brand-black dark:text-white hover:text-brand-red transition-colors">{BRAND.sebi}</a>
                 </div>
                 <div className="flex justify-between items-center border-b border-gray-100 pb-3">
-                  <span className="text-brand-grey text-sm">Category</span>
+                  <span className="text-brand-grey dark:text-gray-300 text-sm">Category</span>
                   <span className="font-bold text-brand-black dark:text-white">Category II AIF</span>
                 </div>
                 <div className="flex justify-between items-center border-b border-gray-100 pb-3">
-                  <span className="text-brand-grey text-sm">Regulation</span>
+                  <span className="text-brand-grey dark:text-gray-300 text-sm">Regulation</span>
                   <span className="font-bold text-brand-black dark:text-white">SEBI (AIF) Regulations, 2012</span>
                 </div>
                 <div className="flex justify-between items-center border-b border-gray-100 pb-3">
-                  <span className="text-brand-grey text-sm">Regulator</span>
+                  <span className="text-brand-grey dark:text-gray-300 text-sm">Regulator</span>
                   <span className="font-bold text-brand-black dark:text-white">SEBI</span>
                 </div>
                 <div className="flex justify-between items-center">
-                  <span className="text-brand-grey text-sm">Status</span>
+                  <span className="text-brand-grey dark:text-gray-300 text-sm">Status</span>
                   <span className="font-bold text-green-600 flex items-center trust-badge badge-bounce">
                     <div className="w-2 h-2 bg-green-500 rounded-full mr-2 animate-pulse" />Active
                   </span>
@@ -468,7 +468,7 @@ function RegulatoryCompliance() {
 
               {/* Investor protection note */}
               <div className="mt-6 bg-brand-red/5 rounded-xl p-4 border border-brand-red/10">
-                <p className="text-xs text-brand-grey leading-relaxed">
+                <p className="text-xs text-brand-grey dark:text-gray-300 leading-relaxed">
                   <strong className="text-brand-black dark:text-white">Investor Protection:</strong> All investments are
                   held by an independent custodian. Fund operations are audited annually by a
                   SEBI-empanelled auditor. Investors receive quarterly NAV statements and annual reports.
@@ -523,7 +523,7 @@ function OfficeGallery() {
         <AnimatedSection className="text-center mb-10">
           <span className="text-brand-red font-semibold text-xs uppercase tracking-wider">Our Space</span>
           <h2 className="section-title mt-2 text-brand-black dark:text-white">Our Office</h2>
-          <div className="flex items-center justify-center gap-2 mt-2 text-brand-grey text-sm">
+          <div className="flex items-center justify-center gap-2 mt-2 text-brand-grey dark:text-gray-300 text-sm">
             <MapPin className="w-4 h-4 text-brand-red" />
             <span>{BRAND.address}</span>
           </div>
@@ -577,7 +577,7 @@ function OfficeGallery() {
             <div className="lg:col-span-2 space-y-6">
               <div>
                 <h3 className="text-xl font-bold text-brand-black dark:text-white mb-3">{OFFICE_TABS[activeTab].title}</h3>
-                <p className="text-brand-grey text-sm leading-relaxed">{OFFICE_TABS[activeTab].description}</p>
+                <p className="text-brand-grey dark:text-gray-300 text-sm leading-relaxed">{OFFICE_TABS[activeTab].description}</p>
               </div>
 
               {/* Thumbnail grid — click to switch tabs */}
@@ -613,7 +613,7 @@ function OfficeGallery() {
                 </div>
                 <div className="flex-1">
                   <p className="text-xs font-bold text-brand-black dark:text-white">Visit Our Office</p>
-                  <p className="text-[10px] text-brand-grey">Queens Court, Egmore, Chennai</p>
+                  <p className="text-[10px] text-brand-grey dark:text-gray-300">Queens Court, Egmore, Chennai</p>
                 </div>
                 <a
                   href="https://maps.google.com/?q=Queens+Court+Egmore+Chennai"

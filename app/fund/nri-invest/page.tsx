@@ -120,7 +120,7 @@ function NRIInvestContent() {
               <h2 className="text-2xl md:text-3xl font-bold text-brand-black dark:text-white mb-4">
                 Why NRIs Trust GHL India Ventures
               </h2>
-              <p className="text-brand-grey max-w-2xl mx-auto">
+              <p className="text-brand-grey dark:text-gray-300 max-w-2xl mx-auto">
                 Institutional-grade governance meets NRI-specific compliance.
                 Every rupee is protected, reported, and repatriable.
               </p>
@@ -166,7 +166,7 @@ function NRIInvestContent() {
                     {item.icon}
                   </div>
                   <h3 className="text-base font-bold text-brand-black dark:text-white mb-2">{item.title}</h3>
-                  <p className="text-sm text-brand-grey leading-relaxed">{item.desc}</p>
+                  <p className="text-sm text-brand-grey dark:text-gray-300 leading-relaxed">{item.desc}</p>
                 </div>
               </AnimatedSection>
             ))}
@@ -203,7 +203,7 @@ function NRIInvestContent() {
                     </div>
                     <div>
                       <h4 className="font-bold text-brand-black dark:text-white text-sm">{item.label}</h4>
-                      <p className="text-xs text-brand-grey">{item.detail}</p>
+                      <p className="text-xs text-brand-grey dark:text-gray-300">{item.detail}</p>
                     </div>
                   </div>
                 ))}
@@ -226,7 +226,7 @@ function NRIInvestContent() {
                   ].map((item) => (
                     <div key={item} className="flex items-start gap-2">
                       <CheckCircle className="w-4 h-4 text-green-500 mt-0.5 shrink-0" />
-                      <span className="text-sm text-brand-grey leading-snug">{item}</span>
+                      <span className="text-sm text-brand-grey dark:text-gray-300 leading-snug">{item}</span>
                     </div>
                   ))}
                 </div>
@@ -252,7 +252,7 @@ function NRIInvestContent() {
               <h2 className="text-2xl md:text-3xl font-bold text-brand-black dark:text-white mb-4">
                 Choose Your NRI Investment Pathway
               </h2>
-              <p className="text-brand-grey max-w-2xl mx-auto">
+              <p className="text-brand-grey dark:text-gray-300 max-w-2xl mx-auto">
                 Two distinct routes designed for different risk appetites and investment sizes.
                 Both are fully FEMA-compliant and can be funded through NRO or NRE accounts.
               </p>
@@ -292,7 +292,7 @@ function NRIInvestContent() {
                   ].map((item) => (
                     <div key={item} className="flex items-start gap-2">
                       <CheckCircle className="w-4 h-4 text-green-500 mt-0.5 shrink-0" />
-                      <span className="text-sm text-brand-grey">{item}</span>
+                      <span className="text-sm text-brand-grey dark:text-gray-300">{item}</span>
                     </div>
                   ))}
                   <div className="pt-4">
@@ -336,7 +336,7 @@ function NRIInvestContent() {
                   ].map((item) => (
                     <div key={item} className="flex items-start gap-2">
                       <CheckCircle className="w-4 h-4 text-green-500 mt-0.5 shrink-0" />
-                      <span className="text-sm text-brand-grey">{item}</span>
+                      <span className="text-sm text-brand-grey dark:text-gray-300">{item}</span>
                     </div>
                   ))}
                   <div className="pt-4">
@@ -367,7 +367,7 @@ function NRIInvestContent() {
               <h2 className="text-2xl md:text-3xl font-bold text-brand-black dark:text-white mb-4">
                 How It Works: 5 Simple Steps
               </h2>
-              <p className="text-brand-grey max-w-2xl mx-auto">
+              <p className="text-brand-grey dark:text-gray-300 max-w-2xl mx-auto">
                 From first call to first quarterly report — the entire process can be completed
                 remotely in under 2 weeks.
               </p>
@@ -434,7 +434,7 @@ function NRIInvestContent() {
                         {item.time}
                       </span>
                     </div>
-                    <p className="text-sm text-brand-grey leading-relaxed">{item.desc}</p>
+                    <p className="text-sm text-brand-grey dark:text-gray-300 leading-relaxed">{item.desc}</p>
                   </div>
                 </div>
               </AnimatedSection>
@@ -479,7 +479,7 @@ function NRIInvestContent() {
                 <div key={item.country} className="card p-3 rounded-xl text-center hover:shadow-md transition-all">
                   <div className="text-2xl mb-1">{item.flag}</div>
                   <div className="text-xs font-bold text-brand-black dark:text-white">{item.country}</div>
-                  <div className="text-[10px] text-brand-grey">{item.city}</div>
+                  <div className="text-[10px] text-brand-grey dark:text-gray-300">{item.city}</div>
                 </div>
               ))}
             </div>
@@ -514,13 +514,13 @@ function NRIInvestContent() {
                       <Star key={i} className="w-3.5 h-3.5 text-yellow-500 fill-yellow-500" />
                     ))}
                   </div>
-                  <p className="text-sm text-brand-grey leading-relaxed mb-4 italic">
+                  <p className="text-sm text-brand-grey dark:text-gray-300 leading-relaxed mb-4 italic">
                     &ldquo;{item.quote}&rdquo;
                   </p>
                   <div>
                     <p className="text-sm font-bold text-brand-black dark:text-white">{item.name}</p>
-                    <p className="text-xs text-brand-grey">{item.location}</p>
-                    <p className="text-[10px] text-brand-grey/60">{item.role}</p>
+                    <p className="text-xs text-brand-grey dark:text-gray-300">{item.location}</p>
+                    <p className="text-[10px] text-brand-grey dark:text-gray-300/60">{item.role}</p>
                   </div>
                 </div>
               </AnimatedSection>
@@ -546,7 +546,7 @@ function NRIInvestContent() {
                   <h3 className="text-xl sm:text-2xl font-bold text-brand-black dark:text-white mb-3">
                     NRI Investment Handbook
                   </h3>
-                  <p className="text-sm text-brand-grey mb-4 leading-relaxed">
+                  <p className="text-sm text-brand-grey dark:text-gray-300 mb-4 leading-relaxed">
                     15 comprehensive chapters covering everything NRIs need to know:
                     FEMA compliance, AIF vs Co-Invest routes, country-specific tax guidance,
                     repatriation rules, and step-by-step onboarding.
@@ -559,7 +559,7 @@ function NRIInvestContent() {
                       'KYC document checklist',
                       'Repatriation flowchart',
                     ].map((item) => (
-                      <div key={item} className="flex items-center gap-2 text-sm text-brand-grey">
+                      <div key={item} className="flex items-center gap-2 text-sm text-brand-grey dark:text-gray-300">
                         <CheckCircle className="w-3.5 h-3.5 text-green-500 shrink-0" />
                         {item}
                       </div>
@@ -584,7 +584,7 @@ function NRIInvestContent() {
                         PDF
                       </div>
                     </div>
-                    <p className="text-xs text-brand-grey">Version 2.0 &bull; February 2026</p>
+                    <p className="text-xs text-brand-grey dark:text-gray-300">Version 2.0 &bull; February 2026</p>
                   </div>
                 </div>
               </div>
@@ -725,7 +725,7 @@ function ComplianceAccordion() {
             <h2 className="text-2xl md:text-3xl font-bold text-brand-black dark:text-white mb-4">
               NRI Regulatory Framework
             </h2>
-            <p className="text-brand-grey max-w-2xl mx-auto">
+            <p className="text-brand-grey dark:text-gray-300 max-w-2xl mx-auto">
               Complete transparency on FEMA, RBI, taxation, and KYC requirements.
               Our compliance desk handles the complexity — you focus on investing.
             </p>
@@ -753,7 +753,7 @@ function ComplianceAccordion() {
                     {item.content.map((line, i) => (
                       <div key={i} className="flex items-start gap-2">
                         <CheckCircle className="w-4 h-4 text-green-500 mt-0.5 shrink-0" />
-                        <span className="text-sm text-brand-grey leading-relaxed">{line}</span>
+                        <span className="text-sm text-brand-grey dark:text-gray-300 leading-relaxed">{line}</span>
                       </div>
                     ))}
                   </div>
@@ -833,7 +833,7 @@ function ConsultationForm() {
             <h2 className="text-2xl md:text-3xl font-bold text-brand-black dark:text-white mb-4">
               Book Your Free NRI Consultation
             </h2>
-            <p className="text-brand-grey max-w-2xl mx-auto">
+            <p className="text-brand-grey dark:text-gray-300 max-w-2xl mx-auto">
               Schedule a complimentary 30-minute video call with our NRI Advisory Team.
               Available in your timezone — IST, GST, EST, PST, or AEST.
             </p>
@@ -850,7 +850,7 @@ function ConsultationForm() {
                 <h3 className="text-xl font-bold text-brand-black dark:text-white mb-2">
                   Consultation Request Received
                 </h3>
-                <p className="text-sm text-brand-grey mb-6">
+                <p className="text-sm text-brand-grey dark:text-gray-300 mb-6">
                   Our NRI Advisory Team will contact you within 24 hours to schedule
                   your complimentary video consultation. Check your email for confirmation.
                 </p>
@@ -863,7 +863,7 @@ function ConsultationForm() {
                   >
                     <Phone className="w-4 h-4" /> WhatsApp Us
                   </a>
-                  <Link href="/fund" className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-brand-grey border border-brand-black/10 rounded-lg hover:bg-brand-black/5 transition-colors">
+                  <Link href="/fund" className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-brand-grey dark:text-gray-300 border border-brand-black/10 rounded-lg hover:bg-brand-black/5 transition-colors">
                     <ArrowLeft className="w-4 h-4" /> Back to Fund
                   </Link>
                 </div>
@@ -973,7 +973,7 @@ function ConsultationForm() {
 
                 <div>
                   <label className="block text-xs font-bold text-brand-black dark:text-white mb-1.5">
-                    Additional Notes <span className="text-brand-grey font-normal">(optional)</span>
+                    Additional Notes <span className="text-brand-grey dark:text-gray-300 font-normal">(optional)</span>
                   </label>
                   <textarea
                     value={formData.message}
@@ -998,7 +998,7 @@ function ConsultationForm() {
                   )}
                 </button>
 
-                <p className="text-[10px] text-brand-grey/60 text-center">
+                <p className="text-[10px] text-brand-grey dark:text-gray-300/60 text-center">
                   By submitting, you agree to receive communications from GHL India Ventures.
                   Your information is protected and will never be shared with third parties.
                 </p>

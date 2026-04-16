@@ -179,11 +179,11 @@ function IrrCalculator() {
         </div>
         <div>
           <h3 className="font-bold text-brand-black dark:text-white text-lg">IRR Calculator</h3>
-          <p className="text-brand-grey text-xs">Internal Rate of Return (Newton-Raphson)</p>
+          <p className="text-brand-grey dark:text-gray-300 text-xs">Internal Rate of Return (Newton-Raphson)</p>
         </div>
       </div>
 
-      <p className="text-brand-grey text-xs mb-4 leading-relaxed">
+      <p className="text-brand-grey dark:text-gray-300 text-xs mb-4 leading-relaxed">
         Enter your cash flows below. Use negative values for investments (outflows) and positive values for returns (inflows).
       </p>
 
@@ -191,9 +191,9 @@ function IrrCalculator() {
       <div className="space-y-2 mb-4 max-h-52 overflow-y-auto pr-1">
         {flows.map((f, i) => (
           <div key={i} className="flex items-center gap-2">
-            <span className="text-brand-grey text-[10px] font-semibold w-10 shrink-0 uppercase tracking-wider">Yr {f.year}</span>
+            <span className="text-brand-grey dark:text-gray-300 text-[10px] font-semibold w-10 shrink-0 uppercase tracking-wider">Yr {f.year}</span>
             <div className="relative flex-1">
-              <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-brand-grey text-xs">₹</span>
+              <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-brand-grey dark:text-gray-300 text-xs">₹</span>
               <input
                 type="number"
                 value={f.amount}
@@ -212,7 +212,7 @@ function IrrCalculator() {
       </div>
 
       {/* Add row */}
-      <button onClick={addFlow} className="w-full py-2 border border-dashed border-gray-300 dark:border-white/15 rounded-lg text-brand-grey text-xs font-medium hover:bg-gray-50 dark:hover:bg-white/5 transition-all flex items-center justify-center gap-1.5 mb-4">
+      <button onClick={addFlow} className="w-full py-2 border border-dashed border-gray-300 dark:border-white/15 rounded-lg text-brand-grey dark:text-gray-300 text-xs font-medium hover:bg-gray-50 dark:hover:bg-white/5 transition-all flex items-center justify-center gap-1.5 mb-4">
         <Plus className="w-3 h-3" /> Add Cash Flow
       </button>
 
@@ -227,7 +227,7 @@ function IrrCalculator() {
         </button>
         <button
           onClick={reset}
-          className="px-3 py-2.5 rounded-xl border border-gray-200 dark:border-white/10 text-brand-grey hover:bg-gray-50 dark:hover:bg-white/5 transition-all"
+          className="px-3 py-2.5 rounded-xl border border-gray-200 dark:border-white/10 text-brand-grey dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-white/5 transition-all"
           title="Reset"
         >
           <RotateCcw className="w-4 h-4" />
@@ -237,7 +237,7 @@ function IrrCalculator() {
       {/* Result */}
       {result && (
         <div className={`mt-4 p-4 rounded-xl text-center ${result.includes('Could not') ? 'bg-red-50 dark:bg-red-500/10' : 'bg-green-50 dark:bg-green-500/10'}`}>
-          <p className="text-xs text-brand-grey mb-1 uppercase tracking-wider font-semibold">
+          <p className="text-xs text-brand-grey dark:text-gray-300 mb-1 uppercase tracking-wider font-semibold">
             {result.includes('Could not') ? 'Error' : 'Annualized IRR'}
           </p>
           <p className={`text-2xl font-extrabold ${result.includes('Could not') ? 'text-red-600' : 'text-green-600'}`}>
@@ -389,8 +389,8 @@ export default function FinancialIQPage() {
                     <span className="text-xs font-medium text-brand-red uppercase tracking-wider">{article.category}</span>
                   </div>
                   <h3 className="font-bold text-lg text-brand-black dark:text-white mb-2 group-hover:text-brand-red transition-colors">{article.title}</h3>
-                  <p className="text-brand-grey text-sm mb-4 line-clamp-2">{article.excerpt}</p>
-                  <div className="flex items-center justify-between text-xs text-brand-grey mt-auto pt-4 border-t border-gray-100">
+                  <p className="text-brand-grey dark:text-gray-300 text-sm mb-4 line-clamp-2">{article.excerpt}</p>
+                  <div className="flex items-center justify-between text-xs text-brand-grey dark:text-gray-300 mt-auto pt-4 border-t border-gray-100">
                     <span className="flex items-center"><Calendar className="w-3 h-3 mr-1" />{new Date(article.date).toLocaleDateString('en-IN', { year: 'numeric', month: 'short', day: 'numeric' })}</span>
                     <span className="flex items-center"><Clock className="w-3 h-3 mr-1" />{article.readTime}</span>
                   </div>
@@ -413,8 +413,8 @@ export default function FinancialIQPage() {
                   <h3 className="font-bold text-lg text-brand-black dark:text-white mb-2 group-hover:text-brand-red transition-colors">
                     {article.title}
                   </h3>
-                  <p className="text-brand-grey text-sm mb-4 line-clamp-2">{article.excerpt}</p>
-                  <div className="flex items-center justify-between text-xs text-brand-grey mt-auto pt-4 border-t border-gray-100">
+                  <p className="text-brand-grey dark:text-gray-300 text-sm mb-4 line-clamp-2">{article.excerpt}</p>
+                  <div className="flex items-center justify-between text-xs text-brand-grey dark:text-gray-300 mt-auto pt-4 border-t border-gray-100">
                     <span className="flex items-center">
                       <Calendar className="w-3 h-3 mr-1" />
                       {new Date(article.date).toLocaleDateString('en-IN', {
@@ -454,7 +454,7 @@ export default function FinancialIQPage() {
             <div className="max-w-4xl mx-auto">
               {/* Search */}
               <div className="relative mb-6">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-brand-grey" />
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-brand-grey dark:text-gray-300" />
                 <input
                   type="text"
                   placeholder="Search glossary terms..."
@@ -496,8 +496,8 @@ export default function FinancialIQPage() {
               <div className="space-y-3">
                 {filteredGlossary.length === 0 ? (
                   <div className="text-center py-12">
-                    <BookOpen className="w-10 h-10 text-brand-grey/40 mx-auto mb-3" />
-                    <p className="text-brand-grey">No terms found. Try a different search.</p>
+                    <BookOpen className="w-10 h-10 text-brand-grey dark:text-gray-300/40 mx-auto mb-3" />
+                    <p className="text-brand-grey dark:text-gray-300">No terms found. Try a different search.</p>
                   </div>
                 ) : (
                   filteredGlossary.map((item, gi) => (
@@ -511,7 +511,7 @@ export default function FinancialIQPage() {
                         </span>
                         <div>
                           <h4 className="font-bold text-brand-black dark:text-white text-lg">{item.term}</h4>
-                          <p className="text-brand-grey text-sm mt-1 leading-relaxed">{item.definition}</p>
+                          <p className="text-brand-grey dark:text-gray-300 text-sm mt-1 leading-relaxed">{item.definition}</p>
                         </div>
                       </div>
                     </div>
@@ -546,7 +546,7 @@ export default function FinancialIQPage() {
                   </div>
                   <div>
                     <h3 className="font-bold text-brand-black dark:text-white text-lg">SIP Calculator</h3>
-                    <p className="text-brand-grey text-xs">Systematic Investment Plan returns</p>
+                    <p className="text-brand-grey dark:text-gray-300 text-xs">Systematic Investment Plan returns</p>
                   </div>
                 </div>
 
@@ -554,7 +554,7 @@ export default function FinancialIQPage() {
                   {/* Monthly amount */}
                   <div>
                     <div className="flex justify-between text-sm mb-1.5">
-                      <span className="text-brand-grey font-medium">Monthly Investment</span>
+                      <span className="text-brand-grey dark:text-gray-300 font-medium">Monthly Investment</span>
                       <span className="font-bold text-brand-black dark:text-white">
                         {new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(sipMonthly)}
                       </span>
@@ -568,7 +568,7 @@ export default function FinancialIQPage() {
                       onChange={(e) => setSipMonthly(Number(e.target.value))}
                       className="w-full accent-brand-red"
                     />
-                    <div className="flex justify-between text-xs text-brand-grey mt-0.5">
+                    <div className="flex justify-between text-xs text-brand-grey dark:text-gray-300 mt-0.5">
                       <span>Rs 1,000</span>
                       <span>Rs 5,00,000</span>
                     </div>
@@ -577,7 +577,7 @@ export default function FinancialIQPage() {
                   {/* Years */}
                   <div>
                     <div className="flex justify-between text-sm mb-1.5">
-                      <span className="text-brand-grey font-medium">Investment Period</span>
+                      <span className="text-brand-grey dark:text-gray-300 font-medium">Investment Period</span>
                       <span className="font-bold text-brand-black dark:text-white">{sipYears} years</span>
                     </div>
                     <input
@@ -589,7 +589,7 @@ export default function FinancialIQPage() {
                       onChange={(e) => setSipYears(Number(e.target.value))}
                       className="w-full accent-brand-red"
                     />
-                    <div className="flex justify-between text-xs text-brand-grey mt-0.5">
+                    <div className="flex justify-between text-xs text-brand-grey dark:text-gray-300 mt-0.5">
                       <span>1 yr</span>
                       <span>30 yrs</span>
                     </div>
@@ -598,7 +598,7 @@ export default function FinancialIQPage() {
                   {/* Expected return */}
                   <div>
                     <div className="flex justify-between text-sm mb-1.5">
-                      <span className="text-brand-grey font-medium">Expected Annual Return</span>
+                      <span className="text-brand-grey dark:text-gray-300 font-medium">Expected Annual Return</span>
                       <span className="font-bold text-brand-black dark:text-white">{sipReturn}%</span>
                     </div>
                     <input
@@ -610,7 +610,7 @@ export default function FinancialIQPage() {
                       onChange={(e) => setSipReturn(Number(e.target.value))}
                       className="w-full accent-brand-red"
                     />
-                    <div className="flex justify-between text-xs text-brand-grey mt-0.5">
+                    <div className="flex justify-between text-xs text-brand-grey dark:text-gray-300 mt-0.5">
                       <span>1%</span>
                       <span>30%</span>
                     </div>
@@ -620,19 +620,19 @@ export default function FinancialIQPage() {
                   <div className="bg-brand-offwhite rounded-xl p-5 mt-4">
                     <div className="grid grid-cols-3 gap-4 text-center">
                       <div>
-                        <p className="text-xs text-brand-grey mb-1">Total Invested</p>
+                        <p className="text-xs text-brand-grey dark:text-gray-300 mb-1">Total Invested</p>
                         <p className="font-bold text-brand-black dark:text-white text-sm">
                           {new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(sipTotalInvested)}
                         </p>
                       </div>
                       <div>
-                        <p className="text-xs text-brand-grey mb-1">Wealth Gained</p>
+                        <p className="text-xs text-brand-grey dark:text-gray-300 mb-1">Wealth Gained</p>
                         <p className="font-bold text-emerald-600 text-sm">
                           {new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(sipWealth)}
                         </p>
                       </div>
                       <div>
-                        <p className="text-xs text-brand-grey mb-1">Total Value</p>
+                        <p className="text-xs text-brand-grey dark:text-gray-300 mb-1">Total Value</p>
                         <p className="font-bold text-brand-red text-lg">
                           {new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(sipFutureValue)}
                         </p>
@@ -681,7 +681,7 @@ export default function FinancialIQPage() {
                     <h3 className="font-bold text-brand-black dark:text-white mb-2 group-hover:text-brand-red transition-colors">
                       {guide.title}
                     </h3>
-                    <p className="text-brand-grey text-sm mb-4">{guide.desc}</p>
+                    <p className="text-brand-grey dark:text-gray-300 text-sm mb-4">{guide.desc}</p>
                     <span className="inline-flex items-center text-brand-red text-sm font-semibold">
                       View in Downloads
                       <ChevronRight className="w-4 h-4 ml-1 group-hover:translate-x-1 transition-transform" />

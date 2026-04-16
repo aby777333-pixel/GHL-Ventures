@@ -92,7 +92,7 @@ function FundOverview() {
                 <div className="w-12 h-12 bg-brand-red/10 rounded-xl flex items-center justify-center mx-auto mb-4 group-hover:bg-brand-red transition-all icon-ring-hover">
                   <item.icon className="w-6 h-6 text-brand-red group-hover:text-white transition-colors" />
                 </div>
-                <p className="text-brand-grey text-xs uppercase tracking-wider mb-1">{item.label}</p>
+                <p className="text-brand-grey dark:text-gray-300 text-xs uppercase tracking-wider mb-1">{item.label}</p>
                 <p className="font-bold text-brand-black dark:text-white text-lg">{item.value}</p>
               </div>
             </AnimatedSection>
@@ -165,12 +165,12 @@ function InvestmentRoutes() {
                     }`}>
                       {route.badge}
                     </span>
-                    <span className="text-xs text-brand-grey dark:text-gray-400">Min. Investment</span>
+                    <span className="text-xs text-brand-grey dark:text-gray-300">Min. Investment</span>
                   </div>
 
                   {/* Title */}
                   <h3 className="text-xl font-bold text-brand-black dark:text-white mb-1">{route.title}</h3>
-                  <p className="text-sm text-brand-grey dark:text-gray-400 mb-4">{route.subtitle}</p>
+                  <p className="text-sm text-brand-grey dark:text-gray-300 mb-4">{route.subtitle}</p>
 
                   {/* Min Investment — prominent */}
                   <div className={`text-3xl font-extrabold mb-6 bg-gradient-to-r ${route.gradient} bg-clip-text text-transparent`}>
@@ -232,7 +232,7 @@ function InvestmentStrategy() {
                 <span className="text-brand-red text-xs font-semibold uppercase tracking-wider">Pillar 1</span>
               </div>
               <h3 className="text-xl font-bold text-brand-black dark:text-white mb-3">Stressed Real Estate</h3>
-              <p className="text-brand-grey leading-relaxed mb-6">
+              <p className="text-brand-grey dark:text-gray-300 leading-relaxed mb-6">
                 India&apos;s stressed real estate market represents a multi-trillion-rupee opportunity.
                 We acquire distressed properties and incomplete projects at significant discounts, then apply
                 resolution, restructuring, and revival strategies to unlock trapped value. Our team&apos;s deep
@@ -266,7 +266,7 @@ function InvestmentStrategy() {
                 <span className="text-brand-red text-xs font-semibold uppercase tracking-wider">Pillar 2</span>
               </div>
               <h3 className="text-xl font-bold text-brand-black dark:text-white mb-3">Early-Stage Startups</h3>
-              <p className="text-brand-grey leading-relaxed mb-6">
+              <p className="text-brand-grey dark:text-gray-300 leading-relaxed mb-6">
                 India&apos;s startup ecosystem is the third largest globally, producing world-class founders
                 across technology, healthcare, fintech, and climate. We invest in pre-Series A and Series A
                 companies with strong unit economics, scalable business models, and founders with domain
@@ -315,21 +315,21 @@ function FundStructure() {
               <div className="grid md:grid-cols-3 gap-6 text-left">
                 <div className="card rounded-xl p-6">
                   <h4 className="font-bold text-brand-black dark:text-white mb-2 text-sm">Investors (LPs)</h4>
-                  <p className="text-brand-grey text-xs">HNIs, Family Offices, Institutional Investors contribute capital to the Fund.</p>
+                  <p className="text-brand-grey dark:text-gray-300 text-xs">HNIs, Family Offices, Institutional Investors contribute capital to the Fund.</p>
                 </div>
                 <div className="card rounded-xl p-6 border-2 border-brand-red/20">
                   <h4 className="font-bold text-brand-red mb-2 text-sm">GHL India Ventures AIF</h4>
-                  <p className="text-brand-grey text-xs">Category II AIF registered with SEBI. Managed by GHL India Ventures as Investment Manager.</p>
+                  <p className="text-brand-grey dark:text-gray-300 text-xs">Category II AIF registered with SEBI. Managed by GHL India Ventures as Investment Manager.</p>
                 </div>
                 <div className="card rounded-xl p-6">
                   <h4 className="font-bold text-brand-black dark:text-white mb-2 text-sm">Portfolio Assets</h4>
-                  <p className="text-brand-grey text-xs">Stressed Real Estate Projects + Early-Stage Startup Equity positions.</p>
+                  <p className="text-brand-grey dark:text-gray-300 text-xs">Stressed Real Estate Projects + Early-Stage Startup Equity positions.</p>
                 </div>
               </div>
 
               <div className="mt-8 flex flex-wrap justify-center gap-4">
                 {['Independent Custodian', 'SEBI-empanelled Auditor', 'Legal Counsel', 'Fund Administrator'].map((role) => (
-                  <span key={role} className="px-3 py-1.5 bg-white dark:bg-white/10 rounded-full text-xs font-medium text-brand-grey border border-gray-200 dark:border-white/10 trust-badge badge-bounce">
+                  <span key={role} className="px-3 py-1.5 bg-white dark:bg-white/10 rounded-full text-xs font-medium text-brand-grey dark:text-gray-300 border border-gray-200 dark:border-white/10 trust-badge badge-bounce">
                     {role}
                   </span>
                 ))}
@@ -391,7 +391,7 @@ function RiskFramework() {
                   <p.icon className="w-6 h-6 text-brand-red group-hover:text-white transition-colors" />
                 </div>
                 <h3 className="font-bold text-brand-black dark:text-white mb-2">{p.title}</h3>
-                <p className="text-brand-grey text-sm leading-relaxed">{p.desc}</p>
+                <p className="text-brand-grey dark:text-gray-300 text-sm leading-relaxed">{p.desc}</p>
               </div>
             </AnimatedSection>
           ))}
@@ -445,7 +445,7 @@ function InvestmentProcess() {
                     <s.icon className="w-5 h-5 text-white" />
                   </div>
                   <h4 className="font-bold text-brand-black dark:text-white text-sm mb-2">{s.title}</h4>
-                  <p className="text-brand-grey text-xs leading-relaxed">{s.desc}</p>
+                  <p className="text-brand-grey dark:text-gray-300 text-xs leading-relaxed">{s.desc}</p>
                 </div>
               </AnimatedSection>
             ))}
@@ -480,7 +480,7 @@ function ReturnsPerformance() {
             <div className="card rounded-2xl p-6 border-l-4 border-brand-red">
               <div className="flex items-start space-x-3">
                 <AlertTriangle className="w-5 h-5 text-brand-red shrink-0 mt-0.5" />
-                <div className="text-xs text-brand-grey leading-relaxed space-y-2">
+                <div className="text-xs text-brand-grey dark:text-gray-300 leading-relaxed space-y-2">
                   <p>
                     <strong className="text-brand-black dark:text-white">Important Disclosures:</strong> Investments in AIFs are subject to market risks.
                     Past performance is not indicative of future results. The value of investments may go down as well as up.
@@ -541,9 +541,9 @@ function FundArticles() {
                 <h3 className="font-bold text-sm text-brand-black dark:text-white mb-2 group-hover:text-brand-red transition-colors line-clamp-2">
                   {article.title}
                 </h3>
-                <p className="text-brand-grey text-xs mb-3 line-clamp-2">{article.excerpt}</p>
+                <p className="text-brand-grey dark:text-gray-300 text-xs mb-3 line-clamp-2">{article.excerpt}</p>
 
-                <div className="flex items-center justify-between text-[10px] text-brand-grey mt-auto pt-3 border-t border-gray-100">
+                <div className="flex items-center justify-between text-[10px] text-brand-grey dark:text-gray-300 mt-auto pt-3 border-t border-gray-100">
                   <span>By GHL Research</span>
                   <span>{new Date(article.date).toLocaleDateString('en-IN', { year: 'numeric', month: 'short', day: 'numeric' })}</span>
                   <span>{article.readTime}</span>
