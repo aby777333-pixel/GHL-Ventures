@@ -679,7 +679,10 @@ button svg, button .lucide, [role="button"] svg {
 
 :root.dark .bg-white {
   background-color: #111111 !important;
-  color: #E5E7EB !important;
+  color: #D1D5DB !important;
+}
+:root.dark .bg-white .text-brand-black {
+  color: #FFFFFF !important;
 }
 
 /* Navbar scrolled state dark mode */
@@ -727,21 +730,25 @@ button svg, button .lucide, [role="button"] svg {
 
 /* ============================================================
    LIGHT MODE TEXT SAFETY NET
-   Ensure card/section text is always readable in light mode
+   Any element with bg-white MUST have dark text so children are readable.
+   This prevents inherited white text from dark parent sections.
    ============================================================ */
-:root:not(.dark) .card p,
-:root:not(.dark) .card span,
-:root:not(.dark) .card li,
-:root:not(.dark) .card h3,
-:root:not(.dark) .card h4,
-:root:not(.dark) .card h5 {
-  color: inherit;
+.bg-white {
+  color: #1F2937 !important;
 }
-:root:not(.dark) .bg-white p:not([class*="text-white"]):not([class*="text-brand-red"]):not([class*="text-gray-"]),
-:root:not(.dark) .bg-white li:not([class*="text-white"]):not([class*="text-brand-red"]):not([class*="text-gray-"]) {
-  color: #374151;
+.bg-white .text-white {
+  color: #FFFFFF !important;
 }
-:root:not(.dark) .card {
+.bg-white .text-brand-red {
+  color: #D0021B !important;
+}
+.bg-white .text-gray-400 {
+  color: #9CA3AF !important;
+}
+.bg-white .text-gray-500 {
+  color: #6B7280 !important;
+}
+.bg-brand-offwhite {
   color: #1F2937;
 }
 
