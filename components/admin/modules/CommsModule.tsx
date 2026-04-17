@@ -168,24 +168,28 @@ function InvestorMessagesTab({ showToast }: { showToast: (msg: string, type?: 's
       const { data: { user } } = await (supabase as any).auth.getUser()
       const adminId = user?.id || null
       const adminName = user?.user_metadata?.full_name || user?.email || 'Admin'
-      // Resolve investor's client_id from the original message so the reply appears
-      // in their dashboard. Messages are keyed by client_id on the investor side.
-      const clientId = msg.client_id || msg.from_client_id || msg.from_id || null
+      // The `messages` table schema has only: id, from_id, to_id, subject,
+      // body, read, read_at, attachments, metadata (jsonb), created_at,
+      // updated_at. Extra fields like from_name / client_id / is_admin_reply /
+      // in_reply_to go inside `metadata` so Postgrest doesn't 400.
       const subject = (msg.subject || '').startsWith('Re:') ? msg.subject : `Re: ${msg.subject || 'Your message'}`
       const payload: Record<string, any> = {
-        client_id: clientId,
         from_id: adminId,
-        from_name: adminName,
         to_id: msg.from_id || null,
         subject,
         body,
-        is_admin_reply: true,
-        in_reply_to: msg.id,
+        read: false,
+        metadata: {
+          is_admin_reply: true,
+          in_reply_to: msg.id,
+          from_name: adminName,
+          original_subject: msg.subject || null,
+        },
       }
       const { error } = await (supabase as any).from('messages').insert(payload)
       if (error) { showToast(`Reply failed: ${error.message}`, 'error'); setReplySending(false); return }
       // Mark original as read
-      try { await (supabase as any).from('messages').update({ read: true }).eq('id', msg.id) } catch {}
+      try { await (supabase as any).from('messages').update({ read: true, read_at: new Date().toISOString() }).eq('id', msg.id) } catch {}
       showToast('Reply sent to investor', 'success')
       setReplyBody('')
       setSelectedMsg(null)

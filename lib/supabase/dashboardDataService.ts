@@ -162,14 +162,19 @@ export async function fetchMessages(clientId?: string) {
     () => sb.from('messages').select('*').or(`to_id.eq.${userId},from_id.eq.${userId}`).order('created_at', { ascending: false }),
     [], 'fetchMessages',
   )
-  // Normalize field names for display
-  return (rows as any[]).map((r: any) => ({
-    ...r,
-    from: r.from_name || 'Advisory Team',
-    avatar: (r.from_name || 'A')[0]?.toUpperCase() || 'A',
-    time: r.created_at ? new Date(r.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }) : '',
-    preview: r.body?.substring(0, 80) || '',
-  }))
+  // Normalize field names for display. Admin replies store the admin's
+  // display name in metadata.from_name since the `messages` table has no
+  // top-level from_name column — so we fall back to metadata here.
+  return (rows as any[]).map((r: any) => {
+    const fromName = r.from_name || r?.metadata?.from_name || 'Advisory Team'
+    return {
+      ...r,
+      from: fromName,
+      avatar: (fromName || 'A')[0]?.toUpperCase() || 'A',
+      time: r.created_at ? new Date(r.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }) : '',
+      preview: r.body?.substring(0, 80) || '',
+    }
+  })
 }
 
 export async function fetchSupportTickets(clientId?: string) {
