@@ -230,7 +230,7 @@ export default function Navbar() {
                           }`}
                         >
                           <div
-                            className={`rounded-xl border shadow-2xl py-1.5 overflow-hidden ${isAbout ? 'min-w-[160px]' : isFund ? 'min-w-[180px]' : isEducation ? 'min-w-[150px]' : 'min-w-[190px]'} ${
+                            className={`rounded-xl border shadow-2xl py-1.5 overflow-hidden ${isAbout ? 'min-w-[160px]' : isFund ? 'min-w-[230px]' : isEducation ? 'min-w-[150px]' : 'min-w-[190px]'} ${
                               scrolled
                                 ? 'bg-white/[0.97] dark:bg-[#111]/[0.97] border-black/[0.08] dark:border-white/[0.1]'
                                 : 'bg-[#0f0f14]/[0.97] border-white/[0.1]'
@@ -243,7 +243,7 @@ export default function Navbar() {
                                 <Link
                                   key={child.href}
                                   href={child.href}
-                                  className={`flex items-center px-4 py-2.5 transition-all duration-150 ${
+                                  className={`flex items-center justify-start text-left whitespace-nowrap px-4 py-2.5 transition-all duration-150 ${
                                     childActive
                                       ? 'text-brand-red'
                                       : scrolled

@@ -173,7 +173,7 @@ function InvestmentRoutes() {
                   <p className="text-sm mb-4" style={{ color: 'var(--text-muted)' }}>{route.subtitle}</p>
 
                   {/* Min Investment — prominent */}
-                  <div className={`text-3xl font-extrabold mb-6 bg-gradient-to-r ${route.gradient} bg-clip-text text-transparent`}>
+                  <div className={`text-3xl font-extrabold mb-6 bg-gradient-to-r ${route.gradient} dark:from-brand-red dark:to-[#a00216] bg-clip-text text-transparent`}>
                     {route.minInvestment}
                   </div>
 
