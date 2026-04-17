@@ -697,8 +697,9 @@ export async function uploadAdminInvestmentDocument(params: {
 }
 
 // ── Mark credit given on an investment application (bug #16) ──
-export async function markInvestmentCreditGiven(appId: string, adminId: string) {
-  if (!isSupabaseConfigured()) return false
+// Returns true on success, or a string error message to surface in the UI.
+export async function markInvestmentCreditGiven(appId: string, adminId: string): Promise<true | string> {
+  if (!isSupabaseConfigured()) return 'Supabase not configured'
   try {
     const sb: any = supabase
     const { error } = await sb
@@ -710,7 +711,10 @@ export async function markInvestmentCreditGiven(appId: string, adminId: string) 
         status: 'credited',
       })
       .eq('id', appId)
-    if (error) return false
+    if (error) {
+      console.warn('[admin] markInvestmentCreditGiven error:', error.message)
+      return error.message || 'Database rejected the update'
+    }
     // Once credited, the full payout schedule becomes visible so the accounts
     // team can process payouts. Safe to run repeatedly — duplicates are skipped.
     try {
@@ -718,7 +722,10 @@ export async function markInvestmentCreditGiven(appId: string, adminId: string) 
       if (app) await generateFullPayoutSchedule(app)
     } catch (e) { console.warn('[admin] auto-generate payouts non-fatal:', e) }
     return true
-  } catch { return false }
+  } catch (e: any) {
+    console.warn('[admin] markInvestmentCreditGiven exception:', e?.message)
+    return e?.message || 'Unknown error'
+  }
 }
 
 // ── Generate full payout schedule for a single investment ──────

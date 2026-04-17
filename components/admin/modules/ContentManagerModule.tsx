@@ -61,7 +61,7 @@ interface SupportTicket {
   id: string
   subject: string
   description: string
-  status: 'open' | 'in-progress' | 'awaiting-client' | 'resolved' | 'closed'
+  status: 'open' | 'in_progress' | 'waiting' | 'escalated' | 'resolved' | 'closed'
   priority: 'low' | 'medium' | 'high' | 'critical'
   user_id: string
   created_at: string
@@ -84,7 +84,8 @@ type ContentTab = typeof CONTENT_TABS[number]['id']
 const BLOG_CATEGORIES = ['Market Updates', 'Investment Tips', 'Company News', 'Economy', 'Real Estate', 'Mutual Funds', 'Insurance']
 const FIQ_CATEGORIES = ['Basics', 'Advanced', 'Tax Planning', 'Retirement', 'Insurance', 'Real Estate', 'Mutual Funds']
 const FAQ_CATEGORIES = ['General', 'Account', 'Investments', 'KYC', 'Payments', 'Returns', 'Support']
-const TICKET_STATUSES = ['open', 'in-progress', 'awaiting-client', 'resolved', 'closed'] as const
+// Match the DB CHECK constraint on public.tickets.status exactly.
+const TICKET_STATUSES = ['open', 'in_progress', 'waiting', 'escalated', 'resolved', 'closed'] as const
 
 // ── Props ───────────────────────────────────────────────────────
 interface ContentManagerModuleProps {
@@ -368,7 +369,7 @@ export default function ContentManagerModule({ subTab, navigate, showToast }: Co
   const publishedBlogs = blogs.filter(b => b.is_published).length
   const publishedFIQ = fiqPosts.filter(f => f.is_published).length
   const activeFAQs = faqs.filter(f => f.is_active).length
-  const openTickets = tickets.filter(t => t.status === 'open' || t.status === 'in-progress').length
+  const openTickets = tickets.filter(t => t.status === 'open' || t.status === 'in_progress').length
 
   // ── Table Columns ──────────────────────────────────────────
   const blogColumns: Column<BlogPost>[] = [
@@ -475,8 +476,9 @@ export default function ContentManagerModule({ subTab, navigate, showToast }: Co
     )},
     { key: 'status', label: 'Status', sortable: true, render: (r) => {
       const v = r.status === 'resolved' || r.status === 'closed' ? 'success'
-        : r.status === 'in-progress' ? 'warning'
-        : r.status === 'awaiting-client' ? 'info' : 'error'
+        : r.status === 'in_progress' ? 'warning'
+        : r.status === 'waiting' ? 'info'
+        : r.status === 'escalated' ? 'error' : 'error'
       return <AdminBadge label={r.status} variant={v} dot />
     }},
     { key: 'priority', label: 'Priority', sortable: true, render: (r) => {

@@ -1121,6 +1121,7 @@ const INV_STATUS_MAP: Record<string, { label: string; variant: 'success' | 'warn
   pending: { label: 'Pending', variant: 'info' },
   under_review: { label: 'Under Review', variant: 'warning' },
   approved: { label: 'Approved', variant: 'success' },
+  credited: { label: 'Credited', variant: 'purple' },
   rejected: { label: 'Rejected', variant: 'error' },
   completed: { label: 'Completed', variant: 'purple' },
 }
@@ -1166,9 +1167,11 @@ function InvestmentsTab({ showToast }: { showToast: (m: string, t?: 'success' | 
     return () => { cancelled = true }
   }, [selectedApp])
 
-  const totalAUM = useMemo(() => applications.filter(a => a.status === 'approved' || a.status === 'completed').reduce((s, a) => s + (Number(a.investment_amount) || 0), 0), [applications])
+  // Include 'credited' in money-in / approved counts so KPIs stay correct after
+  // admin hits Give Credit (status flips from 'approved' to 'credited').
+  const totalAUM = useMemo(() => applications.filter(a => ['approved', 'completed', 'credited'].includes(a.status)).reduce((s, a) => s + (Number(a.investment_amount) || 0), 0), [applications])
   const pendingCount = useMemo(() => applications.filter(a => a.status === 'pending' || a.status === 'under_review').length, [applications])
-  const approvedCount = useMemo(() => applications.filter(a => a.status === 'approved' || a.status === 'completed').length, [applications])
+  const approvedCount = useMemo(() => applications.filter(a => ['approved', 'completed', 'credited'].includes(a.status)).length, [applications])
 
   const columns: Column<any>[] = [
     { key: 'client', label: 'Client', render: (row) => <span className="text-white font-medium">{row._client?.full_name || row._client?.email || '—'}</span> },
@@ -1255,14 +1258,16 @@ function InvestmentsTab({ showToast }: { showToast: (m: string, t?: 'success' | 
       const { markInvestmentCreditGiven } = await import('@/lib/supabase/adminDataService')
       const { supabase } = await import('@/lib/supabase/client')
       const { data: { user } } = await (supabase as any).auth.getUser()
-      const ok = await markInvestmentCreditGiven(id, user?.id || '')
-      if (ok) {
-        showToast('Credit marked as given', 'success')
+      const result = await markInvestmentCreditGiven(id, user?.id || '')
+      if (result === true) {
+        showToast('Credit marked as given — payout schedule generated', 'success')
         loadData()
         setDetailOpen(false)
         setSelectedApp(null)
-      } else { showToast('Failed to mark credit', 'error') }
-    } catch { showToast('Error marking credit', 'error') }
+      } else {
+        showToast(`Failed to mark credit: ${result}`, 'error')
+      }
+    } catch (e: any) { showToast(`Error marking credit: ${e?.message || 'unknown'}`, 'error') }
     finally { setUpdating(false) }
   }
 
