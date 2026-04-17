@@ -4,7 +4,7 @@ import { useState, useEffect, useMemo, useCallback } from 'react'
 import {
   TrendingUp, Users, Target, IndianRupee, Phone, Mail,
   Calendar, ArrowUpRight, ArrowDownRight, Eye, MoreHorizontal,
-  Trophy, Zap, Filter, Plus, Clock, CheckCircle2,
+  Trophy, Zap, Filter, Plus, Clock, CheckCircle2, XCircle,
   Star, BarChart3, Percent, DollarSign, UserPlus, Upload,
   ArrowRightLeft, Loader2, RefreshCw, Trash2,
 } from 'lucide-react'
@@ -1136,6 +1136,14 @@ function InvestmentsTab({ showToast }: { showToast: (m: string, t?: 'success' | 
   const [appTxns, setAppTxns] = useState<any[]>([])
   const [appDocs, setAppDocs] = useState<any[]>([])
   const [docUploading, setDocUploading] = useState(false)
+  // Bug #5/#6: proper modal for rejecting a transaction (replaces window.prompt
+  // which was blocked by some browsers and the tester thought "not asking")
+  const [rejectTxn, setRejectTxn] = useState<any | null>(null)
+  const [rejectReason, setRejectReason] = useState('')
+  // Bug #7: Give Credit confirmation modal — editable investment amount + date
+  const [creditApp, setCreditApp] = useState<any | null>(null)
+  const [creditAmount, setCreditAmount] = useState('')
+  const [creditDate, setCreditDate] = useState('')
 
   const loadData = useCallback(async () => {
     setLoading(true)
@@ -1198,7 +1206,7 @@ function InvestmentsTab({ showToast }: { showToast: (m: string, t?: 'success' | 
             doesn't need to open the modal to find the button. Hidden once
             already credited. */}
         {row.status === 'approved' && !row.credit_given && (
-          <button onClick={(e) => { e.stopPropagation(); handleGiveCredit(row.id) }}
+          <button onClick={(e) => { e.stopPropagation(); openCreditModal(row) }}
             title="Give Credit — records funds as credited for this investment"
             className="px-2 py-1 rounded-lg text-[10px] font-semibold text-emerald-300 bg-emerald-500/15 border border-emerald-500/30 hover:bg-emerald-500/25 transition-colors">
             Give Credit
@@ -1247,21 +1255,43 @@ function InvestmentsTab({ showToast }: { showToast: (m: string, t?: 'success' | 
     finally { setUpdating(false) }
   }
 
-  // Bug #16/18: Give Credit — marks investment as credited. Accepts an
-  // optional appId so the row-level quick action can work without relying
-  // on the selectedApp state (which doesn't update synchronously).
-  const handleGiveCredit = async (appId?: string) => {
-    const id = appId || selectedApp?.id
-    if (!id) return
+  // Bug #7: Open a Give Credit confirmation modal — admin can edit the
+  // final investment amount (e.g. 10.00 L vs what the investor applied for)
+  // and set the credit date before the investment moves to `credited` and
+  // the payout schedule is generated.
+  const openCreditModal = (app: any) => {
+    setCreditApp(app)
+    setCreditAmount(String(app?.investment_amount ?? ''))
+    setCreditDate(new Date().toISOString().split('T')[0])
+  }
+
+  const confirmGiveCredit = async () => {
+    if (!creditApp) return
+    const amt = parseFloat(creditAmount)
+    if (!Number.isFinite(amt) || amt <= 0) { showToast('Enter a valid investment amount', 'warning'); return }
+    if (!creditDate) { showToast('Please select a credit date', 'warning'); return }
     setUpdating(true)
     try {
       const { markInvestmentCreditGiven } = await import('@/lib/supabase/adminDataService')
       const { supabase } = await import('@/lib/supabase/client')
       const { data: { user } } = await (supabase as any).auth.getUser()
-      const result = await markInvestmentCreditGiven(id, user?.id || '')
+      // First persist the admin's edits (final_investment_amount + investment_date)
+      // so the downstream payout-schedule generator uses the right values.
+      const { error: updErr } = await (supabase as any).from('investment_applications').update({
+        final_investment_amount: amt,
+        final_investment_date: creditDate,
+        investment_date: creditDate,
+      }).eq('id', creditApp.id)
+      if (updErr) {
+        showToast(`Failed to save credit details: ${updErr.message}`, 'error')
+        setUpdating(false)
+        return
+      }
+      const result = await markInvestmentCreditGiven(creditApp.id, user?.id || '')
       if (result === true) {
-        showToast('Credit marked as given — payout schedule generated', 'success')
+        showToast(`Credit given: ₹${amt.toLocaleString('en-IN')} — payout schedule generated`, 'success')
         loadData()
+        setCreditApp(null)
         setDetailOpen(false)
         setSelectedApp(null)
       } else {
@@ -1281,23 +1311,49 @@ function InvestmentsTab({ showToast }: { showToast: (m: string, t?: 'success' | 
       if (ok) {
         showToast('Transaction approved', 'success')
         setAppTxns(prev => prev.map(t => t.id === txnId ? { ...t, status: 'approved' } : t))
+        // Refetch from DB to guarantee UI state matches (bug #6)
+        try {
+          const { fetchInvestmentTransactionsForApp } = await import('@/lib/supabase/adminDataService')
+          if (selectedApp?.id) {
+            const fresh = await fetchInvestmentTransactionsForApp(selectedApp.id)
+            setAppTxns(fresh || [])
+          }
+        } catch { /* non-fatal */ }
       } else { showToast('Failed to approve transaction', 'error') }
     } catch { showToast('Error approving transaction', 'error') }
   }
 
-  const handleRejectTxn = async (txnId: string) => {
-    const reason = window.prompt('Reason for rejecting this transaction:', '')
-    if (!reason || !reason.trim()) return
+  // Bug #5: open a proper modal for rejection reason instead of window.prompt
+  const openRejectTxnModal = (txn: any) => {
+    setRejectTxn(txn)
+    setRejectReason('')
+  }
+
+  const confirmRejectTxn = async () => {
+    if (!rejectTxn) return
+    const reason = rejectReason.trim()
+    if (!reason) { showToast('Please provide a rejection reason', 'warning'); return }
     try {
       const { rejectInvestmentTransaction } = await import('@/lib/supabase/adminDataService')
       const { supabase } = await import('@/lib/supabase/client')
       const { data: { user } } = await (supabase as any).auth.getUser()
-      const ok = await rejectInvestmentTransaction(txnId, user?.id || '', reason.trim())
+      const ok = await rejectInvestmentTransaction(rejectTxn.id, user?.id || '', reason)
       if (ok) {
         showToast('Transaction rejected', 'info')
-        setAppTxns(prev => prev.map(t => t.id === txnId ? { ...t, status: 'rejected', admin_notes: reason.trim() } : t))
+        // Bug #6: make absolutely sure the UI flips to rejected. We update the
+        // local row by id and also refetch from the DB as a safety net.
+        setAppTxns(prev => prev.map(t => t.id === rejectTxn.id ? { ...t, status: 'rejected', admin_notes: reason } : t))
+        try {
+          const { fetchInvestmentTransactionsForApp } = await import('@/lib/supabase/adminDataService')
+          if (selectedApp?.id) {
+            const fresh = await fetchInvestmentTransactionsForApp(selectedApp.id)
+            setAppTxns(fresh || [])
+          }
+        } catch { /* non-fatal */ }
+        setRejectTxn(null)
+        setRejectReason('')
       } else { showToast('Failed to reject transaction', 'error') }
-    } catch { showToast('Error rejecting transaction', 'error') }
+    } catch (e: any) { showToast(`Error rejecting transaction: ${e?.message || 'unknown'}`, 'error') }
   }
 
   // Bug #17: Upload investment document (admin)
@@ -1368,7 +1424,7 @@ function InvestmentsTab({ showToast }: { showToast: (m: string, t?: 'success' | 
             ) : null}
             {/* Bug #16: allow admin to mark credit given after approval */}
             {selectedApp.status === 'approved' && !selectedApp.credit_given ? (
-              <ModalButton variant="primary" onClick={handleGiveCredit} disabled={updating}>{updating ? 'Updating...' : 'Give Credit'}</ModalButton>
+              <ModalButton variant="primary" onClick={() => openCreditModal(selectedApp)} disabled={updating}>{updating ? 'Updating...' : 'Give Credit'}</ModalButton>
             ) : null}
           </>
         }>
@@ -1443,15 +1499,25 @@ function InvestmentsTab({ showToast }: { showToast: (m: string, t?: 'success' | 
                           </td>
                           <td className="py-2 text-right">
                             {txn.status === 'pending' ? (
-                              <div className="flex items-center justify-end gap-1">
-                                <button onClick={() => handleApproveTxn(txn.id)} className="p-1 rounded hover:bg-emerald-500/10 text-emerald-400" title="Approve">
-                                  <CheckCircle2 className="w-3.5 h-3.5" />
+                              <div className="flex items-center justify-end gap-1.5">
+                                <button
+                                  onClick={() => handleApproveTxn(txn.id)}
+                                  title="Approve this transaction"
+                                  className="flex items-center gap-1 px-2.5 py-1 rounded-md text-[11px] font-semibold text-emerald-300 bg-emerald-500/15 border border-emerald-500/30 hover:bg-emerald-500/25 transition-colors"
+                                >
+                                  <CheckCircle2 className="w-3 h-3" />
+                                  Approve
                                 </button>
-                                <button onClick={() => handleRejectTxn(txn.id)} className="p-1 rounded hover:bg-red-500/10 text-red-400" title="Reject">
-                                  <Trash2 className="w-3.5 h-3.5" />
+                                <button
+                                  onClick={() => openRejectTxnModal(txn)}
+                                  title="Reject this transaction"
+                                  className="flex items-center gap-1 px-2.5 py-1 rounded-md text-[11px] font-semibold text-red-300 bg-red-500/15 border border-red-500/30 hover:bg-red-500/25 transition-colors"
+                                >
+                                  <XCircle className="w-3 h-3" />
+                                  Reject
                                 </button>
                               </div>
-                            ) : <span className="text-[10px] text-gray-500">{txn.admin_notes || ''}</span>}
+                            ) : <span className="text-[10px] text-gray-500 italic">{txn.admin_notes || (txn.status === 'approved' ? 'Approved' : 'Rejected')}</span>}
                           </td>
                         </tr>
                       ))}
@@ -1529,6 +1595,102 @@ function InvestmentsTab({ showToast }: { showToast: (m: string, t?: 'success' | 
           </div>
         </AdminModal>
       )}
+
+      {/* Bug #5/#6: Transaction rejection modal */}
+      <AdminModal
+        isOpen={!!rejectTxn}
+        onClose={() => { setRejectTxn(null); setRejectReason('') }}
+        title="Reject Transaction"
+        subtitle={rejectTxn ? `Txn ID: ${rejectTxn.transaction_id || rejectTxn.id?.slice(0, 8)}` : ''}
+        maxWidth="max-w-md"
+      >
+        {rejectTxn && (
+          <div className="space-y-4">
+            <div className="p-3 rounded-xl bg-white/[0.03] border border-white/[0.06]">
+              <div className="flex justify-between text-xs">
+                <span className="text-gray-500">Amount</span>
+                <span className="text-white font-semibold">{formatINR(Number(rejectTxn.transaction_amount) || 0)}</span>
+              </div>
+              <div className="flex justify-between text-xs mt-1">
+                <span className="text-gray-500">Date</span>
+                <span className="text-white">{formatDate(rejectTxn.created_at)}</span>
+              </div>
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-400 mb-1.5">Reason for rejection *</label>
+              <textarea
+                rows={3}
+                value={rejectReason}
+                onChange={e => setRejectReason(e.target.value)}
+                placeholder="e.g. Amount mismatch with bank statement, proof unclear…"
+                className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-brand-red/40 focus:ring-1 focus:ring-brand-red/20 resize-none"
+                autoFocus
+              />
+            </div>
+            <div className="flex justify-end gap-3 pt-4 border-t border-white/[0.06]">
+              <button onClick={() => { setRejectTxn(null); setRejectReason('') }} className="px-4 py-2 rounded-xl text-sm font-medium text-gray-400 hover:text-white hover:bg-white/[0.06] transition-colors">Cancel</button>
+              <button
+                disabled={!rejectReason.trim()}
+                onClick={confirmRejectTxn}
+                className="px-5 py-2 rounded-xl text-sm font-medium text-white bg-red-600 hover:bg-red-700 transition-colors disabled:opacity-50"
+              >
+                Confirm Rejection
+              </button>
+            </div>
+          </div>
+        )}
+      </AdminModal>
+
+      {/* Bug #7: Give Credit confirmation modal — editable amount + credit date */}
+      <AdminModal
+        isOpen={!!creditApp}
+        onClose={() => { if (!updating) setCreditApp(null) }}
+        title="Confirm Give Credit"
+        subtitle={creditApp?._client?.full_name ? `Investor: ${creditApp._client.full_name}` : ''}
+        maxWidth="max-w-md"
+      >
+        {creditApp && (
+          <div className="space-y-4">
+            <p className="text-xs text-gray-400">
+              Confirm the final credited investment amount and credit date. These
+              values drive the payout schedule generated for this investor.
+            </p>
+            <div>
+              <label className="block text-xs font-medium text-gray-400 mb-1.5">Investment Amount (₹) *</label>
+              <input
+                type="number"
+                min="0"
+                step="1"
+                value={creditAmount}
+                onChange={e => setCreditAmount(e.target.value)}
+                className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-brand-red/40 focus:ring-1 focus:ring-brand-red/20"
+                autoFocus
+              />
+              <p className="text-[10px] text-gray-500 mt-1">Original application: {formatINR(Number(creditApp?.investment_amount) || 0)}</p>
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-400 mb-1.5">Credit Date *</label>
+              <input
+                type="date"
+                value={creditDate}
+                onChange={e => setCreditDate(e.target.value)}
+                max={new Date().toISOString().split('T')[0]}
+                className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-brand-red/40 focus:ring-1 focus:ring-brand-red/20"
+              />
+            </div>
+            <div className="flex justify-end gap-3 pt-4 border-t border-white/[0.06]">
+              <button disabled={updating} onClick={() => setCreditApp(null)} className="px-4 py-2 rounded-xl text-sm font-medium text-gray-400 hover:text-white hover:bg-white/[0.06] transition-colors disabled:opacity-50">Cancel</button>
+              <button
+                disabled={updating}
+                onClick={confirmGiveCredit}
+                className="px-5 py-2 rounded-xl text-sm font-medium text-white bg-emerald-600 hover:bg-emerald-700 transition-colors disabled:opacity-50"
+              >
+                {updating ? 'Processing…' : 'Confirm & Give Credit'}
+              </button>
+            </div>
+          </div>
+        )}
+      </AdminModal>
     </div>
   )
 }

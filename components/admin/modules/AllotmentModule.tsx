@@ -32,7 +32,11 @@ interface AllotmentModuleProps {
 }
 
 // ── Types ────────────────────────────────────────────────────────
+// Bug #8: One row per investment application so each investment gets its
+// own allotment + distinctive-number range + PDF (no more client-level
+// merging that produced a single allotment for multiple investments).
 interface InvestmentRow {
+  investment_id: string      // investment_applications.id (unique per row)
   client_id: string
   investor_name: string
   email: string
@@ -40,6 +44,7 @@ interface InvestmentRow {
   total_investment: number
   investment_count: number
   folio_number: string
+  investment_date?: string
 }
 
 interface AllotmentPreview extends InvestmentRow {
@@ -202,40 +207,32 @@ export default function AllotmentModule({ subTab, navigate, showToast }: Allotme
         : { data: [] }
       const clientMap = new Map((clientRows || []).map((c: any) => [c.id, c]))
 
-      // Group by client_id and sum amounts
-      const grouped: Record<string, InvestmentRow> = {}
-      for (const inv of invData) {
-        const client = clientMap.get(inv.client_id) || {} as any
-        const cid = inv.client_id
-        if (!grouped[cid]) {
-          grouped[cid] = {
-            client_id: cid,
-            investor_name: client?.full_name || 'Unknown',
-            email: client?.email || '',
-            pan: client?.pan || '',
-            total_investment: 0,
-            investment_count: 0,
-            folio_number: inv.folio_number || '',
-          }
+      // Bug #8: One row per investment application (no grouping by client).
+      const result: InvestmentRow[] = (invData as any[]).map((inv) => {
+        const client: any = clientMap.get(inv.client_id) || {}
+        return {
+          investment_id: inv.id,
+          client_id: inv.client_id,
+          investor_name: client.full_name || 'Unknown',
+          email: client.email || '',
+          pan: client.pan || '',
+          total_investment: Number(inv.final_investment_amount) || Number(inv.investment_amount) || 0,
+          investment_count: 1,
+          folio_number: inv.folio_number || '',
+          investment_date: inv.investment_date,
         }
-        grouped[cid].total_investment += Number((inv as any).final_investment_amount) || Number((inv as any).investment_amount) || 0
-        grouped[cid].investment_count += 1
-        if (inv.folio_number && !grouped[cid].folio_number) {
-          grouped[cid].folio_number = inv.folio_number
-        }
-      }
-
-      const result = Object.values(grouped)
+      })
       setInvestments(result)
 
-      // Pre-fill folio entries from existing data
+      // Pre-fill folio entries keyed by investment_id (so each investment has
+      // its own folio input)
       const folios: Record<string, string> = {}
       for (const row of result) {
-        folios[row.client_id] = row.folio_number || ''
+        folios[row.investment_id] = row.folio_number || ''
       }
       setFolioEntries(folios)
 
-      showToast(`Found ${result.length} investor(s) with ${invData.length} investment(s)`, 'success')
+      showToast(`Found ${result.length} investment(s) from ${new Set(result.map(r => r.client_id)).size} investor(s)`, 'success')
     } catch (err: any) {
       showToast(err.message || 'Failed to fetch investments', 'error')
     } finally {
@@ -270,10 +267,10 @@ export default function AllotmentModule({ subTab, navigate, showToast }: Allotme
 
   // ── Generate preview ───────────────────────────────────────────
   const handlePreview = () => {
-    // Validate all folio numbers are filled
-    const missingFolios = investments.filter(inv => !folioEntries[inv.client_id]?.trim())
+    // Bug #8: folio numbers are now per-investment
+    const missingFolios = investments.filter(inv => !folioEntries[inv.investment_id]?.trim())
     if (missingFolios.length > 0) {
-      showToast(`Please enter folio numbers for all investors (${missingFolios.length} missing)`, 'warning')
+      showToast(`Please enter folio numbers for all investments (${missingFolios.length} missing)`, 'warning')
       return
     }
     setPreviewMode(true)
@@ -305,11 +302,14 @@ export default function AllotmentModule({ subTab, navigate, showToast }: Allotme
 
         const disFrom = currentDisFrom
         const disTo = disFrom + noOfDebentures - 1
-        const folioNumber = folioEntries[inv.client_id]?.trim() || ''
+        const folioNumber = folioEntries[inv.investment_id]?.trim() || ''
 
+        // Bug #8: one allotment row per investment_applications row. Links
+        // via investment_id so the history + PDF can show full lineage.
         records.push({
           folio_number: folioNumber,
           client_id: inv.client_id,
+          investment_id: inv.investment_id,
           investment_amount: inv.total_investment,
           per_debenture_value: perDebentureValue,
           no_of_debentures: noOfDebentures,
@@ -334,17 +334,16 @@ export default function AllotmentModule({ subTab, navigate, showToast }: Allotme
       const { error } = await supabase.from('allotments').insert(records)
       if (error) throw error
 
-      // Update folio numbers on investment_applications for first-time entries
-      // (bug #20: column is `fund_vehicle`, not `fund_type`)
+      // Bug #8: Update folio on the specific investment application (not by
+      // client/fund anymore — that would overwrite the wrong row when one
+      // client has multiple investments in the same fund).
       for (const inv of investments) {
-        const folio = folioEntries[inv.client_id]?.trim()
+        const folio = folioEntries[inv.investment_id]?.trim()
         if (folio && !inv.folio_number) {
           await supabase
             .from('investment_applications')
             .update({ folio_number: folio })
-            .eq('client_id', inv.client_id)
-            .eq('fund_vehicle', fundType)
-            .is('folio_number', null)
+            .eq('id', inv.investment_id)
         }
       }
 
@@ -487,7 +486,7 @@ export default function AllotmentModule({ subTab, navigate, showToast }: Allotme
   const previewColumns: Column<AllotmentPreview>[] = [
     { key: 'folio_number', label: 'Folio No.', width: 'w-32',
       render: (row) => (
-        <span className="font-mono text-xs text-white">{folioEntries[row.client_id] || '-'}</span>
+        <span className="font-mono text-xs text-white">{folioEntries[row.investment_id] || '-'}</span>
       ),
     },
     { key: 'investor_name', label: 'Investor Name',
@@ -643,13 +642,13 @@ export default function AllotmentModule({ subTab, navigate, showToast }: Allotme
                       <th className="text-left py-3 px-3 text-xs font-medium text-gray-500">Investor</th>
                       <th className="text-left py-3 px-3 text-xs font-medium text-gray-500">PAN</th>
                       <th className="text-right py-3 px-3 text-xs font-medium text-gray-500">Total Investment</th>
-                      <th className="text-center py-3 px-3 text-xs font-medium text-gray-500">Investments</th>
+                      <th className="text-center py-3 px-3 text-xs font-medium text-gray-500">Investment Ref</th>
                       <th className="text-left py-3 px-3 text-xs font-medium text-gray-500 w-48">Folio Number</th>
                     </tr>
                   </thead>
                   <tbody>
                     {investments.map((inv) => (
-                      <tr key={inv.client_id} className="border-b border-white/[0.03] hover:bg-white/[0.02] transition-colors">
+                      <tr key={inv.investment_id} className="border-b border-white/[0.03] hover:bg-white/[0.02] transition-colors">
                         <td className="py-3 px-3">
                           <div>
                             <div className="text-white font-medium">{inv.investor_name}</div>
@@ -659,13 +658,13 @@ export default function AllotmentModule({ subTab, navigate, showToast }: Allotme
                         <td className="py-3 px-3 font-mono text-xs text-gray-300">{inv.pan || '-'}</td>
                         <td className="py-3 px-3 text-right text-emerald-400 font-semibold">{formatINR(inv.total_investment)}</td>
                         <td className="py-3 px-3 text-center">
-                          <AdminBadge label={String(inv.investment_count)} variant="neutral" />
+                          <span className="text-[10px] text-gray-500 font-mono">{inv.investment_id.slice(0, 8).toUpperCase()}</span>
                         </td>
                         <td className="py-3 px-3">
                           <input
                             type="text"
-                            value={folioEntries[inv.client_id] || ''}
-                            onChange={(e) => setFolioEntries(prev => ({ ...prev, [inv.client_id]: e.target.value }))}
+                            value={folioEntries[inv.investment_id] || ''}
+                            onChange={(e) => setFolioEntries(prev => ({ ...prev, [inv.investment_id]: e.target.value }))}
                             placeholder={inv.folio_number ? inv.folio_number : 'Enter folio no.'}
                             disabled={!!inv.folio_number}
                             className="w-full px-3 py-1.5 rounded-lg bg-white/[0.04] border border-white/[0.08] text-white text-xs focus:outline-none focus:border-brand-red/50 transition-colors disabled:opacity-60 disabled:cursor-not-allowed placeholder-gray-600"

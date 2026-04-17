@@ -135,7 +135,9 @@ function KYCQueueTab({ kycQueue, showToast, onRefresh }: { kycQueue: any[]; show
     } catch { setViewingDetail(null) }
   }, [])
 
-  // Group KYC items by client (bug #7: list descending by most recent submission)
+  // Group KYC items by client (bug #1: list descending by most recent update).
+  // Falls back to the client's updated_at so KYC approvals/rejections also
+  // bubble the group to the top even if per-sub-row timestamps are older.
   const clientGroups = useMemo(() => {
     const map: Record<string, { clientId: string; clientName: string; clientEmail: string; items: any[]; latest: number }> = {}
     for (const item of kycQueue) {
@@ -143,7 +145,9 @@ function KYCQueueTab({ kycQueue, showToast, onRefresh }: { kycQueue: any[]; show
         map[item.clientId] = { clientId: item.clientId, clientName: item.clientName, clientEmail: item.clientEmail || '', items: [], latest: 0 }
       }
       map[item.clientId].items.push(item)
-      const ts = new Date(item.uploadDate || item.createdAt || item.created_at || 0).getTime()
+      const subTs = new Date(item.uploadDate || item.createdAt || item.created_at || 0).getTime()
+      const clientTs = new Date(item.clientUpdatedAt || 0).getTime()
+      const ts = Math.max(subTs, clientTs)
       if (ts > map[item.clientId].latest) map[item.clientId].latest = ts
     }
     return Object.values(map).sort((a, b) => b.latest - a.latest)

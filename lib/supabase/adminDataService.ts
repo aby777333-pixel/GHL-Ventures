@@ -254,6 +254,10 @@ export async function fetchKYCDocuments() {
     const clientIds = clients.map((c: any) => c.id)
     const clientMap = new Map(clients.map((c: any) => [c.id, c.full_name]))
     const clientEmailMap = new Map(clients.map((c: any) => [c.id, c.email || '']))
+    // Bug #1: also expose client.updated_at so the UI-side group sort can
+    // fall back to the client record's last-modified time (when kyc_status
+    // changed) if the per-KYC sub-row dates are older.
+    const clientUpdatedAtMap = new Map(clients.map((c: any) => [c.id, c.updated_at]))
 
     // Batch fetch all KYC data in parallel instead of per-client loops
     const [basicRes, identityRes, bankRes, dematRes, nomineesRes] = await Promise.all([
@@ -279,10 +283,11 @@ export async function fetchKYCDocuments() {
           clientId: row.client_id,
           clientName: clientMap.get(row.client_id) || 'Unknown',
           clientEmail: clientEmailMap.get(row.client_id) || '',
+          clientUpdatedAt: clientUpdatedAtMap.get(row.client_id),
           type: t.type,
           table: t.table,
           fileName: t.type,
-          uploadDate: row.created_at,
+          uploadDate: row.updated_at || row.created_at,
           status: row.status || 'pending',
           reviewer: row.reviewed_by || null,
           notes: row.admin_notes || '',
