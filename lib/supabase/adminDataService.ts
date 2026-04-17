@@ -380,11 +380,15 @@ export async function deleteUserComplete(userId: string) {
   try {
     // Audit the deletion before executing
     try {
+      // Columns must match public.audit_logs schema:
+      //   id, user_id, action, entity_type, entity_id, old_data, new_data,
+      //   ip_address, user_agent, created_at, user_name, actor_id, module, details
       await sb.from('audit_logs').insert({
         action: 'delete_user_complete',
-        target_user_id: userId,
-        performed_at: new Date().toISOString(),
-        details: JSON.stringify({ action: 'permanent_user_deletion' })
+        entity_type: 'user',
+        entity_id: userId,
+        module: 'admin',
+        details: { reason: 'permanent_user_deletion' },
       })
     } catch (e) {
       console.error('Failed to log user deletion audit:', e)
