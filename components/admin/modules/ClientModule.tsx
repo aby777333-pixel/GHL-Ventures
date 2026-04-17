@@ -182,9 +182,13 @@ export default function ClientModule({ subTab, navigate, showToast }: ClientModu
                   assigned_rm: (c as any).assignedRMId || '',
                   total_invested: String(c.aum || ''),
                 })
+                // Close the profile modal first, then open the edit modal on the
+                // next tick so the portal/overflow transitions cleanly. Previously
+                // the edit modal was opening behind the profile modal's lingering
+                // backdrop (body.overflow=hidden carry-over + same z-index).
                 setProfileModalOpen(false)
                 setSelectedClient(null)
-                setAddClientOpen(true)
+                setTimeout(() => setAddClientOpen(true), 60)
               }}>Edit Client</ModalButton>
             </>
           }
