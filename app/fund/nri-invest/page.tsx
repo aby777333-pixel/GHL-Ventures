@@ -226,7 +226,7 @@ function NRIInvestContent() {
                   ].map((item) => (
                     <div key={item} className="flex items-start gap-2">
                       <CheckCircle className="w-4 h-4 text-green-500 mt-0.5 shrink-0" />
-                      <span className="text-sm text-brand-grey dark:text-gray-300 leading-snug">{item}</span>
+                      <span className="text-sm text-brand-black dark:text-gray-300 leading-snug">{item}</span>
                     </div>
                   ))}
                 </div>
