@@ -136,13 +136,25 @@ export default function InvestmentFlowTab({
 
   // Data hooks
   const { data: investApps, refetch: refetchApps } = useInvestmentApplications(clientId ?? undefined)
-  const { data: investDocs } = useInvestmentDocuments(clientId ?? undefined)
-  const { data: investTxns } = useInvestmentTransactions(clientId ?? undefined)
+  const { data: investDocs, refetch: refetchDocs } = useInvestmentDocuments(clientId ?? undefined)
+  const { data: investTxns, refetch: refetchTxns } = useInvestmentTransactions(clientId ?? undefined)
 
   // Load bank accounts
   useEffect(() => {
     if (clientId) fetchBankAccounts(clientId).then((a: any) => setBankAccounts(a || []))
   }, [clientId])
+
+  // Bug #14: Refetch on tab-focus so admin approvals/credit/doc uploads show
+  // up in the investor panel without requiring a full page reload.
+  useEffect(() => {
+    const onFocus = () => { refetchApps(); refetchDocs(); refetchTxns() }
+    window.addEventListener('focus', onFocus)
+    document.addEventListener('visibilitychange', onFocus)
+    return () => {
+      window.removeEventListener('focus', onFocus)
+      document.removeEventListener('visibilitychange', onFocus)
+    }
+  }, [refetchApps, refetchDocs, refetchTxns])
 
   const kycVerified = kycStatus === 'verified' || kycStatus === 'approved'
 

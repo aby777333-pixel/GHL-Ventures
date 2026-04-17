@@ -1131,6 +1131,10 @@ function InvestmentsTab({ showToast }: { showToast: (m: string, t?: 'success' | 
   const [selectedApp, setSelectedApp] = useState<any | null>(null)
   const [detailOpen, setDetailOpen] = useState(false)
   const [updating, setUpdating] = useState(false)
+  // Bug #12, #15, #17: transactions + docs for the selected app
+  const [appTxns, setAppTxns] = useState<any[]>([])
+  const [appDocs, setAppDocs] = useState<any[]>([])
+  const [docUploading, setDocUploading] = useState(false)
 
   const loadData = useCallback(async () => {
     setLoading(true)
@@ -1140,6 +1144,27 @@ function InvestmentsTab({ showToast }: { showToast: (m: string, t?: 'success' | 
   }, [])
 
   useEffect(() => { loadData() }, [loadData])
+
+  // Load txns + docs whenever an application is selected
+  useEffect(() => {
+    if (!selectedApp?.id) { setAppTxns([]); setAppDocs([]); return }
+    let cancelled = false
+    ;(async () => {
+      try {
+        const { fetchInvestmentTransactionsForApp } = await import('@/lib/supabase/adminDataService')
+        const { supabase } = await import('@/lib/supabase/client')
+        const [txns, docsRes] = await Promise.all([
+          fetchInvestmentTransactionsForApp(selectedApp.id),
+          (supabase as any).from('investment_documents').select('*').eq('investment_app_id', selectedApp.id).order('created_at', { ascending: false }),
+        ])
+        if (!cancelled) {
+          setAppTxns(txns || [])
+          setAppDocs(docsRes?.data || [])
+        }
+      } catch { if (!cancelled) { setAppTxns([]); setAppDocs([]) } }
+    })()
+    return () => { cancelled = true }
+  }, [selectedApp])
 
   const totalAUM = useMemo(() => applications.filter(a => a.status === 'approved' || a.status === 'completed').reduce((s, a) => s + (Number(a.investment_amount) || 0), 0), [applications])
   const pendingCount = useMemo(() => applications.filter(a => a.status === 'pending' || a.status === 'under_review').length, [applications])
@@ -1170,19 +1195,112 @@ function InvestmentsTab({ showToast }: { showToast: (m: string, t?: 'success' | 
     if (!selectedApp) return
     setUpdating(true)
     try {
-      const { updateRow } = await import('@/lib/supabase/adminDataService')
-      const result = await updateRow('investment_applications', selectedApp.id, {
-        status: newStatus,
-        reviewed_at: new Date().toISOString(),
-      })
-      if (result) {
+      const { updateRow, approveInvestmentApplication } = await import('@/lib/supabase/adminDataService')
+      const { supabase } = await import('@/lib/supabase/client')
+      const { data: { user } } = await (supabase as any).auth.getUser()
+      const adminId = user?.id || null
+
+      let ok = false
+      if (newStatus === 'approved') {
+        // Bugs #14, #18, #19: populate investment_date/rates/maturity/commitment
+        // and insert an Acknowledgement Letter document so the investor's
+        // Documents tab and Payment Schedule work immediately.
+        ok = await approveInvestmentApplication(selectedApp, adminId || '')
+      } else {
+        const result = await updateRow('investment_applications', selectedApp.id, {
+          status: newStatus,
+          reviewed_at: new Date().toISOString(),
+          reviewed_by: adminId,
+        })
+        ok = !!result
+      }
+      if (ok) {
         showToast(`Application ${newStatus}`, 'success')
-        setApplications(prev => prev.map(a => a.id === selectedApp.id ? { ...a, status: newStatus } : a))
+        // Refresh the full list so side-effect fields (investment_date, rates, etc.) are picked up.
+        loadData()
         setDetailOpen(false)
         setSelectedApp(null)
       } else { showToast('Failed to update', 'error') }
     } catch (_e) { showToast('Error updating application', 'error') }
     finally { setUpdating(false) }
+  }
+
+  // Bug #16: Give Credit — marks investment as credited
+  const handleGiveCredit = async () => {
+    if (!selectedApp) return
+    setUpdating(true)
+    try {
+      const { markInvestmentCreditGiven } = await import('@/lib/supabase/adminDataService')
+      const { supabase } = await import('@/lib/supabase/client')
+      const { data: { user } } = await (supabase as any).auth.getUser()
+      const ok = await markInvestmentCreditGiven(selectedApp.id, user?.id || '')
+      if (ok) {
+        showToast('Credit marked as given', 'success')
+        loadData()
+        setDetailOpen(false)
+        setSelectedApp(null)
+      } else { showToast('Failed to mark credit', 'error') }
+    } catch { showToast('Error marking credit', 'error') }
+    finally { setUpdating(false) }
+  }
+
+  // Bug #15: Approve a single transaction
+  const handleApproveTxn = async (txnId: string) => {
+    try {
+      const { approveInvestmentTransaction } = await import('@/lib/supabase/adminDataService')
+      const { supabase } = await import('@/lib/supabase/client')
+      const { data: { user } } = await (supabase as any).auth.getUser()
+      const ok = await approveInvestmentTransaction(txnId, user?.id || '')
+      if (ok) {
+        showToast('Transaction approved', 'success')
+        setAppTxns(prev => prev.map(t => t.id === txnId ? { ...t, status: 'approved' } : t))
+      } else { showToast('Failed to approve transaction', 'error') }
+    } catch { showToast('Error approving transaction', 'error') }
+  }
+
+  const handleRejectTxn = async (txnId: string) => {
+    const reason = window.prompt('Reason for rejecting this transaction:', '')
+    if (!reason || !reason.trim()) return
+    try {
+      const { rejectInvestmentTransaction } = await import('@/lib/supabase/adminDataService')
+      const { supabase } = await import('@/lib/supabase/client')
+      const { data: { user } } = await (supabase as any).auth.getUser()
+      const ok = await rejectInvestmentTransaction(txnId, user?.id || '', reason.trim())
+      if (ok) {
+        showToast('Transaction rejected', 'info')
+        setAppTxns(prev => prev.map(t => t.id === txnId ? { ...t, status: 'rejected', admin_notes: reason.trim() } : t))
+      } else { showToast('Failed to reject transaction', 'error') }
+    } catch { showToast('Error rejecting transaction', 'error') }
+  }
+
+  // Bug #17: Upload investment document (admin)
+  const handleAdminDocUpload = async (documentType: string, title: string) => {
+    if (!selectedApp) return
+    setDocUploading(true)
+    try {
+      const { pickAndUploadFiles } = await import('@/lib/supabase/storageService')
+      const { uploadAdminInvestmentDocument } = await import('@/lib/supabase/adminDataService')
+      const { supabase } = await import('@/lib/supabase/client')
+      const { data: { user } } = await (supabase as any).auth.getUser()
+      const results = await pickAndUploadFiles(`admin/investments/${selectedApp.id}`, { accept: '.pdf,.jpg,.jpeg,.png', multiple: false })
+      if (results?.[0]?.success && results[0].file) {
+        const f = results[0].file
+        const row = await uploadAdminInvestmentDocument({
+          investment_app_id: selectedApp.id,
+          client_id: selectedApp.client_id,
+          document_type: documentType,
+          title,
+          file_url: f.url,
+          file_name: f.name || title,
+          uploaded_by: user?.id || '',
+        })
+        if (row) {
+          showToast(`${title} uploaded`, 'success')
+          setAppDocs(prev => [row, ...prev])
+        } else { showToast('Failed to save document', 'error') }
+      }
+    } catch { showToast('Upload failed', 'error') }
+    finally { setDocUploading(false) }
   }
 
   return (
@@ -1221,6 +1339,10 @@ function InvestmentsTab({ showToast }: { showToast: (m: string, t?: 'success' | 
                 <ModalButton variant="primary" onClick={() => handleStatusUpdate('approved')} disabled={updating}>{updating ? 'Updating...' : 'Approve'}</ModalButton>
               </>
             ) : null}
+            {/* Bug #16: allow admin to mark credit given after approval */}
+            {selectedApp.status === 'approved' && !selectedApp.credit_given ? (
+              <ModalButton variant="primary" onClick={handleGiveCredit} disabled={updating}>{updating ? 'Updating...' : 'Give Credit'}</ModalButton>
+            ) : null}
           </>
         }>
           <div className="space-y-5">
@@ -1252,6 +1374,105 @@ function InvestmentsTab({ showToast }: { showToast: (m: string, t?: 'success' | 
                 <p className="text-sm text-gray-300 bg-white/[0.03] p-3 rounded-xl border border-white/[0.04]">{selectedApp.admin_notes}</p>
               </div>
             )}
+
+            {/* Bug #12, #15: Investment Transactions submitted by the investor */}
+            <div className="border-t border-white/[0.06] pt-4">
+              <h4 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Investment Transactions ({appTxns.length})</h4>
+              {appTxns.length === 0 ? (
+                <p className="text-xs text-gray-500">No transactions submitted yet.</p>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-xs">
+                    <thead>
+                      <tr className="text-gray-500 border-b border-white/[0.06]">
+                        <th className="text-left py-2 pr-3">Date</th>
+                        <th className="text-left py-2 pr-3">Txn Amount</th>
+                        <th className="text-left py-2 pr-3">Txn ID</th>
+                        <th className="text-left py-2 pr-3">Status</th>
+                        <th className="text-left py-2 pr-3">Proof</th>
+                        <th className="text-right py-2">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {appTxns.map((txn: any) => (
+                        <tr key={txn.id} className="border-b border-white/[0.04]">
+                          <td className="py-2 pr-3 text-gray-400">{formatDate(txn.created_at)}</td>
+                          <td className="py-2 pr-3 text-white font-semibold">{formatINR(Number(txn.transaction_amount) || 0)}</td>
+                          <td className="py-2 pr-3 text-gray-300 font-mono">{txn.transaction_id || '—'}</td>
+                          <td className="py-2 pr-3">
+                            <AdminBadge
+                              label={txn.status || 'pending'}
+                              variant={txn.status === 'approved' ? 'success' : txn.status === 'rejected' ? 'error' : 'warning'}
+                              size="sm"
+                              dot
+                            />
+                          </td>
+                          <td className="py-2 pr-3">
+                            {txn.transaction_proof_url ? (
+                              <a href={txn.transaction_proof_url} target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:text-blue-300 inline-flex items-center gap-1">
+                                <Eye className="w-3 h-3" /> View
+                              </a>
+                            ) : <span className="text-gray-600">—</span>}
+                          </td>
+                          <td className="py-2 text-right">
+                            {txn.status === 'pending' ? (
+                              <div className="flex items-center justify-end gap-1">
+                                <button onClick={() => handleApproveTxn(txn.id)} className="p-1 rounded hover:bg-emerald-500/10 text-emerald-400" title="Approve">
+                                  <CheckCircle2 className="w-3.5 h-3.5" />
+                                </button>
+                                <button onClick={() => handleRejectTxn(txn.id)} className="p-1 rounded hover:bg-red-500/10 text-red-400" title="Reject">
+                                  <Trash2 className="w-3.5 h-3.5" />
+                                </button>
+                              </div>
+                            ) : <span className="text-[10px] text-gray-500">{txn.admin_notes || ''}</span>}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+
+            {/* Bug #17: Admin-uploaded investment documents */}
+            <div className="border-t border-white/[0.06] pt-4">
+              <h4 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Investment Documents ({appDocs.length})</h4>
+              {appDocs.length > 0 && (
+                <div className="space-y-2 mb-3">
+                  {appDocs.map((doc: any) => (
+                    <div key={doc.id} className="flex items-center justify-between bg-white/[0.03] border border-white/[0.06] rounded-lg px-3 py-2">
+                      <div>
+                        <p className="text-xs text-white font-medium">{doc.title || doc.document_type}</p>
+                        <p className="text-[10px] text-gray-500">{doc.file_name || '—'} · {formatDate(doc.created_at)}</p>
+                      </div>
+                      {doc.file_url ? (
+                        <a href={doc.file_url} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-400 hover:text-blue-300 inline-flex items-center gap-1">
+                          <Eye className="w-3 h-3" /> View
+                        </a>
+                      ) : <span className="text-[10px] text-gray-500">Placeholder</span>}
+                    </div>
+                  ))}
+                </div>
+              )}
+              <div className="grid grid-cols-2 gap-2">
+                {[
+                  { type: 'acknowledgement', label: 'Upload Acknowledgement' },
+                  { type: 'agreement', label: 'Upload Agreement' },
+                  { type: 'allotment', label: 'Upload Allotment Letter' },
+                  { type: 'certificate', label: 'Upload Certificate' },
+                ].map(d => (
+                  <button
+                    key={d.type}
+                    onClick={() => handleAdminDocUpload(d.type, d.label.replace(/^Upload /, ''))}
+                    disabled={docUploading}
+                    className="flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium text-gray-300 bg-white/[0.03] border border-white/[0.06] hover:bg-white/[0.06] hover:text-white transition-colors disabled:opacity-50"
+                  >
+                    <Upload className="w-3.5 h-3.5 text-brand-red" />
+                    {docUploading ? 'Uploading...' : d.label}
+                  </button>
+                ))}
+              </div>
+            </div>
 
             {/* Document Generation */}
             <div className="border-t border-white/[0.06] pt-4">

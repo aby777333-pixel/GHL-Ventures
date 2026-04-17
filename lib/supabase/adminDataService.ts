@@ -631,6 +631,168 @@ export async function upsertBlogPost(post: Partial<BlogPost> & { slug: string; t
   } catch { return null }
 }
 
+// ── Investment Transactions for a single application (bug #12, #15) ──
+export async function fetchInvestmentTransactionsForApp(investmentAppId: string) {
+  if (!isSupabaseConfigured() || !investmentAppId) return []
+  try {
+    const { data } = await (supabase
+      .from('investment_transactions')
+      .select('*')
+      .eq('investment_app_id', investmentAppId)
+      .order('created_at', { ascending: false }) as any)
+    return (data as any[]) || []
+  } catch { return [] }
+}
+
+// ── Approve a single investment transaction (bug #15) ─────────
+export async function approveInvestmentTransaction(txnId: string, adminId: string, notes?: string) {
+  if (!isSupabaseConfigured() || !txnId) return false
+  try {
+    const sb: any = supabase
+    const { error } = await sb
+      .from('investment_transactions')
+      .update({ status: 'approved', admin_notes: notes || null, reviewed_by: adminId, reviewed_at: new Date().toISOString() })
+      .eq('id', txnId)
+    return !error
+  } catch { return false }
+}
+
+export async function rejectInvestmentTransaction(txnId: string, adminId: string, notes: string) {
+  if (!isSupabaseConfigured() || !txnId) return false
+  try {
+    const sb: any = supabase
+    const { error } = await sb
+      .from('investment_transactions')
+      .update({ status: 'rejected', admin_notes: notes, reviewed_by: adminId, reviewed_at: new Date().toISOString() })
+      .eq('id', txnId)
+    return !error
+  } catch { return false }
+}
+
+// ── Upload an investment document (bug #17) ───────────────────
+export async function uploadAdminInvestmentDocument(params: {
+  investment_app_id: string
+  client_id: string
+  document_type: string
+  title: string
+  file_url: string
+  file_name: string
+  uploaded_by: string
+}) {
+  if (!isSupabaseConfigured()) return null
+  try {
+    const sb: any = supabase
+    const { data, error } = await sb
+      .from('investment_documents')
+      .insert({ ...params, status: 'issued' })
+      .select()
+      .single()
+    if (error) { console.warn('[admin] upload investment doc error:', error.message); return null }
+    return data
+  } catch { return null }
+}
+
+// ── Mark credit given on an investment application (bug #16) ──
+export async function markInvestmentCreditGiven(appId: string, adminId: string) {
+  if (!isSupabaseConfigured()) return false
+  try {
+    const sb: any = supabase
+    const { error } = await sb
+      .from('investment_applications')
+      .update({
+        credit_given: true,
+        credit_given_at: new Date().toISOString(),
+        credit_given_by: adminId,
+        status: 'credited',
+      })
+      .eq('id', appId)
+    return !error
+  } catch { return false }
+}
+
+// ── Approve investment application with full side-effects (bugs #14, #18, #19) ──
+// On approve we populate investment_date, interest_rate, appreciation_rate,
+// tds_rate, maturity_date, commitment_id, reference_number (if missing), and
+// insert an Acknowledgement document row so the investor's Documents tab shows it.
+export async function approveInvestmentApplication(app: any, adminId: string) {
+  if (!isSupabaseConfigured() || !app?.id) return false
+  try {
+    // Fund rate lookup — keep in sync with FUNDS constant in InvestmentFlowTab.tsx
+    const rateMap: Record<string, { interest: number; appreciation: number; tenureYears?: number }> = {
+      'Direct AIF Route': { interest: 18, appreciation: 15 },
+      'Alternate route to Invest in AIF via Debenture': { interest: 12, appreciation: 12 },
+      'Alternate route to Invest in AIF via LLP': { interest: 12, appreciation: 12 },
+    }
+    const rates = rateMap[app.fund_vehicle] || { interest: Number(app.interest_rate) || 12, appreciation: Number(app.appreciation_rate) || 12 }
+    const today = new Date()
+    const investmentDate = app.investment_date || today.toISOString().split('T')[0]
+    const tenureYears = Number(String(app.tenure_preference || '').replace(/[^0-9]/g, '')) || 3
+    const maturity = new Date(investmentDate)
+    maturity.setFullYear(maturity.getFullYear() + tenureYears)
+    const maturityDate = maturity.toISOString().split('T')[0]
+    const commitmentId = app.commitment_id || `GHL-CMT-${String(app.id).slice(0, 8).toUpperCase()}`
+    const referenceNumber = app.reference_number || `GHL-REF-${Date.now().toString(36).toUpperCase()}`
+
+    const update: Record<string, any> = {
+      status: 'approved',
+      reviewed_at: new Date().toISOString(),
+      reviewed_by: adminId,
+      investment_date: investmentDate,
+      interest_rate: Number(app.interest_rate) || rates.interest,
+      appreciation_rate: Number(app.appreciation_rate) || rates.appreciation,
+      tds_rate: Number(app.tds_rate) || 10,
+      maturity_date: maturityDate,
+      commitment_id: commitmentId,
+      reference_number: referenceNumber,
+    }
+    const sb: any = supabase
+    const { error: updErr } = await sb.from('investment_applications').update(update).eq('id', app.id)
+    if (updErr) { console.warn('[admin] approve investment update error:', updErr.message); return false }
+
+    // Insert an Acknowledgement document so the investor's Documents tab has it.
+    try {
+      // Avoid duplicates if approval is clicked twice
+      const { data: existingDoc } = await sb
+        .from('investment_documents')
+        .select('id')
+        .eq('investment_app_id', app.id)
+        .eq('document_type', 'acknowledgement')
+        .maybeSingle()
+      if (!existingDoc) {
+        await sb.from('investment_documents').insert({
+          investment_app_id: app.id,
+          client_id: app.client_id,
+          document_type: 'acknowledgement',
+          title: 'Acknowledgement Letter',
+          file_name: `Acknowledgement-${commitmentId}.pdf`,
+          file_url: '',
+          uploaded_by: adminId,
+          status: 'issued',
+        })
+      }
+    } catch (e) { console.warn('[admin] ack doc insert non-fatal:', e) }
+
+    // Notify the investor
+    try {
+      if (app.user_id) {
+        await sb.from('notifications').insert({
+          user_id: app.user_id,
+          title: 'Investment Approved',
+          message: `Your investment application (${commitmentId}) has been approved. View your payment schedule in the dashboard.`,
+          type: 'success',
+          link: '/dashboard/investments',
+          metadata: { investment_app_id: app.id },
+        })
+      }
+    } catch { /* non-blocking */ }
+
+    return true
+  } catch (e: any) {
+    console.warn('[admin] approveInvestmentApplication error:', e?.message)
+    return false
+  }
+}
+
 // ── Investment Applications (admin view — all) ──────────────
 export async function fetchAllInvestmentApplications() {
   if (!isSupabaseConfigured()) return []

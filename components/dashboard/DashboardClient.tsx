@@ -567,7 +567,9 @@ export default function DashboardClient() {
   }, [savedProfileData])
 
   // Handle profile photo upload
-  const handleProfilePhotoUpload = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+  // Bug #28: Persist profile photo to Supabase Storage + profiles.avatar_url
+  // so it survives a refresh.
+  const handleProfilePhotoUpload = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
     if (!file.type.startsWith('image/')) {
@@ -578,14 +580,51 @@ export default function DashboardClient() {
       showToast('Image must be smaller than 5MB', 'info')
       return
     }
+    // Optimistic preview while we upload in the background
     const reader = new FileReader()
     reader.onload = (ev) => {
       const result = ev.target?.result as string
       setProfilePhoto(result)
-      showToast('Profile photo updated successfully!')
     }
     reader.readAsDataURL(file)
-  }, [showToast])
+    try {
+      const { uploadFile } = await import('@/lib/supabase/storageService')
+      const { supabase } = await import('@/lib/supabase/client')
+      const uid = (user as any)?.id
+      const result = await uploadFile(file, `client/avatars/${uid || 'me'}`, { entityType: 'client', entityId: clientId || undefined })
+      const url = result?.file?.url
+      if (url) {
+        setProfilePhoto(url)
+        if (uid) {
+          try { await (supabase as any).from('profiles').update({ avatar_url: url, updated_at: new Date().toISOString() }).eq('id', uid) } catch (err) { console.warn('[profile] avatar_url save non-fatal:', err) }
+        }
+        showToast('Profile photo updated successfully!', 'success')
+      } else {
+        showToast('Photo uploaded locally (cloud sync failed)', 'info')
+      }
+    } catch (err: any) {
+      console.warn('[profile] photo upload error:', err?.message)
+      showToast('Photo preview only (upload failed)', 'info')
+    }
+    // Reset input so re-selecting the same file still triggers
+    if (e.target) e.target.value = ''
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [showToast, user, clientId])
+
+  // Bug #28: On mount, rehydrate avatar from profiles.avatar_url
+  useEffect(() => {
+    const uid = (user as any)?.id
+    if (!uid) return
+    let cancelled = false
+    ;(async () => {
+      try {
+        const { supabase } = await import('@/lib/supabase/client')
+        const { data } = await (supabase as any).from('profiles').select('avatar_url').eq('id', uid).maybeSingle()
+        if (!cancelled && data?.avatar_url) setProfilePhoto(data.avatar_url)
+      } catch { /* non-fatal */ }
+    })()
+    return () => { cancelled = true }
+  }, [user])
 
   const isDark = theme === 'dark'
   const t = (dark: string, light: string) => isDark ? dark : light

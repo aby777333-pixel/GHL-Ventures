@@ -90,13 +90,14 @@ export default function AllotmentModule({ subTab, navigate, showToast }: Allotme
   // ── Fund types ─────────────────────────────────────────────────
   const [fundTypes, setFundTypes] = useState<string[]>([])
 
-  // ── Load fund types on mount ───────────────────────────────────
+  // ── Load fund types on mount (from approved/credited investments) ──
   useEffect(() => {
     if (!isSupabaseConfigured()) return
     const loadFundTypes = async () => {
       const { data } = await supabase
         .from('investment_applications')
         .select('fund_vehicle')
+        .in('status', ['approved', 'credited'])
       if (data) {
         const unique = Array.from(new Set(data.map((d: any) => d.fund_vehicle).filter(Boolean)))
         setFundTypes(unique as string[])
@@ -118,7 +119,19 @@ export default function AllotmentModule({ subTab, navigate, showToast }: Allotme
         .select('*')
         .order('created_at', { ascending: false })
       if (error) throw error
-      setAllotmentHistory(data || [])
+      // Bug #20: `investor_name` isn't a column on `allotments` — enrich at read time
+      // by joining to `clients.full_name` via client_id.
+      const rows = (data as any[]) || []
+      const clientIds = Array.from(new Set(rows.map((r: any) => r.client_id).filter(Boolean)))
+      let clientMap: Map<string, string> = new Map()
+      if (clientIds.length > 0) {
+        const { data: clients } = await supabase
+          .from('clients')
+          .select('id, full_name')
+          .in('id', clientIds)
+        clientMap = new Map((clients || []).map((c: any) => [c.id, c.full_name as string]))
+      }
+      setAllotmentHistory(rows.map((r: any) => ({ ...r, investor_name: clientMap.get(r.client_id) || 'Unknown' })))
     } catch (err: any) {
       showToast(err.message || 'Failed to load allotment history', 'error')
     } finally {
@@ -163,11 +176,12 @@ export default function AllotmentModule({ subTab, navigate, showToast }: Allotme
     setLoading(true)
     setPreviewMode(false)
     try {
-      // Fetch investment applications
+      // Fetch investment applications (bug #20: column is `investment_amount`, not `amount`,
+      // and fund identifier column is `fund_vehicle`).
       const { data: invData, error } = await supabase
         .from('investment_applications')
-        .select('id, client_id, amount, fund_type, investment_date, folio_number, status')
-        .eq('fund_type', fundType)
+        .select('id, client_id, investment_amount, final_investment_amount, fund_vehicle, investment_date, folio_number, status, created_at')
+        .eq('fund_vehicle', fundType)
         .gte('investment_date', fromDate)
         .lte('investment_date', toDate)
         .in('status', ['approved', 'credited'])
@@ -204,7 +218,7 @@ export default function AllotmentModule({ subTab, navigate, showToast }: Allotme
             folio_number: inv.folio_number || '',
           }
         }
-        grouped[cid].total_investment += Number(inv.amount) || 0
+        grouped[cid].total_investment += Number((inv as any).final_investment_amount) || Number((inv as any).investment_amount) || 0
         grouped[cid].investment_count += 1
         if (inv.folio_number && !grouped[cid].folio_number) {
           grouped[cid].folio_number = inv.folio_number
@@ -280,7 +294,10 @@ export default function AllotmentModule({ subTab, navigate, showToast }: Allotme
       let currentDisFrom = maxDisTo + 1
 
       const allotmentDate = new Date().toISOString().split('T')[0]
-      const records: Omit<AllotmentRecord, 'id' | 'created_at'>[] = []
+      // Bug #20: `allotments` table has no `investor_name` column — send only
+      // columns that actually exist in the DB. Investor name is resolved via
+      // client_id join at read time.
+      const records: Record<string, any>[] = []
 
       for (const inv of investments) {
         const noOfDebentures = Math.floor(inv.total_investment / perDebentureValue)
@@ -292,17 +309,17 @@ export default function AllotmentModule({ subTab, navigate, showToast }: Allotme
 
         records.push({
           folio_number: folioNumber,
-          investor_name: inv.investor_name,
           client_id: inv.client_id,
           investment_amount: inv.total_investment,
+          per_debenture_value: perDebentureValue,
           no_of_debentures: noOfDebentures,
           dis_from: disFrom,
           dis_to: disTo,
           fund_type: fundType,
-          per_debenture_value: perDebentureValue,
           allotment_date: allotmentDate,
           from_date: fromDate,
           to_date: toDate,
+          status: 'active',
         })
 
         currentDisFrom = disTo + 1
@@ -318,6 +335,7 @@ export default function AllotmentModule({ subTab, navigate, showToast }: Allotme
       if (error) throw error
 
       // Update folio numbers on investment_applications for first-time entries
+      // (bug #20: column is `fund_vehicle`, not `fund_type`)
       for (const inv of investments) {
         const folio = folioEntries[inv.client_id]?.trim()
         if (folio && !inv.folio_number) {
@@ -325,7 +343,7 @@ export default function AllotmentModule({ subTab, navigate, showToast }: Allotme
             .from('investment_applications')
             .update({ folio_number: folio })
             .eq('client_id', inv.client_id)
-            .eq('fund_type', fundType)
+            .eq('fund_vehicle', fundType)
             .is('folio_number', null)
         }
       }

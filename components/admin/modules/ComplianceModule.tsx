@@ -266,9 +266,26 @@ function KYCQueueTab({ kycQueue, showToast, onRefresh }: { kycQueue: any[]; show
                     {item.notes && <p className="text-[10px] text-amber-400 mt-1">Note: {item.notes}</p>}
                     {/* View Proof links — extract doc URLs from full data */}
                     {item.data && (() => {
-                      const urls = Object.entries(item.data)
-                        .filter(([k, v]) => k.endsWith('_url') && v && typeof v === 'string' && (v as string).startsWith('http'))
-                        .map(([k, v]) => ({ label: k.replace(/_url$/, '').replace(/_/g, ' '), url: v as string }))
+                      // Nominee items store data as an array of nominees (bug #8).
+                      // For each nominee, extract proof_url along with the nominee's name
+                      // as the label; for other KYC tables, keep existing object-key handling.
+                      let urls: { label: string; url: string }[] = []
+                      if (Array.isArray(item.data)) {
+                        urls = (item.data as any[])
+                          .map((nom, i) => {
+                            const u = nom?.proof_url
+                            if (u && typeof u === 'string' && u.startsWith('http')) {
+                              const label = nom?.name ? `${nom.name} proof` : `Nominee ${i + 1} proof`
+                              return { label, url: u as string }
+                            }
+                            return null
+                          })
+                          .filter(Boolean) as { label: string; url: string }[]
+                      } else {
+                        urls = Object.entries(item.data)
+                          .filter(([k, v]) => k.endsWith('_url') && v && typeof v === 'string' && (v as string).startsWith('http'))
+                          .map(([k, v]) => ({ label: k.replace(/_url$/, '').replace(/_/g, ' '), url: v as string }))
+                      }
                       if (urls.length === 0) return null
                       return (
                         <div className="flex flex-wrap gap-1 mt-1.5">
@@ -281,6 +298,19 @@ function KYCQueueTab({ kycQueue, showToast, onRefresh }: { kycQueue: any[]; show
                         </div>
                       )
                     })()}
+                    {/* Nominee roster preview (bug #8) — show name / relation / share so
+                        admins can cross-check against proof docs above. */}
+                    {Array.isArray(item.data) && item.data.length > 0 && (
+                      <div className="mt-2 space-y-1">
+                        {(item.data as any[]).map((nom, i) => (
+                          <div key={nom.id || i} className="text-[10px] text-gray-400">
+                            <span className="text-gray-300">{nom.name || 'Unnamed'}</span>
+                            {nom.relationship && <span> · {nom.relationship}</span>}
+                            {nom.percentage != null && <span> · {nom.percentage}%</span>}
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>
