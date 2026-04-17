@@ -883,18 +883,10 @@ export default function DashboardClient() {
   const renderTopBar = () => (
     <header className={`sticky top-0 z-30 border-b ${t('border-white/[0.06]','border-gray-200/50')}`}
       style={{ background: isDark ? 'rgba(10,10,10,0.8)' : 'rgba(214,211,206,0.92)', backdropFilter: 'blur(40px) saturate(180%)' }}>
-      {/* Market Ticker */}
-      <div className={`border-b ${t('border-white/[0.04]','border-gray-200/40')} px-4 py-1.5 overflow-hidden`}>
-        <div className="flex items-center gap-6 text-xs animate-marquee whitespace-nowrap">
-          {[...MARKET_DATA, ...MARKET_DATA].map((m, i) => (
-            <span key={i} className="inline-flex items-center gap-2">
-              <span className={`font-medium ${t('text-gray-500','text-gray-600')}`}>{m.name}</span>
-              <span className={`font-semibold ${t('text-white','text-gray-900')}`}>{m.value}</span>
-              <span className={`font-semibold ${m.up ? 'text-emerald-400' : 'text-red-400'}`}>{m.change}</span>
-            </span>
-          ))}
-        </div>
-      </div>
+      {/* Market ticker removed — the values were hard-coded constants so
+          the marquee always displayed stale data that was never updated.
+          A real-time ticker can be re-introduced later once a proper
+          market-data feed is wired up. */}
 
       {/* Main bar */}
       <div className="flex items-center justify-between px-4 lg:px-6 py-3">
