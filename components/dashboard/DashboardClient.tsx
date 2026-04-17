@@ -40,6 +40,10 @@ import {
   useSupportTickets,
   useNotifications,
   useKYCSteps,
+  useKYCBasicDetails,
+  useKYCIdentityDetails,
+  useKYCBankDetails,
+  useNominees,
   useDocuments,
   useAdminNews,
   useAssignedRM,
@@ -353,6 +357,13 @@ export default function DashboardClient() {
   const { data: supportTickets, loading: ticketsLoading, error: ticketsError, refetch: refetchTickets } = useSupportTickets(clientId ?? undefined)
   const { data: notifications, refetch: refetchNotifications } = useNotifications(clientId ?? undefined)
   const { data: kycSteps } = useKYCSteps(clientId ?? undefined)
+  // Bugs #26-27: Pull KYC data so the Profile screen reflects what the investor
+  // actually submitted (PAN, DOB, address, bank, nominees), instead of falling
+  // back to incomplete values from the auth metadata.
+  const { data: kycBasic } = useKYCBasicDetails(clientId ?? undefined)
+  const { data: kycIdentity } = useKYCIdentityDetails(clientId ?? undefined)
+  const { data: kycBank } = useKYCBankDetails(clientId ?? undefined)
+  const { data: kycNominees } = useNominees(clientId ?? undefined)
   const { data: documents, loading: docsLoading, error: docsError, refetch: refetchDocs } = useDocuments(clientId ?? undefined)
   const { data: adminNews } = useAdminNews()
   const { data: assignedRM } = useAssignedRM(clientId ?? undefined)
@@ -768,7 +779,7 @@ export default function DashboardClient() {
             const isActive = activeTab === item.id
             return (
               <button key={item.id} onClick={() => { setActiveTab(item.id); setSidebarOpen(false) }}
-                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-300 group relative
+                className={`w-full flex items-center justify-start text-left gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-300 group relative
                   ${isActive
                     ? isDark ? 'text-white bg-brand-red/15 border border-brand-red/20' : 'text-brand-red bg-red-50 border border-red-200'
                     : isDark ? 'text-gray-400 hover:text-white hover:bg-white/[0.04]' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-200/35'
@@ -787,7 +798,7 @@ export default function DashboardClient() {
           <div className={`my-4 border-t ${t('border-white/[0.06]','border-gray-200/50')}`} />
           {SIDEBAR_BOTTOM.map((item) => (
             <button key={item.id} onClick={() => { setActiveTab(item.id); setSidebarOpen(false) }}
-              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-300 group
+              className={`w-full flex items-center justify-start text-left gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-300 group
                 ${activeTab === item.id
                   ? isDark ? 'text-white bg-white/[0.06]' : 'text-gray-900 bg-gray-100/50'
                   : isDark ? 'text-gray-500 hover:text-gray-300 hover:bg-white/[0.03]' : 'text-gray-500 hover:text-gray-700 hover:bg-gray-200/30'
@@ -801,7 +812,7 @@ export default function DashboardClient() {
         {/* Tour + Logout — pushed above mobile bottom nav */}
         <div className="px-3 pb-28 lg:pb-4 pt-2 space-y-1">
           <button onClick={async () => { await logout(); router.push('/login?logged_out=true') }}
-            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-300
+            className="w-full flex items-center justify-start text-left gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-300
               text-gray-500 hover:text-red-400 hover:bg-red-500/[0.06]">
             <LogOut className="w-[18px] h-[18px]" />
             Sign Out
@@ -2572,7 +2583,7 @@ export default function DashboardClient() {
           )}
 
           <div className={`mt-4 pt-4 border-t text-left space-y-2.5 ${t('border-white/[0.06]','border-gray-200/50')}`}>
-            {[['GHL ID', ghlId || 'N/A'],['PAN', user?.pan || 'Not provided'],['Mobile', user?.phone || 'Not provided'],['Joined', user?.created_at ? new Date(user.created_at).toLocaleDateString('en-IN', { month: 'long', year: 'numeric' }) : 'N/A']].map(([l,v],i) => (
+            {[['GHL ID', ghlId || 'N/A'],['PAN', (kycIdentity as any)?.pan_number || savedProfileData.pan || (user as any)?.pan || 'Not provided'],['Mobile', (kycBasic as any)?.phone || user?.phone || 'Not provided'],['Joined', user?.created_at ? new Date(user.created_at).toLocaleDateString('en-IN', { month: 'long', year: 'numeric' }) : 'N/A']].map(([l,v],i) => (
               <div key={i} className="flex justify-between text-xs"><span className={t('text-gray-500','text-gray-700')}>{l}</span><span className={`font-medium ${v === 'Not provided' ? 'text-gray-600 italic' : t('text-white','text-gray-900')}`}>{v}</span></div>
             ))}
           </div>
@@ -2598,7 +2609,7 @@ export default function DashboardClient() {
               <button onClick={openEditProfile} className={`text-xs font-semibold flex items-center gap-1 ${t('text-gray-400 hover:text-white','text-gray-500 hover:text-gray-900')} transition-colors`}><Sliders className="w-3 h-3" /> Edit</button>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {[['Full Name', savedProfileData.full_name || userName],['Email', userEmail],['Phone', savedProfileData.phone || user?.phone || 'Not provided'],['PAN Number', savedProfileData.pan || (user as any)?.pan || 'Not provided'],['City', savedProfileData.city || user?.city || 'Not provided'],['Date of Birth', savedProfileData.dob || user?.dob || 'Not provided'],['Occupation', savedProfileData.occupation || user?.occupation || 'Not provided']].map(([l,v],i) => (
+              {[['Full Name', (kycBasic as any)?.investor_name || savedProfileData.full_name || userName],['Email', (kycBasic as any)?.email || userEmail],['Phone', (kycBasic as any)?.phone || savedProfileData.phone || user?.phone || 'Not provided'],['PAN Number', (kycIdentity as any)?.pan_number || savedProfileData.pan || (user as any)?.pan || 'Not provided'],['City', (kycIdentity as any)?.city || savedProfileData.city || user?.city || 'Not provided'],['Date of Birth', (kycIdentity as any)?.dob || savedProfileData.dob || user?.dob || 'Not provided'],['Occupation', savedProfileData.occupation || user?.occupation || 'Not provided']].map(([l,v],i) => (
                 <div key={i}><p className={`text-[10px] uppercase tracking-wider mb-1 ${t('text-gray-600','text-gray-600')}`}>{l}</p><p className={`text-sm font-medium ${v === 'Not provided' ? 'text-gray-600 italic' : t('text-white','text-gray-900')}`}>{v}</p></div>
               ))}
             </div>
@@ -2610,7 +2621,16 @@ export default function DashboardClient() {
               <h4 className={`text-sm font-bold ${t('text-white','text-gray-900')}`}>Nominee Details</h4>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {[['Nominee Name', savedProfileData.nominee_name || user?.nominee_name || 'Not provided'],['Relationship', savedProfileData.nominee_relation || user?.nominee_relation || 'Not provided'],['Nominee PAN', savedProfileData.nominee_pan || user?.nominee_pan || 'Not provided'],['Share', savedProfileData.nominee_share || user?.nominee_share || 'Not provided']].map(([l,v],i) => (
+              {(() => {
+                // Prefer the first nominee from the KYC nominees table
+                const primaryNominee = (kycNominees && (kycNominees as any[])[0]) as any || null
+                return [
+                  ['Nominee Name', primaryNominee?.name || savedProfileData.nominee_name || user?.nominee_name || 'Not provided'],
+                  ['Relationship', primaryNominee?.relationship || savedProfileData.nominee_relation || user?.nominee_relation || 'Not provided'],
+                  ['Nominee PAN', savedProfileData.nominee_pan || user?.nominee_pan || 'Not provided'],
+                  ['Share', (primaryNominee?.percentage != null ? `${primaryNominee.percentage}%` : (savedProfileData.nominee_share || user?.nominee_share || 'Not provided'))],
+                ]
+              })().map(([l,v],i) => (
                 <div key={i}><p className={`text-[10px] uppercase tracking-wider mb-1 ${t('text-gray-600','text-gray-600')}`}>{l}</p><p className={`text-sm font-medium ${v === 'Not provided' ? 'text-gray-600 italic' : t('text-white','text-gray-900')}`}>{v}</p></div>
               ))}
             </div>
@@ -2879,12 +2899,8 @@ export default function DashboardClient() {
           )}
 
           {[
+            // Bug #24: Only Change Password retained; 2FA / Active Sessions / Login History removed.
             { label: 'Change Password', action: () => { setShowPasswordReset(true); setNewPassword(''); setConfirmNewPassword('') } },
-            { label: 'Enable 2FA', action: async () => {
-              showToast('Two-factor authentication (2FA) requires admin configuration in Supabase. Please contact your administrator to enable MFA for your account.', 'info')
-            } },
-            { label: 'Active Sessions', action: () => showToast('You have 1 active session: Chrome on Windows — Current Device', 'info') },
-            { label: 'Login History', action: () => showToast('Last login: Today at 10:30 AM from Chennai, India (Chrome/Windows)', 'info') },
           ].map((opt, j) => (
             <button key={j} onClick={opt.action} className={`w-full flex items-center justify-between p-2.5 rounded-lg cursor-pointer group transition-colors ${t('hover:bg-white/[0.02]','hover:bg-gray-100')}`}>
               <span className={`text-xs transition-colors ${t('text-gray-400 group-hover:text-white','text-gray-600 group-hover:text-gray-900')}`}>{opt.label}</span>

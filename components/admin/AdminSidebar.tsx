@@ -45,15 +45,11 @@ export default function AdminSidebar({
   userName,
   onLogout,
 }: AdminSidebarProps) {
-  const [expandedModules, setExpandedModules] = useState<Set<string>>(new Set([activeModule]))
+  // Accordion behavior (bug #30): only one module expanded at a time
+  const [expandedModule, setExpandedModule] = useState<string | null>(activeModule)
 
   const toggleModule = (moduleId: string) => {
-    setExpandedModules(prev => {
-      const next = new Set(prev)
-      if (next.has(moduleId)) next.delete(moduleId)
-      else next.add(moduleId)
-      return next
-    })
+    setExpandedModule(prev => (prev === moduleId ? null : moduleId))
   }
 
   const handleNavClick = (path: string) => {
@@ -118,7 +114,7 @@ export default function AdminSidebar({
 
             const Icon = ICON_MAP[item.iconName] || LayoutDashboard
             const isActive = activeModule === item.id
-            const isExpanded = expandedModules.has(item.id)
+            const isExpanded = expandedModule === item.id
             const hasSubItems = item.subItems && item.subItems.length > 0
 
             return (
@@ -162,9 +158,9 @@ export default function AdminSidebar({
                   )}
                 </button>
 
-                {/* Sub-items */}
+                {/* Sub-items — left-aligned (bug #31), indented to match parent text start */}
                 {hasSubItems && isExpanded && (
-                  <div className="ml-8 mt-0.5 space-y-0.5 mb-1">
+                  <div className="ml-3 mt-0.5 space-y-0.5 mb-1 border-l border-white/10 pl-3">
                     {item.subItems!.map(sub => {
                       const subModule = sub.id.split('/')[0]
                       const subTab = sub.id.includes('/') ? sub.id.split('/')[1] : null
@@ -175,7 +171,7 @@ export default function AdminSidebar({
                         <button
                           key={sub.id}
                           onClick={() => handleNavClick(sub.id)}
-                          className={`w-full text-left px-3 py-1.5 rounded-lg text-[13px] transition-all duration-200
+                          className={`w-full flex items-center justify-start text-left px-3 py-1.5 rounded-lg text-[13px] transition-all duration-200
                             ${isSubActive
                               ? 'text-white font-semibold bg-white/15'
                               : 'text-white/60 hover:text-white hover:bg-white/10'

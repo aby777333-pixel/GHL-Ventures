@@ -73,26 +73,18 @@ export default async (request: Request) => {
 
     const supabase = createClient(supabaseUrl, supabaseServiceKey)
 
-    // Check mobile uniqueness
+    // Check mobile uniqueness — only against ACTIVE clients (ignore soft-deleted).
+    // A phone is "registered" iff a client row exists with is_active=true AND a linked user_id.
+    // This avoids false positives from orphaned profiles or deactivated client records.
     const { data: existingClients } = await supabase
       .from('clients')
-      .select('id')
+      .select('id, user_id, is_active')
       .or(`phone.eq.${cleanMobile},phone.eq.+91${cleanMobile},phone.eq.+91 ${cleanMobile.slice(0,5)} ${cleanMobile.slice(5)}`)
+      .eq('is_active', true)
+      .not('user_id', 'is', null)
       .limit(1)
 
     if (existingClients && existingClients.length > 0) {
-      return new Response(JSON.stringify({ error: 'This mobile number is already registered. Please sign in instead.' }), {
-        status: 409, headers: { 'Content-Type': 'application/json', ...getCorsHeaders(request) },
-      })
-    }
-
-    const { data: existingProfiles } = await supabase
-      .from('profiles')
-      .select('id')
-      .or(`phone.eq.${cleanMobile},phone.eq.+91${cleanMobile},phone.eq.+91 ${cleanMobile.slice(0,5)} ${cleanMobile.slice(5)}`)
-      .limit(1)
-
-    if (existingProfiles && existingProfiles.length > 0) {
       return new Response(JSON.stringify({ error: 'This mobile number is already registered. Please sign in instead.' }), {
         status: 409, headers: { 'Content-Type': 'application/json', ...getCorsHeaders(request) },
       })

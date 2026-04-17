@@ -171,14 +171,18 @@ export default function KYCWizard({ clientId, userId, userName, userEmail, userP
     else onToast('Failed to save', 'info')
   }
 
-  // Helper: validate IFSC code via Razorpay API
-  const verifyIFSC = async (ifsc: string): Promise<{ valid: boolean; bankName?: string; branchName?: string }> => {
+  // Helper: validate IFSC code via Razorpay API.
+  // Bug #4: If the public API is unreachable (CORS/rate-limit/offline), don't
+  // block the user — fall back to format-only validation already enforced above.
+  // `reachable=false` means we couldn't confirm either way; treat as valid.
+  const verifyIFSC = async (ifsc: string): Promise<{ valid: boolean; reachable: boolean; bankName?: string; branchName?: string }> => {
     try {
       const res = await fetch(`https://ifsc.razorpay.com/${ifsc}`)
-      if (!res.ok) return { valid: false }
+      if (res.status === 404) return { valid: false, reachable: true }
+      if (!res.ok) return { valid: true, reachable: false }
       const data = await res.json()
-      return { valid: true, bankName: data.BANK || '', branchName: data.BRANCH || '' }
-    } catch { return { valid: false } }
+      return { valid: true, reachable: true, bankName: data.BANK || '', branchName: data.BRANCH || '' }
+    } catch { return { valid: true, reachable: false } }
   }
 
   // Helper: validate date year is 4 digits and reasonable
@@ -209,12 +213,14 @@ export default function KYCWizard({ clientId, userId, userName, userEmail, userP
       const ifscClean = bank.ifsc_code.toUpperCase().replace(/\s/g, '')
       if (ifscClean.length !== 11) { onToast('IFSC code must be exactly 11 characters', 'info'); return }
       if (!/^[A-Z]{4}[A-Z0-9]{7}$/.test(ifscClean)) { onToast('Invalid IFSC format. Must start with 4 letters followed by 7 alphanumeric characters.', 'info'); return }
-      // Verify IFSC code exists via Razorpay API
+      // Verify IFSC code exists via Razorpay API (lenient fallback per bug #4)
       setSaving(true)
       onToast('Verifying IFSC code...', 'info')
       const ifscResult = await verifyIFSC(ifscClean)
-      if (!ifscResult.valid) { setSaving(false); onToast('IFSC code not found in RBI database. Please check and re-enter a valid IFSC code.', 'info'); return }
-      // Auto-fill bank name and branch from verified data using local variable to avoid stale state
+      // Only reject when the API is reachable AND explicitly says the IFSC is invalid (404).
+      // If the API is unreachable (CORS/network), trust the format-only validation above.
+      if (ifscResult.reachable && !ifscResult.valid) { setSaving(false); onToast('IFSC code not found in RBI database. Please check and re-enter a valid IFSC code.', 'info'); return }
+      // Auto-fill bank name and branch only when we got real data back
       const updatedBank = { ...bank, ifsc_code: ifscClean }
       if (ifscResult.bankName) updatedBank.bank_name = lettersOnly(ifscResult.bankName!)
       if (ifscResult.branchName) updatedBank.branch_name = ifscResult.branchName!.replace(/[^a-zA-Z\s.,-]/g, '')
@@ -273,6 +279,12 @@ export default function KYCWizard({ clientId, userId, userName, userEmail, userP
   }
 
   const handleSubmitKYC = async () => {
+    // Bug #6: Gate submission on ALL prior steps having data saved. Users can
+    // click the Nominee stepper directly without filling bank/demat/identity.
+    if (!basicData) { onToast('Please complete Basic Details before submitting', 'info'); setActiveStep(0); return }
+    if (!identityData) { onToast('Please complete Identity Details before submitting', 'info'); setActiveStep(1); return }
+    if (!bankData) { onToast('Please complete Bank Details before submitting', 'info'); setActiveStep(2); return }
+    if (!dematData) { onToast('Please complete Demat step (or mark as skipped) before submitting', 'info'); setActiveStep(3); return }
     if (!nomineesData || nomineesData.length === 0) { onToast('Add at least one nominee', 'info'); return }
     const totalPct = nomineesData.reduce((sum: number, n: any) => sum + (Number(n.percentage) || 0), 0)
     if (Math.abs(totalPct - 100) > 0.01) { onToast(`Nominee percentages must total 100% (currently ${totalPct}%)`, 'info'); return }

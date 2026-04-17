@@ -1147,6 +1147,10 @@ function InvestmentsTab({ showToast }: { showToast: (m: string, t?: 'success' | 
 
   const columns: Column<any>[] = [
     { key: 'client', label: 'Client', render: (row) => <span className="text-white font-medium">{row._client?.full_name || row._client?.email || '—'}</span> },
+    // Bug #13: Show GHL ID, Email and Phone in the investment list.
+    { key: 'client_code', label: 'GHL ID', render: (row) => <span className="font-mono text-xs text-gray-300">{row._client?.client_code || '—'}</span> },
+    { key: 'email', label: 'Email', render: (row) => <span className="text-gray-300 text-xs">{row._client?.email || '—'}</span> },
+    { key: 'phone', label: 'Phone', render: (row) => <span className="text-gray-300 text-xs">{row._client?.phone || '—'}</span> },
     { key: 'fund_vehicle', label: 'Fund / Vehicle', render: (row) => <span className="text-gray-300 text-xs">{row.fund_vehicle || '—'}</span> },
     { key: 'investment_amount', label: 'Amount', sortable: true, render: (row) => <span className="text-white font-semibold">{formatINR(row.investment_amount)}</span> },
     { key: 'tenure_preference', label: 'Tenure', render: (row) => <span className="text-gray-400 text-xs">{row.tenure_preference || '—'}</span> },
@@ -1224,7 +1228,10 @@ function InvestmentsTab({ showToast }: { showToast: (m: string, t?: 'success' | 
             <div className="grid grid-cols-2 gap-4">
               {[
                 { label: 'Client', val: selectedApp._client?.full_name || '—' },
+                // Bug #13: include GHL ID and phone in detail view.
+                { label: 'GHL ID', val: selectedApp._client?.client_code || '—' },
                 { label: 'Email', val: selectedApp._client?.email || '—' },
+                { label: 'Phone', val: selectedApp._client?.phone || '—' },
                 { label: 'Fund / Vehicle', val: selectedApp.fund_vehicle || '—' },
                 { label: 'Amount', val: formatINR(selectedApp.investment_amount) },
                 { label: 'Tenure', val: selectedApp.tenure_preference || '—' },

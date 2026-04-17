@@ -328,11 +328,29 @@ export default function ContentManagerModule({ subTab, navigate, showToast }: Co
   }
 
   // ── Ticket Status Update ──────────────────────────────────
+  // Bug #23: Admin must provide an answer/response before updating ticket status.
+  // The response is appended to tickets.metadata.admin_responses[] and the
+  // status update only proceeds if a non-empty response is supplied.
   const updateTicketStatus = async (id: string, status: string) => {
     if (!isSupabaseConfigured()) return
-    const { error } = await supabase.from('tickets').update({ status }).eq('id', id)
+    const ticket = tickets.find(t => t.id === id)
+    if (!ticket) { showToast('Ticket not found', 'error'); return }
+    const response = window.prompt(
+      `Please enter your response to the investor before updating ticket status to "${status}":`,
+      ''
+    )
+    if (response === null) return // user cancelled
+    const trimmed = response.trim()
+    if (!trimmed) { showToast('Response is required before updating status', 'warning'); return }
+    const prevMeta = ((ticket as any).metadata && typeof (ticket as any).metadata === 'object') ? (ticket as any).metadata : {}
+    const prevResponses = Array.isArray(prevMeta.admin_responses) ? prevMeta.admin_responses : []
+    const nextMeta = {
+      ...prevMeta,
+      admin_responses: [...prevResponses, { response: trimmed, status, at: new Date().toISOString() }],
+    }
+    const { error } = await supabase.from('tickets').update({ status, metadata: nextMeta, updated_at: new Date().toISOString() }).eq('id', id)
     if (error) { showToast(`Status update failed: ${error.message}`, 'error'); return }
-    showToast(`Ticket status updated to ${status}`, 'success')
+    showToast(`Ticket status updated to ${status} — response saved`, 'success')
     fetchTickets()
   }
 

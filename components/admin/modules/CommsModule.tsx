@@ -154,6 +154,49 @@ function InvestorMessagesTab({ showToast }: { showToast: (msg: string, type?: 's
   const [loading, setLoading] = useState(true)
   const [selectedMsg, setSelectedMsg] = useState<any | null>(null)
   const [filterType, setFilterType] = useState<string>('all')
+  // Bug #29: inline reply composer for admin
+  const [replyBody, setReplyBody] = useState('')
+  const [replySending, setReplySending] = useState(false)
+
+  const handleSendReply = useCallback(async (msg: any) => {
+    if (!msg) return
+    const body = replyBody.trim()
+    if (!body) { showToast('Please enter a reply message', 'warning'); return }
+    setReplySending(true)
+    try {
+      const { supabase } = await import('@/lib/supabase/client')
+      const { data: { user } } = await (supabase as any).auth.getUser()
+      const adminId = user?.id || null
+      const adminName = user?.user_metadata?.full_name || user?.email || 'Admin'
+      // Resolve investor's client_id from the original message so the reply appears
+      // in their dashboard. Messages are keyed by client_id on the investor side.
+      const clientId = msg.client_id || msg.from_client_id || msg.from_id || null
+      const subject = (msg.subject || '').startsWith('Re:') ? msg.subject : `Re: ${msg.subject || 'Your message'}`
+      const payload: Record<string, any> = {
+        client_id: clientId,
+        from_id: adminId,
+        from_name: adminName,
+        to_id: msg.from_id || null,
+        subject,
+        body,
+        is_admin_reply: true,
+        in_reply_to: msg.id,
+      }
+      const { error } = await (supabase as any).from('messages').insert(payload)
+      if (error) { showToast(`Reply failed: ${error.message}`, 'error'); setReplySending(false); return }
+      // Mark original as read
+      try { await (supabase as any).from('messages').update({ read: true }).eq('id', msg.id) } catch {}
+      showToast('Reply sent to investor', 'success')
+      setReplyBody('')
+      setSelectedMsg(null)
+      loadMessages()
+    } catch (e: any) {
+      showToast(`Reply failed: ${e?.message || 'unknown error'}`, 'error')
+    } finally {
+      setReplySending(false)
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [replyBody, showToast])
 
   const loadMessages = useCallback(async () => {
     setLoading(true)
@@ -268,6 +311,27 @@ function InvestorMessagesTab({ showToast }: { showToast: (msg: string, type?: 's
                                 <Paperclip className="w-3 h-3" /> {msg.attachments.length} attachment(s)
                               </div>
                             )}
+                            {/* Bug #29: Admin reply composer */}
+                            <div className="mt-4 pt-3 border-t border-white/[0.06]" onClick={(e) => e.stopPropagation()}>
+                              <label className="block text-[10px] uppercase tracking-wider text-gray-500 mb-1.5">Your Reply</label>
+                              <textarea
+                                value={replyBody}
+                                onChange={(e) => setReplyBody(e.target.value)}
+                                rows={3}
+                                placeholder="Type your response to the investor..."
+                                className="w-full bg-white/[0.04] border border-white/[0.08] rounded-lg px-3 py-2 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-brand-red/40 resize-none"
+                              />
+                              <div className="flex items-center justify-end gap-2 mt-2">
+                                <button
+                                  disabled={replySending || !replyBody.trim()}
+                                  onClick={() => handleSendReply(msg)}
+                                  className="flex items-center gap-1.5 px-4 py-1.5 rounded-lg text-xs font-medium text-white bg-brand-red/30 border border-brand-red/40 hover:bg-brand-red/50 transition-colors disabled:opacity-50"
+                                >
+                                  <Send className="w-3 h-3" />
+                                  {replySending ? 'Sending...' : 'Send Reply'}
+                                </button>
+                              </div>
+                            </div>
                           </div>
                         )}
                       </div>

@@ -644,7 +644,8 @@ export async function fetchAllInvestmentApplications() {
     // Enrich with client names
     const clientIds = Array.from(new Set((data as any[]).map((d: any) => d.client_id).filter(Boolean)))
     if (clientIds.length > 0) {
-      const { data: clients } = await (supabase.from('clients').select('id, full_name, email').in('id', clientIds) as any)
+      // Bug #13: include phone and client_code (GHL ID) for admin investment list.
+      const { data: clients } = await (supabase.from('clients').select('id, full_name, email, phone, client_code').in('id', clientIds) as any)
       const clientMap = new Map((clients || []).map((c: any) => [c.id, c]))
       return (data as any[]).map((app: any) => ({ ...app, _client: clientMap.get(app.client_id) || null }))
     }

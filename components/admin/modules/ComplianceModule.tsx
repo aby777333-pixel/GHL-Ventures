@@ -123,16 +123,18 @@ function KYCQueueTab({ kycQueue, showToast, onRefresh }: { kycQueue: any[]; show
   const [processing, setProcessing] = useState(false)
   const [rejectReason, setRejectReason] = useState('')
 
-  // Group KYC items by client
+  // Group KYC items by client (bug #7: list descending by most recent submission)
   const clientGroups = useMemo(() => {
-    const map: Record<string, { clientId: string; clientName: string; clientEmail: string; items: any[] }> = {}
+    const map: Record<string, { clientId: string; clientName: string; clientEmail: string; items: any[]; latest: number }> = {}
     for (const item of kycQueue) {
       if (!map[item.clientId]) {
-        map[item.clientId] = { clientId: item.clientId, clientName: item.clientName, clientEmail: item.clientEmail || '', items: [] }
+        map[item.clientId] = { clientId: item.clientId, clientName: item.clientName, clientEmail: item.clientEmail || '', items: [], latest: 0 }
       }
       map[item.clientId].items.push(item)
+      const ts = new Date(item.uploadDate || item.createdAt || item.created_at || 0).getTime()
+      if (ts > map[item.clientId].latest) map[item.clientId].latest = ts
     }
-    return Object.values(map)
+    return Object.values(map).sort((a, b) => b.latest - a.latest)
   }, [kycQueue])
 
   const filtered = useMemo(() => {

@@ -221,14 +221,24 @@ export default function InvestmentFlowTab({
   const handleSubmitTransaction = async () => {
     if (!selectedApp || !clientId) return
     if (!txnForm.transactionAmount) { showToast('Transaction amount is required', 'error'); return }
+    // Bug #10: Transaction amount must not exceed the committed capital amount.
+    const capital = Number(txnForm.capitalAmount) || Number(selectedApp.investment_amount) || 0
+    const txnAmt = Number(txnForm.transactionAmount)
+    if (!Number.isFinite(txnAmt) || txnAmt <= 0) { showToast('Transaction amount must be a positive number', 'error'); return }
+    if (capital > 0 && txnAmt > capital) {
+      showToast(`Transaction amount cannot exceed the capital amount (₹${fmtINR(capital)})`, 'error')
+      return
+    }
+    // Bug #11: Require proof upload before submission.
+    if (!txnForm.proofUrl) { showToast('Please upload transaction proof before submitting', 'error'); return }
     setTxnSubmitting(true)
     const res = await submitInvestmentTransaction({
       investment_app_id: selectedApp.id,
       client_id: clientId,
-      capital_amount: Number(txnForm.capitalAmount) || Number(selectedApp.investment_amount),
-      transaction_amount: Number(txnForm.transactionAmount),
+      capital_amount: capital,
+      transaction_amount: txnAmt,
       transaction_id: txnForm.transactionId || undefined,
-      transaction_proof_url: txnForm.proofUrl || undefined,
+      transaction_proof_url: txnForm.proofUrl,
       bank_account_id: txnBank || undefined,
     })
     if (res) {

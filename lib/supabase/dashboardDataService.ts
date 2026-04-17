@@ -252,7 +252,7 @@ export async function upsertKYCIdentityDetails(clientId: string, userId: string,
   const row = { ...data, client_id: clientId, user_id: userId, status: 'submitted' }
   const { data: result, error } = await sb.from('kyc_identity_details').upsert(row, { onConflict: 'client_id' }).select().single()
   if (error) { console.warn('[kyc] upsert identity error:', error.message); return null }
-  await sb.from('clients').update({ kyc_step: Math.max(2, data.kyc_step || 2) }).eq('id', clientId)
+  try { await sb.from('clients').update({ kyc_step: Math.max(2, data.kyc_step || 2) }).eq('id', clientId) } catch (e) { console.warn('[kyc] kyc_step update non-fatal:', (e as any)?.message) }
   return result
 }
 
@@ -266,7 +266,9 @@ export async function upsertKYCBankDetails(clientId: string, userId: string, dat
   const row = { ...data, client_id: clientId, user_id: userId, status: 'submitted' }
   const { data: result, error } = await sb.from('kyc_bank_details').upsert(row, { onConflict: 'client_id' }).select().single()
   if (error) { console.warn('[kyc] upsert bank error:', error.message); return null }
-  await sb.from('clients').update({ kyc_step: Math.max(3, data.kyc_step || 3) }).eq('id', clientId)
+  // Bug #5: The bank row saved successfully above. Don't let a kyc_step update
+  // failure (RLS/permissions) make the caller think the save failed.
+  try { await sb.from('clients').update({ kyc_step: Math.max(3, data.kyc_step || 3) }).eq('id', clientId) } catch (e) { console.warn('[kyc] kyc_step update non-fatal:', (e as any)?.message) }
   return result
 }
 
@@ -280,7 +282,7 @@ export async function upsertKYCDematDetails(clientId: string, userId: string, da
   const row = { ...data, client_id: clientId, user_id: userId, status: data.skipped ? 'skipped' : 'submitted' }
   const { data: result, error } = await sb.from('kyc_demat_details').upsert(row, { onConflict: 'client_id' }).select().single()
   if (error) { console.warn('[kyc] upsert demat error:', error.message); return null }
-  await sb.from('clients').update({ kyc_step: Math.max(4, data.kyc_step || 4) }).eq('id', clientId)
+  try { await sb.from('clients').update({ kyc_step: Math.max(4, data.kyc_step || 4) }).eq('id', clientId) } catch (e) { console.warn('[kyc] kyc_step update non-fatal:', (e as any)?.message) }
   return result
 }
 

@@ -20,6 +20,7 @@ import { formatINR, formatDate } from '@/lib/admin/adminHooks'
 const ALLOTMENT_TABS = [
   { id: 'create', label: 'Create Allotment', icon: FileText },
   { id: 'history', label: 'Allotment History', icon: History },
+  { id: 'debenture-certificates', label: 'Debenture Certificates', icon: FileText },
 ] as const
 
 type AllotmentTab = typeof ALLOTMENT_TABS[number]['id']
@@ -126,7 +127,7 @@ export default function AllotmentModule({ subTab, navigate, showToast }: Allotme
   }, [showToast])
 
   useEffect(() => {
-    if (activeTab === 'history') loadHistory()
+    if (activeTab === 'history' || activeTab === 'debenture-certificates') loadHistory()
   }, [activeTab, loadHistory])
 
   // ── Get max distinctive number from existing allotments ────────
@@ -679,6 +680,75 @@ export default function AllotmentModule({ subTab, navigate, showToast }: Allotme
               exportable
               title="Allotment History"
               emptyMessage="No allotments found"
+            />
+          )}
+        </AdminGlass>
+      )}
+
+      {/* ── Debenture Certificates Tab (bug #21) ──────────────────── */}
+      {activeTab === 'debenture-certificates' && (
+        <AdminGlass>
+          {historyLoading ? (
+            <div className="flex items-center justify-center py-16">
+              <span className="w-6 h-6 border-2 border-white/20 border-t-brand-red rounded-full animate-spin" />
+            </div>
+          ) : allotmentHistory.length === 0 ? (
+            <AdminEmptyState
+              icon={FileText}
+              title="No debenture certificates"
+              description="Certificates are generated automatically once debentures are allotted."
+              action={{ label: 'Create Allotment', onClick: () => handleTabClick('create') }}
+            />
+          ) : (
+            <AdminDataTable
+              columns={[
+                ...historyColumns,
+                {
+                  key: 'certificate_action' as any,
+                  label: 'Certificate',
+                  width: 'w-36',
+                  render: (row: AllotmentRecord) => (
+                    <button
+                      onClick={() => {
+                        // Open a printable certificate view in a new tab using allotment details
+                        const html = `<!doctype html><html><head><title>Debenture Certificate — ${row.folio_number || row.id}</title>
+                          <style>body{font-family:Georgia,serif;padding:40px;color:#111}
+                          h1{text-align:center;color:#8B0000}
+                          .row{display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid #eee}
+                          .label{color:#555} .val{font-weight:600}</style></head>
+                          <body><h1>Debenture Certificate</h1>
+                          <p style="text-align:center;color:#666">GHL India Ventures Private Limited</p>
+                          <div style="margin-top:32px">
+                          <div class="row"><span class="label">Folio No.</span><span class="val">${row.folio_number || '-'}</span></div>
+                          <div class="row"><span class="label">Investor</span><span class="val">${row.investor_name || '-'}</span></div>
+                          <div class="row"><span class="label">Fund Type</span><span class="val">${row.fund_type || '-'}</span></div>
+                          <div class="row"><span class="label">Investment Amount</span><span class="val">₹ ${(row.investment_amount || 0).toLocaleString('en-IN')}</span></div>
+                          <div class="row"><span class="label">No. of Debentures</span><span class="val">${(row.no_of_debentures || 0).toLocaleString('en-IN')}</span></div>
+                          <div class="row"><span class="label">Distinctive Nos.</span><span class="val">${row.dis_from} – ${row.dis_to}</span></div>
+                          <div class="row"><span class="label">Allotment Date</span><span class="val">${new Date(row.allotment_date || row.created_at).toLocaleDateString('en-IN')}</span></div>
+                          </div>
+                          <p style="margin-top:48px;text-align:right">Authorised Signatory</p>
+                          <script>window.onload=()=>window.print()</script>
+                          </body></html>`
+                        const w = window.open('', '_blank')
+                        if (w) { w.document.write(html); w.document.close() }
+                      }}
+                      className="flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-medium text-white bg-brand-red/20 border border-brand-red/30 hover:bg-brand-red/30 transition-colors"
+                    >
+                      <Download className="w-3.5 h-3.5" />
+                      View / Print
+                    </button>
+                  ),
+                },
+              ]}
+              data={allotmentHistory}
+              searchable
+              searchPlaceholder="Search by investor, folio, fund type..."
+              searchKeys={['investor_name', 'folio_number', 'fund_type']}
+              pageSize={15}
+              exportable
+              title="Debenture Certificates"
+              emptyMessage="No certificates available"
             />
           )}
         </AdminGlass>
