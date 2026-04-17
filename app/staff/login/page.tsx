@@ -143,7 +143,7 @@ export default function StaffLoginPage() {
             <button
               type="submit"
               disabled={loading || lockoutRemaining > 0}
-              className="w-full py-3 rounded-xl text-white font-semibold text-sm transition-all duration-300 disabled:opacity-60 disabled:cursor-not-allowed hover:opacity-90 hover:shadow-lg hover:shadow-teal-500/20"
+              className="w-full py-3 rounded-xl text-white font-semibold text-sm transition-all duration-300 disabled:opacity-60 disabled:cursor-not-allowed hover:opacity-90 hover:shadow-lg hover:shadow-teal-500/20 flex items-center justify-center"
               style={{ background: 'linear-gradient(135deg, #0D9488 0%, #0F766E 100%)' }}
             >
               {loading ? (
