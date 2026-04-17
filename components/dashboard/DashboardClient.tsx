@@ -426,6 +426,10 @@ export default function DashboardClient() {
   const [msgTo, setMsgTo] = useState('Relationship Manager')
   const [msgSubject, setMsgSubject] = useState('')
   const [msgBody, setMsgBody] = useState('')
+  // Investor-side inline reply composer state
+  const [openMsgId, setOpenMsgId] = useState<string | null>(null)
+  const [replyBody, setReplyBody] = useState('')
+  const [replySending, setReplySending] = useState(false)
   const [bankConnectOpen, setBankConnectOpen] = useState(false)
   const [uploadModalOpen, setUploadModalOpen] = useState(false)
   const [termsOpen, setTermsOpen] = useState(false)
@@ -2278,24 +2282,92 @@ export default function DashboardClient() {
       )}
 
       <div className="space-y-2">
-        {messagesData.map((msg: any) => (
-          <div key={msg.id} onClick={() => showToast(`Opening: "${msg.subject}" from ${msg.from}`, 'info')}>
-          <Glass className={`p-4 cursor-pointer ${!msg.read ? 'border-l-2 border-l-brand-red' : ''}`} hover theme={theme}>
-            <div className="flex items-start gap-3">
-              <div className="w-10 h-10 rounded-full bg-gradient-to-br from-brand-red/20 to-red-900/20 flex items-center justify-center text-xs font-bold text-brand-red shrink-0">{msg.avatar}</div>
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center justify-between mb-0.5">
-                  <p className={`text-sm font-semibold ${t('text-white','text-gray-900')} ${!msg.read ? '' : 'opacity-70'}`}>{msg.from}</p>
-                  <span className={`text-[10px] ${t('text-gray-600','text-gray-600')}`}>{msg.time}</span>
+        {messagesData.map((msg: any) => {
+          const isOpen = openMsgId === msg.id
+          const handleToggle = async () => {
+            if (isOpen) { setOpenMsgId(null); return }
+            setOpenMsgId(msg.id)
+            setReplyBody('')
+            // Mark as read on open so the red dot clears
+            if (!msg.read) {
+              try {
+                const { supabase: sb } = await import('@/lib/supabase/client')
+                await (sb as any).from('messages').update({ read: true, read_at: new Date().toISOString() }).eq('id', msg.id)
+                refetchMessages()
+              } catch { /* non-blocking */ }
+            }
+          }
+          const handleReply = async () => {
+            const body = replyBody.trim()
+            if (!body) { showToast('Please enter a reply', 'info'); return }
+            setReplySending(true)
+            try {
+              // Reply target = whichever of from_id / to_id is NOT the current investor
+              const myId = user?.id
+              let targetId: string | null = null
+              if (msg.from_id && msg.from_id !== myId) targetId = msg.from_id
+              else if (msg.to_id && msg.to_id !== myId) targetId = msg.to_id
+              else targetId = msg.from_id || msg.to_id || null
+              if (!targetId) { showToast('Cannot reply — recipient unresolved', 'info'); setReplySending(false); return }
+              const subject = (msg.subject || '').startsWith('Re:') ? msg.subject : `Re: ${msg.subject || 'Your message'}`
+              await sendMessage({
+                from_id: myId,
+                to_id: targetId,
+                subject,
+                body,
+                metadata: { in_reply_to: msg.id, from_name: user?.name || userName || 'Investor' },
+              })
+              showToast('Reply sent', 'success')
+              setReplyBody('')
+              setOpenMsgId(null)
+              refetchMessages()
+            } catch (err: any) {
+              showToast(`Reply failed: ${err?.message || 'unknown error'}`, 'info')
+            } finally { setReplySending(false) }
+          }
+          return (
+            <Glass key={msg.id} className={`p-4 cursor-pointer ${!msg.read ? 'border-l-2 border-l-brand-red' : ''}`} hover theme={theme}>
+              <div onClick={handleToggle} className="flex items-start gap-3">
+                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-brand-red/20 to-red-900/20 flex items-center justify-center text-xs font-bold text-brand-red shrink-0">{msg.avatar}</div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center justify-between mb-0.5">
+                    <p className={`text-sm font-semibold ${t('text-white','text-gray-900')} ${!msg.read ? '' : 'opacity-70'}`}>{msg.from}</p>
+                    <span className={`text-[10px] ${t('text-gray-600','text-gray-600')}`}>{msg.time}</span>
+                  </div>
+                  <p className={`text-xs font-medium mb-0.5 ${t('text-gray-300','text-gray-700')} ${!msg.read ? '' : 'opacity-70'}`}>{msg.subject}</p>
+                  <p className={`text-xs ${isOpen ? '' : 'truncate'} ${t('text-gray-500','text-gray-700')}`}>{isOpen ? (msg.body || msg.preview) : msg.preview}</p>
                 </div>
-                <p className={`text-xs font-medium mb-0.5 ${t('text-gray-300','text-gray-700')} ${!msg.read ? '' : 'opacity-70'}`}>{msg.subject}</p>
-                <p className={`text-xs truncate ${t('text-gray-500','text-gray-700')}`}>{msg.preview}</p>
+                {!msg.read && <div className="w-2 h-2 rounded-full bg-brand-red shrink-0 mt-2" />}
               </div>
-              {!msg.read && <div className="w-2 h-2 rounded-full bg-brand-red shrink-0 mt-2" />}
-            </div>
-          </Glass>
-          </div>
-        ))}
+              {isOpen && (
+                <div className={`mt-3 pt-3 border-t ${t('border-white/[0.06]','border-gray-200')}`} onClick={(e) => e.stopPropagation()}>
+                  <label className={`block text-[10px] uppercase tracking-wider mb-1.5 ${t('text-gray-500','text-gray-600')}`}>Your Reply</label>
+                  <textarea
+                    value={replyBody}
+                    onChange={(e) => setReplyBody(e.target.value)}
+                    rows={3}
+                    placeholder="Type your reply to the advisory team..."
+                    className={`w-full px-3 py-2 rounded-lg text-sm resize-none ${t('bg-white/[0.04] border border-white/[0.08] text-white placeholder-gray-600','bg-gray-100/40 border border-gray-200/40 text-gray-900 placeholder-gray-400')} focus:outline-none focus:border-brand-red/40`}
+                  />
+                  <div className="flex items-center justify-end gap-2 mt-2">
+                    <button onClick={() => { setOpenMsgId(null); setReplyBody('') }} className={`px-3 py-1.5 rounded-lg text-xs font-medium ${t('text-gray-400 hover:bg-white/[0.06]','text-gray-600 hover:bg-gray-100')}`}>
+                      Cancel
+                    </button>
+                    <button
+                      disabled={replySending || !replyBody.trim()}
+                      onClick={handleReply}
+                      className="flex items-center gap-1.5 px-4 py-1.5 rounded-lg text-xs font-bold text-white transition-all hover:scale-[1.02] disabled:opacity-50"
+                      style={{ background: 'linear-gradient(135deg, #D0021B, #8B0000)' }}
+                    >
+                      <Send className="w-3 h-3" />
+                      {replySending ? 'Sending...' : 'Send Reply'}
+                    </button>
+                  </div>
+                </div>
+              )}
+            </Glass>
+          )
+        })}
       </div>
     </div>
   )

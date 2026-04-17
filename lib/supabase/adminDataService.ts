@@ -706,8 +706,100 @@ export async function markInvestmentCreditGiven(appId: string, adminId: string) 
         status: 'credited',
       })
       .eq('id', appId)
-    return !error
+    if (error) return false
+    // Once credited, the full payout schedule becomes visible so the accounts
+    // team can process payouts. Safe to run repeatedly — duplicates are skipped.
+    try {
+      const { data: app } = await sb.from('investment_applications').select('*').eq('id', appId).single()
+      if (app) await generateFullPayoutSchedule(app)
+    } catch (e) { console.warn('[admin] auto-generate payouts non-fatal:', e) }
+    return true
   } catch { return false }
+}
+
+// ── Generate full payout schedule for a single investment ──────
+// AIF funds pay yearly; Debenture / LLP pay monthly. The schedule runs from
+// investment_date to maturity_date. Idempotent — looks up existing rows
+// keyed by (investment_id, due_date) and only inserts missing ones.
+export async function generateFullPayoutSchedule(app: any) {
+  if (!isSupabaseConfigured() || !app?.id) return 0
+  const sb: any = supabase
+  try {
+    // Skip if required fields missing — caller should approve first.
+    if (!app.investment_date) return 0
+    const fv: string = app.fund_vehicle || ''
+    // AIF = yearly, Debenture/LLP (and anything else) = monthly
+    const isAIF = fv.includes('AIF Direct') || fv === 'Direct AIF Route' || (fv.includes('AIF') && !fv.toLowerCase().includes('debenture') && !fv.toLowerCase().includes('llp'))
+    const frequencyMonths = isAIF ? 12 : 1
+
+    const amount = Number(app.final_investment_amount) || Number(app.investment_amount) || 0
+    if (amount <= 0) return 0
+    const interestRate = Number(app.interest_rate) || 12
+    const tdsPercent = Number(app.tds_rate) || 10
+    const startDate = new Date(app.investment_date)
+    const maturity = app.maturity_date
+      ? new Date(app.maturity_date)
+      : (() => {
+          const tenureYears = Number(String(app.tenure_preference || '').replace(/[^0-9]/g, '')) || 3
+          const d = new Date(startDate); d.setFullYear(d.getFullYear() + tenureYears); return d
+        })()
+
+    // Per-period amounts
+    const grossPerPeriod = isAIF
+      ? +(amount * (interestRate / 100)).toFixed(2)            // yearly gross
+      : +(amount * (interestRate / 100) / 12).toFixed(2)       // monthly gross
+    const tdsPerPeriod = +(grossPerPeriod * (tdsPercent / 100)).toFixed(2)
+    const netPerPeriod = +(grossPerPeriod - tdsPerPeriod).toFixed(2)
+
+    // Build all due_dates until maturity
+    const dueDates: string[] = []
+    const cursor = new Date(startDate)
+    cursor.setMonth(cursor.getMonth() + frequencyMonths)
+    while (cursor <= maturity) {
+      dueDates.push(cursor.toISOString().split('T')[0])
+      cursor.setMonth(cursor.getMonth() + frequencyMonths)
+    }
+    if (dueDates.length === 0) return 0
+
+    // Skip dates that already have a payout row for this investment
+    const { data: existing } = await sb
+      .from('monthly_payouts')
+      .select('due_date')
+      .eq('investment_id', app.id)
+    const alreadyThere = new Set((existing || []).map((r: any) => r.due_date))
+    const missingDates = dueDates.filter(d => !alreadyThere.has(d))
+    if (missingDates.length === 0) return 0
+
+    // Enrich with client + bank details
+    const { data: client } = await sb.from('clients').select('client_code, full_name').eq('id', app.client_id).maybeSingle()
+    const { data: bank } = await sb.from('kyc_bank_details').select('account_number, account_holder_name, bank_name, ifsc_code').eq('client_id', app.client_id).maybeSingle()
+
+    const rows = missingDates.map(due_date => ({
+      client_id: app.client_id,
+      investment_id: app.id,
+      ghl_id: client?.client_code || '',
+      fund_type: app.fund_vehicle || '',
+      investment_amount: amount,
+      investment_date: app.investment_date,
+      due_date,
+      gross_amount: grossPerPeriod,
+      tds_percentage: tdsPercent,
+      tds_amount: tdsPerPeriod,
+      net_interest: netPerPeriod,
+      payment_status: 'pending',
+      account_number: bank?.account_number || null,
+      account_holder_name: bank?.account_holder_name || client?.full_name || null,
+      bank_name: bank?.bank_name || null,
+      ifsc_code: bank?.ifsc_code || null,
+    }))
+
+    const { error: insErr } = await sb.from('monthly_payouts').insert(rows)
+    if (insErr) { console.warn('[admin] generateFullPayoutSchedule insert error:', insErr.message); return 0 }
+    return rows.length
+  } catch (e: any) {
+    console.warn('[admin] generateFullPayoutSchedule error:', e?.message)
+    return 0
+  }
 }
 
 // ── Approve investment application with full side-effects (bugs #14, #18, #19) ──
@@ -785,6 +877,13 @@ export async function approveInvestmentApplication(app: any, adminId: string) {
         })
       }
     } catch { /* non-blocking */ }
+
+    // Auto-generate the payout schedule (AIF=yearly, Debenture=monthly) so
+    // both investor and accounts team see upcoming payouts immediately.
+    try {
+      const mergedApp = { ...app, ...update }
+      await generateFullPayoutSchedule(mergedApp)
+    } catch (e) { console.warn('[admin] auto-generate payouts on approval non-fatal:', e) }
 
     return true
   } catch (e: any) {

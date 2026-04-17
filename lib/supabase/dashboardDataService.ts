@@ -659,6 +659,23 @@ export async function uploadSignedDocument(docId: string, signedUrl: string) {
   return data
 }
 
+// ── Investor Payouts (scheduled + paid) ────────────────────
+// Returns monthly_payouts rows for a given client, optionally filtered to
+// a single investment application. Used by InvestmentFlowTab's Payment
+// Schedule tab so the investor sees the real schedule the accounts team
+// will process (AIF yearly, Debenture monthly).
+export async function fetchInvestorPayouts(clientId?: string, investmentAppId?: string) {
+  if (!isSupabaseConfigured() || !clientId) return []
+  return safeFetch(
+    () => {
+      let q: any = sb.from('monthly_payouts').select('*').eq('client_id', clientId)
+      if (investmentAppId) q = q.eq('investment_id', investmentAppId)
+      return q.order('due_date', { ascending: true })
+    },
+    [], 'fetchInvestorPayouts',
+  )
+}
+
 // ── Investment Transactions (capital submissions) ───────────
 
 export async function fetchInvestmentTransactions(clientId?: string) {

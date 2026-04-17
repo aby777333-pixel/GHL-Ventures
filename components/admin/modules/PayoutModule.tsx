@@ -208,23 +208,20 @@ export default function PayoutModule({ subTab, navigate, showToast }: PayoutModu
     return selectedMonth.getFullYear() === now.getFullYear() && selectedMonth.getMonth() === now.getMonth()
   }, [selectedMonth])
 
-  // ── Bug #22: Generate Monthly Payouts ───────────────────────
-  // For each approved/credited investment, compute that month's interest
-  // payout (gross, TDS, net) and insert a `monthly_payouts` row if one
-  // doesn't already exist. Safe to run repeatedly.
+  // ── Bug #22: Generate Monthly Payouts (refreshed Apr 2026) ──────
+  // Builds the FULL payout schedule for every approved/credited investment
+  // using the correct frequency per fund type: AIF pays yearly, Debenture /
+  // LLP pay monthly. Delegates to generateFullPayoutSchedule() in
+  // adminDataService so both this bulk button and the auto-generation on
+  // approval/credit stay in sync. Idempotent.
   const generatePayouts = useCallback(async () => {
     if (!isSupabaseConfigured()) { showToast('Supabase is not configured', 'error'); return }
     setGenerating(true)
     try {
-      // Month window
-      const monthStart = new Date(selectedMonth.getFullYear(), selectedMonth.getMonth(), 1)
-      const monthEnd = new Date(selectedMonth.getFullYear(), selectedMonth.getMonth() + 1, 0)
-      const dueDate = monthEnd.toISOString().split('T')[0]
-
-      // 1. Get all approved/credited investments with the numbers we need
+      const { generateFullPayoutSchedule } = await import('@/lib/supabase/adminDataService')
       const { data: apps, error: appErr } = await supabase
         .from('investment_applications')
-        .select('id, client_id, fund_vehicle, investment_amount, final_investment_amount, investment_date, maturity_date, interest_rate, tds_rate')
+        .select('*')
         .in('status', ['approved', 'credited'])
       if (appErr) throw appErr
       if (!apps || apps.length === 0) {
@@ -233,71 +230,22 @@ export default function PayoutModule({ subTab, navigate, showToast }: PayoutModu
         return
       }
 
-      // 2. Get existing payouts for this month to avoid duplicates
-      const { data: existing } = await supabase
-        .from('monthly_payouts')
-        .select('investment_id')
-        .gte('due_date', monthStart.toISOString().split('T')[0])
-        .lte('due_date', monthEnd.toISOString().split('T')[0])
-      const alreadyGenerated = new Set((existing || []).map((e: any) => e.investment_id))
-
-      // 3. Pull client + bank details for enrichment
-      const clientIds = Array.from(new Set(apps.map((a: any) => a.client_id).filter(Boolean)))
-      const [clientsRes, bankRes] = await Promise.all([
-        clientIds.length > 0 ? supabase.from('clients').select('id, client_code, full_name').in('id', clientIds) : { data: [] },
-        clientIds.length > 0 ? supabase.from('kyc_bank_details').select('client_id, account_number, account_holder_name, bank_name, ifsc_code').in('client_id', clientIds) : { data: [] },
-      ])
-      const clientMap = new Map((clientsRes.data || []).map((c: any) => [c.id, c]))
-      const bankMap = new Map((bankRes.data || []).map((b: any) => [b.client_id, b]))
-
-      // 4. Build rows
-      const rows: any[] = []
+      let totalCreated = 0
+      let withMissingDate = 0
       for (const app of apps as any[]) {
-        if (alreadyGenerated.has(app.id)) continue
-        // Skip if investment hasn't started yet for this month
-        if (app.investment_date && new Date(app.investment_date) > monthEnd) continue
-        // Skip if matured before this month
-        if (app.maturity_date && new Date(app.maturity_date) < monthStart) continue
-
-        const amount = Number(app.final_investment_amount) || Number(app.investment_amount) || 0
-        if (amount <= 0) continue
-        const interestRate = Number(app.interest_rate) || 12
-        const tdsPercent = Number(app.tds_rate) || 10
-        const gross = +(amount * (interestRate / 100) / 12).toFixed(2)
-        const tds = +(gross * (tdsPercent / 100)).toFixed(2)
-        const net = +(gross - tds).toFixed(2)
-        const client: any = clientMap.get(app.client_id) || {}
-        const bank: any = bankMap.get(app.client_id) || {}
-
-        rows.push({
-          client_id: app.client_id,
-          investment_id: app.id,
-          ghl_id: client.client_code || '',
-          fund_type: app.fund_vehicle || '',
-          investment_amount: amount,
-          investment_date: app.investment_date || null,
-          due_date: dueDate,
-          gross_amount: gross,
-          tds_percentage: tdsPercent,
-          tds_amount: tds,
-          net_interest: net,
-          payment_status: 'pending',
-          account_number: bank.account_number || null,
-          account_holder_name: bank.account_holder_name || client.full_name || null,
-          bank_name: bank.bank_name || null,
-          ifsc_code: bank.ifsc_code || null,
-        })
+        if (!app.investment_date) { withMissingDate++; continue }
+        const created = await generateFullPayoutSchedule(app)
+        totalCreated += created
       }
 
-      if (rows.length === 0) {
-        showToast('All eligible investments already have a payout for this month', 'info')
-        setGenerating(false)
-        return
+      if (totalCreated === 0) {
+        const note = withMissingDate > 0
+          ? `No new payouts generated. ${withMissingDate} investment(s) are missing investment_date — approve them to populate defaults.`
+          : 'All eligible investments already have their full payout schedule.'
+        showToast(note, 'info')
+      } else {
+        showToast(`Generated ${totalCreated} payout row(s) across ${apps.length} investment(s)`, 'success')
       }
-
-      const { error: insErr } = await supabase.from('monthly_payouts').insert(rows)
-      if (insErr) throw insErr
-      showToast(`Generated ${rows.length} payout(s) for ${getMonthLabel(selectedMonth)}`, 'success')
       fetchPayouts()
     } catch (err: any) {
       console.error('[payouts] generate error:', err)
@@ -305,7 +253,7 @@ export default function PayoutModule({ subTab, navigate, showToast }: PayoutModu
     } finally {
       setGenerating(false)
     }
-  }, [selectedMonth, showToast, fetchPayouts])
+  }, [showToast, fetchPayouts])
 
   // ── Status Update ────────────────────────────────────────────
   const openStatusModal = (payout: PayoutRecord) => {
