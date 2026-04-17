@@ -588,23 +588,31 @@ export default function DashboardClient() {
     }
     reader.readAsDataURL(file)
     try {
-      const { uploadFile } = await import('@/lib/supabase/storageService')
       const { supabase } = await import('@/lib/supabase/client')
       const uid = (user as any)?.id
-      const result = await uploadFile(file, `client/avatars/${uid || 'me'}`, { entityType: 'client', entityId: clientId || undefined })
-      const url = result?.file?.url
-      if (url) {
-        setProfilePhoto(url)
-        if (uid) {
-          try { await (supabase as any).from('profiles').update({ avatar_url: url, updated_at: new Date().toISOString() }).eq('id', uid) } catch (err) { console.warn('[profile] avatar_url save non-fatal:', err) }
-        }
-        showToast('Profile photo updated successfully!', 'success')
-      } else {
-        showToast('Photo uploaded locally (cloud sync failed)', 'info')
+      if (!uid) {
+        showToast('Photo preview only (not signed in)', 'info')
+        if (e.target) e.target.value = ''
+        return
       }
+      // Upload directly to the `avatars` bucket under the user's UID folder so
+      // the `avatars_owner_update` RLS policy (first folder segment must equal
+      // auth.uid()) is satisfied and re-uploads succeed on upsert.
+      const ext = (file.name.match(/\.[^.]+$/)?.[0] || '.png').toLowerCase()
+      const path = `${uid}/avatar${ext}`
+      const { error: upErr } = await (supabase as any).storage
+        .from('avatars')
+        .upload(path, file, { upsert: true, contentType: file.type, cacheControl: '3600' })
+      if (upErr) throw upErr
+      const { data: pub } = (supabase as any).storage.from('avatars').getPublicUrl(path)
+      // Cache-bust so the <img> reflects the fresh upload immediately
+      const url = `${pub.publicUrl}?v=${Date.now()}`
+      setProfilePhoto(url)
+      try { await (supabase as any).from('profiles').update({ avatar_url: url, updated_at: new Date().toISOString() }).eq('id', uid) } catch (err) { console.warn('[profile] avatar_url save non-fatal:', err) }
+      showToast('Profile photo updated successfully!', 'success')
     } catch (err: any) {
       console.warn('[profile] photo upload error:', err?.message)
-      showToast('Photo preview only (upload failed)', 'info')
+      showToast(`Photo preview only (upload failed${err?.message ? ': ' + err.message : ''})`, 'info')
     }
     // Reset input so re-selecting the same file still triggers
     if (e.target) e.target.value = ''
