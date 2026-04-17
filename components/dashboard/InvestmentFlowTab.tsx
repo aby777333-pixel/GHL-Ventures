@@ -587,7 +587,52 @@ export default function InvestmentFlowTab({
               <h3 className={`text-base font-bold ${t('text-white','text-gray-900')}`}>{selectedApp.fund_vehicle}</h3>
               <div className="flex gap-2">
                 <button onClick={() => setSubTab('schedule')} className={`px-4 py-2 rounded-lg text-xs font-bold ${t('bg-white/[0.06] text-white border border-white/[0.08]','bg-gray-100 text-gray-900 border border-gray-200')}`}>Payment Schedule</button>
-                <button onClick={() => showToast('PDF export coming soon', 'info')} className={`px-4 py-2 rounded-lg text-xs font-bold ${t('bg-white/[0.06] text-white border border-white/[0.08]','bg-gray-100 text-gray-900 border border-gray-200')}`}>PDF</button>
+                <button
+                  onClick={() => {
+                    // Open a printable investment summary the investor can save as PDF
+                    const app = selectedApp
+                    const fmt = (n: number) => new Intl.NumberFormat('en-IN').format(Math.round(n))
+                    const commitment = app?.commitment_id || `GHL-CMT-${String(app?.id || '').slice(0, 8).toUpperCase()}`
+                    const rows = investorPayouts.length > 0
+                      ? investorPayouts.map((p: any) => `<tr><td>${new Date(p.due_date).toLocaleDateString('en-IN')}</td><td>₹ ${fmt(Number(p.gross_amount)||0)}</td><td>₹ ${fmt(Number(p.tds_amount)||0)}</td><td>₹ ${fmt(Number(p.net_interest)||0)}</td><td>${p.payment_status||'pending'}</td></tr>`).join('')
+                      : schedule.map((r: any) => `<tr><td>${new Date(r.date).toLocaleDateString('en-IN')}</td><td>₹ ${fmt(r.grossInterest)}</td><td>₹ ${fmt(r.tds)}</td><td>₹ ${fmt(r.netInterest)}</td><td>Due</td></tr>`).join('')
+                    const html = `<!doctype html><html><head><title>Investment Summary — ${commitment}</title>
+                      <style>
+                        body{font-family:Georgia,serif;padding:40px 48px;color:#111;line-height:1.5}
+                        h1{color:#8B0000;text-align:center;margin:0 0 6px}
+                        .subhdr{text-align:center;color:#666;font-size:12px;margin-bottom:24px}
+                        h2{color:#8B0000;font-size:16px;margin:24px 0 8px}
+                        table{width:100%;border-collapse:collapse;font-size:12px;margin:8px 0}
+                        th,td{border:1px solid #e1e1e1;padding:6px 10px;text-align:left}
+                        th{background:#faf7f5;font-weight:600}
+                        .facts td.l{background:#faf7f5;color:#555;font-weight:600;width:38%}
+                        @media print{@page{margin:1.4cm}}
+                      </style></head><body>
+                      <h1>GHL INDIA VENTURES PRIVATE LIMITED</h1>
+                      <div class="subhdr">Investment Summary · ${commitment}</div>
+                      <table class="facts">
+                        <tr><td class="l">Investor</td><td>${userName||'-'}</td></tr>
+                        <tr><td class="l">Email</td><td>${userEmail||'-'}</td></tr>
+                        <tr><td class="l">Fund / Vehicle</td><td>${app?.fund_vehicle||'-'}</td></tr>
+                        <tr><td class="l">Investment Amount</td><td>₹ ${fmt(Number(app?.investment_amount)||0)}</td></tr>
+                        <tr><td class="l">Tenure</td><td>${app?.tenure_preference||'-'}</td></tr>
+                        <tr><td class="l">Interest Rate</td><td>${app?.interest_rate||selectedFund.interest}% p.a.</td></tr>
+                        <tr><td class="l">Investment Date</td><td>${app?.investment_date?new Date(app.investment_date).toLocaleDateString('en-IN'):'-'}</td></tr>
+                        <tr><td class="l">Status</td><td>${app?.status||'-'}</td></tr>
+                      </table>
+                      <h2>Payment Schedule</h2>
+                      <table>
+                        <thead><tr><th>Date</th><th>Gross</th><th>TDS</th><th>Net</th><th>Status</th></tr></thead>
+                        <tbody>${rows||'<tr><td colspan=5 style="text-align:center;color:#888">No schedule generated yet</td></tr>'}</tbody>
+                      </table>
+                      <p style="margin-top:32px;font-size:10px;color:#888;text-align:center">System-generated document — ${new Date().toLocaleString('en-IN')}</p>
+                      <script>window.onload=()=>window.print()</script>
+                    </body></html>`
+                    const w = window.open('', '_blank')
+                    if (w) { w.document.write(html); w.document.close() }
+                    else showToast('Please allow popups to export PDF', 'info')
+                  }}
+                  className={`px-4 py-2 rounded-lg text-xs font-bold ${t('bg-white/[0.06] text-white border border-white/[0.08]','bg-gray-100 text-gray-900 border border-gray-200')}`}>PDF</button>
               </div>
             </div>
 

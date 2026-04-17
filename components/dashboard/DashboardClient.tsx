@@ -405,6 +405,7 @@ export default function DashboardClient() {
   const [searchQuery, setSearchQuery] = useState('')
   const [ticketForm, setTicketForm] = useState(false)
   const [expandedTicket, setExpandedTicket] = useState<string | null>(null)
+  const [expandedNewsId, setExpandedNewsId] = useState<string | null>(null)
   const [ticketSubject, setTicketSubject] = useState('')
   const [ticketCategory, setTicketCategory] = useState('General Inquiry')
   const [ticketDesc, setTicketDesc] = useState('')
@@ -1507,13 +1508,15 @@ export default function DashboardClient() {
             <Newspaper className={`w-8 h-8 mx-auto mb-2 ${t('text-gray-600','text-gray-400')}`} />
             <p className={`text-xs ${t('text-gray-500','text-gray-600')}`}>No announcements yet</p>
           </div>
-        ) : adminNews.map((news: any) => (
-          <div key={news.id} onClick={() => showToast(`${String(news.title || '')} — Full article coming soon.`, 'info')} className={`p-3 rounded-xl cursor-pointer transition-all group ${news.pinned ? (isDark ? 'bg-brand-red/[0.06] border border-brand-red/15 hover:border-brand-red/30' : 'bg-red-50/60 border border-red-200/40 hover:border-red-300/60') : t('bg-white/[0.02] border border-white/[0.04] hover:border-white/[0.08]','bg-gray-100/50 border border-gray-200/30 hover:border-gray-300/40')}`}>
+        ) : adminNews.map((news: any) => {
+          const isExpanded = expandedNewsId === news.id
+          return (
+          <div key={news.id} onClick={() => setExpandedNewsId(prev => prev === news.id ? null : news.id)} className={`p-3 rounded-xl cursor-pointer transition-all group ${news.pinned ? (isDark ? 'bg-brand-red/[0.06] border border-brand-red/15 hover:border-brand-red/30' : 'bg-red-50/60 border border-red-200/40 hover:border-red-300/60') : t('bg-white/[0.02] border border-white/[0.04] hover:border-white/[0.08]','bg-gray-100/50 border border-gray-200/30 hover:border-gray-300/40')}`}>
             <div className="flex items-start gap-2 mb-1">
               {news.pinned && <Flame className="w-3 h-3 text-brand-red shrink-0 mt-0.5" />}
               <div className="flex-1 min-w-0">
-                <p className={`text-xs font-bold truncate ${t('text-white','text-gray-900')}`}>{String(news.title || '')}</p>
-                <p className={`text-[11px] mt-0.5 line-clamp-2 leading-relaxed ${t('text-gray-500','text-gray-700')}`}>{String(news.excerpt || news.content || '')}</p>
+                <p className={`text-xs font-bold ${isExpanded ? '' : 'truncate'} ${t('text-white','text-gray-900')}`}>{String(news.title || '')}</p>
+                <p className={`text-[11px] mt-0.5 leading-relaxed ${isExpanded ? 'whitespace-pre-wrap' : 'line-clamp-2'} ${t('text-gray-500','text-gray-700')}`}>{String(isExpanded ? (news.content || news.excerpt || '') : (news.excerpt || news.content || ''))}</p>
               </div>
             </div>
             <div className="flex items-center justify-between mt-2">
@@ -1521,7 +1524,8 @@ export default function DashboardClient() {
               <span className={`text-[10px] ${t('text-gray-600','text-gray-600')}`}>{news.date || (news.created_at ? new Date(news.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }) : '')}</span>
             </div>
           </div>
-        ))}
+          )
+        })}
       </div>
     </Glass>
   )

@@ -442,12 +442,46 @@ function InvoicesTab({ showToast, invoices, refetch }: { showToast: (msg: string
           footer={
             <>
               <ModalButton onClick={() => setSelectedInvoice(null)}>Close</ModalButton>
-              <ModalButton variant="primary" onClick={async () => {
+              <ModalButton variant="primary" onClick={() => {
                 const inv = selectedInvoice
-                const content = `INVOICE: ${inv.id}\nClient: ${inv.clientName}\nType: ${inv.type}\nAmount: ${inv.amount}\nGST: ${inv.gst}\nTotal: ${inv.total}\nStatus: ${inv.status}\nDate: ${inv.date}\nDue Date: ${inv.dueDate}`
-                const blob = new Blob([content], { type: 'text/plain' })
-                await saveBlobAs(blob, `Invoice_${inv.id}.txt`, showToast as any)
-                showToast('Invoice downloaded as text. PDF export coming soon.', 'info')
+                // Real printable PDF invoice — opens in a new window with window.print()
+                const fmt = (n: any) => new Intl.NumberFormat('en-IN').format(Math.round(Number(n) || 0))
+                const html = `<!doctype html><html><head><title>Invoice ${inv.id}</title>
+                  <style>
+                    body{font-family:Georgia,'Times New Roman',serif;padding:40px 56px;color:#111;line-height:1.55}
+                    .hdr{text-align:center;border-bottom:2px solid #8B0000;padding-bottom:12px;margin-bottom:28px}
+                    .hdr h1{color:#8B0000;margin:0;font-size:22px;letter-spacing:1px}
+                    .hdr p{color:#555;margin:4px 0 0;font-size:12px}
+                    h2{color:#8B0000;font-size:18px;text-align:center;margin:20px 0 16px}
+                    .ref{display:flex;justify-content:space-between;font-size:12px;color:#666;margin-bottom:20px}
+                    table{width:100%;border-collapse:collapse;font-size:13px;margin:20px 0}
+                    table td{padding:8px 12px;border:1px solid #e1e1e1}
+                    table td.label{background:#faf7f5;color:#555;width:38%;font-weight:600}
+                    .total{background:#8B0000;color:#fff!important}
+                    .footer{margin-top:56px;font-size:10px;color:#888;text-align:center;border-top:1px solid #eee;padding-top:12px}
+                    @media print{@page{margin:1.6cm}}
+                  </style></head><body>
+                  <div class="hdr"><h1>GHL INDIA VENTURES PRIVATE LIMITED</h1><p>SEBI Registered Category II AIF</p></div>
+                  <div class="ref">
+                    <span>Invoice No: <strong>${inv.id}</strong></span>
+                    <span>Issue Date: <strong>${inv.date ? new Date(inv.date).toLocaleDateString('en-IN') : '-'}</strong></span>
+                    <span>Due Date: <strong>${inv.dueDate ? new Date(inv.dueDate).toLocaleDateString('en-IN') : '-'}</strong></span>
+                  </div>
+                  <h2>Invoice</h2>
+                  <table>
+                    <tr><td class="label">Billed To</td><td>${inv.clientName || '-'}</td></tr>
+                    <tr><td class="label">Type</td><td>${inv.type || '-'}</td></tr>
+                    <tr><td class="label">Amount</td><td>₹ ${fmt(inv.amount)}</td></tr>
+                    <tr><td class="label">GST (18%)</td><td>₹ ${fmt(inv.gst)}</td></tr>
+                    <tr><td class="label total">Total</td><td class="total">₹ ${fmt(inv.total)}</td></tr>
+                    <tr><td class="label">Status</td><td style="text-transform:capitalize">${inv.status || '-'}</td></tr>
+                  </table>
+                  <div class="footer">This is a system-generated document. For queries contact info@ghlindiaventures.com</div>
+                  <script>window.onload=()=>window.print()</script>
+                </body></html>`
+                const w = window.open('', '_blank')
+                if (w) { w.document.write(html); w.document.close() }
+                else showToast('Please allow popups to generate PDF', 'info')
                 setSelectedInvoice(null)
               }}>Download Invoice</ModalButton>
             </>
