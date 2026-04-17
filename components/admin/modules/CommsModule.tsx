@@ -168,14 +168,31 @@ function InvestorMessagesTab({ showToast }: { showToast: (msg: string, type?: 's
       const { data: { user } } = await (supabase as any).auth.getUser()
       const adminId = user?.id || null
       const adminName = user?.user_metadata?.full_name || user?.email || 'Admin'
+
+      // The reply target is the OTHER party on this message. Messages in the
+      // admin inbox can be either an investor->admin note OR an earlier
+      // admin->investor note the admin is now following up on. If we just use
+      // msg.from_id we'd occasionally reply to ourselves (we hit this bug
+      // where reply to_id == admin's own id). So pick whichever of from/to is
+      // not the current admin. Fall back to the other field if only one exists.
+      let targetUserId: string | null = null
+      if (msg.from_id && msg.from_id !== adminId) targetUserId = msg.from_id
+      else if (msg.to_id && msg.to_id !== adminId) targetUserId = msg.to_id
+      else targetUserId = msg.to_id || msg.from_id || null
+
+      if (!targetUserId) {
+        showToast('Cannot reply — unable to resolve the investor on this message', 'error')
+        setReplySending(false)
+        return
+      }
+
       // The `messages` table schema has only: id, from_id, to_id, subject,
       // body, read, read_at, attachments, metadata (jsonb), created_at,
-      // updated_at. Extra fields like from_name / client_id / is_admin_reply /
-      // in_reply_to go inside `metadata` so Postgrest doesn't 400.
+      // updated_at. Auxiliary fields live inside `metadata`.
       const subject = (msg.subject || '').startsWith('Re:') ? msg.subject : `Re: ${msg.subject || 'Your message'}`
       const payload: Record<string, any> = {
         from_id: adminId,
-        to_id: msg.from_id || null,
+        to_id: targetUserId,
         subject,
         body,
         read: false,
