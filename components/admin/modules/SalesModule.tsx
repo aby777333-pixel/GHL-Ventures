@@ -1365,7 +1365,16 @@ function InvestmentsTab({ showToast }: { showToast: (m: string, t?: 'success' | 
       const { uploadAdminInvestmentDocument } = await import('@/lib/supabase/adminDataService')
       const { supabase } = await import('@/lib/supabase/client')
       const { data: { user } } = await (supabase as any).auth.getUser()
-      const results = await pickAndUploadFiles(`admin/investments/${selectedApp.id}`, { accept: '.pdf,.jpg,.jpeg,.png', multiple: false })
+      // Route key 'general' → public `uploads` bucket so investors can view
+       // admin-uploaded investment docs via the stored public URL without
+       // signed URLs. entityId scopes file_records per-investment.
+       const results = await pickAndUploadFiles('general', {
+         accept: '.pdf,.jpg,.jpeg,.png',
+         multiple: false,
+         entityType: 'investment',
+         entityId: selectedApp.id,
+         category: 'investment-document',
+       })
       if (results?.[0]?.success && results[0].file) {
         const f = results[0].file
         const row = await uploadAdminInvestmentDocument({

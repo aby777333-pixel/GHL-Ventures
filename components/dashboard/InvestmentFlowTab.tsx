@@ -278,23 +278,43 @@ export default function InvestmentFlowTab({
   const handleUploadProof = async () => {
     try {
       const { pickAndUploadFiles } = await import('@/lib/supabase/storageService')
-      const results = await pickAndUploadFiles(`client/transactions/${clientId}`, { accept: '.pdf,.jpg,.jpeg,.png', multiple: false })
+      // Route key is the literal 'general' so the file lands in the public
+      // `uploads` bucket (admin + investor can both preview via the stored
+      // public URL without signed-URL ceremony). The clientId is passed as
+      // entityId so file_records still tracks ownership.
+      const results = await pickAndUploadFiles('general', {
+        accept: '.pdf,.jpg,.jpeg,.png',
+        multiple: false,
+        entityType: 'client',
+        entityId: clientId || undefined,
+        category: 'transaction-proof',
+      })
       if (results?.[0]?.success && results[0].file) {
         setTxnForm(p => ({ ...p, proofUrl: results[0].file!.url }))
         showToast('Proof uploaded!', 'success')
+      } else {
+        showToast(`Upload failed${results?.[0]?.error ? ': ' + results[0].error : ''}`, 'error')
       }
-    } catch { showToast('Upload failed', 'error') }
+    } catch (e: any) { showToast(`Upload failed: ${e?.message || 'unknown'}`, 'error') }
   }
 
   const handleUploadSigned = async (docId: string) => {
     try {
       const { pickAndUploadFiles } = await import('@/lib/supabase/storageService')
-      const results = await pickAndUploadFiles(`client/signed/${clientId}`, { accept: '.pdf,.jpg,.jpeg,.png', multiple: false })
+      const results = await pickAndUploadFiles('general', {
+        accept: '.pdf,.jpg,.jpeg,.png',
+        multiple: false,
+        entityType: 'client',
+        entityId: clientId || undefined,
+        category: 'signed-document',
+      })
       if (results?.[0]?.success && results[0].file) {
         await uploadSignedDocument(docId, results[0].file.url)
         showToast('Signed document uploaded!', 'success')
+      } else {
+        showToast(`Upload failed${results?.[0]?.error ? ': ' + results[0].error : ''}`, 'error')
       }
-    } catch { showToast('Upload failed', 'error') }
+    } catch (e: any) { showToast(`Upload failed: ${e?.message || 'unknown'}`, 'error') }
   }
 
   const handleViewDoc = async (url: string) => {

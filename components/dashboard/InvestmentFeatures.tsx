@@ -160,15 +160,22 @@ export function InvestmentDetail({ application, bankAccounts, theme, clientId, s
     try {
       setUploading(true)
       const { pickAndUploadFiles } = await import('@/lib/supabase/storageService')
-      const results = await pickAndUploadFiles(`client/transactions/${clientId}`, {
-        accept: '.pdf,.jpg,.jpeg,.png',
-        multiple: false,
-      })
+      // Route key 'general' → public `uploads` bucket so the stored URL
+       // is directly viewable by admin without signed URLs.
+       const results = await pickAndUploadFiles('general', {
+         accept: '.pdf,.jpg,.jpeg,.png',
+         multiple: false,
+         entityType: 'client',
+         entityId: clientId || undefined,
+         category: 'transaction-proof',
+       })
       if (results && results.length > 0 && results[0].success && results[0].file) {
         setTxnForm(prev => ({ ...prev, proofUrl: results[0].file!.url || results[0].file!.path || '' }))
         showToast('Proof uploaded!', 'success')
+      } else {
+        showToast(`Upload failed${results?.[0]?.error ? ': ' + results[0].error : ''}`, 'error')
       }
-    } catch { showToast('Upload failed', 'error') }
+    } catch (e: any) { showToast(`Upload failed: ${e?.message || 'unknown'}`, 'error') }
     setUploading(false)
   }
 
@@ -369,15 +376,20 @@ export function InvestmentDocumentsSection({ documents, theme, showToast, client
     try {
       setUploading(docId)
       const { pickAndUploadFiles } = await import('@/lib/supabase/storageService')
-      const results = await pickAndUploadFiles(`client/signed/${clientId}`, {
+      const results = await pickAndUploadFiles('general', {
         accept: '.pdf,.jpg,.jpeg,.png',
         multiple: false,
+        entityType: 'client',
+        entityId: clientId || undefined,
+        category: 'signed-document',
       })
       if (results && results.length > 0 && results[0].success && results[0].file) {
         await uploadSignedDocument(docId, results[0].file.url || results[0].file.path || '')
         showToast('Signed document uploaded successfully!', 'success')
+      } else {
+        showToast(`Upload failed${results?.[0]?.error ? ': ' + results[0].error : ''}`, 'error')
       }
-    } catch { showToast('Upload failed', 'error') }
+    } catch (e: any) { showToast(`Upload failed: ${e?.message || 'unknown'}`, 'error') }
     setUploading(null)
   }
 

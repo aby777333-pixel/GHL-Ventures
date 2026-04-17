@@ -3488,7 +3488,7 @@ export default function DashboardClient() {
             <div onClick={async () => {
               try {
                 const { pickAndUploadFiles } = await import('@/lib/supabase/storageService')
-                const results = await pickAndUploadFiles(`client/kyc/clients/${clientId}`, {
+                const results = await pickAndUploadFiles('client/kyc', {
                   accept: '.pdf,.jpg,.jpeg,.png',
                   portal: 'client',
                   entityType: 'client',
