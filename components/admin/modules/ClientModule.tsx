@@ -214,6 +214,10 @@ export default function ClientModule({ subTab, navigate, showToast }: ClientModu
                 if (!emailRegex.test(clientForm.email.trim())) { showToast('Please enter a valid email address', 'error'); return }
                 // Sanitize assigned_rm: send null if empty or non-UUID string like "Unassigned"
                 const sanitizedRM = clientForm.assigned_rm && clientForm.assigned_rm !== 'Unassigned' && clientForm.assigned_rm !== 'Not assigned' ? clientForm.assigned_rm : null
+                // Clamp risk_profile to the DB CHECK constraint values — anything
+                // outside conservative/moderate/aggressive falls back to moderate.
+                const allowedRisk = ['conservative', 'moderate', 'aggressive']
+                const sanitizedRisk = allowedRisk.includes(clientForm.risk_profile) ? clientForm.risk_profile : 'moderate'
                 try {
                   if (editingClient) {
                     // Update existing client
@@ -224,7 +228,7 @@ export default function ClientModule({ subTab, navigate, showToast }: ClientModu
                       email: clientForm.email,
                       phone: clientForm.phone || null,
                       pan: clientForm.pan || null,
-                      risk_profile: clientForm.risk_profile || 'moderate',
+                      risk_profile: sanitizedRisk,
                       assigned_rm: sanitizedRM,
                       total_invested: parseFloat(clientForm.total_invested) || 0,
                     }).eq('id', editingClient.id)
@@ -243,7 +247,7 @@ export default function ClientModule({ subTab, navigate, showToast }: ClientModu
                       email: clientForm.email,
                       phone: clientForm.phone || null,
                       pan: clientForm.pan || null,
-                      risk_profile: clientForm.risk_profile || 'moderate',
+                      risk_profile: sanitizedRisk,
                       assigned_rm: sanitizedRM,
                       total_invested: parseFloat(clientForm.total_invested) || 0,
                       client_code: clientCode,
@@ -292,10 +296,10 @@ export default function ClientModule({ subTab, navigate, showToast }: ClientModu
               <div>
                 <label className="block text-xs font-medium text-gray-400 mb-1.5">Risk Profile</label>
                 <select value={clientForm.risk_profile} onChange={e => setClientForm(f => ({ ...f, risk_profile: e.target.value }))} className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-brand-red/40 focus:ring-1 focus:ring-brand-red/20">
+                  {/* Values must match the DB CHECK constraint on clients.risk_profile */}
                   <option value="conservative">Conservative</option>
                   <option value="moderate">Moderate</option>
                   <option value="aggressive">Aggressive</option>
-                  <option value="speculative">Speculative</option>
                 </select>
               </div>
               <div>
