@@ -319,20 +319,24 @@ function InvestorMessagesTab({ showToast }: { showToast: (msg: string, type?: 's
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 mb-1 flex-wrap">
-                          <span className="text-sm font-semibold text-white truncate">{msg.from_name || 'Investor'}</span>
+                          <span className="text-sm font-semibold text-white truncate">{msg.from_name || msg?.metadata?.from_name || 'Investor'}</span>
                           <span className={`px-2 py-0.5 rounded-full text-[10px] font-medium border ${colorClass}`}>{type}</span>
                           {!msg.read && <span className="w-2 h-2 rounded-full bg-brand-red flex-shrink-0" />}
                         </div>
                         <p className="text-sm text-gray-300 font-medium truncate">{clean}</p>
-                        {isSelected && msg.body && (
+                        {/* Bug #33: Reply composer always renders when the message is
+                            selected (was previously gated on msg.body being non-empty,
+                            which hid the composer for messages with attachments only). */}
+                        {isSelected && (
                           <div className="mt-3 p-3 rounded-lg bg-white/[0.03] border border-white/[0.06]">
-                            <p className="text-sm text-gray-400 whitespace-pre-wrap">{msg.body}</p>
+                            <p className="text-sm text-gray-400 whitespace-pre-wrap">
+                              {msg.body || <span className="italic text-gray-600">(no body)</span>}
+                            </p>
                             {msg.attachments && msg.attachments.length > 0 && (
                               <div className="mt-2 flex items-center gap-1 text-xs text-gray-500">
                                 <Paperclip className="w-3 h-3" /> {msg.attachments.length} attachment(s)
                               </div>
                             )}
-                            {/* Bug #29: Admin reply composer */}
                             <div className="mt-4 pt-3 border-t border-white/[0.06]" onClick={(e) => e.stopPropagation()}>
                               <label className="block text-[10px] uppercase tracking-wider text-gray-500 mb-1.5">Your Reply</label>
                               <textarea

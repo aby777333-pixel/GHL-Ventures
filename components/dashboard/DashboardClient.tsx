@@ -2252,27 +2252,25 @@ export default function DashboardClient() {
                       } catch { /* continue with other files */ }
                     }
                   }
-                  // Resolve recipient: find an admin / RM user to route the message to.
-                  // Rule: never self-address. If we can't resolve a real recipient
-                  // distinct from the sender, surface an error instead of silently
-                  // writing a message that nobody can read.
+                  // Bug #34: Resolve recipient via SECURITY DEFINER RPC so the
+                  // investor's RLS on `profiles` doesn't strip the result.
+                  // RPC returns the assigned RM if available, else the first
+                  // super_admin, else the first admin — never the sender.
                   const { supabase: sb } = await import('@/lib/supabase/client')
                   let recipientId: string | null = null
-                  // Try assigned RM first
-                  if (clientId) {
-                    const { data: clientRow } = await (sb as any).from('clients').select('assigned_rm').eq('id', clientId).maybeSingle()
-                    if (clientRow?.assigned_rm) {
-                      const { data: rmStaff } = await (sb as any).from('staff_profiles').select('user_id').eq('id', clientRow.assigned_rm).maybeSingle()
-                      if (rmStaff?.user_id && rmStaff.user_id !== user?.id) recipientId = rmStaff.user_id
-                    }
-                  }
-                  // Fall back to the first admin OR super_admin
+                  try {
+                    const { data: rpcId } = await (sb as any).rpc('get_support_recipient_id', { p_sender: user?.id || null })
+                    if (rpcId && rpcId !== user?.id) recipientId = rpcId as string
+                  } catch { /* fall through to direct query */ }
+                  // Best-effort fallback: try direct profile lookup (may fail under RLS but harmless)
                   if (!recipientId) {
-                    const { data: admins } = await (sb as any).from('profiles').select('id').in('role', ['admin', 'super_admin']).neq('id', user?.id || '').limit(1)
-                    if (admins?.[0]?.id) recipientId = admins[0].id
+                    try {
+                      const { data: admins } = await (sb as any).from('profiles').select('id').in('role', ['admin', 'super_admin']).neq('id', user?.id || '').limit(1)
+                      if (admins?.[0]?.id) recipientId = admins[0].id
+                    } catch { /* ignore */ }
                   }
                   if (!recipientId) {
-                    showToast('Message service is offline — no relationship manager is currently assigned. Please try again later.', 'info')
+                    showToast('Message service is temporarily unavailable. Please try again in a moment.', 'info')
                     return
                   }
                   const body = attachmentUrls.length > 0 ? `${msgBody}\n\n📎 Attachments: ${attachmentUrls.length} file(s)` : msgBody
@@ -2486,6 +2484,27 @@ export default function DashboardClient() {
                       <p className={`text-xs leading-relaxed ${t('text-gray-400','text-gray-700')}`}>{tk.description}</p>
                     </div>
                   )}
+                  {/* Bug #27: Show admin responses from tickets.metadata.admin_responses */}
+                  {(() => {
+                    const responses = Array.isArray(tk?.metadata?.admin_responses) ? tk.metadata.admin_responses : []
+                    if (responses.length === 0) return null
+                    return (
+                      <div className={`mt-4 pt-3 border-t ${t('border-white/[0.06]','border-gray-200')}`}>
+                        <p className={`text-[10px] font-medium uppercase tracking-wide mb-2 ${t('text-gray-600','text-gray-500')}`}>Admin Replies ({responses.length})</p>
+                        <div className="space-y-2">
+                          {responses.map((r: any, idx: number) => (
+                            <div key={idx} className={`p-3 rounded-lg ${t('bg-white/[0.03] border border-white/[0.06]','bg-blue-50 border border-blue-200/50')}`}>
+                              <div className={`flex items-center justify-between mb-1.5 text-[10px] ${t('text-gray-500','text-gray-600')}`}>
+                                <span className="font-semibold">Status → {r.status || 'updated'}</span>
+                                <span>{r.at ? new Date(r.at).toLocaleString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : ''}</span>
+                              </div>
+                              <p className={`text-xs leading-relaxed whitespace-pre-wrap ${t('text-gray-300','text-gray-800')}`}>{r.response || ''}</p>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )
+                  })()}
                 </div>
               )}
             </div>
@@ -2780,7 +2799,13 @@ export default function DashboardClient() {
               }} className="text-xs text-brand-red font-semibold flex items-center gap-1"><Landmark className="w-3 h-3" /> Bank Connect</button>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {[['Bank Name', savedBankData.bank_name || user?.bank_name || 'Not provided'],['Account No', savedBankData.account_number || user?.bank_account || 'Not provided'],['IFSC', savedBankData.ifsc_code || user?.bank_ifsc || 'Not provided'],['Account Type', savedBankData.account_type || user?.bank_type || 'Not provided']].map(([l,v],i) => (
+              {/* Bug #31: Prefer KYC bank details so Profile shows the exact values the investor submitted */}
+              {[
+                ['Bank Name', (kycBank as any)?.bank_name || savedBankData.bank_name || user?.bank_name || 'Not provided'],
+                ['Account No', (kycBank as any)?.account_number || savedBankData.account_number || user?.bank_account || 'Not provided'],
+                ['IFSC', (kycBank as any)?.ifsc_code || savedBankData.ifsc_code || user?.bank_ifsc || 'Not provided'],
+                ['Account Type', (kycBank as any)?.account_type || savedBankData.account_type || user?.bank_type || 'Not provided'],
+              ].map(([l,v],i) => (
                 <div key={i}><p className={`text-[10px] uppercase tracking-wider mb-1 ${t('text-gray-600','text-gray-600')}`}>{l}</p><p className={`text-sm font-medium ${v === 'Not provided' ? 'text-gray-600 italic' : t('text-white','text-gray-900')}`}>{v}</p></div>
               ))}
             </div>

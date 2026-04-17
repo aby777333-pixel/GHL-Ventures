@@ -1184,10 +1184,29 @@ function InvestmentsTab({ showToast }: { showToast: (m: string, t?: 'success' | 
       return <AdminBadge label={s.label} variant={s.variant} size="sm" dot />
     }},
     { key: 'created_at', label: 'Date', sortable: true, render: (row) => <span className="text-gray-500 text-xs">{formatDate(row.created_at)}</span> },
-    { key: 'actions', label: '', width: '48px', render: (row) => (
-      <button onClick={() => { setSelectedApp(row); setDetailOpen(true) }} className="p-1.5 rounded-lg hover:bg-white/[0.06] text-gray-500 hover:text-white transition-colors">
-        <Eye className="w-3.5 h-3.5" />
-      </button>
+    { key: 'actions', label: '', width: '130px', render: (row) => (
+      <div className="flex items-center gap-1">
+        <button onClick={() => { setSelectedApp(row); setDetailOpen(true) }}
+          title="View details"
+          className="p-1.5 rounded-lg hover:bg-white/[0.06] text-gray-500 hover:text-white transition-colors">
+          <Eye className="w-3.5 h-3.5" />
+        </button>
+        {/* Bug #18: Quick "Give Credit" action on approved rows so the admin
+            doesn't need to open the modal to find the button. Hidden once
+            already credited. */}
+        {row.status === 'approved' && !row.credit_given && (
+          <button onClick={(e) => { e.stopPropagation(); handleGiveCredit(row.id) }}
+            title="Give Credit — records funds as credited for this investment"
+            className="px-2 py-1 rounded-lg text-[10px] font-semibold text-emerald-300 bg-emerald-500/15 border border-emerald-500/30 hover:bg-emerald-500/25 transition-colors">
+            Give Credit
+          </button>
+        )}
+        {row.credit_given && (
+          <span className="px-2 py-1 rounded-lg text-[10px] font-semibold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20">
+            Credited
+          </span>
+        )}
+      </div>
     )},
   ]
 
@@ -1225,15 +1244,18 @@ function InvestmentsTab({ showToast }: { showToast: (m: string, t?: 'success' | 
     finally { setUpdating(false) }
   }
 
-  // Bug #16: Give Credit — marks investment as credited
-  const handleGiveCredit = async () => {
-    if (!selectedApp) return
+  // Bug #16/18: Give Credit — marks investment as credited. Accepts an
+  // optional appId so the row-level quick action can work without relying
+  // on the selectedApp state (which doesn't update synchronously).
+  const handleGiveCredit = async (appId?: string) => {
+    const id = appId || selectedApp?.id
+    if (!id) return
     setUpdating(true)
     try {
       const { markInvestmentCreditGiven } = await import('@/lib/supabase/adminDataService')
       const { supabase } = await import('@/lib/supabase/client')
       const { data: { user } } = await (supabase as any).auth.getUser()
-      const ok = await markInvestmentCreditGiven(selectedApp.id, user?.id || '')
+      const ok = await markInvestmentCreditGiven(id, user?.id || '')
       if (ok) {
         showToast('Credit marked as given', 'success')
         loadData()

@@ -149,7 +149,7 @@ export default function InvestorClient() {
               <button
                 key={tab.id}
                 onClick={() => navigate(tab.id)}
-                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all ${
+                className={`w-full flex items-center justify-start text-left gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all ${
                   isActive
                     ? 'bg-red-50 text-red-700 border border-red-200/60'
                     : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
@@ -165,7 +165,7 @@ export default function InvestorClient() {
         <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-gray-100">
           <button
             onClick={async () => { try { await logout() } catch {} window.location.href = '/' }}
-            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-gray-500 hover:bg-gray-50 hover:text-red-600 transition-colors"
+            className="w-full flex items-center justify-start text-left gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-gray-500 hover:bg-gray-50 hover:text-red-600 transition-colors"
           >
             <LogOut className="w-4 h-4" />
             Sign Out

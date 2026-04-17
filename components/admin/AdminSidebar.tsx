@@ -158,9 +158,10 @@ export default function AdminSidebar({
                   )}
                 </button>
 
-                {/* Sub-items — left-aligned (bug #31), indented to match parent text start */}
+                {/* Sub-items — flush-left (bug #36) aligned to the same left edge
+                    as the parent module buttons (no indent / no border rail). */}
                 {hasSubItems && isExpanded && (
-                  <div className="ml-3 mt-0.5 space-y-0.5 mb-1 border-l border-white/10 pl-3">
+                  <div className="mt-0.5 space-y-0.5 mb-1">
                     {item.subItems!.map(sub => {
                       const subModule = sub.id.split('/')[0]
                       const subTab = sub.id.includes('/') ? sub.id.split('/')[1] : null
@@ -177,6 +178,7 @@ export default function AdminSidebar({
                               : 'text-white/60 hover:text-white hover:bg-white/10'
                             }`}
                         >
+                          <span className="w-[18px] flex-shrink-0" />
                           {sub.label}
                         </button>
                       )

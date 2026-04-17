@@ -108,6 +108,8 @@ export default function ContentManagerModule({ subTab, navigate, showToast }: Co
   const [editorOpen, setEditorOpen] = useState(false)
   const [editingItem, setEditingItem] = useState<BlogPost | FinancialIQPost | FAQ | SupportTicket | null>(null)
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null)
+  // Bug #26: ticket detail view
+  const [viewingTicket, setViewingTicket] = useState<SupportTicket | null>(null)
 
   // Blog / FIQ form fields
   const [formTitle, setFormTitle] = useState('')
@@ -488,8 +490,14 @@ export default function ContentManagerModule({ subTab, navigate, showToast }: Co
     { key: 'updated_at', label: 'Updated', sortable: true, render: (r) => (
       <span className="text-xs text-gray-400">{new Date(r.updated_at).toLocaleDateString()}</span>
     )},
-    { key: 'actions', label: '', width: '180px', render: (r) => (
+    { key: 'actions', label: '', width: '220px', render: (r) => (
       <div className="flex items-center gap-1">
+        {/* Bug #26: Admin "View" button opens full ticket details + response history */}
+        <button onClick={(e) => { e.stopPropagation(); setViewingTicket(r) }}
+          title="View ticket"
+          className="p-1.5 rounded-lg hover:bg-blue-500/10 text-gray-500 hover:text-blue-400 transition-colors">
+          <FileText className="w-3.5 h-3.5" />
+        </button>
         <select
           value={r.status}
           onClick={(e) => e.stopPropagation()}
@@ -837,6 +845,81 @@ export default function ContentManagerModule({ subTab, navigate, showToast }: Co
           Are you sure you want to delete this {activeTab === 'blog' ? 'blog post' : activeTab === 'financial-iq' ? 'Financial IQ post' : activeTab === 'faq' ? 'FAQ' : 'ticket'}?
           This will permanently remove it from the database.
         </p>
+      </AdminModal>
+
+      {/* Bug #26: Ticket detail modal — admins can see the full message + reply history */}
+      <AdminModal
+        isOpen={!!viewingTicket}
+        onClose={() => setViewingTicket(null)}
+        title={viewingTicket ? `Ticket ${(viewingTicket as any).ticket_number || '#' + viewingTicket.id.slice(0, 8)}` : 'Ticket'}
+        subtitle={viewingTicket?.subject}
+        maxWidth="max-w-2xl"
+      >
+        {viewingTicket && (
+          <div className="space-y-4 text-sm">
+            <div className="grid grid-cols-2 gap-3 p-3 rounded-lg bg-white/[0.03] border border-white/[0.06]">
+              <div>
+                <p className="text-[10px] uppercase tracking-wider text-gray-500">Investor</p>
+                <p className="text-xs text-white">{(viewingTicket as any).client_name || 'Unknown'}</p>
+              </div>
+              <div>
+                <p className="text-[10px] uppercase tracking-wider text-gray-500">Status</p>
+                <p className="text-xs text-white capitalize">{viewingTicket.status}</p>
+              </div>
+              <div>
+                <p className="text-[10px] uppercase tracking-wider text-gray-500">Priority</p>
+                <p className="text-xs text-white capitalize">{viewingTicket.priority || 'Medium'}</p>
+              </div>
+              <div>
+                <p className="text-[10px] uppercase tracking-wider text-gray-500">Category</p>
+                <p className="text-xs text-white">{(viewingTicket as any).category || 'General'}</p>
+              </div>
+              <div>
+                <p className="text-[10px] uppercase tracking-wider text-gray-500">Created</p>
+                <p className="text-xs text-white">{new Date(viewingTicket.created_at).toLocaleString('en-IN')}</p>
+              </div>
+              <div>
+                <p className="text-[10px] uppercase tracking-wider text-gray-500">Last Updated</p>
+                <p className="text-xs text-white">{new Date(viewingTicket.updated_at).toLocaleString('en-IN')}</p>
+              </div>
+            </div>
+
+            <div>
+              <p className="text-[10px] uppercase tracking-wider text-gray-500 mb-1.5">Investor's Message</p>
+              <p className="text-xs leading-relaxed text-gray-200 bg-white/[0.03] border border-white/[0.06] rounded-lg p-3 whitespace-pre-wrap">
+                {viewingTicket.description || '(no description)'}
+              </p>
+            </div>
+
+            {(() => {
+              const meta: any = (viewingTicket as any).metadata || {}
+              const responses = Array.isArray(meta.admin_responses) ? meta.admin_responses : []
+              if (responses.length === 0) {
+                return <p className="text-xs italic text-gray-500">No admin responses yet. Changing status will require you to enter a response.</p>
+              }
+              return (
+                <div>
+                  <p className="text-[10px] uppercase tracking-wider text-gray-500 mb-1.5">Admin Response History ({responses.length})</p>
+                  <div className="space-y-2">
+                    {responses.map((r: any, i: number) => (
+                      <div key={i} className="p-3 rounded-lg bg-white/[0.03] border border-white/[0.06]">
+                        <div className="flex items-center justify-between mb-1 text-[10px] text-gray-500">
+                          <span className="font-semibold">Status → {r.status}</span>
+                          <span>{r.at ? new Date(r.at).toLocaleString('en-IN') : ''}</span>
+                        </div>
+                        <p className="text-xs text-gray-200 whitespace-pre-wrap">{r.response}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )
+            })()}
+
+            <div className="flex justify-end pt-3 border-t border-white/[0.06]">
+              <ModalButton variant="secondary" onClick={() => setViewingTicket(null)}>Close</ModalButton>
+            </div>
+          </div>
+        )}
       </AdminModal>
     </div>
   )

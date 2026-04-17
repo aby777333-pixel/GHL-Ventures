@@ -230,19 +230,36 @@ export default function PayoutModule({ subTab, navigate, showToast }: PayoutModu
         return
       }
 
+      // Bug #24: Auto-backfill investment_date / maturity_date for any approved
+      // app that's missing them so the payout schedule always generates.
+      const needsBackfill = (apps as any[]).filter(a => !a.investment_date || !a.maturity_date)
+      if (needsBackfill.length > 0) {
+        const today = new Date()
+        for (const a of needsBackfill) {
+          const tenureYears = Number(String(a.tenure_preference || '').replace(/[^0-9]/g, '')) || 3
+          const invDate = a.investment_date ? new Date(a.investment_date) : today
+          const matDate = new Date(invDate)
+          matDate.setFullYear(matDate.getFullYear() + tenureYears)
+          const patch: Record<string, any> = {
+            investment_date: a.investment_date || invDate.toISOString().split('T')[0],
+            maturity_date: a.maturity_date || matDate.toISOString().split('T')[0],
+            interest_rate: a.interest_rate || (a.fund_vehicle === 'Direct AIF Route' ? 18 : 12),
+            appreciation_rate: a.appreciation_rate || (a.fund_vehicle === 'Direct AIF Route' ? 15 : 12),
+            tds_rate: a.tds_rate || 10,
+          }
+          await (supabase as any).from('investment_applications').update(patch).eq('id', a.id)
+          Object.assign(a, patch)
+        }
+      }
+
       let totalCreated = 0
-      let withMissingDate = 0
       for (const app of apps as any[]) {
-        if (!app.investment_date) { withMissingDate++; continue }
         const created = await generateFullPayoutSchedule(app)
         totalCreated += created
       }
 
       if (totalCreated === 0) {
-        const note = withMissingDate > 0
-          ? `No new payouts generated. ${withMissingDate} investment(s) are missing investment_date — approve them to populate defaults.`
-          : 'All eligible investments already have their full payout schedule.'
-        showToast(note, 'info')
+        showToast('All eligible investments already have their full payout schedule.', 'info')
       } else {
         showToast(`Generated ${totalCreated} payout row(s) across ${apps.length} investment(s)`, 'success')
       }

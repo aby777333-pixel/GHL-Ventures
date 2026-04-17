@@ -120,8 +120,20 @@ export default function ComplianceModule({ subTab, navigate, showToast }: Compli
 function KYCQueueTab({ kycQueue, showToast, onRefresh }: { kycQueue: any[]; showToast: (msg: string, type?: 'success' | 'error' | 'info' | 'warning') => void; onRefresh: () => void }) {
   const [statusFilter, setStatusFilter] = useState<string>('all')
   const [selectedKYC, setSelectedKYC] = useState<any | null>(null)
+  const [viewingKYC, setViewingKYC] = useState<any | null>(null)
+  const [viewingDetail, setViewingDetail] = useState<any | null>(null)
   const [processing, setProcessing] = useState(false)
   const [rejectReason, setRejectReason] = useState('')
+
+  // Fetch full KYC data for the View Details modal (bug #11).
+  const openDetails = useCallback(async (clientId: string) => {
+    setViewingKYC({ clientId })
+    try {
+      const { fetchClientKYCDetails } = await import('@/lib/supabase/adminDataService')
+      const data = await fetchClientKYCDetails(clientId)
+      setViewingDetail(data)
+    } catch { setViewingDetail(null) }
+  }, [])
 
   // Group KYC items by client (bug #7: list descending by most recent submission)
   const clientGroups = useMemo(() => {
@@ -227,6 +239,14 @@ function KYCQueueTab({ kycQueue, showToast, onRefresh }: { kycQueue: any[]; show
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
+                  {/* Bug #11: View the full KYC details submitted by the investor */}
+                  <button
+                    onClick={() => openDetails(group.clientId)}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-blue-500/20 text-blue-400 border border-blue-500/30 hover:bg-blue-500/30 transition-colors"
+                  >
+                    <Eye className="w-3.5 h-3.5" />
+                    View Details
+                  </button>
                   <button
                     disabled={processing}
                     onClick={() => handleApproveAll(group.clientId)}
@@ -351,6 +371,140 @@ function KYCQueueTab({ kycQueue, showToast, onRefresh }: { kycQueue: any[]; show
               >
                 {processing ? 'Rejecting...' : 'Confirm Rejection'}
               </button>
+            </div>
+          </div>
+        )}
+      </AdminModal>
+
+      {/* Bug #11: Full submitted KYC details modal */}
+      <AdminModal
+        isOpen={!!viewingKYC}
+        onClose={() => { setViewingKYC(null); setViewingDetail(null) }}
+        title="Submitted KYC Details"
+        maxWidth="max-w-3xl"
+      >
+        {!viewingDetail ? (
+          <p className="text-xs text-gray-500">Loading…</p>
+        ) : (
+          <div className="space-y-5 text-sm">
+            {/* Basic Details */}
+            <section>
+              <h4 className="text-[11px] uppercase tracking-wider text-gray-400 mb-2">Basic Details</h4>
+              {viewingDetail.basic ? (
+                <div className="grid grid-cols-2 gap-3 p-3 rounded-lg bg-white/[0.03] border border-white/[0.06]">
+                  {Object.entries(viewingDetail.basic)
+                    .filter(([k]) => !['id', 'client_id', 'user_id', 'created_at', 'updated_at'].includes(k))
+                    .map(([k, v]) => (
+                      <div key={k}>
+                        <p className="text-[10px] uppercase tracking-wider text-gray-500">{k.replace(/_/g, ' ')}</p>
+                        <p className="text-xs text-white break-words">{v == null || v === '' ? '—' : String(v)}</p>
+                      </div>
+                    ))}
+                </div>
+              ) : <p className="text-xs text-gray-600 italic">Not submitted</p>}
+            </section>
+
+            {/* Identity Details */}
+            <section>
+              <h4 className="text-[11px] uppercase tracking-wider text-gray-400 mb-2">Identity Details</h4>
+              {viewingDetail.identity ? (
+                <div className="grid grid-cols-2 gap-3 p-3 rounded-lg bg-white/[0.03] border border-white/[0.06]">
+                  {Object.entries(viewingDetail.identity)
+                    .filter(([k]) => !['id', 'client_id', 'user_id', 'created_at', 'updated_at'].includes(k))
+                    .map(([k, v]) => {
+                      const isUrl = typeof v === 'string' && v.startsWith('http')
+                      return (
+                        <div key={k}>
+                          <p className="text-[10px] uppercase tracking-wider text-gray-500">{k.replace(/_/g, ' ')}</p>
+                          {isUrl ? (
+                            <a href={v as string} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-400 hover:text-blue-300">View document ↗</a>
+                          ) : (
+                            <p className="text-xs text-white break-words">{v == null || v === '' ? '—' : String(v)}</p>
+                          )}
+                        </div>
+                      )
+                    })}
+                </div>
+              ) : <p className="text-xs text-gray-600 italic">Not submitted</p>}
+            </section>
+
+            {/* Bank Details */}
+            <section>
+              <h4 className="text-[11px] uppercase tracking-wider text-gray-400 mb-2">Bank Details</h4>
+              {viewingDetail.bank ? (
+                <div className="grid grid-cols-2 gap-3 p-3 rounded-lg bg-white/[0.03] border border-white/[0.06]">
+                  {Object.entries(viewingDetail.bank)
+                    .filter(([k]) => !['id', 'client_id', 'user_id', 'created_at', 'updated_at'].includes(k))
+                    .map(([k, v]) => {
+                      const isUrl = typeof v === 'string' && v.startsWith('http')
+                      return (
+                        <div key={k}>
+                          <p className="text-[10px] uppercase tracking-wider text-gray-500">{k.replace(/_/g, ' ')}</p>
+                          {isUrl ? (
+                            <a href={v as string} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-400 hover:text-blue-300">View document ↗</a>
+                          ) : (
+                            <p className="text-xs text-white break-words">{v == null || v === '' ? '—' : String(v)}</p>
+                          )}
+                        </div>
+                      )
+                    })}
+                </div>
+              ) : <p className="text-xs text-gray-600 italic">Not submitted</p>}
+            </section>
+
+            {/* Demat */}
+            <section>
+              <h4 className="text-[11px] uppercase tracking-wider text-gray-400 mb-2">Demat Account</h4>
+              {viewingDetail.demat ? (
+                <div className="grid grid-cols-2 gap-3 p-3 rounded-lg bg-white/[0.03] border border-white/[0.06]">
+                  {Object.entries(viewingDetail.demat)
+                    .filter(([k]) => !['id', 'client_id', 'user_id', 'created_at', 'updated_at'].includes(k))
+                    .map(([k, v]) => {
+                      const isUrl = typeof v === 'string' && v.startsWith('http')
+                      return (
+                        <div key={k}>
+                          <p className="text-[10px] uppercase tracking-wider text-gray-500">{k.replace(/_/g, ' ')}</p>
+                          {isUrl ? (
+                            <a href={v as string} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-400 hover:text-blue-300">View document ↗</a>
+                          ) : (
+                            <p className="text-xs text-white break-words">{v == null || v === '' ? '—' : String(v)}</p>
+                          )}
+                        </div>
+                      )
+                    })}
+                </div>
+              ) : <p className="text-xs text-gray-600 italic">Not submitted</p>}
+            </section>
+
+            {/* Nominees (bug #9) */}
+            <section>
+              <h4 className="text-[11px] uppercase tracking-wider text-gray-400 mb-2">Nominees</h4>
+              {viewingDetail.nominees && viewingDetail.nominees.length > 0 ? (
+                <div className="space-y-2">
+                  {viewingDetail.nominees.map((nom: any) => (
+                    <div key={nom.id} className="p-3 rounded-lg bg-white/[0.03] border border-white/[0.06] grid grid-cols-2 gap-3">
+                      <div><p className="text-[10px] uppercase text-gray-500">Name</p><p className="text-xs text-white">{nom.name || '—'}</p></div>
+                      <div><p className="text-[10px] uppercase text-gray-500">Relationship</p><p className="text-xs text-white">{nom.relationship || '—'}</p></div>
+                      <div><p className="text-[10px] uppercase text-gray-500">DOB</p><p className="text-xs text-white">{nom.dob || '—'}</p></div>
+                      <div><p className="text-[10px] uppercase text-gray-500">Phone</p><p className="text-xs text-white">{nom.phone || '—'}</p></div>
+                      <div><p className="text-[10px] uppercase text-gray-500">Share %</p><p className="text-xs text-white">{nom.percentage != null ? `${nom.percentage}%` : '—'}</p></div>
+                      <div>
+                        <p className="text-[10px] uppercase text-gray-500">Proof</p>
+                        {nom.proof_url ? (
+                          <a href={nom.proof_url} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-400 hover:text-blue-300">View proof ↗</a>
+                        ) : <p className="text-xs text-gray-500 italic">Not uploaded</p>}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : <p className="text-xs text-gray-600 italic">No nominees added</p>}
+            </section>
+
+            <div className="flex justify-end pt-4 border-t border-white/[0.06]">
+              <button
+                onClick={() => { setViewingKYC(null); setViewingDetail(null) }}
+                className="px-4 py-2 rounded-xl text-sm font-medium text-gray-300 bg-white/[0.06] hover:bg-white/[0.1] transition-colors"
+              >Close</button>
             </div>
           </div>
         )}

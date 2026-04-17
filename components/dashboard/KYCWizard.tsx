@@ -279,12 +279,36 @@ export default function KYCWizard({ clientId, userId, userName, userEmail, userP
   }
 
   const handleSubmitKYC = async () => {
-    // Bug #6: Gate submission on ALL prior steps having data saved. Users can
-    // click the Nominee stepper directly without filling bank/demat/identity.
-    if (!basicData) { onToast('Please complete Basic Details before submitting', 'info'); setActiveStep(0); return }
+    // Bug #6/7: Gate submission on ALL prior steps having data saved AND the
+    // bank + identity fields actually being populated. Previously a user
+    // could click through the stepper without filling bank/demat/identity.
+    if (!basicData?.investor_name || !basicData?.phone || !basicData?.email) {
+      onToast('Please complete Basic Details before submitting', 'info'); setActiveStep(0); return
+    }
+    const isIndian = (basicData?.resident_type || 'indian') === 'indian'
     if (!identityData) { onToast('Please complete Identity Details before submitting', 'info'); setActiveStep(1); return }
+    if (isIndian) {
+      if (!identityData.pan_number || !identityData.aadhar_number || !identityData.pan_doc_url || !identityData.aadhar_doc_url) {
+        onToast('PAN, Aadhaar, and their documents are required before submitting', 'info'); setActiveStep(1); return
+      }
+    } else {
+      if (!identityData.passport_number || !identityData.passport_doc_url) {
+        onToast('Passport number and document are required before submitting', 'info'); setActiveStep(1); return
+      }
+    }
     if (!bankData) { onToast('Please complete Bank Details before submitting', 'info'); setActiveStep(2); return }
+    if (!bankData.account_number || !bankData.account_holder_name || !bankData.bank_name || !bankData.bank_doc_url) {
+      onToast('Account number, holder name, bank name and bank proof are required before submitting', 'info'); setActiveStep(2); return
+    }
+    if (isIndian && !bankData.ifsc_code) {
+      onToast('IFSC code is required for Indian residents', 'info'); setActiveStep(2); return
+    } else if (!isIndian && !bankData.swift_iban_code) {
+      onToast('SWIFT/IBAN code is required for NRI/Foreign residents', 'info'); setActiveStep(2); return
+    }
     if (!dematData) { onToast('Please complete Demat step (or mark as skipped) before submitting', 'info'); setActiveStep(3); return }
+    if (!dematData.skipped && (!dematData.demat_account_number || !dematData.demat_doc_url)) {
+      onToast('Demat account number and document are required (or mark as skipped)', 'info'); setActiveStep(3); return
+    }
     if (!nomineesData || nomineesData.length === 0) { onToast('Add at least one nominee', 'info'); return }
     const totalPct = nomineesData.reduce((sum: number, n: any) => sum + (Number(n.percentage) || 0), 0)
     if (Math.abs(totalPct - 100) > 0.01) { onToast(`Nominee percentages must total 100% (currently ${totalPct}%)`, 'info'); return }

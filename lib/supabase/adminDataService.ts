@@ -243,9 +243,13 @@ export async function fetchClients() {
 }
 
 export async function fetchKYCDocuments() {
-  // Fetch structured KYC submissions — batched queries for performance (Bug #11 fix)
+  // Fetch structured KYC submissions — batched queries for performance (Bug #11 fix).
+  // Bug #8: order by most recently updated first so newest KYCs surface at the top.
   try {
-    const { data: clients } = await sb.from('clients').select('id, full_name, email, kyc_status, kyc_step').in('kyc_status', ['submitted', 'pending', 'rejected', 'verified', 'approved'])
+    const { data: clients } = await sb.from('clients')
+      .select('id, full_name, email, phone, kyc_status, kyc_step, updated_at, created_at')
+      .in('kyc_status', ['submitted', 'pending', 'rejected', 'verified', 'approved'])
+      .order('updated_at', { ascending: false })
     if (!clients || clients.length === 0) return []
     const clientIds = clients.map((c: any) => c.id)
     const clientMap = new Map(clients.map((c: any) => [c.id, c.full_name]))
