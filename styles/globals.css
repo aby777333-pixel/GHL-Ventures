@@ -763,11 +763,14 @@ a > svg {
   pointer-events: none;
 }
 
-/* Fix button hit area — ensure padding and flex centering */
+/* Fix button hit area — keep the cross-axis alignment consistent. We
+   intentionally do NOT force `justify-content: center` here because that
+   overrode Tailwind's `justify-start` utility on sidebar nav buttons,
+   making the investor dashboard sidebar items appear centered instead
+   of flush-left. Each component now picks its own justify utility. */
 button.flex,
 a.flex {
   align-items: center;
-  justify-content: center;
 }
 
 /* ============================================================
@@ -3602,12 +3605,15 @@ a > svg {
   pointer-events: none;
 }
 
-/* Dashboard action buttons - ensure icons + text are centered and fully clickable */
+/* Dashboard action buttons - ensure icons + text are vertically aligned and
+   fully clickable. NOTE: `justify-content` is intentionally omitted so
+   sidebar nav buttons with Tailwind's `justify-start` aren't overridden
+   into center alignment. Any button that WANTS center content should add
+   `justify-center` explicitly (most already do). */
 button[class*="rounded-xl"],
 button[class*="rounded-lg"] {
   display: inline-flex;
   align-items: center;
-  justify-content: center;
   gap: 0.375rem;
 }
 
