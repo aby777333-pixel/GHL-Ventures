@@ -904,20 +904,35 @@ function ClientProfileContent({ client, activeRMs, onAssignRM }: { client: Clien
           <p className="text-gray-300 mt-0.5 mb-1.5">{client.assignedRM || 'Not assigned'}</p>
           <select
             className="w-full bg-white/[0.04] border border-white/[0.08] rounded-lg px-2.5 py-1.5 text-xs text-gray-300 focus:outline-none focus:border-brand-red/40"
-            defaultValue=""
+            value=""
             onChange={(e) => {
               if (e.target.value && client.id) {
                 onAssignRM(client.id, e.target.value)
+                // Reset to placeholder so the same row can be reassigned again
+                e.target.value = ''
               }
             }}
           >
             <option value="" className="bg-neutral-900">— Reassign RM —</option>
+            {activeRMs.length === 0 && (
+              <option value="" disabled className="bg-neutral-900">No active RMs — add one in People & HR</option>
+            )}
             {activeRMs.map((rm: ActiveRM) => (
               <option key={rm.staff_id} value={rm.staff_id} className="bg-neutral-900">
                 {rm.full_name} — {rm.designation} ({rm.client_count} clients)
               </option>
             ))}
           </select>
+          <p className="text-[10px] text-gray-600 mt-1">
+            Need a new staff member?{' '}
+            <a
+              href="/admin/employees"
+              className="text-blue-400 hover:text-blue-300 underline"
+              onClick={(e) => { e.preventDefault(); window.location.href = '/admin/employees' }}
+            >
+              Add Employee in People &amp; HR →
+            </a>
+          </p>
         </div>
         <div>
           <span className="text-gray-500">Joined</span>
