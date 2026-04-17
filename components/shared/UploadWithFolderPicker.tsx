@@ -29,7 +29,7 @@ interface UploadWithFolderPickerProps {
   accept?: string
   multiple?: boolean
   showToast?: (msg: string, type?: 'success' | 'error' | 'info' | 'warning') => void
-  onUploadComplete?: (results: { success: boolean; fileName: string }[]) => void
+  onUploadComplete?: (results: { success: boolean; fileName: string; url?: string; path?: string; bucket?: string }[]) => void
   theme?: 'dark' | 'teal'
   portal?: string
 }
@@ -94,7 +94,7 @@ export default function UploadWithFolderPicker({
     // Build route key from portal and bucket
     const routeKey = defaultRoute
 
-    const results: { success: boolean; fileName: string }[] = []
+    const results: { success: boolean; fileName: string; url?: string; path?: string; bucket?: string }[] = []
 
     for (let i = 0; i < files.length; i++) {
       const file = files[i]
@@ -102,7 +102,13 @@ export default function UploadWithFolderPicker({
         bucket: selectedBucket,
         portal,
       })
-      results.push({ success: result.success, fileName: file.name })
+      results.push({
+        success: result.success,
+        fileName: file.name,
+        url: result.file?.url,
+        path: result.file?.path,
+        bucket: result.file?.bucket,
+      })
     }
 
     const okCount = results.filter(r => r.success).length

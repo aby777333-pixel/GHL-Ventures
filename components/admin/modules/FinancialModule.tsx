@@ -574,8 +574,24 @@ function ExpensesTab({ showToast, expenses }: { showToast: (msg: string, type?: 
     date: '',
     vendor: '',
     paymentMethod: 'bank-transfer',
+    status: 'pending' as 'pending' | 'approved' | 'rejected' | 'paid',
+    notes: '',
+    receiptUrl: '',
+    receiptFileName: '',
+  })
+  const [submitting, setSubmitting] = useState(false)
+
+  const resetExpenseForm = () => setExpenseForm({
+    description: '',
+    category: 'operations',
+    amount: '',
+    date: '',
+    vendor: '',
+    paymentMethod: 'bank-transfer',
     status: 'pending',
     notes: '',
+    receiptUrl: '',
+    receiptFileName: '',
   })
 
   const handleExpenseSubmit = async () => {
@@ -583,32 +599,42 @@ function ExpensesTab({ showToast, expenses }: { showToast: (msg: string, type?: 
       showToast('Please fill in all required fields', 'error')
       return
     }
-    const result = await insertRow('expenses', {
-      description: expenseForm.description,
-      category: expenseForm.category,
-      amount: parseFloat(expenseForm.amount),
-      date: expenseForm.date,
-      vendor: expenseForm.vendor,
-      payment_method: expenseForm.paymentMethod,
-      status: 'pending',
-      notes: expenseForm.notes,
-    })
-    if (!result) {
-      showToast('Failed to save expense', 'error')
-      return
+    setSubmitting(true)
+    try {
+      // Stick to columns that actually exist on public.expenses. Notes /
+      // payment method live in `subcategory` + `invoice_number` as a free-form
+      // tag since the expenses table has no dedicated column for either.
+      const insertPayload: Record<string, any> = {
+        description: expenseForm.description,
+        category: expenseForm.category,
+        amount: parseFloat(expenseForm.amount),
+        date: expenseForm.date,
+        vendor: expenseForm.vendor || null,
+        status: expenseForm.status,  // enum: pending / approved / rejected / paid
+        receipt_url: expenseForm.receiptUrl || null,
+        currency: 'INR',
+        subcategory: expenseForm.paymentMethod || null,  // reuse for payment method
+      }
+      // Append notes to description if provided (table has no notes column)
+      if (expenseForm.notes?.trim()) {
+        insertPayload.description = `${expenseForm.description}\n\nNotes: ${expenseForm.notes.trim()}`
+      }
+
+      const { supabase } = await import('@/lib/supabase/client')
+      const { error } = await (supabase as any).from('expenses').insert(insertPayload)
+      if (error) {
+        showToast(`Failed to save expense: ${error.message}`, 'error')
+        setSubmitting(false)
+        return
+      }
+      showToast('Expense recorded successfully', 'success')
+      setAddExpenseOpen(false)
+      resetExpenseForm()
+    } catch (e: any) {
+      showToast(`Error: ${e?.message || 'unknown'}`, 'error')
+    } finally {
+      setSubmitting(false)
     }
-    showToast('Expense recorded successfully', 'success')
-    setAddExpenseOpen(false)
-    setExpenseForm({
-      description: '',
-      category: 'operations',
-      amount: '',
-      date: '',
-      vendor: '',
-      paymentMethod: 'bank-transfer',
-      status: 'pending',
-      notes: '',
-    })
   }
 
   const getExpenseVariant = (status: string) => {
@@ -809,13 +835,13 @@ function ExpensesTab({ showToast, expenses }: { showToast: (msg: string, type?: 
               <label className="block text-xs font-medium text-gray-400 mb-1.5">Status</label>
               <select
                 value={expenseForm.status}
-                onChange={(e) => setExpenseForm(f => ({ ...f, status: e.target.value }))}
+                onChange={(e) => setExpenseForm(f => ({ ...f, status: e.target.value as typeof f.status }))}
                 className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-brand-red/40 focus:ring-1 focus:ring-brand-red/20"
               >
                 <option value="pending">Pending</option>
                 <option value="approved">Approved</option>
                 <option value="rejected">Rejected</option>
-                <option value="reimbursed">Reimbursed</option>
+                <option value="paid">Paid</option>
               </select>
             </div>
           </div>
@@ -835,13 +861,39 @@ function ExpensesTab({ showToast, expenses }: { showToast: (msg: string, type?: 
           {/* Receipt Upload */}
           <div>
             <label className="block text-xs font-medium text-gray-400 mb-1.5">Receipt</label>
-            <button
-              onClick={() => setFolderPickerOpen(true)}
-              className="flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-medium text-gray-400 bg-white/[0.04] border border-white/[0.06] hover:bg-white/[0.08] transition-colors"
-            >
-              <Upload className="w-4 h-4" />
-              Attach Receipt
-            </button>
+            <div className="flex items-center gap-2 flex-wrap">
+              <button
+                onClick={() => setFolderPickerOpen(true)}
+                className={`flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-medium transition-colors ${
+                  expenseForm.receiptUrl
+                    ? 'text-emerald-400 bg-emerald-500/10 border border-emerald-500/30 hover:bg-emerald-500/20'
+                    : 'text-gray-400 bg-white/[0.04] border border-white/[0.06] hover:bg-white/[0.08]'
+                }`}
+              >
+                <Upload className="w-4 h-4" />
+                {expenseForm.receiptUrl ? 'Replace Receipt' : 'Attach Receipt'}
+              </button>
+              {expenseForm.receiptUrl && (
+                <>
+                  <a
+                    href={expenseForm.receiptUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-xs text-blue-400 hover:text-blue-300 underline truncate max-w-[200px]"
+                    title={expenseForm.receiptFileName}
+                  >
+                    {expenseForm.receiptFileName || 'View receipt'}
+                  </a>
+                  <button
+                    onClick={() => setExpenseForm(f => ({ ...f, receiptUrl: '', receiptFileName: '' }))}
+                    className="text-xs text-gray-500 hover:text-red-400"
+                    title="Remove attachment"
+                  >
+                    Remove
+                  </button>
+                </>
+              )}
+            </div>
           </div>
         </div>
 
@@ -855,9 +907,10 @@ function ExpensesTab({ showToast, expenses }: { showToast: (msg: string, type?: 
           </button>
           <button
             onClick={handleExpenseSubmit}
-            className="px-5 py-2 rounded-xl text-sm font-medium text-white bg-brand-red hover:bg-red-600 transition-colors"
+            disabled={submitting}
+            className="px-5 py-2 rounded-xl text-sm font-medium text-white bg-brand-red hover:bg-red-600 transition-colors disabled:opacity-50"
           >
-            Add Expense
+            {submitting ? 'Saving...' : 'Add Expense'}
           </button>
         </div>
       </AdminModal>
@@ -868,8 +921,16 @@ function ExpensesTab({ showToast, expenses }: { showToast: (msg: string, type?: 
         defaultRoute="admin/expenses"
         showToast={showToast as any}
         onUploadComplete={(results) => {
-          const ok = results.filter(r => r.success).length
-          if (ok > 0) showToast(`${ok} receipt(s) uploaded`, 'success')
+          // Capture the first successful upload as the receipt URL for the
+          // current expense form. The picker closes itself after upload, so
+          // the user lands back on the expense modal with the filename shown.
+          const first = results.find(r => r.success && r.url)
+          if (first?.url) {
+            setExpenseForm(f => ({ ...f, receiptUrl: first.url!, receiptFileName: first.fileName }))
+            showToast('Receipt attached to expense', 'success')
+          } else if (results.some(r => r.success)) {
+            showToast('Upload succeeded but URL was not returned — please re-upload', 'warning')
+          }
         }}
         theme="dark"
         portal="admin"
