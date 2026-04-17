@@ -243,7 +243,7 @@ export default function Navbar() {
                                 <Link
                                   key={child.href}
                                   href={child.href}
-                                  className={`flex items-center justify-start text-left whitespace-nowrap px-4 py-2.5 transition-all duration-150 ${
+                                  className={`w-full flex items-center justify-start text-left whitespace-nowrap px-4 py-2.5 transition-all duration-150 ${
                                     childActive
                                       ? 'text-brand-red'
                                       : scrolled
