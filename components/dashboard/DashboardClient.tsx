@@ -2252,21 +2252,28 @@ export default function DashboardClient() {
                       } catch { /* continue with other files */ }
                     }
                   }
-                  // Resolve recipient: find an admin user to route the message to
+                  // Resolve recipient: find an admin / RM user to route the message to.
+                  // Rule: never self-address. If we can't resolve a real recipient
+                  // distinct from the sender, surface an error instead of silently
+                  // writing a message that nobody can read.
                   const { supabase: sb } = await import('@/lib/supabase/client')
-                  let recipientId = user?.id || '' // fallback
+                  let recipientId: string | null = null
                   // Try assigned RM first
                   if (clientId) {
                     const { data: clientRow } = await (sb as any).from('clients').select('assigned_rm').eq('id', clientId).maybeSingle()
                     if (clientRow?.assigned_rm) {
                       const { data: rmStaff } = await (sb as any).from('staff_profiles').select('user_id').eq('id', clientRow.assigned_rm).maybeSingle()
-                      if (rmStaff?.user_id) recipientId = rmStaff.user_id
+                      if (rmStaff?.user_id && rmStaff.user_id !== user?.id) recipientId = rmStaff.user_id
                     }
                   }
-                  // If no RM found, send to first admin
-                  if (recipientId === user?.id) {
-                    const { data: admins } = await (sb as any).from('profiles').select('id').eq('role', 'admin').limit(1)
+                  // Fall back to the first admin OR super_admin
+                  if (!recipientId) {
+                    const { data: admins } = await (sb as any).from('profiles').select('id').in('role', ['admin', 'super_admin']).neq('id', user?.id || '').limit(1)
                     if (admins?.[0]?.id) recipientId = admins[0].id
+                  }
+                  if (!recipientId) {
+                    showToast('Message service is offline — no relationship manager is currently assigned. Please try again later.', 'info')
+                    return
                   }
                   const body = attachmentUrls.length > 0 ? `${msgBody}\n\n📎 Attachments: ${attachmentUrls.length} file(s)` : msgBody
                   await sendMessage({ from_id: user?.id, to_id: recipientId, subject: `[${msgTo}] ${msgSubject}`, body, attachments: attachmentUrls.length > 0 ? attachmentUrls : [] })

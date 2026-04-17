@@ -44,9 +44,12 @@ export async function fetchPortfolioAssets(clientId?: string) {
   // Maps fund_vehicle to fund types matching the PHP source
   const apps = await safeFetch(
     () => sb.from('investment_applications')
-      .select('id, client_id, fund_vehicle, investment_amount, status, created_at')
+      // Include `credited` — once admin hits Give Credit, the app moves out
+      // of `approved`. Previously this filter dropped credited investments
+      // from the investor's portfolio view.
+      .select('id, client_id, fund_vehicle, investment_amount, final_investment_amount, status, created_at, investment_date')
       .eq('client_id', clientId)
-      .in('status', ['approved', 'active']),
+      .in('status', ['approved', 'active', 'credited']),
     [], 'fetchPortfolioAssets:applications',
   )
   // Map to the shape expected by the dashboard (invested_amount, current_value, fund_type, fund_name)
@@ -57,16 +60,17 @@ export async function fetchPortfolioAssets(clientId?: string) {
     else if (fv.toLowerCase().includes('debenture')) fundType = 'Debenture'
     else if (fv.toLowerCase().includes('llp')) fundType = 'LLP'
     else if (fv.toLowerCase().includes('co-invest')) fundType = 'Co-Invest'
+    const amount = Number(a.final_investment_amount) || Number(a.investment_amount) || 0
     return {
       id: a.id,
       client_id: a.client_id,
       fund_name: fv,
       fund_type: fundType,
-      invested_amount: Number(a.investment_amount) || 0,
-      current_value: Number(a.investment_amount) || 0, // No mark-to-market yet
+      invested_amount: amount,
+      current_value: amount, // No mark-to-market yet
       return_pct: 0,
-      status: a.status === 'approved' ? 'active' : a.status,
-      invested_at: a.created_at,
+      status: a.status === 'approved' || a.status === 'credited' ? 'active' : a.status,
+      invested_at: a.investment_date || a.created_at,
     }
   })
 }
@@ -96,9 +100,9 @@ export async function getAllocation(clientId?: string) {
     } else {
       // Fallback: derive from investment_applications
       const { data: apps } = await sb.from('investment_applications')
-        .select('fund_vehicle, investment_amount')
+        .select('fund_vehicle, investment_amount, final_investment_amount')
         .eq('client_id', clientId)
-        .in('status', ['approved', 'active'])
+        .in('status', ['approved', 'active', 'credited'])
       if (apps && apps.length > 0) {
         rows = (apps as any[]).map((a: any) => {
           const fv = a.fund_vehicle || ''
@@ -107,7 +111,7 @@ export async function getAllocation(clientId?: string) {
           else if (fv.toLowerCase().includes('debenture')) fundType = 'Debenture'
           else if (fv.toLowerCase().includes('llp')) fundType = 'LLP'
           else if (fv.toLowerCase().includes('co-invest')) fundType = 'Co-Invest'
-          return { fund_type: fundType, current_value: Number(a.investment_amount) || 0 }
+          return { fund_type: fundType, current_value: Number(a.final_investment_amount) || Number(a.investment_amount) || 0 }
         })
       }
     }
@@ -193,8 +197,17 @@ export async function fetchSupportTickets(clientId?: string) {
 
 export async function fetchNotifications(clientId?: string) {
   if (!isSupabaseConfigured() || !clientId) return []
+  // notifications.user_id references auth.users(id) — the investor code paths
+  // pass clients.id here by convention (same as fetchMessages / tickets) so
+  // we resolve the auth user_id first. Fall back to the provided value if
+  // the row lookup fails so we don't drop notifications unnecessarily.
+  let userId = clientId
+  try {
+    const { data: clientRow } = await sb.from('clients').select('user_id').eq('id', clientId).maybeSingle()
+    if (clientRow?.user_id) userId = clientRow.user_id
+  } catch { /* use as-is */ }
   const rows = await safeFetch(
-    () => sb.from('notifications').select('*').eq('user_id', clientId).order('created_at', { ascending: false }).limit(20),
+    () => sb.from('notifications').select('*').eq('user_id', userId).order('created_at', { ascending: false }).limit(20),
     [], 'fetchNotifications',
   )
   // Sanitize: ensure no JSONB objects are rendered as React children (prevents React #310)
