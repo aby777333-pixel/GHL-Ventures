@@ -1543,15 +1543,24 @@ function InvestmentsTab({ showToast }: { showToast: (m: string, t?: 'success' | 
                 <div className="space-y-2 mb-3">
                   {appDocs.map((doc: any) => (
                     <div key={doc.id} className="flex items-center justify-between bg-white/[0.03] border border-white/[0.06] rounded-lg px-3 py-2">
-                      <div>
-                        <p className="text-xs text-white font-medium">{doc.title || doc.document_type}</p>
-                        <p className="text-[10px] text-gray-500">{doc.file_name || '—'} · {formatDate(doc.created_at)}</p>
+                      <div className="min-w-0">
+                        <p className="text-xs text-white font-medium truncate">{doc.title || doc.document_type}</p>
+                        <p className="text-[10px] text-gray-500 truncate">{doc.file_name || '—'} · {formatDate(doc.created_at)}</p>
                       </div>
-                      {doc.file_url ? (
-                        <a href={doc.file_url} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-400 hover:text-blue-300 inline-flex items-center gap-1">
-                          <Eye className="w-3 h-3" /> View
-                        </a>
-                      ) : <span className="text-[10px] text-gray-500">Placeholder</span>}
+                      <div className="flex items-center gap-2 shrink-0">
+                        {doc.file_url ? (
+                          <a href={doc.file_url} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-400 hover:text-blue-300 inline-flex items-center gap-1">
+                            <Eye className="w-3 h-3" /> Original
+                          </a>
+                        ) : <span className="text-[10px] text-gray-500">Placeholder</span>}
+                        {doc.signed_copy_url ? (
+                          <a href={doc.signed_copy_url} target="_blank" rel="noopener noreferrer" className="text-xs text-emerald-400 hover:text-emerald-300 inline-flex items-center gap-1" title={doc.signed_at ? `Signed ${formatDate(doc.signed_at)}` : 'Signed copy'}>
+                            <CheckCircle2 className="w-3 h-3" /> Signed
+                          </a>
+                        ) : (doc.document_type === 'debenture_agreement' || doc.document_type === 'agreement' || doc.document_type === 'debenture_certificate') ? (
+                          <span className="text-[10px] text-amber-500" title="Waiting for investor to upload signed copy">Unsigned</span>
+                        ) : null}
+                      </div>
                     </div>
                   ))}
                 </div>
