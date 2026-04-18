@@ -430,6 +430,17 @@ export default function PayoutModule({ subTab, navigate, showToast }: PayoutModu
     { key: 'net_interest', label: 'Net Payout', sortable: true, width: '110px', render: (row) => (
       <span className="text-white font-semibold text-xs">{formatINR(row.net_interest)}</span>
     )},
+    // Testing 2026-04-18 #6: surface bank details inline so admins don't have
+    // to open the modal for every row before disbursing.
+    { key: 'bank_name', label: 'Bank', sortable: true, width: '140px', render: (row) => (
+      <div className="min-w-0">
+        <p className="text-gray-200 text-xs font-medium truncate">{row.bank_name || '—'}</p>
+        <p className="text-[10px] text-gray-500 truncate">{row.account_number ? `A/c ${row.account_number}` : 'No A/c'}</p>
+      </div>
+    )},
+    { key: 'ifsc_code', label: 'IFSC', sortable: true, width: '110px', render: (row) => (
+      <span className="text-gray-300 text-xs font-mono">{row.ifsc_code || '—'}</span>
+    )},
     { key: 'payment_status', label: 'Status', width: '100px', sortable: true, render: (row) => getStatusBadge(row.payment_status) },
     { key: 'actions', label: '', width: '80px', render: (row) => (
       <div className="flex items-center gap-1">

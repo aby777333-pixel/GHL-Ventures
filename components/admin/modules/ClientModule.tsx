@@ -552,7 +552,13 @@ function KYCQueueTab({
               <button
                 onClick={async (e) => {
                   e.stopPropagation()
-                  const ok = await rejectClientKYC(row.clientId, 'admin')
+                  // Testing 2026-04-18 #2: rejection must capture a reason so
+                  // the investor's notification explains what to fix.
+                  const reason = window.prompt(`Reason for rejecting ${row.clientName}'s KYC?`, '')
+                  if (reason === null) return // cancelled
+                  const trimmed = reason.trim()
+                  if (!trimmed) { showToast('Rejection reason is required', 'warning'); return }
+                  const ok = await rejectClientKYC(row.clientId, 'admin', trimmed)
                   if (ok) { showToast(`KYC rejected for ${row.clientName}`, 'success'); onRefresh?.() }
                   else showToast('Rejection failed', 'error')
                 }}
@@ -623,7 +629,11 @@ function KYCQueueTab({
                     setSelectedClientKYC(null); setClientKYCDetails(null)
                   }}>Approve All</ModalButton>
                   <ModalButton variant="danger" onClick={async () => {
-                    const ok = await rejectClientKYC(selectedClientKYC.clientId, 'admin')
+                    const reason = window.prompt('Reason for rejecting this KYC?', '')
+                    if (reason === null) return
+                    const trimmed = reason.trim()
+                    if (!trimmed) { showToast('Rejection reason is required', 'warning'); return }
+                    const ok = await rejectClientKYC(selectedClientKYC.clientId, 'admin', trimmed)
                     if (ok) { showToast('KYC rejected', 'info'); onRefresh?.() }
                     else showToast('Rejection failed', 'error')
                     setSelectedClientKYC(null); setClientKYCDetails(null)
@@ -718,12 +728,24 @@ function KYCQueueTab({
                   <h4 className="text-sm font-semibold text-white mb-3">Nominees ({clientKYCDetails.nominees.length})</h4>
                   <div className="space-y-2">
                     {clientKYCDetails.nominees.map((n: any, i: number) => (
-                      <div key={n.id || i} className="grid grid-cols-2 md:grid-cols-5 gap-2 text-xs border-b border-white/5 pb-2 last:border-0">
-                        <div><span className="text-gray-500">Name:</span> <span className="text-white ml-1">{n.name}</span></div>
-                        <div><span className="text-gray-500">DOB:</span> <span className="text-white ml-1">{n.dob || '-'}</span></div>
-                        <div><span className="text-gray-500">Phone:</span> <span className="text-white ml-1">{n.phone || '-'}</span></div>
-                        <div><span className="text-gray-500">Relation:</span> <span className="text-white ml-1">{n.relationship}</span></div>
-                        <div><span className="text-gray-500">Share:</span> <span className="text-white ml-1">{n.percentage}%</span></div>
+                      <div key={n.id || i} className="border-b border-white/5 pb-2 last:border-0">
+                        <div className="grid grid-cols-2 md:grid-cols-5 gap-2 text-xs">
+                          <div><span className="text-gray-500">Name:</span> <span className="text-white ml-1">{n.name}</span></div>
+                          <div><span className="text-gray-500">DOB:</span> <span className="text-white ml-1">{n.dob || '-'}</span></div>
+                          <div><span className="text-gray-500">Phone:</span> <span className="text-white ml-1">{n.phone || '-'}</span></div>
+                          <div><span className="text-gray-500">Relation:</span> <span className="text-white ml-1">{n.relationship}</span></div>
+                          <div><span className="text-gray-500">Share:</span> <span className="text-white ml-1">{n.percentage}%</span></div>
+                        </div>
+                        <div className="mt-1.5 text-xs">
+                          <span className="text-gray-500">Proof:</span>{' '}
+                          {n.proof_url ? (
+                            <a href={n.proof_url} target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:text-blue-300 underline">
+                              View document
+                            </a>
+                          ) : (
+                            <span className="text-gray-600 italic ml-1">Not uploaded</span>
+                          )}
+                        </div>
                       </div>
                     ))}
                   </div>

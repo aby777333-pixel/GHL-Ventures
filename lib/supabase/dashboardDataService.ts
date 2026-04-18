@@ -767,7 +767,7 @@ export function calculatePaymentSchedule(
   for (let m = 0; m < totalMonths; m++) {
     const payDate = new Date(startDate)
     payDate.setMonth(payDate.getMonth() + m + 1)
-    payDate.setDate(1) // 1st of each month
+    payDate.setDate(5) // Testing 2026-04-18 #4: payout on the 5th of each month
 
     // First month pro-rata if not invested on 1st
     let grossInterest = monthlyInterest

@@ -454,7 +454,13 @@ export async function approveClientKYC(clientId: string, adminUserId: string) {
 
 export async function rejectClientKYC(clientId: string, adminUserId: string, reason?: string) {
   try {
-    await sb.from('clients').update({ kyc_status: 'rejected' }).eq('id', clientId)
+    // Persist the rejection reason so admin can see it later (not just once in a notification).
+    const patch: any = { kyc_status: 'rejected' }
+    if (reason) {
+      const stamp = new Date().toISOString().split('T')[0]
+      patch.notes = `[${stamp}] KYC rejected: ${reason}`
+    }
+    await sb.from('clients').update(patch).eq('id', clientId)
     const { data: client } = await sb.from('clients').select('user_id').eq('id', clientId).single()
     if (client?.user_id) {
       await sb.from('notifications').insert({
@@ -784,13 +790,17 @@ export async function generateFullPayoutSchedule(app: any) {
     const firstTds = +(firstGross * (tdsPercent / 100)).toFixed(2)
     const firstNet = +(firstGross - firstTds).toFixed(2)
 
-    // Build all due_dates until maturity
+    // Build all due_dates until maturity.
+    // Testing 2026-04-18 #4: monthly payouts fall on the 5th of each month.
+    // AIF yearly payouts keep their anniversary date (matches redemption ops).
     const dueDates: string[] = []
     const cursor = new Date(startDate)
     cursor.setMonth(cursor.getMonth() + frequencyMonths)
+    if (!isAIF) cursor.setDate(5)
     while (cursor <= maturity) {
       dueDates.push(cursor.toISOString().split('T')[0])
       cursor.setMonth(cursor.getMonth() + frequencyMonths)
+      if (!isAIF) cursor.setDate(5)
     }
     if (dueDates.length === 0) return 0
 

@@ -356,6 +356,57 @@ export default function InvestmentFlowTab({
     } catch (e: any) { showToast(`Upload failed: ${e?.message || 'unknown'}`, 'error') }
   }
 
+  // Testing 2026-04-18 #7: open a printable acknowledgement letter when no
+  // admin-uploaded file is attached to an acknowledgement_letter row. The
+  // investor can save it as PDF from the browser print dialog — no extra
+  // storage round-trip required.
+  const handleOpenAutoAcknowledgement = (app: any, doc: any) => {
+    const commitment = app?.commitment_id || `GHL-CMT-${String(app?.id || doc?.investment_app_id || '').slice(0, 8).toUpperCase()}`
+    const today = new Date().toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' })
+    const fmt = (n: number) => new Intl.NumberFormat('en-IN').format(Math.round(n))
+    const invDate = app?.investment_date || app?.created_at
+    const invDateStr = invDate ? new Date(invDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' }) : '—'
+    const title = doc?.title || 'Acknowledgement Letter'
+    const safe = (s: any) => String(s ?? '').replace(/[<>]/g, '')
+    const html = `<!doctype html><html><head><title>${safe(title)} — ${safe(commitment)}</title>
+      <style>
+        body{font-family:Georgia,serif;padding:40px 48px;color:#111;line-height:1.6}
+        h1{color:#8B0000;text-align:center;margin:0 0 6px}
+        .sub{text-align:center;color:#666;font-size:12px;margin-bottom:28px}
+        .meta{display:flex;justify-content:space-between;font-size:12px;margin-bottom:24px;color:#444}
+        .box{border:1px solid #e1e1e1;padding:16px 20px;border-radius:6px;margin:16px 0;background:#faf7f5}
+        .row{display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid #eee}
+        .row:last-child{border-bottom:0}
+        .label{color:#666}
+        .val{font-weight:600}
+        .sig{margin-top:48px;font-size:12px;color:#555}
+        @media print{.noprint{display:none}}
+      </style></head><body>
+      <h1>${safe(title)}</h1>
+      <div class="sub">GHL India Ventures · SEBI-Registered Category II AIF</div>
+      <div class="meta"><span>Date: ${today}</span><span>Commitment: ${safe(commitment)}</span></div>
+      <p>Dear ${safe(userName || 'Investor')},</p>
+      <p>We hereby acknowledge receipt of your investment commitment under <strong>${safe(app?.fund_vehicle || '—')}</strong>. Details are recorded below for your records.</p>
+      <div class="box">
+        <div class="row"><span class="label">Investor Name</span><span class="val">${safe(userName || '—')}</span></div>
+        <div class="row"><span class="label">Email</span><span class="val">${safe(userEmail || '—')}</span></div>
+        <div class="row"><span class="label">Fund Vehicle</span><span class="val">${safe(app?.fund_vehicle || '—')}</span></div>
+        <div class="row"><span class="label">Commitment Amount</span><span class="val">₹ ${fmt(Number(app?.investment_amount) || 0)}</span></div>
+        <div class="row"><span class="label">Tenure</span><span class="val">${safe(app?.tenure_preference || '—')}</span></div>
+        <div class="row"><span class="label">Investment Date</span><span class="val">${invDateStr}</span></div>
+        <div class="row"><span class="label">Reference</span><span class="val">${safe(app?.reference_number || commitment)}</span></div>
+      </div>
+      <p>This acknowledgement is generated electronically. Your formal agreement, allotment letter, and debenture certificate will be issued by our operations team and made available in your investor portal shortly.</p>
+      <div class="sig">For GHL India Ventures Private Limited<br/>Investor Relations</div>
+      <p class="noprint" style="margin-top:32px;text-align:center"><button onclick="window.print()" style="padding:8px 20px;background:#8B0000;color:#fff;border:0;border-radius:6px;cursor:pointer">Print / Save as PDF</button></p>
+      </body></html>`
+    const blob = new Blob([html], { type: 'text/html' })
+    const url = URL.createObjectURL(blob)
+    window.open(url, '_blank', 'noopener,noreferrer')
+    // Release the blob URL after the new tab has had a moment to load it.
+    setTimeout(() => URL.revokeObjectURL(url), 30_000)
+  }
+
   const handleViewDoc = async (url: string) => {
     if (!url) { showToast('Document not available', 'info'); return }
     if (url.startsWith('http')) { window.open(url, '_blank'); return }
@@ -572,7 +623,7 @@ export default function InvestmentFlowTab({
                     Payment Schedule
                   </button>
                   <button onClick={handleSubmitInvestment} disabled={submitting}
-                    className="flex-1 py-3 rounded-xl text-sm font-bold text-white disabled:opacity-50"
+                    className="flex-1 py-3 rounded-xl text-sm font-bold text-white text-center disabled:opacity-50"
                     style={{ background: 'linear-gradient(135deg, #D0021B, #8B0000)' }}>
                     {submitting ? 'Submitting...' : 'Submit'}
                   </button>
@@ -752,7 +803,7 @@ export default function InvestmentFlowTab({
                     </button>
                   </div>
                   <button onClick={handleSubmitTransaction} disabled={txnSubmitting || isFullyPaid}
-                    className="w-full py-3 rounded-xl text-sm font-bold text-white disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="w-full py-3 rounded-xl text-sm font-bold text-white text-center disabled:opacity-50 disabled:cursor-not-allowed"
                     style={{ background: 'linear-gradient(135deg, #D0021B, #8B0000)' }}>
                     {txnSubmitting ? 'Submitting...' : isFullyPaid ? 'Fully Paid' : 'Submit'}
                   </button>
@@ -767,57 +818,107 @@ export default function InvestmentFlowTab({
           4. DOCUMENTS (Post-approval)
           ────────────────────────────────────────────────────── */}
       {subTab === 'documents' && (
-        <G className="overflow-hidden" theme={theme}>
+        <div className="space-y-4">
           {investDocs.length === 0 ? (
-            <div className="p-10 text-center">
-              <FileText className={`w-10 h-10 mx-auto mb-3 ${t('text-gray-600','text-gray-400')}`} />
-              <p className={`text-sm font-medium ${t('text-gray-400','text-gray-600')}`}>No investment documents yet</p>
-              <p className={`text-xs mt-1 ${t('text-gray-600','text-gray-500')}`}>Documents will appear here after your investment is approved by admin.</p>
-            </div>
+            <G className="overflow-hidden" theme={theme}>
+              <div className="p-10 text-center">
+                <FileText className={`w-10 h-10 mx-auto mb-3 ${t('text-gray-600','text-gray-400')}`} />
+                <p className={`text-sm font-medium ${t('text-gray-400','text-gray-600')}`}>No investment documents yet</p>
+                <p className={`text-xs mt-1 ${t('text-gray-600','text-gray-500')}`}>Documents will appear here after your investment is approved by admin.</p>
+              </div>
+            </G>
           ) : (
-            <>
-              <div className={`px-5 py-3 border-b ${t('border-white/[0.06]','border-gray-200')}`}>
-                <h4 className={`text-sm font-bold ${t('text-white','text-gray-900')}`}>{investDocs[0]?.fund_vehicle || 'Investment Documents'}</h4>
-              </div>
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className={`border-b ${t('border-white/[0.06] bg-white/[0.02]','border-gray-200 bg-gray-50')}`}>
-                      {['DATE', 'TITLE', 'DOCUMENT', 'SIGNED DOCUMENTS'].map(h => (
-                        <th key={h} className={`text-left text-xs font-bold uppercase tracking-wider py-3 px-5 ${t('text-gray-500','text-gray-600')}`}>{h}</th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {investDocs.map((doc: any, i: number) => (
-                      <tr key={doc.id || i} className={`border-b ${t('border-white/[0.04]','border-gray-100')}`}>
-                        <td className={`py-4 px-5 text-xs ${t('text-gray-400','text-gray-600')}`}>{fmtDateTime(doc.created_at)}</td>
-                        <td className={`py-4 px-5 text-xs font-medium ${t('text-white','text-gray-900')}`}>{doc.title}</td>
-                        <td className="py-4 px-5">
-                          {doc.file_url ? (
-                            <div className="flex gap-2">
-                              <button onClick={() => handleViewDoc(doc.file_url)} className="p-2 rounded-lg bg-brand-red text-white hover:bg-brand-red/80" title="View"><Eye className="w-3.5 h-3.5" /></button>
-                              <button onClick={() => handleViewDoc(doc.file_url)} className="p-2 rounded-lg bg-brand-red text-white hover:bg-brand-red/80" title="Download"><Download className="w-3.5 h-3.5" /></button>
-                            </div>
-                          ) : <span className={`text-xs ${t('text-gray-600','text-gray-400')}`}>-</span>}
-                        </td>
-                        <td className="py-4 px-5">
-                          {(doc.document_type === 'debenture_agreement' || doc.document_type === 'debenture_certificate') ? (
-                            doc.signed_copy_url ? (
-                              <button onClick={() => handleViewDoc(doc.signed_copy_url)} className="p-2 rounded-lg bg-emerald-500/15 text-emerald-500 hover:bg-emerald-500/25" title="Signed"><CheckCircle className="w-3.5 h-3.5" /></button>
-                            ) : (
-                              <button onClick={() => handleUploadSigned(doc.id)} className="p-2 rounded-lg border border-gray-300 text-gray-500 hover:bg-gray-100" title="Upload Signed"><Upload className="w-3.5 h-3.5" /></button>
+            // Testing 2026-04-18 #9: split documents by investment application so
+            // each commitment has its own doc pack (no more mixed rows across funds).
+            (() => {
+              const groupMap = new Map<string, any[]>()
+              for (const doc of investDocs) {
+                const key = doc.investment_app_id || 'orphan'
+                if (!groupMap.has(key)) groupMap.set(key, [])
+                groupMap.get(key)!.push(doc)
+              }
+              const appById = new Map(investApps.map((a: any) => [a.id, a]))
+              const groups = Array.from(groupMap.entries()).sort((a, b) => {
+                const at = new Date((a[1][0]?.created_at) || 0).getTime()
+                const bt = new Date((b[1][0]?.created_at) || 0).getTime()
+                return bt - at
+              })
+              // Types that support admin→investor→admin signing round-trip.
+              const signableTypes = new Set([
+                'debenture_agreement', 'agreement',
+                'debenture_certificate', 'certificate',
+                'allotment_letter',
+              ])
+              const autoGenTypes = new Set(['acknowledgement_letter', 'acknowledgement'])
+              return groups.map(([appId, docs]) => {
+                const app: any = appById.get(appId) || docs[0] || {}
+                const commitment = app.commitment_id || (appId !== 'orphan' ? `GHL-CMT-${String(appId).slice(0,8).toUpperCase()}` : 'Unassigned')
+                const fund = app.fund_vehicle || docs[0]?.fund_vehicle || 'Investment Documents'
+                return (
+                  <G key={appId} className="overflow-hidden" theme={theme}>
+                    <div className={`px-5 py-3 border-b flex items-center justify-between gap-3 ${t('border-white/[0.06]','border-gray-200')}`}>
+                      <div className="min-w-0">
+                        <h4 className={`text-sm font-bold truncate ${t('text-white','text-gray-900')}`}>{fund}</h4>
+                        <p className={`text-[11px] ${t('text-gray-500','text-gray-600')}`}>Commitment: {commitment}{app.investment_amount ? ` · ₹${fmtINR(Number(app.investment_amount) || 0)}` : ''}</p>
+                      </div>
+                      <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${t('bg-white/[0.04] text-gray-400','bg-gray-100 text-gray-600')}`}>{docs.length} doc{docs.length === 1 ? '' : 's'}</span>
+                    </div>
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-sm">
+                        <thead>
+                          <tr className={`border-b ${t('border-white/[0.06] bg-white/[0.02]','border-gray-200 bg-gray-50')}`}>
+                            {['DATE', 'TITLE', 'DOCUMENT', 'SIGNED DOCUMENTS'].map(h => (
+                              <th key={h} className={`text-left text-xs font-bold uppercase tracking-wider py-3 px-5 ${t('text-gray-500','text-gray-600')}`}>{h}</th>
+                            ))}
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {docs.map((doc: any, i: number) => {
+                            const docType = (doc.document_type || '').toLowerCase()
+                            const isAutoAck = autoGenTypes.has(docType) && !doc.file_url
+                            const isSignable = signableTypes.has(docType)
+                            return (
+                              <tr key={doc.id || i} className={`border-b ${t('border-white/[0.04]','border-gray-100')}`}>
+                                <td className={`py-4 px-5 text-xs ${t('text-gray-400','text-gray-600')}`}>{fmtDateTime(doc.created_at)}</td>
+                                <td className={`py-4 px-5 text-xs font-medium ${t('text-white','text-gray-900')}`}>{doc.title}</td>
+                                <td className="py-4 px-5">
+                                  {doc.file_url ? (
+                                    <div className="flex gap-2">
+                                      <button onClick={() => handleViewDoc(doc.file_url)} className="p-2 rounded-lg bg-brand-red text-white hover:bg-brand-red/80" title="View"><Eye className="w-3.5 h-3.5" /></button>
+                                      <button onClick={() => handleViewDoc(doc.file_url)} className="p-2 rounded-lg bg-brand-red text-white hover:bg-brand-red/80" title="Download"><Download className="w-3.5 h-3.5" /></button>
+                                    </div>
+                                  ) : isAutoAck ? (
+                                    // Testing 2026-04-18 #7: auto-generate the acknowledgement
+                                    // in a printable window when admin hasn't uploaded one.
+                                    <button onClick={() => handleOpenAutoAcknowledgement(app, doc)} className="p-2 rounded-lg bg-brand-red text-white hover:bg-brand-red/80" title="Open auto-generated acknowledgement">
+                                      <Eye className="w-3.5 h-3.5" />
+                                    </button>
+                                  ) : <span className={`text-xs ${t('text-gray-600','text-gray-400')}`}>-</span>}
+                                </td>
+                                <td className="py-4 px-5">
+                                  {/* Testing 2026-04-18 #8: allow signed-copy upload on
+                                      every contract-like document, not just the two
+                                      original debenture types. */}
+                                  {isSignable ? (
+                                    doc.signed_copy_url ? (
+                                      <button onClick={() => handleViewDoc(doc.signed_copy_url)} className="p-2 rounded-lg bg-emerald-500/15 text-emerald-500 hover:bg-emerald-500/25" title="Signed"><CheckCircle className="w-3.5 h-3.5" /></button>
+                                    ) : (
+                                      <button onClick={() => handleUploadSigned(doc.id)} className="p-2 rounded-lg border border-white/10 text-gray-400 hover:text-white hover:bg-white/[0.06]" title="Upload Signed"><Upload className="w-3.5 h-3.5" /></button>
+                                    )
+                                  ) : <span className={`text-xs ${t('text-gray-600','text-gray-400')}`}>-</span>}
+                                </td>
+                              </tr>
                             )
-                          ) : <span className={`text-xs ${t('text-gray-600','text-gray-400')}`}>-</span>}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </>
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                  </G>
+                )
+              })
+            })()
           )}
-        </G>
+        </div>
       )}
 
       {/* ──────────────────────────────────────────────────────
@@ -825,14 +926,55 @@ export default function InvestmentFlowTab({
           ────────────────────────────────────────────────────── */}
       {subTab === 'schedule' && (
         <div className="space-y-4">
+          {/* Testing 2026-04-18 #10: payouts must be scoped to one investment.
+              When the investor arrives at Payment Schedule without choosing a
+              specific investment, list their investments so they can pick. */}
+          {!selectedApp && (
+            <G className="overflow-hidden" theme={theme}>
+              {investApps.length === 0 ? (
+                <div className="p-10 text-center">
+                  <Calendar className={`w-10 h-10 mx-auto mb-3 ${t('text-gray-600','text-gray-400')}`} />
+                  <p className={`text-sm font-medium ${t('text-gray-400','text-gray-600')}`}>No investments yet</p>
+                  <p className={`text-xs mt-1 ${t('text-gray-600','text-gray-500')}`}>Submit an investment first to see its payment schedule.</p>
+                </div>
+              ) : (
+                <>
+                  <div className={`px-5 py-3 border-b ${t('border-white/[0.06]','border-gray-200')}`}>
+                    <h4 className={`text-sm font-bold ${t('text-white','text-gray-900')}`}>Select an Investment</h4>
+                    <p className={`text-[11px] mt-0.5 ${t('text-gray-500','text-gray-600')}`}>Payouts are scheduled per investment. Pick one to view its schedule.</p>
+                  </div>
+                  <div className="divide-y divide-white/[0.04] dark:divide-white/[0.04]">
+                    {investApps.map((app: any) => (
+                      <button key={app.id} onClick={() => setSelectedApp(app)}
+                        className={`w-full text-left px-5 py-4 flex items-center justify-between gap-3 transition-colors ${t('hover:bg-white/[0.02]','hover:bg-gray-50')}`}>
+                        <div className="min-w-0">
+                          <p className={`text-sm font-semibold truncate ${t('text-white','text-gray-900')}`}>{app.fund_vehicle || '—'}</p>
+                          <p className={`text-[11px] ${t('text-gray-500','text-gray-600')}`}>{app.commitment_id || `GHL-CMT-${String(app.id).slice(0,8).toUpperCase()}`} · ₹{fmtINR(Number(app.investment_amount) || 0)} · {fmtDate(app.investment_date || app.created_at)}</p>
+                        </div>
+                        <ChevronRight className={`w-4 h-4 shrink-0 ${t('text-gray-500','text-gray-400')}`} />
+                      </button>
+                    ))}
+                  </div>
+                </>
+              )}
+            </G>
+          )}
           {selectedApp && (
             <G className="p-6" theme={theme}>
-              <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center justify-between mb-4 flex-wrap gap-3">
                 <div>
-                  <p className={`text-xs ${t('text-gray-500','text-gray-600')}`}>Fund: {selectedApp.fund_vehicle || selectedFund.name}</p>
+                  <p className={`text-xs ${t('text-gray-500','text-gray-600')}`}>Fund: {selectedApp.fund_vehicle || selectedFund.name}{selectedApp.commitment_id ? ` · ${selectedApp.commitment_id}` : ''}</p>
                   <h3 className={`text-lg font-bold ${t('text-white','text-gray-900')}`}>Investor Details</h3>
                 </div>
-                <p className={`text-xs font-semibold ${t('text-gray-400','text-gray-600')}`}>Investment Date: {fmtDate(selectedApp.investment_date || selectedApp.created_at)}</p>
+                <div className="flex items-center gap-3">
+                  <p className={`text-xs font-semibold ${t('text-gray-400','text-gray-600')}`}>Investment Date: {fmtDate(selectedApp.investment_date || selectedApp.created_at)}</p>
+                  {investApps.length > 1 && (
+                    <button onClick={() => setSelectedApp(null)}
+                      className={`text-xs font-semibold px-3 py-1.5 rounded-lg ${t('bg-white/[0.06] text-gray-300 border border-white/[0.08] hover:bg-white/[0.1]','bg-gray-100 text-gray-700 border border-gray-200 hover:bg-gray-200')}`}>
+                      Change Investment
+                    </button>
+                  )}
+                </div>
               </div>
               <div className="grid grid-cols-2 md:grid-cols-3 gap-3 mb-2">
                 <div><p className={`text-xs ${t('text-gray-500','text-gray-600')}`}>Name</p><p className={`text-sm font-medium ${t('text-white','text-gray-900')}`}>{userName}</p></div>
