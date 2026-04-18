@@ -36,6 +36,12 @@ import {
   useInvestmentTransactions,
 } from '@/lib/supabase/dashboardDataHooks'
 
+// ── Constants ──────────────────────────────────────────────
+// Fund size ceiling enforced per testing report 2026-04-18 #1:
+// "Capital amount not greater than fund size (10000000000)".
+// 10,00,00,00,000 = 1000 Cr — matches SEBI AIF corpus cap for this vehicle.
+const FUND_SIZE_CAP = 10_000_000_000
+
 // ── Helpers ────────────────────────────────────────────────
 function fmtINR(n: number): string { return new Intl.NumberFormat('en-IN').format(n) }
 function fmtDate(d: string): string {
@@ -221,6 +227,11 @@ export default function InvestmentFlowTab({
   const handleSubmitInvestment = async () => {
     if (!clientId || !userId) { showToast('Please log in', 'error'); return }
     if (investAmount < selectedFund.minInvestment) { showToast(`Minimum investment is ₹${fmtINR(selectedFund.minInvestment)}`, 'error'); return }
+    // Bug #1 (test 2026-04-18): Capital amount must not exceed the fund size.
+    if (investAmount > FUND_SIZE_CAP) {
+      showToast(`Investment cannot exceed the fund size of ₹${fmtINR(FUND_SIZE_CAP)}`, 'error')
+      return
+    }
     setSubmitting(true)
     const result = await submitInvestmentApplication({
       client_id: clientId,
@@ -245,15 +256,42 @@ export default function InvestmentFlowTab({
   const [txnBank, setTxnBank] = useState('')
   const [txnSubmitting, setTxnSubmitting] = useState(false)
 
+  // Sum of approved + pending transactions against the selected investment.
+  // Pending counts too — the investor shouldn't double-submit while admin reviews.
+  // Tests 2026-04-18 #3: once commitment is fully paid, no further transactions.
+  const paidForSelectedApp = useMemo(() => {
+    if (!selectedApp?.id) return 0
+    return (investTxns || [])
+      .filter((x: any) => x.investment_app_id === selectedApp.id && x.status !== 'rejected' && x.status !== 'cancelled')
+      .reduce((sum: number, x: any) => sum + (Number(x.transaction_amount) || 0), 0)
+  }, [investTxns, selectedApp])
+
+  const selectedAppCapital = useMemo(() => {
+    return Number(selectedApp?.investment_amount) || 0
+  }, [selectedApp])
+
+  const remainingForSelectedApp = Math.max(0, selectedAppCapital - paidForSelectedApp)
+  const isFullyPaid = selectedAppCapital > 0 && remainingForSelectedApp <= 0
+
   const handleSubmitTransaction = async () => {
     if (!selectedApp || !clientId) return
     if (!txnForm.transactionAmount) { showToast('Transaction amount is required', 'error'); return }
-    // Bug #10: Transaction amount must not exceed the committed capital amount.
-    const capital = Number(txnForm.capitalAmount) || Number(selectedApp.investment_amount) || 0
+    // Tests 2026-04-18 #2: Transaction must not exceed the committed capital amount.
+    const capital = Number(txnForm.capitalAmount) || selectedAppCapital || 0
     const txnAmt = Number(txnForm.transactionAmount)
     if (!Number.isFinite(txnAmt) || txnAmt <= 0) { showToast('Transaction amount must be a positive number', 'error'); return }
     if (capital > 0 && txnAmt > capital) {
       showToast(`Transaction amount cannot exceed the capital amount (₹${fmtINR(capital)})`, 'error')
+      return
+    }
+    // Tests 2026-04-18 #3: Block further transactions once commitment is fully paid.
+    if (isFullyPaid) {
+      showToast('This investment is already fully funded. No more transactions can be submitted.', 'warning')
+      return
+    }
+    // And cap this single txn at what's still owed (includes pending ones).
+    if (txnAmt > remainingForSelectedApp) {
+      showToast(`Only ₹${fmtINR(remainingForSelectedApp)} remains on this commitment. Reduce the transaction amount.`, 'error')
       return
     }
     // Bug #11: Require proof upload before submission.
@@ -271,6 +309,7 @@ export default function InvestmentFlowTab({
     if (res) {
       showToast('Transaction submitted for admin approval!', 'success')
       setTxnForm({ capitalAmount: '', transactionAmount: '', transactionId: '', proofUrl: '' })
+      refetchTxns()
     } else { showToast('Failed to submit transaction', 'error') }
     setTxnSubmitting(false)
   }
@@ -493,9 +532,15 @@ export default function InvestmentFlowTab({
                 <h4 className={`text-base font-bold ${t('text-white','text-gray-900')}`}>Investment Amount</h4>
                 <p className={`text-xs ${t('text-gray-500','text-gray-600')}`}>Enter or choose an amount to invest below</p>
 
-                <input type="number" value={investAmount} onChange={e => setInvestAmount(Number(e.target.value) || 0)}
+                <input type="number" value={investAmount} onChange={e => {
+                    const v = Number(e.target.value) || 0
+                    setInvestAmount(Math.min(v, FUND_SIZE_CAP))
+                  }}
                   className={`w-full px-4 py-3 rounded-xl text-lg font-bold ${t('bg-white/[0.04] border border-white/[0.08] text-white','bg-gray-100 border border-gray-200 text-gray-900')}`}
-                  min={selectedFund.minInvestment} step={100000} />
+                  min={selectedFund.minInvestment} max={FUND_SIZE_CAP} step={100000} />
+                {investAmount > FUND_SIZE_CAP - 1 && (
+                  <p className={`text-[11px] ${t('text-amber-400','text-amber-600')}`}>Capped at fund size (₹{fmtINR(FUND_SIZE_CAP)}).</p>
+                )}
 
                 <div className="flex gap-2 flex-wrap">
                   {[1000000, 2500000, 5000000, 10000000, 25000000].map(amt => (
@@ -661,33 +706,48 @@ export default function InvestmentFlowTab({
               {/* Transaction Form */}
               <div>
                 <h4 className={`text-sm font-bold mb-3 ${t('text-white','text-gray-900')}`}>Transaction</h4>
+                {selectedAppCapital > 0 && (
+                  <div className={`mb-3 p-2.5 rounded-xl text-[11px] ${isFullyPaid ? t('bg-emerald-500/10 border border-emerald-500/20 text-emerald-400','bg-emerald-50 border border-emerald-200 text-emerald-700') : t('bg-white/[0.03] border border-white/[0.06] text-gray-400','bg-gray-50 border border-gray-200 text-gray-700')}`}>
+                    {isFullyPaid ? (
+                      <>Commitment fully funded — ₹{fmtINR(paidForSelectedApp)} of ₹{fmtINR(selectedAppCapital)} paid. No further transactions allowed.</>
+                    ) : (
+                      <>Paid ₹{fmtINR(paidForSelectedApp)} of ₹{fmtINR(selectedAppCapital)} · <span className="font-semibold">₹{fmtINR(remainingForSelectedApp)} remaining</span></>
+                    )}
+                  </div>
+                )}
                 <div className="space-y-3">
                   <div>
                     <label className={`text-xs font-medium mb-1 block ${t('text-gray-400','text-gray-600')}`}>Capital Amount*</label>
                     <input value={txnForm.capitalAmount} onChange={e => setTxnForm(p => ({ ...p, capitalAmount: e.target.value }))}
-                      className={`w-full px-3 py-2.5 rounded-xl text-sm ${t('bg-white/[0.04] border border-white/[0.08] text-white','bg-gray-100 border border-gray-200 text-gray-900')}`} />
+                      disabled={isFullyPaid}
+                      className={`w-full px-3 py-2.5 rounded-xl text-sm disabled:opacity-50 ${t('bg-white/[0.04] border border-white/[0.08] text-white','bg-gray-100 border border-gray-200 text-gray-900')}`} />
                   </div>
                   <div>
                     <label className={`text-xs font-medium mb-1 block ${t('text-gray-400','text-gray-600')}`}>Transaction Amount*</label>
-                    <input value={txnForm.transactionAmount} onChange={e => setTxnForm(p => ({ ...p, transactionAmount: e.target.value }))} placeholder="Transaction Amount"
-                      className={`w-full px-3 py-2.5 rounded-xl text-sm ${t('bg-white/[0.04] border border-white/[0.08] text-white','bg-gray-100 border border-gray-200 text-gray-900')}`} />
+                    <input type="number" value={txnForm.transactionAmount}
+                      onChange={e => setTxnForm(p => ({ ...p, transactionAmount: e.target.value }))}
+                      placeholder={remainingForSelectedApp > 0 ? `Up to ₹${fmtINR(remainingForSelectedApp)}` : 'Transaction Amount'}
+                      disabled={isFullyPaid}
+                      max={remainingForSelectedApp || undefined}
+                      className={`w-full px-3 py-2.5 rounded-xl text-sm disabled:opacity-50 ${t('bg-white/[0.04] border border-white/[0.08] text-white','bg-gray-100 border border-gray-200 text-gray-900')}`} />
                   </div>
                   <div>
                     <label className={`text-xs font-medium mb-1 block ${t('text-gray-400','text-gray-600')}`}>Transaction ID</label>
                     <input value={txnForm.transactionId} onChange={e => setTxnForm(p => ({ ...p, transactionId: e.target.value }))} placeholder="Transaction ID"
-                      className={`w-full px-3 py-2.5 rounded-xl text-sm ${t('bg-white/[0.04] border border-white/[0.08] text-white','bg-gray-100 border border-gray-200 text-gray-900')}`} />
+                      disabled={isFullyPaid}
+                      className={`w-full px-3 py-2.5 rounded-xl text-sm disabled:opacity-50 ${t('bg-white/[0.04] border border-white/[0.08] text-white','bg-gray-100 border border-gray-200 text-gray-900')}`} />
                   </div>
                   <div>
                     <label className={`text-xs font-medium mb-1 block ${t('text-gray-400','text-gray-600')}`}>Transaction Proof*</label>
-                    <button onClick={handleUploadProof}
-                      className={`w-full flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl text-sm border transition-colors ${txnForm.proofUrl ? t('border-emerald-500/30 bg-emerald-500/10 text-emerald-400','border-emerald-300 bg-emerald-50 text-emerald-700') : t('border-white/[0.08] bg-white/[0.04] text-gray-400','border-gray-300 bg-gray-50 text-gray-600')}`}>
+                    <button onClick={handleUploadProof} disabled={isFullyPaid}
+                      className={`w-full flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl text-sm border transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${txnForm.proofUrl ? t('border-emerald-500/30 bg-emerald-500/10 text-emerald-400','border-emerald-300 bg-emerald-50 text-emerald-700') : t('border-white/[0.08] bg-white/[0.04] text-gray-400','border-gray-300 bg-gray-50 text-gray-600')}`}>
                       {txnForm.proofUrl ? <><CheckCircle className="w-4 h-4" /> Uploaded</> : <><Upload className="w-4 h-4" /> Choose File</>}
                     </button>
                   </div>
-                  <button onClick={handleSubmitTransaction} disabled={txnSubmitting}
-                    className="w-full py-3 rounded-xl text-sm font-bold text-white disabled:opacity-50"
+                  <button onClick={handleSubmitTransaction} disabled={txnSubmitting || isFullyPaid}
+                    className="w-full py-3 rounded-xl text-sm font-bold text-white disabled:opacity-50 disabled:cursor-not-allowed"
                     style={{ background: 'linear-gradient(135deg, #D0021B, #8B0000)' }}>
-                    {txnSubmitting ? 'Submitting...' : 'Submit'}
+                    {txnSubmitting ? 'Submitting...' : isFullyPaid ? 'Fully Paid' : 'Submit'}
                   </button>
                 </div>
               </div>

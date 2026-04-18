@@ -771,6 +771,19 @@ export async function generateFullPayoutSchedule(app: any) {
     const tdsPerPeriod = +(grossPerPeriod * (tdsPercent / 100)).toFixed(2)
     const netPerPeriod = +(grossPerPeriod - tdsPerPeriod).toFixed(2)
 
+    // Tests 2026-04-18 #4: first-month payout must be prorated from the
+    // investment date. Monthly debenture/LLP gross accrues daily from the
+    // invest date to the end of the start month; AIF yearly keeps the full
+    // amount (it already aligns to an anniversary date).
+    const startDay = startDate.getDate()
+    const daysInStartMonth = new Date(startDate.getFullYear(), startDate.getMonth() + 1, 0).getDate()
+    const remainingDays = daysInStartMonth - startDay + 1
+    const proratePct = remainingDays / daysInStartMonth
+    const needsProrate = !isAIF && startDay > 1
+    const firstGross = needsProrate ? +(grossPerPeriod * proratePct).toFixed(2) : grossPerPeriod
+    const firstTds = +(firstGross * (tdsPercent / 100)).toFixed(2)
+    const firstNet = +(firstGross - firstTds).toFixed(2)
+
     // Build all due_dates until maturity
     const dueDates: string[] = []
     const cursor = new Date(startDate)
@@ -794,24 +807,28 @@ export async function generateFullPayoutSchedule(app: any) {
     const { data: client } = await sb.from('clients').select('client_code, full_name').eq('id', app.client_id).maybeSingle()
     const { data: bank } = await sb.from('kyc_bank_details').select('account_number, account_holder_name, bank_name, ifsc_code').eq('client_id', app.client_id).maybeSingle()
 
-    const rows = missingDates.map(due_date => ({
-      client_id: app.client_id,
-      investment_id: app.id,
-      ghl_id: client?.client_code || '',
-      fund_type: app.fund_vehicle || '',
-      investment_amount: amount,
-      investment_date: app.investment_date,
-      due_date,
-      gross_amount: grossPerPeriod,
-      tds_percentage: tdsPercent,
-      tds_amount: tdsPerPeriod,
-      net_interest: netPerPeriod,
-      payment_status: 'pending',
-      account_number: bank?.account_number || null,
-      account_holder_name: bank?.account_holder_name || client?.full_name || null,
-      bank_name: bank?.bank_name || null,
-      ifsc_code: bank?.ifsc_code || null,
-    }))
+    const firstDueDate = dueDates[0]
+    const rows = missingDates.map(due_date => {
+      const isFirst = due_date === firstDueDate
+      return {
+        client_id: app.client_id,
+        investment_id: app.id,
+        ghl_id: client?.client_code || '',
+        fund_type: app.fund_vehicle || '',
+        investment_amount: amount,
+        investment_date: app.investment_date,
+        due_date,
+        gross_amount: isFirst ? firstGross : grossPerPeriod,
+        tds_percentage: tdsPercent,
+        tds_amount: isFirst ? firstTds : tdsPerPeriod,
+        net_interest: isFirst ? firstNet : netPerPeriod,
+        payment_status: 'pending',
+        account_number: bank?.account_number || null,
+        account_holder_name: bank?.account_holder_name || client?.full_name || null,
+        bank_name: bank?.bank_name || null,
+        ifsc_code: bank?.ifsc_code || null,
+      }
+    })
 
     const { error: insErr } = await sb.from('monthly_payouts').insert(rows)
     if (insErr) { console.warn('[admin] generateFullPayoutSchedule insert error:', insErr.message); return 0 }
