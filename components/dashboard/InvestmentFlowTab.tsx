@@ -417,7 +417,14 @@ export default function InvestmentFlowTab({
               <h3 className={`text-lg font-bold ${t('text-white','text-gray-900')}`}>{selectedFund.name}</h3>
               <div className="flex gap-2">
                 <button onClick={() => setSubTab('invest')} className="px-4 py-2 rounded-lg text-xs font-bold text-white" style={{ background: 'linear-gradient(135deg, #D0021B, #8B0000)' }}>Investment List</button>
-                <a href="/downloads" target="_blank" className="px-4 py-2 rounded-lg text-xs font-bold text-white bg-brand-red/80 hover:bg-brand-red flex items-center gap-1"><Download className="w-3 h-3" /> Download Terms</a>
+                <a
+                  href="/downloads/investing-and-payment-terms.pdf"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="px-4 py-2 rounded-lg text-xs font-bold text-white bg-brand-red/80 hover:bg-brand-red flex items-center gap-1"
+                >
+                  <Download className="w-3 h-3" /> Download Terms
+                </a>
               </div>
             </div>
 

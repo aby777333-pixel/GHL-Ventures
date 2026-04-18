@@ -829,7 +829,7 @@ export default function DashboardClient() {
         </div>
 
         {/* Nav items */}
-        <nav className="flex-1 px-3 space-y-0.5 overflow-y-auto">
+        <nav className="flex-1 px-3 space-y-0.5 overflow-y-auto dashboard-sidebar-scroll">
           {SIDEBAR_ITEMS.map((item) => {
             const isActive = activeTab === item.id
             return (

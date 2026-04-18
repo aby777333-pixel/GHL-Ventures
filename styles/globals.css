@@ -3731,3 +3731,42 @@ body:not(.dashboard-active):not(.admin-active):not(.staff-active) :root:not(.dar
 :root:not(.dark) body:not(.dashboard-active):not(.admin-active):not(.staff-active) {
   color: #0A0A0A;
 }
+
+/* ============================================================
+   DASHBOARD SIDEBAR SCROLLBAR — visible in both themes
+   Testing 2026-04-18: light-mode sidebar scrollbar was invisible
+   against the near-white gradient. Both themes now render a clearly
+   visible thumb, with colours tuned so they remain subtle.
+   ============================================================ */
+.dashboard-sidebar-scroll {
+  scrollbar-width: thin; /* Firefox */
+}
+:root:not(.dark) .dashboard-sidebar-scroll {
+  scrollbar-color: rgba(0, 0, 0, 0.35) transparent; /* Firefox thumb/track */
+}
+:root.dark .dashboard-sidebar-scroll {
+  scrollbar-color: rgba(255, 255, 255, 0.28) transparent;
+}
+.dashboard-sidebar-scroll::-webkit-scrollbar {
+  width: 8px;
+}
+.dashboard-sidebar-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+.dashboard-sidebar-scroll::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+:root:not(.dark) .dashboard-sidebar-scroll::-webkit-scrollbar-thumb {
+  background-color: rgba(0, 0, 0, 0.35);
+}
+:root:not(.dark) .dashboard-sidebar-scroll::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(0, 0, 0, 0.55);
+}
+:root.dark .dashboard-sidebar-scroll::-webkit-scrollbar-thumb {
+  background-color: rgba(255, 255, 255, 0.28);
+}
+:root.dark .dashboard-sidebar-scroll::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(255, 255, 255, 0.45);
+}
