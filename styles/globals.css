@@ -3619,6 +3619,22 @@ button[class*="rounded-lg"] {
   gap: 0.375rem;
 }
 
+/* Bug report 2026-04-18: Submit buttons rendered left-aligned because the
+   rule above forces display:inline-flex, which makes `text-center` useless —
+   flex layout needs `justify-content`. Buttons that declare `text-center` OR
+   are full-width without an opposing justify utility should centre their
+   content. Sidebar nav (justify-start) and action-split rows (justify-between
+   / justify-end) are explicitly excluded. */
+button[class*="rounded-xl"][class*="text-center"],
+button[class*="rounded-lg"][class*="text-center"],
+button[class*="rounded-xl"][class*="w-full"]:not([class*="justify-start"]):not([class*="justify-between"]):not([class*="justify-end"]):not([class*="justify-around"]),
+button[class*="rounded-lg"][class*="w-full"]:not([class*="justify-start"]):not([class*="justify-between"]):not([class*="justify-end"]):not([class*="justify-around"]),
+button[class*="rounded-xl"][class*="flex-1"]:not([class*="justify-start"]):not([class*="justify-between"]):not([class*="justify-end"]):not([class*="justify-around"]),
+button[class*="rounded-lg"][class*="flex-1"]:not([class*="justify-start"]):not([class*="justify-between"]):not([class*="justify-end"]):not([class*="justify-around"]) {
+  justify-content: center;
+  text-align: center;
+}
+
 /* 2. Font readability - improve minimum sizes in dashboard */
 /* Dashboard minimum font size */
 [class*="text-\\[10px\\]"] {

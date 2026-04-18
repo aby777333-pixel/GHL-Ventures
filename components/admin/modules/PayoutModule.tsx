@@ -430,13 +430,19 @@ export default function PayoutModule({ subTab, navigate, showToast }: PayoutModu
     { key: 'net_interest', label: 'Net Payout', sortable: true, width: '110px', render: (row) => (
       <span className="text-white font-semibold text-xs">{formatINR(row.net_interest)}</span>
     )},
-    // Testing 2026-04-18 #6: surface bank details inline so admins don't have
-    // to open the modal for every row before disbursing.
-    { key: 'bank_name', label: 'Bank', sortable: true, width: '140px', render: (row) => (
+    // Bug 2026-04-18: surface every bank field ops needs to disburse —
+    // bank name, account holder name, full account number, IFSC — inline so
+    // admins don't open the modal for every row.
+    { key: 'bank_name', label: 'Bank', sortable: true, width: '180px', render: (row) => (
       <div className="min-w-0">
         <p className="text-gray-200 text-xs font-medium truncate">{row.bank_name || '—'}</p>
-        <p className="text-[10px] text-gray-500 truncate">{row.account_number ? `A/c ${row.account_number}` : 'No A/c'}</p>
+        <p className="text-[10px] text-gray-500 truncate" title={row.account_holder_name || ''}>
+          {row.account_holder_name || '—'}
+        </p>
       </div>
+    )},
+    { key: 'account_number', label: 'Account No.', sortable: true, width: '160px', render: (row) => (
+      <span className="text-gray-300 text-xs font-mono">{row.account_number || '—'}</span>
     )},
     { key: 'ifsc_code', label: 'IFSC', sortable: true, width: '110px', render: (row) => (
       <span className="text-gray-300 text-xs font-mono">{row.ifsc_code || '—'}</span>

@@ -26,6 +26,8 @@ export interface ClientUser {
   phone?: string | null
   avatar_url?: string | null
   kyc_status: string
+  kyc_rejection_reason?: string | null
+  kyc_rejected_at?: string | null
   account_status: string
   risk_profile?: string | null
   aum: number
@@ -73,6 +75,8 @@ function buildClientUser(
     phone: profile?.phone || client?.phone || meta.phone || null,
     avatar_url: profile?.avatar_url || meta.avatar_url || meta.picture || null,
     kyc_status: String(client?.kyc_status || 'pending'),
+    kyc_rejection_reason: client?.kyc_rejection_reason || null,
+    kyc_rejected_at: client?.kyc_rejected_at || null,
     account_status: client ? 'active' : 'pending',
     risk_profile: client?.risk_profile ? String(client.risk_profile) : null,
     aum: Number(client?.total_invested) || 0,

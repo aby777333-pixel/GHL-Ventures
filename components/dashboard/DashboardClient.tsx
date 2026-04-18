@@ -1638,6 +1638,14 @@ export default function DashboardClient() {
             }`}>
               {userKycStatus === 'approved' || userKycStatus === 'verified' ? 'Approved' : userKycStatus === 'rejected' ? 'Rejected' : 'Pending'}
             </span>
+            {/* Bug 2026-04-18: surface admin's rejection reason so investor
+                sees exactly what to fix. */}
+            {userKycStatus === 'rejected' && (user as any)?.kyc_rejection_reason && (
+              <p className="mt-3 px-3 py-2 rounded-lg text-[11px] text-left text-white/90 bg-black/30 border border-red-500/30 whitespace-pre-wrap max-h-32 overflow-y-auto">
+                <span className="font-semibold text-red-300">Reason: </span>
+                {(user as any).kyc_rejection_reason}
+              </p>
+            )}
           </div>
         </div>
         {/* My Investments Card */}
@@ -3328,8 +3336,14 @@ export default function DashboardClient() {
               </button>
             </div>
             <p className={`text-xs mt-4 ${t('text-gray-600','text-gray-500')}`}>
-              Current KYC Status: <span className="font-semibold text-amber-400 capitalize">{userKycStatus}</span>
+              Current KYC Status: <span className={`font-semibold capitalize ${userKycStatus === 'rejected' ? 'text-red-400' : 'text-amber-400'}`}>{userKycStatus}</span>
             </p>
+            {userKycStatus === 'rejected' && (user as any)?.kyc_rejection_reason && (
+              <div className="mt-4 mx-auto max-w-md px-4 py-3 rounded-xl bg-red-500/10 border border-red-500/30 text-left">
+                <p className="text-xs font-semibold text-red-400 mb-1">Rejection reason</p>
+                <p className={`text-xs whitespace-pre-wrap ${t('text-red-200','text-red-700')}`}>{(user as any).kyc_rejection_reason}</p>
+              </div>
+            )}
           </Glass>
         </div>
       )

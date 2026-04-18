@@ -461,6 +461,27 @@ function KYCQueueTab({
   const [selectedClientKYC, setSelectedClientKYC] = useState<any | null>(null)
   const [clientKYCDetails, setClientKYCDetails] = useState<any | null>(null)
   const [loadingDetails, setLoadingDetails] = useState(false)
+  // KYC rejection modal — replaces window.prompt so the admin types a proper
+  // manual reason that also renders in the investor dashboard banner.
+  const [rejectTarget, setRejectTarget] = useState<{ clientId: string; clientName: string } | null>(null)
+  const [rejectReason, setRejectReason] = useState('')
+  const [rejectSaving, setRejectSaving] = useState(false)
+  const submitRejection = async () => {
+    if (!rejectTarget) return
+    const trimmed = rejectReason.trim()
+    if (!trimmed) { showToast('Rejection reason is required', 'warning'); return }
+    setRejectSaving(true)
+    const ok = await rejectClientKYC(rejectTarget.clientId, 'admin', trimmed)
+    setRejectSaving(false)
+    if (ok) {
+      showToast(`KYC rejected for ${rejectTarget.clientName}`, 'success')
+      setRejectTarget(null); setRejectReason('')
+      setSelectedClientKYC(null); setClientKYCDetails(null)
+      onRefresh?.()
+    } else {
+      showToast('Rejection failed', 'error')
+    }
+  }
 
   // View detailed KYC for a client
   const handleViewClient = async (clientGroup: any) => {
@@ -510,7 +531,19 @@ function KYCQueueTab({
       label: 'Status',
       render: (row) => {
         const variant = row.overallStatus === 'submitted' ? 'warning' as const : getKYCBadgeVariant(row.overallStatus)
-        return <AdminBadge label={row.overallStatus} variant={variant} dot />
+        return (
+          <div className="flex flex-col gap-1 min-w-0">
+            <AdminBadge label={row.overallStatus} variant={variant} dot />
+            {row.overallStatus === 'rejected' && row.kyc_rejection_reason && (
+              <span
+                className="text-[10px] text-red-400 max-w-[220px] truncate cursor-help"
+                title={row.kyc_rejection_reason}
+              >
+                Reason: {row.kyc_rejection_reason}
+              </span>
+            )}
+          </div>
+        )
       },
     },
     {
@@ -550,17 +583,10 @@ function KYCQueueTab({
                 <CheckCircle2 className="w-4 h-4" />
               </button>
               <button
-                onClick={async (e) => {
+                onClick={(e) => {
                   e.stopPropagation()
-                  // Testing 2026-04-18 #2: rejection must capture a reason so
-                  // the investor's notification explains what to fix.
-                  const reason = window.prompt(`Reason for rejecting ${row.clientName}'s KYC?`, '')
-                  if (reason === null) return // cancelled
-                  const trimmed = reason.trim()
-                  if (!trimmed) { showToast('Rejection reason is required', 'warning'); return }
-                  const ok = await rejectClientKYC(row.clientId, 'admin', trimmed)
-                  if (ok) { showToast(`KYC rejected for ${row.clientName}`, 'success'); onRefresh?.() }
-                  else showToast('Rejection failed', 'error')
+                  setRejectReason('')
+                  setRejectTarget({ clientId: row.clientId, clientName: row.clientName })
                 }}
                 className="p-1.5 rounded-lg hover:bg-red-500/10 text-gray-500 hover:text-red-400 transition-colors"
                 title="Reject"
@@ -628,15 +654,9 @@ function KYCQueueTab({
                     else showToast('Approval failed', 'error')
                     setSelectedClientKYC(null); setClientKYCDetails(null)
                   }}>Approve All</ModalButton>
-                  <ModalButton variant="danger" onClick={async () => {
-                    const reason = window.prompt('Reason for rejecting this KYC?', '')
-                    if (reason === null) return
-                    const trimmed = reason.trim()
-                    if (!trimmed) { showToast('Rejection reason is required', 'warning'); return }
-                    const ok = await rejectClientKYC(selectedClientKYC.clientId, 'admin', trimmed)
-                    if (ok) { showToast('KYC rejected', 'info'); onRefresh?.() }
-                    else showToast('Rejection failed', 'error')
-                    setSelectedClientKYC(null); setClientKYCDetails(null)
+                  <ModalButton variant="danger" onClick={() => {
+                    setRejectReason('')
+                    setRejectTarget({ clientId: selectedClientKYC.clientId, clientName: selectedClientKYC.clientName })
                   }}>Reject</ModalButton>
                 </>
               )}
@@ -648,6 +668,20 @@ function KYCQueueTab({
             <div className="text-center py-12 text-gray-400"><Clock className="w-8 h-8 mx-auto mb-2 animate-spin" /> Loading KYC details...</div>
           ) : clientKYCDetails ? (
             <div className="space-y-4 max-h-[70vh] overflow-y-auto">
+              {/* Rejection banner — bug 2026-04-18 */}
+              {selectedClientKYC?.kyc_rejection_reason && (
+                <div className="border border-red-500/30 rounded-xl p-4 bg-red-500/5">
+                  <div className="flex items-start gap-3">
+                    <XCircle className="w-4 h-4 text-red-400 shrink-0 mt-0.5" />
+                    <div className="min-w-0">
+                      <p className="text-xs font-semibold text-red-400 mb-1">
+                        Rejected{selectedClientKYC.kyc_rejected_at ? ` · ${formatDate(selectedClientKYC.kyc_rejected_at)}` : ''}
+                      </p>
+                      <p className="text-sm text-gray-200 whitespace-pre-wrap">{selectedClientKYC.kyc_rejection_reason}</p>
+                    </div>
+                  </div>
+                </div>
+              )}
               {/* Basic Details */}
               {clientKYCDetails.basic && (
                 <div className="border border-white/[0.08] rounded-xl p-4 bg-black/20">
@@ -759,6 +793,44 @@ function KYCQueueTab({
       )}
 
       {/* Old preview modal removed — replaced by consolidated per-client detail view above */}
+
+      {/* KYC Rejection Modal — manual reason required.
+          Bug 2026-04-18: replaces window.prompt so the admin types a proper
+          reason that persists to clients.kyc_rejection_reason and renders
+          in both the admin KYC row and the investor dashboard banner. */}
+      {rejectTarget && (
+        <AdminModal
+          isOpen={!!rejectTarget}
+          onClose={() => { if (!rejectSaving) { setRejectTarget(null); setRejectReason('') } }}
+          title="Reject KYC"
+          subtitle={rejectTarget.clientName}
+          maxWidth="max-w-lg"
+          footer={
+            <>
+              <ModalButton onClick={() => { setRejectTarget(null); setRejectReason('') }} disabled={rejectSaving}>Cancel</ModalButton>
+              <ModalButton variant="danger" onClick={submitRejection} disabled={rejectSaving || !rejectReason.trim()}>
+                {rejectSaving ? 'Rejecting…' : 'Reject KYC'}
+              </ModalButton>
+            </>
+          }
+        >
+          <div className="space-y-3">
+            <p className="text-xs text-gray-400">
+              The reason is saved on the client record and shown to the investor on their dashboard and in their notification. Be specific so they know exactly what to fix.
+            </p>
+            <label className="block text-[11px] font-medium uppercase tracking-wide text-gray-500">Rejection reason <span className="text-red-400">*</span></label>
+            <textarea
+              value={rejectReason}
+              onChange={(e) => setRejectReason(e.target.value)}
+              rows={4}
+              autoFocus
+              placeholder="e.g. PAN card image is blurred — please upload a clearer scan. Also bank statement is older than 3 months."
+              className="w-full px-3 py-2.5 text-sm text-gray-200 rounded-lg bg-white/[0.04] border border-white/[0.08] focus:outline-none focus:border-red-500/50"
+            />
+            <p className="text-[11px] text-gray-500">{rejectReason.trim().length} / 500 characters</p>
+          </div>
+        </AdminModal>
+      )}
     </div>
   )
 }

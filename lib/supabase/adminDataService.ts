@@ -247,13 +247,14 @@ export async function fetchKYCDocuments() {
   // Bug #8: order by most recently updated first so newest KYCs surface at the top.
   try {
     const { data: clients } = await sb.from('clients')
-      .select('id, full_name, email, phone, kyc_status, kyc_step, updated_at, created_at')
+      .select('id, full_name, email, phone, kyc_status, kyc_step, kyc_rejection_reason, kyc_rejected_at, updated_at, created_at')
       .in('kyc_status', ['submitted', 'pending', 'rejected', 'verified', 'approved'])
       .order('updated_at', { ascending: false })
     if (!clients || clients.length === 0) return []
     const clientIds = clients.map((c: any) => c.id)
     const clientMap = new Map(clients.map((c: any) => [c.id, c.full_name]))
     const clientEmailMap = new Map(clients.map((c: any) => [c.id, c.email || '']))
+    const clientRejectionMap = new Map(clients.map((c: any) => [c.id, { reason: c.kyc_rejection_reason, at: c.kyc_rejected_at }]))
     // Bug #1: also expose client.updated_at so the UI-side group sort can
     // fall back to the client record's last-modified time (when kyc_status
     // changed) if the per-KYC sub-row dates are older.
@@ -331,13 +332,24 @@ export async function fetchKYCByClient() {
   try {
     const docs = await fetchKYCDocuments()
     // Also fetch client-level kyc_status for accurate filtering
-    const { data: allClients } = await sb.from('clients').select('id, kyc_status').in('kyc_status', ['submitted', 'pending', 'rejected', 'verified', 'approved'])
+    const { data: allClients } = await sb.from('clients')
+      .select('id, kyc_status, kyc_rejection_reason, kyc_rejected_at')
+      .in('kyc_status', ['submitted', 'pending', 'rejected', 'verified', 'approved'])
     const clientStatusMap = new Map((allClients || []).map((c: any) => [c.id, c.kyc_status]))
+    const rejectionMap = new Map((allClients || []).map((c: any) => [c.id, { reason: c.kyc_rejection_reason, at: c.kyc_rejected_at }]))
 
-    const grouped: Record<string, { clientId: string; clientName: string; docs: any[]; overallStatus: string }> = {}
+    const grouped: Record<string, { clientId: string; clientName: string; docs: any[]; overallStatus: string; kyc_rejection_reason?: string | null; kyc_rejected_at?: string | null }> = {}
     for (const doc of docs) {
       if (!grouped[doc.clientId]) {
-        grouped[doc.clientId] = { clientId: doc.clientId, clientName: doc.clientName, docs: [], overallStatus: 'pending' }
+        const rej: any = rejectionMap.get(doc.clientId) || {}
+        grouped[doc.clientId] = {
+          clientId: doc.clientId,
+          clientName: doc.clientName,
+          docs: [],
+          overallStatus: 'pending',
+          kyc_rejection_reason: rej.reason || null,
+          kyc_rejected_at: rej.at || null,
+        }
       }
       grouped[doc.clientId].docs.push(doc)
     }
@@ -454,12 +466,16 @@ export async function approveClientKYC(clientId: string, adminUserId: string) {
 
 export async function rejectClientKYC(clientId: string, adminUserId: string, reason?: string) {
   try {
-    // Persist the rejection reason so admin can see it later (not just once in a notification).
-    const patch: any = { kyc_status: 'rejected' }
-    if (reason) {
-      const stamp = new Date().toISOString().split('T')[0]
-      patch.notes = `[${stamp}] KYC rejected: ${reason}`
+    // Persist reason in dedicated columns (kyc_rejection_reason /
+    // kyc_rejected_at / kyc_rejected_by) so both admin and investor surfaces
+    // can render it without parsing prose out of a generic notes blob.
+    const patch: any = {
+      kyc_status: 'rejected',
+      kyc_rejection_reason: reason || null,
+      kyc_rejected_at: new Date().toISOString(),
     }
+    if (adminUserId && /^[0-9a-f-]{36}$/i.test(adminUserId)) patch.kyc_rejected_by = adminUserId
+
     await sb.from('clients').update(patch).eq('id', clientId)
     const { data: client } = await sb.from('clients').select('user_id').eq('id', clientId).single()
     if (client?.user_id) {
@@ -471,6 +487,19 @@ export async function rejectClientKYC(clientId: string, adminUserId: string, rea
         link: '/dashboard/kyc',
       })
     }
+    return true
+  } catch { return false }
+}
+
+// Clear rejection fields (called on admin re-approval or investor re-submit).
+export async function clearKYCRejection(clientId: string): Promise<boolean> {
+  if (!isSupabaseConfigured()) return false
+  try {
+    await sb.from('clients').update({
+      kyc_rejection_reason: null,
+      kyc_rejected_at: null,
+      kyc_rejected_by: null,
+    }).eq('id', clientId)
     return true
   } catch { return false }
 }
