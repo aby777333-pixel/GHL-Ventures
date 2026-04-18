@@ -3733,6 +3733,47 @@ body:not(.dashboard-active):not(.admin-active):not(.staff-active) :root:not(.dar
 }
 
 /* ============================================================
+   LIGHT MODE — CARDS / LIGHT CONTAINERS SECONDARY SWEEP
+   Follow-up 2026-04-18: some marketing cards (e.g. NRI-Specific
+   Advantages, SEBI Co-Invest "Ideal For") still showed invisible
+   text because spans carried utility combos like
+   `dark:text-white/80 dark:text-gray-300` alongside `text-brand-black`,
+   which in certain browsers/compiled orders rendered effectively
+   transparent against the card background.
+
+   This block forces every descendant inline text node inside a light
+   card / light surface to a readable near-black in light mode on the
+   public site. Dashboard / admin / staff are excluded by the body
+   class chain. Explicit brand colours remain untouched via the list
+   of :not() selectors — red, emerald, blue, amber, pink, purple, and
+   other accent utilities keep rendering as intended.
+   ============================================================ */
+:root:not(.dark) body:not(.dashboard-active):not(.admin-active):not(.staff-active) .card p:not([class*="text-brand-red"]):not([class*="text-red-"]):not([class*="text-emerald"]):not([class*="text-green"]):not([class*="text-blue"]):not([class*="text-amber"]):not([class*="text-yellow"]):not([class*="text-pink"]):not([class*="text-purple"]):not([class*="text-violet"]):not([class*="text-cyan"]):not([class*="text-teal"]):not([class*="text-orange"]):not([class*="text-rose"]):not([class*="text-indigo"]),
+:root:not(.dark) body:not(.dashboard-active):not(.admin-active):not(.staff-active) .card span:not([class*="text-brand-red"]):not([class*="text-red-"]):not([class*="text-emerald"]):not([class*="text-green"]):not([class*="text-blue"]):not([class*="text-amber"]):not([class*="text-yellow"]):not([class*="text-pink"]):not([class*="text-purple"]):not([class*="text-violet"]):not([class*="text-cyan"]):not([class*="text-teal"]):not([class*="text-orange"]):not([class*="text-rose"]):not([class*="text-indigo"]),
+:root:not(.dark) body:not(.dashboard-active):not(.admin-active):not(.staff-active) .card li:not([class*="text-brand-red"]):not([class*="text-red-"]):not([class*="text-emerald"]):not([class*="text-green"]):not([class*="text-blue"]):not([class*="text-amber"]):not([class*="text-yellow"]):not([class*="text-pink"]):not([class*="text-purple"]):not([class*="text-violet"]):not([class*="text-cyan"]):not([class*="text-teal"]):not([class*="text-orange"]):not([class*="text-rose"]):not([class*="text-indigo"]),
+:root:not(.dark) body:not(.dashboard-active):not(.admin-active):not(.staff-active) .card h1,
+:root:not(.dark) body:not(.dashboard-active):not(.admin-active):not(.staff-active) .card h2,
+:root:not(.dark) body:not(.dashboard-active):not(.admin-active):not(.staff-active) .card h3,
+:root:not(.dark) body:not(.dashboard-active):not(.admin-active):not(.staff-active) .card h4 {
+  color: #0A0A0A !important;
+}
+
+/* Also neutralise explicit white / white-alpha utilities when they
+   accidentally sit on a light surface — Tailwind classes like
+   `text-white`, `text-white/80`, `text-white/90` etc. Use attribute
+   selectors so both `text-white` and `text-white/80` match. */
+:root:not(.dark) body:not(.dashboard-active):not(.admin-active):not(.staff-active) .card [class~="text-white"],
+:root:not(.dark) body:not(.dashboard-active):not(.admin-active):not(.staff-active) .bg-white [class~="text-white"],
+:root:not(.dark) body:not(.dashboard-active):not(.admin-active):not(.staff-active) .bg-brand-offwhite [class~="text-white"],
+:root:not(.dark) body:not(.dashboard-active):not(.admin-active):not(.staff-active) section.bg-white [class~="text-white"],
+:root:not(.dark) body:not(.dashboard-active):not(.admin-active):not(.staff-active) .card [class*="text-white/"],
+:root:not(.dark) body:not(.dashboard-active):not(.admin-active):not(.staff-active) .bg-white [class*="text-white/"],
+:root:not(.dark) body:not(.dashboard-active):not(.admin-active):not(.staff-active) .bg-brand-offwhite [class*="text-white/"],
+:root:not(.dark) body:not(.dashboard-active):not(.admin-active):not(.staff-active) section.bg-white [class*="text-white/"] {
+  color: #0A0A0A !important;
+}
+
+/* ============================================================
    DASHBOARD SIDEBAR SCROLLBAR — visible in both themes
    Testing 2026-04-18: light-mode sidebar scrollbar was invisible
    against the near-white gradient. Both themes now render a clearly

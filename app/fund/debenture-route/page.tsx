@@ -218,7 +218,7 @@ export default function DebentureRoutePage() {
                   ].map((item) => (
                     <li key={item} className="flex items-start">
                       <CheckCircle className="w-5 h-5 text-brand-red mr-3 mt-0.5 shrink-0" />
-                      <span className="text-sm text-brand-black dark:text-white/80 dark:text-gray-300">{item}</span>
+                      <span className="text-sm text-brand-black dark:text-gray-300">{item}</span>
                     </li>
                   ))}
                 </ul>
