@@ -73,6 +73,7 @@ export const ADMIN_SIDEBAR_ITEMS: SidebarItem[] = [
     permission: 'view:employees',
     subItems: [
       { id: 'employees', label: 'Directory' },
+      { id: 'employees/applications', label: 'Applications' },
       { id: 'employees/attendance', label: 'Attendance' },
       { id: 'employees/leave', label: 'Leave' },
       { id: 'employees/performance', label: 'Performance' },
@@ -292,6 +293,7 @@ export const ALL_ADMIN_TAB_PARAMS = [
   { tab: ['realty-brokers', 'inquiries'] },
   { tab: ['realty-brokers', 'analytics'] },
   { tab: ['employees'] },
+  { tab: ['employees', 'applications'] },
   { tab: ['employees', 'attendance'] },
   { tab: ['employees', 'leave'] },
   { tab: ['employees', 'performance'] },
