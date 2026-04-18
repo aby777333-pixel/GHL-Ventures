@@ -3770,3 +3770,27 @@ body:not(.dashboard-active):not(.admin-active):not(.staff-active) :root:not(.dar
 :root.dark .dashboard-sidebar-scroll::-webkit-scrollbar-thumb:hover {
   background-color: rgba(255, 255, 255, 0.45);
 }
+
+/* ============================================================
+   SUBMIT BUTTON TEXT CENTERING — global safety net
+   Request 2026-04-18: "align text in every submit button to the
+   center in all modules."
+
+   Target: any form-bound submit button. Covers both regular and
+   flex layouts so a button with flex (icon + text + spinner) always
+   centers the whole group, and a plain text button keeps its default
+   centered alignment.
+
+   Scope is narrow — only button[type="submit"]. Sidebar nav buttons
+   use type="button" (or no type, which defaults to "submit" only
+   inside a <form>), so general left-aligned nav behaviour elsewhere
+   is untouched.
+   ============================================================ */
+button[type="submit"] {
+  text-align: center;
+  justify-content: center;
+}
+button[type="submit"].flex,
+button[type="submit"].inline-flex {
+  justify-content: center;
+}
