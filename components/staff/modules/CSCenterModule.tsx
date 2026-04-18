@@ -49,6 +49,7 @@ import {
 } from '@/lib/supabase/realtimeSubscriptions'
 import { fetchLeads } from '@/lib/supabase/leadService'
 import { fetchTickets, updateTicket, updateAgentStatus } from '@/lib/supabase/staffDataService'
+import { supabase, isSupabaseConfigured } from '@/lib/supabase/client'
 import type { Lead } from '@/lib/admin/adminTypes'
 
 // ════════════════════════════════════════════════════════════════
@@ -350,8 +351,8 @@ function CSDashboard({ navigate, showToast }: Pick<CSCenterModuleProps, 'navigat
 }
 
 // ── 2. Unified Inbox (live from Supabase) ────────────────────
-function UnifiedInbox({ showToast }: Pick<CSCenterModuleProps, 'showToast'>) {
-  const [channelFilter, setChannelFilter] = useState<string>('all')
+function UnifiedInbox({ showToast, initialChannel = 'all' }: Pick<CSCenterModuleProps, 'showToast'> & { initialChannel?: string }) {
+  const [channelFilter, setChannelFilter] = useState<string>(initialChannel)
   const [selectedThread, setSelectedThread] = useState<string | null>(null)
   const [sessions, setSessions] = useState<ChatSession[]>([])
   const [threadMsgs, setThreadMsgs] = useState<ChatMsg[]>([])
@@ -383,7 +384,7 @@ function UnifiedInbox({ showToast }: Pick<CSCenterModuleProps, 'showToast'>) {
     return () => { mounted = false; clearInterval(interval) }
   }, [selectedThread])
 
-  const channels = ['all', 'chat', 'whatsapp', 'email']
+  const channels = ['all', 'chat', 'whatsapp', 'email', 'telegram', 'social']
 
   const filtered = useMemo(() => {
     if (channelFilter === 'all') return sessions
@@ -1877,6 +1878,143 @@ function CSATDashboard() {
   )
 }
 
+// ── Knowledge Base ────────────────────────────────────────────
+interface KBArticle {
+  id: string
+  title: string
+  category: string | null
+  content: string | null
+  author: string | null
+  helpful: number | null
+  not_helpful: number | null
+  tags: string[] | null
+  updated_at: string | null
+}
+
+function KnowledgeBaseView({ showToast }: Pick<CSCenterModuleProps, 'showToast'>) {
+  const [articles, setArticles] = useState<KBArticle[]>([])
+  const [loading, setLoading] = useState(true)
+  const [query, setQuery] = useState('')
+  const [selected, setSelected] = useState<KBArticle | null>(null)
+  const [category, setCategory] = useState<string>('all')
+
+  useEffect(() => {
+    let active = true
+    ;(async () => {
+      if (!isSupabaseConfigured()) { setLoading(false); return }
+      try {
+        const sb = supabase as any
+        const { data } = await sb.from('kb_articles').select('*').order('updated_at', { ascending: false }).limit(200)
+        if (active && Array.isArray(data)) setArticles(data as KBArticle[])
+      } catch { /* ignore */ }
+      if (active) setLoading(false)
+    })()
+    return () => { active = false }
+  }, [])
+
+  const categories = useMemo(() => {
+    const set = new Set<string>()
+    articles.forEach(a => { if (a.category) set.add(a.category) })
+    return ['all', ...Array.from(set).sort()]
+  }, [articles])
+
+  const filtered = useMemo(() => {
+    const q = query.trim().toLowerCase()
+    return articles.filter(a => {
+      if (category !== 'all' && a.category !== category) return false
+      if (!q) return true
+      return [a.title, a.content, a.category, ...(a.tags || [])].filter(Boolean).join(' ').toLowerCase().includes(q)
+    })
+  }, [articles, query, category])
+
+  const recordHelpful = async (id: string, vote: 'helpful' | 'not_helpful') => {
+    if (!isSupabaseConfigured()) return
+    try {
+      const sb = supabase as any
+      const target = articles.find(a => a.id === id)
+      if (!target) return
+      const nextVal = (target[vote] || 0) + 1
+      const { error } = await sb.from('kb_articles').update({ [vote]: nextVal }).eq('id', id)
+      if (error) { showToast('Only admins can record votes', 'warning'); return }
+      setArticles(prev => prev.map(a => a.id === id ? { ...a, [vote]: nextVal } : a))
+      if (selected && selected.id === id) setSelected({ ...selected, [vote]: nextVal } as KBArticle)
+      showToast('Thanks for the feedback', 'success')
+    } catch { /* ignore */ }
+  }
+
+  return (
+    <div className="space-y-4">
+      <AdminGlass>
+        <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+          <div className="flex items-center gap-2 flex-1 px-3 py-2 rounded-xl bg-white/[0.04] border border-white/[0.08]">
+            <Headphones className="w-4 h-4 text-gray-500" />
+            <input
+              value={query}
+              onChange={e => setQuery(e.target.value)}
+              placeholder="Search knowledge base articles…"
+              className="flex-1 bg-transparent outline-none text-sm text-gray-200 placeholder:text-gray-500"
+            />
+          </div>
+          <select
+            value={category}
+            onChange={e => setCategory(e.target.value)}
+            className="px-3 py-2 rounded-xl bg-white/[0.04] border border-white/[0.08] text-sm text-gray-200 outline-none"
+          >
+            {categories.map(c => <option key={c} value={c}>{c === 'all' ? 'All categories' : c}</option>)}
+          </select>
+        </div>
+      </AdminGlass>
+
+      {loading ? (
+        <AdminGlass><p className="text-sm text-gray-500 py-8 text-center">Loading articles…</p></AdminGlass>
+      ) : filtered.length === 0 ? (
+        <AdminGlass><p className="text-sm text-gray-500 py-8 text-center">No articles found.</p></AdminGlass>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          {filtered.map(a => (
+            <button
+              key={a.id}
+              onClick={() => setSelected(a)}
+              className="text-left p-4 rounded-xl bg-white/[0.02] border border-white/[0.06] hover:bg-white/[0.04] hover:border-teal-500/20 transition-colors"
+            >
+              <div className="flex items-center justify-between gap-2 mb-1.5">
+                <h4 className="text-sm font-semibold text-white truncate">{a.title}</h4>
+                {a.category && <span className="text-[10px] px-2 py-0.5 rounded-full bg-teal-500/10 text-teal-400 border border-teal-500/20 whitespace-nowrap">{a.category}</span>}
+              </div>
+              <p className="text-xs text-gray-400 line-clamp-2">{(a.content || '').replace(/[#*`>]/g, '').slice(0, 180)}</p>
+              <div className="flex items-center gap-3 mt-2 text-[11px] text-gray-500">
+                <span>👍 {a.helpful ?? 0}</span>
+                <span>👎 {a.not_helpful ?? 0}</span>
+                {a.author && <span className="truncate">· {a.author}</span>}
+              </div>
+            </button>
+          ))}
+        </div>
+      )}
+
+      {selected && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70" onClick={() => setSelected(null)}>
+          <div className="max-w-2xl w-full max-h-[80vh] overflow-y-auto bg-neutral-900 border border-white/10 rounded-2xl p-6" onClick={e => e.stopPropagation()}>
+            <div className="flex items-start justify-between gap-3 mb-3">
+              <div>
+                <h3 className="text-lg font-semibold text-white">{selected.title}</h3>
+                {selected.category && <p className="text-xs text-teal-400 mt-0.5">{selected.category}</p>}
+              </div>
+              <button onClick={() => setSelected(null)} className="text-gray-500 hover:text-gray-300 text-2xl leading-none">×</button>
+            </div>
+            <div className="text-sm text-gray-300 leading-relaxed whitespace-pre-wrap">{selected.content}</div>
+            <div className="mt-4 pt-4 border-t border-white/[0.06] flex items-center gap-2 text-xs text-gray-400">
+              <span>Was this helpful?</span>
+              <button onClick={() => recordHelpful(selected.id, 'helpful')} className="px-2 py-1 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">👍 {selected.helpful ?? 0}</button>
+              <button onClick={() => recordHelpful(selected.id, 'not_helpful')} className="px-2 py-1 rounded bg-red-500/10 text-red-400 border border-red-500/20">👎 {selected.not_helpful ?? 0}</button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
 // ── Generic Placeholder ──────────────────────────────────────
 function SubTabPlaceholder({ name, navigate }: { name: string; navigate: (path: string) => void }) {
   return (
@@ -2121,7 +2259,14 @@ export default function CSCenterModule({ subTab, navigate, showToast, role }: CS
     { key: 'csat', label: 'CSAT', icon: <Star className="w-3.5 h-3.5" /> },
   ]
 
-  const PLACEHOLDER_TABS = ['telegram', 'email', 'social', 'knowledge-base', 'scripts', 'quality']
+  // Channel-specific inbox tabs reuse the unified inbox with a pre-selected
+  // channel filter so telegram/email/social are no longer empty placeholders.
+  const CHANNEL_INBOX_TABS: Record<string, string> = {
+    telegram: 'telegram',
+    email:    'email',
+    social:   'social',
+  }
+  const STILL_PLACEHOLDER = ['scripts', 'quality']
 
   function renderContent() {
     if (subTab === null) return <CSDashboard navigate={navigate} showToast={showToast} />
@@ -2134,7 +2279,9 @@ export default function CSCenterModule({ subTab, navigate, showToast, role }: CS
     if (subTab === 'whatsapp') return <WhatsAppView showToast={showToast} />
     if (subTab === 'escalations') return <EscalationsView showToast={showToast} />
     if (subTab === 'csat') return <CSATDashboard />
-    if (PLACEHOLDER_TABS.includes(subTab)) return <SubTabPlaceholder name={subTab} navigate={navigate} />
+    if (subTab === 'knowledge-base') return <KnowledgeBaseView showToast={showToast} />
+    if (CHANNEL_INBOX_TABS[subTab]) return <UnifiedInbox showToast={showToast} initialChannel={CHANNEL_INBOX_TABS[subTab]} />
+    if (STILL_PLACEHOLDER.includes(subTab)) return <SubTabPlaceholder name={subTab} navigate={navigate} />
     return <SubTabPlaceholder name={subTab} navigate={navigate} />
   }
 
