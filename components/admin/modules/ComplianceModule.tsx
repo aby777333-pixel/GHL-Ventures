@@ -14,6 +14,7 @@ import AdminModal, { ModalButton } from '../shared/AdminModal'
 import AdminKPICard from '../shared/AdminKPICard'
 import AdminEmptyState from '../shared/AdminEmptyState'
 import { fetchApprovals, fetchRiskFlags, fetchAuditLog, updateRow, fetchKYCDocuments, approveClientKYC, rejectClientKYC, approveKYCStep, rejectKYCStep } from '@/lib/supabase/adminDataService'
+import GrievancesTab from './GrievancesTab'
 import { formatDate, formatTimeAgo } from '@/lib/admin/adminHooks'
 import type { Approval, RiskFlag, ApprovalStatus, AuditEntry } from '@/lib/admin/adminTypes'
 
@@ -21,6 +22,7 @@ import type { Approval, RiskFlag, ApprovalStatus, AuditEntry } from '@/lib/admin
 const COMPLIANCE_TABS = [
   { id: 'kyc-queue', label: 'KYC Queue', icon: ShieldCheck },
   { id: 'approvals', label: 'Approvals', icon: CheckCircle2 },
+  { id: 'grievances', label: 'Grievances', icon: AlertCircle },
   { id: 'risk-flags', label: 'Risk Flags', icon: Flag },
   { id: 'audit-trail', label: 'Audit Trail', icon: History },
   { id: 'regulations', label: 'Regulations', icon: Gavel },
@@ -108,6 +110,7 @@ export default function ComplianceModule({ subTab, navigate, showToast }: Compli
       <div className="admin-tab-switch">
         {activeTab === 'kyc-queue' && <KYCQueueTab kycQueue={kycQueue} showToast={showToast} onRefresh={loadData} />}
         {activeTab === 'approvals' && <ApprovalsTab approvals={approvals} showToast={showToast} />}
+        {activeTab === 'grievances' && <GrievancesTab showToast={showToast} />}
         {activeTab === 'risk-flags' && <RiskFlagsTab riskFlags={riskFlags} showToast={showToast} />}
         {activeTab === 'audit-trail' && <AuditTrailTab auditLog={auditLog} />}
         {activeTab === 'regulations' && <RegulationsTab />}

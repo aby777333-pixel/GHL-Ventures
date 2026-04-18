@@ -1180,3 +1180,60 @@ export async function getResumeSignedUrl(path: string, expiresIn = 300): Promise
     return null
   }
 }
+
+// ── Grievances ──────────────────────────────────────────────
+// Public /contact/grievance form stores complaints in public.grievances.
+// Admin Compliance → Grievances sub-tab reads + updates from here.
+
+export type Grievance = {
+  id: string
+  ticket_number: string | null
+  full_name: string
+  email: string
+  phone: string | null
+  folio_number: string | null
+  complaint_type: string | null
+  incident_date: string | null
+  description: string
+  desired_resolution: string | null
+  contacted_before: boolean | null
+  previous_reference: string | null
+  status: 'new' | 'acknowledged' | 'in_progress' | 'resolved' | 'rejected' | 'escalated'
+  escalation_level: number
+  assigned_to: string | null
+  admin_notes: string | null
+  resolution_summary: string | null
+  resolved_at: string | null
+  page_url: string | null
+  created_at: string
+  updated_at: string
+}
+
+export async function fetchGrievances(): Promise<Grievance[]> {
+  if (!isSupabaseConfigured()) return []
+  try {
+    const { data, error } = await (supabase as any)
+      .from('grievances')
+      .select('*')
+      .order('created_at', { ascending: false })
+    if (error) { console.warn('[fetchGrievances]', error.message); return [] }
+    return (data || []) as Grievance[]
+  } catch (err) {
+    console.warn('[fetchGrievances] exception:', err)
+    return []
+  }
+}
+
+export async function updateGrievance(
+  id: string,
+  updates: Partial<Pick<Grievance, 'status' | 'escalation_level' | 'admin_notes' | 'resolution_summary'>>,
+): Promise<boolean> {
+  if (!isSupabaseConfigured()) return false
+  try {
+    const patch: any = { ...updates }
+    if (updates.status === 'resolved') patch.resolved_at = new Date().toISOString()
+    const { error } = await (supabase as any).from('grievances').update(patch).eq('id', id)
+    if (error) { console.warn('[updateGrievance]', error.message); return false }
+    return true
+  } catch { return false }
+}

@@ -125,6 +125,7 @@ export const ADMIN_SIDEBAR_ITEMS: SidebarItem[] = [
     subItems: [
       { id: 'compliance', label: 'KYC Queue' },
       { id: 'compliance/approvals', label: 'Approvals' },
+      { id: 'compliance/grievances', label: 'Grievances' },
       { id: 'compliance/risk-flags', label: 'Risk Flags' },
       { id: 'compliance/audit', label: 'Audit Trail' },
     ],
@@ -321,6 +322,7 @@ export const ALL_ADMIN_TAB_PARAMS = [
   { tab: ['compliance'] },
   { tab: ['compliance', 'kyc-queue'] },
   { tab: ['compliance', 'approvals'] },
+  { tab: ['compliance', 'grievances'] },
   { tab: ['compliance', 'risk-flags'] },
   { tab: ['compliance', 'audit'] },
   { tab: ['financial'] },

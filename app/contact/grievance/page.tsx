@@ -1,7 +1,8 @@
 'use client'
 
 import { useState } from 'react'
-import { submitContactForm, submitLead } from '@/lib/supabase/reportsDataService'
+import { submitContactForm } from '@/lib/supabase/reportsDataService'
+import { supabase, isSupabaseConfigured } from '@/lib/supabase/client'
 import { Send, Shield, AlertTriangle, Scale, CheckCircle, ArrowRight, ChevronDown, Mail, Phone, ExternalLink } from 'lucide-react'
 import SpaceHero from '@/components/SpaceHero'
 import AnimatedSection from '@/components/AnimatedSection'
@@ -43,6 +44,7 @@ export default function GrievancePage() {
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
   const [openEscalation, setOpenEscalation] = useState<number | null>(null)
+  const [ticketNumber, setTicketNumber] = useState<string | null>(null)
 
   const handleChange = (field: string, value: string | boolean) => {
     setFormData((prev) => ({ ...prev, [field]: value }))
@@ -53,25 +55,60 @@ export default function GrievancePage() {
     setError('')
     setSubmitting(true)
     try {
-      await Promise.all([
-        submitContactForm({
-          formType: 'grievance',
-          fullName: formData.name,
+      // Primary storage: dedicated grievances table (SEBI-compliant lifecycle).
+      // We also drop a row into contact_submissions for the legacy contact
+      // inbox so support/analytics that already read that table keep working.
+      // submitLead was removed — grievances don't belong in the Sales pipeline.
+      let insertedTicket: string | null = null
+      if (isSupabaseConfigured()) {
+        const sb = supabase as any
+        const { data, error: grievErr } = await sb.from('grievances').insert({
+          full_name: formData.name,
           email: formData.email,
-          phone: formData.phone,
-          message: `Complaint: ${formData.complaintType}\nDate: ${formData.incidentDate}\n\n${formData.description}\n\nDesired Resolution: ${formData.desiredResolution}`,
-          pageUrl: typeof window !== 'undefined' ? window.location.href : '',
-        }),
-        submitLead({
-          firstName: formData.name.split(' ')[0] || '',
-          lastName: formData.name.split(' ').slice(1).join(' ') || '',
-          email: formData.email,
-          phone: formData.phone,
-          source: 'website',
-          investmentInterest: 'grievance',
-          message: `Complaint: ${formData.complaintType}\n${formData.description}`,
-        }),
-      ])
+          phone: formData.phone || null,
+          folio_number: formData.folioNumber || null,
+          complaint_type: formData.complaintType || null,
+          incident_date: formData.incidentDate || null,
+          description: formData.description,
+          desired_resolution: formData.desiredResolution || null,
+          contacted_before: formData.contactedBefore === 'Yes',
+          previous_reference: formData.referenceNumber || null,
+          page_url: typeof window !== 'undefined' ? window.location.href : null,
+        }).select('ticket_number').single()
+        if (grievErr) throw grievErr
+        insertedTicket = data?.ticket_number || null
+      }
+
+      // Mirror in contact_submissions for legacy inbox visibility.
+      await submitContactForm({
+        formType: 'grievance',
+        fullName: formData.name,
+        email: formData.email,
+        phone: formData.phone,
+        subject: insertedTicket ? `Grievance ${insertedTicket}` : 'Grievance',
+        message: `Complaint: ${formData.complaintType}\nDate: ${formData.incidentDate}\n\n${formData.description}\n\nDesired Resolution: ${formData.desiredResolution}`,
+        pageUrl: typeof window !== 'undefined' ? window.location.href : '',
+      })
+
+      // Notify admins (best-effort, non-blocking).
+      try {
+        if (isSupabaseConfigured()) {
+          const sb = supabase as any
+          const { data: admins } = await sb.from('profiles').select('id').in('role', ['admin', 'super_admin'])
+          if (admins && admins.length) {
+            await sb.from('notifications').insert(admins.map((a: any) => ({
+              user_id: a.id,
+              title: 'New Grievance Lodged',
+              message: `${formData.name}${insertedTicket ? ` (${insertedTicket})` : ''} — ${formData.complaintType || 'Grievance'}`,
+              type: 'action_required',
+              link: '/admin/compliance/grievances',
+              metadata: { email: formData.email, phone: formData.phone, complaintType: formData.complaintType, ticket: insertedTicket },
+            })))
+          }
+        }
+      } catch { /* non-blocking */ }
+
+      setTicketNumber(insertedTicket)
       setSubmitted(true)
     } catch (err) {
       console.warn('Grievance form Supabase error:', err)
@@ -226,9 +263,14 @@ export default function GrievancePage() {
                     <CheckCircle className="w-8 h-8 text-green-600" />
                   </div>
                   <h3 className="text-xl font-bold text-brand-black dark:text-white mb-2">Grievance Submitted</h3>
+                  {ticketNumber && (
+                    <p className="text-brand-black dark:text-white text-sm font-semibold mb-2">
+                      Reference: <span className="font-mono text-brand-red">{ticketNumber}</span>
+                    </p>
+                  )}
                   <p className="text-brand-grey text-sm mb-2">Your complaint has been received. You will receive an acknowledgement within 2 working days.</p>
-                  <p className="text-brand-grey text-xs mb-6">We aim to resolve all grievances within 30 calendar days.</p>
-                  <button onClick={() => { setSubmitted(false); setFormData({ name: '', email: '', phone: '', folioNumber: '', complaintType: '', incidentDate: '', description: '', desiredResolution: '', contactedBefore: 'No', referenceNumber: '', privacy: false }) }} className="text-brand-red font-semibold text-sm hover:underline">
+                  <p className="text-brand-grey text-xs mb-6">We aim to resolve all grievances within 30 calendar days. Please save your reference number for tracking.</p>
+                  <button onClick={() => { setSubmitted(false); setTicketNumber(null); setFormData({ name: '', email: '', phone: '', folioNumber: '', complaintType: '', incidentDate: '', description: '', desiredResolution: '', contactedBefore: 'No', referenceNumber: '', privacy: false }) }} className="text-brand-red font-semibold text-sm hover:underline">
                     Submit Another Grievance
                   </button>
                 </div>
