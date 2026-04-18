@@ -12,8 +12,12 @@ import AdminDataTable, { type Column } from '@/components/admin/shared/AdminData
 import AdminModal from '@/components/admin/shared/AdminModal'
 import UploadWithFolderPicker from '@/components/shared/UploadWithFolderPicker'
 import { fetchTasks } from '@/lib/supabase/staffDataService'
-import { insertRow } from '@/lib/supabase/adminDataService'
+import { supabase, isSupabaseConfigured } from '@/lib/supabase/client'
 import type { StaffTask, TaskStatus, TaskPriority } from '@/lib/staff/staffTypes'
+
+// UUID v4 shape — used to tell a dropdown selection apart from legacy
+// free-text input so we can fall back safely.
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
 // ── Props ──────────────────────────────────────────────────────
 interface TasksModuleProps {
@@ -90,6 +94,31 @@ function MyTasksView({ showToast, tasks, onRefresh }: { showToast: TasksModulePr
   const [folderPickerOpen, setFolderPickerOpen] = useState(false)
   const [creating, setCreating] = useState(false)
   const [taskForm, setTaskForm] = useState({ title: '', description: '', priority: 'normal' as TaskPriority, status: 'todo' as TaskStatus, dueDate: '', assignedTo: '', tags: '' })
+  // Assignee dropdown source — tasks.assigned_to is a uuid FK, so we need
+  // real user ids, not free-text names (typing "aswin" here used to crash
+  // the insert with "invalid input syntax for type uuid").
+  const [assignees, setAssignees] = useState<{ id: string; label: string }[]>([])
+  useEffect(() => {
+    if (!newTaskOpen) return
+    if (!isSupabaseConfigured()) return
+    let active = true
+    ;(async () => {
+      try {
+        const sb = supabase as any
+        const { data } = await sb.from('profiles')
+          .select('id, full_name, email, role')
+          .in('role', ['staff', 'admin', 'super_admin', 'rm', 'cs-agent', 'field-officer', 'support'])
+          .eq('is_active', true)
+          .order('full_name', { ascending: true })
+        if (!active || !Array.isArray(data)) return
+        setAssignees(data.map((p: any) => ({
+          id: p.id,
+          label: `${p.full_name || p.email || p.id.slice(0, 8)}${p.role ? ` — ${p.role}` : ''}`,
+        })))
+      } catch { /* non-blocking */ }
+    })()
+    return () => { active = false }
+  }, [newTaskOpen])
 
   const filtered = useMemo(() => {
     return tasks.filter(t => {
@@ -263,7 +292,16 @@ function MyTasksView({ showToast, tasks, onRefresh }: { showToast: TasksModulePr
           </div>
           <div>
             <label className="block text-xs font-medium text-gray-400 mb-1.5">Assigned To</label>
-            <input value={taskForm.assignedTo} onChange={e => setTaskForm({ ...taskForm, assignedTo: e.target.value })} placeholder="Enter team member name or ID" className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-teal-500/40 focus:ring-1 focus:ring-teal-500/20" />
+            <select
+              value={taskForm.assignedTo}
+              onChange={e => setTaskForm({ ...taskForm, assignedTo: e.target.value })}
+              className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-teal-500/40 focus:ring-1 focus:ring-teal-500/20"
+            >
+              <option value="" className="bg-neutral-900">— Assign to me —</option>
+              {assignees.map(a => (
+                <option key={a.id} value={a.id} className="bg-neutral-900">{a.label}</option>
+              ))}
+            </select>
           </div>
           <div className="sm:col-span-2">
             <label className="block text-xs font-medium text-gray-400 mb-1.5">Tags</label>
@@ -287,17 +325,23 @@ function MyTasksView({ showToast, tasks, onRefresh }: { showToast: TasksModulePr
             if (!taskForm.title.trim()) { showToast('Task title is required', 'error'); return }
             setCreating(true)
             try {
-              // Get current user for created_by field
-              let userId: string | null = null
-              try {
-                const { supabase } = await import('@/lib/supabase/client')
-                const { data: { user } } = await (supabase as any).auth.getUser()
-                userId = user?.id || null
-              } catch { /* continue without user id */ }
-              const assigneeId = taskForm.assignedTo?.trim() || userId || null
-              const row = await insertRow('tasks', {
-                title: taskForm.title,
-                description: taskForm.description || null,
+              const sb = supabase as any
+              const { data: { user } } = await sb.auth.getUser()
+              const userId: string | null = user?.id || null
+
+              // assigned_to is a uuid FK — only send a UUID, else fall back to
+              // the caller (self-assign). This prevents the "invalid input
+              // syntax for type uuid" error that made Create Task silently fail.
+              const picked = (taskForm.assignedTo || '').trim()
+              const assigneeId = UUID_RE.test(picked) ? picked : userId
+
+              // Insert without the `.select().single()` round-trip — tasks RLS
+              // SELECT is scoped to rows the user can see, and going through
+              // insertRow's existing RETURNING path would need both writes + reads
+              // to succeed. A plain insert + error reporting is more robust.
+              const { error } = await sb.from('tasks').insert({
+                title: taskForm.title.trim(),
+                description: taskForm.description?.trim() || null,
                 priority: taskForm.priority,
                 status: taskForm.status,
                 due_date: taskForm.dueDate || null,
@@ -306,16 +350,16 @@ function MyTasksView({ showToast, tasks, onRefresh }: { showToast: TasksModulePr
                 tags: taskForm.tags ? taskForm.tags.split(',').map(t => t.trim()).filter(Boolean) : [],
                 source: 'manual',
               })
-              if (row) {
-                showToast('Task created successfully', 'success')
-                setNewTaskOpen(false)
-                setTaskForm({ title: '', description: '', priority: 'normal', status: 'todo', dueDate: '', assignedTo: '', tags: '' })
-                onRefresh()
-              } else {
-                showToast('Failed to create task', 'error')
-              }
+              if (error) throw error
+
+              showToast('Task created successfully', 'success')
+              setNewTaskOpen(false)
+              setTaskForm({ title: '', description: '', priority: 'normal', status: 'todo', dueDate: '', assignedTo: '', tags: '' })
+              onRefresh()
             } catch (err: any) {
-              showToast(`Error creating task: ${err?.message || 'Unknown error'}`, 'error')
+              const msg = err?.message || 'Unknown error'
+              showToast(`Error creating task: ${msg}`, 'error')
+              console.error('[Tasks] Create error:', err)
             } finally {
               setCreating(false)
             }
