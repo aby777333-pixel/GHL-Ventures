@@ -1085,6 +1085,21 @@ export type CareerApplication = {
   raw_message?: string
 }
 
+// reportsDataService.submitContactForm runs submissions through an HTML-entity
+// sanitiser (&quot; etc) before insert. That broke JSON.parse on the message
+// column for older career rows. Decode common entities before parsing so both
+// legacy and new rows read cleanly.
+function decodeHtmlEntities(s: string): string {
+  if (!s) return s
+  return s
+    .replace(/&quot;/g, '"')
+    .replace(/&#x27;/g, "'")
+    .replace(/&#39;/g, "'")
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&amp;/g, '&')
+}
+
 export async function fetchCareerApplications(): Promise<CareerApplication[]> {
   if (!isSupabaseConfigured()) return []
   try {
@@ -1096,7 +1111,13 @@ export async function fetchCareerApplications(): Promise<CareerApplication[]> {
     if (error) { console.warn('[fetchCareerApplications]', error.message); return [] }
     return (data || []).map((r: any) => {
       let parsed: any = {}
-      try { parsed = r.message ? JSON.parse(r.message) : {} } catch { parsed = {} }
+      if (r.message) {
+        // Try raw first (in case a future submit path skips sanitisation),
+        // then fall back to decoding HTML entities.
+        try { parsed = JSON.parse(r.message) } catch {
+          try { parsed = JSON.parse(decodeHtmlEntities(r.message)) } catch { parsed = {} }
+        }
+      }
       return {
         id: r.id,
         full_name: r.full_name || '',

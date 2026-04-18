@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { submitContactForm, submitLead } from '@/lib/supabase/reportsDataService'
+import { submitContactForm } from '@/lib/supabase/reportsDataService'
 import { supabase, isSupabaseConfigured } from '@/lib/supabase/client'
 import { Send, Briefcase, GraduationCap, MapPin, Heart, CheckCircle, ArrowRight, ChevronDown, Mail, Clock, Upload } from 'lucide-react'
 import SpaceHero from '@/components/SpaceHero'
@@ -296,37 +296,50 @@ export default function CareersPage() {
         resumeSize = resumeFile.size
       }
 
-      await Promise.all([
-        submitContactForm({
-          formType: 'career_application',
-          fullName: formData.name,
-          email: formData.email,
-          phone: formData.phone,
-          subject: formData.position || 'Career Application',
-          message: JSON.stringify({
-            position: formData.position,
-            experience: formData.experience,
-            currentCompany: formData.currentCompany,
-            currentCTC: formData.currentCTC,
-            linkedin: formData.linkedin,
-            portfolio: formData.portfolio,
-            coverLetter: formData.coverLetter,
-            resumePath,
-            resumeName,
-            resumeSize,
-          }),
-          pageUrl: typeof window !== 'undefined' ? window.location.href : '',
+      // Career application lands in contact_submissions only — not leads.
+      // (Investor leads and job applicants have different workflows; mixing
+      // them polluted the Sales pipeline.)
+      await submitContactForm({
+        formType: 'career_application',
+        fullName: formData.name,
+        email: formData.email,
+        phone: formData.phone,
+        subject: formData.position || 'Career Application',
+        message: JSON.stringify({
+          position: formData.position,
+          experience: formData.experience,
+          currentCompany: formData.currentCompany,
+          currentCTC: formData.currentCTC,
+          linkedin: formData.linkedin,
+          portfolio: formData.portfolio,
+          coverLetter: formData.coverLetter,
+          resumePath,
+          resumeName,
+          resumeSize,
         }),
-        submitLead({
-          firstName: formData.name.split(' ')[0] || '',
-          lastName: formData.name.split(' ').slice(1).join(' ') || '',
-          email: formData.email,
-          phone: formData.phone,
-          source: 'website',
-          investmentInterest: 'career-application',
-          message: formData.coverLetter,
-        }),
-      ])
+        pageUrl: typeof window !== 'undefined' ? window.location.href : '',
+      })
+
+      // Notify admins so the Applications inbox surfaces the new submission.
+      // Best-effort — swallow errors so a notification failure doesn't abort
+      // the submission UX for the applicant.
+      try {
+        if (isSupabaseConfigured()) {
+          const sb = supabase as any
+          const { data: admins } = await sb.from('profiles').select('id').in('role', ['admin', 'super_admin'])
+          if (admins && admins.length) {
+            await sb.from('notifications').insert(admins.map((a: any) => ({
+              user_id: a.id,
+              title: 'New Career Application',
+              message: `${formData.name} applied for ${formData.position || 'a role'}.`,
+              type: 'action_required',
+              link: '/admin/employees/applications',
+              metadata: { email: formData.email, phone: formData.phone, position: formData.position },
+            })))
+          }
+        }
+      } catch { /* non-blocking */ }
+
       setSubmitted(true)
     } catch (err) {
       console.warn('Career form Supabase error:', err)
@@ -632,29 +645,38 @@ export default function CareersPage() {
 
                   <input type="url" placeholder="Portfolio / Work Samples URL (Optional)" className="input-field" value={formData.portfolio} onChange={(e) => handleChange('portfolio', e.target.value)} />
 
-                  {/* Resume Upload */}
+                  {/* Resume Upload — PDF only */}
                   <div>
                     <label className="block text-xs font-medium text-brand-black dark:text-white mb-1.5">Upload Resume / CV <span className="text-brand-red">*</span></label>
                     <label className="flex items-center justify-center gap-3 px-4 py-4 border-2 border-dashed border-gray-300 rounded-xl cursor-pointer hover:border-brand-red hover:bg-brand-red/5 transition-all duration-200 group">
                       <Upload className="w-5 h-5 text-brand-grey group-hover:text-brand-red transition-colors" />
                       <div className="text-center">
                         <span className="text-sm font-medium text-brand-black dark:text-white group-hover:text-brand-red transition-colors">
-                          {resumeFile ? resumeFile.name : 'Click to upload your resume'}
+                          {resumeFile ? resumeFile.name : 'Click to upload your resume (PDF only)'}
                         </span>
-                        <p className="text-xs text-brand-grey mt-0.5">PDF, DOC, DOCX — Max 5 MB</p>
+                        <p className="text-xs text-brand-grey mt-0.5">PDF format only — Max 5 MB</p>
                       </div>
                       <input
                         type="file"
                         required
-                        accept=".pdf,.doc,.docx"
+                        accept="application/pdf,.pdf"
                         className="hidden"
                         onChange={(e) => {
                           const file = e.target.files?.[0]
-                          if (file && file.size <= 5 * 1024 * 1024) {
-                            setResumeFile(file)
-                          } else if (file) {
-                            alert('File size must be under 5 MB.')
+                          if (!file) return
+                          // Strict PDF-only: must match mime OR .pdf extension.
+                          const isPdf = file.type === 'application/pdf' || /\.pdf$/i.test(file.name)
+                          if (!isPdf) {
+                            alert('Please upload your resume in PDF format only. Other file types are not accepted.')
+                            e.target.value = ''
+                            return
                           }
+                          if (file.size > 5 * 1024 * 1024) {
+                            alert('File size must be under 5 MB.')
+                            e.target.value = ''
+                            return
+                          }
+                          setResumeFile(file)
                         }}
                       />
                     </label>
