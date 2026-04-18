@@ -743,15 +743,27 @@ function ApplicationsTab({ showToast }: { showToast: (msg: string, type?: 'succe
                 resumeLoading ? (
                   <p className="text-xs text-gray-500">Generating secure link…</p>
                 ) : resumeUrl ? (
-                  <div className="flex flex-wrap items-center gap-2">
-                    <a href={resumeUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-brand-red/15 border border-brand-red/30 text-xs text-white hover:bg-brand-red/25">
-                      <Eye className="w-3.5 h-3.5" /> Preview in new tab
-                    </a>
-                    <a href={resumeUrl} download={selected.resumeName || 'resume.pdf'} className="inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-white/[0.04] border border-white/[0.06] text-xs text-gray-200 hover:bg-white/[0.08]">
-                      <Download className="w-3.5 h-3.5" /> Download
-                    </a>
-                    <span className="text-[11px] text-gray-500 truncate max-w-[220px]">{selected.resumeName || 'resume.pdf'}{selected.resumeSize ? ` · ${(selected.resumeSize / 1024).toFixed(0)} KB` : ''}</span>
-                  </div>
+                  (() => {
+                    const name = selected.resumeName || selected.resumePath || ''
+                    const isPdf = /\.pdf$/i.test(name)
+                    return (
+                      <div className="flex flex-wrap items-center gap-2">
+                        {isPdf ? (
+                          <a href={resumeUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-brand-red/15 border border-brand-red/30 text-xs text-white hover:bg-brand-red/25">
+                            <Eye className="w-3.5 h-3.5" /> Preview in new tab
+                          </a>
+                        ) : (
+                          <span className="inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-white/[0.02] border border-white/[0.04] text-xs text-gray-500 cursor-help" title="This file isn't a PDF, so browsers can't preview it inline. Use Download.">
+                            <Eye className="w-3.5 h-3.5 opacity-50" /> Preview unavailable (legacy {name.split('.').pop()?.toLowerCase() || 'file'})
+                          </span>
+                        )}
+                        <a href={resumeUrl} download={name || 'resume'} className="inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-white/[0.04] border border-white/[0.06] text-xs text-gray-200 hover:bg-white/[0.08]">
+                          <Download className="w-3.5 h-3.5" /> Download
+                        </a>
+                        <span className="text-[11px] text-gray-500 truncate max-w-[220px]">{name || 'resume'}{selected.resumeSize ? ` · ${(selected.resumeSize / 1024).toFixed(0)} KB` : ''}</span>
+                      </div>
+                    )
+                  })()
                 ) : (
                   <p className="text-xs text-red-400">Could not generate download link. Check storage permissions.</p>
                 )
