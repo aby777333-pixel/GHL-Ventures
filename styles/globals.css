@@ -3790,6 +3790,89 @@ body:not(.dashboard-active):not(.admin-active):not(.staff-active) :root:not(.dar
 }
 
 /* ============================================================
+   ESCAPE HATCH — restore intended white text on dark surfaces
+   in light mode.
+
+   The safety-net rules above assume any `text-white` inside a
+   light card / light section is a mistake and flip it to near
+   black. That assumption breaks hero blocks that *actually*
+   sit on a dark gradient or explicitly dark background, like
+   the Direct AIF / SEBI Co-Invest hero headers on /fund/nri-
+   invest and the "Regulatory Information" strip on /contact/
+   grievance — the white text collapses to black on black.
+
+   This block restores white on any descendant of a known dark
+   surface that asked for white text. Scoped narrowly to classes
+   that are unambiguously dark (gradients are included because
+   every use in the repo today starts from a dark stop; if that
+   changes we can swap to `[class*="from-gray-"]` gating).
+   Higher specificity + `!important` ensures it wins over the
+   override above.
+   ============================================================ */
+:root:not(.dark) body:not(.dashboard-active):not(.admin-active):not(.staff-active) [class*="bg-gradient-to-"] [class~="text-white"],
+:root:not(.dark) body:not(.dashboard-active):not(.admin-active):not(.staff-active) [class*="bg-gradient-to-"] [class*="text-white/"],
+:root:not(.dark) body:not(.dashboard-active):not(.admin-active):not(.staff-active) [class*="bg-gradient-to-"] h1,
+:root:not(.dark) body:not(.dashboard-active):not(.admin-active):not(.staff-active) [class*="bg-gradient-to-"] h2,
+:root:not(.dark) body:not(.dashboard-active):not(.admin-active):not(.staff-active) [class*="bg-gradient-to-"] h3,
+:root:not(.dark) body:not(.dashboard-active):not(.admin-active):not(.staff-active) [class*="bg-gradient-to-"] h4,
+:root:not(.dark) body:not(.dashboard-active):not(.admin-active):not(.staff-active) .bg-brand-black [class~="text-white"],
+:root:not(.dark) body:not(.dashboard-active):not(.admin-active):not(.staff-active) .bg-brand-black [class*="text-white/"],
+:root:not(.dark) body:not(.dashboard-active):not(.admin-active):not(.staff-active) .bg-brand-black h1,
+:root:not(.dark) body:not(.dashboard-active):not(.admin-active):not(.staff-active) .bg-brand-black h2,
+:root:not(.dark) body:not(.dashboard-active):not(.admin-active):not(.staff-active) .bg-brand-black h3,
+:root:not(.dark) body:not(.dashboard-active):not(.admin-active):not(.staff-active) .bg-brand-black h4,
+:root:not(.dark) body:not(.dashboard-active):not(.admin-active):not(.staff-active) .bg-brand-darkgrey [class~="text-white"],
+:root:not(.dark) body:not(.dashboard-active):not(.admin-active):not(.staff-active) .bg-brand-darkgrey [class*="text-white/"],
+:root:not(.dark) body:not(.dashboard-active):not(.admin-active):not(.staff-active) .bg-brand-darkgrey h1,
+:root:not(.dark) body:not(.dashboard-active):not(.admin-active):not(.staff-active) .bg-brand-darkgrey h2,
+:root:not(.dark) body:not(.dashboard-active):not(.admin-active):not(.staff-active) .bg-brand-darkgrey h3,
+:root:not(.dark) body:not(.dashboard-active):not(.admin-active):not(.staff-active) .bg-brand-darkgrey h4,
+:root:not(.dark) body:not(.dashboard-active):not(.admin-active):not(.staff-active) .bg-black [class~="text-white"],
+:root:not(.dark) body:not(.dashboard-active):not(.admin-active):not(.staff-active) .bg-black [class*="text-white/"],
+:root:not(.dark) body:not(.dashboard-active):not(.admin-active):not(.staff-active) .bg-black h1,
+:root:not(.dark) body:not(.dashboard-active):not(.admin-active):not(.staff-active) .bg-black h2,
+:root:not(.dark) body:not(.dashboard-active):not(.admin-active):not(.staff-active) .bg-black h3,
+:root:not(.dark) body:not(.dashboard-active):not(.admin-active):not(.staff-active) .bg-black h4,
+:root:not(.dark) body:not(.dashboard-active):not(.admin-active):not(.staff-active) [class*="bg-gray-9"] [class~="text-white"],
+:root:not(.dark) body:not(.dashboard-active):not(.admin-active):not(.staff-active) [class*="bg-gray-9"] [class*="text-white/"],
+:root:not(.dark) body:not(.dashboard-active):not(.admin-active):not(.staff-active) [class*="bg-gray-9"] h1,
+:root:not(.dark) body:not(.dashboard-active):not(.admin-active):not(.staff-active) [class*="bg-gray-9"] h2,
+:root:not(.dark) body:not(.dashboard-active):not(.admin-active):not(.staff-active) [class*="bg-gray-9"] h3,
+:root:not(.dark) body:not(.dashboard-active):not(.admin-active):not(.staff-active) [class*="bg-gray-9"] h4,
+:root:not(.dark) body:not(.dashboard-active):not(.admin-active):not(.staff-active) [class*="bg-gray-8"] [class~="text-white"],
+:root:not(.dark) body:not(.dashboard-active):not(.admin-active):not(.staff-active) [class*="bg-gray-8"] [class*="text-white/"],
+:root:not(.dark) body:not(.dashboard-active):not(.admin-active):not(.staff-active) [class*="bg-gray-8"] h1,
+:root:not(.dark) body:not(.dashboard-active):not(.admin-active):not(.staff-active) [class*="bg-gray-8"] h2,
+:root:not(.dark) body:not(.dashboard-active):not(.admin-active):not(.staff-active) [class*="bg-gray-8"] h3,
+:root:not(.dark) body:not(.dashboard-active):not(.admin-active):not(.staff-active) [class*="bg-gray-8"] h4,
+:root:not(.dark) body:not(.dashboard-active):not(.admin-active):not(.staff-active) [class*="bg-neutral-9"] [class~="text-white"],
+:root:not(.dark) body:not(.dashboard-active):not(.admin-active):not(.staff-active) [class*="bg-neutral-9"] [class*="text-white/"],
+:root:not(.dark) body:not(.dashboard-active):not(.admin-active):not(.staff-active) [class*="bg-neutral-9"] h1,
+:root:not(.dark) body:not(.dashboard-active):not(.admin-active):not(.staff-active) [class*="bg-neutral-9"] h2,
+:root:not(.dark) body:not(.dashboard-active):not(.admin-active):not(.staff-active) [class*="bg-neutral-9"] h3,
+:root:not(.dark) body:not(.dashboard-active):not(.admin-active):not(.staff-active) [class*="bg-neutral-9"] h4,
+:root:not(.dark) body:not(.dashboard-active):not(.admin-active):not(.staff-active) [class*="bg-slate-9"] [class~="text-white"],
+:root:not(.dark) body:not(.dashboard-active):not(.admin-active):not(.staff-active) [class*="bg-slate-9"] [class*="text-white/"],
+:root:not(.dark) body:not(.dashboard-active):not(.admin-active):not(.staff-active) [class*="bg-slate-9"] h1,
+:root:not(.dark) body:not(.dashboard-active):not(.admin-active):not(.staff-active) [class*="bg-slate-9"] h2,
+:root:not(.dark) body:not(.dashboard-active):not(.admin-active):not(.staff-active) [class*="bg-slate-9"] h3,
+:root:not(.dark) body:not(.dashboard-active):not(.admin-active):not(.staff-active) [class*="bg-slate-9"] h4,
+:root:not(.dark) body:not(.dashboard-active):not(.admin-active):not(.staff-active) [class*="bg-zinc-9"] [class~="text-white"],
+:root:not(.dark) body:not(.dashboard-active):not(.admin-active):not(.staff-active) [class*="bg-zinc-9"] [class*="text-white/"],
+:root:not(.dark) body:not(.dashboard-active):not(.admin-active):not(.staff-active) [class*="bg-zinc-9"] h1,
+:root:not(.dark) body:not(.dashboard-active):not(.admin-active):not(.staff-active) [class*="bg-zinc-9"] h2,
+:root:not(.dark) body:not(.dashboard-active):not(.admin-active):not(.staff-active) [class*="bg-zinc-9"] h3,
+:root:not(.dark) body:not(.dashboard-active):not(.admin-active):not(.staff-active) [class*="bg-zinc-9"] h4,
+:root:not(.dark) body:not(.dashboard-active):not(.admin-active):not(.staff-active) .bg-brand-red [class~="text-white"],
+:root:not(.dark) body:not(.dashboard-active):not(.admin-active):not(.staff-active) .bg-brand-red [class*="text-white/"],
+:root:not(.dark) body:not(.dashboard-active):not(.admin-active):not(.staff-active) .bg-brand-red h1,
+:root:not(.dark) body:not(.dashboard-active):not(.admin-active):not(.staff-active) .bg-brand-red h2,
+:root:not(.dark) body:not(.dashboard-active):not(.admin-active):not(.staff-active) .bg-brand-red h3,
+:root:not(.dark) body:not(.dashboard-active):not(.admin-active):not(.staff-active) .bg-brand-red h4 {
+  color: #ffffff !important;
+}
+
+/* ============================================================
    DASHBOARD SIDEBAR SCROLLBAR — visible in both themes
    Testing 2026-04-18: light-mode sidebar scrollbar was invisible
    against the near-white gradient. Both themes now render a clearly
