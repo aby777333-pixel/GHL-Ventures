@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { submitContactForm, submitLead } from '@/lib/supabase/reportsDataService'
+import { supabase, isSupabaseConfigured } from '@/lib/supabase/client'
 import { Send, Users, Heart, TrendingUp, CheckCircle, ArrowRight } from 'lucide-react'
 import SpaceHero from '@/components/SpaceHero'
 import AnimatedSection from '@/components/AnimatedSection'
@@ -38,16 +39,13 @@ export default function ReferPage() {
     setError('')
     setSubmitting(true)
     try {
-      await Promise.all([
-        submitContactForm({
-          formType: 'refer_investor',
-          fullName: formData.yourName,
-          email: formData.yourEmail,
-          phone: formData.yourPhone,
-          message: formData.message,
-          pageUrl: typeof window !== 'undefined' ? window.location.href : '',
-        }),
-        submitLead({
+      // Primary: dedicated referrals table tracks BOTH referrer and referee,
+      // plus relationship + investable surplus. Sales still gets a lead for
+      // the referee (they are a real potential investor — unlike careers
+      // or grievances), so we keep submitLead and record the created lead_id.
+      let leadId: string | null = null
+      try {
+        const lead = await submitLead({
           firstName: formData.theirName.split(' ')[0] || '',
           lastName: formData.theirName.split(' ').slice(1).join(' ') || '',
           email: formData.theirEmail,
@@ -56,9 +54,58 @@ export default function ReferPage() {
           source: 'referral',
           investmentInterest: formData.investableSurplus,
           investmentRange: formData.investableSurplus,
-          message: formData.message,
-        }),
-      ])
+          message: `Referred by ${formData.yourName} (${formData.relationship || 'unknown'})\n${formData.message}`,
+        })
+        leadId = (lead as any)?.data?.id || null
+      } catch { /* best-effort */ }
+
+      if (isSupabaseConfigured()) {
+        const sb = supabase as any
+        await sb.from('referrals').insert({
+          referrer_name: formData.yourName,
+          referrer_email: formData.yourEmail,
+          referrer_phone: formData.yourPhone || null,
+          relationship: formData.relationship || null,
+          referee_name: formData.theirName,
+          referee_email: formData.theirEmail || null,
+          referee_phone: formData.theirPhone || null,
+          referee_city: formData.theirCity || null,
+          investable_surplus: formData.investableSurplus || null,
+          message: formData.message || null,
+          lead_id: leadId,
+          page_url: typeof window !== 'undefined' ? window.location.href : null,
+        })
+      }
+
+      // Legacy inbox mirror.
+      await submitContactForm({
+        formType: 'refer_investor',
+        fullName: formData.yourName,
+        email: formData.yourEmail,
+        phone: formData.yourPhone,
+        subject: `Referral: ${formData.theirName}`,
+        message: `Referee: ${formData.theirName} (${formData.theirPhone || ''})\nRelationship: ${formData.relationship}\nSurplus: ${formData.investableSurplus}\n\n${formData.message}`,
+        pageUrl: typeof window !== 'undefined' ? window.location.href : '',
+      })
+
+      // Notify admins (best-effort).
+      try {
+        if (isSupabaseConfigured()) {
+          const sb = supabase as any
+          const { data: admins } = await sb.from('profiles').select('id').in('role', ['admin', 'super_admin'])
+          if (admins && admins.length) {
+            await sb.from('notifications').insert(admins.map((a: any) => ({
+              user_id: a.id,
+              title: 'New Referral',
+              message: `${formData.yourName} referred ${formData.theirName}.`,
+              type: 'action_required',
+              link: '/admin/sales/referrals',
+              metadata: { referrer: formData.yourEmail, referee: formData.theirEmail || formData.theirPhone, surplus: formData.investableSurplus },
+            })))
+          }
+        }
+      } catch { /* non-blocking */ }
+
       setSubmitted(true)
     } catch (err) {
       console.warn('Referral form Supabase error:', err)

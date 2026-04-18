@@ -14,6 +14,9 @@ import AdminBadge from '../shared/AdminBadge'
 import AdminModal, { ModalButton } from '../shared/AdminModal'
 import AdminKPICard from '../shared/AdminKPICard'
 import LeadManagementModule from '../../shared/LeadManagementModule'
+import ReferralsTab from './ReferralsTab'
+import StartupApplicationsTab from './StartupApplicationsTab'
+import NRIConsultationsTab from './NRIConsultationsTab'
 
 // Wrapper to render LeadManagementModule for specific sub-tabs within Sales
 function LeadMgmtWrapper({ subTab, navigate, showToast }: { subTab: string; navigate: (p: string) => void; showToast: (m: string, t?: any) => void }) {
@@ -31,6 +34,9 @@ import { fetchAllInvestmentApplications } from '@/lib/supabase/adminDataService'
 const SALES_TABS = [
   { id: 'pipeline', label: 'Pipeline', icon: TrendingUp },
   { id: 'leads', label: 'Lead List', icon: Users },
+  { id: 'referrals', label: 'Referrals', icon: Users },
+  { id: 'startup-applications', label: 'Startup Apps', icon: Target },
+  { id: 'nri-consultations', label: 'NRI Consult', icon: Zap },
   { id: 'commissions', label: 'Commissions', icon: IndianRupee },
   { id: 'leaderboard', label: 'Leaderboard', icon: Trophy },
   { id: 'investments', label: 'Investments', icon: BarChart3 },
@@ -277,6 +283,9 @@ export default function SalesModule({ subTab, navigate, showToast }: SalesModule
       <div className="admin-tab-switch">
         {activeTab === 'pipeline' && <PipelineTab leads={leads} onViewLead={(l) => { setSelectedLead(l); setLeadModalOpen(true) }} onDeleteLead={handleDeleteLead} showToast={showToast} />}
         {activeTab === 'leads' && <LeadListTab leads={leads} onViewLead={(l) => { setSelectedLead(l); setLeadModalOpen(true) }} onDeleteLead={handleDeleteLead} showToast={showToast} />}
+        {activeTab === 'referrals' && <ReferralsTab showToast={showToast} />}
+        {activeTab === 'startup-applications' && <StartupApplicationsTab showToast={showToast} />}
+        {activeTab === 'nri-consultations' && <NRIConsultationsTab showToast={showToast} />}
         {activeTab === 'commissions' && <CommissionsTab showToast={showToast} />}
         {activeTab === 'leaderboard' && <LeaderboardTab leads={leads} />}
         {activeTab === 'investments' && <InvestmentsTab showToast={showToast} />}

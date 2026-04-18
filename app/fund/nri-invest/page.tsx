@@ -791,19 +791,15 @@ function ConsultationForm() {
     setFormError('')
     try {
       const { submitContactForm, submitLead } = await import('@/lib/supabase/reportsDataService')
-      await Promise.all([
-        submitContactForm({
-          formType: 'nri_invest',
-          fullName: formData.name,
-          email: formData.email,
-          phone: formData.phone,
-          city: formData.country,
-          message: `Route: ${formData.route}\nInvestment Range: ${formData.investmentRange}\n\n${formData.message}`,
-          investmentRange: formData.investmentRange,
-          investmentInterest: 'nri-investment',
-          pageUrl: typeof window !== 'undefined' ? window.location.href : '',
-        }),
-        submitLead({
+      const { supabase, isSupabaseConfigured } = await import('@/lib/supabase/client')
+
+      // An NRI requesting a consultation IS a real investor lead, so we still
+      // create a lead row (like referrals). The dedicated nri_consultations
+      // table captures the scheduling lifecycle (contacted → scheduled →
+      // completed) that a generic lead doesn't model.
+      let leadId: string | null = null
+      try {
+        const lead = await submitLead({
           firstName: formData.name.split(' ')[0] || '',
           lastName: formData.name.split(' ').slice(1).join(' ') || '',
           email: formData.email,
@@ -813,8 +809,55 @@ function ConsultationForm() {
           investmentInterest: 'nri-investment',
           investmentRange: formData.investmentRange,
           message: formData.message,
-        }),
-      ])
+        })
+        leadId = (lead as any)?.data?.id || null
+      } catch { /* best-effort */ }
+
+      if (isSupabaseConfigured()) {
+        const sb = supabase as any
+        await sb.from('nri_consultations').insert({
+          full_name: formData.name,
+          email: formData.email,
+          phone: formData.phone || null,
+          country: formData.country || null,
+          investment_range: formData.investmentRange || null,
+          preferred_route: formData.route || null,
+          message: formData.message || null,
+          lead_id: leadId,
+          page_url: typeof window !== 'undefined' ? window.location.href : null,
+        })
+      }
+
+      await submitContactForm({
+        formType: 'nri_invest',
+        fullName: formData.name,
+        email: formData.email,
+        phone: formData.phone,
+        city: formData.country,
+        subject: 'NRI Consultation Request',
+        message: `Route: ${formData.route}\nInvestment Range: ${formData.investmentRange}\n\n${formData.message}`,
+        investmentRange: formData.investmentRange,
+        investmentInterest: 'nri-investment',
+        pageUrl: typeof window !== 'undefined' ? window.location.href : '',
+      })
+
+      try {
+        if (isSupabaseConfigured()) {
+          const sb = supabase as any
+          const { data: admins } = await sb.from('profiles').select('id').in('role', ['admin', 'super_admin'])
+          if (admins && admins.length) {
+            await sb.from('notifications').insert(admins.map((a: any) => ({
+              user_id: a.id,
+              title: 'New NRI Consultation Request',
+              message: `${formData.name} (${formData.country || 'location n/a'}) — ${formData.route || 'route n/a'} · ${formData.investmentRange || 'range n/a'}`,
+              type: 'action_required',
+              link: '/admin/sales/nri-consultations',
+              metadata: { email: formData.email, phone: formData.phone, country: formData.country, range: formData.investmentRange, route: formData.route },
+            })))
+          }
+        }
+      } catch { /* non-blocking */ }
+
       setSubmitted(true)
     } catch (err) {
       console.warn('NRI form Supabase error:', err)

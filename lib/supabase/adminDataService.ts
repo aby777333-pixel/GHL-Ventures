@@ -1237,3 +1237,129 @@ export async function updateGrievance(
     return true
   } catch { return false }
 }
+
+// ── Referrals ───────────────────────────────────────────────
+export type Referral = {
+  id: string
+  referrer_name: string
+  referrer_email: string
+  referrer_phone: string | null
+  relationship: string | null
+  referee_name: string
+  referee_email: string | null
+  referee_phone: string | null
+  referee_city: string | null
+  investable_surplus: string | null
+  message: string | null
+  status: 'new' | 'contacted' | 'qualified' | 'converted' | 'rejected'
+  assigned_to: string | null
+  admin_notes: string | null
+  lead_id: string | null
+  created_at: string
+  updated_at: string
+}
+
+export async function fetchReferrals(): Promise<Referral[]> {
+  if (!isSupabaseConfigured()) return []
+  try {
+    const { data, error } = await (supabase as any)
+      .from('referrals').select('*').order('created_at', { ascending: false })
+    if (error) { console.warn('[fetchReferrals]', error.message); return [] }
+    return (data || []) as Referral[]
+  } catch { return [] }
+}
+
+export async function updateReferral(id: string, updates: Partial<Pick<Referral, 'status' | 'admin_notes'>>): Promise<boolean> {
+  if (!isSupabaseConfigured()) return false
+  try {
+    const { error } = await (supabase as any).from('referrals').update(updates).eq('id', id)
+    if (error) { console.warn('[updateReferral]', error.message); return false }
+    return true
+  } catch { return false }
+}
+
+// ── Startup Applications ────────────────────────────────────
+export type StartupApplication = {
+  id: string
+  application_number: string | null
+  founder_name: string
+  email: string
+  phone: string | null
+  linkedin: string | null
+  company_name: string
+  founding_year: number | null
+  website: string | null
+  stage: string | null
+  sector: string | null
+  city: string | null
+  mrr: string | null
+  mau: string | null
+  metrics: string | null
+  amount_seeking: string | null
+  use_of_funds: string | null
+  pitch: string | null
+  pitch_deck_url: string | null
+  status: 'new' | 'reviewing' | 'shortlisted' | 'passed' | 'meeting_scheduled' | 'in_diligence' | 'funded' | 'rejected'
+  assigned_to: string | null
+  admin_notes: string | null
+  review_score: number | null
+  created_at: string
+  updated_at: string
+}
+
+export async function fetchStartupApplications(): Promise<StartupApplication[]> {
+  if (!isSupabaseConfigured()) return []
+  try {
+    const { data, error } = await (supabase as any)
+      .from('startup_applications').select('*').order('created_at', { ascending: false })
+    if (error) { console.warn('[fetchStartupApplications]', error.message); return [] }
+    return (data || []) as StartupApplication[]
+  } catch { return [] }
+}
+
+export async function updateStartupApplication(id: string, updates: Partial<Pick<StartupApplication, 'status' | 'admin_notes' | 'review_score'>>): Promise<boolean> {
+  if (!isSupabaseConfigured()) return false
+  try {
+    const { error } = await (supabase as any).from('startup_applications').update(updates).eq('id', id)
+    if (error) { console.warn('[updateStartupApplication]', error.message); return false }
+    return true
+  } catch { return false }
+}
+
+// ── NRI Consultations ───────────────────────────────────────
+export type NRIConsultation = {
+  id: string
+  full_name: string
+  email: string
+  phone: string | null
+  country: string | null
+  investment_range: string | null
+  preferred_route: string | null
+  message: string | null
+  status: 'new' | 'contacted' | 'scheduled' | 'completed' | 'converted' | 'rejected'
+  scheduled_at: string | null
+  assigned_to: string | null
+  admin_notes: string | null
+  lead_id: string | null
+  created_at: string
+  updated_at: string
+}
+
+export async function fetchNRIConsultations(): Promise<NRIConsultation[]> {
+  if (!isSupabaseConfigured()) return []
+  try {
+    const { data, error } = await (supabase as any)
+      .from('nri_consultations').select('*').order('created_at', { ascending: false })
+    if (error) { console.warn('[fetchNRIConsultations]', error.message); return [] }
+    return (data || []) as NRIConsultation[]
+  } catch { return [] }
+}
+
+export async function updateNRIConsultation(id: string, updates: Partial<Pick<NRIConsultation, 'status' | 'admin_notes' | 'scheduled_at'>>): Promise<boolean> {
+  if (!isSupabaseConfigured()) return false
+  try {
+    const { error } = await (supabase as any).from('nri_consultations').update(updates).eq('id', id)
+    if (error) { console.warn('[updateNRIConsultation]', error.message); return false }
+    return true
+  } catch { return false }
+}

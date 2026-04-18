@@ -1,7 +1,8 @@
 'use client'
 
 import { useState } from 'react'
-import { submitContactForm, submitLead } from '@/lib/supabase/reportsDataService'
+import { submitContactForm } from '@/lib/supabase/reportsDataService'
+import { supabase, isSupabaseConfigured } from '@/lib/supabase/client'
 import { Send, Users, Target, TrendingUp, Lightbulb, Cpu, BarChart3, CheckCircle, ArrowRight, Clock } from 'lucide-react'
 import SpaceHero from '@/components/SpaceHero'
 import AnimatedSection from '@/components/AnimatedSection'
@@ -39,33 +40,71 @@ export default function StartupApplyPage() {
     setFormData((prev) => ({ ...prev, [field]: value }))
   }
 
+  const [appNumber, setAppNumber] = useState<string | null>(null)
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError('')
     setSubmitting(true)
     try {
-      await Promise.all([
-        submitContactForm({
-          formType: 'startup_apply',
-          fullName: formData.founderName,
+      // Primary: dedicated startup_applications table with SA-YYYYMMDD-XXXX
+      // ticket. Sales lead removed — a startup founder pitching for funding
+      // is not an investor lead and shouldn't pollute the Sales pipeline.
+      let applicationNumber: string | null = null
+      if (isSupabaseConfigured()) {
+        const sb = supabase as any
+        const { data, error: insErr } = await sb.from('startup_applications').insert({
+          founder_name: formData.founderName,
           email: formData.email,
-          phone: formData.phone,
-          company: formData.companyName,
-          message: `${formData.pitch}\n\nSector: ${formData.sector}, Stage: ${formData.stage}, MRR: ${formData.mrr}, Seeking: ${formData.amountSeeking}`,
-          pageUrl: typeof window !== 'undefined' ? window.location.href : '',
-        }),
-        submitLead({
-          firstName: formData.founderName.split(' ')[0] || '',
-          lastName: formData.founderName.split(' ').slice(1).join(' ') || '',
-          email: formData.email,
-          phone: formData.phone,
-          city: formData.city,
-          source: 'website',
-          investmentInterest: 'startup-funding',
-          investmentRange: formData.amountSeeking,
-          message: formData.pitch,
-        }),
-      ])
+          phone: formData.phone || null,
+          linkedin: formData.linkedin || null,
+          company_name: formData.companyName,
+          founding_year: formData.foundingYear ? parseInt(formData.foundingYear, 10) : null,
+          website: formData.website || null,
+          stage: formData.stage || null,
+          sector: formData.sector || null,
+          city: formData.city || null,
+          mrr: formData.mrr || null,
+          mau: formData.mau || null,
+          metrics: formData.metrics || null,
+          amount_seeking: formData.amountSeeking || null,
+          use_of_funds: formData.useOfFunds || null,
+          pitch: formData.pitch || null,
+          page_url: typeof window !== 'undefined' ? window.location.href : null,
+        }).select('application_number').single()
+        if (insErr) throw insErr
+        applicationNumber = data?.application_number || null
+      }
+
+      await submitContactForm({
+        formType: 'startup_apply',
+        fullName: formData.founderName,
+        email: formData.email,
+        phone: formData.phone,
+        company: formData.companyName,
+        subject: applicationNumber ? `Startup ${applicationNumber}` : 'Startup Application',
+        message: `${formData.pitch}\n\nSector: ${formData.sector}, Stage: ${formData.stage}, MRR: ${formData.mrr}, Seeking: ${formData.amountSeeking}`,
+        pageUrl: typeof window !== 'undefined' ? window.location.href : '',
+      })
+
+      try {
+        if (isSupabaseConfigured()) {
+          const sb = supabase as any
+          const { data: admins } = await sb.from('profiles').select('id').in('role', ['admin', 'super_admin'])
+          if (admins && admins.length) {
+            await sb.from('notifications').insert(admins.map((a: any) => ({
+              user_id: a.id,
+              title: 'New Startup Application',
+              message: `${formData.companyName} (${formData.founderName}) — ${formData.stage || 'stage n/a'} · seeking ${formData.amountSeeking || 'n/a'}.`,
+              type: 'action_required',
+              link: '/admin/sales/startup-applications',
+              metadata: { company: formData.companyName, sector: formData.sector, stage: formData.stage, amount: formData.amountSeeking, app: applicationNumber },
+            })))
+          }
+        }
+      } catch { /* non-blocking */ }
+
+      setAppNumber(applicationNumber)
       setSubmitted(true)
     } catch (err) {
       console.warn('Startup form Supabase error:', err)
