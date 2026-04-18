@@ -673,10 +673,13 @@ export default function DashboardClient() {
   }, [totalCurrent, totalInvested])
 
   // ─── Realtime Subscriptions ─────────────────────────────
+  // Tickets are stored with client_id = auth.users.id (the auth uid), NOT clients.id.
+  // Subscribe on the auth uid so admin status/response updates reach the investor live.
   useEffect(() => {
     if (!clientId) return
+    const authUid = user?.id
     const unsub1 = onClientNotification(clientId, () => refetchNotifications())
-    const unsub2 = onClientTicketUpdate(clientId, () => refetchTickets())
+    const unsub2 = authUid ? onClientTicketUpdate(authUid, () => refetchTickets()) : undefined
     const unsub3 = onNewMessage(clientId, () => refetchMessages())
     const unsub4 = onInvestmentUpdate(clientId, () => refetchPortfolio())
     return () => {
@@ -685,7 +688,7 @@ export default function DashboardClient() {
       unsub3?.()
       unsub4?.()
     }
-  }, [clientId]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [clientId, user?.id]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // ─── Load Bank Data from Supabase (populate form on re-visit) ──
   useEffect(() => {
@@ -2444,7 +2447,11 @@ export default function DashboardClient() {
           {supportTickets.length === 0 && !ticketForm && (
             <p className={`text-sm text-center py-4 ${t('text-gray-500','text-gray-600')}`}>No tickets yet. Click "New Ticket" to get help.</p>
           )}
-          {supportTickets.map((tk: any) => (
+          {supportTickets.map((tk: any) => {
+            const adminResponses = Array.isArray(tk?.metadata?.admin_responses) ? tk.metadata.admin_responses : []
+            const replyCount = adminResponses.length
+            const latestReply = replyCount > 0 ? adminResponses[replyCount - 1] : null
+            return (
             <div key={tk.id} onClick={() => setExpandedTicket(expandedTicket === tk.id ? null : tk.id)} className={`rounded-xl cursor-pointer transition-all ${t('bg-white/[0.02] border border-white/[0.04] hover:border-white/[0.08]','bg-gray-100/60 border border-gray-200/40 hover:border-gray-300')}`}>
               <div className="flex items-center gap-3 p-3">
                 <Ticket className={`w-5 h-5 shrink-0 ${tk.status === 'resolved' || tk.status === 'closed' ? 'text-emerald-400' : 'text-amber-400'}`} />
@@ -2452,8 +2459,22 @@ export default function DashboardClient() {
                   <p className={`text-sm font-semibold ${t('text-white','text-gray-900')}`}>{tk.subject}</p>
                   <p className={`text-[11px] ${t('text-gray-500','text-gray-700')}`}>{tk.ticket_number || tk.id} &bull; {tk.created_at ? new Date(tk.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : ''}</p>
                 </div>
+                {replyCount > 0 && (
+                  <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-blue-500/15 text-blue-400 flex items-center gap-1" title={`${replyCount} admin ${replyCount === 1 ? 'reply' : 'replies'}`}>
+                    <MessageSquare className="w-3 h-3" /> {replyCount}
+                  </span>
+                )}
                 <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${tk.status === 'resolved' || tk.status === 'closed' ? 'bg-emerald-500/15 text-emerald-400' : 'bg-amber-500/15 text-amber-400'}`}>{tk.status}</span>
               </div>
+              {/* Latest admin reply preview on collapsed card */}
+              {expandedTicket !== tk.id && latestReply && (
+                <div className={`px-4 pb-3 pt-0`}>
+                  <div className={`p-2.5 rounded-lg ${t('bg-blue-500/[0.06] border border-blue-500/[0.15]','bg-blue-50 border border-blue-200/50')}`}>
+                    <p className={`text-[10px] font-semibold mb-1 text-blue-400`}>Latest admin reply{latestReply.at ? ` · ${new Date(latestReply.at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}` : ''}</p>
+                    <p className={`text-xs leading-relaxed line-clamp-2 ${t('text-gray-300','text-gray-800')}`}>{latestReply.response || ''}</p>
+                  </div>
+                </div>
+              )}
               {expandedTicket === tk.id && (
                 <div className={`px-4 pb-4 pt-1 border-t ${t('border-white/[0.06]','border-gray-200')}`}>
                   <div className="grid grid-cols-2 gap-3 mb-3">
@@ -2504,7 +2525,8 @@ export default function DashboardClient() {
                 </div>
               )}
             </div>
-          ))}
+            )
+          })}
         </div>
       </Glass>
 
