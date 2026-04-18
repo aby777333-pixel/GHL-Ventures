@@ -1227,7 +1227,7 @@ function EmailerTab({ showToast }: { showToast: Props['showToast'] }) {
         }),
       })
 
-      const data = await res.json()
+      const data = await res.json().catch(() => ({} as Record<string, unknown>))
 
       if (res.ok && data.success) {
         showToast(`Email sent successfully to ${data.sent} recipient(s)${data.failed > 0 ? ` (${data.failed} failed)` : ''}`, 'success')
@@ -1236,7 +1236,10 @@ function EmailerTab({ showToast }: { showToast: Props['showToast'] }) {
         setBody('')
         setSelectedTemplate(null)
       } else {
-        showToast(data.error || 'Failed to send email', 'error')
+        const errList = Array.isArray((data as { errors?: unknown }).errors) ? (data as { errors: string[] }).errors : []
+        const reason = (data as { error?: string }).error || errList[0] || `Failed to send email (HTTP ${res.status})`
+        showToast(reason, 'error')
+        console.error('[Emailer] Send failed:', { status: res.status, data })
       }
     } catch (err) {
       showToast('Network error — please try again', 'error')

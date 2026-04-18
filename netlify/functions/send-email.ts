@@ -119,6 +119,9 @@ export default async (request: Request) => {
     }
 
     const fromName = senderName || 'GHL India Ventures'
+    // FROM address is configurable via RESEND_FROM_EMAIL (must belong to a Resend-verified domain).
+    // If the domain isn't verified, the Resend error is now surfaced back to the UI (see below).
+    const fromEmail = (process.env.RESEND_FROM_EMAIL || 'noreply@ghlindiaventures.com').trim()
     const htmlContent = formatEmailHtml(body)
 
     // Send to each recipient
@@ -131,7 +134,7 @@ export default async (request: Request) => {
             'Authorization': `Bearer ${resendKey}`,
           },
           body: JSON.stringify({
-            from: `${fromName} <noreply@ghlindiaventures.com>`,
+            from: `${fromName} <${fromEmail}>`,
             to: to.trim(),
             subject: subject.trim(),
             html: htmlContent,
@@ -139,7 +142,12 @@ export default async (request: Request) => {
         }).then(async res => {
           if (!res.ok) {
             const errText = await res.text()
-            throw new Error(`Resend API error for ${to}: ${errText}`)
+            let parsed = errText
+            try {
+              const j = JSON.parse(errText)
+              parsed = j.message || j.error || errText
+            } catch { /* keep raw text */ }
+            throw new Error(parsed)
           }
           return res.json()
         })
@@ -152,7 +160,11 @@ export default async (request: Request) => {
       .filter((r): r is PromiseRejectedResult => r.status === 'rejected')
       .map(r => r.reason?.message || 'Unknown error')
 
-    console.log(`[send-email] Sent: ${sent}, Failed: ${failed}`)
+    console.log(`[send-email] From: ${fromEmail} — Sent: ${sent}, Failed: ${failed}`)
+    if (errors.length > 0) console.error('[send-email] Errors:', errors)
+
+    // Build a single readable error string so the frontend can always surface the real reason.
+    const errorMessage = errors.length > 0 ? errors.join(' | ') : undefined
 
     return new Response(
       JSON.stringify({
@@ -160,7 +172,7 @@ export default async (request: Request) => {
         sent,
         failed,
         total: recipients.length,
-        ...(errors.length > 0 ? { errors } : {}),
+        ...(errorMessage ? { error: errorMessage, errors } : {}),
       }),
       { status: sent > 0 ? 200 : 500, headers: { 'Content-Type': 'application/json', ...getCorsHeaders(request) } },
     )
