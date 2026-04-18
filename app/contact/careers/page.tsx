@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { submitContactForm, submitLead } from '@/lib/supabase/reportsDataService'
+import { supabase, isSupabaseConfigured } from '@/lib/supabase/client'
 import { Send, Briefcase, GraduationCap, MapPin, Heart, CheckCircle, ArrowRight, ChevronDown, Mail, Clock, Upload } from 'lucide-react'
 import SpaceHero from '@/components/SpaceHero'
 import AnimatedSection from '@/components/AnimatedSection'
@@ -278,12 +279,30 @@ export default function CareersPage() {
     setError('')
     setSubmitting(true)
     try {
+      // Upload resume to Supabase Storage ('resumes' bucket) first.
+      // Anon INSERT is allowed by the resumes_anon_upload policy; admins read via resumes_admin_read.
+      let resumePath: string | null = null
+      let resumeName: string | null = null
+      let resumeSize: number | null = null
+      if (resumeFile && isSupabaseConfigured()) {
+        const safeName = resumeFile.name.replace(/[^a-zA-Z0-9._-]/g, '_')
+        const key = `${Date.now()}-${crypto.randomUUID()}-${safeName}`
+        const { data: up, error: upErr } = await supabase.storage
+          .from('resumes')
+          .upload(key, resumeFile, { contentType: resumeFile.type || 'application/octet-stream', upsert: false })
+        if (upErr) throw upErr
+        resumePath = up?.path || key
+        resumeName = resumeFile.name
+        resumeSize = resumeFile.size
+      }
+
       await Promise.all([
         submitContactForm({
           formType: 'career_application',
           fullName: formData.name,
           email: formData.email,
           phone: formData.phone,
+          subject: formData.position || 'Career Application',
           message: JSON.stringify({
             position: formData.position,
             experience: formData.experience,
@@ -292,6 +311,9 @@ export default function CareersPage() {
             linkedin: formData.linkedin,
             portfolio: formData.portfolio,
             coverLetter: formData.coverLetter,
+            resumePath,
+            resumeName,
+            resumeSize,
           }),
           pageUrl: typeof window !== 'undefined' ? window.location.href : '',
         }),

@@ -6,6 +6,7 @@ import {
   Mail, Phone, Building2, CheckCircle2, XCircle, Coffee,
   Laptop, Sun, Moon, AlertTriangle, BarChart3, Plus,
   Star, TrendingUp, UserPlus, Briefcase, Upload,
+  FileText, Download, ExternalLink, Linkedin,
 } from 'lucide-react'
 import AdminGlass from '../shared/AdminGlass'
 import AdminDataTable, { type Column } from '../shared/AdminDataTable'
@@ -14,6 +15,7 @@ import AdminModal, { ModalButton } from '../shared/AdminModal'
 import AdminKPICard from '../shared/AdminKPICard'
 import AdminEmptyState from '../shared/AdminEmptyState'
 import { createEmployee, updateEmployee, getEmployeeDirectory, type EmployeeRecord } from '@/lib/supabase/employeeService'
+import { fetchCareerApplications, updateCareerApplicationStatus, getResumeSignedUrl, type CareerApplication } from '@/lib/supabase/adminDataService'
 import { formatDate } from '@/lib/admin/adminHooks'
 import type { Employee, EmployeeStatus, LeaveRequest, AttendanceRecord } from '@/lib/admin/adminTypes'
 import UploadWithFolderPicker from '@/components/shared/UploadWithFolderPicker'
@@ -26,6 +28,7 @@ const ATTENDANCE_SUMMARY: any[] = []
 // ── Sub-tabs ─────────────────────────────────────────────────────
 const EMPLOYEE_TABS = [
   { id: 'directory', label: 'Directory', icon: Users },
+  { id: 'applications', label: 'Applications', icon: Briefcase },
   { id: 'attendance', label: 'Attendance', icon: Clock },
   { id: 'leave', label: 'Leave Requests', icon: CalendarDays },
   { id: 'performance', label: 'Performance', icon: Award },
@@ -206,6 +209,7 @@ export default function EmployeeModule({ subTab, navigate, showToast }: Employee
 
       <div className="admin-tab-switch">
         {activeTab === 'directory' && <DirectoryTab employees={employees} onView={(e) => setSelectedEmployee(e)} showToast={showToast} />}
+        {activeTab === 'applications' && <ApplicationsTab showToast={showToast} />}
         {activeTab === 'attendance' && <AttendanceTab />}
         {activeTab === 'leave' && <LeaveTab showToast={showToast} />}
         {activeTab === 'performance' && <PerformanceTab />}
@@ -512,6 +516,265 @@ function DirectoryTab({ employees, onView, showToast }: { employees: any[]; onVi
         exportable
         title="Employee Directory"
       />
+    </AdminGlass>
+  )
+}
+
+// ── Applications Tab (Career Applications from Website) ─────────
+function ApplicationsTab({ showToast }: { showToast: (msg: string, type?: 'success' | 'error' | 'info' | 'warning') => void }) {
+  const [apps, setApps] = useState<CareerApplication[]>([])
+  const [loading, setLoading] = useState(true)
+  const [selected, setSelected] = useState<CareerApplication | null>(null)
+  const [resumeUrl, setResumeUrl] = useState<string | null>(null)
+  const [resumeLoading, setResumeLoading] = useState(false)
+  const [notesDraft, setNotesDraft] = useState('')
+  const [savingStatus, setSavingStatus] = useState(false)
+
+  const load = useCallback(async () => {
+    setLoading(true)
+    const data = await fetchCareerApplications()
+    setApps(data)
+    setLoading(false)
+  }, [])
+
+  useEffect(() => { load() }, [load])
+
+  useEffect(() => {
+    setResumeUrl(null)
+    setNotesDraft(selected?.notes || '')
+    if (selected?.resumePath) {
+      setResumeLoading(true)
+      getResumeSignedUrl(selected.resumePath, 600).then((url) => {
+        setResumeUrl(url)
+        setResumeLoading(false)
+      })
+    }
+  }, [selected])
+
+  const kpis = useMemo(() => {
+    const total = apps.length
+    const pending = apps.filter(a => !a.is_processed && (a.status === 'new' || !a.status)).length
+    const processed = apps.filter(a => a.is_processed).length
+    const thisWeek = apps.filter(a => {
+      if (!a.created_at) return false
+      const diff = Date.now() - new Date(a.created_at).getTime()
+      return diff < 7 * 24 * 60 * 60 * 1000
+    }).length
+    return { total, pending, processed, thisWeek }
+  }, [apps])
+
+  const statusVariant = (status?: string | null): 'success' | 'warning' | 'error' | 'info' | 'neutral' => {
+    switch ((status || '').toLowerCase()) {
+      case 'hired': case 'accepted': return 'success'
+      case 'reviewed': case 'contacted': case 'shortlisted': return 'info'
+      case 'rejected': return 'error'
+      case 'new': case '': case null: case undefined: return 'warning'
+      default: return 'neutral'
+    }
+  }
+
+  const markStatus = async (newStatus: string) => {
+    if (!selected) return
+    setSavingStatus(true)
+    const ok = await updateCareerApplicationStatus(selected.id, {
+      status: newStatus,
+      is_processed: newStatus !== 'new',
+      notes: notesDraft || null,
+    })
+    setSavingStatus(false)
+    if (ok) {
+      showToast(`Marked as ${newStatus}`, 'success')
+      setSelected(null)
+      load()
+    } else {
+      showToast('Failed to update status', 'error')
+    }
+  }
+
+  const columns: Column<CareerApplication>[] = [
+    {
+      key: 'full_name',
+      label: 'Applicant',
+      sortable: true,
+      render: (row) => (
+        <div>
+          <p className="text-sm font-medium text-white">{row.full_name || '—'}</p>
+          <p className="text-[11px] text-gray-500">{row.email || '—'}</p>
+        </div>
+      ),
+    },
+    {
+      key: 'position',
+      label: 'Position',
+      sortable: true,
+      render: (row) => (
+        <div>
+          <p className="text-sm text-gray-200">{row.position || row.subject || 'Not specified'}</p>
+          <p className="text-[11px] text-gray-500">{row.experience || '—'}{row.currentCompany ? ` · ${row.currentCompany}` : ''}</p>
+        </div>
+      ),
+    },
+    {
+      key: 'phone',
+      label: 'Contact',
+      render: (row) => <span className="text-xs text-gray-400">{row.phone || '—'}</span>,
+    },
+    {
+      key: 'resumePath',
+      label: 'Resume',
+      render: (row) => row.resumePath ? (
+        <span className="inline-flex items-center gap-1 text-[11px] text-blue-400"><FileText className="w-3 h-3" /> {row.resumeName || 'file'}</span>
+      ) : <span className="text-[11px] text-gray-600">None</span>,
+    },
+    {
+      key: 'created_at',
+      label: 'Submitted',
+      sortable: true,
+      render: (row) => <span className="text-xs text-gray-400">{formatDate(row.created_at)}</span>,
+    },
+    {
+      key: 'status',
+      label: 'Status',
+      sortable: true,
+      render: (row) => <AdminBadge label={row.status || 'new'} variant={statusVariant(row.status)} dot />,
+    },
+    {
+      key: 'actions' as any,
+      label: '',
+      render: (row) => (
+        <button
+          onClick={() => setSelected(row)}
+          className="text-xs text-brand-red hover:underline font-medium inline-flex items-center gap-1"
+        >
+          <Eye className="w-3 h-3" /> View
+        </button>
+      ),
+    },
+  ]
+
+  return (
+    <AdminGlass>
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-5">
+        <AdminKPICard title="Total Applications" value={kpis.total} icon={Briefcase} color="#3B82F6" delay={0} />
+        <AdminKPICard title="New / Pending" value={kpis.pending} icon={Clock} color="#F59E0B" delay={50} />
+        <AdminKPICard title="Processed" value={kpis.processed} icon={CheckCircle2} color="#10B981" delay={100} />
+        <AdminKPICard title="This Week" value={kpis.thisWeek} icon={TrendingUp} color="#8B5CF6" delay={150} />
+      </div>
+      {loading ? (
+        <div className="py-12 text-center text-sm text-gray-500">Loading applications…</div>
+      ) : (
+        <AdminDataTable
+          data={apps}
+          columns={columns}
+          searchable
+          exportable
+          title="Career Applications"
+          emptyMessage="No career applications yet"
+        />
+      )}
+
+      {selected && (
+        <AdminModal
+          isOpen={!!selected}
+          onClose={() => setSelected(null)}
+          title={selected.full_name || 'Applicant'}
+          subtitle={`${selected.position || selected.subject || 'Position not specified'} • ${formatDate(selected.created_at)}`}
+          maxWidth="max-w-3xl"
+          footer={
+            <>
+              <ModalButton onClick={() => setSelected(null)}>Close</ModalButton>
+              <ModalButton variant="primary" onClick={() => markStatus('reviewed')} disabled={savingStatus}>Mark Reviewed</ModalButton>
+              <ModalButton variant="primary" onClick={() => markStatus('shortlisted')} disabled={savingStatus}>Shortlist</ModalButton>
+              <ModalButton variant="danger" onClick={() => markStatus('rejected')} disabled={savingStatus}>Reject</ModalButton>
+            </>
+          }
+        >
+          <div className="space-y-5">
+            <div className="flex items-center gap-3 flex-wrap">
+              <AdminBadge label={selected.status || 'new'} variant={statusVariant(selected.status)} dot />
+              {selected.is_processed && <AdminBadge label="Processed" variant="success" />}
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="flex items-center gap-2 p-3 rounded-xl bg-white/[0.03] border border-white/[0.04]">
+                <Mail className="w-4 h-4 text-gray-500 shrink-0" />
+                <a href={selected.email ? `mailto:${selected.email}` : undefined} className="text-xs text-gray-300 truncate hover:text-white">{selected.email || '—'}</a>
+              </div>
+              <div className="flex items-center gap-2 p-3 rounded-xl bg-white/[0.03] border border-white/[0.04]">
+                <Phone className="w-4 h-4 text-gray-500 shrink-0" />
+                <a href={selected.phone ? `tel:${selected.phone}` : undefined} className="text-xs text-gray-300 hover:text-white">{selected.phone || '—'}</a>
+              </div>
+              <div className="flex items-center gap-2 p-3 rounded-xl bg-white/[0.03] border border-white/[0.04]">
+                <Briefcase className="w-4 h-4 text-gray-500 shrink-0" />
+                <span className="text-xs text-gray-300">{selected.position || selected.subject || '—'}</span>
+              </div>
+              <div className="flex items-center gap-2 p-3 rounded-xl bg-white/[0.03] border border-white/[0.04]">
+                <Award className="w-4 h-4 text-gray-500 shrink-0" />
+                <span className="text-xs text-gray-300">{selected.experience || '—'} experience</span>
+              </div>
+              <div className="flex items-center gap-2 p-3 rounded-xl bg-white/[0.03] border border-white/[0.04]">
+                <Building2 className="w-4 h-4 text-gray-500 shrink-0" />
+                <span className="text-xs text-gray-300 truncate">{selected.currentCompany || 'Not provided'}</span>
+              </div>
+              <div className="flex items-center gap-2 p-3 rounded-xl bg-white/[0.03] border border-white/[0.04]">
+                <Star className="w-4 h-4 text-gray-500 shrink-0" />
+                <span className="text-xs text-gray-300">CTC: {selected.currentCTC || 'Not provided'}</span>
+              </div>
+            </div>
+
+            {(selected.linkedin || selected.portfolio) && (
+              <div className="flex flex-wrap gap-2">
+                {selected.linkedin && (
+                  <a href={selected.linkedin} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-500/10 border border-blue-500/20 text-xs text-blue-300 hover:bg-blue-500/20">
+                    <Linkedin className="w-3.5 h-3.5" /> LinkedIn <ExternalLink className="w-3 h-3" />
+                  </a>
+                )}
+                {selected.portfolio && (
+                  <a href={selected.portfolio} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/[0.04] border border-white/[0.06] text-xs text-gray-300 hover:bg-white/[0.08]">
+                    <ExternalLink className="w-3 h-3" /> Portfolio
+                  </a>
+                )}
+              </div>
+            )}
+
+            <div className="p-4 rounded-xl bg-white/[0.02] border border-white/[0.04]">
+              <p className="text-[11px] font-medium uppercase tracking-wide text-gray-500 mb-2">Resume / CV</p>
+              {selected.resumePath ? (
+                resumeLoading ? (
+                  <p className="text-xs text-gray-500">Generating secure link…</p>
+                ) : resumeUrl ? (
+                  <a href={resumeUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-brand-red/10 border border-brand-red/20 text-xs text-white hover:bg-brand-red/20">
+                    <Download className="w-3.5 h-3.5" /> Download {selected.resumeName || 'resume'}
+                    {selected.resumeSize ? <span className="text-gray-500">({(selected.resumeSize / 1024).toFixed(0)} KB)</span> : null}
+                  </a>
+                ) : (
+                  <p className="text-xs text-red-400">Could not generate download link. Check storage permissions.</p>
+                )
+              ) : (
+                <p className="text-xs text-gray-500 italic">No resume uploaded with this application.</p>
+              )}
+            </div>
+
+            {selected.coverLetter && (
+              <div className="p-4 rounded-xl bg-white/[0.02] border border-white/[0.04]">
+                <p className="text-[11px] font-medium uppercase tracking-wide text-gray-500 mb-2">Why GHL India Ventures?</p>
+                <p className="text-sm text-gray-300 leading-relaxed whitespace-pre-wrap">{selected.coverLetter}</p>
+              </div>
+            )}
+
+            <div>
+              <label className="block text-[11px] font-medium uppercase tracking-wide text-gray-500 mb-2">HR Notes</label>
+              <textarea
+                value={notesDraft}
+                onChange={(e) => setNotesDraft(e.target.value)}
+                rows={3}
+                placeholder="Interview feedback, next steps, etc."
+                className="w-full px-3 py-2 text-xs text-gray-200 rounded-lg bg-white/[0.04] border border-white/[0.06] focus:outline-none focus:border-brand-red/50"
+              />
+            </div>
+          </div>
+        </AdminModal>
+      )}
     </AdminGlass>
   )
 }

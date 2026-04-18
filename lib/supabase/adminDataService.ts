@@ -1038,3 +1038,97 @@ export async function deleteRow(table: string, id: string) {
     return true
   } catch { return false }
 }
+
+// ── Career Applications ─────────────────────────────────────
+// Career applications are stored in contact_submissions with form_type='career_application'.
+// The message column holds a JSON blob with role/experience/coverLetter/resumePath, etc.
+
+export type CareerApplication = {
+  id: string
+  full_name: string
+  email: string | null
+  phone: string | null
+  subject: string | null
+  status: string | null
+  is_processed: boolean | null
+  processed_at: string | null
+  notes: string | null
+  created_at: string
+  // Parsed from message JSON
+  position?: string
+  experience?: string
+  currentCompany?: string
+  currentCTC?: string
+  linkedin?: string
+  portfolio?: string
+  coverLetter?: string
+  resumePath?: string | null
+  resumeName?: string | null
+  resumeSize?: number | null
+  raw_message?: string
+}
+
+export async function fetchCareerApplications(): Promise<CareerApplication[]> {
+  if (!isSupabaseConfigured()) return []
+  try {
+    const { data, error } = await supabase
+      .from('contact_submissions' as any)
+      .select('id, full_name, email, phone, subject, status, is_processed, processed_at, notes, message, created_at')
+      .eq('form_type', 'career_application')
+      .order('created_at', { ascending: false }) as any
+    if (error) { console.warn('[fetchCareerApplications]', error.message); return [] }
+    return (data || []).map((r: any) => {
+      let parsed: any = {}
+      try { parsed = r.message ? JSON.parse(r.message) : {} } catch { parsed = {} }
+      return {
+        id: r.id,
+        full_name: r.full_name || '',
+        email: r.email,
+        phone: r.phone,
+        subject: r.subject,
+        status: r.status,
+        is_processed: r.is_processed,
+        processed_at: r.processed_at,
+        notes: r.notes,
+        created_at: r.created_at,
+        position: parsed.position,
+        experience: parsed.experience,
+        currentCompany: parsed.currentCompany,
+        currentCTC: parsed.currentCTC,
+        linkedin: parsed.linkedin,
+        portfolio: parsed.portfolio,
+        coverLetter: parsed.coverLetter,
+        resumePath: parsed.resumePath || null,
+        resumeName: parsed.resumeName || null,
+        resumeSize: parsed.resumeSize || null,
+        raw_message: r.message || '',
+      }
+    })
+  } catch (err) {
+    console.warn('[fetchCareerApplications] exception:', err)
+    return []
+  }
+}
+
+export async function updateCareerApplicationStatus(id: string, updates: { status?: string; is_processed?: boolean; notes?: string | null }): Promise<boolean> {
+  if (!isSupabaseConfigured()) return false
+  try {
+    const patch: any = { ...updates }
+    if (updates.is_processed) patch.processed_at = new Date().toISOString()
+    const { error } = await (supabase as any).from('contact_submissions').update(patch).eq('id', id)
+    if (error) { console.warn('[updateCareerApplicationStatus]', error.message); return false }
+    return true
+  } catch { return false }
+}
+
+export async function getResumeSignedUrl(path: string, expiresIn = 300): Promise<string | null> {
+  if (!isSupabaseConfigured() || !path) return null
+  try {
+    const { data, error } = await supabase.storage.from('resumes').createSignedUrl(path, expiresIn)
+    if (error) { console.warn('[getResumeSignedUrl]', error.message); return null }
+    return data?.signedUrl || null
+  } catch (err) {
+    console.warn('[getResumeSignedUrl] exception:', err)
+    return null
+  }
+}
