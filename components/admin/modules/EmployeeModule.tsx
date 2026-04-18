@@ -16,12 +16,10 @@ import AdminKPICard from '../shared/AdminKPICard'
 import AdminEmptyState from '../shared/AdminEmptyState'
 import { createEmployee, updateEmployee, getEmployeeDirectory, type EmployeeRecord } from '@/lib/supabase/employeeService'
 import { fetchCareerApplications, updateCareerApplicationStatus, getResumeSignedUrl, type CareerApplication } from '@/lib/supabase/adminDataService'
+import { supabase, isSupabaseConfigured } from '@/lib/supabase/client'
 import { formatDate } from '@/lib/admin/adminHooks'
 import type { Employee, EmployeeStatus, LeaveRequest, AttendanceRecord } from '@/lib/admin/adminTypes'
 import UploadWithFolderPicker from '@/components/shared/UploadWithFolderPicker'
-
-// ── Leave & Attendance placeholders (will be fetched from Supabase later) ──
-const LEAVE_REQUESTS: LeaveRequest[] = []
 
 const ATTENDANCE_SUMMARY: any[] = []
 
@@ -47,6 +45,7 @@ export default function EmployeeModule({ subTab, navigate, showToast }: Employee
   const [employees, setEmployees] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [creating, setCreating] = useState(false)
+  const [pendingLeaveCount, setPendingLeaveCount] = useState(0)
 
   const loadData = useCallback(async () => {
     setLoading(true)
@@ -64,6 +63,14 @@ export default function EmployeeModule({ subTab, navigate, showToast }: Employee
       _raw: e,
     })))
     setLoading(false)
+    // Pending leave count for the KPI strip.
+    if (isSupabaseConfigured()) {
+      try {
+        const sb = supabase as any
+        const { count } = await sb.from('leave_requests').select('id', { count: 'exact', head: true }).eq('status', 'pending')
+        setPendingLeaveCount(count || 0)
+      } catch { /* ignore */ }
+    }
   }, [])
 
   useEffect(() => { loadData() }, [loadData])
@@ -155,10 +162,9 @@ export default function EmployeeModule({ subTab, navigate, showToast }: Employee
   const kpis = useMemo(() => {
     const active = employees.filter(e => e.status === 'active').length
     const onLeave = employees.filter(e => e.status === 'on-leave').length
-    const pendingLeaves = LEAVE_REQUESTS.filter(l => l.status === 'pending').length
     const departments = new Set(employees.map(e => e.department)).size
-    return { total: employees.length, active, onLeave, pendingLeaves, departments }
-  }, [employees])
+    return { total: employees.length, active, onLeave, pendingLeaves: pendingLeaveCount, departments }
+  }, [employees, pendingLeaveCount])
 
   const handleTabClick = (tabId: string) => {
     navigate(tabId === 'directory' ? 'employees' : `employees/${tabId}`)
@@ -850,29 +856,93 @@ function AttendanceTab() {
 }
 
 // ── Leave Tab ───────────────────────────────────────────────────
+interface AdminLeaveRow {
+  id: string
+  staff_id: string
+  staff_name: string | null
+  staff_code: string | null
+  leave_type: string
+  start_date: string
+  end_date: string
+  reason: string | null
+  status: string
+  half_day: boolean | null
+  created_at: string
+}
+
 function LeaveTab({ showToast }: { showToast: (msg: string, type?: 'success' | 'error' | 'info' | 'warning') => void }) {
-  const getLeaveVariant = (type: string) => {
-    switch (type) {
-      case 'casual': return 'info' as const
-      case 'sick': return 'error' as const
-      case 'earned': return 'success' as const
-      case 'comp-off': return 'purple' as const
-      default: return 'neutral' as const
+  const [rows, setRows] = useState<AdminLeaveRow[]>([])
+  const [busyId, setBusyId] = useState<string | null>(null)
+
+  const loadRows = useCallback(async () => {
+    if (!isSupabaseConfigured()) return
+    try {
+      const sb = supabase as any
+      const { data, error } = await sb.rpc('list_leave_requests_for_admin')
+      if (!error && Array.isArray(data)) setRows(data as AdminLeaveRow[])
+    } catch { /* ignore */ }
+  }, [])
+
+  useEffect(() => { loadRows() }, [loadRows])
+
+  const daysBetween = (from: string, to: string) => {
+    const a = new Date(from), b = new Date(to)
+    if (isNaN(a.getTime()) || isNaN(b.getTime())) return 1
+    return Math.max(1, Math.round((b.getTime() - a.getTime()) / 86_400_000) + 1)
+  }
+
+  const decide = async (id: string, status: 'approved' | 'rejected') => {
+    if (!isSupabaseConfigured()) { showToast('Database is not configured', 'error'); return }
+    setBusyId(id)
+    try {
+      const sb = supabase as any
+      const { error } = await sb.rpc('set_leave_request_status', { p_leave_id: id, p_status: status, p_note: null })
+      if (error) throw error
+      showToast(`Leave ${status}`, status === 'approved' ? 'success' : 'info')
+      setRows(prev => prev.map(r => r.id === id ? { ...r, status } : r))
+    } catch (err: any) {
+      const msg = err?.message || 'Unknown error'
+      showToast(msg === 'not_authorised' ? 'Only admins can decide leave requests.' : `Failed: ${msg}`, 'error')
+    } finally {
+      setBusyId(null)
     }
   }
 
-  const columns: Column<LeaveRequest>[] = [
+  const tableRows: (LeaveRequest & { _id: string })[] = rows.map(r => ({
+    _id: r.id,
+    id: r.id.slice(0, 8).toUpperCase(),
+    employeeId: r.staff_code || '',
+    employeeName: r.staff_name || 'Unknown staff',
+    type: r.leave_type as LeaveRequest['type'],
+    from: r.start_date,
+    to: r.end_date,
+    days: r.half_day ? 0.5 : daysBetween(r.start_date, r.end_date),
+    reason: r.reason || '',
+    status: r.status as LeaveRequest['status'],
+    appliedDate: r.created_at,
+  }))
+
+  const getLeaveVariant = (type: string) => {
+    const norm = type.toLowerCase()
+    if (norm.includes('casual')) return 'info' as const
+    if (norm.includes('sick')) return 'error' as const
+    if (norm.includes('earned')) return 'success' as const
+    if (norm.includes('comp')) return 'purple' as const
+    return 'neutral' as const
+  }
+
+  const columns: Column<LeaveRequest & { _id: string }>[] = [
     {
       key: 'employeeName',
       label: 'Employee',
       render: (row) => (
         <div>
           <p className="text-sm font-medium text-white">{row.employeeName}</p>
-          <p className="text-[11px] text-gray-500">{row.employeeId}</p>
+          <p className="text-[11px] text-gray-500">{row.employeeId || row.id}</p>
         </div>
       ),
     },
-    { key: 'type', label: 'Type', render: (row) => <AdminBadge label={row.type.replace('-', ' ')} variant={getLeaveVariant(row.type)} /> },
+    { key: 'type', label: 'Type', render: (row) => <AdminBadge label={row.type} variant={getLeaveVariant(row.type)} /> },
     { key: 'from', label: 'From', render: (row) => <span className="text-xs text-gray-300">{formatDate(row.from)}</span> },
     { key: 'to', label: 'To', render: (row) => <span className="text-xs text-gray-300">{formatDate(row.to)}</span> },
     { key: 'days', label: 'Days', render: (row) => <span className="text-white font-semibold">{row.days}</span> },
@@ -896,14 +966,18 @@ function LeaveTab({ showToast }: { showToast: (msg: string, type?: 'success' | '
       render: (row) => row.status === 'pending' ? (
         <div className="flex items-center gap-1">
           <button
-            onClick={(e) => { e.stopPropagation(); showToast(`Leave ${row.id} approved`, 'success') }}
-            className="p-1.5 rounded-lg hover:bg-emerald-500/10 text-gray-500 hover:text-emerald-400 transition-colors"
+            disabled={busyId === row._id}
+            onClick={(e) => { e.stopPropagation(); decide(row._id, 'approved') }}
+            className="p-1.5 rounded-lg hover:bg-emerald-500/10 text-gray-500 hover:text-emerald-400 transition-colors disabled:opacity-50"
+            title="Approve"
           >
             <CheckCircle2 className="w-4 h-4" />
           </button>
           <button
-            onClick={(e) => { e.stopPropagation(); showToast(`Leave ${row.id} rejected`, 'error') }}
-            className="p-1.5 rounded-lg hover:bg-red-500/10 text-gray-500 hover:text-red-400 transition-colors"
+            disabled={busyId === row._id}
+            onClick={(e) => { e.stopPropagation(); decide(row._id, 'rejected') }}
+            className="p-1.5 rounded-lg hover:bg-red-500/10 text-gray-500 hover:text-red-400 transition-colors disabled:opacity-50"
+            title="Reject"
           >
             <XCircle className="w-4 h-4" />
           </button>
@@ -914,9 +988,9 @@ function LeaveTab({ showToast }: { showToast: (msg: string, type?: 'success' | '
 
   return (
     <AdminGlass padding="p-4">
-      <AdminDataTable<LeaveRequest>
+      <AdminDataTable<LeaveRequest & { _id: string }>
         columns={columns}
-        data={LEAVE_REQUESTS}
+        data={tableRows}
         searchKeys={['employeeName', 'type', 'reason']}
         searchPlaceholder="Search leave requests..."
         title="Leave Requests"

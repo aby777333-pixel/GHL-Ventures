@@ -12,7 +12,7 @@ import {
 } from 'lucide-react'
 import { saveBlobAs, pickAndUploadFiles } from '@/lib/supabase/storageService'
 import { insertRow } from '@/lib/supabase/adminDataService'
-import { recordAttendance, submitLeaveRequest } from '@/lib/supabase/staffDataService'
+import { recordAttendance } from '@/lib/supabase/staffDataService'
 import { supabase, isSupabaseConfigured } from '@/lib/supabase/client'
 import AdminModal from '@/components/admin/shared/AdminModal'
 
@@ -576,8 +576,45 @@ function AttendanceView({ showToast }: { showToast: SelfServiceModuleProps['show
 // ================================================================
 function LeaveView({ showToast }: { showToast: SelfServiceModuleProps['showToast'] }) {
   const [leaveForm, setLeaveForm] = useState({ type: '', fromDate: '', toDate: '', halfDay: 'Full Day', reason: '' })
-  const balances: { type: string; total: number; used: number; available: number }[] = []
-  const history: { id: string; type: string; from: string; to: string; days: number; reason: string; status: string }[] = []
+  const [submitting, setSubmitting] = useState(false)
+  type LeaveRow = { id: string; leave_type: string; start_date: string; end_date: string; reason: string | null; status: string; half_day?: boolean; created_at?: string }
+  const [leaveRows, setLeaveRows] = useState<LeaveRow[]>([])
+
+  const daysBetween = (from: string, to: string) => {
+    const a = new Date(from), b = new Date(to)
+    if (isNaN(a.getTime()) || isNaN(b.getTime())) return 1
+    return Math.max(1, Math.round((b.getTime() - a.getTime()) / 86_400_000) + 1)
+  }
+
+  const loadHistory = async () => {
+    if (!isSupabaseConfigured()) return
+    try {
+      const sb = supabase as any
+      const { data, error } = await sb.rpc('get_my_leave_history')
+      if (!error && Array.isArray(data)) setLeaveRows(data as LeaveRow[])
+    } catch { /* ignore */ }
+  }
+
+  useEffect(() => { loadHistory() }, [])
+
+  const ENTITLEMENTS: Record<string, number> = { 'Casual Leave': 12, 'Sick Leave': 12, 'Earned Leave': 18, 'Comp-off': 6 }
+  const balances = (Object.keys(ENTITLEMENTS) as (keyof typeof ENTITLEMENTS)[]).map(type => {
+    const used = leaveRows
+      .filter(r => r.leave_type === type && r.status !== 'rejected' && r.status !== 'cancelled')
+      .reduce((sum, r) => sum + (r.half_day ? 0.5 : daysBetween(r.start_date, r.end_date)), 0)
+    const total = ENTITLEMENTS[type]
+    return { type, total, used, available: Math.max(0, total - used) }
+  })
+
+  const history = leaveRows.map(r => ({
+    id: r.id.slice(0, 8).toUpperCase(),
+    type: r.leave_type,
+    from: r.start_date,
+    to: r.end_date,
+    days: r.half_day ? 0.5 : daysBetween(r.start_date, r.end_date),
+    reason: r.reason || '',
+    status: r.status.charAt(0).toUpperCase() + r.status.slice(1),
+  }))
   const holidays = [
     { date: '14 Mar 2026', name: 'Holi', day: 'Saturday' },
     { date: '02 Apr 2026', name: 'Ram Navami', day: 'Thursday' },
@@ -639,40 +676,47 @@ function LeaveView({ showToast }: { showToast: SelfServiceModuleProps['showToast
           <textarea rows={2} value={leaveForm.reason} onChange={e => setLeaveForm({ ...leaveForm, reason: e.target.value })} placeholder="Enter reason for leave..." className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-teal-500/40 resize-none" />
         </div>
         <div className="mt-3 flex justify-end">
-          <button onClick={async () => {
+          <button
+            disabled={submitting}
+            onClick={async () => {
             if (!leaveForm.type) { showToast('Please select a leave type', 'error'); return }
             if (!leaveForm.fromDate) { showToast('Please select a start date', 'error'); return }
             if (!leaveForm.reason.trim()) { showToast('Please provide a reason for leave', 'error'); return }
+            if (!isSupabaseConfigured()) { showToast('Database is not configured', 'error'); return }
+            setSubmitting(true)
             try {
-              // Get current user for the leave request
-              let staffId: string | null = null
-              try {
-                const sb = supabase as any
-                const { data: { user } } = await sb.auth.getUser()
-                staffId = user?.id || null
-              } catch { /* continue */ }
-              const row = await submitLeaveRequest({
-                leave_type: leaveForm.type,
-                start_date: leaveForm.fromDate,
-                end_date: leaveForm.toDate || leaveForm.fromDate,
-                half_day: leaveForm.halfDay !== 'Full Day',
-                reason: leaveForm.reason.trim(),
-                status: 'pending',
-                staff_id: staffId,
-                requested_by: staffId,
+              // The server-side RPC resolves auth.uid() → staff_profiles.id and runs
+              // the insert under SECURITY DEFINER. Going through the RPC avoids the
+              // FK mismatch (staff_id must be staff_profiles.id) and the RLS
+              // RETURNING trap that breaks `.insert().select().single()` for staff.
+              const sb = supabase as any
+              const { data, error } = await sb.rpc('submit_my_leave_request', {
+                p_leave_type: leaveForm.type,
+                p_start_date: leaveForm.fromDate,
+                p_end_date: leaveForm.toDate || leaveForm.fromDate,
+                p_half_day: leaveForm.halfDay !== 'Full Day',
+                p_reason: leaveForm.reason.trim(),
               })
-              if (row) {
-                showToast('Leave application submitted successfully', 'success')
-                setLeaveForm({ type: '', fromDate: '', toDate: '', halfDay: 'Full Day', reason: '' })
-              } else {
-                showToast('Failed to submit leave application. Please try again.', 'error')
-              }
+              if (error) throw error
+              if (!data) throw new Error('No response from server')
+              showToast('Leave application submitted successfully', 'success')
+              setLeaveForm({ type: '', fromDate: '', toDate: '', halfDay: 'Full Day', reason: '' })
+              loadHistory()
             } catch (err: any) {
-              showToast(`Leave submission error: ${err?.message || 'Unknown error'}`, 'error')
+              const msg = err?.message || 'Unknown error'
+              if (msg === 'no_staff_profile') {
+                showToast('Your staff profile is not set up yet. Please contact an admin.', 'error')
+              } else if (msg === 'not_authenticated') {
+                showToast('Please sign in again to apply for leave.', 'error')
+              } else {
+                showToast(`Leave submission error: ${msg}`, 'error')
+              }
+            } finally {
+              setSubmitting(false)
             }
           }}
-            className="px-5 py-2 rounded-xl text-xs font-semibold bg-teal-500/15 text-teal-400 border border-teal-500/25 hover:bg-teal-500/25 transition-colors">
-            Submit Application
+            className="px-5 py-2 rounded-xl text-xs font-semibold bg-teal-500/15 text-teal-400 border border-teal-500/25 hover:bg-teal-500/25 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+            {submitting ? 'Submitting…' : 'Submit Application'}
           </button>
         </div>
       </AdminGlass>

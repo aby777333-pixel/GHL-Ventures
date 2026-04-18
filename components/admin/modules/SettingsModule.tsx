@@ -14,6 +14,7 @@ import AdminBadge from '../shared/AdminBadge'
 import AdminKPICard from '../shared/AdminKPICard'
 import AdminEmptyState from '../shared/AdminEmptyState'
 import { fetchEmployees, getSystemHealth, fetchActivityFeed } from '@/lib/supabase/adminDataService'
+import { supabase, isSupabaseConfigured } from '@/lib/supabase/client'
 import { ROLE_PERMISSIONS } from '@/lib/admin/adminRBAC'
 import { ROLE_LABELS } from '@/lib/admin/adminAuth'
 import { formatDate } from '@/lib/admin/adminHooks'
@@ -89,6 +90,23 @@ export default function SettingsModule({ subTab, navigate, showToast }: Settings
 }
 
 // ── General Settings ────────────────────────────────────────────
+const SETTINGS_KEY_MAP: Record<string, { dbKey: string; category: string; label: string }> = {
+  companyName:         { dbKey: 'company_name',        category: 'general',      label: 'Company Name' },
+  email:               { dbKey: 'admin_email',         category: 'general',      label: 'Admin Email' },
+  phone:               { dbKey: 'contact_phone',       category: 'general',      label: 'Phone' },
+  sebiReg:             { dbKey: 'sebi_registration',   category: 'compliance',   label: 'SEBI Registration' },
+  timezone:            { dbKey: 'timezone',            category: 'general',      label: 'Timezone' },
+  currency:            { dbKey: 'currency',            category: 'general',      label: 'Currency' },
+  fiscalYear:          { dbKey: 'fiscal_year',         category: 'general',      label: 'Fiscal Year' },
+  darkMode:            { dbKey: 'dark_mode',           category: 'preferences',  label: 'Dark Mode' },
+  emailNotifications:  { dbKey: 'email_notifications', category: 'preferences',  label: 'Email Notifications' },
+  smsAlerts:           { dbKey: 'sms_alerts',          category: 'preferences',  label: 'SMS Alerts' },
+  autoBackup:          { dbKey: 'auto_backup',         category: 'preferences',  label: 'Auto Backup' },
+  twoFactorAuth:       { dbKey: 'two_factor_auth',     category: 'security',     label: 'Two-Factor Auth' },
+  sessionTimeout:      { dbKey: 'session_timeout',     category: 'security',     label: 'Session Timeout' },
+  auditLogging:        { dbKey: 'audit_logging',       category: 'security',     label: 'Audit Logging' },
+}
+
 function GeneralTab({ showToast }: { showToast: (msg: string, type?: 'success' | 'error' | 'info' | 'warning') => void }) {
   const [settings, setSettings] = useState({
     companyName: 'GHL India Ventures Pvt. Ltd.',
@@ -106,10 +124,73 @@ function GeneralTab({ showToast }: { showToast: (msg: string, type?: 'success' |
     sessionTimeout: '8 hours',
     auditLogging: true,
   })
+  const [saving, setSaving] = useState(false)
 
-  const toggleSetting = (key: keyof typeof settings) => {
-    setSettings(prev => ({ ...prev, [key]: !prev[key] }))
-    showToast('Setting updated', 'success')
+  // Load persisted values from site_settings — falls back to the defaults above
+  // for any keys that haven't been saved yet.
+  useEffect(() => {
+    if (!isSupabaseConfigured()) return
+    const dbKeys = Object.values(SETTINGS_KEY_MAP).map(s => s.dbKey)
+    ;(async () => {
+      try {
+        const sb = supabase as any
+        const { data } = await sb.from('site_settings').select('key, value').in('key', dbKeys)
+        if (!Array.isArray(data)) return
+        const byDbKey = Object.fromEntries(data.map((r: any) => [r.key, r.value]))
+        setSettings(prev => {
+          const next = { ...prev }
+          for (const [stateKey, meta] of Object.entries(SETTINGS_KEY_MAP)) {
+            const stored = byDbKey[meta.dbKey]
+            if (stored === undefined) continue
+            const current = (prev as any)[stateKey]
+            if (typeof current === 'boolean') (next as any)[stateKey] = stored === true || stored === 'true'
+            else (next as any)[stateKey] = String(stored)
+          }
+          return next
+        })
+      } catch { /* non-blocking */ }
+    })()
+  }, [])
+
+  const persistOne = async (stateKey: keyof typeof settings, value: unknown) => {
+    if (!isSupabaseConfigured()) return false
+    const meta = SETTINGS_KEY_MAP[stateKey as string]
+    if (!meta) return false
+    try {
+      const sb = supabase as any
+      const { data: { user } } = await sb.auth.getUser()
+      const { error } = await sb.from('site_settings').upsert({
+        key: meta.dbKey,
+        value: typeof value === 'boolean' ? value : String(value),
+        category: meta.category,
+        label: meta.label,
+        updated_by: user?.id || null,
+        updated_at: new Date().toISOString(),
+      }, { onConflict: 'key' })
+      return !error
+    } catch { return false }
+  }
+
+  const saveAll = async () => {
+    if (!isSupabaseConfigured()) { showToast('Database is not configured', 'error'); return }
+    setSaving(true)
+    try {
+      const results = await Promise.all(
+        (Object.keys(settings) as (keyof typeof settings)[]).map(k => persistOne(k, settings[k]))
+      )
+      const failed = results.filter(r => !r).length
+      if (failed === 0) showToast('Settings saved', 'success')
+      else showToast(`Saved with ${failed} failure(s) — check admin role`, 'warning')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const toggleSetting = async (key: keyof typeof settings) => {
+    const next = !settings[key]
+    setSettings(prev => ({ ...prev, [key]: next }))
+    const ok = await persistOne(key, next)
+    showToast(ok ? 'Setting updated' : 'Failed to save setting', ok ? 'success' : 'error')
   }
 
   return (
@@ -121,33 +202,39 @@ function GeneralTab({ showToast }: { showToast: (msg: string, type?: 'success' |
           Company Information
         </h3>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          {[
-            { label: 'Company Name', value: settings.companyName, icon: Globe },
-            { label: 'Admin Email', value: settings.email, icon: Mail },
-            { label: 'Phone', value: settings.phone, icon: Smartphone },
-            { label: 'SEBI Registration', value: settings.sebiReg, icon: Shield },
-            { label: 'Timezone', value: settings.timezone, icon: Clock },
-            { label: 'Currency', value: settings.currency, icon: Key },
-            { label: 'Fiscal Year', value: settings.fiscalYear, icon: Clock },
-          ].map(field => {
+          {([
+            { key: 'companyName' as const, label: 'Company Name', icon: Globe },
+            { key: 'email' as const,       label: 'Admin Email',  icon: Mail },
+            { key: 'phone' as const,       label: 'Phone',        icon: Smartphone },
+            { key: 'sebiReg' as const,     label: 'SEBI Registration', icon: Shield },
+            { key: 'timezone' as const,    label: 'Timezone',     icon: Clock },
+            { key: 'currency' as const,    label: 'Currency',     icon: Key },
+            { key: 'fiscalYear' as const,  label: 'Fiscal Year',  icon: Clock },
+          ]).map(field => {
             const Icon = field.icon
             return (
               <div key={field.label} className="space-y-1.5">
                 <label className="text-[11px] text-gray-500 uppercase tracking-wider font-medium">{field.label}</label>
                 <div className="flex items-center gap-2 p-2.5 rounded-xl bg-white/[0.03] border border-white/[0.06]">
                   <Icon className="w-3.5 h-3.5 text-gray-500 flex-shrink-0" />
-                  <span className="text-sm text-gray-300">{field.value}</span>
+                  <input
+                    type="text"
+                    value={settings[field.key] as string}
+                    onChange={(e) => setSettings(prev => ({ ...prev, [field.key]: e.target.value }))}
+                    className="flex-1 bg-transparent outline-none text-sm text-gray-200 placeholder:text-gray-600"
+                  />
                 </div>
               </div>
             )
           })}
         </div>
         <button
-          onClick={() => showToast('Settings saved (demo mode)', 'success')}
-          className="mt-4 flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium text-white bg-brand-red/20 border border-brand-red/30 hover:bg-brand-red/30 transition-colors admin-btn-press"
+          onClick={saveAll}
+          disabled={saving}
+          className="mt-4 flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium text-white bg-brand-red/20 border border-brand-red/30 hover:bg-brand-red/30 transition-colors admin-btn-press disabled:opacity-50 disabled:cursor-not-allowed"
         >
           <Save className="w-4 h-4" />
-          Save Changes
+          {saving ? 'Saving…' : 'Save Changes'}
         </button>
       </AdminGlass>
 

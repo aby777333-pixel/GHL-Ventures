@@ -20,6 +20,7 @@ import AdminDataTable, { type Column } from '../shared/AdminDataTable'
 import {
   fetchRealtyBrokers, fetchBrokerInquiries,
 } from '@/lib/supabase/adminDataService'
+import { supabase, isSupabaseConfigured } from '@/lib/supabase/client'
 import { formatINR } from '@/lib/admin/adminHooks'
 import UploadWithFolderPicker from '@/components/shared/UploadWithFolderPicker'
 import type { RealtyBroker, BrokerInquiry } from '@/lib/admin/adminTypes'
@@ -208,7 +209,34 @@ export default function RealtyBrokersModule({ subTab, navigate, showToast }: Rea
           maxWidth="max-w-3xl"
           footer={
             <div className="flex gap-2 justify-end">
-              <ModalButton variant="primary" onClick={() => { showToast(`Contacting ${selectedBroker.name}...`, 'info'); setSelectedBroker(null) }}>Contact Broker</ModalButton>
+              <ModalButton
+                variant="primary"
+                onClick={async () => {
+                  // Open the user's mail client pre-filled and log the outreach attempt
+                  // in notifications so admins have an audit trail of who contacted whom.
+                  const email = (selectedBroker.email || '').trim()
+                  const subject = encodeURIComponent(`GHL India Ventures — ${selectedBroker.name}`)
+                  if (email) window.open(`mailto:${email}?subject=${subject}`, '_blank', 'noopener,noreferrer')
+                  if (isSupabaseConfigured()) {
+                    try {
+                      const sb = supabase as any
+                      const { data: { user } } = await sb.auth.getUser()
+                      if (user?.id) {
+                        await sb.from('notifications').insert({
+                          user_id: user.id,
+                          title: 'Broker contacted',
+                          message: `You opened a contact draft for ${selectedBroker.name} (${email || 'no email'}).`,
+                          type: 'info',
+                          link: '/admin/realty-brokers',
+                          metadata: { broker_id: selectedBroker.id, broker_name: selectedBroker.name },
+                        })
+                      }
+                    } catch { /* non-blocking */ }
+                  }
+                  showToast(email ? `Drafted email to ${selectedBroker.name}` : 'No email on file — check the broker profile', email ? 'success' : 'warning')
+                  setSelectedBroker(null)
+                }}
+              >Contact Broker</ModalButton>
               <ModalButton onClick={() => setSelectedBroker(null)}>Close</ModalButton>
             </div>
           }
@@ -311,7 +339,26 @@ export default function RealtyBrokersModule({ subTab, navigate, showToast }: Rea
           maxWidth="max-w-2xl"
           footer={
             <div className="flex gap-2 justify-end">
-              <ModalButton variant="primary" onClick={() => { showToast(`Inquiry ${selectedInquiry.id} assigned`, 'success'); setSelectedInquiry(null) }}>Assign &amp; Respond</ModalButton>
+              <ModalButton
+                variant="primary"
+                onClick={async () => {
+                  if (!isSupabaseConfigured()) { showToast('Database is not configured', 'error'); return }
+                  try {
+                    const sb = supabase as any
+                    const { data: { user } } = await sb.auth.getUser()
+                    if (!user?.id) { showToast('Please sign in again', 'error'); return }
+                    const { error } = await sb.from('broker_inquiries')
+                      .update({ status: 'contacted', assigned_to: user.id, updated_at: new Date().toISOString() })
+                      .eq('id', selectedInquiry.id)
+                    if (error) throw error
+                    showToast(`Inquiry assigned to you`, 'success')
+                    setSelectedInquiry(null)
+                    setInquiries(prev => prev.map(q => q.id === selectedInquiry.id ? { ...q, status: 'contacted' as any, assignedTo: user.id } : q))
+                  } catch (err: any) {
+                    showToast(`Failed: ${err?.message || 'unknown'}`, 'error')
+                  }
+                }}
+              >Assign &amp; Respond</ModalButton>
               <ModalButton onClick={() => setSelectedInquiry(null)}>Close</ModalButton>
             </div>
           }
