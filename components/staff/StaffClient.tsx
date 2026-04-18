@@ -72,6 +72,13 @@ export default function StaffClient() {
     }
   }, [loading, isAuthenticated, router])
 
+  // Mark body as staff portal so global light-mode text overrides
+  // (scoped to the public/marketing site) don't bleed into staff UI.
+  useEffect(() => {
+    document.body.classList.add('staff-active')
+    return () => { document.body.classList.remove('staff-active') }
+  }, [])
+
   // ── Browser Notification Permission ────────────────────────
   useEffect(() => {
     if (isAuthenticated && typeof window !== 'undefined' && 'Notification' in window) {

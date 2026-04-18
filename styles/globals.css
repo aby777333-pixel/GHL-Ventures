@@ -530,16 +530,18 @@ p, span, td, th, label, li, div {
 .dark .dash-glass-hover {
   color: rgba(255, 255, 255, 0.95);
 }
-/* Dashboard-only dark overrides — scoped to avoid breaking main site light mode */
-.dark .dash-root .text-gray-300 { color: rgba(255, 255, 255, 0.85) !important; }
-.dark .dash-root .text-gray-400 { color: rgba(255, 255, 255, 0.75) !important; }
-.dark .dash-root .text-gray-500 { color: rgba(255, 255, 255, 0.65) !important; }
-.dark .dash-root .text-gray-600 { color: rgba(255, 255, 255, 0.55) !important; }
-.dark .dash-root .text-gray-700 { color: rgba(255, 255, 255, 0.50) !important; }
-.dark .dash-root p, .dark .dash-root span, .dark .dash-root td, .dark .dash-root th, .dark .dash-root label, .dark .dash-root li {
+/* Dashboard-only dark overrides — scoped to avoid breaking main site light mode.
+   Selector matches `.dashboard-root` which is the actual class rendered by
+   DashboardShell.tsx (prior `.dash-root` selector was dead — bug fix 2026-04-18). */
+.dark .dashboard-root .text-gray-300 { color: rgba(255, 255, 255, 0.85) !important; }
+.dark .dashboard-root .text-gray-400 { color: rgba(255, 255, 255, 0.75) !important; }
+.dark .dashboard-root .text-gray-500 { color: rgba(255, 255, 255, 0.65) !important; }
+.dark .dashboard-root .text-gray-600 { color: rgba(255, 255, 255, 0.55) !important; }
+.dark .dashboard-root .text-gray-700 { color: rgba(255, 255, 255, 0.50) !important; }
+.dark .dashboard-root p, .dark .dashboard-root span, .dark .dashboard-root td, .dark .dashboard-root th, .dark .dashboard-root label, .dark .dashboard-root li {
   color: inherit;
 }
-.dark .dash-root .text-xs, .dark .dash-root .text-sm {
+.dark .dashboard-root .text-xs, .dark .dashboard-root .text-sm {
   font-weight: 400;
 }
 
@@ -3664,4 +3666,68 @@ button[class*="rounded-lg"] {
 /* Dashboard sidebar text visibility in dark mode */
 .dark [class*="text-brand-grey"] {
   color: rgba(255, 255, 255, 0.6) !important;
+}
+
+/* ============================================================
+   LIGHT MODE — MARKETING SITE TEXT → BLACK
+   Per testing report 2026-04-18: "All section same issue: fix
+   light mode all text color should be black."
+
+   Scope: public/marketing pages only (homepage, fund, about,
+   why-aifs, blog, education, tools, contact, careers, etc.).
+   Excluded: investor dashboard (body.dashboard-active), admin
+   portal (body.admin-active), staff portal (body.staff-active) —
+   those have their own theming and must not be affected.
+
+   Dark-background sections keep white text because the override
+   targets known LIGHT surfaces (bg-white, bg-brand-offwhite,
+   card, bg-gray-50, bg-gray-100) — gradient-dark heroes, black
+   CTAs, and footers are untouched.
+   ============================================================ */
+
+/* Force body/muted text to near-black on every light surface */
+body:not(.dashboard-active):not(.admin-active):not(.staff-active) :root:not(.dark) .text-brand-grey,
+:root:not(.dark) body:not(.dashboard-active):not(.admin-active):not(.staff-active) .text-brand-grey {
+  color: #0A0A0A;
+}
+
+/* Target utility-classed grays ONLY when sitting inside a known
+   light background. Avoids clobbering intentional grays on dark
+   hero/footer sections and leaves component-internal greys alone. */
+:root:not(.dark) body:not(.dashboard-active):not(.admin-active):not(.staff-active) .bg-white [class~="text-brand-grey"],
+:root:not(.dark) body:not(.dashboard-active):not(.admin-active):not(.staff-active) .bg-brand-offwhite [class~="text-brand-grey"],
+:root:not(.dark) body:not(.dashboard-active):not(.admin-active):not(.staff-active) .bg-gray-50 [class~="text-brand-grey"],
+:root:not(.dark) body:not(.dashboard-active):not(.admin-active):not(.staff-active) .bg-gray-100 [class~="text-brand-grey"],
+:root:not(.dark) body:not(.dashboard-active):not(.admin-active):not(.staff-active) .card [class~="text-brand-grey"],
+:root:not(.dark) body:not(.dashboard-active):not(.admin-active):not(.staff-active) .bg-white [class~="text-gray-300"],
+:root:not(.dark) body:not(.dashboard-active):not(.admin-active):not(.staff-active) .bg-white [class~="text-gray-400"],
+:root:not(.dark) body:not(.dashboard-active):not(.admin-active):not(.staff-active) .bg-white [class~="text-gray-500"],
+:root:not(.dark) body:not(.dashboard-active):not(.admin-active):not(.staff-active) .bg-white [class~="text-gray-600"],
+:root:not(.dark) body:not(.dashboard-active):not(.admin-active):not(.staff-active) .bg-white [class~="text-gray-700"],
+:root:not(.dark) body:not(.dashboard-active):not(.admin-active):not(.staff-active) .bg-brand-offwhite [class~="text-gray-300"],
+:root:not(.dark) body:not(.dashboard-active):not(.admin-active):not(.staff-active) .bg-brand-offwhite [class~="text-gray-400"],
+:root:not(.dark) body:not(.dashboard-active):not(.admin-active):not(.staff-active) .bg-brand-offwhite [class~="text-gray-500"],
+:root:not(.dark) body:not(.dashboard-active):not(.admin-active):not(.staff-active) .bg-brand-offwhite [class~="text-gray-600"],
+:root:not(.dark) body:not(.dashboard-active):not(.admin-active):not(.staff-active) .bg-brand-offwhite [class~="text-gray-700"],
+:root:not(.dark) body:not(.dashboard-active):not(.admin-active):not(.staff-active) .bg-gray-50 [class~="text-gray-500"],
+:root:not(.dark) body:not(.dashboard-active):not(.admin-active):not(.staff-active) .bg-gray-50 [class~="text-gray-600"],
+:root:not(.dark) body:not(.dashboard-active):not(.admin-active):not(.staff-active) .bg-gray-50 [class~="text-gray-700"],
+:root:not(.dark) body:not(.dashboard-active):not(.admin-active):not(.staff-active) .bg-gray-100 [class~="text-gray-500"],
+:root:not(.dark) body:not(.dashboard-active):not(.admin-active):not(.staff-active) .bg-gray-100 [class~="text-gray-600"],
+:root:not(.dark) body:not(.dashboard-active):not(.admin-active):not(.staff-active) .bg-gray-100 [class~="text-gray-700"],
+:root:not(.dark) body:not(.dashboard-active):not(.admin-active):not(.staff-active) section.section-padding.bg-white [class~="text-gray-400"],
+:root:not(.dark) body:not(.dashboard-active):not(.admin-active):not(.staff-active) section.section-padding.bg-white [class~="text-gray-500"],
+:root:not(.dark) body:not(.dashboard-active):not(.admin-active):not(.staff-active) section.section-padding.bg-white [class~="text-gray-600"],
+:root:not(.dark) body:not(.dashboard-active):not(.admin-active):not(.staff-active) section.section-padding.bg-brand-offwhite [class~="text-gray-400"],
+:root:not(.dark) body:not(.dashboard-active):not(.admin-active):not(.staff-active) section.section-padding.bg-brand-offwhite [class~="text-gray-500"],
+:root:not(.dark) body:not(.dashboard-active):not(.admin-active):not(.staff-active) section.section-padding.bg-brand-offwhite [class~="text-gray-600"],
+:root:not(.dark) body:not(.dashboard-active):not(.admin-active):not(.staff-active) .section-subtitle {
+  color: #0A0A0A !important;
+}
+
+/* Ensure the base body text token resolves to pure black on
+   public/marketing pages, even when nothing overrides a given
+   element. Section-subtitle is commonly used across pages. */
+:root:not(.dark) body:not(.dashboard-active):not(.admin-active):not(.staff-active) {
+  color: #0A0A0A;
 }
