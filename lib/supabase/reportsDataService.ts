@@ -266,7 +266,10 @@ export async function submitContactForm(formData: {
     return { success: true, local: true }
   }
   try {
-    const { data, error } = await supabase.from('contact_submissions').insert({
+    // Insert with minimal return — contact_submissions RLS blocks anon SELECT,
+    // so chaining `.select().single()` causes PostgREST to reject the write
+    // with a misleading "new row violates row-level security policy" error.
+    const { error } = await supabase.from('contact_submissions').insert({
       form_type: sanitizeStr(formData.formType),
       full_name: sanitizeStr(formData.fullName),
       email: sanitizeStr(formData.email),
@@ -280,9 +283,9 @@ export async function submitContactForm(formData: {
       utm_medium: typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('utm_medium') : null,
       utm_campaign: typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('utm_campaign') : null,
       referrer: typeof document !== 'undefined' ? document.referrer : null,
-    } as any).select().single()
+    } as any)
     if (error) throw error
-    return { success: true, data }
+    return { success: true }
   } catch (err) {
     console.warn('[reportsData] Contact form submission error:', err)
     return { success: false, error: err }

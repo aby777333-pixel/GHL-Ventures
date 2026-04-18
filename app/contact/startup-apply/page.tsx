@@ -50,30 +50,33 @@ export default function StartupApplyPage() {
       // Primary: dedicated startup_applications table with SA-YYYYMMDD-XXXX
       // ticket. Sales lead removed — a startup founder pitching for funding
       // is not an investor lead and shouldn't pollute the Sales pipeline.
+      // Call the SECURITY DEFINER RPC — startup_applications RLS blocks
+      // anon SELECT, so an `.insert().select()` round-trip fails even when
+      // the write itself is allowed. The RPC returns just application_number.
       let applicationNumber: string | null = null
       if (isSupabaseConfigured()) {
         const sb = supabase as any
-        const { data, error: insErr } = await sb.from('startup_applications').insert({
-          founder_name: formData.founderName,
-          email: formData.email,
-          phone: formData.phone || null,
-          linkedin: formData.linkedin || null,
-          company_name: formData.companyName,
-          founding_year: formData.foundingYear ? parseInt(formData.foundingYear, 10) : null,
-          website: formData.website || null,
-          stage: formData.stage || null,
-          sector: formData.sector || null,
-          city: formData.city || null,
-          mrr: formData.mrr || null,
-          mau: formData.mau || null,
-          metrics: formData.metrics || null,
-          amount_seeking: formData.amountSeeking || null,
-          use_of_funds: formData.useOfFunds || null,
-          pitch: formData.pitch || null,
-          page_url: typeof window !== 'undefined' ? window.location.href : null,
-        }).select('application_number').single()
+        const { data, error: insErr } = await sb.rpc('submit_startup_application', {
+          p_founder_name: formData.founderName,
+          p_email: formData.email,
+          p_phone: formData.phone || null,
+          p_linkedin: formData.linkedin || null,
+          p_company_name: formData.companyName,
+          p_founding_year: formData.foundingYear ? parseInt(formData.foundingYear, 10) : null,
+          p_website: formData.website || null,
+          p_stage: formData.stage || null,
+          p_sector: formData.sector || null,
+          p_city: formData.city || null,
+          p_mrr: formData.mrr || null,
+          p_mau: formData.mau || null,
+          p_metrics: formData.metrics || null,
+          p_amount_seeking: formData.amountSeeking || null,
+          p_use_of_funds: formData.useOfFunds || null,
+          p_pitch: formData.pitch || null,
+          p_page_url: typeof window !== 'undefined' ? window.location.href : null,
+        })
         if (insErr) throw insErr
-        applicationNumber = data?.application_number || null
+        applicationNumber = (typeof data === 'string' ? data : null) || null
       }
 
       await submitContactForm({

@@ -59,24 +59,28 @@ export default function GrievancePage() {
       // We also drop a row into contact_submissions for the legacy contact
       // inbox so support/analytics that already read that table keep working.
       // submitLead was removed — grievances don't belong in the Sales pipeline.
+      // Call the SECURITY DEFINER RPC — the grievances table's RLS SELECT
+      // policy blocks anon, so an `.insert().select()` round-trip fails even
+      // when the write itself is allowed. The RPC does the insert server-side
+      // and returns just the generated ticket_number.
       let insertedTicket: string | null = null
       if (isSupabaseConfigured()) {
         const sb = supabase as any
-        const { data, error: grievErr } = await sb.from('grievances').insert({
-          full_name: formData.name,
-          email: formData.email,
-          phone: formData.phone || null,
-          folio_number: formData.folioNumber || null,
-          complaint_type: formData.complaintType || null,
-          incident_date: formData.incidentDate || null,
-          description: formData.description,
-          desired_resolution: formData.desiredResolution || null,
-          contacted_before: formData.contactedBefore === 'Yes',
-          previous_reference: formData.referenceNumber || null,
-          page_url: typeof window !== 'undefined' ? window.location.href : null,
-        }).select('ticket_number').single()
+        const { data, error: grievErr } = await sb.rpc('submit_grievance', {
+          p_full_name: formData.name,
+          p_email: formData.email,
+          p_phone: formData.phone || null,
+          p_folio_number: formData.folioNumber || null,
+          p_complaint_type: formData.complaintType || null,
+          p_incident_date: formData.incidentDate || null,
+          p_description: formData.description,
+          p_desired_resolution: formData.desiredResolution || null,
+          p_contacted_before: formData.contactedBefore === 'Yes',
+          p_previous_reference: formData.referenceNumber || null,
+          p_page_url: typeof window !== 'undefined' ? window.location.href : null,
+        })
         if (grievErr) throw grievErr
-        insertedTicket = data?.ticket_number || null
+        insertedTicket = (typeof data === 'string' ? data : null) || null
       }
 
       // Mirror in contact_submissions for legacy inbox visibility.
