@@ -981,9 +981,18 @@ export default function DashboardClient() {
                 </div>
                 <div className="max-h-80 overflow-y-auto">
                   {notifications.map((n: any) => {
+                    // Route by link first (e.g. "/dashboard/kyc" → 'kyc'), then by type,
+                    // then fall back to dashboard. Without the link-first pass, KYC
+                    // rejection notifications (type='info') land on the overview tab
+                    // and the investor never sees the rejection reason banner.
                     const notifTabMap: Record<string, TabId> = { report: 'documents', opportunity: 'investments', alert: 'kyc', payment: 'transactions', milestone: 'portfolio' }
+                    const validTabs: TabId[] = ['dashboard', 'investments', 'invest-onboard', 'portfolio', 'kyc', 'documents', 'transactions', 'messages', 'support', 'referrals', 'calculators', 'ai-advisor', 'profile', 'settings']
+                    const linkTab = typeof n.link === 'string' ? n.link.split('/').filter(Boolean).pop() : null
+                    const destTab: TabId =
+                      (linkTab && validTabs.includes(linkTab as TabId)) ? (linkTab as TabId)
+                      : (notifTabMap[n.type] || 'dashboard')
                     return (
-                    <div key={n.id} onClick={() => { setNotifsRead(prev => new Set(prev).add(n.id)); markNotificationRead(String(n.id)); setNotifOpen(false); setActiveTab(notifTabMap[n.type] || 'dashboard') }} className={`px-4 py-3 flex gap-3 cursor-pointer transition-colors ${!n.is_read && !notifsRead.has(n.id) ? 'bg-white/[0.02]' : ''} hover:bg-white/[0.04]`}>
+                    <div key={n.id} onClick={() => { setNotifsRead(prev => new Set(prev).add(n.id)); markNotificationRead(String(n.id)); setNotifOpen(false); setActiveTab(destTab) }} className={`px-4 py-3 flex gap-3 cursor-pointer transition-colors ${!n.is_read && !notifsRead.has(n.id) ? 'bg-white/[0.02]' : ''} hover:bg-white/[0.04]`}>
                       <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0
                         ${n.type === 'report' || n.type === 'info' ? 'bg-blue-500/15' : n.type === 'opportunity' || n.type === 'success' ? 'bg-emerald-500/15' : n.type === 'alert' || n.type === 'warning' || n.type === 'action_required' ? 'bg-amber-500/15' : n.type === 'payment' ? 'bg-emerald-500/15' : n.type === 'error' ? 'bg-red-500/15' : 'bg-purple-500/15'}`}>
                         {n.type === 'report' || n.type === 'info' ? <FileText className="w-4 h-4 text-blue-400" /> :
@@ -1851,6 +1860,35 @@ export default function DashboardClient() {
           <Upload className="w-3.5 h-3.5" /> Upload Document
         </button>
       </div>
+
+      {/* Admin rejection banner — investor lands here from the "KYC Rejected"
+          notification link, so the reason needs to be the first thing they see. */}
+      {userKycStatus === 'rejected' && (
+        <div className={`p-5 rounded-2xl border-2 ${t('bg-red-500/10 border-red-500/40','bg-red-50 border-red-300')}`}>
+          <div className="flex items-start gap-3">
+            <div className="w-10 h-10 rounded-xl bg-red-500/20 border border-red-500/30 flex items-center justify-center shrink-0">
+              <AlertCircle className="w-5 h-5 text-red-400" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <h3 className={`text-sm font-bold ${t('text-red-300','text-red-700')}`}>Your KYC was rejected</h3>
+              <p className={`text-xs mt-1 ${t('text-red-200/90','text-red-700/90')}`}>
+                Please review the reason below, correct your documents, and resubmit.
+              </p>
+              {(user as any)?.kyc_rejection_reason && (
+                <div className={`mt-3 p-3 rounded-lg ${t('bg-black/30 border border-red-500/30','bg-white/80 border border-red-300')}`}>
+                  <p className={`text-[10px] uppercase tracking-wider font-semibold mb-1 ${t('text-red-300','text-red-700')}`}>Rejection reason</p>
+                  <p className={`text-xs whitespace-pre-wrap ${t('text-white/90','text-red-900')}`}>{(user as any).kyc_rejection_reason}</p>
+                </div>
+              )}
+              {(user as any)?.kyc_rejected_at && (
+                <p className={`text-[10px] mt-2 ${t('text-gray-500','text-gray-600')}`}>
+                  Rejected on {new Date((user as any).kyc_rejected_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
+                </p>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* KYC Progress */}
       <Glass className="p-6" hover theme={theme}>

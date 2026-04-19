@@ -37,7 +37,10 @@ interface ComplianceModuleProps {
 }
 
 export default function ComplianceModule({ subTab, navigate, showToast }: ComplianceModuleProps) {
-  const activeTab = (COMPLIANCE_TABS.some(t => t.id === subTab) ? subTab : 'kyc-queue') as ComplianceTab
+  // 'audit' is a legacy alias kept around so old sidebar links / bookmarks
+  // still land on the Audit Trail tab after the rename to 'audit-trail'.
+  const normalizedSub = subTab === 'audit' ? 'audit-trail' : subTab
+  const activeTab = (COMPLIANCE_TABS.some(t => t.id === normalizedSub) ? normalizedSub : 'kyc-queue') as ComplianceTab
 
   const [approvals, setApprovals] = useState<any[]>([])
   const [riskFlags, setRiskFlags] = useState<any[]>([])
