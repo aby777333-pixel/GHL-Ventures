@@ -960,15 +960,75 @@ interface AdminLeaveRow {
 function LeaveTab({ showToast }: { showToast: (msg: string, type?: 'success' | 'error' | 'info' | 'warning') => void }) {
   const [rows, setRows] = useState<AdminLeaveRow[]>([])
   const [busyId, setBusyId] = useState<string | null>(null)
+  const [loading, setLoading] = useState(true)
+
+  // Fallback direct-query path — used if the SECURITY DEFINER RPC is
+  // missing, throws, or returns zero rows (we've seen admin sessions where
+  // the RPC's internal auth.uid() check silently drops results). The
+  // "Admins manage leave" RLS on leave_requests still gates access.
+  const loadRowsDirect = useCallback(async (): Promise<AdminLeaveRow[]> => {
+    try {
+      const sb = supabase as any
+      const { data: lrRows, error } = await sb
+        .from('leave_requests')
+        .select('id, staff_id, leave_type, start_date, end_date, reason, status, half_day, created_at, approved_by')
+        .order('created_at', { ascending: false })
+        .limit(500)
+      if (error || !lrRows) return []
+      const staffIds = Array.from(new Set((lrRows as any[]).map(r => r.staff_id).filter(Boolean)))
+      const staffById: Record<string, { user_id: string | null; staff_code: string | null }> = {}
+      if (staffIds.length > 0) {
+        const { data: spRows } = await sb
+          .from('staff_profiles')
+          .select('id, user_id, staff_code')
+          .in('id', staffIds)
+        ;(spRows || []).forEach((s: any) => { staffById[s.id] = { user_id: s.user_id, staff_code: s.staff_code || null } })
+      }
+      const userIds = Object.values(staffById).map(s => s.user_id).filter(Boolean) as string[]
+      const nameById: Record<string, string> = {}
+      if (userIds.length > 0) {
+        const { data: profs } = await sb.from('profiles').select('id, full_name').in('id', userIds)
+        ;(profs || []).forEach((p: any) => { nameById[p.id] = p.full_name || '' })
+      }
+      return (lrRows as any[]).map((r: any): AdminLeaveRow => ({
+        id: r.id,
+        staff_id: r.staff_id,
+        staff_name: staffById[r.staff_id]?.user_id ? (nameById[staffById[r.staff_id]!.user_id!] || null) : null,
+        staff_code: staffById[r.staff_id]?.staff_code || null,
+        leave_type: r.leave_type,
+        start_date: r.start_date,
+        end_date: r.end_date,
+        reason: r.reason,
+        status: r.status,
+        half_day: r.half_day,
+        created_at: r.created_at,
+      }))
+    } catch {
+      return []
+    }
+  }, [])
 
   const loadRows = useCallback(async () => {
     if (!isSupabaseConfigured()) return
+    setLoading(true)
     try {
       const sb = supabase as any
       const { data, error } = await sb.rpc('list_leave_requests_for_admin')
-      if (!error && Array.isArray(data)) setRows(data as AdminLeaveRow[])
-    } catch { /* ignore */ }
-  }, [])
+      if (!error && Array.isArray(data) && data.length > 0) {
+        setRows(data as AdminLeaveRow[])
+      } else {
+        if (error) console.warn('[leave] RPC failed, using direct query:', error.message)
+        const fallback = await loadRowsDirect()
+        setRows(fallback)
+      }
+    } catch (err) {
+      console.warn('[leave] RPC threw, using direct query:', err)
+      const fallback = await loadRowsDirect()
+      setRows(fallback)
+    } finally {
+      setLoading(false)
+    }
+  }, [loadRowsDirect])
 
   useEffect(() => { loadRows() }, [loadRows])
 
@@ -1075,13 +1135,18 @@ function LeaveTab({ showToast }: { showToast: (msg: string, type?: 'success' | '
 
   return (
     <AdminGlass padding="p-4">
-      <AdminDataTable<LeaveRequest & { _id: string }>
-        columns={columns}
-        data={tableRows}
-        searchKeys={['employeeName', 'type', 'reason']}
-        searchPlaceholder="Search leave requests..."
-        title="Leave Requests"
-      />
+      {loading ? (
+        <div className="py-12 text-center text-sm text-gray-500">Loading leave requests…</div>
+      ) : (
+        <AdminDataTable<LeaveRequest & { _id: string }>
+          columns={columns}
+          data={tableRows}
+          searchKeys={['employeeName', 'type', 'reason']}
+          searchPlaceholder="Search leave requests..."
+          title="Leave Requests"
+          emptyMessage="No leave requests yet"
+        />
+      )}
     </AdminGlass>
   )
 }
