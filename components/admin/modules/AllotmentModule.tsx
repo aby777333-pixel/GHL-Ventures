@@ -4,7 +4,7 @@ import { useState, useMemo, useEffect, useCallback } from 'react'
 import {
   FileText, CheckCircle2, Clock, History, Filter,
   Calendar, IndianRupee, Hash, ArrowUpRight, Layers,
-  Eye, AlertTriangle, Search, Download,
+  Eye, AlertTriangle, Search, Download, Send,
 } from 'lucide-react'
 import AdminGlass from '../shared/AdminGlass'
 import AdminDataTable, { type Column } from '../shared/AdminDataTable'
@@ -15,6 +15,7 @@ import AdminEmptyState from '../shared/AdminEmptyState'
 import { supabase as _supabase, isSupabaseConfigured } from '@/lib/supabase/client'
 const supabase = _supabase as any
 import { formatINR, formatDate } from '@/lib/admin/adminHooks'
+import { sendDocumentToClient } from '@/lib/admin/sendToClient'
 
 // ── Sub-tabs ─────────────────────────────────────────────────────
 const ALLOTMENT_TABS = [
@@ -70,6 +71,92 @@ interface AllotmentRecord {
   created_at: string
 }
 
+// ── HTML generators ──────────────────────────────────────────────
+// Extracted so both "Generate PDF" (opens print preview) and "Send to
+// Client" (uploads + logs to documents table) use the identical markup.
+
+function buildAllotmentLetterHTML(row: AllotmentRecord): string {
+  const amountWords = (n: number) => Number.isFinite(n) ? new Intl.NumberFormat('en-IN').format(n) : ''
+  return `<!doctype html><html><head><title>Allotment Letter — ${row.folio_number || row.id}</title>
+    <style>
+      body { font-family: Georgia, 'Times New Roman', serif; padding: 48px 56px; color: #111; line-height: 1.55; }
+      .hdr { text-align: center; border-bottom: 2px solid #8B0000; padding-bottom: 12px; margin-bottom: 28px; }
+      .hdr h1 { color: #8B0000; margin: 0; font-size: 26px; letter-spacing: 1px; }
+      .hdr p  { color: #555; margin: 4px 0 0; font-size: 13px; }
+      h2 { color: #8B0000; font-size: 18px; text-align: center; margin: 20px 0 16px; }
+      .ref { display: flex; justify-content: space-between; font-size: 12px; color: #666; margin-bottom: 20px; }
+      p.body { font-size: 14px; margin: 12px 0; }
+      table.facts { width: 100%; border-collapse: collapse; margin: 20px 0; font-size: 13px; }
+      table.facts td { padding: 8px 12px; border: 1px solid #e1e1e1; }
+      table.facts td.label { background: #faf7f5; color: #555; width: 38%; font-weight: 600; }
+      .sign { margin-top: 56px; display: flex; justify-content: space-between; font-size: 12px; }
+      .sign .cell { border-top: 1px solid #999; padding-top: 8px; width: 40%; text-align: center; color: #555; }
+      .footer { margin-top: 60px; font-size: 10px; color: #888; text-align: center; border-top: 1px solid #eee; padding-top: 12px; }
+      @media print { @page { margin: 1.6cm; } }
+    </style>
+  </head>
+  <body>
+    <div class="hdr">
+      <h1>GHL INDIA VENTURES PRIVATE LIMITED</h1>
+      <p>SEBI Registered Category II AIF · Alternative Investment Fund</p>
+    </div>
+    <div class="ref">
+      <span>Folio: <strong>${row.folio_number || '-'}</strong></span>
+      <span>Allotment Ref: <strong>AL-${String(row.id).slice(0, 8).toUpperCase()}</strong></span>
+      <span>Date: <strong>${new Date(row.allotment_date || row.created_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'long', year: 'numeric' })}</strong></span>
+    </div>
+    <h2>Letter of Allotment</h2>
+    <p class="body">Dear <strong>${row.investor_name || 'Investor'}</strong>,</p>
+    <p class="body">With reference to your application for subscription to units/debentures of
+    <strong>${row.fund_type || 'GHL India Ventures AIF'}</strong>, we are pleased to confirm that the Company
+    has allotted the below-mentioned debentures to you in accordance with the SEBI (AIF) Regulations, 2012
+    and the terms of the Private Placement Memorandum.</p>
+    <table class="facts">
+      <tr><td class="label">Investor Name</td><td>${row.investor_name || '-'}</td></tr>
+      <tr><td class="label">Folio Number</td><td>${row.folio_number || '-'}</td></tr>
+      <tr><td class="label">Fund / Scheme</td><td>${row.fund_type || '-'}</td></tr>
+      <tr><td class="label">Investment Amount</td><td>₹ ${amountWords(Number(row.investment_amount) || 0)} /-</td></tr>
+      <tr><td class="label">No. of Debentures Allotted</td><td>${(row.no_of_debentures || 0).toLocaleString('en-IN')}</td></tr>
+      <tr><td class="label">Distinctive Numbers</td><td>${row.dis_from?.toLocaleString('en-IN') || '-'} to ${row.dis_to?.toLocaleString('en-IN') || '-'}</td></tr>
+      <tr><td class="label">Allotment Date</td><td>${new Date(row.allotment_date || row.created_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'long', year: 'numeric' })}</td></tr>
+    </table>
+    <p class="body">Please preserve this letter safely. Your debenture certificate and investor portal
+    access will be issued separately. For any clarification, please contact our Investor Relations team.</p>
+    <p class="body" style="margin-top: 20px;">Thanking you,<br/>For <strong>GHL India Ventures Private Limited</strong>,</p>
+    <div class="sign">
+      <div class="cell">Authorised Signatory<br/><span style="font-size:10px">(Investment Manager)</span></div>
+      <div class="cell">Company Seal</div>
+    </div>
+    <div class="footer">
+      GHL India Ventures Private Limited · Registered Office: Chennai, Tamil Nadu, India ·
+      SEBI Registration No. IN/AIF2/24/2425/1517 · This is a system-generated document.
+    </div>
+    <script>window.onload = () => window.print()</script>
+  </body></html>`
+}
+
+function buildDebentureCertificateHTML(row: AllotmentRecord): string {
+  return `<!doctype html><html><head><title>Debenture Certificate — ${row.folio_number || row.id}</title>
+    <style>body{font-family:Georgia,serif;padding:40px;color:#111}
+    h1{text-align:center;color:#8B0000}
+    .row{display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid #eee}
+    .label{color:#555} .val{font-weight:600}</style></head>
+    <body><h1>Debenture Certificate</h1>
+    <p style="text-align:center;color:#666">GHL India Ventures Private Limited</p>
+    <div style="margin-top:32px">
+    <div class="row"><span class="label">Folio No.</span><span class="val">${row.folio_number || '-'}</span></div>
+    <div class="row"><span class="label">Investor</span><span class="val">${row.investor_name || '-'}</span></div>
+    <div class="row"><span class="label">Fund Type</span><span class="val">${row.fund_type || '-'}</span></div>
+    <div class="row"><span class="label">Investment Amount</span><span class="val">₹ ${(row.investment_amount || 0).toLocaleString('en-IN')}</span></div>
+    <div class="row"><span class="label">No. of Debentures</span><span class="val">${(row.no_of_debentures || 0).toLocaleString('en-IN')}</span></div>
+    <div class="row"><span class="label">Distinctive Nos.</span><span class="val">${row.dis_from} – ${row.dis_to}</span></div>
+    <div class="row"><span class="label">Allotment Date</span><span class="val">${new Date(row.allotment_date || row.created_at).toLocaleDateString('en-IN')}</span></div>
+    </div>
+    <p style="margin-top:48px;text-align:right">Authorised Signatory</p>
+    <script>window.onload=()=>window.print()</script>
+    </body></html>`
+}
+
 // ── Component ────────────────────────────────────────────────────
 export default function AllotmentModule({ subTab, navigate, showToast }: AllotmentModuleProps) {
   const activeTab = (ALLOTMENT_TABS.some(t => t.id === subTab) ? subTab : 'create') as AllotmentTab
@@ -88,6 +175,8 @@ export default function AllotmentModule({ subTab, navigate, showToast }: Allotme
   const [previewMode, setPreviewMode] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [confirmModalOpen, setConfirmModalOpen] = useState(false)
+  // Per-row in-flight state for Send-to-Client actions (prevents double-sends).
+  const [sendingIds, setSendingIds] = useState<Set<string>>(new Set())
 
   // ── Folio number entries (client_id -> folio_number) ───────────
   const [folioEntries, setFolioEntries] = useState<Record<string, string>>({})
@@ -404,80 +493,55 @@ export default function AllotmentModule({ subTab, navigate, showToast }: Allotme
     {
       key: 'pdf_action' as any,
       label: 'Allotment Letter',
-      width: 'w-40',
+      width: 'w-64',
       render: (row) => (
-        <button
-          onClick={() => {
-            // Bug #22: Generate a printable per-investment allotment letter.
-            // Opens a printable HTML document the admin can save as PDF.
-            const amountWords = (n: number) => {
-              if (!Number.isFinite(n)) return ''
-              return new Intl.NumberFormat('en-IN').format(n)
-            }
-            const html = `<!doctype html><html><head><title>Allotment Letter — ${row.folio_number || row.id}</title>
-              <style>
-                body { font-family: Georgia, 'Times New Roman', serif; padding: 48px 56px; color: #111; line-height: 1.55; }
-                .hdr { text-align: center; border-bottom: 2px solid #8B0000; padding-bottom: 12px; margin-bottom: 28px; }
-                .hdr h1 { color: #8B0000; margin: 0; font-size: 26px; letter-spacing: 1px; }
-                .hdr p  { color: #555; margin: 4px 0 0; font-size: 13px; }
-                h2 { color: #8B0000; font-size: 18px; text-align: center; margin: 20px 0 16px; }
-                .ref { display: flex; justify-content: space-between; font-size: 12px; color: #666; margin-bottom: 20px; }
-                p.body { font-size: 14px; margin: 12px 0; }
-                table.facts { width: 100%; border-collapse: collapse; margin: 20px 0; font-size: 13px; }
-                table.facts td { padding: 8px 12px; border: 1px solid #e1e1e1; }
-                table.facts td.label { background: #faf7f5; color: #555; width: 38%; font-weight: 600; }
-                .sign { margin-top: 56px; display: flex; justify-content: space-between; font-size: 12px; }
-                .sign .cell { border-top: 1px solid #999; padding-top: 8px; width: 40%; text-align: center; color: #555; }
-                .footer { margin-top: 60px; font-size: 10px; color: #888; text-align: center; border-top: 1px solid #eee; padding-top: 12px; }
-                @media print { @page { margin: 1.6cm; } }
-              </style>
-            </head>
-            <body>
-              <div class="hdr">
-                <h1>GHL INDIA VENTURES PRIVATE LIMITED</h1>
-                <p>SEBI Registered Category II AIF · Alternative Investment Fund</p>
-              </div>
-              <div class="ref">
-                <span>Folio: <strong>${row.folio_number || '-'}</strong></span>
-                <span>Allotment Ref: <strong>AL-${String(row.id).slice(0, 8).toUpperCase()}</strong></span>
-                <span>Date: <strong>${new Date(row.allotment_date || row.created_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'long', year: 'numeric' })}</strong></span>
-              </div>
-              <h2>Letter of Allotment</h2>
-              <p class="body">Dear <strong>${row.investor_name || 'Investor'}</strong>,</p>
-              <p class="body">With reference to your application for subscription to units/debentures of
-              <strong>${row.fund_type || 'GHL India Ventures AIF'}</strong>, we are pleased to confirm that the Company
-              has allotted the below-mentioned debentures to you in accordance with the SEBI (AIF) Regulations, 2012
-              and the terms of the Private Placement Memorandum.</p>
-              <table class="facts">
-                <tr><td class="label">Investor Name</td><td>${row.investor_name || '-'}</td></tr>
-                <tr><td class="label">Folio Number</td><td>${row.folio_number || '-'}</td></tr>
-                <tr><td class="label">Fund / Scheme</td><td>${row.fund_type || '-'}</td></tr>
-                <tr><td class="label">Investment Amount</td><td>₹ ${amountWords(Number(row.investment_amount) || 0)} /-</td></tr>
-                <tr><td class="label">No. of Debentures Allotted</td><td>${(row.no_of_debentures || 0).toLocaleString('en-IN')}</td></tr>
-                <tr><td class="label">Distinctive Numbers</td><td>${row.dis_from?.toLocaleString('en-IN') || '-'} to ${row.dis_to?.toLocaleString('en-IN') || '-'}</td></tr>
-                <tr><td class="label">Allotment Date</td><td>${new Date(row.allotment_date || row.created_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'long', year: 'numeric' })}</td></tr>
-              </table>
-              <p class="body">Please preserve this letter safely. Your debenture certificate and investor portal
-              access will be issued separately. For any clarification, please contact our Investor Relations team.</p>
-              <p class="body" style="margin-top: 20px;">Thanking you,<br/>For <strong>GHL India Ventures Private Limited</strong>,</p>
-              <div class="sign">
-                <div class="cell">Authorised Signatory<br/><span style="font-size:10px">(Investment Manager)</span></div>
-                <div class="cell">Company Seal</div>
-              </div>
-              <div class="footer">
-                GHL India Ventures Private Limited · Registered Office: Chennai, Tamil Nadu, India ·
-                SEBI Registration No. IN/AIF2/24/2425/1517 · This is a system-generated document.
-              </div>
-              <script>window.onload = () => window.print()</script>
-            </body></html>`
-            const w = window.open('', '_blank')
-            if (w) { w.document.write(html); w.document.close() }
-          }}
-          className="flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-medium text-white bg-brand-red/20 border border-brand-red/30 hover:bg-brand-red/30 transition-colors"
-        >
-          <Download className="w-3.5 h-3.5" />
-          Generate PDF
-        </button>
+        <div className="flex items-center gap-1.5">
+          <button
+            onClick={() => {
+              const html = buildAllotmentLetterHTML(row)
+              const w = window.open('', '_blank')
+              if (w) { w.document.write(html); w.document.close() }
+            }}
+            className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-medium text-white bg-brand-red/20 border border-brand-red/30 hover:bg-brand-red/30 transition-colors"
+          >
+            <Download className="w-3 h-3" />
+            Generate PDF
+          </button>
+          <button
+            onClick={async () => {
+              if (!row.client_id) {
+                showToast('Missing client id for this allotment', 'error')
+                return
+              }
+              if (sendingIds.has(row.id)) return
+              setSendingIds(prev => new Set(prev).add(row.id))
+              try {
+                const html = buildAllotmentLetterHTML(row)
+                const res = await sendDocumentToClient({
+                  clientId: row.client_id,
+                  html,
+                  fileName: `allotment-letter-${row.folio_number || row.id}.html`,
+                  title: `Allotment Letter — Folio ${row.folio_number || row.id}`,
+                  category: 'agreement',
+                })
+                if (res.ok) {
+                  showToast('Allotment letter sent to client Documents', 'success')
+                  if (res.fileUrl) window.open(res.fileUrl, '_blank')
+                } else {
+                  showToast(res.error || 'Failed to send to client', 'error')
+                }
+              } finally {
+                setSendingIds(prev => { const n = new Set(prev); n.delete(row.id); return n })
+              }
+            }}
+            disabled={sendingIds.has(row.id)}
+            className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-medium text-white bg-emerald-500/20 border border-emerald-500/30 hover:bg-emerald-500/30 transition-colors disabled:opacity-50"
+            title="Send this allotment letter to the client's Documents tab"
+          >
+            <Send className="w-3 h-3" />
+            {sendingIds.has(row.id) ? 'Sending…' : 'Send to Client'}
+          </button>
+        </div>
       ),
     },
   ]
@@ -802,38 +866,56 @@ export default function AllotmentModule({ subTab, navigate, showToast }: Allotme
                 {
                   key: 'certificate_action' as any,
                   label: 'Certificate',
-                  width: 'w-36',
+                  width: 'w-64',
                   render: (row: AllotmentRecord) => (
-                    <button
-                      onClick={() => {
-                        // Open a printable certificate view in a new tab using allotment details
-                        const html = `<!doctype html><html><head><title>Debenture Certificate — ${row.folio_number || row.id}</title>
-                          <style>body{font-family:Georgia,serif;padding:40px;color:#111}
-                          h1{text-align:center;color:#8B0000}
-                          .row{display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid #eee}
-                          .label{color:#555} .val{font-weight:600}</style></head>
-                          <body><h1>Debenture Certificate</h1>
-                          <p style="text-align:center;color:#666">GHL India Ventures Private Limited</p>
-                          <div style="margin-top:32px">
-                          <div class="row"><span class="label">Folio No.</span><span class="val">${row.folio_number || '-'}</span></div>
-                          <div class="row"><span class="label">Investor</span><span class="val">${row.investor_name || '-'}</span></div>
-                          <div class="row"><span class="label">Fund Type</span><span class="val">${row.fund_type || '-'}</span></div>
-                          <div class="row"><span class="label">Investment Amount</span><span class="val">₹ ${(row.investment_amount || 0).toLocaleString('en-IN')}</span></div>
-                          <div class="row"><span class="label">No. of Debentures</span><span class="val">${(row.no_of_debentures || 0).toLocaleString('en-IN')}</span></div>
-                          <div class="row"><span class="label">Distinctive Nos.</span><span class="val">${row.dis_from} – ${row.dis_to}</span></div>
-                          <div class="row"><span class="label">Allotment Date</span><span class="val">${new Date(row.allotment_date || row.created_at).toLocaleDateString('en-IN')}</span></div>
-                          </div>
-                          <p style="margin-top:48px;text-align:right">Authorised Signatory</p>
-                          <script>window.onload=()=>window.print()</script>
-                          </body></html>`
-                        const w = window.open('', '_blank')
-                        if (w) { w.document.write(html); w.document.close() }
-                      }}
-                      className="flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-medium text-white bg-brand-red/20 border border-brand-red/30 hover:bg-brand-red/30 transition-colors"
-                    >
-                      <Download className="w-3.5 h-3.5" />
-                      View / Print
-                    </button>
+                    <div className="flex items-center gap-1.5">
+                      <button
+                        onClick={() => {
+                          const html = buildDebentureCertificateHTML(row)
+                          const w = window.open('', '_blank')
+                          if (w) { w.document.write(html); w.document.close() }
+                        }}
+                        className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-medium text-white bg-brand-red/20 border border-brand-red/30 hover:bg-brand-red/30 transition-colors"
+                      >
+                        <Download className="w-3 h-3" />
+                        View / Print
+                      </button>
+                      <button
+                        onClick={async () => {
+                          if (!row.client_id) {
+                            showToast('Missing client id for this certificate', 'error')
+                            return
+                          }
+                          const sendKey = `cert-${row.id}`
+                          if (sendingIds.has(sendKey)) return
+                          setSendingIds(prev => new Set(prev).add(sendKey))
+                          try {
+                            const html = buildDebentureCertificateHTML(row)
+                            const res = await sendDocumentToClient({
+                              clientId: row.client_id,
+                              html,
+                              fileName: `debenture-certificate-${row.folio_number || row.id}.html`,
+                              title: `Debenture Certificate — Folio ${row.folio_number || row.id}`,
+                              category: 'agreement',
+                            })
+                            if (res.ok) {
+                              showToast('Debenture certificate sent to client Documents', 'success')
+                              if (res.fileUrl) window.open(res.fileUrl, '_blank')
+                            } else {
+                              showToast(res.error || 'Failed to send to client', 'error')
+                            }
+                          } finally {
+                            setSendingIds(prev => { const n = new Set(prev); n.delete(sendKey); return n })
+                          }
+                        }}
+                        disabled={sendingIds.has(`cert-${row.id}`)}
+                        className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-medium text-white bg-emerald-500/20 border border-emerald-500/30 hover:bg-emerald-500/30 transition-colors disabled:opacity-50"
+                        title="Send this certificate to the client's Documents tab"
+                      >
+                        <Send className="w-3 h-3" />
+                        {sendingIds.has(`cert-${row.id}`) ? 'Sending…' : 'Send to Client'}
+                      </button>
+                    </div>
                   ),
                 },
               ]}

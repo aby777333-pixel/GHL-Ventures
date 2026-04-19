@@ -5,7 +5,7 @@ import {
   Banknote, Calendar, ChevronLeft, ChevronRight, Download,
   CheckCircle2, Clock, AlertCircle, IndianRupee, FileText,
   Search, Filter, RefreshCw, Eye, CreditCard, FileSpreadsheet,
-  Printer, Users, ArrowUpRight,
+  Printer, Users, ArrowUpRight, Send,
 } from 'lucide-react'
 import AdminGlass from '../shared/AdminGlass'
 import AdminDataTable, { type Column } from '../shared/AdminDataTable'
@@ -15,6 +15,7 @@ import AdminModal, { ModalButton } from '../shared/AdminModal'
 import AdminEmptyState from '../shared/AdminEmptyState'
 import { supabase as _supabase, isSupabaseConfigured } from '@/lib/supabase/client'
 const supabase = _supabase as any
+import { sendDocumentToClient } from '@/lib/admin/sendToClient'
 
 // ── Helpers ──────────────────────────────────────────────────────
 const formatINR = (n: number) =>
@@ -37,6 +38,7 @@ const getMonthRange = (date: Date) => {
 // ── Types ────────────────────────────────────────────────────────
 interface PayoutRecord {
   id: string
+  client_id: string | null
   investment_date: string | null
   ghl_id: string
   client_name: string
@@ -56,6 +58,105 @@ interface PayoutRecord {
   ifsc_code: string
   aadhar_number: string
   pan_number: string
+}
+
+// ── Payout receipt HTML (used by Send-to-Client) ─────────────────
+// Mirrors the allotment letter styling so the client sees a consistent
+// branded document in their Documents tab. Auto-prints when opened.
+function buildPayoutReceiptHTML(row: {
+  id: string
+  ghl_id: string
+  client_name: string
+  fund_type: string
+  due_date: string | null
+  investment_amount: number
+  gross_interest: number
+  tds_amount: number
+  net_interest: number
+  payment_status: string
+  payment_date: string | null
+  account_number: string
+  account_holder_name: string
+  bank_name: string
+  ifsc_code: string
+}): string {
+  const dueDateLabel = row.due_date
+    ? new Date(row.due_date).toLocaleDateString('en-IN', { day: '2-digit', month: 'long', year: 'numeric' })
+    : '-'
+  const paymentDateLabel = row.payment_date
+    ? new Date(row.payment_date).toLocaleDateString('en-IN', { day: '2-digit', month: 'long', year: 'numeric' })
+    : '-'
+  const monthLabel = row.due_date
+    ? new Date(row.due_date).toLocaleDateString('en-IN', { month: 'long', year: 'numeric' })
+    : '-'
+  return `<!doctype html><html><head><title>Payout Statement — ${monthLabel}</title>
+    <style>
+      body { font-family: Georgia, 'Times New Roman', serif; padding: 48px 56px; color: #111; line-height: 1.55; }
+      .hdr { text-align: center; border-bottom: 2px solid #8B0000; padding-bottom: 12px; margin-bottom: 28px; }
+      .hdr h1 { color: #8B0000; margin: 0; font-size: 26px; letter-spacing: 1px; }
+      .hdr p  { color: #555; margin: 4px 0 0; font-size: 13px; }
+      h2 { color: #8B0000; font-size: 18px; text-align: center; margin: 20px 0 16px; }
+      .ref { display: flex; justify-content: space-between; font-size: 12px; color: #666; margin-bottom: 20px; }
+      p.body { font-size: 14px; margin: 12px 0; }
+      table.facts { width: 100%; border-collapse: collapse; margin: 16px 0; font-size: 13px; }
+      table.facts td { padding: 8px 12px; border: 1px solid #e1e1e1; }
+      table.facts td.label { background: #faf7f5; color: #555; width: 38%; font-weight: 600; }
+      .sign { margin-top: 56px; display: flex; justify-content: space-between; font-size: 12px; }
+      .sign .cell { border-top: 1px solid #999; padding-top: 8px; width: 40%; text-align: center; color: #555; }
+      .footer { margin-top: 60px; font-size: 10px; color: #888; text-align: center; border-top: 1px solid #eee; padding-top: 12px; }
+      .section-title { font-size: 13px; color: #8B0000; margin: 18px 0 6px; text-transform: uppercase; letter-spacing: 0.6px; font-weight: 600; }
+      @media print { @page { margin: 1.6cm; } }
+    </style>
+  </head>
+  <body>
+    <div class="hdr">
+      <h1>GHL INDIA VENTURES PRIVATE LIMITED</h1>
+      <p>SEBI Registered Category II AIF · Alternative Investment Fund</p>
+    </div>
+    <div class="ref">
+      <span>GHL ID: <strong>${row.ghl_id || '-'}</strong></span>
+      <span>Statement Ref: <strong>PO-${String(row.id).slice(0, 8).toUpperCase()}</strong></span>
+      <span>Period: <strong>${monthLabel}</strong></span>
+    </div>
+    <h2>Monthly Payout Statement</h2>
+    <p class="body">Dear <strong>${row.client_name || 'Investor'}</strong>,</p>
+    <p class="body">This statement confirms the interest / distribution computation for your investment
+    in <strong>${row.fund_type || 'GHL India Ventures AIF'}</strong> for the period ending
+    <strong>${dueDateLabel}</strong>.</p>
+
+    <div class="section-title">Payout Summary</div>
+    <table class="facts">
+      <tr><td class="label">Investor</td><td>${row.client_name || '-'}</td></tr>
+      <tr><td class="label">Fund / Scheme</td><td>${row.fund_type || '-'}</td></tr>
+      <tr><td class="label">Investment Amount</td><td>₹ ${(row.investment_amount || 0).toLocaleString('en-IN')}</td></tr>
+      <tr><td class="label">Gross Interest</td><td>₹ ${(row.gross_interest || 0).toLocaleString('en-IN')}</td></tr>
+      <tr><td class="label">TDS @ 10%</td><td>₹ ${(row.tds_amount || 0).toLocaleString('en-IN')}</td></tr>
+      <tr><td class="label">Net Payout</td><td><strong>₹ ${(row.net_interest || 0).toLocaleString('en-IN')}</strong></td></tr>
+      <tr><td class="label">Status</td><td>${(row.payment_status || '-').toUpperCase()}</td></tr>
+      <tr><td class="label">Payment Date</td><td>${paymentDateLabel}</td></tr>
+    </table>
+
+    <div class="section-title">Remittance Account</div>
+    <table class="facts">
+      <tr><td class="label">Bank</td><td>${row.bank_name || '-'}</td></tr>
+      <tr><td class="label">Account Holder</td><td>${row.account_holder_name || '-'}</td></tr>
+      <tr><td class="label">Account No.</td><td>${row.account_number || '-'}</td></tr>
+      <tr><td class="label">IFSC</td><td>${row.ifsc_code || '-'}</td></tr>
+    </table>
+
+    <p class="body" style="margin-top: 20px;">If any of the above details require correction, please
+    reach out to our Investor Relations team promptly.</p>
+    <p class="body">Thanking you,<br/>For <strong>GHL India Ventures Private Limited</strong>,</p>
+    <div class="sign">
+      <div class="cell">Authorised Signatory<br/><span style="font-size:10px">(Finance)</span></div>
+      <div class="cell">Company Seal</div>
+    </div>
+    <div class="footer">
+      GHL India Ventures Private Limited · Registered Office: Chennai, Tamil Nadu, India ·
+      SEBI Registration No. IN/AIF2/24/2425/1517 · This is a system-generated document.
+    </div>
+    <script>window.onload = () => window.print()</script>
+  </body></html>`
 }
 
 // ── Sub-tabs ─────────────────────────────────────────────────────
@@ -91,6 +192,8 @@ export default function PayoutModule({ subTab, navigate, showToast }: PayoutModu
   const [historyFilter, setHistoryFilter] = useState<string>('all')
   const [exportFormat, setExportFormat] = useState<'csv' | 'excel' | 'pdf'>('csv')
   const [generating, setGenerating] = useState(false)
+  // Per-row in-flight state for Send-to-Client actions (prevents double-sends).
+  const [sendingIds, setSendingIds] = useState<Set<string>>(new Set())
 
   // ── Data Fetch ───────────────────────────────────────────────
   const fetchPayouts = useCallback(async () => {
@@ -133,6 +236,7 @@ export default function PayoutModule({ subTab, navigate, showToast }: PayoutModu
         const identity: any = idMap.get(row.client_id) || {}
         return {
           id: row.id,
+          client_id: row.client_id || null,
           investment_date: row.investment_date,
           ghl_id: row.ghl_id || client.ghl_id || '-',
           client_name: client.full_name || '-',
@@ -448,24 +552,65 @@ export default function PayoutModule({ subTab, navigate, showToast }: PayoutModu
       <span className="text-gray-300 text-xs font-mono">{row.ifsc_code || '—'}</span>
     )},
     { key: 'payment_status', label: 'Status', width: '100px', sortable: true, render: (row) => getStatusBadge(row.payment_status) },
-    { key: 'actions', label: '', width: '80px', render: (row) => (
-      <div className="flex items-center gap-1">
-        <button
-          onClick={(e) => { e.stopPropagation(); openDetailModal(row) }}
-          className="p-1.5 rounded-lg hover:bg-white/[0.06] text-gray-500 hover:text-white transition-colors"
-          title="View details"
-        >
-          <Eye className="w-3.5 h-3.5" />
-        </button>
-        <button
-          onClick={(e) => { e.stopPropagation(); openStatusModal(row) }}
-          className="p-1.5 rounded-lg hover:bg-brand-red/20 text-gray-500 hover:text-brand-red transition-colors"
-          title="Update status"
-        >
-          <CheckCircle2 className="w-3.5 h-3.5" />
-        </button>
-      </div>
-    )},
+    { key: 'actions', label: '', width: '150px', render: (row) => {
+      const sending = sendingIds.has(row.id)
+      return (
+        <div className="flex items-center gap-1">
+          <button
+            onClick={(e) => { e.stopPropagation(); openDetailModal(row) }}
+            className="p-1.5 rounded-lg hover:bg-white/[0.06] text-gray-500 hover:text-white transition-colors"
+            title="View details"
+          >
+            <Eye className="w-3.5 h-3.5" />
+          </button>
+          <button
+            onClick={(e) => { e.stopPropagation(); openStatusModal(row) }}
+            className="p-1.5 rounded-lg hover:bg-brand-red/20 text-gray-500 hover:text-brand-red transition-colors"
+            title="Update status"
+          >
+            <CheckCircle2 className="w-3.5 h-3.5" />
+          </button>
+          <button
+            onClick={async (e) => {
+              e.stopPropagation()
+              if (!row.client_id) {
+                showToast('Missing client id — cannot send to demo row', 'error')
+                return
+              }
+              if (sending) return
+              setSendingIds(prev => new Set(prev).add(row.id))
+              try {
+                const html = buildPayoutReceiptHTML(row)
+                const monthTag = row.due_date
+                  ? new Date(row.due_date).toLocaleDateString('en-IN', { month: 'short', year: 'numeric' }).replace(/\s+/g, '-')
+                  : 'current'
+                const res = await sendDocumentToClient({
+                  clientId: row.client_id,
+                  html,
+                  fileName: `payout-statement-${monthTag}-${row.ghl_id || row.id}.html`,
+                  title: `Payout Statement — ${row.due_date ? new Date(row.due_date).toLocaleDateString('en-IN', { month: 'long', year: 'numeric' }) : 'Current Month'}`,
+                  category: 'report',
+                })
+                if (res.ok) {
+                  showToast('Payout statement sent to client Documents', 'success')
+                  if (res.fileUrl) window.open(res.fileUrl, '_blank')
+                } else {
+                  showToast(res.error || 'Failed to send to client', 'error')
+                }
+              } finally {
+                setSendingIds(prev => { const n = new Set(prev); n.delete(row.id); return n })
+              }
+            }}
+            disabled={sending}
+            className="flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-medium text-white bg-emerald-500/20 border border-emerald-500/30 hover:bg-emerald-500/30 transition-colors disabled:opacity-50"
+            title="Send payout statement to client Documents"
+          >
+            <Send className="w-3 h-3" />
+            {sending ? 'Sending…' : 'Send'}
+          </button>
+        </div>
+      )
+    }},
   ]
 
   const historyColumns: Column<PayoutRecord>[] = [
@@ -1023,6 +1168,7 @@ function getDemoData(): PayoutRecord[] {
 
     return {
       id: `payout_${i + 1}`,
+      client_id: null,
       investment_date: new Date(now.getFullYear(), now.getMonth() - (Math.floor(Math.random() * 12) + 1), Math.floor(Math.random() * 28) + 1).toISOString(),
       ghl_id: `GHL${String(1000 + i).padStart(5, '0')}`,
       client_name: name,
