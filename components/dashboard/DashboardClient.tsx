@@ -496,6 +496,29 @@ export default function DashboardClient() {
     setToast({ msg, type })
     setTimeout(() => setToast(null), 3500)
   }, [])
+  // Two-tone ring for new notifications / messages — matches the admin + staff
+  // topbars so every portal signals the same way.
+  const playDashRingSound = useCallback(() => {
+    try {
+      const AC = (window as any).AudioContext || (window as any).webkitAudioContext
+      if (!AC) return
+      const ctx = new AC()
+      const now = ctx.currentTime
+      const tones = [
+        { freq: 800, start: 0, dur: 0.15 },
+        { freq: 1000, start: 0.18, dur: 0.15 },
+      ]
+      tones.forEach(t => {
+        const osc = ctx.createOscillator()
+        const gain = ctx.createGain()
+        osc.connect(gain); gain.connect(ctx.destination)
+        osc.frequency.value = t.freq; osc.type = 'sine'
+        gain.gain.setValueAtTime(0.2, now + t.start)
+        gain.gain.exponentialRampToValueAtTime(0.001, now + t.start + t.dur)
+        osc.start(now + t.start); osc.stop(now + t.start + t.dur + 0.05)
+      })
+    } catch { /* audio blocked — silent */ }
+  }, [])
   // Task reminders derived from KYC status (no hardcoded mock data)
   const taskReminders = useMemo(() => {
     const reminders: { id: number; task: string; due: string; urgent: boolean }[] = []
@@ -675,12 +698,21 @@ export default function DashboardClient() {
   // ─── Realtime Subscriptions ─────────────────────────────
   // Tickets are stored with client_id = auth.users.id (the auth uid), NOT clients.id.
   // Subscribe on the auth uid so admin status/response updates reach the investor live.
+  // Notifications.user_id is also auth.users.id — subscribing on clientId would
+  // silently never fire, so live toasts/sounds depend on using the auth uid here.
   useEffect(() => {
     if (!clientId) return
     const authUid = user?.id
-    const unsub1 = onClientNotification(clientId, () => refetchNotifications())
+    const unsub1 = authUid ? onClientNotification(authUid, (payload: any) => {
+      refetchNotifications()
+      const n = payload?.new
+      if (n?.title) {
+        playDashRingSound()
+        showToast(String(n.title), n.type === 'success' ? 'success' : 'info')
+      }
+    }) : undefined
     const unsub2 = authUid ? onClientTicketUpdate(authUid, () => refetchTickets()) : undefined
-    const unsub3 = onNewMessage(clientId, () => refetchMessages())
+    const unsub3 = onNewMessage(clientId, () => { refetchMessages(); playDashRingSound() })
     const unsub4 = onInvestmentUpdate(clientId, () => refetchPortfolio())
     return () => {
       unsub1?.()

@@ -368,19 +368,20 @@ export default function KYCWizard({ clientId, userId, userName, userEmail, userP
 
   return (
     <div className="flex flex-col lg:flex-row gap-6">
-      {/* Left Stepper */}
+      {/* Left Stepper — flush-left alignment so step labels sit at the card
+          edge instead of floating inside heavy padding. */}
       <div className="lg:w-56 shrink-0">
-        <div className={`${cardCls} lg:sticky lg:top-6`}>
+        <div className={`rounded-xl border p-2 lg:sticky lg:top-6 ${isDark ? 'bg-white/[0.03] border-white/[0.06]' : 'bg-white border-gray-200'}`}>
           {STEPS.map((step, idx) => {
             const status = getStepStatus(idx)
             const isActive = idx === activeStep
             const Icon = step.icon
             return (
               <button key={step.id} onClick={() => setActiveStep(idx)}
-                className={`w-full flex items-center gap-3 px-3 py-3 rounded-lg text-left transition-all mb-1 last:mb-0
+                className={`w-full flex items-center justify-start gap-2.5 px-2 py-2 rounded-lg text-left transition-all mb-1 last:mb-0
                   ${isActive ? 'bg-red-600 text-white' : isDark ? 'hover:bg-white/5 text-gray-400' : 'hover:bg-gray-100 text-gray-600'}
                   ${status === 'submitted' || status === 'approved' ? 'opacity-100' : ''}`}>
-                <div className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0
+                <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0
                   ${isActive ? 'bg-white/20' : status === 'submitted' || status === 'approved' ? 'bg-emerald-500/20 text-emerald-400' : isDark ? 'bg-white/5' : 'bg-gray-100'}`}>
                   {status === 'submitted' || status === 'approved' ? <CheckCircle className="w-4 h-4 text-emerald-500" /> : <Icon className="w-4 h-4" />}
                 </div>
