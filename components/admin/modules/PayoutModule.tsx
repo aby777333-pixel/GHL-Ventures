@@ -593,7 +593,9 @@ export default function PayoutModule({ subTab, navigate, showToast }: PayoutModu
                 })
                 if (res.ok) {
                   showToast('Payout statement sent to client Documents', 'success')
-                  if (res.fileUrl) window.open(res.fileUrl, '_blank')
+                  // Open the rendered HTML directly for admin verification.
+                  const w = window.open('', '_blank')
+                  if (w) { w.document.write(html); w.document.close() }
                 } else {
                   showToast(res.error || 'Failed to send to client', 'error')
                 }

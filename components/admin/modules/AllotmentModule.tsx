@@ -526,7 +526,11 @@ export default function AllotmentModule({ subTab, navigate, showToast }: Allotme
                 })
                 if (res.ok) {
                   showToast('Allotment letter sent to client Documents', 'success')
-                  if (res.fileUrl) window.open(res.fileUrl, '_blank')
+                  // Open the rendered HTML directly for admin verification (avoids
+                  // any browser data-URL navigation restrictions). This mirrors the
+                  // Generate PDF flow.
+                  const w = window.open('', '_blank')
+                  if (w) { w.document.write(html); w.document.close() }
                 } else {
                   showToast(res.error || 'Failed to send to client', 'error')
                 }
@@ -900,7 +904,8 @@ export default function AllotmentModule({ subTab, navigate, showToast }: Allotme
                             })
                             if (res.ok) {
                               showToast('Debenture certificate sent to client Documents', 'success')
-                              if (res.fileUrl) window.open(res.fileUrl, '_blank')
+                              const w = window.open('', '_blank')
+                              if (w) { w.document.write(html); w.document.close() }
                             } else {
                               showToast(res.error || 'Failed to send to client', 'error')
                             }
