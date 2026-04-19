@@ -61,11 +61,15 @@ export default function ComplianceModule({ subTab, navigate, showToast }: Compli
     const pending = approvals.filter(a => a.status === 'pending').length + kycQueue.filter(k => k.status === 'submitted' || k.status === 'pending').length
     const openRisks = riskFlags.filter(r => r.status === 'open' || r.status === 'investigating').length
     const critical = riskFlags.filter(r => r.severity === 'critical').length
-    const total = approvals.length
-    const approved = approvals.filter(a => a.status === 'approved').length
-    const complianceScore = total > 0 ? Math.round((approved / total) * 100) : 0
+    // Compliance Score blends approval decisions + KYC decisions so an empty
+    // approvals table doesn't force the score to 0 while KYCs are actively
+    // being processed.
+    const approvedCount = approvals.filter(a => a.status === 'approved').length
+      + kycQueue.filter(k => k.status === 'approved' || k.status === 'skipped').length
+    const decidable = approvals.length + kycQueue.length
+    const complianceScore = decidable > 0 ? Math.round((approvedCount / decidable) * 100) : 0
     return { pending, openRisks, critical, auditEntries: auditLog.length, complianceScore }
-  }, [approvals, riskFlags, auditLog])
+  }, [approvals, riskFlags, auditLog, kycQueue])
 
   const handleTabClick = (tabId: string) => {
     navigate(tabId === 'kyc-queue' ? 'compliance' : `compliance/${tabId}`)
@@ -158,7 +162,15 @@ function KYCQueueTab({ kycQueue, showToast, onRefresh }: { kycQueue: any[]; show
 
   const filtered = useMemo(() => {
     if (statusFilter === 'all') return clientGroups
-    return clientGroups.filter(g => g.items.some(i => i.status === statusFilter))
+    // KYC sub-rows persist status as 'submitted' (from the client KYC wizard).
+    // Treat the user-facing "Pending" filter as "waiting for my review", so it
+    // matches both 'submitted' and any legacy 'pending' rows — otherwise the
+    // tab would appear empty despite KPI showing 44 pending.
+    const matches = (rowStatus: string): boolean => {
+      if (statusFilter === 'pending') return rowStatus === 'pending' || rowStatus === 'submitted'
+      return rowStatus === statusFilter
+    }
+    return clientGroups.filter(g => g.items.some(i => matches(i.status)))
   }, [statusFilter, clientGroups])
 
   const pendingCount = kycQueue.filter(k => k.status === 'submitted' || k.status === 'pending').length
@@ -796,14 +808,180 @@ function AuditTrailTab({ auditLog }: { auditLog: any[] }) {
 }
 
 // ── Regulations Tab ─────────────────────────────────────────────
+interface RegulationRow {
+  id: string
+  regulator: string
+  title: string
+  description: string
+  cadence: string
+  category: 'Reporting' | 'KYC / AML' | 'Governance' | 'Marketing' | 'Taxation'
+}
+
+const REGULATIONS: RegulationRow[] = [
+  {
+    id: 'sebi-aif-reg-3',
+    regulator: 'SEBI',
+    title: 'AIF Regulations, 2012 — Reg. 3 Registration',
+    description: 'GHL India Ventures is registered as a Category II AIF. Registration certificate must be renewed before expiry and displayed on the firm\'s website.',
+    cadence: 'Every 5 years',
+    category: 'Governance',
+  },
+  {
+    id: 'sebi-aif-q',
+    regulator: 'SEBI',
+    title: 'Quarterly Report — Form AIF-Q',
+    description: 'Filed within 30 days of each quarter-end with SEBI\'s SI Portal. Covers AUM, investor count, fund performance, and concentration metrics.',
+    cadence: 'Quarterly',
+    category: 'Reporting',
+  },
+  {
+    id: 'sebi-aif-ppm',
+    regulator: 'SEBI',
+    title: 'Private Placement Memorandum (PPM) — Reg. 11',
+    description: 'Every investor must receive and sign the latest PPM before drawdown. Amendments require SEBI intimation within 7 days.',
+    cadence: 'On change',
+    category: 'Governance',
+  },
+  {
+    id: 'pmla-kyc',
+    regulator: 'FIU-IND (PMLA)',
+    title: 'Investor KYC under PMLA Rules',
+    description: 'PAN, Aadhaar, proof of address, and bank/demat details captured and verified for every client. Retained for 7 years after exit.',
+    cadence: 'Per investor',
+    category: 'KYC / AML',
+  },
+  {
+    id: 'pmla-str',
+    regulator: 'FIU-IND (PMLA)',
+    title: 'Suspicious Transaction Reports (STR)',
+    description: 'File within 7 days of transaction becoming suspicious. Tracked against the risk_flags queue.',
+    cadence: 'As needed',
+    category: 'KYC / AML',
+  },
+  {
+    id: 'sebi-aif-mktg',
+    regulator: 'SEBI',
+    title: 'AIF marketing material — Reg. 12',
+    description: 'No performance data in public ads; marketing must carry the "market risk" disclaimer. Compliance pre-approval required before publish.',
+    cadence: 'Per asset',
+    category: 'Marketing',
+  },
+  {
+    id: 'sebi-aif-grievance',
+    regulator: 'SEBI',
+    title: 'Investor Grievance Redressal — SCORES',
+    description: 'Acknowledge investor complaints within 3 business days; resolution within 30 days. Tracked in the Grievances tab.',
+    cadence: 'Per complaint',
+    category: 'Governance',
+  },
+  {
+    id: 'sebi-aif-nav',
+    regulator: 'SEBI',
+    title: 'NAV calculation & disclosure',
+    description: 'NAV published monthly on the client portal by the 5th. Any material deviation reported to the Trustee + SEBI.',
+    cadence: 'Monthly',
+    category: 'Reporting',
+  },
+  {
+    id: 'cbdt-tds',
+    regulator: 'CBDT',
+    title: 'TDS on investor payouts — Sec. 194LBB',
+    description: '10% TDS withheld on distributable income; deposited by the 7th of the next month; Form 16A issued quarterly.',
+    cadence: 'Monthly / Quarterly',
+    category: 'Taxation',
+  },
+  {
+    id: 'cbdt-gst-aif',
+    regulator: 'CBDT / GST Council',
+    title: 'GST on management fee',
+    description: '18% GST on fund management fee is collected and remitted monthly via GSTR-3B; GSTR-1 by the 11th.',
+    cadence: 'Monthly',
+    category: 'Taxation',
+  },
+  {
+    id: 'sebi-aif-trustee',
+    regulator: 'SEBI',
+    title: 'Trustee oversight — Trust Deed',
+    description: 'Quarterly trustee review meeting minutes filed; material adverse events notified to trustee within 24 hours.',
+    cadence: 'Quarterly',
+    category: 'Governance',
+  },
+  {
+    id: 'sebi-audit',
+    regulator: 'SEBI',
+    title: 'Annual financial audit',
+    description: 'Fund accounts audited by a SEBI-empaneled CA; audited financials filed within 180 days of FY-end.',
+    cadence: 'Annual',
+    category: 'Reporting',
+  },
+]
+
 function RegulationsTab() {
+  const [categoryFilter, setCategoryFilter] = useState<RegulationRow['category'] | 'All'>('All')
+  const categories = useMemo(() => ['All', ...Array.from(new Set(REGULATIONS.map(r => r.category)))] as (RegulationRow['category'] | 'All')[], [])
+
+  const filtered = useMemo(
+    () => categoryFilter === 'All' ? REGULATIONS : REGULATIONS.filter(r => r.category === categoryFilter),
+    [categoryFilter],
+  )
+
+  const categoryVariant = (c: RegulationRow['category']): 'success' | 'warning' | 'info' | 'purple' | 'error' => {
+    switch (c) {
+      case 'Reporting': return 'info'
+      case 'KYC / AML': return 'error'
+      case 'Governance': return 'success'
+      case 'Marketing': return 'warning'
+      case 'Taxation': return 'purple'
+    }
+  }
+
   return (
-    <AdminGlass>
-      <h3 className="text-sm font-semibold text-white mb-4 flex items-center gap-2">
-        <Gavel className="w-4 h-4 text-brand-red" />
-        Regulatory Compliance Status
-      </h3>
-      <AdminEmptyState title="No regulations tracked" description="Regulatory compliance entries will appear here once configured." />
-    </AdminGlass>
+    <div className="space-y-4">
+      <AdminGlass>
+        <div className="flex items-center gap-2 mb-3 flex-wrap">
+          <h3 className="text-sm font-semibold text-white flex items-center gap-2">
+            <Gavel className="w-4 h-4 text-brand-red" />
+            Regulatory Compliance Checklist
+          </h3>
+          <span className="text-[10px] text-gray-500 ml-2">SEBI AIF (Cat II), PMLA, CBDT — for GHL India Ventures</span>
+        </div>
+        <div className="flex items-center gap-2 flex-wrap">
+          {categories.map(c => (
+            <button
+              key={c}
+              onClick={() => setCategoryFilter(c)}
+              className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors ${
+                categoryFilter === c
+                  ? 'bg-brand-red/20 text-white border-brand-red/30'
+                  : 'bg-white/[0.03] text-gray-400 border-white/[0.06] hover:bg-white/[0.06]'
+              }`}
+            >
+              {c}
+            </button>
+          ))}
+        </div>
+      </AdminGlass>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+        {filtered.map(r => (
+          <AdminGlass key={r.id} padding="p-4">
+            <div className="flex items-start justify-between gap-3 mb-2">
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 flex-wrap mb-1">
+                  <AdminBadge label={r.category} variant={categoryVariant(r.category)} size="sm" />
+                  <span className="text-[10px] text-gray-500">{r.regulator}</span>
+                </div>
+                <h4 className="text-sm font-semibold text-white mb-1">{r.title}</h4>
+                <p className="text-xs text-gray-400 leading-relaxed">{r.description}</p>
+              </div>
+              <div className="text-right shrink-0">
+                <p className="text-[10px] uppercase tracking-wider text-gray-500">Cadence</p>
+                <p className="text-xs text-gray-200 font-medium">{r.cadence}</p>
+              </div>
+            </div>
+          </AdminGlass>
+        ))}
+      </div>
+    </div>
   )
 }
