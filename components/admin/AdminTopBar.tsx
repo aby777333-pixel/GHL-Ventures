@@ -365,7 +365,11 @@ export default function AdminTopBar({ activeModule, activeSubTab, onMenuToggle, 
                     const displayType = notif.type === 'error' ? 'critical' : notif.type === 'action_required' ? 'warning' : notif.type
                     const NIcon = NOTIF_ICONS[displayType as NotificationType] || Info
                     const isRead = notif.is_read || readNotifs.has(notif.id)
-                    const targetModule = notif.metadata?.module || notif.link || 'overview'
+                    // Normalize target: notifications may store full URLs like "/admin/sales/referrals"
+                    // in `link`, while navigate() already prepends "/admin/". Strip any leading
+                    // "/admin/" or "/" so both formats route correctly.
+                    const rawTarget = notif.metadata?.module || notif.link || 'overview'
+                    const targetModule = String(rawTarget).replace(/^\/+admin\/?/i, '').replace(/^\/+/, '') || 'overview'
                     return (
                       <button
                         key={notif.id}
