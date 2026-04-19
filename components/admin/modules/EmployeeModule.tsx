@@ -7,6 +7,7 @@ import {
   Laptop, Sun, Moon, AlertTriangle, BarChart3, Plus,
   Star, TrendingUp, UserPlus, Briefcase, Upload,
   FileText, Download, ExternalLink, Linkedin,
+  Megaphone, Pin, Trash2, Edit3,
 } from 'lucide-react'
 import AdminGlass from '../shared/AdminGlass'
 import AdminDataTable, { type Column } from '../shared/AdminDataTable'
@@ -17,6 +18,14 @@ import AdminEmptyState from '../shared/AdminEmptyState'
 import { createEmployee, updateEmployee, getEmployeeDirectory, type EmployeeRecord } from '@/lib/supabase/employeeService'
 import { fetchCareerApplications, updateCareerApplicationStatus, getResumeSignedUrl, type CareerApplication } from '@/lib/supabase/adminDataService'
 import { supabase, isSupabaseConfigured } from '@/lib/supabase/client'
+import {
+  fetchAllAnnouncements,
+  createAnnouncement,
+  updateAnnouncement,
+  deleteAnnouncement,
+  type AdminAnnouncement,
+  type AnnouncementType,
+} from '@/lib/supabase/announcementService'
 import { formatDate } from '@/lib/admin/adminHooks'
 import type { Employee, EmployeeStatus, LeaveRequest, AttendanceRecord } from '@/lib/admin/adminTypes'
 import UploadWithFolderPicker from '@/components/shared/UploadWithFolderPicker'
@@ -26,6 +35,7 @@ const ATTENDANCE_SUMMARY: any[] = []
 // ── Sub-tabs ─────────────────────────────────────────────────────
 const EMPLOYEE_TABS = [
   { id: 'directory', label: 'Directory', icon: Users },
+  { id: 'announcements', label: 'Announcements', icon: Megaphone },
   { id: 'applications', label: 'Applications', icon: Briefcase },
   { id: 'attendance', label: 'Attendance', icon: Clock },
   { id: 'leave', label: 'Leave Requests', icon: CalendarDays },
@@ -215,6 +225,7 @@ export default function EmployeeModule({ subTab, navigate, showToast }: Employee
 
       <div className="admin-tab-switch">
         {activeTab === 'directory' && <DirectoryTab employees={employees} onView={(e) => setSelectedEmployee(e)} showToast={showToast} />}
+        {activeTab === 'announcements' && <AnnouncementsTab showToast={showToast} />}
         {activeTab === 'applications' && <ApplicationsTab showToast={showToast} />}
         {activeTab === 'attendance' && <AttendanceTab />}
         {activeTab === 'leave' && <LeaveTab showToast={showToast} />}
@@ -1044,6 +1055,294 @@ function PerformanceTab() {
           </div>
         ))}
       </div>
+    </AdminGlass>
+  )
+}
+
+// ── Announcements Tab ──────────────────────────────────────────
+const ANNOUNCEMENT_TYPE_OPTIONS: { value: AnnouncementType; label: string }[] = [
+  { value: 'general', label: 'General' },
+  { value: 'policy-update', label: 'Policy Update' },
+  { value: 'process-change', label: 'Process Change' },
+  { value: 'event', label: 'Event' },
+  { value: 'achievement', label: 'Achievement' },
+]
+
+function AnnouncementsTab({ showToast }: { showToast: (msg: string, type?: 'success' | 'error' | 'info' | 'warning') => void }) {
+  const [list, setList] = useState<AdminAnnouncement[]>([])
+  const [loading, setLoading] = useState(true)
+  const [open, setOpen] = useState(false)
+  const [saving, setSaving] = useState(false)
+  const [editing, setEditing] = useState<AdminAnnouncement | null>(null)
+  const [form, setForm] = useState({
+    title: '',
+    content: '',
+    type: 'general' as AnnouncementType,
+    department: '',
+    pinned: false,
+    active: true,
+  })
+
+  const load = useCallback(async () => {
+    setLoading(true)
+    const data = await fetchAllAnnouncements()
+    setList(data)
+    setLoading(false)
+  }, [])
+
+  useEffect(() => { load() }, [load])
+
+  useEffect(() => {
+    if (editing && open) {
+      setForm({
+        title: editing.title,
+        content: editing.content,
+        type: editing.type,
+        department: editing.department || '',
+        pinned: editing.pinned,
+        active: editing.active,
+      })
+    } else if (!editing && open) {
+      setForm({ title: '', content: '', type: 'general', department: '', pinned: false, active: true })
+    }
+  }, [editing, open])
+
+  const handleSubmit = async () => {
+    if (!form.title.trim() || !form.content.trim()) {
+      showToast('Title and content are required', 'error')
+      return
+    }
+    setSaving(true)
+    const payload = {
+      title: form.title.trim(),
+      content: form.content.trim(),
+      type: form.type,
+      department: form.department.trim() || null,
+      pinned: form.pinned,
+      active: form.active,
+    }
+    const result = editing
+      ? await updateAnnouncement(editing.id, payload)
+      : await createAnnouncement(payload)
+    setSaving(false)
+    if (result.success) {
+      showToast(editing ? 'Announcement updated' : 'Announcement posted', 'success')
+      setOpen(false)
+      setEditing(null)
+      load()
+    } else {
+      showToast(result.error || 'Save failed', 'error')
+    }
+  }
+
+  const handleDelete = async (id: string) => {
+    if (!confirm('Delete this announcement? This cannot be undone.')) return
+    const result = await deleteAnnouncement(id)
+    if (result.success) {
+      showToast('Announcement deleted', 'success')
+      load()
+    } else {
+      showToast(result.error || 'Delete failed', 'error')
+    }
+  }
+
+  const handleTogglePin = async (a: AdminAnnouncement) => {
+    const result = await updateAnnouncement(a.id, { pinned: !a.pinned })
+    if (result.success) load()
+    else showToast(result.error || 'Pin toggle failed', 'error')
+  }
+
+  const handleToggleActive = async (a: AdminAnnouncement) => {
+    const result = await updateAnnouncement(a.id, { active: !a.active })
+    if (result.success) {
+      showToast(a.active ? 'Hidden from staff' : 'Now visible to staff', 'success')
+      load()
+    } else {
+      showToast(result.error || 'Toggle failed', 'error')
+    }
+  }
+
+  const typeVariant = (t: AnnouncementType): 'error' | 'warning' | 'info' | 'success' | 'purple' | 'neutral' => {
+    switch (t) {
+      case 'policy-update': return 'error'
+      case 'process-change': return 'warning'
+      case 'event': return 'info'
+      case 'achievement': return 'success'
+      default: return 'neutral'
+    }
+  }
+
+  const typeLabel = (t: AnnouncementType) => ANNOUNCEMENT_TYPE_OPTIONS.find(o => o.value === t)?.label || t
+
+  return (
+    <AdminGlass padding="p-4">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
+        <div className="flex items-center gap-2">
+          <Megaphone className="w-4 h-4 text-brand-red" />
+          <h3 className="text-sm font-semibold text-white">Staff Announcements</h3>
+          <span className="text-[11px] text-gray-500">({list.length})</span>
+        </div>
+        <button
+          onClick={() => { setEditing(null); setOpen(true) }}
+          className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium text-white bg-brand-red/20 border border-brand-red/30 hover:bg-brand-red/30 transition-colors"
+        >
+          <Plus className="w-4 h-4" />
+          New Announcement
+        </button>
+      </div>
+
+      {loading ? (
+        <div className="py-12 text-center text-sm text-gray-500">Loading announcements…</div>
+      ) : list.length === 0 ? (
+        <AdminEmptyState
+          icon={Megaphone}
+          title="No announcements yet"
+          description="Post company updates, policy changes, or achievements for the staff portal."
+        />
+      ) : (
+        <div className="space-y-3">
+          {list.map(a => (
+            <div key={a.id} className={`p-4 rounded-xl border transition-colors ${a.active ? 'bg-white/[0.03] border-white/[0.06]' : 'bg-white/[0.01] border-white/[0.03] opacity-60'}`}>
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 mb-1.5 flex-wrap">
+                    <AdminBadge label={typeLabel(a.type)} variant={typeVariant(a.type)} size="sm" />
+                    {a.pinned && (
+                      <span className="inline-flex items-center gap-1 text-[10px] text-amber-400">
+                        <Pin className="w-3 h-3" /> Pinned
+                      </span>
+                    )}
+                    {!a.active && <AdminBadge label="Hidden" variant="neutral" size="sm" />}
+                    {a.department && <span className="text-[10px] text-gray-500">{a.department}</span>}
+                  </div>
+                  <h4 className="text-sm font-semibold text-white mb-1">{a.title}</h4>
+                  <p className="text-xs text-gray-400 leading-relaxed mb-2 line-clamp-3">{a.content}</p>
+                  <div className="flex items-center gap-3 text-[10px] text-gray-600">
+                    <span>{a.posted_by_name || 'GHL Admin'}</span>
+                    <span>·</span>
+                    <span>{formatDate(a.created_at)}</span>
+                  </div>
+                </div>
+                <div className="flex items-center gap-1 shrink-0">
+                  <button
+                    onClick={() => handleTogglePin(a)}
+                    title={a.pinned ? 'Unpin' : 'Pin to top'}
+                    className={`p-1.5 rounded-lg transition-colors ${a.pinned ? 'text-amber-400 bg-amber-500/10' : 'text-gray-500 hover:text-amber-400 hover:bg-white/[0.06]'}`}
+                  >
+                    <Pin className="w-4 h-4" />
+                  </button>
+                  <button
+                    onClick={() => handleToggleActive(a)}
+                    title={a.active ? 'Hide from staff' : 'Show to staff'}
+                    className="p-1.5 rounded-lg text-gray-500 hover:text-white hover:bg-white/[0.06] transition-colors"
+                  >
+                    {a.active ? <Eye className="w-4 h-4" /> : <XCircle className="w-4 h-4" />}
+                  </button>
+                  <button
+                    onClick={() => { setEditing(a); setOpen(true) }}
+                    title="Edit"
+                    className="p-1.5 rounded-lg text-gray-500 hover:text-white hover:bg-white/[0.06] transition-colors"
+                  >
+                    <Edit3 className="w-4 h-4" />
+                  </button>
+                  <button
+                    onClick={() => handleDelete(a.id)}
+                    title="Delete"
+                    className="p-1.5 rounded-lg text-gray-500 hover:text-red-400 hover:bg-red-500/10 transition-colors"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      <AdminModal
+        isOpen={open}
+        onClose={() => { setOpen(false); setEditing(null) }}
+        title={editing ? 'Edit Announcement' : 'New Announcement'}
+        maxWidth="max-w-2xl"
+      >
+        <form onSubmit={(e) => { e.preventDefault(); handleSubmit() }}>
+          <div className="space-y-4">
+            <div>
+              <label className="block text-xs font-medium text-gray-400 mb-1.5">Title</label>
+              <input
+                type="text"
+                required
+                value={form.title}
+                onChange={(e) => setForm(f => ({ ...f, title: e.target.value }))}
+                placeholder="e.g. New SEBI compliance guidelines"
+                className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-brand-red/40 focus:ring-1 focus:ring-brand-red/20"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-400 mb-1.5">Content</label>
+              <textarea
+                required
+                rows={5}
+                value={form.content}
+                onChange={(e) => setForm(f => ({ ...f, content: e.target.value }))}
+                placeholder="Full announcement body. Staff portal will show a preview."
+                className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-brand-red/40 focus:ring-1 focus:ring-brand-red/20 resize-y"
+              />
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-xs font-medium text-gray-400 mb-1.5">Type</label>
+                <select
+                  value={form.type}
+                  onChange={(e) => setForm(f => ({ ...f, type: e.target.value as AnnouncementType }))}
+                  className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-brand-red/40 focus:ring-1 focus:ring-brand-red/20"
+                >
+                  {ANNOUNCEMENT_TYPE_OPTIONS.map(o => (
+                    <option key={o.value} value={o.value} className="bg-neutral-900">{o.label}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-400 mb-1.5">Department (optional)</label>
+                <input
+                  type="text"
+                  value={form.department}
+                  onChange={(e) => setForm(f => ({ ...f, department: e.target.value }))}
+                  placeholder="All departments if empty"
+                  className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-brand-red/40 focus:ring-1 focus:ring-brand-red/20"
+                />
+              </div>
+            </div>
+            <div className="flex items-center gap-6">
+              <label className="flex items-center gap-2 text-sm text-gray-300 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={form.pinned}
+                  onChange={(e) => setForm(f => ({ ...f, pinned: e.target.checked }))}
+                  className="w-4 h-4 rounded border-white/20 bg-white/[0.04] text-brand-red focus:ring-brand-red/40"
+                />
+                Pin to top
+              </label>
+              <label className="flex items-center gap-2 text-sm text-gray-300 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={form.active}
+                  onChange={(e) => setForm(f => ({ ...f, active: e.target.checked }))}
+                  className="w-4 h-4 rounded border-white/20 bg-white/[0.04] text-brand-red focus:ring-brand-red/40"
+                />
+                Visible to staff
+              </label>
+            </div>
+          </div>
+          <div className="flex justify-end gap-3 mt-6 pt-4 border-t border-white/[0.06]">
+            <button type="button" onClick={() => { setOpen(false); setEditing(null) }} className="px-4 py-2 rounded-xl text-sm font-medium text-gray-400 hover:text-white hover:bg-white/[0.06] transition-colors">Cancel</button>
+            <button type="submit" disabled={saving} className="px-5 py-2 rounded-xl text-sm font-medium text-white bg-brand-red hover:bg-red-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2">
+              {saving && <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />}
+              {saving ? 'Saving…' : editing ? 'Update' : 'Post Announcement'}
+            </button>
+          </div>
+        </form>
+      </AdminModal>
     </AdminGlass>
   )
 }

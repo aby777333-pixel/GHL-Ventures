@@ -28,8 +28,75 @@ async function queryTable<T>(table: string): Promise<T[]> {
 }
 
 // ── Staff Directory ─────────────────────────────────────────
+/**
+ * Fetches the full staff directory for the Team module.
+ * Prefers the `get_employee_directory` RPC (joins staff_profiles + profiles + auth.users).
+ * Falls back to a direct join so the UI still populates if the RPC is missing.
+ * Returns a shape matching `StaffEmployee` (name/email/phone/department/role/...).
+ */
 export async function fetchStaffEmployees() {
-  return queryTable<any>('staff_profiles')
+  if (!isSupabaseConfigured()) return []
+
+  const mapRow = (r: any) => {
+    const designation = r.designation || r.role || ''
+    const joinRaw = r.join_date || r.date_of_joining || r.created_at || ''
+    return {
+      id: r.id,
+      user_id: r.user_id,
+      staffCode: r.employee_id || r.staff_code || '',
+      name: r.name || r.full_name || '',
+      email: r.email || '',
+      phone: r.phone || '',
+      designation,
+      department: r.department || '',
+      role: designation,
+      location: r.city || r.location || '',
+      shift: r.shift || '',
+      status: r.status || (r.is_active === false ? 'inactive' : 'active'),
+      joinDate: joinRaw ? String(joinRaw).split('T')[0] : '',
+      isOnline: r.agent_status === 'available' || r.agent_status === 'busy',
+      reportingTo: r.reporting_to_name || r.reporting_to || '',
+      skills: r.skills || [],
+    }
+  }
+
+  try {
+    const { data, error } = await sb.rpc('get_employee_directory')
+    if (!error && Array.isArray(data)) return data.map(mapRow)
+    if (error) console.warn('[staffData] get_employee_directory RPC failed:', error.message)
+  } catch (err) {
+    console.warn('[staffData] get_employee_directory exception:', err)
+  }
+
+  try {
+    const { data, error } = await sb
+      .from('staff_profiles')
+      .select('*, profiles!inner(full_name, phone, city, email)')
+      .eq('is_active', true)
+      .order('created_at', { ascending: false })
+    if (error || !data) return []
+    return (data as any[]).map((s: any) => mapRow({
+      id: s.id,
+      user_id: s.user_id,
+      employee_id: s.employee_id,
+      department: s.department,
+      designation: s.designation,
+      date_of_joining: s.date_of_joining,
+      created_at: s.created_at,
+      status: s.status,
+      agent_status: s.agent_status,
+      is_active: s.is_active,
+      reporting_to: s.reporting_to,
+      skills: s.skills,
+      name: s.profiles?.full_name,
+      email: s.profiles?.email,
+      phone: s.profiles?.phone,
+      city: s.profiles?.city,
+    }))
+  } catch (err) {
+    console.warn('[staffData] staff_profiles join fallback failed:', err)
+    return []
+  }
 }
 
 // ── HR / Employee Self-Service ──────────────────────────────
@@ -173,10 +240,38 @@ export async function fetchKBArticles() {
 export async function fetchAnnouncements() {
   if (!isSupabaseConfigured()) return []
   try {
-    const { data, error } = await sb.from('announcements').select('*').eq('active', true).order('created_at', { ascending: false })
+    const { data, error } = await sb
+      .from('announcements')
+      .select('*')
+      .eq('active', true)
+      .order('pinned', { ascending: false })
+      .order('created_at', { ascending: false })
     if (error || !data) return []
-    return data
-  } catch { return [] }
+
+    // Resolve posted_by uuids → full_name
+    const posterIds = Array.from(new Set((data as any[]).map(a => a.posted_by).filter(Boolean)))
+    const posterMap: Record<string, string> = {}
+    if (posterIds.length > 0) {
+      const { data: posters } = await sb.from('profiles').select('id, full_name').in('id', posterIds)
+      ;(posters || []).forEach((p: any) => { posterMap[p.id] = p.full_name || '' })
+    }
+
+    return (data as any[]).map((a: any) => ({
+      id: a.id,
+      title: a.title || 'Untitled',
+      content: a.content || '',
+      type: a.type || 'general',
+      postedBy: posterMap[a.posted_by] || a.posted_by_name || 'GHL Admin',
+      postedDate: a.created_at || new Date().toISOString(),
+      pinned: !!a.pinned,
+      readBy: a.read_by || [],
+      department: a.department || '',
+      active: a.active !== false,
+    }))
+  } catch (err) {
+    console.warn('[staffData] fetchAnnouncements failed:', err)
+    return []
+  }
 }
 
 export function getTrainingModules() { return [] }
