@@ -228,7 +228,7 @@ export default function AdminClient() {
       case 'analytics':
         return <AnalyticsModule subTab={activeSubTab} navigate={navigate} showToast={showToast} />
       case 'comms':
-        return <CommsModule subTab={activeSubTab} navigate={navigate} showToast={showToast} />
+        return <CommsModule subTab={activeSubTab} navigate={navigate} showToast={showToast} user={user} role={role} />
       // case 'marketing': // Hidden for later use
       //   return <MarketingModule subTab={activeSubTab} navigate={navigate} showToast={showToast} />
       case 'reports':

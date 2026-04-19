@@ -38,8 +38,6 @@ import { formatDate } from '@/lib/admin/adminHooks'
 import type { Employee, EmployeeStatus, LeaveRequest, AttendanceRecord } from '@/lib/admin/adminTypes'
 import UploadWithFolderPicker from '@/components/shared/UploadWithFolderPicker'
 
-const ATTENDANCE_SUMMARY: any[] = []
-
 // ── Sub-tabs ─────────────────────────────────────────────────────
 const EMPLOYEE_TABS = [
   { id: 'directory', label: 'Directory', icon: Users },
@@ -826,12 +824,74 @@ function ApplicationsTab({ showToast }: { showToast: (msg: string, type?: 'succe
 }
 
 // ── Attendance Tab ──────────────────────────────────────────────
+interface AttendanceSummaryRow {
+  staffId: string
+  name: string
+  present: number
+  absent: number
+  halfDay: number
+  wfh: number
+  total: number
+}
+
 function AttendanceTab() {
+  const [rows, setRows] = useState<AttendanceSummaryRow[]>([])
+  const [loading, setLoading] = useState(true)
+  const [monthLabel, setMonthLabel] = useState('')
+
+  useEffect(() => {
+    async function load() {
+      if (!isSupabaseConfigured()) { setLoading(false); return }
+      setLoading(true)
+      try {
+        const sb = supabase as any
+        const now = new Date()
+        setMonthLabel(now.toLocaleDateString('en-IN', { month: 'long', year: 'numeric' }))
+        const start = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0]
+        const end = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().split('T')[0]
+
+        const { data: attRows } = await sb
+          .from('attendance')
+          .select('staff_id, status, date')
+          .gte('date', start)
+          .lte('date', end)
+
+        const ids = Array.from(new Set((attRows || []).map((r: any) => r.staff_id).filter(Boolean)))
+        const profilesById: Record<string, string> = {}
+        if (ids.length > 0) {
+          const { data: profs } = await sb.from('profiles').select('id, full_name').in('id', ids)
+          ;(profs || []).forEach((p: any) => { profilesById[p.id] = p.full_name || '' })
+        }
+        const byStaff = new Map<string, AttendanceSummaryRow>()
+        for (const r of (attRows || [])) {
+          const id = r.staff_id
+          if (!id) continue
+          const row = byStaff.get(id) || {
+            staffId: id,
+            name: profilesById[id] || 'Unnamed staff',
+            present: 0, absent: 0, halfDay: 0, wfh: 0, total: 0,
+          }
+          const s = (r.status || '').toLowerCase()
+          if (s === 'present') row.present++
+          else if (s === 'absent') row.absent++
+          else if (s === 'half-day') row.halfDay++
+          else if (s === 'wfh' || s === 'work-from-home') row.wfh++
+          else row.absent++
+          row.total++
+          byStaff.set(id, row)
+        }
+        setRows(Array.from(byStaff.values()).sort((a, b) => a.name.localeCompare(b.name)))
+      } catch { /* silent */ }
+      setLoading(false)
+    }
+    load()
+  }, [])
+
   return (
     <AdminGlass>
       <h3 className="text-sm font-semibold text-white mb-4 flex items-center gap-2">
         <Clock className="w-4 h-4 text-brand-red" />
-        Monthly Attendance Summary
+        {monthLabel || 'Monthly'} Attendance Summary
       </h3>
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
@@ -843,10 +903,14 @@ function AttendanceTab() {
             </tr>
           </thead>
           <tbody>
-            {ATTENDANCE_SUMMARY.map(row => {
-              const pct = Math.round((row.present / row.total) * 100)
+            {loading ? (
+              <tr><td colSpan={6} className="text-center py-6 text-gray-500">Loading attendance…</td></tr>
+            ) : rows.length === 0 ? (
+              <tr><td colSpan={6} className="text-center py-6 text-gray-500">No attendance records yet this month</td></tr>
+            ) : rows.map(row => {
+              const pct = row.total > 0 ? Math.round(((row.present + row.wfh) / row.total) * 100) : 0
               return (
-                <tr key={row.name} className="border-b border-white/[0.04] hover:bg-white/[0.02] transition-colors">
+                <tr key={row.staffId} className="border-b border-white/[0.04] hover:bg-white/[0.02] transition-colors">
                   <td className="px-4 py-3 text-sm font-medium text-white">{row.name}</td>
                   <td className="px-4 py-3 text-emerald-400 font-medium">{row.present}</td>
                   <td className="px-4 py-3 text-red-400">{row.absent}</td>

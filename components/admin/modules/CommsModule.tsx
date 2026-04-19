@@ -74,9 +74,11 @@ interface CommsModuleProps {
   subTab: string | null
   navigate: (path: string) => void
   showToast: (msg: string, type?: 'success' | 'error' | 'info' | 'warning') => void
+  user?: { id?: string; name?: string; email?: string } | null
+  role?: string | null
 }
 
-export default function CommsModule({ subTab, navigate, showToast }: CommsModuleProps) {
+export default function CommsModule({ subTab, navigate, showToast, user, role }: CommsModuleProps) {
   const activeTab = (COMMS_TABS.some(t => t.id === subTab) ? subTab : 'messages') as CommsTab
 
   const kpis = useMemo(() => ({
@@ -141,7 +143,7 @@ export default function CommsModule({ subTab, navigate, showToast }: CommsModule
       <div className="admin-tab-switch">
         {activeTab === 'messages' && <InvestorMessagesTab showToast={showToast} />}
         {activeTab === 'broadcast' && <BroadcastTab showToast={showToast} />}
-        {activeTab === 'internal' && <InternalChatTab showToast={showToast} />}
+        {activeTab === 'internal' && <InternalChatTab showToast={showToast} user={user} role={role} />}
         {activeTab === 'alerts' && <AlertCenterTab showToast={showToast} />}
       </div>
     </div>
@@ -446,7 +448,7 @@ function BroadcastTab({ showToast }: { showToast: (msg: string, type?: 'success'
 }
 
 // ── Internal Chat Tab (wired to shared internalChatService) ─────
-function InternalChatTab({ showToast }: { showToast: (msg: string, type?: 'success' | 'error' | 'info' | 'warning') => void }) {
+function InternalChatTab({ showToast, user, role }: { showToast: (msg: string, type?: 'success' | 'error' | 'info' | 'warning') => void; user?: { id?: string; name?: string; email?: string } | null; role?: string | null }) {
   const channels = getChannels()
   const [activeChannel, setActiveChannel] = useState('general')
   const [messages, setMessages] = useState<InternalMessage[]>([])
@@ -484,19 +486,30 @@ function InternalChatTab({ showToast }: { showToast: (msg: string, type?: 'succe
 
   const handleSend = useCallback(async () => {
     if (!msgInput.trim() || sending) return
+    if (!user?.id) {
+      showToast('Session expired — please sign in again', 'error')
+      return
+    }
     setSending(true)
     const text = msgInput.trim()
     setMsgInput('')
-    const result = await sendInternalMessage(activeChannel, 'admin-user', 'Admin', 'admin', text)
+    const result = await sendInternalMessage(
+      activeChannel,
+      user.id,
+      user.name || user.email || 'Admin',
+      role || 'admin',
+      text,
+    )
     if (result) {
       setMessages(prev => {
         if (prev.find(m => m.id === result.id)) return prev
         return [...prev, result]
       })
-      showToast('Message sent!', 'success')
+    } else {
+      showToast('Failed to send message', 'error')
     }
     setSending(false)
-  }, [msgInput, sending, activeChannel, showToast])
+  }, [msgInput, sending, activeChannel, showToast, user, role])
 
   const formatTime = (ts: string) => {
     try { return formatTimeAgo(ts) } catch { return ts }
