@@ -1500,6 +1500,7 @@ function PoliciesTab({ showToast }: { showToast: (msg: string, type?: 'success' 
   const [form, setForm] = useState<PolicyInput>({
     title: '',
     description: '',
+    body: '',
     version: '',
     category: '',
     icon: 'FileText',
@@ -1525,6 +1526,7 @@ function PoliciesTab({ showToast }: { showToast: (msg: string, type?: 'success' 
       setForm({
         title: editing.title,
         description: editing.description || '',
+        body: editing.body || '',
         version: editing.version || '',
         category: editing.category || '',
         icon: editing.icon || 'FileText',
@@ -1536,7 +1538,7 @@ function PoliciesTab({ showToast }: { showToast: (msg: string, type?: 'success' 
         sort_order: editing.sort_order,
       })
     } else if (!editing && open) {
-      setForm({ title: '', description: '', version: '', category: '', icon: 'FileText', bucket: 'ghl-documents', file_path: '', external_url: '', last_updated: '', active: true, sort_order: (list[list.length - 1]?.sort_order ?? 0) + 1 })
+      setForm({ title: '', description: '', body: '', version: '', category: '', icon: 'FileText', bucket: 'ghl-documents', file_path: '', external_url: '', last_updated: '', active: true, sort_order: (list[list.length - 1]?.sort_order ?? 0) + 1 })
     }
   }, [editing, open, list])
 
@@ -1547,6 +1549,7 @@ function PoliciesTab({ showToast }: { showToast: (msg: string, type?: 'success' 
       ...form,
       title: form.title.trim(),
       description: (form.description || '').trim(),
+      body: (form.body || '').trim() || null,
       version: (form.version || '').trim(),
       category: (form.category || '').trim(),
       icon: form.icon || 'FileText',
@@ -1654,6 +1657,17 @@ function PoliciesTab({ showToast }: { showToast: (msg: string, type?: 'success' 
             <div className="sm:col-span-2">
               <label className="block text-xs font-medium text-gray-400 mb-1.5">Short description</label>
               <textarea rows={2} value={form.description || ''} onChange={(e) => setForm(f => ({ ...f, description: e.target.value }))} className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-brand-red/40 focus:ring-1 focus:ring-brand-red/20 resize-y" />
+            </div>
+            <div className="sm:col-span-2">
+              <label className="block text-xs font-medium text-gray-400 mb-1.5">Policy body (staff reads this inline)</label>
+              <textarea
+                rows={10}
+                value={form.body || ''}
+                onChange={(e) => setForm(f => ({ ...f, body: e.target.value }))}
+                placeholder={'## Purpose\nWhat this policy covers...\n\n## Rules\n- Rule one\n- Rule two\n\nSupports **bold**, _italic_, headings (##), and bullet lists.'}
+                className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2.5 text-xs text-white font-mono focus:outline-none focus:border-brand-red/40 focus:ring-1 focus:ring-brand-red/20 resize-y"
+              />
+              <p className="text-[10px] text-gray-600 mt-1">Use an external URL or storage file if you'd rather link a PDF. Body is the fallback when neither is set.</p>
             </div>
             <div>
               <label className="block text-xs font-medium text-gray-400 mb-1.5">Version</label>

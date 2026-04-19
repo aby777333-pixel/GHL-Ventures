@@ -260,6 +260,7 @@ function PoliciesView({ showToast }: { showToast: Toast }) {
   const [policies, setPolicies] = useState<StaffPolicy[]>([])
   const [loadingPolicy, setLoadingPolicy] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
+  const [viewing, setViewing] = useState<StaffPolicy | null>(null)
 
   useEffect(() => {
     let cancelled = false
@@ -291,6 +292,12 @@ function PoliciesView({ showToast }: { showToast: Toast }) {
           window.open(pub.data.publicUrl, '_blank', 'noopener,noreferrer')
           return
         }
+      }
+      // Fall back to the inline body text. This is the common case when HR
+      // has authored the policy directly in the admin panel (no PDF uploaded).
+      if (pol.body && pol.body.trim().length > 0) {
+        setViewing(pol)
+        return
       }
       showToast(`"${pol.title}" document is not yet uploaded. Please contact HR to upload it.`, 'warning')
     } catch (err) {
@@ -341,8 +348,68 @@ function PoliciesView({ showToast }: { showToast: Toast }) {
           })}
         </div>
       )}
+
+      {viewing && <PolicyReaderModal policy={viewing} onClose={() => setViewing(null)} />}
     </div>
   )
+}
+
+// Renders markdown-ish policy body (headings, bullets, bold, horizontal rules).
+// Lightweight — we don't pull in react-markdown just for this surface.
+function PolicyReaderModal({ policy, onClose }: { policy: StaffPolicy; onClose: () => void }) {
+  const lines = (policy.body || '').split('\n')
+  return (
+    <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm" onClick={onClose}>
+      <div
+        className="relative w-full max-w-2xl max-h-[85vh] overflow-hidden rounded-2xl border border-white/10 bg-[#0a0a0f] flex flex-col"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="px-5 py-4 border-b border-white/[0.06] flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <h3 className="text-sm font-bold text-white truncate">{policy.title}</h3>
+            <div className="flex items-center gap-2 mt-1 flex-wrap">
+              {policy.version && <span className="text-[10px] text-gray-500">{policy.version}</span>}
+              {policy.category && <span className="text-[10px] text-teal-400/70">{policy.category}</span>}
+              {policy.last_updated && <span className="text-[10px] text-gray-600">Updated {policy.last_updated}</span>}
+            </div>
+          </div>
+          <button onClick={onClose} className="shrink-0 p-1.5 rounded-lg text-gray-400 hover:text-white hover:bg-white/[0.06]">✕</button>
+        </div>
+        <div className="flex-1 overflow-y-auto px-5 py-4 text-sm text-gray-200 leading-relaxed space-y-2">
+          {lines.map((raw, i) => {
+            const line = raw.trimEnd()
+            if (!line.trim()) return <div key={i} className="h-2" />
+            if (line.startsWith('## ')) return <h4 key={i} className="text-sm font-bold text-white mt-3">{line.slice(3)}</h4>
+            if (line.startsWith('# ')) return <h3 key={i} className="text-base font-bold text-white mt-3">{line.slice(2)}</h3>
+            if (line.startsWith('- ')) return <div key={i} className="pl-4 text-xs text-gray-300">• {renderInline(line.slice(2))}</div>
+            if (/^\d+\.\s/.test(line)) return <div key={i} className="pl-4 text-xs text-gray-300">{renderInline(line)}</div>
+            if (line === '---') return <hr key={i} className="border-white/[0.08] my-2" />
+            return <p key={i} className="text-xs text-gray-300">{renderInline(line)}</p>
+          })}
+        </div>
+        <div className="px-5 py-3 border-t border-white/[0.06] flex justify-end">
+          <button onClick={onClose} className="px-4 py-1.5 rounded-lg text-xs font-medium text-white bg-teal-500/20 border border-teal-500/30 hover:bg-teal-500/30 transition-colors">Close</button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// Renders **bold** and _italic_ inside a text line; keeps everything else plain.
+function renderInline(s: string): React.ReactNode {
+  const parts: React.ReactNode[] = []
+  let i = 0
+  const re = /(\*\*[^*]+\*\*|_[^_]+_)/g
+  let m: RegExpExecArray | null
+  while ((m = re.exec(s)) !== null) {
+    if (m.index > i) parts.push(s.slice(i, m.index))
+    const tok = m[0]
+    if (tok.startsWith('**')) parts.push(<strong key={m.index} className="text-white">{tok.slice(2, -2)}</strong>)
+    else parts.push(<em key={m.index}>{tok.slice(1, -1)}</em>)
+    i = m.index + tok.length
+  }
+  if (i < s.length) parts.push(s.slice(i))
+  return parts.length > 0 ? parts : s
 }
 
 // ================================================================

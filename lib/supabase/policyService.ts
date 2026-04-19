@@ -15,6 +15,7 @@ export interface StaffPolicy {
   id: string
   title: string
   description: string | null
+  body: string | null
   version: string | null
   category: string | null
   icon: string | null
@@ -31,6 +32,7 @@ export interface StaffPolicy {
 export interface PolicyInput {
   title: string
   description?: string | null
+  body?: string | null
   version?: string | null
   category?: string | null
   icon?: string | null
@@ -100,6 +102,7 @@ export async function createPolicy(input: PolicyInput): Promise<{ success: boole
       .insert({
         title: input.title,
         description: input.description || null,
+        body: input.body || null,
         version: input.version || null,
         category: input.category || null,
         icon: input.icon || null,
