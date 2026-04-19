@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import AdminGlass from '@/components/admin/shared/AdminGlass'
 import AdminBadge from '@/components/admin/shared/AdminBadge'
 import {
@@ -87,7 +87,8 @@ function ProfileOverview({ showToast, userId, userName, userEmail, userPhone, us
   const [newEmail, setNewEmail] = useState('')
   const [newPassword, setNewPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
-  const [form, setForm] = useState({
+  // Persisted values (reflect what's currently in DB)
+  const [profile, setProfile] = useState({
     full_name: userName || '',
     phone: userPhone || '',
     city: '',
@@ -97,15 +98,45 @@ function ProfileOverview({ showToast, userId, userName, userEmail, userPhone, us
     gender: '',
     dob: '',
   })
+  // Editable form state — synced from `profile` when entering edit mode
+  const [form, setForm] = useState(profile)
 
-  const initials = (userName || '?').split(' ').map(n => n[0]).join('').toUpperCase()
+  // Load the current profile row once on mount so personal fields populate
+  useEffect(() => {
+    async function load() {
+      if (!userId || !isSupabaseConfigured()) return
+      try {
+        const sb = supabase as any
+        const { data, error } = await sb
+          .from('profiles')
+          .select('full_name, phone, city, metadata')
+          .eq('id', userId)
+          .maybeSingle()
+        if (error || !data) return
+        const meta = (data.metadata && typeof data.metadata === 'object') ? data.metadata : {}
+        const loaded = {
+          full_name: data.full_name || userName || '',
+          phone: data.phone || userPhone || '',
+          city: data.city || '',
+          address: meta.address || '',
+          emergency_contact: meta.emergency_contact || '',
+          blood_group: meta.blood_group || '',
+          gender: meta.gender || '',
+          dob: meta.dob || '',
+        }
+        setProfile(loaded)
+        setForm(loaded)
+      } catch { /* silent */ }
+    }
+    load()
+  }, [userId, userName, userPhone])
+
+  const initials = (profile.full_name || userName || '?').split(' ').map(n => n[0]).join('').toUpperCase()
   const statusLabel = (userStatus || 'active').replace(/-/g, ' ').replace(/^\w/, c => c.toUpperCase())
   const statusVariant = userStatus === 'active' ? 'success' as const : 'warning' as const
 
   const handleEditToggle = () => {
-    if (!editing) {
-      setForm(prev => ({ ...prev, full_name: userName || '', phone: userPhone || '' }))
-    }
+    if (!editing) setForm(profile)
     setEditing(!editing)
   }
 
@@ -116,34 +147,32 @@ function ProfileOverview({ showToast, userId, userName, userEmail, userPhone, us
     }
     setSaving(true)
     try {
+      const sb = supabase as any
+      // Columns that live directly on profiles
       const profileUpdates: Record<string, any> = {}
-      if (form.full_name && form.full_name !== userName) profileUpdates.full_name = form.full_name
-      if (form.phone && form.phone !== userPhone) profileUpdates.phone = form.phone
-      if (form.city) profileUpdates.city = form.city
+      if (form.full_name !== profile.full_name) profileUpdates.full_name = form.full_name
+      if (form.phone !== profile.phone) profileUpdates.phone = form.phone
+      if (form.city !== profile.city) profileUpdates.city = form.city
 
-      // Also include additional fields that may have been changed
-      // Store extended fields as metadata JSON since columns may not exist
-      const extendedFields: Record<string, string> = {}
-      if (form.address) extendedFields.address = form.address
-      if (form.emergency_contact) extendedFields.emergency_contact = form.emergency_contact
-      if (form.blood_group) extendedFields.blood_group = form.blood_group
-      if (form.gender) extendedFields.gender = form.gender
-      if (form.dob) extendedFields.dob = form.dob
-      if (Object.keys(extendedFields).length > 0) {
-        profileUpdates.metadata = extendedFields
+      // Extended fields go in profiles.metadata (preserve existing keys)
+      const { data: existing } = await sb.from('profiles').select('metadata').eq('id', userId).maybeSingle()
+      const baseMeta = (existing?.metadata && typeof existing.metadata === 'object') ? existing.metadata : {}
+      const extMeta: Record<string, any> = { ...baseMeta }
+      ;(['address', 'emergency_contact', 'blood_group', 'gender', 'dob'] as const).forEach(k => {
+        if (form[k] !== profile[k]) extMeta[k] = form[k] || null
+      })
+      if (JSON.stringify(extMeta) !== JSON.stringify(baseMeta)) profileUpdates.metadata = extMeta
+
+      if (Object.keys(profileUpdates).length === 0) {
+        showToast('No changes to save', 'info')
+        setEditing(false)
+        return
       }
 
-      if (Object.keys(profileUpdates).length > 0) {
-        const sb = supabase as any
-        // Try staff_profiles first (staff portal), then fallback to profiles
-        const { error } = await sb.from('staff_profiles').update(profileUpdates).eq('user_id', userId)
-        if (error) {
-          // Fallback to profiles table
-          const { error: err2 } = await sb.from('profiles').update(profileUpdates).eq('id', userId)
-          if (err2) throw err2
-        }
-      }
+      const { error } = await sb.from('profiles').update(profileUpdates).eq('id', userId)
+      if (error) throw error
 
+      setProfile(form)
       showToast('Profile updated successfully!', 'success')
       setEditing(false)
     } catch (err: any) {
@@ -154,14 +183,14 @@ function ProfileOverview({ showToast, userId, userName, userEmail, userPhone, us
   }
 
   const personalFields = [
-    { label: 'Phone', value: userPhone || '—', key: 'phone', editable: true },
+    { label: 'Phone', value: profile.phone || '—', key: 'phone', editable: true },
     { label: 'Email', value: userEmail || '—', key: 'email', editable: false },
-    { label: 'City', value: form.city || '—', key: 'city', editable: true },
-    { label: 'Date of Birth', value: form.dob || '—', key: 'dob', editable: true },
-    { label: 'Gender', value: form.gender || '—', key: 'gender', editable: true },
-    { label: 'Blood Group', value: form.blood_group || '—', key: 'blood_group', editable: true },
-    { label: 'Address', value: form.address || '—', key: 'address', editable: true },
-    { label: 'Emergency Contact', value: form.emergency_contact || '—', key: 'emergency_contact', editable: true },
+    { label: 'City', value: profile.city || '—', key: 'city', editable: true },
+    { label: 'Date of Birth', value: profile.dob || '—', key: 'dob', editable: true },
+    { label: 'Gender', value: profile.gender || '—', key: 'gender', editable: true },
+    { label: 'Blood Group', value: profile.blood_group || '—', key: 'blood_group', editable: true },
+    { label: 'Address', value: profile.address || '—', key: 'address', editable: true },
+    { label: 'Emergency Contact', value: profile.emergency_contact || '—', key: 'emergency_contact', editable: true },
   ]
 
   const professionalFields = [
@@ -189,7 +218,7 @@ function ProfileOverview({ showToast, userId, userName, userEmail, userPhone, us
                 className="text-xl font-bold text-white bg-white/[0.06] border border-white/[0.1] rounded-lg px-3 py-1.5 w-full max-w-xs focus:outline-none focus:border-teal-500/50"
               />
             ) : (
-              <h2 className="text-xl font-bold text-white">{userName || '—'}</h2>
+              <h2 className="text-xl font-bold text-white">{profile.full_name || userName || '—'}</h2>
             )}
             <p className="text-sm text-gray-400 mt-0.5">{userStaffCode || '—'} &middot; {(userDesignation || '—').replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase())}</p>
             <div className="mt-2 flex items-center gap-3 justify-center sm:justify-start">
@@ -244,7 +273,7 @@ function ProfileOverview({ showToast, userId, userName, userEmail, userPhone, us
                   className="w-full text-sm text-white mt-0.5 bg-white/[0.06] border border-white/[0.1] rounded-lg px-2 py-1 focus:outline-none focus:border-teal-500/50"
                 />
               ) : (
-                <p className="text-sm text-white mt-0.5">{f.key === 'phone' && editing ? form.phone : f.value}</p>
+                <p className="text-sm text-white mt-0.5">{f.value}</p>
               )}
             </div>
           ))}
@@ -389,8 +418,78 @@ function AttendanceView({ showToast }: { showToast: SelfServiceModuleProps['show
   const [hoursWorked, setHoursWorked] = useState(0)
   const totalHoursTarget = 9
 
-  const summary = { present: 0, leave: 0, holiday: 0, late: 0, avgHours: 0, totalDays: 0 }
-  const attendanceDays: { day: number; status: string }[] = []
+  const [monthRows, setMonthRows] = useState<{ date: string; status: string; check_in: string | null; check_out: string | null }[]>([])
+  const [monthLabel, setMonthLabel] = useState('')
+  const [firstOffset, setFirstOffset] = useState(0)
+  const [daysInMonth, setDaysInMonth] = useState(30)
+
+  // Load this-month attendance rows for current user
+  useEffect(() => {
+    async function loadMonth() {
+      if (!isSupabaseConfigured()) return
+      try {
+        const sb = supabase as any
+        const { data: { user } } = await sb.auth.getUser()
+        if (!user?.id) return
+        const now = new Date()
+        const start = new Date(now.getFullYear(), now.getMonth(), 1)
+        const end = new Date(now.getFullYear(), now.getMonth() + 1, 0)
+        setDaysInMonth(end.getDate())
+        // Calendar offset: week starts Mon -> convert Sun (0) to 6, else day-1
+        const startDay = start.getDay()
+        setFirstOffset(startDay === 0 ? 6 : startDay - 1)
+        setMonthLabel(now.toLocaleDateString('en-IN', { month: 'long', year: 'numeric' }) + ' Summary')
+
+        const { data } = await sb
+          .from('attendance')
+          .select('date, status, check_in, check_out')
+          .eq('staff_id', user.id)
+          .gte('date', start.toISOString().split('T')[0])
+          .lte('date', end.toISOString().split('T')[0])
+          .order('date', { ascending: true })
+        setMonthRows((data as any[]) || [])
+      } catch { /* silent */ }
+    }
+    loadMonth()
+  }, [clockedIn])
+
+  const summary = (() => {
+    const s = { present: 0, leave: 0, holiday: 0, late: 0, avgHours: 0, totalDays: 0 }
+    let hoursSum = 0, hoursCount = 0
+    for (const r of monthRows) {
+      const status = (r.status || '').toLowerCase()
+      if (status === 'present' || status === 'wfh') s.present++
+      else if (status === 'leave' || status === 'half-day') s.leave++
+      else if (status === 'holiday') s.holiday++
+      if (r.check_in) {
+        const d = new Date(r.check_in)
+        // late if clock-in after 09:30
+        if (d.getHours() > 9 || (d.getHours() === 9 && d.getMinutes() > 30)) s.late++
+        if (r.check_out) {
+          const mins = (new Date(r.check_out).getTime() - d.getTime()) / 60000
+          if (mins > 0) { hoursSum += mins / 60; hoursCount++ }
+        }
+      }
+    }
+    s.totalDays = monthRows.length
+    s.avgHours = hoursCount > 0 ? Math.round((hoursSum / hoursCount) * 10) / 10 : 0
+    return s
+  })()
+
+  const attendanceDays = (() => {
+    const byDay = new Map<number, string>()
+    for (const r of monthRows) {
+      const day = new Date(r.date).getDate()
+      const status = (r.status || 'present').toLowerCase().replace('wfh', 'present')
+      byDay.set(day, status)
+    }
+    return Array.from({ length: daysInMonth }, (_, i) => {
+      const day = i + 1
+      const dow = new Date(new Date().getFullYear(), new Date().getMonth(), day).getDay()
+      const isWeekend = dow === 0 || dow === 6
+      return { day, status: byDay.get(day) || (isWeekend ? 'weekend' : 'absent') }
+    })
+  })()
 
   // Check if already clocked in today on mount
   useEffect(() => {
@@ -521,7 +620,7 @@ function AttendanceView({ showToast }: { showToast: SelfServiceModuleProps['show
 
         {/* Summary Cards */}
         <AdminGlass className="lg:col-span-2">
-          <SectionHeader title="February 2026 Summary" icon={BarChart3} />
+          <SectionHeader title={monthLabel || 'Attendance Summary'} icon={BarChart3} />
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
             {[
               { label: 'Present', value: summary.present, icon: CheckCircle2, color: 'text-emerald-400' },
@@ -548,10 +647,9 @@ function AttendanceView({ showToast }: { showToast: SelfServiceModuleProps['show
           {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map(d => (
             <div key={d} className="text-center text-[10px] text-gray-600 font-semibold pb-1">{d}</div>
           ))}
-          {/* Feb 2026 starts on Sunday — offset 6 blanks */}
-          {Array.from({ length: 6 }).map((_, i) => <div key={`blank-${i}`} />)}
+          {Array.from({ length: firstOffset }).map((_, i) => <div key={`blank-${i}`} />)}
           {attendanceDays.map(d => (
-            <div key={d.day} className={`text-center py-2 rounded-lg text-xs font-medium border ${statusColors[d.status]}`}>
+            <div key={d.day} className={`text-center py-2 rounded-lg text-xs font-medium border ${statusColors[d.status] || statusColors.weekend}`}>
               {d.day}
             </div>
           ))}
@@ -773,22 +871,81 @@ function LeaveView({ showToast }: { showToast: SelfServiceModuleProps['showToast
 // ================================================================
 //  4. PAYSLIPS
 // ================================================================
+interface PayslipRow {
+  id: string
+  month: string
+  payDate: string
+  basic: number
+  allowances: number
+  deductions: number
+  gross: number
+  net: number
+  status: string
+  fileUrl: string | null
+}
+
 function PayslipsView({ showToast }: { showToast: SelfServiceModuleProps['showToast'] }) {
   const [expanded, setExpanded] = useState<string | null>(null)
+  const [payslips, setPayslips] = useState<PayslipRow[]>([])
+  const [loading, setLoading] = useState(true)
+  const fmt = (n: number) => `₹${(n || 0).toLocaleString('en-IN')}`
 
-  const base = { basic: 0, hra: 0, special: 0, conveyance: 0, medical: 0, pf: 0, esi: 0, pt: 0 }
-  const payslips: { id: string; month: string; payDate: string; basic: number; hra: number; special: number; conveyance: number; medical: number; pf: number; esi: number; pt: number; tds: number; gross: number; deductions: number; net: number }[] = []
-  const fmt = (n: number) => `₹${n.toLocaleString('en-IN')}`
+  useEffect(() => {
+    let active = true
+    async function load() {
+      if (!isSupabaseConfigured()) { setLoading(false); return }
+      try {
+        const sb = supabase as any
+        const { data: { user } } = await sb.auth.getUser()
+        if (!user?.id) { setLoading(false); return }
+        // payslips.staff_id refers to staff_profiles.id; resolve it first
+        const { data: sp } = await sb.from('staff_profiles').select('id').eq('user_id', user.id).maybeSingle()
+        if (!sp?.id) { if (active) setLoading(false); return }
+        const { data } = await sb
+          .from('payslips')
+          .select('id, month, basic, allowances, deductions, net_pay, file_url, status, created_at')
+          .eq('staff_id', sp.id)
+          .order('month', { ascending: false })
+        if (!active) return
+        setPayslips((data as any[] || []).map(p => {
+          const basic = Number(p.basic || 0)
+          const allowances = Number(p.allowances || 0)
+          const deductions = Number(p.deductions || 0)
+          const net = Number(p.net_pay || 0)
+          const monthDate = p.month ? new Date(p.month) : null
+          return {
+            id: p.id,
+            month: monthDate ? monthDate.toLocaleDateString('en-IN', { month: 'long', year: 'numeric' }) : '—',
+            payDate: p.created_at ? new Date(p.created_at).toLocaleDateString('en-IN') : '—',
+            basic,
+            allowances,
+            deductions,
+            gross: basic + allowances,
+            net,
+            status: p.status || 'paid',
+            fileUrl: p.file_url || null,
+          }
+        }))
+      } catch { /* silent */ }
+      if (active) setLoading(false)
+    }
+    load()
+    return () => { active = false }
+  }, [])
 
   return (
     <div className="space-y-5">
       <SectionHeader title="Salary Payslips" icon={IndianRupee} />
-      {payslips.map(p => (
+      {loading ? (
+        <AdminGlass><p className="text-xs text-gray-500 text-center py-6">Loading payslips…</p></AdminGlass>
+      ) : payslips.length === 0 ? (
+        <AdminGlass><p className="text-xs text-gray-500 text-center py-6">No payslips available yet. HR will publish them here each month.</p></AdminGlass>
+      ) : payslips.map(p => (
         <AdminGlass key={p.id}>
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
             <div>
               <p className="text-sm font-semibold text-white">{p.month}</p>
-              <p className="text-[10px] text-gray-500 mt-0.5">Paid on {p.payDate} &middot; {p.id}</p>
+              <p className="text-[10px] text-gray-500 mt-0.5">Paid on {p.payDate} &middot; {p.status}</p>
             </div>
             <div className="flex items-center gap-3">
               <div className="text-right">
@@ -800,11 +957,11 @@ function PayslipsView({ showToast }: { showToast: SelfServiceModuleProps['showTo
                 <Eye className="w-4 h-4 text-gray-400" />
               </button>
               <button onClick={async () => {
-                showToast(`Downloading ${p.month} payslip...`, 'info')
-                const content = `GHL India Ventures — Payslip\n\nEmployee: Staff Member\nMonth: ${p.month}\nPay Date: ${p.payDate}\n\nGross Salary: ${fmt(p.gross)}\nDeductions: ${fmt(p.deductions)}\nTDS: ${fmt(p.tds)}\nNet Salary: ${fmt(p.net)}`
-                const blob = new Blob([content], { type: 'application/pdf' })
-                const filename = `GHL_Payslip_${p.month.replace(' ', '_')}.pdf`
-                await saveBlobAs(blob, filename, showToast as any)
+                if (p.fileUrl) {
+                  window.open(p.fileUrl, '_blank', 'noopener,noreferrer')
+                  return
+                }
+                showToast('Payslip file not yet uploaded by HR', 'warning')
               }}
                 className="p-2 rounded-lg bg-white/[0.04] hover:bg-white/[0.08] transition-colors">
                 <Download className="w-4 h-4 text-gray-400" />
@@ -815,45 +972,23 @@ function PayslipsView({ showToast }: { showToast: SelfServiceModuleProps['showTo
           {expanded === p.id && (
             <div className="mt-4 pt-4 border-t border-white/[0.06]">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {/* Earnings */}
                 <div>
                   <p className="text-[10px] text-emerald-400 uppercase tracking-wider font-semibold mb-2">Earnings</p>
                   <div className="space-y-1.5">
-                    {[
-                      { label: 'Basic Salary', value: p.basic },
-                      { label: 'House Rent Allowance', value: p.hra },
-                      { label: 'Special Allowance', value: p.special },
-                      { label: 'Conveyance', value: p.conveyance },
-                      { label: 'Medical Allowance', value: p.medical },
-                    ].map(e => (
-                      <div key={e.label} className="flex justify-between text-xs">
-                        <span className="text-gray-400">{e.label}</span>
-                        <span className="text-white font-medium">{fmt(e.value)}</span>
-                      </div>
-                    ))}
+                    <div className="flex justify-between text-xs"><span className="text-gray-400">Basic Salary</span><span className="text-white font-medium">{fmt(p.basic)}</span></div>
+                    <div className="flex justify-between text-xs"><span className="text-gray-400">Allowances</span><span className="text-white font-medium">{fmt(p.allowances)}</span></div>
                     <div className="flex justify-between text-xs pt-1.5 border-t border-white/[0.06] font-semibold">
                       <span className="text-gray-300">Gross Earnings</span>
                       <span className="text-emerald-400">{fmt(p.gross)}</span>
                     </div>
                   </div>
                 </div>
-                {/* Deductions */}
                 <div>
                   <p className="text-[10px] text-red-400 uppercase tracking-wider font-semibold mb-2">Deductions</p>
                   <div className="space-y-1.5">
-                    {[
-                      { label: 'Provident Fund (PF)', value: p.pf },
-                      { label: 'ESI', value: p.esi },
-                      { label: 'Professional Tax', value: p.pt },
-                      { label: 'TDS (Income Tax)', value: p.tds },
-                    ].map(d => (
-                      <div key={d.label} className="flex justify-between text-xs">
-                        <span className="text-gray-400">{d.label}</span>
-                        <span className="text-white font-medium">{fmt(d.value)}</span>
-                      </div>
-                    ))}
+                    <div className="flex justify-between text-xs"><span className="text-gray-400">Total Deductions</span><span className="text-white font-medium">{fmt(p.deductions)}</span></div>
                     <div className="flex justify-between text-xs pt-1.5 border-t border-white/[0.06] font-semibold">
-                      <span className="text-gray-300">Total Deductions</span>
+                      <span className="text-gray-300">After Deductions</span>
                       <span className="text-red-400">{fmt(p.deductions)}</span>
                     </div>
                   </div>
@@ -1140,22 +1275,119 @@ function PerformanceView({ showToast }: { showToast: SelfServiceModuleProps['sho
 // ================================================================
 //  8. EXPENSES
 // ================================================================
-function ExpensesView({ showToast }: { showToast: SelfServiceModuleProps['showToast'] }) {
-  const recentClaims: { id: string; date: string; category: string; description: string; amount: number; status: 'Pending' | 'Approved' | 'Reimbursed' | 'Rejected' }[] = []
-  const monthlySummary = { submitted: 0, approved: 0, reimbursed: 0, pending: 0, totalAmount: 0 }
+interface ExpenseRow {
+  id: string
+  date: string
+  category: string
+  description: string
+  amount: number
+  status: string
+  receipt_url: string | null
+}
 
-  const statusVariant = (s: string) => s === 'Approved' ? 'success' : s === 'Pending' ? 'warning' : s === 'Reimbursed' ? 'info' : 'error'
+function ExpensesView({ showToast }: { showToast: SelfServiceModuleProps['showToast'] }) {
+  const [claims, setClaims] = useState<ExpenseRow[]>([])
+  const [loading, setLoading] = useState(true)
+  const [form, setForm] = useState({ category: '', date: '', amount: '', description: '' })
+  const [receiptUrl, setReceiptUrl] = useState<string | null>(null)
+  const [receiptName, setReceiptName] = useState<string | null>(null)
+  const [submitting, setSubmitting] = useState(false)
+  const [staffProfileId, setStaffProfileId] = useState<string | null>(null)
+  const [userId, setUserId] = useState<string | null>(null)
+
+  const loadClaims = useCallback(async () => {
+    if (!isSupabaseConfigured()) { setLoading(false); return }
+    setLoading(true)
+    try {
+      const sb = supabase as any
+      const { data: { user } } = await sb.auth.getUser()
+      if (!user?.id) { setLoading(false); return }
+      setUserId(user.id)
+      const { data: sp } = await sb.from('staff_profiles').select('id').eq('user_id', user.id).maybeSingle()
+      if (sp?.id) setStaffProfileId(sp.id)
+
+      // Show both self-submitted (created_by) and linked to staff profile
+      let query = sb.from('expenses').select('*').order('date', { ascending: false }).limit(50)
+      if (sp?.id) query = query.or(`created_by.eq.${user.id},staff_id.eq.${sp.id}`)
+      else query = query.eq('created_by', user.id)
+      const { data } = await query
+      setClaims((data as any[] || []).map(e => ({
+        id: e.id,
+        date: e.date || (e.created_at ? e.created_at.split('T')[0] : ''),
+        category: e.category || 'Other',
+        description: e.description || '',
+        amount: Number(e.amount || 0),
+        status: (e.status || 'pending').toString(),
+        receipt_url: e.receipt_url || null,
+      })))
+    } catch { /* silent */ }
+    setLoading(false)
+  }, [])
+
+  useEffect(() => { loadClaims() }, [loadClaims])
+
+  const handleSubmit = async () => {
+    if (!form.category) { showToast('Select a category', 'error'); return }
+    const amount = Number(form.amount)
+    if (!amount || amount <= 0) { showToast('Enter a valid amount', 'error'); return }
+    if (!userId) { showToast('Session expired — please sign in again', 'error'); return }
+    setSubmitting(true)
+    try {
+      const sb = supabase as any
+      const payload: Record<string, any> = {
+        category: form.category,
+        description: form.description || null,
+        amount,
+        currency: 'INR',
+        date: form.date || new Date().toISOString().split('T')[0],
+        status: 'pending',
+        created_by: userId,
+      }
+      if (staffProfileId) payload.staff_id = staffProfileId
+      if (receiptUrl) payload.receipt_url = receiptUrl
+      const { error } = await sb.from('expenses').insert(payload)
+      if (error) throw error
+      showToast('Expense claim submitted for approval', 'success')
+      setForm({ category: '', date: '', amount: '', description: '' })
+      setReceiptUrl(null); setReceiptName(null)
+      loadClaims()
+    } catch (err: any) {
+      showToast(`Submit failed: ${err?.message || 'error'}`, 'error')
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  const summary = (() => {
+    const now = new Date()
+    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0]
+    const thisMonth = claims.filter(c => c.date >= monthStart)
+    const approved = thisMonth.filter(c => c.status === 'approved').length
+    const reimbursed = thisMonth.filter(c => c.status === 'reimbursed' || c.status === 'paid').length
+    const pending = thisMonth.filter(c => c.status === 'pending' || c.status === 'submitted').length
+    const totalAmount = thisMonth.reduce((s, c) => s + c.amount, 0)
+    return { submitted: thisMonth.length, approved, reimbursed, pending, totalAmount }
+  })()
+
+  const statusVariant = (s: string) => {
+    const v = s.toLowerCase()
+    if (v === 'approved') return 'success' as const
+    if (v === 'pending' || v === 'submitted') return 'warning' as const
+    if (v === 'reimbursed' || v === 'paid') return 'info' as const
+    if (v === 'rejected') return 'error' as const
+    return 'neutral' as const
+  }
 
   return (
     <div className="space-y-5">
       {/* Monthly Summary */}
       <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
         {[
-          { label: 'Total Claims', value: monthlySummary.submitted, icon: Receipt, color: 'text-white' },
-          { label: 'Approved', value: monthlySummary.approved, icon: CheckCircle2, color: 'text-emerald-400' },
-          { label: 'Reimbursed', value: monthlySummary.reimbursed, icon: IndianRupee, color: 'text-teal-400' },
-          { label: 'Pending', value: monthlySummary.pending, icon: Timer, color: 'text-amber-400' },
-          { label: 'Total Amount', value: `₹${monthlySummary.totalAmount.toLocaleString('en-IN')}`, icon: IndianRupee, color: 'text-teal-400' },
+          { label: 'Total Claims', value: summary.submitted, icon: Receipt, color: 'text-white' },
+          { label: 'Approved', value: summary.approved, icon: CheckCircle2, color: 'text-emerald-400' },
+          { label: 'Reimbursed', value: summary.reimbursed, icon: IndianRupee, color: 'text-teal-400' },
+          { label: 'Pending', value: summary.pending, icon: Timer, color: 'text-amber-400' },
+          { label: 'Total Amount', value: `₹${summary.totalAmount.toLocaleString('en-IN')}`, icon: IndianRupee, color: 'text-teal-400' },
         ].map(s => (
           <AdminGlass key={s.label}>
             <div className="text-center">
@@ -1173,45 +1405,58 @@ function ExpensesView({ showToast }: { showToast: SelfServiceModuleProps['showTo
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
           <div>
             <label className="block text-[10px] text-gray-500 uppercase tracking-wider mb-1">Category</label>
-            <select className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-teal-500/40">
-              <option value="">Select</option>
-              <option>Travel</option><option>Meals</option><option>Supplies</option>
-              <option>Phone</option><option>Other</option>
+            <select value={form.category} onChange={e => setForm(f => ({ ...f, category: e.target.value }))} className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-teal-500/40">
+              <option value="" className="bg-neutral-900">Select</option>
+              <option value="travel" className="bg-neutral-900">Travel</option>
+              <option value="meals" className="bg-neutral-900">Meals</option>
+              <option value="supplies" className="bg-neutral-900">Supplies</option>
+              <option value="phone" className="bg-neutral-900">Phone</option>
+              <option value="fuel" className="bg-neutral-900">Fuel</option>
+              <option value="accommodation" className="bg-neutral-900">Accommodation</option>
+              <option value="other" className="bg-neutral-900">Other</option>
             </select>
           </div>
           <div>
             <label className="block text-[10px] text-gray-500 uppercase tracking-wider mb-1">Date</label>
-            <input type="date" className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-teal-500/40" />
+            <input type="date" value={form.date} onChange={e => setForm(f => ({ ...f, date: e.target.value }))} className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-teal-500/40" />
           </div>
           <div>
             <label className="block text-[10px] text-gray-500 uppercase tracking-wider mb-1">Amount (₹)</label>
-            <input type="number" placeholder="0" className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-teal-500/40" />
+            <input type="number" min="0" value={form.amount} onChange={e => setForm(f => ({ ...f, amount: e.target.value }))} placeholder="0" className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-teal-500/40" />
           </div>
           <div>
             <label className="block text-[10px] text-gray-500 uppercase tracking-wider mb-1">Receipt</label>
-            <button onClick={async () => {
+            <button type="button" onClick={async () => {
               const results = await pickAndUploadFiles('staff/expenses', {
                 accept: '.pdf,.jpg,.jpeg,.png',
                 multiple: false,
                 portal: 'staff',
                 category: 'expense-receipt',
               })
-              if (results.length > 0 && results[0].success) showToast(`Receipt "${results[0].file?.name}" attached`, 'success')
-              else if (results.length > 0) showToast('Upload failed', 'info')
+              const first = results[0]
+              const uploadedUrl = first?.file?.url
+              if (first?.success && uploadedUrl) {
+                setReceiptUrl(uploadedUrl)
+                setReceiptName(first.file?.name || 'receipt')
+                showToast(`Receipt attached`, 'success')
+              } else if (first) {
+                showToast('Upload failed', 'error')
+              }
             }}
-              className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2 text-xs text-gray-500 hover:border-teal-500/40 transition-colors text-left flex items-center gap-1.5">
-              <Upload className="w-3.5 h-3.5" /> Attach receipt
+              className={`w-full bg-white/[0.04] border rounded-xl px-3 py-2 text-xs hover:border-teal-500/40 transition-colors text-left flex items-center gap-1.5 truncate ${receiptUrl ? 'text-teal-400 border-teal-500/30' : 'text-gray-500 border-white/[0.08]'}`}>
+              <Upload className="w-3.5 h-3.5" />
+              <span className="truncate">{receiptName || 'Attach receipt'}</span>
             </button>
           </div>
         </div>
         <div className="mt-3">
           <label className="block text-[10px] text-gray-500 uppercase tracking-wider mb-1">Description</label>
-          <input type="text" placeholder="Brief description of expense..." className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-teal-500/40" />
+          <input type="text" value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} placeholder="Brief description of expense..." className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-teal-500/40" />
         </div>
         <div className="mt-3 flex justify-end">
-          <button onClick={() => showToast('Expense claim submitted for approval', 'success')}
-            className="px-5 py-2 rounded-xl text-xs font-semibold bg-teal-500/15 text-teal-400 border border-teal-500/25 hover:bg-teal-500/25 transition-colors">
-            Submit Claim
+          <button onClick={handleSubmit} disabled={submitting}
+            className="px-5 py-2 rounded-xl text-xs font-semibold bg-teal-500/15 text-teal-400 border border-teal-500/25 hover:bg-teal-500/25 transition-colors disabled:opacity-50">
+            {submitting ? 'Submitting…' : 'Submit Claim'}
           </button>
         </div>
       </AdminGlass>
@@ -1229,17 +1474,27 @@ function ExpensesView({ showToast }: { showToast: SelfServiceModuleProps['showTo
                 <th className="text-left py-2 px-2 font-medium">Description</th>
                 <th className="text-right py-2 px-2 font-medium">Amount</th>
                 <th className="text-center py-2 px-2 font-medium">Status</th>
+                <th className="text-center py-2 px-2 font-medium">Receipt</th>
               </tr>
             </thead>
             <tbody>
-              {recentClaims.map(c => (
+              {loading ? (
+                <tr><td colSpan={7} className="text-center py-6 text-gray-500">Loading…</td></tr>
+              ) : claims.length === 0 ? (
+                <tr><td colSpan={7} className="text-center py-6 text-gray-500">No expense claims yet</td></tr>
+              ) : claims.map(c => (
                 <tr key={c.id} className="border-b border-white/[0.03] hover:bg-white/[0.02]">
-                  <td className="py-2.5 px-2 text-gray-400 font-mono">{c.id}</td>
+                  <td className="py-2.5 px-2 text-gray-400 font-mono">{c.id.slice(0, 8)}</td>
                   <td className="py-2.5 px-2 text-gray-300">{c.date}</td>
-                  <td className="py-2.5 px-2 text-white">{c.category}</td>
-                  <td className="py-2.5 px-2 text-gray-400 max-w-[200px] truncate">{c.description}</td>
+                  <td className="py-2.5 px-2 text-white capitalize">{c.category}</td>
+                  <td className="py-2.5 px-2 text-gray-400 max-w-[220px] truncate">{c.description || '—'}</td>
                   <td className="py-2.5 px-2 text-right text-white font-medium">₹{c.amount.toLocaleString('en-IN')}</td>
                   <td className="py-2.5 px-2 text-center"><AdminBadge label={c.status} variant={statusVariant(c.status)} /></td>
+                  <td className="py-2.5 px-2 text-center">
+                    {c.receipt_url ? (
+                      <a href={c.receipt_url} target="_blank" rel="noopener noreferrer" className="text-teal-400 hover:underline inline-flex items-center gap-1"><Eye className="w-3 h-3" />View</a>
+                    ) : <span className="text-gray-600">—</span>}
+                  </td>
                 </tr>
               ))}
             </tbody>
