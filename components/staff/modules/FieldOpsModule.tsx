@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import {
   MapPin, Camera, Mic, LogIn, FileText, Receipt, AlertTriangle,
   Clock, Users, TrendingUp, Navigation, CheckCircle2, XCircle,
@@ -21,6 +21,7 @@ import AdminModal from '@/components/admin/shared/AdminModal'
 import AdminEmptyState from '@/components/admin/shared/AdminEmptyState'
 import UploadWithFolderPicker from '@/components/shared/UploadWithFolderPicker'
 import { insertRow } from '@/lib/supabase/adminDataService'
+import { supabase, isSupabaseConfigured } from '@/lib/supabase/client'
 
 // ── Props ─────────────────────────────────────────────────────────
 interface FieldOpsModuleProps {
@@ -30,7 +31,6 @@ interface FieldOpsModuleProps {
 }
 
 // ── Data arrays (populated from Supabase when available) ─────────
-const CHECKINS: { id: string; location: string; lat: number; lng: number; time: string; date: string; duration: string; status: string }[] = []
 const SITE_VISITS: { id: string; date: string; site: string; purpose: string; status: string; duration: string; media: number; report: string }[] = []
 const MEDIA_ITEMS: { id: string; name: string; tag: string; site: string; date: string; synced: boolean }[] = []
 const REPORTS: { id: string; title: string; type: string; status: string; date: string; pages: number }[] = []
@@ -219,48 +219,101 @@ function FieldDashboard({ navigate, showToast }: FieldOpsModuleProps) {
 // ══════════════════════════════════════════════════════════════════
 // 2. GPS CHECK-IN
 // ══════════════════════════════════════════════════════════════════
+interface FieldCheckinRow {
+  id: string
+  staff_id: string
+  location: string | null
+  latitude: number | null
+  longitude: number | null
+  notes: string | null
+  photo_url: string | null
+  created_at: string
+}
+
 function GPSCheckIn({ showToast }: FieldOpsModuleProps) {
-  const [checkedIn, setCheckedIn] = useState(false)
+  const [checkingIn, setCheckingIn] = useState(false)
+  const [history, setHistory] = useState<FieldCheckinRow[]>([])
+
+  const loadHistory = useCallback(async () => {
+    if (!isSupabaseConfigured()) return
+    try {
+      const sb = supabase as any
+      const { data: { user } } = await sb.auth.getUser()
+      if (!user?.id) return
+      const { data } = await sb
+        .from('field_checkins')
+        .select('*')
+        .eq('staff_id', user.id)
+        .order('created_at', { ascending: false })
+        .limit(30)
+      setHistory((data as FieldCheckinRow[]) || [])
+    } catch { /* silent */ }
+  }, [])
+
+  useEffect(() => { loadHistory() }, [loadHistory])
+
+  const handleCheckIn = async () => {
+    if (!navigator.geolocation) {
+      showToast('Geolocation not supported by your browser', 'error')
+      return
+    }
+    if (!isSupabaseConfigured()) {
+      showToast('Service unavailable — please reload', 'error')
+      return
+    }
+    setCheckingIn(true)
+    navigator.geolocation.getCurrentPosition(
+      async (pos) => {
+        try {
+          const sb = supabase as any
+          const { data: { user } } = await sb.auth.getUser()
+          if (!user?.id) {
+            showToast('Session expired — please sign in again', 'error')
+            setCheckingIn(false)
+            return
+          }
+          const { latitude, longitude } = pos.coords
+          const { error } = await sb.from('field_checkins').insert({
+            staff_id: user.id,
+            latitude,
+            longitude,
+            location: `${latitude.toFixed(4)}, ${longitude.toFixed(4)}`,
+          })
+          if (error) {
+            showToast(`Check-in failed: ${error.message}`, 'error')
+          } else {
+            showToast(`Checked in at ${latitude.toFixed(4)}, ${longitude.toFixed(4)}`, 'success')
+            loadHistory()
+          }
+        } catch (err: any) {
+          showToast(`Check-in failed: ${err?.message || 'error'}`, 'error')
+        } finally {
+          setCheckingIn(false)
+        }
+      },
+      () => {
+        showToast('GPS access denied. Please enable location services.', 'error')
+        setCheckingIn(false)
+      },
+      { enableHighAccuracy: true, timeout: 10000 }
+    )
+  }
 
   return (
     <div className="space-y-6">
-      {/* Check In/Out Button */}
+      {/* Check In Button */}
       <AdminGlass padding="p-8" className="text-center">
         <button
-          onClick={() => {
-            if (navigator.geolocation) {
-              navigator.geolocation.getCurrentPosition(
-                (pos) => {
-                  const { latitude, longitude } = pos.coords
-                  // Store the check-in
-                  insertRow('staff_checkins', {
-                    latitude,
-                    longitude,
-                    type: checkedIn ? 'checkout' : 'checkin',
-                    timestamp: new Date().toISOString()
-                  }).catch(() => {})
-                  setCheckedIn(!checkedIn)
-                  showToast(checkedIn ? 'Checked out successfully' : `Checked in at ${latitude.toFixed(4)}, ${longitude.toFixed(4)}`, 'success')
-                },
-                (err) => {
-                  showToast('GPS access denied. Please enable location services.', 'error')
-                },
-                { enableHighAccuracy: true, timeout: 10000 }
-              )
-            } else {
-              showToast('Geolocation not supported by your browser', 'error')
-            }
-          }}
-          className={`w-32 h-32 mx-auto rounded-full flex items-center justify-center text-white text-lg font-bold transition-all hover:scale-105 ${checkedIn ? 'bg-red-600 hover:bg-red-500 shadow-lg shadow-red-600/30' : 'bg-teal-600 hover:bg-teal-500 shadow-lg shadow-teal-600/30'}`}
+          onClick={handleCheckIn}
+          disabled={checkingIn}
+          className="w-32 h-32 mx-auto rounded-full flex items-center justify-center text-white text-lg font-bold transition-all hover:scale-105 bg-teal-600 hover:bg-teal-500 shadow-lg shadow-teal-600/30 disabled:opacity-60 disabled:cursor-not-allowed"
         >
           <div className="text-center">
             <LogIn className="w-8 h-8 mx-auto mb-1" />
-            <span className="text-sm">{checkedIn ? 'Check Out' : 'Check In'}</span>
+            <span className="text-sm">{checkingIn ? 'Locating…' : 'Check In'}</span>
           </div>
         </button>
-        <p className="text-gray-400 text-sm mt-4">
-          {checkedIn ? 'Currently checked in at your location' : 'Tap to check in at your current location'}
-        </p>
+        <p className="text-gray-400 text-sm mt-4">Tap to log a GPS check-in at your current location</p>
       </AdminGlass>
 
       {/* Map Placeholder */}
@@ -280,23 +333,27 @@ function GPSCheckIn({ showToast }: FieldOpsModuleProps) {
       {/* Check-in History */}
       <AdminGlass>
         <h3 className="text-sm font-semibold text-white mb-4">Check-in History</h3>
-        <div className="space-y-2">
-          {CHECKINS.map(ci => (
-            <div key={ci.id} className="flex items-center justify-between py-2.5 px-3 rounded-lg bg-white/[0.02] hover:bg-white/[0.04] transition-colors">
-              <div className="flex items-center gap-3 min-w-0">
-                <MapPin className="w-4 h-4 text-teal-400 shrink-0" />
-                <div className="min-w-0">
-                  <p className="text-sm text-white truncate">{ci.location}</p>
-                  <p className="text-[11px] text-gray-500">{ci.date} at {ci.time}</p>
+        {history.length === 0 ? (
+          <p className="text-xs text-gray-500 text-center py-6">No check-ins yet. Tap the button above to log your first one.</p>
+        ) : (
+          <div className="space-y-2">
+            {history.map(ci => {
+              const created = new Date(ci.created_at)
+              return (
+                <div key={ci.id} className="flex items-center justify-between py-2.5 px-3 rounded-lg bg-white/[0.02] hover:bg-white/[0.04] transition-colors">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <MapPin className="w-4 h-4 text-teal-400 shrink-0" />
+                    <div className="min-w-0">
+                      <p className="text-sm text-white truncate">{ci.location || '—'}</p>
+                      <p className="text-[11px] text-gray-500">{created.toLocaleDateString('en-IN', { day: '2-digit', month: 'short' })} at {created.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p>
+                    </div>
+                  </div>
+                  <AdminBadge label="logged" variant="success" dot />
                 </div>
-              </div>
-              <div className="flex items-center gap-3 shrink-0">
-                <span className="text-xs text-gray-400">{ci.duration}</span>
-                <AdminBadge label={ci.status === 'completed' ? 'Done' : 'Missed'} variant={ci.status === 'completed' ? 'success' : 'error'} dot />
-              </div>
-            </div>
-          ))}
-        </div>
+              )
+            })}
+          </div>
+        )}
       </AdminGlass>
     </div>
   )

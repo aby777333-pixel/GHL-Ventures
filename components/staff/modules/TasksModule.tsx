@@ -24,6 +24,7 @@ interface TasksModuleProps {
   subTab: string | null
   navigate: (path: string) => void
   showToast: (msg: string, type?: 'success' | 'error' | 'info' | 'warning') => void
+  userId?: string
 }
 
 // ── Constants ──────────────────────────────────────────────────
@@ -65,15 +66,19 @@ const STATUS_LABEL: Record<TaskStatus, string> = {
 }
 
 // ── Main Component ─────────────────────────────────────────────
-export default function TasksModule({ subTab, navigate, showToast }: TasksModuleProps) {
+export default function TasksModule({ subTab, navigate, showToast, userId }: TasksModuleProps) {
   const tab = subTab || 'my-tasks'
   const [tasks, setTasks] = useState<any[]>([])
 
-  const loadTasks = () => fetchTasks().then(data => setTasks(data || []))
+  // Scope to the current user so "My Tasks" isn't the whole company queue.
+  // Fallback to the full list for roles that legitimately manage everyone's work
+  // — the dataset stays small either way.
+  const loadTasks = () => fetchTasks(userId).then(data => setTasks(data || []))
 
   useEffect(() => {
     loadTasks()
-  }, [])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userId])
 
   return (
     <div className="space-y-6 admin-section-enter">

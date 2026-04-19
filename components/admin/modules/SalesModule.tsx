@@ -29,6 +29,7 @@ import UploadWithFolderPicker from '@/components/shared/UploadWithFolderPicker'
 import { createLead, updateLead, fetchLeads, deleteLead } from '@/lib/supabase/leadService'
 import { onNewLead } from '@/lib/supabase/realtimeSubscriptions'
 import { fetchAllInvestmentApplications } from '@/lib/supabase/adminDataService'
+import { supabase, isSupabaseConfigured } from '@/lib/supabase/client'
 
 // ── Sub-tabs ─────────────────────────────────────────────────────
 const SALES_TABS = [
@@ -628,28 +629,100 @@ function LeadListTab({ leads, onViewLead, onDeleteLead, showToast }: { leads: Le
 }
 
 // ── Commissions Tab ─────────────────────────────────────────────
+interface CommissionRow {
+  id: string
+  sales_rep: string | null
+  deal_id: string | null
+  client_name: string | null
+  deal_value: number | null
+  commission_rate: number | null
+  commission_amount: number | null
+  status: string | null
+  period: string | null
+  created_at: string | null
+}
+
 function CommissionsTab({ showToast }: { showToast: (msg: string, type?: 'success' | 'error' | 'info' | 'warning') => void }) {
-  // Commissions will be populated from real data once the commissions table is set up
-  // For now show empty state
+  const [rows, setRows] = useState<CommissionRow[]>([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    let active = true
+    async function load() {
+      if (!isSupabaseConfigured()) { setLoading(false); return }
+      try {
+        const sb = supabase as any
+        const { data } = await sb.from('commissions').select('*').order('created_at', { ascending: false }).limit(500)
+        if (!active) return
+        setRows((data as CommissionRow[]) || [])
+      } catch { /* silent */ }
+      if (active) setLoading(false)
+    }
+    load()
+    return () => { active = false }
+  }, [])
+
+  const summary = useMemo(() => {
+    const total = rows.reduce((s, r) => s + Number(r.commission_amount || 0), 0)
+    const paid = rows.filter(r => (r.status || '').toLowerCase() === 'paid').reduce((s, r) => s + Number(r.commission_amount || 0), 0)
+    const pending = rows.filter(r => {
+      const v = (r.status || '').toLowerCase()
+      return v === 'pending' || v === 'approved' || v === 'submitted' || !v
+    }).reduce((s, r) => s + Number(r.commission_amount || 0), 0)
+    return { total, paid, pending }
+  }, [rows])
+
+  const statusVariant = (s: string | null): 'success' | 'warning' | 'info' | 'neutral' => {
+    const v = (s || '').toLowerCase()
+    if (v === 'paid') return 'success'
+    if (v === 'pending' || v === 'submitted') return 'warning'
+    if (v === 'approved') return 'info'
+    return 'neutral'
+  }
+
+  const columns: Column<CommissionRow>[] = [
+    { key: 'period', label: 'Period', render: (row) => <span className="text-xs text-gray-300">{row.period || '—'}</span> },
+    { key: 'sales_rep', label: 'Sales Rep', render: (row) => <span className="text-sm text-white font-medium">{row.sales_rep || '—'}</span> },
+    { key: 'client_name', label: 'Client', render: (row) => <span className="text-xs text-gray-300">{row.client_name || '—'}</span> },
+    { key: 'deal_value', label: 'Deal Value', render: (row) => <span className="text-xs text-gray-300">{formatINR(Number(row.deal_value || 0))}</span> },
+    { key: 'commission_rate', label: 'Rate', render: (row) => <span className="text-xs text-gray-400">{row.commission_rate != null ? `${Number(row.commission_rate)}%` : '—'}</span> },
+    { key: 'commission_amount', label: 'Commission', render: (row) => <span className="text-sm text-emerald-400 font-semibold">{formatINR(Number(row.commission_amount || 0))}</span> },
+    { key: 'status', label: 'Status', render: (row) => <AdminBadge label={row.status || 'pending'} variant={statusVariant(row.status)} dot /> },
+    { key: 'created_at', label: 'Recorded', render: (row) => <span className="text-xs text-gray-500">{formatDate(row.created_at)}</span> },
+  ]
+
   return (
     <div className="space-y-4">
       <div className="grid grid-cols-3 gap-3">
         <AdminGlass padding="p-4">
           <p className="text-[11px] text-gray-500 uppercase tracking-wider font-medium">Total Commissions</p>
-          <p className="text-xl font-bold text-white mt-1">{formatINR(0)}</p>
+          <p className="text-xl font-bold text-white mt-1">{formatINR(summary.total)}</p>
         </AdminGlass>
         <AdminGlass padding="p-4">
           <p className="text-[11px] text-gray-500 uppercase tracking-wider font-medium">Paid</p>
-          <p className="text-xl font-bold text-emerald-400 mt-1">{formatINR(0)}</p>
+          <p className="text-xl font-bold text-emerald-400 mt-1">{formatINR(summary.paid)}</p>
         </AdminGlass>
         <AdminGlass padding="p-4">
           <p className="text-[11px] text-gray-500 uppercase tracking-wider font-medium">Pending</p>
-          <p className="text-xl font-bold text-amber-400 mt-1">{formatINR(0)}</p>
+          <p className="text-xl font-bold text-amber-400 mt-1">{formatINR(summary.pending)}</p>
         </AdminGlass>
       </div>
 
       <AdminGlass padding="p-4">
-        <AdminEmptyState title="No commissions yet" description="Commissions will appear here as deals are closed and payouts are processed." />
+        {loading ? (
+          <div className="py-10 text-center text-sm text-gray-500">Loading commissions…</div>
+        ) : rows.length === 0 ? (
+          <AdminEmptyState title="No commissions yet" description="Commissions will appear here as deals are closed and payouts are processed." />
+        ) : (
+          <AdminDataTable<CommissionRow>
+            columns={columns}
+            data={rows}
+            searchKeys={['sales_rep', 'client_name', 'period', 'status']}
+            searchPlaceholder="Search commissions..."
+            exportable
+            title="Commissions Ledger"
+          />
+        )}
       </AdminGlass>
     </div>
   )

@@ -795,6 +795,24 @@ export default function InvestmentFlowTab({
                       disabled={isFullyPaid}
                       className={`w-full px-3 py-2.5 rounded-xl text-sm disabled:opacity-50 ${t('bg-white/[0.04] border border-white/[0.08] text-white','bg-gray-100 border border-gray-200 text-gray-900')}`} />
                   </div>
+                  {bankAccounts.length > 0 && (
+                    <div>
+                      <label className={`text-xs font-medium mb-1 block ${t('text-gray-400','text-gray-600')}`}>Paid from (your bank)</label>
+                      <select
+                        value={txnBank}
+                        onChange={e => setTxnBank(e.target.value)}
+                        disabled={isFullyPaid}
+                        className={`w-full px-3 py-2.5 rounded-xl text-sm disabled:opacity-50 ${t('bg-white/[0.04] border border-white/[0.08] text-white','bg-gray-100 border border-gray-200 text-gray-900')}`}
+                      >
+                        {bankAccounts.map((b: any) => (
+                          <option key={b.id} value={b.id} className="bg-neutral-900">
+                            {[b.bank_name, b.account_number ? `••${String(b.account_number).slice(-4)}` : null].filter(Boolean).join(' — ') || 'Bank account'}
+                          </option>
+                        ))}
+                      </select>
+                      <p className={`text-[10px] mt-1 ${t('text-gray-600','text-gray-500')}`}>Helps ops match your wire transfer against your verified account.</p>
+                    </div>
+                  )}
                   <div>
                     <label className={`text-xs font-medium mb-1 block ${t('text-gray-400','text-gray-600')}`}>Transaction Proof*</label>
                     <button onClick={handleUploadProof} disabled={isFullyPaid}

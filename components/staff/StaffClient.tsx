@@ -246,7 +246,7 @@ export default function StaffClient() {
       case 'clients':
         return <ClientViewModule subTab={activeSubTab} navigate={navigate} showToast={showToast} />
       case 'tasks':
-        return <TasksModule subTab={activeSubTab} navigate={navigate} showToast={showToast} />
+        return <TasksModule subTab={activeSubTab} navigate={navigate} showToast={showToast} userId={user?.id} />
       case 'ai':
         return <AIToolsModule subTab={activeSubTab} navigate={navigate} showToast={showToast} role={role} />
       case 'team':
