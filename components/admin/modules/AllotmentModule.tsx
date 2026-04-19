@@ -493,7 +493,7 @@ export default function AllotmentModule({ subTab, navigate, showToast }: Allotme
     {
       key: 'pdf_action' as any,
       label: 'Allotment Letter',
-      width: 'w-64',
+      width: 'w-72',
       render: (row) => (
         <div className="flex items-center gap-1.5">
           <button
@@ -502,7 +502,7 @@ export default function AllotmentModule({ subTab, navigate, showToast }: Allotme
               const w = window.open('', '_blank')
               if (w) { w.document.write(html); w.document.close() }
             }}
-            className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-medium text-white bg-brand-red/20 border border-brand-red/30 hover:bg-brand-red/30 transition-colors"
+            className="inline-flex items-center justify-center gap-1.5 h-7 px-2.5 rounded-lg text-[11px] font-medium text-white bg-brand-red/20 border border-brand-red/30 hover:bg-brand-red/30 transition-colors whitespace-nowrap leading-none"
           >
             <Download className="w-3 h-3" />
             Generate PDF
@@ -539,7 +539,7 @@ export default function AllotmentModule({ subTab, navigate, showToast }: Allotme
               }
             }}
             disabled={sendingIds.has(row.id)}
-            className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-medium text-white bg-emerald-500/20 border border-emerald-500/30 hover:bg-emerald-500/30 transition-colors disabled:opacity-50"
+            className="inline-flex items-center justify-center gap-1.5 h-7 px-2.5 rounded-lg text-[11px] font-medium text-white bg-emerald-500/20 border border-emerald-500/30 hover:bg-emerald-500/30 transition-colors disabled:opacity-50 whitespace-nowrap leading-none"
             title="Send this allotment letter to the client's Documents tab"
           >
             <Send className="w-3 h-3" />
@@ -870,7 +870,7 @@ export default function AllotmentModule({ subTab, navigate, showToast }: Allotme
                 {
                   key: 'certificate_action' as any,
                   label: 'Certificate',
-                  width: 'w-64',
+                  width: 'w-72',
                   render: (row: AllotmentRecord) => (
                     <div className="flex items-center gap-1.5">
                       <button
@@ -879,7 +879,7 @@ export default function AllotmentModule({ subTab, navigate, showToast }: Allotme
                           const w = window.open('', '_blank')
                           if (w) { w.document.write(html); w.document.close() }
                         }}
-                        className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-medium text-white bg-brand-red/20 border border-brand-red/30 hover:bg-brand-red/30 transition-colors"
+                        className="inline-flex items-center justify-center gap-1.5 h-7 px-2.5 rounded-lg text-[11px] font-medium text-white bg-brand-red/20 border border-brand-red/30 hover:bg-brand-red/30 transition-colors whitespace-nowrap leading-none"
                       >
                         <Download className="w-3 h-3" />
                         View / Print
@@ -914,7 +914,7 @@ export default function AllotmentModule({ subTab, navigate, showToast }: Allotme
                           }
                         }}
                         disabled={sendingIds.has(`cert-${row.id}`)}
-                        className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-medium text-white bg-emerald-500/20 border border-emerald-500/30 hover:bg-emerald-500/30 transition-colors disabled:opacity-50"
+                        className="inline-flex items-center justify-center gap-1.5 h-7 px-2.5 rounded-lg text-[11px] font-medium text-white bg-emerald-500/20 border border-emerald-500/30 hover:bg-emerald-500/30 transition-colors disabled:opacity-50 whitespace-nowrap leading-none"
                         title="Send this certificate to the client's Documents tab"
                       >
                         <Send className="w-3 h-3" />
