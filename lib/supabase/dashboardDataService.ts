@@ -724,7 +724,7 @@ export async function submitInvestmentTransaction(txn: {
         title: 'New Investment Transaction',
         message: `Transaction of ₹${txn.transaction_amount.toLocaleString('en-IN')} submitted for approval.`,
         type: 'action_required',
-        link: '/admin?tab=financial',
+        link: '/admin/financial/transactions',
         metadata: { transaction_id: data?.id, investment_app_id: txn.investment_app_id },
       })))
     }

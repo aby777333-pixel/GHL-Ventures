@@ -19,7 +19,13 @@ import AdminModal, { ModalButton } from '../shared/AdminModal'
 import AdminKPICard from '../shared/AdminKPICard'
 import AdminEmptyState from '../shared/AdminEmptyState'
 import UploadWithFolderPicker from '@/components/shared/UploadWithFolderPicker'
-import { fetchInvoices, fetchExpenses, fetchCommissions, getOverviewKPIs, insertRow, updateRow, deleteRow } from '@/lib/supabase/adminDataService'
+import {
+  fetchInvoices, fetchExpenses, fetchCommissions, getOverviewKPIs,
+  insertRow, updateRow, deleteRow,
+  fetchAllInvestmentTransactions, approveInvestmentTransaction, rejectInvestmentTransaction,
+  type AdminInvestmentTransaction,
+} from '@/lib/supabase/adminDataService'
+import { supabase } from '@/lib/supabase/client'
 import { formatINR, formatDate, useAdminAuth } from '@/lib/admin/adminHooks'
 import type { Invoice, Expense, InvoiceStatus, ExpenseCategory } from '@/lib/admin/adminTypes'
 import { saveBlobAs } from '@/lib/supabase/storageService'
@@ -27,6 +33,7 @@ import { saveBlobAs } from '@/lib/supabase/storageService'
 // ── Sub-tabs ─────────────────────────────────────────────────────
 const FINANCIAL_TABS = [
   { id: 'overview', label: 'Revenue Overview', icon: BarChart3 },
+  { id: 'transactions', label: 'Transactions', icon: Wallet },
   { id: 'invoices', label: 'Invoices', icon: Receipt },
   { id: 'expenses', label: 'Expenses', icon: CreditCard },
   { id: 'payouts', label: 'Payouts', icon: Banknote },
@@ -138,6 +145,7 @@ export default function FinancialModule({ subTab, navigate, showToast }: Financi
       {/* Tab Content */}
       <div className="admin-tab-switch">
         {activeTab === 'overview' && <RevenueOverviewTab kpis={kpis} expenses={expenses} />}
+        {activeTab === 'transactions' && <TransactionsTab showToast={showToast} />}
         {activeTab === 'invoices' && <InvoicesTab showToast={showToast} invoices={invoices} refetch={loadData} />}
         {activeTab === 'expenses' && <ExpensesTab showToast={showToast} expenses={expenses} />}
         {activeTab === 'payouts' && <PayoutsTab showToast={showToast} commissions={commissions} />}
@@ -1038,6 +1046,246 @@ function PayoutsTab({ showToast, commissions }: { showToast: (msg: string, type?
           )}
         </div>
       </AdminGlass>
+    </div>
+  )
+}
+
+// ── Transactions Tab (client investment capital submissions) ──────
+function TransactionsTab({ showToast }: { showToast: (msg: string, type?: 'success' | 'error' | 'info' | 'warning') => void }) {
+  const [rows, setRows] = useState<AdminInvestmentTransaction[]>([])
+  const [loading, setLoading] = useState(true)
+  const [filter, setFilter] = useState<'all' | 'pending' | 'approved' | 'rejected'>('pending')
+  const [selected, setSelected] = useState<AdminInvestmentTransaction | null>(null)
+  const [rejectReason, setRejectReason] = useState('')
+  const [busy, setBusy] = useState(false)
+
+  const load = useCallback(async () => {
+    setLoading(true)
+    const data = await fetchAllInvestmentTransactions(filter)
+    setRows(data)
+    setLoading(false)
+  }, [filter])
+
+  useEffect(() => { load() }, [load])
+
+  const summary = useMemo(() => {
+    // Always compute against the full set so the tab labels are honest even
+    // when the user is filtered into one status.
+    return {
+      pending: rows.filter(r => r.status === 'pending').length,
+      approved: rows.filter(r => r.status === 'approved').length,
+      rejected: rows.filter(r => r.status === 'rejected').length,
+      pendingAmount: rows.filter(r => r.status === 'pending').reduce((s, r) => s + r.transaction_amount, 0),
+    }
+  }, [rows])
+
+  const approve = async (txn: AdminInvestmentTransaction) => {
+    setBusy(true)
+    try {
+      const sb: any = supabase
+      const { data: { user } } = await sb.auth.getUser()
+      const ok = await approveInvestmentTransaction(txn.id, user?.id || '')
+      if (ok) {
+        showToast('Transaction approved', 'success')
+        setSelected(null)
+        load()
+      } else {
+        showToast('Approval failed', 'error')
+      }
+    } catch (err: any) {
+      showToast(`Error: ${err?.message || 'unknown'}`, 'error')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const reject = async () => {
+    if (!selected) return
+    const reason = rejectReason.trim()
+    if (!reason) { showToast('Rejection reason is required', 'warning'); return }
+    setBusy(true)
+    try {
+      const sb: any = supabase
+      const { data: { user } } = await sb.auth.getUser()
+      const ok = await rejectInvestmentTransaction(selected.id, user?.id || '', reason)
+      if (ok) {
+        showToast('Transaction rejected', 'info')
+        setSelected(null)
+        setRejectReason('')
+        load()
+      } else {
+        showToast('Rejection failed', 'error')
+      }
+    } catch (err: any) {
+      showToast(`Error: ${err?.message || 'unknown'}`, 'error')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const statusVariant = (s: string): 'warning' | 'success' | 'error' | 'neutral' => {
+    if (s === 'pending') return 'warning'
+    if (s === 'approved') return 'success'
+    if (s === 'rejected') return 'error'
+    return 'neutral'
+  }
+
+  return (
+    <div className="space-y-5">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        <AdminKPICard title="Pending" value={summary.pending} icon={Clock} color="#F59E0B" delay={0} />
+        <AdminKPICard title="Pending Amount" value={formatINR(summary.pendingAmount)} icon={IndianRupee} color="#F59E0B" delay={50} />
+        <AdminKPICard title="Approved" value={summary.approved} icon={CheckCircle2} color="#10B981" delay={100} />
+        <AdminKPICard title="Rejected" value={summary.rejected} icon={XCircle} color="#EF4444" delay={150} />
+      </div>
+
+      <div className="flex items-center gap-2 flex-wrap">
+        {(['pending', 'approved', 'rejected', 'all'] as const).map(f => (
+          <button
+            key={f}
+            onClick={() => setFilter(f)}
+            className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors ${
+              filter === f
+                ? 'bg-brand-red/20 text-white border-brand-red/30'
+                : 'bg-white/[0.03] text-gray-400 border-white/[0.06] hover:bg-white/[0.06]'
+            }`}
+          >
+            {f.charAt(0).toUpperCase() + f.slice(1)}
+          </button>
+        ))}
+      </div>
+
+      <AdminGlass padding="p-4">
+        {loading ? (
+          <div className="py-10 text-center text-sm text-gray-500">Loading transactions…</div>
+        ) : rows.length === 0 ? (
+          <AdminEmptyState
+            title={filter === 'pending' ? 'No pending transactions' : 'No transactions'}
+            description={filter === 'pending' ? 'New client-submitted transactions waiting for approval will appear here.' : 'Nothing matches this filter yet.'}
+          />
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-white/[0.06] text-[10px] text-gray-500 uppercase tracking-wider">
+                  {['Client', 'Fund', 'Capital', 'Transaction', 'Txn ID', 'Submitted', 'Status', 'Actions'].map(h => (
+                    <th key={h} className="text-left px-3 py-2.5 font-medium">{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {rows.map(row => (
+                  <tr key={row.id} className="border-b border-white/[0.04] hover:bg-white/[0.03] transition-colors">
+                    <td className="px-3 py-3">
+                      <p className="text-sm font-medium text-white">{row.client_name}</p>
+                      <p className="text-[10px] text-gray-500">{row.client_email || '—'}</p>
+                    </td>
+                    <td className="px-3 py-3"><span className="text-xs text-gray-300">{row.fund_vehicle || '—'}</span></td>
+                    <td className="px-3 py-3 text-xs text-gray-300">{formatINR(row.capital_amount)}</td>
+                    <td className="px-3 py-3 text-sm text-emerald-400 font-semibold">{formatINR(row.transaction_amount)}</td>
+                    <td className="px-3 py-3 text-xs text-gray-400 font-mono">{row.transaction_id || '—'}</td>
+                    <td className="px-3 py-3 text-xs text-gray-500">{formatDate(row.created_at)}</td>
+                    <td className="px-3 py-3"><AdminBadge label={row.status} variant={statusVariant(row.status)} dot /></td>
+                    <td className="px-3 py-3">
+                      <button
+                        onClick={() => setSelected(row)}
+                        className="text-xs text-brand-red hover:underline font-medium inline-flex items-center gap-1"
+                      >
+                        <Eye className="w-3 h-3" /> Review
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </AdminGlass>
+
+      {selected && (
+        <AdminModal
+          isOpen={!!selected}
+          onClose={() => { setSelected(null); setRejectReason('') }}
+          title="Investment Transaction"
+          subtitle={`${selected.client_name} · ${formatINR(selected.transaction_amount)} · ${selected.status}`}
+          maxWidth="max-w-2xl"
+          footer={
+            selected.status === 'pending' ? (
+              <>
+                <ModalButton onClick={() => { setSelected(null); setRejectReason('') }}>Close</ModalButton>
+                <ModalButton variant="danger" onClick={reject} disabled={busy}>{busy ? 'Working…' : 'Reject'}</ModalButton>
+                <ModalButton variant="primary" onClick={() => approve(selected)} disabled={busy}>{busy ? 'Working…' : 'Approve'}</ModalButton>
+              </>
+            ) : (
+              <ModalButton onClick={() => setSelected(null)}>Close</ModalButton>
+            )
+          }
+        >
+          <div className="space-y-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="p-3 rounded-xl bg-white/[0.03] border border-white/[0.04]">
+                <p className="text-[10px] uppercase tracking-wider text-gray-500 mb-1">Client</p>
+                <p className="text-sm text-white">{selected.client_name}</p>
+                <p className="text-[11px] text-gray-500">{selected.client_email || '—'}</p>
+              </div>
+              <div className="p-3 rounded-xl bg-white/[0.03] border border-white/[0.04]">
+                <p className="text-[10px] uppercase tracking-wider text-gray-500 mb-1">Fund vehicle</p>
+                <p className="text-sm text-gray-200">{selected.fund_vehicle || '—'}</p>
+              </div>
+              <div className="p-3 rounded-xl bg-white/[0.03] border border-white/[0.04]">
+                <p className="text-[10px] uppercase tracking-wider text-gray-500 mb-1">Capital committed</p>
+                <p className="text-sm text-white">{formatINR(selected.capital_amount)}</p>
+              </div>
+              <div className="p-3 rounded-xl bg-white/[0.03] border border-white/[0.04]">
+                <p className="text-[10px] uppercase tracking-wider text-gray-500 mb-1">This transaction</p>
+                <p className="text-sm text-emerald-400 font-semibold">{formatINR(selected.transaction_amount)}</p>
+              </div>
+              <div className="p-3 rounded-xl bg-white/[0.03] border border-white/[0.04]">
+                <p className="text-[10px] uppercase tracking-wider text-gray-500 mb-1">Transaction ID</p>
+                <p className="text-sm text-gray-200 font-mono">{selected.transaction_id || '—'}</p>
+              </div>
+              <div className="p-3 rounded-xl bg-white/[0.03] border border-white/[0.04]">
+                <p className="text-[10px] uppercase tracking-wider text-gray-500 mb-1">Submitted</p>
+                <p className="text-sm text-gray-200">{formatDate(selected.created_at)}</p>
+              </div>
+            </div>
+
+            <div className="p-3 rounded-xl bg-white/[0.02] border border-white/[0.04]">
+              <p className="text-[10px] uppercase tracking-wider text-gray-500 mb-2">Transaction proof</p>
+              {selected.transaction_proof_url ? (
+                <a
+                  href={selected.transaction_proof_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-brand-red/15 border border-brand-red/30 text-xs text-white hover:bg-brand-red/25"
+                >
+                  <Eye className="w-3.5 h-3.5" /> Open proof in a new tab
+                </a>
+              ) : (
+                <p className="text-xs text-gray-500 italic">Client did not attach a proof file.</p>
+              )}
+            </div>
+
+            {selected.status === 'pending' ? (
+              <div>
+                <label className="block text-[11px] uppercase tracking-wider text-gray-500 mb-1">Rejection reason (only needed for Reject)</label>
+                <textarea
+                  rows={3}
+                  value={rejectReason}
+                  onChange={(e) => setRejectReason(e.target.value)}
+                  placeholder="Explain why this is being rejected. The client sees this in their dashboard."
+                  className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-brand-red/40 resize-y"
+                />
+              </div>
+            ) : selected.admin_notes ? (
+              <div className="p-3 rounded-xl bg-white/[0.02] border border-white/[0.04]">
+                <p className="text-[10px] uppercase tracking-wider text-gray-500 mb-1">Admin note</p>
+                <p className="text-xs text-gray-300 whitespace-pre-wrap">{selected.admin_notes}</p>
+              </div>
+            ) : null}
+          </div>
+        </AdminModal>
+      )}
     </div>
   )
 }

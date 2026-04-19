@@ -692,6 +692,81 @@ export async function fetchInvestmentTransactionsForApp(investmentAppId: string)
   } catch { return [] }
 }
 
+/**
+ * Fetch every investment transaction enriched with client + investment-app
+ * context. Used by the admin Financial > Transactions queue so staff don't
+ * have to drill into each application to find what's waiting for review.
+ */
+export interface AdminInvestmentTransaction {
+  id: string
+  investment_app_id: string | null
+  client_id: string
+  client_name: string
+  client_email: string | null
+  fund_vehicle: string | null
+  capital_amount: number
+  transaction_amount: number
+  transaction_id: string | null
+  transaction_proof_url: string | null
+  bank_account_id: string | null
+  status: string
+  admin_notes: string | null
+  reviewed_by: string | null
+  reviewed_at: string | null
+  created_at: string
+}
+
+export async function fetchAllInvestmentTransactions(filter?: 'pending' | 'approved' | 'rejected' | 'all'): Promise<AdminInvestmentTransaction[]> {
+  if (!isSupabaseConfigured()) return []
+  try {
+    const sb: any = supabase
+    let query = sb
+      .from('investment_transactions')
+      .select('*')
+      .order('created_at', { ascending: false })
+      .limit(500)
+    if (filter && filter !== 'all') query = query.eq('status', filter)
+    const { data: txns, error } = await query
+    if (error || !txns) return []
+
+    const clientIds = Array.from(new Set((txns as any[]).map(t => t.client_id).filter(Boolean)))
+    const appIds = Array.from(new Set((txns as any[]).map(t => t.investment_app_id).filter(Boolean)))
+    const [clientsRes, appsRes] = await Promise.all([
+      clientIds.length > 0
+        ? sb.from('clients').select('id, full_name, email').in('id', clientIds)
+        : Promise.resolve({ data: [] }),
+      appIds.length > 0
+        ? sb.from('investment_applications').select('id, fund_vehicle').in('id', appIds)
+        : Promise.resolve({ data: [] }),
+    ])
+    const clientById: Record<string, { name: string; email: string }> = {}
+    ;(clientsRes.data || []).forEach((c: any) => { clientById[c.id] = { name: c.full_name || '', email: c.email || '' } })
+    const appById: Record<string, { fund_vehicle: string | null }> = {}
+    ;(appsRes.data || []).forEach((a: any) => { appById[a.id] = { fund_vehicle: a.fund_vehicle || null } })
+
+    return (txns as any[]).map((t: any) => ({
+      id: t.id,
+      investment_app_id: t.investment_app_id,
+      client_id: t.client_id,
+      client_name: clientById[t.client_id]?.name || 'Unknown client',
+      client_email: clientById[t.client_id]?.email || null,
+      fund_vehicle: t.investment_app_id ? (appById[t.investment_app_id]?.fund_vehicle || null) : null,
+      capital_amount: Number(t.capital_amount || 0),
+      transaction_amount: Number(t.transaction_amount || 0),
+      transaction_id: t.transaction_id,
+      transaction_proof_url: t.transaction_proof_url,
+      bank_account_id: t.bank_account_id,
+      status: t.status || 'pending',
+      admin_notes: t.admin_notes,
+      reviewed_by: t.reviewed_by,
+      reviewed_at: t.reviewed_at,
+      created_at: t.created_at,
+    }))
+  } catch {
+    return []
+  }
+}
+
 // ── Approve a single investment transaction (bug #15) ─────────
 export async function approveInvestmentTransaction(txnId: string, adminId: string, notes?: string) {
   if (!isSupabaseConfigured() || !txnId) return false

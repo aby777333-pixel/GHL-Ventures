@@ -143,6 +143,7 @@ export const ADMIN_SIDEBAR_ITEMS: SidebarItem[] = [
     permission: 'view:financial',
     subItems: [
       { id: 'financial', label: 'Dashboard' },
+      { id: 'financial/transactions', label: 'Transactions' },
       { id: 'financial/revenue', label: 'Revenue' },
       { id: 'financial/payouts', label: 'Payouts' },
       { id: 'financial/invoices', label: 'Invoices' },
@@ -338,6 +339,7 @@ export const ALL_ADMIN_TAB_PARAMS = [
   { tab: ['compliance', 'risk-flags'] },
   { tab: ['compliance', 'audit'] },
   { tab: ['financial'] },
+  { tab: ['financial', 'transactions'] },
   { tab: ['financial', 'revenue'] },
   { tab: ['financial', 'payouts'] },
   { tab: ['financial', 'invoices'] },
