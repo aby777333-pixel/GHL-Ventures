@@ -27,6 +27,104 @@ async function queryTable<T>(table: string): Promise<T[]> {
   }
 }
 
+// ── Client View (staff portal) ──────────────────────────────
+/**
+ * Record consumed by the staff Client View. Combines columns from the
+ * real `clients` table with derived ticket/interaction stats so each
+ * card can show counts + most-recent status without extra fetches.
+ */
+export interface StaffClientRecord {
+  id: string
+  userId: string | null
+  clientCode: string
+  name: string
+  email: string
+  phone: string
+  city: string
+  pan: string
+  kycStatus: string
+  investorType: string
+  riskProfile: string
+  totalInvested: number
+  currentValue: number
+  assignedRm: string | null
+  isActive: boolean
+  createdAt: string
+  updatedAt: string
+  // derived
+  ticketCount: number
+  openTicketCount: number
+  lastTicketStatus: string
+  lastInteractionAt: string
+}
+
+/** Enrich a clients row with ticket stats from the already-fetched ticket set. */
+function enrichClientRow(c: any, ticketsByClient: Map<string, any[]>): StaffClientRecord {
+  const bucket = ticketsByClient.get(c.id) || []
+  const sorted = [...bucket].sort((a, b) => {
+    const av = new Date(a.updated_at || a.created_at || 0).getTime()
+    const bv = new Date(b.updated_at || b.created_at || 0).getTime()
+    return bv - av
+  })
+  const latest = sorted[0]
+  const openTickets = bucket.filter(t => !['resolved', 'closed'].includes(String(t.status || '').toLowerCase()))
+  return {
+    id: c.id,
+    userId: c.user_id || null,
+    clientCode: c.client_code || c.ghl_id || '',
+    name: c.full_name || '',
+    email: c.email || '',
+    phone: c.phone || '',
+    city: c.city || '',
+    pan: c.pan || '',
+    kycStatus: c.kyc_status || 'pending',
+    investorType: c.investor_type || '',
+    riskProfile: c.risk_profile || '',
+    totalInvested: Number(c.total_invested || 0),
+    currentValue: Number(c.current_value || c.aum || 0),
+    assignedRm: c.assigned_rm || null,
+    isActive: c.is_active !== false,
+    createdAt: c.created_at || '',
+    updatedAt: c.updated_at || '',
+    ticketCount: bucket.length,
+    openTicketCount: openTickets.length,
+    lastTicketStatus: latest?.status || '',
+    lastInteractionAt: latest?.updated_at || latest?.created_at || c.updated_at || c.created_at || '',
+  }
+}
+
+/**
+ * Fetch every client the logged-in staff is allowed to see, enriched with
+ * ticket/interaction summaries. Visibility is governed by the
+ * `clients_select_own` RLS policy, so callers don't need extra filtering.
+ */
+export async function fetchStaffClients(): Promise<StaffClientRecord[]> {
+  if (!isSupabaseConfigured()) return []
+  try {
+    const [clientsResp, ticketsResp] = await Promise.all([
+      sb.from('clients').select('*').order('updated_at', { ascending: false }),
+      sb.from('tickets').select('id, client_id, subject, status, priority, updated_at, created_at'),
+    ])
+
+    const clientRows = (clientsResp?.data as any[]) || []
+    const ticketRows = (ticketsResp?.data as any[]) || []
+    if (clientsResp?.error) console.warn('[staffData] fetchStaffClients error:', clientsResp.error.message)
+
+    const byClient = new Map<string, any[]>()
+    for (const t of ticketRows) {
+      if (!t?.client_id) continue
+      const arr = byClient.get(t.client_id) || []
+      arr.push(t)
+      byClient.set(t.client_id, arr)
+    }
+
+    return clientRows.map(c => enrichClientRow(c, byClient))
+  } catch (err) {
+    console.warn('[staffData] fetchStaffClients failed:', err)
+    return []
+  }
+}
+
 // ── Staff Directory ─────────────────────────────────────────
 /**
  * Fetches the full staff directory for the Team module.
