@@ -40,6 +40,30 @@ export default function KYCWizard({ clientId, userId, userName, userEmail, userP
   const [activeStep, setActiveStep] = useState(0)
   const [saving, setSaving] = useState(false)
   const [uploading, setUploading] = useState(false)
+  // Inline per-field validation errors. Keys are the field name ("investor_name",
+  // "pan_number", …). When a key is present, the input renders with a red border
+  // and a small red message below. Cleared as soon as the user edits that field.
+  const [errors, setErrors] = useState<Record<string, string>>({})
+
+  // Helper: mark a required input as invalid via a red border/ring — appended
+  // onto the existing input className so placeholder/value styling stays intact.
+  const errorRing = (name: string) =>
+    errors[name] ? ' !border-red-500 focus:!border-red-500 ring-1 ring-red-500/30' : ''
+
+  // Helper: render an inline error message below a field.
+  const renderError = (name: string) =>
+    errors[name] ? (
+      <p className="mt-1.5 text-xs text-red-400 flex items-center gap-1">
+        <AlertCircle className="w-3 h-3 shrink-0" />
+        {errors[name]}
+      </p>
+    ) : null
+
+  // Helper: clear a field-level error as the user edits. Used inside onChange
+  // so the red highlight disappears on the first keystroke / selection.
+  const clearError = (name: string) => {
+    if (errors[name]) setErrors(e => { const n = { ...e }; delete n[name]; return n })
+  }
 
   // Fetch existing KYC data
   const { data: basicData, refetch: refetchBasic } = useKYCBasicDetails(clientId)
@@ -132,9 +156,38 @@ export default function KYCWizard({ clientId, userId, userName, userEmail, userP
     return 'pending'
   }
 
+  // Scroll to the first field that has an error and focus it for accessibility.
+  const focusFirstError = (errs: Record<string, string>) => {
+    const first = Object.keys(errs)[0]
+    if (!first || typeof document === 'undefined') return
+    // Defer so React has flushed the red-border class before we scroll.
+    setTimeout(() => {
+      const el = document.querySelector(`[data-field="${first}"]`) as HTMLElement | null
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'center' })
+        const input = el.querySelector('input, select, textarea') as HTMLElement | null
+        input?.focus()
+      }
+    }, 40)
+  }
+
   // Save handlers
   const saveBasic = async () => {
-    if (!basic.investor_name || !basic.phone || !basic.email) { onToast('Please fill all required fields', 'info'); return }
+    const errs: Record<string, string> = {}
+    if (!basic.investor_name.trim()) errs.investor_name = 'Investor name is required'
+    if (!basic.phone.trim()) errs.phone = 'Phone number is required'
+    if (!basic.email.trim()) errs.email = 'Email is required'
+    else if (!/^\S+@\S+\.\S+$/.test(basic.email.trim())) errs.email = 'Please enter a valid email address'
+    if (!basic.gender) errs.gender = 'Please select a gender'
+    if (!basic.investor_type) errs.investor_type = 'Please select an investor type'
+    if (!basic.resident_type) errs.resident_type = 'Please select a resident type'
+    if (Object.keys(errs).length > 0) {
+      setErrors(errs)
+      onToast('⚠ Please fill all the highlighted fields', 'info')
+      focusFirstError(errs)
+      return
+    }
+    setErrors({})
     setSaving(true)
     const result = await upsertKYCBasicDetails(clientId, userId, basic)
     setSaving(false)
@@ -143,27 +196,36 @@ export default function KYCWizard({ clientId, userId, userName, userEmail, userP
   }
 
   const saveIdentity = async () => {
+    const errs: Record<string, string> = {}
     const isIndian = basic.resident_type === 'indian' || basicData?.resident_type === 'indian'
     if (isIndian) {
-      if (!identity.pan_number) { onToast('PAN number is required for Indian residents', 'info'); return }
-      // PAN format: 5 letters, 4 digits, 1 letter (e.g., ABCDE1234F)
-      const panRegex = /^[A-Z]{5}[0-9]{4}[A-Z]$/
-      if (!panRegex.test(identity.pan_number)) { onToast('Invalid PAN format. Expected: ABCDE1234F (5 letters, 4 digits, 1 letter)', 'info'); return }
-      if (!identity.aadhar_number) { onToast('Aadhar number is required for Indian residents', 'info'); return }
-      // Aadhar: 12 digits
-      const aadharDigits = identity.aadhar_number.replace(/\s/g, '')
-      if (!/^\d{12}$/.test(aadharDigits)) { onToast('Invalid Aadhar number. Must be exactly 12 digits.', 'info'); return }
-      // Require document uploads for Indian residents
-      if (!panDocUrl) { onToast('Please upload your PAN card document', 'info'); return }
-      if (!aadharDocUrl) { onToast('Please upload your Aadhar card document', 'info'); return }
+      if (!identity.pan_number) errs.pan_number = 'PAN number is required'
+      else if (!/^[A-Z]{5}[0-9]{4}[A-Z]$/.test(identity.pan_number)) errs.pan_number = 'Invalid PAN format (expected ABCDE1234F)'
+      if (!identity.aadhar_number) errs.aadhar_number = 'Aadhaar number is required'
+      else if (!/^\d{12}$/.test(identity.aadhar_number.replace(/\s/g, ''))) errs.aadhar_number = 'Aadhaar must be exactly 12 digits'
+      if (!panDocUrl) errs.pan_doc = 'Please upload your PAN card document'
+      if (!aadharDocUrl) errs.aadhar_doc = 'Please upload your Aadhaar card document'
     } else {
-      if (!identity.passport_number) { onToast('Passport number is required', 'info'); return }
-      if (!passportDocUrl) { onToast('Please upload your Passport document', 'info'); return }
+      if (!identity.passport_number) errs.passport_number = 'Passport number is required'
+      if (!passportDocUrl) errs.passport_doc = 'Please upload your passport document'
     }
-    if (!identity.name_on_document || !identity.father_name || !identity.dob) { onToast('Please fill all required fields', 'info'); return }
-    if (!isValidDOB(identity.dob)) { onToast('Please enter a valid date of birth (year must be 4 digits between 1900 and current year)', 'info'); return }
-    if (!identity.address) { onToast('Address is required', 'info'); return }
-    if (!identity.city || !identity.state || !identity.pincode) { onToast('City, State, and Pincode are required', 'info'); return }
+    if (!identity.name_on_document) errs.name_on_document = 'Name on document is required'
+    if (!identity.father_name) errs.father_name = 'Father name is required'
+    if (!identity.dob) errs.dob = 'Date of birth is required'
+    else if (!isValidDOB(identity.dob)) errs.dob = `Year must be 4 digits (1900-${new Date().getFullYear()})`
+    if (!identity.address) errs.address = 'Address is required'
+    if (!identity.courier_address) errs.courier_address = 'Courier (current) address is required'
+    if (!identity.country) errs.country = 'Country is required'
+    if (!identity.state) errs.state = 'State is required'
+    if (!identity.city) errs.city = 'City is required'
+    if (!identity.pincode) errs.pincode = 'Pincode is required'
+    if (Object.keys(errs).length > 0) {
+      setErrors(errs)
+      onToast('⚠ Please fill all the highlighted fields', 'info')
+      focusFirstError(errs)
+      return
+    }
+    setErrors({})
     setSaving(true)
     const result = await upsertKYCIdentityDetails(clientId, userId, { ...identity, aadhar_doc_url: aadharDocUrl, pan_doc_url: panDocUrl, passport_doc_url: passportDocUrl })
     setSaving(false)
@@ -199,40 +261,60 @@ export default function KYCWizard({ clientId, userId, userName, userEmail, userP
   const lettersOnly = (val: string) => val.replace(/[^a-zA-Z\s.]/g, '')
 
   const saveBank = async () => {
-    if (!bank.account_number || !bank.account_holder_name || !bank.bank_name) { onToast('Please fill all required fields', 'info'); return }
-    // Validate letters-only fields
-    if (!/^[a-zA-Z\s.]+$/.test(bank.account_holder_name)) { onToast('Account holder name should contain only letters', 'info'); return }
-    if (!/^[a-zA-Z\s.]+$/.test(bank.bank_name)) { onToast('Bank name should contain only letters', 'info'); return }
-    if (bank.branch_name && !/^[a-zA-Z\s.,-]+$/.test(bank.branch_name)) { onToast('Branch name should contain only letters', 'info'); return }
-    // IFSC / SWIFT validation based on resident type
+    const errs: Record<string, string> = {}
     const isIndianBank = basic.resident_type === 'indian' || basicData?.resident_type === 'indian'
+
+    if (!bank.account_number) errs.account_number = 'Account number is required'
+    else if (bank.account_number.length < 8) errs.account_number = 'Account number must be at least 8 digits'
+    if (!bank.account_holder_name) errs.account_holder_name = 'Account holder name is required'
+    else if (!/^[a-zA-Z\s.]+$/.test(bank.account_holder_name)) errs.account_holder_name = 'Account holder name should contain only letters'
+    if (!bank.bank_name) errs.bank_name = 'Bank name is required'
+    else if (!/^[a-zA-Z\s.]+$/.test(bank.bank_name)) errs.bank_name = 'Bank name should contain only letters'
+    if (bank.branch_name && !/^[a-zA-Z\s.,-]+$/.test(bank.branch_name)) errs.branch_name = 'Branch name should contain only letters'
+
+    if (isIndianBank) {
+      if (!bank.ifsc_code) errs.ifsc_code = 'IFSC code is required for Indian residents'
+      else {
+        const ifscClean = bank.ifsc_code.toUpperCase().replace(/\s/g, '')
+        if (ifscClean.length !== 11) errs.ifsc_code = 'IFSC code must be exactly 11 characters'
+        else if (!/^[A-Z]{4}[A-Z0-9]{7}$/.test(ifscClean)) errs.ifsc_code = 'Invalid IFSC format (4 letters + 7 alphanumeric)'
+      }
+    } else {
+      if (!bank.swift_iban_code) errs.swift_iban_code = 'SWIFT/IBAN code is required for NRI/Foreign residents'
+    }
+
+    if (!bankDocUrl) errs.bank_doc = 'Please upload bank proof (statement / cheque / passbook)'
+
+    if (Object.keys(errs).length > 0) {
+      setErrors(errs)
+      onToast('⚠ Please fill all the highlighted fields', 'info')
+      focusFirstError(errs)
+      return
+    }
+    setErrors({})
+
+    // IFSC is format-valid; verify against RBI database (lenient fallback).
     let bankToSave = bank
     if (isIndianBank) {
-      if (!bank.ifsc_code) { onToast('IFSC code is required for Indian residents', 'info'); return }
-      // IFSC: 4 letters followed by 7 alphanumeric characters (total 11)
       const ifscClean = bank.ifsc_code.toUpperCase().replace(/\s/g, '')
-      if (ifscClean.length !== 11) { onToast('IFSC code must be exactly 11 characters', 'info'); return }
-      if (!/^[A-Z]{4}[A-Z0-9]{7}$/.test(ifscClean)) { onToast('Invalid IFSC format. Must start with 4 letters followed by 7 alphanumeric characters.', 'info'); return }
-      // Verify IFSC code exists via Razorpay API (lenient fallback per bug #4)
       setSaving(true)
       onToast('Verifying IFSC code...', 'info')
       const ifscResult = await verifyIFSC(ifscClean)
-      // Only reject when the API is reachable AND explicitly says the IFSC is invalid (404).
-      // If the API is unreachable (CORS/network), trust the format-only validation above.
-      if (ifscResult.reachable && !ifscResult.valid) { setSaving(false); onToast('IFSC code not found in RBI database. Please check and re-enter a valid IFSC code.', 'info'); return }
-      // Auto-fill bank name and branch only when we got real data back
+      if (ifscResult.reachable && !ifscResult.valid) {
+        setSaving(false)
+        setErrors({ ifsc_code: 'IFSC code not found in RBI database. Please check and re-enter.' })
+        onToast('⚠ Invalid IFSC code', 'info')
+        focusFirstError({ ifsc_code: 'x' })
+        return
+      }
       const updatedBank = { ...bank, ifsc_code: ifscClean }
       if (ifscResult.bankName) updatedBank.bank_name = lettersOnly(ifscResult.bankName!)
       if (ifscResult.branchName) updatedBank.branch_name = ifscResult.branchName!.replace(/[^a-zA-Z\s.,-]/g, '')
       setBank(updatedBank)
       bankToSave = updatedBank
       setSaving(false)
-    } else {
-      if (!bank.swift_iban_code) { onToast('SWIFT/IBAN code is required for NRI/Foreign residents', 'info'); return }
     }
-    if (bankToSave.account_number.length < 8) { onToast('Account number must be at least 8 digits', 'info'); return }
-    // Require bank proof document
-    if (!bankDocUrl) { onToast('Please upload bank proof (Bank Statement / Cancelled Cheque / Passbook)', 'info'); return }
+
     setSaving(true)
     const result = await upsertKYCBankDetails(clientId, userId, { ...bankToSave, bank_doc_url: bankDocUrl })
     setSaving(false)
@@ -241,9 +323,25 @@ export default function KYCWizard({ clientId, userId, userName, userEmail, userP
   }
 
   const saveDemat = async () => {
-    if (!demat.skipped && !demat.demat_account_number) { onToast('Enter demat number or skip', 'info'); return }
-    // Require demat proof document when not skipped
-    if (!demat.skipped && !dematDocUrl) { onToast('Please upload your Demat statement document', 'info'); return }
+    if (demat.skipped) {
+      setErrors({})
+      setSaving(true)
+      const result = await upsertKYCDematDetails(clientId, userId, { ...demat, demat_doc_url: dematDocUrl })
+      setSaving(false)
+      if (result) { onToast('Demat step skipped', 'success'); refetchDemat(); refetchOverall(); setActiveStep(4) }
+      else onToast('Failed to save', 'info')
+      return
+    }
+    const errs: Record<string, string> = {}
+    if (!demat.demat_account_number) errs.demat_account_number = 'Demat account number is required (or tick "skip")'
+    if (!dematDocUrl) errs.demat_doc = 'Please upload your Demat statement'
+    if (Object.keys(errs).length > 0) {
+      setErrors(errs)
+      onToast('⚠ Please fill all the highlighted fields', 'info')
+      focusFirstError(errs)
+      return
+    }
+    setErrors({})
     setSaving(true)
     const result = await upsertKYCDematDetails(clientId, userId, { ...demat, demat_doc_url: dematDocUrl })
     setSaving(false)
@@ -252,17 +350,25 @@ export default function KYCWizard({ clientId, userId, userName, userEmail, userP
   }
 
   const saveNominee = async () => {
-    if (!nomineeForm.name || !nomineeForm.phone || !nomineeForm.relationship || !nomineeForm.percentage) { onToast('Fill all nominee fields', 'info'); return }
-    if (!nomineeForm.dob) { onToast('Nominee date of birth is required', 'info'); return }
-    if (!isValidDOB(nomineeForm.dob)) { onToast('Please enter a valid nominee date of birth (year must be 4 digits between 1900 and current year)', 'info'); return }
-    // Validate nominee phone: must be 10 digits (Indian mobile)
+    const errs: Record<string, string> = {}
+    if (!nomineeForm.name) errs.nominee_name = 'Nominee name is required'
+    if (!nomineeForm.dob) errs.nominee_dob = 'Date of birth is required'
+    else if (!isValidDOB(nomineeForm.dob)) errs.nominee_dob = `Year must be 4 digits (1900-${new Date().getFullYear()})`
     const phoneDigits = nomineeForm.phone.replace(/\D/g, '')
-    if (phoneDigits.length !== 10) { onToast('Nominee phone must be a valid 10-digit mobile number', 'info'); return }
-    // Validate percentage range
+    if (!nomineeForm.phone) errs.nominee_phone = 'Phone number is required'
+    else if (phoneDigits.length !== 10) errs.nominee_phone = 'Phone must be a valid 10-digit mobile number'
+    if (!nomineeForm.relationship) errs.nominee_relationship = 'Please select a relationship'
     const pct = parseFloat(nomineeForm.percentage)
-    if (isNaN(pct) || pct <= 0 || pct > 100) { onToast('Nominee percentage must be between 1 and 100', 'info'); return }
-    // Require nominee proof document
-    if (!nomineeProofUrl) { onToast('Please upload nominee ID proof (PAN/Aadhaar)', 'info'); return }
+    if (!nomineeForm.percentage) errs.nominee_percentage = 'Percentage is required'
+    else if (isNaN(pct) || pct <= 0 || pct > 100) errs.nominee_percentage = 'Percentage must be between 1 and 100'
+    if (!nomineeProofUrl) errs.nominee_proof = 'Please upload nominee ID proof (PAN/Aadhaar)'
+    if (Object.keys(errs).length > 0) {
+      setErrors(errs)
+      onToast('⚠ Please fill all the highlighted fields', 'info')
+      focusFirstError(errs)
+      return
+    }
+    setErrors({})
     setSaving(true)
     if (editingNomineeId) {
       await updateNominee(editingNomineeId, { ...nomineeForm, phone: phoneDigits, percentage: pct, proof_url: nomineeProofUrl })
@@ -351,18 +457,19 @@ export default function KYCWizard({ clientId, userId, userName, userEmail, userP
     )
   }
 
-  const renderFileUpload = (label: string, currentUrl: string, setter: (url: string) => void) => (
-    <div>
+  const renderFileUpload = (label: string, currentUrl: string, setter: (url: string) => void, errorKey?: string) => (
+    <div data-field={errorKey}>
       <label className={labelCls}>{label} *</label>
-      <div className={`flex items-center gap-3 ${inputCls} cursor-pointer`}>
+      <div className={`flex items-center gap-3 ${inputCls}${errorKey ? errorRing(errorKey) : ''} cursor-pointer`}>
         <input type="file" accept="image/*,.pdf" className="hidden" id={`file-${label}`}
-          onChange={(e) => { const f = e.target.files?.[0]; if (f) handleFileUpload(f, setter) }} />
+          onChange={(e) => { const f = e.target.files?.[0]; if (f) { handleFileUpload(f, setter); if (errorKey) clearError(errorKey) } }} />
         <label htmlFor={`file-${label}`} className="flex items-center gap-2 cursor-pointer flex-1">
           <Upload className="w-4 h-4 text-gray-500" />
           <span className="text-sm">{currentUrl ? 'File uploaded' : 'Choose File'}</span>
         </label>
         {currentUrl && <a href={currentUrl} target="_blank" rel="noopener" className="text-red-500"><Eye className="w-4 h-4" /></a>}
       </div>
+      {errorKey && renderError(errorKey)}
     </div>
   )
 
@@ -377,7 +484,7 @@ export default function KYCWizard({ clientId, userId, userName, userEmail, userP
             const isActive = idx === activeStep
             const Icon = step.icon
             return (
-              <button key={step.id} onClick={() => setActiveStep(idx)}
+              <button key={step.id} onClick={() => { setActiveStep(idx); setErrors({}) }}
                 className={`w-full flex items-center justify-start gap-2.5 px-2 py-2 rounded-lg text-left transition-all mb-1 last:mb-0
                   ${isActive ? 'bg-red-600 text-white' : isDark ? 'hover:bg-white/5 text-gray-400' : 'hover:bg-gray-100 text-gray-600'}
                   ${status === 'submitted' || status === 'approved' ? 'opacity-100' : ''}`}>
@@ -403,23 +510,26 @@ export default function KYCWizard({ clientId, userId, userName, userEmail, userP
                 {basicData?.status && <span className={`px-3 py-1 rounded-full text-xs font-semibold ${basicData.status === 'approved' ? 'bg-emerald-500/20 text-emerald-400' : basicData.status === 'rejected' ? 'bg-red-500/20 text-red-400' : 'bg-amber-500/20 text-amber-400'}`}>{basicData.status}</span>}
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div><label className={labelCls}>Investor Name *</label><input className={inputCls} value={basic.investor_name} onChange={e => setBasic({ ...basic, investor_name: e.target.value })} /></div>
-                <div><label className={labelCls}>Phone Number *</label><input className={inputCls} value={basic.phone} onChange={e => setBasic({ ...basic, phone: e.target.value })} placeholder="+919876543210" /></div>
-                <div><label className={labelCls}>Email *</label><input className={inputCls} type="email" value={basic.email} onChange={e => setBasic({ ...basic, email: e.target.value })} /></div>
-                <div><label className={labelCls}>Gender *</label>
-                  <select className={inputCls} value={basic.gender} onChange={e => setBasic({ ...basic, gender: e.target.value })}>
+                <div data-field="investor_name"><label className={labelCls}>Investor Name *</label><input className={inputCls + errorRing('investor_name')} value={basic.investor_name} onChange={e => { setBasic({ ...basic, investor_name: e.target.value }); clearError('investor_name') }} />{renderError('investor_name')}</div>
+                <div data-field="phone"><label className={labelCls}>Phone Number *</label><input className={inputCls + errorRing('phone')} value={basic.phone} onChange={e => { setBasic({ ...basic, phone: e.target.value }); clearError('phone') }} placeholder="+919876543210" />{renderError('phone')}</div>
+                <div data-field="email"><label className={labelCls}>Email *</label><input className={inputCls + errorRing('email')} type="email" value={basic.email} onChange={e => { setBasic({ ...basic, email: e.target.value }); clearError('email') }} />{renderError('email')}</div>
+                <div data-field="gender"><label className={labelCls}>Gender *</label>
+                  <select className={inputCls + errorRing('gender')} value={basic.gender} onChange={e => { setBasic({ ...basic, gender: e.target.value }); clearError('gender') }}>
                     <option value="">Select</option><option value="male">Male</option><option value="female">Female</option><option value="other">Other</option>
                   </select>
+                  {renderError('gender')}
                 </div>
-                <div><label className={labelCls}>Investor Type *</label>
-                  <select className={inputCls} value={basic.investor_type} onChange={e => setBasic({ ...basic, investor_type: e.target.value })}>
+                <div data-field="investor_type"><label className={labelCls}>Investor Type *</label>
+                  <select className={inputCls + errorRing('investor_type')} value={basic.investor_type} onChange={e => { setBasic({ ...basic, investor_type: e.target.value }); clearError('investor_type') }}>
                     <option value="individual">Individual</option><option value="huf">HUF</option><option value="corporate">Corporate</option><option value="partnership">Partnership</option><option value="trust">Trust</option>
                   </select>
+                  {renderError('investor_type')}
                 </div>
-                <div><label className={labelCls}>Resident Type *</label>
-                  <select className={inputCls} value={basic.resident_type} onChange={e => setBasic({ ...basic, resident_type: e.target.value })}>
+                <div data-field="resident_type"><label className={labelCls}>Resident Type *</label>
+                  <select className={inputCls + errorRing('resident_type')} value={basic.resident_type} onChange={e => { setBasic({ ...basic, resident_type: e.target.value }); clearError('resident_type') }}>
                     <option value="indian">Indian Resident</option><option value="nri">NRI/Foreign</option>
                   </select>
+                  {renderError('resident_type')}
                 </div>
               </div>
               <div className="flex justify-end mt-6"><button className={btnPrimary} onClick={saveBasic} disabled={saving}>{saving ? 'Saving...' : 'Continue'}</button></div>
@@ -436,32 +546,32 @@ export default function KYCWizard({ clientId, userId, userName, userEmail, userP
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {(basic.resident_type === 'indian' || basicData?.resident_type === 'indian') ? (
                   <>
-                    <div><label className={labelCls}>PAN Number *</label><input className={inputCls} value={identity.pan_number} onChange={e => setIdentity({ ...identity, pan_number: e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '') })} placeholder="ABCDE1234F" maxLength={10} />{identity.pan_number && !/^[A-Z]{5}[0-9]{4}[A-Z]$/.test(identity.pan_number) && <p className={`text-xs mt-1 ${isDark ? 'text-amber-400' : 'text-amber-600'}`}>PAN must be 10 chars: 5 letters, 4 digits, 1 letter (e.g. ABCDE1234F)</p>}{identity.pan_number && /^[A-Z]{5}[0-9]{4}[A-Z]$/.test(identity.pan_number) && <p className={`text-xs mt-1 ${isDark ? 'text-emerald-400' : 'text-emerald-600'}`}>Valid PAN format</p>}</div>
-                    <div><label className={labelCls}>Name *</label><input className={inputCls} value={identity.name_on_document} onChange={e => setIdentity({ ...identity, name_on_document: e.target.value })} /></div>
-                    <div><label className={labelCls}>Aadhaar Number *</label><input className={inputCls} value={identity.aadhar_number} onChange={e => { const v = e.target.value.replace(/\D/g, ''); setIdentity({ ...identity, aadhar_number: v.length <= 12 ? v.replace(/(\d{4})(?=\d)/g, '$1 ').trim() : identity.aadhar_number }) }} placeholder="1234 5678 9012" maxLength={14} />{identity.aadhar_number && identity.aadhar_number.replace(/\s/g, '').length !== 12 && <p className={`text-xs mt-1 ${isDark ? 'text-amber-400' : 'text-amber-600'}`}>Aadhaar must be exactly 12 digits</p>}{identity.aadhar_number && identity.aadhar_number.replace(/\s/g, '').length === 12 && <p className={`text-xs mt-1 ${isDark ? 'text-emerald-400' : 'text-emerald-600'}`}>✓ Valid Aadhaar format</p>}</div>
+                    <div data-field="pan_number"><label className={labelCls}>PAN Number *</label><input className={inputCls + errorRing('pan_number')} value={identity.pan_number} onChange={e => { setIdentity({ ...identity, pan_number: e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '') }); clearError('pan_number') }} placeholder="ABCDE1234F" maxLength={10} />{renderError('pan_number')}{!errors.pan_number && identity.pan_number && !/^[A-Z]{5}[0-9]{4}[A-Z]$/.test(identity.pan_number) && <p className={`text-xs mt-1 ${isDark ? 'text-amber-400' : 'text-amber-600'}`}>PAN must be 10 chars: 5 letters, 4 digits, 1 letter (e.g. ABCDE1234F)</p>}{!errors.pan_number && identity.pan_number && /^[A-Z]{5}[0-9]{4}[A-Z]$/.test(identity.pan_number) && <p className={`text-xs mt-1 ${isDark ? 'text-emerald-400' : 'text-emerald-600'}`}>Valid PAN format</p>}</div>
+                    <div data-field="name_on_document"><label className={labelCls}>Name *</label><input className={inputCls + errorRing('name_on_document')} value={identity.name_on_document} onChange={e => { setIdentity({ ...identity, name_on_document: e.target.value }); clearError('name_on_document') }} />{renderError('name_on_document')}</div>
+                    <div data-field="aadhar_number"><label className={labelCls}>Aadhaar Number *</label><input className={inputCls + errorRing('aadhar_number')} value={identity.aadhar_number} onChange={e => { const v = e.target.value.replace(/\D/g, ''); setIdentity({ ...identity, aadhar_number: v.length <= 12 ? v.replace(/(\d{4})(?=\d)/g, '$1 ').trim() : identity.aadhar_number }); clearError('aadhar_number') }} placeholder="1234 5678 9012" maxLength={14} />{renderError('aadhar_number')}{!errors.aadhar_number && identity.aadhar_number && identity.aadhar_number.replace(/\s/g, '').length !== 12 && <p className={`text-xs mt-1 ${isDark ? 'text-amber-400' : 'text-amber-600'}`}>Aadhaar must be exactly 12 digits</p>}{!errors.aadhar_number && identity.aadhar_number && identity.aadhar_number.replace(/\s/g, '').length === 12 && <p className={`text-xs mt-1 ${isDark ? 'text-emerald-400' : 'text-emerald-600'}`}>✓ Valid Aadhaar format</p>}</div>
                   </>
                 ) : (
                   <>
-                    <div><label className={labelCls}>Passport Number *</label><input className={inputCls} value={identity.passport_number} onChange={e => setIdentity({ ...identity, passport_number: e.target.value })} /></div>
-                    <div><label className={labelCls}>Name *</label><input className={inputCls} value={identity.name_on_document} onChange={e => setIdentity({ ...identity, name_on_document: e.target.value })} /></div>
+                    <div data-field="passport_number"><label className={labelCls}>Passport Number *</label><input className={inputCls + errorRing('passport_number')} value={identity.passport_number} onChange={e => { setIdentity({ ...identity, passport_number: e.target.value }); clearError('passport_number') }} />{renderError('passport_number')}</div>
+                    <div data-field="name_on_document"><label className={labelCls}>Name *</label><input className={inputCls + errorRing('name_on_document')} value={identity.name_on_document} onChange={e => { setIdentity({ ...identity, name_on_document: e.target.value }); clearError('name_on_document') }} />{renderError('name_on_document')}</div>
                   </>
                 )}
-                <div><label className={labelCls}>Father Name *</label><input className={inputCls} value={identity.father_name} onChange={e => setIdentity({ ...identity, father_name: e.target.value })} /></div>
-                <div><label className={labelCls}>DOB *</label><input className={inputCls} type="date" value={identity.dob} max={new Date().toISOString().split('T')[0]} min="1900-01-01" onChange={e => setIdentity({ ...identity, dob: e.target.value })} />{identity.dob && !isValidDOB(identity.dob) && <p className="text-xs text-amber-500 mt-1">Year must be 4 digits (1900-{new Date().getFullYear()})</p>}</div>
-                <div className="md:col-span-2"><label className={labelCls}>Address *</label><textarea className={inputCls} rows={2} value={identity.address} onChange={e => setIdentity({ ...identity, address: e.target.value })} /></div>
-                <div className="md:col-span-2"><label className={labelCls}>Courier Address (Current Address) *</label><textarea className={inputCls} rows={2} value={identity.courier_address} onChange={e => setIdentity({ ...identity, courier_address: e.target.value })} /></div>
-                <div><label className={labelCls}>Country *</label><input className={inputCls} value={identity.country} onChange={e => setIdentity({ ...identity, country: e.target.value })} /></div>
-                <div><label className={labelCls}>State *</label><input className={inputCls} value={identity.state} onChange={e => setIdentity({ ...identity, state: e.target.value })} /></div>
-                <div><label className={labelCls}>City *</label><input className={inputCls} value={identity.city} onChange={e => setIdentity({ ...identity, city: e.target.value })} /></div>
-                <div><label className={labelCls}>Pincode *</label><input className={inputCls} value={identity.pincode} onChange={e => setIdentity({ ...identity, pincode: e.target.value })} /></div>
+                <div data-field="father_name"><label className={labelCls}>Father Name *</label><input className={inputCls + errorRing('father_name')} value={identity.father_name} onChange={e => { setIdentity({ ...identity, father_name: e.target.value }); clearError('father_name') }} />{renderError('father_name')}</div>
+                <div data-field="dob"><label className={labelCls}>DOB *</label><input className={inputCls + errorRing('dob')} type="date" value={identity.dob} max={new Date().toISOString().split('T')[0]} min="1900-01-01" onChange={e => { setIdentity({ ...identity, dob: e.target.value }); clearError('dob') }} />{renderError('dob')}{!errors.dob && identity.dob && !isValidDOB(identity.dob) && <p className="text-xs text-amber-500 mt-1">Year must be 4 digits (1900-{new Date().getFullYear()})</p>}</div>
+                <div className="md:col-span-2" data-field="address"><label className={labelCls}>Address *</label><textarea className={inputCls + errorRing('address')} rows={2} value={identity.address} onChange={e => { setIdentity({ ...identity, address: e.target.value }); clearError('address') }} />{renderError('address')}</div>
+                <div className="md:col-span-2" data-field="courier_address"><label className={labelCls}>Courier Address (Current Address) *</label><textarea className={inputCls + errorRing('courier_address')} rows={2} value={identity.courier_address} onChange={e => { setIdentity({ ...identity, courier_address: e.target.value }); clearError('courier_address') }} />{renderError('courier_address')}</div>
+                <div data-field="country"><label className={labelCls}>Country *</label><input className={inputCls + errorRing('country')} value={identity.country} onChange={e => { setIdentity({ ...identity, country: e.target.value }); clearError('country') }} />{renderError('country')}</div>
+                <div data-field="state"><label className={labelCls}>State *</label><input className={inputCls + errorRing('state')} value={identity.state} onChange={e => { setIdentity({ ...identity, state: e.target.value }); clearError('state') }} />{renderError('state')}</div>
+                <div data-field="city"><label className={labelCls}>City *</label><input className={inputCls + errorRing('city')} value={identity.city} onChange={e => { setIdentity({ ...identity, city: e.target.value }); clearError('city') }} />{renderError('city')}</div>
+                <div data-field="pincode"><label className={labelCls}>Pincode *</label><input className={inputCls + errorRing('pincode')} value={identity.pincode} onChange={e => { setIdentity({ ...identity, pincode: e.target.value }); clearError('pincode') }} />{renderError('pincode')}</div>
                 {(basic.resident_type === 'indian' || basicData?.resident_type === 'indian') ? (
-                  <>{renderFileUpload('Upload Aadhar', aadharDocUrl, setAadharDocUrl)}{renderFileUpload('Upload PAN', panDocUrl, setPanDocUrl)}</>
+                  <>{renderFileUpload('Upload Aadhar', aadharDocUrl, setAadharDocUrl, 'aadhar_doc')}{renderFileUpload('Upload PAN', panDocUrl, setPanDocUrl, 'pan_doc')}</>
                 ) : (
-                  <>{renderFileUpload('Upload Passport', passportDocUrl, setPassportDocUrl)}</>
+                  <>{renderFileUpload('Upload Passport', passportDocUrl, setPassportDocUrl, 'passport_doc')}</>
                 )}
               </div>
               <div className="flex justify-between mt-6">
-                <button className={btnOutline} onClick={() => setActiveStep(0)}>Back</button>
+                <button className={btnOutline} onClick={() => { setActiveStep(0); setErrors({}) }}>Back</button>
                 <button className={btnPrimary} onClick={saveIdentity} disabled={saving || uploading}>{saving ? 'Saving...' : 'Continue'}</button>
               </div>
             </>
@@ -475,21 +585,21 @@ export default function KYCWizard({ clientId, userId, userName, userEmail, userP
                 {bankData?.status && <span className={`px-3 py-1 rounded-full text-xs font-semibold ${bankData.status === 'approved' ? 'bg-emerald-500/20 text-emerald-400' : bankData.status === 'rejected' ? 'bg-red-500/20 text-red-400' : 'bg-amber-500/20 text-amber-400'}`}>{bankData.status}</span>}
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div><label className={labelCls}>Account Type *</label>
+                <div data-field="account_type"><label className={labelCls}>Account Type *</label>
                   <select className={inputCls} value={bank.account_type} onChange={e => setBank({ ...bank, account_type: e.target.value })}>
                     <option value="savings">Savings</option><option value="current">Current</option><option value="nro">NRO</option><option value="nre">NRE</option>
                   </select>
                 </div>
-                <div><label className={labelCls}>Account Number *</label><input className={inputCls} value={bank.account_number} onChange={e => setBank({ ...bank, account_number: e.target.value.replace(/\D/g, '') })} placeholder="Enter account number" maxLength={18} /></div>
-                <div><label className={labelCls}>IFSC Code {(basic.resident_type === 'indian' || basicData?.resident_type === 'indian') ? '*' : ''}</label><input className={inputCls} value={bank.ifsc_code} onChange={e => setBank({ ...bank, ifsc_code: e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '') })} placeholder="e.g. SBIN0001234" maxLength={11} />{bank.ifsc_code && bank.ifsc_code.length === 11 && /^[A-Z]{4}[A-Z0-9]{7}$/.test(bank.ifsc_code) && <p className={`text-xs mt-1 ${isDark ? 'text-emerald-400' : 'text-emerald-600'}`}>✓ Valid IFSC format (will be verified on save)</p>}{bank.ifsc_code && bank.ifsc_code.length > 0 && (bank.ifsc_code.length !== 11 || !/^[A-Z]{4}[A-Z0-9]{7}$/.test(bank.ifsc_code)) && <p className={`text-xs mt-1 ${isDark ? 'text-amber-400' : 'text-amber-600'}`}>IFSC must be 11 characters: 4 letters + 7 alphanumeric</p>}</div>
-                <div><label className={labelCls}>SWIFT/IBAN Code {(basic.resident_type !== 'indian' && basicData?.resident_type !== 'indian') ? '*' : ''}</label><input className={inputCls} value={bank.swift_iban_code} onChange={e => setBank({ ...bank, swift_iban_code: e.target.value.toUpperCase() })} placeholder={(basic.resident_type === 'indian' || basicData?.resident_type === 'indian') ? 'Optional for Indian residents' : 'Required for NRI/Foreign'} /></div>
-                <div><label className={labelCls}>Account Holder Name *</label><input className={inputCls} value={bank.account_holder_name} onChange={e => setBank({ ...bank, account_holder_name: lettersOnly(e.target.value) })} />{bank.account_holder_name && !/^[a-zA-Z\s.]+$/.test(bank.account_holder_name) && <p className="text-xs text-amber-500 mt-1">Only letters allowed</p>}</div>
-                <div><label className={labelCls}>Bank Name *</label><input className={inputCls} value={bank.bank_name} onChange={e => setBank({ ...bank, bank_name: lettersOnly(e.target.value) })} />{bank.bank_name && !/^[a-zA-Z\s.]+$/.test(bank.bank_name) && <p className="text-xs text-amber-500 mt-1">Only letters allowed</p>}</div>
-                <div><label className={labelCls}>Branch Name</label><input className={inputCls} value={bank.branch_name} onChange={e => setBank({ ...bank, branch_name: e.target.value.replace(/[^a-zA-Z\s.,-]/g, '') })} placeholder="Branch name (auto-filled from IFSC)" /></div>
-                {renderFileUpload('Upload Document (Bank Statement/Cancelled Cheque/Passbook)', bankDocUrl, setBankDocUrl)}
+                <div data-field="account_number"><label className={labelCls}>Account Number *</label><input className={inputCls + errorRing('account_number')} value={bank.account_number} onChange={e => { setBank({ ...bank, account_number: e.target.value.replace(/\D/g, '') }); clearError('account_number') }} placeholder="Enter account number" maxLength={18} />{renderError('account_number')}</div>
+                <div data-field="ifsc_code"><label className={labelCls}>IFSC Code {(basic.resident_type === 'indian' || basicData?.resident_type === 'indian') ? '*' : ''}</label><input className={inputCls + errorRing('ifsc_code')} value={bank.ifsc_code} onChange={e => { setBank({ ...bank, ifsc_code: e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '') }); clearError('ifsc_code') }} placeholder="e.g. SBIN0001234" maxLength={11} />{renderError('ifsc_code')}{!errors.ifsc_code && bank.ifsc_code && bank.ifsc_code.length === 11 && /^[A-Z]{4}[A-Z0-9]{7}$/.test(bank.ifsc_code) && <p className={`text-xs mt-1 ${isDark ? 'text-emerald-400' : 'text-emerald-600'}`}>✓ Valid IFSC format (will be verified on save)</p>}{!errors.ifsc_code && bank.ifsc_code && bank.ifsc_code.length > 0 && (bank.ifsc_code.length !== 11 || !/^[A-Z]{4}[A-Z0-9]{7}$/.test(bank.ifsc_code)) && <p className={`text-xs mt-1 ${isDark ? 'text-amber-400' : 'text-amber-600'}`}>IFSC must be 11 characters: 4 letters + 7 alphanumeric</p>}</div>
+                <div data-field="swift_iban_code"><label className={labelCls}>SWIFT/IBAN Code {(basic.resident_type !== 'indian' && basicData?.resident_type !== 'indian') ? '*' : ''}</label><input className={inputCls + errorRing('swift_iban_code')} value={bank.swift_iban_code} onChange={e => { setBank({ ...bank, swift_iban_code: e.target.value.toUpperCase() }); clearError('swift_iban_code') }} placeholder={(basic.resident_type === 'indian' || basicData?.resident_type === 'indian') ? 'Optional for Indian residents' : 'Required for NRI/Foreign'} />{renderError('swift_iban_code')}</div>
+                <div data-field="account_holder_name"><label className={labelCls}>Account Holder Name *</label><input className={inputCls + errorRing('account_holder_name')} value={bank.account_holder_name} onChange={e => { setBank({ ...bank, account_holder_name: lettersOnly(e.target.value) }); clearError('account_holder_name') }} />{renderError('account_holder_name')}{!errors.account_holder_name && bank.account_holder_name && !/^[a-zA-Z\s.]+$/.test(bank.account_holder_name) && <p className="text-xs text-amber-500 mt-1">Only letters allowed</p>}</div>
+                <div data-field="bank_name"><label className={labelCls}>Bank Name *</label><input className={inputCls + errorRing('bank_name')} value={bank.bank_name} onChange={e => { setBank({ ...bank, bank_name: lettersOnly(e.target.value) }); clearError('bank_name') }} />{renderError('bank_name')}{!errors.bank_name && bank.bank_name && !/^[a-zA-Z\s.]+$/.test(bank.bank_name) && <p className="text-xs text-amber-500 mt-1">Only letters allowed</p>}</div>
+                <div data-field="branch_name"><label className={labelCls}>Branch Name</label><input className={inputCls + errorRing('branch_name')} value={bank.branch_name} onChange={e => { setBank({ ...bank, branch_name: e.target.value.replace(/[^a-zA-Z\s.,-]/g, '') }); clearError('branch_name') }} placeholder="Branch name (auto-filled from IFSC)" />{renderError('branch_name')}</div>
+                {renderFileUpload('Upload Document (Bank Statement/Cancelled Cheque/Passbook)', bankDocUrl, setBankDocUrl, 'bank_doc')}
               </div>
               <div className="flex justify-between mt-6">
-                <button className={btnOutline} onClick={() => setActiveStep(1)}>Back</button>
+                <button className={btnOutline} onClick={() => { setActiveStep(1); setErrors({}) }}>Back</button>
                 <button className={btnPrimary} onClick={saveBank} disabled={saving || uploading}>{saving ? 'Saving...' : 'Continue'}</button>
               </div>
             </>
@@ -509,13 +619,13 @@ export default function KYCWizard({ clientId, userId, userName, userEmail, userP
                 </label>
                 {!demat.skipped && (
                   <>
-                    <div><label className={labelCls}>Demat Account Number *</label><input className={inputCls} value={demat.demat_account_number} onChange={e => setDemat({ ...demat, demat_account_number: e.target.value })} /></div>
-                    {renderFileUpload('Upload Demat Statement', dematDocUrl, setDematDocUrl)}
+                    <div data-field="demat_account_number"><label className={labelCls}>Demat Account Number *</label><input className={inputCls + errorRing('demat_account_number')} value={demat.demat_account_number} onChange={e => { setDemat({ ...demat, demat_account_number: e.target.value }); clearError('demat_account_number') }} />{renderError('demat_account_number')}</div>
+                    {renderFileUpload('Upload Demat Statement', dematDocUrl, setDematDocUrl, 'demat_doc')}
                   </>
                 )}
               </div>
               <div className="flex justify-between mt-6">
-                <button className={btnOutline} onClick={() => setActiveStep(2)}>Back</button>
+                <button className={btnOutline} onClick={() => { setActiveStep(2); setErrors({}) }}>Back</button>
                 <button className={btnPrimary} onClick={saveDemat} disabled={saving || uploading}>{saving ? 'Saving...' : 'Continue'}</button>
               </div>
             </>
@@ -566,19 +676,22 @@ export default function KYCWizard({ clientId, userId, userName, userEmail, userP
                 <div className={`${isDark ? 'bg-white/[0.02] border-white/10' : 'bg-gray-50 border-gray-200'} border rounded-xl p-5 mb-6`}>
                   <h4 className={`font-semibold mb-4 ${isDark ? 'text-white' : 'text-gray-900'}`}>{editingNomineeId ? 'Edit Nominee' : 'Add Nominee'}</h4>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div><label className={labelCls}>Nominee Name *</label><input className={inputCls} value={nomineeForm.name} onChange={e => setNomineeForm({ ...nomineeForm, name: e.target.value })} /></div>
-                    <div><label className={labelCls}>Nominee DOB *</label><input className={inputCls} type="date" value={nomineeForm.dob} max={new Date().toISOString().split('T')[0]} min="1900-01-01" onChange={e => setNomineeForm({ ...nomineeForm, dob: e.target.value })} />{nomineeForm.dob && !isValidDOB(nomineeForm.dob) && <p className="text-xs text-amber-500 mt-1">Year must be 4 digits (1900-{new Date().getFullYear()})</p>}</div>
-                    <div><label className={labelCls}>Nominee Phone *</label><input className={inputCls} value={nomineeForm.phone} onChange={e => setNomineeForm({ ...nomineeForm, phone: e.target.value })} placeholder="10-digit mobile number" maxLength={10} />
-                      {nomineeForm.phone && nomineeForm.phone.replace(/\D/g, '').length !== 10 && <p className="text-xs text-red-500 mt-1">Must be a valid 10-digit mobile number</p>}
+                    <div data-field="nominee_name"><label className={labelCls}>Nominee Name *</label><input className={inputCls + errorRing('nominee_name')} value={nomineeForm.name} onChange={e => { setNomineeForm({ ...nomineeForm, name: e.target.value }); clearError('nominee_name') }} />{renderError('nominee_name')}</div>
+                    <div data-field="nominee_dob"><label className={labelCls}>Nominee DOB *</label><input className={inputCls + errorRing('nominee_dob')} type="date" value={nomineeForm.dob} max={new Date().toISOString().split('T')[0]} min="1900-01-01" onChange={e => { setNomineeForm({ ...nomineeForm, dob: e.target.value }); clearError('nominee_dob') }} />{renderError('nominee_dob')}{!errors.nominee_dob && nomineeForm.dob && !isValidDOB(nomineeForm.dob) && <p className="text-xs text-amber-500 mt-1">Year must be 4 digits (1900-{new Date().getFullYear()})</p>}</div>
+                    <div data-field="nominee_phone"><label className={labelCls}>Nominee Phone *</label><input className={inputCls + errorRing('nominee_phone')} value={nomineeForm.phone} onChange={e => { setNomineeForm({ ...nomineeForm, phone: e.target.value }); clearError('nominee_phone') }} placeholder="10-digit mobile number" maxLength={10} />
+                      {renderError('nominee_phone')}
+                      {!errors.nominee_phone && nomineeForm.phone && nomineeForm.phone.replace(/\D/g, '').length !== 10 && <p className="text-xs text-red-500 mt-1">Must be a valid 10-digit mobile number</p>}
                     </div>
-                    {renderFileUpload('Upload Nominee ID Proof (PAN/Aadhaar)', nomineeProofUrl, setNomineeProofUrl)}
-                    <div><label className={labelCls}>Nominee Relationship *</label>
-                      <select className={inputCls} value={nomineeForm.relationship} onChange={e => setNomineeForm({ ...nomineeForm, relationship: e.target.value })}>
+                    {renderFileUpload('Upload Nominee ID Proof (PAN/Aadhaar)', nomineeProofUrl, setNomineeProofUrl, 'nominee_proof')}
+                    <div data-field="nominee_relationship"><label className={labelCls}>Nominee Relationship *</label>
+                      <select className={inputCls + errorRing('nominee_relationship')} value={nomineeForm.relationship} onChange={e => { setNomineeForm({ ...nomineeForm, relationship: e.target.value }); clearError('nominee_relationship') }}>
                         <option value="">Select Relationship</option><option value="spouse">Spouse</option><option value="father">Father</option><option value="mother">Mother</option><option value="son">Son</option><option value="daughter">Daughter</option><option value="brother">Brother</option><option value="sister">Sister</option><option value="other">Other</option>
                       </select>
+                      {renderError('nominee_relationship')}
                     </div>
-                    <div><label className={labelCls}>Percentage *</label>
-                      <div className="relative"><input className={inputCls + ' pr-8'} type="number" min="0" max="100" value={nomineeForm.percentage} onChange={e => setNomineeForm({ ...nomineeForm, percentage: e.target.value })} /><span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 text-sm">%</span></div>
+                    <div data-field="nominee_percentage"><label className={labelCls}>Percentage *</label>
+                      <div className="relative"><input className={inputCls + errorRing('nominee_percentage') + ' pr-8'} type="number" min="0" max="100" value={nomineeForm.percentage} onChange={e => { setNomineeForm({ ...nomineeForm, percentage: e.target.value }); clearError('nominee_percentage') }} /><span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 text-sm">%</span></div>
+                      {renderError('nominee_percentage')}
                     </div>
                   </div>
                   <div className="flex justify-between mt-5">
@@ -590,7 +703,7 @@ export default function KYCWizard({ clientId, userId, userName, userEmail, userP
 
               {/* Submit KYC */}
               <div className="flex justify-between mt-4">
-                <button className={btnOutline} onClick={() => setActiveStep(3)}>Back</button>
+                <button className={btnOutline} onClick={() => { setActiveStep(3); setErrors({}) }}>Back</button>
                 <button className={btnPrimary} onClick={handleSubmitKYC} disabled={saving}>
                   {saving ? 'Submitting...' : 'Submit KYC for Review'}
                 </button>
