@@ -86,6 +86,8 @@ export async function getChannelMessages(channelId: string): Promise<InternalMes
   }
 }
 
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
 /** Send a message to a channel */
 export async function sendInternalMessage(
   channelId: string,
@@ -95,6 +97,7 @@ export async function sendInternalMessage(
   message: string
 ): Promise<InternalMessage | null> {
   const safeMessage = sanitizeStr(message)
+  const isValidUuid = UUID_RE.test(userId)
   const newMsg: InternalMessage = {
     id: `msg-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
     channel_id: channelId,
@@ -105,8 +108,8 @@ export async function sendInternalMessage(
     created_at: new Date().toISOString(),
   }
 
-  if (!isSupabaseConfigured()) {
-    // Store locally
+  if (!isSupabaseConfigured() || !isValidUuid) {
+    // Store locally if Supabase is unavailable or caller didn't supply a real user id
     if (!localMessages[channelId]) localMessages[channelId] = []
     localMessages[channelId].push(newMsg)
     return newMsg
@@ -126,24 +129,11 @@ export async function sendInternalMessage(
       .single()
 
     if (error) {
-      // Fallback to local if table doesn't exist
+      console.warn('[internalChat] insert failed:', error.message)
+      // Fallback to local so the UI still updates
       if (!localMessages[channelId]) localMessages[channelId] = []
       localMessages[channelId].push(newMsg)
       return newMsg
-    }
-
-    // Bridge: if posting to announcements channel, also insert into announcements table
-    if (channelId === 'announcements' && data) {
-      try {
-        await (supabase as any).from('announcements').insert({
-          title: safeMessage.length > 80 ? safeMessage.slice(0, 80) + '...' : safeMessage,
-          content: safeMessage,
-          type: 'general',
-          priority: 'normal',
-          author: sanitizeStr(userName),
-          active: true,
-        })
-      } catch (_e) { /* non-blocking */ }
     }
 
     return data as InternalMessage

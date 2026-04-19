@@ -14,7 +14,12 @@ import {
   type InternalChannel,
   type InternalMessage,
 } from '@/lib/supabase/internalChatService'
-import type { Announcement } from '@/lib/staff/staffTypes'
+import type { Announcement, StaffUser, StaffRole } from '@/lib/staff/staffTypes'
+import {
+  fetchActivePolicies,
+  type StaffPolicy,
+} from '@/lib/supabase/policyService'
+import { recordWellnessCheckin } from '@/lib/supabase/wellnessService'
 import {
   MessageSquare, Send, Megaphone, FileText, MessageCircle, Heart, Smile,
   Hash, Users, Dumbbell, Brain, Calendar, Scale, ShieldCheck, ChevronRight,
@@ -26,9 +31,11 @@ interface InternalModuleProps {
   subTab: string | null
   navigate: (path: string) => void
   showToast: (msg: string, type?: 'success' | 'error' | 'info' | 'warning') => void
+  user?: StaffUser | null
+  role?: StaffRole | null
 }
 
-export default function InternalModule({ subTab, navigate, showToast }: InternalModuleProps) {
+export default function InternalModule({ subTab, navigate, showToast, user, role }: InternalModuleProps) {
   const tab = subTab || 'chat'
   const [announcements, setAnnouncements] = useState<any[]>([])
 
@@ -37,12 +44,12 @@ export default function InternalModule({ subTab, navigate, showToast }: Internal
   }, [])
 
   switch (tab) {
-    case 'chat':        return <ChatView showToast={showToast} />
+    case 'chat':        return <ChatView showToast={showToast} user={user} role={role} />
     case 'noticeboard': return <NoticeboardView announcements={announcements} />
     case 'policies':    return <PoliciesView showToast={showToast} />
     case 'feedback':    return <FeedbackView showToast={showToast} />
-    case 'wellness':    return <WellnessView showToast={showToast} />
-    default:            return <ChatView showToast={showToast} />
+    case 'wellness':    return <WellnessView showToast={showToast} user={user} />
+    default:            return <ChatView showToast={showToast} user={user} role={role} />
   }
 }
 
@@ -61,7 +68,7 @@ function SectionHeader({ title, icon: Icon }: { title: string; icon: IconFC }) {
 // ================================================================
 //  1. INTERNAL CHAT (wired to shared internalChatService)
 // ================================================================
-function ChatView({ showToast }: { showToast: Toast }) {
+function ChatView({ showToast, user, role }: { showToast: Toast; user?: StaffUser | null; role?: StaffRole | null }) {
   const channels = getChannels()
   const [activeChannel, setActiveChannel] = useState('general')
   const [messages, setMessages] = useState<InternalMessage[]>([])
@@ -98,20 +105,30 @@ function ChatView({ showToast }: { showToast: Toast }) {
 
   const handleSend = useCallback(async () => {
     if (!msgInput.trim() || sending) return
+    if (!user?.id) {
+      showToast('Session expired — please sign in again', 'error')
+      return
+    }
     setSending(true)
     const text = msgInput.trim()
     setMsgInput('')
-    // Use a generic staff identity (in production, pull from auth context)
-    const result = await sendInternalMessage(activeChannel, 'staff-user', 'Staff Member', 'staff', text)
+    const result = await sendInternalMessage(
+      activeChannel,
+      user.id,
+      user.name || user.email || 'Staff Member',
+      role || 'staff',
+      text,
+    )
     if (result) {
       setMessages(prev => {
         if (prev.find(m => m.id === result.id)) return prev
         return [...prev, result]
       })
-      showToast('Message sent!', 'success')
+    } else {
+      showToast('Failed to send message', 'error')
     }
     setSending(false)
-  }, [msgInput, sending, activeChannel, showToast])
+  }, [msgInput, sending, activeChannel, showToast, user, role])
 
   const formatTime = (ts: string) => {
     try {
@@ -228,47 +245,54 @@ function NoticeboardView({ announcements }: { announcements: any[] }) {
 }
 
 // ================================================================
-//  3. COMPANY POLICIES
+//  3. COMPANY POLICIES  (admin-managed via company_policies table)
 // ================================================================
-const POLICIES: { id: string; title: string; lastUpdated: string; version: string; icon: IconFC }[] = [
-  { id: 'pol-1', title: 'Leave Policy', lastUpdated: '2025-11-15', version: 'v3.2', icon: Calendar },
-  { id: 'pol-2', title: 'Code of Conduct', lastUpdated: '2025-08-01', version: 'v2.1', icon: ShieldCheck },
-  { id: 'pol-3', title: 'Work from Home Guidelines', lastUpdated: '2026-01-10', version: 'v1.4', icon: Lightbulb },
-  { id: 'pol-4', title: 'Expense Reimbursement Policy', lastUpdated: '2026-02-18', version: 'v4.0', icon: FileText },
-  { id: 'pol-5', title: 'Data Security Policy', lastUpdated: '2025-12-01', version: 'v2.0', icon: ShieldCheck },
-  { id: 'pol-6', title: 'Anti-Harassment Policy', lastUpdated: '2025-09-20', version: 'v1.2', icon: Heart },
-]
+const POLICY_ICON_MAP: Record<string, IconFC> = {
+  Calendar, ShieldCheck, Lightbulb, FileText, Heart,
+}
+
+function resolvePolicyIcon(name: string | null | undefined): IconFC {
+  if (!name) return FileText
+  return POLICY_ICON_MAP[name] || FileText
+}
 
 function PoliciesView({ showToast }: { showToast: Toast }) {
+  const [policies, setPolicies] = useState<StaffPolicy[]>([])
   const [loadingPolicy, setLoadingPolicy] = useState<string | null>(null)
+  const [loading, setLoading] = useState(true)
 
-  const handleViewDocument = async (pol: typeof POLICIES[number]) => {
+  useEffect(() => {
+    let cancelled = false
+    fetchActivePolicies().then(list => {
+      if (!cancelled) {
+        setPolicies(list)
+        setLoading(false)
+      }
+    })
+    return () => { cancelled = true }
+  }, [])
+
+  const handleViewDocument = async (pol: StaffPolicy) => {
     setLoadingPolicy(pol.id)
     try {
-      const sb = supabase as any
-      const fileName = pol.title.toLowerCase().replace(/\s+/g, '-')
-      const possiblePaths = [
-        { bucket: 'ghl-documents', path: `policies/${fileName}.pdf` },
-        { bucket: 'ghl-documents', path: `policies/${pol.id}.pdf` },
-        { bucket: 'documents', path: `policies/${fileName}.pdf` },
-        { bucket: 'ghl-documents', path: `documents/policies/${fileName}.pdf` },
-      ]
-
-      let publicUrl: string | null = null
-      for (const { bucket, path } of possiblePaths) {
-        // Use download to verify file exists (HEAD requests may fail due to CORS)
-        const { data: blob, error } = await sb.storage.from(bucket).download(path)
-        if (!error && blob) {
-          const { data: urlData } = sb.storage.from(bucket).getPublicUrl(path)
-          if (urlData?.publicUrl) { publicUrl = urlData.publicUrl; break }
+      if (pol.external_url) {
+        window.open(pol.external_url, '_blank', 'noopener,noreferrer')
+        return
+      }
+      if (pol.bucket && pol.file_path) {
+        const sb = supabase as any
+        const { data, error } = await sb.storage.from(pol.bucket).createSignedUrl(pol.file_path, 600)
+        if (!error && data?.signedUrl) {
+          window.open(data.signedUrl, '_blank', 'noopener,noreferrer')
+          return
+        }
+        const pub = sb.storage.from(pol.bucket).getPublicUrl(pol.file_path)
+        if (pub?.data?.publicUrl) {
+          window.open(pub.data.publicUrl, '_blank', 'noopener,noreferrer')
+          return
         }
       }
-
-      if (publicUrl) {
-        window.open(publicUrl, '_blank', 'noopener,noreferrer')
-      } else {
-        showToast(`"${pol.title}" document is not yet uploaded. Please contact HR to upload it.`, 'warning')
-      }
+      showToast(`"${pol.title}" document is not yet uploaded. Please contact HR to upload it.`, 'warning')
     } catch (err) {
       console.error('Error fetching policy document:', err)
       showToast(`Failed to open ${pol.title}`, 'error')
@@ -280,32 +304,43 @@ function PoliciesView({ showToast }: { showToast: Toast }) {
   return (
     <div className="space-y-4">
       <SectionHeader title="Company Policies" icon={FileText} />
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-        {POLICIES.map(pol => {
-          const Icon = pol.icon
-          const isLoading = loadingPolicy === pol.id
-          return (
-            <AdminGlass key={pol.id} padding="p-4">
-              <div className="flex items-start gap-3">
-                <div className="w-9 h-9 rounded-lg bg-teal-500/10 border border-teal-500/20 flex items-center justify-center shrink-0">
-                  <Icon className="w-4 h-4 text-teal-400" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <h4 className="text-sm font-semibold text-white mb-1">{pol.title}</h4>
-                  <div className="flex items-center gap-3 text-[10px] text-white/35 mb-2">
-                    <span>Last updated: {pol.lastUpdated}</span>
-                    <span>{pol.version}</span>
+      {loading ? (
+        <AdminGlass hover={false} padding="p-6"><p className="text-xs text-white/40 text-center">Loading policies…</p></AdminGlass>
+      ) : policies.length === 0 ? (
+        <AdminGlass hover={false} padding="p-6">
+          <p className="text-xs text-white/40 text-center">No policies published yet. Ask HR to add them in the admin portal.</p>
+        </AdminGlass>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          {policies.map(pol => {
+            const Icon = resolvePolicyIcon(pol.icon)
+            const isLoading = loadingPolicy === pol.id
+            const lastUpdated = pol.last_updated || (pol.updated_at ? pol.updated_at.slice(0, 10) : '')
+            return (
+              <AdminGlass key={pol.id} padding="p-4">
+                <div className="flex items-start gap-3">
+                  <div className="w-9 h-9 rounded-lg bg-teal-500/10 border border-teal-500/20 flex items-center justify-center shrink-0">
+                    <Icon className="w-4 h-4 text-teal-400" />
                   </div>
-                  <button onClick={() => handleViewDocument(pol)} disabled={isLoading}
-                    className="flex items-center gap-1 text-[10px] font-semibold text-teal-400 hover:text-teal-300 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
-                    <Eye className="w-3 h-3" /> {isLoading ? 'Opening...' : 'View Document'}
-                  </button>
+                  <div className="flex-1 min-w-0">
+                    <h4 className="text-sm font-semibold text-white mb-1">{pol.title}</h4>
+                    {pol.description && <p className="text-[11px] text-white/45 mb-1.5">{pol.description}</p>}
+                    <div className="flex items-center gap-3 text-[10px] text-white/35 mb-2 flex-wrap">
+                      {lastUpdated && <span>Last updated: {lastUpdated}</span>}
+                      {pol.version && <span>{pol.version}</span>}
+                      {pol.category && <span className="text-teal-400/70">{pol.category}</span>}
+                    </div>
+                    <button onClick={() => handleViewDocument(pol)} disabled={isLoading}
+                      className="flex items-center gap-1 text-[10px] font-semibold text-teal-400 hover:text-teal-300 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+                      <Eye className="w-3 h-3" /> {isLoading ? 'Opening...' : 'View Document'}
+                    </button>
+                  </div>
                 </div>
-              </div>
-            </AdminGlass>
-          )
-        })}
-      </div>
+              </AdminGlass>
+            )
+          })}
+        </div>
+      )}
     </div>
   )
 }
@@ -316,9 +351,16 @@ function PoliciesView({ showToast }: { showToast: Toast }) {
 type FeedbackCategory = 'Workplace' | 'Process' | 'Tools' | 'HR' | 'General'
 type FeedbackStatus = 'submitted' | 'acknowledged' | 'resolved'
 
-const RECENT_FEEDBACK: { id: string; category: FeedbackCategory; subject: string; status: FeedbackStatus; date: string }[] = []
+interface FeedbackRow {
+  id: string
+  category: string
+  subject: string
+  status: FeedbackStatus | string
+  created_at: string
+  admin_response?: string | null
+}
 
-const FB_STATUS: Record<FeedbackStatus, { label: string; variant: 'success' | 'warning' | 'info' }> = {
+const FB_STATUS: Record<string, { label: string; variant: 'success' | 'warning' | 'info' | 'neutral' }> = {
   submitted: { label: 'Submitted', variant: 'info' },
   acknowledged: { label: 'Acknowledged', variant: 'warning' },
   resolved: { label: 'Resolved', variant: 'success' },
@@ -330,6 +372,24 @@ function FeedbackView({ showToast }: { showToast: Toast }) {
   const [description, setDescription] = useState('')
   const [anonymous, setAnonymous] = useState(false)
   const [submitting, setSubmitting] = useState(false)
+  const [recent, setRecent] = useState<FeedbackRow[]>([])
+
+  const loadRecent = useCallback(async () => {
+    try {
+      const sb = supabase as any
+      const { data: { user } } = await sb.auth.getUser()
+      if (!user?.id) { setRecent([]); return }
+      const { data, error } = await sb
+        .from('feedback')
+        .select('id, category, subject, status, created_at, admin_response')
+        .eq('staff_id', user.id)
+        .order('created_at', { ascending: false })
+        .limit(10)
+      if (!error && data) setRecent(data as FeedbackRow[])
+    } catch { /* ignore */ }
+  }, [])
+
+  useEffect(() => { loadRecent() }, [loadRecent])
 
   const handleSubmit = async () => {
     if (!subject.trim() || !description.trim()) { showToast('Please fill in all required fields', 'warning'); return }
@@ -360,7 +420,12 @@ function FeedbackView({ showToast }: { showToast: Toast }) {
         status: 'submitted',
       }
       const row = await insertRow('feedback', feedbackData)
-      if (row) { showToast('Feedback submitted successfully!', 'success') } else { showToast('Failed to submit feedback — please try again', 'error') }
+      if (row) {
+        showToast('Feedback submitted successfully!', 'success')
+        loadRecent()
+      } else {
+        showToast('Failed to submit feedback — please try again', 'error')
+      }
       setSubject(''); setDescription(''); setAnonymous(false); setCategory('General')
     } catch (err) {
       console.error('Feedback submission error:', err)
@@ -410,10 +475,13 @@ function FeedbackView({ showToast }: { showToast: Toast }) {
       </AdminGlass>
       {/* Recent Feedback */}
       <div>
-        <h4 className="text-xs font-semibold text-white/50 mb-3">Recent Feedback</h4>
+        <h4 className="text-xs font-semibold text-white/50 mb-3">Your Recent Feedback</h4>
         <div className="space-y-2">
-          {RECENT_FEEDBACK.map(fb => {
-            const badge = FB_STATUS[fb.status]
+          {recent.length === 0 && (
+            <p className="text-[11px] text-white/30 italic">No feedback submitted yet.</p>
+          )}
+          {recent.map(fb => {
+            const badge = FB_STATUS[fb.status] || { label: fb.status || 'Submitted', variant: 'neutral' as const }
             return (
               <AdminGlass key={fb.id} padding="p-3">
                 <div className="flex items-center justify-between gap-3">
@@ -423,9 +491,15 @@ function FeedbackView({ showToast }: { showToast: Toast }) {
                   </div>
                   <div className="flex items-center gap-2 shrink-0">
                     <AdminBadge label={badge.label} variant={badge.variant} size="sm" />
-                    <span className="text-[10px] text-white/25">{fb.date}</span>
+                    <span className="text-[10px] text-white/25">{new Date(fb.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}</span>
                   </div>
                 </div>
+                {fb.admin_response && (
+                  <p className="text-[11px] text-teal-300/80 mt-2 border-t border-white/[0.06] pt-2">
+                    <span className="text-[9px] uppercase tracking-wider text-white/30 mr-1">Admin:</span>
+                    {fb.admin_response}
+                  </p>
+                )}
               </AdminGlass>
             )
           })}
@@ -451,8 +525,10 @@ const MOODS = [
   { emoji: '\uD83D\uDE25', label: 'Stressed' },
 ]
 
-function WellnessView({ showToast }: { showToast: Toast }) {
+function WellnessView({ showToast, user }: { showToast: Toast; user?: StaffUser | null }) {
   const [expandedCards, setExpandedCards] = useState<Set<string>>(new Set())
+  const [moodSending, setMoodSending] = useState(false)
+  const [lastMood, setLastMood] = useState<string | null>(null)
 
   const toggleCard = (id: string) => {
     setExpandedCards(prev => {
@@ -522,15 +598,39 @@ function WellnessView({ showToast }: { showToast: Toast }) {
       <AdminGlass hover={false} padding="p-5">
         <h4 className="text-xs font-semibold text-white mb-1">Quick Poll</h4>
         <p className="text-[11px] text-white/40 mb-4">How are you feeling today?</p>
-        <div className="flex items-center gap-3 justify-center">
-          {MOODS.map(mood => (
-            <button key={mood.label} onClick={() => showToast(`Thanks for sharing! You're feeling: ${mood.label}`, 'success')}
-              className="flex flex-col items-center gap-1.5 px-3 py-2.5 rounded-xl bg-white/[0.03] border border-white/[0.06] hover:bg-teal-500/10 hover:border-teal-500/20 transition-all group">
-              <span className="text-2xl group-hover:scale-110 transition-transform">{mood.emoji}</span>
-              <span className="text-[10px] text-white/40 group-hover:text-teal-300 font-medium">{mood.label}</span>
-            </button>
-          ))}
+        <div className="flex items-center gap-3 justify-center flex-wrap">
+          {MOODS.map(mood => {
+            const isActive = lastMood === mood.label
+            return (
+              <button
+                key={mood.label}
+                disabled={moodSending}
+                onClick={async () => {
+                  setMoodSending(true)
+                  const result = await recordWellnessCheckin({
+                    staffId: user?.id || null,
+                    mood: mood.label.toLowerCase(),
+                    moodLabel: mood.label,
+                  })
+                  setMoodSending(false)
+                  if (result.success) {
+                    setLastMood(mood.label)
+                    showToast(`Thanks for sharing — logged as "${mood.label}"`, 'success')
+                  } else {
+                    showToast(result.error || 'Could not record mood — please retry', 'error')
+                  }
+                }}
+                className={`flex flex-col items-center gap-1.5 px-3 py-2.5 rounded-xl border transition-all group disabled:opacity-50 disabled:cursor-not-allowed ${isActive ? 'bg-teal-500/15 border-teal-500/40' : 'bg-white/[0.03] border-white/[0.06] hover:bg-teal-500/10 hover:border-teal-500/20'}`}
+              >
+                <span className="text-2xl group-hover:scale-110 transition-transform">{mood.emoji}</span>
+                <span className={`text-[10px] font-medium ${isActive ? 'text-teal-300' : 'text-white/40 group-hover:text-teal-300'}`}>{mood.label}</span>
+              </button>
+            )
+          })}
         </div>
+        {lastMood && (
+          <p className="text-[10px] text-white/30 text-center mt-3">Logged just now</p>
+        )}
       </AdminGlass>
     </div>
   )

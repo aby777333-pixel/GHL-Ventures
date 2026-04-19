@@ -7,7 +7,7 @@ import {
   Laptop, Sun, Moon, AlertTriangle, BarChart3, Plus,
   Star, TrendingUp, UserPlus, Briefcase, Upload,
   FileText, Download, ExternalLink, Linkedin,
-  Megaphone, Pin, Trash2, Edit3,
+  Megaphone, Pin, Trash2, Edit3, BookOpen, MessageSquare,
 } from 'lucide-react'
 import AdminGlass from '../shared/AdminGlass'
 import AdminDataTable, { type Column } from '../shared/AdminDataTable'
@@ -26,6 +26,14 @@ import {
   type AdminAnnouncement,
   type AnnouncementType,
 } from '@/lib/supabase/announcementService'
+import {
+  fetchAllPolicies,
+  createPolicy,
+  updatePolicy,
+  deletePolicy,
+  type StaffPolicy,
+  type PolicyInput,
+} from '@/lib/supabase/policyService'
 import { formatDate } from '@/lib/admin/adminHooks'
 import type { Employee, EmployeeStatus, LeaveRequest, AttendanceRecord } from '@/lib/admin/adminTypes'
 import UploadWithFolderPicker from '@/components/shared/UploadWithFolderPicker'
@@ -36,6 +44,8 @@ const ATTENDANCE_SUMMARY: any[] = []
 const EMPLOYEE_TABS = [
   { id: 'directory', label: 'Directory', icon: Users },
   { id: 'announcements', label: 'Announcements', icon: Megaphone },
+  { id: 'policies', label: 'Policies', icon: BookOpen },
+  { id: 'feedback', label: 'Feedback', icon: MessageSquare },
   { id: 'applications', label: 'Applications', icon: Briefcase },
   { id: 'attendance', label: 'Attendance', icon: Clock },
   { id: 'leave', label: 'Leave Requests', icon: CalendarDays },
@@ -226,6 +236,8 @@ export default function EmployeeModule({ subTab, navigate, showToast }: Employee
       <div className="admin-tab-switch">
         {activeTab === 'directory' && <DirectoryTab employees={employees} onView={(e) => setSelectedEmployee(e)} showToast={showToast} />}
         {activeTab === 'announcements' && <AnnouncementsTab showToast={showToast} />}
+        {activeTab === 'policies' && <PoliciesTab showToast={showToast} />}
+        {activeTab === 'feedback' && <FeedbackTab showToast={showToast} />}
         {activeTab === 'applications' && <ApplicationsTab showToast={showToast} />}
         {activeTab === 'attendance' && <AttendanceTab />}
         {activeTab === 'leave' && <LeaveTab showToast={showToast} />}
@@ -1344,5 +1356,418 @@ function AnnouncementsTab({ showToast }: { showToast: (msg: string, type?: 'succ
         </form>
       </AdminModal>
     </AdminGlass>
+  )
+}
+
+// ── Policies Tab ──────────────────────────────────────────────
+const POLICY_ICON_CHOICES = ['FileText', 'Calendar', 'ShieldCheck', 'Lightbulb', 'Heart']
+
+function PoliciesTab({ showToast }: { showToast: (msg: string, type?: 'success' | 'error' | 'info' | 'warning') => void }) {
+  const [list, setList] = useState<StaffPolicy[]>([])
+  const [loading, setLoading] = useState(true)
+  const [open, setOpen] = useState(false)
+  const [saving, setSaving] = useState(false)
+  const [editing, setEditing] = useState<StaffPolicy | null>(null)
+  const [form, setForm] = useState<PolicyInput>({
+    title: '',
+    description: '',
+    version: '',
+    category: '',
+    icon: 'FileText',
+    bucket: 'ghl-documents',
+    file_path: '',
+    external_url: '',
+    last_updated: '',
+    active: true,
+    sort_order: 0,
+  })
+
+  const load = useCallback(async () => {
+    setLoading(true)
+    const data = await fetchAllPolicies()
+    setList(data)
+    setLoading(false)
+  }, [])
+
+  useEffect(() => { load() }, [load])
+
+  useEffect(() => {
+    if (editing && open) {
+      setForm({
+        title: editing.title,
+        description: editing.description || '',
+        version: editing.version || '',
+        category: editing.category || '',
+        icon: editing.icon || 'FileText',
+        bucket: editing.bucket || 'ghl-documents',
+        file_path: editing.file_path || '',
+        external_url: editing.external_url || '',
+        last_updated: editing.last_updated || '',
+        active: editing.active,
+        sort_order: editing.sort_order,
+      })
+    } else if (!editing && open) {
+      setForm({ title: '', description: '', version: '', category: '', icon: 'FileText', bucket: 'ghl-documents', file_path: '', external_url: '', last_updated: '', active: true, sort_order: (list[list.length - 1]?.sort_order ?? 0) + 1 })
+    }
+  }, [editing, open, list])
+
+  const handleSubmit = async () => {
+    if (!form.title?.trim()) { showToast('Title is required', 'error'); return }
+    setSaving(true)
+    const payload: PolicyInput = {
+      ...form,
+      title: form.title.trim(),
+      description: (form.description || '').trim(),
+      version: (form.version || '').trim(),
+      category: (form.category || '').trim(),
+      icon: form.icon || 'FileText',
+      bucket: (form.bucket || '').trim() || null,
+      file_path: (form.file_path || '').trim() || null,
+      external_url: (form.external_url || '').trim() || null,
+      last_updated: form.last_updated || null,
+    }
+    const result = editing
+      ? await updatePolicy(editing.id, payload)
+      : await createPolicy(payload)
+    setSaving(false)
+    if (result.success) {
+      showToast(editing ? 'Policy updated' : 'Policy created', 'success')
+      setOpen(false)
+      setEditing(null)
+      load()
+    } else {
+      showToast(result.error || 'Save failed', 'error')
+    }
+  }
+
+  const handleDelete = async (id: string) => {
+    if (!confirm('Delete this policy? Staff will immediately lose access.')) return
+    const result = await deletePolicy(id)
+    if (result.success) { showToast('Policy deleted', 'success'); load() }
+    else showToast(result.error || 'Delete failed', 'error')
+  }
+
+  const handleToggleActive = async (p: StaffPolicy) => {
+    const result = await updatePolicy(p.id, { active: !p.active })
+    if (result.success) load()
+    else showToast(result.error || 'Toggle failed', 'error')
+  }
+
+  return (
+    <AdminGlass padding="p-4">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
+        <div className="flex items-center gap-2">
+          <BookOpen className="w-4 h-4 text-brand-red" />
+          <h3 className="text-sm font-semibold text-white">Company Policies</h3>
+          <span className="text-[11px] text-gray-500">({list.length})</span>
+        </div>
+        <button
+          onClick={() => { setEditing(null); setOpen(true) }}
+          className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium text-white bg-brand-red/20 border border-brand-red/30 hover:bg-brand-red/30 transition-colors"
+        >
+          <Plus className="w-4 h-4" />
+          New Policy
+        </button>
+      </div>
+
+      {loading ? (
+        <div className="py-12 text-center text-sm text-gray-500">Loading policies…</div>
+      ) : list.length === 0 ? (
+        <AdminEmptyState icon={BookOpen} title="No policies yet" description="Publish HR, compliance, and operational policies for staff to access." />
+      ) : (
+        <div className="space-y-2">
+          {list.map(p => (
+            <div key={p.id} className={`p-4 rounded-xl border transition-colors ${p.active ? 'bg-white/[0.03] border-white/[0.06]' : 'bg-white/[0.01] border-white/[0.03] opacity-60'}`}>
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 mb-1 flex-wrap">
+                    <h4 className="text-sm font-semibold text-white">{p.title}</h4>
+                    {p.version && <span className="text-[10px] text-gray-500">{p.version}</span>}
+                    {!p.active && <AdminBadge label="Hidden" variant="neutral" size="sm" />}
+                    {p.category && <AdminBadge label={p.category} variant="info" size="sm" />}
+                  </div>
+                  {p.description && <p className="text-xs text-gray-400 mb-1.5 line-clamp-2">{p.description}</p>}
+                  <div className="flex items-center gap-3 text-[10px] text-gray-600 flex-wrap">
+                    {p.last_updated && <span>Last updated: {p.last_updated}</span>}
+                    {p.external_url && <span className="text-blue-400 truncate max-w-[240px]">{p.external_url}</span>}
+                    {p.bucket && p.file_path && <span className="text-teal-400 truncate max-w-[240px]">{p.bucket}/{p.file_path}</span>}
+                  </div>
+                </div>
+                <div className="flex items-center gap-1 shrink-0">
+                  <button onClick={() => handleToggleActive(p)} title={p.active ? 'Hide from staff' : 'Show to staff'} className="p-1.5 rounded-lg text-gray-500 hover:text-white hover:bg-white/[0.06]">
+                    {p.active ? <Eye className="w-4 h-4" /> : <XCircle className="w-4 h-4" />}
+                  </button>
+                  <button onClick={() => { setEditing(p); setOpen(true) }} title="Edit" className="p-1.5 rounded-lg text-gray-500 hover:text-white hover:bg-white/[0.06]">
+                    <Edit3 className="w-4 h-4" />
+                  </button>
+                  <button onClick={() => handleDelete(p.id)} title="Delete" className="p-1.5 rounded-lg text-gray-500 hover:text-red-400 hover:bg-red-500/10">
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      <AdminModal
+        isOpen={open}
+        onClose={() => { setOpen(false); setEditing(null) }}
+        title={editing ? 'Edit Policy' : 'New Policy'}
+        maxWidth="max-w-2xl"
+      >
+        <form onSubmit={(e) => { e.preventDefault(); handleSubmit() }}>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="sm:col-span-2">
+              <label className="block text-xs font-medium text-gray-400 mb-1.5">Title</label>
+              <input type="text" required value={form.title} onChange={(e) => setForm(f => ({ ...f, title: e.target.value }))} placeholder="e.g. Leave Policy" className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-brand-red/40 focus:ring-1 focus:ring-brand-red/20" />
+            </div>
+            <div className="sm:col-span-2">
+              <label className="block text-xs font-medium text-gray-400 mb-1.5">Short description</label>
+              <textarea rows={2} value={form.description || ''} onChange={(e) => setForm(f => ({ ...f, description: e.target.value }))} className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-brand-red/40 focus:ring-1 focus:ring-brand-red/20 resize-y" />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-400 mb-1.5">Version</label>
+              <input type="text" value={form.version || ''} onChange={(e) => setForm(f => ({ ...f, version: e.target.value }))} placeholder="v1.0" className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-brand-red/40 focus:ring-1 focus:ring-brand-red/20" />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-400 mb-1.5">Category</label>
+              <input type="text" value={form.category || ''} onChange={(e) => setForm(f => ({ ...f, category: e.target.value }))} placeholder="HR / Compliance / Security" className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-brand-red/40 focus:ring-1 focus:ring-brand-red/20" />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-400 mb-1.5">Icon</label>
+              <select value={form.icon || 'FileText'} onChange={(e) => setForm(f => ({ ...f, icon: e.target.value }))} className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-brand-red/40">
+                {POLICY_ICON_CHOICES.map(ic => <option key={ic} value={ic} className="bg-neutral-900">{ic}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-400 mb-1.5">Last updated</label>
+              <input type="date" value={form.last_updated || ''} onChange={(e) => setForm(f => ({ ...f, last_updated: e.target.value }))} className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-brand-red/40" />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-400 mb-1.5">Storage bucket</label>
+              <input type="text" value={form.bucket || ''} onChange={(e) => setForm(f => ({ ...f, bucket: e.target.value }))} placeholder="ghl-documents" className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-brand-red/40" />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-400 mb-1.5">Storage file path</label>
+              <input type="text" value={form.file_path || ''} onChange={(e) => setForm(f => ({ ...f, file_path: e.target.value }))} placeholder="policies/leave-policy.pdf" className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-brand-red/40" />
+            </div>
+            <div className="sm:col-span-2">
+              <label className="block text-xs font-medium text-gray-400 mb-1.5">External URL (optional, overrides storage)</label>
+              <input type="url" value={form.external_url || ''} onChange={(e) => setForm(f => ({ ...f, external_url: e.target.value }))} placeholder="https://..." className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-brand-red/40" />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-400 mb-1.5">Display order</label>
+              <input type="number" value={form.sort_order ?? 0} onChange={(e) => setForm(f => ({ ...f, sort_order: Number(e.target.value) }))} className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-brand-red/40" />
+            </div>
+            <label className="flex items-center gap-2 text-sm text-gray-300 cursor-pointer mt-5">
+              <input type="checkbox" checked={form.active !== false} onChange={(e) => setForm(f => ({ ...f, active: e.target.checked }))} className="w-4 h-4 rounded border-white/20 bg-white/[0.04] text-brand-red focus:ring-brand-red/40" />
+              Visible to staff
+            </label>
+          </div>
+          <div className="flex justify-end gap-3 mt-6 pt-4 border-t border-white/[0.06]">
+            <button type="button" onClick={() => { setOpen(false); setEditing(null) }} className="px-4 py-2 rounded-xl text-sm font-medium text-gray-400 hover:text-white hover:bg-white/[0.06] transition-colors">Cancel</button>
+            <button type="submit" disabled={saving} className="px-5 py-2 rounded-xl text-sm font-medium text-white bg-brand-red hover:bg-red-600 transition-colors disabled:opacity-50 flex items-center gap-2">
+              {saving && <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />}
+              {saving ? 'Saving…' : editing ? 'Update Policy' : 'Create Policy'}
+            </button>
+          </div>
+        </form>
+      </AdminModal>
+    </AdminGlass>
+  )
+}
+
+// ── Feedback Tab (staff submissions) ──────────────────────────
+interface AdminFeedbackRow {
+  id: string
+  staff_id: string | null
+  staff_name?: string
+  category: string
+  subject: string
+  description: string
+  is_anonymous: boolean
+  status: string
+  admin_response: string | null
+  created_at: string
+  updated_at: string
+}
+
+function FeedbackTab({ showToast }: { showToast: (msg: string, type?: 'success' | 'error' | 'info' | 'warning') => void }) {
+  const [rows, setRows] = useState<AdminFeedbackRow[]>([])
+  const [loading, setLoading] = useState(true)
+  const [selected, setSelected] = useState<AdminFeedbackRow | null>(null)
+  const [responseDraft, setResponseDraft] = useState('')
+  const [statusDraft, setStatusDraft] = useState('submitted')
+  const [saving, setSaving] = useState(false)
+
+  const load = useCallback(async () => {
+    if (!isSupabaseConfigured()) { setRows([]); setLoading(false); return }
+    setLoading(true)
+    try {
+      const sb = supabase as any
+      const { data, error } = await sb
+        .from('feedback')
+        .select('*')
+        .order('created_at', { ascending: false })
+      if (error || !data) { setRows([]); setLoading(false); return }
+      const staffIds = Array.from(new Set((data as any[]).map(r => r.staff_id).filter(Boolean)))
+      const nameMap: Record<string, string> = {}
+      if (staffIds.length > 0) {
+        const { data: profs } = await sb.from('profiles').select('id, full_name').in('id', staffIds)
+        ;(profs || []).forEach((p: any) => { nameMap[p.id] = p.full_name || '' })
+      }
+      setRows((data as any[]).map((r: any) => ({
+        ...r,
+        staff_name: r.is_anonymous ? 'Anonymous' : (nameMap[r.staff_id] || 'Staff Member'),
+      })))
+    } catch {
+      setRows([])
+    } finally {
+      setLoading(false)
+    }
+  }, [])
+
+  useEffect(() => { load() }, [load])
+
+  useEffect(() => {
+    if (selected) {
+      setResponseDraft(selected.admin_response || '')
+      setStatusDraft(selected.status || 'submitted')
+    }
+  }, [selected])
+
+  const handleSave = async () => {
+    if (!selected) return
+    setSaving(true)
+    try {
+      const sb = supabase as any
+      const { error } = await sb
+        .from('feedback')
+        .update({
+          admin_response: responseDraft || null,
+          status: statusDraft,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', selected.id)
+      if (error) { showToast(error.message, 'error'); setSaving(false); return }
+      showToast('Feedback updated', 'success')
+      setSelected(null)
+      load()
+    } catch (err: any) {
+      showToast(err?.message || 'Save failed', 'error')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const kpis = useMemo(() => {
+    const total = rows.length
+    const submitted = rows.filter(r => r.status === 'submitted').length
+    const ack = rows.filter(r => r.status === 'acknowledged').length
+    const resolved = rows.filter(r => r.status === 'resolved').length
+    return { total, submitted, ack, resolved }
+  }, [rows])
+
+  const statusVariant = (s: string): 'success' | 'warning' | 'info' | 'neutral' => {
+    if (s === 'resolved') return 'success'
+    if (s === 'acknowledged') return 'warning'
+    if (s === 'submitted') return 'info'
+    return 'neutral'
+  }
+
+  const columns: Column<AdminFeedbackRow>[] = [
+    {
+      key: 'subject',
+      label: 'Feedback',
+      render: (row) => (
+        <div>
+          <p className="text-sm font-medium text-white">{row.subject}</p>
+          <p className="text-[11px] text-gray-500 truncate max-w-[320px]">{row.description}</p>
+        </div>
+      ),
+    },
+    { key: 'category', label: 'Category', render: (row) => <AdminBadge label={row.category} variant="info" size="sm" /> },
+    { key: 'staff_name', label: 'From', render: (row) => <span className="text-xs text-gray-300">{row.staff_name}</span> },
+    { key: 'status', label: 'Status', render: (row) => <AdminBadge label={row.status} variant={statusVariant(row.status)} dot /> },
+    { key: 'created_at', label: 'Submitted', render: (row) => <span className="text-xs text-gray-400">{formatDate(row.created_at)}</span> },
+    {
+      key: 'actions',
+      label: '',
+      sortable: false,
+      width: '80px',
+      render: (row) => (
+        <button onClick={(e) => { e.stopPropagation(); setSelected(row) }} className="text-xs text-brand-red hover:underline font-medium inline-flex items-center gap-1">
+          <Eye className="w-3 h-3" /> View
+        </button>
+      ),
+    },
+  ]
+
+  return (
+    <div className="space-y-5">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        <AdminKPICard title="Total Feedback" value={kpis.total} icon={MessageSquare} color="#3B82F6" delay={0} />
+        <AdminKPICard title="New" value={kpis.submitted} icon={Clock} color="#F59E0B" delay={50} />
+        <AdminKPICard title="Acknowledged" value={kpis.ack} icon={AlertTriangle} color="#8B5CF6" delay={100} />
+        <AdminKPICard title="Resolved" value={kpis.resolved} icon={CheckCircle2} color="#10B981" delay={150} />
+      </div>
+
+      <AdminGlass padding="p-4">
+        {loading ? (
+          <div className="py-12 text-center text-sm text-gray-500">Loading feedback…</div>
+        ) : (
+          <AdminDataTable<AdminFeedbackRow>
+            columns={columns}
+            data={rows}
+            searchKeys={['subject', 'description', 'category', 'staff_name']}
+            searchPlaceholder="Search feedback..."
+            onRowClick={(row) => setSelected(row)}
+            emptyMessage="No staff feedback submitted yet"
+            title="Staff Feedback"
+          />
+        )}
+      </AdminGlass>
+
+      {selected && (
+        <AdminModal
+          isOpen={!!selected}
+          onClose={() => setSelected(null)}
+          title={selected.subject}
+          subtitle={`${selected.category} • ${selected.staff_name} • ${formatDate(selected.created_at)}`}
+          maxWidth="max-w-2xl"
+          footer={
+            <>
+              <ModalButton onClick={() => setSelected(null)}>Close</ModalButton>
+              <ModalButton variant="primary" onClick={handleSave} disabled={saving}>{saving ? 'Saving…' : 'Save'}</ModalButton>
+            </>
+          }
+        >
+          <div className="space-y-4">
+            <div>
+              <p className="text-[11px] uppercase tracking-wider text-gray-500 mb-1">Description</p>
+              <p className="text-sm text-gray-200 whitespace-pre-wrap">{selected.description}</p>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs font-medium text-gray-400 mb-1.5">Status</label>
+                <select value={statusDraft} onChange={(e) => setStatusDraft(e.target.value)} className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-brand-red/40">
+                  <option value="submitted" className="bg-neutral-900">Submitted</option>
+                  <option value="acknowledged" className="bg-neutral-900">Acknowledged</option>
+                  <option value="resolved" className="bg-neutral-900">Resolved</option>
+                </select>
+              </div>
+              <div className="flex items-center gap-2 mt-5">
+                <AdminBadge label={selected.is_anonymous ? 'Anonymous' : 'Attributed'} variant={selected.is_anonymous ? 'warning' : 'info'} />
+              </div>
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-400 mb-1.5">Admin response (visible to staff)</label>
+              <textarea rows={4} value={responseDraft} onChange={(e) => setResponseDraft(e.target.value)} placeholder="Your response will appear on the staff's feedback list." className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-brand-red/40 resize-y" />
+            </div>
+          </div>
+        </AdminModal>
+      )}
+    </div>
   )
 }

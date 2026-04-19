@@ -252,7 +252,7 @@ export default function StaffClient() {
       case 'team':
         return <TeamModule subTab={activeSubTab} navigate={navigate} showToast={showToast} role={role} />
       case 'internal':
-        return <InternalModule subTab={activeSubTab} navigate={navigate} showToast={showToast} />
+        return <InternalModule subTab={activeSubTab} navigate={navigate} showToast={showToast} user={user} role={role} />
       default:
         return (
           <AdminGlass className="flex flex-col items-center justify-center py-16">
