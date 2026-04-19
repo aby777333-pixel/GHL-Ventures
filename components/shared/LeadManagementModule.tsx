@@ -136,7 +136,7 @@ export default function LeadManagementModule({
     if (!isSupabaseConfigured()) return
     setLoading(true)
     try {
-      const [leadsRes, statusRes, sourceRes, companyRes, staffRes] = await Promise.all([
+      const [leadsRes, statusRes, sourceRes, companyRes, staffRes, profilesRes] = await Promise.all([
         (() => {
           let q = (supabase as any).from('leads').select('*').order('created_at', { ascending: false })
           if (scope === 'irm' && resolvedUserId) q = q.eq('assigned_to', resolvedUserId)
@@ -145,13 +145,42 @@ export default function LeadManagementModule({
         (supabase as any).from('lead_statuses').select('*').order('sort_order', { ascending: true }),
         (supabase as any).from('lead_sources').select('*').order('created_at', { ascending: false }),
         (supabase as any).from('lead_companies').select('*').order('created_at', { ascending: false }),
-        (supabase as any).from('staff_profiles').select('id, full_name, email'),
+        // staff_profiles only has id/user_id; full_name + email live on profiles
+        (supabase as any).from('staff_profiles').select('id, user_id, is_active'),
+        (supabase as any).from('profiles').select('id, full_name, email'),
       ])
-      setLeads(leadsRes.data || [])
+
+      // Normalize lead names: DB may have empty `name` but populated first_name/last_name
+      // (happens for website form submissions + legacy rows). Fall back in order so the
+      // table never shows blanks while keeping the stored value authoritative when set.
+      const normalizedLeads = (leadsRes.data || []).map((l: any) => ({
+        ...l,
+        name: (l.name?.toString().trim())
+          || [l.first_name, l.last_name].filter(Boolean).join(' ').trim()
+          || (l.email ? l.email.split('@')[0] : '')
+          || '(Unnamed)',
+      }))
+
+      // Join staff_profiles → profiles so assigned-to dropdown/table display works.
+      const profilesById: Record<string, any> = {}
+      for (const p of (profilesRes.data || [])) profilesById[p.id] = p
+      const joinedStaff = (staffRes.data || [])
+        .filter((s: any) => s.is_active !== false)
+        .map((s: any) => {
+          const p = profilesById[s.user_id] || {}
+          return {
+            id: s.id,
+            full_name: p.full_name || p.email || 'Unnamed staff',
+            email: p.email || '',
+          }
+        })
+        .sort((a: any, b: any) => a.full_name.localeCompare(b.full_name))
+
+      setLeads(normalizedLeads)
       setStatuses(statusRes.data || [])
       setSources(sourceRes.data || [])
       setCompanies(companyRes.data || [])
-      setStaffList(staffRes.data || [])
+      setStaffList(joinedStaff)
     } catch (e) {
       console.error('Failed to load lead data:', e)
     }
