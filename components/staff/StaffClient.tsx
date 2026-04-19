@@ -234,7 +234,7 @@ export default function StaffClient() {
 
     switch (activeModule) {
       case 'home':
-        return <HomeModule navigate={navigate} showToast={showToast} userName={user?.name || ''} role={role} />
+        return <HomeModule navigate={navigate} showToast={showToast} userName={user?.name || ''} role={role} userId={user?.id} />
       case 'me':
         return <SelfServiceModule subTab={activeSubTab} navigate={navigate} showToast={showToast} userId={session?.user?.id} userName={user?.name || ''} userEmail={user?.email || ''} userPhone={user?.phone || ''} userRole={role} userDepartment={user?.department || ''} userDesignation={user?.designation || ''} userStaffCode={user?.staffCode || ''} userJoinDate={user?.joinDate || ''} userStatus={user?.status || 'active'} />
       case 'cs':

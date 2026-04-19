@@ -12,7 +12,7 @@ import AdminGlass from '../../admin/shared/AdminGlass'
 import AdminBadge from '../../admin/shared/AdminBadge'
 import { getGreeting } from '@/lib/staff/staffHooks'
 import {
-  fetchTasks, fetchAnnouncements, getCSKPIs, fetchTickets,
+  fetchTasks, fetchAnnouncements, fetchTickets,
 } from '@/lib/supabase/staffDataService'
 import type { StaffRole, TaskPriority } from '@/lib/staff/staffTypes'
 import { isCSRole, isFieldRole } from '@/lib/staff/staffRBAC'
@@ -22,6 +22,7 @@ interface HomeModuleProps {
   showToast: (msg: string, type?: 'success' | 'error' | 'info' | 'warning') => void
   userName: string
   role: StaffRole
+  userId?: string
 }
 
 // ── Priority Helpers ──────────────────────────────────────────────
@@ -64,7 +65,7 @@ const DAILY_QUOTES = [
 ]
 
 // ── Component ─────────────────────────────────────────────────────
-export default function HomeModule({ navigate, showToast, userName, role }: HomeModuleProps) {
+export default function HomeModule({ navigate, showToast, userName, role, userId }: HomeModuleProps) {
   const firstName = userName.split(' ')[0]
   const greeting = getGreeting()
   const today = new Date().toLocaleDateString('en-IN', {
@@ -73,20 +74,40 @@ export default function HomeModule({ navigate, showToast, userName, role }: Home
 
   const [tasks, setTasks] = useState<any[]>([])
   const [announcements, setAnnouncements] = useState<any[]>([])
-  const [csKpis, setCsKpis] = useState(getCSKPIs())
   const [tickets, setTickets] = useState<any[]>([])
 
   const loadData = useCallback(async () => {
     const [t, a, tk] = await Promise.all([
-      fetchTasks(), fetchAnnouncements(), fetchTickets(),
+      fetchTasks(userId), fetchAnnouncements(), fetchTickets(userId),
     ])
     setTasks(t)
     setAnnouncements(a)
     setTickets(tk)
-    setCsKpis(getCSKPIs())
-  }, [])
+  }, [userId])
 
   useEffect(() => { loadData() }, [loadData])
+
+  // Derived CS KPIs from the ticket set (scoped to current user above)
+  const csKpis = useMemo(() => {
+    const resolved = tickets.filter(t => t.status === 'resolved' || t.status === 'closed')
+    const ticketsResolved = resolved.length
+    // Avg response time (minutes): created_at -> resolved_at
+    let minutesSum = 0, minutesCount = 0
+    for (const t of resolved) {
+      if (t.created_at && t.resolved_at) {
+        const delta = (new Date(t.resolved_at).getTime() - new Date(t.created_at).getTime()) / 60000
+        if (delta > 0) { minutesSum += delta; minutesCount++ }
+      }
+    }
+    const avgResponseTime = minutesCount > 0 ? Math.round(minutesSum / minutesCount) : 0
+    // CSAT: average csat_score (1-5) → percentage
+    const withCsat = tickets.filter(t => typeof t.csat_score === 'number' && t.csat_score > 0)
+    const csatAvg = withCsat.length > 0
+      ? withCsat.reduce((s, t) => s + Number(t.csat_score), 0) / withCsat.length
+      : 0
+    const csatScore = csatAvg > 0 ? Math.round((csatAvg / 5) * 100) : 0
+    return { ticketsResolved, avgResponseTime, csatScore }
+  }, [tickets])
 
   const dailyQuote = useMemo(() => {
     const idx = new Date().getDate() % DAILY_QUOTES.length
@@ -151,9 +172,9 @@ export default function HomeModule({ navigate, showToast, userName, role }: Home
     { label: 'Tasks', icon: ListTodo, path: 'tasks', color: 'text-blue-400' },
     { label: 'AI Tools', icon: Sparkles, path: 'ai', color: 'text-purple-400' },
     { label: 'Team Directory', icon: Users, path: 'team', color: 'text-emerald-400' },
-    { label: 'Knowledge Base', icon: BookOpen, path: 'internal/kb', color: 'text-amber-400' },
+    { label: 'Knowledge Base', icon: BookOpen, path: 'cs/knowledge-base', color: 'text-amber-400' },
     { label: 'Leave', icon: CalendarDays, path: 'me/leave', color: 'text-pink-400' },
-    { label: 'Training', icon: GraduationCap, path: 'internal/training', color: 'text-cyan-400' },
+    { label: 'Training', icon: GraduationCap, path: 'me/training', color: 'text-cyan-400' },
     { label: 'Internal Chat', icon: MessageSquare, path: 'internal/chat', color: 'text-indigo-400' },
   ]
 
