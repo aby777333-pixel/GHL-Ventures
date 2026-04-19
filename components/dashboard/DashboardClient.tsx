@@ -3694,7 +3694,7 @@ export default function DashboardClient() {
           {calcs.map(c => (
             <button key={c.id} onClick={() => setActiveCalc(c.id)}
               className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium transition-all
-                ${activeCalc === c.id ? 'text-white bg-brand-red' : t('text-gray-400 bg-white/[0.04] hover:bg-white/[0.06]','text-gray-600 bg-gray-100/50 hover:bg-gray-200/40')}`}>
+                ${activeCalc === c.id ? 'text-white bg-brand-red' : t('text-gray-400 bg-white/[0.04] hover:bg-white/[0.06]','text-gray-900 bg-gray-100 hover:bg-gray-200 border border-gray-200')}`}>
               <c.icon className="w-3.5 h-3.5" /> {c.label}
             </button>
           ))}

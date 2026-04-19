@@ -746,11 +746,11 @@ export default function InvestmentFlowTab({
                 <div className={`p-4 rounded-xl ${t('bg-white/[0.02] border border-white/[0.06]','bg-gray-50 border border-gray-200')}`}>
                   <p className={`text-xs font-bold mb-3 ${t('text-blue-400','text-blue-600')}`}>Transfer funds to the following account</p>
                   {[
-                    { label: 'Account Name', val: 'GHL India Ventures Private Limited' },
-                    { label: 'Account Number', val: '50200095363498' },
-                    { label: 'IFSC Code', val: 'HDFC0000043' },
-                    { label: 'Bank Name', val: 'HDFC Bank' },
-                    { label: 'Branch', val: 'Egmore, Chennai' },
+                    { label: 'Account Holder Name', val: 'LANDMAXO PROPERTIES PVT LTD' },
+                    { label: 'Account Number', val: '10090419033' },
+                    { label: 'IFSC Code', val: 'IDFB0080105' },
+                    { label: 'Bank Name', val: 'IDFC FIRST BANK' },
+                    { label: 'Branch', val: 'ADYAR' },
                     { label: 'Account Type', val: 'Current Account' },
                   ].map((f, i) => (
                     <div key={i} className={`flex justify-between py-2 border-b last:border-0 ${t('border-white/[0.04]','border-gray-200')}`}>
