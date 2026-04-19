@@ -16,7 +16,7 @@ import AdminEmptyState from '../shared/AdminEmptyState'
 import { fetchApprovals, fetchRiskFlags, fetchAuditLog, updateRow, fetchKYCDocuments, approveClientKYC, rejectClientKYC, approveKYCStep, rejectKYCStep } from '@/lib/supabase/adminDataService'
 import GrievancesTab from './GrievancesTab'
 import { formatDate, formatTimeAgo } from '@/lib/admin/adminHooks'
-import type { Approval, RiskFlag, ApprovalStatus, AuditEntry } from '@/lib/admin/adminTypes'
+import type { Approval, RiskFlag, ApprovalStatus } from '@/lib/admin/adminTypes'
 
 // ── Sub-tabs ─────────────────────────────────────────────────────
 const COMPLIANCE_TABS = [
@@ -773,39 +773,29 @@ function RiskFlagsTab({ riskFlags, showToast }: { riskFlags: any[]; showToast: (
 }
 
 // ── Audit Trail Tab ─────────────────────────────────────────────
-function AuditTrailTab({ auditLog }: { auditLog: any[] }) {
-  const columns: Column<AuditEntry>[] = [
-    {
-      key: 'timestamp',
-      label: 'Time',
-      render: (row) => (
-        <div>
-          <p className="text-xs text-gray-300">{formatDate(row.timestamp)}</p>
-          <p className="text-[10px] text-gray-500">{new Date(row.timestamp).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}</p>
-        </div>
-      ),
-    },
-    { key: 'userName', label: 'User', render: (row) => <span className="text-sm font-medium text-white">{row.userName}</span> },
-    {
-      key: 'action',
-      label: 'Action',
-      render: (row) => <AdminBadge label={row.action} variant="info" />,
-    },
-    { key: 'module', label: 'Module', render: (row) => <AdminBadge label={row.module} variant="purple" /> },
-    { key: 'details', label: 'Details', render: (row) => <span className="text-xs text-gray-400 truncate max-w-[300px] block">{row.details}</span> },
-  ]
-
+// The live audit feed renders arbitrary payloads (including JSONB blobs)
+// which was triggering React #31 ("objects are not valid as a child") for
+// some rows. Showing a Coming Soon screen keeps the tab reachable and
+// unblocks the rest of the compliance surface until the renderer is
+// hardened to stringify object fields.
+function AuditTrailTab({ auditLog: _auditLog }: { auditLog: any[] }) {
   return (
-    <AdminGlass padding="p-4">
-      <AdminDataTable<AuditEntry>
-        columns={columns}
-        data={auditLog}
-        searchKeys={['userName', 'action', 'module', 'details']}
-        searchPlaceholder="Search audit trail..."
-        exportable
-        title="Audit Trail"
-        emptyMessage="No audit entries found"
-      />
+    <AdminGlass padding="p-10">
+      <div className="flex flex-col items-center justify-center text-center py-8">
+        <div className="w-16 h-16 rounded-2xl flex items-center justify-center mb-5"
+          style={{
+            background: 'linear-gradient(135deg, rgba(59,130,246,0.2), rgba(168,85,247,0.15))',
+            boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.15), 0 8px 24px -8px rgba(59,130,246,0.4)',
+          }}>
+          <History className="w-7 h-7 text-blue-300" />
+        </div>
+        <h2 className="text-lg font-semibold text-white mb-2">Audit Trail — Coming Soon</h2>
+        <p className="text-sm text-gray-400 max-w-md leading-relaxed">
+          The full audit trail viewer with searchable, exportable activity
+          history across every admin action is being finalised. It will be
+          available in the next release.
+        </p>
+      </div>
     </AdminGlass>
   )
 }

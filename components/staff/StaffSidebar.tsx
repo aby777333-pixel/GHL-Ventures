@@ -119,9 +119,11 @@ export default function StaffSidebar({
                   )}
                 </button>
 
-                {/* Sub-items */}
+                {/* Sub-items — flush-left alignment so labels sit on the
+                    same left edge as parent nav buttons (no indent / no
+                    vertical rail). Matches the admin sidebar's bug #36 fix. */}
                 {hasChildren && isExpanded && (
-                  <div className="ml-4 pl-3 border-l border-white/[0.04] mt-0.5 space-y-0.5">
+                  <div className="mt-0.5 space-y-0.5 mb-1">
                     {item.subItems!.map(sub => {
                       const subPath = sub.href.replace('/staff/', '')
                       const isSubActive = isActive && (
@@ -133,12 +135,13 @@ export default function StaffSidebar({
                         <button
                           key={sub.id}
                           onClick={() => handleNav(sub.href)}
-                          className={`w-full text-left px-3 py-1.5 rounded-lg text-[11px] font-medium transition-all duration-150 ${
+                          className={`w-full flex items-center justify-start text-left px-3 py-1.5 rounded-lg text-[11px] font-medium transition-all duration-150 ${
                             isSubActive
                               ? 'text-teal-400 bg-teal-500/[0.08]'
                               : 'text-gray-600 hover:text-gray-300 hover:bg-white/[0.03]'
                           }`}
                         >
+                          <span className="w-[18px] flex-shrink-0" />
                           {sub.label}
                         </button>
                       )
