@@ -484,8 +484,12 @@ export default function AllotmentModule({ subTab, navigate, showToast }: Allotme
     { key: 'dis_to', label: 'Dis. To', sortable: true, width: 'w-28',
       render: (row) => <span className="font-mono text-xs text-gray-300">{row.dis_to.toLocaleString('en-IN')}</span>
     },
-    { key: 'fund_type', label: 'Fund Type', sortable: true, width: 'w-32',
-      render: (row) => <AdminBadge label={row.fund_type || 'N/A'} variant="info" />
+    { key: 'fund_type', label: 'Fund Type', sortable: true, width: 'w-44',
+      render: (row) => (
+        <span className="inline-block px-2 py-1 rounded-md text-[11px] font-medium leading-snug text-blue-300 bg-blue-500/10 border border-blue-500/20">
+          {row.fund_type || 'N/A'}
+        </span>
+      ),
     },
     { key: 'allotment_date', label: 'Allotment Date', sortable: true, width: 'w-32',
       render: (row) => <span className="text-xs text-gray-400">{formatDate(row.allotment_date)}</span>
@@ -572,8 +576,12 @@ export default function AllotmentModule({ subTab, navigate, showToast }: Allotme
     { key: 'dis_to', label: 'Dis. To', width: 'w-28',
       render: (row) => <span className="font-mono text-xs text-gray-300">{row.dis_to.toLocaleString('en-IN')}</span>
     },
-    { key: 'fund_type', label: 'Fund Type', width: 'w-32',
-      render: () => <AdminBadge label={fundType || 'N/A'} variant="info" />
+    { key: 'fund_type', label: 'Fund Type', width: 'w-44',
+      render: () => (
+        <span className="inline-block px-2 py-1 rounded-md text-[11px] font-medium leading-snug text-blue-300 bg-blue-500/10 border border-blue-500/20">
+          {fundType || 'N/A'}
+        </span>
+      ),
     },
   ]
 
