@@ -155,6 +155,7 @@ function CSDashboard({ navigate, showToast }: Pick<CSCenterModuleProps, 'navigat
   const [agentStatus, setAgentStatus] = useState<string>('available')
   const [chatSessions, setChatSessions] = useState<ChatSession[]>([])
   const [loadingSessions, setLoadingSessions] = useState(true)
+  const [callsHandledToday, setCallsHandledToday] = useState(0)
 
   // Load current agent status on mount
   useEffect(() => {
@@ -183,6 +184,28 @@ function CSDashboard({ navigate, showToast }: Pick<CSCenterModuleProps, 'navigat
     }
     load()
     const interval = setInterval(load, 6000)
+    return () => { mounted = false; clearInterval(interval) }
+  }, [])
+
+  // Load "calls handled today" count from the calls table
+  useEffect(() => {
+    let mounted = true
+    async function loadCalls() {
+      if (!isSupabaseConfigured()) return
+      try {
+        const sb = supabase as any
+        const startOfDay = new Date()
+        startOfDay.setHours(0, 0, 0, 0)
+        const { count } = await sb
+          .from('calls')
+          .select('id', { count: 'exact', head: true })
+          .not('ended_at', 'is', null)
+          .gte('ended_at', startOfDay.toISOString())
+        if (mounted && typeof count === 'number') setCallsHandledToday(count)
+      } catch { /* silent */ }
+    }
+    loadCalls()
+    const interval = setInterval(loadCalls, 30000)
     return () => { mounted = false; clearInterval(interval) }
   }, [])
 
@@ -239,7 +262,7 @@ function CSDashboard({ navigate, showToast }: Pick<CSCenterModuleProps, 'navigat
         <AdminKPICard title="Chats in Queue" value={waitingSessions.length} subtitle="Waiting for agent" icon={Users} color={ACCENT} delay={0} />
         <AdminKPICard title="Active Sessions" value={activeSessions.length} subtitle="Currently active" icon={CheckCircle2} color="#8b5cf6" delay={100} />
         <AdminKPICard title="Total Sessions" value={chatSessions.length} subtitle="All channels" icon={MessageCircle} color="#f59e0b" delay={200} />
-        <AdminKPICard title="Calls Handled" value={0} subtitle="Today" icon={Phone} color="#ec4899" delay={300} />
+        <AdminKPICard title="Calls Handled" value={callsHandledToday} subtitle="Today" icon={Phone} color="#ec4899" delay={300} />
       </div>
 
       {/* Live Queue + Active Sessions */}
@@ -816,11 +839,151 @@ function TicketManagement({ showToast }: Pick<CSCenterModuleProps, 'showToast'>)
 }
 
 // ── 4. Calls ─────────────────────────────────────────────────
+interface CallRow {
+  id: string
+  contact_name: string | null
+  contact_phone: string | null
+  recipient_name: string | null
+  recipient_number: string | null
+  direction: string | null
+  duration_seconds: number | null
+  outcome: string | null
+  notes: string | null
+  scheduled_at: string | null
+  started_at: string | null
+  ended_at: string | null
+  created_at: string | null
+  call_type: string | null
+}
+
+function fmtCallDuration(seconds: number | null): string {
+  if (!seconds || seconds <= 0) return '—'
+  const mm = Math.floor(seconds / 60)
+  const ss = seconds % 60
+  return `${mm}:${ss.toString().padStart(2, '0')}`
+}
+
+function waitLabel(iso: string | null): string {
+  if (!iso) return '—'
+  const diff = Math.max(0, Math.round((Date.now() - new Date(iso).getTime()) / 1000))
+  if (diff < 60) return `${diff}s`
+  if (diff < 3600) return `${Math.round(diff / 60)}m`
+  return `${Math.round(diff / 3600)}h`
+}
+
 function CallsView({ showToast }: Pick<CSCenterModuleProps, 'showToast'>) {
-  const [activeCall, setActiveCall] = useState(false)
+  const [activeCall, setActiveCall] = useState<CallRow | null>(null)
+  const [pending, setPending] = useState<CallRow[]>([])
+  const [recent, setRecent] = useState<CallRow[]>([])
+  const [loading, setLoading] = useState(true)
+  const [logOpen, setLogOpen] = useState(false)
+  const [logForm, setLogForm] = useState({ contact_name: '', contact_phone: '', direction: 'outbound', outcome: 'connected', notes: '' })
+  const [saving, setSaving] = useState(false)
+
+  const load = useCallback(async () => {
+    if (!isSupabaseConfigured()) { setLoading(false); return }
+    setLoading(true)
+    try {
+      const sb = supabase as any
+      const nowIso = new Date().toISOString()
+      const [pendingRes, recentRes] = await Promise.all([
+        sb.from('calls')
+          .select('*')
+          .is('ended_at', null)
+          .or(`scheduled_at.gte.${nowIso},scheduled_at.is.null`)
+          .order('scheduled_at', { ascending: true, nullsFirst: false })
+          .limit(50),
+        sb.from('calls')
+          .select('*')
+          .not('ended_at', 'is', null)
+          .order('ended_at', { ascending: false })
+          .limit(30),
+      ])
+      setPending((pendingRes.data as CallRow[]) || [])
+      setRecent((recentRes.data as CallRow[]) || [])
+    } catch (_e) {
+      setPending([]); setRecent([])
+    }
+    setLoading(false)
+  }, [])
+
+  useEffect(() => { load() }, [load])
+
+  const acceptCall = useCallback(async (row: CallRow) => {
+    try {
+      const sb = supabase as any
+      await sb.from('calls').update({ started_at: new Date().toISOString() }).eq('id', row.id)
+      setActiveCall({ ...row, started_at: new Date().toISOString() })
+      setPending(prev => prev.filter(c => c.id !== row.id))
+      showToast(`Connecting to ${row.contact_name || row.contact_phone || 'caller'}...`, 'info')
+    } catch (err: any) {
+      showToast(`Could not start call: ${err?.message || 'error'}`, 'error')
+    }
+  }, [showToast])
+
+  const endCall = useCallback(async (row: CallRow, outcome: string) => {
+    try {
+      const sb = supabase as any
+      const endedAt = new Date().toISOString()
+      const started = row.started_at ? new Date(row.started_at).getTime() : Date.now()
+      const duration = Math.max(1, Math.round((Date.now() - started) / 1000))
+      await sb.from('calls').update({ ended_at: endedAt, outcome, duration_seconds: duration }).eq('id', row.id)
+      setActiveCall(null)
+      showToast('Call ended', 'info')
+      load()
+    } catch (err: any) {
+      showToast(`Could not end call: ${err?.message || 'error'}`, 'error')
+    }
+  }, [load, showToast])
+
+  const logCall = useCallback(async () => {
+    if (!logForm.contact_name && !logForm.contact_phone) { showToast('Enter caller name or number', 'error'); return }
+    setSaving(true)
+    try {
+      const sb = supabase as any
+      const { data: auth } = await sb.auth.getUser()
+      const now = new Date().toISOString()
+      await sb.from('calls').insert({
+        caller_id: auth?.user?.id || null,
+        contact_name: logForm.contact_name || null,
+        contact_phone: logForm.contact_phone || null,
+        direction: logForm.direction,
+        outcome: logForm.outcome,
+        notes: logForm.notes || null,
+        started_at: now,
+        ended_at: now,
+        duration_seconds: 0,
+      })
+      setLogForm({ contact_name: '', contact_phone: '', direction: 'outbound', outcome: 'connected', notes: '' })
+      setLogOpen(false)
+      showToast('Call logged', 'success')
+      load()
+    } catch (err: any) {
+      showToast(`Could not log call: ${err?.message || 'error'}`, 'error')
+    } finally {
+      setSaving(false)
+    }
+  }, [logForm, load, showToast])
+
+  const callOutcomeVariant = (o: string | null): 'success' | 'warning' | 'info' | 'neutral' | 'error' => {
+    if (!o) return 'neutral'
+    const v = o.toLowerCase()
+    if (v.includes('resolved') || v === 'connected' || v === 'answered') return 'success'
+    if (v.includes('escalat')) return 'warning'
+    if (v.includes('missed') || v.includes('failed') || v.includes('rejected')) return 'error'
+    return 'info'
+  }
 
   return (
     <div className="space-y-4">
+      <div className="flex items-center justify-end">
+        <button
+          onClick={() => setLogOpen(true)}
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-teal-500/20 text-teal-400 border border-teal-500/30 hover:bg-teal-500/30 transition-colors"
+        >
+          <Plus className="w-3.5 h-3.5" /> Log Call
+        </button>
+      </div>
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {/* Call Queue */}
         <AdminGlass padding="p-0">
@@ -828,34 +991,40 @@ function CallsView({ showToast }: Pick<CSCenterModuleProps, 'showToast'>) {
             <div className="flex items-center gap-2">
               <Phone className="w-4 h-4 text-violet-400" />
               <h3 className="text-sm font-semibold text-white">Pending Calls</h3>
-              <span className="text-[10px] bg-violet-500/20 text-violet-400 px-2 py-0.5 rounded-full font-medium">{PENDING_CALLS.length}</span>
+              <span className="text-[10px] bg-violet-500/20 text-violet-400 px-2 py-0.5 rounded-full font-medium">{pending.length}</span>
             </div>
           </div>
           <div className="divide-y divide-white/[0.04]">
-            {PENDING_CALLS.length === 0 ? (
+            {loading ? (
+              <div className="px-5 py-8 text-center text-xs text-gray-500">Loading calls…</div>
+            ) : pending.length === 0 ? (
               <div className="px-5 py-8 text-center text-xs text-gray-500">No pending calls</div>
-            ) : PENDING_CALLS.map(c => (
+            ) : pending.map(c => {
+              const name = c.contact_name || c.recipient_name || 'Unknown caller'
+              const phone = c.contact_phone || c.recipient_number || ''
+              return (
               <div key={c.id} className="px-5 py-3 flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-white font-medium">{c.clientName}</p>
-                  <p className="text-xs text-gray-500">{c.reason}</p>
-                  <p className="text-[10px] text-gray-600 font-mono mt-0.5">{c.phone}</p>
+                  <p className="text-sm text-white font-medium">{name}</p>
+                  <p className="text-xs text-gray-500">{c.notes || c.call_type || c.direction || '—'}</p>
+                  <p className="text-[10px] text-gray-600 font-mono mt-0.5">{phone}</p>
                 </div>
                 <div className="flex items-center gap-3">
-                  <AdminBadge label={c.priority} variant={priorityVariant(c.priority)} size="sm" dot />
+                  <AdminBadge label={c.direction || 'outbound'} variant="info" size="sm" />
                   <div className="flex items-center gap-1 text-xs text-gray-500">
                     <Clock className="w-3 h-3" />
-                    {c.waitTime}
+                    {waitLabel(c.scheduled_at || c.created_at)}
                   </div>
                   <button
-                    onClick={() => { setActiveCall(true); showToast(`Connecting to ${c.clientName}...`, 'info') }}
+                    onClick={() => acceptCall(c)}
                     className="p-2 rounded-lg bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/30 transition-colors"
                   >
                     <Phone className="w-3.5 h-3.5" />
                   </button>
                 </div>
               </div>
-            ))}
+              )
+            })}
           </div>
         </AdminGlass>
 
@@ -868,43 +1037,12 @@ function CallsView({ showToast }: Pick<CSCenterModuleProps, 'showToast'>) {
             </div>
           </div>
           {activeCall ? (
-            <div className="p-6 text-center">
-              <div className="w-16 h-16 rounded-full bg-teal-500/20 border-2 border-teal-500/40 flex items-center justify-center mx-auto mb-3 animate-pulse">
-                <Phone className="w-7 h-7 text-teal-400" />
-              </div>
-              <p className="text-white font-semibold">Meena Iyer</p>
-              <p className="text-xs text-gray-500 mt-1">+91 98765 43210</p>
-              <p className="text-sm text-teal-400 font-mono mt-2">05:32</p>
-              <div className="flex items-center justify-center gap-3 mt-5">
-                {[
-                  { icon: <Headphones className="w-4 h-4" />, label: 'Mute', color: 'bg-white/[0.06] text-gray-400 hover:bg-white/[0.1]' },
-                  { icon: <Clock className="w-4 h-4" />, label: 'Hold', color: 'bg-amber-500/20 text-amber-400 hover:bg-amber-500/30' },
-                  { icon: <ArrowRight className="w-4 h-4" />, label: 'Transfer', color: 'bg-blue-500/20 text-blue-400 hover:bg-blue-500/30' },
-                  { icon: <Shield className="w-4 h-4" />, label: 'Record', color: 'bg-red-500/20 text-red-400 hover:bg-red-500/30' },
-                  { icon: <Edit3 className="w-4 h-4" />, label: 'Notes', color: 'bg-white/[0.06] text-gray-400 hover:bg-white/[0.1]' },
-                ].map((btn, i) => (
-                  <button
-                    key={i}
-                    onClick={() => showToast(`${btn.label} toggled`, 'info')}
-                    className={`flex flex-col items-center gap-1 p-3 rounded-xl border border-white/[0.08] transition-colors ${btn.color}`}
-                  >
-                    {btn.icon}
-                    <span className="text-[10px]">{btn.label}</span>
-                  </button>
-                ))}
-              </div>
-              <button
-                onClick={() => { setActiveCall(false); showToast('Call ended', 'info') }}
-                className="mt-5 px-6 py-2 rounded-xl text-sm font-medium bg-red-500/20 text-red-400 border border-red-500/30 hover:bg-red-500/30 transition-colors"
-              >
-                End Call
-              </button>
-            </div>
+            <ActiveCallPanel call={activeCall} onEnd={(outcome) => endCall(activeCall, outcome)} showToast={showToast} />
           ) : (
             <div className="flex flex-col items-center justify-center py-16 text-gray-500">
               <Phone className="w-10 h-10 mb-3 opacity-30" />
               <p className="text-sm">No active call</p>
-              <p className="text-xs mt-1">Pick up a call from the queue</p>
+              <p className="text-xs mt-1">Pick up a call from the queue or log a new one</p>
             </div>
           )}
         </AdminGlass>
@@ -916,35 +1054,133 @@ function CallsView({ showToast }: Pick<CSCenterModuleProps, 'showToast'>) {
           <h3 className="text-sm font-semibold text-white">Recent Calls</h3>
         </div>
         <div className="divide-y divide-white/[0.04]">
-          {RECENT_CALLS.length === 0 ? (
+          {loading ? (
+            <div className="px-5 py-8 text-center text-xs text-gray-500">Loading…</div>
+          ) : recent.length === 0 ? (
             <div className="px-5 py-8 text-center text-xs text-gray-500">No recent call history</div>
-          ) : RECENT_CALLS.map(c => (
-            <div key={c.id} className="flex items-center gap-4 px-5 py-3">
-              <div className={`p-2 rounded-lg ${c.direction === 'inbound' ? 'bg-teal-500/10' : 'bg-violet-500/10'}`}>
-                {c.direction === 'inbound'
-                  ? <ArrowDownRight className="w-4 h-4 text-teal-400" />
-                  : <ArrowUpRight className="w-4 h-4 text-violet-400" />
-                }
+          ) : recent.map(c => {
+            const name = c.contact_name || c.recipient_name || 'Unknown'
+            const when = c.ended_at || c.started_at || c.created_at || ''
+            return (
+              <div key={c.id} className="flex items-center gap-4 px-5 py-3">
+                <div className={`p-2 rounded-lg ${c.direction === 'inbound' ? 'bg-teal-500/10' : 'bg-violet-500/10'}`}>
+                  {c.direction === 'inbound'
+                    ? <ArrowDownRight className="w-4 h-4 text-teal-400" />
+                    : <ArrowUpRight className="w-4 h-4 text-violet-400" />
+                  }
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm text-white font-medium truncate">{name}</p>
+                  <p className="text-xs text-gray-500">{c.direction || 'outbound'} &middot; {fmtCallDuration(c.duration_seconds)}</p>
+                </div>
+                {c.outcome && <AdminBadge label={c.outcome} variant={callOutcomeVariant(c.outcome)} size="sm" />}
+                <span className="text-xs text-gray-600">{when ? new Date(when).toLocaleString('en-IN', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }) : ''}</span>
               </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm text-white font-medium">{c.clientName}</p>
-                <p className="text-xs text-gray-500">{c.direction} &middot; {c.duration}</p>
-              </div>
-              <AdminBadge
-                label={c.outcome}
-                variant={c.outcome === 'Resolved' ? 'success' : c.outcome === 'Escalated' ? 'warning' : 'info'}
-                size="sm"
-              />
-              <span className={`text-[10px] px-1.5 py-0.5 rounded ${
-                c.sentiment === 'positive' ? 'bg-emerald-500/10 text-emerald-400' :
-                c.sentiment === 'negative' ? 'bg-red-500/10 text-red-400' :
-                'bg-gray-500/10 text-gray-400'
-              }`}>{c.sentiment}</span>
-              <span className="text-xs text-gray-600">{c.time}</span>
-            </div>
-          ))}
+            )
+          })}
         </div>
       </AdminGlass>
+
+      {/* Log Call Modal */}
+      <AdminModal isOpen={logOpen} onClose={() => setLogOpen(false)} title="Log Call" subtitle="Record a manual call entry">
+        <form onSubmit={(e) => { e.preventDefault(); logCall() }} className="space-y-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label className="block text-[10px] uppercase tracking-wider text-gray-500 mb-1">Caller name</label>
+              <input type="text" value={logForm.contact_name} onChange={e => setLogForm(f => ({ ...f, contact_name: e.target.value }))} placeholder="Full name" className="w-full bg-white/[0.04] border border-white/[0.08] rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-teal-500/40" />
+            </div>
+            <div>
+              <label className="block text-[10px] uppercase tracking-wider text-gray-500 mb-1">Phone</label>
+              <input type="tel" value={logForm.contact_phone} onChange={e => setLogForm(f => ({ ...f, contact_phone: e.target.value }))} placeholder="+91..." className="w-full bg-white/[0.04] border border-white/[0.08] rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-teal-500/40" />
+            </div>
+            <div>
+              <label className="block text-[10px] uppercase tracking-wider text-gray-500 mb-1">Direction</label>
+              <select value={logForm.direction} onChange={e => setLogForm(f => ({ ...f, direction: e.target.value }))} className="w-full bg-white/[0.04] border border-white/[0.08] rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-teal-500/40">
+                <option value="outbound" className="bg-neutral-900">Outbound</option>
+                <option value="inbound" className="bg-neutral-900">Inbound</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-[10px] uppercase tracking-wider text-gray-500 mb-1">Outcome</label>
+              <select value={logForm.outcome} onChange={e => setLogForm(f => ({ ...f, outcome: e.target.value }))} className="w-full bg-white/[0.04] border border-white/[0.08] rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-teal-500/40">
+                <option value="connected" className="bg-neutral-900">Connected</option>
+                <option value="voicemail" className="bg-neutral-900">Voicemail</option>
+                <option value="missed" className="bg-neutral-900">Missed</option>
+                <option value="no-answer" className="bg-neutral-900">No Answer</option>
+                <option value="resolved" className="bg-neutral-900">Resolved</option>
+                <option value="escalated" className="bg-neutral-900">Escalated</option>
+              </select>
+            </div>
+          </div>
+          <div>
+            <label className="block text-[10px] uppercase tracking-wider text-gray-500 mb-1">Notes</label>
+            <textarea rows={3} value={logForm.notes} onChange={e => setLogForm(f => ({ ...f, notes: e.target.value }))} className="w-full bg-white/[0.04] border border-white/[0.08] rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-teal-500/40 resize-y" />
+          </div>
+          <div className="flex justify-end gap-2 pt-3 border-t border-white/[0.06]">
+            <button type="button" onClick={() => setLogOpen(false)} className="px-3 py-1.5 rounded-lg text-xs font-medium text-gray-400 hover:text-white hover:bg-white/[0.06]">Cancel</button>
+            <button type="submit" disabled={saving} className="px-4 py-1.5 rounded-lg text-xs font-medium bg-teal-500/20 text-teal-400 border border-teal-500/30 hover:bg-teal-500/30 transition-colors disabled:opacity-50">
+              {saving ? 'Saving…' : 'Log Call'}
+            </button>
+          </div>
+        </form>
+      </AdminModal>
+    </div>
+  )
+}
+
+function ActiveCallPanel({ call, onEnd, showToast }: { call: CallRow; onEnd: (outcome: string) => void; showToast: (m: string, t?: 'success' | 'error' | 'info' | 'warning') => void }) {
+  const [elapsed, setElapsed] = useState(0)
+  useEffect(() => {
+    const start = call.started_at ? new Date(call.started_at).getTime() : Date.now()
+    const tick = () => setElapsed(Math.max(0, Math.floor((Date.now() - start) / 1000)))
+    tick()
+    const id = setInterval(tick, 1000)
+    return () => clearInterval(id)
+  }, [call.started_at])
+
+  const name = call.contact_name || call.recipient_name || 'Unknown caller'
+  const phone = call.contact_phone || call.recipient_number || ''
+
+  return (
+    <div className="p-6 text-center">
+      <div className="w-16 h-16 rounded-full bg-teal-500/20 border-2 border-teal-500/40 flex items-center justify-center mx-auto mb-3 animate-pulse">
+        <Phone className="w-7 h-7 text-teal-400" />
+      </div>
+      <p className="text-white font-semibold">{name}</p>
+      <p className="text-xs text-gray-500 mt-1">{phone}</p>
+      <p className="text-sm text-teal-400 font-mono mt-2">{fmtCallDuration(elapsed)}</p>
+      <div className="flex items-center justify-center gap-3 mt-5">
+        {[
+          { label: 'Mute', color: 'bg-white/[0.06] text-gray-400 hover:bg-white/[0.1]', icon: <Headphones className="w-4 h-4" /> },
+          { label: 'Hold', color: 'bg-amber-500/20 text-amber-400 hover:bg-amber-500/30', icon: <Clock className="w-4 h-4" /> },
+          { label: 'Transfer', color: 'bg-blue-500/20 text-blue-400 hover:bg-blue-500/30', icon: <ArrowRight className="w-4 h-4" /> },
+          { label: 'Record', color: 'bg-red-500/20 text-red-400 hover:bg-red-500/30', icon: <Shield className="w-4 h-4" /> },
+          { label: 'Notes', color: 'bg-white/[0.06] text-gray-400 hover:bg-white/[0.1]', icon: <Edit3 className="w-4 h-4" /> },
+        ].map((btn) => (
+          <button
+            key={btn.label}
+            onClick={() => showToast(`${btn.label} toggled`, 'info')}
+            className={`flex flex-col items-center gap-1 p-3 rounded-xl border border-white/[0.08] transition-colors ${btn.color}`}
+          >
+            {btn.icon}
+            <span className="text-[10px]">{btn.label}</span>
+          </button>
+        ))}
+      </div>
+      <div className="flex items-center justify-center gap-2 mt-5">
+        <button
+          onClick={() => onEnd('resolved')}
+          className="px-4 py-2 rounded-xl text-sm font-medium bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 hover:bg-emerald-500/30 transition-colors"
+        >
+          Resolve
+        </button>
+        <button
+          onClick={() => onEnd('connected')}
+          className="px-6 py-2 rounded-xl text-sm font-medium bg-red-500/20 text-red-400 border border-red-500/30 hover:bg-red-500/30 transition-colors"
+        >
+          End Call
+        </button>
+      </div>
     </div>
   )
 }
