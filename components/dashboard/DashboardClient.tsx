@@ -1116,21 +1116,44 @@ export default function DashboardClient() {
   // ═══════════════════════════════════════════════════════════
   const renderHeroMetrics = () => {
     const metrics = [
-      { label: 'Total Investment', value: `\u20B9${formatINR(portfolioValue)}`, change: `+${totalReturn}%`, up: true, icon: Wallet, gradient: 'from-brand-red/20 to-red-900/20', iconColor: '#D0021B' },
-      { label: 'Total Payout', value: `\u20B9${formatINR(0)}`, change: '\u2014', up: true, icon: IndianRupee, gradient: 'from-purple-500/20 to-purple-900/20', iconColor: '#8B5CF6' },
-      { label: 'AIF Investment', value: `\u20B9${formatINR(aifInvestment)}`, change: '\u2014', up: true, icon: Building2, gradient: 'from-emerald-500/20 to-emerald-900/20', iconColor: '#10B981' },
-      { label: 'Debenture', value: `\u20B9${formatINR(coInvestValue)}`, change: '\u2014', up: true, icon: FileText, gradient: 'from-blue-500/20 to-blue-900/20', iconColor: '#3B82F6' },
+      { label: 'Total Investment', sublabel: 'Aggregate Capital', value: `\u20B9${formatINR(portfolioValue)}`, change: `+${totalReturn}%`, up: true, icon: Wallet, iconColor: '#D0021B' },
+      { label: 'Total Payout', sublabel: 'Distributions', value: `\u20B9${formatINR(0)}`, change: '\u2014', up: true, icon: IndianRupee, iconColor: '#A855F7' },
+      { label: 'AIF Investment', sublabel: 'Alternative Funds', value: `\u20B9${formatINR(aifInvestment)}`, change: '\u2014', up: true, icon: Building2, iconColor: '#10B981' },
+      { label: 'Debenture', sublabel: 'Fixed Income', value: `\u20B9${formatINR(coInvestValue)}`, change: '\u2014', up: true, icon: FileText, iconColor: '#3B82F6' },
     ]
     return (
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         {metrics.map((m, i) => (
-          <div key={i} className="rounded-xl p-5 transition-all duration-300 hover:scale-[1.02]"
-            style={{ background: 'linear-gradient(to right, #2e2222, #a70e0e)' }}>
-            <div className="flex items-center gap-3 mb-3">
-              <m.icon className="w-5 h-5 text-white" />
-              <h5 className="text-white text-sm font-medium">{m.label}</h5>
+          <div key={i} className="relative rounded-2xl overflow-hidden group transition-all duration-500 hover:translate-y-[-2px]"
+            style={{
+              background: 'linear-gradient(135deg, #160606 0%, #240a0a 50%, #160606 100%)',
+              border: `1px solid ${m.iconColor}22`,
+              boxShadow: '0 6px 24px rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.04)'
+            }}>
+            <div className="absolute top-0 left-0 right-0 h-px" style={{ background: `linear-gradient(90deg, transparent, ${m.iconColor}90, transparent)` }} />
+            <div className="absolute top-1/2 -right-16 -translate-y-1/2 w-44 h-44 rounded-full opacity-20 blur-3xl transition-opacity duration-500 group-hover:opacity-35"
+              style={{ background: `radial-gradient(circle, ${m.iconColor} 0%, transparent 70%)` }} />
+            <div className="relative p-5">
+              <div className="flex items-start justify-between mb-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-11 h-11 rounded-xl flex items-center justify-center shrink-0"
+                    style={{ background: `${m.iconColor}18`, border: `1px solid ${m.iconColor}33`, boxShadow: `inset 0 1px 0 ${m.iconColor}22` }}>
+                    <m.icon className="w-5 h-5" style={{ color: m.iconColor }} strokeWidth={1.75} />
+                  </div>
+                  <div>
+                    <p className="text-[10px] uppercase tracking-[0.2em] text-white/45 font-medium mb-0.5">{m.sublabel}</p>
+                    <h5 className="text-white text-sm font-semibold tracking-tight">{m.label}</h5>
+                  </div>
+                </div>
+                {m.change !== '\u2014' && (
+                  <span className="text-[10px] font-bold px-2 py-1 rounded-md bg-emerald-500/15 text-emerald-300 border border-emerald-500/20 uppercase tracking-wider">{m.change}</span>
+                )}
+              </div>
+              <div className="flex items-end justify-between gap-3 pl-1">
+                <h5 className="text-white text-2xl font-bold tracking-tight" style={{ textShadow: '0 1px 2px rgba(0,0,0,0.3)' }}>{m.value}</h5>
+                <div className="h-7 w-px" style={{ background: `linear-gradient(180deg, transparent, ${m.iconColor}55, transparent)` }} />
+              </div>
             </div>
-            <h5 className="text-white text-xl font-bold">{m.value}</h5>
           </div>
         ))}
       </div>
@@ -1660,32 +1683,59 @@ export default function DashboardClient() {
       {/* 3 Welcome Cards Row (matches investor.php) */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {/* Welcome Card */}
-        <div className="rounded-xl shadow-sm" style={{ background: 'linear-gradient(135deg, #2e1515, #4a1a1a)' }}>
-          <div className="p-6 text-center">
-            <i className="las la-user text-2xl mb-3 text-white/70" />
-            <h3 className="text-lg font-semibold text-white">Welcome</h3>
-            <h5 className="text-white/80 mt-1">{userName}</h5>
-            {ghlId && <p className="text-sm text-white/50">({ghlId})</p>}
+        <div className="relative rounded-2xl overflow-hidden group transition-all duration-500 hover:translate-y-[-2px]"
+          style={{
+            background: 'linear-gradient(135deg, #170808 0%, #260c0c 50%, #170808 100%)',
+            border: '1px solid rgba(208, 2, 27, 0.22)',
+            boxShadow: '0 6px 24px rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.05)'
+          }}>
+          <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-red-600/70 to-transparent" />
+          <div className="absolute top-0 right-0 w-36 h-36 rounded-full opacity-20 blur-3xl transition-opacity duration-500 group-hover:opacity-30"
+            style={{ background: 'radial-gradient(circle, #D0021B 0%, transparent 70%)' }} />
+          <div className="relative p-6 text-center">
+            <div className="inline-flex items-center justify-center w-12 h-12 rounded-full mb-4"
+              style={{ background: 'linear-gradient(135deg, rgba(208,2,27,0.22), rgba(139,0,0,0.08))', border: '1px solid rgba(208,2,27,0.35)', boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.06)' }}>
+              <User className="w-5 h-5 text-red-300" strokeWidth={1.75} />
+            </div>
+            <p className="text-[10px] uppercase tracking-[0.22em] text-white/50 font-medium mb-1">Investor Profile</p>
+            <h3 className="text-lg font-semibold text-white tracking-tight">Welcome</h3>
+            <h5 className="text-white/90 mt-1.5 text-base font-medium">{userName}</h5>
+            {ghlId && <p className="text-[11px] text-white/45 mt-1 tracking-[0.15em] font-mono">{ghlId}</p>}
           </div>
         </div>
         {/* KYC Status Card */}
-        <div className="rounded-xl shadow-sm" style={{ background: 'linear-gradient(135deg, #2e1515, #4a1a1a)' }}>
-          <div className="p-6 text-center">
-            <i className="las la-user text-2xl mb-3 text-white/70" />
-            <h3 className="text-lg font-semibold text-white">KYC Status</h3>
-            <span className={`inline-block mt-2 px-4 py-1.5 rounded-full text-sm font-medium ${
+        <div className="relative rounded-2xl overflow-hidden group transition-all duration-500 hover:translate-y-[-2px]"
+          style={{
+            background: 'linear-gradient(135deg, #170808 0%, #260c0c 50%, #170808 100%)',
+            border: '1px solid rgba(208, 2, 27, 0.22)',
+            boxShadow: '0 6px 24px rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.05)'
+          }}>
+          <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-red-600/70 to-transparent" />
+          <div className="absolute top-0 right-0 w-36 h-36 rounded-full opacity-20 blur-3xl transition-opacity duration-500 group-hover:opacity-30"
+            style={{ background: 'radial-gradient(circle, #D0021B 0%, transparent 70%)' }} />
+          <div className="relative p-6 text-center">
+            <div className="inline-flex items-center justify-center w-12 h-12 rounded-full mb-4"
+              style={{ background: 'linear-gradient(135deg, rgba(208,2,27,0.22), rgba(139,0,0,0.08))', border: '1px solid rgba(208,2,27,0.35)', boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.06)' }}>
+              <Shield className="w-5 h-5 text-red-300" strokeWidth={1.75} />
+            </div>
+            <p className="text-[10px] uppercase tracking-[0.22em] text-white/50 font-medium mb-1">Verification</p>
+            <h3 className="text-lg font-semibold text-white tracking-tight">KYC Status</h3>
+            <span className={`inline-flex items-center gap-1.5 mt-3 px-4 py-1.5 rounded-full text-[11px] font-semibold uppercase tracking-[0.15em] border ${
               userKycStatus === 'approved' || userKycStatus === 'verified'
-                ? 'bg-green-700 text-white'
+                ? 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30'
                 : userKycStatus === 'rejected'
-                ? 'bg-red-700 text-white'
-                : 'bg-yellow-600 text-white'
+                ? 'bg-red-500/15 text-red-300 border-red-500/30'
+                : 'bg-amber-500/15 text-amber-300 border-amber-500/30'
             }`}>
+              <span className={`w-1.5 h-1.5 rounded-full ${
+                userKycStatus === 'approved' || userKycStatus === 'verified' ? 'bg-emerald-400' : userKycStatus === 'rejected' ? 'bg-red-400' : 'bg-amber-400'
+              }`} style={{ boxShadow: `0 0 8px currentColor` }} />
               {userKycStatus === 'approved' || userKycStatus === 'verified' ? 'Approved' : userKycStatus === 'rejected' ? 'Rejected' : 'Pending'}
             </span>
             {/* Bug 2026-04-18: surface admin's rejection reason so investor
                 sees exactly what to fix. */}
             {userKycStatus === 'rejected' && (user as any)?.kyc_rejection_reason && (
-              <p className="mt-3 px-3 py-2 rounded-lg text-[11px] text-left text-white/90 bg-black/30 border border-red-500/30 whitespace-pre-wrap max-h-32 overflow-y-auto">
+              <p className="mt-3 px-3 py-2 rounded-lg text-[11px] text-left text-white/90 bg-black/40 border border-red-500/30 whitespace-pre-wrap max-h-32 overflow-y-auto">
                 <span className="font-semibold text-red-300">Reason: </span>
                 {(user as any).kyc_rejection_reason}
               </p>
@@ -1693,11 +1743,27 @@ export default function DashboardClient() {
           </div>
         </div>
         {/* My Investments Card */}
-        <div className="rounded-xl shadow-sm" style={{ background: 'linear-gradient(135deg, #2e1515, #4a1a1a)' }}>
-          <div className="p-6 text-center">
-            <i className="las la-coins text-2xl mb-3 text-white/70" />
-            <h3 className="text-lg font-semibold text-white">My Investments</h3>
-            <button onClick={() => setActiveTab('investments')} className="mt-3 px-5 py-2 text-sm rounded-lg text-white font-medium" style={{ backgroundColor: '#ac0d0d' }}>View</button>
+        <div className="relative rounded-2xl overflow-hidden group transition-all duration-500 hover:translate-y-[-2px]"
+          style={{
+            background: 'linear-gradient(135deg, #170808 0%, #260c0c 50%, #170808 100%)',
+            border: '1px solid rgba(208, 2, 27, 0.22)',
+            boxShadow: '0 6px 24px rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.05)'
+          }}>
+          <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-red-600/70 to-transparent" />
+          <div className="absolute top-0 right-0 w-36 h-36 rounded-full opacity-20 blur-3xl transition-opacity duration-500 group-hover:opacity-30"
+            style={{ background: 'radial-gradient(circle, #D0021B 0%, transparent 70%)' }} />
+          <div className="relative p-6 text-center">
+            <div className="inline-flex items-center justify-center w-12 h-12 rounded-full mb-4"
+              style={{ background: 'linear-gradient(135deg, rgba(208,2,27,0.22), rgba(139,0,0,0.08))', border: '1px solid rgba(208,2,27,0.35)', boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.06)' }}>
+              <Briefcase className="w-5 h-5 text-red-300" strokeWidth={1.75} />
+            </div>
+            <p className="text-[10px] uppercase tracking-[0.22em] text-white/50 font-medium mb-1">Portfolio</p>
+            <h3 className="text-lg font-semibold text-white tracking-tight">My Investments</h3>
+            <button onClick={() => setActiveTab('investments')}
+              className="mt-3 inline-flex items-center gap-1.5 px-5 py-2 text-[11px] font-semibold rounded-lg text-white uppercase tracking-[0.15em] transition-all duration-300 hover:shadow-lg hover:shadow-red-900/40"
+              style={{ background: 'linear-gradient(135deg, #D0021B, #8B0000)', border: '1px solid rgba(255,255,255,0.1)', boxShadow: '0 2px 8px rgba(208,2,27,0.3), inset 0 1px 0 rgba(255,255,255,0.15)' }}>
+              View Details <ChevronRight className="w-3.5 h-3.5" />
+            </button>
           </div>
         </div>
       </div>
@@ -1707,16 +1773,27 @@ export default function DashboardClient() {
 
       {/* Portfolio Section (matches investor.php) */}
       {totalInvested > 0 && (
-        <div className="bg-white rounded-2xl shadow-sm p-6">
-          <h3 className="text-lg font-semibold text-gray-800 mb-4">Portfolio</h3>
-          <div className="grid grid-cols-2 gap-6">
-            <div>
-              <h6 className="text-sm text-gray-500">Commitment</h6>
-              <h5 className="text-xl font-bold text-gray-800">₹{formatINR(totalInvested)}</h5>
+        <div className="relative rounded-2xl overflow-hidden"
+          style={{
+            background: 'linear-gradient(135deg, #170808 0%, #220c0c 50%, #170808 100%)',
+            border: '1px solid rgba(208, 2, 27, 0.18)',
+            boxShadow: '0 6px 24px rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.04)'
+          }}>
+          <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-red-600/70 to-transparent" />
+          <div className="relative p-6">
+            <div className="flex items-center gap-2.5 mb-5">
+              <div className="w-1 h-5 rounded-full" style={{ background: 'linear-gradient(180deg, #D0021B, #8B0000)' }} />
+              <h3 className="text-lg font-semibold text-white tracking-tight">Portfolio</h3>
             </div>
-            <div>
-              <h6 className="text-sm text-gray-500">Investment</h6>
-              <h5 className="text-xl font-bold text-gray-800">₹{formatINR(totalCurrent)}</h5>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="p-4 rounded-xl bg-white/[0.02] border border-white/[0.06]">
+                <p className="text-[10px] uppercase tracking-[0.2em] text-white/45 font-medium mb-1.5">Commitment</p>
+                <h5 className="text-2xl font-bold text-white tracking-tight" style={{ textShadow: '0 1px 2px rgba(0,0,0,0.3)' }}>₹{formatINR(totalInvested)}</h5>
+              </div>
+              <div className="p-4 rounded-xl bg-white/[0.02] border border-white/[0.06]">
+                <p className="text-[10px] uppercase tracking-[0.2em] text-white/45 font-medium mb-1.5">Investment</p>
+                <h5 className="text-2xl font-bold text-white tracking-tight" style={{ textShadow: '0 1px 2px rgba(0,0,0,0.3)' }}>₹{formatINR(totalCurrent)}</h5>
+              </div>
             </div>
           </div>
         </div>
@@ -1724,28 +1801,42 @@ export default function DashboardClient() {
 
       {/* FAQ Section (matches investor.php) */}
       {faqs.length > 0 && (
-        <div className="bg-white rounded-2xl shadow-sm p-6">
-          <h4 className="text-center font-semibold mb-4" style={{ color: '#ac0d0d' }}>Frequently Asked Questions</h4>
-          <div className="space-y-2">
-            {faqs.map((faq: any, idx: number) => (
-              <div key={faq.id || idx} className="border border-gray-200 rounded-lg overflow-hidden">
-                <button
-                  onClick={() => setOpenFaqId(openFaqId === (faq.id || idx) ? null : (faq.id || idx))}
-                  className="w-full flex items-center justify-between px-4 py-3 text-left hover:bg-gray-50 transition-colors"
-                >
-                  <span className="font-medium text-gray-800 text-sm">{faq.question}</span>
-                  <i className={`las la-angle-${openFaqId === (faq.id || idx) ? 'up' : 'down'} text-gray-400`} />
-                </button>
-                {openFaqId === (faq.id || idx) && (
-                  <div className="px-4 pb-3">
-                    <p className="text-sm text-gray-600">{faq.answer}</p>
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
-          <div className="text-center mt-4">
-            <a href="/contact/faqs" className="text-sm font-semibold" style={{ color: '#ac0d0d' }}>View More</a>
+        <div className="relative rounded-2xl overflow-hidden"
+          style={{
+            background: 'linear-gradient(135deg, #170808 0%, #220c0c 50%, #170808 100%)',
+            border: '1px solid rgba(208, 2, 27, 0.18)',
+            boxShadow: '0 6px 24px rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.04)'
+          }}>
+          <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-red-600/70 to-transparent" />
+          <div className="relative p-6">
+            <div className="flex items-center justify-center gap-3 mb-5">
+              <div className="h-px w-10 bg-gradient-to-r from-transparent to-red-600/50" />
+              <h4 className="text-center font-semibold text-base text-white tracking-tight uppercase" style={{ letterSpacing: '0.15em' }}>Frequently Asked Questions</h4>
+              <div className="h-px w-10 bg-gradient-to-l from-transparent to-red-600/50" />
+            </div>
+            <div className="space-y-2">
+              {faqs.map((faq: any, idx: number) => (
+                <div key={faq.id || idx} className="rounded-xl overflow-hidden bg-white/[0.02] border border-white/[0.06] hover:border-red-500/25 transition-colors">
+                  <button
+                    onClick={() => setOpenFaqId(openFaqId === (faq.id || idx) ? null : (faq.id || idx))}
+                    className="w-full flex items-center justify-between gap-3 px-4 py-3 text-left hover:bg-white/[0.02] transition-colors"
+                  >
+                    <span className="font-medium text-white text-sm">{faq.question}</span>
+                    <ChevronDown className={`w-4 h-4 text-white/40 shrink-0 transition-transform duration-300 ${openFaqId === (faq.id || idx) ? 'rotate-180 text-red-400' : ''}`} />
+                  </button>
+                  {openFaqId === (faq.id || idx) && (
+                    <div className="px-4 pb-3 pt-1 border-t border-white/[0.04]">
+                      <p className="text-sm text-white/70 leading-relaxed">{faq.answer}</p>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+            <div className="text-center mt-5">
+              <a href="/contact/faqs" className="inline-flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-[0.18em] text-red-400 hover:text-red-300 transition-colors">
+                View More <ChevronRight className="w-3 h-3" />
+              </a>
+            </div>
           </div>
         </div>
       )}
