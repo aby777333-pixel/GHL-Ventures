@@ -325,7 +325,7 @@ function LiveFinancialTV() {
 function HeroSection() {
 
   return (
-    <section className="relative min-h-screen flex items-center overflow-hidden" style={{ background: 'linear-gradient(180deg, #020012 0%, #060020 20%, #08001a 40%, #0a0014 60%, #0c0a10 80%, #0a0a0a 100%)' }}>
+    <section className="dark-surface relative min-h-screen flex items-center overflow-hidden" style={{ background: 'linear-gradient(180deg, #020012 0%, #060020 20%, #08001a 40%, #0a0014 60%, #0c0a10 80%, #0a0a0a 100%)' }}>
 
       <SpaceHero variant="aurora" />
 
@@ -550,7 +550,7 @@ function NewsScroller() {
   const feed = headlines.map(h => `${h.label}  ${h.text}`).join('  \u00A0\u00A0\u2022\u00A0\u00A0  ')
 
   return (
-    <section className="relative py-2.5" style={{ backgroundColor: '#0D0D0D', borderTop: '1px solid rgba(208,2,27,0.15)', borderBottom: '1px solid rgba(208,2,27,0.15)' }}>
+    <section className="dark-surface relative py-2.5" style={{ backgroundColor: '#0D0D0D', borderTop: '1px solid rgba(208,2,27,0.15)', borderBottom: '1px solid rgba(208,2,27,0.15)' }}>
       <div className="container-max mx-auto overflow-hidden">
         <div className="flex items-center">
           <span className="shrink-0 px-4 py-1 bg-brand-red text-white text-[10px] font-bold uppercase tracking-widest rounded-r-full mr-4">
@@ -578,7 +578,7 @@ function TickerStrip() {
   const text = `SEBI Registration No. ${BRAND.sebi}  \u2022  Category II AIF  \u2022  As per SEBI AIF Regulations  \u2022  Stressed Real Estate & Early-Stage Startups  \u2022  Chennai, India  \u2022  ${BRAND.email}`
 
   return (
-    <section className="relative overflow-hidden py-3" style={{ backgroundColor: '#1a0000' }}>
+    <section className="dark-surface relative overflow-hidden py-3" style={{ backgroundColor: '#1a0000' }}>
       <div className="flex whitespace-nowrap animate-marquee">
         {[0, 1].map(i => (
           <span key={i} className="inline-block text-gray-400 text-sm font-medium tracking-wide px-8">
@@ -1531,7 +1531,7 @@ function FAQSection() {
   ]
 
   return (
-    <section className="py-16 md:py-24" style={{ background: 'linear-gradient(180deg, rgba(10,10,10,0.98) 0%, rgba(26,26,26,1) 100%)' }}>
+    <section className="dark-surface py-16 md:py-24" style={{ background: 'linear-gradient(180deg, rgba(10,10,10,0.98) 0%, rgba(26,26,26,1) 100%)' }}>
       <div className="container-max mx-auto px-4 sm:px-6 lg:px-8">
         <AnimatedSection className="text-center mb-12">
           <span className="eyebrow !text-brand-red">Frequently Asked Questions</span>
@@ -1586,7 +1586,7 @@ function FAQSection() {
    ================================================================ */
 function InvestmentDisclaimer() {
   return (
-    <section className="py-6 px-4 sm:px-6 lg:px-8" style={{ backgroundColor: '#0D0D0D' }}>
+    <section className="dark-surface py-6 px-4 sm:px-6 lg:px-8" style={{ backgroundColor: '#0D0D0D' }}>
       <div className="container-max mx-auto">
         <div className="flex items-start gap-3 p-4 rounded-xl border border-amber-500/20 bg-amber-500/5">
           <AlertTriangle className="w-5 h-5 text-amber-500 shrink-0 mt-0.5" />
@@ -1617,7 +1617,7 @@ export default function HomePage() {
       {/* ── Market Data Marquees — moved from Navbar to right above News ── */}
       <MarketDataMarquee />
       <CurrencyTicker />
-      <div className="w-full" style={{ backgroundColor: '#1a0000' }}>
+      <div className="dark-surface w-full" style={{ backgroundColor: '#1a0000' }}>
         <div className="container-max mx-auto overflow-hidden">
           <div className="animate-marquee whitespace-nowrap py-1.5">
             <span className="inline-block text-white/80 mx-8" style={{ fontSize: '11px', letterSpacing: '0.02em' }}>

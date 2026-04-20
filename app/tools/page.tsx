@@ -1560,7 +1560,7 @@ export default function ToolsPage() {
     <>
       {/* ── HERO SECTION ── */}
       <section
-        className="relative min-h-[50vh] flex items-center overflow-hidden"
+        className="dark-surface relative min-h-[50vh] flex items-center overflow-hidden"
         style={{ background: 'linear-gradient(135deg, #030014 0%, #0a0020 40%, #0d0010 70%, #0a0a0a 100%)' }}
       >
         <SpaceHero variant="wormhole" />

@@ -7,7 +7,7 @@ import SpaceHero from '@/components/SpaceHero'
 
 export default function DisclaimerPage() {
   return (
-    <section className="relative min-h-screen py-32 md:py-40 px-4 sm:px-6 lg:px-8 overflow-hidden" style={{ backgroundColor: '#0A0A0A' }}>
+    <section className="dark-surface relative min-h-screen py-32 md:py-40 px-4 sm:px-6 lg:px-8 overflow-hidden" style={{ backgroundColor: '#0A0A0A' }}>
       {/* Space: Lightning theme */}
       <SpaceHero variant="lightning" />
       <div className="max-w-4xl mx-auto relative z-10">

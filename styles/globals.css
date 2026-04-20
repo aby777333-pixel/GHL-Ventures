@@ -3875,7 +3875,40 @@ body:not(.dashboard-active):not(.admin-active):not(.staff-active) :root:not(.dar
 :root:not(.dark) body:not(.dashboard-active):not(.admin-active):not(.staff-active) .card-dark h1,
 :root:not(.dark) body:not(.dashboard-active):not(.admin-active):not(.staff-active) .card-dark h2,
 :root:not(.dark) body:not(.dashboard-active):not(.admin-active):not(.staff-active) .card-dark h3,
-:root:not(.dark) body:not(.dashboard-active):not(.admin-active):not(.staff-active) .card-dark h4 {
+:root:not(.dark) body:not(.dashboard-active):not(.admin-active):not(.staff-active) .card-dark h4,
+/* .gradient-dark is a custom class that @applies `bg-gradient-to-b
+   from-brand-black to-brand-darkgrey`; the compiled class name is
+   literally `gradient-dark`, so the [class*="bg-gradient-to-"] matcher
+   doesn't catch it. Used across blog hero, fund-slug hero, etc. */
+:root:not(.dark) body:not(.dashboard-active):not(.admin-active):not(.staff-active) .gradient-dark,
+:root:not(.dark) body:not(.dashboard-active):not(.admin-active):not(.staff-active) .gradient-dark [class~="text-white"],
+:root:not(.dark) body:not(.dashboard-active):not(.admin-active):not(.staff-active) .gradient-dark [class*="text-white/"],
+:root:not(.dark) body:not(.dashboard-active):not(.admin-active):not(.staff-active) .gradient-dark h1,
+:root:not(.dark) body:not(.dashboard-active):not(.admin-active):not(.staff-active) .gradient-dark h2,
+:root:not(.dark) body:not(.dashboard-active):not(.admin-active):not(.staff-active) .gradient-dark h3,
+:root:not(.dark) body:not(.dashboard-active):not(.admin-active):not(.staff-active) .gradient-dark h4,
+/* Arbitrary Tailwind hex background classes that start with 0/1/2 are
+   almost always dark (e.g. bg-[#0D0D0D], bg-[#1a0000], bg-[#111]).
+   Class selector must escape the brackets + #. */
+:root:not(.dark) body:not(.dashboard-active):not(.admin-active):not(.staff-active) [class*="bg-\[\#0"],
+:root:not(.dark) body:not(.dashboard-active):not(.admin-active):not(.staff-active) [class*="bg-\[\#1"],
+:root:not(.dark) body:not(.dashboard-active):not(.admin-active):not(.staff-active) [class*="bg-\[\#2"],
+:root:not(.dark) body:not(.dashboard-active):not(.admin-active):not(.staff-active) [class*="bg-\[\#0"] [class~="text-white"],
+:root:not(.dark) body:not(.dashboard-active):not(.admin-active):not(.staff-active) [class*="bg-\[\#0"] [class*="text-white/"],
+:root:not(.dark) body:not(.dashboard-active):not(.admin-active):not(.staff-active) [class*="bg-\[\#1"] [class~="text-white"],
+:root:not(.dark) body:not(.dashboard-active):not(.admin-active):not(.staff-active) [class*="bg-\[\#1"] [class*="text-white/"],
+:root:not(.dark) body:not(.dashboard-active):not(.admin-active):not(.staff-active) [class*="bg-\[\#2"] [class~="text-white"],
+:root:not(.dark) body:not(.dashboard-active):not(.admin-active):not(.staff-active) [class*="bg-\[\#2"] [class*="text-white/"],
+/* Opt-in helper for sections that set a dark background via inline
+   style (Tailwind can't see those). Add `dark-surface` alongside the
+   inline style to preserve white/light text in light mode. */
+:root:not(.dark) body:not(.dashboard-active):not(.admin-active):not(.staff-active) .dark-surface,
+:root:not(.dark) body:not(.dashboard-active):not(.admin-active):not(.staff-active) .dark-surface [class~="text-white"],
+:root:not(.dark) body:not(.dashboard-active):not(.admin-active):not(.staff-active) .dark-surface [class*="text-white/"],
+:root:not(.dark) body:not(.dashboard-active):not(.admin-active):not(.staff-active) .dark-surface h1,
+:root:not(.dark) body:not(.dashboard-active):not(.admin-active):not(.staff-active) .dark-surface h2,
+:root:not(.dark) body:not(.dashboard-active):not(.admin-active):not(.staff-active) .dark-surface h3,
+:root:not(.dark) body:not(.dashboard-active):not(.admin-active):not(.staff-active) .dark-surface h4 {
   color: #ffffff !important;
 }
 
@@ -3901,7 +3934,12 @@ body:not(.dashboard-active):not(.admin-active):not(.staff-active) :root:not(.dar
 :root:not(.dark) body:not(.dashboard-active):not(.admin-active):not(.staff-active) [class*="bg-neutral-9"] [class*="text-gray-"],
 :root:not(.dark) body:not(.dashboard-active):not(.admin-active):not(.staff-active) [class*="bg-slate-9"] [class*="text-gray-"],
 :root:not(.dark) body:not(.dashboard-active):not(.admin-active):not(.staff-active) [class*="bg-zinc-9"] [class*="text-gray-"],
-:root:not(.dark) body:not(.dashboard-active):not(.admin-active):not(.staff-active) .card-dark [class*="text-gray-"] {
+:root:not(.dark) body:not(.dashboard-active):not(.admin-active):not(.staff-active) .card-dark [class*="text-gray-"],
+:root:not(.dark) body:not(.dashboard-active):not(.admin-active):not(.staff-active) .gradient-dark [class*="text-gray-"],
+:root:not(.dark) body:not(.dashboard-active):not(.admin-active):not(.staff-active) [class*="bg-\[\#0"] [class*="text-gray-"],
+:root:not(.dark) body:not(.dashboard-active):not(.admin-active):not(.staff-active) [class*="bg-\[\#1"] [class*="text-gray-"],
+:root:not(.dark) body:not(.dashboard-active):not(.admin-active):not(.staff-active) [class*="bg-\[\#2"] [class*="text-gray-"],
+:root:not(.dark) body:not(.dashboard-active):not(.admin-active):not(.staff-active) .dark-surface [class*="text-gray-"] {
   color: rgba(255, 255, 255, 0.78) !important;
 }
 
@@ -3915,7 +3953,9 @@ body:not(.dashboard-active):not(.admin-active):not(.staff-active) :root:not(.dar
 :root:not(.dark) body:not(.dashboard-active):not(.admin-active):not(.staff-active) [class*="bg-gradient-to-"] a:not([class*="text-brand"]):not([class*="text-red"]):not([class*="text-emerald"]):not([class*="text-green"]):not([class*="text-blue"]):not([class*="text-amber"]):not([class*="text-yellow"]):not([class*="text-pink"]):not([class*="text-purple"]):not([class*="text-violet"]):not([class*="text-cyan"]):not([class*="text-teal"]):not([class*="text-orange"]):not([class*="text-rose"]):not([class*="text-indigo"]):not([class*="text-white"]),
 :root:not(.dark) body:not(.dashboard-active):not(.admin-active):not(.staff-active) .bg-brand-black a:not([class*="text-brand"]):not([class*="text-red"]):not([class*="text-emerald"]):not([class*="text-green"]):not([class*="text-blue"]):not([class*="text-amber"]):not([class*="text-yellow"]):not([class*="text-pink"]):not([class*="text-purple"]):not([class*="text-violet"]):not([class*="text-cyan"]):not([class*="text-teal"]):not([class*="text-orange"]):not([class*="text-rose"]):not([class*="text-indigo"]):not([class*="text-white"]),
 :root:not(.dark) body:not(.dashboard-active):not(.admin-active):not(.staff-active) .bg-brand-darkgrey a:not([class*="text-brand"]):not([class*="text-red"]):not([class*="text-emerald"]):not([class*="text-green"]):not([class*="text-blue"]):not([class*="text-amber"]):not([class*="text-yellow"]):not([class*="text-pink"]):not([class*="text-purple"]):not([class*="text-violet"]):not([class*="text-cyan"]):not([class*="text-teal"]):not([class*="text-orange"]):not([class*="text-rose"]):not([class*="text-indigo"]):not([class*="text-white"]),
-:root:not(.dark) body:not(.dashboard-active):not(.admin-active):not(.staff-active) .bg-black a:not([class*="text-brand"]):not([class*="text-red"]):not([class*="text-emerald"]):not([class*="text-green"]):not([class*="text-blue"]):not([class*="text-amber"]):not([class*="text-yellow"]):not([class*="text-pink"]):not([class*="text-purple"]):not([class*="text-violet"]):not([class*="text-cyan"]):not([class*="text-teal"]):not([class*="text-orange"]):not([class*="text-rose"]):not([class*="text-indigo"]):not([class*="text-white"]) {
+:root:not(.dark) body:not(.dashboard-active):not(.admin-active):not(.staff-active) .bg-black a:not([class*="text-brand"]):not([class*="text-red"]):not([class*="text-emerald"]):not([class*="text-green"]):not([class*="text-blue"]):not([class*="text-amber"]):not([class*="text-yellow"]):not([class*="text-pink"]):not([class*="text-purple"]):not([class*="text-violet"]):not([class*="text-cyan"]):not([class*="text-teal"]):not([class*="text-orange"]):not([class*="text-rose"]):not([class*="text-indigo"]):not([class*="text-white"]),
+:root:not(.dark) body:not(.dashboard-active):not(.admin-active):not(.staff-active) .gradient-dark a:not([class*="text-brand"]):not([class*="text-red"]):not([class*="text-emerald"]):not([class*="text-green"]):not([class*="text-blue"]):not([class*="text-amber"]):not([class*="text-yellow"]):not([class*="text-pink"]):not([class*="text-purple"]):not([class*="text-violet"]):not([class*="text-cyan"]):not([class*="text-teal"]):not([class*="text-orange"]):not([class*="text-rose"]):not([class*="text-indigo"]):not([class*="text-white"]),
+:root:not(.dark) body:not(.dashboard-active):not(.admin-active):not(.staff-active) .dark-surface a:not([class*="text-brand"]):not([class*="text-red"]):not([class*="text-emerald"]):not([class*="text-green"]):not([class*="text-blue"]):not([class*="text-amber"]):not([class*="text-yellow"]):not([class*="text-pink"]):not([class*="text-purple"]):not([class*="text-violet"]):not([class*="text-cyan"]):not([class*="text-teal"]):not([class*="text-orange"]):not([class*="text-rose"]):not([class*="text-indigo"]):not([class*="text-white"]) {
   color: inherit !important;
 }
 
