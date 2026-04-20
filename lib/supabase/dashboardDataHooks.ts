@@ -156,7 +156,7 @@ export function useInvestmentTransactions(clientId?: string) {
 
 // ── Assigned RM ─────────────────────────────────────────────
 export function useAssignedRM(clientId?: string) {
-  return useQuery<{ name: string; designation: string; department: string; phone: string } | null>(
+  return useQuery<svc.AssignedRMInfo | null>(
     () => svc.fetchAssignedRM(clientId),
     null,
     clientId,

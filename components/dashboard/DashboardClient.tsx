@@ -1699,6 +1699,68 @@ export default function DashboardClient() {
         </div>
       </div>
 
+      {/* Investor Relationship Manager Card — surfaces Super Admin assignment */}
+      {assignedRM && assignedRM.name && (
+        <div className="bg-white rounded-2xl shadow-sm p-6 max-w-md mx-auto md:mx-0">
+          <p className="text-center text-xs font-bold tracking-[0.18em] text-gray-400 mb-4">
+            YOUR INVESTOR RELATIONSHIP MANAGER
+          </p>
+          <div className="flex flex-col items-center">
+            <div className="relative w-24 h-24 mb-3">
+              <div className="w-24 h-24 rounded-full border-[3px] border-brand-red overflow-hidden bg-gray-100 flex items-center justify-center">
+                {assignedRM.avatar_url ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={assignedRM.avatar_url} alt={assignedRM.name} className="w-full h-full object-cover" />
+                ) : (
+                  <span className="text-2xl font-bold text-brand-red">
+                    {assignedRM.name.trim().charAt(0).toUpperCase()}
+                  </span>
+                )}
+              </div>
+              <span className="absolute bottom-1 right-1 w-4 h-4 rounded-full bg-emerald-500 border-2 border-white" />
+            </div>
+            <h4 className="text-lg font-bold text-gray-900">{assignedRM.name}</h4>
+            <p className="text-sm text-gray-500 mt-0.5">
+              {assignedRM.designation}
+              {' · '}
+              <span className="inline-flex items-center gap-1 text-gray-500">
+                Verified <CheckCircle className="w-3.5 h-3.5 text-emerald-500" />
+              </span>
+            </p>
+          </div>
+          <div className="mt-5 space-y-2">
+            {assignedRM.phone && (
+              <a
+                href={`tel:${assignedRM.phone.replace(/\s+/g, '')}`}
+                className="flex items-center gap-3 px-4 py-3 rounded-xl bg-gray-100 hover:bg-gray-200 transition-colors"
+              >
+                <Phone className="w-4 h-4 text-brand-red shrink-0" />
+                <span className="text-sm text-gray-800">{assignedRM.phone}</span>
+              </a>
+            )}
+            {assignedRM.email && (
+              <a
+                href={`mailto:${assignedRM.email}`}
+                className="flex items-center gap-3 px-4 py-3 rounded-xl bg-gray-100 hover:bg-gray-200 transition-colors"
+              >
+                <Mail className="w-4 h-4 text-brand-red shrink-0" />
+                <span className="text-sm text-gray-800 truncate">{assignedRM.email}</span>
+              </a>
+            )}
+          </div>
+          {assignedRM.phone && (
+            <a
+              href={`tel:${assignedRM.phone.replace(/\s+/g, '')}`}
+              className="mt-4 flex items-center justify-center gap-2 w-full py-3 rounded-xl text-white font-semibold transition-all hover:scale-[1.01]"
+              style={{ background: 'linear-gradient(135deg, #D0021B, #8B0000)' }}
+            >
+              <PhoneCall className="w-4 h-4" />
+              Contact Manager
+            </a>
+          )}
+        </div>
+      )}
+
       {/* 4 Crimson Stats Cards (matches investor.php) */}
       {renderHeroMetrics()}
 

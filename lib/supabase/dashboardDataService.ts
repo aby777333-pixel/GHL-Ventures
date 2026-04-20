@@ -599,7 +599,16 @@ export async function updateProfile(fields: Record<string, any>) {
 }
 
 // ── Assigned RM ────────────────────────────────────────────
-export async function fetchAssignedRM(clientId?: string): Promise<{ name: string; designation: string; department: string; phone: string } | null> {
+export interface AssignedRMInfo {
+  name: string
+  designation: string
+  department: string
+  phone: string
+  email: string
+  avatar_url: string
+}
+
+export async function fetchAssignedRM(clientId?: string): Promise<AssignedRMInfo | null> {
   if (!isSupabaseConfigured() || !clientId) return null
 
   try {
@@ -613,6 +622,8 @@ export async function fetchAssignedRM(clientId?: string): Promise<{ name: string
         designation: data[0].designation || 'Relationship Manager',
         department: data[0].department || '',
         phone: data[0].phone || '+917200255252',
+        email: data[0].email || '',
+        avatar_url: data[0].avatar_url || '',
       }
     }
 
@@ -635,7 +646,7 @@ export async function fetchAssignedRM(clientId?: string): Promise<{ name: string
 
     const { data: profile } = await sb
       .from('profiles')
-      .select('full_name, phone')
+      .select('full_name, phone, email, avatar_url')
       .eq('id', staffProfile.user_id)
       .maybeSingle()
 
@@ -644,6 +655,8 @@ export async function fetchAssignedRM(clientId?: string): Promise<{ name: string
       designation: staffProfile.designation || 'Relationship Manager',
       department: staffProfile.department || '',
       phone: profile?.phone || '+917200255252',
+      email: profile?.email || '',
+      avatar_url: profile?.avatar_url || '',
     }
   } catch (err) {
     console.warn('[dashboard] fetchAssignedRM exception:', err)
