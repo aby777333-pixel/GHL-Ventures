@@ -9,13 +9,16 @@ interface ThemeToggleProps {
 
 export default function ThemeToggle({ scrolled }: ThemeToggleProps) {
   const { theme, toggleTheme } = useTheme()
+  const isLightTheme = theme === 'light'
 
   return (
     <button
       onClick={toggleTheme}
       className={`w-7 h-7 rounded-full flex items-center justify-center transition-all duration-300 ${
         scrolled
-          ? 'text-gray-600 dark:text-white/60 hover:text-brand-red hover:bg-red-50 dark:hover:bg-white/10'
+          ? isLightTheme
+            ? 'text-black hover:text-brand-red hover:bg-red-50'
+            : 'text-white/60 hover:text-brand-red hover:bg-white/10'
           : 'text-white/60 hover:text-brand-red hover:bg-white/10'
       }`}
       aria-label={`Switch to ${theme === 'light' ? 'dark' : 'light'} mode`}

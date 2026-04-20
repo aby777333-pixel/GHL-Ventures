@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
 import { Bell, X, TrendingUp, FileText, Calendar, Check } from 'lucide-react'
 import { NOTIFICATIONS, type Notification } from '@/lib/notifications'
+import { useTheme } from '@/lib/ThemeProvider'
 
 type TabFilter = 'all' | 'fund' | 'blog' | 'event'
 
@@ -12,10 +13,12 @@ interface NotificationCenterProps {
 }
 
 export default function NotificationCenter({ scrolled }: NotificationCenterProps) {
+  const { theme } = useTheme()
   const [isOpen, setIsOpen] = useState(false)
   const [activeTab, setActiveTab] = useState<TabFilter>('all')
   const [readIds, setReadIds] = useState<Set<string>>(new Set())
   const panelRef = useRef<HTMLDivElement>(null)
+  const isLightTheme = theme === 'light'
 
   // Load read state from localStorage
   useEffect(() => {
@@ -84,7 +87,9 @@ export default function NotificationCenter({ scrolled }: NotificationCenterProps
         onClick={() => setIsOpen(!isOpen)}
         className={`relative w-7 h-7 rounded-full flex items-center justify-center transition-all duration-300 ${
           scrolled
-            ? 'text-gray-600 dark:text-white/60 hover:text-brand-red hover:bg-red-50 dark:hover:bg-white/10'
+            ? isLightTheme
+              ? 'text-black hover:text-brand-red hover:bg-red-50'
+              : 'text-white/60 hover:text-brand-red hover:bg-white/10'
             : 'text-white/60 hover:text-brand-red hover:bg-white/10'
         }`}
         aria-label="Notifications"
@@ -101,17 +106,17 @@ export default function NotificationCenter({ scrolled }: NotificationCenterProps
       {/* Dropdown Panel */}
       {isOpen && (
         <div
-          className="absolute right-0 top-full mt-2 w-[340px] rounded-xl shadow-2xl border overflow-hidden"
+          className={`absolute right-0 top-full mt-2 w-[340px] rounded-xl shadow-2xl border overflow-hidden ${
+            isLightTheme ? 'bg-white/95 border-black/10' : 'bg-[#111]/95 border-white/10'
+          }`}
           style={{
-            background: 'rgba(255, 255, 255, 0.98)',
             backdropFilter: 'blur(20px)',
-            borderColor: 'rgba(0,0,0,0.08)',
             zIndex: 9997,
           }}
         >
           {/* Header */}
-          <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100">
-            <h4 className="text-sm font-bold text-brand-black">Notifications</h4>
+          <div className={`flex items-center justify-between px-4 py-3 border-b ${isLightTheme ? 'border-gray-100' : 'border-white/10'}`}>
+            <h4 className={`text-sm font-bold ${isLightTheme ? 'text-brand-black' : 'text-white'}`}>Notifications</h4>
             <div className="flex items-center gap-2">
               {unreadCount > 0 && (
                 <button
@@ -123,7 +128,7 @@ export default function NotificationCenter({ scrolled }: NotificationCenterProps
               )}
               <button
                 onClick={() => setIsOpen(false)}
-                className="text-gray-400 hover:text-gray-600 p-0.5"
+                className={`p-0.5 ${isLightTheme ? 'text-gray-400 hover:text-gray-600' : 'text-white/40 hover:text-white/70'}`}
               >
                 <X className="w-3.5 h-3.5" />
               </button>
@@ -131,7 +136,7 @@ export default function NotificationCenter({ scrolled }: NotificationCenterProps
           </div>
 
           {/* Tabs */}
-          <div className="flex border-b border-gray-100 px-2">
+          <div className={`flex border-b px-2 ${isLightTheme ? 'border-gray-100' : 'border-white/10'}`}>
             {tabs.map(tab => (
               <button
                 key={tab.key}
@@ -139,7 +144,7 @@ export default function NotificationCenter({ scrolled }: NotificationCenterProps
                 className={`flex-1 py-2 text-[10px] font-semibold uppercase tracking-wider transition-colors ${
                   activeTab === tab.key
                     ? 'text-brand-red border-b-2 border-brand-red'
-                    : 'text-gray-400 hover:text-gray-600'
+                    : isLightTheme ? 'text-gray-400 hover:text-gray-600' : 'text-white/45 hover:text-white/75'
                 }`}
               >
                 {tab.label}
@@ -150,7 +155,7 @@ export default function NotificationCenter({ scrolled }: NotificationCenterProps
           {/* Notification List */}
           <div className="max-h-[320px] overflow-y-auto">
             {filteredNotifs.length === 0 ? (
-              <div className="py-8 text-center text-gray-400 text-sm">
+              <div className={`py-8 text-center text-sm ${isLightTheme ? 'text-gray-400' : 'text-white/45'}`}>
                 No notifications
               </div>
             ) : (
@@ -159,18 +164,22 @@ export default function NotificationCenter({ scrolled }: NotificationCenterProps
                   key={n.id}
                   href={n.link}
                   onClick={() => { markAsRead(n.id); setIsOpen(false) }}
-                  className={`block px-4 py-3 border-b border-gray-50 hover:bg-gray-50 transition-colors ${
-                    !isRead(n) ? 'bg-red-50/30' : ''
+                  className={`block px-4 py-3 border-b transition-colors ${
+                    isLightTheme
+                      ? `border-gray-50 hover:bg-gray-50 ${!isRead(n) ? 'bg-red-50/30' : ''}`
+                      : `border-white/5 hover:bg-white/5 ${!isRead(n) ? 'bg-brand-red/10' : ''}`
                   }`}
                 >
                   <div className="flex gap-3">
-                    <div className="shrink-0 w-8 h-8 rounded-lg bg-gray-100 flex items-center justify-center mt-0.5">
+                    <div className={`shrink-0 w-8 h-8 rounded-lg flex items-center justify-center mt-0.5 ${isLightTheme ? 'bg-gray-100' : 'bg-white/5'}`}>
                       {typeIcon(n.type)}
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
                         <p className={`text-xs font-semibold truncate ${
-                          !isRead(n) ? 'text-brand-black' : 'text-gray-500'
+                          !isRead(n)
+                            ? isLightTheme ? 'text-brand-black' : 'text-white'
+                            : isLightTheme ? 'text-gray-500' : 'text-white/65'
                         }`}>
                           {n.title}
                         </p>
@@ -178,10 +187,10 @@ export default function NotificationCenter({ scrolled }: NotificationCenterProps
                           <span className="w-1.5 h-1.5 rounded-full bg-brand-red shrink-0" />
                         )}
                       </div>
-                      <p className="text-[11px] text-gray-400 mt-0.5 line-clamp-2 leading-relaxed">
+                      <p className={`text-[11px] mt-0.5 line-clamp-2 leading-relaxed ${isLightTheme ? 'text-gray-400' : 'text-white/45'}`}>
                         {n.description}
                       </p>
-                      <p className="text-[10px] text-gray-300 mt-1">
+                      <p className={`text-[10px] mt-1 ${isLightTheme ? 'text-gray-300' : 'text-white/30'}`}>
                         {new Date(n.date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
                       </p>
                     </div>
@@ -192,7 +201,7 @@ export default function NotificationCenter({ scrolled }: NotificationCenterProps
           </div>
 
           {/* Footer */}
-          <div className="px-4 py-2.5 border-t border-gray-100 text-center">
+          <div className={`px-4 py-2.5 border-t text-center ${isLightTheme ? 'border-gray-100' : 'border-white/10'}`}>
             <Link
               href="/downloads"
               onClick={() => setIsOpen(false)}
