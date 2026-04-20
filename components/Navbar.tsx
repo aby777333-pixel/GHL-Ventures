@@ -10,10 +10,12 @@ import Logo from '@/components/Logo'
 import NotificationCenter from '@/components/NotificationCenter'
 import ThemeToggle from '@/components/ThemeToggle'
 import ThemePicker from '@/components/ThemePicker'
+import { useTheme } from '@/lib/ThemeProvider'
 
 const PORTAL_PREFIXES = ['/staff', '/admin', '/dashboard']
 
 export default function Navbar() {
+  const { theme } = useTheme()
   const [isOpen, setIsOpen] = useState(false)
   const [scrolled, setScrolled] = useState(false)
   const [aboutOpen, setAboutOpen] = useState(false)
@@ -36,6 +38,7 @@ export default function Navbar() {
 
   // Hide on portal routes (staff, admin, dashboard)
   const isPortal = PORTAL_PREFIXES.some(p => pathname.startsWith(p))
+  const isLightTheme = theme === 'light'
 
   const handleScroll = useCallback(() => {
     setScrolled(window.scrollY > 20)
@@ -201,7 +204,9 @@ export default function Navbar() {
                             isActive
                               ? 'text-brand-red'
                               : scrolled
-                              ? 'text-gray-800 dark:text-white/80 hover:text-brand-red'
+                              ? isLightTheme
+                                ? 'text-black hover:text-brand-red'
+                                : 'text-white/80 hover:text-brand-red'
                               : 'text-white/80 hover:text-brand-red'
                           }`}
                           style={{
@@ -247,7 +252,9 @@ export default function Navbar() {
                                     childActive
                                       ? 'text-brand-red'
                                       : scrolled
-                                      ? 'text-gray-800 dark:text-white/80 hover:text-brand-red hover:bg-gray-50 dark:hover:bg-white/5'
+                                      ? isLightTheme
+                                        ? 'text-black hover:text-brand-red hover:bg-gray-50'
+                                        : 'text-white/80 hover:text-brand-red hover:bg-white/5'
                                       : 'text-white/80 hover:text-brand-red hover:bg-white/5'
                                   }`}
                                   style={{
@@ -276,7 +283,9 @@ export default function Navbar() {
                         isActive
                           ? 'text-brand-red'
                           : scrolled
-                          ? 'text-gray-800 dark:text-white/80 hover:text-brand-red'
+                          ? isLightTheme
+                            ? 'text-black hover:text-brand-red'
+                            : 'text-white/80 hover:text-brand-red'
                           : 'text-white/80 hover:text-brand-red'
                       }`}
                       style={{
@@ -309,7 +318,9 @@ export default function Navbar() {
                 }}
                 className={`hidden xl:inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full font-medium transition-all duration-200 border ${
                   scrolled
-                    ? 'border-gray-200 dark:border-white/15 text-gray-500 dark:text-white/50 hover:bg-gray-50 dark:hover:bg-white/10 hover:text-gray-800 dark:hover:text-white'
+                    ? isLightTheme
+                      ? 'border-gray-200 text-gray-600 hover:bg-gray-50 hover:text-black'
+                      : 'border-white/15 text-white/50 hover:bg-white/10 hover:text-white'
                     : 'border-white/15 text-white/50 hover:bg-white/10 hover:text-white'
                 }`}
                 style={{ fontSize: '10px' }}
@@ -325,7 +336,9 @@ export default function Navbar() {
                   href="/login"
                   className={`inline-flex items-center space-x-1 px-2.5 py-1 rounded-full font-semibold transition-all duration-200 border ${
                     scrolled
-                      ? 'border-gray-200 dark:border-white/15 text-gray-700 dark:text-white/70 hover:bg-gray-50 dark:hover:bg-white/10 hover:text-gray-900 dark:hover:text-white'
+                      ? isLightTheme
+                        ? 'border-gray-200 text-black hover:bg-gray-50'
+                        : 'border-white/15 text-white/70 hover:bg-white/10 hover:text-white'
                       : 'border-white/15 text-white/70 hover:bg-white/10 hover:text-white'
                   }`}
                   style={{ fontSize: '10px', letterSpacing: '0.03em' }}
@@ -357,7 +370,7 @@ export default function Navbar() {
 
               {/* Divider */}
               <div className={`hidden xl:block w-px h-4 mx-1 ${
-                scrolled ? 'bg-gray-200 dark:bg-white/20' : 'bg-white/15'
+                scrolled ? (isLightTheme ? 'bg-gray-300' : 'bg-white/20') : 'bg-white/15'
               }`} />
 
               {/* Let's Talk pill button — desktop */}
@@ -381,7 +394,9 @@ export default function Navbar() {
                 onClick={() => setIsOpen(!isOpen)}
                 className={`xl:hidden p-2 rounded-lg transition-colors duration-200 ${
                   scrolled
-                    ? 'text-gray-800 dark:text-white hover:bg-gray-100 dark:hover:bg-white/10'
+                    ? isLightTheme
+                      ? 'text-black hover:bg-gray-100'
+                      : 'text-white hover:bg-white/10'
                     : 'text-white hover:bg-white/10'
                 }`}
                 aria-expanded={isOpen}
