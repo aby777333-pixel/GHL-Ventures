@@ -3905,6 +3905,20 @@ body:not(.dashboard-active):not(.admin-active):not(.staff-active) :root:not(.dar
   color: rgba(255, 255, 255, 0.78) !important;
 }
 
+/* Anchor tags inside dark surfaces keep their browser-default blue
+   in light mode, ignoring the parent's light-grey text. Example:
+   the SEBI registration link at the bottom of the home "Get in
+   Touch" card rendered as unreadable dim blue on dark.
+   Force anchors to inherit their parent's color unless they've
+   been styled with an explicit brand / semantic colour. */
+:root:not(.dark) body:not(.dashboard-active):not(.admin-active):not(.staff-active) .card-dark a:not([class*="text-brand"]):not([class*="text-red"]):not([class*="text-emerald"]):not([class*="text-green"]):not([class*="text-blue"]):not([class*="text-amber"]):not([class*="text-yellow"]):not([class*="text-pink"]):not([class*="text-purple"]):not([class*="text-violet"]):not([class*="text-cyan"]):not([class*="text-teal"]):not([class*="text-orange"]):not([class*="text-rose"]):not([class*="text-indigo"]):not([class*="text-white"]),
+:root:not(.dark) body:not(.dashboard-active):not(.admin-active):not(.staff-active) [class*="bg-gradient-to-"] a:not([class*="text-brand"]):not([class*="text-red"]):not([class*="text-emerald"]):not([class*="text-green"]):not([class*="text-blue"]):not([class*="text-amber"]):not([class*="text-yellow"]):not([class*="text-pink"]):not([class*="text-purple"]):not([class*="text-violet"]):not([class*="text-cyan"]):not([class*="text-teal"]):not([class*="text-orange"]):not([class*="text-rose"]):not([class*="text-indigo"]):not([class*="text-white"]),
+:root:not(.dark) body:not(.dashboard-active):not(.admin-active):not(.staff-active) .bg-brand-black a:not([class*="text-brand"]):not([class*="text-red"]):not([class*="text-emerald"]):not([class*="text-green"]):not([class*="text-blue"]):not([class*="text-amber"]):not([class*="text-yellow"]):not([class*="text-pink"]):not([class*="text-purple"]):not([class*="text-violet"]):not([class*="text-cyan"]):not([class*="text-teal"]):not([class*="text-orange"]):not([class*="text-rose"]):not([class*="text-indigo"]):not([class*="text-white"]),
+:root:not(.dark) body:not(.dashboard-active):not(.admin-active):not(.staff-active) .bg-brand-darkgrey a:not([class*="text-brand"]):not([class*="text-red"]):not([class*="text-emerald"]):not([class*="text-green"]):not([class*="text-blue"]):not([class*="text-amber"]):not([class*="text-yellow"]):not([class*="text-pink"]):not([class*="text-purple"]):not([class*="text-violet"]):not([class*="text-cyan"]):not([class*="text-teal"]):not([class*="text-orange"]):not([class*="text-rose"]):not([class*="text-indigo"]):not([class*="text-white"]),
+:root:not(.dark) body:not(.dashboard-active):not(.admin-active):not(.staff-active) .bg-black a:not([class*="text-brand"]):not([class*="text-red"]):not([class*="text-emerald"]):not([class*="text-green"]):not([class*="text-blue"]):not([class*="text-amber"]):not([class*="text-yellow"]):not([class*="text-pink"]):not([class*="text-purple"]):not([class*="text-violet"]):not([class*="text-cyan"]):not([class*="text-teal"]):not([class*="text-orange"]):not([class*="text-rose"]):not([class*="text-indigo"]):not([class*="text-white"]) {
+  color: inherit !important;
+}
+
 /* ============================================================
    DASHBOARD SIDEBAR SCROLLBAR — visible in both themes
    Testing 2026-04-18: light-mode sidebar scrollbar was invisible
