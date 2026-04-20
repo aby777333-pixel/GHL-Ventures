@@ -836,97 +836,21 @@ function KYCQueueTab({
 }
 
 // ── Client Analytics Tab ────────────────────────────────────────
-function ClientAnalyticsTab({ clients }: { clients: any[] }) {
-  const riskBreakdown = useMemo(() => {
-    const counts: Record<string, number> = {}
-    clients.forEach(c => { counts[c.riskProfile] = (counts[c.riskProfile] || 0) + 1 })
-    return counts
-  }, [clients])
-
-  const statusBreakdown = useMemo(() => {
-    const counts: Record<string, number> = {}
-    clients.forEach(c => { counts[c.accountStatus] = (counts[c.accountStatus] || 0) + 1 })
-    return counts
-  }, [clients])
-
-  const topClients = useMemo(() =>
-    [...clients].sort((a, b) => b.aum - a.aum).slice(0, 5),
-  [clients])
-
+function ClientAnalyticsTab({ clients: _clients }: { clients: any[] }) {
+  // Intentionally parked: a proper breakdown (risk profile, status,
+  // AUM cohorts, retention) needs backing queries + charts that the
+  // product team hasn't signed off yet. Show a clear Coming Soon state
+  // instead of an inconsistent half-implementation.
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-      {/* Risk Profile Distribution */}
-      <AdminGlass>
-        <h3 className="text-sm font-semibold text-white mb-4 flex items-center gap-2">
-          <Activity className="w-4 h-4 text-brand-red" />
-          Risk Profile Distribution
-        </h3>
-        <div className="space-y-3">
-          {Object.entries(riskBreakdown).map(([profile, count]) => {
-            const pct = Math.round((count / (clients.length || 1)) * 100)
-            const color = profile === 'conservative' ? '#10B981' : profile === 'moderate' ? '#3B82F6' : profile === 'aggressive' ? '#F59E0B' : '#EF4444'
-            return (
-              <div key={profile}>
-                <div className="flex items-center justify-between text-xs mb-1">
-                  <span className="text-gray-400 capitalize">{profile}</span>
-                  <span className="text-white font-medium">{count} ({pct}%)</span>
-                </div>
-                <div className="h-2 bg-white/[0.04] rounded-full overflow-hidden">
-                  <div className="h-full rounded-full transition-all duration-1000" style={{ width: `${pct}%`, backgroundColor: color }} />
-                </div>
-              </div>
-            )
-          })}
-        </div>
-      </AdminGlass>
-
-      {/* Account Status */}
-      <AdminGlass>
-        <h3 className="text-sm font-semibold text-white mb-4 flex items-center gap-2">
-          <UserCircle className="w-4 h-4 text-brand-red" />
-          Account Status
-        </h3>
-        <div className="grid grid-cols-2 gap-3">
-          {Object.entries(statusBreakdown).map(([status, count]) => (
-            <div key={status} className="p-3 rounded-xl bg-white/[0.03] border border-white/[0.04]">
-              <AdminBadge label={status} variant={getAccountBadgeVariant(status)} />
-              <p className="text-xl font-bold text-white mt-2">{count}</p>
-              <p className="text-[11px] text-gray-500">{Math.round((count / (clients.length || 1)) * 100)}% of total</p>
-            </div>
-          ))}
-        </div>
-      </AdminGlass>
-
-      {/* Top Clients by AUM */}
-      <AdminGlass className="lg:col-span-2">
-        <h3 className="text-sm font-semibold text-white mb-4 flex items-center gap-2">
-          <IndianRupee className="w-4 h-4 text-brand-red" />
-          Top Clients by AUM
-        </h3>
-        <div className="space-y-2">
-          {topClients.map((c, i) => {
-            const maxAUM = topClients[0]?.aum || 1
-            const pct = Math.round((c.aum / maxAUM) * 100)
-            return (
-              <div key={c.id} className="flex items-center gap-3 p-3 rounded-xl bg-white/[0.02] hover:bg-white/[0.04] transition-colors">
-                <span className="text-xs font-bold text-gray-600 w-6">#{i + 1}</span>
-                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-brand-red/30 to-purple-500/30 flex items-center justify-center text-[10px] font-bold text-white flex-shrink-0">
-                  {c.name.split(' ').map((n: string) => n[0]).join('')}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center justify-between mb-1">
-                    <span className="text-sm font-medium text-white truncate">{c.name}</span>
-                    <span className="text-sm font-bold text-white ml-2">{formatINR(c.aum)}</span>
-                  </div>
-                  <div className="h-1.5 bg-white/[0.04] rounded-full overflow-hidden">
-                    <div className="h-full rounded-full bg-gradient-to-r from-brand-red to-red-400" style={{ width: `${pct}%` }} />
-                  </div>
-                </div>
-              </div>
-            )
-          })}
-        </div>
-      </AdminGlass>
+    <div className="flex flex-col items-center justify-center py-20 px-6 text-center">
+      <div className="w-16 h-16 rounded-2xl bg-brand-red/10 border border-brand-red/20 flex items-center justify-center mb-5">
+        <PieChart className="w-8 h-8 text-brand-red" />
+      </div>
+      <h3 className="text-xl font-bold text-white mb-2">Client Analytics — Coming Soon</h3>
+      <p className="text-sm text-gray-400 max-w-md">
+        Risk-profile breakdown, KYC status mix, AUM cohorts and retention insights
+        will land here in the next release.
+      </p>
     </div>
   )
 }
