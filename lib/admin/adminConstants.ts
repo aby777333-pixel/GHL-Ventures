@@ -35,6 +35,7 @@ export const ADMIN_SIDEBAR_ITEMS: SidebarItem[] = [
     subItems: [
       { id: 'clients', label: 'All Clients' },
       { id: 'clients/kyc-queue', label: 'KYC Queue' },
+      { id: 'clients/analytics', label: 'Client Analytics' },
     ],
   },
   {
@@ -287,6 +288,7 @@ export const ALL_ADMIN_TAB_PARAMS = [
   { tab: ['overview'] },
   { tab: ['clients'] },
   { tab: ['clients', 'kyc-queue'] },
+  { tab: ['clients', 'analytics'] },
   { tab: ['clients', 'profile'] },
   { tab: ['sales'] },
   { tab: ['sales', 'pipeline'] },
