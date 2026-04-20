@@ -3868,8 +3868,41 @@ body:not(.dashboard-active):not(.admin-active):not(.staff-active) :root:not(.dar
 :root:not(.dark) body:not(.dashboard-active):not(.admin-active):not(.staff-active) .bg-brand-red h1,
 :root:not(.dark) body:not(.dashboard-active):not(.admin-active):not(.staff-active) .bg-brand-red h2,
 :root:not(.dark) body:not(.dashboard-active):not(.admin-active):not(.staff-active) .bg-brand-red h3,
-:root:not(.dark) body:not(.dashboard-active):not(.admin-active):not(.staff-active) .bg-brand-red h4 {
+:root:not(.dark) body:not(.dashboard-active):not(.admin-active):not(.staff-active) .bg-brand-red h4,
+:root:not(.dark) body:not(.dashboard-active):not(.admin-active):not(.staff-active) .card-dark,
+:root:not(.dark) body:not(.dashboard-active):not(.admin-active):not(.staff-active) .card-dark [class~="text-white"],
+:root:not(.dark) body:not(.dashboard-active):not(.admin-active):not(.staff-active) .card-dark [class*="text-white/"],
+:root:not(.dark) body:not(.dashboard-active):not(.admin-active):not(.staff-active) .card-dark h1,
+:root:not(.dark) body:not(.dashboard-active):not(.admin-active):not(.staff-active) .card-dark h2,
+:root:not(.dark) body:not(.dashboard-active):not(.admin-active):not(.staff-active) .card-dark h3,
+:root:not(.dark) body:not(.dashboard-active):not(.admin-active):not(.staff-active) .card-dark h4 {
   color: #ffffff !important;
+}
+
+/* ============================================================
+   LIGHT MODE — restore gray-text on dark surfaces
+   Report 2026-04-20: the "Get in Touch" card, Why-AIFs stats tile,
+   About "SEBI Registered" tile, Fund calculator results, and
+   "What Is an AIF?" sidebar rendered muted-gray labels
+   (text-gray-300 / 400 / 500 / 600 / 700) as dark grey on dark
+   backgrounds in light mode — near-invisible.
+   Cause: global `.text-gray-XXX { color: … !important }` rules
+   force dark grey everywhere, overriding the gray-on-dark intent.
+   Fix: restore a readable light grey for text-gray-* classes when
+   they sit inside a known dark container. Matches the same set of
+   dark surfaces the white-on-dark escape hatch already covers.
+   ============================================================ */
+:root:not(.dark) body:not(.dashboard-active):not(.admin-active):not(.staff-active) [class*="bg-gradient-to-"] [class*="text-gray-"],
+:root:not(.dark) body:not(.dashboard-active):not(.admin-active):not(.staff-active) .bg-brand-black [class*="text-gray-"],
+:root:not(.dark) body:not(.dashboard-active):not(.admin-active):not(.staff-active) .bg-brand-darkgrey [class*="text-gray-"],
+:root:not(.dark) body:not(.dashboard-active):not(.admin-active):not(.staff-active) .bg-black [class*="text-gray-"],
+:root:not(.dark) body:not(.dashboard-active):not(.admin-active):not(.staff-active) [class*="bg-gray-9"] [class*="text-gray-"],
+:root:not(.dark) body:not(.dashboard-active):not(.admin-active):not(.staff-active) [class*="bg-gray-8"] [class*="text-gray-"],
+:root:not(.dark) body:not(.dashboard-active):not(.admin-active):not(.staff-active) [class*="bg-neutral-9"] [class*="text-gray-"],
+:root:not(.dark) body:not(.dashboard-active):not(.admin-active):not(.staff-active) [class*="bg-slate-9"] [class*="text-gray-"],
+:root:not(.dark) body:not(.dashboard-active):not(.admin-active):not(.staff-active) [class*="bg-zinc-9"] [class*="text-gray-"],
+:root:not(.dark) body:not(.dashboard-active):not(.admin-active):not(.staff-active) .card-dark [class*="text-gray-"] {
+  color: rgba(255, 255, 255, 0.78) !important;
 }
 
 /* ============================================================
