@@ -11,11 +11,21 @@ import { supabase, isSupabaseConfigured } from '@/lib/supabase/client'
 import { AUTH_ERRORS, mapSupabaseError } from '@/lib/auth/errorMessages'
 import { submitContactForm } from '@/lib/supabase/reportsDataService'
 
-// Netlify function base URL
+// Netlify function base URL.
+// The custom domain ghlindiaventures.com is served by a separate nginx host
+// that doesn't expose /.netlify/functions/* — calls there return a 308 to a
+// trailing-slash URL that 404s, which the browser surfaces as a generic
+// "Network error". Route function traffic to the canonical Netlify host in
+// that case. CORS is already whitelisted for ghlindiaventures.com in each
+// SMS OTP function.
+const NETLIFY_FUNCTIONS_HOST = 'https://ghl-india-ventures-2025.netlify.app'
 function getFunctionBase(): string {
   if (typeof window === 'undefined') return ''
   const origin = window.location.origin
-  return origin.includes('localhost') ? 'http://localhost:8888' : origin
+  if (origin.includes('localhost')) return 'http://localhost:8888'
+  // Any *.netlify.app origin (prod + deploy previews) hosts its own functions.
+  if (origin.endsWith('.netlify.app')) return origin
+  return NETLIFY_FUNCTIONS_HOST
 }
 
 function RegisterPageInner() {
