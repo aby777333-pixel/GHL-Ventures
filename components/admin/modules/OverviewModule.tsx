@@ -9,9 +9,9 @@ interface OverviewModuleProps {
   showToast: (msg: string, type?: 'success' | 'error' | 'info' | 'warning') => void
 }
 
-// ── Stat Card (glassy / glossy / foggy tech card) ──
-// `accent` is an "r, g, b" triple that feeds the --kpi-accent-rgb CSS var
-// on .admin-kpi-glass so each tile gets its own tech hue.
+// ── Stat Card (restrained, corporate look) ──
+// `accent` is an "r, g, b" triple fed to the --kpi-accent-rgb CSS var,
+// which drives the thin top accent bar and the muted icon badge only.
 function StatCard({ title, value, icon, href, navigate, isCurrency, accent }: {
   title: string
   value: number
@@ -23,31 +23,48 @@ function StatCard({ title, value, icon, href, navigate, isCurrency, accent }: {
 }) {
   const display = isCurrency ? formatINR(value) : value.toLocaleString('en-IN')
   const accentRgb = accent || '208, 2, 27'
+  const interactive = !!(href && navigate)
   const card = (
     <div
-      className="admin-kpi-glass rounded-xl mt-4 cursor-pointer"
+      className={`admin-kpi-glass rounded-lg ${interactive ? 'cursor-pointer' : ''}`}
       style={{ ['--kpi-accent-rgb' as any]: accentRgb }}
     >
       <div className="p-5">
-        <h5 className="text-white text-sm font-medium opacity-90">{title}</h5>
-        <div className="flex items-center justify-between mt-3">
-          <i
-            className={`${icon} text-2xl`}
-            style={{
-              color: `rgb(${accentRgb})`,
-              filter: `drop-shadow(0 0 8px rgba(${accentRgb}, 0.55))`,
-            }}
-          />
-          <h2 className="text-white text-2xl font-bold">{isCurrency && '₹'}{display}</h2>
+        <div className="flex items-start justify-between">
+          <p className="text-[10.5px] tracking-[0.14em] uppercase font-semibold text-white/55">
+            {title}
+          </p>
+          <span className="admin-kpi-icon shrink-0">
+            <i className={`${icon} text-base`} />
+          </span>
         </div>
+        <p
+          className="mt-4 text-[1.65rem] font-semibold text-white leading-none"
+          style={{ fontVariantNumeric: 'tabular-nums', letterSpacing: '-0.01em' }}
+        >
+          {isCurrency && <span className="text-white/70 mr-0.5 text-[1.3rem]">₹</span>}
+          {display}
+        </p>
       </div>
     </div>
   )
 
-  if (href && navigate) {
-    return <div onClick={() => navigate(href)}>{card}</div>
+  if (interactive) {
+    return <div onClick={() => navigate!(href!)}>{card}</div>
   }
   return card
+}
+
+// ── Section Eyebrow ──
+// Quiet uppercase label + trailing hairline. Replaces the prior
+// colourful pill so the dashboard reads like a report, not a toy.
+function SectionEyebrow({ label }: { label: string }) {
+  return (
+    <div className="admin-section-eyebrow">
+      <span className="admin-section-eyebrow__label">{label}</span>
+      <span className="admin-section-eyebrow__rule" />
+    </div>
+  )
 }
 
 export default function OverviewModule({ navigate, showToast }: OverviewModuleProps) {
@@ -82,58 +99,55 @@ export default function OverviewModule({ navigate, showToast }: OverviewModulePr
     )
   }
 
+  // Accent palette — kept to three restrained tones so the whole
+  // dashboard reads as one cohesive surface instead of a rainbow.
+  // Neutral = cool slate (primary metrics), Emerald = positive,
+  // Amber = pending, Brand red = escalation / rejection.
+  const NEUTRAL = '148, 163, 184'   // slate-400
+  const EMERALD = '16, 185, 129'
+  const AMBER = '245, 158, 11'
+  const BRAND = '208, 2, 27'
+
   return (
     <div>
       {/* Users Section */}
-      <h4 className="text-lg font-semibold text-white flex items-center gap-2">
-        <span className="inline-block w-1 h-5 rounded-full" style={{ background: 'linear-gradient(180deg, rgb(34, 211, 238), rgb(168, 85, 247))' }} />
-        Users
-      </h4>
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
-        <StatCard title="Total Users" value={stats.totalUsers} icon="las la-user" href="clients" navigate={navigate} accent="34, 211, 238" />
-        <StatCard title="Invested Users" value={stats.investedUsers} icon="las la-user-check" href="clients" navigate={navigate} accent="16, 185, 129" />
+      <SectionEyebrow label="Users" />
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
+        <StatCard title="Total Users" value={stats.totalUsers} icon="las la-user" href="clients" navigate={navigate} accent={NEUTRAL} />
+        <StatCard title="Invested Users" value={stats.investedUsers} icon="las la-user-check" href="clients" navigate={navigate} accent={EMERALD} />
       </div>
 
       {/* KYC Section */}
-      <h4 className="text-lg font-semibold text-white mt-8 flex items-center gap-2">
-        <span className="inline-block w-1 h-5 rounded-full" style={{ background: 'linear-gradient(180deg, rgb(168, 85, 247), rgb(239, 68, 68))' }} />
-        KYC
-      </h4>
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
-        <StatCard title="Total KYC" value={stats.totalKyc} icon="las la-id-card" href="compliance/kyc-queue" navigate={navigate} accent="168, 85, 247" />
-        <StatCard title="Pending" value={stats.pendingKyc} icon="las la-clock" href="compliance/kyc-queue" navigate={navigate} accent="245, 158, 11" />
-        <StatCard title="Approved" value={stats.approvedKyc} icon="las la-check-circle" href="compliance/kyc-queue" navigate={navigate} accent="16, 185, 129" />
-        <StatCard title="Rejected" value={stats.rejectedKyc} icon="las la-times-circle" href="compliance/kyc-queue" navigate={navigate} accent="239, 68, 68" />
+      <SectionEyebrow label="KYC" />
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
+        <StatCard title="Total KYC" value={stats.totalKyc} icon="las la-id-card" href="compliance/kyc-queue" navigate={navigate} accent={NEUTRAL} />
+        <StatCard title="Pending" value={stats.pendingKyc} icon="las la-clock" href="compliance/kyc-queue" navigate={navigate} accent={AMBER} />
+        <StatCard title="Approved" value={stats.approvedKyc} icon="las la-check-circle" href="compliance/kyc-queue" navigate={navigate} accent={EMERALD} />
+        <StatCard title="Rejected" value={stats.rejectedKyc} icon="las la-times-circle" href="compliance/kyc-queue" navigate={navigate} accent={BRAND} />
       </div>
 
       {/* Investment Section */}
-      <h4 className="text-lg font-semibold text-white mt-8 flex items-center gap-2">
-        <span className="inline-block w-1 h-5 rounded-full" style={{ background: 'linear-gradient(180deg, rgb(34, 211, 238), rgb(16, 185, 129))' }} />
-        Investment
-      </h4>
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
-        <StatCard title="Total Investment" value={stats.totalInvestment} icon="las la-wallet" href="financial" navigate={navigate} isCurrency accent="34, 211, 238" />
-        <StatCard title="AIF" value={stats.aifInvestment} icon="las la-chart-line" href="financial" navigate={navigate} isCurrency accent="168, 85, 247" />
-        <StatCard title="Debenture" value={stats.debentureInvestment} icon="las la-file-invoice-dollar" href="financial" navigate={navigate} isCurrency accent="244, 114, 182" />
-        <StatCard title="This Month" value={stats.monthInvestment} icon="las la-calendar-day" href="financial" navigate={navigate} isCurrency accent="16, 185, 129" />
+      <SectionEyebrow label="Investment" />
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
+        <StatCard title="Total Investment" value={stats.totalInvestment} icon="las la-wallet" href="financial" navigate={navigate} isCurrency accent={NEUTRAL} />
+        <StatCard title="AIF" value={stats.aifInvestment} icon="las la-chart-line" href="financial" navigate={navigate} isCurrency accent={NEUTRAL} />
+        <StatCard title="Debenture" value={stats.debentureInvestment} icon="las la-file-invoice-dollar" href="financial" navigate={navigate} isCurrency accent={NEUTRAL} />
+        <StatCard title="This Month" value={stats.monthInvestment} icon="las la-calendar-day" href="financial" navigate={navigate} isCurrency accent={EMERALD} />
       </div>
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
-        <StatCard title="Total Payout" value={stats.totalPayout} icon="las la-money-bill-wave" href="payouts" navigate={navigate} isCurrency accent="16, 185, 129" />
-        <StatCard title="This Month Payout" value={stats.monthPayout} icon="las la-calendar-check" href="payouts" navigate={navigate} isCurrency accent="34, 211, 238" />
-        <StatCard title="Total TDS" value={stats.totalTds} icon="las la-percentage" href="payouts" navigate={navigate} isCurrency accent="245, 158, 11" />
-        <StatCard title="This Month TDS" value={stats.monthTds} icon="las la-receipt" href="payouts" navigate={navigate} isCurrency accent="168, 85, 247" />
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 mt-3">
+        <StatCard title="Total Payout" value={stats.totalPayout} icon="las la-money-bill-wave" href="payouts" navigate={navigate} isCurrency accent={EMERALD} />
+        <StatCard title="This Month Payout" value={stats.monthPayout} icon="las la-calendar-check" href="payouts" navigate={navigate} isCurrency accent={NEUTRAL} />
+        <StatCard title="Total TDS" value={stats.totalTds} icon="las la-percentage" href="payouts" navigate={navigate} isCurrency accent={AMBER} />
+        <StatCard title="This Month TDS" value={stats.monthTds} icon="las la-receipt" href="payouts" navigate={navigate} isCurrency accent={NEUTRAL} />
       </div>
 
       {/* Support Ticket Section */}
-      <h4 className="text-lg font-semibold text-white mt-8 flex items-center gap-2">
-        <span className="inline-block w-1 h-5 rounded-full" style={{ background: 'linear-gradient(180deg, rgb(245, 158, 11), rgb(168, 85, 247))' }} />
-        Support Ticket
-      </h4>
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
-        <StatCard title="Total Tickets" value={stats.totalTickets} icon="las la-ticket-alt" href="content/tickets" navigate={navigate} accent="34, 211, 238" />
-        <StatCard title="Pending" value={stats.pendingTickets} icon="las la-hourglass-half" href="content/tickets" navigate={navigate} accent="245, 158, 11" />
-        <StatCard title="Opened" value={stats.openTickets} icon="las la-envelope-open" href="content/tickets" navigate={navigate} accent="168, 85, 247" />
-        <StatCard title="Closed" value={stats.closedTickets} icon="las la-check-circle" href="content/tickets" navigate={navigate} accent="16, 185, 129" />
+      <SectionEyebrow label="Support Tickets" />
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
+        <StatCard title="Total Tickets" value={stats.totalTickets} icon="las la-ticket-alt" href="content/tickets" navigate={navigate} accent={NEUTRAL} />
+        <StatCard title="Pending" value={stats.pendingTickets} icon="las la-hourglass-half" href="content/tickets" navigate={navigate} accent={AMBER} />
+        <StatCard title="Opened" value={stats.openTickets} icon="las la-envelope-open" href="content/tickets" navigate={navigate} accent={NEUTRAL} />
+        <StatCard title="Closed" value={stats.closedTickets} icon="las la-check-circle" href="content/tickets" navigate={navigate} accent={EMERALD} />
       </div>
 
       {/* Footer spacer */}
