@@ -88,7 +88,7 @@ const FUNDS = [
     interest: 18,
     capitalAppreciation: 15,
     totalAssuredReturns: 33,
-    tenure: '5-7 Years',
+    tenure: '5-10 Years',
     strategy: ['Direct participation in SEBI-regulated AIF scheme', 'Diversified portfolio across real estate and startups', 'Professional fund management with quarterly NAV updates'],
     documents: ['PPM (Private Placement Memorandum)', 'Contribution Agreement', 'Capital Call Notice', 'NAV Statement'],
     security: ['SEBI registered Category II AIF', 'Independent custodian for assets', 'Quarterly audited NAV'],

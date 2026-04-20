@@ -172,7 +172,7 @@ const INVESTMENT_VEHICLES = [
     shortName: 'GHL AIF',
     returnRate: 22.0,
     minInvestment: 10000000,
-    lockIn: '5-7 years',
+    lockIn: '5-10 years',
     taxBracket: 'Pass-through (investor level)',
     risk: 'High',
     riskLevel: 5,

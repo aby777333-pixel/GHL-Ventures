@@ -34,13 +34,20 @@ export default function LoginPage() {
     })
   }, [router])
 
-  // Resolve email from input (supports email or 10-digit mobile)
-  const resolveEmail = (input: string) => {
+  // Classify input as email, 10-digit mobile, or raw string
+  const classifyInput = (input: string): { kind: 'email' | 'mobile' | 'raw'; value: string } => {
     const cleaned = input.trim()
-    if (cleaned.includes('@')) return cleaned
+    if (cleaned.includes('@')) return { kind: 'email', value: cleaned }
     const digits = cleaned.replace(/\D/g, '')
-    if (digits.length === 10) return `${digits}@ghlindiaventures.com`
-    return cleaned
+    if (digits.length === 10) return { kind: 'mobile', value: digits }
+    return { kind: 'raw', value: cleaned }
+  }
+
+  // Netlify function base URL — matches pattern used in register page
+  const getFunctionBase = () => {
+    if (typeof window === 'undefined') return ''
+    const origin = window.location.origin
+    return origin.includes('localhost') ? 'http://localhost:8888' : origin
   }
 
   // ── Password Login ─────────────────────────────────────────
@@ -57,14 +64,41 @@ export default function LoginPage() {
     }
 
     try {
-      const email = resolveEmail(emailOrMobile)
+      const input = classifyInput(emailOrMobile)
 
-      // Sign in via Supabase — returns structured result with error differentiation
-      const result = await loginClient(email, password)
+      if (input.kind === 'mobile') {
+        // Mobile login: resolve email → sign in server-side, then set session client-side
+        const res = await fetch(`${getFunctionBase()}/.netlify/functions/login-mobile`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ mobile: input.value, password }),
+        })
+        const data = await res.json().catch(() => ({}))
+
+        if (!res.ok || !data.access_token || !data.refresh_token) {
+          setError(data.error || AUTH_ERRORS.INVALID_CREDENTIALS)
+          setLoading(false)
+          return
+        }
+
+        const { error: sessionError } = await supabase.auth.setSession({
+          access_token: data.access_token,
+          refresh_token: data.refresh_token,
+        })
+        if (sessionError) {
+          setError(mapSupabaseError(sessionError.message) || AUTH_ERRORS.INVALID_CREDENTIALS)
+          setLoading(false)
+          return
+        }
+        router.push('/dashboard')
+        return
+      }
+
+      // Email (or raw) login: use existing client-side flow
+      const result = await loginClient(input.value, password)
       if (result.session) {
         router.push('/dashboard')
       } else {
-        // Show specific error message based on failure type
         setError(result.message || AUTH_ERRORS.INVALID_CREDENTIALS)
       }
     } catch (err: any) {
@@ -75,11 +109,12 @@ export default function LoginPage() {
 
   // ── Forgot Password ────────────────────────────────────────
   const handleForgotPassword = async () => {
-    const email = resolveEmail(emailOrMobile)
-    if (!email.includes('@') || email.endsWith('@ghlindiaventures.com')) {
+    const input = classifyInput(emailOrMobile)
+    if (input.kind !== 'email') {
       setError(AUTH_ERRORS.RESET_EMAIL_REQUIRED)
       return
     }
+    const email = input.value
     setError('')
     setLoading(true)
     try {

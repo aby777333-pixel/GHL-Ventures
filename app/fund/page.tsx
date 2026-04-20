@@ -68,11 +68,16 @@ function FundHero() {
 
 /* ───────────────────────────── 2. FUND OVERVIEW ───────────────────────────── */
 function FundOverview() {
-  const metrics = [
+  const metrics: Array<{
+    icon: typeof FileText
+    label: string
+    value: string
+    href?: string
+  }> = [
     { icon: FileText, label: 'Fund Type', value: 'Category II AIF' },
     { icon: Shield, label: 'SEBI Registration', value: BRAND.sebi },
-    { icon: DollarSign, label: 'Invest From', value: 'Contact for Details' },
-    { icon: Clock, label: 'Investment Horizon', value: '5-7 Years' },
+    { icon: DollarSign, label: 'Invest From', value: 'Contact for Details', href: '/contact' },
+    { icon: Clock, label: 'Investment Horizon', value: '5-10 Years' },
     { icon: TrendingUp, label: 'Target IRR', value: '18-22%' },
     { icon: Target, label: 'Fund Size Target', value: '₹500 Crore' },
   ]
@@ -86,17 +91,33 @@ function FundOverview() {
         </AnimatedSection>
 
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-5xl mx-auto">
-          {metrics.map((item, i) => (
-            <AnimatedSection key={item.label} delay={i * 80}>
+          {metrics.map((item, i) => {
+            const cardInner = (
               <div className="card text-center h-full group hover-lift">
                 <div className="w-12 h-12 bg-brand-red/10 rounded-xl flex items-center justify-center mx-auto mb-4 group-hover:bg-brand-red transition-all icon-ring-hover">
                   <item.icon className="w-6 h-6 text-brand-red group-hover:text-white transition-colors" />
                 </div>
                 <p className=" text-xs uppercase tracking-wider mb-1">{item.label}</p>
-                <p className="font-bold  text-lg">{item.value}</p>
+                <p className="font-bold  text-lg group-hover:text-brand-red transition-colors">{item.value}</p>
+                {item.href && (
+                  <span className="inline-flex items-center gap-1 mt-2 text-xs font-semibold text-brand-red">
+                    Contact us <ArrowRight className="w-3 h-3" />
+                  </span>
+                )}
               </div>
-            </AnimatedSection>
-          ))}
+            )
+            return (
+              <AnimatedSection key={item.label} delay={i * 80}>
+                {item.href ? (
+                  <Link href={item.href} className="block h-full focus:outline-none focus:ring-2 focus:ring-brand-red/40 rounded-2xl" aria-label={`${item.label} — ${item.value}. Contact us for details.`}>
+                    {cardInner}
+                  </Link>
+                ) : (
+                  cardInner
+                )}
+              </AnimatedSection>
+            )
+          })}
         </div>
       </div>
     </section>

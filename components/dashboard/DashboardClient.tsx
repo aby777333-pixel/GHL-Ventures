@@ -1854,7 +1854,7 @@ export default function DashboardClient() {
       </div>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {[
-          { title: 'Category II AIF - Direct', desc: 'Invest in SEBI-registered AIF with stressed RE and startup exposure.', min: 'As per SEBI AIF Regulations', target: '18-22% IRR', tenure: '5-7 Years', risk: 'High', color: '#D0021B', icon: Building2 },
+          { title: 'Category II AIF - Direct', desc: 'Invest in SEBI-registered AIF with stressed RE and startup exposure.', min: 'As per SEBI AIF Regulations', target: '18-22% IRR', tenure: '5-10 Years', risk: 'High', color: '#D0021B', icon: Building2 },
           { title: 'SEBI Co-Invest Framework', desc: 'Regulated co-invest structure with fixed returns and same asset pool.', min: 'Contact for details', target: '12-15% p.a.', tenure: '3-5 Years', risk: 'Moderate', color: '#3B82F6', icon: FileText },
           { title: 'NCLT Recovery Assets', desc: 'Stressed properties at 40-60% discount through IBC resolution.', min: '\u20B950 Lakhs', target: '25-35% IRR', tenure: '2-4 Years', risk: 'High', color: '#10B981', icon: Target, upcoming: true },
           { title: 'Early-Stage Startups', desc: 'Pre-Series A in high-growth Indian tech startups.', min: '\u20B925 Lakhs', target: '30-50% IRR', tenure: '5-8 Years', risk: 'Very High', color: '#F59E0B', icon: Rocket, upcoming: true },

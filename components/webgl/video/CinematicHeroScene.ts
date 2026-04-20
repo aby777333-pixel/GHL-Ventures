@@ -36,7 +36,7 @@ export const HERO_OVERLAYS = [
   { title: 'Stressed Real Estate', subtitle: 'High-Alpha Distressed Assets', detail: 'NCLT Resolution \u2022 Value Unlocking' },
   { title: 'Early-Stage Startups', subtitle: 'India\u2019s Next Unicorns', detail: 'Deep Tech \u2022 FinTech \u2022 HealthTech' },
   { title: '6 Portfolio Companies', subtitle: '\u20B9200Cr+ Capital Deployed', detail: '25+ Years Combined Experience' },
-  { title: '\u20B9500 Crore Target', subtitle: '18\u201322% Target IRR', detail: '5\u20137 Year Investment Horizon' },
+  { title: '\u20B9500 Crore Target', subtitle: '18\u201322% Target IRR', detail: '5\u201310 Year Investment Horizon' },
   { title: 'Creating Wealth.', subtitle: 'Building Trust.', detail: 'Inspiring Growth.' },
 ]
 

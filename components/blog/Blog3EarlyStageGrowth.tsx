@@ -81,7 +81,7 @@ export default function Blog3EarlyStageGrowth() {
         rows={[
           ['Target IRR', '22–30%'],
           ['Equity Multiple', '3x–5x'],
-          ['Investment Horizon', '5–7 years'],
+          ['Investment Horizon', '5–10 years'],
           ['Portfolio Size', '10–15 companies'],
           ['Exit Strategy', 'IPO / Strategic Sale / Secondary'],
         ]}

@@ -103,7 +103,7 @@ export default function DirectAIFPage() {
                   {[
                     { label: 'Minimum Investment', value: 'As per SEBI AIF Regulations' },
                     { label: 'Fund Category', value: 'SEBI Category II AIF' },
-                    { label: 'Investment Horizon', value: '5–7 Years' },
+                    { label: 'Investment Horizon', value: '5–10 Years' },
                     { label: 'Target IRR', value: '15–25%' },
                     { label: 'Fund Size Target', value: '₹500 Crore' },
                     { label: 'SEBI Registration', value: BRAND.sebi },

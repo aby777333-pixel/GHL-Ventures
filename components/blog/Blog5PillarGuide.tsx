@@ -155,7 +155,7 @@ export default function Blog5PillarGuide() {
         rows={[
           ['Target IRR', '22–30%'],
           ['Equity Multiple', '3x–5x'],
-          ['Investment Horizon', '5–7 years'],
+          ['Investment Horizon', '5–10 years'],
         ]}
       />
 
