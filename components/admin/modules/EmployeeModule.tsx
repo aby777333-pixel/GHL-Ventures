@@ -125,6 +125,7 @@ export default function EmployeeModule({ subTab, navigate, showToast }: Employee
 
       const result = await updateEmployee(staffProfileId, userId, {
         fullName: empForm.name,
+        email: empForm.email || undefined,
         phone: empForm.phone || undefined,
         department: empForm.department,
         designation: empForm.role,

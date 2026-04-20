@@ -621,7 +621,7 @@ export async function fetchAssignedRM(clientId?: string): Promise<AssignedRMInfo
         name: data[0].name || 'Your Relationship Manager',
         designation: data[0].designation || 'Relationship Manager',
         department: data[0].department || '',
-        phone: data[0].phone || '+917200255252',
+        phone: data[0].phone || '',
         email: data[0].email || '',
         avatar_url: data[0].avatar_url || '',
       }
@@ -654,7 +654,7 @@ export async function fetchAssignedRM(clientId?: string): Promise<AssignedRMInfo
       name: profile?.full_name || 'Your Relationship Manager',
       designation: staffProfile.designation || 'Relationship Manager',
       department: staffProfile.department || '',
-      phone: profile?.phone || '+917200255252',
+      phone: profile?.phone || '',
       email: profile?.email || '',
       avatar_url: profile?.avatar_url || '',
     }

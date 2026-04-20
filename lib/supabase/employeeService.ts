@@ -92,6 +92,7 @@ export async function updateEmployee(
   userId: string,
   updates: {
     fullName?: string
+    email?: string
     phone?: string
     department?: string
     designation?: string
@@ -103,10 +104,14 @@ export async function updateEmployee(
   if (!isSupabaseConfigured()) return { success: false, error: 'Service unavailable' }
 
   try {
-    // Update profiles table (name, phone)
+    // Update profiles table (name, phone, email).
+    // NOTE: email here updates only profiles.email (what the dashboard shows).
+    // It does NOT change the auth.users login email — that requires an admin
+    // password-reset flow and is intentionally out of scope for this form.
     const profileUpdates: Record<string, any> = {}
     if (updates.fullName) profileUpdates.full_name = updates.fullName
     if (updates.phone !== undefined) profileUpdates.phone = updates.phone
+    if (updates.email !== undefined) profileUpdates.email = updates.email
 
     if (Object.keys(profileUpdates).length > 0) {
       const { error: profileErr } = await db

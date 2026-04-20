@@ -411,6 +411,9 @@ export default function DashboardClient() {
   const [ticketDesc, setTicketDesc] = useState('')
   const [openFaqId, setOpenFaqId] = useState<string | number | null>(null)
   const [faqs, setFaqs] = useState<any[]>([])
+  // Floating Investor Relationship Manager widget — collapsed by default,
+  // expands into a card popup on click so it doesn't crowd the dashboard.
+  const [rmWidgetOpen, setRmWidgetOpen] = useState(false)
 
   // Load FAQs for dashboard
   useEffect(() => {
@@ -1698,68 +1701,6 @@ export default function DashboardClient() {
           </div>
         </div>
       </div>
-
-      {/* Investor Relationship Manager Card — surfaces Super Admin assignment */}
-      {assignedRM && assignedRM.name && (
-        <div className="bg-white rounded-2xl shadow-sm p-6 max-w-md mx-auto md:mx-0">
-          <p className="text-center text-xs font-bold tracking-[0.18em] text-gray-400 mb-4">
-            YOUR INVESTOR RELATIONSHIP MANAGER
-          </p>
-          <div className="flex flex-col items-center">
-            <div className="relative w-24 h-24 mb-3">
-              <div className="w-24 h-24 rounded-full border-[3px] border-brand-red overflow-hidden bg-gray-100 flex items-center justify-center">
-                {assignedRM.avatar_url ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={assignedRM.avatar_url} alt={assignedRM.name} className="w-full h-full object-cover" />
-                ) : (
-                  <span className="text-2xl font-bold text-brand-red">
-                    {assignedRM.name.trim().charAt(0).toUpperCase()}
-                  </span>
-                )}
-              </div>
-              <span className="absolute bottom-1 right-1 w-4 h-4 rounded-full bg-emerald-500 border-2 border-white" />
-            </div>
-            <h4 className="text-lg font-bold text-gray-900">{assignedRM.name}</h4>
-            <p className="text-sm text-gray-500 mt-0.5">
-              {assignedRM.designation}
-              {' · '}
-              <span className="inline-flex items-center gap-1 text-gray-500">
-                Verified <CheckCircle className="w-3.5 h-3.5 text-emerald-500" />
-              </span>
-            </p>
-          </div>
-          <div className="mt-5 space-y-2">
-            {assignedRM.phone && (
-              <a
-                href={`tel:${assignedRM.phone.replace(/\s+/g, '')}`}
-                className="flex items-center gap-3 px-4 py-3 rounded-xl bg-gray-100 hover:bg-gray-200 transition-colors"
-              >
-                <Phone className="w-4 h-4 text-brand-red shrink-0" />
-                <span className="text-sm text-gray-800">{assignedRM.phone}</span>
-              </a>
-            )}
-            {assignedRM.email && (
-              <a
-                href={`mailto:${assignedRM.email}`}
-                className="flex items-center gap-3 px-4 py-3 rounded-xl bg-gray-100 hover:bg-gray-200 transition-colors"
-              >
-                <Mail className="w-4 h-4 text-brand-red shrink-0" />
-                <span className="text-sm text-gray-800 truncate">{assignedRM.email}</span>
-              </a>
-            )}
-          </div>
-          {assignedRM.phone && (
-            <a
-              href={`tel:${assignedRM.phone.replace(/\s+/g, '')}`}
-              className="mt-4 flex items-center justify-center gap-2 w-full py-3 rounded-xl text-white font-semibold transition-all hover:scale-[1.01]"
-              style={{ background: 'linear-gradient(135deg, #D0021B, #8B0000)' }}
-            >
-              <PhoneCall className="w-4 h-4" />
-              Contact Manager
-            </a>
-          )}
-        </div>
-      )}
 
       {/* 4 Crimson Stats Cards (matches investor.php) */}
       {renderHeroMetrics()}
@@ -4166,6 +4107,128 @@ export default function DashboardClient() {
           })}
         </div>
       </nav>
+
+      {/* Floating Investor Relationship Manager widget */}
+      {assignedRM && assignedRM.name && (
+        <>
+          {/* Collapsed pill — sits above the bottom nav on mobile, right-aligned on desktop */}
+          {!rmWidgetOpen && (
+            <button
+              onClick={() => setRmWidgetOpen(true)}
+              aria-label="Open Investor Relationship Manager"
+              title={`Your IRM: ${assignedRM.name}`}
+              className="fixed bottom-24 lg:bottom-24 right-4 lg:right-6 z-[10000] flex items-center gap-2.5 pl-1.5 pr-4 py-1.5 rounded-full shadow-2xl border border-white/20 text-white hover:scale-[1.03] transition-all"
+              style={{ background: 'linear-gradient(135deg, #D0021B, #8B0000)' }}
+            >
+              <span className="relative w-9 h-9 rounded-full border-2 border-white overflow-hidden bg-white flex items-center justify-center shrink-0">
+                {assignedRM.avatar_url ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={assignedRM.avatar_url} alt={assignedRM.name} className="w-full h-full object-cover" />
+                ) : (
+                  <span className="text-sm font-bold text-brand-red">
+                    {assignedRM.name.trim().charAt(0).toUpperCase()}
+                  </span>
+                )}
+                <span className="absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full bg-emerald-400 border border-white" />
+              </span>
+              <span className="text-left hidden sm:block">
+                <span className="block text-[9px] uppercase tracking-wider font-semibold text-white/75 leading-none">Your IRM</span>
+                <span className="block text-xs font-semibold leading-tight mt-0.5 max-w-[140px] truncate">{assignedRM.name}</span>
+              </span>
+            </button>
+          )}
+
+          {/* Expanded popup card */}
+          {rmWidgetOpen && (
+            <>
+              <div
+                className="fixed inset-0 z-[10000] bg-black/40 backdrop-blur-sm animate-fade-in"
+                onClick={() => setRmWidgetOpen(false)}
+                aria-hidden
+              />
+              <div
+                role="dialog"
+                aria-label="Investor Relationship Manager details"
+                className="fixed bottom-24 lg:bottom-24 right-4 lg:right-6 z-[10001] w-[calc(100vw-2rem)] sm:w-[360px] bg-white rounded-2xl shadow-2xl border border-gray-200 p-5 animate-fade-in"
+              >
+                <div className="flex items-start justify-between mb-3">
+                  <p className="text-xs font-bold tracking-[0.18em] text-gray-400">
+                    YOUR INVESTOR RELATIONSHIP MANAGER
+                  </p>
+                  <button
+                    onClick={() => setRmWidgetOpen(false)}
+                    aria-label="Close"
+                    className="text-gray-400 hover:text-gray-700 -mt-1 -mr-1 p-1"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+                <div className="flex flex-col items-center">
+                  <div className="relative w-20 h-20 mb-3">
+                    <div className="w-20 h-20 rounded-full border-[3px] border-brand-red overflow-hidden bg-gray-100 flex items-center justify-center">
+                      {assignedRM.avatar_url ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={assignedRM.avatar_url} alt={assignedRM.name} className="w-full h-full object-cover" />
+                      ) : (
+                        <span className="text-2xl font-bold text-brand-red">
+                          {assignedRM.name.trim().charAt(0).toUpperCase()}
+                        </span>
+                      )}
+                    </div>
+                    <span className="absolute bottom-0.5 right-0.5 w-3.5 h-3.5 rounded-full bg-emerald-500 border-2 border-white" />
+                  </div>
+                  <h4 className="text-base font-bold text-gray-900">{assignedRM.name}</h4>
+                  <p className="text-xs text-gray-500 mt-0.5 flex items-center gap-1.5">
+                    <span>{assignedRM.designation}</span>
+                    <span>·</span>
+                    <span className="inline-flex items-center gap-1">Verified <CheckCircle className="w-3.5 h-3.5 text-emerald-500" /></span>
+                  </p>
+                </div>
+                <div className="mt-4 space-y-2">
+                  {assignedRM.phone ? (
+                    <a
+                      href={`tel:${assignedRM.phone.replace(/\s+/g, '')}`}
+                      className="flex items-center gap-3 px-3.5 py-2.5 rounded-xl bg-gray-100 hover:bg-gray-200 transition-colors"
+                    >
+                      <Phone className="w-4 h-4 text-brand-red shrink-0" />
+                      <span className="text-sm text-gray-800">{assignedRM.phone}</span>
+                    </a>
+                  ) : (
+                    <div className="flex items-center gap-3 px-3.5 py-2.5 rounded-xl bg-gray-50 border border-dashed border-gray-200">
+                      <Phone className="w-4 h-4 text-gray-300 shrink-0" />
+                      <span className="text-sm text-gray-400">Phone not available</span>
+                    </div>
+                  )}
+                  {assignedRM.email ? (
+                    <a
+                      href={`mailto:${assignedRM.email}`}
+                      className="flex items-center gap-3 px-3.5 py-2.5 rounded-xl bg-gray-100 hover:bg-gray-200 transition-colors"
+                    >
+                      <Mail className="w-4 h-4 text-brand-red shrink-0" />
+                      <span className="text-sm text-gray-800 truncate">{assignedRM.email}</span>
+                    </a>
+                  ) : (
+                    <div className="flex items-center gap-3 px-3.5 py-2.5 rounded-xl bg-gray-50 border border-dashed border-gray-200">
+                      <Mail className="w-4 h-4 text-gray-300 shrink-0" />
+                      <span className="text-sm text-gray-400">Email not available</span>
+                    </div>
+                  )}
+                </div>
+                {(assignedRM.phone || assignedRM.email) && (
+                  <a
+                    href={assignedRM.phone ? `tel:${assignedRM.phone.replace(/\s+/g, '')}` : `mailto:${assignedRM.email}`}
+                    className="mt-4 flex items-center justify-center gap-2 w-full py-2.5 rounded-xl text-white font-semibold transition-all hover:scale-[1.01]"
+                    style={{ background: 'linear-gradient(135deg, #D0021B, #8B0000)' }}
+                  >
+                    <PhoneCall className="w-4 h-4" />
+                    Contact Manager
+                  </a>
+                )}
+              </div>
+            </>
+          )}
+        </>
+      )}
 
       {/* Toast notification */}
       {toast && (
