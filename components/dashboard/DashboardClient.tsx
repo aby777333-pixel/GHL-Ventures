@@ -1803,9 +1803,9 @@ export default function DashboardClient() {
       {faqs.length > 0 && (
         <div className="relative rounded-2xl overflow-hidden"
           style={{
-            background: 'linear-gradient(135deg, #170808 0%, #220c0c 50%, #170808 100%)',
-            border: '1px solid rgba(208, 2, 27, 0.18)',
-            boxShadow: '0 6px 24px rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.04)'
+            background: 'linear-gradient(135deg, #0a0a0a 0%, #141414 50%, #0a0a0a 100%)',
+            border: '1px solid rgba(255, 255, 255, 0.06)',
+            boxShadow: '0 6px 24px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.04)'
           }}>
           <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-red-600/70 to-transparent" />
           <div className="relative p-6">
