@@ -691,10 +691,16 @@ button svg, button .lucide, [role="button"] svg {
 }
 /* removed: was forcing white text inside white-bg cards */
 
-/* Navbar scrolled state dark mode */
+/* Navbar scrolled state — always dark per 2026-04-20 design direction.
+   Previously rendered white-on-scroll in light mode, producing an
+   unreadable white-on-white logo/text combo. Now stays black in both
+   themes; the Tailwind `bg-[#0A0A0A]/90` class on the <nav> is the
+   authoritative bg, this rule just ensures the shadow + border stay
+   consistent even if Tailwind ordering shifts. */
 .navbar-scrolled {
-  background-color: rgba(255, 255, 255, 0.9);
-  box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+  background-color: rgba(10, 10, 10, 0.92) !important;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+  border-bottom: 1px solid rgba(255,255,255,0.06);
 }
 :root.dark .navbar-scrolled {
   background-color: rgba(10, 10, 10, 0.92) !important;

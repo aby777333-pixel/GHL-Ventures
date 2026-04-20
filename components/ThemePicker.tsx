@@ -29,18 +29,12 @@ export default function ThemePicker({ scrolled }: ThemePickerProps) {
       {/* Trigger button */}
       <button
         onClick={() => setOpen(!open)}
-        className={`w-7 h-7 rounded-full flex items-center justify-center transition-all duration-300 ${
-          scrolled
-            ? isLightTheme
-              ? 'text-black hover:text-brand-red hover:bg-red-50'
-              : 'text-white/60 hover:text-brand-red hover:bg-white/10'
-            : 'text-white/60 hover:text-brand-red hover:bg-white/10'
-        }`}
+        className="w-7 h-7 rounded-full flex items-center justify-center transition-all duration-300 text-white/60 hover:text-brand-red hover:bg-white/10"
         aria-label="Color theme picker"
         title="Color Theme"
       >
         {globalOverrideColor ? (
-          <div className={`w-3.5 h-3.5 rounded-full ring-1 ${isLightTheme ? 'ring-black/20' : 'ring-white/30'}`} style={{ background: globalOverrideColor }} />
+          <div className="w-3.5 h-3.5 rounded-full ring-1 ring-white/30" style={{ background: globalOverrideColor }} />
         ) : (
           <Palette className="w-3.5 h-3.5" />
         )}

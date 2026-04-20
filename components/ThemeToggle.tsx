@@ -4,23 +4,18 @@ import { useTheme } from '@/lib/ThemeProvider'
 import { Sun, Moon } from 'lucide-react'
 
 interface ThemeToggleProps {
-  scrolled: boolean
+  // Kept for API compatibility with Navbar. The nav now stays dark in
+  // both scroll states, so the button uses a single white-on-dark palette.
+  scrolled?: boolean
 }
 
-export default function ThemeToggle({ scrolled }: ThemeToggleProps) {
+export default function ThemeToggle(_props: ThemeToggleProps) {
   const { theme, toggleTheme } = useTheme()
-  const isLightTheme = theme === 'light'
 
   return (
     <button
       onClick={toggleTheme}
-      className={`w-7 h-7 rounded-full flex items-center justify-center transition-all duration-300 ${
-        scrolled
-          ? isLightTheme
-            ? 'text-black hover:text-brand-red hover:bg-red-50'
-            : 'text-white/60 hover:text-brand-red hover:bg-white/10'
-          : 'text-white/60 hover:text-brand-red hover:bg-white/10'
-      }`}
+      className="w-7 h-7 rounded-full flex items-center justify-center transition-all duration-300 text-white/60 hover:text-brand-red hover:bg-white/10"
       aria-label={`Switch to ${theme === 'light' ? 'dark' : 'light'} mode`}
       title={`${theme === 'light' ? 'Dark' : 'Light'} mode`}
     >

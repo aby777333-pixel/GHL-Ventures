@@ -85,13 +85,7 @@ export default function NotificationCenter({ scrolled }: NotificationCenterProps
       {/* Bell Icon Button */}
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className={`relative w-7 h-7 rounded-full flex items-center justify-center transition-all duration-300 ${
-          scrolled
-            ? isLightTheme
-              ? 'text-black hover:text-brand-red hover:bg-red-50'
-              : 'text-white/60 hover:text-brand-red hover:bg-white/10'
-            : 'text-white/60 hover:text-brand-red hover:bg-white/10'
-        }`}
+        className="relative w-7 h-7 rounded-full flex items-center justify-center transition-all duration-300 text-white/60 hover:text-brand-red hover:bg-white/10"
         aria-label="Notifications"
         title="Notifications"
       >

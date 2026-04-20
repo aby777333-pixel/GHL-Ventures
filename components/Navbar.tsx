@@ -10,12 +10,10 @@ import Logo from '@/components/Logo'
 import NotificationCenter from '@/components/NotificationCenter'
 import ThemeToggle from '@/components/ThemeToggle'
 import ThemePicker from '@/components/ThemePicker'
-import { useTheme } from '@/lib/ThemeProvider'
 
 const PORTAL_PREFIXES = ['/staff', '/admin', '/dashboard']
 
 export default function Navbar() {
-  const { theme } = useTheme()
   const [isOpen, setIsOpen] = useState(false)
   const [scrolled, setScrolled] = useState(false)
   const [aboutOpen, setAboutOpen] = useState(false)
@@ -38,7 +36,6 @@ export default function Navbar() {
 
   // Hide on portal routes (staff, admin, dashboard)
   const isPortal = PORTAL_PREFIXES.some(p => pathname.startsWith(p))
-  const isLightTheme = theme === 'light'
 
   const handleScroll = useCallback(() => {
     setScrolled(window.scrollY > 20)
@@ -147,7 +144,7 @@ export default function Navbar() {
       <nav
         className={`transition-all duration-300 ${
           scrolled
-            ? 'navbar-scrolled backdrop-blur-[20px] shadow-lg bg-white/90 dark:bg-[#0A0A0A]/90'
+            ? 'navbar-scrolled backdrop-blur-[20px] shadow-lg bg-[#0A0A0A]/90'
             : 'bg-[#0A0A0A]'
         }`}
         aria-label="Main navigation"
@@ -203,10 +200,6 @@ export default function Navbar() {
                           className={`relative uppercase font-semibold transition-colors duration-200 px-2 py-1.5 rounded inline-flex items-center gap-0.5 ${
                             isActive
                               ? 'text-brand-red'
-                              : scrolled
-                              ? isLightTheme
-                                ? 'text-black hover:text-brand-red'
-                                : 'text-white/80 hover:text-brand-red'
                               : 'text-white/80 hover:text-brand-red'
                           }`}
                           style={{
@@ -235,11 +228,7 @@ export default function Navbar() {
                           }`}
                         >
                           <div
-                            className={`rounded-xl border shadow-2xl py-1.5 overflow-hidden ${isAbout ? 'min-w-[160px]' : isFund ? 'min-w-[230px]' : isEducation ? 'min-w-[150px]' : 'min-w-[190px]'} ${
-                              scrolled
-                                ? 'bg-white/[0.97] dark:bg-[#111]/[0.97] border-black/[0.08] dark:border-white/[0.1]'
-                                : 'bg-[#0f0f14]/[0.97] border-white/[0.1]'
-                            }`}
+                            className={`rounded-xl border shadow-2xl py-1.5 overflow-hidden ${isAbout ? 'min-w-[160px]' : isFund ? 'min-w-[230px]' : isEducation ? 'min-w-[150px]' : 'min-w-[190px]'} bg-[#0f0f14]/[0.97] border-white/[0.1]`}
                             style={{ backdropFilter: 'blur(20px)' }}
                           >
                             {link.children.map((child) => {
@@ -251,10 +240,6 @@ export default function Navbar() {
                                   className={`w-full flex items-center justify-start text-left whitespace-nowrap px-4 py-2.5 transition-all duration-150 ${
                                     childActive
                                       ? 'text-brand-red'
-                                      : scrolled
-                                      ? isLightTheme
-                                        ? 'text-black hover:text-brand-red hover:bg-gray-50'
-                                        : 'text-white/80 hover:text-brand-red hover:bg-white/5'
                                       : 'text-white/80 hover:text-brand-red hover:bg-white/5'
                                   }`}
                                   style={{
@@ -282,10 +267,6 @@ export default function Navbar() {
                       className={`relative uppercase font-semibold transition-colors duration-200 px-2 py-1.5 rounded ${
                         isActive
                           ? 'text-brand-red'
-                          : scrolled
-                          ? isLightTheme
-                            ? 'text-black hover:text-brand-red'
-                            : 'text-white/80 hover:text-brand-red'
                           : 'text-white/80 hover:text-brand-red'
                       }`}
                       style={{
@@ -316,13 +297,7 @@ export default function Navbar() {
                   // Dispatch Ctrl+K to open command palette
                   document.dispatchEvent(new KeyboardEvent('keydown', { key: 'k', ctrlKey: true, metaKey: true, bubbles: true }))
                 }}
-                className={`hidden xl:inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full font-medium transition-all duration-200 border ${
-                  scrolled
-                    ? isLightTheme
-                      ? 'border-gray-200 text-gray-600 hover:bg-gray-50 hover:text-black'
-                      : 'border-white/15 text-white/50 hover:bg-white/10 hover:text-white'
-                    : 'border-white/15 text-white/50 hover:bg-white/10 hover:text-white'
-                }`}
+                className="hidden xl:inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full font-medium transition-all duration-200 border border-white/15 text-white/50 hover:bg-white/10 hover:text-white"
                 style={{ fontSize: '10px' }}
                 title="Quick search (Ctrl+K)"
               >
@@ -334,13 +309,7 @@ export default function Navbar() {
               <div className="hidden xl:flex items-center space-x-1">
                 <Link
                   href="/login"
-                  className={`inline-flex items-center space-x-1 px-2.5 py-1 rounded-full font-semibold transition-all duration-200 border ${
-                    scrolled
-                      ? isLightTheme
-                        ? 'border-gray-200 text-black hover:bg-gray-50'
-                        : 'border-white/15 text-white/70 hover:bg-white/10 hover:text-white'
-                      : 'border-white/15 text-white/70 hover:bg-white/10 hover:text-white'
-                  }`}
+                  className="inline-flex items-center space-x-1 px-2.5 py-1 rounded-full font-semibold transition-all duration-200 border border-white/15 text-white/70 hover:bg-white/10 hover:text-white"
                   style={{ fontSize: '10px', letterSpacing: '0.03em' }}
                 >
                   <LogIn className="w-2.5 h-2.5" />
@@ -370,7 +339,7 @@ export default function Navbar() {
 
               {/* Divider */}
               <div className={`hidden xl:block w-px h-4 mx-1 ${
-                scrolled ? (isLightTheme ? 'bg-gray-300' : 'bg-white/20') : 'bg-white/15'
+                scrolled ? 'bg-white/20' : 'bg-white/15'
               }`} />
 
               {/* Let's Talk pill button — desktop */}
@@ -392,13 +361,7 @@ export default function Navbar() {
               {/* Hamburger — mobile / tablet */}
               <button
                 onClick={() => setIsOpen(!isOpen)}
-                className={`xl:hidden p-2 rounded-lg transition-colors duration-200 ${
-                  scrolled
-                    ? isLightTheme
-                      ? 'text-black hover:bg-gray-100'
-                      : 'text-white hover:bg-white/10'
-                    : 'text-white hover:bg-white/10'
-                }`}
+                className="xl:hidden p-2 rounded-lg transition-colors duration-200 text-white hover:bg-white/10"
                 aria-expanded={isOpen}
                 aria-label="Toggle menu"
               >
