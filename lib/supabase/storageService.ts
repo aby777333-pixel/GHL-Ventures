@@ -37,10 +37,35 @@ export const BUCKETS = {
   MARKETING: 'marketing-assets',
   UPLOADS: 'uploads',
   KYC: 'kyc-documents',
+  LEGACY_KYC: 'legacy-kyc-documents',
   RESUMES: 'resumes',
 } as const
 
 export type BucketName = typeof BUCKETS[keyof typeof BUCKETS]
+
+// Buckets that do NOT serve public URLs. Callers that need a browser-loadable
+// URL for an object in one of these buckets must use createSignedUrl().
+// Kept as a constant so the storage helpers and any caller that persists a
+// URL (file_records, kyc_*, documents, etc.) stay in sync.
+export const PRIVATE_BUCKETS: ReadonlySet<string> = new Set<string>([
+  'ghl-documents',
+  'ghl-exports',
+  'ghl-temp-uploads',
+  'ghl-backups',
+  'resumes',
+  'lead-attachments',
+  'client-uploads',
+  'investment-documents',
+  'documents',
+  'staff-documents',
+  'message-attachments',
+  'reports',
+  'legacy-kyc-documents',
+])
+
+export const isPrivateBucket = (bucket: string) => PRIVATE_BUCKETS.has(bucket)
+
+const SIGNED_URL_TTL_SECONDS = 60 * 60 // 1 hour — matches existing callers
 
 // ── Types ─────────────────────────────────────────────────────
 
@@ -304,7 +329,7 @@ export async function uploadFile(
           return { success: false, error: `${uploadError.message} (fallback: ${fallbackError.message})` }
         }
 
-        const { data: fbUrl } = supabase.storage.from(LEGACY_BUCKET).getPublicUrl(filePath)
+        const fbUrlStr = await resolveObjectUrl(LEGACY_BUCKET, filePath)
 
         const fileRecord = await trackFileRecord({
           fileName: sanitizeFileName(file.name),
@@ -331,7 +356,7 @@ export async function uploadFile(
           file: {
             name: file.name,
             path: filePath,
-            url: fbUrl.publicUrl,
+            url: fbUrlStr,
             size: file.size,
             type: file.type,
             bucket: LEGACY_BUCKET,
@@ -342,7 +367,7 @@ export async function uploadFile(
       return { success: false, error: uploadError.message }
     }
 
-    const { data: urlData } = supabase.storage.from(bucket).getPublicUrl(filePath)
+    const uploadedUrl = await resolveObjectUrl(bucket, filePath)
 
     // Track file record in database
     let fileRecordId: string | undefined
@@ -388,7 +413,7 @@ export async function uploadFile(
       file: {
         name: file.name,
         path: filePath,
-        url: urlData.publicUrl,
+        url: uploadedUrl,
         size: file.size,
         type: file.type,
         bucket,
@@ -427,8 +452,11 @@ export async function uploadFiles(
 
 /**
  * Get a download URL for a file.
- * For public buckets: returns the public URL.
- * For private buckets: creates a signed URL.
+ * For public buckets: returns the public URL immediately.
+ * For private buckets: creates a time-limited signed URL.
+ *
+ * Note: getPublicUrl() always returns a URL string even when the bucket is
+ * private — that URL will 400 on access. We must branch on bucket privacy.
  */
 export async function getDownloadUrl(
   filePath: string,
@@ -439,25 +467,48 @@ export async function getDownloadUrl(
   }
 
   try {
-    // Try public URL first (for public buckets)
+    if (isPrivateBucket(bucket)) {
+      const { data: signedData, error } = await supabase.storage
+        .from(bucket)
+        .createSignedUrl(filePath, SIGNED_URL_TTL_SECONDS)
+
+      if (error || !signedData?.signedUrl) {
+        return { success: false, error: error?.message || 'Failed to create download URL' }
+      }
+      return { success: true, url: signedData.signedUrl }
+    }
+
     const { data: urlData } = supabase.storage.from(bucket).getPublicUrl(filePath)
     if (urlData?.publicUrl) {
       return { success: true, url: urlData.publicUrl }
     }
 
-    // Fall back to signed URL (for private buckets)
+    // Unknown bucket with no public URL — try signed URL as last resort
     const { data: signedData, error } = await supabase.storage
       .from(bucket)
-      .createSignedUrl(filePath, 3600) // 1 hour
+      .createSignedUrl(filePath, SIGNED_URL_TTL_SECONDS)
 
     if (error || !signedData?.signedUrl) {
       return { success: false, error: error?.message || 'Failed to create download URL' }
     }
-
     return { success: true, url: signedData.signedUrl }
   } catch (err: any) {
     return { success: false, error: err?.message || 'Download failed' }
   }
+}
+
+/**
+ * Resolve the best URL for a stored object at upload time.
+ * Public bucket → long-lived public URL.
+ * Private bucket → short-lived signed URL (caller should refresh before it expires).
+ */
+async function resolveObjectUrl(bucket: string, filePath: string): Promise<string> {
+  if (isPrivateBucket(bucket)) {
+    const { data } = await supabase.storage.from(bucket).createSignedUrl(filePath, SIGNED_URL_TTL_SECONDS)
+    return data?.signedUrl || ''
+  }
+  const { data } = supabase.storage.from(bucket).getPublicUrl(filePath)
+  return data?.publicUrl || ''
 }
 
 /**
@@ -1004,12 +1055,20 @@ export async function getPreviewUrl(
   if (!isSupabaseConfigured()) return null
 
   try {
+    if (isPrivateBucket(bucket)) {
+      const { data: signed, error } = await supabase.storage
+        .from(bucket)
+        .createSignedUrl(filePath, SIGNED_URL_TTL_SECONDS)
+      if (error || !signed?.signedUrl) return null
+      return signed.signedUrl
+    }
+
     const { data } = supabase.storage.from(bucket).getPublicUrl(filePath)
     if (data?.publicUrl) return data.publicUrl
 
     const { data: signed, error } = await supabase.storage
       .from(bucket)
-      .createSignedUrl(filePath, 3600)
+      .createSignedUrl(filePath, SIGNED_URL_TTL_SECONDS)
 
     if (error || !signed?.signedUrl) return null
     return signed.signedUrl
