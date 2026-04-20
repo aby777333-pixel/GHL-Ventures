@@ -177,6 +177,10 @@ export default function AllotmentModule({ subTab, navigate, showToast }: Allotme
   const [confirmModalOpen, setConfirmModalOpen] = useState(false)
   // Per-row in-flight state for Send-to-Client actions (prevents double-sends).
   const [sendingIds, setSendingIds] = useState<Set<string>>(new Set())
+  // Rows for which the doc has already been delivered to the client's Documents tab.
+  // Keys: `${row.id}` for allotment letters, `cert-${row.id}` for debenture certs.
+  // Seeded from the documents table on history load so the Sent state survives reloads.
+  const [sentIds, setSentIds] = useState<Set<string>>(new Set())
 
   // ── Folio number entries (client_id -> folio_number) ───────────
   const [folioEntries, setFolioEntries] = useState<Record<string, string>>({})
@@ -225,7 +229,29 @@ export default function AllotmentModule({ subTab, navigate, showToast }: Allotme
           .in('id', clientIds)
         clientMap = new Map((clients || []).map((c: any) => [c.id, c.full_name as string]))
       }
-      setAllotmentHistory(rows.map((r: any) => ({ ...r, investor_name: clientMap.get(r.client_id) || 'Unknown' })))
+      const enrichedRows = rows.map((r: any) => ({ ...r, investor_name: clientMap.get(r.client_id) || 'Unknown' }))
+      setAllotmentHistory(enrichedRows)
+
+      // Seed sent-to-client state from documents table so the Sent indicator
+      // persists across reloads. Match on file_name which is deterministic per row.
+      if (enrichedRows.length > 0) {
+        const letterNames = enrichedRows.map((r: any) => `allotment-letter-${r.folio_number || r.id}.html`)
+        const certNames = enrichedRows.map((r: any) => `debenture-certificate-${r.folio_number || r.id}.html`)
+        const { data: sentDocs } = await supabase
+          .from('documents')
+          .select('file_name')
+          .in('file_name', [...letterNames, ...certNames])
+        const sentFiles = new Set<string>((sentDocs || []).map((d: any) => d.file_name as string))
+        const sent = new Set<string>()
+        for (const r of enrichedRows) {
+          const folio = r.folio_number || r.id
+          if (sentFiles.has(`allotment-letter-${folio}.html`)) sent.add(r.id)
+          if (sentFiles.has(`debenture-certificate-${folio}.html`)) sent.add(`cert-${r.id}`)
+        }
+        setSentIds(sent)
+      } else {
+        setSentIds(new Set())
+      }
     } catch (err: any) {
       showToast(err.message || 'Failed to load allotment history', 'error')
     } finally {
@@ -529,6 +555,7 @@ export default function AllotmentModule({ subTab, navigate, showToast }: Allotme
                   category: 'agreement',
                 })
                 if (res.ok) {
+                  setSentIds(prev => new Set(prev).add(row.id))
                   showToast('Allotment letter sent to client Documents', 'success')
                   // Open the rendered HTML directly for admin verification (avoids
                   // any browser data-URL navigation restrictions). This mirrors the
@@ -543,11 +570,22 @@ export default function AllotmentModule({ subTab, navigate, showToast }: Allotme
               }
             }}
             disabled={sendingIds.has(row.id)}
-            className="inline-flex items-center justify-center gap-1.5 h-7 px-2.5 rounded-lg text-[11px] font-medium text-white bg-emerald-500/20 border border-emerald-500/30 hover:bg-emerald-500/30 transition-colors disabled:opacity-50 whitespace-nowrap leading-none"
-            title="Send this allotment letter to the client's Documents tab"
+            className={`inline-flex items-center justify-center gap-1.5 h-7 px-2.5 rounded-lg text-[11px] font-medium text-white border transition-colors disabled:opacity-50 whitespace-nowrap leading-none ${
+              sentIds.has(row.id)
+                ? 'bg-emerald-500/30 border-emerald-400/50 hover:bg-emerald-500/40'
+                : 'bg-emerald-500/20 border-emerald-500/30 hover:bg-emerald-500/30'
+            }`}
+            title={sentIds.has(row.id)
+              ? "Already delivered to client's Documents tab — click to re-send"
+              : "Send this allotment letter to the client's Documents tab"}
           >
-            <Send className="w-3 h-3" />
-            {sendingIds.has(row.id) ? 'Sending…' : 'Send to Client'}
+            {sendingIds.has(row.id) ? (
+              <><Send className="w-3 h-3" />Sending…</>
+            ) : sentIds.has(row.id) ? (
+              <><CheckCircle2 className="w-3 h-3" />Sent to Client</>
+            ) : (
+              <><Send className="w-3 h-3" />Send to Client</>
+            )}
           </button>
         </div>
       ),
@@ -911,6 +949,7 @@ export default function AllotmentModule({ subTab, navigate, showToast }: Allotme
                               category: 'agreement',
                             })
                             if (res.ok) {
+                              setSentIds(prev => new Set(prev).add(sendKey))
                               showToast('Debenture certificate sent to client Documents', 'success')
                               const w = window.open('', '_blank')
                               if (w) { w.document.write(html); w.document.close() }
@@ -922,11 +961,22 @@ export default function AllotmentModule({ subTab, navigate, showToast }: Allotme
                           }
                         }}
                         disabled={sendingIds.has(`cert-${row.id}`)}
-                        className="inline-flex items-center justify-center gap-1.5 h-7 px-2.5 rounded-lg text-[11px] font-medium text-white bg-emerald-500/20 border border-emerald-500/30 hover:bg-emerald-500/30 transition-colors disabled:opacity-50 whitespace-nowrap leading-none"
-                        title="Send this certificate to the client's Documents tab"
+                        className={`inline-flex items-center justify-center gap-1.5 h-7 px-2.5 rounded-lg text-[11px] font-medium text-white border transition-colors disabled:opacity-50 whitespace-nowrap leading-none ${
+                          sentIds.has(`cert-${row.id}`)
+                            ? 'bg-emerald-500/30 border-emerald-400/50 hover:bg-emerald-500/40'
+                            : 'bg-emerald-500/20 border-emerald-500/30 hover:bg-emerald-500/30'
+                        }`}
+                        title={sentIds.has(`cert-${row.id}`)
+                          ? "Already delivered to client's Documents tab — click to re-send"
+                          : "Send this certificate to the client's Documents tab"}
                       >
-                        <Send className="w-3 h-3" />
-                        {sendingIds.has(`cert-${row.id}`) ? 'Sending…' : 'Send to Client'}
+                        {sendingIds.has(`cert-${row.id}`) ? (
+                          <><Send className="w-3 h-3" />Sending…</>
+                        ) : sentIds.has(`cert-${row.id}`) ? (
+                          <><CheckCircle2 className="w-3 h-3" />Sent to Client</>
+                        ) : (
+                          <><Send className="w-3 h-3" />Send to Client</>
+                        )}
                       </button>
                     </div>
                   ),
