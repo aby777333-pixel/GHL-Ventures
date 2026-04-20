@@ -12,20 +12,9 @@ interface NewsItem {
   sentiment: 'positive' | 'negative' | 'neutral'
 }
 
-const NEWS_FEED: NewsItem[] = [
-  { id: 1, headline: 'SENSEX rallies 450 points; NIFTY crosses 23,800 on strong FII buying', source: 'ET Markets', time: '2 min ago', category: 'india', sentiment: 'positive' },
-  { id: 2, headline: 'RBI holds repo rate at 6.25% — maintains accommodative stance for growth', source: 'Mint', time: '18 min ago', category: 'india', sentiment: 'neutral' },
-  { id: 3, headline: 'India\'s GDP growth revised upward to 7.2% for FY26 by IMF', source: 'Reuters', time: '35 min ago', category: 'india', sentiment: 'positive' },
-  { id: 4, headline: 'SEBI tightens AIF disclosure norms — enhanced reporting from Q3 2026', source: 'LiveMint', time: '1 hr ago', category: 'india', sentiment: 'neutral' },
-  { id: 5, headline: 'Gold hits ₹78,200/10g as global safe-haven demand surges', source: 'MCX', time: '1 hr ago', category: 'india', sentiment: 'positive' },
-  { id: 6, headline: 'US Fed signals potential rate cut in June as inflation eases to 2.3%', source: 'Bloomberg', time: '2 hr ago', category: 'global', sentiment: 'positive' },
-  { id: 7, headline: 'China manufacturing PMI expands at fastest pace in 14 months', source: 'CNBC', time: '3 hr ago', category: 'global', sentiment: 'positive' },
-  { id: 8, headline: 'European markets open higher on easing trade war tensions', source: 'FT', time: '3 hr ago', category: 'global', sentiment: 'positive' },
-  { id: 9, headline: 'Crude oil drops below $72/bbl as OPEC+ signals production increase', source: 'Reuters', time: '4 hr ago', category: 'global', sentiment: 'negative' },
-  { id: 10, headline: 'Japan\'s Nikkei 225 gains 1.8% on tech rally and weak yen boost', source: 'Nikkei Asia', time: '5 hr ago', category: 'global', sentiment: 'positive' },
-  { id: 11, headline: 'Indian startup funding sees 40% jump in Q1 2026 — $4.2B raised', source: 'Inc42', time: '5 hr ago', category: 'india', sentiment: 'positive' },
-  { id: 12, headline: 'Real estate sector sees 25% growth in Chennai micro-markets', source: 'PropTiger', time: '6 hr ago', category: 'india', sentiment: 'positive' },
-]
+// Mock data removed (2026-04-20) — previously seeded with static demo
+// headlines. Widget short-circuits to null when empty.
+const NEWS_FEED: NewsItem[] = []
 
 export default function MarketNewsTicker() {
   const [isOpen, setIsOpen] = useState(false)
@@ -57,6 +46,7 @@ export default function MarketNewsTicker() {
   }
 
   if (!showWidget) return null
+  if (NEWS_FEED.length === 0) return null
 
   // Collapsed pill — bottom, to the left of Economic Calendar
   if (!isOpen) {

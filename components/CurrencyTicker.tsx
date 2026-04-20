@@ -10,14 +10,10 @@ interface CurrencyRate {
   flag: string
 }
 
-const BASE_RATES: CurrencyRate[] = [
-  { pair: 'USD/INR', rate: 83.42, change: 0.12, flag: '🇺🇸' },
-  { pair: 'EUR/INR', rate: 90.85, change: -0.08, flag: '🇪🇺' },
-  { pair: 'GBP/INR', rate: 105.63, change: 0.23, flag: '🇬🇧' },
-  { pair: 'JPY/INR', rate: 0.5524, change: -0.01, flag: '🇯🇵' },
-  { pair: 'AED/INR', rate: 22.72, change: 0.03, flag: '🇦🇪' },
-  { pair: 'SGD/INR', rate: 62.14, change: 0.15, flag: '🇸🇬' },
-]
+// Mock data removed (2026-04-20) — previously had hardcoded FX rates with
+// simulated fluctuations. Widget short-circuits to null when empty so the
+// page layout isn't affected.
+const BASE_RATES: CurrencyRate[] = []
 
 export default function CurrencyTicker() {
   const [rates, setRates] = useState<CurrencyRate[]>(BASE_RATES)
@@ -36,6 +32,8 @@ export default function CurrencyTicker() {
     }, 5000)
     return () => clearInterval(interval)
   }, [])
+
+  if (rates.length === 0) return null
 
   return (
     <div

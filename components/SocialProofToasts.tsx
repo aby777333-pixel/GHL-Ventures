@@ -10,20 +10,10 @@ interface SocialProofEntry {
   timeAgo: string
 }
 
-const SOCIAL_PROOF_DATA: SocialProofEntry[] = [
-  { city: 'Mumbai', action: 'scheduled a consultation', timeAgo: '2 minutes ago' },
-  { city: 'Bengaluru', action: 'downloaded the fund brochure', timeAgo: '5 minutes ago' },
-  { city: 'Chennai', action: 'started an investment inquiry', timeAgo: '3 minutes ago' },
-  { city: 'Delhi', action: 'viewed the SEBI Co-Invest Framework', timeAgo: '7 minutes ago' },
-  { city: 'Hyderabad', action: 'requested a callback', timeAgo: '4 minutes ago' },
-  { city: 'Pune', action: 'explored the portfolio', timeAgo: '6 minutes ago' },
-  { city: 'Kolkata', action: 'registered for the webinar', timeAgo: '8 minutes ago' },
-  { city: 'Coimbatore', action: 'began KYC verification', timeAgo: '1 minute ago' },
-  { city: 'Ahmedabad', action: 'read about stressed real estate', timeAgo: '10 minutes ago' },
-  { city: 'Lucknow', action: 'compared investment routes', timeAgo: '9 minutes ago' },
-  { city: 'Jaipur', action: 'signed up for updates', timeAgo: '3 minutes ago' },
-  { city: 'Kochi', action: 'initiated document request', timeAgo: '5 minutes ago' },
-]
+// Mock data removed (2026-04-20) — previously seeded fake visitor-activity
+// toasts to look socially active. Now an empty array; the widget renders
+// nothing until a real activity feed is wired in.
+const SOCIAL_PROOF_DATA: SocialProofEntry[] = []
 
 function shuffleArray<T>(array: T[]): T[] {
   const shuffled = [...array]

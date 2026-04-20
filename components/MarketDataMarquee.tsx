@@ -30,6 +30,9 @@ export default function MarketDataMarquee() {
   }
 
   if (dismissed) return null
+  // No market data / headlines → don't render the bar at all (removes
+  // blank space on the home page after the mock data was cleared).
+  if (ALL_MARKET_DATA.length === 0 && ECONOMIC_HEADLINES.length === 0) return null
 
   const renderTickerItem = (ticker: MarketTicker, index: number) => (
     <span key={`${ticker.symbol}-${index}`} className="inline-flex items-center shrink-0">

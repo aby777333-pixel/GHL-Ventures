@@ -13,18 +13,10 @@ interface Sector {
   subsectors: string[]
 }
 
-const INITIAL_SECTORS: Sector[] = [
-  { id: 'realestate', name: 'Stressed Real Estate', shortName: 'RE', change: 3.2, marketCap: '₹142Cr', weight: 18, subsectors: ['NCLT Assets', 'Distressed Debt', 'Restructuring'] },
-  { id: 'startups', name: 'Early-Stage Startups', shortName: 'SU', change: 5.8, marketCap: '₹98Cr', weight: 14, subsectors: ['SaaS', 'HealthTech', 'FinTech'] },
-  { id: 'infra', name: 'Infrastructure', shortName: 'IN', change: -1.4, marketCap: '₹86Cr', weight: 12, subsectors: ['Roads', 'Power', 'Urban Dev'] },
-  { id: 'healthcare', name: 'Healthcare', shortName: 'HC', change: 2.1, marketCap: '₹74Cr', weight: 11, subsectors: ['MedTech', 'Hospitals', 'Pharma'] },
-  { id: 'fintech', name: 'FinTech', shortName: 'FT', change: 4.6, marketCap: '₹68Cr', weight: 10, subsectors: ['Payments', 'Lending', 'InsurTech'] },
-  { id: 'consumer', name: 'Consumer', shortName: 'CN', change: -0.8, marketCap: '₹55Cr', weight: 9, subsectors: ['D2C', 'Retail', 'FMCG'] },
-  { id: 'greentech', name: 'Green Energy', shortName: 'GE', change: 6.3, marketCap: '₹52Cr', weight: 8, subsectors: ['Solar', 'EV', 'Battery'] },
-  { id: 'edtech', name: 'EdTech', shortName: 'ED', change: -2.5, marketCap: '₹38Cr', weight: 6, subsectors: ['K-12', 'Upskilling', 'AI Tutoring'] },
-  { id: 'logistics', name: 'Logistics', shortName: 'LG', change: 1.9, marketCap: '₹34Cr', weight: 6, subsectors: ['Warehousing', 'Last Mile', 'Cold Chain'] },
-  { id: 'deeptech', name: 'Deep Tech', shortName: 'DT', change: 7.1, marketCap: '₹28Cr', weight: 6, subsectors: ['AI/ML', 'Semiconductor', 'Quantum'] },
-]
+// Mock data removed (2026-04-20) — previously seeded with fabricated
+// sector performance numbers. Heatmap renders nothing until backed by a
+// real portfolio feed.
+const INITIAL_SECTORS: Sector[] = []
 
 function getColor(change: number): string {
   if (change >= 5) return 'from-emerald-500 to-emerald-600'
@@ -68,6 +60,9 @@ export default function PortfolioHeatmap() {
     }, 3000)
     return () => clearInterval(interval)
   }, [isOpen])
+
+  // No sectors → don't render the widget at all.
+  if (sectors.length === 0) return null
 
   const totalPositive = sectors.filter(s => s.change > 0).length
   const avgChange = sectors.reduce((a, s) => a + s.change, 0) / sectors.length

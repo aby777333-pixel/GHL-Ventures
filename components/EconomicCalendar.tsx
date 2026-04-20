@@ -35,33 +35,10 @@ interface CalendarEvent {
   icon: React.ElementType
 }
 
-// Upcoming economic events — simulated realistic data
-const CALENDAR_EVENTS: CalendarEvent[] = [
-  // Global Events
-  { id: 1, date: 'Feb 18', time: '19:30 IST', event: 'US Retail Sales (MoM)', region: 'global', impact: 'high', previous: '0.4%', forecast: '0.3%', icon: ShoppingCart },
-  { id: 2, date: 'Feb 19', time: '20:00 IST', event: 'FOMC Meeting Minutes', region: 'global', impact: 'high', previous: '-', forecast: '-', icon: Landmark },
-  { id: 3, date: 'Feb 20', time: '14:30 IST', event: 'ECB Monetary Policy Statement', region: 'global', impact: 'high', previous: '-', forecast: '-', icon: Landmark },
-  { id: 4, date: 'Feb 20', time: '19:00 IST', event: 'US Initial Jobless Claims', region: 'global', impact: 'medium', previous: '213K', forecast: '218K', icon: Briefcase },
-  { id: 5, date: 'Feb 21', time: '15:30 IST', event: 'UK GDP Growth Rate (QoQ)', region: 'global', impact: 'high', previous: '0.0%', forecast: '0.1%', icon: BarChart3 },
-  { id: 6, date: 'Feb 21', time: '20:45 IST', event: 'US Manufacturing PMI (Flash)', region: 'global', impact: 'medium', previous: '51.2', forecast: '51.5', icon: Factory },
-  { id: 7, date: 'Feb 24', time: '05:30 IST', event: 'Japan CPI (YoY)', region: 'global', impact: 'medium', previous: '3.6%', forecast: '3.4%', icon: ShoppingCart },
-  { id: 8, date: 'Feb 25', time: '20:00 IST', event: 'US Consumer Confidence Index', region: 'global', impact: 'medium', previous: '104.1', forecast: '105.0', icon: TrendingUp },
-  { id: 9, date: 'Feb 27', time: '19:00 IST', event: 'US GDP (QoQ) Second Estimate', region: 'global', impact: 'high', previous: '3.3%', forecast: '3.2%', icon: BarChart3 },
-  { id: 10, date: 'Feb 28', time: '19:00 IST', event: 'US Core PCE Price Index (MoM)', region: 'global', impact: 'high', previous: '0.2%', forecast: '0.3%', icon: Banknote },
-  // Indian Events
-  { id: 11, date: 'Feb 18', time: '17:30 IST', event: 'India WPI Inflation (YoY)', region: 'india', impact: 'medium', previous: '2.37%', forecast: '2.50%', icon: TrendingUp },
-  { id: 12, date: 'Feb 19', time: '17:30 IST', event: 'SEBI Board Meeting — AIF Regulations', region: 'india', impact: 'high', previous: '-', forecast: '-', icon: Landmark },
-  { id: 13, date: 'Feb 20', time: '12:00 IST', event: 'India Trade Balance', region: 'india', impact: 'medium', previous: '-$22.1B', forecast: '-$20.8B', icon: BarChart3 },
-  { id: 14, date: 'Feb 21', time: '17:30 IST', event: 'RBI Weekly Statistical Supplement', region: 'india', impact: 'low', previous: '-', forecast: '-', icon: Landmark },
-  { id: 15, date: 'Feb 24', time: '12:00 IST', event: 'India Manufacturing PMI (Flash)', region: 'india', impact: 'high', previous: '57.5', forecast: '57.8', icon: Factory },
-  { id: 16, date: 'Feb 25', time: '17:30 IST', event: 'India GDP Q3 FY26 (Advance)', region: 'india', impact: 'high', previous: '7.6%', forecast: '7.2%', icon: BarChart3 },
-  { id: 17, date: 'Feb 26', time: '10:00 IST', event: 'India Infrastructure Output (YoY)', region: 'india', impact: 'medium', previous: '4.3%', forecast: '4.6%', icon: Factory },
-  { id: 18, date: 'Feb 27', time: '12:00 IST', event: 'India Fiscal Deficit (Jan)', region: 'india', impact: 'medium', previous: '₹9.2T', forecast: '₹9.5T', icon: Banknote },
-  { id: 19, date: 'Feb 28', time: '17:30 IST', event: 'India Forex Reserves Weekly', region: 'india', impact: 'low', previous: '$624.3B', forecast: '-', icon: Banknote },
-  { id: 20, date: 'Mar 3', time: '17:30 IST', event: 'India CPI Inflation (Feb)', region: 'india', impact: 'high', previous: '4.31%', forecast: '4.40%', icon: ShoppingCart },
-  { id: 21, date: 'Mar 5', time: '09:30 IST', event: 'India Services PMI (Feb)', region: 'india', impact: 'medium', previous: '56.5', forecast: '56.8', icon: Briefcase },
-  { id: 22, date: 'Mar 7', time: '10:00 IST', event: 'RBI Monetary Policy Decision', region: 'india', impact: 'high', previous: '6.25%', forecast: '6.00%', icon: Landmark },
-]
+// Mock data removed (2026-04-20) — previously held hardcoded Feb-Mar 2025
+// events seeded for demo. The widget now renders nothing until a live feed
+// is connected (planned: RBI/SEBI calendar + ForexFactory API).
+const CALENDAR_EVENTS: CalendarEvent[] = []
 
 const impactColors: Record<Impact, { bg: string; text: string; dot: string }> = {
   high: { bg: 'bg-red-500/10', text: 'text-red-400', dot: 'bg-red-400' },
@@ -90,6 +67,8 @@ export default function EconomicCalendar() {
   }, {})
 
   if (!showWidget) return null
+  // No events → don't show the widget at all (avoids an empty popup).
+  if (CALENDAR_EVENTS.length === 0) return null
 
   // Collapsed pill — bottom-right
   if (!isOpen) {
