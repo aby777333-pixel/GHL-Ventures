@@ -1,0 +1,72 @@
+-- ============================================================
+-- 2026-04-20 - Live KYC data cleanup + reload
+-- ============================================================
+-- Source data:  C:/Users/GIO4X/Documents/ghl live data/Live DB Details/
+--   - users.csv          (16 real customers)
+--   - identitykycs.csv   (16 rows)
+--   - bankkycs.csv       (16 rows)
+--   - dematkycs.csv      (6 rows)
+--   - nomineekycs.csv    (16 rows)
+--   - uploads/*          (563 files; already mirrored into Supabase
+--                         storage bucket `legacy-uploads`)
+--
+-- Goal: kyc_basic_details / kyc_identity_details / kyc_bank_details /
+--       kyc_demat_details / nominees should reflect ONLY the 16 real
+--       investors from users.csv (no test / demo / staff rows), with
+--       every PAN, Aadhaar, passport, bank, demat and nominee field
+--       matching the CSV byte-for-byte and every document URL pointing
+--       at the matching object inside `legacy-uploads`.
+--
+-- 16 ghl_id <- legacy user_id map:
+--   GHL702382=560 GHL445261=1242 GHL642636=1274 GHL489351=1275
+--   GHL351074=1276 GHL190358=1501 GHL353787=1526 GHL950580=1539
+--   GHL927062=1625 GHL967620=1652 GHL222708=1680 GHL233321=1694
+--   GHL675038=1727 GHL212622=1732 GHL845797=1737 GHL931829=1764
+--
+-- Steps actually executed against the live Supabase project
+-- (obugyxjgwnwijhsfyfxp) via MCP supabase tool:
+--
+--   1) DELETE all rows in the 5 KYC tables whose client_id was NOT
+--      one of the 16 real investors (no FKs depend on these tables;
+--      checked information_schema before deleting).
+--      Removed: 20 basic, 14 identity, 11 bank, 13 demat, 14 nominees.
+--
+--   2) On the cleaned-up clients (test / demo / staff), reset
+--      clients.kyc_status to 'pending' and clients.kyc_step to 0.
+--
+--   3) Upsert kyc_basic_details for each ghl_id with the CSV values
+--      (investor_name, phone, email, gender, investor_type='individual',
+--      resident_type='indian' for all except GHL233321='foreign',
+--      status='approved', email_verified=true).
+--
+--   4) Upsert kyc_identity_details with the CSV values:
+--        id_proof  -> aadhar_doc_url
+--        id_proof1 -> pan_doc_url   (NULL when CSV has NULL — no
+--                                    longer mirroring aadhar into pan)
+--        id_proof3 -> passport_doc_url
+--      All file paths rewritten /uploads/X ->
+--        https://obugyxjgwnwijhsfyfxp.supabase.co/storage/v1/object/public/legacy-uploads/X
+--      country='India' for everyone except GHL233321 ('Japan').
+--      DOB strings DD-MM-YYYY normalised to YYYY-MM-DD.
+--
+--   5) Upsert kyc_bank_details (account_type 'savings' / 'nro' to
+--      satisfy kyc_bank_details_account_type_check).
+--
+--   6) Upsert kyc_demat_details for the 6 users in dematkycs.csv,
+--      skipped=false, status='approved'.
+--
+--   7) Upsert nominees one per client; status='active' to satisfy
+--      nominees_status_check (allowed values active/inactive).
+--
+-- Final counts (verified):
+--   kyc_basic_details     = 16
+--   kyc_identity_details  = 16
+--   kyc_bank_details      = 16
+--   kyc_demat_details     =  6
+--   nominees              = 16
+--   referenced legacy-uploads files = 59 (all present in bucket).
+--
+-- ============================================================
+-- This file is a record only.  The actual statements were applied
+-- live via the supabase MCP tool on 2026-04-20.
+-- ============================================================
