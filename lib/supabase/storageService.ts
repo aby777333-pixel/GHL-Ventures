@@ -257,8 +257,30 @@ export async function uploadFile(
   const bucket = options?.bucket || route.bucket
   const resolvedFolder = options?.bucket ? folder : route.folder
 
+  // Derive portal from the route key prefix when the caller didn't set one.
+  // `file_records` RLS requires `portal='client'` for client uploads (etc.);
+  // the historical default of 'admin' caused silent INSERT failures on the
+  // client/staff/investor/agent portals, so file tracking was lost.
+  const derivedPortal = folder?.split('/')?.[0] || 'admin'
+  const resolvedPortal = options?.portal || (
+    ['admin', 'staff', 'client', 'investor', 'agent', 'website'].includes(derivedPortal)
+      ? derivedPortal
+      : 'admin'
+  )
+
   if (!isSupabaseConfigured()) {
     return { success: false, error: 'Supabase not configured — file upload unavailable' }
+  }
+
+  // Auto-populate uploadedBy from the current auth session when not provided.
+  // This keeps the file_records RLS `Clients insert own files` policy satisfied
+  // (it accepts either matching uploaded_by OR matching entity_id → client).
+  let resolvedUploadedBy = options?.uploadedBy
+  if (!resolvedUploadedBy) {
+    try {
+      const { data: authData } = await supabase.auth.getUser()
+      if (authData?.user?.id) resolvedUploadedBy = authData.user.id
+    } catch { /* anonymous or SSR — leave undefined */ }
   }
 
   try {
@@ -297,8 +319,8 @@ export async function uploadFile(
           description: options?.description,
           entityType: options?.entityType,
           entityId: options?.entityId,
-          portal: options?.portal || 'admin',
-          uploadedBy: options?.uploadedBy,
+          portal: resolvedPortal,
+          uploadedBy: resolvedUploadedBy,
           uploadedByName: options?.uploadedByName,
           accessLevel: options?.accessLevel,
           isConfidential: options?.isConfidential,
@@ -338,8 +360,8 @@ export async function uploadFile(
         description: options?.description,
         entityType: options?.entityType,
         entityId: options?.entityId,
-        portal: options?.portal || 'admin',
-        uploadedBy: options?.uploadedBy,
+        portal: resolvedPortal,
+        uploadedBy: resolvedUploadedBy,
         uploadedByName: options?.uploadedByName,
         accessLevel: options?.accessLevel,
         isConfidential: options?.isConfidential,
@@ -349,8 +371,8 @@ export async function uploadFile(
     // Log activity
     await logFileActivity({
       action: 'upload',
-      portal: options?.portal || 'admin',
-      performedBy: options?.uploadedBy,
+      portal: resolvedPortal,
+      performedBy: resolvedUploadedBy,
       performedByName: options?.uploadedByName,
       details: {
         fileName: file.name,
