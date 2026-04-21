@@ -202,15 +202,19 @@ export default function DynamicFIQViewer({ slug: propSlug }: { slug: string }) {
       </section>
 
       {/* Cover Image — always rendered, falls back to a category-appropriate
-          royalty-free Unsplash image when no custom cover is set. */}
+          royalty-free Unsplash image when no custom cover is set.
+          Uses a fixed 16:9 container with object-contain so the ENTIRE
+          source image is visible (no cropping), regardless of its native
+          aspect ratio. The light grey background neutralises any
+          letterboxing for images that aren't exactly 16:9. */}
       <section className="bg-white">
         <div className="container-max mx-auto px-4 sm:px-6 lg:px-8 -mt-4">
-          <div className="rounded-2xl overflow-hidden shadow-xl max-h-[480px]">
+          <div className="max-w-5xl mx-auto rounded-2xl overflow-hidden shadow-xl aspect-[16/9] bg-gray-100">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src={resolveFIQCoverImage(post.cover_image, post.category)}
               alt={post.title}
-              className="w-full h-full object-cover"
+              className="w-full h-full object-contain"
               onError={makeFIQImageErrorHandler(post.category)}
             />
           </div>
