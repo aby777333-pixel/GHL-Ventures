@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { supabase as _sb, isSupabaseConfigured } from '@/lib/supabase/client'
-import { resolveFIQCoverImage } from '@/lib/fiqFallbackImages'
+import { resolveFIQCoverImage, makeFIQImageErrorHandler } from '@/lib/fiqFallbackImages'
 import {
   Calendar, Clock, ArrowLeft, User, Tag, BookOpen, GraduationCap,
 } from 'lucide-react'
@@ -211,6 +211,7 @@ export default function DynamicFIQViewer({ slug: propSlug }: { slug: string }) {
               src={resolveFIQCoverImage(post.cover_image, post.category)}
               alt={post.title}
               className="w-full h-full object-cover"
+              onError={makeFIQImageErrorHandler(post.category)}
             />
           </div>
         </div>
@@ -253,6 +254,7 @@ export default function DynamicFIQViewer({ slug: propSlug }: { slug: string }) {
                         src={resolveFIQCoverImage(rp.cover_image, rp.category)}
                         alt={rp.title}
                         className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                        onError={makeFIQImageErrorHandler(rp.category)}
                       />
                     </div>
                     <div className="p-4">

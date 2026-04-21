@@ -5,7 +5,7 @@ import AnimatedSection from '@/components/AnimatedSection'
 import PlaceholderImage from '@/components/PlaceholderImage'
 import { FINANCIAL_IQ_ARTICLES } from '@/lib/constants'
 import { supabase as _sb, isSupabaseConfigured } from '@/lib/supabase/client'
-import { resolveFIQCoverImage } from '@/lib/fiqFallbackImages'
+import { resolveFIQCoverImage, makeFIQImageErrorHandler } from '@/lib/fiqFallbackImages'
 import {
   BookOpen,
   GraduationCap,
@@ -380,7 +380,13 @@ export default function FinancialIQPage() {
                   <div className={`card group h-full hover-lift cursor-pointer ${['glow-card-orange', 'glow-card-pink', 'glow-card-teal', 'glow-card-rose', 'glow-card-blue'][i % 5]}`}>
                     {article.coverImage && (
                       <div className="aspect-video relative rounded-xl mb-4 overflow-hidden bg-gray-100">
-                        <img src={article.coverImage} alt={article.title} className="w-full h-full object-cover" loading="lazy" />
+                        <img
+                          src={article.coverImage}
+                          alt={article.title}
+                          className="w-full h-full object-cover"
+                          loading="lazy"
+                          onError={makeFIQImageErrorHandler(article.category)}
+                        />
                       </div>
                     )}
                     {!article.coverImage && (
