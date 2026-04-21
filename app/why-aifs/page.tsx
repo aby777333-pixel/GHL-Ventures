@@ -106,7 +106,7 @@ function WhatIsAIF() {
           <AnimatedSection direction="right">
             <div className="bg-gradient-to-br from-brand-black to-brand-darkgrey rounded-3xl p-8 text-white">
               <div className="border-l-2 border-brand-red pl-5 mb-6">
-                <p className="text-gray-300 italic leading-relaxed text-sm">
+                <p className="text-white/90 italic leading-relaxed text-sm">
                   &ldquo;Any fund established or incorporated in India which is a privately pooled investment
                   vehicle which collects funds from sophisticated investors, whether Indian or foreign,
                   for investing in accordance with a defined investment policy for the benefit of its investors.&rdquo;
@@ -127,8 +127,8 @@ function WhatIsAIF() {
                       <item.icon className="w-4 h-4 text-brand-red" />
                     </div>
                     <div>
-                      <span className="text-gray-500 text-xs font-medium">{item.label}</span>
-                      <p className="text-gray-200 text-sm">{item.value}</p>
+                      <span className="text-white/70 text-xs font-medium">{item.label}</span>
+                      <p className="text-white text-sm">{item.value}</p>
                     </div>
                   </div>
                 ))}
@@ -289,11 +289,11 @@ function IndustryStats() {
                 <div key={stat.label} className="text-center">
                   <div className="text-3xl md:text-4xl font-bold text-brand-red mb-1">{stat.value}</div>
                   <div className="text-white text-xs font-semibold uppercase tracking-wider">{stat.label}</div>
-                  <div className="text-gray-500 text-xs mt-1">{stat.sub}</div>
+                  <div className="text-white/70 text-xs mt-1">{stat.sub}</div>
                 </div>
               ))}
             </div>
-            <p className="text-center text-gray-600 text-xs mt-6">
+            <p className="text-center text-white/70 text-xs mt-6">
               Source: SEBI Statistics, PMS Bazaar Industry Report, NSE AIF Primer. Data for illustrative purposes.
             </p>
           </div>

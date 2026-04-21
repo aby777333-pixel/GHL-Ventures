@@ -1319,7 +1319,7 @@ function ContactFormSection() {
                       <Phone className="w-5 h-5 text-brand-red" />
                     </div>
                     <div>
-                      <p className="text-gray-400 text-xs uppercase tracking-widest mb-1">Phone</p>
+                      <p className="text-white/80 text-xs uppercase tracking-widest mb-1">Phone</p>
                       <p className="text-white text-sm font-medium">{BRAND.phone1}</p>
                       <p className="text-white text-sm font-medium">{BRAND.phone2}</p>
                     </div>
@@ -1330,7 +1330,7 @@ function ContactFormSection() {
                       <Mail className="w-5 h-5 text-brand-red" />
                     </div>
                     <div>
-                      <p className="text-gray-400 text-xs uppercase tracking-widest mb-1">Email</p>
+                      <p className="text-white/80 text-xs uppercase tracking-widest mb-1">Email</p>
                       <p className="text-white text-sm font-medium">{BRAND.email}</p>
                     </div>
                   </div>
@@ -1340,7 +1340,7 @@ function ContactFormSection() {
                       <MapPin className="w-5 h-5 text-brand-red" />
                     </div>
                     <div>
-                      <p className="text-gray-400 text-xs uppercase tracking-widest mb-1">Address</p>
+                      <p className="text-white/80 text-xs uppercase tracking-widest mb-1">Address</p>
                       <p className="text-white text-sm font-medium leading-relaxed">{BRAND.address}</p>
                     </div>
                   </div>
@@ -1350,7 +1350,7 @@ function ContactFormSection() {
                       <Clock className="w-5 h-5 text-brand-red" />
                     </div>
                     <div>
-                      <p className="text-gray-400 text-xs uppercase tracking-widest mb-1">Office Hours</p>
+                      <p className="text-white/80 text-xs uppercase tracking-widest mb-1">Office Hours</p>
                       <p className="text-white text-sm font-medium">Mon – Sat: 10:00 AM – 6:00 PM IST</p>
                     </div>
                   </div>
@@ -1358,7 +1358,7 @@ function ContactFormSection() {
 
                 <hr className="border-white/10 my-6" />
 
-                <div className="flex items-center gap-2 text-gray-400 text-xs">
+                <div className="flex items-center gap-2 text-white/80 text-xs">
                   <Shield className="w-4 h-4 text-brand-red" />
                   <a href={BRAND.sebiUrl} target="_blank" rel="noopener noreferrer" className="hover:text-brand-red transition-colors">SEBI Reg. No. {BRAND.sebi}</a>
                 </div>

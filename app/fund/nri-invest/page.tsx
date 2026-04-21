@@ -271,11 +271,11 @@ function NRIInvestContent() {
                       </div>
                       <div>
                         <h3 className="text-white font-bold text-lg">Direct AIF Route</h3>
-                        <p className="text-white/70 text-xs">For HNIs & Family Offices</p>
+                        <p className="text-white/90 text-xs">For HNIs & Family Offices</p>
                       </div>
                     </div>
                     <div className="text-3xl font-bold text-white">
-                      As per SEBI <span className="text-sm font-normal text-white/60">AIF Regulations</span>
+                      As per SEBI <span className="text-sm font-normal text-white/90">AIF Regulations</span>
                     </div>
                   </div>
                 </div>
@@ -315,11 +315,11 @@ function NRIInvestContent() {
                       </div>
                       <div>
                         <h3 className="text-white font-bold text-lg">SEBI Co-Invest Framework</h3>
-                        <p className="text-white/70 text-xs">Accessible Entry Point</p>
+                        <p className="text-white/90 text-xs">Accessible Entry Point</p>
                       </div>
                     </div>
                     <div className="text-3xl font-bold text-white">
-                      Contact Us <span className="text-sm font-normal text-white/60">for details</span>
+                      Contact Us <span className="text-sm font-normal text-white/90">for details</span>
                     </div>
                   </div>
                 </div>

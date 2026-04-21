@@ -232,10 +232,10 @@ export default function BlogPage() {
                   <h2 className="text-2xl md:text-3xl font-bold text-white mb-4 group-hover:text-brand-red transition-colors leading-tight">
                     {featuredPost.title}
                   </h2>
-                  <p className="text-gray-400 mb-6 leading-relaxed">
+                  <p className="text-white/80 mb-6 leading-relaxed">
                     {featuredPost.excerpt}
                   </p>
-                  <div className="flex items-center gap-4 mb-6 text-sm text-gray-500">
+                  <div className="flex items-center gap-4 mb-6 text-sm text-white/70">
                     <span className="flex items-center">
                       <User className="w-4 h-4 mr-1.5" />
                       {(featuredPost as any).author}

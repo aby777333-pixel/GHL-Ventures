@@ -264,7 +264,7 @@ export default function FundCalculatorSection({
                 {/* Right — Results */}
                 <div className="card p-6 sm:p-8 rounded-2xl bg-gradient-to-br from-brand-black to-gray-900 text-white">
                   <div className="text-center mb-6">
-                    <p className="text-gray-400 text-[10px] uppercase tracking-wider mb-1">Projected Returns</p>
+                    <p className="text-white/70 text-[10px] uppercase tracking-wider mb-1">Projected Returns</p>
                     <p className="text-3xl sm:text-4xl font-extrabold text-white">
                       {formatINR(activeResult.total)}
                     </p>
@@ -276,15 +276,15 @@ export default function FundCalculatorSection({
                   {/* Stats grid */}
                   <div className="grid grid-cols-3 gap-4 mb-6">
                     <div className="text-center p-3 rounded-xl bg-white/5">
-                      <p className="text-gray-500 text-[9px] uppercase tracking-wider">Invested</p>
+                      <p className="text-white/70 text-[9px] uppercase tracking-wider">Invested</p>
                       <p className="text-white text-sm font-bold mt-1">{formatINR(activeResult.invested)}</p>
                     </div>
                     <div className="text-center p-3 rounded-xl bg-white/5">
-                      <p className="text-gray-500 text-[9px] uppercase tracking-wider">Returns</p>
+                      <p className="text-white/70 text-[9px] uppercase tracking-wider">Returns</p>
                       <p className="text-green-400 text-sm font-bold mt-1">+{formatINR(activeResult.returns)}</p>
                     </div>
                     <div className="text-center p-3 rounded-xl bg-white/5">
-                      <p className="text-gray-500 text-[9px] uppercase tracking-wider">CAGR</p>
+                      <p className="text-white/70 text-[9px] uppercase tracking-wider">CAGR</p>
                       <p className="text-brand-red text-sm font-bold mt-1">{activeResult.cagr}%</p>
                     </div>
                   </div>
@@ -301,7 +301,7 @@ export default function FundCalculatorSection({
                         style={{ width: `${(activeResult.returns / activeResult.total) * 100}%` }}
                       />
                     </div>
-                    <div className="flex justify-between mt-1.5 text-[9px] text-gray-500">
+                    <div className="flex justify-between mt-1.5 text-[9px] text-white/70">
                       <span className="flex items-center gap-1"><span className="w-2 h-2 rounded bg-blue-500 inline-block" /> Invested</span>
                       <span className="flex items-center gap-1"><span className="w-2 h-2 rounded bg-green-500 inline-block" /> Returns</span>
                     </div>
@@ -309,16 +309,16 @@ export default function FundCalculatorSection({
 
                   {/* Growth multiplier */}
                   <div className="text-center p-4 rounded-xl bg-brand-red/10 border border-brand-red/20">
-                    <p className="text-gray-400 text-[10px] uppercase tracking-wider">Your Money Grows</p>
+                    <p className="text-white/70 text-[10px] uppercase tracking-wider">Your Money Grows</p>
                     <p className="text-2xl font-extrabold text-brand-red mt-1">
                       {(activeResult.total / activeResult.invested).toFixed(1)}x
                     </p>
-                    <p className="text-gray-400 text-[10px]">
+                    <p className="text-white/70 text-[10px]">
                       in {activeCalc === 'aif' ? aifYears : debYears} years
                     </p>
                   </div>
 
-                  <p className="text-gray-600 text-[8px] text-center mt-4 leading-relaxed">
+                  <p className="text-white/60 text-[8px] text-center mt-4 leading-relaxed">
                     For illustration only. Past performance ≠ future results. Target returns are not guaranteed.
                     Consult your financial advisor before investing.
                   </p>

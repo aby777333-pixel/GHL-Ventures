@@ -1469,7 +1469,7 @@ function CalculatorCard({ tool, accentColor }: { tool: ToolDef; accentColor: str
   }, [values, tool])
 
   return (
-    <div className="bg-white dark:bg-[#1A1A1A] rounded-xl border border-gray-100 dark:border-white/5 overflow-hidden transition-all duration-300 hover:shadow-lg hover:shadow-black/5">
+    <div className="bg-white dark:bg-stone-900 rounded-xl border border-gray-100 dark:border-white/5 overflow-hidden transition-all duration-300 hover:shadow-lg hover:shadow-black/5">
       {/* Header */}
       <button
         onClick={() => setExpanded(!expanded)}
@@ -1624,7 +1624,7 @@ export default function ToolsPage() {
                 value={searchQuery}
                 onChange={e => setSearchQuery(e.target.value)}
                 placeholder="Search calculators..."
-                className="w-full pl-11 pr-4 py-3 rounded-xl border border-gray-200 dark:border-white/10 bg-white dark:bg-[#1A1A1A] text-sm outline-none focus:border-brand-red transition-colors text-brand-black dark:text-white"
+                className="w-full pl-11 pr-4 py-3 rounded-xl border border-gray-200 dark:border-white/10 bg-white dark:bg-stone-900 text-sm outline-none focus:border-brand-red transition-colors text-brand-black dark:text-white"
               />
             </div>
           </div>
@@ -1642,7 +1642,7 @@ export default function ToolsPage() {
                     className={`inline-flex items-center gap-2 px-4 py-2 rounded-full text-xs font-semibold uppercase tracking-wider transition-all duration-200 border ${
                       isActive
                         ? 'text-white border-transparent shadow-lg'
-                        : 'text-gray-600 dark:text-white/50 border-gray-200 dark:border-white/10 hover:border-gray-300 dark:hover:border-white/20 bg-white dark:bg-[#1A1A1A]'
+                        : 'text-gray-600 dark:text-white/50 border-gray-200 dark:border-white/10 hover:border-gray-300 dark:hover:border-white/20 bg-white dark:bg-stone-900'
                     }`}
                     style={isActive ? { background: cat.color, boxShadow: `0 4px 20px ${cat.color}40` } : {}}
                   >
