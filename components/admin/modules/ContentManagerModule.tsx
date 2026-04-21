@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import {
   FileText, BookOpen, HelpCircle, Ticket, Plus, Edit, Trash2,
-  Save,
+  Save, Send,
 } from 'lucide-react'
 import AdminGlass from '../shared/AdminGlass'
 import AdminDataTable, { type Column } from '../shared/AdminDataTable'
@@ -11,6 +11,7 @@ import AdminBadge from '../shared/AdminBadge'
 import AdminKPICard from '../shared/AdminKPICard'
 import AdminModal, { ModalButton } from '../shared/AdminModal'
 import AdminEmptyState from '../shared/AdminEmptyState'
+import FIQBroadcastModal from './FIQBroadcastModal'
 import { supabase as _supabase, isSupabaseConfigured } from '@/lib/supabase/client'
 const supabase = _supabase as any
 
@@ -44,6 +45,11 @@ interface FinancialIQPost {
   published_at: string | null
   created_at: string
   updated_at: string
+  scheduled_for?: string | null
+  email_sent_at?: string | null
+  meta_title?: string | null
+  meta_description?: string | null
+  read_time?: number | null
 }
 
 interface FAQ {
@@ -129,6 +135,13 @@ export default function ContentManagerModule({ subTab, navigate, showToast }: Co
   const [formSortOrder, setFormSortOrder] = useState(0)
   const [formActive, setFormActive] = useState(true)
 
+  // Financial IQ extras: SEO + scheduled publish + manual broadcast
+  const [formMetaTitle, setFormMetaTitle] = useState('')
+  const [formMetaDescription, setFormMetaDescription] = useState('')
+  const [formScheduledFor, setFormScheduledFor] = useState('')
+  const [formReadTime, setFormReadTime] = useState<number | ''>('')
+  const [broadcastTarget, setBroadcastTarget] = useState<FinancialIQPost | null>(null)
+
   // ── Data Fetching — single bulk loader ─────────────────────
   const loadAllContent = useCallback(async () => {
     if (!isSupabaseConfigured()) { setLoading(false); return }
@@ -190,6 +203,7 @@ export default function ContentManagerModule({ subTab, navigate, showToast }: Co
     setFormCategory(''); setFormCoverImage(''); setFormAuthor(''); setFormTags('')
     setFormPublished(false); setFormQuestion(''); setFormAnswer('')
     setFormSortOrder(0); setFormActive(true); setEditingItem(null)
+    setFormMetaTitle(''); setFormMetaDescription(''); setFormScheduledFor(''); setFormReadTime('')
   }
 
   const openBlogEditor = (item?: BlogPost) => {
@@ -212,8 +226,20 @@ export default function ContentManagerModule({ subTab, navigate, showToast }: Co
       setFormExcerpt(item.excerpt); setFormCategory(item.category)
       setFormCoverImage(item.cover_image || ''); setFormAuthor(item.author)
       setFormTags((item.tags || []).join(', ')); setFormPublished(item.is_published)
+      setFormMetaTitle(item.meta_title || '')
+      setFormMetaDescription(item.meta_description || '')
+      setFormScheduledFor(item.scheduled_for ? toDatetimeLocal(item.scheduled_for) : '')
+      setFormReadTime(item.read_time ?? '')
     }
     setEditorOpen(true)
+  }
+
+  // Convert an ISO timestamp (with timezone) to the value format expected
+  // by <input type="datetime-local"> — "YYYY-MM-DDTHH:mm" in local time.
+  function toDatetimeLocal(iso: string) {
+    const d = new Date(iso)
+    const pad = (n: number) => n.toString().padStart(2, '0')
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`
   }
 
   const openFAQEditor = (item?: FAQ) => {
@@ -268,6 +294,13 @@ export default function ContentManagerModule({ subTab, navigate, showToast }: Co
   const saveFIQ = async () => {
     if (!isSupabaseConfigured()) return
     const slug = formSlug || formTitle.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '')
+    const prev = editingItem as FinancialIQPost | null
+    // Preserve an existing published_at when the admin is just editing a
+    // published article (don't reset it each save).
+    const wasPublished = !!prev?.is_published
+    const publishedAt = formPublished
+      ? (wasPublished && prev?.published_at ? prev.published_at : new Date().toISOString())
+      : null
     const payload = {
       title: formTitle,
       slug,
@@ -278,7 +311,11 @@ export default function ContentManagerModule({ subTab, navigate, showToast }: Co
       author: formAuthor,
       tags: formTags.split(',').map(t => t.trim()).filter(Boolean),
       is_published: formPublished,
-      published_at: formPublished ? new Date().toISOString() : null,
+      published_at: publishedAt,
+      scheduled_for: formScheduledFor ? new Date(formScheduledFor).toISOString() : null,
+      meta_title: formMetaTitle || null,
+      meta_description: formMetaDescription || null,
+      read_time: typeof formReadTime === 'number' && formReadTime > 0 ? formReadTime : null,
     }
     if (editingItem) {
       const { error } = await supabase.from('financial_iq_posts').update(payload).eq('id', editingItem.id)
@@ -414,19 +451,36 @@ export default function ContentManagerModule({ subTab, navigate, showToast }: Co
       <AdminBadge label={r.category || 'Uncategorized'} variant="purple" />
     )},
     { key: 'author', label: 'Author', sortable: true },
-    { key: 'is_published', label: 'Status', sortable: true, render: (r) => (
-      <AdminBadge label={r.is_published ? 'Published' : 'Draft'} variant={r.is_published ? 'success' : 'neutral'} dot />
+    { key: 'is_published', label: 'Status', sortable: true, render: (r) => {
+      if (r.is_published) return <AdminBadge label="Published" variant="success" dot />
+      if (r.scheduled_for) {
+        const future = new Date(r.scheduled_for).getTime() > Date.now()
+        return <AdminBadge label={future ? 'Scheduled' : 'Due'} variant={future ? 'info' : 'warning'} dot />
+      }
+      return <AdminBadge label="Draft" variant="neutral" dot />
+    }},
+    { key: 'scheduled_for', label: 'Scheduled', sortable: true, render: (r) => (
+      <span className="text-xs text-gray-400">{r.scheduled_for ? new Date(r.scheduled_for).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : '—'}</span>
     )},
-    { key: 'created_at', label: 'Created', sortable: true, render: (r) => (
-      <span className="text-xs text-gray-400">{new Date(r.created_at).toLocaleDateString()}</span>
+    { key: 'email_sent_at', label: 'Email', sortable: true, render: (r) => (
+      r.email_sent_at
+        ? <span title={new Date(r.email_sent_at).toLocaleString('en-IN')} className="text-[11px] text-green-400">Sent</span>
+        : <span className="text-[11px] text-gray-500">—</span>
     )},
-    { key: 'actions', label: '', width: '120px', render: (r) => (
+    { key: 'actions', label: '', width: '160px', render: (r) => (
       <div className="flex items-center gap-1">
+        <button onClick={(e) => { e.stopPropagation(); setBroadcastTarget(r) }}
+          title="Send to clients"
+          className="p-1.5 rounded-lg hover:bg-brand-red/10 text-gray-500 hover:text-brand-red transition-colors">
+          <Send className="w-3.5 h-3.5" />
+        </button>
         <button onClick={(e) => { e.stopPropagation(); openFIQEditor(r) }}
+          title="Edit"
           className="p-1.5 rounded-lg hover:bg-white/[0.06] text-gray-500 hover:text-white transition-colors">
           <Edit className="w-3.5 h-3.5" />
         </button>
         <button onClick={(e) => { e.stopPropagation(); setDeleteConfirmId(r.id) }}
+          title="Delete"
           className="p-1.5 rounded-lg hover:bg-red-500/10 text-gray-500 hover:text-red-400 transition-colors">
           <Trash2 className="w-3.5 h-3.5" />
         </button>
@@ -578,12 +632,51 @@ export default function ContentManagerModule({ subTab, navigate, showToast }: Co
           <input value={formTags} onChange={e => setFormTags(e.target.value)}
             placeholder="investing, finance, tips" className={inputClass} />
         </div>
+
+        {type === 'financial-iq' && (
+          <>
+            <div className="pt-3 mt-3 border-t border-white/[0.06]">
+              <p className="text-[10px] uppercase tracking-wider text-gray-500 mb-2">SEO &amp; scheduling</p>
+            </div>
+            <div>
+              <label className={labelClass}>Meta title <span className="text-gray-600">(optional, for search engines)</span></label>
+              <input value={formMetaTitle} onChange={e => setFormMetaTitle(e.target.value)}
+                placeholder={formTitle || 'Defaults to article title'} maxLength={70} className={inputClass} />
+              <p className="text-[10px] text-gray-500 mt-1">{formMetaTitle.length}/70 characters</p>
+            </div>
+            <div>
+              <label className={labelClass}>Meta description <span className="text-gray-600">(optional, 150-160 chars ideal)</span></label>
+              <textarea value={formMetaDescription} onChange={e => setFormMetaDescription(e.target.value)}
+                rows={2} placeholder={formExcerpt || 'Defaults to excerpt'} maxLength={180}
+                className={`${inputClass} resize-y`} />
+              <p className="text-[10px] text-gray-500 mt-1">{formMetaDescription.length}/180 characters</p>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className={labelClass}>Schedule for <span className="text-gray-600">(auto-publish)</span></label>
+                <input type="datetime-local" value={formScheduledFor} onChange={e => setFormScheduledFor(e.target.value)}
+                  className={inputClass} />
+                <p className="text-[10px] text-gray-500 mt-1">Leave empty to publish manually. Weekly cron runs Mondays 10:00 IST.</p>
+              </div>
+              <div>
+                <label className={labelClass}>Read time (minutes)</label>
+                <input type="number" min={1} max={60} value={formReadTime}
+                  onChange={e => setFormReadTime(e.target.value === '' ? '' : Number(e.target.value))}
+                  placeholder="Auto-calculated if left blank" className={inputClass} />
+              </div>
+            </div>
+          </>
+        )}
+
         <div className="flex items-center gap-3 pt-1">
           <button onClick={() => setFormPublished(!formPublished)}
             className={`relative w-10 h-5 rounded-full transition-colors ${formPublished ? 'bg-brand-red' : 'bg-white/10'}`}>
             <span className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white transition-transform ${formPublished ? 'translate-x-5' : ''}`} />
           </button>
           <span className="text-sm text-gray-300">{formPublished ? 'Published' : 'Draft'}</span>
+          {type === 'financial-iq' && formScheduledFor && !formPublished && (
+            <span className="text-xs text-amber-400 ml-3">⏰ will auto-publish on schedule</span>
+          )}
         </div>
       </div>
     )
@@ -791,8 +884,13 @@ export default function ContentManagerModule({ subTab, navigate, showToast }: Co
           footer={
             <>
               <ModalButton variant="secondary" onClick={() => { setEditorOpen(false); resetForm() }}>Cancel</ModalButton>
+              {editingItem && (editingItem as FinancialIQPost).is_published && (
+                <ModalButton variant="secondary" onClick={() => { setBroadcastTarget(editingItem as FinancialIQPost); setEditorOpen(false) }}>
+                  <span className="flex items-center gap-1.5"><Send className="w-3.5 h-3.5" /> Send to clients</span>
+                </ModalButton>
+              )}
               <ModalButton variant="primary" onClick={saveFIQ} disabled={!formTitle.trim() || !formContent.trim()}>
-                <span className="flex items-center gap-1.5"><Save className="w-3.5 h-3.5" /> {editingItem ? 'Update' : 'Publish'}</span>
+                <span className="flex items-center gap-1.5"><Save className="w-3.5 h-3.5" /> {editingItem ? 'Update' : 'Save'}</span>
               </ModalButton>
             </>
           }
@@ -848,6 +946,13 @@ export default function ContentManagerModule({ subTab, navigate, showToast }: Co
           This will permanently remove it from the database.
         </p>
       </AdminModal>
+
+      {/* Financial IQ broadcast modal — manual bulk/individual send */}
+      <FIQBroadcastModal
+        post={broadcastTarget}
+        onClose={() => setBroadcastTarget(null)}
+        showToast={showToast}
+      />
 
       {/* Bug #26: Ticket detail modal — admins can see the full message + reply history */}
       <AdminModal

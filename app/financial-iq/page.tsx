@@ -373,28 +373,30 @@ export default function FinancialIQPage() {
             {/* Dynamic articles from database first */}
             {dynamicFIQArticles.map((article, i) => (
               <AnimatedSection key={`dyn-${article.slug}`} delay={i * 80}>
-                <div className={`card group h-full hover-lift ${['glow-card-orange', 'glow-card-pink', 'glow-card-teal', 'glow-card-rose', 'glow-card-blue'][i % 5]}`}>
-                  {article.coverImage && (
-                    <div className="aspect-video relative rounded-xl mb-4 overflow-hidden bg-gray-100">
-                      <img src={article.coverImage} alt={article.title} className="w-full h-full object-cover" loading="lazy" />
+                <Link href={`/financial-iq/${article.slug}`} className="block h-full">
+                  <div className={`card group h-full hover-lift cursor-pointer ${['glow-card-orange', 'glow-card-pink', 'glow-card-teal', 'glow-card-rose', 'glow-card-blue'][i % 5]}`}>
+                    {article.coverImage && (
+                      <div className="aspect-video relative rounded-xl mb-4 overflow-hidden bg-gray-100">
+                        <img src={article.coverImage} alt={article.title} className="w-full h-full object-cover" loading="lazy" />
+                      </div>
+                    )}
+                    {!article.coverImage && (
+                      <div className="w-12 h-12 bg-brand-red/10 rounded-xl flex items-center justify-center mb-4 group-hover:bg-brand-red transition-all icon-ring-hover">
+                        <BookOpen className="w-6 h-6 text-brand-red group-hover:text-white transition-colors" />
+                      </div>
+                    )}
+                    <div className="flex items-center space-x-2 mb-3">
+                      <GraduationCap className="w-4 h-4 text-brand-red" />
+                      <span className="text-xs font-medium text-brand-red uppercase tracking-wider">{article.category}</span>
                     </div>
-                  )}
-                  {!article.coverImage && (
-                    <div className="w-12 h-12 bg-brand-red/10 rounded-xl flex items-center justify-center mb-4 group-hover:bg-brand-red transition-all icon-ring-hover">
-                      <BookOpen className="w-6 h-6 text-brand-red group-hover:text-white transition-colors" />
+                    <h3 className="font-bold text-lg text-brand-black dark:text-white mb-2 group-hover:text-brand-red transition-colors">{article.title}</h3>
+                    <p className="text-brand-grey dark:text-gray-300 text-sm mb-4 line-clamp-2">{article.excerpt}</p>
+                    <div className="flex items-center justify-between text-xs text-brand-grey dark:text-gray-300 mt-auto pt-4 border-t border-gray-100">
+                      <span className="flex items-center"><Calendar className="w-3 h-3 mr-1" />{new Date(article.date).toLocaleDateString('en-IN', { year: 'numeric', month: 'short', day: 'numeric' })}</span>
+                      <span className="flex items-center"><Clock className="w-3 h-3 mr-1" />{article.readTime}</span>
                     </div>
-                  )}
-                  <div className="flex items-center space-x-2 mb-3">
-                    <GraduationCap className="w-4 h-4 text-brand-red" />
-                    <span className="text-xs font-medium text-brand-red uppercase tracking-wider">{article.category}</span>
                   </div>
-                  <h3 className="font-bold text-lg text-brand-black dark:text-white mb-2 group-hover:text-brand-red transition-colors">{article.title}</h3>
-                  <p className="text-brand-grey dark:text-gray-300 text-sm mb-4 line-clamp-2">{article.excerpt}</p>
-                  <div className="flex items-center justify-between text-xs text-brand-grey dark:text-gray-300 mt-auto pt-4 border-t border-gray-100">
-                    <span className="flex items-center"><Calendar className="w-3 h-3 mr-1" />{new Date(article.date).toLocaleDateString('en-IN', { year: 'numeric', month: 'short', day: 'numeric' })}</span>
-                    <span className="flex items-center"><Clock className="w-3 h-3 mr-1" />{article.readTime}</span>
-                  </div>
-                </div>
+                </Link>
               </AnimatedSection>
             ))}
             {/* Static articles from constants */}
