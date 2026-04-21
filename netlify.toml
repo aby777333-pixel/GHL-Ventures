@@ -9,6 +9,19 @@
 [build.environment]
   NODE_VERSION = "18"
 
+# Financial IQ dynamic slugs — any /financial-iq/<slug> path that doesn't
+# have a pre-built static file (e.g. articles created since the last
+# deploy) falls back to the "What Is an AIF" shell. Its DynamicFIQViewer
+# reads the slug from window.location.pathname and loads the correct
+# post from Supabase, so new articles work immediately without a
+# rebuild. force=false means existing static files (/financial-iq/ and
+# known-slug folders) are served first.
+[[redirects]]
+  from = "/financial-iq/*"
+  to = "/financial-iq/what-is-aif/index.html"
+  status = 200
+  force = false
+
 [[redirects]]
   from = "/*"
   to = "/404.html"

@@ -54,11 +54,25 @@ function renderBlocks(content: string) {
   })
 }
 
-export default function DynamicFIQViewer({ slug }: { slug: string }) {
+// Resolve the real slug from the current URL — this lets a Netlify
+// rewrite serve ONE pre-built HTML shell for any /financial-iq/<slug>
+// path and still load the correct article from Supabase, so newly
+// published articles don't 404 while waiting for the next site build.
+function resolveSlug(propSlug: string): string {
+  if (typeof window === 'undefined') return propSlug
+  const parts = window.location.pathname.split('/').filter(Boolean)
+  if (parts[0] === 'financial-iq' && parts[1]) {
+    try { return decodeURIComponent(parts[1]) } catch { return parts[1] }
+  }
+  return propSlug
+}
+
+export default function DynamicFIQViewer({ slug: propSlug }: { slug: string }) {
   const [post, setPost] = useState<FIQPost | null>(null)
   const [loading, setLoading] = useState(true)
   const [notFound, setNotFound] = useState(false)
   const [relatedPosts, setRelatedPosts] = useState<FIQPost[]>([])
+  const slug = resolveSlug(propSlug)
 
   useEffect(() => {
     if (!isSupabaseConfigured()) { setLoading(false); setNotFound(true); return }

@@ -30,14 +30,18 @@ export async function generateStaticParams() {
   }
   try {
     const sb = createClient(url, key)
-    const { data } = await sb
+    const { data, error } = await sb
       .from('financial_iq_posts')
       .select('slug')
       .eq('is_published', true)
+    if (error) return FALLBACK_FIQ_SLUGS.map((slug) => ({ slug }))
     const dbSlugs = (data || [])
       .map((r: any) => r.slug)
       .filter((s: any): s is string => typeof s === 'string' && s.length > 0)
     const merged = Array.from(new Set([...FALLBACK_FIQ_SLUGS, ...dbSlugs]))
+    // Logged so `netlify deploy --prod` output shows which slugs are
+    // being statically pre-built for each deploy.
+    console.log(`[fiq] pre-building ${merged.length} article pages: ${merged.join(', ')}`)
     return merged.map((slug) => ({ slug }))
   } catch {
     return FALLBACK_FIQ_SLUGS.map((slug) => ({ slug }))
