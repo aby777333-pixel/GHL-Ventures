@@ -36,6 +36,7 @@ interface FIQPostForBroadcast {
 
 interface ClientRow {
   id: string
+  user_id: string | null
   full_name: string
   email: string | null
   phone: string | null
@@ -73,7 +74,7 @@ export default function FIQBroadcastModal({ post, onClose, showToast }: Props) {
     if (!post || !isSupabaseConfigured()) return
     setLoading(true)
     sb.from('clients')
-      .select('id, full_name, email, phone, newsletter_opt_out, is_active')
+      .select('id, user_id, full_name, email, phone, newsletter_opt_out, is_active')
       .eq('is_active', true)
       .order('full_name', { ascending: true })
       .then(({ data }: any) => {
@@ -114,6 +115,7 @@ export default function FIQBroadcastModal({ post, onClose, showToast }: Props) {
   const emailCount = selectedList.filter(c => sendEmail && c.email && !c.newsletter_opt_out).length
   const waCount = selectedList.filter(c => sendWhatsApp && c.phone).length
   const optedOut = selectedList.filter(c => c.newsletter_opt_out).length
+  const dashboardCount = selectedList.filter(c => !!c.user_id).length
 
   // Dashboard alerts are always posted for selected clients with an auth
   // account, so we allow Send even when neither email nor WhatsApp is
@@ -315,6 +317,9 @@ export default function FIQBroadcastModal({ post, onClose, showToast }: Props) {
                           {c.newsletter_opt_out && (
                             <span title="Unsubscribed from newsletter" className="text-[10px] px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-400 border border-amber-500/20">opt-out</span>
                           )}
+                          {!c.user_id && (
+                            <span title="No investor dashboard account yet — dashboard alert will be skipped" className="text-[10px] px-1.5 py-0.5 rounded bg-gray-500/10 text-gray-400 border border-gray-500/20">no dashboard</span>
+                          )}
                           {sendEmail && !emailOK && (
                             <span title={c.email ? 'Opted out' : 'No email on file'} className="text-[10px] px-1.5 py-0.5 rounded bg-gray-500/10 text-gray-400 border border-gray-500/20">no email</span>
                           )}
@@ -331,11 +336,12 @@ export default function FIQBroadcastModal({ post, onClose, showToast }: Props) {
               {/* Summary */}
               <div className="flex items-center flex-wrap gap-3 text-xs text-gray-400">
                 <span>Selected: <span className="text-white font-medium">{selectedIds.size}</span></span>
-                {sendEmail && <span>· Will email: <span className="text-white font-medium">{emailCount}</span></span>}
+                <span>· Dashboard alerts: <span className="text-white font-medium">{dashboardCount}</span></span>
+                {sendEmail && <span>· Email: <span className="text-white font-medium">{emailCount}</span></span>}
                 {sendWhatsApp && <span>· WhatsApp: <span className="text-white font-medium">{waCount}</span></span>}
                 {optedOut > 0 && (
                   <span className="flex items-center gap-1 text-amber-400">
-                    <AlertTriangle className="w-3 h-3" /> {optedOut} opted out of newsletter — email skipped
+                    <AlertTriangle className="w-3 h-3" /> {optedOut} opted out — email skipped
                   </span>
                 )}
               </div>
@@ -344,7 +350,27 @@ export default function FIQBroadcastModal({ post, onClose, showToast }: Props) {
 
           {/* Results */}
           {results && (
-            <div className="max-h-96 overflow-y-auto rounded-xl border border-white/[0.06]">
+            <div className="space-y-3">
+              {/* Resend setup banner when we detect the test-mode restriction */}
+              {results.some(r => r.channel === 'email' && r.status === 'failed' && /testing emails|verified domain/i.test(r.error || '')) && (
+                <div className="flex items-start gap-2 p-3 rounded-xl bg-amber-500/10 border border-amber-500/30">
+                  <AlertTriangle className="w-4 h-4 text-amber-400 mt-0.5 shrink-0" />
+                  <div className="text-xs">
+                    <p className="text-white font-medium">Email is in Resend test mode</p>
+                    <p className="text-gray-300 mt-0.5 leading-relaxed">
+                      Resend&apos;s default sender (<code className="text-amber-300">onboarding@resend.dev</code>) only delivers to the Resend account owner&apos;s mailbox — that&apos;s why real client addresses fail. To unlock client sends:
+                    </p>
+                    <ol className="text-gray-300 list-decimal list-inside mt-2 space-y-0.5">
+                      <li>Verify <code className="text-amber-300">ghlindiaventures.com</code> at <a href="https://resend.com/domains" target="_blank" rel="noopener noreferrer" className="text-blue-400 underline">resend.com/domains</a>.</li>
+                      <li>In Netlify, set <code className="text-amber-300">RESEND_FROM_EMAIL=noreply@ghlindiaventures.com</code>.</li>
+                      <li>Redeploy — no code change needed.</li>
+                    </ol>
+                    <p className="text-gray-400 mt-2">Dashboard alerts and WhatsApp click-to-chat links are unaffected and already working.</p>
+                  </div>
+                </div>
+              )}
+
+              <div className="max-h-96 overflow-y-auto rounded-xl border border-white/[0.06]">
               <div className="p-3 bg-white/[0.03] border-b border-white/[0.06] flex items-center gap-2 flex-wrap">
                 <CheckCircle className="w-4 h-4 text-green-400" />
                 <p className="text-xs text-white">
@@ -370,6 +396,7 @@ export default function FIQBroadcastModal({ post, onClose, showToast }: Props) {
                     {r.error && <span className="text-red-400 text-[11px] truncate max-w-xs" title={r.error}>{r.error}</span>}
                   </div>
                 ))}
+              </div>
               </div>
             </div>
           )}

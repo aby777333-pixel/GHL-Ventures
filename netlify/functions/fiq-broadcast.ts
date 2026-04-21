@@ -246,6 +246,13 @@ export default async (request: Request) => {
             const errText = await resp.text()
             let msg = errText
             try { const j = JSON.parse(errText); msg = j.message || j.error || errText } catch { /* keep */ }
+            // Resend rejects sends from unverified domains AND limits
+            // onboarding@resend.dev to the account owner's own mailbox.
+            // Translate the raw error into something actionable.
+            const lower = msg.toLowerCase()
+            if (lower.includes('testing emails') || lower.includes('verified domain')) {
+              msg = `${msg}  ·  Fix: verify your sender domain at resend.com/domains, then set RESEND_FROM_EMAIL in Netlify.`
+            }
             const r: BroadcastResult = { channel: 'email', recipient: c.email, client_id: c.id, status: 'failed', error: msg }
             results.push(r); useAudit(r)
           } else {
