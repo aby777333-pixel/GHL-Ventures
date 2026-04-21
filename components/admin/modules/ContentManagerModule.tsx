@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import {
   FileText, BookOpen, HelpCircle, Ticket, Plus, Edit, Trash2,
-  Save, Send,
+  Save, Send, Upload, Loader2,
 } from 'lucide-react'
 import AdminGlass from '../shared/AdminGlass'
 import AdminDataTable, { type Column } from '../shared/AdminDataTable'
@@ -136,12 +136,50 @@ export default function ContentManagerModule({ subTab, navigate, showToast }: Co
   const [formSortOrder, setFormSortOrder] = useState(0)
   const [formActive, setFormActive] = useState(true)
 
-  // Financial IQ extras: SEO + scheduled publish + manual broadcast
+  // Financial IQ extras: SEO + scheduled publish + manual broadcast + cover image upload
   const [formMetaTitle, setFormMetaTitle] = useState('')
   const [formMetaDescription, setFormMetaDescription] = useState('')
   const [formScheduledFor, setFormScheduledFor] = useState('')
   const [formReadTime, setFormReadTime] = useState<number | ''>('')
   const [broadcastTarget, setBroadcastTarget] = useState<FinancialIQPost | null>(null)
+  const [coverUploading, setCoverUploading] = useState(false)
+
+  // Upload a cover image to the public `ghl-media` Supabase Storage bucket
+  // and wire the resulting URL into formCoverImage. Called from the file
+  // input on the editor. Accepts common image types up to 5 MB.
+  const uploadCoverImage = async (file: File) => {
+    if (!isSupabaseConfigured()) {
+      showToast('Supabase not configured', 'error')
+      return
+    }
+    if (!file.type.startsWith('image/')) {
+      showToast('File must be an image (jpg, png, webp, gif)', 'error')
+      return
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      showToast('Image must be under 5 MB', 'error')
+      return
+    }
+    setCoverUploading(true)
+    try {
+      const ext = (file.name.split('.').pop() || 'jpg').toLowerCase().replace(/[^a-z0-9]/g, '') || 'jpg'
+      const filename = `fiq-covers/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`
+      const { error: upErr } = await supabase.storage.from('ghl-media').upload(filename, file, {
+        cacheControl: '3600', upsert: false, contentType: file.type,
+      })
+      if (upErr) { showToast(`Upload failed: ${upErr.message}`, 'error'); setCoverUploading(false); return }
+      const { data: pub } = supabase.storage.from('ghl-media').getPublicUrl(filename)
+      if (pub?.publicUrl) {
+        setFormCoverImage(pub.publicUrl)
+        showToast('Cover image uploaded', 'success')
+      } else {
+        showToast('Upload succeeded but public URL was empty', 'warning')
+      }
+    } catch (e: any) {
+      showToast(`Upload error: ${e?.message || 'unknown'}`, 'error')
+    }
+    setCoverUploading(false)
+  }
 
   // ── Data Fetching — single bulk loader ─────────────────────
   const loadAllContent = useCallback(async () => {
@@ -630,14 +668,64 @@ export default function ContentManagerModule({ subTab, navigate, showToast }: Co
           </div>
         </div>
         <div>
-          <label className={labelClass}>Cover Image URL</label>
-          <input value={formCoverImage} onChange={e => setFormCoverImage(e.target.value)}
-            placeholder="https://images.unsplash.com/photo-..." className={inputClass} />
+          <label className={labelClass}>Cover Image</label>
+          <div className="flex items-start gap-3">
+            {/* Preview thumbnail — also shown when an image is pasted as URL */}
+            {formCoverImage && (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={formCoverImage}
+                alt="Cover preview"
+                className="w-20 h-20 rounded-lg object-cover border border-white/[0.08] shrink-0"
+                onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none' }}
+              />
+            )}
+            <div className="flex-1 space-y-2">
+              <input
+                value={formCoverImage}
+                onChange={e => setFormCoverImage(e.target.value)}
+                placeholder="Paste URL or click Upload →"
+                className={inputClass}
+              />
+              {type === 'financial-iq' && (
+                <div className="flex items-center gap-2 flex-wrap">
+                  <label className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/[0.04] border border-white/[0.08] text-xs text-gray-300 hover:bg-white/[0.08] cursor-pointer transition-colors">
+                    {coverUploading ? (
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    ) : (
+                      <Upload className="w-3.5 h-3.5" />
+                    )}
+                    {coverUploading ? 'Uploading…' : 'Upload image'}
+                    <input
+                      type="file"
+                      accept="image/jpeg,image/png,image/webp,image/gif"
+                      className="hidden"
+                      disabled={coverUploading}
+                      onChange={(e) => {
+                        const f = e.target.files?.[0]
+                        if (f) uploadCoverImage(f)
+                        e.currentTarget.value = ''
+                      }}
+                    />
+                  </label>
+                  {formCoverImage && (
+                    <button
+                      type="button"
+                      onClick={() => setFormCoverImage('')}
+                      className="text-xs text-gray-500 hover:text-red-400 transition-colors"
+                    >
+                      Clear
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
           {type === 'financial-iq' && (
-            <p className="text-[10px] text-gray-500 mt-1">
-              Use royalty-free images from{' '}
+            <p className="text-[10px] text-gray-500 mt-1.5">
+              Upload a JPG/PNG/WEBP (≤5 MB) or paste a URL from{' '}
               <a href="https://unsplash.com/s/photos/finance" target="_blank" rel="noopener noreferrer" className="text-brand-red hover:underline">Unsplash</a>
-              {' or '}
+              {' / '}
               <a href="https://www.pexels.com/search/finance/" target="_blank" rel="noopener noreferrer" className="text-brand-red hover:underline">Pexels</a>.
               Leave blank and a topic-matched fallback is auto-selected from the article&apos;s category.
             </p>
