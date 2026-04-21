@@ -142,10 +142,9 @@ export default async (request: Request) => {
       { status: 400, headers: { 'Content-Type': 'application/json', ...cors(request) } })
   }
   const chanList = (channels || []).filter(c => c === 'email' || c === 'whatsapp')
-  if (chanList.length === 0) {
-    return new Response(JSON.stringify({ error: 'At least one channel (email or whatsapp) is required' }),
-      { status: 400, headers: { 'Content-Type': 'application/json', ...cors(request) } })
-  }
+  // chanList may legitimately be empty — in that case the broadcast is
+  // "dashboard-only" and just posts in-app notifications. Email and
+  // WhatsApp are optional escalation channels on top.
 
   const supabaseUrl = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL || ''
   const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || ''
@@ -168,7 +167,7 @@ export default async (request: Request) => {
 
   // 2. Load the recipient client set. Empty client_ids = "all eligible".
   let clientQuery = sb.from('clients')
-    .select('id, full_name, email, phone, newsletter_opt_out, is_active')
+    .select('id, user_id, full_name, email, phone, newsletter_opt_out, is_active')
     .eq('is_active', true)
   if (client_ids && client_ids.length > 0) {
     clientQuery = clientQuery.in('id', client_ids)
@@ -191,7 +190,12 @@ export default async (request: Request) => {
 
   // 3. Send per channel, per recipient. Results accumulated for audit + response.
   const resendKey = process.env.RESEND_API_KEY || ''
-  const fromEmail = (process.env.RESEND_FROM_EMAIL || 'noreply@ghlindiaventures.com').trim()
+  // Resend requires the sender domain to be verified on the account. If
+  // RESEND_FROM_EMAIL isn't set (or is set to an unverified domain), fall
+  // back to onboarding@resend.dev which Resend guarantees to work for any
+  // account. Once the ghlindiaventures.com domain is verified in Resend,
+  // set RESEND_FROM_EMAIL=noreply@ghlindiaventures.com in Netlify env vars.
+  const fromEmail = (process.env.RESEND_FROM_EMAIL || 'onboarding@resend.dev').trim()
   const waToken = process.env.WHATSAPP_API_TOKEN || ''
   const waPhoneId = process.env.WHATSAPP_PHONE_NUMBER_ID || ''
   const waTemplate = process.env.WHATSAPP_TEMPLATE_NAME || ''
@@ -323,6 +327,42 @@ export default async (request: Request) => {
     if (auditErr) console.error('[fiq-broadcast] audit insert error:', auditErr.message)
   }
 
-  return new Response(JSON.stringify({ post_id: post.id, results }),
-    { status: 200, headers: { 'Content-Type': 'application/json', ...cors(request) } })
+  // 5. Dashboard notifications — one per recipient (regardless of channel)
+  //    so every client who was targeted sees the new article as an alert
+  //    inside their investor dashboard. The notifications.user_id column
+  //    references auth.users, so we skip clients without an auth account
+  //    (legacy imports that haven't logged in yet).
+  const notifRows = recipients
+    .filter((c: any) => !!c.user_id)
+    .map((c: any) => ({
+      user_id: c.user_id,
+      type: 'info',
+      module: 'financial-iq',
+      title: 'New Financial IQ article',
+      message: `${post.title}${post.excerpt ? ' — ' + post.excerpt.slice(0, 180) : ''}`,
+      link: `/financial-iq/${post.slug}`,
+      metadata: {
+        post_id: post.id,
+        slug: post.slug,
+        category: post.category || null,
+        trigger: trigger === 'scheduled' ? 'scheduled' : 'manual',
+      },
+    }))
+
+  let notifInserted = 0
+  if (notifRows.length > 0) {
+    const { error: notifErr, count } = await sb
+      .from('notifications')
+      .insert(notifRows, { count: 'exact' })
+    if (notifErr) {
+      console.error('[fiq-broadcast] notification insert error:', notifErr.message)
+    } else {
+      notifInserted = count ?? notifRows.length
+    }
+  }
+
+  return new Response(
+    JSON.stringify({ post_id: post.id, results, dashboard_notified: notifInserted }),
+    { status: 200, headers: { 'Content-Type': 'application/json', ...cors(request) } },
+  )
 }

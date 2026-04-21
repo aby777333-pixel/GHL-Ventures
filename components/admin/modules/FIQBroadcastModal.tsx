@@ -19,7 +19,7 @@
  */
 
 import { useEffect, useMemo, useState } from 'react'
-import { Search, Send, Users, Mail, MessageCircle, AlertTriangle, CheckCircle, Loader2, ExternalLink } from 'lucide-react'
+import { Search, Send, Users, Mail, MessageCircle, AlertTriangle, CheckCircle, Loader2, ExternalLink, Bell } from 'lucide-react'
 import AdminModal, { ModalButton } from '../shared/AdminModal'
 import { supabase as _sb, isSupabaseConfigured } from '@/lib/supabase/client'
 
@@ -67,6 +67,7 @@ export default function FIQBroadcastModal({ post, onClose, showToast }: Props) {
   const [loading, setLoading] = useState(false)
   const [sending, setSending] = useState(false)
   const [results, setResults] = useState<BroadcastResult[] | null>(null)
+  const [dashboardNotified, setDashboardNotified] = useState(0)
 
   useEffect(() => {
     if (!post || !isSupabaseConfigured()) return
@@ -114,7 +115,10 @@ export default function FIQBroadcastModal({ post, onClose, showToast }: Props) {
   const waCount = selectedList.filter(c => sendWhatsApp && c.phone).length
   const optedOut = selectedList.filter(c => c.newsletter_opt_out).length
 
-  const canSend = !!post && selectedIds.size > 0 && (sendEmail || sendWhatsApp) && !sending
+  // Dashboard alerts are always posted for selected clients with an auth
+  // account, so we allow Send even when neither email nor WhatsApp is
+  // ticked (dashboard-only broadcast).
+  const canSend = !!post && selectedIds.size > 0 && !sending
 
   const handleSend = async () => {
     if (!post) return
@@ -138,12 +142,25 @@ export default function FIQBroadcastModal({ post, onClose, showToast }: Props) {
         return
       }
       setResults(json.results || [])
+      setDashboardNotified(typeof json.dashboard_notified === 'number' ? json.dashboard_notified : 0)
       const sent = (json.results || []).filter((r: BroadcastResult) => r.status === 'sent').length
       const failed = (json.results || []).filter((r: BroadcastResult) => r.status === 'failed').length
-      if (failed === 0 && sent > 0) {
-        showToast(`Broadcast sent to ${sent} recipient${sent === 1 ? '' : 's'}`, 'success')
+      const dashN = json.dashboard_notified || 0
+      const channelsUsed = sendEmail || sendWhatsApp
+      const dashMsg = dashN ? ` · ${dashN} dashboard alert${dashN === 1 ? '' : 's'}` : ''
+      if (!channelsUsed) {
+        // Dashboard-only broadcast
+        if (dashN > 0) {
+          showToast(`Posted ${dashN} dashboard alert${dashN === 1 ? '' : 's'}`, 'success')
+        } else {
+          showToast(`No recipients had a dashboard account — nothing posted`, 'warning')
+        }
+      } else if (failed === 0 && sent > 0) {
+        showToast(`Broadcast sent to ${sent} recipient${sent === 1 ? '' : 's'}${dashMsg}`, 'success')
       } else if (sent > 0) {
-        showToast(`Sent ${sent}, ${failed} failed — see details below`, 'warning')
+        showToast(`Sent ${sent}, ${failed} failed${dashMsg} — see details below`, 'warning')
+      } else if (dashN > 0) {
+        showToast(`Email/WhatsApp failed, but ${dashN} dashboard alert${dashN === 1 ? '' : 's'} posted`, 'warning')
       } else {
         showToast(`Broadcast failed for all recipients`, 'error')
       }
@@ -157,6 +174,7 @@ export default function FIQBroadcastModal({ post, onClose, showToast }: Props) {
     setSelectedIds(new Set())
     setSearch('')
     setResults(null)
+    setDashboardNotified(0)
     setSending(false)
     setSendEmail(true)
     setSendWhatsApp(false)
@@ -188,6 +206,15 @@ export default function FIQBroadcastModal({ post, onClose, showToast }: Props) {
     >
       {!post ? null : (
         <div className="space-y-4">
+          {/* Dashboard-alert notice — always on */}
+          <div className="flex items-start gap-2 p-3 rounded-xl bg-blue-500/10 border border-blue-500/30">
+            <Bell className="w-4 h-4 text-blue-400 mt-0.5 shrink-0" />
+            <div className="text-xs">
+              <p className="text-white font-medium">Dashboard alert posted to every selected client</p>
+              <p className="text-gray-400 mt-0.5">In-app notification is always delivered (clients without an auth account are skipped). Email and WhatsApp below are additional channels.</p>
+            </div>
+          </div>
+
           {/* Channels */}
           <div className="grid grid-cols-2 gap-3">
             <label className={`flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-colors ${sendEmail ? 'bg-brand-red/10 border-brand-red/40' : 'bg-white/[0.03] border-white/[0.08] hover:bg-white/[0.06]'}`}>
@@ -318,13 +345,16 @@ export default function FIQBroadcastModal({ post, onClose, showToast }: Props) {
           {/* Results */}
           {results && (
             <div className="max-h-96 overflow-y-auto rounded-xl border border-white/[0.06]">
-              <div className="p-3 bg-white/[0.03] border-b border-white/[0.06] flex items-center gap-2">
+              <div className="p-3 bg-white/[0.03] border-b border-white/[0.06] flex items-center gap-2 flex-wrap">
                 <CheckCircle className="w-4 h-4 text-green-400" />
                 <p className="text-xs text-white">
                   Sent: {results.filter(r => r.status === 'sent').length} ·
                   Failed: {results.filter(r => r.status === 'failed').length} ·
                   Skipped: {results.filter(r => r.status === 'skipped').length}
                 </p>
+                <span className="inline-flex items-center gap-1 text-[11px] text-blue-400 ml-auto">
+                  <Bell className="w-3 h-3" /> Dashboard alerts: {dashboardNotified}
+                </span>
               </div>
               <div className="divide-y divide-white/[0.04]">
                 {results.map((r, i) => (
