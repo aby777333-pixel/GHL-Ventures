@@ -89,7 +89,7 @@ const CONTENT_TABS = [
 type ContentTab = typeof CONTENT_TABS[number]['id']
 
 const BLOG_CATEGORIES = ['Market Updates', 'Investment Tips', 'Company News', 'Economy', 'Real Estate', 'Mutual Funds', 'Insurance']
-const FIQ_CATEGORIES = ['Basics', 'Advanced', 'Tax Planning', 'Retirement', 'Insurance', 'Real Estate', 'Mutual Funds']
+const FIQ_CATEGORIES = ['Basics', 'Advanced', 'Strategy', 'Education', 'Tax Planning', 'Retirement', 'Insurance', 'Real Estate', 'Mutual Funds', 'Startups']
 const FAQ_CATEGORIES = ['General', 'Account', 'Investments', 'KYC', 'Payments', 'Returns', 'Support']
 // Match the DB CHECK constraint on public.tickets.status exactly.
 const TICKET_STATUSES = ['open', 'in_progress', 'waiting', 'escalated', 'resolved', 'closed'] as const

@@ -27,6 +27,7 @@ export const FIQ_CATEGORY_FALLBACK_IMAGES: Record<string, string> = {
   'Insurance':      'https://images.unsplash.com/photo-1633158829585-23ba8f7c8caf?w=1200&q=80',
   'Real Estate':    'https://images.unsplash.com/photo-1486325212027-8081e485255e?w=1200&q=80',
   'Mutual Funds':   'https://images.unsplash.com/photo-1554224155-8d04cb21cd6c?w=1200&q=80',
+  'Startups':       'https://images.unsplash.com/photo-1559136555-9303baea8ebd?w=1200&q=80',
   'General':        'https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=1200&q=80',
 }
 
