@@ -5,6 +5,7 @@ import AnimatedSection from '@/components/AnimatedSection'
 import PlaceholderImage from '@/components/PlaceholderImage'
 import { FINANCIAL_IQ_ARTICLES } from '@/lib/constants'
 import { supabase as _sb, isSupabaseConfigured } from '@/lib/supabase/client'
+import { resolveFIQCoverImage } from '@/lib/fiqFallbackImages'
 import {
   BookOpen,
   GraduationCap,
@@ -270,8 +271,10 @@ export default function FinancialIQPage() {
             excerpt: p.excerpt || '',
             category: p.category || 'General',
             date: p.published_at || p.created_at,
-            readTime: '5 min read',
-            coverImage: p.cover_image || '',
+            readTime: p.read_time ? `${p.read_time} min read` : '5 min read',
+            // Falls back to a category-appropriate royalty-free Unsplash image
+            // when the admin hasn't uploaded a custom cover.
+            coverImage: resolveFIQCoverImage(p.cover_image, p.category),
           })))
         }
       })

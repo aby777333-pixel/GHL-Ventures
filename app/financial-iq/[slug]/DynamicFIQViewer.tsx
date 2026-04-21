@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { supabase as _sb, isSupabaseConfigured } from '@/lib/supabase/client'
+import { resolveFIQCoverImage } from '@/lib/fiqFallbackImages'
 import {
   Calendar, Clock, ArrowLeft, User, Tag, BookOpen, GraduationCap,
 } from 'lucide-react'
@@ -200,17 +201,20 @@ export default function DynamicFIQViewer({ slug: propSlug }: { slug: string }) {
         </div>
       </section>
 
-      {/* Cover Image */}
-      {post.cover_image && (
-        <section className="bg-white">
-          <div className="container-max mx-auto px-4 sm:px-6 lg:px-8 -mt-4">
-            <div className="rounded-2xl overflow-hidden shadow-xl max-h-[480px]">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={post.cover_image} alt={post.title} className="w-full h-full object-cover" />
-            </div>
+      {/* Cover Image — always rendered, falls back to a category-appropriate
+          royalty-free Unsplash image when no custom cover is set. */}
+      <section className="bg-white">
+        <div className="container-max mx-auto px-4 sm:px-6 lg:px-8 -mt-4">
+          <div className="rounded-2xl overflow-hidden shadow-xl max-h-[480px]">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={resolveFIQCoverImage(post.cover_image, post.category)}
+              alt={post.title}
+              className="w-full h-full object-cover"
+            />
           </div>
-        </section>
-      )}
+        </div>
+      </section>
 
       {/* Article Body */}
       <section className="bg-white py-12">
@@ -243,12 +247,14 @@ export default function DynamicFIQViewer({ slug: propSlug }: { slug: string }) {
               {relatedPosts.map((rp) => (
                 <Link key={rp.id} href={`/financial-iq/${rp.slug}`} className="group">
                   <div className="bg-white rounded-xl border border-gray-200 overflow-hidden hover:shadow-lg transition-shadow">
-                    {rp.cover_image && (
-                      <div className="aspect-video overflow-hidden">
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img src={rp.cover_image} alt={rp.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
-                      </div>
-                    )}
+                    <div className="aspect-video overflow-hidden">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={resolveFIQCoverImage(rp.cover_image, rp.category)}
+                        alt={rp.title}
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                      />
+                    </div>
                     <div className="p-4">
                       <span className="text-xs font-medium text-brand-red uppercase">{rp.category}</span>
                       <h3 className="font-semibold text-brand-black dark:text-white mt-1 mb-2 line-clamp-2 group-hover:text-brand-red transition-colors">

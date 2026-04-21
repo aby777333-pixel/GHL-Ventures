@@ -12,6 +12,7 @@ import AdminKPICard from '../shared/AdminKPICard'
 import AdminModal, { ModalButton } from '../shared/AdminModal'
 import AdminEmptyState from '../shared/AdminEmptyState'
 import FIQBroadcastModal from './FIQBroadcastModal'
+import { resolveFIQCoverImage } from '@/lib/fiqFallbackImages'
 import { supabase as _supabase, isSupabaseConfigured } from '@/lib/supabase/client'
 const supabase = _supabase as any
 
@@ -301,13 +302,19 @@ export default function ContentManagerModule({ subTab, navigate, showToast }: Co
     const publishedAt = formPublished
       ? (wasPublished && prev?.published_at ? prev.published_at : new Date().toISOString())
       : null
+    // When the admin leaves Cover Image blank, auto-fill a category-
+    // appropriate royalty-free Unsplash image so every article has
+    // visual presence on the hub + detail pages without extra work.
+    const resolvedCover = formCoverImage.trim()
+      ? formCoverImage.trim()
+      : resolveFIQCoverImage(null, formCategory)
     const payload = {
       title: formTitle,
       slug,
       content: formContent,
       excerpt: formExcerpt,
       category: formCategory,
-      cover_image: formCoverImage,
+      cover_image: resolvedCover,
       author: formAuthor,
       tags: formTags.split(',').map(t => t.trim()).filter(Boolean),
       is_published: formPublished,
@@ -625,7 +632,16 @@ export default function ContentManagerModule({ subTab, navigate, showToast }: Co
         <div>
           <label className={labelClass}>Cover Image URL</label>
           <input value={formCoverImage} onChange={e => setFormCoverImage(e.target.value)}
-            placeholder="https://..." className={inputClass} />
+            placeholder="https://images.unsplash.com/photo-..." className={inputClass} />
+          {type === 'financial-iq' && (
+            <p className="text-[10px] text-gray-500 mt-1">
+              Use royalty-free images from{' '}
+              <a href="https://unsplash.com/s/photos/finance" target="_blank" rel="noopener noreferrer" className="text-brand-red hover:underline">Unsplash</a>
+              {' or '}
+              <a href="https://www.pexels.com/search/finance/" target="_blank" rel="noopener noreferrer" className="text-brand-red hover:underline">Pexels</a>.
+              Leave blank and a topic-matched fallback is auto-selected from the article&apos;s category.
+            </p>
+          )}
         </div>
         <div>
           <label className={labelClass}>Tags (comma-separated)</label>
