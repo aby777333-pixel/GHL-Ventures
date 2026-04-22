@@ -264,7 +264,7 @@ function NRIInvestContent() {
             <AnimatedSection direction="left">
               <div className="card rounded-2xl overflow-hidden h-full border-2 border-brand-red/20 hover:border-brand-red/40 transition-colors group">
                 <div className="p-1">
-                  <div className="bg-gradient-to-r from-brand-red to-red-800 p-6 rounded-t-xl">
+                  <div className="dark-surface bg-gradient-to-r from-brand-red to-red-800 p-6 rounded-t-xl">
                     <div className="flex items-center gap-3 mb-3">
                       <div className="w-10 h-10 rounded-lg bg-white/20 flex items-center justify-center">
                         <Target className="w-5 h-5 text-white" />
@@ -308,7 +308,7 @@ function NRIInvestContent() {
             <AnimatedSection direction="right">
               <div className="card rounded-2xl overflow-hidden h-full border-2 border-brand-black/10 hover:border-brand-red/20 transition-colors group">
                 <div className="p-1">
-                  <div className="bg-gradient-to-r from-gray-800 to-gray-900 p-6 rounded-t-xl">
+                  <div className="dark-surface bg-gradient-to-r from-gray-800 to-gray-900 p-6 rounded-t-xl">
                     <div className="flex items-center gap-3 mb-3">
                       <div className="w-10 h-10 rounded-lg bg-white/20 flex items-center justify-center">
                         <Banknote className="w-5 h-5 text-white" />

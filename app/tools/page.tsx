@@ -1477,7 +1477,10 @@ function CalculatorCard({ tool, accentColor }: { tool: ToolDef; accentColor: str
       >
         <div className="flex items-center gap-3">
           <div className="w-2 h-2 rounded-full shrink-0" style={{ background: accentColor }} />
-          <span className="font-semibold text-sm text-brand-black dark:text-white/90">{tool.name}</span>
+          {/* Global unscoped `.text-sm { font-weight: 450 }` in globals.css
+              overrides font-semibold. Use the important prefix so the tool
+              title renders at a readable weight in both themes. */}
+          <span className="!font-semibold text-sm text-brand-black dark:text-white/90">{tool.name}</span>
         </div>
         {expanded ? (
           <ChevronUp className="w-4 h-4 text-gray-400 group-hover:text-brand-red transition-colors" />

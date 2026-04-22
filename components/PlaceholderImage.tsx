@@ -113,7 +113,7 @@ export default function PlaceholderImage({
         loading="lazy"
       />
       {label && overlay && (
-        <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent p-4 translate-y-1 opacity-90 group-hover/img:translate-y-0 group-hover/img:opacity-100 transition-all duration-300">
+        <div className="dark-surface absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent p-4 translate-y-1 opacity-90 group-hover/img:translate-y-0 group-hover/img:opacity-100 transition-all duration-300">
           <p className="text-white/90 text-xs font-medium">{label}</p>
         </div>
       )}

@@ -262,7 +262,7 @@ export default function FundCalculatorSection({
                 </div>
 
                 {/* Right — Results */}
-                <div className="card p-6 sm:p-8 rounded-2xl bg-gradient-to-br from-brand-black to-gray-900 text-white">
+                <div className="card dark-surface p-6 sm:p-8 rounded-2xl bg-gradient-to-br from-brand-black to-gray-900 text-white">
                   <div className="text-center mb-6">
                     <p className="text-white/70 text-[10px] uppercase tracking-wider mb-1">Projected Returns</p>
                     <p className="text-3xl sm:text-4xl font-extrabold text-white">

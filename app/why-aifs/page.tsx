@@ -104,7 +104,7 @@ function WhatIsAIF() {
           </AnimatedSection>
 
           <AnimatedSection direction="right">
-            <div className="bg-gradient-to-br from-brand-black to-brand-darkgrey rounded-3xl p-8 text-white">
+            <div className="dark-surface bg-gradient-to-br from-brand-black to-brand-darkgrey rounded-3xl p-8 text-white">
               <div className="border-l-2 border-brand-red pl-5 mb-6">
                 <p className="text-white/90 italic leading-relaxed text-sm">
                   &ldquo;Any fund established or incorporated in India which is a privately pooled investment
