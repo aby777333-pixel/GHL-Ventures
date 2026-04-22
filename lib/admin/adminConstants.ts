@@ -292,6 +292,7 @@ export const ALL_ADMIN_TAB_PARAMS = [
   { tab: ['clients', 'analytics'] },
   { tab: ['clients', 'profile'] },
   { tab: ['sales'] },
+  { tab: ['sales', 'create-account'] },
   { tab: ['sales', 'pipeline'] },
   { tab: ['sales', 'leads'] },
   { tab: ['sales', 'referrals'] },
