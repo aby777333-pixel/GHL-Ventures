@@ -196,6 +196,9 @@ export default function BroadcastTab({ showToast }: BroadcastTabProps) {
   const [openCampaign, setOpenCampaign] = useState<BroadcastCampaign | null>(null)
   const [campaignDeliveries, setCampaignDeliveries] = useState<BroadcastDelivery[]>([])
   const [loadingDeliveries, setLoadingDeliveries] = useState(false)
+  const [deleteCampaignId, setDeleteCampaignId] = useState<string | null>(null)
+  const [clearAllOpen, setClearAllOpen] = useState(false)
+  const [clearing, setClearing] = useState(false)
 
   // ── Fetchers ────────────────────────────────────────────────────
   const fetchLeads = useCallback(async () => {
@@ -407,6 +410,38 @@ export default function BroadcastTab({ showToast }: BroadcastTabProps) {
     }
   }
 
+  // ── Campaign delete ─────────────────────────────────────────────
+  // broadcast_deliveries has ON DELETE CASCADE on campaign_id, so removing
+  // the campaign row also removes its delivery log in a single round-trip.
+  const deleteCampaign = async () => {
+    if (!deleteCampaignId) return
+    if (!isSupabaseConfigured()) { showToast('Database not configured', 'error'); return }
+    const { error } = await supabase.from('broadcast_campaigns').delete().eq('id', deleteCampaignId)
+    if (error) { showToast(`Delete failed: ${error.message}`, 'error'); return }
+    showToast('Campaign deleted', 'success')
+    setDeleteCampaignId(null)
+    fetchCampaigns()
+  }
+
+  const clearAllCampaigns = async () => {
+    if (!isSupabaseConfigured()) { showToast('Database not configured', 'error'); return }
+    setClearing(true)
+    try {
+      // Supabase blocks unqualified deletes — use a predicate that matches
+      // every row (id IS NOT NULL) so intent is explicit and RLS can still
+      // gate it. Cascade handles the deliveries table.
+      const { error } = await supabase.from('broadcast_campaigns').delete().not('id', 'is', null)
+      if (error) throw error
+      showToast('All campaign history cleared', 'success')
+      setClearAllOpen(false)
+      fetchCampaigns()
+    } catch (err: any) {
+      showToast(err?.message || 'Failed to clear history', 'error')
+    } finally {
+      setClearing(false)
+    }
+  }
+
   // ── KPIs ─────────────────────────────────────────────────────────
   const kpiTotalLeads = leads.length
   const kpiWithEmail = leads.filter(l => l.email).length
@@ -511,11 +546,18 @@ export default function BroadcastTab({ showToast }: BroadcastTabProps) {
       ),
     },
     {
-      key: 'actions', label: '', width: '60px', render: (r) => (
-        <button
-          onClick={(e) => { e.stopPropagation(); setOpenCampaign(r) }}
-          className="text-[11px] px-2 py-1 rounded-lg text-gray-400 hover:text-white hover:bg-white/[0.06] transition-colors"
-        >Details</button>
+      key: 'actions', label: '', width: '140px', render: (r) => (
+        <div className="flex items-center gap-1 justify-end">
+          <button
+            onClick={(e) => { e.stopPropagation(); setOpenCampaign(r) }}
+            className="text-[11px] px-2 py-1 rounded-lg text-gray-400 hover:text-white hover:bg-white/[0.06] transition-colors"
+          >Details</button>
+          <button
+            onClick={(e) => { e.stopPropagation(); setDeleteCampaignId(r.id) }}
+            className="p-1.5 rounded-lg hover:bg-red-500/10 text-gray-500 hover:text-red-400 transition-colors"
+            title="Delete campaign"
+          ><Trash2 className="w-3.5 h-3.5" /></button>
+        </div>
       ),
     },
   ]
@@ -783,6 +825,16 @@ export default function BroadcastTab({ showToast }: BroadcastTabProps) {
               searchKeys={['name', 'subject', 'body']}
               title="Campaign History"
               pageSize={15}
+              actions={
+                <button
+                  onClick={() => setClearAllOpen(true)}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-red-400 bg-red-500/10 border border-red-500/20 hover:bg-red-500/20 transition-colors"
+                  title="Delete all campaign history"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                  Clear All
+                </button>
+              }
             />
           )}
         </AdminGlass>
@@ -998,6 +1050,48 @@ export default function BroadcastTab({ showToast }: BroadcastTabProps) {
             </div>
           </div>
         )}
+      </AdminModal>
+
+      {/* ── Delete Campaign Confirm ─────────────────────────────── */}
+      <AdminModal
+        isOpen={!!deleteCampaignId} onClose={() => setDeleteCampaignId(null)}
+        title="Delete campaign?" maxWidth="max-w-md"
+        footer={
+          <div className="flex justify-end gap-3">
+            <button onClick={() => setDeleteCampaignId(null)}
+              className="px-4 py-2 rounded-xl text-sm text-gray-400 hover:text-white hover:bg-white/[0.06] transition-colors">Cancel</button>
+            <button onClick={deleteCampaign}
+              className="px-5 py-2 rounded-xl text-sm text-white bg-red-600 hover:bg-red-700 transition-colors">Delete</button>
+          </div>
+        }
+      >
+        <p className="text-sm text-gray-300">
+          This will permanently remove the campaign and all its delivery records. Messages already sent
+          to recipients are unaffected — this only clears the audit trail from the database.
+        </p>
+      </AdminModal>
+
+      {/* ── Clear All History Confirm ───────────────────────────── */}
+      <AdminModal
+        isOpen={clearAllOpen} onClose={() => setClearAllOpen(false)}
+        title="Clear ALL campaign history?" maxWidth="max-w-md"
+        footer={
+          <div className="flex justify-end gap-3">
+            <button onClick={() => setClearAllOpen(false)} disabled={clearing}
+              className="px-4 py-2 rounded-xl text-sm text-gray-400 hover:text-white hover:bg-white/[0.06] transition-colors disabled:opacity-50">Cancel</button>
+            <button onClick={clearAllCampaigns} disabled={clearing}
+              className="px-5 py-2 rounded-xl text-sm text-white bg-red-600 hover:bg-red-700 transition-colors disabled:opacity-50 inline-flex items-center gap-2">
+              {clearing && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+              {clearing ? 'Clearing…' : `Delete ${campaigns.length} campaign${campaigns.length === 1 ? '' : 's'}`}
+            </button>
+          </div>
+        }
+      >
+        <p className="text-sm text-gray-300">
+          This permanently removes <strong className="text-white">all {campaigns.length}</strong> past campaign record{campaigns.length === 1 ? '' : 's'} and their
+          delivery logs. Messages already sent are unaffected — only the audit trail is cleared.
+          This cannot be undone.
+        </p>
       </AdminModal>
     </div>
   )
