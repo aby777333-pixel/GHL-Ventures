@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import {
   FileText, BookOpen, HelpCircle, Ticket, Plus, Edit, Trash2,
-  Save, Send, Upload, Loader2,
+  Save, Send, Upload, Loader2, Radio,
 } from 'lucide-react'
 import AdminGlass from '../shared/AdminGlass'
 import AdminDataTable, { type Column } from '../shared/AdminDataTable'
@@ -12,6 +12,7 @@ import AdminKPICard from '../shared/AdminKPICard'
 import AdminModal, { ModalButton } from '../shared/AdminModal'
 import AdminEmptyState from '../shared/AdminEmptyState'
 import FIQBroadcastModal from './FIQBroadcastModal'
+import BroadcastTab from './BroadcastTab'
 import { resolveFIQCoverImage } from '@/lib/fiqFallbackImages'
 import { supabase as _supabase, isSupabaseConfigured } from '@/lib/supabase/client'
 const supabase = _supabase as any
@@ -84,6 +85,7 @@ const CONTENT_TABS = [
   { id: 'financial-iq', label: 'Financial IQ', icon: BookOpen },
   { id: 'faq', label: 'FAQ', icon: HelpCircle },
   { id: 'tickets', label: 'Support Tickets', icon: Ticket },
+  { id: 'broadcast', label: 'Broadcast', icon: Radio },
 ] as const
 
 type ContentTab = typeof CONTENT_TABS[number]['id']
@@ -852,6 +854,12 @@ export default function ContentManagerModule({ subTab, navigate, showToast }: Co
         })}
       </div>
 
+      {/* Broadcast Tab renders its own layout (KPIs + sub-views) so it bypasses
+          the shared content-area KPI cards + AdminGlass wrapper below. */}
+      {activeTab === 'broadcast' ? (
+        <BroadcastTab showToast={showToast} />
+      ) : (
+      <>
       {/* KPI Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <AdminKPICard title="Blog Posts" value={blogs.length} subtitle={`${publishedBlogs} published`} icon={FileText} color="#3B82F6" delay={0} />
@@ -955,6 +963,8 @@ export default function ContentManagerModule({ subTab, navigate, showToast }: Co
           </>
         )}
       </AdminGlass>
+      </>
+      )}
 
       {/* Editor Modal: Blog */}
       {activeTab === 'blog' && (

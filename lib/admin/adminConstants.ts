@@ -227,6 +227,7 @@ export const ADMIN_SIDEBAR_ITEMS: SidebarItem[] = [
       { id: 'content/financial-iq', label: 'Financial IQ' },
       { id: 'content/faq', label: 'FAQ Management' },
       { id: 'content/tickets', label: 'Support Tickets' },
+      { id: 'content/broadcast', label: 'Broadcast' },
     ],
   },
   {
@@ -379,6 +380,7 @@ export const ALL_ADMIN_TAB_PARAMS = [
   { tab: ['content', 'financial-iq'] },
   { tab: ['content', 'faq'] },
   { tab: ['content', 'tickets'] },
+  { tab: ['content', 'broadcast'] },
   { tab: ['reports'] },
   { tab: ['reports', 'builder'] },
   { tab: ['reports', 'financial'] },
