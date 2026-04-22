@@ -25,6 +25,16 @@ import { formatINR } from '@/lib/admin/adminHooks'
 import UploadWithFolderPicker from '@/components/shared/UploadWithFolderPicker'
 import type { RealtyBroker, BrokerInquiry } from '@/lib/admin/adminTypes'
 
+// ── Netlify function host (same pattern as CreateAccountTab) ───────
+const NETLIFY_FUNCTIONS_HOST = 'https://ghl-india-ventures-2025.netlify.app'
+function getFunctionBase(): string {
+  if (typeof window === 'undefined') return ''
+  const origin = window.location.origin
+  if (origin.includes('localhost')) return 'http://localhost:8888'
+  if (origin.endsWith('.netlify.app')) return origin
+  return NETLIFY_FUNCTIONS_HOST
+}
+
 // ── Status Config ──────────────────────────────────────────────────
 const BROKER_STATUS_CONFIG: Record<string, { label: string; variant: 'success' | 'warning' | 'error' | 'info' | 'neutral' | 'purple' }> = {
   active: { label: 'Active', variant: 'success' },
@@ -97,6 +107,168 @@ export default function RealtyBrokersModule({ subTab, navigate, showToast }: Rea
   const [selectedInquiry, setSelectedInquiry] = useState<BrokerInquiry | null>(null)
   const [addBrokerOpen, setAddBrokerOpen] = useState(false)
   const [folderPickerOpen, setFolderPickerOpen] = useState(false)
+  const [editBroker, setEditBroker] = useState<RealtyBroker | null>(null)
+  const [submittingEdit, setSubmittingEdit] = useState(false)
+  const [editForm, setEditForm] = useState({
+    name: '', email: '', phone: '', company: '', reraId: '',
+    city: 'Chennai', specialization: 'residential',
+    status: 'pending-verification' as string,
+    totalDeals: '0', totalValue: '0', commission: '0', rating: '0',
+    tags: '',
+  })
+  const [composeEmailOpen, setComposeEmailOpen] = useState(false)
+  const [emailSubject, setEmailSubject] = useState('')
+  const [emailBody, setEmailBody] = useState('')
+  const [sendingEmail, setSendingEmail] = useState(false)
+
+  const openEditBroker = (b: RealtyBroker) => {
+    setEditForm({
+      name: b.name || '',
+      email: b.email || '',
+      phone: b.phone || '',
+      company: b.company || '',
+      reraId: b.reraId || '',
+      city: b.city || 'Chennai',
+      specialization: b.specialization || 'residential',
+      status: b.status || 'pending-verification',
+      totalDeals: String(b.totalDeals ?? 0),
+      totalValue: String(b.totalValue ?? 0),
+      commission: String(b.commission ?? 0),
+      rating: String(b.rating ?? 0),
+      tags: (b.tags || []).join(', '),
+    })
+    setEditBroker(b)
+  }
+
+  const handleEditFormChange = (field: string, value: string) => {
+    setEditForm(prev => ({ ...prev, [field]: value }))
+  }
+
+  const handleEditSubmit = async () => {
+    if (!editBroker) return
+    if (!editForm.name.trim() || !editForm.email.trim() || !editForm.phone.trim()) {
+      showToast('Please fill in Name, Email and Phone', 'error')
+      return
+    }
+    if (!isSupabaseConfigured()) {
+      showToast('Database is not configured', 'error')
+      return
+    }
+
+    const toNumber = (v: string, fallback = 0) => {
+      const n = parseFloat(v)
+      return isNaN(n) ? fallback : n
+    }
+    const tagsArr = editForm.tags
+      .split(',')
+      .map(t => t.trim())
+      .filter(Boolean)
+
+    setSubmittingEdit(true)
+    try {
+      const sb = supabase as any
+      const { data, error } = await sb.from('realty_brokers').update({
+        name: editForm.name.trim(),
+        email: editForm.email.trim(),
+        phone: editForm.phone.trim(),
+        company: editForm.company.trim() || null,
+        rera_id: editForm.reraId.trim() || null,
+        city: editForm.city,
+        specialization: editForm.specialization,
+        status: editForm.status,
+        total_deals: Math.max(0, Math.round(toNumber(editForm.totalDeals))),
+        total_value: Math.max(0, toNumber(editForm.totalValue)),
+        commission: Math.max(0, toNumber(editForm.commission)),
+        rating: Math.min(5, Math.max(0, toNumber(editForm.rating))),
+        tags: tagsArr,
+        last_active: new Date().toISOString(),
+      }).eq('id', editBroker.id).select().single()
+
+      if (error) {
+        showToast(error.message || 'Failed to update broker', 'error')
+        return
+      }
+      showToast(`${data?.name || editForm.name} updated`, 'success')
+      setEditBroker(null)
+      loadData()
+    } catch (err: any) {
+      showToast(err?.message || 'Failed to update broker', 'error')
+    } finally {
+      setSubmittingEdit(false)
+    }
+  }
+
+  const openComposeEmail = (b: RealtyBroker) => {
+    setEmailSubject(`GHL India Ventures — ${b.name}`)
+    setEmailBody(
+      `Dear ${b.name},\n\n` +
+      `We'd like to connect with you regarding an opportunity that may be a strong fit for your portfolio.\n\n` +
+      `Please reply to this email at your convenience so we can set up a call.\n\n` +
+      `Warm regards,\nGHL India Ventures`
+    )
+    setComposeEmailOpen(true)
+  }
+
+  const handleSendEmailToBroker = async () => {
+    if (!selectedBroker) return
+    const recipient = (selectedBroker.email || '').trim()
+    if (!recipient) {
+      showToast('No email on file for this broker', 'error')
+      return
+    }
+    if (!emailSubject.trim()) {
+      showToast('Please enter a subject', 'error')
+      return
+    }
+    if (!emailBody.trim()) {
+      showToast('Please enter a message', 'error')
+      return
+    }
+
+    setSendingEmail(true)
+    try {
+      const res = await fetch(`${getFunctionBase()}/.netlify/functions/send-email`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          recipients: [recipient],
+          subject: emailSubject.trim(),
+          body: emailBody.trim(),
+        }),
+      })
+      const data = await res.json().catch(() => ({} as Record<string, unknown>))
+      if (res.ok && (data as any).success) {
+        showToast(`Email sent to ${selectedBroker.name}`, 'success')
+        // Audit the outreach
+        if (isSupabaseConfigured()) {
+          try {
+            const sb = supabase as any
+            const { data: { user } } = await sb.auth.getUser()
+            if (user?.id) {
+              await sb.from('notifications').insert({
+                user_id: user.id,
+                title: 'Broker emailed',
+                message: `Sent "${emailSubject.trim()}" to ${selectedBroker.name} (${recipient}).`,
+                type: 'success',
+                link: '/admin/realty-brokers',
+                metadata: { broker_id: selectedBroker.id, broker_name: selectedBroker.name },
+              })
+            }
+          } catch { /* non-blocking */ }
+        }
+        setComposeEmailOpen(false)
+        setSelectedBroker(null)
+      } else {
+        const errList = Array.isArray((data as { errors?: unknown }).errors) ? (data as { errors: string[] }).errors : []
+        const reason = (data as { error?: string }).error || errList[0] || `Failed to send email (HTTP ${res.status})`
+        showToast(reason, 'error')
+      }
+    } catch (err: any) {
+      showToast(err?.message || 'Network error — please try again', 'error')
+    } finally {
+      setSendingEmail(false)
+    }
+  }
   const [brokerForm, setBrokerForm] = useState({
     name: '',
     email: '',
@@ -233,7 +405,7 @@ export default function RealtyBrokersModule({ subTab, navigate, showToast }: Rea
       </div>
 
       {/* Content based on sub-tab */}
-      {subTab === null && <BrokerDirectory brokers={brokers} onSelect={setSelectedBroker} showToast={showToast} />}
+      {subTab === null && <BrokerDirectory brokers={brokers} onSelect={setSelectedBroker} onEdit={openEditBroker} />}
       {subTab === 'inquiries' && <InquiriesView inquiries={inquiries} brokers={brokers} onSelect={setSelectedInquiry} onCreated={loadData} showToast={showToast} />}
       {subTab === 'analytics' && <AnalyticsView brokers={brokers} inquiries={inquiries} />}
 
@@ -249,30 +421,13 @@ export default function RealtyBrokersModule({ subTab, navigate, showToast }: Rea
             <div className="flex gap-2 justify-end">
               <ModalButton
                 variant="primary"
-                onClick={async () => {
-                  // Open the user's mail client pre-filled and log the outreach attempt
-                  // in notifications so admins have an audit trail of who contacted whom.
+                onClick={() => {
                   const email = (selectedBroker.email || '').trim()
-                  const subject = encodeURIComponent(`GHL India Ventures — ${selectedBroker.name}`)
-                  if (email) window.open(`mailto:${email}?subject=${subject}`, '_blank', 'noopener,noreferrer')
-                  if (isSupabaseConfigured()) {
-                    try {
-                      const sb = supabase as any
-                      const { data: { user } } = await sb.auth.getUser()
-                      if (user?.id) {
-                        await sb.from('notifications').insert({
-                          user_id: user.id,
-                          title: 'Broker contacted',
-                          message: `You opened a contact draft for ${selectedBroker.name} (${email || 'no email'}).`,
-                          type: 'info',
-                          link: '/admin/realty-brokers',
-                          metadata: { broker_id: selectedBroker.id, broker_name: selectedBroker.name },
-                        })
-                      }
-                    } catch { /* non-blocking */ }
+                  if (!email) {
+                    showToast('No email on file — check the broker profile', 'warning')
+                    return
                   }
-                  showToast(email ? `Drafted email to ${selectedBroker.name}` : 'No email on file — check the broker profile', email ? 'success' : 'warning')
-                  setSelectedBroker(null)
+                  openComposeEmail(selectedBroker)
                 }}
               >Contact Broker</ModalButton>
               <ModalButton onClick={() => setSelectedBroker(null)}>Close</ModalButton>
@@ -612,15 +767,131 @@ export default function RealtyBrokersModule({ subTab, navigate, showToast }: Rea
         theme="dark"
         portal="admin"
       />
+
+      {/* Edit Broker Modal */}
+      <AdminModal
+        isOpen={!!editBroker}
+        onClose={() => setEditBroker(null)}
+        title="Edit Broker"
+        subtitle={editBroker ? editBroker.name : undefined}
+        maxWidth="max-w-3xl"
+        footer={
+          <div className="flex justify-end gap-3">
+            <button onClick={() => setEditBroker(null)} disabled={submittingEdit} className="px-4 py-2 rounded-xl text-sm font-medium text-gray-400 hover:text-white hover:bg-white/[0.06] transition-colors disabled:opacity-50">Cancel</button>
+            <button onClick={handleEditSubmit} disabled={submittingEdit} className="px-5 py-2 rounded-xl text-sm font-medium text-white bg-brand-red hover:bg-red-600 transition-colors disabled:opacity-50">{submittingEdit ? 'Saving…' : 'Save Changes'}</button>
+          </div>
+        }
+      >
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label className="block text-xs font-medium text-gray-400 mb-1.5">Broker Name *</label>
+            <input type="text" value={editForm.name} onChange={(e) => handleEditFormChange('name', e.target.value)} className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-brand-red/40 focus:ring-1 focus:ring-brand-red/20" />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-gray-400 mb-1.5">Email *</label>
+            <input type="email" value={editForm.email} onChange={(e) => handleEditFormChange('email', e.target.value)} className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-brand-red/40 focus:ring-1 focus:ring-brand-red/20" />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-gray-400 mb-1.5">Phone *</label>
+            <input type="tel" value={editForm.phone} onChange={(e) => handleEditFormChange('phone', e.target.value)} className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-brand-red/40 focus:ring-1 focus:ring-brand-red/20" />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-gray-400 mb-1.5">Company Name</label>
+            <input type="text" value={editForm.company} onChange={(e) => handleEditFormChange('company', e.target.value)} className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-brand-red/40 focus:ring-1 focus:ring-brand-red/20" />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-gray-400 mb-1.5">RERA Registration ID</label>
+            <input type="text" value={editForm.reraId} onChange={(e) => handleEditFormChange('reraId', e.target.value)} className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-brand-red/40 focus:ring-1 focus:ring-brand-red/20" />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-gray-400 mb-1.5">City</label>
+            <select value={editForm.city} onChange={(e) => handleEditFormChange('city', e.target.value)} className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-brand-red/40 focus:ring-1 focus:ring-brand-red/20">
+              <option value="Chennai">Chennai</option>
+              <option value="Bangalore">Bangalore</option>
+              <option value="Coimbatore">Coimbatore</option>
+              <option value="Hosur">Hosur</option>
+              <option value="Hyderabad">Hyderabad</option>
+              <option value="Mumbai">Mumbai</option>
+              <option value="Pune">Pune</option>
+            </select>
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-gray-400 mb-1.5">Specialization</label>
+            <select value={editForm.specialization} onChange={(e) => handleEditFormChange('specialization', e.target.value)} className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-brand-red/40 focus:ring-1 focus:ring-brand-red/20">
+              <option value="residential">Residential</option>
+              <option value="commercial">Commercial</option>
+              <option value="land">Land</option>
+              <option value="industrial">Industrial</option>
+              <option value="mixed-use">Mixed-Use</option>
+            </select>
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-gray-400 mb-1.5">Status</label>
+            <select value={editForm.status} onChange={(e) => handleEditFormChange('status', e.target.value)} className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-brand-red/40 focus:ring-1 focus:ring-brand-red/20">
+              <option value="active">Active</option>
+              <option value="inactive">Inactive</option>
+              <option value="pending-verification">Pending Verification</option>
+              <option value="suspended">Suspended</option>
+            </select>
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-gray-400 mb-1.5">Total Deals</label>
+            <input type="number" min="0" step="1" value={editForm.totalDeals} onChange={(e) => handleEditFormChange('totalDeals', e.target.value)} className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-brand-red/40 focus:ring-1 focus:ring-brand-red/20" />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-gray-400 mb-1.5">Total Deal Value (₹)</label>
+            <input type="number" min="0" step="1" value={editForm.totalValue} onChange={(e) => handleEditFormChange('totalValue', e.target.value)} placeholder="e.g. 50000000" className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-brand-red/40 focus:ring-1 focus:ring-brand-red/20" />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-gray-400 mb-1.5">Commission Earned (₹)</label>
+            <input type="number" min="0" step="1" value={editForm.commission} onChange={(e) => handleEditFormChange('commission', e.target.value)} className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-brand-red/40 focus:ring-1 focus:ring-brand-red/20" />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-gray-400 mb-1.5">Rating (0–5)</label>
+            <input type="number" min="0" max="5" step="0.1" value={editForm.rating} onChange={(e) => handleEditFormChange('rating', e.target.value)} className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-brand-red/40 focus:ring-1 focus:ring-brand-red/20" />
+          </div>
+          <div className="sm:col-span-2">
+            <label className="block text-xs font-medium text-gray-400 mb-1.5">Tags (comma separated)</label>
+            <input type="text" value={editForm.tags} onChange={(e) => handleEditFormChange('tags', e.target.value)} placeholder="e.g. 5y exp, 2.5% commission, top-performer" className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-brand-red/40 focus:ring-1 focus:ring-brand-red/20" />
+          </div>
+        </div>
+      </AdminModal>
+
+      {/* Compose Email Modal */}
+      <AdminModal
+        isOpen={composeEmailOpen}
+        onClose={() => setComposeEmailOpen(false)}
+        title="Email Broker"
+        subtitle={selectedBroker ? `${selectedBroker.name} <${selectedBroker.email}>` : undefined}
+        maxWidth="max-w-2xl"
+        footer={
+          <div className="flex justify-end gap-3">
+            <button onClick={() => setComposeEmailOpen(false)} disabled={sendingEmail} className="px-4 py-2 rounded-xl text-sm font-medium text-gray-400 hover:text-white hover:bg-white/[0.06] transition-colors disabled:opacity-50">Cancel</button>
+            <button onClick={handleSendEmailToBroker} disabled={sendingEmail} className="px-5 py-2 rounded-xl text-sm font-medium text-white bg-brand-red hover:bg-red-600 transition-colors disabled:opacity-50">{sendingEmail ? 'Sending…' : 'Send Email'}</button>
+          </div>
+        }
+      >
+        <div className="space-y-4">
+          <div>
+            <label className="block text-xs font-medium text-gray-400 mb-1.5">Subject</label>
+            <input type="text" value={emailSubject} onChange={(e) => setEmailSubject(e.target.value)} className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-brand-red/40 focus:ring-1 focus:ring-brand-red/20" />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-gray-400 mb-1.5">Message</label>
+            <textarea value={emailBody} onChange={(e) => setEmailBody(e.target.value)} rows={10} className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-brand-red/40 focus:ring-1 focus:ring-brand-red/20 resize-none" />
+            <p className="text-[10px] text-gray-600 mt-1">Sent via Resend from noreply@ghlindiaventures.com. Replies go to info@ghlindiaventures.com.</p>
+          </div>
+        </div>
+      </AdminModal>
     </div>
   )
 }
 
 // ── Broker Directory Sub-view ──────────────────────────────────────
-function BrokerDirectory({ brokers, onSelect, showToast }: {
+function BrokerDirectory({ brokers, onSelect, onEdit }: {
   brokers: RealtyBroker[]
   onSelect: (b: RealtyBroker) => void
-  showToast: (msg: string, type?: 'success' | 'error' | 'info' | 'warning') => void
+  onEdit: (b: RealtyBroker) => void
 }) {
   const columns: Column<RealtyBroker>[] = [
     {
@@ -712,7 +983,7 @@ function BrokerDirectory({ brokers, onSelect, showToast }: {
             <Eye className="w-3.5 h-3.5" />
           </button>
           <button
-            onClick={(e) => { e.stopPropagation(); showToast(`Editing ${row.name}...`, 'info') }}
+            onClick={(e) => { e.stopPropagation(); onEdit(row) }}
             className="p-1.5 rounded-lg text-gray-500 hover:text-white hover:bg-white/[0.08] transition-colors"
             title="Edit Broker"
           >
