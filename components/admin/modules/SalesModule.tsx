@@ -17,6 +17,7 @@ import LeadManagementModule from '../../shared/LeadManagementModule'
 import ReferralsTab from './ReferralsTab'
 import StartupApplicationsTab from './StartupApplicationsTab'
 import NRIConsultationsTab from './NRIConsultationsTab'
+import CreateAccountTab from './CreateAccountTab'
 
 // Wrapper to render LeadManagementModule for specific sub-tabs within Sales
 function LeadMgmtWrapper({ subTab, navigate, showToast }: { subTab: string; navigate: (p: string) => void; showToast: (m: string, t?: any) => void }) {
@@ -34,6 +35,7 @@ import { supabase, isSupabaseConfigured } from '@/lib/supabase/client'
 // ── Sub-tabs ─────────────────────────────────────────────────────
 const SALES_TABS = [
   { id: 'pipeline', label: 'Pipeline', icon: TrendingUp },
+  { id: 'create-account', label: 'Create Account', icon: UserPlus },
   { id: 'leads', label: 'Lead List', icon: Users },
   { id: 'referrals', label: 'Referrals', icon: Users },
   { id: 'startup-applications', label: 'Startup Apps', icon: Target },
@@ -283,6 +285,7 @@ export default function SalesModule({ subTab, navigate, showToast }: SalesModule
       {/* Tab Content */}
       <div className="admin-tab-switch">
         {activeTab === 'pipeline' && <PipelineTab leads={leads} onViewLead={(l) => { setSelectedLead(l); setLeadModalOpen(true) }} onDeleteLead={handleDeleteLead} showToast={showToast} />}
+        {activeTab === 'create-account' && <CreateAccountTab showToast={showToast} />}
         {activeTab === 'leads' && <LeadListTab leads={leads} onViewLead={(l) => { setSelectedLead(l); setLeadModalOpen(true) }} onDeleteLead={handleDeleteLead} showToast={showToast} />}
         {activeTab === 'referrals' && <ReferralsTab showToast={showToast} />}
         {activeTab === 'startup-applications' && <StartupApplicationsTab showToast={showToast} />}

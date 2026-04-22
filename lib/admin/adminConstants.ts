@@ -45,6 +45,7 @@ export const ADMIN_SIDEBAR_ITEMS: SidebarItem[] = [
     permission: 'view:sales',
     subItems: [
       { id: 'sales', label: 'Dashboard' },
+      { id: 'sales/create-account', label: 'Create Account' },
       { id: 'sales/pipeline', label: 'Pipeline' },
       { id: 'sales/leads', label: 'Leads' },
       { id: 'sales/referrals', label: 'Referrals' },
