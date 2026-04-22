@@ -159,54 +159,38 @@ async function sendEmail(
   }
 }
 
-async function sendWhatsApp(
-  phone: string,
-  messageText: string,
-  cfg: { endpoint: string; token: string; templateName: string; templateLang: string },
-): Promise<SendResult> {
-  const e164 = e164ish(phone)
-  if (!e164) return { status: 'failed', error: 'Invalid phone number' }
-  const base = cfg.endpoint.replace(/\/+$/, '')
-
+// Best-effort: add the recipient to Wati's contact database. Idempotent —
+// Wati returns an error if the contact already exists, which we ignore.
+// Without this step numbers that have never spoken with the business
+// WhatsApp get "Invalid Contact" on sendSessionMessage.
+async function watiAddContact(base: string, token: string, e164: string, name: string): Promise<void> {
   try {
-    if (cfg.templateName) {
-      // Template message — can be sent outside 24h session window.
-      // Single {{1}} body variable = messageText.
-      const url = `${base}/api/v1/sendTemplateMessage?whatsappNumber=${encodeURIComponent(e164)}`
-      const resp = await fetch(url, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${cfg.token}` },
-        body: JSON.stringify({
-          template_name: cfg.templateName,
-          broadcast_name: 'ghl_broadcast',
-          parameters: [{ name: '1', value: messageText.slice(0, 900) }],
-          language: cfg.templateLang,
-        }),
-      })
-      const j: any = await resp.json().catch(() => ({}))
-      if (!resp.ok || j?.result === false) {
-        return { status: 'failed', error: j?.info || j?.error || `HTTP ${resp.status}` }
-      }
-      return { status: 'sent', provider_id: j?.messageId || j?.id }
-    }
+    await fetch(`${base}/api/v1/addContact/${encodeURIComponent(e164)}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+      body: JSON.stringify({ name: name || e164, customParams: [] }),
+    })
+  } catch { /* swallow — the subsequent send will surface any real error */ }
+}
 
-    // Free-form session message. Only works for contacts inside the 24h
-    // conversation window — otherwise Wati will reject with a clear error.
-    // Wati's multi-tenant API expects messageText as a QUERY parameter, not
-    // in the JSON body. The empty JSON body {} is required so Content-Length
-    // is non-zero (some edge runtimes strip bodyless POSTs).
-    const url = `${base}/api/v1/sendSessionMessage/${encodeURIComponent(e164)}?messageText=${encodeURIComponent(messageText)}`
+async function watiSendTemplate(
+  base: string, token: string, e164: string, messageText: string, templateName: string, templateLang: string,
+): Promise<SendResult> {
+  try {
+    const url = `${base}/api/v1/sendTemplateMessage?whatsappNumber=${encodeURIComponent(e164)}`
     const resp = await fetch(url, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${cfg.token}` },
-      body: '{}',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+      body: JSON.stringify({
+        template_name: templateName,
+        broadcast_name: 'ghl_broadcast',
+        parameters: [{ name: '1', value: messageText.slice(0, 900) }],
+        language: templateLang,
+      }),
     })
     const raw = await resp.text()
     let j: any = {}
     try { j = JSON.parse(raw) } catch { /* keep raw */ }
-    // Wati returns { result: "success" | true, ... } on success and
-    // { result: false, info: "..." } on failure. Also guard against plain
-    // { ok: true } and unexpected error shapes.
     const succeeded = resp.ok && (j?.result === true || j?.result === 'success' || j?.ok === true || j?.success === true)
     if (!succeeded) {
       return { status: 'failed', error: j?.info || j?.message || j?.error || raw.slice(0, 200) || `HTTP ${resp.status}` }
@@ -215,6 +199,83 @@ async function sendWhatsApp(
   } catch (err: any) {
     return { status: 'failed', error: err?.message || 'network error' }
   }
+}
+
+async function watiSendSession(
+  base: string, token: string, e164: string, messageText: string,
+): Promise<SendResult> {
+  try {
+    // Wati's multi-tenant API expects messageText as a QUERY parameter, not
+    // in the JSON body. The empty JSON body {} is required so Content-Length
+    // is non-zero (some edge runtimes strip bodyless POSTs).
+    const url = `${base}/api/v1/sendSessionMessage/${encodeURIComponent(e164)}?messageText=${encodeURIComponent(messageText)}`
+    const resp = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+      body: '{}',
+    })
+    const raw = await resp.text()
+    let j: any = {}
+    try { j = JSON.parse(raw) } catch { /* keep raw */ }
+    const succeeded = resp.ok && (j?.result === true || j?.result === 'success' || j?.ok === true || j?.success === true)
+    if (!succeeded) {
+      return { status: 'failed', error: j?.info || j?.message || j?.error || raw.slice(0, 200) || `HTTP ${resp.status}` }
+    }
+    return { status: 'sent', provider_id: j?.messageId || j?.id }
+  } catch (err: any) {
+    return { status: 'failed', error: err?.message || 'network error' }
+  }
+}
+
+// WhatsApp (Wati) entry point used by the broadcast loop.
+//   1. Pre-register the contact (idempotent).
+//   2. If admin configured a Meta-approved template, send via template
+//      (works for any contact, no session required).
+//   3. Otherwise try a free-form session message. If Wati reports a
+//      session/contact problem AND a template name is configured, retry
+//      through the template path — covers mixed recipient lists where
+//      some contacts have active sessions and some don't.
+async function sendWhatsApp(
+  phone: string,
+  messageText: string,
+  cfg: { endpoint: string; token: string; templateName: string; templateLang: string; recipientName: string },
+): Promise<SendResult> {
+  const e164 = e164ish(phone)
+  if (!e164) return { status: 'failed', error: 'Invalid phone number' }
+  const base = cfg.endpoint.replace(/\/+$/, '')
+
+  await watiAddContact(base, cfg.token, e164, cfg.recipientName)
+
+  if (cfg.templateName) {
+    return watiSendTemplate(base, cfg.token, e164, messageText, cfg.templateName, cfg.templateLang)
+  }
+
+  const sessionResult = await watiSendSession(base, cfg.token, e164, messageText)
+  if (sessionResult.status === 'sent') return sessionResult
+
+  // Session-specific failures that a template could rescue. If the admin
+  // has a template configured but didn't set it as primary, we still try.
+  const err = (sessionResult.error || '').toLowerCase()
+  const isSessionIssue = err.includes('invalid contact')
+    || err.includes('ticket')
+    || err.includes('session')
+    || err.includes('expired')
+    || err.includes('24')
+  if (isSessionIssue && cfg.templateName) {
+    const templateResult = await watiSendTemplate(base, cfg.token, e164, messageText, cfg.templateName, cfg.templateLang)
+    if (templateResult.status === 'sent') return templateResult
+    // If template also fails, surface the more informative of the two errors.
+    return { status: 'failed', error: `session: ${sessionResult.error} | template: ${templateResult.error}` }
+  }
+
+  // Rewrite the most common opaque Wati errors into actionable guidance.
+  if (isSessionIssue) {
+    return {
+      status: 'failed',
+      error: `${sessionResult.error} — this contact isn't inside the 24h WhatsApp session window. Either have them message your Wati business number first, or set WATI_TEMPLATE_NAME in Netlify to broadcast via an approved template.`,
+    }
+  }
+  return sessionResult
 }
 
 export default async (request: Request) => {
@@ -376,6 +437,7 @@ export default async (request: Request) => {
       } else {
         const res = await sendWhatsApp(mobile, waText, {
           endpoint: watiEndpoint, token: watiToken, templateName: watiTemplate, templateLang: watiLang,
+          recipientName: r.name || '',
         })
         deliveryRows.push({
           campaign_id: campaign.id, lead_id: r.id, recipient_name: r.name, email: r.email, mobile,
