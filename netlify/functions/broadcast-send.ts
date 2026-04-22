@@ -192,15 +192,24 @@ async function sendWhatsApp(
 
     // Free-form session message. Only works for contacts inside the 24h
     // conversation window — otherwise Wati will reject with a clear error.
-    const url = `${base}/api/v1/sendSessionMessage/${encodeURIComponent(e164)}`
+    // Wati's multi-tenant API expects messageText as a QUERY parameter, not
+    // in the JSON body. The empty JSON body {} is required so Content-Length
+    // is non-zero (some edge runtimes strip bodyless POSTs).
+    const url = `${base}/api/v1/sendSessionMessage/${encodeURIComponent(e164)}?messageText=${encodeURIComponent(messageText)}`
     const resp = await fetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${cfg.token}` },
-      body: JSON.stringify({ messageText }),
+      body: '{}',
     })
-    const j: any = await resp.json().catch(() => ({}))
-    if (!resp.ok || j?.result === false) {
-      return { status: 'failed', error: j?.info || j?.error || `HTTP ${resp.status}` }
+    const raw = await resp.text()
+    let j: any = {}
+    try { j = JSON.parse(raw) } catch { /* keep raw */ }
+    // Wati returns { result: "success" | true, ... } on success and
+    // { result: false, info: "..." } on failure. Also guard against plain
+    // { ok: true } and unexpected error shapes.
+    const succeeded = resp.ok && (j?.result === true || j?.result === 'success' || j?.ok === true || j?.success === true)
+    if (!succeeded) {
+      return { status: 'failed', error: j?.info || j?.message || j?.error || raw.slice(0, 200) || `HTTP ${resp.status}` }
     }
     return { status: 'sent', provider_id: j?.messageId || j?.id }
   } catch (err: any) {
