@@ -603,12 +603,51 @@ export async function fetchAssets() {
 }
 
 // ── Realty Brokers ──────────────────────────────────────────
+// DB uses snake_case, the Admin UI / RealtyBroker type uses camelCase.
+// Map the columns here so every consumer gets the shape they expect
+// (reraId, totalDeals, totalValue, joinDate, lastActive, assignedRM).
 export async function fetchRealtyBrokers() {
-  return queryTable<any>('realty_brokers')
+  const rows = await queryTable<any>('realty_brokers')
+  return (rows || []).map((r: any) => ({
+    id: r.id,
+    name: r.name || '',
+    email: r.email || '',
+    phone: r.phone || '',
+    company: r.company || '',
+    reraId: r.rera_id || '',
+    specialization: r.specialization || 'residential',
+    city: r.city || '',
+    status: r.status || 'pending-verification',
+    totalDeals: Number(r.total_deals) || 0,
+    totalValue: Number(r.total_value) || 0,
+    commission: Number(r.commission) || 0,
+    rating: Number(r.rating) || 0,
+    joinDate: r.join_date || r.created_at || '',
+    lastActive: r.last_active || r.updated_at || r.created_at || '',
+    assignedRM: r.assigned_rm || undefined,
+    tags: Array.isArray(r.tags) ? r.tags : [],
+  }))
 }
 
 export async function fetchBrokerInquiries() {
-  return queryTable<any>('broker_inquiries')
+  const rows = await queryTable<any>('broker_inquiries')
+  return (rows || []).map((r: any) => ({
+    id: r.id,
+    brokerId: r.broker_id || undefined,
+    brokerName: r.broker_name || '',
+    source: r.source || 'website',
+    type: r.type || 'realty',
+    subject: r.subject || '',
+    message: r.message || '',
+    status: r.status || 'new',
+    priority: r.priority || 'medium',
+    assignedTo: r.assigned_to || undefined,
+    propertyType: r.property_type || undefined,
+    location: r.location || undefined,
+    estimatedValue: r.estimated_value != null ? Number(r.estimated_value) : undefined,
+    createdDate: r.created_at || '',
+    lastUpdated: r.updated_at || r.created_at || '',
+  }))
 }
 
 // ── Notifications ───────────────────────────────────────────

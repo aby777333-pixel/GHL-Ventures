@@ -109,30 +109,68 @@ export default function RealtyBrokersModule({ subTab, navigate, showToast }: Rea
     commissionRate: '',
     status: 'pending-verification' as string,
   })
+  const [submittingBroker, setSubmittingBroker] = useState(false)
 
   const handleBrokerFormChange = (field: string, value: string) => {
     setBrokerForm(prev => ({ ...prev, [field]: value }))
   }
 
-  const handleBrokerSubmit = () => {
-    if (!brokerForm.name || !brokerForm.email || !brokerForm.phone) {
-      showToast('Please fill in all required fields', 'error')
+  const resetBrokerForm = () => setBrokerForm({
+    name: '', email: '', phone: '', company: '', reraId: '',
+    city: 'Chennai', specialization: 'residential',
+    experience: '', commissionRate: '',
+    status: 'pending-verification',
+  })
+
+  const handleBrokerSubmit = async () => {
+    if (!brokerForm.name.trim() || !brokerForm.email.trim() || !brokerForm.phone.trim()) {
+      showToast('Please fill in Name, Email and Phone', 'error')
       return
     }
-    showToast('Broker registered successfully', 'success')
-    setAddBrokerOpen(false)
-    setBrokerForm({
-      name: '',
-      email: '',
-      phone: '',
-      company: '',
-      reraId: '',
-      city: 'Chennai',
-      specialization: 'residential',
-      experience: '',
-      commissionRate: '',
-      status: 'pending-verification',
-    })
+    if (!isSupabaseConfigured()) {
+      showToast('Database is not configured', 'error')
+      return
+    }
+    // Capture the extras the DB table doesn't have a dedicated column for
+    // (experience, commission rate) as tags so they're still retrievable.
+    const extraTags: string[] = []
+    if (brokerForm.experience.trim()) extraTags.push(`${brokerForm.experience.trim()}y exp`)
+    if (brokerForm.commissionRate.trim()) extraTags.push(`${brokerForm.commissionRate.trim()}% commission`)
+
+    setSubmittingBroker(true)
+    try {
+      const sb = supabase as any
+      const { data, error } = await sb.from('realty_brokers').insert({
+        name: brokerForm.name.trim(),
+        email: brokerForm.email.trim(),
+        phone: brokerForm.phone.trim(),
+        company: brokerForm.company.trim() || null,
+        rera_id: brokerForm.reraId.trim() || null,
+        city: brokerForm.city,
+        specialization: brokerForm.specialization,
+        status: brokerForm.status,
+        total_deals: 0,
+        total_value: 0,
+        commission: 0,
+        rating: 0,
+        join_date: new Date().toISOString().split('T')[0],
+        last_active: new Date().toISOString(),
+        tags: extraTags,
+      }).select().single()
+
+      if (error) {
+        showToast(error.message || 'Failed to register broker', 'error')
+        return
+      }
+      showToast(`Broker ${data?.name || brokerForm.name} registered`, 'success')
+      setAddBrokerOpen(false)
+      resetBrokerForm()
+      loadData() // refresh directory + KPIs
+    } catch (err: any) {
+      showToast(err?.message || 'Failed to register broker', 'error')
+    } finally {
+      setSubmittingBroker(false)
+    }
   }
 
   // ── KPIs ────────────────────────────────────────────────────────
@@ -196,7 +234,7 @@ export default function RealtyBrokersModule({ subTab, navigate, showToast }: Rea
 
       {/* Content based on sub-tab */}
       {subTab === null && <BrokerDirectory brokers={brokers} onSelect={setSelectedBroker} showToast={showToast} />}
-      {subTab === 'inquiries' && <InquiriesView inquiries={inquiries} brokers={brokers} onSelect={setSelectedInquiry} showToast={showToast} />}
+      {subTab === 'inquiries' && <InquiriesView inquiries={inquiries} brokers={brokers} onSelect={setSelectedInquiry} onCreated={loadData} showToast={showToast} />}
       {subTab === 'analytics' && <AnalyticsView brokers={brokers} inquiries={inquiries} />}
 
       {/* Broker Detail Modal */}
@@ -425,8 +463,8 @@ export default function RealtyBrokersModule({ subTab, navigate, showToast }: Rea
         maxWidth="max-w-3xl"
         footer={
           <div className="flex justify-end gap-3">
-            <button onClick={() => setAddBrokerOpen(false)} className="px-4 py-2 rounded-xl text-sm font-medium text-gray-400 hover:text-white hover:bg-white/[0.06] transition-colors">Cancel</button>
-            <button onClick={handleBrokerSubmit} className="px-5 py-2 rounded-xl text-sm font-medium text-white bg-brand-red hover:bg-red-600 transition-colors">Register Broker</button>
+            <button onClick={() => setAddBrokerOpen(false)} disabled={submittingBroker} className="px-4 py-2 rounded-xl text-sm font-medium text-gray-400 hover:text-white hover:bg-white/[0.06] transition-colors disabled:opacity-50">Cancel</button>
+            <button onClick={handleBrokerSubmit} disabled={submittingBroker} className="px-5 py-2 rounded-xl text-sm font-medium text-white bg-brand-red hover:bg-red-600 transition-colors disabled:opacity-50">{submittingBroker ? 'Registering…' : 'Register Broker'}</button>
           </div>
         }
       >
@@ -711,13 +749,15 @@ function BrokerDirectory({ brokers, onSelect, showToast }: {
 }
 
 // ── Inquiries Sub-view ─────────────────────────────────────────────
-function InquiriesView({ inquiries, brokers, onSelect, showToast }: {
+function InquiriesView({ inquiries, brokers, onSelect, onCreated, showToast }: {
   inquiries: BrokerInquiry[]
   brokers: RealtyBroker[]
   onSelect: (i: BrokerInquiry) => void
+  onCreated?: () => void
   showToast: (msg: string, type?: 'success' | 'error' | 'info' | 'warning') => void
 }) {
   const [addInquiryOpen, setAddInquiryOpen] = useState(false)
+  const [submittingInquiry, setSubmittingInquiry] = useState(false)
   const [inquiryForm, setInquiryForm] = useState({
     clientName: '',
     clientPhone: '',
@@ -734,24 +774,84 @@ function InquiriesView({ inquiries, brokers, onSelect, showToast }: {
     setInquiryForm(prev => ({ ...prev, [field]: value }))
   }
 
-  const handleInquirySubmit = () => {
-    if (!inquiryForm.clientName) {
+  const resetInquiryForm = () => setInquiryForm({
+    clientName: '', clientPhone: '', clientEmail: '',
+    propertyType: 'Residential Apartment', preferredLocation: '',
+    budgetRange: '', priority: 'medium', notes: '', assignedBroker: '',
+  })
+
+  // Best-effort parse of budget strings like "50L - 1Cr" / "2.5Cr" into a
+  // numeric rupee value (estimated_value column is numeric). Lakh = 1e5,
+  // crore = 1e7. Anything unparseable stays null.
+  const parseBudgetToRupees = (input: string): number | null => {
+    const s = (input || '').trim().toLowerCase()
+    if (!s) return null
+    // Pick the first number in the string.
+    const m = s.match(/([\d.]+)\s*(cr|crore|l|lac|lakh|k)?/i)
+    if (!m) return null
+    const n = parseFloat(m[1])
+    if (isNaN(n)) return null
+    const unit = (m[2] || '').toLowerCase()
+    if (unit === 'cr' || unit === 'crore') return Math.round(n * 1e7)
+    if (unit === 'l' || unit === 'lac' || unit === 'lakh') return Math.round(n * 1e5)
+    if (unit === 'k') return Math.round(n * 1e3)
+    return Math.round(n)
+  }
+
+  const handleInquirySubmit = async () => {
+    if (!inquiryForm.clientName.trim()) {
       showToast('Please enter the client name', 'error')
       return
     }
-    showToast('Inquiry created successfully', 'success')
-    setAddInquiryOpen(false)
-    setInquiryForm({
-      clientName: '',
-      clientPhone: '',
-      clientEmail: '',
-      propertyType: 'Residential Apartment',
-      preferredLocation: '',
-      budgetRange: '',
-      priority: 'medium',
-      notes: '',
-      assignedBroker: '',
-    })
+    if (!isSupabaseConfigured()) {
+      showToast('Database is not configured', 'error')
+      return
+    }
+
+    // Pick the broker row that matches the selected name so broker_id is
+    // linked for future reporting. Falls back to null if the admin hasn't
+    // picked one.
+    const assigned = brokers.find(b => b.name === inquiryForm.assignedBroker)
+    const brokerName = assigned?.name || inquiryForm.assignedBroker.trim() || 'Unassigned'
+    const subject = `Inquiry: ${inquiryForm.clientName.trim()} — ${inquiryForm.propertyType}`
+    const messageParts = [
+      `Client: ${inquiryForm.clientName.trim()}`,
+      inquiryForm.clientPhone.trim() ? `Phone: ${inquiryForm.clientPhone.trim()}` : '',
+      inquiryForm.clientEmail.trim() ? `Email: ${inquiryForm.clientEmail.trim()}` : '',
+      inquiryForm.budgetRange.trim() ? `Budget: ${inquiryForm.budgetRange.trim()}` : '',
+      inquiryForm.notes.trim() ? `Notes: ${inquiryForm.notes.trim()}` : '',
+    ].filter(Boolean).join('\n')
+
+    setSubmittingInquiry(true)
+    try {
+      const sb = supabase as any
+      const { error } = await sb.from('broker_inquiries').insert({
+        broker_id: assigned?.id || null,
+        broker_name: brokerName,
+        source: 'direct',
+        type: 'realty',
+        subject,
+        message: messageParts || null,
+        status: 'new',
+        priority: inquiryForm.priority,
+        property_type: inquiryForm.propertyType || null,
+        location: inquiryForm.preferredLocation.trim() || null,
+        estimated_value: parseBudgetToRupees(inquiryForm.budgetRange),
+      })
+
+      if (error) {
+        showToast(error.message || 'Failed to create inquiry', 'error')
+        return
+      }
+      showToast('Inquiry created', 'success')
+      setAddInquiryOpen(false)
+      resetInquiryForm()
+      onCreated?.()
+    } catch (err: any) {
+      showToast(err?.message || 'Failed to create inquiry', 'error')
+    } finally {
+      setSubmittingInquiry(false)
+    }
   }
 
   const columns: Column<BrokerInquiry>[] = [
@@ -868,8 +968,8 @@ function InquiriesView({ inquiries, brokers, onSelect, showToast }: {
         maxWidth="max-w-3xl"
         footer={
           <div className="flex justify-end gap-3">
-            <button onClick={() => setAddInquiryOpen(false)} className="px-4 py-2 rounded-xl text-sm font-medium text-gray-400 hover:text-white hover:bg-white/[0.06] transition-colors">Cancel</button>
-            <button onClick={handleInquirySubmit} className="px-5 py-2 rounded-xl text-sm font-medium text-white bg-brand-red hover:bg-red-600 transition-colors">Create Inquiry</button>
+            <button onClick={() => setAddInquiryOpen(false)} disabled={submittingInquiry} className="px-4 py-2 rounded-xl text-sm font-medium text-gray-400 hover:text-white hover:bg-white/[0.06] transition-colors disabled:opacity-50">Cancel</button>
+            <button onClick={handleInquirySubmit} disabled={submittingInquiry} className="px-5 py-2 rounded-xl text-sm font-medium text-white bg-brand-red hover:bg-red-600 transition-colors disabled:opacity-50">{submittingInquiry ? 'Creating…' : 'Create Inquiry'}</button>
           </div>
         }
       >
