@@ -122,6 +122,7 @@ export default async (request: Request) => {
     // FROM address is configurable via RESEND_FROM_EMAIL (must belong to a Resend-verified domain).
     // If the domain isn't verified, the Resend error is now surfaced back to the UI (see below).
     const fromEmail = (process.env.RESEND_FROM_EMAIL || 'noreply@ghlindiaventures.com').trim()
+    const replyToEmail = (process.env.RESEND_REPLY_TO || 'info@ghlindiaventures.com').trim()
     const htmlContent = formatEmailHtml(body)
 
     // Send to each recipient
@@ -136,6 +137,7 @@ export default async (request: Request) => {
           body: JSON.stringify({
             from: `${fromName} <${fromEmail}>`,
             to: to.trim(),
+            reply_to: replyToEmail,
             subject: subject.trim(),
             html: htmlContent,
           }),

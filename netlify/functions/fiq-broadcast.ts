@@ -10,7 +10,8 @@
 
    Required env:
      RESEND_API_KEY
-     RESEND_FROM_EMAIL              (optional, default noreply@ghlindiaventures.com)
+     RESEND_FROM_EMAIL              (optional, default noreply@ghlindiaventures.com — must be on a Resend-verified domain)
+     RESEND_REPLY_TO                (optional, default info@ghlindiaventures.com)
      SUPABASE_URL / NEXT_PUBLIC_SUPABASE_URL
      SUPABASE_SERVICE_ROLE_KEY
 
@@ -190,12 +191,12 @@ export default async (request: Request) => {
 
   // 3. Send per channel, per recipient. Results accumulated for audit + response.
   const resendKey = process.env.RESEND_API_KEY || ''
-  // Resend requires the sender domain to be verified on the account. If
-  // RESEND_FROM_EMAIL isn't set (or is set to an unverified domain), fall
-  // back to onboarding@resend.dev which Resend guarantees to work for any
-  // account. Once the ghlindiaventures.com domain is verified in Resend,
-  // set RESEND_FROM_EMAIL=noreply@ghlindiaventures.com in Netlify env vars.
-  const fromEmail = (process.env.RESEND_FROM_EMAIL || 'onboarding@resend.dev').trim()
+  // ghlindiaventures.com is verified on Resend (DKIM + SPF green). Send
+  // from the branded address by default so Gmail/Outlook show a clean
+  // "GHL India Ventures" sender and not an "on behalf of resend.dev"
+  // strip. Override with RESEND_FROM_EMAIL if needed.
+  const fromEmail = (process.env.RESEND_FROM_EMAIL || 'noreply@ghlindiaventures.com').trim()
+  const replyToEmail = (process.env.RESEND_REPLY_TO || 'info@ghlindiaventures.com').trim()
   const waToken = process.env.WHATSAPP_API_TOKEN || ''
   const waPhoneId = process.env.WHATSAPP_PHONE_NUMBER_ID || ''
   const waTemplate = process.env.WHATSAPP_TEMPLATE_NAME || ''
@@ -238,20 +239,29 @@ export default async (request: Request) => {
             body: JSON.stringify({
               from: `GHL India Ventures <${fromEmail}>`,
               to: c.email.trim(),
+              reply_to: replyToEmail,
               subject: `${post.title} — Financial IQ`,
               html: buildEmailHtml(post, articleUrl, unsubUrl),
+              // One-click unsubscribe: satisfies Gmail/Yahoo 2024 bulk
+              // sender rules and raises the "inbox" vs "promotions"
+              // placement odds. The List-Unsubscribe-Post header pairs
+              // with the function's existing GET unsubscribe endpoint.
+              headers: {
+                'List-Unsubscribe': `<${unsubUrl}>`,
+                'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click',
+              },
             }),
           })
           if (!resp.ok) {
             const errText = await resp.text()
             let msg = errText
             try { const j = JSON.parse(errText); msg = j.message || j.error || errText } catch { /* keep */ }
-            // Resend rejects sends from unverified domains AND limits
-            // onboarding@resend.dev to the account owner's own mailbox.
-            // Translate the raw error into something actionable.
+            // If the sender domain gets unverified (DKIM/SPF changes),
+            // Resend returns a "verified domain" error. Surface an
+            // actionable hint instead of a raw message.
             const lower = msg.toLowerCase()
             if (lower.includes('testing emails') || lower.includes('verified domain')) {
-              msg = `${msg}  ·  Fix: verify your sender domain at resend.com/domains, then set RESEND_FROM_EMAIL in Netlify.`
+              msg = `${msg}  ·  Fix: re-verify ${fromEmail.split('@')[1] || 'the sender domain'} at resend.com/domains.`
             }
             const r: BroadcastResult = { channel: 'email', recipient: c.email, client_id: c.id, status: 'failed', error: msg }
             results.push(r); useAudit(r)
