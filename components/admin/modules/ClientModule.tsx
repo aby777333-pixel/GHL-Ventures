@@ -18,6 +18,8 @@ import { getActiveRMs, assignRMToClient, type ActiveRM } from '@/lib/supabase/em
 import { formatINR, formatDate } from '@/lib/admin/adminHooks'
 import type { Client, KYCDocument, KYCStatus } from '@/lib/admin/adminTypes'
 import UploadWithFolderPicker from '@/components/shared/UploadWithFolderPicker'
+import AdminAddKYCModal from './AdminAddKYCModal'
+import { supabase } from '@/lib/supabase/client'
 
 // ── Sub-tabs ─────────────────────────────────────────────────────
 const CLIENT_TABS = [
@@ -43,6 +45,10 @@ export default function ClientModule({ subTab, navigate, showToast }: ClientModu
   const [folderPickerOpen, setFolderPickerOpen] = useState(false)
   const [editingClient, setEditingClient] = useState<Client | null>(null)
   const [clientForm, setClientForm] = useState({ full_name: '', email: '', phone: '', pan: '', risk_profile: 'moderate', assigned_rm: '', total_invested: '' })
+  // Add KYC on behalf of an existing client created without KYC.
+  // addKYCTarget holds the client + resolved user_id (looked up on open).
+  const [addKYCTarget, setAddKYCTarget] = useState<{ client: Client; userId: string } | null>(null)
+  const [resolvingKYCTarget, setResolvingKYCTarget] = useState(false)
 
   const [clients, setClients] = useState<any[]>([])
   const [kycDocs, setKycDocs] = useState<any[]>([])
@@ -74,6 +80,31 @@ export default function ClientModule({ subTab, navigate, showToast }: ClientModu
       showToast(result.error || 'Failed to assign RM', 'error')
     }
   }
+
+  // ── Open Add-KYC modal for a client. Client.id is the clients.id UUID;
+  // we need clients.user_id for the KYC rows (RLS uses auth.uid and the
+  // KYC services want it to link the KYC back to the investor's auth user).
+  const openAddKYCFor = useCallback(async (client: Client) => {
+    setResolvingKYCTarget(true)
+    try {
+      const { data, error } = await (supabase
+        .from('clients')
+        .select('user_id')
+        .eq('id', client.id)
+        .maybeSingle() as any)
+      if (error || !data?.user_id) {
+        showToast('Could not locate the auth user for this client. Ask them to log in once, or contact support.', 'error')
+        return
+      }
+      // Close the profile modal first to avoid stacked-modal backdrop issues,
+      // then open the KYC modal on the next tick.
+      setProfileModalOpen(false)
+      setSelectedClient(null)
+      setTimeout(() => setAddKYCTarget({ client, userId: data.user_id }), 60)
+    } finally {
+      setResolvingKYCTarget(false)
+    }
+  }, [showToast])
 
   // ── KPIs ──────────────────────────────────────────────────────
   const kpis = useMemo(() => {
@@ -193,7 +224,35 @@ export default function ClientModule({ subTab, navigate, showToast }: ClientModu
             </>
           }
         >
-          <ClientProfileContent client={selectedClient} activeRMs={activeRMs} onAssignRM={handleAssignRM} />
+          <ClientProfileContent client={selectedClient} activeRMs={activeRMs} onAssignRM={handleAssignRM} onAddKYC={openAddKYCFor} addingKYC={resolvingKYCTarget} />
+        </AdminModal>
+      )}
+
+      {/* Add KYC Modal — opens when admin clicks "Add KYC" on a client
+          profile whose kyc_status is still pending. Renders the same
+          5-step wizard used during account creation. */}
+      {addKYCTarget && (
+        <AdminModal
+          isOpen={!!addKYCTarget}
+          onClose={() => setAddKYCTarget(null)}
+          title={`Add KYC — ${addKYCTarget.client.name}`}
+          subtitle="Complete Know-Your-Customer on behalf of this client"
+          maxWidth="max-w-4xl"
+          footer={
+            <div className="flex items-center justify-end w-full">
+              <ModalButton onClick={() => setAddKYCTarget(null)}>Close</ModalButton>
+            </div>
+          }
+        >
+          <AdminAddKYCModal
+            clientId={addKYCTarget.client.id}
+            userId={addKYCTarget.userId}
+            initialName={addKYCTarget.client.name}
+            initialEmail={addKYCTarget.client.email}
+            initialPhone={addKYCTarget.client.phone}
+            showToast={showToast}
+            onComplete={() => { loadData() }}
+          />
         </AdminModal>
       )}
 
@@ -856,10 +915,21 @@ function ClientAnalyticsTab({ clients: _clients }: { clients: any[] }) {
 }
 
 // ── Client Profile Modal Content ────────────────────────────────
-function ClientProfileContent({ client, activeRMs, onAssignRM }: { client: Client; activeRMs: ActiveRM[]; onAssignRM: (clientId: string, rmStaffId: string) => void }) {
+function ClientProfileContent({ client, activeRMs, onAssignRM, onAddKYC, addingKYC }: { client: Client; activeRMs: ActiveRM[]; onAssignRM: (clientId: string, rmStaffId: string) => void; onAddKYC?: (client: Client) => void; addingKYC?: boolean }) {
   const returns = client.investedAmount > 0
     ? ((client.currentValue - client.investedAmount) / client.investedAmount * 100).toFixed(1)
     : '0'
+
+  // KYC status handling (per product spec):
+  // - 'pending'     → Not started. Show "Add KYC" button.
+  // - 'submitted' / 'under-review' → Show "KYC Submitted" badge, no action.
+  // - 'approved' / 'verified-ish' → Show "KYC Completed" badge.
+  // - 'rejected'    → Existing reject flow handles it; no "Add KYC" here
+  //                   to avoid creating a duplicate entry (business rule:
+  //                   "Once KYC is submitted, prevent duplicate creation").
+  const kycNotStarted = client.kycStatus === 'pending'
+  const kycInReview = client.kycStatus === 'submitted' || client.kycStatus === 'under-review'
+  const kycCompleted = client.kycStatus === 'approved'
 
   return (
     <div className="space-y-6">
@@ -870,7 +940,11 @@ function ClientProfileContent({ client, activeRMs, onAssignRM }: { client: Clien
         </div>
         <div className="flex-1">
           <div className="flex items-center gap-2 flex-wrap">
-            <AdminBadge label={client.kycStatus.replace('-', ' ')} variant={getKYCBadgeVariant(client.kycStatus)} dot />
+            <AdminBadge
+              label={kycNotStarted ? 'KYC not started' : kycInReview ? 'KYC Submitted' : kycCompleted ? 'KYC Completed' : client.kycStatus.replace('-', ' ')}
+              variant={getKYCBadgeVariant(client.kycStatus)}
+              dot
+            />
             <AdminBadge label={client.accountStatus} variant={getAccountBadgeVariant(client.accountStatus)} />
             <AdminBadge label={client.riskProfile} variant={
               client.riskProfile === 'conservative' ? 'success' :
@@ -879,6 +953,19 @@ function ClientProfileContent({ client, activeRMs, onAssignRM }: { client: Clien
             } />
           </div>
         </div>
+        {/* Add KYC — only when KYC has not been started. Once submitted,
+            hide the button to prevent duplicate KYC creation per spec. */}
+        {kycNotStarted && onAddKYC && (
+          <button
+            type="button"
+            onClick={() => onAddKYC(client)}
+            disabled={addingKYC}
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold bg-brand-red/20 border border-brand-red/30 text-white hover:bg-brand-red/30 disabled:opacity-50 whitespace-nowrap"
+          >
+            <ShieldCheck className="w-4 h-4" />
+            {addingKYC ? 'Opening…' : 'Add KYC'}
+          </button>
+        )}
       </div>
 
       {/* Contact Info */}
