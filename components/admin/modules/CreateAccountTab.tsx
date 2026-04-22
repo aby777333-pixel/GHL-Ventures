@@ -162,7 +162,15 @@ export default function CreateAccountTab({ showToast }: CreateAccountTabProps) {
     else if (reg.password.length < 8) errs.password = 'Password must be at least 8 characters'
     else if (!/[a-zA-Z]/.test(reg.password)) errs.password = 'Password must include a letter'
     else if (!/[0-9]/.test(reg.password)) errs.password = 'Password must include a number'
-    if (Object.keys(errs).length > 0) { setErrors(errs); return }
+    if (Object.keys(errs).length > 0) {
+      setErrors(errs)
+      // Surface the first error as a toast so the user notices — red-border
+      // alone is easy to miss when a browser autofill chip is covering the
+      // field.
+      const first = Object.values(errs)[0]
+      showToast(first || 'Please fix the highlighted fields', 'warning')
+      return
+    }
     setErrors({})
 
     setSaving(true)
@@ -214,7 +222,9 @@ export default function CreateAccountTab({ showToast }: CreateAccountTabProps) {
     if (!basic.email.trim()) errs.email = 'Email is required'
     if (!basic.investor_type) errs.investor_type = 'Select investor type'
     if (!basic.resident_type) errs.resident_type = 'Select resident type'
-    if (Object.keys(errs).length > 0) { setErrors(errs); return }
+    if (Object.keys(errs).length > 0) {
+      setErrors(errs); showToast(Object.values(errs)[0] || 'Please fill required fields', 'warning'); return
+    }
     setErrors({})
     setSaving(true)
     // email_verified=true: admin-created accounts are treated as verified.
@@ -250,7 +260,9 @@ export default function CreateAccountTab({ showToast }: CreateAccountTabProps) {
     if (!identity.state) errs.state = 'State is required'
     if (!identity.city) errs.city = 'City is required'
     if (!identity.pincode) errs.pincode = 'Pincode is required'
-    if (Object.keys(errs).length > 0) { setErrors(errs); return }
+    if (Object.keys(errs).length > 0) {
+      setErrors(errs); showToast(Object.values(errs)[0] || 'Please fill required fields', 'warning'); return
+    }
     setErrors({})
     setSaving(true)
     const result = await upsertKYCIdentityDetails(clientId, userId, {
@@ -278,7 +290,9 @@ export default function CreateAccountTab({ showToast }: CreateAccountTabProps) {
       if (!bank.swift_iban_code) errs.swift_iban_code = 'SWIFT/IBAN is required'
     }
     if (!bankDocUrl) errs.bank_doc = 'Upload bank proof'
-    if (Object.keys(errs).length > 0) { setErrors(errs); return }
+    if (Object.keys(errs).length > 0) {
+      setErrors(errs); showToast(Object.values(errs)[0] || 'Please fill required fields', 'warning'); return
+    }
     setErrors({})
     setSaving(true)
     const result = await upsertKYCBankDetails(clientId, userId, {
@@ -305,7 +319,9 @@ export default function CreateAccountTab({ showToast }: CreateAccountTabProps) {
     const errs: Record<string, string> = {}
     if (!demat.demat_account_number) errs.demat_account_number = 'Demat account number is required (or Skip)'
     if (!dematDocUrl) errs.demat_doc = 'Upload demat statement'
-    if (Object.keys(errs).length > 0) { setErrors(errs); return }
+    if (Object.keys(errs).length > 0) {
+      setErrors(errs); showToast(Object.values(errs)[0] || 'Please fill required fields', 'warning'); return
+    }
     setErrors({})
     setSaving(true)
     const result = await upsertKYCDematDetails(clientId, userId, { ...demat, demat_doc_url: dematDocUrl, skipped: false })
@@ -329,7 +345,9 @@ export default function CreateAccountTab({ showToast }: CreateAccountTabProps) {
     if (!nomineeForm.percentage) errs.nominee_percentage = 'Percentage is required'
     else if (isNaN(pct) || pct <= 0 || pct > 100) errs.nominee_percentage = 'Must be 1-100'
     if (!nomineeProofUrl) errs.nominee_proof = 'Upload ID proof'
-    if (Object.keys(errs).length > 0) { setErrors(errs); return }
+    if (Object.keys(errs).length > 0) {
+      setErrors(errs); showToast(Object.values(errs)[0] || 'Please fill required fields', 'warning'); return
+    }
     setErrors({})
     setSaving(true)
     if (editingNomineeId) {
@@ -458,22 +476,31 @@ export default function CreateAccountTab({ showToast }: CreateAccountTabProps) {
         )}
       </AdminGlass>
 
-      {/* Stepper */}
+      {/* Stepper — before the account is created, only "Registration" is
+          navigable; clicking a later step shows a hint instead of silently
+          doing nothing. After creation, the admin can jump to any step that
+          has already been reached. */}
       <div className="flex items-center gap-2 overflow-x-auto pb-1">
         {STAGES.map((s, idx) => {
           const Icon = s.icon
           const isActive = s.id === activeStage
           const isDone = idx < stageIndex
-          const canJump = clientId && (isDone || isActive)
+          const isRegister = s.id === 'register'
+          const canJump = isRegister || (!!clientId && (isDone || isActive))
+          const handleClick = () => {
+            if (canJump) { setActiveStage(s.id); return }
+            showToast('Complete Step 1 (Registration) first to unlock KYC steps', 'info')
+          }
           return (
             <button
               key={s.id}
-              onClick={() => { if (canJump) setActiveStage(s.id) }}
-              disabled={!canJump}
+              type="button"
+              onClick={handleClick}
               className={`flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium border transition-colors whitespace-nowrap
                 ${isActive ? 'bg-brand-red/20 text-white border-brand-red/40' :
                   isDone ? 'bg-emerald-500/10 text-emerald-300 border-emerald-500/20' :
-                  'bg-white/[0.03] text-gray-500 border-white/[0.06] cursor-not-allowed'}`}
+                  canJump ? 'bg-white/[0.04] text-gray-300 border-white/[0.08] hover:bg-white/[0.08]' :
+                  'bg-white/[0.02] text-gray-600 border-white/[0.04] hover:bg-white/[0.04]'}`}
             >
               {isDone ? <CheckCircle className="w-3.5 h-3.5" /> : <Icon className="w-3.5 h-3.5" />}
               {s.label}
@@ -484,7 +511,17 @@ export default function CreateAccountTab({ showToast }: CreateAccountTabProps) {
 
       {/* Stage panels */}
       {activeStage === 'register' && (
-        <div className={cardCls}>
+        <form
+          className={cardCls}
+          autoComplete="off"
+          onSubmit={(e) => { e.preventDefault(); submitRegistration() }}
+        >
+          {/* Honeypot + hidden dummy fields defeat browser autofill that was
+              hijacking Phone / Password with the admin's own credentials.
+              Must be BEFORE the real inputs and styled visually hidden. */}
+          <input type="text" name="prevent_autofill" autoComplete="off" style={{ display: 'none' }} tabIndex={-1} aria-hidden="true" />
+          <input type="password" name="prevent_autofill_pw" autoComplete="new-password" style={{ display: 'none' }} tabIndex={-1} aria-hidden="true" />
+
           <div className="flex items-center justify-between mb-5">
             <h3 className="text-base font-semibold text-white">Step 1 — Registration</h3>
             <span className="text-[11px] px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-300 border border-emerald-500/20 flex items-center gap-1">
@@ -493,24 +530,69 @@ export default function CreateAccountTab({ showToast }: CreateAccountTabProps) {
           </div>
           <div className="grid md:grid-cols-2 gap-4">
             <div>
-              <label className={labelCls}>Name *</label>
-              <input className={inputCls + errorRing('name')} value={reg.name} onChange={e => { setReg(r => ({ ...r, name: e.target.value })); clearError('name') }} placeholder="Investor full name" />
+              <label className={labelCls} htmlFor="ca-name">Name *</label>
+              <input
+                id="ca-name"
+                name="investor-name"
+                type="text"
+                autoComplete="off"
+                autoCorrect="off"
+                spellCheck={false}
+                className={inputCls + errorRing('name')}
+                value={reg.name}
+                onChange={e => { setReg(r => ({ ...r, name: e.target.value })); clearError('name') }}
+                placeholder="Investor full name"
+              />
               {renderError('name')}
             </div>
             <div>
-              <label className={labelCls}>Email *</label>
-              <input type="email" className={inputCls + errorRing('email')} value={reg.email} onChange={e => { setReg(r => ({ ...r, email: e.target.value })); clearError('email') }} placeholder="name@example.com" />
+              <label className={labelCls} htmlFor="ca-email">Email *</label>
+              <input
+                id="ca-email"
+                name="investor-email"
+                type="email"
+                autoComplete="off"
+                autoCorrect="off"
+                spellCheck={false}
+                className={inputCls + errorRing('email')}
+                value={reg.email}
+                onChange={e => { setReg(r => ({ ...r, email: e.target.value })); clearError('email') }}
+                placeholder="name@example.com"
+              />
               {renderError('email')}
             </div>
             <div>
-              <label className={labelCls}>Phone Number *</label>
-              <input className={inputCls + errorRing('phone')} value={reg.phone} onChange={e => { setReg(r => ({ ...r, phone: e.target.value })); clearError('phone') }} placeholder="+91 98765 43210" />
+              <label className={labelCls} htmlFor="ca-phone">Phone Number *</label>
+              <input
+                id="ca-phone"
+                name="investor-phone"
+                type="tel"
+                inputMode="numeric"
+                autoComplete="off"
+                autoCorrect="off"
+                spellCheck={false}
+                className={inputCls + errorRing('phone')}
+                value={reg.phone}
+                onChange={e => { setReg(r => ({ ...r, phone: e.target.value })); clearError('phone') }}
+                placeholder="10-digit mobile (e.g. 9876543210)"
+              />
               {renderError('phone')}
             </div>
             <div>
-              <label className={labelCls}>Password *</label>
+              <label className={labelCls} htmlFor="ca-password">Password *</label>
               <div className="relative">
-                <input type={showPassword ? 'text' : 'password'} className={inputCls + errorRing('password') + ' pr-16'} value={reg.password} onChange={e => { setReg(r => ({ ...r, password: e.target.value })); clearError('password') }} placeholder="Min 8 characters, incl. letters & numbers" />
+                <input
+                  id="ca-password"
+                  name="investor-password"
+                  type={showPassword ? 'text' : 'password'}
+                  autoComplete="new-password"
+                  autoCorrect="off"
+                  spellCheck={false}
+                  className={inputCls + errorRing('password') + ' pr-16'}
+                  value={reg.password}
+                  onChange={e => { setReg(r => ({ ...r, password: e.target.value })); clearError('password') }}
+                  placeholder="Min 8 characters, incl. letters & numbers"
+                />
                 <button type="button" onClick={() => setShowPassword(s => !s)} className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] text-gray-400 hover:text-white px-2 py-1 rounded bg-white/5 border border-white/10">
                   {showPassword ? 'Hide' : 'Show'}
                 </button>
@@ -518,17 +600,28 @@ export default function CreateAccountTab({ showToast }: CreateAccountTabProps) {
               {renderError('password')}
             </div>
             <div className="md:col-span-2">
-              <label className={labelCls}>Referral Code</label>
-              <input className={inputCls} value={reg.referral} onChange={e => setReg(r => ({ ...r, referral: e.target.value }))} placeholder="Optional — e.g. GHL-ABCD1234" />
+              <label className={labelCls} htmlFor="ca-referral">Referral Code</label>
+              <input
+                id="ca-referral"
+                name="investor-referral"
+                type="text"
+                autoComplete="off"
+                autoCorrect="off"
+                spellCheck={false}
+                className={inputCls}
+                value={reg.referral}
+                onChange={e => setReg(r => ({ ...r, referral: e.target.value }))}
+                placeholder="Optional — e.g. GHL-ABCD1234"
+              />
             </div>
           </div>
           <div className="mt-6 flex justify-end">
-            <button onClick={submitRegistration} disabled={saving} className={btnPrimary}>
+            <button type="submit" disabled={saving} className={btnPrimary}>
               {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <UserPlus className="w-4 h-4" />}
               {saving ? 'Creating…' : 'Create Account & Continue'}
             </button>
           </div>
-        </div>
+        </form>
       )}
 
       {activeStage === 'basic' && (
