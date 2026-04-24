@@ -52,11 +52,19 @@ export default function LoginPage() {
     return { kind: 'raw', value: cleaned }
   }
 
-  // Netlify function base URL — matches pattern used in register page
+  // Netlify function base URL.
+  // The custom domain ghlindiaventures.com is served by a separate nginx host
+  // that doesn't expose /.netlify/functions/* — requests there return a 308
+  // to a trailing-slash URL that 404s. Route function traffic to the canonical
+  // *.netlify.app host in that case. login-mobile already whitelists
+  // ghlindiaventures.com via CORS.
+  const NETLIFY_FUNCTIONS_HOST = 'https://ghl-india-ventures-2025.netlify.app'
   const getFunctionBase = () => {
     if (typeof window === 'undefined') return ''
     const origin = window.location.origin
-    return origin.includes('localhost') ? 'http://localhost:8888' : origin
+    if (origin.includes('localhost')) return 'http://localhost:8888'
+    if (origin.endsWith('.netlify.app')) return origin
+    return NETLIFY_FUNCTIONS_HOST
   }
 
   // ── Password Login ─────────────────────────────────────────
