@@ -1548,6 +1548,9 @@ export async function deleteClientSafe(clientId: string, userId?: string | null)
       const ok = await deleteUserComplete(authUserId)
       if (ok) return { ok: true }
     }
+    // Detach leads that were converted from this client so the FK (now
+    // ON DELETE SET NULL) doesn't rely on schema version.
+    try { await sb.from('leads').update({ converted_client_id: null, converted_at: null }).eq('converted_client_id', clientId) } catch { /* ignore */ }
     // Fallback: soft-cleanup (delete the client row — any dependent tables
     // with ON DELETE CASCADE will follow).
     const { error } = await sb.from('clients').delete().eq('id', clientId)
@@ -1601,19 +1604,27 @@ export async function deleteInvestmentSafe(investmentId: string): Promise<Delete
   }
 }
 
-// ── Lead-taxonomy deletes: block when any lead references the record
-async function countLeadRefs(column: string, id: string): Promise<number> {
+// ── Lead-taxonomy deletes: block when any lead references the record.
+// Leads don't have FK columns for status/source — they store the name in
+// `lead_status_name` / `source` — so we match by name, not id.
+async function countLeadRefsByColumn(column: string, value: string): Promise<number> {
   const sb = supabase as any
-  const { count } = await sb.from('leads').select('id', { count: 'exact', head: true }).eq(column, id)
+  const { count, error } = await sb.from('leads').select('id', { count: 'exact', head: true }).eq(column, value)
+  if (error) { console.warn('[admin] countLeadRefsByColumn error:', error.message); return 0 }
   return count || 0
 }
 
 export async function deleteLeadStatusSafe(id: string): Promise<DeleteResult> {
   if (!isSupabaseConfigured()) return { ok: false, error: 'Service unavailable' }
   try {
-    const used = await countLeadRefs('lead_status_id', id)
-    if (used > 0) return { ok: false, error: 'This record is already used in Leads and cannot be deleted.' }
     const sb = supabase as any
+    const { data: row } = await sb.from('lead_statuses').select('name').eq('id', id).maybeSingle()
+    if (!row) return { ok: false, error: 'Status not found' }
+    const name: string = row.name
+    const stageValue = name.toLowerCase().replace(/\s+/g, '-')
+    const byName = await countLeadRefsByColumn('lead_status_name', name)
+    const byStage = await countLeadRefsByColumn('stage', stageValue)
+    if (byName + byStage > 0) return { ok: false, error: 'This status is already used in Leads and cannot be deleted.' }
     const { error } = await sb.from('lead_statuses').delete().eq('id', id)
     if (error) return { ok: false, error: error.message }
     return { ok: true }
@@ -1623,9 +1634,17 @@ export async function deleteLeadStatusSafe(id: string): Promise<DeleteResult> {
 export async function deleteLeadSourceSafe(id: string): Promise<DeleteResult> {
   if (!isSupabaseConfigured()) return { ok: false, error: 'Service unavailable' }
   try {
-    const used = await countLeadRefs('lead_source_id', id)
-    if (used > 0) return { ok: false, error: 'This record is already used in Leads and cannot be deleted.' }
     const sb = supabase as any
+    const { data: row } = await sb.from('lead_sources').select('name').eq('id', id).maybeSingle()
+    if (!row) return { ok: false, error: 'Source not found' }
+    const name: string = row.name
+    // leads.source is an enum stored as lowercased-hyphen-slug (see Edit Lead form).
+    const sourceValue = name.toLowerCase().replace(/\s+/g, '-')
+    let used = await countLeadRefsByColumn('source', sourceValue)
+    if (used === 0 && sourceValue !== name.toLowerCase()) {
+      used = await countLeadRefsByColumn('source', name.toLowerCase())
+    }
+    if (used > 0) return { ok: false, error: 'This source is already used in Leads and cannot be deleted.' }
     const { error } = await sb.from('lead_sources').delete().eq('id', id)
     if (error) return { ok: false, error: error.message }
     return { ok: true }
@@ -1635,9 +1654,12 @@ export async function deleteLeadSourceSafe(id: string): Promise<DeleteResult> {
 export async function deleteLeadCompanySafe(id: string): Promise<DeleteResult> {
   if (!isSupabaseConfigured()) return { ok: false, error: 'Service unavailable' }
   try {
-    const used = await countLeadRefs('lead_company_id', id)
-    if (used > 0) return { ok: false, error: 'This record is already used in Leads and cannot be deleted.' }
     const sb = supabase as any
+    const { data: row } = await sb.from('lead_companies').select('name').eq('id', id).maybeSingle()
+    if (!row) return { ok: false, error: 'Company not found' }
+    const byId = await countLeadRefsByColumn('company_id', id)
+    const byName = await countLeadRefsByColumn('company_name', row.name)
+    if (byId + byName > 0) return { ok: false, error: 'This company is already used in Leads and cannot be deleted.' }
     const { error } = await sb.from('lead_companies').delete().eq('id', id)
     if (error) return { ok: false, error: error.message }
     return { ok: true }
