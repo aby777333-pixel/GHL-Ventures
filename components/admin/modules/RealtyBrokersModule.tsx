@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react'
 import {
   Building2, MapPin, Phone, Mail, Star, IndianRupee, TrendingUp,
-  UserCheck, AlertCircle, Plus, Search, Filter, Eye, Edit3,
+  UserCheck, AlertCircle, Plus, Search, Filter, Eye, Edit3, Trash2,
   Clock, CheckCircle2, XCircle, ArrowUpRight, ArrowDownRight,
   Globe, MessageSquare, FileText, ExternalLink, Tag, Users,
   BarChart3, Briefcase, Home, Factory, Layers, Upload,
@@ -18,7 +18,7 @@ import AdminModal, { ModalButton } from '../shared/AdminModal'
 import AdminKPICard from '../shared/AdminKPICard'
 import AdminDataTable, { type Column } from '../shared/AdminDataTable'
 import {
-  fetchRealtyBrokers, fetchBrokerInquiries,
+  fetchRealtyBrokers, fetchBrokerInquiries, deleteRealtyBrokerSafe,
 } from '@/lib/supabase/adminDataService'
 import { supabase, isSupabaseConfigured } from '@/lib/supabase/client'
 import { formatINR } from '@/lib/admin/adminHooks'
@@ -121,6 +121,9 @@ export default function RealtyBrokersModule({ subTab, navigate, showToast }: Rea
   const [emailBody, setEmailBody] = useState('')
   const [sendingEmail, setSendingEmail] = useState(false)
 
+  const [deleteBroker, setDeleteBroker] = useState<RealtyBroker | null>(null)
+  const [deletingBroker, setDeletingBroker] = useState(false)
+
   const openEditBroker = (b: RealtyBroker) => {
     setEditForm({
       name: b.name || '',
@@ -195,6 +198,24 @@ export default function RealtyBrokersModule({ subTab, navigate, showToast }: Rea
       showToast(err?.message || 'Failed to update broker', 'error')
     } finally {
       setSubmittingEdit(false)
+    }
+  }
+
+  const handleDeleteBroker = async () => {
+    if (!deleteBroker) return
+    setDeletingBroker(true)
+    try {
+      const res = await deleteRealtyBrokerSafe(deleteBroker.id)
+      if (!res.ok) {
+        showToast(res.error || 'Failed to delete broker', 'error')
+        return
+      }
+      showToast(`${deleteBroker.name} deleted`, 'success')
+      setDeleteBroker(null)
+      if (selectedBroker?.id === deleteBroker.id) setSelectedBroker(null)
+      loadData()
+    } finally {
+      setDeletingBroker(false)
     }
   }
 
@@ -405,7 +426,7 @@ export default function RealtyBrokersModule({ subTab, navigate, showToast }: Rea
       </div>
 
       {/* Content based on sub-tab */}
-      {subTab === null && <BrokerDirectory brokers={brokers} onSelect={setSelectedBroker} onEdit={openEditBroker} />}
+      {subTab === null && <BrokerDirectory brokers={brokers} onSelect={setSelectedBroker} onEdit={openEditBroker} onDelete={setDeleteBroker} />}
       {subTab === 'inquiries' && <InquiriesView inquiries={inquiries} brokers={brokers} onSelect={setSelectedInquiry} onCreated={loadData} showToast={showToast} />}
       {subTab === 'analytics' && <AnalyticsView brokers={brokers} inquiries={inquiries} />}
 
@@ -883,15 +904,38 @@ export default function RealtyBrokersModule({ subTab, navigate, showToast }: Rea
           </div>
         </div>
       </AdminModal>
+
+      {/* Delete Broker Confirmation */}
+      <AdminModal
+        isOpen={!!deleteBroker}
+        onClose={() => !deletingBroker && setDeleteBroker(null)}
+        title="Delete Broker"
+        subtitle={deleteBroker ? `This will permanently remove ${deleteBroker.name}.` : undefined}
+        maxWidth="max-w-md"
+        footer={
+          <div className="flex justify-end gap-3">
+            <button onClick={() => setDeleteBroker(null)} disabled={deletingBroker} className="px-4 py-2 rounded-xl text-sm font-medium text-gray-400 hover:text-white hover:bg-white/[0.06] transition-colors disabled:opacity-50">Cancel</button>
+            <button onClick={handleDeleteBroker} disabled={deletingBroker} className="px-5 py-2 rounded-xl text-sm font-medium text-white bg-red-600 hover:bg-red-700 transition-colors disabled:opacity-50">{deletingBroker ? 'Deleting…' : 'Delete Broker'}</button>
+          </div>
+        }
+      >
+        <div className="space-y-3 text-sm text-gray-300">
+          <p>Are you sure you want to delete this broker? This action cannot be undone.</p>
+          <p className="text-xs text-gray-500">
+            Brokers with linked inquiries cannot be deleted — remove or reassign the inquiries first.
+          </p>
+        </div>
+      </AdminModal>
     </div>
   )
 }
 
 // ── Broker Directory Sub-view ──────────────────────────────────────
-function BrokerDirectory({ brokers, onSelect, onEdit }: {
+function BrokerDirectory({ brokers, onSelect, onEdit, onDelete }: {
   brokers: RealtyBroker[]
   onSelect: (b: RealtyBroker) => void
   onEdit: (b: RealtyBroker) => void
+  onDelete: (b: RealtyBroker) => void
 }) {
   const columns: Column<RealtyBroker>[] = [
     {
@@ -988,6 +1032,13 @@ function BrokerDirectory({ brokers, onSelect, onEdit }: {
             title="Edit Broker"
           >
             <Edit3 className="w-3.5 h-3.5" />
+          </button>
+          <button
+            onClick={(e) => { e.stopPropagation(); onDelete(row) }}
+            className="p-1.5 rounded-lg text-gray-500 hover:text-red-400 hover:bg-red-500/10 transition-colors"
+            title="Delete Broker"
+          >
+            <Trash2 className="w-3.5 h-3.5" />
           </button>
         </div>
       ),

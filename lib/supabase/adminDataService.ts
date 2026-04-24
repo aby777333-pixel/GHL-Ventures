@@ -1695,3 +1695,24 @@ export async function deleteAssetSafe(id: string): Promise<DeleteResult> {
   const ok = await deleteRow('assets', id)
   return ok ? { ok: true } : { ok: false, error: 'Failed to delete asset' }
 }
+
+// ── Realty broker delete: block when the broker has open inquiries
+// (broker_inquiries.broker_id → realty_brokers.id is RESTRICT).
+export async function deleteRealtyBrokerSafe(id: string): Promise<DeleteResult> {
+  if (!isSupabaseConfigured()) return { ok: false, error: 'Service unavailable' }
+  try {
+    const sb = supabase as any
+    const { count } = await sb
+      .from('broker_inquiries')
+      .select('id', { count: 'exact', head: true })
+      .eq('broker_id', id)
+    if ((count || 0) > 0) {
+      return { ok: false, error: 'Broker has linked inquiries and cannot be deleted. Remove or reassign inquiries first.' }
+    }
+    const { error } = await sb.from('realty_brokers').delete().eq('id', id)
+    if (error) return { ok: false, error: error.message }
+    return { ok: true }
+  } catch (e: any) {
+    return { ok: false, error: e?.message || 'Delete failed' }
+  }
+}
