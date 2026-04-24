@@ -8,6 +8,7 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import type { StaffSession, StaffRole, AgentStatus } from './staffTypes'
 import { getStaffSession, logoutStaff } from '@/lib/supabase/staffAuthService'
 import { upsertStaffPresence, updateStaffStatus, staffHeartbeat } from '@/lib/supabase/chatService'
+import { useSessionGuard, sessionInvalidationMessage, type SessionInvalidationReason } from '@/lib/supabase/sessionGuard'
 
 // ── useStaffAuth ────────────────────────────────────────────────
 export function useStaffAuth() {
@@ -28,6 +29,24 @@ export function useStaffAuth() {
   const refreshSession = useCallback(() => {
     getStaffSession().then(s => setSession(s))
   }, [])
+
+  const handleInvalidated = useCallback((reason: SessionInvalidationReason) => {
+    try {
+      if (typeof window !== 'undefined') {
+        try { sessionStorage.setItem('ghl_staff_logout_msg', sessionInvalidationMessage(reason)) } catch { /* ignore */ }
+      }
+    } finally {
+      logoutStaff().finally(() => {
+        setSession(null)
+        if (typeof window !== 'undefined') {
+          const path = window.location?.pathname || ''
+          if (!path.startsWith('/staff/login')) window.location.href = '/staff/login'
+        }
+      })
+    }
+  }, [])
+  const extraCheck = useCallback(async () => (await getStaffSession()) !== null, [])
+  useSessionGuard({ isAuthenticated: !!session, onInvalidated: handleInvalidated, extraCheck })
 
   return {
     session,

@@ -26,6 +26,15 @@ export default function StaffLoginPage() {
     return () => clearInterval(id)
   }, [])
 
+  // Surface any session-invalidation message set by the session guard.
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    try {
+      const msg = sessionStorage.getItem('ghl_staff_logout_msg')
+      if (msg) { setError(msg); sessionStorage.removeItem('ghl_staff_logout_msg') }
+    } catch { /* ignore */ }
+  }, [])
+
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
     setError('')

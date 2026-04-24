@@ -34,6 +34,15 @@ export default function LoginPage() {
     })
   }, [router])
 
+  // Surface any session-invalidation message set by the session guard.
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    try {
+      const msg = sessionStorage.getItem('ghl_client_logout_msg')
+      if (msg) { setError(msg); sessionStorage.removeItem('ghl_client_logout_msg') }
+    } catch { /* ignore */ }
+  }, [])
+
   // Classify input as email, 10-digit mobile, or raw string
   const classifyInput = (input: string): { kind: 'email' | 'mobile' | 'raw'; value: string } => {
     const cleaned = input.trim()

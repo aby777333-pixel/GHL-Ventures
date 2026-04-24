@@ -53,6 +53,15 @@ export default function AdminLoginPage() {
     checkSession()
   }, [router])
 
+  // Surface any session-invalidation message set by the session guard.
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    try {
+      const msg = sessionStorage.getItem('ghl_admin_logout_msg')
+      if (msg) { setError(msg); sessionStorage.removeItem('ghl_admin_logout_msg') }
+    } catch { /* ignore */ }
+  }, [])
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError('')

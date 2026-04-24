@@ -5,7 +5,7 @@ import {
   Users, UserPlus, Search, Filter, Download, Upload, Pencil, Trash2,
   Phone, Mail, Calendar, ChevronRight, Plus, X, Check, AlertTriangle,
   FileText, ArrowUpRight, TrendingUp, PhoneCall, Star, RefreshCw,
-  Palette, ToggleLeft, ToggleRight, Hash, Building2, Zap,
+  Palette, ToggleLeft, ToggleRight, Hash, Building2, Zap, CheckSquare, Square,
 } from 'lucide-react'
 import { supabase as _supabase, isSupabaseConfigured } from '@/lib/supabase/client'
 import { deleteLeadStatusSafe, deleteLeadSourceSafe, deleteLeadCompanySafe } from '@/lib/supabase/adminDataService'
@@ -279,6 +279,9 @@ function LeadListingTab({
   const [showFilters, setShowFilters] = useState(false)
   const [editLead, setEditLead] = useState<Lead | null>(null)
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null)
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
+  const [bulkDeleteConfirm, setBulkDeleteConfirm] = useState(false)
+  const [bulkDeleting, setBulkDeleting] = useState(false)
 
   // ── Lookups ──────────────────────────────────────────────────
   // Map by name for display (DB stores names, not IDs)
@@ -353,6 +356,31 @@ function LeadListingTab({
     if (error) { showToast('Failed to delete lead', 'error'); return }
     showToast('Lead deleted', 'success')
     setDeleteConfirm(null)
+    setSelectedIds(prev => { const n = new Set(prev); n.delete(id); return n })
+    reload()
+  }
+
+  // ── Bulk selection ───────────────────────────────────────────
+  const visibleIds = useMemo(() => filtered.map(l => l.id), [filtered])
+  const allVisibleSelected = visibleIds.length > 0 && visibleIds.every(id => selectedIds.has(id))
+  const someVisibleSelected = visibleIds.some(id => selectedIds.has(id)) && !allVisibleSelected
+  const selectAllVisible = () => setSelectedIds(prev => {
+    const n = new Set(prev); visibleIds.forEach(id => n.add(id)); return n
+  })
+  const deselectAll = () => setSelectedIds(new Set())
+  const toggleRow = (id: string) => setSelectedIds(prev => {
+    const n = new Set(prev); if (n.has(id)) n.delete(id); else n.add(id); return n
+  })
+  const handleBulkDelete = async () => {
+    if (selectedIds.size === 0) return
+    setBulkDeleting(true)
+    const ids = Array.from(selectedIds)
+    const { error } = await (supabase as any).from('leads').delete().in('id', ids)
+    setBulkDeleting(false)
+    setBulkDeleteConfirm(false)
+    if (error) { showToast('Failed to delete leads: ' + error.message, 'error'); return }
+    showToast(`${ids.length} lead${ids.length === 1 ? '' : 's'} deleted`, 'success')
+    setSelectedIds(new Set())
     reload()
   }
 
@@ -477,6 +505,27 @@ function LeadListingTab({
           </button>
         </div>
 
+        {/* Bulk-selection bar */}
+        <div className="flex flex-wrap items-center gap-2 mt-3 pt-3 border-t border-white/[0.06]">
+          <button onClick={selectAllVisible}
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-white/[0.04] border border-white/[0.08] rounded-lg text-xs text-gray-300 hover:bg-white/[0.08] hover:text-white transition-all">
+            <CheckSquare size={12} /> Select all ({visibleIds.length})
+          </button>
+          <button onClick={deselectAll}
+            disabled={selectedIds.size === 0}
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-white/[0.04] border border-white/[0.08] rounded-lg text-xs text-gray-300 hover:bg-white/[0.08] hover:text-white transition-all disabled:opacity-40 disabled:cursor-not-allowed">
+            <Square size={12} /> Deselect all
+          </button>
+          <span className="text-xs text-gray-500">
+            {selectedIds.size > 0 ? `${selectedIds.size} selected` : 'No rows selected'}
+          </span>
+          <button onClick={() => setBulkDeleteConfirm(true)}
+            disabled={selectedIds.size === 0}
+            className="ml-auto flex items-center gap-1.5 px-3 py-1.5 bg-red-600/20 border border-red-500/40 rounded-lg text-xs text-red-300 hover:bg-red-600/30 transition-all disabled:opacity-40 disabled:cursor-not-allowed">
+            <Trash2 size={12} /> Delete selected
+          </button>
+        </div>
+
         {/* Expanded Filters */}
         {showFilters && (
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 mt-4 pt-4 border-t border-white/[0.06]">
@@ -525,6 +574,20 @@ function LeadListingTab({
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-white/[0.06] bg-white/[0.02] sticky top-0">
+                  <th className="px-3 py-3 w-10 text-left">
+                    <button
+                      type="button"
+                      onClick={() => allVisibleSelected ? deselectAll() : selectAllVisible()}
+                      title={allVisibleSelected ? 'Deselect all' : 'Select all'}
+                      className="text-gray-400 hover:text-white transition-colors"
+                    >
+                      {allVisibleSelected
+                        ? <CheckSquare size={14} className="text-[#D0021B]" />
+                        : someVisibleSelected
+                          ? <CheckSquare size={14} className="text-[#D0021B]/60" />
+                          : <Square size={14} />}
+                    </button>
+                  </th>
                   {['Created', 'Name', 'Email', 'Phone', 'Income', 'Planning', 'Assigned To', 'Status', 'Source', 'Company', 'Actions'].map(h => (
                     <th key={h} className="px-4 py-3 text-left text-[10px] uppercase tracking-wider text-gray-500 font-semibold whitespace-nowrap">{h}</th>
                   ))}
@@ -536,8 +599,19 @@ function LeadListingTab({
                   const source = sourceMap[lead.source || '']
                   const company = companyMap[lead.company_name || '']
                   const staff = staffMap[lead.assigned_to || '']
+                  const selected = selectedIds.has(lead.id)
                   return (
-                    <tr key={lead.id} className="border-b border-white/[0.04] hover:bg-white/[0.03] transition-colors">
+                    <tr key={lead.id} className={`border-b border-white/[0.04] hover:bg-white/[0.03] transition-colors ${selected ? 'bg-[#D0021B]/5' : ''}`}>
+                      <td className="px-3 py-3">
+                        <button
+                          type="button"
+                          onClick={() => toggleRow(lead.id)}
+                          title={selected ? 'Deselect' : 'Select'}
+                          className="text-gray-400 hover:text-white transition-colors"
+                        >
+                          {selected ? <CheckSquare size={14} className="text-[#D0021B]" /> : <Square size={14} />}
+                        </button>
+                      </td>
                       <td className="px-4 py-3 text-gray-400 whitespace-nowrap">{formatDate(lead.created_at)}</td>
                       <td className="px-4 py-3 text-white font-medium">{lead.name}</td>
                       <td className="px-4 py-3 text-gray-400">{lead.email}</td>
@@ -599,6 +673,16 @@ function LeadListingTab({
           message="Are you sure you want to delete this lead? This action cannot be undone."
           onConfirm={() => handleDelete(deleteConfirm)}
           onCancel={() => setDeleteConfirm(null)}
+        />
+      )}
+
+      {/* Bulk delete confirmation */}
+      {bulkDeleteConfirm && (
+        <ConfirmModal
+          title={`Delete ${selectedIds.size} Lead${selectedIds.size === 1 ? '' : 's'}`}
+          message={`Are you sure you want to delete ${selectedIds.size} selected lead${selectedIds.size === 1 ? '' : 's'}? This action cannot be undone.`}
+          onConfirm={handleBulkDelete}
+          onCancel={() => !bulkDeleting && setBulkDeleteConfirm(false)}
         />
       )}
     </div>
@@ -998,16 +1082,56 @@ function LeadStatusCRUD({
     else showToast(res.error || 'Failed to delete status', 'error')
   }
 
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
+  const [bulkDeleting, setBulkDeleting] = useState(false)
+  const visibleIds = statuses.map(s => s.id)
+  const allVisibleSelected = visibleIds.length > 0 && visibleIds.every(id => selectedIds.has(id))
+  const selectAllVisible = () => setSelectedIds(new Set(visibleIds))
+  const deselectAll = () => setSelectedIds(new Set())
+  const toggleRow = (id: string) => setSelectedIds(prev => {
+    const n = new Set(prev); if (n.has(id)) n.delete(id); else n.add(id); return n
+  })
+  const handleBulkDelete = async () => {
+    if (selectedIds.size === 0) return
+    if (!window.confirm(`Delete ${selectedIds.size} selected status${selectedIds.size === 1 ? '' : 'es'}? In-use statuses will be skipped.`)) return
+    setBulkDeleting(true)
+    const ids = Array.from(selectedIds)
+    let ok = 0, skipped: string[] = []
+    for (const id of ids) {
+      const res = await deleteLeadStatusSafe(id)
+      if (res.ok) ok++
+      else skipped.push(statuses.find(s => s.id === id)?.name || id)
+    }
+    setBulkDeleting(false)
+    setSelectedIds(new Set())
+    if (ok > 0) showToast(`Deleted ${ok} status${ok === 1 ? '' : 'es'}${skipped.length ? `, skipped ${skipped.length} (in use)` : ''}`, skipped.length ? 'warning' : 'success')
+    else showToast(`Could not delete: all ${skipped.length} in use`, 'error')
+    reload()
+  }
+
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between flex-wrap gap-2">
         <h3 className="text-lg font-semibold text-white flex items-center gap-2">
           <Palette size={20} className="text-[#D0021B]" /> Lead Statuses
         </h3>
-        <button onClick={startCreate}
-          className="flex items-center gap-1.5 px-4 py-2 bg-[#D0021B] text-white rounded-lg text-sm font-medium hover:bg-[#B0011A] transition-all">
-          <Plus size={14} /> Add Status
-        </button>
+        <div className="flex items-center gap-2 flex-wrap">
+          <button onClick={selectAllVisible} className="flex items-center gap-1.5 px-3 py-1.5 bg-white/[0.04] border border-white/[0.08] rounded-lg text-xs text-gray-300 hover:bg-white/[0.08] hover:text-white transition-all">
+            <CheckSquare size={12} /> Select all ({visibleIds.length})
+          </button>
+          <button onClick={deselectAll} disabled={selectedIds.size === 0}
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-white/[0.04] border border-white/[0.08] rounded-lg text-xs text-gray-300 hover:bg-white/[0.08] hover:text-white transition-all disabled:opacity-40 disabled:cursor-not-allowed">
+            <Square size={12} /> Deselect all
+          </button>
+          <button onClick={handleBulkDelete} disabled={selectedIds.size === 0 || bulkDeleting}
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-red-600/20 border border-red-500/40 rounded-lg text-xs text-red-300 hover:bg-red-600/30 transition-all disabled:opacity-40 disabled:cursor-not-allowed">
+            <Trash2 size={12} /> {bulkDeleting ? 'Deleting...' : `Delete selected${selectedIds.size > 0 ? ` (${selectedIds.size})` : ''}`}
+          </button>
+          <button onClick={startCreate}
+            className="flex items-center gap-1.5 px-4 py-2 bg-[#D0021B] text-white rounded-lg text-sm font-medium hover:bg-[#B0011A] transition-all">
+            <Plus size={14} /> Add Status
+          </button>
+        </div>
       </div>
 
       {/* Create/Edit form */}
@@ -1062,14 +1186,28 @@ function LeadStatusCRUD({
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-white/[0.06] bg-white/[0.02]">
+                <th className="px-3 py-3 w-10 text-left">
+                  <button type="button" onClick={() => allVisibleSelected ? deselectAll() : selectAllVisible()}
+                    title={allVisibleSelected ? 'Deselect all' : 'Select all'}
+                    className="text-gray-400 hover:text-white transition-colors">
+                    {allVisibleSelected ? <CheckSquare size={14} className="text-[#D0021B]" /> : <Square size={14} />}
+                  </button>
+                </th>
                 {['Color', 'Name', 'Sort Order', 'Active', 'Actions'].map(h => (
                   <th key={h} className="px-4 py-3 text-left text-[10px] uppercase tracking-wider text-gray-500 font-semibold">{h}</th>
                 ))}
               </tr>
             </thead>
             <tbody>
-              {statuses.map(s => (
-                <tr key={s.id} className="border-b border-white/[0.04] hover:bg-white/[0.03]">
+              {statuses.map(s => {
+                const selected = selectedIds.has(s.id)
+                return (
+                <tr key={s.id} className={`border-b border-white/[0.04] hover:bg-white/[0.03] ${selected ? 'bg-[#D0021B]/5' : ''}`}>
+                  <td className="px-3 py-3">
+                    <button type="button" onClick={() => toggleRow(s.id)} title={selected ? 'Deselect' : 'Select'} className="text-gray-400 hover:text-white transition-colors">
+                      {selected ? <CheckSquare size={14} className="text-[#D0021B]" /> : <Square size={14} />}
+                    </button>
+                  </td>
                   <td className="px-4 py-3">
                     <div className="w-6 h-6 rounded-full border border-white/10" style={{ backgroundColor: s.color }} />
                   </td>
@@ -1093,9 +1231,10 @@ function LeadStatusCRUD({
                     </div>
                   </td>
                 </tr>
-              ))}
+                )
+              })}
               {statuses.length === 0 && (
-                <tr><td colSpan={5} className="px-4 py-12 text-center text-gray-500">No statuses yet. Click &quot;Add Status&quot; to create one.</td></tr>
+                <tr><td colSpan={6} className="px-4 py-12 text-center text-gray-500">No statuses yet. Click &quot;Add Status&quot; to create one.</td></tr>
               )}
             </tbody>
           </table>
@@ -1146,16 +1285,56 @@ function LeadSourceCRUD({
     else showToast(res.error || 'Failed to delete source', 'error')
   }
 
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
+  const [bulkDeleting, setBulkDeleting] = useState(false)
+  const visibleIds = sources.map(s => s.id)
+  const allVisibleSelected = visibleIds.length > 0 && visibleIds.every(id => selectedIds.has(id))
+  const selectAllVisible = () => setSelectedIds(new Set(visibleIds))
+  const deselectAll = () => setSelectedIds(new Set())
+  const toggleRow = (id: string) => setSelectedIds(prev => {
+    const n = new Set(prev); if (n.has(id)) n.delete(id); else n.add(id); return n
+  })
+  const handleBulkDelete = async () => {
+    if (selectedIds.size === 0) return
+    if (!window.confirm(`Delete ${selectedIds.size} selected source${selectedIds.size === 1 ? '' : 's'}? In-use sources will be skipped.`)) return
+    setBulkDeleting(true)
+    const ids = Array.from(selectedIds)
+    let ok = 0, skipped: string[] = []
+    for (const id of ids) {
+      const res = await deleteLeadSourceSafe(id)
+      if (res.ok) ok++
+      else skipped.push(sources.find(s => s.id === id)?.name || id)
+    }
+    setBulkDeleting(false)
+    setSelectedIds(new Set())
+    if (ok > 0) showToast(`Deleted ${ok} source${ok === 1 ? '' : 's'}${skipped.length ? `, skipped ${skipped.length} (in use)` : ''}`, skipped.length ? 'warning' : 'success')
+    else showToast(`Could not delete: all ${skipped.length} in use`, 'error')
+    reload()
+  }
+
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between flex-wrap gap-2">
         <h3 className="text-lg font-semibold text-white flex items-center gap-2">
           <Zap size={20} className="text-[#D0021B]" /> Lead Sources
         </h3>
-        <button onClick={startCreate}
-          className="flex items-center gap-1.5 px-4 py-2 bg-[#D0021B] text-white rounded-lg text-sm font-medium hover:bg-[#B0011A] transition-all">
-          <Plus size={14} /> Add Source
-        </button>
+        <div className="flex items-center gap-2 flex-wrap">
+          <button onClick={selectAllVisible} className="flex items-center gap-1.5 px-3 py-1.5 bg-white/[0.04] border border-white/[0.08] rounded-lg text-xs text-gray-300 hover:bg-white/[0.08] hover:text-white transition-all">
+            <CheckSquare size={12} /> Select all ({visibleIds.length})
+          </button>
+          <button onClick={deselectAll} disabled={selectedIds.size === 0}
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-white/[0.04] border border-white/[0.08] rounded-lg text-xs text-gray-300 hover:bg-white/[0.08] hover:text-white transition-all disabled:opacity-40 disabled:cursor-not-allowed">
+            <Square size={12} /> Deselect all
+          </button>
+          <button onClick={handleBulkDelete} disabled={selectedIds.size === 0 || bulkDeleting}
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-red-600/20 border border-red-500/40 rounded-lg text-xs text-red-300 hover:bg-red-600/30 transition-all disabled:opacity-40 disabled:cursor-not-allowed">
+            <Trash2 size={12} /> {bulkDeleting ? 'Deleting...' : `Delete selected${selectedIds.size > 0 ? ` (${selectedIds.size})` : ''}`}
+          </button>
+          <button onClick={startCreate}
+            className="flex items-center gap-1.5 px-4 py-2 bg-[#D0021B] text-white rounded-lg text-sm font-medium hover:bg-[#B0011A] transition-all">
+            <Plus size={14} /> Add Source
+          </button>
+        </div>
       </div>
 
       {(creating || editId) && (
@@ -1191,14 +1370,28 @@ function LeadSourceCRUD({
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-white/[0.06] bg-white/[0.02]">
+                <th className="px-3 py-3 w-10 text-left">
+                  <button type="button" onClick={() => allVisibleSelected ? deselectAll() : selectAllVisible()}
+                    title={allVisibleSelected ? 'Deselect all' : 'Select all'}
+                    className="text-gray-400 hover:text-white transition-colors">
+                    {allVisibleSelected ? <CheckSquare size={14} className="text-[#D0021B]" /> : <Square size={14} />}
+                  </button>
+                </th>
                 {['Name', 'Active', 'Actions'].map(h => (
                   <th key={h} className="px-4 py-3 text-left text-[10px] uppercase tracking-wider text-gray-500 font-semibold">{h}</th>
                 ))}
               </tr>
             </thead>
             <tbody>
-              {sources.map(s => (
-                <tr key={s.id} className="border-b border-white/[0.04] hover:bg-white/[0.03]">
+              {sources.map(s => {
+                const selected = selectedIds.has(s.id)
+                return (
+                <tr key={s.id} className={`border-b border-white/[0.04] hover:bg-white/[0.03] ${selected ? 'bg-[#D0021B]/5' : ''}`}>
+                  <td className="px-3 py-3">
+                    <button type="button" onClick={() => toggleRow(s.id)} title={selected ? 'Deselect' : 'Select'} className="text-gray-400 hover:text-white transition-colors">
+                      {selected ? <CheckSquare size={14} className="text-[#D0021B]" /> : <Square size={14} />}
+                    </button>
+                  </td>
                   <td className="px-4 py-3 text-white font-medium">{s.name}</td>
                   <td className="px-4 py-3">
                     <button onClick={() => toggleActive(s)}>
@@ -1218,9 +1411,10 @@ function LeadSourceCRUD({
                     </div>
                   </td>
                 </tr>
-              ))}
+                )
+              })}
               {sources.length === 0 && (
-                <tr><td colSpan={3} className="px-4 py-12 text-center text-gray-500">No sources yet.</td></tr>
+                <tr><td colSpan={4} className="px-4 py-12 text-center text-gray-500">No sources yet.</td></tr>
               )}
             </tbody>
           </table>
@@ -1271,16 +1465,56 @@ function LeadCompanyCRUD({
     else showToast(res.error || 'Failed to delete company', 'error')
   }
 
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
+  const [bulkDeleting, setBulkDeleting] = useState(false)
+  const visibleIds = companies.map(c => c.id)
+  const allVisibleSelected = visibleIds.length > 0 && visibleIds.every(id => selectedIds.has(id))
+  const selectAllVisible = () => setSelectedIds(new Set(visibleIds))
+  const deselectAll = () => setSelectedIds(new Set())
+  const toggleRow = (id: string) => setSelectedIds(prev => {
+    const n = new Set(prev); if (n.has(id)) n.delete(id); else n.add(id); return n
+  })
+  const handleBulkDelete = async () => {
+    if (selectedIds.size === 0) return
+    if (!window.confirm(`Delete ${selectedIds.size} selected compan${selectedIds.size === 1 ? 'y' : 'ies'}? In-use companies will be skipped.`)) return
+    setBulkDeleting(true)
+    const ids = Array.from(selectedIds)
+    let ok = 0, skipped: string[] = []
+    for (const id of ids) {
+      const res = await deleteLeadCompanySafe(id)
+      if (res.ok) ok++
+      else skipped.push(companies.find(c => c.id === id)?.name || id)
+    }
+    setBulkDeleting(false)
+    setSelectedIds(new Set())
+    if (ok > 0) showToast(`Deleted ${ok} compan${ok === 1 ? 'y' : 'ies'}${skipped.length ? `, skipped ${skipped.length} (in use)` : ''}`, skipped.length ? 'warning' : 'success')
+    else showToast(`Could not delete: all ${skipped.length} in use`, 'error')
+    reload()
+  }
+
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between flex-wrap gap-2">
         <h3 className="text-lg font-semibold text-white flex items-center gap-2">
           <Building2 size={20} className="text-[#D0021B]" /> Lead Companies
         </h3>
-        <button onClick={startCreate}
-          className="flex items-center gap-1.5 px-4 py-2 bg-[#D0021B] text-white rounded-lg text-sm font-medium hover:bg-[#B0011A] transition-all">
-          <Plus size={14} /> Add Company
-        </button>
+        <div className="flex items-center gap-2 flex-wrap">
+          <button onClick={selectAllVisible} className="flex items-center gap-1.5 px-3 py-1.5 bg-white/[0.04] border border-white/[0.08] rounded-lg text-xs text-gray-300 hover:bg-white/[0.08] hover:text-white transition-all">
+            <CheckSquare size={12} /> Select all ({visibleIds.length})
+          </button>
+          <button onClick={deselectAll} disabled={selectedIds.size === 0}
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-white/[0.04] border border-white/[0.08] rounded-lg text-xs text-gray-300 hover:bg-white/[0.08] hover:text-white transition-all disabled:opacity-40 disabled:cursor-not-allowed">
+            <Square size={12} /> Deselect all
+          </button>
+          <button onClick={handleBulkDelete} disabled={selectedIds.size === 0 || bulkDeleting}
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-red-600/20 border border-red-500/40 rounded-lg text-xs text-red-300 hover:bg-red-600/30 transition-all disabled:opacity-40 disabled:cursor-not-allowed">
+            <Trash2 size={12} /> {bulkDeleting ? 'Deleting...' : `Delete selected${selectedIds.size > 0 ? ` (${selectedIds.size})` : ''}`}
+          </button>
+          <button onClick={startCreate}
+            className="flex items-center gap-1.5 px-4 py-2 bg-[#D0021B] text-white rounded-lg text-sm font-medium hover:bg-[#B0011A] transition-all">
+            <Plus size={14} /> Add Company
+          </button>
+        </div>
       </div>
 
       {(creating || editId) && (
@@ -1316,14 +1550,28 @@ function LeadCompanyCRUD({
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-white/[0.06] bg-white/[0.02]">
+                <th className="px-3 py-3 w-10 text-left">
+                  <button type="button" onClick={() => allVisibleSelected ? deselectAll() : selectAllVisible()}
+                    title={allVisibleSelected ? 'Deselect all' : 'Select all'}
+                    className="text-gray-400 hover:text-white transition-colors">
+                    {allVisibleSelected ? <CheckSquare size={14} className="text-[#D0021B]" /> : <Square size={14} />}
+                  </button>
+                </th>
                 {['Name', 'Active', 'Actions'].map(h => (
                   <th key={h} className="px-4 py-3 text-left text-[10px] uppercase tracking-wider text-gray-500 font-semibold">{h}</th>
                 ))}
               </tr>
             </thead>
             <tbody>
-              {companies.map(c => (
-                <tr key={c.id} className="border-b border-white/[0.04] hover:bg-white/[0.03]">
+              {companies.map(c => {
+                const selected = selectedIds.has(c.id)
+                return (
+                <tr key={c.id} className={`border-b border-white/[0.04] hover:bg-white/[0.03] ${selected ? 'bg-[#D0021B]/5' : ''}`}>
+                  <td className="px-3 py-3">
+                    <button type="button" onClick={() => toggleRow(c.id)} title={selected ? 'Deselect' : 'Select'} className="text-gray-400 hover:text-white transition-colors">
+                      {selected ? <CheckSquare size={14} className="text-[#D0021B]" /> : <Square size={14} />}
+                    </button>
+                  </td>
                   <td className="px-4 py-3 text-white font-medium">{c.name}</td>
                   <td className="px-4 py-3">
                     <button onClick={() => toggleActive(c)}>
@@ -1343,9 +1591,10 @@ function LeadCompanyCRUD({
                     </div>
                   </td>
                 </tr>
-              ))}
+                )
+              })}
               {companies.length === 0 && (
-                <tr><td colSpan={3} className="px-4 py-12 text-center text-gray-500">No companies yet.</td></tr>
+                <tr><td colSpan={4} className="px-4 py-12 text-center text-gray-500">No companies yet.</td></tr>
               )}
             </tbody>
           </table>

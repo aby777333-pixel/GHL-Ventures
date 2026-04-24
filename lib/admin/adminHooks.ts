@@ -9,6 +9,7 @@ import type { AdminSession, AdminRole, Permission } from './adminTypes'
 import { getAdminSession, logoutAdmin } from '@/lib/supabase/adminAuthService'
 import { hasPermission, hasModuleAccess } from './adminRBAC'
 import type { PermissionModule } from './adminTypes'
+import { useSessionGuard, sessionInvalidationMessage, type SessionInvalidationReason } from '@/lib/supabase/sessionGuard'
 
 // ── useAdminAuth ──────────────────────────────────────────────────
 export function useAdminAuth() {
@@ -29,6 +30,26 @@ export function useAdminAuth() {
   const refreshSession = useCallback(() => {
     getAdminSession().then(s => setSession(s))
   }, [])
+
+  // Guard the session: auto-logout + redirect when the user no longer
+  // exists, the session is revoked, or the portal has been idle > 30min.
+  const handleInvalidated = useCallback((reason: SessionInvalidationReason) => {
+    try {
+      if (typeof window !== 'undefined') {
+        try { sessionStorage.setItem('ghl_admin_logout_msg', sessionInvalidationMessage(reason)) } catch { /* ignore */ }
+      }
+    } finally {
+      logoutAdmin().finally(() => {
+        setSession(null)
+        if (typeof window !== 'undefined') {
+          const path = window.location?.pathname || ''
+          if (!path.startsWith('/admin/login')) window.location.href = '/admin/login'
+        }
+      })
+    }
+  }, [])
+  const extraCheck = useCallback(async () => (await getAdminSession()) !== null, [])
+  useSessionGuard({ isAuthenticated: !!session, onInvalidated: handleInvalidated, extraCheck })
 
   return {
     session,

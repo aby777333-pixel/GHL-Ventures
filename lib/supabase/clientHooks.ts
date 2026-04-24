@@ -11,6 +11,7 @@ import { useState, useEffect, useCallback } from 'react'
 import type { ClientSession } from './clientAuthService'
 import { getClientSession, logoutClient } from './clientAuthService'
 import { supabase } from './client'
+import { useSessionGuard, sessionInvalidationMessage, type SessionInvalidationReason } from './sessionGuard'
 
 export function useClientAuth() {
   const [session, setSession] = useState<ClientSession | null>(null)
@@ -76,6 +77,27 @@ export function useClientAuth() {
     }
     return s
   }, [])
+
+  const handleInvalidated = useCallback((reason: SessionInvalidationReason) => {
+    try {
+      if (typeof window !== 'undefined') {
+        try { sessionStorage.setItem('ghl_client_logout_msg', sessionInvalidationMessage(reason)) } catch { /* ignore */ }
+      }
+    } finally {
+      logoutClient().finally(() => {
+        setSession(null)
+        setClientId(null)
+        setGhlId(null)
+        setEmailVerified(false)
+        if (typeof window !== 'undefined') {
+          const path = window.location?.pathname || ''
+          if (!path.startsWith('/login') && !path.startsWith('/register')) window.location.href = '/login'
+        }
+      })
+    }
+  }, [])
+  const extraCheck = useCallback(async () => (await getClientSession()) !== null, [])
+  useSessionGuard({ isAuthenticated: !!session, onInvalidated: handleInvalidated, extraCheck })
 
   return {
     session,
