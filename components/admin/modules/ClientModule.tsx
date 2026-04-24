@@ -5,7 +5,7 @@ import {
   Users, UserPlus, Eye, Phone, Mail, Calendar, IndianRupee,
   ShieldCheck, AlertTriangle, FileText, Filter, CheckCircle2,
   XCircle, Clock, MoreHorizontal, ArrowUpRight, ChevronRight,
-  Search, UserCircle, FileSearch, PieChart, Activity, Building2, Upload,
+  Search, UserCircle, FileSearch, PieChart, Activity, Building2, Upload, Trash2,
 } from 'lucide-react'
 import AdminGlass from '../shared/AdminGlass'
 import AdminDataTable, { type Column } from '../shared/AdminDataTable'
@@ -13,7 +13,7 @@ import AdminBadge, { getKYCBadgeVariant, getAccountBadgeVariant } from '../share
 import AdminModal, { ModalButton } from '../shared/AdminModal'
 import AdminEmptyState from '../shared/AdminEmptyState'
 import AdminKPICard from '../shared/AdminKPICard'
-import { fetchClients, fetchKYCDocuments, fetchKYCByClient, fetchClientKYCDetails, approveKYCStep, rejectKYCStep, approveClientKYC, rejectClientKYC, deleteUserComplete } from '@/lib/supabase/adminDataService'
+import { fetchClients, fetchKYCDocuments, fetchKYCByClient, fetchClientKYCDetails, approveKYCStep, rejectKYCStep, approveClientKYC, rejectClientKYC, deleteUserComplete, deleteClientSafe, deleteClientKYCSafe } from '@/lib/supabase/adminDataService'
 import { getActiveRMs, assignRMToClient, type ActiveRM } from '@/lib/supabase/employeeService'
 import { formatINR, formatDate } from '@/lib/admin/adminHooks'
 import type { Client, KYCDocument, KYCStatus } from '@/lib/admin/adminTypes'
@@ -68,6 +68,35 @@ export default function ClientModule({ subTab, navigate, showToast }: ClientModu
   }, [])
 
   useEffect(() => { loadData() }, [loadData])
+
+  // ── Delete client (safe) — blocks approved KYC and approved investments.
+  const handleDeleteClient = useCallback(async (client: Client) => {
+    if (!window.confirm(`Delete client "${client.name}"? This cannot be undone.`)) return
+    const res = await deleteClientSafe(client.id, (client as any).user_id || null)
+    if (res.ok) {
+      showToast(`Client "${client.name}" deleted`, 'success')
+      if (selectedClient?.id === client.id) { setProfileModalOpen(false); setSelectedClient(null) }
+      loadData()
+    } else {
+      showToast(res.error || 'Failed to delete client', 'error')
+    }
+  }, [selectedClient, showToast, loadData])
+
+  // ── Delete KYC submission — blocks when already approved/verified.
+  const handleDeleteKYC = useCallback(async (row: { clientId: string; clientName: string; overallStatus: string }) => {
+    if (row.overallStatus === 'approved' || row.overallStatus === 'verified') {
+      showToast('KYC is approved and cannot be deleted.', 'warning')
+      return
+    }
+    if (!window.confirm(`Delete KYC submission for "${row.clientName}"? The client will need to resubmit.`)) return
+    const res = await deleteClientKYCSafe(row.clientId)
+    if (res.ok) {
+      showToast(`KYC deleted for ${row.clientName}`, 'success')
+      loadData()
+    } else {
+      showToast(res.error || 'Failed to delete KYC', 'error')
+    }
+  }, [showToast, loadData])
 
   const handleAssignRM = async (clientId: string, rmStaffId: string) => {
     setAssigningRM(true)
@@ -174,6 +203,7 @@ export default function ClientModule({ subTab, navigate, showToast }: ClientModu
           <ClientListTab
             clients={clients}
             onViewClient={(c) => { setSelectedClient(c); setProfileModalOpen(true) }}
+            onDeleteClient={handleDeleteClient}
             showToast={showToast}
           />
         )}
@@ -185,6 +215,7 @@ export default function ClientModule({ subTab, navigate, showToast }: ClientModu
             setFilter={setKycFilter}
             showToast={showToast}
             onRefresh={loadData}
+            onDeleteKYC={handleDeleteKYC}
           />
         )}
         {activeTab === 'analytics' && <ClientAnalyticsTab clients={clients} />}
@@ -413,10 +444,12 @@ export default function ClientModule({ subTab, navigate, showToast }: ClientModu
 function ClientListTab({
   clients,
   onViewClient,
+  onDeleteClient,
   showToast,
 }: {
   clients: any[]
   onViewClient: (c: Client) => void
+  onDeleteClient: (c: Client) => void
   showToast: (msg: string, type?: 'success' | 'error' | 'info' | 'warning') => void
 }) {
   const columns: Column<Client>[] = [
@@ -472,15 +505,38 @@ function ClientListTab({
       key: 'actions',
       label: '',
       sortable: false,
-      width: '60px',
-      render: (row) => (
-        <button
-          onClick={(e) => { e.stopPropagation(); onViewClient(row) }}
-          className="p-1.5 rounded-lg hover:bg-white/[0.06] text-gray-500 hover:text-white transition-colors"
-        >
-          <Eye className="w-4 h-4" />
-        </button>
-      ),
+      width: '100px',
+      render: (row) => {
+        const ks = row.kycStatus as string
+        const isApproved = ks === 'approved' || ks === 'verified'
+        return (
+          <div className="flex items-center gap-1">
+            <button
+              onClick={(e) => { e.stopPropagation(); onViewClient(row) }}
+              className="p-1.5 rounded-lg hover:bg-white/[0.06] text-gray-500 hover:text-white transition-colors"
+              title="View"
+            >
+              <Eye className="w-4 h-4" />
+            </button>
+            {isApproved ? (
+              <span
+                className="px-2 py-1 rounded-lg text-[10px] font-medium text-emerald-400 bg-emerald-500/10 border border-emerald-500/20"
+                title="Approved KYC cannot be deleted"
+              >
+                Approved
+              </span>
+            ) : (
+              <button
+                onClick={(e) => { e.stopPropagation(); onDeleteClient(row) }}
+                className="p-1.5 rounded-lg hover:bg-red-500/10 text-gray-500 hover:text-red-400 transition-colors"
+                title="Delete client"
+              >
+                <Trash2 className="w-4 h-4" />
+              </button>
+            )}
+          </div>
+        )
+      },
     },
   ]
 
@@ -508,6 +564,7 @@ function KYCQueueTab({
   setFilter,
   showToast,
   onRefresh,
+  onDeleteKYC,
 }: {
   kycDocs: any[]
   kycByClient: any[]
@@ -515,6 +572,7 @@ function KYCQueueTab({
   setFilter: (f: KYCStatus | 'all') => void
   showToast: (msg: string, type?: 'success' | 'error' | 'info' | 'warning') => void
   onRefresh?: () => void
+  onDeleteKYC: (row: { clientId: string; clientName: string; overallStatus: string }) => void
 }) {
   const [previewDoc, setPreviewDoc] = useState<any | null>(null)
   const [selectedClientKYC, setSelectedClientKYC] = useState<any | null>(null)
@@ -617,45 +675,64 @@ function KYCQueueTab({
       key: 'actions',
       label: 'Actions',
       sortable: false,
-      width: '180px',
-      render: (row) => (
-        <div className="flex items-center gap-1">
-          <button
-            onClick={(e) => { e.stopPropagation(); handleViewClient(row) }}
-            className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-white/[0.06] hover:bg-white/[0.1] text-gray-300 hover:text-white text-xs transition-colors"
-            title="View Details"
-          >
-            <Eye className="w-3.5 h-3.5" /> View
-          </button>
-          {(row.overallStatus === 'submitted' || row.overallStatus === 'pending') && (
-            <>
-              <button
-                onClick={async (e) => {
-                  e.stopPropagation()
-                  const ok = await approveClientKYC(row.clientId, 'admin')
-                  if (ok) { showToast(`KYC approved for ${row.clientName}`, 'success'); onRefresh?.() }
-                  else showToast('Approval failed', 'error')
-                }}
-                className="p-1.5 rounded-lg hover:bg-emerald-500/10 text-gray-500 hover:text-emerald-400 transition-colors"
-                title="Approve All"
+      width: '220px',
+      render: (row) => {
+        const isApproved = row.overallStatus === 'approved' || row.overallStatus === 'verified'
+        return (
+          <div className="flex items-center gap-1">
+            <button
+              onClick={(e) => { e.stopPropagation(); handleViewClient(row) }}
+              className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-white/[0.06] hover:bg-white/[0.1] text-gray-300 hover:text-white text-xs transition-colors"
+              title="View Details"
+            >
+              <Eye className="w-3.5 h-3.5" /> View
+            </button>
+            {(row.overallStatus === 'submitted' || row.overallStatus === 'pending') && (
+              <>
+                <button
+                  onClick={async (e) => {
+                    e.stopPropagation()
+                    const ok = await approveClientKYC(row.clientId, 'admin')
+                    if (ok) { showToast(`KYC approved for ${row.clientName}`, 'success'); onRefresh?.() }
+                    else showToast('Approval failed', 'error')
+                  }}
+                  className="p-1.5 rounded-lg hover:bg-emerald-500/10 text-gray-500 hover:text-emerald-400 transition-colors"
+                  title="Approve All"
+                >
+                  <CheckCircle2 className="w-4 h-4" />
+                </button>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    setRejectReason('')
+                    setRejectTarget({ clientId: row.clientId, clientName: row.clientName })
+                  }}
+                  className="p-1.5 rounded-lg hover:bg-red-500/10 text-gray-500 hover:text-red-400 transition-colors"
+                  title="Reject"
+                >
+                  <XCircle className="w-4 h-4" />
+                </button>
+              </>
+            )}
+            {isApproved ? (
+              <span
+                className="px-2 py-1 rounded-lg text-[10px] font-medium text-emerald-400 bg-emerald-500/10 border border-emerald-500/20"
+                title="Approved KYC cannot be deleted"
               >
-                <CheckCircle2 className="w-4 h-4" />
-              </button>
+                Approved
+              </span>
+            ) : (
               <button
-                onClick={(e) => {
-                  e.stopPropagation()
-                  setRejectReason('')
-                  setRejectTarget({ clientId: row.clientId, clientName: row.clientName })
-                }}
+                onClick={(e) => { e.stopPropagation(); onDeleteKYC(row) }}
                 className="p-1.5 rounded-lg hover:bg-red-500/10 text-gray-500 hover:text-red-400 transition-colors"
-                title="Reject"
+                title="Delete KYC"
               >
-                <XCircle className="w-4 h-4" />
+                <Trash2 className="w-4 h-4" />
               </button>
-            </>
-          )}
-        </div>
-      ),
+            )}
+          </div>
+        )
+      },
     },
   ]
 

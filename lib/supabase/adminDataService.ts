@@ -1165,6 +1165,10 @@ const ALLOWED_TABLES = [
   'compliance_items', 'reports', 'roles', 'funds', 'bank_accounts',
   'investment_applications', 'kyc_documents', 'leave_requests',
   'invoices', 'commissions', 'approvals', 'campaigns', 'staff_checkins', 'marketing_content',
+  // Lead taxonomy + KYC step tables — needed for admin-panel delete with
+  // dependency checks (Lead Statuses/Sources/Companies and KYC Queue).
+  'lead_statuses', 'lead_sources', 'lead_companies',
+  'kyc_basic_details', 'kyc_identity_details', 'kyc_bank_details', 'kyc_demat_details',
 ]
 
 export async function insertRow(table: string, row: Record<string, any>) {
@@ -1505,4 +1509,167 @@ export async function updateNRIConsultation(id: string, updates: Partial<Pick<NR
     if (error) { console.warn('[updateNRIConsultation]', error.message); return false }
     return true
   } catch { return false }
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// ── DEPENDENCY-AWARE DELETE HELPERS ──────────────────────────────
+// These wrap destructive admin actions with business-rule checks so
+// the UI can show a clear "cannot delete" message instead of silently
+// orphaning data (e.g. Lead Status still referenced by existing leads,
+// Employee assigned to a lead, KYC/Investment already approved).
+// ═══════════════════════════════════════════════════════════════════
+
+export type DeleteResult = { ok: boolean; error?: string }
+
+// ── Client delete: block if KYC approved or any approved/credited investment
+export async function deleteClientSafe(clientId: string, userId?: string | null): Promise<DeleteResult> {
+  if (!isSupabaseConfigured()) return { ok: false, error: 'Service unavailable' }
+  try {
+    const sb = supabase as any
+    // Check KYC approval
+    const { data: client } = await sb.from('clients').select('kyc_status, full_name, user_id').eq('id', clientId).maybeSingle()
+    if (!client) return { ok: false, error: 'Client not found' }
+    if (client.kyc_status === 'approved' || client.kyc_status === 'verified') {
+      return { ok: false, error: 'Client has approved KYC and cannot be deleted.' }
+    }
+    // Check approved investments
+    const { data: inv } = await sb
+      .from('investment_applications')
+      .select('id, status')
+      .eq('client_id', clientId)
+      .in('status', ['approved', 'credited', 'completed'])
+      .limit(1)
+    if (Array.isArray(inv) && inv.length > 0) {
+      return { ok: false, error: 'Client has approved investments and cannot be deleted.' }
+    }
+    // Prefer full RPC cleanup when we know the auth user_id
+    const authUserId = userId || client.user_id
+    if (authUserId) {
+      const ok = await deleteUserComplete(authUserId)
+      if (ok) return { ok: true }
+    }
+    // Fallback: soft-cleanup (delete the client row — any dependent tables
+    // with ON DELETE CASCADE will follow).
+    const { error } = await sb.from('clients').delete().eq('id', clientId)
+    if (error) return { ok: false, error: error.message }
+    return { ok: true }
+  } catch (e: any) {
+    return { ok: false, error: e?.message || 'Delete failed' }
+  }
+}
+
+// ── KYC delete: remove per-client KYC rows and reset kyc_status to 'pending'
+// Blocks when KYC is already approved/verified.
+export async function deleteClientKYCSafe(clientId: string): Promise<DeleteResult> {
+  if (!isSupabaseConfigured()) return { ok: false, error: 'Service unavailable' }
+  try {
+    const sb = supabase as any
+    const { data: client } = await sb.from('clients').select('kyc_status').eq('id', clientId).maybeSingle()
+    if (!client) return { ok: false, error: 'Client not found' }
+    if (client.kyc_status === 'approved' || client.kyc_status === 'verified') {
+      return { ok: false, error: 'KYC is approved and cannot be deleted.' }
+    }
+    // Delete per-step KYC rows. Ignore individual errors (table may not
+    // have a row for every step) and collect any fatal error.
+    const tables = ['kyc_basic_details', 'kyc_identity_details', 'kyc_bank_details', 'kyc_demat_details']
+    for (const t of tables) {
+      try { await sb.from(t).delete().eq('client_id', clientId) } catch { /* ignore per-table */ }
+    }
+    // Reset kyc_status back to pending so client can restart KYC.
+    try { await sb.from('clients').update({ kyc_status: 'pending' }).eq('id', clientId) } catch { /* ignore */ }
+    return { ok: true }
+  } catch (e: any) {
+    return { ok: false, error: e?.message || 'Delete failed' }
+  }
+}
+
+// ── Investment delete: block when status is approved/credited/completed
+export async function deleteInvestmentSafe(investmentId: string): Promise<DeleteResult> {
+  if (!isSupabaseConfigured()) return { ok: false, error: 'Service unavailable' }
+  try {
+    const sb = supabase as any
+    const { data: app } = await sb.from('investment_applications').select('status').eq('id', investmentId).maybeSingle()
+    if (!app) return { ok: false, error: 'Investment not found' }
+    if (['approved', 'credited', 'completed'].includes(app.status)) {
+      return { ok: false, error: 'Investment is approved and cannot be deleted.' }
+    }
+    const { error } = await sb.from('investment_applications').delete().eq('id', investmentId)
+    if (error) return { ok: false, error: error.message }
+    return { ok: true }
+  } catch (e: any) {
+    return { ok: false, error: e?.message || 'Delete failed' }
+  }
+}
+
+// ── Lead-taxonomy deletes: block when any lead references the record
+async function countLeadRefs(column: string, id: string): Promise<number> {
+  const sb = supabase as any
+  const { count } = await sb.from('leads').select('id', { count: 'exact', head: true }).eq(column, id)
+  return count || 0
+}
+
+export async function deleteLeadStatusSafe(id: string): Promise<DeleteResult> {
+  if (!isSupabaseConfigured()) return { ok: false, error: 'Service unavailable' }
+  try {
+    const used = await countLeadRefs('lead_status_id', id)
+    if (used > 0) return { ok: false, error: 'This record is already used in Leads and cannot be deleted.' }
+    const sb = supabase as any
+    const { error } = await sb.from('lead_statuses').delete().eq('id', id)
+    if (error) return { ok: false, error: error.message }
+    return { ok: true }
+  } catch (e: any) { return { ok: false, error: e?.message || 'Delete failed' } }
+}
+
+export async function deleteLeadSourceSafe(id: string): Promise<DeleteResult> {
+  if (!isSupabaseConfigured()) return { ok: false, error: 'Service unavailable' }
+  try {
+    const used = await countLeadRefs('lead_source_id', id)
+    if (used > 0) return { ok: false, error: 'This record is already used in Leads and cannot be deleted.' }
+    const sb = supabase as any
+    const { error } = await sb.from('lead_sources').delete().eq('id', id)
+    if (error) return { ok: false, error: error.message }
+    return { ok: true }
+  } catch (e: any) { return { ok: false, error: e?.message || 'Delete failed' } }
+}
+
+export async function deleteLeadCompanySafe(id: string): Promise<DeleteResult> {
+  if (!isSupabaseConfigured()) return { ok: false, error: 'Service unavailable' }
+  try {
+    const used = await countLeadRefs('lead_company_id', id)
+    if (used > 0) return { ok: false, error: 'This record is already used in Leads and cannot be deleted.' }
+    const sb = supabase as any
+    const { error } = await sb.from('lead_companies').delete().eq('id', id)
+    if (error) return { ok: false, error: error.message }
+    return { ok: true }
+  } catch (e: any) { return { ok: false, error: e?.message || 'Delete failed' } }
+}
+
+// ── Employee delete: block if assigned to any lead (as assignee)
+export async function deleteEmployeeSafe(staffProfileId: string, userId: string): Promise<DeleteResult> {
+  if (!isSupabaseConfigured()) return { ok: false, error: 'Service unavailable' }
+  try {
+    const sb = supabase as any
+    // Check leads.assigned_to — column accepts the auth user_id
+    if (userId) {
+      const { count } = await sb.from('leads').select('id', { count: 'exact', head: true }).eq('assigned_to', userId)
+      if ((count || 0) > 0) {
+        return { ok: false, error: 'This employee is assigned to one or more leads and cannot be deleted.' }
+      }
+    }
+    // Prefer full cleanup via RPC (removes auth + profile + staff rows)
+    if (userId) {
+      const ok = await deleteUserComplete(userId)
+      if (ok) return { ok: true }
+    }
+    // Fallback: delete the staff_profile row directly
+    const { error } = await sb.from('staff_profiles').delete().eq('id', staffProfileId)
+    if (error) return { ok: false, error: error.message }
+    return { ok: true }
+  } catch (e: any) { return { ok: false, error: e?.message || 'Delete failed' } }
+}
+
+// ── Asset delete: straightforward — reuses the generic deleteRow helper
+export async function deleteAssetSafe(id: string): Promise<DeleteResult> {
+  const ok = await deleteRow('assets', id)
+  return ok ? { ok: true } : { ok: false, error: 'Failed to delete asset' }
 }

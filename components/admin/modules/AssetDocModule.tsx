@@ -5,7 +5,7 @@ import {
   FolderOpen, Monitor, FileText, Key, Award, Eye, Download,
   Upload, Plus, Search, Calendar, Tag, Lock, Globe,
   HardDrive, Shield, AlertTriangle, Clock, CheckCircle2,
-  Laptop, Server, File, FolderClosed,
+  Laptop, Server, File, FolderClosed, Trash2,
 } from 'lucide-react'
 import AdminGlass from '../shared/AdminGlass'
 import AdminDataTable, { type Column } from '../shared/AdminDataTable'
@@ -13,7 +13,7 @@ import AdminBadge from '../shared/AdminBadge'
 import AdminModal, { ModalButton } from '../shared/AdminModal'
 import AdminKPICard from '../shared/AdminKPICard'
 import AdminEmptyState from '../shared/AdminEmptyState'
-import { fetchAssets, fetchDocuments, insertRow } from '@/lib/supabase/adminDataService'
+import { fetchAssets, fetchDocuments, insertRow, deleteAssetSafe } from '@/lib/supabase/adminDataService'
 import { formatINR, formatDate } from '@/lib/admin/adminHooks'
 import type { Asset, AssetCategory, AssetStatus } from '@/lib/admin/adminTypes'
 import { saveBlobAs } from '@/lib/supabase/storageService'
@@ -248,6 +248,13 @@ function AssetInventoryTab({ assets, showToast, onRefresh }: { assets: any[]; sh
     }
   }
 
+  const handleDeleteAsset = async (row: Asset) => {
+    if (!window.confirm(`Delete asset "${row.name}"? This cannot be undone.`)) return
+    const res = await deleteAssetSafe(row.id)
+    if (res.ok) { showToast('Asset deleted', 'success'); onRefresh?.() }
+    else showToast(res.error || 'Failed to delete asset', 'error')
+  }
+
   const columns: Column<Asset>[] = [
     {
       key: 'name',
@@ -288,6 +295,21 @@ function AssetInventoryTab({ assets, showToast, onRefresh }: { assets: any[]; sh
           </span>
         )
       },
+    },
+    {
+      key: 'actions',
+      label: '',
+      sortable: false,
+      width: '60px',
+      render: (row) => (
+        <button
+          onClick={(e) => { e.stopPropagation(); handleDeleteAsset(row) }}
+          className="p-1.5 rounded-lg hover:bg-red-500/10 text-gray-500 hover:text-red-400 transition-colors"
+          title="Delete asset"
+        >
+          <Trash2 className="w-4 h-4" />
+        </button>
+      ),
     },
   ]
 

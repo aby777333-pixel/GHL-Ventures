@@ -8,6 +8,7 @@ import {
   Palette, ToggleLeft, ToggleRight, Hash, Building2, Zap,
 } from 'lucide-react'
 import { supabase as _supabase, isSupabaseConfigured } from '@/lib/supabase/client'
+import { deleteLeadStatusSafe, deleteLeadSourceSafe, deleteLeadCompanySafe } from '@/lib/supabase/adminDataService'
 
 const supabase = _supabase as any
 
@@ -990,6 +991,13 @@ function LeadStatusCRUD({
     reload()
   }
 
+  const handleDelete = async (s: LeadStatus) => {
+    if (!window.confirm(`Delete status "${s.name}"? This cannot be undone.`)) return
+    const res = await deleteLeadStatusSafe(s.id)
+    if (res.ok) { showToast('Status deleted', 'success'); reload() }
+    else showToast(res.error || 'Failed to delete status', 'error')
+  }
+
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
@@ -1075,9 +1083,14 @@ function LeadStatusCRUD({
                     </button>
                   </td>
                   <td className="px-4 py-3">
-                    <button onClick={() => startEdit(s)} className="p-1.5 rounded-lg hover:bg-white/[0.08] text-gray-400 hover:text-blue-400">
-                      <Pencil size={13} />
-                    </button>
+                    <div className="flex items-center gap-1">
+                      <button onClick={() => startEdit(s)} className="p-1.5 rounded-lg hover:bg-white/[0.08] text-gray-400 hover:text-blue-400" title="Edit">
+                        <Pencil size={13} />
+                      </button>
+                      <button onClick={() => handleDelete(s)} className="p-1.5 rounded-lg hover:bg-red-500/10 text-gray-400 hover:text-red-400" title="Delete">
+                        <Trash2 size={13} />
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -1124,6 +1137,13 @@ function LeadSourceCRUD({
   const toggleActive = async (s: LeadSource) => {
     await (supabase as any).from('lead_sources').update({ is_active: !s.is_active }).eq('id', s.id)
     reload()
+  }
+
+  const handleDelete = async (s: LeadSource) => {
+    if (!window.confirm(`Delete source "${s.name}"? This cannot be undone.`)) return
+    const res = await deleteLeadSourceSafe(s.id)
+    if (res.ok) { showToast('Source deleted', 'success'); reload() }
+    else showToast(res.error || 'Failed to delete source', 'error')
   }
 
   return (
@@ -1188,9 +1208,14 @@ function LeadSourceCRUD({
                     </button>
                   </td>
                   <td className="px-4 py-3">
-                    <button onClick={() => startEdit(s)} className="p-1.5 rounded-lg hover:bg-white/[0.08] text-gray-400 hover:text-blue-400">
-                      <Pencil size={13} />
-                    </button>
+                    <div className="flex items-center gap-1">
+                      <button onClick={() => startEdit(s)} className="p-1.5 rounded-lg hover:bg-white/[0.08] text-gray-400 hover:text-blue-400" title="Edit">
+                        <Pencil size={13} />
+                      </button>
+                      <button onClick={() => handleDelete(s)} className="p-1.5 rounded-lg hover:bg-red-500/10 text-gray-400 hover:text-red-400" title="Delete">
+                        <Trash2 size={13} />
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -1237,6 +1262,13 @@ function LeadCompanyCRUD({
   const toggleActive = async (c: LeadCompany) => {
     await (supabase as any).from('lead_companies').update({ is_active: !c.is_active }).eq('id', c.id)
     reload()
+  }
+
+  const handleDelete = async (c: LeadCompany) => {
+    if (!window.confirm(`Delete company "${c.name}"? This cannot be undone.`)) return
+    const res = await deleteLeadCompanySafe(c.id)
+    if (res.ok) { showToast('Company deleted', 'success'); reload() }
+    else showToast(res.error || 'Failed to delete company', 'error')
   }
 
   return (
@@ -1301,9 +1333,14 @@ function LeadCompanyCRUD({
                     </button>
                   </td>
                   <td className="px-4 py-3">
-                    <button onClick={() => startEdit(c)} className="p-1.5 rounded-lg hover:bg-white/[0.08] text-gray-400 hover:text-blue-400">
-                      <Pencil size={13} />
-                    </button>
+                    <div className="flex items-center gap-1">
+                      <button onClick={() => startEdit(c)} className="p-1.5 rounded-lg hover:bg-white/[0.08] text-gray-400 hover:text-blue-400" title="Edit">
+                        <Pencil size={13} />
+                      </button>
+                      <button onClick={() => handleDelete(c)} className="p-1.5 rounded-lg hover:bg-red-500/10 text-gray-400 hover:text-red-400" title="Delete">
+                        <Trash2 size={13} />
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))}

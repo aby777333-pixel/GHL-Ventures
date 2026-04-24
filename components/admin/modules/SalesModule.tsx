@@ -1280,31 +1280,73 @@ function InvestmentsTab({ showToast }: { showToast: (m: string, t?: 'success' | 
       return <AdminBadge label={s.label} variant={s.variant} size="sm" dot />
     }},
     { key: 'created_at', label: 'Date', sortable: true, render: (row) => <span className="text-gray-500 text-xs">{formatDate(row.created_at)}</span> },
-    { key: 'actions', label: '', width: '130px', render: (row) => (
-      <div className="flex items-center gap-1">
-        <button onClick={() => { setSelectedApp(row); setDetailOpen(true) }}
-          title="View details"
-          className="p-1.5 rounded-lg hover:bg-white/[0.06] text-gray-500 hover:text-white transition-colors">
-          <Eye className="w-3.5 h-3.5" />
-        </button>
-        {/* Bug #18: Quick "Give Credit" action on approved rows so the admin
-            doesn't need to open the modal to find the button. Hidden once
-            already credited. */}
-        {row.status === 'approved' && !row.credit_given && (
-          <button onClick={(e) => { e.stopPropagation(); openCreditModal(row) }}
-            title="Give Credit — records funds as credited for this investment"
-            className="px-2 py-1 rounded-lg text-[10px] font-semibold text-emerald-300 bg-emerald-500/15 border border-emerald-500/30 hover:bg-emerald-500/25 transition-colors">
-            Give Credit
+    { key: 'actions', label: '', width: '180px', render: (row) => {
+      const isApproved = ['approved', 'credited', 'completed'].includes(row.status)
+      return (
+        <div className="flex items-center gap-1">
+          <button onClick={() => { setSelectedApp(row); setDetailOpen(true) }}
+            title="View details"
+            className="p-1.5 rounded-lg hover:bg-white/[0.06] text-gray-500 hover:text-white transition-colors">
+            <Eye className="w-3.5 h-3.5" />
           </button>
-        )}
-        {row.credit_given && (
-          <span className="px-2 py-1 rounded-lg text-[10px] font-semibold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20">
-            Credited
-          </span>
-        )}
-      </div>
-    )},
+          {/* Bug #18: Quick "Give Credit" action on approved rows so the admin
+              doesn't need to open the modal to find the button. Hidden once
+              already credited. */}
+          {row.status === 'approved' && !row.credit_given && (
+            <button onClick={(e) => { e.stopPropagation(); openCreditModal(row) }}
+              title="Give Credit — records funds as credited for this investment"
+              className="px-2 py-1 rounded-lg text-[10px] font-semibold text-emerald-300 bg-emerald-500/15 border border-emerald-500/30 hover:bg-emerald-500/25 transition-colors">
+              Give Credit
+            </button>
+          )}
+          {row.credit_given && (
+            <span className="px-2 py-1 rounded-lg text-[10px] font-semibold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20">
+              Credited
+            </span>
+          )}
+          {isApproved ? (
+            <span
+              className="px-2 py-1 rounded-lg text-[10px] font-medium text-emerald-400 bg-emerald-500/10 border border-emerald-500/20"
+              title="Approved investments cannot be deleted"
+            >
+              Approved
+            </span>
+          ) : (
+            <button
+              onClick={(e) => { e.stopPropagation(); handleDeleteInvestment(row) }}
+              title="Delete investment application"
+              className="p-1.5 rounded-lg hover:bg-red-500/10 text-gray-500 hover:text-red-400 transition-colors"
+            >
+              <Trash2 className="w-3.5 h-3.5" />
+            </button>
+          )}
+        </div>
+      )
+    }},
   ]
+
+  // ── Delete investment application — blocks approved/credited/completed.
+  const handleDeleteInvestment = async (app: any) => {
+    if (['approved', 'credited', 'completed'].includes(app.status)) {
+      showToast('Approved investments cannot be deleted.', 'warning')
+      return
+    }
+    const label = app?._client?.full_name || app?._client?.email || app.id
+    if (!window.confirm(`Delete investment application for "${label}"? This cannot be undone.`)) return
+    try {
+      const { deleteInvestmentSafe } = await import('@/lib/supabase/adminDataService')
+      const res = await deleteInvestmentSafe(app.id)
+      if (res.ok) {
+        showToast('Investment application deleted', 'success')
+        loadData()
+        if (selectedApp?.id === app.id) { setDetailOpen(false); setSelectedApp(null) }
+      } else {
+        showToast(res.error || 'Failed to delete investment', 'error')
+      }
+    } catch (e: any) {
+      showToast(e?.message || 'Error deleting investment', 'error')
+    }
+  }
 
   const handleStatusUpdate = async (newStatus: string) => {
     if (!selectedApp) return

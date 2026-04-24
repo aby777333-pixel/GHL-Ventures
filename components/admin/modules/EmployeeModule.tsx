@@ -16,7 +16,7 @@ import AdminModal, { ModalButton } from '../shared/AdminModal'
 import AdminKPICard from '../shared/AdminKPICard'
 import AdminEmptyState from '../shared/AdminEmptyState'
 import { createEmployee, updateEmployee, getEmployeeDirectory, type EmployeeRecord } from '@/lib/supabase/employeeService'
-import { fetchCareerApplications, updateCareerApplicationStatus, getResumeSignedUrl, type CareerApplication } from '@/lib/supabase/adminDataService'
+import { fetchCareerApplications, updateCareerApplicationStatus, getResumeSignedUrl, deleteEmployeeSafe, type CareerApplication } from '@/lib/supabase/adminDataService'
 import { supabase, isSupabaseConfigured } from '@/lib/supabase/client'
 import {
   fetchAllAnnouncements,
@@ -185,6 +185,22 @@ export default function EmployeeModule({ subTab, navigate, showToast }: Employee
     return { total: employees.length, active, onLeave, pendingLeaves: pendingLeaveCount, departments }
   }, [employees, pendingLeaveCount])
 
+  // ── Delete Employee — blocks when assigned to any lead as assignee.
+  const handleDeleteEmployee = useCallback(async (emp: any) => {
+    const raw = emp?._raw as EmployeeRecord | undefined
+    const staffProfileId = raw?.id || emp.id
+    const userId = raw?.user_id || ''
+    if (!window.confirm(`Delete employee "${emp.name}"? This permanently removes their account.`)) return
+    const res = await deleteEmployeeSafe(staffProfileId, userId)
+    if (res.ok) {
+      showToast(`Employee "${emp.name}" deleted`, 'success')
+      if (selectedEmployee?.id === emp.id) setSelectedEmployee(null)
+      loadData()
+    } else {
+      showToast(res.error || 'Failed to delete employee', 'error')
+    }
+  }, [selectedEmployee, showToast, loadData])
+
   const handleTabClick = (tabId: string) => {
     navigate(tabId === 'directory' ? 'employees' : `employees/${tabId}`)
   }
@@ -233,7 +249,7 @@ export default function EmployeeModule({ subTab, navigate, showToast }: Employee
       </div>
 
       <div className="admin-tab-switch">
-        {activeTab === 'directory' && <DirectoryTab employees={employees} onView={(e) => setSelectedEmployee(e)} showToast={showToast} />}
+        {activeTab === 'directory' && <DirectoryTab employees={employees} onView={(e) => setSelectedEmployee(e)} onDelete={handleDeleteEmployee} showToast={showToast} />}
         {activeTab === 'announcements' && <AnnouncementsTab showToast={showToast} />}
         {activeTab === 'policies' && <PoliciesTab showToast={showToast} />}
         {activeTab === 'feedback' && <FeedbackTab showToast={showToast} />}
@@ -487,7 +503,7 @@ export default function EmployeeModule({ subTab, navigate, showToast }: Employee
 }
 
 // ── Directory Tab ───────────────────────────────────────────────
-function DirectoryTab({ employees, onView, showToast }: { employees: any[]; onView: (e: Employee) => void; showToast: (msg: string, type?: 'success' | 'error' | 'info' | 'warning') => void }) {
+function DirectoryTab({ employees, onView, onDelete, showToast }: { employees: any[]; onView: (e: Employee) => void; onDelete: (e: any) => void; showToast: (msg: string, type?: 'success' | 'error' | 'info' | 'warning') => void }) {
   const columns: Column<Employee>[] = [
     {
       key: 'name',
@@ -524,11 +540,16 @@ function DirectoryTab({ employees, onView, showToast }: { employees: any[]; onVi
       key: 'actions',
       label: '',
       sortable: false,
-      width: '50px',
+      width: '90px',
       render: (row) => (
-        <button onClick={(e) => { e.stopPropagation(); onView(row) }} className="p-1.5 rounded-lg hover:bg-white/[0.06] text-gray-500 hover:text-white transition-colors">
-          <Eye className="w-4 h-4" />
-        </button>
+        <div className="flex items-center gap-1">
+          <button onClick={(e) => { e.stopPropagation(); onView(row) }} className="p-1.5 rounded-lg hover:bg-white/[0.06] text-gray-500 hover:text-white transition-colors" title="View">
+            <Eye className="w-4 h-4" />
+          </button>
+          <button onClick={(e) => { e.stopPropagation(); onDelete(row) }} className="p-1.5 rounded-lg hover:bg-red-500/10 text-gray-500 hover:text-red-400 transition-colors" title="Delete employee">
+            <Trash2 className="w-4 h-4" />
+          </button>
+        </div>
       ),
     },
   ]
