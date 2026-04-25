@@ -1565,15 +1565,37 @@ export async function deleteClientSafe(clientId: string, userId?: string | null)
       })
     } catch { /* non-blocking */ }
 
-    // Single-source-of-truth RPC: handles auth-linked AND legacy clients,
-    // including storage.objects cleanup.
-    const { data: ok, error } = await sb.rpc('admin_delete_client_full', { p_client_id: clientId })
-    if (error) {
-      console.warn('[admin] admin_delete_client_full error:', error.message)
-      return { ok: false, error: error.message }
+    // Storage objects must be deleted via the Storage REST API
+    // (Supabase blocks direct DELETE FROM storage.objects). Route both
+    // the storage cleanup and the DB purge through the
+    // admin-delete-client Netlify function so they happen in lockstep
+    // with proper service-role auth.
+    try {
+      const { getAuthToken } = await import('./client')
+      const token = await getAuthToken()
+      const origin = typeof window !== 'undefined' ? window.location.origin : ''
+      const NETLIFY_FUNCTIONS_HOST = 'https://ghl-india-ventures-2025.netlify.app'
+      const base = origin.includes('localhost')
+        ? 'http://localhost:8888'
+        : (origin.endsWith('.netlify.app') ? origin : NETLIFY_FUNCTIONS_HOST)
+      const res = await fetch(`${base}/.netlify/functions/admin-delete-client`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify({ clientId }),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok || !data?.success) {
+        return { ok: false, error: data?.error || `Delete failed (${res.status})` }
+      }
+      return { ok: true }
+    } catch (e: any) {
+      // Fallback: pure DB purge via RPC. Storage objects will linger but
+      // the DB is consistent.
+      const { data: ok2, error } = await sb.rpc('admin_delete_client_full', { p_client_id: clientId })
+      if (error) return { ok: false, error: error.message }
+      if (ok2 !== true) return { ok: false, error: 'Purge returned false' }
+      return { ok: true }
     }
-    if (ok !== true) return { ok: false, error: 'Purge returned false' }
-    return { ok: true }
   } catch (e: any) {
     return { ok: false, error: e?.message || 'Delete failed' }
   }
