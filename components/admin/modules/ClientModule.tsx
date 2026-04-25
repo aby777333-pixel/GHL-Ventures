@@ -635,21 +635,41 @@ function KYCQueueTab({
   const [rejectTarget, setRejectTarget] = useState<{ clientId: string; clientName: string } | null>(null)
   const [rejectReason, setRejectReason] = useState('')
   const [rejectSaving, setRejectSaving] = useState(false)
+  // When ON, after recording the rejection we also call the full-purge
+  // path (storage objects + every client-linked table + auth user). Off
+  // by default so the existing "ask client to resubmit" flow still works.
+  const [rejectAndPurge, setRejectAndPurge] = useState(false)
   const submitRejection = async () => {
     if (!rejectTarget) return
     const trimmed = rejectReason.trim()
     if (!trimmed) { showToast('Rejection reason is required', 'warning'); return }
     setRejectSaving(true)
     const ok = await rejectClientKYC(rejectTarget.clientId, 'admin', trimmed)
-    setRejectSaving(false)
-    if (ok) {
-      showToast(`KYC rejected for ${rejectTarget.clientName}`, 'success')
-      setRejectTarget(null); setRejectReason('')
+    if (!ok) {
+      setRejectSaving(false)
+      showToast('Rejection failed', 'error')
+      return
+    }
+    if (rejectAndPurge) {
+      const purge = await deleteClientSafe(rejectTarget.clientId, null)
+      setRejectSaving(false)
+      if (purge.ok) {
+        showToast(`Client "${rejectTarget.clientName}" rejected and permanently removed`, 'success')
+      } else {
+        // The rejection itself succeeded — surface the purge error so the
+        // admin knows the soft-rejection took effect but data wasn't wiped.
+        showToast(`Rejected. Purge failed: ${purge.error || 'unknown error'}`, 'warning')
+      }
+      setRejectTarget(null); setRejectReason(''); setRejectAndPurge(false)
       setSelectedClientKYC(null); setClientKYCDetails(null)
       onRefresh?.()
-    } else {
-      showToast('Rejection failed', 'error')
+      return
     }
+    setRejectSaving(false)
+    showToast(`KYC rejected for ${rejectTarget.clientName}`, 'success')
+    setRejectTarget(null); setRejectReason(''); setRejectAndPurge(false)
+    setSelectedClientKYC(null); setClientKYCDetails(null)
+    onRefresh?.()
   }
 
   // View detailed KYC for a client
@@ -989,15 +1009,17 @@ function KYCQueueTab({
       {rejectTarget && (
         <AdminModal
           isOpen={!!rejectTarget}
-          onClose={() => { if (!rejectSaving) { setRejectTarget(null); setRejectReason('') } }}
-          title="Reject KYC"
+          onClose={() => { if (!rejectSaving) { setRejectTarget(null); setRejectReason(''); setRejectAndPurge(false) } }}
+          title={rejectAndPurge ? 'Disapprove & Permanently Remove' : 'Reject KYC'}
           subtitle={rejectTarget.clientName}
           maxWidth="max-w-lg"
           footer={
             <>
-              <ModalButton onClick={() => { setRejectTarget(null); setRejectReason('') }} disabled={rejectSaving}>Cancel</ModalButton>
+              <ModalButton onClick={() => { setRejectTarget(null); setRejectReason(''); setRejectAndPurge(false) }} disabled={rejectSaving}>Cancel</ModalButton>
               <ModalButton variant="danger" onClick={submitRejection} disabled={rejectSaving || !rejectReason.trim()}>
-                {rejectSaving ? 'Rejecting…' : 'Reject KYC'}
+                {rejectSaving
+                  ? (rejectAndPurge ? 'Disapproving & purging…' : 'Rejecting…')
+                  : (rejectAndPurge ? 'Disapprove & Remove' : 'Reject KYC')}
               </ModalButton>
             </>
           }
@@ -1016,6 +1038,25 @@ function KYCQueueTab({
               className="w-full px-3 py-2.5 text-sm text-gray-200 rounded-lg bg-white/[0.04] border border-white/[0.08] focus:outline-none focus:border-red-500/50"
             />
             <p className="text-[11px] text-gray-500">{rejectReason.trim().length} / 500 characters</p>
+
+            {/* Optional: full-purge after rejection */}
+            <div className="pt-2 border-t border-white/[0.06]">
+              <label className="flex items-start gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={rejectAndPurge}
+                  onChange={(e) => setRejectAndPurge(e.target.checked)}
+                  disabled={rejectSaving}
+                  className="mt-0.5 rounded border-gray-600 bg-white/[0.04] text-red-500 focus:ring-red-500/40"
+                />
+                <span className="text-xs text-gray-300">
+                  <span className="font-medium text-red-300">Also permanently remove this client</span>
+                  <span className="block text-[11px] text-gray-500 mt-0.5">
+                    Wipes all KYC documents, investment docs, profile, account record, and the auth login from every repository — cannot be undone. Use only when the application is genuinely invalid (fake / fraudulent / duplicate). Approved KYC and credited investments still block this.
+                  </span>
+                </span>
+              </label>
+            </div>
           </div>
         </AdminModal>
       )}

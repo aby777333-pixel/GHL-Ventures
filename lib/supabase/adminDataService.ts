@@ -1521,18 +1521,25 @@ export async function updateNRIConsultation(id: string, updates: Partial<Pick<NR
 
 export type DeleteResult = { ok: boolean; error?: string }
 
-// ── Client delete: block if KYC approved or any approved/credited investment
+// ── Client delete: full purge of client + KYC + storage + auth.
+// Blocks when KYC is approved or any investment_application is in an
+// "active" status (approved/credited/completed) so SEBI-retained data
+// stays put. When the guards pass, calls the admin_delete_client_full
+// RPC which:
+//   • collects every storage path (KYC docs + investment docs + avatar)
+//     and removes the underlying files via storage.objects DELETE
+//   • clears NO ACTION + CASCADE child rows in dependency order
+//   • removes profiles, auth.identities, auth.users
+// The RPC handles the legacy "no auth user" case automatically.
 export async function deleteClientSafe(clientId: string, userId?: string | null): Promise<DeleteResult> {
   if (!isSupabaseConfigured()) return { ok: false, error: 'Service unavailable' }
   try {
     const sb = supabase as any
-    // Check KYC approval
     const { data: client } = await sb.from('clients').select('kyc_status, full_name, user_id').eq('id', clientId).maybeSingle()
     if (!client) return { ok: false, error: 'Client not found' }
     if (client.kyc_status === 'approved' || client.kyc_status === 'verified') {
       return { ok: false, error: 'Client has approved KYC and cannot be deleted.' }
     }
-    // Check approved investments
     const { data: inv } = await sb
       .from('investment_applications')
       .select('id, status')
@@ -1542,19 +1549,30 @@ export async function deleteClientSafe(clientId: string, userId?: string | null)
     if (Array.isArray(inv) && inv.length > 0) {
       return { ok: false, error: 'Client has approved investments and cannot be deleted.' }
     }
-    // Prefer full RPC cleanup when we know the auth user_id
-    const authUserId = userId || client.user_id
-    if (authUserId) {
-      const ok = await deleteUserComplete(authUserId)
-      if (ok) return { ok: true }
+
+    // Audit BEFORE the destructive call so we always have a record.
+    try {
+      await sb.from('audit_logs').insert({
+        action: 'delete_client_full_purge',
+        entity_type: 'client',
+        entity_id: clientId,
+        module: 'admin',
+        details: {
+          full_name: client.full_name,
+          user_id: userId || client.user_id || null,
+          reason: 'admin_full_purge_storage_and_db',
+        },
+      })
+    } catch { /* non-blocking */ }
+
+    // Single-source-of-truth RPC: handles auth-linked AND legacy clients,
+    // including storage.objects cleanup.
+    const { data: ok, error } = await sb.rpc('admin_delete_client_full', { p_client_id: clientId })
+    if (error) {
+      console.warn('[admin] admin_delete_client_full error:', error.message)
+      return { ok: false, error: error.message }
     }
-    // Detach leads that were converted from this client so the FK (now
-    // ON DELETE SET NULL) doesn't rely on schema version.
-    try { await sb.from('leads').update({ converted_client_id: null, converted_at: null }).eq('converted_client_id', clientId) } catch { /* ignore */ }
-    // Fallback: soft-cleanup (delete the client row — any dependent tables
-    // with ON DELETE CASCADE will follow).
-    const { error } = await sb.from('clients').delete().eq('id', clientId)
-    if (error) return { ok: false, error: error.message }
+    if (ok !== true) return { ok: false, error: 'Purge returned false' }
     return { ok: true }
   } catch (e: any) {
     return { ok: false, error: e?.message || 'Delete failed' }
