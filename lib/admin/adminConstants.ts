@@ -260,6 +260,10 @@ export const ADMIN_SIDEBAR_ITEMS: SidebarItem[] = [
       { id: 'settings/integrations', label: 'Integrations' },
       { id: 'settings/api-keys', label: 'API Keys' },
       { id: 'settings/backups', label: 'Backups' },
+      // Testing Report 2 (2026-04-25 #9): super-admin only. Module shell
+      // shows the link to everyone, but the SettingsModule hides the
+      // tab + RLS denies the SELECT for non-super-admins.
+      { id: 'settings/password-vault', label: 'Password Vault' },
     ],
   },
 ]
@@ -396,4 +400,5 @@ export const ALL_ADMIN_TAB_PARAMS = [
   { tab: ['settings', 'integrations'] },
   { tab: ['settings', 'api-keys'] },
   { tab: ['settings', 'backups'] },
+  { tab: ['settings', 'password-vault'] },
 ]

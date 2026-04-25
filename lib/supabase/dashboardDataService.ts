@@ -333,14 +333,25 @@ export async function deleteNominee(nomineeId: string) {
 export async function submitKYCForReview(clientId: string) {
   if (!isSupabaseConfigured()) return false
   try {
-    // Update all step statuses to submitted
-    await Promise.all([
-      sb.from('kyc_basic_details').update({ status: 'submitted' }).eq('client_id', clientId),
-      sb.from('kyc_identity_details').update({ status: 'submitted' }).eq('client_id', clientId),
-      sb.from('kyc_bank_details').update({ status: 'submitted' }).eq('client_id', clientId),
-    ])
-    // Update client kyc_status
-    await sb.from('clients').update({ kyc_status: 'submitted', kyc_step: 5 }).eq('id', clientId)
+    // Testing Report 2 (2026-04-25 #1): admin must be able to edit an
+    // already-approved KYC without demoting it back to "submitted". If the
+    // client is already verified/approved, leave the status alone — the
+    // admin is just amending fields.
+    const { data: existing } = await sb.from('clients').select('kyc_status').eq('id', clientId).maybeSingle()
+    const currentStatus: string = (existing?.kyc_status || '').toLowerCase()
+    const alreadyApproved = currentStatus === 'approved' || currentStatus === 'verified'
+
+    if (!alreadyApproved) {
+      await Promise.all([
+        sb.from('kyc_basic_details').update({ status: 'submitted' }).eq('client_id', clientId),
+        sb.from('kyc_identity_details').update({ status: 'submitted' }).eq('client_id', clientId),
+        sb.from('kyc_bank_details').update({ status: 'submitted' }).eq('client_id', clientId),
+      ])
+      await sb.from('clients').update({ kyc_status: 'submitted', kyc_step: 5 }).eq('id', clientId)
+    } else {
+      // Just bump kyc_step so the wizard doesn't think it's incomplete next time.
+      await sb.from('clients').update({ kyc_step: 5, updated_at: new Date().toISOString() }).eq('id', clientId)
+    }
     // Notify admins
     try {
       const { data: admins } = await sb.from('profiles').select('id').in('role', ['admin', 'super_admin'])

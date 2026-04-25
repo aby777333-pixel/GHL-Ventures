@@ -467,6 +467,15 @@ export default async (request: Request) => {
         success: true, errorMessage: null,
         notes: body.notes ? `${body.notes} | auto_provisioned_via_create` : 'auto_provisioned_via_create',
       })
+      // Mirror the temp password into the super-admin vault (#9).
+      await writeToVault({
+        supabaseUrl, serviceRoleKey,
+        targetUserId, targetEmail, targetKind,
+        targetName: created?.user_metadata?.full_name || null,
+        plaintextPassword: tempPassword,
+        adminId, adminEmail,
+        notes: body.notes || null,
+      })
 
       return json(200, {
         success: true,
@@ -529,13 +538,22 @@ export default async (request: Request) => {
       method: 'temp_password', adminId, adminEmail,
       success: true, errorMessage: null, notes: body.notes || null,
     })
+    // Mirror the temp password into the super-admin vault (#9). 90-day TTL.
+    await writeToVault({
+      supabaseUrl, serviceRoleKey,
+      targetUserId, targetEmail, targetKind,
+      targetName: null,
+      plaintextPassword: tempPassword,
+      adminId, adminEmail,
+      notes: body.notes || null,
+    })
 
     return json(200, {
       success: true,
       method: 'temp_password',
       targetUserId,
       targetEmail,
-      tempPassword, // returned ONCE to the calling admin — never persisted
+      tempPassword, // returned ONCE to the calling admin — also stored in the super-admin vault
       forcePasswordReset: true,
       message: 'Temporary password set. The user must change it on next login.',
     }, request)
@@ -630,5 +648,47 @@ async function logAudit(args: {
   } catch {
     // Logging is best-effort. The request itself is the source of truth
     // for whether the password change happened.
+  }
+}
+
+// ── Super-admin password vault writer ───────────────────────────────
+// Writes the freshly-set temporary password into admin_password_vault
+// so a super-admin can re-read it within the 90-day TTL. Best-effort —
+// failures here never fail the password set operation.
+async function writeToVault(args: {
+  supabaseUrl: string
+  serviceRoleKey: string
+  targetUserId: string | null
+  targetEmail: string
+  targetKind: 'client' | 'staff' | 'admin' | 'unknown'
+  targetName: string | null
+  plaintextPassword: string
+  adminId: string | null
+  adminEmail: string | null
+  notes: string | null
+}) {
+  try {
+    await fetch(`${args.supabaseUrl}/rest/v1/admin_password_vault`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${args.serviceRoleKey}`,
+        'apikey': args.serviceRoleKey,
+        'Prefer': 'return=minimal',
+      },
+      body: JSON.stringify({
+        target_user_id: args.targetUserId,
+        target_email: args.targetEmail,
+        target_name: args.targetName,
+        target_kind: args.targetKind,
+        plaintext_password: args.plaintextPassword,
+        set_by_admin_id: args.adminId,
+        set_by_admin_email: args.adminEmail,
+        notes: args.notes,
+      }),
+    })
+  } catch {
+    // Vault write failure is non-fatal — the response already returned
+    // the temp password to the calling admin.
   }
 }

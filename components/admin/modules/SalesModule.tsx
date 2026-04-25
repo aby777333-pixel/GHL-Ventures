@@ -1127,7 +1127,16 @@ function generateInvestmentDocument(
   const amountWords = numberToWords(amount)
   const fund = app.fund_vehicle || 'Alternate route to Invest in AIF via Debenture'
   const dateStr = new Date().toLocaleDateString('en-IN', { day: '2-digit', month: '2-digit', year: 'numeric' })
-  const refNo = `GHLVEN/${(app.id || '').replace(/-/g,'').slice(0, 3).toUpperCase()}/${new Date().getFullYear()}`
+  // Testing Report 2 (2026-04-25 #8): prefer the canonical reference
+  // (GHLVEN/<seq>/<FY>) stored on the application. Fall back to a same-
+  // shape value if the application doesn't have one yet.
+  const _now = new Date()
+  const _yr = _now.getFullYear()
+  const _fy = (_now.getMonth() + 1) >= 4
+    ? `${String(_yr).slice(-2)}${String(_yr + 1).slice(-2)}`
+    : `${String(_yr - 1).slice(-2)}${String(_yr).slice(-2)}`
+  const refNo: string = app.reference_number
+    || `GHLVEN/${(app.id || '').replace(/-/g, '').slice(0, 3).toUpperCase()}/${_fy}`
   const folioNo = `D${(app.id || '').replace(/-/g,'').slice(0,4).toUpperCase()}`
   const certNo = `${(app.id || '').replace(/-/g,'').slice(0, 3).toUpperCase()}`
   const tenure = app.tenure_preference || '3 years'
@@ -1965,7 +1974,11 @@ function InvestmentsTab({ showToast }: { showToast: (m: string, t?: 'success' | 
                     {/* TDS-6 (25-04-2026): TDS docs can be uploaded multiple times.
                         Each upload is added to the investor's TDS section. */}
                     <button
-                      onClick={() => handleAdminDocUpload('tds', `TDS Certificate — ${formatDate(new Date().toISOString())}`)}
+                      // Testing Report 2 (2026-04-25 #7): keep the title
+                      // simple — just "TDS Certificate". The created_at
+                      // column on investment_documents already records when
+                      // each one was uploaded.
+                      onClick={() => handleAdminDocUpload('tds', 'TDS Certificate')}
                       disabled={docUploading}
                       className="flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium text-amber-300 bg-amber-500/10 border border-amber-500/20 hover:bg-amber-500/20 transition-colors disabled:opacity-50 col-span-2"
                       title="Upload a TDS certificate. Multiple uploads allowed — each appears in the investor's TDS section."

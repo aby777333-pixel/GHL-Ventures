@@ -19,7 +19,9 @@ import { useEffect, useRef } from 'react'
 import { supabase, isSupabaseConfigured } from './client'
 
 const CHECK_INTERVAL_MS = 60_000          // re-verify every minute
-const INACTIVITY_MS = 30 * 60_000          // 30 minutes idle → logout
+// Testing Report 2 (2026-04-25 #2): logout should only fire after a full
+// hour of inactivity, never while the user is actively using the site.
+const INACTIVITY_MS = 60 * 60_000          // 60 minutes idle → logout
 const ACTIVITY_EVENTS: (keyof WindowEventMap)[] = [
   'mousemove', 'mousedown', 'keydown', 'scroll', 'touchstart', 'click',
 ]

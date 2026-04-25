@@ -862,10 +862,12 @@ export default function InvestmentFlowTab({
                 return bt - at
               })
               // Types that support admin→investor→admin signing round-trip.
+              // Testing Report 2 (2026-04-25 #6): only the Debenture Agreement
+              // requires a signed copy back from the investor. The Debenture
+              // Certificate, Allotment Letter and Acknowledgement no longer
+              // show an Upload button on the investor side.
               const signableTypes = new Set([
                 'debenture_agreement', 'agreement',
-                'debenture_certificate', 'certificate',
-                'allotment_letter',
               ])
               const autoGenTypes = new Set(['acknowledgement_letter', 'acknowledgement'])
               return groups.map(([appId, docs]) => {
@@ -885,7 +887,9 @@ export default function InvestmentFlowTab({
                       <table className="w-full text-sm">
                         <thead>
                           <tr className={`border-b ${t('border-white/[0.06] bg-white/[0.02]','border-gray-200 bg-gray-50')}`}>
-                            {['DATE', 'TITLE', 'DOCUMENT', 'SIGNED DOCUMENTS'].map(h => (
+                            {/* Testing Report 2 (2026-04-25 #5): drop the
+                                Date column from the investor's docs table. */}
+                            {['TITLE', 'DOCUMENT', 'SIGNED DOCUMENTS'].map(h => (
                               <th key={h} className={`text-left text-xs font-bold uppercase tracking-wider py-3 px-5 ${t('text-gray-500','text-gray-600')}`}>{h}</th>
                             ))}
                           </tr>
@@ -897,7 +901,6 @@ export default function InvestmentFlowTab({
                             const isSignable = signableTypes.has(docType)
                             return (
                               <tr key={doc.id || i} className={`border-b ${t('border-white/[0.04]','border-gray-100')}`}>
-                                <td className={`py-4 px-5 text-xs ${t('text-gray-400','text-gray-600')}`}>{fmtDateTime(doc.created_at)}</td>
                                 <td className={`py-4 px-5 text-xs font-medium ${t('text-white','text-gray-900')}`}>{doc.title}</td>
                                 <td className="py-4 px-5">
                                   {doc.file_url ? (

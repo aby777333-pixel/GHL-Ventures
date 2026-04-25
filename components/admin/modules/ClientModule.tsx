@@ -45,7 +45,7 @@ export default function ClientModule({ subTab, navigate, showToast }: ClientModu
   const [addClientOpen, setAddClientOpen] = useState(false)
   const [folderPickerOpen, setFolderPickerOpen] = useState(false)
   const [editingClient, setEditingClient] = useState<Client | null>(null)
-  const [clientForm, setClientForm] = useState({ full_name: '', email: '', phone: '', pan: '', risk_profile: 'moderate', assigned_rm: '', total_invested: '' })
+  const [clientForm, setClientForm] = useState({ full_name: '', email: '', phone: '', pan: '', risk_profile: 'moderate', assigned_rm: '', total_invested: '', referred_by: '' })
   // Add KYC on behalf of an existing client created without KYC.
   // addKYCTarget holds the client + resolved user_id (looked up on open).
   const [addKYCTarget, setAddKYCTarget] = useState<{ client: Client; userId: string } | null>(null)
@@ -193,7 +193,7 @@ export default function ClientModule({ subTab, navigate, showToast }: ClientModu
           <p className="text-sm text-gray-500 mt-1">Manage investors, KYC verification, and client relationships</p>
         </div>
         <button
-          onClick={() => { setEditingClient(null); setClientForm({ full_name: '', email: '', phone: '', pan: '', risk_profile: 'moderate', assigned_rm: '', total_invested: '' }); setAddClientOpen(true) }}
+          onClick={() => { setEditingClient(null); setClientForm({ full_name: '', email: '', phone: '', pan: '', risk_profile: 'moderate', assigned_rm: '', total_invested: '', referred_by: '' }); setAddClientOpen(true) }}
           className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium text-white bg-brand-red/20 border border-brand-red/30 hover:bg-brand-red/30 transition-colors self-start admin-btn-press"
         >
           <UserPlus className="w-4 h-4" />
@@ -280,6 +280,7 @@ export default function ClientModule({ subTab, navigate, showToast }: ClientModu
                   risk_profile: c.riskProfile || 'moderate',
                   assigned_rm: (c as any).assignedRMId || '',
                   total_invested: String(c.aum || ''),
+                  referred_by: (c as any).referredBy || '',
                 })
                 // Close the profile modal first, then open the edit modal on the
                 // next tick so the portal/overflow transitions cleanly. Previously
@@ -350,6 +351,11 @@ export default function ClientModule({ subTab, navigate, showToast }: ClientModu
                     // Update existing client
                     const { supabase } = await import('@/lib/supabase/client')
                     const sb = supabase as any
+                    // Testing Report 2 (2026-04-25 #3): admin can back-fill
+                    // a referral code on an existing client. Empty string
+                    // sent as NULL so we don't accidentally lock a blank
+                    // referrer in.
+                    const referredBy = (clientForm.referred_by || '').trim() || null
                     const { error } = await sb.from('clients').update({
                       full_name: clientForm.full_name,
                       email: clientForm.email,
@@ -358,11 +364,45 @@ export default function ClientModule({ subTab, navigate, showToast }: ClientModu
                       risk_profile: sanitizedRisk,
                       assigned_rm: sanitizedRM,
                       total_invested: parseFloat(clientForm.total_invested) || 0,
+                      referred_by: referredBy,
                     }).eq('id', editingClient.id)
                     if (error) throw error
+                    // Best-effort: if the entered code matches a client's
+                    // referral_code, ensure a referrals row links them so
+                    // the referrer's commission tracking is in sync.
+                    if (referredBy) {
+                      try {
+                        const { data: referrer } = await sb.from('clients')
+                          .select('id, full_name, email, phone')
+                          .eq('referral_code', referredBy)
+                          .maybeSingle()
+                        if (referrer && referrer.id !== editingClient.id) {
+                          // Insert a referrals row (status 'won' since the
+                          // referee is already a registered client). Skip
+                          // duplicates by checking existing first.
+                          const { data: existing } = await sb.from('referrals')
+                            .select('id')
+                            .eq('referrer_email', referrer.email || '')
+                            .eq('referee_email', clientForm.email)
+                            .maybeSingle()
+                          if (!existing) {
+                            await sb.from('referrals').insert({
+                              referrer_name: referrer.full_name || '',
+                              referrer_email: referrer.email || '',
+                              referrer_phone: referrer.phone || '',
+                              referee_name: clientForm.full_name,
+                              referee_email: clientForm.email,
+                              referee_phone: clientForm.phone || '',
+                              status: 'won',
+                              admin_notes: `Back-filled by admin via client edit · code ${referredBy}`,
+                            })
+                          }
+                        }
+                      } catch (e) { console.warn('[admin] referral link non-fatal:', e) }
+                    }
                     setAddClientOpen(false)
                     setEditingClient(null)
-                    setClientForm({ full_name: '', email: '', phone: '', pan: '', risk_profile: 'moderate', assigned_rm: '', total_invested: '' })
+                    setClientForm({ full_name: '', email: '', phone: '', pan: '', risk_profile: 'moderate', assigned_rm: '', total_invested: '', referred_by: '' })
                     showToast(`Client ${clientForm.full_name} updated successfully`, 'success')
                     loadData()
                   } else {
@@ -377,13 +417,14 @@ export default function ClientModule({ subTab, navigate, showToast }: ClientModu
                       risk_profile: sanitizedRisk,
                       assigned_rm: sanitizedRM,
                       total_invested: parseFloat(clientForm.total_invested) || 0,
+                      referred_by: (clientForm.referred_by || '').trim() || null,
                       client_code: clientCode,
                       kyc_status: 'pending',
                       is_active: true,
                     })
                     if (result) {
                       setAddClientOpen(false)
-                      setClientForm({ full_name: '', email: '', phone: '', pan: '', risk_profile: 'moderate', assigned_rm: '', total_invested: '' })
+                      setClientForm({ full_name: '', email: '', phone: '', pan: '', risk_profile: 'moderate', assigned_rm: '', total_invested: '', referred_by: '' })
                       showToast(`Client ${clientForm.full_name} registered (${clientCode})`, 'success')
                       loadData()
                     } else {
@@ -441,9 +482,18 @@ export default function ClientModule({ subTab, navigate, showToast }: ClientModu
                 </select>
               </div>
             </div>
-            <div>
-              <label className="block text-xs font-medium text-gray-400 mb-1.5">Initial Investment Amount (₹)</label>
-              <input type="number" placeholder="0" value={clientForm.total_invested} onChange={e => setClientForm(f => ({ ...f, total_invested: e.target.value }))} className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-brand-red/40 focus:ring-1 focus:ring-brand-red/20" />
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-xs font-medium text-gray-400 mb-1.5">Initial Investment Amount (₹)</label>
+                <input type="number" placeholder="0" value={clientForm.total_invested} onChange={e => setClientForm(f => ({ ...f, total_invested: e.target.value }))} className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-brand-red/40 focus:ring-1 focus:ring-brand-red/20" />
+              </div>
+              <div>
+                {/* Testing Report 2 (2026-04-25 #3): admin can back-fill a
+                    referral code if the user registered without one. */}
+                <label className="block text-xs font-medium text-gray-400 mb-1.5">Referral Code (Referred By)</label>
+                <input type="text" placeholder="e.g. GHL-R-AB12CD" value={clientForm.referred_by} onChange={e => setClientForm(f => ({ ...f, referred_by: e.target.value.trim() }))} className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-brand-red/40 focus:ring-1 focus:ring-brand-red/20" />
+                <p className="mt-1 text-[10px] text-gray-500">Enter the referrer&apos;s code. If it matches a registered client, the referral link is created automatically.</p>
+              </div>
             </div>
             <div className="sm:col-span-2">
               <label className="block text-xs font-medium text-gray-400 mb-1.5">Attach KYC / Documents</label>
@@ -1128,17 +1178,23 @@ function ClientProfileContent({ client, activeRMs, onAssignRM, onAddKYC, addingK
             } />
           </div>
         </div>
-        {/* Add KYC — only when KYC has not been started. Once submitted,
-            hide the button to prevent duplicate KYC creation per spec. */}
-        {kycNotStarted && onAddKYC && (
+        {/* Manage KYC — Testing Report 2 (2026-04-25 #1):
+            admin must always be able to update KYC details + documents
+            even after the investor has submitted or been approved.
+            The wizard pre-loads existing values so the admin can amend
+            specific fields without restarting the flow. */}
+        {onAddKYC && (
           <button
             type="button"
             onClick={() => onAddKYC(client)}
             disabled={addingKYC}
             className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold bg-brand-red/20 border border-brand-red/30 text-white hover:bg-brand-red/30 disabled:opacity-50 whitespace-nowrap"
+            title={kycNotStarted ? 'Start KYC for this client' : 'Edit existing KYC details / documents'}
           >
             <ShieldCheck className="w-4 h-4" />
-            {addingKYC ? 'Opening…' : 'Add KYC'}
+            {addingKYC
+              ? 'Opening…'
+              : kycNotStarted ? 'Add KYC' : kycCompleted ? 'Edit KYC' : 'Update KYC'}
           </button>
         )}
       </div>

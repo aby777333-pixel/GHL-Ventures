@@ -17,7 +17,7 @@ import { fetchEmployees, getSystemHealth, fetchActivityFeed } from '@/lib/supaba
 import { supabase, isSupabaseConfigured } from '@/lib/supabase/client'
 import { ROLE_PERMISSIONS } from '@/lib/admin/adminRBAC'
 import { ROLE_LABELS } from '@/lib/admin/adminAuth'
-import { formatDate } from '@/lib/admin/adminHooks'
+import { formatDate, useAdminAuth } from '@/lib/admin/adminHooks'
 import type { AdminRole } from '@/lib/admin/adminTypes'
 import { saveBlobAs } from '@/lib/supabase/storageService'
 
@@ -28,6 +28,10 @@ const SETTINGS_TABS = [
   { id: 'security', label: 'Security', icon: Lock },
   { id: 'integrations', label: 'Integrations', icon: Plug },
   { id: 'system', label: 'System', icon: Server },
+  // Testing Report 2 (2026-04-25 #9): super-admin-only "Password Vault"
+  // sub-tab. The button is hidden for non-super-admins below, but the
+  // entry must exist in the list so navigate() can resolve the URL.
+  { id: 'password-vault', label: 'Password Vault', icon: Key },
 ] as const
 
 type SettingsTab = typeof SETTINGS_TABS[number]['id']
@@ -40,6 +44,12 @@ interface SettingsModuleProps {
 
 export default function SettingsModule({ subTab, navigate, showToast }: SettingsModuleProps) {
   const activeTab = (SETTINGS_TABS.some(t => t.id === subTab) ? subTab : 'general') as SettingsTab
+  // Hide the Password Vault sub-tab from non-super-admins. We still
+  // resolve activeTab against the master list so URLs route correctly,
+  // but the panel itself refuses to render for the wrong role.
+  const { role } = useAdminAuth()
+  const isSuperAdmin = role === 'super-admin'
+  const visibleTabs = SETTINGS_TABS.filter(t => t.id !== 'password-vault' || isSuperAdmin)
 
   const [employees, setEmployees] = useState<any[]>([])
   const [systemHealth, setSystemHealth] = useState<any>({ uptime: 0, responseTime: 0, errorRate: 0, apiCalls24h: 0, storageUsed: 0, storageTotal: 100 })
@@ -60,7 +70,7 @@ export default function SettingsModule({ subTab, navigate, showToast }: Settings
       </div>
 
       <div className="flex gap-1 p-1 bg-white/[0.03] rounded-xl border border-white/[0.06] w-fit">
-        {SETTINGS_TABS.map(tab => {
+        {visibleTabs.map(tab => {
           const Icon = tab.icon
           const isActive = activeTab === tab.id
           return (
@@ -84,6 +94,15 @@ export default function SettingsModule({ subTab, navigate, showToast }: Settings
         {activeTab === 'security' && <SecurityTab showToast={showToast} />}
         {activeTab === 'integrations' && <IntegrationsTab showToast={showToast} />}
         {activeTab === 'system' && <SystemTab showToast={showToast} systemHealth={systemHealth} />}
+        {activeTab === 'password-vault' && (
+          isSuperAdmin
+            ? <PasswordVaultTab showToast={showToast} />
+            : <AdminEmptyState
+                icon={Lock}
+                title="Restricted area"
+                description="Password Vault is only available to Super Admin accounts."
+              />
+        )}
       </div>
     </div>
   )
@@ -1220,3 +1239,197 @@ function SystemTab({ showToast, systemHealth }: { showToast: (msg: string, type?
     </div>
   )
 }
+
+// ── Password Vault Tab (Super Admin only) ────────────────────────
+// Shows admin-set temporary passwords created via the
+// admin-password-reset Netlify function. RLS limits SELECT to
+// profiles.role='super_admin', so this query naturally returns [] for
+// any non-super-admin even if the route is opened directly.
+interface VaultRow {
+  id: string
+  target_user_id: string | null
+  target_email: string
+  target_name: string | null
+  target_kind: string
+  plaintext_password: string
+  set_by_admin_email: string | null
+  notes: string | null
+  created_at: string
+  expires_at: string
+  view_count: number
+}
+
+function PasswordVaultTab({ showToast }: { showToast: (msg: string, type?: 'success' | 'error' | 'info' | 'warning') => void }) {
+  const [rows, setRows] = useState<VaultRow[]>([])
+  const [loading, setLoading] = useState(true)
+  const [revealedIds, setRevealedIds] = useState<Set<string>>(new Set())
+  const [search, setSearch] = useState('')
+
+  const load = async () => {
+    setLoading(true)
+    if (!isSupabaseConfigured()) { setLoading(false); return }
+    const sb: any = supabase
+    const { data, error } = await sb
+      .from('admin_password_vault')
+      .select('id, target_user_id, target_email, target_name, target_kind, plaintext_password, set_by_admin_email, notes, created_at, expires_at, view_count')
+      .order('created_at', { ascending: false })
+      .limit(500)
+    if (error) {
+      console.warn('[settings/password-vault] load error:', error.message)
+      showToast('Failed to load vault — your role may not permit it.', 'error')
+    } else {
+      setRows((data || []) as VaultRow[])
+    }
+    setLoading(false)
+  }
+
+  useEffect(() => { load() }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
+  const toggleReveal = async (row: VaultRow) => {
+    setRevealedIds(prev => {
+      const next = new Set(prev)
+      if (next.has(row.id)) next.delete(row.id)
+      else next.add(row.id)
+      return next
+    })
+    // Bump view_count + last_viewed_at on first reveal in this session.
+    if (!revealedIds.has(row.id) && isSupabaseConfigured()) {
+      try {
+        const sb: any = supabase
+        await sb.from('admin_password_vault')
+          .update({ last_viewed_at: new Date().toISOString(), view_count: (row.view_count || 0) + 1 })
+          .eq('id', row.id)
+      } catch { /* non-fatal */ }
+    }
+  }
+
+  const copy = async (text: string) => {
+    try {
+      await navigator.clipboard.writeText(text)
+      showToast('Copied to clipboard', 'success')
+    } catch {
+      showToast('Copy failed — please select and copy manually', 'warning')
+    }
+  }
+
+  const filtered = useMemo(() => {
+    const q = search.trim().toLowerCase()
+    if (!q) return rows
+    return rows.filter(r =>
+      r.target_email.toLowerCase().includes(q) ||
+      (r.target_name || '').toLowerCase().includes(q) ||
+      (r.set_by_admin_email || '').toLowerCase().includes(q),
+    )
+  }, [rows, search])
+
+  return (
+    <div className="space-y-4">
+      <AdminGlass padding="p-5">
+        <div className="flex items-start gap-3">
+          <Key className="w-5 h-5 text-amber-400 mt-0.5" />
+          <div className="text-xs text-gray-300 space-y-1.5">
+            <p>This vault stores <span className="font-semibold text-white">admin-set temporary passwords</span> only — passwords the user set themselves are bcrypt-hashed by Supabase Auth and cannot be displayed.</p>
+            <p>Entries auto-expire after 90 days. Every reveal is recorded in <code className="text-amber-400">view_count</code> and <code className="text-amber-400">last_viewed_at</code>. Treat these credentials as sensitive — share them only through secure channels.</p>
+          </div>
+        </div>
+      </AdminGlass>
+
+      <div className="flex items-center gap-3">
+        <div className="flex-1">
+          <input
+            type="text"
+            placeholder="Search by user email, name, or admin who set it…"
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-brand-red/40 focus:ring-1 focus:ring-brand-red/20"
+          />
+        </div>
+        <button
+          onClick={load}
+          disabled={loading}
+          className="p-2.5 rounded-xl bg-white/[0.04] border border-white/[0.08] hover:bg-white/[0.08] text-gray-300 hover:text-white transition-colors disabled:opacity-40"
+          title="Refresh"
+        >
+          <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+        </button>
+      </div>
+
+      <AdminGlass padding="p-0">
+        {loading ? (
+          <div className="flex items-center justify-center py-16"><Loader2 className="w-5 h-5 text-brand-red animate-spin" /></div>
+        ) : filtered.length === 0 ? (
+          <AdminEmptyState
+            icon={Key}
+            title="No vault entries"
+            description={rows.length === 0
+              ? 'No admin-set temporary passwords have been recorded yet. They appear here automatically when admins set a temp password from a client/employee profile.'
+              : 'No entries match your search.'}
+          />
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="text-xs uppercase text-gray-500 border-b border-white/[0.06]">
+                  <th className="text-left py-3 px-4">User</th>
+                  <th className="text-left py-3 px-4">Kind</th>
+                  <th className="text-left py-3 px-4">Temporary Password</th>
+                  <th className="text-left py-3 px-4">Set By</th>
+                  <th className="text-left py-3 px-4">Set At</th>
+                  <th className="text-left py-3 px-4">Expires</th>
+                  <th className="text-right py-3 px-4">Views</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filtered.map(row => {
+                  const revealed = revealedIds.has(row.id)
+                  const isExpired = new Date(row.expires_at).getTime() < Date.now()
+                  return (
+                    <tr key={row.id} className={`border-b border-white/[0.04] ${isExpired ? 'opacity-50' : ''}`}>
+                      <td className="py-3 px-4">
+                        <div className="text-xs text-white font-medium">{row.target_name || row.target_email}</div>
+                        <div className="text-[11px] text-gray-500">{row.target_email}</div>
+                      </td>
+                      <td className="py-3 px-4 text-[11px] text-gray-400 capitalize">{row.target_kind}</td>
+                      <td className="py-3 px-4">
+                        <div className="flex items-center gap-2">
+                          <code className="px-2 py-1 rounded bg-black/40 text-xs text-white font-mono break-all min-w-[140px]">
+                            {revealed ? row.plaintext_password : '•'.repeat(Math.min(16, row.plaintext_password.length))}
+                          </code>
+                          <button
+                            type="button"
+                            onClick={() => toggleReveal(row)}
+                            className="p-1.5 rounded-md bg-white/[0.06] hover:bg-white/[0.1] text-gray-300 hover:text-white"
+                            title={revealed ? 'Hide' : 'Reveal'}
+                          >
+                            {revealed ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => copy(row.plaintext_password)}
+                            className="p-1.5 rounded-md bg-white/[0.06] hover:bg-white/[0.1] text-gray-300 hover:text-white"
+                            title="Copy"
+                          >
+                            <Copy className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      </td>
+                      <td className="py-3 px-4 text-[11px] text-gray-400">{row.set_by_admin_email || '—'}</td>
+                      <td className="py-3 px-4 text-[11px] text-gray-400">{formatDate(row.created_at)}</td>
+                      <td className="py-3 px-4 text-[11px]">
+                        <span className={isExpired ? 'text-red-400' : 'text-gray-400'}>
+                          {isExpired ? 'Expired' : formatDate(row.expires_at)}
+                        </span>
+                      </td>
+                      <td className="py-3 px-4 text-right text-[11px] text-gray-400">{row.view_count}</td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </AdminGlass>
+    </div>
+  )
+}
+

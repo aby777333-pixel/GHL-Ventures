@@ -1085,7 +1085,32 @@ export async function approveInvestmentApplication(app: any, adminId: string) {
     maturity.setFullYear(maturity.getFullYear() + tenureYears)
     const maturityDate = maturity.toISOString().split('T')[0]
     const commitmentId = app.commitment_id || `GHL-CMT-${String(app.id).slice(0, 8).toUpperCase()}`
-    const referenceNumber = app.reference_number || `GHL-REF-${Date.now().toString(36).toUpperCase()}`
+    // Testing Report 2 (2026-04-25 #8): reference number must follow
+    // GHLVEN/<seq>/<FY>, with the seq starting at 100 and the FY computed
+    // from the current Indian financial year. The next_investment_reference
+    // RPC mints the value atomically so concurrent approvals don't collide.
+    let referenceNumber: string = app.reference_number || ''
+    if (!referenceNumber) {
+      try {
+        const sb2: any = supabase
+        const { data: refData, error: refErr } = await sb2.rpc('next_investment_reference')
+        if (!refErr && typeof refData === 'string' && refData) {
+          referenceNumber = refData
+        } else {
+          // Fallback: keep approval moving even if the RPC is unreachable.
+          // Format mirrors the canonical one so downstream parsers still work.
+          const now = new Date()
+          const yr = now.getFullYear()
+          const mo = now.getMonth() + 1
+          const fy = mo >= 4
+            ? `${String(yr).slice(-2)}${String(yr + 1).slice(-2)}`
+            : `${String(yr - 1).slice(-2)}${String(yr).slice(-2)}`
+          referenceNumber = `GHLVEN/${Date.now().toString().slice(-3)}/${fy}`
+        }
+      } catch {
+        referenceNumber = `GHL-REF-${Date.now().toString(36).toUpperCase()}`
+      }
+    }
 
     const update: Record<string, any> = {
       status: 'approved',
@@ -1689,11 +1714,20 @@ export async function deleteInvestmentSafe(investmentId: string): Promise<Delete
   if (!isSupabaseConfigured()) return { ok: false, error: 'Service unavailable' }
   try {
     const sb = supabase as any
-    const { data: app } = await sb.from('investment_applications').select('status').eq('id', investmentId).maybeSingle()
+    const { data: app } = await sb.from('investment_applications').select('status, client_id').eq('id', investmentId).maybeSingle()
     if (!app) return { ok: false, error: 'Investment not found' }
     if (['approved', 'credited', 'completed'].includes(app.status)) {
       return { ok: false, error: 'Investment is approved and cannot be deleted.' }
     }
+    // Testing Report 2 (2026-04-25 #4): the parent delete previously
+    // surfaced "deleted" in the UI but actually failed because of NO ACTION
+    // FKs from investment_documents and investment_transactions. Cascade-
+    // clean those first so pending applications can be removed cleanly.
+    await sb.from('investment_documents').delete().eq('investment_app_id', investmentId)
+    await sb.from('investment_transactions').delete().eq('investment_app_id', investmentId)
+    // monthly_payouts.investment_id points at the legacy investments table,
+    // not investment_applications, so removing the application doesn't
+    // require touching it.
     const { error } = await sb.from('investment_applications').delete().eq('id', investmentId)
     if (error) return { ok: false, error: error.message }
     return { ok: true }
