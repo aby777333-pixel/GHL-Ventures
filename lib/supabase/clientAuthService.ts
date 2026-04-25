@@ -6,6 +6,7 @@
    ───────────────────────────────────────────────────────────── */
 
 import { supabase, isSupabaseConfigured } from './client'
+import { primeForcePasswordResetIfNeeded } from '../auth/forceReset'
 
 // Lazy import to avoid circular dependencies
 async function tryAutoAssignRM(userId: string) {
@@ -133,6 +134,9 @@ export async function loginClient(email: string, password: string): Promise<Logi
       return { session: null, error: 'invalid_credentials', message: 'Incorrect email or password. Please try again.' }
     }
 
+    // If admin set a temporary password, signal the dashboard to force a change.
+    primeForcePasswordResetIfNeeded(data.user)
+
     // Auth succeeded — now fetch profile/client rows (won't throw on missing)
     const { profile, client } = await fetchProfileAndClient(data.user.id)
 
@@ -239,6 +243,10 @@ export async function getClientSession(): Promise<ClientSession | null> {
   try {
     const { data: { session } } = await supabase.auth.getSession()
     if (!session?.user) return null
+
+    // If a force-reset was set while the session was already live, re-prime
+    // the session-storage flag so the dashboard parks on the reset screen.
+    primeForcePasswordResetIfNeeded(session.user)
 
     // Use .maybeSingle() to avoid throwing on missing rows
     const { profile, client } = await fetchProfileAndClient(session.user.id)

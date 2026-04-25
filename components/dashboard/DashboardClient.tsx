@@ -316,7 +316,11 @@ export default function DashboardClient() {
       const { isSupabaseConfigured } = await import('@/lib/supabase/client')
       const { supabase } = await import('@/lib/supabase/client')
       if (!isSupabaseConfigured()) { showToast('⚠ Auth service unavailable', 'info'); return }
-      const { error } = await supabase.auth.updateUser({ password: newPassword })
+      // Clear the force-reset metadata so subsequent logins don't trip the gate.
+      const { error } = await supabase.auth.updateUser({
+        password: newPassword,
+        data: { force_password_reset: false, force_password_reset_cleared_at: new Date().toISOString() },
+      })
       if (error) { showToast(`⚠ ${error.message}`, 'info'); return }
       setPasswordResetDone(true)
       setShowPasswordReset(false)

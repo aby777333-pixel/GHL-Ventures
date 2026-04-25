@@ -5,7 +5,7 @@ import {
   Users, UserPlus, Eye, Phone, Mail, Calendar, IndianRupee,
   ShieldCheck, AlertTriangle, FileText, Filter, CheckCircle2,
   XCircle, Clock, MoreHorizontal, ArrowUpRight, ChevronRight,
-  Search, UserCircle, FileSearch, PieChart, Activity, Building2, Upload, Trash2,
+  Search, UserCircle, FileSearch, PieChart, Activity, Building2, Upload, Trash2, KeyRound,
 } from 'lucide-react'
 import AdminGlass from '../shared/AdminGlass'
 import AdminDataTable, { type Column } from '../shared/AdminDataTable'
@@ -19,6 +19,7 @@ import { formatINR, formatDate } from '@/lib/admin/adminHooks'
 import type { Client, KYCDocument, KYCStatus } from '@/lib/admin/adminTypes'
 import UploadWithFolderPicker from '@/components/shared/UploadWithFolderPicker'
 import AdminAddKYCModal from './AdminAddKYCModal'
+import PasswordResetModal, { type PasswordResetTarget } from '../shared/PasswordResetModal'
 import { supabase } from '@/lib/supabase/client'
 
 // ── Sub-tabs ─────────────────────────────────────────────────────
@@ -56,6 +57,10 @@ export default function ClientModule({ subTab, navigate, showToast }: ClientModu
   const [loading, setLoading] = useState(true)
   const [activeRMs, setActiveRMs] = useState<ActiveRM[]>([])
   const [assigningRM, setAssigningRM] = useState(false)
+  // Password-reset target. Holds the auth user_id once resolved (clients.user_id),
+  // resolved lazily on click so the list query stays untouched.
+  const [resetTarget, setResetTarget] = useState<PasswordResetTarget | null>(null)
+  const [resolvingResetTarget, setResolvingResetTarget] = useState(false)
 
   const loadData = useCallback(async () => {
     setLoading(true)
@@ -109,6 +114,31 @@ export default function ClientModule({ subTab, navigate, showToast }: ClientModu
       showToast(result.error || 'Failed to assign RM', 'error')
     }
   }
+
+  // ── Open Password Reset modal. Resolve clients.user_id (auth.users.id)
+  //    so the Netlify function can target the correct auth user. Falls back
+  //    to email if no user_id is linked yet (legacy/imported clients).
+  const openResetForClient = useCallback(async (client: Client) => {
+    if (!client.email && !(client as any).user_id) {
+      showToast('This client has no email or auth link — cannot reset.', 'error')
+      return
+    }
+    setResolvingResetTarget(true)
+    try {
+      let userId: string | null = (client as any).user_id || null
+      if (!userId) {
+        const { data } = await (supabase
+          .from('clients')
+          .select('user_id')
+          .eq('id', client.id)
+          .maybeSingle() as any)
+        userId = data?.user_id || null
+      }
+      setResetTarget({ userId, email: client.email || '', name: client.name })
+    } finally {
+      setResolvingResetTarget(false)
+    }
+  }, [showToast])
 
   // ── Open Add-KYC modal for a client. Client.id is the clients.id UUID;
   // we need clients.user_id for the KYC rows (RLS uses auth.uid and the
@@ -204,6 +234,8 @@ export default function ClientModule({ subTab, navigate, showToast }: ClientModu
             clients={clients}
             onViewClient={(c) => { setSelectedClient(c); setProfileModalOpen(true) }}
             onDeleteClient={handleDeleteClient}
+            onResetPassword={openResetForClient}
+            resolvingReset={resolvingResetTarget}
             showToast={showToast}
           />
         )}
@@ -436,6 +468,14 @@ export default function ClientModule({ subTab, navigate, showToast }: ClientModu
         theme="dark"
         portal="admin"
       />
+
+      {/* Password Reset Modal — admin chooses email-link or temp-password flow */}
+      <PasswordResetModal
+        isOpen={!!resetTarget}
+        target={resetTarget}
+        onClose={() => setResetTarget(null)}
+        showToast={showToast}
+      />
     </div>
   )
 }
@@ -445,11 +485,15 @@ function ClientListTab({
   clients,
   onViewClient,
   onDeleteClient,
+  onResetPassword,
+  resolvingReset,
   showToast,
 }: {
   clients: any[]
   onViewClient: (c: Client) => void
   onDeleteClient: (c: Client) => void
+  onResetPassword: (c: Client) => void
+  resolvingReset: boolean
   showToast: (msg: string, type?: 'success' | 'error' | 'info' | 'warning') => void
 }) {
   const columns: Column<Client>[] = [
@@ -505,7 +549,7 @@ function ClientListTab({
       key: 'actions',
       label: '',
       sortable: false,
-      width: '100px',
+      width: '140px',
       render: (row) => {
         const ks = row.kycStatus as string
         const isApproved = ks === 'approved' || ks === 'verified'
@@ -517,6 +561,14 @@ function ClientListTab({
               title="View"
             >
               <Eye className="w-4 h-4" />
+            </button>
+            <button
+              onClick={(e) => { e.stopPropagation(); onResetPassword(row) }}
+              disabled={resolvingReset}
+              className="p-1.5 rounded-lg hover:bg-amber-500/10 text-gray-500 hover:text-amber-400 transition-colors disabled:opacity-50"
+              title="Reset password"
+            >
+              <KeyRound className="w-4 h-4" />
             </button>
             {isApproved ? (
               <span

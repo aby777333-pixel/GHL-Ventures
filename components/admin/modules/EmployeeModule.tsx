@@ -7,7 +7,7 @@ import {
   Laptop, Sun, Moon, AlertTriangle, BarChart3, Plus,
   Star, TrendingUp, UserPlus, Briefcase, Upload,
   FileText, Download, ExternalLink, Linkedin,
-  Megaphone, Pin, Trash2, Edit3, BookOpen, MessageSquare,
+  Megaphone, Pin, Trash2, Edit3, BookOpen, MessageSquare, KeyRound,
 } from 'lucide-react'
 import AdminGlass from '../shared/AdminGlass'
 import AdminDataTable, { type Column } from '../shared/AdminDataTable'
@@ -37,6 +37,7 @@ import {
 import { formatDate } from '@/lib/admin/adminHooks'
 import type { Employee, EmployeeStatus, LeaveRequest, AttendanceRecord } from '@/lib/admin/adminTypes'
 import UploadWithFolderPicker from '@/components/shared/UploadWithFolderPicker'
+import PasswordResetModal, { type PasswordResetTarget } from '../shared/PasswordResetModal'
 
 // ── Sub-tabs ─────────────────────────────────────────────────────
 const EMPLOYEE_TABS = [
@@ -78,6 +79,7 @@ export default function EmployeeModule({ subTab, navigate, showToast }: Employee
       status: e.status as EmployeeStatus,
       joinDate: e.join_date,
       reportingTo: e.reporting_to_name || e.reporting_to || '',
+      userId: e.user_id || null,
       _raw: e,
     })))
     setLoading(false)
@@ -97,6 +99,7 @@ export default function EmployeeModule({ subTab, navigate, showToast }: Employee
   const [addEmployeeOpen, setAddEmployeeOpen] = useState(false)
   const [folderPickerOpen, setFolderPickerOpen] = useState(false)
   const [editEmployee, setEditEmployee] = useState<Employee | null>(null)
+  const [resetTarget, setResetTarget] = useState<PasswordResetTarget | null>(null)
   const [empForm, setEmpForm] = useState({
     name: '', email: '', phone: '', password: '', department: 'Operations', role: 'cs-agent',
     employeeType: 'full-time' as 'full-time' | 'contract' | 'intern',
@@ -249,7 +252,18 @@ export default function EmployeeModule({ subTab, navigate, showToast }: Employee
       </div>
 
       <div className="admin-tab-switch">
-        {activeTab === 'directory' && <DirectoryTab employees={employees} onView={(e) => setSelectedEmployee(e)} onDelete={handleDeleteEmployee} showToast={showToast} />}
+        {activeTab === 'directory' && (
+          <DirectoryTab
+            employees={employees}
+            onView={(e) => setSelectedEmployee(e)}
+            onDelete={handleDeleteEmployee}
+            onResetPassword={(e: any) => {
+              if (!e.email) { showToast('Employee has no email on file', 'error'); return }
+              setResetTarget({ userId: e.userId || null, email: e.email, name: e.name })
+            }}
+            showToast={showToast}
+          />
+        )}
         {activeTab === 'announcements' && <AnnouncementsTab showToast={showToast} />}
         {activeTab === 'policies' && <PoliciesTab showToast={showToast} />}
         {activeTab === 'feedback' && <FeedbackTab showToast={showToast} />}
@@ -498,12 +512,20 @@ export default function EmployeeModule({ subTab, navigate, showToast }: Employee
         theme="dark"
         portal="admin"
       />
+
+      {/* Password Reset Modal — admin chooses email-link or temp-password flow */}
+      <PasswordResetModal
+        isOpen={!!resetTarget}
+        target={resetTarget}
+        onClose={() => setResetTarget(null)}
+        showToast={showToast}
+      />
     </div>
   )
 }
 
 // ── Directory Tab ───────────────────────────────────────────────
-function DirectoryTab({ employees, onView, onDelete, showToast }: { employees: any[]; onView: (e: Employee) => void; onDelete: (e: any) => void; showToast: (msg: string, type?: 'success' | 'error' | 'info' | 'warning') => void }) {
+function DirectoryTab({ employees, onView, onDelete, onResetPassword, showToast }: { employees: any[]; onView: (e: Employee) => void; onDelete: (e: any) => void; onResetPassword: (e: any) => void; showToast: (msg: string, type?: 'success' | 'error' | 'info' | 'warning') => void }) {
   const columns: Column<Employee>[] = [
     {
       key: 'name',
@@ -540,11 +562,14 @@ function DirectoryTab({ employees, onView, onDelete, showToast }: { employees: a
       key: 'actions',
       label: '',
       sortable: false,
-      width: '90px',
+      width: '130px',
       render: (row) => (
         <div className="flex items-center gap-1">
           <button onClick={(e) => { e.stopPropagation(); onView(row) }} className="p-1.5 rounded-lg hover:bg-white/[0.06] text-gray-500 hover:text-white transition-colors" title="View">
             <Eye className="w-4 h-4" />
+          </button>
+          <button onClick={(e) => { e.stopPropagation(); onResetPassword(row) }} className="p-1.5 rounded-lg hover:bg-amber-500/10 text-gray-500 hover:text-amber-400 transition-colors" title="Reset password">
+            <KeyRound className="w-4 h-4" />
           </button>
           <button onClick={(e) => { e.stopPropagation(); onDelete(row) }} className="p-1.5 rounded-lg hover:bg-red-500/10 text-gray-500 hover:text-red-400 transition-colors" title="Delete employee">
             <Trash2 className="w-4 h-4" />

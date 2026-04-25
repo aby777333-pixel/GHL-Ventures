@@ -7,6 +7,7 @@
 
 import { supabase, isSupabaseConfigured } from './client'
 import type { AdminSession } from '../admin/adminTypes'
+import { primeForcePasswordResetIfNeeded } from '../auth/forceReset'
 
 // Re-export types for convenience
 export type { AdminSession } from '../admin/adminTypes'
@@ -50,6 +51,9 @@ export async function authenticateAdmin(
       console.warn('[adminAuth] Authentication failed:', error?.message)
       return null
     }
+
+    // If a temp password is in force, prime the dashboard signal.
+    primeForcePasswordResetIfNeeded(data.user)
 
     // Fetch profile with role
     const { data: profile, error: profileError } = await supabase
@@ -114,6 +118,9 @@ export async function getAdminSession(): Promise<AdminSession | null> {
 
     const { data: { session } } = await supabase.auth.getSession()
     if (!session?.user) return null
+
+    // Re-prime force-password-reset flag after a refresh
+    primeForcePasswordResetIfNeeded(session.user)
 
     const { data: profile } = await supabase
       .from('profiles')

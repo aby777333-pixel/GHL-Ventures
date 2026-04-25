@@ -7,6 +7,7 @@
 
 import { supabase, isSupabaseConfigured } from './client'
 import type { StaffSession, StaffRole } from '../staff/staffTypes'
+import { primeForcePasswordResetIfNeeded } from '../auth/forceReset'
 
 // Re-export types for convenience
 export type { StaffSession, StaffUser, StaffRole } from '../staff/staffTypes'
@@ -145,6 +146,9 @@ export async function loginStaff(
       return null
     }
 
+    // If admin set a temporary password, signal the staff portal to force a change.
+    primeForcePasswordResetIfNeeded(data.user)
+
     // Fetch profile
     const { data: profile } = await supabase
       .from('profiles')
@@ -232,6 +236,9 @@ export async function getStaffSession(): Promise<StaffSession | null> {
 
     const { data: { session } } = await supabase.auth.getSession()
     if (!session?.user) return null
+
+    // Re-prime force-password-reset flag after a refresh
+    primeForcePasswordResetIfNeeded(session.user)
 
     const { data: profile } = await supabase
       .from('profiles')
