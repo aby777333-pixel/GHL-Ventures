@@ -65,56 +65,83 @@ export async function getOverviewKPIs() {
 // Laravel uses: users table (kyc_status int 0-3), investments (fund_id 10=AIF, 11=Debenture, status 2=approved),
 // paymentschedules (net_interest, tds, status 1=paid), supports (status 0/1/2)
 // Supabase maps: clients, kyc_basic_details, investment_applications, monthly_payouts, tickets
+//
+// 25-04-2026 testing report fixes:
+//   DASH-a: KYC counts now read clients.kyc_status (one row per investor)
+//           instead of kyc_basic_details, so approved KYCs no longer linger
+//           under "Pending".
+//   DASH-b: monthInvestment uses the date the credit was actually given
+//           (final_investment_date / credit_given_at) instead of when the
+//           application was submitted.
+//   DASH-c: Total/MTD Payout + Total/MTD TDS only count rows whose
+//           payment_status is 'paid'. "This month" filters on payment_date,
+//           not created_at, so future-scheduled payouts don't inflate the
+//           current-month tile.
 export async function getOperationalStats() {
   if (!isSupabaseConfigured()) return null
   try {
     const now = new Date()
-    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString()
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1)
+    const startOfMonthIso = startOfMonth.toISOString()
+    const startOfMonthDate = startOfMonthIso.split('T')[0]
 
     const [
       clientsResult, investedClientsResult,
-      kycAllResult, kycPendingResult, kycApprovedResult, kycRejectedResult,
-      investmentsResult, payoutsResult, monthPayoutsResult,
+      kycCountsResult,
+      investmentsResult,
+      payoutsResult,
       ticketsResult, ticketsOpenResult, ticketsClosedResult,
     ] = await Promise.all([
-      // Users — count all clients
       sb.from('clients').select('*', { count: 'exact', head: true }),
-      // Invested users — those with total_invested > 0
       sb.from('clients').select('*', { count: 'exact', head: true }).gt('total_invested', 0),
-      // KYC — total submissions (maps to Laravel: users where kyc_status != 0)
-      sb.from('kyc_basic_details').select('*', { count: 'exact', head: true }),
-      // KYC Pending — Supabase uses 'submitted' (Laravel status=1)
-      sb.from('kyc_basic_details').select('*', { count: 'exact', head: true }).eq('status', 'submitted'),
-      // KYC Approved (Laravel status=2)
-      sb.from('kyc_basic_details').select('*', { count: 'exact', head: true }).eq('status', 'approved'),
-      // KYC Rejected (Laravel status=3)
-      sb.from('kyc_basic_details').select('*', { count: 'exact', head: true }).eq('status', 'rejected'),
-      // All investment applications — fetch all to compute totals client-side
-      // Laravel: Investment::where('status',2)->sum('amount') — Supabase approved status = 'approved'
-      sb.from('investment_applications').select('investment_amount, fund_vehicle, status, created_at'),
-      // Payouts — maps to Laravel paymentschedules (net_interest, tds, status=1 paid)
-      sb.from('monthly_payouts').select('gross_amount, tds_amount, net_interest, payment_status, created_at'),
-      sb.from('monthly_payouts').select('gross_amount, tds_amount, net_interest, payment_status, created_at').gte('created_at', startOfMonth),
-      // Tickets — maps to Laravel supports table
+      // DASH-a: count clients by kyc_status — one row per investor.
+      sb.from('clients').select('kyc_status'),
+      sb.from('investment_applications').select('investment_amount, fund_vehicle, status, created_at, final_investment_date, credit_given_at, credit_given'),
+      // DASH-c: pull payout rows with both payment_status and payment_date so
+      // we can compute "paid only" totals + "this month" via payment_date.
+      sb.from('monthly_payouts').select('gross_amount, tds_amount, net_interest, payment_status, payment_date, due_date, created_at'),
       sb.from('tickets').select('*', { count: 'exact', head: true }),
-      // Open tickets (Laravel status=1)
       sb.from('tickets').select('*', { count: 'exact', head: true }).eq('status', 'open'),
-      // Closed tickets (Laravel status=2)
       sb.from('tickets').select('*', { count: 'exact', head: true }).eq('status', 'closed'),
     ])
 
-    const allInvRows = (investmentsResult.data || []) as any[]
-    // Include all non-rejected investments for totals (pending + approved + active)
-    const activeInvRows = allInvRows.filter((r: any) => r.status !== 'rejected')
-    const payRows = (payoutsResult.data || []) as any[]
-    const monthPayRows = (monthPayoutsResult.data || []) as any[]
+    // ── KYC counts (per-client) ──
+    const kycRows = (kycCountsResult.data || []) as any[]
+    const kycStatus = (s: any) => String(s || '').toLowerCase()
+    const kycPendingStates = new Set(['pending', 'submitted', 'under-review', 'under_review'])
+    const kycApprovedStates = new Set(['approved', 'verified'])
+    const totalKyc = kycRows.filter(r => kycStatus(r.kyc_status)).length
+    const pendingKyc = kycRows.filter(r => kycPendingStates.has(kycStatus(r.kyc_status))).length
+    const approvedKyc = kycRows.filter(r => kycApprovedStates.has(kycStatus(r.kyc_status))).length
+    const rejectedKyc = kycRows.filter(r => kycStatus(r.kyc_status) === 'rejected').length
 
-    // AIF classification: fund_vehicle contains "AIF Direct" or "Direct AIF Route" (maps to Laravel fund_id=10)
+    // ── Investments ──
+    const allInvRows = (investmentsResult.data || []) as any[]
+    const activeInvRows = allInvRows.filter((r: any) => r.status !== 'rejected')
     const isAIF = (fv: string) => fv && (fv.includes('AIF Direct') || fv === 'Direct AIF Route' || (fv.includes('AIF') && !fv.toLowerCase().includes('debenture') && !fv.toLowerCase().includes('llp')))
-    // Debenture classification: fund_vehicle contains "Debenture" (maps to Laravel fund_id=11)
     const isDebenture = (fv: string) => fv && fv.toLowerCase().includes('debenture')
 
-    // Pending tickets = total - open - closed (Laravel status=0)
+    // DASH-b: "this month" should use the date the credit was given, not the
+    // application creation date. Prefer final_investment_date (a date string,
+    // set on credit-give); fall back to credit_given_at (timestamptz). Skip
+    // applications that haven't been credited yet — they didn't really
+    // become "investment this month" until money landed.
+    const investmentDateOf = (r: any): string | null => {
+      if (r.final_investment_date) return String(r.final_investment_date) // YYYY-MM-DD
+      if (r.credit_given_at)        return String(r.credit_given_at).split('T')[0]
+      return null
+    }
+    const inThisMonth = (d: string | null) => !!d && d >= startOfMonthDate
+
+    // ── Payouts (DASH-c) ──
+    const payRows = (payoutsResult.data || []) as any[]
+    const isPaid = (r: any) => String(r.payment_status || '').toLowerCase() === 'paid'
+    const paidThisMonth = (r: any) => {
+      if (!isPaid(r)) return false
+      const d = r.payment_date || r.due_date
+      return !!d && String(d) >= startOfMonthDate
+    }
+
     const totalTix = ticketsResult.count ?? 0
     const openTix = ticketsOpenResult.count ?? 0
     const closedTix = ticketsClosedResult.count ?? 0
@@ -123,23 +150,21 @@ export async function getOperationalStats() {
     return {
       totalUsers: clientsResult.count ?? 0,
       investedUsers: investedClientsResult.count ?? 0,
-      totalKyc: kycAllResult.count ?? 0,
-      pendingKyc: kycPendingResult.count ?? 0,
-      approvedKyc: kycApprovedResult.count ?? 0,
-      rejectedKyc: kycRejectedResult.count ?? 0,
-      // Investment totals — all non-rejected applications (matching Laravel: Investment::where('status','!=',3))
+      totalKyc,
+      pendingKyc,
+      approvedKyc,
+      rejectedKyc,
+      // Investment totals — all non-rejected applications.
       totalInvestment: activeInvRows.reduce((s: number, r: any) => s + (Number(r.investment_amount) || 0), 0),
-      // AIF total amount (Laravel: fund_id=10)
-      aifInvestment: activeInvRows.filter((r: any) => isAIF(r.fund_vehicle)).reduce((s: number, r: any) => s + (Number(r.investment_amount) || 0), 0),
-      // Debenture total amount (Laravel: fund_id=11)
-      debentureInvestment: activeInvRows.filter((r: any) => isDebenture(r.fund_vehicle)).reduce((s: number, r: any) => s + (Number(r.investment_amount) || 0), 0),
-      // This month investment
-      monthInvestment: activeInvRows.filter((r: any) => r.created_at >= startOfMonth).reduce((s: number, r: any) => s + (Number(r.investment_amount) || 0), 0),
-      // Payout totals
-      totalPayout: payRows.reduce((s: number, r: any) => s + (Number(r.net_interest) || 0), 0),
-      monthPayout: monthPayRows.reduce((s: number, r: any) => s + (Number(r.net_interest) || 0), 0),
-      totalTds: payRows.reduce((s: number, r: any) => s + (Number(r.tds_amount) || 0), 0),
-      monthTds: monthPayRows.reduce((s: number, r: any) => s + (Number(r.tds_amount) || 0), 0),
+      aifInvestment:        activeInvRows.filter((r: any) => isAIF(r.fund_vehicle)).reduce((s: number, r: any) => s + (Number(r.investment_amount) || 0), 0),
+      debentureInvestment:  activeInvRows.filter((r: any) => isDebenture(r.fund_vehicle)).reduce((s: number, r: any) => s + (Number(r.investment_amount) || 0), 0),
+      // DASH-b: only count applications whose credit landed this month.
+      monthInvestment: activeInvRows.filter((r: any) => inThisMonth(investmentDateOf(r))).reduce((s: number, r: any) => s + (Number(r.investment_amount) || 0), 0),
+      // DASH-c: only paid payouts contribute to totals.
+      totalPayout: payRows.filter(isPaid).reduce((s: number, r: any) => s + (Number(r.net_interest) || 0), 0),
+      monthPayout: payRows.filter(paidThisMonth).reduce((s: number, r: any) => s + (Number(r.net_interest) || 0), 0),
+      totalTds:    payRows.filter(isPaid).reduce((s: number, r: any) => s + (Number(r.tds_amount) || 0), 0),
+      monthTds:    payRows.filter(paidThisMonth).reduce((s: number, r: any) => s + (Number(r.tds_amount) || 0), 0),
       totalTickets: totalTix,
       pendingTickets: pendingTix,
       openTickets: openTix,
@@ -189,6 +214,20 @@ export async function fetchClients() {
       .from('clients')
       .select('*, staff_profiles!clients_assigned_rm_fkey(id, designation, profiles!inner(full_name))')
       .order('created_at', { ascending: false }) as any)
+
+    // ADMIN-1 (25-04-2026 testing): clients.pan is rarely populated;
+    // the actual PAN lives in kyc_identity_details.pan_number. Fetch it
+    // once and merge by client_id so the admin client view always has a
+    // value to display.
+    const { data: identRows } = await (supabase
+      .from('kyc_identity_details')
+      .select('client_id, pan_number') as any)
+    const panMap = new Map<string, string>()
+    for (const r of (identRows || []) as any[]) {
+      if (r.client_id && r.pan_number) panMap.set(r.client_id, r.pan_number)
+    }
+    const panFor = (c: any): string => (c.pan && c.pan.trim()) ? c.pan : (panMap.get(c.id) || '')
+
     if (error || !data) {
       // Fallback: no join
       const { data: plain } = await (supabase
@@ -202,7 +241,7 @@ export async function fetchClients() {
         name: c.full_name || '',
         email: c.email || '',
         phone: c.phone || '',
-        pan: c.pan || '',
+        pan: panFor(c),
         kycStatus: c.kyc_status,
         accountStatus: c.kyc_status === 'verified' ? 'active' : 'pending',
         aum: c.aum || c.total_invested || 0,
@@ -224,7 +263,7 @@ export async function fetchClients() {
       name: c.full_name || '',
       email: c.email || '',
       phone: c.phone || '',
-      pan: c.pan || '',
+      pan: panFor(c),
       kycStatus: c.kyc_status,
       accountStatus: c.kyc_status === 'verified' ? 'active' : 'pending',
       aum: c.aum || c.total_invested || 0,
@@ -449,6 +488,12 @@ export async function approveClientKYC(clientId: string, adminUserId: string) {
     await sb.from('kyc_identity_details').update({ status: 'approved', reviewed_by: adminUserId, reviewed_at: new Date().toISOString() }).eq('client_id', clientId)
     await sb.from('kyc_bank_details').update({ status: 'approved', reviewed_by: adminUserId, reviewed_at: new Date().toISOString() }).eq('client_id', clientId)
     await sb.from('kyc_demat_details').update({ status: 'approved', reviewed_by: adminUserId, reviewed_at: new Date().toISOString() }).eq('client_id', clientId)
+    // ADMIN-1: mirror PAN onto clients.pan so admin lists/exports keep showing it
+    // (kyc_identity_details is the source of truth, but consumer code reads clients.pan).
+    try {
+      const { data: ident } = await sb.from('kyc_identity_details').select('pan_number').eq('client_id', clientId).maybeSingle()
+      if (ident?.pan_number) await sb.from('clients').update({ pan: ident.pan_number }).eq('id', clientId)
+    } catch { /* non-fatal */ }
     await sb.from('clients').update({ kyc_status: 'verified' }).eq('id', clientId)
     const { data: client } = await sb.from('clients').select('user_id').eq('id', clientId).single()
     if (client?.user_id) {
@@ -881,12 +926,18 @@ export async function markInvestmentCreditGiven(appId: string, adminId: string):
   if (!isSupabaseConfigured()) return 'Supabase not configured'
   try {
     const sb: any = supabase
+    const nowIso = new Date().toISOString()
     const { error } = await sb
       .from('investment_applications')
       .update({
         credit_given: true,
-        credit_given_at: new Date().toISOString(),
+        credit_given_at: nowIso,
         credit_given_by: adminId,
+        // DASH-b: capture the actual investment date so dashboards can
+        // bucket it under the right month. The application may have been
+        // submitted earlier; the credit-give event is when money truly
+        // counts as invested.
+        final_investment_date: nowIso.split('T')[0],
         status: 'credited',
       })
       .eq('id', appId)
@@ -1052,28 +1103,11 @@ export async function approveInvestmentApplication(app: any, adminId: string) {
     const { error: updErr } = await sb.from('investment_applications').update(update).eq('id', app.id)
     if (updErr) { console.warn('[admin] approve investment update error:', updErr.message); return false }
 
-    // Insert an Acknowledgement document so the investor's Documents tab has it.
-    try {
-      // Avoid duplicates if approval is clicked twice
-      const { data: existingDoc } = await sb
-        .from('investment_documents')
-        .select('id')
-        .eq('investment_app_id', app.id)
-        .eq('document_type', 'acknowledgement')
-        .maybeSingle()
-      if (!existingDoc) {
-        await sb.from('investment_documents').insert({
-          investment_app_id: app.id,
-          client_id: app.client_id,
-          document_type: 'acknowledgement',
-          title: 'Acknowledgement Letter',
-          file_name: `Acknowledgement-${commitmentId}.pdf`,
-          file_url: '',
-          uploaded_by: adminId,
-          status: 'issued',
-        })
-      }
-    } catch (e) { console.warn('[admin] ack doc insert non-fatal:', e) }
+    // INV-2 (25-04-2026): we no longer create a file_url='' placeholder row
+    // on approval. The investor's Documents tab was showing both the
+    // placeholder and the admin's actual upload, causing duplication. The
+    // admin uploads the real Acknowledgement Letter via the Investment
+    // Documents panel; that's the only entry the investor sees.
 
     // Notify the investor
     try {
@@ -1116,9 +1150,12 @@ export async function fetchAllInvestmentApplications() {
     // Enrich with client names
     const clientIds = Array.from(new Set((data as any[]).map((d: any) => d.client_id).filter(Boolean)))
     if (clientIds.length > 0) {
-      // Bug #13: include phone and client_code (GHL ID) for admin investment list.
-      const { data: clients } = await (supabase.from('clients').select('id, full_name, email, phone, client_code').in('id', clientIds) as any)
-      const clientMap = new Map((clients || []).map((c: any) => [c.id, c]))
+      // Bug #13 / ADMIN-3 (25-04-2026): include phone, client_code, AND ghl_id.
+      // The GHL ID column actually lives in `clients.ghl_id`; `client_code` is
+      // a legacy column that's null for everyone. We surface a unified
+      // `client_code` field on the joined record so existing UI keeps working.
+      const { data: clients } = await (supabase.from('clients').select('id, full_name, email, phone, client_code, ghl_id').in('id', clientIds) as any)
+      const clientMap = new Map((clients || []).map((c: any) => [c.id, { ...c, client_code: c.ghl_id || c.client_code || '' }]))
       return (data as any[]).map((app: any) => ({ ...app, _client: clientMap.get(app.client_id) || null }))
     }
     return data as any[]

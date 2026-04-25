@@ -1928,7 +1928,7 @@ function InvestmentsTab({ showToast }: { showToast: (m: string, t?: 'success' | 
                           <a href={doc.signed_copy_url} target="_blank" rel="noopener noreferrer" className="text-xs text-emerald-400 hover:text-emerald-300 inline-flex items-center gap-1" title={doc.signed_at ? `Signed ${formatDate(doc.signed_at)}` : 'Signed copy'}>
                             <CheckCircle2 className="w-3 h-3" /> Signed
                           </a>
-                        ) : (doc.document_type === 'debenture_agreement' || doc.document_type === 'agreement' || doc.document_type === 'debenture_certificate') ? (
+                        ) : (doc.document_type === 'debenture_agreement' || doc.document_type === 'agreement') ? (
                           <span className="text-[10px] text-amber-500" title="Waiting for investor to upload signed copy">Unsigned</span>
                         ) : null}
                       </div>
@@ -1936,49 +1936,87 @@ function InvestmentsTab({ showToast }: { showToast: (m: string, t?: 'success' | 
                   ))}
                 </div>
               )}
-              <div className="grid grid-cols-2 gap-2">
-                {[
+              {/* ADMIN-4 (25-04-2026): hide an Upload <type> button once a real
+                  file (file_url present) has been uploaded for that type.
+                  Placeholder rows (file_url='') still allow upload. The TDS
+                  button below intentionally has no such guard — admin can
+                  upload many TDS certificates. */}
+              {(() => {
+                const hasReal = (t: string) => appDocs.some((d: any) => d.document_type === t && d.file_url)
+                const slots = [
                   { type: 'acknowledgement', label: 'Upload Acknowledgement' },
-                  { type: 'agreement', label: 'Upload Agreement' },
+                  { type: 'agreement', label: 'Upload Debenture Agreement' },
                   { type: 'allotment', label: 'Upload Allotment Letter' },
-                  { type: 'certificate', label: 'Upload Certificate' },
-                ].map(d => (
-                  <button
-                    key={d.type}
-                    onClick={() => handleAdminDocUpload(d.type, d.label.replace(/^Upload /, ''))}
-                    disabled={docUploading}
-                    className="flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium text-gray-300 bg-white/[0.03] border border-white/[0.06] hover:bg-white/[0.06] hover:text-white transition-colors disabled:opacity-50"
-                  >
-                    <Upload className="w-3.5 h-3.5 text-brand-red" />
-                    {docUploading ? 'Uploading...' : d.label}
-                  </button>
-                ))}
-              </div>
+                  { type: 'certificate', label: 'Upload Debenture Certificate' },
+                ].filter(d => !hasReal(d.type))
+                return (
+                  <div className="grid grid-cols-2 gap-2">
+                    {slots.map(d => (
+                      <button
+                        key={d.type}
+                        onClick={() => handleAdminDocUpload(d.type, d.label.replace(/^Upload /, ''))}
+                        disabled={docUploading}
+                        className="flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium text-gray-300 bg-white/[0.03] border border-white/[0.06] hover:bg-white/[0.06] hover:text-white transition-colors disabled:opacity-50"
+                      >
+                        <Upload className="w-3.5 h-3.5 text-brand-red" />
+                        {docUploading ? 'Uploading...' : d.label}
+                      </button>
+                    ))}
+                    {/* TDS-6 (25-04-2026): TDS docs can be uploaded multiple times.
+                        Each upload is added to the investor's TDS section. */}
+                    <button
+                      onClick={() => handleAdminDocUpload('tds', `TDS Certificate — ${formatDate(new Date().toISOString())}`)}
+                      disabled={docUploading}
+                      className="flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium text-amber-300 bg-amber-500/10 border border-amber-500/20 hover:bg-amber-500/20 transition-colors disabled:opacity-50 col-span-2"
+                      title="Upload a TDS certificate. Multiple uploads allowed — each appears in the investor's TDS section."
+                    >
+                      <Upload className="w-3.5 h-3.5" />
+                      {docUploading ? 'Uploading…' : 'Upload TDS Certificate (multiple allowed)'}
+                    </button>
+                  </div>
+                )
+              })()}
             </div>
 
             {/* Document Generation */}
             <div className="border-t border-white/[0.06] pt-4">
               <h4 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Generate Documents</h4>
-              <div className="grid grid-cols-2 gap-2">
-                {[
+              {/* ADMIN-5 (25-04-2026): once a doc of a given type has been
+                  uploaded, hide the matching Generate button so admin doesn't
+                  produce a duplicate. Generators map to upload types as:
+                  acknowledgement→acknowledgement, allotment→allotment,
+                  certificate→certificate, agreement→agreement. */}
+              {(() => {
+                const hasReal = (t: string) => appDocs.some((d: any) => d.document_type === t && d.file_url)
+                const genSlots = [
                   { type: 'acknowledgement' as const, label: 'Acknowledgement Letter' },
                   { type: 'allotment' as const, label: 'Allotment Letter' },
                   { type: 'certificate' as const, label: 'Debenture Certificate' },
                   { type: 'agreement' as const, label: 'Debenture Agreement' },
-                ].map(doc => (
-                  <button
-                    key={doc.type}
-                    onClick={() => {
-                      generateInvestmentDocument(doc.type, selectedApp)
-                      showToast(`Generating ${doc.label}...`, 'info')
-                    }}
-                    className="flex items-center gap-2 px-3 py-2.5 rounded-xl text-xs font-medium text-gray-300 bg-white/[0.03] border border-white/[0.06] hover:bg-white/[0.06] hover:text-white transition-colors"
-                  >
-                    <Upload className="w-3.5 h-3.5 text-brand-red" />
-                    {doc.label}
-                  </button>
-                ))}
-              </div>
+                ].filter(d => !hasReal(d.type))
+                if (genSlots.length === 0) {
+                  return (
+                    <p className="text-[11px] text-gray-500 italic">All documents have been uploaded. Generation is hidden to prevent duplicates.</p>
+                  )
+                }
+                return (
+                  <div className="grid grid-cols-2 gap-2">
+                    {genSlots.map(doc => (
+                      <button
+                        key={doc.type}
+                        onClick={() => {
+                          generateInvestmentDocument(doc.type, selectedApp)
+                          showToast(`Generating ${doc.label}...`, 'info')
+                        }}
+                        className="flex items-center gap-2 px-3 py-2.5 rounded-xl text-xs font-medium text-gray-300 bg-white/[0.03] border border-white/[0.06] hover:bg-white/[0.06] hover:text-white transition-colors"
+                      >
+                        <Upload className="w-3.5 h-3.5 text-brand-red" />
+                        {doc.label}
+                      </button>
+                    ))}
+                  </div>
+                )
+              })()}
               <p className="text-[10px] text-gray-600 mt-2">Documents open in a new window for printing to PDF. Please allow popups if prompted.</p>
             </div>
           </div>

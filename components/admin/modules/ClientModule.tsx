@@ -169,10 +169,15 @@ export default function ClientModule({ subTab, navigate, showToast }: ClientModu
   const kpis = useMemo(() => {
     const active = clients.filter(c => c.accountStatus === 'active').length
     const totalAUM = clients.reduce((s, c) => s + c.aum, 0)
-    const pendingKYC = kycDocs.filter(d => d.status === 'pending' || d.status === 'under-review' || d.status === 'submitted').length
+    // ADMIN-2 (25-04-2026 testing): Pending KYC must count UNIQUE USERS,
+    // not per-step rows. Previously we filtered kycDocs (which has up to
+    // 5 step rows per investor), so 2 pending users showed as 9.
+    const pendingKYC = kycByClient.filter(g =>
+      g.overallStatus === 'pending' || g.overallStatus === 'submitted' || g.overallStatus === 'under-review'
+    ).length
     const avgAUM = active > 0 ? totalAUM / active : 0
     return { total: clients.length, active, totalAUM, pendingKYC, avgAUM }
-  }, [clients, kycDocs])
+  }, [clients, kycByClient])
 
   // ── Tab Navigation ────────────────────────────────────────────
   const handleTabClick = (tabId: string) => {
