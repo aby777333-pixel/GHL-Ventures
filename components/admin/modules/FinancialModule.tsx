@@ -48,7 +48,12 @@ interface FinancialModuleProps {
 }
 
 export default function FinancialModule({ subTab, navigate, showToast }: FinancialModuleProps) {
-  const activeTab = (FINANCIAL_TABS.some(t => t.id === subTab) ? subTab : 'overview') as FinancialTab
+  // The sidebar exposes "Revenue" as /admin/financial/revenue/ but the
+  // tab itself is keyed 'overview'. Treat 'revenue' as a synonym so the
+  // page's sub-tab nav highlights correctly when arriving from sidebar.
+  const SUB_TAB_ALIASES: Record<string, FinancialTab> = { revenue: 'overview' }
+  const resolvedSubTab = SUB_TAB_ALIASES[subTab || ''] || subTab
+  const activeTab = (FINANCIAL_TABS.some(t => t.id === resolvedSubTab) ? resolvedSubTab : 'overview') as FinancialTab
 
   // ── Live data state ────────────────────────────────────────────
   const [invoices, setInvoices] = useState<any[]>([])
@@ -144,7 +149,7 @@ export default function FinancialModule({ subTab, navigate, showToast }: Financi
 
       {/* Tab Content */}
       <div className="admin-tab-switch">
-        {activeTab === 'overview' && <RevenueOverviewTab kpis={kpis} expenses={expenses} />}
+        {activeTab === 'overview' && <RevenueOverviewTab kpis={kpis} expenses={expenses} invoices={invoices} />}
         {activeTab === 'transactions' && <TransactionsTab showToast={showToast} />}
         {activeTab === 'invoices' && <InvoicesTab showToast={showToast} invoices={invoices} refetch={loadData} />}
         {activeTab === 'expenses' && <ExpensesTab showToast={showToast} expenses={expenses} />}
@@ -155,8 +160,41 @@ export default function FinancialModule({ subTab, navigate, showToast }: Financi
 }
 
 // ── Revenue Overview Tab ────────────────────────────────────────
-function RevenueOverviewTab({ kpis, expenses }: { kpis: { monthlyRevenue: number; totalInvoiced: number; collected: number; overdue: number; totalExpenses: number; netIncome: number; pendingPayouts: number }; expenses: any[] }) {
+function RevenueOverviewTab({ kpis, expenses, invoices }: { kpis: { monthlyRevenue: number; totalInvoiced: number; collected: number; overdue: number; totalExpenses: number; netIncome: number; pendingPayouts: number }; expenses: any[]; invoices: any[] }) {
   const CATEGORY_COLORS = ['#DC2626', '#3B82F6', '#10B981', '#8B5CF6']
+
+  // Last 6 months of invoice revenue, bucketed by `type`. Empty until
+  // the live invoice ledger has rows in it. Values shown in lakhs (L)
+  // because the Y-axis tickFormatter assumes that unit.
+  const revenueByMonth = useMemo(() => {
+    const months: { key: string; month: string; management: number; performance: number; placement: number; advisory: number }[] = []
+    const now = new Date()
+    for (let i = 5; i >= 0; i--) {
+      const d = new Date(now.getFullYear(), now.getMonth() - i, 1)
+      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
+      const month = d.toLocaleString('en-IN', { month: 'short' })
+      months.push({ key, month, management: 0, performance: 0, placement: 0, advisory: 0 })
+    }
+    const idxByKey = new Map(months.map((m, i) => [m.key, i]))
+    const typeBucket = (t: string): 'management' | 'performance' | 'placement' | 'advisory' => {
+      const x = (t || '').toLowerCase()
+      if (x.includes('performance')) return 'performance'
+      if (x.includes('placement')) return 'placement'
+      if (x.includes('advisor')) return 'advisory'
+      return 'management'
+    }
+    invoices.forEach((inv: any) => {
+      const d = inv.date ? new Date(inv.date) : null
+      if (!d || isNaN(d.getTime())) return
+      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
+      const idx = idxByKey.get(key)
+      if (idx === undefined) return
+      const bucket = typeBucket(inv.type)
+      // Display in lakhs to match the existing axis formatter (`${v}L`).
+      months[idx][bucket] += (Number(inv.total) || 0) / 100000
+    })
+    return months
+  }, [invoices])
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
@@ -168,7 +206,7 @@ function RevenueOverviewTab({ kpis, expenses }: { kpis: { monthlyRevenue: number
         </h3>
         <div className="h-72">
           <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={[]} barGap={2}>
+            <BarChart data={revenueByMonth} barGap={2}>
               <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" />
               <XAxis dataKey="month" tick={{ fill: '#6B7280', fontSize: 11 }} axisLine={false} tickLine={false} />
               <YAxis tick={{ fill: '#6B7280', fontSize: 11 }} axisLine={false} tickLine={false} tickFormatter={(v) => `${v}L`} />
@@ -286,15 +324,16 @@ function InvoicesTab({ showToast, invoices, refetch }: { showToast: (msg: string
     const gst = Math.round(amount * 0.18 * 100) / 100
     const total = Math.round((amount + gst) * 100) / 100
     const result = await insertRow('invoices', {
-      clientName: invoiceForm.clientName,
+      // Postgres columns are snake_case — fetchInvoices maps them back
+      // to camelCase for read paths.
+      client_name: invoiceForm.clientName,
       amount,
       gst,
       total,
       type: invoiceForm.type,
       date: invoiceForm.date || new Date().toISOString().split('T')[0],
-      dueDate: invoiceForm.dueDate || null,
+      due_date: invoiceForm.dueDate || null,
       status: invoiceForm.status,
-      notes: invoiceForm.notes || null,
     })
     if (!result) { showToast('Failed to create invoice', 'error'); return }
     showToast('Invoice created successfully', 'success')

@@ -576,8 +576,20 @@ export async function fetchAuditLog() {
 }
 
 // ── Finance ─────────────────────────────────────────────────
+// invoices / commissions are stored snake_case in Postgres but the
+// Financial module UI was written against camelCase shapes (clientName,
+// dueDate, commissionAmount, salesRep). Map at this boundary so callers
+// don't need to know.
 export async function fetchInvoices() {
-  return queryTable<any>('invoices')
+  const rows = await queryTable<any>('invoices')
+  return (rows || []).map((r: any) => ({
+    ...r,
+    clientName: r.client_name ?? r.clientName ?? '',
+    dueDate:    r.due_date    ?? r.dueDate    ?? null,
+    amount: Number(r.amount) || 0,
+    gst:    Number(r.gst)    || 0,
+    total:  Number(r.total)  || 0,
+  }))
 }
 
 export async function fetchExpenses() {
@@ -585,7 +597,16 @@ export async function fetchExpenses() {
 }
 
 export async function fetchCommissions() {
-  return queryTable<any>('commissions')
+  const rows = await queryTable<any>('commissions')
+  return (rows || []).map((r: any) => ({
+    ...r,
+    salesRep:         r.sales_rep         ?? r.salesRep         ?? '',
+    clientName:       r.client_name       ?? r.clientName       ?? '',
+    dealId:           r.deal_id           ?? r.dealId           ?? '',
+    dealValue:        Number(r.deal_value)        || 0,
+    commissionRate:   Number(r.commission_rate)   || 0,
+    commissionAmount: Number(r.commission_amount) || 0,
+  }))
 }
 
 // ── Assets ──────────────────────────────────────────────────
