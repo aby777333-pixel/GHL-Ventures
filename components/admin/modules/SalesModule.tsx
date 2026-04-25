@@ -6,7 +6,7 @@ import {
   Calendar, ArrowUpRight, ArrowDownRight, Eye, MoreHorizontal,
   Trophy, Zap, Filter, Plus, Clock, CheckCircle2, XCircle,
   Star, BarChart3, Percent, DollarSign, UserPlus, Upload,
-  ArrowRightLeft, Loader2, RefreshCw, Trash2,
+  ArrowRightLeft, Loader2, RefreshCw, Trash2, Check, Square, CheckSquare, X, ChevronDown,
 } from 'lucide-react'
 import AdminGlass from '../shared/AdminGlass'
 import AdminDataTable, { type Column } from '../shared/AdminDataTable'
@@ -27,7 +27,7 @@ import AdminEmptyState from '../shared/AdminEmptyState'
 import { formatINR, formatDate } from '@/lib/admin/adminHooks'
 import type { Lead, LeadStage, LeadSource, Commission } from '@/lib/admin/adminTypes'
 import UploadWithFolderPicker from '@/components/shared/UploadWithFolderPicker'
-import { createLead, updateLead, fetchLeads, deleteLead } from '@/lib/supabase/leadService'
+import { createLead, updateLead, fetchLeads, deleteLead, updateLeadStatus } from '@/lib/supabase/leadService'
 import { onNewLead } from '@/lib/supabase/realtimeSubscriptions'
 import { fetchAllInvestmentApplications } from '@/lib/supabase/adminDataService'
 import { supabase, isSupabaseConfigured } from '@/lib/supabase/client'
@@ -201,6 +201,45 @@ export default function SalesModule({ subTab, navigate, showToast }: SalesModule
     }
   }, [showToast, selectedLead, loadLeads])
 
+  // ── Bulk operations on the pipeline ───────────────────────────
+  // The pipeline tab lifts its selection state up here so the actual
+  // mutations reuse the same `deleteLead` / `updateLeadStatus` paths
+  // as single-row operations — keeps audit logs + activity rows in
+  // sync with the existing flow.
+  const [pipelineSelected, setPipelineSelected] = useState<string[]>([])
+  const [pipelineSelectMode, setPipelineSelectMode] = useState(false)
+  const [bulkBusy, setBulkBusy] = useState(false)
+
+  const handleBulkDeleteLeads = useCallback(async (ids: string[]) => {
+    if (ids.length === 0) return
+    if (!window.confirm(`Delete ${ids.length} lead(s)? This cannot be undone.`)) return
+    setBulkBusy(true)
+    const results = await Promise.all(ids.map(id => deleteLead(id)))
+    const okCount = results.filter(Boolean).length
+    const failCount = results.length - okCount
+    if (okCount > 0) showToast(`Deleted ${okCount} lead${okCount === 1 ? '' : 's'}`, 'success')
+    if (failCount > 0) showToast(`${failCount} delete${failCount === 1 ? '' : 's'} failed`, 'error')
+    if (selectedLead && ids.includes(selectedLead.id)) { setLeadModalOpen(false); setSelectedLead(null) }
+    setPipelineSelected([])
+    setPipelineSelectMode(false)
+    setBulkBusy(false)
+    loadLeads()
+  }, [showToast, selectedLead, loadLeads])
+
+  const handleBulkMoveStage = useCallback(async (ids: string[], stage: LeadStage) => {
+    if (ids.length === 0) return
+    setBulkBusy(true)
+    const results = await Promise.all(ids.map(id => updateLeadStatus(id, stage)))
+    const okCount = results.filter(r => r.success).length
+    const failCount = results.length - okCount
+    if (okCount > 0) showToast(`Moved ${okCount} lead${okCount === 1 ? '' : 's'} → ${STAGE_CONFIG[stage].label}`, 'success')
+    if (failCount > 0) showToast(`${failCount} move${failCount === 1 ? '' : 's'} failed`, 'error')
+    setPipelineSelected([])
+    setPipelineSelectMode(false)
+    setBulkBusy(false)
+    loadLeads()
+  }, [showToast, loadLeads])
+
   // ── KPIs ──────────────────────────────────────────────────────
   const kpis = useMemo(() => {
     const pipeline = leads.filter(l => l.stage !== 'won' && l.stage !== 'lost')
@@ -284,7 +323,21 @@ export default function SalesModule({ subTab, navigate, showToast }: SalesModule
 
       {/* Tab Content */}
       <div className="admin-tab-switch">
-        {activeTab === 'pipeline' && <PipelineTab leads={leads} onViewLead={(l) => { setSelectedLead(l); setLeadModalOpen(true) }} onDeleteLead={handleDeleteLead} showToast={showToast} />}
+        {activeTab === 'pipeline' && (
+          <PipelineTab
+            leads={leads}
+            onViewLead={(l) => { setSelectedLead(l); setLeadModalOpen(true) }}
+            onDeleteLead={handleDeleteLead}
+            showToast={showToast}
+            selected={pipelineSelected}
+            setSelected={setPipelineSelected}
+            selectMode={pipelineSelectMode}
+            setSelectMode={setPipelineSelectMode}
+            onBulkDelete={handleBulkDeleteLeads}
+            onBulkMoveStage={handleBulkMoveStage}
+            bulkBusy={bulkBusy}
+          />
+        )}
         {activeTab === 'create-account' && <CreateAccountTab showToast={showToast} />}
         {activeTab === 'leads' && <LeadListTab leads={leads} onViewLead={(l) => { setSelectedLead(l); setLeadModalOpen(true) }} onDeleteLead={handleDeleteLead} showToast={showToast} />}
         {activeTab === 'referrals' && <ReferralsTab showToast={showToast} />}
@@ -443,8 +496,33 @@ export default function SalesModule({ subTab, navigate, showToast }: SalesModule
 }
 
 // ── Pipeline (Kanban-style) ─────────────────────────────────────
-function PipelineTab({ leads, onViewLead, onDeleteLead, showToast }: { leads: Lead[]; onViewLead: (l: Lead) => void; onDeleteLead: (l: Lead) => void; showToast: (msg: string, type?: 'success' | 'error' | 'info' | 'warning') => void }) {
+function PipelineTab({
+  leads,
+  onViewLead,
+  onDeleteLead,
+  showToast,
+  selected,
+  setSelected,
+  selectMode,
+  setSelectMode,
+  onBulkDelete,
+  onBulkMoveStage,
+  bulkBusy,
+}: {
+  leads: Lead[]
+  onViewLead: (l: Lead) => void
+  onDeleteLead: (l: Lead) => void
+  showToast: (msg: string, type?: 'success' | 'error' | 'info' | 'warning') => void
+  selected: string[]
+  setSelected: React.Dispatch<React.SetStateAction<string[]>>
+  selectMode: boolean
+  setSelectMode: React.Dispatch<React.SetStateAction<boolean>>
+  onBulkDelete: (ids: string[]) => void
+  onBulkMoveStage: (ids: string[], stage: LeadStage) => void
+  bulkBusy: boolean
+}) {
   const stages: LeadStage[] = ['new', 'contacted', 'qualified', 'proposal', 'negotiation', 'won', 'lost']
+  const [moveOpen, setMoveOpen] = useState(false)
 
   const grouped = useMemo(() => {
     const map: Record<LeadStage, Lead[]> = { new: [], contacted: [], qualified: [], proposal: [], negotiation: [], won: [], lost: [] }
@@ -452,71 +530,237 @@ function PipelineTab({ leads, onViewLead, onDeleteLead, showToast }: { leads: Le
     return map
   }, [leads])
 
+  // Always work from a Set for O(1) lookups even when toggling many cards.
+  const selectedSet = useMemo(() => new Set(selected), [selected])
+
+  const allIds = useMemo(() => leads.map(l => l.id), [leads])
+  const allSelected = leads.length > 0 && selected.length === leads.length
+  const someSelected = selected.length > 0 && !allSelected
+
+  const toggleOne = useCallback((id: string) => {
+    setSelected(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id])
+  }, [setSelected])
+
+  const selectAllStage = useCallback((stage: LeadStage) => {
+    const stageIds = grouped[stage].map(l => l.id)
+    if (stageIds.length === 0) return
+    const stageAllPicked = stageIds.every(id => selectedSet.has(id))
+    setSelected(prev => {
+      if (stageAllPicked) return prev.filter(id => !stageIds.includes(id))
+      const merged = new Set(prev)
+      stageIds.forEach(id => merged.add(id))
+      return Array.from(merged)
+    })
+  }, [grouped, selectedSet, setSelected])
+
+  const selectAll = useCallback(() => setSelected(allIds), [allIds, setSelected])
+  const clearSelection = useCallback(() => setSelected([]), [setSelected])
+  const exitSelectMode = useCallback(() => { setSelectMode(false); setSelected([]); setMoveOpen(false) }, [setSelectMode, setSelected])
+
   return (
-    <div className="overflow-x-auto pb-4">
-      <div className="flex gap-3 min-w-[900px]">
-        {stages.map(stage => {
-          const config = STAGE_CONFIG[stage]
-          const stageLeads = grouped[stage]
-          const stageValue = stageLeads.reduce((s, l) => s + l.value, 0)
+    <div className="space-y-3">
+      {/* ── Bulk-action toolbar ──────────────────────────────────── */}
+      <div className="flex flex-wrap items-center justify-between gap-2 px-3 py-2 rounded-xl bg-white/[0.03] border border-white/[0.06]">
+        <div className="flex items-center gap-2">
+          {!selectMode ? (
+            <button
+              onClick={() => setSelectMode(true)}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-gray-300 bg-white/[0.04] border border-white/[0.08] hover:bg-white/[0.08] hover:text-white transition-colors"
+              title="Enter multi-select mode"
+            >
+              <CheckSquare className="w-3.5 h-3.5" />
+              Select
+            </button>
+          ) : (
+            <>
+              <button
+                onClick={allSelected ? clearSelection : selectAll}
+                disabled={bulkBusy || leads.length === 0}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-gray-200 bg-white/[0.06] border border-white/[0.1] hover:bg-white/[0.1] transition-colors disabled:opacity-50"
+                title={allSelected ? 'Deselect all' : 'Select all'}
+              >
+                {allSelected ? <CheckSquare className="w-3.5 h-3.5 text-brand-red" /> : <Square className="w-3.5 h-3.5" />}
+                {allSelected ? 'Deselect All' : 'Select All'}
+              </button>
+              <button
+                onClick={clearSelection}
+                disabled={bulkBusy || selected.length === 0}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-gray-400 bg-white/[0.04] border border-white/[0.08] hover:bg-white/[0.08] hover:text-white transition-colors disabled:opacity-40"
+              >
+                <X className="w-3.5 h-3.5" />
+                Clear
+              </button>
+              <span className="text-xs text-gray-500 ml-1">
+                {selected.length} of {leads.length} selected
+                {someSelected && <span className="ml-1 text-gray-600">(partial)</span>}
+              </span>
+            </>
+          )}
+        </div>
 
-          return (
-            <div key={stage} className="flex-1 min-w-[180px]">
-              {/* Column Header */}
-              <div className={`p-3 rounded-t-xl border ${config.bgColor}`}>
-                <div className="flex items-center justify-between">
-                  <span className={`text-xs font-semibold ${config.color}`}>{config.label}</span>
-                  <span className="text-[10px] text-gray-500 bg-white/[0.06] px-1.5 py-0.5 rounded-full">{stageLeads.length}</span>
+        {selectMode && (
+          <div className="flex items-center gap-2">
+            {/* Move-to-stage dropdown */}
+            <div className="relative">
+              <button
+                onClick={() => setMoveOpen(o => !o)}
+                disabled={bulkBusy || selected.length === 0}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-gray-200 bg-white/[0.04] border border-white/[0.08] hover:bg-white/[0.08] hover:text-white transition-colors disabled:opacity-40"
+              >
+                <ArrowRightLeft className="w-3.5 h-3.5" />
+                Move to stage
+                <ChevronDown className="w-3 h-3" />
+              </button>
+              {moveOpen && (
+                <div className="absolute right-0 mt-1 w-48 rounded-xl bg-[#141414] border border-white/[0.08] shadow-xl z-20 overflow-hidden">
+                  {stages.map(s => {
+                    const cfg = STAGE_CONFIG[s]
+                    return (
+                      <button
+                        key={s}
+                        onClick={() => { setMoveOpen(false); onBulkMoveStage(selected, s) }}
+                        className="w-full flex items-center gap-2 px-3 py-2 text-xs text-left hover:bg-white/[0.06] transition-colors"
+                      >
+                        <span className={`w-2 h-2 rounded-full ${cfg.bgColor.split(' ')[0]}`} />
+                        <span className={cfg.color}>{cfg.label}</span>
+                      </button>
+                    )
+                  })}
                 </div>
-                <p className="text-[10px] text-gray-500 mt-1">{formatINR(stageValue)}</p>
-              </div>
-
-              {/* Cards */}
-              <div className="space-y-2 mt-2">
-                {stageLeads.map(lead => (
-                  <div
-                    key={lead.id}
-                    onClick={() => onViewLead(lead)}
-                    className="p-3 rounded-xl bg-white/[0.03] border border-white/[0.06] hover:border-white/[0.12] hover:bg-white/[0.05] cursor-pointer transition-all group"
-                  >
-                    <div className="flex items-start justify-between mb-2">
-                      <p className="text-xs font-medium text-white">{lead.name}</p>
-                      <div className="flex items-center gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <Eye className="w-3 h-3 text-gray-500" />
-                        <button onClick={(e) => { e.stopPropagation(); onDeleteLead(lead) }} className="p-0.5 rounded-md hover:bg-red-500/20 transition-colors" title="Delete lead">
-                          <Trash2 className="w-3 h-3 text-red-400/60 hover:text-red-400" />
-                        </button>
-                      </div>
-                    </div>
-                    <p className="text-sm font-bold text-white">{formatINR(lead.value)}</p>
-                    <div className="flex items-center justify-between mt-2">
-                      <span className="text-[10px] text-gray-500 capitalize">{lead.source.replace('-', ' ')}</span>
-                      <div className="flex items-center gap-1">
-                        <Zap className="w-3 h-3 text-amber-400" />
-                        <span className={`text-[10px] font-semibold ${
-                          lead.aiScore >= 80 ? 'text-emerald-400' : lead.aiScore >= 50 ? 'text-amber-400' : 'text-red-400'
-                        }`}>{lead.aiScore}</span>
-                      </div>
-                    </div>
-                    {lead.notes && (
-                      <p className="text-[10px] text-gray-500 mt-1.5 line-clamp-2 italic">&ldquo;{lead.notes}&rdquo;</p>
-                    )}
-                    {lead.probability > 0 && (
-                      <div className="mt-2 h-1 bg-white/[0.04] rounded-full overflow-hidden">
-                        <div className="h-full bg-brand-red/60 rounded-full" style={{ width: `${lead.probability}%` }} />
-                      </div>
-                    )}
-                  </div>
-                ))}
-                {stageLeads.length === 0 && (
-                  <div className="p-4 rounded-xl border border-dashed border-white/[0.06] text-center">
-                    <p className="text-[10px] text-gray-600">No leads</p>
-                  </div>
-                )}
-              </div>
+              )}
             </div>
-          )
-        })}
+
+            {/* Bulk delete */}
+            <button
+              onClick={() => onBulkDelete(selected)}
+              disabled={bulkBusy || selected.length === 0}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-red-400 bg-red-500/10 border border-red-500/20 hover:bg-red-500/20 transition-colors disabled:opacity-40"
+            >
+              {bulkBusy ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Trash2 className="w-3.5 h-3.5" />}
+              Delete
+            </button>
+
+            <button
+              onClick={exitSelectMode}
+              disabled={bulkBusy}
+              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium text-gray-500 hover:text-white hover:bg-white/[0.06] transition-colors disabled:opacity-40"
+              title="Exit select mode"
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        )}
+      </div>
+
+      {/* ── Pipeline columns ─────────────────────────────────────── */}
+      <div className="overflow-x-auto pb-4">
+        <div className="flex gap-3 min-w-[900px]">
+          {stages.map(stage => {
+            const config = STAGE_CONFIG[stage]
+            const stageLeads = grouped[stage]
+            const stageValue = stageLeads.reduce((s, l) => s + l.value, 0)
+            const stageIds = stageLeads.map(l => l.id)
+            const stageAllPicked = stageIds.length > 0 && stageIds.every(id => selectedSet.has(id))
+            const stageSomePicked = stageIds.some(id => selectedSet.has(id))
+
+            return (
+              <div key={stage} className="flex-1 min-w-[180px]">
+                {/* Column Header */}
+                <div className={`p-3 rounded-t-xl border ${config.bgColor}`}>
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-2 min-w-0">
+                      {selectMode && stageLeads.length > 0 && (
+                        <button
+                          onClick={() => selectAllStage(stage)}
+                          disabled={bulkBusy}
+                          className="p-0.5 rounded hover:bg-white/[0.1] transition-colors disabled:opacity-50"
+                          title={stageAllPicked ? 'Deselect column' : 'Select column'}
+                        >
+                          {stageAllPicked
+                            ? <CheckSquare className="w-3.5 h-3.5 text-brand-red" />
+                            : stageSomePicked
+                              ? <CheckSquare className="w-3.5 h-3.5 text-brand-red/40" />
+                              : <Square className="w-3.5 h-3.5 text-gray-500" />}
+                        </button>
+                      )}
+                      <span className={`text-xs font-semibold ${config.color} truncate`}>{config.label}</span>
+                    </div>
+                    <span className="text-[10px] text-gray-500 bg-white/[0.06] px-1.5 py-0.5 rounded-full">{stageLeads.length}</span>
+                  </div>
+                  <p className="text-[10px] text-gray-500 mt-1">{formatINR(stageValue)}</p>
+                </div>
+
+                {/* Cards */}
+                <div className="space-y-2 mt-2">
+                  {stageLeads.map(lead => {
+                    const picked = selectedSet.has(lead.id)
+                    return (
+                      <div
+                        key={lead.id}
+                        onClick={() => {
+                          if (selectMode) toggleOne(lead.id)
+                          else onViewLead(lead)
+                        }}
+                        className={`p-3 rounded-xl border cursor-pointer transition-all group ${
+                          picked
+                            ? 'bg-brand-red/10 border-brand-red/40'
+                            : 'bg-white/[0.03] border-white/[0.06] hover:border-white/[0.12] hover:bg-white/[0.05]'
+                        }`}
+                      >
+                        <div className="flex items-start justify-between mb-2 gap-2">
+                          <div className="flex items-start gap-2 min-w-0">
+                            {selectMode && (
+                              <button
+                                onClick={(e) => { e.stopPropagation(); toggleOne(lead.id) }}
+                                className="mt-0.5 p-0.5 rounded hover:bg-white/[0.08] transition-colors"
+                                title={picked ? 'Deselect' : 'Select'}
+                                aria-label={picked ? 'Deselect lead' : 'Select lead'}
+                              >
+                                {picked
+                                  ? <CheckSquare className="w-3.5 h-3.5 text-brand-red" />
+                                  : <Square className="w-3.5 h-3.5 text-gray-500" />}
+                              </button>
+                            )}
+                            <p className="text-xs font-medium text-white truncate">{lead.name}</p>
+                          </div>
+                          <div className={`flex items-center gap-1.5 transition-opacity ${selectMode ? 'opacity-0 pointer-events-none' : 'opacity-0 group-hover:opacity-100'}`}>
+                            <Eye className="w-3 h-3 text-gray-500" />
+                            <button onClick={(e) => { e.stopPropagation(); onDeleteLead(lead) }} className="p-0.5 rounded-md hover:bg-red-500/20 transition-colors" title="Delete lead">
+                              <Trash2 className="w-3 h-3 text-red-400/60 hover:text-red-400" />
+                            </button>
+                          </div>
+                        </div>
+                        <p className="text-sm font-bold text-white">{formatINR(lead.value)}</p>
+                        <div className="flex items-center justify-between mt-2">
+                          <span className="text-[10px] text-gray-500 capitalize">{lead.source.replace('-', ' ')}</span>
+                          <div className="flex items-center gap-1">
+                            <Zap className="w-3 h-3 text-amber-400" />
+                            <span className={`text-[10px] font-semibold ${
+                              lead.aiScore >= 80 ? 'text-emerald-400' : lead.aiScore >= 50 ? 'text-amber-400' : 'text-red-400'
+                            }`}>{lead.aiScore}</span>
+                          </div>
+                        </div>
+                        {lead.notes && (
+                          <p className="text-[10px] text-gray-500 mt-1.5 line-clamp-2 italic">&ldquo;{lead.notes}&rdquo;</p>
+                        )}
+                        {lead.probability > 0 && (
+                          <div className="mt-2 h-1 bg-white/[0.04] rounded-full overflow-hidden">
+                            <div className="h-full bg-brand-red/60 rounded-full" style={{ width: `${lead.probability}%` }} />
+                          </div>
+                        )}
+                      </div>
+                    )
+                  })}
+                  {stageLeads.length === 0 && (
+                    <div className="p-4 rounded-xl border border-dashed border-white/[0.06] text-center">
+                      <p className="text-[10px] text-gray-600">No leads</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )
+          })}
+        </div>
       </div>
     </div>
   )
