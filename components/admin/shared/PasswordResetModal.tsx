@@ -49,7 +49,7 @@ export default function PasswordResetModal({ isOpen, target, onClose, showToast 
   const [showTemp, setShowTemp] = useState(false)
   const [autoGenerate, setAutoGenerate] = useState(true)
   const [submitting, setSubmitting] = useState(false)
-  const [result, setResult] = useState<{ tempPassword?: string; emailSent?: boolean } | null>(null)
+  const [result, setResult] = useState<{ tempPassword?: string; emailSent?: boolean; autoProvisioned?: boolean } | null>(null)
   const [copied, setCopied] = useState(false)
   const [error, setError] = useState('')
 
@@ -104,11 +104,21 @@ export default function PasswordResetModal({ isOpen, target, onClose, showToast 
       }
 
       if (method === 'email_link') {
-        setResult({ emailSent: true })
-        showToast(`Reset email sent to ${target.email}`, 'success')
+        setResult({ emailSent: true, autoProvisioned: !!data.autoProvisioned })
+        showToast(
+          data.autoProvisioned
+            ? `Account created and invite sent to ${target.email}`
+            : `Reset email sent to ${target.email}`,
+          'success',
+        )
       } else {
-        setResult({ tempPassword: data.tempPassword })
-        showToast('Temporary password set. Hand it off securely — it will not be shown again.', 'success')
+        setResult({ tempPassword: data.tempPassword, autoProvisioned: !!data.autoProvisioned })
+        showToast(
+          data.autoProvisioned
+            ? 'Auth account created and temporary password set. Hand it off securely — it will not be shown again.'
+            : 'Temporary password set. Hand it off securely — it will not be shown again.',
+          'success',
+        )
       }
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Network error'
@@ -143,15 +153,30 @@ export default function PasswordResetModal({ isOpen, target, onClose, showToast 
         }
       >
         {result.emailSent ? (
-          <div className="flex items-start gap-3 p-3 rounded-lg bg-emerald-500/10 border border-emerald-500/20">
-            <CheckCircle2 className="w-5 h-5 text-emerald-400 mt-0.5 flex-shrink-0" />
-            <div className="text-sm text-emerald-200">
-              A password reset link has been emailed to <span className="font-medium">{target.email}</span>.
-              The link expires after a short window — ask the user to act on it promptly.
+          <div className="space-y-3">
+            {result.autoProvisioned && (
+              <div className="flex items-start gap-2 p-2.5 rounded-lg bg-blue-500/10 border border-blue-500/20 text-xs text-blue-200">
+                <AlertTriangle className="w-3.5 h-3.5 text-blue-300 flex-shrink-0 mt-0.5" />
+                <span>This client had no auth account — one was created automatically and an invitation email was sent.</span>
+              </div>
+            )}
+            <div className="flex items-start gap-3 p-3 rounded-lg bg-emerald-500/10 border border-emerald-500/20">
+              <CheckCircle2 className="w-5 h-5 text-emerald-400 mt-0.5 flex-shrink-0" />
+              <div className="text-sm text-emerald-200">
+                {result.autoProvisioned
+                  ? <>An invitation email has been sent to <span className="font-medium">{target.email}</span>. Ask the user to click the link in their inbox to set their password and sign in.</>
+                  : <>A password reset link has been emailed to <span className="font-medium">{target.email}</span>. The link expires after a short window — ask the user to act on it promptly.</>}
+              </div>
             </div>
           </div>
         ) : (
           <div className="space-y-3">
+            {result.autoProvisioned && (
+              <div className="flex items-start gap-2 p-2.5 rounded-lg bg-blue-500/10 border border-blue-500/20 text-xs text-blue-200">
+                <AlertTriangle className="w-3.5 h-3.5 text-blue-300 flex-shrink-0 mt-0.5" />
+                <span>This client had no auth account — one was created automatically and the temporary password below was set on it.</span>
+              </div>
+            )}
             <div className="flex items-start gap-3 p-3 rounded-lg bg-amber-500/10 border border-amber-500/20">
               <AlertTriangle className="w-5 h-5 text-amber-400 mt-0.5 flex-shrink-0" />
               <div className="text-xs text-amber-200">
