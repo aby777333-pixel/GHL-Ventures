@@ -99,22 +99,15 @@ export async function getAdminSession(): Promise<AdminSession | null> {
   if (!isSupabaseConfigured()) return null
 
   try {
-    // Check for existing stored session and validate expiry (BUG C7)
+    // Tests 28-04-2026 #1: previous code force-expired admin sessions after
+    // a fixed 8h window even when the underlying Supabase session was still
+    // valid, kicking active admins to /login mid-shift. Trust Supabase auth
+    // as the source of truth and rely on the inactivity tracker for idle
+    // timeouts. We still read the stored timestamps for telemetry/UI but
+    // never use them as the sole reason to sign the user out.
     const storedRaw = typeof window !== 'undefined'
       ? (sessionStorage.getItem('ghl_admin_session') || localStorage.getItem('ghl-admin-session'))
       : null
-    if (storedRaw) {
-      try {
-        const parsed = JSON.parse(storedRaw)
-        if (parsed.expiresAt && Date.now() > parsed.expiresAt) {
-          // Session expired — sign out
-          await supabase.auth.signOut()
-          try { sessionStorage.removeItem('ghl_admin_session') } catch { /* ignore */ }
-          try { localStorage.removeItem('ghl-admin-session') } catch { /* ignore */ }
-          return null
-        }
-      } catch { /* ignore parse errors, continue to re-validate */ }
-    }
 
     const { data: { session } } = await supabase.auth.getSession()
     if (!session?.user) return null

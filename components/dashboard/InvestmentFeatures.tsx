@@ -418,7 +418,7 @@ export function InvestmentDocumentsSection({ documents, theme, showToast, client
             {documents.map((doc: any, i: number) => (
               <tr key={doc.id || i} className={`border-b ${t('border-white/[0.03] hover:bg-white/[0.02]','border-gray-100 hover:bg-gray-50')}`}>
                 <td className={`py-3 px-5 text-xs ${t('text-gray-400','text-gray-600')}`}>{formatDate(doc.created_at)}</td>
-                <td className={`py-3 px-5 text-xs font-medium ${t('text-white','text-gray-900')}`}>{doc.title}</td>
+                <td className={`py-3 px-5 text-xs font-medium ${t('text-white','text-gray-900')}`}>{(doc.title || '').startsWith('TDS Certificate') ? 'TDS Certificate' : doc.title}</td>
                 <td className="py-3 px-5">
                   <div className="flex items-center gap-2">
                     {doc.file_url && (

@@ -920,6 +920,38 @@ export async function uploadAdminInvestmentDocument(params: {
   } catch { return null }
 }
 
+// ── Reference Number Helper (Tests 28-04-2026 #5) ──────────────
+// Builds `GHLVEN/{seq}/{FYcode}`. The Indian financial year runs Apr–Mar,
+// so April 2026 belongs to FY 26-27 (code 2627) while March 2026 belongs
+// to FY 25-26 (code 2526). The sequential number starts at 100 and counts
+// every approved investment application within the same financial year.
+export function getFinancialYearCode(date: Date | string): string {
+  const d = typeof date === 'string' ? new Date(date) : date
+  const month = d.getUTCMonth() // 0 = Jan, 3 = Apr
+  const year = d.getUTCFullYear()
+  const startYear = month >= 3 ? year : year - 1 // Apr–Dec stays, Jan–Mar rolls back
+  const endYear = startYear + 1
+  return `${String(startYear).slice(-2)}${String(endYear).slice(-2)}`
+}
+
+export async function generateGhlVenReference(investmentDate: string): Promise<string> {
+  const fyCode = getFinancialYearCode(investmentDate || new Date().toISOString())
+  let seq = 100
+  if (isSupabaseConfigured()) {
+    try {
+      // Count all reference numbers issued for the same financial year so we
+      // can keep numbering sequential per FY (admin requirement).
+      const sb: any = supabase
+      const { count } = await sb
+        .from('investment_applications')
+        .select('id', { count: 'exact', head: true })
+        .like('reference_number', `GHLVEN/%/${fyCode}`)
+      if (typeof count === 'number') seq = 100 + count
+    } catch { /* fall back to 100 */ }
+  }
+  return `GHLVEN/${seq}/${fyCode}`
+}
+
 // ── Mark credit given on an investment application (bug #16) ──
 // Returns true on success, or a string error message to surface in the UI.
 export async function markInvestmentCreditGiven(appId: string, adminId: string): Promise<true | string> {
@@ -956,8 +988,13 @@ export async function markInvestmentCreditGiven(appId: string, adminId: string):
       console.warn('[admin] markInvestmentCreditGiven error:', error.message)
       return error.message || 'Database rejected the update'
     }
-    // Once credited, the full payout schedule becomes visible so the accounts
-    // team can process payouts. Safe to run repeatedly — duplicates are skipped.
+    // Tests 28-04-2026 #7: payouts were originally scheduled from the
+    // investment-application date. Once the admin issues credit, the
+    // schedule must be re-anchored to the credit date — otherwise the
+    // first month's pro-ration and every subsequent due date are wrong.
+    // We delete every pending payout for this investment and rebuild from
+    // scratch using `final_investment_date` (set in confirmGiveCredit) as
+    // the new start date. Already-paid rows are preserved.
     try {
       const { data: app } = await sb.from('investment_applications').select('*').eq('id', appId).single()
       if (app) {
@@ -980,7 +1017,15 @@ export async function markInvestmentCreditGiven(appId: string, adminId: string):
             }
           }
         }
-        await sb.from('monthly_payouts').delete().eq('investment_id', appId).eq('payment_status', 'pending')
+        try {
+          await sb
+            .from('monthly_payouts')
+            .delete()
+            .eq('investment_id', app.id)
+            .neq('payment_status', 'paid')
+        } catch (cleanupErr) {
+          console.warn('[admin] payout cleanup before regen non-fatal:', cleanupErr)
+        }
         await generateFullPayoutSchedule(app)
       }
     } catch (e) { console.warn('[admin] auto-generate payouts non-fatal:', e) }
@@ -1146,10 +1191,12 @@ export async function approveInvestmentApplication(app: any, adminId: string) {
     maturity.setFullYear(maturity.getFullYear() + tenureYears)
     const maturityDate = maturity.toISOString().split('T')[0]
     const commitmentId = app.commitment_id || `GHL-CMT-${String(app.id).slice(0, 8).toUpperCase()}`
-    // Testing Report 2 (2026-04-25 #8): reference number must follow
-    // GHLVEN/<seq>/<FY>, with the seq starting at 100 and the FY computed
-    // from the current Indian financial year. The next_investment_reference
-    // RPC mints the value atomically so concurrent approvals don't collide.
+    // Tests 28-04-2026 #5 / Testing Report 2 (2026-04-25 #8): reference
+    // number must follow `GHLVEN/{seq}/{FY}` where seq starts at 100 and FY
+    // uses the Indian financial year (Apr–Mar) encoded as e.g. 2526 / 2627.
+    // The next_investment_reference RPC mints the value atomically so
+    // concurrent approvals don't collide. If the RPC is unavailable we
+    // fall back to a count-based generator that still respects the format.
     let referenceNumber: string = app.reference_number || ''
     if (!referenceNumber) {
       try {
@@ -1158,18 +1205,10 @@ export async function approveInvestmentApplication(app: any, adminId: string) {
         if (!refErr && typeof refData === 'string' && refData) {
           referenceNumber = refData
         } else {
-          // Fallback: keep approval moving even if the RPC is unreachable.
-          // Format mirrors the canonical one so downstream parsers still work.
-          const now = new Date()
-          const yr = now.getFullYear()
-          const mo = now.getMonth() + 1
-          const fy = mo >= 4
-            ? `${String(yr).slice(-2)}${String(yr + 1).slice(-2)}`
-            : `${String(yr - 1).slice(-2)}${String(yr).slice(-2)}`
-          referenceNumber = `GHLVEN/${Date.now().toString().slice(-3)}/${fy}`
+          referenceNumber = await generateGhlVenReference(investmentDate)
         }
       } catch {
-        referenceNumber = `GHL-REF-${Date.now().toString(36).toUpperCase()}`
+        referenceNumber = await generateGhlVenReference(investmentDate)
       }
     }
 
@@ -1220,6 +1259,28 @@ export async function approveInvestmentApplication(app: any, adminId: string) {
   } catch (e: any) {
     console.warn('[admin] approveInvestmentApplication error:', e?.message)
     return false
+  }
+}
+
+// ── Delete an investment application + cascade related rows ──
+// Tests 28-04-2026 #3: admin needs a "Delete Investment" action. The
+// `investment_applications` row owns child rows in `monthly_payouts`,
+// `investment_documents`, and `investment_transactions` — wipe those
+// first so we don't leave orphaned schedules visible to the investor.
+export async function deleteInvestmentApplication(appId: string): Promise<{ ok: boolean; error?: string }> {
+  if (!isSupabaseConfigured()) return { ok: false, error: 'Supabase not configured' }
+  if (!appId) return { ok: false, error: 'Missing investment id' }
+  try {
+    const sb: any = supabase
+    // Delete dependents first (best-effort — table may not exist in some envs)
+    try { await sb.from('monthly_payouts').delete().eq('investment_id', appId) } catch { /* non-fatal */ }
+    try { await sb.from('investment_documents').delete().eq('investment_app_id', appId) } catch { /* non-fatal */ }
+    try { await sb.from('investment_transactions').delete().eq('investment_app_id', appId) } catch { /* non-fatal */ }
+    const { error } = await sb.from('investment_applications').delete().eq('id', appId)
+    if (error) return { ok: false, error: error.message || 'Delete failed' }
+    return { ok: true }
+  } catch (e: any) {
+    return { ok: false, error: e?.message || 'Unknown error' }
   }
 }
 

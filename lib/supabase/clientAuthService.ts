@@ -290,11 +290,27 @@ export async function getClientSession(): Promise<ClientSession | null> {
 export async function logoutClient(): Promise<void> {
   if (!isSupabaseConfigured()) return
   try {
+    // Capture user id BEFORE signOut so we can wipe their namespaced caches.
+    let priorUserId: string | null = null
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      priorUserId = session?.user?.id || null
+    } catch { /* best-effort */ }
+
     await supabase.auth.signOut({ scope: 'global' })
-    // Clear any cached session data
+    // Clear any cached session data and per-user profile/bank caches so a
+    // different user signing in on the same device cannot see leftover data
+    // (Tests 28-04-2026 #9).
     if (typeof window !== 'undefined') {
       localStorage.removeItem('ghl-chat-visitor')
       localStorage.removeItem('ghl-chat-history')
+      try { localStorage.removeItem('ghl-profile-data') } catch { /* ignore */ }
+      try { localStorage.removeItem('ghl-bank-data') } catch { /* ignore */ }
+      try { localStorage.removeItem('ghl-last-activity') } catch { /* ignore */ }
+      if (priorUserId) {
+        try { localStorage.removeItem(`ghl-profile-data:${priorUserId}`) } catch { /* ignore */ }
+        try { localStorage.removeItem(`ghl-bank-data:${priorUserId}`) } catch { /* ignore */ }
+      }
     }
   } catch (err) {
     console.warn('[clientAuth] logoutClient exception:', err)

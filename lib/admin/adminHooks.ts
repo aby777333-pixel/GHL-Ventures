@@ -8,6 +8,8 @@ import { useState, useEffect, useCallback, useMemo } from 'react'
 import type { AdminSession, AdminRole, Permission } from './adminTypes'
 import { getAdminSession, logoutAdmin } from '@/lib/supabase/adminAuthService'
 import { hasPermission, hasModuleAccess } from './adminRBAC'
+import { useInactivityLogout } from '@/lib/supabase/inactivityTracker'
+import { supabase } from '@/lib/supabase/client'
 import type { PermissionModule } from './adminTypes'
 import { useSessionGuard, sessionInvalidationMessage, type SessionInvalidationReason } from '@/lib/supabase/sessionGuard'
 
@@ -17,15 +19,38 @@ export function useAdminAuth() {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
+    let cancelled = false
     getAdminSession().then(s => {
+      if (cancelled) return
       setSession(s)
       setLoading(false)
     })
+
+    // Tests 28-04-2026 #1: keep the admin session aligned with token
+    // refresh / cross-tab sign-in events so a transient auth-state flip
+    // never drops the active admin to /admin/login.
+    const { data: subscription } = supabase.auth.onAuthStateChange((event) => {
+      if (event === 'SIGNED_OUT') {
+        if (!cancelled) setSession(null)
+      } else if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED' || event === 'USER_UPDATED') {
+        getAdminSession().then(s => { if (!cancelled) setSession(s) })
+      }
+    })
+
+    return () => {
+      cancelled = true
+      subscription.subscription?.unsubscribe()
+    }
   }, [])
 
   const logout = useCallback(() => {
     logoutAdmin().then(() => setSession(null))
   }, [])
+
+  // Tests 28-04-2026 #1: idle-only logout. The tracker re-validates the
+  // Supabase session before pulling the trigger, so an active admin is
+  // never logged out simply because a timer fired.
+  useInactivityLogout(() => { logout() }, !!session)
 
   const refreshSession = useCallback(() => {
     getAdminSession().then(s => setSession(s))

@@ -166,7 +166,7 @@ export function getVisibleModules(role: AdminRole): PermissionModule[] {
   const all: PermissionModule[] = [
     'overview', 'clients', 'sales', 'realty-brokers', 'employees', 'assets',
     'ai-ops', 'compliance', 'financial', 'analytics', 'comms', 'marketing', 'reports', 'settings',
-    'allotments', 'payouts', 'content',
+    'allotments', 'payouts', 'content', 'user-passwords',
   ]
   return all.filter(mod => hasModuleAccess(role, mod))
 }

@@ -1116,27 +1116,64 @@ function LeadDetailContent({ lead }: { lead: Lead }) {
 // INVESTMENTS TAB
 // ═══════════════════════════════════════════════════════════════
 
-function generateInvestmentDocument(
+async function generateInvestmentDocument(
   type: 'acknowledgement' | 'allotment' | 'certificate' | 'agreement',
   app: any
 ) {
-  const clientName = app._client?.full_name || 'Investor'
-  const clientEmail = app._client?.email || ''
-  const amount = Number(app.investment_amount) || 0
+  // Tests 28-04-2026 #10: pull every investor field straight from KYC so
+  // documents are ready to download without admin edits. We hydrate from
+  // kyc_basic_details, kyc_identity_details, kyc_bank_details and the
+  // clients table before opening the print preview.
+  let clientName = app._client?.full_name || 'Investor'
+  let clientEmail = app._client?.email || ''
+  let clientPhone: string = app._client?.phone || ''
+  let clientAddress = ''
+  let clientPan = ''
+  try {
+    if (app.client_id) {
+      const { supabase: sb } = await import('@/lib/supabase/client')
+      const sbAny: any = sb
+      const [basicRes, identityRes, clientRes] = await Promise.all([
+        sbAny.from('kyc_basic_details').select('investor_name, email, phone, address').eq('client_id', app.client_id).maybeSingle(),
+        sbAny.from('kyc_identity_details').select('pan_number, address, city, state, pincode, dob').eq('client_id', app.client_id).maybeSingle(),
+        sbAny.from('clients').select('full_name, email, phone, pan, city').eq('id', app.client_id).maybeSingle(),
+      ])
+      const basic: any = basicRes?.data || {}
+      const identity: any = identityRes?.data || {}
+      const c: any = clientRes?.data || {}
+      clientName = basic.investor_name || c.full_name || clientName
+      clientEmail = basic.email || c.email || clientEmail
+      clientPhone = basic.phone || c.phone || clientPhone
+      clientPan = identity.pan_number || c.pan || ''
+      const addressParts = [
+        basic.address,
+        identity.address,
+        identity.city || c.city,
+        identity.state,
+        identity.pincode,
+      ].filter((part: any) => part && String(part).trim().length > 0)
+      clientAddress = Array.from(new Set(addressParts.map((s: any) => String(s).trim()))).join(', ')
+    }
+  } catch { /* fall back to whatever the application row already had */ }
+
+  const amount = Number(app.final_investment_amount) || Number(app.investment_amount) || 0
   const numDebentures = Math.floor(amount / 10)
   const amountWords = numberToWords(amount)
   const fund = app.fund_vehicle || 'Alternate route to Invest in AIF via Debenture'
-  const dateStr = new Date().toLocaleDateString('en-IN', { day: '2-digit', month: '2-digit', year: 'numeric' })
-  // Testing Report 2 (2026-04-25 #8): prefer the canonical reference
-  // (GHLVEN/<seq>/<FY>) stored on the application. Fall back to a same-
-  // shape value if the application doesn't have one yet.
-  const _now = new Date()
-  const _yr = _now.getFullYear()
-  const _fy = (_now.getMonth() + 1) >= 4
-    ? `${String(_yr).slice(-2)}${String(_yr + 1).slice(-2)}`
-    : `${String(_yr - 1).slice(-2)}${String(_yr).slice(-2)}`
-  const refNo: string = app.reference_number
-    || `GHLVEN/${(app.id || '').replace(/-/g, '').slice(0, 3).toUpperCase()}/${_fy}`
+  const investmentDate = app.final_investment_date || app.investment_date || app.created_at || new Date().toISOString()
+  const dateStr = new Date(investmentDate).toLocaleDateString('en-IN', { day: '2-digit', month: '2-digit', year: 'numeric' })
+  const longDateStr = new Date(investmentDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'long', year: 'numeric' })
+  // Tests 28-04-2026 #5: prefer the persisted reference_number (GHLVEN/100/2526
+  // format generated server-side on approval); fall back to a freshly built
+  // FY-aware reference for previews of un-approved applications.
+  const refNo = app.reference_number || (() => {
+    const d = new Date(investmentDate)
+    const month = d.getUTCMonth()
+    const year = d.getUTCFullYear()
+    const startYear = month >= 3 ? year : year - 1
+    const fyCode = `${String(startYear).slice(-2)}${String(startYear + 1).slice(-2)}`
+    return `GHLVEN/100/${fyCode}`
+  })()
   const folioNo = `D${(app.id || '').replace(/-/g,'').slice(0,4).toUpperCase()}`
   const certNo = `${(app.id || '').replace(/-/g,'').slice(0, 3).toUpperCase()}`
   const tenure = app.tenure_preference || '3 years'
@@ -1201,44 +1238,56 @@ function generateInvestmentDocument(
 
   const templates: Record<string, string> = {
     acknowledgement: `${css}<body>${header}
-      <p class="right">Date: [DATE]</p>
-      <p>Ref: [REF]<br/>[NAME]<br/>[ADDRESS]<br/>[PHONE]<br/>Email: [EMAIL]</p>
+      <p>Ref: [REF] <span style="float:right;">Date: [DATE]</span></p>
+      <p>[NAME],<br/>[ADDRESS]<br/>[PHONE]</p>
       <p><strong>Subject: Acknowledgement of investment receipt</strong></p>
       <p>Dear [NAME],</p>
-      <p><strong>GHL India Ventures welcomes you to the new Dawn of Wealth Creation and prosperity</strong></p>
-      <p>We are delighted to welcome you to <strong>GHL India Ventures</strong>, where your financial aspirations take shape and transform into lasting success. By joining us, you have become an integral part of our <strong>prestigious family of visionary investors</strong> &mdash; individuals who believe in creating wealth with wisdom and foresight.</p>
-      <p>Your decision to partner with GHL India Ventures marks a <strong>powerful first step toward true financial freedom</strong>. Together, let us shape a future defined by prosperity, stability, and enduring success.</p>
-      <p>Welcome once again to GHL India Ventures &mdash; <strong>where your prosperity is our purpose</strong>.</p>
+      <p><strong>Landmaxo Properties welcomes you to the new Dawn of Wealth Creation and prosperity</strong></p>
+      <p>We are delighted to welcome you to <strong>Landmaxo Properties</strong>, where your financial aspirations take shape and transform into lasting success. By joining us, you have become an integral part of our <strong>prestigious family of visionary investors</strong> &mdash; individuals who believe in creating wealth with wisdom and foresight.</p>
+      <p>Your decision to partner with Landmaxo Properties marks a <strong>powerful first step toward true financial freedom</strong>. Together, let us shape a future defined by prosperity, stability, and enduring success.</p>
+      <p>Welcome once again to Landmaxo Properties &mdash; <strong>where your prosperity is our purpose</strong>.</p>
       <p>We acknowledge receipt of your investment towards the <strong>subscription of debentures in Landmaxo Properties Private Limited</strong>, as detailed below:</p>
       <table class="mb">
         <tr><th>S.No</th><th>Date of Receipt</th><th>Amount (&#8377;)</th><th>Amount in Words</th></tr>
         <tr><td>1</td><td>[DATE]</td><td>[AMOUNT]</td><td>[AMOUNT_WORDS] Rupees Only</td></tr>
       </table>
       <p>The debentures carry an <strong>interest rate of 1% per month</strong> along with an <strong>annual appreciation of 12%</strong>, for a <strong>minimum tenure of three (3) years</strong> from the date of investment. Interest will be paid on or before the <strong>10th of each month</strong>, after deduction of applicable <strong>TDS (currently 10%)</strong> under the Income Tax Act, 1961.</p>
-      <p>Debentures may be <strong>redeemed at the investor's option</strong> after completion of the 3-year tenure. <strong>TDS credits</strong> will be reflected in the investor's PAN account on a <strong>quarterly basis</strong>.</p>
+      <p>Debentures may be <strong>redeemed at the investor&rsquo;s option</strong> after completion of the 3-year tenure. <strong>TDS credits</strong> will be reflected in the investor&rsquo;s PAN account on a <strong>quarterly basis</strong>.</p>
       <p class="note">* This is system generated document. Signature authentication is not required. *</p>
       ${footer}</body>`,
 
     allotment: `${css}<body>${logo}
-      <div class="header" style="border-bottom:none;">
-        <h1 style="color:#2d6a2e;">LANDMAXO PROPERTIES PRIVATE LIMITED</h1>
-        <div class="sub">{ CIN: U70109TN2022PTC151180 }</div>
-        <div class="sub">No.2D, Queens Court, Montieth Road, Egmore, Chennai - 600008</div>
-      </div>
-      <p class="right">Date: [DATE]</p>
-      <p>To<br/><strong>[NAME]</strong><br/>[ADDRESS]<br/>[EMAIL]</p>
-      <p class="center bold">Sub: Allotment of Secured, Non &ndash; Convertible Debentures</p>
-      <p>Dear Investor,</p>
-      <p>This is with reference to your Investment, I am directed by the Board of Directors to inform you that you have been allotted <strong>[NUM_DEB]</strong> Secured, Non-Convertible debentures of Rs.10/- each. The tenure of debentures is for [TENURE].</p>
+      <p>To <span style="float:right;">Date: [DATE]</span></p>
+      <p><strong>[NAME]</strong>,<br/>[ADDRESS]</p>
+      <p class="center bold">Subject: Allotment of [FUND]</p>
+      <p>Dear [NAME],</p>
+      <p>This is with reference to your Investment, I am directed by the Board of Directors to inform you that you have been allotted <strong>[NUM_DEB] [FUND]</strong> of Rs.10/- each. The tenure of debentures is for [TENURE].</p>
       <p>These debentures are allotted to you as per the resolution passed at the Board meeting held on [DATE] and as per the terms and conditions of Articles of Association of the company.</p>
       <p>Details of allotment are as follows:</p>
       <table style="font-size:10px;">
-        <tr><th>Folio No.</th><th>No. of Debentures</th><th colspan="2">Distinctive Nos.</th><th>Amount (Rs)</th><th>Type</th><th>Rate</th><th>Tenure</th></tr>
-        <tr><th></th><th></th><th>From</th><th>To</th><th></th><th></th><th></th><th></th></tr>
-        <tr><td>[FOLIO]</td><td>[NUM_DEB]</td><td>1</td><td>[NUM_DEB_RAW]</td><td>[AMOUNT]</td><td style="font-size:9px;">Secured, Non-Convertible</td><td>[RATE]</td><td>[TENURE]</td></tr>
+        <tr>
+          <th rowspan="2">Folio No</th>
+          <th rowspan="2">No Of Debentures</th>
+          <th colspan="2">Distinctive Nos.</th>
+          <th rowspan="2">Amount Received in Rs</th>
+          <th rowspan="2">Fund Type</th>
+          <th rowspan="2">Rate Of Interest</th>
+          <th rowspan="2">Tenure</th>
+        </tr>
+        <tr><th>From</th><th>To</th></tr>
+        <tr>
+          <td>[FOLIO]</td>
+          <td>[NUM_DEB]</td>
+          <td>1010001</td>
+          <td>[NUM_DEB_RAW]</td>
+          <td>[AMOUNT]</td>
+          <td style="font-size:9px;">[FUND]</td>
+          <td>1% (per month)</td>
+          <td>[TENURE]</td>
+        </tr>
       </table>
       <p class="mt">Duly signed and executed debenture certificate will be sent to you.</p>
-      <p class="mt bold">This is a computer generated document and does not require signature</p>
+      <p class="mt center"><em>* This is a computer generated document and does not require signature. *</em></p>
       ${footer}</body>`,
 
     certificate: `${css}
@@ -1264,8 +1313,8 @@ function generateInvestmentDocument(
           <table class="cert-fields" style="width:100%;margin-top:12px;">
             <tr><td>Name(s) of the Registered<br/>Debenture holder(s)</td><td class="bold">[NAME]</td></tr>
             <tr><td>No. of Debenture(s) held</td><td class="bold">[NUM_DEB] ([AMOUNT_WORDS] Only)</td></tr>
-            <tr><td>Distinctive No.(s)</td><td class="bold">1 to [NUM_DEB_RAW] (Both inclusive)</td></tr>
-            <tr><td>Total Value of debenture(s)</td><td class="bold">[AMOUNT] ([AMOUNT_WORDS] Only)</td></tr>
+            <tr><td>Distinctive No.(s)</td><td class="bold">1010001 to [NUM_DEB_RAW] (Both inclusive)</td></tr>
+            <tr><td>Total Value of debenture(s)</td><td class="bold">[AMOUNT] ([AMOUNT_WORDS] Rupees Only)</td></tr>
           </table>
           <p class="mt">GIVEN under the common seal of the Company this [DATE]</p>
           <div style="display:flex;justify-content:space-between;margin-top:48px;">
@@ -1287,12 +1336,11 @@ function generateInvestmentDocument(
       </div>
       <h2 class="center" style="color:#D0021B;">DEBENTURE SUBSCRIPTION AGREEMENT</h2>
       <p class="right">Date: [DATE]</p>
-      <p>This Debenture Subscription Agreement (&ldquo;Agreement&rdquo;) is made and entered into on <strong>[DATE]</strong></p>
-      <p><strong>BETWEEN:</strong></p>
-      <p class="clause"><strong>Landmaxo Properties Private Limited</strong>, a company incorporated under the Companies Act, 2013, having its registered office at No.2D, Queens Court, Montieth Road, Egmore, Chennai &ndash; 600008, Tamil Nadu (CIN: U70109TN2022PTC151180), hereinafter referred to as the &ldquo;<strong>Company</strong>&rdquo; / &ldquo;<strong>Issuer</strong>&rdquo; (which expression shall include its successors and assigns) of the <strong>FIRST PART</strong>;</p>
-      <p><strong>AND</strong></p>
-      <p class="clause"><strong>[NAME]</strong>, hereinafter referred to as the &ldquo;<strong>Subscriber</strong>&rdquo; / &ldquo;<strong>Debenture Holder</strong>&rdquo; of the <strong>SECOND PART</strong>.</p>
-      <p>(The Company and the Subscriber are hereinafter individually referred to as &ldquo;Party&rdquo; and collectively as &ldquo;Parties&rdquo;.)</p>
+      <p>This <strong>DEBENTURE INVESTMENT AGREEMENT</strong> is made on this <strong>[DATE]</strong>,</p>
+      <p><strong>BETWEEN</strong></p>
+      <p class="clause"><strong>M/s. Landmaxo Properties Private Limited</strong> (CIN: U70109TN2022PTC151180), a private limited Company incorporated under the Companies Act, 2013 and having Registered office at 2D, Queens Court, No. 6, Montieth Road, Egmore, Chennai - 600008 (hereinafter referred to as the &ldquo;<strong>Company</strong>&rdquo;), represented through its Authorised Signatory Mr. V. Rajkumar of the <strong>FIRST PART</strong>; and</p>
+      <p class="clause"><strong>[NAME]</strong>, Residing At [ADDRESS] (hereinafter referred to as the &ldquo;<strong>Investor</strong>&rdquo;) and shall unless it be repugnant to the context or meaning thereof be deemed to mean and include him/herself and his/her nominees to the extent specified herein and their respective heirs, executors, administrators and assigns of the <strong>SECOND PART</strong>;</p>
+      <p>(The Company and the Investor are hereinafter individually referred to as &ldquo;Party&rdquo; and collectively as &ldquo;Parties&rdquo;.)</p>
 
       <div class="clause-title">1. DEFINITIONS AND INTERPRETATION</div>
       <p class="clause">1.1 &ldquo;<strong>Debentures</strong>&rdquo; means Secured, Non-Convertible Debentures of face value of Rs. 10/- each issued by the Company.</p>
@@ -1344,85 +1392,78 @@ function generateInvestmentDocument(
 
       <div style="display:flex;justify-content:space-between;margin-top:40px;">
         <div style="width:45%;">
-          <p class="bold">For Landmaxo Properties Private Limited</p>
+          <p class="bold">For Landmaxo Properties Pvt Ltd</p>
           <div style="height:60px;"></div>
-          <div style="border-top:1px solid #333;padding-top:4px;font-size:11px;">Authorised Signatory<br/>Director</div>
-          <p style="font-size:10px;margin-top:8px;">Name: ___________________<br/>Designation: ___________________<br/>Date: [DATE]</p>
+          <div style="border-top:1px solid #333;padding-top:4px;font-size:11px;">V. Rajkumar<br/>(Authorised Signatory)</div>
+          <p style="font-size:10px;margin-top:8px;">Date: [DATE]</p>
         </div>
         <div style="width:45%;text-align:right;">
-          <p class="bold">Subscriber / Debenture Holder</p>
+          <p class="bold">Investor</p>
           <div style="height:60px;"></div>
-          <div style="border-top:1px solid #333;padding-top:4px;font-size:11px;">[NAME]</div>
-          <p style="font-size:10px;margin-top:8px;">PAN: ___________________<br/>Address: ___________________<br/>Date: [DATE]</p>
+          <div style="border-top:1px solid #333;padding-top:4px;font-size:11px;">[NAME]<br/>(Investor)</div>
+          <p style="font-size:10px;margin-top:8px;">PAN: [PAN]<br/>Address: [ADDRESS]<br/>Date: [DATE]</p>
         </div>
       </div>
 
-      <div class="clause-title mt">WITNESS:</div>
-      <div style="display:flex;justify-content:space-between;margin-top:12px;">
-        <div style="width:45%;font-size:10px;">1. Name: ___________________<br/>Address: ___________________<br/>Signature: ___________________</div>
-        <div style="width:45%;font-size:10px;">2. Name: ___________________<br/>Address: ___________________<br/>Signature: ___________________</div>
-      </div>
+      <h3 class="center mt" style="margin-top:32px;">Schedule - I</h3>
+      <table class="schedule-table" style="margin-top:8px;">
+        <tr><th>S.No</th><th>Date</th><th>Name</th><th>No. of Debentures</th><th>Nominal Value (in Rs.)</th></tr>
+        <tr><td>1.</td><td>[DATE]</td><td>[NAME]</td><td>[NUM_DEB]</td><td>[AMOUNT]</td></tr>
+        <tr><td colspan="3" class="right bold">Total</td><td class="bold">[NUM_DEB]</td><td class="bold">[AMOUNT]</td></tr>
+      </table>
       ${footer}</body>`,
   }
 
-  // Build the input form that appears first
+  // Tests 28-04-2026 #10: render the document directly with KYC data
+  // already substituted in. The admin doesn't need to fill anything in;
+  // the toolbar still allows printing or saving as PDF.
   const titles: Record<string, string> = { acknowledgement: 'Acknowledgement Letter', allotment: 'Allotment Letter', certificate: 'Debenture Certificate', agreement: 'Debenture Agreement' }
-  const inputForm = `
-    <div id="inputForm" style="max-width:600px;margin:60px auto 20px;padding:28px;background:#fff;border:1px solid #ddd;border-radius:12px;font-family:Arial,sans-serif;">
-      <h2 style="margin:0 0 4px;color:#2d6a2e;font-size:20px;">${titles[type]}</h2>
-      <p style="color:#888;font-size:12px;margin:0 0 20px;">Fill in the details below and click Generate</p>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
-        <div><label style="font-size:11px;color:#666;display:block;margin-bottom:3px;">Full Name *</label><input id="f_name" value="${clientName}" style="width:100%;padding:8px 10px;border:1px solid #ccc;border-radius:6px;font-size:13px;"/></div>
-        <div><label style="font-size:11px;color:#666;display:block;margin-bottom:3px;">Email</label><input id="f_email" value="${clientEmail}" style="width:100%;padding:8px 10px;border:1px solid #ccc;border-radius:6px;font-size:13px;"/></div>
-        <div><label style="font-size:11px;color:#666;display:block;margin-bottom:3px;">Phone</label><input id="f_phone" value="" placeholder="+91 98765 43210" style="width:100%;padding:8px 10px;border:1px solid #ccc;border-radius:6px;font-size:13px;"/></div>
-        <div><label style="font-size:11px;color:#666;display:block;margin-bottom:3px;">Date</label><input id="f_date" value="${dateStr}" style="width:100%;padding:8px 10px;border:1px solid #ccc;border-radius:6px;font-size:13px;"/></div>
-        <div style="grid-column:1/-1;"><label style="font-size:11px;color:#666;display:block;margin-bottom:3px;">Address</label><textarea id="f_address" rows="2" placeholder="Full address..." style="width:100%;padding:8px 10px;border:1px solid #ccc;border-radius:6px;font-size:13px;resize:vertical;"></textarea></div>
-        <div><label style="font-size:11px;color:#666;display:block;margin-bottom:3px;">Investment Amount (&#8377;)</label><input id="f_amount" type="number" value="${amount}" style="width:100%;padding:8px 10px;border:1px solid #ccc;border-radius:6px;font-size:13px;"/></div>
-        <div><label style="font-size:11px;color:#666;display:block;margin-bottom:3px;">Tenure</label><input id="f_tenure" value="${tenure}" style="width:100%;padding:8px 10px;border:1px solid #ccc;border-radius:6px;font-size:13px;"/></div>
-        <div><label style="font-size:11px;color:#666;display:block;margin-bottom:3px;">Reference No</label><input id="f_ref" value="${refNo}" style="width:100%;padding:8px 10px;border:1px solid #ccc;border-radius:6px;font-size:13px;"/></div>
-        <div><label style="font-size:11px;color:#666;display:block;margin-bottom:3px;">Folio No</label><input id="f_folio" value="${folioNo}" style="width:100%;padding:8px 10px;border:1px solid #ccc;border-radius:6px;font-size:13px;"/></div>
-        <div><label style="font-size:11px;color:#666;display:block;margin-bottom:3px;">Interest Rate</label><input id="f_rate" value="1% per month" style="width:100%;padding:8px 10px;border:1px solid #ccc;border-radius:6px;font-size:13px;"/></div>
-        <div><label style="font-size:11px;color:#666;display:block;margin-bottom:3px;">Fund Type</label><input id="f_fund" value="${fund}" style="width:100%;padding:8px 10px;border:1px solid #ccc;border-radius:6px;font-size:13px;"/></div>
-      </div>
-      <div style="margin-top:20px;text-align:right;">
-        <button onclick="window.close()" style="padding:10px 20px;border:1px solid #ccc;border-radius:6px;background:#fff;color:#666;cursor:pointer;margin-right:8px;font-size:13px;">Cancel</button>
-        <button onclick="generateDoc()" style="padding:10px 24px;border:none;border-radius:6px;background:#2d6a2e;color:#fff;cursor:pointer;font-weight:600;font-size:13px;">Generate &amp; Print</button>
-      </div>
-    </div>`
 
-  // Build the full page with form + hidden document
-  const fullPage = `<!DOCTYPE html><html><head><title>${titles[type]} - GHL India Ventures</title>${css}
-  <style>#docContent{display:none;max-width:210mm;margin:0 auto;background:#fff;padding:20mm;box-shadow:0 2px 20px rgba(0,0,0,0.1);}@media print{#docContent{max-width:none;padding:0;box-shadow:none;}}</style>
-  </head><body style="background:#f5f5f5;margin:0;padding:20px 0;">
-  ${inputForm}
-  <div id="docContent">${templates[type].replace(css, '').replace(/\$\{toolbar\}/g, '')}</div>
-  <script>
-  ${numberToWordsJS}
-  function generateDoc(){
-    var n=document.getElementById('f_name').value;
-    var em=document.getElementById('f_email').value;
-    var ph=document.getElementById('f_phone').value;
-    var dt=document.getElementById('f_date').value;
-    var addr=document.getElementById('f_address').value;
-    var amt=parseInt(document.getElementById('f_amount').value)||0;
-    var tn=document.getElementById('f_tenure').value;
-    var ref=document.getElementById('f_ref').value;
-    var fol=document.getElementById('f_folio').value;
-    var rate=document.getElementById('f_rate').value;
-    var fund=document.getElementById('f_fund').value;
-    var numDeb=Math.floor(amt/10);
-    var amtW=numberToWords(amt);
-    var doc=document.getElementById('docContent');
-    var html=doc.innerHTML;
-    html=html.replace(/\\[NAME\\]/g,n).replace(/\\[EMAIL\\]/g,em).replace(/\\[PHONE\\]/g,ph).replace(/\\[DATE\\]/g,dt).replace(/\\[ADDRESS\\]/g,addr).replace(/\\[AMOUNT\\]/g,amt.toLocaleString('en-IN')).replace(/\\[AMOUNT_WORDS\\]/g,amtW).replace(/\\[TENURE\\]/g,tn).replace(/\\[REF\\]/g,ref).replace(/\\[FOLIO\\]/g,fol).replace(/\\[RATE\\]/g,rate).replace(/\\[FUND\\]/g,fund).replace(/\\[NUM_DEB\\]/g,numDeb.toLocaleString('en-IN')).replace(/\\[NUM_DEB_RAW\\]/g,numDeb.toString()).replace(/\\[CERT_NO\\]/g,ref.split('/')[1]||'001');
-    document.getElementById('inputForm').style.display='none';
-    doc.style.display='block';
-    doc.innerHTML=html;
-    document.body.style.background='#f5f5f5';
-    document.body.style.paddingTop='20px';
-    setTimeout(function(){window.print();},400);
-  }
-  <\/script></body></html>`
+  const escapeHtml = (s: string) => String(s ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+
+  const safeName = escapeHtml(clientName || 'Investor')
+  const safeEmail = escapeHtml(clientEmail || '—')
+  const safePhone = escapeHtml(clientPhone || '—')
+  const safeAddress = escapeHtml(clientAddress || '—').replace(/\n/g, '<br/>')
+  const safePan = escapeHtml(clientPan || '—')
+  const safeFund = escapeHtml(fund)
+  const safeRef = escapeHtml(refNo)
+  const safeFolio = escapeHtml(folioNo)
+  const safeCert = escapeHtml(certNo)
+  const safeTenure = escapeHtml(tenure)
+  const safeAmt = amount.toLocaleString('en-IN')
+  const safeAmtWords = escapeHtml(amountWords || '')
+  const safeNumDeb = numDebentures.toLocaleString('en-IN')
+  const safeNumDebRaw = String(numDebentures)
+
+  const populated = templates[type]
+    .replace(/\[NAME\]/g, safeName)
+    .replace(/\[EMAIL\]/g, safeEmail)
+    .replace(/\[PHONE\]/g, safePhone)
+    .replace(/\[DATE\]/g, escapeHtml(longDateStr || dateStr))
+    .replace(/\[ADDRESS\]/g, safeAddress)
+    .replace(/\[AMOUNT\]/g, safeAmt)
+    .replace(/\[AMOUNT_WORDS\]/g, safeAmtWords)
+    .replace(/\[TENURE\]/g, safeTenure)
+    .replace(/\[REF\]/g, safeRef)
+    .replace(/\[FOLIO\]/g, safeFolio)
+    .replace(/\[RATE\]/g, '1% per month')
+    .replace(/\[FUND\]/g, safeFund)
+    .replace(/\[NUM_DEB\]/g, safeNumDeb)
+    .replace(/\[NUM_DEB_RAW\]/g, safeNumDebRaw)
+    .replace(/\[CERT_NO\]/g, safeCert)
+    .replace(/\[PAN\]/g, safePan)
+
+  const fullPage = `<!DOCTYPE html><html><head><title>${escapeHtml(titles[type])} - ${safeName}</title>${css}
+  <style>#docContent{max-width:210mm;margin:0 auto;background:#fff;padding:20mm;box-shadow:0 2px 20px rgba(0,0,0,0.1);}@media print{#docContent{max-width:none;padding:0;box-shadow:none;}body{padding-top:0!important;}}</style>
+  </head><body style="background:#f5f5f5;margin:0;padding:60px 0 20px;">
+  ${toolbar}
+  <div id="docContent">${populated.replace(css, '').replace(/\$\{toolbar\}/g, '')}</div>
+  </body></html>`
 
   const win = window.open('', '_blank')
   if (!win) return
@@ -1482,6 +1523,10 @@ function InvestmentsTab({ showToast }: { showToast: (m: string, t?: 'success' | 
   const [creditApp, setCreditApp] = useState<any | null>(null)
   const [creditAmount, setCreditAmount] = useState('')
   const [creditDate, setCreditDate] = useState('')
+  // Tests 28-04-2026 #3: confirmation modal for hard-deleting an investment
+  // application along with its payout schedule and documents.
+  const [deleteApp, setDeleteApp] = useState<any | null>(null)
+  const [deleting, setDeleting] = useState(false)
 
   const loadData = useCallback(async () => {
     setLoading(true)
@@ -1566,7 +1611,7 @@ function InvestmentsTab({ showToast }: { showToast: (m: string, t?: 'success' | 
             </span>
           ) : (
             <button
-              onClick={(e) => { e.stopPropagation(); handleDeleteInvestment(row) }}
+              onClick={(e) => { e.stopPropagation(); setDeleteApp(row) }}
               title="Delete investment application"
               className="p-1.5 rounded-lg hover:bg-red-500/10 text-gray-500 hover:text-red-400 transition-colors"
             >
@@ -1578,26 +1623,33 @@ function InvestmentsTab({ showToast }: { showToast: (m: string, t?: 'success' | 
     }},
   ]
 
-  // ── Delete investment application — blocks approved/credited/completed.
-  const handleDeleteInvestment = async (app: any) => {
-    if (['approved', 'credited', 'completed'].includes(app.status)) {
+  // Tests 28-04-2026 #3 — uses the upstream `deleteInvestmentSafe` which
+  // already blocks approved/credited/completed rows and cascades through
+  // investment_documents and investment_transactions. We stage the row in
+  // `deleteApp` to keep a real confirmation modal (not window.confirm).
+  const confirmDeleteInvestment = async () => {
+    if (!deleteApp) return
+    if (['approved', 'credited', 'completed'].includes(deleteApp.status)) {
       showToast('Approved investments cannot be deleted.', 'warning')
+      setDeleteApp(null)
       return
     }
-    const label = app?._client?.full_name || app?._client?.email || app.id
-    if (!window.confirm(`Delete investment application for "${label}"? This cannot be undone.`)) return
+    setDeleting(true)
     try {
       const { deleteInvestmentSafe } = await import('@/lib/supabase/adminDataService')
-      const res = await deleteInvestmentSafe(app.id)
+      const res = await deleteInvestmentSafe(deleteApp.id)
       if (res.ok) {
         showToast('Investment application deleted', 'success')
-        loadData()
-        if (selectedApp?.id === app.id) { setDetailOpen(false); setSelectedApp(null) }
+        setApplications(prev => prev.filter(a => a.id !== deleteApp.id))
+        if (selectedApp?.id === deleteApp.id) { setDetailOpen(false); setSelectedApp(null) }
+        setDeleteApp(null)
       } else {
         showToast(res.error || 'Failed to delete investment', 'error')
       }
     } catch (e: any) {
-      showToast(e?.message || 'Error deleting investment', 'error')
+      showToast(`Error deleting investment: ${e?.message || 'unknown'}`, 'error')
+    } finally {
+      setDeleting(false)
     }
   }
 
@@ -2028,9 +2080,13 @@ function InvestmentsTab({ showToast }: { showToast: (m: string, t?: 'success' | 
                     {genSlots.map(doc => (
                       <button
                         key={doc.type}
-                        onClick={() => {
-                          generateInvestmentDocument(doc.type, selectedApp)
+                        onClick={async () => {
                           showToast(`Generating ${doc.label}...`, 'info')
+                          try {
+                            await generateInvestmentDocument(doc.type, selectedApp)
+                          } catch (e: any) {
+                            showToast(`Failed to generate ${doc.label}: ${e?.message || 'unknown'}`, 'error')
+                          }
                         }}
                         className="flex items-center gap-2 px-3 py-2.5 rounded-xl text-xs font-medium text-gray-300 bg-white/[0.03] border border-white/[0.06] hover:bg-white/[0.06] hover:text-white transition-colors"
                       >
@@ -2137,6 +2193,37 @@ function InvestmentsTab({ showToast }: { showToast: (m: string, t?: 'success' | 
                 className="px-5 py-2 rounded-xl text-sm font-medium text-white bg-emerald-600 hover:bg-emerald-700 transition-colors disabled:opacity-50"
               >
                 {updating ? 'Processing…' : 'Confirm & Give Credit'}
+              </button>
+            </div>
+          </div>
+        )}
+      </AdminModal>
+
+      {/* Tests 28-04-2026 #3: Delete investment confirmation modal */}
+      <AdminModal
+        isOpen={!!deleteApp}
+        onClose={() => { if (!deleting) setDeleteApp(null) }}
+        title="Delete Investment"
+        subtitle={deleteApp?._client?.full_name ? `Investor: ${deleteApp._client.full_name}` : ''}
+        maxWidth="max-w-md"
+      >
+        {deleteApp && (
+          <div className="space-y-4">
+            <p className="text-sm text-gray-300">
+              This will permanently remove the investment application
+              <strong className="text-white"> {formatINR(Number(deleteApp.investment_amount) || 0)}</strong>
+              {' '}({deleteApp.fund_vehicle || 'investment'}) along with its
+              payout schedule, transactions and admin-uploaded documents.
+              This cannot be undone.
+            </p>
+            <div className="flex justify-end gap-3 pt-4 border-t border-white/[0.06]">
+              <button disabled={deleting} onClick={() => setDeleteApp(null)} className="px-4 py-2 rounded-xl text-sm font-medium text-gray-400 hover:text-white hover:bg-white/[0.06] transition-colors disabled:opacity-50">Cancel</button>
+              <button
+                disabled={deleting}
+                onClick={confirmDeleteInvestment}
+                className="px-5 py-2 rounded-xl text-sm font-medium text-white bg-red-600 hover:bg-red-700 transition-colors disabled:opacity-50"
+              >
+                {deleting ? 'Deleting…' : 'Delete Investment'}
               </button>
             </div>
           </div>

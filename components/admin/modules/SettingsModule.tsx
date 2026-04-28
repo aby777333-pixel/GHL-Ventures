@@ -633,7 +633,7 @@ function SecurityTab({ showToast }: { showToast: (msg: string, type?: 'success' 
         <div className="space-y-3">
           {[
             { label: 'Password Policy', value: 'Min 8 chars, 1 uppercase, 1 number, 1 special', status: 'Active' },
-            { label: 'Session Timeout', value: '8 hours of inactivity', status: 'Active' },
+            { label: 'Session Timeout', value: '1 hour of inactivity', status: 'Active' },
             { label: 'Max Login Attempts', value: '5 attempts before lockout', status: 'Active' },
             { label: 'IP Whitelisting', value: 'Not configured', status: 'Inactive' },
             { label: 'Data Encryption', value: 'AES-256 at rest, TLS 1.3 in transit', status: 'Active' },

@@ -345,11 +345,25 @@ export default function DashboardClient() {
   // ─── Auth ────────────────────────────────────────────────
   const { user, clientId, ghlId, isAuthenticated, emailVerified, loading: authLoading, logout } = useClientAuth()
 
-  // Auth guard — redirect to login if not authenticated
+  // Auth guard — redirect to login only when the underlying Supabase session
+  // is truly invalid (not for a transient null while hydrating). Tests
+  // 28-04-2026 #1: previous guard fired on every brief null, kicking active
+  // users out mid-session.
   useEffect(() => {
-    if (!authLoading && !isAuthenticated) {
-      router.push('/login')
-    }
+    if (authLoading || isAuthenticated) return
+    let cancelled = false
+    ;(async () => {
+      try {
+        const { isSessionInvalid } = await import('@/lib/supabase/inactivityTracker')
+        const invalid = await isSessionInvalid()
+        if (!cancelled && invalid) router.push('/login')
+      } catch {
+        // If the check itself fails, fall back to the previous behaviour to
+        // avoid stranding the user on a half-rendered dashboard.
+        if (!cancelled) router.push('/login')
+      }
+    })()
+    return () => { cancelled = true }
   }, [authLoading, isAuthenticated, router])
 
   // ─── Data Hooks ─────────────────────────────────────────
@@ -544,32 +558,35 @@ export default function DashboardClient() {
     full_name: '', phone: '', city: '', dob: '', occupation: '', pan: '',
     nominee_name: '', nominee_relation: '', nominee_pan: '', nominee_share: '',
   })
-  const [savedProfileData, setSavedProfileData] = useState<Record<string, string>>(() => {
-    if (typeof window !== 'undefined') {
-      try {
-        const saved = localStorage.getItem('ghl-profile-data')
-        if (saved) return JSON.parse(saved)
-      } catch { /* fallback */ }
-    }
-    return {}
-  })
+  // Tests 28-04-2026 #9: profile / bank data was previously cached under a
+  // single global localStorage key, so signing in as another user revealed
+  // the previous user's name, phone, PAN, etc. Both caches are now keyed
+  // by the active user's id and a hydration effect below clears them
+  // whenever the auth user changes.
+  const [savedProfileData, setSavedProfileData] = useState<Record<string, string>>({})
   const [bankForm, setBankForm] = useState({
     holder_name: '', account_number: '', ifsc_code: '', account_type: 'savings'
   })
-  const [savedBankData, setSavedBankData] = useState<Record<string, string>>(() => {
-    if (typeof window !== 'undefined') {
-      try {
-        const saved = localStorage.getItem('ghl-bank-data')
-        if (saved) return JSON.parse(saved)
-      } catch { /* fallback */ }
-    }
-    return {}
-  })
+  const [savedBankData, setSavedBankData] = useState<Record<string, string>>({})
 
   // Initialize/merge savedProfileData from user object on load
   // Always merge user data so that DB updates (e.g., KYC approval adding nominee details) are reflected
   useEffect(() => {
     if (!user) return
+    // Tests 28-04-2026 #9: load the cached profile (if any) from this user's
+    // namespaced localStorage key, then merge in the latest DB values. This
+    // guarantees the form never shows stale data left behind by another
+    // account that previously signed in on the same browser.
+    let cached: Record<string, string> = {}
+    if (typeof window !== 'undefined' && user.id) {
+      try {
+        const raw = localStorage.getItem(`ghl-profile-data:${user.id}`)
+        if (raw) cached = JSON.parse(raw)
+      } catch { /* fallback */ }
+      // Drop the legacy unscoped cache so any leaked data is wiped from
+      // the device once an authenticated user opens the dashboard.
+      try { localStorage.removeItem('ghl-profile-data') } catch { /* ignore */ }
+    }
     const fromUser: Record<string, string> = {}
     if (user.name) fromUser.full_name = user.name
     if (user.phone) fromUser.phone = user.phone
@@ -581,25 +598,25 @@ export default function DashboardClient() {
     if ((user as any).nominee_relation) fromUser.nominee_relation = (user as any).nominee_relation
     if ((user as any).nominee_pan) fromUser.nominee_pan = (user as any).nominee_pan
     if ((user as any).nominee_share) fromUser.nominee_share = String((user as any).nominee_share || '')
-    if (Object.keys(fromUser).length > 0) {
-      setSavedProfileData(prev => {
-        // Merge: user data fills in any missing fields, but existing saved data takes priority
-        const merged = { ...fromUser, ...prev }
-        // However, for nominee fields, always prefer the latest DB data over stale localStorage
-        if ((user as any).nominee_name) merged.nominee_name = (user as any).nominee_name
-        if ((user as any).nominee_relation) merged.nominee_relation = (user as any).nominee_relation
-        if ((user as any).nominee_pan) merged.nominee_pan = (user as any).nominee_pan
-        if ((user as any).nominee_share) merged.nominee_share = String((user as any).nominee_share || '')
-        return merged
-      })
-    }
-  }, [user]) // eslint-disable-line react-hooks/exhaustive-deps
-  // Persist savedProfileData to localStorage so it survives KYC uploads and re-renders
+
+    // Merge: cached overrides defaults, but the latest DB values for nominee
+    // and the user's own name/phone always win to avoid stale display.
+    const merged: Record<string, string> = { ...fromUser, ...cached }
+    if ((user as any).nominee_name) merged.nominee_name = (user as any).nominee_name
+    if ((user as any).nominee_relation) merged.nominee_relation = (user as any).nominee_relation
+    if ((user as any).nominee_pan) merged.nominee_pan = (user as any).nominee_pan
+    if ((user as any).nominee_share) merged.nominee_share = String((user as any).nominee_share || '')
+    if (user.name) merged.full_name = user.name
+    if (user.phone) merged.phone = user.phone
+    setSavedProfileData(merged)
+  }, [user?.id]) // eslint-disable-line react-hooks/exhaustive-deps
+  // Persist savedProfileData under the active user's namespace so it never
+  // leaks across accounts on a shared device.
   useEffect(() => {
-    if (typeof window !== 'undefined' && Object.keys(savedProfileData).length > 0) {
-      localStorage.setItem('ghl-profile-data', JSON.stringify(savedProfileData))
-    }
-  }, [savedProfileData])
+    if (typeof window === 'undefined' || !user?.id) return
+    if (Object.keys(savedProfileData).length === 0) return
+    try { localStorage.setItem(`ghl-profile-data:${user.id}`, JSON.stringify(savedProfileData)) } catch { /* ignore quota */ }
+  }, [savedProfileData, user?.id])
 
   // Handle profile photo upload
   // Bug #28: Persist profile photo to Supabase Storage + profiles.avatar_url
@@ -732,6 +749,16 @@ export default function DashboardClient() {
   // ─── Load Bank Data from Supabase (populate form on re-visit) ──
   useEffect(() => {
     if (!clientId) return
+    // Tests 28-04-2026 #9: hydrate bank cache from this user's namespaced
+    // localStorage entry only — never the legacy global key — so we can't
+    // bleed another user's bank info into the form.
+    if (typeof window !== 'undefined' && user?.id) {
+      try { localStorage.removeItem('ghl-bank-data') } catch { /* ignore */ }
+      try {
+        const raw = localStorage.getItem(`ghl-bank-data:${user.id}`)
+        if (raw) setSavedBankData(JSON.parse(raw))
+      } catch { /* fallback */ }
+    }
     fetchBankAccounts(clientId).then((accounts: any[]) => {
       if (accounts?.length > 0) {
         const primary = accounts[0]
@@ -745,7 +772,7 @@ export default function DashboardClient() {
         setSavedBankData(prev => (prev.account_number ? prev : data))
       }
     }).catch(() => {})
-  }, [clientId]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [clientId, user?.id]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // ─── Referral Hooks (must be before early returns) ──────
   const referralCode = useMemo(() => {
@@ -3083,13 +3110,13 @@ export default function DashboardClient() {
                   await addBankAccount({ client_id: clientId || '', user_id: user?.id || '', account_holder_name: bankForm.holder_name, account_number: bankForm.account_number, ifsc_code: bankForm.ifsc_code, bank_name: '', account_type: bankForm.account_type, is_primary: true })
                   const bankData = { bank_name: 'Verified Bank', account_number: bankForm.account_number, ifsc_code: bankForm.ifsc_code, account_type: bankForm.account_type, holder_name: bankForm.holder_name }
                   setSavedBankData(bankData)
-                  if (typeof window !== 'undefined') localStorage.setItem('ghl-bank-data', JSON.stringify(bankData))
+                  if (typeof window !== 'undefined' && user?.id) localStorage.setItem(`ghl-bank-data:${user.id}`, JSON.stringify(bankData))
                   setBankConnectOpen(false); setBankForm({ holder_name: '', account_number: '', ifsc_code: '', account_type: 'savings' })
                   showToast('Bank account verified and connected successfully.')
                 } catch {
                   const bankData = { bank_name: 'Pending Verification', account_number: bankForm.account_number, ifsc_code: bankForm.ifsc_code, account_type: bankForm.account_type, holder_name: bankForm.holder_name }
                   setSavedBankData(bankData)
-                  if (typeof window !== 'undefined') localStorage.setItem('ghl-bank-data', JSON.stringify(bankData))
+                  if (typeof window !== 'undefined' && user?.id) localStorage.setItem(`ghl-bank-data:${user.id}`, JSON.stringify(bankData))
                   showToast('Bank details saved. Verification pending.', 'info'); setBankConnectOpen(false)
                 }
               }} className="w-full py-2.5 rounded-xl text-sm font-semibold text-white" style={{ background: 'linear-gradient(135deg, #D0021B, #8B0000)' }}>Verify & Connect</button>

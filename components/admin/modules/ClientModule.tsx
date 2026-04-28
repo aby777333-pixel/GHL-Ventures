@@ -45,6 +45,9 @@ export default function ClientModule({ subTab, navigate, showToast }: ClientModu
   const [addClientOpen, setAddClientOpen] = useState(false)
   const [folderPickerOpen, setFolderPickerOpen] = useState(false)
   const [editingClient, setEditingClient] = useState<Client | null>(null)
+  // Tests 28-04-2026 #2: admin can now set/update the referral code
+  // (`clients.referred_by`) for users that signed up without one. The
+  // referrer is linked back through the same column the dashboard uses.
   const [clientForm, setClientForm] = useState({ full_name: '', email: '', phone: '', pan: '', risk_profile: 'moderate', assigned_rm: '', total_invested: '', referred_by: '' })
   // Add KYC on behalf of an existing client created without KYC.
   // addKYCTarget holds the client + resolved user_id (looked up on open).
@@ -347,6 +350,8 @@ export default function ClientModule({ subTab, navigate, showToast }: ClientModu
                 const allowedRisk = ['conservative', 'moderate', 'aggressive']
                 const sanitizedRisk = allowedRisk.includes(clientForm.risk_profile) ? clientForm.risk_profile : 'moderate'
                 try {
+                  // Tests 28-04-2026 #2: include referral code in saves so
+                  // admin-added codes flow through to clients.referred_by.
                   if (editingClient) {
                     // Update existing client
                     const { supabase } = await import('@/lib/supabase/client')
@@ -494,6 +499,18 @@ export default function ClientModule({ subTab, navigate, showToast }: ClientModu
                 <input type="text" placeholder="e.g. GHL-R-AB12CD" value={clientForm.referred_by} onChange={e => setClientForm(f => ({ ...f, referred_by: e.target.value.trim() }))} className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-brand-red/40 focus:ring-1 focus:ring-brand-red/20" />
                 <p className="mt-1 text-[10px] text-gray-500">Enter the referrer&apos;s code. If it matches a registered client, the referral link is created automatically.</p>
               </div>
+            </div>
+            {/* Tests 28-04-2026 #2: admin-managed referral code. Empty = no referrer. */}
+            <div>
+              <label className="block text-xs font-medium text-gray-400 mb-1.5">Referral Code (optional)</label>
+              <input
+                type="text"
+                placeholder="e.g. GHL-ABC123"
+                value={clientForm.referred_by}
+                onChange={e => setClientForm(f => ({ ...f, referred_by: e.target.value.trim() }))}
+                className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-brand-red/40 focus:ring-1 focus:ring-brand-red/20 uppercase"
+              />
+              <p className="text-[10px] text-gray-600 mt-1">Use the referrer&apos;s code (visible in their Referrals tab). Updating it links this client to that referrer in the dashboard.</p>
             </div>
             <div className="sm:col-span-2">
               <label className="block text-xs font-medium text-gray-400 mb-1.5">Attach KYC / Documents</label>

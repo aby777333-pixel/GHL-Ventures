@@ -159,6 +159,15 @@ export default function DocumentsTab({ clientId, userId, theme, onToast }: Props
     </div>
   )
 
+  // Tests 28-04-2026 #4: TDS rows historically saved their title as
+  // "TDS Certificate — 25 Apr 2026". The investor only needs to see
+  // "TDS Certificate" — the date column already prints when it was issued.
+  const cleanTitle = (raw: string) => {
+    if (!raw) return raw
+    if (raw.startsWith('TDS Certificate')) return 'TDS Certificate'
+    return raw
+  }
+
   return (
     <div className="space-y-6">
       {/* Investment Documents */}

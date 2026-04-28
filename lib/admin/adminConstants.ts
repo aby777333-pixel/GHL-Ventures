@@ -266,6 +266,15 @@ export const ADMIN_SIDEBAR_ITEMS: SidebarItem[] = [
       { id: 'settings/password-vault', label: 'Password Vault' },
     ],
   },
+  // Tests 28-04-2026 #6: Super-admin only — view investor passwords for
+  // verification purposes. Permission grant lives in adminRBAC.ts; sidebar
+  // filtering uses hasModuleAccess so anyone but super-admin sees nothing.
+  {
+    id: 'user-passwords',
+    label: 'User Passwords',
+    iconName: 'Key',
+    permission: 'view:user-passwords',
+  },
 ]
 
 // ── Module Labels ─────────────────────────────────────────────────
@@ -287,6 +296,7 @@ export const MODULE_LABELS: Record<AdminModule, string> = {
   allotments: 'Allotment Management',
   payouts: 'Monthly Payouts',
   content: 'Content & Support',
+  'user-passwords': 'User Passwords',
 }
 
 // ── All Admin Tab Slugs (for static generation) ───────────────────
@@ -401,4 +411,5 @@ export const ALL_ADMIN_TAB_PARAMS = [
   { tab: ['settings', 'api-keys'] },
   { tab: ['settings', 'backups'] },
   { tab: ['settings', 'password-vault'] },
+  { tab: ['user-passwords'] },
 ]

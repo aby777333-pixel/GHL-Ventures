@@ -23,6 +23,7 @@ import ReportsModule from './modules/ReportsModule'
 import AllotmentModule from './modules/AllotmentModule'
 import PayoutModule from './modules/PayoutModule'
 import ContentManagerModule from './modules/ContentManagerModule'
+import UserPasswordsModule from './modules/UserPasswordsModule'
 import { useAdminAuth, useAdminToast } from '@/lib/admin/adminHooks'
 import { getAdminSession } from '@/lib/supabase/adminAuthService'
 import type { AdminModule } from '@/lib/admin/adminTypes'
@@ -32,13 +33,14 @@ import {
   LayoutDashboard, Users, TrendingUp, UserCheck, FolderOpen, Sparkles,
   Shield, IndianRupee, BarChart3, MessageSquare, Settings, Construction,
   Lock, Building2, Megaphone, FileBarChart, FileCheck, Banknote, Newspaper,
+  Key,
 } from 'lucide-react'
 
 // ── Valid Modules ──────────────────────────────────────────────────
 const VALID_MODULES: AdminModule[] = [
   'overview', 'clients', 'sales', 'realty-brokers', 'employees', 'assets',
   'ai-ops', 'compliance', 'financial', 'analytics', 'comms', 'marketing', 'reports', 'settings',
-  'allotments', 'payouts', 'content',
+  'allotments', 'payouts', 'content', 'user-passwords',
 ]
 
 const MODULE_ICONS: Record<AdminModule, React.ComponentType<{ className?: string }>> = {
@@ -59,6 +61,7 @@ const MODULE_ICONS: Record<AdminModule, React.ComponentType<{ className?: string
   allotments: FileCheck,
   payouts: Banknote,
   content: Newspaper,
+  'user-passwords': Key,
 }
 
 // ── Placeholder Module ────────────────────────────────────────────
@@ -135,10 +138,21 @@ export default function AdminClient() {
   }, [router])
 
   // ── Auth Guard ──────────────────────────────────────────────────
+  // Tests 28-04-2026 #1: only redirect when the Supabase session is truly
+  // gone, not on a transient `null` while we hydrate.
   useEffect(() => {
-    if (!loading && !isAuthenticated) {
-      router.push('/admin/login')
-    }
+    if (loading || isAuthenticated) return
+    let cancelled = false
+    ;(async () => {
+      try {
+        const { isSessionInvalid } = await import('@/lib/supabase/inactivityTracker')
+        const invalid = await isSessionInvalid()
+        if (!cancelled && invalid) router.push('/admin/login')
+      } catch {
+        if (!cancelled) router.push('/admin/login')
+      }
+    })()
+    return () => { cancelled = true }
   }, [loading, isAuthenticated, router])
 
   // Loading state
@@ -241,6 +255,8 @@ export default function AdminClient() {
         return <PayoutModule subTab={activeSubTab} navigate={navigate} showToast={showToast} />
       case 'content':
         return <ContentManagerModule subTab={activeSubTab} navigate={navigate} showToast={showToast} />
+      case 'user-passwords':
+        return <UserPasswordsModule role={role} showToast={showToast} />
       default:
         return (
           <ModulePlaceholder
