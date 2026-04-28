@@ -927,19 +927,30 @@ export async function markInvestmentCreditGiven(appId: string, adminId: string):
   try {
     const sb: any = supabase
     const nowIso = new Date().toISOString()
+
+    // Preserve any credit/final-investment date the admin already set in the
+    // Give-Credit modal (SalesModule.confirmGiveCredit). Only fall back to
+    // today when neither field is populated yet — the credit date drives the
+    // entire payout schedule, so blindly overwriting it would shift every row.
+    const { data: existing } = await sb
+      .from('investment_applications')
+      .select('investment_date, final_investment_date')
+      .eq('id', appId)
+      .maybeSingle()
+
+    const update: Record<string, any> = {
+      credit_given: true,
+      credit_given_at: nowIso,
+      credit_given_by: adminId,
+      status: 'credited',
+    }
+    if (!existing?.final_investment_date) {
+      update.final_investment_date = existing?.investment_date || nowIso.split('T')[0]
+    }
+
     const { error } = await sb
       .from('investment_applications')
-      .update({
-        credit_given: true,
-        credit_given_at: nowIso,
-        credit_given_by: adminId,
-        // DASH-b: capture the actual investment date so dashboards can
-        // bucket it under the right month. The application may have been
-        // submitted earlier; the credit-give event is when money truly
-        // counts as invested.
-        final_investment_date: nowIso.split('T')[0],
-        status: 'credited',
-      })
+      .update(update)
       .eq('id', appId)
     if (error) {
       console.warn('[admin] markInvestmentCreditGiven error:', error.message)
@@ -949,7 +960,29 @@ export async function markInvestmentCreditGiven(appId: string, adminId: string):
     // team can process payouts. Safe to run repeatedly — duplicates are skipped.
     try {
       const { data: app } = await sb.from('investment_applications').select('*').eq('id', appId).single()
-      if (app) await generateFullPayoutSchedule(app)
+      if (app) {
+        // Issue 28-04-2026: when the credit date differs from the original
+        // approval date, the maturity_date set at approval is stale (it was
+        // computed from the older investment_date). Re-derive maturity from
+        // the current investment_date + tenure so the schedule extends to
+        // the correct end. Then drop any pending rows from the previous
+        // (now-incorrect) schedule so the regen rebuilds them with the new
+        // dates and prorated amounts. Paid rows are left untouched.
+        const tenureYears = Number(String(app.tenure_preference || '').replace(/[^0-9]/g, '')) || 3
+        if (app.investment_date) {
+          const sd = new Date(app.investment_date)
+          if (!Number.isNaN(sd.getTime())) {
+            const md = new Date(sd); md.setFullYear(md.getFullYear() + tenureYears)
+            const expectedMaturity = md.toISOString().split('T')[0]
+            if (app.maturity_date !== expectedMaturity) {
+              await sb.from('investment_applications').update({ maturity_date: expectedMaturity }).eq('id', appId)
+              app.maturity_date = expectedMaturity
+            }
+          }
+        }
+        await sb.from('monthly_payouts').delete().eq('investment_id', appId).eq('payment_status', 'pending')
+        await generateFullPayoutSchedule(app)
+      }
     } catch (e) { console.warn('[admin] auto-generate payouts non-fatal:', e) }
     return true
   } catch (e: any) {
@@ -1005,6 +1038,17 @@ export async function generateFullPayoutSchedule(app: any) {
     const firstTds = +(firstGross * (tdsPercent / 100)).toFixed(2)
     const firstNet = +(firstGross - firstTds).toFixed(2)
 
+    // Issue 28-04-2026: when the credit/investment date falls mid-month, the
+    // first payout only covers the days from start-day to month-end. The
+    // (startDay - 1) days at the front of the start month are not lost — they
+    // are paid as a 37th-month catch-up one cycle after the last regular
+    // payout, so the investor still receives a full tenure's worth of interest.
+    const trailingDays = needsProrate ? startDay - 1 : 0
+    const trailingPct = needsProrate ? trailingDays / daysInStartMonth : 0
+    const trailingGross = needsProrate ? +(grossPerPeriod * trailingPct).toFixed(2) : 0
+    const trailingTds = +(trailingGross * (tdsPercent / 100)).toFixed(2)
+    const trailingNet = +(trailingGross - trailingTds).toFixed(2)
+
     // Build all due_dates until maturity.
     // Testing 2026-04-18 #4: monthly payouts fall on the 5th of each month.
     // AIF yearly payouts keep their anniversary date (matches redemption ops).
@@ -1018,6 +1062,17 @@ export async function generateFullPayoutSchedule(app: any) {
       if (!isAIF) cursor.setDate(5)
     }
     if (dueDates.length === 0) return 0
+
+    // Append the 37th-month catch-up payout (one cycle after the last regular
+    // due date) to recover the front-of-month days lost to proration.
+    let trailingDueDate: string | null = null
+    if (needsProrate && trailingGross > 0) {
+      const lastRegular = new Date(dueDates[dueDates.length - 1] + 'T00:00:00')
+      lastRegular.setMonth(lastRegular.getMonth() + frequencyMonths)
+      if (!isAIF) lastRegular.setDate(5)
+      trailingDueDate = lastRegular.toISOString().split('T')[0]
+      dueDates.push(trailingDueDate)
+    }
 
     // Skip dates that already have a payout row for this investment
     const { data: existing } = await sb
@@ -1035,6 +1090,12 @@ export async function generateFullPayoutSchedule(app: any) {
     const firstDueDate = dueDates[0]
     const rows = missingDates.map(due_date => {
       const isFirst = due_date === firstDueDate
+      const isTrailing = trailingDueDate !== null && due_date === trailingDueDate
+      let gross = grossPerPeriod
+      let tds = tdsPerPeriod
+      let net = netPerPeriod
+      if (isFirst) { gross = firstGross; tds = firstTds; net = firstNet }
+      else if (isTrailing) { gross = trailingGross; tds = trailingTds; net = trailingNet }
       return {
         client_id: app.client_id,
         investment_id: app.id,
@@ -1043,10 +1104,10 @@ export async function generateFullPayoutSchedule(app: any) {
         investment_amount: amount,
         investment_date: app.investment_date,
         due_date,
-        gross_amount: isFirst ? firstGross : grossPerPeriod,
+        gross_amount: gross,
         tds_percentage: tdsPercent,
-        tds_amount: isFirst ? firstTds : tdsPerPeriod,
-        net_interest: isFirst ? firstNet : netPerPeriod,
+        tds_amount: tds,
+        net_interest: net,
         payment_status: 'pending',
         account_number: bank?.account_number || null,
         account_holder_name: bank?.account_holder_name || client?.full_name || null,

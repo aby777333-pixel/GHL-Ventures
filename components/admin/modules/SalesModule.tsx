@@ -1657,11 +1657,22 @@ function InvestmentsTab({ showToast }: { showToast: (m: string, t?: 'success' | 
       const { data: { user } } = await (supabase as any).auth.getUser()
       // First persist the admin's edits (final_investment_amount + investment_date)
       // so the downstream payout-schedule generator uses the right values.
-      const { error: updErr } = await (supabase as any).from('investment_applications').update({
+      // Issue 28-04-2026: also re-derive maturity_date from the credit date so
+      // the payout schedule covers the full tenure starting from the credit
+      // date (not whatever placeholder was set at approval time).
+      const tenureYears = Number(String(creditApp?.tenure_preference || '').replace(/[^0-9]/g, '')) || 3
+      const matRef = new Date(creditDate)
+      matRef.setFullYear(matRef.getFullYear() + tenureYears)
+      const maturityDate = Number.isNaN(matRef.getTime())
+        ? null
+        : matRef.toISOString().split('T')[0]
+      const updatePayload: Record<string, any> = {
         final_investment_amount: amt,
         final_investment_date: creditDate,
         investment_date: creditDate,
-      }).eq('id', creditApp.id)
+      }
+      if (maturityDate) updatePayload.maturity_date = maturityDate
+      const { error: updErr } = await (supabase as any).from('investment_applications').update(updatePayload).eq('id', creditApp.id)
       if (updErr) {
         showToast(`Failed to save credit details: ${updErr.message}`, 'error')
         setUpdating(false)

@@ -801,14 +801,6 @@ export function calculatePaymentSchedule(
       grossInterest = Math.round(monthlyInterest * (remainingDays / daysInMonth))
     }
 
-    // Last month adds pro-rata remainder from first month
-    if (m === totalMonths - 1 && startDay > 1) {
-      const daysInStartMonth = new Date(startDate.getFullYear(), startDate.getMonth() + 1, 0).getDate()
-      const usedDays = daysInStartMonth - startDay + 1
-      const remainder = monthlyInterest - Math.round(monthlyInterest * (usedDays / daysInStartMonth))
-      grossInterest = monthlyInterest + remainder
-    }
-
     grossInterest = Math.round(grossInterest)
     const tds = Math.round(grossInterest * (tdsRate / 100))
     const netInterest = grossInterest - tds
@@ -829,6 +821,32 @@ export function calculatePaymentSchedule(
       debentureValue: (m + 1) % 12 === 0 ? debentureValue : 0,
       paymentStatus: 'Due',
     })
+  }
+
+  // Issue 28-04-2026: when the start date falls mid-month, the first payout
+  // only covered (daysInStartMonth - startDay + 1) days. The (startDay - 1)
+  // days at the front of the start month are paid as a 37th-month catch-up
+  // one cycle after the last regular payout, so the investor still receives
+  // the full tenure's worth of interest.
+  if (startDay > 1) {
+    const daysInStartMonth = new Date(startDate.getFullYear(), startDate.getMonth() + 1, 0).getDate()
+    const trailingDays = startDay - 1
+    const trailingGross = Math.round(monthlyInterest * (trailingDays / daysInStartMonth))
+    if (trailingGross > 0) {
+      const payDate = new Date(startDate)
+      payDate.setMonth(payDate.getMonth() + totalMonths + 1)
+      payDate.setDate(5)
+      const tds = Math.round(trailingGross * (tdsRate / 100))
+      schedule.push({
+        date: payDate.toISOString().split('T')[0],
+        grossInterest: trailingGross,
+        tds,
+        netInterest: trailingGross - tds,
+        appreciation: 0,
+        debentureValue: 0,
+        paymentStatus: 'Due',
+      })
+    }
   }
 
   return schedule
