@@ -3966,6 +3966,41 @@ body:not(.dashboard-active):not(.admin-active):not(.staff-active) :root:not(.dar
 }
 
 /* ============================================================
+   v6 (28-04-2026) — DARK-SURFACE WHITE-TEXT FINAL ESCAPE HATCH
+   QA pass flagged: in light mode, text inside `.dark-surface`
+   cards rendered black-on-dark when the card was nested inside
+   a light section (`.bg-white`, `.bg-brand-offwhite`, `.card`).
+
+   Affected pages: /why-aifs hero side-card, /fund + slug
+   calculator results panel, /fund/nri-invest "SEBI Co-Invest"
+   pathway card, blog list image overlays.
+
+   Cause: the safety-net at lines 3773-3796 force-blacks
+   `text-white` on light surfaces with specificity up to 0,19,2
+   (`.card p:not()*13`) and 0,7,2 (`section.bg-white [text-white]`).
+   The existing dark-surface escape hatch sits at 0,7,1 and loses
+   the cascade tie-break.
+
+   Fix: re-assert white text inside `.dark-surface` at matching
+   or higher specificity. The :not()-chained variants for p/span/li
+   mirror the safety-net pattern (0,19,2) and source-order later
+   so they win. The `.dark-surface.dark-surface` chain on heading
+   selectors lifts h1-h4 to 0,7,2 to beat `section.bg-white h*`
+   without changing the rule semantics.
+   ============================================================ */
+:root:not(.dark) body:not(.dashboard-active):not(.admin-active):not(.staff-active) .dark-surface p:not([class*="text-brand-red"]):not([class*="text-red-"]):not([class*="text-emerald"]):not([class*="text-green"]):not([class*="text-blue"]):not([class*="text-amber"]):not([class*="text-yellow"]):not([class*="text-pink"]):not([class*="text-purple"]):not([class*="text-violet"]):not([class*="text-cyan"]):not([class*="text-teal"]):not([class*="text-orange"]):not([class*="text-rose"]):not([class*="text-indigo"]),
+:root:not(.dark) body:not(.dashboard-active):not(.admin-active):not(.staff-active) .dark-surface span:not([class*="text-brand-red"]):not([class*="text-red-"]):not([class*="text-emerald"]):not([class*="text-green"]):not([class*="text-blue"]):not([class*="text-amber"]):not([class*="text-yellow"]):not([class*="text-pink"]):not([class*="text-purple"]):not([class*="text-violet"]):not([class*="text-cyan"]):not([class*="text-teal"]):not([class*="text-orange"]):not([class*="text-rose"]):not([class*="text-indigo"]),
+:root:not(.dark) body:not(.dashboard-active):not(.admin-active):not(.staff-active) .dark-surface li:not([class*="text-brand-red"]):not([class*="text-red-"]):not([class*="text-emerald"]):not([class*="text-green"]):not([class*="text-blue"]):not([class*="text-amber"]):not([class*="text-yellow"]):not([class*="text-pink"]):not([class*="text-purple"]):not([class*="text-violet"]):not([class*="text-cyan"]):not([class*="text-teal"]):not([class*="text-orange"]):not([class*="text-rose"]):not([class*="text-indigo"]),
+:root:not(.dark) body:not(.dashboard-active):not(.admin-active):not(.staff-active) .dark-surface.dark-surface [class~="text-white"],
+:root:not(.dark) body:not(.dashboard-active):not(.admin-active):not(.staff-active) .dark-surface.dark-surface [class*="text-white/"],
+:root:not(.dark) body:not(.dashboard-active):not(.admin-active):not(.staff-active) .dark-surface.dark-surface h1,
+:root:not(.dark) body:not(.dashboard-active):not(.admin-active):not(.staff-active) .dark-surface.dark-surface h2,
+:root:not(.dark) body:not(.dashboard-active):not(.admin-active):not(.staff-active) .dark-surface.dark-surface h3,
+:root:not(.dark) body:not(.dashboard-active):not(.admin-active):not(.staff-active) .dark-surface.dark-surface h4 {
+  color: #ffffff !important;
+}
+
+/* ============================================================
    DASHBOARD SIDEBAR SCROLLBAR — visible in both themes
    Testing 2026-04-18: light-mode sidebar scrollbar was invisible
    against the near-white gradient. Both themes now render a clearly

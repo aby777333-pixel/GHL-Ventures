@@ -1479,8 +1479,13 @@ function CalculatorCard({ tool, accentColor }: { tool: ToolDef; accentColor: str
           <div className="w-2 h-2 rounded-full shrink-0" style={{ background: accentColor }} />
           {/* Global unscoped `.text-sm { font-weight: 450 }` in globals.css
               overrides font-semibold. Use the important prefix so the tool
-              title renders at a readable weight in both themes. */}
-          <span className="!font-semibold text-sm text-brand-black dark:text-white/90">{tool.name}</span>
+              title renders at a readable weight in both themes.
+              v6 (28-04-2026): drop `dark:text-white/90` — its substring
+              `text-white/` matched the global `[class*="bg-[#0"] [class*="text-white/"]`
+              escape hatch (the section's `dark:bg-[#0A0A0A]` triggered the
+              bg-[#0 matcher) and forced the tool name to white-on-white in
+              light mode. CSS variable auto-flips per theme. */}
+          <span className="!font-semibold text-sm text-[color:var(--text-heading)]">{tool.name}</span>
         </div>
         {expanded ? (
           <ChevronUp className="w-4 h-4 text-gray-400 group-hover:text-brand-red transition-colors" />
