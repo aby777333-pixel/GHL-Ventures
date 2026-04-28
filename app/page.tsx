@@ -805,9 +805,14 @@ function PortfolioSpotlight() {
                   className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
                   loading="lazy"
                 />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
-                <div className="absolute bottom-4 left-5 right-5">
-                  <h3 className="text-white text-xl font-bold">Narikudi, Madurai</h3>
+                {/* Gradient now wraps the heading instead of sitting next to it
+                    so `text-white` stays white in light mode (the global
+                    light-mode safety net only spares text-white descendants
+                    of a `bg-gradient-to-*` ancestor). */}
+                <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent flex items-end">
+                  <div className="px-5 pb-4 w-full">
+                    <h3 className="text-white text-xl font-bold drop-shadow-md" style={{ color: '#FFFFFF' }}>Narikudi, Madurai</h3>
+                  </div>
                 </div>
               </div>
               <p className="text-brand-grey text-sm leading-relaxed mb-5">
@@ -841,9 +846,12 @@ function PortfolioSpotlight() {
                   className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
                   loading="lazy"
                 />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
-                <div className="absolute bottom-4 left-5 right-5">
-                  <h3 className="text-white text-xl font-bold">Karadivavi, Coimbatore</h3>
+                {/* Gradient wraps the heading so `text-white` stays white in
+                    light mode (see card-1 comment). */}
+                <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent flex items-end">
+                  <div className="px-5 pb-4 w-full">
+                    <h3 className="text-white text-xl font-bold drop-shadow-md" style={{ color: '#FFFFFF' }}>Karadivavi, Coimbatore</h3>
+                  </div>
                 </div>
               </div>
               <p className="text-brand-grey text-sm leading-relaxed mb-5">

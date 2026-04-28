@@ -3919,6 +3919,30 @@ body:not(.dashboard-active):not(.admin-active):not(.staff-active) :root:not(.dar
 }
 
 /* ============================================================
+   28-04-2026: portfolio image-overlay headings inside `.card`
+   The home-page "Narikudi, Madurai" / "Karadivavi, Coimbatore"
+   labels are absolute-positioned over a dark gradient on top of
+   an image. The general "bg-gradient-to-* text-white" escape
+   hatch above has the same specificity as the `.card text-white`
+   safety net (both end with two class-tier selectors), so the
+   safety net keeps winning on at least some browsers / source
+   ordering paths and the headings render near-black. Add a
+   higher-specificity override that matches `.card` AND the
+   gradient ancestor so it unambiguously beats the safety net.
+   ============================================================ */
+:root:not(.dark) body:not(.dashboard-active):not(.admin-active):not(.staff-active) .card [class*="bg-gradient-to-"] [class~="text-white"],
+:root:not(.dark) body:not(.dashboard-active):not(.admin-active):not(.staff-active) .card [class*="bg-gradient-to-"] [class*="text-white/"],
+:root:not(.dark) body:not(.dashboard-active):not(.admin-active):not(.staff-active) .card [class*="bg-gradient-to-"] h1,
+:root:not(.dark) body:not(.dashboard-active):not(.admin-active):not(.staff-active) .card [class*="bg-gradient-to-"] h2,
+:root:not(.dark) body:not(.dashboard-active):not(.admin-active):not(.staff-active) .card [class*="bg-gradient-to-"] h3,
+:root:not(.dark) body:not(.dashboard-active):not(.admin-active):not(.staff-active) .card [class*="bg-gradient-to-"] h4,
+:root:not(.dark) body:not(.dashboard-active):not(.admin-active):not(.staff-active) .bg-white [class*="bg-gradient-to-"] [class~="text-white"],
+:root:not(.dark) body:not(.dashboard-active):not(.admin-active):not(.staff-active) .bg-brand-offwhite [class*="bg-gradient-to-"] [class~="text-white"],
+:root:not(.dark) body:not(.dashboard-active):not(.admin-active):not(.staff-active) section.bg-white [class*="bg-gradient-to-"] [class~="text-white"] {
+  color: #FFFFFF !important;
+}
+
+/* ============================================================
    LIGHT MODE — restore gray-text on dark surfaces
    Report 2026-04-20: the "Get in Touch" card, Why-AIFs stats tile,
    About "SEBI Registered" tile, Fund calculator results, and
