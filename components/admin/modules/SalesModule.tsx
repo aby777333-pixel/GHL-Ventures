@@ -1878,6 +1878,28 @@ function InvestmentsTab({ showToast }: { showToast: (m: string, t?: 'success' | 
             {selectedApp.status === 'approved' && !selectedApp.credit_given ? (
               <ModalButton variant="primary" onClick={() => openCreditModal(selectedApp)} disabled={updating}>{updating ? 'Updating...' : 'Give Credit'}</ModalButton>
             ) : null}
+            {/* Tests 28-04-2026 follow-up: manual schedule rebuild for
+                cases where the credit date was edited later or the auto-
+                regen on credit-given was interrupted. Only meaningful
+                once credit has been given. */}
+            {selectedApp.credit_given ? (
+              <ModalButton onClick={async () => {
+                if (!window.confirm('Regenerate the payout schedule for this investment? Pending payouts will be rebuilt against the latest credit date. Paid rows will be preserved.')) return
+                try {
+                  setUpdating(true)
+                  const { regenerateInvestmentSchedule } = await import('@/lib/supabase/adminDataService')
+                  const res = await regenerateInvestmentSchedule(selectedApp.id)
+                  if (res.ok) {
+                    showToast(`Schedule rebuilt — ${res.rows ?? 0} payouts re-anchored to credit date`, 'success')
+                    loadData()
+                  } else {
+                    showToast(res.error || 'Failed to regenerate schedule', 'error')
+                  }
+                } catch (e: any) {
+                  showToast(`Error: ${e?.message || 'unknown'}`, 'error')
+                } finally { setUpdating(false) }
+              }} disabled={updating}>{updating ? 'Working…' : 'Regenerate Schedule'}</ModalButton>
+            ) : null}
           </>
         }>
           <div className="space-y-5">
@@ -1894,6 +1916,14 @@ function InvestmentsTab({ showToast }: { showToast: (m: string, t?: 'success' | 
                 { label: 'Tenure', val: selectedApp.tenure_preference || '—' },
                 { label: 'Status', val: (INV_STATUS_MAP[selectedApp.status] || { label: selectedApp.status }).label },
                 { label: 'Applied On', val: formatDate(selectedApp.created_at) },
+                // Tests 28-04-2026 follow-up: surface every date that drives
+                // the schedule so the admin can see what the calc anchored
+                // to. Approval Date is investment_date, Credit Date is
+                // final_investment_date, Effective Start is what the
+                // schedule generator actually used (priority order).
+                { label: 'Approval Date', val: selectedApp.investment_date ? formatDate(selectedApp.investment_date) : '—' },
+                { label: 'Credit Date', val: selectedApp.final_investment_date ? formatDate(selectedApp.final_investment_date) : (selectedApp.credit_given_at ? formatDate(selectedApp.credit_given_at) : '—') },
+                { label: 'Effective Start', val: formatDate(selectedApp.final_investment_date || selectedApp.credit_given_at || selectedApp.investment_date || selectedApp.created_at) },
                 { label: 'Terms Accepted', val: selectedApp.terms_accepted ? 'Yes' : 'No' },
               ].map((f, i) => (
                 <div key={i}>

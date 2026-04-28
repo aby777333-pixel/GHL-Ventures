@@ -970,14 +970,25 @@ export async function markInvestmentCreditGiven(appId: string, adminId: string):
       .eq('id', appId)
       .maybeSingle()
 
+    // The credit date is whichever of these the admin populated first:
+    //   1. final_investment_date (modal sets this)
+    //   2. investment_date (set by confirmGiveCredit on the same submit)
+    //   3. today (last-resort default)
+    const creditDate = existing?.final_investment_date
+      || existing?.investment_date
+      || nowIso.split('T')[0]
+
     const update: Record<string, any> = {
       credit_given: true,
       credit_given_at: nowIso,
       credit_given_by: adminId,
       status: 'credited',
-    }
-    if (!existing?.final_investment_date) {
-      update.final_investment_date = existing?.investment_date || nowIso.split('T')[0]
+      // Mirror the credit date into BOTH columns so the schedule generator
+      // and the investor UI cannot disagree even if `confirmGiveCredit`
+      // failed to update one of them. This is the actual fix for
+      // 28-04-2026: "Payout is not calculating as per credit database."
+      final_investment_date: creditDate,
+      investment_date: creditDate,
     }
 
     const { error } = await sb
@@ -1001,13 +1012,14 @@ export async function markInvestmentCreditGiven(appId: string, adminId: string):
         // Issue 28-04-2026: when the credit date differs from the original
         // approval date, the maturity_date set at approval is stale (it was
         // computed from the older investment_date). Re-derive maturity from
-        // the current investment_date + tenure so the schedule extends to
-        // the correct end. Then drop any pending rows from the previous
-        // (now-incorrect) schedule so the regen rebuilds them with the new
-        // dates and prorated amounts. Paid rows are left untouched.
+        // the EFFECTIVE start date + tenure so the schedule extends to the
+        // correct end. Then drop every pending row from the previous (now-
+        // incorrect) schedule so the regen rebuilds them with the new dates
+        // and prorated amounts. Paid rows are left untouched.
         const tenureYears = Number(String(app.tenure_preference || '').replace(/[^0-9]/g, '')) || 3
-        if (app.investment_date) {
-          const sd = new Date(app.investment_date)
+        const startStr = effectiveStartDate(app)
+        if (startStr) {
+          const sd = new Date(`${startStr}T00:00:00`)
           if (!Number.isNaN(sd.getTime())) {
             const md = new Date(sd); md.setFullYear(md.getFullYear() + tenureYears)
             const expectedMaturity = md.toISOString().split('T')[0]
@@ -1036,16 +1048,89 @@ export async function markInvestmentCreditGiven(appId: string, adminId: string):
   }
 }
 
+// ── Manual schedule regeneration (admin "Regenerate Schedule" button) ──
+// Allows the admin to rebuild the payout schedule for a specific
+// investment without re-clicking Give Credit. Uses the same logic as
+// the auto-regen on credit-given so an out-of-sync schedule (e.g.
+// after a back-dated credit edit) can be fixed in one click.
+export async function regenerateInvestmentSchedule(appId: string): Promise<{ ok: boolean; rows?: number; error?: string }> {
+  if (!isSupabaseConfigured()) return { ok: false, error: 'Service unavailable' }
+  if (!appId) return { ok: false, error: 'Missing investment id' }
+  try {
+    const sb: any = supabase
+    const { data: app } = await sb.from('investment_applications').select('*').eq('id', appId).single()
+    if (!app) return { ok: false, error: 'Investment not found' }
+    const startStr = effectiveStartDate(app)
+    if (!startStr) return { ok: false, error: 'Investment has no start date — give credit first' }
+    // Recompute maturity from the effective start so a backdated credit
+    // doesn't truncate the schedule.
+    const tenureYears = Number(String(app.tenure_preference || '').replace(/[^0-9]/g, '')) || 3
+    const sd = new Date(`${startStr}T00:00:00`)
+    if (!Number.isNaN(sd.getTime())) {
+      const md = new Date(sd); md.setFullYear(md.getFullYear() + tenureYears)
+      const expectedMaturity = md.toISOString().split('T')[0]
+      if (app.maturity_date !== expectedMaturity) {
+        await sb.from('investment_applications').update({ maturity_date: expectedMaturity }).eq('id', appId)
+        app.maturity_date = expectedMaturity
+      }
+    }
+    try {
+      await sb
+        .from('monthly_payouts')
+        .delete()
+        .eq('investment_id', app.id)
+        .neq('payment_status', 'paid')
+    } catch (cleanupErr) {
+      console.warn('[admin] regen cleanup non-fatal:', cleanupErr)
+    }
+    const rows = await generateFullPayoutSchedule(app)
+    return { ok: true, rows }
+  } catch (e: any) {
+    return { ok: false, error: e?.message || 'Regeneration failed' }
+  }
+}
+
+// ── Effective start date for a credited investment ─────────────
+// Tests 28-04-2026 (follow-up): the payout schedule + investor UI must
+// always anchor to the credit date when the admin has given credit.
+// We previously relied on `app.investment_date` being overwritten in
+// `confirmGiveCredit`, but if that update was skipped or rolled back the
+// schedule silently fell back to the original application date. This
+// helper centralises the priority so every consumer agrees on which
+// field is "the start of the investment":
+//
+//   1. final_investment_date  ← set by Give-Credit modal (date string)
+//   2. credit_given_at        ← timestamptz when credit-given fired
+//   3. investment_date        ← legacy approval-date column
+//   4. created_at             ← absolute fallback (application date)
+export function effectiveStartDate(app: any): string | null {
+  if (!app) return null
+  const pickDate = (v: any): string | null => {
+    if (!v) return null
+    const s = String(v)
+    return s.includes('T') ? s.split('T')[0] : s
+  }
+  return (
+    pickDate(app.final_investment_date)
+    || pickDate(app.credit_given_at)
+    || pickDate(app.investment_date)
+    || pickDate(app.created_at)
+  )
+}
+
 // ── Generate full payout schedule for a single investment ──────
 // AIF funds pay yearly; Debenture / LLP pay monthly. The schedule runs from
-// investment_date to maturity_date. Idempotent — looks up existing rows
-// keyed by (investment_id, due_date) and only inserts missing ones.
+// the effective start date to maturity_date. Idempotent — looks up existing
+// rows keyed by (investment_id, due_date) and only inserts missing ones.
 export async function generateFullPayoutSchedule(app: any) {
   if (!isSupabaseConfigured() || !app?.id) return 0
   const sb: any = supabase
   try {
-    // Skip if required fields missing — caller should approve first.
-    if (!app.investment_date) return 0
+    // Use the credit-aware effective start date so the first-month
+    // proration always follows the credit database, never the stale
+    // application/approval date.
+    const startDateStr = effectiveStartDate(app)
+    if (!startDateStr) return 0
     const fv: string = app.fund_vehicle || ''
     // AIF = yearly, Debenture/LLP (and anything else) = monthly
     const isAIF = fv.includes('AIF Direct') || fv === 'Direct AIF Route' || (fv.includes('AIF') && !fv.toLowerCase().includes('debenture') && !fv.toLowerCase().includes('llp'))
@@ -1055,13 +1140,18 @@ export async function generateFullPayoutSchedule(app: any) {
     if (amount <= 0) return 0
     const interestRate = Number(app.interest_rate) || 12
     const tdsPercent = Number(app.tds_rate) || 10
-    const startDate = new Date(app.investment_date)
+    const startDate = new Date(`${startDateStr}T00:00:00`)
+    const tenureYears = Number(String(app.tenure_preference || '').replace(/[^0-9]/g, '')) || 3
+    // Recompute maturity from the effective start so a back-dated credit
+    // doesn't leave a stale maturity that truncates the schedule.
+    const expectedMaturity = (() => {
+      const d = new Date(startDate)
+      d.setFullYear(d.getFullYear() + tenureYears)
+      return d
+    })()
     const maturity = app.maturity_date
-      ? new Date(app.maturity_date)
-      : (() => {
-          const tenureYears = Number(String(app.tenure_preference || '').replace(/[^0-9]/g, '')) || 3
-          const d = new Date(startDate); d.setFullYear(d.getFullYear() + tenureYears); return d
-        })()
+      ? new Date(`${String(app.maturity_date).split('T')[0]}T00:00:00`)
+      : expectedMaturity
 
     // Per-period amounts
     const grossPerPeriod = isAIF
@@ -1147,7 +1237,10 @@ export async function generateFullPayoutSchedule(app: any) {
         ghl_id: client?.client_code || '',
         fund_type: app.fund_vehicle || '',
         investment_amount: amount,
-        investment_date: app.investment_date,
+        // Stamp the row with the same effective start the math used so any
+        // future query/diff against monthly_payouts can verify it matches
+        // the credit date and not the stale legacy field.
+        investment_date: startDateStr,
         due_date,
         gross_amount: gross,
         tds_percentage: tdsPercent,

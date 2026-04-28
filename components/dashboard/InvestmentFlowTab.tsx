@@ -225,9 +225,13 @@ export default function InvestmentFlowTab({
   // Payment schedule for selected app
   const schedule = useMemo(() => {
     if (!selectedApp) return []
+    // Tests 28-04-2026 follow-up: the preview must use the same effective
+    // start date that the admin-side schedule generator uses, so the
+    // monthly amounts shown to the investor before real payouts land
+    // already match what they will see once admin gives credit.
     return calculatePaymentSchedule(
       Number(selectedApp.investment_amount) || investAmount,
-      selectedApp.investment_date || selectedApp.created_at || new Date().toISOString(),
+      selectedApp.final_investment_date || selectedApp.investment_date || selectedApp.created_at || new Date().toISOString(),
       Number(selectedApp.tenure_preference?.replace(/[^0-9]/g, '')) || investTenure,
       Number(selectedApp.interest_rate) || selectedFund.interest,
       Number(selectedApp.appreciation_rate) || selectedFund.capitalAppreciation,
@@ -987,7 +991,7 @@ export default function InvestmentFlowTab({
                             <span className={`inline-flex items-center justify-center w-5 h-5 rounded-md text-[10px] font-bold ${t('bg-brand-red/20 text-brand-red','bg-brand-red/10 text-brand-red')}`}>{idx + 1}</span>
                             <p className={`text-sm font-semibold truncate ${t('text-white','text-gray-900')}`}>{app.fund_vehicle || '—'}</p>
                           </div>
-                          <p className={`text-[11px] ${t('text-gray-500','text-gray-600')}`}>{app.commitment_id || `GHL-CMT-${String(app.id).slice(0,8).toUpperCase()}`} · ₹{fmtINR(Number(app.investment_amount) || 0)} · {fmtDate(app.investment_date || app.created_at)}</p>
+                          <p className={`text-[11px] ${t('text-gray-500','text-gray-600')}`}>{app.commitment_id || `GHL-CMT-${String(app.id).slice(0,8).toUpperCase()}`} · ₹{fmtINR(Number(app.investment_amount) || 0)} · {fmtDate(app.final_investment_date || app.investment_date || app.created_at)}</p>
                         </div>
                         <ChevronRight className={`w-4 h-4 shrink-0 ${t('text-gray-500','text-gray-400')}`} />
                       </button>
@@ -1005,7 +1009,12 @@ export default function InvestmentFlowTab({
                   <h3 className={`text-lg font-bold ${t('text-white','text-gray-900')}`}>Investor Details</h3>
                 </div>
                 <div className="flex items-center gap-3">
-                  <p className={`text-xs font-semibold ${t('text-gray-400','text-gray-600')}`}>Investment Date: {fmtDate(selectedApp.investment_date || selectedApp.created_at)}</p>
+                  {/* Tests 28-04-2026 follow-up: anchor the displayed date to
+                      the effective start (final_investment_date is set on
+                      Give-Credit; falls back to investment_date / created_at).
+                      This guarantees the visible date matches the date the
+                      payout schedule was computed against. */}
+                  <p className={`text-xs font-semibold ${t('text-gray-400','text-gray-600')}`}>Investment Date: {fmtDate(selectedApp.final_investment_date || selectedApp.investment_date || selectedApp.created_at)}</p>
                   {investApps.length > 1 && (
                     <button onClick={() => setSelectedApp(null)}
                       className={`text-xs font-semibold px-3 py-1.5 rounded-lg ${t('bg-white/[0.06] text-gray-300 border border-white/[0.08] hover:bg-white/[0.1]','bg-gray-100 text-gray-700 border border-gray-200 hover:bg-gray-200')}`}>
