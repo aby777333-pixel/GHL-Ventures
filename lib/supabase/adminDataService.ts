@@ -1209,21 +1209,53 @@ export async function generateFullPayoutSchedule(app: any) {
       dueDates.push(trailingDueDate)
     }
 
-    // Skip dates that already have a payout row for this investment
+    // Reconcile against any existing payout rows for this investment.
+    //
+    // Issue 29-04-2026 (Payout Recalculation Logic — Credit Date scenario):
+    // when the admin enters / changes the Credit Date, the upstream cleanup
+    // (`markInvestmentCreditGiven` / `regenerateInvestmentSchedule`) tries to
+    // delete pending rows so this generator can re-insert them with the new
+    // partial-first / 37th-month-trailing amounts. Until the matching DELETE
+    // RLS policy (migration 20260429_payout_delete_policy.sql) shipped, that
+    // delete silently returned 0 rows on the live DB. The generator's old
+    // "skip existing dates" guard then preserved the stale amounts.
+    //
+    // Defence-in-depth: instead of skipping, we now treat any pending row at
+    // an expected due_date as a candidate to UPDATE in place. Paid rows are
+    // never touched. Pending rows whose due_date is no longer part of the
+    // schedule (e.g. trailing date moved because the credit date shifted) are
+    // deleted. New dates are inserted. This keeps the schedule in sync with
+    // the credit date even if a future RLS/permissions regression breaks
+    // the upstream cleanup again.
     const { data: existing } = await sb
       .from('monthly_payouts')
-      .select('due_date')
+      .select('id, due_date, payment_status')
       .eq('investment_id', app.id)
-    const alreadyThere = new Set((existing || []).map((r: any) => r.due_date))
-    const missingDates = dueDates.filter(d => !alreadyThere.has(d))
-    if (missingDates.length === 0) return 0
+    const existingRows = (existing || []) as Array<{ id: string; due_date: string; payment_status: string | null }>
+    const expectedDates = new Set(dueDates)
+    const byDate = new Map<string, { id: string; payment_status: string | null }>()
+    for (const r of existingRows) byDate.set(r.due_date, { id: r.id, payment_status: r.payment_status })
 
-    // Enrich with client + bank details
+    // Drop pending rows that are no longer in the recomputed schedule (e.g.
+    // a back-dated credit shifted the trailing 37th-month date or shortened
+    // the maturity). Paid rows are preserved even if mismatched — accounts
+    // already disbursed money against them.
+    const stalePendingIds = existingRows
+      .filter(r => r.payment_status !== 'paid' && !expectedDates.has(r.due_date))
+      .map(r => r.id)
+    if (stalePendingIds.length > 0) {
+      const { error: delErr } = await sb.from('monthly_payouts').delete().in('id', stalePendingIds)
+      if (delErr) console.warn('[admin] generateFullPayoutSchedule stale-row delete error:', delErr.message)
+    }
+
+    // Enrich with client + bank details (used for both inserts and updates)
     const { data: client } = await sb.from('clients').select('client_code, full_name').eq('id', app.client_id).maybeSingle()
     const { data: bank } = await sb.from('kyc_bank_details').select('account_number, account_holder_name, bank_name, ifsc_code').eq('client_id', app.client_id).maybeSingle()
 
     const firstDueDate = dueDates[0]
-    const rows = missingDates.map(due_date => {
+    const insertRows: any[] = []
+    let updatedCount = 0
+    for (const due_date of dueDates) {
       const isFirst = due_date === firstDueDate
       const isTrailing = trailingDueDate !== null && due_date === trailingDueDate
       let gross = grossPerPeriod
@@ -1231,32 +1263,55 @@ export async function generateFullPayoutSchedule(app: any) {
       let net = netPerPeriod
       if (isFirst) { gross = firstGross; tds = firstTds; net = firstNet }
       else if (isTrailing) { gross = trailingGross; tds = trailingTds; net = trailingNet }
-      return {
-        client_id: app.client_id,
-        investment_id: app.id,
-        ghl_id: client?.client_code || '',
-        fund_type: app.fund_vehicle || '',
-        investment_amount: amount,
-        // Stamp the row with the same effective start the math used so any
-        // future query/diff against monthly_payouts can verify it matches
-        // the credit date and not the stale legacy field.
-        investment_date: startDateStr,
-        due_date,
-        gross_amount: gross,
-        tds_percentage: tdsPercent,
-        tds_amount: tds,
-        net_interest: net,
-        payment_status: 'pending',
-        account_number: bank?.account_number || null,
-        account_holder_name: bank?.account_holder_name || client?.full_name || null,
-        bank_name: bank?.bank_name || null,
-        ifsc_code: bank?.ifsc_code || null,
-      }
-    })
 
-    const { error: insErr } = await sb.from('monthly_payouts').insert(rows)
-    if (insErr) { console.warn('[admin] generateFullPayoutSchedule insert error:', insErr.message); return 0 }
-    return rows.length
+      const existingForDate = byDate.get(due_date)
+      if (existingForDate) {
+        // Never overwrite an already-paid disbursement; the books reflect
+        // what was actually sent and the investor was already taxed.
+        if (existingForDate.payment_status === 'paid') continue
+        const { error: updErr } = await sb
+          .from('monthly_payouts')
+          .update({
+            investment_amount: amount,
+            investment_date: startDateStr,
+            gross_amount: gross,
+            tds_percentage: tdsPercent,
+            tds_amount: tds,
+            net_interest: net,
+          })
+          .eq('id', existingForDate.id)
+        if (updErr) console.warn('[admin] generateFullPayoutSchedule update error:', updErr.message)
+        else updatedCount += 1
+      } else {
+        insertRows.push({
+          client_id: app.client_id,
+          investment_id: app.id,
+          ghl_id: client?.client_code || '',
+          fund_type: app.fund_vehicle || '',
+          investment_amount: amount,
+          // Stamp the row with the same effective start the math used so any
+          // future query/diff against monthly_payouts can verify it matches
+          // the credit date and not the stale legacy field.
+          investment_date: startDateStr,
+          due_date,
+          gross_amount: gross,
+          tds_percentage: tdsPercent,
+          tds_amount: tds,
+          net_interest: net,
+          payment_status: 'pending',
+          account_number: bank?.account_number || null,
+          account_holder_name: bank?.account_holder_name || client?.full_name || null,
+          bank_name: bank?.bank_name || null,
+          ifsc_code: bank?.ifsc_code || null,
+        })
+      }
+    }
+
+    if (insertRows.length > 0) {
+      const { error: insErr } = await sb.from('monthly_payouts').insert(insertRows)
+      if (insErr) { console.warn('[admin] generateFullPayoutSchedule insert error:', insErr.message); return updatedCount }
+    }
+    return insertRows.length + updatedCount
   } catch (e: any) {
     console.warn('[admin] generateFullPayoutSchedule error:', e?.message)
     return 0
