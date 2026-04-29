@@ -138,21 +138,28 @@ export default function AdminClient() {
   }, [router])
 
   // ── Auth Guard ──────────────────────────────────────────────────
-  // Tests 28-04-2026 #1: only redirect when the Supabase session is truly
-  // gone, not on a transient `null` while we hydrate.
+  // Tests 28-04-2026 #1: don't redirect on a transient `null` during
+  // hydration / token refresh — the loading flag and a short re-check
+  // bridge that window. Issue 29-04-2026: but DO redirect when the user
+  // has a non-admin Supabase session (e.g. a regular client navigating
+  // to /admin), otherwise they get stuck on the "Redirecting to
+  // login..." card forever because isSessionInvalid only flags a
+  // missing Supabase session, not a missing admin role.
   useEffect(() => {
     if (loading || isAuthenticated) return
     let cancelled = false
-    ;(async () => {
+    const timer = setTimeout(async () => {
       try {
-        const { isSessionInvalid } = await import('@/lib/supabase/inactivityTracker')
-        const invalid = await isSessionInvalid()
-        if (!cancelled && invalid) router.push('/admin/login')
+        // Re-check directly against Supabase. getAdminSession returns
+        // null both when there's no session at all AND when the signed-
+        // in user lacks an admin role — both cases warrant a redirect.
+        const fresh = await getAdminSession()
+        if (!cancelled && !fresh) router.push('/admin/login')
       } catch {
         if (!cancelled) router.push('/admin/login')
       }
-    })()
-    return () => { cancelled = true }
+    }, 600)
+    return () => { cancelled = true; clearTimeout(timer) }
   }, [loading, isAuthenticated, router])
 
   // Loading state
