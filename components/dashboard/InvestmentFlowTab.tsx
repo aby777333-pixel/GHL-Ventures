@@ -66,7 +66,12 @@ const FUNDS = [
     name: 'Alternate route to Invest in AIF via Debenture',
     fundType: 'Category II AIF (as per SEBI Alternative Investment Fund Regulations, 2012)',
     focus: 'Stressed and special situation real estate assets',
-    minInvestment: 1000000,
+    // Issue 29-04-2026 (Debenture Limitation Update): admin needs to onboard
+    // existing debenture investors whose original ticket size was below ₹10L,
+    // so we drop the floor on this vehicle. AIF Direct keeps its ₹1Cr SEBI
+    // regulatory minimum. `0` here is treated as "no minimum" by the form
+    // validation and the displayed copy.
+    minInvestment: 0,
     interest: 12, // 1% per month
     capitalAppreciation: 12,
     totalAssuredReturns: 24,
@@ -242,7 +247,14 @@ export default function InvestmentFlowTab({
   // ── Submit investment ─────────────────────────────────────
   const handleSubmitInvestment = async () => {
     if (!clientId || !userId) { showToast('Please log in', 'error'); return }
-    if (investAmount < selectedFund.minInvestment) { showToast(`Minimum investment is ₹${fmtINR(selectedFund.minInvestment)}`, 'error'); return }
+    // Issue 29-04-2026: a fund's minInvestment of 0 means "no minimum"
+    // (Debenture). Still require a positive amount in that case so we
+    // don't accept zero / negative tickets. AIF Direct (₹1Cr) and LLP
+    // (₹10L) keep their floors via the same comparison.
+    if (investAmount <= 0) { showToast('Please enter an investment amount', 'error'); return }
+    if (selectedFund.minInvestment > 0 && investAmount < selectedFund.minInvestment) {
+      showToast(`Minimum investment is ₹${fmtINR(selectedFund.minInvestment)}`, 'error'); return
+    }
     // Bug #1 (test 2026-04-18): Capital amount must not exceed the fund size.
     if (investAmount > FUND_SIZE_CAP) {
       showToast(`Investment cannot exceed the fund size of ₹${fmtINR(FUND_SIZE_CAP)}`, 'error')
@@ -515,7 +527,7 @@ export default function InvestmentFlowTab({
                 <table className={`w-full text-sm`}>
                   <tbody>
                     {[
-                      { label: 'Investment', value: `starting from ₹${fmtINR(selectedFund.minInvestment)}` },
+                      { label: 'Investment', value: selectedFund.minInvestment > 0 ? `starting from ₹${fmtINR(selectedFund.minInvestment)}` : 'Flexible — no minimum' },
                       { label: 'Interest', value: `${selectedFund.interest / 12}% per month (means ${selectedFund.interest}% per annum)` },
                       { label: 'Capital Appreciation', value: `${selectedFund.capitalAppreciation}% per annum payable at redemption` },
                       { label: 'Total Assured Returns', value: `${selectedFund.totalAssuredReturns}% per annum` },
@@ -583,7 +595,7 @@ export default function InvestmentFlowTab({
                 <table className="w-full">
                   <tbody>
                     {[
-                      { label: 'MINIMUM INVESTMENT', value: `₹ ${fmtINR(selectedFund.minInvestment)}`, bold: true },
+                      { label: 'MINIMUM INVESTMENT', value: selectedFund.minInvestment > 0 ? `₹ ${fmtINR(selectedFund.minInvestment)}` : 'No minimum', bold: true },
                       { label: 'CAPITAL INVESTED', value: `₹${fmtINR(investAmount)}`, bold: true },
                       { label: 'Locking Period', value: `${investTenure} years`, bold: false },
                       { label: 'MONTHLY RETURNS', value: `₹${fmtINR(monthlyInterest)}`, bold: true },
@@ -611,7 +623,7 @@ export default function InvestmentFlowTab({
                     setInvestAmount(Math.min(v, FUND_SIZE_CAP))
                   }}
                   className={`w-full px-4 py-3 rounded-xl text-lg font-bold ${t('bg-white/[0.04] border border-white/[0.08] text-white','bg-gray-100 border border-gray-200 text-gray-900')}`}
-                  min={selectedFund.minInvestment} max={FUND_SIZE_CAP} step={100000} />
+                  min={selectedFund.minInvestment > 0 ? selectedFund.minInvestment : 1} max={FUND_SIZE_CAP} step={100000} />
                 {investAmount > FUND_SIZE_CAP - 1 && (
                   <p className={`text-[11px] ${t('text-amber-400','text-amber-600')}`}>Capped at fund size (₹{fmtINR(FUND_SIZE_CAP)}).</p>
                 )}
