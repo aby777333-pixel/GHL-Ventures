@@ -165,7 +165,9 @@ export default function AllotmentModule({ subTab, navigate, showToast }: Allotme
   const [fromDate, setFromDate] = useState('')
   const [toDate, setToDate] = useState('')
   const [fundType, setFundType] = useState('')
-  const [perDebentureValue, setPerDebentureValue] = useState<number>(100)
+  // Pending 30-04-2026 #4: default Per Debenture Value to ₹10 (face value
+  // per the debenture agreement / certificate templates).
+  const [perDebentureValue, setPerDebentureValue] = useState<number>(10)
 
   // ── Data state ─────────────────────────────────────────────────
   const [investments, setInvestments] = useState<InvestmentRow[]>([])

@@ -1979,25 +1979,56 @@ export async function deleteClientKYCSafe(clientId: string): Promise<DeleteResul
   }
 }
 
-// ── Investment delete: block when status is approved/credited/completed
-export async function deleteInvestmentSafe(investmentId: string): Promise<DeleteResult> {
+// ── Investment delete: full cascade
+//
+// Pending 30-04-2026 #1: admin needs to be able to delete investments
+// that were created by mistake — including ones that already moved to
+// approved / credited / completed. When `force` is true (used by the
+// admin Force-Delete confirm flow) we wipe ALL linked records:
+//   * payout schedule (monthly_payouts)
+//   * investment documents (investment_documents)
+//   * investment transactions (investment_transactions)
+//   * allotment rows (allotments)
+//   * doc tracking (investment_doc_tracking — FK CASCADE handles it,
+//     but we delete defensively in case the FK was relaxed)
+//   * referral commission row link (cleared via FK ON DELETE SET NULL)
+//
+// When `force` is false the legacy guard remains: approved/credited
+// investments are protected and only pending/under_review/rejected
+// rows can be deleted (preserves the existing safe-delete UI path).
+export async function deleteInvestmentSafe(
+  investmentId: string,
+  options?: { force?: boolean }
+): Promise<DeleteResult> {
   if (!isSupabaseConfigured()) return { ok: false, error: 'Service unavailable' }
+  const force = !!options?.force
   try {
     const sb = supabase as any
-    const { data: app } = await sb.from('investment_applications').select('status, client_id').eq('id', investmentId).maybeSingle()
+    const { data: app } = await sb
+      .from('investment_applications')
+      .select('id, status, client_id')
+      .eq('id', investmentId)
+      .maybeSingle()
     if (!app) return { ok: false, error: 'Investment not found' }
-    if (['approved', 'credited', 'completed'].includes(app.status)) {
+    if (!force && ['approved', 'credited', 'completed'].includes(app.status)) {
       return { ok: false, error: 'Investment is approved and cannot be deleted.' }
     }
-    // Testing Report 2 (2026-04-25 #4): the parent delete previously
-    // surfaced "deleted" in the UI but actually failed because of NO ACTION
-    // FKs from investment_documents and investment_transactions. Cascade-
-    // clean those first so pending applications can be removed cleanly.
-    await sb.from('investment_documents').delete().eq('investment_app_id', investmentId)
-    await sb.from('investment_transactions').delete().eq('investment_app_id', investmentId)
-    // monthly_payouts.investment_id points at the legacy investments table,
-    // not investment_applications, so removing the application doesn't
-    // require touching it.
+
+    // Cascade-clean every table that holds an FK back to this investment.
+    // We swallow individual errors (best-effort) so a missing optional table
+    // doesn't block the parent delete; the final delete still surfaces hard
+    // failures.
+    const cascade = async (table: string, col: string) => {
+      try { await sb.from(table).delete().eq(col, investmentId) } catch (_e) { /* table may not exist */ }
+    }
+    await cascade('investment_documents', 'investment_app_id')
+    await cascade('investment_transactions', 'investment_app_id')
+    await cascade('investment_doc_tracking', 'investment_app_id')
+    // monthly_payouts: column is investment_id (per migration 040)
+    await cascade('monthly_payouts', 'investment_id')
+    // allotments: column is investment_id (admin uses investment_app_id as the value)
+    await cascade('allotments', 'investment_id')
+
     const { error } = await sb.from('investment_applications').delete().eq('id', investmentId)
     if (error) return { ok: false, error: error.message }
     return { ok: true }
@@ -2117,4 +2148,495 @@ export async function deleteRealtyBrokerSafe(id: string): Promise<DeleteResult> 
   } catch (e: any) {
     return { ok: false, error: e?.message || 'Delete failed' }
   }
+}
+
+// ════════════════════════════════════════════════════════════════
+// Pending 30-04-2026 — admin helpers for items 2, 3, 8, 9, 10
+// ════════════════════════════════════════════════════════════════
+
+// Item 3 — Manual reference number entry/edit. Stored on the
+// existing `reference_number` text column on investment_applications.
+export async function updateInvestmentReferenceNumber(
+  investmentId: string,
+  referenceNumber: string,
+): Promise<DeleteResult> {
+  if (!isSupabaseConfigured()) return { ok: false, error: 'Service unavailable' }
+  try {
+    const sb = supabase as any
+    const trimmed = (referenceNumber || '').trim()
+    if (!trimmed) return { ok: false, error: 'Reference number cannot be empty' }
+    const { error } = await sb
+      .from('investment_applications')
+      .update({ reference_number: trimmed })
+      .eq('id', investmentId)
+    if (error) return { ok: false, error: error.message }
+    return { ok: true }
+  } catch (e: any) {
+    return { ok: false, error: e?.message || 'Update failed' }
+  }
+}
+
+export async function fetchInvestmentReferenceList(): Promise<any[]> {
+  if (!isSupabaseConfigured()) return []
+  try {
+    const sb = supabase as any
+    const { data: apps } = await sb
+      .from('investment_applications')
+      .select('id, reference_number, fund_vehicle, investment_amount, status, client_id, created_at, investment_date')
+      .order('created_at', { ascending: false })
+    if (!apps || apps.length === 0) return []
+    const clientIds = Array.from(new Set((apps as any[]).map(a => a.client_id).filter(Boolean)))
+    let clientMap: Map<string, any> = new Map()
+    if (clientIds.length > 0) {
+      const { data: clients } = await sb
+        .from('clients')
+        .select('id, full_name, email, phone, client_code')
+        .in('id', clientIds)
+      clientMap = new Map((clients || []).map((c: any) => [c.id, c]))
+    }
+    return (apps as any[]).map(a => ({ ...a, _client: clientMap.get(a.client_id) || null }))
+  } catch { return [] }
+}
+
+// Item 10 — Document tracking
+export type InvDocTrackingRow = {
+  id: string
+  investment_app_id: string
+  client_id: string | null
+  invested_at: string | null
+  acknowledgement_at: string | null
+  document_prep_at: string | null
+  soft_copy_at: string | null
+  courier_started_at: string | null
+  courier_received_at: string | null
+  courier_code: string | null
+  courier_partner: string | null
+  courier_tracking_url: string | null
+  notes: string | null
+  created_at: string
+  updated_at: string
+}
+
+export async function fetchInvestmentDocTracking(
+  investmentAppId: string,
+): Promise<InvDocTrackingRow | null> {
+  if (!isSupabaseConfigured()) return null
+  try {
+    const sb = supabase as any
+    const { data } = await sb
+      .from('investment_doc_tracking')
+      .select('*')
+      .eq('investment_app_id', investmentAppId)
+      .maybeSingle()
+    return (data as InvDocTrackingRow) || null
+  } catch { return null }
+}
+
+export async function fetchInvestmentDocTrackingForClient(
+  clientId: string,
+): Promise<InvDocTrackingRow[]> {
+  if (!isSupabaseConfigured()) return []
+  try {
+    const sb = supabase as any
+    const { data } = await sb
+      .from('investment_doc_tracking')
+      .select('*')
+      .eq('client_id', clientId)
+    return (data as InvDocTrackingRow[]) || []
+  } catch { return [] }
+}
+
+// Status options the admin can set from the modal. The DB column for
+// each maps as: invested→invested_at, acknowledgement_process→
+// acknowledgement_at, document_preparing→document_prep_at,
+// soft_copy_uploaded→soft_copy_at (also auto by trigger),
+// courier_process_started→courier_started_at (also auto on courier_code),
+// courier_delivered→courier_received_at.
+export type DocTrackingStage =
+  | 'invested'
+  | 'acknowledgement_process'
+  | 'document_preparing'
+  | 'soft_copy_uploaded'
+  | 'courier_process_started'
+  | 'courier_delivered'
+
+const STAGE_TO_COLUMN: Record<DocTrackingStage, keyof InvDocTrackingRow> = {
+  invested: 'invested_at',
+  acknowledgement_process: 'acknowledgement_at',
+  document_preparing: 'document_prep_at',
+  soft_copy_uploaded: 'soft_copy_at',
+  courier_process_started: 'courier_started_at',
+  courier_delivered: 'courier_received_at',
+}
+
+// Ensure a tracking row exists for the given investment, returning it.
+export async function ensureInvestmentDocTracking(
+  investmentAppId: string,
+): Promise<InvDocTrackingRow | null> {
+  if (!isSupabaseConfigured()) return null
+  try {
+    const sb = supabase as any
+    const existing = await fetchInvestmentDocTracking(investmentAppId)
+    if (existing) return existing
+    const { data: app } = await sb
+      .from('investment_applications')
+      .select('id, client_id, status, investment_date, created_at')
+      .eq('id', investmentAppId)
+      .maybeSingle()
+    if (!app) return null
+    const isInvested = ['approved', 'credited', 'completed'].includes(app.status)
+    const { data, error } = await sb
+      .from('investment_doc_tracking')
+      .insert({
+        investment_app_id: investmentAppId,
+        client_id: app.client_id,
+        invested_at: isInvested ? (app.investment_date || app.created_at || new Date().toISOString()) : null,
+      })
+      .select('*')
+      .maybeSingle()
+    if (error) {
+      console.warn('[admin] ensureInvestmentDocTracking insert error:', error.message)
+      return null
+    }
+    return (data as InvDocTrackingRow) || null
+  } catch { return null }
+}
+
+export async function setInvestmentDocTrackingStage(
+  investmentAppId: string,
+  stage: DocTrackingStage,
+  value: boolean = true,
+  extras?: { notes?: string | null },
+): Promise<DeleteResult> {
+  if (!isSupabaseConfigured()) return { ok: false, error: 'Service unavailable' }
+  try {
+    const sb = supabase as any
+    await ensureInvestmentDocTracking(investmentAppId)
+    const col = STAGE_TO_COLUMN[stage]
+    const updates: Record<string, any> = {
+      [col]: value ? new Date().toISOString() : null,
+    }
+    if (extras?.notes !== undefined) updates.notes = extras.notes
+    const { error } = await sb
+      .from('investment_doc_tracking')
+      .update(updates)
+      .eq('investment_app_id', investmentAppId)
+    if (error) return { ok: false, error: error.message }
+    return { ok: true }
+  } catch (e: any) {
+    return { ok: false, error: e?.message || 'Update failed' }
+  }
+}
+
+export async function setInvestmentCourierTracking(
+  investmentAppId: string,
+  payload: { code?: string | null; partner?: string | null; trackingUrl?: string | null },
+): Promise<DeleteResult> {
+  if (!isSupabaseConfigured()) return { ok: false, error: 'Service unavailable' }
+  try {
+    const sb = supabase as any
+    await ensureInvestmentDocTracking(investmentAppId)
+    const updates: Record<string, any> = {}
+    if (payload.code !== undefined) updates.courier_code = payload.code
+    if (payload.partner !== undefined) updates.courier_partner = payload.partner
+    if (payload.trackingUrl !== undefined) updates.courier_tracking_url = payload.trackingUrl
+    const { error } = await sb
+      .from('investment_doc_tracking')
+      .update(updates)
+      .eq('investment_app_id', investmentAppId)
+    if (error) return { ok: false, error: error.message }
+    return { ok: true }
+  } catch (e: any) {
+    return { ok: false, error: e?.message || 'Update failed' }
+  }
+}
+
+// Item 8 — Add/update a referrer code on an existing client. When the
+// code resolves to a registered client (clients.referral_code) we also
+// upsert a `referrals` row so the referrer's commission tracking sees
+// the new investor.
+export async function setClientReferrer(
+  clientId: string,
+  referrerCode: string,
+): Promise<DeleteResult> {
+  if (!isSupabaseConfigured()) return { ok: false, error: 'Service unavailable' }
+  try {
+    const sb = supabase as any
+    const code = (referrerCode || '').trim()
+    if (!code) return { ok: false, error: 'Referrer code cannot be empty' }
+
+    const { data: refClient } = await sb
+      .from('clients')
+      .select('id, full_name, email, phone, referral_code')
+      .eq('referral_code', code)
+      .maybeSingle()
+
+    const { data: thisClient } = await sb
+      .from('clients')
+      .select('id, full_name, email, phone, referred_by')
+      .eq('id', clientId)
+      .maybeSingle()
+    if (!thisClient) return { ok: false, error: 'Client not found' }
+
+    if (refClient && refClient.id === clientId) {
+      return { ok: false, error: 'A client cannot refer themselves.' }
+    }
+
+    const { error: upErr } = await sb
+      .from('clients')
+      .update({ referred_by: code })
+      .eq('id', clientId)
+    if (upErr) return { ok: false, error: upErr.message }
+
+    if (refClient) {
+      const { data: existing } = await sb
+        .from('referrals')
+        .select('id')
+        .eq('referee_client_id', clientId)
+        .eq('referrer_email', refClient.email)
+        .maybeSingle()
+      if (!existing) {
+        await sb.from('referrals').insert({
+          referrer_name: refClient.full_name || 'Referrer',
+          referrer_email: refClient.email || `${code}@ghlindiaventures.com`,
+          referrer_phone: refClient.phone || null,
+          referee_name: thisClient.full_name || 'Investor',
+          referee_email: thisClient.email || null,
+          referee_phone: thisClient.phone || null,
+          referee_client_id: clientId,
+          status: 'qualified',
+          relationship: 'referral_code',
+        })
+      }
+    }
+    return { ok: true }
+  } catch (e: any) {
+    return { ok: false, error: e?.message || 'Update failed' }
+  }
+}
+
+// Item 9 — Enriched referrals: each referrer with their referee's
+// investment + commission. Reads referrals + joins applications via
+// referee_client_id so the UI can show real numbers.
+export type ReferralWithInvestment = Referral & {
+  investment_app_id: string | null
+  investment_amount: number | null
+  commission_rate: number | null
+  commission_amount: number | null
+  commission_status: string | null
+  referee_client_id: string | null
+  _investment?: {
+    id: string
+    fund_vehicle: string | null
+    investment_amount: number | null
+    final_investment_amount: number | null
+    status: string
+    investment_date: string | null
+  } | null
+}
+
+export async function fetchReferralsWithInvestment(): Promise<ReferralWithInvestment[]> {
+  if (!isSupabaseConfigured()) return []
+  try {
+    const sb = supabase as any
+    const { data: refs } = await sb
+      .from('referrals')
+      .select('*')
+      .order('created_at', { ascending: false })
+    const list = (refs as any[]) || []
+    if (list.length === 0) return []
+
+    // Try to auto-link any referrals whose referee_client_id is null
+    // by matching email/phone of an existing client. Quietly skip
+    // failures so the read still works.
+    for (const r of list) {
+      if (r.referee_client_id) continue
+      const lookups: { col: 'email' | 'phone'; val: string | null }[] = [
+        { col: 'email', val: r.referee_email },
+        { col: 'phone', val: r.referee_phone },
+      ]
+      for (const { col, val } of lookups) {
+        if (!val) continue
+        const { data: c } = await sb.from('clients').select('id').eq(col, val).maybeSingle()
+        if (c?.id) {
+          await sb.from('referrals').update({ referee_client_id: c.id }).eq('id', r.id)
+          r.referee_client_id = c.id
+          break
+        }
+      }
+    }
+
+    // Pull investment data for any referee that resolved to a client.
+    const clientIds = Array.from(new Set(list.map((r: any) => r.referee_client_id).filter(Boolean)))
+    let invByClient: Map<string, any> = new Map()
+    if (clientIds.length > 0) {
+      const { data: invs } = await sb
+        .from('investment_applications')
+        .select('id, client_id, fund_vehicle, investment_amount, final_investment_amount, status, investment_date')
+        .in('client_id', clientIds)
+        .order('created_at', { ascending: false })
+      // Pick the most recent application per client
+      for (const inv of (invs as any[]) || []) {
+        if (!invByClient.has(inv.client_id)) invByClient.set(inv.client_id, inv)
+      }
+    }
+
+    return list.map((r: any) => {
+      const inv = r.referee_client_id ? invByClient.get(r.referee_client_id) || null : null
+      // Backfill investment_amount/commission on the row when an
+      // investment exists but the row hasn't been calculated yet.
+      let amount = r.investment_amount
+      let commission = r.commission_amount
+      const rate = r.commission_rate || 1.0
+      if (inv && (!amount || !commission)) {
+        const finalAmt = Number(inv.final_investment_amount) || Number(inv.investment_amount) || 0
+        amount = amount || finalAmt
+        commission = commission || (finalAmt * rate / 100)
+      }
+      return {
+        ...r,
+        investment_amount: amount,
+        commission_amount: commission,
+        _investment: inv,
+      } as ReferralWithInvestment
+    })
+  } catch { return [] }
+}
+
+// Item 9 — admin updates commission rate / status / payout flag.
+export async function updateReferralCommission(
+  referralId: string,
+  updates: {
+    commission_rate?: number
+    commission_amount?: number
+    commission_status?: 'pending' | 'accrued' | 'paid' | 'cancelled'
+  },
+): Promise<DeleteResult> {
+  if (!isSupabaseConfigured()) return { ok: false, error: 'Service unavailable' }
+  try {
+    const sb = supabase as any
+    const { error } = await sb.from('referrals').update(updates).eq('id', referralId)
+    if (error) return { ok: false, error: error.message }
+    return { ok: true }
+  } catch (e: any) {
+    return { ok: false, error: e?.message || 'Update failed' }
+  }
+}
+
+// Item 2 — Admin Investment Creation Flow.
+// Creates an investment_applications row directly on behalf of a client.
+// The optional transaction payload is recorded into investment_transactions
+// so the admin's "Investments" tab shows the same shape it would for an
+// investor-submitted application.
+export type AdminCreateInvestmentInput = {
+  client_id: string
+  fund_vehicle: string
+  investment_amount: number
+  tenure_preference?: string | null
+  reference_number?: string | null
+  notes?: string | null
+  transaction?: {
+    transaction_id?: string
+    transaction_amount?: number
+    transaction_date?: string
+    transaction_proof_url?: string | null
+    bank_name?: string | null
+    payment_mode?: string | null
+  } | null
+}
+
+export async function adminCreateInvestmentForClient(
+  input: AdminCreateInvestmentInput,
+  adminId: string,
+): Promise<{ ok: true; id: string } | { ok: false; error: string }> {
+  if (!isSupabaseConfigured()) return { ok: false, error: 'Service unavailable' }
+  try {
+    const sb = supabase as any
+    if (!input.client_id) return { ok: false, error: 'Client is required' }
+    if (!input.fund_vehicle) return { ok: false, error: 'Fund / vehicle is required' }
+    if (!input.investment_amount || input.investment_amount <= 0) {
+      return { ok: false, error: 'Enter a valid investment amount' }
+    }
+    const tenureYears = Number(String(input.tenure_preference || '').replace(/[^0-9]/g, '')) || 3
+    const today = new Date()
+    const maturity = new Date(today)
+    maturity.setFullYear(maturity.getFullYear() + tenureYears)
+    const baseRow: Record<string, any> = {
+      client_id: input.client_id,
+      fund_vehicle: input.fund_vehicle,
+      investment_amount: input.investment_amount,
+      tenure_preference: input.tenure_preference || `${tenureYears} years`,
+      status: 'pending',
+      created_by: adminId || null,
+      admin_notes: input.notes || null,
+      terms_accepted: true,
+      // Pending 30-04-2026 #3: respect a manually-entered reference number.
+      reference_number: (input.reference_number || '').trim() || null,
+    }
+    const { data, error } = await sb
+      .from('investment_applications')
+      .insert(baseRow)
+      .select('id')
+      .maybeSingle()
+    if (error || !data?.id) {
+      return { ok: false, error: error?.message || 'Failed to create investment' }
+    }
+    const newId = data.id as string
+
+    if (input.transaction) {
+      const t = input.transaction
+      try {
+        await sb.from('investment_transactions').insert({
+          investment_app_id: newId,
+          client_id: input.client_id,
+          transaction_id: t.transaction_id || null,
+          transaction_amount: t.transaction_amount || input.investment_amount,
+          transaction_date: t.transaction_date || today.toISOString().split('T')[0],
+          transaction_proof_url: t.transaction_proof_url || null,
+          bank_name: t.bank_name || null,
+          payment_mode: t.payment_mode || null,
+          status: 'pending',
+        })
+      } catch (e) { console.warn('[admin] adminCreateInvestmentForClient txn insert:', (e as any)?.message) }
+    }
+    return { ok: true, id: newId }
+  } catch (e: any) {
+    return { ok: false, error: e?.message || 'Create failed' }
+  }
+}
+
+// Items 11/12 — admin website notification helpers. We intentionally
+// only write rows to `notifications` (which the dashboard already
+// reads). SMS / WhatsApp / Email channels require external provider
+// credentials (Twilio / WhatsApp Business / Resend) and are wired as
+// no-op stubs that log a console warning so the call-sites don't
+// silently miss until creds land. See netlify/functions/send-email.ts
+// for the existing Resend hookup.
+export async function notifyAdminsWebsite(
+  type: 'info' | 'success' | 'warning' | 'error' | 'action_required',
+  title: string,
+  message: string | null,
+  link: string | null,
+  metadata: Record<string, any> = {},
+): Promise<void> {
+  if (!isSupabaseConfigured()) return
+  try {
+    const sb = supabase as any
+    const { data: admins } = await sb
+      .from('profiles')
+      .select('id')
+      .in('role', ['admin', 'super_admin'])
+    const targets = (admins as any[] | null) || []
+    if (targets.length === 0) return
+    const rows = targets.map(a => ({
+      user_id: a.id,
+      type,
+      title,
+      message,
+      link,
+      is_read: false,
+      metadata,
+    }))
+    await sb.from('notifications').insert(rows)
+  } catch (e) { console.warn('[admin] notifyAdminsWebsite:', (e as any)?.message) }
 }

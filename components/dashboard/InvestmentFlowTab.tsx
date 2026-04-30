@@ -35,6 +35,7 @@ import {
   useInvestmentDocuments,
   useInvestmentTransactions,
 } from '@/lib/supabase/dashboardDataHooks'
+import DocumentTrackingProgress from './DocumentTrackingProgress'
 
 // ── Constants ──────────────────────────────────────────────
 // Fund size ceiling enforced per testing report 2026-04-18 #1:
@@ -903,7 +904,14 @@ export default function InvestmentFlowTab({
                 const commitment = app.commitment_id || (appId !== 'orphan' ? `GHL-CMT-${String(appId).slice(0,8).toUpperCase()}` : 'Unassigned')
                 const fund = app.fund_vehicle || docs[0]?.fund_vehicle || 'Investment Documents'
                 return (
-                  <G key={appId} className="overflow-hidden" theme={theme}>
+                  <div key={appId} className="space-y-3">
+                  {/* Pending 30-04-2026 #10: per-investment 6-stage progress
+                      strip on the investor's Documents tab. Renders only
+                      when the application id is real (skip orphans). */}
+                  {appId !== 'orphan' && (
+                    <DocumentTrackingProgress investmentAppId={appId} theme={(theme === 'light' ? 'light' : 'dark')} />
+                  )}
+                  <G className="overflow-hidden" theme={theme}>
                     <div className={`px-5 py-3 border-b flex items-center justify-between gap-3 ${t('border-white/[0.06]','border-gray-200')}`}>
                       <div className="min-w-0">
                         <h4 className={`text-sm font-bold truncate ${t('text-white','text-gray-900')}`}>{fund}</h4>
@@ -963,6 +971,7 @@ export default function InvestmentFlowTab({
                       </table>
                     </div>
                   </G>
+                  </div>
                 )
               })
             })()

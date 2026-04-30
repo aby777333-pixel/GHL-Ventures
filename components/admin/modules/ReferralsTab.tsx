@@ -1,43 +1,58 @@
 'use client'
 
 import { useState, useEffect, useCallback, useMemo } from 'react'
-import { Users, UserPlus, CheckCircle2, XCircle, Eye, Mail, Phone, MapPin, IndianRupee } from 'lucide-react'
+import { Users, UserPlus, CheckCircle2, XCircle, Eye, Mail, Phone, MapPin, IndianRupee, TrendingUp } from 'lucide-react'
 import AdminGlass from '../shared/AdminGlass'
 import AdminDataTable, { type Column } from '../shared/AdminDataTable'
 import AdminBadge from '../shared/AdminBadge'
 import AdminModal, { ModalButton } from '../shared/AdminModal'
 import AdminKPICard from '../shared/AdminKPICard'
 import AdminEmptyState from '../shared/AdminEmptyState'
-import { fetchReferrals, updateReferral, type Referral } from '@/lib/supabase/adminDataService'
-import { formatDate } from '@/lib/admin/adminHooks'
+import {
+  fetchReferralsWithInvestment,
+  updateReferral,
+  updateReferralCommission,
+  type ReferralWithInvestment,
+} from '@/lib/supabase/adminDataService'
+import { formatDate, formatINR } from '@/lib/admin/adminHooks'
 
 type ShowToast = (msg: string, type?: 'success' | 'error' | 'info' | 'warning') => void
 
 export default function ReferralsTab({ showToast }: { showToast: ShowToast }) {
-  const [items, setItems] = useState<Referral[]>([])
+  const [items, setItems] = useState<ReferralWithInvestment[]>([])
   const [loading, setLoading] = useState(true)
-  const [selected, setSelected] = useState<Referral | null>(null)
+  const [selected, setSelected] = useState<ReferralWithInvestment | null>(null)
   const [notes, setNotes] = useState('')
   const [saving, setSaving] = useState(false)
+  // Pending 30-04-2026 #9: editable commission rate / status
+  const [commRate, setCommRate] = useState('1')
+  const [commStatus, setCommStatus] = useState<'pending' | 'accrued' | 'paid' | 'cancelled'>('pending')
 
   const load = useCallback(async () => {
     setLoading(true)
-    setItems(await fetchReferrals())
+    setItems(await fetchReferralsWithInvestment())
     setLoading(false)
   }, [])
 
   useEffect(() => { load() }, [load])
-  useEffect(() => { setNotes(selected?.admin_notes || '') }, [selected])
+  useEffect(() => {
+    setNotes(selected?.admin_notes || '')
+    setCommRate(String(selected?.commission_rate ?? '1'))
+    setCommStatus((selected?.commission_status as any) || 'pending')
+  }, [selected])
 
+  // Pending 30-04-2026 #9: KPI strip now also rolls up converted-investment
+  // amounts and total commission earned.
   const kpis = useMemo(() => {
     const total = items.length
     const pending = items.filter(r => r.status === 'new').length
-    const converted = items.filter(r => r.status === 'converted').length
-    const thisWeek = items.filter(r => Date.now() - new Date(r.created_at).getTime() < 7 * 24 * 3600 * 1000).length
-    return { total, pending, converted, thisWeek }
+    const converted = items.filter(r => r.status === 'converted' || r._investment).length
+    const totalInvested = items.reduce((s, r) => s + (Number(r.investment_amount) || 0), 0)
+    const totalCommission = items.reduce((s, r) => s + (Number(r.commission_amount) || 0), 0)
+    return { total, pending, converted, totalInvested, totalCommission }
   }, [items])
 
-  const variant = (s: Referral['status']): 'success' | 'warning' | 'error' | 'info' | 'neutral' => {
+  const variant = (s: ReferralWithInvestment['status']): 'success' | 'warning' | 'error' | 'info' | 'neutral' => {
     switch (s) {
       case 'converted': return 'success'
       case 'rejected': return 'error'
@@ -47,7 +62,7 @@ export default function ReferralsTab({ showToast }: { showToast: ShowToast }) {
     }
   }
 
-  const setStatus = async (status: Referral['status']) => {
+  const setStatus = async (status: ReferralWithInvestment['status']) => {
     if (!selected) return
     setSaving(true)
     const ok = await updateReferral(selected.id, { status, admin_notes: notes || null })
@@ -65,7 +80,23 @@ export default function ReferralsTab({ showToast }: { showToast: ShowToast }) {
     if (ok) load()
   }
 
-  const columns: Column<Referral>[] = [
+  const saveCommission = async () => {
+    if (!selected) return
+    const rate = parseFloat(commRate)
+    if (!Number.isFinite(rate) || rate < 0) { showToast('Invalid rate', 'warning'); return }
+    setSaving(true)
+    const amt = (Number(selected.investment_amount) || 0) * rate / 100
+    const res = await updateReferralCommission(selected.id, {
+      commission_rate: rate,
+      commission_amount: amt,
+      commission_status: commStatus,
+    })
+    setSaving(false)
+    if (res.ok) { showToast('Commission updated', 'success'); load(); setSelected(null) }
+    else showToast(res.error || 'Save failed', 'error')
+  }
+
+  const columns: Column<ReferralWithInvestment>[] = [
     {
       key: 'referrer_name', label: 'Referrer', sortable: true,
       render: (r) => (
@@ -76,7 +107,7 @@ export default function ReferralsTab({ showToast }: { showToast: ShowToast }) {
       ),
     },
     {
-      key: 'referee_name', label: 'Referee', sortable: true,
+      key: 'referee_name', label: 'Referred Investor', sortable: true,
       render: (r) => (
         <div className="min-w-0">
           <p className="text-sm text-white font-medium truncate">{r.referee_name}</p>
@@ -84,8 +115,34 @@ export default function ReferralsTab({ showToast }: { showToast: ShowToast }) {
         </div>
       ),
     },
-    { key: 'relationship', label: 'Relation', render: (r) => <span className="text-xs text-gray-300">{r.relationship || '-'}</span> },
-    { key: 'investable_surplus', label: 'Surplus', render: (r) => <span className="text-xs text-gray-300">{r.investable_surplus || '-'}</span> },
+    // Pending 30-04-2026 #9: investment + commission columns
+    {
+      key: 'investment_amount', label: 'Invested', sortable: true,
+      render: (r) => (
+        <span className={r.investment_amount ? 'text-emerald-400 font-semibold' : 'text-gray-600'}>
+          {r.investment_amount ? formatINR(Number(r.investment_amount)) : '—'}
+        </span>
+      ),
+    },
+    {
+      key: 'investment_status' as any, label: 'Inv. Status',
+      render: (r) => r._investment
+        ? <AdminBadge label={r._investment.status} variant={r._investment.status === 'approved' || r._investment.status === 'credited' ? 'success' : 'info'} dot size="sm" />
+        : <span className="text-gray-600 text-xs">—</span>,
+    },
+    {
+      key: 'commission_amount', label: 'Commission',
+      render: (r) => (
+        <div className="flex flex-col">
+          <span className={r.commission_amount ? 'text-amber-400 font-semibold text-xs' : 'text-gray-600 text-xs'}>
+            {r.commission_amount ? formatINR(Number(r.commission_amount)) : '—'}
+          </span>
+          {r.commission_status && r.commission_amount ? (
+            <span className="text-[10px] text-gray-500 capitalize">{r.commission_status}</span>
+          ) : null}
+        </div>
+      ),
+    },
     { key: 'created_at', label: 'Submitted', sortable: true, render: (r) => <span className="text-xs text-gray-400">{formatDate(r.created_at)}</span> },
     { key: 'status', label: 'Status', sortable: true, render: (r) => <AdminBadge label={r.status} variant={variant(r.status)} dot /> },
     { key: 'actions' as any, label: '', render: (r) => (
@@ -97,17 +154,18 @@ export default function ReferralsTab({ showToast }: { showToast: ShowToast }) {
 
   return (
     <AdminGlass>
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-5">
+      <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 mb-5">
         <AdminKPICard title="Total Referrals" value={kpis.total} icon={Users} color="#3B82F6" delay={0} />
         <AdminKPICard title="Pending" value={kpis.pending} icon={UserPlus} color="#F59E0B" delay={50} />
         <AdminKPICard title="Converted" value={kpis.converted} icon={CheckCircle2} color="#10B981" delay={100} />
-        <AdminKPICard title="This Week" value={kpis.thisWeek} icon={IndianRupee} color="#8B5CF6" delay={150} />
+        <AdminKPICard title="Total Invested" value={formatINR(kpis.totalInvested)} icon={IndianRupee} color="#8B5CF6" delay={150} />
+        <AdminKPICard title="Commission" value={formatINR(kpis.totalCommission)} icon={TrendingUp} color="#EC4899" delay={200} />
       </div>
 
       {loading ? (
         <div className="py-12 text-center text-sm text-gray-500">Loading referrals...</div>
       ) : items.length === 0 ? (
-        <AdminEmptyState title="No referrals yet" description="Submissions from /contact/refer will appear here." />
+        <AdminEmptyState title="No referrals yet" description="Submissions from /contact/refer or admin-linked referrals will appear here." />
       ) : (
         <AdminDataTable data={items as any} columns={columns as any} searchable exportable title="Investor Referrals" emptyMessage="No matching referrals" />
       )}
@@ -146,6 +204,69 @@ export default function ReferralsTab({ showToast }: { showToast: ShowToast }) {
                 {selected.referee_city && <p className="text-xs text-gray-400"><MapPin className="w-3 h-3 inline mr-1" />{selected.referee_city}</p>}
               </div>
             </div>
+
+            {/* Pending 30-04-2026 #9: investment + commission summary */}
+            {selected._investment && (
+              <div className="p-4 rounded-xl bg-emerald-500/[0.08] border border-emerald-500/20">
+                <p className="text-[11px] uppercase text-emerald-400 mb-2 font-semibold">Referred Investment</p>
+                <div className="grid grid-cols-3 gap-3 text-xs">
+                  <div>
+                    <p className="text-gray-500">Fund</p>
+                    <p className="text-white font-medium">{selected._investment.fund_vehicle || '—'}</p>
+                  </div>
+                  <div>
+                    <p className="text-gray-500">Amount</p>
+                    <p className="text-emerald-400 font-bold">{formatINR(Number(selected._investment.final_investment_amount) || Number(selected._investment.investment_amount) || 0)}</p>
+                  </div>
+                  <div>
+                    <p className="text-gray-500">Status</p>
+                    <p className="text-white capitalize">{selected._investment.status}</p>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            <div className="p-4 rounded-xl bg-amber-500/[0.06] border border-amber-500/20">
+              <p className="text-[11px] uppercase text-amber-400 mb-2 font-semibold">Commission</p>
+              <div className="grid grid-cols-3 gap-3">
+                <div>
+                  <label className="text-[10px] text-gray-500 uppercase">Rate (%)</label>
+                  <input
+                    type="number" step="0.1" min="0" max="100"
+                    value={commRate}
+                    onChange={e => setCommRate(e.target.value)}
+                    className="mt-1 w-full bg-white/[0.04] border border-white/[0.08] rounded-lg px-2 py-1.5 text-xs text-white focus:outline-none focus:border-amber-500/40"
+                  />
+                </div>
+                <div>
+                  <label className="text-[10px] text-gray-500 uppercase">Amount</label>
+                  <p className="mt-2 text-sm text-amber-400 font-bold">
+                    {formatINR((Number(selected.investment_amount) || 0) * (parseFloat(commRate) || 0) / 100)}
+                  </p>
+                </div>
+                <div>
+                  <label className="text-[10px] text-gray-500 uppercase">Status</label>
+                  <select
+                    value={commStatus}
+                    onChange={e => setCommStatus(e.target.value as any)}
+                    className="mt-1 w-full bg-white/[0.04] border border-white/[0.08] rounded-lg px-2 py-1.5 text-xs text-white focus:outline-none focus:border-amber-500/40"
+                  >
+                    <option value="pending">Pending</option>
+                    <option value="accrued">Accrued</option>
+                    <option value="paid">Paid</option>
+                    <option value="cancelled">Cancelled</option>
+                  </select>
+                </div>
+              </div>
+              <button
+                disabled={saving}
+                onClick={saveCommission}
+                className="mt-3 px-3 py-1.5 rounded-lg text-xs font-semibold text-white bg-amber-600 hover:bg-amber-700 transition-colors disabled:opacity-50"
+              >
+                Save Commission
+              </button>
+            </div>
+
             <div className="flex flex-wrap gap-2">
               <AdminBadge label={selected.status} variant={variant(selected.status)} dot />
               {selected.investable_surplus && <AdminBadge label={`Surplus: ${selected.investable_surplus}`} variant="purple" />}

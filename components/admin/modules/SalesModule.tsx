@@ -7,7 +7,9 @@ import {
   Trophy, Zap, Filter, Plus, Clock, CheckCircle2, XCircle,
   Star, BarChart3, Percent, DollarSign, UserPlus, Upload,
   ArrowRightLeft, Loader2, RefreshCw, Trash2, Check, Square, CheckSquare, X, ChevronDown,
+  Truck, Pencil, Hash,
 } from 'lucide-react'
+import DocumentTrackingModal from './DocumentTrackingModal'
 import AdminGlass from '../shared/AdminGlass'
 import AdminDataTable, { type Column } from '../shared/AdminDataTable'
 import AdminBadge from '../shared/AdminBadge'
@@ -43,6 +45,9 @@ const SALES_TABS = [
   { id: 'commissions', label: 'Commissions', icon: IndianRupee },
   { id: 'leaderboard', label: 'Leaderboard', icon: Trophy },
   { id: 'investments', label: 'Investments', icon: BarChart3 },
+  // Pending 30-04-2026 #3: Reference number management — separate
+  // listing of every investment + its reference number (manual or auto).
+  { id: 'reference-numbers', label: 'Reference Nos.', icon: Hash },
   { id: 'lead-statuses', label: 'Lead Statuses', icon: CheckCircle2 },
   { id: 'lead-sources', label: 'Lead Sources', icon: Zap },
   { id: 'lead-companies', label: 'Companies', icon: Target },
@@ -346,6 +351,7 @@ export default function SalesModule({ subTab, navigate, showToast }: SalesModule
         {activeTab === 'commissions' && <CommissionsTab showToast={showToast} />}
         {activeTab === 'leaderboard' && <LeaderboardTab leads={leads} />}
         {activeTab === 'investments' && <InvestmentsTab showToast={showToast} />}
+        {activeTab === 'reference-numbers' && <ReferenceNumbersTab showToast={showToast} />}
         {activeTab === 'lead-statuses' && <LeadMgmtWrapper subTab="lead-statuses" navigate={navigate} showToast={showToast} />}
         {activeTab === 'lead-sources' && <LeadMgmtWrapper subTab="lead-sources" navigate={navigate} showToast={showToast} />}
         {activeTab === 'lead-companies' && <LeadMgmtWrapper subTab="lead-companies" navigate={navigate} showToast={showToast} />}
@@ -1304,8 +1310,8 @@ async function generateInvestmentDocument(
         <div class="cert-body">
           <p>This is to certify that the person(s) named in this Certificate is/are the Registered/Beneficial Holder(s) of the within mentioned debenture(s) bearing the distinctive number(s) herein specified in the above-named Company subject to the Memorandum and Articles of Association of the Company and that the amount endorsed herein has been paid up on each such share.</p>
           <div class="cert-highlight">
-            DEBENTURE EACH OF RUPEES 10/-(Nominal Value)<br/>
-            AMOUNT PAID-UPPER DEBENTURE RUPEES 10/-[Rupees Ten Only]
+            DEBENTURE FACE VALUE: RUPEES 10/- EACH (Nominal Value)<br/>
+            AMOUNT PAID UP PER DEBENTURE: RUPEES 10/- (Rupees Ten Only)
           </div>
           <table class="cert-fields" style="width:100%;">
             <tr><td>Regd. Folio No. [FOLIO]</td><td class="right">Certificate No. [CERT_NO]</td></tr>
@@ -1527,6 +1533,16 @@ function InvestmentsTab({ showToast }: { showToast: (m: string, t?: 'success' | 
   // application along with its payout schedule and documents.
   const [deleteApp, setDeleteApp] = useState<any | null>(null)
   const [deleting, setDeleting] = useState(false)
+  // Pending 30-04-2026 #10: Document tracking modal anchor
+  const [trackingApp, setTrackingApp] = useState<any | null>(null)
+  // Pending 30-04-2026 #1: force-delete confirmation for approved investments
+  const [forceDeleteApp, setForceDeleteApp] = useState<any | null>(null)
+  const [forceDeleteAck, setForceDeleteAck] = useState('')
+  // Pending 30-04-2026 #3: editable reference number inside detail modal
+  const [refNumberDraft, setRefNumberDraft] = useState('')
+  const [savingRefNumber, setSavingRefNumber] = useState(false)
+  // Pending 30-04-2026 #2: Admin Investment Creation modal
+  const [createOpen, setCreateOpen] = useState(false)
 
   const loadData = useCallback(async () => {
     setLoading(true)
@@ -1578,14 +1594,23 @@ function InvestmentsTab({ showToast }: { showToast: (m: string, t?: 'success' | 
       return <AdminBadge label={s.label} variant={s.variant} size="sm" dot />
     }},
     { key: 'created_at', label: 'Date', sortable: true, render: (row) => <span className="text-gray-500 text-xs">{formatDate(row.created_at)}</span> },
-    { key: 'actions', label: '', width: '180px', render: (row) => {
+    { key: 'actions', label: '', width: '230px', render: (row) => {
       const isApproved = ['approved', 'credited', 'completed'].includes(row.status)
       return (
         <div className="flex items-center gap-1">
-          <button onClick={() => { setSelectedApp(row); setDetailOpen(true) }}
+          <button onClick={(e) => { e.stopPropagation(); setSelectedApp(row); setDetailOpen(true) }}
             title="View details"
             className="p-1.5 rounded-lg hover:bg-white/[0.06] text-gray-500 hover:text-white transition-colors">
             <Eye className="w-3.5 h-3.5" />
+          </button>
+          {/* Pending 30-04-2026 #10: per-row Tracking button. Available
+              for any investment so admin can also pre-stage tracking
+              before the row is approved. */}
+          <button onClick={(e) => { e.stopPropagation(); setTrackingApp(row) }}
+            title="Document tracking"
+            className="px-2 py-1 rounded-lg text-[10px] font-semibold text-white bg-brand-red hover:bg-brand-red/80 transition-colors inline-flex items-center gap-1">
+            <Truck className="w-3 h-3" />
+            Tracking
           </button>
           {/* Bug #18: Quick "Give Credit" action on approved rows so the admin
               doesn't need to open the modal to find the button. Hidden once
@@ -1603,12 +1628,16 @@ function InvestmentsTab({ showToast }: { showToast: (m: string, t?: 'success' | 
             </span>
           )}
           {isApproved ? (
-            <span
-              className="px-2 py-1 rounded-lg text-[10px] font-medium text-emerald-400 bg-emerald-500/10 border border-emerald-500/20"
-              title="Approved investments cannot be deleted"
+            // Pending 30-04-2026 #1: allow force-delete for mistaken
+            // approvals. Two-step confirmation (modal + typed phrase)
+            // prevents accidental wipes.
+            <button
+              onClick={(e) => { e.stopPropagation(); setForceDeleteApp(row); setForceDeleteAck('') }}
+              title="Force delete — wipes all linked records (payouts, docs, transactions, allotment, tracking)"
+              className="p-1.5 rounded-lg hover:bg-red-500/10 text-gray-500 hover:text-red-400 transition-colors"
             >
-              Approved
-            </span>
+              <Trash2 className="w-3.5 h-3.5" />
+            </button>
           ) : (
             <button
               onClick={(e) => { e.stopPropagation(); setDeleteApp(row) }}
@@ -1651,6 +1680,55 @@ function InvestmentsTab({ showToast }: { showToast: (m: string, t?: 'success' | 
     } finally {
       setDeleting(false)
     }
+  }
+
+  // Pending 30-04-2026 #1: Force-delete for approved/credited investments,
+  // with full cascade. Triggered from the modal below after the admin
+  // types DELETE to confirm.
+  const confirmForceDelete = async () => {
+    if (!forceDeleteApp) return
+    if (forceDeleteAck.trim().toUpperCase() !== 'DELETE') {
+      showToast('Type DELETE to confirm', 'warning'); return
+    }
+    setUpdating(true)
+    try {
+      const { deleteInvestmentSafe } = await import('@/lib/supabase/adminDataService')
+      const res = await deleteInvestmentSafe(forceDeleteApp.id, { force: true })
+      if (res.ok) {
+        showToast('Investment fully deleted (all linked records cleared)', 'success')
+        loadData()
+        if (selectedApp?.id === forceDeleteApp.id) { setDetailOpen(false); setSelectedApp(null) }
+        setForceDeleteApp(null); setForceDeleteAck('')
+      } else {
+        showToast(res.error || 'Failed to force-delete investment', 'error')
+      }
+    } catch (e: any) {
+      showToast(e?.message || 'Error force-deleting investment', 'error')
+    } finally { setUpdating(false) }
+  }
+
+  // Pending 30-04-2026 #3: keep the editable reference-number input in
+  // sync whenever a different application is opened in the detail modal.
+  useEffect(() => {
+    setRefNumberDraft(selectedApp?.reference_number || '')
+  }, [selectedApp?.id, selectedApp?.reference_number])
+
+  const handleSaveReferenceNumber = async () => {
+    if (!selectedApp) return
+    const trimmed = refNumberDraft.trim()
+    if (!trimmed) { showToast('Reference number cannot be empty', 'warning'); return }
+    setSavingRefNumber(true)
+    try {
+      const { updateInvestmentReferenceNumber } = await import('@/lib/supabase/adminDataService')
+      const res = await updateInvestmentReferenceNumber(selectedApp.id, trimmed)
+      if (res.ok) {
+        showToast('Reference number updated', 'success')
+        setApplications(prev => prev.map(a => a.id === selectedApp.id ? { ...a, reference_number: trimmed } : a))
+        setSelectedApp((s: any) => s ? { ...s, reference_number: trimmed } : s)
+      } else {
+        showToast(res.error || 'Save failed', 'error')
+      }
+    } finally { setSavingRefNumber(false) }
   }
 
   const handleStatusUpdate = async (newStatus: string) => {
@@ -1850,9 +1928,20 @@ function InvestmentsTab({ showToast }: { showToast: (m: string, t?: 'success' | 
 
       {/* Table */}
       <AdminGlass padding="p-0">
-        <div className="px-5 py-4 border-b border-white/[0.06] flex items-center justify-between">
+        <div className="px-5 py-4 border-b border-white/[0.06] flex items-center justify-between gap-2">
           <h3 className="text-sm font-semibold text-white">All Investment Applications</h3>
-          <button onClick={loadData} className="p-1.5 rounded-lg hover:bg-white/[0.06] text-gray-500 hover:text-white transition-colors"><RefreshCw className="w-3.5 h-3.5" /></button>
+          <div className="flex items-center gap-2">
+            {/* Pending 30-04-2026 #2: admin creates investment for an investor. */}
+            <button
+              onClick={() => setCreateOpen(true)}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-white bg-brand-red hover:bg-brand-red/80 transition-colors"
+              title="Create an investment on behalf of an investor"
+            >
+              <Plus className="w-3.5 h-3.5" />
+              Create Investment
+            </button>
+            <button onClick={loadData} className="p-1.5 rounded-lg hover:bg-white/[0.06] text-gray-500 hover:text-white transition-colors"><RefreshCw className="w-3.5 h-3.5" /></button>
+          </div>
         </div>
         {loading ? (
           <div className="flex items-center justify-center py-16"><Loader2 className="w-5 h-5 text-brand-red animate-spin" /></div>
@@ -1939,6 +2028,30 @@ function InvestmentsTab({ showToast }: { showToast: (m: string, t?: 'success' | 
                 <p className="text-sm text-gray-300 bg-white/[0.03] p-3 rounded-xl border border-white/[0.04]">{selectedApp.admin_notes}</p>
               </div>
             )}
+
+            {/* Pending 30-04-2026 #3: editable reference number. Auto-
+                generation still runs on approval, but admin can override
+                here if the investor came in with a pre-existing ref. */}
+            <div className="border-t border-white/[0.06] pt-4">
+              <p className="text-[10px] text-gray-500 uppercase tracking-wider mb-2">Investment Reference Number</p>
+              <div className="flex items-center gap-2">
+                <input
+                  type="text"
+                  value={refNumberDraft}
+                  onChange={e => setRefNumberDraft(e.target.value)}
+                  placeholder="GHLVEN/001/2526"
+                  className="flex-1 bg-white/[0.04] border border-white/[0.08] rounded-lg px-3 py-2 text-sm text-white font-mono focus:outline-none focus:border-brand-red/40"
+                />
+                <button
+                  disabled={savingRefNumber || refNumberDraft.trim() === (selectedApp.reference_number || '')}
+                  onClick={handleSaveReferenceNumber}
+                  className="px-3 py-2 rounded-lg text-xs font-semibold text-white bg-brand-red hover:bg-brand-red/80 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                >
+                  {savingRefNumber ? 'Saving…' : 'Save'}
+                </button>
+              </div>
+              <p className="text-[10px] text-gray-500 mt-1">Manually override the auto-generated reference number — useful when migrating existing investors.</p>
+            </div>
 
             {/* Bug #12, #15: Investment Transactions submitted by the investor */}
             <div className="border-t border-white/[0.06] pt-4">
@@ -2259,6 +2372,470 @@ function InvestmentsTab({ showToast }: { showToast: (m: string, t?: 'success' | 
           </div>
         )}
       </AdminModal>
+
+      {/* Pending 30-04-2026 #10: Document Tracking modal */}
+      <DocumentTrackingModal
+        isOpen={!!trackingApp}
+        onClose={() => setTrackingApp(null)}
+        investmentAppId={trackingApp?.id || null}
+        investorName={trackingApp?._client?.full_name || trackingApp?._client?.email}
+        showToast={showToast}
+      />
+
+      {/* Pending 30-04-2026 #1: Force Delete modal — wipes all linked records */}
+      <AdminModal
+        isOpen={!!forceDeleteApp}
+        onClose={() => { if (!updating) { setForceDeleteApp(null); setForceDeleteAck('') } }}
+        title="Force Delete Investment"
+        subtitle={forceDeleteApp ? `${forceDeleteApp._client?.full_name || 'Investor'} — ${formatINR(Number(forceDeleteApp.investment_amount) || 0)}` : ''}
+        maxWidth="max-w-md"
+      >
+        {forceDeleteApp && (
+          <div className="space-y-4">
+            <div className="p-3 rounded-xl bg-red-500/10 border border-red-500/20 text-xs text-red-300">
+              <p className="font-semibold mb-1">This will permanently wipe ALL linked records:</p>
+              <ul className="list-disc pl-4 space-y-0.5">
+                <li>Payout schedule (monthly_payouts)</li>
+                <li>Investment documents</li>
+                <li>Investment transactions</li>
+                <li>Allotment rows</li>
+                <li>Document tracking</li>
+              </ul>
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-400 mb-1.5">
+                Type <span className="font-mono text-red-400">DELETE</span> to confirm
+              </label>
+              <input
+                type="text"
+                value={forceDeleteAck}
+                onChange={e => setForceDeleteAck(e.target.value)}
+                placeholder="DELETE"
+                className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2.5 text-sm text-white font-mono focus:outline-none focus:border-red-500/40 focus:ring-1 focus:ring-red-500/20"
+                autoFocus
+              />
+            </div>
+            <div className="flex justify-end gap-3 pt-4 border-t border-white/[0.06]">
+              <button disabled={updating} onClick={() => { setForceDeleteApp(null); setForceDeleteAck('') }}
+                className="px-4 py-2 rounded-xl text-sm font-medium text-gray-400 hover:text-white hover:bg-white/[0.06] transition-colors disabled:opacity-50">
+                Cancel
+              </button>
+              <button
+                disabled={updating || forceDeleteAck.trim().toUpperCase() !== 'DELETE'}
+                onClick={confirmForceDelete}
+                className="px-5 py-2 rounded-xl text-sm font-medium text-white bg-red-600 hover:bg-red-700 transition-colors disabled:opacity-40"
+              >
+                {updating ? 'Deleting…' : 'Force Delete'}
+              </button>
+            </div>
+          </div>
+        )}
+      </AdminModal>
+
+      {/* Pending 30-04-2026 #2: Admin Investment Creation modal */}
+      <AdminCreateInvestmentModal
+        isOpen={createOpen}
+        onClose={() => setCreateOpen(false)}
+        showToast={showToast}
+        onCreated={() => { setCreateOpen(false); loadData() }}
+      />
     </div>
   )
 }
+
+// ════════════════════════════════════════════════════════════════
+// Pending 30-04-2026 #2 — AdminCreateInvestmentModal
+//
+// Lets admin create a fresh investment_applications row for any
+// existing client. Mirrors the essential fields of the investor flow:
+// fund vehicle, amount, tenure, optional reference number override,
+// and an optional transaction record (txn id, amount, date, mode).
+// ════════════════════════════════════════════════════════════════
+function AdminCreateInvestmentModal({
+  isOpen, onClose, showToast, onCreated,
+}: {
+  isOpen: boolean
+  onClose: () => void
+  showToast: (m: string, t?: 'success' | 'error' | 'info' | 'warning') => void
+  onCreated: () => void
+}) {
+  const [clients, setClients] = useState<any[]>([])
+  const [loading, setLoading] = useState(false)
+  const [submitting, setSubmitting] = useState(false)
+  const [form, setForm] = useState({
+    client_id: '',
+    fund_vehicle: 'Alternate route to Invest in AIF via Debenture',
+    investment_amount: '',
+    tenure_preference: '3 years',
+    reference_number: '',
+    notes: '',
+    txn_id: '',
+    txn_amount: '',
+    txn_date: new Date().toISOString().split('T')[0],
+    payment_mode: 'NEFT',
+    bank_name: '',
+  })
+
+  useEffect(() => {
+    if (!isOpen) return
+    let cancelled = false
+    ;(async () => {
+      setLoading(true)
+      try {
+        if (!isSupabaseConfigured()) return
+        const { data } = await (supabase as any)
+          .from('clients')
+          .select('id, full_name, email, phone, client_code')
+          .order('full_name', { ascending: true })
+          .limit(500)
+        if (!cancelled) setClients((data as any[]) || [])
+      } finally { if (!cancelled) setLoading(false) }
+    })()
+    return () => { cancelled = true }
+  }, [isOpen])
+
+  const reset = () => setForm({
+    client_id: '', fund_vehicle: 'Alternate route to Invest in AIF via Debenture',
+    investment_amount: '', tenure_preference: '3 years', reference_number: '', notes: '',
+    txn_id: '', txn_amount: '', txn_date: new Date().toISOString().split('T')[0],
+    payment_mode: 'NEFT', bank_name: '',
+  })
+
+  const handleSubmit = async () => {
+    if (!form.client_id) { showToast('Select an investor', 'warning'); return }
+    const amt = parseFloat(form.investment_amount)
+    if (!Number.isFinite(amt) || amt <= 0) { showToast('Enter a valid amount', 'warning'); return }
+    setSubmitting(true)
+    try {
+      const { adminCreateInvestmentForClient } = await import('@/lib/supabase/adminDataService')
+      const { data: { user } } = await (supabase as any).auth.getUser()
+      const txnAmt = parseFloat(form.txn_amount)
+      const res = await adminCreateInvestmentForClient({
+        client_id: form.client_id,
+        fund_vehicle: form.fund_vehicle,
+        investment_amount: amt,
+        tenure_preference: form.tenure_preference,
+        reference_number: form.reference_number,
+        notes: form.notes,
+        transaction: form.txn_id || form.txn_amount ? {
+          transaction_id: form.txn_id || undefined,
+          transaction_amount: Number.isFinite(txnAmt) ? txnAmt : amt,
+          transaction_date: form.txn_date,
+          payment_mode: form.payment_mode,
+          bank_name: form.bank_name || null,
+        } : null,
+      }, user?.id || '')
+      if (res.ok) {
+        showToast('Investment created — review on the list and approve when ready', 'success')
+        reset()
+        onCreated()
+      } else {
+        showToast(res.error || 'Failed to create investment', 'error')
+      }
+    } finally { setSubmitting(false) }
+  }
+
+  return (
+    <AdminModal
+      isOpen={isOpen}
+      onClose={() => { if (!submitting) { reset(); onClose() } }}
+      title="Create Investment for Investor"
+      subtitle="Mirrors the investor flow — fund, amount, tenure, optional transaction"
+      maxWidth="max-w-2xl"
+      footer={
+        <>
+          <ModalButton onClick={() => { if (!submitting) { reset(); onClose() } }}>Cancel</ModalButton>
+          <ModalButton variant="primary" onClick={handleSubmit} disabled={submitting}>
+            {submitting ? 'Creating…' : 'Create Investment'}
+          </ModalButton>
+        </>
+      }
+    >
+      <div className="space-y-4">
+        {/* Investor */}
+        <div>
+          <label className="block text-xs font-medium text-gray-400 mb-1.5">Investor *</label>
+          <select
+            value={form.client_id}
+            onChange={e => setForm(f => ({ ...f, client_id: e.target.value }))}
+            className="w-full bg-white/[0.04] border border-white/[0.08] rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:border-brand-red/40"
+          >
+            <option value="">{loading ? 'Loading clients…' : 'Select investor'}</option>
+            {clients.map(c => (
+              <option key={c.id} value={c.id}>
+                {c.full_name || c.email || c.id} {c.client_code ? `(${c.client_code})` : ''}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        {/* Fund / amount / tenure */}
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <label className="block text-xs font-medium text-gray-400 mb-1.5">Fund / Vehicle *</label>
+            <select
+              value={form.fund_vehicle}
+              onChange={e => setForm(f => ({ ...f, fund_vehicle: e.target.value }))}
+              className="w-full bg-white/[0.04] border border-white/[0.08] rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:border-brand-red/40"
+            >
+              <option>Alternate route to Invest in AIF via Debenture</option>
+              <option>Direct AIF Route</option>
+              <option>Alternate route to Invest in AIF via LLP</option>
+              <option>Co-Investment Route</option>
+            </select>
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-gray-400 mb-1.5">Tenure *</label>
+            <select
+              value={form.tenure_preference}
+              onChange={e => setForm(f => ({ ...f, tenure_preference: e.target.value }))}
+              className="w-full bg-white/[0.04] border border-white/[0.08] rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:border-brand-red/40"
+            >
+              <option>3 years</option><option>5 years</option><option>7 years</option><option>10 years</option>
+            </select>
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-gray-400 mb-1.5">Investment Amount (₹) *</label>
+            <input
+              type="number" min="0" step="1000"
+              value={form.investment_amount}
+              onChange={e => setForm(f => ({ ...f, investment_amount: e.target.value }))}
+              placeholder="e.g. 1000000"
+              className="w-full bg-white/[0.04] border border-white/[0.08] rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:border-brand-red/40"
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-gray-400 mb-1.5">Reference Number (optional)</label>
+            <input
+              type="text"
+              value={form.reference_number}
+              onChange={e => setForm(f => ({ ...f, reference_number: e.target.value }))}
+              placeholder="Auto-generated if blank"
+              className="w-full bg-white/[0.04] border border-white/[0.08] rounded-lg px-3 py-2.5 text-sm font-mono text-white focus:outline-none focus:border-brand-red/40"
+            />
+          </div>
+        </div>
+
+        {/* Transaction (optional) */}
+        <div className="border-t border-white/[0.06] pt-4">
+          <p className="text-[11px] uppercase tracking-wider text-gray-500 mb-3">Payment Details (optional)</p>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs font-medium text-gray-400 mb-1.5">Transaction ID</label>
+              <input
+                type="text"
+                value={form.txn_id}
+                onChange={e => setForm(f => ({ ...f, txn_id: e.target.value }))}
+                placeholder="UTR / RRN / Cheque #"
+                className="w-full bg-white/[0.04] border border-white/[0.08] rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:border-brand-red/40"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-400 mb-1.5">Txn Amount (₹)</label>
+              <input
+                type="number" min="0"
+                value={form.txn_amount}
+                onChange={e => setForm(f => ({ ...f, txn_amount: e.target.value }))}
+                placeholder="Defaults to investment amount"
+                className="w-full bg-white/[0.04] border border-white/[0.08] rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:border-brand-red/40"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-400 mb-1.5">Transaction Date</label>
+              <input
+                type="date"
+                value={form.txn_date}
+                onChange={e => setForm(f => ({ ...f, txn_date: e.target.value }))}
+                max={new Date().toISOString().split('T')[0]}
+                className="w-full bg-white/[0.04] border border-white/[0.08] rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:border-brand-red/40"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-400 mb-1.5">Payment Mode</label>
+              <select
+                value={form.payment_mode}
+                onChange={e => setForm(f => ({ ...f, payment_mode: e.target.value }))}
+                className="w-full bg-white/[0.04] border border-white/[0.08] rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:border-brand-red/40"
+              >
+                <option>NEFT</option><option>RTGS</option><option>IMPS</option>
+                <option>UPI</option><option>Cheque</option><option>Demand Draft</option>
+              </select>
+            </div>
+            <div className="col-span-2">
+              <label className="block text-xs font-medium text-gray-400 mb-1.5">Bank Name</label>
+              <input
+                type="text"
+                value={form.bank_name}
+                onChange={e => setForm(f => ({ ...f, bank_name: e.target.value }))}
+                placeholder="e.g. HDFC Bank"
+                className="w-full bg-white/[0.04] border border-white/[0.08] rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:border-brand-red/40"
+              />
+            </div>
+          </div>
+        </div>
+
+        <div>
+          <label className="block text-xs font-medium text-gray-400 mb-1.5">Admin Notes</label>
+          <textarea
+            rows={2}
+            value={form.notes}
+            onChange={e => setForm(f => ({ ...f, notes: e.target.value }))}
+            placeholder="Why is admin creating this investment? (e.g. legacy migration)"
+            className="w-full bg-white/[0.04] border border-white/[0.08] rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:border-brand-red/40 resize-none"
+          />
+        </div>
+
+        <p className="text-[10px] text-gray-500">
+          New investments start in <span className="font-semibold text-amber-400">pending</span>. Review and approve them from the list to trigger the auto-generated documents and payout schedule.
+        </p>
+      </div>
+    </AdminModal>
+  )
+}
+
+// ════════════════════════════════════════════════════════════════
+// Pending 30-04-2026 #3 — ReferenceNumbersTab
+//
+// Listing of every investment + its reference number with inline
+// edit. Useful when migrating older investors whose ref numbers
+// don't match the auto-generated GHLVEN/seq/FY format.
+// ════════════════════════════════════════════════════════════════
+function ReferenceNumbersTab({ showToast }: { showToast: (m: string, t?: 'success' | 'error' | 'info' | 'warning') => void }) {
+  const [rows, setRows] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
+  const [search, setSearch] = useState('')
+  const [editingId, setEditingId] = useState<string | null>(null)
+  const [draft, setDraft] = useState('')
+  const [saving, setSaving] = useState(false)
+
+  const load = useCallback(async () => {
+    setLoading(true)
+    try {
+      const { fetchInvestmentReferenceList } = await import('@/lib/supabase/adminDataService')
+      setRows(await fetchInvestmentReferenceList())
+    } finally { setLoading(false) }
+  }, [])
+  useEffect(() => { load() }, [load])
+
+  const filtered = useMemo(() => {
+    const q = search.trim().toLowerCase()
+    if (!q) return rows
+    return rows.filter((r: any) => {
+      return (r.reference_number || '').toLowerCase().includes(q)
+        || (r._client?.full_name || '').toLowerCase().includes(q)
+        || (r._client?.email || '').toLowerCase().includes(q)
+        || (r._client?.client_code || '').toLowerCase().includes(q)
+        || (r.fund_vehicle || '').toLowerCase().includes(q)
+        || (r.id || '').toLowerCase().includes(q)
+    })
+  }, [rows, search])
+
+  const startEdit = (r: any) => { setEditingId(r.id); setDraft(r.reference_number || '') }
+  const cancelEdit = () => { setEditingId(null); setDraft('') }
+
+  const saveEdit = async () => {
+    if (!editingId) return
+    const trimmed = draft.trim()
+    if (!trimmed) { showToast('Reference number cannot be empty', 'warning'); return }
+    setSaving(true)
+    try {
+      const { updateInvestmentReferenceNumber } = await import('@/lib/supabase/adminDataService')
+      const res = await updateInvestmentReferenceNumber(editingId, trimmed)
+      if (res.ok) {
+        setRows(prev => prev.map(r => r.id === editingId ? { ...r, reference_number: trimmed } : r))
+        showToast('Reference number updated', 'success')
+        cancelEdit()
+      } else {
+        showToast(res.error || 'Save failed', 'error')
+      }
+    } finally { setSaving(false) }
+  }
+
+  return (
+    <div className="space-y-4">
+      <AdminGlass padding="p-0">
+        <div className="px-5 py-4 border-b border-white/[0.06] flex items-center justify-between gap-3">
+          <div>
+            <h3 className="text-sm font-semibold text-white">Investment Reference Numbers</h3>
+            <p className="text-[11px] text-gray-500">
+              Manual override of auto-generated reference numbers — useful for migrated/legacy investors.
+            </p>
+          </div>
+          <div className="flex items-center gap-2">
+            <input
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              placeholder="Search ref / investor / fund…"
+              className="bg-white/[0.04] border border-white/[0.08] rounded-lg px-3 py-1.5 text-xs text-white w-64 focus:outline-none focus:border-brand-red/40"
+            />
+            <button onClick={load} className="p-1.5 rounded-lg hover:bg-white/[0.06] text-gray-500 hover:text-white transition-colors"><RefreshCw className="w-3.5 h-3.5" /></button>
+          </div>
+        </div>
+        {loading ? (
+          <div className="flex items-center justify-center py-16"><Loader2 className="w-5 h-5 text-brand-red animate-spin" /></div>
+        ) : filtered.length === 0 ? (
+          <AdminEmptyState icon={Hash} title="No reference numbers" description="Approved or admin-created investments will appear here." />
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-xs">
+              <thead>
+                <tr className="text-gray-500 border-b border-white/[0.06] bg-white/[0.02]">
+                  <th className="text-left py-3 px-4 font-bold uppercase tracking-wider">Reference Number</th>
+                  <th className="text-left py-3 px-4 font-bold uppercase tracking-wider">Investment ID</th>
+                  <th className="text-left py-3 px-4 font-bold uppercase tracking-wider">Investor</th>
+                  <th className="text-left py-3 px-4 font-bold uppercase tracking-wider">GHL ID</th>
+                  <th className="text-left py-3 px-4 font-bold uppercase tracking-wider">Fund</th>
+                  <th className="text-right py-3 px-4 font-bold uppercase tracking-wider">Amount</th>
+                  <th className="text-left py-3 px-4 font-bold uppercase tracking-wider">Status</th>
+                  <th className="text-right py-3 px-4 font-bold uppercase tracking-wider">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filtered.map((r: any) => (
+                  <tr key={r.id} className="border-b border-white/[0.04] hover:bg-white/[0.02] transition-colors">
+                    <td className="py-3 px-4">
+                      {editingId === r.id ? (
+                        <div className="flex items-center gap-1">
+                          <input
+                            value={draft}
+                            onChange={e => setDraft(e.target.value)}
+                            className="bg-white/[0.04] border border-white/[0.08] rounded px-2 py-1 text-xs font-mono text-white w-44 focus:outline-none focus:border-brand-red/40"
+                            autoFocus
+                          />
+                          <button disabled={saving} onClick={saveEdit} className="p-1 rounded text-emerald-400 hover:bg-emerald-500/10"><Check className="w-3 h-3" /></button>
+                          <button disabled={saving} onClick={cancelEdit} className="p-1 rounded text-gray-500 hover:text-white hover:bg-white/[0.06]"><X className="w-3 h-3" /></button>
+                        </div>
+                      ) : (
+                        <span className="font-mono text-white">{r.reference_number || <span className="text-gray-600 italic">— not set —</span>}</span>
+                      )}
+                    </td>
+                    <td className="py-3 px-4 font-mono text-gray-400 text-[11px]">{(r.id || '').slice(0, 8).toUpperCase()}…</td>
+                    <td className="py-3 px-4 text-white">{r._client?.full_name || '—'}<br /><span className="text-gray-500 text-[10px]">{r._client?.email || ''}</span></td>
+                    <td className="py-3 px-4 font-mono text-[11px] text-gray-400">{r._client?.client_code || '—'}</td>
+                    <td className="py-3 px-4 text-gray-400">{r.fund_vehicle || '—'}</td>
+                    <td className="py-3 px-4 text-right font-semibold text-white">{formatINR(Number(r.investment_amount) || 0)}</td>
+                    <td className="py-3 px-4">
+                      <AdminBadge label={r.status} variant={INV_STATUS_MAP[r.status]?.variant || 'info'} size="sm" dot />
+                    </td>
+                    <td className="py-3 px-4 text-right">
+                      {editingId === r.id ? null : (
+                        <button
+                          onClick={() => startEdit(r)}
+                          className="px-2 py-1 rounded text-[10px] font-semibold text-gray-300 bg-white/[0.04] border border-white/[0.06] hover:bg-white/[0.08] hover:text-white transition-colors inline-flex items-center gap-1"
+                        >
+                          <Pencil className="w-3 h-3" />
+                          Edit
+                        </button>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </AdminGlass>
+    </div>
+  )
+}
+
