@@ -919,18 +919,24 @@ export async function fetchReferralList(userId?: string): Promise<{ name: string
         status: c.kyc_status === 'verified' ? 'Verified' : 'Pending',
       }))
     }
-    // Fallback: direct query (works for admin/staff users)
+    // Fallback: direct query (works for admin/staff users).
+    // Re-Testing 30-04-2026 #6: prefer joined_at so the date column
+    // reflects the admin-edited join date instead of the system-stamped
+    // created_at.
     const { data: fallback } = await sb
       .from('clients')
-      .select('full_name, email, created_at, kyc_status')
+      .select('full_name, email, created_at, joined_at, kyc_status')
       .eq('referred_by', code)
       .order('created_at', { ascending: false })
     if (!fallback || fallback.length === 0) return []
-    return fallback.map((c: any) => ({
-      name: c.full_name || c.email || 'Referred User',
-      date: c.created_at ? new Date(c.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : '—',
-      status: c.kyc_status === 'verified' ? 'Verified' : 'Pending',
-    }))
+    return fallback.map((c: any) => {
+      const dateSrc = c.joined_at || c.created_at
+      return {
+        name: c.full_name || c.email || 'Referred User',
+        date: dateSrc ? new Date(dateSrc).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : '—',
+        status: c.kyc_status === 'verified' ? 'Verified' : 'Pending',
+      }
+    })
   } catch (_e) {
     return []
   }

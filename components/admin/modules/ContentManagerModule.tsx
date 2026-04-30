@@ -149,6 +149,9 @@ export default function ContentManagerModule({ subTab, navigate, showToast }: Co
   // Upload a cover image to the public `ghl-media` Supabase Storage bucket
   // and wire the resulting URL into formCoverImage. Called from the file
   // input on the editor. Accepts common image types up to 5 MB.
+  // Re-Testing 30-04-2026 #4: prefix the upload path by activeTab so
+  // blog covers land under `blog-covers/` and FIQ covers under
+  // `fiq-covers/` — keeps the bucket organised.
   const uploadCoverImage = async (file: File) => {
     if (!isSupabaseConfigured()) {
       showToast('Supabase not configured', 'error')
@@ -165,7 +168,8 @@ export default function ContentManagerModule({ subTab, navigate, showToast }: Co
     setCoverUploading(true)
     try {
       const ext = (file.name.split('.').pop() || 'jpg').toLowerCase().replace(/[^a-z0-9]/g, '') || 'jpg'
-      const filename = `fiq-covers/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`
+      const folder = activeTab === 'blog' ? 'blog-covers' : 'fiq-covers'
+      const filename = `${folder}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`
       const { error: upErr } = await supabase.storage.from('ghl-media').upload(filename, file, {
         cacheControl: '3600', upsert: false, contentType: file.type,
       })
@@ -689,7 +693,11 @@ export default function ContentManagerModule({ subTab, navigate, showToast }: Co
                 placeholder="Paste URL or click Upload →"
                 className={inputClass}
               />
-              {type === 'financial-iq' && (
+              {/* Re-Testing 30-04-2026 #4: image upload was gated to
+                  financial-iq only, so blog posts couldn't upload a
+                  cover image. Make the upload button available for
+                  both content types. */}
+              {(type === 'financial-iq' || type === 'blog') && (
                 <div className="flex items-center gap-2 flex-wrap">
                   <label className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/[0.04] border border-white/[0.08] text-xs text-gray-300 hover:bg-white/[0.08] cursor-pointer transition-colors">
                     {coverUploading ? (

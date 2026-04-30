@@ -870,7 +870,9 @@ export default function InvestmentFlowTab({
               strip per active investment ABOVE the documents list, so
               the investor sees admin status updates even when no doc
               files have been uploaded yet. The strip pulls live from
-              public.investment_doc_tracking on every mount. */}
+              public.investment_doc_tracking on every mount.
+              Re-Testing #5: pass fundLabel + refLabel so the strip
+              header identifies WHICH investment it represents. */}
           {investApps.length > 0 && investApps
             .filter((app: any) => ['approved', 'credited', 'completed'].includes(app.status))
             .map((app: any) => (
@@ -878,6 +880,8 @@ export default function InvestmentFlowTab({
                 key={`tracking-${app.id}`}
                 investmentAppId={app.id}
                 theme={(theme === 'light' ? 'light' : 'dark')}
+                fundLabel={app.fund_vehicle || 'Investment'}
+                refLabel={app.reference_number || app.commitment_id || `GHL-CMT-${String(app.id).slice(0, 8).toUpperCase()}`}
               />
             ))
           }

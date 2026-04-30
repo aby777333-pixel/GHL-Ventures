@@ -49,7 +49,7 @@ export default function ClientModule({ subTab, navigate, showToast }: ClientModu
   // Tests 28-04-2026 #2: admin can now set/update the referral code
   // (`clients.referred_by`) for users that signed up without one. The
   // referrer is linked back through the same column the dashboard uses.
-  const [clientForm, setClientForm] = useState({ full_name: '', email: '', phone: '', pan: '', risk_profile: 'moderate', assigned_rm: '', total_invested: '', referred_by: '' })
+  const [clientForm, setClientForm] = useState({ full_name: '', email: '', phone: '', pan: '', risk_profile: 'moderate', assigned_rm: '', total_invested: '', referred_by: '', joined_at: '' })
   // Add KYC on behalf of an existing client created without KYC.
   // addKYCTarget holds the client + resolved user_id (looked up on open).
   const [addKYCTarget, setAddKYCTarget] = useState<{ client: Client; userId: string } | null>(null)
@@ -236,7 +236,7 @@ export default function ClientModule({ subTab, navigate, showToast }: ClientModu
           <p className="text-sm text-gray-500 mt-1">Manage investors, KYC verification, and client relationships</p>
         </div>
         <button
-          onClick={() => { setEditingClient(null); setClientForm({ full_name: '', email: '', phone: '', pan: '', risk_profile: 'moderate', assigned_rm: '', total_invested: '', referred_by: '' }); setAddClientOpen(true) }}
+          onClick={() => { setEditingClient(null); setClientForm({ full_name: '', email: '', phone: '', pan: '', risk_profile: 'moderate', assigned_rm: '', total_invested: '', referred_by: '', joined_at: '' }); setAddClientOpen(true) }}
           className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium text-white bg-brand-red/20 border border-brand-red/30 hover:bg-brand-red/30 transition-colors self-start admin-btn-press"
         >
           <UserPlus className="w-4 h-4" />
@@ -325,6 +325,8 @@ export default function ClientModule({ subTab, navigate, showToast }: ClientModu
                   assigned_rm: (c as any).assignedRMId || '',
                   total_invested: String(c.aum || ''),
                   referred_by: (c as any).referredBy || '',
+                  // Re-Testing 30-04-2026 #6: editable joined date.
+                  joined_at: ((c as any).joinedAt || c.joinDate || '').slice(0, 10),
                 })
                 // Close the profile modal first, then open the edit modal on the
                 // next tick so the portal/overflow transitions cleanly. Previously
@@ -402,7 +404,11 @@ export default function ClientModule({ subTab, navigate, showToast }: ClientModu
                     // sent as NULL so we don't accidentally lock a blank
                     // referrer in.
                     const referredBy = (clientForm.referred_by || '').trim() || null
-                    const { error } = await sb.from('clients').update({
+                    // Re-Testing 30-04-2026 #6: persist editable joined_at.
+                    // Empty string → leave existing value alone, otherwise
+                    // anchor the date at midnight UTC.
+                    const joinedAtValue = (clientForm.joined_at || '').trim()
+                    const updatePayload: Record<string, any> = {
                       full_name: clientForm.full_name,
                       email: clientForm.email,
                       phone: clientForm.phone || null,
@@ -411,7 +417,12 @@ export default function ClientModule({ subTab, navigate, showToast }: ClientModu
                       assigned_rm: sanitizedRM,
                       total_invested: parseFloat(clientForm.total_invested) || 0,
                       referred_by: referredBy,
-                    }).eq('id', editingClient.id)
+                    }
+                    if (joinedAtValue) {
+                      // Send a date-only ISO so the column stores the chosen day.
+                      updatePayload.joined_at = `${joinedAtValue}T00:00:00Z`
+                    }
+                    const { error } = await sb.from('clients').update(updatePayload).eq('id', editingClient.id)
                     if (error) throw error
                     // Best-effort: if the entered code matches a client's
                     // referral_code, ensure a referrals row links them so
@@ -448,7 +459,7 @@ export default function ClientModule({ subTab, navigate, showToast }: ClientModu
                     }
                     setAddClientOpen(false)
                     setEditingClient(null)
-                    setClientForm({ full_name: '', email: '', phone: '', pan: '', risk_profile: 'moderate', assigned_rm: '', total_invested: '', referred_by: '' })
+                    setClientForm({ full_name: '', email: '', phone: '', pan: '', risk_profile: 'moderate', assigned_rm: '', total_invested: '', referred_by: '', joined_at: '' })
                     showToast(`Client ${clientForm.full_name} updated successfully`, 'success')
                     loadData()
                   } else {
@@ -470,7 +481,7 @@ export default function ClientModule({ subTab, navigate, showToast }: ClientModu
                     })
                     if (result) {
                       setAddClientOpen(false)
-                      setClientForm({ full_name: '', email: '', phone: '', pan: '', risk_profile: 'moderate', assigned_rm: '', total_invested: '', referred_by: '' })
+                      setClientForm({ full_name: '', email: '', phone: '', pan: '', risk_profile: 'moderate', assigned_rm: '', total_invested: '', referred_by: '', joined_at: '' })
                       showToast(`Client ${clientForm.full_name} registered (${clientCode})`, 'success')
                       loadData()
                     } else {
@@ -541,6 +552,22 @@ export default function ClientModule({ subTab, navigate, showToast }: ClientModu
                 <p className="mt-1 text-[10px] text-gray-500">Enter the referrer&apos;s code. If it matches a registered client, the referral link is created automatically.</p>
               </div>
             </div>
+            {/* Re-Testing 30-04-2026 #6: editable joined date. Useful when
+                migrating legacy investors so the referrer&apos;s referral list
+                doesn&apos;t show today&apos;s date as everyone&apos;s join date. */}
+            {editingClient && (
+              <div>
+                <label className="block text-xs font-medium text-gray-400 mb-1.5">Joined Date</label>
+                <input
+                  type="date"
+                  value={clientForm.joined_at}
+                  onChange={e => setClientForm(f => ({ ...f, joined_at: e.target.value }))}
+                  max={new Date().toISOString().split('T')[0]}
+                  className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-brand-red/40 focus:ring-1 focus:ring-brand-red/20"
+                />
+                <p className="mt-1 text-[10px] text-gray-500">Override the displayed join date. Defaults to the original creation date if untouched.</p>
+              </div>
+            )}
             {/* Tests 28-04-2026 #2: admin-managed referral code. Empty = no referrer. */}
             <div>
               <label className="block text-xs font-medium text-gray-400 mb-1.5">Referral Code (optional)</label>

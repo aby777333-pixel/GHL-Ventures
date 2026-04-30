@@ -38,9 +38,16 @@ const STAGES: { key: keyof TrackingRow; label: string; icon: any }[] = [
 export default function DocumentTrackingProgress({
   investmentAppId,
   theme = 'dark',
+  // Re-Testing 30-04-2026 #5: caller passes the investment's fund
+  // name + reference / commitment so each strip is clearly labelled
+  // when an investor has multiple investments.
+  fundLabel,
+  refLabel,
 }: {
   investmentAppId: string
   theme?: 'dark' | 'light'
+  fundLabel?: string
+  refLabel?: string
 }) {
   const [row, setRow] = useState<TrackingRow | null>(null)
   const [loading, setLoading] = useState(true)
@@ -71,14 +78,23 @@ export default function DocumentTrackingProgress({
 
   return (
     <div className={`rounded-2xl border p-5 ${dark ? 'bg-white/[0.03] border-white/[0.06]' : 'bg-white border-gray-200/60'}`}>
-      <div className="flex items-center justify-between mb-4">
-        <h4 className={`text-sm font-bold ${dark ? 'text-white' : 'text-gray-900'}`}>Document Tracking</h4>
+      <div className="flex items-start justify-between mb-4 gap-3">
+        <div className="min-w-0">
+          <h4 className={`text-sm font-bold ${dark ? 'text-white' : 'text-gray-900'}`}>Document Tracking</h4>
+          {/* Re-Testing 30-04-2026 #5: per-investment subtitle so multi-
+              investment investors can tell which strip is which. */}
+          {(fundLabel || refLabel) && (
+            <p className={`text-[11px] mt-0.5 truncate ${dark ? 'text-gray-500' : 'text-gray-600'}`}>
+              {fundLabel || ''}{fundLabel && refLabel ? ' · ' : ''}{refLabel || ''}
+            </p>
+          )}
+        </div>
         {r.courier_tracking_url ? (
           <a
             href={r.courier_tracking_url}
             target="_blank"
             rel="noopener noreferrer"
-            className="text-[11px] font-semibold text-brand-red hover:underline inline-flex items-center gap-1"
+            className="text-[11px] font-semibold text-brand-red hover:underline inline-flex items-center gap-1 shrink-0"
           >
             Track Courier <ExternalLink className="w-3 h-3" />
           </a>
@@ -107,10 +123,9 @@ export default function DocumentTrackingProgress({
               }`}>
                 {on ? <CheckCircle2 className="w-5 h-5" /> : <Icon className="w-4 h-4" />}
               </div>
+              {/* Re-Testing 30-04-2026 #3: removed the per-stage date
+                  display below each label. */}
               <p className={`text-[10px] font-medium leading-tight ${on ? 'text-emerald-400' : dark ? 'text-gray-400' : 'text-gray-600'}`}>{label}</p>
-              {on && ts ? (
-                <p className={`text-[9px] mt-0.5 ${dark ? 'text-gray-600' : 'text-gray-400'}`}>{new Date(ts).toLocaleDateString('en-IN', { day: '2-digit', month: '2-digit' })}</p>
-              ) : null}
             </div>
           )
         })}

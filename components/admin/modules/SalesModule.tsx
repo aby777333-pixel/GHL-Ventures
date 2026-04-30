@@ -2478,6 +2478,9 @@ function AdminCreateInvestmentModal({
   const [clients, setClients] = useState<any[]>([])
   const [loading, setLoading] = useState(false)
   const [submitting, setSubmitting] = useState(false)
+  // Re-Testing 30-04-2026 #2: transaction proof upload inside the
+  // Create Investment flow (admin had to upload it separately before).
+  const [proofUploading, setProofUploading] = useState(false)
   const [form, setForm] = useState({
     client_id: '',
     fund_vehicle: 'Alternate route to Invest in AIF via Debenture',
@@ -2490,6 +2493,8 @@ function AdminCreateInvestmentModal({
     txn_date: new Date().toISOString().split('T')[0],
     payment_mode: 'NEFT',
     bank_name: '',
+    proof_url: '',
+    proof_name: '',
   })
 
   useEffect(() => {
@@ -2515,7 +2520,34 @@ function AdminCreateInvestmentModal({
     investment_amount: '', tenure_preference: '3 years', reference_number: '', notes: '',
     txn_id: '', txn_amount: '', txn_date: new Date().toISOString().split('T')[0],
     payment_mode: 'NEFT', bank_name: '',
+    proof_url: '', proof_name: '',
   })
+
+  // Re-Testing 30-04-2026 #2: pick + upload the transaction proof
+  // (bank slip / wire confirmation) inline. Stores the file in the
+  // public `uploads` bucket (route key 'general') and returns a
+  // public URL we save on the investment_transactions row.
+  const handlePickProof = async () => {
+    setProofUploading(true)
+    try {
+      const { pickAndUploadFiles } = await import('@/lib/supabase/storageService')
+      const results = await pickAndUploadFiles('general', {
+        accept: '.pdf,.jpg,.jpeg,.png',
+        multiple: false,
+        entityType: 'investment',
+        category: 'transaction-proof',
+      })
+      const f = results?.[0]
+      if (f?.success && f.file?.url) {
+        setForm(prev => ({ ...prev, proof_url: f.file!.url, proof_name: f.file!.name || 'proof' }))
+        showToast('Transaction proof uploaded', 'success')
+      } else if (f && !f.success) {
+        showToast(f.error || 'Upload failed', 'error')
+      }
+    } catch (e: any) {
+      showToast(e?.message || 'Upload failed', 'error')
+    } finally { setProofUploading(false) }
+  }
 
   const handleSubmit = async () => {
     if (!form.client_id) { showToast('Select an investor', 'warning'); return }
@@ -2526,6 +2558,10 @@ function AdminCreateInvestmentModal({
       const { adminCreateInvestmentForClient } = await import('@/lib/supabase/adminDataService')
       const { data: { user } } = await (supabase as any).auth.getUser()
       const txnAmt = parseFloat(form.txn_amount)
+      // Build transaction payload if any payment field is filled OR
+      // the admin already uploaded a proof — proof alone is enough to
+      // count as a recorded transaction.
+      const hasTxn = form.txn_id || form.txn_amount || form.proof_url
       const res = await adminCreateInvestmentForClient({
         client_id: form.client_id,
         fund_vehicle: form.fund_vehicle,
@@ -2533,12 +2569,13 @@ function AdminCreateInvestmentModal({
         tenure_preference: form.tenure_preference,
         reference_number: form.reference_number,
         notes: form.notes,
-        transaction: form.txn_id || form.txn_amount ? {
+        transaction: hasTxn ? {
           transaction_id: form.txn_id || undefined,
           transaction_amount: Number.isFinite(txnAmt) ? txnAmt : amt,
           transaction_date: form.txn_date,
           payment_mode: form.payment_mode,
           bank_name: form.bank_name || null,
+          transaction_proof_url: form.proof_url || null,
         } : null,
       }, user?.id || '')
       if (res.ok) {
@@ -2686,6 +2723,39 @@ function AdminCreateInvestmentModal({
                 placeholder="e.g. HDFC Bank"
                 className="w-full bg-white/[0.04] border border-white/[0.08] rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:border-brand-red/40"
               />
+            </div>
+            {/* Re-Testing 30-04-2026 #2: transaction proof upload inline. */}
+            <div className="col-span-2">
+              <label className="block text-xs font-medium text-gray-400 mb-1.5">Transaction Proof</label>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={handlePickProof}
+                  disabled={proofUploading || submitting}
+                  className={`flex-1 flex items-center justify-center gap-2 px-3 py-2.5 rounded-lg text-sm border transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
+                    form.proof_url
+                      ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-400'
+                      : 'border-white/[0.08] bg-white/[0.04] text-gray-300 hover:bg-white/[0.06]'
+                  }`}
+                >
+                  {form.proof_url ? (
+                    <><CheckCircle2 className="w-4 h-4" /> {form.proof_name || 'Uploaded'}</>
+                  ) : (
+                    <><Upload className="w-4 h-4" /> {proofUploading ? 'Uploading…' : 'Choose proof file'}</>
+                  )}
+                </button>
+                {form.proof_url ? (
+                  <button
+                    type="button"
+                    onClick={() => setForm(f => ({ ...f, proof_url: '', proof_name: '' }))}
+                    className="px-3 py-2.5 rounded-lg text-xs font-medium text-gray-400 bg-white/[0.04] border border-white/[0.06] hover:bg-white/[0.08] hover:text-white transition-colors"
+                    title="Remove uploaded proof"
+                  >
+                    Clear
+                  </button>
+                ) : null}
+              </div>
+              <p className="text-[10px] text-gray-500 mt-1">PDF / JPG / PNG. Stored under the public uploads bucket and linked to the new transaction row.</p>
             </div>
           </div>
         </div>

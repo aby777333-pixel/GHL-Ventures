@@ -251,7 +251,11 @@ export async function fetchClients() {
         city: c.city,
         referredBy: c.referred_by || '',
         referralCode: c.referral_code || '',
-        joinDate: c.created_at?.split('T')[0] || '',
+        // Re-Testing 30-04-2026 #6: prefer the editable joined_at column,
+        // fall back to created_at for legacy rows that haven't been
+        // back-filled yet.
+        joinDate: (c.joined_at || c.created_at)?.split('T')[0] || '',
+        joinedAt: c.joined_at || c.created_at || '',
         lastActive: c.updated_at?.split('T')[0] || '',
         assignedRM: c.assigned_rm ? 'Assigned' : 'Not assigned',
         assignedRMId: c.assigned_rm || null,
@@ -2687,6 +2691,23 @@ export async function adminCreateInvestmentForClient(
       return { ok: false, error: `Reference number "${manualRef}" is already in use.` }
     }
 
+    // Re-Testing 30-04-2026 #1: investor-side RLS on investment_applications
+    // is `user_id = auth.uid() OR is_admin/staff`, so an admin-created row
+    // without a `user_id` is invisible to the investor. Look up the
+    // client's auth user_id and stamp it on the row so the investor's
+    // dashboard sees it immediately.
+    let resolvedUserId: string | null = null
+    try {
+      const { data: clientRow } = await sb
+        .from('clients')
+        .select('user_id')
+        .eq('id', input.client_id)
+        .maybeSingle()
+      resolvedUserId = clientRow?.user_id || null
+    } catch (e) {
+      console.warn('[admin] adminCreateInvestmentForClient: user_id lookup failed:', (e as any)?.message)
+    }
+
     // Testing 30-04-2026 #4: investment_applications doesn't have a
     // `created_by` column — sending one trips the PostgREST schema-cache
     // check. We persist the admin id in admin_notes instead so the audit
@@ -2694,6 +2715,7 @@ export async function adminCreateInvestmentForClient(
     const adminTag = adminId ? `[admin-created by ${adminId}] ` : ''
     const baseRow: Record<string, any> = {
       client_id: input.client_id,
+      user_id: resolvedUserId,
       fund_vehicle: input.fund_vehicle,
       investment_amount: input.investment_amount,
       tenure_preference: input.tenure_preference || `${tenureYears} years`,
