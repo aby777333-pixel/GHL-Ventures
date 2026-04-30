@@ -1199,6 +1199,38 @@ function AIAdvisorTab({ showToast }: { showToast: Props['showToast'] }) {
 // TAB 6: SMART EMAILER
 // ═══════════════════════════════════════════════════════════════
 
+// Pending 30-04-2026 — file attachment helpers for the Emailer
+type EmailerAttachment = {
+  id: string
+  filename: string
+  size: number
+  contentType: string
+  content: string  // base64 (no data: URI prefix)
+}
+
+const MAX_FILE_BYTES = 25 * 1024 * 1024  // 25MB per file
+const MAX_TOTAL_BYTES = 40 * 1024 * 1024 // 40MB total payload
+
+async function fileToBase64(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onerror = () => reject(reader.error)
+    reader.onload = () => {
+      const out = String(reader.result || '')
+      // Strip the data: URI prefix so we send pure base64 to the function.
+      const idx = out.indexOf(',')
+      resolve(idx >= 0 ? out.slice(idx + 1) : out)
+    }
+    reader.readAsDataURL(file)
+  })
+}
+
+function fmtFileSize(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
+  return `${(bytes / (1024 * 1024)).toFixed(2)} MB`
+}
+
 function EmailerTab({ showToast }: { showToast: Props['showToast'] }) {
   const { EMAIL_TEMPLATES } = useReportsDataContext()
   const [recipients, setRecipients] = useState('')
@@ -1206,6 +1238,57 @@ function EmailerTab({ showToast }: { showToast: Props['showToast'] }) {
   const [body, setBody] = useState('')
   const [selectedTemplate, setSelectedTemplate] = useState<string | null>(null)
   const [sending, setSending] = useState(false)
+  // Pending 30-04-2026: report/file attachments for outgoing emails.
+  const [attachments, setAttachments] = useState<EmailerAttachment[]>([])
+  const [attaching, setAttaching] = useState(false)
+  const [dragActive, setDragActive] = useState(false)
+
+  const totalAttachmentBytes = useMemo(
+    () => attachments.reduce((s, a) => s + a.size, 0),
+    [attachments],
+  )
+
+  const addFiles = useCallback(async (fileList: FileList | File[] | null) => {
+    if (!fileList) return
+    const files = Array.from(fileList)
+    if (files.length === 0) return
+    setAttaching(true)
+    try {
+      const additions: EmailerAttachment[] = []
+      let runningTotal = totalAttachmentBytes
+      for (const file of files) {
+        if (file.size > MAX_FILE_BYTES) {
+          showToast(`"${file.name}" is over the 25MB limit`, 'error')
+          continue
+        }
+        if (runningTotal + file.size > MAX_TOTAL_BYTES) {
+          showToast(`Total attachment size would exceed 40MB — skipped "${file.name}"`, 'warning')
+          continue
+        }
+        try {
+          const content = await fileToBase64(file)
+          additions.push({
+            id: `${file.name}-${file.size}-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+            filename: file.name,
+            size: file.size,
+            contentType: file.type || 'application/octet-stream',
+            content,
+          })
+          runningTotal += file.size
+        } catch (e) {
+          console.warn('[Emailer] read file failed:', file.name, e)
+          showToast(`Could not read "${file.name}"`, 'error')
+        }
+      }
+      if (additions.length > 0) {
+        setAttachments(prev => [...prev, ...additions])
+        showToast(`${additions.length} attachment${additions.length === 1 ? '' : 's'} added`, 'success')
+      }
+    } finally { setAttaching(false) }
+  }, [totalAttachmentBytes, showToast])
+
+  const removeAttachment = (id: string) =>
+    setAttachments(prev => prev.filter(a => a.id !== id))
 
   const handleSendEmail = async () => {
     if (!recipients.trim()) { showToast('Please enter recipient email(s)', 'error'); return }
@@ -1224,17 +1307,26 @@ function EmailerTab({ showToast }: { showToast: Props['showToast'] }) {
           recipients: recipientList,
           subject: subject.trim(),
           body: body.trim(),
+          // Pending 30-04-2026: pass any attached report/file as base64.
+          attachments: attachments.map(a => ({
+            filename: a.filename,
+            content: a.content,
+            contentType: a.contentType,
+          })),
+          templateId: selectedTemplate,
         }),
       })
 
       const data = await res.json().catch(() => ({} as Record<string, unknown>))
 
       if (res.ok && data.success) {
-        showToast(`Email sent successfully to ${data.sent} recipient(s)${data.failed > 0 ? ` (${data.failed} failed)` : ''}`, 'success')
+        const attachNote = attachments.length > 0 ? ` with ${attachments.length} attachment${attachments.length === 1 ? '' : 's'}` : ''
+        showToast(`Email sent successfully to ${data.sent} recipient(s)${attachNote}${data.failed > 0 ? ` (${data.failed} failed)` : ''}`, 'success')
         setRecipients('')
         setSubject('')
         setBody('')
         setSelectedTemplate(null)
+        setAttachments([])
       } else {
         const errList = Array.isArray((data as { errors?: unknown }).errors) ? (data as { errors: string[] }).errors : []
         const reason = (data as { error?: string }).error || errList[0] || `Failed to send email (HTTP ${res.status})`
@@ -1273,12 +1365,77 @@ function EmailerTab({ showToast }: { showToast: Props['showToast'] }) {
                 ))}
               </div>
               <textarea value={body} onChange={e => setBody(e.target.value)} rows={8} placeholder="Compose your email..." className="w-full px-4 py-3 rounded-xl bg-white/[0.04] border border-white/[0.08] text-sm text-white placeholder:text-gray-600 focus:outline-none focus:border-brand-red/40 resize-none" />
+
+              {/* Pending 30-04-2026: drag-drop / pick attachments to send
+                  with the email. Files are sent as base64 inline (capped
+                  at 25MB per file, 40MB total). */}
+              <div
+                onDragOver={(e) => { e.preventDefault(); setDragActive(true) }}
+                onDragLeave={() => setDragActive(false)}
+                onDrop={(e) => {
+                  e.preventDefault(); setDragActive(false)
+                  if (e.dataTransfer?.files) addFiles(e.dataTransfer.files)
+                }}
+                className={`rounded-xl border border-dashed transition-colors p-3 ${dragActive ? 'border-brand-red/60 bg-brand-red/5' : 'border-white/[0.10] bg-white/[0.02] hover:bg-white/[0.04]'}`}
+              >
+                <div className="flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <Paperclip className="w-3.5 h-3.5 text-gray-400 shrink-0" />
+                    <div className="min-w-0">
+                      <p className="text-xs text-gray-300 font-medium truncate">
+                        {attachments.length === 0
+                          ? 'Attach reports, PDFs, images…'
+                          : `${attachments.length} attachment${attachments.length === 1 ? '' : 's'} — ${fmtFileSize(totalAttachmentBytes)}`}
+                      </p>
+                      <p className="text-[10px] text-gray-500">Drag & drop or click — 25MB per file, 40MB total</p>
+                    </div>
+                  </div>
+                  <label className="shrink-0 cursor-pointer flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-gray-300 bg-white/[0.06] border border-white/[0.08] hover:bg-white/[0.10] transition-colors">
+                    <Upload className="w-3 h-3" />
+                    {attaching ? 'Reading…' : 'Choose files'}
+                    <input
+                      type="file"
+                      multiple
+                      className="hidden"
+                      disabled={attaching}
+                      onChange={(e) => {
+                        addFiles(e.target.files)
+                        // Reset so the same file can be re-picked after removal.
+                        e.currentTarget.value = ''
+                      }}
+                    />
+                  </label>
+                </div>
+
+                {attachments.length > 0 && (
+                  <div className="mt-3 flex flex-wrap gap-1.5">
+                    {attachments.map(a => (
+                      <div key={a.id} className="flex items-center gap-1.5 px-2 py-1 rounded-lg text-[11px] text-gray-300 bg-white/[0.06] border border-white/[0.08]">
+                        <File className="w-3 h-3 text-brand-red" />
+                        <span className="truncate max-w-[180px]" title={a.filename}>{a.filename}</span>
+                        <span className="text-[10px] text-gray-500">{fmtFileSize(a.size)}</span>
+                        <button
+                          onClick={() => removeAttachment(a.id)}
+                          className="ml-0.5 text-gray-500 hover:text-red-400 transition-colors"
+                          title="Remove"
+                        >
+                          <XCircle className="w-3 h-3" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
               <div className="flex gap-2">
-                <button onClick={handleSendEmail} disabled={sending} className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium text-white bg-brand-red/20 border border-brand-red/30 hover:bg-brand-red/30 transition-colors admin-btn-press disabled:opacity-50 disabled:cursor-not-allowed"><Send className="w-3.5 h-3.5" /> {sending ? 'Sending...' : 'Send Now'}</button>
+                <button onClick={handleSendEmail} disabled={sending || attaching} className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium text-white bg-brand-red/20 border border-brand-red/30 hover:bg-brand-red/30 transition-colors admin-btn-press disabled:opacity-50 disabled:cursor-not-allowed"><Send className="w-3.5 h-3.5" /> {sending ? 'Sending...' : 'Send Now'}</button>
                 <button onClick={() => { if (!recipients.trim()) { showToast('Please enter recipient email(s)', 'error'); return } showToast(`Email scheduled for ${recipients.split(',').length} recipient(s)`, 'info') }} className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium text-gray-400 bg-white/[0.04] border border-white/[0.06] hover:bg-white/[0.08] transition-colors admin-btn-press"><Calendar className="w-3.5 h-3.5" /> Schedule</button>
               </div>
             </div>
-            <p className="text-[10px] text-emerald-500/60 mt-3">✓ Connected to Resend Email API</p>
+            <p className="text-[10px] text-emerald-500/60 mt-3">
+              ✓ Connected to Resend Email API
+              {attachments.length > 0 ? ` · ${attachments.length} attachment${attachments.length === 1 ? '' : 's'} ready` : ''}
+            </p>
           </AdminGlass>
         </div>
 

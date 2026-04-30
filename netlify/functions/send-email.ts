@@ -26,11 +26,21 @@ function escapeHtml(str: string): string {
   return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;')
 }
 
+interface EmailAttachment {
+  filename: string
+  // base64 content (NOT data: URI). Caller strips the prefix.
+  content: string
+  // optional MIME hint; Resend infers from filename if omitted.
+  contentType?: string
+}
+
 interface SendEmailBody {
   recipients: string[]
   subject: string
   body: string
   senderName?: string
+  attachments?: EmailAttachment[]
+  templateId?: string
 }
 
 function formatEmailHtml(body: string): string {
@@ -75,7 +85,35 @@ export default async (request: Request) => {
   }
 
   try {
-    const { recipients, subject, body, senderName }: SendEmailBody = await request.json()
+    const { recipients, subject, body, senderName, attachments, templateId }: SendEmailBody = await request.json()
+    // Pending 30-04-2026: cap individual attachment size at 25MB and total
+    // payload at 40MB (Resend's hard limit). Reject early so the user gets
+    // a clear error instead of a generic Resend 413.
+    const safeAttachments: EmailAttachment[] = []
+    let totalAttachmentBytes = 0
+    if (Array.isArray(attachments)) {
+      for (const a of attachments) {
+        if (!a?.filename || !a?.content) continue
+        // Strip a possible data: URI prefix.
+        const cleaned = String(a.content).replace(/^data:[^;]+;base64,/, '').trim()
+        // Approx decoded size = base64 length * 3/4
+        const approxBytes = Math.ceil(cleaned.length * 0.75)
+        if (approxBytes > 25 * 1024 * 1024) {
+          return new Response(
+            JSON.stringify({ error: `Attachment "${a.filename}" exceeds the 25MB limit` }),
+            { status: 413, headers: { 'Content-Type': 'application/json', ...getCorsHeaders(request) } },
+          )
+        }
+        totalAttachmentBytes += approxBytes
+        safeAttachments.push({ filename: a.filename, content: cleaned, contentType: a.contentType })
+      }
+      if (totalAttachmentBytes > 40 * 1024 * 1024) {
+        return new Response(
+          JSON.stringify({ error: 'Total attachment size exceeds 40MB' }),
+          { status: 413, headers: { 'Content-Type': 'application/json', ...getCorsHeaders(request) } },
+        )
+      }
+    }
 
     // Validate
     if (!recipients || !Array.isArray(recipients) || recipients.length === 0) {
@@ -132,19 +170,28 @@ export default async (request: Request) => {
     // is used when the Resend key is absent.
     const sendOne = async (to: string) => {
       if (resendKey) {
+        const payload: Record<string, any> = {
+          from: `${fromName} <${fromEmail}>`,
+          to: to.trim(),
+          reply_to: replyToEmail,
+          subject: subject.trim(),
+          html: htmlContent,
+        }
+        // Resend accepts: attachments: [{ filename, content (base64) }]
+        if (safeAttachments.length > 0) {
+          payload.attachments = safeAttachments.map(a => ({
+            filename: a.filename,
+            content: a.content,
+            ...(a.contentType ? { content_type: a.contentType } : {}),
+          }))
+        }
         const res = await fetch('https://api.resend.com/emails', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${resendKey}`,
           },
-          body: JSON.stringify({
-            from: `${fromName} <${fromEmail}>`,
-            to: to.trim(),
-            reply_to: replyToEmail,
-            subject: subject.trim(),
-            html: htmlContent,
-          }),
+          body: JSON.stringify(payload),
         })
         if (!res.ok) {
           const errText = await res.text()
@@ -155,22 +202,31 @@ export default async (request: Request) => {
         return res.json()
       }
 
-      // MSG91 Email v5
+      // MSG91 Email v5 — its `attachments` payload mirrors Resend
+      // (filename + content as base64). Field name varies by version;
+      // `attachments[].content` is the v5 contract.
       const fromDomain = (process.env.MSG91_FROM_DOMAIN || fromEmail.split('@')[1] || '').trim()
       const fromUser = (process.env.MSG91_FROM_USER || fromEmail.split('@')[0] || 'noreply').trim()
+      const msg91Payload: Record<string, any> = {
+        to: [{ email: to.trim() }],
+        from: { email: `${fromUser}@${fromDomain}`, name: fromName },
+        domain: fromDomain,
+        subject: subject.trim(),
+        body: htmlContent,
+      }
+      if (safeAttachments.length > 0) {
+        msg91Payload.attachments = safeAttachments.map(a => ({
+          filename: a.filename,
+          content: a.content,
+        }))
+      }
       const res = await fetch('https://control.msg91.com/api/v5/email/send', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'authkey': msg91Key,
         },
-        body: JSON.stringify({
-          to: [{ email: to.trim() }],
-          from: { email: `${fromUser}@${fromDomain}`, name: fromName },
-          domain: fromDomain,
-          subject: subject.trim(),
-          body: htmlContent,
-        }),
+        body: JSON.stringify(msg91Payload),
       })
       if (!res.ok) {
         const errText = await res.text()
@@ -195,6 +251,41 @@ export default async (request: Request) => {
 
     // Build a single readable error string so the frontend can always surface the real reason.
     const errorMessage = errors.length > 0 ? errors.join(' | ') : undefined
+
+    // Pending 30-04-2026: best-effort audit log into public.email_logs.
+    // Uses the service-role key so the function bypasses RLS. Skipped if
+    // the env vars aren't set so local/dev still works.
+    try {
+      const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL || ''
+      const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY || ''
+      if (supabaseUrl && serviceRoleKey) {
+        const status = sent > 0 && failed === 0 ? 'sent' : (sent > 0 ? 'partial' : 'failed')
+        await fetch(`${supabaseUrl}/rest/v1/email_logs`, {
+          method: 'POST',
+          headers: {
+            'apikey': serviceRoleKey,
+            'Authorization': `Bearer ${serviceRoleKey}`,
+            'Content-Type': 'application/json',
+            'Prefer': 'return=minimal',
+          },
+          body: JSON.stringify({
+            recipients,
+            subject: subject.trim(),
+            body: body.trim(),
+            attachment_names: safeAttachments.map(a => a.filename),
+            attachment_urls: [],
+            template_id: templateId || null,
+            status,
+            sent_count: sent,
+            failed_count: failed,
+            error_message: errorMessage || null,
+            metadata: { from: fromEmail },
+          }),
+        })
+      }
+    } catch (logErr) {
+      console.warn('[send-email] log insert failed (non-fatal):', logErr)
+    }
 
     return new Response(
       JSON.stringify({
