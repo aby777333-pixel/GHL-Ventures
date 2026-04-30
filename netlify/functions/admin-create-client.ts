@@ -242,6 +242,41 @@ export default async (request: Request) => {
       }
     }
 
+    // Pending 30-04-2026 #12.a: also notify admins when a client is
+    // created via this admin-side flow (not just public registration).
+    // Best-effort — failures shouldn't block the success response.
+    try {
+      const adminsRes = await fetch(
+        `${supabaseUrl}/rest/v1/profiles?role=in.(admin,super_admin)&select=id`,
+        { headers: { 'Authorization': `Bearer ${serviceRoleKey}`, 'apikey': serviceRoleKey } },
+      )
+      if (adminsRes.ok) {
+        const admins = (await adminsRes.json()) as Array<{ id: string }>
+        if (Array.isArray(admins) && admins.length > 0) {
+          const notifs = admins.map(a => ({
+            user_id: a.id,
+            title: 'New Client Created',
+            message: `Admin created an account for ${body.fullName} (${body.email}). KYC pending.`,
+            type: 'info',
+            link: '/admin/clients',
+            metadata: { client_id: clientId, user_id: userId, source: 'admin_created' },
+          }))
+          await fetch(`${supabaseUrl}/rest/v1/notifications`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${serviceRoleKey}`,
+              'apikey': serviceRoleKey,
+              'Prefer': 'return=minimal',
+            },
+            body: JSON.stringify(notifs),
+          })
+        }
+      }
+    } catch (e) {
+      console.warn('[admin-create-client] notify admins failed (non-fatal):', e)
+    }
+
     return new Response(
       JSON.stringify({
         success: true,

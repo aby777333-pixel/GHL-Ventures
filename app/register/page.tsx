@@ -284,6 +284,25 @@ function RegisterPageInner() {
         })
       } catch { /* non-blocking */ }
 
+      // Pending 30-04-2026 #12.a: notify admins on every new
+      // registration. Website notification is required; SMS/WhatsApp
+      // are not (admin can WhatsApp the new investor manually if
+      // needed). Best-effort, never blocks the signup result screen.
+      try {
+        const { data: admins } = await supabase.from('profiles').select('id').in('role', ['admin', 'super_admin'])
+        if (admins && admins.length > 0) {
+          const notifs = admins.map((a: any) => ({
+            user_id: a.id,
+            title: 'New User Registration',
+            message: `${form.name} (${form.email}) just registered. KYC pending.`,
+            type: 'info',
+            link: '/admin/clients',
+            metadata: { client_email: form.email, phone: mobileDigits, referral: form.referral || null },
+          }))
+          await supabase.from('notifications').insert(notifs as any)
+        }
+      } catch { /* non-blocking */ }
+
       // Record referral if a referral code was used (non-blocking)
       if (form.referral && form.referral.startsWith('GHL-')) {
         try {
