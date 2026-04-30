@@ -110,10 +110,13 @@ export default async (request: Request) => {
     }
 
     const resendKey = process.env.RESEND_API_KEY || ''
+    // Pending 30-04-2026 — MSG91 Email fallback. When RESEND_API_KEY is
+    // missing we fall through to MSG91's Email API using MSG91_AUTH_KEY.
+    const msg91Key = process.env.MSG91_AUTH_KEY || ''
 
-    if (!resendKey) {
+    if (!resendKey && !msg91Key) {
       return new Response(
-        JSON.stringify({ error: 'Email service not configured. Set RESEND_API_KEY in Netlify environment variables.' }),
+        JSON.stringify({ error: 'Email service not configured. Set RESEND_API_KEY or MSG91_AUTH_KEY in Netlify environment variables.' }),
         { status: 500, headers: { 'Content-Type': 'application/json', ...getCorsHeaders(request) } },
       )
     }
@@ -125,10 +128,11 @@ export default async (request: Request) => {
     const replyToEmail = (process.env.RESEND_REPLY_TO || 'info@ghlindiaventures.com').trim()
     const htmlContent = formatEmailHtml(body)
 
-    // Send to each recipient
-    const results = await Promise.allSettled(
-      recipients.map(to =>
-        fetch('https://api.resend.com/emails', {
+    // Provider abstraction. Resend is preferred (existing wiring); MSG91
+    // is used when the Resend key is absent.
+    const sendOne = async (to: string) => {
+      if (resendKey) {
+        const res = await fetch('https://api.resend.com/emails', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -141,20 +145,44 @@ export default async (request: Request) => {
             subject: subject.trim(),
             html: htmlContent,
           }),
-        }).then(async res => {
-          if (!res.ok) {
-            const errText = await res.text()
-            let parsed = errText
-            try {
-              const j = JSON.parse(errText)
-              parsed = j.message || j.error || errText
-            } catch { /* keep raw text */ }
-            throw new Error(parsed)
-          }
-          return res.json()
         })
-      )
-    )
+        if (!res.ok) {
+          const errText = await res.text()
+          let parsed = errText
+          try { const j = JSON.parse(errText); parsed = j.message || j.error || errText } catch {}
+          throw new Error(parsed)
+        }
+        return res.json()
+      }
+
+      // MSG91 Email v5
+      const fromDomain = (process.env.MSG91_FROM_DOMAIN || fromEmail.split('@')[1] || '').trim()
+      const fromUser = (process.env.MSG91_FROM_USER || fromEmail.split('@')[0] || 'noreply').trim()
+      const res = await fetch('https://control.msg91.com/api/v5/email/send', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'authkey': msg91Key,
+        },
+        body: JSON.stringify({
+          to: [{ email: to.trim() }],
+          from: { email: `${fromUser}@${fromDomain}`, name: fromName },
+          domain: fromDomain,
+          subject: subject.trim(),
+          body: htmlContent,
+        }),
+      })
+      if (!res.ok) {
+        const errText = await res.text()
+        let parsed = errText
+        try { const j = JSON.parse(errText); parsed = j.message || j.error || j.errors?.[0]?.message || errText } catch {}
+        throw new Error(`MSG91: ${parsed}`)
+      }
+      return res.json()
+    }
+
+    // Send to each recipient (provider chosen above)
+    const results = await Promise.allSettled(recipients.map(to => sendOne(to)))
 
     const sent = results.filter(r => r.status === 'fulfilled').length
     const failed = results.filter(r => r.status === 'rejected').length

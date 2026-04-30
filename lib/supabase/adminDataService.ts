@@ -495,7 +495,7 @@ export async function approveClientKYC(clientId: string, adminUserId: string) {
       if (ident?.pan_number) await sb.from('clients').update({ pan: ident.pan_number }).eq('id', clientId)
     } catch { /* non-fatal */ }
     await sb.from('clients').update({ kyc_status: 'verified' }).eq('id', clientId)
-    const { data: client } = await sb.from('clients').select('user_id').eq('id', clientId).single()
+    const { data: client } = await sb.from('clients').select('user_id, full_name, phone').eq('id', clientId).single()
     if (client?.user_id) {
       await sb.from('notifications').insert({
         user_id: client.user_id,
@@ -505,6 +505,17 @@ export async function approveClientKYC(clientId: string, adminUserId: string) {
         link: '/dashboard/investments',
       })
     }
+    // Pending 30-04-2026 #12.d: WhatsApp the investor.
+    try {
+      if (client?.phone) {
+        const { notifyKycDecisionInvestor } = await import('@/lib/notifications/notify')
+        await notifyKycDecisionInvestor({
+          investorPhone: client.phone,
+          investorName: client.full_name || 'Investor',
+          decision: 'approved',
+        })
+      }
+    } catch (_e) { /* non-blocking */ }
     return true
   } catch { return false }
 }
@@ -522,7 +533,7 @@ export async function rejectClientKYC(clientId: string, adminUserId: string, rea
     if (adminUserId && /^[0-9a-f-]{36}$/i.test(adminUserId)) patch.kyc_rejected_by = adminUserId
 
     await sb.from('clients').update(patch).eq('id', clientId)
-    const { data: client } = await sb.from('clients').select('user_id').eq('id', clientId).single()
+    const { data: client } = await sb.from('clients').select('user_id, full_name, phone').eq('id', clientId).single()
     if (client?.user_id) {
       await sb.from('notifications').insert({
         user_id: client.user_id,
@@ -532,6 +543,18 @@ export async function rejectClientKYC(clientId: string, adminUserId: string, rea
         link: '/dashboard/kyc',
       })
     }
+    // Pending 30-04-2026 #12.d: WhatsApp the investor.
+    try {
+      if (client?.phone) {
+        const { notifyKycDecisionInvestor } = await import('@/lib/notifications/notify')
+        await notifyKycDecisionInvestor({
+          investorPhone: client.phone,
+          investorName: client.full_name || 'Investor',
+          decision: 'rejected',
+          reason: reason || undefined,
+        })
+      }
+    } catch (_e) { /* non-blocking */ }
     return true
   } catch { return false }
 }
@@ -916,6 +939,38 @@ export async function uploadAdminInvestmentDocument(params: {
       .select()
       .single()
     if (error) { console.warn('[admin] upload investment doc error:', error.message); return null }
+
+    // Pending 30-04-2026 #12.g/h: WhatsApp the investor with the
+    // attached document (soft-copy upload, TDS certificate, etc.).
+    try {
+      const { data: clientRow } = await sb
+        .from('clients')
+        .select('full_name, phone')
+        .eq('id', params.client_id)
+        .maybeSingle()
+      if (clientRow?.phone && params.file_url) {
+        const isTds = (params.document_type || '').toLowerCase().includes('tds')
+          || (params.title || '').toLowerCase().includes('tds')
+        const notify = await import('@/lib/notifications/notify')
+        if (isTds) {
+          await notify.notifyTdsCertificateInvestor({
+            investorPhone: clientRow.phone,
+            investorName: clientRow.full_name || 'Investor',
+            fileUrl: params.file_url,
+            fileName: params.file_name,
+          })
+        } else {
+          await notify.notifySoftCopyUploadedInvestor({
+            investorPhone: clientRow.phone,
+            investorName: clientRow.full_name || 'Investor',
+            documentTitle: params.title || params.document_type,
+            fileUrl: params.file_url,
+            fileName: params.file_name,
+          })
+        }
+      }
+    } catch (_e) { /* non-blocking */ }
+
     return data
   } catch { return null }
 }
@@ -1395,6 +1450,25 @@ export async function approveInvestmentApplication(app: any, adminId: string) {
         })
       }
     } catch { /* non-blocking */ }
+
+    // Pending 30-04-2026 #12.e: WhatsApp the investor on approval.
+    try {
+      const { data: clientRow } = await sb
+        .from('clients')
+        .select('full_name, phone')
+        .eq('id', app.client_id)
+        .maybeSingle()
+      if (clientRow?.phone) {
+        const { notifyInvestmentDecisionInvestor } = await import('@/lib/notifications/notify')
+        await notifyInvestmentDecisionInvestor({
+          investorPhone: clientRow.phone,
+          investorName: clientRow.full_name || 'Investor',
+          decision: 'approved',
+          fund: app.fund_vehicle || 'Investment',
+          amount: Number(app.investment_amount) || 0,
+        })
+      }
+    } catch (_e) { /* non-blocking */ }
 
     // Auto-generate the payout schedule (AIF=yearly, Debenture=monthly) so
     // both investor and accounts team see upcoming payouts immediately.

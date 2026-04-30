@@ -180,8 +180,14 @@ export default function PayoutModule({ subTab, navigate, showToast }: PayoutModu
 
   // ── State ────────────────────────────────────────────────────
   const [payouts, setPayouts] = useState<PayoutRecord[]>([])
+  const [allPaidHistory, setAllPaidHistory] = useState<PayoutRecord[]>([])
   const [loading, setLoading] = useState(true)
+  const [historyLoading, setHistoryLoading] = useState(true)
   const [selectedMonth, setSelectedMonth] = useState(new Date())
+  // Set to true once we've auto-jumped to the nearest month with data
+  // (or confirmed today already has data) so subsequent renders don't
+  // override the user's manual month navigation.
+  const [initialMonthResolved, setInitialMonthResolved] = useState(false)
   const [statusFilter, setStatusFilter] = useState<string>('all')
   const [updateModalOpen, setUpdateModalOpen] = useState(false)
   const [detailModalOpen, setDetailModalOpen] = useState(false)
@@ -410,6 +416,28 @@ export default function PayoutModule({ subTab, navigate, showToast }: PayoutModu
       )
       showToast(`Payment status updated to ${newStatus}`, 'success')
       setUpdateModalOpen(false)
+
+      // Pending 30-04-2026 #12.f: WhatsApp the investor on every
+      // payout status change. Best-effort — never blocks the update.
+      try {
+        const sb: any = supabase
+        const { data: client } = await sb
+          .from('clients')
+          .select('full_name, phone')
+          .eq('id', selectedPayout.client_id)
+          .maybeSingle()
+        if (client?.phone) {
+          const { notifyPayoutStatusInvestor } = await import('@/lib/notifications/notify')
+          await notifyPayoutStatusInvestor({
+            investorPhone: client.phone,
+            investorName: client.full_name || 'Investor',
+            amount: Number(selectedPayout.net_interest) || 0,
+            status: newStatus,
+            dueDate: selectedPayout.due_date || undefined,
+            fundType: selectedPayout.fund_type || undefined,
+          })
+        }
+      } catch (_e) { /* non-blocking */ }
     } catch (err) {
       console.error('Error updating status:', err)
       showToast('Failed to update payment status', 'error')

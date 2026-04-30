@@ -1753,6 +1753,22 @@ function InvestmentsTab({ showToast }: { showToast: (m: string, t?: 'success' | 
           reviewed_by: adminId,
         })
         ok = !!result
+        // Pending 30-04-2026 #12.e: WhatsApp the investor on rejection.
+        if (ok && newStatus === 'rejected') {
+          try {
+            const phone = selectedApp._client?.phone
+            if (phone) {
+              const { notifyInvestmentDecisionInvestor } = await import('@/lib/notifications/notify')
+              await notifyInvestmentDecisionInvestor({
+                investorPhone: phone,
+                investorName: selectedApp._client?.full_name || 'Investor',
+                decision: 'rejected',
+                fund: selectedApp.fund_vehicle || 'Investment',
+                amount: Number(selectedApp.investment_amount) || 0,
+              })
+            }
+          } catch (_e) { /* non-blocking */ }
+        }
       }
       if (ok) {
         showToast(`Application ${newStatus}`, 'success')

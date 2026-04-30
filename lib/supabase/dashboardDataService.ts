@@ -352,9 +352,9 @@ export async function submitKYCForReview(clientId: string) {
       // Just bump kyc_step so the wizard doesn't think it's incomplete next time.
       await sb.from('clients').update({ kyc_step: 5, updated_at: new Date().toISOString() }).eq('id', clientId)
     }
-    // Notify admins
+    // Notify admins (website + WhatsApp per Pending 30-04-2026 #12.b)
     try {
-      const { data: admins } = await sb.from('profiles').select('id').in('role', ['admin', 'super_admin'])
+      const { data: admins } = await sb.from('profiles').select('id, phone').in('role', ['admin', 'super_admin'])
       const { data: clientData } = await sb.from('clients').select('full_name').eq('id', clientId).single()
       if (admins && admins.length > 0) {
         const notifs = admins.map((a: any) => ({
@@ -366,6 +366,17 @@ export async function submitKYCForReview(clientId: string) {
           metadata: { client_id: clientId },
         }))
         await sb.from('notifications').insert(notifs)
+        // WhatsApp — best-effort, never blocks the user-facing action.
+        try {
+          const phones = (admins as any[]).map(a => a.phone).filter(Boolean)
+          if (phones.length > 0) {
+            const { notifyKycSubmittedAdmin } = await import('@/lib/notifications/notify')
+            await notifyKycSubmittedAdmin({
+              adminPhones: phones,
+              investorName: clientData?.full_name || 'An investor',
+            })
+          }
+        } catch (_e) { /* non-blocking */ }
       }
     } catch { /* non-blocking */ }
     return true
@@ -1084,6 +1095,29 @@ export async function submitInvestmentApplication(app: InvestmentApplicationInpu
     const currentTotal = Number(client?.total_invested) || 0
     await sb.from('clients').update({ total_invested: currentTotal + app.investment_amount }).eq('id', app.client_id)
   } catch { /* non-blocking */ }
+
+  // Pending 30-04-2026 #12.c: notify admins via WhatsApp + Email on
+  // investment submission. The website notification is already created
+  // by the trg_notify_investment_application trigger (migration 029).
+  try {
+    const { data: admins } = await sb.from('profiles')
+      .select('id, email, phone, full_name')
+      .in('role', ['admin', 'super_admin'])
+    const { data: clientData } = await sb.from('clients')
+      .select('full_name').eq('id', app.client_id).maybeSingle()
+    if (admins && admins.length > 0) {
+      const phones = (admins as any[]).map(a => a.phone).filter(Boolean)
+      const emails = (admins as any[]).map(a => a.email).filter(Boolean)
+      const { notifyInvestmentSubmittedAdmin } = await import('@/lib/notifications/notify')
+      await notifyInvestmentSubmittedAdmin({
+        adminPhones: phones,
+        adminEmails: emails,
+        investorName: clientData?.full_name || 'An investor',
+        amount: Number(app.investment_amount) || 0,
+        fund: app.fund_vehicle || 'Investment',
+      })
+    }
+  } catch (_e) { /* non-blocking */ }
 
   return data
 }
