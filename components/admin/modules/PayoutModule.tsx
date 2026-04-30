@@ -351,9 +351,14 @@ export default function PayoutModule({ subTab, navigate, showToast }: PayoutModu
     }
   }, [showToast])
 
-  // Load history once on mount + every time the History or Export tab
-  // is opened. We don't want to refetch every time the monthly
-  // selection changes — history is independent of selectedMonth.
+  // Load history once on mount AND every time the History or Export
+  // tab is opened. Mounting on every page entry guarantees the data
+  // is ready even if the user lands directly on /admin/payouts/history
+  // via URL (vs clicking the tab from Monthly Payouts).
+  useEffect(() => {
+    fetchAllPaidHistory()
+  }, [fetchAllPaidHistory])
+
   useEffect(() => {
     if (activeTab === 'history' || activeTab === 'export') {
       fetchAllPaidHistory()
@@ -934,30 +939,46 @@ export default function PayoutModule({ subTab, navigate, showToast }: PayoutModu
     </div>
   )
 
-  const renderPayoutHistory = () => (
+  const renderPayoutHistory = () => {
+    // Pending 30-04-2026 follow-up: history KPIs were derived from
+    // the *monthly* slice, which made them look broken whenever the
+    // selected month had zero paid rows. They now reflect the true
+    // all-time paid history so the strip matches the table below.
+    const histKpis = (() => {
+      const totalPaid = allPaidHistory.reduce((s, p) => s + p.net_interest, 0)
+      const count = allPaidHistory.length
+      const investors = new Set(allPaidHistory.map(p => p.client_id).filter(Boolean)).size
+      return {
+        totalPaid,
+        count,
+        investors,
+        avgPayout: count > 0 ? Math.round(totalPaid / count) : 0,
+      }
+    })()
+    return (
     <div className="space-y-6">
       {/* History Summary */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <AdminKPICard
           title="Total Disbursed"
-          value={formatINR(kpis.paidAmount)}
-          subtitle={`${kpis.paidCount} payments`}
+          value={formatINR(histKpis.totalPaid)}
+          subtitle={`${histKpis.count} payment${histKpis.count === 1 ? '' : 's'}`}
           icon={Banknote}
           color="#10B981"
           delay={0}
         />
         <AdminKPICard
           title="Investors Paid"
-          value={String(kpis.paidCount)}
-          subtitle={`out of ${kpis.total}`}
+          value={String(histKpis.investors)}
+          subtitle="unique recipients"
           icon={Users}
           color="#3B82F6"
           delay={100}
         />
         <AdminKPICard
           title="Avg. Net Payout"
-          value={kpis.paidCount > 0 ? formatINR(Math.round(kpis.paidAmount / kpis.paidCount)) : formatINR(0)}
-          subtitle="Per investor"
+          value={formatINR(histKpis.avgPayout)}
+          subtitle="Per payment"
           icon={ArrowUpRight}
           color="#8B5CF6"
           delay={200}
@@ -1026,7 +1047,8 @@ export default function PayoutModule({ subTab, navigate, showToast }: PayoutModu
         />
       )}
     </div>
-  )
+    )
+  }
 
   const renderExport = () => {
     // Pending 30-04-2026 follow-up: scope selector + counts so admin
