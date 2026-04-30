@@ -1360,7 +1360,16 @@ function EmailerTab({ showToast }: { showToast: Props['showToast'] }) {
               <input value={recipients} onChange={e => setRecipients(e.target.value)} placeholder="Recipient email(s) — separate multiple with commas..." className="w-full px-4 py-2.5 rounded-xl bg-white/[0.04] border border-white/[0.08] text-sm text-white placeholder:text-gray-600 focus:outline-none focus:border-brand-red/40" />
               <input value={subject} onChange={e => setSubject(e.target.value)} placeholder="Subject line..." className="w-full px-4 py-2.5 rounded-xl bg-white/[0.04] border border-white/[0.08] text-sm text-white placeholder:text-gray-600 focus:outline-none focus:border-brand-red/40" />
               <div className="flex gap-1.5 flex-wrap">
-                {['{{client_name}}', '{{portfolio_value}}', '{{next_action}}', '{{fund_name}}'].map(f => (
+                {/* Pending 30-04-2026 follow-up: chips reflect the
+                    selected template's merge tags (names + numbers).
+                    Falls back to a generic four when no template
+                    is loaded. Clicking inserts the placeholder at
+                    the cursor / end of body. */}
+                {(() => {
+                  const tpl = EMAIL_TEMPLATES.find(t => t.id === selectedTemplate)
+                  const tags = tpl?.mergeTags || ['{{client_name}}', '{{portfolio_value}}', '{{next_action}}', '{{fund_name}}']
+                  return tags
+                })().map(f => (
                   <button key={f} onClick={() => setBody(prev => prev + ' ' + f)} className="px-2 py-1 rounded text-[10px] text-purple-300 bg-purple-500/10 border border-purple-500/20 hover:bg-purple-500/20 transition-colors">{f}</button>
                 ))}
               </div>
@@ -1442,14 +1451,33 @@ function EmailerTab({ showToast }: { showToast: Props['showToast'] }) {
         {/* Templates */}
         <AdminGlass>
           <h3 className="text-sm font-semibold text-white mb-4">Template Library</h3>
+          <p className="text-[10px] text-gray-500 mb-3">Click a template to populate subject + body with placeholder fillers (names, numbers, dates).</p>
           <div className="space-y-2">
             {EMAIL_TEMPLATES.map(t => (
-              <button key={t.id} onClick={() => { setSelectedTemplate(t.id); setSubject(t.subject); showToast(`Template loaded: ${t.name}`, 'info') }} className={`w-full text-left p-3 rounded-xl border transition-colors ${selectedTemplate === t.id ? 'border-brand-red/30 bg-brand-red/5' : 'border-white/[0.06] bg-white/[0.02] hover:bg-white/[0.04]'}`}>
+              <button
+                key={t.id}
+                onClick={() => {
+                  // Pending 30-04-2026 follow-up: clicking a template now
+                  // populates subject AND body. If the composer already has
+                  // unsaved content, ask before overwriting so we don't
+                  // wipe a half-written email.
+                  const hasDraft = body.trim().length > 0 && body.trim() !== (EMAIL_TEMPLATES.find(x => x.id === selectedTemplate)?.body || '').trim()
+                  if (hasDraft && !window.confirm('Replace the current draft with this template?')) return
+                  setSelectedTemplate(t.id)
+                  setSubject(t.subject)
+                  setBody(t.body)
+                  showToast(`Template loaded: ${t.name}`, 'info')
+                }}
+                className={`w-full text-left p-3 rounded-xl border transition-colors ${selectedTemplate === t.id ? 'border-brand-red/30 bg-brand-red/5' : 'border-white/[0.06] bg-white/[0.02] hover:bg-white/[0.04]'}`}
+              >
                 <p className="text-xs text-white font-medium">{t.name}</p>
-                <p className="text-[10px] text-gray-500 mt-0.5">{t.category}</p>
+                <p className="text-[10px] text-gray-500 mt-0.5">{t.category} · {t.mergeTags.length} fillers</p>
               </button>
             ))}
           </div>
+          <p className="text-[10px] text-gray-500 mt-3">
+            Tip: attach reports/PDFs from the composer's Choose Files area — they ship with whichever template you've loaded.
+          </p>
         </AdminGlass>
       </div>
     </div>

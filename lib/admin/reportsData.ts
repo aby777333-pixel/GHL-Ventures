@@ -188,15 +188,205 @@ export const AUM_FORECAST = {
 // EMAIL TEMPLATES
 // ═══════════════════════════════════════════════════════════════
 
-export const EMAIL_TEMPLATES = [
-  { id: 'TPL001', name: 'Monthly Performance Update', subject: 'GHL India Ventures — {{month}} Performance Update', category: 'investor' },
-  { id: 'TPL002', name: 'Quarterly NAV Report', subject: 'Q{{quarter}} NAV Report — GHL India Ventures AIF', category: 'investor' },
-  { id: 'TPL003', name: 'New Opportunity Alert', subject: 'Exclusive: New Investment Opportunity — {{fund_name}}', category: 'marketing' },
-  { id: 'TPL004', name: 'Compliance Notice', subject: 'Important: Compliance Update — {{notice_type}}', category: 'compliance' },
-  { id: 'TPL005', name: 'Event Invitation', subject: 'You\'re Invited: {{event_name}} — GHL India Ventures', category: 'marketing' },
-  { id: 'TPL006', name: 'Welcome Email', subject: 'Welcome to GHL India Ventures, {{client_name}}!', category: 'onboarding' },
-  { id: 'TPL007', name: 'KYC Reminder', subject: 'Action Required: Complete Your KYC — {{client_name}}', category: 'compliance' },
-  { id: 'TPL008', name: 'Board Communication', subject: '{{subject}} — Board of Directors', category: 'internal' },
+// Pending 30-04-2026 (follow-up): each template now ships a default
+// body with merge-tag fillers so the Emailer can populate the composer
+// in one click. `mergeTags` is the set of placeholders the body uses,
+// surfaced by the EmailerTab as quick-insert chips when a template is
+// selected. Replace tokens server-side at send time, or by hand in the
+// composer before clicking Send.
+export type EmailTemplate = {
+  id: string
+  name: string
+  subject: string
+  category: string
+  body: string
+  mergeTags: string[]
+}
+
+export const EMAIL_TEMPLATES: EmailTemplate[] = [
+  {
+    id: 'TPL001',
+    name: 'Monthly Performance Update',
+    subject: 'GHL India Ventures — {{month}} Performance Update',
+    category: 'investor',
+    mergeTags: ['{{client_name}}', '{{month}}', '{{portfolio_value}}', '{{monthly_return_pct}}', '{{ytd_return_pct}}', '{{net_payout}}', '{{next_payout_date}}'],
+    body: `Dear {{client_name}},
+
+Greetings from GHL India Ventures.
+
+Please find below your portfolio performance summary for {{month}}:
+
+  • Portfolio value (as of month-end): ₹{{portfolio_value}}
+  • Monthly return: {{monthly_return_pct}}%
+  • Year-to-date return: {{ytd_return_pct}}%
+  • Net interest credited this month: ₹{{net_payout}}
+  • Next scheduled payout: {{next_payout_date}}
+
+Detailed performance and tax breakups are attached for your records.
+
+Should you have any queries, please reply to this email or reach out to your relationship manager.
+
+Warm regards,
+GHL India Ventures
+SEBI Registered Category II AIF`,
+  },
+  {
+    id: 'TPL002',
+    name: 'Quarterly NAV Report',
+    subject: 'Q{{quarter}} NAV Report — GHL India Ventures AIF',
+    category: 'investor',
+    mergeTags: ['{{client_name}}', '{{quarter}}', '{{fy}}', '{{nav_per_unit}}', '{{units_held}}', '{{total_value}}', '{{quarterly_return_pct}}'],
+    body: `Dear {{client_name}},
+
+The NAV Statement for Q{{quarter}} FY{{fy}} is attached.
+
+Quick highlights:
+
+  • NAV per unit (close of quarter): ₹{{nav_per_unit}}
+  • Units held: {{units_held}}
+  • Total holding value: ₹{{total_value}}
+  • Quarterly return: {{quarterly_return_pct}}%
+
+The attached PDF contains the full NAV computation, fund-level performance, and the auditor-signed quarterly disclosure.
+
+Please reach out if you would like a portfolio review.
+
+Warm regards,
+GHL India Ventures`,
+  },
+  {
+    id: 'TPL003',
+    name: 'New Opportunity Alert',
+    subject: 'Exclusive: New Investment Opportunity — {{fund_name}}',
+    category: 'marketing',
+    mergeTags: ['{{client_name}}', '{{fund_name}}', '{{min_ticket}}', '{{target_irr}}', '{{tenure}}', '{{deadline}}', '{{rm_name}}'],
+    body: `Dear {{client_name}},
+
+We are pleased to share an exclusive new opportunity available to our priority investors.
+
+  • Vehicle: {{fund_name}}
+  • Minimum ticket: ₹{{min_ticket}}
+  • Target IRR: {{target_irr}}%
+  • Tenure: {{tenure}}
+  • Subscription closes: {{deadline}}
+
+The full term sheet is attached. Allocations are on a first-come basis. To express interest, please reply to this email or contact {{rm_name}} directly.
+
+Best regards,
+GHL India Ventures`,
+  },
+  {
+    id: 'TPL004',
+    name: 'Compliance Notice',
+    subject: 'Important: Compliance Update — {{notice_type}}',
+    category: 'compliance',
+    mergeTags: ['{{client_name}}', '{{notice_type}}', '{{effective_date}}', '{{action_required}}', '{{deadline}}'],
+    body: `Dear {{client_name}},
+
+This is to bring to your attention an important compliance update concerning your investment with GHL India Ventures.
+
+  • Notice: {{notice_type}}
+  • Effective date: {{effective_date}}
+  • Action required: {{action_required}}
+  • Response deadline: {{deadline}}
+
+The detailed circular is attached. Please review at the earliest. Failure to act within the deadline may attract regulatory consequences.
+
+For any clarifications, please reach out to compliance@ghlindiaventures.com.
+
+Regards,
+Compliance Desk
+GHL India Ventures`,
+  },
+  {
+    id: 'TPL005',
+    name: 'Event Invitation',
+    subject: 'You\'re Invited: {{event_name}} — GHL India Ventures',
+    category: 'marketing',
+    mergeTags: ['{{client_name}}', '{{event_name}}', '{{event_date}}', '{{event_time}}', '{{event_venue}}', '{{rsvp_link}}'],
+    body: `Dear {{client_name}},
+
+You are cordially invited to {{event_name}}, hosted by GHL India Ventures.
+
+  • Date: {{event_date}}
+  • Time: {{event_time}}
+  • Venue: {{event_venue}}
+
+The agenda + speaker line-up are attached. Please confirm your attendance via the RSVP link below:
+
+{{rsvp_link}}
+
+We look forward to hosting you.
+
+Warm regards,
+GHL India Ventures`,
+  },
+  {
+    id: 'TPL006',
+    name: 'Welcome Email',
+    subject: 'Welcome to GHL India Ventures, {{client_name}}!',
+    category: 'onboarding',
+    mergeTags: ['{{client_name}}', '{{ghl_id}}', '{{rm_name}}', '{{rm_email}}', '{{rm_phone}}', '{{login_url}}'],
+    body: `Dear {{client_name}},
+
+Welcome to GHL India Ventures — we're delighted to have you on board.
+
+Your investor profile is now active:
+
+  • GHL ID: {{ghl_id}}
+  • Relationship Manager: {{rm_name}}
+  • RM email: {{rm_email}}
+  • RM phone: {{rm_phone}}
+
+You can sign in to the investor portal anytime at {{login_url}} to track your investments, payouts, and documents.
+
+A welcome kit (KYC checklist, fund overview, FAQs) is attached for your reference.
+
+If you have any questions getting started, please reach out to {{rm_name}}.
+
+Warm regards,
+GHL India Ventures`,
+  },
+  {
+    id: 'TPL007',
+    name: 'KYC Reminder',
+    subject: 'Action Required: Complete Your KYC — {{client_name}}',
+    category: 'compliance',
+    mergeTags: ['{{client_name}}', '{{pending_step}}', '{{kyc_link}}', '{{deadline}}', '{{rm_name}}'],
+    body: `Dear {{client_name}},
+
+Your KYC on the GHL India Ventures portal is incomplete. To begin investing, please complete the following:
+
+  • Pending step: {{pending_step}}
+  • Resume KYC: {{kyc_link}}
+  • Recommended completion by: {{deadline}}
+
+The KYC checklist + sample documents are attached. If you need assistance, your relationship manager {{rm_name}} can walk you through the process.
+
+Regards,
+GHL India Ventures Compliance`,
+  },
+  {
+    id: 'TPL008',
+    name: 'Board Communication',
+    subject: '{{subject}} — Board of Directors',
+    category: 'internal',
+    mergeTags: ['{{recipient_name}}', '{{subject}}', '{{meeting_date}}', '{{summary}}'],
+    body: `Dear {{recipient_name}},
+
+Re: {{subject}}
+
+Please find attached the briefing pack for the Board meeting scheduled on {{meeting_date}}.
+
+Summary:
+{{summary}}
+
+Kindly review at your earliest and revert with any pre-read comments.
+
+Regards,
+GHL India Ventures
+Office of the MD`,
+  },
 ]
 
 // ═══════════════════════════════════════════════════════════════
