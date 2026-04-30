@@ -182,7 +182,12 @@ export default function PayoutModule({ subTab, navigate, showToast }: PayoutModu
   const [payouts, setPayouts] = useState<PayoutRecord[]>([])
   const [allPaidHistory, setAllPaidHistory] = useState<PayoutRecord[]>([])
   const [loading, setLoading] = useState(true)
-  const [historyLoading, setHistoryLoading] = useState(true)
+  // Pending Testing 30-04-2026 (re-fix): start at false so the History
+  // table or empty-state shows immediately if the fetch has any
+  // initialisation hiccup. fetchAllPaidHistory still flips it true→false
+  // around the network call, so the spinner appears while loading.
+  const [historyLoading, setHistoryLoading] = useState(false)
+  const [historyError, setHistoryError] = useState<string | null>(null)
   const [selectedMonth, setSelectedMonth] = useState(new Date())
   // Set to true once we've auto-jumped to the nearest month with data
   // (or confirmed today already has data) so subsequent renders don't
@@ -284,6 +289,7 @@ export default function PayoutModule({ subTab, navigate, showToast }: PayoutModu
   // selectedMonth, so without this the History tab only ever showed
   // paid payouts inside the current month — which looked broken.
   const fetchAllPaidHistory = useCallback(async () => {
+    setHistoryError(null)
     if (!isSupabaseConfigured()) {
       setAllPaidHistory(getDemoData().filter(p => p.payment_status === 'paid'))
       setHistoryLoading(false)
@@ -291,29 +297,48 @@ export default function PayoutModule({ subTab, navigate, showToast }: PayoutModu
     }
     setHistoryLoading(true)
     try {
+      // Pending Testing 30-04-2026 (re-fix): use a defensive cap (5000)
+      // and explicit returning so the result is always a valid array.
       const { data: payoutRows, error } = await supabase
         .from('monthly_payouts')
         .select('*')
         .eq('payment_status', 'paid')
         .order('payment_date', { ascending: false })
-      if (error) throw error
-      if (!payoutRows || payoutRows.length === 0) {
+        .limit(5000)
+      if (error) {
+        console.error('[PayoutHistory] fetch error:', error)
+        setHistoryError(error.message || 'Failed to load payment history')
         setAllPaidHistory([])
-        setHistoryLoading(false)
+        return
+      }
+      const rows = (payoutRows as any[]) || []
+      console.log(`[PayoutHistory] fetched ${rows.length} paid rows`)
+      if (rows.length === 0) {
+        setAllPaidHistory([])
         return
       }
 
-      const clientIds = Array.from(new Set(payoutRows.map((r: any) => r.client_id).filter(Boolean)))
-      const [clientsRes, bankRes, identityRes] = await Promise.all([
-        clientIds.length > 0 ? supabase.from('clients').select('id, ghl_id, full_name, email, phone').in('id', clientIds) : { data: [] },
-        clientIds.length > 0 ? supabase.from('kyc_bank_details').select('client_id, account_number, account_holder_name, bank_name, ifsc_code').in('client_id', clientIds) : { data: [] },
-        clientIds.length > 0 ? supabase.from('kyc_identity_details').select('client_id, pan_number, aadhar_number').in('client_id', clientIds) : { data: [] },
-      ])
-      const clientMap = new Map((clientsRes.data || []).map((c: any) => [c.id, c]))
-      const bankMap = new Map((bankRes.data || []).map((b: any) => [b.client_id, b]))
-      const idMap = new Map((identityRes.data || []).map((i: any) => [i.client_id, i]))
+      const clientIds = Array.from(new Set(rows.map((r: any) => r.client_id).filter(Boolean)))
+      let clientMap = new Map<string, any>()
+      let bankMap = new Map<string, any>()
+      let idMap = new Map<string, any>()
+      try {
+        const [clientsRes, bankRes, identityRes] = await Promise.all([
+          clientIds.length > 0 ? supabase.from('clients').select('id, ghl_id, full_name, email, phone').in('id', clientIds) : Promise.resolve({ data: [] as any[] }),
+          clientIds.length > 0 ? supabase.from('kyc_bank_details').select('client_id, account_number, account_holder_name, bank_name, ifsc_code').in('client_id', clientIds) : Promise.resolve({ data: [] as any[] }),
+          clientIds.length > 0 ? supabase.from('kyc_identity_details').select('client_id, pan_number, aadhar_number').in('client_id', clientIds) : Promise.resolve({ data: [] as any[] }),
+        ])
+        clientMap = new Map(((clientsRes as any).data || []).map((c: any) => [c.id, c]))
+        bankMap = new Map(((bankRes as any).data || []).map((b: any) => [b.client_id, b]))
+        idMap = new Map(((identityRes as any).data || []).map((i: any) => [i.client_id, i]))
+      } catch (joinErr) {
+        // Joins are decorative — if they fail (RLS on KYC tables for
+        // example) we still render the payouts using whatever the
+        // monthly_payouts row already has.
+        console.warn('[PayoutHistory] client/bank/identity join failed (non-fatal):', joinErr)
+      }
 
-      const mapped: PayoutRecord[] = payoutRows.map((row: any) => {
+      const mapped: PayoutRecord[] = rows.map((row: any) => {
         const client: any = clientMap.get(row.client_id) || {}
         const bank: any = bankMap.get(row.client_id) || {}
         const identity: any = idMap.get(row.client_id) || {}
@@ -322,7 +347,7 @@ export default function PayoutModule({ subTab, navigate, showToast }: PayoutModu
           client_id: row.client_id || null,
           investment_date: row.investment_date,
           ghl_id: row.ghl_id || client.ghl_id || '-',
-          client_name: client.full_name || '-',
+          client_name: client.full_name || row.account_holder_name || '-',
           email: client.email || '-',
           phone: client.phone || '-',
           fund_type: row.fund_type || '-',
@@ -342,14 +367,14 @@ export default function PayoutModule({ subTab, navigate, showToast }: PayoutModu
         }
       })
       setAllPaidHistory(mapped)
-    } catch (err) {
-      console.error('Error fetching paid history:', err)
-      showToast('Failed to load payment history', 'error')
+    } catch (err: any) {
+      console.error('[PayoutHistory] unexpected error:', err)
+      setHistoryError(err?.message || 'Failed to load payment history')
       setAllPaidHistory([])
     } finally {
       setHistoryLoading(false)
     }
-  }, [showToast])
+  }, [])
 
   // Load history once on mount AND every time the History or Export
   // tab is opened. Mounting on every page entry guarantees the data
@@ -1023,7 +1048,21 @@ export default function PayoutModule({ subTab, navigate, showToast }: PayoutModu
       </AdminGlass>
 
       {/* History Table */}
-      {historyLoading ? (
+      {historyError ? (
+        <AdminGlass>
+          <div className="p-6 text-sm text-red-300 bg-red-500/10 border border-red-500/20 rounded-xl">
+            <p className="font-semibold mb-1">Couldn&apos;t load payment history</p>
+            <p className="text-xs text-red-400 break-words">{historyError}</p>
+            <button
+              onClick={fetchAllPaidHistory}
+              className="mt-3 px-3 py-1.5 rounded-lg text-xs font-semibold text-white bg-brand-red hover:bg-brand-red/80 transition-colors inline-flex items-center gap-1"
+            >
+              <RefreshCw className="w-3 h-3" />
+              Retry
+            </button>
+          </div>
+        </AdminGlass>
+      ) : historyLoading ? (
         <AdminGlass>
           <div className="flex items-center justify-center py-16">
             <Loader2 className="w-5 h-5 text-brand-red animate-spin" />
@@ -1033,7 +1072,7 @@ export default function PayoutModule({ subTab, navigate, showToast }: PayoutModu
         <AdminEmptyState
           icon={Clock}
           title="No payment history"
-          description="Completed payments will appear here once admin marks payouts as paid."
+          description={`Completed payments will appear here once admin marks payouts as paid.${allPaidHistory.length > 0 ? ` (${allPaidHistory.length} records loaded but filtered out — try changing the fund filter.)` : ''}`}
         />
       ) : (
         <AdminDataTable
