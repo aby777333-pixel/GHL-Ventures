@@ -4201,3 +4201,71 @@ button[type="submit"].inline-flex {
 .admin-section-eyebrow:first-of-type {
   margin-top: 0;
 }
+
+/* ============================================================
+   Pending Testing 30-04-2026 (DOCX) — light-mode contrast fixes
+   Items #1, #3, #4, #5 from the FRONTEND TESTING REPORT.
+
+   Scoped to marketing-site (NOT dashboard/admin/staff) so we
+   never affect the dark surfaces those portals rely on.
+   ============================================================ */
+
+/* #1 — Drag-selected text must keep white-on-red contrast in
+       light theme. Highest-specificity wins on top of any
+       Tailwind ::selection coming through utilities. */
+:root:not(.dark) body:not(.dashboard-active):not(.admin-active):not(.staff-active) ::selection,
+:root:not(.dark) body:not(.dashboard-active):not(.admin-active):not(.staff-active) ::-moz-selection {
+  background-color: #D0021B !important;
+  color: #FFFFFF !important;
+}
+
+/* #4 — Big image overlay headings (hero / banner / portfolio
+       tiles) — when text-white sits on top of an image (with
+       or without a gradient veil), force white in light mode.
+       The earlier 28-04-2026 rule scoped this to `.card`; this
+       extension covers hero sections, fund banners, and any
+       absolute-positioned overlay on a background image. */
+:root:not(.dark) body:not(.dashboard-active):not(.admin-active):not(.staff-active) [class*="bg-gradient-to-"] h1.text-white,
+:root:not(.dark) body:not(.dashboard-active):not(.admin-active):not(.staff-active) [class*="bg-gradient-to-"] h2.text-white,
+:root:not(.dark) body:not(.dashboard-active):not(.admin-active):not(.staff-active) [class*="bg-gradient-to-"] h3.text-white,
+:root:not(.dark) body:not(.dashboard-active):not(.admin-active):not(.staff-active) [class*="bg-gradient-to-"] p.text-white,
+:root:not(.dark) body:not(.dashboard-active):not(.admin-active):not(.staff-active) [class*="absolute"][class*="inset"].text-white,
+:root:not(.dark) body:not(.dashboard-active):not(.admin-active):not(.staff-active) [class*="absolute"][class*="inset"] h1,
+:root:not(.dark) body:not(.dashboard-active):not(.admin-active):not(.staff-active) [class*="absolute"][class*="inset"] h2,
+:root:not(.dark) body:not(.dashboard-active):not(.admin-active):not(.staff-active) [class*="absolute"][class*="inset"] h3,
+:root:not(.dark) body:not(.dashboard-active):not(.admin-active):not(.staff-active) [class*="absolute"][class*="inset"] p,
+:root:not(.dark) body:not(.dashboard-active):not(.admin-active):not(.staff-active) section[style*="background-image"] h1,
+:root:not(.dark) body:not(.dashboard-active):not(.admin-active):not(.staff-active) section[style*="background-image"] h2,
+:root:not(.dark) body:not(.dashboard-active):not(.admin-active):not(.staff-active) section[style*="background-image"] h3,
+:root:not(.dark) body:not(.dashboard-active):not(.admin-active):not(.staff-active) section[style*="background-image"] p {
+  color: #FFFFFF !important;
+}
+
+/* #3 — Notification dropdown content must be readable on the
+       light-theme white panel. The dropdown already uses
+       Tailwind dark:* classes which are partially broken in
+       this project (see CLAUDE memory note about CSS variables).
+       Force black text + secondary gray for muted lines on the
+       marketing-site notification panels and the topbar bell. */
+:root:not(.dark) body:not(.dashboard-active):not(.admin-active):not(.staff-active) [class*="notification"] {
+  color: #111827;
+}
+:root:not(.dark) body:not(.dashboard-active):not(.admin-active):not(.staff-active) [class*="notification"] .text-white,
+:root:not(.dark) body:not(.dashboard-active):not(.admin-active):not(.staff-active) [class*="notification"] [class*="text-white/"] {
+  color: #111827 !important;
+}
+:root:not(.dark) body:not(.dashboard-active):not(.admin-active):not(.staff-active) [class*="notification"] .text-gray-300,
+:root:not(.dark) body:not(.dashboard-active):not(.admin-active):not(.staff-active) [class*="notification"] .text-gray-400,
+:root:not(.dark) body:not(.dashboard-active):not(.admin-active):not(.staff-active) [class*="notification"] .text-gray-500 {
+  color: #4B5563 !important;
+}
+
+/* #5 — Active / "selected" sidebar / nav-tab item should keep
+       legible BLACK text on light backgrounds (was rendering
+       white / red, which on a near-white pill became invisible). */
+:root:not(.dark) body:not(.dashboard-active):not(.admin-active):not(.staff-active) [aria-current="page"],
+:root:not(.dark) body:not(.dashboard-active):not(.admin-active):not(.staff-active) [data-active="true"],
+:root:not(.dark) body:not(.dashboard-active):not(.admin-active):not(.staff-active) .is-active {
+  color: #0A0A0A;
+}
+

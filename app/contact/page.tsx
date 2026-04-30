@@ -371,14 +371,29 @@ export default function ContactPage() {
                     <h2 className="text-2xl font-bold text-brand-black dark:text-white mb-6">Contact Information</h2>
                   </div>
 
-                  {/* Office Address */}
+                  {/* Chennai HQ */}
                   <div className="flex items-start space-x-4">
                     <div className="w-12 h-12 bg-brand-red/10 rounded-xl flex items-center justify-center shrink-0 icon-ring-hover">
                       <MapPin className="w-6 h-6 text-brand-red" />
                     </div>
                     <div>
-                      <h3 className="font-bold text-brand-black dark:text-white text-base mb-1">Office Address</h3>
+                      <h3 className="font-bold text-brand-black dark:text-white text-base mb-1">Chennai (Head Office)</h3>
                       <p className="text-brand-grey dark:text-gray-300 text-sm leading-relaxed">{BRAND.address}</p>
+                    </div>
+                  </div>
+
+                  {/* Pending Testing 30-04-2026 (DOCX #2): Delhi branch address.
+                      EDIT IN PLACE — replace the placeholder lines below with the
+                      real address. Lives here on purpose so it's easy to find. */}
+                  <div className="flex items-start space-x-4">
+                    <div className="w-12 h-12 bg-brand-red/10 rounded-xl flex items-center justify-center shrink-0 icon-ring-hover">
+                      <MapPin className="w-6 h-6 text-brand-red" />
+                    </div>
+                    <div>
+                      <h3 className="font-bold text-brand-black dark:text-white text-base mb-1">Delhi (Branch Office)</h3>
+                      <p className="text-brand-grey dark:text-gray-300 text-sm leading-relaxed">
+                        {BRAND.delhiAddress}
+                      </p>
                     </div>
                   </div>
 

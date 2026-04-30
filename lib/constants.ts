@@ -19,6 +19,10 @@ export const BRAND = {
     'Hi GHL India Ventures team, I\'d like to learn more about your AIF fund.',
   address:
     '2D, Queens Court, No. 6, Montieth Road, Egmore, Chennai, Tamil Nadu \u2013 600 008, India',
+  // Pending Testing 30-04-2026 (DOCX #2): Delhi branch. Replace the
+  // placeholder line with the real address \u2014 referenced by the Contact
+  // page card so this is the single source of truth.
+  delhiAddress: 'Delhi Branch Office \u2014 address to be added',
   officeHours: 'Mon\u2013Fri, 9:30 AM \u2013 6:30 PM IST',
   minInvestment: 'As per SEBI AIF Regulations',
   colors: {

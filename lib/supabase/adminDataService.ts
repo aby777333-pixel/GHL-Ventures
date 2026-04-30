@@ -2103,8 +2103,25 @@ export async function deleteInvestmentSafe(
     // allotments: column is investment_id (admin uses investment_app_id as the value)
     await cascade('allotments', 'investment_id')
 
-    const { error } = await sb.from('investment_applications').delete().eq('id', investmentId)
+    // Testing 30-04-2026 #3: PostgREST DELETE returns 204 even when 0
+    // rows match (RLS / silent FK block / typo). The previous code
+    // surfaced ok=true so the UI optimistically removed the row, but
+    // a refresh brought it back. We now use returning=representation
+    // and verify a row actually went out.
+    const { data: deleted, error } = await sb
+      .from('investment_applications')
+      .delete()
+      .eq('id', investmentId)
+      .select('id')
     if (error) return { ok: false, error: error.message }
+    if (!Array.isArray(deleted) || deleted.length === 0) {
+      // Row still exists — likely an RLS policy or an unhandled FK.
+      // Tell the admin clearly instead of silently "succeeding".
+      return {
+        ok: false,
+        error: 'Delete blocked by the database (no rows affected). This usually means the row is referenced by a table not yet cascaded, or your RLS policy doesn\'t allow this delete.',
+      }
+    }
     return { ok: true }
   } catch (e: any) {
     return { ok: false, error: e?.message || 'Delete failed' }
@@ -2230,6 +2247,28 @@ export async function deleteRealtyBrokerSafe(id: string): Promise<DeleteResult> 
 
 // Item 3 — Manual reference number entry/edit. Stored on the
 // existing `reference_number` text column on investment_applications.
+// Testing 30-04-2026 #2: prevent duplicate reference numbers across
+// investments. Returns true if `value` is taken by some other
+// investment_applications row (excluding `excludeId` if provided).
+export async function isReferenceNumberInUse(
+  value: string,
+  excludeId?: string,
+): Promise<boolean> {
+  if (!isSupabaseConfigured()) return false
+  try {
+    const sb = supabase as any
+    const trimmed = (value || '').trim()
+    if (!trimmed) return false
+    let query = sb
+      .from('investment_applications')
+      .select('id', { count: 'exact', head: true })
+      .eq('reference_number', trimmed)
+    if (excludeId) query = query.neq('id', excludeId)
+    const { count } = await query
+    return (count || 0) > 0
+  } catch { return false }
+}
+
 export async function updateInvestmentReferenceNumber(
   investmentId: string,
   referenceNumber: string,
@@ -2239,6 +2278,11 @@ export async function updateInvestmentReferenceNumber(
     const sb = supabase as any
     const trimmed = (referenceNumber || '').trim()
     if (!trimmed) return { ok: false, error: 'Reference number cannot be empty' }
+    // Testing 30-04-2026 #2: reject duplicates so admins can't end up
+    // with two investments sharing the same canonical reference.
+    if (await isReferenceNumberInUse(trimmed, investmentId)) {
+      return { ok: false, error: `Reference number "${trimmed}" is already in use.` }
+    }
     const { error } = await sb
       .from('investment_applications')
       .update({ reference_number: trimmed })
@@ -2635,14 +2679,26 @@ export async function adminCreateInvestmentForClient(
     const today = new Date()
     const maturity = new Date(today)
     maturity.setFullYear(maturity.getFullYear() + tenureYears)
+    // Testing 30-04-2026 #2: if admin manually entered a reference
+    // number, reject duplicates so we don't end up with two investments
+    // sharing the same canonical ref.
+    const manualRef = (input.reference_number || '').trim()
+    if (manualRef && await isReferenceNumberInUse(manualRef)) {
+      return { ok: false, error: `Reference number "${manualRef}" is already in use.` }
+    }
+
+    // Testing 30-04-2026 #4: investment_applications doesn't have a
+    // `created_by` column — sending one trips the PostgREST schema-cache
+    // check. We persist the admin id in admin_notes instead so the audit
+    // trail is preserved without changing the DB shape.
+    const adminTag = adminId ? `[admin-created by ${adminId}] ` : ''
     const baseRow: Record<string, any> = {
       client_id: input.client_id,
       fund_vehicle: input.fund_vehicle,
       investment_amount: input.investment_amount,
       tenure_preference: input.tenure_preference || `${tenureYears} years`,
       status: 'pending',
-      created_by: adminId || null,
-      admin_notes: input.notes || null,
+      admin_notes: `${adminTag}${input.notes || ''}`.trim() || null,
       terms_accepted: true,
       // Pending 30-04-2026 #3: respect a manually-entered reference number.
       reference_number: (input.reference_number || '').trim() || null,

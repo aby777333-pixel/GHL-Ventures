@@ -6,6 +6,7 @@ import {
   ShieldCheck, AlertTriangle, FileText, Filter, CheckCircle2,
   XCircle, Clock, MoreHorizontal, ArrowUpRight, ChevronRight,
   Search, UserCircle, FileSearch, PieChart, Activity, Building2, Upload, Trash2, KeyRound,
+  Link2,
 } from 'lucide-react'
 import AdminGlass from '../shared/AdminGlass'
 import AdminDataTable, { type Column } from '../shared/AdminDataTable'
@@ -64,6 +65,45 @@ export default function ClientModule({ subTab, navigate, showToast }: ClientModu
   // resolved lazily on click so the list query stays untouched.
   const [resetTarget, setResetTarget] = useState<PasswordResetTarget | null>(null)
   const [resolvingResetTarget, setResolvingResetTarget] = useState(false)
+
+  // Pending Testing 30-04-2026 #5: dedicated quick-set referrer modal so
+  // admin doesn't need to open the full Edit Client form to back-fill a
+  // referral code on an existing investor.
+  const [referrerTarget, setReferrerTarget] = useState<{ id: string; name: string; current: string } | null>(null)
+  const [referrerDraft, setReferrerDraft] = useState('')
+  const [referrerSaving, setReferrerSaving] = useState(false)
+
+  const openSetReferrer = useCallback(async (row: any) => {
+    // Pull the current referred_by from the DB so admin sees what's
+    // already there. Best-effort; if it fails we still open the modal
+    // with an empty draft.
+    let current = ''
+    try {
+      const sb: any = supabase
+      const { data } = await sb.from('clients').select('referred_by').eq('id', row.id).maybeSingle()
+      current = data?.referred_by || ''
+    } catch { /* non-fatal */ }
+    setReferrerTarget({ id: row.id, name: row.name || row.full_name || 'Investor', current })
+    setReferrerDraft(current)
+  }, [])
+
+  const saveReferrer = useCallback(async () => {
+    if (!referrerTarget) return
+    const code = referrerDraft.trim()
+    if (!code) { showToast('Referrer code cannot be empty', 'warning'); return }
+    setReferrerSaving(true)
+    try {
+      const { setClientReferrer } = await import('@/lib/supabase/adminDataService')
+      const res = await setClientReferrer(referrerTarget.id, code)
+      if (res.ok) {
+        showToast(`Referrer set to ${code}`, 'success')
+        setReferrerTarget(null)
+        setReferrerDraft('')
+      } else {
+        showToast(res.error || 'Failed to set referrer', 'error')
+      }
+    } finally { setReferrerSaving(false) }
+  }, [referrerTarget, referrerDraft, showToast])
 
   const loadData = useCallback(async () => {
     setLoading(true)
@@ -243,6 +283,7 @@ export default function ClientModule({ subTab, navigate, showToast }: ClientModu
             onViewClient={(c) => { setSelectedClient(c); setProfileModalOpen(true) }}
             onDeleteClient={handleDeleteClient}
             onResetPassword={openResetForClient}
+            onSetReferrer={openSetReferrer}
             resolvingReset={resolvingResetTarget}
             showToast={showToast}
           />
@@ -548,6 +589,51 @@ export default function ClientModule({ subTab, navigate, showToast }: ClientModu
         onClose={() => setResetTarget(null)}
         showToast={showToast}
       />
+
+      {/* Pending Testing 30-04-2026 #5: Quick Set Referrer modal */}
+      <AdminModal
+        isOpen={!!referrerTarget}
+        onClose={() => { if (!referrerSaving) { setReferrerTarget(null); setReferrerDraft('') } }}
+        title="Set Referrer Code"
+        subtitle={referrerTarget ? `Investor: ${referrerTarget.name}` : ''}
+        maxWidth="max-w-md"
+        footer={
+          <>
+            <ModalButton onClick={() => { if (!referrerSaving) { setReferrerTarget(null); setReferrerDraft('') } }}>Cancel</ModalButton>
+            <ModalButton
+              variant="primary"
+              onClick={saveReferrer}
+              disabled={referrerSaving || !referrerDraft.trim() || referrerDraft.trim() === (referrerTarget?.current || '')}
+            >
+              {referrerSaving ? 'Saving…' : 'Save Referrer'}
+            </ModalButton>
+          </>
+        }
+      >
+        <div className="space-y-3">
+          <p className="text-xs text-gray-400">
+            Enter the referrer&apos;s code (the <span className="font-mono text-purple-300">referral_code</span> on
+            their <em>own</em> client record — usually starts with <span className="font-mono">GHL-</span>). When the
+            code matches a registered investor we also create a <span className="font-mono">referrals</span> row so
+            the referrer&apos;s commission tracking picks up this investor automatically.
+          </p>
+          <input
+            type="text"
+            value={referrerDraft}
+            onChange={e => setReferrerDraft(e.target.value)}
+            placeholder="e.g. GHL-R-AB12CD"
+            className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2.5 text-sm text-white font-mono placeholder-gray-600 focus:outline-none focus:border-brand-red/40"
+            autoFocus
+          />
+          {referrerTarget?.current ? (
+            <p className="text-[10px] text-gray-500">
+              Current value: <span className="font-mono text-gray-400">{referrerTarget.current}</span>
+            </p>
+          ) : (
+            <p className="text-[10px] text-gray-500 italic">No referrer set yet for this investor.</p>
+          )}
+        </div>
+      </AdminModal>
     </div>
   )
 }
@@ -558,6 +644,7 @@ function ClientListTab({
   onViewClient,
   onDeleteClient,
   onResetPassword,
+  onSetReferrer,
   resolvingReset,
   showToast,
 }: {
@@ -565,6 +652,7 @@ function ClientListTab({
   onViewClient: (c: Client) => void
   onDeleteClient: (c: Client) => void
   onResetPassword: (c: Client) => void
+  onSetReferrer: (c: any) => void
   resolvingReset: boolean
   showToast: (msg: string, type?: 'success' | 'error' | 'info' | 'warning') => void
 }) {
@@ -641,6 +729,16 @@ function ClientListTab({
               title="Reset password"
             >
               <KeyRound className="w-4 h-4" />
+            </button>
+            {/* Pending Testing 30-04-2026 #5: quick Set Referrer
+                action so admin doesn't need to open the full edit
+                form just to back-fill a referral code. */}
+            <button
+              onClick={(e) => { e.stopPropagation(); onSetReferrer(row) }}
+              className="p-1.5 rounded-lg hover:bg-purple-500/10 text-gray-500 hover:text-purple-300 transition-colors"
+              title="Set / update referrer code"
+            >
+              <Link2 className="w-4 h-4" />
             </button>
             {isApproved ? (
               <span

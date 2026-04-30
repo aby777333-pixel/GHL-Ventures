@@ -866,6 +866,21 @@ export default function InvestmentFlowTab({
           ────────────────────────────────────────────────────── */}
       {subTab === 'documents' && (
         <div className="space-y-4">
+          {/* Pending Testing 30-04-2026 #6: render the document-tracking
+              strip per active investment ABOVE the documents list, so
+              the investor sees admin status updates even when no doc
+              files have been uploaded yet. The strip pulls live from
+              public.investment_doc_tracking on every mount. */}
+          {investApps.length > 0 && investApps
+            .filter((app: any) => ['approved', 'credited', 'completed'].includes(app.status))
+            .map((app: any) => (
+              <DocumentTrackingProgress
+                key={`tracking-${app.id}`}
+                investmentAppId={app.id}
+                theme={(theme === 'light' ? 'light' : 'dark')}
+              />
+            ))
+          }
           {investDocs.length === 0 ? (
             <G className="overflow-hidden" theme={theme}>
               <div className="p-10 text-center">
@@ -905,12 +920,10 @@ export default function InvestmentFlowTab({
                 const fund = app.fund_vehicle || docs[0]?.fund_vehicle || 'Investment Documents'
                 return (
                   <div key={appId} className="space-y-3">
-                  {/* Pending 30-04-2026 #10: per-investment 6-stage progress
-                      strip on the investor's Documents tab. Renders only
-                      when the application id is real (skip orphans). */}
-                  {appId !== 'orphan' && (
-                    <DocumentTrackingProgress investmentAppId={appId} theme={(theme === 'light' ? 'light' : 'dark')} />
-                  )}
+                  {/* Pending Testing 30-04-2026 #6: tracking strip is now
+                      rendered once per active investment ABOVE this list
+                      (so it shows even when there are zero doc files).
+                      Removed the per-group strip to avoid duplicates. */}
                   <G className="overflow-hidden" theme={theme}>
                     <div className={`px-5 py-3 border-b flex items-center justify-between gap-3 ${t('border-white/[0.06]','border-gray-200')}`}>
                       <div className="min-w-0">
@@ -1085,31 +1098,56 @@ export default function InvestmentFlowTab({
                 <table className="w-full text-xs">
                   <thead>
                     <tr className={`border-b ${t('border-white/[0.06] bg-white/[0.02]','border-gray-200 bg-gray-50')}`}>
-                      {['Due Date', 'Fund', 'Gross', 'TDS', 'Net Interest', 'Payment Status', 'Paid On'].map(h => (
+                      {/* Pending Testing 30-04-2026 #1: Appreciation + Value of Debenture
+                          columns added to the live (post-credit) schedule, mirroring the
+                          preview table below. */}
+                      {['Due Date', 'Fund', 'Gross', 'TDS', 'Net Interest', 'Appreciation', 'Value of Debenture', 'Payment Status', 'Paid On'].map(h => (
                         <th key={h} className={`text-left font-bold uppercase tracking-wider py-3 px-4 ${t('text-gray-500','text-gray-600')}`}>{h}</th>
                       ))}
                     </tr>
                   </thead>
                   <tbody>
-                    {investorPayouts.map((p: any) => {
-                      const status = (p.payment_status || 'pending').toLowerCase()
-                      const pillCls = status === 'paid'
-                        ? 'bg-emerald-500/15 text-emerald-500'
-                        : status === 'overdue'
-                          ? 'bg-red-500/15 text-red-500'
-                          : 'bg-amber-500/15 text-amber-500'
-                      return (
-                        <tr key={p.id} className={`border-b ${t('border-white/[0.03] hover:bg-white/[0.02]','border-gray-100 hover:bg-gray-50')}`}>
-                          <td className={`py-2.5 px-4 ${t('text-gray-400','text-gray-700')}`}>{fmtDate(p.due_date)}</td>
-                          <td className={`py-2.5 px-4 ${t('text-gray-400','text-gray-700')}`}>{p.fund_type || '—'}</td>
-                          <td className={`py-2.5 px-4 font-semibold ${t('text-white','text-gray-900')}`}>₹{fmtINR(Number(p.gross_amount) || 0)}</td>
-                          <td className={`py-2.5 px-4 ${t('text-red-400','text-red-600')}`}>₹{fmtINR(Number(p.tds_amount) || 0)}</td>
-                          <td className={`py-2.5 px-4 font-semibold ${t('text-emerald-400','text-emerald-700')}`}>₹{fmtINR(Number(p.net_interest) || 0)}</td>
-                          <td className="py-2.5 px-4"><span className={`px-2 py-0.5 rounded-full text-[10px] font-bold capitalize ${pillCls}`}>{status}</span></td>
-                          <td className={`py-2.5 px-4 ${t('text-gray-500','text-gray-600')}`}>{p.payment_date ? fmtDate(p.payment_date) : '—'}</td>
-                        </tr>
-                      )
-                    })}
+                    {(() => {
+                      // Pending Testing 30-04-2026 #1: compute appreciation
+                      // + cumulative debenture value per row at render time.
+                      // monthly_payouts only stores gross/TDS/net, so we
+                      // derive these from the parent investment app.
+                      const principal = Number(selectedApp?.final_investment_amount) || Number(selectedApp?.investment_amount) || 0
+                      const apprPct = Number(selectedApp?.appreciation_rate) || 12
+                      const yearlyAppr = principal * (apprPct / 100)
+                      const startDate = selectedApp?.investment_date ? new Date(selectedApp.investment_date) : null
+                      return investorPayouts.map((p: any) => {
+                        const status = (p.payment_status || 'pending').toLowerCase()
+                        const pillCls = status === 'paid'
+                          ? 'bg-emerald-500/15 text-emerald-500'
+                          : status === 'overdue'
+                            ? 'bg-red-500/15 text-red-500'
+                            : 'bg-amber-500/15 text-amber-500'
+                        let monthIdx = 0
+                        let isAnniversary = false
+                        if (startDate && p.due_date) {
+                          const due = new Date(p.due_date)
+                          monthIdx = (due.getFullYear() - startDate.getFullYear()) * 12
+                            + (due.getMonth() - startDate.getMonth())
+                          isAnniversary = monthIdx > 0 && monthIdx % 12 === 0
+                        }
+                        const appreciation = isAnniversary ? yearlyAppr : 0
+                        const debValue = isAnniversary ? principal + (monthIdx / 12) * yearlyAppr : 0
+                        return (
+                          <tr key={p.id} className={`border-b ${t('border-white/[0.03] hover:bg-white/[0.02]','border-gray-100 hover:bg-gray-50')}`}>
+                            <td className={`py-2.5 px-4 ${t('text-gray-400','text-gray-700')}`}>{fmtDate(p.due_date)}</td>
+                            <td className={`py-2.5 px-4 ${t('text-gray-400','text-gray-700')}`}>{p.fund_type || '—'}</td>
+                            <td className={`py-2.5 px-4 font-semibold ${t('text-white','text-gray-900')}`}>₹{fmtINR(Number(p.gross_amount) || 0)}</td>
+                            <td className={`py-2.5 px-4 ${t('text-red-400','text-red-600')}`}>₹{fmtINR(Number(p.tds_amount) || 0)}</td>
+                            <td className={`py-2.5 px-4 font-semibold ${t('text-emerald-400','text-emerald-700')}`}>₹{fmtINR(Number(p.net_interest) || 0)}</td>
+                            <td className={`py-2.5 px-4 ${appreciation > 0 ? t('text-blue-400','text-blue-700') : t('text-gray-600','text-gray-400')}`}>{appreciation > 0 ? `₹${fmtINR(Math.round(appreciation))}` : '—'}</td>
+                            <td className={`py-2.5 px-4 font-bold ${debValue > 0 ? t('text-white','text-gray-900') : t('text-gray-600','text-gray-400')}`}>{debValue > 0 ? `₹${fmtINR(Math.round(debValue))}` : '—'}</td>
+                            <td className="py-2.5 px-4"><span className={`px-2 py-0.5 rounded-full text-[10px] font-bold capitalize ${pillCls}`}>{status}</span></td>
+                            <td className={`py-2.5 px-4 ${t('text-gray-500','text-gray-600')}`}>{p.payment_date ? fmtDate(p.payment_date) : '—'}</td>
+                          </tr>
+                        )
+                      })
+                    })()}
                   </tbody>
                 </table>
               </div>
