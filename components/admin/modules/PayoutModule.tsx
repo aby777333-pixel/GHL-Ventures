@@ -5,7 +5,7 @@ import {
   Banknote, Calendar, ChevronLeft, ChevronRight, Download,
   CheckCircle2, Clock, AlertCircle, IndianRupee, FileText,
   Search, Filter, RefreshCw, Eye, CreditCard, FileSpreadsheet,
-  Printer, Users, ArrowUpRight, Send,
+  Printer, Users, ArrowUpRight, Send, Loader2,
 } from 'lucide-react'
 import AdminGlass from '../shared/AdminGlass'
 import AdminDataTable, { type Column } from '../shared/AdminDataTable'
@@ -197,6 +197,8 @@ export default function PayoutModule({ subTab, navigate, showToast }: PayoutModu
   const [updating, setUpdating] = useState(false)
   const [historyFilter, setHistoryFilter] = useState<string>('all')
   const [exportFormat, setExportFormat] = useState<'csv' | 'excel' | 'pdf'>('csv')
+  // Pending 30-04-2026 follow-up: scope picker on the Export tab.
+  const [exportScope, setExportScope] = useState<'monthly' | 'paid_history' | 'all'>('monthly')
   const [generating, setGenerating] = useState(false)
   // Per-row in-flight state for Send-to-Client actions (prevents double-sends).
   const [sendingIds, setSendingIds] = useState<Set<string>>(new Set())
@@ -277,17 +279,112 @@ export default function PayoutModule({ subTab, navigate, showToast }: PayoutModu
 
   useEffect(() => { fetchPayouts() }, [fetchPayouts])
 
+  // Pending 30-04-2026 follow-up: dedicated all-time fetch for the
+  // Payout History tab. The monthly fetch above is scoped to the
+  // selectedMonth, so without this the History tab only ever showed
+  // paid payouts inside the current month — which looked broken.
+  const fetchAllPaidHistory = useCallback(async () => {
+    if (!isSupabaseConfigured()) {
+      setAllPaidHistory(getDemoData().filter(p => p.payment_status === 'paid'))
+      setHistoryLoading(false)
+      return
+    }
+    setHistoryLoading(true)
+    try {
+      const { data: payoutRows, error } = await supabase
+        .from('monthly_payouts')
+        .select('*')
+        .eq('payment_status', 'paid')
+        .order('payment_date', { ascending: false })
+      if (error) throw error
+      if (!payoutRows || payoutRows.length === 0) {
+        setAllPaidHistory([])
+        setHistoryLoading(false)
+        return
+      }
+
+      const clientIds = Array.from(new Set(payoutRows.map((r: any) => r.client_id).filter(Boolean)))
+      const [clientsRes, bankRes, identityRes] = await Promise.all([
+        clientIds.length > 0 ? supabase.from('clients').select('id, ghl_id, full_name, email, phone').in('id', clientIds) : { data: [] },
+        clientIds.length > 0 ? supabase.from('kyc_bank_details').select('client_id, account_number, account_holder_name, bank_name, ifsc_code').in('client_id', clientIds) : { data: [] },
+        clientIds.length > 0 ? supabase.from('kyc_identity_details').select('client_id, pan_number, aadhar_number').in('client_id', clientIds) : { data: [] },
+      ])
+      const clientMap = new Map((clientsRes.data || []).map((c: any) => [c.id, c]))
+      const bankMap = new Map((bankRes.data || []).map((b: any) => [b.client_id, b]))
+      const idMap = new Map((identityRes.data || []).map((i: any) => [i.client_id, i]))
+
+      const mapped: PayoutRecord[] = payoutRows.map((row: any) => {
+        const client: any = clientMap.get(row.client_id) || {}
+        const bank: any = bankMap.get(row.client_id) || {}
+        const identity: any = idMap.get(row.client_id) || {}
+        return {
+          id: row.id,
+          client_id: row.client_id || null,
+          investment_date: row.investment_date,
+          ghl_id: row.ghl_id || client.ghl_id || '-',
+          client_name: client.full_name || '-',
+          email: client.email || '-',
+          phone: client.phone || '-',
+          fund_type: row.fund_type || '-',
+          due_date: row.due_date,
+          investment_amount: row.investment_amount || 0,
+          gross_interest: row.gross_amount || 0,
+          tds_amount: row.tds_amount || 0,
+          net_interest: row.net_interest || 0,
+          payment_status: row.payment_status || 'pending',
+          payment_date: row.payment_date,
+          account_number: row.account_number || bank.account_number || '-',
+          account_holder_name: row.account_holder_name || bank.account_holder_name || '-',
+          bank_name: row.bank_name || bank.bank_name || '-',
+          ifsc_code: row.ifsc_code || bank.ifsc_code || '-',
+          aadhar_number: identity.aadhar_number || '-',
+          pan_number: identity.pan_number || '-',
+        }
+      })
+      setAllPaidHistory(mapped)
+    } catch (err) {
+      console.error('Error fetching paid history:', err)
+      showToast('Failed to load payment history', 'error')
+      setAllPaidHistory([])
+    } finally {
+      setHistoryLoading(false)
+    }
+  }, [showToast])
+
+  // Load history once on mount + every time the History or Export tab
+  // is opened. We don't want to refetch every time the monthly
+  // selection changes — history is independent of selectedMonth.
+  useEffect(() => {
+    if (activeTab === 'history' || activeTab === 'export') {
+      fetchAllPaidHistory()
+    }
+  }, [activeTab, fetchAllPaidHistory])
+
   // ── Filtered Data ────────────────────────────────────────────
   const filteredPayouts = useMemo(() => {
     if (statusFilter === 'all') return payouts
     return payouts.filter(p => p.payment_status === statusFilter)
   }, [payouts, statusFilter])
 
+  // Pending 30-04-2026 follow-up: history now reads from the dedicated
+  // all-time paid set, not the monthly slice. Filter still applies.
   const historyPayouts = useMemo(() => {
-    const paid = payouts.filter(p => p.payment_status === 'paid')
+    const paid = allPaidHistory
     if (historyFilter === 'all') return paid
-    return paid.filter(p => p.fund_type.toLowerCase().includes(historyFilter.toLowerCase()))
-  }, [payouts, historyFilter])
+    return paid.filter(p => (p.fund_type || '').toLowerCase().includes(historyFilter.toLowerCase()))
+  }, [allPaidHistory, historyFilter])
+
+  // Build the fund-type filter options from the data we actually have
+  // (legacy hard-coded "Gold Fund / Real Estate Fund / Fixed Income"
+  // didn't match what the DB stores, so the dropdown silently filtered
+  // everything away).
+  const historyFundOptions = useMemo(() => {
+    const set = new Set<string>()
+    for (const p of allPaidHistory) {
+      if (p.fund_type && p.fund_type !== '-') set.add(p.fund_type)
+    }
+    return Array.from(set).sort()
+  }, [allPaidHistory])
 
   // ── KPIs ─────────────────────────────────────────────────────
   const kpis = useMemo(() => {
@@ -470,8 +567,33 @@ export default function PayoutModule({ subTab, navigate, showToast }: PayoutModu
     return [headers, ...rows].map(r => r.map(c => `"${c}"`).join(',')).join('\n')
   }
 
-  const handleExport = (format: 'csv' | 'excel' | 'pdf') => {
-    const data = filteredPayouts.length > 0 ? filteredPayouts : payouts
+  // Pending 30-04-2026 follow-up: export now respects a scope selector
+  // on the Export tab (Current Month / All Paid / All Records). The
+  // legacy Export button on the Monthly Payouts tab keeps the old
+  // behaviour (filteredPayouts || payouts) for backwards compat.
+  const handleExport = (
+    format: 'csv' | 'excel' | 'pdf',
+    scope: 'monthly' | 'paid_history' | 'all' = 'monthly',
+  ) => {
+    let data: PayoutRecord[]
+    let labelSuffix: string
+    if (scope === 'paid_history') {
+      data = allPaidHistory
+      labelSuffix = 'paid_history'
+    } else if (scope === 'all') {
+      // Combine the current monthly view + all paid history, dedupe by id.
+      const seen = new Set<string>()
+      data = [...payouts, ...allPaidHistory].filter(p => {
+        if (seen.has(p.id)) return false
+        seen.add(p.id)
+        return true
+      })
+      labelSuffix = 'all'
+    } else {
+      data = filteredPayouts.length > 0 ? filteredPayouts : payouts
+      labelSuffix = getMonthLabel(selectedMonth).replace(' ', '_')
+    }
+
     if (data.length === 0) {
       showToast('No data to export', 'warning')
       return
@@ -483,26 +605,33 @@ export default function PayoutModule({ subTab, navigate, showToast }: PayoutModu
       const url = URL.createObjectURL(blob)
       const a = document.createElement('a')
       a.href = url
-      a.download = `payouts_${getMonthLabel(selectedMonth).replace(' ', '_')}.${format === 'excel' ? 'xlsx' : 'csv'}`
+      a.download = `payouts_${labelSuffix}.${format === 'excel' ? 'xlsx' : 'csv'}`
       document.body.appendChild(a)
       a.click()
       document.body.removeChild(a)
       URL.revokeObjectURL(url)
-      showToast(`Exported as ${format.toUpperCase()} successfully`, 'success')
+      showToast(`Exported ${data.length} record${data.length === 1 ? '' : 's'} as ${format.toUpperCase()}`, 'success')
     } else if (format === 'pdf') {
-      const printContent = buildPrintHTML(data)
+      const printContent = buildPrintHTML(data, scope)
       const printWindow = window.open('', '_blank')
       if (printWindow) {
         printWindow.document.write(printContent)
         printWindow.document.close()
         printWindow.print()
-        showToast('PDF print view opened', 'success')
+        showToast(`PDF print view opened (${data.length} record${data.length === 1 ? '' : 's'})`, 'success')
+      } else {
+        showToast('Popup blocked — allow popups for this site', 'error')
       }
     }
   }
 
-  const buildPrintHTML = (data: PayoutRecord[]) => {
-    const month = getMonthLabel(selectedMonth)
+  const buildPrintHTML = (data: PayoutRecord[], scope: 'monthly' | 'paid_history' | 'all' = 'monthly') => {
+    const heading = scope === 'paid_history'
+      ? 'All Paid Payouts'
+      : scope === 'all'
+        ? 'All Payout Records'
+        : getMonthLabel(selectedMonth)
+    const month = heading
     const rows = data.map(p => `
       <tr>
         <td>${p.ghl_id}</td><td>${p.client_name}</td><td>${p.fund_type}</td>
@@ -835,37 +964,55 @@ export default function PayoutModule({ subTab, navigate, showToast }: PayoutModu
         />
       </div>
 
-      {/* Month Selector for History */}
+      {/* History filter — shows real fund_type values from the data,
+          and a Refresh button so admin can re-pull after marking
+          payouts paid in the Monthly tab. The legacy month-arrow
+          selector was misleading here (history is all-time), so it's
+          gone. */}
       <AdminGlass>
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <button onClick={() => navigateMonth(-1)} className="p-2 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] text-gray-400 hover:text-white transition-colors border border-white/[0.06]">
-              <ChevronLeft className="w-4 h-4" />
-            </button>
-            <p className="text-white font-semibold text-sm min-w-[160px] text-center">{getMonthLabel(selectedMonth)}</p>
-            <button onClick={() => navigateMonth(1)} className="p-2 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] text-gray-400 hover:text-white transition-colors border border-white/[0.06]">
-              <ChevronRight className="w-4 h-4" />
+        <div className="flex items-center justify-between gap-3 flex-wrap">
+          <div className="flex items-center gap-2">
+            <p className="text-xs text-gray-400">
+              Showing <span className="text-white font-semibold">{historyPayouts.length}</span>
+              {' '}paid payout{historyPayouts.length === 1 ? '' : 's'}
+              {' '}({formatINR(historyPayouts.reduce((s, p) => s + p.net_interest, 0))} net)
+            </p>
+          </div>
+          <div className="flex items-center gap-2">
+            <select
+              value={historyFilter}
+              onChange={e => setHistoryFilter(e.target.value)}
+              className="bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2 text-xs text-gray-300 focus:outline-none focus:border-brand-red/40 max-w-[260px]"
+            >
+              <option value="all">All Funds</option>
+              {historyFundOptions.map(opt => (
+                <option key={opt} value={opt}>{opt}</option>
+              ))}
+            </select>
+            <button
+              onClick={fetchAllPaidHistory}
+              disabled={historyLoading}
+              className="p-2 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] text-gray-400 hover:text-white transition-colors border border-white/[0.06] disabled:opacity-50"
+              title="Refresh"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 ${historyLoading ? 'animate-spin' : ''}`} />
             </button>
           </div>
-          <select
-            value={historyFilter}
-            onChange={e => setHistoryFilter(e.target.value)}
-            className="bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2 text-xs text-gray-300 focus:outline-none focus:border-brand-red/40"
-          >
-            <option value="all">All Funds</option>
-            <option value="gold">Gold Fund</option>
-            <option value="real-estate">Real Estate Fund</option>
-            <option value="fixed">Fixed Income</option>
-          </select>
         </div>
       </AdminGlass>
 
       {/* History Table */}
-      {historyPayouts.length === 0 ? (
+      {historyLoading ? (
+        <AdminGlass>
+          <div className="flex items-center justify-center py-16">
+            <Loader2 className="w-5 h-5 text-brand-red animate-spin" />
+          </div>
+        </AdminGlass>
+      ) : historyPayouts.length === 0 ? (
         <AdminEmptyState
           icon={Clock}
           title="No payment history"
-          description="Completed payments will appear here."
+          description="Completed payments will appear here once admin marks payouts as paid."
         />
       ) : (
         <AdminDataTable
@@ -881,8 +1028,58 @@ export default function PayoutModule({ subTab, navigate, showToast }: PayoutModu
     </div>
   )
 
-  const renderExport = () => (
+  const renderExport = () => {
+    // Pending 30-04-2026 follow-up: scope selector + counts so admin
+    // can choose what to export (current month / paid history / all).
+    const exportScopeData =
+      exportScope === 'paid_history' ? allPaidHistory
+        : exportScope === 'all'
+          ? (() => {
+              const seen = new Set<string>()
+              return [...payouts, ...allPaidHistory].filter(p => {
+                if (seen.has(p.id)) return false; seen.add(p.id); return true
+              })
+            })()
+          : (filteredPayouts.length > 0 ? filteredPayouts : payouts)
+    const exportNetTotal = exportScopeData.reduce((s, p) => s + p.net_interest, 0)
+
+    return (
     <div className="space-y-6">
+      {/* Scope selector */}
+      <AdminGlass>
+        <div className="flex items-center justify-between gap-3 flex-wrap">
+          <div>
+            <p className="text-xs text-gray-400 mb-1">Export Scope</p>
+            <div className="flex items-center gap-1.5 flex-wrap">
+              {([
+                { id: 'monthly' as const, label: `Current Month (${getMonthLabel(selectedMonth)})` },
+                { id: 'paid_history' as const, label: 'All Paid History' },
+                { id: 'all' as const, label: 'All Records' },
+              ]).map(opt => (
+                <button
+                  key={opt.id}
+                  onClick={() => setExportScope(opt.id)}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors ${
+                    exportScope === opt.id
+                      ? 'bg-brand-red/15 text-white border-brand-red/40'
+                      : 'bg-white/[0.04] text-gray-400 border-white/[0.06] hover:bg-white/[0.08] hover:text-white'
+                  }`}
+                >
+                  {opt.label}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div className="text-right">
+            <p className="text-[10px] uppercase tracking-wider text-gray-500">Selected</p>
+            <p className="text-white text-sm font-semibold">
+              {exportScopeData.length} record{exportScopeData.length === 1 ? '' : 's'}
+            </p>
+            <p className="text-[11px] text-emerald-400">{formatINR(exportNetTotal)} net</p>
+          </div>
+        </div>
+      </AdminGlass>
+
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {/* CSV */}
         <AdminGlass hover>
@@ -893,8 +1090,9 @@ export default function PayoutModule({ subTab, navigate, showToast }: PayoutModu
             <h3 className="text-white font-semibold text-sm mb-1">CSV Export</h3>
             <p className="text-gray-500 text-xs mb-4">Comma-separated values file compatible with Excel, Google Sheets, and other tools.</p>
             <button
-              onClick={() => handleExport('csv')}
-              className="w-full px-4 py-2.5 rounded-xl text-sm font-medium border transition-colors bg-emerald-500/10 text-emerald-400 border-emerald-500/20 hover:bg-emerald-500/20"
+              onClick={() => handleExport('csv', exportScope)}
+              disabled={exportScopeData.length === 0}
+              className="w-full px-4 py-2.5 rounded-xl text-sm font-medium border transition-colors bg-emerald-500/10 text-emerald-400 border-emerald-500/20 hover:bg-emerald-500/20 disabled:opacity-40 disabled:cursor-not-allowed"
             >
               <Download className="w-4 h-4 inline mr-2" />Export CSV
             </button>
@@ -910,8 +1108,9 @@ export default function PayoutModule({ subTab, navigate, showToast }: PayoutModu
             <h3 className="text-white font-semibold text-sm mb-1">Excel Export</h3>
             <p className="text-gray-500 text-xs mb-4">Download as an Excel-compatible spreadsheet file for detailed analysis.</p>
             <button
-              onClick={() => handleExport('excel')}
-              className="w-full px-4 py-2.5 rounded-xl text-sm font-medium border transition-colors bg-blue-500/10 text-blue-400 border-blue-500/20 hover:bg-blue-500/20"
+              onClick={() => handleExport('excel', exportScope)}
+              disabled={exportScopeData.length === 0}
+              className="w-full px-4 py-2.5 rounded-xl text-sm font-medium border transition-colors bg-blue-500/10 text-blue-400 border-blue-500/20 hover:bg-blue-500/20 disabled:opacity-40 disabled:cursor-not-allowed"
             >
               <Download className="w-4 h-4 inline mr-2" />Export Excel
             </button>
@@ -927,8 +1126,9 @@ export default function PayoutModule({ subTab, navigate, showToast }: PayoutModu
             <h3 className="text-white font-semibold text-sm mb-1">PDF / Print</h3>
             <p className="text-gray-500 text-xs mb-4">Generate a printable view of the payout data. Use your browser&apos;s print dialog to save as PDF.</p>
             <button
-              onClick={() => handleExport('pdf')}
-              className="w-full px-4 py-2.5 rounded-xl text-sm font-medium border transition-colors bg-red-500/10 text-red-400 border-red-500/20 hover:bg-red-500/20"
+              onClick={() => handleExport('pdf', exportScope)}
+              disabled={exportScopeData.length === 0}
+              className="w-full px-4 py-2.5 rounded-xl text-sm font-medium border transition-colors bg-red-500/10 text-red-400 border-red-500/20 hover:bg-red-500/20 disabled:opacity-40 disabled:cursor-not-allowed"
             >
               <Printer className="w-4 h-4 inline mr-2" />Print / PDF
             </button>
@@ -941,16 +1141,24 @@ export default function PayoutModule({ subTab, navigate, showToast }: PayoutModu
         <div className="flex items-start gap-3 p-1">
           <AlertCircle className="w-5 h-5 text-amber-400 flex-shrink-0 mt-0.5" />
           <div>
-            <p className="text-sm text-white font-medium">Export includes all data for {getMonthLabel(selectedMonth)}</p>
+            <p className="text-sm text-white font-medium">
+              {exportScope === 'paid_history'
+                ? 'Export includes every paid payout to date.'
+                : exportScope === 'all'
+                  ? 'Export includes the current month plus all paid history (deduped).'
+                  : `Export includes data for ${getMonthLabel(selectedMonth)}.`}
+            </p>
             <p className="text-xs text-gray-500 mt-1">
-              {payouts.length} records will be exported. Data includes investor details, fund info, payout amounts,
-              TDS deductions, bank details, and KYC information. Apply filters on the Monthly Payouts tab to export a subset.
+              {exportScopeData.length} record{exportScopeData.length === 1 ? '' : 's'} will be exported.
+              {' '}Includes investor details, fund info, payout amounts, TDS deductions, bank details, and KYC information.
+              {exportScope === 'monthly' ? ' Apply status filters on the Monthly Payouts tab to narrow the subset.' : ''}
             </p>
           </div>
         </div>
       </AdminGlass>
     </div>
-  )
+    )
+  }
 
   // ── Main Render ──────────────────────────────────────────────
   return (
