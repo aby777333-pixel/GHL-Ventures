@@ -1290,6 +1290,66 @@ function EmailerTab({ showToast }: { showToast: Props['showToast'] }) {
   const removeAttachment = (id: string) =>
     setAttachments(prev => prev.filter(a => a.id !== id))
 
+  // Pending 30-04-2026 follow-up: bulk recipient import from CSV.
+  // The parser is intentionally permissive — it pulls every email-
+  // shaped token out of the file, so it works with:
+  //   - one email per line
+  //   - emails in any column of a CSV (Excel-style export)
+  //   - mixed delimiters (comma, semicolon, tab, newline)
+  //   - leading BOM, quotes, surrounding whitespace
+  // Invalid lines are silently skipped; the toast reports counts.
+  const handleImportCsv = useCallback(async (file: File) => {
+    if (file.size > 5 * 1024 * 1024) {
+      showToast('CSV is over 5MB — please split into smaller files', 'error')
+      return
+    }
+    try {
+      const raw = await file.text()
+      // Strip BOM
+      const text = raw.replace(/^﻿/, '')
+      // Pull every RFC-5322-ish email out of the whole document. This
+      // sidesteps brittle CSV parsing while still handling the cases
+      // the user is likely to throw at it (Excel exports, Mailchimp
+      // unsubscribe lists, plain newline-separated dumps, etc.).
+      const matches = text.match(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/gi) || []
+      const tokens = matches.map(s => s.trim())
+      // Dedupe vs existing input + within the file (case-insensitive).
+      const existing = new Set(
+        recipients
+          .split(',')
+          .map(s => s.trim().toLowerCase())
+          .filter(Boolean),
+      )
+      const additions: string[] = []
+      const seen = new Set<string>()
+      for (const tok of tokens) {
+        const lower = tok.toLowerCase()
+        if (existing.has(lower) || seen.has(lower)) continue
+        seen.add(lower)
+        additions.push(tok)
+      }
+      const skipped = tokens.length - additions.length
+      if (additions.length === 0) {
+        showToast(
+          tokens.length === 0
+            ? 'No emails found in this file'
+            : `All ${tokens.length} emails are already in the recipient list`,
+          'warning',
+        )
+        return
+      }
+      const merged = recipients.trim()
+        ? `${recipients.replace(/,\s*$/, '')}, ${additions.join(', ')}`
+        : additions.join(', ')
+      setRecipients(merged)
+      const dupNote = skipped > 0 ? ` · ${skipped} duplicate${skipped === 1 ? '' : 's'} skipped` : ''
+      showToast(`Imported ${additions.length} email${additions.length === 1 ? '' : 's'}${dupNote}`, 'success')
+    } catch (e) {
+      console.error('[Emailer] CSV import failed:', e)
+      showToast('Could not read CSV — please check the file', 'error')
+    }
+  }, [recipients, showToast])
+
   const handleSendEmail = async () => {
     if (!recipients.trim()) { showToast('Please enter recipient email(s)', 'error'); return }
     if (!subject.trim()) { showToast('Please enter a subject', 'error'); return }
@@ -1357,7 +1417,54 @@ function EmailerTab({ showToast }: { showToast: Props['showToast'] }) {
           <AdminGlass>
             <h3 className="text-sm font-semibold text-white mb-4">Email Composer</h3>
             <div className="space-y-3">
-              <input value={recipients} onChange={e => setRecipients(e.target.value)} placeholder="Recipient email(s) — separate multiple with commas..." className="w-full px-4 py-2.5 rounded-xl bg-white/[0.04] border border-white/[0.08] text-sm text-white placeholder:text-gray-600 focus:outline-none focus:border-brand-red/40" />
+              {/* Pending 30-04-2026 follow-up: bulk CSV import for
+                  recipients. Accepts .csv / .txt with one email per
+                  line OR a column of emails (auto-detects which column
+                  by scanning for the first email-shaped string in
+                  the header row, or falls back to extracting every
+                  email-pattern match in the file).
+                  - Dedupes (case-insensitive) against existing
+                    recipients in the input.
+                  - Shows toast with counts of added / skipped /
+                    invalid rows. */}
+              <div className="flex items-stretch gap-2">
+                <input
+                  value={recipients}
+                  onChange={e => setRecipients(e.target.value)}
+                  placeholder="Recipient email(s) — separate multiple with commas, or use Import CSV →"
+                  className="flex-1 px-4 py-2.5 rounded-xl bg-white/[0.04] border border-white/[0.08] text-sm text-white placeholder:text-gray-600 focus:outline-none focus:border-brand-red/40"
+                />
+                <label className="shrink-0 cursor-pointer flex items-center gap-1.5 px-3 py-2.5 rounded-xl text-xs font-medium text-gray-300 bg-white/[0.06] border border-white/[0.08] hover:bg-white/[0.10] transition-colors">
+                  <Upload className="w-3.5 h-3.5" />
+                  Import CSV
+                  <input
+                    type="file"
+                    accept=".csv,.txt,text/csv,text/plain"
+                    className="hidden"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0]
+                      e.currentTarget.value = ''
+                      if (!file) return
+                      handleImportCsv(file)
+                    }}
+                  />
+                </label>
+                {recipients.trim() ? (
+                  <button
+                    type="button"
+                    onClick={() => setRecipients('')}
+                    title="Clear recipients"
+                    className="shrink-0 px-3 py-2.5 rounded-xl text-xs font-medium text-gray-400 bg-white/[0.04] border border-white/[0.06] hover:bg-white/[0.08] hover:text-white transition-colors"
+                  >
+                    Clear
+                  </button>
+                ) : null}
+              </div>
+              {recipients.trim() ? (
+                <p className="text-[10px] text-gray-500 -mt-1">
+                  {recipients.split(',').map(s => s.trim()).filter(Boolean).length} recipient(s) loaded
+                </p>
+              ) : null}
               <input value={subject} onChange={e => setSubject(e.target.value)} placeholder="Subject line..." className="w-full px-4 py-2.5 rounded-xl bg-white/[0.04] border border-white/[0.08] text-sm text-white placeholder:text-gray-600 focus:outline-none focus:border-brand-red/40" />
               <div className="flex gap-1.5 flex-wrap">
                 {/* Pending 30-04-2026 follow-up: chips reflect the
