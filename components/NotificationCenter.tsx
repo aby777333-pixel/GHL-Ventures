@@ -100,7 +100,7 @@ export default function NotificationCenter({ scrolled }: NotificationCenterProps
       {/* Dropdown Panel */}
       {isOpen && (
         <div
-          className={`absolute right-0 top-full mt-2 w-[340px] rounded-xl shadow-2xl border overflow-hidden ${
+          className={`notification-panel absolute right-0 top-full mt-2 w-[340px] rounded-xl shadow-2xl border overflow-hidden ${
             isLightTheme ? 'bg-white/95 border-black/10' : 'bg-[#111]/95 border-white/10'
           }`}
           style={{

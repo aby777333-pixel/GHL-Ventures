@@ -564,7 +564,7 @@ function OfficeGallery() {
                 />
                 {/* Gradient overlay at bottom */}
                 <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent" />
-                <div className="absolute bottom-0 left-0 right-0 p-6">
+                <div className="image-overlay-text absolute bottom-0 left-0 right-0 p-6">
                   <span className="inline-block px-3 py-1 bg-brand-red/90 text-white text-[10px] font-bold uppercase tracking-wider rounded-full mb-2 trust-badge badge-bounce">
                     {OFFICE_TABS[activeTab].label}
                   </span>

@@ -4269,3 +4269,93 @@ button[type="submit"].inline-flex {
   color: #0A0A0A;
 }
 
+/* ============================================================
+   Pending Re-Testing 28-04-2026 (DOCX) — refined contrast fixes
+   The earlier 30-04-2026 block missed three real cases:
+
+     1. Same-element `bg-brand-black text-white` (e.g. comparison
+        table header rows on /fund/debenture-route/). The earlier
+        safety-net flipped text-white to black, but the escape
+        hatch only matched DESCENDANTS of bg-brand-black, not the
+        same element — so the row rendered black-on-black.
+     2. h3/h2 inside .card on a section.bg-brand-black backdrop
+        (e.g. SEBI Co-Invest Framework card on /fund/). The escape
+        hatch was too greedy — it forced h3 white even though the
+        immediate surface was a white .card, hiding the heading.
+     3. Image-overlay headings & notification dropdown panels —
+        the earlier `[class*="notification"]` selector did not
+        match any element in the codebase (no class actually
+        contained the word). Replaced with explicit marker classes
+        added in the JSX.
+   ============================================================ */
+
+/* #1 — Same-element dark surface + text-white. Header rows that
+        carry both `bg-brand-black` and `text-white` need to keep
+        their white text in light mode. The descendant escape
+        hatch above does not cover this case (no space between
+        `.bg-brand-black` and `[class~="text-white"]`). */
+:root:not(.dark) body:not(.dashboard-active):not(.admin-active):not(.staff-active) .bg-brand-black[class~="text-white"],
+:root:not(.dark) body:not(.dashboard-active):not(.admin-active):not(.staff-active) .bg-brand-black[class*="text-white/"],
+:root:not(.dark) body:not(.dashboard-active):not(.admin-active):not(.staff-active) .bg-brand-darkgrey[class~="text-white"],
+:root:not(.dark) body:not(.dashboard-active):not(.admin-active):not(.staff-active) .bg-brand-darkgrey[class*="text-white/"],
+:root:not(.dark) body:not(.dashboard-active):not(.admin-active):not(.staff-active) .bg-black[class~="text-white"],
+:root:not(.dark) body:not(.dashboard-active):not(.admin-active):not(.staff-active) .bg-black[class*="text-white/"] {
+  color: #FFFFFF !important;
+}
+
+/* #5 — Headings inside a `.card` that sits on a section with
+        `bg-brand-black`/`bg-black`/`bg-brand-darkgrey` should
+        retain the dark heading color (the white card is the
+        immediate surface, NOT the dark section). The earlier
+        escape hatch `.bg-brand-black h3 { color: white }` was
+        applied at the section level and overrode the inline
+        `var(--text-heading)` value, hiding the heading.
+        Re-applying the dark color for headings inside .card
+        wins via source order. Only matches headings that did
+        NOT explicitly request white text. */
+:root:not(.dark) body:not(.dashboard-active):not(.admin-active):not(.staff-active) .card h1:not([class~="text-white"]):not([class*="text-white/"]),
+:root:not(.dark) body:not(.dashboard-active):not(.admin-active):not(.staff-active) .card h2:not([class~="text-white"]):not([class*="text-white/"]),
+:root:not(.dark) body:not(.dashboard-active):not(.admin-active):not(.staff-active) .card h3:not([class~="text-white"]):not([class*="text-white/"]),
+:root:not(.dark) body:not(.dashboard-active):not(.admin-active):not(.staff-active) .card h4:not([class~="text-white"]):not([class*="text-white/"]) {
+  color: var(--text-heading) !important;
+}
+
+/* #4 — Image-overlay text container marker class. Add
+        `image-overlay-text` to wrappers that sit absolutely on
+        top of an <Image fill> (e.g. about page Office Gallery's
+        "Welcome Lounge" caption). Forces white in light mode.
+        Specificity is bumped by repeating the class so it wins
+        over the .bg-brand-offwhite [class~="text-white"]
+        safety-net (3 classes vs 2 + element). */
+:root:not(.dark) body:not(.dashboard-active):not(.admin-active):not(.staff-active) .image-overlay-text.image-overlay-text,
+:root:not(.dark) body:not(.dashboard-active):not(.admin-active):not(.staff-active) .image-overlay-text.image-overlay-text [class~="text-white"],
+:root:not(.dark) body:not(.dashboard-active):not(.admin-active):not(.staff-active) .image-overlay-text.image-overlay-text [class*="text-white/"],
+:root:not(.dark) body:not(.dashboard-active):not(.admin-active):not(.staff-active) .image-overlay-text.image-overlay-text h1,
+:root:not(.dark) body:not(.dashboard-active):not(.admin-active):not(.staff-active) .image-overlay-text.image-overlay-text h2,
+:root:not(.dark) body:not(.dashboard-active):not(.admin-active):not(.staff-active) .image-overlay-text.image-overlay-text h3,
+:root:not(.dark) body:not(.dashboard-active):not(.admin-active):not(.staff-active) .image-overlay-text.image-overlay-text h4,
+:root:not(.dark) body:not(.dashboard-active):not(.admin-active):not(.staff-active) .image-overlay-text.image-overlay-text p,
+:root:not(.dark) body:not(.dashboard-active):not(.admin-active):not(.staff-active) .image-overlay-text.image-overlay-text span {
+  color: #FFFFFF !important;
+}
+
+/* #3 — Notification dropdown panel marker class. Add
+        `notification-panel` to the dropdown root. Forces
+        readable colors in light mode regardless of nested
+        utility classes. */
+:root:not(.dark) body:not(.dashboard-active):not(.admin-active):not(.staff-active) .notification-panel {
+  color: #111827;
+}
+:root:not(.dark) body:not(.dashboard-active):not(.admin-active):not(.staff-active) .notification-panel .text-white,
+:root:not(.dark) body:not(.dashboard-active):not(.admin-active):not(.staff-active) .notification-panel [class*="text-white/"] {
+  color: #111827 !important;
+}
+:root:not(.dark) body:not(.dashboard-active):not(.admin-active):not(.staff-active) .notification-panel .text-brand-black {
+  color: #0A0A0A !important;
+}
+:root:not(.dark) body:not(.dashboard-active):not(.admin-active):not(.staff-active) .notification-panel .text-gray-300,
+:root:not(.dark) body:not(.dashboard-active):not(.admin-active):not(.staff-active) .notification-panel .text-gray-400,
+:root:not(.dark) body:not(.dashboard-active):not(.admin-active):not(.staff-active) .notification-panel .text-gray-500 {
+  color: #4B5563 !important;
+}
+
