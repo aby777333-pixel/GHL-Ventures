@@ -326,119 +326,44 @@ function HeroSection() {
   return (
     <section className="hero-realestate relative min-h-screen flex items-center overflow-hidden" style={{ background: 'linear-gradient(180deg, #fbfaf6 0%, #f4f1ea 35%, #ecebe6 65%, #e4e6ea 100%)' }}>
 
-      {/* ---- REAL-ESTATE THEMED BACKGROUND ---- */}
+      {/* ---- HERO BACKDROP — cityscape photo ---- */}
 
-      {/* Warm sun-light radial — top right, golden hour */}
-      <div className="absolute inset-0 pointer-events-none" style={{ background: 'radial-gradient(ellipse at 85% 12%, rgba(255, 214, 153, 0.55) 0%, rgba(255, 214, 153, 0) 50%)' }} />
-
-      {/* Soft brand-red accent — left middle */}
-      <div className="absolute inset-0 pointer-events-none" style={{ background: 'radial-gradient(ellipse at 18% 55%, rgba(208, 2, 27, 0.06) 0%, rgba(208, 2, 27, 0) 55%)' }} />
-
-      {/* Cool slate accent — bottom left for depth */}
-      <div className="absolute inset-0 pointer-events-none" style={{ background: 'radial-gradient(ellipse at 5% 95%, rgba(71, 85, 105, 0.10) 0%, rgba(71, 85, 105, 0) 45%)' }} />
-
-      {/* Faint blueprint grid pattern */}
-      <div
-        className="absolute inset-0 pointer-events-none opacity-[0.35]"
-        style={{
-          backgroundImage:
-            'linear-gradient(rgba(71, 85, 105, 0.08) 1px, transparent 1px), linear-gradient(90deg, rgba(71, 85, 105, 0.08) 1px, transparent 1px)',
-          backgroundSize: '56px 56px',
-          maskImage: 'radial-gradient(ellipse at center, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0.35) 70%, transparent 100%)',
-          WebkitMaskImage: 'radial-gradient(ellipse at center, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0.35) 70%, transparent 100%)',
-        }}
-      />
-
-      {/* City skyline silhouette — anchored to bottom */}
-      <svg
-        className="absolute bottom-0 left-0 w-full pointer-events-none"
-        viewBox="0 0 1600 320"
-        preserveAspectRatio="none"
-        style={{ height: '32vh', minHeight: '180px', maxHeight: '320px', opacity: 0.55 }}
-        aria-hidden="true"
-      >
-        <defs>
-          <linearGradient id="skylineGrad" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="#cbd5e1" stopOpacity="0.55" />
-            <stop offset="55%" stopColor="#94a3b8" stopOpacity="0.85" />
-            <stop offset="100%" stopColor="#64748b" stopOpacity="1" />
-          </linearGradient>
-          <linearGradient id="skylineGradBack" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="#e2e8f0" stopOpacity="0.45" />
-            <stop offset="100%" stopColor="#cbd5e1" stopOpacity="0.85" />
-          </linearGradient>
-          <linearGradient id="windowGlow" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="#fde68a" stopOpacity="0.95" />
-            <stop offset="100%" stopColor="#fbbf24" stopOpacity="0.7" />
-          </linearGradient>
-        </defs>
-
-        {/* Back layer — distant buildings (lighter) */}
-        <path
-          d="M0,320 L0,210 L40,210 L40,180 L100,180 L100,200 L150,200 L150,150 L210,150 L210,175 L270,175 L270,135 L320,135 L320,165 L380,165 L380,140 L440,140 L440,170 L500,170 L500,125 L560,125 L560,160 L620,160 L620,145 L680,145 L680,170 L740,170 L740,130 L810,130 L810,160 L870,160 L870,140 L930,140 L930,175 L990,175 L990,150 L1050,150 L1050,180 L1110,180 L1110,155 L1170,155 L1170,185 L1230,185 L1230,160 L1290,160 L1290,190 L1350,190 L1350,165 L1410,165 L1410,195 L1470,195 L1470,170 L1530,170 L1530,200 L1600,200 L1600,320 Z"
-          fill="url(#skylineGradBack)"
+      {/* Photo — anchored to fill the section */}
+      <picture aria-hidden="true">
+        <source srcSet="/images/home/hero-cityscape-sm.webp" type="image/webp" media="(max-width: 768px)" />
+        <source srcSet="/images/home/hero-cityscape.webp" type="image/webp" />
+        <source srcSet="/images/home/hero-cityscape-sm.jpg" type="image/jpeg" media="(max-width: 768px)" />
+        <img
+          src="/images/home/hero-cityscape.jpg"
+          alt=""
+          className="absolute inset-0 w-full h-full object-cover pointer-events-none select-none"
+          loading="eager"
+          decoding="async"
         />
+      </picture>
 
-        {/* Front layer — taller iconic skyline */}
-        <path
-          d="M0,320 L0,260 L60,260 L60,225 L130,225 L130,200 L180,200 L180,165 L230,165 L230,140 L280,140 L280,90 L330,90 L330,115 L370,115 L370,75 L420,75 L420,110 L470,110 L470,55 L530,55 L530,85 L590,85 L590,40 L650,40 L650,75 L710,75 L710,30 L770,30 L770,65 L830,65 L830,95 L880,95 L880,50 L940,50 L940,80 L1000,80 L1000,45 L1060,45 L1060,105 L1110,105 L1110,75 L1160,75 L1160,120 L1220,120 L1220,95 L1280,95 L1280,140 L1340,140 L1340,170 L1400,170 L1400,135 L1460,135 L1460,180 L1520,180 L1520,210 L1580,210 L1580,240 L1600,240 L1600,320 Z"
-          fill="url(#skylineGrad)"
-        />
+      {/* Soft white wash — lifts the photo's whites toward our cream palette */}
+      <div className="absolute inset-0 pointer-events-none" style={{ background: 'rgba(251, 250, 246, 0.32)' }} />
 
-        {/* Glowing windows — subtle warm dots scattered across the skyline */}
-        <g fill="url(#windowGlow)" opacity="0.9">
-          <rect x="290" y="105" width="5" height="6" rx="1" />
-          <rect x="305" y="115" width="5" height="6" rx="1" />
-          <rect x="290" y="125" width="5" height="6" rx="1" />
-          <rect x="320" y="105" width="5" height="6" rx="1" />
-          <rect x="480" y="70" width="5" height="6" rx="1" />
-          <rect x="495" y="80" width="5" height="6" rx="1" />
-          <rect x="510" y="70" width="5" height="6" rx="1" />
-          <rect x="480" y="90" width="5" height="6" rx="1" />
-          <rect x="600" y="55" width="5" height="6" rx="1" />
-          <rect x="615" y="65" width="5" height="6" rx="1" />
-          <rect x="630" y="55" width="5" height="6" rx="1" />
-          <rect x="720" y="45" width="5" height="6" rx="1" />
-          <rect x="735" y="55" width="5" height="6" rx="1" />
-          <rect x="750" y="45" width="5" height="6" rx="1" />
-          <rect x="720" y="65" width="5" height="6" rx="1" />
-          <rect x="950" y="60" width="5" height="6" rx="1" />
-          <rect x="965" y="75" width="5" height="6" rx="1" />
-          <rect x="980" y="60" width="5" height="6" rx="1" />
-          <rect x="1010" y="60" width="5" height="6" rx="1" />
-          <rect x="1025" y="75" width="5" height="6" rx="1" />
-          <rect x="1170" y="90" width="5" height="6" rx="1" />
-          <rect x="1185" y="100" width="5" height="6" rx="1" />
-          <rect x="1290" y="110" width="5" height="6" rx="1" />
-          <rect x="1305" y="125" width="5" height="6" rx="1" />
-        </g>
-
-        {/* Crane — adds the "in development" real-estate feel */}
-        <g stroke="#475569" strokeWidth="2" fill="none" opacity="0.8">
-          <line x1="155" y1="200" x2="155" y2="100" />
-          <line x1="80" y1="115" x2="225" y2="115" />
-          <line x1="155" y1="100" x2="80" y2="115" />
-          <line x1="155" y1="100" x2="225" y2="115" />
-          <line x1="200" y1="115" x2="200" y2="135" />
-        </g>
-      </svg>
-
-      {/* Floor-line — soft horizon between sky and skyline */}
-      <div className="absolute left-0 right-0 pointer-events-none" style={{ bottom: '32vh', height: '1px', background: 'linear-gradient(90deg, transparent, rgba(71, 85, 105, 0.18), transparent)' }} />
-
-      {/* Subtle light rays from top-right (sun shafts) */}
+      {/* Left-side legibility scrim — keeps text readable while preserving the bridge view on the right */}
       <div
-        className="absolute top-0 right-0 pointer-events-none"
+        className="absolute inset-0 pointer-events-none"
         style={{
-          width: '60%',
-          height: '70%',
           background:
-            'conic-gradient(from 200deg at 100% 0%, rgba(255, 220, 170, 0) 0deg, rgba(255, 220, 170, 0.18) 8deg, rgba(255, 220, 170, 0) 18deg, rgba(255, 220, 170, 0.12) 28deg, rgba(255, 220, 170, 0) 40deg)',
-          filter: 'blur(4px)',
+            'linear-gradient(90deg, rgba(251, 250, 246, 0.82) 0%, rgba(251, 250, 246, 0.62) 28%, rgba(251, 250, 246, 0.18) 55%, rgba(251, 250, 246, 0) 75%)',
         }}
       />
 
-      {/* ---- END REAL-ESTATE BACKGROUND ---- */}
+      {/* Top-edge softening — fades photo into the page top so the nav floats cleanly */}
+      <div className="absolute inset-x-0 top-0 h-24 pointer-events-none" style={{ background: 'linear-gradient(180deg, rgba(251, 250, 246, 0.55) 0%, rgba(251, 250, 246, 0) 100%)' }} />
+
+      {/* Bottom-edge softening — eases into the next section */}
+      <div className="absolute inset-x-0 bottom-0 h-24 pointer-events-none" style={{ background: 'linear-gradient(180deg, rgba(251, 250, 246, 0) 0%, rgba(251, 250, 246, 0.55) 100%)' }} />
+
+      {/* Soft brand-red accent — left middle, very subtle warmth */}
+      <div className="absolute inset-0 pointer-events-none" style={{ background: 'radial-gradient(ellipse at 18% 55%, rgba(208, 2, 27, 0.05) 0%, rgba(208, 2, 27, 0) 55%)' }} />
+
+      {/* ---- END HERO BACKDROP ---- */}
 
       <div className="container-max mx-auto px-4 sm:px-6 lg:px-8 relative z-10 pt-28 pb-14">
         <div className="grid lg:grid-cols-2 gap-12 xl:gap-20 items-center">
