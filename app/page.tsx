@@ -359,13 +359,13 @@ function HeroSection() {
               </AnimatedSection>
 
               <AnimatedSection delay={200}>
-                <h1 className="text-3xl sm:text-4xl md:text-4xl lg:text-5xl font-extrabold leading-[1.08] mb-5 tracking-tight" style={{ color: '#ffffff', textShadow: '0 2px 18px rgba(0,0,0,0.55), 0 0 36px rgba(208,2,27,0.18)' }}>
+                <h1 className="text-3xl sm:text-4xl md:text-4xl lg:text-5xl font-extrabold leading-[1.08] mb-5 tracking-tight" style={{ color: '#ffffff', textShadow: '0 2px 22px rgba(0,0,0,0.78), 0 0 42px rgba(0,0,0,0.45), 0 0 64px rgba(255,42,64,0.22)' }}>
                   SEBI Registered <span className="text-gradient-shimmer">Alternative Investment Fund</span> — Where Bold Capital Meets Intelligence
                 </h1>
               </AnimatedSection>
 
               <AnimatedSection delay={400}>
-                <p className="text-base mb-8 max-w-xl leading-relaxed" style={{ color: 'rgba(255,255,255,0.92)', textShadow: '0 1px 8px rgba(0,0,0,0.55)' }}>
+                <p className="text-base mb-8 max-w-xl leading-relaxed" style={{ color: 'rgba(255,255,255,0.95)', textShadow: '0 1px 12px rgba(0,0,0,0.78), 0 0 24px rgba(0,0,0,0.5)' }}>
                   GHL India Ventures delivers institutional-grade alternative investments for India&apos;s discerning investors. As per SEBI AIF Regulations.
                 </p>
               </AnimatedSection>
