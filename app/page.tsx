@@ -342,26 +342,26 @@ function HeroSection() {
         />
       </picture>
 
-      {/* Soft white wash — lifts the photo's whites toward our cream palette */}
-      <div className="absolute inset-0 pointer-events-none" style={{ background: 'rgba(251, 250, 246, 0.32)' }} />
+      {/* Soft white wash — very light tint to keep the photo's character */}
+      <div className="absolute inset-0 pointer-events-none" style={{ background: 'rgba(251, 250, 246, 0.10)' }} />
 
-      {/* Left-side legibility scrim — keeps text readable while preserving the bridge view on the right */}
+      {/* Left-side legibility scrim — narrower + lighter; bridge stays clearly visible */}
       <div
         className="absolute inset-0 pointer-events-none"
         style={{
           background:
-            'linear-gradient(90deg, rgba(251, 250, 246, 0.82) 0%, rgba(251, 250, 246, 0.62) 28%, rgba(251, 250, 246, 0.18) 55%, rgba(251, 250, 246, 0) 75%)',
+            'linear-gradient(90deg, rgba(251, 250, 246, 0.55) 0%, rgba(251, 250, 246, 0.32) 25%, rgba(251, 250, 246, 0.08) 45%, rgba(251, 250, 246, 0) 60%)',
         }}
       />
 
       {/* Top-edge softening — fades photo into the page top so the nav floats cleanly */}
-      <div className="absolute inset-x-0 top-0 h-24 pointer-events-none" style={{ background: 'linear-gradient(180deg, rgba(251, 250, 246, 0.55) 0%, rgba(251, 250, 246, 0) 100%)' }} />
+      <div className="absolute inset-x-0 top-0 h-20 pointer-events-none" style={{ background: 'linear-gradient(180deg, rgba(251, 250, 246, 0.30) 0%, rgba(251, 250, 246, 0) 100%)' }} />
 
       {/* Bottom-edge softening — eases into the next section */}
-      <div className="absolute inset-x-0 bottom-0 h-24 pointer-events-none" style={{ background: 'linear-gradient(180deg, rgba(251, 250, 246, 0) 0%, rgba(251, 250, 246, 0.55) 100%)' }} />
+      <div className="absolute inset-x-0 bottom-0 h-20 pointer-events-none" style={{ background: 'linear-gradient(180deg, rgba(251, 250, 246, 0) 0%, rgba(251, 250, 246, 0.30) 100%)' }} />
 
       {/* Soft brand-red accent — left middle, very subtle warmth */}
-      <div className="absolute inset-0 pointer-events-none" style={{ background: 'radial-gradient(ellipse at 18% 55%, rgba(208, 2, 27, 0.05) 0%, rgba(208, 2, 27, 0) 55%)' }} />
+      <div className="absolute inset-0 pointer-events-none" style={{ background: 'radial-gradient(ellipse at 18% 55%, rgba(208, 2, 27, 0.04) 0%, rgba(208, 2, 27, 0) 55%)' }} />
 
       {/* ---- END HERO BACKDROP ---- */}
 
