@@ -4403,12 +4403,12 @@ button[type="submit"].inline-flex {
   border-radius: 1.5rem;                               /* 24px */
   background: linear-gradient(
     135deg,
-    rgba(255, 255, 255, 0.025) 0%,
-    rgba(255, 255, 255, 0.005) 100%
+    rgba(255, 255, 255, 0.012) 0%,
+    rgba(255, 255, 255, 0)     100%
   );
-  -webkit-backdrop-filter: blur(8px) saturate(120%);
-          backdrop-filter: blur(8px) saturate(120%);
-  border: 1px solid rgba(255, 255, 255, 0.28);
+  -webkit-backdrop-filter: blur(4px) saturate(115%);
+          backdrop-filter: blur(4px) saturate(115%);
+  border: 1px solid rgba(255, 255, 255, 0.34);
   overflow: hidden;
   animation:
     hero-glass-fadein 900ms ease-out both,
@@ -4462,25 +4462,45 @@ button[type="submit"].inline-flex {
   color: #ffffff !important;
 }
 
-/* Brighter red for the hero glass card — pure brand red looks muddy
-   against a soft sunset photo, so we lift it to a vivid scarlet only
-   inside this card. Doesn't touch the global brand-red elsewhere. */
+/* Vivid red for the hero glass card — pure brand red gets muddy
+   against a soft sunset photo, so we lift it to a vivid scarlet
+   only inside this card. Strong shadow halo (dark + light layered)
+   keeps the red punching against ANY portion of the photo behind. */
 .hero-glass-card .text-brand-red {
-  color: #FF2A40 !important;
-  text-shadow: 0 0 18px rgba(255, 42, 64, 0.45);
+  color: #FF0F2C !important;
+  text-shadow:
+    0 0 1px rgba(0, 0, 0, 0.55),
+    0 1px 2px rgba(0, 0, 0, 0.45),
+    0 0 18px rgba(255, 15, 44, 0.55);
 }
 .hero-glass-card svg.text-brand-red,
 .hero-glass-card .text-brand-red svg {
-  color: #FF2A40 !important;
+  color: #FF0F2C !important;
+  filter: drop-shadow(0 1px 2px rgba(0,0,0,0.4));
 }
 .hero-glass-card .text-gradient-shimmer {
   background-image: linear-gradient(
     110deg,
-    #FF2A40 0%,
-    #FF2A40 35%,
-    #FFB3BC 50%,
-    #FF2A40 65%,
-    #FF2A40 100%
+    #FF0F2C 0%,
+    #FF0F2C 35%,
+    #FFC2CA 50%,
+    #FF0F2C 65%,
+    #FF0F2C 100%
   ) !important;
+  filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.5))
+          drop-shadow(0 0 24px rgba(255, 15, 44, 0.35));
+}
+
+/* Trust pills below the CTAs — black-on-white so they stay legible
+   against the photo. Must override the glass card's force-white-text
+   safety-net rule above (same selector base, more specific via the
+   .hero-trust-pill marker class). The pill's <svg> icon is forced
+   back to brand-red below since the text-color cascades into it via
+   currentColor. */
+:root:not(.dark) body:not(.dashboard-active):not(.admin-active):not(.staff-active) .hero-glass-card.hero-glass-card .hero-trust-pill {
+  color: #0f172a !important;
+}
+:root:not(.dark) body:not(.dashboard-active):not(.admin-active):not(.staff-active) .hero-glass-card.hero-glass-card .hero-trust-pill svg {
+  color: #FF0F2C !important;
 }
 

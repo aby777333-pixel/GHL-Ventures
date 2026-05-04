@@ -386,16 +386,14 @@ function HeroSection() {
                 <div className="flex flex-wrap gap-3">
                   {[
                     { icon: BadgeCheck, text: 'SEBI Reg.' },
-                    { icon: MapPin, text: 'Egmore, Chennai' },
                     { icon: Landmark, text: 'Category II AIF' },
                     { icon: IndianRupee, text: 'Managed by Trustee' },
                   ].map(b => (
                     <span
                       key={b.text}
-                      className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-white/10 border border-white/25 rounded-full text-xs font-medium backdrop-blur-sm"
-                      style={{ color: '#ffffff' }}
+                      className="hero-trust-pill inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-white/95 border border-slate-300 rounded-full text-xs font-semibold backdrop-blur-sm shadow-sm"
                     >
-                      <b.icon className="w-3.5 h-3.5 text-brand-red" />
+                      <b.icon className="w-3.5 h-3.5" style={{ color: '#FF0F2C' }} />
                       {b.text}
                     </span>
                   ))}
