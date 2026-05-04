@@ -4478,29 +4478,65 @@ button[type="submit"].inline-flex {
   color: #FF0F2C !important;
   filter: drop-shadow(0 1px 2px rgba(0,0,0,0.4));
 }
+/* Hero headline accent — replaces the slow textShimmer with a
+   bright, always-visible scrolling gradient AND a breathing glow.
+   The gradient is fully bright (no dark stops) so the text never
+   "dims out" between shimmer passes. */
+@keyframes hero-headline-sweep {
+  0%   { background-position:   0% center; }
+  100% { background-position: 200% center; }
+}
+@keyframes hero-headline-breath {
+  0%, 100% {
+    filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.55))
+            drop-shadow(0 0 14px rgba(255, 31, 53, 0.40));
+  }
+  50% {
+    filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.55))
+            drop-shadow(0 0 32px rgba(255, 31, 53, 0.85));
+  }
+}
+
 .hero-glass-card .text-gradient-shimmer {
   background-image: linear-gradient(
     110deg,
-    #FF0F2C 0%,
-    #FF0F2C 35%,
-    #FFC2CA 50%,
-    #FF0F2C 65%,
-    #FF0F2C 100%
+    #FF1F35  0%,
+    #FF4A60 22%,
+    #FFD0D6 50%,
+    #FF4A60 78%,
+    #FF1F35 100%
   ) !important;
-  filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.5))
-          drop-shadow(0 0 24px rgba(255, 15, 44, 0.35));
+  background-size: 220% auto !important;
+  -webkit-background-clip: text !important;
+          background-clip: text !important;
+  -webkit-text-fill-color: transparent !important;
+  animation:
+    hero-headline-sweep 5s linear infinite,
+    hero-headline-breath 2.6s ease-in-out infinite !important;
 }
 
-/* Trust pills below the CTAs — black-on-white so they stay legible
-   against the photo. Must override the glass card's force-white-text
-   safety-net rule above (same selector base, more specific via the
-   .hero-trust-pill marker class). The pill's <svg> icon is forced
-   back to brand-red below since the text-color cascades into it via
-   currentColor. */
-:root:not(.dark) body:not(.dashboard-active):not(.admin-active):not(.staff-active) .hero-glass-card.hero-glass-card .hero-trust-pill {
-  color: #0f172a !important;
+@media (prefers-reduced-motion: reduce) {
+  .hero-glass-card .text-gradient-shimmer {
+    animation: none !important;
+    background-image: linear-gradient(110deg, #FF1F35 0%, #FF4A60 100%) !important;
+    background-position: 0 center !important;
+  }
 }
-:root:not(.dark) body:not(.dashboard-active):not(.admin-active):not(.staff-active) .hero-glass-card.hero-glass-card .hero-trust-pill svg {
+
+/* Trust pills below the CTAs — solid-white pill, slate-900 text,
+   brand-red icon. Self-contained: doesn't rely on Tailwind utility
+   classes for the background/border/text so the safety-net !important
+   rules in this file can't bleach it. */
+:root:not(.dark) body:not(.dashboard-active):not(.admin-active):not(.staff-active) .hero-glass-card.hero-glass-card .hero-trust-pill,
+:root .hero-glass-card .hero-trust-pill {
+  background-color: #ffffff !important;
+  color: #0f172a !important;
+  border: 1px solid #cbd5e1 !important;
+  -webkit-backdrop-filter: none !important;
+          backdrop-filter: none !important;
+}
+:root:not(.dark) body:not(.dashboard-active):not(.admin-active):not(.staff-active) .hero-glass-card.hero-glass-card .hero-trust-pill .hero-trust-pill-icon,
+:root .hero-glass-card .hero-trust-pill .hero-trust-pill-icon {
   color: #FF0F2C !important;
 }
 

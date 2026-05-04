@@ -391,9 +391,9 @@ function HeroSection() {
                   ].map(b => (
                     <span
                       key={b.text}
-                      className="hero-trust-pill inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-white/95 border border-slate-300 rounded-full text-xs font-semibold backdrop-blur-sm shadow-sm"
+                      className="hero-trust-pill inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-semibold shadow-md"
                     >
-                      <b.icon className="w-3.5 h-3.5" style={{ color: '#FF0F2C' }} />
+                      <b.icon className="hero-trust-pill-icon w-3.5 h-3.5" />
                       {b.text}
                     </span>
                   ))}
