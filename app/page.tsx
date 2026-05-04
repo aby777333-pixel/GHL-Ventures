@@ -24,7 +24,6 @@ import TaxImpactAnalyzer from '@/components/TaxImpactAnalyzer'
 import InflationProofChecker from '@/components/InflationProofChecker'
 import { AlertTriangle } from 'lucide-react'
 import VoiceInput from '@/components/shared/VoiceInput'
-import SpaceHero from '@/components/SpaceHero'
 /* ================================================================
    HELPER: VideoPlayer — HTML5 video with cinematic styling
    ================================================================ */
@@ -325,94 +324,128 @@ function LiveFinancialTV() {
 function HeroSection() {
 
   return (
-    <section className="dark-surface relative min-h-screen flex items-center overflow-hidden" style={{ background: 'linear-gradient(180deg, #020012 0%, #060020 20%, #08001a 40%, #0a0014 60%, #0c0a10 80%, #0a0a0a 100%)' }}>
+    <section className="hero-realestate relative min-h-screen flex items-center overflow-hidden" style={{ background: 'linear-gradient(180deg, #fbfaf6 0%, #f4f1ea 35%, #ecebe6 65%, #e4e6ea 100%)' }}>
 
-      <SpaceHero variant="aurora" />
+      {/* ---- REAL-ESTATE THEMED BACKGROUND ---- */}
 
-      {/* ---- CINEMATIC SPACE BACKGROUND ---- */}
+      {/* Warm sun-light radial — top right, golden hour */}
+      <div className="absolute inset-0 pointer-events-none" style={{ background: 'radial-gradient(ellipse at 85% 12%, rgba(255, 214, 153, 0.55) 0%, rgba(255, 214, 153, 0) 50%)' }} />
 
-      {/* Deep space subtle nebula patches */}
-      <div className="nebula-patch" style={{ top: '8%', left: '10%', width: '300px', height: '300px', background: 'rgba(60, 20, 120, 0.05)' }} />
-      <div className="nebula-patch" style={{ top: '25%', right: '5%', width: '250px', height: '250px', background: 'rgba(30, 40, 120, 0.04)', animationDelay: '-7s' }} />
+      {/* Soft brand-red accent — left middle */}
+      <div className="absolute inset-0 pointer-events-none" style={{ background: 'radial-gradient(ellipse at 18% 55%, rgba(208, 2, 27, 0.06) 0%, rgba(208, 2, 27, 0) 55%)' }} />
 
-      {/* Star field */}
-      {STARS.map((star, i) => (
-        <span
-          key={i}
-          className={`star star-${star.size}`}
-          style={{
-            top: `${star.y}%`,
-            left: `${star.x}%`,
-            animationDelay: `${star.delay}s`,
-          }}
+      {/* Cool slate accent — bottom left for depth */}
+      <div className="absolute inset-0 pointer-events-none" style={{ background: 'radial-gradient(ellipse at 5% 95%, rgba(71, 85, 105, 0.10) 0%, rgba(71, 85, 105, 0) 45%)' }} />
+
+      {/* Faint blueprint grid pattern */}
+      <div
+        className="absolute inset-0 pointer-events-none opacity-[0.35]"
+        style={{
+          backgroundImage:
+            'linear-gradient(rgba(71, 85, 105, 0.08) 1px, transparent 1px), linear-gradient(90deg, rgba(71, 85, 105, 0.08) 1px, transparent 1px)',
+          backgroundSize: '56px 56px',
+          maskImage: 'radial-gradient(ellipse at center, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0.35) 70%, transparent 100%)',
+          WebkitMaskImage: 'radial-gradient(ellipse at center, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0.35) 70%, transparent 100%)',
+        }}
+      />
+
+      {/* City skyline silhouette — anchored to bottom */}
+      <svg
+        className="absolute bottom-0 left-0 w-full pointer-events-none"
+        viewBox="0 0 1600 320"
+        preserveAspectRatio="none"
+        style={{ height: '32vh', minHeight: '180px', maxHeight: '320px', opacity: 0.55 }}
+        aria-hidden="true"
+      >
+        <defs>
+          <linearGradient id="skylineGrad" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="#cbd5e1" stopOpacity="0.55" />
+            <stop offset="55%" stopColor="#94a3b8" stopOpacity="0.85" />
+            <stop offset="100%" stopColor="#64748b" stopOpacity="1" />
+          </linearGradient>
+          <linearGradient id="skylineGradBack" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="#e2e8f0" stopOpacity="0.45" />
+            <stop offset="100%" stopColor="#cbd5e1" stopOpacity="0.85" />
+          </linearGradient>
+          <linearGradient id="windowGlow" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="#fde68a" stopOpacity="0.95" />
+            <stop offset="100%" stopColor="#fbbf24" stopOpacity="0.7" />
+          </linearGradient>
+        </defs>
+
+        {/* Back layer — distant buildings (lighter) */}
+        <path
+          d="M0,320 L0,210 L40,210 L40,180 L100,180 L100,200 L150,200 L150,150 L210,150 L210,175 L270,175 L270,135 L320,135 L320,165 L380,165 L380,140 L440,140 L440,170 L500,170 L500,125 L560,125 L560,160 L620,160 L620,145 L680,145 L680,170 L740,170 L740,130 L810,130 L810,160 L870,160 L870,140 L930,140 L930,175 L990,175 L990,150 L1050,150 L1050,180 L1110,180 L1110,155 L1170,155 L1170,185 L1230,185 L1230,160 L1290,160 L1290,190 L1350,190 L1350,165 L1410,165 L1410,195 L1470,195 L1470,170 L1530,170 L1530,200 L1600,200 L1600,320 Z"
+          fill="url(#skylineGradBack)"
         />
-      ))}
 
-      {/* ISS orbiting across the sky */}
-      <div className="space-station">
-        <div className="space-station-body" />
-      </div>
+        {/* Front layer — taller iconic skyline */}
+        <path
+          d="M0,320 L0,260 L60,260 L60,225 L130,225 L130,200 L180,200 L180,165 L230,165 L230,140 L280,140 L280,90 L330,90 L330,115 L370,115 L370,75 L420,75 L420,110 L470,110 L470,55 L530,55 L530,85 L590,85 L590,40 L650,40 L650,75 L710,75 L710,30 L770,30 L770,65 L830,65 L830,95 L880,95 L880,50 L940,50 L940,80 L1000,80 L1000,45 L1060,45 L1060,105 L1110,105 L1110,75 L1160,75 L1160,120 L1220,120 L1220,95 L1280,95 L1280,140 L1340,140 L1340,170 L1400,170 L1400,135 L1460,135 L1460,180 L1520,180 L1520,210 L1580,210 L1580,240 L1600,240 L1600,320 Z"
+          fill="url(#skylineGrad)"
+        />
 
-      {/* Airplane 1 — cruising through moonlit clouds near horizon */}
-      <div className="airplane">
-        <div className="airplane-body">
-          <span className="airplane-light airplane-light-red" />
-          <span className="airplane-light airplane-light-white" />
-          <span className="airplane-light airplane-light-green" />
-        </div>
-      </div>
+        {/* Glowing windows — subtle warm dots scattered across the skyline */}
+        <g fill="url(#windowGlow)" opacity="0.9">
+          <rect x="290" y="105" width="5" height="6" rx="1" />
+          <rect x="305" y="115" width="5" height="6" rx="1" />
+          <rect x="290" y="125" width="5" height="6" rx="1" />
+          <rect x="320" y="105" width="5" height="6" rx="1" />
+          <rect x="480" y="70" width="5" height="6" rx="1" />
+          <rect x="495" y="80" width="5" height="6" rx="1" />
+          <rect x="510" y="70" width="5" height="6" rx="1" />
+          <rect x="480" y="90" width="5" height="6" rx="1" />
+          <rect x="600" y="55" width="5" height="6" rx="1" />
+          <rect x="615" y="65" width="5" height="6" rx="1" />
+          <rect x="630" y="55" width="5" height="6" rx="1" />
+          <rect x="720" y="45" width="5" height="6" rx="1" />
+          <rect x="735" y="55" width="5" height="6" rx="1" />
+          <rect x="750" y="45" width="5" height="6" rx="1" />
+          <rect x="720" y="65" width="5" height="6" rx="1" />
+          <rect x="950" y="60" width="5" height="6" rx="1" />
+          <rect x="965" y="75" width="5" height="6" rx="1" />
+          <rect x="980" y="60" width="5" height="6" rx="1" />
+          <rect x="1010" y="60" width="5" height="6" rx="1" />
+          <rect x="1025" y="75" width="5" height="6" rx="1" />
+          <rect x="1170" y="90" width="5" height="6" rx="1" />
+          <rect x="1185" y="100" width="5" height="6" rx="1" />
+          <rect x="1290" y="110" width="5" height="6" rx="1" />
+          <rect x="1305" y="125" width="5" height="6" rx="1" />
+        </g>
 
-      {/* Airplane 2 — second plane going opposite direction, higher */}
-      <div className="airplane-2">
-        <div className="airplane-body">
-          <span className="airplane-light airplane-light-red" />
-          <span className="airplane-light airplane-light-white" />
-          <span className="airplane-light airplane-light-green" />
-        </div>
-      </div>
+        {/* Crane — adds the "in development" real-estate feel */}
+        <g stroke="#475569" strokeWidth="2" fill="none" opacity="0.8">
+          <line x1="155" y1="200" x2="155" y2="100" />
+          <line x1="80" y1="115" x2="225" y2="115" />
+          <line x1="155" y1="100" x2="80" y2="115" />
+          <line x1="155" y1="100" x2="225" y2="115" />
+          <line x1="200" y1="115" x2="200" y2="135" />
+        </g>
+      </svg>
 
-      {/* Airplane 3 — higher altitude, smaller */}
-      <div className="airplane-3">
-        <div className="airplane-body">
-          <span className="airplane-light airplane-light-red" />
-          <span className="airplane-light airplane-light-white" />
-          <span className="airplane-light airplane-light-green" />
-        </div>
-      </div>
+      {/* Floor-line — soft horizon between sky and skyline */}
+      <div className="absolute left-0 right-0 pointer-events-none" style={{ bottom: '32vh', height: '1px', background: 'linear-gradient(90deg, transparent, rgba(71, 85, 105, 0.18), transparent)' }} />
 
-      {/* Airplane 4 — low near horizon, slow */}
-      <div className="airplane-4">
-        <div className="airplane-body">
-          <span className="airplane-light airplane-light-red" />
-          <span className="airplane-light airplane-light-white" />
-          <span className="airplane-light airplane-light-green" />
-        </div>
-      </div>
+      {/* Subtle light rays from top-right (sun shafts) */}
+      <div
+        className="absolute top-0 right-0 pointer-events-none"
+        style={{
+          width: '60%',
+          height: '70%',
+          background:
+            'conic-gradient(from 200deg at 100% 0%, rgba(255, 220, 170, 0) 0deg, rgba(255, 220, 170, 0.18) 8deg, rgba(255, 220, 170, 0) 18deg, rgba(255, 220, 170, 0.12) 28deg, rgba(255, 220, 170, 0) 40deg)',
+          filter: 'blur(4px)',
+        }}
+      />
 
-      {/* Earth arc — night side with city light glow */}
-      <div className="space-arc" />
-      <div className="space-arc-inner" />
-
-      {/* Earth surface — faint city lights visible on the night side */}
-      <div className="earth-city-lights" />
-
-      {/* Horizon glow — the thin atmosphere line */}
-      <div className="space-horizon" />
-
-      {/* Subtle grain overlay */}
-      <div className="absolute inset-0 grain-overlay pointer-events-none" />
-
-      {/* Subtle brand radial */}
-      <div className="absolute inset-0 pointer-events-none" style={{ background: 'radial-gradient(ellipse at 25% 50%, rgba(208, 2, 27, 0.06) 0%, transparent 60%)' }} />
-
-      {/* ---- END SPACE BACKGROUND ---- */}
+      {/* ---- END REAL-ESTATE BACKGROUND ---- */}
 
       <div className="container-max mx-auto px-4 sm:px-6 lg:px-8 relative z-10 pt-28 pb-14">
         <div className="grid lg:grid-cols-2 gap-12 xl:gap-20 items-center">
           {/* LEFT: Hero Copy */}
           <div>
             <AnimatedSection delay={0}>
-              <div className="inline-flex items-center px-4 py-2 bg-brand-red/10 border border-brand-red/20 rounded-full mb-8 backdrop-blur-sm">
+              <div className="inline-flex items-center px-4 py-2 bg-brand-red/10 border border-brand-red/30 rounded-full mb-8 backdrop-blur-sm shadow-sm">
                 <Shield className="w-4 h-4 text-brand-red mr-2" />
                 <span className="text-brand-red text-xs font-semibold uppercase tracking-widest">
                   SEBI Registered &nbsp;|&nbsp; Category II AIF
@@ -421,13 +454,13 @@ function HeroSection() {
             </AnimatedSection>
 
             <AnimatedSection delay={200}>
-              <h1 className="text-3xl sm:text-4xl md:text-4xl lg:text-5xl font-extrabold text-white leading-[1.08] mb-5 tracking-tight" style={{ textShadow: '0 2px 16px rgba(0,0,0,0.8), 0 0 40px rgba(208,2,27,0.15)' }}>
+              <h1 className="text-3xl sm:text-4xl md:text-4xl lg:text-5xl font-extrabold leading-[1.08] mb-5 tracking-tight" style={{ color: '#0f172a', textShadow: '0 1px 0 rgba(255,255,255,0.5)' }}>
                 SEBI Registered <span className="text-gradient-shimmer">Alternative Investment Fund</span> — Where Bold Capital Meets Intelligence
               </h1>
             </AnimatedSection>
 
             <AnimatedSection delay={400}>
-              <p className="text-base text-gray-300 mb-8 max-w-xl leading-relaxed" style={{ textShadow: '0 1px 8px rgba(0,0,0,0.6)' }}>
+              <p className="text-base mb-8 max-w-xl leading-relaxed" style={{ color: '#334155' }}>
                 GHL India Ventures delivers institutional-grade alternative investments for India&apos;s discerning investors. As per SEBI AIF Regulations.
               </p>
             </AnimatedSection>
@@ -437,7 +470,7 @@ function HeroSection() {
                 <Link href="/fund" className="btn-primary">
                   Explore Our Fund <ArrowRight className="ml-2 w-4 h-4" />
                 </Link>
-                <Link href="/contact" className="btn-outline-white">
+                <Link href="/contact" className="hero-talk-btn inline-flex items-center justify-center px-6 py-2.5 border-2 border-slate-800 text-slate-800 font-semibold rounded-full text-sm transition-all duration-300 hover:bg-slate-800 hover:text-white focus:outline-none focus:ring-2 focus:ring-slate-800 focus:ring-offset-2">
                   Talk to an Advisor
                 </Link>
               </div>
@@ -454,7 +487,8 @@ function HeroSection() {
                 ].map(b => (
                   <span
                     key={b.text}
-                    className="inline-flex items-center gap-1.5 px-4 py-1.5 bg-white/5 border border-white/10 rounded-full text-gray-300 text-xs font-medium backdrop-blur-sm"
+                    className="inline-flex items-center gap-1.5 px-4 py-1.5 bg-white/85 border border-slate-300 rounded-full text-xs font-medium backdrop-blur-sm shadow-sm"
+                    style={{ color: '#334155' }}
                   >
                     <b.icon className="w-3.5 h-3.5 text-brand-red" />
                     {b.text}
@@ -473,7 +507,7 @@ function HeroSection() {
 
             {/* Market Hotlists — Top Gainers, Losers, Most Active (compact + scrollable) */}
             <AnimatedSection delay={600} direction="right">
-              <div className="relative rounded-2xl overflow-hidden border border-white/10 bg-black/40 backdrop-blur-sm">
+              <div className="relative rounded-2xl overflow-hidden border border-white/10 bg-black/40 backdrop-blur-sm shadow-xl shadow-slate-900/20">
                 <div className="overflow-y-auto scrollbar-hide" style={{ height: '200px' }}>
                   <iframe
                     key="hotlists-widget"
@@ -520,8 +554,8 @@ function HeroSection() {
 
       {/* Scroll indicator */}
       <div className="absolute bottom-8 left-1/2 -translate-x-1/2 animate-bounce z-10">
-        <div className="w-7 h-11 border-2 border-white/30 rounded-full flex justify-center pt-2">
-          <div className="w-1.5 h-3 bg-white/50 rounded-full" />
+        <div className="w-7 h-11 border-2 rounded-full flex justify-center pt-2" style={{ borderColor: 'rgba(51, 65, 85, 0.45)' }}>
+          <div className="w-1.5 h-3 rounded-full" style={{ background: 'rgba(51, 65, 85, 0.65)' }} />
         </div>
       </div>
     </section>
