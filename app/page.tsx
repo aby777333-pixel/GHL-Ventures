@@ -346,60 +346,62 @@ function HeroSection() {
 
       <div className="container-max mx-auto px-4 sm:px-6 lg:px-8 relative z-10 pt-28 pb-14">
         <div className="grid lg:grid-cols-2 gap-12 xl:gap-20 items-center">
-          {/* LEFT: Hero Copy */}
-          <div>
-            <AnimatedSection delay={0}>
-              <div className="inline-flex items-center px-4 py-2 bg-brand-red/10 border border-brand-red/30 rounded-full mb-8 backdrop-blur-sm shadow-sm">
-                <Shield className="w-4 h-4 text-brand-red mr-2" />
-                <span className="text-brand-red text-xs font-semibold uppercase tracking-widest">
-                  SEBI Registered &nbsp;|&nbsp; Category II AIF
-                </span>
-              </div>
-            </AnimatedSection>
-
-            <AnimatedSection delay={200}>
-              <h1 className="text-3xl sm:text-4xl md:text-4xl lg:text-5xl font-extrabold leading-[1.08] mb-5 tracking-tight" style={{ color: '#0f172a', textShadow: '0 1px 0 rgba(255,255,255,0.5)' }}>
-                SEBI Registered <span className="text-gradient-shimmer">Alternative Investment Fund</span> — Where Bold Capital Meets Intelligence
-              </h1>
-            </AnimatedSection>
-
-            <AnimatedSection delay={400}>
-              <p className="text-base mb-8 max-w-xl leading-relaxed" style={{ color: '#334155' }}>
-                GHL India Ventures delivers institutional-grade alternative investments for India&apos;s discerning investors. As per SEBI AIF Regulations.
-              </p>
-            </AnimatedSection>
-
-            <AnimatedSection delay={550}>
-              <div className="flex flex-wrap gap-4 mb-10">
-                <Link href="/fund" className="btn-primary">
-                  Explore Our Fund <ArrowRight className="ml-2 w-4 h-4" />
-                </Link>
-                <Link href="/contact" className="hero-talk-btn inline-flex items-center justify-center px-6 py-2.5 border-2 border-slate-800 text-slate-800 font-semibold rounded-full text-sm transition-all duration-300 hover:bg-slate-800 hover:text-white focus:outline-none focus:ring-2 focus:ring-slate-800 focus:ring-offset-2">
-                  Talk to an Advisor
-                </Link>
-              </div>
-            </AnimatedSection>
-
-            {/* Trust badges */}
-            <AnimatedSection delay={700}>
-              <div className="flex flex-wrap gap-3">
-                {[
-                  { icon: BadgeCheck, text: 'SEBI Reg.' },
-                  { icon: MapPin, text: 'Egmore, Chennai' },
-                  { icon: Landmark, text: 'Category II AIF' },
-                  { icon: IndianRupee, text: 'Managed by Trustee' },
-                ].map(b => (
-                  <span
-                    key={b.text}
-                    className="inline-flex items-center gap-1.5 px-4 py-1.5 bg-white/85 border border-slate-300 rounded-full text-xs font-medium backdrop-blur-sm shadow-sm"
-                    style={{ color: '#334155' }}
-                  >
-                    <b.icon className="w-3.5 h-3.5 text-brand-red" />
-                    {b.text}
+          {/* LEFT: Hero Copy — frosted glass card floating over the cityscape */}
+          <div className="hero-glass-card relative p-7 sm:p-9 lg:p-10">
+            <div className="relative z-10">
+              <AnimatedSection delay={0}>
+                <div className="inline-flex items-center px-4 py-2 bg-brand-red/15 border border-brand-red/40 rounded-full mb-7 backdrop-blur-sm">
+                  <Shield className="w-4 h-4 text-brand-red mr-2" />
+                  <span className="text-brand-red text-xs font-semibold uppercase tracking-widest">
+                    SEBI Registered &nbsp;|&nbsp; Category II AIF
                   </span>
-                ))}
-              </div>
-            </AnimatedSection>
+                </div>
+              </AnimatedSection>
+
+              <AnimatedSection delay={200}>
+                <h1 className="text-3xl sm:text-4xl md:text-4xl lg:text-5xl font-extrabold leading-[1.08] mb-5 tracking-tight" style={{ color: '#ffffff', textShadow: '0 2px 18px rgba(0,0,0,0.55), 0 0 36px rgba(208,2,27,0.18)' }}>
+                  SEBI Registered <span className="text-gradient-shimmer">Alternative Investment Fund</span> — Where Bold Capital Meets Intelligence
+                </h1>
+              </AnimatedSection>
+
+              <AnimatedSection delay={400}>
+                <p className="text-base mb-8 max-w-xl leading-relaxed" style={{ color: 'rgba(255,255,255,0.92)', textShadow: '0 1px 8px rgba(0,0,0,0.55)' }}>
+                  GHL India Ventures delivers institutional-grade alternative investments for India&apos;s discerning investors. As per SEBI AIF Regulations.
+                </p>
+              </AnimatedSection>
+
+              <AnimatedSection delay={550}>
+                <div className="flex flex-wrap gap-4 mb-9">
+                  <Link href="/fund" className="btn-primary">
+                    Explore Our Fund <ArrowRight className="ml-2 w-4 h-4" />
+                  </Link>
+                  <Link href="/contact" className="inline-flex items-center justify-center px-6 py-2.5 border-2 border-white/80 text-white font-semibold rounded-full text-sm transition-all duration-300 hover:bg-white hover:text-slate-900 focus:outline-none focus:ring-2 focus:ring-white focus:ring-offset-2">
+                    Talk to an Advisor
+                  </Link>
+                </div>
+              </AnimatedSection>
+
+              {/* Trust badges */}
+              <AnimatedSection delay={700}>
+                <div className="flex flex-wrap gap-3">
+                  {[
+                    { icon: BadgeCheck, text: 'SEBI Reg.' },
+                    { icon: MapPin, text: 'Egmore, Chennai' },
+                    { icon: Landmark, text: 'Category II AIF' },
+                    { icon: IndianRupee, text: 'Managed by Trustee' },
+                  ].map(b => (
+                    <span
+                      key={b.text}
+                      className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-white/10 border border-white/25 rounded-full text-xs font-medium backdrop-blur-sm"
+                      style={{ color: '#ffffff' }}
+                    >
+                      <b.icon className="w-3.5 h-3.5 text-brand-red" />
+                      {b.text}
+                    </span>
+                  ))}
+                </div>
+              </AnimatedSection>
+            </div>
           </div>
 
           {/* RIGHT: Live Financial TV + Image Slider */}
