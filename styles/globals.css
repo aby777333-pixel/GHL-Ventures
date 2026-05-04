@@ -4403,12 +4403,12 @@ button[type="submit"].inline-flex {
   border-radius: 1.5rem;                               /* 24px */
   background: linear-gradient(
     135deg,
-    rgba(255, 255, 255, 0.10) 0%,
-    rgba(255, 255, 255, 0.04) 100%
+    rgba(255, 255, 255, 0.05) 0%,
+    rgba(255, 255, 255, 0.015) 100%
   );
-  -webkit-backdrop-filter: blur(22px) saturate(140%);
-          backdrop-filter: blur(22px) saturate(140%);
-  border: 1px solid rgba(255, 255, 255, 0.16);
+  -webkit-backdrop-filter: blur(14px) saturate(135%);
+          backdrop-filter: blur(14px) saturate(135%);
+  border: 1px solid rgba(255, 255, 255, 0.20);
   overflow: hidden;
   animation:
     hero-glass-fadein 900ms ease-out both,
@@ -4460,5 +4460,27 @@ button[type="submit"].inline-flex {
 :root:not(.dark) body:not(.dashboard-active):not(.admin-active):not(.staff-active) .hero-glass-card.hero-glass-card p,
 :root:not(.dark) body:not(.dashboard-active):not(.admin-active):not(.staff-active) .hero-glass-card.hero-glass-card span:not([class*="text-brand-red"]):not([class*="text-gradient-shimmer"]) {
   color: #ffffff !important;
+}
+
+/* Brighter red for the hero glass card — pure brand red looks muddy
+   against a soft sunset photo, so we lift it to a vivid scarlet only
+   inside this card. Doesn't touch the global brand-red elsewhere. */
+.hero-glass-card .text-brand-red {
+  color: #FF2A40 !important;
+  text-shadow: 0 0 18px rgba(255, 42, 64, 0.45);
+}
+.hero-glass-card svg.text-brand-red,
+.hero-glass-card .text-brand-red svg {
+  color: #FF2A40 !important;
+}
+.hero-glass-card .text-gradient-shimmer {
+  background-image: linear-gradient(
+    110deg,
+    #FF2A40 0%,
+    #FF2A40 35%,
+    #FFB3BC 50%,
+    #FF2A40 65%,
+    #FF2A40 100%
+  ) !important;
 }
 
