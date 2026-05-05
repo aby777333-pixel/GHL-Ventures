@@ -4518,33 +4518,39 @@ button[type="submit"].inline-flex {
   color: #FF0F2C !important;
   filter: drop-shadow(0 1px 2px rgba(0,0,0,0.4));
 }
-/* Hero headline accent — replaces the slow textShimmer with a
-   bright, always-visible scrolling gradient AND a breathing glow.
-   The gradient is fully bright (no dark stops) so the text never
-   "dims out" between shimmer passes. */
+/* Hero headline accent — bright, scrolling gradient with a strong
+   dark halo so the red text is legible against ANY backdrop, including
+   warm sunset / rosy photos that previously washed it out. Gradient
+   peaks at white in the centre to guarantee contrast on red backgrounds. */
 @keyframes hero-headline-sweep {
   0%   { background-position:   0% center; }
   100% { background-position: 200% center; }
 }
 @keyframes hero-headline-breath {
   0%, 100% {
-    filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.55))
-            drop-shadow(0 0 14px rgba(255, 31, 53, 0.40));
+    filter:
+      drop-shadow(0 0 1px rgba(0, 0, 0, 0.95))
+      drop-shadow(0 2px 6px rgba(0, 0, 0, 0.85))
+      drop-shadow(0 0 18px rgba(0, 0, 0, 0.55))
+      drop-shadow(0 0 14px rgba(255, 31, 53, 0.45));
   }
   50% {
-    filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.55))
-            drop-shadow(0 0 32px rgba(255, 31, 53, 0.85));
+    filter:
+      drop-shadow(0 0 1px rgba(0, 0, 0, 0.95))
+      drop-shadow(0 2px 6px rgba(0, 0, 0, 0.85))
+      drop-shadow(0 0 22px rgba(0, 0, 0, 0.6))
+      drop-shadow(0 0 32px rgba(255, 31, 53, 0.85));
   }
 }
 
 .hero-glass-card .text-gradient-shimmer {
   background-image: linear-gradient(
     110deg,
-    #FF1F35  0%,
-    #FF4A60 22%,
-    #FFD0D6 50%,
-    #FF4A60 78%,
-    #FF1F35 100%
+    #C8001A   0%,
+    #FF1F35  20%,
+    #FFFFFF  50%,
+    #FF1F35  80%,
+    #C8001A 100%
   ) !important;
   background-size: 220% auto !important;
   -webkit-background-clip: text !important;
@@ -4558,8 +4564,11 @@ button[type="submit"].inline-flex {
 @media (prefers-reduced-motion: reduce) {
   .hero-glass-card .text-gradient-shimmer {
     animation: none !important;
-    background-image: linear-gradient(110deg, #FF1F35 0%, #FF4A60 100%) !important;
+    background-image: linear-gradient(110deg, #C8001A 0%, #FF1F35 50%, #C8001A 100%) !important;
     background-position: 0 center !important;
+    filter:
+      drop-shadow(0 0 1px rgba(0, 0, 0, 0.95))
+      drop-shadow(0 2px 6px rgba(0, 0, 0, 0.85)) !important;
   }
 }
 
