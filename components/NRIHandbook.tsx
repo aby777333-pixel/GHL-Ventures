@@ -27,7 +27,7 @@ const CHAPTERS: Chapter[] = [
     content: [
       'India\'s economic transformation is one of the most compelling investment narratives of the 21st century. With GDP growth consistently outpacing major economies, a young and aspirational demographic, and sweeping reforms in digital infrastructure, taxation, and capital markets, the country offers Non-Resident Indians a rare opportunity to participate in wealth creation at scale.',
       'For NRIs, investing in India is not just a financial decision — it is a connection to home, a legacy-building exercise, and a strategic diversification of global portfolios. Yet, despite the opportunity, many NRIs remain on the sidelines due to regulatory complexity, lack of trust in local intermediaries, or simply not knowing where to start.',
-      'GHL India Ventures was created to bridge this gap. As a SEBI-registered Category II Alternative Investment Fund (Reg. No. IN/AIF2/2425/1517), we offer NRIs a fully compliant, institutional-grade pathway to invest in two of India\'s most asymmetric opportunity sets: stressed real estate recovery and early-stage startup investments.',
+      'GHL India Ventures was created to bridge this gap. As a SEBI-registered Category II Alternative Investment Fund (Reg. No. IN/AIF2/24-25/1517), we offer NRIs a fully compliant, institutional-grade pathway to invest in two of India\'s most asymmetric opportunity sets: stressed real estate recovery and early-stage startup investments.',
       'This handbook is your comprehensive guide to understanding how NRI investment works in India, what regulatory frameworks govern it, and how GHL India Ventures makes the process seamless, transparent, and rewarding.',
     ],
   },

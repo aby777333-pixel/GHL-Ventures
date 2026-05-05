@@ -131,7 +131,7 @@ function GeneralTab({ showToast }: { showToast: (msg: string, type?: 'success' |
     companyName: 'GHL India Ventures Pvt. Ltd.',
     email: 'admin@ghlindiaventures.com',
     phone: '+91 7200 255 252',
-    sebiReg: 'IN/AIF2/2425/1517',
+    sebiReg: 'IN/AIF2/24-25/1517',
     timezone: 'Asia/Kolkata (IST)',
     currency: 'INR (₹)',
     fiscalYear: 'April — March',

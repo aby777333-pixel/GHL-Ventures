@@ -17,7 +17,7 @@ const KNOWLEDGE_BASE: KnowledgeEntry[] = [
     id: 'about-ghl',
     category: 'general',
     keywords: ['what', 'ghl', 'about', 'who', 'company', 'ventures'],
-    response: '**GHL India Ventures** is a SEBI-registered Category II Alternative Investment Fund (AIF) based in Chennai, India.\n\nWe invest in two high-conviction themes:\n\u2022 **Stressed Real Estate** acquired through NCLT at deep discounts\n\u2022 **Early-Stage Startups** across technology, healthcare & logistics\n\nOur fund targets **15\u201325% IRR** with institutional-grade transparency and SEBI compliance.\n\nSEBI Registration: **IN/AIF2/2425/1517**',
+    response: '**GHL India Ventures** is a SEBI-registered Category II Alternative Investment Fund (AIF) based in Chennai, India.\n\nWe invest in two high-conviction themes:\n\u2022 **Stressed Real Estate** acquired through NCLT at deep discounts\n\u2022 **Early-Stage Startups** across technology, healthcare & logistics\n\nOur fund targets **15\u201325% IRR** with institutional-grade transparency and SEBI compliance.\n\nSEBI Registration: **IN/AIF2/24-25/1517**',
     followUp: ['Investment Routes', 'How to Invest', 'Minimum Investment'],
     priority: 10,
   },
@@ -145,7 +145,7 @@ const KNOWLEDGE_BASE: KnowledgeEntry[] = [
     id: 'contact',
     category: 'contact',
     keywords: ['contact', 'phone', 'email', 'address', 'office', 'reach', 'call', 'whatsapp'],
-    response: '**Contact GHL India Ventures:**\n\n**Phone:** +91 44 2843 1043 | +91 72002 55252\n**Email:** info@ghlindiaventures.com\n**WhatsApp:** +91 72002 55252\n\n**Office:**\n2D, Queens Court, No. 6, Montieth Road\nEgmore, Chennai \u2013 600 008\n\n**Hours:** Mon\u2013Fri, 9:30 AM \u2013 6:30 PM IST\n\nWant me to connect you with an advisor right away?',
+    response: '**Contact GHL India Ventures:**\n\n**Phone:** +91 44 2843 1043 | +91 72002 55252\n**Email:** info@ghlindiaventures.com\n**WhatsApp:** +91 72002 55252\n\n**Office:**\n2D, Queens Court, No. 6, Montieth Road\nEgmore, Chennai \u2013 600 008\n\n**Hours:** Mon\u2013Sat, 10:00 AM \u2013 6:30 PM IST\n\nWant me to connect you with an advisor right away?',
     followUp: ['Schedule Consultation', 'WhatsApp Chat', 'Investment Process'],
     priority: 8,
   },
@@ -154,7 +154,7 @@ const KNOWLEDGE_BASE: KnowledgeEntry[] = [
     id: 'sebi',
     category: 'compliance',
     keywords: ['sebi', 'registered', 'regulation', 'legal', 'compliant', 'license', 'registration'],
-    response: '**SEBI Registration Details:**\n\n\u2022 **Fund Name:** GHL India Ventures\n\u2022 **Category:** Category II AIF\n\u2022 **Registration No:** IN/AIF2/2425/1517\n\u2022 **Regulator:** Securities and Exchange Board of India (SEBI)\n\nWe comply with all provisions of the **SEBI (AIF) Regulations, 2012**, including mandatory disclosures, annual audits, and investor protection measures.\n\nFor any regulatory concerns, you can also reach SEBI SCORES at **scores.gov.in**.',
+    response: '**SEBI Registration Details:**\n\n\u2022 **Fund Name:** GHL India Ventures\n\u2022 **Category:** Category II AIF\n\u2022 **Registration No:** IN/AIF2/24-25/1517\n\u2022 **Regulator:** Securities and Exchange Board of India (SEBI)\n\nWe comply with all provisions of the **SEBI (AIF) Regulations, 2012**, including mandatory disclosures, annual audits, and investor protection measures.\n\nFor any regulatory concerns, you can also reach SEBI SCORES at **scores.gov.in**.',
     followUp: ['Safety & Risk', 'How to Invest', 'Contact Info'],
     priority: 8,
   },
@@ -317,7 +317,7 @@ export function findBestResponse(
 }
 
 // ─── Claude AI Fallback for ARIA ───
-const ARIA_SYSTEM_PROMPT = `You are ARIA, the AI assistant for GHL India Ventures — a SEBI-registered Category II Alternative Investment Fund (AIF) based in Chennai, India. SEBI Registration: IN/AIF2/2425/1517.
+const ARIA_SYSTEM_PROMPT = `You are ARIA, the AI assistant for GHL India Ventures — a SEBI-registered Category II Alternative Investment Fund (AIF) based in Chennai, India. SEBI Registration: IN/AIF2/24-25/1517.
 
 Key facts:
 • GHL invests in stressed real estate (NCLT-acquired at 40-60% discounts) and early-stage startups

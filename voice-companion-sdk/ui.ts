@@ -1014,7 +1014,7 @@ export class UIManager {
     const tips = [
       'Start with our Risk Quiz to find your ideal investment profile',
       'AIF minimum is as per SEBI AIF Regulations | SEBI Co-Invest Framework also available',
-      'GHL India Ventures is SEBI registered (IN/AIF2/2425/1517)',
+      'GHL India Ventures is SEBI registered (IN/AIF2/24-25/1517)',
       'Ask me about returns, risk, portfolio companies, or exit mechanisms',
       'Say "compare routes" to see AIF vs Co-Invest side by side',
     ];

@@ -96,7 +96,7 @@ const FAQ_CATEGORIES = [
     items: [
       {
         q: 'Is GHL India Ventures SEBI registered?',
-        a: 'Yes. GHL India Ventures is a SEBI-registered Category II Alternative Investment Fund with registration number IN/AIF2/2425/1517. We adhere to all SEBI AIF regulations and reporting requirements.',
+        a: 'Yes. GHL India Ventures is a SEBI-registered Category II Alternative Investment Fund with registration number IN/AIF2/24-25/1517. We adhere to all SEBI AIF regulations and reporting requirements.',
       },
       {
         q: 'How are AIF returns taxed?',

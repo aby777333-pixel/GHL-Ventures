@@ -285,7 +285,7 @@ export default function Blog5PillarGuide() {
       <SectionHeading level={2}>Why GHL India Ventures — SEBI Registered Category II AIF</SectionHeading>
 
       <P>
-        <InternalLink href="/about">GHL India Ventures</InternalLink> is a SEBI-registered Category II Alternative Investment Fund (Registration No.: IN/AIF2/2425/1517) specializing in:
+        <InternalLink href="/about">GHL India Ventures</InternalLink> is a SEBI-registered Category II Alternative Investment Fund (Registration No.: IN/AIF2/24-25/1517) specializing in:
       </P>
 
       <BulletList items={[

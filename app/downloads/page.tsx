@@ -21,7 +21,7 @@ const SECTIONS = [
     imageTheme: 'team',
     document: {
       title: 'GHL India Ventures Corporate Brochure',
-      desc: 'A comprehensive overview of our firm, our team, and our investment philosophy. Learn about our mission to invest in India\'s future through stressed real estate and high-growth startups.',
+      desc: 'A comprehensive overview of our firm, our team, and our investment philosophy. Learn about our mission to invest in India\'s future through stressed real estate.',
       lastUpdated: 'January 2025',
       fileSize: '6.3 MB',
       fileType: 'PDF',

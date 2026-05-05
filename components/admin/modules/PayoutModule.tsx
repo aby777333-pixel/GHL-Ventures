@@ -153,7 +153,7 @@ function buildPayoutReceiptHTML(row: {
     </div>
     <div class="footer">
       GHL India Ventures Private Limited · Registered Office: Chennai, Tamil Nadu, India ·
-      SEBI Registration No. IN/AIF2/24/2425/1517 · This is a system-generated document.
+      SEBI Registration No. IN/AIF2/24/24-25/1517 · This is a system-generated document.
     </div>
     <script>window.onload = () => window.print()</script>
   </body></html>`

@@ -23,11 +23,11 @@ const FAQ_ITEMS = [
   },
   {
     q: 'What sectors do you invest in?',
-    a: 'We focus on two primary verticals \u2014 stressed real estate resolution (distressed and under-valued properties across South India) and early-stage startup investments in technology, healthcare, fintech, and consumer sectors.',
+    a: 'We focus on stressed real estate resolution \u2014 acquiring distressed and under-valued properties across South India and revitalising them for sale, lease, or institutional exit.',
   },
   {
     q: 'Is my investment safe?',
-    a: 'GHL India Ventures is a SEBI-registered Category II AIF (IN/AIF2/2425/1517), subject to stringent regulatory oversight. We employ a rigorous risk management framework, diversified portfolio strategy, and institutional-grade governance. However, all alternative investments carry inherent risks and past performance does not guarantee future returns.',
+    a: 'GHL India Ventures is a SEBI-registered Category II AIF (IN/AIF2/24-25/1517), subject to stringent regulatory oversight. We employ a rigorous risk management framework, diversified portfolio strategy, and institutional-grade governance. However, all alternative investments carry inherent risks and past performance does not guarantee future returns.',
   },
   {
     q: 'How are returns distributed?',
@@ -433,8 +433,8 @@ export default function ContactPage() {
                     </div>
                     <div>
                       <h3 className="font-bold text-brand-black dark:text-white text-base mb-1">Office Hours</h3>
-                      <p className="text-brand-grey dark:text-gray-300 text-sm">Mon &ndash; Fri, 9:30 AM &ndash; 6:30 PM IST</p>
-                      <p className="text-brand-grey dark:text-gray-300 text-sm">Saturday &ndash; Sunday: Closed</p>
+                      <p className="text-brand-grey dark:text-gray-300 text-sm">Monday &ndash; Saturday, 10:00 AM &ndash; 6:30 PM IST</p>
+                      <p className="text-brand-grey dark:text-gray-300 text-sm">Sunday: Closed</p>
                     </div>
                   </div>
 

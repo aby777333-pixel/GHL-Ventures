@@ -94,7 +94,7 @@ function AboutHero() {
           </h1>
           <p className="text-sm md:text-base text-gray-300 max-w-3xl leading-relaxed mb-8">
             GHL India Ventures is a SEBI-registered Category II Alternative Investment Fund
-            identifying high-growth opportunities in stressed real estate and early-stage startups across India.
+            identifying high-growth opportunities in stressed real estate across India.
           </p>
         </AnimatedSection>
 
@@ -121,7 +121,7 @@ function OurStoryTimeline() {
           <h2 className="section-title mt-2 text-brand-black dark:text-white">Born From Conviction</h2>
           <p className="section-subtitle mx-auto mt-4 max-w-3xl">
             GHL India Ventures was founded from a deep conviction that India&apos;s stressed real estate market
-            and burgeoning startup ecosystem represent generational investment opportunities. With roots in Chennai
+            represents a generational investment opportunity. With roots in Chennai
             and a pan-India outlook, we set out to build a platform that combines institutional rigour with
             entrepreneurial empathy.
           </p>
@@ -182,10 +182,9 @@ function OurStoryTimeline() {
                 by resolving, restructuring, and reviving these assets with disciplined capital.
               </p>
               <p>
-                Simultaneously, India&apos;s startup ecosystem was producing world-class founders
-                who needed more than just funding. They needed partners who understand the
-                Indian regulatory landscape, can open doors, and have the patience to see
-                a vision through.
+                Our focus is singular: deploying disciplined capital into stressed real estate
+                opportunities — restructuring distressed assets, reviving stalled projects, and
+                creating institutional-grade returns where conventional capital cannot reach.
               </p>
             </div>
           </AnimatedSection>
@@ -198,7 +197,6 @@ function OurStoryTimeline() {
                   { icon: Briefcase, text: 'Category II Alternative Investment Fund' },
                   { icon: Globe, text: 'Headquartered in Chennai, investing across India' },
                   { icon: Building2, text: 'Stressed real estate resolution focus' },
-                  { icon: Sparkles, text: 'Early-stage startup investment vertical' },
                 ].map((item: any) => (
                   <div key={item.text} className="flex items-center space-x-4">
                     <div className="w-10 h-10 bg-brand-red/20 rounded-lg flex items-center justify-center shrink-0">
@@ -238,9 +236,9 @@ function MissionVision() {
               </div>
               <h3 className="text-xl font-bold text-brand-black dark:text-white mb-3">Our Mission</h3>
               <p className="text-brand-grey dark:text-gray-300 leading-relaxed">
-                To identify and invest in high-growth Indian enterprises across two compelling verticals:
-                stressed real estate assets ripe for resolution and early-stage startups poised for
-                exponential growth. We combine institutional discipline with entrepreneurial agility
+                To identify and invest in high-growth Indian enterprises within a singular,
+                high-conviction vertical: stressed real estate assets ripe for resolution and
+                value creation. We combine institutional discipline with entrepreneurial agility
                 to create lasting economic and social value for our investors and the communities we touch.
               </p>
             </div>

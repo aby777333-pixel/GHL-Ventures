@@ -30,7 +30,7 @@ export const OVERLAY_CONTENT = [
   {
     title: 'GHL India Ventures Trust',
     subtitle: 'Category II Alternative Investment Fund',
-    detail: 'SEBI Registered \u2022 IN/AIF2/2425/1517',
+    detail: 'SEBI Registered \u2022 IN/AIF2/24-25/1517',
   },
   {
     title: '\u20B9500 Crore',

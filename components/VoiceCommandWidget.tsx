@@ -721,8 +721,8 @@ export default function VoiceCommandWidget() {
         break
       }
       case 'sebi': {
-        const sebiInfo = 'GHL India Ventures SEBI registration number is IN/AIF2/2425/1517, registered as a Category 2 Alternative Investment Fund.'
-        setFeedback('SEBI Reg: IN/AIF2/2425/1517')
+        const sebiInfo = 'GHL India Ventures SEBI registration number is IN/AIF2/24-25/1517, registered as a Category 2 Alternative Investment Fund.'
+        setFeedback('SEBI Reg: IN/AIF2/24-25/1517')
         speak(sebiInfo)
         break
       }
@@ -733,7 +733,7 @@ export default function VoiceCommandWidget() {
         break
       }
       case 'officehours': {
-        const hours = 'Monday to Saturday, 9:30 AM to 6:30 PM IST'
+        const hours = 'Monday to Saturday, 10:00 AM to 6:30 PM IST'
         setFeedback(`Office Hours: ${hours}`)
         speak(`GHL India Ventures office hours are ${hours}`)
         break
@@ -1212,7 +1212,7 @@ export default function VoiceCommandWidget() {
         break
       }
       case 'issafe': {
-        const safeMsg = 'GHL India Ventures is SEBI registered under Category 2 AIF with registration IN/AIF2/2425/1517. All investments are SEBI regulated. However, all investments carry market risk. Please read the PPM carefully.'
+        const safeMsg = 'GHL India Ventures is SEBI registered under Category 2 AIF with registration IN/AIF2/24-25/1517. All investments are SEBI regulated. However, all investments carry market risk. Please read the PPM carefully.'
         setFeedback(safeMsg)
         speak(safeMsg)
         break

@@ -254,7 +254,7 @@ export function generateResponse(input: string, visitorName?: string, pageContex
       ]
 
     case 'about_sebi':
-      return [{ speaker: 'abe', text: `Absolutely — your security comes first. GHL India Ventures is registered with SEBI under Registration No. IN/AIF2/2425/1517. This means mandatory quarterly audits, third-party custodial safeguards, transparent NAV reporting, and strict compliance with AIF regulations. Your money is in an institutionally governed vehicle, not a personal account.` }]
+      return [{ speaker: 'abe', text: `Absolutely — your security comes first. GHL India Ventures is registered with SEBI under Registration No. IN/AIF2/24-25/1517. This means mandatory quarterly audits, third-party custodial safeguards, transparent NAV reporting, and strict compliance with AIF regulations. Your money is in an institutionally governed vehicle, not a personal account.` }]
 
     case 'about_team':
       return [{ speaker: 'tina', text: `Our leadership team brings over 25 years of combined experience across private equity, real estate, and venture capital. They've analyzed over 1,000 pitch decks and created more than ₹500 Cr in value. Want me to take you to our About page for full details?` }]

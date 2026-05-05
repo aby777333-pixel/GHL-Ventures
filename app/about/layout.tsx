@@ -5,7 +5,7 @@ const SITE_URL = 'https://ghlindiaventures.com';
 export const metadata: Metadata = {
   title: 'About GHL India Ventures | SEBI Registered Category II AIF Chennai',
   description:
-    'Learn about GHL India Ventures — a SEBI-registered Category II AIF (IN/AIF2/2425/1517) based in Chennai. Our team, investment philosophy, stressed real estate recovery strategy, and startup investment approach.',
+    'Learn about GHL India Ventures — a SEBI-registered Category II AIF (IN/AIF2/24-25/1517) based in Chennai. Our team, investment philosophy, and stressed real estate recovery strategy.',
   keywords: [
     'GHL India Ventures about',
     'SEBI registered AIF Chennai',
@@ -18,7 +18,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: 'About GHL India Ventures | SEBI Registered Category II AIF Chennai',
     description:
-      'Learn about GHL India Ventures — a SEBI-registered Category II AIF (IN/AIF2/2425/1517) based in Chennai. Our team, investment philosophy, stressed real estate recovery strategy, and startup investment approach.',
+      'Learn about GHL India Ventures — a SEBI-registered Category II AIF (IN/AIF2/24-25/1517) based in Chennai. Our team, investment philosophy, and stressed real estate recovery strategy.',
     url: `${SITE_URL}/about`,
     siteName: 'GHL India Ventures',
     type: 'website',
@@ -36,7 +36,7 @@ export const metadata: Metadata = {
     card: 'summary_large_image',
     title: 'About GHL India Ventures | SEBI Registered Category II AIF Chennai',
     description:
-      'Learn about GHL India Ventures — a SEBI-registered Category II AIF (IN/AIF2/2425/1517) based in Chennai. Our team, investment philosophy, stressed real estate recovery strategy, and startup investment approach.',
+      'Learn about GHL India Ventures — a SEBI-registered Category II AIF (IN/AIF2/24-25/1517) based in Chennai. Our team, investment philosophy, and stressed real estate recovery strategy.',
     images: [`${SITE_URL}/og-image.jpg`],
   },
   alternates: {

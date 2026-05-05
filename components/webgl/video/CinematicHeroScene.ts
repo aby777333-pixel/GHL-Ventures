@@ -32,7 +32,7 @@ export const HERO_SEGMENTS = [
 
 export const HERO_OVERLAYS = [
   { title: 'India\u2019s Alternative Investment Frontier', subtitle: 'GHL India Ventures Trust', detail: 'SEBI Registered Category II AIF' },
-  { title: 'GHL India Ventures', subtitle: 'Creating Wealth. Building Trust.', detail: 'IN/AIF2/2425/1517' },
+  { title: 'GHL India Ventures', subtitle: 'Creating Wealth. Building Trust.', detail: 'IN/AIF2/24-25/1517' },
   { title: 'Stressed Real Estate', subtitle: 'High-Alpha Distressed Assets', detail: 'NCLT Resolution \u2022 Value Unlocking' },
   { title: 'Early-Stage Startups', subtitle: 'India\u2019s Next Unicorns', detail: 'Deep Tech \u2022 FinTech \u2022 HealthTech' },
   { title: '6 Portfolio Companies', subtitle: '\u20B9200Cr+ Capital Deployed', detail: '25+ Years Combined Experience' },

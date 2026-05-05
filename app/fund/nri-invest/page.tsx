@@ -132,7 +132,7 @@ function NRIInvestContent() {
               {
                 icon: <Shield className="w-6 h-6" />,
                 title: 'SEBI Registered',
-                desc: 'Category II AIF (IN/AIF2/2425/1517) with mandatory quarterly audits, independent trustee oversight, and SEBI grievance redressal.',
+                desc: 'Category II AIF (IN/AIF2/24-25/1517) with mandatory quarterly audits, independent trustee oversight, and SEBI grievance redressal.',
               },
               {
                 icon: <Scale className="w-6 h-6" />,

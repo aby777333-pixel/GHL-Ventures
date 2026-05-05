@@ -10,7 +10,7 @@ import type { KnowledgeEntry, BrandData, TeamMember, PortfolioCompany } from './
 export const BRAND: BrandData = {
   name: 'GHL India Ventures',
   tagline: 'Investing in India\'s Future',
-  sebiRegistration: 'IN/AIF2/2425/1517',
+  sebiRegistration: 'IN/AIF2/24-25/1517',
   phone: '+91 44 2843 1043',
   altPhone: '+91 7200 255 252',
   email: 'info@ghlindiaventures.com',
@@ -47,8 +47,8 @@ export const PORTFOLIO: PortfolioCompany[] = [
 
 export const KNOWLEDGE_BASE: KnowledgeEntry[] = [
   // General
-  { id: 'about', category: 'general', keywords: ['about', 'company', 'ghl', 'who', 'what is'], response: 'GHL India Ventures is a SEBI-registered Category II Alternative Investment Fund based in Chennai. We focus on two primary strategies: stressed real estate recovery through NCLT acquisitions, and early-stage startup investments. Our SEBI registration number is IN/AIF2/2425/1517.', followUp: ['What is an AIF?', 'Tell me about the team'], priority: 5, speaker: 'abe' },
-  { id: 'sebi', category: 'compliance', keywords: ['sebi', 'registered', 'regulation', 'category ii', 'license'], response: 'We are registered with SEBI as a Category II AIF under registration number IN/AIF2/2425/1517. Category II AIFs include private equity funds, debt funds, and funds that do not fall under Category I or III. This means we are fully regulated and must comply with all SEBI guidelines for investor protection.', followUp: ['What does Category II mean?', 'How is my investment protected?'], priority: 5, speaker: 'abe' },
+  { id: 'about', category: 'general', keywords: ['about', 'company', 'ghl', 'who', 'what is'], response: 'GHL India Ventures is a SEBI-registered Category II Alternative Investment Fund based in Chennai. We focus on two primary strategies: stressed real estate recovery through NCLT acquisitions, and early-stage startup investments. Our SEBI registration number is IN/AIF2/24-25/1517.', followUp: ['What is an AIF?', 'Tell me about the team'], priority: 5, speaker: 'abe' },
+  { id: 'sebi', category: 'compliance', keywords: ['sebi', 'registered', 'regulation', 'category ii', 'license'], response: 'We are registered with SEBI as a Category II AIF under registration number IN/AIF2/24-25/1517. Category II AIFs include private equity funds, debt funds, and funds that do not fall under Category I or III. This means we are fully regulated and must comply with all SEBI guidelines for investor protection.', followUp: ['What does Category II mean?', 'How is my investment protected?'], priority: 5, speaker: 'abe' },
   { id: 'team', category: 'general', keywords: ['team', 'founder', 'management', 'who runs', 'leadership'], response: 'Our team is led by Gopal H. Lakshmi, our Managing Director and Founder, with 25+ years in PE. Our CIO Venkatesh Ramachandran manages investment decisions, Meenakshi Sundaram heads Real Estate, and Arvind Natarajan leads our Startup vertical. We also have Priya Venkatesh as CFO and Karthik Srinivasan heading Compliance.', followUp: ['Tell me more about the founder', 'How experienced is the team?'], priority: 4, speaker: 'abe' },
 
   // Fund Structure

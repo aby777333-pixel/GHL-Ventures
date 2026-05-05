@@ -356,7 +356,7 @@ export function ArticleReaderProvider({ children }: { children: React.ReactNode 
                     <p className="text-xs text-brand-grey italic leading-relaxed">
                       Disclaimer: This article is for educational purposes only and does not constitute investment advice.
                       Investments in AIFs are subject to market risks including loss of principal.
-                      Past performance is not indicative of future results. SEBI Reg. No. IN/AIF2/2425/1517.
+                      Past performance is not indicative of future results. SEBI Reg. No. IN/AIF2/24-25/1517.
                     </p>
                   </div>
 

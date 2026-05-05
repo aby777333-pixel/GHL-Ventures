@@ -92,7 +92,7 @@ export default function WhyAIFsLayout({ children }: { children: React.ReactNode 
         name: 'What is GHL India Ventures\' SEBI registration?',
         acceptedAnswer: {
           '@type': 'Answer',
-          text: 'GHL India Ventures is registered with SEBI as a Category II AIF under Registration Number IN/AIF2/2425/1517, headquartered in Chennai, Tamil Nadu.',
+          text: 'GHL India Ventures is registered with SEBI as a Category II AIF under Registration Number IN/AIF2/24-25/1517, headquartered in Chennai, Tamil Nadu.',
         },
       },
     ],

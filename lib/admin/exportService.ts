@@ -92,7 +92,7 @@ export function exportToPDF<T extends Record<string, any>>(
     <thead><tr>${columns.map(c => `<th>${c.label}</th>`).join('')}</tr></thead>
     <tbody>${data.map(row => `<tr>${columns.map(c => `<td>${row[c.key] ?? ''}</td>`).join('')}</tr>`).join('')}</tbody>
   </table>
-  <div class="footer">GHL India Ventures Pvt. Ltd. &bull; SEBI Reg: IN/AIF2/2425/1517 &bull; Confidential</div>
+  <div class="footer">GHL India Ventures Pvt. Ltd. &bull; SEBI Reg: IN/AIF2/24-25/1517 &bull; Confidential</div>
   <script>window.print()</script>
 </body></html>`
 

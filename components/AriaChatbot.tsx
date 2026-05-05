@@ -20,7 +20,7 @@ function getResponse(input: string): string {
 
   // About GHL
   if (lower.includes('what is ghl') || lower.includes('tell me about ghl') || lower.includes('who are you') || lower.includes('about ghl')) {
-    return "GHL India Ventures is a SEBI-registered Category II Alternate Investment Fund\u2014think of us as a carefully curated gateway for sophisticated investors to access opportunities that aren\u2019t available through regular markets.\n\nWe focus on two spaces: **stressed real estate** in India, and **early-stage startups** with strong fundamentals.\n\nOur registration (IN/AIF2/2425/1517) means we operate under SEBI\u2019s full regulatory framework.\n\nWe\u2019re based in Chennai, but our thinking is pan-India. Would you like to know more about how we invest?"
+    return "GHL India Ventures is a SEBI-registered Category II Alternate Investment Fund\u2014think of us as a carefully curated gateway for sophisticated investors to access opportunities that aren\u2019t available through regular markets.\n\nWe focus on two spaces: **stressed real estate** in India, and **early-stage startups** with strong fundamentals.\n\nOur registration (IN/AIF2/24-25/1517) means we operate under SEBI\u2019s full regulatory framework.\n\nWe\u2019re based in Chennai, but our thinking is pan-India. Would you like to know more about how we invest?"
   }
 
   // AIF
@@ -60,12 +60,12 @@ function getResponse(input: string): string {
 
   // Contact
   if (lower.includes('contact') || lower.includes('phone') || lower.includes('email') || lower.includes('address')) {
-    return "Here\u2019s how to reach us:\n\n**Phone:** +91 44 2843 1043 | +91 7200 255 252\n**Email:** info@ghlindiaventures.com\n**Office:** 2D, Queens Court, No. 6, Montieth Road, Egmore, Chennai \u2013 600 008\n**Hours:** Mon\u2013Fri, 9:30 AM \u2013 6:30 PM IST\n\nYou can also chat with us on WhatsApp. Would you like me to connect you?"
+    return "Here\u2019s how to reach us:\n\n**Phone:** +91 44 2843 1043 | +91 7200 255 252\n**Email:** info@ghlindiaventures.com\n**Office:** 2D, Queens Court, No. 6, Montieth Road, Egmore, Chennai \u2013 600 008\n**Hours:** Mon\u2013Sat, 10:00 AM \u2013 6:30 PM IST\n\nYou can also chat with us on WhatsApp. Would you like me to connect you?"
   }
 
   // SEBI / registration
   if (lower.includes('sebi') || lower.includes('registered') || lower.includes('regulation')) {
-    return "We are registered with SEBI as a Category II AIF: **IN/AIF2/2425/1517**.\n\nThis means full regulatory oversight, mandatory disclosures, and investor protection under SEBI (AIF) Regulations, 2012.\n\nFor any regulatory concerns, SEBI\u2019s SCORES portal at scores.gov.in is also available.\n\nWhat else would you like to know?"
+    return "We are registered with SEBI as a Category II AIF: **IN/AIF2/24-25/1517**.\n\nThis means full regulatory oversight, mandatory disclosures, and investor protection under SEBI (AIF) Regulations, 2012.\n\nFor any regulatory concerns, SEBI\u2019s SCORES portal at scores.gov.in is also available.\n\nWhat else would you like to know?"
   }
 
   // Complaints

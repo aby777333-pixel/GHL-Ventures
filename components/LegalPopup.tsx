@@ -193,7 +193,7 @@ function DocHeader({ date }: { date: string }) {
     <div className="bg-brand-offwhite rounded-xl p-4 mb-6 border border-gray-100">
       <p className="text-xs text-brand-grey font-medium">GHL India Ventures Trust</p>
       <p className="text-xs text-brand-grey">{date}</p>
-      <p className="text-xs text-brand-grey mt-1">SEBI Registration No. IN/AIF2/2425/1517</p>
+      <p className="text-xs text-brand-grey mt-1">SEBI Registration No. IN/AIF2/24-25/1517</p>
     </div>
   )
 }
@@ -282,7 +282,7 @@ function PrivacyContent() {
       <Para>We will acknowledge receipt of your privacy-related grievance within 48 hours and endeavor to resolve it within thirty (30) business days. If you are not satisfied with our response, you may escalate your complaint to the relevant Data Protection Authority or approach SEBI through the SCORES portal (scores.gov.in) for investment-related grievances.</Para>
 
       <div className="mt-6 pt-4 border-t border-gray-200">
-        <Para>SEBI Registration No. IN/AIF2/2425/1517 | Category II Alternative Investment Fund. This Privacy Policy governs data handling practices of GHL India Ventures Trust. For investment-related terms, please refer to our Terms of Service and the Private Placement Memorandum.</Para>
+        <Para>SEBI Registration No. IN/AIF2/24-25/1517 | Category II Alternative Investment Fund. This Privacy Policy governs data handling practices of GHL India Ventures Trust. For investment-related terms, please refer to our Terms of Service and the Private Placement Memorandum.</Para>
         <Para>&copy; 2026 GHL India Ventures Trust. All Rights Reserved.</Para>
       </div>
     </>
@@ -315,7 +315,7 @@ function TermsContent() {
       <Para>These Terms constitute a legally binding agreement between you (&ldquo;User,&rdquo; &ldquo;You&rdquo;) and GHL India Ventures Trust (&ldquo;GHL,&rdquo; &ldquo;We,&rdquo; &ldquo;Us,&rdquo; &ldquo;Company&rdquo;).</Para>
 
       <SectionTitle>2. About GHL India Ventures</SectionTitle>
-      <Para>GHL India Ventures Trust is a SEBI-registered Category II Alternative Investment Fund, registered under the Securities and Exchange Board of India (Alternative Investment Funds) Regulations, 2012, bearing Registration Number IN/AIF2/2425/1517.</Para>
+      <Para>GHL India Ventures Trust is a SEBI-registered Category II Alternative Investment Fund, registered under the Securities and Exchange Board of India (Alternative Investment Funds) Regulations, 2012, bearing Registration Number IN/AIF2/24-25/1517.</Para>
       <Para>Registered Office: 2D, Queens Court, No. 6, Montieth Road, Egmore, Chennai, Tamil Nadu &ndash; 600 008, India.</Para>
       <Para>The company specializes in stressed real estate special situations and early-stage venture capital investments. Nothing on this Platform shall be construed as the Company operating in any capacity beyond its SEBI-registered mandate.</Para>
 
@@ -385,7 +385,7 @@ function TermsContent() {
       <Para>We will acknowledge receipt of your grievance within 48 hours and endeavor to resolve it within thirty (30) business days, in accordance with applicable SEBI guidelines on investor grievance redressal.</Para>
 
       <div className="mt-6 pt-4 border-t border-gray-200">
-        <Para>SEBI Registration No. IN/AIF2/2425/1517 | Category II Alternative Investment Fund. Investments in AIFs involve risks, including the possible loss of principal. Past performance is not indicative of future results.</Para>
+        <Para>SEBI Registration No. IN/AIF2/24-25/1517 | Category II Alternative Investment Fund. Investments in AIFs involve risks, including the possible loss of principal. Past performance is not indicative of future results.</Para>
         <Para>&copy; 2026 GHL India Ventures Trust. All Rights Reserved.</Para>
       </div>
     </>
@@ -400,7 +400,7 @@ function DisclaimerContent() {
 
       <SectionTitle>Regulatory Status</SectionTitle>
       <Para>
-        GHL India Ventures Trust is registered with the Securities and Exchange Board of India (SEBI) as a Category II Alternative Investment Fund under Registration Number IN/AIF2/2425/1517, pursuant to the SEBI (Alternative Investment Funds) Regulations, 2012. This registration does not imply that SEBI endorses, guarantees, or recommends any investment product, strategy, or communication published by GHL India Ventures.
+        GHL India Ventures Trust is registered with the Securities and Exchange Board of India (SEBI) as a Category II Alternative Investment Fund under Registration Number IN/AIF2/24-25/1517, pursuant to the SEBI (Alternative Investment Funds) Regulations, 2012. This registration does not imply that SEBI endorses, guarantees, or recommends any investment product, strategy, or communication published by GHL India Ventures.
       </Para>
 
       <SectionTitle>Not an Offer or Solicitation</SectionTitle>
@@ -455,7 +455,7 @@ function DisclaimerContent() {
       </Para>
 
       <div className="mt-6 pt-4 border-t border-gray-200">
-        <Para>&copy; 2026 GHL India Ventures Trust. All Rights Reserved. SEBI Registration No. IN/AIF2/2425/1517.</Para>
+        <Para>&copy; 2026 GHL India Ventures Trust. All Rights Reserved. SEBI Registration No. IN/AIF2/24-25/1517.</Para>
       </div>
     </>
   )

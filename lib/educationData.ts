@@ -152,7 +152,7 @@ export const ARTICLES: Article[] = [
       'Who Can Invest in AIFs?',
       'AIFs are designed for sophisticated investors who understand the risks involved. Eligible participants include Indian resident individuals with the required minimum capital, high-net-worth individuals, ultra-high-net-worth individuals, family offices, corporate treasuries, banks, NBFCs (subject to RBI guidelines), insurance companies (subject to IRDAI norms), pension funds (subject to PFRDA regulations), and Non-Resident Indians through their NRO accounts. The minimum investment for Category I and II AIFs is 1 crore rupees.',
       'How GHL India Ventures Fits In',
-      'GHL India Ventures is registered with SEBI as a Category II Alternative Investment Fund under Registration Number IN/AIF2/2425/1517. The fund focuses on two high-conviction strategies: recovering value from stressed real estate assets acquired through NCLT resolutions, and backing early-stage startups across fintech, healthtech, and cleantech. The fund is headquartered in Chennai and operates with institutional-grade governance, quarterly NAV reporting, and transparent investor communication.',
+      'GHL India Ventures is registered with SEBI as a Category II Alternative Investment Fund under Registration Number IN/AIF2/24-25/1517. The fund focuses on two high-conviction strategies: recovering value from stressed real estate assets acquired through NCLT resolutions, and backing early-stage startups across fintech, healthtech, and cleantech. The fund is headquartered in Chennai and operates with institutional-grade governance, quarterly NAV reporting, and transparent investor communication.',
     ],
   },
   {

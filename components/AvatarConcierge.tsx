@@ -961,7 +961,7 @@ export default function AvatarConcierge() {
       {/* ── Footer disclaimer ── */}
       <div className="px-3 py-1.5 border-t border-white/5 text-center shrink-0">
         <span className="text-[8px] text-gray-600">
-          ⚠️ {t.disclaimer} · SEBI Reg: IN/AIF2/2425/1517 · {t.privacyPolicy}
+          ⚠️ {t.disclaimer} · SEBI Reg: IN/AIF2/24-25/1517 · {t.privacyPolicy}
         </span>
       </div>
 

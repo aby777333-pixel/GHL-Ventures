@@ -350,9 +350,9 @@ function HeroSection() {
           <div className="hero-glass-card relative p-7 sm:p-9 lg:p-10">
             <div className="relative z-10">
               <AnimatedSection delay={0}>
-                <div className="inline-flex items-center px-4 py-2 bg-brand-red/15 border border-brand-red/40 rounded-full mb-7 backdrop-blur-sm">
-                  <Shield className="w-4 h-4 text-brand-red mr-2" />
-                  <span className="text-brand-red text-xs font-semibold uppercase tracking-widest">
+                <div className="inline-flex items-center px-4 py-2 bg-brand-red/30 border border-brand-red/70 rounded-full mb-7 backdrop-blur-sm shadow-lg shadow-brand-red/25">
+                  <Shield className="w-4 h-4 text-white mr-2" />
+                  <span className="text-white text-xs font-bold uppercase tracking-widest" style={{ textShadow: '0 1px 4px rgba(0,0,0,0.7)' }}>
                     SEBI Registered &nbsp;|&nbsp; Category II AIF
                   </span>
                 </div>
@@ -559,7 +559,7 @@ function WhoWeAre() {
             </div>
 
             <p className="text-brand-grey text-base leading-relaxed mb-4">
-              GHL India Ventures is a SEBI-registered Category II Alternative Investment Fund focused on two high-conviction strategies: recovering value from stressed real estate assets and backing early-stage startups poised to transform India&apos;s economic landscape.
+              GHL India Ventures is a SEBI-registered Category II Alternative Investment Fund focused on a high-conviction strategy: recovering value from stressed real estate assets across India.
             </p>
             <p className="text-brand-grey text-base leading-relaxed mb-8">
               Headquartered in Chennai, our leadership brings over 25 years of experience spanning private equity, financial services, and strategic advisory.
@@ -652,13 +652,13 @@ function WhyChooseUs() {
   const features = [
     {
       title: 'SEBI-Regulated Trust',
-      desc: 'Our registration as a Category II Alternative Investment Fund (IN/AIF2/2425/1517) guarantees full regulatory compliance, third-party audits, and custodial safeguards for every rupee you commit.',
+      desc: 'Our registration as a Category II Alternative Investment Fund (IN/AIF2/24-25/1517) guarantees full regulatory compliance, third-party audits, and custodial safeguards for every rupee you commit.',
       icon: Shield,
       img: '/images/home/sebi-regulated.jpg',
     },
     {
       title: 'Diversified Portfolio',
-      desc: 'We balance high-conviction plays in stressed real estate recovery with early-stage startup exposure, offering built-in diversification across asset types, geographies, and time horizons.',
+      desc: 'We focus on high-conviction plays in stressed real estate recovery, offering built-in diversification across asset types, geographies, and time horizons.',
       icon: BarChart3,
       img: '/images/home/diversified-portfolio.jpg',
     },
@@ -1452,7 +1452,7 @@ function FAQSection() {
   const faqs = [
     {
       q: 'What is a Category II AIF?',
-      a: 'A Category II Alternative Investment Fund (AIF) is a SEBI-regulated pooled investment vehicle that invests in real estate, private equity, distressed assets, and unlisted companies. GHL India Ventures is registered under SEBI Registration No. IN/AIF2/2425/1517, with mandatory quarterly audits and third-party custodial safeguards.',
+      a: 'A Category II Alternative Investment Fund (AIF) is a SEBI-regulated pooled investment vehicle that invests in real estate, private equity, distressed assets, and unlisted companies. GHL India Ventures is registered under SEBI Registration No. IN/AIF2/24-25/1517, with mandatory quarterly audits and third-party custodial safeguards.',
     },
     {
       q: 'What is the minimum investment in GHL India Ventures?',
@@ -1460,7 +1460,7 @@ function FAQSection() {
     },
     {
       q: 'Is GHL India Ventures SEBI registered?',
-      a: 'Yes. GHL India Ventures is registered with the Securities and Exchange Board of India (SEBI) as a Category II Alternative Investment Fund under Registration Number IN/AIF2/2425/1517. This ensures institutional-grade governance, transparent NAV reporting, and strict regulatory compliance.',
+      a: 'Yes. GHL India Ventures is registered with the Securities and Exchange Board of India (SEBI) as a Category II Alternative Investment Fund under Registration Number IN/AIF2/24-25/1517. This ensures institutional-grade governance, transparent NAV reporting, and strict regulatory compliance.',
     },
     {
       q: 'How does stressed real estate investment work?',
@@ -1537,7 +1537,7 @@ function InvestmentDisclaimer() {
         <div className="flex items-start gap-3 p-4 rounded-xl border border-amber-500/20 bg-amber-500/5">
           <AlertTriangle className="w-5 h-5 text-amber-500 shrink-0 mt-0.5" />
           <p className="text-xs text-gray-400 leading-relaxed">
-            <strong className="text-amber-400">Investment Risk Disclaimer:</strong> Investments in Alternative Investment Funds (AIFs) and related co-invest instruments are subject to market risks including possible loss of principal. Past performance is not indicative of future results. The information on this website does not constitute an offer, solicitation, or investment advice. Prospective investors must read the Private Placement Memorandum (PPM) and all scheme-related documents before investing. SEBI Registration No. IN/AIF2/2425/1517. Category II AIF minimum investment as per SEBI regulations.
+            <strong className="text-amber-400">Investment Risk Disclaimer:</strong> Investments in Alternative Investment Funds (AIFs) and related co-invest instruments are subject to market risks including possible loss of principal. Past performance is not indicative of future results. The information on this website does not constitute an offer, solicitation, or investment advice. Prospective investors must read the Private Placement Memorandum (PPM) and all scheme-related documents before investing. SEBI Registration No. IN/AIF2/24-25/1517. Category II AIF minimum investment as per SEBI regulations.
           </p>
         </div>
       </div>
@@ -1567,15 +1567,15 @@ export default function HomePage() {
         <div className="container-max mx-auto overflow-hidden">
           <div className="animate-marquee whitespace-nowrap py-1.5">
             <span className="inline-block text-white/80 mx-8" style={{ fontSize: '11px', letterSpacing: '0.02em' }}>
-              SEBI Registered AIF &nbsp;|&nbsp; Registration No. <a href={BRAND.sebiUrl} target="_blank" rel="noopener noreferrer" className="hover:text-brand-red transition-colors">IN/AIF2/2425/1517</a>
+              SEBI Registered AIF &nbsp;|&nbsp; Registration No. <a href={BRAND.sebiUrl} target="_blank" rel="noopener noreferrer" className="hover:text-brand-red transition-colors">IN/AIF2/24-25/1517</a>
               &nbsp;|&nbsp; AIF: As per SEBI Regulations &nbsp;|&nbsp; SEBI Co-Invest Framework &nbsp;|&nbsp;
-              Stressed Real Estate &amp; Early-Stage Startups &nbsp;|&nbsp;
+              Stressed Real Estate &nbsp;|&nbsp;
               Chennai, India
             </span>
             <span className="inline-block text-white/80 mx-8" style={{ fontSize: '11px', letterSpacing: '0.02em' }}>
-              SEBI Registered AIF &nbsp;|&nbsp; Registration No. <a href={BRAND.sebiUrl} target="_blank" rel="noopener noreferrer" className="hover:text-brand-red transition-colors">IN/AIF2/2425/1517</a>
+              SEBI Registered AIF &nbsp;|&nbsp; Registration No. <a href={BRAND.sebiUrl} target="_blank" rel="noopener noreferrer" className="hover:text-brand-red transition-colors">IN/AIF2/24-25/1517</a>
               &nbsp;|&nbsp; AIF: As per SEBI Regulations &nbsp;|&nbsp; SEBI Co-Invest Framework &nbsp;|&nbsp;
-              Stressed Real Estate &amp; Early-Stage Startups &nbsp;|&nbsp;
+              Stressed Real Estate &nbsp;|&nbsp;
               Chennai, India
             </span>
           </div>

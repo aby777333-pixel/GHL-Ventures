@@ -49,12 +49,12 @@ export const metadata: Metadata = {
     default: 'GHL India Ventures | SEBI Registered AIF Chennai',
     template: '%s',
   },
-  description: 'SEBI-registered Category II AIF in Chennai. Invest in stressed real estate & startups via AIF or SEBI Co-Invest Framework. SEBI Reg. IN/AIF2/2425/1517.',
+  description: 'SEBI-registered Category II AIF in Chennai. Invest in stressed real estate & startups via AIF or SEBI Co-Invest Framework. SEBI Reg. IN/AIF2/24-25/1517.',
   keywords: [
     'AIF', 'Alternative Investment Fund', 'SEBI registered AIF', 'Category II AIF',
     'GHL India Ventures', 'Chennai investment fund', 'stressed real estate fund India',
     'startup investment fund', 'HNI investment India', 'NCLT real estate recovery',
-    'Private Equity India', 'AIF minimum investment', 'SEBI IN/AIF2/2425/1517',
+    'Private Equity India', 'AIF minimum investment', 'SEBI IN/AIF2/24-25/1517',
   ],
   authors: [{ name: 'GHL India Ventures' }],
   creator: 'GHL India Ventures',
@@ -103,7 +103,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     '@id': `${SITE_URL}/#organization`,
     name: 'GHL India Ventures',
     legalName: 'GHL India Ventures Private Limited',
-    description: 'SEBI-registered Category II Alternative Investment Fund (IN/AIF2/2425/1517) focused on stressed real estate recovery and early-stage startup investments in India.',
+    description: 'SEBI-registered Category II Alternative Investment Fund (IN/AIF2/24-25/1517) focused on stressed real estate recovery and early-stage startup investments in India.',
     url: SITE_URL,
     logo: `${SITE_URL}/icon.svg`,
     image: `${SITE_URL}/og-image.jpg`,
@@ -192,7 +192,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         name: 'What is a Category II AIF?',
         acceptedAnswer: {
           '@type': 'Answer',
-          text: 'A Category II Alternative Investment Fund (AIF) is a SEBI-regulated pooled investment vehicle that invests in real estate, private equity, distressed assets, and unlisted companies. GHL India Ventures is registered as Category II AIF under SEBI Registration No. IN/AIF2/2425/1517.',
+          text: 'A Category II Alternative Investment Fund (AIF) is a SEBI-regulated pooled investment vehicle that invests in real estate, private equity, distressed assets, and unlisted companies. GHL India Ventures is registered as Category II AIF under SEBI Registration No. IN/AIF2/24-25/1517.',
         },
       },
       {
@@ -208,7 +208,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         name: 'Is GHL India Ventures SEBI registered?',
         acceptedAnswer: {
           '@type': 'Answer',
-          text: 'Yes, GHL India Ventures is registered with the Securities and Exchange Board of India (SEBI) as a Category II Alternative Investment Fund under Registration Number IN/AIF2/2425/1517. This ensures mandatory quarterly audits, third-party custodial safeguards, and transparent NAV reporting.',
+          text: 'Yes, GHL India Ventures is registered with the Securities and Exchange Board of India (SEBI) as a Category II Alternative Investment Fund under Registration Number IN/AIF2/24-25/1517. This ensures mandatory quarterly audits, third-party custodial safeguards, and transparent NAV reporting.',
         },
       },
       {

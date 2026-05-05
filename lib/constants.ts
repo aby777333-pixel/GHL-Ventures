@@ -7,8 +7,8 @@ export const BRAND = {
   fullName: 'GHL India Ventures Trust',
   tagline: 'Creating Wealth. Building Trust. Inspiring Growth.',
   description:
-    'A SEBI-registered Category II Alternative Investment Fund specialising in stressed real estate assets and early-stage startup investments, designed exclusively for High Net-Worth Individuals seeking superior risk-adjusted returns.',
-  sebi: 'IN/AIF2/2425/1517',
+    'A SEBI-registered Category II Alternative Investment Fund specialising in stressed real estate asset investments, designed exclusively for High Net-Worth Individuals seeking superior risk-adjusted returns.',
+  sebi: 'IN/AIF2/24-25/1517',
   sebiUrl: 'https://www.sebi.gov.in/sebiweb/other/OtherAction.do?doRecognisedFpi=yes&intmId=16&name=GHL%20INDIA%20VENTURES%20TRUST&regNo=IN/AIF2/24-25/1517',
   phone1: '+91 44 2843 1043',
   phone2: '+91 7200 255 252',
@@ -24,7 +24,7 @@ export const BRAND = {
   // for the Contact page card.
   delhiAddress:
     'I-Thum Tower, Tower B, Unit no. 317, 3rd Floor, Plot no. A-40, Sector-62, Noida 201301, Delhi NCR',
-  officeHours: 'Mon\u2013Fri, 9:30 AM \u2013 6:30 PM IST',
+  officeHours: 'Mon\u2013Sat, 10:00 AM \u2013 6:30 PM IST',
   minInvestment: 'As per SEBI AIF Regulations',
   colors: {
     red: '#D0021B',
@@ -530,13 +530,13 @@ export const MILESTONES = [
     year: '2024',
     title: 'SEBI Registration Granted',
     description:
-      'Received SEBI Cat II AIF registration (IN/AIF2/2425/1517). First close completed and deployment initiated into stressed RE assets and startup portfolio.',
+      'Received SEBI Cat II AIF registration (IN/AIF2/24-25/1517). First close completed and deployment initiated into stressed real estate assets.',
   },
   {
     year: '2025',
     title: 'Active Deployment',
     description:
-      'Growth phase with active positions in 3 stressed real estate projects and 3 early-stage startups, with pipeline expanding into Tier 2 cities.',
+      'Growth phase with active positions in 3 stressed real estate projects, with pipeline expanding into Tier 2 cities.',
   },
 ] as const
 
@@ -636,6 +636,6 @@ export const FAQ_ITEMS = [
   {
     question: 'Is GHL India Ventures regulated by SEBI, and how is investor money protected?',
     answer:
-      'Yes, GHL India Ventures Trust is a SEBI-registered Category II AIF (Registration No. IN/AIF2/2425/1517). All investor funds are held in a dedicated fund account with an independent custodian. The fund is audited annually, and NAV is reported quarterly to all investors.',
+      'Yes, GHL India Ventures Trust is a SEBI-registered Category II AIF (Registration No. IN/AIF2/24-25/1517). All investor funds are held in a dedicated fund account with an independent custodian. The fund is audited annually, and NAV is reported quarterly to all investors.',
   },
 ] as const

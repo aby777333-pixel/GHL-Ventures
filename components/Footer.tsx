@@ -142,7 +142,7 @@ export default function Footer() {
               </h3>
               <p className="text-gray-400 text-sm leading-relaxed mb-6">
                 {BRAND.description} We bridge growth capital gaps through strategic
-                investments in stressed real estate and early-stage startups across India.
+                investments in stressed real estate across India.
               </p>
               <div className="flex flex-wrap gap-2.5">
                 {SOCIAL_LINKS.map((social) => (
@@ -244,7 +244,7 @@ export default function Footer() {
                 </li>
                 <li className="inline-flex items-start gap-3 text-gray-400 text-sm text-left">
                   <Clock className="w-4 h-4 mt-0.5 shrink-0" />
-                  <span>Mon - Sat: 9:30 AM - 6:30 PM IST</span>
+                  <span>Mon - Sat: 10:00 AM - 6:30 PM IST</span>
                 </li>
               </ul>
             </div>

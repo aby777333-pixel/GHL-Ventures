@@ -278,7 +278,7 @@ export default function VideoCallWidget() {
 
                   <div className="mt-3 flex items-center justify-center space-x-1.5 text-gray-600 text-[10px]">
                     <Clock className="w-3 h-3" />
-                    <span>Mon-Fri, 9:30 AM - 6:30 PM IST</span>
+                    <span>Mon-Sat, 10:00 AM - 6:30 PM IST</span>
                   </div>
                 </div>
               )}
