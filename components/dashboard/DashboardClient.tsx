@@ -26,6 +26,7 @@ import {
 } from 'recharts'
 import Logo from '@/components/Logo'
 import SocialLinks from '@/components/SocialLinks'
+import { BRAND } from '@/lib/constants'
 
 // Auth
 import { useClientAuth } from '@/lib/supabase/clientHooks'
@@ -3312,13 +3313,13 @@ export default function DashboardClient() {
             </div>
             <ChevronRight className={`w-3.5 h-3.5 ${t('text-gray-600','text-gray-600')}`} />
           </button>
-          <button onClick={() => window.open('https://www.sebi.gov.in/', '_blank')}
+          <button onClick={() => window.open(BRAND.sebiUrl, '_blank', 'noopener,noreferrer')}
             className={`w-full flex items-center justify-between p-3 rounded-xl cursor-pointer group transition-all ${t('bg-white/[0.03] hover:bg-white/[0.06] border border-white/[0.04]','bg-gray-100/40 hover:bg-gray-200/35 border border-gray-200/30')}`}>
             <div className="flex items-center gap-2.5">
               <Landmark className="w-4 h-4 text-amber-400" />
               <div className="text-left">
                 <span className={`text-xs font-semibold block ${t('text-white','text-gray-900')}`}>SEBI Compliance</span>
-                <span className={`text-[10px] ${t('text-gray-500','text-gray-600')}`}>Reg: IN/AIF2/24-25/1517</span>
+                <span className={`text-[10px] ${t('text-gray-500','text-gray-600')}`}>Reg: {BRAND.sebi}</span>
               </div>
             </div>
             <ExternalLink className={`w-3.5 h-3.5 ${t('text-gray-600','text-gray-600')}`} />
@@ -4203,7 +4204,7 @@ export default function DashboardClient() {
         {renderTopBar()}
         <div className="flex-1 p-4 lg:p-6 pb-20 overflow-auto">{renderContent()}</div>
         <footer className={`hidden sm:flex border-t px-4 lg:px-6 py-3 flex-col sm:flex-row items-center justify-between gap-2 text-[11px] ${isDark ? 'border-white/[0.04] text-gray-600' : 'border-gray-300/50 text-gray-500'}`}>
-          <p>&copy; 2026 GHL India Ventures. <a href="https://www.sebi.gov.in/sebiweb/other/OtherAction.do?doRecognisedFpi=yes&intmId=16&name=GHL%20INDIA%20VENTURES%20TRUST&regNo=IN/AIF2/24-25/1517" target="_blank" rel="noopener noreferrer" className="hover:text-brand-red transition-colors">SEBI Reg: IN/AIF2/24-25/1517</a></p>
+          <p>&copy; 2026 GHL India Ventures. <a href={BRAND.sebiUrl} target="_blank" rel="noopener noreferrer" className="hover:text-brand-red transition-colors">SEBI Reg: {BRAND.sebi}</a></p>
           <div className="flex items-center gap-3">
             <button onClick={() => { setTermsOpen(true); setTermsScrolled(false) }} className="hover:underline hover:text-white transition-colors">Terms & Conditions</button>
             <span>&bull;</span>

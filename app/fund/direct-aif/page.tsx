@@ -32,10 +32,10 @@ export default function DirectAIFPage() {
               <span className="text-brand-red font-medium">Direct AIF Route</span>
             </nav>
 
-            <div className="inline-flex items-center px-4 py-2 bg-brand-red/10 border border-brand-red/20 rounded-full mb-6">
+            <a href={BRAND.sebiUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center px-4 py-2 bg-brand-red/10 border border-brand-red/20 rounded-full mb-6 hover:bg-brand-red/15 transition-colors">
               <Shield className="w-4 h-4 text-brand-red mr-2" />
               <span className="text-brand-red text-sm font-medium">SEBI Reg: {BRAND.sebi}</span>
-            </div>
+            </a>
 
             <h1 className="text-2xl md:text-3xl lg:text-4xl font-bold text-white mb-5 leading-tight">
               Direct AIF Route<br />

@@ -58,10 +58,10 @@ function NRIInvestContent() {
               <span className="text-brand-red font-medium">NRI Invest</span>
             </nav>
 
-            <div className="inline-flex items-center px-4 py-2 bg-brand-red/10 border border-brand-red/20 rounded-full mb-6">
+            <a href={BRAND.sebiUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center px-4 py-2 bg-brand-red/10 border border-brand-red/20 rounded-full mb-6 hover:bg-brand-red/15 transition-colors">
               <Shield className="w-4 h-4 text-brand-red mr-2" />
               <span className="text-brand-red text-sm font-medium">SEBI Reg: {BRAND.sebi}</span>
-            </div>
+            </a>
 
             <h1 className="text-2xl md:text-3xl lg:text-5xl font-bold text-white mb-5 leading-tight">
               Invest in India.<br />
@@ -637,7 +637,7 @@ function NRIInvestContent() {
                 </Link>
               </div>
               <p className="text-[10px] text-gray-500 mt-8">
-                GHL India Ventures Trust &bull; SEBI Cat II AIF &bull; Reg: {BRAND.sebi} &bull;
+                GHL India Ventures Trust &bull; SEBI Cat II AIF &bull; Reg: <a href={BRAND.sebiUrl} target="_blank" rel="noopener noreferrer" className="hover:text-brand-red transition-colors underline">{BRAND.sebi}</a> &bull;
                 Mutual fund investments are subject to market risks. Past performance is not indicative of future results.
               </p>
             </div>

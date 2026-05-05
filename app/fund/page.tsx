@@ -41,10 +41,10 @@ function FundHero() {
             <span className="text-brand-red font-medium">Fund</span>
           </nav>
 
-          <div className="inline-flex items-center px-4 py-2 bg-brand-red/10 border border-brand-red/20 rounded-full mb-6 trust-badge badge-bounce">
+          <a href={BRAND.sebiUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center px-4 py-2 bg-brand-red/10 border border-brand-red/20 rounded-full mb-6 trust-badge badge-bounce hover:bg-brand-red/15 transition-colors">
             <Shield className="w-4 h-4 text-brand-red mr-2" />
             <span className="text-brand-red text-sm font-medium">SEBI Reg: {BRAND.sebi}</span>
-          </div>
+          </a>
           <h1 className="text-2xl md:text-3xl lg:text-4xl font-bold text-white mt-2 mb-5 leading-tight">
             Institutional Access.<br />
             <span className="text-gradient-shimmer">HNI Returns.</span>
@@ -515,7 +515,7 @@ function ReturnsPerformance() {
                   <p>
                     This website does not constitute an offer or solicitation of an offer to purchase units of the Fund.
                     Investment in the Fund is subject to the terms and conditions of the PPM and Contribution Agreement.
-                    SEBI Registration: {BRAND.sebi}
+                    SEBI Registration: <a href={BRAND.sebiUrl} target="_blank" rel="noopener noreferrer" className="hover:text-brand-red transition-colors underline">{BRAND.sebi}</a>
                   </p>
                 </div>
               </div>
