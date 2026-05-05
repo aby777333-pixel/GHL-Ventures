@@ -3309,6 +3309,46 @@ body.admin-active #ghl-direct-widget {
   transform: scale(1.05);
 }
 
+/* ── Team portrait soft blend ──
+   Fades the photo edges into the card background so imperfect
+   cut-out / hair-edge artifacts disappear visually.
+   Works in light + dark mode (parent .card supplies the bg). */
+.team-portrait {
+  position: relative;
+  /* Match the photo's dark studio backdrop while still letting the card
+     gradient breathe at the very edges where the image fades to transparent. */
+  background: #1A1A1A;
+}
+:root:not(.dark) .team-portrait {
+  background: #f3f3f3;
+}
+.team-portrait img {
+  -webkit-mask-image: radial-gradient(ellipse 96% 96% at 50% 52%, #000 70%, transparent 100%);
+          mask-image: radial-gradient(ellipse 96% 96% at 50% 52%, #000 70%, transparent 100%);
+}
+/* Subtle vignette that matches the card on top of the image — hides any
+   residual halo right at the edge without dimming the face. */
+.team-portrait::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  border-radius: inherit;
+  background:
+    linear-gradient(to bottom, rgba(26,26,26,0.6) 0%, transparent 10%),
+    linear-gradient(to top,    rgba(26,26,26,0.5) 0%, transparent 8%),
+    linear-gradient(to right,  rgba(26,26,26,0.45) 0%, transparent 6%),
+    linear-gradient(to left,   rgba(26,26,26,0.45) 0%, transparent 6%);
+  mix-blend-mode: normal;
+}
+:root:not(.dark) .team-portrait::after {
+  background:
+    linear-gradient(to bottom, rgba(243,243,243,0.7) 0%, transparent 10%),
+    linear-gradient(to top,    rgba(243,243,243,0.6) 0%, transparent 8%),
+    linear-gradient(to right,  rgba(243,243,243,0.55) 0%, transparent 6%),
+    linear-gradient(to left,   rgba(243,243,243,0.55) 0%, transparent 6%);
+}
+
 /* ── 5. Text Gradient Shimmer — subtle light sweep on gradient text ── */
 @keyframes textShimmer {
   0% {

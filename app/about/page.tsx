@@ -282,7 +282,7 @@ function LeadershipTeam() {
             <AnimatedSection key={member.name} delay={i * 100}>
               <div className={`card text-center group hover-lift h-full flex flex-col ${['glow-card-red','glow-card-blue','glow-card-violet'][i % 3]}`}>
                 {/* Portrait photo — 4:5 aspect ratio, rounded rectangle */}
-                <div className="w-full aspect-[4/5] rounded-xl overflow-hidden mb-6">
+                <div className="team-portrait w-full aspect-[4/5] rounded-xl overflow-hidden mb-6">
                   <Image
                     src={member.image}
                     alt={member.name}
