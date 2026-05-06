@@ -4628,3 +4628,20 @@ button[type="submit"].inline-flex {
   text-shadow: 0 1px 8px rgba(0, 0, 0, 0.75);
 }
 
+/* Contact / "Start Your Investment Journey" — moody green fields
+   with sunbeam background. Light off-white wash keeps the dark form
+   labels readable while the photo still shows through. The dark-mode
+   override on the <section> already covers the photo, so the overlay
+   is light-mode only. */
+.contact-section {
+  background-color: #e8e6df;
+}
+.contact-overlay {
+  background:
+    linear-gradient(180deg, rgba(248, 246, 240, 0.62) 0%, rgba(248, 246, 240, 0.55) 50%, rgba(248, 246, 240, 0.65) 100%);
+}
+:root.dark .contact-bg,
+:root.dark .contact-overlay {
+  display: none;
+}
+

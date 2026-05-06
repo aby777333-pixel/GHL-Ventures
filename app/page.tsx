@@ -1055,8 +1055,24 @@ function ContactFormSection() {
   }
 
   return (
-    <section className="section-padding bg-brand-offwhite dark:!bg-[#111111]">
-      <div className="container-max mx-auto">
+    <section className="contact-section relative section-padding overflow-hidden dark:!bg-[#111111]">
+      {/* Background image — moody green fields with sunbeam */}
+      <picture className="contact-bg absolute inset-0 pointer-events-none select-none">
+        <source srcSet="/images/home/contact-bg-sm.webp" type="image/webp" media="(max-width: 768px)" />
+        <source srcSet="/images/home/contact-bg.webp" type="image/webp" />
+        <img
+          src="/images/home/contact-bg.jpg"
+          alt=""
+          aria-hidden="true"
+          className="w-full h-full object-cover"
+        />
+      </picture>
+      {/* Off-white wash so dark form labels stay readable while the
+          photo still shows through. Removed in dark mode (the
+          dark-bg override on the section already covers the image). */}
+      <div className="contact-overlay absolute inset-0 pointer-events-none" />
+
+      <div className="container-max mx-auto relative z-10">
         <div className="grid lg:grid-cols-5 gap-12 items-start">
           {/* Left: Form */}
           <div className="lg:col-span-3">
