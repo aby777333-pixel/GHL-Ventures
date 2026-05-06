@@ -4589,14 +4589,20 @@ button[type="submit"].inline-flex {
   color: #FF0F2C !important;
 }
 
-/* Why Choose Us — skyline background with dark gradient overlay so the
-   white feature cards stay legible at any scroll position. */
+/* Why Choose Us — skyline background, no overlay. White cards carry their
+   own contrast; the heading/eyebrow get a strong text-shadow so they stay
+   legible against any region of the photograph. */
 .why-choose-section {
-  background-color: #0b1220;
+  background-color: #1a2436;
 }
-.why-choose-overlay {
-  background:
-    linear-gradient(180deg, rgba(8, 12, 24, 0.78) 0%, rgba(8, 12, 24, 0.62) 50%, rgba(8, 12, 24, 0.82) 100%),
-    radial-gradient(ellipse at 50% 30%, rgba(0, 0, 0, 0) 0%, rgba(0, 0, 0, 0.35) 100%);
+.why-choose-heading {
+  color: #ffffff !important;
+  text-shadow:
+    0 2px 8px rgba(0, 0, 0, 0.65),
+    0 0 28px rgba(0, 0, 0, 0.45);
+}
+.why-choose-eyebrow {
+  color: rgba(255, 255, 255, 0.92) !important;
+  text-shadow: 0 1px 6px rgba(0, 0, 0, 0.7);
 }
 
