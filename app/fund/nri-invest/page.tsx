@@ -4,7 +4,6 @@ import { useState } from 'react'
 import Link from 'next/link'
 import AnimatedSection from '@/components/AnimatedSection'
 import { BRAND } from '@/lib/constants'
-import SpaceHero from '@/components/SpaceHero'
 import { NRIHandbookProvider, useNRIHandbook } from '@/components/NRIHandbook'
 import FundCalculatorSection from '@/components/FundCalculatorSection'
 import {
@@ -38,12 +37,21 @@ function NRIInvestContent() {
       {/* ═══════════════════════════════════════════════
           1. HERO — NRI Flight Theme
          ═══════════════════════════════════════════════ */}
-      <section className="relative min-h-[85vh] flex items-center gradient-dark overflow-hidden">
-        <SpaceHero variant="nri-flight" />
-        <div className="absolute inset-0 overflow-hidden pointer-events-none">
-          <div className="absolute top-20 right-20 w-80 h-80 bg-brand-red/10 rounded-full blur-3xl" />
-          <div className="absolute bottom-10 left-10 w-60 h-60 bg-orange-500/5 rounded-full blur-3xl" />
-        </div>
+      <section className="nri-hero relative min-h-[85vh] flex items-center overflow-hidden">
+        {/* Background image — airplane on misty mountain runway */}
+        <picture className="absolute inset-0 pointer-events-none select-none">
+          <source srcSet="/images/nri/hero-bg-sm.webp" type="image/webp" media="(max-width: 768px)" />
+          <source srcSet="/images/nri/hero-bg.webp" type="image/webp" />
+          <img
+            src="/images/nri/hero-bg.jpg"
+            alt=""
+            aria-hidden="true"
+            className="w-full h-full object-cover"
+          />
+        </picture>
+        {/* Soft left-side dark gradient so the heading + body copy
+            stay readable against the bright sky portion of the photo. */}
+        <div className="nri-hero-overlay absolute inset-0 pointer-events-none" />
 
         <div className="container-max mx-auto px-4 sm:px-6 lg:px-8 relative z-10 pt-40 pb-32">
           <AnimatedSection>

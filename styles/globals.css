@@ -4652,3 +4652,16 @@ button[type="submit"].inline-flex {
   background-color: #0a0d14;
 }
 
+/* NRI Invest hero — airplane-on-misty-runway background. The photo's
+   sky region is bright, so a soft left-to-right dark gradient keeps
+   the white heading + body copy legible while the runway/airplane
+   stay visible on the right. */
+.nri-hero {
+  background-color: #1a2030;
+}
+.nri-hero-overlay {
+  background:
+    linear-gradient(90deg, rgba(8, 12, 24, 0.78) 0%, rgba(8, 12, 24, 0.58) 35%, rgba(8, 12, 24, 0.28) 65%, rgba(8, 12, 24, 0.05) 100%),
+    linear-gradient(180deg, rgba(8, 12, 24, 0.0) 0%, rgba(8, 12, 24, 0.25) 100%);
+}
+
