@@ -57,15 +57,14 @@ export interface ClaudeMessage {
   content: string
 }
 
-// Both alias-style and dated IDs — fall through to widely-deployed
-// dated builds when newer aliases aren't live on this account / plan.
+// Verified live against this account's API key (2026-05):
+// the Claude 4.x family + Opus 4.1 are available; 3-x dated IDs 404.
 const CLAUDE_MODELS = [
   'claude-sonnet-4-5-20250929',
   'claude-sonnet-4-5',
   'claude-haiku-4-5-20251001',
   'claude-haiku-4-5',
-  'claude-3-5-sonnet-20241022',
-  'claude-3-5-haiku-20241022',
+  'claude-opus-4-1-20250805',
 ]
 
 const PROXY_URL = '/api/claude-proxy'

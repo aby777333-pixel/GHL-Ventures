@@ -115,18 +115,16 @@ export interface ClaudeMessage {
   content: string
 }
 
-// Models to try in order of preference. We list both alias-style ("…-4-5")
-// and dated IDs so that if Anthropic hasn't rolled out a given alias on
-// the current account / plan we still land on a working dated build.
-// Without the dated fallbacks the chain previously errored out as
-// "All models failed. Last error: Model claude-haiku-4-5-20251001 not found".
+// Models to try in order of preference. Verified live against this
+// account's API key (2026-05): the Claude 4.x family + Opus 4.1 are
+// available; all 3-x dated IDs return 404. We keep both alias-style
+// and dated 4.x IDs so a dated retirement is covered by the alias.
 const CLAUDE_MODELS = [
   'claude-sonnet-4-5-20250929',
   'claude-sonnet-4-5',
   'claude-haiku-4-5-20251001',
   'claude-haiku-4-5',
-  'claude-3-5-sonnet-20241022',
-  'claude-3-5-haiku-20241022',
+  'claude-opus-4-1-20250805',
 ]
 
 // Proxy endpoint — Netlify function keeps the API key server-side
