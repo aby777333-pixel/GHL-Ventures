@@ -673,11 +673,26 @@ function WhyChooseUs() {
   ]
 
   return (
-    <section className="py-16 md:py-20 bg-brand-offwhite">
-      <div className="container-max mx-auto">
+    <section className="why-choose-section relative py-16 md:py-20 overflow-hidden">
+      {/* Background image */}
+      <picture className="absolute inset-0 -z-10 pointer-events-none select-none">
+        <source srcSet="/images/home/why-choose-bg-sm.webp" type="image/webp" media="(max-width: 768px)" />
+        <source srcSet="/images/home/why-choose-bg.webp" type="image/webp" />
+        <img
+          src="/images/home/why-choose-bg.jpg"
+          alt=""
+          aria-hidden="true"
+          className="w-full h-full object-cover"
+          loading="lazy"
+        />
+      </picture>
+      {/* Dark overlay for legibility */}
+      <div className="why-choose-overlay absolute inset-0 -z-10 pointer-events-none" />
+
+      <div className="container-max mx-auto relative">
         <AnimatedSection className="text-center mb-10">
-          <span className="eyebrow">The GHL Advantage</span>
-          <h2 className="section-title mt-3 text-brand-black">Why Choose Us</h2>
+          <span className="eyebrow text-white/90">The GHL Advantage</span>
+          <h2 className="section-title mt-3 text-white drop-shadow-lg">Why Choose Us</h2>
         </AnimatedSection>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 md:gap-6">
