@@ -18,7 +18,7 @@ import {
   useAuditLog, useStorageStats, useFileSearch,
 } from '@/lib/admin/fileRepositoryHooks'
 import {
-  formatFileSize, getFileTypeColor, buildFolderTree, MOCK_FOLDERS,
+  formatFileSize, getFileTypeColor, buildFolderTree,
 } from '@/lib/admin/fileRepositoryData'
 import * as svc from '@/lib/supabase/fileRepositoryService'
 import { saveFileAs, saveBlobAs, checkStorageConnection } from '@/lib/supabase/storageService'
@@ -80,8 +80,26 @@ export default function FileRepository({ showToast, navigate }: Props) {
 
 
   // ── Data hooks ────────────────────────────────────────────
-  const { data: folderTree, loading: foldersLoading } = useFolderTree()
+  const { data: folderTree, loading: foldersLoading, refetch: refetchFolders } = useFolderTree()
   const { data: files, loading: filesLoading, refetch: refetchFiles } = useRepoFiles(currentFolderId)
+
+  // Flatten the live tree into a RepoFolder[] for breadcrumb / sub-
+  // folder / current-folder lookups. Replaces reads from the empty
+  // MOCK_FOLDERS constant — without this, folders created via the
+  // "Folder" button never appeared in the main pane or breadcrumbs.
+  const liveFolders = useMemo(() => {
+    const out: import('@/lib/admin/fileRepositoryTypes').RepoFolder[] = []
+    const walk = (nodes: typeof folderTree) => {
+      for (const n of nodes) {
+        // Strip `children` to fit RepoFolder. All other fields are inherited.
+        const { children, ...flat } = n
+        out.push(flat)
+        if (children?.length) walk(children)
+      }
+    }
+    walk(folderTree)
+    return out
+  }, [folderTree])
   const { data: searchResults, loading: searchLoading } = useFileSearch(searchQuery)
   const { data: storageStats } = useStorageStats()
   const { data: detailFile } = useFileDetail(detailFileId)
@@ -94,8 +112,8 @@ export default function FileRepository({ showToast, navigate }: Props) {
 
   const currentFolder = useMemo(() => {
     if (!currentFolderId) return null
-    return MOCK_FOLDERS.find(f => f.id === currentFolderId) || null
-  }, [currentFolderId])
+    return liveFolders.find(f => f.id === currentFolderId) || null
+  }, [currentFolderId, liveFolders])
 
   const breadcrumbs = useMemo(() => {
     if (!currentFolder) return [{ id: null, name: 'All Files' }]
@@ -104,11 +122,11 @@ export default function FileRepository({ showToast, navigate }: Props) {
     let accumulated = ''
     for (const part of pathParts) {
       accumulated += '/' + part
-      const folder = MOCK_FOLDERS.find(f => f.path === accumulated)
+      const folder = liveFolders.find(f => f.path === accumulated)
       if (folder) crumbs.push({ id: folder.id, name: folder.name })
     }
     return crumbs
-  }, [currentFolder])
+  }, [currentFolder, liveFolders])
 
   const sortedFiles = useMemo(() => {
     const sorted = [...displayFiles]
@@ -127,10 +145,10 @@ export default function FileRepository({ showToast, navigate }: Props) {
 
   const subFolders = useMemo(() => {
     if (!currentFolderId) {
-      return MOCK_FOLDERS.filter(f => !f.parentId).sort((a, b) => a.sortOrder - b.sortOrder)
+      return liveFolders.filter(f => !f.parentId).sort((a, b) => a.sortOrder - b.sortOrder)
     }
-    return MOCK_FOLDERS.filter(f => f.parentId === currentFolderId).sort((a, b) => a.sortOrder - b.sortOrder)
-  }, [currentFolderId])
+    return liveFolders.filter(f => f.parentId === currentFolderId).sort((a, b) => a.sortOrder - b.sortOrder)
+  }, [currentFolderId, liveFolders])
 
   // ── Actions ───────────────────────────────────────────────
   const toggleFolderExpand = useCallback((folderId: string) => {
@@ -172,20 +190,46 @@ export default function FileRepository({ showToast, navigate }: Props) {
   }, [showToast, refetchFiles, detailFileId])
 
   const handleCreateFolder = useCallback(async () => {
-    if (!newFolderName.trim()) return
-    const slug = newFolderName.trim().toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '')
+    const trimmed = newFolderName.trim()
+    if (!trimmed) return
+    const slug = trimmed.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '')
+    if (!slug) {
+      showToast('Folder name must contain at least one letter or number', 'warning')
+      return
+    }
+    // Guard against duplicates within the same parent — Supabase has a
+    // unique index on (parent_id, slug); pre-checking yields a friendlier error.
+    const collision = liveFolders.some(f => f.parentId === currentFolderId && f.slug === slug)
+    if (collision) {
+      showToast(`A folder named "${trimmed}" already exists here`, 'warning')
+      return
+    }
+
     const parentPath = currentFolder?.path || ''
-    await svc.createFolder({
-      name: newFolderName.trim(),
+    const result = await svc.createFolder({
+      name: trimmed,
       slug,
       parentId: currentFolderId,
       path: `${parentPath}/${slug}`,
     })
-    showToast(`Created folder "${newFolderName.trim()}"`, 'success')
+
+    if (!result) {
+      showToast(`Could not create folder "${trimmed}" — check storage permissions and try again`, 'error')
+      return
+    }
+
+    showToast(`Created folder "${trimmed}"`, 'success')
     setNewFolderName('')
     setNewFolderModalOpen(false)
+    // Refresh both the tree (so the new folder appears in the sidebar
+    // and sub-folder grid) and the files list (folder counts).
+    refetchFolders()
     refetchFiles()
-  }, [newFolderName, currentFolderId, currentFolder, showToast, refetchFiles])
+    // Open the parent in the tree so the user can see what they created.
+    if (currentFolderId) {
+      setExpandedFolders(prev => new Set(prev).add(currentFolderId))
+    }
+  }, [newFolderName, currentFolderId, currentFolder, liveFolders, showToast, refetchFolders, refetchFiles])
 
   const handleDownload = useCallback(async (file: RepoFile) => {
     showToast(`Downloading ${file.fileName}...`, 'info')
@@ -193,11 +237,32 @@ export default function FileRepository({ showToast, navigate }: Props) {
 
     // If file has a storage path, download from Supabase
     if (file.fileUrl && isSupabaseConfigured()) {
-      // fileUrl may be a full URL or a storage path
-      const storagePath = file.fileUrl.startsWith('http')
-        ? file.fileUrl.split('/storage/v1/object/public/uploads/')[1] || file.fileUrl
-        : file.fileUrl
-      await saveFileAs(storagePath, file.fileName, 'uploads', showToast as any)
+      // fileUrl may be a full URL or a bare storage path. Supabase storage
+      // URLs follow `…/storage/v1/object/{public|sign}/<bucket>/<path…>`.
+      // Derive the bucket from the URL so files in any bucket (DOCUMENTS,
+      // EXPORTS, MEDIA, AVATARS, etc.) download correctly — the previous
+      // hardcoded 'uploads' bucket only worked for legacy uploads.
+      let storagePath = file.fileUrl
+      let bucket = 'uploads'
+      if (file.fileUrl.startsWith('http')) {
+        const m = file.fileUrl.match(/\/storage\/v1\/object\/(?:public|sign|authenticated)\/([^/]+)\/(.+?)(?:\?|$)/)
+        if (m) {
+          bucket = m[1]
+          storagePath = decodeURIComponent(m[2])
+        } else {
+          // Direct download from the URL as a last resort (e.g. CDN-hosted).
+          try {
+            const resp = await fetch(file.fileUrl)
+            const blob = await resp.blob()
+            await saveBlobAs(blob, file.fileName, showToast as any)
+            return
+          } catch {
+            showToast(`Could not download ${file.fileName}`, 'error')
+            return
+          }
+        }
+      }
+      await saveFileAs(storagePath, file.fileName, bucket, showToast as any)
       return
     }
 
@@ -350,7 +415,7 @@ export default function FileRepository({ showToast, navigate }: Props) {
           <AdminGlass padding="p-3">
             <div className="flex items-center justify-between mb-3">
               <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Folders</span>
-              <span className="text-[10px] text-gray-600">{MOCK_FOLDERS.filter(f => !f.parentId).length} root</span>
+              <span className="text-[10px] text-gray-600">{liveFolders.filter(f => !f.parentId).length} root</span>
             </div>
 
             {/* All Files link */}
@@ -362,7 +427,7 @@ export default function FileRepository({ showToast, navigate }: Props) {
             >
               <FolderOpen className="w-3.5 h-3.5" />
               <span>All Files</span>
-              <span className="ml-auto text-[10px] text-gray-600">{MOCK_FOLDERS.reduce((s, f) => s + f.fileCount, 0)}</span>
+              <span className="ml-auto text-[10px] text-gray-600">{liveFolders.reduce((s, f) => s + f.fileCount, 0)}</span>
             </button>
 
             {/* Folder tree */}
@@ -599,7 +664,11 @@ export default function FileRepository({ showToast, navigate }: Props) {
         open={uploadModalOpen}
         onClose={() => setUploadModalOpen(false)}
         showToast={showToast}
-        onUploadComplete={() => { refetchFiles() }}
+        // Tag uploads into the currently-open folder so they appear
+        // there immediately. Refresh the file grid + folder counts
+        // when the upload completes.
+        folderId={currentFolderId}
+        onUploadComplete={() => { refetchFiles(); refetchFolders() }}
         theme="dark"
         portal="admin"
       />

@@ -32,6 +32,8 @@ interface UploadWithFolderPickerProps {
   onUploadComplete?: (results: { success: boolean; fileName: string; url?: string; path?: string; bucket?: string }[]) => void
   theme?: 'dark' | 'teal'
   portal?: string
+  /** When set, uploaded files get folder_id linked so they appear inside the open folder */
+  folderId?: string | null
 }
 
 export default function UploadWithFolderPicker({
@@ -45,6 +47,7 @@ export default function UploadWithFolderPicker({
   onUploadComplete,
   theme = 'dark',
   portal = 'admin',
+  folderId,
 }: UploadWithFolderPickerProps) {
   const [selectedBucket, setSelectedBucket] = useState<string | null>(defaultBucket || null)
   const [dropdownOpen, setDropdownOpen] = useState(false)
@@ -101,6 +104,9 @@ export default function UploadWithFolderPicker({
       const result = await uploadFile(file, routeKey, {
         bucket: selectedBucket,
         portal,
+        // Link the file to the open folder when one is selected so it
+        // shows up inside that folder in the File Repository view.
+        folderId: folderId || undefined,
       })
       results.push({
         success: result.success,
