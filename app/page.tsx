@@ -675,7 +675,7 @@ function WhyChooseUs() {
   return (
     <section className="why-choose-section relative py-16 md:py-20 overflow-hidden">
       {/* Background image (no overlay — cards provide their own contrast) */}
-      <picture className="why-choose-bg absolute inset-0 -z-10 pointer-events-none select-none">
+      <picture className="why-choose-bg absolute inset-0 pointer-events-none select-none">
         <source srcSet="/images/home/why-choose-bg-sm.webp" type="image/webp" media="(max-width: 768px)" />
         <source srcSet="/images/home/why-choose-bg.webp" type="image/webp" />
         <img
@@ -686,7 +686,7 @@ function WhyChooseUs() {
         />
       </picture>
 
-      <div className="container-max mx-auto relative">
+      <div className="container-max mx-auto relative z-10">
         <AnimatedSection className="text-center mb-10">
           <span className="eyebrow why-choose-eyebrow">The GHL Advantage</span>
           <h2 className="section-title mt-3 why-choose-heading">Why Choose Us</h2>
