@@ -103,7 +103,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     '@id': `${SITE_URL}/#organization`,
     name: 'GHL India Ventures',
     legalName: 'GHL India Ventures Private Limited',
-    description: 'SEBI-registered Category II Alternative Investment Fund (IN/AIF2/24-25/1517) focused on stressed real estate recovery and early-stage startup investments in India.',
+    description: 'SEBI-registered Category II Alternative Investment Fund (IN/AIF2/24-25/1517) focused on stressed real estate recovery in India.',
     url: SITE_URL,
     logo: `${SITE_URL}/icon.svg`,
     image: `${SITE_URL}/og-image.jpg`,

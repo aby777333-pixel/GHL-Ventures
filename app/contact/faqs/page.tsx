@@ -44,23 +44,19 @@ const FAQ_CATEGORIES = [
     items: [
       {
         q: 'What is GHL India Ventures\' investment strategy?',
-        a: 'We follow a dual-strategy approach: (1) Stressed Real Estate Recovery — acquiring distressed residential and commercial real estate assets through NCLT/IBC processes at significant discounts, completing development, and selling at market value. (2) Early-Stage Venture Capital — investing in pre-seed to pre-Series A startups across fintech, healthtech, cleantech, and SaaS.',
+        a: 'Our Category II AIF focuses on Stressed Real Estate Recovery — acquiring distressed residential and commercial real estate assets through NCLT/IBC processes at significant discounts, completing development, and selling at market value.',
       },
       {
         q: 'What is the fund tenure?',
-        a: 'The base fund tenure is 7–10 years, with potential extensions of up to 2 years subject to investor consent. This allows adequate time for stressed real estate resolution cycles (typically 3–5 years) and startup exits (typically 5–7 years).',
+        a: 'The base fund tenure is 7–10 years, with potential extensions of up to 2 years subject to investor consent. This allows adequate time for stressed real estate resolution cycles (typically 3–5 years) and full project exits.',
       },
       {
         q: 'How does the drawdown schedule work?',
         a: 'Your committed capital is drawn down in tranches as investment opportunities are identified. Typically, 30-40% is called in the first year, with the remainder drawn over years 2-4. You will receive at least 10 business days notice before each drawdown.',
       },
       {
-        q: 'What is the allocation between real estate and startups?',
-        a: 'The target allocation is approximately 60-70% towards stressed real estate recovery and 30-40% towards early-stage startups. The Investment Committee may adjust these ranges based on market conditions and opportunity flow.',
-      },
-      {
         q: 'How is NAV calculated?',
-        a: 'Net Asset Value is calculated quarterly by our independent fund administrator. Real estate assets are valued based on independent third-party valuations, while startup investments follow IPEV (International Private Equity and Venture Capital Valuation) guidelines.',
+        a: 'Net Asset Value is calculated quarterly by our independent fund administrator. Real estate assets are valued based on independent third-party valuations following SEBI AIF guidelines.',
       },
     ],
   },
@@ -70,7 +66,7 @@ const FAQ_CATEGORIES = [
     items: [
       {
         q: 'What returns can I expect?',
-        a: 'While past performance does not guarantee future results, our target gross IRR is 18-22% per annum across the blended portfolio. Stressed real estate assets historically offer 15-20% IRR, while successful startup exits can deliver significantly higher multiples.',
+        a: 'While past performance does not guarantee future results, our target gross IRR is 18-24% per annum across the portfolio. Stressed real estate assets historically offer 15-24% IRR, depending on asset class and resolution profile.',
       },
       {
         q: 'How is risk managed?',
@@ -82,11 +78,7 @@ const FAQ_CATEGORIES = [
       },
       {
         q: 'How are returns distributed?',
-        a: 'Returns follow a waterfall distribution model: (1) Return of invested capital to investors, (2) Preferred return (hurdle rate) to investors, (3) Catch-up to the fund manager, (4) Carried interest split above the hurdle. Distributions are made as portfolio companies exit.',
-      },
-      {
-        q: 'What happens if a portfolio company fails?',
-        a: 'In the event of a startup failure, the invested amount in that specific company may be fully or partially lost. This risk is mitigated by portfolio diversification — we typically invest across 8-12 startups. For real estate, the underlying asset provides intrinsic value protection.',
+        a: 'Returns follow a waterfall distribution model: (1) Return of invested capital to investors, (2) Preferred return (hurdle rate) to investors, (3) Catch-up to the fund manager, (4) Carried interest split above the hurdle. Distributions are made as portfolio assets exit.',
       },
     ],
   },
@@ -100,7 +92,7 @@ const FAQ_CATEGORIES = [
       },
       {
         q: 'How are AIF returns taxed?',
-        a: 'Category II AIFs enjoy pass-through taxation — income is taxed in the hands of the investor, not at the fund level. Capital gains from real estate held for more than 24 months qualify for long-term capital gains treatment. Startup exits may qualify for Section 54F reinvestment benefits.',
+        a: 'Category II AIFs enjoy pass-through taxation — income is taxed in the hands of the investor, not at the fund level. Capital gains from real estate held for more than 24 months qualify for long-term capital gains treatment.',
       },
       {
         q: 'What reports will I receive?',

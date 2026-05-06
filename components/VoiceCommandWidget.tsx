@@ -715,7 +715,7 @@ export default function VoiceCommandWidget() {
         break
       }
       case 'ghlinfo': {
-        const info = 'GHL India Ventures is a SEBI registered Category 2 Alternative Investment Fund based in Chennai, specializing in stressed real estate and early-stage startup investments.'
+        const info = 'GHL India Ventures is a SEBI registered Category 2 Alternative Investment Fund based in Chennai, specializing in stressed real estate recovery investments.'
         setFeedback(info)
         speak(info)
         break

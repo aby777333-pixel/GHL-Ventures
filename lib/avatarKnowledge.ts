@@ -216,7 +216,7 @@ export function generateResponse(input: string, visitorName?: string, pageContex
 
     case 'show_around':
       return [
-        { speaker: 'abe', text: `Great${name}! Let me walk you through what we have here. GHL India Ventures is a SEBI-registered Category II AIF based in Chennai. We focus on stressed real estate recovery and early-stage startups.` },
+        { speaker: 'abe', text: `Great${name}! Let me walk you through what we have here. GHL India Ventures is a SEBI-registered Category II AIF based in Chennai, focused on stressed real estate recovery across India.` },
         { speaker: 'tina', text: `Here's what you can explore: Our Fund page explains our AIF structure and investment routes. Portfolio shows our 6 active investments. Blog has expert insights on markets and AIFs. Financial IQ is our learning center. And Contact gets you straight to our team. Where would you like to start?` }
       ]
 
@@ -245,7 +245,7 @@ export function generateResponse(input: string, visitorName?: string, pageContex
       return [{ speaker: 'tina', text: `Why don't investors ever get lost? Because they always follow the returns! But seriously${name}, I'm here to help you with your investment journey. What would you like to know?` }]
 
     case 'about_company':
-      return [{ speaker: 'abe', text: `GHL India Ventures is a SEBI-registered Category II Alternative Investment Fund (AIF), headquartered in Egmore, Chennai. We focus on two high-potential sectors: recovering stressed real estate through NCLT/IBC resolution, and backing early-stage Indian startups in fintech, healthtech, and cleantech. With 25+ years of combined leadership experience and over ₹500 Cr in value created, we're building India's future — one smart investment at a time.` }]
+      return [{ speaker: 'abe', text: `GHL India Ventures is a SEBI-registered Category II Alternative Investment Fund (AIF), headquartered in Egmore, Chennai. We focus on stressed real estate recovery — acquiring distressed and stalled residential and commercial projects through NCLT/IBC and direct routes, completing them, and exiting at market value. With 25+ years of combined leadership experience and over ₹500 Cr in value created, we're building India's future — one smart investment at a time.` }]
 
     case 'about_fund':
       return [

@@ -51,16 +51,19 @@ function FundHero() {
           </h1>
           <p className="text-base text-gray-300 max-w-3xl leading-relaxed">
             A Category II Alternative Investment Fund designed to deliver superior risk-adjusted returns
-            through stressed real estate resolution and early-stage startup investments across India.
+            through stressed real estate resolution across India.
           </p>
         </AnimatedSection>
 
-        {/* Investment Overview Video */}
-        <AnimatedSection delay={200}>
-          <div className="mt-10 max-w-4xl">
-            <WebGLVideoPresentation className="shadow-2xl shadow-brand-red/10" />
-          </div>
-        </AnimatedSection>
+        {/* Investment Overview Video — hidden site-wide for later use.
+            Un-comment the AnimatedSection block to restore. */}
+        {false && (
+          <AnimatedSection delay={200}>
+            <div className="mt-10 max-w-4xl">
+              <WebGLVideoPresentation className="shadow-2xl shadow-brand-red/10" />
+            </div>
+          </AnimatedSection>
+        )}
       </div>
     </section>
   )
@@ -78,7 +81,7 @@ function FundOverview() {
     { icon: Shield, label: 'SEBI Registration', value: BRAND.sebi },
     { icon: DollarSign, label: 'Invest From', value: 'Contact for Details', href: '/contact' },
     { icon: Clock, label: 'Investment Horizon', value: '5-10 Years' },
-    { icon: TrendingUp, label: 'Target IRR', value: '18-22%' },
+    { icon: TrendingUp, label: 'Target IRR', value: '18-24%' },
     { icon: Target, label: 'Fund Size Target', value: '₹500 Crore' },
   ]
 
@@ -277,29 +280,31 @@ function InvestmentStrategy() {
             </div>
           </AnimatedSection>
 
-          {/* Pillar 2: Early-Stage Startups */}
+          {/* Pillar 2: SEBI Co-Invest Framework */}
           <AnimatedSection direction="right">
             <div className="card h-full">
               {/* Image placeholder */}
-              <PlaceholderImage theme="startup" aspectRatio="aspect-[16/9]" label="Startup Portfolio Companies" className="rounded-xl mb-6" />
+              <PlaceholderImage theme="real-estate" aspectRatio="aspect-[16/9]" label="SEBI Co-Invest Framework" className="rounded-xl mb-6" />
               <div className="inline-flex items-center px-3 py-1 bg-brand-red/10 rounded-full mb-4 trust-badge badge-bounce">
                 <Sparkles className="w-3.5 h-3.5 text-brand-red mr-1.5" />
                 <span className="text-brand-red text-xs font-semibold uppercase tracking-wider">Pillar 2</span>
               </div>
-              <h3 className="text-xl font-bold  mb-3">Early-Stage Startups</h3>
+              <h3 className="text-xl font-bold  mb-3">SEBI Co-Invest Framework</h3>
               <p className=" leading-relaxed mb-6">
-                India&apos;s startup ecosystem is the third largest globally, producing world-class founders
-                across technology, healthcare, fintech, and climate. We invest in pre-Series A and Series A
-                companies with strong unit economics, scalable business models, and founders with domain
-                expertise. Beyond capital, we provide strategic mentorship, network access, and governance support.
+                Alongside our Direct AIF route, GHL offers a SEBI Co-Invest Framework that
+                gives accredited investors structured, asset-backed access to the same
+                stressed real estate opportunity at a more accessible entry point. Returns
+                are fixed at 24% PA with a 3&ndash;5 year tenure, backed by the underlying
+                project assets and supported by the same compliance and reporting standards
+                as the AIF.
               </p>
               <div className="space-y-3">
                 {[
-                  'Proprietary deal flow through 100+ founder network',
-                  'Rigorous 6-stage due diligence process',
-                  'Sector focus: SaaS, HealthTech, FinTech, CleanTech',
-                  'Active board participation and mentorship',
-                  'Co-investment opportunities for strategic LPs',
+                  'SEBI-compliant Co-Invest structure',
+                  'Fixed 24% PA returns, 3–5 year tenure',
+                  'Asset-backed by underlying real estate projects',
+                  'Lower entry point than the Direct AIF route',
+                  'Same custodian, auditor and reporting standards',
                 ].map((item) => (
                   <div key={item} className="flex items-start space-x-3">
                     <CheckCircle className="w-4 h-4 text-brand-red shrink-0 mt-0.5" />
@@ -344,7 +349,7 @@ function FundStructure() {
                 </div>
                 <div className="card rounded-xl p-6">
                   <h4 className="font-bold  mb-2 text-sm">Portfolio Assets</h4>
-                  <p className=" text-xs">Stressed Real Estate Projects + Early-Stage Startup Equity positions.</p>
+                  <p className=" text-xs">Stressed Real Estate Projects acquired through NCLT/IBC and direct distressed-asset routes.</p>
                 </div>
               </div>
 
@@ -369,12 +374,12 @@ function RiskFramework() {
     {
       icon: ShieldCheck,
       title: 'Portfolio Diversification',
-      desc: 'No single investment exceeds 15% of fund corpus. Balanced allocation across real estate and startups to manage concentration risk.',
+      desc: 'No single investment exceeds 15% of fund corpus. Balanced allocation across multiple real estate projects to manage concentration risk.',
     },
     {
       icon: Eye,
       title: 'Continuous Monitoring',
-      desc: 'Real-time dashboards for real estate project milestones and startup KPIs. Monthly IC reviews on all portfolio positions.',
+      desc: 'Real-time dashboards for real estate project milestones, construction progress, and exit readiness. Monthly IC reviews on all portfolio positions.',
     },
     {
       icon: ClipboardCheck,
@@ -384,7 +389,7 @@ function RiskFramework() {
     {
       icon: Gavel,
       title: 'Legal & Regulatory Safeguards',
-      desc: 'Comprehensive legal structuring, RERA compliance checks for real estate, and SHA/SSA protections for startup investments.',
+      desc: 'Comprehensive legal structuring, RERA compliance checks, title curing, and NCLT/IBC procedural safeguards on every investment.',
     },
     {
       icon: BarChart2,
@@ -425,10 +430,10 @@ function RiskFramework() {
 /* ───────────────────────────── 6. INVESTMENT PROCESS — 5 STEP TIMELINE ───────────────────────────── */
 function InvestmentProcess() {
   const steps = [
-    { step: '01', icon: Search, title: 'Deal Sourcing', desc: 'Proprietary deal flow through our network of 100+ founders, developers, brokers, NCLT professionals, and sector experts across India.' },
-    { step: '02', icon: ClipboardCheck, title: 'Due Diligence', desc: 'Rigorous commercial, financial, legal, technical, and ESG analysis. Site visits for real estate; deep founder and market diligence for startups.' },
+    { step: '01', icon: Search, title: 'Deal Sourcing', desc: 'Proprietary deal flow through our network of developers, brokers, NCLT/IBC resolution professionals, lender consortia, and real estate sector experts across India.' },
+    { step: '02', icon: ClipboardCheck, title: 'Due Diligence', desc: 'Rigorous commercial, financial, legal, technical, and ESG analysis. Site visits, title review, construction-stage assessment, and creditor positioning for every project.' },
     { step: '03', icon: Gavel, title: 'IC Approval', desc: 'Formal Investment Committee review with independent advisor input. Unanimous approval required for capital deployment.' },
-    { step: '04', icon: Rocket, title: 'Execution', desc: 'Structured deal closing with comprehensive legal documentation. Board seats for startups; project management oversight for real estate.' },
+    { step: '04', icon: Rocket, title: 'Execution', desc: 'Structured deal closing with comprehensive legal documentation. Direct project management oversight from acquisition through completion.' },
     { step: '05', icon: Eye, title: 'Monitoring & Exit', desc: 'Active value creation with quarterly performance reviews. Strategic exit planning to maximise investor returns within the fund horizon.' },
   ]
 
@@ -509,7 +514,7 @@ function ReturnsPerformance() {
                   </p>
                   <p>
                     AIF investments are illiquid. There is no secondary market for these units.
-                    Target IRR of 18-22% is an estimate and not a commitment or guarantee.
+                    Target IRR of 18-24% is an estimate and not a commitment or guarantee.
                     Please read the Private Placement Memorandum carefully before investing.
                   </p>
                   <p>

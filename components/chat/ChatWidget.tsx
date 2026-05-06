@@ -733,7 +733,7 @@ export default function ChatWidget() {
                 </div>
                 <div className="flex-1">
                   <p className="text-white text-sm font-medium">Call Us</p>
-                  <p className="text-gray-400 text-[11px]">+91 7200 255 252 · Mon–Sat 10:00 AM–6:30 PM</p>
+                  <p className="text-gray-400 text-[11px]">+91 7200 255 252 · Mon – Sat – 10.00AM – 6.30PM IST</p>
                 </div>
                 <ArrowRight className="w-4 h-4 text-gray-500" />
               </button>

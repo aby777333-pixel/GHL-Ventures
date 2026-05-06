@@ -102,12 +102,16 @@ function AboutHero() {
           </p>
         </AnimatedSection>
 
-        {/* Investment Overview Video */}
-        <AnimatedSection delay={200}>
-          <div className="max-w-3xl mt-4">
-            <AboutVideoPlayer />
-          </div>
-        </AnimatedSection>
+        {/* Investment Overview Video — hidden site-wide for later use.
+            Restore by un-commenting the block below; the AboutVideoPlayer
+            component above this function is kept intact. */}
+        {false && (
+          <AnimatedSection delay={200}>
+            <div className="max-w-3xl mt-4">
+              <AboutVideoPlayer />
+            </div>
+          </AnimatedSection>
+        )}
       </div>
     </section>
   )

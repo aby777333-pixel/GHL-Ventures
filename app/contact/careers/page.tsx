@@ -48,21 +48,21 @@ const POSITIONS: Position[] = [
     ],
   },
   {
-    title: 'Investment Analyst – Venture Capital',
+    title: 'Investment Analyst – Real Estate',
     department: 'Investment Team',
     location: 'Chennai',
     type: 'Full-time',
-    experience: '2–4 years in VC, startup ecosystem, or Big 4 transaction advisory',
+    experience: '2–4 years in real estate PE, NCLT/IBC advisory, or Big 4 transaction advisory',
     qualifications: [
-      'Deep understanding of the Indian startup ecosystem — sectors, valuations, and funding stages',
-      'Experience sourcing deals, reviewing pitch decks, and building early-stage financial models',
-      'Ex-startup operator, Big 4 with VC exposure, or accelerator/incubator background preferred',
+      'Deep understanding of Indian real estate — submarkets, valuations, and distressed-asset cycles',
+      'Experience sourcing deals, reviewing project DPRs, and building cash-flow / NPV models',
+      'NCLT/IBC, real estate PE, or Big 4 transaction advisory background preferred',
       'MBA Finance / CFA or equivalent analytical credentials',
     ],
     responsibilities: [
-      'Source, screen, and evaluate early-stage startup investment opportunities across target sectors',
-      'Lead preliminary due diligence — founder interviews, market sizing, unit economics analysis',
-      'Build financial models and valuation frameworks for seed to Series A deals',
+      'Source, screen, and evaluate distressed real estate opportunities across target submarkets',
+      'Lead preliminary due diligence — title review, market sizing, construction cost analysis',
+      'Build financial models and valuation frameworks for NCLT and direct distressed deals',
       'Prepare investment notes and support Investment Committee decision-making',
     ],
   },
@@ -105,22 +105,22 @@ const POSITIONS: Position[] = [
     ],
   },
   {
-    title: 'Portfolio Associate – Startup Ecosystem',
+    title: 'Portfolio Associate – Real Estate Projects',
     department: 'Portfolio Management',
     location: 'Chennai',
     type: 'Full-time',
-    experience: '1–3 years in venture capital, startup operations, or management consulting',
+    experience: '1–3 years in real estate PE, project management, or management consulting',
     qualifications: [
-      'Passion for the startup ecosystem with hands-on understanding of early-stage company challenges',
+      'Strong understanding of residential and commercial real estate project lifecycles in India',
       'Strong analytical skills — ability to track KPIs, build dashboards, and prepare portfolio reports',
-      'Experience working directly with founders on growth strategy, governance, or fundraising',
+      'Experience working directly with developers, EPC contractors, or RERA/NCLT counterparties',
       'MBA or equivalent from a top-tier institution preferred',
     ],
     responsibilities: [
-      'Work directly with investee startups on growth planning, governance frameworks, and board reporting',
-      'Track portfolio company KPIs, milestones, and follow-on funding readiness',
+      'Work directly with portfolio projects on construction milestones, governance, and exit planning',
+      'Track project KPIs, milestones, and capital deployment vs plan',
       'Prepare quarterly portfolio reviews and LP reporting materials',
-      'Support founders with strategic introductions, operational guidance, and ecosystem connections',
+      'Support project teams with strategic introductions and operational oversight',
     ],
   },
   {
@@ -362,7 +362,7 @@ export default function CareersPage() {
               Careers at <span className="text-gradient">GHL India Ventures</span>
             </h1>
             <p className="text-white/70 text-base md:text-lg max-w-2xl mx-auto">
-              Build the future of alternative investing in India. Join a mission-driven team managing stressed real estate recovery and early-stage startup investments.
+              Build the future of alternative investing in India. Join a mission-driven team managing stressed real estate recovery across India.
             </p>
           </AnimatedSection>
         </div>

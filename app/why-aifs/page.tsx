@@ -219,7 +219,7 @@ function Categories() {
 function Advantages() {
   const advantages = [
     { icon: TrendingUp, title: 'Alpha Generation', desc: 'AIFs have historically generated significant alpha over public market benchmarks, with 75% of AIFs successfully delivering positive alpha.' },
-    { icon: PieChart, title: 'True Portfolio Diversification', desc: 'Access asset classes with low correlation to public markets \u2014 stressed real estate, private credit, early-stage ventures, and infrastructure.' },
+    { icon: PieChart, title: 'True Portfolio Diversification', desc: 'Access asset classes with low correlation to public markets \u2014 stressed real estate, private credit, structured debt, and infrastructure.' },
     { icon: Shield, title: 'Institutional Governance', desc: 'SEBI-mandated compliance ensures quarterly NAV reporting, third-party audits, custodial safeguards, and transparent fee structures.' },
     { icon: Award, title: 'Professional Fund Management', desc: 'Capital managed by experienced investment professionals with deep domain expertise and proven track records in complex deals.' },
     { icon: Zap, title: 'Access to Exclusive Deals', desc: 'AIFs participate in deal flows individuals cannot access \u2014 NCLT resolutions, pre-IPO placements, structured credit opportunities.' },
@@ -357,9 +357,9 @@ function GHLApproach() {
     },
     {
       num: '02',
-      title: 'Early-Stage Venture Capital',
-      desc: 'We back visionary founders building transformative businesses across India\u2019s most promising sectors \u2014 fintech, healthtech, cleantech, and deep technology. Our approach is conviction-based, not trend-chasing.',
-      tags: ['Pre-Series A to Series A', 'Fintech', 'HealthTech', 'CleanTech'],
+      title: 'Direct Distressed Asset Recovery',
+      desc: 'Beyond the NCLT route, we also pursue direct acquisitions of stalled or under-recovered real estate assets \u2014 restructuring debt, completing construction, and repositioning each project for an institutional-grade exit.',
+      tags: ['Direct Acquisitions', 'Debt Restructuring', 'Construction Completion', 'Asset Repositioning'],
     },
     {
       num: '03',

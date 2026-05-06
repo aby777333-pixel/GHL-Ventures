@@ -513,7 +513,7 @@ function NewsScroller() {
    SECTION 2: Ticker / Stats Strip
    ================================================================ */
 function TickerStrip() {
-  const text = `SEBI Registration No. ${BRAND.sebi}  \u2022  Category II AIF  \u2022  As per SEBI AIF Regulations  \u2022  Stressed Real Estate & Early-Stage Startups  \u2022  Chennai, India  \u2022  ${BRAND.email}`
+  const text = `SEBI Registration No. ${BRAND.sebi}  \u2022  Category II AIF  \u2022  As per SEBI AIF Regulations  \u2022  Stressed Real Estate Recovery  \u2022  Chennai, India  \u2022  ${BRAND.email}`
 
   return (
     <section className="dark-surface relative overflow-hidden py-3" style={{ backgroundColor: '#1a0000' }}>
@@ -1324,7 +1324,7 @@ function ContactFormSection() {
                     </div>
                     <div>
                       <p className="text-white/80 text-xs uppercase tracking-widest mb-1">Office Hours</p>
-                      <p className="text-white text-sm font-medium">Mon – Sat: 10:00 AM – 6:00 PM IST</p>
+                      <p className="text-white text-sm font-medium">Mon – Sat – 10.00AM – 6.30PM IST</p>
                     </div>
                   </div>
                 </div>
@@ -1613,7 +1613,9 @@ export default function HomePage() {
       <WhoWeAre />
       <hr className="section-divider-animated" />
       <InvestmentCapabilities />
-      <VideoFeature />
+      {/* VideoFeature hidden site-wide for later use. Restore by
+          un-commenting the line below. */}
+      {/* <VideoFeature /> */}
       <hr className="section-divider-animated" />
       <WhyChooseUs />
       <InvestorToolsCTA

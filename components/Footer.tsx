@@ -244,7 +244,7 @@ export default function Footer() {
                 </li>
                 <li className="inline-flex items-start gap-3 text-gray-400 text-sm text-left">
                   <Clock className="w-4 h-4 mt-0.5 shrink-0" />
-                  <span>Mon - Sat: 10:00 AM - 6:30 PM IST</span>
+                  <span>{BRAND.officeHours}</span>
                 </li>
               </ul>
             </div>

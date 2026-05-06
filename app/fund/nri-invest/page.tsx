@@ -53,11 +53,13 @@ function NRIInvestContent() {
             stay readable against the bright sky portion of the photo. */}
         <div className="nri-hero-overlay absolute inset-0 pointer-events-none" />
 
-        {/* Hero text intentionally pinned to the left of the viewport
-            (mr-auto, no mx-auto) so the heading sits over the dark left
-            half of the runway photo while the airplane stays visible
-            on the right on wide viewports. */}
-        <div className="max-w-7xl mr-auto px-4 sm:px-6 lg:px-8 relative z-10 pt-40 pb-32">
+        {/* Hero container mirrors the Navbar's max-w-[1440px] mx-auto so
+            the heading's left edge lines up vertically with the GHL
+            INDIA logo in the nav (perpendicular to the logo). The
+            parent <section> is `flex items-center` so we add `w-full`
+            here — without it the flex-item would shrink to content
+            width and mx-auto would centre it on a different x. */}
+        <div className="w-full max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8 relative z-10 pt-40 pb-32">
           <AnimatedSection>
             {/* Breadcrumb */}
             <nav className="flex items-center text-sm text-gray-400 mb-6">
@@ -81,8 +83,8 @@ function NRIInvestContent() {
             </h1>
             <p className="text-base lg:text-lg text-gray-300 max-w-3xl leading-relaxed mb-4">
               A SEBI-registered Category II AIF designed for Non-Resident Indians.
-              Access India&apos;s stressed real estate recovery and early-stage startup opportunities
-              through a fully FEMA/RBI-compliant investment structure.
+              Access India&apos;s stressed real estate recovery opportunity through a fully
+              FEMA/RBI-compliant investment structure.
             </p>
             <p className="text-sm text-gray-500 max-w-2xl">
               NRO/NRE routing &bull; Fully repatriable &bull; Remote onboarding &bull; Available in your timezone
@@ -293,7 +295,7 @@ function NRIInvestContent() {
                 </div>
                 <div className="p-6 space-y-3">
                   {[
-                    'Full portfolio diversification across RE & startups',
+                    'Full portfolio diversification across stressed real estate projects',
                     'SEBI regulatory protection & oversight',
                     'Quarterly NAV reporting',
                     'Target IRR: 18–25%',

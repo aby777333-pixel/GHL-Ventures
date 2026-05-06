@@ -32,8 +32,8 @@ const VEHICLES = [
   { id: 'nifty', name: 'NIFTY 50 Index', rate: 12.5, color: '#8B5CF6', risk: 'Medium', icon: TrendingUp },
   { id: 'pms', name: 'Portfolio Mgmt (PMS)', rate: 16.0, color: '#EC4899', risk: 'Med-High', icon: Trophy },
   { id: 'realestate', name: 'Direct Real Estate', rate: 8.0, color: '#22C55E', risk: 'Medium', icon: Scale },
-  { id: 'ghl-deb', name: 'GHL Co-Invest Framework', rate: 16.0, color: '#D0021B', risk: 'Med-High', icon: Zap, isGHL: true },
-  { id: 'ghl-aif', name: 'GHL Direct AIF', rate: 22.0, color: '#D0021B', risk: 'High', icon: Star, isGHL: true },
+  { id: 'ghl-deb', name: 'GHL Co-Invest Framework', rate: 24.0, color: '#D0021B', risk: 'Med-High', icon: Zap, isGHL: true },
+  { id: 'ghl-aif', name: 'GHL Direct AIF', rate: 24.0, color: '#D0021B', risk: 'High', icon: Star, isGHL: true },
 ]
 
 /* GHL Advantages over competitors */
@@ -45,7 +45,7 @@ const GHL_ADVANTAGES = [
   },
   {
     title: 'Dual Asset Strategy',
-    desc: 'Stressed real estate + early-stage startups — two uncorrelated return streams that no single FD, MF, or PMS offers.',
+    desc: 'A diversified stressed real estate portfolio across two uncorrelated return streams that no single FD, MF, or PMS offers.',
     vs: 'vs. single-asset-class funds',
   },
   {
@@ -60,7 +60,7 @@ const GHL_ADVANTAGES = [
   },
   {
     title: 'Active Value Creation',
-    desc: 'Board seats for startups, project management for real estate. We don\'t just invest — we build value hands-on.',
+    desc: 'Hands-on project management across our stressed real estate portfolio. We don\'t just invest — we build value hands-on.',
     vs: 'vs. passive FDs, index funds, and gold',
   },
   {
@@ -84,12 +84,12 @@ export default function FundCalculatorSection({
   // AIF state
   const [aifAmount, setAifAmount] = useState(10000000) // ₹1 Cr
   const [aifYears, setAifYears] = useState(5)
-  const [aifIRR, setAifIRR] = useState(20)
+  const [aifIRR, setAifIRR] = useState(24) // Targeting 24% PA per 2026-05 brand guidance
 
-  // Debenture state
+  // Debenture (Co-Invest) state
   const [debAmount, setDebAmount] = useState(1000000) // ₹10L
   const [debYears, setDebYears] = useState(3)
-  const [debRate, setDebRate] = useState(16)
+  const [debRate, setDebRate] = useState(24) // Co-Invest fixed at 24% PA per 2026-05 brand guidance
 
   // Comparison state
   const [compAmount, setCompAmount] = useState(10000000)
@@ -250,11 +250,11 @@ export default function FundCalculatorSection({
                           <span className="text-brand-grey">Expected Return (p.a.)</span>
                           <span className="text-brand-black font-bold">{debRate}%</span>
                         </div>
-                        <input type="range" min={10} max={20} step={1}
+                        <input type="range" min={10} max={30} step={1}
                           value={debRate} onChange={e => setDebRate(Number(e.target.value))}
                           className="w-full accent-brand-red" />
                         <div className="flex justify-between text-[10px] text-brand-grey/60 mt-0.5">
-                          <span>10%</span><span>20%</span>
+                          <span>10%</span><span>30%</span>
                         </div>
                       </div>
                     </div>

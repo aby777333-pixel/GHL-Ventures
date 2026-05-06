@@ -691,6 +691,27 @@ button svg, button .lucide, [role="button"] svg {
 }
 /* removed: was forcing white text inside white-bg cards */
 
+/* ────────────────────────────────────────────────────────────────
+   Legal popup (Privacy / Terms / Disclaimer) — always renders as
+   light theme regardless of global dark mode, so the policy text
+   stays readable. Without this block, dark-mode overrides for
+   `.bg-white`, `.text-brand-black`, `.text-brand-grey` etc. would
+   mix LIGHT inner cards (bg-gray-50) with WHITE text and yield
+   invisible characters. See components/LegalPopup.tsx.
+   ─────────────────────────────────────────────────────────────── */
+:root.dark .legal-modal-panel.bg-white,
+:root.dark .legal-modal-panel .bg-white {
+  background-color: #FFFFFF !important;
+  color: #111827 !important;
+}
+:root.dark .legal-modal-panel .text-brand-black { color: #0A0A0A !important; }
+:root.dark .legal-modal-panel .text-brand-grey  { color: #6B7280 !important; }
+:root.dark .legal-modal-panel .bg-brand-offwhite { background-color: #F8F7F5 !important; color: #0A0A0A !important; }
+:root.dark .legal-modal-panel .bg-gray-50  { background-color: #F9FAFB !important; }
+:root.dark .legal-modal-panel .bg-gray-100 { background-color: #F3F4F6 !important; }
+:root.dark .legal-modal-panel .border-gray-200 { border-color: #E5E7EB !important; }
+:root.dark .legal-modal-panel strong { color: #111827; }
+
 /* Navbar scrolled state — always dark per 2026-04-20 design direction.
    Previously rendered white-on-scroll in light mode, producing an
    unreadable white-on-white logo/text combo. Now stays black in both

@@ -20,7 +20,7 @@ function getResponse(input: string): string {
 
   // About GHL
   if (lower.includes('what is ghl') || lower.includes('tell me about ghl') || lower.includes('who are you') || lower.includes('about ghl')) {
-    return "GHL India Ventures is a SEBI-registered Category II Alternate Investment Fund\u2014think of us as a carefully curated gateway for sophisticated investors to access opportunities that aren\u2019t available through regular markets.\n\nWe focus on two spaces: **stressed real estate** in India, and **early-stage startups** with strong fundamentals.\n\nOur registration (IN/AIF2/24-25/1517) means we operate under SEBI\u2019s full regulatory framework.\n\nWe\u2019re based in Chennai, but our thinking is pan-India. Would you like to know more about how we invest?"
+    return "GHL India Ventures is a SEBI-registered Category II Alternate Investment Fund\u2014think of us as a carefully curated gateway for sophisticated investors to access opportunities that aren\u2019t available through regular markets.\n\nWe focus on **stressed real estate recovery** in India \u2014 acquiring distressed and stalled projects via NCLT/IBC and direct routes, completing them, and exiting at market value.\n\nOur registration (IN/AIF2/24-25/1517) means we operate under SEBI\u2019s full regulatory framework.\n\nWe\u2019re based in Chennai, but our thinking is pan-India. Would you like to know more about how we invest?"
   }
 
   // AIF
@@ -40,7 +40,7 @@ function getResponse(input: string): string {
 
   // Returns / performance
   if (lower.includes('returns') || lower.includes('performance') || lower.includes('irr')) {
-    return "I want to be honest\u2014we don\u2019t promise returns. No responsible investment manager does.\n\nWhat we can share is our **target IRR framework**. Stressed real estate and early-stage startups have shown strong risk-adjusted returns over medium-to-long horizons.\n\nEvery investment goes through a rigorous IC process. We only deploy capital when due diligence supports a clear thesis.\n\n*This is educational information\u2014for advice specific to your situation, our advisors are here.*\n\nWould you like to connect with our team?"
+    return "I want to be honest\u2014we don\u2019t promise returns. No responsible investment manager does.\n\nWhat we can share is our **target IRR framework**. Stressed real estate has historically shown strong risk-adjusted returns over medium-to-long horizons, particularly when assets are acquired through NCLT/IBC at material discounts.\n\nEvery investment goes through a rigorous IC process. We only deploy capital when due diligence supports a clear thesis.\n\n*This is educational information\u2014for advice specific to your situation, our advisors are here.*\n\nWould you like to connect with our team?"
   }
 
   // Safety / risk
@@ -55,12 +55,12 @@ function getResponse(input: string): string {
 
   // Team / leadership
   if (lower.includes('team') || lower.includes('who') || lower.includes('founders') || lower.includes('leadership')) {
-    return "Our team has deep roots in Indian finance, real estate, and early-stage venture\u2014people who\u2019ve seen both sides of the investment table.\n\nLed by our Founder & MD with 25+ years in financial services, the team brings expertise across investment banking, real estate, and startups.\n\nYou can meet everyone on our About page. Would you like me to take you there?"
+    return "Our team has deep roots in Indian finance and real estate\u2014people who\u2019ve seen both sides of the investment table.\n\nLed by our Founder & MD with 25+ years in financial services, the team brings expertise across investment banking, NCLT/IBC resolution, and project-led real estate development.\n\nYou can meet everyone on our About page. Would you like me to take you there?"
   }
 
   // Contact
   if (lower.includes('contact') || lower.includes('phone') || lower.includes('email') || lower.includes('address')) {
-    return "Here\u2019s how to reach us:\n\n**Phone:** +91 44 2843 1043 | +91 7200 255 252\n**Email:** info@ghlindiaventures.com\n**Office:** 2D, Queens Court, No. 6, Montieth Road, Egmore, Chennai \u2013 600 008\n**Hours:** Mon\u2013Sat, 10:00 AM \u2013 6:30 PM IST\n\nYou can also chat with us on WhatsApp. Would you like me to connect you?"
+    return "Here\u2019s how to reach us:\n\n**Phone:** +91 44 2843 1043 | +91 7200 255 252\n**Email:** info@ghlindiaventures.com\n**Office:** 2D, Queens Court, No. 6, Montieth Road, Egmore, Chennai \u2013 600 008\n**Hours:** Mon \u2013 Sat \u2013 10.00AM \u2013 6.30PM IST\n\nYou can also chat with us on WhatsApp. Would you like me to connect you?"
   }
 
   // SEBI / registration

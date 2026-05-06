@@ -336,27 +336,32 @@ export default function FinancialIQPage() {
       </section>
 
       {/* ────────────────────────────────────────
-          1. Investment Overview Video
+          1. Investment Overview Video — hidden site-wide for later
+             use; un-comment the section block to restore.
       ──────────────────────────────────────── */}
-      <section className="section-padding bg-brand-offwhite">
-        <div className="container-max mx-auto">
-          <AnimatedSection className="text-center mb-12">
-            <span className="text-brand-red font-semibold text-xs uppercase tracking-wider">Learn Visually</span>
-            <h2 className="section-title text-brand-black dark:text-white mt-2">Investment Overview</h2>
-            <p className="section-subtitle mx-auto mt-4">
-              An interactive overview of GHL India Ventures&apos; investment strategy, portfolio, and performance.
-            </p>
-          </AnimatedSection>
+      {false && (
+        <>
+          <section className="section-padding bg-brand-offwhite">
+            <div className="container-max mx-auto">
+              <AnimatedSection className="text-center mb-12">
+                <span className="text-brand-red font-semibold text-xs uppercase tracking-wider">Learn Visually</span>
+                <h2 className="section-title text-brand-black dark:text-white mt-2">Investment Overview</h2>
+                <p className="section-subtitle mx-auto mt-4">
+                  An interactive overview of GHL India Ventures&apos; investment strategy, portfolio, and performance.
+                </p>
+              </AnimatedSection>
 
-          <AnimatedSection delay={100}>
-            <div className="max-w-4xl mx-auto">
-              <FinancialIQVideoPlayer />
+              <AnimatedSection delay={100}>
+                <div className="max-w-4xl mx-auto">
+                  <FinancialIQVideoPlayer />
+                </div>
+              </AnimatedSection>
             </div>
-          </AnimatedSection>
-        </div>
-      </section>
+          </section>
 
-      <hr className="section-divider-animated" />
+          <hr className="section-divider-animated" />
+        </>
+      )}
 
       {/* ────────────────────────────────────────
           2. Educational Articles

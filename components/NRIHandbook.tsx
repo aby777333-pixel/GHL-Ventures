@@ -27,7 +27,7 @@ const CHAPTERS: Chapter[] = [
     content: [
       'India\'s economic transformation is one of the most compelling investment narratives of the 21st century. With GDP growth consistently outpacing major economies, a young and aspirational demographic, and sweeping reforms in digital infrastructure, taxation, and capital markets, the country offers Non-Resident Indians a rare opportunity to participate in wealth creation at scale.',
       'For NRIs, investing in India is not just a financial decision — it is a connection to home, a legacy-building exercise, and a strategic diversification of global portfolios. Yet, despite the opportunity, many NRIs remain on the sidelines due to regulatory complexity, lack of trust in local intermediaries, or simply not knowing where to start.',
-      'GHL India Ventures was created to bridge this gap. As a SEBI-registered Category II Alternative Investment Fund (Reg. No. IN/AIF2/24-25/1517), we offer NRIs a fully compliant, institutional-grade pathway to invest in two of India\'s most asymmetric opportunity sets: stressed real estate recovery and early-stage startup investments.',
+      'GHL India Ventures was created to bridge this gap. As a SEBI-registered Category II Alternative Investment Fund (Reg. No. IN/AIF2/24-25/1517), we offer NRIs a fully compliant, institutional-grade pathway to invest in one of India\'s most asymmetric opportunity sets: stressed real estate recovery.',
       'This handbook is your comprehensive guide to understanding how NRI investment works in India, what regulatory frameworks govern it, and how GHL India Ventures makes the process seamless, transparent, and rewarding.',
     ],
   },
@@ -88,13 +88,13 @@ const CHAPTERS: Chapter[] = [
   },
   {
     id: 7,
-    title: 'Startup Investments: Early-Stage Growth',
+    title: 'Stressed Real Estate Recovery: A Closer Look',
     icon: <Sparkles className="w-5 h-5" />,
     content: [
-      'India\'s startup ecosystem has matured remarkably over the past decade. With over 100 unicorns, a thriving angel investor community, and deep pools of venture capital, India is now the world\'s third-largest startup ecosystem by company count.',
-      'GHL India Ventures allocates a portion of the fund to early-stage startup investments (seed to pre-Series A) across sectors including fintech, healthtech, SaaS, cleantech, and agritech. This allocation provides NRI investors with exposure to high-growth opportunities that can deliver outsized returns.',
-      'Our startup investment approach: rigorous 7-layer due diligence covering team, market, product, unit economics, governance, competitive moat, and exit potential; sector-focused approach in areas where India has structural advantages; active portfolio support through mentorship, introductions, and follow-on funding; target portfolio of 8–12 startup investments for diversification.',
-      'For NRIs working in global technology hubs like Silicon Valley, Singapore, or London, investing in Indian startups through GHL offers a way to participate in India\'s innovation economy while leveraging the fund\'s on-ground expertise for deal sourcing and portfolio management.',
+      'Stressed real estate is the cornerstone of GHL India Ventures\' investment thesis. Across India, an estimated ₹4 lakh crore of residential and commercial real estate sits stalled, distressed, or under-recovered — held in NCLT proceedings, with creditor consortia, or with developers unable to complete construction. This pool represents one of the deepest pockets of forced-seller, deep-discount opportunity in any major economy today.',
+      'GHL\'s strategy combines two complementary approaches within the same asset class. First, NCLT/IBC-led acquisitions: we identify projects entering insolvency resolution, conduct full legal and technical diligence, and acquire them at 40–60% below replacement cost through the formal resolution process. Second, direct distressed acquisitions: we negotiate directly with developers, lenders, or homebuyer-creditor groups for stalled projects that haven\'t yet reached the NCLT stage, restructuring the deal to unlock trapped value.',
+      'Our value-creation playbook focuses on three levers: completing construction with a vetted EPC partner network and our own oversight team; clearing legal and regulatory overhangs (RERA registration, title cure, encumbrance discharge); and repositioning the asset for an institutional-grade exit — sale to end-users, bulk sale to a real-estate platform, or a structured monetisation event. This is hands-on, operationally intensive work, but it is what produces the asset-backed margin of safety NRIs are looking for.',
+      'For NRI investors, this strategy offers exposure to physical Indian real estate without the operational headaches of direct property ownership — no tenant management, no maintenance, no regulatory paperwork, no individual title risk. The fund handles everything end-to-end, and investors receive returns proportional to their commitment, with quarterly NAV reporting and annual audited financials throughout.',
     ],
   },
   {

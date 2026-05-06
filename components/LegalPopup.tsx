@@ -84,10 +84,13 @@ export function LegalPopupProvider({ children }: { children: React.ReactNode }) 
           onClick={close}
         />
 
-        {/* Modal Panel */}
+        {/* Modal Panel — `legal-modal-panel` forces light-theme colours
+            inside the modal even when global dark mode is active, so
+            the policy/terms/disclaimer text stays readable. See
+            styles/globals.css for the override block. */}
         <div className="absolute inset-0 flex items-center justify-center p-4 md:p-8">
           <div
-            className={`relative bg-white rounded-2xl shadow-2xl w-full max-w-3xl max-h-[90vh] flex flex-col transition-all duration-300 ${
+            className={`legal-modal-panel relative bg-white rounded-2xl shadow-2xl w-full max-w-3xl max-h-[90vh] flex flex-col transition-all duration-300 ${
               activeDoc ? 'scale-100 translate-y-0' : 'scale-95 translate-y-4'
             }`}
           >
@@ -278,7 +281,7 @@ function PrivacyContent() {
       <SectionTitle>13. Grievance Redressal &amp; Contact</SectionTitle>
       <Para>In accordance with the Information Technology Act, 2000 and applicable SEBI regulations, GHL India Ventures has appointed a Grievance Officer to address your concerns regarding data privacy:</Para>
       <Para>Grievance Officer, GHL India Ventures Trust, 2D, Queens Court, No. 6, Montieth Road, Egmore, Chennai, Tamil Nadu &ndash; 600 008, India.</Para>
-      <Para>Email: info@ghlindiaventures.com | Phone: +91 44 2843 1043 | +91 7200 255 252 | Office Hours: Monday to Saturday, 10:00 AM to 6:00 PM IST.</Para>
+      <Para>Email: info@ghlindiaventures.com | Phone: +91 44 2843 1043 | +91 7200 255 252 | Office Hours: Mon &ndash; Sat &ndash; 10.00AM &ndash; 6.30PM IST.</Para>
       <Para>We will acknowledge receipt of your privacy-related grievance within 48 hours and endeavor to resolve it within thirty (30) business days. If you are not satisfied with our response, you may escalate your complaint to the relevant Data Protection Authority or approach SEBI through the SCORES portal (scores.gov.in) for investment-related grievances.</Para>
 
       <div className="mt-6 pt-4 border-t border-gray-200">
@@ -317,7 +320,7 @@ function TermsContent() {
       <SectionTitle>2. About GHL India Ventures</SectionTitle>
       <Para>GHL India Ventures Trust is a SEBI-registered Category II Alternative Investment Fund, registered under the Securities and Exchange Board of India (Alternative Investment Funds) Regulations, 2012, bearing Registration Number IN/AIF2/24-25/1517.</Para>
       <Para>Registered Office: 2D, Queens Court, No. 6, Montieth Road, Egmore, Chennai, Tamil Nadu &ndash; 600 008, India.</Para>
-      <Para>The company specializes in stressed real estate special situations and early-stage venture capital investments. Nothing on this Platform shall be construed as the Company operating in any capacity beyond its SEBI-registered mandate.</Para>
+      <Para>The company specializes in stressed real estate special situations and related investments. Nothing on this Platform shall be construed as the Company operating in any capacity beyond its SEBI-registered mandate.</Para>
 
       <SectionTitle>3. Eligibility &amp; Registration</SectionTitle>
       <Para><strong>3.1 General Access:</strong> The informational sections of this platform are available to all visitors. However, certain features&mdash;including the Investor Portal, document downloads, portfolio tracking, and interactive investment tools&mdash;require account registration.</Para>
@@ -381,7 +384,7 @@ function TermsContent() {
       <SectionTitle>16. Grievance Redressal &amp; Contact</SectionTitle>
       <Para>For any questions, concerns, grievances, or complaints regarding these Terms or the Platform, please contact:</Para>
       <Para>Compliance Officer / Grievance Officer, GHL India Ventures Trust, 2D, Queens Court, No. 6, Montieth Road, Egmore, Chennai, Tamil Nadu &ndash; 600 008, India.</Para>
-      <Para>Email: info@ghlindiaventures.com | Phone: +91 44 2843 1043 | +91 7200 255 252 | Office Hours: Monday to Saturday, 10:00 AM to 6:00 PM IST.</Para>
+      <Para>Email: info@ghlindiaventures.com | Phone: +91 44 2843 1043 | +91 7200 255 252 | Office Hours: Mon &ndash; Sat &ndash; 10.00AM &ndash; 6.30PM IST.</Para>
       <Para>We will acknowledge receipt of your grievance within 48 hours and endeavor to resolve it within thirty (30) business days, in accordance with applicable SEBI guidelines on investor grievance redressal.</Para>
 
       <div className="mt-6 pt-4 border-t border-gray-200">
@@ -410,7 +413,7 @@ function DisclaimerContent() {
 
       <SectionTitle>Investment Risk Warning</SectionTitle>
       <Para>
-        Investments in Alternative Investment Funds (AIFs), Non-Convertible Debentures (NCDs), and related financial instruments involve significant risks, including but not limited to the risk of total or partial loss of the principal amount invested, illiquidity, market volatility, regulatory changes, and risks specific to stressed real estate and early-stage venture capital investments.
+        Investments in Alternative Investment Funds (AIFs), Non-Convertible Debentures (NCDs), and related financial instruments involve significant risks, including but not limited to the risk of total or partial loss of the principal amount invested, illiquidity, market volatility, regulatory changes, and risks specific to stressed real estate investments.
       </Para>
       <Para>
         Past performance of any fund, investment, or strategy referenced on this website is not indicative of future results. There is no guarantee that any target returns, IRR projections, or wealth growth illustrations will be achieved. All financial projections, return estimates, and portfolio performance figures shown on this website are for illustrative and educational purposes only.

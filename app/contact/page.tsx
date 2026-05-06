@@ -433,7 +433,7 @@ export default function ContactPage() {
                     </div>
                     <div>
                       <h3 className="font-bold text-brand-black dark:text-white text-base mb-1">Office Hours</h3>
-                      <p className="text-brand-grey dark:text-gray-300 text-sm">Monday &ndash; Saturday, 10:00 AM &ndash; 6:30 PM IST</p>
+                      <p className="text-brand-grey dark:text-gray-300 text-sm">Mon &ndash; Sat &ndash; 10.00AM &ndash; 6.30PM IST</p>
                       <p className="text-brand-grey dark:text-gray-300 text-sm">Sunday: Closed</p>
                     </div>
                   </div>

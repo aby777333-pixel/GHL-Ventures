@@ -24,7 +24,7 @@ export const BRAND = {
   // for the Contact page card.
   delhiAddress:
     'I-Thum Tower, Tower B, Unit no. 317, 3rd Floor, Plot no. A-40, Sector-62, Noida 201301, Delhi NCR',
-  officeHours: 'Mon\u2013Sat, 10:00 AM \u2013 6:30 PM IST',
+  officeHours: 'Mon \u2013 Sat \u2013 10.00AM \u2013 6.30PM IST',
   minInvestment: 'As per SEBI AIF Regulations',
   colors: {
     red: '#D0021B',
@@ -48,7 +48,10 @@ export const NAV_LINKS = [
     children: [
       { label: 'Why GHL?', href: '/about' },
       { label: 'Tools', href: '/tools' },
-      { label: 'Downloads', href: '/downloads' },
+      // Downloads link hidden for later use; the /downloads route is
+      // also gated to 404 in app/downloads/page.tsx. Restore by
+      // un-commenting the next line and removing the notFound() gate.
+      // { label: 'Downloads', href: '/downloads' },
     ],
   },
   { label: 'Why AIFs', href: '/why-aifs' },
@@ -79,7 +82,10 @@ export const NAV_LINKS = [
       { label: 'Contact Us', href: '/contact' },
       { label: 'FAQs', href: '/contact/faqs' },
       { label: 'Refer an Investor', href: '/contact/refer' },
-      { label: 'Startup Application', href: '/contact/startup-apply' },
+      // Startup Application link hidden as part of the 2026-05 fund
+      // repositioning. The /contact/startup-apply route still exists
+      // for direct access; restore the nav link by un-commenting:
+      // { label: 'Startup Application', href: '/contact/startup-apply' },
       { label: 'Grievance Redressal', href: '/contact/grievance' },
       { label: 'Careers', href: '/contact/careers' },
     ],
@@ -142,15 +148,18 @@ export const FUND_ARTICLES = [
     category: 'Real Estate',
     readTime: '8 min read',
   },
-  {
-    slug: 'early-stage-startups-alternative-portfolio',
-    title: 'Why Early-Stage Startups Belong in Your Alternative Investment Portfolio',
-    excerpt:
-      'The case for allocating a portion of your alternative portfolio to early-stage ventures and how to evaluate risk at the seed and pre-Series A stage.',
-    date: '2025-01-05',
-    category: 'Startups',
-    readTime: '7 min read',
-  },
+  // Early-Stage Startups blog post hidden for later use as part of
+  // the 2026-05 fund repositioning. Article + [slug] handler entry
+  // preserved; restore by un-commenting this block.
+  // {
+  //   slug: 'early-stage-startups-alternative-portfolio',
+  //   title: 'Why Early-Stage Startups Belong in Your Alternative Investment Portfolio',
+  //   excerpt:
+  //     'The case for allocating a portion of your alternative portfolio to early-stage ventures and how to evaluate risk at the seed and pre-Series A stage.',
+  //   date: '2025-01-05',
+  //   category: 'Startups',
+  //   readTime: '7 min read',
+  // },
   {
     slug: 'sebi-aif-framework-sophisticated-investor',
     title: 'SEBI\'s AIF Framework: What Every Sophisticated Investor Must Know',
@@ -178,15 +187,17 @@ export const FUND_ARTICLES = [
     category: 'Real Estate',
     readTime: '8 min read',
   },
-  {
-    slug: 'due-diligence-startup-investments-ghl-framework',
-    title: 'Due Diligence in Startup Investments: The GHL India Ventures Framework',
-    excerpt:
-      'Our proprietary 7-layer due diligence process for evaluating early-stage companies, covering team, market, product, unit economics, and governance.',
-    date: '2024-11-28',
-    category: 'Startups',
-    readTime: '7 min read',
-  },
+  // Startup-DD blog post hidden for later use as part of the 2026-05
+  // fund repositioning. Restore by un-commenting this block.
+  // {
+  //   slug: 'due-diligence-startup-investments-ghl-framework',
+  //   title: 'Due Diligence in Startup Investments: The GHL India Ventures Framework',
+  //   excerpt:
+  //     'Our proprietary 7-layer due diligence process for evaluating early-stage companies, covering team, market, product, unit economics, and governance.',
+  //   date: '2024-11-28',
+  //   category: 'Startups',
+  //   readTime: '7 min read',
+  // },
   {
     slug: 'tax-efficiency-category-ii-aif-pass-through',
     title: 'Tax Efficiency in Category II AIFs: Pass-Through Status Explained',
@@ -222,6 +233,18 @@ export const FUND_ARTICLES = [
 
 export const TEAM_MEMBERS = [
   {
+    name: 'Raj Kumar',
+    role: 'COO',
+    quote: 'Operational excellence is the backbone of every successful venture — we ensure every moving part works in harmony toward our investors\' goals.',
+    image: '/images/team/raj-kumar.jpg',
+  },
+  {
+    name: 'Senthil Kumar',
+    role: 'Head of Legal',
+    quote: 'In every deal, compliance and integrity come first. We protect our investors by building a legal framework that\'s as strong as our ambitions.',
+    image: '/images/team/senthil-kumar.jpg',
+  },
+  {
     name: 'Bennet J',
     role: 'VP Sales & Marketing',
     quote: 'At GHL, we don\'t just sell investments — we build lasting relationships rooted in trust, transparency, and shared success.',
@@ -240,18 +263,6 @@ export const TEAM_MEMBERS = [
     image: '/images/team/padmanabhan-n.jpg',
   },
   {
-    name: 'Raj Kumar',
-    role: 'COO',
-    quote: 'Operational excellence is the backbone of every successful venture — we ensure every moving part works in harmony toward our investors\' goals.',
-    image: '/images/team/raj-kumar.jpg',
-  },
-  {
-    name: 'Senthil Kumar',
-    role: 'Head of Legal',
-    quote: 'In every deal, compliance and integrity come first. We protect our investors by building a legal framework that\'s as strong as our ambitions.',
-    image: '/images/team/senthil-kumar.jpg',
-  },
-  {
     name: 'Abe Abrams',
     role: 'IT Head',
     quote: 'Technology is the silent engine behind smart investing — we leverage innovation to give our stakeholders an edge in every market.',
@@ -268,7 +279,7 @@ export const ADVISORY_BOARD = [
     name: 'Dr. Srinivasan Iyer',
     initials: 'SI',
     role: 'Advisory Board Member',
-    bio: 'Retired IAS officer and former Secretary of Commerce. Brings policy insight and a deep understanding of India\'s regulatory environment across real estate and startup sectors.',
+    bio: 'Retired IAS officer and former Secretary of Commerce. Brings policy insight and a deep understanding of India\'s regulatory environment across real estate, infrastructure, and capital markets.',
     linkedin: '#', // LinkedIn profile URL pending
   },
   {
@@ -431,16 +442,21 @@ export const BLOG_POSTS = [
     readTime: '7 min read',
     image: '/blog/stressed-real-estate-alpha.jpg',
   },
-  {
-    slug: 'early-stage-growth-companies-india',
-    title: 'Investing in India\'s Early-Stage Growth Companies: Where Scale Meets Strategy',
-    excerpt:
-      'India\'s startup ecosystem has matured. Explore how disciplined venture investing at the Series A to pre-IPO stage delivers 22–30% IRR by backing validated, capital-efficient companies.',
-    date: '2026-02-17',
-    category: 'Startups',
-    readTime: '8 min read',
-    image: '/blog/early-stage-growth.jpg',
-  },
+  // Early-Stage Growth blog post hidden for later use as part of the
+  // 2026-05 fund repositioning (single-pillar stressed real estate
+  // focus). The Blog3EarlyStageGrowth component, the [slug] handler
+  // entry, and the underlying article are all preserved — restore by
+  // un-commenting this block.
+  // {
+  //   slug: 'early-stage-growth-companies-india',
+  //   title: 'Investing in India\'s Early-Stage Growth Companies: Where Scale Meets Strategy',
+  //   excerpt:
+  //     'India\'s startup ecosystem has matured. Explore how disciplined venture investing at the Series A to pre-IPO stage delivers 22–30% IRR by backing validated, capital-efficient companies.',
+  //   date: '2026-02-17',
+  //   category: 'Startups',
+  //   readTime: '8 min read',
+  //   image: '/blog/early-stage-growth.jpg',
+  // },
   {
     slug: 'governance-transparency-alternative-investment-funds',
     title: 'The Importance of Governance and Transparency in Alternative Investment Funds',
@@ -486,15 +502,16 @@ export const FINANCIAL_IQ_ARTICLES = [
     category: 'Real Estate',
     readTime: '5 min read',
   },
-  {
-    slug: 'how-startup-valuations-work',
-    title: 'How Startup Valuations Work: A Primer for New Investors',
-    excerpt:
-      'Demystifying pre-money vs post-money valuations, dilution, and how to evaluate whether a startup investment is fairly priced.',
-    date: '2024-12-20',
-    category: 'Startups',
-    readTime: '6 min read',
-  },
+  // Startup-valuations Financial IQ post hidden for later use.
+  // {
+  //   slug: 'how-startup-valuations-work',
+  //   title: 'How Startup Valuations Work: A Primer for New Investors',
+  //   excerpt:
+  //     'Demystifying pre-money vs post-money valuations, dilution, and how to evaluate whether a startup investment is fairly priced.',
+  //   date: '2024-12-20',
+  //   category: 'Startups',
+  //   readTime: '6 min read',
+  // },
 ] as const
 
 // ============================================================
@@ -506,7 +523,7 @@ export const MILESTONES = [
     year: '2020',
     title: 'Vision Takes Shape',
     description:
-      'GHL India Ventures conceptualised with a dual-focus thesis on stressed real estate resolution and early-stage startup investing.',
+      'GHL India Ventures conceptualised around a focused thesis on stressed real estate resolution across India.',
   },
   {
     year: '2021',
@@ -629,9 +646,9 @@ export const FAQ_ITEMS = [
       'The fund has a base tenure of 7\u201310 years with provisions for extensions. Returns are distributed to investors after exits from individual investments, following a waterfall structure that prioritises return of capital before profit sharing.',
   },
   {
-    question: 'How does the fund manage risk across real estate and startup investments?',
+    question: 'How does the fund manage risk across its real estate portfolio?',
     answer:
-      'We maintain a balanced allocation between stressed real estate (lower risk, asset-backed) and early-stage startups (higher risk, higher upside). Each investment undergoes independent legal, financial, and market due diligence. Portfolio-level diversification across sectors, stages, and geographies further mitigates concentration risk.',
+      'We diversify across multiple stressed real estate projects, geographies, and acquisition routes (NCLT/IBC vs direct). Each investment undergoes independent legal, financial, and market due diligence, and no single project exceeds 15% of fund corpus.',
   },
   {
     question: 'Is GHL India Ventures regulated by SEBI, and how is investor money protected?',

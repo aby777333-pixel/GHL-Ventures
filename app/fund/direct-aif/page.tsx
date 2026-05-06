@@ -69,7 +69,7 @@ export default function DirectAIFPage() {
           <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 max-w-5xl mx-auto">
             {[
               { icon: Target, title: 'Target Returns', value: '15–25% IRR', desc: 'Institutional-grade returns through disciplined alternative investing' },
-              { icon: Building2, title: 'Direct Ownership', value: 'Premium Assets', desc: 'Direct stake in stressed real estate & high-growth startups' },
+              { icon: Building2, title: 'Direct Ownership', value: 'Premium Assets', desc: 'Direct stake in a portfolio of stressed real estate projects' },
               { icon: Eye, title: 'Full Transparency', value: 'Quarterly Reports', desc: 'Detailed NAV, portfolio updates & performance reporting' },
               { icon: Shield, title: 'SEBI Regulated', value: 'Category II AIF', desc: 'Regulated by SEBI with custodian, auditor & compliance' },
             ].map((item, i) => (
@@ -104,7 +104,7 @@ export default function DirectAIFPage() {
                     { label: 'Minimum Investment', value: 'As per SEBI AIF Regulations' },
                     { label: 'Fund Category', value: 'SEBI Category II AIF' },
                     { label: 'Investment Horizon', value: '5–10 Years' },
-                    { label: 'Target IRR', value: '15–25%' },
+                    { label: 'Target IRR', value: '18–24%' },
                     { label: 'Fund Size Target', value: '₹500 Crore' },
                     { label: 'SEBI Registration', value: BRAND.sebi },
                     { label: 'Management Fee', value: '2% p.a.' },
@@ -134,9 +134,9 @@ export default function DirectAIFPage() {
 
           <div className="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto">
             {[
-              { icon: Sparkles, title: 'Dual Investment Strategy', desc: 'Capital deployed across stressed real estate resolution and early-stage startup investments — two uncorrelated return streams in a single vehicle.' },
-              { icon: Users, title: 'Exclusive Deal Flow', desc: 'Access institutional-grade opportunities sourced through our proprietary network of banks, NCLT listings, accelerators, and venture partners.' },
-              { icon: BarChart3, title: 'Active Value Creation', desc: 'Hands-on project management for real estate, board participation for startups — we don\'t just invest capital, we create value.' },
+              { icon: Sparkles, title: 'Dual Investment Strategy', desc: 'Capital deployed across NCLT/IBC distressed-asset acquisitions and direct stressed real estate development — two complementary return streams in a single vehicle.' },
+              { icon: Users, title: 'Exclusive Deal Flow', desc: 'Access institutional-grade opportunities sourced through our proprietary network of banks, NCLT listings, and resolution professionals.' },
+              { icon: BarChart3, title: 'Active Value Creation', desc: 'Hands-on project management across our stressed real estate portfolio — we don\'t just invest capital, we create value.' },
               { icon: FileText, title: 'Complete Transparency', desc: 'Quarterly NAV updates, detailed portfolio reports, annual audited statements, and direct access to our investment team.' },
             ].map((item, i) => (
               <AnimatedSection key={item.title} delay={i * 100}>

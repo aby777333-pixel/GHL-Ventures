@@ -17,7 +17,7 @@ const KNOWLEDGE_BASE: KnowledgeEntry[] = [
     id: 'about-ghl',
     category: 'general',
     keywords: ['what', 'ghl', 'about', 'who', 'company', 'ventures'],
-    response: '**GHL India Ventures** is a SEBI-registered Category II Alternative Investment Fund (AIF) based in Chennai, India.\n\nWe invest in two high-conviction themes:\n\u2022 **Stressed Real Estate** acquired through NCLT at deep discounts\n\u2022 **Early-Stage Startups** across technology, healthcare & logistics\n\nOur fund targets **15\u201325% IRR** with institutional-grade transparency and SEBI compliance.\n\nSEBI Registration: **IN/AIF2/24-25/1517**',
+    response: '**GHL India Ventures** is a SEBI-registered Category II Alternative Investment Fund (AIF) based in Chennai, India.\n\nOur focus is **Stressed Real Estate Recovery** \u2014 acquiring distressed and stalled residential and commercial projects through NCLT/IBC at deep discounts, completing them, and selling at market value.\n\nOur fund targets **18\u201324% IRR** with institutional-grade transparency and SEBI compliance.\n\nSEBI Registration: **IN/AIF2/24-25/1517**',
     followUp: ['Investment Routes', 'How to Invest', 'Minimum Investment'],
     priority: 10,
   },
@@ -124,11 +124,11 @@ const KNOWLEDGE_BASE: KnowledgeEntry[] = [
     priority: 7,
   },
   {
-    id: 'startups',
+    id: 'real-estate-recovery',
     category: 'portfolio',
-    keywords: ['startup', 'tech', 'early stage', 'venture', 'fintech', 'health'],
-    response: '**Early-Stage Startup Strategy:**\n\nWe invest in startups across:\n\u2022 **Fintech** \u2014 Digital financial services\n\u2022 **Healthcare** \u2014 Health-tech platforms\n\u2022 **Logistics** \u2014 Sustainable supply chain solutions\n\n**Our Selection Process:**\n\u2022 Review 500+ pitch decks annually\n\u2022 Invest in less than 2% of reviewed opportunities\n\u2022 Focus on capital-efficient, revenue-generating startups\n\u2022 Provide strategic guidance & network access',
-    followUp: ['Portfolio Companies', 'Returns', 'Risk Management'],
+    keywords: ['real estate', 'recovery', 'nclt', 'ibc', 'distressed', 'project', 'residential', 'commercial'],
+    response: '**Stressed Real Estate Recovery Strategy:**\n\nWe acquire and revive distressed real estate across:\n\u2022 **NCLT/IBC resolution** \u2014 buying assets through the formal insolvency process at 40\u201360% discounts\n\u2022 **Direct distressed acquisitions** \u2014 negotiating with developers, lenders, and creditor consortia for stalled projects\n\u2022 **Construction completion** \u2014 finishing partially-built residential and commercial projects with vetted EPC partners\n\n**Our Selection Process:**\n\u2022 Full legal, technical, and market diligence on every project\n\u2022 Focus on assets with clear title-cure paths and end-user demand\n\u2022 Active project management through to exit\n\u2022 Asset-backed margin of safety via deep-discount entry',
+    followUp: ['Portfolio Returns', 'Risk Management', 'Investment Routes'],
     priority: 7,
   },
   // ─── Team ───
@@ -145,7 +145,7 @@ const KNOWLEDGE_BASE: KnowledgeEntry[] = [
     id: 'contact',
     category: 'contact',
     keywords: ['contact', 'phone', 'email', 'address', 'office', 'reach', 'call', 'whatsapp'],
-    response: '**Contact GHL India Ventures:**\n\n**Phone:** +91 44 2843 1043 | +91 72002 55252\n**Email:** info@ghlindiaventures.com\n**WhatsApp:** +91 72002 55252\n\n**Office:**\n2D, Queens Court, No. 6, Montieth Road\nEgmore, Chennai \u2013 600 008\n\n**Hours:** Mon\u2013Sat, 10:00 AM \u2013 6:30 PM IST\n\nWant me to connect you with an advisor right away?',
+    response: '**Contact GHL India Ventures:**\n\n**Phone:** +91 44 2843 1043 | +91 72002 55252\n**Email:** info@ghlindiaventures.com\n**WhatsApp:** +91 72002 55252\n\n**Office:**\n2D, Queens Court, No. 6, Montieth Road\nEgmore, Chennai \u2013 600 008\n\n**Hours:** Mon \u2013 Sat \u2013 10.00AM \u2013 6.30PM IST\n\nWant me to connect you with an advisor right away?',
     followUp: ['Schedule Consultation', 'WhatsApp Chat', 'Investment Process'],
     priority: 8,
   },
@@ -320,9 +320,9 @@ export function findBestResponse(
 const ARIA_SYSTEM_PROMPT = `You are ARIA, the AI assistant for GHL India Ventures — a SEBI-registered Category II Alternative Investment Fund (AIF) based in Chennai, India. SEBI Registration: IN/AIF2/24-25/1517.
 
 Key facts:
-• GHL invests in stressed real estate (NCLT-acquired at 40-60% discounts) and early-stage startups
-• Two routes: Direct AIF (for HNIs) and SEBI Co-Invest Framework (for salaried professionals)
-• Target returns: 15-25% IRR for Direct AIF
+• GHL invests in stressed real estate (NCLT-acquired at 40-60% discounts and direct distressed acquisitions)
+• Two routes: Direct AIF (for HNIs) and SEBI Co-Invest Framework (for accredited investors)
+• Target returns: 18-24% IRR for Direct AIF; 24% PA fixed for the Co-Invest Framework
 • Office: 2D, Queens Court, No. 6, Montieth Road, Egmore, Chennai – 600 008
 • Phone: +91 44 2843 1043 | +91 72002 55252
 • Email: info@ghlindiaventures.com
