@@ -181,7 +181,7 @@ export default function ClientAIAdvisor({ theme, t }: Props) {
                 <button
                   key={card.title}
                   onClick={() => setInput(card.desc)}
-                  className={`w-full flex items-center gap-3 p-2.5 rounded-xl text-left transition-colors ${
+                  className={`w-full flex items-center justify-start gap-3 p-2.5 rounded-xl text-left transition-colors ${
                     isDark ? 'hover:bg-white/[0.04]' : 'hover:bg-gray-50'
                   }`}
                 >

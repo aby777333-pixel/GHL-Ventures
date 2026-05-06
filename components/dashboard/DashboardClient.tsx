@@ -1071,8 +1071,8 @@ export default function DashboardClient() {
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className={`text-xs font-semibold ${t('text-white','text-gray-900')} ${!n.is_read ? '' : 'opacity-60'}`}>{String(n.title || '')}</p>
-                        <p className={`text-[11px] mt-0.5 ${t('text-gray-500','text-gray-700')}`}>{String(n.message || n.body || '')}</p>
-                        <p className={`text-[10px] mt-1 ${t('text-gray-600','text-gray-600')}`}>{n.created_at ? new Date(n.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }) : ''}</p>
+                        <p className={`text-[11px] mt-0.5 ${t('text-gray-200','text-gray-700')}`}>{String(n.message || n.body || '')}</p>
+                        <p className={`text-[10px] mt-1 ${t('text-gray-400','text-gray-600')}`}>{n.created_at ? new Date(n.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }) : ''}</p>
                       </div>
                       {!n.is_read && !notifsRead.has(n.id) && <div className="w-2 h-2 rounded-full bg-brand-red shrink-0 mt-1.5" />}
                     </div>
@@ -2853,17 +2853,21 @@ export default function DashboardClient() {
   // PROFILE TAB (Personal, Nominee, Bank) — with Edit Profile
   // ═══════════════════════════════════════════════════════════
   const openEditProfile = () => {
+    // Prefer KYC-table values (authoritative once KYC is approved) over the
+    // local saved-profile cache and the legacy user record. Mirrors the
+    // precedence used by the read-only Personal/Nominee panels below.
+    const primaryNominee = (kycNominees && (kycNominees as any[])[0]) as any || null
     setEditForm({
-      full_name: savedProfileData.full_name || user?.name || '',
-      phone: savedProfileData.phone || user?.phone || '',
-      pan: savedProfileData.pan || (user as any)?.pan || '',
-      city: savedProfileData.city || user?.city || '',
-      dob: savedProfileData.dob || (user as any)?.dob || '',
+      full_name: (kycBasic as any)?.investor_name || savedProfileData.full_name || user?.name || '',
+      phone: (kycBasic as any)?.phone || savedProfileData.phone || user?.phone || '',
+      pan: (kycIdentity as any)?.pan_number || savedProfileData.pan || (user as any)?.pan || '',
+      city: (kycIdentity as any)?.city || savedProfileData.city || user?.city || '',
+      dob: (kycIdentity as any)?.dob || savedProfileData.dob || (user as any)?.dob || '',
       occupation: savedProfileData.occupation || (user as any)?.occupation || '',
-      nominee_name: savedProfileData.nominee_name || (user as any)?.nominee_name || '',
-      nominee_relation: savedProfileData.nominee_relation || (user as any)?.nominee_relation || '',
+      nominee_name: primaryNominee?.name || savedProfileData.nominee_name || (user as any)?.nominee_name || '',
+      nominee_relation: primaryNominee?.relationship || savedProfileData.nominee_relation || (user as any)?.nominee_relation || '',
       nominee_pan: savedProfileData.nominee_pan || (user as any)?.nominee_pan || '',
-      nominee_share: savedProfileData.nominee_share || (user as any)?.nominee_share || '',
+      nominee_share: primaryNominee?.percentage != null ? String(primaryNominee.percentage) : (savedProfileData.nominee_share || (user as any)?.nominee_share || ''),
     })
     setEditProfileOpen(true)
   }

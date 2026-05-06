@@ -99,20 +99,6 @@ const FUNDS = [
     documents: ['PPM (Private Placement Memorandum)', 'Contribution Agreement', 'Capital Call Notice', 'NAV Statement'],
     security: ['SEBI registered Category II AIF', 'Independent custodian for assets', 'Quarterly audited NAV'],
   },
-  {
-    id: 'llp',
-    name: 'Alternate route to Invest in AIF via LLP',
-    fundType: 'LLP-based co-investment structure',
-    focus: 'Structured co-investment via LLP framework',
-    minInvestment: 1000000,
-    interest: 12,
-    capitalAppreciation: 12,
-    totalAssuredReturns: 24,
-    tenure: 'Min 3 years, Max 10 years',
-    strategy: ['Co-investment through LLP structure', 'Same asset pool as main AIF', 'Fixed return mechanism with capital protection'],
-    documents: ['LLP Agreement', 'Supplementary Agreement', 'Capital Account Statement'],
-    security: ['LLP registered with MCA', 'Charge creation on assets', 'Debenture trustee oversight'],
-  },
 ]
 
 // ── Props ──────────────────────────────────────────────────
