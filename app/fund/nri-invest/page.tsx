@@ -53,7 +53,11 @@ function NRIInvestContent() {
             stay readable against the bright sky portion of the photo. */}
         <div className="nri-hero-overlay absolute inset-0 pointer-events-none" />
 
-        <div className="container-max mx-auto px-4 sm:px-6 lg:px-8 relative z-10 pt-40 pb-32">
+        {/* Hero text intentionally pinned to the left of the viewport
+            (mr-auto, no mx-auto) so the heading sits over the dark left
+            half of the runway photo while the airplane stays visible
+            on the right on wide viewports. */}
+        <div className="max-w-7xl mr-auto px-4 sm:px-6 lg:px-8 relative z-10 pt-40 pb-32">
           <AnimatedSection>
             {/* Breadcrumb */}
             <nav className="flex items-center text-sm text-gray-400 mb-6">
@@ -582,17 +586,31 @@ function NRIInvestContent() {
                     <ArrowRight className="w-4 h-4" />
                   </button>
                 </div>
-                {/* Right — Visual */}
-                <div className="bg-gradient-to-br from-brand-red/5 to-brand-red/10 p-8 flex items-center justify-center">
-                  <div className="text-center">
+                {/* Right — Visual (airport runway bg under the PDF mockup) */}
+                <div className="relative p-8 flex items-center justify-center overflow-hidden">
+                  <picture className="absolute inset-0 pointer-events-none select-none">
+                    <source srcSet="/images/nri/handbook-bg-sm.webp" type="image/webp" media="(max-width: 768px)" />
+                    <source srcSet="/images/nri/handbook-bg.webp" type="image/webp" />
+                    <img
+                      src="/images/nri/handbook-bg.jpg"
+                      alt=""
+                      aria-hidden="true"
+                      className="w-full h-full object-cover"
+                    />
+                  </picture>
+                  {/* Soft dark overlay so the white PDF mockup + version text
+                      stay readable against the bright sunset sky portion. */}
+                  <div className="absolute inset-0 bg-black/45 pointer-events-none" />
+
+                  <div className="relative z-10 text-center">
                     <div className="w-24 h-32 mx-auto rounded-lg bg-white shadow-xl border border-brand-black/10 flex flex-col items-center justify-center mb-4 relative">
                       <BookOpen className="w-8 h-8 text-brand-red mb-2" />
-                      <p className="text-[8px] font-bold text-brand-black dark:text-white leading-tight text-center px-2">NRI Investment Handbook</p>
+                      <p className="text-[8px] font-bold text-brand-black leading-tight text-center px-2">NRI Investment Handbook</p>
                       <div className="absolute -top-2 -right-2 w-6 h-6 rounded-full bg-brand-red text-white text-[8px] font-bold flex items-center justify-center">
                         PDF
                       </div>
                     </div>
-                    <p className="text-xs text-brand-grey dark:text-gray-300">Version 2.0 &bull; February 2026</p>
+                    <p className="text-xs text-white/90">Version 2.0 &bull; February 2026</p>
                   </div>
                 </div>
               </div>

@@ -375,16 +375,16 @@ function NRIHandbookModal({ onClose }: { onClose: () => void }) {
                   <button
                     key={ch.id}
                     onClick={() => setCurrentChapter(idx)}
-                    className={`w-full text-left flex items-center gap-2 px-2 py-2 rounded-lg text-[11px] transition-all mb-0.5 ${
+                    className={`w-full text-left flex items-start gap-2 px-2 py-2 rounded-lg text-[11px] transition-all mb-0.5 ${
                       idx === currentChapter
                         ? 'bg-brand-red/10 text-brand-red font-semibold'
                         : 'text-brand-grey hover:text-brand-black hover:bg-brand-black/5'
                     }`}
                   >
-                    <span className="w-5 h-5 rounded-md flex items-center justify-center shrink-0 text-[9px] font-bold bg-brand-black/5">
+                    <span className="w-5 h-5 rounded-md flex items-center justify-center shrink-0 text-[9px] font-bold bg-brand-black/5 mt-0.5">
                       {ch.id}
                     </span>
-                    <span className="line-clamp-2 leading-tight">{ch.title}</span>
+                    <span className="flex-1 text-left line-clamp-2 leading-tight">{ch.title}</span>
                   </button>
                 ))}
               </div>
