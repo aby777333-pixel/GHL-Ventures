@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo, useCallback, useEffect } from 'react'
+import { useState, useMemo, useCallback, useEffect, useRef } from 'react'
 import {
   FileBarChart, BarChart3, TrendingUp, PieChart, Download, Calendar, Filter,
   ArrowUpRight, ArrowDownRight, IndianRupee, Users, Target, Clock, Activity,
@@ -18,6 +18,7 @@ import {
 import AdminGlass from '../shared/AdminGlass'
 import AdminKPICard from '../shared/AdminKPICard'
 import FileRepository from './FileRepository'
+import ReportPreview from './ReportPreview'
 import {
   formatINRCompact, getClientsByTier,
 } from '@/lib/admin/reportsData'
@@ -27,6 +28,10 @@ import { saveBlobAs } from '@/lib/supabase/storageService'
 import { useFolderTree, useRepoFiles } from '@/lib/admin/fileRepositoryHooks'
 import { buildFolderTree, formatFileSize, getFileTypeColor } from '@/lib/admin/fileRepositoryData'
 import type { FolderNode, RepoFile } from '@/lib/admin/fileRepositoryTypes'
+import {
+  saveReportDraft, exportReportToPDF, shareReport,
+  type ReportDraft, type SavedBlock,
+} from '@/lib/admin/reportBuilderService'
 
 // ── Constants ────────────────────────────────────────────────
 const CHART_COLORS = ['#DC2626', '#D4AF37', '#3B82F6', '#10B981', '#8B5CF6', '#F59E0B', '#EC4899', '#06B6D4']
@@ -392,8 +397,23 @@ function RepoTreeItem({
   )
 }
 
+// Per-block user-editable properties (Properties Inspector)
+interface BlockProps {
+  title?: string
+  dataSource?: string
+  dateRange?: string
+  chartType?: string
+  text?: string
+}
+
+interface CanvasItem {
+  id: string
+  block: BuilderBlock
+  props?: BlockProps
+}
+
 function BuilderTab({ showToast }: { showToast: Props['showToast'] }) {
-  const [canvasBlocks, setCanvasBlocks] = useState<{ id: string; block: BuilderBlock }[]>([])
+  const [canvasBlocks, setCanvasBlocks] = useState<CanvasItem[]>([])
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [reportTitle, setReportTitle] = useState('Untitled Report')
   const [draggedBlock, setDraggedBlock] = useState<BuilderBlock | null>(null)
@@ -402,6 +422,24 @@ function BuilderTab({ showToast }: { showToast: Props['showToast'] }) {
   const [showRepoBrowser, setShowRepoBrowser] = useState(false)
   const [repoBrowserFolderId, setRepoBrowserFolderId] = useState<string | null>(null)
   const [expandedRepoFolders, setExpandedRepoFolders] = useState<Set<string>>(new Set())
+
+  // ── Save / Preview / Export / Share state ─────────────────
+  const [showPreview, setShowPreview] = useState(false)
+  const [exporting, setExporting] = useState(false)
+  const [saving, setSaving] = useState(false)
+  // Stable client-side id so a draft can be updated in place across saves.
+  const draftIdRef = useRef<string>('')
+  if (!draftIdRef.current) {
+    draftIdRef.current = (typeof crypto !== 'undefined' && 'randomUUID' in crypto)
+      ? crypto.randomUUID()
+      : `draft-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
+  }
+  // Persisted Supabase id (set after first successful save).
+  const reportIdRef = useRef<string | null>(null)
+  // Last successful storage URL — copied by Share when present.
+  const lastStorageUrlRef = useRef<string | null>(null)
+  // Hidden offscreen container the Export handler captures via html2canvas.
+  const previewRef = useRef<HTMLDivElement>(null)
 
   const { data: rawFolders, loading: foldersLoading } = useFolderTree()
   const folderTree = useMemo(() => buildFolderTree(rawFolders), [rawFolders])
@@ -463,6 +501,121 @@ function BuilderTab({ showToast }: { showToast: Props['showToast'] }) {
     if (selectedId === id) setSelectedId(null)
   }
 
+  const setBlockProps = useCallback((id: string, patch: Partial<BlockProps>) => {
+    setCanvasBlocks(prev => prev.map(b =>
+      b.id === id ? { ...b, props: { ...(b.props || {}), ...patch } } : b
+    ))
+  }, [])
+
+  // ── Build the wire-format draft from current canvas state ──
+  const buildDraft = useCallback((): ReportDraft => {
+    const blocks: SavedBlock[] = canvasBlocks.map(c => ({
+      id: c.id,
+      type: c.block.type,
+      label: c.block.label,
+      category: c.block.category,
+      fileRef: c.block.fileRef,
+      props: c.props,
+    }))
+    return {
+      id: draftIdRef.current,
+      title: reportTitle,
+      blocks,
+      updatedAt: new Date().toISOString(),
+    }
+  }, [canvasBlocks, reportTitle])
+
+  // ── Save handler ──────────────────────────────────────────
+  const handleSave = useCallback(async () => {
+    if (saving) return
+    setSaving(true)
+    try {
+      const draft = buildDraft()
+      const result = await saveReportDraft(draft)
+      if (result.success) {
+        reportIdRef.current = result.id
+        showToast(`Saved: ${reportTitle}`, 'success')
+      } else {
+        // Saved to localStorage but Supabase failed
+        showToast(`Saved locally — sync failed: ${result.error || 'unknown'}`, 'warning')
+      }
+    } catch (err: any) {
+      showToast(`Save failed: ${err?.message || 'unknown error'}`, 'error')
+    } finally {
+      setSaving(false)
+    }
+  }, [buildDraft, reportTitle, saving, showToast])
+
+  // ── Preview handler — opens modal ─────────────────────────
+  const handlePreview = useCallback(() => {
+    if (canvasBlocks.length === 0) {
+      showToast('Add at least one block before previewing', 'warning')
+      return
+    }
+    setShowPreview(true)
+  }, [canvasBlocks.length, showToast])
+
+  // ── Export to PDF (uploads to ghl-exports + downloads) ────
+  const handleExport = useCallback(async () => {
+    if (exporting) return
+    if (canvasBlocks.length === 0) {
+      showToast('Add at least one block before exporting', 'warning')
+      return
+    }
+    setExporting(true)
+    // Ensure preview DOM exists
+    setShowPreview(true)
+
+    // Wait one paint so the off-screen ReportPreview has rendered.
+    await new Promise(r => setTimeout(r, 120))
+
+    try {
+      const el = previewRef.current
+      if (!el) {
+        showToast('Preview not ready, please try again', 'error')
+        return
+      }
+      // Save first so the export has a parent reports.id.
+      if (!reportIdRef.current) {
+        const saveRes = await saveReportDraft(buildDraft())
+        if (saveRes.success) reportIdRef.current = saveRes.id
+      }
+
+      const fileName = (reportTitle || 'report').replace(/[^a-zA-Z0-9_-]/g, '_')
+      const result = await exportReportToPDF({
+        element: el,
+        fileName,
+        reportId: reportIdRef.current || undefined,
+        alsoDownload: true,
+        showToast,
+      })
+
+      if (result.success) {
+        if (result.storageUrl) {
+          lastStorageUrlRef.current = result.storageUrl
+          showToast('PDF saved to storage and downloaded', 'success')
+        } else {
+          showToast('PDF downloaded', 'success')
+        }
+      } else {
+        showToast(`Export failed: ${result.error || 'unknown'}`, 'error')
+      }
+    } catch (err: any) {
+      showToast(`Export failed: ${err?.message || 'unknown error'}`, 'error')
+    } finally {
+      setExporting(false)
+    }
+  }, [buildDraft, canvasBlocks.length, exporting, reportTitle, showToast])
+
+  // ── Share handler ─────────────────────────────────────────
+  const handleShare = useCallback(async () => {
+    await shareReport({
+      storageUrl: lastStorageUrlRef.current || undefined,
+      draft: buildDraft(),
+      showToast,
+    })
+  }, [buildDraft, showToast])
+
   // Render helper for file type icon in attachment blocks
   const getFileIcon = (fileType: string) => {
     const t = fileType.toLowerCase()
@@ -491,11 +644,32 @@ function BuilderTab({ showToast }: { showToast: Props['showToast'] }) {
             >
               <FolderOpen className="w-3 h-3" /> Repository
             </button>
-            {[{ label: 'Save', icon: Save }, { label: 'Preview', icon: Eye }, { label: 'Export', icon: Download }, { label: 'Share', icon: Share2 }].map(a => (
-              <button key={a.label} onClick={() => showToast(`${a.label}: ${reportTitle}`, 'info')} className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-medium text-gray-400 bg-white/[0.04] border border-white/[0.06] hover:bg-white/[0.08] transition-colors admin-btn-press">
-                <a.icon className="w-3 h-3" /> {a.label}
-              </button>
-            ))}
+            <button
+              onClick={handleSave}
+              disabled={saving}
+              className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-medium text-gray-400 bg-white/[0.04] border border-white/[0.06] hover:bg-white/[0.08] transition-colors admin-btn-press disabled:opacity-50"
+            >
+              <Save className="w-3 h-3" /> {saving ? 'Saving…' : 'Save'}
+            </button>
+            <button
+              onClick={handlePreview}
+              className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-medium text-gray-400 bg-white/[0.04] border border-white/[0.06] hover:bg-white/[0.08] transition-colors admin-btn-press"
+            >
+              <Eye className="w-3 h-3" /> Preview
+            </button>
+            <button
+              onClick={handleExport}
+              disabled={exporting}
+              className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-medium text-white bg-brand-red/20 border border-brand-red/30 hover:bg-brand-red/30 transition-colors admin-btn-press disabled:opacity-50"
+            >
+              <Download className="w-3 h-3" /> {exporting ? 'Exporting…' : 'Export PDF'}
+            </button>
+            <button
+              onClick={handleShare}
+              className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-medium text-gray-400 bg-white/[0.04] border border-white/[0.06] hover:bg-white/[0.08] transition-colors admin-btn-press"
+            >
+              <Share2 className="w-3 h-3" /> Share
+            </button>
           </div>
         </div>
       </AdminGlass>
@@ -542,13 +716,13 @@ function BuilderTab({ showToast }: { showToast: Props['showToast'] }) {
               </div>
             ) : (
               <div className="space-y-3">
-                {canvasBlocks.map(({ id, block }) => (
+                {canvasBlocks.map(({ id, block, props }) => (
                   <div key={id} onClick={() => setSelectedId(id)} className={`relative p-4 rounded-xl border transition-all cursor-pointer group ${selectedId === id ? 'border-brand-red/40 bg-brand-red/5' : 'border-white/[0.08] bg-white/[0.03] hover:border-white/[0.15]'}`}>
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
                         <GripVertical className="w-3.5 h-3.5 text-gray-600 cursor-grab" />
                         <block.icon className="w-4 h-4 text-gray-400" />
-                        <span className="text-sm text-white">{block.label}</span>
+                        <span className="text-sm text-white">{props?.title || block.label}</span>
                         <span className="text-[10px] text-gray-600 uppercase">{block.category}</span>
                       </div>
                       <button onClick={e => { e.stopPropagation(); removeBlock(id) }} className="opacity-0 group-hover:opacity-100 text-gray-500 hover:text-red-400 transition-all"><XCircle className="w-4 h-4" /></button>
@@ -570,9 +744,34 @@ function BuilderTab({ showToast }: { showToast: Props['showToast'] }) {
                           <Paperclip className="w-4 h-4 text-gray-600 flex-shrink-0" />
                         </div>
                       </div>
+                    ) : block.type === 'logo' ? (
+                      <div className="mt-3 py-4 rounded-lg bg-white border border-white/[0.04] flex items-center justify-center">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src="/images/brand/ghl-logo-full-red.png" alt="GHL India Ventures" style={{ height: 40, width: 'auto' }} />
+                      </div>
+                    ) : block.type === 'divider' ? (
+                      <div className="mt-3 h-px bg-white/[0.1]" />
+                    ) : block.type === 'text' ? (
+                      <div className="mt-3 rounded-lg bg-white/[0.02] border border-white/[0.04] p-3">
+                        <p className="text-xs text-gray-300 whitespace-pre-wrap leading-relaxed">
+                          {props?.text || 'Click to edit text in the Properties panel →'}
+                        </p>
+                      </div>
                     ) : (
-                      <div className="mt-3 h-16 rounded-lg bg-white/[0.02] border border-white/[0.04] flex items-center justify-center">
-                        <span className="text-xs text-gray-600">{block.type === 'chart' ? 'Chart Preview' : block.type === 'kpi' ? 'KPI Data' : block.type === 'table' ? 'Table Data' : `${block.label} content`}</span>
+                      <div className="mt-3 rounded-lg bg-white/[0.02] border border-white/[0.04] px-3 py-2">
+                        <p className="text-[10px] text-gray-500 uppercase tracking-wider">
+                          {block.type === 'kpi' ? 'KPI Card' :
+                           block.type === 'table' ? `Table — ${props?.dataSource || 'Revenue Data'}` :
+                           block.type === 'chart' ? `${props?.chartType || 'Area Chart'} — ${props?.dataSource || 'Revenue Data'}` :
+                           block.type === 'comparison' ? 'Period Comparison' :
+                           block.type === 'ai-summary' ? 'AI Executive Summary' :
+                           block.type === 'ai-forecast' ? 'AI Revenue Forecast' :
+                           block.type === 'ai-recs' ? 'AI Recommendations' :
+                           block.label}
+                        </p>
+                        <p className="text-[10px] text-gray-600 mt-1">
+                          Renders live data from your dashboards in Preview &amp; PDF.
+                        </p>
                       </div>
                     )}
                   </div>
@@ -587,16 +786,90 @@ function BuilderTab({ showToast }: { showToast: Props['showToast'] }) {
           <div className="col-span-12 lg:col-span-3">
             <AdminGlass>
               <h4 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Properties</h4>
-              {selectedId ? (
-                <div className="space-y-4">
-                  <div><label className="text-[10px] text-gray-500 uppercase">Block Title</label><input className="w-full mt-1 px-3 py-2 rounded-lg bg-white/[0.04] border border-white/[0.08] text-sm text-white focus:outline-none focus:border-brand-red/40" placeholder="Enter title..." /></div>
-                  <div><label className="text-[10px] text-gray-500 uppercase">Data Source</label><select className="w-full mt-1 px-3 py-2 rounded-lg bg-white/[0.04] border border-white/[0.08] text-sm text-gray-300 focus:outline-none"><option>Revenue Data</option><option>Client Data</option><option>Campaign Data</option><option>Staff Data</option></select></div>
-                  <div><label className="text-[10px] text-gray-500 uppercase">Date Range</label><select className="w-full mt-1 px-3 py-2 rounded-lg bg-white/[0.04] border border-white/[0.08] text-sm text-gray-300 focus:outline-none"><option>This Month</option><option>This Quarter</option><option>This Year</option><option>Last 12 Months</option></select></div>
-                  <div><label className="text-[10px] text-gray-500 uppercase">Chart Type</label><select className="w-full mt-1 px-3 py-2 rounded-lg bg-white/[0.04] border border-white/[0.08] text-sm text-gray-300 focus:outline-none"><option>Area Chart</option><option>Bar Chart</option><option>Line Chart</option><option>Pie Chart</option><option>Donut Chart</option></select></div>
-                </div>
-              ) : (
-                <div className="text-center py-8"><Eye className="w-6 h-6 text-gray-600 mx-auto mb-2" /><p className="text-xs text-gray-500">Select a block on the canvas to edit its properties</p></div>
-              )}
+              {(() => {
+                const selected = selectedId ? canvasBlocks.find(b => b.id === selectedId) : null
+                if (!selected) {
+                  return (
+                    <div className="text-center py-8"><Eye className="w-6 h-6 text-gray-600 mx-auto mb-2" /><p className="text-xs text-gray-500">Select a block on the canvas to edit its properties</p></div>
+                  )
+                }
+                const p = selected.props || {}
+                const showText = selected.block.type === 'text'
+                const showChart = selected.block.type === 'chart'
+                const showData = ['table', 'chart'].includes(selected.block.type)
+                const showRange = ['kpi', 'table', 'chart', 'comparison', 'ai-forecast', 'ai-summary', 'ai-recs'].includes(selected.block.type)
+                return (
+                  <div className="space-y-4">
+                    <div>
+                      <label className="text-[10px] text-gray-500 uppercase">Block Title</label>
+                      <input
+                        value={p.title || ''}
+                        onChange={e => setBlockProps(selected.id, { title: e.target.value })}
+                        className="w-full mt-1 px-3 py-2 rounded-lg bg-white/[0.04] border border-white/[0.08] text-sm text-white focus:outline-none focus:border-brand-red/40"
+                        placeholder={selected.block.label}
+                      />
+                    </div>
+                    {showText && (
+                      <div>
+                        <label className="text-[10px] text-gray-500 uppercase">Body Text</label>
+                        <textarea
+                          value={p.text || ''}
+                          onChange={e => setBlockProps(selected.id, { text: e.target.value })}
+                          rows={5}
+                          className="w-full mt-1 px-3 py-2 rounded-lg bg-white/[0.04] border border-white/[0.08] text-sm text-white focus:outline-none focus:border-brand-red/40"
+                          placeholder="Enter heading or paragraph text…"
+                        />
+                      </div>
+                    )}
+                    {showData && (
+                      <div>
+                        <label className="text-[10px] text-gray-500 uppercase">Data Source</label>
+                        <select
+                          value={p.dataSource || 'Revenue Data'}
+                          onChange={e => setBlockProps(selected.id, { dataSource: e.target.value })}
+                          className="w-full mt-1 px-3 py-2 rounded-lg bg-white/[0.04] border border-white/[0.08] text-sm text-gray-300 focus:outline-none"
+                        >
+                          <option>Revenue Data</option>
+                          <option>Client Data</option>
+                          <option>Campaign Data</option>
+                          <option>Staff Data</option>
+                        </select>
+                      </div>
+                    )}
+                    {showRange && (
+                      <div>
+                        <label className="text-[10px] text-gray-500 uppercase">Date Range</label>
+                        <select
+                          value={p.dateRange || 'This Month'}
+                          onChange={e => setBlockProps(selected.id, { dateRange: e.target.value })}
+                          className="w-full mt-1 px-3 py-2 rounded-lg bg-white/[0.04] border border-white/[0.08] text-sm text-gray-300 focus:outline-none"
+                        >
+                          <option>This Month</option>
+                          <option>This Quarter</option>
+                          <option>This Year</option>
+                          <option>Last 12 Months</option>
+                        </select>
+                      </div>
+                    )}
+                    {showChart && (
+                      <div>
+                        <label className="text-[10px] text-gray-500 uppercase">Chart Type</label>
+                        <select
+                          value={p.chartType || 'Area Chart'}
+                          onChange={e => setBlockProps(selected.id, { chartType: e.target.value })}
+                          className="w-full mt-1 px-3 py-2 rounded-lg bg-white/[0.04] border border-white/[0.08] text-sm text-gray-300 focus:outline-none"
+                        >
+                          <option>Area Chart</option>
+                          <option>Bar Chart</option>
+                          <option>Line Chart</option>
+                          <option>Pie Chart</option>
+                          <option>Donut Chart</option>
+                        </select>
+                      </div>
+                    )}
+                  </div>
+                )
+              })()}
             </AdminGlass>
           </div>
         )}
@@ -702,6 +975,63 @@ function BuilderTab({ showToast }: { showToast: Props['showToast'] }) {
             </div>
           </div>
         </AdminGlass>
+      )}
+
+      {/* Off-screen render target for html2canvas — always mounted so the
+          Export button can capture even when the Preview modal is closed.
+          Position: fixed + visibility hidden keeps it out of the viewport
+          without affecting layout, but html2canvas can still walk the DOM. */}
+      <div
+        aria-hidden="true"
+        style={{
+          position: 'fixed',
+          left: '-10000px',
+          top: 0,
+          width: '794px',
+          pointerEvents: 'none',
+        }}
+      >
+        <ReportPreview ref={previewRef} title={reportTitle} blocks={buildDraft().blocks} />
+      </div>
+
+      {/* Preview Modal */}
+      {showPreview && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4"
+          onClick={() => setShowPreview(false)}
+        >
+          <div
+            className="relative bg-white rounded-xl shadow-2xl max-w-[860px] w-full max-h-[90vh] overflow-hidden"
+            onClick={e => e.stopPropagation()}
+          >
+            {/* Modal header */}
+            <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 bg-gray-50">
+              <div className="flex items-center gap-2">
+                <Eye className="w-4 h-4 text-gray-600" />
+                <h3 className="text-sm font-semibold text-gray-900">Preview &mdash; {reportTitle}</h3>
+              </div>
+              <div className="flex gap-2">
+                <button
+                  onClick={handleExport}
+                  disabled={exporting}
+                  className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-medium text-white bg-brand-red hover:bg-brand-red/90 transition-colors disabled:opacity-50"
+                >
+                  <Download className="w-3 h-3" /> {exporting ? 'Exporting…' : 'Export PDF'}
+                </button>
+                <button
+                  onClick={() => setShowPreview(false)}
+                  className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-medium text-gray-600 bg-gray-200 hover:bg-gray-300 transition-colors"
+                >
+                  <XCircle className="w-3 h-3" /> Close
+                </button>
+              </div>
+            </div>
+            {/* Modal body — scrollable preview */}
+            <div className="overflow-y-auto" style={{ maxHeight: 'calc(90vh - 56px)' }}>
+              <ReportPreview title={reportTitle} blocks={buildDraft().blocks} />
+            </div>
+          </div>
+        </div>
       )}
     </div>
   )

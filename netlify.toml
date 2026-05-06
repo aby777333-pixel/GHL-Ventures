@@ -9,6 +9,18 @@
 [build.environment]
   NODE_VERSION = "18"
 
+# API proxy alias — Netlify Functions live at /.netlify/functions/<name> by
+# default. Several client modules (admin/staff/client claudeApi, chatKnowledge,
+# VoiceCompanion) call the shorter /api/<name> path. Without this rewrite the
+# catch-all /* → /404.html below intercepts them, returning a 404 HTML page
+# that the client surfaces as "All models failed. Last error: Model X not
+# found". Keep this redirect ABOVE the catch-all.
+[[redirects]]
+  from = "/api/*"
+  to = "/.netlify/functions/:splat"
+  status = 200
+  force = true
+
 # Financial IQ dynamic slugs — any /financial-iq/<slug> path that doesn't
 # have a pre-built static file (e.g. articles created since the last
 # deploy) falls back to the "What Is an AIF" shell. Its DynamicFIQViewer

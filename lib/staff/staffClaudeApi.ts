@@ -57,10 +57,15 @@ export interface ClaudeMessage {
   content: string
 }
 
-// Older Claude 3.x IDs were retired by Anthropic and now 404.
+// Both alias-style and dated IDs — fall through to widely-deployed
+// dated builds when newer aliases aren't live on this account / plan.
 const CLAUDE_MODELS = [
-  'claude-sonnet-4-6',
+  'claude-sonnet-4-5-20250929',
+  'claude-sonnet-4-5',
   'claude-haiku-4-5-20251001',
+  'claude-haiku-4-5',
+  'claude-3-5-sonnet-20241022',
+  'claude-3-5-haiku-20241022',
 ]
 
 const PROXY_URL = '/api/claude-proxy'

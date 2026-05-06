@@ -100,7 +100,10 @@ export default async (request: Request) => {
         'content-type': 'application/json',
       },
       body: JSON.stringify({
-        model: model || 'claude-sonnet-4-6',
+        // Default to a dated model ID known to be live on the API. The client
+        // walks its own fallback chain so this default is only used when the
+        // caller omits the model field entirely.
+        model: model || 'claude-sonnet-4-5-20250929',
         max_tokens: max_tokens || 1024,
         ...(system ? { system } : {}),
         messages,
