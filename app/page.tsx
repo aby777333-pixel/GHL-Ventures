@@ -589,12 +589,24 @@ function InvestmentCapabilities() {
   ]
 
   return (
-    <section className="section-padding bg-white">
-      <div className="container-max mx-auto">
+    <section className="pillars-section relative section-padding overflow-hidden">
+      {/* Background image — paddy field at sunset */}
+      <picture className="pillars-bg absolute inset-0 pointer-events-none select-none">
+        <source srcSet="/images/home/pillars-bg-sm.webp" type="image/webp" media="(max-width: 768px)" />
+        <source srcSet="/images/home/pillars-bg.webp" type="image/webp" />
+        <img
+          src="/images/home/pillars-bg.jpg"
+          alt=""
+          aria-hidden="true"
+          className="w-full h-full object-cover"
+        />
+      </picture>
+
+      <div className="container-max mx-auto relative z-10">
         <AnimatedSection className="text-center mb-10">
-          <span className="eyebrow">Our Approach</span>
-          <h2 className="section-title mt-3 text-brand-black">Six Pillars of Our Investment Philosophy</h2>
-          <p className="section-subtitle mx-auto mt-4">
+          <span className="eyebrow pillars-eyebrow">Our Approach</span>
+          <h2 className="section-title mt-3 pillars-heading">Six Pillars of Our Investment Philosophy</h2>
+          <p className="section-subtitle mx-auto mt-4 pillars-subtitle">
             We don&apos;t just invest capital — we invest conviction.
           </p>
         </AnimatedSection>

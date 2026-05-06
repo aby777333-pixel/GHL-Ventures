@@ -4606,3 +4606,25 @@ button[type="submit"].inline-flex {
   text-shadow: 0 1px 6px rgba(0, 0, 0, 0.7);
 }
 
+/* Six Pillars of Our Investment Philosophy — paddy/tractor sunset
+   background. White cards keep their own contrast; heading + eyebrow
+   + subtitle get strong text-shadows so they stay legible against any
+   region of the photograph. */
+.pillars-section {
+  background-color: #2a3a1f;
+}
+.pillars-heading {
+  color: #ffffff !important;
+  text-shadow:
+    0 2px 8px rgba(0, 0, 0, 0.7),
+    0 0 28px rgba(0, 0, 0, 0.5);
+}
+.pillars-eyebrow {
+  color: rgba(255, 255, 255, 0.92) !important;
+  text-shadow: 0 1px 6px rgba(0, 0, 0, 0.75);
+}
+.pillars-subtitle {
+  color: rgba(255, 255, 255, 0.92) !important;
+  text-shadow: 0 1px 8px rgba(0, 0, 0, 0.75);
+}
+
