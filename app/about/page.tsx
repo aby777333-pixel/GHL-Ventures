@@ -12,7 +12,6 @@ import {
   Lightbulb, Lock, ChevronDown, ChevronUp, Linkedin,
   Home, ChevronRight, Building2, Sparkles, MapPin, Play
 } from 'lucide-react'
-import SpaceHero from '@/components/SpaceHero'
 
 /* ───────────────────────────── VIDEO PLAYER ───────────────────────────── */
 function AboutVideoPlayer() {
@@ -68,14 +67,19 @@ function AboutVideoPlayer() {
 /* ───────────────────────────── 1. HERO ───────────────────────────── */
 function AboutHero() {
   return (
-    <section className="relative min-h-[80vh] flex items-center gradient-dark overflow-hidden">
-      {/* Space: Constellation theme */}
-      <SpaceHero variant="constellation" />
-      {/* Decorative blurs */}
-      <div className="absolute inset-0 opacity-10">
-        <div className="absolute top-20 right-20 w-96 h-96 bg-brand-red rounded-full blur-3xl" />
-        <div className="absolute bottom-10 left-10 w-64 h-64 bg-brand-red rounded-full blur-3xl" />
-      </div>
+    <section className="about-hero relative min-h-[80vh] flex items-center overflow-hidden">
+      {/* Background image — Indian flag ink swirl. No overlay; hero
+          headline is white and sits on the dark left half of the photo. */}
+      <picture className="absolute inset-0 pointer-events-none select-none">
+        <source srcSet="/images/about/hero-bg-sm.webp" type="image/webp" media="(max-width: 768px)" />
+        <source srcSet="/images/about/hero-bg.webp" type="image/webp" />
+        <img
+          src="/images/about/hero-bg.jpg"
+          alt=""
+          aria-hidden="true"
+          className="w-full h-full object-cover"
+        />
+      </picture>
 
       <div className="container-max mx-auto px-4 sm:px-6 lg:px-8 relative z-10 pt-40 pb-12">
         <AnimatedSection>

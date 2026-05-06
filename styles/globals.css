@@ -4645,3 +4645,10 @@ button[type="submit"].inline-flex {
   display: none;
 }
 
+/* About page hero — Indian-flag ink-swirl background, no overlay.
+   Fallback color matches the photo's dark left edge so the brief
+   pre-image-load state isn't visually jarring. */
+.about-hero {
+  background-color: #0a0d14;
+}
+
