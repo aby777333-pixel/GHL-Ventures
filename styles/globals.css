@@ -4498,7 +4498,7 @@ button[type="submit"].inline-flex {
 :root:not(.dark) body:not(.dashboard-active):not(.admin-active):not(.staff-active) .hero-glass-card.hero-glass-card h1,
 :root:not(.dark) body:not(.dashboard-active):not(.admin-active):not(.staff-active) .hero-glass-card.hero-glass-card h2,
 :root:not(.dark) body:not(.dashboard-active):not(.admin-active):not(.staff-active) .hero-glass-card.hero-glass-card p,
-:root:not(.dark) body:not(.dashboard-active):not(.admin-active):not(.staff-active) .hero-glass-card.hero-glass-card span:not([class*="text-brand-red"]):not([class*="text-gradient-shimmer"]) {
+:root:not(.dark) body:not(.dashboard-active):not(.admin-active):not(.staff-active) .hero-glass-card.hero-glass-card span:not([class*="text-brand-red"]):not([class*="text-gradient-shimmer"]):not(.hero-trust-pill) {
   color: #ffffff !important;
 }
 

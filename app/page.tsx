@@ -646,71 +646,58 @@ function VideoFeature() {
 }
 
 /* ================================================================
-   SECTION 6: Why Choose Us (Alternating Layout)
+   SECTION 6: Why Choose Us (Compact 4-Card Grid)
    ================================================================ */
 function WhyChooseUs() {
   const features = [
     {
       title: 'SEBI-Regulated Trust',
-      desc: 'Our registration as a Category II Alternative Investment Fund (IN/AIF2/24-25/1517) guarantees full regulatory compliance, third-party audits, and custodial safeguards for every rupee you commit.',
+      desc: 'Category II AIF (IN/AIF2/24-25/1517). Full regulatory compliance, third-party audits, and custodial safeguards on every rupee.',
       icon: Shield,
-      img: '/images/home/sebi-regulated.jpg',
     },
     {
       title: 'Diversified Portfolio',
-      desc: 'We focus on high-conviction plays in stressed real estate recovery, offering built-in diversification across asset types, geographies, and time horizons.',
+      desc: 'High-conviction plays in stressed real estate recovery, with built-in diversification across asset types, geographies, and horizons.',
       icon: BarChart3,
-      img: '/images/home/diversified-portfolio.jpg',
     },
     {
       title: 'Expert-Led Strategy',
-      desc: 'Our investment committee brings 25+ years of experience spanning private equity, structured finance, and entrepreneurial growth. Every decision is backed by rigorous analysis.',
+      desc: '25+ years across private equity, structured finance, and entrepreneurial growth. Every decision backed by rigorous analysis.',
       icon: Target,
-      img: '/images/home/expert-strategy.jpg',
     },
     {
       title: 'Investor-First Approach',
-      desc: 'Quarterly NAV reporting, transparent fee structures, dedicated relationship managers, and a governance framework that places investor interests at the absolute centre of every decision.',
+      desc: 'Quarterly NAV reporting, transparent fees, dedicated relationship managers, and governance that puts investors first.',
       icon: Users,
-      img: '/images/home/investor-first.jpg',
     },
   ]
 
   return (
-    <section className="section-padding bg-brand-offwhite">
+    <section className="py-16 md:py-20 bg-brand-offwhite">
       <div className="container-max mx-auto">
         <AnimatedSection className="text-center mb-10">
           <span className="eyebrow">The GHL Advantage</span>
           <h2 className="section-title mt-3 text-brand-black">Why Choose Us</h2>
         </AnimatedSection>
 
-        <div className="space-y-14">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 md:gap-6">
           {features.map((f, i) => {
-            const isEven = i % 2 === 0
+            const Icon = f.icon
             return (
-              <div
-                key={f.title}
-                className={`grid lg:grid-cols-2 gap-12 items-center ${isEven ? '' : 'lg:direction-rtl'}`}
-              >
-                {/* Image placeholder */}
-                <AnimatedSection direction={isEven ? 'left' : 'right'} className={isEven ? '' : 'lg:order-2'}>
-                  <div className="relative aspect-[4/3] bg-gray-900 overflow-hidden card-img-zoom group/img rounded-3xl">
-                    <img src={f.img} alt={f.title} className="w-full h-full object-cover transition-transform duration-500" loading="lazy" />
-                    <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent p-4 translate-y-1 opacity-90 group-hover/img:translate-y-0 group-hover/img:opacity-100 transition-all duration-300">
-                      <p className="text-white/90 text-xs font-medium">{f.title}</p>
+              <AnimatedSection key={f.title} delay={i * 100}>
+                <div className="card hover-lift h-full p-6 relative overflow-hidden">
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="w-11 h-11 rounded-xl bg-brand-red/10 text-brand-red flex items-center justify-center">
+                      <Icon className="w-5 h-5" />
                     </div>
+                    <span className="text-[11px] font-bold uppercase tracking-widest text-brand-red/70">
+                      0{i + 1}
+                    </span>
                   </div>
-                </AnimatedSection>
-
-                {/* Text */}
-                <AnimatedSection direction={isEven ? 'right' : 'left'} className={isEven ? '' : 'lg:order-1'}>
-                  <span className="inline-block px-3 py-1 bg-brand-red/10 text-brand-red text-xs font-bold uppercase tracking-widest rounded-full mb-4">
-                    0{i + 1}
-                  </span>
-                  <h3 className="text-xl md:text-2xl font-bold text-brand-black mb-3">{f.title}</h3>
-                  <p className="text-brand-grey text-base leading-relaxed">{f.desc}</p>
-                </AnimatedSection>
-              </div>
+                  <h3 className="text-base md:text-lg font-bold text-brand-black mb-2 leading-snug">{f.title}</h3>
+                  <p className="text-brand-grey text-sm leading-relaxed">{f.desc}</p>
+                </div>
+              </AnimatedSection>
             )
           })}
         </div>
