@@ -338,7 +338,7 @@ export async function getAIResponse(input: string): Promise<string> {
         system: ARIA_SYSTEM_PROMPT,
         messages: [{ role: 'user', content: input }],
         max_tokens: 300,
-        model: 'claude-3-haiku-20240307', // Fast & cheap for visitor chat
+        model: 'claude-haiku-4-5-20251001', // Fast & cheap for visitor chat (Haiku 4.5; old 3.x haiku was retired)
       }),
     })
 

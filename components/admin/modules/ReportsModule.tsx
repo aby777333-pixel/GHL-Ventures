@@ -1575,7 +1575,7 @@ function EmailerTab({ showToast }: { showToast: Props['showToast'] }) {
                   setBody(t.body)
                   showToast(`Template loaded: ${t.name}`, 'info')
                 }}
-                className={`w-full text-left p-3 rounded-xl border transition-colors ${selectedTemplate === t.id ? 'border-brand-red/30 bg-brand-red/5' : 'border-white/[0.06] bg-white/[0.02] hover:bg-white/[0.04]'}`}
+                className={`w-full justify-start text-left p-3 rounded-xl border transition-colors ${selectedTemplate === t.id ? 'border-brand-red/30 bg-brand-red/5' : 'border-white/[0.06] bg-white/[0.02] hover:bg-white/[0.04]'}`}
               >
                 <p className="text-xs text-white font-medium">{t.name}</p>
                 <p className="text-[10px] text-gray-500 mt-0.5">{t.category} · {t.mergeTags.length} fillers</p>

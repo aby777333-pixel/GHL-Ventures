@@ -115,11 +115,12 @@ export interface ClaudeMessage {
   content: string
 }
 
-// Models to try in order of preference
+// Models to try in order of preference. Older Claude 3.x IDs were
+// retired by Anthropic and now return 404 ("Model ... not found"),
+// which surfaced as "AI Error: All models failed" in the UI.
 const CLAUDE_MODELS = [
-  'claude-sonnet-4-20250514',
-  'claude-3-5-sonnet-20241022',
-  'claude-3-haiku-20240307',
+  'claude-sonnet-4-6',
+  'claude-haiku-4-5-20251001',
 ]
 
 // Proxy endpoint — Netlify function keeps the API key server-side
