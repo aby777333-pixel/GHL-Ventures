@@ -11,17 +11,16 @@ import {
   CheckCircle, Home, ChevronRight, ChevronDown, ChevronUp,
   DollarSign, Eye, Award, ShieldCheck, Activity
 } from 'lucide-react'
-import SpaceHero from '@/components/SpaceHero'
 
 /* ───────────────────────────── 1. HERO — City Theme ───────────────────────────── */
 function WhyAIFsHero() {
   return (
-    <section className="relative min-h-[60vh] flex items-center gradient-dark overflow-hidden">
-      <SpaceHero variant="city" />
-      <div className="absolute inset-0 opacity-10">
-        <div className="absolute top-16 left-20 w-80 h-80 bg-brand-red rounded-full blur-3xl" />
-        <div className="absolute bottom-10 right-10 w-56 h-56 bg-amber-500 rounded-full blur-3xl" />
-      </div>
+    <section className="relative min-h-[80vh] flex items-center bg-brand-black overflow-hidden">
+      <picture aria-hidden="true">
+        <source srcSet="/images/heros/why-aifs-hero-sm.jpg" media="(max-width: 768px)" />
+        <img src="/images/heros/why-aifs-hero.jpg" alt="" className="absolute inset-0 w-full h-full object-cover pointer-events-none select-none" loading="eager" decoding="async" />
+      </picture>
+      <div className="absolute inset-0 bg-gradient-to-r from-black/85 via-black/60 to-black/40 pointer-events-none" />
 
       <div className="container-max mx-auto px-4 sm:px-6 lg:px-8 relative z-10 pt-32 pb-20">
         <AnimatedSection>

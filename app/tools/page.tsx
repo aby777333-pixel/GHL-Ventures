@@ -8,7 +8,6 @@ import {
   IndianRupee, ArrowRight, ChevronDown, ChevronUp, Percent,
   Wallet, Home, LineChart, Scale, Coins, Globe, Star,
 } from 'lucide-react'
-import SpaceHero from '@/components/SpaceHero'
 
 /* ================================================================
    TYPES
@@ -1567,34 +1566,14 @@ export default function ToolsPage() {
   return (
     <>
       {/* ── HERO SECTION ── */}
-      <section
-        className="dark-surface relative min-h-[50vh] flex items-center overflow-hidden"
-        style={{ background: 'linear-gradient(135deg, #030014 0%, #0a0020 40%, #0d0010 70%, #0a0a0a 100%)' }}
-      >
-        <SpaceHero variant="wormhole" />
-        {/* Star field (fewer, decorative) */}
-        {Array.from({ length: 30 }, (_, i) => {
-          const positions = [
-            { x: 5, y: 10 }, { x: 15, y: 30 }, { x: 25, y: 15 }, { x: 35, y: 55 }, { x: 45, y: 20 },
-            { x: 55, y: 45 }, { x: 65, y: 12 }, { x: 75, y: 60 }, { x: 85, y: 25 }, { x: 95, y: 40 },
-            { x: 10, y: 70 }, { x: 20, y: 80 }, { x: 30, y: 42 }, { x: 40, y: 75 }, { x: 50, y: 8 },
-            { x: 60, y: 65 }, { x: 70, y: 35 }, { x: 80, y: 50 }, { x: 90, y: 18 }, { x: 3, y: 55 },
-            { x: 12, y: 48 }, { x: 28, y: 88 }, { x: 42, y: 62 }, { x: 58, y: 78 }, { x: 72, y: 85 },
-            { x: 88, y: 72 }, { x: 33, y: 5 }, { x: 52, y: 35 }, { x: 78, y: 15 }, { x: 92, y: 58 },
-          ]
-          const p = positions[i]
-          return (
-            <span
-              key={i}
-              className={`star ${i % 5 === 0 ? 'star-lg' : i % 3 === 0 ? 'star-md' : 'star-sm'}`}
-              style={{ top: `${p.y}%`, left: `${p.x}%`, animationDelay: `${(i * 0.37) % 3}s` }}
-            />
-          )
-        })}
+      <section className="dark-surface relative min-h-[80vh] flex items-center overflow-hidden bg-brand-black">
+        <picture aria-hidden="true">
+          <source srcSet="/images/heros/tools-hero-sm.jpg" media="(max-width: 768px)" />
+          <img src="/images/heros/tools-hero.jpg" alt="" className="absolute inset-0 w-full h-full object-cover pointer-events-none select-none" loading="eager" decoding="async" />
+        </picture>
+        <div className="absolute inset-0 bg-gradient-to-b from-black/70 via-black/55 to-black/70 pointer-events-none" />
 
-        <div className="absolute inset-0 pointer-events-none" style={{ background: 'radial-gradient(ellipse at 25% 50%, rgba(208, 2, 27, 0.08) 0%, transparent 60%)' }} />
-
-        <div className="container-max mx-auto px-4 sm:px-6 lg:px-8 relative z-10 pt-44 pb-16 text-center">
+        <div className="container-max mx-auto px-4 sm:px-6 lg:px-8 relative z-10 pt-44 pb-32 text-center">
           <AnimatedSection delay={0}>
             <div className="inline-flex items-center px-4 py-2 bg-brand-red/10 border border-brand-red/20 rounded-full mb-6 backdrop-blur-sm">
               <Calculator className="w-4 h-4 text-brand-red mr-2" />

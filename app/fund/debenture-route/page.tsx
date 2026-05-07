@@ -8,19 +8,18 @@ import {
   Wallet, Heart, Home, Briefcase, Clock,
   ArrowLeft, Star, IndianRupee, ShieldCheck, BarChart3
 } from 'lucide-react'
-import SpaceHero from '@/components/SpaceHero'
 import FundCalculatorSection from '@/components/FundCalculatorSection'
 
 export default function DebentureRoutePage() {
   return (
     <>
       {/* Hero */}
-      <section className="relative pt-40 pb-16 overflow-hidden gradient-dark">
-        <SpaceHero variant="supernova" />
-        <div className="absolute inset-0 overflow-hidden pointer-events-none">
-          <div className="absolute top-20 left-20 w-80 h-80 bg-brand-red/8 rounded-full blur-3xl" />
-          <div className="absolute bottom-10 right-10 w-60 h-60 bg-blue-500/5 rounded-full blur-3xl" />
-        </div>
+      <section className="relative pt-40 pb-44 md:pb-56 lg:pb-64 overflow-hidden bg-brand-black">
+        <picture aria-hidden="true">
+          <source srcSet="/images/heros/debenture-route-hero-sm.jpg" media="(max-width: 768px)" />
+          <img src="/images/heros/debenture-route-hero.jpg" alt="" className="absolute inset-0 w-full h-full object-cover pointer-events-none select-none" loading="eager" decoding="async" />
+        </picture>
+        <div className="absolute inset-0 bg-gradient-to-r from-black/85 via-black/60 to-black/40 pointer-events-none" />
         <div className="container-max mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
           <AnimatedSection>
             {/* Breadcrumb */}

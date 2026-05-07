@@ -8,19 +8,18 @@ import {
   BarChart3, Eye, FileText, Phone, Building2, Sparkles,
   ArrowLeft, Star
 } from 'lucide-react'
-import SpaceHero from '@/components/SpaceHero'
 import FundCalculatorSection from '@/components/FundCalculatorSection'
 
 export default function DirectAIFPage() {
   return (
     <>
       {/* Hero */}
-      <section className="relative pt-40 pb-16 gradient-dark overflow-hidden">
-        <SpaceHero variant="blackhole" />
-        <div className="absolute inset-0 overflow-hidden pointer-events-none">
-          <div className="absolute top-20 right-20 w-80 h-80 bg-brand-red/10 rounded-full blur-3xl" />
-          <div className="absolute bottom-10 left-10 w-60 h-60 bg-brand-red/5 rounded-full blur-3xl" />
-        </div>
+      <section className="relative pt-40 pb-44 md:pb-56 lg:pb-64 overflow-hidden bg-brand-black">
+        <picture aria-hidden="true">
+          <source srcSet="/images/heros/direct-aif-hero-sm.jpg" media="(max-width: 768px)" />
+          <img src="/images/heros/direct-aif-hero.jpg" alt="" className="absolute inset-0 w-full h-full object-cover pointer-events-none select-none" loading="eager" decoding="async" />
+        </picture>
+        <div className="absolute inset-0 bg-gradient-to-r from-black/80 via-black/55 to-black/30 pointer-events-none" />
         <div className="container-max mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
           <AnimatedSection>
             {/* Breadcrumb */}

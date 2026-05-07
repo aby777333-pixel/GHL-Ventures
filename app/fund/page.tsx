@@ -16,21 +16,19 @@ import {
   Search, ClipboardCheck, Gavel, Rocket, Eye,
   Building2, Sparkles, Layers, ShieldCheck, BarChart2
 } from 'lucide-react'
-import SpaceHero from '@/components/SpaceHero'
 import FundCalculatorSection from '@/components/FundCalculatorSection'
 
 /* ───────────────────────────── 1. HERO ───────────────────────────── */
 function FundHero() {
   return (
-    <section className="relative min-h-[80vh] flex items-center gradient-dark overflow-hidden">
-      {/* Space: Nebula theme */}
-      <SpaceHero variant="nebula" />
-      <div className="absolute inset-0 opacity-10">
-        <div className="absolute top-20 left-20 w-96 h-96 bg-brand-red rounded-full blur-3xl" />
-        <div className="absolute bottom-10 right-10 w-64 h-64 bg-brand-red rounded-full blur-3xl" />
-      </div>
+    <section className="relative min-h-[95vh] flex items-center bg-brand-black overflow-hidden">
+      <picture aria-hidden="true">
+        <source srcSet="/images/heros/fund-hero-sm.jpg" media="(max-width: 768px)" />
+        <img src="/images/heros/fund-hero.jpg" alt="" className="absolute inset-0 w-full h-full object-cover pointer-events-none select-none" loading="eager" decoding="async" />
+      </picture>
+      <div className="absolute inset-0 bg-gradient-to-r from-black/85 via-black/55 to-black/30 pointer-events-none" />
 
-      <div className="container-max mx-auto px-4 sm:px-6 lg:px-8 relative z-10 pt-40 pb-32">
+      <div className="container-max mx-auto px-4 sm:px-6 lg:px-8 relative z-10 pt-40 pb-44">
         <AnimatedSection>
           {/* Breadcrumb */}
           <nav className="flex items-center space-x-2 text-sm text-gray-400 mb-8">
