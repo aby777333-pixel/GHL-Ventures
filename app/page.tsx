@@ -686,18 +686,6 @@ function WhyChooseUs() {
 
   return (
     <section className="why-choose-section relative py-16 md:py-20 overflow-hidden">
-      {/* Background image (no overlay — cards provide their own contrast) */}
-      <picture className="why-choose-bg absolute inset-0 pointer-events-none select-none">
-        <source srcSet="/images/home/why-choose-bg-sm.webp" type="image/webp" media="(max-width: 768px)" />
-        <source srcSet="/images/home/why-choose-bg.webp" type="image/webp" />
-        <img
-          src="/images/home/why-choose-bg.jpg"
-          alt=""
-          aria-hidden="true"
-          className="w-full h-full object-cover"
-        />
-      </picture>
-
       <div className="container-max mx-auto relative z-10">
         <AnimatedSection className="text-center mb-10">
           <span className="eyebrow why-choose-eyebrow">The GHL Advantage</span>
@@ -885,15 +873,29 @@ function FinancialIQTeaser() {
   ]
 
   return (
-    <section className="relative py-14 md:py-20 overflow-hidden">
-      <div className="absolute inset-0 hero-gradient pointer-events-none" />
+    <section className="relative py-14 md:py-20 overflow-hidden bg-brand-black">
+      {/* Background image — moved over from "Why Choose Us". Sits behind a
+          dark overlay so the white heading + gray paragraph copy keep enough
+          contrast against the photograph. */}
+      <picture className="absolute inset-0 pointer-events-none select-none">
+        <source srcSet="/images/home/why-choose-bg-sm.webp" type="image/webp" media="(max-width: 768px)" />
+        <source srcSet="/images/home/why-choose-bg.webp" type="image/webp" />
+        <img
+          src="/images/home/why-choose-bg.jpg"
+          alt=""
+          aria-hidden="true"
+          className="w-full h-full object-cover"
+          loading="lazy"
+        />
+      </picture>
+      <div className="absolute inset-0 bg-black/65 pointer-events-none" />
       <div className="absolute top-0 right-0 w-96 h-96 bg-brand-red/20 rounded-full blur-[120px] pointer-events-none" />
 
       <div className="container-max mx-auto px-4 sm:px-6 lg:px-8 relative z-10 text-center">
         <AnimatedSection>
           <span className="eyebrow !text-brand-red">Learn &amp; Grow</span>
           <h2 className="section-title mt-3 text-white">Build Your Financial IQ</h2>
-          <p className="text-gray-400 text-base max-w-2xl mx-auto mt-3 mb-8">
+          <p className="text-gray-200 text-base max-w-2xl mx-auto mt-3 mb-8" style={{ textShadow: '0 1px 6px rgba(0,0,0,0.7)' }}>
             Knowledge is the ultimate edge. Explore curated content designed to sharpen your investment acumen.
           </p>
         </AnimatedSection>
