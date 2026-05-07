@@ -295,7 +295,7 @@ export default function Footer() {
 
           {/* ── Bottom Bar ── */}
           <div className="border-t border-white/10 pt-6">
-            <div className="flex flex-col lg:flex-row items-start justify-between gap-4 text-xs text-gray-500">
+            <div className="flex flex-col lg:flex-row items-start justify-between gap-4 text-xs text-gray-300">
               {/* Left */}
               <p className="text-left">
                 &copy; 2026 GHL India Ventures Trust. All Rights Reserved.
@@ -305,21 +305,21 @@ export default function Footer() {
               <div className="flex flex-wrap items-center justify-start lg:justify-center gap-x-4 gap-y-1">
                 <LegalLink
                   type="privacy"
-                  className="hover:text-brand-red transition-colors duration-200"
+                  className="text-gray-200 hover:text-brand-red transition-colors duration-200 font-medium"
                 >
                   Privacy Policy
                 </LegalLink>
-                <span className="text-white/20">|</span>
+                <span className="text-white/30">|</span>
                 <LegalLink
                   type="terms"
-                  className="hover:text-brand-red transition-colors duration-200"
+                  className="text-gray-200 hover:text-brand-red transition-colors duration-200 font-medium"
                 >
                   Terms &amp; Conditions
                 </LegalLink>
-                <span className="text-white/20">|</span>
+                <span className="text-white/30">|</span>
                 <LegalLink
                   type="disclaimer"
-                  className="hover:text-brand-red transition-colors duration-200"
+                  className="text-gray-200 hover:text-brand-red transition-colors duration-200 font-medium"
                 >
                   Disclaimer
                 </LegalLink>

@@ -699,18 +699,51 @@ button svg, button .lucide, [role="button"] svg {
    mix LIGHT inner cards (bg-gray-50) with WHITE text and yield
    invisible characters. See components/LegalPopup.tsx.
    ─────────────────────────────────────────────────────────────── */
-:root.dark .legal-modal-panel.bg-white,
-:root.dark .legal-modal-panel .bg-white {
+/* The panel is always rendered as a white card regardless of theme.
+   The leading `:root:not(.dark)` plus a doubled `.legal-modal-panel`
+   selector is intentional: it pushes specificity past the
+   marketing-site safety-net rule
+   `:root:not(.dark) body... [class*="absolute"][class*="inset"] p`
+   that otherwise repainted `<p>` white inside the modal (the popup
+   wrapper is positioned `absolute inset-0`).
+   Specificity here is (0, 8, 1); the safety net is (0, 7, 2). */
+:root:not(.dark) body:not(.dashboard-active):not(.admin-active):not(.staff-active) .legal-modal-panel.legal-modal-panel.bg-white,
+:root:not(.dark) body:not(.dashboard-active):not(.admin-active):not(.staff-active) .legal-modal-panel.legal-modal-panel .bg-white,
+:root.dark body:not(.dashboard-active):not(.admin-active):not(.staff-active) .legal-modal-panel.legal-modal-panel.bg-white,
+:root.dark body:not(.dashboard-active):not(.admin-active):not(.staff-active) .legal-modal-panel.legal-modal-panel .bg-white {
   background-color: #FFFFFF !important;
   color: #111827 !important;
 }
-:root.dark .legal-modal-panel .text-brand-black { color: #0A0A0A !important; }
-:root.dark .legal-modal-panel .text-brand-grey  { color: #6B7280 !important; }
-:root.dark .legal-modal-panel .bg-brand-offwhite { background-color: #F8F7F5 !important; color: #0A0A0A !important; }
-:root.dark .legal-modal-panel .bg-gray-50  { background-color: #F9FAFB !important; }
-:root.dark .legal-modal-panel .bg-gray-100 { background-color: #F3F4F6 !important; }
-:root.dark .legal-modal-panel .border-gray-200 { border-color: #E5E7EB !important; }
-:root.dark .legal-modal-panel strong { color: #111827; }
+:root:not(.dark) body:not(.dashboard-active):not(.admin-active):not(.staff-active) .legal-modal-panel.legal-modal-panel h1,
+:root:not(.dark) body:not(.dashboard-active):not(.admin-active):not(.staff-active) .legal-modal-panel.legal-modal-panel h2,
+:root:not(.dark) body:not(.dashboard-active):not(.admin-active):not(.staff-active) .legal-modal-panel.legal-modal-panel h3,
+:root:not(.dark) body:not(.dashboard-active):not(.admin-active):not(.staff-active) .legal-modal-panel.legal-modal-panel h4,
+:root:not(.dark) body:not(.dashboard-active):not(.admin-active):not(.staff-active) .legal-modal-panel.legal-modal-panel .text-brand-black,
+:root.dark body:not(.dashboard-active):not(.admin-active):not(.staff-active) .legal-modal-panel.legal-modal-panel h1,
+:root.dark body:not(.dashboard-active):not(.admin-active):not(.staff-active) .legal-modal-panel.legal-modal-panel h2,
+:root.dark body:not(.dashboard-active):not(.admin-active):not(.staff-active) .legal-modal-panel.legal-modal-panel h3,
+:root.dark body:not(.dashboard-active):not(.admin-active):not(.staff-active) .legal-modal-panel.legal-modal-panel h4,
+:root.dark body:not(.dashboard-active):not(.admin-active):not(.staff-active) .legal-modal-panel.legal-modal-panel .text-brand-black { color: #0A0A0A !important; }
+:root:not(.dark) body:not(.dashboard-active):not(.admin-active):not(.staff-active) .legal-modal-panel.legal-modal-panel p,
+:root:not(.dark) body:not(.dashboard-active):not(.admin-active):not(.staff-active) .legal-modal-panel.legal-modal-panel li,
+:root:not(.dark) body:not(.dashboard-active):not(.admin-active):not(.staff-active) .legal-modal-panel.legal-modal-panel .text-brand-grey,
+:root.dark body:not(.dashboard-active):not(.admin-active):not(.staff-active) .legal-modal-panel.legal-modal-panel p,
+:root.dark body:not(.dashboard-active):not(.admin-active):not(.staff-active) .legal-modal-panel.legal-modal-panel li,
+:root.dark body:not(.dashboard-active):not(.admin-active):not(.staff-active) .legal-modal-panel.legal-modal-panel .text-brand-grey { color: #4B5563 !important; }
+:root:not(.dark) body:not(.dashboard-active):not(.admin-active):not(.staff-active) .legal-modal-panel.legal-modal-panel strong,
+:root.dark body:not(.dashboard-active):not(.admin-active):not(.staff-active) .legal-modal-panel.legal-modal-panel strong { color: #111827 !important; }
+:root:not(.dark) body:not(.dashboard-active):not(.admin-active):not(.staff-active) .legal-modal-panel.legal-modal-panel .bg-brand-offwhite,
+:root.dark body:not(.dashboard-active):not(.admin-active):not(.staff-active) .legal-modal-panel.legal-modal-panel .bg-brand-offwhite { background-color: #F8F7F5 !important; }
+:root:not(.dark) body:not(.dashboard-active):not(.admin-active):not(.staff-active) .legal-modal-panel.legal-modal-panel .bg-gray-50,
+:root.dark body:not(.dashboard-active):not(.admin-active):not(.staff-active) .legal-modal-panel.legal-modal-panel .bg-gray-50 { background-color: #F9FAFB !important; }
+:root:not(.dark) body:not(.dashboard-active):not(.admin-active):not(.staff-active) .legal-modal-panel.legal-modal-panel .bg-gray-100,
+:root.dark body:not(.dashboard-active):not(.admin-active):not(.staff-active) .legal-modal-panel.legal-modal-panel .bg-gray-100 { background-color: #F3F4F6 !important; }
+:root:not(.dark) body:not(.dashboard-active):not(.admin-active):not(.staff-active) .legal-modal-panel.legal-modal-panel .border-gray-200,
+:root.dark body:not(.dashboard-active):not(.admin-active):not(.staff-active) .legal-modal-panel.legal-modal-panel .border-gray-200 { border-color: #E5E7EB !important; }
+/* Brand-coloured accents (red links/badges inside the modal) keep
+   their hue. */
+:root:not(.dark) body:not(.dashboard-active):not(.admin-active):not(.staff-active) .legal-modal-panel.legal-modal-panel .text-brand-red,
+:root.dark body:not(.dashboard-active):not(.admin-active):not(.staff-active) .legal-modal-panel.legal-modal-panel .text-brand-red { color: #D0021B !important; }
 
 /* Navbar scrolled state — always dark per 2026-04-20 design direction.
    Previously rendered white-on-scroll in light mode, producing an
