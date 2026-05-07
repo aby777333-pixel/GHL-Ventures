@@ -866,12 +866,12 @@ function BlogSection() {
    SECTION 9: Financial IQ Teaser
    ================================================================ */
 function FinancialIQTeaser() {
-  const pills = [
-    { icon: Video, label: 'Videos' },
-    { icon: FileText, label: 'Articles' },
-    { icon: BookOpen, label: 'Glossary' },
-  ]
-
+  // Per the 2026-05 site corrections, the Videos / Articles / Glossary
+  // pill row has been removed from this teaser — the section now leads
+  // straight from the headline + sub-copy into the "Explore Financial
+  // IQ" CTA. The pill list is intentionally not deleted from history;
+  // restoring the pills only requires bringing back the array + the
+  // .map() block.
   return (
     <section className="relative py-14 md:py-20 overflow-hidden bg-brand-black">
       {/* Background image — moved over from "Why Choose Us". Sits behind a
@@ -895,24 +895,12 @@ function FinancialIQTeaser() {
         <AnimatedSection>
           <span className="eyebrow !text-brand-red">Learn &amp; Grow</span>
           <h2 className="section-title mt-3 text-white">Build Your Financial IQ</h2>
-          <p className="text-gray-200 text-base max-w-2xl mx-auto mt-3 mb-8" style={{ textShadow: '0 1px 6px rgba(0,0,0,0.7)' }}>
+          <p className="text-gray-200 text-base max-w-2xl mx-auto mt-3 mb-10" style={{ textShadow: '0 1px 6px rgba(0,0,0,0.7)' }}>
             Knowledge is the ultimate edge. Explore curated content designed to sharpen your investment acumen.
           </p>
         </AnimatedSection>
 
         <AnimatedSection delay={200}>
-          <div className="flex flex-wrap justify-center gap-4 mb-12">
-            {pills.map(p => (
-              <span
-                key={p.label}
-                className="inline-flex items-center gap-2.5 px-6 py-3 bg-white/5 border border-white/10 rounded-full text-white text-sm font-semibold hover:bg-brand-red/20 hover:border-brand-red/30 transition-all cursor-pointer"
-              >
-                <p.icon className="w-4 h-4 text-brand-red" />
-                {p.label}
-              </span>
-            ))}
-          </div>
-
           <Link href="/financial-iq" className="btn-primary">
             Explore Financial IQ <ArrowRight className="ml-2 w-5 h-5" />
           </Link>
