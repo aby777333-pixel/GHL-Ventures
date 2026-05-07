@@ -4,8 +4,10 @@
    Mirrors the admin AIAdvisorTab pattern with client-specific context and questions. */
 
 import { useState, useEffect, useRef, useCallback } from 'react'
-import { Brain, Send, Sparkles, BookOpen, Shield, Globe, Gift, HelpCircle } from 'lucide-react'
+import { Brain, Send, Sparkles, BookOpen, Shield, Globe, Gift, HelpCircle, Trash2 } from 'lucide-react'
 import { callClientClaudeAPI, getClientSimulatedResponse, type ClaudeMessage } from '@/lib/client/clientClaudeApi'
+
+const CHAT_STORAGE_KEY = 'ghl_ai_advisor_messages_v1'
 
 interface Props {
   theme: 'dark' | 'light'
@@ -29,15 +31,33 @@ const TOPIC_CARDS = [
   { icon: HelpCircle, title: 'Fee Structure', desc: 'Management fees, charges', color: '#EC4899' },
 ]
 
+const WELCOME_MESSAGE = { role: 'ai' as const, content: 'Welcome to the GHL Investment Advisor! I can help you understand your portfolio, explain investment structures, guide you through KYC, and answer questions about AIF investments. Try one of the suggested topics below.' }
+
 export default function ClientAIAdvisor({ theme, t }: Props) {
   const isDark = theme === 'dark'
-  const [messages, setMessages] = useState<{ role: 'user' | 'ai'; content: string }[]>([
-    { role: 'ai', content: 'Welcome to the GHL Investment Advisor! I can help you understand your portfolio, explain investment structures, guide you through KYC, and answer questions about AIF investments. Try one of the suggested topics below.' },
-  ])
+  // Hydrate from sessionStorage so the chat survives tab switches inside the
+  // dashboard (one of the 2026-05 punch-list items).
+  const [messages, setMessages] = useState<{ role: 'user' | 'ai'; content: string }[]>(() => {
+    if (typeof window === 'undefined') return [WELCOME_MESSAGE]
+    try {
+      const raw = sessionStorage.getItem(CHAT_STORAGE_KEY)
+      if (raw) {
+        const parsed = JSON.parse(raw)
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed
+      }
+    } catch { /* ignore — fall through to welcome */ }
+    return [WELCOME_MESSAGE]
+  })
   const [input, setInput] = useState('')
   const [thinking, setThinking] = useState(false)
   const [isLive, setIsLive] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
+
+  // Persist chat to sessionStorage on every change.
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    try { sessionStorage.setItem(CHAT_STORAGE_KEY, JSON.stringify(messages)) } catch {}
+  }, [messages])
 
   useEffect(() => {
     const checkKey = () => {
@@ -52,6 +72,14 @@ export default function ClientAIAdvisor({ theme, t }: Props) {
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages, thinking])
+
+  const endChat = useCallback(() => {
+    setMessages([WELCOME_MESSAGE])
+    setInput('')
+    if (typeof window !== 'undefined') {
+      try { sessionStorage.removeItem(CHAT_STORAGE_KEY) } catch {}
+    }
+  }, [])
 
   const handleSend = useCallback(async () => {
     if (!input.trim() || thinking) return
@@ -80,17 +108,35 @@ export default function ClientAIAdvisor({ theme, t }: Props) {
   }, [input, thinking, messages])
 
   const renderMarkdown = (text: string) => {
+    // Bold strong segments must inherit the surrounding theme colour — the
+    // earlier hardcoded `text-white` rendered the bolded words invisible in
+    // light mode (one of the 2026-05 punch-list items).
     return text.split('**').map((part, j) =>
-      j % 2 === 1 ? <strong key={j} className="text-white">{part}</strong> : part
+      j % 2 === 1 ? <strong key={j} className={isDark ? 'text-white' : 'text-gray-900'}>{part}</strong> : part
     )
   }
 
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div>
-        <h2 className={`text-xl font-bold ${t('text-white', 'text-gray-900')}`}>AI Investment Advisor</h2>
-        <p className={`text-sm mt-1 ${t('text-gray-500', 'text-gray-600')}`}>Ask questions about your investments, portfolio, KYC, or AIF regulations</p>
+      <div className="flex items-start justify-between gap-4 flex-wrap">
+        <div>
+          <h2 className={`text-xl font-bold ${t('text-white', 'text-gray-900')}`}>AI Investment Advisor</h2>
+          <p className={`text-sm mt-1 ${t('text-gray-500', 'text-gray-600')}`}>Ask questions about your investments, portfolio, KYC, or AIF regulations</p>
+        </div>
+        {messages.length > 1 && (
+          <button
+            onClick={endChat}
+            className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold transition-all ${
+              isDark
+                ? 'bg-white/[0.04] border border-white/[0.08] text-gray-300 hover:text-white hover:bg-white/[0.08]'
+                : 'bg-white border border-gray-200 text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+            }`}
+            aria-label="End chat and clear messages"
+          >
+            <Trash2 className="w-3.5 h-3.5" /> End Chat
+          </button>
+        )}
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">

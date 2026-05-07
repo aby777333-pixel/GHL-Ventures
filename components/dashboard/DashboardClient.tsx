@@ -177,25 +177,58 @@ const TOUR_STEPS = [
 ]
 
 /* ═══════════════════════════════════════════════════════════════
-   SIDEBAR ITEMS
+   SIDEBAR ITEMS — grouped per Investor Dashboard spec:
+   Investment | Support | Profile | General | Referral System
    ═══════════════════════════════════════════════════════════════ */
-const SIDEBAR_ITEMS: { id: TabId; label: string; icon: any; badge?: string }[] = [
-  { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
-  { id: 'investments', label: 'Invest', icon: TrendingUp },
-  { id: 'portfolio', label: 'Portfolio', icon: Briefcase },
-  { id: 'kyc', label: 'KYC', icon: FileCheck },
-  { id: 'documents', label: 'Documents', icon: FileText },
-  { id: 'transactions', label: 'Transaction', icon: ArrowLeftRight },
-  { id: 'support', label: 'Support Tickets', icon: HeadphonesIcon },
-  { id: 'referrals', label: 'Referral System', icon: Gift },
-  { id: 'messages', label: 'Messages', icon: MessageSquare },
-  { id: 'calculators', label: 'Calculators', icon: BarChart3 },
-  { id: 'ai-advisor', label: 'AI Advisor', icon: Brain, badge: 'NEW' },
+type SidebarItem = { id: TabId; label: string; icon: any; badge?: string }
+type SidebarSection = { section?: string; items: SidebarItem[] }
+
+const SIDEBAR_SECTIONS: SidebarSection[] = [
+  {
+    items: [
+      { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
+      { id: 'investments', label: 'Invest', icon: TrendingUp },
+    ],
+  },
+  {
+    section: 'Investment',
+    items: [
+      { id: 'portfolio', label: 'Portfolio', icon: Briefcase },
+      { id: 'documents', label: 'Document', icon: FileText },
+      { id: 'transactions', label: 'Transaction', icon: ArrowLeftRight },
+    ],
+  },
+  {
+    section: 'Support',
+    items: [
+      { id: 'support', label: 'Support', icon: HeadphonesIcon },
+      { id: 'messages', label: 'Message', icon: MessageSquare },
+      { id: 'ai-advisor', label: 'AI Advisor', icon: Brain, badge: 'NEW' },
+    ],
+  },
+  {
+    section: 'Profile',
+    items: [
+      { id: 'kyc', label: 'KYC', icon: FileCheck },
+      { id: 'profile', label: 'Profile', icon: User },
+    ],
+  },
+  {
+    section: 'General',
+    items: [
+      { id: 'settings', label: 'Setting', icon: Settings },
+      { id: 'calculators', label: 'Calculator', icon: BarChart3 },
+    ],
+  },
+  {
+    items: [
+      { id: 'referrals', label: 'Referral System', icon: Gift },
+    ],
+  },
 ]
-const SIDEBAR_BOTTOM: { id: TabId; label: string; icon: any }[] = [
-  { id: 'profile', label: 'Profile', icon: User },
-  { id: 'settings', label: 'Settings', icon: Settings },
-]
+// Flat list kept for legacy callers (search, notifications, tour) — order matches the sections above.
+const SIDEBAR_ITEMS: SidebarItem[] = SIDEBAR_SECTIONS.flatMap(s => s.items)
+const SIDEBAR_BOTTOM: SidebarItem[] = []
 
 /* ═══════════════════════════════════════════════════════════════
    HELPERS
@@ -897,37 +930,34 @@ export default function DashboardClient() {
 
         {/* Nav items */}
         <nav className="flex-1 px-3 space-y-0.5 overflow-y-auto dashboard-sidebar-scroll">
-          {SIDEBAR_ITEMS.map((item) => {
-            const isActive = activeTab === item.id
-            return (
-              <button key={item.id} onClick={() => { setActiveTab(item.id); setSidebarOpen(false) }}
-                className={`w-full flex items-center justify-start text-left gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-300 group relative
-                  ${isActive
-                    ? isDark ? 'text-white bg-brand-red/15 border border-brand-red/20' : 'text-brand-red bg-red-50 border border-red-200'
-                    : isDark ? 'text-gray-400 hover:text-white hover:bg-white/[0.04]' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-200/35'
-                  }`}>
-                {isActive && <div className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-5 rounded-r-full bg-brand-red" />}
-                <item.icon className={`w-[18px] h-[18px] ${isActive ? 'text-brand-red' : isDark ? 'text-gray-500 group-hover:text-gray-300' : 'text-gray-400 group-hover:text-gray-600'}`} />
-                {item.label}
-                {item.badge && (
-                  <span className={`ml-auto text-[10px] px-1.5 py-0.5 rounded-full font-bold ${item.badge === 'NEW' ? 'bg-brand-red/20 text-brand-red' : 'bg-blue-500/20 text-blue-400'}`}>
-                    {item.badge}
-                  </span>
-                )}
-              </button>
-            )
-          })}
-          <div className={`my-4 border-t ${t('border-white/[0.06]','border-gray-200/50')}`} />
-          {SIDEBAR_BOTTOM.map((item) => (
-            <button key={item.id} onClick={() => { setActiveTab(item.id); setSidebarOpen(false) }}
-              className={`w-full flex items-center justify-start text-left gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-300 group
-                ${activeTab === item.id
-                  ? isDark ? 'text-white bg-white/[0.06]' : 'text-gray-900 bg-gray-100/50'
-                  : isDark ? 'text-gray-500 hover:text-gray-300 hover:bg-white/[0.03]' : 'text-gray-500 hover:text-gray-700 hover:bg-gray-200/30'
-                }`}>
-              <item.icon className="w-[18px] h-[18px]" />
-              {item.label}
-            </button>
+          {SIDEBAR_SECTIONS.map((section, sIdx) => (
+            <div key={sIdx} className={sIdx > 0 ? 'mt-3' : ''}>
+              {section.section && (
+                <p className={`px-3 mt-1 mb-1 text-[10px] uppercase tracking-[0.18em] font-semibold ${t('text-gray-500','text-gray-500')}`}>
+                  {section.section}
+                </p>
+              )}
+              {section.items.map((item) => {
+                const isActive = activeTab === item.id
+                return (
+                  <button key={item.id} onClick={() => { setActiveTab(item.id); setSidebarOpen(false) }}
+                    className={`w-full flex items-center justify-start text-left gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-300 group relative
+                      ${isActive
+                        ? isDark ? 'text-white bg-brand-red/15 border border-brand-red/20' : 'text-brand-red bg-red-50 border border-red-200'
+                        : isDark ? 'text-gray-400 hover:text-white hover:bg-white/[0.04]' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-200/35'
+                      }`}>
+                    {isActive && <div className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-5 rounded-r-full bg-brand-red" />}
+                    <item.icon className={`w-[18px] h-[18px] ${isActive ? 'text-brand-red' : isDark ? 'text-gray-500 group-hover:text-gray-300' : 'text-gray-400 group-hover:text-gray-600'}`} />
+                    {item.label}
+                    {item.badge && (
+                      <span className={`ml-auto text-[10px] px-1.5 py-0.5 rounded-full font-bold ${item.badge === 'NEW' ? 'bg-brand-red/20 text-brand-red' : 'bg-blue-500/20 text-blue-400'}`}>
+                        {item.badge}
+                      </span>
+                    )}
+                  </button>
+                )
+              })}
+            </div>
           ))}
         </nav>
 
@@ -1817,11 +1847,15 @@ export default function DashboardClient() {
               <div className="w-1 h-5 rounded-full" style={{ background: 'linear-gradient(180deg, #D0021B, #8B0000)' }} />
               <h3 className="text-lg font-semibold text-white tracking-tight">Portfolio</h3>
             </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="p-4 rounded-xl bg-white/[0.02] border border-white/[0.06]">
-                <p className="text-[10px] uppercase tracking-[0.2em] text-white/45 font-medium mb-1.5">Commitment</p>
-                <h5 className="text-2xl font-bold text-white tracking-tight" style={{ textShadow: '0 1px 2px rgba(0,0,0,0.3)' }}>₹{formatINR(totalInvested)}</h5>
-              </div>
+            {/* Commitment is shown only for AIF investors (Category II AIF Direct).
+                Non-AIF clients (e.g. debenture-route) see only the Investment card. */}
+            <div className={`grid gap-4 ${aifTotal > 0 ? 'grid-cols-2' : 'grid-cols-1'}`}>
+              {aifTotal > 0 && (
+                <div className="p-4 rounded-xl bg-white/[0.02] border border-white/[0.06]">
+                  <p className="text-[10px] uppercase tracking-[0.2em] text-white/45 font-medium mb-1.5">Commitment</p>
+                  <h5 className="text-2xl font-bold text-white tracking-tight" style={{ textShadow: '0 1px 2px rgba(0,0,0,0.3)' }}>₹{formatINR(totalInvested)}</h5>
+                </div>
+              )}
               <div className="p-4 rounded-xl bg-white/[0.02] border border-white/[0.06]">
                 <p className="text-[10px] uppercase tracking-[0.2em] text-white/45 font-medium mb-1.5">Investment</p>
                 <h5 className="text-2xl font-bold text-white tracking-tight" style={{ textShadow: '0 1px 2px rgba(0,0,0,0.3)' }}>₹{formatINR(totalCurrent)}</h5>
@@ -2807,8 +2841,23 @@ export default function DashboardClient() {
           </Glass>
         </div>
         <Glass className="p-6" hover theme={theme}>
-          <h4 className={`text-sm font-bold mb-4 ${t('text-white','text-gray-900')}`}>How It Works</h4>
-          {[{ step: '1', t: 'Share Link', d: 'Share your unique referral link with friends and family' },{ step: '2', t: 'They Register', d: 'Your referral signs up using your link' },{ step: '3', t: 'They Invest', d: 'Once they complete an investment, you get notified' },{ step: '4', t: 'You Earn', d: 'Receive referral bonus as per our reward policy' }].map((s, i) => (
+          <h4 className={`text-sm font-bold mb-4 ${t('text-white','text-gray-900')}`}>Referral Reward Slab</h4>
+          <div className="space-y-2 mb-4">
+            <div className={`flex items-center justify-between px-3 py-2 rounded-xl ${t('bg-white/[0.03] border border-white/[0.06]','bg-gray-100/60 border border-gray-200/40')}`}>
+              <span className={`text-xs ${t('text-gray-300','text-gray-700')}`}>Up to {'₹'}5 Crore</span>
+              <span className="text-sm font-bold text-brand-red">3%</span>
+            </div>
+            <div className={`flex items-center justify-between px-3 py-2 rounded-xl ${t('bg-white/[0.03] border border-white/[0.06]','bg-gray-100/60 border border-gray-200/40')}`}>
+              <span className={`text-xs ${t('text-gray-300','text-gray-700')}`}>{'₹'}5.01 Crore and above</span>
+              <span className="text-sm font-bold text-brand-red">4%</span>
+            </div>
+            <div className={`flex items-center justify-between px-3 py-2 rounded-xl ${t('bg-emerald-500/[0.05] border border-emerald-500/15','bg-emerald-50 border border-emerald-200/60')}`}>
+              <span className={`text-xs ${t('text-gray-300','text-gray-700')}`}>Management Fee</span>
+              <span className="text-sm font-bold text-emerald-400">1% PA</span>
+            </div>
+          </div>
+          <h4 className={`text-sm font-bold mb-2 ${t('text-white','text-gray-900')}`}>How It Works</h4>
+          {[{ step: '1', t: 'Share Link', d: 'Share your unique referral link with friends and family' },{ step: '2', t: 'They Register', d: 'Your referral signs up using your link' },{ step: '3', t: 'They Invest', d: 'Once they complete an investment, you get notified' },{ step: '4', t: 'You Earn', d: 'Receive referral bonus as per the slab above' }].map((s, i) => (
             <div key={i} className="flex items-start gap-3 mb-3">
               <span className="w-7 h-7 rounded-full bg-brand-red/15 flex items-center justify-center text-xs font-bold text-brand-red shrink-0">{s.step}</span>
               <div><p className={`text-xs font-semibold ${t('text-white','text-gray-900')}`}>{s.t}</p><p className={`text-[11px] ${t('text-gray-500','text-gray-700')}`}>{s.d}</p></div>
@@ -2822,19 +2871,30 @@ export default function DashboardClient() {
         <Glass className="p-5" hover theme={theme}>
           <h4 className={`text-sm font-bold mb-3 ${t('text-white','text-gray-900')}`}>Your Referrals</h4>
           <div className={`rounded-xl overflow-hidden border ${t('border-white/[0.06]','border-gray-200')}`}>
-            <div className={`grid grid-cols-3 px-4 py-2.5 text-[11px] font-semibold uppercase tracking-wider ${t('bg-white/[0.03] text-gray-500','bg-gray-100 text-gray-600')}`}>
-              <span>Name</span><span>Joined</span><span>Status</span>
+            <div className={`grid grid-cols-4 px-4 py-2.5 text-[11px] font-semibold uppercase tracking-wider ${t('bg-white/[0.03] text-gray-500','bg-gray-100 text-gray-600')}`}>
+              <span>Referral</span>
+              <span>Investment History</span>
+              <span>Paid Status</span>
+              <span>Payment Date</span>
             </div>
-            {referralList.map((r, i) => (
-              <div key={i} className={`grid grid-cols-3 px-4 py-3 text-xs border-t ${t('border-white/[0.04] text-gray-300','border-gray-200 text-gray-700')}`}>
-                <span className={`font-medium ${t('text-white','text-gray-900')}`}>{r.name}</span>
-                <span>{r.date}</span>
-                <span className={`inline-flex items-center gap-1 ${r.status === 'Verified' ? 'text-emerald-400' : 'text-amber-400'}`}>
-                  <span className={`w-1.5 h-1.5 rounded-full ${r.status === 'Verified' ? 'bg-emerald-400' : 'bg-amber-400'}`} />
-                  {r.status}
-                </span>
-              </div>
-            ))}
+            {referralList.map((r: any, i: number) => {
+              // Optional fields populated by Supabase if/when wired up — fall
+              // back to '—' / 'Pending' so existing rows still render cleanly.
+              const investmentCount = r.investmentCount ?? r.investment_history ?? null
+              const paidStatus = r.paidStatus ?? r.paid_status ?? (r.status === 'Verified' ? 'Pending' : 'Pending')
+              const paymentDate = r.paymentDate ?? r.payment_date ?? '—'
+              return (
+                <div key={i} className={`grid grid-cols-4 px-4 py-3 text-xs border-t ${t('border-white/[0.04] text-gray-300','border-gray-200 text-gray-700')}`}>
+                  <span className={`font-medium ${t('text-white','text-gray-900')}`}>{r.name}</span>
+                  <span>{investmentCount != null ? `${investmentCount} investment${investmentCount === 1 ? '' : 's'}` : '—'}</span>
+                  <span className={`inline-flex items-center gap-1 ${paidStatus === 'Paid' ? 'text-emerald-400' : 'text-amber-400'}`}>
+                    <span className={`w-1.5 h-1.5 rounded-full ${paidStatus === 'Paid' ? 'bg-emerald-400' : 'bg-amber-400'}`} />
+                    {paidStatus}
+                  </span>
+                  <span>{paymentDate}</span>
+                </div>
+              )
+            })}
           </div>
         </Glass>
       )}
@@ -3336,6 +3396,148 @@ export default function DashboardClient() {
   // ═══════════════════════════════════════════════════════════
   // PORTFOLIO TAB
   // ═══════════════════════════════════════════════════════════
+  const PORTFOLIO_DOC_TYPES = [
+    'Acknowledgement letter',
+    'Debenture Agreement',
+    'Debenture allotment letter',
+    'Debenture Certificate',
+  ] as const
+
+  const findDocForApp = (appId: string | number, docType: string) => {
+    const id = String(appId || '')
+    return (investmentDocs as any[]).find(d => {
+      const matchesApp = String(d.application_id || d.investment_id || d.applicationId || '') === id
+      const name = String(d.document_name || d.name || d.title || d.type || '').toLowerCase()
+      const matchesType = name.includes(docType.toLowerCase().split(' ')[0])
+      return matchesApp && matchesType
+    })
+  }
+
+  const formatPortfolioDate = (s: any) => {
+    if (!s) return '—'
+    try { return new Date(s).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) } catch { return '—' }
+  }
+
+  const kycApproved = userKycStatus === 'approved' || userKycStatus === 'verified'
+  const kycApprovedDate = formatPortfolioDate((kycBasic as any)?.updated_at || (user as any)?.kyc_approved_at || (user as any)?.updated_at)
+
+  const renderKycReadOnlySummary = () => {
+    const rows: [string, string][] = [
+      ['Investor Name', String((kycBasic as any)?.investor_name || userName || '—')],
+      ['PAN', String((kycIdentity as any)?.pan_number || (user as any)?.pan || '—')],
+      ['Date of Birth', String((kycIdentity as any)?.dob || (user as any)?.dob || '—')],
+      ['City', String((kycIdentity as any)?.city || (user as any)?.city || '—')],
+      ['Phone', String((kycBasic as any)?.phone || user?.phone || '—')],
+      ['Email', String((kycBasic as any)?.email || userEmail || '—')],
+      ['Nominee', String(((kycNominees as any[])?.[0]?.name) || '—')],
+      ['Approval Date', kycApproved ? kycApprovedDate : '—'],
+    ]
+    return (
+      <Glass className="p-5 lg:p-6" hover theme={theme}>
+        <div className="flex items-center justify-between mb-4 gap-3 flex-wrap">
+          <h3 className={`text-base font-bold ${t('text-white','text-gray-900')}`}>KYC Summary (Read-only)</h3>
+          <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${kycApproved ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/20' : 'bg-amber-500/15 text-amber-400 border border-amber-500/20'}`}>
+            <span className={`w-1.5 h-1.5 rounded-full ${kycApproved ? 'bg-emerald-400' : 'bg-amber-400'}`} />
+            {kycApproved ? 'Approved' : (userKycStatus || 'Pending')}
+          </span>
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          {rows.map(([label, value], i) => (
+            <div key={i} className={`p-3 rounded-xl ${t('bg-white/[0.03] border border-white/[0.06]','bg-gray-100/50 border border-gray-200/50')}`}>
+              <p className={`text-[10px] uppercase tracking-wider font-semibold mb-1 ${t('text-gray-500','text-gray-600')}`}>{label}</p>
+              <p className={`text-sm font-medium ${t('text-white','text-gray-900')}`}>{value}</p>
+            </div>
+          ))}
+        </div>
+      </Glass>
+    )
+  }
+
+  const renderInvestmentDocTracking = () => {
+    const apps = (investmentApps as any[]) || []
+    if (apps.length === 0) return null
+    return (
+      <Glass className="p-5 lg:p-6" hover theme={theme}>
+        <h3 className={`text-base font-bold mb-1 ${t('text-white','text-gray-900')}`}>Investment Document Tracking</h3>
+        <p className={`text-xs mb-4 ${t('text-gray-500','text-gray-700')}`}>Per-investment proofs, approval dates, and tracking status.</p>
+        <div className="space-y-5">
+          {apps.map((app: any, idx: number) => {
+            const appId = app.id || app.application_id || idx
+            const appLabel = app.fund_name || app.product_name || app.investment_type || `Investment #${idx + 1}`
+            const investmentAmount = Number(app.investment_amount) || 0
+            const investmentDate = formatPortfolioDate(app.investment_date || app.created_at)
+            const transactionProofDoc = (investmentDocs as any[]).find(d => String(d.application_id || d.investment_id || '') === String(appId) && /transaction|proof|receipt/i.test(String(d.document_name || d.name || d.type || '')))
+            const approvalDate = formatPortfolioDate(app.approved_at || app.approval_date || app.updated_at)
+            return (
+              <div key={appId} className={`rounded-2xl border overflow-hidden ${t('border-white/[0.06]','border-gray-200/60')}`}>
+                <div className={`flex flex-wrap items-center justify-between gap-3 px-4 py-3 ${t('bg-white/[0.03]','bg-gray-100/60')}`}>
+                  <div>
+                    <p className={`text-sm font-semibold ${t('text-white','text-gray-900')}`}>{appLabel}</p>
+                    <p className={`text-[11px] mt-0.5 ${t('text-gray-500','text-gray-600')}`}>
+                      {`₹${formatINR(investmentAmount)}`} · Invested {investmentDate} · Approved {approvalDate}
+                    </p>
+                  </div>
+                  <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-1 rounded-full ${(app.status === 'approved' || app.status === 'active') ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/20' : 'bg-amber-500/15 text-amber-400 border border-amber-500/20'}`}>
+                    {String(app.status || 'pending').toUpperCase()}
+                  </span>
+                </div>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-xs">
+                    <thead>
+                      <tr className={`${t('text-gray-500','text-gray-600')} border-b ${t('border-white/[0.06]','border-gray-200')}`}>
+                        <th className="text-left py-2 px-3 font-semibold">S.No</th>
+                        <th className="text-left py-2 px-3 font-semibold">Document Name</th>
+                        <th className="text-left py-2 px-3 font-semibold">Upload Date</th>
+                        <th className="text-left py-2 px-3 font-semibold">Action</th>
+                        <th className="text-left py-2 px-3 font-semibold">Tracking Status</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {PORTFOLIO_DOC_TYPES.map((docType, dIdx) => {
+                        const doc = findDocForApp(appId, docType)
+                        const uploaded = !!doc
+                        return (
+                          <tr key={dIdx} className={`border-b last:border-b-0 ${t('border-white/[0.04]','border-gray-200/60')}`}>
+                            <td className={`py-2 px-3 ${t('text-gray-300','text-gray-700')}`}>{dIdx + 1}</td>
+                            <td className={`py-2 px-3 font-medium ${t('text-white','text-gray-900')}`}>{docType}</td>
+                            <td className={`py-2 px-3 ${t('text-gray-300','text-gray-700')}`}>{uploaded ? formatPortfolioDate(doc?.created_at || doc?.uploaded_at) : '—'}</td>
+                            <td className="py-2 px-3">
+                              {uploaded && doc?.file_url
+                                ? <a href={doc.file_url} target="_blank" rel="noopener noreferrer" className="text-brand-red font-semibold hover:underline">View</a>
+                                : <span className={t('text-gray-600','text-gray-400')}>—</span>}
+                            </td>
+                            <td className="py-2 px-3">
+                              <span className={`inline-flex items-center gap-1 ${uploaded ? 'text-emerald-400' : 'text-amber-400'}`}>
+                                <span className={`w-1.5 h-1.5 rounded-full ${uploaded ? 'bg-emerald-400' : 'bg-amber-400'}`} />
+                                {uploaded ? 'Uploaded' : 'Pending'}
+                              </span>
+                            </td>
+                          </tr>
+                        )
+                      })}
+                      {/* Transaction proof + Approval date as an additional row */}
+                      <tr className={`${t('bg-white/[0.02]','bg-gray-100/40')}`}>
+                        <td className={`py-2 px-3 ${t('text-gray-300','text-gray-700')}`}>{PORTFOLIO_DOC_TYPES.length + 1}</td>
+                        <td className={`py-2 px-3 font-medium ${t('text-white','text-gray-900')}`}>Transaction Proof</td>
+                        <td className={`py-2 px-3 ${t('text-gray-300','text-gray-700')}`}>{transactionProofDoc ? formatPortfolioDate(transactionProofDoc.created_at || transactionProofDoc.uploaded_at) : '—'}</td>
+                        <td className="py-2 px-3">
+                          {transactionProofDoc?.file_url
+                            ? <a href={transactionProofDoc.file_url} target="_blank" rel="noopener noreferrer" className="text-brand-red font-semibold hover:underline">View</a>
+                            : <span className={t('text-gray-600','text-gray-400')}>—</span>}
+                        </td>
+                        <td className={`py-2 px-3 ${t('text-gray-300','text-gray-700')}`}>{approvalDate}</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      </Glass>
+    )
+  }
+
   const renderPortfolioTab = () => (
     <div className="space-y-6">
       <h2 className={`text-xl font-bold ${t('text-white','text-gray-900')}`}>Your Portfolio</h2>
@@ -3345,6 +3547,8 @@ export default function DashboardClient() {
         <div>{renderAllocationChart()}</div>
       </div>
       {renderPortfolioAssets()}
+      {renderKycReadOnlySummary()}
+      {renderInvestmentDocTracking()}
     </div>
   )
 

@@ -438,12 +438,14 @@ export default function InvestmentFlowTab({
   // ════════════════════════════════════════════════════════════
   //  RENDER
   // ════════════════════════════════════════════════════════════
+  // Documents + Payment Schedule are hidden per the 2026-05 dashboard
+  // corrections punch-list — they may be re-enabled in a later iteration.
+  // The render branches for sub-tabs 'documents'/'schedule' are kept intact
+  // so logic still works if a deep link drops a user there.
   const TABS = [
     { id: 'funds' as const, label: 'Fund Details', icon: Building2 },
     { id: 'invest' as const, label: 'Invest', icon: TrendingUp },
     { id: 'history' as const, label: 'My Investments', icon: Briefcase },
-    { id: 'documents' as const, label: 'Documents', icon: FileText },
-    { id: 'schedule' as const, label: 'Payment Schedule', icon: Calendar },
   ]
 
   return (
@@ -451,7 +453,7 @@ export default function InvestmentFlowTab({
       {/* Sub-tab navigation */}
       <div className="flex flex-wrap gap-2">
         {TABS.map(tab => (
-          <button key={tab.id} onClick={() => { setSubTab(tab.id); if (tab.id !== 'history' && tab.id !== 'schedule') setSelectedApp(null) }}
+          <button key={tab.id} onClick={() => { setSubTab(tab.id); if (tab.id !== 'history') setSelectedApp(null) }}
             className={`flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-xs font-bold transition-all ${
               subTab === tab.id
                 ? 'text-white border border-brand-red/40' : t('text-gray-500 border border-white/[0.06] hover:text-white hover:bg-white/[0.04]','text-gray-600 border border-gray-200 hover:text-gray-900 hover:bg-gray-100')
