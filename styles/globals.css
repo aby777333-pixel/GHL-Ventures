@@ -4610,21 +4610,28 @@ button[type="submit"].inline-flex {
   color: #FF0F2C !important;
 }
 
-/* Why Choose Us — skyline background, no overlay. White cards carry their
-   own contrast; the heading/eyebrow get a strong text-shadow so they stay
-   legible against any region of the photograph. */
+/* Why Choose Us — site default cream gradient (matches hero / about hero
+   tones). Heading sits in dark brand black; eyebrow uses brand red. White
+   cards keep their own contrast against the soft beige backdrop. */
 .why-choose-section {
-  background-color: #1a2436;
+  background: linear-gradient(180deg, #fbfaf6 0%, #f4f1ea 35%, #ecebe6 65%, #e4e6ea 100%);
 }
 .why-choose-heading {
-  color: #ffffff !important;
-  text-shadow:
-    0 2px 8px rgba(0, 0, 0, 0.65),
-    0 0 28px rgba(0, 0, 0, 0.45);
+  color: #0A0A0A !important;
+  text-shadow: none;
 }
 .why-choose-eyebrow {
-  color: rgba(255, 255, 255, 0.92) !important;
-  text-shadow: 0 1px 6px rgba(0, 0, 0, 0.7);
+  color: #D0021B !important;
+  text-shadow: none;
+}
+:root.dark .why-choose-section {
+  background: linear-gradient(180deg, #0a0a0a 0%, #111111 50%, #0a0a0a 100%);
+}
+:root.dark .why-choose-heading {
+  color: #ffffff !important;
+}
+:root.dark .why-choose-eyebrow {
+  color: #FF2A40 !important;
 }
 
 /* Six Pillars of Our Investment Philosophy — paddy/tractor sunset

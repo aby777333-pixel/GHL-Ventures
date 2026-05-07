@@ -10,7 +10,6 @@ import {
 } from 'lucide-react'
 import Link from 'next/link'
 import { LegalLink } from '@/components/LegalPopup'
-import SpaceHero from '@/components/SpaceHero'
 
 const FAQ_ITEMS = [
   {
@@ -97,16 +96,27 @@ export default function ContactPage() {
   return (
     <>
       {/* Hero */}
-      <section className="pt-40 pb-12 gradient-dark relative overflow-hidden">
-        {/* Space: Lunar theme */}
-        <SpaceHero variant="lunar" />
+      <section className="pt-40 pb-12 relative overflow-hidden bg-brand-black">
+        {/* Backdrop photo — contact-themed (phone/chat/email/@) */}
+        <picture aria-hidden="true">
+          <source srcSet="/images/home/contact-hero-bg-sm.jpg" media="(max-width: 768px)" />
+          <img
+            src="/images/home/contact-hero-bg.jpg"
+            alt=""
+            className="absolute inset-0 w-full h-full object-cover pointer-events-none select-none"
+            loading="eager"
+            decoding="async"
+          />
+        </picture>
+        {/* Dark overlay for text legibility */}
+        <div className="absolute inset-0 bg-gradient-to-r from-black/85 via-black/55 to-black/30 pointer-events-none" />
         <div className="container-max mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
           <AnimatedSection>
             <span className="eyebrow">Get In Touch</span>
-            <h1 className="text-2xl md:text-3xl lg:text-4xl font-bold text-white mt-4 mb-5">
+            <h1 className="text-2xl md:text-3xl lg:text-4xl font-bold text-white mt-4 mb-5" style={{ textShadow: '0 2px 12px rgba(0,0,0,0.7)' }}>
               Contact <span className="text-gradient-shimmer">GHL India Ventures</span>
             </h1>
-            <p className="text-sm md:text-base text-gray-300 max-w-3xl">
+            <p className="text-sm md:text-base text-gray-200 max-w-3xl" style={{ textShadow: '0 1px 8px rgba(0,0,0,0.7)' }}>
               Schedule a consultation with our investment team. We&apos;re here to guide you through every step of your investment journey.
             </p>
           </AnimatedSection>
