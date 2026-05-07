@@ -1041,7 +1041,7 @@ export default function DashboardClient() {
             {notifOpen && (
               <>
               <div className="fixed inset-0 z-40" onClick={() => setNotifOpen(false)} />
-              <div className="absolute right-0 top-12 w-80 rounded-2xl border shadow-2xl z-50 overflow-hidden bg-[#111] border-white/[0.08]" style={{ animation: 'dashTooltipIn 0.2s ease-out' }}>
+              <div className={`absolute right-0 top-12 w-80 rounded-2xl border shadow-2xl z-50 overflow-hidden ${t('bg-[#111] border-white/[0.08]','bg-white border-gray-200')}`} style={{ animation: 'dashTooltipIn 0.2s ease-out' }}>
                 <div className={`px-4 py-3 flex items-center justify-between border-b ${t('border-white/[0.06]','border-gray-200/40')}`}>
                   <h4 className={`text-sm font-bold ${t('text-white','text-gray-900')}`}>Notifications</h4>
                   <button onClick={() => { setNotifsRead(new Set(notifications.map((n: any) => n.id))); showToast('All notifications marked as read') }} className="text-[10px] text-brand-red font-semibold">Mark all read</button>
@@ -1059,7 +1059,7 @@ export default function DashboardClient() {
                       (linkTab && validTabs.includes(linkTab as TabId)) ? (linkTab as TabId)
                       : (notifTabMap[n.type] || 'dashboard')
                     return (
-                    <div key={n.id} onClick={() => { setNotifsRead(prev => new Set(prev).add(n.id)); markNotificationRead(String(n.id)); setNotifOpen(false); setActiveTab(destTab) }} className={`px-4 py-3 flex gap-3 cursor-pointer transition-colors ${!n.is_read && !notifsRead.has(n.id) ? 'bg-white/[0.02]' : ''} hover:bg-white/[0.04]`}>
+                    <div key={n.id} onClick={() => { setNotifsRead(prev => new Set(prev).add(n.id)); markNotificationRead(String(n.id)); setNotifOpen(false); setActiveTab(destTab) }} className={`px-4 py-3 flex gap-3 cursor-pointer transition-colors ${!n.is_read && !notifsRead.has(n.id) ? t('bg-white/[0.02]','bg-red-50/40') : ''} ${t('hover:bg-white/[0.04]','hover:bg-gray-50')}`}>
                       <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0
                         ${n.type === 'report' || n.type === 'info' ? 'bg-blue-500/15' : n.type === 'opportunity' || n.type === 'success' ? 'bg-emerald-500/15' : n.type === 'alert' || n.type === 'warning' || n.type === 'action_required' ? 'bg-amber-500/15' : n.type === 'payment' ? 'bg-emerald-500/15' : n.type === 'error' ? 'bg-red-500/15' : 'bg-purple-500/15'}`}>
                         {n.type === 'report' || n.type === 'info' ? <FileText className="w-4 h-4 text-blue-400" /> :
