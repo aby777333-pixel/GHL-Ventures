@@ -25,7 +25,6 @@ import {
   Play,
 } from 'lucide-react'
 import { useState, useRef, useCallback, useEffect } from 'react'
-import SpaceHero from '@/components/SpaceHero'
 
 /* ─── Video Player ─── */
 function FinancialIQVideoPlayer() {
@@ -309,13 +308,12 @@ export default function FinancialIQPage() {
   return (
     <>
       {/* Hero */}
-      <section className="pt-40 pb-20 gradient-dark relative overflow-hidden">
-        {/* Space: Pulsar theme */}
-        <SpaceHero variant="pulsar" />
-        <div className="absolute inset-0 overflow-hidden pointer-events-none">
-          <div className="absolute -top-40 right-0 w-96 h-96 bg-brand-red/5 rounded-full blur-3xl" />
-          <div className="absolute bottom-0 -left-20 w-72 h-72 bg-brand-red/3 rounded-full blur-3xl" />
-        </div>
+      <section className="pt-40 pb-44 md:pb-56 lg:pb-64 relative overflow-hidden bg-brand-black">
+        <picture aria-hidden="true">
+          <source srcSet="/images/heros/financial-iq-hero-sm.jpg" media="(max-width: 768px)" />
+          <img src="/images/heros/financial-iq-hero.jpg" alt="" className="absolute inset-0 w-full h-full object-cover pointer-events-none select-none" loading="eager" decoding="async" />
+        </picture>
+        <div className="absolute inset-0 bg-gradient-to-r from-black/85 via-black/60 to-black/35 pointer-events-none" />
         <div className="container-max mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
           <AnimatedSection>
             <div className="max-w-4xl">

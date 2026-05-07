@@ -5,7 +5,6 @@ import Image from 'next/image'
 import AnimatedSection from '@/components/AnimatedSection'
 import PlaceholderImage from '@/components/PlaceholderImage'
 import { BLOG_POSTS, FUND_ARTICLES } from '@/lib/constants'
-import SpaceHero from '@/components/SpaceHero'
 import {
   BarChart3,
   Clock,
@@ -182,14 +181,12 @@ export default function BlogPage() {
   return (
     <>
       {/* SEO-optimized Hero */}
-      <section className="pt-40 pb-12 gradient-dark relative overflow-hidden">
-        {/* Space: Rocket theme */}
-        <SpaceHero variant="rocket" />
-        {/* Background decorative elements */}
-        <div className="absolute inset-0 overflow-hidden pointer-events-none">
-          <div className="absolute -top-40 -right-40 w-80 h-80 bg-brand-red/5 rounded-full blur-3xl" />
-          <div className="absolute -bottom-20 -left-20 w-60 h-60 bg-brand-red/3 rounded-full blur-3xl" />
-        </div>
+      <section className="pt-40 pb-44 md:pb-56 lg:pb-64 relative overflow-hidden bg-brand-black">
+        <picture aria-hidden="true">
+          <source srcSet="/images/heros/blog-hero-sm.jpg" media="(max-width: 768px)" />
+          <img src="/images/heros/blog-hero.jpg" alt="" className="absolute inset-0 w-full h-full object-cover pointer-events-none select-none" loading="eager" decoding="async" />
+        </picture>
+        <div className="absolute inset-0 bg-gradient-to-r from-black/85 via-black/55 to-black/30 pointer-events-none" />
         <div className="container-max mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
           <AnimatedSection>
             <span className="inline-flex items-center px-4 py-1.5 bg-brand-red/10 border border-brand-red/20 rounded-full text-brand-red text-xs font-semibold uppercase tracking-wider mb-6">
