@@ -4,7 +4,6 @@ import { useState } from 'react'
 import { submitContactForm } from '@/lib/supabase/reportsDataService'
 import { supabase, isSupabaseConfigured } from '@/lib/supabase/client'
 import { Send, Shield, AlertTriangle, Scale, CheckCircle, ArrowRight, ChevronDown, Mail, Phone, ExternalLink } from 'lucide-react'
-import SpaceHero from '@/components/SpaceHero'
 import AnimatedSection from '@/components/AnimatedSection'
 import Link from 'next/link'
 import { BRAND } from '@/lib/constants'
@@ -125,9 +124,12 @@ export default function GrievancePage() {
   return (
     <>
       {/* ── Hero ── */}
-      <section className="relative overflow-hidden gradient-dark pt-40 pb-12">
-        <SpaceHero variant="eclipse" />
-        <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-brand-black/50 pointer-events-none" />
+      <section className="relative overflow-hidden pt-40 pb-44 md:pb-56 lg:pb-64 bg-brand-black">
+        <picture aria-hidden="true">
+          <source srcSet="/images/heros/grievance-hero-sm.jpg" media="(max-width: 768px)" />
+          <img src="/images/heros/grievance-hero.jpg" alt="" className="absolute inset-0 w-full h-full object-cover pointer-events-none select-none" loading="eager" decoding="async" />
+        </picture>
+        <div className="absolute inset-0 bg-gradient-to-b from-black/75 via-black/55 to-black/85 pointer-events-none" />
         <div className="container-max mx-auto relative z-10 text-center">
           <AnimatedSection>
             <span className="eyebrow text-brand-red">Investor Protection</span>

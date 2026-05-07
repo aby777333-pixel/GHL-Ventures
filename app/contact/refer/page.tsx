@@ -117,7 +117,7 @@ export default function ReferPage() {
   return (
     <>
       {/* ── Hero ── */}
-      <section className="relative overflow-hidden pt-40 pb-44 md:pb-56 lg:pb-64 bg-brand-black">
+      <section className="relative overflow-hidden pt-40 pb-56 md:pb-72 lg:pb-96 min-h-[80vh] flex items-center bg-brand-black">
         <picture aria-hidden="true">
           <source srcSet="/images/heros/refer-hero-sm.jpg" media="(max-width: 768px)" />
           <img src="/images/heros/refer-hero.jpg" alt="" className="absolute inset-0 w-full h-full object-cover pointer-events-none select-none" loading="eager" decoding="async" />
