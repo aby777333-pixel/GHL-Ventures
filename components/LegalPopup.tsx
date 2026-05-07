@@ -21,12 +21,23 @@ const DOC_META: Record<LegalDocType, { title: string; icon: typeof FileText }> =
 }
 
 // ── Provider + Modal ──
+// Per the 2026-05 site corrections, the floating Terms & Conditions /
+// Privacy / Disclaimer modal is currently not needed. The provider, the
+// `useLegalPopup` hook, and the `LegalLink` element are all retained so
+// the existing JSX (footer, login, register, cookie consent, contact
+// page, etc.) keeps compiling, but openLegal is a no-op and the modal
+// markup is short-circuited out. To re-enable later, set this flag to
+// `true` (or wire it to an env var / settings) and the popup will work
+// exactly as before.
+const LEGAL_POPUP_ENABLED = false
+
 export function LegalPopupProvider({ children }: { children: React.ReactNode }) {
   const [activeDoc, setActiveDoc] = useState<LegalDocType | null>(null)
   const [atBottom, setAtBottom] = useState(false)
   const scrollRef = useRef<HTMLDivElement>(null)
 
   const openLegal = useCallback((type: LegalDocType) => {
+    if (!LEGAL_POPUP_ENABLED) return
     setActiveDoc(type)
     setAtBottom(false)
   }, [])
