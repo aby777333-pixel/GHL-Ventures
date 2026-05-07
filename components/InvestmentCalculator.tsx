@@ -71,12 +71,13 @@ export default function InvestmentCalculator({ isOpen, onClose }: InvestmentCalc
   // Debenture state
   const [debAmount, setDebAmount] = useState(1000000) // ₹10L
   const [debYears, setDebYears] = useState(3)
-  const [debRate, setDebRate] = useState(24) // Co-Invest fixed at 24% PA per 2026-05 brand guidance
+  // Co-Invest is fixed at 24% PA per 2026-05 brand guidance.
+  const debRate = 24
 
   // AIF state
   const [aifAmount, setAifAmount] = useState(10000000)
   const [aifYears, setAifYears] = useState(5)
-  const [aifIRR, setAifIRR] = useState(24) // AIF targeting 24% PA per 2026-05 brand guidance
+  const [aifIRR, setAifIRR] = useState(24) // AIF targeting 18–24% IRR per 2026-05 brand guidance
 
   // Compare state
   const [compareAmount, setCompareAmount] = useState(10000000)
@@ -280,20 +281,13 @@ export default function InvestmentCalculator({ isOpen, onClose }: InvestmentCalc
                 <div>
                   <div className="flex justify-between text-sm mb-2">
                     <span className="text-gray-400">Expected Return (p.a.)</span>
-                    <span className="text-white font-semibold">{debRate}%</span>
+                    <span className="text-white font-semibold">{debRate}% <span className="text-[10px] uppercase tracking-wider text-gray-500 ml-1">Fixed</span></span>
                   </div>
-                  <input
-                    type="range"
-                    min={10}
-                    max={30}
-                    step={1}
-                    value={debRate}
-                    onChange={e => setDebRate(Number(e.target.value))}
-                    className="w-full accent-brand-red"
-                  />
-                  <div className="flex justify-between text-[10px] text-gray-600 mt-0.5">
-                    <span>10%</span><span>30%</span>
+                  {/* Co-Invest is fixed at 24% PA — render a static bar instead of a slider. */}
+                  <div className="w-full h-2 rounded-full bg-brand-red/15 overflow-hidden">
+                    <div className="h-full bg-brand-red" style={{ width: '100%' }} />
                   </div>
+                  <p className="text-[10px] text-gray-500 mt-1">SEBI Co-Invest Framework — fixed coupon</p>
                 </div>
               </div>
               <ResultCard result={debResult} label="Co-Invest" />
@@ -349,15 +343,15 @@ export default function InvestmentCalculator({ isOpen, onClose }: InvestmentCalc
                   </div>
                   <input
                     type="range"
-                    min={12}
-                    max={30}
+                    min={18}
+                    max={24}
                     step={1}
                     value={aifIRR}
                     onChange={e => setAifIRR(Number(e.target.value))}
                     className="w-full accent-brand-red"
                   />
                   <div className="flex justify-between text-[10px] text-gray-600 mt-0.5">
-                    <span>12%</span><span>30%</span>
+                    <span>18%</span><span>24%</span>
                   </div>
                 </div>
               </div>

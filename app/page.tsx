@@ -591,10 +591,9 @@ function InvestmentCapabilities() {
 
   return (
     <section className="pillars-section relative section-padding overflow-hidden">
-      {/* Background image — paddy field at sunset */}
+      {/* Background image — riverside red-dome temple (image 11) */}
       <picture className="pillars-bg absolute inset-0 pointer-events-none select-none">
-        <source srcSet="/images/home/pillars-bg-sm.webp" type="image/webp" media="(max-width: 768px)" />
-        <source srcSet="/images/home/pillars-bg.webp" type="image/webp" />
+        <source srcSet="/images/home/pillars-bg-sm.jpg" media="(max-width: 768px)" />
         <img
           src="/images/home/pillars-bg.jpg"
           alt=""

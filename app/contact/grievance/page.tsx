@@ -8,27 +8,31 @@ import AnimatedSection from '@/components/AnimatedSection'
 import Link from 'next/link'
 import { BRAND } from '@/lib/constants'
 
-const ESCALATION_LEVELS = [
+// Per the 2026-05 site corrections, the Compliance Officer (Level 1)
+// and Managing Director (Level 2) escalation channels have been hidden
+// from the public grievance page — only the SEBI SCORES route is shown
+// to investors. The full ladder is preserved below for reference if it
+// needs to be restored later.
+//
+// const ESCALATION_LEVELS_FULL = [
+//   { level: 'Level 1', title: 'Compliance Officer', ... },
+//   { level: 'Level 2', title: 'Managing Director', ... },
+//   { level: 'Level 3', title: 'SEBI SCORES Portal', ... },
+// ]
+type EscalationLevel = {
+  level: string
+  title: string
+  desc: string
+  contact: string
+  contactType: 'email' | 'link'
+}
+const ESCALATION_LEVELS: EscalationLevel[] = [
   {
-    level: 'Level 1',
-    title: 'Compliance Officer',
-    desc: 'Write to our Compliance Officer with details of your grievance. Response within 7 working days.',
-    contact: 'compliance@ghlindiaventures.com',
-    contactType: 'email' as const,
-  },
-  {
-    level: 'Level 2',
-    title: 'Managing Director',
-    desc: 'If the resolution at Level 1 is unsatisfactory, escalate to the Managing Director. Response within 15 working days.',
-    contact: 'md@ghlindiaventures.com',
-    contactType: 'email' as const,
-  },
-  {
-    level: 'Level 3',
+    level: 'SEBI',
     title: 'SEBI SCORES Portal',
-    desc: 'If the matter remains unresolved after 30 days, investors may lodge a complaint on the SEBI SCORES portal.',
+    desc: 'Investors may lodge a complaint on the SEBI SCORES portal at any time. Complaints submitted via SCORES are tracked and resolved as per the SEBI redressal framework.',
     contact: 'https://scores.sebi.gov.in',
-    contactType: 'link' as const,
+    contactType: 'link',
   },
 ]
 
@@ -42,7 +46,8 @@ export default function GrievancePage() {
   const [submitted, setSubmitted] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
-  const [openEscalation, setOpenEscalation] = useState<number | null>(null)
+  // Default-expand the SEBI SCORES card since it's the only entry now.
+  const [openEscalation, setOpenEscalation] = useState<number | null>(0)
   const [ticketNumber, setTicketNumber] = useState<string | null>(null)
 
   const handleChange = (field: string, value: string | boolean) => {
@@ -179,7 +184,7 @@ export default function GrievancePage() {
                 As a SEBI-registered Category II AIF (Registration No. <a href={BRAND.sebiUrl} target="_blank" rel="noopener noreferrer" className="text-brand-red hover:underline">{BRAND.sebi}</a>), GHL India Ventures maintains a robust grievance redressal mechanism to protect investor interests. Every complaint is taken seriously and handled with the utmost urgency and confidentiality.
               </p>
               <p className="text-brand-grey text-sm leading-relaxed">
-                We follow a structured 3-level escalation framework. If a complaint is not resolved satisfactorily at one level, investors can escalate to the next level, with SEBI&apos;s SCORES portal as the final recourse.
+                Investors are encouraged to use SEBI&apos;s SCORES portal for complaint registration and tracking. SCORES provides an independent, regulator-monitored redressal channel for any grievance related to GHL India Ventures.
               </p>
             </div>
           </AnimatedSection>
@@ -291,7 +296,7 @@ export default function GrievancePage() {
         <div className="container-max mx-auto max-w-3xl">
           <AnimatedSection className="text-center mb-10">
             <span className="text-brand-red font-semibold text-xs uppercase tracking-wider">Resolution Framework</span>
-            <h2 className="section-title mt-2 text-brand-black dark:text-white">Escalation Path</h2>
+            <h2 className="section-title mt-2 text-brand-black dark:text-white">SEBI SCORES Redressal</h2>
           </AnimatedSection>
 
           <div className="space-y-4">

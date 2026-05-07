@@ -135,7 +135,7 @@ function InvestmentRoutes() {
       minInvestment: 'As per SEBI Regulations',
       features: [
         'Direct ownership in premium ventures',
-        'Target returns: 15–25% IRR',
+        'Target returns: 18–24% IRR',
         'Full transparency & reporting',
         'SEBI Category II AIF structure',
       ],

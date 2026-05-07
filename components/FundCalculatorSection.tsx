@@ -89,7 +89,9 @@ export default function FundCalculatorSection({
   // Debenture (Co-Invest) state
   const [debAmount, setDebAmount] = useState(1000000) // ₹10L
   const [debYears, setDebYears] = useState(3)
-  const [debRate, setDebRate] = useState(24) // Co-Invest fixed at 24% PA per 2026-05 brand guidance
+  // Co-Invest is fixed at 24% PA per 2026-05 brand guidance — held as a
+  // const (no setter) since the UI no longer exposes a slider for it.
+  const debRate = 24
 
   // Comparison state
   const [compAmount, setCompAmount] = useState(10000000)
@@ -208,11 +210,11 @@ export default function FundCalculatorSection({
                           <span className="text-brand-grey">Target IRR</span>
                           <span className="text-brand-black font-bold">{aifIRR}%</span>
                         </div>
-                        <input type="range" min={12} max={30} step={1}
+                        <input type="range" min={18} max={24} step={1}
                           value={aifIRR} onChange={e => setAifIRR(Number(e.target.value))}
                           className="w-full accent-brand-red" />
                         <div className="flex justify-between text-[10px] text-brand-grey/60 mt-0.5">
-                          <span>12%</span><span>30%</span>
+                          <span>18%</span><span>24%</span>
                         </div>
                       </div>
                     </div>
@@ -248,14 +250,13 @@ export default function FundCalculatorSection({
                       <div>
                         <div className="flex justify-between text-sm mb-2">
                           <span className="text-brand-grey">Expected Return (p.a.)</span>
-                          <span className="text-brand-black font-bold">{debRate}%</span>
+                          <span className="text-brand-black font-bold">{debRate}% <span className="text-[10px] uppercase tracking-wider text-brand-grey/70 ml-1">Fixed</span></span>
                         </div>
-                        <input type="range" min={10} max={30} step={1}
-                          value={debRate} onChange={e => setDebRate(Number(e.target.value))}
-                          className="w-full accent-brand-red" />
-                        <div className="flex justify-between text-[10px] text-brand-grey/60 mt-0.5">
-                          <span>10%</span><span>30%</span>
+                        {/* Co-Invest is fixed at 24% PA per 2026-05 brand guidance — slider replaced with a static read-only bar so the value is communicated without implying it can be changed. */}
+                        <div className="w-full h-2 rounded-full bg-brand-red/15 overflow-hidden">
+                          <div className="h-full bg-brand-red" style={{ width: '100%' }} />
                         </div>
+                        <p className="text-[10px] text-brand-grey/70 mt-1">SEBI Co-Invest Framework — fixed coupon</p>
                       </div>
                     </div>
                   )}

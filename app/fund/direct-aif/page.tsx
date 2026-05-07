@@ -42,7 +42,7 @@ export default function DirectAIFPage() {
             </h1>
             <p className="text-base text-gray-300 max-w-3xl leading-relaxed">
               Direct ownership in premium ventures through a SEBI-registered Category II Alternative Investment Fund.
-              Access institutional-grade deal flow with full transparency, professional management, and target returns of 15–25% IRR.
+              Access institutional-grade deal flow with full transparency, professional management, and target returns of 18–24% IRR.
             </p>
 
             <div className="mt-8 flex flex-wrap gap-4">
@@ -67,7 +67,7 @@ export default function DirectAIFPage() {
 
           <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 max-w-5xl mx-auto">
             {[
-              { icon: Target, title: 'Target Returns', value: '15–25% IRR', desc: 'Institutional-grade returns through disciplined alternative investing' },
+              { icon: Target, title: 'Target Returns', value: '18–24% IRR', desc: 'Institutional-grade returns through disciplined alternative investing' },
               { icon: Building2, title: 'Direct Ownership', value: 'Premium Assets', desc: 'Direct stake in a portfolio of stressed real estate projects' },
               { icon: Eye, title: 'Full Transparency', value: 'Quarterly Reports', desc: 'Detailed NAV, portfolio updates & performance reporting' },
               { icon: Shield, title: 'SEBI Regulated', value: 'Category II AIF', desc: 'Regulated by SEBI with custodian, auditor & compliance' },
