@@ -324,7 +324,7 @@ function LiveFinancialTV() {
 function HeroSection() {
 
   return (
-    <section className="hero-realestate relative min-h-[115vh] lg:min-h-[120vh] flex items-center overflow-hidden" style={{ background: 'linear-gradient(180deg, #fbfaf6 0%, #f4f1ea 35%, #ecebe6 65%, #e4e6ea 100%)' }}>
+    <section className="hero-realestate relative min-h-screen flex items-center overflow-hidden" style={{ background: 'linear-gradient(180deg, #fbfaf6 0%, #f4f1ea 35%, #ecebe6 65%, #e4e6ea 100%)' }}>
 
       {/* ---- HERO BACKDROP — cityscape photo ---- */}
 

@@ -96,7 +96,7 @@ export default function ContactPage() {
   return (
     <>
       {/* Hero */}
-      <section className="pt-40 pb-12 relative overflow-hidden bg-brand-black">
+      <section className="pt-40 pb-32 md:pb-44 lg:pb-56 relative overflow-hidden bg-brand-black">
         {/* Backdrop photo — contact-themed (phone/chat/email/@) */}
         <picture aria-hidden="true">
           <source srcSet="/images/home/contact-hero-bg-sm.jpg" media="(max-width: 768px)" />
