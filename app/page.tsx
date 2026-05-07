@@ -326,21 +326,22 @@ function HeroSection() {
   return (
     <section className="hero-realestate relative min-h-screen flex items-center overflow-hidden" style={{ background: 'linear-gradient(180deg, #fbfaf6 0%, #f4f1ea 35%, #ecebe6 65%, #e4e6ea 100%)' }}>
 
-      {/* ---- HERO BACKDROP — cityscape photo ---- */}
+      {/* ---- HERO BACKDROP — bridge sunset photo (hpbg) ---- */}
 
       {/* Photo — anchored to fill the section */}
       <picture aria-hidden="true">
-        <source srcSet="/images/home/hero-cityscape-sm.webp" type="image/webp" media="(max-width: 768px)" />
-        <source srcSet="/images/home/hero-cityscape.webp" type="image/webp" />
-        <source srcSet="/images/home/hero-cityscape-sm.jpg" type="image/jpeg" media="(max-width: 768px)" />
+        <source srcSet="/images/home/hero-hpbg-sm.jpg" media="(max-width: 768px)" />
         <img
-          src="/images/home/hero-cityscape.jpg"
+          src="/images/home/hero-hpbg.jpg"
           alt=""
           className="absolute inset-0 w-full h-full object-cover pointer-events-none select-none"
           loading="eager"
           decoding="async"
         />
       </picture>
+      {/* Soft dark overlay to keep the trust pill + headline legible
+          against the bright sky in the upper third of the photo. */}
+      <div className="absolute inset-0 bg-gradient-to-b from-black/55 via-black/25 to-black/55 pointer-events-none" />
 
       {/* ---- END HERO BACKDROP ---- */}
 

@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import Logo from '@/components/Logo'
 import { LegalLink } from '@/components/LegalPopup'
-import { BRAND, NAV_LINKS, SOCIAL_LINKS } from '@/lib/constants'
+import { BRAND, SOCIAL_LINKS } from '@/lib/constants'
 import {
   MapPin,
   Phone,
@@ -17,7 +17,6 @@ import {
   Send,
   MessageCircle,
   Clock,
-  Download,
   Shield,
 } from 'lucide-react'
 
@@ -63,16 +62,30 @@ const SocialIcon = ({ icon }: { icon: string }) => {
   }
 }
 
-const DOWNLOAD_LINKS = [
-  { label: 'Corporate Brochure', href: '/downloads#corporate-brochure' },
-  { label: 'Investment Roadmap', href: '/downloads#investment-roadmap' },
-  { label: 'Investment Guide', href: '/downloads#investment-guide' },
-  { label: 'NAV Report', href: '/downloads#nav' },
-]
+// Downloads column has been replaced with a second Quick Links column —
+// the four PDF assets are still reachable from the /downloads route, but
+// they no longer have a dedicated footer block (per 2026-05 site
+// corrections).
+const QUICK_LINKS_PRIMARY = [
+  { label: 'Home', href: '/' },
+  { label: 'Why GHL?', href: '/about' },
+  { label: 'Why AIFs', href: '/why-aifs' },
+  { label: 'Fund Overview', href: '/fund' },
+  { label: 'Direct AIF Route', href: '/fund/direct-aif' },
+  { label: 'SEBI Co-Invest Framework', href: '/fund/debenture-route' },
+] as const
 
-const QUICK_LINKS = NAV_LINKS.filter((link) =>
-  ['/', '/about', '/fund', '/portfolio', '/blog', '/contact'].includes(link.href)
-)
+const QUICK_LINKS_SECONDARY = [
+  { label: 'NRI Invest', href: '/fund/nri-invest' },
+  { label: 'Blog', href: '/blog' },
+  { label: 'Financial IQ', href: '/financial-iq' },
+  { label: 'Insights', href: '/education/insights' },
+  { label: 'Tools', href: '/tools' },
+  { label: 'FAQs', href: '/contact/faqs' },
+  { label: 'Refer an Investor', href: '/contact/refer' },
+  { label: 'Careers', href: '/contact/careers' },
+  { label: 'Grievance', href: '/contact/grievance' },
+] as const
 
 const PORTAL_PREFIXES = ['/staff', '/admin', '/dashboard']
 
@@ -169,7 +182,7 @@ export default function Footer() {
                 Quick Links
               </h3>
               <ul className="space-y-3">
-                {QUICK_LINKS.map((link) => (
+                {QUICK_LINKS_PRIMARY.map((link) => (
                   <li key={link.href} className="text-left">
                     <Link
                       href={link.href}
@@ -184,20 +197,20 @@ export default function Footer() {
               </ul>
             </div>
 
-            {/* Col 3: Downloads */}
+            {/* Col 3: More Links (replaces former Downloads column) */}
             <div className="text-left">
               <h3 className="text-sm font-semibold uppercase tracking-wider text-white/40 mb-5">
-                Downloads
+                More Links
               </h3>
               <ul className="space-y-3">
-                {DOWNLOAD_LINKS.map((link) => (
+                {QUICK_LINKS_SECONDARY.map((link) => (
                   <li key={link.href} className="text-left">
                     <Link
                       href={link.href}
                       className="text-gray-400 hover:text-brand-red transition-colors duration-200
                         text-sm inline-flex items-center group"
                     >
-                      <Download className="w-3.5 h-3.5 mr-2 opacity-60 group-hover:opacity-100 transition-opacity duration-200" />
+                      <ArrowUpRight className="w-3.5 h-3.5 mr-2 opacity-0 -translate-x-1 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-200" />
                       {link.label}
                     </Link>
                   </li>

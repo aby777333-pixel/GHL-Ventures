@@ -69,14 +69,14 @@ export default function InvestmentCalculator({ isOpen, onClose }: InvestmentCalc
   const [sipRate, setSipRate] = useState(15)
 
   // Debenture state
-  const [debAmount, setDebAmount] = useState(1000000)
+  const [debAmount, setDebAmount] = useState(1000000) // ₹10L
   const [debYears, setDebYears] = useState(3)
-  const [debRate, setDebRate] = useState(14)
+  const [debRate, setDebRate] = useState(24) // Co-Invest fixed at 24% PA per 2026-05 brand guidance
 
   // AIF state
   const [aifAmount, setAifAmount] = useState(10000000)
   const [aifYears, setAifYears] = useState(5)
-  const [aifIRR, setAifIRR] = useState(20)
+  const [aifIRR, setAifIRR] = useState(24) // AIF targeting 24% PA per 2026-05 brand guidance
 
   // Compare state
   const [compareAmount, setCompareAmount] = useState(10000000)
@@ -285,14 +285,14 @@ export default function InvestmentCalculator({ isOpen, onClose }: InvestmentCalc
                   <input
                     type="range"
                     min={10}
-                    max={20}
+                    max={30}
                     step={1}
                     value={debRate}
                     onChange={e => setDebRate(Number(e.target.value))}
                     className="w-full accent-brand-red"
                   />
                   <div className="flex justify-between text-[10px] text-gray-600 mt-0.5">
-                    <span>10%</span><span>20%</span>
+                    <span>10%</span><span>30%</span>
                   </div>
                 </div>
               </div>

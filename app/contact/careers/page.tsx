@@ -351,13 +351,13 @@ export default function CareersPage() {
   return (
     <>
       {/* ── Hero ── */}
-      <section className="relative overflow-hidden pt-40 pb-44 md:pb-56 lg:pb-64 bg-brand-black">
+      <section className="relative overflow-hidden pt-40 pb-44 md:pb-56 lg:pb-64 min-h-[80vh] flex items-center bg-brand-black">
         <picture aria-hidden="true">
           <source srcSet="/images/heros/careers-hero-sm.jpg" media="(max-width: 768px)" />
           <img src="/images/heros/careers-hero.jpg" alt="" className="absolute inset-0 w-full h-full object-cover pointer-events-none select-none" loading="eager" decoding="async" />
         </picture>
         <div className="absolute inset-0 bg-gradient-to-b from-black/70 via-black/55 to-black/80 pointer-events-none" />
-        <div className="container-max mx-auto relative z-10 text-center">
+        <div className="container-max mx-auto relative z-10 text-center w-full">
           <AnimatedSection>
             <span className="eyebrow text-brand-red">Join Our Team</span>
             <h1 className="text-4xl md:text-5xl lg:text-6xl font-extrabold text-white mt-3 mb-5">
