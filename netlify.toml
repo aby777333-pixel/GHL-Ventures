@@ -34,6 +34,18 @@
   status = 200
   force = false
 
+# Blog dynamic slugs — same pattern as financial-iq above. Any
+# /blog/<slug> created in Supabase after the last deploy has no
+# static page, so without this rule the catch-all below 404s it.
+# The /blog-post shell reads window.location.pathname, derives the
+# slug, and renders DynamicBlogViewer. force=false so pre-built
+# slugs continue to serve their static HTML.
+[[redirects]]
+  from = "/blog/*"
+  to = "/blog-post/index.html"
+  status = 200
+  force = false
+
 [[redirects]]
   from = "/*"
   to = "/404.html"

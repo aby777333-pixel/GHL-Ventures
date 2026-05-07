@@ -11,6 +11,28 @@
 
 import { supabase, isSupabaseConfigured, getAuthToken } from './client'
 
+// ── Update auth login email via admin endpoint ────────────
+// profiles.email is just a display mirror; the real login email lives in
+// auth.users.email and only the service-role can change it. Without this,
+// admins editing the email in the UI silently broke staff login.
+async function updateAuthEmail(userId: string, email: string): Promise<{ success: boolean; error?: string }> {
+  try {
+    const token = await getAuthToken()
+    if (!token) return { success: false, error: 'Authentication required' }
+    const response = await fetch('/.netlify/functions/update-employee-email', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+      body: JSON.stringify({ userId, email }),
+    })
+    let data: any = {}
+    try { data = await response.json() } catch { /* ignore */ }
+    if (!response.ok) return { success: false, error: data.error || `Failed (${response.status})` }
+    return { success: true }
+  } catch (err: any) {
+    return { success: false, error: `Network error: ${err?.message || 'could not reach server'}` }
+  }
+}
+
 const db = supabase as any
 
 // ── Types ─────────────────────────────────────────────────
@@ -104,14 +126,28 @@ export async function updateEmployee(
   if (!isSupabaseConfigured()) return { success: false, error: 'Service unavailable' }
 
   try {
-    // Update profiles table (name, phone, email).
-    // NOTE: email here updates only profiles.email (what the dashboard shows).
-    // It does NOT change the auth.users login email — that requires an admin
-    // password-reset flow and is intentionally out of scope for this form.
+    // If email is changing, push it through the admin endpoint first so
+    // auth.users.email and profiles.email stay in sync. The endpoint
+    // mirrors the new email into profiles.email itself, so we then skip
+    // re-sending email in the direct profiles update below.
+    let emailHandledByAdmin = false
+    if (updates.email !== undefined && userId) {
+      const trimmed = updates.email.trim()
+      if (trimmed) {
+        const r = await updateAuthEmail(userId, trimmed)
+        if (!r.success) {
+          console.error('[employeeService] updateAuthEmail failed:', r.error)
+          return { success: false, error: r.error || 'Failed to update login email' }
+        }
+        emailHandledByAdmin = true
+      }
+    }
+
+    // Update profiles table (name, phone, email-fallback).
     const profileUpdates: Record<string, any> = {}
     if (updates.fullName) profileUpdates.full_name = updates.fullName
     if (updates.phone !== undefined) profileUpdates.phone = updates.phone
-    if (updates.email !== undefined) profileUpdates.email = updates.email
+    if (updates.email !== undefined && !emailHandledByAdmin) profileUpdates.email = updates.email
 
     if (Object.keys(profileUpdates).length > 0) {
       const { error: profileErr } = await db
