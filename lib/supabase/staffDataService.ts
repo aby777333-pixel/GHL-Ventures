@@ -445,13 +445,27 @@ export async function submitExpense(expense: Record<string, any>) {
   } catch { return null }
 }
 
+// Legacy attendance insert. Newer client code routes through clock_in_now()
+// instead, but this stays for any caller still on the older bundle. The
+// attendance_resolve_staff_id() trigger (migration 053) silently rewrites
+// staff_id from auth.uid() → staff_profiles.id at the row level so the FK
+// no longer fails. We also fall back to the RPC on any error so the user
+// gets a successful clock-in instead of a generic failure toast.
 export async function recordAttendance(record: Record<string, any>) {
   if (!isSupabaseConfigured()) return null
   try {
     const { data, error } = await sb.from('attendance').insert(record).select().single()
-    if (error) { console.warn('[staff] Attendance error:', error.message); return null }
-    return data
-  } catch { return null }
+    if (!error) return data
+    console.warn('[staff] Attendance insert error, retrying via RPC:', error.message)
+    // Fallback: run the same flow through the SECURITY DEFINER RPC which
+    // resolves staff_profiles.id and auto-creates the profile if missing.
+    const { data: rpcData, error: rpcErr } = await sb.rpc('clock_in_now')
+    if (rpcErr) { console.warn('[staff] clock_in_now RPC error:', rpcErr.message); return null }
+    return rpcData
+  } catch (e) {
+    console.warn('[staff] Attendance unexpected error:', e)
+    return null
+  }
 }
 
 export async function updateAgentStatus(staffId: string, status: string) {
