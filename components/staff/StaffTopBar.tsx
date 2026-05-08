@@ -385,12 +385,43 @@ export default function StaffTopBar({
                   {notifications.slice(0, 20).map(notif => {
                     const NIcon = NOTIF_ICONS[notif.type] || Info
                     const isRead = notif.is_read || readNotifs.has(notif.id)
+                    // Notifications may store their target as `metadata.module`
+                    // (e.g. "me/leave") or as a fully qualified `link` (e.g.
+                    // "/staff/me/leave"). The previous handler only consumed
+                    // `metadata.module`, so the recent leave-approved /
+                    // chat-assigned rows that only carry `link` no-op'd on
+                    // click. Strip "/staff/" before passing to navigate(),
+                    // and remap any legacy / typo'd module heads to a valid
+                    // staff module so we never hard-navigate to a path the
+                    // static export didn't produce (Netlify 404).
+                    const STAFF_VALID_MODULES = ['home','me','cs','field','leads','clients','tasks','ai','team','internal']
+                    const STAFF_MODULE_ALIASES: Record<string, string> = {
+                      profile: 'me',
+                      employees: 'me',
+                      people: 'me',
+                      hr: 'me',
+                      attendance: 'me/attendance',
+                      leave: 'me/leave',
+                      payslips: 'me/payslips',
+                      messages: 'internal',
+                      chat: 'internal/chat',
+                      announcements: 'team/announcements',
+                    }
+                    const rawTarget = notif.metadata?.module || notif.link || ''
+                    let targetModule = String(rawTarget).replace(/^\/+staff\/?/i, '').replace(/^\/+/, '')
+                    const head = targetModule.split('/')[0]
+                    if (head && STAFF_MODULE_ALIASES[head]) {
+                      targetModule = targetModule.replace(head, STAFF_MODULE_ALIASES[head])
+                    } else if (head && !STAFF_VALID_MODULES.includes(head)) {
+                      targetModule = '' // unknown — fall back to home, no 404
+                    }
                     return (
                       <button
                         key={notif.id}
                         onClick={() => {
                           markAsRead(notif.id)
-                          if (notif.metadata?.module) navigate(notif.metadata.module)
+                          if (targetModule) navigate(targetModule)
+                          else navigate('home')
                           setNotifOpen(false)
                         }}
                         className={`w-full text-left px-4 py-3 border-b border-white/[0.03] hover:bg-white/[0.04] transition-colors ${isRead ? 'opacity-60' : ''}`}

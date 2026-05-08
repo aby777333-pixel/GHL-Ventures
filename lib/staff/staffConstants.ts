@@ -100,14 +100,19 @@ export const STAFF_SIDEBAR_ITEMS: StaffNavItem[] = [
     id: 'ai', label: 'AI Advisor', iconName: 'Sparkles', href: '/staff/ai',
     subItems: [],
   },
-  {
-    id: 'team', label: 'Team', iconName: 'UsersRound', href: '/staff/team',
-    subItems: [
-      { id: 'directory', label: 'Directory', href: '/staff/team/directory' },
-      { id: 'roster', label: 'Roster', href: '/staff/team/roster' },
-      { id: 'announcements', label: 'Announcements', href: '/staff/team/announcements' },
-    ],
-  },
+  // The "Team" entry is hidden per Staff Dashboard Corrections (2026-05) —
+  // "hide this page for later use". The static export still produces the
+  // /staff/team/* paths (so existing deep links resolve), but the sidebar
+  // entry below is intentionally commented out so the page can no longer
+  // be reached through the UI. Restore by un-commenting when needed.
+  // {
+  //   id: 'team', label: 'Team', iconName: 'UsersRound', href: '/staff/team',
+  //   subItems: [
+  //     { id: 'directory', label: 'Directory', href: '/staff/team/directory' },
+  //     { id: 'roster', label: 'Roster', href: '/staff/team/roster' },
+  //     { id: 'announcements', label: 'Announcements', href: '/staff/team/announcements' },
+  //   ],
+  // },
   {
     id: 'internal', label: 'Internal', iconName: 'MessageCircle', href: '/staff/internal',
     subItems: [

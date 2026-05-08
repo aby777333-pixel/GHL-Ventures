@@ -142,14 +142,15 @@ function ChatView({ showToast, user, role }: { showToast: Toast; user?: StaffUse
       <SectionHeader title="Internal Chat" icon={MessageSquare} />
       <AdminGlass hover={false} padding="p-0">
         <div className="flex h-[480px]">
-          {/* Channel List */}
-          <div className="w-52 border-r border-white/[0.06] p-3 space-y-1 shrink-0">
-            <p className="text-[10px] font-semibold text-white/40 uppercase tracking-widest px-2 mb-2">Channels</p>
+          {/* Channel List — flush against the left edge of the card,
+              explicitly left-aligned per Staff Dashboard Corrections (2026-05). */}
+          <div className="w-56 border-r border-white/[0.06] py-3 pl-2 pr-3 space-y-1 shrink-0 text-left">
+            <p className="text-[10px] font-semibold text-white/40 uppercase tracking-widest pl-2 mb-2 text-left">Channels</p>
             {channels.map(ch => {
               const active = activeChannel === ch.id
               return (
                 <button key={ch.id} onClick={() => setActiveChannel(ch.id)}
-                  className={`w-full flex items-center gap-2 px-2.5 py-2 rounded-lg text-xs transition-all ${active ? 'bg-teal-500/15 text-teal-300' : 'text-white/50 hover:text-white/80 hover:bg-white/[0.04]'}`}>
+                  className={`w-full flex items-center justify-start text-left gap-2 px-2.5 py-2 rounded-lg text-xs transition-all ${active ? 'bg-teal-500/15 text-teal-300' : 'text-white/50 hover:text-white/80 hover:bg-white/[0.04]'}`}>
                   <Hash className="w-3.5 h-3.5 shrink-0" />
                   <span className="truncate font-medium">{ch.name}</span>
                   {ch.unread > 0 && (
