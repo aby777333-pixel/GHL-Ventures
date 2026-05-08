@@ -533,57 +533,42 @@ function AttendanceView({ showToast }: { showToast: SelfServiceModuleProps['show
   const handleClockToggle = async () => {
     setClockLoading(true)
     try {
-      // Get current user id for staff_id
-      let staffId: string | null = null
-      try {
-        const sb = supabase as any
-        const { data: { user } } = await sb.auth.getUser()
-        staffId = user?.id || null
-      } catch { /* continue */ }
-
+      // Per Staff Dashboard Corrections (2026-05): clock-in/out go through
+      // server-side RPCs that resolve auth.uid() → staff_profiles.id (the
+      // attendance.staff_id FK target) and auto-create the staff_profile
+      // when missing. Direct inserts were failing because the previous code
+      // passed auth.uid() into staff_id, breaking the FK to staff_profiles.
+      const sb = supabase as any
       const now = new Date()
       if (!clockedIn) {
-        // Clock In
-        const record = await recordAttendance({
-          staff_id: staffId,
-          date: now.toISOString().split('T')[0],
-          check_in: now.toISOString(),
-          status: 'present',
-        })
-        if (record) {
-          setClockedIn(true)
-          setClockInTime(now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }))
-          setClockInTimestamp(now)
-          showToast('Clocked in successfully', 'success')
-        } else {
-          showToast('Failed to record clock-in. Please try again.', 'error')
-        }
+        const { data, error } = await sb.rpc('clock_in_now')
+        if (error) throw error
+        const t = data?.check_in ? new Date(data.check_in) : now
+        setClockedIn(true)
+        setClockInTime(t.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }))
+        setClockInTimestamp(t)
+        showToast('Clocked in successfully', 'success')
       } else {
-        // Clock Out — update the attendance record with clock_out time
-        const sb = supabase as any
-        const today = now.toISOString().split('T')[0]
-        const { error } = await sb.from('attendance')
-          .update({ check_out: now.toISOString() })
-          .eq('date', today)
-          .is('check_out', null)
-          .order('created_at', { ascending: false })
-          .limit(1)
-        if (error) {
-          showToast(`Clock-out failed: ${error.message}`, 'error')
-        } else {
-          // Calculate total hours worked before resetting
-          const totalHrs = clockInTimestamp
-            ? Math.round(((now.getTime() - clockInTimestamp.getTime()) / (1000 * 60 * 60)) * 10) / 10
-            : 0
-          setClockedIn(false)
-          setClockInTime('—')
-          setClockInTimestamp(null)
-          setHoursWorked(totalHrs)
-          showToast(`Clocked out successfully. Hours worked: ${totalHrs}h`, 'success')
-        }
+        const { data, error } = await sb.rpc('clock_out_now')
+        if (error) throw error
+        const totalHrs = clockInTimestamp
+          ? Math.round(((now.getTime() - clockInTimestamp.getTime()) / (1000 * 60 * 60)) * 10) / 10
+          : 0
+        setClockedIn(false)
+        setClockInTime('—')
+        setClockInTimestamp(null)
+        setHoursWorked(totalHrs)
+        showToast(`Clocked out successfully. Hours worked: ${totalHrs}h`, 'success')
       }
     } catch (err: any) {
-      showToast(`Attendance error: ${err?.message || 'Unknown error'}`, 'error')
+      const msg = err?.message || 'Unknown error'
+      if (msg === 'no_staff_profile') {
+        showToast('Your staff profile is not set up yet. Please contact an admin.', 'error')
+      } else if (msg === 'not_authenticated') {
+        showToast('Please sign in again.', 'error')
+      } else {
+        showToast(`Attendance error: ${msg}`, 'error')
+      }
     } finally {
       setClockLoading(false)
     }

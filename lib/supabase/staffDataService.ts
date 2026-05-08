@@ -266,6 +266,16 @@ export async function fetchClientInteractions(staffId?: string) {
 export function getQueueData() { return [] }
 
 // ── Tasks ───────────────────────────────────────────────────
+// DB values for `tasks.priority` (low|medium|high|critical) and `tasks.status`
+// (pending|in_progress|completed|cancelled) are mapped back to the UI labels
+// (low|normal|high|urgent / todo|in-progress|done) so the existing badge
+// helpers and filter chips keep working unchanged.
+const TASK_PRIORITY_FROM_DB: Record<string, string> = {
+  critical: 'urgent', high: 'high', medium: 'normal', low: 'low',
+}
+const TASK_STATUS_FROM_DB: Record<string, string> = {
+  pending: 'todo', in_progress: 'in-progress', completed: 'done', cancelled: 'blocked',
+}
 export async function fetchTasks(assignedTo?: string) {
   if (!isSupabaseConfigured()) return []
   try {
@@ -273,7 +283,11 @@ export async function fetchTasks(assignedTo?: string) {
     if (assignedTo) query = query.eq('assigned_to', assignedTo)
     const { data, error } = await query
     if (error || !data) return []
-    return data
+    return (data as any[]).map((row: any) => ({
+      ...row,
+      priority: TASK_PRIORITY_FROM_DB[row.priority] || row.priority,
+      status: TASK_STATUS_FROM_DB[row.status] || row.status,
+    }))
   } catch { return [] }
 }
 

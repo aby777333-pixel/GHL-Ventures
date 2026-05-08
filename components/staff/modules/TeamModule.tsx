@@ -69,17 +69,17 @@ export default function TeamModule({ subTab, navigate, showToast, role }: TeamMo
   }, [])
 
   switch (tab) {
-    case 'directory':     return <DirectoryView showToast={showToast} employees={employees || []} />
+    case 'directory':     return <DirectoryView showToast={showToast} employees={employees || []} navigate={navigate} />
     case 'roster':        return <RosterView employees={employees || []} />
     case 'announcements': return <AnnouncementsView announcements={announcements || []} />
-    default:              return <DirectoryView showToast={showToast} employees={employees || []} />
+    default:              return <DirectoryView showToast={showToast} employees={employees || []} navigate={navigate} />
   }
 }
 
 // ================================================================
 //  1. DIRECTORY VIEW
 // ================================================================
-function DirectoryView({ showToast, employees = [] }: { showToast: TeamModuleProps['showToast']; employees: any[] }) {
+function DirectoryView({ showToast, employees = [], navigate }: { showToast: TeamModuleProps['showToast']; employees: any[]; navigate: TeamModuleProps['navigate'] }) {
   const [search, setSearch] = useState('')
   const [deptFilter, setDeptFilter] = useState<string>('all')
 
@@ -141,7 +141,7 @@ function DirectoryView({ showToast, employees = [] }: { showToast: TeamModulePro
       {/* Employee Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {filtered.map(emp => (
-          <EmployeeCard key={emp.id} employee={emp} showToast={showToast} />
+          <EmployeeCard key={emp.id} employee={emp} showToast={showToast} navigate={navigate} />
         ))}
       </div>
 
@@ -158,8 +158,27 @@ function DirectoryView({ showToast, employees = [] }: { showToast: TeamModulePro
 }
 
 // ── Employee Card ──────────────────────────────────────────────
-function EmployeeCard({ employee: emp, showToast }: { employee: StaffEmployee; showToast: TeamModuleProps['showToast'] }) {
+function EmployeeCard({ employee: emp, showToast, navigate }: { employee: StaffEmployee; showToast: TeamModuleProps['showToast']; navigate: TeamModuleProps['navigate'] }) {
   const empName = emp?.name || 'Unknown'
+  // Per Staff Dashboard Corrections (2026-05): Chat opens the internal-chat
+  // tab so the staff member can DM the colleague; Call uses a tel: handler
+  // so the OS dialer / VoIP app picks up. Both buttons used to no-op via a
+  // toast only.
+  const phoneRaw = (emp?.phone || '').toString().trim()
+  const telHref = phoneRaw ? `tel:${phoneRaw.replace(/[^+0-9]/g, '')}` : ''
+  const emailRaw = (emp?.email || '').toString().trim()
+  const handleChat = () => {
+    if (!emp?.id) { showToast('Cannot open chat — employee record missing', 'error'); return }
+    try {
+      // Stash the target so InternalModule's ChatView can open the right thread.
+      sessionStorage.setItem('staff:chat:open', JSON.stringify({ id: emp.id, name: empName, email: emailRaw }))
+    } catch { /* sessionStorage may be blocked */ }
+    navigate('/staff/internal/chat')
+  }
+  const handleCall = () => {
+    if (!telHref) { showToast(`No phone number on file for ${empName}`, 'info'); return }
+    try { window.location.href = telHref } catch { /* ignore */ }
+  }
   return (
     <AdminGlass padding="p-4">
       <div className="flex items-start gap-3">
@@ -204,15 +223,17 @@ function EmployeeCard({ employee: emp, showToast }: { employee: StaffEmployee; s
       {/* Actions */}
       <div className="flex items-center gap-2 mt-3 pt-3 border-t border-white/[0.06]">
         <button
-          onClick={() => showToast(`Opening chat with ${empName}...`, 'info')}
+          onClick={handleChat}
           className="flex-1 flex items-center justify-center gap-1.5 px-3 py-1.5 text-[11px] font-medium text-teal-400 bg-teal-500/10 border border-teal-500/20 rounded-lg hover:bg-teal-500/20 transition-colors"
         >
           <MessageSquare className="w-3 h-3" />
           Chat
         </button>
         <button
-          onClick={() => showToast(`Calling ${empName}...`, 'info')}
-          className="flex-1 flex items-center justify-center gap-1.5 px-3 py-1.5 text-[11px] font-medium text-teal-400 bg-teal-500/10 border border-teal-500/20 rounded-lg hover:bg-teal-500/20 transition-colors"
+          onClick={handleCall}
+          disabled={!telHref}
+          title={telHref ? `Call ${empName}` : 'No phone number on file'}
+          className="flex-1 flex items-center justify-center gap-1.5 px-3 py-1.5 text-[11px] font-medium text-teal-400 bg-teal-500/10 border border-teal-500/20 rounded-lg hover:bg-teal-500/20 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
         >
           <Phone className="w-3 h-3" />
           Call

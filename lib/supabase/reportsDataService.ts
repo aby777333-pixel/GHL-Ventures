@@ -340,7 +340,15 @@ export async function submitLead(leadData: {
     return { success: true, local: true }
   }
   try {
-    // Insert lead with correct column names matching DB schema
+    // Per Staff Dashboard Corrections (2026-05): the leads table view shows
+    // Income / Planning / Company columns that the website form was not
+    // populating, so admin saw mostly blank rows after a website lead came
+    // in. Mirror the most useful website-form fields onto those columns:
+    //   investmentRange       → income_bracket   (e.g. "₹10L–25L")
+    //   investmentInterest    → planning         (e.g. "AIF Investment")
+    //   notes / message kept  → notes
+    // Existing semantic columns (investment_interest, estimated_value) are
+    // still populated so any other consumer continues to work.
     const { data, error } = await supabase.from('leads').insert({
       first_name: leadData.firstName,
       last_name: leadData.lastName || '',
@@ -350,7 +358,11 @@ export async function submitLead(leadData: {
       source: leadData.source || 'website',
       investment_interest: leadData.investmentInterest,
       estimated_value: leadData.estimatedInvestment || parseInvestmentRange(leadData.investmentRange) || 0,
+      income_bracket: leadData.investmentRange || null,
+      planning: leadData.investmentInterest || null,
+      preferred_contact_method: 'phone',
       status: 'new',
+      stage: 'new',
       notes: leadData.message || null,
     } as any).select().single() as any
     if (error) throw error

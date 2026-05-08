@@ -398,17 +398,39 @@ function LeadListingTab({
     downloadFile(csv, 'leads-export.csv', 'text/csv')
   }
 
+  // Per Staff Dashboard Corrections (2026-05): the previous export wrote
+  // CSV bytes into a `.xlsx` file, which Excel rejects as corrupt because
+  // .xlsx is a ZIP/XML format. We now emit SpreadsheetML 2003 XML and save
+  // it as `.xls` — Excel opens this natively without prompts and the data
+  // is preserved as proper text cells (no number/date corruption).
   const exportExcel = () => {
     const headers = ['Created Date', 'Name', 'Email', 'Phone', 'Income Bracket', 'Planning', 'Assigned To', 'Status', 'Source', 'Company']
     const rows = filtered.map(l => [
-      formatDate(l.created_at), l.name, l.email, l.phone, l.income_bracket || '',
+      formatDate(l.created_at), l.name || '', l.email || '', l.phone || '', l.income_bracket || '',
       l.planning || '', staffMap[l.assigned_to || '']?.full_name || '',
       (statusMap[l.lead_status_name || ''] || statusMap[l.stage || ''])?.name || l.lead_status_name || l.stage || '',
       (sourceMap[l.source || ''])?.name || l.source || '',
       (companyMap[l.company_name || ''])?.name || l.company_name || '',
     ])
-    const csv = [headers, ...rows].map(r => r.map(c => `"${(c || '').replace(/"/g, '""')}"`).join(',')).join('\n')
-    downloadFile(csv, 'leads-export.xlsx', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+    const xmlEsc = (s: any) => String(s ?? '')
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;').replace(/'/g, '&apos;')
+    const buildRow = (cells: any[]) =>
+      `<Row>${cells.map(c => `<Cell><Data ss:Type="String">${xmlEsc(c)}</Data></Cell>`).join('')}</Row>`
+    const xml =
+      `<?xml version="1.0" encoding="UTF-8"?>\n` +
+      `<?mso-application progid="Excel.Sheet"?>\n` +
+      `<Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet" ` +
+      `xmlns:o="urn:schemas-microsoft-com:office:office" ` +
+      `xmlns:x="urn:schemas-microsoft-com:office:excel" ` +
+      `xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet" ` +
+      `xmlns:html="http://www.w3.org/TR/REC-html40">\n` +
+      `<Styles><Style ss:ID="hdr"><Font ss:Bold="1"/><Interior ss:Color="#222222" ss:Pattern="Solid"/><Font ss:Color="#FFFFFF" ss:Bold="1"/></Style></Styles>\n` +
+      `<Worksheet ss:Name="Leads"><Table>` +
+      `<Row>${headers.map(h => `<Cell ss:StyleID="hdr"><Data ss:Type="String">${xmlEsc(h)}</Data></Cell>`).join('')}</Row>` +
+      rows.map(buildRow).join('') +
+      `</Table></Worksheet></Workbook>`
+    downloadFile(xml, 'leads-export.xls', 'application/vnd.ms-excel')
   }
 
   const exportPDF = () => {

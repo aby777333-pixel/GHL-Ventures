@@ -340,6 +340,17 @@ function MyTasksView({ showToast, tasks, onRefresh }: { showToast: TasksModulePr
               const picked = (taskForm.assignedTo || '').trim()
               const assigneeId = UUID_RE.test(picked) ? picked : userId
 
+              // Per Staff Dashboard Corrections (2026-05): the UI uses
+              // friendlier priority/status labels ("urgent"/"normal",
+              // "todo"/"in-progress"/"blocked"/"done") than the DB CHECK
+              // constraints permit ("low|medium|high|critical" /
+              // "pending|in_progress|completed|cancelled"). Map before insert
+              // so Create Task no longer fails with a check-constraint error.
+              const PRIORITY_DB: Record<string, string> = { urgent: 'critical', high: 'high', normal: 'medium', low: 'low' }
+              const STATUS_DB: Record<string, string> = { todo: 'pending', 'in-progress': 'in_progress', blocked: 'pending', done: 'completed' }
+              const dbPriority = PRIORITY_DB[taskForm.priority] || 'medium'
+              const dbStatus = STATUS_DB[taskForm.status] || 'pending'
+
               // Insert without the `.select().single()` round-trip — tasks RLS
               // SELECT is scoped to rows the user can see, and going through
               // insertRow's existing RETURNING path would need both writes + reads
@@ -347,8 +358,8 @@ function MyTasksView({ showToast, tasks, onRefresh }: { showToast: TasksModulePr
               const { error } = await sb.from('tasks').insert({
                 title: taskForm.title.trim(),
                 description: taskForm.description?.trim() || null,
-                priority: taskForm.priority,
-                status: taskForm.status,
+                priority: dbPriority,
+                status: dbStatus,
                 due_date: taskForm.dueDate || null,
                 assigned_to: assigneeId,
                 assigned_by: userId,
