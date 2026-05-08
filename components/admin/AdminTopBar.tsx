@@ -369,7 +369,22 @@ export default function AdminTopBar({ activeModule, activeSubTab, onMenuToggle, 
                     // in `link`, while navigate() already prepends "/admin/". Strip any leading
                     // "/admin/" or "/" so both formats route correctly.
                     const rawTarget = notif.metadata?.module || notif.link || 'overview'
-                    const targetModule = String(rawTarget).replace(/^\/+admin\/?/i, '').replace(/^\/+/, '') || 'overview'
+                    let targetModule = String(rawTarget).replace(/^\/+admin\/?/i, '').replace(/^\/+/, '') || 'overview'
+                    // Defensive remap: legacy / mistyped module slugs that
+                    // were emitted before the 2026-05 fix. Without this,
+                    // clicking the bell entry hard-navigates to a path the
+                    // static export never produced and Netlify serves a 404.
+                    const MODULE_ALIASES: Record<string, string> = {
+                      people: 'employees',
+                      hr: 'employees',
+                      'human-resources': 'employees',
+                      crm: 'sales',
+                      kyc: 'compliance',
+                    }
+                    const head = targetModule.split('/')[0]
+                    if (MODULE_ALIASES[head]) {
+                      targetModule = targetModule.replace(head, MODULE_ALIASES[head])
+                    }
                     return (
                       <button
                         key={notif.id}

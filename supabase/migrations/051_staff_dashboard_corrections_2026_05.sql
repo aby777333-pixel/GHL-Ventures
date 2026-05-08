@@ -157,7 +157,7 @@ BEGIN
            CASE WHEN p_end_date IS NOT NULL AND p_end_date <> p_start_date
                 THEN ' → ' || to_char(p_end_date, 'DD Mon') ELSE '' END || ')',
            'action_required',
-           '/admin/people/leave',
+           '/admin/employees/leave',
            jsonb_build_object('leave_request_id', v_inserted.id, 'staff_id', v_staff_id)
       FROM public.profiles p
      WHERE p.role IN ('admin', 'super_admin');
