@@ -1230,9 +1230,12 @@ function PayslipsTab({ showToast }: { showToast: (msg: string, type?: 'success' 
     if (!isSupabaseConfigured()) { setLoading(false); return }
     setLoading(true)
     const sb = supabase as any
+    // staff_profiles.user_id FKs to auth.users(id), not public.profiles(id)
+    // — PostgREST can't auto-embed across that relationship, so we issue
+    // two queries and join in JS.
     const [{ data: staffRows }, { data: payslipRows }] = await Promise.all([
       sb.from('staff_profiles')
-        .select('id, designation, department, profiles:user_id(full_name, email)')
+        .select('id, user_id, designation, department, status')
         .eq('status', 'active'),
       sb.from('payslips')
         .select('id, staff_id, month, basic, allowances, deductions, net_pay, file_url, status, created_at')
@@ -1240,11 +1243,21 @@ function PayslipsTab({ showToast }: { showToast: (msg: string, type?: 'success' 
         .order('created_at', { ascending: false })
         .limit(200),
     ])
-    setStaff((staffRows as any[] || []).map((s: any) => ({
-      id: s.id,
-      name: s.profiles?.full_name || s.profiles?.email || 'Staff',
-      email: s.profiles?.email || '',
-    })).sort((a, b) => a.name.localeCompare(b.name)))
+    const userIds = (staffRows as any[] || []).map((s: any) => s.user_id).filter(Boolean)
+    let profileMap = new Map<string, { full_name: string; email: string }>()
+    if (userIds.length > 0) {
+      const { data: profileRows } = await sb.from('profiles')
+        .select('id, full_name, email')
+        .in('id', userIds)
+      for (const p of (profileRows as any[]) || []) {
+        profileMap.set(p.id, { full_name: p.full_name || '', email: p.email || '' })
+      }
+    }
+    setStaff((staffRows as any[] || []).map((s: any) => {
+      const prof = profileMap.get(s.user_id) || { full_name: '', email: '' }
+      const name = prof.full_name || prof.email || s.designation || 'Staff'
+      return { id: s.id, name, email: prof.email }
+    }).sort((a, b) => a.name.localeCompare(b.name)))
     setRows((payslipRows as any[]) || [])
     setLoading(false)
   }, [])
