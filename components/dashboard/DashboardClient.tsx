@@ -449,6 +449,11 @@ export default function DashboardClient() {
     }
   }, [theme])
   const [sidebarOpen, setSidebarOpen] = useState(false)
+  // Sidebar section collapse state — per Investor Dashboard Corrections
+  // (2026-05) the Profile / Investment / Support sections behave like
+  // dropdowns. Default: expanded so existing investors aren't surprised.
+  const [collapsedSections, setCollapsedSections] = useState<Record<string, boolean>>({})
+  const toggleSection = (key: string) => setCollapsedSections(p => ({ ...p, [key]: !p[key] }))
   const [notifOpen, setNotifOpen] = useState(false)
   const [currentTime, setCurrentTime] = useState('')
   const [greeting, setGreeting] = useState('')
@@ -928,37 +933,55 @@ export default function DashboardClient() {
           </div>
         </div>
 
-        {/* Nav items */}
+        {/* Nav items — Profile/Investment/Support are collapsible dropdowns
+            per Investor Dashboard Corrections (2026-05). Sections without a
+            heading (Dashboard/Invest top group, General, Referral) always
+            render their items. The General + Referral groups stay flat. */}
         <nav className="flex-1 px-3 space-y-0.5 overflow-y-auto dashboard-sidebar-scroll">
-          {SIDEBAR_SECTIONS.map((section, sIdx) => (
-            <div key={sIdx} className={sIdx > 0 ? 'mt-3' : ''}>
-              {section.section && (
-                <p className={`px-3 mt-1 mb-1 text-[10px] uppercase tracking-[0.18em] font-semibold ${t('text-gray-500','text-gray-500')}`}>
-                  {section.section}
-                </p>
-              )}
-              {section.items.map((item) => {
-                const isActive = activeTab === item.id
-                return (
-                  <button key={item.id} onClick={() => { setActiveTab(item.id); setSidebarOpen(false) }}
-                    className={`w-full flex items-center justify-start text-left gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-300 group relative
-                      ${isActive
-                        ? isDark ? 'text-white bg-brand-red/15 border border-brand-red/20' : 'text-brand-red bg-red-50 border border-red-200'
-                        : isDark ? 'text-gray-400 hover:text-white hover:bg-white/[0.04]' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-200/35'
-                      }`}>
-                    {isActive && <div className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-5 rounded-r-full bg-brand-red" />}
-                    <item.icon className={`w-[18px] h-[18px] ${isActive ? 'text-brand-red' : isDark ? 'text-gray-500 group-hover:text-gray-300' : 'text-gray-400 group-hover:text-gray-600'}`} />
-                    {item.label}
-                    {item.badge && (
-                      <span className={`ml-auto text-[10px] px-1.5 py-0.5 rounded-full font-bold ${item.badge === 'NEW' ? 'bg-brand-red/20 text-brand-red' : 'bg-blue-500/20 text-blue-400'}`}>
-                        {item.badge}
-                      </span>
-                    )}
+          {SIDEBAR_SECTIONS.map((section, sIdx) => {
+            const sectionKey = section.section || `_${sIdx}`
+            const collapsible = ['Profile', 'Investment', 'Support'].includes(section.section || '')
+            const isCollapsed = collapsible && collapsedSections[sectionKey] === true
+            // Auto-expand a collapsed section if its active tab is inside it
+            const containsActive = section.items.some(it => it.id === activeTab)
+            const showItems = !collapsible || !isCollapsed || containsActive
+            return (
+              <div key={sIdx} className={sIdx > 0 ? 'mt-3' : ''}>
+                {section.section && (collapsible ? (
+                  <button
+                    onClick={() => toggleSection(sectionKey)}
+                    className={`w-full flex items-center justify-between gap-2 px-3 mt-1 mb-1 py-1 rounded-md transition-colors ${t('hover:bg-white/[0.03] text-gray-500','hover:bg-gray-100 text-gray-500')}`}>
+                    <span className="text-[10px] uppercase tracking-[0.18em] font-semibold">{section.section}</span>
+                    <ChevronDown className={`w-3 h-3 transition-transform ${showItems ? '' : '-rotate-90'}`} />
                   </button>
-                )
-              })}
-            </div>
-          ))}
+                ) : (
+                  <p className={`px-3 mt-1 mb-1 text-[10px] uppercase tracking-[0.18em] font-semibold ${t('text-gray-500','text-gray-500')}`}>
+                    {section.section}
+                  </p>
+                ))}
+                {showItems && section.items.map((item) => {
+                  const isActive = activeTab === item.id
+                  return (
+                    <button key={item.id} onClick={() => { setActiveTab(item.id); setSidebarOpen(false) }}
+                      className={`w-full flex items-center justify-start text-left gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-300 group relative
+                        ${isActive
+                          ? isDark ? 'text-white bg-brand-red/15 border border-brand-red/20' : 'text-brand-red bg-red-50 border border-red-200'
+                          : isDark ? 'text-gray-400 hover:text-white hover:bg-white/[0.04]' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-200/35'
+                        }`}>
+                      {isActive && <div className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-5 rounded-r-full bg-brand-red" />}
+                      <item.icon className={`w-[18px] h-[18px] ${isActive ? 'text-brand-red' : isDark ? 'text-gray-500 group-hover:text-gray-300' : 'text-gray-400 group-hover:text-gray-600'}`} />
+                      {item.label}
+                      {item.badge && (
+                        <span className={`ml-auto text-[10px] px-1.5 py-0.5 rounded-full font-bold ${item.badge === 'NEW' ? 'bg-brand-red/20 text-brand-red' : 'bg-blue-500/20 text-blue-400'}`}>
+                          {item.badge}
+                        </span>
+                      )}
+                    </button>
+                  )
+                })}
+              </div>
+            )
+          })}
         </nav>
 
         {/* Tour + Logout — pushed above mobile bottom nav */}
@@ -1833,37 +1856,11 @@ export default function DashboardClient() {
       {/* 4 Crimson Stats Cards (matches investor.php) */}
       {renderHeroMetrics()}
 
-      {/* Portfolio Section (matches investor.php) */}
-      {totalInvested > 0 && (
-        <div className="relative rounded-2xl overflow-hidden"
-          style={{
-            background: 'linear-gradient(135deg, #170808 0%, #220c0c 50%, #170808 100%)',
-            border: '1px solid rgba(208, 2, 27, 0.18)',
-            boxShadow: '0 6px 24px rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.04)'
-          }}>
-          <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-red-600/70 to-transparent" />
-          <div className="relative p-6">
-            <div className="flex items-center gap-2.5 mb-5">
-              <div className="w-1 h-5 rounded-full" style={{ background: 'linear-gradient(180deg, #D0021B, #8B0000)' }} />
-              <h3 className="text-lg font-semibold text-white tracking-tight">Portfolio</h3>
-            </div>
-            {/* Commitment is shown only for AIF investors (Category II AIF Direct).
-                Non-AIF clients (e.g. debenture-route) see only the Investment card. */}
-            <div className={`grid gap-4 ${aifTotal > 0 ? 'grid-cols-2' : 'grid-cols-1'}`}>
-              {aifTotal > 0 && (
-                <div className="p-4 rounded-xl bg-white/[0.02] border border-white/[0.06]">
-                  <p className="text-[10px] uppercase tracking-[0.2em] text-white/45 font-medium mb-1.5">Commitment</p>
-                  <h5 className="text-2xl font-bold text-white tracking-tight" style={{ textShadow: '0 1px 2px rgba(0,0,0,0.3)' }}>₹{formatINR(totalInvested)}</h5>
-                </div>
-              )}
-              <div className="p-4 rounded-xl bg-white/[0.02] border border-white/[0.06]">
-                <p className="text-[10px] uppercase tracking-[0.2em] text-white/45 font-medium mb-1.5">Investment</p>
-                <h5 className="text-2xl font-bold text-white tracking-tight" style={{ textShadow: '0 1px 2px rgba(0,0,0,0.3)' }}>₹{formatINR(totalCurrent)}</h5>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Portfolio overview card removed per Investor Dashboard Corrections
+          (2026-05): "Remove Portfolio, as the investment count is not
+          showing correctly". The 4 stats cards above already convey
+          aggregate totals; the dedicated Portfolio tab continues to show
+          ongoing-asset details. */}
 
       {/* FAQ Section (matches investor.php) */}
       {faqs.length > 0 && (
@@ -2390,7 +2387,9 @@ export default function DashboardClient() {
         </div>
       </Glass>
 
-      {/* Investment Transaction Submissions */}
+      {/* Investment Transaction Submissions — extended per Investor
+          Dashboard Corrections (2026-05) with Transaction Proof (eye
+          button) and Approval Date columns. */}
       {investmentTxns.length > 0 && (
         <>
           <h3 className={`text-base font-bold mb-3 mt-6 ${t('text-white','text-gray-900')}`}>Investment Transaction Submissions</h3>
@@ -2399,25 +2398,44 @@ export default function DashboardClient() {
               <table className="w-full text-sm">
                 <thead>
                   <tr className={`border-b ${t('border-white/[0.06]','border-gray-200/50')}`}>
-                    {['Date', 'Capital Amount', 'Transaction Amount', 'Transaction ID', 'Status'].map(h => (
+                    {['Investment Date', 'Capital Amount', 'Transaction Amount', 'Transaction ID', 'Transaction Proof', 'Approval Date', 'Status'].map(h => (
                       <th key={h} className={`text-left text-xs font-medium py-3 px-5 ${t('text-gray-500','text-gray-600')}`}>{h}</th>
                     ))}
                   </tr>
                 </thead>
                 <tbody>
-                  {investmentTxns.map((txn: any, i: number) => (
-                    <tr key={txn.id || i} className={`border-b ${t('border-white/[0.03] hover:bg-white/[0.02]','border-gray-100 hover:bg-gray-50')}`}>
-                      <td className={`py-3 px-5 text-xs ${t('text-gray-400','text-gray-700')}`}>{txn.created_at ? new Date(txn.created_at).toLocaleDateString('en-IN') : '—'}</td>
-                      <td className={`py-3 px-5 text-xs font-semibold ${t('text-white','text-gray-900')}`}>₹{new Intl.NumberFormat('en-IN').format(Number(txn.capital_amount) || 0)}</td>
-                      <td className={`py-3 px-5 text-xs font-semibold ${t('text-white','text-gray-900')}`}>₹{new Intl.NumberFormat('en-IN').format(Number(txn.transaction_amount) || 0)}</td>
-                      <td className={`py-3 px-5 text-xs font-mono ${t('text-gray-400','text-gray-600')}`}>{txn.transaction_id || '—'}</td>
-                      <td className="py-3 px-5">
-                        <span className={`inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full ${txn.status === 'approved' ? 'text-emerald-400 bg-emerald-500/15' : txn.status === 'rejected' ? 'text-red-400 bg-red-500/15' : 'text-amber-400 bg-amber-500/15'}`}>
-                          {(txn.status || 'pending').charAt(0).toUpperCase() + (txn.status || 'pending').slice(1)}
-                        </span>
-                      </td>
-                    </tr>
-                  ))}
+                  {investmentTxns.map((txn: any, i: number) => {
+                    const approvalDate = txn.approved_at || txn.approval_date || (txn.status === 'approved' ? txn.updated_at : null)
+                    const proofUrl = txn.transaction_proof_url || txn.proof_url
+                    return (
+                      <tr key={txn.id || i} className={`border-b ${t('border-white/[0.03] hover:bg-white/[0.02]','border-gray-100 hover:bg-gray-50')}`}>
+                        <td className={`py-3 px-5 text-xs ${t('text-gray-400','text-gray-700')}`}>{txn.created_at ? new Date(txn.created_at).toLocaleDateString('en-IN') : '—'}</td>
+                        <td className={`py-3 px-5 text-xs font-semibold ${t('text-white','text-gray-900')}`}>₹{new Intl.NumberFormat('en-IN').format(Number(txn.capital_amount) || 0)}</td>
+                        <td className={`py-3 px-5 text-xs font-semibold ${t('text-white','text-gray-900')}`}>₹{new Intl.NumberFormat('en-IN').format(Number(txn.transaction_amount) || 0)}</td>
+                        <td className={`py-3 px-5 text-xs font-mono ${t('text-gray-400','text-gray-600')}`}>{txn.transaction_id || '—'}</td>
+                        <td className="py-3 px-5">
+                          {proofUrl ? (
+                            <a
+                              href={proofUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              title="View transaction proof"
+                              className={`inline-flex items-center justify-center w-8 h-8 rounded-lg transition-colors ${t('bg-brand-red/15 text-brand-red hover:bg-brand-red/25','bg-brand-red/10 text-brand-red hover:bg-brand-red/20')}`}>
+                              <Eye className="w-3.5 h-3.5" />
+                            </a>
+                          ) : (
+                            <span className={`text-[10px] ${t('text-gray-600','text-gray-400')}`}>—</span>
+                          )}
+                        </td>
+                        <td className={`py-3 px-5 text-xs ${t('text-gray-400','text-gray-700')}`}>{approvalDate ? new Date(approvalDate).toLocaleDateString('en-IN') : '—'}</td>
+                        <td className="py-3 px-5">
+                          <span className={`inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full ${txn.status === 'approved' ? 'text-emerald-400 bg-emerald-500/15' : txn.status === 'rejected' ? 'text-red-400 bg-red-500/15' : 'text-amber-400 bg-amber-500/15'}`}>
+                            {(txn.status || 'pending').charAt(0).toUpperCase() + (txn.status || 'pending').slice(1)}
+                          </span>
+                        </td>
+                      </tr>
+                    )
+                  })}
                 </tbody>
               </table>
             </div>
@@ -3019,25 +3037,25 @@ export default function DashboardClient() {
             ))}
           </div>
 
-          {/* Quick Actions */}
-          <div className={`mt-4 pt-4 border-t space-y-2 ${t('border-white/[0.06]','border-gray-200/50')}`}>
-            <button onClick={openEditProfile} className={`w-full flex items-center justify-center gap-2 px-3 py-2 rounded-xl text-xs font-semibold transition-all ${t('bg-white/[0.04] hover:bg-white/[0.08] text-gray-300 hover:text-white border border-white/[0.06]','bg-gray-100 hover:bg-gray-200 text-gray-700 border border-gray-200')}`}>
-              <Sliders className="w-3.5 h-3.5" /> Edit Details
-            </button>
-            {!(userKycStatus === 'approved' || userKycStatus === 'verified') && (
+          {/* Quick Actions — duplicate "Edit Details" removed per
+              Investor Dashboard Corrections (2026-05). The single "Edit
+              Profile" button in the page header is the canonical entry. */}
+          {!(userKycStatus === 'approved' || userKycStatus === 'verified') && (
+            <div className={`mt-4 pt-4 border-t ${t('border-white/[0.06]','border-gray-200/50')}`}>
               <button onClick={() => setActiveTab('kyc')} className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-xl text-xs font-semibold text-white transition-all hover:scale-[1.02]" style={{ background: 'linear-gradient(135deg, #D0021B, #8B0000)' }}>
                 <FileCheck className="w-3.5 h-3.5" /> Complete KYC
               </button>
-            )}
-          </div>
+            </div>
+          )}
         </Glass>
 
         <div className="lg:col-span-2 space-y-4">
-          {/* Personal Details */}
+          {/* Personal Details — duplicate "Edit" link removed per Investor
+              Dashboard Corrections (2026-05); the page-level Edit Profile
+              button is the single canonical entry. */}
           <Glass className="p-6" hover theme={theme}>
             <div className="flex items-center justify-between mb-4">
               <h4 className={`text-sm font-bold ${t('text-white','text-gray-900')}`}>Personal Details</h4>
-              <button onClick={openEditProfile} className={`text-xs font-semibold flex items-center gap-1 ${t('text-gray-400 hover:text-white','text-gray-500 hover:text-gray-900')} transition-colors`}><Sliders className="w-3 h-3" /> Edit</button>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               {[['Full Name', (kycBasic as any)?.investor_name || savedProfileData.full_name || userName],['Email', (kycBasic as any)?.email || userEmail],['Phone', (kycBasic as any)?.phone || savedProfileData.phone || user?.phone || 'Not provided'],['PAN Number', (kycIdentity as any)?.pan_number || savedProfileData.pan || (user as any)?.pan || 'Not provided'],['City', (kycIdentity as any)?.city || savedProfileData.city || user?.city || 'Not provided'],['Date of Birth', (kycIdentity as any)?.dob || savedProfileData.dob || user?.dob || 'Not provided'],['Occupation', savedProfileData.occupation || user?.occupation || 'Not provided']].map(([l,v],i) => (
@@ -3538,19 +3556,123 @@ export default function DashboardClient() {
     )
   }
 
-  const renderPortfolioTab = () => (
-    <div className="space-y-6">
-      <h2 className={`text-xl font-bold ${t('text-white','text-gray-900')}`}>Your Portfolio</h2>
-      {renderHeroMetrics()}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        <div className="lg:col-span-2">{renderNAVChart()}</div>
-        <div>{renderAllocationChart()}</div>
+  // Per Investor Dashboard Corrections (2026-05): the Portfolio tab content
+  // was replaced with ongoing-asset cards (Madurai, Coimbatore) — the
+  // previous NAV/Allocation/KYC summary widgets were not yet meaningful
+  // for current investors, and the spec calls for showcasing live assets.
+  const renderPortfolioTab = () => {
+    const ongoingAssets = [
+      {
+        name: 'MADURAI',
+        sub: 'Solar Energy Development Land',
+        image: '/images/portfolio/narikudi-madurai.jpg',
+        location: 'Karikudi, approximately 80 km from Madurai, TN',
+        area: '165 acres',
+        acquisitionCost: '₹22.5 crores',
+        postDevInvestment: '₹25 crores',
+        marketValue: '₹40 crores (approx.)',
+        purpose: 'Establishment of a large-scale solar power plant',
+        status: 'Acquisition complete',
+        description: 'This vast tract of land, located near a major power substation, is ideally suited for renewable energy projects. With its favourable solar irradiance, clear title, and level terrain, it presents a compelling opportunity for clean energy generation.',
+        body2: 'The region is rapidly developing into a renewable energy corridor, with nearby operational plants like the 50 Aadhavan Power Plant and 50 Kothravan Power Plant managed by the Greenko Group.',
+        advantage: 'Strategic proximity to infrastructure, direct grid connectivity, and location in a high-growth renewable zone make this property a high-yield acquisition at a 40% discount to market value.',
+      },
+      {
+        name: 'COIMBATORE',
+        sub: 'Industrial & Defence Corridor Land',
+        image: '/images/portfolio/karadivavi-coimbatore.jpg',
+        location: 'Karadivavi, approximately 35 km from Coimbatore, TN',
+        area: '30 acres',
+        acquisitionCost: '₹45 crores',
+        projectedMarketValue: '₹75 crores',
+        purpose: 'Industrial, commercial, & mixed-use development',
+        status: 'Acquisition completed',
+        description: 'Strategically positioned near the Defence Corridor and Sulur Airbase, this 30-acre property offers enormous potential for industrial and infrastructure development. The area is a growing industrial hub with excellent connectivity to Coimbatore, one of Tamil Nadu’s largest commercial centres.',
+        body2: '',
+        advantage: 'Located within an emerging industrial cluster, the property offers high appreciation potential and multi-use development opportunities, aligning with regional economic growth plans.',
+      },
+    ]
+    return (
+      <div className="space-y-6">
+        <h2 className={`text-xl font-bold ${t('text-white','text-gray-900')}`}>Your Portfolio</h2>
+        <p className={`text-sm ${t('text-gray-500','text-gray-700')}`}>Ongoing assets of GHL India Ventures.</p>
+
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {ongoingAssets.map(asset => (
+            <Glass key={asset.name} className="overflow-hidden" hover theme={theme}>
+              {/* Hero photo */}
+              <div className="h-44 w-full bg-gradient-to-br from-neutral-800 via-neutral-700 to-neutral-900 relative overflow-hidden">
+                <img src={asset.image} alt={asset.name} className="w-full h-full object-cover"
+                  onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }} />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent" />
+              </div>
+
+              {/* Title block */}
+              <div className="px-5 pt-4 pb-2 text-center">
+                <h3 className={`text-lg font-bold tracking-wider ${t('text-white','text-gray-900')}`}>{asset.name}</h3>
+                <p className={`text-xs ${t('text-gray-400','text-gray-600')}`}>{asset.sub}</p>
+              </div>
+
+              {/* Detail rows */}
+              <div className="px-5 pb-5 space-y-2">
+                {[
+                  ['Location', asset.location],
+                  ['Area', asset.area],
+                  ['Acquisition Cost', asset.acquisitionCost],
+                  asset.postDevInvestment ? ['Post-Development Investment', asset.postDevInvestment] : null,
+                  asset.marketValue ? ['Market Value (Post Development)', asset.marketValue] : null,
+                  asset.projectedMarketValue ? ['Projected Market Value', asset.projectedMarketValue] : null,
+                  ['Purpose', asset.purpose],
+                  ['Status', asset.status],
+                ].filter(Boolean).map((row, i) => {
+                  const [label, value] = row as [string, string]
+                  return (
+                    <div key={i} className={`grid grid-cols-3 gap-3 py-1.5 border-b last:border-b-0 ${t('border-white/[0.04]','border-gray-200')}`}>
+                      <span className={`col-span-1 text-[11px] uppercase tracking-wider font-semibold ${t('text-gray-500','text-gray-600')}`}>{label}</span>
+                      <span className={`col-span-2 text-xs ${t('text-gray-200','text-gray-800')}`}>{value}</span>
+                    </div>
+                  )
+                })}
+
+                {/* Description */}
+                <div className={`pt-3 text-xs leading-relaxed ${t('text-gray-300','text-gray-700')}`}>
+                  <p className="font-bold mb-1">Description :</p>
+                  <p>{asset.description}</p>
+                  {asset.body2 && <p className="mt-2">{asset.body2}</p>}
+                </div>
+
+                <div className={`pt-3 text-xs leading-relaxed ${t('text-gray-300','text-gray-700')}`}>
+                  <p className="font-bold mb-1">Advantage :</p>
+                  <p>{asset.advantage}</p>
+                </div>
+              </div>
+            </Glass>
+          ))}
+        </div>
+
+        {/* Investment Outlook block */}
+        <div className="relative rounded-2xl overflow-hidden text-white"
+          style={{ background: 'linear-gradient(135deg, #8B0000 0%, #D0021B 50%, #8B0000 100%)' }}>
+          <div className="absolute top-0 left-0 right-0 h-px bg-white/30" />
+          <div className="relative p-6 sm:p-8">
+            <div className="text-center mb-4">
+              <button onClick={() => setActiveTab('investments')}
+                className="px-6 py-2 rounded-lg text-xs font-bold bg-white text-brand-red uppercase tracking-wider hover:bg-gray-100 transition-colors">
+                Invest
+              </button>
+            </div>
+            <h3 className="text-center text-xl font-bold tracking-[0.2em] mb-4">INVESTMENT OUTLOOK</h3>
+            <p className="text-sm leading-relaxed max-w-3xl mx-auto text-center mb-3">
+              Each acquisition undertaken by GHL India Ventures reflects our commitment to strategic value creation through the acquisition and transformation of stressed assets. By combining structured financing, on-ground redevelopment, and institutional governance, we consistently position our portfolio for high growth and sustainable returns.
+            </p>
+            <p className="text-sm leading-relaxed max-w-3xl mx-auto text-center">
+              At the time of asset disposal, the Fund targets an exit multiple of 2X to 2.5X on invested capital, backed by tangible development progress, improved liquidity, and enhanced asset value.
+            </p>
+          </div>
+        </div>
       </div>
-      {renderPortfolioAssets()}
-      {renderKycReadOnlySummary()}
-      {renderInvestmentDocTracking()}
-    </div>
-  )
+    )
+  }
 
   // ═══════════════════════════════════════════════════════════
   // INVESTMENT ONBOARDING TAB

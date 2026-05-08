@@ -431,15 +431,55 @@ export default function KYCWizard({ clientId, userId, userName, userEmail, userP
   const btnPrimary = 'px-6 py-2.5 rounded-lg bg-red-600 hover:bg-red-700 text-white text-sm font-semibold transition-colors disabled:opacity-50'
   const btnOutline = `px-6 py-2.5 rounded-lg border text-sm font-semibold transition-colors ${isDark ? 'border-white/10 text-white hover:bg-white/5' : 'border-gray-300 text-gray-700 hover:bg-gray-50'}`
 
-  // KYC already approved
+  // KYC already approved — read-mode summary per Investor Dashboard
+  // Corrections (2026-05): show all KYC topics (Bank Details, Proofs,
+  // Nominee Details) along with verification status and approval date.
   if (overallStatus?.status === 'verified' || overallStatus?.status === 'approved') {
+    const approvedAt = (overallStatus as any)?.updated_at || (basicData as any)?.updated_at
+    const approvalDate = approvedAt ? new Date(approvedAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'
+    const primaryNominee = (nomineesData && nomineesData[0]) as any | undefined
+    const proofs: { label: string; verified: boolean; url?: string; back?: string }[] = [
+      { label: 'PAN Card', verified: !!(identityData as any)?.pan_doc_url, url: (identityData as any)?.pan_doc_url },
+      { label: 'Aadhar Card', verified: !!(identityData as any)?.aadhar_doc_url, url: (identityData as any)?.aadhar_doc_url, back: (identityData as any)?.aadhar_back_url },
+      { label: 'Bank Proof', verified: !!(bankData as any)?.bank_doc_url, url: (bankData as any)?.bank_doc_url },
+      { label: 'Nominee ID Proof', verified: !!primaryNominee?.proof_url, url: primaryNominee?.proof_url },
+    ]
+    const subCardCls = isDark
+      ? 'rounded-xl border border-white/[0.06] bg-white/[0.03]'
+      : 'rounded-xl border border-gray-200 bg-white'
+    const subTabCls = (active: boolean) => active
+      ? 'bg-neutral-900 text-white border-neutral-800'
+      : isDark ? 'bg-white/[0.04] text-gray-400 border-white/[0.06] hover:text-white' : 'bg-gray-50 text-gray-600 border-gray-200 hover:text-gray-900'
     return (
-      <div className={cardCls}>
-        <div className="text-center py-12">
-          <CheckCircle className="w-16 h-16 text-emerald-500 mx-auto mb-4" />
-          <h2 className={`text-2xl font-bold mb-2 ${isDark ? 'text-white' : 'text-gray-900'}`}>KYC Approved</h2>
-          <p className={isDark ? 'text-gray-400' : 'text-gray-600'}>Your KYC verification is complete. You can now invest.</p>
+      <div className="space-y-5">
+        {/* Header / status summary */}
+        <div className={`${subCardCls} px-5 py-5 text-center`}>
+          <p className={`text-[11px] uppercase tracking-wider font-semibold mb-2 ${isDark ? 'text-gray-500' : 'text-gray-600'}`}>
+            KYC Status: <span className="text-emerald-500 font-bold">Approved</span>
+          </p>
+          <h2 className={`text-xl font-bold mb-1 flex items-center justify-center gap-2 ${isDark ? 'text-white' : 'text-gray-900'}`}>
+            <CheckCircle className="w-5 h-5 text-emerald-500" /> KYC Verification Complete
+          </h2>
+          <p className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+            Your documents have been verified and KYC is approved.
+          </p>
+          <p className={`text-[11px] mt-2 ${isDark ? 'text-gray-500' : 'text-gray-600'}`}>
+            Approval Date: <span className={`font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}>{approvalDate}</span>
+          </p>
         </div>
+
+        {/* Read-only sub-tabs: Bank Details · Proofs · Nominee Details */}
+        <KycReadModeTabs
+          isDark={isDark}
+          subCardCls={subCardCls}
+          subTabCls={subTabCls}
+          basicData={basicData}
+          identityData={identityData}
+          bankData={bankData}
+          dematData={dematData}
+          primaryNominee={primaryNominee}
+          proofs={proofs}
+        />
       </div>
     )
   }
@@ -712,6 +752,131 @@ export default function KYCWizard({ clientId, userId, userName, userEmail, userP
           )}
         </div>
       </div>
+    </div>
+  )
+}
+
+// ════════════════════════════════════════════════════════════════
+// KYC Read-mode Tabs — shown after KYC is approved.
+// Tabs: Bank Details · Proofs · Nominee Details
+// ════════════════════════════════════════════════════════════════
+function KycReadModeTabs({
+  isDark, subCardCls, subTabCls, basicData, identityData, bankData, dematData, primaryNominee, proofs,
+}: {
+  isDark: boolean
+  subCardCls: string
+  subTabCls: (active: boolean) => string
+  basicData: any
+  identityData: any
+  bankData: any
+  dematData: any
+  primaryNominee: any
+  proofs: { label: string; verified: boolean; url?: string; back?: string }[]
+}) {
+  const [tab, setTab] = useState<'bank' | 'proofs' | 'nominee'>('bank')
+  const labelCls = isDark ? 'text-[11px] uppercase tracking-wider text-gray-500 font-semibold' : 'text-[11px] uppercase tracking-wider text-gray-600 font-semibold'
+  const valueCls = isDark ? 'text-sm text-white font-medium' : 'text-sm text-gray-900 font-medium'
+  return (
+    <div className="space-y-3">
+      <div className="flex flex-wrap gap-2">
+        {[
+          { id: 'bank' as const, label: 'Bank Details' },
+          { id: 'proofs' as const, label: 'Proofs' },
+          { id: 'nominee' as const, label: 'Nominee Details' },
+        ].map(t => (
+          <button key={t.id} onClick={() => setTab(t.id)}
+            className={`px-4 py-2 rounded-xl text-xs font-bold border transition-colors ${subTabCls(tab === t.id)}`}>
+            {t.label}
+          </button>
+        ))}
+      </div>
+
+      {tab === 'bank' && (
+        <div className={`${subCardCls} p-5 space-y-3`}>
+          {[
+            ['Account No', bankData?.account_number || '—'],
+            ['IFSC', bankData?.ifsc_code || bankData?.swift_iban_code || '—'],
+            ['Holder Name', bankData?.account_holder_name || basicData?.investor_name || '—'],
+            ['Branch', bankData?.branch_name || '—'],
+            ['Account Type', bankData?.account_type || '—'],
+            ['Bank Name', bankData?.bank_name || '—'],
+            ...(dematData?.demat_account_number ? [['Demat Account', dematData.demat_account_number]] as [string, string][] : []),
+          ].map(([l, v], i) => (
+            <div key={i} className={`flex items-center justify-between gap-3 py-2 border-b last:border-b-0 ${isDark ? 'border-white/[0.06]' : 'border-gray-200'}`}>
+              <span className={labelCls}>{l}</span>
+              <span className={valueCls}>{v}</span>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {tab === 'proofs' && (
+        <div className={`${subCardCls} p-5 space-y-3`}>
+          <div className={`flex items-center justify-between mb-2 pb-2 border-b ${isDark ? 'border-white/[0.06]' : 'border-gray-200'}`}>
+            <span className={`text-[11px] uppercase tracking-wider font-semibold ${isDark ? 'text-gray-500' : 'text-gray-600'}`}>KYC Documents</span>
+          </div>
+          {proofs.map((p, i) => (
+            <div key={i} className={`flex items-center justify-between gap-3 py-2 ${i < proofs.length - 1 ? `border-b ${isDark ? 'border-white/[0.04]' : 'border-gray-200'}` : ''}`}>
+              <div className="flex items-center gap-3">
+                <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${isDark ? 'bg-white/[0.06]' : 'bg-gray-100'}`}>
+                  <FileText className={`w-4 h-4 ${isDark ? 'text-gray-400' : 'text-gray-600'}`} />
+                </div>
+                <div>
+                  <p className={`text-sm font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}>{p.label}</p>
+                  {p.label === 'Aadhar Card' && (p.url || p.back) && (
+                    <p className={`text-[10px] ${isDark ? 'text-gray-500' : 'text-gray-600'}`}>Front{p.back ? ' + Back' : ''} page</p>
+                  )}
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                {p.verified ? (
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/15 text-emerald-500">
+                    <CheckCircle className="w-3 h-3" /> Verified
+                  </span>
+                ) : (
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/15 text-amber-500">
+                    <Clock className="w-3 h-3" /> Pending
+                  </span>
+                )}
+                {p.label === 'Aadhar Card' && p.url && (
+                  <a href={p.url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 px-2 py-1 rounded-md text-[10px] font-bold bg-brand-red/15 text-brand-red hover:bg-brand-red/25 transition-colors">
+                    <Eye className="w-3 h-3" /> Front
+                  </a>
+                )}
+                {p.label === 'Aadhar Card' && p.back && (
+                  <a href={p.back} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 px-2 py-1 rounded-md text-[10px] font-bold bg-brand-red/15 text-brand-red hover:bg-brand-red/25 transition-colors">
+                    <Eye className="w-3 h-3" /> Back
+                  </a>
+                )}
+                {p.label !== 'Aadhar Card' && p.url && (
+                  <a href={p.url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 px-2 py-1 rounded-md text-[10px] font-bold bg-brand-red/15 text-brand-red hover:bg-brand-red/25 transition-colors">
+                    <Eye className="w-3 h-3" /> View
+                  </a>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {tab === 'nominee' && (
+        <div className={`${subCardCls} p-5 space-y-3`}>
+          {primaryNominee ? [
+            ['Name', primaryNominee.name || '—'],
+            ['Relationship', primaryNominee.relationship || '—'],
+            ['Phone', primaryNominee.phone || '—'],
+            ['DOB', primaryNominee.dob || '—'],
+            ['Share', primaryNominee.percentage != null ? `${primaryNominee.percentage}%` : '—'],
+          ].map(([l, v], i) => (
+            <div key={i} className={`flex items-center justify-between gap-3 py-2 border-b last:border-b-0 ${isDark ? 'border-white/[0.06]' : 'border-gray-200'}`}>
+              <span className={labelCls}>{l}</span>
+              <span className={valueCls}>{v}</span>
+            </div>
+          )) : (
+            <p className={`text-xs ${isDark ? 'text-gray-500' : 'text-gray-600'}`}>No nominee on file.</p>
+          )}
+        </div>
+      )}
     </div>
   )
 }

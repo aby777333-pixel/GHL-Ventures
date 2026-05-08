@@ -61,18 +61,17 @@ function G({ children, className = '', theme }: { children: React.ReactNode; cla
 }
 
 // ── Fund data ──────────────────────────────────────────────
+// Per Investor Dashboard Corrections #2 (2026-05): Alternate-route ticket
+// size is set to ₹10L. Direct AIF Route is purely SEBI-regulated AIF
+// (no startup exposure), with Interest 12% pa, Capital Appreciation 12% pa,
+// Total Assured Returns 24% pa.
 const FUNDS = [
   {
     id: 'debenture',
     name: 'Alternate route to Invest in AIF via Debenture',
     fundType: 'Category II AIF (as per SEBI Alternative Investment Fund Regulations, 2012)',
     focus: 'Stressed and special situation real estate assets',
-    // Issue 29-04-2026 (Debenture Limitation Update): admin needs to onboard
-    // existing debenture investors whose original ticket size was below ₹10L,
-    // so we drop the floor on this vehicle. AIF Direct keeps its ₹1Cr SEBI
-    // regulatory minimum. `0` here is treated as "no minimum" by the form
-    // validation and the displayed copy.
-    minInvestment: 0,
+    minInvestment: 1000000,
     interest: 12, // 1% per month
     capitalAppreciation: 12,
     totalAssuredReturns: 24,
@@ -89,13 +88,13 @@ const FUNDS = [
     id: 'direct-aif',
     name: 'Direct AIF Route',
     fundType: 'Category II AIF — Direct Investment',
-    focus: 'SEBI-registered AIF with stressed RE and startup exposure',
+    focus: 'SEBI-registered AIF with stressed real estate exposure',
     minInvestment: 10000000,
-    interest: 18,
-    capitalAppreciation: 15,
-    totalAssuredReturns: 33,
+    interest: 12,
+    capitalAppreciation: 12,
+    totalAssuredReturns: 24,
     tenure: '5-10 Years',
-    strategy: ['Direct participation in SEBI-regulated AIF scheme', 'Diversified portfolio across real estate and startups', 'Professional fund management with quarterly NAV updates'],
+    strategy: ['Direct participation in SEBI-regulated AIF scheme', 'Diversified portfolio across stressed real estate assets', 'Professional fund management with quarterly NAV updates'],
     documents: ['PPM (Private Placement Memorandum)', 'Contribution Agreement', 'Capital Call Notice', 'NAV Statement'],
     security: ['SEBI registered Category II AIF', 'Independent custodian for assets', 'Quarterly audited NAV'],
   },
@@ -213,6 +212,30 @@ export default function InvestmentFlowTab({
   const yearlyReturns = monthlyInterest * 12
   const yearlyAppreciation = Math.round(investAmount * (selectedFund.capitalAppreciation / 100))
   const sumCapitalROI = investAmount + (yearlyReturns * investTenure) + (yearlyAppreciation * investTenure)
+
+  // Card filter for "My Investments": split between Direct AIF and Debenture
+  // (Investor Dashboard Corrections 2026-05). Replaces the previous AIF/NCD/PT
+  // segmentation that didn't match the actual fund vehicles offered.
+  const [investFilter, setInvestFilter] = useState<'all' | 'aif' | 'debenture'>('all')
+  const isAIFApp = (app: any) => {
+    const v = String(app?.fund_vehicle || '').toLowerCase()
+    return v.includes('direct aif') || v === 'direct aif route' || v.includes('aif direct')
+  }
+  const isDebentureApp = (app: any) => {
+    const v = String(app?.fund_vehicle || '').toLowerCase()
+    return v.includes('debenture')
+  }
+  const filteredApps = useMemo(() => {
+    const apps = investApps || []
+    if (investFilter === 'aif') return apps.filter(isAIFApp)
+    if (investFilter === 'debenture') return apps.filter(isDebentureApp)
+    return apps
+  }, [investApps, investFilter])
+
+  // Sub-views for the card "Explore" button: Investment Documents, History,
+  // Document Tracking, TDS — matches the screenshot in the corrections PDF.
+  // Cashback is intentionally omitted per "Do not use the cashback option".
+  const [exploreView, setExploreView] = useState<'documents' | 'history' | 'tracking' | 'tds'>('documents')
 
   // Payment schedule for selected app
   const schedule = useMemo(() => {
@@ -450,15 +473,17 @@ export default function InvestmentFlowTab({
 
   return (
     <div className="space-y-6">
-      {/* Sub-tab navigation */}
+      {/* Sub-tab navigation — active state uses dark background per
+          Investor Dashboard Corrections (2026-05): "while in active status,
+          it must be dark — Eg: Fund Details, Invest and My Investment". */}
       <div className="flex flex-wrap gap-2">
         {TABS.map(tab => (
           <button key={tab.id} onClick={() => { setSubTab(tab.id); if (tab.id !== 'history') setSelectedApp(null) }}
             className={`flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-xs font-bold transition-all ${
               subTab === tab.id
-                ? 'text-white border border-brand-red/40' : t('text-gray-500 border border-white/[0.06] hover:text-white hover:bg-white/[0.04]','text-gray-600 border border-gray-200 hover:text-gray-900 hover:bg-gray-100')
-            }`}
-            style={subTab === tab.id ? { background: 'linear-gradient(135deg, rgba(208,2,27,0.2), rgba(139,0,0,0.2))' } : undefined}>
+                ? 'text-white bg-neutral-900 border border-neutral-800 shadow-md shadow-black/20'
+                : t('text-gray-500 border border-white/[0.06] hover:text-white hover:bg-white/[0.04]','text-gray-600 border border-gray-200 hover:text-gray-900 hover:bg-gray-100')
+            }`}>
             <tab.icon className="w-3.5 h-3.5" />{tab.label}
           </button>
         ))}
@@ -480,11 +505,12 @@ export default function InvestmentFlowTab({
           </div>
 
           <G className="p-6" theme={theme}>
-            {/* Header with buttons */}
+            {/* Header with buttons — "Investment List" button removed per
+                Investor Dashboard Corrections (2026-05). Investors now reach
+                the Invest screen via the bottom "Invest" CTA only. */}
             <div className="flex items-start justify-between mb-6">
               <h3 className={`text-lg font-bold ${t('text-white','text-gray-900')}`}>{selectedFund.name}</h3>
               <div className="flex gap-2">
-                <button onClick={() => setSubTab('invest')} className="px-4 py-2 rounded-lg text-xs font-bold text-white" style={{ background: 'linear-gradient(135deg, #D0021B, #8B0000)' }}>Investment List</button>
                 <a
                   href="/downloads/investing-and-payment-terms.pdf"
                   target="_blank"
@@ -652,55 +678,404 @@ export default function InvestmentFlowTab({
       )}
 
       {/* ──────────────────────────────────────────────────────
-          3. MY INVESTMENTS (History Table)
-          ────────────────────────────────────────────────────── */}
+          3. MY INVESTMENTS (Card-wise grid)
+          ──────────────────────────────────────────────────────
+          Per Investor Dashboard Corrections (2026-05):
+          - Card-wise layout split by Direct AIF / Debenture
+          - Right-corner filter chips (All / Direct AIF / Debenture)
+            replacing the legacy AIF/NCD/PT segmentation
+          - AIF cards display the Commitment ID; Debenture cards do not
+          - Explore opens an in-card sub-menu: Investment Documents,
+            History, Document Tracking, TDS (Cashback intentionally
+            excluded — "Do not use the cashback option")           */}
       {subTab === 'history' && !selectedApp && (
-        <G className="overflow-hidden" theme={theme}>
+        <div className="space-y-4">
           {investApps.length === 0 ? (
-            <div className="p-10 text-center">
-              <Briefcase className={`w-10 h-10 mx-auto mb-3 ${t('text-gray-600','text-gray-400')}`} />
-              <p className={`text-sm font-medium ${t('text-gray-400','text-gray-600')}`}>No investments yet</p>
-              <p className={`text-xs mt-1 ${t('text-gray-600','text-gray-500')}`}>Your investment commitments will appear here.</p>
-              <button onClick={() => setSubTab('funds')} className="mt-4 px-6 py-2 rounded-xl text-xs font-bold text-white" style={{ background: 'linear-gradient(135deg, #D0021B, #8B0000)' }}>Browse Funds</button>
-            </div>
+            <G className="overflow-hidden" theme={theme}>
+              <div className="p-10 text-center">
+                <Briefcase className={`w-10 h-10 mx-auto mb-3 ${t('text-gray-600','text-gray-400')}`} />
+                <p className={`text-sm font-medium ${t('text-gray-400','text-gray-600')}`}>No investments yet</p>
+                <p className={`text-xs mt-1 ${t('text-gray-600','text-gray-500')}`}>Your investment commitments will appear here.</p>
+                <button onClick={() => setSubTab('funds')} className="mt-4 px-6 py-2 rounded-xl text-xs font-bold text-white" style={{ background: 'linear-gradient(135deg, #D0021B, #8B0000)' }}>Browse Funds</button>
+              </div>
+            </G>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className={`border-b ${t('border-white/[0.06] bg-white/[0.02]','border-gray-200 bg-gray-50')}`}>
-                    {['COMMITMENT ID', 'FUND NAME', 'REFERENCE NUMBER', 'AMOUNT (₹)', 'ACTION'].map(h => (
-                      <th key={h} className={`text-left text-xs font-bold uppercase tracking-wider py-4 px-5 ${t('text-gray-500','text-gray-600')}`}>{h}</th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {investApps.map((app: any, i: number) => (
-                    <tr key={app.id || i} className={`border-b ${t('border-white/[0.04] hover:bg-white/[0.02]','border-gray-100 hover:bg-gray-50')}`}>
-                      <td className={`py-4 px-5 text-xs ${t('text-gray-400','text-gray-600')}`}>{app.commitment_id || 'Not Generated'}</td>
-                      <td className={`py-4 px-5 text-xs font-medium ${t('text-white','text-gray-900')}`}>{app.fund_vehicle || '—'}</td>
-                      <td className={`py-4 px-5 text-xs ${t('text-gray-400','text-gray-600')}`}>{app.reference_number || 'Not Generated'}</td>
-                      <td className={`py-4 px-5 text-xs font-bold ${t('text-white','text-gray-900')}`}>{fmtINR(Number(app.investment_amount) || 0)}</td>
-                      <td className="py-4 px-5">
-                        <button onClick={() => { setSelectedApp(app); setTxnForm({ capitalAmount: String(app.investment_amount || ''), transactionAmount: '', transactionId: '', proofUrl: '' }); if (bankAccounts[0]) setTxnBank(bankAccounts[0].id) }}
-                          className="p-2 rounded-lg bg-brand-red text-white hover:bg-brand-red/80 transition-colors" title="View">
-                          <Eye className="w-4 h-4" />
-                        </button>
-                      </td>
-                    </tr>
+            <>
+              {/* Filter bar: Active Investment count + Direct AIF / Debenture chips */}
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div className="flex items-center gap-2">
+                  <span className="w-2 h-2 rounded-full bg-emerald-500" />
+                  <span className={`text-sm font-semibold ${t('text-white','text-gray-900')}`}>Active Investment</span>
+                  <span className={`text-[11px] px-2 py-0.5 rounded-full ${t('bg-white/[0.06] text-gray-300','bg-gray-100 text-gray-700')}`}>{filteredApps.length} {filteredApps.length === 1 ? 'plan' : 'plans'}</span>
+                </div>
+                <div className={`flex gap-1 p-1 rounded-xl ${t('bg-white/[0.04] border border-white/[0.06]','bg-gray-100 border border-gray-200')}`}>
+                  {[
+                    { id: 'all' as const, label: 'All' },
+                    { id: 'aif' as const, label: 'Direct AIF' },
+                    { id: 'debenture' as const, label: 'Debenture' },
+                  ].map(f => (
+                    <button key={f.id} onClick={() => setInvestFilter(f.id)}
+                      className={`px-3 py-1.5 rounded-lg text-[11px] font-bold transition-colors ${investFilter === f.id
+                        ? 'bg-brand-red text-white shadow-sm'
+                        : t('text-gray-400 hover:text-white','text-gray-600 hover:text-gray-900')}`}>
+                      {f.label}
+                    </button>
                   ))}
-                </tbody>
-              </table>
-            </div>
+                </div>
+              </div>
+
+              {/* Card grid */}
+              {filteredApps.length === 0 ? (
+                <G className="p-10 text-center" theme={theme}>
+                  <Briefcase className={`w-10 h-10 mx-auto mb-3 ${t('text-gray-600','text-gray-400')}`} />
+                  <p className={`text-sm font-medium ${t('text-gray-400','text-gray-600')}`}>No investments in this category</p>
+                  <p className={`text-xs mt-1 ${t('text-gray-600','text-gray-500')}`}>Switch the filter above to view other investments.</p>
+                </G>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {filteredApps.map((app: any, i: number) => {
+                    const isAIF = isAIFApp(app)
+                    const status = String(app.status || 'pending').toLowerCase()
+                    const statusLabel = status.charAt(0).toUpperCase() + status.slice(1)
+                    const investDate = fmtDate(app.investment_date || app.final_investment_date || app.created_at)
+                    const tenureYears = Number(String(app.tenure_preference || '').replace(/[^0-9]/g, '')) || 3
+                    const start = app.investment_date || app.final_investment_date || app.created_at
+                    const maturityDate = (() => {
+                      try {
+                        if (!start) return '—'
+                        const d = new Date(start)
+                        d.setFullYear(d.getFullYear() + tenureYears)
+                        return d.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })
+                      } catch { return '—' }
+                    })()
+                    // Maturity progress (rough): % between invest date and maturity
+                    const progress = (() => {
+                      try {
+                        if (!start) return 0
+                        const s = new Date(start).getTime()
+                        const e = new Date(start).setFullYear(new Date(start).getFullYear() + tenureYears)
+                        const now = Date.now()
+                        if (now <= s) return 0
+                        if (now >= e) return 100
+                        return Math.round(((now - s) / (e - s)) * 100)
+                      } catch { return 0 }
+                    })()
+                    return (
+                      <div key={app.id || i} className={`relative rounded-2xl overflow-hidden border transition-all hover:-translate-y-0.5 ${t('bg-white/[0.03] border-white/[0.08] hover:border-brand-red/30','bg-white border-gray-200 hover:border-brand-red/40 shadow-sm')}`}>
+                        {/* Top accent strip with vehicle label */}
+                        <div className="relative h-28 bg-gradient-to-br from-neutral-900 via-red-950/40 to-black overflow-hidden">
+                          <div className="absolute inset-0 opacity-20" style={{ backgroundImage: 'radial-gradient(circle at 30% 30%, rgba(208,2,27,0.6), transparent 60%)' }} />
+                          <span className="absolute top-3 right-3 text-[10px] font-bold uppercase tracking-wider px-2 py-1 rounded-md bg-brand-red/90 text-white">
+                            {isAIF ? 'Direct AIF' : 'Debenture'}
+                          </span>
+                          <div className="relative h-full flex items-end px-4 pb-3">
+                            <div>
+                              <p className="text-white text-lg font-bold leading-tight">{app.fund_vehicle || 'Investment'}</p>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Body */}
+                        <div className="p-4 space-y-2.5">
+                          {/* Commitment ID — visible only for AIF per spec */}
+                          {isAIF && (
+                            <div className="flex items-center justify-between">
+                              <span className={`text-[10px] uppercase tracking-wider font-semibold ${t('text-gray-500','text-gray-600')}`}>Commitment ID</span>
+                              <span className={`text-[11px] font-mono font-semibold ${t('text-white','text-gray-900')}`}>{app.commitment_id || 'Not Generated'}</span>
+                            </div>
+                          )}
+
+                          <div className="flex items-center gap-2">
+                            <Calendar className={`w-3.5 h-3.5 ${t('text-gray-500','text-gray-500')}`} />
+                            <span className={`text-[11px] ${t('text-gray-400','text-gray-600')}`}>Invest Date</span>
+                            <span className={`ml-auto text-[11px] font-semibold ${t('text-white','text-gray-900')}`}>{investDate}</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <IndianRupee className={`w-3.5 h-3.5 ${t('text-gray-500','text-gray-500')}`} />
+                            <span className={`text-[11px] ${t('text-gray-400','text-gray-600')}`}>Invest Amount</span>
+                            <span className={`ml-auto text-[12px] font-bold ${t('text-white','text-gray-900')}`}>₹{fmtINR(Number(app.investment_amount) || 0)}</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Clock className={`w-3.5 h-3.5 ${t('text-gray-500','text-gray-500')}`} />
+                            <span className={`text-[11px] ${t('text-gray-400','text-gray-600')}`}>Maturity Date</span>
+                            <span className={`ml-auto text-[11px] font-semibold ${t('text-white','text-gray-900')}`}>{maturityDate}</span>
+                          </div>
+
+                          {/* Progress to maturity */}
+                          <div className="pt-1">
+                            <div className="flex items-center justify-between mb-1">
+                              <span className={`text-[10px] uppercase tracking-wider font-semibold ${t('text-gray-500','text-gray-600')}`}>Progress to maturity</span>
+                              <span className={`text-[10px] font-semibold ${t('text-gray-400','text-gray-600')}`}>{maturityDate}</span>
+                            </div>
+                            <div className={`w-full h-1.5 rounded-full overflow-hidden ${t('bg-white/[0.06]','bg-gray-200')}`}>
+                              <div className="h-full rounded-full bg-gradient-to-r from-brand-red to-red-400" style={{ width: `${progress}%` }} />
+                            </div>
+                          </div>
+
+                          {/* Status pill + Explore CTA */}
+                          <div className="flex items-center justify-between pt-2">
+                            <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                              status === 'approved' || status === 'active' || status === 'credited'
+                                ? 'bg-emerald-500/15 text-emerald-500'
+                                : status === 'rejected' ? 'bg-red-500/15 text-red-500'
+                                : 'bg-amber-500/15 text-amber-500'
+                            }`}>
+                              <span className={`w-1.5 h-1.5 rounded-full ${
+                                status === 'approved' || status === 'active' || status === 'credited' ? 'bg-emerald-500' : status === 'rejected' ? 'bg-red-500' : 'bg-amber-500'
+                              }`} />
+                              {statusLabel || 'Pending'}
+                            </span>
+                            <button onClick={() => { setSelectedApp(app); setExploreView('documents'); setTxnForm({ capitalAmount: String(app.investment_amount || ''), transactionAmount: '', transactionId: '', proofUrl: '' }); if (bankAccounts[0]) setTxnBank(bankAccounts[0].id) }}
+                              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-[11px] font-bold text-white"
+                              style={{ background: 'linear-gradient(135deg, #D0021B, #8B0000)' }}>
+                              Explore <ArrowRight className="w-3 h-3" />
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
+            </>
           )}
-        </G>
+        </div>
       )}
 
-      {/* ── Investment Detail (when app selected from history) ── */}
+      {/* ── Investment Detail (when app selected from history) ──
+          Per Investor Dashboard Corrections (2026-05): Explore opens a
+          sub-menu — Investment Documents · History · Document Tracking · TDS
+          (Cashback intentionally not implemented). The Submit Transaction
+          form is kept available below the Explore nav for active commitments. */}
       {subTab === 'history' && selectedApp && (
         <div className="space-y-4">
           <button onClick={() => setSelectedApp(null)} className={`flex items-center gap-1 text-xs font-semibold ${t('text-gray-400 hover:text-white','text-gray-600 hover:text-gray-900')} transition-colors`}>
             ← Back to My Investments
           </button>
+
+          {/* Explore sub-menu */}
+          <div className="flex flex-wrap gap-2">
+            {[
+              { id: 'documents' as const, label: 'Investment Documents', icon: FileText },
+              { id: 'history' as const, label: 'History', icon: Clock },
+              { id: 'tracking' as const, label: 'Document Tracking', icon: FileCheck },
+              { id: 'tds' as const, label: 'TDS', icon: Receipt },
+            ].map(v => (
+              <button key={v.id} onClick={() => setExploreView(v.id)}
+                className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold transition-all ${
+                  exploreView === v.id
+                    ? 'text-white bg-brand-red border border-brand-red'
+                    : t('text-gray-400 border border-white/[0.06] hover:text-white hover:bg-white/[0.04]','text-gray-600 border border-gray-200 hover:text-gray-900 hover:bg-gray-100')
+                }`}>
+                <v.icon className="w-3.5 h-3.5" />{v.label}
+              </button>
+            ))}
+          </div>
+
+          {/* ── Investment Documents view ── */}
+          {exploreView === 'documents' && (
+            <G className="overflow-hidden" theme={theme}>
+              <div className={`px-5 py-3 border-b ${t('border-white/[0.06]','border-gray-200')}`}>
+                <h4 className={`text-sm font-bold ${t('text-white','text-gray-900')}`}>Investment Documents</h4>
+                <p className={`text-[11px] mt-0.5 ${t('text-gray-500','text-gray-600')}`}>
+                  {selectedApp.fund_vehicle}{selectedApp.commitment_id ? ` · ${selectedApp.commitment_id}` : ''}
+                </p>
+              </div>
+              {(() => {
+                const docsForApp = (investDocs || []).filter((d: any) => d.investment_app_id === selectedApp.id)
+                if (docsForApp.length === 0) {
+                  return (
+                    <div className="p-10 text-center">
+                      <FileText className={`w-10 h-10 mx-auto mb-3 ${t('text-gray-600','text-gray-400')}`} />
+                      <p className={`text-sm font-medium ${t('text-gray-400','text-gray-600')}`}>No investment documents yet</p>
+                      <p className={`text-xs mt-1 ${t('text-gray-600','text-gray-500')}`}>Documents will appear here after admin processes your investment.</p>
+                    </div>
+                  )
+                }
+                return (
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className={`border-b ${t('border-white/[0.06] bg-white/[0.02]','border-gray-200 bg-gray-50')}`}>
+                          {['DOCUMENT', 'ACTION'].map(h => (
+                            <th key={h} className={`text-left text-xs font-bold uppercase tracking-wider py-3 px-5 ${t('text-gray-500','text-gray-600')}`}>{h}</th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {docsForApp.map((doc: any, i: number) => {
+                          const docType = (doc.document_type || '').toLowerCase()
+                          const autoGen = ['acknowledgement_letter', 'acknowledgement'].includes(docType) && !doc.file_url
+                          const ready = !!doc.file_url || autoGen
+                          return (
+                            <tr key={doc.id || i} className={`border-b ${t('border-white/[0.04]','border-gray-100')}`}>
+                              <td className={`py-3 px-5 text-xs font-medium ${t('text-white','text-gray-900')}`}>{doc.title || 'Document'}</td>
+                              <td className="py-3 px-5">
+                                {doc.file_url ? (
+                                  <button onClick={() => handleViewDoc(doc.file_url)} className="inline-flex items-center gap-1 text-[11px] font-bold px-3 py-1.5 rounded-lg bg-brand-red/15 text-brand-red hover:bg-brand-red/25 transition-colors">
+                                    <Eye className="w-3 h-3" /> View
+                                  </button>
+                                ) : autoGen ? (
+                                  <button onClick={() => handleOpenAutoAcknowledgement(selectedApp, doc)} className="inline-flex items-center gap-1 text-[11px] font-bold px-3 py-1.5 rounded-lg bg-brand-red/15 text-brand-red hover:bg-brand-red/25 transition-colors">
+                                    <Eye className="w-3 h-3" /> View
+                                  </button>
+                                ) : (
+                                  <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-1 rounded-full bg-amber-500/15 text-amber-500">
+                                    <Clock className="w-3 h-3" /> Processing
+                                  </span>
+                                )}
+                              </td>
+                            </tr>
+                          )
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                )
+              })()}
+            </G>
+          )}
+
+          {/* ── History view ── */}
+          {exploreView === 'history' && (
+            <G className="overflow-hidden" theme={theme}>
+              <div className={`flex flex-wrap items-center justify-between gap-3 px-5 py-3 border-b ${t('border-white/[0.06]','border-gray-200')}`}>
+                <h4 className={`text-sm font-bold ${t('text-white','text-gray-900')}`}>Payment History</h4>
+              </div>
+              {(() => {
+                const rowsForApp = (investorPayouts || []).length > 0
+                  ? (investorPayouts || [])
+                  : schedule
+                if (rowsForApp.length === 0) {
+                  return (
+                    <div className="p-10 text-center">
+                      <Clock className={`w-10 h-10 mx-auto mb-3 ${t('text-gray-600','text-gray-400')}`} />
+                      <p className={`text-sm font-medium ${t('text-gray-400','text-gray-600')}`}>No payment history yet</p>
+                      <p className={`text-xs mt-1 ${t('text-gray-600','text-gray-500')}`}>Your payment history will appear here once payouts begin.</p>
+                    </div>
+                  )
+                }
+                return (
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className={`border-b ${t('border-white/[0.06] bg-white/[0.02]','border-gray-200 bg-gray-50')}`}>
+                          {['#', 'DATE', 'AMOUNT (₹)', 'TDS (₹)', 'NET (₹)', 'STATUS'].map(h => (
+                            <th key={h} className={`text-left text-xs font-bold uppercase tracking-wider py-3 px-5 ${t('text-gray-500','text-gray-600')}`}>{h}</th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {rowsForApp.map((row: any, i: number) => {
+                          const isPayout = !!row.id && !!row.due_date
+                          const date = isPayout ? row.due_date : row.date
+                          const gross = isPayout ? Number(row.gross_amount) || 0 : Number(row.grossInterest) || 0
+                          const tdsAmt = isPayout ? Number(row.tds_amount) || 0 : Number(row.tds) || 0
+                          const net = isPayout ? Number(row.net_interest) || 0 : Number(row.netInterest) || 0
+                          const status = isPayout ? String(row.payment_status || 'pending') : 'Due'
+                          const statusLower = status.toLowerCase()
+                          const pillCls = statusLower === 'paid'
+                            ? 'bg-emerald-500/15 text-emerald-500'
+                            : statusLower === 'overdue' ? 'bg-red-500/15 text-red-500'
+                            : 'bg-amber-500/15 text-amber-500'
+                          return (
+                            <tr key={i} className={`border-b ${t('border-white/[0.04] hover:bg-white/[0.02]','border-gray-100 hover:bg-gray-50')}`}>
+                              <td className={`py-3 px-5 text-xs ${t('text-gray-400','text-gray-600')}`}>{i + 1}</td>
+                              <td className={`py-3 px-5 text-xs ${t('text-gray-400','text-gray-700')}`}>{fmtDate(date)}</td>
+                              <td className={`py-3 px-5 text-xs font-semibold ${t('text-white','text-gray-900')}`}>{fmtINR(gross)}</td>
+                              <td className={`py-3 px-5 text-xs ${t('text-red-400','text-red-600')}`}>{fmtINR(tdsAmt)}</td>
+                              <td className={`py-3 px-5 text-xs font-semibold ${t('text-emerald-400','text-emerald-700')}`}>{fmtINR(net)}</td>
+                              <td className="py-3 px-5"><span className={`px-2 py-0.5 rounded-full text-[10px] font-bold capitalize ${pillCls}`}>{status}</span></td>
+                            </tr>
+                          )
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                )
+              })()}
+            </G>
+          )}
+
+          {/* ── Document Tracking view ── */}
+          {exploreView === 'tracking' && (
+            <DocumentTrackingProgress
+              investmentAppId={selectedApp.id}
+              theme={(theme === 'light' ? 'light' : 'dark')}
+              fundLabel={selectedApp.fund_vehicle || 'Investment'}
+              refLabel={selectedApp.reference_number || selectedApp.commitment_id || `GHL-CMT-${String(selectedApp.id).slice(0, 8).toUpperCase()}`}
+            />
+          )}
+
+          {/* ── TDS view ── */}
+          {exploreView === 'tds' && (() => {
+            const tdsTotal = (investorPayouts || [])
+              .filter((p: any) => p.investment_app_id === selectedApp.id)
+              .reduce((s: number, p: any) => s + (Number(p.tds_amount) || 0), 0)
+            const fy = (() => {
+              const d = new Date()
+              const y = d.getMonth() + 1 >= 4 ? d.getFullYear() : d.getFullYear() - 1
+              return `${y}-${String((y + 1) % 100).padStart(2, '0')}`
+            })()
+            const tdsCerts = (investDocs || []).filter((d: any) => d.investment_app_id === selectedApp.id && /tds/i.test(String(d.title || d.document_type || '')))
+            return (
+              <div className="space-y-4">
+                <G className="p-5" theme={theme}>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div className={`p-4 rounded-xl ${t('bg-white/[0.03] border border-white/[0.06]','bg-gray-50 border border-gray-200')}`}>
+                      <p className={`text-[10px] uppercase tracking-wider font-semibold mb-1 ${t('text-gray-500','text-gray-600')}`}>Total TDS Deducted</p>
+                      <p className={`text-xl font-bold ${t('text-white','text-gray-900')}`}>₹{fmtINR(tdsTotal)}</p>
+                    </div>
+                    <div className={`p-4 rounded-xl ${t('bg-white/[0.03] border border-white/[0.06]','bg-gray-50 border border-gray-200')}`}>
+                      <p className={`text-[10px] uppercase tracking-wider font-semibold mb-1 ${t('text-gray-500','text-gray-600')}`}>TDS Rate</p>
+                      <p className={`text-xl font-bold ${t('text-white','text-gray-900')}`}>{selectedApp.tds_rate || 10}%</p>
+                    </div>
+                    <div className={`p-4 rounded-xl ${t('bg-white/[0.03] border border-white/[0.06]','bg-gray-50 border border-gray-200')}`}>
+                      <p className={`text-[10px] uppercase tracking-wider font-semibold mb-1 ${t('text-gray-500','text-gray-600')}`}>Financial Year</p>
+                      <p className={`text-xl font-bold ${t('text-white','text-gray-900')}`}>{fy}</p>
+                    </div>
+                  </div>
+                </G>
+                <G className="overflow-hidden" theme={theme}>
+                  <div className={`px-5 py-3 border-b ${t('border-white/[0.06]','border-gray-200')}`}>
+                    <h4 className={`text-sm font-bold ${t('text-white','text-gray-900')}`}>TDS Certificates</h4>
+                  </div>
+                  {tdsCerts.length === 0 ? (
+                    <p className={`px-5 py-6 text-xs ${t('text-gray-500','text-gray-600')}`}>No TDS documents available yet.</p>
+                  ) : (
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-sm">
+                        <thead>
+                          <tr className={`border-b ${t('border-white/[0.06] bg-white/[0.02]','border-gray-200 bg-gray-50')}`}>
+                            {['TITLE', 'DATE', 'ACTION'].map(h => (
+                              <th key={h} className={`text-left text-xs font-bold uppercase tracking-wider py-3 px-5 ${t('text-gray-500','text-gray-600')}`}>{h}</th>
+                            ))}
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {tdsCerts.map((doc: any, i: number) => (
+                            <tr key={doc.id || i} className={`border-b ${t('border-white/[0.04]','border-gray-100')}`}>
+                              <td className={`py-3 px-5 text-xs font-medium ${t('text-white','text-gray-900')}`}>{doc.title || 'TDS Certificate'}</td>
+                              <td className={`py-3 px-5 text-xs ${t('text-gray-400','text-gray-700')}`}>{fmtDate(doc.created_at)}</td>
+                              <td className="py-3 px-5">
+                                {doc.file_url ? (
+                                  <button onClick={() => handleViewDoc(doc.file_url)} className="inline-flex items-center gap-1 text-[11px] font-bold px-3 py-1.5 rounded-lg bg-brand-red/15 text-brand-red hover:bg-brand-red/25 transition-colors">
+                                    <Eye className="w-3 h-3" /> View
+                                  </button>
+                                ) : (
+                                  <span className={`text-[11px] ${t('text-gray-500','text-gray-600')}`}>—</span>
+                                )}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </G>
+              </div>
+            )
+          })()}
 
           <G className="p-6" theme={theme}>
             <div className="flex items-center justify-between mb-4">
