@@ -384,11 +384,21 @@ function HeroSection() {
               <AnimatedSection delay={200}>
                 {/* 2026-05-10 spec change: tagline replaced with the new
                     "elite don't follow the crowd" line, and the shimmer
-                    animation on "Alternative Investment Fund" removed —
-                    plain white preserves the original H1 hierarchy without
-                    the moving gradient that the spec asked us to drop. */}
+                    animation on "Alternative Investment Fund" removed.
+                    2026-05-10 follow-up: the tagline portion is now styled
+                    in brand-red with a lighter weight (semibold) so it reads
+                    as a sub-statement under the white "SEBI Registered
+                    Alternative Investment Fund" mark. The dash splits the
+                    two clauses and renders in white. */}
                 <h1 className="text-3xl sm:text-4xl md:text-4xl lg:text-5xl font-extrabold leading-[1.08] mb-5 tracking-tight" style={{ color: '#ffffff', textShadow: '0 2px 22px rgba(0,0,0,0.78), 0 0 42px rgba(0,0,0,0.45), 0 0 64px rgba(255,42,64,0.22)' }}>
-                  SEBI Registered Alternative Investment Fund — For stable investments, the elite don&apos;t follow the crowd. They move with the giant in the game.
+                  SEBI Registered Alternative Investment Fund
+                  <span> — </span>
+                  {/* `text-brand-red` is on the hero-glass-card safelist —
+                      without it the global `color: #fff !important` rule
+                      forces white on every span inside the card. */}
+                  <span className="text-brand-red block mt-2 text-xl sm:text-2xl md:text-2xl lg:text-3xl font-semibold leading-snug tracking-normal">
+                    For stable investments, the elite don&apos;t follow the crowd. They move with the giant in the game.
+                  </span>
                 </h1>
               </AnimatedSection>
 

@@ -4503,14 +4503,18 @@ button[type="submit"].inline-flex {
 .hero-glass-card {
   position: relative;
   border-radius: 1.5rem;                               /* 24px */
+  /* 2026-05-10 follow-up: glass made noticeably clearer so the elephant
+     ribbon photo behind it stays legible. Background tint stays a hair
+     under the previous value (so the white H1 still has *some* contrast)
+     but the backdrop-filter blur is dropped from 4px to 1.5px. */
   background: linear-gradient(
     135deg,
-    rgba(255, 255, 255, 0.012) 0%,
+    rgba(255, 255, 255, 0.005) 0%,
     rgba(255, 255, 255, 0)     100%
   );
-  -webkit-backdrop-filter: blur(4px) saturate(115%);
-          backdrop-filter: blur(4px) saturate(115%);
-  border: 1px solid rgba(255, 255, 255, 0.34);
+  -webkit-backdrop-filter: blur(1.5px) saturate(108%);
+          backdrop-filter: blur(1.5px) saturate(108%);
+  border: 1px solid rgba(255, 255, 255, 0.22);
   overflow: hidden;
   animation:
     hero-glass-fadein 900ms ease-out both,
