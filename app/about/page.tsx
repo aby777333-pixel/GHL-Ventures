@@ -73,11 +73,14 @@ function AboutVideoPlayer() {
 function AboutHero() {
   return (
     <section className="about-hero relative min-h-[80vh] flex items-center overflow-hidden">
-      {/* Background image — Indian flag ink swirl. No overlay; hero
-          headline is white and sits on the dark left half of the photo. */}
+      {/* Background image — 2026-05-10: swapped from the Indian flag ink
+          swirl to the new red-corridor / footstep-chart photo. The legacy
+          .webp variants point at the old asset, so they're disabled here
+          to prevent a stale image being served on browsers that prefer
+          WebP. The hero headline (white) still sits on the dark left half
+          of the new photo and stays legible. */}
       <picture className="absolute inset-0 pointer-events-none select-none">
-        <source srcSet="/images/about/hero-bg-sm.webp" type="image/webp" media="(max-width: 768px)" />
-        <source srcSet="/images/about/hero-bg.webp" type="image/webp" />
+        <source srcSet="/images/about/hero-bg-sm.jpg" media="(max-width: 768px)" />
         <img
           src="/images/about/hero-bg.jpg"
           alt=""
