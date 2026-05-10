@@ -343,15 +343,18 @@ function HeroSection() {
         />
       </picture>
       {/* Left-weighted scrim: keeps the frosted-glass copy card legible on
-          the left. The right two-thirds stay almost untouched so the SEBI
-          ribbon + elephant + sky in the photo read clearly. The bottom band
-          fades to the new off-white so the hero blends into the next
-          section. */}
+          the left. The right two-thirds stay almost untouched so the
+          elephant + sky in the photo read clearly.
+          2026-05-10 follow-up: the bottom off-white fade was washing the
+          image behind the card's lower section (buttons + SEBI pills)
+          and making the glass look opaque. The vertical fade is removed
+          and the left scrim is lightened from 0.55 to 0.42 so the
+          greyhounds + dust read through the card all the way down. */}
       <div
         className="absolute inset-0 pointer-events-none"
         style={{
           background:
-            'linear-gradient(90deg, rgba(11,9,10,0.55) 0%, rgba(11,9,10,0.32) 22%, rgba(11,9,10,0.10) 45%, rgba(11,9,10,0.0) 65%), linear-gradient(180deg, rgba(11,9,10,0.0) 78%, rgba(245,243,244,0.55) 100%)',
+            'linear-gradient(90deg, rgba(11,9,10,0.42) 0%, rgba(11,9,10,0.22) 22%, rgba(11,9,10,0.08) 45%, rgba(11,9,10,0.0) 65%)',
         }}
       />
 
