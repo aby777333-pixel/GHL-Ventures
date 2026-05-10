@@ -324,24 +324,36 @@ function LiveFinancialTV() {
 function HeroSection() {
 
   return (
-    <section className="hero-realestate relative min-h-screen flex items-center overflow-hidden" style={{ background: 'linear-gradient(180deg, #fbfaf6 0%, #f4f1ea 35%, #ecebe6 65%, #e4e6ea 100%)' }}>
+    <section className="hero-realestate relative min-h-screen flex items-center overflow-hidden" style={{ background: 'linear-gradient(180deg, #F5F3F4 0%, #ffffff 100%)' }}>
 
-      {/* ---- HERO BACKDROP — bridge sunset photo (hpbg) ---- */}
+      {/* ---- HERO BACKDROP — elephant + greyhounds w/ SEBI ribbon (hpbg) ---- */}
 
-      {/* Photo — anchored to fill the section */}
+      {/* Photo — anchored to fill the section. Object-position pushes the
+          right edge slightly off-screen so the elephant + ribbon centre on
+          the desktop hero while the greyhounds stay visible on the left. */}
       <picture aria-hidden="true">
         <source srcSet="/images/home/hero-hpbg-sm.jpg" media="(max-width: 768px)" />
         <img
           src="/images/home/hero-hpbg.jpg"
           alt=""
           className="absolute inset-0 w-full h-full object-cover pointer-events-none select-none"
+          style={{ objectPosition: 'center 38%' }}
           loading="eager"
           decoding="async"
         />
       </picture>
-      {/* Soft dark overlay to keep the trust pill + headline legible
-          against the bright sky in the upper third of the photo. */}
-      <div className="absolute inset-0 bg-gradient-to-b from-black/55 via-black/25 to-black/55 pointer-events-none" />
+      {/* Left-weighted scrim: keeps the frosted-glass copy card legible on
+          the left. The right two-thirds stay almost untouched so the SEBI
+          ribbon + elephant + sky in the photo read clearly. The bottom band
+          fades to the new off-white so the hero blends into the next
+          section. */}
+      <div
+        className="absolute inset-0 pointer-events-none"
+        style={{
+          background:
+            'linear-gradient(90deg, rgba(11,9,10,0.55) 0%, rgba(11,9,10,0.32) 22%, rgba(11,9,10,0.10) 45%, rgba(11,9,10,0.0) 65%), linear-gradient(180deg, rgba(11,9,10,0.0) 78%, rgba(245,243,244,0.55) 100%)',
+        }}
+      />
 
       {/* ---- END HERO BACKDROP ---- */}
 

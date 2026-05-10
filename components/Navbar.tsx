@@ -8,8 +8,11 @@ import { Menu, X, Phone, ArrowRight, LogIn, UserPlus, ShieldCheck, Search, Chevr
 import Logo from '@/components/Logo'
 // MarketDataMarquee and CurrencyTicker moved to home page (above NewsScroller)
 import NotificationCenter from '@/components/NotificationCenter'
-import ThemeToggle from '@/components/ThemeToggle'
-import ThemePicker from '@/components/ThemePicker'
+// Palette refresh 2026-05-10: dark mode + colour-picker disabled in the
+// public navbar. Imports kept commented so re-enabling later is a one-line
+// change rather than re-wiring the file.
+// import ThemeToggle from '@/components/ThemeToggle'
+// import ThemePicker from '@/components/ThemePicker'
 
 const PORTAL_PREFIXES = ['/staff', '/admin', '/dashboard']
 
@@ -331,9 +334,12 @@ export default function Navbar() {
               </div>
 
               {/* Theme Controls & Notification Center — desktop */}
+              {/* Palette refresh 2026-05-10: dark mode + colour-picker hidden
+                  per spec ("we do not require a dark version"). The widgets
+                  stay imported so deep-links / dashboards that still rely on
+                  ThemeProvider keep working — they just no longer ship to the
+                  public-site navbar. */}
               <div className="hidden xl:flex items-center space-x-0.5">
-                <ThemePicker scrolled={scrolled} />
-                <ThemeToggle scrolled={scrolled} />
                 <NotificationCenter scrolled={scrolled} />
               </div>
 

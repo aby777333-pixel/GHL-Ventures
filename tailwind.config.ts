@@ -9,12 +9,24 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
+        // Palette refresh 2026-05-10: dropped #D0021B for #BA181B (the SAR-2
+        // mid-red), tightened black + slate, and softened the off-white. The
+        // new tokens (red-deep / red-mid / red-light / taupe / grey-soft)
+        // expose the rest of the refreshed swatch deck for surfaces, hover
+        // states, and dividers without churning every existing utility.
+        // brand.grey stays at slate-500 — it's used as a body-text role and
+        // changing it to the warm taupe would tank legibility on white.
         brand: {
-          red: '#D0021B',
-          black: '#0A0A0A',
-          offwhite: '#F8F7F5',
+          red: '#BA181B',
+          'red-deep': '#660708',
+          'red-mid': '#A4161A',
+          'red-light': '#E5383B',
+          black: '#0B090A',
+          offwhite: '#F5F3F4',
           grey: '#6B7280',
-          darkgrey: '#1A1A1A',
+          'grey-soft': '#D3D3D3',
+          taupe: '#B1A7A6',
+          darkgrey: '#161A1D',
         },
       },
       fontFamily: {

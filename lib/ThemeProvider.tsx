@@ -138,30 +138,23 @@ export default function ThemeProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     setMounted(true)
-    const savedTheme = localStorage.getItem('ghl-theme') as Theme | null
-    const savedColor = localStorage.getItem('ghl-color-theme') as ColorTheme | null
-    const savedCustom = localStorage.getItem('ghl-custom-accent')
-
-    // Default to light theme — only use dark if explicitly saved
-    const resolvedTheme = savedTheme || 'light'
-    setTheme(resolvedTheme)
-    document.documentElement.classList.toggle('dark', resolvedTheme === 'dark')
-    if (savedColor) {
-      setColorThemeState(savedColor)
-      applyColorTheme(savedColor, savedCustom || '#D0021B')
-    }
-    if (savedCustom) {
-      setCustomAccentState(savedCustom)
-    }
+    // Palette refresh 2026-05-10: the public site is now light-only. Any
+    // legacy `ghl-theme=dark` cached in localStorage from a previous session
+    // is forcibly cleared and the .dark class on <html> is removed so dark
+    // CSS rules can't bleed onto the new layout.
+    try {
+      localStorage.removeItem('ghl-theme')
+      localStorage.removeItem('ghl-color-theme')
+      localStorage.removeItem('ghl-custom-accent')
+    } catch { /* SSR / privacy mode */ }
+    setTheme('light')
+    document.documentElement.classList.remove('dark')
     // On mount: never restore global override (it must not persist)
   }, [])
 
   const toggleTheme = () => {
-    const next = theme === 'light' ? 'dark' : 'light'
-    setTheme(next)
-    localStorage.setItem('ghl-theme', next)
-    document.documentElement.classList.toggle('dark', next === 'dark')
-    // Reset any global override when day/night toggle is clicked
+    // Palette refresh 2026-05-10: public site is light-only — toggle is a
+    // no-op so any stray button bound to it can't drop the user into dark.
     if (globalOverrideColor) {
       setGlobalOverrideColorState(null)
       removeGlobalOverride()

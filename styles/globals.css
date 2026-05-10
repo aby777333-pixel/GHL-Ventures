@@ -6,30 +6,38 @@
 
 /* ============================================================
    GHL India Ventures - Global Stylesheet
-   Brand Colors: Red #D0021B | Black #0A0A0A | White #FFFFFF
-                 Off-White #F8F7F5 | Grey #6B7280
+   Palette refresh 2026-05-10 (SAR-2 swatch deck):
+     0B090A · 161A1D · 660708 · A4161A · BA181B · E5383B
+     B1A7A6 · D3D3D3 · F5F3F4 · FFFFFF
    ============================================================ */
 
 /* ----- CSS Custom Properties ----- */
 :root {
-  --color-red: #D0021B;
-  --color-red-dark: #8B0000;
-  --color-black: #0A0A0A;
+  /* Reds */
+  --color-red: #BA181B;        /* primary brand red */
+  --color-red-dark: #660708;   /* deep red — used in gradients + hovers */
+  --color-red-mid: #A4161A;    /* mid red — between primary and deep */
+  --color-red-light: #E5383B;  /* light red — accents + active states */
+  /* Neutrals */
+  --color-black: #0B090A;
+  --color-darkgrey: #161A1D;
+  --color-taupe: #B1A7A6;      /* warm gray for surfaces */
+  --color-grey-soft: #D3D3D3;  /* soft gray for borders/dividers */
+  --color-offwhite: #F5F3F4;
   --color-white: #FFFFFF;
-  --color-offwhite: #F8F7F5;
+  /* Body-text roles — kept at slate scale for legibility */
   --color-grey: #6B7280;
-  --color-darkgrey: #1A1A1A;
   --text-heading: #111827;
   --text-body: #374151;
   --text-muted: #6B7280;
 
-  --hero-gradient: linear-gradient(135deg, #0A0A0A 0%, #1a0000 50%, #0A0A0A 100%);
-  --red-burst: radial-gradient(circle at 30% 50%, rgba(208, 2, 27, 0.3) 0%, transparent 60%);
+  --hero-gradient: linear-gradient(135deg, #0B090A 0%, #161A1D 50%, #0B090A 100%);
+  --red-burst: radial-gradient(circle at 30% 50%, rgba(186, 24, 27, 0.30) 0%, transparent 60%);
   --glass-bg: rgba(255, 255, 255, 0.08);
   --glass-border: 1px solid rgba(255, 255, 255, 0.12);
   --glass-blur: blur(24px);
-  --cta-gradient: linear-gradient(135deg, #D0021B 0%, #8B0000 100%);
-  --section-divider: linear-gradient(90deg, transparent, #D0021B, transparent);
+  --cta-gradient: linear-gradient(135deg, #BA181B 0%, #660708 100%);
+  --section-divider: linear-gradient(90deg, transparent, #BA181B, transparent);
 
   --font-primary: 'TT Norms Pro', 'Helvetica Neue', Helvetica, Arial, sans-serif;
 }
