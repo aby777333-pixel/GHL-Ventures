@@ -24,24 +24,30 @@ function WhyAIFsHero() {
 
       <div className="container-max mx-auto px-4 sm:px-6 lg:px-8 relative z-10 pt-32 pb-20">
         <AnimatedSection>
+          {/* 2026-05-10: hero copy switched to white / off-white only —
+              the new red-bars + city-skyline photo already carries the
+              red-accent visual, so the previous brand-red eyebrow + red
+              gradient on the headline read as duplicate noise. The
+              "Schedule a Consultation" CTA stays in brand red because
+              it's an action, not a copy element. */}
           {/* Breadcrumb */}
-          <nav className="flex items-center space-x-2 text-sm text-gray-400 mb-8">
+          <nav className="flex items-center space-x-2 text-sm text-white/70 mb-8">
             <Link href="/" className="hover:text-white transition-colors flex items-center">
               <Home className="w-3.5 h-3.5 mr-1" /> Home
             </Link>
             <ChevronRight className="w-3.5 h-3.5" />
-            <span className="text-brand-red font-medium">Why AIFs</span>
+            <span className="text-white font-medium">Why AIFs</span>
           </nav>
 
-          <div className="inline-flex items-center px-4 py-2 bg-brand-red/10 border border-brand-red/20 rounded-full mb-6">
-            <Lightbulb className="w-4 h-4 text-brand-red mr-2" />
-            <span className="text-brand-red text-sm font-medium">Investor Education</span>
+          <div className="inline-flex items-center px-4 py-2 bg-white/10 border border-white/25 rounded-full mb-6 backdrop-blur-sm">
+            <Lightbulb className="w-4 h-4 text-white mr-2" />
+            <span className="text-white text-sm font-medium">Investor Education</span>
           </div>
           <h1 className="text-2xl md:text-3xl lg:text-4xl font-bold text-white mt-2 mb-5 leading-tight">
-            Understanding <span className="text-gradient">Alternative</span><br />
-            <span className="text-gradient">Investment Funds</span> <span className="italic font-normal text-gray-300">in India</span>
+            Understanding Alternative<br />
+            Investment Funds <span className="italic font-normal text-white/85">in India</span>
           </h1>
-          <p className="text-base text-gray-300 max-w-3xl leading-relaxed mb-8">
+          <p className="text-base text-white/85 max-w-3xl leading-relaxed mb-8">
             A comprehensive guide to SEBI-regulated AIFs &mdash; what they are, how they work,
             their advantages, and how institutional-grade strategies deliver superior
             risk-adjusted returns for India&apos;s discerning investors.
@@ -56,7 +62,7 @@ function WhyAIFsHero() {
             </Link>
             <a
               href="#what-is-aif"
-              className="inline-flex items-center px-6 py-2.5 text-white/80 font-semibold text-sm rounded-lg border border-white/15 hover:border-brand-red hover:text-brand-red transition-all"
+              className="inline-flex items-center px-6 py-2.5 text-white/85 font-semibold text-sm rounded-lg border border-white/25 hover:border-white hover:text-white transition-all"
             >
               Start Learning &darr;
             </a>
