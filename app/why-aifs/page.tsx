@@ -20,7 +20,9 @@ function WhyAIFsHero() {
         <source srcSet="/images/heros/why-aifs-hero-sm.jpg" media="(max-width: 768px)" />
         <img src="/images/heros/why-aifs-hero.jpg" alt="" className="absolute inset-0 w-full h-full object-cover pointer-events-none select-none" loading="eager" decoding="async" />
       </picture>
-      <div className="absolute inset-0 bg-gradient-to-r from-black/85 via-black/60 to-black/40 pointer-events-none" />
+      {/* 2026-05-10 follow-up: dark scrim removed per spec. The new
+          red-bars + city-skyline photo is dark enough on its own that
+          the white hero copy reads cleanly without an overlay. */}
 
       <div className="container-max mx-auto px-4 sm:px-6 lg:px-8 relative z-10 pt-32 pb-20">
         <AnimatedSection>
