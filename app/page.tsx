@@ -16,12 +16,12 @@ import {
 import { submitContactForm, submitLead } from '@/lib/supabase/reportsDataService'
 import MarketDataMarquee from '@/components/MarketDataMarquee'
 import CurrencyTicker from '@/components/CurrencyTicker'
-import RiskAssessmentQuiz from '@/components/RiskAssessmentQuiz'
-import InvestmentCalculator from '@/components/InvestmentCalculator'
-import AllInvestmentsCalculator from '@/components/AllInvestmentsCalculator'
-import WealthGrowthMap from '@/components/WealthGrowthMap'
-import TaxImpactAnalyzer from '@/components/TaxImpactAnalyzer'
-import InflationProofChecker from '@/components/InflationProofChecker'
+// 2026-05-10: the investor-tools (Find Your Ideal Investment Route)
+// section + its 6 modals were lifted out of this file into
+// components/InvestorToolsSection.tsx and now live on /about. The
+// home page hosts the leadership team grid in their place via
+// components/LeadershipTeamSection.tsx.
+import LeadershipTeamSection from '@/components/LeadershipTeamSection'
 import { AlertTriangle } from 'lucide-react'
 import VoiceInput from '@/components/shared/VoiceInput'
 /* ================================================================
@@ -1379,8 +1379,17 @@ function ContactFormSection() {
 }
 
 /* ================================================================
-   SECTION: Risk Quiz + Calculator CTA (after WhyChooseUs)
+   SECTION: Risk Quiz + Calculator CTA (after WhyChooseUs) — DEPRECATED
+   ------------------------------------------------------------
+   2026-05-10: this function is unused on the home page (the home
+   page now hosts <LeadershipTeamSection /> in this slot per spec).
+   The full panel + its 6 modals were lifted out into
+   components/InvestorToolsSection.tsx and now mount on /about.
+   The local definition is left intact (but unreferenced) so a
+   later spec change can re-enable it by uncommenting the
+   <InvestorToolsCTA /> call without a code archeology pass.
    ================================================================ */
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 function InvestorToolsCTA({ onOpenQuiz, onOpenCalc, onOpenAllCalc, onOpenWealthMap, onOpenTaxAnalyzer, onOpenInflationCheck }: { onOpenQuiz: () => void; onOpenCalc: () => void; onOpenAllCalc: () => void; onOpenWealthMap: () => void; onOpenTaxAnalyzer: () => void; onOpenInflationCheck: () => void }) {
   return (
     <section className="relative py-14 md:py-20 overflow-hidden">
@@ -1610,12 +1619,8 @@ function InvestmentDisclaimer() {
    HOME PAGE — All Sections + Modals
    ================================================================ */
 export default function HomePage() {
-  const [quizOpen, setQuizOpen] = useState(false)
-  const [calcOpen, setCalcOpen] = useState(false)
-  const [allCalcOpen, setAllCalcOpen] = useState(false)
-  const [wealthMapOpen, setWealthMapOpen] = useState(false)
-  const [taxAnalyzerOpen, setTaxAnalyzerOpen] = useState(false)
-  const [inflationCheckOpen, setInflationCheckOpen] = useState(false)
+  // 2026-05-10: calculator-modal state moved into InvestorToolsSection
+  // (now mounted on /about). Home page no longer manages those modals.
 
   return (
     <>
@@ -1652,14 +1657,9 @@ export default function HomePage() {
       {/* <VideoFeature /> */}
       <hr className="section-divider-animated" />
       <WhyChooseUs />
-      <InvestorToolsCTA
-        onOpenQuiz={() => setQuizOpen(true)}
-        onOpenCalc={() => setCalcOpen(true)}
-        onOpenAllCalc={() => setAllCalcOpen(true)}
-        onOpenWealthMap={() => setWealthMapOpen(true)}
-        onOpenTaxAnalyzer={() => setTaxAnalyzerOpen(true)}
-        onOpenInflationCheck={() => setInflationCheckOpen(true)}
-      />
+      {/* 2026-05-10: leadership team grid replaces the InvestorToolsCTA
+          calculator panel here. The calculator section now lives on /about. */}
+      <LeadershipTeamSection />
       <hr className="section-divider-animated" />
       <PortfolioSpotlight />
       <hr className="section-divider-animated" />
@@ -1668,14 +1668,6 @@ export default function HomePage() {
       <FAQSection />
       <TestimonialsSection />
       <ContactFormSection />
-
-      {/* Modals */}
-      <RiskAssessmentQuiz isOpen={quizOpen} onClose={() => setQuizOpen(false)} />
-      <InvestmentCalculator isOpen={calcOpen} onClose={() => setCalcOpen(false)} />
-      <AllInvestmentsCalculator isOpen={allCalcOpen} onClose={() => setAllCalcOpen(false)} />
-      <WealthGrowthMap isOpen={wealthMapOpen} onClose={() => setWealthMapOpen(false)} />
-      <TaxImpactAnalyzer isOpen={taxAnalyzerOpen} onClose={() => setTaxAnalyzerOpen(false)} />
-      <InflationProofChecker isOpen={inflationCheckOpen} onClose={() => setInflationCheckOpen(false)} />
     </>
   )
 }

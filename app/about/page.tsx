@@ -4,8 +4,13 @@ import { useState, useRef, useCallback } from 'react'
 import Link from 'next/link'
 import AnimatedSection from '@/components/AnimatedSection'
 import PlaceholderImage from '@/components/PlaceholderImage'
-import { BRAND, TEAM_MEMBERS, ADVISORY_BOARD, MILESTONES } from '@/lib/constants'
+import { BRAND, ADVISORY_BOARD, MILESTONES } from '@/lib/constants'
 import Image from 'next/image'
+// 2026-05-10: leadership team grid moved to home page
+// (components/LeadershipTeamSection.tsx). This page now hosts the
+// investor-tools / "Find Your Ideal Investment Route" calculator
+// panel + its 6 modals via components/InvestorToolsSection.tsx.
+import InvestorToolsSection from '@/components/InvestorToolsSection'
 import {
   ArrowRight, Target, Eye, Heart, Shield, Users, Award,
   CheckCircle, TrendingUp, Globe, Briefcase, Star,
@@ -272,46 +277,10 @@ function MissionVision() {
   )
 }
 
-/* ───────────────────────────── 4. LEADERSHIP TEAM ───────────────────────────── */
-function LeadershipTeam() {
-  return (
-    <section className="section-padding bg-brand-offwhite">
-      <div className="container-max mx-auto">
-        <AnimatedSection className="text-center mb-10">
-          <span className="text-brand-red font-semibold text-xs uppercase tracking-wider">Leadership</span>
-          <h2 className="section-title mt-2 text-brand-black dark:text-white">Our Team</h2>
-          <p className="section-subtitle mx-auto mt-4">
-            Experienced professionals united by a shared passion for investing in India&apos;s future.
-          </p>
-        </AnimatedSection>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-          {TEAM_MEMBERS.map((member, i) => (
-            <AnimatedSection key={member.name} delay={i * 100}>
-              <div className={`card text-center group hover-lift h-full flex flex-col ${['glow-card-red','glow-card-blue','glow-card-violet'][i % 3]}`}>
-                {/* Portrait photo — 4:5 aspect ratio, rounded rectangle */}
-                <div className="team-portrait w-full aspect-[4/5] rounded-xl overflow-hidden mb-6">
-                  <Image
-                    src={member.image}
-                    alt={member.name}
-                    width={320}
-                    height={400}
-                    className="w-full h-full object-cover transition-transform duration-300 ease-in-out group-hover:scale-[1.03]"
-                  />
-                </div>
-                <h3 className="font-bold text-lg text-brand-black dark:text-white">{member.name}</h3>
-                <p className="text-brand-red text-sm font-medium mb-3">{member.role}</p>
-                <p className="text-brand-grey dark:text-gray-300 text-sm leading-relaxed flex-grow italic line-clamp-3">
-                  &ldquo;{member.quote}&rdquo;
-                </p>
-              </div>
-            </AnimatedSection>
-          ))}
-        </div>
-      </div>
-    </section>
-  )
-}
+/* ───────────────────────────── 4. LEADERSHIP TEAM ─────────────────────────────
+   2026-05-10: moved to home page in <LeadershipTeamSection />
+   (components/LeadershipTeamSection.tsx). About now mounts
+   <InvestorToolsSection /> in its place — see PAGE composition below. */
 
 /* ───────────────────────────── 5. OUR VALUES ───────────────────────────── */
 function OurValues() {
@@ -671,7 +640,9 @@ export default function AboutPage() {
       <OurStoryTimeline />
       <hr className="section-divider-animated" />
       <MissionVision />
-      <LeadershipTeam />
+      {/* 2026-05-10: investor tools panel sits where the leadership team
+          used to. Team grid is now on the home page. */}
+      <InvestorToolsSection />
       <OurValues />
       <hr className="section-divider-animated" />
       {/* Advisory Board section hidden — uncomment to restore */}
