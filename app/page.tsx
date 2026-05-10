@@ -358,8 +358,12 @@ function HeroSection() {
       {/* ---- END HERO BACKDROP ---- */}
 
       <div className="container-max mx-auto px-4 sm:px-6 lg:px-8 relative z-10 pt-28 pb-14">
-        <div className="grid lg:grid-cols-2 gap-12 xl:gap-20 items-center">
-          {/* LEFT: Hero Copy — frosted glass card floating over the cityscape */}
+        {/* 2026-05-10: Bloomberg TV + Market Hotlists moved into the
+            "Capital That Creates Value" section below — the hero now lets the
+            elephant + ribbon photo carry the right two-thirds. The copy card
+            is capped at ~half-width so the elephant stays unobstructed. */}
+        <div className="lg:max-w-[640px] xl:max-w-[680px]">
+          {/* Hero Copy — frosted glass card floating over the photo */}
           <div className="hero-glass-card relative p-7 sm:p-9 lg:p-10">
             <div className="relative z-10">
               <AnimatedSection delay={0}>
@@ -415,57 +419,11 @@ function HeroSection() {
             </div>
           </div>
 
-          {/* RIGHT: Live Financial TV + Image Slider */}
-          <div className="space-y-6">
-            {/* Live Financial TV Embed — with channel switcher */}
-            <AnimatedSection delay={400} direction="right">
-              <LiveFinancialTV />
-            </AnimatedSection>
-
-            {/* Market Hotlists — Top Gainers, Losers, Most Active (compact + scrollable) */}
-            <AnimatedSection delay={600} direction="right">
-              <div className="relative rounded-2xl overflow-hidden border border-white/10 bg-black/40 backdrop-blur-sm shadow-xl shadow-slate-900/20">
-                <div className="overflow-y-auto scrollbar-hide" style={{ height: '200px' }}>
-                  <iframe
-                    key="hotlists-widget"
-                    src={`https://s.tradingview.com/embed-widget/hotlists/?locale=en#${encodeURIComponent(JSON.stringify({
-                      colorTheme: 'dark',
-                      dateRange: '12M',
-                      exchange: 'BSE',
-                      showChart: false,
-                      showSymbolLogo: true,
-                      width: '100%',
-                      height: '100%',
-                      isTransparent: true,
-                      plotLineColorGrowing: 'rgba(0,200,100,1)',
-                      plotLineColorFalling: 'rgba(255,23,68,1)',
-                      gridLineColor: 'rgba(255,255,255,0.06)',
-                      scaleFontColor: 'rgba(255,255,255,0.5)',
-                      belowLineFillColorGrowing: 'rgba(0,200,100,0.05)',
-                      belowLineFillColorFalling: 'rgba(255,23,68,0.05)',
-                      belowLineFillColorGrowingBottom: 'rgba(0,0,0,0)',
-                      belowLineFillColorFallingBottom: 'rgba(0,0,0,0)',
-                      symbolActiveColor: 'rgba(208,2,27,0.15)',
-                    }))}`}
-                    title="Market Hotlists — Top Movers"
-                    className="w-full border-0"
-                    style={{ height: '460px' }}
-                    loading="lazy"
-                  />
-                </div>
-                {/* Live badge */}
-                <div className="absolute top-2 right-3 z-10 flex items-center gap-1.5">
-                  <span className="relative flex h-2 w-2">
-                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-500 opacity-75" />
-                    <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500" />
-                  </span>
-                  <span className="text-green-400 text-[9px] font-semibold uppercase tracking-wider">Live</span>
-                </div>
-                {/* Scroll hint gradient at bottom */}
-                <div className="absolute bottom-0 left-0 right-0 h-6 bg-gradient-to-t from-black/80 to-transparent pointer-events-none" />
-              </div>
-            </AnimatedSection>
-          </div>
+          {/* RIGHT column intentionally removed 2026-05-10: the hero is now
+              a single-column copy card so the elephant + greyhounds + SEBI
+              ribbon photo can dominate the rest of the canvas. The Bloomberg
+              TV + Market Hotlists widgets that lived here have been relocated
+              into <WhoWeAre /> below. */}
         </div>
       </div>
 
@@ -549,10 +507,54 @@ function WhoWeAre() {
     <section className="section-padding bg-brand-offwhite">
       <div className="container-max mx-auto">
         <div className="grid lg:grid-cols-2 gap-10 items-center">
-          {/* Left: Image placeholder */}
+          {/* Left: Bloomberg Live TV + Market Hotlists — relocated from the
+              hero on 2026-05-10. Replaces the previous team-professionals
+              photo so the live market layer lives next to the firm's
+              "Capital That Creates Value" stats instead of competing with
+              the elephant photo on the hero. */}
           <AnimatedSection direction="left">
-            <div className="relative aspect-[4/3] bg-gray-900 overflow-hidden card-img-zoom group/img rounded-3xl">
-              <img src="/images/home/team-professionals.jpg" alt="GHL India Ventures Team" className="w-full h-full object-cover transition-transform duration-500" loading="lazy" />
+            <div className="space-y-5">
+              <LiveFinancialTV />
+              <div className="relative rounded-2xl overflow-hidden border border-white/10 bg-black/85 shadow-xl shadow-black/15">
+                <div className="overflow-y-auto scrollbar-hide" style={{ height: '200px' }}>
+                  <iframe
+                    key="hotlists-widget-whoweare"
+                    src={`https://s.tradingview.com/embed-widget/hotlists/?locale=en#${encodeURIComponent(JSON.stringify({
+                      colorTheme: 'dark',
+                      dateRange: '12M',
+                      exchange: 'BSE',
+                      showChart: false,
+                      showSymbolLogo: true,
+                      width: '100%',
+                      height: '100%',
+                      isTransparent: true,
+                      plotLineColorGrowing: 'rgba(0,200,100,1)',
+                      plotLineColorFalling: 'rgba(255,23,68,1)',
+                      gridLineColor: 'rgba(255,255,255,0.06)',
+                      scaleFontColor: 'rgba(255,255,255,0.5)',
+                      belowLineFillColorGrowing: 'rgba(0,200,100,0.05)',
+                      belowLineFillColorFalling: 'rgba(255,23,68,0.05)',
+                      belowLineFillColorGrowingBottom: 'rgba(0,0,0,0)',
+                      belowLineFillColorFallingBottom: 'rgba(0,0,0,0)',
+                      symbolActiveColor: 'rgba(186,24,27,0.15)',
+                    }))}`}
+                    title="Market Hotlists — Top Movers"
+                    className="w-full border-0"
+                    style={{ height: '460px' }}
+                    loading="lazy"
+                  />
+                </div>
+                {/* Live badge */}
+                <div className="absolute top-2 right-3 z-10 flex items-center gap-1.5">
+                  <span className="relative flex h-2 w-2">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-500 opacity-75" />
+                    <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500" />
+                  </span>
+                  <span className="text-green-400 text-[9px] font-semibold uppercase tracking-wider">Live</span>
+                </div>
+                {/* Scroll hint gradient at bottom */}
+                <div className="absolute bottom-0 left-0 right-0 h-6 bg-gradient-to-t from-black/80 to-transparent pointer-events-none" />
+              </div>
             </div>
           </AnimatedSection>
 
