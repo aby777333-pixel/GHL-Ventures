@@ -76,6 +76,16 @@ const FUNDS = [
     capitalAppreciation: 12,
     totalAssuredReturns: 24,
     tenure: 'Min 3 years, Max 10 years',
+    // Term Sheet uploaded under /downloads — Debenture route uses the legacy
+    // investing-and-payment-terms.pdf, Direct AIF gets its own per SAR 2026-05-10
+    termsHref: '/downloads/investing-and-payment-terms.pdf',
+    keyTerms: [
+      { label: 'Investment', value: 'starting from ₹10,00,000' },
+      { label: 'Interest', value: '1% per month (means 12% per annum)' },
+      { label: 'Capital Appreciation', value: '12% per annum payable at redemption' },
+      { label: 'Total Assured Returns', value: '24% per annum' },
+      { label: 'Tenure', value: 'Min 3 years, Max 10 years' },
+    ],
     strategy: [
       'Acquire industrial land, residential layouts, and commercial land at 30-50% below market value through bank auctions, distressed sales, and private deals.',
       'Monetize quickly by selling to industries, developers, or other end-users at less than fair market price.',
@@ -89,11 +99,23 @@ const FUNDS = [
     name: 'Direct AIF Route',
     fundType: 'Category II AIF — Direct Investment',
     focus: 'SEBI-registered AIF with stressed real estate exposure',
+    // Direct AIF minimum is the SEBI-mandated ₹1 crore floor (Cat-II AIF rule).
     minInvestment: 10000000,
     interest: 12,
     capitalAppreciation: 12,
     totalAssuredReturns: 24,
-    tenure: '5-10 Years',
+    tenure: 'Minimum - 3 years, Maximum - 10 years',
+    // Per SAR 2026-05-10: a separate Term Sheet PDF must back the Direct AIF
+    // download. The file ships at /downloads/term-sheet-direct-aif.pdf.
+    termsHref: '/downloads/term-sheet-direct-aif.pdf',
+    keyTerms: [
+      { label: 'Minimum Investment', value: '₹1 crore (Direct AIF)' },
+      { label: 'Target Returns', value: '24% p.a. (performance-linked; AIF cannot guarantee returns under SEBI guidelines)' },
+      { label: 'Return Structure', value: '12% distributed annually as income; Balance profit added to capital for long-term wealth creation' },
+      { label: 'Taxation', value: 'Dividend / Interest taxable at applicable slab rate (10% TDS). Capital accumulation taxed as capital gains at 12% or 20% (without / with indexation)' },
+      { label: 'Tenure', value: 'Minimum - 3 years, Maximum - 10 years' },
+      { label: 'Fund Size', value: '₹100 crore' },
+    ],
     strategy: ['Direct participation in SEBI-regulated AIF scheme', 'Diversified portfolio across stressed real estate assets', 'Professional fund management with quarterly NAV updates'],
     documents: ['PPM (Private Placement Memorandum)', 'Contribution Agreement', 'Capital Call Notice', 'NAV Statement'],
     security: ['SEBI registered Category II AIF', 'Independent custodian for assets', 'Quarterly audited NAV'],
@@ -254,6 +276,14 @@ export default function InvestmentFlowTab({
     )
   }, [selectedApp, investAmount, investTenure, selectedFund])
 
+  // SAR 2026-05-10 #1: after the investor submits a new commitment, they must
+  // be taken straight to a post-submit page that asks for the wire-transfer
+  // information (bank details + transaction form). The flag below force-routes
+  // through the bank/txn form view regardless of credit status, since fresh
+  // applications start at status='pending' but partial-paid items must keep
+  // the same behaviour as the explore detail view.
+  const [postSubmitMode, setPostSubmitMode] = useState(false)
+
   // ── Submit investment ─────────────────────────────────────
   const handleSubmitInvestment = async () => {
     if (!clientId || !userId) { showToast('Please log in', 'error'); return }
@@ -280,8 +310,15 @@ export default function InvestmentFlowTab({
       terms_accepted: true,
     })
     if (result) {
-      showToast('Investment submitted! You will be redirected to your investment history.', 'success')
+      showToast('Investment submitted! Please complete the wire transfer details below.', 'success')
       refetchApps()
+      // SAR 2026-05-10 #1: route the investor to the bank/txn form right after
+      // submit (the My Investments listing comes after they record the wire).
+      setSelectedApp(result)
+      setExploreView('documents')
+      setPostSubmitMode(true)
+      setTxnForm({ capitalAmount: String(result?.investment_amount || investAmount || ''), transactionAmount: '', transactionId: '', proofUrl: '' })
+      if (bankAccounts[0]) setTxnBank(bankAccounts[0].id)
       setSubTab('history')
     } else {
       showToast('Failed to submit investment', 'error')
@@ -314,6 +351,10 @@ export default function InvestmentFlowTab({
   const handleSubmitTransaction = async () => {
     if (!selectedApp || !clientId) return
     if (!txnForm.transactionAmount) { showToast('Transaction amount is required', 'error'); return }
+    // SAR 2026-05-10 #3: Transaction ID (UTR / reference number) is mandatory.
+    // Without it ops cannot reconcile the wire transfer against the bank feed,
+    // so the form blocks submission rather than risking unattributed payments.
+    if (!txnForm.transactionId.trim()) { showToast('Transaction ID is required', 'error'); return }
     // Tests 2026-04-18 #2: Transaction must not exceed the committed capital amount.
     const capital = Number(txnForm.capitalAmount) || selectedAppCapital || 0
     const txnAmt = Number(txnForm.transactionAmount)
@@ -512,7 +553,7 @@ export default function InvestmentFlowTab({
               <h3 className={`text-lg font-bold ${t('text-white','text-gray-900')}`}>{selectedFund.name}</h3>
               <div className="flex gap-2">
                 <a
-                  href="/downloads/investing-and-payment-terms.pdf"
+                  href={(selectedFund as any).termsHref || '/downloads/investing-and-payment-terms.pdf'}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="px-4 py-2 rounded-lg text-xs font-bold text-white bg-brand-red/80 hover:bg-brand-red flex items-center gap-1"
@@ -541,13 +582,13 @@ export default function InvestmentFlowTab({
                 <h4 className={`text-xs font-bold uppercase tracking-wider mt-4 mb-2 ${t('text-gray-500','text-gray-600')}`}>Key Investment Terms</h4>
                 <table className={`w-full text-sm`}>
                   <tbody>
-                    {[
+                    {((selectedFund as any).keyTerms || [
                       { label: 'Investment', value: selectedFund.minInvestment > 0 ? `starting from ₹${fmtINR(selectedFund.minInvestment)}` : 'Flexible — no minimum' },
                       { label: 'Interest', value: `${selectedFund.interest / 12}% per month (means ${selectedFund.interest}% per annum)` },
                       { label: 'Capital Appreciation', value: `${selectedFund.capitalAppreciation}% per annum payable at redemption` },
                       { label: 'Total Assured Returns', value: `${selectedFund.totalAssuredReturns}% per annum` },
                       { label: 'Tenure', value: selectedFund.tenure },
-                    ].map((r, i) => (
+                    ]).map((r: { label: string; value: string }, i: number) => (
                       <tr key={i} className={`border-b ${t('border-white/[0.06]','border-gray-200')}`}>
                         <td className={`py-2.5 pr-4 text-xs font-semibold ${t('text-gray-400','text-gray-600')}`}>{r.label}</td>
                         <td className={`py-2.5 text-xs ${t('text-gray-300','text-gray-800')}`}>{r.value}</td>
@@ -813,24 +854,36 @@ export default function InvestmentFlowTab({
                           </div>
 
                           {/* Status pill + Explore CTA */}
-                          <div className="flex items-center justify-between pt-2">
-                            <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold ${
-                              status === 'approved' || status === 'active' || status === 'credited'
-                                ? 'bg-emerald-500/15 text-emerald-500'
-                                : status === 'rejected' ? 'bg-red-500/15 text-red-500'
-                                : 'bg-amber-500/15 text-amber-500'
-                            }`}>
-                              <span className={`w-1.5 h-1.5 rounded-full ${
-                                status === 'approved' || status === 'active' || status === 'credited' ? 'bg-emerald-500' : status === 'rejected' ? 'bg-red-500' : 'bg-amber-500'
-                              }`} />
-                              {statusLabel || 'Pending'}
-                            </span>
-                            <button onClick={() => { setSelectedApp(app); setExploreView('documents'); setTxnForm({ capitalAmount: String(app.investment_amount || ''), transactionAmount: '', transactionId: '', proofUrl: '' }); if (bankAccounts[0]) setTxnBank(bankAccounts[0].id) }}
-                              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-[11px] font-bold text-white"
-                              style={{ background: 'linear-gradient(135deg, #D0021B, #8B0000)' }}>
-                              Explore <ArrowRight className="w-3 h-3" />
-                            </button>
-                          </div>
+                          {/* SAR 2026-05-10 #4-5: Explore is hidden until the
+                              admin has credited the investment — pre-credit
+                              cards show only the status pill. Once status is
+                              `credited`, `active`, or `approved`, the button
+                              reveals the documents/history sub-menu. */}
+                          {(() => {
+                            const exploreUnlocked = status === 'credited' || status === 'active' || status === 'approved'
+                            return (
+                              <div className="flex items-center justify-between pt-2">
+                                <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                                  exploreUnlocked
+                                    ? 'bg-emerald-500/15 text-emerald-500'
+                                    : status === 'rejected' ? 'bg-red-500/15 text-red-500'
+                                    : 'bg-amber-500/15 text-amber-500'
+                                }`}>
+                                  <span className={`w-1.5 h-1.5 rounded-full ${
+                                    exploreUnlocked ? 'bg-emerald-500' : status === 'rejected' ? 'bg-red-500' : 'bg-amber-500'
+                                  }`} />
+                                  {statusLabel || 'Pending'}
+                                </span>
+                                {exploreUnlocked && (
+                                  <button onClick={() => { setSelectedApp(app); setPostSubmitMode(false); setExploreView('documents'); setTxnForm({ capitalAmount: String(app.investment_amount || ''), transactionAmount: '', transactionId: '', proofUrl: '' }); if (bankAccounts[0]) setTxnBank(bankAccounts[0].id) }}
+                                    className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-[11px] font-bold text-white"
+                                    style={{ background: 'linear-gradient(135deg, #D0021B, #8B0000)' }}>
+                                    Explore <ArrowRight className="w-3 h-3" />
+                                  </button>
+                                )}
+                              </div>
+                            )
+                          })()}
                         </div>
                       </div>
                     )
@@ -845,9 +898,13 @@ export default function InvestmentFlowTab({
       {/* ── Investment Detail (when app selected from history) ──
           Per Investor Dashboard Corrections (2026-05): Explore opens a
           sub-menu — Investment Documents · History · Document Tracking · TDS
-          (Cashback intentionally not implemented). The Submit Transaction
-          form is kept available below the Explore nav for active commitments. */}
-      {subTab === 'history' && selectedApp && (
+          (Cashback intentionally not implemented).
+          SAR 2026-05-10 #1+#6: when the investor reaches this view via the
+          post-submit redirect (`postSubmitMode`), they see ONLY the bank
+          details + transaction form (no sub-menu, no schedule/PDF). When they
+          reach it via the post-credit Explore button, the bank/txn form
+          section is hidden and only the sub-menu surfaces. */}
+      {subTab === 'history' && selectedApp && !postSubmitMode && (
         <div className="space-y-4">
           <button onClick={() => setSelectedApp(null)} className={`flex items-center gap-1 text-xs font-semibold ${t('text-gray-400 hover:text-white','text-gray-600 hover:text-gray-900')} transition-colors`}>
             ← Back to My Investments
@@ -1078,7 +1135,7 @@ export default function InvestmentFlowTab({
           })()}
 
           <G className="p-6" theme={theme}>
-            <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center justify-between">
               <h3 className={`text-base font-bold ${t('text-white','text-gray-900')}`}>{selectedApp.fund_vehicle}</h3>
               <div className="flex gap-2">
                 <button onClick={() => setSubTab('schedule')} className={`px-4 py-2 rounded-lg text-xs font-bold ${t('bg-white/[0.06] text-white border border-white/[0.08]','bg-gray-100 text-gray-900 border border-gray-200')}`}>Payment Schedule</button>
@@ -1129,6 +1186,33 @@ export default function InvestmentFlowTab({
                   }}
                   className={`px-4 py-2 rounded-lg text-xs font-bold ${t('bg-white/[0.06] text-white border border-white/[0.08]','bg-gray-100 text-gray-900 border border-gray-200')}`}>PDF</button>
               </div>
+            </div>
+          </G>
+        </div>
+      )}
+
+      {/* ── Post-submit flow ──────────────────────────────────
+          SAR 2026-05-10 #1: After the investor submits a new commitment, this
+          dedicated view asks for the wire-transfer info (Bank Account Details
+          + Transaction form). It replaces the earlier behaviour of dropping
+          the investor onto the My Investments listing without the form.
+          The Explore detail (above) intentionally does not render this form
+          per SAR 2026-05-10 #6 ("Hide the above information"). */}
+      {subTab === 'history' && selectedApp && postSubmitMode && (
+        <div className="space-y-4">
+          <button
+            onClick={() => { setPostSubmitMode(false); setSelectedApp(null) }}
+            className={`flex items-center gap-1 text-xs font-semibold ${t('text-gray-400 hover:text-white','text-gray-600 hover:text-gray-900')} transition-colors`}
+          >
+            ← Back to My Investments
+          </button>
+
+          <G className="p-6" theme={theme}>
+            <div className="mb-4">
+              <h3 className={`text-base font-bold ${t('text-white','text-gray-900')}`}>{selectedApp.fund_vehicle}</h3>
+              <p className={`text-[11px] mt-0.5 ${t('text-gray-500','text-gray-600')}`}>
+                Commitment recorded · ₹{fmtINR(Number(selectedApp.investment_amount) || 0)} · Complete the wire transfer below to finalise.
+              </p>
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -1182,8 +1266,10 @@ export default function InvestmentFlowTab({
                       className={`w-full px-3 py-2.5 rounded-xl text-sm disabled:opacity-50 ${t('bg-white/[0.04] border border-white/[0.08] text-white','bg-gray-100 border border-gray-200 text-gray-900')}`} />
                   </div>
                   <div>
-                    <label className={`text-xs font-medium mb-1 block ${t('text-gray-400','text-gray-600')}`}>Transaction ID</label>
-                    <input value={txnForm.transactionId} onChange={e => setTxnForm(p => ({ ...p, transactionId: e.target.value }))} placeholder="Transaction ID"
+                    {/* SAR 2026-05-10 #3: Transaction ID is mandatory. */}
+                    <label className={`text-xs font-medium mb-1 block ${t('text-gray-400','text-gray-600')}`}>Transaction ID*</label>
+                    <input value={txnForm.transactionId} onChange={e => setTxnForm(p => ({ ...p, transactionId: e.target.value }))} placeholder="UTR / Transaction reference"
+                      required
                       disabled={isFullyPaid}
                       className={`w-full px-3 py-2.5 rounded-xl text-sm disabled:opacity-50 ${t('bg-white/[0.04] border border-white/[0.08] text-white','bg-gray-100 border border-gray-200 text-gray-900')}`} />
                   </div>

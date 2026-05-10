@@ -194,7 +194,9 @@ const SIDEBAR_SECTIONS: SidebarSection[] = [
     section: 'Investment',
     items: [
       { id: 'portfolio', label: 'Portfolio', icon: Briefcase },
-      { id: 'documents', label: 'Document', icon: FileText },
+      // Document option hidden per SAR 2026-05-10: documents now surface
+      // inside the Investment Flow Explore sub-menu, so the sidebar entry
+      // is redundant. The route still exists for deep-links.
       { id: 'transactions', label: 'Transaction', icon: ArrowLeftRight },
     ],
   },
@@ -261,11 +263,25 @@ function useAnimatedCounter(end: number, duration = 2000) {
 function Glass({ children, className = '', hover = true, glow = false, theme = 'dark' as Theme }: {
   children: React.ReactNode; className?: string; hover?: boolean; glow?: boolean; theme?: Theme
 }) {
+  // SAR 2026-05-10 #10: Calculator (and every other Glass card) was being
+  // forced to `bg-white border-gray-200` regardless of theme. In light mode
+  // this still rendered but slider tracks/comparison bars sat on white-on-
+  // white and the panels lost their outline against the beige page bg.
+  // Dark mode: translucent slate so contents read against the dark canvas.
+  // Light mode: solid white with a slightly darker border + softer shadow
+  //             so cards and the components inside them are clearly visible.
+  const isDark = theme === 'dark'
   return (
     <div
-      className={`relative rounded-xl border border-gray-200 overflow-hidden transition-all duration-300 bg-white
-        ${hover ? 'hover:shadow-md hover:-translate-y-0.5' : ''} ${glow ? 'shadow-sm' : ''} ${className}`}
-      style={{ boxShadow: '0 1px 3px rgba(0,0,0,0.08)' }}
+      className={`relative rounded-xl border overflow-hidden transition-all duration-300
+        ${isDark
+          ? 'bg-white/[0.03] border-white/[0.08] backdrop-blur-sm'
+          : 'bg-white border-gray-200'}
+        ${hover ? 'hover:shadow-md hover:-translate-y-0.5' : ''}
+        ${glow ? 'shadow-sm' : ''} ${className}`}
+      style={isDark
+        ? { boxShadow: '0 1px 3px rgba(0,0,0,0.4)' }
+        : { boxShadow: '0 1px 3px rgba(0,0,0,0.08), 0 0 0 1px rgba(0,0,0,0.02)' }}
     >
       <div className="relative">{children}</div>
     </div>
@@ -732,11 +748,29 @@ export default function DashboardClient() {
   // Maps to Laravel: Investment::where('user_id',...)->where('status',2)->sum('amount')
   const totalCurrent = useMemo(() => portfolioAssets.reduce((s: number, a: any) => s + (Number(a.current_value) || 0), 0), [portfolioAssets])
   const totalInvested = useMemo(() => portfolioAssets.reduce((s: number, a: any) => s + (Number(a.invested_amount) || 0), 0), [portfolioAssets])
-  // AIF amount (Laravel: fund_id=10)
-  const aifTotal = useMemo(() => portfolioAssets.filter((a: any) => a.fund_type === 'AIF').reduce((s: number, a: any) => s + (Number(a.invested_amount) || 0), 0), [portfolioAssets])
-  // Debenture amount (Laravel: fund_id=11)
-  const debentureTotal = useMemo(() => portfolioAssets.filter((a: any) => a.fund_type === 'Debenture').reduce((s: number, a: any) => s + (Number(a.invested_amount) || 0), 0), [portfolioAssets])
-  const portfolioValue = useAnimatedCounter(user?.aum || totalInvested || 0)
+  // AIF amount — both routes (Direct AIF + Alternate route via Debenture) are
+  // AIF investments per the corrections punch-list dated 2026-05-10
+  // ("Investments are not reflected in the concern Investment bracket"). Both
+  // ride the same SEBI Cat-II AIF, so the AIF Investment tile aggregates them.
+  // Matching is also case-insensitive so a slightly-different fund_vehicle
+  // string ("direct aif route" vs "Direct AIF Route") still gets counted.
+  const aifTotal = useMemo(() => portfolioAssets.reduce((s: number, a: any) => {
+    const ft = String(a.fund_type || '').toLowerCase()
+    const fv = String(a.fund_name || '').toLowerCase()
+    const isAifRoute = ft === 'aif' || ft === 'debenture' || fv.includes('aif') || fv.includes('debenture')
+    return s + (isAifRoute ? (Number(a.invested_amount) || 0) : 0)
+  }, 0), [portfolioAssets])
+  // Debenture amount (Laravel: fund_id=11) — Alternate route only
+  const debentureTotal = useMemo(() => portfolioAssets.reduce((s: number, a: any) => {
+    const ft = String(a.fund_type || '').toLowerCase()
+    const fv = String(a.fund_name || '').toLowerCase()
+    return s + (ft === 'debenture' || fv.includes('debenture') ? (Number(a.invested_amount) || 0) : 0)
+  }, 0), [portfolioAssets])
+  // Total Investment must reconcile with the breakdown buckets — if admin sets
+  // total_invested on the client profile but no application rows exist, prefer
+  // the higher of the two so the figure isn't lost, but never less than the
+  // sum of categorised investments (otherwise buckets > total looks broken).
+  const portfolioValue = useAnimatedCounter(Math.max(Number(user?.aum) || 0, totalInvested) || 0)
   const aifInvestment = useAnimatedCounter(aifTotal || 0)
   const coInvestValue = useAnimatedCounter(debentureTotal || 0)
   const currentNAV = useAnimatedCounter(navHistory.length ? (navHistory[navHistory.length - 1]?.nav_value || navHistory[navHistory.length - 1]?.nav || 0) * 100 : 0)
@@ -3566,15 +3600,15 @@ export default function DashboardClient() {
         name: 'MADURAI',
         sub: 'Solar Energy Development Land',
         image: '/images/portfolio/narikudi-madurai.jpg',
-        location: 'Karikudi, approximately 80 km from Madurai, TN',
-        area: '165 acres',
+        location: 'Narikudi, approximately 50 km from Madurai, TN',
+        area: '145 acres',
         acquisitionCost: '₹22.5 crores',
-        postDevInvestment: '₹25 crores',
+        postDevInvestment: '₹25 crore',
         marketValue: '₹40 crores (approx.)',
-        purpose: 'Establishment of a large-scale solar power plant',
+        purpose: 'Establishment of a largescale solar power plant',
         status: 'Acquisition complete',
         description: 'This vast tract of land, located near a major power substation, is ideally suited for renewable energy projects. With its favourable solar irradiance, clear title, and level terrain, it presents a compelling opportunity for clean energy generation.',
-        body2: 'The region is rapidly developing into a renewable energy corridor, with nearby operational plants like the 50 Aadhavan Power Plant and 50 Kothravan Power Plant managed by the Greenko Group.',
+        body2: 'The region is rapidly developing into a renewable energy corridor, with nearby operational plants like SEI Aadhavan Power Plant and SEI Kathiravan Power Plant managed by the Greenko Group.',
         advantage: 'Strategic proximity to infrastructure, direct grid connectivity, and location in a high-growth renewable zone make this property a high-yield acquisition at a 40% discount to market value.',
       },
       {
@@ -4205,15 +4239,15 @@ export default function DashboardClient() {
               <>
                 {/* IRR-specific results */}
                 <div className="grid grid-cols-2 gap-3 mb-5">
-                  <div className={`p-4 rounded-xl text-center ${t('bg-white/[0.03] border border-white/[0.04]','bg-gray-100/50 border border-gray-200/30')}`}>
+                  <div className={`p-4 rounded-xl text-center ${t('bg-white/[0.03] border border-white/[0.04]','bg-gray-50 border border-gray-200')}`}>
                     <p className={`text-[10px] uppercase tracking-wider ${t('text-gray-500','text-gray-600')}`}>Initial Investment</p>
                     <p className={`text-lg font-black mt-1 ${t('text-white','text-gray-900')}`}>{'\u20B9'}{formatINR(calcInputs.amount)}</p>
                   </div>
-                  <div className={`p-4 rounded-xl text-center ${t('bg-emerald-500/[0.06] border border-emerald-500/[0.1]','bg-emerald-50/60 border border-emerald-200/50')}`}>
+                  <div className={`p-4 rounded-xl text-center ${t('bg-emerald-500/[0.06] border border-emerald-500/[0.1]','bg-emerald-50 border border-emerald-200')}`}>
                     <p className={`text-[10px] uppercase tracking-wider ${t('text-gray-500','text-gray-600')}`}>Final Value</p>
                     <p className="text-lg font-black mt-1 text-emerald-400">{'\u20B9'}{formatINR(Math.round(irrFinalValue))}</p>
                   </div>
-                  <div className={`p-4 rounded-xl text-center col-span-2 ${t('bg-brand-red/[0.06] border border-brand-red/[0.1]','bg-red-50/60 border border-red-200/50')}`}>
+                  <div className={`p-4 rounded-xl text-center col-span-2 ${t('bg-brand-red/[0.06] border border-brand-red/[0.1]','bg-red-50 border border-red-200')}`}>
                     <p className={`text-[10px] uppercase tracking-wider ${t('text-gray-500','text-gray-600')}`}>Internal Rate of Return (IRR)</p>
                     <p className="text-3xl font-black mt-1 text-brand-red">{irrRate.toFixed(2)}%</p>
                     <p className={`text-[10px] mt-1 ${t('text-gray-500','text-gray-600')}`}>Annualized over {calcInputs.years} year{calcInputs.years > 1 ? 's' : ''}</p>
@@ -4236,7 +4270,7 @@ export default function DashboardClient() {
                     return (
                       <div key={i} className="flex items-center gap-3">
                         <span className={`w-20 text-[10px] font-medium text-right ${t('text-gray-400','text-gray-600')}`}>{p.name}</span>
-                        <div className={`flex-1 h-4 rounded-full overflow-hidden ${t('bg-white/[0.04]','bg-gray-200/30')}`}>
+                        <div className={`flex-1 h-4 rounded-full overflow-hidden ${t('bg-white/[0.04]','bg-gray-200')}`}>
                           <div className="h-full rounded-full transition-all duration-700" style={{ width: `${Math.min((p.irr / maxIrr) * 100, 100)}%`, background: p.color }} />
                         </div>
                         <span className={`w-12 text-[10px] font-bold text-right ${p.irr === irrRate ? 'text-brand-red' : t('text-white','text-gray-900')}`}>{p.irr.toFixed(1)}%</span>
@@ -4246,7 +4280,7 @@ export default function DashboardClient() {
                 </div>
 
                 {/* IRR insight */}
-                <div className={`mt-4 p-3 rounded-xl ${t('bg-white/[0.03] border border-white/[0.04]','bg-gray-100/50 border border-gray-200/30')}`}>
+                <div className={`mt-4 p-3 rounded-xl ${t('bg-white/[0.03] border border-white/[0.04]','bg-gray-50 border border-gray-200')}`}>
                   <div className="flex items-start gap-2">
                     <Sparkles className="w-4 h-4 text-brand-red mt-0.5 shrink-0" />
                     <p className={`text-[11px] leading-relaxed ${t('text-gray-400','text-gray-600')}`}>
@@ -4261,19 +4295,19 @@ export default function DashboardClient() {
               <>
                 {/* Standard results for other calculators */}
                 <div className="grid grid-cols-2 gap-3 mb-5">
-                  <div className={`p-4 rounded-xl text-center ${t('bg-white/[0.03] border border-white/[0.04]','bg-gray-100/50 border border-gray-200/30')}`}>
+                  <div className={`p-4 rounded-xl text-center ${t('bg-white/[0.03] border border-white/[0.04]','bg-gray-50 border border-gray-200')}`}>
                     <p className={`text-[10px] uppercase tracking-wider ${t('text-gray-500','text-gray-600')}`}>Total Invested</p>
                     <p className={`text-lg font-black mt-1 ${t('text-white','text-gray-900')}`}>{'\u20B9'}{formatINR(activeCalc === 'sip' ? calcInputs.amount * calcInputs.years * 12 : calcInputs.amount)}</p>
                   </div>
-                  <div className={`p-4 rounded-xl text-center ${t('bg-emerald-500/[0.06] border border-emerald-500/[0.1]','bg-emerald-50/60 border border-emerald-200/50')}`}>
+                  <div className={`p-4 rounded-xl text-center ${t('bg-emerald-500/[0.06] border border-emerald-500/[0.1]','bg-emerald-50 border border-emerald-200')}`}>
                     <p className={`text-[10px] uppercase tracking-wider ${t('text-gray-500','text-gray-600')}`}>Future Value</p>
                     <p className="text-lg font-black mt-1 text-emerald-400">{'\u20B9'}{formatINR(Math.round(activeCalc === 'sip' ? sipFuture : future))}</p>
                   </div>
-                  <div className={`p-4 rounded-xl text-center ${t('bg-white/[0.03] border border-white/[0.04]','bg-gray-100/50 border border-gray-200/30')}`}>
+                  <div className={`p-4 rounded-xl text-center ${t('bg-white/[0.03] border border-white/[0.04]','bg-gray-50 border border-gray-200')}`}>
                     <p className={`text-[10px] uppercase tracking-wider ${t('text-gray-500','text-gray-600')}`}>Wealth Gain</p>
                     <p className={`text-lg font-black mt-1 text-emerald-400`}>{'\u20B9'}{formatINR(Math.round((activeCalc === 'sip' ? sipFuture : future) - (activeCalc === 'sip' ? calcInputs.amount * calcInputs.years * 12 : calcInputs.amount)))}</p>
                   </div>
-                  <div className={`p-4 rounded-xl text-center ${t('bg-white/[0.03] border border-white/[0.04]','bg-gray-100/50 border border-gray-200/30')}`}>
+                  <div className={`p-4 rounded-xl text-center ${t('bg-white/[0.03] border border-white/[0.04]','bg-gray-50 border border-gray-200')}`}>
                     <p className={`text-[10px] uppercase tracking-wider ${t('text-gray-500','text-gray-600')}`}>CAGR</p>
                     <p className={`text-lg font-black mt-1 text-brand-red`}>{calcInputs.rate}%</p>
                   </div>
@@ -4294,7 +4328,7 @@ export default function DashboardClient() {
                     return (
                       <div key={i} className="flex items-center gap-3">
                         <span className={`w-20 text-[10px] font-medium text-right ${t('text-gray-400','text-gray-600')}`}>{p.name}</span>
-                        <div className={`flex-1 h-4 rounded-full overflow-hidden ${t('bg-white/[0.04]','bg-gray-200/30')}`}>
+                        <div className={`flex-1 h-4 rounded-full overflow-hidden ${t('bg-white/[0.04]','bg-gray-200')}`}>
                           <div className="h-full rounded-full transition-all duration-700" style={{ width: `${Math.min((pv / maxVal) * 100, 100)}%`, background: p.color }} />
                         </div>
                         <span className={`w-16 text-[10px] font-bold text-right ${t('text-white','text-gray-900')}`}>{'\u20B9'}{formatINR(Math.round(pv))}</span>
