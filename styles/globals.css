@@ -4557,6 +4557,26 @@ button[type="submit"].inline-flex {
   .hero-glass-card::before { animation: none; opacity: 0; }
 }
 
+/* 2026-05-10: smoky-white sub-panel that wraps the red hero caption.
+   Sits inside the hero-glass-card and gives the red lettering its own
+   isolated stage so the photo's SEBI ribbon (which bleeds through the
+   clearer parent glass) can't muddy the text. Inline-block + box-decor.
+   so it hugs the wrapped lines instead of stretching to full width. */
+.hero-caption-panel {
+  display: inline-block;
+  -webkit-box-decoration-break: clone;
+          box-decoration-break: clone;
+  padding: 0.55em 0.85em;
+  border-radius: 0.85rem;
+  background: rgba(255, 255, 255, 0.18);
+  border: 1px solid rgba(255, 255, 255, 0.30);
+  -webkit-backdrop-filter: blur(10px) saturate(120%);
+          backdrop-filter: blur(10px) saturate(120%);
+  box-shadow:
+    0 6px 24px rgba(11, 9, 10, 0.18),
+    inset 0 1px 0 rgba(255, 255, 255, 0.35);
+}
+
 /* Force white text inside the glass card. Defeats the global
    light-mode safety-nets (.bg-brand-offwhite p {}, etc.) the same
    way `.image-overlay-text` does — class repeated for specificity. */
