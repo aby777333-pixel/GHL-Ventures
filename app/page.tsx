@@ -357,7 +357,13 @@ function HeroSection() {
 
       {/* ---- END HERO BACKDROP ---- */}
 
-      <div className="container-max mx-auto px-4 sm:px-6 lg:px-8 relative z-10 pt-28 pb-14">
+      {/* 2026-05-10 update: align the hero container with the navbar
+          (max-w-[1440px], same horizontal padding) so the copy card sits
+          vertically perpendicular to the GHL logo instead of floating to
+          the right of it. `w-full` is required because the section is a
+          flex child — without it the container collapses to content width
+          and the card drifts right of the logo. */}
+      <div className="w-full max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8 relative z-10 pt-28 pb-14">
         {/* 2026-05-10: Bloomberg TV + Market Hotlists moved into the
             "Capital That Creates Value" section below — the hero now lets the
             elephant + ribbon photo carry the right two-thirds. The copy card
@@ -376,8 +382,13 @@ function HeroSection() {
               </AnimatedSection>
 
               <AnimatedSection delay={200}>
+                {/* 2026-05-10 spec change: tagline replaced with the new
+                    "elite don't follow the crowd" line, and the shimmer
+                    animation on "Alternative Investment Fund" removed —
+                    plain white preserves the original H1 hierarchy without
+                    the moving gradient that the spec asked us to drop. */}
                 <h1 className="text-3xl sm:text-4xl md:text-4xl lg:text-5xl font-extrabold leading-[1.08] mb-5 tracking-tight" style={{ color: '#ffffff', textShadow: '0 2px 22px rgba(0,0,0,0.78), 0 0 42px rgba(0,0,0,0.45), 0 0 64px rgba(255,42,64,0.22)' }}>
-                  SEBI Registered <span className="text-gradient-shimmer">Alternative Investment Fund</span> — Where Bold Capital Meets Intelligence
+                  SEBI Registered Alternative Investment Fund — For stable investments, the elite don&apos;t follow the crowd. They move with the giant in the game.
                 </h1>
               </AnimatedSection>
 
@@ -398,11 +409,13 @@ function HeroSection() {
                 </div>
               </AnimatedSection>
 
-              {/* Trust badges */}
+              {/* Trust badges — 2026-05-10: SEBI registration number
+                  IN/AIF2/24-25/1517 surfaced inline on the SEBI pill so
+                  the regulatory ID is visible at a glance. */}
               <AnimatedSection delay={700}>
                 <div className="flex flex-wrap gap-3">
                   {[
-                    { icon: BadgeCheck, text: 'SEBI Reg.' },
+                    { icon: BadgeCheck, text: 'SEBI Reg. IN/AIF2/24-25/1517' },
                     { icon: Landmark, text: 'Category II AIF' },
                     { icon: IndianRupee, text: 'Managed by Trustee' },
                   ].map(b => (
