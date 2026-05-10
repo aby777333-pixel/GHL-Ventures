@@ -24,7 +24,13 @@ function WhyAIFsHero() {
           red-bars + city-skyline photo is dark enough on its own that
           the white hero copy reads cleanly without an overlay. */}
 
-      <div className="container-max mx-auto px-4 sm:px-6 lg:px-8 relative z-10 pt-32 pb-20">
+      {/* 2026-05-10 follow-up: align the hero container width with the
+          navbar (max-w-[1440px], same horizontal padding) so the copy
+          sits vertically perpendicular to the GHL logo. `w-full` is
+          required because the section is a flex child — without it the
+          container collapses to content width and the text drifts right
+          of the logo. */}
+      <div className="w-full max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8 relative z-10 pt-32 pb-20">
         <AnimatedSection>
           {/* 2026-05-10: hero copy switched to white / off-white only —
               the new red-bars + city-skyline photo already carries the
