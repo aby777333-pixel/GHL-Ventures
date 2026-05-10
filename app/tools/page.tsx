@@ -1566,36 +1566,20 @@ export default function ToolsPage() {
   return (
     <>
       {/* ── HERO SECTION ── */}
+      {/* 2026-05-10: hero photo swapped to the red-corridor / market-tools
+          composite, which already has its own embedded headline +
+          paragraph + FINTECH CERTIFIED / MARKET DYNAMICS PLATFORM badges
+          + EXPLORE OUR SOLUTIONS button baked into the right side of the
+          image. The previous text overlay (73+ Professional Tools pill,
+          "Market Tools & Financial Calculators" h1, sub-paragraph) is
+          removed so the hero copy isn't duplicated on top of the photo's
+          own copy. The dark scrim is also dropped — the new photo's
+          right side is light-tone and the scrim was washing it grey. */}
       <section className="dark-surface relative min-h-[80vh] flex items-center overflow-hidden bg-brand-black">
         <picture aria-hidden="true">
           <source srcSet="/images/heros/tools-hero-sm.jpg" media="(max-width: 768px)" />
           <img src="/images/heros/tools-hero.jpg" alt="" className="absolute inset-0 w-full h-full object-cover pointer-events-none select-none" loading="eager" decoding="async" />
         </picture>
-        <div className="absolute inset-0 bg-gradient-to-b from-black/70 via-black/55 to-black/70 pointer-events-none" />
-
-        <div className="container-max mx-auto px-4 sm:px-6 lg:px-8 relative z-10 pt-44 pb-32 text-center">
-          <AnimatedSection delay={0}>
-            <div className="inline-flex items-center px-4 py-2 bg-brand-red/10 border border-brand-red/20 rounded-full mb-6 backdrop-blur-sm">
-              <Calculator className="w-4 h-4 text-brand-red mr-2" />
-              <span className="text-brand-red text-xs font-semibold uppercase tracking-widest">
-                {totalTools}+ Professional Tools
-              </span>
-            </div>
-          </AnimatedSection>
-
-          <AnimatedSection delay={200}>
-            <h1 className="text-3xl sm:text-4xl md:text-5xl font-extrabold text-white leading-[1.08] mb-5 tracking-tight" style={{ textShadow: '0 2px 16px rgba(0,0,0,0.8)' }}>
-              Market Tools & <span className="text-gradient">Financial Calculators</span>
-            </h1>
-          </AnimatedSection>
-
-          <AnimatedSection delay={400}>
-            <p className="text-base text-gray-300 mb-8 max-w-2xl mx-auto leading-relaxed" style={{ textShadow: '0 1px 8px rgba(0,0,0,0.6)' }}>
-              Professional-grade calculators for investments, trading, real estate, tax planning, and more.
-              Every tool an Indian investor needs, in one place.
-            </p>
-          </AnimatedSection>
-        </div>
       </section>
 
       {/* ── TOOLS SECTION ── */}
