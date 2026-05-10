@@ -4566,15 +4566,21 @@ button[type="submit"].inline-flex {
   display: inline-block;
   -webkit-box-decoration-break: clone;
           box-decoration-break: clone;
-  padding: 0.55em 0.85em;
-  border-radius: 0.85rem;
-  background: rgba(255, 255, 255, 0.18);
-  border: 1px solid rgba(255, 255, 255, 0.30);
-  -webkit-backdrop-filter: blur(10px) saturate(120%);
-          backdrop-filter: blur(10px) saturate(120%);
+  padding: 0.65em 1em;
+  border-radius: 0.95rem;
+  /* 2026-05-10 follow-up: panel made noticeably "thicker" — higher
+     white tint, stronger blur, heavier border + shadow — so the red
+     lettering stands on a clearly defined glass slab instead of a
+     barely-there scrim. */
+  background: rgba(255, 255, 255, 0.42);
+  border: 1.5px solid rgba(255, 255, 255, 0.55);
+  -webkit-backdrop-filter: blur(18px) saturate(135%);
+          backdrop-filter: blur(18px) saturate(135%);
   box-shadow:
-    0 6px 24px rgba(11, 9, 10, 0.18),
-    inset 0 1px 0 rgba(255, 255, 255, 0.35);
+    0 12px 38px rgba(11, 9, 10, 0.28),
+    0 2px 6px rgba(11, 9, 10, 0.18),
+    inset 0 1px 0 rgba(255, 255, 255, 0.55),
+    inset 0 -1px 0 rgba(11, 9, 10, 0.06);
 }
 
 /* Force white text inside the glass card. Defeats the global
