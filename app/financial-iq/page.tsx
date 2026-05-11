@@ -658,7 +658,7 @@ export default function FinancialIQPage() {
               { title: 'Market Outlook Report', desc: 'Our latest quarterly market analysis and sector forecasts.', icon: TrendingUp },
             ].map((guide, i) => (
               <AnimatedSection key={guide.title} delay={i * 100}>
-                <Link href="/downloads" className="block">
+                <Link href="/contact" className="block">
                   <div className={`card group hover-lift h-full text-center ${['glow-card-rose', 'glow-card-cyan', 'glow-card-orange'][i % 3]}`}>
                     <div className="w-14 h-14 bg-brand-red/10 rounded-xl flex items-center justify-center mx-auto mb-4 group-hover:bg-brand-red transition-all icon-ring-hover">
                       <guide.icon className="w-7 h-7 text-brand-red group-hover:text-white transition-colors" />
@@ -668,7 +668,7 @@ export default function FinancialIQPage() {
                     </h3>
                     <p className="text-brand-grey dark:text-gray-300 text-sm mb-4">{guide.desc}</p>
                     <span className="inline-flex items-center text-brand-red text-sm font-semibold">
-                      View in Downloads
+                      Request Guide
                       <ChevronRight className="w-4 h-4 ml-1 group-hover:translate-x-1 transition-transform" />
                     </span>
                   </div>

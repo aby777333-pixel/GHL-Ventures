@@ -954,7 +954,7 @@ export default function InvestmentFlowTab({
                     <table className="w-full text-sm">
                       <thead>
                         <tr className={`border-b ${t('border-white/[0.06] bg-white/[0.02]','border-gray-200 bg-gray-50')}`}>
-                          {['DOCUMENT', 'ACTION'].map(h => (
+                          {['DOCUMENT', 'ACTION', 'SIGNED COPY'].map(h => (
                             <th key={h} className={`text-left text-xs font-bold uppercase tracking-wider py-3 px-5 ${t('text-gray-500','text-gray-600')}`}>{h}</th>
                           ))}
                         </tr>
@@ -962,8 +962,14 @@ export default function InvestmentFlowTab({
                       <tbody>
                         {docsForApp.map((doc: any, i: number) => {
                           const docType = (doc.document_type || '').toLowerCase()
+                          const docTitleLower = (doc.title || '').toLowerCase()
                           const autoGen = ['acknowledgement_letter', 'acknowledgement'].includes(docType) && !doc.file_url
                           const ready = !!doc.file_url || autoGen
+                          // Only the Debenture Agreement gets a signed-copy slot
+                          // (Testing Report 2 — 2026-04-25 #6). Match the same
+                          // rule used by the bulk view further down: by
+                          // document_type or by a title containing "agreement".
+                          const isSignable = docType === 'debenture_agreement' || docType === 'agreement' || /agreement/.test(docTitleLower)
                           return (
                             <tr key={doc.id || i} className={`border-b ${t('border-white/[0.04]','border-gray-100')}`}>
                               <td className={`py-3 px-5 text-xs font-medium ${t('text-white','text-gray-900')}`}>{doc.title || 'Document'}</td>
@@ -981,6 +987,19 @@ export default function InvestmentFlowTab({
                                     <Clock className="w-3 h-3" /> Processing
                                   </span>
                                 )}
+                              </td>
+                              <td className="py-3 px-5">
+                                {isSignable ? (
+                                  doc.signed_copy_url ? (
+                                    <button onClick={() => handleViewDoc(doc.signed_copy_url)} className="inline-flex items-center gap-1 text-[11px] font-bold px-3 py-1.5 rounded-lg bg-emerald-500/15 text-emerald-500 hover:bg-emerald-500/25 transition-colors" title="View signed copy">
+                                      <CheckCircle className="w-3 h-3" /> Signed
+                                    </button>
+                                  ) : (
+                                    <button onClick={() => handleUploadSigned(doc.id)} className={`inline-flex items-center gap-1 text-[11px] font-bold px-3 py-1.5 rounded-lg border transition-colors ${t('border-white/10 text-gray-300 hover:text-white hover:bg-white/[0.06]','border-gray-300 text-gray-700 hover:bg-gray-50')}`} title="Upload signed copy">
+                                      <Upload className="w-3 h-3" /> Upload
+                                    </button>
+                                  )
+                                ) : <span className={`text-xs ${t('text-gray-600','text-gray-400')}`}>-</span>}
                               </td>
                             </tr>
                           )

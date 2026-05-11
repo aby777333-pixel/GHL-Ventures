@@ -226,7 +226,7 @@ export default function BlogPage() {
                   <span className="inline-block px-3 py-1 bg-brand-red text-white text-xs font-bold uppercase tracking-wider rounded-full w-fit mb-4">
                     {featuredCategory}
                   </span>
-                  <h2 className="text-2xl md:text-3xl font-bold text-white mb-4 group-hover:text-brand-red transition-colors leading-tight">
+                  <h2 className="text-2xl md:text-3xl font-bold text-white mb-6 group-hover:text-brand-red transition-colors leading-snug">
                     {featuredPost.title}
                   </h2>
                   <p className="text-white/80 mb-6 leading-relaxed">

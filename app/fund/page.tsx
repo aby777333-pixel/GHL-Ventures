@@ -292,14 +292,14 @@ function InvestmentStrategy() {
                 Alongside our Direct AIF route, GHL offers a SEBI Co-Invest Framework that
                 gives accredited investors structured, asset-backed access to the same
                 stressed real estate opportunity at a more accessible entry point. Returns
-                are fixed at 24% PA with a 3&ndash;5 year tenure, backed by the underlying
+                are fixed at 24% PA with a 3&ndash;10 year tenure, backed by the underlying
                 project assets and supported by the same compliance and reporting standards
                 as the AIF.
               </p>
               <div className="space-y-3">
                 {[
                   'SEBI-compliant Co-Invest structure',
-                  'Fixed 24% PA returns, 3–5 year tenure',
+                  'Fixed 24% PA returns, 3–10 year tenure',
                   'Asset-backed by underlying real estate projects',
                   'Lower entry point than the Direct AIF route',
                   'Same custodian, auditor and reporting standards',

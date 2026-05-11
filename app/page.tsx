@@ -921,36 +921,30 @@ function FinancialIQTeaser() {
   // .map() block.
   return (
     <section className="relative py-14 md:py-20 overflow-hidden bg-brand-black">
-      {/* Background image — moved over from "Why Choose Us". Sits behind a
-          dark overlay so the white heading + gray paragraph copy keep enough
-          contrast against the photograph. */}
-      <picture className="absolute inset-0 pointer-events-none select-none">
-        <source srcSet="/images/home/why-choose-bg-sm.webp" type="image/webp" media="(max-width: 768px)" />
-        <source srcSet="/images/home/why-choose-bg.webp" type="image/webp" />
-        <img
-          src="/images/home/why-choose-bg.jpg"
-          alt=""
-          aria-hidden="true"
-          className="w-full h-full object-cover"
-          loading="lazy"
-        />
-      </picture>
-      <div className="absolute inset-0 bg-black/65 pointer-events-none" />
+      <img
+        src="/images/home/financial-iq-bg.jpg"
+        alt=""
+        aria-hidden="true"
+        className="absolute inset-0 w-full h-full object-cover pointer-events-none select-none"
+        loading="lazy"
+      />
+      <div className="absolute inset-0 bg-black/45 pointer-events-none" />
       <div className="absolute top-0 right-0 w-96 h-96 bg-brand-red/20 rounded-full blur-[120px] pointer-events-none" />
 
       <div className="container-max mx-auto px-4 sm:px-6 lg:px-8 relative z-10 text-center">
         <AnimatedSection>
-          <span className="eyebrow !text-brand-red">Learn &amp; Grow</span>
-          <h2 className="section-title mt-3 text-white">Build Your Financial IQ</h2>
-          <p className="text-gray-200 text-base max-w-2xl mx-auto mt-3 mb-10" style={{ textShadow: '0 1px 6px rgba(0,0,0,0.7)' }}>
-            Knowledge is the ultimate edge. Explore curated content designed to sharpen your investment acumen.
-          </p>
-        </AnimatedSection>
-
-        <AnimatedSection delay={200}>
-          <Link href="/financial-iq" className="btn-primary">
-            Explore Financial IQ <ArrowRight className="ml-2 w-5 h-5" />
-          </Link>
+          <div className="inline-block mx-auto px-8 py-10 md:px-12 md:py-12 rounded-2xl bg-white/10 backdrop-blur-md border border-white/20 shadow-2xl">
+            <span className="eyebrow !text-brand-red">Learn &amp; Grow</span>
+            <h2 className="section-title mt-3 text-white">Build Your Financial IQ</h2>
+            <p className="text-gray-100 text-base max-w-2xl mx-auto mt-3 mb-8" style={{ textShadow: '0 1px 6px rgba(0,0,0,0.7)' }}>
+              Knowledge is the ultimate edge. Explore curated content designed to sharpen your investment acumen.
+            </p>
+            <AnimatedSection delay={200}>
+              <Link href="/financial-iq" className="btn-primary">
+                Explore Financial IQ <ArrowRight className="ml-2 w-5 h-5" />
+              </Link>
+            </AnimatedSection>
+          </div>
         </AnimatedSection>
       </div>
     </section>

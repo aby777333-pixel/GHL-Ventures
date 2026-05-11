@@ -173,7 +173,7 @@ export default function DebentureRoutePage() {
                 {[
                   { param: 'Minimum Investment', ghl: 'Contact for Details', fd: '₹1,000+' },
                   { param: 'Returns Potential', ghl: 'Higher*', fd: '6–7% p.a.' },
-                  { param: 'Asset Backing', ghl: 'Real Estate + Startups', fd: 'Bank Guarantee' },
+                  { param: 'Asset Backing', ghl: 'Real Estate', fd: 'Bank Guarantee' },
                   { param: 'Professional Management', ghl: '✓ Institutional-grade', fd: '✗ None' },
                   { param: 'Diversification Benefit', ghl: '✓ Alternative Assets', fd: '✗ Same Asset Class' },
                   { param: 'Tax Efficiency', ghl: 'Pass-through Structure', fd: 'Taxed as Income' },
