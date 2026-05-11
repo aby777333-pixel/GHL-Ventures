@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { BRAND } from '@/lib/constants'
 import {
-  Home, ArrowLeft, Search, BookOpen, Phone, Download, FileText, Users,
+  Home, ArrowLeft, Search, BookOpen, Phone, GraduationCap, FileText, Users,
 } from 'lucide-react'
 
 const QUICK_LINKS = [
@@ -12,7 +12,7 @@ const QUICK_LINKS = [
   { label: 'Fund', href: '/fund', icon: FileText },
   { label: 'Contact', href: '/contact', icon: Phone },
   { label: 'Blog', href: '/blog', icon: BookOpen },
-  { label: 'Downloads', href: '/downloads', icon: Download },
+  { label: 'Financial IQ', href: '/financial-iq', icon: GraduationCap },
 ]
 
 export default function NotFoundPage() {
