@@ -200,6 +200,24 @@ export default function BroadcastTab({ showToast }: BroadcastTabProps) {
   const [clearAllOpen, setClearAllOpen] = useState(false)
   const [clearing, setClearing] = useState(false)
 
+  // 2026-05-12: when the user lands here via the Communications Hub
+  // "New Broadcast" button (or the Email Notifications "+ New" CTA),
+  // CommsModule parks a short-lived flag in sessionStorage. Honour
+  // it once on mount, switch to the compose view, preselect the
+  // email channel for the Email entry-point, then clear the flag so
+  // a subsequent visit to /admin/comms/broadcast still defaults to
+  // the Leads view.
+  useEffect(() => {
+    try {
+      const mode = sessionStorage.getItem('comms-open-compose')
+      if (mode === 'email' || mode === 'broadcast') {
+        setView('compose')
+        if (mode === 'email') setComposeChannel('email')
+        sessionStorage.removeItem('comms-open-compose')
+      }
+    } catch { /* sessionStorage unavailable */ }
+  }, [])
+
   // ── Fetchers ────────────────────────────────────────────────────
   const fetchLeads = useCallback(async () => {
     if (!isSupabaseConfigured()) return

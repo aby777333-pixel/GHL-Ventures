@@ -100,6 +100,19 @@ export default function CommsModule({ subTab, navigate, showToast, user, role }:
     navigate(tabId === 'messages' ? 'comms' : `comms/${tabId}`)
   }
 
+  // 2026-05-12: open the broadcast/email composer that lives inside
+  // BroadcastTab. We park a short-lived flag in sessionStorage and
+  // navigate to /admin/comms/broadcast; BroadcastTab reads the flag
+  // on mount, switches its inner view to "compose", and (for the
+  // Email entry) preselects the email channel. The flag is cleared
+  // immediately after it's consumed so a subsequent direct visit to
+  // the Broadcast tab still lands on the default Leads view.
+  const openComposer = (mode: 'broadcast' | 'email') => {
+    try { sessionStorage.setItem('comms-open-compose', mode) } catch { /* private mode */ }
+    showToast(mode === 'email' ? 'Opening email composer...' : 'Opening broadcast composer...', 'info')
+    navigate('comms/broadcast')
+  }
+
   return (
     <div className="space-y-6 admin-section-enter">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
@@ -108,7 +121,7 @@ export default function CommsModule({ subTab, navigate, showToast, user, role }:
           <p className="text-sm text-gray-500 mt-1">Broadcasts, internal messaging, and system alerts</p>
         </div>
         <button
-          onClick={() => showToast('Opening broadcast composer...', 'info')}
+          onClick={() => openComposer('broadcast')}
           className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium text-white bg-brand-red/20 border border-brand-red/30 hover:bg-brand-red/30 transition-colors self-start admin-btn-press"
         >
           <Send className="w-4 h-4" />
@@ -173,7 +186,8 @@ export default function CommsModule({ subTab, navigate, showToast, user, role }:
             description="Templates, triggers, and delivery logs for transactional and marketing emails."
             icon={Bell}
             showToast={showToast}
-            hint="Templates live in `email_templates`; deliveries in `email_logs`. View opens the rendered body, Edit lets you tweak the template, Delete removes obsolete drafts."
+            onCreate={() => openComposer('email')}
+            hint="Templates live in `email_templates`; deliveries in `email_logs`. Use the New button above to compose an email broadcast (preselects the Email channel in the composer)."
           />
         )}
       </div>
