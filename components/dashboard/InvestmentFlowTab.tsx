@@ -34,6 +34,7 @@ import {
   useInvestmentApplications,
   useInvestmentDocuments,
   useInvestmentTransactions,
+  useKYCBankDetails,
 } from '@/lib/supabase/dashboardDataHooks'
 import DocumentTrackingProgress from './DocumentTrackingProgress'
 
@@ -185,10 +186,43 @@ export default function InvestmentFlowTab({
     if (apps.length === 1) setSelectedApp(apps[0])
   }, [subTab, investApps, selectedApp])
 
-  // Load bank accounts
+  // Investor Dashboard Corrections 2026-05-12 #5: the "Paid from
+  // (your bank)" dropdown must surface the bank the investor entered
+  // in their KYC. We now fold the kyc_bank_details row (if present)
+  // into the existing bank_accounts list with a stable synthetic id so
+  // it shows up in the picker even before the investor copies the
+  // account into the bank_accounts table.
+  const { data: kycBankForTxn } = useKYCBankDetails(clientId ?? undefined)
   useEffect(() => {
-    if (clientId) fetchBankAccounts(clientId).then((a: any) => setBankAccounts(a || []))
-  }, [clientId])
+    if (!clientId) { setBankAccounts([]); return }
+    let cancelled = false
+    fetchBankAccounts(clientId).then((a: any) => {
+      if (cancelled) return
+      const list: any[] = Array.isArray(a) ? [...a] : []
+      const k = kycBankForTxn as any
+      if (k && (k.account_number || k.bank_name)) {
+        const exists = list.some((b: any) =>
+          b.account_number && k.account_number &&
+          String(b.account_number).trim() === String(k.account_number).trim(),
+        )
+        if (!exists) {
+          list.unshift({
+            id: `kyc-bank-${clientId}`,
+            client_id: clientId,
+            account_holder_name: k.account_holder_name || k.holder_name || '',
+            account_number: k.account_number || '',
+            ifsc_code: k.ifsc_code || '',
+            bank_name: k.bank_name || '',
+            account_type: k.account_type || 'savings',
+            is_primary: list.length === 0,
+            source: 'kyc',
+          })
+        }
+      }
+      setBankAccounts(list)
+    })
+    return () => { cancelled = true }
+  }, [clientId, kycBankForTxn])
 
   // Bug #14: Refetch on tab-focus so admin approvals/credit/doc uploads show
   // up in the investor panel without requiring a full page reload.

@@ -194,16 +194,9 @@ export default function NotificationCenter({ scrolled }: NotificationCenterProps
             )}
           </div>
 
-          {/* Footer */}
-          <div className={`px-4 py-2.5 border-t text-center ${isLightTheme ? 'border-gray-100' : 'border-white/10'}`}>
-            <Link
-              href="/downloads"
-              onClick={() => setIsOpen(false)}
-              className="text-[11px] text-brand-red font-semibold hover:underline"
-            >
-              View All Documents & Downloads
-            </Link>
-          </div>
+          {/* Footer — 2026-05-12 site corrections: link to /downloads
+              suppressed because the page currently 404s. The notification
+              list itself remains intact. */}
         </div>
       )}
     </div>

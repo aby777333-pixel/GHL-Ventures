@@ -75,16 +75,17 @@ const QUICK_LINKS_PRIMARY = [
   { label: 'SEBI Co-Invest Framework', href: '/fund/debenture-route' },
 ] as const
 
+// 2026-05-12 site corrections: More Links trimmed to the top five
+// most-visited destinations (NRI Invest, Blog, Financial IQ, FAQs,
+// Careers). The remaining items (Insights, Tools, Refer an Investor,
+// Grievance) are still reachable from their primary surfaces but no
+// longer occupy the footer rail.
 const QUICK_LINKS_SECONDARY = [
   { label: 'NRI Invest', href: '/fund/nri-invest' },
   { label: 'Blog', href: '/blog' },
   { label: 'Financial IQ', href: '/financial-iq' },
-  { label: 'Insights', href: '/education/insights' },
-  { label: 'Tools', href: '/tools' },
   { label: 'FAQs', href: '/contact/faqs' },
-  { label: 'Refer an Investor', href: '/contact/refer' },
   { label: 'Careers', href: '/contact/careers' },
-  { label: 'Grievance', href: '/contact/grievance' },
 ] as const
 
 const PORTAL_PREFIXES = ['/staff', '/admin', '/dashboard']

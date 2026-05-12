@@ -203,10 +203,10 @@ export default function InsightsPage() {
         <div className="absolute inset-0 bg-gradient-to-r from-black/85 via-black/55 to-black/30 pointer-events-none" />
         <div className="container-max mx-auto px-4 sm:px-6 lg:px-8 relative z-10 pt-40 pb-12">
           <AnimatedSection>
-            <nav className="flex items-center space-x-2 text-sm text-gray-400 mb-8">
-              <Link href="/" className="hover:text-white transition-colors">Home</Link>
+            <nav className="flex items-center space-x-2 text-sm text-white mb-8">
+              <Link href="/" className="text-white hover:text-brand-red transition-colors">Home</Link>
               <ChevronRight className="w-3.5 h-3.5" />
-              <span className="text-gray-500">Education</span>
+              <span className="text-white/80">Education</span>
               <ChevronRight className="w-3.5 h-3.5" />
               <span className="text-brand-red font-medium">Insights</span>
             </nav>

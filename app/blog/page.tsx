@@ -282,16 +282,20 @@ export default function BlogPage() {
                 aria-label="Search articles"
               />
             </div>
-            {/* Category tabs */}
+            {/* Category tabs — 2026-05-12 site corrections: chip
+                contrast lifted (gray-200 surface + slate-800 text +
+                border) so the inactive chip labels remain legible when
+                the filter bar floats over the red CTA strip below the
+                "Real Estate" hero card. */}
             <div className="flex flex-wrap gap-2">
               {CATEGORIES.map((cat) => (
                 <button
                   key={cat}
                   onClick={() => setActiveCategory(cat)}
-                  className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${
+                  className={`px-4 py-2 rounded-full text-sm font-semibold transition-all ${
                     activeCategory === cat
                       ? 'bg-brand-red text-white shadow-lg shadow-brand-red/25'
-                      : 'bg-gray-100 text-brand-grey hover:bg-gray-200'
+                      : 'bg-gray-200 text-slate-800 border border-gray-300 hover:bg-gray-300 hover:text-slate-900'
                   }`}
                 >
                   {cat}

@@ -223,6 +223,10 @@
     background: var(--cta-gradient);
     box-shadow: 0 4px 20px rgba(208, 2, 27, 0.3);
     focus-ring-color: var(--color-red);
+    color: #FFFFFF !important;
+  }
+  .btn-primary, .btn-primary * {
+    color: #FFFFFF !important;
   }
   .btn-primary:hover {
     box-shadow: 0 6px 28px rgba(208, 2, 27, 0.45);

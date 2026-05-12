@@ -92,8 +92,8 @@ function AboutHero() {
       <div className="container-max mx-auto px-4 sm:px-6 lg:px-8 relative z-10 pt-40 pb-12">
         <AnimatedSection>
           {/* Breadcrumb */}
-          <nav className="flex items-center space-x-2 text-sm text-gray-400 mb-8">
-            <Link href="/" className="hover:text-white transition-colors flex items-center">
+          <nav className="flex items-center space-x-2 text-sm text-white mb-8">
+            <Link href="/" className="text-white hover:text-brand-red transition-colors flex items-center">
               <Home className="w-3.5 h-3.5 mr-1" /> Home
             </Link>
             <ChevronRight className="w-3.5 h-3.5" />

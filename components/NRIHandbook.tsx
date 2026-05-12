@@ -70,8 +70,8 @@ const CHAPTERS: Chapter[] = [
     icon: <Banknote className="w-5 h-5" />,
     content: [
       'GHL India Ventures offers two distinct investment pathways for NRIs, each designed for different risk appetites and investment sizes.',
-      'Route 1 — Direct AIF (as per SEBI regulations): This is the primary investment route through our SEBI-registered Category II AIF. Investors become unit holders in the fund and gain exposure to the entire portfolio of stressed real estate assets and startup investments. Benefits include: full portfolio diversification, SEBI regulatory protection, quarterly NAV reporting, target IRR of 18–25%, and a fund tenure of 7–10 years with provision for extensions.',
-      'Route 2 — SEBI Co-Invest Framework: For NRIs who prefer an accessible entry point or structured exposure, the Co-Invest Framework provides access through regulated instruments. Benefits include: accessible entry, structured returns framework, asset-backed security, shorter tenures (3–5 years), and competitive target returns. Contact us for current details.',
+      'Route 1 — Direct AIF (as per SEBI regulations): This is the primary investment route through our SEBI-registered Category II AIF. Investors become unit holders in the fund and gain exposure to the entire portfolio of stressed real estate assets and startup investments. Benefits include: full portfolio diversification, SEBI regulatory protection, quarterly NAV reporting, target IRR of 18–25%, and a fund tenure of 3–10 years with provision for extensions.',
+      'Route 2 — SEBI Co-Invest Framework: For NRIs who prefer an accessible entry point or structured exposure, the Co-Invest Framework provides access through regulated instruments. Benefits include: accessible entry, structured returns framework, asset-backed security, tenures of 3–10 years, and competitive target returns. Contact us for current details.',
       'Both routes are fully FEMA-compliant and can be funded through NRO or NRE accounts. The choice between routes depends on your investment horizon, risk tolerance, and desired portfolio allocation. Our advisory team provides personalised guidance to help NRIs select the optimal route.',
     ],
   },
@@ -182,7 +182,7 @@ const CHAPTERS: Chapter[] = [
       'You are now equipped with the knowledge to make an informed decision about investing in India through GHL India Ventures. Here are your next steps.',
       'Step 1 — Book a Free NRI Consultation: Schedule a 30-minute video call with our NRI Advisory Team. We\'ll discuss your investment goals, risk tolerance, preferred route, and answer any specific questions. Available in your timezone — we operate across IST, GST, EST, PST, and AEST.',
       'Step 2 — Receive a Personalised Investment Proposal: Based on our consultation, we\'ll prepare a customised investment proposal outlining the recommended route, expected returns, tax implications specific to your country of residence, and a detailed timeline.',
-      'Step 3 — Begin Your Investment Journey: Complete KYC, sign agreements digitally, transfer funds, and begin receiving quarterly updates on your portfolio. Welcome to the GHL India Ventures family. Contact us: Phone: +91 44 2843 1043 | +91 7200 255 252 | Email: nri@ghlindiaventures.com | WhatsApp: +91 7200 255 252',
+      'Step 3 — Begin Your Investment Journey: Complete KYC, sign agreements digitally, transfer funds, and begin receiving quarterly updates on your portfolio. Welcome to the GHL India Ventures family. Contact us: Phone: +91 44 2843 1043 | +91 7200 255 252 | Email: info@ghlindiaventures.com | WhatsApp: +91 7200 255 252',
     ],
   },
 ]

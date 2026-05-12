@@ -1951,8 +1951,8 @@ export default function DashboardClient() {
       </div>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {[
-          { title: 'Category II AIF - Direct', desc: 'Invest in SEBI-registered AIF with stressed RE and startup exposure.', min: 'As per SEBI AIF Regulations', target: '18-22% IRR', tenure: '5-10 Years', risk: 'High', color: '#D0021B', icon: Building2 },
-          { title: 'SEBI Co-Invest Framework', desc: 'Regulated co-invest structure with fixed returns and same asset pool.', min: 'Contact for details', target: '12-15% p.a.', tenure: '3-5 Years', risk: 'Moderate', color: '#3B82F6', icon: FileText },
+          { title: 'Category II AIF - Direct', desc: 'Invest in SEBI-registered AIF with stressed RE and startup exposure.', min: 'As per SEBI AIF Regulations', target: '18-22% IRR', tenure: '3-10 Years', risk: 'High', color: '#D0021B', icon: Building2 },
+          { title: 'SEBI Co-Invest Framework', desc: 'Regulated co-invest structure with fixed returns and same asset pool.', min: 'Contact for details', target: '12-15% p.a.', tenure: '3-10 Years', risk: 'Moderate', color: '#3B82F6', icon: FileText },
           { title: 'NCLT Recovery Assets', desc: 'Stressed properties at 40-60% discount through IBC resolution.', min: '\u20B950 Lakhs', target: '25-35% IRR', tenure: '2-4 Years', risk: 'High', color: '#10B981', icon: Target, upcoming: true },
           { title: 'Early-Stage Startups', desc: 'Pre-Series A in high-growth Indian tech startups.', min: '\u20B925 Lakhs', target: '30-50% IRR', tenure: '5-8 Years', risk: 'Very High', color: '#F59E0B', icon: Rocket, upcoming: true },
         ].map((opp, i) => (
@@ -2381,52 +2381,23 @@ export default function DashboardClient() {
           await saveBlobAs(blob, filename, showToast as any)
         }} className="flex items-center gap-2 text-xs text-brand-red font-semibold"><Download className="w-3.5 h-3.5" /> Export CSV</button>
       </div>
-      <Glass className="overflow-hidden" hover={false} theme={theme}>
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className={`border-b ${t('border-white/[0.06]','border-gray-200/50')}`}>
-                {['Date', 'Type', 'Fund', 'Amount', 'Status'].map(h => (
-                  <th key={h} className={`text-${h === 'Amount' || h === 'Status' ? 'right' : 'left'} text-xs font-medium py-3 px-5 ${t('text-gray-500','text-gray-600')}`}>{h}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {transactions.length === 0 ? (
-                <tr>
-                  <td colSpan={5} className="py-12 text-center">
-                    <ArrowLeftRight className={`w-10 h-10 mx-auto mb-3 ${t('text-gray-600','text-gray-400')}`} />
-                    <p className={`text-sm font-medium ${t('text-gray-400','text-gray-600')}`}>No transactions yet</p>
-                    <p className={`text-xs mt-1 ${t('text-gray-600','text-gray-500')}`}>Your transaction history will appear here once you make an investment.</p>
-                  </td>
-                </tr>
-              ) : transactions.map((tx: any, i: number) => (
-                <tr key={i} className={`border-b transition-colors ${t('border-white/[0.03] hover:bg-white/[0.02]','border-gray-100 hover:bg-gray-200/30')}`}>
-                  <td className={`py-3 px-5 text-xs ${t('text-gray-400','text-gray-700')}`}>{tx.date}</td>
-                  <td className="py-3 px-5">
-                    <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${tx.type === 'Investment' ? 'bg-blue-500/15 text-blue-400' : tx.type === 'Dividend' ? 'bg-emerald-500/15 text-emerald-400' : 'bg-gray-500/15 text-gray-400'}`}>{tx.type}</span>
-                  </td>
-                  <td className={`py-3 px-5 text-xs font-medium ${t('text-white','text-gray-900')}`}>{tx.fund}</td>
-                  <td className={`py-3 px-5 text-right text-xs font-semibold ${t('text-white','text-gray-900')}`}>{tx.amount > 0 ? `\u20B9${formatINR(tx.amount)}` : '-'}</td>
-                  <td className="py-3 px-5 text-right">
-                    <span className={`inline-flex items-center gap-1 text-[10px] font-semibold ${tx.status === 'completed' ? 'text-emerald-400' : 'text-gray-500'}`}>
-                      {tx.status === 'completed' ? <CheckCircle className="w-3 h-3" /> : <Info className="w-3 h-3" />}
-                      {tx.status === 'completed' ? 'Completed' : 'Info'}
-                    </span>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </Glass>
+      {/* Investor Dashboard Corrections 2026-05-12 #14: the generic
+          Date/Type/Fund/Amount/Status table that previously rendered
+          here has been removed because it duplicated the rich
+          Investment Transaction Submissions panel below (and usually
+          rendered an empty "No transactions yet" state). CSV export
+          still uses the underlying `transactions` data set, so the
+          action remains functional. */}
 
       {/* Investment Transaction Submissions — extended per Investor
           Dashboard Corrections (2026-05) with Transaction Proof (eye
-          button) and Approval Date columns. */}
-      {investmentTxns.length > 0 && (
+          button) and Approval Date columns. With the duplicate generic
+          table removed (2026-05-12 #14), this panel is now the sole
+          surface for the Transactions tab and renders an empty state
+          when no submissions exist. */}
+      {investmentTxns.length > 0 ? (
         <>
-          <h3 className={`text-base font-bold mb-3 mt-6 ${t('text-white','text-gray-900')}`}>Investment Transaction Submissions</h3>
+          <h3 className={`text-base font-bold mb-3 ${t('text-white','text-gray-900')}`}>Investment Transaction Submissions</h3>
           <Glass className="overflow-hidden" hover={false} theme={theme}>
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
@@ -2475,6 +2446,12 @@ export default function DashboardClient() {
             </div>
           </Glass>
         </>
+      ) : (
+        <Glass className="p-12 text-center" hover={false} theme={theme}>
+          <ArrowLeftRight className={`w-10 h-10 mx-auto mb-3 ${t('text-gray-600','text-gray-400')}`} />
+          <p className={`text-sm font-medium ${t('text-gray-400','text-gray-600')}`}>No transactions yet</p>
+          <p className={`text-xs mt-1 ${t('text-gray-600','text-gray-500')}`}>Your transaction history will appear here once you make an investment.</p>
+        </Glass>
       )}
     </div>
   )
@@ -3000,8 +2977,23 @@ export default function DashboardClient() {
     }
   }
 
-  // Profile completion percentage
-  const profileFields = [user?.name, user?.phone, user?.city, user?.dob, user?.occupation, user?.nominee_name, user?.bank_name, user?.pan]
+  // Profile completion percentage — Investor Dashboard Corrections
+  // 2026-05-12: previously only the `user` record was inspected so the
+  // bar lingered well below 100% even after KYC fully populated the
+  // sub-tables. Now we honour the same precedence the Profile UI uses
+  // (KYC → saved profile cache → legacy user record) so the bar tracks
+  // what the investor actually sees on screen.
+  const _primaryNomineeForProgress = (kycNominees && (kycNominees as any[])[0]) as any || null
+  const profileFields = [
+    (kycBasic as any)?.investor_name || savedProfileData.full_name || user?.name,
+    (kycBasic as any)?.phone || savedProfileData.phone || user?.phone,
+    (kycIdentity as any)?.city || savedProfileData.city || user?.city,
+    (kycIdentity as any)?.dob || savedProfileData.dob || (user as any)?.dob,
+    savedProfileData.occupation || (user as any)?.occupation,
+    _primaryNomineeForProgress?.name || savedProfileData.nominee_name || (user as any)?.nominee_name,
+    (kycBank as any)?.bank_name || savedBankData.bank_name || (user as any)?.bank_name,
+    (kycIdentity as any)?.pan_number || savedProfileData.pan || (user as any)?.pan,
+  ]
   const filledFields = profileFields.filter(Boolean).length
   const profileCompletion = Math.round((filledFields / profileFields.length) * 100)
 
@@ -3123,18 +3115,9 @@ export default function DashboardClient() {
           <Glass className="p-6" hover theme={theme}>
             <div className="flex items-center justify-between mb-4">
               <h4 className={`text-sm font-bold ${t('text-white','text-gray-900')}`}>Bank Details</h4>
-              <button onClick={() => {
-                // Pre-populate form from saved data so user doesn't have to re-enter everything
-                if (savedBankData.holder_name || savedBankData.account_number) {
-                  setBankForm({
-                    holder_name: savedBankData.holder_name || '',
-                    account_number: savedBankData.account_number || '',
-                    ifsc_code: savedBankData.ifsc_code || '',
-                    account_type: savedBankData.account_type || 'savings',
-                  })
-                }
-                setBankConnectOpen(true)
-              }} className="text-xs text-brand-red font-semibold flex items-center gap-1"><Landmark className="w-3 h-3" /> Bank Connect</button>
+              {/* Investor Dashboard Corrections 2026-05-12: Bank Connect
+                  CTA hidden — bank details are captured via the KYC flow,
+                  so the standalone connect modal duplicates that path. */}
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               {/* Bug #31: Prefer KYC bank details so Profile shows the exact values the investor submitted */}
@@ -3959,9 +3942,9 @@ export default function DashboardClient() {
         <div className={`p-4 rounded-xl mb-5 ${t('bg-white/[0.02] border border-white/[0.04]','bg-gray-50 border border-gray-200')}`}>
           <div className="flex items-center justify-between mb-3">
             <h4 className={`text-sm font-bold ${t('text-white','text-gray-900')}`}>{investVehicle}</h4>
-            <a href="/downloads" target="_blank" className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-white bg-brand-red/80 hover:bg-brand-red transition-colors">
-              <Download className="w-3 h-3" /> Download Terms
-            </a>
+            {/* 2026-05-12 site corrections: Download Terms CTA hidden
+                because /downloads currently 404s. Restore once the page
+                is re-enabled. */}
           </div>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
             <div className={`p-2.5 rounded-lg ${t('bg-white/[0.02]','bg-white')}`}>

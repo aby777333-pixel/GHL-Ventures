@@ -31,8 +31,8 @@ function FundHero() {
       <div className="container-max mx-auto px-4 sm:px-6 lg:px-8 relative z-10 pt-40 pb-44">
         <AnimatedSection>
           {/* Breadcrumb */}
-          <nav className="flex items-center space-x-2 text-sm text-gray-400 mb-8">
-            <Link href="/" className="hover:text-white transition-colors flex items-center">
+          <nav className="flex items-center space-x-2 text-sm text-white mb-8">
+            <Link href="/" className="text-white hover:text-brand-red transition-colors flex items-center">
               <Home className="w-3.5 h-3.5 mr-1" /> Home
             </Link>
             <ChevronRight className="w-3.5 h-3.5" />
@@ -78,7 +78,7 @@ function FundOverview() {
     { icon: FileText, label: 'Fund Type', value: 'Category II AIF' },
     { icon: Shield, label: 'SEBI Registration', value: BRAND.sebi },
     { icon: DollarSign, label: 'Invest From', value: 'Contact for Details', href: '/contact' },
-    { icon: Clock, label: 'Investment Horizon', value: '5-10 Years' },
+    { icon: Clock, label: 'Investment Horizon', value: '3-10 Years' },
     { icon: TrendingUp, label: 'Target IRR', value: '18-24%' },
     { icon: Target, label: 'Fund Size Target', value: '₹500 Crore' },
   ]
@@ -589,15 +589,14 @@ function FundCTA() {
         <AnimatedSection>
           <h2 className="text-2xl md:text-3xl font-bold mb-4">Interested in Our Fund?</h2>
           <p className="text-gray-400 text-base max-w-2xl mx-auto mb-8">
-            Reach out to learn more about investment opportunities, or download our detailed fund documents.
+            Reach out to learn more about investment opportunities and speak with our team.
           </p>
           <div className="flex flex-wrap justify-center gap-4">
             <Link href="/contact" className="btn-primary">
               Schedule Meeting <ArrowRight className="ml-2 w-5 h-5" />
             </Link>
-            <Link href="/downloads" className="inline-flex items-center px-6 py-2.5 text-sm border-2 border-white text-white font-bold rounded-lg hover:bg-white/10 transition-all">
-              Download Documents
-            </Link>
+            {/* 2026-05-12 site corrections: Download Documents CTA hidden
+                because /downloads currently returns a 404. */}
           </div>
         </AnimatedSection>
       </div>

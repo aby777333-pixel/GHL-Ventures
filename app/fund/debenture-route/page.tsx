@@ -23,10 +23,10 @@ export default function DebentureRoutePage() {
         <div className="container-max mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
           <AnimatedSection>
             {/* Breadcrumb */}
-            <nav className="flex items-center text-sm text-gray-400 mb-6">
-              <Link href="/" className="hover:text-white transition-colors">Home</Link>
+            <nav className="flex items-center text-sm text-white mb-6">
+              <Link href="/" className="text-white hover:text-brand-red transition-colors">Home</Link>
               <span className="mx-2">/</span>
-              <Link href="/fund" className="hover:text-white transition-colors">Fund</Link>
+              <Link href="/fund" className="text-white hover:text-brand-red transition-colors">Fund</Link>
               <span className="mx-2">/</span>
               <span className="text-brand-red font-medium">SEBI Co-Invest Framework</span>
             </nav>

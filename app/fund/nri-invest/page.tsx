@@ -62,12 +62,12 @@ function NRIInvestContent() {
         <div className="w-full max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8 relative z-10 pt-40 pb-32">
           <AnimatedSection>
             {/* Breadcrumb */}
-            <nav className="flex items-center text-sm text-gray-400 mb-6">
-              <Link href="/" className="hover:text-white transition-colors flex items-center">
+            <nav className="flex items-center text-sm text-white mb-6">
+              <Link href="/" className="text-white hover:text-brand-red transition-colors flex items-center">
                 <Home className="w-3.5 h-3.5 mr-1" /> Home
               </Link>
               <ChevronRight className="w-3.5 h-3.5 mx-1" />
-              <Link href="/fund" className="hover:text-white transition-colors">Fund</Link>
+              <Link href="/fund" className="text-white hover:text-brand-red transition-colors">Fund</Link>
               <ChevronRight className="w-3.5 h-3.5 mx-1" />
               <span className="text-brand-red font-medium">NRI Invest</span>
             </nav>
@@ -299,7 +299,7 @@ function NRIInvestContent() {
                     'SEBI regulatory protection & oversight',
                     'Quarterly NAV reporting',
                     'Target IRR: 18–24%',
-                    'Fund tenure: 7–10 years',
+                    'Fund tenure: 3–10 years',
                     'Independent custodian safeguard',
                     'Pass-through taxation',
                     'Annual audited financials',
@@ -343,7 +343,7 @@ function NRIInvestContent() {
                     'Asset-backed security',
                     'Fixed coupon structure',
                     'Target returns: 24% p.a. (fixed)',
-                    'Shorter tenure: 3–5 years',
+                    'Tenure: 3–10 years',
                     'Lower entry point for NRIs',
                     'Exposure to stressed RE recovery',
                     'Regular interest payouts',

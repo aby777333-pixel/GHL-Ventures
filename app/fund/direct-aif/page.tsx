@@ -23,10 +23,10 @@ export default function DirectAIFPage() {
         <div className="container-max mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
           <AnimatedSection>
             {/* Breadcrumb */}
-            <nav className="flex items-center text-sm text-gray-400 mb-6">
-              <Link href="/" className="hover:text-white transition-colors">Home</Link>
+            <nav className="flex items-center text-sm text-white mb-6">
+              <Link href="/" className="text-white hover:text-brand-red transition-colors">Home</Link>
               <span className="mx-2">/</span>
-              <Link href="/fund" className="hover:text-white transition-colors">Fund</Link>
+              <Link href="/fund" className="text-white hover:text-brand-red transition-colors">Fund</Link>
               <span className="mx-2">/</span>
               <span className="text-brand-red font-medium">Direct AIF Route</span>
             </nav>
@@ -102,7 +102,7 @@ export default function DirectAIFPage() {
                   {[
                     { label: 'Minimum Investment', value: 'As per SEBI AIF Regulations' },
                     { label: 'Fund Category', value: 'SEBI Category II AIF' },
-                    { label: 'Investment Horizon', value: '5–10 Years' },
+                    { label: 'Investment Horizon', value: '3–10 Years' },
                     { label: 'Target IRR', value: '18–24%' },
                     { label: 'Fund Size Target', value: '₹500 Crore' },
                     { label: 'SEBI Registration', value: BRAND.sebi },
@@ -210,12 +210,9 @@ export default function DirectAIFPage() {
               >
                 Schedule Meeting <ArrowRight className="ml-2 w-4 h-4" />
               </Link>
-              <Link
-                href="/downloads"
-                className="inline-flex items-center justify-center px-6 py-2.5 text-sm border-2 border-white/30 text-white font-bold rounded-lg hover:bg-white/10 transition-all"
-              >
-                Download Fund Documents
-              </Link>
+              {/* 2026-05-12 site corrections: Download Fund Documents
+                  CTA hidden because /downloads is currently a 404 stub.
+                  Restore by uncommenting once the page is re-enabled. */}
             </div>
           </AnimatedSection>
         </div>

@@ -139,7 +139,7 @@ Office: ${BRAND.address} | Phone: ${BRAND.altPhone} | Email: ${BRAND.email}
 Hours: ${BRAND.officeHours}
 
 INVESTMENT ROUTES:
-1. Direct AIF: ${BRAND.minInvestmentAIF}, 15-25% target IRR, 5-10 year tenure, stressed real estate + startups
+1. Direct AIF: ${BRAND.minInvestmentAIF}, 15-25% target IRR, 3-10 year tenure, stressed real estate + startups
 2. SEBI Co-Invest Framework: ${BRAND.minInvestmentDebenture}, structured returns, SEBI-regulated
 
 TEAM: ${TEAM.map(m => `${m.name} (${m.role})`).join(', ')}
