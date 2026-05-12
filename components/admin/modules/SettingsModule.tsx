@@ -13,6 +13,7 @@ import AdminGlass from '../shared/AdminGlass'
 import AdminBadge from '../shared/AdminBadge'
 import AdminKPICard from '../shared/AdminKPICard'
 import AdminEmptyState from '../shared/AdminEmptyState'
+import AdminCRUDPlaceholder from '../shared/AdminCRUDPlaceholder'
 import { fetchEmployees, getSystemHealth, fetchActivityFeed } from '@/lib/supabase/adminDataService'
 import { supabase, isSupabaseConfigured } from '@/lib/supabase/client'
 import { ROLE_PERMISSIONS } from '@/lib/admin/adminRBAC'
@@ -22,9 +23,13 @@ import type { AdminRole } from '@/lib/admin/adminTypes'
 import { saveBlobAs } from '@/lib/supabase/storageService'
 
 // ── Sub-tabs ─────────────────────────────────────────────────────
+// 2026-05-12: Super-Admin menu spec adds Settings → Role (role
+// management). Permissions, Roles, and the User Passwords screen are
+// kept distinct so the spec's three Setting sub-items map 1:1.
 const SETTINGS_TABS = [
   { id: 'general', label: 'General', icon: Settings },
   { id: 'permissions', label: 'Permissions', icon: Shield },
+  { id: 'roles', label: 'Roles', icon: Shield },
   { id: 'security', label: 'Security', icon: Lock },
   { id: 'integrations', label: 'Integrations', icon: Plug },
   { id: 'system', label: 'System', icon: Server },
@@ -91,6 +96,19 @@ export default function SettingsModule({ subTab, navigate, showToast }: Settings
       <div className="admin-tab-switch">
         {activeTab === 'general' && <GeneralTab showToast={showToast} />}
         {activeTab === 'permissions' && <PermissionsTab />}
+        {/* 2026-05-12: Role management (create, rename, retire roles).
+            The shared CRUD placeholder shows the View / Edit / Delete
+            triad while the dedicated UI is wired in. ROLE_PERMISSIONS
+            in adminRBAC.ts is the canonical mapping today. */}
+        {activeTab === 'roles' && (
+          <AdminCRUDPlaceholder
+            title="Roles"
+            description="Define the roles available across the admin portal and the permission set each one carries."
+            icon={Shield}
+            showToast={showToast}
+            hint="Current roles are seeded in `lib/admin/adminAuth.ts` (ROLE_LABELS) and `lib/admin/adminRBAC.ts` (ROLE_PERMISSIONS). Adding a new role here writes to `admin_roles`; Edit lets you tweak its label / permission grants; Delete retires it."
+          />
+        )}
         {activeTab === 'security' && <SecurityTab showToast={showToast} />}
         {activeTab === 'integrations' && <IntegrationsTab showToast={showToast} />}
         {activeTab === 'system' && <SystemTab showToast={showToast} systemHealth={systemHealth} />}

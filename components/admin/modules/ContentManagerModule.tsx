@@ -80,11 +80,17 @@ interface SupportTicket {
 // ── Sub-tabs ────────────────────────────────────────────────────
 // Tab IDs MUST match sidebar navigation sub-item IDs from adminConstants.ts:
 // 'content' → blog, 'content/financial-iq' → financial-iq, 'content/faq' → faq, 'content/tickets' → tickets
+// 2026-05-12: `tickets-resolved` and `tickets-rejected` added per the
+// Super-Admin menu spec. They render the same Tickets table with a
+// pre-applied status filter; the existing Pending view is reached via
+// `tickets`.
 const CONTENT_TABS = [
   { id: 'blog', label: 'Blog Posts', icon: FileText },
   { id: 'financial-iq', label: 'Financial IQ', icon: BookOpen },
   { id: 'faq', label: 'FAQ', icon: HelpCircle },
-  { id: 'tickets', label: 'Support Tickets', icon: Ticket },
+  { id: 'tickets', label: 'Tickets · Pending', icon: Ticket },
+  { id: 'tickets-resolved', label: 'Tickets · Resolved', icon: Ticket },
+  { id: 'tickets-rejected', label: 'Tickets · Rejected', icon: Ticket },
   { id: 'broadcast', label: 'Broadcast', icon: Radio },
 ] as const
 
@@ -953,23 +959,44 @@ export default function ContentManagerModule({ subTab, navigate, showToast }: Co
           </>
         )}
 
-        {/* Support Tickets Tab */}
-        {activeTab === 'tickets' && (
-          <>
-            {tickets.length === 0 && !loading ? (
-              <AdminEmptyState icon={Ticket} title="No support tickets" description="Tickets submitted by investors will appear here." />
-            ) : (
-              <AdminDataTable
-                columns={ticketColumns}
-                data={tickets}
-                searchable
-                searchPlaceholder="Search tickets..."
-                searchKeys={['subject', 'status', 'priority']}
-                title="Support Tickets"
-              />
-            )}
-          </>
-        )}
+        {/* Support Tickets Tab — 2026-05-12: status-scoped variants
+            (tickets-resolved / tickets-rejected) filter the canonical
+            list so each PDF sidebar entry lands on its cohort. The
+            "Pending" view excludes resolved/rejected rows. */}
+        {(activeTab === 'tickets' || activeTab === 'tickets-resolved' || activeTab === 'tickets-rejected') && (() => {
+          const scopedTickets = (() => {
+            if (activeTab === 'tickets-resolved') {
+              return tickets.filter((t: any) => ['resolved', 'closed', 'completed'].includes(String(t.status || '').toLowerCase()))
+            }
+            if (activeTab === 'tickets-rejected') {
+              return tickets.filter((t: any) => ['rejected', 'declined', 'cancelled', 'canceled'].includes(String(t.status || '').toLowerCase()))
+            }
+            // Pending = everything that isn't already resolved or rejected
+            return tickets.filter((t: any) => {
+              const s = String(t.status || '').toLowerCase()
+              return !['resolved', 'closed', 'completed', 'rejected', 'declined', 'cancelled', 'canceled'].includes(s)
+            })
+          })()
+          const scopedTitle = activeTab === 'tickets-resolved' ? 'Resolved Tickets'
+            : activeTab === 'tickets-rejected' ? 'Rejected Tickets'
+            : 'Pending Tickets'
+          return (
+            <>
+              {scopedTickets.length === 0 && !loading ? (
+                <AdminEmptyState icon={Ticket} title={`No ${scopedTitle.toLowerCase()}`} description="Tickets submitted by investors will appear here." />
+              ) : (
+                <AdminDataTable
+                  columns={ticketColumns}
+                  data={scopedTickets}
+                  searchable
+                  searchPlaceholder="Search tickets..."
+                  searchKeys={['subject', 'status', 'priority']}
+                  title={scopedTitle}
+                />
+              )}
+            </>
+          )
+        })()}
       </AdminGlass>
       </>
       )}

@@ -11,293 +11,242 @@ export const FEATURE_FLAGS = {
 }
 
 // ── Sidebar Navigation Config ─────────────────────────────────────
+// 2026-05-12: `id` was tightened to `AdminModule` originally, but the
+// Super-Admin menu spec calls for multiple sidebar entries that map to
+// the *same* underlying module (e.g. Investment + Leads + Referral
+// all live under the `sales` module). Allowing `id` to be a string
+// gives each sidebar row its own expansion + active-state keys without
+// breaking permission checks (which use `permission`) or navigation
+// (which uses sub-item `id` strings the AdminClient parses into a
+// module + sub-tab pair).
 export interface SidebarItem {
-  id: AdminModule
+  id: string
+  module: AdminModule
   label: string
   iconName: string
   badge?: number | string
   permission: Permission
+  /** Optional navigation target for sidebar rows that have no sub-items but point at a specific sub-route. */
+  navigateTo?: string
   subItems?: { id: string; label: string }[]
 }
 
+// ────────────────────────────────────────────────────────────────────
+// Super-Admin sidebar — restructured 2026-05-12 to match the menu spec
+// in "Super admin - Menu structure.pdf". Every PDF entry is linked to
+// an existing route or a newly-added sub-tab; the underlying module
+// routing (clients/sales/compliance/etc.) is preserved so existing
+// bookmarks, ALL_ADMIN_TAB_PARAMS entries, and module sub-tab handlers
+// keep working. Row-level Edit / Delete / View actions are honoured by
+// the existing tables — every list view in the admin already exposes
+// the kebab menu with these three actions.
+// ────────────────────────────────────────────────────────────────────
 export const ADMIN_SIDEBAR_ITEMS: SidebarItem[] = [
+  // 1. Dashboard
   {
     id: 'overview',
-    label: 'Overview',
+    module: 'overview',
+    label: 'Dashboard',
     iconName: 'LayoutDashboard',
     permission: 'view:overview',
   },
+  // 2. Users
   {
-    id: 'clients',
-    label: 'Clients',
+    id: 'users',
+    module: 'clients',
+    label: 'Users',
     iconName: 'Users',
     permission: 'view:clients',
     subItems: [
-      { id: 'clients', label: 'All Clients' },
-      { id: 'clients/kyc-queue', label: 'KYC Queue' },
-      { id: 'clients/analytics', label: 'Client Analytics' },
+      { id: 'clients', label: 'All Users' },
+      { id: 'clients/channel-partners', label: 'Channel Partner' },
     ],
   },
+  // 3. Investment
   {
-    id: 'sales',
-    label: 'Sales & CRM',
+    id: 'investment',
+    module: 'sales',
+    label: 'Investment',
     iconName: 'TrendingUp',
     permission: 'view:sales',
     subItems: [
-      { id: 'sales', label: 'Dashboard' },
-      { id: 'sales/create-account', label: 'Create Account' },
-      { id: 'sales/pipeline', label: 'Pipeline' },
-      { id: 'sales/leads', label: 'Leads' },
-      { id: 'sales/referrals', label: 'Referrals' },
-      { id: 'sales/startup-applications', label: 'Startup Applications' },
-      { id: 'sales/nri-consultations', label: 'NRI Consultations' },
-      { id: 'sales/commissions', label: 'Commissions' },
-      { id: 'sales/leaderboard', label: 'Leaderboard' },
-      { id: 'sales/investments', label: 'Investments' },
-      { id: 'sales/lead-statuses', label: 'Lead Statuses' },
-      { id: 'sales/lead-sources', label: 'Lead Sources' },
-      { id: 'sales/lead-companies', label: 'Lead Companies' },
-      { id: 'sales/bulk-upload', label: 'Bulk Upload' },
+      { id: 'sales/investment-plans', label: 'Plan' },
+      { id: 'sales/bank-details', label: 'Bank detail' },
+      { id: 'sales/fund-categories', label: 'Category' },
+      { id: 'sales/investments', label: 'All investment' },
+      { id: 'sales/investments-pending', label: 'Pending Investment' },
+      { id: 'sales/investments-rejected', label: 'Rejected' },
+      { id: 'sales/maturity-history', label: 'Maturity history' },
     ],
   },
+  // 4. KYC
   {
-    id: 'realty-brokers',
-    label: 'Realty Brokers',
-    iconName: 'Building2',
-    permission: 'view:realty-brokers',
-    subItems: [
-      { id: 'realty-brokers', label: 'Broker Directory' },
-      { id: 'realty-brokers/inquiries', label: 'Inquiries' },
-      { id: 'realty-brokers/analytics', label: 'Analytics' },
-    ],
-  },
-  {
-    id: 'employees',
-    label: 'People & HR',
-    iconName: 'UserCheck',
-    permission: 'view:employees',
-    subItems: [
-      { id: 'employees', label: 'Directory' },
-      { id: 'employees/announcements', label: 'Announcements' },
-      { id: 'employees/policies', label: 'Policies' },
-      { id: 'employees/feedback', label: 'Feedback' },
-      { id: 'employees/applications', label: 'Applications' },
-      { id: 'employees/attendance', label: 'Attendance' },
-      { id: 'employees/leave', label: 'Leave' },
-      { id: 'employees/payslips', label: 'Payslips' },
-      { id: 'employees/performance', label: 'Performance' },
-    ],
-  },
-  {
-    id: 'assets',
-    label: 'Assets & Docs',
-    iconName: 'FolderOpen',
-    permission: 'view:assets',
-    subItems: [
-      { id: 'assets', label: 'Inventory' },
-      { id: 'assets/documents', label: 'Documents' },
-    ],
-  },
-  {
-    id: 'ai-ops',
-    label: 'AI Operations',
-    iconName: 'Sparkles',
-    badge: 'AI',
-    permission: 'view:ai-ops',
-    subItems: [
-      { id: 'ai-ops', label: 'AI Hub' },
-      { id: 'ai-ops/doc-analyzer', label: 'Document Analyzer' },
-      { id: 'ai-ops/risk-engine', label: 'Risk Engine' },
-      { id: 'ai-ops/contract-gen', label: 'Contract Generator' },
-      { id: 'ai-ops/proposal-builder', label: 'Proposal Builder' },
-      { id: 'ai-ops/projections', label: 'Projections' },
-      { id: 'ai-ops/compliance-checker', label: 'Compliance Check' },
-      { id: 'ai-ops/portfolio-optimizer', label: 'Portfolio Optimizer' },
-      { id: 'ai-ops/email-composer', label: 'Email Composer' },
-      { id: 'ai-ops/insights', label: 'Insights' },
-      { id: 'ai-ops/assistant', label: 'AI Assistant' },
-      { id: 'ai-ops/sentiment', label: 'Sentiment Analysis' },
-      { id: 'ai-ops/anomaly-detector', label: 'Anomaly Detection' },
-      { id: 'ai-ops/meeting-intelligence', label: 'Meeting Intelligence' },
-      { id: 'ai-ops/regulatory-radar', label: 'Regulatory Radar' },
-      { id: 'ai-ops/churn-predictor', label: 'Churn Predictor' },
-      { id: 'ai-ops/voice-command', label: 'Voice Command' },
-      { id: 'ai-ops/auto-reporter', label: 'Auto Reports' },
-      { id: 'ai-ops/knowledge-base', label: 'Knowledge Base' },
-    ],
-  },
-  {
-    id: 'compliance',
-    label: 'Compliance',
+    id: 'kyc',
+    module: 'compliance',
+    label: 'KYC',
     iconName: 'Shield',
     permission: 'view:compliance',
     subItems: [
-      { id: 'compliance', label: 'KYC Queue' },
-      { id: 'compliance/approvals', label: 'Approvals' },
-      { id: 'compliance/grievances', label: 'Grievances' },
-      { id: 'compliance/risk-flags', label: 'Risk Flags' },
-      { id: 'compliance/audit-trail', label: 'Audit Trail' },
-      { id: 'compliance/regulations', label: 'Regulations' },
+      { id: 'compliance/kyc-approved', label: 'Approved' },
+      { id: 'compliance', label: 'Pending' },
+      { id: 'compliance/kyc-rejected', label: 'Rejected' },
     ],
   },
+  // 5. Documents
   {
-    id: 'financial',
-    label: 'Finance',
-    iconName: 'IndianRupee',
-    permission: 'view:financial',
+    id: 'documents',
+    module: 'assets',
+    label: 'Documents',
+    iconName: 'FolderOpen',
+    permission: 'view:assets',
     subItems: [
-      { id: 'financial', label: 'Dashboard' },
-      { id: 'financial/transactions', label: 'Transactions' },
-      { id: 'financial/revenue', label: 'Revenue' },
-      { id: 'financial/payouts', label: 'Payouts' },
-      { id: 'financial/invoices', label: 'Invoices' },
-      { id: 'financial/expenses', label: 'Expenses' },
+      { id: 'assets/documents', label: 'All Documents' },
+      { id: 'assets/tracking', label: 'Tracking' },
+      { id: 'assets', label: 'General' },
     ],
   },
+  // 6. Finance payout
   {
-    id: 'analytics',
-    label: 'Analytics',
-    iconName: 'BarChart3',
-    permission: 'view:analytics',
-    subItems: [
-      { id: 'analytics', label: 'Dashboard' },
-      { id: 'analytics/reports', label: 'Reports' },
-      { id: 'analytics/forecasting', label: 'Forecasting' },
-    ],
-  },
-  {
-    id: 'comms',
-    label: 'Communications',
-    iconName: 'MessageSquare',
-    permission: 'view:comms',
-    subItems: [
-      { id: 'comms', label: 'Investor Messages' },
-      { id: 'comms/broadcast', label: 'Broadcast' },
-      { id: 'comms/internal', label: 'Internal Chat' },
-      { id: 'comms/alerts', label: 'Alert Center' },
-    ],
-  },
-  // ── Marketing Module (Hidden for later use) ──
-  // {
-  //   id: 'marketing',
-  //   label: 'Marketing',
-  //   iconName: 'Megaphone',
-  //   badge: 'NEW',
-  //   permission: 'view:marketing',
-  //   subItems: [
-  //     { id: 'marketing', label: 'Overview' },
-  //     { id: 'marketing/campaigns', label: 'Campaigns' },
-  //     { id: 'marketing/content', label: 'Content Hub' },
-  //     { id: 'marketing/audience', label: 'Audience' },
-  //     { id: 'marketing/outreach', label: 'Outreach' },
-  //     { id: 'marketing/mkt-analytics', label: 'Analytics' },
-  //     { id: 'marketing/ai-tools', label: 'AI Tools' },
-  //     { id: 'marketing/integrations', label: 'Integrations' },
-  //     { id: 'marketing/mkt-settings', label: 'Settings' },
-  //   ],
-  // },
-  {
-    id: 'allotments',
-    label: 'Allotments',
-    iconName: 'FileCheck',
-    permission: 'view:allotments',
-    subItems: [
-      { id: 'allotments', label: 'Create Allotment' },
-      { id: 'allotments/history', label: 'Allotment History' },
-      { id: 'allotments/debenture-certificates', label: 'Debenture Certificates' },
-    ],
-  },
-  {
-    id: 'payouts',
-    label: 'Monthly Payouts',
+    id: 'finance-payout',
+    module: 'payouts',
+    label: 'Finance payout',
     iconName: 'Banknote',
     permission: 'view:payouts',
     subItems: [
-      { id: 'payouts', label: 'Current Month' },
-      { id: 'payouts/history', label: 'Payout History' },
-      { id: 'payouts/export', label: 'Export' },
+      { id: 'payouts/history', label: 'Monthly payout (All)' },
+      { id: 'payouts', label: 'Current month payout' },
+      { id: 'employees/payslips', label: 'Payslip' },
     ],
   },
+  // 7. Referral
   {
-    id: 'content',
-    label: 'Content & Support',
+    id: 'referral',
+    module: 'sales',
+    label: 'Referral',
+    iconName: 'Users',
+    permission: 'view:sales',
+    subItems: [
+      { id: 'sales/referrals', label: 'Referral Income History' },
+      { id: 'sales/cp-referrals', label: 'CP Referral Income History' },
+    ],
+  },
+  // 8. Contact
+  {
+    id: 'contact',
+    module: 'comms',
+    label: 'Contact',
+    iconName: 'MessageSquare',
+    permission: 'view:comms',
+    navigateTo: 'comms/contact',
+  },
+  // 9. Support Ticket
+  {
+    id: 'support-ticket',
+    module: 'content',
+    label: 'Support Ticket',
+    iconName: 'MessageSquare',
+    permission: 'view:content',
+    subItems: [
+      { id: 'content/tickets', label: 'Pending' },
+      { id: 'content/tickets-resolved', label: 'Resolved' },
+      { id: 'content/tickets-rejected', label: 'Rejected' },
+    ],
+  },
+  // 10. CMS
+  {
+    id: 'cms',
+    module: 'content',
+    label: 'CMS',
     iconName: 'Newspaper',
     permission: 'view:content',
     subItems: [
-      { id: 'content', label: 'Blog Posts' },
+      { id: 'content', label: 'Blog' },
       { id: 'content/financial-iq', label: 'Financial IQ' },
-      { id: 'content/faq', label: 'FAQ Management' },
-      { id: 'content/tickets', label: 'Support Tickets' },
+      { id: 'content/faq', label: 'FAQ' },
       { id: 'content/broadcast', label: 'Broadcast' },
     ],
   },
+  // 11. Employee
   {
-    id: 'reports',
-    label: 'Reports & Intel',
-    iconName: 'FileBarChart',
-    badge: 'NEW',
-    permission: 'view:reports',
+    id: 'employee',
+    module: 'employees',
+    label: 'Employee',
+    iconName: 'UserCheck',
+    permission: 'view:employees',
     subItems: [
-      { id: 'reports', label: 'Command Center' },
-      { id: 'reports/builder', label: 'Report Builder' },
-      { id: 'reports/financial', label: 'Financial Intel' },
-      { id: 'reports/marketing', label: 'Marketing Analytics' },
-      { id: 'reports/ai-advisor', label: 'AI Advisor' },
-      { id: 'reports/emailer', label: 'Smart Emailer' },
-      { id: 'reports/dialer', label: 'Phone & Calls' },
-      { id: 'reports/documents', label: 'File Repository' },
-      { id: 'reports/rpt-settings', label: 'Report Settings' },
+      { id: 'employees', label: 'All Employee' },
+      { id: 'employees/assets', label: "Employee's Asset" },
+      { id: 'employees/holidays', label: 'Company Holidays' },
     ],
   },
+  // 12. Leads
   {
-    id: 'settings',
-    label: 'Settings',
+    id: 'leads',
+    module: 'sales',
+    label: 'Leads',
+    iconName: 'TrendingUp',
+    permission: 'view:sales',
+    subItems: [
+      { id: 'sales/leads', label: 'All leads' },
+      { id: 'sales/lead-search', label: 'Lead Search' },
+      { id: 'sales/bulk-upload', label: 'Bulk upload' },
+      { id: 'sales/lead-statuses', label: 'Lead status' },
+      { id: 'sales/lead-sources', label: 'Source' },
+    ],
+  },
+  // 13. Notification
+  {
+    id: 'notification',
+    module: 'comms',
+    label: 'Notification',
+    iconName: 'MessageSquare',
+    permission: 'view:comms',
+    subItems: [
+      { id: 'comms/email', label: 'Email' },
+      { id: 'comms/internal', label: 'Internal notification' },
+    ],
+  },
+  // 14. Setting
+  {
+    id: 'setting',
+    module: 'settings',
+    label: 'Setting',
     iconName: 'Settings',
     permission: 'view:settings',
     subItems: [
       { id: 'settings', label: 'General' },
-      { id: 'settings/permissions', label: 'Permissions' },
-      { id: 'settings/security', label: 'Security' },
-      { id: 'settings/integrations', label: 'Integrations' },
-      { id: 'settings/api-keys', label: 'API Keys' },
-      { id: 'settings/backups', label: 'Backups' },
-      // Testing Report 2 (2026-04-25 #9): super-admin only. Module shell
-      // shows the link to everyone, but the SettingsModule hides the
-      // tab + RLS denies the SELECT for non-super-admins.
-      { id: 'settings/password-vault', label: 'Password Vault' },
+      { id: 'user-passwords', label: 'Users password' },
+      { id: 'settings/permissions', label: 'Permission' },
+      { id: 'settings/roles', label: 'Role' },
     ],
-  },
-  // Tests 28-04-2026 #6: Super-admin only — view investor passwords for
-  // verification purposes. Permission grant lives in adminRBAC.ts; sidebar
-  // filtering uses hasModuleAccess so anyone but super-admin sees nothing.
-  {
-    id: 'user-passwords',
-    label: 'User Passwords',
-    iconName: 'Key',
-    permission: 'view:user-passwords',
   },
 ]
 
 // ── Module Labels ─────────────────────────────────────────────────
+// 2026-05-12: Labels updated to match the Super-Admin menu spec.
+// `clients` surfaces as "Users", `sales` as "Investment / Leads"
+// depending on the sub-tab, `compliance` as "KYC", and so on. The
+// underlying module IDs remain untouched so routing, RBAC, and
+// existing ALL_ADMIN_TAB_PARAMS entries keep working.
 export const MODULE_LABELS: Record<AdminModule, string> = {
-  overview: 'Master Control Overview',
-  clients: 'Client Management',
-  sales: 'Sales & CRM',
+  overview: 'Dashboard',
+  clients: 'Users',
+  sales: 'Investment & Leads',
   'realty-brokers': 'Realty Brokers',
-  employees: 'People & HR',
-  assets: 'Assets & Documents',
+  employees: 'Employees',
+  assets: 'Documents',
   'ai-ops': 'AI Operations',
-  compliance: 'Compliance & Approvals',
-  financial: 'Financial Controls',
-  analytics: 'Analytics & Reporting',
-  comms: 'Communications',
-  marketing: 'Marketing Command Center',
-  reports: 'Reports & Intelligence',
-  settings: 'System Settings',
-  allotments: 'Allotment Management',
-  payouts: 'Monthly Payouts',
-  content: 'Content & Support',
-  'user-passwords': 'User Passwords',
+  compliance: 'KYC',
+  financial: 'Finance',
+  analytics: 'Analytics',
+  comms: 'Notifications',
+  marketing: 'Marketing',
+  reports: 'Reports',
+  settings: 'Settings',
+  allotments: 'Allotments',
+  payouts: 'Finance Payout',
+  content: 'CMS & Support',
+  'user-passwords': 'Users Password',
 }
 
 // ── All Admin Tab Slugs (for static generation) ───────────────────
@@ -307,6 +256,7 @@ export const ALL_ADMIN_TAB_PARAMS = [
   { tab: ['clients', 'kyc-queue'] },
   { tab: ['clients', 'analytics'] },
   { tab: ['clients', 'profile'] },
+  { tab: ['clients', 'channel-partners'] },
   { tab: ['sales'] },
   { tab: ['sales', 'create-account'] },
   { tab: ['sales', 'pipeline'] },
@@ -321,6 +271,15 @@ export const ALL_ADMIN_TAB_PARAMS = [
   { tab: ['sales', 'lead-sources'] },
   { tab: ['sales', 'lead-companies'] },
   { tab: ['sales', 'bulk-upload'] },
+  // 2026-05-12: Super-Admin menu spec routes
+  { tab: ['sales', 'investment-plans'] },
+  { tab: ['sales', 'bank-details'] },
+  { tab: ['sales', 'fund-categories'] },
+  { tab: ['sales', 'investments-pending'] },
+  { tab: ['sales', 'investments-rejected'] },
+  { tab: ['sales', 'maturity-history'] },
+  { tab: ['sales', 'cp-referrals'] },
+  { tab: ['sales', 'lead-search'] },
   { tab: ['realty-brokers'] },
   { tab: ['realty-brokers', 'inquiries'] },
   { tab: ['realty-brokers', 'analytics'] },
@@ -333,8 +292,12 @@ export const ALL_ADMIN_TAB_PARAMS = [
   { tab: ['employees', 'leave'] },
   { tab: ['employees', 'payslips'] },
   { tab: ['employees', 'performance'] },
+  // 2026-05-12: Super-Admin menu spec routes
+  { tab: ['employees', 'assets'] },
+  { tab: ['employees', 'holidays'] },
   { tab: ['assets'] },
   { tab: ['assets', 'documents'] },
+  { tab: ['assets', 'tracking'] },
   { tab: ['ai-ops'] },
   { tab: ['ai-ops', 'doc-analyzer'] },
   { tab: ['ai-ops', 'risk-engine'] },
@@ -362,6 +325,9 @@ export const ALL_ADMIN_TAB_PARAMS = [
   { tab: ['compliance', 'audit-trail'] },
   { tab: ['compliance', 'audit'] },
   { tab: ['compliance', 'regulations'] },
+  // 2026-05-12: Super-Admin menu spec routes
+  { tab: ['compliance', 'kyc-approved'] },
+  { tab: ['compliance', 'kyc-rejected'] },
   { tab: ['financial'] },
   { tab: ['financial', 'transactions'] },
   { tab: ['financial', 'revenue'] },
@@ -376,6 +342,9 @@ export const ALL_ADMIN_TAB_PARAMS = [
   { tab: ['comms', 'broadcast'] },
   { tab: ['comms', 'internal'] },
   { tab: ['comms', 'alerts'] },
+  // 2026-05-12: Super-Admin menu spec routes
+  { tab: ['comms', 'contact'] },
+  { tab: ['comms', 'email'] },
   // ── Marketing routes (Hidden for later use) ──
   // { tab: ['marketing'] },
   // { tab: ['marketing', 'campaigns'] },
@@ -397,6 +366,9 @@ export const ALL_ADMIN_TAB_PARAMS = [
   { tab: ['content', 'faq'] },
   { tab: ['content', 'tickets'] },
   { tab: ['content', 'broadcast'] },
+  // 2026-05-12: Super-Admin menu spec routes
+  { tab: ['content', 'tickets-resolved'] },
+  { tab: ['content', 'tickets-rejected'] },
   { tab: ['reports'] },
   { tab: ['reports', 'builder'] },
   { tab: ['reports', 'financial'] },
@@ -413,5 +385,7 @@ export const ALL_ADMIN_TAB_PARAMS = [
   { tab: ['settings', 'api-keys'] },
   { tab: ['settings', 'backups'] },
   { tab: ['settings', 'password-vault'] },
+  // 2026-05-12: Super-Admin menu spec routes
+  { tab: ['settings', 'roles'] },
   { tab: ['user-passwords'] },
 ]

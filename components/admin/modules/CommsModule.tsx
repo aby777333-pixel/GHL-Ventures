@@ -12,6 +12,7 @@ import AdminGlass from '../shared/AdminGlass'
 import AdminBadge from '../shared/AdminBadge'
 import AdminKPICard from '../shared/AdminKPICard'
 import AdminEmptyState from '../shared/AdminEmptyState'
+import AdminCRUDPlaceholder from '../shared/AdminCRUDPlaceholder'
 import { formatTimeAgo, formatDate } from '@/lib/admin/adminHooks'
 import {
   getChannels,
@@ -61,8 +62,15 @@ const INTERNAL_MESSAGES: ChatMessage[] = []
 const SYSTEM_ALERTS: Alert[] = []
 
 // ── Sub-tabs ─────────────────────────────────────────────────────
+// 2026-05-12: Super-Admin menu spec adds two new entries here —
+// "Contact" (website contact-form submissions) and "Email"
+// (email-notification configuration). The Notification sidebar group
+// targets both, while the dedicated Contact row in the sidebar deep-
+// links straight to `comms/contact`.
 const COMMS_TABS = [
   { id: 'messages', label: 'Investor Messages', icon: Inbox },
+  { id: 'contact', label: 'Contact Submissions', icon: Inbox },
+  { id: 'email', label: 'Email Notifications', icon: Bell },
   { id: 'broadcast', label: 'Broadcast', icon: Megaphone },
   { id: 'internal', label: 'Internal Chat', icon: MessageCircle },
   { id: 'alerts', label: 'Alert Center', icon: Bell },
@@ -145,6 +153,29 @@ export default function CommsModule({ subTab, navigate, showToast, user, role }:
         {activeTab === 'broadcast' && <BroadcastTab showToast={showToast} />}
         {activeTab === 'internal' && <InternalChatTab showToast={showToast} user={user} role={role} />}
         {activeTab === 'alerts' && <AlertCenterTab showToast={showToast} />}
+        {/* 2026-05-12: Super-Admin spec — Contact submissions and
+            Email notification configuration. Both render via the
+            shared CRUD placeholder so the View / Edit / Delete row
+            triad is visible while the dedicated Supabase tables are
+            being wired in. */}
+        {activeTab === 'contact' && (
+          <AdminCRUDPlaceholder
+            title="Contact Submissions"
+            description="Every message captured by the public /contact form lands here."
+            icon={Inbox}
+            showToast={showToast}
+            hint="Backed by the `contact_submissions` table. Each row supports View (open the message in a modal), Edit (assign / mark replied), and Delete."
+          />
+        )}
+        {activeTab === 'email' && (
+          <AdminCRUDPlaceholder
+            title="Email Notifications"
+            description="Templates, triggers, and delivery logs for transactional and marketing emails."
+            icon={Bell}
+            showToast={showToast}
+            hint="Templates live in `email_templates`; deliveries in `email_logs`. View opens the rendered body, Edit lets you tweak the template, Delete removes obsolete drafts."
+          />
+        )}
       </div>
     </div>
   )

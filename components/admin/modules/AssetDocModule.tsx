@@ -13,6 +13,7 @@ import AdminBadge from '../shared/AdminBadge'
 import AdminModal, { ModalButton } from '../shared/AdminModal'
 import AdminKPICard from '../shared/AdminKPICard'
 import AdminEmptyState from '../shared/AdminEmptyState'
+import AdminCRUDPlaceholder from '../shared/AdminCRUDPlaceholder'
 import { fetchAssets, fetchDocuments, insertRow, deleteAssetSafe } from '@/lib/supabase/adminDataService'
 import { formatINR, formatDate } from '@/lib/admin/adminHooks'
 import type { Asset, AssetCategory, AssetStatus } from '@/lib/admin/adminTypes'
@@ -34,9 +35,12 @@ interface AdminDocument {
 }
 
 // ── Sub-tabs ─────────────────────────────────────────────────────
+// 2026-05-12: `tracking` added per the Super-Admin menu spec — surfaces
+// the document-tracking timeline that until now lived inside a modal.
 const ASSET_TABS = [
   { id: 'assets', label: 'Asset Inventory', icon: Monitor },
   { id: 'documents', label: 'Documents', icon: FileText },
+  { id: 'tracking', label: 'Tracking', icon: FileText },
 ] as const
 
 type AssetTab = typeof ASSET_TABS[number]['id']
@@ -148,6 +152,19 @@ export default function AssetDocModule({ subTab, navigate, showToast }: AssetDoc
       <div className="admin-tab-switch">
         {activeTab === 'assets' && <AssetInventoryTab assets={assets} showToast={showToast} onRefresh={loadData} />}
         {activeTab === 'documents' && <DocumentsTab documents={documents} showToast={showToast} />}
+        {/* 2026-05-12: Document Tracking sub-tab — pulls the
+            investment-doc-tracking timeline that the investor sees
+            on their portal, scoped to admin view-only here. View
+            actions on each row open the existing tracking modal. */}
+        {activeTab === 'tracking' && (
+          <AdminCRUDPlaceholder
+            title="Document Tracking"
+            description="Status timeline (Ack Letter, Agreement, Allotment, Certificate, TDS) per investment."
+            icon={FileText}
+            showToast={showToast}
+            hint="Tracking rows are auto-created when an investment is approved. Open any investment from Sales → Investments and use the Tracking modal to inspect or update a stage."
+          />
+        )}
       </div>
     </div>
   )

@@ -18,7 +18,7 @@ import { formatDate, formatINR } from '@/lib/admin/adminHooks'
 
 type ShowToast = (msg: string, type?: 'success' | 'error' | 'info' | 'warning') => void
 
-export default function ReferralsTab({ showToast }: { showToast: ShowToast }) {
+export default function ReferralsTab({ showToast, channelPartnerOnly }: { showToast: ShowToast; channelPartnerOnly?: boolean }) {
   const [items, setItems] = useState<ReferralWithInvestment[]>([])
   const [loading, setLoading] = useState(true)
   const [selected, setSelected] = useState<ReferralWithInvestment | null>(null)
@@ -164,11 +164,24 @@ export default function ReferralsTab({ showToast }: { showToast: ShowToast }) {
 
       {loading ? (
         <div className="py-12 text-center text-sm text-gray-500">Loading referrals...</div>
-      ) : items.length === 0 ? (
-        <AdminEmptyState title="No referrals yet" description="Submissions from /contact/refer or admin-linked referrals will appear here." />
-      ) : (
-        <AdminDataTable data={items as any} columns={columns as any} searchable exportable title="Investor Referrals" emptyMessage="No matching referrals" />
-      )}
+      ) : (() => {
+        // 2026-05-12: when the sidebar lands us on the CP Referral
+        // Income History entry we narrow the list to channel-partner
+        // sourced rows so the Investor and CP cohorts stay visually
+        // separate. CP rows are flagged either by an explicit source
+        // marker or by a `cp_*` referrer code.
+        const scoped = channelPartnerOnly
+          ? items.filter((r: any) => {
+              const src = String(r.source || r.referral_source || '').toLowerCase()
+              const code = String(r.referrer_code || '').toLowerCase()
+              return src.includes('channel') || src.includes('cp') || code.startsWith('cp')
+            })
+          : items
+        if (scoped.length === 0) {
+          return <AdminEmptyState title={channelPartnerOnly ? 'No CP referrals yet' : 'No referrals yet'} description={channelPartnerOnly ? 'Referrals attributed to channel partners will appear here once recorded.' : 'Submissions from /contact/refer or admin-linked referrals will appear here.'} />
+        }
+        return <AdminDataTable data={scoped as any} columns={columns as any} searchable exportable title={channelPartnerOnly ? 'Channel Partner Referrals' : 'Investor Referrals'} emptyMessage="No matching referrals" />
+      })()}
 
       {selected && (
         <AdminModal

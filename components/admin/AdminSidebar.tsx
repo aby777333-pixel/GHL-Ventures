@@ -108,12 +108,13 @@ export default function AdminSidebar({
         <nav className="flex-1 px-2 overflow-y-auto space-y-0.5 admin-scrollbar text-left">
           {ADMIN_SIDEBAR_ITEMS.map(item => {
             // AI_SUITE: Hidden per business decision. Re-enable via FEATURE_FLAGS.AI_SUITE_ENABLED
-            if (item.id === 'ai-ops' && !FEATURE_FLAGS.AI_SUITE_ENABLED) return null
-            // Check role access
-            if (!hasModuleAccess(userRole, item.id)) return null
+            if (item.module === 'ai-ops' && !FEATURE_FLAGS.AI_SUITE_ENABLED) return null
+            // Check role access against the underlying AdminModule (e.g. sales for
+            // the Investment / Leads / Referral rows that all map to one module).
+            if (!hasModuleAccess(userRole, item.module)) return null
 
             const Icon = ICON_MAP[item.iconName] || LayoutDashboard
-            const isActive = activeModule === item.id
+            const isActive = activeModule === item.module
             const isExpanded = expandedModule === item.id
             const hasSubItems = item.subItems && item.subItems.length > 0
 
@@ -126,7 +127,10 @@ export default function AdminSidebar({
                       // Bug #15: Parent should ONLY toggle dropdown, not navigate
                       toggleModule(item.id)
                     } else {
-                      handleNavClick(item.id)
+                      // 2026-05-12: prefer the explicit navigateTo target
+                      // (e.g. Contact → comms/contact). Fall back to the
+                      // module slug for legacy entries like Dashboard.
+                      handleNavClick(item.navigateTo || item.module)
                     }
                   }}
                   className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-300 group relative

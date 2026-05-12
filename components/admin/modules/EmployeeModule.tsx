@@ -16,6 +16,7 @@ import AdminBadge from '../shared/AdminBadge'
 import AdminModal, { ModalButton } from '../shared/AdminModal'
 import AdminKPICard from '../shared/AdminKPICard'
 import AdminEmptyState from '../shared/AdminEmptyState'
+import AdminCRUDPlaceholder from '../shared/AdminCRUDPlaceholder'
 import { createEmployee, updateEmployee, getEmployeeDirectory, type EmployeeRecord } from '@/lib/supabase/employeeService'
 import { fetchCareerApplications, updateCareerApplicationStatus, getResumeSignedUrl, deleteEmployeeSafe, type CareerApplication } from '@/lib/supabase/adminDataService'
 import { supabase, isSupabaseConfigured } from '@/lib/supabase/client'
@@ -41,8 +42,12 @@ import UploadWithFolderPicker from '@/components/shared/UploadWithFolderPicker'
 import PasswordResetModal, { type PasswordResetTarget } from '../shared/PasswordResetModal'
 
 // ── Sub-tabs ─────────────────────────────────────────────────────
+// 2026-05-12: Super-Admin menu spec adds Employee → Employee's Asset
+// (asset directory scoped to assigned employee) and Company Holidays.
 const EMPLOYEE_TABS = [
   { id: 'directory', label: 'Directory', icon: Users },
+  { id: 'assets', label: "Employee's Asset", icon: Briefcase },
+  { id: 'holidays', label: 'Company Holidays', icon: CalendarDays },
   { id: 'announcements', label: 'Announcements', icon: Megaphone },
   { id: 'policies', label: 'Policies', icon: BookOpen },
   { id: 'feedback', label: 'Feedback', icon: MessageSquare },
@@ -274,6 +279,29 @@ export default function EmployeeModule({ subTab, navigate, showToast }: Employee
         {activeTab === 'leave' && <LeaveTab showToast={showToast} />}
         {activeTab === 'payslips' && <PayslipsTab showToast={showToast} />}
         {activeTab === 'performance' && <PerformanceTab />}
+        {/* 2026-05-12: Employee → Asset directory and Company Holidays
+            placeholders. The Asset row mirrors the canonical "/admin/assets"
+            module but scoped to employee-assigned items; Holidays surfaces
+            the calendar fed by HR. Both use the shared placeholder shell
+            so the View / Edit / Delete triad is visible. */}
+        {activeTab === 'assets' && (
+          <AdminCRUDPlaceholder
+            title="Employee Assets"
+            description="Laptops, phones, peripherals, and access keys assigned to staff."
+            icon={Briefcase}
+            showToast={showToast}
+            hint="Use /admin/assets to manage the full inventory. This view will narrow the canonical list to assets with a non-null `assignedTo`."
+          />
+        )}
+        {activeTab === 'holidays' && (
+          <AdminCRUDPlaceholder
+            title="Company Holidays"
+            description="Public holidays and company-wide off-days for attendance, leave, and payroll calendars."
+            icon={CalendarDays}
+            showToast={showToast}
+            hint="HR can add, edit, or remove holidays from this list. Each row supports View / Edit / Delete; the canonical Supabase table is `company_holidays`."
+          />
+        )}
       </div>
 
       {selectedEmployee && (

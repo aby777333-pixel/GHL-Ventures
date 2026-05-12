@@ -24,8 +24,13 @@ import PasswordResetModal, { type PasswordResetTarget } from '../shared/Password
 import { supabase } from '@/lib/supabase/client'
 
 // ── Sub-tabs ─────────────────────────────────────────────────────
+// 2026-05-12: `channel-partners` added per the Super-Admin menu spec.
+// It reuses ClientListTab with a filter so the Channel-Partner cohort
+// is surfaced via the same row layout (and the same View / Edit /
+// Delete actions) as the rest of the client base.
 const CLIENT_TABS = [
   { id: 'list', label: 'Client List', icon: Users },
+  { id: 'channel-partners', label: 'Channel Partners', icon: Users },
   { id: 'kyc-queue', label: 'KYC Queue', icon: ShieldCheck },
   { id: 'analytics', label: 'Client Analytics', icon: PieChart },
 ] as const
@@ -280,6 +285,28 @@ export default function ClientModule({ subTab, navigate, showToast }: ClientModu
         {activeTab === 'list' && (
           <ClientListTab
             clients={clients}
+            onViewClient={(c) => { setSelectedClient(c); setProfileModalOpen(true) }}
+            onDeleteClient={handleDeleteClient}
+            onResetPassword={openResetForClient}
+            onSetReferrer={openSetReferrer}
+            resolvingReset={resolvingResetTarget}
+            showToast={showToast}
+          />
+        )}
+        {/* 2026-05-12: Channel Partner cohort — same row UI as the
+            All Users list, but narrowed to clients flagged as channel
+            partners. The filter spans a few legacy schemas: an explicit
+            `role` / `user_type`, a `referrer_code` starting with cp_,
+            or a non-empty `channel_partner_id`. */}
+        {activeTab === 'channel-partners' && (
+          <ClientListTab
+            clients={clients.filter((c: any) => {
+              const role = String(c.role || c.user_type || '').toLowerCase()
+              const code = String(c.referrer_code || '').toLowerCase()
+              if (role.includes('channel') || role === 'cp') return true
+              if (code.startsWith('cp')) return true
+              return !!c.channel_partner_id
+            })}
             onViewClient={(c) => { setSelectedClient(c); setProfileModalOpen(true) }}
             onDeleteClient={handleDeleteClient}
             onResetPassword={openResetForClient}

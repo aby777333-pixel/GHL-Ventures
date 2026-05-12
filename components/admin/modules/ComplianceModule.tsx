@@ -19,8 +19,14 @@ import { formatDate, formatTimeAgo } from '@/lib/admin/adminHooks'
 import type { Approval, RiskFlag, ApprovalStatus } from '@/lib/admin/adminTypes'
 
 // ── Sub-tabs ─────────────────────────────────────────────────────
+// 2026-05-12: `kyc-approved` and `kyc-rejected` added per the
+// Super-Admin menu spec. They render the same KYCQueueTab with an
+// initial status filter so the existing queue + actions (Approve /
+// Reject / View) are reused without forking the UI.
 const COMPLIANCE_TABS = [
   { id: 'kyc-queue', label: 'KYC Queue', icon: ShieldCheck },
+  { id: 'kyc-approved', label: 'KYC Approved', icon: CheckCircle2 },
+  { id: 'kyc-rejected', label: 'KYC Rejected', icon: AlertCircle },
   { id: 'approvals', label: 'Approvals', icon: CheckCircle2 },
   { id: 'grievances', label: 'Grievances', icon: AlertCircle },
   { id: 'risk-flags', label: 'Risk Flags', icon: Flag },
@@ -115,7 +121,10 @@ export default function ComplianceModule({ subTab, navigate, showToast }: Compli
       </div>
 
       <div className="admin-tab-switch">
-        {activeTab === 'kyc-queue' && <KYCQueueTab kycQueue={kycQueue} showToast={showToast} onRefresh={loadData} />}
+        {activeTab === 'kyc-queue' && <KYCQueueTab kycQueue={kycQueue} showToast={showToast} onRefresh={loadData} initialStatusFilter="pending" />}
+        {/* 2026-05-12: status-scoped variants pre-set the queue filter. */}
+        {activeTab === 'kyc-approved' && <KYCQueueTab kycQueue={kycQueue} showToast={showToast} onRefresh={loadData} initialStatusFilter="approved" />}
+        {activeTab === 'kyc-rejected' && <KYCQueueTab kycQueue={kycQueue} showToast={showToast} onRefresh={loadData} initialStatusFilter="rejected" />}
         {activeTab === 'approvals' && <ApprovalsTab approvals={approvals} showToast={showToast} />}
         {activeTab === 'grievances' && <GrievancesTab showToast={showToast} />}
         {activeTab === 'risk-flags' && <RiskFlagsTab riskFlags={riskFlags} showToast={showToast} />}
@@ -127,8 +136,13 @@ export default function ComplianceModule({ subTab, navigate, showToast }: Compli
 }
 
 // ── KYC Queue Tab ───────────────────────────────────────────────
-function KYCQueueTab({ kycQueue, showToast, onRefresh }: { kycQueue: any[]; showToast: (msg: string, type?: 'success' | 'error' | 'info' | 'warning') => void; onRefresh: () => void }) {
-  const [statusFilter, setStatusFilter] = useState<string>('all')
+function KYCQueueTab({ kycQueue, showToast, onRefresh, initialStatusFilter }: { kycQueue: any[]; showToast: (msg: string, type?: 'success' | 'error' | 'info' | 'warning') => void; onRefresh: () => void; initialStatusFilter?: string }) {
+  // 2026-05-12: when ComplianceModule routes us in via the kyc-approved /
+  // kyc-rejected sub-tabs, we open with the matching status preset so the
+  // user sees the filtered cohort immediately. The filter chips remain
+  // interactive so admins can still pivot to "all" or other states.
+  const [statusFilter, setStatusFilter] = useState<string>(initialStatusFilter || 'all')
+  useEffect(() => { if (initialStatusFilter) setStatusFilter(initialStatusFilter) }, [initialStatusFilter])
   const [selectedKYC, setSelectedKYC] = useState<any | null>(null)
   const [viewingKYC, setViewingKYC] = useState<any | null>(null)
   const [viewingDetail, setViewingDetail] = useState<any | null>(null)

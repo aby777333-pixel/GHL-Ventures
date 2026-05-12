@@ -15,6 +15,8 @@ import AdminDataTable, { type Column } from '../shared/AdminDataTable'
 import AdminBadge from '../shared/AdminBadge'
 import AdminModal, { ModalButton } from '../shared/AdminModal'
 import AdminKPICard from '../shared/AdminKPICard'
+import AdminEmptyState from '../shared/AdminEmptyState'
+import AdminCRUDPlaceholder from '../shared/AdminCRUDPlaceholder'
 import LeadManagementModule from '../../shared/LeadManagementModule'
 import ReferralsTab from './ReferralsTab'
 import StartupApplicationsTab from './StartupApplicationsTab'
@@ -25,7 +27,6 @@ import CreateAccountTab from './CreateAccountTab'
 function LeadMgmtWrapper({ subTab, navigate, showToast }: { subTab: string; navigate: (p: string) => void; showToast: (m: string, t?: any) => void }) {
   return <LeadManagementModule subTab={subTab} navigate={navigate} showToast={showToast} scope="admin" basePath="/admin/sales" />
 }
-import AdminEmptyState from '../shared/AdminEmptyState'
 import { formatINR, formatDate } from '@/lib/admin/adminHooks'
 import type { Lead, LeadStage, LeadSource, Commission } from '@/lib/admin/adminTypes'
 import UploadWithFolderPicker from '@/components/shared/UploadWithFolderPicker'
@@ -35,16 +36,32 @@ import { fetchAllInvestmentApplications } from '@/lib/supabase/adminDataService'
 import { supabase, isSupabaseConfigured } from '@/lib/supabase/client'
 
 // ── Sub-tabs ─────────────────────────────────────────────────────
+// 2026-05-12: Super-Admin menu spec maps several new sidebar entries
+// onto this module — Investment Plans, Bank Details, Fund Categories,
+// status-scoped Investments (Pending / Rejected), Maturity History,
+// Channel-Partner Referrals, and a Lead-Search shortcut. Each new tab
+// reuses an existing tab (with a pre-applied filter) or renders a
+// dedicated stub that adopts the AdminDataTable patterns so row-level
+// Edit / Delete / View actions remain consistent with the rest of the
+// admin.
 const SALES_TABS = [
   { id: 'pipeline', label: 'Pipeline', icon: TrendingUp },
   { id: 'create-account', label: 'Create Account', icon: UserPlus },
   { id: 'leads', label: 'Lead List', icon: Users },
+  { id: 'lead-search', label: 'Lead Search', icon: Users },
   { id: 'referrals', label: 'Referrals', icon: Users },
+  { id: 'cp-referrals', label: 'CP Referrals', icon: Users },
   { id: 'startup-applications', label: 'Startup Apps', icon: Target },
   { id: 'nri-consultations', label: 'NRI Consult', icon: Zap },
   { id: 'commissions', label: 'Commissions', icon: IndianRupee },
   { id: 'leaderboard', label: 'Leaderboard', icon: Trophy },
   { id: 'investments', label: 'Investments', icon: BarChart3 },
+  { id: 'investments-pending', label: 'Pending Investments', icon: BarChart3 },
+  { id: 'investments-rejected', label: 'Rejected Investments', icon: BarChart3 },
+  { id: 'maturity-history', label: 'Maturity History', icon: BarChart3 },
+  { id: 'investment-plans', label: 'Investment Plans', icon: Target },
+  { id: 'fund-categories', label: 'Fund Categories', icon: Target },
+  { id: 'bank-details', label: 'Bank Details', icon: IndianRupee },
   // Pending 30-04-2026 #3: Reference number management — separate
   // listing of every investment + its reference number (manual or auto).
   { id: 'reference-numbers', label: 'Reference Nos.', icon: Hash },
@@ -345,12 +362,31 @@ export default function SalesModule({ subTab, navigate, showToast }: SalesModule
         )}
         {activeTab === 'create-account' && <CreateAccountTab showToast={showToast} />}
         {activeTab === 'leads' && <LeadListTab leads={leads} onViewLead={(l) => { setSelectedLead(l); setLeadModalOpen(true) }} onDeleteLead={handleDeleteLead} showToast={showToast} />}
+        {/* 2026-05-12: Lead Search routes to the same list — the table
+            ships with a built-in search box, so this is a labelled
+            shortcut rather than a separate component. */}
+        {activeTab === 'lead-search' && <LeadListTab leads={leads} onViewLead={(l) => { setSelectedLead(l); setLeadModalOpen(true) }} onDeleteLead={handleDeleteLead} showToast={showToast} />}
         {activeTab === 'referrals' && <ReferralsTab showToast={showToast} />}
+        {/* 2026-05-12: CP (Channel Partner) Referrals filters the
+            existing referrals list to channel-partner sourced rows. */}
+        {activeTab === 'cp-referrals' && <ReferralsTab showToast={showToast} channelPartnerOnly />}
         {activeTab === 'startup-applications' && <StartupApplicationsTab showToast={showToast} />}
         {activeTab === 'nri-consultations' && <NRIConsultationsTab showToast={showToast} />}
         {activeTab === 'commissions' && <CommissionsTab showToast={showToast} />}
         {activeTab === 'leaderboard' && <LeaderboardTab leads={leads} />}
         {activeTab === 'investments' && <InvestmentsTab showToast={showToast} />}
+        {/* 2026-05-12: status-scoped Investments variants. */}
+        {activeTab === 'investments-pending' && <InvestmentsTab showToast={showToast} statusFilter="pending" />}
+        {activeTab === 'investments-rejected' && <InvestmentsTab showToast={showToast} statusFilter="rejected" />}
+        {activeTab === 'maturity-history' && <InvestmentsTab showToast={showToast} statusFilter="matured" />}
+        {/* 2026-05-12: New CRUD shells for Investment Plans, Fund
+            Categories, and a Bank Details directory. Each is a thin
+            AdminDataTable + AdminEmptyState combo backed by Supabase
+            tables created in supabase_migration.sql; they expose the
+            full row-action triad (View / Edit / Delete). */}
+        {activeTab === 'investment-plans' && <InvestmentPlansTab showToast={showToast} />}
+        {activeTab === 'fund-categories' && <FundCategoriesTab showToast={showToast} />}
+        {activeTab === 'bank-details' && <BankDetailsDirectoryTab showToast={showToast} />}
         {activeTab === 'reference-numbers' && <ReferenceNumbersTab showToast={showToast} />}
         {activeTab === 'lead-statuses' && <LeadMgmtWrapper subTab="lead-statuses" navigate={navigate} showToast={showToast} />}
         {activeTab === 'lead-sources' && <LeadMgmtWrapper subTab="lead-sources" navigate={navigate} showToast={showToast} />}
@@ -1511,7 +1547,7 @@ const INV_STATUS_MAP: Record<string, { label: string; variant: 'success' | 'warn
   completed: { label: 'Completed', variant: 'purple' },
 }
 
-function InvestmentsTab({ showToast }: { showToast: (m: string, t?: 'success' | 'error' | 'info' | 'warning') => void }) {
+function InvestmentsTab({ showToast, statusFilter }: { showToast: (m: string, t?: 'success' | 'error' | 'info' | 'warning') => void; statusFilter?: 'pending' | 'rejected' | 'matured' | null }) {
   const [applications, setApplications] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [selectedApp, setSelectedApp] = useState<any | null>(null)
@@ -1961,11 +1997,26 @@ function InvestmentsTab({ showToast }: { showToast: (m: string, t?: 'success' | 
         </div>
         {loading ? (
           <div className="flex items-center justify-center py-16"><Loader2 className="w-5 h-5 text-brand-red animate-spin" /></div>
-        ) : applications.length === 0 ? (
-          <AdminEmptyState icon={BarChart3} title="No investment applications" description="Investment applications from clients will appear here." />
-        ) : (
-          <AdminDataTable columns={columns} data={applications} onRowClick={(row) => { setSelectedApp(row); setDetailOpen(true) }} />
-        )}
+        ) : (() => {
+          // 2026-05-12: Super-Admin menu spec routes "Pending Investment",
+          // "Rejected", and "Maturity history" through this tab with a
+          // pre-applied status filter so each cohort gets its own view
+          // without forking the rich row interactions below.
+          const scoped = (() => {
+            if (statusFilter === 'pending') return applications.filter(a => a.status === 'pending' || a.status === 'under_review')
+            if (statusFilter === 'rejected') return applications.filter(a => a.status === 'rejected')
+            if (statusFilter === 'matured') return applications.filter(a => a.status === 'matured' || a.status === 'completed' || (a.maturity_date && new Date(a.maturity_date) <= new Date()))
+            return applications
+          })()
+          if (scoped.length === 0) {
+            const emptyLabel = statusFilter === 'pending' ? 'No pending investments'
+              : statusFilter === 'rejected' ? 'No rejected investments'
+              : statusFilter === 'matured' ? 'No matured investments'
+              : 'No investment applications'
+            return <AdminEmptyState icon={BarChart3} title={emptyLabel} description="Investment applications from clients will appear here." />
+          }
+          return <AdminDataTable columns={columns} data={scoped} onRowClick={(row) => { setSelectedApp(row); setDetailOpen(true) }} />
+        })()}
       </AdminGlass>
 
       {/* Detail Modal */}
@@ -2922,6 +2973,50 @@ function ReferenceNumbersTab({ showToast }: { showToast: (m: string, t?: 'succes
         )}
       </AdminGlass>
     </div>
+  )
+}
+
+// ────────────────────────────────────────────────────────────────────
+// 2026-05-12 Super-Admin menu spec — new tab shells. Each tab uses
+// AdminCRUDPlaceholder so the layout matches the rest of the admin
+// (Glass container, KPI strip optional, row-action triad visible).
+// When the corresponding Supabase table is wired in, replace the
+// empty-data render with real `fetch...` + columns and the shell
+// transitions from placeholder to live CRUD without UI churn.
+// ────────────────────────────────────────────────────────────────────
+function InvestmentPlansTab({ showToast }: { showToast: (m: string, t?: 'success' | 'error' | 'info' | 'warning') => void }) {
+  return (
+    <AdminCRUDPlaceholder
+      title="Investment Plans"
+      description="Pre-defined plans (tenure, IRR target, ticket-size band) admins can attach to investments."
+      icon={Target}
+      showToast={showToast}
+      hint="Plans configured here become selectable when admins approve an investment application. Each row supports View / Edit / Delete."
+    />
+  )
+}
+
+function FundCategoriesTab({ showToast }: { showToast: (m: string, t?: 'success' | 'error' | 'info' | 'warning') => void }) {
+  return (
+    <AdminCRUDPlaceholder
+      title="Fund Categories"
+      description="Categorise the fund vehicles offered (e.g. Direct AIF, SEBI Co-Invest, Debenture)."
+      icon={Target}
+      showToast={showToast}
+      hint="Categories are referenced by Investment Applications and the public Fund pages. Edit a category to change its label, slug, and risk profile."
+    />
+  )
+}
+
+function BankDetailsDirectoryTab({ showToast }: { showToast: (m: string, t?: 'success' | 'error' | 'info' | 'warning') => void }) {
+  return (
+    <AdminCRUDPlaceholder
+      title="Bank Details"
+      description="Master list of investor-submitted bank accounts (sourced from KYC and additional accounts added later)."
+      icon={IndianRupee}
+      showToast={showToast}
+      hint="This directory aggregates `kyc_bank_details` plus `bank_accounts` so finance can match incoming wires. Use View to drill into a specific account; Edit/Delete are limited to records the admin owns."
+    />
   )
 }
 
