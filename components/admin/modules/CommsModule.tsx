@@ -106,15 +106,16 @@ export default function CommsModule({ subTab, navigate, showToast, user, role }:
   // 2026-05-13: BroadcastTab never wired the sessionStorage hand-off,
   // so "New Broadcast" / "Compose Email" navigated to an empty list.
   // Hoist the composer here as a single modal and let entry points
-  // drive its initialMode directly.
+  // drive its initialMode directly. We deliberately do NOT navigate
+  // when opening — the modal renders on top of whichever tab the
+  // admin is on, so opening from Email Notifications keeps them on
+  // that tab (otherwise it looked like the "+ New" button was just
+  // bouncing them to the Broadcast tab).
   const [composerOpen, setComposerOpen] = useState(false)
   const [composerMode, setComposerMode] = useState<'broadcast' | 'email'>('broadcast')
   const openComposer = (mode: 'broadcast' | 'email') => {
     setComposerMode(mode)
     setComposerOpen(true)
-    // Land the user on the broadcast tab so the recently-sent list is
-    // visible after the modal closes. No-op when already there.
-    navigate('comms/broadcast')
   }
 
   // Auto-open if the legacy sessionStorage flag is set (any prior

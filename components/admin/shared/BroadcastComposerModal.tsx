@@ -66,7 +66,11 @@ export default function BroadcastComposerModal({ open, initialMode = 'broadcast'
       setError(''); setSuccess(''); setSending(false)
       setChannel('email')
     } else {
-      setChannel(initialMode === 'email' ? 'email' : 'email')
+      // Both entry points (broadcast and email) currently default to the
+      // email channel; the admin can switch to WhatsApp/Both inside the
+      // modal. Keep this branch explicit so a future entry point that
+      // wants to default to WhatsApp can override it via initialMode.
+      setChannel('email')
     }
   }, [open, initialMode])
 
@@ -137,7 +141,12 @@ export default function BroadcastComposerModal({ open, initialMode = 'broadcast'
     <AdminModal
       isOpen={open}
       onClose={onClose}
-      title={isWhatsAppOnly ? 'New WhatsApp Broadcast' : initialMode === 'email' ? 'Compose Email Broadcast' : 'New Broadcast'}
+      title={
+        channel === 'whatsapp' ? 'New WhatsApp Broadcast'
+        : channel === 'both' ? 'New Email + WhatsApp Broadcast'
+        : initialMode === 'email' ? 'Compose Email'
+        : 'New Email Broadcast'
+      }
       subtitle="Sends via Resend (email) and/or Wati (WhatsApp). Audience and content type are server-validated."
       maxWidth="max-w-2xl"
       footer={
