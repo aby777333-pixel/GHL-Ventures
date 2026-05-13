@@ -16,10 +16,27 @@
    The flag is cleared immediately after consumption.
    ───────────────────────────────────────────────────────────── */
 
-import { useEffect, useMemo, useState } from 'react'
-import { Loader2, Mail, MessageCircle, Send, AlertTriangle, CheckCircle2 } from 'lucide-react'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { Loader2, Mail, MessageCircle, Send, AlertTriangle, CheckCircle2, Paperclip, XCircle } from 'lucide-react'
 import AdminModal, { ModalButton } from './AdminModal'
 import { getAuthToken } from '@/lib/supabase/client'
+import { uploadFile } from '@/lib/supabase/storageService'
+
+// Public bucket used to host broadcast attachments. The broadcast-send
+// function emails the URL to the recipient so it must be reachable
+// without auth. `marketing-assets` is public and accepts image / video /
+// PDF — exactly the content types we support for attachments.
+const BROADCAST_ATTACHMENT_BUCKET = 'marketing-assets'
+
+// Map content type → accept attribute on the <input type=file>. Plain
+// text and html don't need an upload control at all.
+const ACCEPT_BY_CONTENT_TYPE: Record<string, string> = {
+  image: 'image/*',
+  video: 'video/*',
+  pdf: 'application/pdf',
+  link: '*/*',
+  blog: '*/*',
+}
 
 const NETLIFY_FUNCTIONS_HOST = 'https://ghl-india-ventures-2025.netlify.app'
 function getFunctionBase(): string {
@@ -69,6 +86,10 @@ export default function BroadcastComposerModal({ open, initialMode = 'broadcast'
   const [sending, setSending] = useState(false)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
+  const [uploading, setUploading] = useState(false)
+  const [uploadError, setUploadError] = useState('')
+  const [uploadedFileName, setUploadedFileName] = useState('')
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   // Reset transient state when the modal closes / opens fresh.
   useEffect(() => {
@@ -77,6 +98,7 @@ export default function BroadcastComposerModal({ open, initialMode = 'broadcast'
       setAttachmentUrl(''); setAudience('all_leads')
       setAdHocRows([{ name: '', email: '', mobile: '' }])
       setError(''); setSuccess(''); setSending(false)
+      setUploading(false); setUploadError(''); setUploadedFileName('')
       setChannel('email')
     } else {
       // Seed from prefill when provided (Re-send flow); otherwise start with
@@ -107,6 +129,53 @@ export default function BroadcastComposerModal({ open, initialMode = 'broadcast'
     if (audience === 'all_leads') return true
     return adHocRows.some(r => r.email.trim() || r.mobile.trim())
   }, [audience, adHocRows])
+
+  // ── Upload attachment ──────────────────────────────────────────
+  // Stores the picked file in the public marketing-assets bucket so the
+  // emailed URL is openable without auth. broadcast-send already pastes
+  // attachment_url into the email body, so once we set attachmentUrl
+  // the rest of the flow is unchanged.
+  const handleFilePicked: React.ChangeEventHandler<HTMLInputElement> = async (e) => {
+    setUploadError('')
+    const file = e.target.files?.[0]
+    e.target.value = '' // allow re-pick of the same file after clear
+    if (!file) return
+
+    // Guardrail mirroring the bucket's file_size_limit (~50 MB).
+    if (file.size > 50 * 1024 * 1024) {
+      setUploadError(`File is ${(file.size / 1024 / 1024).toFixed(1)} MB — bucket limit is 50 MB.`)
+      return
+    }
+
+    setUploading(true)
+    try {
+      const res = await uploadFile(file, 'broadcast/attachments', {
+        bucket: BROADCAST_ATTACHMENT_BUCKET,
+        accessLevel: 'public',
+        category: 'marketing',
+        tags: ['broadcast-attachment', contentType],
+        description: `Attachment for broadcast "${name || subject || 'untitled'}"`,
+        trackRecord: false,
+      })
+      const url = res.file?.url || ''
+      if (!res.success || !url) {
+        setUploadError(res.error || 'Upload failed.')
+        return
+      }
+      setAttachmentUrl(url)
+      setUploadedFileName(file.name)
+    } catch (err: any) {
+      setUploadError(err?.message || 'Upload failed.')
+    } finally {
+      setUploading(false)
+    }
+  }
+
+  const clearAttachment = () => {
+    setAttachmentUrl('')
+    setUploadedFileName('')
+    setUploadError('')
+  }
 
   const handleSend = async () => {
     setError(''); setSuccess('')
@@ -250,8 +319,64 @@ export default function BroadcastComposerModal({ open, initialMode = 'broadcast'
         </Labelled>
 
         {showAttachment && (
-          <Labelled label="Attachment / link URL" hint="Public URL the recipient can open (image, video, PDF or article).">
-            <input value={attachmentUrl} onChange={e => setAttachmentUrl(e.target.value)} placeholder="https://…" className={inputCls} />
+          <Labelled
+            label="Attachment / link URL"
+            hint={
+              ['link', 'blog'].includes(contentType)
+                ? 'Paste the article / external link URL.'
+                : 'Upload the file (it lands in the public marketing-assets bucket) or paste a public URL the recipient can open.'
+            }
+          >
+            <div className="space-y-2">
+              <div className="flex flex-col sm:flex-row gap-2">
+                <input
+                  value={attachmentUrl}
+                  onChange={e => { setAttachmentUrl(e.target.value); if (uploadedFileName) setUploadedFileName('') }}
+                  placeholder="https://…"
+                  className={inputCls + ' flex-1'}
+                />
+                {!['link', 'blog'].includes(contentType) && (
+                  <>
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept={ACCEPT_BY_CONTENT_TYPE[contentType] || '*/*'}
+                      onChange={handleFilePicked}
+                      className="hidden"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => fileInputRef.current?.click()}
+                      disabled={uploading}
+                      className="inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold text-white bg-brand-red/20 border border-brand-red/30 hover:bg-brand-red/30 transition-colors disabled:opacity-60"
+                    >
+                      {uploading
+                        ? <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Uploading…</>
+                        : <><Paperclip className="w-3.5 h-3.5" /> Upload {contentType === 'pdf' ? 'PDF' : contentType === 'image' ? 'Image' : contentType === 'video' ? 'Video' : 'File'}</>
+                      }
+                    </button>
+                  </>
+                )}
+              </div>
+
+              {/* Status: uploaded file name + clear, OR upload error */}
+              {uploadedFileName && !uploadError && (
+                <div className="flex items-center justify-between gap-2 px-2.5 py-1.5 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-[11px] text-emerald-200">
+                  <span className="inline-flex items-center gap-1.5 truncate">
+                    <CheckCircle2 className="w-3.5 h-3.5 flex-shrink-0" />
+                    <span className="truncate">Uploaded: {uploadedFileName}</span>
+                  </span>
+                  <button type="button" onClick={clearAttachment} className="text-emerald-300 hover:text-white" title="Remove attachment">
+                    <XCircle className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              )}
+              {uploadError && (
+                <div className="flex items-start gap-1.5 px-2.5 py-1.5 rounded-lg bg-red-500/10 border border-red-500/20 text-[11px] text-red-200">
+                  <AlertTriangle className="w-3.5 h-3.5 mt-0.5 flex-shrink-0" /> {uploadError}
+                </div>
+              )}
+            </div>
           </Labelled>
         )}
 
