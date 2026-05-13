@@ -152,7 +152,7 @@ export default function AssetDocModule({ subTab, navigate, showToast }: AssetDoc
         <div className="flex flex-wrap gap-2 self-start">
           <button
             onClick={() => setBuilderOpen(true)}
-            className="flex items-center gap-2 px-3.5 py-2.5 rounded-xl text-sm font-medium text-white bg-white/[0.04] border border-white/[0.08] hover:bg-white/[0.08] transition-colors admin-btn-press"
+            className="flex items-center gap-2 px-3.5 py-2.5 rounded-xl text-sm font-semibold text-purple-100 bg-purple-500/20 border border-purple-500/30 hover:bg-purple-500/30 transition-colors admin-btn-press"
             title="Compose a document from scratch and export as PDF or Word"
           >
             <Wand2 className="w-4 h-4" />
@@ -160,7 +160,7 @@ export default function AssetDocModule({ subTab, navigate, showToast }: AssetDoc
           </button>
           <button
             onClick={() => setUploadOpen(true)}
-            className="flex items-center gap-2 px-3.5 py-2.5 rounded-xl text-sm font-medium text-white bg-white/[0.04] border border-white/[0.08] hover:bg-white/[0.08] transition-colors admin-btn-press"
+            className="flex items-center gap-2 px-3.5 py-2.5 rounded-xl text-sm font-semibold text-cyan-100 bg-cyan-500/20 border border-cyan-500/30 hover:bg-cyan-500/30 transition-colors admin-btn-press"
             title="Drag-and-drop PDF, Word, Excel, images to the Documents library"
           >
             <Upload className="w-4 h-4" />
@@ -168,7 +168,7 @@ export default function AssetDocModule({ subTab, navigate, showToast }: AssetDoc
           </button>
           <button
             onClick={() => setFolderPickerOpen(true)}
-            className="flex items-center gap-2 px-3.5 py-2.5 rounded-xl text-sm font-medium text-white bg-brand-red/20 border border-brand-red/30 hover:bg-brand-red/30 transition-colors admin-btn-press"
+            className="flex items-center gap-2 px-3.5 py-2.5 rounded-xl text-sm font-semibold text-rose-100 bg-rose-500/20 border border-rose-500/30 hover:bg-rose-500/30 transition-colors admin-btn-press"
           >
             <Plus className="w-4 h-4" />
             Asset Files
@@ -736,7 +736,7 @@ function DocumentsTab({ documents, showToast, openGenerator }: {
                     if (!url) { showToast(error || 'No file URL available for this document', 'error'); return }
                     window.open(url, '_blank', 'noopener,noreferrer')
                   }}
-                  className="flex-1 min-w-[80px] flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-[11px] font-medium text-gray-400 bg-white/[0.03] hover:bg-white/[0.06] transition-colors"
+                  className="flex-1 min-w-[80px] flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-[11px] font-semibold text-blue-200 bg-blue-500/15 border border-blue-500/25 hover:bg-blue-500/25 transition-colors"
                 >
                   <Eye className="w-3 h-3" />
                   View
@@ -754,7 +754,7 @@ function DocumentsTab({ documents, showToast, openGenerator }: {
                     link.click()
                     document.body.removeChild(link)
                   }}
-                  className="flex-1 min-w-[80px] flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-[11px] font-medium text-gray-400 bg-white/[0.03] hover:bg-white/[0.06] transition-colors"
+                  className="flex-1 min-w-[80px] flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-[11px] font-semibold text-emerald-200 bg-emerald-500/15 border border-emerald-500/25 hover:bg-emerald-500/25 transition-colors"
                 >
                   <Download className="w-3 h-3" />
                   Download
@@ -762,7 +762,7 @@ function DocumentsTab({ documents, showToast, openGenerator }: {
                 {pickTemplateKind(doc.category) && (
                   <button
                     onClick={() => openGenerator(doc)}
-                    className="flex-1 min-w-[110px] flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-[11px] font-semibold text-white bg-brand-red/20 border border-brand-red/30 hover:bg-brand-red/30 transition-colors"
+                    className="flex-1 min-w-[110px] flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-[11px] font-semibold text-amber-100 bg-amber-500/20 border border-amber-500/30 hover:bg-amber-500/30 transition-colors"
                     title="Fill in the fields and download a fresh PDF for this document type"
                   >
                     <Sparkles className="w-3 h-3" />
@@ -913,7 +913,7 @@ function TemplatesTab({
                 {pickTemplateKind(doc.category) && (
                   <button
                     onClick={() => openGenerator(doc)}
-                    className="flex-1 min-w-[110px] flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-[11px] font-semibold text-white bg-brand-red/20 border border-brand-red/30 hover:bg-brand-red/30 transition-colors"
+                    className="flex-1 min-w-[110px] flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-[11px] font-semibold text-amber-100 bg-amber-500/20 border border-amber-500/30 hover:bg-amber-500/30 transition-colors"
                     title="Fill in the fields and download a populated PDF"
                   >
                     <Sparkles className="w-3 h-3" /> Fill & Download
@@ -925,7 +925,7 @@ function TemplatesTab({
                     if (!url) { showToast(error || 'Template URL is missing — re-run the seed script.', 'error'); return }
                     window.open(url, '_blank', 'noopener,noreferrer')
                   }}
-                  className="flex-1 min-w-[80px] flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-[11px] font-medium text-gray-400 bg-white/[0.03] hover:bg-white/[0.06] transition-colors"
+                  className="flex-1 min-w-[80px] flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-[11px] font-semibold text-blue-200 bg-blue-500/15 border border-blue-500/25 hover:bg-blue-500/25 transition-colors"
                   title="Open the blank template"
                 >
                   <Eye className="w-3 h-3" /> View
@@ -942,17 +942,17 @@ function TemplatesTab({
                     link.click()
                     document.body.removeChild(link)
                   }}
-                  className="flex-1 min-w-[80px] flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-[11px] font-medium text-gray-400 bg-white/[0.03] hover:bg-white/[0.06] transition-colors"
+                  className="flex-1 min-w-[80px] flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-[11px] font-semibold text-emerald-200 bg-emerald-500/15 border border-emerald-500/25 hover:bg-emerald-500/25 transition-colors"
                   title="Download a copy of the blank template"
                 >
                   <Download className="w-3 h-3" /> Download
                 </button>
                 <button
                   onClick={() => handleCopyUrl(doc)}
-                  className="flex-1 min-w-[80px] flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-[11px] font-medium text-gray-400 bg-white/[0.03] hover:bg-white/[0.06] transition-colors"
+                  className="flex-1 min-w-[80px] flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-[11px] font-semibold text-purple-200 bg-purple-500/15 border border-purple-500/25 hover:bg-purple-500/25 transition-colors"
                   title="Copy the public auto-fetch URL"
                 >
-                  {copiedId === doc.id ? <CheckCircle2 className="w-3 h-3 text-emerald-400" /> : <Tag className="w-3 h-3" />}
+                  {copiedId === doc.id ? <CheckCircle2 className="w-3 h-3 text-emerald-300" /> : <Tag className="w-3 h-3" />}
                   {copiedId === doc.id ? 'Copied' : 'Copy URL'}
                 </button>
               </div>
