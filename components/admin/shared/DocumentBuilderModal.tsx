@@ -20,6 +20,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   Plus, Trash2, GripVertical, Download, Eye, Type, ListChecks,
   Heading1, AlignLeft, Image as ImageIcon, PenLine, FileText, Loader2,
+  RefreshCw, Library,
 } from 'lucide-react'
 import { jsPDF } from 'jspdf'
 import {
@@ -27,6 +28,9 @@ import {
   ImageRun,
 } from 'docx'
 import AdminModal, { ModalButton } from './AdminModal'
+import { supabase, isSupabaseConfigured } from '@/lib/supabase/client'
+import { getDownloadUrl } from '@/lib/supabase/storageService'
+import { DOCUMENT_TEMPLATES, type DocumentKind } from '@/lib/admin/documentTemplates'
 
 // ── Block model ─────────────────────────────────────────────────
 type BlockKind = 'heading' | 'paragraph' | 'kv-list' | 'bullet-list' | 'image' | 'signature'
@@ -70,6 +74,16 @@ interface Props {
   showToast: (msg: string, type?: 'success' | 'error' | 'info' | 'warning') => void
 }
 
+interface LibraryImage {
+  id: string
+  title: string
+  fileName: string
+  url: string                       // resolved public OR signed URL
+  bucket?: string | null
+  path?: string | null
+  thumbUrl?: string                 // same as url; UI uses <img>
+}
+
 export default function DocumentBuilderModal({ open, onClose, showToast }: Props) {
   const [docTitle, setDocTitle] = useState('Untitled Document')
   const [blocks, setBlocks] = useState<Block[]>([
@@ -78,6 +92,18 @@ export default function DocumentBuilderModal({ open, onClose, showToast }: Props
   ])
   const [busy, setBusy] = useState<null | 'pdf' | 'docx' | 'preview'>(null)
   const dragId = useRef<string | null>(null)
+
+  // ── Library ──────────────────────────────────────────────────────
+  // Pulls uploaded images from public.documents on open and on Refresh.
+  // The admin clicks (or drags) a tile to insert it into the canvas; the
+  // image is fetched on demand and inlined as a base64 data URL so the
+  // PDF / DOCX exporters can embed it without any further network call.
+  const [libraryImages, setLibraryImages] = useState<LibraryImage[]>([])
+  const [libraryLoading, setLibraryLoading] = useState(false)
+  const [insertingId, setInsertingId] = useState<string | null>(null)
+  // Tracks which item is being dragged out of the library so canvas
+  // can decide whether to handle an external-drop vs. a reorder-drop.
+  const draggedLibraryImageRef = useRef<LibraryImage | null>(null)
 
   // Restore + autosave draft to sessionStorage.
   useEffect(() => {
@@ -107,6 +133,14 @@ export default function DocumentBuilderModal({ open, onClose, showToast }: Props
   const onDragStart = (id: string) => { dragId.current = id }
   const onDragOver = (e: React.DragEvent) => { e.preventDefault() }
   const onDrop = (overId: string) => {
+    // Library-image drag takes priority: insert a new Image block at the
+    // drop target rather than reorder.
+    const libImg = draggedLibraryImageRef.current
+    if (libImg) {
+      draggedLibraryImageRef.current = null
+      void insertImageFromLibrary(libImg, overId)
+      return
+    }
     const fromId = dragId.current
     if (!fromId || fromId === overId) return
     setBlocks(bs => {
@@ -120,6 +154,114 @@ export default function DocumentBuilderModal({ open, onClose, showToast }: Props
     })
     dragId.current = null
   }
+
+  // ── Library loaders ───────────────────────────────────────────
+  const loadLibrary = useCallback(async () => {
+    if (!isSupabaseConfigured()) { setLibraryImages([]); return }
+    setLibraryLoading(true)
+    try {
+      const sb: any = supabase
+      const { data, error } = await sb
+        .from('documents')
+        .select('id, title, file_name, file_url, mime_type, metadata')
+        .or('mime_type.ilike.image/%,file_type.ilike.png,file_type.ilike.jpg,file_type.ilike.jpeg,file_type.ilike.webp,file_type.ilike.gif')
+        .eq('is_template', false)
+        .order('created_at', { ascending: false })
+        .limit(50)
+      if (error) {
+        console.warn('[DocumentBuilder] library load:', error.message)
+        setLibraryImages([])
+        return
+      }
+      // Resolve each row to a usable URL (signed for private buckets).
+      const out: LibraryImage[] = []
+      for (const raw of (data || []) as any[]) {
+        const meta = raw?.metadata && typeof raw.metadata === 'object' ? raw.metadata : {}
+        const bucket: string | null = meta.bucket || null
+        const path: string | null = meta.path || null
+        let url = String(raw.file_url || '')
+        if (!url.startsWith('https://') && bucket && path) {
+          const res = await getDownloadUrl(path, bucket)
+          if (res.success && res.url) url = res.url
+        }
+        if (!url || !url.startsWith('http')) continue
+        out.push({
+          id: raw.id,
+          title: raw.title || raw.file_name || 'Untitled',
+          fileName: raw.file_name || 'image',
+          url,
+          bucket,
+          path,
+          thumbUrl: url,
+        })
+      }
+      setLibraryImages(out)
+    } catch (e: any) {
+      console.warn('[DocumentBuilder] library load error:', e?.message || e)
+      setLibraryImages([])
+    } finally {
+      setLibraryLoading(false)
+    }
+  }, [])
+
+  useEffect(() => { if (open) loadLibrary() }, [open, loadLibrary])
+
+  // ── Library actions ───────────────────────────────────────────
+  // Fetches the chosen image and converts to a data URL so the exporters
+  // can embed it without another network hop. The fetch is CORS-friendly
+  // — Supabase storage sets `Access-Control-Allow-Origin: *` on object URLs.
+  const fetchAsDataUrl = async (url: string): Promise<string> => {
+    const resp = await fetch(url)
+    if (!resp.ok) throw new Error(`HTTP ${resp.status}`)
+    const blob = await resp.blob()
+    return await new Promise<string>((resolve, reject) => {
+      const reader = new FileReader()
+      reader.onload = () => resolve(String(reader.result))
+      reader.onerror = () => reject(new Error('Read failed'))
+      reader.readAsDataURL(blob)
+    })
+  }
+
+  const insertImageFromLibrary = useCallback(async (img: LibraryImage, anchorId?: string | null) => {
+    setInsertingId(img.id)
+    try {
+      const dataUrl = await fetchAsDataUrl(img.url)
+      setBlocks(bs => {
+        const block: ImageBlock = {
+          id: `b-${Math.random().toString(36).slice(2, 10)}`,
+          kind: 'image',
+          dataUrl,
+          width: 320,
+          align: 'center',
+        }
+        if (!anchorId) return [...bs, block]
+        const idx = bs.findIndex(b => b.id === anchorId)
+        if (idx < 0) return [...bs, block]
+        const next = bs.slice()
+        next.splice(idx + 1, 0, block)
+        return next
+      })
+      showToast(`Inserted "${img.title}".`, 'success')
+    } catch (e: any) {
+      showToast(`Could not insert image: ${e?.message || 'fetch failed'}`, 'error')
+    } finally {
+      setInsertingId(null)
+    }
+  }, [showToast])
+
+  // Field templates — drop a Heading + KV List block pair sourced from
+  // DOCUMENT_TEMPLATES so the admin doesn't have to type the placeholder
+  // table from scratch.
+  const insertFieldTemplate = useCallback((kind: DocumentKind) => {
+    const t = DOCUMENT_TEMPLATES[kind]
+    if (!t) return
+    setBlocks(bs => ([
+      ...bs,
+      { id: `b-${Math.random().toString(36).slice(2, 10)}`, kind: 'heading', text: t.headline, level: 1, align: 'center' },
+      { id: `b-${Math.random().toString(36).slice(2, 10)}`, kind: 'kv-list', rows: t.fields.map(f => ({ label: f.label, value: `{{${f.key}}}` })) },
+    ]))
+    showToast(`Added ${t.title} template fields.`, 'success')
+  }, [showToast])
 
   // ── Export: PDF ──────────────────────────────────────────────
   const renderPdfBlob = (): Blob => {
@@ -337,9 +479,9 @@ export default function DocumentBuilderModal({ open, onClose, showToast }: Props
         </>
       }
     >
-      <div className="grid grid-cols-1 lg:grid-cols-[200px_1fr] gap-4">
-        {/* Block palette */}
-        <div className="space-y-2">
+      <div className="grid grid-cols-1 lg:grid-cols-[220px_1fr] gap-4">
+        {/* Block palette + Library */}
+        <div className="space-y-2 max-h-[60vh] overflow-y-auto pr-1">
           <div className="text-[10px] uppercase tracking-wider text-gray-500 px-1">Add Block</div>
           {blockPalette.map(p => {
             const Icon = p.icon
@@ -350,7 +492,79 @@ export default function DocumentBuilderModal({ open, onClose, showToast }: Props
               </button>
             )
           })}
-          <div className="pt-2 border-t border-white/[0.06]">
+
+          {/* Field Templates — click to drop a ready-made Heading + Field
+              List for one of the four known document kinds. */}
+          <div className="pt-3 border-t border-white/[0.06]">
+            <div className="text-[10px] uppercase tracking-wider text-gray-500 px-1 mb-1.5">Field Templates</div>
+            <div className="grid grid-cols-2 gap-1.5">
+              {(Object.keys(DOCUMENT_TEMPLATES) as DocumentKind[]).map(k => (
+                <button
+                  key={k}
+                  onClick={() => insertFieldTemplate(k)}
+                  className="px-2 py-1.5 rounded-lg bg-amber-500/10 border border-amber-500/20 text-[10px] font-medium text-amber-200 hover:bg-amber-500/20 transition-colors text-left"
+                  title={`Insert ${DOCUMENT_TEMPLATES[k].title} fields`}
+                >
+                  {DOCUMENT_TEMPLATES[k].title.replace(' Letter', '').replace('Debenture ', '')}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Image Library — pulled from uploaded documents (mime image/*). */}
+          <div className="pt-3 border-t border-white/[0.06]">
+            <div className="flex items-center justify-between px-1 mb-1.5">
+              <div className="text-[10px] uppercase tracking-wider text-gray-500 flex items-center gap-1.5">
+                <Library className="w-3 h-3" /> Image Library
+              </div>
+              <button
+                onClick={loadLibrary}
+                disabled={libraryLoading}
+                className="text-[10px] text-gray-500 hover:text-white inline-flex items-center gap-1 disabled:opacity-50"
+                title="Refresh library"
+              >
+                {libraryLoading ? <Loader2 className="w-3 h-3 animate-spin" /> : <RefreshCw className="w-3 h-3" />}
+              </button>
+            </div>
+            {libraryLoading && libraryImages.length === 0 ? (
+              <div className="text-[10px] text-gray-500 px-1 py-2">Loading…</div>
+            ) : libraryImages.length === 0 ? (
+              <div className="text-[10px] text-gray-500 px-1 py-2">No images uploaded yet. Use <span className="text-amber-300">Upload to Library</span> to add some.</div>
+            ) : (
+              <div className="grid grid-cols-2 gap-1.5">
+                {libraryImages.map(img => (
+                  <button
+                    key={img.id}
+                    draggable
+                    onDragStart={(e) => {
+                      draggedLibraryImageRef.current = img
+                      // Hide the reorder semantic during this drag.
+                      dragId.current = null
+                      try { e.dataTransfer.setData('text/plain', img.id) } catch { /* ignore */ }
+                      e.dataTransfer.effectAllowed = 'copy'
+                    }}
+                    onDragEnd={() => { draggedLibraryImageRef.current = null }}
+                    onClick={() => insertImageFromLibrary(img)}
+                    disabled={insertingId === img.id}
+                    className="group relative aspect-square rounded-lg overflow-hidden border border-white/[0.08] bg-white/[0.04] hover:border-brand-red/40 transition-colors disabled:opacity-60"
+                    title={`${img.title}\n${img.fileName}`}
+                  >
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={img.thumbUrl} alt={img.title} className="w-full h-full object-cover" />
+                    {insertingId === img.id && (
+                      <span className="absolute inset-0 flex items-center justify-center bg-black/60">
+                        <Loader2 className="w-4 h-4 animate-spin text-white" />
+                      </span>
+                    )}
+                    <span className="absolute bottom-0 left-0 right-0 px-1.5 py-0.5 text-[9px] text-white bg-black/60 truncate">{img.title}</span>
+                  </button>
+                ))}
+              </div>
+            )}
+            <p className="text-[9px] text-gray-600 px-1 mt-1.5">Click or drag onto the canvas.</p>
+          </div>
+
+          <div className="pt-3 border-t border-white/[0.06]">
             <div className="text-[10px] uppercase tracking-wider text-gray-500 px-1 mb-1.5">Title (file name)</div>
             <input value={docTitle} onChange={e => setDocTitle(e.target.value)} className="w-full bg-white/[0.04] border border-white/[0.08] rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-brand-red/40" />
           </div>
