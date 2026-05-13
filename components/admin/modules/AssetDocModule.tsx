@@ -5,7 +5,7 @@ import {
   FolderOpen, Monitor, FileText, Key, Award, Eye, Download,
   Upload, Plus, Search, Calendar, Tag, Lock, Globe,
   HardDrive, Shield, AlertTriangle, Clock, CheckCircle2,
-  Laptop, Server, File, FolderClosed, Trash2,
+  Laptop, Server, File, FolderClosed, Trash2, Sparkles,
 } from 'lucide-react'
 import AdminGlass from '../shared/AdminGlass'
 import AdminDataTable, { type Column } from '../shared/AdminDataTable'
@@ -19,6 +19,8 @@ import { formatINR, formatDate } from '@/lib/admin/adminHooks'
 import type { Asset, AssetCategory, AssetStatus } from '@/lib/admin/adminTypes'
 import { saveBlobAs, getDownloadUrl } from '@/lib/supabase/storageService'
 import UploadWithFolderPicker from '@/components/shared/UploadWithFolderPicker'
+import DocumentGeneratorModal from '../shared/DocumentGeneratorModal'
+import { pickTemplateKind, type DocumentKind } from '@/lib/admin/documentTemplates'
 
 // ── Document type ───────────────────────────────────────────────
 interface AdminDocument {
@@ -69,6 +71,19 @@ export default function AssetDocModule({ subTab, navigate, showToast }: AssetDoc
   const [assets, setAssets] = useState<any[]>([])
   const [documents, setDocuments] = useState<AdminDocument[]>([])
   const [loading, setLoading] = useState(true)
+
+  // ── Document Generator (Fill & Download) ────────────────────────
+  // 2026-05-13: Generate button on each known doc kind opens this modal
+  // with the matching field set; output is a populated PDF via jsPDF.
+  const [generator, setGenerator] = useState<{ kind: DocumentKind; documentName: string } | null>(null)
+  const openGenerator = (doc: AdminDocument) => {
+    const kind = pickTemplateKind(doc.category)
+    if (!kind) {
+      showToast('No generator available for this document type.', 'warning')
+      return
+    }
+    setGenerator({ kind, documentName: doc.name })
+  }
 
   const loadData = useCallback(async () => {
     setLoading(true)
@@ -149,6 +164,14 @@ export default function AssetDocModule({ subTab, navigate, showToast }: AssetDoc
         portal="admin"
       />
 
+      <DocumentGeneratorModal
+        isOpen={generator !== null}
+        kind={generator?.kind || null}
+        documentName={generator?.documentName || null}
+        onClose={() => setGenerator(null)}
+        showToast={showToast}
+      />
+
       <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
         <AdminKPICard title="Total Assets" value={kpis.totalAssets} icon={Monitor} color="#3B82F6" delay={0} />
         <AdminKPICard title="Active Assets" value={kpis.activeAssets} icon={CheckCircle2} color="#10B981" delay={50} />
@@ -180,8 +203,8 @@ export default function AssetDocModule({ subTab, navigate, showToast }: AssetDoc
         {activeTab === 'assets' && <AssetInventoryTab assets={assets} showToast={showToast} onRefresh={loadData} />}
         {/* 2026-05-13: Documents tab hides templates — those live on the dedicated
             Templates sub-tab. Keeps the existing library view free of clutter. */}
-        {activeTab === 'documents' && <DocumentsTab documents={documents.filter(d => !d.isTemplate)} showToast={showToast} />}
-        {activeTab === 'templates' && <TemplatesTab documents={documents.filter(d => d.isTemplate)} loading={loading} showToast={showToast} />}
+        {activeTab === 'documents' && <DocumentsTab documents={documents.filter(d => !d.isTemplate)} showToast={showToast} openGenerator={openGenerator} />}
+        {activeTab === 'templates' && <TemplatesTab documents={documents.filter(d => d.isTemplate)} loading={loading} showToast={showToast} openGenerator={openGenerator} />}
         {/* 2026-05-12: Document Tracking sub-tab — pulls the
             investment-doc-tracking timeline that the investor sees
             on their portal, scoped to admin view-only here. View
@@ -588,7 +611,11 @@ async function resolveDocumentUrl(doc: AdminDocument): Promise<{ url: string; er
 }
 
 // ── Documents Tab ───────────────────────────────────────────────
-function DocumentsTab({ documents, showToast }: { documents: AdminDocument[]; showToast: (msg: string, type?: 'success' | 'error' | 'info' | 'warning') => void }) {
+function DocumentsTab({ documents, showToast, openGenerator }: {
+  documents: AdminDocument[]
+  showToast: (msg: string, type?: 'success' | 'error' | 'info' | 'warning') => void
+  openGenerator: (doc: AdminDocument) => void
+}) {
   const [categoryFilter, setCategoryFilter] = useState<string>('all')
 
   const categories = useMemo(() => {
@@ -664,14 +691,14 @@ function DocumentsTab({ documents, showToast }: { documents: AdminDocument[]; sh
                   </div>
                 </div>
               </div>
-              <div className="flex gap-2 mt-3 pt-3 border-t border-white/[0.04]">
+              <div className="flex flex-wrap gap-2 mt-3 pt-3 border-t border-white/[0.04]">
                 <button
                   onClick={async () => {
                     const { url, error } = await resolveDocumentUrl(doc)
                     if (!url) { showToast(error || 'No file URL available for this document', 'error'); return }
                     window.open(url, '_blank', 'noopener,noreferrer')
                   }}
-                  className="flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-[11px] font-medium text-gray-400 bg-white/[0.03] hover:bg-white/[0.06] transition-colors"
+                  className="flex-1 min-w-[80px] flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-[11px] font-medium text-gray-400 bg-white/[0.03] hover:bg-white/[0.06] transition-colors"
                 >
                   <Eye className="w-3 h-3" />
                   View
@@ -689,11 +716,21 @@ function DocumentsTab({ documents, showToast }: { documents: AdminDocument[]; sh
                     link.click()
                     document.body.removeChild(link)
                   }}
-                  className="flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-[11px] font-medium text-gray-400 bg-white/[0.03] hover:bg-white/[0.06] transition-colors"
+                  className="flex-1 min-w-[80px] flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-[11px] font-medium text-gray-400 bg-white/[0.03] hover:bg-white/[0.06] transition-colors"
                 >
                   <Download className="w-3 h-3" />
                   Download
                 </button>
+                {pickTemplateKind(doc.category) && (
+                  <button
+                    onClick={() => openGenerator(doc)}
+                    className="flex-1 min-w-[110px] flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-[11px] font-semibold text-white bg-brand-red/20 border border-brand-red/30 hover:bg-brand-red/30 transition-colors"
+                    title="Fill in the fields and download a fresh PDF for this document type"
+                  >
+                    <Sparkles className="w-3 h-3" />
+                    Fill & Download
+                  </button>
+                )}
               </div>
             </AdminGlass>
           )
@@ -718,10 +755,12 @@ function TemplatesTab({
   documents,
   loading,
   showToast,
+  openGenerator,
 }: {
   documents: AdminDocument[]
   loading: boolean
   showToast: (msg: string, type?: 'success' | 'error' | 'info' | 'warning') => void
+  openGenerator: (doc: AdminDocument) => void
 }) {
   const [search, setSearch] = useState('')
   const [copiedId, setCopiedId] = useState<string | null>(null)
@@ -832,14 +871,23 @@ function TemplatesTab({
                 </div>
               )}
 
-              <div className="flex gap-2 mt-3 pt-3 border-t border-white/[0.04]">
+              <div className="flex flex-wrap gap-2 mt-3 pt-3 border-t border-white/[0.04]">
+                {pickTemplateKind(doc.category) && (
+                  <button
+                    onClick={() => openGenerator(doc)}
+                    className="flex-1 min-w-[110px] flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-[11px] font-semibold text-white bg-brand-red/20 border border-brand-red/30 hover:bg-brand-red/30 transition-colors"
+                    title="Fill in the fields and download a populated PDF"
+                  >
+                    <Sparkles className="w-3 h-3" /> Fill & Download
+                  </button>
+                )}
                 <button
                   onClick={async () => {
                     const { url, error } = await resolveDocumentUrl(doc)
                     if (!url) { showToast(error || 'Template URL is missing — re-run the seed script.', 'error'); return }
                     window.open(url, '_blank', 'noopener,noreferrer')
                   }}
-                  className="flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-[11px] font-medium text-gray-400 bg-white/[0.03] hover:bg-white/[0.06] transition-colors"
+                  className="flex-1 min-w-[80px] flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-[11px] font-medium text-gray-400 bg-white/[0.03] hover:bg-white/[0.06] transition-colors"
                   title="Open the blank template"
                 >
                   <Eye className="w-3 h-3" /> View
@@ -856,14 +904,14 @@ function TemplatesTab({
                     link.click()
                     document.body.removeChild(link)
                   }}
-                  className="flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-[11px] font-medium text-gray-400 bg-white/[0.03] hover:bg-white/[0.06] transition-colors"
+                  className="flex-1 min-w-[80px] flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-[11px] font-medium text-gray-400 bg-white/[0.03] hover:bg-white/[0.06] transition-colors"
                   title="Download a copy of the blank template"
                 >
                   <Download className="w-3 h-3" /> Download
                 </button>
                 <button
                   onClick={() => handleCopyUrl(doc)}
-                  className="flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-[11px] font-medium text-gray-400 bg-white/[0.03] hover:bg-white/[0.06] transition-colors"
+                  className="flex-1 min-w-[80px] flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-[11px] font-medium text-gray-400 bg-white/[0.03] hover:bg-white/[0.06] transition-colors"
                   title="Copy the public auto-fetch URL"
                 >
                   {copiedId === doc.id ? <CheckCircle2 className="w-3 h-3 text-emerald-400" /> : <Tag className="w-3 h-3" />}
