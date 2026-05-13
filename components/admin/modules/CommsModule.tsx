@@ -23,6 +23,7 @@ import {
   type InternalMessage,
 } from '@/lib/supabase/internalChatService'
 import { fetchAllMessages } from '@/lib/supabase/adminDataService'
+import BroadcastComposerModal from '../shared/BroadcastComposerModal'
 
 // ── Mock Data ────────────────────────────────────────────────────
 interface Broadcast {
@@ -100,18 +101,33 @@ export default function CommsModule({ subTab, navigate, showToast, user, role }:
     navigate(tabId === 'messages' ? 'comms' : `comms/${tabId}`)
   }
 
-  // 2026-05-12: open the broadcast/email composer that lives inside
-  // BroadcastTab. We park a short-lived flag in sessionStorage and
-  // navigate to /admin/comms/broadcast; BroadcastTab reads the flag
-  // on mount, switches its inner view to "compose", and (for the
-  // Email entry) preselects the email channel. The flag is cleared
-  // immediately after it's consumed so a subsequent direct visit to
-  // the Broadcast tab still lands on the default Leads view.
+  // 2026-05-13: BroadcastTab never wired the sessionStorage hand-off,
+  // so "New Broadcast" / "Compose Email" navigated to an empty list.
+  // Hoist the composer here as a single modal and let entry points
+  // drive its initialMode directly.
+  const [composerOpen, setComposerOpen] = useState(false)
+  const [composerMode, setComposerMode] = useState<'broadcast' | 'email'>('broadcast')
   const openComposer = (mode: 'broadcast' | 'email') => {
-    try { sessionStorage.setItem('comms-open-compose', mode) } catch { /* private mode */ }
-    showToast(mode === 'email' ? 'Opening email composer...' : 'Opening broadcast composer...', 'info')
+    setComposerMode(mode)
+    setComposerOpen(true)
+    // Land the user on the broadcast tab so the recently-sent list is
+    // visible after the modal closes. No-op when already there.
     navigate('comms/broadcast')
   }
+
+  // Auto-open if the legacy sessionStorage flag is set (any prior
+  // navigation path that pre-dated this hoist still works).
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    try {
+      const flag = sessionStorage.getItem('comms-open-compose')
+      if (flag === 'broadcast' || flag === 'email') {
+        setComposerMode(flag)
+        setComposerOpen(true)
+        sessionStorage.removeItem('comms-open-compose')
+      }
+    } catch { /* private mode */ }
+  }, [])
 
   return (
     <div className="space-y-6 admin-section-enter">
@@ -191,6 +207,13 @@ export default function CommsModule({ subTab, navigate, showToast, user, role }:
           />
         )}
       </div>
+
+      <BroadcastComposerModal
+        open={composerOpen}
+        initialMode={composerMode}
+        onClose={() => setComposerOpen(false)}
+        showToast={showToast}
+      />
     </div>
   )
 }

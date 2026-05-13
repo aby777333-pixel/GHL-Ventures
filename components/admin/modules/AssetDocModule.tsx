@@ -6,6 +6,7 @@ import {
   Upload, Plus, Search, Calendar, Tag, Lock, Globe,
   HardDrive, Shield, AlertTriangle, Clock, CheckCircle2,
   Laptop, Server, File, FolderClosed, Trash2, Sparkles,
+  Wand2,
 } from 'lucide-react'
 import AdminGlass from '../shared/AdminGlass'
 import AdminDataTable, { type Column } from '../shared/AdminDataTable'
@@ -20,6 +21,8 @@ import type { Asset, AssetCategory, AssetStatus } from '@/lib/admin/adminTypes'
 import { saveBlobAs, getDownloadUrl } from '@/lib/supabase/storageService'
 import UploadWithFolderPicker from '@/components/shared/UploadWithFolderPicker'
 import DocumentGeneratorModal from '../shared/DocumentGeneratorModal'
+import DocumentUploadModal from '../shared/DocumentUploadModal'
+import DocumentBuilderModal from '../shared/DocumentBuilderModal'
 import { pickTemplateKind, type DocumentKind } from '@/lib/admin/documentTemplates'
 
 // ── Document type ───────────────────────────────────────────────
@@ -85,6 +88,10 @@ export default function AssetDocModule({ subTab, navigate, showToast }: AssetDoc
     setGenerator({ kind, documentName: doc.name })
   }
 
+  // 2026-05-13: Upload to Library + Document Builder
+  const [uploadOpen, setUploadOpen] = useState(false)
+  const [builderOpen, setBuilderOpen] = useState(false)
+
   const loadData = useCallback(async () => {
     setLoading(true)
     const [a, d] = await Promise.all([fetchAssets(), fetchDocuments()])
@@ -142,13 +149,31 @@ export default function AssetDocModule({ subTab, navigate, showToast }: AssetDoc
           <h1 className="text-2xl font-bold text-white">Assets & Documents</h1>
           <p className="text-sm text-gray-500 mt-1">Asset inventory and document management system</p>
         </div>
-        <button
-          onClick={() => setFolderPickerOpen(true)}
-          className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium text-white bg-brand-red/20 border border-brand-red/30 hover:bg-brand-red/30 transition-colors self-start admin-btn-press"
-        >
-          <Upload className="w-4 h-4" />
-          Upload Document
-        </button>
+        <div className="flex flex-wrap gap-2 self-start">
+          <button
+            onClick={() => setBuilderOpen(true)}
+            className="flex items-center gap-2 px-3.5 py-2.5 rounded-xl text-sm font-medium text-white bg-white/[0.04] border border-white/[0.08] hover:bg-white/[0.08] transition-colors admin-btn-press"
+            title="Compose a document from scratch and export as PDF or Word"
+          >
+            <Wand2 className="w-4 h-4" />
+            Document Builder
+          </button>
+          <button
+            onClick={() => setUploadOpen(true)}
+            className="flex items-center gap-2 px-3.5 py-2.5 rounded-xl text-sm font-medium text-white bg-white/[0.04] border border-white/[0.08] hover:bg-white/[0.08] transition-colors admin-btn-press"
+            title="Drag-and-drop PDF, Word, Excel, images to the Documents library"
+          >
+            <Upload className="w-4 h-4" />
+            Upload to Library
+          </button>
+          <button
+            onClick={() => setFolderPickerOpen(true)}
+            className="flex items-center gap-2 px-3.5 py-2.5 rounded-xl text-sm font-medium text-white bg-brand-red/20 border border-brand-red/30 hover:bg-brand-red/30 transition-colors admin-btn-press"
+          >
+            <Plus className="w-4 h-4" />
+            Asset Files
+          </button>
+        </div>
       </div>
 
       <UploadWithFolderPicker
@@ -169,6 +194,19 @@ export default function AssetDocModule({ subTab, navigate, showToast }: AssetDoc
         kind={generator?.kind || null}
         documentName={generator?.documentName || null}
         onClose={() => setGenerator(null)}
+        showToast={showToast}
+      />
+
+      <DocumentUploadModal
+        open={uploadOpen}
+        onClose={() => setUploadOpen(false)}
+        showToast={showToast}
+        onUploaded={() => { setUploadOpen(false); loadData() }}
+      />
+
+      <DocumentBuilderModal
+        open={builderOpen}
+        onClose={() => setBuilderOpen(false)}
         showToast={showToast}
       />
 
