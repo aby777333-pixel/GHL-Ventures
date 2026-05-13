@@ -24,7 +24,7 @@ import {
 } from '@/lib/supabase/internalChatService'
 import { fetchAllMessages } from '@/lib/supabase/adminDataService'
 import { supabase as supabaseClient, isSupabaseConfigured } from '@/lib/supabase/client'
-import BroadcastComposerModal from '../shared/BroadcastComposerModal'
+import BroadcastComposerModal, { type BroadcastPrefill } from '../shared/BroadcastComposerModal'
 import AdminModal, { ModalButton } from '../shared/AdminModal'
 
 // ── Mock Data ────────────────────────────────────────────────────
@@ -113,8 +113,10 @@ export default function CommsModule({ subTab, navigate, showToast, user, role }:
   // bouncing them to the Broadcast tab).
   const [composerOpen, setComposerOpen] = useState(false)
   const [composerMode, setComposerMode] = useState<'broadcast' | 'email'>('broadcast')
-  const openComposer = (mode: 'broadcast' | 'email') => {
+  const [composerPrefill, setComposerPrefill] = useState<BroadcastPrefill | null>(null)
+  const openComposer = (mode: 'broadcast' | 'email', prefill?: BroadcastPrefill | null) => {
     setComposerMode(mode)
+    setComposerPrefill(prefill || null)
     setComposerOpen(true)
   }
 
@@ -199,13 +201,14 @@ export default function CommsModule({ subTab, navigate, showToast, user, role }:
             hint="Backed by the `contact_submissions` table. Each row supports View (open the message in a modal), Edit (assign / mark replied), and Delete."
           />
         )}
-        {activeTab === 'email' && <EmailNotificationsTab showToast={showToast} onCreate={() => openComposer('email')} />}
+        {activeTab === 'email' && <EmailNotificationsTab showToast={showToast} openComposer={openComposer} />}
       </div>
 
       <BroadcastComposerModal
         open={composerOpen}
         initialMode={composerMode}
-        onClose={() => setComposerOpen(false)}
+        prefill={composerPrefill}
+        onClose={() => { setComposerOpen(false); setComposerPrefill(null) }}
         showToast={showToast}
       />
     </div>
@@ -531,7 +534,27 @@ interface EmailLogRow {
   created_at: string | null
 }
 
-function EmailNotificationsTab({ showToast, onCreate }: { showToast: (msg: string, type?: 'success' | 'error' | 'info' | 'warning') => void; onCreate: () => void }) {
+function EmailNotificationsTab({
+  showToast,
+  openComposer,
+}: {
+  showToast: (msg: string, type?: 'success' | 'error' | 'info' | 'warning') => void
+  openComposer: (mode: 'broadcast' | 'email', prefill?: BroadcastPrefill | null) => void
+}) {
+  const onCreate = () => openComposer('email')
+  const onResend = (row: EmailLogRow) => {
+    // Carry the original subject, body, and recipients into a fresh
+    // compose. The admin reviews + tweaks before clicking Send.
+    openComposer('email', {
+      name: row.subject ? `Re-send: ${row.subject}` : 'Re-send',
+      subject: row.subject || '',
+      body: row.body || '',
+      channel: 'email',
+      contentType: row.attachment_urls && row.attachment_urls.length > 0 ? 'link' : 'text',
+      attachmentUrl: (row.attachment_urls && row.attachment_urls[0]) || '',
+      recipients: row.recipients || [],
+    })
+  }
   const [rows, setRows] = useState<EmailLogRow[]>([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
@@ -670,7 +693,7 @@ function EmailNotificationsTab({ showToast, onCreate }: { showToast: (msg: strin
                       <button onClick={() => setViewing(row)} className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-medium text-gray-300 bg-white/[0.04] hover:bg-white/[0.08] transition-colors">
                         <Eye className="w-3 h-3" /> View
                       </button>
-                      <button onClick={onCreate} className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-medium text-gray-300 bg-white/[0.04] hover:bg-white/[0.08] transition-colors" title="Compose a new email using the same recipients as a starting point">
+                      <button onClick={() => onResend(row)} className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-medium text-gray-300 bg-white/[0.04] hover:bg-white/[0.08] transition-colors" title="Open the email composer pre-filled with this message's subject, body, and recipients">
                         <Send className="w-3 h-3" /> Re-send
                       </button>
                       <button

@@ -33,16 +33,29 @@ function getFunctionBase(): string {
 type Channel = 'email' | 'whatsapp' | 'both'
 type ContentType = 'text' | 'html' | 'image' | 'video' | 'pdf' | 'link' | 'blog'
 
+export interface BroadcastPrefill {
+  name?: string
+  subject?: string
+  body?: string
+  channel?: Channel
+  contentType?: ContentType
+  attachmentUrl?: string
+  /** Recipients to pre-populate the ad-hoc table with. */
+  recipients?: string[]
+}
+
 interface Props {
   open: boolean
   /** Optional preset — 'email' arrives from the Email Notification tab, 'broadcast' from the Hub header. */
   initialMode?: 'broadcast' | 'email'
+  /** Optional pre-filled values (e.g. when the admin clicks Re-send on an existing email log). */
+  prefill?: BroadcastPrefill | null
   onClose: () => void
   showToast: (msg: string, type?: 'success' | 'error' | 'info' | 'warning') => void
   onSent?: () => void
 }
 
-export default function BroadcastComposerModal({ open, initialMode = 'broadcast', onClose, showToast, onSent }: Props) {
+export default function BroadcastComposerModal({ open, initialMode = 'broadcast', prefill = null, onClose, showToast, onSent }: Props) {
   const [name, setName] = useState('')
   const [channel, setChannel] = useState<Channel>(initialMode === 'email' ? 'email' : 'email')
   const [subject, setSubject] = useState('')
@@ -66,13 +79,25 @@ export default function BroadcastComposerModal({ open, initialMode = 'broadcast'
       setError(''); setSuccess(''); setSending(false)
       setChannel('email')
     } else {
-      // Both entry points (broadcast and email) currently default to the
-      // email channel; the admin can switch to WhatsApp/Both inside the
-      // modal. Keep this branch explicit so a future entry point that
-      // wants to default to WhatsApp can override it via initialMode.
-      setChannel('email')
+      // Seed from prefill when provided (Re-send flow); otherwise start with
+      // the default email channel and let the admin switch channels inside
+      // the modal.
+      setName(prefill?.name || '')
+      setSubject(prefill?.subject || '')
+      setBody(prefill?.body || '')
+      setContentType(prefill?.contentType || 'text')
+      setAttachmentUrl(prefill?.attachmentUrl || '')
+      setChannel(prefill?.channel || 'email')
+      if (prefill?.recipients && prefill.recipients.length > 0) {
+        setAudience('ad_hoc')
+        setAdHocRows(prefill.recipients.map(r => ({ name: '', email: r.includes('@') ? r : '', mobile: r.includes('@') ? '' : r })))
+      } else {
+        setAudience('all_leads')
+        setAdHocRows([{ name: '', email: '', mobile: '' }])
+      }
+      setError(''); setSuccess(''); setSending(false)
     }
-  }, [open, initialMode])
+  }, [open, initialMode, prefill])
 
   const isWhatsAppOnly = channel === 'whatsapp'
   const needsSubject = channel === 'email' || channel === 'both'
