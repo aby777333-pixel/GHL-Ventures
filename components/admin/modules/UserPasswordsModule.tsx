@@ -20,6 +20,14 @@
    The UI deliberately calls out that pre-existing self-set
    passwords cannot be revealed; only admin-issued ones are
    visible in plaintext for verification purposes.
+
+   `handleSetPassword` calls the `admin-password-reset` Netlify
+   function with `method='temp_password'` so the auth.users row
+   is patched immediately (the user can log in right after). The
+   plaintext is mirrored into `user_password_audit` so the UI list
+   keeps displaying it, and the function also populates the
+   canonical `admin_password_vault` for the Settings → Password
+   Vault view.
    ───────────────────────────────────────────────────────────── */
 
 import { useEffect, useMemo, useState } from 'react'
@@ -117,32 +125,77 @@ export default function UserPasswordsModule({ role, showToast }: Props) {
     )
   }, [users, search])
 
+  // The Netlify functions live on the *.netlify.app host. When the panel is
+  // opened from the custom domain (ghlindiaventures.com is a separate nginx
+  // host that 308→404s /.netlify/functions/*) we have to call the canonical
+  // host directly. CORS for admin-password-reset already whitelists both
+  // origins, so this is safe.
+  const NETLIFY_FUNCTIONS_HOST = 'https://ghl-india-ventures-2025.netlify.app'
+  const getFunctionBase = () => {
+    if (typeof window === 'undefined') return ''
+    const origin = window.location.origin
+    if (origin.includes('localhost')) return 'http://localhost:8888'
+    if (origin.endsWith('.netlify.app')) return origin
+    return NETLIFY_FUNCTIONS_HOST
+  }
+
   const handleSetPassword = async () => {
-    if (!editing || !newPwd.trim() || newPwd.length < 6) {
-      showToast('Password must be at least 6 characters', 'warning')
+    if (!editing || !newPwd.trim() || newPwd.length < 10) {
+      showToast('Password must be at least 10 characters', 'warning')
       return
     }
     setSaving(true)
     try {
-      // Best-effort: record the admin-issued password in the audit table so
-      // it is visible to other super-admins for verification. The actual auth
-      // password update requires a service-role key on the server side; we
-      // log the change here and ask ops to apply it via the admin console.
       const sb: any = supabase
-      const { data: { user: adminUser } } = await sb.auth.getUser()
-      const insert = await sb.from('user_password_audit').insert({
-        user_id: editing.id,
-        password_plain: newPwd,
-        set_by: adminUser?.id || null,
-      })
-      if (insert.error) {
-        showToast(`Failed to record password: ${insert.error.message}`, 'error')
-      } else {
-        showToast('Password recorded. Apply via Supabase Auth admin to make it active.', 'success')
-        setEditing(null)
-        setNewPwd('')
-        load()
+
+      // Need the admin's access token to authorise the Netlify function call.
+      const { data: { session } } = await sb.auth.getSession()
+      const accessToken = session?.access_token
+      if (!accessToken) {
+        showToast('Your admin session has expired. Please sign in again.', 'error')
+        return
       }
+
+      // 1) Patch auth.users via the admin-password-reset Netlify function
+      //    (uses the service-role key on the server). This is what actually
+      //    makes the password usable at login.
+      const resp = await fetch(`${getFunctionBase()}/.netlify/functions/admin-password-reset`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${accessToken}`,
+        },
+        body: JSON.stringify({
+          targetUserId: editing.id,
+          targetEmail: editing.email || undefined,
+          method: 'temp_password',
+          tempPassword: newPwd,
+          notes: 'Set via Admin → User Passwords module',
+        }),
+      })
+      const data = await resp.json().catch(() => ({} as any))
+      if (!resp.ok || !data?.success) {
+        const errMsg = data?.error || `Failed to update password (HTTP ${resp.status})`
+        showToast(`Could not update password: ${errMsg}`, 'error')
+        return
+      }
+
+      // 2) Mirror the plaintext into user_password_audit so the existing UI
+      //    list keeps showing the admin-issued password. The Netlify function
+      //    already wrote to admin_password_vault for the Settings vault view.
+      const { data: { user: adminUser } } = await sb.auth.getUser()
+      try {
+        await sb.from('user_password_audit').insert({
+          user_id: editing.id,
+          password_plain: newPwd,
+          set_by: adminUser?.id || null,
+        })
+      } catch { /* non-fatal — password is already active */ }
+
+      showToast('Password updated. The user can sign in now and will be prompted to change it on next login.', 'success')
+      setEditing(null)
+      setNewPwd('')
+      load()
     } catch (e: any) {
       showToast(`Error: ${e?.message || 'unknown'}`, 'error')
     } finally {
@@ -259,14 +312,14 @@ export default function UserPasswordsModule({ role, showToast }: Props) {
           <div onClick={e => e.stopPropagation()} className="w-full max-w-md mx-4 rounded-2xl bg-[#111118] border border-white/[0.06] p-5">
             <h3 className="text-base font-semibold text-white mb-1">Set password for {editing.full_name || editing.email}</h3>
             <p className="text-xs text-gray-500 mb-4">
-              The new password will be recorded for super-admin verification.
-              Apply it in Supabase Auth to make it active for the user.
+              Updates the user&apos;s Supabase auth password immediately. The user
+              will be prompted to change it on their next login.
             </p>
             <input
               type="text"
               value={newPwd}
               onChange={e => setNewPwd(e.target.value)}
-              placeholder="New password (min 6 chars)"
+              placeholder="New password (min 10 chars)"
               className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-brand-red/40 focus:ring-1 focus:ring-brand-red/20"
               autoFocus
             />
