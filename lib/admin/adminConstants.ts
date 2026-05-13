@@ -101,6 +101,7 @@ export const ADMIN_SIDEBAR_ITEMS: SidebarItem[] = [
     permission: 'view:assets',
     subItems: [
       { id: 'assets/documents', label: 'All Documents' },
+      { id: 'assets/templates', label: 'Templates' },
       { id: 'assets/tracking', label: 'Tracking' },
       { id: 'assets', label: 'General' },
     ],
@@ -297,6 +298,7 @@ export const ALL_ADMIN_TAB_PARAMS = [
   { tab: ['employees', 'holidays'] },
   { tab: ['assets'] },
   { tab: ['assets', 'documents'] },
+  { tab: ['assets', 'templates'] },
   { tab: ['assets', 'tracking'] },
   { tab: ['ai-ops'] },
   { tab: ['ai-ops', 'doc-analyzer'] },

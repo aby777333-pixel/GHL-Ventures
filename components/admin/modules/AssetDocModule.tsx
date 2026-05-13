@@ -32,14 +32,21 @@ interface AdminDocument {
   version: number
   tags: string[]
   fileUrl: string
+  isTemplate: boolean
+  accessLevel: string
+  placeholders: string[]
 }
 
 // ── Sub-tabs ─────────────────────────────────────────────────────
 // 2026-05-12: `tracking` added per the Super-Admin menu spec — surfaces
 // the document-tracking timeline that until now lived inside a modal.
+// 2026-05-13: `templates` added — auto-fetched blank PDF templates the
+// super-admin can populate dynamically. Source bucket is `ghl-templates`
+// (public), keyed off `documents.is_template = true`.
 const ASSET_TABS = [
   { id: 'assets', label: 'Asset Inventory', icon: Monitor },
   { id: 'documents', label: 'Documents', icon: FileText },
+  { id: 'templates', label: 'Templates', icon: FileText },
   { id: 'tracking', label: 'Tracking', icon: FileText },
 ] as const
 
@@ -75,6 +82,9 @@ export default function AssetDocModule({ subTab, navigate, showToast }: AssetDoc
       version: raw.version || 1,
       tags: Array.isArray(raw.tags) ? raw.tags : [],
       fileUrl: raw.file_url || '',
+      isTemplate: raw.is_template === true,
+      accessLevel: raw.access_level || 'internal',
+      placeholders: Array.isArray(raw?.metadata?.placeholders) ? raw.metadata.placeholders : [],
     }))
     setDocuments(mapped)
     setLoading(false)
@@ -151,7 +161,10 @@ export default function AssetDocModule({ subTab, navigate, showToast }: AssetDoc
 
       <div className="admin-tab-switch">
         {activeTab === 'assets' && <AssetInventoryTab assets={assets} showToast={showToast} onRefresh={loadData} />}
-        {activeTab === 'documents' && <DocumentsTab documents={documents} showToast={showToast} />}
+        {/* 2026-05-13: Documents tab hides templates — those live on the dedicated
+            Templates sub-tab. Keeps the existing library view free of clutter. */}
+        {activeTab === 'documents' && <DocumentsTab documents={documents.filter(d => !d.isTemplate)} showToast={showToast} />}
+        {activeTab === 'templates' && <TemplatesTab documents={documents.filter(d => d.isTemplate)} loading={loading} showToast={showToast} />}
         {/* 2026-05-12: Document Tracking sub-tab — pulls the
             investment-doc-tracking timeline that the investor sees
             on their portal, scoped to admin view-only here. View
@@ -664,6 +677,173 @@ function DocumentsTab({ documents, showToast }: { documents: AdminDocument[]; sh
           </div>
         )}
       </div>
+    </div>
+  )
+}
+
+// ── Templates Tab ───────────────────────────────────────────────
+// Auto-fetched from the public `ghl-templates` Supabase bucket via the
+// documents table (filtered on is_template = true). Templates are
+// intentionally blank — no logos, names, numbers or prefilled details —
+// so the super-admin can populate the {{PLACEHOLDER}} tokens dynamically
+// before issuing a document to an investor.
+function TemplatesTab({
+  documents,
+  loading,
+  showToast,
+}: {
+  documents: AdminDocument[]
+  loading: boolean
+  showToast: (msg: string, type?: 'success' | 'error' | 'info' | 'warning') => void
+}) {
+  const [search, setSearch] = useState('')
+  const [copiedId, setCopiedId] = useState<string | null>(null)
+
+  const filtered = useMemo(() => {
+    const q = search.trim().toLowerCase()
+    if (!q) return documents
+    return documents.filter(d =>
+      d.name.toLowerCase().includes(q) ||
+      d.category.toLowerCase().includes(q) ||
+      d.tags.some(t => t.toLowerCase().includes(q)),
+    )
+  }, [search, documents])
+
+  const handleCopyUrl = async (doc: AdminDocument) => {
+    if (!doc.fileUrl) return
+    try {
+      await navigator.clipboard.writeText(doc.fileUrl)
+      setCopiedId(doc.id)
+      showToast('Template URL copied — paste into your generator or share securely.', 'success')
+      setTimeout(() => setCopiedId(curr => (curr === doc.id ? null : curr)), 2000)
+    } catch {
+      showToast('Copy failed — please copy the URL manually.', 'warning')
+    }
+  }
+
+  return (
+    <div className="space-y-4">
+      <AdminGlass padding="p-4">
+        <div className="flex items-start gap-3">
+          <FileText className="w-5 h-5 text-amber-400 mt-0.5 flex-shrink-0" />
+          <div className="text-xs text-gray-300 space-y-1.5">
+            <p>
+              <span className="font-semibold text-white">Blank Templates Repository.</span>
+              {' '}Auto-fetched from the public <code className="text-amber-300">ghl-templates</code> bucket on every load.
+              Templates contain placeholder tokens (<code className="text-amber-300">{'{{INVESTOR_NAME}}'}</code>,{' '}
+              <code className="text-amber-300">{'{{INVESTMENT_AMOUNT}}'}</code>, etc.) and intentionally carry no logos,
+              names, numbers or prefilled details — the Super Admin populates them on demand.
+            </p>
+          </div>
+        </div>
+      </AdminGlass>
+
+      <AdminGlass padding="p-4">
+        <div className="flex items-center gap-2 bg-white/[0.04] border border-white/[0.06] rounded-xl px-3 py-2">
+          <Search className="w-4 h-4 text-gray-500" />
+          <input
+            type="text"
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            placeholder="Search by template name, category or tag…"
+            className="flex-1 bg-transparent text-sm text-white placeholder-gray-600 outline-none"
+          />
+        </div>
+      </AdminGlass>
+
+      {loading ? (
+        <AdminGlass padding="p-10">
+          <div className="text-center text-sm text-gray-500">Loading templates…</div>
+        </AdminGlass>
+      ) : filtered.length === 0 ? (
+        <AdminGlass>
+          <AdminEmptyState
+            icon={FileText}
+            title="No templates"
+            description="Run the seed script (scripts/seed-admin-document-templates.mjs) or upload templates with is_template=true."
+          />
+        </AdminGlass>
+      ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+          {filtered.map(doc => (
+            <AdminGlass key={doc.id} padding="p-4" className="group">
+              <div className="flex items-start gap-3">
+                <div className="p-2.5 rounded-xl flex-shrink-0 text-amber-400 bg-amber-500/10">
+                  <FileText className="w-5 h-5" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-white truncate group-hover:text-brand-red transition-colors">{doc.name}</p>
+                  <p className="text-[11px] text-gray-500 mt-0.5">
+                    {doc.type} • {doc.size} • v{doc.version}
+                  </p>
+                  <div className="flex flex-wrap gap-1 mt-2">
+                    <AdminBadge label={doc.category} variant="purple" size="sm" />
+                    <AdminBadge label={doc.accessLevel} variant={doc.accessLevel === 'public' ? 'success' : 'neutral'} size="sm" />
+                    {doc.placeholders.length > 0 && (
+                      <span className="text-[9px] px-1.5 py-0.5 rounded bg-white/[0.04] text-gray-400 border border-white/[0.06]">
+                        {doc.placeholders.length} fields
+                      </span>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {doc.placeholders.length > 0 && (
+                <div className="mt-3 pt-3 border-t border-white/[0.04]">
+                  <p className="text-[10px] uppercase tracking-wide text-gray-500 mb-1.5">Placeholders</p>
+                  <div className="flex flex-wrap gap-1">
+                    {doc.placeholders.slice(0, 8).map(p => (
+                      <code key={p} className="text-[10px] px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-300 border border-amber-500/20">
+                        {p}
+                      </code>
+                    ))}
+                    {doc.placeholders.length > 8 && (
+                      <span className="text-[10px] text-gray-500">+{doc.placeholders.length - 8} more</span>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              <div className="flex gap-2 mt-3 pt-3 border-t border-white/[0.04]">
+                <button
+                  onClick={() => {
+                    if (doc.fileUrl) window.open(doc.fileUrl, '_blank', 'noopener,noreferrer')
+                    else showToast('Template URL is missing — re-run the seed script.', 'error')
+                  }}
+                  className="flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-[11px] font-medium text-gray-400 bg-white/[0.03] hover:bg-white/[0.06] transition-colors"
+                  title="Open the blank template"
+                >
+                  <Eye className="w-3 h-3" /> View
+                </button>
+                <button
+                  onClick={() => {
+                    if (!doc.fileUrl) { showToast('Template URL is missing — re-run the seed script.', 'error'); return }
+                    const link = document.createElement('a')
+                    link.href = doc.fileUrl
+                    link.download = doc.name
+                    link.target = '_blank'
+                    document.body.appendChild(link)
+                    link.click()
+                    document.body.removeChild(link)
+                  }}
+                  className="flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-[11px] font-medium text-gray-400 bg-white/[0.03] hover:bg-white/[0.06] transition-colors"
+                  title="Download a copy of the blank template"
+                >
+                  <Download className="w-3 h-3" /> Download
+                </button>
+                <button
+                  onClick={() => handleCopyUrl(doc)}
+                  className="flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-[11px] font-medium text-gray-400 bg-white/[0.03] hover:bg-white/[0.06] transition-colors"
+                  title="Copy the public auto-fetch URL"
+                >
+                  {copiedId === doc.id ? <CheckCircle2 className="w-3 h-3 text-emerald-400" /> : <Tag className="w-3 h-3" />}
+                  {copiedId === doc.id ? 'Copied' : 'Copy URL'}
+                </button>
+              </div>
+            </AdminGlass>
+          ))}
+        </div>
+      )}
     </div>
   )
 }
