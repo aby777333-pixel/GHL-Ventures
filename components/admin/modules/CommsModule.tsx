@@ -23,7 +23,9 @@ import {
   type InternalMessage,
 } from '@/lib/supabase/internalChatService'
 import { fetchAllMessages } from '@/lib/supabase/adminDataService'
+import { supabase as supabaseClient, isSupabaseConfigured } from '@/lib/supabase/client'
 import BroadcastComposerModal from '../shared/BroadcastComposerModal'
+import AdminModal, { ModalButton } from '../shared/AdminModal'
 
 // ── Mock Data ────────────────────────────────────────────────────
 interface Broadcast {
@@ -196,16 +198,7 @@ export default function CommsModule({ subTab, navigate, showToast, user, role }:
             hint="Backed by the `contact_submissions` table. Each row supports View (open the message in a modal), Edit (assign / mark replied), and Delete."
           />
         )}
-        {activeTab === 'email' && (
-          <AdminCRUDPlaceholder
-            title="Email Notifications"
-            description="Templates, triggers, and delivery logs for transactional and marketing emails."
-            icon={Bell}
-            showToast={showToast}
-            onCreate={() => openComposer('email')}
-            hint="Templates live in `email_templates`; deliveries in `email_logs`. Use the New button above to compose an email broadcast (preselects the Email channel in the composer)."
-          />
-        )}
+        {activeTab === 'email' && <EmailNotificationsTab showToast={showToast} onCreate={() => openComposer('email')} />}
       </div>
 
       <BroadcastComposerModal
@@ -511,6 +504,241 @@ function BroadcastTab({ showToast }: { showToast: (msg: string, type?: 'success'
           </AdminGlass>
         )
       })}
+    </div>
+  )
+}
+
+// ── Email Notifications Tab ─────────────────────────────────────
+// 2026-05-13: replaces the AdminCRUDPlaceholder stub. Reads
+// real rows from `public.email_logs` (already populated by the
+// existing broadcast-send / send-email Netlify functions), and
+// exposes View / Delete actions. The + New button hands off to
+// the BroadcastComposerModal with the Email channel preselected.
+interface EmailLogRow {
+  id: string
+  subject: string | null
+  body: string | null
+  recipients: string[] | null
+  status: string | null
+  sent_count: number | null
+  failed_count: number | null
+  error_message: string | null
+  scheduled_for: string | null
+  template_id: string | null
+  attachment_names: string[] | null
+  attachment_urls: string[] | null
+  created_at: string | null
+}
+
+function EmailNotificationsTab({ showToast, onCreate }: { showToast: (msg: string, type?: 'success' | 'error' | 'info' | 'warning') => void; onCreate: () => void }) {
+  const [rows, setRows] = useState<EmailLogRow[]>([])
+  const [loading, setLoading] = useState(true)
+  const [search, setSearch] = useState('')
+  const [viewing, setViewing] = useState<EmailLogRow | null>(null)
+  const [deleting, setDeleting] = useState<string | null>(null)
+
+  const load = useCallback(async () => {
+    setLoading(true)
+    if (!isSupabaseConfigured()) { setRows([]); setLoading(false); return }
+    try {
+      const sb: any = supabaseClient
+      const { data, error } = await sb
+        .from('email_logs')
+        .select('id,subject,body,recipients,status,sent_count,failed_count,error_message,scheduled_for,template_id,attachment_names,attachment_urls,created_at')
+        .order('created_at', { ascending: false })
+        .limit(500)
+      if (error) {
+        console.warn('[CommsModule/email] load error:', error.message)
+        showToast(`Failed to load email logs: ${error.message}`, 'error')
+        setRows([])
+      } else {
+        setRows((data || []) as EmailLogRow[])
+      }
+    } catch (e: any) {
+      showToast(`Failed to load email logs: ${e?.message || 'unknown'}`, 'error')
+      setRows([])
+    } finally {
+      setLoading(false)
+    }
+  }, [showToast])
+
+  useEffect(() => { load() }, [load])
+
+  const filtered = useMemo(() => {
+    const q = search.trim().toLowerCase()
+    if (!q) return rows
+    return rows.filter(r =>
+      (r.subject || '').toLowerCase().includes(q) ||
+      (r.status || '').toLowerCase().includes(q) ||
+      (r.recipients || []).some(rec => (rec || '').toLowerCase().includes(q)),
+    )
+  }, [rows, search])
+
+  const handleDelete = async (row: EmailLogRow) => {
+    if (!window.confirm(`Delete email log "${row.subject || row.id}"? This removes only the audit row; emails already sent are not recalled.`)) return
+    setDeleting(row.id)
+    try {
+      const sb: any = supabaseClient
+      const { error } = await sb.from('email_logs').delete().eq('id', row.id)
+      if (error) { showToast(`Delete failed: ${error.message}`, 'error'); return }
+      setRows(prev => prev.filter(r => r.id !== row.id))
+      showToast('Email log deleted.', 'success')
+    } catch (e: any) {
+      showToast(`Delete failed: ${e?.message || 'unknown'}`, 'error')
+    } finally {
+      setDeleting(null)
+    }
+  }
+
+  const statusVariant = (s: string | null): 'success' | 'warning' | 'error' | 'neutral' | 'info' => {
+    const k = (s || '').toLowerCase()
+    if (k === 'sent' || k === 'delivered') return 'success'
+    if (k === 'partial') return 'warning'
+    if (k === 'failed' || k === 'error') return 'error'
+    if (k === 'scheduled' || k === 'queued') return 'info'
+    return 'neutral'
+  }
+
+  return (
+    <div className="space-y-4">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <div>
+          <h2 className="text-lg font-semibold text-white">Email Notifications</h2>
+          <p className="text-xs text-gray-500 mt-0.5">Templates, triggers, and delivery logs for transactional and marketing emails.</p>
+        </div>
+        <button onClick={onCreate} className="flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-semibold text-white bg-brand-red/20 border border-brand-red/30 hover:bg-brand-red/30 transition-colors self-start">
+          <Plus className="w-4 h-4" /> New
+        </button>
+      </div>
+
+      <AdminGlass padding="p-3">
+        <div className="flex items-center gap-2 bg-white/[0.04] border border-white/[0.06] rounded-xl px-3 py-2">
+          <Search className="w-4 h-4 text-gray-500" />
+          <input
+            type="text"
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            placeholder="Search by subject, recipient, or status…"
+            className="flex-1 bg-transparent text-sm text-white placeholder-gray-600 outline-none"
+          />
+          <button onClick={load} className="text-[11px] text-gray-400 hover:text-white inline-flex items-center gap-1" title="Refresh">
+            <RefreshCw className="w-3 h-3" /> Refresh
+          </button>
+        </div>
+      </AdminGlass>
+
+      {loading ? (
+        <AdminGlass padding="p-10"><div className="text-center text-sm text-gray-500">Loading email logs…</div></AdminGlass>
+      ) : filtered.length === 0 ? (
+        <AdminEmptyState
+          title="Email Notifications — no records yet"
+          description="Templates live in `email_logs`; deliveries are logged automatically by broadcast-send / send-email. Use the New button above to compose an email broadcast (preselects the Email channel in the composer)."
+        />
+      ) : (
+        <div className="space-y-2">
+          {filtered.map(row => {
+            const recipients = row.recipients || []
+            const sent = Number(row.sent_count || 0)
+            const failed = Number(row.failed_count || 0)
+            const total = recipients.length || (sent + failed)
+            return (
+              <AdminGlass key={row.id} padding="p-4">
+                <div className="flex items-start gap-3">
+                  <div className="p-2.5 rounded-xl flex-shrink-0 bg-blue-500/15 text-blue-400">
+                    <Mail className="w-4 h-4" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <p className="text-sm font-medium text-white truncate">{row.subject || '(no subject)'}</p>
+                        <div className="flex flex-wrap items-center gap-3 mt-1 text-[11px] text-gray-500">
+                          <span>{total} recipient{total !== 1 ? 's' : ''}</span>
+                          {sent > 0 && <span className="text-emerald-300">{sent} sent</span>}
+                          {failed > 0 && <span className="text-red-300">{failed} failed</span>}
+                          {row.template_id && <span>template: <code className="text-amber-300">{row.template_id}</code></span>}
+                          {row.scheduled_for && <span>scheduled {formatDate(row.scheduled_for)}</span>}
+                          {row.created_at && <span>{formatTimeAgo(row.created_at)}</span>}
+                        </div>
+                        {row.error_message && (
+                          <p className="mt-1.5 text-[11px] text-red-300 line-clamp-1" title={row.error_message}>{row.error_message}</p>
+                        )}
+                      </div>
+                      <AdminBadge label={row.status || 'unknown'} variant={statusVariant(row.status)} dot />
+                    </div>
+                    <div className="flex gap-2 mt-3 pt-3 border-t border-white/[0.04]">
+                      <button onClick={() => setViewing(row)} className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-medium text-gray-300 bg-white/[0.04] hover:bg-white/[0.08] transition-colors">
+                        <Eye className="w-3 h-3" /> View
+                      </button>
+                      <button onClick={onCreate} className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-medium text-gray-300 bg-white/[0.04] hover:bg-white/[0.08] transition-colors" title="Compose a new email using the same recipients as a starting point">
+                        <Send className="w-3 h-3" /> Re-send
+                      </button>
+                      <button
+                        onClick={() => handleDelete(row)}
+                        disabled={deleting === row.id}
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-medium text-red-300 bg-red-500/10 hover:bg-red-500/20 transition-colors disabled:opacity-50"
+                      >
+                        <Trash2 className="w-3 h-3" /> {deleting === row.id ? 'Deleting…' : 'Delete'}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </AdminGlass>
+            )
+          })}
+        </div>
+      )}
+
+      {/* View modal */}
+      <AdminModal
+        isOpen={viewing !== null}
+        onClose={() => setViewing(null)}
+        title={viewing?.subject || 'Email log'}
+        subtitle={viewing?.created_at ? `Logged ${formatDate(viewing.created_at)}` : undefined}
+        maxWidth="max-w-2xl"
+        footer={<ModalButton variant="primary" onClick={() => setViewing(null)}>Close</ModalButton>}
+      >
+        {viewing && (
+          <div className="space-y-3 text-sm">
+            <KV label="Status">
+              <AdminBadge label={viewing.status || 'unknown'} variant={statusVariant(viewing.status)} dot />
+            </KV>
+            <KV label="Recipients">
+              <div className="text-xs text-gray-300 break-words">{(viewing.recipients || []).join(', ') || '—'}</div>
+            </KV>
+            <KV label="Counts">
+              <div className="text-xs text-gray-300">{viewing.sent_count || 0} sent · {viewing.failed_count || 0} failed</div>
+            </KV>
+            {viewing.template_id && <KV label="Template"><code className="text-xs text-amber-300">{viewing.template_id}</code></KV>}
+            {viewing.scheduled_for && <KV label="Scheduled"><span className="text-xs text-gray-300">{formatDate(viewing.scheduled_for)}</span></KV>}
+            {viewing.attachment_urls && viewing.attachment_urls.length > 0 && (
+              <KV label="Attachments">
+                <ul className="text-xs text-gray-300 space-y-1">
+                  {viewing.attachment_urls.map((url, i) => (
+                    <li key={i}><a href={url} target="_blank" rel="noopener noreferrer" className="text-brand-red hover:underline">{(viewing.attachment_names && viewing.attachment_names[i]) || url}</a></li>
+                  ))}
+                </ul>
+              </KV>
+            )}
+            {viewing.error_message && (
+              <KV label="Error">
+                <div className="text-xs text-red-300 whitespace-pre-wrap break-words">{viewing.error_message}</div>
+              </KV>
+            )}
+            <KV label="Body">
+              <pre className="text-[11px] text-gray-300 whitespace-pre-wrap break-words bg-white/[0.03] border border-white/[0.06] rounded-lg p-3 max-h-[40vh] overflow-y-auto">{viewing.body || '(empty)'}</pre>
+            </KV>
+          </div>
+        )}
+      </AdminModal>
+    </div>
+  )
+}
+
+function KV({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div className="grid grid-cols-1 sm:grid-cols-[110px_1fr] gap-2">
+      <div className="text-[11px] uppercase tracking-wider text-gray-500">{label}</div>
+      <div>{children}</div>
     </div>
   )
 }
