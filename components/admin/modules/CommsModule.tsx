@@ -919,71 +919,307 @@ function InternalChatTab({ showToast, user, role }: { showToast: (msg: string, t
 }
 
 // ── Alert Center Tab ────────────────────────────────────────────
+// 2026-05-13: was rendering a hardcoded empty SYSTEM_ALERTS array, so
+// notifications already visible in the top-bar dropdown (e.g. New KYC
+// Submission) never appeared here. Wire to the live `notifications`
+// table (same source as AdminTopBar) and add a lifecycle status
+// (open / pending / action_taken / closed) stored in metadata so no
+// schema migration is needed.
+
+type AlertLifecycleStatus = 'open' | 'pending' | 'action_taken' | 'closed'
+
+interface AlertRow {
+  id: string
+  type: string | null
+  title: string | null
+  message: string | null
+  link: string | null
+  is_read: boolean | null
+  read_at: string | null
+  module: string | null
+  metadata: any
+  created_at: string | null
+}
+
+function getAlertStatus(row: AlertRow): AlertLifecycleStatus {
+  const fromMeta = row.metadata && typeof row.metadata === 'object' ? row.metadata.alert_status : undefined
+  if (fromMeta === 'pending' || fromMeta === 'action_taken' || fromMeta === 'closed' || fromMeta === 'open') return fromMeta
+  return 'open'
+}
+
+function deriveSeverity(row: AlertRow): 'critical' | 'high' | 'medium' | 'low' {
+  const fromMeta = row.metadata?.severity
+  if (fromMeta === 'critical' || fromMeta === 'high' || fromMeta === 'medium' || fromMeta === 'low') return fromMeta
+  const type = (row.type || '').toLowerCase()
+  if (type.includes('security') || type.includes('breach')) return 'critical'
+  if (type.includes('error') || type.includes('failure') || type.includes('alert')) return 'high'
+  if (type.includes('warning') || type.includes('reminder')) return 'medium'
+  return 'low'
+}
+
 function AlertCenterTab({ showToast }: { showToast: (msg: string, type?: 'success' | 'error' | 'info' | 'warning') => void }) {
+  const [rows, setRows] = useState<AlertRow[]>([])
+  const [loading, setLoading] = useState(true)
+  const [filter, setFilter] = useState<'all' | AlertLifecycleStatus>('all')
+  const [busyId, setBusyId] = useState<string | null>(null)
+
+  const load = useCallback(async () => {
+    setLoading(true)
+    if (!isSupabaseConfigured()) { setRows([]); setLoading(false); return }
+    try {
+      const sb: any = supabaseClient
+      const { data, error } = await sb
+        .from('notifications')
+        .select('id,type,title,message,link,is_read,read_at,module,metadata,created_at')
+        .order('created_at', { ascending: false })
+        .limit(500)
+      if (error) {
+        console.warn('[CommsModule/alerts] load error:', error.message)
+        showToast(`Failed to load alerts: ${error.message}`, 'error')
+        setRows([])
+      } else {
+        setRows((data || []) as AlertRow[])
+      }
+    } catch (e: any) {
+      showToast(`Failed to load alerts: ${e?.message || 'unknown'}`, 'error')
+      setRows([])
+    } finally {
+      setLoading(false)
+    }
+  }, [showToast])
+
+  useEffect(() => { load() }, [load])
+
+  const counts = useMemo(() => {
+    const c = { all: rows.length, open: 0, pending: 0, action_taken: 0, closed: 0 } as Record<string, number>
+    for (const r of rows) c[getAlertStatus(r)]++
+    return c
+  }, [rows])
+
+  const filtered = useMemo(() => {
+    if (filter === 'all') return rows
+    return rows.filter(r => getAlertStatus(r) === filter)
+  }, [rows, filter])
+
+  const patchRow = async (row: AlertRow, patch: Partial<{ is_read: boolean; status: AlertLifecycleStatus; note?: string }>) => {
+    setBusyId(row.id)
+    try {
+      const sb: any = supabaseClient
+      const updates: any = {}
+      if (patch.is_read !== undefined) {
+        updates.is_read = patch.is_read
+        updates.read_at = patch.is_read ? new Date().toISOString() : null
+      }
+      if (patch.status) {
+        const nextMeta = { ...(row.metadata && typeof row.metadata === 'object' ? row.metadata : {}), alert_status: patch.status, status_changed_at: new Date().toISOString() }
+        updates.metadata = nextMeta
+      }
+      const { error } = await sb.from('notifications').update(updates).eq('id', row.id)
+      if (error) { showToast(`Update failed: ${error.message}`, 'error'); return }
+      setRows(prev => prev.map(r => r.id === row.id
+        ? { ...r,
+            is_read: updates.is_read !== undefined ? updates.is_read : r.is_read,
+            read_at: updates.read_at !== undefined ? updates.read_at : r.read_at,
+            metadata: updates.metadata ? updates.metadata : r.metadata,
+          }
+        : r,
+      ))
+      const verb = patch.status === 'open' ? 'Re-opened'
+                 : patch.status === 'pending' ? 'Marked Pending'
+                 : patch.status === 'action_taken' ? 'Marked Action Taken'
+                 : patch.status === 'closed' ? 'Closed'
+                 : patch.is_read ? 'Marked Read'
+                 : 'Updated'
+      showToast(`${verb}.`, 'success')
+    } catch (e: any) {
+      showToast(`Update failed: ${e?.message || 'unknown'}`, 'error')
+    } finally {
+      setBusyId(null)
+    }
+  }
+
+  const handleDelete = async (row: AlertRow) => {
+    if (!window.confirm(`Delete alert "${row.title || row.id}"? This cannot be undone.`)) return
+    setBusyId(row.id)
+    try {
+      const sb: any = supabaseClient
+      const { error } = await sb.from('notifications').delete().eq('id', row.id)
+      if (error) { showToast(`Delete failed: ${error.message}`, 'error'); return }
+      setRows(prev => prev.filter(r => r.id !== row.id))
+      showToast('Alert deleted.', 'success')
+    } catch (e: any) {
+      showToast(`Delete failed: ${e?.message || 'unknown'}`, 'error')
+    } finally {
+      setBusyId(null)
+    }
+  }
+
   const severityIcons: Record<string, React.ComponentType<{ className?: string }>> = {
     critical: AlertTriangle,
     high: AlertTriangle,
     medium: Bell,
     low: CheckCircle2,
   }
-
   const severityColors: Record<string, string> = {
     critical: 'text-red-400 bg-red-500/15 border-red-500/20',
     high: 'text-amber-400 bg-amber-500/15 border-amber-500/20',
     medium: 'text-blue-400 bg-blue-500/15 border-blue-500/20',
     low: 'text-gray-400 bg-gray-500/15 border-gray-500/20',
   }
+  const statusVariant = (s: AlertLifecycleStatus): 'success' | 'warning' | 'error' | 'neutral' | 'info' => (
+    s === 'open' ? 'info'
+    : s === 'pending' ? 'warning'
+    : s === 'action_taken' ? 'success'
+    : 'neutral'
+  )
+  const statusLabel = (s: AlertLifecycleStatus) => (
+    s === 'action_taken' ? 'action taken' : s
+  )
 
-  const typeColors: Record<string, string> = {
-    system: 'info',
-    compliance: 'warning',
-    finance: 'success',
-    security: 'error',
-  }
-
-  if (SYSTEM_ALERTS.length === 0) {
-    return <AdminEmptyState title="No alerts" description="System alerts, compliance warnings, and security notifications will appear here." />
-  }
+  const filterChips: { id: 'all' | AlertLifecycleStatus; label: string }[] = [
+    { id: 'all', label: `All (${counts.all || 0})` },
+    { id: 'open', label: `Open (${counts.open || 0})` },
+    { id: 'pending', label: `Pending (${counts.pending || 0})` },
+    { id: 'action_taken', label: `Action Taken (${counts.action_taken || 0})` },
+    { id: 'closed', label: `Closed (${counts.closed || 0})` },
+  ]
 
   return (
-    <div className="space-y-3">
-      {SYSTEM_ALERTS.sort((a, b) => {
-        const order = { critical: 0, high: 1, medium: 2, low: 3 }
-        return (order[a.severity] || 4) - (order[b.severity] || 4)
-      }).map(alert => {
-        const Icon = severityIcons[alert.severity] || Bell
-        const colorClass = severityColors[alert.severity] || ''
-        return (
-          <AdminGlass key={alert.id} padding="p-4" className={!alert.acknowledged ? 'border-l-2 border-l-brand-red' : ''}>
-            <div className="flex items-start gap-3">
-              <div className={`p-2 rounded-xl border flex-shrink-0 ${colorClass}`}>
-                <Icon className="w-4 h-4" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="flex items-start justify-between gap-3">
-                  <div>
-                    <div className="flex items-center gap-2 mb-1">
-                      <p className="text-sm font-medium text-white">{alert.title}</p>
-                      <AdminBadge label={alert.type} variant={typeColors[alert.type] as 'info' | 'warning' | 'success' | 'error'} />
-                      <AdminBadge label={alert.severity} variant={alert.severity === 'critical' ? 'error' : alert.severity === 'high' ? 'warning' : alert.severity === 'medium' ? 'info' : 'neutral'} />
-                    </div>
-                    <p className="text-xs text-gray-400">{alert.message}</p>
-                    <p className="text-[10px] text-gray-600 mt-1">{formatTimeAgo(alert.timestamp)}</p>
+    <div className="space-y-4">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <div>
+          <h2 className="text-lg font-semibold text-white">Alert Center</h2>
+          <p className="text-xs text-gray-500 mt-0.5">System alerts, compliance warnings, KYC submissions, and security notifications.</p>
+        </div>
+        <button onClick={load} className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] text-gray-400 bg-white/[0.04] hover:bg-white/[0.08] transition-colors self-start">
+          <RefreshCw className="w-3 h-3" /> Refresh
+        </button>
+      </div>
+
+      {/* Filter chips */}
+      <div className="flex flex-wrap gap-2">
+        {filterChips.map(chip => (
+          <button
+            key={chip.id}
+            onClick={() => setFilter(chip.id)}
+            className={`px-3 py-1.5 rounded-lg text-[11px] font-medium border transition-colors ${
+              filter === chip.id
+                ? 'bg-brand-red/20 text-white border-brand-red/30'
+                : 'bg-white/[0.03] text-gray-500 border-white/[0.06] hover:bg-white/[0.06] hover:text-gray-300'
+            }`}
+          >
+            {chip.label}
+          </button>
+        ))}
+      </div>
+
+      {loading ? (
+        <AdminGlass padding="p-10"><div className="text-center text-sm text-gray-500">Loading alerts…</div></AdminGlass>
+      ) : filtered.length === 0 ? (
+        <AdminEmptyState
+          title={filter === 'all' ? 'No alerts' : `No ${filter.replace('_', ' ')} alerts`}
+          description={filter === 'all'
+            ? 'System alerts, compliance warnings, and security notifications will appear here.'
+            : 'Try a different filter to see other alerts.'}
+        />
+      ) : (
+        <div className="space-y-2">
+          {filtered.map(row => {
+            const severity = deriveSeverity(row)
+            const status = getAlertStatus(row)
+            const Icon = severityIcons[severity] || Bell
+            const colorClass = severityColors[severity] || ''
+            const unread = !row.is_read
+            const isBusy = busyId === row.id
+            return (
+              <AdminGlass key={row.id} padding="p-4" className={unread ? 'border-l-2 border-l-brand-red' : ''}>
+                <div className="flex items-start gap-3">
+                  <div className={`p-2 rounded-xl border flex-shrink-0 ${colorClass}`}>
+                    <Icon className="w-4 h-4" />
                   </div>
-                  {!alert.acknowledged && (
-                    <button
-                      onClick={() => showToast(`Alert "${alert.title}" acknowledged`, 'success')}
-                      className="px-3 py-1 rounded-lg text-[11px] font-medium text-brand-red bg-brand-red/10 border border-brand-red/20 hover:bg-brand-red/20 transition-colors flex-shrink-0"
-                    >
-                      Acknowledge
-                    </button>
-                  )}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <div className="flex flex-wrap items-center gap-2 mb-1">
+                          <p className="text-sm font-medium text-white truncate">{row.title || '(untitled)'}</p>
+                          {row.type && <AdminBadge label={row.type} variant="info" size="sm" />}
+                          <AdminBadge label={severity} variant={severity === 'critical' ? 'error' : severity === 'high' ? 'warning' : severity === 'medium' ? 'info' : 'neutral'} size="sm" />
+                          <AdminBadge label={statusLabel(status)} variant={statusVariant(status)} size="sm" dot />
+                          {row.is_read && <span className="text-[10px] text-gray-500">read</span>}
+                        </div>
+                        <p className="text-xs text-gray-400 whitespace-pre-wrap break-words">{row.message || ''}</p>
+                        <p className="text-[10px] text-gray-600 mt-1">
+                          {row.module && <span className="mr-2">{row.module}</span>}
+                          {row.created_at && <span>{formatTimeAgo(row.created_at)}</span>}
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Actions */}
+                    <div className="flex flex-wrap gap-2 mt-3 pt-3 border-t border-white/[0.04]">
+                      {unread && (
+                        <ActionBtn onClick={() => patchRow(row, { is_read: true })} disabled={isBusy}>
+                          <Eye className="w-3 h-3" /> Mark Read
+                        </ActionBtn>
+                      )}
+                      {status !== 'open' && (
+                        <ActionBtn onClick={() => patchRow(row, { status: 'open' })} disabled={isBusy}>
+                          <Inbox className="w-3 h-3" /> Re-open
+                        </ActionBtn>
+                      )}
+                      {status !== 'pending' && status !== 'closed' && (
+                        <ActionBtn onClick={() => patchRow(row, { status: 'pending' })} disabled={isBusy} accent="amber">
+                          <Clock className="w-3 h-3" /> Pending
+                        </ActionBtn>
+                      )}
+                      {status !== 'action_taken' && status !== 'closed' && (
+                        <ActionBtn onClick={() => patchRow(row, { status: 'action_taken', is_read: true })} disabled={isBusy} accent="emerald">
+                          <CheckCircle2 className="w-3 h-3" /> Action Taken
+                        </ActionBtn>
+                      )}
+                      {status !== 'closed' && (
+                        <ActionBtn onClick={() => patchRow(row, { status: 'closed', is_read: true })} disabled={isBusy}>
+                          <Archive className="w-3 h-3" /> Close
+                        </ActionBtn>
+                      )}
+                      {row.link && (
+                        <a href={row.link.startsWith('http') ? row.link : (row.link.startsWith('/') ? row.link : `/${row.link}`)} target={row.link.startsWith('http') ? '_blank' : undefined} rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-medium text-brand-red bg-brand-red/10 hover:bg-brand-red/20 transition-colors">
+                          <Send className="w-3 h-3" /> Open
+                        </a>
+                      )}
+                      <button
+                        onClick={() => handleDelete(row)}
+                        disabled={isBusy}
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-medium text-red-300 bg-red-500/10 hover:bg-red-500/20 transition-colors disabled:opacity-50"
+                      >
+                        <Trash2 className="w-3 h-3" /> Delete
+                      </button>
+                    </div>
+                  </div>
                 </div>
-              </div>
-            </div>
-          </AdminGlass>
-        )
-      })}
+              </AdminGlass>
+            )
+          })}
+        </div>
+      )}
     </div>
+  )
+}
+
+function ActionBtn({ children, onClick, disabled, accent = 'neutral' }: { children: React.ReactNode; onClick: () => void; disabled?: boolean; accent?: 'neutral' | 'amber' | 'emerald' }) {
+  const tone = accent === 'amber'
+    ? 'text-amber-200 bg-amber-500/10 hover:bg-amber-500/20'
+    : accent === 'emerald'
+      ? 'text-emerald-200 bg-emerald-500/10 hover:bg-emerald-500/20'
+      : 'text-gray-300 bg-white/[0.04] hover:bg-white/[0.08]'
+  return (
+    <button
+      onClick={onClick}
+      disabled={disabled}
+      className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-medium transition-colors disabled:opacity-50 ${tone}`}
+    >
+      {children}
+    </button>
   )
 }
