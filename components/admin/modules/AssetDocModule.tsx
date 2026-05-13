@@ -17,7 +17,7 @@ import AdminCRUDPlaceholder from '../shared/AdminCRUDPlaceholder'
 import { fetchAssets, fetchDocuments, insertRow, deleteAssetSafe } from '@/lib/supabase/adminDataService'
 import { formatINR, formatDate } from '@/lib/admin/adminHooks'
 import type { Asset, AssetCategory, AssetStatus } from '@/lib/admin/adminTypes'
-import { saveBlobAs } from '@/lib/supabase/storageService'
+import { saveBlobAs, getDownloadUrl } from '@/lib/supabase/storageService'
 import UploadWithFolderPicker from '@/components/shared/UploadWithFolderPicker'
 
 // ── Document type ───────────────────────────────────────────────
@@ -31,7 +31,11 @@ interface AdminDocument {
   size: string
   version: number
   tags: string[]
+  /** Public URL when the underlying bucket is public; empty string when it's private and the UI must mint a signed URL via storageBucket + storagePath. */
   fileUrl: string
+  /** Set when the object lives in a private bucket — used by View / Download to call getDownloadUrl() and produce a short-lived signed URL on demand. */
+  storageBucket: string | null
+  storagePath: string | null
   isTemplate: boolean
   accessLevel: string
   placeholders: string[]
@@ -71,21 +75,34 @@ export default function AssetDocModule({ subTab, navigate, showToast }: AssetDoc
     const [a, d] = await Promise.all([fetchAssets(), fetchDocuments()])
     setAssets(a || [])
     // Map raw DB documents to AdminDocument shape
-    const mapped: AdminDocument[] = ((d || []) as any[]).map((raw: any) => ({
-      id: raw.id || String(Math.random()),
-      name: raw.title || raw.file_name || raw.name || 'Untitled',
-      type: (raw.file_type || raw.mime_type || raw.type || 'PDF').toUpperCase().replace('.',''),
-      category: raw.category || 'general',
-      uploadedBy: raw.uploaded_by_name || raw.uploaded_by || 'System',
-      uploadDate: raw.created_at || raw.uploaded_at || raw.uploadDate || new Date().toISOString(),
-      size: raw.file_size ? `${Math.round(Number(raw.file_size) / 1024)} KB` : (raw.size || '—'),
-      version: raw.version || 1,
-      tags: Array.isArray(raw.tags) ? raw.tags : [],
-      fileUrl: raw.file_url || '',
-      isTemplate: raw.is_template === true,
-      accessLevel: raw.access_level || 'internal',
-      placeholders: Array.isArray(raw?.metadata?.placeholders) ? raw.metadata.placeholders : [],
-    }))
+    const mapped: AdminDocument[] = ((d || []) as any[]).map((raw: any) => {
+      const meta = raw?.metadata && typeof raw.metadata === 'object' ? raw.metadata : {}
+      // Files stored in a private bucket carry their bucket+path in metadata.
+      // file_url for those rows is a `supabase://bucket/path` pseudo-URL (so
+      // upsert keys stay stable) and the public storage endpoint 404s — we
+      // must mint a signed URL on demand at View / Download time.
+      const storageBucket: string | null = meta.bucket || null
+      const storagePath: string | null = meta.path || null
+      const rawUrl: string = String(raw.file_url || '')
+      const usePublic = rawUrl.startsWith('https://')
+      return {
+        id: raw.id || String(Math.random()),
+        name: raw.title || raw.file_name || raw.name || 'Untitled',
+        type: (raw.file_type || raw.mime_type || raw.type || 'PDF').toUpperCase().replace('.',''),
+        category: raw.category || 'general',
+        uploadedBy: raw.uploaded_by_name || raw.uploaded_by || 'System',
+        uploadDate: raw.created_at || raw.uploaded_at || raw.uploadDate || new Date().toISOString(),
+        size: raw.file_size ? `${Math.round(Number(raw.file_size) / 1024)} KB` : (raw.size || '—'),
+        version: raw.version || 1,
+        tags: Array.isArray(raw.tags) ? raw.tags : [],
+        fileUrl: usePublic ? rawUrl : '',
+        storageBucket,
+        storagePath,
+        isTemplate: raw.is_template === true,
+        accessLevel: raw.access_level || 'internal',
+        placeholders: Array.isArray(meta.placeholders) ? meta.placeholders : [],
+      }
+    })
     setDocuments(mapped)
     setLoading(false)
   }, [])
@@ -556,6 +573,20 @@ function AssetInventoryTab({ assets, showToast, onRefresh }: { assets: any[]; sh
   )
 }
 
+// ── Helper: resolve a usable URL for a stored document ─────────────
+// Private-bucket rows have `fileUrl=''` and `storageBucket`/`storagePath`
+// set in their metadata; we mint a short-lived signed URL on demand.
+// Public-bucket rows already have a long-lived `fileUrl`.
+async function resolveDocumentUrl(doc: AdminDocument): Promise<{ url: string; error?: string }> {
+  if (doc.fileUrl) return { url: doc.fileUrl }
+  if (doc.storageBucket && doc.storagePath) {
+    const res = await getDownloadUrl(doc.storagePath, doc.storageBucket)
+    if (res.success && res.url) return { url: res.url }
+    return { url: '', error: res.error || 'Failed to mint signed URL' }
+  }
+  return { url: '', error: 'No file URL or storage path available' }
+}
+
 // ── Documents Tab ───────────────────────────────────────────────
 function DocumentsTab({ documents, showToast }: { documents: AdminDocument[]; showToast: (msg: string, type?: 'success' | 'error' | 'info' | 'warning') => void }) {
   const [categoryFilter, setCategoryFilter] = useState<string>('all')
@@ -635,12 +666,10 @@ function DocumentsTab({ documents, showToast }: { documents: AdminDocument[]; sh
               </div>
               <div className="flex gap-2 mt-3 pt-3 border-t border-white/[0.04]">
                 <button
-                  onClick={() => {
-                    if (doc.fileUrl) {
-                      window.open(doc.fileUrl, '_blank', 'noopener,noreferrer')
-                    } else {
-                      showToast('No file URL available for this document', 'error')
-                    }
+                  onClick={async () => {
+                    const { url, error } = await resolveDocumentUrl(doc)
+                    if (!url) { showToast(error || 'No file URL available for this document', 'error'); return }
+                    window.open(url, '_blank', 'noopener,noreferrer')
                   }}
                   className="flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-[11px] font-medium text-gray-400 bg-white/[0.03] hover:bg-white/[0.06] transition-colors"
                 >
@@ -649,18 +678,16 @@ function DocumentsTab({ documents, showToast }: { documents: AdminDocument[]; sh
                 </button>
                 <button
                   onClick={async () => {
-                    if (doc.fileUrl) {
-                      showToast(`Downloading ${doc.name}...`, 'info')
-                      const link = document.createElement('a')
-                      link.href = doc.fileUrl
-                      link.download = doc.name || 'document'
-                      link.target = '_blank'
-                      document.body.appendChild(link)
-                      link.click()
-                      document.body.removeChild(link)
-                    } else {
-                      showToast('No file available for download', 'error')
-                    }
+                    const { url, error } = await resolveDocumentUrl(doc)
+                    if (!url) { showToast(error || 'No file available for download', 'error'); return }
+                    showToast(`Downloading ${doc.name}...`, 'info')
+                    const link = document.createElement('a')
+                    link.href = url
+                    link.download = doc.name || 'document'
+                    link.target = '_blank'
+                    document.body.appendChild(link)
+                    link.click()
+                    document.body.removeChild(link)
                   }}
                   className="flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-[11px] font-medium text-gray-400 bg-white/[0.03] hover:bg-white/[0.06] transition-colors"
                 >
@@ -710,9 +737,10 @@ function TemplatesTab({
   }, [search, documents])
 
   const handleCopyUrl = async (doc: AdminDocument) => {
-    if (!doc.fileUrl) return
+    const { url, error } = await resolveDocumentUrl(doc)
+    if (!url) { showToast(error || 'No URL available for this template', 'error'); return }
     try {
-      await navigator.clipboard.writeText(doc.fileUrl)
+      await navigator.clipboard.writeText(url)
       setCopiedId(doc.id)
       showToast('Template URL copied — paste into your generator or share securely.', 'success')
       setTimeout(() => setCopiedId(curr => (curr === doc.id ? null : curr)), 2000)
@@ -806,9 +834,10 @@ function TemplatesTab({
 
               <div className="flex gap-2 mt-3 pt-3 border-t border-white/[0.04]">
                 <button
-                  onClick={() => {
-                    if (doc.fileUrl) window.open(doc.fileUrl, '_blank', 'noopener,noreferrer')
-                    else showToast('Template URL is missing — re-run the seed script.', 'error')
+                  onClick={async () => {
+                    const { url, error } = await resolveDocumentUrl(doc)
+                    if (!url) { showToast(error || 'Template URL is missing — re-run the seed script.', 'error'); return }
+                    window.open(url, '_blank', 'noopener,noreferrer')
                   }}
                   className="flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-[11px] font-medium text-gray-400 bg-white/[0.03] hover:bg-white/[0.06] transition-colors"
                   title="Open the blank template"
@@ -816,10 +845,11 @@ function TemplatesTab({
                   <Eye className="w-3 h-3" /> View
                 </button>
                 <button
-                  onClick={() => {
-                    if (!doc.fileUrl) { showToast('Template URL is missing — re-run the seed script.', 'error'); return }
+                  onClick={async () => {
+                    const { url, error } = await resolveDocumentUrl(doc)
+                    if (!url) { showToast(error || 'Template URL is missing — re-run the seed script.', 'error'); return }
                     const link = document.createElement('a')
-                    link.href = doc.fileUrl
+                    link.href = url
                     link.download = doc.name
                     link.target = '_blank'
                     document.body.appendChild(link)

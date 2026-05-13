@@ -196,6 +196,11 @@ export const ADMIN_SIDEBAR_ITEMS: SidebarItem[] = [
     ],
   },
   // 13. Notification
+  // 2026-05-13: Smart Emailer restored — the route (`reports/emailer`)
+  // and the EmailerTab component already exist in ReportsModule. Adding
+  // it as a sub-item under Notification re-exposes it in the sidebar
+  // (the spec-driven menu restructure on 2026-05-12 had dropped the
+  // Reports group, hiding this entry).
   {
     id: 'notification',
     module: 'comms',
@@ -204,6 +209,7 @@ export const ADMIN_SIDEBAR_ITEMS: SidebarItem[] = [
     permission: 'view:comms',
     subItems: [
       { id: 'comms/email', label: 'Email' },
+      { id: 'reports/emailer', label: 'Smart Emailer' },
       { id: 'comms/internal', label: 'Internal notification' },
     ],
   },

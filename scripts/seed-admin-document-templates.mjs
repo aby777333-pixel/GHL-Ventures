@@ -218,14 +218,39 @@ function publicUrl(bucket, storagePath) {
   return sb.storage.from(bucket).getPublicUrl(storagePath).data.publicUrl
 }
 
+// Private buckets (e.g. ghl-documents) do not serve files at the
+// /storage/v1/object/public/... path — that endpoint returns 404
+// "Bucket not found". The UI must mint a fresh signed URL on demand,
+// so for these objects we leave `file_url` blank and stash bucket +
+// path in `metadata`. AssetDocModule reads that and calls
+// `storageService.getDownloadUrl(path, bucket)` when the admin clicks
+// View / Download.
+const PRIVATE_BUCKETS = new Set(['ghl-documents', 'ghl-exports', 'ghl-backups', 'investment-documents', 'kyc-documents', 'reports', 'staff-documents', 'resumes', 'client-uploads'])
+
 async function upsertDocumentRow(row) {
-  // Idempotent by (file_url) — we set the URL deterministically per file.
-  const { data: existing, error: selErr } = await sb
-    .from('documents')
-    .select('id')
-    .eq('file_url', row.file_url)
-    .maybeSingle()
-  if (selErr && selErr.code !== 'PGRST116') throw selErr
+  // Idempotent by (metadata.bucket + metadata.path) when present, else file_url.
+  // The bucket+path key is stable across URL-scheme changes (public ↔ signed).
+  const meta = row.metadata || {}
+  let existing = null
+  if (meta.bucket && meta.path) {
+    const { data, error } = await sb
+      .from('documents')
+      .select('id')
+      .eq('metadata->>bucket', meta.bucket)
+      .eq('metadata->>path', meta.path)
+      .maybeSingle()
+    if (error && error.code !== 'PGRST116') throw error
+    existing = data
+  }
+  if (!existing) {
+    const { data, error } = await sb
+      .from('documents')
+      .select('id')
+      .eq('file_url', row.file_url)
+      .maybeSingle()
+    if (error && error.code !== 'PGRST116') throw error
+    existing = data
+  }
 
   if (existing?.id) {
     const { error } = await sb.from('documents').update(row).eq('id', existing.id)
@@ -242,6 +267,7 @@ async function main() {
   console.log('→ Source dir:', SOURCE_DIR)
 
   // 6a. Reference / sample PDFs → ghl-documents (private)
+  const REF_BUCKET = 'ghl-documents'
   const referenceResults = []
   for (const ref of REFERENCE_SOURCES) {
     const abs = path.join(SOURCE_DIR, ref.file)
@@ -251,11 +277,15 @@ async function main() {
     }
     const bytes = fs.readFileSync(abs)
     const storagePath = `admin-library/references/${ref.file}`
-    await uploadBytes('ghl-documents', storagePath, bytes, 'application/pdf')
-    const url = publicUrl('ghl-documents', storagePath) // signed via RLS at fetch time
+    await uploadBytes(REF_BUCKET, storagePath, bytes, 'application/pdf')
+    // Private buckets: leave file_url empty; UI mints a signed URL on demand
+    // using metadata.bucket + metadata.path. The historic upsert key was
+    // `file_url`, so we synthesise a stable `supabase://` pseudo-URL just
+    // for idempotency.
+    const upsertKey = `supabase://${REF_BUCKET}/${storagePath}`
     const res = await upsertDocumentRow({
       title: ref.title,
-      file_url: url,
+      file_url: upsertKey,
       file_name: ref.file,
       file_type: 'pdf',
       mime_type: 'application/pdf',
@@ -268,7 +298,12 @@ async function main() {
       access_level: 'internal',
       status: 'active',
       owner_type: 'admin',
-      metadata: { source: 'ops-upload-2026-05-13', kind: 'reference' },
+      metadata: {
+        source: 'ops-upload-2026-05-13',
+        kind: 'reference',
+        bucket: REF_BUCKET,
+        path: storagePath,
+      },
     })
     console.log(`  ${res.action === 'inserted' ? '+' : '~'} reference: ${ref.file}`)
     referenceResults.push({ file: ref.file, ...res })
