@@ -153,12 +153,25 @@ export default function AdminSidebar({
         }
       `}</style>
 
-      {/* Sidebar */}
+      {/* Sidebar — UI Aesthetic 2026-05-14: glossy-black carbon finish.
+          Four stacked layers compose the look:
+            1. top-left specular highlight (soft white sheen),
+            2. + 3. crossing 45° / -45° micro-stripes for a carbon-weave feel,
+            4. base near-black vertical gradient with a subtle mid-lift.
+          A 1px right edge keeps the sidebar separated from the page bg,
+          and an inset shadow adds depth without dimming the accent glows. */}
       <aside
         className={`fixed top-0 left-0 h-full z-[10000] w-[280px] flex flex-col transition-transform duration-500 ease-out
           lg:translate-x-0 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}
         style={{
-          background: 'linear-gradient(180deg, #2e1515 0%, #4a1a1a 100%)',
+          background: [
+            'radial-gradient(140% 60% at 0% 0%, rgba(255,255,255,0.07), transparent 55%)',
+            'repeating-linear-gradient(45deg, rgba(255,255,255,0.018) 0 2px, transparent 2px 4px)',
+            'repeating-linear-gradient(-45deg, rgba(0,0,0,0.32) 0 2px, transparent 2px 4px)',
+            'linear-gradient(180deg, #0b0b0d 0%, #141418 48%, #0a0a0c 100%)',
+          ].join(', '),
+          borderRight: '1px solid rgba(255,255,255,0.06)',
+          boxShadow: 'inset -1px 0 0 rgba(255,255,255,0.04), 6px 0 24px rgba(0,0,0,0.45)',
         }}
       >
         {/* Logo */}
