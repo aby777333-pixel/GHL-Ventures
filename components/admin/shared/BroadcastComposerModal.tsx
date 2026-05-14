@@ -90,6 +90,14 @@ export default function BroadcastComposerModal({ open, initialMode = 'broadcast'
   const [uploadError, setUploadError] = useState('')
   const [uploadedFileName, setUploadedFileName] = useState('')
   const fileInputRef = useRef<HTMLInputElement>(null)
+  // Broadcast Attachments 2026-05-14: real Resend attachments (multi-file,
+  // base64-encoded client side) and additional link rows rendered as
+  // call-to-action buttons in the email body.
+  type ResendAttachment = { filename: string; content: string; contentType?: string; sizeBytes: number }
+  const [emailAttachments, setEmailAttachments] = useState<ResendAttachment[]>([])
+  const [attachError, setAttachError] = useState('')
+  const attachInputRef = useRef<HTMLInputElement>(null)
+  const [extraLinks, setExtraLinks] = useState<{ label: string; url: string }[]>([])
 
   // Reset transient state when the modal closes / opens fresh.
   useEffect(() => {
@@ -100,6 +108,7 @@ export default function BroadcastComposerModal({ open, initialMode = 'broadcast'
       setError(''); setSuccess(''); setSending(false)
       setUploading(false); setUploadError(''); setUploadedFileName('')
       setChannel('email')
+      setEmailAttachments([]); setAttachError(''); setExtraLinks([])
     } else {
       // Seed from prefill when provided (Re-send flow); otherwise start with
       // the default email channel and let the admin switch channels inside
@@ -177,6 +186,57 @@ export default function BroadcastComposerModal({ open, initialMode = 'broadcast'
     setUploadError('')
   }
 
+  // Broadcast Attachments 2026-05-14: file → base64 helper. Used for real
+  // email attachments (forwarded to Resend) — distinct from the embedded
+  // media URL above. Strips the data: URI prefix so the function gets a
+  // clean base64 payload.
+  const readFileAsBase64 = (file: File): Promise<string> => new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onload = () => {
+      const result = reader.result as string
+      const idx = result.indexOf(',')
+      resolve(idx >= 0 ? result.slice(idx + 1) : result)
+    }
+    reader.onerror = () => reject(new Error('Failed to read file'))
+    reader.readAsDataURL(file)
+  })
+
+  const handleAttachmentsPicked: React.ChangeEventHandler<HTMLInputElement> = async (e) => {
+    setAttachError('')
+    const files = Array.from(e.target.files || [])
+    e.target.value = ''
+    if (files.length === 0) return
+
+    const PER_FILE_LIMIT = 25 * 1024 * 1024 // 25 MB — Resend per-file
+    const TOTAL_LIMIT = 40 * 1024 * 1024    // 40 MB — Resend total
+
+    const next: ResendAttachment[] = [...emailAttachments]
+    let runningBytes = next.reduce((acc, a) => acc + a.sizeBytes, 0)
+    for (const f of files) {
+      if (f.size > PER_FILE_LIMIT) {
+        setAttachError(`"${f.name}" is ${(f.size / 1024 / 1024).toFixed(1)} MB — the per-file limit is 25 MB.`)
+        continue
+      }
+      if (runningBytes + f.size > TOTAL_LIMIT) {
+        setAttachError(`Adding "${f.name}" would exceed the 40 MB total attachment limit.`)
+        continue
+      }
+      try {
+        const content = await readFileAsBase64(f)
+        next.push({ filename: f.name, content, contentType: f.type || undefined, sizeBytes: f.size })
+        runningBytes += f.size
+      } catch (err: any) {
+        setAttachError(err?.message || `Failed to read ${f.name}`)
+      }
+    }
+    setEmailAttachments(next)
+  }
+
+  const removeAttachment = (idx: number) => {
+    setEmailAttachments(prev => prev.filter((_, i) => i !== idx))
+    if (attachError) setAttachError('')
+  }
+
   const handleSend = async () => {
     setError(''); setSuccess('')
 
@@ -198,6 +258,19 @@ export default function BroadcastComposerModal({ open, initialMode = 'broadcast'
       }
       if (needsSubject) payload.subject = subject.trim()
       if (showAttachment && attachmentUrl.trim()) payload.attachment_url = attachmentUrl.trim()
+      // Broadcast Attachments 2026-05-14: ship real file attachments (Resend
+      // forwards as MIME parts) and any additional links rendered as buttons.
+      if (emailAttachments.length > 0) {
+        payload.attachments = emailAttachments.map(a => ({
+          filename: a.filename,
+          content: a.content,
+          contentType: a.contentType,
+        }))
+      }
+      const cleanLinks = extraLinks
+        .map(l => ({ label: l.label.trim() || undefined, url: l.url.trim() }))
+        .filter(l => !!l.url)
+      if (cleanLinks.length > 0) payload.links = cleanLinks
       if (audience === 'all_leads') payload.all_leads = true
       else payload.ad_hoc = adHocRows
         .map(r => ({ name: r.name.trim() || undefined, email: r.email.trim() || undefined, mobile: r.mobile.trim() || undefined }))
@@ -379,6 +452,119 @@ export default function BroadcastComposerModal({ open, initialMode = 'broadcast'
             </div>
           </Labelled>
         )}
+
+        {/* Broadcast Attachments 2026-05-14: real Resend attachments. Works
+            for any content type so admins can attach a brochure + an image
+            alongside a plain-text body. Resend limits: 25 MB / file, 40 MB
+            total — enforced here AND in broadcast-send.ts. */}
+        {!isWhatsAppOnly && (
+          <Labelled
+            label="Email Attachments"
+            hint="Attach files (images, PDFs, etc.) directly to the email. Limit: 25 MB per file · 40 MB total."
+          >
+            <div className="space-y-2">
+              <div className="flex items-center gap-2">
+                <input
+                  ref={attachInputRef}
+                  type="file"
+                  multiple
+                  accept="image/*,application/pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.csv,.zip"
+                  onChange={handleAttachmentsPicked}
+                  className="hidden"
+                />
+                <button
+                  type="button"
+                  onClick={() => attachInputRef.current?.click()}
+                  className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold text-white bg-brand-red/20 border border-brand-red/30 hover:bg-brand-red/30 transition-colors"
+                >
+                  <Paperclip className="w-3.5 h-3.5" /> Add files
+                </button>
+                {emailAttachments.length > 0 && (
+                  <span className="text-[10px] text-gray-400">
+                    {emailAttachments.length} file{emailAttachments.length === 1 ? '' : 's'}
+                    {' · '}
+                    {(emailAttachments.reduce((acc, a) => acc + a.sizeBytes, 0) / 1024 / 1024).toFixed(1)} MB
+                  </span>
+                )}
+              </div>
+
+              {emailAttachments.length > 0 && (
+                <ul className="space-y-1">
+                  {emailAttachments.map((a, i) => (
+                    <li key={i} className="flex items-center justify-between gap-2 px-2.5 py-1.5 rounded-lg bg-white/[0.04] border border-white/[0.06] text-[11px] text-gray-200">
+                      <span className="inline-flex items-center gap-1.5 truncate">
+                        <Paperclip className="w-3 h-3 flex-shrink-0 text-gray-500" />
+                        <span className="truncate">{a.filename}</span>
+                        <span className="text-gray-500 shrink-0">· {(a.sizeBytes / 1024 / 1024).toFixed(2)} MB</span>
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => removeAttachment(i)}
+                        className="text-gray-400 hover:text-red-400"
+                        title="Remove attachment"
+                        aria-label={`Remove ${a.filename}`}
+                      >
+                        <XCircle className="w-3.5 h-3.5" />
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+
+              {attachError && (
+                <div className="flex items-start gap-1.5 px-2.5 py-1.5 rounded-lg bg-red-500/10 border border-red-500/20 text-[11px] text-red-200">
+                  <AlertTriangle className="w-3.5 h-3.5 mt-0.5 flex-shrink-0" /> {attachError}
+                </div>
+              )}
+            </div>
+          </Labelled>
+        )}
+
+        {/* Additional Links — rendered as call-to-action buttons inside the
+            email body. WhatsApp recipients receive the URLs appended to the
+            text body (one per line). */}
+        <Labelled
+          label="Additional Links"
+          hint="Optional buttons added to the email body — e.g. a Calendly link, brochure URL, or article."
+        >
+          <div className="space-y-2">
+            {extraLinks.length === 0 ? (
+              <p className="text-[11px] italic text-gray-500">No links yet. Click &quot;Add link&quot; to include one.</p>
+            ) : (
+              extraLinks.map((l, i) => (
+                <div key={i} className="grid grid-cols-1 sm:grid-cols-[1fr_2fr_auto] gap-2">
+                  <input
+                    value={l.label}
+                    onChange={e => setExtraLinks(prev => prev.map((x, j) => j === i ? { ...x, label: e.target.value } : x))}
+                    placeholder="Button label (optional)"
+                    className={inputCls}
+                  />
+                  <input
+                    value={l.url}
+                    onChange={e => setExtraLinks(prev => prev.map((x, j) => j === i ? { ...x, url: e.target.value } : x))}
+                    placeholder="https://…"
+                    className={inputCls}
+                    type="url"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setExtraLinks(prev => prev.filter((_, j) => j !== i))}
+                    className="px-3 py-2 rounded-xl text-xs text-gray-400 bg-white/[0.04] border border-white/[0.06] hover:text-red-400"
+                  >
+                    Remove
+                  </button>
+                </div>
+              ))
+            )}
+            <button
+              type="button"
+              onClick={() => setExtraLinks(prev => [...prev, { label: '', url: '' }])}
+              className="text-[11px] text-brand-red hover:underline"
+            >
+              + Add link
+            </button>
+          </div>
+        </Labelled>
 
         <Labelled label="Audience">
           <div className="grid grid-cols-2 gap-2 mb-3">

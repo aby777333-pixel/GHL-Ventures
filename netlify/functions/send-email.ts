@@ -43,15 +43,38 @@ interface SendEmailBody {
   templateId?: string
 }
 
+// Letterhead 2026-05-14: shared with broadcast-send.ts. Logo is served
+// from the same Netlify deploy so mail clients fetch over CDN.
+const LETTERHEAD_LOGO_URL = 'https://ghl-india-ventures-2025.netlify.app/images/brand/ghl-logo-full-red.png'
+const LETTERHEAD_WEBSITE = 'www.ghlindiaventures.com'
+const LETTERHEAD_WEBSITE_HREF = 'https://ghlindiaventures.com'
+const LETTERHEAD_SEBI_REG = 'IN/AIF2/24-25/1517'
+const LETTERHEAD_EMAIL = 'info@ghlindiaventures.com'
+
 function formatEmailHtml(body: string): string {
   // Convert newlines to <br> for the email body
   const htmlBody = escapeHtml(body).replace(/\n/g, '<br>')
 
   return `
     <div style="font-family: Arial, sans-serif; max-width: 640px; margin: 0 auto; background: #ffffff; border-radius: 8px; overflow: hidden; border: 1px solid #e5e5e5;">
-      <div style="background: #0A0A0A; padding: 20px; text-align: center;">
-        <h1 style="color: #D0021B; margin: 0; font-size: 22px; font-weight: 700;">GHL India Ventures</h1>
-        <p style="color: #888; margin: 6px 0 0; font-size: 12px; letter-spacing: 1px;">SEBI Registered Category II AIF</p>
+      <div style="background:#ffffff; padding:22px 24px 18px; text-align:center; border-bottom:1px solid #e5e5e5;">
+        <img src="${LETTERHEAD_LOGO_URL}" alt="GHL India Ventures" style="max-width:260px; height:auto; display:block; margin:0 auto 12px;" />
+        <p style="margin:6px 0 0; font-size:13px; font-weight:700; letter-spacing:0.5px;">
+          <a href="${LETTERHEAD_WEBSITE_HREF}" style="color:#D0021B; text-decoration:none;">${LETTERHEAD_WEBSITE}</a>
+        </p>
+        <p style="margin:8px 0 0; font-size:12px; color:#111;">
+          <span style="color:#D0021B; font-weight:700;">+91</span> 44 2843 1043
+          &nbsp;<span style="color:#D0021B;">|</span>&nbsp;
+          <span style="color:#D0021B; font-weight:700;">+91</span> 7200 255 252
+        </p>
+        <p style="margin:10px 0 0; font-size:11px;">
+          <span style="background:#F5C518; color:#000; font-weight:700; padding:3px 10px; border-radius:3px; display:inline-block;">
+            SEBI Registration No. <span style="color:#D0021B;">${LETTERHEAD_SEBI_REG}</span>
+          </span>
+        </p>
+        <p style="margin:8px 0 0; font-size:11px; color:#D0021B; font-weight:600;">
+          ${LETTERHEAD_EMAIL}
+        </p>
       </div>
 
       <div style="padding: 32px 28px;">
@@ -62,9 +85,9 @@ function formatEmailHtml(body: string): string {
 
       <div style="background: #f9f9f9; padding: 16px; text-align: center; border-top: 1px solid #eee;">
         <p style="color: #999; font-size: 11px; margin: 0; line-height: 1.6;">
-          GHL India Ventures Private Limited &bull; SEBI Reg: IN/AIF2/24-25/1517<br>
+          GHL India Ventures Private Limited &bull; SEBI Reg: ${LETTERHEAD_SEBI_REG}<br>
           Queens Court, Egmore, Chennai 600008<br>
-          <a href="https://ghl-india-ventures-2025.netlify.app" style="color: #D0021B; text-decoration: none;">www.ghlindiaventures.com</a>
+          <a href="${LETTERHEAD_WEBSITE_HREF}" style="color: #D0021B; text-decoration: none;">${LETTERHEAD_WEBSITE}</a>
         </p>
       </div>
     </div>

@@ -48,12 +48,27 @@ function esc(s: string) {
 type ContentType = 'text' | 'image' | 'video' | 'pdf' | 'link' | 'blog' | 'html'
 type Channel = 'email' | 'whatsapp' | 'both'
 
+interface EmailAttachment {
+  filename: string
+  // base64 content (no data: URI prefix). Caller may include the prefix —
+  // we strip it defensively before validating size.
+  content: string
+  contentType?: string
+}
+
+interface LinkEntry {
+  label?: string
+  url: string
+}
+
 interface BroadcastBody {
   name: string                    // campaign name / internal label
   subject?: string                // email subject
   body: string                    // message body (plain text; HTML allowed when content_type='html')
   content_type?: ContentType
-  attachment_url?: string         // public URL for media / pdf / link / blog
+  attachment_url?: string         // legacy single-URL embed (media / pdf / link / blog)
+  attachments?: EmailAttachment[] // Broadcast Attachments 2026-05-14: real file attachments forwarded to Resend
+  links?: LinkEntry[]             // Broadcast Attachments 2026-05-14: extra links rendered as buttons
   channel: Channel
   lead_ids?: string[]             // if empty/absent, uses `all_leads=true` or ad-hoc recipients
   all_leads?: boolean
@@ -61,8 +76,70 @@ interface BroadcastBody {
   created_by?: string             // profile id — optional audit
 }
 
-function formatEmailHtml(payload: { subject: string; body: string; content_type: ContentType; attachment_url?: string }) {
-  const { body, content_type, attachment_url } = payload
+// Letterhead 2026-05-14: matches the branding card the user provided —
+// logo + website + two phone numbers + SEBI registration + info email.
+// Hosted via the same Netlify deploy so mail clients fetch over CDN.
+const LETTERHEAD_LOGO_URL = 'https://ghl-india-ventures-2025.netlify.app/images/brand/ghl-logo-full-red.png'
+const LETTERHEAD_WEBSITE = 'www.ghlindiaventures.com'
+const LETTERHEAD_WEBSITE_HREF = 'https://ghlindiaventures.com'
+const LETTERHEAD_PHONE_PRIMARY = '+91 44 2843 1043'
+const LETTERHEAD_PHONE_SECONDARY = '+91 7200 255 252'
+const LETTERHEAD_SEBI_REG = 'IN/AIF2/24-25/1517'
+const LETTERHEAD_EMAIL = 'info@ghlindiaventures.com'
+
+function renderLetterheadHeader(): string {
+  return `
+    <div style="background:#ffffff; padding:22px 24px 18px; text-align:center; border-bottom:1px solid #e5e5e5;">
+      <img src="${LETTERHEAD_LOGO_URL}" alt="GHL India Ventures" style="max-width:260px; height:auto; display:block; margin:0 auto 12px;" />
+      <p style="margin:6px 0 0; font-size:13px; font-weight:700; letter-spacing:0.5px;">
+        <a href="${LETTERHEAD_WEBSITE_HREF}" style="color:#D0021B; text-decoration:none;">${LETTERHEAD_WEBSITE}</a>
+      </p>
+      <p style="margin:8px 0 0; font-size:12px; color:#111;">
+        <span style="color:#D0021B; font-weight:700;">+91</span> 44 2843 1043
+        &nbsp;<span style="color:#D0021B;">|</span>&nbsp;
+        <span style="color:#D0021B; font-weight:700;">+91</span> 7200 255 252
+      </p>
+      <p style="margin:10px 0 0; font-size:11px;">
+        <span style="background:#F5C518; color:#000; font-weight:700; padding:3px 10px; border-radius:3px; display:inline-block;">
+          SEBI Registration No. <span style="color:#D0021B;">${LETTERHEAD_SEBI_REG}</span>
+        </span>
+      </p>
+      <p style="margin:8px 0 0; font-size:11px; color:#D0021B; font-weight:600;">
+        ${LETTERHEAD_EMAIL}
+      </p>
+    </div>`
+}
+
+function renderLinksBlock(links?: LinkEntry[]): string {
+  if (!links || links.length === 0) return ''
+  const buttons = links
+    .map(l => {
+      const url = (l.url || '').trim()
+      if (!url) return ''
+      const label = esc((l.label || '').trim() || 'Open Link →')
+      return `<a href="${esc(url)}" style="display:inline-block; padding:10px 18px; background:#D0021B; color:#fff; text-decoration:none; border-radius:6px; font-weight:700; font-size:13px; margin:4px 6px 4px 0;">${label}</a>`
+    })
+    .filter(Boolean)
+    .join('')
+  if (!buttons) return ''
+  return `<div style="margin:18px 0 4px;">${buttons}</div>`
+}
+
+function renderAttachmentsHint(attachments?: EmailAttachment[]): string {
+  // Resend renders the attachments themselves in the recipient's mail
+  // client; we just add a small "Attachments" line so the body explicitly
+  // calls them out. Keeps parity with how Gmail / Outlook display them.
+  if (!attachments || attachments.length === 0) return ''
+  const list = attachments.map(a => `<li style="margin:2px 0;">${esc(a.filename)}</li>`).join('')
+  return `
+    <div style="margin:18px 0 4px; padding:10px 14px; background:#fafafa; border:1px solid #eee; border-radius:6px;">
+      <p style="margin:0 0 4px; font-size:11px; color:#666; text-transform:uppercase; letter-spacing:0.6px; font-weight:700;">Attached</p>
+      <ul style="margin:0; padding:0 0 0 18px; font-size:12px; color:#333;">${list}</ul>
+    </div>`
+}
+
+function formatEmailHtml(payload: { subject: string; body: string; content_type: ContentType; attachment_url?: string; attachments?: EmailAttachment[]; links?: LinkEntry[] }) {
+  const { body, content_type, attachment_url, attachments, links } = payload
   const isHtml = content_type === 'html'
   const mainHtml = isHtml
     ? body
@@ -84,19 +161,18 @@ function formatEmailHtml(payload: { subject: string; body: string; content_type:
 
   return `
     <div style="font-family: Arial, sans-serif; max-width: 640px; margin: 0 auto; background:#ffffff; border:1px solid #e5e5e5; border-radius:8px; overflow:hidden;">
-      <div style="background:#0A0A0A; padding:20px; text-align:center;">
-        <h1 style="color:#D0021B; margin:0; font-size:22px; font-weight:700;">GHL India Ventures</h1>
-        <p style="color:#888; margin:6px 0 0; font-size:12px; letter-spacing:1px;">SEBI Registered Category II AIF</p>
-      </div>
+      ${renderLetterheadHeader()}
       <div style="padding:28px 24px;">
         <div style="color:#333; font-size:14px; line-height:1.7;">${mainHtml}</div>
         ${mediaBlock}
+        ${renderLinksBlock(links)}
+        ${renderAttachmentsHint(attachments)}
       </div>
       <div style="background:#f9f9f9; padding:16px; text-align:center; border-top:1px solid #eee;">
         <p style="color:#999; font-size:11px; margin:0; line-height:1.6;">
-          GHL India Ventures Private Limited &bull; SEBI Reg: IN/AIF2/24-25/1517<br/>
+          GHL India Ventures Private Limited &bull; SEBI Reg: ${LETTERHEAD_SEBI_REG}<br/>
           Queens Court, Egmore, Chennai 600008<br/>
-          <a href="https://ghlindiaventures.com" style="color:#D0021B; text-decoration:none;">www.ghlindiaventures.com</a>
+          <a href="${LETTERHEAD_WEBSITE_HREF}" style="color:#D0021B; text-decoration:none;">${LETTERHEAD_WEBSITE}</a>
         </p>
       </div>
     </div>`
@@ -132,19 +208,30 @@ async function sendEmail(
   to: string,
   subject: string,
   html: string,
-  cfg: { resendKey: string; fromEmail: string; replyToEmail: string },
+  cfg: { resendKey: string; fromEmail: string; replyToEmail: string; attachments?: EmailAttachment[] },
 ): Promise<SendResult> {
   try {
+    const payload: Record<string, any> = {
+      from: `GHL India Ventures <${cfg.fromEmail}>`,
+      to: to.trim(),
+      reply_to: cfg.replyToEmail,
+      subject,
+      html,
+    }
+    if (cfg.attachments && cfg.attachments.length > 0) {
+      // Broadcast Attachments 2026-05-14: Resend accepts attachments as
+      // { filename, content (base64), content_type? }. We strip any data:
+      // URI prefix defensively so callers can pass either form.
+      payload.attachments = cfg.attachments.map(a => ({
+        filename: a.filename,
+        content: String(a.content || '').replace(/^data:[^;]+;base64,/, '').trim(),
+        ...(a.contentType ? { content_type: a.contentType } : {}),
+      }))
+    }
     const resp = await fetch('https://api.resend.com/emails', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${cfg.resendKey}` },
-      body: JSON.stringify({
-        from: `GHL India Ventures <${cfg.fromEmail}>`,
-        to: to.trim(),
-        reply_to: cfg.replyToEmail,
-        subject,
-        html,
-      }),
+      body: JSON.stringify(payload),
     })
     if (!resp.ok) {
       const raw = await resp.text()
@@ -386,8 +473,55 @@ export default async (request: Request) => {
   const watiLang = (process.env.WATI_TEMPLATE_LANG || 'en').trim()
 
   const subject = body.subject?.trim() || body.name.trim()
-  const emailHtml = formatEmailHtml({ subject, body: body.body, content_type: contentType, attachment_url: body.attachment_url })
-  const waText = buildWhatsAppText(body.body, body.attachment_url)
+
+  // ── Validate + normalise Broadcast Attachments 2026-05-14 ───────
+  // Resend's hard limit is 40MB total / 25MB per attachment. Reject
+  // early so the admin sees a clear error instead of a 413 from Resend.
+  const safeAttachments: EmailAttachment[] = []
+  let totalAttachmentBytes = 0
+  if (Array.isArray(body.attachments)) {
+    for (const a of body.attachments) {
+      if (!a?.filename || !a?.content) continue
+      const cleaned = String(a.content).replace(/^data:[^;]+;base64,/, '').trim()
+      const approxBytes = Math.ceil(cleaned.length * 0.75)
+      if (approxBytes > 25 * 1024 * 1024) {
+        return new Response(
+          JSON.stringify({ error: `Attachment "${a.filename}" exceeds the 25MB limit` }),
+          { status: 413, headers: { 'Content-Type': 'application/json', ...cors(request) } },
+        )
+      }
+      totalAttachmentBytes += approxBytes
+      safeAttachments.push({ filename: a.filename, content: cleaned, contentType: a.contentType })
+    }
+    if (totalAttachmentBytes > 40 * 1024 * 1024) {
+      return new Response(
+        JSON.stringify({ error: 'Total attachment size exceeds 40MB' }),
+        { status: 413, headers: { 'Content-Type': 'application/json', ...cors(request) } },
+      )
+    }
+  }
+
+  // Filter out blank link rows from the admin form before persisting / rendering.
+  const safeLinks: LinkEntry[] = Array.isArray(body.links)
+    ? body.links.map(l => ({ label: (l?.label || '').trim() || undefined, url: (l?.url || '').trim() })).filter(l => !!l.url)
+    : []
+
+  const emailHtml = formatEmailHtml({
+    subject,
+    body: body.body,
+    content_type: contentType,
+    attachment_url: body.attachment_url,
+    attachments: safeAttachments,
+    links: safeLinks,
+  })
+  // WhatsApp text gets the link URLs appended (one per line) so recipients
+  // who only get WA still see them. Real file attachments don't ship via
+  // WhatsApp Session API, so we don't try to forward those here.
+  const waLinkUrls = safeLinks.map(l => l.url)
+  const waText = buildWhatsAppText(
+    body.body,
+    [body.attachment_url, ...waLinkUrls].filter(Boolean).join('\n') || undefined,
+  )
 
   // ── Send loop ────────────────────────────────────────────
   let sentCount = 0
@@ -410,7 +544,10 @@ export default async (request: Request) => {
         })
         failedCount++
       } else {
-        const res = await sendEmail(email, subject, emailHtml, { resendKey, fromEmail, replyToEmail })
+        const res = await sendEmail(email, subject, emailHtml, {
+          resendKey, fromEmail, replyToEmail,
+          attachments: safeAttachments,
+        })
         deliveryRows.push({
           campaign_id: campaign.id, lead_id: r.id, recipient_name: r.name, email, mobile: r.mobile,
           channel: 'email', status: res.status, error: res.error || null, provider_id: res.provider_id || null,
