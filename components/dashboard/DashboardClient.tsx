@@ -612,7 +612,16 @@ export default function DashboardClient() {
   const [editForm, setEditForm] = useState({
     full_name: '', phone: '', city: '', dob: '', occupation: '', pan: '',
     nominee_name: '', nominee_relation: '', nominee_pan: '', nominee_share: '',
+    // Investor Contact Corrections 2026-05-14: support multiple emails / phones
+    // beyond the canonical login email. Additional values are persisted to the
+    // clients.additional_emails / additional_phones text[] columns.
+    additional_emails: [] as string[],
+    additional_phones: [] as string[],
   })
+  // Investor Contact Corrections 2026-05-14: additional emails/phones live on
+  // the clients row (text[] columns). Loaded once when clientId resolves and
+  // re-loaded after each save so the modal always opens with fresh data.
+  const [clientContactExtras, setClientContactExtras] = useState<{ additional_emails: string[]; additional_phones: string[] }>({ additional_emails: [], additional_phones: [] })
   // Tests 28-04-2026 #9: profile / bank data was previously cached under a
   // single global localStorage key, so signing in as another user revealed
   // the previous user's name, phone, PAN, etc. Both caches are now keyed
@@ -672,6 +681,25 @@ export default function DashboardClient() {
     if (Object.keys(savedProfileData).length === 0) return
     try { localStorage.setItem(`ghl-profile-data:${user.id}`, JSON.stringify(savedProfileData)) } catch { /* ignore quota */ }
   }, [savedProfileData, user?.id])
+
+  // Investor Contact Corrections 2026-05-14: hydrate additional emails/phones
+  // from the clients row. Idempotent — runs whenever clientId resolves.
+  useEffect(() => {
+    if (!clientId) return
+    let cancelled = false
+    ;(async () => {
+      try {
+        const { supabase: sb } = await import('@/lib/supabase/client')
+        const { data } = await (sb as any).from('clients').select('additional_emails, additional_phones').eq('id', clientId).maybeSingle()
+        if (cancelled) return
+        setClientContactExtras({
+          additional_emails: Array.isArray(data?.additional_emails) ? data.additional_emails : [],
+          additional_phones: Array.isArray(data?.additional_phones) ? data.additional_phones : [],
+        })
+      } catch { /* defaults stay empty */ }
+    })()
+    return () => { cancelled = true }
+  }, [clientId])
 
   // Handle profile photo upload
   // Bug #28: Persist profile photo to Supabase Storage + profiles.avatar_url
@@ -2957,21 +2985,45 @@ export default function DashboardClient() {
       nominee_relation: primaryNominee?.relationship || savedProfileData.nominee_relation || (user as any)?.nominee_relation || '',
       nominee_pan: savedProfileData.nominee_pan || (user as any)?.nominee_pan || '',
       nominee_share: primaryNominee?.percentage != null ? String(primaryNominee.percentage) : (savedProfileData.nominee_share || (user as any)?.nominee_share || ''),
+      additional_emails: [...(clientContactExtras.additional_emails || [])],
+      additional_phones: [...(clientContactExtras.additional_phones || [])],
     })
     setEditProfileOpen(true)
   }
 
   const handleSaveProfile = async () => {
+    // Clean up the additional contact arrays before persisting: trim, drop
+    // blanks, and dedupe (case-insensitive for emails). We never persist
+    // duplicates of the primary contact either.
+    const primaryEmail = (user?.email || '').trim().toLowerCase()
+    const primaryPhone = (editForm.phone || '').trim()
+    const cleanEmails = Array.from(new Set(
+      (editForm.additional_emails || [])
+        .map(e => (e || '').trim())
+        .filter(Boolean)
+        .filter(e => e.toLowerCase() !== primaryEmail)
+        .map(e => e.toLowerCase()),
+    ))
+    const cleanPhones = Array.from(new Set(
+      (editForm.additional_phones || [])
+        .map(p => (p || '').trim())
+        .filter(Boolean)
+        .filter(p => p !== primaryPhone),
+    ))
+    const cleanedForm = { ...editForm, additional_emails: cleanEmails, additional_phones: cleanPhones }
     try {
       const svc = await import('@/lib/supabase/dashboardDataService')
       if (typeof svc.updateProfile === 'function') {
-        await svc.updateProfile(editForm)
+        await svc.updateProfile(cleanedForm)
       }
-      setSavedProfileData({ ...editForm })
+      setSavedProfileData({ ...cleanedForm } as any)
+      setClientContactExtras({ additional_emails: cleanEmails, additional_phones: cleanPhones })
+      setEditForm(prev => ({ ...prev, additional_emails: cleanEmails, additional_phones: cleanPhones }))
       showToast('Profile updated successfully!', 'success')
       setEditProfileOpen(false)
     } catch {
-      setSavedProfileData({ ...editForm })
+      setSavedProfileData({ ...cleanedForm } as any)
+      setClientContactExtras({ additional_emails: cleanEmails, additional_phones: cleanPhones })
       showToast('Profile saved locally. Changes will sync when online.', 'info')
       setEditProfileOpen(false)
     }
@@ -3145,9 +3197,26 @@ export default function DashboardClient() {
 
             <div className="space-y-4">
               <p className={`text-[10px] uppercase tracking-wider font-semibold ${t('text-gray-500','text-gray-600')}`}>Personal Information</p>
+
+              {/* Primary email — read-only. The login email lives in
+                  auth.users; changing it goes through a verification flow
+                  outside this modal. */}
+              <div>
+                <label className={`text-[10px] uppercase tracking-wider mb-1 block ${t('text-gray-500','text-gray-600')}`}>Email Address (Login)</label>
+                <input
+                  type="email"
+                  value={user?.email || ''}
+                  readOnly
+                  className={`w-full px-4 py-2.5 rounded-xl text-sm cursor-not-allowed ${t('bg-white/[0.02] border border-white/[0.04] text-gray-400','bg-gray-100 border border-gray-200 text-gray-600')} outline-none`}
+                />
+                <p className={`text-[10px] mt-1 ${t('text-gray-600','text-gray-500')}`}>
+                  This is your sign-in email and cannot be changed here. Contact support to update it.
+                </p>
+              </div>
+
               {[
                 { key: 'full_name', label: 'Full Name', placeholder: 'Enter your full name' },
-                { key: 'phone', label: 'Phone Number', placeholder: '+91 XXXXX XXXXX' },
+                { key: 'phone', label: 'Primary Phone', placeholder: '+91 XXXXX XXXXX' },
                 { key: 'pan', label: 'PAN Number', placeholder: 'ABCDE1234F' },
                 { key: 'city', label: 'City', placeholder: 'e.g. Chennai, Mumbai' },
                 { key: 'dob', label: 'Date of Birth', placeholder: 'DD/MM/YYYY' },
@@ -3159,6 +3228,92 @@ export default function DashboardClient() {
                     className={`w-full px-4 py-2.5 rounded-xl text-sm ${t('bg-white/[0.04] border border-white/[0.06] text-white placeholder-gray-600 focus:border-brand-red/50','bg-gray-100/40 border border-gray-200/40 text-gray-900 placeholder-gray-400 focus:border-brand-red/50')} outline-none transition-colors`} />
                 </div>
               ))}
+
+              {/* Additional emails — repeater. Saved to clients.additional_emails. */}
+              <div>
+                <div className="flex items-center justify-between mb-1">
+                  <label className={`text-[10px] uppercase tracking-wider ${t('text-gray-500','text-gray-600')}`}>Additional Emails</label>
+                  <button
+                    type="button"
+                    onClick={() => setEditForm(prev => ({ ...prev, additional_emails: [...(prev.additional_emails || []), ''] }))}
+                    className="text-[10px] font-semibold text-brand-red hover:underline"
+                  >
+                    + Add Email
+                  </button>
+                </div>
+                {(editForm.additional_emails || []).length === 0 ? (
+                  <p className={`text-[11px] italic ${t('text-gray-600','text-gray-500')}`}>No additional emails. Click &quot;Add Email&quot; to add one for contact purposes.</p>
+                ) : (
+                  <div className="space-y-2">
+                    {(editForm.additional_emails || []).map((val, idx) => (
+                      <div key={idx} className="flex gap-2">
+                        <input
+                          type="email"
+                          value={val}
+                          onChange={e => setEditForm(prev => {
+                            const next = [...(prev.additional_emails || [])]
+                            next[idx] = e.target.value
+                            return { ...prev, additional_emails: next }
+                          })}
+                          placeholder="name@example.com"
+                          className={`flex-1 px-4 py-2.5 rounded-xl text-sm ${t('bg-white/[0.04] border border-white/[0.06] text-white placeholder-gray-600 focus:border-brand-red/50','bg-gray-100/40 border border-gray-200/40 text-gray-900 placeholder-gray-400 focus:border-brand-red/50')} outline-none transition-colors`}
+                        />
+                        <button
+                          type="button"
+                          aria-label="Remove email"
+                          onClick={() => setEditForm(prev => ({ ...prev, additional_emails: (prev.additional_emails || []).filter((_, i) => i !== idx) }))}
+                          className={`px-3 rounded-xl text-xs ${t('bg-white/[0.04] border border-white/[0.06] text-gray-400 hover:text-red-400','bg-gray-100 border border-gray-200 text-gray-500 hover:text-red-500')}`}
+                        >
+                          Remove
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Additional phones — repeater. Saved to clients.additional_phones. */}
+              <div>
+                <div className="flex items-center justify-between mb-1">
+                  <label className={`text-[10px] uppercase tracking-wider ${t('text-gray-500','text-gray-600')}`}>Additional Phones</label>
+                  <button
+                    type="button"
+                    onClick={() => setEditForm(prev => ({ ...prev, additional_phones: [...(prev.additional_phones || []), ''] }))}
+                    className="text-[10px] font-semibold text-brand-red hover:underline"
+                  >
+                    + Add Phone
+                  </button>
+                </div>
+                {(editForm.additional_phones || []).length === 0 ? (
+                  <p className={`text-[11px] italic ${t('text-gray-600','text-gray-500')}`}>No additional phones. Useful if you have a work number or family contact.</p>
+                ) : (
+                  <div className="space-y-2">
+                    {(editForm.additional_phones || []).map((val, idx) => (
+                      <div key={idx} className="flex gap-2">
+                        <input
+                          type="tel"
+                          value={val}
+                          onChange={e => setEditForm(prev => {
+                            const next = [...(prev.additional_phones || [])]
+                            next[idx] = e.target.value
+                            return { ...prev, additional_phones: next }
+                          })}
+                          placeholder="+91 XXXXX XXXXX"
+                          className={`flex-1 px-4 py-2.5 rounded-xl text-sm ${t('bg-white/[0.04] border border-white/[0.06] text-white placeholder-gray-600 focus:border-brand-red/50','bg-gray-100/40 border border-gray-200/40 text-gray-900 placeholder-gray-400 focus:border-brand-red/50')} outline-none transition-colors`}
+                        />
+                        <button
+                          type="button"
+                          aria-label="Remove phone"
+                          onClick={() => setEditForm(prev => ({ ...prev, additional_phones: (prev.additional_phones || []).filter((_, i) => i !== idx) }))}
+                          className={`px-3 rounded-xl text-xs ${t('bg-white/[0.04] border border-white/[0.06] text-gray-400 hover:text-red-400','bg-gray-100 border border-gray-200 text-gray-500 hover:text-red-500')}`}
+                        >
+                          Remove
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
 
               <div className={`pt-4 border-t ${t('border-white/[0.06]','border-gray-200')}`}>
                 <p className={`text-[10px] uppercase tracking-wider font-semibold mb-3 ${t('text-gray-500','text-gray-600')}`}>Nominee Information</p>

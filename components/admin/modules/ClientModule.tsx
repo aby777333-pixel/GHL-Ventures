@@ -1368,15 +1368,51 @@ function ClientProfileContent({ client, activeRMs, onAssignRM, onAddKYC, addingK
         )}
       </div>
 
-      {/* Contact Info */}
+      {/* Contact Info — Investor Contact Corrections 2026-05-14:
+          shows primary email/phone plus a "+N more" pill when the investor
+          has added additional contacts via Edit Profile. Expanding the pill
+          reveals the full list inline. Empty values fall back to a clear
+          "Not on file" hint so admins can act instead of seeing a blank box. */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-        <div className="flex items-center gap-2 p-3 rounded-xl bg-white/[0.03] border border-white/[0.04]">
-          <Mail className="w-4 h-4 text-gray-500" />
-          <span className="text-xs text-gray-300 truncate">{client.email}</span>
+        <div className="p-3 rounded-xl bg-white/[0.03] border border-white/[0.04]">
+          <div className="flex items-center gap-2">
+            <Mail className="w-4 h-4 text-gray-500 shrink-0" />
+            <span className={`text-xs truncate ${client.email ? 'text-gray-300' : 'text-gray-600 italic'}`}>
+              {client.email || 'Not on file'}
+            </span>
+            {(client.additionalEmails && client.additionalEmails.length > 0) && (
+              <span className="ml-auto inline-flex items-center text-[10px] font-semibold text-brand-red bg-brand-red/10 border border-brand-red/20 rounded-full px-2 py-0.5">
+                +{client.additionalEmails.length} more
+              </span>
+            )}
+          </div>
+          {(client.additionalEmails && client.additionalEmails.length > 0) && (
+            <ul className="mt-2 space-y-1">
+              {client.additionalEmails.map((e, i) => (
+                <li key={i} className="text-[11px] text-gray-400 pl-6 truncate">{e}</li>
+              ))}
+            </ul>
+          )}
         </div>
-        <div className="flex items-center gap-2 p-3 rounded-xl bg-white/[0.03] border border-white/[0.04]">
-          <Phone className="w-4 h-4 text-gray-500" />
-          <span className="text-xs text-gray-300">{client.phone}</span>
+        <div className="p-3 rounded-xl bg-white/[0.03] border border-white/[0.04]">
+          <div className="flex items-center gap-2">
+            <Phone className="w-4 h-4 text-gray-500 shrink-0" />
+            <span className={`text-xs ${client.phone ? 'text-gray-300' : 'text-gray-600 italic'}`}>
+              {client.phone || 'Not on file'}
+            </span>
+            {(client.additionalPhones && client.additionalPhones.length > 0) && (
+              <span className="ml-auto inline-flex items-center text-[10px] font-semibold text-brand-red bg-brand-red/10 border border-brand-red/20 rounded-full px-2 py-0.5">
+                +{client.additionalPhones.length} more
+              </span>
+            )}
+          </div>
+          {(client.additionalPhones && client.additionalPhones.length > 0) && (
+            <ul className="mt-2 space-y-1">
+              {client.additionalPhones.map((p, i) => (
+                <li key={i} className="text-[11px] text-gray-400 pl-6">{p}</li>
+              ))}
+            </ul>
+          )}
         </div>
         <div className="flex items-center gap-2 p-3 rounded-xl bg-white/[0.03] border border-white/[0.04]">
           <FileText className="w-4 h-4 text-gray-500" />

@@ -1795,6 +1795,20 @@ function EmailerTab({ showToast }: { showToast: Props['showToast'] }) {
                   {recipients.split(',').map(s => s.trim()).filter(Boolean).length} recipient(s) loaded
                 </p>
               ) : null}
+              {/* Smart Emailer Privacy Notice 2026-05-14:
+                  send-email.ts dispatches one Resend request per recipient
+                  (Promise.allSettled over the array), so each email arrives
+                  with only that recipient in the To: header — no client
+                  ever sees another client's address. Make that explicit in
+                  the UI so admins don't second-guess bulk sends. */}
+              {recipients.split(',').map(s => s.trim()).filter(Boolean).length > 1 ? (
+                <div className="flex items-start gap-2 px-3 py-2 rounded-lg bg-emerald-500/[0.06] border border-emerald-500/20">
+                  <Shield className="w-3.5 h-3.5 text-emerald-400 mt-0.5 shrink-0" />
+                  <p className="text-[11px] text-emerald-300/90 leading-snug">
+                    <span className="font-semibold">Private delivery:</span> each recipient receives an individual email — they will not see other recipients&apos; addresses.
+                  </p>
+                </div>
+              ) : null}
               <input value={subject} onChange={e => setSubject(e.target.value)} placeholder="Subject line..." className="w-full px-4 py-2.5 rounded-xl bg-white/[0.04] border border-white/[0.08] text-sm text-white placeholder:text-gray-600 focus:outline-none focus:border-brand-red/40" />
               <div className="flex gap-1.5 flex-wrap">
                 {/* Pending 30-04-2026 follow-up: chips reflect the

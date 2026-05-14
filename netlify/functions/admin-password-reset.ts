@@ -175,6 +175,19 @@ export default async (request: Request) => {
         const u = await userRes.json()
         targetEmail = (u.email || '').toLowerCase()
       }
+    } else if (targetUserId && targetEmail) {
+      // Password Vault Reliability 2026-05-14: when the User Passwords UI
+      // hands us both fields, verify the auth.users row actually exists.
+      // Legacy profile-only rows would otherwise reach the PUT step and
+      // fail opaquely with "Failed to set temporary password".
+      const userRes = await fetch(`${supabaseUrl}/auth/v1/admin/users/${targetUserId}`, {
+        headers: { 'Authorization': `Bearer ${serviceRoleKey}`, 'apikey': serviceRoleKey },
+      })
+      if (!userRes.ok) {
+        // Clear the id so the downstream lookup-by-email / auto-provision
+        // branches can take over.
+        targetUserId = ''
+      }
     }
 
     // No auth user yet? Look up the matching CLIENTS row by email so we can
@@ -510,14 +523,24 @@ export default async (request: Request) => {
 
     if (!patchRes.ok) {
       const errText = await patchRes.text()
+      // Password Vault Reliability 2026-05-14: surface the underlying
+      // Supabase reason so the admin sees a usable error (e.g. "User not
+      // found", "Password should be at least 6 characters") instead of
+      // the opaque generic message we used to return.
+      let reason = ''
+      try {
+        const j = JSON.parse(errText)
+        reason = j.msg || j.message || j.error_description || j.error || ''
+      } catch { /* fall through */ }
+      const detail = reason || errText.slice(0, 200) || `HTTP ${patchRes.status}`
       await logAudit({
         supabaseUrl, serviceRoleKey, request,
         targetUserId, targetEmail, targetKind,
         method: 'temp_password', adminId, adminEmail,
-        success: false, errorMessage: `admin update failed: ${patchRes.status} ${errText.slice(0, 200)}`,
+        success: false, errorMessage: `admin update failed: ${patchRes.status} ${detail}`,
         notes: body.notes || null,
       })
-      return json(patchRes.status, { error: 'Failed to set temporary password' }, request)
+      return json(patchRes.status, { error: `Failed to set temporary password: ${detail}` }, request)
     }
 
     // Best-effort: revoke any existing refresh tokens so the user is forced

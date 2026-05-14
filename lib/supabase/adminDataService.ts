@@ -228,6 +228,72 @@ export async function fetchClients() {
     }
     const panFor = (c: any): string => (c.pan && c.pan.trim()) ? c.pan : (panMap.get(c.id) || '')
 
+    // KYC basic details also carry phone — second fallback for clients
+    // whose phone wasn't set on the clients row itself.
+    let basicPhoneMap = new Map<string, string>()
+    try {
+      const { data: basicRows } = await (supabase
+        .from('kyc_basic_details')
+        .select('client_id, phone') as any)
+      for (const r of (basicRows || []) as any[]) {
+        if (r.client_id && r.phone) basicPhoneMap.set(r.client_id, r.phone)
+      }
+    } catch { /* table missing in some envs */ }
+
+    // Investor Contact Corrections 2026-05-14: profiles also stores
+    // email/phone on signup. When clients.* is empty we fall back to the
+    // matching profile row (joined on user_id).
+    const rows = (error || !data) ? null : (data as any[])
+    const userIds = new Set<string>()
+    for (const c of rows || []) if (c.user_id) userIds.add(c.user_id)
+    let profileMap = new Map<string, { email?: string; phone?: string }>()
+    if (userIds.size > 0) {
+      try {
+        const { data: profs } = await (supabase
+          .from('profiles')
+          .select('id, email, phone')
+          .in('id', Array.from(userIds)) as any)
+        for (const p of (profs || []) as any[]) {
+          profileMap.set(p.id, { email: p.email || '', phone: p.phone || '' })
+        }
+      } catch { /* leave empty */ }
+    }
+
+    // Final fallback for email only: ask the admin-only RPC for
+    // auth.users.email for any user_id that still has no resolved email.
+    // The function is SECURITY DEFINER and rejects non-admin callers, so
+    // we can safely call it from the browser session.
+    const missingEmailUserIds: string[] = []
+    for (const c of rows || []) {
+      const directEmail = (c.email || '').trim()
+      const profEmail = profileMap.get(c.user_id || '')?.email || ''
+      if (!directEmail && !profEmail && c.user_id) missingEmailUserIds.push(c.user_id)
+    }
+    let authEmailMap = new Map<string, string>()
+    if (missingEmailUserIds.length > 0) {
+      try {
+        const { data: authRows } = await (supabase as any).rpc('admin_get_auth_emails', { p_user_ids: missingEmailUserIds })
+        for (const r of (authRows || []) as any[]) {
+          if (r.user_id && r.email) authEmailMap.set(r.user_id, r.email)
+        }
+      } catch { /* RPC missing locally — silently degrade */ }
+    }
+
+    const resolveEmail = (c: any): string => {
+      const direct = (c.email || '').trim()
+      if (direct) return direct
+      const fromProfile = profileMap.get(c.user_id || '')?.email || ''
+      if (fromProfile) return fromProfile
+      return authEmailMap.get(c.user_id || '') || ''
+    }
+    const resolvePhone = (c: any): string => {
+      const direct = (c.phone || '').trim()
+      if (direct) return direct
+      const fromProfile = (profileMap.get(c.user_id || '')?.phone || '').trim()
+      if (fromProfile) return fromProfile
+      return (basicPhoneMap.get(c.id) || '').trim()
+    }
+
     if (error || !data) {
       // Fallback: no join
       const { data: plain } = await (supabase
@@ -239,8 +305,8 @@ export async function fetchClients() {
         id: c.id,
         ghlId: c.ghl_id || '',
         name: c.full_name || '',
-        email: c.email || '',
-        phone: c.phone || '',
+        email: resolveEmail(c),
+        phone: resolvePhone(c),
         pan: panFor(c),
         kycStatus: c.kyc_status,
         accountStatus: c.kyc_status === 'verified' ? 'active' : 'pending',
@@ -251,6 +317,8 @@ export async function fetchClients() {
         city: c.city,
         referredBy: c.referred_by || '',
         referralCode: c.referral_code || '',
+        additionalEmails: Array.isArray(c.additional_emails) ? c.additional_emails : [],
+        additionalPhones: Array.isArray(c.additional_phones) ? c.additional_phones : [],
         // Re-Testing 30-04-2026 #6: prefer the editable joined_at column,
         // fall back to created_at for legacy rows that haven't been
         // back-filled yet.
@@ -265,8 +333,8 @@ export async function fetchClients() {
       id: c.id,
       ghlId: c.ghl_id || '',
       name: c.full_name || '',
-      email: c.email || '',
-      phone: c.phone || '',
+      email: resolveEmail(c),
+      phone: resolvePhone(c),
       pan: panFor(c),
       kycStatus: c.kyc_status,
       accountStatus: c.kyc_status === 'verified' ? 'active' : 'pending',
@@ -277,6 +345,8 @@ export async function fetchClients() {
       city: c.city,
       referredBy: c.referred_by || '',
       referralCode: c.referral_code || '',
+      additionalEmails: Array.isArray(c.additional_emails) ? c.additional_emails : [],
+      additionalPhones: Array.isArray(c.additional_phones) ? c.additional_phones : [],
       joinDate: c.created_at?.split('T')[0] || '',
       lastActive: c.updated_at?.split('T')[0] || '',
       assignedRM: c.staff_profiles?.profiles?.full_name || 'Not assigned',

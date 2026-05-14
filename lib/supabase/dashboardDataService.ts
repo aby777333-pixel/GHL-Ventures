@@ -591,14 +591,23 @@ export async function updateProfile(fields: Record<string, any>) {
     if (pErr) console.warn('[dashboard] Profile update error:', pErr.message)
   }
 
-  // Update clients table (nominee, dob, occupation stored here)
-  // Use 'in' check so empty strings don't prevent fields from being saved
-  const clientFields = ['dob', 'occupation', 'nominee_name', 'nominee_relation', 'nominee_pan', 'nominee_share']
+  // Update clients table (nominee, dob, occupation stored here).
+  // Investor Contact Corrections 2026-05-14: mirror phone + full_name onto
+  // clients so admin views see the latest, and persist the new
+  // additional_emails/additional_phones arrays from the modal.
+  const clientFields = ['dob', 'occupation', 'nominee_name', 'nominee_relation', 'nominee_pan', 'nominee_share', 'full_name', 'phone']
   const clientUpdate: Record<string, any> = {}
   for (const key of clientFields) {
     if (key in fields && fields[key] !== undefined && fields[key] !== '') {
       clientUpdate[key] = fields[key]
     }
+  }
+  // Arrays are written even when empty so a user can clear all extras.
+  if (Array.isArray(fields.additional_emails)) {
+    clientUpdate.additional_emails = fields.additional_emails
+  }
+  if (Array.isArray(fields.additional_phones)) {
+    clientUpdate.additional_phones = fields.additional_phones
   }
 
   if (Object.keys(clientUpdate).length > 0) {

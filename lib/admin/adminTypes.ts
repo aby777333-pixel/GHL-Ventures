@@ -89,6 +89,10 @@ export interface Client {
   lastActive: string
   assignedRM: string
   avatar?: string
+  // Investor Contact Corrections 2026-05-14: extra emails/phones captured
+  // by the investor in their Edit Profile dialog. Empty arrays when none.
+  additionalEmails?: string[]
+  additionalPhones?: string[]
 }
 
 export interface KYCDocument {
