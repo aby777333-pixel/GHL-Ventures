@@ -24,6 +24,30 @@ const ICON_MAP: Record<string, React.ComponentType<{ className?: string }>> = {
   Building2, Megaphone, FileCheck, Banknote, Newspaper, FileBarChart, Key,
 }
 
+// ── Per-module accent glow palette (UI Aesthetic 2026-05-14) ─────
+// Each top-level sidebar item gets its own subtle accent color so a
+// hover/active state lights the row up with the matching hue. Keyed by
+// SidebarItem.id (not module) so Investment / Referral / Leads — which
+// all share module='sales' — still feel distinct. Colors are picked to
+// read well against the dark-red gradient background of the sidebar.
+const MODULE_ACCENTS: Record<string, string> = {
+  overview: '#FBBF24',          // amber  — Dashboard
+  users: '#7DD3FC',             // sky    — Users
+  investment: '#A78BFA',        // violet — Investment
+  kyc: '#34D399',               // emerald — KYC
+  documents: '#F472B6',         // pink   — Documents
+  'finance-payout': '#FCD34D',  // gold   — Finance payout
+  referral: '#22D3EE',          // cyan   — Referral
+  contact: '#60A5FA',           // blue   — Contact
+  'support-ticket': '#FCA5A5',  // coral  — Support Ticket
+  cms: '#5EEAD4',               // teal   — CMS
+  employee: '#C4B5FD',          // lavender — Employee
+  leads: '#FB923C',             // orange — Leads
+  notification: '#E879F9',      // fuchsia — Notification
+  setting: '#94A3B8',           // slate  — Setting
+}
+const DEFAULT_ACCENT = '#F5C2C2'
+
 interface AdminSidebarProps {
   activeModule: AdminModule
   activeSubTab: string | null
@@ -68,6 +92,66 @@ export default function AdminSidebar({
           onClick={() => setSidebarOpen(false)}
         />
       )}
+
+      {/* UI Aesthetic 2026-05-14: per-module glow styles. color-mix() is
+          supported in all evergreen browsers (Chrome/Edge ≥111, Firefox
+          ≥113, Safari ≥16.2) and degrades gracefully — older engines
+          simply fall back to the underlying solid colors. */}
+      <style>{`
+        .ghl-nav-btn {
+          transition: background-color 200ms ease, border-color 220ms ease, box-shadow 280ms ease, color 200ms ease;
+        }
+        .ghl-nav-btn:hover {
+          background-color: color-mix(in srgb, var(--ac, #fff) 9%, transparent);
+          border-color: color-mix(in srgb, var(--ac, #fff) 22%, transparent);
+          box-shadow: 0 0 14px color-mix(in srgb, var(--ac, #fff) 26%, transparent);
+        }
+        .ghl-nav-btn[data-active="true"] {
+          background-color: color-mix(in srgb, var(--ac, #fff) 14%, transparent);
+          border-color: color-mix(in srgb, var(--ac, #fff) 48%, transparent);
+          box-shadow:
+            0 0 22px color-mix(in srgb, var(--ac, #fff) 42%, transparent),
+            inset 0 0 12px color-mix(in srgb, var(--ac, #fff) 16%, transparent);
+        }
+        .ghl-nav-icon {
+          transition: color 200ms ease, filter 250ms ease;
+        }
+        .ghl-nav-btn:hover .ghl-nav-icon {
+          color: var(--ac, #fff);
+          filter: drop-shadow(0 0 6px color-mix(in srgb, var(--ac, #fff) 55%, transparent));
+        }
+        .ghl-nav-btn[data-active="true"] .ghl-nav-icon {
+          color: var(--ac, #fff);
+          filter: drop-shadow(0 0 8px color-mix(in srgb, var(--ac, #fff) 70%, transparent));
+        }
+        .ghl-nav-bar {
+          background: linear-gradient(180deg, var(--ac, #fff), color-mix(in srgb, var(--ac, #fff) 55%, transparent));
+          box-shadow: 0 0 10px color-mix(in srgb, var(--ac, #fff) 80%, transparent);
+        }
+        .ghl-sub-btn {
+          transition: background-color 200ms ease, color 200ms ease, box-shadow 220ms ease;
+        }
+        .ghl-sub-btn:hover {
+          background-color: color-mix(in srgb, var(--ac, #fff) 8%, transparent);
+        }
+        .ghl-sub-btn[data-active="true"] {
+          background-color: color-mix(in srgb, var(--ac, #fff) 13%, transparent);
+          color: #fff;
+          box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--ac, #fff) 30%, transparent);
+        }
+        .ghl-foot-btn {
+          transition: background-color 200ms ease, color 200ms ease, box-shadow 250ms ease;
+        }
+        .ghl-foot-btn:hover {
+          background-color: color-mix(in srgb, var(--ac, #fff) 10%, transparent);
+          box-shadow: 0 0 12px color-mix(in srgb, var(--ac, #fff) 22%, transparent);
+          color: #fff;
+        }
+        .ghl-foot-btn:hover .ghl-nav-icon {
+          color: var(--ac, #fff);
+          filter: drop-shadow(0 0 5px color-mix(in srgb, var(--ac, #fff) 55%, transparent));
+        }
+      `}</style>
 
       {/* Sidebar */}
       <aside
@@ -117,11 +201,13 @@ export default function AdminSidebar({
             const isActive = activeModule === item.module
             const isExpanded = expandedModule === item.id
             const hasSubItems = item.subItems && item.subItems.length > 0
+            const accent = MODULE_ACCENTS[item.id] || DEFAULT_ACCENT
 
             return (
-              <div key={item.id}>
+              <div key={item.id} style={{ ['--ac' as any]: accent }}>
                 {/* Main module button */}
                 <button
+                  data-active={isActive ? 'true' : 'false'}
                   onClick={() => {
                     if (hasSubItems) {
                       // Bug #15: Parent should ONLY toggle dropdown, not navigate
@@ -133,16 +219,13 @@ export default function AdminSidebar({
                       handleNavClick(item.navigateTo || item.module)
                     }
                   }}
-                  className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-300 group relative
-                    ${isActive
-                      ? 'text-white bg-white/20 border border-white/20'
-                      : 'text-white/80 hover:text-white hover:bg-white/10 border border-transparent'
-                    }`}
+                  className={`ghl-nav-btn w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium group relative border border-transparent
+                    ${isActive ? 'text-white' : 'text-white/80 hover:text-white'}`}
                 >
                   {isActive && (
-                    <div className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-5 rounded-r-full bg-white" />
+                    <div className="ghl-nav-bar absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-5 rounded-r-full" />
                   )}
-                  <Icon className={`w-[18px] h-[18px] flex-shrink-0 ${isActive ? 'text-white' : 'text-white/60 group-hover:text-white'}`} />
+                  <Icon className={`ghl-nav-icon w-[18px] h-[18px] flex-shrink-0 ${isActive ? '' : 'text-white/60'}`} />
                   <span className="flex-1 text-left">{item.label}</span>
 
                   {/* Badge */}
@@ -163,7 +246,8 @@ export default function AdminSidebar({
                 </button>
 
                 {/* Sub-items — flush-left (bug #36) aligned to the same left edge
-                    as the parent module buttons (no indent / no border rail). */}
+                    as the parent module buttons (no indent / no border rail).
+                    Sub-items inherit the parent's --ac so the tint feels cohesive. */}
                 {hasSubItems && isExpanded && (
                   <div className="mt-0.5 space-y-0.5 mb-1">
                     {item.subItems!.map(sub => {
@@ -175,12 +259,10 @@ export default function AdminSidebar({
                       return (
                         <button
                           key={sub.id}
+                          data-active={isSubActive ? 'true' : 'false'}
                           onClick={() => handleNavClick(sub.id)}
-                          className={`w-full flex items-center justify-start text-left px-3 py-1.5 rounded-lg text-[13px] transition-all duration-200
-                            ${isSubActive
-                              ? 'text-white font-semibold bg-white/15'
-                              : 'text-white/60 hover:text-white hover:bg-white/10'
-                            }`}
+                          className={`ghl-sub-btn w-full flex items-center justify-start text-left px-3 py-1.5 rounded-lg text-[13px]
+                            ${isSubActive ? 'text-white font-semibold' : 'text-white/60 hover:text-white'}`}
                         >
                           <span className="w-[18px] flex-shrink-0" />
                           {sub.label}
@@ -196,32 +278,33 @@ export default function AdminSidebar({
           <div className="my-4 border-t border-white/20" />
         </nav>
 
-        {/* Bottom section */}
+        {/* Bottom section — each footer link carries its own --ac so the
+            hover glow stays distinct from the nav above. */}
         <div className="px-3 pb-4 pt-2 space-y-1 border-t border-white/20">
           <Link
             href="/dashboard"
             target="_blank"
-            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-300
-              text-white/70 hover:text-white hover:bg-white/10"
+            style={{ ['--ac' as any]: '#7DD3FC' /* sky — Client Dashboard */ }}
+            className="ghl-foot-btn w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-white/70"
           >
-            <ExternalLink className="w-[18px] h-[18px]" />
+            <ExternalLink className="ghl-nav-icon w-[18px] h-[18px] text-white/60" />
             Client Dashboard
           </Link>
           <Link
             href="/staff/login"
             target="_blank"
-            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-300
-              text-white/70 hover:text-white hover:bg-white/10"
+            style={{ ['--ac' as any]: '#C4B5FD' /* lavender — Staff Portal */ }}
+            className="ghl-foot-btn w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-white/70"
           >
-            <BadgeCheck className="w-[18px] h-[18px]" />
+            <BadgeCheck className="ghl-nav-icon w-[18px] h-[18px] text-white/60" />
             Staff Portal
           </Link>
           <button
             onClick={onLogout}
-            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-300
-              text-white/70 hover:text-white hover:bg-white/10"
+            style={{ ['--ac' as any]: '#FCA5A5' /* coral — destructive but soft */ }}
+            className="ghl-foot-btn w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-white/70"
           >
-            <LogOut className="w-[18px] h-[18px]" />
+            <LogOut className="ghl-nav-icon w-[18px] h-[18px] text-white/60" />
             Sign Out
           </button>
         </div>
