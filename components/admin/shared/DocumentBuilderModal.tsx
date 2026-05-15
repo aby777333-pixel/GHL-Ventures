@@ -19,13 +19,13 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   Plus, Trash2, GripVertical, Download, Eye, Type, ListChecks,
-  Heading1, AlignLeft, Image as ImageIcon, PenLine, FileText, Loader2,
-  RefreshCw, Library,
+  Heading1, AlignLeft, AlignJustify, Image as ImageIcon, PenLine, FileText, Loader2,
+  RefreshCw, Library, Table as TableIcon, Building2,
 } from 'lucide-react'
 import { jsPDF } from 'jspdf'
 import {
   Document, Packer, Paragraph, TextRun, HeadingLevel, AlignmentType,
-  ImageRun,
+  ImageRun, Table, TableRow, TableCell, WidthType, BorderStyle,
 } from 'docx'
 import AdminModal, { ModalButton } from './AdminModal'
 import { supabase, isSupabaseConfigured } from '@/lib/supabase/client'
@@ -33,17 +33,31 @@ import { getDownloadUrl } from '@/lib/supabase/storageService'
 import { DOCUMENT_TEMPLATES, type DocumentKind } from '@/lib/admin/documentTemplates'
 
 // ── Block model ─────────────────────────────────────────────────
-type BlockKind = 'heading' | 'paragraph' | 'kv-list' | 'bullet-list' | 'image' | 'signature'
+type BlockKind = 'heading' | 'paragraph' | 'kv-list' | 'bullet-list' | 'image' | 'signature' | 'table' | 'footer'
 
 interface BaseBlock { id: string; kind: BlockKind }
 interface HeadingBlock extends BaseBlock { kind: 'heading'; text: string; level: 1 | 2 | 3; align: 'left' | 'center' | 'right' }
-interface ParagraphBlock extends BaseBlock { kind: 'paragraph'; text: string }
+interface ParagraphBlock extends BaseBlock { kind: 'paragraph'; text: string; justify?: boolean }
 interface KvListBlock extends BaseBlock { kind: 'kv-list'; rows: { label: string; value: string }[] }
 interface BulletListBlock extends BaseBlock { kind: 'bullet-list'; items: string[] }
 interface ImageBlock extends BaseBlock { kind: 'image'; dataUrl: string; width: number; align: 'left' | 'center' | 'right' }
 interface SignatureBlock extends BaseBlock { kind: 'signature'; labels: string[] } // two signature lines
+interface TableBlock extends BaseBlock {
+  kind: 'table'
+  headers: string[]
+  rows: string[][]
+  align: ('left' | 'center' | 'right')[]
+}
+interface FooterBlock extends BaseBlock {
+  kind: 'footer'
+  companyName: string
+  lines: string[]
+  bgColor: string                  // CSS color string e.g. '#FFF6D9'
+}
 
-type Block = HeadingBlock | ParagraphBlock | KvListBlock | BulletListBlock | ImageBlock | SignatureBlock
+type Block =
+  | HeadingBlock | ParagraphBlock | KvListBlock | BulletListBlock | ImageBlock
+  | SignatureBlock | TableBlock | FooterBlock
 
 const STORAGE_KEY = 'ghl-admin-document-builder-draft-v1'
 
@@ -51,22 +65,48 @@ const blankBlock = (kind: BlockKind): Block => {
   const id = `b-${Math.random().toString(36).slice(2, 10)}`
   switch (kind) {
     case 'heading':     return { id, kind, text: 'Untitled heading', level: 1, align: 'center' }
-    case 'paragraph':   return { id, kind, text: '' }
+    case 'paragraph':   return { id, kind, text: '', justify: true }
     case 'kv-list':     return { id, kind, rows: [{ label: 'Label', value: 'Value' }] }
     case 'bullet-list': return { id, kind, items: [''] }
     case 'image':       return { id, kind, dataUrl: '', width: 280, align: 'center' }
     case 'signature':   return { id, kind, labels: ['Authorised Signatory', 'Authorised Signatory'] }
+    case 'table':       return {
+      id, kind,
+      headers: ['Column 1', 'Column 2', 'Column 3'],
+      rows: [['', '', ''], ['', '', '']],
+      align: ['left', 'left', 'left'],
+    }
+    case 'footer':      return {
+      id, kind,
+      companyName: 'GHL INDIA VENTURES PRIVATE LIMITED',
+      lines: [
+        'CIN: U70109TN2022PTC151180',
+        'Email: info@ghlindiaventures.com',
+        'Desk No 12, 2D, Queens Court, Montieth Road, Egmore, Chennai-600008.',
+      ],
+      bgColor: '#FFF6D9',
+    }
   }
 }
 
 const blockPalette: { kind: BlockKind; label: string; icon: React.ComponentType<{ className?: string }> }[] = [
   { kind: 'heading',     label: 'Heading',     icon: Heading1 },
-  { kind: 'paragraph',   label: 'Paragraph',   icon: AlignLeft },
+  { kind: 'paragraph',   label: 'Paragraph',   icon: AlignJustify },
   { kind: 'kv-list',     label: 'Field List',  icon: ListChecks },
   { kind: 'bullet-list', label: 'Bullets',     icon: Type },
+  { kind: 'table',       label: 'Table',       icon: TableIcon },
   { kind: 'image',       label: 'Image',       icon: ImageIcon },
   { kind: 'signature',   label: 'Signatures',  icon: PenLine },
+  { kind: 'footer',      label: 'Footer',      icon: Building2 },
 ]
+
+// Convert a CSS hex like '#FFF6D9' to a [r,g,b] tuple in 0–255 (jsPDF fillColor input).
+function hexToRgb(hex: string): [number, number, number] {
+  const m = /^#?([0-9a-f]{6})$/i.exec(hex || '')
+  if (!m) return [255, 246, 217]
+  const n = parseInt(m[1], 16)
+  return [(n >> 16) & 0xff, (n >> 8) & 0xff, n & 0xff]
+}
 
 interface Props {
   open: boolean
@@ -290,13 +330,92 @@ export default function DocumentBuilderModal({ open, onClose, showToast }: Props
         y += 6
       } else if (b.kind === 'paragraph') {
         doc.setFont('helvetica', 'normal').setFontSize(11)
-        const lines = doc.splitTextToSize(b.text || '', pageW - margin * 2)
-        for (const line of lines) {
+        const maxW = pageW - margin * 2
+        const lines = doc.splitTextToSize(b.text || '', maxW)
+        const justify = b.justify !== false
+        for (let i = 0; i < lines.length; i++) {
           ensureSpace(16)
-          doc.text(line, margin, y)
+          const line = lines[i]
+          const isLast = i === lines.length - 1 || lines[i + 1] === ''
+          if (justify && !isLast && line.trim().includes(' ')) {
+            // Distribute extra space across word gaps to justify the line.
+            const words = line.split(' ').filter(Boolean)
+            if (words.length > 1) {
+              const naturalW = doc.getTextWidth(words.join(' '))
+              const extra = maxW - naturalW
+              const gap = doc.getTextWidth(' ') + extra / (words.length - 1)
+              let x = margin
+              for (let j = 0; j < words.length; j++) {
+                doc.text(words[j], x, y)
+                x += doc.getTextWidth(words[j]) + gap
+              }
+            } else {
+              doc.text(line, margin, y)
+            }
+          } else {
+            doc.text(line, margin, y)
+          }
           y += 14
         }
         y += 6
+      } else if (b.kind === 'table') {
+        doc.setFontSize(10)
+        const cols = Math.max(1, b.headers.length)
+        const cellW = (pageW - margin * 2) / cols
+        const padX = 4
+        const padY = 5
+        // header row
+        const hdrLines = b.headers.map(h => doc.splitTextToSize(h || '', cellW - padX * 2))
+        const hdrH = Math.max(18, ...hdrLines.map((ls: string[]) => ls.length * 12)) + padY * 2
+        ensureSpace(hdrH + 28)
+        doc.setFillColor(245, 245, 245)
+        doc.rect(margin, y, cellW * cols, hdrH, 'F')
+        doc.setFont('helvetica', 'bold')
+        for (let c = 0; c < cols; c++) {
+          const x = margin + cellW * c
+          doc.rect(x, y, cellW, hdrH)
+          doc.text(hdrLines[c], x + cellW / 2, y + padY + 10, { align: 'center' })
+        }
+        y += hdrH
+        // body rows
+        doc.setFont('helvetica', 'normal')
+        for (const row of b.rows) {
+          const cellLines = row.map((cell, c) => doc.splitTextToSize(cell || '', cellW - padX * 2))
+          const rowH = Math.max(16, ...cellLines.map((ls: string[]) => ls.length * 12)) + padY * 2
+          ensureSpace(rowH)
+          for (let c = 0; c < cols; c++) {
+            const x = margin + cellW * c
+            doc.rect(x, y, cellW, rowH)
+            const align = (b.align && b.align[c]) || 'left'
+            const tx = align === 'center' ? x + cellW / 2
+                    : align === 'right' ? x + cellW - padX
+                    : x + padX
+            doc.text(cellLines[c], tx, y + padY + 10, { align })
+          }
+          y += rowH
+        }
+        y += 8
+      } else if (b.kind === 'footer') {
+        // Render at the current y as a coloured band spanning the full width.
+        const [r, g, bl] = hexToRgb(b.bgColor)
+        const bandLines = [b.companyName, ...b.lines].filter(Boolean)
+        const lineH = 14
+        const titleH = 20
+        const bandH = titleH + (bandLines.length - 1) * lineH + 14
+        ensureSpace(bandH + 8)
+        doc.setFillColor(r, g, bl)
+        doc.rect(0, y, pageW, bandH, 'F')
+        let cy = y + 14
+        doc.setFont('helvetica', 'bold').setFontSize(13).setTextColor(20, 20, 20)
+        doc.text(bandLines[0] || '', pageW / 2, cy, { align: 'center' })
+        cy += titleH
+        doc.setFont('helvetica', 'normal').setFontSize(9.5)
+        for (let i = 1; i < bandLines.length; i++) {
+          doc.text(bandLines[i] || '', pageW / 2, cy, { align: 'center' })
+          cy += lineH
+        }
+        doc.setTextColor(0, 0, 0)
+        y += bandH + 6
       } else if (b.kind === 'kv-list') {
         doc.setFontSize(11)
         for (const row of b.rows) {
@@ -365,7 +484,50 @@ export default function DocumentBuilderModal({ open, onClose, showToast }: Props
       } else if (b.kind === 'paragraph') {
         // Preserve newlines by splitting into multiple paragraphs.
         const parts = (b.text || '').split('\n')
-        for (const part of parts) children.push(new Paragraph({ children: [new TextRun(part)] }))
+        const align = b.justify !== false ? AlignmentType.JUSTIFIED : AlignmentType.LEFT
+        for (const part of parts) children.push(new Paragraph({ children: [new TextRun(part)], alignment: align }))
+      } else if (b.kind === 'table') {
+        const tableRows: TableRow[] = []
+        const thinBorder = { style: BorderStyle.SINGLE, size: 4, color: '000000' }
+        const borders = { top: thinBorder, bottom: thinBorder, left: thinBorder, right: thinBorder }
+        // Header row
+        tableRows.push(new TableRow({
+          children: b.headers.map(h => new TableCell({
+            borders,
+            children: [new Paragraph({
+              children: [new TextRun({ text: h || '', bold: true })],
+              alignment: AlignmentType.CENTER,
+            })],
+          })),
+        }))
+        for (const row of b.rows) {
+          tableRows.push(new TableRow({
+            children: b.headers.map((_, c) => {
+              const align = (b.align && b.align[c]) || 'left'
+              const dxa = align === 'center' ? AlignmentType.CENTER
+                        : align === 'right' ? AlignmentType.RIGHT
+                        : AlignmentType.LEFT
+              return new TableCell({
+                borders,
+                children: [new Paragraph({ children: [new TextRun(row[c] || '')], alignment: dxa })],
+              })
+            }),
+          }))
+        }
+        children.push(new Table({
+          rows: tableRows,
+          width: { size: 100, type: WidthType.PERCENTAGE },
+        }))
+        children.push(new Paragraph({ text: '' }))
+      } else if (b.kind === 'footer') {
+        children.push(new Paragraph({
+          children: [new TextRun({ text: b.companyName || '', bold: true })],
+          alignment: AlignmentType.CENTER,
+        }))
+        for (const ln of b.lines) {
+          if (!ln) continue
+          children.push(new Paragraph({ children: [new TextRun(ln)], alignment: AlignmentType.CENTER }))
+        }
       } else if (b.kind === 'kv-list') {
         for (const row of b.rows) {
           children.push(new Paragraph({
@@ -632,8 +794,127 @@ function BlockEditor({ block, onChange }: { block: Block; onChange: (patch: Part
   if (block.kind === 'paragraph') {
     return (
       <div className="space-y-2">
-        <div className="text-[10px] uppercase tracking-wider text-gray-500">Paragraph</div>
-        <textarea value={block.text} onChange={e => onChange({ text: e.target.value } as any)} rows={3} placeholder="Write your paragraph…" className={input + ' resize-none font-mono text-[12px]'} />
+        <div className="flex items-center justify-between">
+          <div className="text-[10px] uppercase tracking-wider text-gray-500">Paragraph</div>
+          <label className="flex items-center gap-1.5 text-[10px] text-gray-400 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={block.justify !== false}
+              onChange={e => onChange({ justify: e.target.checked } as any)}
+              className="accent-brand-red"
+            />
+            Justified
+          </label>
+        </div>
+        <textarea value={block.text} onChange={e => onChange({ text: e.target.value } as any)} rows={3} placeholder="Write your paragraph…" className={input + ' resize-none text-[12px] leading-relaxed'} style={{ textAlign: block.justify !== false ? 'justify' : 'left' }} />
+      </div>
+    )
+  }
+
+  if (block.kind === 'table') {
+    const setHeader = (i: number, v: string) =>
+      onChange({ headers: block.headers.map((h, j) => j === i ? v : h) } as any)
+    const setAlign = (i: number, v: 'left' | 'center' | 'right') =>
+      onChange({ align: block.align.map((a, j) => j === i ? v : a) } as any)
+    const setCell = (r: number, c: number, v: string) =>
+      onChange({ rows: block.rows.map((row, ri) => ri === r ? row.map((cell, ci) => ci === c ? v : cell) : row) } as any)
+    const addColumn = () =>
+      onChange({
+        headers: [...block.headers, `Column ${block.headers.length + 1}`],
+        rows: block.rows.map(r => [...r, '']),
+        align: [...block.align, 'left'],
+      } as any)
+    const removeColumn = (i: number) =>
+      onChange({
+        headers: block.headers.filter((_, j) => j !== i),
+        rows: block.rows.map(r => r.filter((_, j) => j !== i)),
+        align: block.align.filter((_, j) => j !== i),
+      } as any)
+    const addRow = () =>
+      onChange({ rows: [...block.rows, block.headers.map(() => '')] } as any)
+    const removeRow = (i: number) =>
+      onChange({ rows: block.rows.filter((_, j) => j !== i) } as any)
+    return (
+      <div className="space-y-2">
+        <div className="text-[10px] uppercase tracking-wider text-gray-500">Table</div>
+        {/* Headers */}
+        <div className="space-y-1.5">
+          <div className="text-[10px] text-gray-500">Column headings & alignment</div>
+          {block.headers.map((h, i) => (
+            <div key={i} className="flex items-center gap-1.5">
+              <input value={h} onChange={e => setHeader(i, e.target.value)} placeholder={`Heading ${i + 1}`} className={input + ' flex-1'} />
+              <select value={block.align[i] || 'left'} onChange={e => setAlign(i, e.target.value as any)} className={input + ' max-w-[70px]'} title="Column alignment">
+                <option value="left">L</option><option value="center">C</option><option value="right">R</option>
+              </select>
+              {block.headers.length > 1 && (
+                <button onClick={() => removeColumn(i)} className="p-1 text-gray-500 hover:text-red-300" title="Remove column">
+                  <Trash2 className="w-3 h-3" />
+                </button>
+              )}
+            </div>
+          ))}
+        </div>
+        {/* Rows */}
+        <div className="space-y-1.5 pt-1">
+          <div className="text-[10px] text-gray-500">Rows</div>
+          {block.rows.map((row, ri) => (
+            <div key={ri} className="rounded-lg bg-white/[0.02] border border-white/[0.06] p-1.5">
+              <div className="flex items-center justify-between mb-1">
+                <span className="text-[9px] text-gray-500">Row {ri + 1}</span>
+                {block.rows.length > 1 && (
+                  <button onClick={() => removeRow(ri)} className="p-0.5 text-gray-500 hover:text-red-300" title="Remove row">
+                    <Trash2 className="w-3 h-3" />
+                  </button>
+                )}
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
+                {row.map((cell, ci) => (
+                  <input
+                    key={ci}
+                    value={cell}
+                    onChange={e => setCell(ri, ci, e.target.value)}
+                    placeholder={block.headers[ci] || `Col ${ci + 1}`}
+                    className={input + ' text-[11px]'}
+                  />
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+        <div className="flex gap-2 text-[11px] pt-1">
+          <button onClick={addColumn} className="text-brand-red hover:underline">+ Column</button>
+          <button onClick={addRow} className="text-brand-red hover:underline">+ Row</button>
+        </div>
+      </div>
+    )
+  }
+
+  if (block.kind === 'footer') {
+    const setLine = (i: number, v: string) =>
+      onChange({ lines: block.lines.map((l, j) => j === i ? v : l) } as any)
+    return (
+      <div className="space-y-2">
+        <div className="text-[10px] uppercase tracking-wider text-gray-500">Footer</div>
+        <input value={block.companyName} onChange={e => onChange({ companyName: e.target.value } as any)} placeholder="Company name" className={input + ' text-sm font-semibold'} />
+        <div className="space-y-1.5">
+          {block.lines.map((l, i) => (
+            <div key={i} className="flex items-center gap-1.5">
+              <input value={l} onChange={e => setLine(i, e.target.value)} placeholder={`Footer line ${i + 1}`} className={input + ' flex-1'} />
+              {block.lines.length > 1 && (
+                <button onClick={() => onChange({ lines: block.lines.filter((_, j) => j !== i) } as any)} className="p-1 text-gray-500 hover:text-red-300" title="Remove line">
+                  <Trash2 className="w-3 h-3" />
+                </button>
+              )}
+            </div>
+          ))}
+        </div>
+        <div className="flex items-center gap-2 text-[11px]">
+          <button onClick={() => onChange({ lines: [...block.lines, ''] } as any)} className="text-brand-red hover:underline">+ Line</button>
+          <label className="flex items-center gap-1.5 text-gray-400 ml-auto">
+            Strip colour
+            <input type="color" value={block.bgColor} onChange={e => onChange({ bgColor: e.target.value } as any)} className="h-6 w-9 rounded border border-white/[0.08] bg-transparent cursor-pointer" />
+          </label>
+        </div>
       </div>
     )
   }
