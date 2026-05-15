@@ -14,7 +14,7 @@ import AdminBadge from '../shared/AdminBadge'
 import AdminKPICard from '../shared/AdminKPICard'
 import AdminEmptyState from '../shared/AdminEmptyState'
 import AdminCRUDPlaceholder from '../shared/AdminCRUDPlaceholder'
-import { fetchEmployees, getSystemHealth, fetchActivityFeed, fetchAdminUsers, createAdminUser, updateAdminUserRole, fetchPermissionAuditLog, type AdminUserRow, type PermissionAuditRow } from '@/lib/supabase/adminDataService'
+import { fetchEmployees, getSystemHealth, fetchActivityFeed, fetchAdminUsers, createAdminUser, updateAdminUserRole, updateAdminUserPermissions, fetchPermissionAuditLog, type AdminUserRow, type PermissionAuditRow } from '@/lib/supabase/adminDataService'
 import { supabase, isSupabaseConfigured } from '@/lib/supabase/client'
 import { ROLE_PERMISSIONS } from '@/lib/admin/adminRBAC'
 import { ROLE_LABELS } from '@/lib/admin/adminAuth'
@@ -97,19 +97,7 @@ export default function SettingsModule({ subTab, navigate, showToast }: Settings
       <div className="admin-tab-switch">
         {activeTab === 'general' && <GeneralTab showToast={showToast} />}
         {activeTab === 'permissions' && <PermissionsTab showToast={showToast} />}
-        {/* 2026-05-12: Role management (create, rename, retire roles).
-            The shared CRUD placeholder shows the View / Edit / Delete
-            triad while the dedicated UI is wired in. ROLE_PERMISSIONS
-            in adminRBAC.ts is the canonical mapping today. */}
-        {activeTab === 'roles' && (
-          <AdminCRUDPlaceholder
-            title="Roles"
-            description="Define the roles available across the admin portal and the permission set each one carries."
-            icon={Shield}
-            showToast={showToast}
-            hint="Current roles are seeded in `lib/admin/adminAuth.ts` (ROLE_LABELS) and `lib/admin/adminRBAC.ts` (ROLE_PERMISSIONS). Adding a new role here writes to `admin_roles`; Edit lets you tweak its label / permission grants; Delete retires it."
-          />
-        )}
+        {activeTab === 'roles' && <RolesTab showToast={showToast} />}
         {activeTab === 'security' && <SecurityTab showToast={showToast} />}
         {activeTab === 'integrations' && <IntegrationsTab showToast={showToast} />}
         {activeTab === 'system' && <SystemTab showToast={showToast} systemHealth={systemHealth} />}
@@ -353,6 +341,11 @@ function PermissionsTab({ showToast }: { showToast: Toast }) {
   const [editingRoleFor, setEditingRoleFor] = useState<AdminUserRow | null>(null)
   const [savingRole, setSavingRole] = useState(false)
   const [newRole, setNewRole] = useState<string>('admin')
+  // 2026-05-15: per-user permission overrides (Super Admin grants module
+  // access to a specific user beyond their role).
+  const [editingPermsFor, setEditingPermsFor] = useState<AdminUserRow | null>(null)
+  const [permsDraft, setPermsDraft] = useState<string[]>([])
+  const [savingPerms, setSavingPerms] = useState(false)
   const [saving, setSaving] = useState(false)
   const [form, setForm] = useState({
     email: '', full_name: '', phone: '', role: 'admin', department: '', password: '',
@@ -444,6 +437,29 @@ function PermissionsTab({ showToast }: { showToast: Toast }) {
         showToast(res.error || 'Failed to update role', 'error')
       }
     } finally { setSavingRole(false) }
+  }
+
+  // Per-user permission overrides submit handler
+  const openPermsEditor = (u: AdminUserRow) => {
+    setEditingPermsFor(u)
+    setPermsDraft(Array.isArray(u.permission_overrides) ? [...u.permission_overrides] : [])
+  }
+  const togglePermDraft = (token: string) => {
+    setPermsDraft(prev => prev.includes(token) ? prev.filter(t => t !== token) : [...prev, token])
+  }
+  const handlePermsSave = async () => {
+    if (!editingPermsFor) return
+    setSavingPerms(true)
+    try {
+      const res = await updateAdminUserPermissions(editingPermsFor.id, permsDraft)
+      if (res.ok) {
+        showToast(`Permissions updated for ${editingPermsFor.full_name || editingPermsFor.email}`, 'success')
+        setEditingPermsFor(null)
+        loadAll()
+      } else {
+        showToast(res.error || 'Failed to update permissions', 'error')
+      }
+    } finally { setSavingPerms(false) }
   }
 
   const PERM_VIEWS = [
@@ -609,6 +625,16 @@ function PermissionsTab({ showToast }: { showToast: Toast }) {
                       className="px-2.5 py-1 rounded-md text-[10px] font-medium text-gray-300 bg-white/[0.04] border border-white/[0.08] hover:bg-white/[0.08] transition-colors"
                     >
                       Change Role
+                    </button>
+                    <button
+                      onClick={() => {
+                        const row = adminUsers.find(u => u.id === user.id)
+                        if (row) openPermsEditor(row)
+                      }}
+                      className="px-2.5 py-1 rounded-md text-[10px] font-medium text-purple-300 bg-purple-500/10 border border-purple-500/30 hover:bg-purple-500/20 transition-colors"
+                      title="Grant module-level permissions beyond the role"
+                    >
+                      Manage Permissions
                     </button>
                   </div>
                 </div>
@@ -861,6 +887,196 @@ function PermissionsTab({ showToast }: { showToast: Toast }) {
           </div>
         )}
       </AdminModal>
+
+      {/* Per-user permission overrides modal */}
+      <AdminModal
+        isOpen={!!editingPermsFor}
+        onClose={() => setEditingPermsFor(null)}
+        title={editingPermsFor ? `Manage permissions · ${editingPermsFor.full_name || editingPermsFor.email}` : ''}
+        subtitle="Grants here are added on top of the user's role permissions. Useful when one user needs access to a module their role doesn't normally include."
+        maxWidth="max-w-2xl"
+        footer={
+          <>
+            <ModalButton onClick={() => setEditingPermsFor(null)} disabled={savingPerms}>Cancel</ModalButton>
+            <ModalButton variant="primary" onClick={handlePermsSave} disabled={savingPerms}>
+              {savingPerms ? 'Saving…' : 'Save Permissions'}
+            </ModalButton>
+          </>
+        }
+      >
+        {editingPermsFor && (
+          <div className="space-y-3">
+            <div className="text-[11px] text-gray-400">
+              <span className="uppercase tracking-wider text-gray-500">Role:</span> {ROLE_LABELS[ROLE_DB_TO_UI[editingPermsFor.role] || 'viewer']}
+              {' '}<span className="text-gray-600">·</span> {permsDraft.length} permission{permsDraft.length === 1 ? '' : 's'} granted
+            </div>
+            <div className="grid grid-cols-1 gap-2">
+              {allModules.map(mod => (
+                <div key={mod} className="rounded-xl bg-white/[0.02] border border-white/[0.06] p-2.5">
+                  <div className="flex items-center justify-between mb-1.5">
+                    <p className="text-sm font-medium text-white capitalize">{mod.replace(/-/g, ' ')}</p>
+                    <span className="text-[10px] text-gray-500">{allActions.filter(a => permsDraft.includes(`${a}:${mod}`)).length} of {allActions.length}</span>
+                  </div>
+                  <div className="flex flex-wrap gap-1.5">
+                    {allActions.map(action => {
+                      const token = `${action}:${mod}`
+                      const on = permsDraft.includes(token)
+                      return (
+                        <button
+                          key={token}
+                          onClick={() => togglePermDraft(token)}
+                          className={`px-2 py-0.5 rounded text-[10px] font-medium uppercase tracking-wider transition-colors ${
+                            on
+                              ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40'
+                              : 'bg-white/[0.03] text-gray-500 border border-white/[0.08] hover:bg-white/[0.06]'
+                          }`}
+                        >
+                          {action}
+                        </button>
+                      )
+                    })}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </AdminModal>
+    </div>
+  )
+}
+
+// ── Roles Tab ───────────────────────────────────────────────────
+// 2026-05-15: Roles tab was a CRUD placeholder ("coming soon"). The
+// system's roles are seeded statically in adminRBAC.ts; runtime role
+// creation is out of scope for now, so this tab surfaces the canonical
+// list with user counts + module-level grants and provides quick
+// access to add a user with that role.
+function RolesTab(_props: { showToast: Toast }) {
+  const roles = Object.keys(ROLE_LABELS) as AdminRole[]
+  const allModules = ['overview', 'clients', 'sales', 'realty-brokers', 'employees', 'assets', 'ai-ops', 'compliance', 'financial', 'analytics', 'comms', 'marketing', 'reports', 'settings']
+  const allActions = ['view', 'create', 'edit', 'approve', 'delete', 'export', 'configure']
+  const [users, setUsers] = useState<AdminUserRow[]>([])
+  const [loading, setLoading] = useState(true)
+  const [expandedRole, setExpandedRole] = useState<AdminRole | null>(null)
+
+  useEffect(() => {
+    let alive = true
+    setLoading(true)
+    fetchAdminUsers().then(u => { if (alive) { setUsers(u); setLoading(false) } })
+    return () => { alive = false }
+  }, [])
+
+  const usersByRole = useMemo(() => {
+    const map: Record<string, AdminUserRow[]> = {}
+    for (const u of users) {
+      const uiRole = (ROLE_DB_TO_UI[u.role] || 'viewer') as AdminRole
+      if (!map[uiRole]) map[uiRole] = []
+      map[uiRole].push(u)
+    }
+    return map
+  }, [users])
+
+  return (
+    <div className="space-y-4">
+      <AdminGlass>
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <h3 className="text-sm font-semibold text-white flex items-center gap-2">
+              <Shield className="w-4 h-4 text-brand-red" />
+              Roles
+              <span className="text-[10px] text-gray-500 font-normal ml-2">{roles.length} roles · {users.length} admin users</span>
+            </h3>
+            <p className="text-[11px] text-gray-500 mt-0.5 max-w-xl">
+              Each admin user belongs to one role. Roles carry a default set of module permissions. Use <span className="text-purple-300">Settings → Permissions → Users → Manage Permissions</span> to grant a specific user extra access beyond their role.
+            </p>
+          </div>
+        </div>
+      </AdminGlass>
+
+      {loading ? (
+        <div className="py-8 text-center text-xs text-gray-500"><Loader2 className="w-4 h-4 animate-spin inline mr-2" />Loading roles…</div>
+      ) : (
+        <div className="space-y-2">
+          {roles.map(role => {
+            const perms = ROLE_PERMISSIONS[role] || []
+            const hasWildcard = perms.includes('*')
+            const moduleCount = hasWildcard ? allModules.length : allModules.filter(m => perms.some(p => p.endsWith(`:${m}`))).length
+            const list = usersByRole[role] || []
+            const isExpanded = expandedRole === role
+            return (
+              <AdminGlass key={role} className="!p-0 overflow-hidden">
+                <button
+                  onClick={() => setExpandedRole(isExpanded ? null : role)}
+                  className="w-full flex items-center justify-between p-4 hover:bg-white/[0.02] transition-colors text-left"
+                >
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className="w-9 h-9 rounded-lg bg-brand-red/10 flex items-center justify-center shrink-0">
+                      <Shield className="w-4 h-4 text-brand-red" />
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-sm font-semibold text-white truncate">{ROLE_LABELS[role]}</p>
+                      <p className="text-[11px] text-gray-500 truncate">
+                        {hasWildcard ? 'Full system access' : `${perms.length} permissions · ${moduleCount} modules`}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2 shrink-0 ml-2">
+                    <span className="text-[11px] text-gray-500 hidden sm:inline">{list.length} user{list.length === 1 ? '' : 's'}</span>
+                    <AdminBadge
+                      label={hasWildcard ? 'Super' : moduleCount >= 10 ? 'Full' : moduleCount >= 5 ? 'Standard' : 'Limited'}
+                      variant={hasWildcard ? 'error' : moduleCount >= 10 ? 'success' : moduleCount >= 5 ? 'info' : 'neutral'}
+                    />
+                    <ChevronRight className={`w-4 h-4 text-gray-500 transition-transform ${isExpanded ? 'rotate-90' : ''}`} />
+                  </div>
+                </button>
+                {isExpanded && (
+                  <div className="px-4 pb-4 border-t border-white/[0.04]">
+                    <div className="pt-3 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2">
+                      {allModules.map(mod => {
+                        const modPerms = hasWildcard ? allActions : allActions.filter(a => perms.includes(`${a}:${mod}` as never))
+                        const hasModule = modPerms.length > 0
+                        return (
+                          <div key={mod} className={`p-2.5 rounded-lg border text-[11px] ${hasModule ? 'bg-white/[0.02] border-white/[0.06]' : 'bg-white/[0.01] border-white/[0.03] opacity-40'}`}>
+                            <p className="text-white font-medium capitalize mb-1">{mod.replace(/-/g, ' ')}</p>
+                            {hasModule ? (
+                              <div className="flex flex-wrap gap-1">
+                                {modPerms.map(a => (
+                                  <span key={a} className="px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-400 text-[9px] uppercase font-semibold">{a.charAt(0)}</span>
+                                ))}
+                              </div>
+                            ) : (
+                              <span className="text-gray-600 text-[10px]">No access</span>
+                            )}
+                          </div>
+                        )
+                      })}
+                    </div>
+                    {list.length > 0 && (
+                      <div className="mt-3 pt-3 border-t border-white/[0.04]">
+                        <p className="text-[10px] uppercase tracking-wider text-gray-500 mb-2">Users with this role</p>
+                        <div className="flex flex-wrap gap-2">
+                          {list.map(u => (
+                            <span key={u.id} className="px-2 py-1 rounded-lg bg-white/[0.03] border border-white/[0.06] text-[11px] text-gray-300" title={u.email}>
+                              {u.full_name || u.email}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </AdminGlass>
+            )
+          })}
+        </div>
+      )}
+
+      <AdminGlass className="!border-dashed">
+        <p className="text-[11px] text-gray-500">
+          Want to add a brand-new role? Roles are defined in <code className="text-amber-300">lib/admin/adminRBAC.ts</code> (ROLE_PERMISSIONS). For now, edit the file directly and redeploy. Future versions will surface a Create Role form here once an <code className="text-amber-300">admin_roles</code> table is wired in.
+        </p>
+      </AdminGlass>
     </div>
   )
 }
@@ -952,7 +1168,31 @@ function SecurityTab({ showToast }: { showToast: (msg: string, type?: 'success' 
 }
 
 // ── Integrations Tab ────────────────────────────────────────────
+// 2026-05-15: Monday.com integration removed per business decision —
+// the lead pipeline now lives entirely in Supabase. Keeping the tab
+// itself so the Settings sub-navigation doesn't lose a slot; rendering
+// a clean placeholder makes room for future integrations without
+// reviving the dead Monday wiring.
 function IntegrationsTab({ showToast }: { showToast: (msg: string, type?: 'success' | 'error' | 'info' | 'warning') => void }) {
+  void showToast // reserved for future hooks
+  return (
+    <div className="space-y-4">
+      <AdminGlass className="!border-dashed">
+        <AdminEmptyState
+          icon={Plug}
+          title="No Integrations Active"
+          description="Lead pipeline, KYC, payouts, and documents all run on Supabase. New third-party integrations will appear here once they are configured."
+        />
+      </AdminGlass>
+    </div>
+  )
+}
+
+// ── Legacy Integrations Tab (Monday.com) — RETIRED 2026-05-15 ──
+// Kept as `_LegacyIntegrationsTab` purely so old in-page hashes and
+// linked screenshots don't break the build by referencing removed
+// symbols. Do NOT call this; routing skips it.
+function _LegacyIntegrationsTab({ showToast }: { showToast: (msg: string, type?: 'success' | 'error' | 'info' | 'warning') => void }) {
   const [mondayKey, setMondayKey] = useState('')
   const [showKey, setShowKey] = useState(false)
   const [testing, setTesting] = useState(false)

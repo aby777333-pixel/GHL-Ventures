@@ -40,7 +40,16 @@ interface HeadingBlock extends BaseBlock { kind: 'heading'; text: string; level:
 interface ParagraphBlock extends BaseBlock { kind: 'paragraph'; text: string; justify?: boolean }
 interface KvListBlock extends BaseBlock { kind: 'kv-list'; rows: { label: string; value: string }[] }
 interface BulletListBlock extends BaseBlock { kind: 'bullet-list'; items: string[] }
-interface ImageBlock extends BaseBlock { kind: 'image'; dataUrl: string; width: number; align: 'left' | 'center' | 'right' }
+interface ImageBlock extends BaseBlock {
+  kind: 'image'
+  dataUrl: string
+  width: number
+  align: 'left' | 'center' | 'right'
+  /** Natural aspect ratio (height / width) captured from the source image
+   *  when uploaded or fetched. PDF + DOCX exporters use this so wide logos
+   *  don't get squashed into the legacy hard-coded 0.6 ratio. */
+  aspectRatio?: number
+}
 interface SignatureBlock extends BaseBlock { kind: 'signature'; labels: string[] } // two signature lines
 interface TableBlock extends BaseBlock {
   kind: 'table'
@@ -273,6 +282,17 @@ export default function DocumentBuilderModal({ open, onClose, showToast, inline 
     setInsertingId(img.id)
     try {
       const dataUrl = await fetchAsDataUrl(img.url)
+      // Probe natural dimensions so PDF/DOCX export respects the aspect ratio.
+      const aspectRatio = await new Promise<number>((resolve) => {
+        const probe = new window.Image()
+        probe.onload = () => {
+          const w = probe.naturalWidth || 1
+          const h = probe.naturalHeight || 1
+          resolve(h / w)
+        }
+        probe.onerror = () => resolve(0.6)
+        probe.src = dataUrl
+      })
       setBlocks(bs => {
         const block: ImageBlock = {
           id: `b-${Math.random().toString(36).slice(2, 10)}`,
@@ -280,6 +300,7 @@ export default function DocumentBuilderModal({ open, onClose, showToast, inline 
           dataUrl,
           width: 320,
           align: 'center',
+          aspectRatio,
         }
         if (!anchorId) return [...bs, block]
         const idx = bs.findIndex(b => b.id === anchorId)
@@ -447,13 +468,19 @@ export default function DocumentBuilderModal({ open, onClose, showToast, inline 
         }
         y += 6
       } else if (b.kind === 'image' && b.dataUrl) {
-        ensureSpace(b.width * 0.6 + 12)
+        // 2026-05-15: respect the image's natural aspect ratio so wide logos
+        // (e.g. GHL India Ventures' 3:1 wordmark) don't get vertically
+        // stretched into the legacy 0.6 hard-coded ratio.
+        const aspect = (typeof b.aspectRatio === 'number' && b.aspectRatio > 0) ? b.aspectRatio : 0.6
+        const drawH = b.width * aspect
+        ensureSpace(drawH + 12)
         const x = b.align === 'center' ? (pageW - b.width) / 2 : b.align === 'right' ? pageW - margin - b.width : margin
         try {
-          // jspdf accepts a data URL directly. Height auto-scales from a square box.
-          doc.addImage(b.dataUrl, 'PNG', x, y, b.width, b.width * 0.6, undefined, 'FAST')
+          // Detect PNG vs JPEG from data URL prefix so jsPDF doesn't lossy-recompress.
+          const fmt = /^data:image\/jpe?g/i.test(b.dataUrl) ? 'JPEG' : 'PNG'
+          doc.addImage(b.dataUrl, fmt, x, y, b.width, drawH, undefined, 'FAST')
         } catch { /* ignore — broken image */ }
-        y += b.width * 0.6 + 12
+        y += drawH + 12
       } else if (b.kind === 'signature') {
         ensureSpace(40)
         const halves = b.labels.slice(0, 2)
@@ -552,10 +579,12 @@ export default function DocumentBuilderModal({ open, onClose, showToast, inline 
         try {
           const base64 = b.dataUrl.split(',')[1] || ''
           const bin = Uint8Array.from(atob(base64), c => c.charCodeAt(0))
+          // Respect natural aspect ratio so logos don't get squashed.
+          const aspect = (typeof b.aspectRatio === 'number' && b.aspectRatio > 0) ? b.aspectRatio : 0.6
           children.push(new Paragraph({
             children: [new ImageRun({
               data: bin,
-              transformation: { width: b.width, height: Math.round(b.width * 0.6) },
+              transformation: { width: b.width, height: Math.round(b.width * aspect) },
             } as any)],
             alignment: b.align === 'center' ? AlignmentType.CENTER : b.align === 'right' ? AlignmentType.RIGHT : AlignmentType.LEFT,
           }))
@@ -992,6 +1021,25 @@ function BlockEditor({ block, onChange }: { block: Block; onChange: (patch: Part
   }
 
   if (block.kind === 'image') {
+    // Resolve the image's natural aspect ratio (height / width) so the PDF
+    // and DOCX renderers don't squash wide logos. Falls back to 0.6 only if
+    // probing fails. Synchronous-feeling: we await the Image.onload before
+    // committing dataUrl + aspectRatio to state.
+    const loadFile = (file: File) => {
+      const reader = new FileReader()
+      reader.onload = () => {
+        const url = String(reader.result || '')
+        const probe = new window.Image()
+        probe.onload = () => {
+          const w = probe.naturalWidth || 1
+          const h = probe.naturalHeight || 1
+          onChange({ dataUrl: url, aspectRatio: h / w } as any)
+        }
+        probe.onerror = () => onChange({ dataUrl: url, aspectRatio: 0.6 } as any)
+        probe.src = url
+      }
+      reader.readAsDataURL(file)
+    }
     return (
       <div className="space-y-2">
         <div className="text-[10px] uppercase tracking-wider text-gray-500">Image</div>
@@ -999,12 +1047,9 @@ function BlockEditor({ block, onChange }: { block: Block; onChange: (patch: Part
           <label className="flex flex-col items-center justify-center gap-1 py-6 border border-dashed border-white/[0.12] rounded-lg cursor-pointer hover:bg-white/[0.03]">
             <ImageIcon className="w-5 h-5 text-gray-500" />
             <div className="text-[11px] text-gray-400">Click to pick an image (PNG/JPG)</div>
-            <input type="file" accept="image/*" className="hidden" onChange={async (e) => {
+            <input type="file" accept="image/*" className="hidden" onChange={(e) => {
               const f = e.target.files?.[0]
-              if (!f) return
-              const reader = new FileReader()
-              reader.onload = () => onChange({ dataUrl: String(reader.result) } as any)
-              reader.readAsDataURL(f)
+              if (f) loadFile(f)
             }} />
           </label>
         ) : (
@@ -1013,12 +1058,9 @@ function BlockEditor({ block, onChange }: { block: Block; onChange: (patch: Part
             <div className="flex gap-2 text-[11px]">
               <label className="bg-white/[0.04] border border-white/[0.08] rounded-md px-2 py-1 text-gray-300 cursor-pointer hover:text-white">
                 Replace
-                <input type="file" accept="image/*" className="hidden" onChange={async (e) => {
+                <input type="file" accept="image/*" className="hidden" onChange={(e) => {
                   const f = e.target.files?.[0]
-                  if (!f) return
-                  const reader = new FileReader()
-                  reader.onload = () => onChange({ dataUrl: String(reader.result) } as any)
-                  reader.readAsDataURL(f)
+                  if (f) loadFile(f)
                 }} />
               </label>
               <button onClick={() => onChange({ dataUrl: '' } as any)} className="text-gray-400 hover:text-white">Clear</button>

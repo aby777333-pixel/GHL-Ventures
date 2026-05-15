@@ -3174,6 +3174,7 @@ export interface AdminUserRow {
   department: string | null
   last_login_at: string | null
   created_at: string
+  permission_overrides: string[]
 }
 
 const ADMIN_ROLE_DB_VALUES = [
@@ -3188,14 +3189,45 @@ export async function fetchAdminUsers(): Promise<AdminUserRow[]> {
     const sb = supabase as any
     const { data, error } = await sb
       .from('profiles')
-      .select('id, email, full_name, phone, role, department, last_login_at, created_at')
+      .select('id, email, full_name, phone, role, department, last_login_at, created_at, permission_overrides')
       .in('role', ADMIN_ROLE_DB_VALUES)
       .order('created_at', { ascending: false })
     if (error) { console.warn('[admin] fetchAdminUsers:', error.message); return [] }
-    return ((data as any[]) || []) as AdminUserRow[]
+    return ((data as any[]) || []).map((u: any) => ({
+      id: u.id,
+      email: u.email,
+      full_name: u.full_name,
+      phone: u.phone,
+      role: u.role,
+      department: u.department,
+      last_login_at: u.last_login_at,
+      created_at: u.created_at,
+      permission_overrides: Array.isArray(u.permission_overrides) ? u.permission_overrides : [],
+    }))
   } catch (e: any) {
     console.warn('[admin] fetchAdminUsers error:', e?.message)
     return []
+  }
+}
+
+// Persist per-user permission overrides (granted by Super Admin beyond the
+// user's base role). `overrides` is an array of tokens like 'view:reports'.
+export async function updateAdminUserPermissions(userId: string, overrides: string[]): Promise<{ ok: boolean; error?: string }> {
+  if (!isSupabaseConfigured()) return { ok: false, error: 'Service unavailable' }
+  try {
+    const sb = supabase as any
+    const clean = Array.from(new Set((overrides || []).filter(s => typeof s === 'string' && /^[a-z_-]+:[a-z-]+$/i.test(s))))
+    const { error } = await sb.from('profiles').update({ permission_overrides: clean }).eq('id', userId)
+    if (error) return { ok: false, error: error.message }
+    try {
+      await sb.from('audit_logs').insert({
+        action: 'update_admin_permissions', entity_type: 'user', entity_id: userId,
+        module: 'settings', details: { overrides: clean },
+      })
+    } catch { /* non-blocking */ }
+    return { ok: true }
+  } catch (e: any) {
+    return { ok: false, error: e?.message || 'Update failed' }
   }
 }
 
@@ -3572,5 +3604,113 @@ export async function uploadFundPlanAsset(file: File, kind: 'image' | 'pdf'): Pr
     return { ok: true, url }
   } catch (e: any) {
     return { ok: false, error: e?.message || 'Upload failed' }
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// DOCUMENT TRACKING (2026-05-15)
+// Backed by the existing `document_tracking` table:
+//   (id, client_id, investment_id, document_type, document_name,
+//    document_url, status, provided_date, signed_copy_url,
+//    signed_at, notes, created_by, created_at, updated_at)
+// ═══════════════════════════════════════════════════════════════════
+
+export interface DocTrackingRow {
+  id: string
+  client_id: string | null
+  clientName: string | null
+  investment_id: string | null
+  document_type: string
+  document_name: string | null
+  document_url: string | null
+  status: string
+  provided_date: string | null
+  signed_at: string | null
+  notes: string | null
+  created_at: string
+}
+
+export async function fetchDocumentTracking(): Promise<DocTrackingRow[]> {
+  if (!isSupabaseConfigured()) return []
+  try {
+    const sb = supabase as any
+    const { data, error } = await sb
+      .from('document_tracking')
+      .select('id, client_id, investment_id, document_type, document_name, document_url, status, provided_date, signed_at, notes, created_at')
+      .order('created_at', { ascending: false })
+      .limit(200)
+    if (error) { console.warn('[admin] fetchDocumentTracking:', error.message); return [] }
+    const rows = ((data as any[]) || [])
+    const clientIds = Array.from(new Set(rows.map(r => r.client_id).filter(Boolean)))
+    let nameMap = new Map<string, string>()
+    if (clientIds.length > 0) {
+      const { data: clients } = await sb.from('clients').select('id, full_name').in('id', clientIds)
+      for (const c of ((clients as any[]) || [])) nameMap.set(c.id, c.full_name || 'Unknown')
+    }
+    return rows.map(r => ({
+      id: r.id,
+      client_id: r.client_id,
+      clientName: r.client_id ? (nameMap.get(r.client_id) || null) : null,
+      investment_id: r.investment_id,
+      document_type: r.document_type,
+      document_name: r.document_name,
+      document_url: r.document_url,
+      status: r.status,
+      provided_date: r.provided_date,
+      signed_at: r.signed_at,
+      notes: r.notes,
+      created_at: r.created_at,
+    }))
+  } catch (e: any) {
+    console.warn('[admin] fetchDocumentTracking error:', e?.message)
+    return []
+  }
+}
+
+export async function createDocumentTracking(input: {
+  client_id: string
+  investment_id?: string | null
+  document_type: string
+  document_name?: string
+  status?: string
+  notes?: string
+  document_url?: string | null
+  provided_date?: string | null
+}): Promise<{ ok: boolean; id?: string; error?: string }> {
+  if (!isSupabaseConfigured()) return { ok: false, error: 'Service unavailable' }
+  try {
+    const sb = supabase as any
+    if (!input.client_id) return { ok: false, error: 'Client is required' }
+    if (!input.document_type) return { ok: false, error: 'Document type is required' }
+    const { data, error } = await sb
+      .from('document_tracking')
+      .insert({
+        client_id: input.client_id,
+        investment_id: input.investment_id || null,
+        document_type: input.document_type,
+        document_name: input.document_name || input.document_type,
+        status: input.status || 'pending',
+        notes: input.notes || null,
+        document_url: input.document_url || null,
+        provided_date: input.provided_date || null,
+      })
+      .select('id')
+      .single()
+    if (error) return { ok: false, error: error.message }
+    return { ok: true, id: (data as any)?.id }
+  } catch (e: any) {
+    return { ok: false, error: e?.message || 'Create failed' }
+  }
+}
+
+export async function deleteDocumentTracking(id: string): Promise<{ ok: boolean; error?: string }> {
+  if (!isSupabaseConfigured()) return { ok: false, error: 'Service unavailable' }
+  try {
+    const sb = supabase as any
+    const { error } = await sb.from('document_tracking').delete().eq('id', id)
+    if (error) return { ok: false, error: error.message }
+    return { ok: true }
+  } catch (e: any) {
+    return { ok: false, error: e?.message || 'Delete failed' }
   }
 }

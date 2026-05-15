@@ -187,7 +187,10 @@ export default function AdminClient() {
   }
 
   // ── Permission Check ────────────────────────────────────────────
-  const hasAccess = hasModuleAccess(role, activeModule)
+  // 2026-05-15: also consider per-user overrides granted via Settings →
+  // Permissions → Users → Manage Permissions (profiles.permission_overrides).
+  const overrides = (user as any)?.permissionOverrides as string[] | undefined
+  const hasAccess = hasModuleAccess(role, activeModule, overrides)
 
   // ── Render Module Content ───────────────────────────────────────
   const renderModule = () => {

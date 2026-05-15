@@ -144,6 +144,13 @@ export async function getAdminSession(): Promise<AdminSession | null> {
       expiresAt = Date.now() + 8 * 60 * 60 * 1000
     }
 
+    // 2026-05-15: thread the per-user permission overrides so AdminClient
+    // can union them with the role grants when deciding module access.
+    const rawOverrides = (p as any).permission_overrides
+    const permissionOverrides: string[] = Array.isArray(rawOverrides)
+      ? rawOverrides.filter((x: unknown) => typeof x === 'string')
+      : []
+
     return {
       user: {
         name: p.full_name || session.user.email || '',
@@ -151,6 +158,7 @@ export async function getAdminSession(): Promise<AdminSession | null> {
         role: mapDbRoleToAdminRole(p.role) as any,
         department: p.department || undefined,
         phone: p.phone || undefined,
+        permissionOverrides,
       },
       loginAt,
       expiresAt,

@@ -146,15 +146,22 @@ export function hasPermission(role: AdminRole, permission: Permission): boolean 
   return perms.includes(permission)
 }
 
-export function hasModuleAccess(role: AdminRole, module: PermissionModule): boolean {
+export function hasModuleAccess(role: AdminRole, module: PermissionModule, overrides?: string[] | null): boolean {
   const perms = ROLE_PERMISSIONS[role]
-  if (!perms) return false
-  if (perms.includes('*')) return true
-  return perms.some(p => p.endsWith(`:${module}`))
+  if (perms?.includes('*')) return true
+  if (perms?.some(p => p.endsWith(`:${module}`))) return true
+  // 2026-05-15: per-user overrides granted by the Super Admin via Settings →
+  // Permissions → Users → Manage Permissions. Any permission token ending in
+  // `:module` is sufficient to surface the module in the sidebar.
+  if (Array.isArray(overrides) && overrides.some(p => typeof p === 'string' && p.endsWith(`:${module}`))) return true
+  return false
 }
 
-export function canPerformAction(role: AdminRole, action: PermissionAction, module: PermissionModule): boolean {
-  return hasPermission(role, `${action}:${module}`)
+export function canPerformAction(role: AdminRole, action: PermissionAction, module: PermissionModule, overrides?: string[] | null): boolean {
+  if (hasPermission(role, `${action}:${module}`)) return true
+  const token = `${action}:${module}`
+  if (Array.isArray(overrides) && overrides.includes(token)) return true
+  return false
 }
 
 export function isRoleHigherOrEqual(role: AdminRole, targetRole: AdminRole): boolean {

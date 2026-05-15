@@ -15,7 +15,7 @@ import AdminModal, { ModalButton } from '../shared/AdminModal'
 import AdminKPICard from '../shared/AdminKPICard'
 import AdminEmptyState from '../shared/AdminEmptyState'
 import AdminCRUDPlaceholder from '../shared/AdminCRUDPlaceholder'
-import { fetchAssets, fetchDocuments, insertRow, deleteAssetSafe } from '@/lib/supabase/adminDataService'
+import { fetchAssets, fetchDocuments, insertRow, deleteAssetSafe, fetchClients, fetchDocumentTracking, createDocumentTracking, deleteDocumentTracking, type DocTrackingRow } from '@/lib/supabase/adminDataService'
 import { formatINR, formatDate } from '@/lib/admin/adminHooks'
 import type { Asset, AssetCategory, AssetStatus } from '@/lib/admin/adminTypes'
 import { saveBlobAs, getDownloadUrl } from '@/lib/supabase/storageService'
@@ -253,15 +253,7 @@ export default function AssetDocModule({ subTab, navigate, showToast }: AssetDoc
             investment-doc-tracking timeline that the investor sees
             on their portal, scoped to admin view-only here. View
             actions on each row open the existing tracking modal. */}
-        {activeTab === 'tracking' && (
-          <AdminCRUDPlaceholder
-            title="Document Tracking"
-            description="Status timeline (Ack Letter, Agreement, Allotment, Certificate, TDS) per investment."
-            icon={FileText}
-            showToast={showToast}
-            hint="Tracking rows are auto-created when an investment is approved. Open any investment from Sales → Investments and use the Tracking modal to inspect or update a stage."
-          />
-        )}
+        {activeTab === 'tracking' && <DocumentTrackingTab showToast={showToast} />}
       </div>
     </div>
   )
@@ -967,5 +959,196 @@ function TemplatesTab({
         </div>
       )}
     </div>
+  )
+}
+
+// ─────────────────────────────────────────────────────────────────
+// DocumentTrackingTab — admin view + create for the
+// `document_tracking` table (2026-05-15).
+// ─────────────────────────────────────────────────────────────────
+const TRACKING_STAGE_OPTIONS = [
+  { value: 'acknowledgement', label: 'Acknowledgement Letter' },
+  { value: 'agreement', label: 'Debenture Agreement' },
+  { value: 'allotment', label: 'Allotment Letter' },
+  { value: 'certificate', label: 'Debenture Certificate' },
+  { value: 'tds', label: 'TDS Certificate' },
+  { value: 'kyc', label: 'KYC Document' },
+  { value: 'other', label: 'Other' },
+]
+
+const TRACKING_STATUS_OPTIONS = [
+  { value: 'pending', label: 'Pending', variant: 'warning' as const },
+  { value: 'in_progress', label: 'In Progress', variant: 'info' as const },
+  { value: 'completed', label: 'Completed', variant: 'success' as const },
+  { value: 'blocked', label: 'Blocked', variant: 'error' as const },
+]
+
+function DocumentTrackingTab({ showToast }: { showToast: (msg: string, type?: 'success' | 'error' | 'info' | 'warning') => void }) {
+  const [rows, setRows] = useState<DocTrackingRow[]>([])
+  const [clients, setClients] = useState<Array<{ id: string; full_name: string; email: string | null }>>([])
+  const [loading, setLoading] = useState(true)
+  const [openCreate, setOpenCreate] = useState(false)
+  const [saving, setSaving] = useState(false)
+  const [form, setForm] = useState({
+    client_id: '',
+    document_type: 'acknowledgement',
+    document_name: '',
+    status: 'pending',
+    notes: '',
+    document_url: '',
+    provided_date: '',
+  })
+
+  const load = useCallback(async () => {
+    setLoading(true)
+    const [r, c] = await Promise.all([fetchDocumentTracking(), fetchClients()])
+    setRows(r)
+    setClients(((c as any[]) || []).map((x: any) => ({ id: x.id, full_name: x.full_name || x.name || 'Unknown', email: x.email || null })))
+    setLoading(false)
+  }, [])
+  useEffect(() => { load() }, [load])
+
+  const handleCreate = async () => {
+    if (!form.client_id) { showToast('Choose a client', 'error'); return }
+    if (!form.document_type) { showToast('Document type is required', 'error'); return }
+    setSaving(true)
+    try {
+      const res = await createDocumentTracking({
+        client_id: form.client_id,
+        document_type: form.document_type,
+        document_name: form.document_name.trim() || TRACKING_STAGE_OPTIONS.find(s => s.value === form.document_type)?.label || form.document_type,
+        status: form.status,
+        notes: form.notes.trim() || undefined,
+        document_url: form.document_url.trim() || null,
+        provided_date: form.provided_date || null,
+      })
+      if (res.ok) {
+        showToast('Tracking entry created', 'success')
+        setOpenCreate(false)
+        setForm({ client_id: '', document_type: 'acknowledgement', document_name: '', status: 'pending', notes: '', document_url: '', provided_date: '' })
+        load()
+      } else {
+        showToast(res.error || 'Create failed', 'error')
+      }
+    } finally { setSaving(false) }
+  }
+
+  const handleDelete = async (row: DocTrackingRow) => {
+    if (!window.confirm('Delete this tracking entry?')) return
+    const res = await deleteDocumentTracking(row.id)
+    if (res.ok) { showToast('Tracking entry deleted', 'success'); load() }
+    else showToast(res.error || 'Delete failed', 'error')
+  }
+
+  const stageLabel = (v: string) => TRACKING_STAGE_OPTIONS.find(s => s.value === v)?.label || v
+  const statusOpt = (v: string) => TRACKING_STATUS_OPTIONS.find(s => s.value === v) || TRACKING_STATUS_OPTIONS[0]
+
+  return (
+    <AdminGlass>
+      <div className="flex items-start justify-between gap-3 mb-4">
+        <div className="flex-1 min-w-[200px]">
+          <h2 className="text-base font-semibold text-white">Document Tracking</h2>
+          <p className="text-xs text-gray-500 mt-0.5">Status timeline (Ack Letter, Agreement, Allotment, Certificate, TDS) per investment. Rows auto-create when an investment is approved; admins can also add manual entries here.</p>
+        </div>
+        <button
+          onClick={() => setOpenCreate(true)}
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-brand-red/20 border border-brand-red/30 text-xs font-medium text-white hover:bg-brand-red/30 transition-colors"
+        >
+          <Plus className="w-3.5 h-3.5" /> New Entry
+        </button>
+      </div>
+
+      {loading ? (
+        <div className="py-10 text-center text-xs text-gray-500">Loading…</div>
+      ) : rows.length === 0 ? (
+        <AdminEmptyState
+          icon={FileText}
+          title="No tracking entries yet"
+          description="New entries appear when an investment is approved. Use New Entry to log a stage manually."
+        />
+      ) : (
+        <div className="space-y-2">
+          {rows.map(r => {
+            const s = statusOpt(r.status)
+            return (
+              <div key={r.id} className="flex items-center gap-3 p-3 rounded-xl bg-white/[0.02] border border-white/[0.06] hover:bg-white/[0.03] transition-colors">
+                <div className="w-9 h-9 rounded-lg bg-brand-red/10 text-brand-red flex items-center justify-center flex-shrink-0">
+                  <FileText className="w-4 h-4" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <p className="text-sm font-medium text-white truncate">{r.document_name || stageLabel(r.document_type)}</p>
+                    <AdminBadge label={stageLabel(r.document_type)} variant="neutral" />
+                    <AdminBadge label={s.label} variant={s.variant} dot />
+                  </div>
+                  <p className="text-[11px] text-gray-500 truncate mt-0.5">{r.clientName || '—'}{r.notes ? ` · ${r.notes}` : ''}</p>
+                  <p className="text-[10px] text-gray-600 mt-0.5">Created {formatDate(r.created_at)}{r.provided_date ? ` · Provided ${formatDate(r.provided_date)}` : ''}</p>
+                </div>
+                <div className="flex items-center gap-1 flex-shrink-0">
+                  {r.document_url && (
+                    <a href={r.document_url} target="_blank" rel="noopener noreferrer" className="p-1.5 text-gray-400 hover:text-white" title="Open document"><Eye className="w-3.5 h-3.5" /></a>
+                  )}
+                  <button onClick={() => handleDelete(r)} className="p-1.5 text-gray-500 hover:text-red-400" title="Delete"><Trash2 className="w-3.5 h-3.5" /></button>
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      )}
+
+      <AdminModal
+        isOpen={openCreate}
+        onClose={() => setOpenCreate(false)}
+        title="New Document Tracking Entry"
+        subtitle="Log a document stage manually. Auto-tracking still applies when investments transition through approved → credited → completed."
+        maxWidth="max-w-lg"
+        footer={
+          <>
+            <ModalButton onClick={() => setOpenCreate(false)} disabled={saving}>Cancel</ModalButton>
+            <ModalButton variant="primary" onClick={handleCreate} disabled={saving}>{saving ? 'Saving…' : 'Submit'}</ModalButton>
+          </>
+        }
+      >
+        <div className="space-y-3">
+          <div>
+            <label className="block text-[10px] uppercase tracking-wider text-gray-500 font-medium mb-1">Client *</label>
+            <select value={form.client_id} onChange={e => setForm(p => ({ ...p, client_id: e.target.value }))} className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-brand-red/40 focus:ring-1 focus:ring-brand-red/20">
+              <option value="">Choose…</option>
+              {clients.map(c => <option key={c.id} value={c.id}>{c.full_name}{c.email ? ` — ${c.email}` : ''}</option>)}
+            </select>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-[10px] uppercase tracking-wider text-gray-500 font-medium mb-1">Document Type *</label>
+              <select value={form.document_type} onChange={e => setForm(p => ({ ...p, document_type: e.target.value }))} className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-brand-red/40 focus:ring-1 focus:ring-brand-red/20">
+                {TRACKING_STAGE_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className="block text-[10px] uppercase tracking-wider text-gray-500 font-medium mb-1">Status</label>
+              <select value={form.status} onChange={e => setForm(p => ({ ...p, status: e.target.value }))} className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-brand-red/40 focus:ring-1 focus:ring-brand-red/20">
+                {TRACKING_STATUS_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className="block text-[10px] uppercase tracking-wider text-gray-500 font-medium mb-1">Display Name</label>
+              <input value={form.document_name} onChange={e => setForm(p => ({ ...p, document_name: e.target.value }))} placeholder="Defaults to document type label" className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-brand-red/40 focus:ring-1 focus:ring-brand-red/20" />
+            </div>
+            <div>
+              <label className="block text-[10px] uppercase tracking-wider text-gray-500 font-medium mb-1">Provided Date</label>
+              <input type="date" value={form.provided_date} onChange={e => setForm(p => ({ ...p, provided_date: e.target.value }))} className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-brand-red/40 focus:ring-1 focus:ring-brand-red/20" />
+            </div>
+          </div>
+          <div>
+            <label className="block text-[10px] uppercase tracking-wider text-gray-500 font-medium mb-1">Document URL</label>
+            <input value={form.document_url} onChange={e => setForm(p => ({ ...p, document_url: e.target.value }))} placeholder="https://… (link to the document)" className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-brand-red/40 focus:ring-1 focus:ring-brand-red/20" />
+          </div>
+          <div>
+            <label className="block text-[10px] uppercase tracking-wider text-gray-500 font-medium mb-1">Notes</label>
+            <textarea value={form.notes} onChange={e => setForm(p => ({ ...p, notes: e.target.value }))} rows={3} className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-brand-red/40 focus:ring-1 focus:ring-brand-red/20 resize-y" />
+          </div>
+        </div>
+      </AdminModal>
+    </AdminGlass>
   )
 }

@@ -23,6 +23,8 @@ export interface AdminUser {
   avatar?: string
   department?: string
   phone?: string
+  /** Per-user permission tokens granted beyond the role (see profiles.permission_overrides). */
+  permissionOverrides?: string[]
 }
 
 export interface AdminSession {
