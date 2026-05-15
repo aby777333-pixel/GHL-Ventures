@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo, useEffect } from 'react'
+import { useState, useMemo, useEffect, useCallback } from 'react'
 import {
   Settings, Shield, Users, Key, Database, Bell, Globe,
   Lock, Eye, EyeOff, CheckCircle2, AlertTriangle, Clock,
@@ -14,13 +14,14 @@ import AdminBadge from '../shared/AdminBadge'
 import AdminKPICard from '../shared/AdminKPICard'
 import AdminEmptyState from '../shared/AdminEmptyState'
 import AdminCRUDPlaceholder from '../shared/AdminCRUDPlaceholder'
-import { fetchEmployees, getSystemHealth, fetchActivityFeed } from '@/lib/supabase/adminDataService'
+import { fetchEmployees, getSystemHealth, fetchActivityFeed, fetchAdminUsers, createAdminUser, updateAdminUserRole, fetchPermissionAuditLog, type AdminUserRow, type PermissionAuditRow } from '@/lib/supabase/adminDataService'
 import { supabase, isSupabaseConfigured } from '@/lib/supabase/client'
 import { ROLE_PERMISSIONS } from '@/lib/admin/adminRBAC'
 import { ROLE_LABELS } from '@/lib/admin/adminAuth'
 import { formatDate, useAdminAuth } from '@/lib/admin/adminHooks'
 import type { AdminRole } from '@/lib/admin/adminTypes'
 import { saveBlobAs } from '@/lib/supabase/storageService'
+import AdminModal, { ModalButton } from '../shared/AdminModal'
 
 // ── Sub-tabs ─────────────────────────────────────────────────────
 // 2026-05-12: Super-Admin menu spec adds Settings → Role (role
@@ -95,7 +96,7 @@ export default function SettingsModule({ subTab, navigate, showToast }: Settings
 
       <div className="admin-tab-switch">
         {activeTab === 'general' && <GeneralTab showToast={showToast} />}
-        {activeTab === 'permissions' && <PermissionsTab />}
+        {activeTab === 'permissions' && <PermissionsTab showToast={showToast} />}
         {/* 2026-05-12: Role management (create, rename, retire roles).
             The shared CRUD placeholder shows the View / Edit / Delete
             triad while the dedicated UI is wired in. ROLE_PERMISSIONS
@@ -317,16 +318,133 @@ function GeneralTab({ showToast }: { showToast: (msg: string, type?: 'success' |
 }
 
 // ── Permissions Matrix ──────────────────────────────────────────
-function PermissionsTab() {
+type Toast = (msg: string, type?: 'success' | 'error' | 'info' | 'warning') => void
+
+// Maps DB role values (snake_case) to UI role keys (kebab-case).
+const ROLE_DB_TO_UI: Record<string, AdminRole> = {
+  super_admin: 'super-admin',
+  admin: 'admin',
+  compliance_officer: 'compliance-officer',
+  fund_manager: 'fund-manager',
+  manager: 'manager',
+  marketing_manager: 'marketing-manager',
+  sales: 'sales',
+  marketing_executive: 'marketing-executive',
+  operations: 'operations',
+  hr: 'hr',
+  viewer: 'viewer',
+}
+const ROLE_UI_TO_DB: Record<string, string> = Object.fromEntries(
+  Object.entries(ROLE_DB_TO_UI).map(([db, ui]) => [ui, db])
+)
+
+function PermissionsTab({ showToast }: { showToast: Toast }) {
   const [permView, setPermView] = useState<'roles' | 'users' | 'matrix' | 'audit' | 'presets'>('roles')
   const roles = Object.keys(ROLE_LABELS) as AdminRole[]
   const allModules = ['overview', 'clients', 'sales', 'realty-brokers', 'employees', 'assets', 'ai-ops', 'compliance', 'financial', 'analytics', 'comms', 'marketing', 'reports', 'settings']
   const allActions = ['view', 'create', 'edit', 'approve', 'delete', 'export', 'configure']
   const [expandedRole, setExpandedRole] = useState<AdminRole | null>(null)
 
-  const userAssignments: { email: string; name: string; role: AdminRole; dept: string; lastActive: string }[] = []
-  const permAuditLog: { id: string; timestamp: string; user: string; action: string; target: string; detail: string; module: string }[] = []
+  // ADMIN COMMAND CENTER 2026-05-15: live user list + audit log + Add User flow.
+  const [adminUsers, setAdminUsers] = useState<AdminUserRow[]>([])
+  const [auditRows, setAuditRows] = useState<PermissionAuditRow[]>([])
+  const [loadingData, setLoadingData] = useState(true)
+  const [addOpen, setAddOpen] = useState(false)
+  const [editingRoleFor, setEditingRoleFor] = useState<AdminUserRow | null>(null)
+  const [savingRole, setSavingRole] = useState(false)
+  const [newRole, setNewRole] = useState<string>('admin')
+  const [saving, setSaving] = useState(false)
+  const [form, setForm] = useState({
+    email: '', full_name: '', phone: '', role: 'admin', department: '', password: '',
+  })
+
+  const loadAll = useCallback(async () => {
+    setLoadingData(true)
+    const [users, audit] = await Promise.all([fetchAdminUsers(), fetchPermissionAuditLog()])
+    setAdminUsers(users)
+    setAuditRows(audit)
+    setLoadingData(false)
+  }, [])
+
+  useEffect(() => { loadAll() }, [loadAll])
+
+  const userAssignments = useMemo(() => adminUsers.map(u => ({
+    email: u.email,
+    name: u.full_name || u.email,
+    role: (ROLE_DB_TO_UI[u.role] || 'viewer') as AdminRole,
+    dept: u.department || '—',
+    lastActive: u.last_login_at || u.created_at,
+    id: u.id,
+  })), [adminUsers])
+
+  const permAuditLog = useMemo(() => auditRows.map(r => {
+    const a = r.action
+    const friendly =
+      a === 'create_admin_user' ? 'Created' :
+      a === 'update_admin_role' ? 'Role Changed' :
+      a === 'delete_admin_user' ? 'Revoked' :
+      a === 'trash_client' ? 'Auto-Revoked' :
+      a === 'restore_client' ? 'Granted' :
+      'Permission Change'
+    return {
+      id: r.id,
+      timestamp: r.created_at,
+      user: r.actor_name || 'System',
+      action: friendly,
+      target: r.target ? String(r.target).slice(0, 8) + '…' : '—',
+      detail: r.details ? JSON.stringify(r.details).slice(0, 120) : '',
+      module: r.module || '—',
+    }
+  }), [auditRows])
+
   const presets: { id: string; name: string; description: string; permCount: number; usedBy: number }[] = []
+
+  // Add User submit handler
+  const handleCreateUser = async () => {
+    if (!form.email.trim() || !form.full_name.trim() || !form.password.trim()) {
+      showToast('Email, name and password are required', 'error')
+      return
+    }
+    if (form.password.length < 8) {
+      showToast('Password must be at least 8 characters', 'error')
+      return
+    }
+    setSaving(true)
+    try {
+      const res = await createAdminUser({
+        email: form.email.trim().toLowerCase(),
+        full_name: form.full_name.trim(),
+        phone: form.phone.trim() || undefined,
+        role: form.role,
+        department: form.department.trim() || undefined,
+        password: form.password,
+      })
+      if (res.ok) {
+        showToast(`Admin user "${form.full_name}" created`, 'success')
+        setAddOpen(false)
+        setForm({ email: '', full_name: '', phone: '', role: 'admin', department: '', password: '' })
+        loadAll()
+      } else {
+        showToast(res.error || 'Failed to create admin user', 'error')
+      }
+    } finally { setSaving(false) }
+  }
+
+  // Change-role submit handler
+  const handleRoleChange = async () => {
+    if (!editingRoleFor) return
+    setSavingRole(true)
+    try {
+      const res = await updateAdminUserRole(editingRoleFor.id, newRole)
+      if (res.ok) {
+        showToast(`Role updated for ${editingRoleFor.full_name || editingRoleFor.email}`, 'success')
+        setEditingRoleFor(null)
+        loadAll()
+      } else {
+        showToast(res.error || 'Failed to update role', 'error')
+      }
+    } finally { setSavingRole(false) }
+  }
 
   const PERM_VIEWS = [
     { id: 'roles' as const, label: 'Roles', icon: Users },
@@ -445,34 +563,58 @@ function PermissionsTab() {
             <h3 className="text-sm font-semibold text-white flex items-center gap-2">
               <Users className="w-4 h-4 text-brand-red" />
               User Role Assignments
+              <span className="text-[10px] text-gray-500 font-normal ml-2">{userAssignments.length} user{userAssignments.length === 1 ? '' : 's'}</span>
             </h3>
-            <button className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-white bg-brand-red/20 border border-brand-red/30 rounded-lg hover:bg-brand-red/30 transition-colors">
+            <button
+              onClick={() => setAddOpen(true)}
+              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-white bg-brand-red/20 border border-brand-red/30 rounded-lg hover:bg-brand-red/30 transition-colors"
+            >
               <Plus className="w-3.5 h-3.5" />
               Add User
             </button>
           </div>
-          <div className="space-y-2">
-            {userAssignments.map(user => (
-              <div key={user.email} className="flex items-center justify-between p-3 rounded-xl bg-white/[0.02] border border-white/[0.04] hover:bg-white/[0.03] transition-colors">
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-full bg-brand-red/10 flex items-center justify-center text-white text-xs font-bold">
-                    {user.name.split(' ').map(n => n[0]).join('')}
+          {loadingData ? (
+            <div className="py-8 text-center text-xs text-gray-500"><Loader2 className="w-4 h-4 animate-spin inline mr-2" />Loading admin users…</div>
+          ) : userAssignments.length === 0 ? (
+            <AdminEmptyState
+              icon={Users}
+              title="No admin users yet"
+              description="Click Add User to invite the first admin. Their role determines which modules they can access."
+            />
+          ) : (
+            <div className="space-y-2">
+              {userAssignments.map(user => (
+                <div key={user.email} className="flex items-center justify-between p-3 rounded-xl bg-white/[0.02] border border-white/[0.04] hover:bg-white/[0.03] transition-colors">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className="w-8 h-8 rounded-full bg-brand-red/10 flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
+                      {user.name.split(' ').map(n => n[0]).slice(0, 2).join('')}
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-sm text-white font-medium truncate">{user.name}</p>
+                      <p className="text-[11px] text-gray-500 truncate">{user.email} &middot; {user.dept}</p>
+                    </div>
                   </div>
-                  <div>
-                    <p className="text-sm text-white font-medium">{user.name}</p>
-                    <p className="text-[11px] text-gray-500">{user.email} &middot; {user.dept}</p>
+                  <div className="flex items-center gap-3 flex-shrink-0">
+                    <AdminBadge
+                      label={ROLE_LABELS[user.role] || user.role}
+                      variant={user.role === 'super-admin' ? 'error' : user.role.includes('admin') ? 'warning' : 'info'}
+                    />
+                    <span className="text-[10px] text-gray-600 hidden sm:inline">{formatDate(user.lastActive)}</span>
+                    <button
+                      onClick={() => {
+                        const row = adminUsers.find(u => u.id === user.id) || null
+                        setEditingRoleFor(row)
+                        setNewRole(row?.role || 'admin')
+                      }}
+                      className="px-2.5 py-1 rounded-md text-[10px] font-medium text-gray-300 bg-white/[0.04] border border-white/[0.08] hover:bg-white/[0.08] transition-colors"
+                    >
+                      Change Role
+                    </button>
                   </div>
                 </div>
-                <div className="flex items-center gap-3">
-                  <AdminBadge
-                    label={ROLE_LABELS[user.role]}
-                    variant={user.role === 'super-admin' ? 'error' : user.role.includes('admin') ? 'warning' : 'info'}
-                  />
-                  <span className="text-[10px] text-gray-600 hidden sm:inline">{formatDate(user.lastActive)}</span>
-                </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
         </AdminGlass>
       )}
 
@@ -542,28 +684,35 @@ function PermissionsTab() {
           <h3 className="text-sm font-semibold text-white mb-4 flex items-center gap-2">
             <Clock className="w-4 h-4 text-brand-red" />
             Permission Change Audit Trail
+            <span className="text-[10px] text-gray-500 font-normal ml-2">{permAuditLog.length} event{permAuditLog.length === 1 ? '' : 's'}</span>
           </h3>
-          <div className="space-y-2">
-            {permAuditLog.map(entry => (
-              <div key={entry.id} className="flex items-start gap-3 p-3 rounded-xl bg-white/[0.02] border border-white/[0.04]">
-                <div className={`w-2 h-2 rounded-full mt-1.5 shrink-0 ${
-                  entry.action === 'Granted' ? 'bg-emerald-400' :
-                  entry.action === 'Revoked' || entry.action === 'Auto-Revoked' ? 'bg-red-400' :
-                  entry.action === 'Role Changed' ? 'bg-blue-400' :
-                  entry.action === 'Created' ? 'bg-purple-400' : 'bg-amber-400'
-                }`} />
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <span className="text-sm text-white font-medium">{entry.action}</span>
-                    <span className="text-[11px] text-gray-400">&rarr; {entry.target}</span>
-                    <AdminBadge label={entry.module} variant="neutral" />
+          {loadingData ? (
+            <div className="py-8 text-center text-xs text-gray-500"><Loader2 className="w-4 h-4 animate-spin inline mr-2" />Loading audit log…</div>
+          ) : permAuditLog.length === 0 ? (
+            <AdminEmptyState icon={Clock} title="No permission events yet" description="Audit entries for admin-user creation, role changes, and client trash/restore will appear here." />
+          ) : (
+            <div className="space-y-2">
+              {permAuditLog.map(entry => (
+                <div key={entry.id} className="flex items-start gap-3 p-3 rounded-xl bg-white/[0.02] border border-white/[0.04]">
+                  <div className={`w-2 h-2 rounded-full mt-1.5 shrink-0 ${
+                    entry.action === 'Granted' ? 'bg-emerald-400' :
+                    entry.action === 'Revoked' || entry.action === 'Auto-Revoked' ? 'bg-red-400' :
+                    entry.action === 'Role Changed' ? 'bg-blue-400' :
+                    entry.action === 'Created' ? 'bg-purple-400' : 'bg-amber-400'
+                  }`} />
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="text-sm text-white font-medium">{entry.action}</span>
+                      <span className="text-[11px] text-gray-400">&rarr; {entry.target}</span>
+                      <AdminBadge label={entry.module} variant="neutral" />
+                    </div>
+                    <p className="text-[11px] text-gray-500 mt-0.5 break-all">{entry.detail}</p>
+                    <p className="text-[10px] text-gray-600 mt-1">by {entry.user} &middot; {formatDate(entry.timestamp)}</p>
                   </div>
-                  <p className="text-[11px] text-gray-500 mt-0.5">{entry.detail}</p>
-                  <p className="text-[10px] text-gray-600 mt-1">by {entry.user} &middot; {formatDate(entry.timestamp)}</p>
                 </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
         </AdminGlass>
       )}
 
@@ -609,6 +758,109 @@ function PermissionsTab() {
           ))}
         </div>
       )}
+
+      {/* Add User modal */}
+      <AdminModal
+        isOpen={addOpen}
+        onClose={() => setAddOpen(false)}
+        title="Add Admin User"
+        subtitle="Creates an admin-side account (no client/investor record). The user can log in immediately at /admin/login."
+        maxWidth="max-w-lg"
+        footer={
+          <>
+            <ModalButton onClick={() => setAddOpen(false)} disabled={saving}>Cancel</ModalButton>
+            <ModalButton variant="primary" onClick={handleCreateUser} disabled={saving}>
+              {saving ? <span className="inline-flex items-center gap-2"><Loader2 className="w-4 h-4 animate-spin" />Creating…</span> : 'Create User'}
+            </ModalButton>
+          </>
+        }
+      >
+        <div className="space-y-3">
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-[10px] uppercase tracking-wider text-gray-500 font-medium mb-1">Full Name *</label>
+              <input value={form.full_name} onChange={e => setForm(p => ({ ...p, full_name: e.target.value }))} className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-brand-red/40 focus:ring-1 focus:ring-brand-red/20" />
+            </div>
+            <div>
+              <label className="block text-[10px] uppercase tracking-wider text-gray-500 font-medium mb-1">Email *</label>
+              <input type="email" value={form.email} onChange={e => setForm(p => ({ ...p, email: e.target.value }))} className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-brand-red/40 focus:ring-1 focus:ring-brand-red/20" />
+            </div>
+            <div>
+              <label className="block text-[10px] uppercase tracking-wider text-gray-500 font-medium mb-1">Phone</label>
+              <input value={form.phone} onChange={e => setForm(p => ({ ...p, phone: e.target.value }))} className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-brand-red/40 focus:ring-1 focus:ring-brand-red/20" />
+            </div>
+            <div>
+              <label className="block text-[10px] uppercase tracking-wider text-gray-500 font-medium mb-1">Department</label>
+              <input value={form.department} onChange={e => setForm(p => ({ ...p, department: e.target.value }))} placeholder="e.g. Compliance, Sales" className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-brand-red/40 focus:ring-1 focus:ring-brand-red/20" />
+            </div>
+            <div>
+              <label className="block text-[10px] uppercase tracking-wider text-gray-500 font-medium mb-1">Role *</label>
+              <select value={form.role} onChange={e => setForm(p => ({ ...p, role: e.target.value }))} className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-brand-red/40 focus:ring-1 focus:ring-brand-red/20">
+                <option value="admin">Admin</option>
+                <option value="super_admin">Super Admin</option>
+                <option value="compliance_officer">Compliance Officer</option>
+                <option value="fund_manager">Fund Manager</option>
+                <option value="manager">Manager</option>
+                <option value="marketing_manager">Marketing Manager</option>
+                <option value="sales">Sales</option>
+                <option value="marketing_executive">Marketing Executive</option>
+                <option value="operations">Operations</option>
+                <option value="hr">HR</option>
+                <option value="viewer">Viewer</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-[10px] uppercase tracking-wider text-gray-500 font-medium mb-1">Temporary Password *</label>
+              <input type="text" value={form.password} onChange={e => setForm(p => ({ ...p, password: e.target.value }))} placeholder="≥ 8 characters" className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-brand-red/40 focus:ring-1 focus:ring-brand-red/20 font-mono" />
+            </div>
+          </div>
+          <div className="flex items-start gap-2 p-2.5 rounded-lg bg-amber-500/10 border border-amber-500/20 text-[11px] text-amber-200">
+            <Shield className="w-3.5 h-3.5 mt-0.5 flex-shrink-0" />
+            <span>This creates a real auth user with the chosen role. Share the temporary password securely and instruct the user to change it on first login (Settings → Password Vault).</span>
+          </div>
+        </div>
+      </AdminModal>
+
+      {/* Change Role modal */}
+      <AdminModal
+        isOpen={!!editingRoleFor}
+        onClose={() => setEditingRoleFor(null)}
+        title={editingRoleFor ? `Change role · ${editingRoleFor.full_name || editingRoleFor.email}` : ''}
+        subtitle="Updates the user's role in profiles. Module access is re-checked on every page navigation."
+        maxWidth="max-w-md"
+        footer={
+          <>
+            <ModalButton onClick={() => setEditingRoleFor(null)} disabled={savingRole}>Cancel</ModalButton>
+            <ModalButton variant="primary" onClick={handleRoleChange} disabled={savingRole}>
+              {savingRole ? 'Saving…' : 'Save Role'}
+            </ModalButton>
+          </>
+        }
+      >
+        {editingRoleFor && (
+          <div className="space-y-3">
+            <div className="text-[11px] text-gray-400">
+              <span className="uppercase tracking-wider text-gray-500">Current role:</span> {ROLE_LABELS[ROLE_DB_TO_UI[editingRoleFor.role] || 'viewer']}
+            </div>
+            <div>
+              <label className="block text-[10px] uppercase tracking-wider text-gray-500 font-medium mb-1">New Role</label>
+              <select value={newRole} onChange={e => setNewRole(e.target.value)} className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-brand-red/40 focus:ring-1 focus:ring-brand-red/20">
+                <option value="admin">Admin</option>
+                <option value="super_admin">Super Admin</option>
+                <option value="compliance_officer">Compliance Officer</option>
+                <option value="fund_manager">Fund Manager</option>
+                <option value="manager">Manager</option>
+                <option value="marketing_manager">Marketing Manager</option>
+                <option value="sales">Sales</option>
+                <option value="marketing_executive">Marketing Executive</option>
+                <option value="operations">Operations</option>
+                <option value="hr">HR</option>
+                <option value="viewer">Viewer</option>
+              </select>
+            </div>
+          </div>
+        )}
+      </AdminModal>
     </div>
   )
 }

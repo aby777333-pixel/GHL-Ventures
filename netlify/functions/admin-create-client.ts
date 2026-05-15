@@ -18,10 +18,24 @@
 interface CreateClientBody {
   email: string
   password: string
-  fullName: string
+  fullName?: string
+  full_name?: string
   phone?: string
   referral?: string
+  // 2026-05-15: optional admin-side fields. When `role` is provided AND in
+  // ADMIN_ROLE_VALUES, after the standard creation flow the function will
+  // promote the new profile to that role and (if `skip_client_row` is true)
+  // delete the auto-created clients row so the user is an admin-only account.
+  role?: string
+  department?: string
+  skip_client_row?: boolean
 }
+
+const ADMIN_ROLE_VALUES = [
+  'super_admin', 'admin', 'compliance_officer', 'fund_manager',
+  'manager', 'marketing_manager', 'sales',
+  'marketing_executive', 'operations', 'hr', 'viewer',
+]
 
 const ALLOWED_ORIGINS = [
   'https://ghl-india-ventures-2025.netlify.app',
@@ -105,10 +119,12 @@ export default async (request: Request) => {
 
   try {
     const body: CreateClientBody = await request.json()
+    // Allow both `fullName` (legacy) and `full_name` (new admin-user flow).
+    const fullName = fullName || body.full_name || ''
 
-    if (!body.email || !body.password || !body.fullName) {
+    if (!body.email || !body.password || !fullName) {
       return new Response(
-        JSON.stringify({ error: 'Missing required fields: email, password, fullName' }),
+        JSON.stringify({ error: 'Missing required fields: email, password, full_name' }),
         { status: 400, headers: { 'Content-Type': 'application/json', ...getCorsHeaders(request) } },
       )
     }
@@ -135,7 +151,7 @@ export default async (request: Request) => {
         password: body.password,
         email_confirm: true,
         user_metadata: {
-          full_name: body.fullName,
+          full_name: fullName,
           phone: phoneDigits || null,
           referral_source: body.referral || null,
           created_by_admin: true,
@@ -163,7 +179,19 @@ export default async (request: Request) => {
 
     // Step 2: Upsert profile (trigger may have already created one as 'viewer').
     // Keep the role='viewer' (client-equivalent) that the trigger sets; just
-    // patch the fields we know.
+    // patch the fields we know. When `role` is provided AND in
+    // ADMIN_ROLE_VALUES, promote the profile to that role and persist
+    // department metadata for the Settings → Permissions view.
+    const wantsAdminRole = !!body.role && ADMIN_ROLE_VALUES.includes(body.role)
+    const profilePatch: Record<string, unknown> = {
+      full_name: fullName,
+      phone: phoneDigits || null,
+      email: body.email,
+    }
+    if (wantsAdminRole) {
+      profilePatch.role = body.role
+      if (body.department) profilePatch.department = body.department
+    }
     await fetch(`${supabaseUrl}/rest/v1/profiles?id=eq.${userId}`, {
       method: 'PATCH',
       headers: {
@@ -172,12 +200,44 @@ export default async (request: Request) => {
         'apikey': serviceRoleKey,
         'Prefer': 'return=minimal',
       },
-      body: JSON.stringify({
-        full_name: body.fullName,
-        phone: phoneDigits || null,
-        email: body.email,
-      }),
+      body: JSON.stringify(profilePatch),
     })
+
+    // 2026-05-15: admin-side user creation. Skip the clients-row patch below
+    // and remove the auto-created clients row so the user is admin-only.
+    if (wantsAdminRole && body.skip_client_row) {
+      try {
+        await fetch(`${supabaseUrl}/rest/v1/clients?user_id=eq.${userId}`, {
+          method: 'DELETE',
+          headers: { 'Authorization': `Bearer ${serviceRoleKey}`, 'apikey': serviceRoleKey },
+        })
+      } catch { /* best-effort — RLS-safe */ }
+
+      // Audit
+      try {
+        await fetch(`${supabaseUrl}/rest/v1/audit_logs`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${serviceRoleKey}`,
+            'apikey': serviceRoleKey,
+            'Prefer': 'return=minimal',
+          },
+          body: JSON.stringify({
+            action: 'create_admin_user',
+            entity_type: 'user',
+            entity_id: userId,
+            module: 'settings',
+            details: { email: body.email, role: body.role, department: body.department || null },
+          }),
+        })
+      } catch { /* non-blocking */ }
+
+      return new Response(
+        JSON.stringify({ success: true, userId, email: body.email, fullName, role: body.role }),
+        { status: 201, headers: { 'Content-Type': 'application/json', ...getCorsHeaders(request) } },
+      )
+    }
 
     // Step 3: Patch the clients row created by the auto-trigger, or upsert
     // if the trigger did not run (e.g., role wasn't 'viewer'). The trigger
@@ -201,7 +261,7 @@ export default async (request: Request) => {
             'Prefer': 'return=minimal',
           },
           body: JSON.stringify({
-            full_name: body.fullName,
+            full_name: fullName,
             email: body.email,
             phone: phoneDigits || null,
             acquisition_source: 'admin_created',
@@ -223,7 +283,7 @@ export default async (request: Request) => {
           },
           body: JSON.stringify({
             user_id: userId,
-            full_name: body.fullName,
+            full_name: fullName,
             email: body.email,
             phone: phoneDigits || null,
             acquisition_source: 'admin_created',
@@ -256,7 +316,7 @@ export default async (request: Request) => {
           const notifs = admins.map(a => ({
             user_id: a.id,
             title: 'New Client Created',
-            message: `Admin created an account for ${body.fullName} (${body.email}). KYC pending.`,
+            message: `Admin created an account for ${fullName} (${body.email}). KYC pending.`,
             type: 'info',
             link: '/admin/clients',
             metadata: { client_id: clientId, user_id: userId, source: 'admin_created' },
@@ -283,7 +343,7 @@ export default async (request: Request) => {
         userId,
         clientId,
         email: body.email,
-        fullName: body.fullName,
+        fullName: fullName,
       }),
       { status: 201, headers: { 'Content-Type': 'application/json', ...getCorsHeaders(request) } },
     )

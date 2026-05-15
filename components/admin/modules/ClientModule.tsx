@@ -6,7 +6,7 @@ import {
   ShieldCheck, AlertTriangle, FileText, Filter, CheckCircle2,
   XCircle, Clock, MoreHorizontal, ArrowUpRight, ChevronRight,
   Search, UserCircle, FileSearch, PieChart, Activity, Building2, Upload, Trash2, KeyRound,
-  Link2,
+  Link2, RotateCcw, ArchiveX,
 } from 'lucide-react'
 import AdminGlass from '../shared/AdminGlass'
 import AdminDataTable, { type Column } from '../shared/AdminDataTable'
@@ -14,7 +14,7 @@ import AdminBadge, { getKYCBadgeVariant, getAccountBadgeVariant } from '../share
 import AdminModal, { ModalButton } from '../shared/AdminModal'
 import AdminEmptyState from '../shared/AdminEmptyState'
 import AdminKPICard from '../shared/AdminKPICard'
-import { fetchClients, fetchKYCDocuments, fetchKYCByClient, fetchClientKYCDetails, approveKYCStep, rejectKYCStep, approveClientKYC, rejectClientKYC, deleteUserComplete, deleteClientSafe, deleteClientKYCSafe } from '@/lib/supabase/adminDataService'
+import { fetchClients, fetchKYCDocuments, fetchKYCByClient, fetchClientKYCDetails, approveKYCStep, rejectKYCStep, approveClientKYC, rejectClientKYC, deleteUserComplete, deleteClientSafe, deleteClientKYCSafe, trashClient, restoreClient } from '@/lib/supabase/adminDataService'
 import { getActiveRMs, assignRMToClient, type ActiveRM } from '@/lib/supabase/employeeService'
 import { formatINR, formatDate } from '@/lib/admin/adminHooks'
 import type { Client, KYCDocument, KYCStatus } from '@/lib/admin/adminTypes'
@@ -32,6 +32,7 @@ const CLIENT_TABS = [
   { id: 'list', label: 'Client List', icon: Users },
   { id: 'channel-partners', label: 'Channel Partners', icon: Users },
   { id: 'kyc-queue', label: 'KYC Queue', icon: ShieldCheck },
+  { id: 'trash', label: 'Trash', icon: Trash2 },
   { id: 'analytics', label: 'Client Analytics', icon: PieChart },
 ] as const
 
@@ -61,6 +62,7 @@ export default function ClientModule({ subTab, navigate, showToast }: ClientModu
   const [resolvingKYCTarget, setResolvingKYCTarget] = useState(false)
 
   const [clients, setClients] = useState<any[]>([])
+  const [trashedClients, setTrashedClients] = useState<any[]>([])
   const [kycDocs, setKycDocs] = useState<any[]>([])
   const [kycByClient, setKycByClient] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
@@ -112,8 +114,15 @@ export default function ClientModule({ subTab, navigate, showToast }: ClientModu
 
   const loadData = useCallback(async () => {
     setLoading(true)
-    const [c, k, byClient, rms] = await Promise.all([fetchClients(), fetchKYCDocuments(), fetchKYCByClient(), getActiveRMs()])
+    const [c, trashed, k, byClient, rms] = await Promise.all([
+      fetchClients(),
+      fetchClients({ trashedOnly: true }),
+      fetchKYCDocuments(),
+      fetchKYCByClient(),
+      getActiveRMs(),
+    ])
     setClients(c)
+    setTrashedClients(trashed)
     setKycDocs(k)
     setKycByClient(byClient)
     setActiveRMs(rms)
@@ -122,18 +131,46 @@ export default function ClientModule({ subTab, navigate, showToast }: ClientModu
 
   useEffect(() => { loadData() }, [loadData])
 
-  // ── Delete client (safe) — blocks approved KYC and approved investments.
+  // ── Trash client (soft-delete) — recoverable from the Trash tab.
+  // 2026-05-15 (Admin Command Center): "Delete" now sends the client to
+  // Trash instead of purging immediately. Permanent purge lives on the
+  // Trash tab itself (Permanent Delete button) so an accidental click can
+  // always be undone via Restore.
   const handleDeleteClient = useCallback(async (client: Client) => {
-    if (!window.confirm(`Delete client "${client.name}"? This cannot be undone.`)) return
-    const res = await deleteClientSafe(client.id, (client as any).user_id || null)
+    if (!window.confirm(`Send client "${client.name}" to Trash? You can restore them later from the Trash tab.`)) return
+    const res = await trashClient(client.id, 'admin_trash_from_list')
     if (res.ok) {
-      showToast(`Client "${client.name}" deleted`, 'success')
+      showToast(`Client "${client.name}" moved to Trash`, 'success')
       if (selectedClient?.id === client.id) { setProfileModalOpen(false); setSelectedClient(null) }
       loadData()
     } else {
-      showToast(res.error || 'Failed to delete client', 'error')
+      showToast(res.error || 'Failed to trash client', 'error')
     }
   }, [selectedClient, showToast, loadData])
+
+  // ── Restore a trashed client (Trash tab → Restore button).
+  const handleRestoreClient = useCallback(async (client: any) => {
+    const res = await restoreClient(client.id)
+    if (res.ok) {
+      showToast(`Restored "${client.full_name || client.name}"`, 'success')
+      loadData()
+    } else {
+      showToast(res.error || 'Failed to restore client', 'error')
+    }
+  }, [showToast, loadData])
+
+  // ── Permanent delete from Trash (super-admin destructive action).
+  const handlePermanentDelete = useCallback(async (client: any) => {
+    const name = client.full_name || client.name || 'this client'
+    if (!window.confirm(`PERMANENTLY delete "${name}"? This cannot be undone — all data, files, and auth records will be erased.`)) return
+    const res = await deleteClientSafe(client.id, client.user_id || null)
+    if (res.ok) {
+      showToast(`"${name}" permanently deleted`, 'success')
+      loadData()
+    } else {
+      showToast(res.error || 'Failed to delete permanently', 'error')
+    }
+  }, [showToast, loadData])
 
   // ── Delete KYC submission — blocks when already approved/verified.
   const handleDeleteKYC = useCallback(async (row: { clientId: string; clientName: string; overallStatus: string }) => {
@@ -324,6 +361,13 @@ export default function ClientModule({ subTab, navigate, showToast }: ClientModu
             showToast={showToast}
             onRefresh={loadData}
             onDeleteKYC={handleDeleteKYC}
+          />
+        )}
+        {activeTab === 'trash' && (
+          <TrashedClientsTab
+            trashed={trashedClients}
+            onRestore={handleRestoreClient}
+            onPermanentDelete={handlePermanentDelete}
           />
         )}
         {activeTab === 'analytics' && <ClientAnalyticsTab clients={clients} />}
@@ -1489,5 +1533,80 @@ function ClientProfileContent({ client, activeRMs, onAssignRM, onAddKYC, addingK
         </div>
       </div>
     </div>
+  )
+}
+
+// ─────────────────────────────────────────────────────────────────
+// TrashedClientsTab — recovery/permanent-delete view for soft-deleted
+// clients (2026-05-15 Admin Command Center).
+// ─────────────────────────────────────────────────────────────────
+function TrashedClientsTab({
+  trashed,
+  onRestore,
+  onPermanentDelete,
+}: {
+  trashed: any[]
+  onRestore: (c: any) => void
+  onPermanentDelete: (c: any) => void
+}) {
+  if (!trashed || trashed.length === 0) {
+    return (
+      <AdminGlass>
+        <AdminEmptyState
+          icon={Trash2}
+          title="Trash is empty"
+          description="Deleted clients land here and can be restored within 30 days. Permanent delete only happens when an admin explicitly purges from this tab."
+        />
+      </AdminGlass>
+    )
+  }
+  return (
+    <AdminGlass>
+      <div className="flex items-center justify-between mb-4">
+        <div>
+          <h2 className="text-base font-semibold text-white">Trashed Clients</h2>
+          <p className="text-xs text-gray-500 mt-0.5">{trashed.length} client{trashed.length === 1 ? '' : 's'} pending restore or permanent delete</p>
+        </div>
+      </div>
+      <div className="space-y-2">
+        {trashed.map((c: any) => (
+          <div key={c.id} className="flex items-center gap-3 p-3 rounded-xl bg-white/[0.02] border border-white/[0.06] hover:bg-white/[0.03] transition-colors">
+            <div className="w-9 h-9 rounded-full bg-amber-500/15 flex items-center justify-center text-amber-300 text-xs font-bold flex-shrink-0">
+              {(c.full_name || c.email || '?').split(' ').map((n: string) => n[0]).slice(0, 2).join('')}
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-medium text-white truncate">{c.full_name || 'Unknown'}</p>
+              <p className="text-[11px] text-gray-500 truncate">
+                {c.email || c.phone || '—'}
+                {c.deleted_reason && <span className="ml-2 text-gray-600">· {c.deleted_reason}</span>}
+              </p>
+              {c.deleted_at && (
+                <p className="text-[10px] text-amber-400 mt-0.5">
+                  Trashed {formatDate(c.deleted_at)}
+                </p>
+              )}
+            </div>
+            <div className="flex items-center gap-2 flex-shrink-0">
+              <button
+                onClick={() => onRestore(c)}
+                className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-medium text-emerald-300 bg-emerald-500/10 border border-emerald-500/30 hover:bg-emerald-500/20 transition-colors"
+                title="Restore client"
+              >
+                <RotateCcw className="w-3 h-3" />
+                Restore
+              </button>
+              <button
+                onClick={() => onPermanentDelete(c)}
+                className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-medium text-red-300 bg-red-500/10 border border-red-500/30 hover:bg-red-500/20 transition-colors"
+                title="Permanently delete (cannot be undone)"
+              >
+                <ArchiveX className="w-3 h-3" />
+                Purge
+              </button>
+            </div>
+          </div>
+        ))}
+      </div>
+    </AdminGlass>
   )
 }

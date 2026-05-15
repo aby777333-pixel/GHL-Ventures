@@ -32,7 +32,7 @@ import type { Lead, LeadStage, LeadSource, Commission } from '@/lib/admin/adminT
 import UploadWithFolderPicker from '@/components/shared/UploadWithFolderPicker'
 import { createLead, updateLead, fetchLeads, deleteLead, updateLeadStatus } from '@/lib/supabase/leadService'
 import { onNewLead } from '@/lib/supabase/realtimeSubscriptions'
-import { fetchAllInvestmentApplications } from '@/lib/supabase/adminDataService'
+import { fetchAllInvestmentApplications, fetchAllBankAccounts, createBankAccount, deleteBankAccount, fetchClients, type AdminBankAccountRow } from '@/lib/supabase/adminDataService'
 import { supabase, isSupabaseConfigured } from '@/lib/supabase/client'
 
 // ── Sub-tabs ─────────────────────────────────────────────────────
@@ -3009,14 +3009,273 @@ function FundCategoriesTab({ showToast }: { showToast: (m: string, t?: 'success'
 }
 
 function BankDetailsDirectoryTab({ showToast }: { showToast: (m: string, t?: 'success' | 'error' | 'info' | 'warning') => void }) {
+  const [rows, setRows] = useState<AdminBankAccountRow[]>([])
+  const [loading, setLoading] = useState(true)
+  const [createOpen, setCreateOpen] = useState(false)
+  const [clientOptions, setClientOptions] = useState<Array<{ id: string; full_name: string; email: string | null }>>([])
+  const [form, setForm] = useState({
+    client_id: '',
+    account_holder_name: '',
+    account_number: '',
+    ifsc_code: '',
+    bank_name: '',
+    branch_name: '',
+    account_type: 'savings' as 'savings' | 'current' | 'nro' | 'nre',
+    is_primary: false,
+  })
+  const [saving, setSaving] = useState(false)
+  const [search, setSearch] = useState('')
+
+  const load = useCallback(async () => {
+    setLoading(true)
+    const [accounts, clientList] = await Promise.all([
+      fetchAllBankAccounts(),
+      fetchClients(),
+    ])
+    setRows(accounts)
+    setClientOptions(((clientList as any[]) || []).map(c => ({
+      id: c.id,
+      full_name: c.full_name || c.name || 'Unknown',
+      email: c.email || null,
+    })))
+    setLoading(false)
+  }, [])
+
+  useEffect(() => { load() }, [load])
+
+  const filtered = useMemo(() => {
+    if (!search.trim()) return rows
+    const q = search.toLowerCase()
+    return rows.filter(r =>
+      r.clientName.toLowerCase().includes(q) ||
+      (r.clientEmail || '').toLowerCase().includes(q) ||
+      r.account_number.toLowerCase().includes(q) ||
+      r.ifsc_code.toLowerCase().includes(q) ||
+      (r.bank_name || '').toLowerCase().includes(q)
+    )
+  }, [rows, search])
+
+  const handleCreate = async () => {
+    if (!form.client_id) { showToast('Pick a client', 'error'); return }
+    if (!form.account_holder_name.trim()) { showToast('Account holder name is required', 'error'); return }
+    if (!/^\d{6,18}$/.test(form.account_number.trim())) { showToast('Account number must be 6–18 digits', 'error'); return }
+    if (!/^[A-Z]{4}0[A-Z0-9]{6}$/.test(form.ifsc_code.trim().toUpperCase())) { showToast('Invalid IFSC code', 'error'); return }
+    setSaving(true)
+    try {
+      const res = await createBankAccount({
+        client_id: form.client_id,
+        account_holder_name: form.account_holder_name.trim(),
+        account_number: form.account_number.trim(),
+        ifsc_code: form.ifsc_code.trim().toUpperCase(),
+        bank_name: form.bank_name.trim() || undefined,
+        branch_name: form.branch_name.trim() || undefined,
+        account_type: form.account_type,
+        is_primary: form.is_primary,
+      })
+      if (res.ok) {
+        showToast('Bank account added', 'success')
+        setCreateOpen(false)
+        setForm({ client_id: '', account_holder_name: '', account_number: '', ifsc_code: '', bank_name: '', branch_name: '', account_type: 'savings', is_primary: false })
+        load()
+      } else {
+        showToast(res.error || 'Failed to add bank account', 'error')
+      }
+    } finally { setSaving(false) }
+  }
+
+  const handleDelete = async (row: AdminBankAccountRow) => {
+    if (row.source !== 'bank_accounts') {
+      showToast('KYC-sourced accounts can only be deleted via the KYC tab.', 'warning')
+      return
+    }
+    if (!window.confirm(`Delete bank account ending ${row.account_number.slice(-4)}?`)) return
+    const res = await deleteBankAccount(row.id)
+    if (res.ok) { showToast('Bank account deleted', 'success'); load() }
+    else showToast(res.error || 'Failed to delete', 'error')
+  }
+
   return (
-    <AdminCRUDPlaceholder
-      title="Bank Details"
-      description="Master list of investor-submitted bank accounts (sourced from KYC and additional accounts added later)."
-      icon={IndianRupee}
-      showToast={showToast}
-      hint="This directory aggregates `kyc_bank_details` plus `bank_accounts` so finance can match incoming wires. Use View to drill into a specific account; Edit/Delete are limited to records the admin owns."
-    />
+    <AdminGlass>
+      <div className="flex flex-wrap items-start justify-between gap-3 mb-4">
+        <div className="flex-1 min-w-[180px]">
+          <h2 className="text-base font-semibold text-white">Bank Details</h2>
+          <p className="text-xs text-gray-500 mt-0.5">Master list of investor bank accounts (sourced from KYC plus additional accounts added by the admin).</p>
+        </div>
+        <div className="flex items-center gap-2">
+          <input
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            placeholder="Search by name, account, IFSC…"
+            className="bg-white/[0.04] border border-white/[0.08] rounded-lg px-3 py-1.5 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-brand-red/40 w-56"
+          />
+          <button
+            onClick={() => setCreateOpen(true)}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-brand-red/20 border border-brand-red/30 text-xs font-medium text-white hover:bg-brand-red/30 transition-colors"
+          >
+            <Plus className="w-3.5 h-3.5" />
+            Add Bank Details
+          </button>
+        </div>
+      </div>
+
+      {loading ? (
+        <div className="py-10 text-center text-xs text-gray-500"><Loader2 className="w-4 h-4 animate-spin inline mr-2" />Loading…</div>
+      ) : filtered.length === 0 ? (
+        <AdminEmptyState
+          icon={IndianRupee}
+          title="No bank accounts"
+          description={search ? 'No accounts match your search.' : 'No bank details yet. Use Add Bank Details to create the first record.'}
+        />
+      ) : (
+        <div className="overflow-x-auto -mx-4 px-4">
+          <table className="w-full text-xs">
+            <thead>
+              <tr className="border-b border-white/[0.06] text-gray-500 uppercase tracking-wider text-[10px]">
+                <th className="text-left px-2 py-2 font-medium">Investor</th>
+                <th className="text-left px-2 py-2 font-medium">Bank</th>
+                <th className="text-left px-2 py-2 font-medium">Account #</th>
+                <th className="text-left px-2 py-2 font-medium">IFSC</th>
+                <th className="text-left px-2 py-2 font-medium">Type</th>
+                <th className="text-left px-2 py-2 font-medium">Source</th>
+                <th className="text-right px-2 py-2 font-medium">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filtered.map(r => (
+                <tr key={r.id} className="border-b border-white/[0.03] hover:bg-white/[0.02] transition-colors">
+                  <td className="px-2 py-2.5">
+                    <p className="text-white font-medium">{r.clientName}</p>
+                    <p className="text-[10px] text-gray-500">{r.clientEmail || '—'}</p>
+                  </td>
+                  <td className="px-2 py-2.5 text-gray-300">{r.bank_name || '—'}<p className="text-[10px] text-gray-500">{r.account_holder_name}</p></td>
+                  <td className="px-2 py-2.5 text-gray-300 font-mono tracking-wider">{r.account_number || '—'}</td>
+                  <td className="px-2 py-2.5 text-gray-300 font-mono">{r.ifsc_code || '—'}</td>
+                  <td className="px-2 py-2.5 text-gray-400 capitalize">{r.account_type}</td>
+                  <td className="px-2 py-2.5">
+                    <AdminBadge label={r.source === 'bank_accounts' ? 'Admin' : 'KYC'} variant={r.source === 'bank_accounts' ? 'success' : 'info'} />
+                  </td>
+                  <td className="px-2 py-2.5 text-right">
+                    <button
+                      onClick={() => handleDelete(r)}
+                      className="p-1.5 text-gray-500 hover:text-red-400 transition-colors"
+                      title={r.source === 'bank_accounts' ? 'Delete bank account' : 'KYC-sourced — manage via KYC'}
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      <AdminModal
+        isOpen={createOpen}
+        onClose={() => setCreateOpen(false)}
+        title="Add Bank Details"
+        subtitle="Add a new bank account for an investor. The account is stored in `bank_accounts` and aggregated with KYC-sourced entries."
+        maxWidth="max-w-lg"
+        footer={
+          <>
+            <ModalButton onClick={() => setCreateOpen(false)} disabled={saving}>Cancel</ModalButton>
+            <ModalButton variant="primary" onClick={handleCreate} disabled={saving}>
+              {saving ? <span className="inline-flex items-center gap-2"><Loader2 className="w-4 h-4 animate-spin" />Saving…</span> : 'Add Account'}
+            </ModalButton>
+          </>
+        }
+      >
+        <div className="space-y-3">
+          <div>
+            <label className="block text-[10px] uppercase tracking-wider text-gray-500 font-medium mb-1">Client *</label>
+            <select
+              value={form.client_id}
+              onChange={e => setForm(p => ({ ...p, client_id: e.target.value }))}
+              className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-brand-red/40 focus:ring-1 focus:ring-brand-red/20"
+            >
+              <option value="">Choose investor…</option>
+              {clientOptions.map(c => (
+                <option key={c.id} value={c.id}>{c.full_name}{c.email ? ` — ${c.email}` : ''}</option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="block text-[10px] uppercase tracking-wider text-gray-500 font-medium mb-1">Account Holder Name *</label>
+            <input
+              value={form.account_holder_name}
+              onChange={e => setForm(p => ({ ...p, account_holder_name: e.target.value }))}
+              placeholder="As printed on the cancelled cheque"
+              className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-brand-red/40 focus:ring-1 focus:ring-brand-red/20"
+            />
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-[10px] uppercase tracking-wider text-gray-500 font-medium mb-1">Account Number *</label>
+              <input
+                inputMode="numeric"
+                value={form.account_number}
+                onChange={e => setForm(p => ({ ...p, account_number: e.target.value.replace(/\D/g, '').slice(0, 18) }))}
+                placeholder="6–18 digits"
+                className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-brand-red/40 focus:ring-1 focus:ring-brand-red/20 font-mono tracking-wider"
+              />
+            </div>
+            <div>
+              <label className="block text-[10px] uppercase tracking-wider text-gray-500 font-medium mb-1">IFSC *</label>
+              <input
+                value={form.ifsc_code}
+                onChange={e => setForm(p => ({ ...p, ifsc_code: e.target.value.toUpperCase().slice(0, 11) }))}
+                placeholder="HDFC0001234"
+                className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-brand-red/40 focus:ring-1 focus:ring-brand-red/20 font-mono"
+              />
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-[10px] uppercase tracking-wider text-gray-500 font-medium mb-1">Bank Name</label>
+              <input
+                value={form.bank_name}
+                onChange={e => setForm(p => ({ ...p, bank_name: e.target.value }))}
+                placeholder="HDFC Bank"
+                className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-brand-red/40 focus:ring-1 focus:ring-brand-red/20"
+              />
+            </div>
+            <div>
+              <label className="block text-[10px] uppercase tracking-wider text-gray-500 font-medium mb-1">Branch</label>
+              <input
+                value={form.branch_name}
+                onChange={e => setForm(p => ({ ...p, branch_name: e.target.value }))}
+                placeholder="Branch name"
+                className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-brand-red/40 focus:ring-1 focus:ring-brand-red/20"
+              />
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-3 items-end">
+            <div>
+              <label className="block text-[10px] uppercase tracking-wider text-gray-500 font-medium mb-1">Account Type</label>
+              <select
+                value={form.account_type}
+                onChange={e => setForm(p => ({ ...p, account_type: e.target.value as any }))}
+                className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-brand-red/40 focus:ring-1 focus:ring-brand-red/20"
+              >
+                <option value="savings">Savings</option>
+                <option value="current">Current</option>
+                <option value="nro">NRO</option>
+                <option value="nre">NRE</option>
+              </select>
+            </div>
+            <label className="flex items-center gap-2 text-xs text-gray-300 pb-2">
+              <input
+                type="checkbox"
+                checked={form.is_primary}
+                onChange={e => setForm(p => ({ ...p, is_primary: e.target.checked }))}
+                className="accent-brand-red"
+              />
+              Mark as primary
+            </label>
+          </div>
+        </div>
+      </AdminModal>
+    </AdminGlass>
   )
 }
 

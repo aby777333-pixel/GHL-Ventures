@@ -60,6 +60,7 @@ export const ADMIN_SIDEBAR_ITEMS: SidebarItem[] = [
     subItems: [
       { id: 'clients', label: 'All Users' },
       { id: 'clients/channel-partners', label: 'Channel Partner' },
+      { id: 'clients/trash', label: 'Trash' },
     ],
   },
   // 3. Investment
@@ -264,6 +265,7 @@ export const ALL_ADMIN_TAB_PARAMS = [
   { tab: ['clients', 'analytics'] },
   { tab: ['clients', 'profile'] },
   { tab: ['clients', 'channel-partners'] },
+  { tab: ['clients', 'trash'] },
   { tab: ['sales'] },
   { tab: ['sales', 'create-account'] },
   { tab: ['sales', 'pipeline'] },

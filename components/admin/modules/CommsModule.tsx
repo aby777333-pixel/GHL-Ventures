@@ -22,7 +22,7 @@ import {
   type InternalChannel,
   type InternalMessage,
 } from '@/lib/supabase/internalChatService'
-import { fetchAllMessages } from '@/lib/supabase/adminDataService'
+import { fetchAllMessages, fetchContactSubmissions, createContactSubmission, updateContactSubmission, deleteContactSubmission, type ContactSubmissionRow } from '@/lib/supabase/adminDataService'
 import { supabase as supabaseClient, isSupabaseConfigured } from '@/lib/supabase/client'
 import BroadcastComposerModal, { type BroadcastPrefill } from '../shared/BroadcastComposerModal'
 import AdminModal, { ModalButton } from '../shared/AdminModal'
@@ -192,15 +192,7 @@ export default function CommsModule({ subTab, navigate, showToast, user, role }:
             shared CRUD placeholder so the View / Edit / Delete row
             triad is visible while the dedicated Supabase tables are
             being wired in. */}
-        {activeTab === 'contact' && (
-          <AdminCRUDPlaceholder
-            title="Contact Submissions"
-            description="Every message captured by the public /contact form lands here."
-            icon={Inbox}
-            showToast={showToast}
-            hint="Backed by the `contact_submissions` table. Each row supports View (open the message in a modal), Edit (assign / mark replied), and Delete."
-          />
-        )}
+        {activeTab === 'contact' && <ContactSubmissionsTab showToast={showToast} />}
         {activeTab === 'email' && <EmailNotificationsTab showToast={showToast} openComposer={openComposer} />}
       </div>
 
@@ -1221,5 +1213,259 @@ function ActionBtn({ children, onClick, disabled, accent = 'neutral' }: { childr
     >
       {children}
     </button>
+  )
+}
+
+// ─────────────────────────────────────────────────────────────────
+// ContactSubmissionsTab — list + create + mark-replied + delete
+// (2026-05-15 Admin Command Center).
+// ─────────────────────────────────────────────────────────────────
+function ContactSubmissionsTab({ showToast }: { showToast: (msg: string, type?: 'success' | 'error' | 'info' | 'warning') => void }) {
+  const [rows, setRows] = useState<ContactSubmissionRow[]>([])
+  const [loading, setLoading] = useState(true)
+  const [openCreate, setOpenCreate] = useState(false)
+  const [viewing, setViewing] = useState<ContactSubmissionRow | null>(null)
+  const [saving, setSaving] = useState(false)
+  const [search, setSearch] = useState('')
+  const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'processed'>('all')
+
+  const [form, setForm] = useState({
+    form_type: 'general',
+    full_name: '',
+    email: '',
+    phone: '',
+    company: '',
+    subject: '',
+    message: '',
+    notes: '',
+  })
+
+  const load = useCallback(async () => {
+    setLoading(true)
+    const data = await fetchContactSubmissions()
+    setRows(data)
+    setLoading(false)
+  }, [])
+
+  useEffect(() => { load() }, [load])
+
+  const filtered = useMemo(() => {
+    let out = rows
+    if (statusFilter !== 'all') {
+      out = out.filter(r => statusFilter === 'processed' ? r.is_processed : !r.is_processed)
+    }
+    if (search.trim()) {
+      const q = search.toLowerCase()
+      out = out.filter(r =>
+        (r.full_name || '').toLowerCase().includes(q) ||
+        (r.email || '').toLowerCase().includes(q) ||
+        (r.phone || '').toLowerCase().includes(q) ||
+        (r.subject || '').toLowerCase().includes(q) ||
+        (r.message || '').toLowerCase().includes(q)
+      )
+    }
+    return out
+  }, [rows, statusFilter, search])
+
+  const handleCreate = async () => {
+    if (!form.full_name.trim()) { showToast('Name is required', 'error'); return }
+    if (!form.message.trim()) { showToast('Message is required', 'error'); return }
+    setSaving(true)
+    try {
+      const res = await createContactSubmission(form)
+      if (res.ok) {
+        showToast('Contact submission created', 'success')
+        setOpenCreate(false)
+        setForm({ form_type: 'general', full_name: '', email: '', phone: '', company: '', subject: '', message: '', notes: '' })
+        load()
+      } else {
+        showToast(res.error || 'Failed to create submission', 'error')
+      }
+    } finally { setSaving(false) }
+  }
+
+  const handleToggleProcessed = async (row: ContactSubmissionRow) => {
+    const res = await updateContactSubmission(row.id, { is_processed: !row.is_processed })
+    if (res.ok) {
+      showToast(row.is_processed ? 'Marked as pending' : 'Marked as replied', 'success')
+      load()
+    } else showToast(res.error || 'Update failed', 'error')
+  }
+
+  const handleDelete = async (row: ContactSubmissionRow) => {
+    if (!window.confirm(`Delete submission from ${row.full_name || 'unknown'}?`)) return
+    const res = await deleteContactSubmission(row.id)
+    if (res.ok) { showToast('Submission deleted', 'success'); load(); setViewing(null) }
+    else showToast(res.error || 'Delete failed', 'error')
+  }
+
+  return (
+    <AdminGlass>
+      <div className="flex flex-wrap items-start justify-between gap-3 mb-4">
+        <div className="flex-1 min-w-[180px]">
+          <h2 className="text-base font-semibold text-white">Contact Submissions</h2>
+          <p className="text-xs text-gray-500 mt-0.5">Every message captured by the public /contact form lands here. Each row can be viewed, marked as replied, or deleted.</p>
+        </div>
+        <div className="flex items-center gap-2">
+          <input
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            placeholder="Search…"
+            className="bg-white/[0.04] border border-white/[0.08] rounded-lg px-3 py-1.5 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-brand-red/40 w-48"
+          />
+          <select
+            value={statusFilter}
+            onChange={e => setStatusFilter(e.target.value as any)}
+            className="bg-white/[0.04] border border-white/[0.08] rounded-lg px-3 py-1.5 text-xs text-white focus:outline-none focus:border-brand-red/40"
+          >
+            <option value="all">All</option>
+            <option value="pending">Pending</option>
+            <option value="processed">Replied</option>
+          </select>
+          <button
+            onClick={() => setOpenCreate(true)}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-brand-red/20 border border-brand-red/30 text-xs font-medium text-white hover:bg-brand-red/30 transition-colors"
+          >
+            <Plus className="w-3.5 h-3.5" />
+            New
+          </button>
+        </div>
+      </div>
+
+      {loading ? (
+        <div className="py-10 text-center text-xs text-gray-500"><RefreshCw className="w-4 h-4 animate-spin inline mr-2" />Loading…</div>
+      ) : filtered.length === 0 ? (
+        <AdminEmptyState
+          icon={Inbox}
+          title="No submissions"
+          description={search || statusFilter !== 'all' ? 'No submissions match your filter.' : 'New submissions from the public /contact form will appear here.'}
+        />
+      ) : (
+        <div className="space-y-2">
+          {filtered.map(row => (
+            <div key={row.id} className="flex items-center gap-3 p-3 rounded-xl bg-white/[0.02] border border-white/[0.06] hover:bg-white/[0.03] transition-colors">
+              <div className={`w-9 h-9 rounded-full ${row.is_processed ? 'bg-emerald-500/15 text-emerald-300' : 'bg-amber-500/15 text-amber-300'} flex items-center justify-center text-xs font-bold flex-shrink-0`}>
+                {(row.full_name || '?').split(' ').map(n => n[0]).slice(0, 2).join('')}
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <p className="text-sm font-medium text-white truncate">{row.full_name || '(unnamed)'}</p>
+                  <AdminBadge label={row.form_type} variant="neutral" />
+                  {row.is_processed && <AdminBadge label="Replied" variant="success" />}
+                </div>
+                <p className="text-[11px] text-gray-500 truncate mt-0.5">{row.email || row.phone || '—'}{row.subject ? ` · ${row.subject}` : ''}</p>
+                <p className="text-[11px] text-gray-400 truncate mt-1">{row.message || '—'}</p>
+              </div>
+              <div className="flex items-center gap-1 flex-shrink-0">
+                <button onClick={() => setViewing(row)} className="p-1.5 text-gray-400 hover:text-white" title="View"><Eye className="w-3.5 h-3.5" /></button>
+                <button onClick={() => handleToggleProcessed(row)} className={`p-1.5 ${row.is_processed ? 'text-amber-400 hover:text-amber-300' : 'text-emerald-400 hover:text-emerald-300'}`} title={row.is_processed ? 'Mark pending' : 'Mark replied'}>
+                  {row.is_processed ? <Clock className="w-3.5 h-3.5" /> : <CheckCircle2 className="w-3.5 h-3.5" />}
+                </button>
+                <button onClick={() => handleDelete(row)} className="p-1.5 text-gray-500 hover:text-red-400" title="Delete"><Trash2 className="w-3.5 h-3.5" /></button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      <AdminModal
+        isOpen={openCreate}
+        onClose={() => setOpenCreate(false)}
+        title="Create Contact Submission"
+        subtitle="Use this to log a contact captured outside the public form (phone call, email, walk-in)."
+        maxWidth="max-w-lg"
+        footer={
+          <>
+            <ModalButton onClick={() => setOpenCreate(false)} disabled={saving}>Cancel</ModalButton>
+            <ModalButton variant="primary" onClick={handleCreate} disabled={saving}>
+              {saving ? 'Saving…' : 'Save'}
+            </ModalButton>
+          </>
+        }
+      >
+        <div className="space-y-3">
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-[10px] uppercase tracking-wider text-gray-500 font-medium mb-1">Form Type</label>
+              <select value={form.form_type} onChange={e => setForm(p => ({ ...p, form_type: e.target.value }))} className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-brand-red/40 focus:ring-1 focus:ring-brand-red/20">
+                <option value="general">General</option>
+                <option value="invest">Invest</option>
+                <option value="refer_investor">Refer Investor</option>
+                <option value="startup_apply">Startup Apply</option>
+                <option value="grievance">Grievance</option>
+                <option value="career_application">Career Application</option>
+                <option value="callback">Callback</option>
+                <option value="newsletter">Newsletter</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-[10px] uppercase tracking-wider text-gray-500 font-medium mb-1">Full Name *</label>
+              <input value={form.full_name} onChange={e => setForm(p => ({ ...p, full_name: e.target.value }))} className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-brand-red/40 focus:ring-1 focus:ring-brand-red/20" />
+            </div>
+            <div>
+              <label className="block text-[10px] uppercase tracking-wider text-gray-500 font-medium mb-1">Email</label>
+              <input type="email" value={form.email} onChange={e => setForm(p => ({ ...p, email: e.target.value }))} className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-brand-red/40 focus:ring-1 focus:ring-brand-red/20" />
+            </div>
+            <div>
+              <label className="block text-[10px] uppercase tracking-wider text-gray-500 font-medium mb-1">Phone</label>
+              <input value={form.phone} onChange={e => setForm(p => ({ ...p, phone: e.target.value }))} className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-brand-red/40 focus:ring-1 focus:ring-brand-red/20" />
+            </div>
+            <div>
+              <label className="block text-[10px] uppercase tracking-wider text-gray-500 font-medium mb-1">Company</label>
+              <input value={form.company} onChange={e => setForm(p => ({ ...p, company: e.target.value }))} className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-brand-red/40 focus:ring-1 focus:ring-brand-red/20" />
+            </div>
+            <div>
+              <label className="block text-[10px] uppercase tracking-wider text-gray-500 font-medium mb-1">Subject</label>
+              <input value={form.subject} onChange={e => setForm(p => ({ ...p, subject: e.target.value }))} className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-brand-red/40 focus:ring-1 focus:ring-brand-red/20" />
+            </div>
+          </div>
+          <div>
+            <label className="block text-[10px] uppercase tracking-wider text-gray-500 font-medium mb-1">Message *</label>
+            <textarea value={form.message} onChange={e => setForm(p => ({ ...p, message: e.target.value }))} rows={4} className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-brand-red/40 focus:ring-1 focus:ring-brand-red/20 resize-y" />
+          </div>
+          <div>
+            <label className="block text-[10px] uppercase tracking-wider text-gray-500 font-medium mb-1">Internal Notes</label>
+            <textarea value={form.notes} onChange={e => setForm(p => ({ ...p, notes: e.target.value }))} rows={2} placeholder="Not shown to the submitter" className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-brand-red/40 focus:ring-1 focus:ring-brand-red/20 resize-y" />
+          </div>
+        </div>
+      </AdminModal>
+
+      <AdminModal
+        isOpen={!!viewing}
+        onClose={() => setViewing(null)}
+        title={viewing?.full_name || 'Submission'}
+        subtitle={viewing ? `${viewing.form_type} · ${formatDate(viewing.created_at)}` : ''}
+        maxWidth="max-w-lg"
+        footer={viewing && (
+          <>
+            <ModalButton onClick={() => setViewing(null)}>Close</ModalButton>
+            <ModalButton variant="primary" onClick={() => { handleToggleProcessed(viewing); setViewing(null) }}>
+              {viewing.is_processed ? 'Mark as Pending' : 'Mark as Replied'}
+            </ModalButton>
+          </>
+        )}
+      >
+        {viewing && (
+          <div className="space-y-3 text-sm">
+            <div className="grid grid-cols-2 gap-2 text-[11px]">
+              <div><span className="text-gray-500">Email:</span> <span className="text-white">{viewing.email || '—'}</span></div>
+              <div><span className="text-gray-500">Phone:</span> <span className="text-white">{viewing.phone || '—'}</span></div>
+              <div><span className="text-gray-500">Company:</span> <span className="text-white">{viewing.company || '—'}</span></div>
+              <div><span className="text-gray-500">Subject:</span> <span className="text-white">{viewing.subject || '—'}</span></div>
+            </div>
+            <div className="pt-3 border-t border-white/[0.06]">
+              <p className="text-[10px] uppercase tracking-wider text-gray-500 mb-1.5">Message</p>
+              <p className="text-sm text-gray-200 whitespace-pre-wrap">{viewing.message || '—'}</p>
+            </div>
+            {viewing.notes && (
+              <div className="pt-3 border-t border-white/[0.06]">
+                <p className="text-[10px] uppercase tracking-wider text-gray-500 mb-1.5">Internal Notes</p>
+                <p className="text-sm text-gray-200 whitespace-pre-wrap">{viewing.notes}</p>
+              </div>
+            )}
+          </div>
+        )}
+      </AdminModal>
+    </AdminGlass>
   )
 }

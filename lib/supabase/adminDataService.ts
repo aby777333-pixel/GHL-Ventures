@@ -206,14 +206,20 @@ export async function fetchActivityFeed() {
 export function getUpcomingDeadlines() { return [] }
 
 // ── Clients ─────────────────────────────────────────────────
-export async function fetchClients() {
+export async function fetchClients(opts?: { includeTrashed?: boolean; trashedOnly?: boolean }) {
   if (!isSupabaseConfigured()) return []
   try {
-    // Join with staff_profiles + profiles to get the RM's name
-    const { data, error } = await (supabase
+    // ADMIN COMMAND CENTER 2026-05-15: by default exclude soft-deleted clients
+    // (deleted_at IS NOT NULL). Pass { trashedOnly: true } to fetch the Trash
+    // view, or { includeTrashed: true } to include both.
+    let q: any = supabase
       .from('clients')
       .select('*, staff_profiles!clients_assigned_rm_fkey(id, designation, profiles!inner(full_name))')
-      .order('created_at', { ascending: false }) as any)
+      .order('created_at', { ascending: false })
+    if (opts?.trashedOnly) q = q.not('deleted_at', 'is', null)
+    else if (!opts?.includeTrashed) q = q.is('deleted_at', null)
+    // Join with staff_profiles + profiles to get the RM's name
+    const { data, error } = await (q as any)
 
     // ADMIN-1 (25-04-2026 testing): clients.pan is rarely populated;
     // the actual PAN lives in kyc_identity_details.pan_number. Fetch it
@@ -382,6 +388,13 @@ export async function fetchKYCDocuments() {
       sb.from('nominees').select('*').in('client_id', clientIds).eq('status', 'active'),
     ])
 
+    // ADMIN COMMAND CENTER 2026-05-15: also expose client.kyc_status alongside
+    // the per-sub-row status. The KYC Approved / Rejected tabs filter on the
+    // CLIENT-level status (set by approveClientKYC -> 'verified') so they pick
+    // up rows even when a sub-table's status column lagged behind the bulk
+    // approval write.
+    const clientStatusMap = new Map(clients.map((c: any) => [c.id, c.kyc_status]))
+
     const kycItems: any[] = []
     const tableData: { table: string; type: string; rows: any[] }[] = [
       { table: 'kyc_basic_details', type: 'Basic Details', rows: basicRes.data || [] },
@@ -398,6 +411,7 @@ export async function fetchKYCDocuments() {
           clientName: clientMap.get(row.client_id) || 'Unknown',
           clientEmail: clientEmailMap.get(row.client_id) || '',
           clientUpdatedAt: clientUpdatedAtMap.get(row.client_id),
+          clientKycStatus: clientStatusMap.get(row.client_id) || 'pending',
           type: t.type,
           table: t.table,
           fileName: t.type,
@@ -423,6 +437,7 @@ export async function fetchKYCDocuments() {
         id: `nominee-${cid}`,
         clientId: cid,
         clientName: clientMap.get(cid) || 'Unknown',
+        clientKycStatus: clientStatusMap.get(cid) || 'pending',
         type: 'Nominee Details',
         table: 'nominees',
         fileName: `${nominees.length} nominee(s)`,
@@ -432,6 +447,32 @@ export async function fetchKYCDocuments() {
         notes: '',
         data: nominees,
       })
+    }
+
+    // ADMIN COMMAND CENTER 2026-05-15: if a client.kyc_status is 'verified' /
+    // 'approved' / 'rejected' but has NO sub-rows yet (e.g. legacy import or
+    // KYC reset), still surface the client so the Approved / Rejected tabs
+    // show the cohort.
+    for (const c of clients as any[]) {
+      const hasItems = kycItems.some(it => it.clientId === c.id)
+      if (!hasItems && ['verified', 'approved', 'rejected'].includes(c.kyc_status)) {
+        kycItems.push({
+          id: `client-status-${c.id}`,
+          clientId: c.id,
+          clientName: c.full_name || 'Unknown',
+          clientEmail: c.email || '',
+          clientUpdatedAt: c.updated_at,
+          clientKycStatus: c.kyc_status,
+          type: 'KYC Status',
+          table: 'clients',
+          fileName: 'KYC Status',
+          uploadDate: c.updated_at,
+          status: c.kyc_status === 'verified' ? 'approved' : c.kyc_status,
+          reviewer: null,
+          notes: '',
+          data: c,
+        })
+      }
     }
     return kycItems
   } catch (err) {
@@ -2861,4 +2902,395 @@ export async function notifyAdminsWebsite(
     }))
     await sb.from('notifications').insert(rows)
   } catch (e) { console.warn('[admin] notifyAdminsWebsite:', (e as any)?.message) }
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// ADMIN COMMAND CENTER (2026-05-15)
+// Soft-delete clients · admin users CRUD · contact submissions ·
+// bank accounts admin view · permission audit log.
+// ═══════════════════════════════════════════════════════════════════
+
+// ── Soft-delete (Trash) a client. Reversible via restoreClient. ────
+export async function trashClient(clientId: string, reason?: string): Promise<DeleteResult> {
+  if (!isSupabaseConfigured()) return { ok: false, error: 'Service unavailable' }
+  try {
+    const sb = supabase as any
+    const { data, error } = await sb.rpc('admin_trash_client', {
+      p_client_id: clientId,
+      p_reason: reason || null,
+    })
+    if (error) return { ok: false, error: error.message }
+    if (data !== true) return { ok: false, error: 'Already trashed' }
+    return { ok: true }
+  } catch (e: any) {
+    return { ok: false, error: e?.message || 'Trash failed' }
+  }
+}
+
+// ── Restore a soft-deleted client. ────────────────────────────────
+export async function restoreClient(clientId: string): Promise<DeleteResult> {
+  if (!isSupabaseConfigured()) return { ok: false, error: 'Service unavailable' }
+  try {
+    const sb = supabase as any
+    const { data, error } = await sb.rpc('admin_restore_client', { p_client_id: clientId })
+    if (error) return { ok: false, error: error.message }
+    if (data !== true) return { ok: false, error: 'Restore returned false' }
+    return { ok: true }
+  } catch (e: any) {
+    return { ok: false, error: e?.message || 'Restore failed' }
+  }
+}
+
+// ── Contact submissions: admin list + create. ─────────────────────
+export interface ContactSubmissionRow {
+  id: string
+  form_type: string
+  full_name: string | null
+  email: string | null
+  phone: string | null
+  company: string | null
+  subject: string | null
+  message: string | null
+  is_processed: boolean
+  notes: string | null
+  created_at: string
+}
+
+export async function fetchContactSubmissions(): Promise<ContactSubmissionRow[]> {
+  if (!isSupabaseConfigured()) return []
+  try {
+    const sb = supabase as any
+    const { data, error } = await sb
+      .from('contact_submissions')
+      .select('id, form_type, full_name, email, phone, company, subject, message, is_processed, notes, created_at')
+      .order('created_at', { ascending: false })
+      .limit(200)
+    if (error) { console.warn('[admin] fetchContactSubmissions:', error.message); return [] }
+    return (data as any[] | null) || []
+  } catch (e: any) {
+    console.warn('[admin] fetchContactSubmissions error:', e?.message)
+    return []
+  }
+}
+
+export async function createContactSubmission(input: {
+  form_type?: string
+  full_name: string
+  email?: string
+  phone?: string
+  company?: string
+  subject?: string
+  message: string
+  notes?: string
+}): Promise<{ ok: boolean; id?: string; error?: string }> {
+  if (!isSupabaseConfigured()) return { ok: false, error: 'Service unavailable' }
+  try {
+    const sb = supabase as any
+    const { data, error } = await sb
+      .from('contact_submissions')
+      .insert({
+        form_type: input.form_type || 'general',
+        full_name: input.full_name,
+        email: input.email || null,
+        phone: input.phone || null,
+        company: input.company || null,
+        subject: input.subject || null,
+        message: input.message,
+        notes: input.notes || null,
+      })
+      .select('id')
+      .single()
+    if (error) return { ok: false, error: error.message }
+    return { ok: true, id: (data as any)?.id }
+  } catch (e: any) {
+    return { ok: false, error: e?.message || 'Create failed' }
+  }
+}
+
+export async function updateContactSubmission(id: string, patch: Partial<{ is_processed: boolean; notes: string }>): Promise<{ ok: boolean; error?: string }> {
+  if (!isSupabaseConfigured()) return { ok: false, error: 'Service unavailable' }
+  try {
+    const sb = supabase as any
+    const row: any = { ...patch }
+    if (patch.is_processed !== undefined) row.processed_at = patch.is_processed ? new Date().toISOString() : null
+    const { error } = await sb.from('contact_submissions').update(row).eq('id', id)
+    if (error) return { ok: false, error: error.message }
+    return { ok: true }
+  } catch (e: any) {
+    return { ok: false, error: e?.message || 'Update failed' }
+  }
+}
+
+export async function deleteContactSubmission(id: string): Promise<{ ok: boolean; error?: string }> {
+  if (!isSupabaseConfigured()) return { ok: false, error: 'Service unavailable' }
+  try {
+    const sb = supabase as any
+    const { error } = await sb.from('contact_submissions').delete().eq('id', id)
+    if (error) return { ok: false, error: error.message }
+    return { ok: true }
+  } catch (e: any) {
+    return { ok: false, error: e?.message || 'Delete failed' }
+  }
+}
+
+// ── Admin Bank Accounts: directory view across all clients. ───────
+export interface AdminBankAccountRow {
+  id: string
+  client_id: string
+  clientName: string
+  clientEmail: string | null
+  account_holder_name: string
+  account_number: string
+  ifsc_code: string
+  bank_name: string | null
+  branch_name: string | null
+  account_type: string
+  is_primary: boolean
+  is_verified: boolean
+  created_at: string
+  source: 'bank_accounts' | 'kyc_bank_details'
+}
+
+export async function fetchAllBankAccounts(): Promise<AdminBankAccountRow[]> {
+  if (!isSupabaseConfigured()) return []
+  try {
+    const sb = supabase as any
+    // Build a client lookup so we can show the investor's name in the directory.
+    const { data: clients } = await sb.from('clients').select('id, full_name, email')
+    const cMap = new Map<string, { name: string; email: string }>(
+      ((clients as any[]) || []).map((c: any) => [c.id, { name: c.full_name || 'Unknown', email: c.email || null }])
+    )
+    const out: AdminBankAccountRow[] = []
+    const baseInfo = (id: string) => cMap.get(id) || { name: 'Unknown', email: null }
+
+    // Primary table — bank_accounts
+    const { data: rows1 } = await sb.from('bank_accounts').select('*').order('created_at', { ascending: false })
+    for (const r of ((rows1 as any[]) || [])) {
+      const info = baseInfo(r.client_id)
+      out.push({
+        id: r.id,
+        client_id: r.client_id,
+        clientName: info.name,
+        clientEmail: info.email,
+        account_holder_name: r.account_holder_name,
+        account_number: r.account_number,
+        ifsc_code: r.ifsc_code,
+        bank_name: r.bank_name || null,
+        branch_name: r.branch_name || null,
+        account_type: r.account_type || 'savings',
+        is_primary: !!r.is_primary,
+        is_verified: !!r.is_verified,
+        created_at: r.created_at,
+        source: 'bank_accounts',
+      })
+    }
+    // KYC-sourced bank details
+    const { data: rows2 } = await sb.from('kyc_bank_details').select('*').order('created_at', { ascending: false })
+    for (const r of ((rows2 as any[]) || [])) {
+      const info = baseInfo(r.client_id)
+      out.push({
+        id: `kyc-${r.id}`,
+        client_id: r.client_id,
+        clientName: info.name,
+        clientEmail: info.email,
+        account_holder_name: r.account_holder_name || info.name,
+        account_number: r.account_number || '',
+        ifsc_code: r.ifsc_code || '',
+        bank_name: r.bank_name || null,
+        branch_name: r.branch_name || null,
+        account_type: r.account_type || 'savings',
+        is_primary: false,
+        is_verified: r.status === 'approved',
+        created_at: r.created_at,
+        source: 'kyc_bank_details',
+      })
+    }
+    return out
+  } catch (e: any) {
+    console.warn('[admin] fetchAllBankAccounts error:', e?.message)
+    return []
+  }
+}
+
+export async function createBankAccount(input: {
+  client_id: string
+  account_holder_name: string
+  account_number: string
+  ifsc_code: string
+  bank_name?: string
+  branch_name?: string
+  account_type?: 'savings' | 'current' | 'nro' | 'nre'
+  is_primary?: boolean
+}): Promise<{ ok: boolean; id?: string; error?: string }> {
+  if (!isSupabaseConfigured()) return { ok: false, error: 'Service unavailable' }
+  try {
+    const sb = supabase as any
+    // Resolve client.user_id so RLS passes for the admin
+    const { data: client } = await sb.from('clients').select('user_id').eq('id', input.client_id).maybeSingle()
+    const userId = (client as any)?.user_id || null
+    const { data, error } = await sb
+      .from('bank_accounts')
+      .insert({
+        client_id: input.client_id,
+        user_id: userId,
+        account_holder_name: input.account_holder_name,
+        account_number: input.account_number,
+        ifsc_code: input.ifsc_code,
+        bank_name: input.bank_name || null,
+        branch_name: input.branch_name || null,
+        account_type: input.account_type || 'savings',
+        is_primary: !!input.is_primary,
+      })
+      .select('id')
+      .single()
+    if (error) return { ok: false, error: error.message }
+    return { ok: true, id: (data as any)?.id }
+  } catch (e: any) {
+    return { ok: false, error: e?.message || 'Create failed' }
+  }
+}
+
+export async function deleteBankAccount(id: string): Promise<{ ok: boolean; error?: string }> {
+  if (!isSupabaseConfigured()) return { ok: false, error: 'Service unavailable' }
+  try {
+    const sb = supabase as any
+    const { error } = await sb.from('bank_accounts').delete().eq('id', id)
+    if (error) return { ok: false, error: error.message }
+    return { ok: true }
+  } catch (e: any) {
+    return { ok: false, error: e?.message || 'Delete failed' }
+  }
+}
+
+// ── Admin Users: directory + create + role update. ────────────────
+// Backed by public.profiles. An admin user is anyone whose role lands in
+// the admin half of ROLE_LABELS (admin, super-admin, manager, etc.).
+export interface AdminUserRow {
+  id: string
+  email: string
+  full_name: string | null
+  phone: string | null
+  role: string
+  department: string | null
+  last_login_at: string | null
+  created_at: string
+}
+
+const ADMIN_ROLE_DB_VALUES = [
+  'admin', 'super_admin', 'compliance_officer', 'fund_manager',
+  'manager', 'marketing_manager', 'sales',
+  'marketing_executive', 'operations', 'hr', 'viewer',
+]
+
+export async function fetchAdminUsers(): Promise<AdminUserRow[]> {
+  if (!isSupabaseConfigured()) return []
+  try {
+    const sb = supabase as any
+    const { data, error } = await sb
+      .from('profiles')
+      .select('id, email, full_name, phone, role, department, last_login_at, created_at')
+      .in('role', ADMIN_ROLE_DB_VALUES)
+      .order('created_at', { ascending: false })
+    if (error) { console.warn('[admin] fetchAdminUsers:', error.message); return [] }
+    return ((data as any[]) || []) as AdminUserRow[]
+  } catch (e: any) {
+    console.warn('[admin] fetchAdminUsers error:', e?.message)
+    return []
+  }
+}
+
+export async function updateAdminUserRole(userId: string, role: string): Promise<{ ok: boolean; error?: string }> {
+  if (!isSupabaseConfigured()) return { ok: false, error: 'Service unavailable' }
+  try {
+    const sb = supabase as any
+    const { error } = await sb.from('profiles').update({ role }).eq('id', userId)
+    if (error) return { ok: false, error: error.message }
+    try {
+      await sb.from('audit_logs').insert({
+        action: 'update_admin_role', entity_type: 'user', entity_id: userId,
+        module: 'settings', details: { new_role: role },
+      })
+    } catch { /* non-blocking */ }
+    return { ok: true }
+  } catch (e: any) {
+    return { ok: false, error: e?.message || 'Update failed' }
+  }
+}
+
+// Create an admin user via the existing admin-create-client Netlify function
+// (it accepts an arbitrary `role` so we re-use it for admin-side users too).
+// Fallback: insert directly into profiles if no auth user is needed (legacy).
+export async function createAdminUser(input: {
+  email: string
+  full_name: string
+  phone?: string
+  role: string
+  department?: string
+  password: string
+}): Promise<{ ok: boolean; userId?: string; error?: string }> {
+  if (!isSupabaseConfigured()) return { ok: false, error: 'Service unavailable' }
+  try {
+    const { getAuthToken } = await import('./client')
+    const token = await getAuthToken()
+    const origin = typeof window !== 'undefined' ? window.location.origin : ''
+    const NETLIFY_FUNCTIONS_HOST = 'https://ghl-india-ventures-2025.netlify.app'
+    const base = origin.includes('localhost')
+      ? 'http://localhost:8888'
+      : (origin.endsWith('.netlify.app') ? origin : NETLIFY_FUNCTIONS_HOST)
+    const res = await fetch(`${base}/.netlify/functions/admin-create-client`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+      body: JSON.stringify({
+        email: input.email,
+        full_name: input.full_name,
+        phone: input.phone || null,
+        role: input.role,
+        department: input.department || null,
+        password: input.password,
+        skip_client_row: true,           // admin-side user, not an investor
+      }),
+    })
+    const data = await res.json().catch(() => ({}))
+    if (!res.ok || !data?.success) {
+      return { ok: false, error: data?.error || `Create failed (${res.status})` }
+    }
+    return { ok: true, userId: data.userId }
+  } catch (e: any) {
+    return { ok: false, error: e?.message || 'Create failed' }
+  }
+}
+
+// ── Permission audit log: read from public.audit_logs. ────────────
+export interface PermissionAuditRow {
+  id: string
+  created_at: string
+  actor_name: string | null
+  action: string
+  target: string | null
+  module: string | null
+  details: any
+}
+
+export async function fetchPermissionAuditLog(): Promise<PermissionAuditRow[]> {
+  if (!isSupabaseConfigured()) return []
+  try {
+    const sb = supabase as any
+    const { data } = await sb
+      .from('audit_logs')
+      .select('id, created_at, user_name, action, entity_id, module, details')
+      .in('action', ['update_admin_role', 'create_admin_user', 'delete_admin_user', 'trash_client', 'restore_client', 'permission_change'])
+      .order('created_at', { ascending: false })
+      .limit(100)
+    return ((data as any[]) || []).map((r: any) => ({
+      id: r.id,
+      created_at: r.created_at,
+      actor_name: r.user_name || null,
+      action: r.action,
+      target: r.entity_id || null,
+      module: r.module || null,
+      details: r.details || null,
+    }))
+  } catch {
+    return []
+  }
 }

@@ -179,15 +179,28 @@ function KYCQueueTab({ kycQueue, showToast, onRefresh, initialStatusFilter }: { 
 
   const filtered = useMemo(() => {
     if (statusFilter === 'all') return clientGroups
-    // KYC sub-rows persist status as 'submitted' (from the client KYC wizard).
-    // Treat the user-facing "Pending" filter as "waiting for my review", so it
-    // matches both 'submitted' and any legacy 'pending' rows — otherwise the
-    // tab would appear empty despite KPI showing 44 pending.
-    const matches = (rowStatus: string): boolean => {
+    // ADMIN COMMAND CENTER 2026-05-15: the KYC Approved / Rejected tabs were
+    // empty because approveClientKYC marks the CLIENT row as 'verified' but
+    // the sub-rows can lag. Filter on the client-level kyc_status (carried
+    // through fetchKYCDocuments as `clientKycStatus`) so the cohort lights up
+    // immediately after approval. Falls back to sub-row status when the
+    // client status field is missing (legacy rows).
+    const matchesClient = (cks: string): boolean => {
+      if (statusFilter === 'pending') return cks === 'pending' || cks === 'submitted' || cks === 'under-review'
+      if (statusFilter === 'approved') return cks === 'approved' || cks === 'verified'
+      if (statusFilter === 'rejected') return cks === 'rejected'
+      return cks === statusFilter
+    }
+    const matchesRow = (rowStatus: string): boolean => {
       if (statusFilter === 'pending') return rowStatus === 'pending' || rowStatus === 'submitted'
+      if (statusFilter === 'approved') return rowStatus === 'approved' || rowStatus === 'verified'
       return rowStatus === statusFilter
     }
-    return clientGroups.filter(g => g.items.some(i => matches(i.status)))
+    return clientGroups.filter(g => {
+      const cks = (g.items[0] as any)?.clientKycStatus
+      if (cks) return matchesClient(cks)
+      return g.items.some(i => matchesRow(i.status))
+    })
   }, [statusFilter, clientGroups])
 
   const pendingCount = kycQueue.filter(k => k.status === 'submitted' || k.status === 'pending').length
