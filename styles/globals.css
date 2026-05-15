@@ -4784,3 +4784,19 @@ button[type="submit"].inline-flex {
   background: rgba(255, 255, 255, 0.14);
 }
 
+/* ============================================================
+   DOCUMENT BUILDER — inline mode (2026-05-15)
+   Override the modal-sized 60vh max-height on the palette/canvas
+   columns so the builder uses the full available page height
+   when rendered as a tab panel instead of inside a modal.
+   ============================================================ */
+.docbuilder-inline-grid > div {
+  max-height: none !important;
+}
+.docbuilder-inline-grid > div:first-child {
+  max-height: calc(100vh - 220px) !important;
+}
+.docbuilder-inline-grid > div:last-child {
+  min-height: 60vh;
+}
+

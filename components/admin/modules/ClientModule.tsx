@@ -838,22 +838,25 @@ function ClientListTab({
             >
               <Link2 className="w-4 h-4" />
             </button>
-            {isApproved ? (
+            {/* 2026-05-15: Approved clients can now be sent to Trash too.
+                The badge stays for at-a-glance status; the trash button
+                routes to admin_trash_client (soft-delete, recoverable
+                from the Trash tab) rather than the hard-delete purge. */}
+            {isApproved && (
               <span
                 className="px-2 py-1 rounded-lg text-[10px] font-medium text-emerald-400 bg-emerald-500/10 border border-emerald-500/20"
-                title="Approved KYC cannot be deleted"
+                title="KYC approved"
               >
                 Approved
               </span>
-            ) : (
-              <button
-                onClick={(e) => { e.stopPropagation(); onDeleteClient(row) }}
-                className="p-1.5 rounded-lg hover:bg-red-500/10 text-gray-500 hover:text-red-400 transition-colors"
-                title="Delete client"
-              >
-                <Trash2 className="w-4 h-4" />
-              </button>
             )}
+            <button
+              onClick={(e) => { e.stopPropagation(); onDeleteClient(row) }}
+              className="p-1.5 rounded-lg hover:bg-red-500/10 text-gray-500 hover:text-red-400 transition-colors"
+              title={isApproved ? 'Move approved client to Trash (recoverable)' : 'Move client to Trash (recoverable)'}
+            >
+              <Trash2 className="w-4 h-4" />
+            </button>
           </div>
         )
       },

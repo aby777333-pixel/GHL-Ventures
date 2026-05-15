@@ -241,7 +241,13 @@ export default function AssetDocModule({ subTab, navigate, showToast }: AssetDoc
         {activeTab === 'assets' && <AssetInventoryTab assets={assets} showToast={showToast} onRefresh={loadData} />}
         {/* 2026-05-13: Documents tab hides templates — those live on the dedicated
             Templates sub-tab. Keeps the existing library view free of clutter. */}
-        {activeTab === 'documents' && <DocumentsTab documents={documents.filter(d => !d.isTemplate)} showToast={showToast} openGenerator={openGenerator} />}
+        {activeTab === 'documents' && (
+          // 2026-05-15: Documents tab is now the live Document Builder UI
+          // (palette + canvas + library + PDF/DOCX export) instead of the
+          // legacy uploaded-document gallery. The gallery is still reachable
+          // via Templates / Asset Inventory and the Library upload modal.
+          <DocumentBuilderModal open inline showToast={showToast} onClose={() => {}} />
+        )}
         {activeTab === 'templates' && <TemplatesTab documents={documents.filter(d => d.isTemplate)} loading={loading} showToast={showToast} openGenerator={openGenerator} />}
         {/* 2026-05-12: Document Tracking sub-tab — pulls the
             investment-doc-tracking timeline that the investor sees

@@ -112,6 +112,11 @@ interface Props {
   open: boolean
   onClose: () => void
   showToast: (msg: string, type?: 'success' | 'error' | 'info' | 'warning') => void
+  /** 2026-05-15: render as a full-page panel instead of an AdminModal. The
+   *  builder body, palette, library, and exports are identical; only the
+   *  outer shell changes. Used by the Documents tab so admins land directly
+   *  in the builder instead of a gallery. */
+  inline?: boolean
 }
 
 interface LibraryImage {
@@ -124,7 +129,7 @@ interface LibraryImage {
   thumbUrl?: string                 // same as url; UI uses <img>
 }
 
-export default function DocumentBuilderModal({ open, onClose, showToast }: Props) {
+export default function DocumentBuilderModal({ open, onClose, showToast, inline = false }: Props) {
   const [docTitle, setDocTitle] = useState('Untitled Document')
   const [blocks, setBlocks] = useState<Block[]>([
     { id: 'b-init-heading', kind: 'heading', text: 'Untitled Document', level: 1, align: 'center' },
@@ -146,8 +151,10 @@ export default function DocumentBuilderModal({ open, onClose, showToast }: Props
   const draggedLibraryImageRef = useRef<LibraryImage | null>(null)
 
   // Restore + autosave draft to sessionStorage.
+  // In inline mode the builder is "always open" so we restore once on mount;
+  // in modal mode we restore each time the modal opens.
   useEffect(() => {
-    if (!open) return
+    if (!inline && !open) return
     try {
       const raw = sessionStorage.getItem(STORAGE_KEY)
       if (raw) {
@@ -156,12 +163,12 @@ export default function DocumentBuilderModal({ open, onClose, showToast }: Props
         if (typeof parsed?.docTitle === 'string') setDocTitle(parsed.docTitle)
       }
     } catch { /* ignore */ }
-  }, [open])
+  }, [open, inline])
 
   useEffect(() => {
-    if (!open) return
+    if (!inline && !open) return
     try { sessionStorage.setItem(STORAGE_KEY, JSON.stringify({ docTitle, blocks })) } catch { /* ignore */ }
-  }, [open, docTitle, blocks])
+  }, [open, inline, docTitle, blocks])
 
   // ── Block ops ─────────────────────────────────────────────────
   const addBlock = (kind: BlockKind) => setBlocks(bs => [...bs, blankBlock(kind)])
@@ -244,7 +251,7 @@ export default function DocumentBuilderModal({ open, onClose, showToast }: Props
     }
   }, [])
 
-  useEffect(() => { if (open) loadLibrary() }, [open, loadLibrary])
+  useEffect(() => { if (open || inline) loadLibrary() }, [open, inline, loadLibrary])
 
   // ── Library actions ───────────────────────────────────────────
   // Fetches the chosen image and converts to a data URL so the exporters
@@ -616,32 +623,26 @@ export default function DocumentBuilderModal({ open, onClose, showToast }: Props
     } finally { setBusy(null) }
   }
 
-  return (
-    <AdminModal
-      isOpen={open}
-      onClose={onClose}
-      title="Document Builder"
-      subtitle="Drag blocks to reorder. Export as PDF or Word — no logos or pre-filled data added."
-      maxWidth="max-w-5xl"
-      footer={
-        <>
-          <ModalButton onClick={onClose} disabled={!!busy}>Close</ModalButton>
-          <ModalButton onClick={handlePreview} disabled={!!busy}>
-            {busy === 'preview' ? (<span className="inline-flex items-center gap-2"><Loader2 className="w-4 h-4 animate-spin" /> Rendering…</span>)
-                                : (<span className="inline-flex items-center gap-2"><Eye className="w-4 h-4" /> Preview PDF</span>)}
-          </ModalButton>
-          <ModalButton onClick={handleExportDocx} disabled={!!busy}>
-            {busy === 'docx' ? (<span className="inline-flex items-center gap-2"><Loader2 className="w-4 h-4 animate-spin" /> Generating…</span>)
-                             : (<span className="inline-flex items-center gap-2"><Download className="w-4 h-4" /> Export .docx</span>)}
-          </ModalButton>
-          <ModalButton variant="primary" onClick={handleExportPdf} disabled={!!busy}>
-            {busy === 'pdf' ? (<span className="inline-flex items-center gap-2"><Loader2 className="w-4 h-4 animate-spin" /> Generating…</span>)
-                            : (<span className="inline-flex items-center gap-2"><FileText className="w-4 h-4" /> Export PDF</span>)}
-          </ModalButton>
-        </>
-      }
-    >
-      <div className="grid grid-cols-1 lg:grid-cols-[220px_1fr] gap-4">
+  // Action buttons reused in both inline (toolbar) and modal (footer) modes.
+  const actionButtons = (
+    <>
+      <ModalButton onClick={handlePreview} disabled={!!busy}>
+        {busy === 'preview' ? (<span className="inline-flex items-center gap-2"><Loader2 className="w-4 h-4 animate-spin" /> Rendering…</span>)
+                            : (<span className="inline-flex items-center gap-2"><Eye className="w-4 h-4" /> Preview PDF</span>)}
+      </ModalButton>
+      <ModalButton onClick={handleExportDocx} disabled={!!busy}>
+        {busy === 'docx' ? (<span className="inline-flex items-center gap-2"><Loader2 className="w-4 h-4 animate-spin" /> Generating…</span>)
+                         : (<span className="inline-flex items-center gap-2"><Download className="w-4 h-4" /> Export .docx</span>)}
+      </ModalButton>
+      <ModalButton variant="primary" onClick={handleExportPdf} disabled={!!busy}>
+        {busy === 'pdf' ? (<span className="inline-flex items-center gap-2"><Loader2 className="w-4 h-4 animate-spin" /> Generating…</span>)
+                        : (<span className="inline-flex items-center gap-2"><FileText className="w-4 h-4" /> Export PDF</span>)}
+      </ModalButton>
+    </>
+  )
+
+  const body = (
+    <div className={`grid grid-cols-1 lg:grid-cols-[220px_1fr] gap-4${inline ? ' docbuilder-inline-grid' : ''}`}>
         {/* Block palette + Library */}
         <div className="space-y-2 max-h-[60vh] overflow-y-auto pr-1">
           <div className="text-[10px] uppercase tracking-wider text-gray-500 px-1">Add Block</div>
@@ -766,6 +767,40 @@ export default function DocumentBuilderModal({ open, onClose, showToast }: Props
           </div>
         </div>
       </div>
+  )
+
+  if (inline) {
+    return (
+      <div className="space-y-4">
+        <div className="flex items-start justify-between flex-wrap gap-3">
+          <div>
+            <h2 className="text-base font-semibold text-white">Document Builder</h2>
+            <p className="text-[11px] text-gray-500 mt-0.5 max-w-2xl">
+              Drag blocks to reorder. Insert headings, paragraphs (justified), field lists, tables, bullet lists, images, signatures, and footers. Export as PDF or Word — no GHL/Landmaxo branding is added unless you drop in a logo block.
+            </p>
+          </div>
+          <div className="flex flex-wrap gap-2">{actionButtons}</div>
+        </div>
+        {body}
+      </div>
+    )
+  }
+
+  return (
+    <AdminModal
+      isOpen={open}
+      onClose={onClose}
+      title="Document Builder"
+      subtitle="Drag blocks to reorder. Export as PDF or Word — no logos or pre-filled data added."
+      maxWidth="max-w-5xl"
+      footer={
+        <>
+          <ModalButton onClick={onClose} disabled={!!busy}>Close</ModalButton>
+          {actionButtons}
+        </>
+      }
+    >
+      {body}
     </AdminModal>
   )
 }
