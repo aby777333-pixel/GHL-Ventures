@@ -32,7 +32,7 @@ import type { Lead, LeadStage, LeadSource, Commission } from '@/lib/admin/adminT
 import UploadWithFolderPicker from '@/components/shared/UploadWithFolderPicker'
 import { createLead, updateLead, fetchLeads, deleteLead, updateLeadStatus } from '@/lib/supabase/leadService'
 import { onNewLead } from '@/lib/supabase/realtimeSubscriptions'
-import { fetchAllInvestmentApplications, fetchAllBankAccounts, createBankAccount, deleteBankAccount, fetchClients, type AdminBankAccountRow } from '@/lib/supabase/adminDataService'
+import { fetchAllInvestmentApplications, fetchAllBankAccounts, createBankAccount, deleteBankAccount, fetchClients, type AdminBankAccountRow, fetchFundCategories, createFundCategory, deleteFundCategory, fetchFundPlans, createFundPlan, deleteFundPlan, uploadFundPlanAsset, type FundCategoryRow, type FundPlanRow, type FundPlanBankRow } from '@/lib/supabase/adminDataService'
 import { supabase, isSupabaseConfigured } from '@/lib/supabase/client'
 
 // ── Sub-tabs ─────────────────────────────────────────────────────
@@ -2985,26 +2985,514 @@ function ReferenceNumbersTab({ showToast }: { showToast: (m: string, t?: 'succes
 // transitions from placeholder to live CRUD without UI churn.
 // ────────────────────────────────────────────────────────────────────
 function InvestmentPlansTab({ showToast }: { showToast: (m: string, t?: 'success' | 'error' | 'info' | 'warning') => void }) {
+  const [plans, setPlans] = useState<FundPlanRow[]>([])
+  const [categories, setCategories] = useState<FundCategoryRow[]>([])
+  const [loading, setLoading] = useState(true)
+  const [createOpen, setCreateOpen] = useState(false)
+  const [viewing, setViewing] = useState<FundPlanRow | null>(null)
+  const [saving, setSaving] = useState(false)
+  const [uploading, setUploading] = useState<'image' | 'pdf' | null>(null)
+  const [strategyDraft, setStrategyDraft] = useState('')
+  const [minRangeDraft, setMinRangeDraft] = useState('')
+
+  const emptyForm = useMemo(() => ({
+    fund_name: '',
+    fund_type_id: '',
+    tenure: '',
+    yearly_return: '',
+    yearly_appreciation: '',
+    yearly_tds: '',
+    tax: '',
+    capital_gain: '',
+    tds_of_tax: '',
+    locking_period: '',
+    investment_strategy: [] as string[],
+    minimum_investment_range: [] as string[],
+    status: 'active',
+    country: '',
+    image_url: '' as string | null,
+    pdf_url: '' as string | null,
+  }), [])
+  const [form, setForm] = useState(emptyForm)
+  const [banks, setBanks] = useState<FundPlanBankRow[]>([
+    { account_holder_name: '', account_number: '', ifsc_code: '', branch_name: '', bank_name: '', swift_iban_code: '', is_primary: true },
+  ])
+
+  const load = useCallback(async () => {
+    setLoading(true)
+    const [p, c] = await Promise.all([fetchFundPlans(), fetchFundCategories()])
+    setPlans(p)
+    setCategories(c)
+    setLoading(false)
+  }, [])
+  useEffect(() => { load() }, [load])
+
+  const resetForm = () => {
+    setForm(emptyForm)
+    setBanks([{ account_holder_name: '', account_number: '', ifsc_code: '', branch_name: '', bank_name: '', swift_iban_code: '', is_primary: true }])
+    setStrategyDraft(''); setMinRangeDraft('')
+  }
+
+  const handleUpload = async (kind: 'image' | 'pdf', file: File) => {
+    setUploading(kind)
+    try {
+      const res = await uploadFundPlanAsset(file, kind)
+      if (res.ok && res.url) {
+        setForm(p => ({ ...p, [kind === 'image' ? 'image_url' : 'pdf_url']: res.url || null }))
+        showToast(`${kind === 'image' ? 'Image' : 'PDF'} uploaded`, 'success')
+      } else {
+        showToast(res.error || 'Upload failed', 'error')
+      }
+    } finally { setUploading(null) }
+  }
+
+  const addStrategy = () => {
+    const v = strategyDraft.trim()
+    if (!v) return
+    setForm(p => ({ ...p, investment_strategy: [...p.investment_strategy, v] }))
+    setStrategyDraft('')
+  }
+  const removeStrategy = (i: number) => setForm(p => ({ ...p, investment_strategy: p.investment_strategy.filter((_, j) => j !== i) }))
+
+  const addMinRange = () => {
+    const v = minRangeDraft.trim()
+    if (!v) return
+    setForm(p => ({ ...p, minimum_investment_range: [...p.minimum_investment_range, v] }))
+    setMinRangeDraft('')
+  }
+  const removeMinRange = (i: number) => setForm(p => ({ ...p, minimum_investment_range: p.minimum_investment_range.filter((_, j) => j !== i) }))
+
+  const addBank = () => setBanks(b => [...b, { account_holder_name: '', account_number: '', ifsc_code: '', branch_name: '', bank_name: '', swift_iban_code: '', is_primary: false }])
+  const removeBank = (i: number) => setBanks(b => b.filter((_, j) => j !== i))
+  const setBankField = (i: number, key: keyof FundPlanBankRow, value: any) => setBanks(b => b.map((row, j) => j === i ? { ...row, [key]: value } : row))
+
+  const handleCreate = async () => {
+    if (!form.fund_name.trim()) { showToast('Fund name is required', 'error'); return }
+    setSaving(true)
+    try {
+      const res = await createFundPlan({
+        ...form,
+        fund_type_id: form.fund_type_id || null,
+        banks: banks.filter(b => b.account_holder_name.trim() && b.account_number.trim() && b.ifsc_code.trim()),
+      })
+      if (res.ok) {
+        if (res.error) showToast(res.error, 'warning')
+        else showToast('Investment plan created', 'success')
+        setCreateOpen(false)
+        resetForm()
+        load()
+      } else {
+        showToast(res.error || 'Failed to create plan', 'error')
+      }
+    } finally { setSaving(false) }
+  }
+
+  const handleDelete = async (row: FundPlanRow) => {
+    if (!window.confirm(`Delete plan "${row.fund_name}"? This cannot be undone.`)) return
+    const res = await deleteFundPlan(row.id)
+    if (res.ok) { showToast('Plan deleted', 'success'); load() }
+    else showToast(res.error || 'Delete failed', 'error')
+  }
+
   return (
-    <AdminCRUDPlaceholder
-      title="Investment Plans"
-      description="Pre-defined plans (tenure, IRR target, ticket-size band) admins can attach to investments."
-      icon={Target}
-      showToast={showToast}
-      hint="Plans configured here become selectable when admins approve an investment application. Each row supports View / Edit / Delete."
-    />
+    <AdminGlass>
+      <div className="flex flex-wrap items-start justify-between gap-3 mb-4">
+        <div className="flex-1 min-w-[200px]">
+          <h2 className="text-base font-semibold text-white">Investment Plans</h2>
+          <p className="text-xs text-gray-500 mt-0.5">Pre-defined plans (tenure, returns, locking period) admins can attach to investments. Each row supports View / Delete.</p>
+        </div>
+        <button
+          onClick={() => setCreateOpen(true)}
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-brand-red/20 border border-brand-red/30 text-xs font-medium text-white hover:bg-brand-red/30 transition-colors"
+        >
+          <Plus className="w-3.5 h-3.5" /> Add Plan
+        </button>
+      </div>
+
+      {loading ? (
+        <div className="py-10 text-center text-xs text-gray-500"><Loader2 className="w-4 h-4 animate-spin inline mr-2" />Loading…</div>
+      ) : plans.length === 0 ? (
+        <AdminEmptyState
+          icon={Target}
+          title="No investment plans yet"
+          description="Plans configured here become selectable when admins approve an investment application."
+        />
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
+          {plans.map(p => (
+            <div key={p.id} className="rounded-2xl border border-white/[0.08] bg-white/[0.02] p-4 hover:bg-white/[0.03] transition-colors">
+              <div className="flex items-start justify-between gap-2 mb-2">
+                <div className="min-w-0">
+                  <p className="text-sm font-semibold text-white truncate">{p.fund_name}</p>
+                  <p className="text-[11px] text-gray-500 mt-0.5">{p.fund_type_name || 'Uncategorised'} · {p.country || '—'}</p>
+                </div>
+                <AdminBadge label={p.status} variant={p.status === 'active' ? 'success' : 'neutral'} />
+              </div>
+              <div className="grid grid-cols-2 gap-x-3 gap-y-1 text-[11px] text-gray-400">
+                {p.tenure && <div><span className="text-gray-500">Tenure</span><p className="text-white">{p.tenure}</p></div>}
+                {p.yearly_return && <div><span className="text-gray-500">Yearly Return</span><p className="text-white">{p.yearly_return}</p></div>}
+                {p.locking_period && <div><span className="text-gray-500">Lock-in</span><p className="text-white">{p.locking_period}</p></div>}
+                {p.tax && <div><span className="text-gray-500">Tax</span><p className="text-white">{p.tax}</p></div>}
+              </div>
+              {p.banks.length > 0 && (
+                <p className="text-[10px] text-gray-500 mt-2">{p.banks.length} bank account{p.banks.length === 1 ? '' : 's'}</p>
+              )}
+              <div className="flex items-center justify-end gap-2 mt-3 pt-3 border-t border-white/[0.04]">
+                <button onClick={() => setViewing(p)} className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-medium text-blue-300 bg-blue-500/10 border border-blue-500/30 hover:bg-blue-500/20 transition-colors">
+                  <Eye className="w-3 h-3" /> View
+                </button>
+                <button onClick={() => handleDelete(p)} className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-medium text-red-300 bg-red-500/10 border border-red-500/30 hover:bg-red-500/20 transition-colors">
+                  <Trash2 className="w-3 h-3" /> Delete
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      <AdminModal
+        isOpen={createOpen}
+        onClose={() => { setCreateOpen(false); resetForm() }}
+        title="Add Investment Plan"
+        subtitle="All fields are optional except Fund Name. Add bank accounts at the bottom — each requires Holder, Account #, and IFSC."
+        maxWidth="max-w-3xl"
+        footer={
+          <>
+            <ModalButton onClick={() => { setCreateOpen(false); resetForm() }} disabled={saving}>Cancel</ModalButton>
+            <ModalButton variant="primary" onClick={handleCreate} disabled={saving}>
+              {saving ? <span className="inline-flex items-center gap-2"><Loader2 className="w-4 h-4 animate-spin" />Saving…</span> : 'Submit'}
+            </ModalButton>
+          </>
+        }
+      >
+        <div className="space-y-3">
+          <div className="grid grid-cols-2 gap-3">
+            <PlanField label="Fund Name *" value={form.fund_name} onChange={v => setForm(p => ({ ...p, fund_name: v }))} />
+            <div>
+              <label className="block text-[10px] uppercase tracking-wider text-gray-500 font-medium mb-1">Fund Type</label>
+              <select value={form.fund_type_id} onChange={e => setForm(p => ({ ...p, fund_type_id: e.target.value }))} className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-brand-red/40 focus:ring-1 focus:ring-brand-red/20">
+                <option value="">— Select —</option>
+                {categories.map(c => <option key={c.id} value={c.id}>{c.type}</option>)}
+              </select>
+            </div>
+            <PlanField label="Tenure" value={form.tenure} onChange={v => setForm(p => ({ ...p, tenure: v }))} placeholder="e.g. 3 years" />
+            <PlanField label="Yearly Return" value={form.yearly_return} onChange={v => setForm(p => ({ ...p, yearly_return: v }))} placeholder="e.g. 12%" />
+            <PlanField label="Yearly Appreciation" value={form.yearly_appreciation} onChange={v => setForm(p => ({ ...p, yearly_appreciation: v }))} placeholder="e.g. 12%" />
+            <PlanField label="Yearly TDS" value={form.yearly_tds} onChange={v => setForm(p => ({ ...p, yearly_tds: v }))} placeholder="e.g. 10%" />
+            <PlanField label="Tax" value={form.tax} onChange={v => setForm(p => ({ ...p, tax: v }))} />
+            <PlanField label="Capital Gain" value={form.capital_gain} onChange={v => setForm(p => ({ ...p, capital_gain: v }))} />
+            <PlanField label="TDS of Tax" value={form.tds_of_tax} onChange={v => setForm(p => ({ ...p, tds_of_tax: v }))} />
+            <PlanField label="Locking Period" value={form.locking_period} onChange={v => setForm(p => ({ ...p, locking_period: v }))} placeholder="e.g. 3 years" />
+            <PlanField label="Country" value={form.country} onChange={v => setForm(p => ({ ...p, country: v }))} placeholder="e.g. India" />
+            <div>
+              <label className="block text-[10px] uppercase tracking-wider text-gray-500 font-medium mb-1">Status</label>
+              <select value={form.status} onChange={e => setForm(p => ({ ...p, status: e.target.value }))} className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-brand-red/40 focus:ring-1 focus:ring-brand-red/20">
+                <option value="active">Active</option>
+                <option value="inactive">Inactive</option>
+                <option value="draft">Draft</option>
+                <option value="archived">Archived</option>
+              </select>
+            </div>
+          </div>
+
+          {/* Investment Strategy (list) */}
+          <div>
+            <label className="block text-[10px] uppercase tracking-wider text-gray-500 font-medium mb-1">Investment Strategy</label>
+            <div className="flex gap-2 mb-2">
+              <input value={strategyDraft} onChange={e => setStrategyDraft(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addStrategy() } }} placeholder="Add a strategy line" className="flex-1 bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-brand-red/40 focus:ring-1 focus:ring-brand-red/20" />
+              <button onClick={addStrategy} className="px-3 py-2 rounded-xl text-xs font-medium text-white bg-brand-red/20 border border-brand-red/30 hover:bg-brand-red/30 transition-colors">Add</button>
+            </div>
+            {form.investment_strategy.length > 0 && (
+              <div className="flex flex-wrap gap-1.5">
+                {form.investment_strategy.map((s, i) => (
+                  <span key={i} className="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-white/[0.04] border border-white/[0.08] text-[11px] text-gray-300">
+                    {s}
+                    <button onClick={() => removeStrategy(i)} className="text-gray-500 hover:text-red-400" title="Remove"><X className="w-3 h-3" /></button>
+                  </span>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Minimum Investment Range (list) */}
+          <div>
+            <label className="block text-[10px] uppercase tracking-wider text-gray-500 font-medium mb-1">Minimum Investment Range</label>
+            <div className="flex gap-2 mb-2">
+              <input value={minRangeDraft} onChange={e => setMinRangeDraft(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addMinRange() } }} placeholder="e.g. 10,00,000" className="flex-1 bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-brand-red/40 focus:ring-1 focus:ring-brand-red/20" />
+              <button onClick={addMinRange} className="px-3 py-2 rounded-xl text-xs font-medium text-white bg-brand-red/20 border border-brand-red/30 hover:bg-brand-red/30 transition-colors">Add</button>
+            </div>
+            {form.minimum_investment_range.length > 0 && (
+              <div className="flex flex-wrap gap-1.5">
+                {form.minimum_investment_range.map((s, i) => (
+                  <span key={i} className="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-white/[0.04] border border-white/[0.08] text-[11px] text-gray-300">
+                    {s}
+                    <button onClick={() => removeMinRange(i)} className="text-gray-500 hover:text-red-400" title="Remove"><X className="w-3 h-3" /></button>
+                  </span>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Uploads */}
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-[10px] uppercase tracking-wider text-gray-500 font-medium mb-1">Upload Image</label>
+              {form.image_url ? (
+                <div className="flex items-center gap-2 p-2 rounded-xl bg-white/[0.04] border border-white/[0.06]">
+                  <img src={form.image_url} alt="" className="h-10 w-10 object-cover rounded bg-white" />
+                  <p className="text-[11px] text-gray-300 flex-1 truncate">Uploaded</p>
+                  <button onClick={() => setForm(p => ({ ...p, image_url: null }))} className="p-1 text-gray-500 hover:text-red-400"><Trash2 className="w-3.5 h-3.5" /></button>
+                </div>
+              ) : (
+                <label className="flex items-center justify-center gap-2 px-3 py-2 rounded-xl text-xs font-medium text-gray-300 bg-white/[0.04] border border-dashed border-white/[0.14] hover:bg-white/[0.06] cursor-pointer">
+                  {uploading === 'image' ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Upload className="w-3.5 h-3.5" />}
+                  Choose image
+                  <input type="file" accept="image/*" className="hidden" onChange={e => { const f = e.target.files?.[0]; if (f) handleUpload('image', f); e.target.value = '' }} />
+                </label>
+              )}
+            </div>
+            <div>
+              <label className="block text-[10px] uppercase tracking-wider text-gray-500 font-medium mb-1">Upload PDF</label>
+              {form.pdf_url ? (
+                <div className="flex items-center gap-2 p-2 rounded-xl bg-white/[0.04] border border-white/[0.06]">
+                  <div className="h-10 w-10 rounded bg-red-500/15 text-red-300 flex items-center justify-center text-[10px] font-bold">PDF</div>
+                  <a href={form.pdf_url} target="_blank" rel="noopener noreferrer" className="text-[11px] text-blue-300 flex-1 truncate hover:underline">View PDF</a>
+                  <button onClick={() => setForm(p => ({ ...p, pdf_url: null }))} className="p-1 text-gray-500 hover:text-red-400"><Trash2 className="w-3.5 h-3.5" /></button>
+                </div>
+              ) : (
+                <label className="flex items-center justify-center gap-2 px-3 py-2 rounded-xl text-xs font-medium text-gray-300 bg-white/[0.04] border border-dashed border-white/[0.14] hover:bg-white/[0.06] cursor-pointer">
+                  {uploading === 'pdf' ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Upload className="w-3.5 h-3.5" />}
+                  Choose PDF
+                  <input type="file" accept="application/pdf" className="hidden" onChange={e => { const f = e.target.files?.[0]; if (f) handleUpload('pdf', f); e.target.value = '' }} />
+                </label>
+              )}
+            </div>
+          </div>
+
+          {/* Bank details — multi-row */}
+          <div className="pt-3 border-t border-white/[0.06]">
+            <div className="flex items-center justify-between mb-2">
+              <p className="text-[11px] uppercase tracking-wider text-gray-500 font-semibold">Bank Details</p>
+              <button onClick={addBank} className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-medium text-gray-300 bg-white/[0.04] border border-white/[0.08] hover:bg-white/[0.08] transition-colors">
+                <Plus className="w-3 h-3" /> Add Bank Row
+              </button>
+            </div>
+            <div className="space-y-2">
+              {banks.map((b, i) => (
+                <div key={i} className="rounded-xl bg-white/[0.02] border border-white/[0.06] p-2.5 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] uppercase tracking-wider text-gray-500">Bank #{i + 1}</span>
+                    {banks.length > 1 && (
+                      <button onClick={() => removeBank(i)} className="p-1 text-gray-500 hover:text-red-400" title="Remove row"><Trash2 className="w-3 h-3" /></button>
+                    )}
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <PlanField label="Account Holder Name" value={b.account_holder_name} onChange={v => setBankField(i, 'account_holder_name', v)} compact />
+                    <PlanField label="Account Number" value={b.account_number} onChange={v => setBankField(i, 'account_number', v.replace(/\D/g, '').slice(0, 18))} compact />
+                    <PlanField label="IFSC Code" value={b.ifsc_code} onChange={v => setBankField(i, 'ifsc_code', v.toUpperCase().slice(0, 11))} compact />
+                    <PlanField label="Branch Name" value={b.branch_name || ''} onChange={v => setBankField(i, 'branch_name', v)} compact />
+                    <PlanField label="Bank Name" value={b.bank_name || ''} onChange={v => setBankField(i, 'bank_name', v)} compact />
+                    <PlanField label="Swift/IBAN Code" value={b.swift_iban_code || ''} onChange={v => setBankField(i, 'swift_iban_code', v)} compact />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </AdminModal>
+
+      {/* View modal */}
+      <AdminModal
+        isOpen={!!viewing}
+        onClose={() => setViewing(null)}
+        title={viewing?.fund_name || 'Plan'}
+        subtitle={viewing ? `${viewing.fund_type_name || 'Uncategorised'} · ${viewing.country || '—'}` : ''}
+        maxWidth="max-w-2xl"
+        footer={<ModalButton onClick={() => setViewing(null)}>Close</ModalButton>}
+      >
+        {viewing && (
+          <div className="space-y-3 text-sm">
+            <div className="grid grid-cols-2 gap-2 text-[11px]">
+              <Kv k="Tenure" v={viewing.tenure} />
+              <Kv k="Yearly Return" v={viewing.yearly_return} />
+              <Kv k="Yearly Appreciation" v={viewing.yearly_appreciation} />
+              <Kv k="Yearly TDS" v={viewing.yearly_tds} />
+              <Kv k="Tax" v={viewing.tax} />
+              <Kv k="Capital Gain" v={viewing.capital_gain} />
+              <Kv k="TDS of Tax" v={viewing.tds_of_tax} />
+              <Kv k="Locking Period" v={viewing.locking_period} />
+              <Kv k="Status" v={viewing.status} />
+              <Kv k="Country" v={viewing.country} />
+            </div>
+            {viewing.investment_strategy.length > 0 && (
+              <div>
+                <p className="text-[10px] uppercase tracking-wider text-gray-500 mb-1">Investment Strategy</p>
+                <ul className="text-[12px] text-gray-300 list-disc pl-5">{viewing.investment_strategy.map((s, i) => <li key={i}>{s}</li>)}</ul>
+              </div>
+            )}
+            {viewing.minimum_investment_range.length > 0 && (
+              <div>
+                <p className="text-[10px] uppercase tracking-wider text-gray-500 mb-1">Minimum Investment Range</p>
+                <ul className="text-[12px] text-gray-300 list-disc pl-5">{viewing.minimum_investment_range.map((s, i) => <li key={i}>{s}</li>)}</ul>
+              </div>
+            )}
+            {(viewing.image_url || viewing.pdf_url) && (
+              <div className="flex flex-wrap gap-2">
+                {viewing.image_url && <a href={viewing.image_url} target="_blank" rel="noopener noreferrer" className="text-[11px] text-blue-300 hover:underline">View image</a>}
+                {viewing.pdf_url && <a href={viewing.pdf_url} target="_blank" rel="noopener noreferrer" className="text-[11px] text-blue-300 hover:underline">View PDF</a>}
+              </div>
+            )}
+            {viewing.banks.length > 0 && (
+              <div className="pt-2 border-t border-white/[0.06]">
+                <p className="text-[10px] uppercase tracking-wider text-gray-500 mb-1.5">Bank Accounts</p>
+                <div className="space-y-1.5">
+                  {viewing.banks.map((b, i) => (
+                    <div key={i} className="text-[11px] text-gray-300 p-2 rounded bg-white/[0.02] border border-white/[0.04]">
+                      <p className="font-medium text-white">{b.account_holder_name}</p>
+                      <p className="text-gray-500">{b.bank_name || '—'} · {b.branch_name || '—'}</p>
+                      <p className="text-gray-400 font-mono">{b.account_number} · {b.ifsc_code}{b.swift_iban_code ? ` · SWIFT ${b.swift_iban_code}` : ''}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+      </AdminModal>
+    </AdminGlass>
+  )
+}
+
+function PlanField({ label, value, onChange, placeholder, compact }: { label: string; value: string; onChange: (v: string) => void; placeholder?: string; compact?: boolean }) {
+  return (
+    <div>
+      <label className="block text-[10px] uppercase tracking-wider text-gray-500 font-medium mb-1">{label}</label>
+      <input
+        value={value}
+        onChange={e => onChange(e.target.value)}
+        placeholder={placeholder}
+        className={`w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 ${compact ? 'py-1.5 text-[12px]' : 'py-2 text-sm'} text-white placeholder-gray-600 focus:outline-none focus:border-brand-red/40 focus:ring-1 focus:ring-brand-red/20`}
+      />
+    </div>
+  )
+}
+
+function Kv({ k, v }: { k: string; v: any }) {
+  return (
+    <div>
+      <span className="text-gray-500">{k}</span>
+      <p className="text-white">{v == null || v === '' ? '—' : String(v)}</p>
+    </div>
   )
 }
 
 function FundCategoriesTab({ showToast }: { showToast: (m: string, t?: 'success' | 'error' | 'info' | 'warning') => void }) {
+  const [rows, setRows] = useState<FundCategoryRow[]>([])
+  const [loading, setLoading] = useState(true)
+  const [createOpen, setCreateOpen] = useState(false)
+  const [type, setType] = useState('')
+  const [saving, setSaving] = useState(false)
+
+  const load = useCallback(async () => {
+    setLoading(true)
+    const data = await fetchFundCategories({ activeOnly: false })
+    setRows(data)
+    setLoading(false)
+  }, [])
+  useEffect(() => { load() }, [load])
+
+  const handleCreate = async () => {
+    if (!type.trim()) { showToast('Type is required', 'error'); return }
+    setSaving(true)
+    try {
+      const res = await createFundCategory({ type })
+      if (res.ok) {
+        showToast('Fund type added', 'success')
+        setType('')
+        setCreateOpen(false)
+        load()
+      } else {
+        showToast(res.error || 'Create failed', 'error')
+      }
+    } finally { setSaving(false) }
+  }
+
+  const handleDelete = async (row: FundCategoryRow) => {
+    if (!window.confirm(`Deactivate "${row.type}"? Existing fund plans will keep their reference; future ones won't see this category in the picker.`)) return
+    const res = await deleteFundCategory(row.id)
+    if (res.ok) { showToast('Fund type deactivated', 'success'); load() }
+    else showToast(res.error || 'Delete failed', 'error')
+  }
+
   return (
-    <AdminCRUDPlaceholder
-      title="Fund Categories"
-      description="Categorise the fund vehicles offered (e.g. Direct AIF, SEBI Co-Invest, Debenture)."
-      icon={Target}
-      showToast={showToast}
-      hint="Categories are referenced by Investment Applications and the public Fund pages. Edit a category to change its label, slug, and risk profile."
-    />
+    <AdminGlass>
+      <div className="flex items-start justify-between gap-3 mb-4">
+        <div className="flex-1 min-w-[180px]">
+          <h2 className="text-base font-semibold text-white">Fund Categories</h2>
+          <p className="text-xs text-gray-500 mt-0.5">Categorise the fund vehicles offered (e.g. Direct AIF, SEBI Co-Invest, Debenture). Used by the Investment Plan picker.</p>
+        </div>
+        <button
+          onClick={() => setCreateOpen(true)}
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-brand-red/20 border border-brand-red/30 text-xs font-medium text-white hover:bg-brand-red/30 transition-colors"
+        >
+          <Plus className="w-3.5 h-3.5" /> Add Fund Type
+        </button>
+      </div>
+
+      {loading ? (
+        <div className="py-10 text-center text-xs text-gray-500"><Loader2 className="w-4 h-4 animate-spin inline mr-2" />Loading…</div>
+      ) : rows.length === 0 ? (
+        <AdminEmptyState icon={Target} title="No fund categories" description="Use Add Fund Type to create the first category." />
+      ) : (
+        <div className="space-y-2">
+          {rows.map(c => (
+            <div key={c.id} className="flex items-center justify-between p-3 rounded-xl bg-white/[0.02] border border-white/[0.04] hover:bg-white/[0.03] transition-colors">
+              <div className="flex items-center gap-3 min-w-0">
+                <div className="w-8 h-8 rounded-lg bg-brand-red/10 text-brand-red flex items-center justify-center flex-shrink-0">
+                  <Target className="w-4 h-4" />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-sm font-medium text-white truncate">{c.type}</p>
+                  <p className="text-[10px] text-gray-500 truncate">{c.slug || '—'}{c.description ? ` · ${c.description}` : ''}</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <AdminBadge label={c.is_active ? 'Active' : 'Inactive'} variant={c.is_active ? 'success' : 'neutral'} />
+                {c.is_active && (
+                  <button onClick={() => handleDelete(c)} className="p-1.5 text-gray-500 hover:text-red-400 transition-colors" title="Deactivate"><Trash2 className="w-3.5 h-3.5" /></button>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      <AdminModal
+        isOpen={createOpen}
+        onClose={() => { setCreateOpen(false); setType('') }}
+        title="Add Fund Type"
+        subtitle="The Type is what admins will see in the Investment Plan picker."
+        maxWidth="max-w-md"
+        footer={
+          <>
+            <ModalButton onClick={() => { setCreateOpen(false); setType('') }} disabled={saving}>Cancel</ModalButton>
+            <ModalButton variant="primary" onClick={handleCreate} disabled={saving}>
+              {saving ? <span className="inline-flex items-center gap-2"><Loader2 className="w-4 h-4 animate-spin" />Saving…</span> : 'Submit'}
+            </ModalButton>
+          </>
+        }
+      >
+        <div>
+          <label className="block text-[10px] uppercase tracking-wider text-gray-500 font-medium mb-1">Type *</label>
+          <input
+            value={type}
+            onChange={e => setType(e.target.value)}
+            placeholder="e.g. Debenture, Direct AIF, SEBI Co-Invest"
+            className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-brand-red/40 focus:ring-1 focus:ring-brand-red/20"
+          />
+        </div>
+      </AdminModal>
+    </AdminGlass>
   )
 }
 

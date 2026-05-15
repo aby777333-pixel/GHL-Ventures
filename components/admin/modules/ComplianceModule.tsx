@@ -179,27 +179,36 @@ function KYCQueueTab({ kycQueue, showToast, onRefresh, initialStatusFilter }: { 
 
   const filtered = useMemo(() => {
     if (statusFilter === 'all') return clientGroups
-    // ADMIN COMMAND CENTER 2026-05-15: the KYC Approved / Rejected tabs were
-    // empty because approveClientKYC marks the CLIENT row as 'verified' but
-    // the sub-rows can lag. Filter on the client-level kyc_status (carried
-    // through fetchKYCDocuments as `clientKycStatus`) so the cohort lights up
-    // immediately after approval. Falls back to sub-row status when the
-    // client status field is missing (legacy rows).
-    const matchesClient = (cks: string): boolean => {
-      if (statusFilter === 'pending') return cks === 'pending' || cks === 'submitted' || cks === 'under-review'
-      if (statusFilter === 'approved') return cks === 'approved' || cks === 'verified'
-      if (statusFilter === 'rejected') return cks === 'rejected'
-      return cks === statusFilter
-    }
-    const matchesRow = (rowStatus: string): boolean => {
-      if (statusFilter === 'pending') return rowStatus === 'pending' || rowStatus === 'submitted'
-      if (statusFilter === 'approved') return rowStatus === 'approved' || rowStatus === 'verified'
-      return rowStatus === statusFilter
-    }
+    // ADMIN COMMAND CENTER 2026-05-15 (revised): the Approved tab was leaking
+    // clients whose `kyc_status` had been bumped to 'verified' at the client
+    // row but whose sub-row decisions were still 'submitted'. Truly-approved
+    // clients are those where the client-level status is verified/approved
+    // AND no sub-row is still in submitted/pending — i.e. every KYC step has
+    // a final decision. The Pending tab gets the inverse.
+    const isApprovedClient = (cks: string): boolean => cks === 'approved' || cks === 'verified'
+    const hasUndecidedSubRow = (items: any[]): boolean =>
+      items.some(i => i.status === 'submitted' || i.status === 'pending' || i.status === 'under-review')
     return clientGroups.filter(g => {
-      const cks = (g.items[0] as any)?.clientKycStatus
-      if (cks) return matchesClient(cks)
-      return g.items.some(i => matchesRow(i.status))
+      const cks = (g.items[0] as any)?.clientKycStatus || ''
+      if (statusFilter === 'pending') {
+        // Show clients that still have a sub-row awaiting decision, OR whose
+        // overall client status is pending/submitted.
+        if (cks === 'pending' || cks === 'submitted' || cks === 'under-review') return true
+        if (isApprovedClient(cks)) return false
+        if (cks === 'rejected') return false
+        return hasUndecidedSubRow(g.items)
+      }
+      if (statusFilter === 'approved') {
+        // Strict: client must be verified/approved AND every sub-row decided.
+        return isApprovedClient(cks) && !hasUndecidedSubRow(g.items)
+      }
+      if (statusFilter === 'rejected') {
+        return cks === 'rejected'
+      }
+      if (statusFilter === 'submitted') {
+        return hasUndecidedSubRow(g.items) && !isApprovedClient(cks) && cks !== 'rejected'
+      }
+      return cks === statusFilter
     })
   }, [statusFilter, clientGroups])
 

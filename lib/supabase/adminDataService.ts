@@ -3294,3 +3294,283 @@ export async function fetchPermissionAuditLog(): Promise<PermissionAuditRow[]> {
     return []
   }
 }
+
+// ═══════════════════════════════════════════════════════════════════
+// FUND CATEGORIES + INVESTMENT PLANS (2026-05-15)
+// Backed by fund_categories, fund_plans, fund_plan_banks tables.
+// Image / PDF uploads use the ghl-media public bucket so the public
+// fund pages can render them without signed URLs.
+// ═══════════════════════════════════════════════════════════════════
+
+export interface FundCategoryRow {
+  id: string
+  type: string
+  slug: string | null
+  description: string | null
+  is_active: boolean
+  sort_order: number
+  created_at: string
+}
+
+export async function fetchFundCategories(opts?: { activeOnly?: boolean }): Promise<FundCategoryRow[]> {
+  if (!isSupabaseConfigured()) return []
+  try {
+    const sb = supabase as any
+    let q = sb.from('fund_categories')
+      .select('id, type, slug, description, is_active, sort_order, created_at')
+      .order('sort_order', { ascending: true })
+      .order('created_at', { ascending: false })
+    if (opts?.activeOnly) q = q.eq('is_active', true)
+    const { data, error } = await q
+    if (error) { console.warn('[admin] fetchFundCategories:', error.message); return [] }
+    return ((data as any[]) || []) as FundCategoryRow[]
+  } catch (e: any) {
+    console.warn('[admin] fetchFundCategories error:', e?.message)
+    return []
+  }
+}
+
+export async function createFundCategory(input: { type: string; description?: string }): Promise<{ ok: boolean; id?: string; error?: string }> {
+  if (!isSupabaseConfigured()) return { ok: false, error: 'Service unavailable' }
+  try {
+    const sb = supabase as any
+    const type = (input.type || '').trim()
+    if (!type) return { ok: false, error: 'Type is required' }
+    const slug = type.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 60)
+    const { data, error } = await sb
+      .from('fund_categories')
+      .insert({ type, slug, description: input.description || null })
+      .select('id')
+      .single()
+    if (error) return { ok: false, error: error.message }
+    return { ok: true, id: (data as any)?.id }
+  } catch (e: any) {
+    return { ok: false, error: e?.message || 'Create failed' }
+  }
+}
+
+export async function deleteFundCategory(id: string): Promise<{ ok: boolean; error?: string }> {
+  if (!isSupabaseConfigured()) return { ok: false, error: 'Service unavailable' }
+  try {
+    const sb = supabase as any
+    // Soft-delete: mark inactive so existing fund_plans references stay intact.
+    const { error } = await sb.from('fund_categories').update({ is_active: false }).eq('id', id)
+    if (error) return { ok: false, error: error.message }
+    return { ok: true }
+  } catch (e: any) {
+    return { ok: false, error: e?.message || 'Delete failed' }
+  }
+}
+
+export interface FundPlanBankRow {
+  id?: string
+  account_holder_name: string
+  account_number: string
+  ifsc_code: string
+  branch_name?: string | null
+  bank_name?: string | null
+  swift_iban_code?: string | null
+  is_primary?: boolean
+}
+
+export interface FundPlanRow {
+  id: string
+  fund_name: string
+  fund_type_id: string | null
+  fund_type_name: string | null
+  tenure: string | null
+  yearly_return: string | null
+  yearly_appreciation: string | null
+  yearly_tds: string | null
+  tax: string | null
+  capital_gain: string | null
+  tds_of_tax: string | null
+  locking_period: string | null
+  investment_strategy: string[]
+  minimum_investment_range: string[]
+  status: string
+  country: string | null
+  image_url: string | null
+  pdf_url: string | null
+  banks: FundPlanBankRow[]
+  created_at: string
+}
+
+export async function fetchFundPlans(): Promise<FundPlanRow[]> {
+  if (!isSupabaseConfigured()) return []
+  try {
+    const sb = supabase as any
+    const { data: plans, error } = await sb
+      .from('fund_plans')
+      .select('*')
+      .order('created_at', { ascending: false })
+    if (error) { console.warn('[admin] fetchFundPlans:', error.message); return [] }
+    const planRows = ((plans as any[]) || [])
+
+    // Look up category names in one go.
+    const typeIds = Array.from(new Set(planRows.map(p => p.fund_type_id).filter(Boolean)))
+    let typeMap = new Map<string, string>()
+    if (typeIds.length > 0) {
+      const { data: types } = await sb.from('fund_categories').select('id, type').in('id', typeIds)
+      for (const t of ((types as any[]) || [])) typeMap.set(t.id, t.type)
+    }
+
+    // Pull all bank rows for these plans in one query.
+    const planIds = planRows.map(p => p.id)
+    let bankMap = new Map<string, FundPlanBankRow[]>()
+    if (planIds.length > 0) {
+      const { data: banks } = await sb.from('fund_plan_banks').select('*').in('fund_plan_id', planIds).order('sort_order', { ascending: true })
+      for (const b of ((banks as any[]) || [])) {
+        if (!bankMap.has(b.fund_plan_id)) bankMap.set(b.fund_plan_id, [])
+        bankMap.get(b.fund_plan_id)!.push({
+          id: b.id,
+          account_holder_name: b.account_holder_name,
+          account_number: b.account_number,
+          ifsc_code: b.ifsc_code,
+          branch_name: b.branch_name,
+          bank_name: b.bank_name,
+          swift_iban_code: b.swift_iban_code,
+          is_primary: !!b.is_primary,
+        })
+      }
+    }
+
+    return planRows.map(p => ({
+      id: p.id,
+      fund_name: p.fund_name,
+      fund_type_id: p.fund_type_id,
+      fund_type_name: p.fund_type_id ? (typeMap.get(p.fund_type_id) || null) : null,
+      tenure: p.tenure,
+      yearly_return: p.yearly_return,
+      yearly_appreciation: p.yearly_appreciation,
+      yearly_tds: p.yearly_tds,
+      tax: p.tax,
+      capital_gain: p.capital_gain,
+      tds_of_tax: p.tds_of_tax,
+      locking_period: p.locking_period,
+      investment_strategy: Array.isArray(p.investment_strategy) ? p.investment_strategy : [],
+      minimum_investment_range: Array.isArray(p.minimum_investment_range) ? p.minimum_investment_range : [],
+      status: p.status,
+      country: p.country,
+      image_url: p.image_url,
+      pdf_url: p.pdf_url,
+      banks: bankMap.get(p.id) || [],
+      created_at: p.created_at,
+    }))
+  } catch (e: any) {
+    console.warn('[admin] fetchFundPlans error:', e?.message)
+    return []
+  }
+}
+
+export async function createFundPlan(input: {
+  fund_name: string
+  fund_type_id?: string | null
+  tenure?: string
+  yearly_return?: string
+  yearly_appreciation?: string
+  yearly_tds?: string
+  tax?: string
+  capital_gain?: string
+  tds_of_tax?: string
+  locking_period?: string
+  investment_strategy?: string[]
+  minimum_investment_range?: string[]
+  status?: string
+  country?: string
+  image_url?: string | null
+  pdf_url?: string | null
+  banks?: FundPlanBankRow[]
+}): Promise<{ ok: boolean; id?: string; error?: string }> {
+  if (!isSupabaseConfigured()) return { ok: false, error: 'Service unavailable' }
+  try {
+    const sb = supabase as any
+    if (!input.fund_name?.trim()) return { ok: false, error: 'Fund name is required' }
+    const { data: plan, error } = await sb
+      .from('fund_plans')
+      .insert({
+        fund_name: input.fund_name.trim(),
+        fund_type_id: input.fund_type_id || null,
+        tenure: input.tenure || null,
+        yearly_return: input.yearly_return || null,
+        yearly_appreciation: input.yearly_appreciation || null,
+        yearly_tds: input.yearly_tds || null,
+        tax: input.tax || null,
+        capital_gain: input.capital_gain || null,
+        tds_of_tax: input.tds_of_tax || null,
+        locking_period: input.locking_period || null,
+        investment_strategy: input.investment_strategy || [],
+        minimum_investment_range: input.minimum_investment_range || [],
+        status: input.status || 'active',
+        country: input.country || null,
+        image_url: input.image_url || null,
+        pdf_url: input.pdf_url || null,
+      })
+      .select('id')
+      .single()
+    if (error) return { ok: false, error: error.message }
+    const planId = (plan as any)?.id as string
+    if (planId && Array.isArray(input.banks) && input.banks.length > 0) {
+      const bankRows = input.banks
+        .filter(b => b.account_holder_name?.trim() && b.account_number?.trim() && b.ifsc_code?.trim())
+        .map((b, i) => ({
+          fund_plan_id: planId,
+          account_holder_name: b.account_holder_name.trim(),
+          account_number: b.account_number.trim(),
+          ifsc_code: b.ifsc_code.trim().toUpperCase(),
+          branch_name: b.branch_name?.trim() || null,
+          bank_name: b.bank_name?.trim() || null,
+          swift_iban_code: b.swift_iban_code?.trim() || null,
+          is_primary: !!b.is_primary,
+          sort_order: i,
+        }))
+      if (bankRows.length > 0) {
+        const { error: bankErr } = await sb.from('fund_plan_banks').insert(bankRows)
+        if (bankErr) {
+          // Plan was created; bank linkage failed. Surface but keep the plan.
+          return { ok: true, id: planId, error: `Plan created but bank rows failed: ${bankErr.message}` }
+        }
+      }
+    }
+    return { ok: true, id: planId }
+  } catch (e: any) {
+    return { ok: false, error: e?.message || 'Create failed' }
+  }
+}
+
+export async function deleteFundPlan(id: string): Promise<{ ok: boolean; error?: string }> {
+  if (!isSupabaseConfigured()) return { ok: false, error: 'Service unavailable' }
+  try {
+    const sb = supabase as any
+    const { error } = await sb.from('fund_plans').delete().eq('id', id)
+    if (error) return { ok: false, error: error.message }
+    return { ok: true }
+  } catch (e: any) {
+    return { ok: false, error: e?.message || 'Delete failed' }
+  }
+}
+
+// Upload a public asset (plan image or PDF) to the ghl-media bucket and
+// return a public URL the UI can persist into fund_plans.image_url/pdf_url.
+export async function uploadFundPlanAsset(file: File, kind: 'image' | 'pdf'): Promise<{ ok: boolean; url?: string; error?: string }> {
+  if (!isSupabaseConfigured()) return { ok: false, error: 'Service unavailable' }
+  try {
+    const sb = supabase as any
+    const ext = (file.name.split('.').pop() || (kind === 'pdf' ? 'pdf' : 'png')).toLowerCase()
+    const safe = file.name.replace(/[^a-zA-Z0-9._-]/g, '_').slice(0, 80)
+    const path = `fund-plans/${Date.now()}-${Math.random().toString(36).slice(2, 8)}-${safe}`
+    const { error } = await sb.storage.from('ghl-media').upload(path, file, {
+      cacheControl: '3600',
+      upsert: false,
+      contentType: file.type || (kind === 'pdf' ? 'application/pdf' : 'image/png'),
+    })
+    if (error) return { ok: false, error: error.message }
+    const { data } = sb.storage.from('ghl-media').getPublicUrl(path)
+    const url: string | undefined = data?.publicUrl
+    if (!url) return { ok: false, error: 'No public URL returned' }
+    void ext // ext is captured in the path; suppress unused warnings.
+    return { ok: true, url }
+  } catch (e: any) {
+    return { ok: false, error: e?.message || 'Upload failed' }
+  }
+}
