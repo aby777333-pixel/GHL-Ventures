@@ -20,7 +20,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   Plus, Trash2, GripVertical, Download, Eye, Type, ListChecks,
   Heading1, AlignLeft, AlignJustify, Image as ImageIcon, PenLine, FileText, Loader2,
-  RefreshCw, Library, Table as TableIcon, Building2,
+  RefreshCw, Library, Table as TableIcon, Building2, Move,
 } from 'lucide-react'
 import { jsPDF } from 'jspdf'
 import {
@@ -33,7 +33,7 @@ import { getDownloadUrl } from '@/lib/supabase/storageService'
 import { DOCUMENT_TEMPLATES, type DocumentKind } from '@/lib/admin/documentTemplates'
 
 // ── Block model ─────────────────────────────────────────────────
-type BlockKind = 'heading' | 'paragraph' | 'kv-list' | 'bullet-list' | 'image' | 'signature' | 'table' | 'footer'
+type BlockKind = 'heading' | 'paragraph' | 'kv-list' | 'bullet-list' | 'image' | 'signature' | 'table' | 'footer' | 'spacer'
 
 interface BaseBlock { id: string; kind: BlockKind }
 interface HeadingBlock extends BaseBlock { kind: 'heading'; text: string; level: 1 | 2 | 3; align: 'left' | 'center' | 'right' }
@@ -63,10 +63,16 @@ interface FooterBlock extends BaseBlock {
   lines: string[]
   bgColor: string                  // CSS color string e.g. '#FFF6D9'
 }
+/** 2026-05-15: vertical spacer between blocks. Height is in mm to match
+ *  the PDF coordinate space (jsPDF unit:'pt' converts via 1mm ≈ 2.834pt). */
+interface SpacerBlock extends BaseBlock {
+  kind: 'spacer'
+  heightMm: number
+}
 
 type Block =
   | HeadingBlock | ParagraphBlock | KvListBlock | BulletListBlock | ImageBlock
-  | SignatureBlock | TableBlock | FooterBlock
+  | SignatureBlock | TableBlock | FooterBlock | SpacerBlock
 
 const STORAGE_KEY = 'ghl-admin-document-builder-draft-v1'
 
@@ -95,6 +101,7 @@ const blankBlock = (kind: BlockKind): Block => {
       ],
       bgColor: '#FFF6D9',
     }
+    case 'spacer':      return { id, kind, heightMm: 8 }
   }
 }
 
@@ -107,6 +114,7 @@ const blockPalette: { kind: BlockKind; label: string; icon: React.ComponentType<
   { kind: 'image',       label: 'Image',       icon: ImageIcon },
   { kind: 'signature',   label: 'Signatures',  icon: PenLine },
   { kind: 'footer',      label: 'Footer',      icon: Building2 },
+  { kind: 'spacer',      label: 'Spacer',      icon: Move },
 ]
 
 // Convert a CSS hex like '#FFF6D9' to a [r,g,b] tuple in 0–255 (jsPDF fillColor input).
@@ -444,6 +452,11 @@ export default function DocumentBuilderModal({ open, onClose, showToast, inline 
         }
         doc.setTextColor(0, 0, 0)
         y += bandH + 6
+      } else if (b.kind === 'spacer') {
+        // 2026-05-15: arbitrary vertical gap between blocks. 1mm ≈ 2.834pt.
+        const pts = Math.max(0, Math.min(80, b.heightMm)) * 2.834
+        ensureSpace(pts)
+        y += pts
       } else if (b.kind === 'kv-list') {
         doc.setFontSize(11)
         for (const row of b.rows) {
@@ -562,6 +575,10 @@ export default function DocumentBuilderModal({ open, onClose, showToast, inline 
           if (!ln) continue
           children.push(new Paragraph({ children: [new TextRun(ln)], alignment: AlignmentType.CENTER }))
         }
+      } else if (b.kind === 'spacer') {
+        // Approximate one blank paragraph per ~6mm of requested spacing.
+        const count = Math.max(1, Math.min(20, Math.round(b.heightMm / 6)))
+        for (let i = 0; i < count; i++) children.push(new Paragraph({ text: '' }))
       } else if (b.kind === 'kv-list') {
         for (const row of b.rows) {
           children.push(new Paragraph({
@@ -703,11 +720,17 @@ export default function DocumentBuilderModal({ open, onClose, showToast, inline 
             </div>
           </div>
 
-          {/* Image Library — pulled from uploaded documents (mime image/*). */}
+          {/* Image Library — pulled from uploaded documents (mime image/*).
+              2026-05-15: surfaced more prominently in inline mode so admins
+              can see at a glance which uploaded images are insertable into
+              the canvas. Each tile is click-to-insert OR drag-to-canvas. */}
           <div className="pt-3 border-t border-white/[0.06]">
             <div className="flex items-center justify-between px-1 mb-1.5">
               <div className="text-[10px] uppercase tracking-wider text-gray-500 flex items-center gap-1.5">
                 <Library className="w-3 h-3" /> Image Library
+                {libraryImages.length > 0 && (
+                  <span className="inline-flex items-center justify-center min-w-[16px] h-[16px] rounded-full bg-brand-red/20 text-brand-red text-[9px] font-bold px-1">{libraryImages.length}</span>
+                )}
               </div>
               <button
                 onClick={loadLibrary}
@@ -721,7 +744,14 @@ export default function DocumentBuilderModal({ open, onClose, showToast, inline 
             {libraryLoading && libraryImages.length === 0 ? (
               <div className="text-[10px] text-gray-500 px-1 py-2">Loading…</div>
             ) : libraryImages.length === 0 ? (
-              <div className="text-[10px] text-gray-500 px-1 py-2">No images uploaded yet. Use <span className="text-amber-300">Upload to Library</span> to add some.</div>
+              <div className="rounded-lg border border-dashed border-white/[0.12] bg-white/[0.02] p-3 text-center">
+                <Library className="w-5 h-5 text-gray-500 mx-auto mb-1.5" />
+                <p className="text-[11px] text-gray-300 font-medium mb-0.5">Your library is empty</p>
+                <p className="text-[10px] text-gray-500 leading-snug">
+                  Click <span className="text-cyan-300 font-medium">Upload to Library</span> at the top to add PNGs / JPGs.
+                  Once uploaded, tiles appear here — click any tile to insert it into the canvas.
+                </p>
+              </div>
             ) : (
               <div className="grid grid-cols-2 gap-1.5">
                 {libraryImages.map(img => (
@@ -738,11 +768,17 @@ export default function DocumentBuilderModal({ open, onClose, showToast, inline 
                     onDragEnd={() => { draggedLibraryImageRef.current = null }}
                     onClick={() => insertImageFromLibrary(img)}
                     disabled={insertingId === img.id}
-                    className="group relative aspect-square rounded-lg overflow-hidden border border-white/[0.08] bg-white/[0.04] hover:border-brand-red/40 transition-colors disabled:opacity-60"
-                    title={`${img.title}\n${img.fileName}`}
+                    className="group relative aspect-square rounded-lg overflow-hidden border border-white/[0.08] bg-white/[0.04] hover:border-brand-red/40 hover:ring-2 hover:ring-brand-red/30 transition-all disabled:opacity-60"
+                    title={`Click to insert "${img.title}"`}
                   >
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img src={img.thumbUrl} alt={img.title} className="w-full h-full object-cover" />
+                    {/* Hover overlay — confirms the click action */}
+                    <span className="absolute inset-0 flex items-center justify-center bg-black/0 group-hover:bg-black/40 transition-colors">
+                      <span className="opacity-0 group-hover:opacity-100 transition-opacity inline-flex items-center gap-1 px-2 py-1 rounded-md bg-brand-red text-white text-[9px] font-semibold uppercase tracking-wider">
+                        <Plus className="w-3 h-3" /> Insert
+                      </span>
+                    </span>
                     {insertingId === img.id && (
                       <span className="absolute inset-0 flex items-center justify-center bg-black/60">
                         <Loader2 className="w-4 h-4 animate-spin text-white" />
@@ -753,7 +789,9 @@ export default function DocumentBuilderModal({ open, onClose, showToast, inline 
                 ))}
               </div>
             )}
-            <p className="text-[9px] text-gray-600 px-1 mt-1.5">Click or drag onto the canvas.</p>
+            <p className="text-[9px] text-gray-500 px-1 mt-1.5">
+              <span className="text-emerald-400">Click</span> a tile to insert · or <span className="text-emerald-400">drag</span> onto a specific block to drop it after that block.
+            </p>
           </div>
 
           <div className="pt-3 border-t border-white/[0.06]">
@@ -979,6 +1017,66 @@ function BlockEditor({ block, onChange }: { block: Block; onChange: (patch: Part
             <input type="color" value={block.bgColor} onChange={e => onChange({ bgColor: e.target.value } as any)} className="h-6 w-9 rounded border border-white/[0.08] bg-transparent cursor-pointer" />
           </label>
         </div>
+      </div>
+    )
+  }
+
+  if (block.kind === 'spacer') {
+    // 2026-05-15: vertical breathing room between blocks. Height is in mm
+    // so the PDF coordinate space stays predictable across A4 pages.
+    const presets: Array<{ label: string; mm: number }> = [
+      { label: 'XS', mm: 4 },
+      { label: 'S', mm: 8 },
+      { label: 'M', mm: 16 },
+      { label: 'L', mm: 28 },
+      { label: 'XL', mm: 40 },
+    ]
+    return (
+      <div className="space-y-2">
+        <div className="flex items-center justify-between">
+          <div className="text-[10px] uppercase tracking-wider text-gray-500">Spacer</div>
+          <span className="text-[10px] text-gray-500 font-mono">{block.heightMm}mm</span>
+        </div>
+        <div className="flex flex-wrap gap-1.5">
+          {presets.map(p => (
+            <button
+              key={p.label}
+              onClick={() => onChange({ heightMm: p.mm } as any)}
+              className={`px-2.5 py-1 rounded-md text-[10px] font-medium uppercase tracking-wider transition-colors ${
+                block.heightMm === p.mm
+                  ? 'bg-brand-red/20 text-white border border-brand-red/30'
+                  : 'bg-white/[0.04] text-gray-400 border border-white/[0.08] hover:bg-white/[0.08]'
+              }`}
+              title={`${p.mm}mm gap`}
+            >
+              {p.label}
+            </button>
+          ))}
+        </div>
+        <div className="flex items-center gap-2">
+          <input
+            type="range"
+            min={1}
+            max={80}
+            step={1}
+            value={block.heightMm}
+            onChange={e => onChange({ heightMm: Number(e.target.value) || 8 } as any)}
+            className="flex-1 accent-brand-red"
+          />
+          <input
+            type="number"
+            min={1}
+            max={80}
+            value={block.heightMm}
+            onChange={e => onChange({ heightMm: Math.max(1, Math.min(80, Number(e.target.value) || 8)) } as any)}
+            className={input + ' max-w-[80px] text-center'}
+          />
+        </div>
+        <div
+          className="rounded bg-white/[0.04] border border-dashed border-white/[0.12]"
+          style={{ height: Math.max(4, Math.min(120, block.heightMm * 3)) + 'px' }}
+          aria-hidden
+        />
       </div>
     )
   }
