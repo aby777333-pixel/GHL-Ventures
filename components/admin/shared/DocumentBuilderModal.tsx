@@ -29,7 +29,7 @@ import {
 } from 'docx'
 import AdminModal, { ModalButton } from './AdminModal'
 import { supabase, isSupabaseConfigured } from '@/lib/supabase/client'
-import { getDownloadUrl } from '@/lib/supabase/storageService'
+import { getDownloadUrl, deleteStorageFile } from '@/lib/supabase/storageService'
 import { DOCUMENT_TEMPLATES, type DocumentKind } from '@/lib/admin/documentTemplates'
 
 // ── Block model ─────────────────────────────────────────────────
@@ -163,6 +163,9 @@ export default function DocumentBuilderModal({ open, onClose, showToast, inline 
   const [libraryImages, setLibraryImages] = useState<LibraryImage[]>([])
   const [libraryLoading, setLibraryLoading] = useState(false)
   const [insertingId, setInsertingId] = useState<string | null>(null)
+  // 2026-05-16: per-tile delete state so a spinner shows on the tile being
+  // removed instead of locking the whole panel.
+  const [deletingId, setDeletingId] = useState<string | null>(null)
   // Tracks which item is being dragged out of the library so canvas
   // can decide whether to handle an external-drop vs. a reorder-drop.
   const draggedLibraryImageRef = useRef<LibraryImage | null>(null)
@@ -355,6 +358,43 @@ export default function DocumentBuilderModal({ open, onClose, showToast, inline 
       setInsertingId(null)
     }
   }, [showToast])
+
+  // 2026-05-16: Delete a library image — removes the storage object AND the
+  // public.documents row in one click. Confirm dialog up front since this
+  // is irreversible; the screenshot uploader will simply re-insert a fresh
+  // row + object next time the admin uploads the same file.
+  const deleteLibraryImage = useCallback(async (img: LibraryImage) => {
+    if (!img?.id) return
+    if (!window.confirm(`Delete "${img.title}" from the library?\n\nThis removes the file from storage and the documents list. Cannot be undone.`)) return
+    setDeletingId(img.id)
+    // Optimistic: drop from the grid first so the UI feels instant.
+    const snapshot = libraryImages
+    setLibraryImages(prev => prev.filter(x => x.id !== img.id))
+    try {
+      if (img.bucket && img.path) {
+        const storage = await deleteStorageFile(img.path, img.bucket)
+        if (!storage.success) {
+          // Object may already be gone (manual cleanup, prior failure);
+          // proceed to remove the DB row anyway so the library reflects reality.
+          console.warn('[DocumentBuilder] storage delete:', storage.error)
+        }
+      }
+      const sb: any = supabase
+      const { error } = await sb.from('documents').delete().eq('id', img.id)
+      if (error) {
+        // Restore the grid + tell the user.
+        setLibraryImages(snapshot)
+        showToast(`Could not delete: ${error.message}`, 'error')
+        return
+      }
+      showToast(`Deleted "${img.title}".`, 'success')
+    } catch (e: any) {
+      setLibraryImages(snapshot)
+      showToast(`Delete failed: ${e?.message || 'unknown'}`, 'error')
+    } finally {
+      setDeletingId(null)
+    }
+  }, [libraryImages, showToast])
 
   // 2026-05-15: when an admin clicks Insert on a library tile inside the
   // View Library modal, drop a fresh Image block into the canvas. The
@@ -808,37 +848,57 @@ export default function DocumentBuilderModal({ open, onClose, showToast, inline 
             ) : (
               <div className="grid grid-cols-2 gap-1.5">
                 {libraryImages.map(img => (
-                  <button
+                  <div
                     key={img.id}
-                    draggable
-                    onDragStart={(e) => {
-                      draggedLibraryImageRef.current = img
-                      // Hide the reorder semantic during this drag.
-                      dragId.current = null
-                      try { e.dataTransfer.setData('text/plain', img.id) } catch { /* ignore */ }
-                      e.dataTransfer.effectAllowed = 'copy'
-                    }}
-                    onDragEnd={() => { draggedLibraryImageRef.current = null }}
-                    onClick={() => insertImageFromLibrary(img)}
-                    disabled={insertingId === img.id}
-                    className="group relative aspect-square rounded-lg overflow-hidden border border-white/[0.08] bg-white/[0.04] hover:border-brand-red/40 hover:ring-2 hover:ring-brand-red/30 transition-all disabled:opacity-60"
-                    title={`Click to insert "${img.title}"`}
+                    className="group relative aspect-square rounded-lg overflow-hidden border border-white/[0.08] bg-white/[0.04] hover:border-brand-red/40 hover:ring-2 hover:ring-brand-red/30 transition-all"
                   >
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={img.thumbUrl} alt={img.title} className="w-full h-full object-cover" />
-                    {/* Hover overlay — confirms the click action */}
-                    <span className="absolute inset-0 flex items-center justify-center bg-black/0 group-hover:bg-black/40 transition-colors">
-                      <span className="opacity-0 group-hover:opacity-100 transition-opacity inline-flex items-center gap-1 px-2 py-1 rounded-md bg-brand-red text-white text-[9px] font-semibold uppercase tracking-wider">
-                        <Plus className="w-3 h-3" /> Insert
+                    {/* Insert (click) + drag surface. The tile itself is the
+                        click target; the delete button below floats above. */}
+                    <button
+                      type="button"
+                      draggable
+                      onDragStart={(e) => {
+                        draggedLibraryImageRef.current = img
+                        // Hide the reorder semantic during this drag.
+                        dragId.current = null
+                        try { e.dataTransfer.setData('text/plain', img.id) } catch { /* ignore */ }
+                        e.dataTransfer.effectAllowed = 'copy'
+                      }}
+                      onDragEnd={() => { draggedLibraryImageRef.current = null }}
+                      onClick={() => insertImageFromLibrary(img)}
+                      disabled={insertingId === img.id || deletingId === img.id}
+                      className="absolute inset-0 w-full h-full disabled:opacity-60 disabled:cursor-not-allowed"
+                      title={`Click to insert "${img.title}"`}
+                      aria-label={`Insert ${img.title}`}
+                    >
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={img.thumbUrl} alt={img.title} className="w-full h-full object-cover pointer-events-none" />
+                      {/* Hover overlay — confirms the click action */}
+                      <span className="absolute inset-0 flex items-center justify-center bg-black/0 group-hover:bg-black/40 transition-colors">
+                        <span className="opacity-0 group-hover:opacity-100 transition-opacity inline-flex items-center gap-1 px-2 py-1 rounded-md bg-brand-red text-white text-[9px] font-semibold uppercase tracking-wider">
+                          <Plus className="w-3 h-3" /> Insert
+                        </span>
                       </span>
-                    </span>
+                    </button>
+                    {/* Delete chip — only appears on hover; click stops
+                        propagation so it doesn't also trigger insert. */}
+                    <button
+                      type="button"
+                      onClick={(e) => { e.stopPropagation(); e.preventDefault(); void deleteLibraryImage(img) }}
+                      disabled={deletingId === img.id || insertingId === img.id}
+                      className="absolute top-1 right-1 z-10 p-1 rounded-md bg-black/70 text-red-300 opacity-0 group-hover:opacity-100 hover:bg-red-500/80 hover:text-white transition-all disabled:opacity-60 disabled:cursor-not-allowed"
+                      title={`Delete "${img.title}" from library`}
+                      aria-label={`Delete ${img.title}`}
+                    >
+                      {deletingId === img.id ? <Loader2 className="w-3 h-3 animate-spin" /> : <Trash2 className="w-3 h-3" />}
+                    </button>
                     {insertingId === img.id && (
-                      <span className="absolute inset-0 flex items-center justify-center bg-black/60">
+                      <span className="absolute inset-0 flex items-center justify-center bg-black/60 pointer-events-none">
                         <Loader2 className="w-4 h-4 animate-spin text-white" />
                       </span>
                     )}
-                    <span className="absolute bottom-0 left-0 right-0 px-1.5 py-0.5 text-[9px] text-white bg-black/60 truncate">{img.title}</span>
-                  </button>
+                    <span className="absolute bottom-0 left-0 right-0 px-1.5 py-0.5 text-[9px] text-white bg-black/60 truncate pointer-events-none">{img.title}</span>
+                  </div>
                 ))}
               </div>
             )}
