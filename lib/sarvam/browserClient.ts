@@ -535,6 +535,391 @@ export function sarvamResultToSRT(result: SarvamSttResult): string {
   return lines.join('\n')
 }
 
+// ════════════════════════════════════════════════════════════
+//  Phase 3a — Transliterate / LID / TTS-Stream / Dict / Doc
+// ════════════════════════════════════════════════════════════
+
+// ── Types (re-declared browser-safe; mirror lib/sarvam/types.ts) ─
+export interface SarvamTransliterateResult {
+  request_id: string | null
+  transliterated_text: string
+  source_language_code: string
+}
+
+export interface SarvamLIDResult {
+  request_id: string | null
+  language_code: string | null         // BCP-47
+  script_code: string | null           // ISO 15924
+}
+
+export interface SarvamDictEntry {
+  /** Sarvam dictionary id ('p_xxxxxxxx') */
+  dictionary_id: string
+  /** Registry metadata (may be null for dicts that exist at Sarvam
+   *  but haven't been registered locally yet). */
+  name: string | null
+  description: string | null
+  word_count: number | null
+  languages: string[] | null
+  [k: string]: unknown
+}
+export interface SarvamDictListResult {
+  dictionaries: SarvamDictEntry[]
+}
+
+export interface SarvamDictContents {
+  pronunciations: Record<string, Record<string, string>>
+}
+
+export interface SarvamDocJobCreateResult {
+  job_id: string
+  state: string
+  upload_url?: string
+  expires_at?: string
+}
+
+export type SarvamDocJobState =
+  | 'Accepted' | 'Pending' | 'Running'
+  | 'Completed' | 'PartiallyCompleted' | 'Failed'
+  | string
+
+export interface SarvamDocJobStatus {
+  job_id: string
+  job_state: SarvamDocJobState
+  total_pages?: number
+  pages_processed?: number
+  pages_succeeded?: number
+  pages_failed?: number
+  error_message?: string | null
+}
+
+export interface SarvamDocJobOutput {
+  job_id: string
+  output_url?: string
+  expires_at?: string
+}
+
+// ── Transliterate ───────────────────────────────────────────
+export interface SarvamTransliterateOptions {
+  input: string
+  source_language_code: string         // BCP-47 or 'auto'
+  target_language_code: string
+  spoken_form?: boolean
+  numerals_format?: 'international' | 'native'
+}
+
+/** Romanise, Indic-conversion, or spoken-form transliteration. */
+export async function sarvamTransliterate(
+  opts: SarvamTransliterateOptions,
+): Promise<SarvamTransliterateResult> {
+  const auth = await getAuthHeader()
+  const resp = await fetch(`${getFunctionsBase()}/.netlify/functions/sarvam-transliterate`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...auth },
+    body: JSON.stringify(opts),
+  })
+  await throwOnHttpError(resp, 'transliterate')
+  return (await resp.json()) as SarvamTransliterateResult
+}
+
+// ── Language Identification ─────────────────────────────────
+export async function sarvamLID(input: string): Promise<SarvamLIDResult> {
+  const auth = await getAuthHeader()
+  const resp = await fetch(`${getFunctionsBase()}/.netlify/functions/sarvam-lid`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...auth },
+    body: JSON.stringify({ input }),
+  })
+  await throwOnHttpError(resp, 'lid')
+  return (await resp.json()) as SarvamLIDResult
+}
+
+// ── TTS HTTP Streaming ──────────────────────────────────────
+export interface SarvamTtsStreamOptions extends SarvamTtsCallOptions {
+  /** Override the 2500-char REST cap (HTTP stream supports up to 3500). */
+}
+
+export interface SarvamTtsStreamCallResult extends SarvamTtsCallResult {
+  /** True when the response body is being delivered chunk-by-chunk
+   *  (most HTTPS clients with the right CDN headers). The caller can
+   *  still treat `blob` / `url` as a final-form playable artefact. */
+  streamed: boolean
+}
+
+/**
+ * Higher-throughput TTS path that returns the same {blob, url} shape
+ * as `sarvamTTS` but talks to /sarvam-tts-stream — supports up to
+ * 3500 chars and streams Sarvam's body straight back, so playback
+ * starts earlier on long inputs.
+ *
+ * Implementation note: we still consume the full body into a Blob
+ * before returning the URL, because <audio>.src needs a complete
+ * resource for seek support. For true incremental playback (MediaSource
+ * Extensions) wire the Response.body's ReadableStream directly into a
+ * SourceBuffer — that's a Phase 3b NEXUS-agent concern, not a Phase 3a
+ * demo affordance.
+ */
+export async function sarvamTTSStream(
+  opts: SarvamTtsStreamOptions,
+): Promise<SarvamTtsStreamCallResult> {
+  const auth = await getAuthHeader()
+  const resp = await fetch(`${getFunctionsBase()}/.netlify/functions/sarvam-tts-stream`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...auth },
+    body: JSON.stringify({ target_language_code: 'en-IN', ...opts }),
+  })
+  await throwOnHttpError(resp, 'tts-stream')
+  const contentType = resp.headers.get('Content-Type') || 'audio/mpeg'
+  const streamed = !!resp.body
+  const blob = await resp.blob()
+  const url = URL.createObjectURL(blob)
+  return {
+    blob, url, contentType, streamed,
+    requestId: resp.headers.get('X-Sarvam-Request-Id') || null,
+  }
+}
+
+// ── Pronunciation Dictionary CRUD ───────────────────────────
+export interface SarvamDictCreateOptions {
+  /** Friendly name — 'ghl-financial', 'gio-trading', 'brand-names'. */
+  name: string
+  /** Either a parsed object (we'll JSON.stringify it) OR a Blob/File
+   *  the caller already has in hand. */
+  file: { pronunciations: Record<string, Record<string, string>> } | Blob | File
+  description?: string
+  /** BCP-47 codes covered by the dict. Auto-derived from `file` keys
+   *  on the server if omitted. */
+  languages?: string[]
+}
+
+/** Create a new dictionary at Sarvam + register it locally. */
+export async function sarvamDictCreate(
+  opts: SarvamDictCreateOptions,
+): Promise<{ dictionary_id: string; name: string; word_count: number; languages: string[] }> {
+  const auth = await getAuthHeader()
+  const form = new FormData()
+  if (opts.file instanceof Blob) {
+    form.append('file', opts.file, `${opts.name}.json`)
+  } else {
+    form.append(
+      'file',
+      new Blob([JSON.stringify(opts.file)], { type: 'application/json' }),
+      `${opts.name}.json`,
+    )
+  }
+  form.append('name', opts.name)
+  if (opts.description) form.append('description', opts.description)
+  if (opts.languages?.length) form.append('languages', opts.languages.join(','))
+  const resp = await fetch(`${getFunctionsBase()}/.netlify/functions/sarvam-dict-create`, {
+    method: 'POST',
+    headers: { ...auth },
+    body: form,
+  })
+  await throwOnHttpError(resp, 'dict-create')
+  return (await resp.json()) as { dictionary_id: string; name: string; word_count: number; languages: string[] }
+}
+
+export async function sarvamDictList(): Promise<SarvamDictListResult> {
+  const auth = await getAuthHeader()
+  const resp = await fetch(`${getFunctionsBase()}/.netlify/functions/sarvam-dict-list`, {
+    headers: { ...auth },
+  })
+  await throwOnHttpError(resp, 'dict-list')
+  return (await resp.json()) as SarvamDictListResult
+}
+
+export async function sarvamDictGet(dictionaryId: string): Promise<SarvamDictContents> {
+  const auth = await getAuthHeader()
+  const resp = await fetch(
+    `${getFunctionsBase()}/.netlify/functions/sarvam-dict-get?id=${encodeURIComponent(dictionaryId)}`,
+    { headers: { ...auth } },
+  )
+  await throwOnHttpError(resp, 'dict-get')
+  return (await resp.json()) as SarvamDictContents
+}
+
+export interface SarvamDictUpdateOptions {
+  dictionary_id: string
+  file: { pronunciations: Record<string, Record<string, string>> } | Blob | File
+  description?: string
+  languages?: string[]
+}
+
+export async function sarvamDictUpdate(
+  opts: SarvamDictUpdateOptions,
+): Promise<{ dictionary_id: string; word_count: number; languages: string[] }> {
+  const auth = await getAuthHeader()
+  const form = new FormData()
+  if (opts.file instanceof Blob) {
+    form.append('file', opts.file, `${opts.dictionary_id}.json`)
+  } else {
+    form.append(
+      'file',
+      new Blob([JSON.stringify(opts.file)], { type: 'application/json' }),
+      `${opts.dictionary_id}.json`,
+    )
+  }
+  if (opts.description) form.append('description', opts.description)
+  if (opts.languages?.length) form.append('languages', opts.languages.join(','))
+  const resp = await fetch(
+    `${getFunctionsBase()}/.netlify/functions/sarvam-dict-update?id=${encodeURIComponent(opts.dictionary_id)}`,
+    { method: 'POST', headers: { ...auth }, body: form },
+  )
+  await throwOnHttpError(resp, 'dict-update')
+  return (await resp.json()) as { dictionary_id: string; word_count: number; languages: string[] }
+}
+
+export async function sarvamDictDelete(dictionaryId: string): Promise<{ deleted: true; dictionary_id: string }> {
+  const auth = await getAuthHeader()
+  const resp = await fetch(
+    `${getFunctionsBase()}/.netlify/functions/sarvam-dict-delete?id=${encodeURIComponent(dictionaryId)}`,
+    { method: 'POST', headers: { ...auth } },
+  )
+  await throwOnHttpError(resp, 'dict-delete')
+  return (await resp.json()) as { deleted: true; dictionary_id: string }
+}
+
+// ── Document Digitization ───────────────────────────────────
+export interface SarvamDocCreateOptions {
+  language: string                      // BCP-47
+  output_format?: 'md' | 'html'
+  file_name?: string
+  file_size?: number
+}
+
+export async function sarvamDocCreate(
+  opts: SarvamDocCreateOptions,
+): Promise<SarvamDocJobCreateResult> {
+  const auth = await getAuthHeader()
+  const resp = await fetch(`${getFunctionsBase()}/.netlify/functions/sarvam-doc-create`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...auth },
+    body: JSON.stringify(opts),
+  })
+  await throwOnHttpError(resp, 'doc-create')
+  return (await resp.json()) as SarvamDocJobCreateResult
+}
+
+/** Upload the source PDF/image directly to Sarvam's signed PUT URL.
+ *  No proxy. Same XHR-based progress reporting as batch STT uploads. */
+export function sarvamDocUpload(
+  signedUrl: string,
+  file: Blob | File,
+  onProgress?: (loaded: number, total: number) => void,
+): Promise<void> {
+  return new Promise<void>((resolve, reject) => {
+    const xhr = new XMLHttpRequest()
+    xhr.open('PUT', signedUrl, true)
+    if (onProgress && xhr.upload) {
+      xhr.upload.onprogress = (evt) => {
+        if (evt.lengthComputable) onProgress(evt.loaded, evt.total)
+      }
+    }
+    xhr.onload = () => {
+      if (xhr.status >= 200 && xhr.status < 300) resolve()
+      else reject(new SarvamBrowserError({
+        status: xhr.status,
+        message: `Upload failed (HTTP ${xhr.status}): ${xhr.responseText?.slice(0, 200) || ''}`,
+      }))
+    }
+    xhr.onerror = () => reject(new SarvamBrowserError({
+      status: 0, message: 'Upload network error — check your connection and retry.',
+    }))
+    xhr.ontimeout = () => reject(new SarvamBrowserError({
+      status: 0, message: 'Upload timed out.',
+    }))
+    xhr.send(file)
+  })
+}
+
+export async function sarvamDocStart(jobId: string): Promise<{ job_id: string; state: string }> {
+  const auth = await getAuthHeader()
+  const resp = await fetch(`${getFunctionsBase()}/.netlify/functions/sarvam-doc-start`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...auth },
+    body: JSON.stringify({ job_id: jobId }),
+  })
+  await throwOnHttpError(resp, 'doc-start')
+  return (await resp.json()) as { job_id: string; state: string }
+}
+
+export async function sarvamDocStatus(jobId: string): Promise<SarvamDocJobStatus> {
+  const auth = await getAuthHeader()
+  const resp = await fetch(
+    `${getFunctionsBase()}/.netlify/functions/sarvam-doc-status?job_id=${encodeURIComponent(jobId)}`,
+    { headers: { ...auth } },
+  )
+  await throwOnHttpError(resp, 'doc-status')
+  return (await resp.json()) as SarvamDocJobStatus
+}
+
+/** Long-poll until terminal. Cadence 2s for first 30s, then 10s,
+ *  cap 90 min total. Same shape as sarvamBatchPollStatus. */
+export async function sarvamDocPollStatus(
+  jobId: string,
+  opts?: {
+    onTick?: (s: SarvamDocJobStatus) => void
+    abortSignal?: AbortSignal
+    maxMs?: number
+  },
+): Promise<SarvamDocJobStatus> {
+  const TERMINAL = new Set(['Completed', 'PartiallyCompleted', 'Failed'])
+  const start = Date.now()
+  const maxMs = opts?.maxMs ?? 90 * 60 * 1000
+  while (true) {
+    if (opts?.abortSignal?.aborted) {
+      throw new SarvamBrowserError({ status: 0, message: 'Polling aborted' })
+    }
+    if (Date.now() - start > maxMs) {
+      throw new SarvamBrowserError({
+        status: 0,
+        message: `Document job ${jobId} did not complete within ${(maxMs / 60000).toFixed(0)} min.`,
+      })
+    }
+    try {
+      const status = await sarvamDocStatus(jobId)
+      opts?.onTick?.(status)
+      if (TERMINAL.has(String(status.job_state || ''))) return status
+    } catch (e) {
+      // eslint-disable-next-line no-console
+      console.warn('[sarvamDocPollStatus] tick failed:', formatSarvamError(e))
+    }
+    const elapsed = Date.now() - start
+    const delay = elapsed < 30_000 ? 2_000 : 10_000
+    await new Promise<void>((r) => setTimeout(r, delay))
+  }
+}
+
+export async function sarvamDocOutput(jobId: string): Promise<SarvamDocJobOutput> {
+  const auth = await getAuthHeader()
+  const resp = await fetch(
+    `${getFunctionsBase()}/.netlify/functions/sarvam-doc-output?job_id=${encodeURIComponent(jobId)}`,
+    { headers: { ...auth } },
+  )
+  await throwOnHttpError(resp, 'doc-output')
+  return (await resp.json()) as SarvamDocJobOutput
+}
+
+/** Convenience: get the signed URL + fetch the result ZIP as a Blob
+ *  (browser → Sarvam CDN, no proxy). Caller is responsible for
+ *  unzipping if they want individual files. */
+export async function sarvamDocFetchOutput(jobId: string): Promise<{ blob: Blob; url: string; expires_at?: string }> {
+  const out = await sarvamDocOutput(jobId)
+  if (!out.output_url) {
+    throw new SarvamBrowserError({ status: 0, message: 'No output URL available — job may not be terminal yet.' })
+  }
+  const r = await fetch(out.output_url)
+  if (!r.ok) {
+    throw new SarvamBrowserError({
+      status: r.status,
+      message: `Output fetch failed: HTTP ${r.status}`,
+    })
+  }
+  const blob = await r.blob()
+  const url = URL.createObjectURL(blob)
+  return { blob, url, expires_at: out.expires_at }
+}
+
 // ── Tiny helper: human-friendly error messages ──────────────
 // Components can call this in a toast / inline error block
 // without parsing status codes themselves.

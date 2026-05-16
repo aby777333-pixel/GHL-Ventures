@@ -285,6 +285,7 @@ export const SARVAM_DEFAULTS = {
 // ── Endpoint constants ──────────────────────────────────────
 export const SARVAM_ENDPOINTS = {
   TTS:                'https://api.sarvam.ai/text-to-speech',
+  TTS_STREAM:         'https://api.sarvam.ai/text-to-speech/stream',
   TTS_WSS:            'wss://api.sarvam.ai/text-to-speech/ws',
   STT:                'https://api.sarvam.ai/speech-to-text',
   STT_TRANSLATE:      'https://api.sarvam.ai/speech-to-text-translate',
@@ -295,12 +296,189 @@ export const SARVAM_ENDPOINTS = {
   TRANSLATE:          'https://api.sarvam.ai/translate',
   TRANSLITERATE:      'https://api.sarvam.ai/transliterate',
   TEXT_LID:           'https://api.sarvam.ai/text-lid',
-  // Batch job lifecycle uses templated paths
+  // Pronunciation dictionary CRUD
+  DICT:               'https://api.sarvam.ai/pronunciation-dictionary',
+  DICT_BY_ID:         (id: string) => `https://api.sarvam.ai/pronunciation-dictionary/${id}`,
+  // Document digitization (job-based)
+  DOC_PARSE:          'https://api.sarvam.ai/parse/parsepdf',
+  DOC_JOB:            (jobId: string) => `https://api.sarvam.ai/parse/parsepdf/${jobId}`,
+  DOC_JOB_START:      (jobId: string) => `https://api.sarvam.ai/parse/parsepdf/${jobId}/start`,
+  DOC_JOB_STATUS:     (jobId: string) => `https://api.sarvam.ai/parse/parsepdf/${jobId}/status`,
+  DOC_JOB_OUTPUT:     (jobId: string) => `https://api.sarvam.ai/parse/parsepdf/${jobId}/output`,
+  // Batch STT job lifecycle uses templated paths
   BATCH_UPLOAD_URL:   (jobId: string) => `https://api.sarvam.ai/speech-to-text/job/${jobId}/upload-url`,
   BATCH_START:        (jobId: string) => `https://api.sarvam.ai/speech-to-text/job/${jobId}/start`,
   BATCH_STATUS:       (jobId: string) => `https://api.sarvam.ai/speech-to-text/job/${jobId}/status`,
   BATCH_OUTPUT_URL:   (jobId: string) => `https://api.sarvam.ai/speech-to-text/job/${jobId}/output-url`,
 } as const
+
+// ── Phase 3a request / response shapes ──────────────────────
+
+// HTTP Streaming TTS — same shape as REST but caller gets the
+// raw audio bytes streamed (we set Content-Type from the codec).
+// Max input bumped to 3500 chars per the spec.
+export interface TtsStreamRequest extends Omit<TtsRequest, 'text'> {
+  text: string                            // ≤ 3500 chars on bulbul:v3
+}
+
+// Pronunciation dictionary — file-based create/list/get/update/delete.
+export interface PronunciationDictEntry {
+  /** Per-language word→pronunciation map.
+   *  Key: BCP-47 lang code (hi-IN, en-IN, ta-IN, etc.)
+   *  Value: { "ORIGINAL": "PHONETIC" } */
+  pronunciations: Partial<Record<SarvamLanguageCode, Record<string, string>>>
+}
+
+export interface PronunciationDictMeta {
+  dictionary_id: string                   // 'p_5cb7faa6'
+  name?: string
+  description?: string
+  word_count?: number
+  languages?: string[]
+  created_at?: string
+  updated_at?: string
+}
+
+export interface PronunciationDictCreateResponse {
+  dictionary_id: string
+}
+
+// Transliteration — script conversion + spoken form.
+// Supported langs: 10 Indic + en (same as mayura:v1 surface).
+export interface TransliterateRequest {
+  input: string                           // ≤ 1000 chars
+  source_language_code: SarvamLanguageCode | 'auto'
+  target_language_code: SarvamLanguageCode
+  /** true = produce a speakable rendering (e.g. "9:30am" → spoken form) */
+  spoken_form?: boolean
+  numerals_format?: NumeralFormat
+}
+
+export interface TransliterateResponse {
+  request_id: string | null
+  transliterated_text: string
+  source_language_code: string
+}
+
+// Language Identification — auto-detect on a piece of free text.
+export interface LIDRequest {
+  input: string                           // ≤ 1000 chars
+}
+
+export interface LIDResponse {
+  request_id: string | null
+  language_code: string | null            // BCP-47 (e.g. 'hi-IN')
+  script_code: string | null              // ISO 15924 (Deva, Latn, Beng, ...)
+}
+
+// Document digitization — async job, like batch STT.
+export const DOC_OUTPUT_FORMATS = ['md', 'html'] as const
+export type DocOutputFormat = typeof DOC_OUTPUT_FORMATS[number]
+
+export interface DocumentJobCreateRequest {
+  language: SarvamLanguageCode             // BCP-47 incl. extended Indic
+  output_format?: DocOutputFormat          // default 'md'
+}
+
+export interface DocumentJobCreateResponse {
+  job_id: string
+  state: 'Accepted' | string
+  upload_url?: string                      // signed PUT URL for the source file
+}
+
+export type DocumentJobState =
+  | 'Accepted' | 'Pending' | 'Running'
+  | 'Completed' | 'PartiallyCompleted' | 'Failed'
+
+export interface DocumentJobStatusResponse {
+  job_id: string
+  job_state: DocumentJobState | string
+  total_pages?: number
+  pages_processed?: number
+  pages_succeeded?: number
+  pages_failed?: number
+  error_message?: string | null
+}
+
+export interface DocumentJobOutputResponse {
+  job_id: string
+  output_url?: string                      // signed GET URL to the result ZIP
+  expires_at?: string
+}
+
+// ── Phase 3a validators ─────────────────────────────────────
+
+const _docFormats = new Set<string>(DOC_OUTPUT_FORMATS)
+
+export function validateTransliterateRequest(raw: unknown): TransliterateRequest {
+  if (!raw || typeof raw !== 'object') throw new ValidationError('Body must be a JSON object')
+  const b = raw as Record<string, unknown>
+  if (typeof b.input !== 'string' || b.input.length === 0) {
+    throw new ValidationError('input is required', 'input')
+  }
+  if (b.input.length > 1000) {
+    throw new ValidationError('input exceeds 1000 chars', 'input')
+  }
+  const src = b.source_language_code
+  if (src !== 'auto' && !isLang(src)) {
+    throw new ValidationError('invalid source_language_code', 'source_language_code')
+  }
+  if (!isLang(b.target_language_code)) {
+    throw new ValidationError('invalid target_language_code', 'target_language_code')
+  }
+  if (b.numerals_format !== undefined && !_numeralFormats.has(String(b.numerals_format))) {
+    throw new ValidationError(`unknown numerals_format: ${b.numerals_format}`, 'numerals_format')
+  }
+  return {
+    input: b.input,
+    source_language_code: b.source_language_code as TransliterateRequest['source_language_code'],
+    target_language_code: b.target_language_code as SarvamLanguageCode,
+    spoken_form: b.spoken_form === true,
+    numerals_format: b.numerals_format as NumeralFormat | undefined,
+  }
+}
+
+export function validateLIDRequest(raw: unknown): LIDRequest {
+  if (!raw || typeof raw !== 'object') throw new ValidationError('Body must be a JSON object')
+  const b = raw as Record<string, unknown>
+  if (typeof b.input !== 'string' || b.input.length === 0) {
+    throw new ValidationError('input is required', 'input')
+  }
+  if (b.input.length > 1000) {
+    throw new ValidationError('input exceeds 1000 chars', 'input')
+  }
+  return { input: b.input }
+}
+
+export function validateDocumentJobCreate(raw: unknown): DocumentJobCreateRequest {
+  if (!raw || typeof raw !== 'object') throw new ValidationError('Body must be a JSON object')
+  const b = raw as Record<string, unknown>
+  if (!isLang(b.language)) {
+    throw new ValidationError('language is required (BCP-47)', 'language')
+  }
+  const fmt = (b.output_format as string | undefined) || 'md'
+  if (!_docFormats.has(fmt)) {
+    throw new ValidationError(`output_format must be 'md' or 'html'`, 'output_format')
+  }
+  return {
+    language: b.language as SarvamLanguageCode,
+    output_format: fmt as DocOutputFormat,
+  }
+}
+
+// HTTP-stream TTS validator — same rules as REST but a higher
+// character cap (3500 on bulbul:v3).
+export function validateTtsStreamRequest(raw: unknown): TtsStreamRequest {
+  // Re-use the REST validator for everything except length, then
+  // cap-check separately. Avoids duplicating the v3 / v2 split.
+  const base = validateTtsRequest(raw) as TtsRequest
+  const model = base.model || SARVAM_DEFAULTS.TTS_MODEL
+  const max = model === 'bulbul:v3' ? 3500 : 1500
+  if (base.text.length > max) {
+    throw new ValidationError(`text exceeds ${max} chars for ${model} stream`, 'text')
+  }
+  return base as TtsStreamRequest
+}
 
 // ── Error envelope returned by Sarvam ───────────────────────
 export interface SarvamErrorEnvelope {
