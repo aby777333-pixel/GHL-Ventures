@@ -496,19 +496,50 @@ function PermissionsTab({ showToast }: { showToast: Toast }) {
       return
     }
     setSaving(true)
+    // Snapshot form fields BEFORE the reset so the optimistic row we push
+    // into adminUsers carries the values the admin actually typed (not the
+    // blanks we set right after success).
+    const snap = {
+      email: form.email.trim().toLowerCase(),
+      full_name: form.full_name.trim(),
+      phone: form.phone.trim(),
+      role: form.role,
+      department: form.department.trim(),
+    }
     try {
       const res = await createAdminUser({
-        email: form.email.trim().toLowerCase(),
-        full_name: form.full_name.trim(),
-        phone: form.phone.trim() || undefined,
-        role: form.role,
-        department: form.department.trim() || undefined,
+        email: snap.email,
+        full_name: snap.full_name,
+        phone: snap.phone || undefined,
+        role: snap.role,
+        department: snap.department || undefined,
         password: form.password,
       })
       if (res.ok) {
-        showToast(`Admin user "${form.full_name}" created`, 'success')
+        showToast(`Admin user "${snap.full_name}" created`, 'success')
         setAddOpen(false)
         setForm({ email: '', full_name: '', phone: '', role: 'admin', department: '', password: '' })
+        // 2026-05-16: optimistically push the new user into the list so the
+        // "No admin users yet" empty-state disappears instantly. The
+        // subsequent loadAll() reconciles with the canonical DB shape (real
+        // id, created_at, etc.) — the temporary id is replaced once that
+        // resolves.
+        if (res.userId) {
+          setAdminUsers(prev => ([
+            {
+              id: res.userId!,
+              email: snap.email,
+              full_name: snap.full_name,
+              phone: snap.phone || null,
+              role: snap.role,
+              department: snap.department || null,
+              last_login_at: null,
+              created_at: new Date().toISOString(),
+              permission_overrides: [],
+            },
+            ...prev,
+          ]))
+        }
         loadAll()
       } else {
         showToast(res.error || 'Failed to create admin user', 'error')
