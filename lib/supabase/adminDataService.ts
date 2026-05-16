@@ -333,6 +333,8 @@ export async function fetchClients(opts?: { includeTrashed?: boolean; trashedOnl
         lastActive: c.updated_at?.split('T')[0] || '',
         assignedRM: c.assigned_rm ? 'Assigned' : 'Not assigned',
         assignedRMId: c.assigned_rm || null,
+        deleted_at: c.deleted_at || null,
+        deleted_reason: c.deleted_reason || null,
       }))
     }
     return (data as any[]).map((c: any) => ({
@@ -357,6 +359,12 @@ export async function fetchClients(opts?: { includeTrashed?: boolean; trashedOnl
       lastActive: c.updated_at?.split('T')[0] || '',
       assignedRM: c.staff_profiles?.profiles?.full_name || 'Not assigned',
       assignedRMId: c.assigned_rm || null,
+      // 2026-05-16: include soft-delete metadata so the Trash tab can show
+      // the trashed-at timestamp + the reason without making a second query.
+      // Previously these were dropped during the map, so TrashedClientsTab
+      // rendered an empty name row and no trashed date.
+      deleted_at: c.deleted_at || null,
+      deleted_reason: c.deleted_reason || null,
     }))
   } catch { return [] }
 }

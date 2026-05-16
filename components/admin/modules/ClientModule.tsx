@@ -145,6 +145,14 @@ export default function ClientModule({ subTab, navigate, showToast }: ClientModu
       loadData()
     } else {
       showToast(res.error || 'Failed to trash client', 'error')
+      // 2026-05-16: if the RPC reported "Already trashed", our in-memory
+      // clients list is the stale party (the row was trashed in another tab
+      // or earlier in this session before a refetch). Reload so the row
+      // stops appearing in All Clients.
+      if (/already trashed/i.test(res.error || '')) {
+        if (selectedClient?.id === client.id) { setProfileModalOpen(false); setSelectedClient(null) }
+        loadData()
+      }
     }
   }, [selectedClient, showToast, loadData])
 
@@ -1572,13 +1580,22 @@ function TrashedClientsTab({
         </div>
       </div>
       <div className="space-y-2">
-        {trashed.map((c: any) => (
+        {trashed.map((c: any) => {
+          // 2026-05-16: fetchClients() returns the mapped shape (name/email/phone),
+          // not raw DB columns. Previously this list read c.full_name and the
+          // trashed-at metadata which were never present in the mapped output,
+          // so each row showed "Unknown" with no trashed date. Fall back to
+          // raw columns too in case the shape changes again.
+          const displayName = c.name || c.full_name || 'Unknown'
+          const initials = String(c.name || c.full_name || c.email || '?')
+            .split(' ').map((n: string) => n[0]).slice(0, 2).join('')
+          return (
           <div key={c.id} className="flex items-center gap-3 p-3 rounded-xl bg-white/[0.02] border border-white/[0.06] hover:bg-white/[0.03] transition-colors">
             <div className="w-9 h-9 rounded-full bg-amber-500/15 flex items-center justify-center text-amber-300 text-xs font-bold flex-shrink-0">
-              {(c.full_name || c.email || '?').split(' ').map((n: string) => n[0]).slice(0, 2).join('')}
+              {initials}
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-white truncate">{c.full_name || 'Unknown'}</p>
+              <p className="text-sm font-medium text-white truncate">{displayName}</p>
               <p className="text-[11px] text-gray-500 truncate">
                 {c.email || c.phone || '—'}
                 {c.deleted_reason && <span className="ml-2 text-gray-600">· {c.deleted_reason}</span>}
@@ -1608,7 +1625,8 @@ function TrashedClientsTab({
               </button>
             </div>
           </div>
-        ))}
+          )
+        })}
       </div>
     </AdminGlass>
   )
