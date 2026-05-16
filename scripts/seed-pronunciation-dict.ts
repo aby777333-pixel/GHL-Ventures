@@ -32,6 +32,38 @@
 
 // Native fetch + FormData on Node 18+, no extra deps.
 
+// ── .env.local auto-loader ──────────────────────────────────
+// Next.js loads .env.local during dev/build automatically, but a
+// standalone Node CLI doesn't. Rather than add the dotenv dep (and
+// to keep this script drop-in for anyone who clones the repo), we
+// do a tiny inline parse of the project's .env.local + .env if
+// present. Variables already set in the real shell env take
+// precedence — never overwrite.
+import { readFileSync } from 'node:fs'
+import { resolve } from 'node:path'
+
+function loadEnvFile(path: string): void {
+  let raw: string
+  try { raw = readFileSync(path, 'utf8') } catch { return }
+  for (const line of raw.split(/\r?\n/)) {
+    const trimmed = line.trim()
+    if (!trimmed || trimmed.startsWith('#')) continue
+    const eq = trimmed.indexOf('=')
+    if (eq < 0) continue
+    const key = trimmed.slice(0, eq).trim()
+    let val = trimmed.slice(eq + 1).trim()
+    // Strip wrapping quotes — single or double.
+    if ((val.startsWith('"') && val.endsWith('"')) || (val.startsWith("'") && val.endsWith("'"))) {
+      val = val.slice(1, -1)
+    }
+    if (!(key in process.env)) process.env[key] = val
+  }
+}
+// Try .env.local first (project convention), then .env. cwd-relative
+// so `npx tsx scripts/seed-pronunciation-dict.ts` works from repo root.
+loadEnvFile(resolve(process.cwd(), '.env.local'))
+loadEnvFile(resolve(process.cwd(), '.env'))
+
 const SARVAM_API_KEY = process.env.SARVAM_API_KEY || ''
 const SUPABASE_URL =
   process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL || ''
