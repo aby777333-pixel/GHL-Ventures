@@ -3206,15 +3206,42 @@ export async function fetchAdminUsers(): Promise<AdminUserRow[]> {
     // negligible and the surface area for future enum-mismatch regressions
     // shrinks to zero.
     const allowed = new Set(ADMIN_ROLE_DB_VALUES)
-    const { data, error } = await sb
+    const runQuery = () => sb
       .from('profiles')
       .select('id, email, full_name, phone, role, department, last_login_at, created_at, permission_overrides')
       .order('created_at', { ascending: false })
+
+    let { data, error } = await runQuery()
+
+    // 2026-05-16: if the first call returns 0 rows for what should be an
+    // authenticated admin session, refresh the JWT and retry once. We've
+    // observed admins land on a screen full of "0 users" despite the DB
+    // having 40+ rows — invariably because the cached session token expired
+    // between page load and now, and PostgREST silently returned [] under
+    // the anon role's RLS. supabase.auth.refreshSession() restores the
+    // authenticated JWT and the retry then succeeds. Only do this once
+    // per call to avoid loops on a genuinely-empty table.
+    if (!error && Array.isArray(data) && data.length === 0) {
+      try {
+        const { data: { session } } = await sb.auth.getSession()
+        if (session?.user) {
+          console.warn('[admin] fetchAdminUsers: got 0 rows on first try; refreshing session and retrying')
+          await sb.auth.refreshSession()
+          const retry = await runQuery()
+          if (!retry.error && Array.isArray(retry.data) && retry.data.length > 0) {
+            console.log('[admin] fetchAdminUsers: recovered after session refresh —', retry.data.length, 'rows')
+            data = retry.data
+            error = null
+          }
+        }
+      } catch (e: any) {
+        console.warn('[admin] fetchAdminUsers: session refresh failed:', e?.message || e)
+      }
+    }
+
     if (error) {
       // 2026-05-16: surface as console.error (not warn) so admins running
-      // into "0 users" can quickly diff vs the working DB query. The most
-      // common cause is a stale JWT — supabase.auth.refreshSession() in the
-      // browser usually clears it.
+      // into "0 users" can quickly diff vs the working DB query.
       console.error('[admin] fetchAdminUsers query failed:', error.message, error)
       return []
     }
@@ -3238,7 +3265,7 @@ export async function fetchAdminUsers(): Promise<AdminUserRow[]> {
       // to the whitelist above.
       console.warn('[admin] fetchAdminUsers: select returned', rows.length, 'rows but none matched admin roles. Sample roles:', rows.slice(0, 5).map((r: any) => r.role))
     } else if (rows.length === 0) {
-      console.warn('[admin] fetchAdminUsers: select returned 0 rows — likely an auth/RLS problem (stale JWT, or signed out)')
+      console.warn('[admin] fetchAdminUsers: still 0 rows after session refresh — likely an auth/RLS problem (signed out, or RLS policy reject)')
     }
     return filtered
   } catch (e: any) {
