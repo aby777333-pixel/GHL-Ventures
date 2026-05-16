@@ -3187,23 +3187,35 @@ export async function fetchAdminUsers(): Promise<AdminUserRow[]> {
   if (!isSupabaseConfigured()) return []
   try {
     const sb = supabase as any
+    // 2026-05-16: previously used `.in('role', ADMIN_ROLE_DB_VALUES)`. When
+    // the user_role enum was missing some values that the array contained,
+    // PostgREST rejected the entire query (HTTP 400) and the whole admin
+    // users list silently became []. After the 20260516 enum-expansion
+    // migration this is fixed, but the PostgREST schema cache can lag
+    // briefly after `ALTER TYPE ... ADD VALUE`, leaving the screen empty
+    // until the next reload. Defensively, we fetch all profiles and filter
+    // client-side. The profiles table is small (<1k rows), so the cost is
+    // negligible and the surface area for future enum-mismatch regressions
+    // shrinks to zero.
+    const allowed = new Set(ADMIN_ROLE_DB_VALUES)
     const { data, error } = await sb
       .from('profiles')
       .select('id, email, full_name, phone, role, department, last_login_at, created_at, permission_overrides')
-      .in('role', ADMIN_ROLE_DB_VALUES)
       .order('created_at', { ascending: false })
     if (error) { console.warn('[admin] fetchAdminUsers:', error.message); return [] }
-    return ((data as any[]) || []).map((u: any) => ({
-      id: u.id,
-      email: u.email,
-      full_name: u.full_name,
-      phone: u.phone,
-      role: u.role,
-      department: u.department,
-      last_login_at: u.last_login_at,
-      created_at: u.created_at,
-      permission_overrides: Array.isArray(u.permission_overrides) ? u.permission_overrides : [],
-    }))
+    return ((data as any[]) || [])
+      .filter((u: any) => allowed.has(String(u.role || '')))
+      .map((u: any) => ({
+        id: u.id,
+        email: u.email,
+        full_name: u.full_name,
+        phone: u.phone,
+        role: u.role,
+        department: u.department,
+        last_login_at: u.last_login_at,
+        created_at: u.created_at,
+        permission_overrides: Array.isArray(u.permission_overrides) ? u.permission_overrides : [],
+      }))
   } catch (e: any) {
     console.warn('[admin] fetchAdminUsers error:', e?.message)
     return []
