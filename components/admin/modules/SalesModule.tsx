@@ -1278,8 +1278,13 @@ async function generateInvestmentDocument(
     <div>Desk No 12, 2D, Queens Court, Montieth Road, Egmore, Chennai-600008.</div>
   </div>`
 
+  // 2026-05-16: per request, the Acknowledgement Letter, Allotment Letter,
+  // and Debenture Agreement render the centred dynamic body only — no
+  // top Landmaxo logo and no green footer band. The Debenture Certificate
+  // is intentionally left untouched since the seal/border layout depends
+  // on the logo + footer staying in place.
   const templates: Record<string, string> = {
-    acknowledgement: `${css}<body>${header}
+    acknowledgement: `${css}<body>
       <p>Ref: [REF] <span style="float:right;">Date: [DATE]</span></p>
       <p>[NAME],<br/>[ADDRESS]<br/>[PHONE]</p>
       <p><strong>Subject: Acknowledgement of investment receipt</strong></p>
@@ -1296,9 +1301,9 @@ async function generateInvestmentDocument(
       <p>The debentures carry an <strong>interest rate of 1% per month</strong> along with an <strong>annual appreciation of 12%</strong>, for a <strong>minimum tenure of three (3) years</strong> from the date of investment. Interest will be paid on or before the <strong>10th of each month</strong>, after deduction of applicable <strong>TDS (currently 10%)</strong> under the Income Tax Act, 1961.</p>
       <p>Debentures may be <strong>redeemed at the investor&rsquo;s option</strong> after completion of the 3-year tenure. <strong>TDS credits</strong> will be reflected in the investor&rsquo;s PAN account on a <strong>quarterly basis</strong>.</p>
       <p class="note">* This is system generated document. Signature authentication is not required. *</p>
-      ${footer}</body>`,
+      </body>`,
 
-    allotment: `${css}<body>${logo}
+    allotment: `${css}<body>
       <p>To <span style="float:right;">Date: [DATE]</span></p>
       <p><strong>[NAME]</strong>,<br/>[ADDRESS]</p>
       <p class="center bold">Subject: Allotment of [FUND]</p>
@@ -1330,7 +1335,7 @@ async function generateInvestmentDocument(
       </table>
       <p class="mt">Duly signed and executed debenture certificate will be sent to you.</p>
       <p class="mt center"><em>* This is a computer generated document and does not require signature. *</em></p>
-      ${footer}</body>`,
+      </body>`,
 
     certificate: `${css}
       <style>.cert-border{border:4px double #C8A951;padding:28px;margin:10px;background:#fff;}.cert-title{text-align:center;font-size:24px;font-weight:800;letter-spacing:3px;margin-bottom:8px;color:#333;}.cert-company{text-align:center;font-size:18px;font-weight:700;margin-bottom:4px;}.cert-sub{text-align:center;font-size:10px;color:#555;margin-bottom:20px;}.cert-body{line-height:1.8;font-size:12px;}.cert-highlight{text-align:center;background:#f8f8f0;border:1px solid #C8A951;padding:10px;margin:16px 0;font-weight:700;font-size:13px;}.cert-fields td{padding:6px 12px;font-size:12px;border:none;}.cert-fields td:first-child{color:#666;width:220px;}</style>
@@ -1371,11 +1376,6 @@ async function generateInvestmentDocument(
     agreement: `${css}
       <style>.clause{margin-bottom:8px;}.clause-title{font-weight:700;margin-top:16px;margin-bottom:6px;font-size:13px;}.schedule-table td,.schedule-table th{border:1px solid #999;padding:5px 8px;font-size:10px;}</style>
       <body>
-      ${logo}
-      <div class="header" style="border-bottom:none;">
-        <h1 style="color:#2d6a2e;">LANDMAXO PROPERTIES PRIVATE LIMITED</h1>
-        <div class="sub">CIN: U70109TN2022PTC151180 | Queens Court, Egmore, Chennai - 600008</div>
-      </div>
       <h2 class="center" style="color:#D0021B;">DEBENTURE SUBSCRIPTION AGREEMENT</h2>
       <p class="right">Date: [DATE]</p>
       <p>This <strong>DEBENTURE INVESTMENT AGREEMENT</strong> is made on this <strong>[DATE]</strong>,</p>
@@ -1453,7 +1453,7 @@ async function generateInvestmentDocument(
         <tr><td>1.</td><td>[DATE]</td><td>[NAME]</td><td>[NUM_DEB]</td><td>[AMOUNT]</td></tr>
         <tr><td colspan="3" class="right bold">Total</td><td class="bold">[NUM_DEB]</td><td class="bold">[AMOUNT]</td></tr>
       </table>
-      ${footer}</body>`,
+      </body>`,
   }
 
   // Tests 28-04-2026 #10: render the document directly with KYC data
