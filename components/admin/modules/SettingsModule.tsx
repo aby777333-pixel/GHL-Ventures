@@ -14,7 +14,7 @@ import AdminBadge from '../shared/AdminBadge'
 import AdminKPICard from '../shared/AdminKPICard'
 import AdminEmptyState from '../shared/AdminEmptyState'
 import AdminCRUDPlaceholder from '../shared/AdminCRUDPlaceholder'
-import { fetchEmployees, getSystemHealth, fetchActivityFeed, fetchAdminUsers, createAdminUser, updateAdminUserRole, updateAdminUserPermissions, deleteAdminUser, fetchPermissionAuditLog, type AdminUserRow, type PermissionAuditRow } from '@/lib/supabase/adminDataService'
+import { fetchEmployees, getSystemHealth, fetchActivityFeed, fetchAdminUsers, createAdminUser, updateAdminUserRole, updateAdminUserPermissions, deleteAdminUser, fetchPermissionAuditLog, fetchCustomRoles, createCustomRole, updateCustomRole, deleteCustomRole, type AdminUserRow, type PermissionAuditRow, type AdminRoleRow } from '@/lib/supabase/adminDataService'
 import { supabase, isSupabaseConfigured } from '@/lib/supabase/client'
 import { ROLE_PERMISSIONS } from '@/lib/admin/adminRBAC'
 import { ROLE_LABELS } from '@/lib/admin/adminAuth'
@@ -1233,25 +1233,34 @@ function PermissionsTab({ showToast }: { showToast: Toast }) {
 }
 
 // ── Roles Tab ───────────────────────────────────────────────────
-// 2026-05-15: Roles tab was a CRUD placeholder ("coming soon"). The
-// system's roles are seeded statically in adminRBAC.ts; runtime role
-// creation is out of scope for now, so this tab surfaces the canonical
-// list with user counts + module-level grants and provides quick
-// access to add a user with that role.
-function RolesTab(_props: { showToast: Toast }) {
-  const roles = Object.keys(ROLE_LABELS) as AdminRole[]
+// 2026-05-16: built-in roles still live in adminRBAC.ts (one row per
+// user_role enum value). Custom roles are stored in public.admin_roles
+// and can be created/edited/deleted from the UI by a Super Admin. The
+// list below merges both sources.
+function RolesTab({ showToast }: { showToast: Toast }) {
+  const builtInRoles = Object.keys(ROLE_LABELS) as AdminRole[]
   const allModules = ['overview', 'clients', 'sales', 'realty-brokers', 'employees', 'assets', 'ai-ops', 'compliance', 'financial', 'analytics', 'comms', 'marketing', 'reports', 'settings']
   const allActions = ['view', 'create', 'edit', 'approve', 'delete', 'export', 'configure']
   const [users, setUsers] = useState<AdminUserRow[]>([])
+  const [customRoles, setCustomRoles] = useState<AdminRoleRow[]>([])
   const [loading, setLoading] = useState(true)
-  const [expandedRole, setExpandedRole] = useState<AdminRole | null>(null)
+  const [expandedRoleKey, setExpandedRoleKey] = useState<string | null>(null)
+  // Create / Edit role modal state.
+  const [roleModalOpen, setRoleModalOpen] = useState(false)
+  const [editingRole, setEditingRole] = useState<AdminRoleRow | null>(null)
+  const [roleForm, setRoleForm] = useState<{ name: string; description: string; permissions: string[] }>({ name: '', description: '', permissions: [] })
+  const [savingRole, setSavingRole] = useState(false)
+  const [deletingRoleId, setDeletingRoleId] = useState<string | null>(null)
 
-  useEffect(() => {
-    let alive = true
+  const loadAll = useCallback(async () => {
     setLoading(true)
-    fetchAdminUsers().then(u => { if (alive) { setUsers(u); setLoading(false) } })
-    return () => { alive = false }
+    const [u, r] = await Promise.all([fetchAdminUsers(), fetchCustomRoles()])
+    setUsers(u)
+    setCustomRoles(r)
+    setLoading(false)
   }, [])
+
+  useEffect(() => { loadAll() }, [loadAll])
 
   const usersByRole = useMemo(() => {
     const map: Record<string, AdminUserRow[]> = {}
@@ -1263,6 +1272,87 @@ function RolesTab(_props: { showToast: Toast }) {
     return map
   }, [users])
 
+  const openCreateRole = () => {
+    setEditingRole(null)
+    setRoleForm({ name: '', description: '', permissions: [] })
+    setRoleModalOpen(true)
+  }
+
+  const openEditRole = (r: AdminRoleRow) => {
+    setEditingRole(r)
+    setRoleForm({ name: r.name, description: r.description || '', permissions: [...r.permissions] })
+    setRoleModalOpen(true)
+  }
+
+  const togglePerm = (token: string) => {
+    setRoleForm(prev => prev.permissions.includes(token)
+      ? { ...prev, permissions: prev.permissions.filter(p => p !== token) }
+      : { ...prev, permissions: [...prev.permissions, token] })
+  }
+
+  const toggleModuleAll = (mod: string) => {
+    const tokens = allActions.map(a => `${a}:${mod}`)
+    const allOn = tokens.every(t => roleForm.permissions.includes(t))
+    setRoleForm(prev => ({
+      ...prev,
+      permissions: allOn
+        ? prev.permissions.filter(p => !tokens.includes(p))
+        : Array.from(new Set([...prev.permissions, ...tokens])),
+    }))
+  }
+
+  const saveRole = async () => {
+    if (!roleForm.name.trim()) { showToast('Role name is required', 'error'); return }
+    setSavingRole(true)
+    try {
+      if (editingRole) {
+        const res = await updateCustomRole(editingRole.id, {
+          name: roleForm.name.trim(),
+          description: roleForm.description.trim() || null,
+          permissions: roleForm.permissions,
+        })
+        if (res === true) {
+          showToast('Role updated', 'success')
+          setRoleModalOpen(false)
+          await loadAll()
+        } else {
+          showToast(res, 'error')
+        }
+      } else {
+        const res = await createCustomRole({
+          name: roleForm.name.trim(),
+          description: roleForm.description.trim(),
+          permissions: roleForm.permissions,
+        })
+        if (typeof res === 'string') {
+          showToast(res, 'error')
+        } else {
+          showToast(`Role "${res.name}" created`, 'success')
+          setRoleModalOpen(false)
+          await loadAll()
+        }
+      }
+    } finally {
+      setSavingRole(false)
+    }
+  }
+
+  const removeRole = async (r: AdminRoleRow) => {
+    if (!confirm(`Delete role "${r.name}"? Users currently linked to it will be detached.`)) return
+    setDeletingRoleId(r.id)
+    try {
+      const res = await deleteCustomRole(r.id)
+      if (res === true) {
+        showToast(`Role "${r.name}" deleted`, 'success')
+        await loadAll()
+      } else {
+        showToast(res, 'error')
+      }
+    } finally {
+      setDeletingRoleId(null)
+    }
+  }
+
   return (
     <div className="space-y-4">
       <AdminGlass>
@@ -1271,12 +1361,19 @@ function RolesTab(_props: { showToast: Toast }) {
             <h3 className="text-sm font-semibold text-white flex items-center gap-2">
               <Shield className="w-4 h-4 text-brand-red" />
               Roles
-              <span className="text-[10px] text-gray-500 font-normal ml-2">{roles.length} roles · {users.length} admin users</span>
+              <span className="text-[10px] text-gray-500 font-normal ml-2">{builtInRoles.length + customRoles.length} roles · {users.length} admin users</span>
             </h3>
             <p className="text-[11px] text-gray-500 mt-0.5 max-w-xl">
               Each admin user belongs to one role. Roles carry a default set of module permissions. Use <span className="text-purple-300">Settings → Permissions → Users → Manage Permissions</span> to grant a specific user extra access beyond their role.
             </p>
           </div>
+          <button
+            onClick={openCreateRole}
+            className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium bg-brand-red/20 text-white border border-brand-red/30 hover:bg-brand-red/30 transition-colors shrink-0"
+          >
+            <Plus className="w-3.5 h-3.5" />
+            Create Role
+          </button>
         </div>
       </AdminGlass>
 
@@ -1284,16 +1381,17 @@ function RolesTab(_props: { showToast: Toast }) {
         <div className="py-8 text-center text-xs text-gray-500"><Loader2 className="w-4 h-4 animate-spin inline mr-2" />Loading roles…</div>
       ) : (
         <div className="space-y-2">
-          {roles.map(role => {
+          {builtInRoles.map(role => {
             const perms = ROLE_PERMISSIONS[role] || []
             const hasWildcard = perms.includes('*')
             const moduleCount = hasWildcard ? allModules.length : allModules.filter(m => perms.some(p => p.endsWith(`:${m}`))).length
             const list = usersByRole[role] || []
-            const isExpanded = expandedRole === role
+            const key = `builtin:${role}`
+            const isExpanded = expandedRoleKey === key
             return (
-              <AdminGlass key={role} className="!p-0 overflow-hidden">
+              <AdminGlass key={key} className="!p-0 overflow-hidden">
                 <button
-                  onClick={() => setExpandedRole(isExpanded ? null : role)}
+                  onClick={() => setExpandedRoleKey(isExpanded ? null : key)}
                   className="w-full flex items-center justify-between p-4 hover:bg-white/[0.02] transition-colors text-left"
                 >
                   <div className="flex items-center gap-3 min-w-0">
@@ -1355,14 +1453,173 @@ function RolesTab(_props: { showToast: Toast }) {
               </AdminGlass>
             )
           })}
+
+          {/* ── Custom roles (DB-backed, editable) ────────────── */}
+          {customRoles.map(role => {
+            const perms = role.permissions || []
+            const hasWildcard = perms.includes('*')
+            const moduleCount = hasWildcard ? allModules.length : allModules.filter(m => perms.some(p => p.endsWith(`:${m}`))).length
+            const key = `custom:${role.id}`
+            const isExpanded = expandedRoleKey === key
+            return (
+              <AdminGlass key={key} className="!p-0 overflow-hidden">
+                <div className="w-full flex items-center justify-between p-4 hover:bg-white/[0.02] transition-colors">
+                  <button
+                    onClick={() => setExpandedRoleKey(isExpanded ? null : key)}
+                    className="flex items-center gap-3 min-w-0 flex-1 text-left"
+                  >
+                    <div className="w-9 h-9 rounded-lg bg-purple-500/15 flex items-center justify-center shrink-0">
+                      <Shield className="w-4 h-4 text-purple-400" />
+                    </div>
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-2">
+                        <p className="text-sm font-semibold text-white truncate">{role.name}</p>
+                        <AdminBadge label="Custom" variant="info" />
+                      </div>
+                      <p className="text-[11px] text-gray-500 truncate">
+                        {role.description ? `${role.description} · ` : ''}{perms.length} permissions · {moduleCount} modules
+                      </p>
+                    </div>
+                  </button>
+                  <div className="flex items-center gap-2 shrink-0 ml-2">
+                    <button
+                      onClick={() => openEditRole(role)}
+                      className="px-2 py-1 rounded-lg text-[11px] font-medium bg-white/[0.04] text-gray-300 border border-white/[0.08] hover:bg-white/[0.08] transition-colors"
+                      title="Edit role"
+                    >
+                      Edit
+                    </button>
+                    <button
+                      onClick={() => removeRole(role)}
+                      disabled={deletingRoleId === role.id}
+                      className="p-1.5 rounded-lg text-red-400 hover:bg-red-500/10 transition-colors disabled:opacity-50"
+                      title="Delete role"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                    <ChevronRight
+                      className={`w-4 h-4 text-gray-500 transition-transform cursor-pointer ${isExpanded ? 'rotate-90' : ''}`}
+                      onClick={() => setExpandedRoleKey(isExpanded ? null : key)}
+                    />
+                  </div>
+                </div>
+                {isExpanded && (
+                  <div className="px-4 pb-4 border-t border-white/[0.04]">
+                    <div className="pt-3 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2">
+                      {allModules.map(mod => {
+                        const modPerms = hasWildcard ? allActions : allActions.filter(a => perms.includes(`${a}:${mod}` as never))
+                        const hasModule = modPerms.length > 0
+                        return (
+                          <div key={mod} className={`p-2.5 rounded-lg border text-[11px] ${hasModule ? 'bg-white/[0.02] border-white/[0.06]' : 'bg-white/[0.01] border-white/[0.03] opacity-40'}`}>
+                            <p className="text-white font-medium capitalize mb-1">{mod.replace(/-/g, ' ')}</p>
+                            {hasModule ? (
+                              <div className="flex flex-wrap gap-1">
+                                {modPerms.map(a => (
+                                  <span key={a} className="px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-400 text-[9px] uppercase font-semibold">{a.charAt(0)}</span>
+                                ))}
+                              </div>
+                            ) : (
+                              <span className="text-gray-600 text-[10px]">No access</span>
+                            )}
+                          </div>
+                        )
+                      })}
+                    </div>
+                  </div>
+                )}
+              </AdminGlass>
+            )
+          })}
         </div>
       )}
 
-      <AdminGlass className="!border-dashed">
-        <p className="text-[11px] text-gray-500">
-          Want to add a brand-new role? Roles are defined in <code className="text-amber-300">lib/admin/adminRBAC.ts</code> (ROLE_PERMISSIONS). For now, edit the file directly and redeploy. Future versions will surface a Create Role form here once an <code className="text-amber-300">admin_roles</code> table is wired in.
-        </p>
-      </AdminGlass>
+      {/* ── Create / Edit Role Modal ────────────────────────────── */}
+      <AdminModal
+        isOpen={roleModalOpen}
+        onClose={() => setRoleModalOpen(false)}
+        title={editingRole ? `Edit Role: ${editingRole.name}` : 'Create Role'}
+        maxWidth="max-w-3xl"
+      >
+        <div className="space-y-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label className="block text-[11px] font-medium text-gray-400 mb-1.5 uppercase tracking-wider">Role Name *</label>
+              <input
+                type="text"
+                value={roleForm.name}
+                onChange={e => setRoleForm(p => ({ ...p, name: e.target.value }))}
+                placeholder="e.g. Senior Analyst"
+                className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-brand-red/40 focus:ring-1 focus:ring-brand-red/20"
+              />
+            </div>
+            <div>
+              <label className="block text-[11px] font-medium text-gray-400 mb-1.5 uppercase tracking-wider">Description</label>
+              <input
+                type="text"
+                value={roleForm.description}
+                onChange={e => setRoleForm(p => ({ ...p, description: e.target.value }))}
+                placeholder="What does this role do?"
+                className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-brand-red/40 focus:ring-1 focus:ring-brand-red/20"
+              />
+            </div>
+          </div>
+
+          <div>
+            <div className="flex items-center justify-between mb-2">
+              <label className="text-[11px] font-medium text-gray-400 uppercase tracking-wider">Permissions ({roleForm.permissions.length})</label>
+              <span className="text-[10px] text-gray-500">Click a module title to toggle all actions</span>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-[400px] overflow-y-auto pr-1">
+              {allModules.map(mod => {
+                const tokens = allActions.map(a => `${a}:${mod}`)
+                const onCount = tokens.filter(t => roleForm.permissions.includes(t)).length
+                const allOn = onCount === tokens.length
+                return (
+                  <div key={mod} className="rounded-xl bg-white/[0.02] border border-white/[0.06] p-2.5">
+                    <div className="flex items-center justify-between mb-1.5">
+                      <button
+                        onClick={() => toggleModuleAll(mod)}
+                        className={`text-sm font-medium capitalize transition-colors ${allOn ? 'text-emerald-300' : 'text-white hover:text-emerald-200'}`}
+                      >
+                        {mod.replace(/-/g, ' ')}
+                      </button>
+                      <span className="text-[10px] text-gray-500">{onCount} of {tokens.length}</span>
+                    </div>
+                    <div className="flex flex-wrap gap-1.5">
+                      {allActions.map(action => {
+                        const token = `${action}:${mod}`
+                        const on = roleForm.permissions.includes(token)
+                        return (
+                          <button
+                            key={token}
+                            onClick={() => togglePerm(token)}
+                            className={`px-2 py-0.5 rounded text-[10px] font-medium uppercase tracking-wider transition-colors ${
+                              on
+                                ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40'
+                                : 'bg-white/[0.03] text-gray-500 border border-white/[0.08] hover:bg-white/[0.06]'
+                            }`}
+                          >
+                            {action}
+                          </button>
+                        )
+                      })}
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+
+          <div className="flex justify-end gap-2 pt-4 border-t border-white/[0.06]">
+            <ModalButton variant="secondary" onClick={() => setRoleModalOpen(false)} disabled={savingRole}>
+              Cancel
+            </ModalButton>
+            <ModalButton variant="primary" onClick={saveRole} disabled={savingRole || !roleForm.name.trim()}>
+              {savingRole ? (<><Loader2 className="w-3.5 h-3.5 animate-spin" />Saving…</>) : (editingRole ? 'Update Role' : 'Create Role')}
+            </ModalButton>
+          </div>
+        </div>
+      </AdminModal>
     </div>
   )
 }

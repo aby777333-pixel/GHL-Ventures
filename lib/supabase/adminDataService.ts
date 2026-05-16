@@ -849,6 +849,107 @@ export async function fetchRiskFlags() {
   return queryTable<any>('risk_flags')
 }
 
+// ── Custom Admin Roles ─────────────────────────────────────
+// 2026-05-16: Super-Admins can define new permission templates from
+// Settings → Roles without redeploying. Built-in roles still live in
+// lib/admin/adminRBAC.ts; this table stores the user-defined ones.
+export interface AdminRoleRow {
+  id: string
+  key: string
+  name: string
+  description: string | null
+  permissions: string[]
+  is_active: boolean
+  created_by: string | null
+  created_at: string
+  updated_at: string
+}
+
+export async function fetchCustomRoles(): Promise<AdminRoleRow[]> {
+  if (!isSupabaseConfigured()) return []
+  try {
+    const { data, error } = await (supabase
+      .from('admin_roles')
+      .select('*')
+      .order('created_at', { ascending: false }) as any)
+    if (error || !data) return []
+    return (data as any[]).map(r => ({
+      ...r,
+      permissions: Array.isArray(r.permissions) ? r.permissions : [],
+    }))
+  } catch { return [] }
+}
+
+function slugifyRoleKey(name: string): string {
+  return name.toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 60) || `role-${Date.now()}`
+}
+
+export async function createCustomRole(input: {
+  name: string
+  description?: string
+  permissions: string[]
+}): Promise<AdminRoleRow | string> {
+  if (!isSupabaseConfigured()) return 'Supabase not configured'
+  const name = (input.name || '').trim()
+  if (!name) return 'Role name is required'
+  if (!Array.isArray(input.permissions)) return 'Permissions must be an array'
+  try {
+    const sb: any = supabase
+    const { data: { user } } = await sb.auth.getUser()
+    const key = slugifyRoleKey(name)
+    const { data, error } = await sb
+      .from('admin_roles')
+      .insert({
+        key,
+        name,
+        description: input.description || null,
+        permissions: input.permissions,
+        is_active: true,
+        created_by: user?.id || null,
+      })
+      .select('*')
+      .single()
+    if (error) {
+      if ((error.message || '').includes('duplicate')) return 'A role with this name already exists'
+      return error.message || 'Failed to create role'
+    }
+    return { ...data, permissions: Array.isArray(data.permissions) ? data.permissions : [] }
+  } catch (err: any) {
+    return err?.message || 'Failed to create role'
+  }
+}
+
+export async function updateCustomRole(id: string, patch: Partial<{
+  name: string
+  description: string | null
+  permissions: string[]
+  is_active: boolean
+}>): Promise<true | string> {
+  if (!isSupabaseConfigured()) return 'Supabase not configured'
+  try {
+    const sb: any = supabase
+    const { error } = await sb.from('admin_roles').update(patch).eq('id', id)
+    if (error) return error.message || 'Failed to update role'
+    return true
+  } catch (err: any) {
+    return err?.message || 'Failed to update role'
+  }
+}
+
+export async function deleteCustomRole(id: string): Promise<true | string> {
+  if (!isSupabaseConfigured()) return 'Supabase not configured'
+  try {
+    const sb: any = supabase
+    // Detach any users currently linked to this role before deletion.
+    await sb.from('profiles').update({ custom_role_id: null }).eq('custom_role_id', id)
+    const { error } = await sb.from('admin_roles').delete().eq('id', id)
+    if (error) return error.message || 'Failed to delete role'
+    return true
+  } catch (err: any) {
+    return err?.message || 'Failed to delete role'
+  }
+}
+
 export async function fetchAuditLog() {
   if (!isSupabaseConfigured()) return []
   try {
