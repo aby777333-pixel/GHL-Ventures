@@ -20,7 +20,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   Plus, Trash2, GripVertical, Download, Eye, Type, ListChecks,
   Heading1, AlignLeft, AlignJustify, Image as ImageIcon, PenLine, FileText, Loader2,
-  RefreshCw, Library, Table as TableIcon, Building2, Move,
+  RefreshCw, Library, Table as TableIcon, Building2, Move, ChevronUp, ChevronDown,
 } from 'lucide-react'
 import { jsPDF } from 'jspdf'
 import {
@@ -193,6 +193,22 @@ export default function DocumentBuilderModal({ open, onClose, showToast, inline 
   const updateBlock = useCallback((id: string, patch: Partial<Block>) => {
     setBlocks(bs => bs.map(b => b.id === id ? ({ ...b, ...patch } as Block) : b))
   }, [])
+  // 2026-05-16: explicit Up / Down reorder. HTML5 drag-and-drop is fragile
+  // here because every block hosts <input>/<textarea> editors — clicking to
+  // edit text routinely starts a drag and breaks selection, and many admins
+  // never figured out the drag at all. Buttons are predictable.
+  const moveBlock = useCallback((id: string, dir: -1 | 1) => {
+    setBlocks(bs => {
+      const idx = bs.findIndex(b => b.id === id)
+      if (idx < 0) return bs
+      const target = idx + dir
+      if (target < 0 || target >= bs.length) return bs
+      const next = bs.slice()
+      const [moved] = next.splice(idx, 1)
+      next.splice(target, 0, moved)
+      return next
+    })
+  }, [])
 
   const onDragStart = (id: string) => { dragId.current = id }
   const onDragOver = (e: React.DragEvent) => { e.preventDefault() }
@@ -270,6 +286,21 @@ export default function DocumentBuilderModal({ open, onClose, showToast, inline 
 
   useEffect(() => { if (open || inline) loadLibrary() }, [open, inline, loadLibrary])
 
+  // 2026-05-15: refresh the library whenever DocumentUploadModal finishes an
+  // upload, so newly-uploaded images appear without the user clicking the
+  // small Refresh button. The event is dispatched on the window so this
+  // component doesn't need a direct prop wire-up.
+  useEffect(() => {
+    if (!open && !inline) return
+    if (typeof window === 'undefined') return
+    const handler = () => { loadLibrary() }
+    window.addEventListener('ghl-library-uploaded', handler)
+    return () => window.removeEventListener('ghl-library-uploaded', handler)
+  }, [open, inline, loadLibrary])
+
+  // (insertImageFromLibrary defined below; the related useEffect is mounted
+  // after the callback so the dependency reference resolves correctly.)
+
   // ── Library actions ───────────────────────────────────────────
   // Fetches the chosen image and converts to a data URL so the exporters
   // can embed it without another network hop. The fetch is CORS-friendly
@@ -324,6 +355,28 @@ export default function DocumentBuilderModal({ open, onClose, showToast, inline 
       setInsertingId(null)
     }
   }, [showToast])
+
+  // 2026-05-15: when an admin clicks Insert on a library tile inside the
+  // View Library modal, drop a fresh Image block into the canvas. The
+  // event carries the resolved public/signed URL + a display title.
+  // (Mounted after insertImageFromLibrary so the reference resolves.)
+  useEffect(() => {
+    if (!open && !inline) return
+    if (typeof window === 'undefined') return
+    const handler = (e: Event) => {
+      const detail = (e as CustomEvent).detail || {}
+      const img: LibraryImage = {
+        id: `lib-${Math.random().toString(36).slice(2, 10)}`,
+        title: String(detail.title || 'Library image'),
+        fileName: String(detail.fileName || detail.title || 'image'),
+        url: String(detail.url || ''),
+        thumbUrl: String(detail.url || ''),
+      }
+      if (img.url) void insertImageFromLibrary(img)
+    }
+    window.addEventListener('ghl-library-insert-image', handler)
+    return () => window.removeEventListener('ghl-library-insert-image', handler)
+  }, [open, inline, insertImageFromLibrary])
 
   // Field templates — drop a Heading + KV List block pair sourced from
   // DOCUMENT_TEMPLATES so the admin doesn't have to type the placeholder
@@ -807,17 +860,47 @@ export default function DocumentBuilderModal({ open, onClose, showToast, inline 
               No blocks yet — add one from the panel on the left.
             </div>
           )}
-          {blocks.map(b => (
+          {blocks.map((b, idx) => (
             <div
               key={b.id}
-              draggable
-              onDragStart={() => onDragStart(b.id)}
               onDragOver={onDragOver}
               onDrop={() => onDrop(b.id)}
               className="rounded-xl bg-white/[0.04] border border-white/[0.06] p-3"
             >
               <div className="flex items-start gap-2">
-                <span title="Drag to reorder" className="mt-1"><GripVertical className="w-4 h-4 text-gray-500 cursor-grab" /></span>
+                {/* Reorder controls — explicit Up/Down + drag handle.
+                    Drag is scoped to the handle only so input/textarea
+                    selection inside the block never triggers a drag. */}
+                <div className="flex flex-col items-center gap-0.5 mt-0.5">
+                  <button
+                    type="button"
+                    onClick={() => moveBlock(b.id, -1)}
+                    disabled={idx === 0}
+                    className="p-0.5 text-gray-500 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                    title="Move block up"
+                    aria-label="Move block up"
+                  >
+                    <ChevronUp className="w-3.5 h-3.5" />
+                  </button>
+                  <span
+                    draggable
+                    onDragStart={() => onDragStart(b.id)}
+                    title="Drag to reorder"
+                    className="cursor-grab active:cursor-grabbing"
+                  >
+                    <GripVertical className="w-4 h-4 text-gray-500" />
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => moveBlock(b.id, 1)}
+                    disabled={idx === blocks.length - 1}
+                    className="p-0.5 text-gray-500 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                    title="Move block down"
+                    aria-label="Move block down"
+                  >
+                    <ChevronDown className="w-3.5 h-3.5" />
+                  </button>
+                </div>
                 <div className="flex-1">
                   <BlockEditor block={b} onChange={(patch) => updateBlock(b.id, patch)} />
                 </div>

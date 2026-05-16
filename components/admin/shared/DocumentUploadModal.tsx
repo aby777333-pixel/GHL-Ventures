@@ -152,15 +152,23 @@ export default function DocumentUploadModal({ open, onClose, showToast, onUpload
           description: item.description,
           trackRecord: false, // we insert into `documents` directly below
         })
-        if (!up.success) {
+        if (!up.success || !up.file?.path) {
           updateStaged(item.id, { status: 'error', error: up.error || 'Upload failed' })
           failCount++
           continue
         }
 
+        // 2026-05-16: uploadFile() adds a timestamp prefix to the object name
+        // (buildPath → `${ts}_${safe}`), so we MUST persist the actual returned
+        // path. Hardcoding `admin/documents/<name>` left signed-URL generation
+        // pointing at a non-existent object — the Image Library + Documents
+        // grid preview silently failed for every uploaded image until this fix.
+        const storedBucket = up.file.bucket || 'ghl-documents'
+        const storedPath = up.file.path
+
         const inserted = await insertRow('documents', {
           title: item.title || item.file.name,
-          file_url: `supabase://ghl-documents/admin/documents/${item.file.name}`,
+          file_url: `supabase://${storedBucket}/${storedPath}`,
           file_name: item.file.name,
           file_type: (item.file.name.split('.').pop() || 'bin').toLowerCase(),
           mime_type: item.file.type || 'application/octet-stream',
@@ -176,8 +184,8 @@ export default function DocumentUploadModal({ open, onClose, showToast, onUpload
           description: item.description || null,
           metadata: {
             source: 'admin-upload',
-            bucket: 'ghl-documents',
-            path: `admin/documents/${item.file.name}`,
+            bucket: storedBucket,
+            path: storedPath,
             original_filename: item.file.name,
           },
         })
@@ -197,6 +205,14 @@ export default function DocumentUploadModal({ open, onClose, showToast, onUpload
     if (okCount > 0) {
       showToast(`${okCount} file(s) uploaded${failCount ? ` (${failCount} failed)` : ''}.`, 'success')
       onUploaded?.()
+      // 2026-05-15: broadcast so the Document Builder's Image Library and
+      // any future library panels can refresh themselves without waiting
+      // for the parent to re-render.
+      try {
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(new CustomEvent('ghl-library-uploaded', { detail: { count: okCount } }))
+        }
+      } catch { /* ignore */ }
     }
     if (failCount > 0 && okCount === 0) {
       showToast('Upload failed — see per-row errors.', 'error')
