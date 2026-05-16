@@ -441,6 +441,18 @@ export async function fetchKYCDocuments() {
     }
     for (const cid of Object.keys(nomineesByClient)) {
       const nominees = nomineesByClient[cid]
+      // 2026-05-16: nominees doesn't track its own approval column the way
+      // kyc_*_details do, so we derive the row's display status from the
+      // parent client.kyc_status. When the admin clicks Approve All on the
+      // client, kyc_status flips to 'verified' — the nominee chip then
+      // mirrors that decision instead of perpetually rendering 'submitted'
+      // (which used to keep approved clients out of the Approved tab).
+      const cks = String(clientStatusMap.get(cid) || 'pending').toLowerCase()
+      const derivedStatus = cks === 'verified' || cks === 'approved'
+        ? 'approved'
+        : cks === 'rejected'
+        ? 'rejected'
+        : 'submitted'
       kycItems.push({
         id: `nominee-${cid}`,
         clientId: cid,
@@ -450,7 +462,7 @@ export async function fetchKYCDocuments() {
         table: 'nominees',
         fileName: `${nominees.length} nominee(s)`,
         uploadDate: nominees[0]?.created_at || '',
-        status: 'submitted',
+        status: derivedStatus,
         reviewer: null,
         notes: '',
         data: nominees,
