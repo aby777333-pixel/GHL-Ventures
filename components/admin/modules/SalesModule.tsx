@@ -1377,85 +1377,200 @@ async function generateInvestmentDocument(
       </div>
       ${footer}</body>`,
 
+    // 2026-05-16: Debenture Agreement re-templated to match the
+    // Landmaxo reference (no logo, no footer; top half of page 1
+    // intentionally blank so a physical Rs.100 non-judicial stamp
+    // paper can be affixed; agreement body starts mid-page-1).
+    // Dynamic fields: [LONG_DATE_ORDINAL] ("27th of February, 2026"),
+    // [SHORT_DATE] ("27-02-2026"), [NAME], [NAME_CAPS], [ADDRESS],
+    // [EMAIL], [NUM_DEB], [AMOUNT]. All other field names from the
+    // prior template are still supported by the populator but
+    // unused in this body.
     agreement: `${css}
-      <style>.clause{margin-bottom:8px;}.clause-title{font-weight:700;margin-top:16px;margin-bottom:6px;font-size:13px;}.schedule-table td,.schedule-table th{border:1px solid #999;padding:5px 8px;font-size:10px;}</style>
+      <style>
+        .clause{margin-bottom:8px;line-height:1.55;}
+        .clause-title{font-weight:700;margin-top:16px;margin-bottom:6px;font-size:13px;}
+        .schedule-table td,.schedule-table th{border:1px solid #999;padding:5px 8px;font-size:10px;}
+        .page-break{page-break-after:always;break-after:page;}
+        .stamp-spacer{height:135mm;}
+        .agreement-cover{min-height:220mm;display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;font-size:14px;line-height:2.2;}
+        .notices-table{width:100%;border-collapse:collapse;font-size:11px;margin-top:8px;}
+        .notices-table th,.notices-table td{border:1px solid #999;padding:6px 10px;vertical-align:top;}
+        .sig-row{display:flex;justify-content:space-between;align-items:flex-start;}
+        .sig-block{width:45%;}
+        .sig-line{border-top:1px solid #333;padding-top:4px;font-size:11px;margin-top:48px;}
+        ol.whereas{padding-left:22px;}
+        ol.whereas li{margin-bottom:10px;line-height:1.55;}
+      </style>
       <body>
-      <h2 class="center" style="color:#D0021B;">DEBENTURE SUBSCRIPTION AGREEMENT</h2>
-      <p class="right">Date: [DATE]</p>
-      <p>This <strong>DEBENTURE INVESTMENT AGREEMENT</strong> is made on this <strong>[DATE]</strong>,</p>
-      <p><strong>BETWEEN</strong></p>
-      <p class="clause"><strong>M/s. Landmaxo Properties Private Limited</strong> (CIN: U70109TN2022PTC151180), a private limited Company incorporated under the Companies Act, 2013 and having Registered office at 2D, Queens Court, No. 6, Montieth Road, Egmore, Chennai - 600008 (hereinafter referred to as the &ldquo;<strong>Company</strong>&rdquo;), represented through its Authorised Signatory Mr. V. Rajkumar of the <strong>FIRST PART</strong>; and</p>
-      <p class="clause"><strong>[NAME]</strong>, Residing At [ADDRESS] (hereinafter referred to as the &ldquo;<strong>Investor</strong>&rdquo;) and shall unless it be repugnant to the context or meaning thereof be deemed to mean and include him/herself and his/her nominees to the extent specified herein and their respective heirs, executors, administrators and assigns of the <strong>SECOND PART</strong>;</p>
-      <p>(The Company and the Investor are hereinafter individually referred to as &ldquo;Party&rdquo; and collectively as &ldquo;Parties&rdquo;.)</p>
 
-      <div class="clause-title">1. DEFINITIONS AND INTERPRETATION</div>
-      <p class="clause">1.1 &ldquo;<strong>Debentures</strong>&rdquo; means Secured, Non-Convertible Debentures of face value of Rs. 10/- each issued by the Company.</p>
-      <p class="clause">1.2 &ldquo;<strong>Subscription Amount</strong>&rdquo; means Rs. [AMOUNT]/- (Rupees [AMOUNT_WORDS] Only).</p>
-      <p class="clause">1.3 &ldquo;<strong>Tenure</strong>&rdquo; means [TENURE] from the date of allotment unless redeemed earlier as per Clause 6.</p>
-      <p class="clause">1.4 &ldquo;<strong>Interest Rate</strong>&rdquo; means 1% per month (12% per annum) payable monthly.</p>
+      <!-- ── Page 1 — Stamp paper preamble ─────────────
+           Top half is left blank intentionally so a physical
+           Rs. 100 non-judicial stamp paper can be affixed by
+           the company. The agreement preamble + signatures
+           sit in the lower half. -->
+      <div class="stamp-spacer"></div>
+      <p style="line-height:1.7;">This Stamp paper form part of Debenture Investment Agreement dated <strong>[LONG_DATE_ORDINAL]</strong>, entered between <strong>LANDMAXO PROPERTIES PRIVATE LIMITED</strong> and <strong>[NAME]</strong>.</p>
 
-      <div class="clause-title">2. SUBSCRIPTION</div>
-      <p class="clause">2.1 The Subscriber agrees to subscribe to [NUM_DEB] Secured, Non-Convertible Debentures of Rs. 10/- each, aggregating to Rs. [AMOUNT]/- (Rupees [AMOUNT_WORDS] Only).</p>
-      <p class="clause">2.2 The Company agrees to allot the said Debentures to the Subscriber upon receipt of the Subscription Amount.</p>
-
-      <div class="clause-title">3. INTEREST AND PAYMENTS</div>
-      <p class="clause">3.1 The Debentures shall carry interest at the rate of <strong>1% per month</strong> on the face value of the Debentures.</p>
-      <p class="clause">3.2 Interest shall be paid monthly, on or before the 10th of each calendar month, by way of direct bank transfer to the Subscriber&rsquo;s designated bank account.</p>
-      <p class="clause">3.3 An annual appreciation of <strong>12% per annum</strong> shall be applicable on the principal investment amount.</p>
-      <p class="clause">3.4 Tax Deducted at Source (TDS) at the rate of 10% (or as applicable under the Income Tax Act, 1961) shall be deducted before disbursement of interest.</p>
-
-      <div class="clause-title">4. SECURITY</div>
-      <p class="clause">4.1 The Debentures are secured by a charge on the assets of the Company as determined by the Board of Directors from time to time.</p>
-      <p class="clause">4.2 A Debenture Trust Deed shall be executed in favour of the Debenture Trustee for the benefit of the Debenture Holders.</p>
-
-      <div class="clause-title">5. TENURE AND LOCK-IN</div>
-      <p class="clause">5.1 The minimum lock-in period for the Debentures shall be [TENURE] from the date of allotment.</p>
-      <p class="clause">5.2 The Debentures shall not be transferable during the lock-in period except with the prior written consent of the Company.</p>
-
-      <div class="clause-title">6. REDEMPTION</div>
-      <p class="clause">6.1 Upon completion of the tenure, the Subscriber may opt for redemption of the Debentures at face value plus accrued appreciation.</p>
-      <p class="clause">6.2 Early redemption may be permitted at the sole discretion of the Company, subject to applicable exit load/charges if any.</p>
-      <p class="clause">6.3 The Subscriber may also opt for renewal of the Debentures for a further term on mutually agreed terms.</p>
-
-      <div class="clause-title">7. REPRESENTATIONS AND WARRANTIES</div>
-      <p class="clause">7.1 The Subscriber represents that the funds invested are from legitimate sources and are not proceeds of any illegal activity.</p>
-      <p class="clause">7.2 The Company represents that it is duly incorporated and authorized to issue the Debentures.</p>
-
-      <div class="clause-title">8. EVENTS OF DEFAULT</div>
-      <p class="clause">8.1 Non-payment of interest for a continuous period of 3 months shall constitute an event of default.</p>
-      <p class="clause">8.2 Upon occurrence of an event of default, the Subscriber shall have the right to demand immediate redemption of the Debentures.</p>
-
-      <div class="clause-title">9. GOVERNING LAW AND JURISDICTION</div>
-      <p class="clause">9.1 This Agreement shall be governed by and construed in accordance with the laws of India.</p>
-      <p class="clause">9.2 Any disputes arising under this Agreement shall be subject to the exclusive jurisdiction of the courts in Chennai, Tamil Nadu.</p>
-
-      <div class="clause-title">10. GENERAL</div>
-      <p class="clause">10.1 This Agreement constitutes the entire understanding between the Parties with respect to the subject matter hereof.</p>
-      <p class="clause">10.2 No amendment or modification of this Agreement shall be valid unless made in writing and signed by both Parties.</p>
-      <p class="clause">10.3 All notices under this Agreement shall be in writing and delivered to the registered addresses of the respective Parties.</p>
-
-      <p class="mt"><strong>IN WITNESS WHEREOF</strong>, the Parties have executed this Agreement on the date first written above.</p>
-
-      <div style="display:flex;justify-content:space-between;margin-top:40px;">
-        <div style="width:45%;">
+      <div class="sig-row" style="margin-top:32mm;">
+        <div class="sig-block">
           <p class="bold">For Landmaxo Properties Pvt Ltd</p>
-          <div style="height:60px;"></div>
-          <div style="border-top:1px solid #333;padding-top:4px;font-size:11px;">V. Rajkumar<br/>(Authorised Signatory)</div>
-          <p style="font-size:10px;margin-top:8px;">Date: [DATE]</p>
+          <p class="sig-line">V. Rajkumar<br/>(Authorised Signatory)</p>
         </div>
-        <div style="width:45%;text-align:right;">
+        <div class="sig-block" style="text-align:left;">
           <p class="bold">Investor</p>
-          <div style="height:60px;"></div>
-          <div style="border-top:1px solid #333;padding-top:4px;font-size:11px;">[NAME]<br/>(Investor)</div>
-          <p style="font-size:10px;margin-top:8px;">PAN: [PAN]<br/>Address: [ADDRESS]<br/>Date: [DATE]</p>
+          <p class="sig-line">[NAME]<br/>(Investor)</p>
         </div>
       </div>
 
-      <h3 class="center mt" style="margin-top:32px;">Schedule - I</h3>
+      <div class="page-break"></div>
+
+      <!-- ── Page 2 — Title / Cover ──────────────────── -->
+      <div class="agreement-cover">
+        <p style="font-size:16px;font-weight:700;letter-spacing:1px;margin:0 0 24px;">DEBENTURE INVESTMENT AGREEMENT</p>
+        <p style="margin:0 0 24px;">EXECUTED BETWEEN</p>
+        <p style="font-weight:700;margin:0 0 4px;">LANDMAXO PROPERTIES PRIVATE LIMITED</p>
+        <p style="margin:0 0 24px;">(&ldquo;COMPANY&rdquo;)</p>
+        <p style="margin:0 0 24px;">AND</p>
+        <p style="font-weight:700;margin:0 0 4px;">[NAME_CAPS]</p>
+        <p style="margin:0;">(&ldquo;INVESTOR&rdquo;)</p>
+      </div>
+
+      <div class="page-break"></div>
+
+      <!-- ── Page 3+ — Agreement body ────────────────── -->
+      <h2 class="center">DEBENTURE INVESTMENT AGREEMENT</h2>
+      <p class="mt">This <strong>DEBENTURE INVESTMENT AGREEMENT</strong> is made on this <strong>[LONG_DATE_ORDINAL]</strong>,</p>
+      <p class="center"><strong>BETWEEN</strong></p>
+      <p class="clause"><strong>M/s. Landmaxo Properties Private Limited</strong> (CIN: U70109TN2022PTC151180) a private limited Company incorporated under the Companies Act, 2013 and having Registered office at 2D, Queens Court, No. 6, Montieth Road, Egmore, Chennai - 600008 (hereinafter referred to as the &ldquo;<strong>Company</strong>&rdquo;), represented through its Authorised Signatory Mr. V.Rajkumar of the <strong>FIRST PART</strong>; and</p>
+      <p class="clause"><strong>[NAME]</strong>, Residing At [ADDRESS] (hereinafter referred to as the &ldquo;<strong>Investor</strong>&rdquo;) and shall unless it be repugnant to the context or meaning thereof be deemed to mean and include him/herself and his/her nominees to the extent specified herein and their respective heirs, executors, administrators and assigns of the <strong>SECOND PART</strong>;</p>
+
+      <p class="mt"><strong>WHEREAS:</strong></p>
+      <ol class="whereas">
+        <li>The Company is engaged in the business of Flipping of Stressed Real Estate Asset, by investing its fund into the units of various AIF registered with the Securities and Exchange Board of India.</li>
+        <li>The Investor has accepted the offer made by the Company for the subscription of <strong>12% Redeemable, Secured, Non-Convertible Debentures</strong> with premium for redemption @12% per Annum <strong>(total 24%)</strong> (hereinafter referred to as the &ldquo;<strong>Debentures</strong>&rdquo;) for a minimum term of <strong>three (3) years</strong> and maximum term of <strong>ten (10) years</strong>, and the Company has agreed to issue and allot the said Debentures to the Investor.</li>
+        <li>The Parties now wish to record the terms and conditions of their mutual understanding in respect of this Transaction.</li>
+      </ol>
+
+      <p class="mt"><strong>IT IS NOW AGREED AS UNDER:</strong></p>
+
+      <div class="clause-title">1. Subscription for Debenture</div>
+      <p class="clause">Investor agrees to subscribe for, and the Company agrees to issue and allot to Investor, such number of Debentures at such price as is set out against their name in <strong>&ldquo;Schedule I&rdquo;</strong>.</p>
+
+      <div class="clause-title">2. Interest</div>
+      <p class="clause">The Interest for the Debenture is fixed at 12 % per annum (payable @ 1%/month). TDS shall be deductible as per the rate specified in Income Tax act, 1961. The total sum of interest payable per annum inclusive of TDS is Rs. 1,20,000/Annum (One Lakh Twenty Thousand only)</p>
+
+      <div class="clause-title">3. Appreciation</div>
+      <p class="clause">The Debenture Value shall accrue appreciation at the rate of twelve percent <strong>(12%) per annum</strong>, calculated on a simple interest basis and not on a compounding basis. Such appreciation shall be added to the principal Debenture Value as premium and at the time of redemption which shall be treated as premium payable upon redemption. The applicable appreciation rates, accrual methodology, and the corresponding redemption values shall be as published and updated from time to time in the Investor Dashboard section of the GHL India Ventures website, and such published information shall be deemed to form an integral and binding part of this Agreement.</p>
+
+      <div class="clause-title">4. Tenure</div>
+      <p class="clause">Total tenure is 10 years with option to redeem at any time after 3 years at the option of the investor.</p>
+
+      <div class="clause-title">5. Redemption</div>
+      <p class="clause">The Debentures will be redeemed at a premium @ 12% per Annum by the Company at the end of the tenure. Upon full and final payment towards redemption of debentures, the Company shall file a Satisfaction of charge with the Registrar of Companies.</p>
+
+      <div class="clause-title">6. Security Creation</div>
+      <p class="clause">The Company shall, for securing the due repayment of the Debentures together with interest, appoint a Debenture Trustee in accordance with applicable laws. Upon completion of the issue and allotment of the Debentures, the Company shall execute a Mortgage Deed - Pledge Agreement in respect of the identified asset (Property, Units of AIF) in favour of the Debenture Trustee, who shall hold the same for the benefit of and in trust for the Debenture-holders.</p>
+
+      <div class="clause-title">7. Representations and Warranties</div>
+      <p class="clause">The Company represents to the Investor that:</p>
+      <p class="clause">The Company is a duly incorporated and validly existing Company under the laws of India, and has full power and authority to enter into this Agreement and to perform its obligations under this Agreement;</p>
+      <p class="clause">The execution and delivery of this Agreement by the Company and the performance of its obligations under this Agreement have been duly and validly authorized by all necessary corporate action. This Agreement constitutes a legal, valid, and binding obligation of the Company, enforceable against the Company in accordance with the terms contained herein.</p>
+      <p class="clause">The Company has the power and authority to issue Debentures to the Investor.</p>
+
+      <div class="clause-title">8. Termination</div>
+      <p class="clause"><strong>8.1</strong> This Agreement shall terminate in the manner stated below:</p>
+      <p class="clause" style="padding-left:18px;"><strong>8.1.1</strong> With respect to any Party, upon transfer of a Debenture, such Party ceases to hold any Debenture or</p>
+      <p class="clause" style="padding-left:18px;"><strong>8.1.2</strong> With respect to any Party, upon redemption of a Debenture, such Party ceases to hold any Debenture or</p>
+      <p class="clause"><strong>8.2</strong> The rights and obligations of the Parties under this Agreement, which either expressly or by their nature survive the termination of this Agreement, shall not be extinguished by the termination of this Agreement.</p>
+      <p class="clause"><strong>8.3</strong> The termination of this Agreement in any of the circumstances aforesaid shall not in any way affect or prejudice any right accrued to any Party against the other Parties, prior to such termination</p>
+
+      <div class="clause-title">9. Notices</div>
+      <p class="clause"><strong>9.1</strong> All notices which are required to be given hereunder shall be in writing and shall be sent to the address of the recipient set out in the Agreement or such other address as the recipient may designate by notice given in writing to all the Parties. Any such notice may be delivered personally or by registered post, with acknowledgement of delivery due, e-mail, or facsimile transmission (receipt confirmed).</p>
+      <p class="clause">Unless otherwise changed by notice delivered in the manner provided above, the addresses to which notices and other communications shall be sent shall be as follows:</p>
+
+      <table class="notices-table">
+        <thead>
+          <tr>
+            <th>If to the Company:</th>
+            <th>If to the Investor:</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>Kind Attn:</strong> Mr. V. Rajkumar</td>
+            <td><strong>Kind Attn:</strong> [NAME]</td>
+          </tr>
+          <tr>
+            <td><strong>Address:</strong> Landmaxo Properties Private Limited, 2D, Queens Court, No. 6, Montieth Road, Egmore, Chennai - 600008</td>
+            <td><strong>Address:</strong> [ADDRESS]</td>
+          </tr>
+          <tr>
+            <td><strong>e-mail ID:</strong> sales@ghlindiaventures.com</td>
+            <td><strong>e-mail ID:</strong> [EMAIL]</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div class="clause-title">10. Dispute Resolution:</div>
+      <p class="clause"><strong>10.1</strong> If any dispute arises between any of the Parties hereto during the subsistence or thereafter, in connection with the validity, interpretation, implementation or alleged breach of any provision of this Agreement or regarding any question, including the question as to whether the termination of this Agreement by any Party hereto has been legitimate, the Parties hereto shall endeavour to settle such dispute amicably. The attempt to bring about an amicable settlement is considered to have failed as soon as one of the Parties hereto, after reasonable attempts, which attempt shall continue for not less than 15 (fifteen) days, gives 15 (fifteen) days notice thereof to the other Party in writing.</p>
+      <p class="clause"><strong>10.2</strong> In case of such failure, the dispute shall be referred to a sole arbitrator. The arbitration proceedings shall be governed by the provisions of the Arbitration and Conciliation Act, 1996. In the event of a failure to agree upon a sole arbitrator within a period of 15 (fifteen) days of receipt of notice, 1 (one) arbitrator each shall be appointed by the Company, on the one hand, and the Investor, on the other hand. The two arbitrators so appointed shall together appoint a third arbitrator, who shall be the chairperson of the arbitral panel. It is expressly clarified that these dispute resolution provisions apply to claims or disputes concerning any and all Parties to this Agreement and not just to disputes between the Company and the Investor.</p>
+      <p class="clause"><strong>10.3</strong> The arbitration proceedings shall be held at Chennai. The arbitration proceedings shall be in English language. The award shall be substantiated in writing. The court of arbitration shall also decide on the costs of the arbitration proceedings. The award shall be binding on the disputing Parties subject to applicable laws and the award shall be enforceable in any competent court of law. The provisions of this survive the termination of this Agreement for any reason whatsoever. Clause 9 shall The courts at Chennai shall have exclusive jurisdiction.</p>
+
+      <div class="clause-title">11. Governing Jurisdiction:</div>
+      <p class="clause">This Agreement shall be governed by the laws of the Republic of India. Incase dispute araised between the parties to the agreement is not resolved through Court of Arbitration, then the parties shall approach the High Courts in Chennai, India which has exclusive jurisdiction in respect of all disputes arising out of this Agreement.</p>
+
+      <div class="clause-title">12. Miscellaneous</div>
+      <p class="clause"><strong>12.1 Amendment:</strong> No variation of this Agreement shall be valid unless it is in writing and signed by the Company and by the Investor.</p>
+      <p class="clause"><strong>12.2 Non-disclosure:</strong> Each of the parties agrees to keep secret and confidential and not to use, disclose or divulge to any third party or to enable or cause any person to become aware of (except for the purposes of the Company&rsquo;s business) any confidential information relating to the Company including but not limited to IP Rights (whether owned or licensed by the Company), lists of customers, reports, notes, memoranda and all other documentary records pertaining to the Company or its business affairs, finances, suppliers, customers or contractual or other arrangements but excluding any information which is in the public domain (otherwise than through the wrongful disclosure of any party) or which a party is required to disclose by law or by the rules of any regulatory body to it or the Company is subject.</p>
+      <p class="clause"><strong>12.3</strong> The Company shall bear the costs and disbursements incurred in negotiating and closing this Agreement and of matters incidental to this Agreement.</p>
+      <p class="clause"><strong>12.4</strong> The Company shall not be considered in breach of this Agreement to the extent that performance of their respective obligations is prevented by an Event of Force Majeure.</p>
+      <p class="clause"><strong>12.5</strong> This Agreement shall be binding on and endure for the benefit of each party&rsquo;s personal representatives and successors in title. This includes any successor to any Debenture in the Company transferred in accordance with this Agreement.</p>
+      <p class="clause"><strong>12.6</strong> Nothing in this Agreement establishes a partnership between the parties.</p>
+      <p class="clause"><strong>12.7</strong> This Agreement may be executed in any number of counterparts each of which when executed by one or more of the parties hereto shall constitute an original but all of which shall constitute one and the same instrument.</p>
+      <p class="clause"><strong>12.8</strong> This Agreement has been executed and delivered on the Execution Date.</p>
+
+      <p class="mt"><strong>Signature:</strong></p>
+
+      <div class="sig-row" style="margin-top:16px;">
+        <div class="sig-block">
+          <p class="bold">For Landmaxo Properties Pvt Ltd</p>
+          <p class="sig-line">V. Rajkumar<br/>(Authorised Signatory)</p>
+        </div>
+        <div class="sig-block" style="text-align:left;">
+          <p class="bold">Investor</p>
+          <p class="sig-line">[NAME]<br/>(Investor)</p>
+        </div>
+      </div>
+
+      <div class="page-break"></div>
+
+      <!-- ── Schedule I ──────────────────────────────── -->
+      <h3 class="center">Schedule - I</h3>
       <table class="schedule-table" style="margin-top:8px;">
-        <tr><th>S.No</th><th>Date</th><th>Name</th><th>No. of Debentures</th><th>Nominal Value (in Rs.)</th></tr>
-        <tr><td>1.</td><td>[DATE]</td><td>[NAME]</td><td>[NUM_DEB]</td><td>[AMOUNT]</td></tr>
-        <tr><td colspan="3" class="right bold">Total</td><td class="bold">[NUM_DEB]</td><td class="bold">[AMOUNT]</td></tr>
+        <thead>
+          <tr>
+            <th>S.No</th>
+            <th>Date</th>
+            <th>Name</th>
+            <th>No. of Debentures</th>
+            <th>Nominal Value (in Rs.)</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>1.</td>
+            <td>[SHORT_DATE]</td>
+            <td>[NAME]</td>
+            <td>[NUM_DEB]</td>
+            <td>[AMOUNT]</td>
+          </tr>
+          <tr>
+            <td colspan="3" class="right bold">Total</td>
+            <td class="bold">[NUM_DEB]</td>
+            <td class="bold">[AMOUNT]</td>
+          </tr>
+        </tbody>
       </table>
       </body>`,
   }
@@ -1485,8 +1600,37 @@ async function generateInvestmentDocument(
   const safeAmtWords = escapeHtml(amountWords || '')
   const safeNumDeb = numDebentures.toLocaleString('en-IN')
   const safeNumDebRaw = String(numDebentures)
+  // 2026-05-16: new fields for the re-templated Debenture Agreement.
+  // [LONG_DATE_ORDINAL]: "27th of February, 2026" — legal-prose date
+  //   with English ordinal suffix.
+  // [SHORT_DATE]: "27-02-2026" — Schedule I cell, dash-separated.
+  // [NAME_CAPS]: ALL-CAPS variant for the cover page.
+  const ordinalSuffix = (n: number): string => {
+    const v = n % 100
+    if (v >= 11 && v <= 13) return n + 'th'
+    switch (n % 10) {
+      case 1: return n + 'st'
+      case 2: return n + 'nd'
+      case 3: return n + 'rd'
+      default: return n + 'th'
+    }
+  }
+  const dateObj = new Date(investmentDate)
+  const longDateOrdinal = isFinite(dateObj.getTime())
+    ? `${ordinalSuffix(dateObj.getDate())} of ${dateObj.toLocaleDateString('en-IN', { month: 'long' })}, ${dateObj.getFullYear()}`
+    : longDateStr
+  const shortDateDash = isFinite(dateObj.getTime())
+    ? `${String(dateObj.getDate()).padStart(2, '0')}-${String(dateObj.getMonth() + 1).padStart(2, '0')}-${dateObj.getFullYear()}`
+    : dateStr
+  const safeNameCaps = escapeHtml((clientName || 'Investor').toUpperCase())
 
   const populated = templates[type]
+    // Order matters: replace the more specific placeholders BEFORE
+    // the bare ones (NAME_CAPS before NAME) so the bare regex
+    // doesn't eat the prefix of the specific name.
+    .replace(/\[LONG_DATE_ORDINAL\]/g, escapeHtml(longDateOrdinal))
+    .replace(/\[SHORT_DATE\]/g, escapeHtml(shortDateDash))
+    .replace(/\[NAME_CAPS\]/g, safeNameCaps)
     .replace(/\[NAME\]/g, safeName)
     .replace(/\[EMAIL\]/g, safeEmail)
     .replace(/\[PHONE\]/g, safePhone)
