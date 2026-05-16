@@ -794,11 +794,18 @@ export default function DashboardClient() {
     const fv = String(a.fund_name || '').toLowerCase()
     return s + (ft === 'debenture' || fv.includes('debenture') ? (Number(a.invested_amount) || 0) : 0)
   }, 0), [portfolioAssets])
-  // Total Investment must reconcile with the breakdown buckets — if admin sets
-  // total_invested on the client profile but no application rows exist, prefer
-  // the higher of the two so the figure isn't lost, but never less than the
-  // sum of categorised investments (otherwise buckets > total looks broken).
-  const portfolioValue = useAnimatedCounter(Math.max(Number(user?.aum) || 0, totalInvested) || 0)
+  // 2026-05-16: Total Investment must reflect ACTIVE investments only.
+  // Previously this used Math.max(user.aum, totalInvested) on the theory
+  // that admin-set client.total_invested shouldn't be lost — but
+  // clientAuthService maps user.aum from client.total_invested, which is
+  // a manually-tracked aggregate that includes historical / pending /
+  // legacy capital and routinely diverges from the live portfolio
+  // (e.g. GHL India Ventures: aum=0, total_invested=3.5 Cr stale, only
+  // ₹20L of credited apps actually live). The investor dashboard should
+  // show what's actually active in their portfolio — sourced from
+  // fetchPortfolioAssets, which already filters by approved/active/credited
+  // on the investment_applications fallback path.
+  const portfolioValue = useAnimatedCounter(totalInvested || 0)
   const aifInvestment = useAnimatedCounter(aifTotal || 0)
   const coInvestValue = useAnimatedCounter(debentureTotal || 0)
   const currentNAV = useAnimatedCounter(navHistory.length ? (navHistory[navHistory.length - 1]?.nav_value || navHistory[navHistory.length - 1]?.nav || 0) * 100 : 0)

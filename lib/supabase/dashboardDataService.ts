@@ -33,9 +33,14 @@ async function safeFetch<T>(
 
 export async function fetchPortfolioAssets(clientId?: string) {
   if (!isSupabaseConfigured() || !clientId) return []
-  // Try investments table first (structured portfolio data)
+  // 2026-05-16: investor dashboard's Total Investment must reflect
+  // ACTIVE investments only. Both paths below filter on status. The
+  // investments table's `status` enum uses values like 'active' /
+  // 'matured' / 'redeemed' / 'pending'; we accept 'active' only here
+  // for safety. The investment_applications fallback already filtered
+  // by status (approved / active / credited).
   const primary = await safeFetch(
-    () => sb.from('investments').select('*').eq('client_id', clientId),
+    () => sb.from('investments').select('*').eq('client_id', clientId).eq('status', 'active'),
     [], 'fetchPortfolioAssets:investments',
   )
   if ((primary as any[]).length > 0) return primary
