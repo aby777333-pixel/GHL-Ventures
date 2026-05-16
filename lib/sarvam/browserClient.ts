@@ -229,6 +229,312 @@ export async function sarvamTranslate(
   return (await resp.json()) as SarvamTranslateResult
 }
 
+// ── Batch STT — types ───────────────────────────────────────
+export interface SarvamBatchUploadUrl {
+  file_index: number
+  url: string
+  expires_at?: string
+}
+
+export interface SarvamBatchCreateResult {
+  job_id: string
+  state: 'PENDING' | string
+  upload_urls: SarvamBatchUploadUrl[]
+}
+
+export type SarvamBatchState =
+  | 'PENDING' | 'RUNNING' | 'COMPLETED' | 'FAILED' | 'PARTIAL'
+
+export interface SarvamBatchStatusResult {
+  job_id: string
+  state: SarvamBatchState | string
+  progress?: number
+  error_message?: string | null
+  file_results?: {
+    successful?: Array<{ file_index: number; output_url?: string }>
+    failed?: Array<{ file_index: number; error?: string }>
+  }
+}
+
+export interface SarvamBatchOutputItem {
+  file_index: number
+  url: string
+  expires_at?: string
+}
+export interface SarvamBatchOutputsResult {
+  job_id: string
+  output_urls: SarvamBatchOutputItem[]
+}
+
+/** A single file's parsed output — same shape as SarvamSttResult. */
+export type SarvamBatchFileResult = SarvamSttResult & {
+  file_index: number
+  /** Original input filename if the UI tracked it; not provided by Sarvam. */
+  original_filename?: string
+}
+
+// ── Batch STT — call helpers ────────────────────────────────
+
+export interface SarvamBatchCreateOptions {
+  model?: 'saaras:v3' | 'saarika:v2.5' | 'saaras:v2.5'
+  mode?: 'transcribe' | 'translate' | 'verbatim' | 'translit' | 'codemix'
+  language_code?: string
+  with_diarization?: boolean
+  num_speakers?: number
+  with_timestamps?: boolean
+  file_count: number
+  input_audio_codec?: 'wav' | 'pcm_s16le' | 'pcm_l16' | 'pcm_raw'
+  translate_to_english?: boolean
+}
+
+/** Create a batch STT job. Returns the job_id and one signed upload URL
+ *  per file. */
+export async function sarvamBatchCreate(
+  opts: SarvamBatchCreateOptions,
+): Promise<SarvamBatchCreateResult> {
+  const auth = await getAuthHeader()
+  const resp = await fetch(`${getFunctionsBase()}/.netlify/functions/sarvam-batch-create`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...auth },
+    body: JSON.stringify(opts),
+  })
+  await throwOnHttpError(resp, 'batch-create')
+  return (await resp.json()) as SarvamBatchCreateResult
+}
+
+/**
+ * Upload a single audio file directly to its Sarvam-signed URL. No
+ * Authorization header — the signature is in the URL itself. Reports
+ * progress via the optional `onProgress(loaded, total)` callback.
+ *
+ * Uses XMLHttpRequest (not fetch) because fetch doesn't expose upload
+ * progress events in any current browser without a streaming
+ * ReadableStream that Sarvam's CDN doesn't accept.
+ */
+export function sarvamBatchUpload(
+  signedUrl: string,
+  file: Blob | File,
+  onProgress?: (loaded: number, total: number) => void,
+): Promise<void> {
+  return new Promise<void>((resolve, reject) => {
+    const xhr = new XMLHttpRequest()
+    xhr.open('PUT', signedUrl, true)
+    // Do NOT set Authorization — the URL is pre-signed.
+    // Content-Type left blank: the CDN reads the file body's bytes;
+    // some signed-URL schemes reject if Content-Type doesn't match
+    // what was signed, so we let the browser decide.
+    if (onProgress && xhr.upload) {
+      xhr.upload.onprogress = (evt) => {
+        if (evt.lengthComputable) onProgress(evt.loaded, evt.total)
+      }
+    }
+    xhr.onload = () => {
+      if (xhr.status >= 200 && xhr.status < 300) {
+        resolve()
+      } else {
+        reject(new SarvamBrowserError({
+          status: xhr.status,
+          message: `Upload failed (HTTP ${xhr.status}): ${xhr.responseText?.slice(0, 200) || ''}`,
+        }))
+      }
+    }
+    xhr.onerror = () => reject(new SarvamBrowserError({
+      status: 0,
+      message: 'Upload network error — check your connection and retry.',
+    }))
+    xhr.ontimeout = () => reject(new SarvamBrowserError({
+      status: 0,
+      message: 'Upload timed out.',
+    }))
+    xhr.send(file)
+  })
+}
+
+/** Convenience: upload an array of files in parallel against a matching
+ *  array of signed URLs (in `upload_urls` order). Per-file progress is
+ *  reported via `onProgress(fileIndex, loaded, total)`. */
+export async function sarvamBatchUploadAll(
+  uploadUrls: SarvamBatchUploadUrl[],
+  files: Array<Blob | File>,
+  onProgress?: (fileIndex: number, loaded: number, total: number) => void,
+): Promise<void> {
+  if (uploadUrls.length !== files.length) {
+    throw new SarvamBrowserError({
+      status: 0,
+      message: `Got ${uploadUrls.length} upload URLs but ${files.length} files.`,
+    })
+  }
+  // Sort by file_index so the URL ↔ file pairing is deterministic.
+  const sorted = [...uploadUrls].sort((a, b) => a.file_index - b.file_index)
+  await Promise.all(
+    sorted.map((u, i) =>
+      sarvamBatchUpload(u.url, files[i], (loaded, total) =>
+        onProgress?.(u.file_index, loaded, total),
+      ),
+    ),
+  )
+}
+
+/** Kick off processing for a job once all files have been uploaded. */
+export async function sarvamBatchStart(jobId: string): Promise<{ job_id: string; state: string }> {
+  const auth = await getAuthHeader()
+  const resp = await fetch(`${getFunctionsBase()}/.netlify/functions/sarvam-batch-start`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...auth },
+    body: JSON.stringify({ job_id: jobId }),
+  })
+  await throwOnHttpError(resp, 'batch-start')
+  return (await resp.json()) as { job_id: string; state: string }
+}
+
+/** Single status check. Use sarvamBatchPollStatus for the long-poll
+ *  helper with auto-backoff. */
+export async function sarvamBatchStatus(jobId: string): Promise<SarvamBatchStatusResult> {
+  const auth = await getAuthHeader()
+  const resp = await fetch(
+    `${getFunctionsBase()}/.netlify/functions/sarvam-batch-status?job_id=${encodeURIComponent(jobId)}`,
+    { headers: { ...auth } },
+  )
+  await throwOnHttpError(resp, 'batch-status')
+  return (await resp.json()) as SarvamBatchStatusResult
+}
+
+/**
+ * Long-poll a batch job until it reaches a terminal state. Cadence:
+ * 5 s for the first 2 minutes, then 30 s. Caps total wait at 90 minutes
+ * (Sarvam's hard max is 1 hour of audio per file; this leaves headroom).
+ * Calls `onTick(status)` on every poll, even when the state hasn't
+ * changed, so the UI can update progress bars.
+ *
+ * Resolves with the final terminal-state status. Rejects only on
+ * abort, hard auth failures, or running past the cap.
+ */
+export async function sarvamBatchPollStatus(
+  jobId: string,
+  opts?: {
+    onTick?: (s: SarvamBatchStatusResult) => void
+    abortSignal?: AbortSignal
+    /** Override the 90-minute cap (in milliseconds). */
+    maxMs?: number
+  },
+): Promise<SarvamBatchStatusResult> {
+  const TERMINAL = new Set(['COMPLETED', 'FAILED', 'PARTIAL'])
+  const start = Date.now()
+  const maxMs = opts?.maxMs ?? 90 * 60 * 1000
+  let lastStatus: SarvamBatchStatusResult | null = null
+
+  while (true) {
+    if (opts?.abortSignal?.aborted) {
+      throw new SarvamBrowserError({ status: 0, message: 'Polling aborted' })
+    }
+    if (Date.now() - start > maxMs) {
+      throw new SarvamBrowserError({
+        status: 0,
+        message: `Job ${jobId} did not complete within ${(maxMs / 60000).toFixed(0)} min.`,
+      })
+    }
+    try {
+      const status = await sarvamBatchStatus(jobId)
+      lastStatus = status
+      opts?.onTick?.(status)
+      if (TERMINAL.has(String(status.state || ''))) return status
+    } catch (e) {
+      // Transient errors shouldn't break the poll loop — log + keep going.
+      // eslint-disable-next-line no-console
+      console.warn('[sarvamBatchPollStatus] tick failed:', formatSarvamError(e))
+    }
+    const elapsed = Date.now() - start
+    const delay = elapsed < 2 * 60 * 1000 ? 5_000 : 30_000
+    await new Promise<void>((r) => setTimeout(r, delay))
+    if (opts?.abortSignal?.aborted) {
+      throw new SarvamBrowserError({ status: 0, message: 'Polling aborted' })
+    }
+  }
+  // Unreachable — the loop only exits via terminal state, throw, or
+  // cap. lastStatus is consumed elsewhere via onTick.
+}
+
+/** Fetch the signed download URLs for a completed job. */
+export async function sarvamBatchOutputs(jobId: string): Promise<SarvamBatchOutputsResult> {
+  const auth = await getAuthHeader()
+  const resp = await fetch(
+    `${getFunctionsBase()}/.netlify/functions/sarvam-batch-output?job_id=${encodeURIComponent(jobId)}`,
+    { headers: { ...auth } },
+  )
+  await throwOnHttpError(resp, 'batch-output')
+  return (await resp.json()) as SarvamBatchOutputsResult
+}
+
+/**
+ * Convenience: given a completed job_id, fetch its signed download
+ * URLs AND fetch each output JSON in parallel, returning the parsed
+ * results sorted by file_index. The transcripts are loaded straight
+ * from Sarvam's CDN (no proxy hop).
+ */
+export async function sarvamBatchFetchResults(
+  jobId: string,
+  originalFilenames?: string[],
+): Promise<SarvamBatchFileResult[]> {
+  const outputs = await sarvamBatchOutputs(jobId)
+  const sorted = [...(outputs.output_urls || [])].sort((a, b) => a.file_index - b.file_index)
+
+  // Fetch all outputs in parallel from Sarvam's CDN.
+  const parsed = await Promise.all(
+    sorted.map(async (o) => {
+      let body: SarvamSttResult
+      try {
+        const r = await fetch(o.url, { method: 'GET' })
+        if (!r.ok) {
+          throw new SarvamBrowserError({
+            status: r.status,
+            message: `Output ${o.file_index} fetch failed: HTTP ${r.status}`,
+          })
+        }
+        body = (await r.json()) as SarvamSttResult
+      } catch (e) {
+        if (e instanceof SarvamBrowserError) throw e
+        throw new SarvamBrowserError({
+          status: 0,
+          message: `Output ${o.file_index} fetch failed: ${(e as Error)?.message || 'network'}`,
+        })
+      }
+      return {
+        ...body,
+        file_index: o.file_index,
+        original_filename: originalFilenames?.[o.file_index],
+      } as SarvamBatchFileResult
+    }),
+  )
+  return parsed
+}
+
+/** Build a WebVTT/SRT timeline from a SarvamSttResult that has
+ *  timestamps. Returns "" if timestamps aren't present. */
+export function sarvamResultToSRT(result: SarvamSttResult): string {
+  const ts = result.timestamps
+  if (!ts || !ts.words?.length) return ''
+  const lines: string[] = []
+  const fmt = (s: number) => {
+    const hh = Math.floor(s / 3600).toString().padStart(2, '0')
+    const mm = Math.floor((s % 3600) / 60).toString().padStart(2, '0')
+    const ss = (s % 60).toFixed(3).padStart(6, '0').replace('.', ',')
+    return `${hh}:${mm}:${ss}`
+  }
+  // Group into ~7-word cues so the captions are readable.
+  const CHUNK = 7
+  let cue = 1
+  for (let i = 0; i < ts.words.length; i += CHUNK) {
+    const slice = ts.words.slice(i, i + CHUNK)
+    const start = ts.start_time_seconds[i] ?? 0
+    const end = ts.end_time_seconds[Math.min(i + slice.length - 1, ts.end_time_seconds.length - 1)] ?? start + 1
+    lines.push(String(cue++))
+    lines.push(`${fmt(start)} --> ${fmt(end)}`)
+    lines.push(slice.join(' '))
+    lines.push('')
+  }
+  return lines.join('\n')
+}
+
 // ── Tiny helper: human-friendly error messages ──────────────
 // Components can call this in a toast / inline error block
 // without parsing status codes themselves.

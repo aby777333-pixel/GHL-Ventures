@@ -36,6 +36,7 @@ import {
   logSarvamCall,
   sarvamJson,
 } from '../../lib/sarvam/client'
+import { rateLimitResponse } from '../../lib/sarvam/rateLimit'
 
 // Set to true ONLY for an explicit public TTS demo with Turnstile
 // in front. Production = false. Public TTS without a captcha is a
@@ -120,6 +121,12 @@ export default async (request: Request): Promise<Response> => {
     } catch {
       return json(401, { error: 'Session verification failed' }, request)
     }
+  }
+
+  // ── Rate limit (per-user, in-memory bucket) ──────────────
+  {
+    const limited = rateLimitResponse(userId, 'tts', corsHeaders(request))
+    if (limited) return limited
   }
 
   // ── Parse + validate body ────────────────────────────────

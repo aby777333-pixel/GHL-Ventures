@@ -42,6 +42,7 @@ import {
   logSarvamCall,
   sarvamJson,
 } from '../../lib/sarvam/client'
+import { rateLimitResponse } from '../../lib/sarvam/rateLimit'
 
 const ALLOWED_ORIGINS = [
   'https://ghl-india-ventures-2025.netlify.app',
@@ -118,6 +119,12 @@ export default async (request: Request): Promise<Response> => {
     if (!userId) return json(401, { error: 'Invalid session' }, request)
   } catch {
     return json(401, { error: 'Session verification failed' }, request)
+  }
+
+  // ── Rate limit (per-user, in-memory bucket) ──────────────
+  {
+    const limited = rateLimitResponse(userId, 'translate', corsHeaders(request))
+    if (limited) return limited
   }
 
   // ── Parse + validate ─────────────────────────────────────

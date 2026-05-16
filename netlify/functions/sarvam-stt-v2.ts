@@ -44,6 +44,7 @@ import {
   logSarvamCall,
   sarvamMultipart,
 } from '../../lib/sarvam/client'
+import { rateLimitResponse } from '../../lib/sarvam/rateLimit'
 
 const ALLOWED_ORIGINS = [
   'https://ghl-india-ventures-2025.netlify.app',
@@ -125,6 +126,15 @@ export default async (request: Request): Promise<Response> => {
     if (!userId) return json(401, { error: 'Invalid session' }, request)
   } catch {
     return json(401, { error: 'Session verification failed' }, request)
+  }
+
+  // ── Rate limit (per-user, in-memory bucket) ──────────────
+  // We don't know yet whether this is STT or STT-translate — use
+  // 'stt' as the conservative bucket since they share Sarvam's
+  // per-key budget.
+  {
+    const limited = rateLimitResponse(userId, 'stt', corsHeaders(request))
+    if (limited) return limited
   }
 
   // ── Parse multipart ──────────────────────────────────────
