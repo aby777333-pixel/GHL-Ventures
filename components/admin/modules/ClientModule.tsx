@@ -131,6 +131,19 @@ export default function ClientModule({ subTab, navigate, showToast }: ClientModu
 
   useEffect(() => { loadData() }, [loadData])
 
+  // 2026-05-16: refetch whenever the user switches into Client List or Trash.
+  // Without this, a user who navigates Trash → Client List → Trash sees the
+  // same in-memory `trashedClients` array that loadData() set on mount, and
+  // the row they just restored elsewhere lingers in the Trash UI even though
+  // the DB no longer flags it. Refetching on tab focus guarantees fresh
+  // state regardless of how aggressive their browser is about caching the JS
+  // bundle (the trashed list comes from a fresh Supabase call each time).
+  useEffect(() => {
+    if (activeTab === 'list' || activeTab === 'trash') {
+      loadData()
+    }
+  }, [activeTab, loadData])
+
   // ── Trash client (soft-delete) — recoverable from the Trash tab.
   // 2026-05-15 (Admin Command Center): "Delete" now sends the client to
   // Trash instead of purging immediately. Permanent purge lives on the
