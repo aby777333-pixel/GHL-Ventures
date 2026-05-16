@@ -1288,7 +1288,31 @@ async function generateInvestmentDocument(
   // is intentionally left untouched since the seal/border layout depends
   // on the logo + footer staying in place.
   const templates: Record<string, string> = {
-    acknowledgement: `${css}<body>
+    acknowledgement: `${css}
+      <style>
+        /* 2026-05-16: leave reserved blank bands at the top and bottom of
+           the Acknowledgement Letter so the company can affix its physical
+           letterhead logo and footer manually after printing. On-screen
+           the placeholders show as faint dashed outlines so the admin can
+           visually confirm the reserved area; on print the outlines vanish
+           and only whitespace remains. */
+        .ack-logo-space{height:38mm;width:100%;}
+        .ack-footer-space{height:34mm;width:100%;margin-top:18mm;}
+        @media screen{
+          .ack-logo-space{border:1px dashed rgba(208,2,27,0.25);display:flex;align-items:center;justify-content:center;color:#bbb;font-size:10px;letter-spacing:2px;text-transform:uppercase;}
+          .ack-logo-space::before{content:"Reserved for logo — placed manually after print";}
+          .ack-footer-space{border:1px dashed rgba(208,2,27,0.25);display:flex;align-items:center;justify-content:center;color:#bbb;font-size:10px;letter-spacing:2px;text-transform:uppercase;}
+          .ack-footer-space::before{content:"Reserved for footer — placed manually after print";}
+        }
+        @media print{.ack-logo-space,.ack-footer-space{border:none!important;}}
+        .ack-logo-space::before,.ack-footer-space::before{display:block;}
+        /* Keep the body, table, and trailing note from breaking across the
+           reserved footer band. */
+        .ack-body p,.ack-body table{break-inside:avoid;page-break-inside:avoid;}
+      </style>
+      <body>
+      <div class="ack-logo-space"></div>
+      <div class="ack-body">
       <p>Ref: [REF] <span style="float:right;">Date: [DATE]</span></p>
       <p>[NAME],<br/>[ADDRESS]<br/>[PHONE]</p>
       <p><strong>Subject: Acknowledgement of investment receipt</strong></p>
@@ -1305,6 +1329,8 @@ async function generateInvestmentDocument(
       <p>The debentures carry an <strong>interest rate of 1% per month</strong> along with an <strong>annual appreciation of 12%</strong>, for a <strong>minimum tenure of three (3) years</strong> from the date of investment. Interest will be paid on or before the <strong>10th of each month</strong>, after deduction of applicable <strong>TDS (currently 10%)</strong> under the Income Tax Act, 1961.</p>
       <p>Debentures may be <strong>redeemed at the investor&rsquo;s option</strong> after completion of the 3-year tenure. <strong>TDS credits</strong> will be reflected in the investor&rsquo;s PAN account on a <strong>quarterly basis</strong>.</p>
       <p class="note">* This is system generated document. Signature authentication is not required. *</p>
+      </div>
+      <div class="ack-footer-space"></div>
       </body>`,
 
     allotment: `${css}<body>
