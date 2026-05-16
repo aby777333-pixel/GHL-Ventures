@@ -1388,19 +1388,31 @@ async function generateInvestmentDocument(
     // unused in this body.
     agreement: `${css}
       <style>
-        .clause{margin-bottom:8px;line-height:1.55;}
-        .clause-title{font-weight:700;margin-top:16px;margin-bottom:6px;font-size:13px;}
+        /* Paragraph orphan/widow control so a single trailing line doesn't
+           strand at the top of the next page, which is what made page 4
+           start mid-table on the Landmaxo print. */
+        p,li{orphans:3;widows:3;}
+        .clause{margin-bottom:8px;line-height:1.55;break-inside:avoid;page-break-inside:avoid;}
+        .clause-title{font-weight:700;margin-top:16px;margin-bottom:6px;font-size:13px;break-after:avoid;page-break-after:avoid;}
+        .schedule-table{break-inside:avoid;page-break-inside:avoid;}
         .schedule-table td,.schedule-table th{border:1px solid #999;padding:5px 8px;font-size:10px;}
+        .schedule-table tr{break-inside:avoid;page-break-inside:avoid;}
         .page-break{page-break-after:always;break-after:page;}
         .stamp-spacer{height:135mm;}
-        .agreement-cover{min-height:220mm;display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;font-size:14px;line-height:2.2;}
-        .notices-table{width:100%;border-collapse:collapse;font-size:11px;margin-top:8px;}
+        .agreement-cover{min-height:220mm;display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;font-size:14px;line-height:2.2;break-inside:avoid;page-break-inside:avoid;}
+        /* 2026-05-16: notices-table was breaking across pages — header on
+           one page, rows on the next. Force the whole table (and each row)
+           to stay on a single page. thead repeats on overflow as a fallback. */
+        .notices-table{width:100%;border-collapse:collapse;font-size:11px;margin-top:8px;break-inside:avoid;page-break-inside:avoid;}
+        .notices-table thead{display:table-header-group;}
+        .notices-table tr{break-inside:avoid;page-break-inside:avoid;}
         .notices-table th,.notices-table td{border:1px solid #999;padding:6px 10px;vertical-align:top;}
-        .sig-row{display:flex;justify-content:space-between;align-items:flex-start;}
-        .sig-block{width:45%;}
+        .sig-row{display:flex;justify-content:space-between;align-items:flex-start;break-inside:avoid;page-break-inside:avoid;}
+        .sig-block{width:45%;break-inside:avoid;page-break-inside:avoid;}
         .sig-line{border-top:1px solid #333;padding-top:4px;font-size:11px;margin-top:48px;}
         ol.whereas{padding-left:22px;}
-        ol.whereas li{margin-bottom:10px;line-height:1.55;}
+        ol.whereas li{margin-bottom:10px;line-height:1.55;break-inside:avoid;page-break-inside:avoid;}
+        h2,h3{break-after:avoid;page-break-after:avoid;}
       </style>
       <body>
 
