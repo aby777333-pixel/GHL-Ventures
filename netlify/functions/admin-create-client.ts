@@ -120,7 +120,12 @@ export default async (request: Request) => {
   try {
     const body: CreateClientBody = await request.json()
     // Allow both `fullName` (legacy) and `full_name` (new admin-user flow).
-    const fullName = fullName || body.full_name || ''
+    // 2026-05-16: previous line was `const fullName = fullName || ...` which
+    // self-referenced the binding inside its TDZ — every call threw
+    // "Cannot access 'fullName' before initialization", and the catch handler
+    // surfaced that as the 500 response, so Add Admin User was completely
+    // broken (and admin client creation along with it).
+    const fullName = body.fullName || body.full_name || ''
 
     if (!body.email || !body.password || !fullName) {
       return new Response(

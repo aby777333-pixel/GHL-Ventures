@@ -3292,6 +3292,41 @@ export async function createAdminUser(input: {
   }
 }
 
+// 2026-05-16: Fully purge an admin user (auth + profile + clients + downstream)
+// via the existing delete_user_complete RPC. Used by the Settings → Permissions
+// admin-user list so super admins can remove orphan / mis-created admin
+// accounts without leaving an investor-side clients row behind.
+//
+// Caller-side safety: SettingsModule blocks self-delete and last-super-admin
+// delete before reaching this helper. RPC is SECURITY DEFINER and currently
+// grants EXECUTE to authenticated; tightening that is tracked separately.
+export async function deleteAdminUser(userId: string): Promise<{ ok: boolean; error?: string }> {
+  if (!isSupabaseConfigured()) return { ok: false, error: 'Service unavailable' }
+  if (!userId) return { ok: false, error: 'userId is required' }
+  try {
+    const sb = supabase as any
+    const { data, error } = await sb.rpc('delete_user_complete', { target_user_id: userId })
+    if (error) return { ok: false, error: error.message }
+    if (data !== true) return { ok: false, error: 'Delete RPC returned false — check server logs' }
+    // Best-effort audit
+    try {
+      const { data: { user } } = await sb.auth.getUser()
+      await sb.from('audit_logs').insert({
+        action: 'delete_admin_user',
+        entity_type: 'user',
+        entity_id: userId,
+        module: 'settings',
+        actor_id: user?.id || null,
+        user_id: user?.id || null,
+        new_data: { deleted_user_id: userId },
+      })
+    } catch { /* non-blocking */ }
+    return { ok: true }
+  } catch (e: any) {
+    return { ok: false, error: e?.message || 'Delete failed' }
+  }
+}
+
 // ── Permission audit log: read from public.audit_logs. ────────────
 export interface PermissionAuditRow {
   id: string
@@ -3579,6 +3614,85 @@ export async function deleteFundPlan(id: string): Promise<{ ok: boolean; error?:
     return { ok: true }
   } catch (e: any) {
     return { ok: false, error: e?.message || 'Delete failed' }
+  }
+}
+
+// 2026-05-16: Edit an existing fund plan. Replaces all bank rows in a single
+// transaction-equivalent flow (delete then insert), mirroring createFundPlan
+// so the edit form can use the same bank-row UI without diff tracking.
+export async function updateFundPlan(id: string, input: {
+  fund_name: string
+  fund_type_id?: string | null
+  tenure?: string
+  yearly_return?: string
+  yearly_appreciation?: string
+  yearly_tds?: string
+  tax?: string
+  capital_gain?: string
+  tds_of_tax?: string
+  locking_period?: string
+  investment_strategy?: string[]
+  minimum_investment_range?: string[]
+  status?: string
+  country?: string
+  image_url?: string | null
+  pdf_url?: string | null
+  banks?: FundPlanBankRow[]
+}): Promise<{ ok: boolean; error?: string }> {
+  if (!isSupabaseConfigured()) return { ok: false, error: 'Service unavailable' }
+  try {
+    const sb = supabase as any
+    if (!id) return { ok: false, error: 'Plan id is required' }
+    if (!input.fund_name?.trim()) return { ok: false, error: 'Fund name is required' }
+    const { error } = await sb
+      .from('fund_plans')
+      .update({
+        fund_name: input.fund_name.trim(),
+        fund_type_id: input.fund_type_id || null,
+        tenure: input.tenure || null,
+        yearly_return: input.yearly_return || null,
+        yearly_appreciation: input.yearly_appreciation || null,
+        yearly_tds: input.yearly_tds || null,
+        tax: input.tax || null,
+        capital_gain: input.capital_gain || null,
+        tds_of_tax: input.tds_of_tax || null,
+        locking_period: input.locking_period || null,
+        investment_strategy: input.investment_strategy || [],
+        minimum_investment_range: input.minimum_investment_range || [],
+        status: input.status || 'active',
+        country: input.country || null,
+        image_url: input.image_url || null,
+        pdf_url: input.pdf_url || null,
+      })
+      .eq('id', id)
+    if (error) return { ok: false, error: error.message }
+
+    // Replace bank rows. If the caller didn't pass `banks`, leave existing
+    // ones in place — only an explicit empty array clears them.
+    if (Array.isArray(input.banks)) {
+      const { error: delErr } = await sb.from('fund_plan_banks').delete().eq('fund_plan_id', id)
+      if (delErr) return { ok: true, error: `Plan updated but bank reset failed: ${delErr.message}` }
+      const bankRows = input.banks
+        .filter(b => b.account_holder_name?.trim() && b.account_number?.trim() && b.ifsc_code?.trim())
+        .map((b, i) => ({
+          fund_plan_id: id,
+          account_holder_name: b.account_holder_name.trim(),
+          account_number: b.account_number.trim(),
+          ifsc_code: b.ifsc_code.trim().toUpperCase(),
+          branch_name: b.branch_name?.trim() || null,
+          bank_name: b.bank_name?.trim() || null,
+          swift_iban_code: b.swift_iban_code?.trim() || null,
+          is_primary: !!b.is_primary,
+          sort_order: i,
+        }))
+      if (bankRows.length > 0) {
+        const { error: bankErr } = await sb.from('fund_plan_banks').insert(bankRows)
+        if (bankErr) return { ok: true, error: `Plan updated but bank rows failed: ${bankErr.message}` }
+      }
+    }
+    return { ok: true }
+  } catch (e: any) {
+    return { ok: false, error: e?.message || 'Update failed' }
   }
 }
 

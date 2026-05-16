@@ -32,7 +32,7 @@ import type { Lead, LeadStage, LeadSource, Commission } from '@/lib/admin/adminT
 import UploadWithFolderPicker from '@/components/shared/UploadWithFolderPicker'
 import { createLead, updateLead, fetchLeads, deleteLead, updateLeadStatus } from '@/lib/supabase/leadService'
 import { onNewLead } from '@/lib/supabase/realtimeSubscriptions'
-import { fetchAllInvestmentApplications, fetchAllBankAccounts, createBankAccount, deleteBankAccount, fetchClients, type AdminBankAccountRow, fetchFundCategories, createFundCategory, deleteFundCategory, fetchFundPlans, createFundPlan, deleteFundPlan, uploadFundPlanAsset, type FundCategoryRow, type FundPlanRow, type FundPlanBankRow } from '@/lib/supabase/adminDataService'
+import { fetchAllInvestmentApplications, fetchAllBankAccounts, createBankAccount, deleteBankAccount, fetchClients, type AdminBankAccountRow, fetchFundCategories, createFundCategory, deleteFundCategory, fetchFundPlans, createFundPlan, updateFundPlan, deleteFundPlan, uploadFundPlanAsset, type FundCategoryRow, type FundPlanRow, type FundPlanBankRow } from '@/lib/supabase/adminDataService'
 import { supabase, isSupabaseConfigured } from '@/lib/supabase/client'
 
 // ── Sub-tabs ─────────────────────────────────────────────────────
@@ -2989,6 +2989,10 @@ function InvestmentPlansTab({ showToast }: { showToast: (m: string, t?: 'success
   const [categories, setCategories] = useState<FundCategoryRow[]>([])
   const [loading, setLoading] = useState(true)
   const [createOpen, setCreateOpen] = useState(false)
+  // 2026-05-16: when set, the Add modal becomes an Edit modal and Save
+  // patches the existing row instead of inserting a new one. State is kept
+  // separate from `createOpen` so the same modal body / form serves both.
+  const [editingId, setEditingId] = useState<string | null>(null)
   const [viewing, setViewing] = useState<FundPlanRow | null>(null)
   const [saving, setSaving] = useState(false)
   const [uploading, setUploading] = useState<'image' | 'pdf' | null>(null)
@@ -3070,21 +3074,64 @@ function InvestmentPlansTab({ showToast }: { showToast: (m: string, t?: 'success
     if (!form.fund_name.trim()) { showToast('Fund name is required', 'error'); return }
     setSaving(true)
     try {
-      const res = await createFundPlan({
+      const payload = {
         ...form,
         fund_type_id: form.fund_type_id || null,
         banks: banks.filter(b => b.account_holder_name.trim() && b.account_number.trim() && b.ifsc_code.trim()),
-      })
+      }
+      const res = editingId
+        ? await updateFundPlan(editingId, payload)
+        : await createFundPlan(payload)
       if (res.ok) {
         if (res.error) showToast(res.error, 'warning')
-        else showToast('Investment plan created', 'success')
+        else showToast(editingId ? 'Investment plan updated' : 'Investment plan created', 'success')
         setCreateOpen(false)
+        setEditingId(null)
         resetForm()
         load()
       } else {
-        showToast(res.error || 'Failed to create plan', 'error')
+        showToast(res.error || (editingId ? 'Failed to update plan' : 'Failed to create plan'), 'error')
       }
     } finally { setSaving(false) }
+  }
+
+  // 2026-05-16: hydrate the create form from an existing plan row + open the
+  // modal in edit mode. Bank list is cloned (same shape as create flow) so
+  // adds/removes inside the modal don't mutate the in-memory plans state.
+  const startEdit = (row: FundPlanRow) => {
+    setEditingId(row.id)
+    setForm({
+      fund_name: row.fund_name || '',
+      fund_type_id: row.fund_type_id || '',
+      tenure: row.tenure || '',
+      yearly_return: row.yearly_return || '',
+      yearly_appreciation: row.yearly_appreciation || '',
+      yearly_tds: row.yearly_tds || '',
+      tax: row.tax || '',
+      capital_gain: row.capital_gain || '',
+      tds_of_tax: row.tds_of_tax || '',
+      locking_period: row.locking_period || '',
+      investment_strategy: Array.isArray(row.investment_strategy) ? [...row.investment_strategy] : [],
+      minimum_investment_range: Array.isArray(row.minimum_investment_range) ? [...row.minimum_investment_range] : [],
+      status: row.status || 'active',
+      country: row.country || '',
+      image_url: row.image_url || null,
+      pdf_url: row.pdf_url || null,
+    })
+    const editBanks: FundPlanBankRow[] = (row.banks && row.banks.length > 0)
+      ? row.banks.map(b => ({
+          account_holder_name: b.account_holder_name || '',
+          account_number: b.account_number || '',
+          ifsc_code: b.ifsc_code || '',
+          branch_name: b.branch_name || '',
+          bank_name: b.bank_name || '',
+          swift_iban_code: b.swift_iban_code || '',
+          is_primary: !!b.is_primary,
+        }))
+      : [{ account_holder_name: '', account_number: '', ifsc_code: '', branch_name: '', bank_name: '', swift_iban_code: '', is_primary: true }]
+    setBanks(editBanks)
+    setStrategyDraft(''); setMinRangeDraft('')
+    setCreateOpen(true)
   }
 
   const handleDelete = async (row: FundPlanRow) => {
@@ -3099,7 +3146,7 @@ function InvestmentPlansTab({ showToast }: { showToast: (m: string, t?: 'success
       <div className="flex flex-wrap items-start justify-between gap-3 mb-4">
         <div className="flex-1 min-w-[200px]">
           <h2 className="text-base font-semibold text-white">Investment Plans</h2>
-          <p className="text-xs text-gray-500 mt-0.5">Pre-defined plans (tenure, returns, locking period) admins can attach to investments. Each row supports View / Delete.</p>
+          <p className="text-xs text-gray-500 mt-0.5">Pre-defined plans (tenure, returns, locking period) admins can attach to investments. Each row supports View / Edit / Delete.</p>
         </div>
         <button
           onClick={() => setCreateOpen(true)}
@@ -3141,6 +3188,9 @@ function InvestmentPlansTab({ showToast }: { showToast: (m: string, t?: 'success
                 <button onClick={() => setViewing(p)} className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-medium text-blue-300 bg-blue-500/10 border border-blue-500/30 hover:bg-blue-500/20 transition-colors">
                   <Eye className="w-3 h-3" /> View
                 </button>
+                <button onClick={() => startEdit(p)} className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-medium text-amber-300 bg-amber-500/10 border border-amber-500/30 hover:bg-amber-500/20 transition-colors">
+                  <Pencil className="w-3 h-3" /> Edit
+                </button>
                 <button onClick={() => handleDelete(p)} className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-medium text-red-300 bg-red-500/10 border border-red-500/30 hover:bg-red-500/20 transition-colors">
                   <Trash2 className="w-3 h-3" /> Delete
                 </button>
@@ -3152,15 +3202,17 @@ function InvestmentPlansTab({ showToast }: { showToast: (m: string, t?: 'success
 
       <AdminModal
         isOpen={createOpen}
-        onClose={() => { setCreateOpen(false); resetForm() }}
-        title="Add Investment Plan"
-        subtitle="All fields are optional except Fund Name. Add bank accounts at the bottom — each requires Holder, Account #, and IFSC."
+        onClose={() => { setCreateOpen(false); setEditingId(null); resetForm() }}
+        title={editingId ? 'Edit Investment Plan' : 'Add Investment Plan'}
+        subtitle={editingId
+          ? 'Update fields below. Bank rows are replaced on save — leave them as-is to keep current accounts.'
+          : 'All fields are optional except Fund Name. Add bank accounts at the bottom — each requires Holder, Account #, and IFSC.'}
         maxWidth="max-w-3xl"
         footer={
           <>
-            <ModalButton onClick={() => { setCreateOpen(false); resetForm() }} disabled={saving}>Cancel</ModalButton>
+            <ModalButton onClick={() => { setCreateOpen(false); setEditingId(null); resetForm() }} disabled={saving}>Cancel</ModalButton>
             <ModalButton variant="primary" onClick={handleCreate} disabled={saving}>
-              {saving ? <span className="inline-flex items-center gap-2"><Loader2 className="w-4 h-4 animate-spin" />Saving…</span> : 'Submit'}
+              {saving ? <span className="inline-flex items-center gap-2"><Loader2 className="w-4 h-4 animate-spin" />Saving…</span> : (editingId ? 'Save Changes' : 'Submit')}
             </ModalButton>
           </>
         }

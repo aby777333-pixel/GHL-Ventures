@@ -14,7 +14,7 @@ import AdminBadge from '../shared/AdminBadge'
 import AdminKPICard from '../shared/AdminKPICard'
 import AdminEmptyState from '../shared/AdminEmptyState'
 import AdminCRUDPlaceholder from '../shared/AdminCRUDPlaceholder'
-import { fetchEmployees, getSystemHealth, fetchActivityFeed, fetchAdminUsers, createAdminUser, updateAdminUserRole, updateAdminUserPermissions, fetchPermissionAuditLog, type AdminUserRow, type PermissionAuditRow } from '@/lib/supabase/adminDataService'
+import { fetchEmployees, getSystemHealth, fetchActivityFeed, fetchAdminUsers, createAdminUser, updateAdminUserRole, updateAdminUserPermissions, deleteAdminUser, fetchPermissionAuditLog, type AdminUserRow, type PermissionAuditRow } from '@/lib/supabase/adminDataService'
 import { supabase, isSupabaseConfigured } from '@/lib/supabase/client'
 import { ROLE_PERMISSIONS } from '@/lib/admin/adminRBAC'
 import { ROLE_LABELS } from '@/lib/admin/adminAuth'
@@ -350,6 +350,11 @@ function PermissionsTab({ showToast }: { showToast: Toast }) {
   const [form, setForm] = useState({
     email: '', full_name: '', phone: '', role: 'admin', department: '', password: '',
   })
+  // 2026-05-16: track caller's own user id so the Delete button on the admin
+  // user list can hide for self (the RPC would happily nuke the current
+  // session otherwise and lock the admin out mid-action).
+  const [meId, setMeId] = useState<string | null>(null)
+  const [deletingUserId, setDeletingUserId] = useState<string | null>(null)
 
   const loadAll = useCallback(async () => {
     setLoadingData(true)
@@ -360,6 +365,17 @@ function PermissionsTab({ showToast }: { showToast: Toast }) {
   }, [])
 
   useEffect(() => { loadAll() }, [loadAll])
+
+  // Capture caller's user id once on mount so Delete-User can skip self.
+  useEffect(() => {
+    (async () => {
+      try {
+        const sb = supabase as any
+        const { data: { user } } = await sb.auth.getUser()
+        setMeId(user?.id || null)
+      } catch { /* ignore */ }
+    })()
+  }, [])
 
   const userAssignments = useMemo(() => adminUsers.map(u => ({
     email: u.email,
@@ -390,7 +406,84 @@ function PermissionsTab({ showToast }: { showToast: Toast }) {
     }
   }), [auditRows])
 
-  const presets: { id: string; name: string; description: string; permCount: number; usedBy: number }[] = []
+  // 2026-05-15: Permission Presets — bundled permission tokens admins can
+  // apply to a specific user (writes to profiles.permission_overrides) for
+  // quick onboarding. Defaults are seeded statically; admins can add custom
+  // presets which persist in localStorage so multiple users in the same
+  // browser see them. Persisted in DB is out of scope for this pass.
+  interface PermissionPreset { id: string; name: string; description: string; permissions: string[] }
+  const DEFAULT_PRESETS: PermissionPreset[] = [
+    { id: 'p-readonly', name: 'Read-Only Auditor', description: 'View-only access across every module — useful for auditors and observers.', permissions: ['view:overview', 'view:clients', 'view:sales', 'view:realty-brokers', 'view:employees', 'view:assets', 'view:compliance', 'view:financial', 'view:analytics', 'view:comms', 'view:marketing', 'view:reports'] },
+    { id: 'p-approver', name: 'Compliance Approver', description: 'Approve KYC + compliance flags; read across finance and clients.', permissions: ['view:overview', 'view:clients', 'approve:clients', 'view:compliance', 'edit:compliance', 'approve:compliance', 'export:compliance', 'view:financial', 'view:reports', 'export:reports'] },
+    { id: 'p-reports', name: 'Reports Only', description: 'Pull and export reports without touching the rest of the system.', permissions: ['view:overview', 'view:reports', 'create:reports', 'export:reports', 'view:analytics', 'export:analytics'] },
+    { id: 'p-marketing', name: 'Marketing Lite', description: 'Run marketing campaigns + comms without finance or compliance access.', permissions: ['view:overview', 'view:clients', 'view:marketing', 'create:marketing', 'edit:marketing', 'export:marketing', 'view:comms', 'create:comms', 'view:analytics'] },
+    { id: 'p-sales', name: 'Sales Lite', description: 'Lead and pipeline access plus client read.', permissions: ['view:overview', 'view:clients', 'view:sales', 'create:sales', 'edit:sales', 'export:sales', 'view:realty-brokers', 'view:marketing'] },
+  ]
+
+  const PRESETS_KEY = 'ghl-admin-permission-presets-v1'
+  const [presets, setPresets] = useState<PermissionPreset[]>(DEFAULT_PRESETS)
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    try {
+      const raw = localStorage.getItem(PRESETS_KEY)
+      if (raw) {
+        const parsed = JSON.parse(raw)
+        if (Array.isArray(parsed) && parsed.length) setPresets([...DEFAULT_PRESETS, ...parsed.filter((p: any) => p && p.id && Array.isArray(p.permissions))])
+      }
+    } catch { /* ignore */ }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+  const persistCustom = (next: PermissionPreset[]) => {
+    try {
+      const custom = next.filter(p => !p.id.startsWith('p-')) // only persist user-created ones
+      localStorage.setItem(PRESETS_KEY, JSON.stringify(custom))
+    } catch { /* ignore */ }
+  }
+
+  const [presetCreateOpen, setPresetCreateOpen] = useState(false)
+  const [presetForm, setPresetForm] = useState<{ name: string; description: string; permissions: string[] }>({ name: '', description: '', permissions: [] })
+  const [applyPresetFor, setApplyPresetFor] = useState<PermissionPreset | null>(null)
+  const [applyTargetId, setApplyTargetId] = useState('')
+  const [applyingPreset, setApplyingPreset] = useState(false)
+  const togglePresetDraftToken = (token: string) => setPresetForm(p => p.permissions.includes(token) ? { ...p, permissions: p.permissions.filter(t => t !== token) } : { ...p, permissions: [...p.permissions, token] })
+  const handlePresetCreate = () => {
+    if (!presetForm.name.trim()) { showToast('Preset name is required', 'error'); return }
+    if (presetForm.permissions.length === 0) { showToast('Pick at least one permission', 'error'); return }
+    const id = `custom-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`
+    const next: PermissionPreset = { id, name: presetForm.name.trim(), description: presetForm.description.trim() || 'Custom preset', permissions: presetForm.permissions }
+    const all = [...presets, next]
+    setPresets(all)
+    persistCustom(all)
+    setPresetCreateOpen(false)
+    setPresetForm({ name: '', description: '', permissions: [] })
+    showToast(`Preset "${next.name}" created`, 'success')
+  }
+  const handlePresetDelete = (p: PermissionPreset) => {
+    if (p.id.startsWith('p-')) { showToast('Default presets cannot be deleted.', 'warning'); return }
+    if (!window.confirm(`Delete preset "${p.name}"?`)) return
+    const next = presets.filter(x => x.id !== p.id)
+    setPresets(next)
+    persistCustom(next)
+    showToast('Preset removed', 'success')
+  }
+  const handlePresetApply = async () => {
+    if (!applyPresetFor || !applyTargetId) return
+    setApplyingPreset(true)
+    try {
+      const target = adminUsers.find(u => u.id === applyTargetId)
+      const existing = target?.permission_overrides || []
+      const merged = Array.from(new Set([...existing, ...applyPresetFor.permissions]))
+      const res = await updateAdminUserPermissions(applyTargetId, merged)
+      if (res.ok) {
+        showToast(`Applied "${applyPresetFor.name}" to ${target?.full_name || target?.email || 'user'}`, 'success')
+        setApplyPresetFor(null)
+        setApplyTargetId('')
+        loadAll()
+      } else {
+        showToast(res.error || 'Apply failed', 'error')
+      }
+    } finally { setApplyingPreset(false) }
+  }
 
   // Add User submit handler
   const handleCreateUser = async () => {
@@ -460,6 +553,47 @@ function PermissionsTab({ showToast }: { showToast: Toast }) {
         showToast(res.error || 'Failed to update permissions', 'error')
       }
     } finally { setSavingPerms(false) }
+  }
+
+  // 2026-05-16: full-purge an admin user (auth + profile + clients + downstream).
+  // Refuses to delete self, the last super_admin, or any super_admin unless
+  // the caller is also a super_admin. The auto-created clients row (left over
+  // from older signup paths that didn't set skip_client_row) is removed too,
+  // which fixes orphan rows lingering in Client List after an admin user was
+  // changed/removed elsewhere.
+  const handleDeleteUser = async (target: { id: string; name: string; email: string; role: AdminRole }) => {
+    if (!target?.id) return
+    if (meId && target.id === meId) {
+      showToast('You cannot delete your own admin account', 'error')
+      return
+    }
+    const me = adminUsers.find(u => u.id === meId)
+    const meRole = me?.role || ''
+    const targetRow = adminUsers.find(u => u.id === target.id)
+    const targetDbRole = targetRow?.role || ''
+    if (targetDbRole === 'super_admin') {
+      if (meRole !== 'super_admin') {
+        showToast('Only a super admin can delete another super admin', 'error')
+        return
+      }
+      const superAdminCount = adminUsers.filter(u => u.role === 'super_admin').length
+      if (superAdminCount <= 1) {
+        showToast('Cannot delete the last super admin', 'error')
+        return
+      }
+    }
+    const label = target.name || target.email
+    if (!window.confirm(`Permanently delete admin user "${label}"?\n\nThis removes the auth account, profile, any client/investor record, and all downstream data. This cannot be undone.`)) return
+    setDeletingUserId(target.id)
+    try {
+      const res = await deleteAdminUser(target.id)
+      if (res.ok) {
+        showToast(`Deleted "${label}"`, 'success')
+        loadAll()
+      } else {
+        showToast(res.error || 'Delete failed', 'error')
+      }
+    } finally { setDeletingUserId(null) }
   }
 
   const PERM_VIEWS = [
@@ -636,6 +770,17 @@ function PermissionsTab({ showToast }: { showToast: Toast }) {
                     >
                       Manage Permissions
                     </button>
+                    {meId !== user.id && (
+                      <button
+                        onClick={() => handleDeleteUser(user)}
+                        disabled={deletingUserId === user.id}
+                        className="px-2.5 py-1 rounded-md text-[10px] font-medium text-red-300 bg-red-500/10 border border-red-500/30 hover:bg-red-500/20 transition-colors disabled:opacity-50 disabled:cursor-not-allowed inline-flex items-center gap-1"
+                        title="Permanently remove this user (auth + profile + any client record)"
+                      >
+                        {deletingUserId === user.id ? <Loader2 className="w-3 h-3 animate-spin" /> : <Trash2 className="w-3 h-3" />}
+                        Delete
+                      </button>
+                    )}
                   </div>
                 </div>
               ))}
@@ -750,40 +895,150 @@ function PermissionsTab({ showToast }: { showToast: Toast }) {
               <h3 className="text-sm font-semibold text-white flex items-center gap-2">
                 <Copy className="w-4 h-4 text-brand-red" />
                 Permission Presets
+                <span className="text-[10px] text-gray-500 font-normal ml-2">{presets.length} preset{presets.length === 1 ? '' : 's'}</span>
               </h3>
-              <p className="text-[11px] text-gray-500 mt-0.5">Pre-configured role templates for quick user setup</p>
+              <p className="text-[11px] text-gray-500 mt-0.5">Pre-configured permission bundles. Apply to a user to grant the bundle on top of their role.</p>
             </div>
-            <button className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-white bg-brand-red/20 border border-brand-red/30 rounded-lg hover:bg-brand-red/30 transition-colors">
+            <button
+              onClick={() => { setPresetForm({ name: '', description: '', permissions: [] }); setPresetCreateOpen(true) }}
+              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-white bg-brand-red/20 border border-brand-red/30 rounded-lg hover:bg-brand-red/30 transition-colors"
+            >
               <Plus className="w-3.5 h-3.5" />
               New Preset
             </button>
           </div>
-          {presets.map(preset => (
-            <AdminGlass key={preset.id}>
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-purple-500/10 flex items-center justify-center shrink-0">
-                    <Shield className="w-5 h-5 text-purple-400" />
+          {presets.map(preset => {
+            const isDefault = preset.id.startsWith('p-')
+            return (
+              <AdminGlass key={preset.id}>
+                <div className="flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className="w-10 h-10 rounded-xl bg-purple-500/10 flex items-center justify-center shrink-0">
+                      <Shield className="w-5 h-5 text-purple-400" />
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium text-white truncate">{preset.name}{isDefault && <span className="ml-2 text-[9px] uppercase tracking-wider text-amber-300">Default</span>}</p>
+                      <p className="text-[11px] text-gray-500 truncate">{preset.description}</p>
+                    </div>
                   </div>
-                  <div>
-                    <p className="text-sm font-medium text-white">{preset.name}</p>
-                    <p className="text-[11px] text-gray-500">{preset.description}</p>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <div className="text-right hidden sm:block">
+                      <p className="text-xs text-white font-medium">{preset.permissions.length} perms</p>
+                    </div>
+                    <button
+                      onClick={() => { setApplyPresetFor(preset); setApplyTargetId('') }}
+                      className="px-2.5 py-1.5 rounded-lg text-[11px] font-medium text-emerald-300 bg-emerald-500/10 border border-emerald-500/30 hover:bg-emerald-500/20 transition-colors"
+                      title="Apply this preset to a user"
+                    >
+                      Apply to User
+                    </button>
+                    {!isDefault && (
+                      <button onClick={() => handlePresetDelete(preset)} className="p-1.5 rounded-lg text-gray-500 hover:text-red-400 transition-colors" title="Delete preset">
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    )}
                   </div>
                 </div>
-                <div className="flex items-center gap-3 shrink-0">
-                  <div className="text-right hidden sm:block">
-                    <p className="text-xs text-white font-medium">{preset.permCount} perms</p>
-                    <p className="text-[10px] text-gray-500">{preset.usedBy} user{preset.usedBy !== 1 ? 's' : ''}</p>
-                  </div>
-                  <button className="p-2 rounded-lg hover:bg-white/[0.06] text-gray-500 hover:text-white transition-colors" title="Apply preset">
-                    <CheckCircle2 className="w-4 h-4" />
-                  </button>
-                </div>
-              </div>
-            </AdminGlass>
-          ))}
+              </AdminGlass>
+            )
+          })}
         </div>
       )}
+
+      {/* New Preset modal */}
+      <AdminModal
+        isOpen={presetCreateOpen}
+        onClose={() => { setPresetCreateOpen(false); setPresetForm({ name: '', description: '', permissions: [] }) }}
+        title="New Permission Preset"
+        subtitle="Bundles save to this browser only. Apply to a user to copy the permissions into their permission_overrides."
+        maxWidth="max-w-2xl"
+        footer={
+          <>
+            <ModalButton onClick={() => { setPresetCreateOpen(false); setPresetForm({ name: '', description: '', permissions: [] }) }}>Cancel</ModalButton>
+            <ModalButton variant="primary" onClick={handlePresetCreate}>Save Preset</ModalButton>
+          </>
+        }
+      >
+        <div className="space-y-3">
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-[10px] uppercase tracking-wider text-gray-500 font-medium mb-1">Name *</label>
+              <input value={presetForm.name} onChange={e => setPresetForm(p => ({ ...p, name: e.target.value }))} placeholder="e.g. Finance Read-Only" className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-brand-red/40 focus:ring-1 focus:ring-brand-red/20" />
+            </div>
+            <div>
+              <label className="block text-[10px] uppercase tracking-wider text-gray-500 font-medium mb-1">Description</label>
+              <input value={presetForm.description} onChange={e => setPresetForm(p => ({ ...p, description: e.target.value }))} placeholder="What this preset grants" className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-brand-red/40 focus:ring-1 focus:ring-brand-red/20" />
+            </div>
+          </div>
+          <div>
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-[10px] uppercase tracking-wider text-gray-500 font-medium">Permissions ({presetForm.permissions.length})</span>
+            </div>
+            <div className="grid grid-cols-1 gap-2 max-h-[50vh] overflow-y-auto pr-1">
+              {allModules.map(mod => (
+                <div key={mod} className="rounded-xl bg-white/[0.02] border border-white/[0.06] p-2.5">
+                  <div className="flex items-center justify-between mb-1.5">
+                    <p className="text-sm font-medium text-white capitalize">{mod.replace(/-/g, ' ')}</p>
+                    <span className="text-[10px] text-gray-500">{allActions.filter(a => presetForm.permissions.includes(`${a}:${mod}`)).length} of {allActions.length}</span>
+                  </div>
+                  <div className="flex flex-wrap gap-1.5">
+                    {allActions.map(action => {
+                      const token = `${action}:${mod}`
+                      const on = presetForm.permissions.includes(token)
+                      return (
+                        <button
+                          key={token}
+                          onClick={() => togglePresetDraftToken(token)}
+                          className={`px-2 py-0.5 rounded text-[10px] font-medium uppercase tracking-wider transition-colors ${on ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40' : 'bg-white/[0.03] text-gray-500 border border-white/[0.08] hover:bg-white/[0.06]'}`}
+                        >
+                          {action}
+                        </button>
+                      )
+                    })}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </AdminModal>
+
+      {/* Apply Preset modal */}
+      <AdminModal
+        isOpen={!!applyPresetFor}
+        onClose={() => { setApplyPresetFor(null); setApplyTargetId('') }}
+        title={applyPresetFor ? `Apply Preset · ${applyPresetFor.name}` : ''}
+        subtitle="Pick an admin user. The preset's permissions are added on top of their role (no permissions are removed)."
+        maxWidth="max-w-lg"
+        footer={
+          <>
+            <ModalButton onClick={() => { setApplyPresetFor(null); setApplyTargetId('') }} disabled={applyingPreset}>Cancel</ModalButton>
+            <ModalButton variant="primary" onClick={handlePresetApply} disabled={applyingPreset || !applyTargetId}>{applyingPreset ? 'Applying…' : 'Apply'}</ModalButton>
+          </>
+        }
+      >
+        {applyPresetFor && (
+          <div className="space-y-3">
+            <div>
+              <label className="block text-[10px] uppercase tracking-wider text-gray-500 font-medium mb-1">User</label>
+              <select value={applyTargetId} onChange={e => setApplyTargetId(e.target.value)} className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-brand-red/40 focus:ring-1 focus:ring-brand-red/20">
+                <option value="">Choose user…</option>
+                {adminUsers.map(u => (
+                  <option key={u.id} value={u.id}>{u.full_name || u.email} — {ROLE_LABELS[ROLE_DB_TO_UI[u.role] || 'viewer']}</option>
+                ))}
+              </select>
+            </div>
+            <div className="rounded-xl bg-white/[0.02] border border-white/[0.06] p-3">
+              <p className="text-[10px] uppercase tracking-wider text-gray-500 mb-1.5">Permissions Granted</p>
+              <div className="flex flex-wrap gap-1.5">
+                {applyPresetFor.permissions.map(t => (
+                  <span key={t} className="px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-300 text-[10px] font-medium font-mono">{t}</span>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+      </AdminModal>
 
       {/* Add User modal */}
       <AdminModal
