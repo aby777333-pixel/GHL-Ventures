@@ -3210,8 +3210,16 @@ export async function fetchAdminUsers(): Promise<AdminUserRow[]> {
       .from('profiles')
       .select('id, email, full_name, phone, role, department, last_login_at, created_at, permission_overrides')
       .order('created_at', { ascending: false })
-    if (error) { console.warn('[admin] fetchAdminUsers:', error.message); return [] }
-    return ((data as any[]) || [])
+    if (error) {
+      // 2026-05-16: surface as console.error (not warn) so admins running
+      // into "0 users" can quickly diff vs the working DB query. The most
+      // common cause is a stale JWT — supabase.auth.refreshSession() in the
+      // browser usually clears it.
+      console.error('[admin] fetchAdminUsers query failed:', error.message, error)
+      return []
+    }
+    const rows = (data as any[]) || []
+    const filtered = rows
       .filter((u: any) => allowed.has(String(u.role || '')))
       .map((u: any) => ({
         id: u.id,
@@ -3224,6 +3232,15 @@ export async function fetchAdminUsers(): Promise<AdminUserRow[]> {
         created_at: u.created_at,
         permission_overrides: Array.isArray(u.permission_overrides) ? u.permission_overrides : [],
       }))
+    if (rows.length > 0 && filtered.length === 0) {
+      // Diagnostic: select returned rows but none matched ADMIN_ROLE_DB_VALUES.
+      // Usually means a new role landed in profiles.role without being added
+      // to the whitelist above.
+      console.warn('[admin] fetchAdminUsers: select returned', rows.length, 'rows but none matched admin roles. Sample roles:', rows.slice(0, 5).map((r: any) => r.role))
+    } else if (rows.length === 0) {
+      console.warn('[admin] fetchAdminUsers: select returned 0 rows — likely an auth/RLS problem (stale JWT, or signed out)')
+    }
+    return filtered
   } catch (e: any) {
     console.warn('[admin] fetchAdminUsers error:', e?.message)
     return []
