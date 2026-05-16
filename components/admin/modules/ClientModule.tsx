@@ -142,41 +142,63 @@ export default function ClientModule({ subTab, navigate, showToast }: ClientModu
     if (res.ok) {
       showToast(`Client "${client.name}" moved to Trash`, 'success')
       if (selectedClient?.id === client.id) { setProfileModalOpen(false); setSelectedClient(null) }
+      // 2026-05-16: drop the row from the in-memory clients list immediately
+      // so the All Clients table updates without waiting for the loadData()
+      // round-trip. loadData() still runs so the Trash tab picks up the new
+      // entry.
+      setClients(prev => prev.filter((c: any) => c.id !== client.id))
       loadData()
     } else {
       showToast(res.error || 'Failed to trash client', 'error')
-      // 2026-05-16: if the RPC reported "Already trashed", our in-memory
-      // clients list is the stale party (the row was trashed in another tab
-      // or earlier in this session before a refetch). Reload so the row
-      // stops appearing in All Clients.
+      // If the RPC reported "Already trashed", our in-memory clients list is
+      // the stale party (the row was trashed in another tab or earlier in
+      // this session before a refetch). Drop the row and refresh.
       if (/already trashed/i.test(res.error || '')) {
         if (selectedClient?.id === client.id) { setProfileModalOpen(false); setSelectedClient(null) }
+        setClients(prev => prev.filter((c: any) => c.id !== client.id))
         loadData()
       }
     }
   }, [selectedClient, showToast, loadData])
 
   // ── Restore a trashed client (Trash tab → Restore button).
+  // 2026-05-16: optimistically drop the row from `trashedClients` the instant
+  // the RPC reports success, so the Trash tab updates without waiting for
+  // the loadData() refetch round-trip. loadData() still runs to refresh
+  // the main clients list (so the restored client reappears in Client List).
+  // If the RPC returns "Restore returned false" (already restored elsewhere),
+  // refresh anyway to clear the stale row.
   const handleRestoreClient = useCallback(async (client: any) => {
     const res = await restoreClient(client.id)
     if (res.ok) {
       showToast(`Restored "${client.full_name || client.name}"`, 'success')
+      setTrashedClients(prev => prev.filter((c: any) => c.id !== client.id))
       loadData()
     } else {
       showToast(res.error || 'Failed to restore client', 'error')
+      if (/restore returned false|not found/i.test(res.error || '')) {
+        setTrashedClients(prev => prev.filter((c: any) => c.id !== client.id))
+        loadData()
+      }
     }
   }, [showToast, loadData])
 
   // ── Permanent delete from Trash (super-admin destructive action).
+  // Same optimistic-removal pattern as Restore.
   const handlePermanentDelete = useCallback(async (client: any) => {
     const name = client.full_name || client.name || 'this client'
     if (!window.confirm(`PERMANENTLY delete "${name}"? This cannot be undone — all data, files, and auth records will be erased.`)) return
     const res = await deleteClientSafe(client.id, client.user_id || null)
     if (res.ok) {
       showToast(`"${name}" permanently deleted`, 'success')
+      setTrashedClients(prev => prev.filter((c: any) => c.id !== client.id))
       loadData()
     } else {
       showToast(res.error || 'Failed to delete permanently', 'error')
+      if (/not found/i.test(res.error || '')) {
+        setTrashedClients(prev => prev.filter((c: any) => c.id !== client.id))
+        loadData()
+      }
     }
   }, [showToast, loadData])
 
