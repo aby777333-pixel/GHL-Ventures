@@ -777,22 +777,32 @@ export default function DashboardClient() {
   const totalCurrent = useMemo(() => portfolioAssets.reduce((s: number, a: any) => s + (Number(a.current_value) || 0), 0), [portfolioAssets])
   const totalInvested = useMemo(() => portfolioAssets.reduce((s: number, a: any) => s + (Number(a.invested_amount) || 0), 0), [portfolioAssets])
   // AIF amount — both routes (Direct AIF + Alternate route via Debenture) are
-  // AIF investments per the corrections punch-list dated 2026-05-10
-  // ("Investments are not reflected in the concern Investment bracket"). Both
-  // ride the same SEBI Cat-II AIF, so the AIF Investment tile aggregates them.
-  // Matching is also case-insensitive so a slightly-different fund_vehicle
-  // string ("direct aif route" vs "Direct AIF Route") still gets counted.
+  // 2026-05-16: AIF and Debenture buckets are now MUTUALLY EXCLUSIVE.
+  // Previously the AIF matcher counted any row whose fund_type or name
+  // mentioned 'debenture' too, so an "Alternate route to Invest in AIF
+  // via Debenture" application landed in both buckets — the same ₹20L
+  // was reported as AIF ₹20L AND Debenture ₹20L, and the breakdown
+  // overflowed the parent Total Investment card by 2×.
+  //
+  // Rule: if the instrument is a debenture (even an AIF-backed one),
+  // it belongs to the Debenture bucket. AIF only fires when the
+  // investment is a *direct* AIF subscription (no debenture wrapper).
+  // Matching stays case-insensitive so legacy fund_vehicle strings
+  // ("direct aif route" vs "Direct AIF Route") still classify.
+  const isDebenture = (a: any) => {
+    const ft = String(a.fund_type || '').toLowerCase()
+    const fv = String(a.fund_name || '').toLowerCase()
+    return ft === 'debenture' || fv.includes('debenture')
+  }
   const aifTotal = useMemo(() => portfolioAssets.reduce((s: number, a: any) => {
+    if (isDebenture(a)) return s                            // Debenture wins.
     const ft = String(a.fund_type || '').toLowerCase()
     const fv = String(a.fund_name || '').toLowerCase()
-    const isAifRoute = ft === 'aif' || ft === 'debenture' || fv.includes('aif') || fv.includes('debenture')
-    return s + (isAifRoute ? (Number(a.invested_amount) || 0) : 0)
+    const isAif = ft === 'aif' || fv.includes('aif')
+    return s + (isAif ? (Number(a.invested_amount) || 0) : 0)
   }, 0), [portfolioAssets])
-  // Debenture amount (Laravel: fund_id=11) — Alternate route only
   const debentureTotal = useMemo(() => portfolioAssets.reduce((s: number, a: any) => {
-    const ft = String(a.fund_type || '').toLowerCase()
-    const fv = String(a.fund_name || '').toLowerCase()
-    return s + (ft === 'debenture' || fv.includes('debenture') ? (Number(a.invested_amount) || 0) : 0)
+    return s + (isDebenture(a) ? (Number(a.invested_amount) || 0) : 0)
   }, 0), [portfolioAssets])
   // 2026-05-16: Total Investment must reflect ACTIVE investments only.
   // Previously this used Math.max(user.aum, totalInvested) on the theory
