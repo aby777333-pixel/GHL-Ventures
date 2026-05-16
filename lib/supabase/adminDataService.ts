@@ -745,8 +745,92 @@ export async function fetchEmployees() {
 }
 
 // ── Compliance ──────────────────────────────────────────────
+// 2026-05-16: the dedicated `approvals` table was never populated by any
+// existing write path — the real approval-worthy work lives on `clients`
+// (KYC submissions awaiting review) and `investment_applications` (new
+// investments awaiting credit). We continue to read the `approvals` table
+// for any legacy/manually-inserted rows, then synthesise rows from those
+// two upstream sources so the ApprovalsTab reflects what actually needs an
+// admin decision today. Shape matches `Approval` in lib/admin/adminTypes.ts
+// so the existing UI renders without changes.
 export async function fetchApprovals() {
-  return queryTable<any>('approvals')
+  const legacyRows: any[] = await queryTable<any>('approvals')
+
+  if (!isSupabaseConfigured()) return legacyRows
+
+  const synthesised: any[] = []
+
+  // KYC submissions that need an admin decision.
+  try {
+    const { data: kycClients } = await (supabase
+      .from('clients')
+      .select('id, full_name, email, kyc_status, created_at, updated_at')
+      .is('deleted_at', null)
+      .in('kyc_status', ['pending', 'submitted', 'under-review', 'under_review']) as any)
+    for (const c of (kycClients || []) as any[]) {
+      const submitted = c.updated_at || c.created_at
+      const status: 'pending' = 'pending'
+      synthesised.push({
+        id: `kyc-${c.id}`,
+        type: 'kyc',
+        requestedBy: c.full_name || c.email || 'Investor',
+        description: `KYC verification for ${c.full_name || c.email || 'investor'}`,
+        date: submitted || new Date().toISOString(),
+        priority: c.kyc_status === 'under-review' || c.kyc_status === 'under_review' ? 'high' : 'medium',
+        assignedReviewer: undefined,
+        status,
+      })
+    }
+  } catch (err) {
+    console.warn('[adminData] fetchApprovals — kyc derivation failed:', err)
+  }
+
+  // Investment applications waiting on credit / approval. We treat any
+  // non-final status as "pending" for the queue.
+  try {
+    const { data: pendingApps } = await (supabase
+      .from('investment_applications')
+      .select('id, client_id, investment_amount, fund_vehicle, status, created_at, reference_number, credit_given')
+      .in('status', ['pending', 'submitted', 'under-review', 'under_review', 'approved']) as any)
+    const apps = ((pendingApps || []) as any[]).filter(a => !a.credit_given)
+    // Bulk-resolve client names for the requestedBy field.
+    const clientIds = Array.from(new Set(apps.map(a => a.client_id).filter(Boolean)))
+    let nameMap = new Map<string, string>()
+    if (clientIds.length > 0) {
+      const { data: clientRows } = await (supabase
+        .from('clients')
+        .select('id, full_name, email')
+        .in('id', clientIds) as any)
+      for (const c of (clientRows || []) as any[]) {
+        nameMap.set(c.id, c.full_name || c.email || 'Investor')
+      }
+    }
+    for (const a of apps) {
+      const amountCr = Number(a.investment_amount) > 0
+        ? `₹${(Number(a.investment_amount) / 100000).toFixed(2)} L`
+        : 'Pending'
+      const vehicle = a.fund_vehicle ? ` — ${a.fund_vehicle}` : ''
+      const ref = a.reference_number ? ` (${a.reference_number})` : ''
+      const isHighValue = Number(a.investment_amount) >= 5000000 // ≥ ₹50 L
+      synthesised.push({
+        id: `inv-${a.id}`,
+        type: 'investment',
+        requestedBy: nameMap.get(a.client_id || '') || 'Investor',
+        description: `Investment ${amountCr}${vehicle}${ref}`,
+        date: a.created_at || new Date().toISOString(),
+        priority: isHighValue ? 'high' : 'medium',
+        assignedReviewer: undefined,
+        status: 'pending',
+      })
+    }
+  } catch (err) {
+    console.warn('[adminData] fetchApprovals — investment derivation failed:', err)
+  }
+
+  // Sort newest-first and prepend legacy rows so manual approvals still
+  // show up at the top of their respective filter groups.
+  synthesised.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+  return [...legacyRows, ...synthesised]
 }
 
 export async function fetchRiskFlags() {

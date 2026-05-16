@@ -179,40 +179,41 @@ function KYCQueueTab({ kycQueue, showToast, onRefresh, initialStatusFilter }: { 
 
   const filtered = useMemo(() => {
     if (statusFilter === 'all') return clientGroups
-    // ADMIN COMMAND CENTER 2026-05-15 (revised): the Approved tab was leaking
-    // clients whose `kyc_status` had been bumped to 'verified' at the client
-    // row but whose sub-row decisions were still 'submitted'. Truly-approved
-    // clients are those where the client-level status is verified/approved
-    // AND no sub-row is still in submitted/pending — i.e. every KYC step has
-    // a final decision. The Pending tab gets the inverse.
+    // ADMIN COMMAND CENTER 2026-05-15 (final): client.kyc_status is the
+    // source of truth — that's what approveClientKYC flips, and a backfill
+    // syncs the sub-rows where they lagged. The filter trusts the client
+    // status first, and falls back to sub-row status only when the client
+    // status is missing.
     const isApprovedClient = (cks: string): boolean => cks === 'approved' || cks === 'verified'
-    const hasUndecidedSubRow = (items: any[]): boolean =>
-      items.some(i => i.status === 'submitted' || i.status === 'pending' || i.status === 'under-review')
     return clientGroups.filter(g => {
       const cks = (g.items[0] as any)?.clientKycStatus || ''
-      if (statusFilter === 'pending') {
-        // Show clients that still have a sub-row awaiting decision, OR whose
-        // overall client status is pending/submitted.
-        if (cks === 'pending' || cks === 'submitted' || cks === 'under-review') return true
-        if (isApprovedClient(cks)) return false
-        if (cks === 'rejected') return false
-        return hasUndecidedSubRow(g.items)
-      }
       if (statusFilter === 'approved') {
-        // Strict: client must be verified/approved AND every sub-row decided.
-        return isApprovedClient(cks) && !hasUndecidedSubRow(g.items)
+        if (cks) return isApprovedClient(cks)
+        return g.items.every(i => i.status === 'approved')
       }
       if (statusFilter === 'rejected') {
-        return cks === 'rejected'
+        if (cks) return cks === 'rejected'
+        return g.items.some(i => i.status === 'rejected')
+      }
+      if (statusFilter === 'pending') {
+        if (cks) return cks === 'pending' || cks === 'submitted' || cks === 'under-review'
+        return g.items.some(i => i.status === 'submitted' || i.status === 'pending')
       }
       if (statusFilter === 'submitted') {
-        return hasUndecidedSubRow(g.items) && !isApprovedClient(cks) && cks !== 'rejected'
+        if (cks) return cks === 'submitted' || cks === 'pending'
+        return g.items.some(i => i.status === 'submitted')
       }
       return cks === statusFilter
     })
   }, [statusFilter, clientGroups])
 
   const pendingCount = kycQueue.filter(k => k.status === 'submitted' || k.status === 'pending').length
+  // 2026-05-16: the badge labels the cohort that's awaiting decisions, so it only
+  // belongs on the unfiltered "All" view or the explicit "Pending/Submitted"
+  // filters. Suppress it on KYC Approved / KYC Rejected (which use this same
+  // component with initialStatusFilter='approved'|'rejected') so an approved
+  // client never appears under a "32 pending review" header.
+  const showPendingBadge = statusFilter === 'all' || statusFilter === 'pending' || statusFilter === 'submitted'
 
   const handleApproveAll = async (clientId: string) => {
     setProcessing(true)
@@ -267,7 +268,7 @@ function KYCQueueTab({ kycQueue, showToast, onRefresh, initialStatusFilter }: { 
             </button>
           ))}
         </div>
-        {pendingCount > 0 && (
+        {showPendingBadge && pendingCount > 0 && (
           <span className="px-3 py-1 rounded-full text-xs font-semibold bg-amber-500/20 text-amber-400 border border-amber-500/30">
             {pendingCount} pending review
           </span>
@@ -719,12 +720,44 @@ function ApprovalsTab({ approvals, showToast }: { approvals: any[]; showToast: (
               </button>
               <button
                 onClick={async () => {
-                  const newStatus = reviewAction === 'approve' ? 'approved' : 'rejected'
-                  const ok = await updateRow('approvals', reviewApproval.id, { status: newStatus, reviewer_notes: reviewerNotes })
+                  // 2026-05-16: synthetic rows (id prefixed with `kyc-` /
+                  // `inv-`) are aggregations from clients + investment_apps,
+                  // not real rows in the `approvals` table. Route the action
+                  // to the proper handler so the buttons actually work
+                  // without falling back to a stale generic updateRow call.
+                  const id: string = reviewApproval.id
+                  const isKYC = id.startsWith('kyc-')
+                  const isInv = id.startsWith('inv-')
+                  let ok = false
+                  try {
+                    if (isKYC) {
+                      const clientId = id.slice(4)
+                      const { supabase } = await import('@/lib/supabase/client')
+                      const { data: { user } } = await supabase.auth.getUser()
+                      const { approveClientKYC, rejectClientKYC } = await import('@/lib/supabase/adminDataService')
+                      ok = reviewAction === 'approve'
+                        ? !!(await approveClientKYC(clientId, user?.id || ''))
+                        : !!(await rejectClientKYC(clientId, user?.id || '', reviewerNotes || 'Rejected from Approvals queue.'))
+                    } else if (isInv) {
+                      const appId = id.slice(4)
+                      if (reviewAction === 'approve') {
+                        const { markInvestmentCreditGiven } = await import('@/lib/supabase/adminDataService')
+                        const { supabase } = await import('@/lib/supabase/client')
+                        const { data: { user } } = await supabase.auth.getUser()
+                        const res = await markInvestmentCreditGiven(appId, user?.id || '')
+                        ok = res === true
+                      } else {
+                        ok = await updateRow('investment_applications', appId, { status: 'rejected' })
+                      }
+                    } else {
+                      const newStatus = reviewAction === 'approve' ? 'approved' : 'rejected'
+                      ok = await updateRow('approvals', id, { status: newStatus, reviewer_notes: reviewerNotes })
+                    }
+                  } catch { ok = false }
                   showToast(
                     ok
-                      ? (reviewAction === 'approve' ? `${reviewApproval.id} approved successfully` : `${reviewApproval.id} rejected`)
-                      : `Failed to update ${reviewApproval.id}`,
+                      ? (reviewAction === 'approve' ? 'Approved successfully' : 'Rejected')
+                      : `Failed to ${reviewAction === 'approve' ? 'approve' : 'reject'}`,
                     ok ? (reviewAction === 'approve' ? 'success' : 'error') : 'error'
                   )
                   setReviewApproval(null)
