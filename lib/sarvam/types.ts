@@ -296,9 +296,13 @@ export const SARVAM_ENDPOINTS = {
   TRANSLATE:          'https://api.sarvam.ai/translate',
   TRANSLITERATE:      'https://api.sarvam.ai/transliterate',
   TEXT_LID:           'https://api.sarvam.ai/text-lid',
-  // Pronunciation dictionary CRUD
-  DICT:               'https://api.sarvam.ai/pronunciation-dictionary',
-  DICT_BY_ID:         (id: string) => `https://api.sarvam.ai/pronunciation-dictionary/${id}`,
+  // Pronunciation dictionary CRUD — nested under /text-to-speech/.
+  // The Sarvam addendum doc lists the bare /pronunciation-dictionary
+  // path, but in production the real endpoint is
+  // /text-to-speech/pronunciation-dictionary (confirmed via live API
+  // call returning 404 on the bare path, 2xx on the nested one).
+  DICT:               'https://api.sarvam.ai/text-to-speech/pronunciation-dictionary',
+  DICT_BY_ID:         (id: string) => `https://api.sarvam.ai/text-to-speech/pronunciation-dictionary/${id}`,
   // Document digitization (job-based)
   DOC_PARSE:          'https://api.sarvam.ai/parse/parsepdf',
   DOC_JOB:            (jobId: string) => `https://api.sarvam.ai/parse/parsepdf/${jobId}`,

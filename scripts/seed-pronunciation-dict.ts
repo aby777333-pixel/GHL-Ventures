@@ -69,7 +69,9 @@ const SUPABASE_URL =
   process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL || ''
 const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || ''
 
-const SARVAM_DICT_URL = 'https://api.sarvam.ai/pronunciation-dictionary'
+// Nested under /text-to-speech/. The bare /pronunciation-dictionary
+// path 404s in production; the nested one is the live endpoint.
+const SARVAM_DICT_URL = 'https://api.sarvam.ai/text-to-speech/pronunciation-dictionary'
 
 interface DictBlueprint {
   name: string
