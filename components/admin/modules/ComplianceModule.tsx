@@ -179,25 +179,38 @@ function KYCQueueTab({ kycQueue, showToast, onRefresh, initialStatusFilter }: { 
 
   const filtered = useMemo(() => {
     if (statusFilter === 'all') return clientGroups
-    // ADMIN COMMAND CENTER 2026-05-15 (final): client.kyc_status is the
-    // source of truth — that's what approveClientKYC flips, and a backfill
-    // syncs the sub-rows where they lagged. The filter trusts the client
-    // status first, and falls back to sub-row status only when the client
-    // status is missing.
+    // ADMIN COMMAND CENTER 2026-05-16 (strict): a client only belongs in the
+    // Approved tab when the parent client.kyc_status is verified/approved AND
+    // every captured sub-row is approved-or-skipped. The previous "trust the
+    // parent status" rule leaked clients whose Nominee Details (or other
+    // step) was still 'submitted' into Approved — surfacing a yellow
+    // 'submitted' chip under an otherwise-approved card. Mixed-state
+    // clients now appear under Pending until every sub-row is decided.
     const isApprovedClient = (cks: string): boolean => cks === 'approved' || cks === 'verified'
+    const isSubRowDecided = (s: string): boolean =>
+      s === 'approved' || s === 'skipped' || s === 'rejected'
+    const everySubRowApproved = (items: any[]): boolean =>
+      items.length > 0 && items.every(i => i.status === 'approved' || i.status === 'skipped')
+    const hasUndecidedSubRow = (items: any[]): boolean =>
+      items.some(i => !isSubRowDecided(i.status))
     return clientGroups.filter(g => {
       const cks = (g.items[0] as any)?.clientKycStatus || ''
       if (statusFilter === 'approved') {
-        if (cks) return isApprovedClient(cks)
-        return g.items.every(i => i.status === 'approved')
+        // Strict: parent approved AND every sub-row decided as approved/skipped.
+        if (cks) return isApprovedClient(cks) && everySubRowApproved(g.items)
+        return everySubRowApproved(g.items)
       }
       if (statusFilter === 'rejected') {
         if (cks) return cks === 'rejected'
         return g.items.some(i => i.status === 'rejected')
       }
       if (statusFilter === 'pending') {
-        if (cks) return cks === 'pending' || cks === 'submitted' || cks === 'under-review'
-        return g.items.some(i => i.status === 'submitted' || i.status === 'pending')
+        // Anything not yet fully decided: parent pending, OR parent approved
+        // but a sub-row is still awaiting a decision.
+        if (cks === 'rejected') return false
+        if (isApprovedClient(cks)) return hasUndecidedSubRow(g.items)
+        if (cks) return cks === 'pending' || cks === 'submitted' || cks === 'under-review' || hasUndecidedSubRow(g.items)
+        return hasUndecidedSubRow(g.items)
       }
       if (statusFilter === 'submitted') {
         if (cks) return cks === 'submitted' || cks === 'pending'
