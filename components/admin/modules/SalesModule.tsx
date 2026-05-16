@@ -1221,7 +1221,11 @@ async function generateInvestmentDocument(
   const tenure = app.tenure_preference || '3 years'
 
   const css = `<style>
-    @page{size:A4;margin:18mm 20mm;}
+    /* 2026-05-16: bumped top print margin to 32mm so the first line of the
+       document body sits well below the browser-injected print header
+       (date / URL) and the page feels less crowded at the top. Side and
+       bottom margins unchanged. */
+    @page{size:A4;margin:32mm 20mm 20mm 20mm;}
     *{box-sizing:border-box;}
     body{font-family:'Segoe UI',Arial,sans-serif;color:#222;line-height:1.6;font-size:12px;margin:0;padding:0;max-width:210mm;margin-left:auto;margin-right:auto;padding:20mm;overflow-wrap:break-word;word-wrap:break-word;}
     table{width:100%;border-collapse:collapse;table-layout:fixed;}
