@@ -161,13 +161,22 @@ export default function InvestmentFlowTab({
   const { data: investTxns, refetch: refetchTxns } = useInvestmentTransactions(clientId ?? undefined)
   // Real payouts for the selected application, from monthly_payouts table.
   // When present, these supersede the computed `schedule` preview.
+  // 2026-05-16: only fetch when we have a REAL investment app id. The Invest
+  // preview screen calls setSelectedApp({...}) with a synthetic object (no
+  // `id`) just to pivot to the schedule view; previously this triggered
+  // fetchInvestorPayouts(clientId, undefined) which, lacking an investment_id
+  // filter, returned every payout the client had ever accumulated across all
+  // their applications — so a client with two prior investments saw every
+  // month duplicated. Guarding on selectedApp?.id keeps the live path for
+  // real selections from My Investments and routes previews to the computed
+  // `schedule` fallback.
   const [investorPayouts, setInvestorPayouts] = useState<any[]>([])
   useEffect(() => {
-    if (!clientId) { setInvestorPayouts([]); return }
+    if (!clientId || !selectedApp?.id) { setInvestorPayouts([]); return }
     let cancelled = false
     ;(async () => {
       try {
-        const rows = await fetchInvestorPayouts(clientId, selectedApp?.id)
+        const rows = await fetchInvestorPayouts(clientId, selectedApp.id)
         if (!cancelled) setInvestorPayouts(rows as any[])
       } catch { if (!cancelled) setInvestorPayouts([]) }
     })()
