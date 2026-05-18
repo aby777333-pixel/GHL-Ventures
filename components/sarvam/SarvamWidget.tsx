@@ -24,8 +24,6 @@ import {
 import {
   createChatSession,
   sendChatMessage,
-  getVisitorChatMessages,
-  getActiveSessionForVisitor,
   pollNewMessages,
   type ChatSession,
 } from '@/lib/supabase/chatService'
@@ -181,44 +179,20 @@ export default function SarvamWidget() {
     return () => { cancelled = true }
   }, [langCode])
 
-  // ── Restore active session on mount ───────────────────────────
-  // Only flip into "human" mode if a supervisor is actually assigned
-  // to the session. An unassigned session means the visitor tapped
-  // "Talk to a human" but nobody picked up — in that case we start
-  // fresh in bot mode and let them keep chatting with the KB.
-  // (The unassigned session row still exists in Supabase for the
-  // staff Smarty console to take over later.)
-  useEffect(() => {
-    async function restore() {
-      const s = await getActiveSessionForVisitor()
-      if (!s || s.channel !== 'sarvam') return
-      if (!s.assigned_rep_id) return
-
-      setSession(s)
-      setMode('human')
-      setAgentJoined(true)
-      setAgentName('Supervisor')
-
-      const history = await getVisitorChatMessages(s.id)
-      if (history.length > 0) {
-        const uiMsgs: SarvamMessage[] = history.map(m => ({
-          id: m.id,
-          text: m.message,
-          originalText: m.message,
-          sender: m.sender_type === 'visitor' ? 'user'
-            : m.sender_type === 'agent' ? 'agent'
-            : m.sender_type === 'bot' ? 'bot' : 'system',
-          timestamp: new Date(m.created_at),
-          lang: langCode,
-        }))
-        history.forEach(m => seenMsgIds.current.add(m.id))
-        setMessages(uiMsgs)
-        lastPollRef.current = history[history.length - 1].created_at
-      }
-    }
-    restore()
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+  // ── No auto-restore — always start fresh in bot mode ─────────
+  // Earlier versions restored the visitor's last Sarvam session on
+  // mount. That caused stale sessions (left over from a previous
+  // "Talk to a human" tap that nobody picked up) to drag every
+  // future widget open back into human/LIVE mode with no bot
+  // replies. Users hit it repeatedly: header shows "Supervisor is
+  // on the line", bot doesn't answer, typing goes nowhere.
+  //
+  // Fresh-bot-every-time is the right default. If a supervisor
+  // is actively chatting, the visitor's widget is still open from
+  // when they clicked "Talk to a human" — they don't need restore.
+  // If they reload, the old session sits in the staff Smarty
+  // console; the supervisor can still re-engage by sending a new
+  // message (which would arrive on a new session for the visitor).
 
   // ── Poll for supervisor messages when in human mode ─────────
   useEffect(() => {
