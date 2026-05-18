@@ -115,16 +115,28 @@ export default function ContactPage() {
         </picture>
         <div className="container-max mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
           <AnimatedSection>
-            <span className="text-[11px] md:text-xs font-semibold uppercase tracking-[0.18em] text-brand-red">
-              Get In Touch
-            </span>
-            <h1 className="text-2xl md:text-3xl lg:text-4xl font-bold mt-4 mb-5">
-              <span className="text-brand-red">Contact</span>{' '}
-              <span className="text-brand-black">GHL India Ventures</span>
-            </h1>
-            <p className="text-sm md:text-base text-brand-black max-w-3xl">
-              Schedule a consultation with our investment team. We&apos;re here to guide you through every step of your investment journey.
-            </p>
+            {/* Soft "smoky" panel behind the copy — radial gradient that
+                fades into the image at the edges so the headline remains
+                readable where the handshake silhouettes overlap. */}
+            <div
+              className="inline-block max-w-3xl px-6 sm:px-8 py-6 sm:py-8 rounded-2xl"
+              style={{
+                background: 'radial-gradient(ellipse at 30% 50%, rgba(255,255,255,0.92) 0%, rgba(255,255,255,0.78) 55%, rgba(255,255,255,0) 100%)',
+                backdropFilter: 'blur(8px)',
+                WebkitBackdropFilter: 'blur(8px)',
+              }}
+            >
+              <span className="text-[11px] md:text-xs font-semibold uppercase tracking-[0.18em] text-brand-red">
+                Get In Touch
+              </span>
+              <h1 className="text-2xl md:text-3xl lg:text-4xl font-bold mt-4 mb-5">
+                <span className="text-brand-red">Contact</span>{' '}
+                <span className="text-brand-black">GHL India Ventures</span>
+              </h1>
+              <p className="text-sm md:text-base text-brand-black">
+                Schedule a consultation with our investment team. We&apos;re here to guide you through every step of your investment journey.
+              </p>
+            </div>
           </AnimatedSection>
         </div>
       </section>
