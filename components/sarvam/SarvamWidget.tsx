@@ -370,15 +370,21 @@ export default function SarvamWidget() {
         )}
       </div>
 
-      {/* ── Expanded Panel — slides from left ── */}
+      {/* ── Expanded Panel — slides from left ──
+          The Tailwind class `pointer-events-auto` is REQUIRED here
+          (not just the inline style). globals.css disables pointer
+          events on every descendant of `[data-ghl-widget]` with
+          `!important`, and only restores it for elements that
+          carry the literal class. Inline style loses that fight. */}
       <div
-        className="fixed z-[9998] transition-all duration-300 ease-out"
+        className={`fixed z-[9998] transition-all duration-300 ease-out ${
+          isOpen ? 'pointer-events-auto' : 'pointer-events-none'
+        }`}
         style={{
           left: '20px',
           top: '50%',
           transform: `translateY(-50%) translateX(${isOpen ? '0' : '-1rem'})`,
           opacity: isOpen ? 1 : 0,
-          pointerEvents: isOpen ? 'auto' : 'none',
           width: '360px',
           height: '560px',
           maxHeight: 'calc(100vh - 120px)',
