@@ -31,10 +31,58 @@ import {
 } from '@/lib/supabase/chatService'
 import { isSupabaseConfigured } from '@/lib/supabase/client'
 import { SARVAM_KB } from '@/components/sarvam/SarvamKnowledge'
-import TTSPlayer from '@/components/shared/TTSPlayer'
+import TTSPlayer, { type DictOption } from '@/components/shared/TTSPlayer'
+import { sarvamDictList, SarvamBrowserError, type SarvamDictEntry } from '@/lib/sarvam/browserClient'
 
 const ACCENT = '#6366F1'
 const ACCENT_GRAD = 'linear-gradient(135deg, #6366F1 0%, #8B5CF6 100%)'
+
+const DICT_STORAGE_KEY = 'ghl-sarvam-dict-id'
+
+/** Fetch the staff's available Sarvam pronunciation dictionaries and
+ *  expose them as DictOption[] for <TTSPlayer />. Picks are persisted
+ *  in localStorage so a supervisor's choice survives reloads. */
+function useSarvamDicts() {
+  const [dicts, setDicts] = useState<DictOption[]>([])
+  const [activeDictId, setActiveDictId] = useState<string | null>(null)
+
+  useEffect(() => {
+    let mounted = true
+    async function load() {
+      try {
+        const res = await sarvamDictList()
+        if (!mounted) return
+        const opts: DictOption[] = (res.dictionaries || []).map((d: SarvamDictEntry) => ({
+          id: d.dictionary_id,
+          name: d.name || d.dictionary_id,
+          word_count: d.word_count ?? null,
+          languages: d.languages ?? null,
+        }))
+        setDicts(opts)
+
+        const stored = typeof window !== 'undefined' ? localStorage.getItem(DICT_STORAGE_KEY) : null
+        if (stored && opts.find(o => o.id === stored)) {
+          setActiveDictId(stored)
+        }
+      } catch (err) {
+        // Silent — dict picker is optional. SarvamBrowserError just means
+        // the user isn't signed in or the function isn't deployed yet.
+        if (!(err instanceof SarvamBrowserError)) console.warn('[sarvam] dict list failed', err)
+      }
+    }
+    load()
+    return () => { mounted = false }
+  }, [])
+
+  const setActive = useCallback((id: string | null) => {
+    setActiveDictId(id)
+    if (typeof window === 'undefined') return
+    if (id) localStorage.setItem(DICT_STORAGE_KEY, id)
+    else localStorage.removeItem(DICT_STORAGE_KEY)
+  }, [])
+
+  return { dicts, activeDictId, setActive }
+}
 
 interface SarvamModuleProps {
   subTab: string | null
@@ -64,6 +112,7 @@ function SarvamConsole({
   const [reply, setReply] = useState('')
   const [sending, setSending] = useState(false)
   const endRef = useRef<HTMLDivElement>(null)
+  const { dicts, activeDictId, setActive } = useSarvamDicts()
 
   // Poll Sarvam sessions
   useEffect(() => {
@@ -277,7 +326,14 @@ function SarvamConsole({
                           )}
                           <p className="text-xs leading-relaxed whitespace-pre-wrap">{m.message}</p>
                           <div className="flex items-center gap-2 mt-1">
-                            <TTSPlayer text={m.message} accent={ACCENT} size="sm" />
+                            <TTSPlayer
+                              text={m.message}
+                              accent={ACCENT}
+                              size="sm"
+                              dictionaryId={activeDictId}
+                              dictionaries={dicts}
+                              onDictionaryChange={setActive}
+                            />
                             <span className="text-[10px] text-gray-600">
                               {new Date(m.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                             </span>
@@ -334,6 +390,7 @@ function SarvamConsole({
 function SarvamKBView() {
   const [activeId, setActiveId] = useState<string>(SARVAM_KB[0]?.id || '')
   const [search, setSearch] = useState('')
+  const { dicts, activeDictId, setActive } = useSarvamDicts()
 
   const filtered = useMemo(() => {
     if (!search.trim()) return SARVAM_KB
@@ -393,7 +450,16 @@ function SarvamKBView() {
               <>
                 <div className="flex items-center gap-2 mb-2">
                   <AdminBadge label={active.category} variant="info" size="sm" />
-                  <span className="ml-auto"><TTSPlayer text={active.answer} accent={ACCENT} size="md" /></span>
+                  <span className="ml-auto">
+                    <TTSPlayer
+                      text={active.answer}
+                      accent={ACCENT}
+                      size="md"
+                      dictionaryId={activeDictId}
+                      dictionaries={dicts}
+                      onDictionaryChange={setActive}
+                    />
+                  </span>
                 </div>
                 <h4 className="text-base font-semibold text-white mb-2">{active.question}</h4>
                 <p className="text-sm text-gray-300 leading-relaxed whitespace-pre-wrap">{active.answer}</p>

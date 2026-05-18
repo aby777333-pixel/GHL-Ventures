@@ -82,6 +82,8 @@ export interface SarvamTTSRequest {
   model?: 'bulbul:v3' | 'bulbul:v2'
   pace?: number           // 0.5–2.0
   sampleRate?: number     // 8000–48000, default 24000
+  /** Sarvam pronunciation dictionary id ('p_xxxxxxxx'). v3 only. */
+  pronunciationDictionaryId?: string
 }
 
 export interface SarvamTTSResponse {
@@ -159,17 +161,22 @@ export async function sarvamTTS(req: SarvamTTSRequest): Promise<string | null> {
   if (!isSarvamConfigured()) return null
 
   try {
+    const body: Record<string, unknown> = {
+      text: req.text.slice(0, 2500),
+      target_language_code: req.targetLanguage,
+      speaker: req.speaker || SARVAM_AVATAR_VOICES.abe,
+      model: req.model || 'bulbul:v3',
+      pace: req.pace || 1.0,
+      speech_sample_rate: req.sampleRate || 24000,
+    }
+    // Forward optional Sarvam pronunciation-dictionary id (v3 only)
+    if (req.pronunciationDictionaryId) {
+      body.pronunciation_dictionary_id = req.pronunciationDictionaryId
+    }
     const res = await fetch(`${SARVAM_BASE_URL}/text-to-speech`, {
       method: 'POST',
       headers: headers('application/json'),
-      body: JSON.stringify({
-        text: req.text.slice(0, 2500),
-        target_language_code: req.targetLanguage,
-        speaker: req.speaker || SARVAM_AVATAR_VOICES.abe,
-        model: req.model || 'bulbul:v3',
-        pace: req.pace || 1.0,
-        speech_sample_rate: req.sampleRate || 24000,
-      }),
+      body: JSON.stringify(body),
     })
 
     if (!res.ok) {
