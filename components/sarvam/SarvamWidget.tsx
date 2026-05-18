@@ -41,8 +41,13 @@ import TTSPlayer from '@/components/shared/TTSPlayer'
 
 const PORTAL_PREFIXES = ['/staff', '/admin', '/dashboard']
 
-const ACCENT = '#6366F1'         // indigo-500
-const GRADIENT = 'linear-gradient(135deg, #6366F1 0%, #8B5CF6 100%)'
+/* Bright-red accent — chosen to capture attention even at the edge
+   of the viewport. Brand red (#D0021B) is reserved for ARIA on the
+   bottom-right; Smarty uses a slightly more saturated #FF1744 so the
+   two widgets are visually distinct. */
+const ACCENT = '#FF1744'
+const ACCENT_RGB = '255,23,68'
+const GRADIENT = 'linear-gradient(135deg, #FF1744 0%, #D0021B 100%)'
 
 type SarvamMode = 'bot' | 'human'
 
@@ -439,26 +444,41 @@ export default function SarvamWidget() {
             className="group relative flex flex-col items-center focus:outline-none"
             aria-label="Open GHL Smarty multilingual assistant"
           >
+            {/* Triple-layer attention-grabbing pulse: two offset rings + a
+                slow breathing glow behind the badge. */}
             {showPulse && (
-              <span
-                className="absolute inset-0 rounded-2xl animate-pulse-ring pointer-events-none"
-                style={{ border: `2px solid ${ACCENT}80` }}
-              />
+              <>
+                <span
+                  className="absolute top-0 left-0 w-12 h-12 rounded-2xl animate-pulse-ring pointer-events-none"
+                  style={{ border: `2px solid ${ACCENT}` }}
+                />
+                <span
+                  className="absolute top-0 left-0 w-12 h-12 rounded-2xl animate-pulse-ring pointer-events-none"
+                  style={{ border: `2px solid ${ACCENT}AA`, animationDelay: '0.7s' }}
+                />
+                <span
+                  className="absolute top-0 left-0 w-12 h-12 rounded-2xl pointer-events-none animate-smarty-breath"
+                  style={{ background: `radial-gradient(circle, ${ACCENT}55 0%, transparent 70%)` }}
+                />
+              </>
             )}
             <div
-              className="relative w-12 h-12 rounded-2xl flex items-center justify-center text-white shadow-xl transition-transform group-hover:scale-105"
-              style={{ background: GRADIENT, boxShadow: `0 0 24px ${ACCENT}66` }}
+              className="relative w-12 h-12 rounded-2xl flex items-center justify-center text-white shadow-xl transition-transform group-hover:scale-110 animate-smarty-bob"
+              style={{
+                background: GRADIENT,
+                boxShadow: `0 0 28px ${ACCENT}, 0 0 56px rgba(${ACCENT_RGB},0.5)`,
+              }}
             >
               <Sparkles className="w-5 h-5" />
               {unread > 0 && (
-                <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-brand-red text-white text-[10px] font-bold flex items-center justify-center">
+                <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-white text-[10px] font-bold flex items-center justify-center" style={{ color: ACCENT }}>
                   {unread}
                 </span>
               )}
             </div>
             <span
-              className="mt-1.5 px-2 py-0.5 rounded-md text-[10px] font-semibold text-white tracking-wide"
-              style={{ background: 'rgba(99,102,241,0.18)', border: '1px solid rgba(99,102,241,0.3)' }}
+              className="mt-1.5 px-2 py-0.5 rounded-md text-[10px] font-bold text-white tracking-wide animate-smarty-pulse-chip"
+              style={{ background: GRADIENT, boxShadow: `0 0 12px ${ACCENT}80` }}
             >
               SMARTY
             </span>
@@ -487,9 +507,9 @@ export default function SarvamWidget() {
           maxWidth: 'calc(100vw - 2rem)',
           background: 'rgba(10,10,14,0.95)',
           backdropFilter: 'blur(28px)',
-          border: '1px solid rgba(99,102,241,0.18)',
+          border: '1px solid rgba(255,23,68,0.20)',
           borderRadius: '20px',
-          boxShadow: '0 24px 80px rgba(0,0,0,0.6), 0 0 60px rgba(99,102,241,0.15)',
+          boxShadow: '0 24px 80px rgba(0,0,0,0.6), 0 0 60px rgba(255,23,68,0.18)',
         }}
         role="dialog"
         aria-label="GHL Smarty multilingual concierge"
@@ -508,7 +528,7 @@ export default function SarvamWidget() {
                 <span className="text-white font-semibold text-sm">GHL Smarty</span>
                 <span
                   className="text-[9px] uppercase tracking-wider px-1.5 py-0.5 rounded font-semibold"
-                  style={{ background: 'rgba(99,102,241,0.18)', color: '#a5b4fc' }}
+                  style={{ background: 'rgba(255,23,68,0.20)', color: '#FCA5A5' }}
                 >
                   {mode === 'bot' ? 'AI' : 'LIVE'}
                 </span>
@@ -543,7 +563,7 @@ export default function SarvamWidget() {
             {showLangDropdown && (
               <div
                 className="absolute top-full left-3 mt-1 w-56 max-h-[240px] overflow-y-auto rounded-xl shadow-2xl z-10"
-                style={{ background: '#0e0e14', border: '1px solid rgba(99,102,241,0.18)' }}
+                style={{ background: '#0e0e14', border: '1px solid rgba(255,23,68,0.30)' }}
               >
                 {SARVAM_LANGUAGES.map(l => {
                   const supportsTTS = SARVAM_TTS_LANGUAGES.includes(l.code as SarvamLanguageCode)
@@ -673,7 +693,7 @@ export default function SarvamWidget() {
               <button
                 onClick={switchToHuman}
                 className="w-full flex items-center justify-center gap-1.5 py-2 rounded-xl text-[12px] font-semibold text-white transition-all hover:opacity-90"
-                style={{ background: 'rgba(255,255,255,0.04)', border: `1px solid ${ACCENT}55`, color: '#c7d2fe' }}
+                style={{ background: 'rgba(255,255,255,0.04)', border: `1px solid ${ACCENT}66`, color: '#FCA5A5' }}
               >
                 <Headphones className="w-3.5 h-3.5" />
                 Talk to a human supervisor
@@ -693,7 +713,7 @@ export default function SarvamWidget() {
                 style={{
                   background: isRecording ? `${ACCENT}33` : 'rgba(255,255,255,0.05)',
                   border: `1px solid ${isRecording ? ACCENT : 'rgba(255,255,255,0.08)'}`,
-                  color: isRecording ? '#ef4444' : '#a5b4fc',
+                  color: isRecording ? '#ef4444' : '#FCA5A5',
                 }}
               >
                 {isProcessingVoice ? <Loader2 className="w-3.5 h-3.5 animate-spin" />

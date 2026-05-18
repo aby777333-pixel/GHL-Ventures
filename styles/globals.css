@@ -496,6 +496,30 @@
   animation: pulse-ring 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
 }
 
+/* Smarty launcher attention animations — bright-red gradient + halo
+   breathing + soft bob. Used by components/sarvam/SarvamWidget.tsx. */
+@keyframes smarty-breath {
+  0%, 100% { opacity: 0.55; transform: scale(1); }
+  50%      { opacity: 0.95; transform: scale(1.18); }
+}
+.animate-smarty-breath {
+  animation: smarty-breath 2.4s ease-in-out infinite;
+}
+@keyframes smarty-bob {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-3px); }
+}
+.animate-smarty-bob {
+  animation: smarty-bob 2.4s ease-in-out infinite;
+}
+@keyframes smarty-pulse-chip {
+  0%, 100% { transform: scale(1);    filter: brightness(1); }
+  50%      { transform: scale(1.06); filter: brightness(1.15); }
+}
+.animate-smarty-pulse-chip {
+  animation: smarty-pulse-chip 1.8s ease-in-out infinite;
+}
+
 /* Spin slow animation */
 @keyframes spin-slow {
   0% {

@@ -37,8 +37,10 @@ import { SARVAM_KB } from '@/components/sarvam/SarvamKnowledge'
 import TTSPlayer, { type DictOption } from '@/components/shared/TTSPlayer'
 import { sarvamDictList, SarvamBrowserError, type SarvamDictEntry } from '@/lib/sarvam/browserClient'
 
-const ACCENT = '#6366F1'
-const ACCENT_GRAD = 'linear-gradient(135deg, #6366F1 0%, #8B5CF6 100%)'
+/* Bright-red Smarty accent — matches the public widget (#FF1744 →
+   #D0021B). Brand red #D0021B is the deepest end of the gradient. */
+const ACCENT = '#FF1744'
+const ACCENT_GRAD = 'linear-gradient(135deg, #FF1744 0%, #D0021B 100%)'
 
 const DICT_STORAGE_KEY = 'ghl-sarvam-dict-id'
 
@@ -214,7 +216,7 @@ function SarvamConsole({
         <div className="lg:col-span-2">
           <AdminGlass padding="p-0">
             <div className="px-4 py-3 border-b border-white/[0.06] flex items-center gap-2">
-              <Sparkles className="w-4 h-4 text-indigo-400" />
+              <Sparkles className="w-4 h-4 text-rose-400" />
               <h3 className="text-sm font-semibold text-white">Smarty Sessions</h3>
               <span className="ml-auto text-[10px] text-gray-500">{sessions.length} total</span>
             </div>
@@ -234,12 +236,12 @@ function SarvamConsole({
                   key={s.id}
                   onClick={() => setSelectedId(s.id)}
                   className={`w-full text-left px-4 py-3 transition-colors ${
-                    selectedId === s.id ? 'bg-indigo-500/[0.10]' : 'hover:bg-white/[0.02]'
+                    selectedId === s.id ? 'bg-rose-500/[0.10]' : 'hover:bg-white/[0.02]'
                   }`}
                 >
                   <div className="flex items-center justify-between mb-1">
                     <div className="flex items-center gap-2 min-w-0">
-                      <Sparkles className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
+                      <Sparkles className="w-3.5 h-3.5 text-rose-400 shrink-0" />
                       <span className="text-sm font-medium text-white truncate">{s.visitor_name || 'Visitor'}</span>
                       {(s.status === 'waiting' || s.status === 'queued') && <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse shrink-0" />}
                     </div>
@@ -319,13 +321,13 @@ function SarvamConsole({
                       ) : (
                         <div className={`max-w-[78%] rounded-2xl px-3.5 py-2.5 ${
                           m.sender_type === 'agent'
-                            ? 'rounded-tr-md bg-indigo-500/15 border border-indigo-500/25 text-indigo-50'
+                            ? 'rounded-tr-md bg-rose-500/15 border border-rose-500/25 text-rose-50'
                             : m.sender_type === 'bot'
                               ? 'rounded-tl-md bg-white/[0.05] border border-white/[0.06] text-gray-200'
                               : 'rounded-tl-md bg-white/[0.06] border border-white/[0.08] text-gray-200'
                         }`}>
                           {m.sender_name && m.sender_type !== 'agent' && (
-                            <p className="text-[10px] text-indigo-300 font-medium mb-0.5">{m.sender_name}</p>
+                            <p className="text-[10px] text-rose-300 font-medium mb-0.5">{m.sender_name}</p>
                           )}
                           <p className="text-xs leading-relaxed whitespace-pre-wrap">{m.message}</p>
                           <div className="flex items-center gap-2 mt-1">
@@ -356,7 +358,7 @@ function SarvamConsole({
                       value={reply}
                       onChange={e => setReply(e.target.value)}
                       placeholder="Reply as Smarty supervisor..."
-                      className="flex-1 px-4 py-2 text-xs bg-white/[0.04] border border-white/[0.08] rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-indigo-500/40"
+                      className="flex-1 px-4 py-2 text-xs bg-white/[0.04] border border-white/[0.08] rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-rose-500/40"
                     />
                     <button
                       type="submit"
@@ -411,7 +413,7 @@ function SarvamKBView() {
     <div className="space-y-4">
       <AdminGlass padding="p-4">
         <div className="flex items-center gap-3">
-          <BookOpen className="w-5 h-5 text-indigo-400" />
+          <BookOpen className="w-5 h-5 text-rose-400" />
           <h3 className="text-sm font-semibold text-white">Smarty Knowledge Base</h3>
           <span className="ml-auto text-[10px] text-gray-500">{SARVAM_KB.length} answers · 11+ languages</span>
         </div>
@@ -427,7 +429,7 @@ function SarvamKBView() {
                 value={search}
                 onChange={e => setSearch(e.target.value)}
                 placeholder="Search the KB..."
-                className="w-full px-3 py-2 text-xs bg-white/[0.04] border border-white/[0.08] rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-indigo-500/40"
+                className="w-full px-3 py-2 text-xs bg-white/[0.04] border border-white/[0.08] rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-rose-500/40"
               />
             </div>
             <div className="divide-y divide-white/[0.04] max-h-[520px] overflow-y-auto">
@@ -436,7 +438,7 @@ function SarvamKBView() {
                   key={e.id}
                   onClick={() => setActiveId(e.id)}
                   className={`w-full text-left px-4 py-3 transition-colors ${
-                    activeId === e.id ? 'bg-indigo-500/[0.10]' : 'hover:bg-white/[0.02]'
+                    activeId === e.id ? 'bg-rose-500/[0.10]' : 'hover:bg-white/[0.02]'
                   }`}
                 >
                   <p className="text-xs font-medium text-white truncate">{e.question}</p>
@@ -473,8 +475,8 @@ function SarvamKBView() {
                       {active.suggestions.map(s => (
                         <span
                           key={s}
-                          className="px-2.5 py-1 rounded-full text-[11px] text-indigo-200"
-                          style={{ background: 'rgba(99,102,241,0.12)', border: '1px solid rgba(99,102,241,0.25)' }}
+                          className="px-2.5 py-1 rounded-full text-[11px] text-rose-200"
+                          style={{ background: 'rgba(255,23,68,0.12)', border: '1px solid rgba(255,23,68,0.30)' }}
                         >
                           {s}
                         </span>
@@ -537,11 +539,11 @@ function SarvamOverview({ navigate }: Pick<SarvamModuleProps, 'navigate'>) {
           <button
             onClick={() => navigate('sarvam/console')}
             className="text-left rounded-xl p-4 transition-all hover:scale-[1.01]"
-            style={{ background: 'rgba(99,102,241,0.10)', border: '1px solid rgba(99,102,241,0.25)' }}
+            style={{ background: 'rgba(255,23,68,0.10)', border: '1px solid rgba(255,23,68,0.30)' }}
           >
             <div className="flex items-center justify-between mb-1.5">
-              <span className="text-xs font-semibold uppercase tracking-wider text-indigo-300">Console</span>
-              <ArrowRight className="w-3.5 h-3.5 text-indigo-300" />
+              <span className="text-xs font-semibold uppercase tracking-wider text-rose-300">Console</span>
+              <ArrowRight className="w-3.5 h-3.5 text-rose-300" />
             </div>
             <p className="text-2xl font-bold text-white">{stats.active + stats.waiting}</p>
             <p className="text-[11px] text-gray-400 mt-1">Active + waiting sessions</p>
@@ -550,11 +552,11 @@ function SarvamOverview({ navigate }: Pick<SarvamModuleProps, 'navigate'>) {
           <button
             onClick={() => navigate('sarvam/kb')}
             className="text-left rounded-xl p-4 transition-all hover:scale-[1.01]"
-            style={{ background: 'rgba(99,102,241,0.06)', border: '1px solid rgba(99,102,241,0.18)' }}
+            style={{ background: 'rgba(255,23,68,0.06)', border: '1px solid rgba(255,23,68,0.18)' }}
           >
             <div className="flex items-center justify-between mb-1.5">
-              <span className="text-xs font-semibold uppercase tracking-wider text-indigo-300">Knowledge Base</span>
-              <ArrowRight className="w-3.5 h-3.5 text-indigo-300" />
+              <span className="text-xs font-semibold uppercase tracking-wider text-rose-300">Knowledge Base</span>
+              <ArrowRight className="w-3.5 h-3.5 text-rose-300" />
             </div>
             <p className="text-2xl font-bold text-white">{SARVAM_KB.length}</p>
             <p className="text-[11px] text-gray-400 mt-1">Curated answers</p>
@@ -573,7 +575,7 @@ function SarvamOverview({ navigate }: Pick<SarvamModuleProps, 'navigate'>) {
 
       <AdminGlass padding="p-5">
         <h4 className="text-sm font-semibold text-white mb-2 flex items-center gap-2">
-          <Volume2 className="w-4 h-4 text-indigo-400" />
+          <Volume2 className="w-4 h-4 text-rose-400" />
           How supervisor takeover works
         </h4>
         <ol className="text-xs text-gray-400 leading-relaxed space-y-1.5 ml-4 list-decimal">
@@ -624,7 +626,7 @@ export default function SarvamModule({ subTab, navigate, showToast, role, curren
                   onClick={() => navigate(t.id === 'overview' ? 'sarvam' : `sarvam/${t.id}`)}
                   className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border transition-all ${
                     isActive
-                      ? 'bg-indigo-500/20 border-indigo-500/30 text-indigo-300'
+                      ? 'bg-rose-500/20 border-rose-500/30 text-rose-300'
                       : 'bg-white/[0.03] border-white/[0.06] text-gray-500 hover:bg-white/[0.06] hover:text-gray-300'
                   }`}
                 >
