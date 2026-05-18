@@ -115,6 +115,10 @@ export interface SarvamTranslateRequest {
   sourceLanguage: SarvamLanguageCode | 'auto'
   targetLanguage: SarvamLanguageCode
   mode?: 'formal' | 'modern-colloquial' | 'classic-colloquial' | 'code-mixed'
+  /** Default is `sarvam-translate:v1` because it covers all 22 Indian
+   *  languages (Mayura only handles 11 — Hindi, English, Bengali,
+   *  Gujarati, Kannada, Malayalam, Marathi, Odia, Punjabi, Tamil,
+   *  Telugu). For the Smarty concierge we need full coverage. */
   model?: 'mayura:v1' | 'sarvam-translate:v1'
 }
 
@@ -270,7 +274,11 @@ export async function sarvamTranslate(req: SarvamTranslateRequest): Promise<Sarv
         source_language_code: req.sourceLanguage,
         target_language_code: req.targetLanguage,
         mode: req.mode || 'formal',
-        model: req.model || 'mayura:v1',
+        // sarvam-translate:v1 covers all 22 Indian languages; mayura:v1
+        // hard-fails with "Language not supported" for Manipuri, Santali,
+        // Assamese, Sanskrit, Nepali, Sindhi, Konkani, Maithili, Dogri,
+        // Kashmiri, Bodo, and Urdu.
+        model: req.model || 'sarvam-translate:v1',
       }),
     })
 
