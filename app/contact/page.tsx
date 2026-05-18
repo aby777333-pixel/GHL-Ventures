@@ -95,13 +95,15 @@ export default function ContactPage() {
 
   return (
     <>
-      {/* Hero */}
-      <section className="pt-40 pb-32 md:pb-44 lg:pb-56 relative overflow-hidden bg-brand-black">
-        {/* Backdrop photo — contact-themed (phone/chat/email/@) */}
+      {/* Hero — 2026-05-18: swapped to the red-ribbon handshake artwork
+          (PNG, transparent edges sit nicely on brand-black) and bumped
+          the vertical padding a notch so the image has room to breathe. */}
+      <section className="pt-48 pb-44 md:pb-60 lg:pb-72 relative overflow-hidden bg-brand-black">
+        {/* Backdrop photo — corporate handshake on red ribbon */}
         <picture aria-hidden="true">
-          <source srcSet="/images/home/contact-hero-bg-sm.jpg" media="(max-width: 768px)" />
+          <source srcSet="/images/home/contact-hero-bg-sm.png" media="(max-width: 768px)" />
           <img
-            src="/images/home/contact-hero-bg.jpg"
+            src="/images/home/contact-hero-bg.png"
             alt=""
             className="absolute inset-0 w-full h-full object-cover pointer-events-none select-none"
             loading="eager"
