@@ -95,10 +95,13 @@ export default function ContactPage() {
 
   return (
     <>
-      {/* Hero — 2026-05-18: swapped to the red-ribbon handshake artwork
-          (PNG, transparent edges sit nicely on brand-black) and bumped
-          the vertical padding a notch so the image has room to breathe. */}
-      <section className="pt-48 pb-44 md:pb-60 lg:pb-72 relative overflow-hidden bg-brand-black">
+      {/* Hero — 2026-05-18: red-ribbon handshake artwork. The image is
+          mostly white / light grey on the left where the copy sits, so
+          we drop the dark overlay and switch the headline + subtitle
+          to red + black for high contrast on the bright backdrop.
+          Background stays white as a fallback in case the PNG fails
+          to load (was bg-brand-black which used to bleed through). */}
+      <section className="pt-48 pb-44 md:pb-60 lg:pb-72 relative overflow-hidden bg-white">
         {/* Backdrop photo — corporate handshake on red ribbon */}
         <picture aria-hidden="true">
           <source srcSet="/images/home/contact-hero-bg-sm.png" media="(max-width: 768px)" />
@@ -110,15 +113,16 @@ export default function ContactPage() {
             decoding="async"
           />
         </picture>
-        {/* Dark overlay for text legibility */}
-        <div className="absolute inset-0 bg-gradient-to-r from-black/85 via-black/55 to-black/30 pointer-events-none" />
         <div className="container-max mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
           <AnimatedSection>
-            <span className="eyebrow">Get In Touch</span>
-            <h1 className="text-2xl md:text-3xl lg:text-4xl font-bold text-white mt-4 mb-5" style={{ textShadow: '0 2px 12px rgba(0,0,0,0.7)' }}>
-              Contact <span className="text-gradient-shimmer">GHL India Ventures</span>
+            <span className="text-[11px] md:text-xs font-semibold uppercase tracking-[0.18em] text-brand-red">
+              Get In Touch
+            </span>
+            <h1 className="text-2xl md:text-3xl lg:text-4xl font-bold mt-4 mb-5">
+              <span className="text-brand-red">Contact</span>{' '}
+              <span className="text-brand-black">GHL India Ventures</span>
             </h1>
-            <p className="text-sm md:text-base text-gray-200 max-w-3xl" style={{ textShadow: '0 1px 8px rgba(0,0,0,0.7)' }}>
+            <p className="text-sm md:text-base text-brand-black max-w-3xl">
               Schedule a consultation with our investment team. We&apos;re here to guide you through every step of your investment journey.
             </p>
           </AnimatedSection>
