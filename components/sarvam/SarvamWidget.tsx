@@ -119,6 +119,10 @@ export default function SarvamWidget() {
    *  flips, the bot keeps answering even in "human" mode so the
    *  visitor isn't left waiting at typing dots. */
   const [agentJoined, setAgentJoined] = useState(false)
+  /** Visible while we're translating existing bubbles after a
+   *  language change, so the user has a clear signal that the
+   *  English text they see is about to swap to their language. */
+  const [isTranslating, setIsTranslating] = useState(false)
   const [showPulse, setShowPulse] = useState(true)
 
   const messagesEndRef = useRef<HTMLDivElement>(null)
@@ -158,23 +162,41 @@ export default function SarvamWidget() {
           ? { ...m, text: m.originalText, lang: 'en-IN' }
           : m
       ))
+      setIsTranslating(false)
       return
     }
+    setIsTranslating(true)
     ;(async () => {
-      // Snapshot current bot/agent/system messages and translate each
+      // Pre-warm the KB in parallel so future bot replies hit the
+      // translation cache instantly (the for-await loop used before
+      // serialised these one-by-one, which felt sluggish — and on
+      // slow networks the visible bubbles could stay English for
+      // 4-8 seconds before catching up).
+      const kbAnswers = SARVAM_KB.map(e => e.answer)
+
+      // Snapshot current bot/agent/system messages
       const snapshot = messagesRef.current
-      const translated = new Map<string, string>()
-      for (const m of snapshot) {
-        if ((m.sender === 'bot' || m.sender === 'agent' || m.sender === 'system') && m.originalText) {
-          const t = await translateForLang(m.originalText, langCode)
-          if (cancelled) return
-          translated.set(m.id, t)
-        }
-      }
+      const visibleSources = snapshot
+        .filter(m =>
+          (m.sender === 'bot' || m.sender === 'agent' || m.sender === 'system') && m.originalText
+        )
+
+      // Fire every translation in parallel — visible bubbles first,
+      // then the rest of the KB to warm the cache. The cache itself
+      // de-dupes so duplicate (e.g. the welcome) costs one call.
+      const visibleResults = await Promise.all(
+        visibleSources.map(async m => [m.id, await translateForLang(m.originalText!, langCode)] as const),
+      )
       if (cancelled) return
+      const byId = new Map(visibleResults)
       setMessages(prev => prev.map(m =>
-        translated.has(m.id) ? { ...m, text: translated.get(m.id)!, lang: langCode } : m
+        byId.has(m.id) ? { ...m, text: byId.get(m.id)!, lang: langCode } : m
       ))
+      setIsTranslating(false)
+
+      // Warm the rest of the KB in the background (no UI update).
+      // Errors are swallowed inside translateForLang.
+      void Promise.all(kbAnswers.map(a => translateForLang(a, langCode)))
     })()
     return () => { cancelled = true }
   }, [langCode])
@@ -562,7 +584,14 @@ export default function SarvamWidget() {
               <span>{selectedLang?.native || 'English'}</span>
               <ChevronRight className={`w-3 h-3 transition-transform ${showLangDropdown ? 'rotate-90' : ''}`} />
             </button>
-            <span className="text-[10px] text-gray-600">Tap 🔊 on any reply to hear it</span>
+            {isTranslating ? (
+              <span className="flex items-center gap-1 text-[10px] text-rose-300">
+                <Loader2 className="w-3 h-3 animate-spin" />
+                Translating…
+              </span>
+            ) : (
+              <span className="text-[10px] text-gray-600">Tap 🔊 on any reply to hear it</span>
+            )}
 
             {showLangDropdown && (
               <div
