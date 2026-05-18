@@ -262,13 +262,33 @@ export async function sarvamSTT(req: SarvamSTTRequest): Promise<SarvamSTTRespons
 
 // ── Translation ─────────────────────────────────────────────
 
+/* api.sarvam.ai/translate returns HTTP 400 on the CORS preflight,
+ * which Chrome / Firefox / Edge all interpret as preflight failure
+ * — so browser-direct calls from the anonymous Smarty widget die
+ * silently. We proxy through a Netlify function instead. The proxy
+ * lives at /.netlify/functions/sarvam-translate-public; it forwards
+ * the body verbatim to Sarvam server-side (no CORS dance) and
+ * returns the same JSON.
+ *
+ * The legacy direct path is still used when caller code passes an
+ * explicit `direct: true` for staff-side or server-side callers
+ * that don't suffer the preflight problem. */
+const TRANSLATE_PROXY = '/.netlify/functions/sarvam-translate-public'
+
 export async function sarvamTranslate(req: SarvamTranslateRequest): Promise<SarvamTranslateResponse | null> {
-  if (!isSarvamConfigured()) return null
+  // For SSR / non-browser contexts, fall back to the direct call.
+  const isBrowser = typeof window !== 'undefined'
+  const url = isBrowser ? TRANSLATE_PROXY : `${SARVAM_BASE_URL}/translate`
+  const requestHeaders: Record<string, string> = isBrowser
+    ? { 'Content-Type': 'application/json' }
+    : headers('application/json')
+
+  if (!isBrowser && !isSarvamConfigured()) return null
 
   try {
-    const res = await fetch(`${SARVAM_BASE_URL}/translate`, {
+    const res = await fetch(url, {
       method: 'POST',
-      headers: headers('application/json'),
+      headers: requestHeaders,
       body: JSON.stringify({
         input: req.input.slice(0, 2000),
         source_language_code: req.sourceLanguage,
