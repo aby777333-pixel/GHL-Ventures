@@ -21,6 +21,7 @@ import {
   Plus, Trash2, GripVertical, Download, Eye, Type, ListChecks,
   Heading1, AlignLeft, AlignJustify, Image as ImageIcon, PenLine, FileText, Loader2,
   RefreshCw, Library, Table as TableIcon, Building2, Move, ChevronUp, ChevronDown,
+  Calendar, Mail, Phone, Link2, Minus, FileX2, BarChart3, Send,
 } from 'lucide-react'
 import { jsPDF } from 'jspdf'
 import {
@@ -31,9 +32,15 @@ import AdminModal, { ModalButton } from './AdminModal'
 import { supabase, isSupabaseConfigured } from '@/lib/supabase/client'
 import { getDownloadUrl, deleteStorageFile } from '@/lib/supabase/storageService'
 import { DOCUMENT_TEMPLATES, type DocumentKind } from '@/lib/admin/documentTemplates'
+import SmartEmailComposerModal, { type SmartComposerAttachment } from './SmartEmailComposerModal'
 
 // ── Block model ─────────────────────────────────────────────────
-type BlockKind = 'heading' | 'paragraph' | 'kv-list' | 'bullet-list' | 'image' | 'signature' | 'table' | 'footer' | 'spacer'
+type BlockKind =
+  | 'heading' | 'paragraph' | 'kv-list' | 'bullet-list' | 'image'
+  | 'signature' | 'table' | 'footer' | 'spacer'
+  // 2026-05-18 Document Builder expansion: communication + structural blocks.
+  | 'date' | 'email' | 'phone' | 'link'
+  | 'divider' | 'page-break' | 'chart'
 
 interface BaseBlock { id: string; kind: BlockKind }
 interface HeadingBlock extends BaseBlock { kind: 'heading'; text: string; level: 1 | 2 | 3; align: 'left' | 'center' | 'right' }
@@ -69,10 +76,60 @@ interface SpacerBlock extends BaseBlock {
   kind: 'spacer'
   heightMm: number
 }
+/** Date block — ISO date plus a display format. Format options match
+ *  the most common Indian investor-doc styles. */
+interface DateBlock extends BaseBlock {
+  kind: 'date'
+  label: string                    // e.g. "Date of Issue"
+  iso: string                      // YYYY-MM-DD
+  format: 'long' | 'short' | 'iso' // "18 May 2026" / "18/05/2026" / "2026-05-18"
+  align: 'left' | 'center' | 'right'
+}
+interface EmailBlock extends BaseBlock {
+  kind: 'email'
+  label: string
+  address: string
+  align: 'left' | 'center' | 'right'
+}
+interface PhoneBlock extends BaseBlock {
+  kind: 'phone'
+  label: string
+  number: string
+  align: 'left' | 'center' | 'right'
+}
+interface LinkBlock extends BaseBlock {
+  kind: 'link'
+  display: string
+  url: string
+  align: 'left' | 'center' | 'right'
+}
+/** Thin horizontal rule between sections. */
+interface DividerBlock extends BaseBlock {
+  kind: 'divider'
+  thickness: number                // px (PDF maps to pt)
+  color: string                    // hex
+}
+/** Forces a page break in PDF; expands to N blank paragraphs in DOCX. */
+interface PageBreakBlock extends BaseBlock {
+  kind: 'page-break'
+}
+/** Simple bar chart from {label, value} pairs. Rendered to a data URL via
+ *  an offscreen canvas at export time so PDF + DOCX get the same artifact. */
+interface ChartBlock extends BaseBlock {
+  kind: 'chart'
+  title: string
+  rows: { label: string; value: number }[]
+  variant: 'bar' | 'column' | 'doughnut'
+  width: number                    // px
+  align: 'left' | 'center' | 'right'
+  color: string                    // hex bar color
+}
 
 type Block =
   | HeadingBlock | ParagraphBlock | KvListBlock | BulletListBlock | ImageBlock
   | SignatureBlock | TableBlock | FooterBlock | SpacerBlock
+  | DateBlock | EmailBlock | PhoneBlock | LinkBlock
+  | DividerBlock | PageBreakBlock | ChartBlock
 
 const STORAGE_KEY = 'ghl-admin-document-builder-draft-v1'
 
@@ -102,6 +159,159 @@ const blankBlock = (kind: BlockKind): Block => {
       bgColor: '#FFF6D9',
     }
     case 'spacer':      return { id, kind, heightMm: 8 }
+    case 'date':        return {
+      id, kind,
+      label: 'Date',
+      iso: new Date().toISOString().slice(0, 10),
+      format: 'long',
+      align: 'left',
+    }
+    case 'email':       return { id, kind, label: 'Email', address: 'info@ghlindiaventures.com', align: 'left' }
+    case 'phone':       return { id, kind, label: 'Phone', number: '+91 7200 255 252', align: 'left' }
+    case 'link':        return { id, kind, display: 'GHL India Ventures', url: 'https://ghlindiaventures.com', align: 'left' }
+    case 'divider':     return { id, kind, thickness: 1, color: '#9CA3AF' }
+    case 'page-break':  return { id, kind }
+    case 'chart':       return {
+      id, kind,
+      title: 'Portfolio Allocation',
+      rows: [
+        { label: 'AIF Direct', value: 60 },
+        { label: 'Co-Invest',  value: 25 },
+        { label: 'Debenture',  value: 15 },
+      ],
+      variant: 'bar',
+      width: 420,
+      align: 'center',
+      color: '#BA181B',
+    }
+  }
+}
+
+// ── Date formatting helper used by both editor preview + exporters ──
+function formatDate(iso: string, format: DateBlock['format']): string {
+  if (!iso) return ''
+  // Accept either YYYY-MM-DD or full ISO; bail to raw input on parse failure.
+  const parts = iso.length >= 10 ? iso.slice(0, 10).split('-') : []
+  if (parts.length !== 3) return iso
+  const y = Number(parts[0]), m = Number(parts[1]), d = Number(parts[2])
+  if (!y || !m || !d) return iso
+  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+  const dd = String(d).padStart(2, '0')
+  const mm = String(m).padStart(2, '0')
+  if (format === 'iso')   return `${y}-${mm}-${dd}`
+  if (format === 'short') return `${dd}/${mm}/${y}`
+  return `${dd} ${months[m - 1] || mm} ${y}`
+}
+
+// ── Chart rasteriser ─────────────────────────────────────────
+// Renders a ChartBlock to a data:image/png URL via an offscreen
+// <canvas>. Same artifact gets embedded in PDF and DOCX so the two
+// exports look identical. Supports bar / column / doughnut.
+function renderChartToDataUrl(block: ChartBlock): string {
+  if (typeof document === 'undefined') return ''
+  const rows = (block.rows || []).filter(r => Number.isFinite(r.value))
+  if (rows.length === 0) return ''
+  const W = Math.max(160, Math.min(1200, Math.round(block.width || 420)))
+  const H = block.variant === 'doughnut' ? Math.round(W * 0.62) : Math.round(W * 0.55)
+  const canvas = document.createElement('canvas')
+  canvas.width = W * 2  // retina-ish
+  canvas.height = H * 2
+  const ctx = canvas.getContext('2d')
+  if (!ctx) return ''
+  ctx.scale(2, 2)
+  ctx.fillStyle = '#FFFFFF'
+  ctx.fillRect(0, 0, W, H)
+
+  const title = (block.title || '').trim()
+  const titleH = title ? 22 : 0
+  if (title) {
+    ctx.fillStyle = '#111827'
+    ctx.font = 'bold 13px sans-serif'
+    ctx.textAlign = 'center'
+    ctx.fillText(title, W / 2, 16)
+  }
+
+  const padding = { top: titleH + 6, right: 12, bottom: 22, left: block.variant === 'bar' ? 110 : 32 }
+  const plotW = W - padding.left - padding.right
+  const plotH = H - padding.top - padding.bottom
+  const maxVal = Math.max(...rows.map(r => r.value), 1)
+
+  ctx.fillStyle = block.color || '#BA181B'
+  ctx.strokeStyle = '#E5E7EB'
+  ctx.lineWidth = 0.5
+
+  if (block.variant === 'doughnut') {
+    const total = rows.reduce((s, r) => s + r.value, 0) || 1
+    const cx = W / 2
+    const cy = padding.top + plotH / 2
+    const radius = Math.min(plotW, plotH) / 2 - 4
+    const inner = radius * 0.55
+    const palette = ['#BA181B', '#660708', '#A4161A', '#E5383B', '#9CA3AF', '#374151', '#D4A017']
+    let angle = -Math.PI / 2
+    rows.forEach((r, i) => {
+      const slice = (r.value / total) * Math.PI * 2
+      ctx.beginPath()
+      ctx.moveTo(cx, cy)
+      ctx.arc(cx, cy, radius, angle, angle + slice)
+      ctx.closePath()
+      ctx.fillStyle = palette[i % palette.length]
+      ctx.fill()
+      angle += slice
+    })
+    // Punch out the doughnut hole.
+    ctx.globalCompositeOperation = 'destination-out'
+    ctx.beginPath()
+    ctx.arc(cx, cy, inner, 0, Math.PI * 2)
+    ctx.fill()
+    ctx.globalCompositeOperation = 'source-over'
+    // Legend on the right edge.
+    ctx.font = '10px sans-serif'
+    ctx.textAlign = 'left'
+    rows.forEach((r, i) => {
+      const ly = padding.top + 4 + i * 14
+      ctx.fillStyle = palette[i % palette.length]
+      ctx.fillRect(W - padding.right - 100, ly, 8, 8)
+      ctx.fillStyle = '#111827'
+      const pct = ((r.value / total) * 100).toFixed(0)
+      ctx.fillText(`${r.label} ${pct}%`, W - padding.right - 86, ly + 7)
+    })
+  } else if (block.variant === 'column') {
+    const barW = plotW / rows.length * 0.6
+    const gap = plotW / rows.length
+    rows.forEach((r, i) => {
+      const h = (r.value / maxVal) * plotH
+      const x = padding.left + i * gap + (gap - barW) / 2
+      const y = padding.top + plotH - h
+      ctx.fillRect(x, y, barW, h)
+      ctx.fillStyle = '#374151'
+      ctx.font = '10px sans-serif'
+      ctx.textAlign = 'center'
+      ctx.fillText(String(r.value), x + barW / 2, y - 3)
+      ctx.fillText(r.label.slice(0, 14), x + barW / 2, padding.top + plotH + 12)
+      ctx.fillStyle = block.color || '#BA181B'
+    })
+  } else {
+    // Horizontal bar — default. Easier to read for portfolio splits.
+    const barH = plotH / rows.length * 0.6
+    const gap = plotH / rows.length
+    ctx.font = '10px sans-serif'
+    rows.forEach((r, i) => {
+      const w = (r.value / maxVal) * plotW
+      const y = padding.top + i * gap + (gap - barH) / 2
+      ctx.fillStyle = block.color || '#BA181B'
+      ctx.fillRect(padding.left, y, w, barH)
+      ctx.fillStyle = '#374151'
+      ctx.textAlign = 'right'
+      ctx.fillText(r.label.slice(0, 16), padding.left - 6, y + barH / 2 + 3)
+      ctx.textAlign = 'left'
+      ctx.fillText(String(r.value), padding.left + w + 4, y + barH / 2 + 3)
+    })
+  }
+
+  try {
+    return canvas.toDataURL('image/png')
+  } catch {
+    return ''
   }
 }
 
@@ -112,8 +322,15 @@ const blockPalette: { kind: BlockKind; label: string; icon: React.ComponentType<
   { kind: 'bullet-list', label: 'Bullets',     icon: Type },
   { kind: 'table',       label: 'Table',       icon: TableIcon },
   { kind: 'image',       label: 'Image',       icon: ImageIcon },
+  { kind: 'chart',       label: 'Chart',       icon: BarChart3 },
+  { kind: 'date',        label: 'Date',        icon: Calendar },
+  { kind: 'email',       label: 'Email',       icon: Mail },
+  { kind: 'phone',       label: 'Phone',       icon: Phone },
+  { kind: 'link',        label: 'Link',        icon: Link2 },
   { kind: 'signature',   label: 'Signatures',  icon: PenLine },
   { kind: 'footer',      label: 'Footer',      icon: Building2 },
+  { kind: 'divider',     label: 'Divider',     icon: Minus },
+  { kind: 'page-break',  label: 'Page Break',  icon: FileX2 },
   { kind: 'spacer',      label: 'Spacer',      icon: Move },
 ]
 
@@ -599,6 +816,68 @@ export default function DocumentBuilderModal({ open, onClose, showToast, inline 
         doc.text(halves[0] || '', x1, y)
         if (halves[1]) doc.text(halves[1], x2, y)
         y += 20
+      } else if (b.kind === 'date') {
+        ensureSpace(20)
+        doc.setFont('helvetica', 'normal').setFontSize(11)
+        const text = `${b.label ? b.label + ': ' : ''}${formatDate(b.iso, b.format)}`
+        const x = b.align === 'center' ? pageW / 2 : b.align === 'right' ? pageW - margin : margin
+        doc.text(text, x, y, { align: b.align })
+        y += 16
+      } else if (b.kind === 'email') {
+        ensureSpace(20)
+        doc.setFont('helvetica', 'normal').setFontSize(11)
+        const text = `${b.label ? b.label + ': ' : ''}${b.address || ''}`
+        const x = b.align === 'center' ? pageW / 2 : b.align === 'right' ? pageW - margin : margin
+        doc.setTextColor(20, 20, 220)
+        doc.textWithLink(text, x, y, { align: b.align, url: `mailto:${b.address || ''}` })
+        doc.setTextColor(0, 0, 0)
+        y += 16
+      } else if (b.kind === 'phone') {
+        ensureSpace(20)
+        doc.setFont('helvetica', 'normal').setFontSize(11)
+        const text = `${b.label ? b.label + ': ' : ''}${b.number || ''}`
+        const x = b.align === 'center' ? pageW / 2 : b.align === 'right' ? pageW - margin : margin
+        const tel = (b.number || '').replace(/[^+\d]/g, '')
+        doc.setTextColor(20, 20, 220)
+        doc.textWithLink(text, x, y, { align: b.align, url: tel ? `tel:${tel}` : '#' })
+        doc.setTextColor(0, 0, 0)
+        y += 16
+      } else if (b.kind === 'link') {
+        ensureSpace(20)
+        doc.setFont('helvetica', 'normal').setFontSize(11)
+        const display = b.display || b.url || ''
+        const x = b.align === 'center' ? pageW / 2 : b.align === 'right' ? pageW - margin : margin
+        doc.setTextColor(20, 20, 220)
+        doc.textWithLink(display, x, y, { align: b.align, url: b.url || '#' })
+        doc.setTextColor(0, 0, 0)
+        y += 16
+      } else if (b.kind === 'divider') {
+        ensureSpace(12)
+        const [dr, dg, db] = hexToRgb(b.color || '#9CA3AF')
+        doc.setDrawColor(dr, dg, db)
+        doc.setLineWidth(Math.max(0.4, Math.min(4, b.thickness || 1)))
+        doc.line(margin, y, pageW - margin, y)
+        doc.setDrawColor(0, 0, 0)
+        doc.setLineWidth(0.4)
+        y += 10
+      } else if (b.kind === 'page-break') {
+        doc.addPage()
+        y = margin
+      } else if (b.kind === 'chart') {
+        const dataUrl = renderChartToDataUrl(b)
+        if (dataUrl) {
+          // Match the embed sizing logic used for image blocks.
+          const w = Math.max(120, Math.min(pageW - margin * 2, b.width))
+          // Mirror chart aspect from renderChartToDataUrl (variant-specific).
+          const aspect = b.variant === 'doughnut' ? 0.62 : 0.55
+          const h = w * aspect
+          ensureSpace(h + 12)
+          const x = b.align === 'center' ? (pageW - w) / 2
+                  : b.align === 'right' ? pageW - margin - w
+                  : margin
+          try { doc.addImage(dataUrl, 'PNG', x, y, w, h, undefined, 'FAST') } catch { /* ignore */ }
+          y += h + 10
+        }
       }
     }
 
@@ -703,6 +982,60 @@ export default function DocumentBuilderModal({ open, onClose, showToast, inline 
         children.push(new Paragraph({ text: '' }))
         children.push(new Paragraph({ text: '_________________________            _________________________' }))
         children.push(new Paragraph({ text: `${b.labels[0] || ''}                                  ${b.labels[1] || ''}` }))
+      } else if (b.kind === 'date') {
+        const align = b.align === 'center' ? AlignmentType.CENTER : b.align === 'right' ? AlignmentType.RIGHT : AlignmentType.LEFT
+        children.push(new Paragraph({
+          alignment: align,
+          children: [
+            new TextRun({ text: b.label ? `${b.label}: ` : '', bold: !!b.label }),
+            new TextRun({ text: formatDate(b.iso, b.format) }),
+          ],
+        }))
+      } else if (b.kind === 'email') {
+        const align = b.align === 'center' ? AlignmentType.CENTER : b.align === 'right' ? AlignmentType.RIGHT : AlignmentType.LEFT
+        children.push(new Paragraph({
+          alignment: align,
+          children: [
+            new TextRun({ text: b.label ? `${b.label}: ` : '', bold: !!b.label }),
+            new TextRun({ text: b.address || '', color: '1A56DB', underline: {} as any }),
+          ],
+        }))
+      } else if (b.kind === 'phone') {
+        const align = b.align === 'center' ? AlignmentType.CENTER : b.align === 'right' ? AlignmentType.RIGHT : AlignmentType.LEFT
+        children.push(new Paragraph({
+          alignment: align,
+          children: [
+            new TextRun({ text: b.label ? `${b.label}: ` : '', bold: !!b.label }),
+            new TextRun({ text: b.number || '' }),
+          ],
+        }))
+      } else if (b.kind === 'link') {
+        const align = b.align === 'center' ? AlignmentType.CENTER : b.align === 'right' ? AlignmentType.RIGHT : AlignmentType.LEFT
+        children.push(new Paragraph({
+          alignment: align,
+          children: [new TextRun({ text: b.display || b.url || '', color: '1A56DB', underline: {} as any })],
+        }))
+      } else if (b.kind === 'divider') {
+        // Approximate a horizontal rule in Word with a long em-dash row.
+        children.push(new Paragraph({ children: [new TextRun({ text: '—'.repeat(40), color: (b.color || '#9CA3AF').replace('#', '') })] }))
+      } else if (b.kind === 'page-break') {
+        children.push(new Paragraph({ children: [new TextRun({ text: '', break: 1 })], pageBreakBefore: true } as any))
+      } else if (b.kind === 'chart') {
+        try {
+          const dataUrl = renderChartToDataUrl(b)
+          if (dataUrl) {
+            const base64 = dataUrl.split(',')[1] || ''
+            const bin = Uint8Array.from(atob(base64), c => c.charCodeAt(0))
+            const aspect = b.variant === 'doughnut' ? 0.62 : 0.55
+            children.push(new Paragraph({
+              alignment: b.align === 'center' ? AlignmentType.CENTER : b.align === 'right' ? AlignmentType.RIGHT : AlignmentType.LEFT,
+              children: [new ImageRun({
+                data: bin,
+                transformation: { width: b.width, height: Math.round(b.width * aspect) },
+              } as any)],
+            }))
+          }
+        } catch { /* ignore */ }
       }
     }
 
@@ -762,6 +1095,85 @@ export default function DocumentBuilderModal({ open, onClose, showToast, inline 
     } finally { setBusy(null) }
   }
 
+  // ── Send to Clients ───────────────────────────────────────────
+  // Renders the document as a PDF, encodes it as base64 (the format
+  // Resend expects), then opens the SmartEmailComposer with the
+  // PDF pre-attached + a sensible subject seeded from the doc title.
+  // No client sees another client's address — see SmartComposer
+  // privacy contract.
+  const [sendOpen, setSendOpen] = useState(false)
+  const [sendAttachments, setSendAttachments] = useState<SmartComposerAttachment[]>([])
+  const [sendSubject, setSendSubject] = useState('')
+  const [sendBody, setSendBody] = useState('')
+
+  // Build a plain-text body from the document blocks — used as the
+  // initial email body when the admin clicks Send to Clients. The PDF
+  // is the canonical artifact; the body is a friendly intro plus a
+  // short text recap so WhatsApp recipients also get readable content.
+  const buildPlainBody = (): string => {
+    const lines: string[] = []
+    lines.push(`Dear {{client_name}},`)
+    lines.push('')
+    lines.push(`Please find attached the document "${docTitle}".`)
+    lines.push('')
+    for (const b of blocks) {
+      switch (b.kind) {
+        case 'heading':
+          lines.push(b.text || '')
+          break
+        case 'paragraph':
+          lines.push(b.text || '')
+          break
+        case 'bullet-list':
+          for (const it of b.items) if (it) lines.push(`• ${it}`)
+          break
+        case 'kv-list':
+          for (const r of b.rows) lines.push(`${r.label}: ${r.value}`)
+          break
+        case 'date':
+          lines.push(`${b.label || 'Date'}: ${formatDate(b.iso, b.format)}`)
+          break
+        case 'email':
+          lines.push(`${b.label || 'Email'}: ${b.address}`)
+          break
+        case 'phone':
+          lines.push(`${b.label || 'Phone'}: ${b.number}`)
+          break
+        case 'link':
+          lines.push(`${b.display || b.url}: ${b.url}`)
+          break
+        default:
+          // image / table / chart / footer / divider / page-break / spacer /
+          // signature — not surfaced in the plain-text recap.
+          break
+      }
+    }
+    lines.push('')
+    lines.push('Regards,')
+    lines.push('Team {{fund_name}}')
+    return lines.join('\n').replace(/\n{3,}/g, '\n\n').trim()
+  }
+
+  const handleOpenSend = async () => {
+    try {
+      setBusy('pdf')
+      const blob = renderPdfBlob()
+      const buf = await blob.arrayBuffer()
+      // base64 from ArrayBuffer
+      let bin = ''
+      const u8 = new Uint8Array(buf)
+      for (let i = 0; i < u8.length; i++) bin += String.fromCharCode(u8[i])
+      const content = btoa(bin)
+      const filename = `${safeName}.pdf`
+      setSendAttachments([{ filename, content, contentType: 'application/pdf', sizeBytes: buf.byteLength }])
+      setSendSubject(docTitle && docTitle !== 'Untitled Document' ? docTitle : 'Document from GHL India Ventures')
+      setSendBody(buildPlainBody())
+      setSendOpen(true)
+    } catch (e: any) {
+      showToast(`Could not prepare document for sending: ${e?.message || 'unknown'}`, 'error')
+    } finally { setBusy(null) }
+  }
+
   // Action buttons reused in both inline (toolbar) and modal (footer) modes.
   const actionButtons = (
     <>
@@ -776,6 +1188,9 @@ export default function DocumentBuilderModal({ open, onClose, showToast, inline 
       <ModalButton variant="primary" onClick={handleExportPdf} disabled={!!busy}>
         {busy === 'pdf' ? (<span className="inline-flex items-center gap-2"><Loader2 className="w-4 h-4 animate-spin" /> Generating…</span>)
                         : (<span className="inline-flex items-center gap-2"><FileText className="w-4 h-4" /> Export PDF</span>)}
+      </ModalButton>
+      <ModalButton variant="primary" onClick={handleOpenSend} disabled={!!busy}>
+        <span className="inline-flex items-center gap-2"><Send className="w-4 h-4" /> Send to Clients</span>
       </ModalButton>
     </>
   )
@@ -979,6 +1394,21 @@ export default function DocumentBuilderModal({ open, onClose, showToast, inline 
       </div>
   )
 
+  // Smart composer mount — used by both inline + modal returns below.
+  // Kept as a fragment so we don't accidentally wrap an AdminModal
+  // inside another AdminModal (which would stack backdrops).
+  const composerMount = (
+    <SmartEmailComposerModal
+      open={sendOpen}
+      onClose={() => setSendOpen(false)}
+      showToast={showToast}
+      initialAttachments={sendAttachments}
+      initialSubject={sendSubject}
+      initialBody={sendBody}
+      title={`Send "${docTitle}" to Clients`}
+    />
+  )
+
   if (inline) {
     return (
       <div className="space-y-4">
@@ -986,32 +1416,36 @@ export default function DocumentBuilderModal({ open, onClose, showToast, inline 
           <div>
             <h2 className="text-base font-semibold text-white">Document Builder</h2>
             <p className="text-[11px] text-gray-500 mt-0.5 max-w-2xl">
-              Drag blocks to reorder. Insert headings, paragraphs (justified), field lists, tables, bullet lists, images, signatures, and footers. Export as PDF or Word — no GHL/Landmaxo branding is added unless you drop in a logo block.
+              Drag blocks to reorder. Insert headings, paragraphs (justified), field lists, tables, bullet lists, images, dates, emails, phones, links, charts, dividers, page breaks, signatures, and footers. Export as PDF / Word, or send straight to clients (email + WhatsApp) — each recipient gets their own copy.
             </p>
           </div>
           <div className="flex flex-wrap gap-2">{actionButtons}</div>
         </div>
         {body}
+        {composerMount}
       </div>
     )
   }
 
   return (
-    <AdminModal
-      isOpen={open}
-      onClose={onClose}
-      title="Document Builder"
-      subtitle="Drag blocks to reorder. Export as PDF or Word — no logos or pre-filled data added."
-      maxWidth="max-w-5xl"
-      footer={
-        <>
-          <ModalButton onClick={onClose} disabled={!!busy}>Close</ModalButton>
-          {actionButtons}
-        </>
-      }
-    >
-      {body}
-    </AdminModal>
+    <>
+      <AdminModal
+        isOpen={open}
+        onClose={onClose}
+        title="Document Builder"
+        subtitle="Drag blocks to reorder. Export as PDF or Word, or send straight to clients (email + WhatsApp) — each recipient gets their own copy."
+        maxWidth="max-w-5xl"
+        footer={
+          <>
+            <ModalButton onClick={onClose} disabled={!!busy}>Close</ModalButton>
+            {actionButtons}
+          </>
+        }
+      >
+        {body}
+      </AdminModal>
+      {composerMount}
+    </>
   )
 }
 
@@ -1324,6 +1758,173 @@ function BlockEditor({ block, onChange }: { block: Block; onChange: (patch: Part
           {block.labels.map((label, i) => (
             <input key={i} value={label} onChange={e => onChange({ labels: block.labels.map((v, j) => j === i ? e.target.value : v) } as any)} placeholder={`Signatory ${i + 1}`} className={input} />
           ))}
+        </div>
+      </div>
+    )
+  }
+
+  if (block.kind === 'date') {
+    return (
+      <div className="space-y-2">
+        <div className="text-[10px] uppercase tracking-wider text-gray-500">Date</div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+          <input
+            value={block.label}
+            onChange={e => onChange({ label: e.target.value } as any)}
+            placeholder="Label (optional)"
+            className={input}
+          />
+          <input
+            type="date"
+            value={block.iso}
+            onChange={e => onChange({ iso: e.target.value } as any)}
+            className={input}
+          />
+        </div>
+        <div className="flex gap-2 text-[11px]">
+          <select value={block.format} onChange={e => onChange({ format: e.target.value as any } as any)} className={input + ' max-w-[160px]'}>
+            <option value="long">18 May 2026</option>
+            <option value="short">18/05/2026</option>
+            <option value="iso">2026-05-18</option>
+          </select>
+          <select value={block.align} onChange={e => onChange({ align: e.target.value as any } as any)} className={input + ' max-w-[120px]'}>
+            <option value="left">Left</option><option value="center">Center</option><option value="right">Right</option>
+          </select>
+          <div className="text-[10px] text-gray-500 self-center">Preview: <span className="text-gray-300">{formatDate(block.iso, block.format) || '—'}</span></div>
+        </div>
+      </div>
+    )
+  }
+
+  if (block.kind === 'email') {
+    return (
+      <div className="space-y-2">
+        <div className="text-[10px] uppercase tracking-wider text-gray-500">Email Address</div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+          <input value={block.label} onChange={e => onChange({ label: e.target.value } as any)} placeholder="Label (optional)" className={input} />
+          <input type="email" value={block.address} onChange={e => onChange({ address: e.target.value } as any)} placeholder="name@example.com" className={input} />
+        </div>
+        <select value={block.align} onChange={e => onChange({ align: e.target.value as any } as any)} className={input + ' max-w-[120px] text-[11px]'}>
+          <option value="left">Left</option><option value="center">Center</option><option value="right">Right</option>
+        </select>
+      </div>
+    )
+  }
+
+  if (block.kind === 'phone') {
+    return (
+      <div className="space-y-2">
+        <div className="text-[10px] uppercase tracking-wider text-gray-500">Phone</div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+          <input value={block.label} onChange={e => onChange({ label: e.target.value } as any)} placeholder="Label (optional)" className={input} />
+          <input type="tel" value={block.number} onChange={e => onChange({ number: e.target.value } as any)} placeholder="+91 7200 255 252" className={input} />
+        </div>
+        <select value={block.align} onChange={e => onChange({ align: e.target.value as any } as any)} className={input + ' max-w-[120px] text-[11px]'}>
+          <option value="left">Left</option><option value="center">Center</option><option value="right">Right</option>
+        </select>
+      </div>
+    )
+  }
+
+  if (block.kind === 'link') {
+    return (
+      <div className="space-y-2">
+        <div className="text-[10px] uppercase tracking-wider text-gray-500">Link</div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+          <input value={block.display} onChange={e => onChange({ display: e.target.value } as any)} placeholder="Display text" className={input} />
+          <input type="url" value={block.url} onChange={e => onChange({ url: e.target.value } as any)} placeholder="https://…" className={input} />
+        </div>
+        <select value={block.align} onChange={e => onChange({ align: e.target.value as any } as any)} className={input + ' max-w-[120px] text-[11px]'}>
+          <option value="left">Left</option><option value="center">Center</option><option value="right">Right</option>
+        </select>
+      </div>
+    )
+  }
+
+  if (block.kind === 'divider') {
+    return (
+      <div className="space-y-2">
+        <div className="text-[10px] uppercase tracking-wider text-gray-500">Divider</div>
+        <div className="flex items-center gap-2 text-[11px]">
+          <label className="text-gray-500">Thickness</label>
+          <input
+            type="number" min={1} max={6} value={block.thickness}
+            onChange={e => onChange({ thickness: Math.max(1, Math.min(6, Number(e.target.value) || 1)) } as any)}
+            className={input + ' max-w-[80px]'}
+          />
+          <label className="text-gray-500 ml-2">Color</label>
+          <input
+            type="color" value={block.color}
+            onChange={e => onChange({ color: e.target.value } as any)}
+            className="w-9 h-7 rounded cursor-pointer bg-transparent border border-white/[0.12]"
+          />
+          <div className="flex-1 ml-2">
+            <hr style={{ borderColor: block.color, borderTopWidth: block.thickness, opacity: 0.9 }} />
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  if (block.kind === 'page-break') {
+    return (
+      <div className="flex items-center gap-2 text-[11px] text-gray-400">
+        <FileX2 className="w-3.5 h-3.5" />
+        Page Break — next block starts on a new PDF page.
+      </div>
+    )
+  }
+
+  if (block.kind === 'chart') {
+    const updateRow = (i: number, patch: Partial<{ label: string; value: number }>) =>
+      onChange({ rows: block.rows.map((r, j) => j === i ? { ...r, ...patch } : r) } as any)
+    const addRow = () => onChange({ rows: [...block.rows, { label: 'Item', value: 10 }] } as any)
+    const removeRow = (i: number) => onChange({ rows: block.rows.filter((_, j) => j !== i) } as any)
+    return (
+      <div className="space-y-2">
+        <div className="text-[10px] uppercase tracking-wider text-gray-500">Chart</div>
+        <input value={block.title} onChange={e => onChange({ title: e.target.value } as any)} placeholder="Chart title" className={input} />
+        <div className="flex gap-2 text-[11px]">
+          <select value={block.variant} onChange={e => onChange({ variant: e.target.value as any } as any)} className={input + ' max-w-[140px]'}>
+            <option value="bar">Horizontal bar</option>
+            <option value="column">Vertical column</option>
+            <option value="doughnut">Doughnut</option>
+          </select>
+          <select value={block.align} onChange={e => onChange({ align: e.target.value as any } as any)} className={input + ' max-w-[120px]'}>
+            <option value="left">Left</option><option value="center">Center</option><option value="right">Right</option>
+          </select>
+          <input
+            type="number" min={200} max={720} value={block.width}
+            onChange={e => onChange({ width: Math.max(200, Math.min(720, Number(e.target.value) || 420)) } as any)}
+            className={input + ' max-w-[100px]'} placeholder="Width px"
+          />
+          <input
+            type="color" value={block.color}
+            onChange={e => onChange({ color: e.target.value } as any)}
+            className="w-9 h-7 rounded cursor-pointer bg-transparent border border-white/[0.12]"
+            title="Bar color"
+          />
+        </div>
+        <div className="space-y-1.5">
+          <div className="text-[10px] text-gray-500">Data</div>
+          {block.rows.map((r, i) => (
+            <div key={i} className="flex items-center gap-1.5">
+              <input value={r.label} onChange={e => updateRow(i, { label: e.target.value })} placeholder="Label" className={input + ' flex-1'} />
+              <input
+                type="number" value={Number.isFinite(r.value) ? r.value : 0}
+                onChange={e => updateRow(i, { value: Number(e.target.value) || 0 })}
+                placeholder="Value" className={input + ' max-w-[100px]'}
+              />
+              {block.rows.length > 1 && (
+                <button onClick={() => removeRow(i)} className="p-1 text-gray-500 hover:text-red-300" title="Remove">
+                  <Trash2 className="w-3 h-3" />
+                </button>
+              )}
+            </div>
+          ))}
+          <button onClick={addRow} className="inline-flex items-center gap-1.5 text-[10px] text-brand-red hover:underline">
+            <Plus className="w-3 h-3" /> Add data point
+          </button>
         </div>
       </div>
     )
