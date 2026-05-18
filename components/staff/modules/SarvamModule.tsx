@@ -1,10 +1,13 @@
 /* ─────────────────────────────────────────────────────────────
-   GHL Sarvam — Staff Portal Module
+   GHL Smarty — Staff Portal Module
 
    Mirrors the website-side <SarvamWidget /> from the supervisor
    side. Lists live chat_sessions where channel='sarvam', lets
    a supervisor take over (reassignChat) and reply in real time,
-   and exposes the GHL Sarvam knowledge base as a side-panel.
+   and exposes the GHL Smarty knowledge base as a side-panel.
+
+   Internal IDs ('sarvam', file names, routes) stay unchanged —
+   only user-visible labels are "GHL Smarty".
 
    Reuses the existing chatService backbone — no new tables.
    ───────────────────────────────────────────────────────────── */
@@ -200,8 +203,8 @@ function SarvamConsole({
     <div className="space-y-4">
       {/* KPI strip */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <AdminKPICard title="Sarvam Waiting" value={waiting.length} subtitle="Need supervisor" icon={Clock} color={ACCENT} delay={0} />
-        <AdminKPICard title="Live Sarvam" value={live.length} subtitle="In progress" icon={MessageCircle} color="#8b5cf6" delay={100} />
+        <AdminKPICard title="Smarty Waiting" value={waiting.length} subtitle="Need supervisor" icon={Clock} color={ACCENT} delay={0} />
+        <AdminKPICard title="Live Smarty" value={live.length} subtitle="In progress" icon={MessageCircle} color="#8b5cf6" delay={100} />
         <AdminKPICard title="Total Sessions" value={sessions.length} subtitle="All channels" icon={Sparkles} color="#a78bfa" delay={200} />
         <AdminKPICard title="Languages" value={11} subtitle="Sarvam Bulbul TTS" icon={Languages} color="#22d3ee" delay={300} />
       </div>
@@ -212,7 +215,7 @@ function SarvamConsole({
           <AdminGlass padding="p-0">
             <div className="px-4 py-3 border-b border-white/[0.06] flex items-center gap-2">
               <Sparkles className="w-4 h-4 text-indigo-400" />
-              <h3 className="text-sm font-semibold text-white">Sarvam Sessions</h3>
+              <h3 className="text-sm font-semibold text-white">Smarty Sessions</h3>
               <span className="ml-auto text-[10px] text-gray-500">{sessions.length} total</span>
             </div>
             <div className="divide-y divide-white/[0.04] max-h-[520px] overflow-y-auto">
@@ -223,8 +226,8 @@ function SarvamConsole({
               ) : sessions.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-12 px-4 text-center">
                   <Sparkles className="w-8 h-8 text-gray-600 mb-3" />
-                  <p className="text-sm text-gray-400">No Sarvam sessions yet</p>
-                  <p className="text-xs text-gray-600 mt-1">Visitors will arrive here when they tap the SARVAM badge on the website.</p>
+                  <p className="text-sm text-gray-400">No Smarty sessions yet</p>
+                  <p className="text-xs text-gray-600 mt-1">Visitors will arrive here when they tap the SMARTY badge on the website.</p>
                 </div>
               ) : sessions.map(s => (
                 <button
@@ -245,7 +248,7 @@ function SarvamConsole({
                     </span>
                   </div>
                   <p className="text-xs text-gray-500 truncate">
-                    {s.page_url ? new URL(s.page_url).pathname : 'GHL Sarvam'}
+                    {s.page_url ? new URL(s.page_url).pathname : 'GHL Smarty'}
                   </p>
                   <div className="flex items-center gap-1.5 mt-1.5">
                     <AdminBadge
@@ -278,7 +281,7 @@ function SarvamConsole({
                     </div>
                     <div className="min-w-0">
                       <p className="text-sm font-semibold text-white truncate">{active.visitor_name || 'Visitor'}</p>
-                      <p className="text-[10px] text-gray-500 truncate">{active.page_url || 'GHL Sarvam concierge'}</p>
+                      <p className="text-[10px] text-gray-500 truncate">{active.page_url || 'GHL Smarty concierge'}</p>
                     </div>
                   </div>
                   <div className="flex items-center gap-2 shrink-0">
@@ -352,7 +355,7 @@ function SarvamConsole({
                       type="text"
                       value={reply}
                       onChange={e => setReply(e.target.value)}
-                      placeholder="Reply as Sarvam supervisor..."
+                      placeholder="Reply as Smarty supervisor..."
                       className="flex-1 px-4 py-2 text-xs bg-white/[0.04] border border-white/[0.08] rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-indigo-500/40"
                     />
                     <button
@@ -365,15 +368,15 @@ function SarvamConsole({
                     </button>
                   </form>
                   <p className="text-[10px] text-gray-600 mt-1.5">
-                    Replies are delivered live to the visitor's Sarvam widget and read aloud on demand.
+                    Replies are delivered live to the visitor's Smarty widget and read aloud on demand.
                   </p>
                 </div>
               </div>
             ) : (
               <div className="flex flex-col items-center justify-center py-20 text-gray-500">
                 <Sparkles className="w-10 h-10 mb-3 opacity-30" />
-                <p className="text-sm">Pick a Sarvam session to begin</p>
-                <p className="text-xs text-gray-600 mt-1">All conversations from the website's GHL Sarvam widget appear here.</p>
+                <p className="text-sm">Pick a Smarty session to begin</p>
+                <p className="text-xs text-gray-600 mt-1">All conversations from the website's GHL Smarty widget appear here.</p>
               </div>
             )}
           </AdminGlass>
@@ -409,10 +412,10 @@ function SarvamKBView() {
       <AdminGlass padding="p-4">
         <div className="flex items-center gap-3">
           <BookOpen className="w-5 h-5 text-indigo-400" />
-          <h3 className="text-sm font-semibold text-white">Sarvam Knowledge Base</h3>
+          <h3 className="text-sm font-semibold text-white">Smarty Knowledge Base</h3>
           <span className="ml-auto text-[10px] text-gray-500">{SARVAM_KB.length} answers · 11+ languages</span>
         </div>
-        <p className="text-xs text-gray-500 mt-1">These are the canonical replies the GHL Sarvam bot uses. They can also be read aloud in any supported language.</p>
+        <p className="text-xs text-gray-500 mt-1">These are the canonical replies the GHL Smarty bot uses. They can also be read aloud in any supported language.</p>
       </AdminGlass>
 
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-4">
@@ -523,9 +526,9 @@ function SarvamOverview({ navigate }: Pick<SarvamModuleProps, 'navigate'>) {
             <Sparkles className="w-5 h-5 text-white" />
           </div>
           <div>
-            <h3 className="text-base font-semibold text-white">GHL Sarvam — Multilingual Concierge</h3>
+            <h3 className="text-base font-semibold text-white">GHL Smarty — Multilingual Concierge</h3>
             <p className="text-xs text-gray-500 mt-0.5">
-              Live Sarvam-powered chat on the public website · 11+ Indian languages · Sarvam Bulbul TTS · Saaras STT
+              Live multilingual chat on the public website · Powered by Sarvam AI · 11+ Indian languages · Bulbul TTS · Saaras STT
             </p>
           </div>
         </div>
@@ -574,7 +577,7 @@ function SarvamOverview({ navigate }: Pick<SarvamModuleProps, 'navigate'>) {
           How supervisor takeover works
         </h4>
         <ol className="text-xs text-gray-400 leading-relaxed space-y-1.5 ml-4 list-decimal">
-          <li>A visitor opens the SARVAM badge on the left of any page and chats with the bot.</li>
+          <li>A visitor opens the SMARTY badge on the left of any page and chats with the bot.</li>
           <li>When they tap "Talk to a human supervisor" — or you spot a waiting session here — a chat_sessions row is created with channel = sarvam.</li>
           <li>Open the Console, pick the session, hit Take Over. Your name is broadcast to the visitor and the bot stops auto-replying.</li>
           <li>Type your reply — it is delivered live; the visitor can press the speaker icon to hear it in their chosen Indian language.</li>
@@ -607,7 +610,7 @@ export default function SarvamModule({ subTab, navigate, showToast, role, curren
               <Sparkles className="w-5 h-5 text-white" />
             </div>
             <div>
-              <h2 className="text-base font-semibold text-white">GHL Sarvam</h2>
+              <h2 className="text-base font-semibold text-white">GHL Smarty</h2>
               <p className="text-[11px] text-gray-500">Multilingual concierge · Supervisor takeover · KB</p>
             </div>
           </div>

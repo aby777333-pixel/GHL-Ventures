@@ -1,6 +1,8 @@
 /* ─────────────────────────────────────────────────────────────
-   GHL Sarvam Widget — multilingual concierge on the left middle
-   of the public site.
+   GHL Smarty Widget — multilingual concierge on the left middle
+   of the public site. (Internal IDs / channel / file paths still
+   say "sarvam" — see project_sarvam_phase4.md memory; renaming
+   them would break chat_sessions rows, RBAC and routes.)
 
    • Bot mode: instant answers from SARVAM_KB (with TTS playback
      in 11+ Indian languages and Sarvam STT voice input).
@@ -30,7 +32,7 @@ import {
 import {
   SARVAM_LANGUAGES,
   SARVAM_TTS_LANGUAGES,
-  toSarvamLangCode,
+  sarvamTranslateText,
   type SarvamLanguageCode,
 } from '@/lib/sarvamService'
 import { speechToText } from '@/lib/sarvam/sarvamService'
@@ -46,11 +48,37 @@ type SarvamMode = 'bot' | 'human'
 
 interface SarvamMessage {
   id: string
+  /** Currently-visible text (may be a translation). */
   text: string
+  /** Untranslated source. Used to re-translate when the user picks a
+   *  different language. Only populated for bot / agent / system
+   *  messages — visitor messages are not retranslated. */
+  originalText?: string
   sender: 'user' | 'bot' | 'agent' | 'system'
   timestamp: Date
   /** When set, the speaker on this bubble auto-plays in this language. */
   lang?: SarvamLanguageCode
+}
+
+/** Translation cache so we don't re-call the Sarvam API for the same
+ *  (text, lang) pair. Key: `${lang}::${text.slice(0,200)}`. */
+const translationCache = new Map<string, string>()
+
+async function translateForLang(text: string, lang: SarvamLanguageCode): Promise<string> {
+  if (!text || lang === 'en-IN') return text
+  const key = `${lang}::${text.slice(0, 200)}`
+  const cached = translationCache.get(key)
+  if (cached) return cached
+  try {
+    const t = await sarvamTranslateText(text, lang, 'en-IN')
+    if (t && t.trim()) {
+      translationCache.set(key, t)
+      return t
+    }
+  } catch {
+    /* fall through to original */
+  }
+  return text
 }
 
 let counter = 0
@@ -92,6 +120,8 @@ export default function SarvamWidget() {
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const lastPollRef = useRef<string>(new Date().toISOString())
   const seenMsgIds = useRef<Set<string>>(new Set())
+  const messagesRef = useRef<SarvamMessage[]>([])
+  useEffect(() => { messagesRef.current = messages }, [messages])
 
   // ── Initial welcome ────────────────────────────────────────
   useEffect(() => {
@@ -100,6 +130,7 @@ export default function SarvamWidget() {
       setMessages([{
         id: uid(),
         text: welcome.answer,
+        originalText: welcome.answer,
         sender: 'bot',
         timestamp: new Date(),
         lang: langCode,
@@ -108,6 +139,37 @@ export default function SarvamWidget() {
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
+
+  // ── Re-translate bot messages when the user picks a new language ──
+  useEffect(() => {
+    let cancelled = false
+    if (langCode === 'en-IN') {
+      // Restore originals
+      setMessages(prev => prev.map(m =>
+        (m.sender === 'bot' || m.sender === 'agent' || m.sender === 'system') && m.originalText
+          ? { ...m, text: m.originalText, lang: 'en-IN' }
+          : m
+      ))
+      return
+    }
+    ;(async () => {
+      // Snapshot current bot/agent/system messages and translate each
+      const snapshot = messagesRef.current
+      const translated = new Map<string, string>()
+      for (const m of snapshot) {
+        if ((m.sender === 'bot' || m.sender === 'agent' || m.sender === 'system') && m.originalText) {
+          const t = await translateForLang(m.originalText, langCode)
+          if (cancelled) return
+          translated.set(m.id, t)
+        }
+      }
+      if (cancelled) return
+      setMessages(prev => prev.map(m =>
+        translated.has(m.id) ? { ...m, text: translated.get(m.id)!, lang: langCode } : m
+      ))
+    })()
+    return () => { cancelled = true }
+  }, [langCode])
 
   // ── Restore active session on mount (only if it's a Sarvam session) ──
   useEffect(() => {
@@ -121,6 +183,7 @@ export default function SarvamWidget() {
           const uiMsgs: SarvamMessage[] = history.map(m => ({
             id: m.id,
             text: m.message,
+            originalText: m.message,
             sender: m.sender_type === 'visitor' ? 'user'
               : m.sender_type === 'agent' ? 'agent'
               : m.sender_type === 'bot' ? 'bot' : 'system',
@@ -156,6 +219,7 @@ export default function SarvamWidget() {
           const uiMsgs: SarvamMessage[] = unseen.map(m => ({
             id: m.id,
             text: m.message,
+            originalText: m.message,
             sender: m.sender_type === 'agent' ? 'agent' as const
               : m.sender_type === 'system' ? 'system' as const
               : 'bot' as const,
@@ -163,6 +227,16 @@ export default function SarvamWidget() {
             lang: langCode,
           }))
           setMessages(prev => [...prev, ...uiMsgs])
+          // If a non-English language is active, translate the new
+          // supervisor / system bubbles in the background.
+          if (langCode !== 'en-IN') {
+            ;(async () => {
+              for (const m of uiMsgs) {
+                const t = await translateForLang(m.originalText!, langCode)
+                setMessages(prev => prev.map(x => x.id === m.id ? { ...x, text: t, lang: langCode } : x))
+              }
+            })()
+          }
           setIsTyping(false)
 
           const agentMsg = unseen.find(m => m.sender_type === 'agent')
@@ -196,19 +270,32 @@ export default function SarvamWidget() {
   const replyAsBot = useCallback((userText: string) => {
     const match = findSarvamKBAnswer(userText)
     const fallback = `I do not have that exact answer yet, but I can connect you with a human supervisor — tap "Talk to a human" below.`
-    const reply: SarvamMessage = {
-      id: uid(),
-      text: match ? match.entry.answer : fallback,
-      sender: 'bot',
-      timestamp: new Date(),
-      lang: langCode,
-    }
-    const delay = Math.min(500 + reply.text.length * 6, 1800)
-    setTimeout(() => {
-      setMessages(prev => [...prev, reply])
+    const englishAnswer = match ? match.entry.answer : fallback
+    const replyId = uid()
+    const delay = Math.min(500 + englishAnswer.length * 6, 1800)
+    // Insert the English reply immediately (UX: typing dots stop, bubble appears).
+    // If the user is on a non-English language, kick off a translation in
+    // parallel and patch the bubble + suggestion chips as soon as it lands.
+    setTimeout(async () => {
+      const initial: SarvamMessage = {
+        id: replyId,
+        text: englishAnswer,
+        originalText: englishAnswer,
+        sender: 'bot',
+        timestamp: new Date(),
+        lang: 'en-IN',
+      }
+      setMessages(prev => [...prev, initial])
       setSuggestions(match?.entry.suggestions || ['Talk to a human', 'What is AIF?', 'Minimum investment'])
       setIsTyping(false)
       if (!isOpen) setUnread(u => u + 1)
+
+      if (langCode !== 'en-IN') {
+        const translated = await translateForLang(englishAnswer, langCode)
+        setMessages(prev => prev.map(m =>
+          m.id === replyId ? { ...m, text: translated, lang: langCode } : m
+        ))
+      }
     }, delay)
   }, [isOpen, langCode])
 
@@ -246,16 +333,25 @@ export default function SarvamWidget() {
     setIsTyping(true)
     setSuggestions([])
 
-    const sys: SarvamMessage = {
-      id: uid(),
-      text: 'Connecting you with a supervisor from the GHL Sarvam team...',
+    const englishSys = 'Connecting you with a supervisor from the GHL Smarty team...'
+    const sysId = uid()
+    setMessages(prev => [...prev, {
+      id: sysId,
+      text: englishSys,
+      originalText: englishSys,
       sender: 'system',
       timestamp: new Date(),
+    }])
+    if (langCode !== 'en-IN') {
+      translateForLang(englishSys, langCode).then(t => {
+        setMessages(prev => prev.map(m =>
+          m.id === sysId ? { ...m, text: t, lang: langCode } : m
+        ))
+      })
     }
-    setMessages(prev => [...prev, sys])
 
     const created = await createChatSession({
-      visitorName: 'Sarvam Visitor',
+      visitorName: 'Smarty Visitor',
       pageUrl: typeof window !== 'undefined' ? window.location.href : undefined,
       channel: 'sarvam',
     })
@@ -264,7 +360,7 @@ export default function SarvamWidget() {
       await sendChatMessage({
         sessionId: created.id,
         senderType: 'system',
-        message: `New GHL Sarvam session opened from ${pathname}. Visitor language: ${langCode}.`,
+        message: `New GHL Smarty session opened from ${pathname}. Visitor language: ${langCode}.`,
       })
       // Replay the bot conversation context for the supervisor
       const lastFew = messages.slice(-4)
@@ -341,7 +437,7 @@ export default function SarvamWidget() {
           <button
             onClick={() => setIsOpen(true)}
             className="group relative flex flex-col items-center focus:outline-none"
-            aria-label="Open GHL Sarvam multilingual assistant"
+            aria-label="Open GHL Smarty multilingual assistant"
           >
             {showPulse && (
               <span
@@ -364,7 +460,7 @@ export default function SarvamWidget() {
               className="mt-1.5 px-2 py-0.5 rounded-md text-[10px] font-semibold text-white tracking-wide"
               style={{ background: 'rgba(99,102,241,0.18)', border: '1px solid rgba(99,102,241,0.3)' }}
             >
-              SARVAM
+              SMARTY
             </span>
           </button>
         )}
@@ -396,7 +492,7 @@ export default function SarvamWidget() {
           boxShadow: '0 24px 80px rgba(0,0,0,0.6), 0 0 60px rgba(99,102,241,0.15)',
         }}
         role="dialog"
-        aria-label="GHL Sarvam multilingual concierge"
+        aria-label="GHL Smarty multilingual concierge"
       >
         <div className="flex flex-col h-full">
           {/* Header */}
@@ -409,7 +505,7 @@ export default function SarvamWidget() {
             </div>
             <div className="ml-3 flex-1 min-w-0">
               <div className="flex items-center gap-1.5">
-                <span className="text-white font-semibold text-sm">GHL Sarvam</span>
+                <span className="text-white font-semibold text-sm">GHL Smarty</span>
                 <span
                   className="text-[9px] uppercase tracking-wider px-1.5 py-0.5 rounded font-semibold"
                   style={{ background: 'rgba(99,102,241,0.18)', color: '#a5b4fc' }}

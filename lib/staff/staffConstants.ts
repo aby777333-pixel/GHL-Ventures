@@ -101,7 +101,7 @@ export const STAFF_SIDEBAR_ITEMS: StaffNavItem[] = [
     subItems: [],
   },
   {
-    id: 'sarvam', label: 'GHL Sarvam', iconName: 'Languages', href: '/staff/sarvam',
+    id: 'sarvam', label: 'GHL Smarty', iconName: 'Languages', href: '/staff/sarvam',
     badge: 'NEW',
     subItems: [
       { id: 'overview', label: 'Overview', href: '/staff/sarvam' },
@@ -146,7 +146,7 @@ export const STAFF_MODULE_LABELS: Record<StaffModule, string> = {
   internal: 'Internal',
   field: 'Field Operations',
   leads: 'Lead Management',
-  sarvam: 'GHL Sarvam',
+  sarvam: 'GHL Smarty',
 }
 
 // ── All Tab Params (for Next.js static generation) ──────────────

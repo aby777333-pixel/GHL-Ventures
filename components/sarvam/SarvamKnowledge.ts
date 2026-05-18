@@ -1,11 +1,13 @@
 /* ─────────────────────────────────────────────────────────────
-   GHL Sarvam — Knowledge Base
+   GHL Smarty — Knowledge Base
 
-   Compact KB tuned for the multilingual Sarvam concierge.
+   Compact KB tuned for the multilingual Smarty concierge.
    The same knowledge surface is shown to website visitors
    (via the side widget) and to staff supervisors in the
-   "GHL Sarvam" tab. Keep entries short — they may be played
+   "GHL Smarty" tab. Keep entries short — they may be played
    back as speech in 11+ Indian languages.
+   (Internal type names retain "Sarvam" prefix — they pre-date
+   the rebrand. Renaming would churn imports across the app.)
    ───────────────────────────────────────────────────────────── */
 
 export interface SarvamKBEntry {
@@ -22,7 +24,7 @@ export const SARVAM_KB: SarvamKBEntry[] = [
     id: 'sarvam-greet',
     category: 'support',
     question: 'Welcome message',
-    answer: 'Namaste! I am GHL Sarvam — your multilingual investment assistant. I can answer questions about our SEBI-registered AIF and Co-Invest Framework in 11+ Indian languages. Press the speaker icon to hear any reply aloud.',
+    answer: 'Namaste! I am GHL Smarty — your multilingual investment assistant. I can answer questions about our SEBI-registered AIF and Co-Invest Framework in 11+ Indian languages. Press the speaker icon to hear any reply aloud.',
     keywords: ['hi', 'hello', 'namaste', 'start', 'hey', 'help'],
     suggestions: ['What is AIF?', 'Minimum investment', 'How to invest', 'Talk to advisor'],
   },
