@@ -13,6 +13,7 @@ import TasksModule from './modules/TasksModule'
 import AIToolsModule from './modules/AIToolsModule'
 import TeamModule from './modules/TeamModule'
 import InternalModule from './modules/InternalModule'
+import SarvamModule from './modules/SarvamModule'
 import LeadManagementModule from '../shared/LeadManagementModule'
 import AdminGlass from '../admin/shared/AdminGlass'
 import AdminToast from '../admin/shared/AdminToast'
@@ -23,15 +24,15 @@ import { STAFF_MODULE_LABELS } from '@/lib/staff/staffConstants'
 import type { StaffModule, AgentStatus } from '@/lib/staff/staffTypes'
 import {
   Home, User, Headphones, MapPin, Users, CheckSquare, Sparkles,
-  UsersRound, MessageCircle, Lock, Construction, Target,
+  UsersRound, MessageCircle, Lock, Construction, Target, Languages,
 } from 'lucide-react'
 
 // ── Valid Modules ──────────────────────────────────────────────
-const VALID_MODULES: StaffModule[] = ['home', 'me', 'cs', 'field', 'leads', 'clients', 'tasks', 'ai', 'team', 'internal']
+const VALID_MODULES: StaffModule[] = ['home', 'me', 'cs', 'field', 'leads', 'clients', 'tasks', 'ai', 'team', 'internal', 'sarvam']
 
 const MODULE_ICONS: Record<StaffModule, React.ComponentType<{ className?: string }>> = {
   home: Home, me: User, cs: Headphones, field: MapPin, leads: Target, clients: Users,
-  tasks: CheckSquare, ai: Sparkles, team: UsersRound, internal: MessageCircle,
+  tasks: CheckSquare, ai: Sparkles, team: UsersRound, internal: MessageCircle, sarvam: Languages,
 }
 
 export default function StaffClient() {
@@ -253,6 +254,8 @@ export default function StaffClient() {
         return <TeamModule subTab={activeSubTab} navigate={navigate} showToast={showToast} role={role} />
       case 'internal':
         return <InternalModule subTab={activeSubTab} navigate={navigate} showToast={showToast} user={user} role={role} />
+      case 'sarvam':
+        return <SarvamModule subTab={activeSubTab} navigate={navigate} showToast={showToast} role={role} currentUserId={user?.id} currentUserName={user?.name} />
       default:
         return (
           <AdminGlass className="flex flex-col items-center justify-center py-16">

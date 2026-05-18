@@ -29,6 +29,7 @@ export type StaffModule =
   | 'internal'
   | 'field'
   | 'leads'
+  | 'sarvam'
 
 // ── Permission Types ────────────────────────────────────────────
 export type StaffPermission = 'view' | 'create' | 'edit' | 'escalate' | 'close' | 'export' | 'manage'

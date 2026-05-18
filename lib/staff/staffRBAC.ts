@@ -117,6 +117,20 @@ const MODULE_PERMISSIONS: Record<StaffModule, Record<StaffRole, StaffPermission[
     'general-employee': ['view'],
     'intern': ['view'],
   },
+  sarvam: {
+    'cs-lead': ['view', 'create', 'edit', 'escalate', 'close', 'manage'],
+    'senior-cs-agent': ['view', 'create', 'edit', 'escalate', 'close'],
+    'cs-agent': ['view', 'create', 'edit'],
+    'relationship-manager': ['view', 'create', 'edit', 'escalate'],
+    'field-sales-manager': ['view'],
+    'field-sales-executive': [],
+    'site-inspector': [],
+    'kyc-officer': ['view', 'create'],
+    'operations-executive': ['view', 'create'],
+    'hr-executive': [],
+    'general-employee': [],
+    'intern': [],
+  },
 }
 
 // ── Access Check Functions ──────────────────────────────────────
@@ -144,6 +158,6 @@ export function isLeadRole(role: StaffRole): boolean {
 
 // ── Get Visible Modules ─────────────────────────────────────────
 export function getStaffVisibleModules(role: StaffRole): StaffModule[] {
-  const allModules: StaffModule[] = ['home', 'me', 'cs', 'clients', 'tasks', 'team', 'ai', 'internal', 'field']
+  const allModules: StaffModule[] = ['home', 'me', 'cs', 'clients', 'tasks', 'team', 'ai', 'internal', 'field', 'sarvam']
   return allModules.filter(m => hasStaffModuleAccess(role, m))
 }

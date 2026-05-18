@@ -100,6 +100,15 @@ export const STAFF_SIDEBAR_ITEMS: StaffNavItem[] = [
     id: 'ai', label: 'AI Advisor', iconName: 'Sparkles', href: '/staff/ai',
     subItems: [],
   },
+  {
+    id: 'sarvam', label: 'GHL Sarvam', iconName: 'Languages', href: '/staff/sarvam',
+    badge: 'NEW',
+    subItems: [
+      { id: 'overview', label: 'Overview', href: '/staff/sarvam' },
+      { id: 'console', label: 'Live Console', href: '/staff/sarvam/console' },
+      { id: 'kb', label: 'Knowledge Base', href: '/staff/sarvam/kb' },
+    ],
+  },
   // The "Team" entry is hidden per Staff Dashboard Corrections (2026-05) —
   // "hide this page for later use". The static export still produces the
   // /staff/team/* paths (so existing deep links resolve), but the sidebar
@@ -137,6 +146,7 @@ export const STAFF_MODULE_LABELS: Record<StaffModule, string> = {
   internal: 'Internal',
   field: 'Field Operations',
   leads: 'Lead Management',
+  sarvam: 'GHL Sarvam',
 }
 
 // ── All Tab Params (for Next.js static generation) ──────────────
@@ -184,4 +194,6 @@ export const ALL_STAFF_TAB_PARAMS = [
   // Internal
   { tab: ['internal'] }, { tab: ['internal', 'chat'] }, { tab: ['internal', 'noticeboard'] },
   { tab: ['internal', 'policies'] }, { tab: ['internal', 'feedback'] }, { tab: ['internal', 'wellness'] },
+  // GHL Sarvam (multilingual concierge supervisor console)
+  { tab: ['sarvam'] }, { tab: ['sarvam', 'console'] }, { tab: ['sarvam', 'kb'] },
 ]

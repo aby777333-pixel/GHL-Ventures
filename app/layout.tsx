@@ -20,6 +20,8 @@ import LiveVisitorCount from '@/components/LiveVisitorCount'
 // Lazy-load heavy widgets (reduces initial page load by ~2s)
 const ChatWidget = dynamic(() => import('@/components/chat/ChatWidget'), { ssr: false })
 const CommandPalette = dynamic(() => import('@/components/CommandPalette'), { ssr: false })
+// GHL Sarvam — multilingual concierge (left middle of every public page)
+const SarvamWidget = dynamic(() => import('@/components/sarvam/SarvamWidget'), { ssr: false })
 // VoiceCommandWidget hidden for now — uncomment to re-enable
 // const VoiceCommandWidget = dynamic(() => import('@/components/VoiceCommandWidget'), { ssr: false })
 // SpeechTranslationWidget hidden for now — uncomment to re-enable
@@ -299,6 +301,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               {/* <SpeechTranslationWidget /> */}
               <CommandPalette />
               <ChatWidget />
+              {/* GHL Sarvam — multilingual concierge anchored to left-middle on public pages */}
+              <MainSiteOnly>
+                <SarvamWidget />
+              </MainSiteOnly>
             </ArticleReaderProvider>
           </LegalPopupProvider>
         </ThemeProvider>
