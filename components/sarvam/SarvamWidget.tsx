@@ -116,6 +116,11 @@ export default function SarvamWidget() {
   const [unread, setUnread] = useState(0)
   const [session, setSession] = useState<ChatSession | null>(null)
   const [agentName, setAgentName] = useState<string>('')
+  /** True once a supervisor has sent at least one message OR the
+   *  restored session already has an assigned_rep_id. Until this
+   *  flips, the bot keeps answering even in "human" mode so the
+   *  visitor isn't left waiting at typing dots. */
+  const [agentJoined, setAgentJoined] = useState(false)
   const [showPulse, setShowPulse] = useState(true)
 
   const messagesEndRef = useRef<HTMLDivElement>(null)
@@ -176,30 +181,39 @@ export default function SarvamWidget() {
     return () => { cancelled = true }
   }, [langCode])
 
-  // ── Restore active session on mount (only if it's a Sarvam session) ──
+  // ── Restore active session on mount ───────────────────────────
+  // Only flip into "human" mode if a supervisor is actually assigned
+  // to the session. An unassigned session means the visitor tapped
+  // "Talk to a human" but nobody picked up — in that case we start
+  // fresh in bot mode and let them keep chatting with the KB.
+  // (The unassigned session row still exists in Supabase for the
+  // staff Smarty console to take over later.)
   useEffect(() => {
     async function restore() {
       const s = await getActiveSessionForVisitor()
-      if (s && s.channel === 'sarvam') {
-        setSession(s)
-        setMode('human')
-        const history = await getVisitorChatMessages(s.id)
-        if (history.length > 0) {
-          const uiMsgs: SarvamMessage[] = history.map(m => ({
-            id: m.id,
-            text: m.message,
-            originalText: m.message,
-            sender: m.sender_type === 'visitor' ? 'user'
-              : m.sender_type === 'agent' ? 'agent'
-              : m.sender_type === 'bot' ? 'bot' : 'system',
-            timestamp: new Date(m.created_at),
-            lang: langCode,
-          }))
-          history.forEach(m => seenMsgIds.current.add(m.id))
-          setMessages(uiMsgs)
-          lastPollRef.current = history[history.length - 1].created_at
-        }
-        if (s.assigned_rep_id) setAgentName('Supervisor')
+      if (!s || s.channel !== 'sarvam') return
+      if (!s.assigned_rep_id) return
+
+      setSession(s)
+      setMode('human')
+      setAgentJoined(true)
+      setAgentName('Supervisor')
+
+      const history = await getVisitorChatMessages(s.id)
+      if (history.length > 0) {
+        const uiMsgs: SarvamMessage[] = history.map(m => ({
+          id: m.id,
+          text: m.message,
+          originalText: m.message,
+          sender: m.sender_type === 'visitor' ? 'user'
+            : m.sender_type === 'agent' ? 'agent'
+            : m.sender_type === 'bot' ? 'bot' : 'system',
+          timestamp: new Date(m.created_at),
+          lang: langCode,
+        }))
+        history.forEach(m => seenMsgIds.current.add(m.id))
+        setMessages(uiMsgs)
+        lastPollRef.current = history[history.length - 1].created_at
       }
     }
     restore()
@@ -217,7 +231,13 @@ export default function SarvamWidget() {
     const poll = async () => {
       const newMsgs = await pollNewMessages(sessionId, lastPollRef.current)
       if (newMsgs.length > 0) {
-        const unseen = newMsgs.filter(m => !seenMsgIds.current.has(m.id))
+        // Only surface agent + system messages to the visitor. Their own
+        // `visitor` messages and the `bot`/`visitor` history we replayed
+        // when escalating are also in this stream — but they were already
+        // rendered locally, so re-rendering them would double up or echo
+        // (which is what the screenshot showed before this fix).
+        const relevant = newMsgs.filter(m => m.sender_type === 'agent' || m.sender_type === 'system')
+        const unseen = relevant.filter(m => !seenMsgIds.current.has(m.id))
         if (unseen.length > 0) {
           unseen.forEach(m => seenMsgIds.current.add(m.id))
           lastPollRef.current = unseen[unseen.length - 1].created_at
@@ -225,9 +245,7 @@ export default function SarvamWidget() {
             id: m.id,
             text: m.message,
             originalText: m.message,
-            sender: m.sender_type === 'agent' ? 'agent' as const
-              : m.sender_type === 'system' ? 'system' as const
-              : 'bot' as const,
+            sender: m.sender_type === 'agent' ? 'agent' as const : 'system' as const,
             timestamp: new Date(m.created_at),
             lang: langCode,
           }))
@@ -246,6 +264,7 @@ export default function SarvamWidget() {
 
           const agentMsg = unseen.find(m => m.sender_type === 'agent')
           if (agentMsg) {
+            setAgentJoined(true)
             if (agentMsg.sender_name) setAgentName(agentMsg.sender_name)
             else setAgentName('Supervisor')
           }
@@ -319,7 +338,8 @@ export default function SarvamWidget() {
       return
     }
 
-    // Human mode — persist to Supabase, supervisor will see it
+    // Human mode — always persist to Supabase so the supervisor
+    // sees the full thread when they join.
     if (session?.id) {
       await sendChatMessage({
         sessionId: session.id,
@@ -328,8 +348,16 @@ export default function SarvamWidget() {
         message: content,
       })
     }
-    setTimeout(() => setIsTyping(false), 8000)
-  }, [input, mode, session, replyAsBot])
+
+    if (agentJoined) {
+      // A real supervisor is on the line — let them respond.
+      setTimeout(() => setIsTyping(false), 8000)
+    } else {
+      // No supervisor yet — keep the KB bot replying so the
+      // visitor isn't stuck staring at typing dots.
+      replyAsBot(content)
+    }
+  }, [input, mode, session, agentJoined, replyAsBot])
 
   // ── Mode switch ────────────────────────────────────────────
   const switchToHuman = useCallback(async () => {
@@ -530,13 +558,15 @@ export default function SarvamWidget() {
                   className="text-[9px] uppercase tracking-wider px-1.5 py-0.5 rounded font-semibold"
                   style={{ background: 'rgba(255,23,68,0.20)', color: '#FCA5A5' }}
                 >
-                  {mode === 'bot' ? 'AI' : 'LIVE'}
+                  {mode === 'bot' ? 'AI' : agentJoined ? 'LIVE' : 'WAITING'}
                 </span>
               </div>
               <p className="text-[10px] text-gray-500 truncate">
                 {mode === 'bot'
                   ? 'Multilingual concierge · 11+ Indian languages'
-                  : `${agentName || 'Supervisor'} is on the line`}
+                  : agentJoined
+                    ? `${agentName || 'Supervisor'} is on the line`
+                    : 'Finding a supervisor · keep chatting with the bot'}
               </p>
             </div>
             <button
