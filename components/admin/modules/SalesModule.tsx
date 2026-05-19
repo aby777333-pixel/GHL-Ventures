@@ -1290,47 +1290,37 @@ async function generateInvestmentDocument(
   const templates: Record<string, string> = {
     acknowledgement: `${css}
       <style>
-        /* 2026-05-16: leave reserved blank bands at the top and bottom of
-           the Acknowledgement Letter so the company can affix its physical
-           letterhead logo and footer manually after printing. On-screen
-           the placeholders show as faint dashed outlines so the admin can
-           visually confirm the reserved area; on print the outlines vanish
-           and only whitespace remains. */
-        .ack-logo-space{height:38mm;width:100%;}
-        .ack-footer-space{height:34mm;width:100%;margin-top:18mm;}
-        @media screen{
-          .ack-logo-space{border:1px dashed rgba(208,2,27,0.25);display:flex;align-items:center;justify-content:center;color:#bbb;font-size:10px;letter-spacing:2px;text-transform:uppercase;}
-          .ack-logo-space::before{content:"Reserved for logo — placed manually after print";}
-          .ack-footer-space{border:1px dashed rgba(208,2,27,0.25);display:flex;align-items:center;justify-content:center;color:#bbb;font-size:10px;letter-spacing:2px;text-transform:uppercase;}
-          .ack-footer-space::before{content:"Reserved for footer — placed manually after print";}
-        }
-        @media print{.ack-logo-space,.ack-footer-space{border:none!important;}}
-        .ack-logo-space::before,.ack-footer-space::before{display:block;}
-        /* Keep the body, table, and trailing note from breaking across the
-           reserved footer band. */
+        /* 2026-05-19: no logo — header/footer reserved bands removed per
+           handwritten review. Body text justified, header tightened so the
+           Ref / Date and the addressee block sit immediately under each
+           other, and the receipt table is given 30px of vertical breathing
+           room above and below. */
+        .ack-body{padding:30px;}
+        .ack-body p{text-align:justify;}
         .ack-body p,.ack-body table{break-inside:avoid;page-break-inside:avoid;}
+        .ack-head{margin:0 0 4px;}
+        .ack-addr{margin:0 0 18px;}
+        .ack-receipt{margin:30px 0;}
       </style>
       <body>
-      <div class="ack-logo-space"></div>
       <div class="ack-body">
-      <p>Ref: [REF] <span style="float:right;">Date: [DATE]</span></p>
-      <p>[NAME],<br/>[ADDRESS]<br/>[PHONE]</p>
-      <p><strong>Subject: Acknowledgement of investment receipt</strong></p>
-      <p>Dear [NAME],</p>
-      <p><strong>Landmaxo Properties welcomes you to the new Dawn of Wealth Creation and prosperity</strong></p>
+      <p class="ack-head" style="text-align:left;">Ref: [REF] <span style="float:right;">Date: [DATE]</span></p>
+      <p class="ack-addr" style="text-align:left;">[NAME],<br/>[ADDRESS]<br/>[PHONE]</p>
+      <p style="text-align:left;"><strong>Subject: Acknowledgement of investment receipt</strong></p>
+      <p style="text-align:left;">Dear [NAME],</p>
+      <p style="text-align:left;"><strong>Landmaxo Properties welcomes you to the new Dawn of Wealth Creation and prosperity</strong></p>
       <p>We are delighted to welcome you to <strong>Landmaxo Properties</strong>, where your financial aspirations take shape and transform into lasting success. By joining us, you have become an integral part of our <strong>prestigious family of visionary investors</strong> &mdash; individuals who believe in creating wealth with wisdom and foresight.</p>
       <p>Your decision to partner with Landmaxo Properties marks a <strong>powerful first step toward true financial freedom</strong>. Together, let us shape a future defined by prosperity, stability, and enduring success.</p>
       <p>Welcome once again to Landmaxo Properties &mdash; <strong>where your prosperity is our purpose</strong>.</p>
       <p>We acknowledge receipt of your investment towards the <strong>subscription of debentures in Landmaxo Properties Private Limited</strong>, as detailed below:</p>
-      <table class="mb">
+      <table class="ack-receipt">
         <tr><th>S.No</th><th>Date of Receipt</th><th>Amount (&#8377;)</th><th>Amount in Words</th></tr>
         <tr><td>1</td><td>[DATE]</td><td>[AMOUNT]</td><td>[AMOUNT_WORDS] Rupees Only</td></tr>
       </table>
       <p>The debentures carry an <strong>interest rate of 1% per month</strong> along with an <strong>annual appreciation of 12%</strong>, for a <strong>minimum tenure of three (3) years</strong> from the date of investment. Interest will be paid on or before the <strong>10th of each month</strong>, after deduction of applicable <strong>TDS (currently 10%)</strong> under the Income Tax Act, 1961.</p>
       <p>Debentures may be <strong>redeemed at the investor&rsquo;s option</strong> after completion of the 3-year tenure. <strong>TDS credits</strong> will be reflected in the investor&rsquo;s PAN account on a <strong>quarterly basis</strong>.</p>
-      <p class="note">* This is system generated document. Signature authentication is not required. *</p>
+      <p class="note" style="text-align:left;">* This is system generated document. Signature authentication is not required. *</p>
       </div>
-      <div class="ack-footer-space"></div>
       </body>`,
 
     allotment: `${css}<body>
@@ -1368,40 +1358,53 @@ async function generateInvestmentDocument(
       </body>`,
 
     certificate: `${css}
-      <style>.cert-border{border:4px double #C8A951;padding:28px;margin:10px;background:#fff;}.cert-title{text-align:center;font-size:24px;font-weight:800;letter-spacing:3px;margin-bottom:8px;color:#333;}.cert-company{text-align:center;font-size:18px;font-weight:700;margin-bottom:4px;}.cert-sub{text-align:center;font-size:10px;color:#555;margin-bottom:20px;}.cert-body{line-height:1.8;font-size:12px;}.cert-highlight{text-align:center;background:#f8f8f0;border:1px solid #C8A951;padding:10px;margin:16px 0;font-weight:700;font-size:13px;}.cert-fields td{padding:6px 12px;font-size:12px;border:none;}.cert-fields td:first-child{color:#666;width:220px;}</style>
+      <style>
+        /* 2026-05-19: handwritten review — no logo (text mark removed),
+           30px padding on the certificate body, dynamic distinctive range
+           and folio/cert numbers, justified prose block. The double-gold
+           border and company seal placeholder are retained because they
+           define the certificate look. */
+        .cert-border{border:4px double #C8A951;padding:30px;margin:10px;background:#fff;}
+        .cert-title{text-align:center;font-size:24px;font-weight:800;letter-spacing:3px;margin-bottom:8px;color:#333;}
+        .cert-company{text-align:center;font-size:18px;font-weight:700;margin-bottom:4px;}
+        .cert-sub{text-align:center;font-size:10px;color:#555;margin-bottom:30px;}
+        .cert-body{line-height:1.8;font-size:12px;}
+        .cert-body p{text-align:justify;}
+        .cert-highlight{text-align:center;background:#f8f8f0;border:1px solid #C8A951;padding:12px;margin:18px 0;font-weight:700;font-size:13px;}
+        .cert-fields td{padding:8px 14px;font-size:12px;border:none;vertical-align:top;}
+        .cert-fields td:first-child{color:#666;width:220px;}
+      </style>
       <body>
       <div class="cert-border">
         <div class="cert-title">DEBENTURE CERTIFICATE</div>
-        <div style="text-align:center;margin-bottom:8px;">
-          <div style="font-size:28px;font-weight:900;color:#2d6a2e;letter-spacing:3px;">LANDMA<span style="color:#E8A317;">X</span>O</div>
-          <div style="font-size:9px;color:#666;letter-spacing:2px;">Invest&bull; Earn&bull; Repeat</div>
-        </div>
         <div class="cert-company">LANDMAXO PROPERTIES PRIVATE LIMITED</div>
         <div class="cert-sub">(CIN: U70109TN2022PTC151180) &nbsp;|&nbsp; (Incorporated under the Companies Act, 2013)<br/>Reg. Office: 2D, 2nd Floor, Queens Court, No. 6 Montieth Road, Egmore, Chennai - 600008, Tamil Nadu, India</div>
         <div class="cert-body">
-          <p>This is to certify that the person(s) named in this Certificate is/are the Registered/Beneficial Holder(s) of the within mentioned debenture(s) bearing the distinctive number(s) herein specified in the above-named Company subject to the Memorandum and Articles of Association of the Company and that the amount endorsed herein has been paid up on each such share.</p>
+          <p>This is to certify that <strong>[NAME]</strong> is the Registered/Beneficial Holder of the within mentioned debenture(s) bearing the distinctive number(s) herein specified in the above-named Company subject to the Memorandum and Articles of Association of the Company and that the amount endorsed herein has been paid up on each such debenture.</p>
           <div class="cert-highlight">
             DEBENTURE FACE VALUE: RUPEES 10/- EACH (Nominal Value)<br/>
             AMOUNT PAID UP PER DEBENTURE: RUPEES 10/- (Rupees Ten Only)
           </div>
           <table class="cert-fields" style="width:100%;">
-            <tr><td>Regd. Folio No. [FOLIO]</td><td class="right">Certificate No. [CERT_NO]</td></tr>
+            <tr><td>Regd. Folio No. <strong>[FOLIO]</strong></td><td class="right">Certificate No. <strong>[CERT_NO]</strong></td></tr>
           </table>
           <table class="cert-fields" style="width:100%;margin-top:12px;">
-            <tr><td>Name(s) of the Registered<br/>Debenture holder(s)</td><td class="bold">[NAME]</td></tr>
-            <tr><td>No. of Debenture(s) held</td><td class="bold">[NUM_DEB] ([AMOUNT_WORDS] Only)</td></tr>
-            <tr><td>Distinctive No.(s)</td><td class="bold">1010001 to [NUM_DEB_RAW] (Both inclusive)</td></tr>
-            <tr><td>Total Value of debenture(s)</td><td class="bold">[AMOUNT] ([AMOUNT_WORDS] Rupees Only)</td></tr>
+            <tr><td>Name of the Registered<br/>Debenture Holder</td><td class="bold">[NAME]</td></tr>
+            <tr><td>No. of Debenture(s) held</td><td class="bold">[NUM_DEB] ([NUM_DEB_WORDS] Only)</td></tr>
+            <tr><td>Distinctive No.(s)</td><td class="bold">[DISTINCTIVE_FROM] to [DISTINCTIVE_TO] (Both inclusive)</td></tr>
+            <tr><td>Total Value of Debenture(s)</td><td class="bold">Rs. [AMOUNT]/- ([AMOUNT_WORDS] Rupees Only)</td></tr>
+            <tr><td>Rate of Interest</td><td class="bold">12% per annum (1% per month)</td></tr>
+            <tr><td>Date of Issue</td><td class="bold">[LONG_DATE_ORDINAL]</td></tr>
           </table>
-          <p class="mt">GIVEN under the common seal of the Company this [DATE]</p>
-          <div style="display:flex;justify-content:space-between;margin-top:48px;">
-            <div style="text-align:center;"><div style="border-top:1px solid #333;padding-top:4px;width:120px;">Director</div></div>
+          <p class="mt">GIVEN under the common seal of the Company this <strong>[LONG_DATE_ORDINAL]</strong>.</p>
+          <div style="display:flex;justify-content:space-between;align-items:flex-end;margin-top:60px;">
+            <div style="text-align:center;width:160px;"><div style="padding-top:4px;font-weight:700;">Director</div></div>
             <div style="text-align:center;"><div style="width:80px;height:80px;border:2px solid #C8A951;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:8px;color:#999;">Company<br/>Seal</div></div>
-            <div style="text-align:center;"><div style="border-top:1px solid #333;padding-top:4px;width:150px;">Authorised Signatory</div></div>
+            <div style="text-align:center;width:180px;"><div style="padding-top:4px;font-weight:700;">Authorised Signatory<br/>V. Rajkumar</div></div>
           </div>
         </div>
       </div>
-      ${footer}</body>`,
+      </body>`,
 
     // 2026-05-16: Debenture Agreement re-templated to match the
     // Landmaxo reference (no logo, no footer; top half of page 1
@@ -1414,33 +1417,40 @@ async function generateInvestmentDocument(
     // unused in this body.
     agreement: `${css}
       <style>
-        /* Paragraph orphan/widow control so a single trailing line doesn't
-           strand at the top of the next page, which is what made page 4
-           start mid-table on the Landmaxo print. */
+        /* 2026-05-19: handwritten review — justify body pages, remove the
+           signature dashes (bare names only), 30px breathing room around
+           paragraphs/tables, bold cover & signature roles, drop the bold
+           from the centred "BETWEEN", and force a clean page break before
+           each of the three sections the reviewer marked (Page-2: "IT IS
+           NOW AGREED AS UNDER", Page-3: "7. Representations and Warranties",
+           Page-5: "12. Miscellaneous"). */
         p,li{orphans:3;widows:3;}
-        .clause{margin-bottom:8px;line-height:1.55;break-inside:avoid;page-break-inside:avoid;}
-        .clause-title{font-weight:700;margin-top:16px;margin-bottom:6px;font-size:13px;break-after:avoid;page-break-after:avoid;}
-        .schedule-table{break-inside:avoid;page-break-inside:avoid;}
-        .schedule-table td,.schedule-table th{border:1px solid #999;padding:5px 8px;font-size:10px;}
+        .agreement-body p,.agreement-body li{text-align:justify;}
+        .agreement-body{padding:30px;}
+        .clause{margin-bottom:10px;line-height:1.6;break-inside:avoid;page-break-inside:avoid;}
+        .clause-title{font-weight:700;margin-top:18px;margin-bottom:8px;font-size:13px;break-after:avoid;page-break-after:avoid;}
+        .schedule-table{break-inside:avoid;page-break-inside:avoid;margin-top:30px;}
+        .schedule-table td,.schedule-table th{border:1px solid #999;padding:10px 12px;font-size:11px;}
         .schedule-table tr{break-inside:avoid;page-break-inside:avoid;}
         .page-break{page-break-after:always;break-after:page;}
         .stamp-spacer{height:135mm;}
-        .agreement-cover{min-height:220mm;display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;font-size:14px;line-height:2.2;break-inside:avoid;page-break-inside:avoid;}
-        /* 2026-05-16: notices-table was breaking across pages — header on
-           one page, rows on the next. Force the whole table (and each row)
-           to stay on a single page. thead repeats on overflow as a fallback. */
-        .notices-table{width:100%;border-collapse:collapse;font-size:11px;margin-top:8px;break-inside:avoid;page-break-inside:avoid;}
+        .agreement-cover{min-height:220mm;display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;font-size:14px;line-height:2.2;break-inside:avoid;page-break-inside:avoid;font-weight:700;}
+        .agreement-cover p{font-weight:700;}
+        .notices-table{width:100%;border-collapse:collapse;font-size:11px;margin:8px 0 30px;break-inside:avoid;page-break-inside:avoid;}
         .notices-table thead{display:table-header-group;}
         .notices-table tr{break-inside:avoid;page-break-inside:avoid;}
-        .notices-table th,.notices-table td{border:1px solid #999;padding:6px 10px;vertical-align:top;}
+        .notices-table th,.notices-table td{border:1px solid #999;padding:8px 12px;vertical-align:top;}
         .sig-row{display:flex;justify-content:space-between;align-items:flex-start;break-inside:avoid;page-break-inside:avoid;}
         .sig-block{width:45%;break-inside:avoid;page-break-inside:avoid;}
-        .sig-line{border-top:1px solid #333;padding-top:4px;font-size:11px;margin-top:48px;}
+        /* No underline beneath signatures — names sit on their own,
+           with 30px of space above where the dash used to be. */
+        .sig-line{padding-top:0;font-size:11px;margin-top:30px;font-weight:700;}
         ol.whereas{padding-left:22px;}
-        ol.whereas li{margin-bottom:10px;line-height:1.55;break-inside:avoid;page-break-inside:avoid;}
+        ol.whereas li{margin-bottom:12px;line-height:1.6;break-inside:avoid;page-break-inside:avoid;}
         h2,h3{break-after:avoid;page-break-after:avoid;}
       </style>
       <body>
+      <div class="agreement-body">
 
       <!-- ── Page 1 — Stamp paper preamble ─────────────
            Top half is left blank intentionally so a physical
@@ -1463,23 +1473,23 @@ async function generateInvestmentDocument(
 
       <div class="page-break"></div>
 
-      <!-- ── Page 2 — Title / Cover ──────────────────── -->
+      <!-- ── Page 2 — Title / Cover (fully bold per review) ──────── -->
       <div class="agreement-cover">
         <p style="font-size:16px;font-weight:700;letter-spacing:1px;margin:0 0 24px;">DEBENTURE INVESTMENT AGREEMENT</p>
-        <p style="margin:0 0 24px;">EXECUTED BETWEEN</p>
+        <p style="margin:0 0 24px;font-weight:700;">EXECUTED BETWEEN</p>
         <p style="font-weight:700;margin:0 0 4px;">LANDMAXO PROPERTIES PRIVATE LIMITED</p>
-        <p style="margin:0 0 24px;">(&ldquo;COMPANY&rdquo;)</p>
-        <p style="margin:0 0 24px;">AND</p>
+        <p style="margin:0 0 24px;font-weight:700;">(&ldquo;COMPANY&rdquo;)</p>
+        <p style="margin:0 0 24px;font-weight:700;">AND</p>
         <p style="font-weight:700;margin:0 0 4px;">[NAME_CAPS]</p>
-        <p style="margin:0;">(&ldquo;INVESTOR&rdquo;)</p>
+        <p style="margin:0;font-weight:700;">(&ldquo;INVESTOR&rdquo;)</p>
       </div>
 
       <div class="page-break"></div>
 
-      <!-- ── Page 3+ — Agreement body ────────────────── -->
+      <!-- ── Page 3 (Page-1 in review) — Title, parties intro, WHEREAS ── -->
       <h2 class="center">DEBENTURE INVESTMENT AGREEMENT</h2>
       <p class="mt">This <strong>DEBENTURE INVESTMENT AGREEMENT</strong> is made on this <strong>[LONG_DATE_ORDINAL]</strong>,</p>
-      <p class="center"><strong>BETWEEN</strong></p>
+      <p class="center">BETWEEN</p>
       <p class="clause"><strong>M/s. Landmaxo Properties Private Limited</strong> (CIN: U70109TN2022PTC151180) a private limited Company incorporated under the Companies Act, 2013 and having Registered office at 2D, Queens Court, No. 6, Montieth Road, Egmore, Chennai - 600008 (hereinafter referred to as the &ldquo;<strong>Company</strong>&rdquo;), represented through its Authorised Signatory Mr. V.Rajkumar of the <strong>FIRST PART</strong>; and</p>
       <p class="clause"><strong>[NAME]</strong>, Residing At [ADDRESS] (hereinafter referred to as the &ldquo;<strong>Investor</strong>&rdquo;) and shall unless it be repugnant to the context or meaning thereof be deemed to mean and include him/herself and his/her nominees to the extent specified herein and their respective heirs, executors, administrators and assigns of the <strong>SECOND PART</strong>;</p>
 
@@ -1490,13 +1500,16 @@ async function generateInvestmentDocument(
         <li>The Parties now wish to record the terms and conditions of their mutual understanding in respect of this Transaction.</li>
       </ol>
 
-      <p class="mt"><strong>IT IS NOW AGREED AS UNDER:</strong></p>
+      <div class="page-break"></div>
+
+      <!-- ── Page 4 (Page-2 in review) — Clauses 1 through 6 ── -->
+      <p><strong>IT IS NOW AGREED AS UNDER:</strong></p>
 
       <div class="clause-title">1. Subscription for Debenture</div>
       <p class="clause">Investor agrees to subscribe for, and the Company agrees to issue and allot to Investor, such number of Debentures at such price as is set out against their name in <strong>&ldquo;Schedule I&rdquo;</strong>.</p>
 
       <div class="clause-title">2. Interest</div>
-      <p class="clause">The Interest for the Debenture is fixed at 12 % per annum (payable @ 1%/month). TDS shall be deductible as per the rate specified in Income Tax act, 1961. The total sum of interest payable per annum inclusive of TDS is Rs. 1,20,000/Annum (One Lakh Twenty Thousand only)</p>
+      <p class="clause">The Interest for the Debenture is fixed at 12 % per annum (payable @ 1%/month). TDS shall be deductible as per the rate specified in Income Tax act, 1961. The total sum of interest payable per annum inclusive of TDS is Rs. [INTEREST_AMOUNT]/Annum ([INTEREST_AMOUNT_WORDS] only)</p>
 
       <div class="clause-title">3. Appreciation</div>
       <p class="clause">The Debenture Value shall accrue appreciation at the rate of twelve percent <strong>(12%) per annum</strong>, calculated on a simple interest basis and not on a compounding basis. Such appreciation shall be added to the principal Debenture Value as premium and at the time of redemption which shall be treated as premium payable upon redemption. The applicable appreciation rates, accrual methodology, and the corresponding redemption values shall be as published and updated from time to time in the Investor Dashboard section of the GHL India Ventures website, and such published information shall be deemed to form an integral and binding part of this Agreement.</p>
@@ -1510,6 +1523,9 @@ async function generateInvestmentDocument(
       <div class="clause-title">6. Security Creation</div>
       <p class="clause">The Company shall, for securing the due repayment of the Debentures together with interest, appoint a Debenture Trustee in accordance with applicable laws. Upon completion of the issue and allotment of the Debentures, the Company shall execute a Mortgage Deed - Pledge Agreement in respect of the identified asset (Property, Units of AIF) in favour of the Debenture Trustee, who shall hold the same for the benefit of and in trust for the Debenture-holders.</p>
 
+      <div class="page-break"></div>
+
+      <!-- ── Page 5 (Page-3 in review) — Clauses 7 through 11 ── -->
       <div class="clause-title">7. Representations and Warranties</div>
       <p class="clause">The Company represents to the Investor that:</p>
       <p class="clause">The Company is a duly incorporated and validly existing Company under the laws of India, and has full power and authority to enter into this Agreement and to perform its obligations under this Agreement;</p>
@@ -1558,6 +1574,9 @@ async function generateInvestmentDocument(
       <div class="clause-title">11. Governing Jurisdiction:</div>
       <p class="clause">This Agreement shall be governed by the laws of the Republic of India. Incase dispute araised between the parties to the agreement is not resolved through Court of Arbitration, then the parties shall approach the High Courts in Chennai, India which has exclusive jurisdiction in respect of all disputes arising out of this Agreement.</p>
 
+      <div class="page-break"></div>
+
+      <!-- ── Page 6 (Page-5 in review) — Miscellaneous + signatures ── -->
       <div class="clause-title">12. Miscellaneous</div>
       <p class="clause"><strong>12.1 Amendment:</strong> No variation of this Agreement shall be valid unless it is in writing and signed by the Company and by the Investor.</p>
       <p class="clause"><strong>12.2 Non-disclosure:</strong> Each of the parties agrees to keep secret and confidential and not to use, disclose or divulge to any third party or to enable or cause any person to become aware of (except for the purposes of the Company&rsquo;s business) any confidential information relating to the Company including but not limited to IP Rights (whether owned or licensed by the Company), lists of customers, reports, notes, memoranda and all other documentary records pertaining to the Company or its business affairs, finances, suppliers, customers or contractual or other arrangements but excluding any information which is in the public domain (otherwise than through the wrongful disclosure of any party) or which a party is required to disclose by law or by the rules of any regulatory body to it or the Company is subject.</p>
@@ -1583,9 +1602,9 @@ async function generateInvestmentDocument(
 
       <div class="page-break"></div>
 
-      <!-- ── Schedule I ──────────────────────────────── -->
-      <h3 class="center">Schedule - I</h3>
-      <table class="schedule-table" style="margin-top:8px;">
+      <!-- ── Schedule I (Page-6 in review) ────────────── -->
+      <h3 class="center" style="margin-top:0;">Schedule - I</h3>
+      <table class="schedule-table">
         <thead>
           <tr>
             <th>S.No</th>
@@ -1610,6 +1629,7 @@ async function generateInvestmentDocument(
           </tr>
         </tbody>
       </table>
+      </div>
       </body>`,
   }
 
@@ -1662,6 +1682,20 @@ async function generateInvestmentDocument(
     : dateStr
   const safeNameCaps = escapeHtml((clientName || 'Investor').toUpperCase())
 
+  // 2026-05-19: handwritten review — make the previously hard-coded
+  // "Rs. 1,20,000 (One Lakh Twenty Thousand)" interest line and the
+  // certificate distinctive-number range fully dynamic. Interest =
+  // 12% of the principal investment, distinctive range walks
+  // (1010001..1010000+NUM_DEB) so each certificate stays unique.
+  const interestAmount = Math.round(amount * 0.12)
+  const safeInterestAmount = interestAmount.toLocaleString('en-IN')
+  const safeInterestWords = escapeHtml(numberToWords(interestAmount))
+  const distinctiveFrom = 1010001
+  const distinctiveTo = numDebentures > 0 ? distinctiveFrom + numDebentures - 1 : distinctiveFrom
+  const safeDistinctiveFrom = distinctiveFrom.toLocaleString('en-IN')
+  const safeDistinctiveTo = distinctiveTo.toLocaleString('en-IN')
+  const safeNumDebWords = escapeHtml(numberToWords(numDebentures))
+
   const populated = templates[type]
     // Order matters: replace the more specific placeholders BEFORE
     // the bare ones (NAME_CAPS before NAME) so the bare regex
@@ -1681,10 +1715,15 @@ async function generateInvestmentDocument(
     .replace(/\[FOLIO\]/g, safeFolio)
     .replace(/\[RATE\]/g, '1% per month')
     .replace(/\[FUND\]/g, safeFund)
+    .replace(/\[NUM_DEB_WORDS\]/g, safeNumDebWords)
     .replace(/\[NUM_DEB\]/g, safeNumDeb)
     .replace(/\[NUM_DEB_RAW\]/g, safeNumDebRaw)
     .replace(/\[CERT_NO\]/g, safeCert)
     .replace(/\[PAN\]/g, safePan)
+    .replace(/\[INTEREST_AMOUNT_WORDS\]/g, safeInterestWords)
+    .replace(/\[INTEREST_AMOUNT\]/g, safeInterestAmount)
+    .replace(/\[DISTINCTIVE_FROM\]/g, safeDistinctiveFrom)
+    .replace(/\[DISTINCTIVE_TO\]/g, safeDistinctiveTo)
 
   const fullPage = `<!DOCTYPE html><html><head><title>${escapeHtml(titles[type])} - ${safeName}</title>${css}
   <style>#docContent{max-width:210mm;margin:0 auto;background:#fff;padding:20mm;box-shadow:0 2px 20px rgba(0,0,0,0.1);}@media print{#docContent{max-width:none;padding:0;box-shadow:none;}body{padding-top:0!important;}}</style>
