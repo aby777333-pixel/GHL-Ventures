@@ -14,43 +14,44 @@ export default function DirectAIFPage() {
   return (
     <>
       {/* Hero */}
-      <section className="relative pt-40 pb-44 md:pb-56 lg:pb-64 overflow-hidden bg-white">
+      <section className="relative pt-40 pb-44 md:pb-56 lg:pb-64 overflow-hidden bg-brand-red">
         <picture aria-hidden="true">
           <source srcSet="/images/heros/direct-aif-hero-sm.jpg" media="(max-width: 768px)" />
           <img src="/images/heros/direct-aif-hero.jpg" alt="" className="absolute inset-0 w-full h-full object-cover pointer-events-none select-none" loading="eager" decoding="async" />
         </picture>
-        {/* 2026-06-05: GHL img 32 (light sky / red ripple). Dark scrim removed;
-            copy is black + red in the navbar's max-w-[1440px] container. */}
+        {/* 2026-06-05: GHL img 38 (vivid-red maze photo). No scrim; the photo is
+            bright red, so the copy is WHITE (white-on-red contrast) and the
+            primary CTA is a white button. Navbar's max-w-[1440px] container. */}
         <div className="w-full max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
           <AnimatedSection>
             {/* Breadcrumb */}
-            <nav className="flex items-center text-sm text-brand-grey mb-6">
-              <Link href="/" className="text-brand-black hover:text-brand-red transition-colors">Home</Link>
+            <nav className="flex items-center text-sm text-white/80 mb-6">
+              <Link href="/" className="text-white hover:text-white/70 transition-colors">Home</Link>
               <span className="mx-2">/</span>
-              <Link href="/fund" className="text-brand-black hover:text-brand-red transition-colors">Fund</Link>
+              <Link href="/fund" className="text-white hover:text-white/70 transition-colors">Fund</Link>
               <span className="mx-2">/</span>
-              <span className="text-brand-red font-medium">Direct AIF Route</span>
+              <span className="text-white font-semibold">Direct AIF Route</span>
             </nav>
 
-            <a href={BRAND.sebiUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center px-4 py-2 bg-brand-red/10 border border-brand-red/20 rounded-full mb-6 hover:bg-brand-red/15 transition-colors">
-              <Shield className="w-4 h-4 text-brand-red mr-2" />
-              <span className="text-brand-red text-sm font-medium">SEBI Reg: {BRAND.sebi}</span>
+            <a href={BRAND.sebiUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center px-4 py-2 bg-white/15 border border-white/30 rounded-full mb-6 hover:bg-white/25 transition-colors">
+              <Shield className="w-4 h-4 text-white mr-2" />
+              <span className="text-white text-sm font-medium">SEBI Reg: {BRAND.sebi}</span>
             </a>
 
-            <h1 className="text-2xl md:text-3xl lg:text-4xl font-bold text-brand-black mb-5 leading-tight">
+            <h1 className="text-2xl md:text-3xl lg:text-4xl font-bold text-white mb-5 leading-tight">
               Direct AIF Route<br />
-              <span className="text-gradient">For HNIs & Family Offices</span>
+              <span className="text-white/90">For HNIs & Family Offices</span>
             </h1>
-            <p className="text-base text-gray-700 max-w-3xl leading-relaxed">
+            <p className="text-base text-white/90 max-w-3xl leading-relaxed">
               Direct ownership in premium ventures through a SEBI-registered Category II Alternative Investment Fund.
               Access institutional-grade deal flow with full transparency, professional management, and target returns of 18–24% IRR.
             </p>
 
             <div className="mt-8 flex flex-wrap gap-4">
-              <Link href="/contact" className="btn-primary">
+              <Link href="/contact" className="inline-flex items-center px-6 py-2.5 bg-white text-brand-red font-bold text-sm rounded-lg hover:bg-white/90 transition-all shadow-lg shadow-black/10">
                 Schedule a Meeting <ArrowRight className="ml-2 w-4 h-4" />
               </Link>
-              <Link href="/fund" className="inline-flex items-center px-6 py-2.5 text-sm border-2 border-brand-black/20 text-brand-black font-bold rounded-lg hover:bg-brand-black/5 transition-all">
+              <Link href="/fund" className="inline-flex items-center px-6 py-2.5 text-sm border-2 border-white/40 text-white font-bold rounded-lg hover:bg-white/10 transition-all">
                 <ArrowLeft className="mr-2 w-4 h-4" /> Back to Fund
               </Link>
             </div>
