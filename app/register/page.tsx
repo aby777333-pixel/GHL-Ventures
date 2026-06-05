@@ -214,10 +214,18 @@ function RegisterPageInner() {
       return
     }
 
-    if (form.password.length < 8) { setError('Password must be at least 8 characters long.'); return }
-    if (!/[a-zA-Z]/.test(form.password)) { setError('Password must contain at least one letter (a-z, A-Z).'); return }
-    if (!/[0-9]/.test(form.password)) { setError('Password must contain at least one number (0-9).'); return }
-    if (!/[^a-zA-Z0-9\s]/.test(form.password)) { setError('Password must contain at least one special character (!@#$%...).'); return }
+    // Strip leading/trailing whitespace + zero-width chars a mobile keyboard
+    // may inject, so the password is NEVER stored padded. A padded stored
+    // password would then only match on a device that reproduces the exact
+    // padding (e.g. autofill on the original device) and fail everywhere the
+    // user simply types it — which is the mobile-login bug we hit.
+    const cleanPassword = form.password.replace(/^[s​‌‍﻿]+|[s​‌‍﻿]+$/g, '')
+    const cleanEmail = form.email.trim().toLowerCase()
+
+    if (cleanPassword.length < 8) { setError('Password must be at least 8 characters long.'); return }
+    if (!/[a-zA-Z]/.test(cleanPassword)) { setError('Password must contain at least one letter (a-z, A-Z).'); return }
+    if (!/[0-9]/.test(cleanPassword)) { setError('Password must contain at least one number (0-9).'); return }
+    if (!/[^a-zA-Z0-9\s]/.test(cleanPassword)) { setError('Password must contain at least one special character (!@#$%...).'); return }
 
     if (!isSupabaseConfigured()) {
       setError(AUTH_ERRORS.SERVICE_UNAVAILABLE)
@@ -227,8 +235,8 @@ function RegisterPageInner() {
     setLoading(true)
     try {
       const { data, error: signupError } = await supabase.auth.signUp({
-        email: form.email,
-        password: form.password,
+        email: cleanEmail,
+        password: cleanPassword,
         options: {
           emailRedirectTo: typeof window !== 'undefined' ? `${window.location.origin}/auth/callback?flow=signup` : undefined,
           data: {
@@ -263,7 +271,7 @@ function RegisterPageInner() {
           await supabase.from('clients').upsert({
             user_id: data.user.id,
             full_name: form.name,
-            email: form.email,
+            email: cleanEmail,
             phone: mobileDigits,
             acquisition_source: 'website',
             referred_by: form.referral || null,
