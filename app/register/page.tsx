@@ -468,6 +468,8 @@ function RegisterPageInner() {
                   <input
                     id="reg-mobile"
                     type="tel"
+                    inputMode="numeric"
+                    autoComplete="tel-national"
                     required
                     className={`input-field pl-14 ${otpVerified ? 'border-green-400 bg-green-50' : ''}`}
                     placeholder="XXXXX XXXXX"
@@ -553,13 +555,13 @@ function RegisterPageInner() {
 
             <div>
               <label htmlFor="reg-email" className="block text-xs font-medium text-brand-black mb-1">Email Address</label>
-              <input id="reg-email" type="email" required className="input-field" placeholder="your@email.com" value={form.email} onChange={(e) => handleChange('email', e.target.value)} />
+              <input id="reg-email" type="email" inputMode="email" autoCapitalize="none" autoCorrect="off" autoComplete="email" spellCheck={false} required className="input-field" placeholder="your@email.com" value={form.email} onChange={(e) => handleChange('email', e.target.value)} />
             </div>
 
             <div>
               <label htmlFor="reg-password" className="block text-xs font-medium text-brand-black mb-1">Password</label>
               <div className="relative">
-                <input id="reg-password" type={showPassword ? 'text' : 'password'} required className="input-field pr-12" placeholder="Create a strong password" value={form.password} onChange={(e) => handleChange('password', e.target.value)} />
+                <input id="reg-password" type={showPassword ? 'text' : 'password'} autoCapitalize="none" autoCorrect="off" autoComplete="new-password" spellCheck={false} required className="input-field pr-12" placeholder="Create a strong password" value={form.password} onChange={(e) => handleChange('password', e.target.value)} />
                 <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-brand-grey hover:text-brand-black" aria-label="Toggle password visibility">
                   {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                 </button>

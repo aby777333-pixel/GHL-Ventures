@@ -27,6 +27,10 @@ nul
 .env
 .env.local
 .env.production
+# Any *.env / *.env.local sidecar files (e.g. sarvam.env.local) — these
+# hold live secrets and must never be committed.
+*.env
+*.env.local
 
 # IDE
 .vscode/

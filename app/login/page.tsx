@@ -46,7 +46,7 @@ export default function LoginPage() {
   // Classify input as email, 10-digit mobile, or raw string
   const classifyInput = (input: string): { kind: 'email' | 'mobile' | 'raw'; value: string } => {
     const cleaned = input.trim()
-    if (cleaned.includes('@')) return { kind: 'email', value: cleaned }
+    if (cleaned.includes('@')) return { kind: 'email', value: cleaned.toLowerCase() }
     const digits = cleaned.replace(/\D/g, '')
     if (digits.length === 10) return { kind: 'mobile', value: digits }
     return { kind: 'raw', value: cleaned }
@@ -270,6 +270,13 @@ export default function LoginPage() {
                   id="login-email"
                   type="text"
                   required
+                  // Cross-device hardening: stop mobile keyboards from
+                  // auto-capitalising / autocorrecting the identifier (a
+                  // leading-cap or trailing space silently breaks login).
+                  autoCapitalize="none"
+                  autoCorrect="off"
+                  autoComplete="username"
+                  spellCheck={false}
                   className="input-field"
                   placeholder="you@email.com or 10-digit mobile"
                   value={emailOrMobile}
@@ -285,6 +292,13 @@ export default function LoginPage() {
                   id="login-password"
                   type={showPassword ? 'text' : 'password'}
                   required
+                  // When "show password" is on the field becomes type=text,
+                  // which mobile keyboards auto-capitalise/autocorrect — these
+                  // attrs keep the typed password byte-for-byte intact.
+                  autoCapitalize="none"
+                  autoCorrect="off"
+                  autoComplete="current-password"
+                  spellCheck={false}
                   className="input-field pr-12"
                   placeholder="Enter your password"
                   value={password}

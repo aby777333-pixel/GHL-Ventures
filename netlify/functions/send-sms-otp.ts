@@ -53,11 +53,15 @@ export default async (request: Request) => {
       })
     }
 
-    const supabaseUrl = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL || ''
-    const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || ''
-    const fast2smsKey = process.env.MSG91_AUTH_KEY || ''
-    const templateId = process.env.MSG91_TEMPLATE_ID || ''
-    const senderId = process.env.MSG91_SENDER_ID || 'GHLAIF'
+    // .trim() every credential: a stray newline/space in a Netlify env var
+    // gets sent verbatim in the `authorization` header and Fast2SMS rejects it
+    // with "Invalid Authentication, Check Authorization Key" even when the key
+    // itself is valid. Trimming makes the function tolerant of that.
+    const supabaseUrl = (process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL || '').trim()
+    const supabaseServiceKey = (process.env.SUPABASE_SERVICE_ROLE_KEY || '').trim()
+    const fast2smsKey = (process.env.MSG91_AUTH_KEY || '').trim()
+    const templateId = (process.env.MSG91_TEMPLATE_ID || '').trim()
+    const senderId = (process.env.MSG91_SENDER_ID || 'GHLAIF').trim()
 
     if (!supabaseUrl || !supabaseServiceKey) {
       return new Response(JSON.stringify({ error: 'Database not configured' }), {
@@ -144,7 +148,7 @@ export default async (request: Request) => {
         flash: 0,
         numbers: cleanMobile,
         template_id: templateId,
-        entity_id: process.env.MSG91_ENTITY_ID || '',
+        entity_id: (process.env.MSG91_ENTITY_ID || '').trim(),
       }
       console.log('[SMS OTP] Sending to:', cleanMobile, 'via Fast2SMS DLT route')
 
