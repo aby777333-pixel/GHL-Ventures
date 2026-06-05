@@ -638,9 +638,9 @@ function InvestmentCapabilities() {
 
   return (
     <section className="pillars-section relative section-padding overflow-hidden">
-      {/* 2026-06-05: background swapped to GHL img 28 (light glow). No scrim;
-          the .pillars-* title copy is dark (globals.css) to contrast on the
-          bright top of the photo. */}
+      {/* 2026-06-05: background swapped to GHL website img (horse-racing at
+          sunset). No scrim; the .pillars-* title copy is dark (globals.css) to
+          contrast on the light hazy sky where the title sits. */}
       <picture className="pillars-bg absolute inset-0 pointer-events-none select-none">
         <source srcSet="/images/home/pillars-bg-sm.png" media="(max-width: 768px)" />
         <img
@@ -1089,12 +1089,13 @@ function ContactFormSection() {
 
   return (
     <section className="contact-section relative section-padding overflow-hidden dark:!bg-[#111111]">
-      {/* Background image — moody green fields with sunbeam */}
+      {/* 2026-06-05: background swapped to GHL img 7 (blueprint-to-city, light
+          left). The off-white contact-overlay wash below is kept so the dark
+          form labels stay readable. Old .webp sources dropped — asset is png. */}
       <picture className="contact-bg absolute inset-0 pointer-events-none select-none">
-        <source srcSet="/images/home/contact-bg-sm.webp" type="image/webp" media="(max-width: 768px)" />
-        <source srcSet="/images/home/contact-bg.webp" type="image/webp" />
+        <source srcSet="/images/home/contact-bg-sm.png" media="(max-width: 768px)" />
         <img
-          src="/images/home/contact-bg.jpg"
+          src="/images/home/contact-bg.png"
           alt=""
           aria-hidden="true"
           className="w-full h-full object-cover"
