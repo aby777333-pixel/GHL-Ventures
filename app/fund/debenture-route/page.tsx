@@ -19,8 +19,10 @@ export default function DebentureRoutePage() {
           <source srcSet="/images/heros/debenture-route-hero-sm.jpg" media="(max-width: 768px)" />
           <img src="/images/heros/debenture-route-hero.jpg" alt="" className="absolute inset-0 w-full h-full object-cover pointer-events-none select-none" loading="eager" decoding="async" />
         </picture>
-        <div className="absolute inset-0 bg-gradient-to-r from-black/85 via-black/60 to-black/40 pointer-events-none" />
-        <div className="container-max mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+        {/* 2026-06-05: dark scrim removed so the photo shows clear. White copy
+            reads on the dark flag/storm photo, in the navbar's max-w-[1440px]
+            container (left edge under the logo). */}
+        <div className="w-full max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
           <AnimatedSection>
             {/* Breadcrumb */}
             <nav className="flex items-center text-sm text-white mb-6">

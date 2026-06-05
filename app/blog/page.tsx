@@ -186,8 +186,10 @@ export default function BlogPage() {
           <source srcSet="/images/heros/blog-hero-sm.jpg" media="(max-width: 768px)" />
           <img src="/images/heros/blog-hero.jpg" alt="" className="absolute inset-0 w-full h-full object-cover pointer-events-none select-none" loading="eager" decoding="async" />
         </picture>
-        <div className="absolute inset-0 bg-gradient-to-r from-black/85 via-black/55 to-black/30 pointer-events-none" />
-        <div className="container-max mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+        {/* 2026-06-05: dark scrim removed so the photo shows clear. White copy
+            still reads on the dusk-blue photo, in the navbar's max-w-[1440px]
+            container (left edge perpendicular to the GHL logo). */}
+        <div className="w-full max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
           <AnimatedSection>
             <span className="inline-flex items-center px-4 py-1.5 bg-brand-red/10 border border-brand-red/20 rounded-full text-brand-red text-xs font-semibold uppercase tracking-wider mb-6">
               <BookOpen className="w-4 h-4 mr-2" />

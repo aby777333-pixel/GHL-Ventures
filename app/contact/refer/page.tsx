@@ -126,14 +126,16 @@ export default function ReferPage() {
           <source srcSet="/images/heros/refer-hero-sm.jpg" media="(max-width: 768px)" />
           <img src="/images/heros/refer-hero.jpg" alt="" className="absolute inset-0 w-full h-full object-cover pointer-events-none select-none" loading="eager" decoding="async" />
         </picture>
-        <div className="absolute inset-0 bg-gradient-to-r from-black/85 via-black/60 to-black/40 pointer-events-none" />
-        <div className="container-max mx-auto relative z-10 text-center">
+        {/* 2026-06-05: dark scrim removed; copy left-aligned in the navbar's
+            max-w-[1440px] container (left edge under the logo). White copy
+            reads on the dark library photo. */}
+        <div className="w-full max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
           <AnimatedSection>
             <span className="eyebrow text-brand-red">Referral Programme</span>
             <h1 className="text-4xl md:text-5xl lg:text-6xl font-extrabold text-white mt-3 mb-5">
               Refer an <span className="text-gradient">Investor</span>
             </h1>
-            <p className="text-white/70 text-base md:text-lg max-w-2xl mx-auto">
+            <p className="text-white/80 text-base md:text-lg max-w-2xl">
               Know someone who could benefit from institutional-grade alternative investments? Introduce them to GHL India Ventures.
             </p>
           </AnimatedSection>
