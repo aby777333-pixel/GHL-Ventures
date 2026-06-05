@@ -73,12 +73,13 @@ function AboutVideoPlayer() {
 function AboutHero() {
   return (
     <section className="about-hero relative min-h-[80vh] flex items-center overflow-hidden">
-      {/* Background image — 2026-05-10: swapped from the Indian flag ink
-          swirl to the new red-corridor / footstep-chart photo. The legacy
-          .webp variants point at the old asset, so they're disabled here
-          to prevent a stale image being served on browsers that prefer
-          WebP. The hero headline (white) still sits on the dark left half
-          of the new photo and stays legible. */}
+      {/* Background image — 2026-06-05: swapped to the whale-and-rower
+          photo (GHL img 37). The legacy .webp variants still point at an
+          older asset, so they remain disabled here to prevent a stale image
+          being served on browsers that prefer WebP — only the .jpg files
+          (hero-bg.jpg / hero-bg-sm.jpg) are referenced. The hero headline
+          (white) sits on the darker left half of the photo and stays
+          legible. */}
       <picture className="absolute inset-0 pointer-events-none select-none">
         <source srcSet="/images/about/hero-bg-sm.jpg" media="(max-width: 768px)" />
         <img
