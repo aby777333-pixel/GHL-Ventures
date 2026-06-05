@@ -1570,19 +1570,16 @@ export default function ToolsPage() {
           The photo carries NO baked-in copy, so the headline, sub-text,
           badges and the EXPLORE OUR SOLUTIONS CTA live here as a real HTML
           overlay on the light left side. Copy is black + red (NOT a
-          `.dark-surface`, which would force white headings) and a strong
-          white scrim sits behind it so it contrasts hard against the photo.
-          The text column uses the navbar's max-w-[1440px] container so its
-          left edge is perpendicular to the GHL logo. */}
+          `.dark-surface`, which would force white headings); no scrim, so
+          the photo stays clear — the bold dark copy sits on the light sky /
+          cliff area where it stays legible on its own. The text column uses
+          the navbar's max-w-[1440px] container so its left edge is
+          perpendicular to the GHL logo. */}
       <section className="relative min-h-[80vh] flex items-center overflow-hidden bg-white">
         <picture aria-hidden="true">
           <source srcSet="/images/heros/tools-hero-sm.png" media="(max-width: 768px)" />
           <img src="/images/heros/tools-hero.png" alt="" className="absolute inset-0 w-full h-full object-cover pointer-events-none select-none" loading="eager" decoding="async" />
         </picture>
-
-        {/* Legibility scrim — keeps the dark copy contrasting against the
-            light left third of the photo. */}
-        <div className="absolute inset-0 bg-gradient-to-r from-white/95 via-white/65 to-transparent pointer-events-none" />
 
         <div className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8 w-full relative z-10 pt-40 pb-12">
           <AnimatedSection>
