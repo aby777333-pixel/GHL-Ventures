@@ -45,7 +45,9 @@ export default function LoginPage() {
 
   // Classify input as email, 10-digit mobile, or raw string
   const classifyInput = (input: string): { kind: 'email' | 'mobile' | 'raw'; value: string } => {
-    const cleaned = input.trim()
+    // Strip surrounding whitespace AND zero-width chars some mobile
+    // keyboards inject, which a plain .trim() would miss.
+    const cleaned = input.replace(/^[s​‌‍﻿]+|[s​‌‍﻿]+$/g, '')
     if (cleaned.includes('@')) return { kind: 'email', value: cleaned.toLowerCase() }
     const digits = cleaned.replace(/\D/g, '')
     if (digits.length === 10) return { kind: 'mobile', value: digits }
@@ -83,16 +85,32 @@ export default function LoginPage() {
     try {
       const input = classifyInput(emailOrMobile)
 
+      // Mobile keyboards (notably Samsung) can append an invisible trailing
+      // space or zero-width character to the password even with autoCorrect
+      // off — the byte-exact Supabase check then rejects it as "incorrect
+      // password", which is why a credential that works on a laptop fails on
+      // a phone. Try the value EXACTLY as typed first (so a password that
+      // legitimately contains spaces is never broken), then fall back to a
+      // variant with surrounding whitespace / zero-width chars stripped.
+      const stripEdges = (s: string) => s.replace(/^[s​‌‍﻿]+|[s​‌‍﻿]+$/g, '')
+      const cleanedPassword = stripEdges(password)
+      const passwordCandidates = cleanedPassword !== password ? [password, cleanedPassword] : [password]
+
       if (input.kind === 'mobile') {
         // Mobile login: resolve email → sign in server-side, then set session client-side
-        const res = await fetch(`${getFunctionBase()}/.netlify/functions/login-mobile`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ mobile: input.value, password }),
-        })
-        const data = await res.json().catch(() => ({}))
+        let data: any = {}
+        let ok = false
+        for (const pw of passwordCandidates) {
+          const res = await fetch(`${getFunctionBase()}/.netlify/functions/login-mobile`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ mobile: input.value, password: pw }),
+          })
+          data = await res.json().catch(() => ({}))
+          if (res.ok && data.access_token && data.refresh_token) { ok = true; break }
+        }
 
-        if (!res.ok || !data.access_token || !data.refresh_token) {
+        if (!ok) {
           setError(data.error || AUTH_ERRORS.INVALID_CREDENTIALS)
           setLoading(false)
           return
@@ -112,7 +130,10 @@ export default function LoginPage() {
       }
 
       // Email (or raw) login: use existing client-side flow
-      const result = await loginClient(input.value, password)
+      let result = await loginClient(input.value, passwordCandidates[0])
+      for (let i = 1; i < passwordCandidates.length && !result.session; i++) {
+        result = await loginClient(input.value, passwordCandidates[i])
+      }
       if (result.session) {
         router.push('/dashboard')
       } else {
