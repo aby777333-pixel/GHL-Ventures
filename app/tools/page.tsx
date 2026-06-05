@@ -1572,7 +1572,12 @@ export default function ToolsPage() {
           EXPLORE OUR SOLUTIONS CTA are restored here as a real HTML overlay
           on the light left side of the photo. A soft white scrim keeps the
           dark headline legible without dimming the image. */}
-      <section className="dark-surface relative min-h-[80vh] flex items-center overflow-hidden bg-brand-black">
+      {/* NOTE: intentionally NOT a `.dark-surface` — that class forces all
+          headings to white, which is invisible on this light photo. The new
+          image is white-toned, so the copy is red + black instead. The text
+          column uses the SAME max-w-[1440px] container as the navbar so its
+          left edge sits directly under the logo. */}
+      <section className="relative min-h-[80vh] flex items-center overflow-hidden bg-white">
         <picture aria-hidden="true">
           <source srcSet="/images/heros/tools-hero-sm.png" media="(max-width: 768px)" />
           <img src="/images/heros/tools-hero.png" alt="" className="absolute inset-0 w-full h-full object-cover pointer-events-none select-none" loading="eager" decoding="async" />
@@ -1581,14 +1586,14 @@ export default function ToolsPage() {
         {/* Legibility scrim over the light left third of the photo */}
         <div className="absolute inset-0 bg-gradient-to-r from-white/90 via-white/55 to-transparent pointer-events-none" />
 
-        <div className="container-max mx-auto px-4 sm:px-6 lg:px-8 relative z-10 pt-40 pb-12">
+        <div className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8 w-full relative z-10 pt-40 pb-12">
           <AnimatedSection>
-            <div className="max-w-xl">
+            <div className="max-w-xl text-left">
               <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold text-brand-black mb-5 leading-tight">
                 Equip Yourself With the{' '}
                 <span className="text-brand-red">Most Advanced</span> Financial &amp; Market Tools
               </h1>
-              <p className="text-sm md:text-base text-brand-grey max-w-lg leading-relaxed mb-6">
+              <p className="text-sm md:text-base text-gray-700 max-w-lg leading-relaxed mb-6">
                 Leverage a comprehensive, data-driven platform for predictive analytics,
                 risk management, and portfolio optimization. Empower your decisions with
                 real-time market intelligence.
