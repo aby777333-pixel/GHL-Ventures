@@ -1566,56 +1566,13 @@ export default function ToolsPage() {
   return (
     <>
       {/* ── HERO SECTION ── */}
-      {/* 2026-06-05: hero photo swapped to the red-sphere / cliff image
-          (GHL img 24). Unlike the previous composite, this photo carries
-          NO baked-in copy, so the headline, sub-text, badges and the
-          EXPLORE OUR SOLUTIONS CTA are restored here as a real HTML overlay
-          on the light left side of the photo. A soft white scrim keeps the
-          dark headline legible without dimming the image. */}
-      {/* NOTE: intentionally NOT a `.dark-surface` — that class forces all
-          headings to white, which is invisible on this light photo. The new
-          image is white-toned, so the copy is red + black instead. The text
-          column uses the SAME max-w-[1440px] container as the navbar so its
-          left edge sits directly under the logo. */}
-      <section className="relative min-h-[80vh] flex items-center overflow-hidden bg-white">
+      {/* 2026-06-05: hero is the red-sphere / cliff photo (GHL img 24),
+          shown full-bleed with no text overlay. */}
+      <section className="relative min-h-[80vh] overflow-hidden bg-white">
         <picture aria-hidden="true">
           <source srcSet="/images/heros/tools-hero-sm.png" media="(max-width: 768px)" />
           <img src="/images/heros/tools-hero.png" alt="" className="absolute inset-0 w-full h-full object-cover pointer-events-none select-none" loading="eager" decoding="async" />
         </picture>
-
-        {/* Legibility scrim over the light left third of the photo */}
-        <div className="absolute inset-0 bg-gradient-to-r from-white/90 via-white/55 to-transparent pointer-events-none" />
-
-        <div className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8 w-full relative z-10 pt-40 pb-12">
-          <AnimatedSection>
-            <div className="max-w-xl text-left">
-              <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold text-brand-black mb-5 leading-tight">
-                Equip Yourself With the{' '}
-                <span className="text-brand-red">Most Advanced</span> Financial &amp; Market Tools
-              </h1>
-              <p className="text-sm md:text-base text-gray-700 max-w-lg leading-relaxed mb-6">
-                Leverage a comprehensive, data-driven platform for predictive analytics,
-                risk management, and portfolio optimization. Empower your decisions with
-                real-time market intelligence.
-              </p>
-              {/* Trust badges */}
-              <div className="flex flex-wrap items-center gap-4 mb-8 text-brand-black">
-                <div className="flex items-center gap-2">
-                  <Shield className="w-5 h-5 text-brand-red" />
-                  <span className="text-xs font-semibold tracking-wide">FINTECH CERTIFIED</span>
-                </div>
-                <span className="hidden sm:block w-px h-5 bg-brand-black/20" />
-                <div className="flex items-center gap-2">
-                  <BarChart3 className="w-5 h-5 text-brand-red" />
-                  <span className="text-xs font-semibold tracking-wide">MARKET DYNAMICS PLATFORM</span>
-                </div>
-              </div>
-              <a href="#tools-section" className="btn-primary inline-flex items-center">
-                Explore Our Solutions <ArrowRight className="w-4 h-4 ml-2" />
-              </a>
-            </div>
-          </AnimatedSection>
-        </div>
       </section>
 
       {/* ── TOOLS SECTION ── */}
