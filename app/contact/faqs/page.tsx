@@ -120,19 +120,20 @@ export default function FaqsPage() {
   return (
     <>
       {/* ── Hero ── */}
-      <section className="relative overflow-hidden pt-40 pb-44 md:pb-56 lg:pb-64 min-h-[80vh] flex items-center bg-brand-black">
+      <section className="relative overflow-hidden pt-40 pb-44 md:pb-56 lg:pb-64 min-h-[80vh] flex items-center bg-white">
         <picture aria-hidden="true">
           <source srcSet="/images/heros/faqs-hero-sm.jpg" media="(max-width: 768px)" />
           <img src="/images/heros/faqs-hero.jpg" alt="" className="absolute inset-0 w-full h-full object-cover pointer-events-none select-none" loading="eager" decoding="async" />
         </picture>
-        <div className="absolute inset-0 bg-gradient-to-b from-black/80 via-black/65 to-black/85 pointer-events-none" />
-        <div className="container-max mx-auto relative z-10 text-center w-full">
+        {/* 2026-06-05: GHL img 36 (light desert). Scrim removed; copy is black +
+            red, left-aligned in the navbar's max-w-[1440px] container. */}
+        <div className="w-full max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
           <AnimatedSection>
             <span className="eyebrow text-brand-red">Knowledge Base</span>
-            <h1 className="text-4xl md:text-5xl lg:text-6xl font-extrabold text-white mt-3 mb-5">
+            <h1 className="text-4xl md:text-5xl lg:text-6xl font-extrabold text-brand-black mt-3 mb-5">
               Frequently Asked <span className="text-gradient">Questions</span>
             </h1>
-            <p className="text-white/70 text-base md:text-lg max-w-2xl mx-auto">
+            <p className="text-gray-700 text-base md:text-lg max-w-2xl">
               Comprehensive answers about investing with GHL India Ventures — from eligibility and KYC to fund structure, risk management, and taxation.
             </p>
           </AnimatedSection>

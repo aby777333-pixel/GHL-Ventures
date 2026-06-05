@@ -129,19 +129,20 @@ export default function GrievancePage() {
   return (
     <>
       {/* ── Hero ── */}
-      <section className="relative overflow-hidden pt-40 pb-44 md:pb-56 lg:pb-64 min-h-[80vh] flex items-center bg-brand-black">
+      <section className="relative overflow-hidden pt-40 pb-44 md:pb-56 lg:pb-64 min-h-[80vh] flex items-center bg-white">
         <picture aria-hidden="true">
-          <source srcSet="/images/heros/grievance-hero-sm.jpg" media="(max-width: 768px)" />
-          <img src="/images/heros/grievance-hero.jpg" alt="" className="absolute inset-0 w-full h-full object-cover pointer-events-none select-none" loading="eager" decoding="async" />
+          <source srcSet="/images/heros/grievance-hero-sm.png" media="(max-width: 768px)" />
+          <img src="/images/heros/grievance-hero.png" alt="" className="absolute inset-0 w-full h-full object-cover pointer-events-none select-none" loading="eager" decoding="async" />
         </picture>
-        <div className="absolute inset-0 bg-gradient-to-b from-black/75 via-black/55 to-black/85 pointer-events-none" />
-        <div className="container-max mx-auto relative z-10 text-center w-full">
+        {/* 2026-06-05: GHL img 31 (bright sky / ladder). Scrim removed; copy is
+            black + red, left-aligned in the navbar's max-w-[1440px] container. */}
+        <div className="w-full max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
           <AnimatedSection>
             <span className="eyebrow text-brand-red">Investor Protection</span>
-            <h1 className="text-4xl md:text-5xl lg:text-6xl font-extrabold text-white mt-3 mb-5">
+            <h1 className="text-4xl md:text-5xl lg:text-6xl font-extrabold text-brand-black mt-3 mb-5">
               Grievance <span className="text-gradient">Redressal</span>
             </h1>
-            <p className="text-white/70 text-base md:text-lg max-w-2xl mx-auto">
+            <p className="text-gray-700 text-base md:text-lg max-w-2xl">
               GHL India Ventures is committed to fair and transparent resolution of investor grievances as mandated by SEBI.
             </p>
           </AnimatedSection>
