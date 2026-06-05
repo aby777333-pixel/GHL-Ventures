@@ -15,14 +15,14 @@ import {
 /* ───────────────────────────── 1. HERO — City Theme ───────────────────────────── */
 function WhyAIFsHero() {
   return (
-    <section className="relative min-h-[80vh] flex items-center bg-brand-black overflow-hidden">
+    <section className="relative min-h-[80vh] flex items-center bg-white overflow-hidden">
       <picture aria-hidden="true">
         <source srcSet="/images/heros/why-aifs-hero-sm.jpg" media="(max-width: 768px)" />
         <img src="/images/heros/why-aifs-hero.jpg" alt="" className="absolute inset-0 w-full h-full object-cover pointer-events-none select-none" loading="eager" decoding="async" />
       </picture>
-      {/* 2026-05-10 follow-up: dark scrim removed per spec. The new
-          red-bars + city-skyline photo is dark enough on its own that
-          the white hero copy reads cleanly without an overlay. */}
+      {/* 2026-06-05: hero photo swapped to GHL img 33 (light, question-mark
+          concrete). No scrim — the copy is black + red so it contrasts on
+          the light photo without dimming it. */}
 
       {/* 2026-05-10 follow-up: align the hero container width with the
           navbar (max-w-[1440px], same horizontal padding) so the copy
@@ -39,23 +39,23 @@ function WhyAIFsHero() {
               "Schedule a Consultation" CTA stays in brand red because
               it's an action, not a copy element. */}
           {/* Breadcrumb */}
-          <nav className="flex items-center space-x-2 text-sm text-white/70 mb-8">
-            <Link href="/" className="hover:text-white transition-colors flex items-center">
+          <nav className="flex items-center space-x-2 text-sm text-brand-grey mb-8">
+            <Link href="/" className="hover:text-brand-black transition-colors flex items-center">
               <Home className="w-3.5 h-3.5 mr-1" /> Home
             </Link>
             <ChevronRight className="w-3.5 h-3.5" />
-            <span className="text-white font-medium">Why AIFs</span>
+            <span className="text-brand-black font-medium">Why AIFs</span>
           </nav>
 
-          <div className="inline-flex items-center px-4 py-2 bg-white/10 border border-white/25 rounded-full mb-6 backdrop-blur-sm">
-            <Lightbulb className="w-4 h-4 text-white mr-2" />
-            <span className="text-white text-sm font-medium">Investor Education</span>
+          <div className="inline-flex items-center px-4 py-2 bg-brand-red/10 border border-brand-red/20 rounded-full mb-6">
+            <Lightbulb className="w-4 h-4 text-brand-red mr-2" />
+            <span className="text-brand-red text-sm font-medium">Investor Education</span>
           </div>
-          <h1 className="text-2xl md:text-3xl lg:text-4xl font-bold text-white mt-2 mb-5 leading-tight">
+          <h1 className="text-2xl md:text-3xl lg:text-4xl font-bold text-brand-black mt-2 mb-5 leading-tight">
             Understanding Alternative<br />
-            Investment Funds <span className="italic font-normal text-white/85">in India</span>
+            Investment Funds <span className="italic font-normal text-brand-red">in India</span>
           </h1>
-          <p className="text-base text-white/85 max-w-3xl leading-relaxed mb-8">
+          <p className="text-base text-gray-700 max-w-3xl leading-relaxed mb-8">
             A comprehensive guide to SEBI-regulated AIFs &mdash; what they are, how they work,
             their advantages, and how institutional-grade strategies deliver superior
             risk-adjusted returns for India&apos;s discerning investors.
@@ -70,7 +70,7 @@ function WhyAIFsHero() {
             </Link>
             <a
               href="#what-is-aif"
-              className="inline-flex items-center px-6 py-2.5 text-white/85 font-semibold text-sm rounded-lg border border-white/25 hover:border-white hover:text-white transition-all"
+              className="inline-flex items-center px-6 py-2.5 text-brand-black font-semibold text-sm rounded-lg border border-brand-black/25 hover:border-brand-black hover:bg-brand-black/5 transition-all"
             >
               Start Learning &darr;
             </a>

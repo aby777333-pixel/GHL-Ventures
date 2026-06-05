@@ -21,18 +21,20 @@ import FundCalculatorSection from '@/components/FundCalculatorSection'
 /* ───────────────────────────── 1. HERO ───────────────────────────── */
 function FundHero() {
   return (
-    <section className="relative min-h-[95vh] flex items-center bg-brand-black overflow-hidden">
+    <section className="relative min-h-[95vh] flex items-center bg-white overflow-hidden">
       <picture aria-hidden="true">
-        <source srcSet="/images/heros/fund-hero-sm.jpg" media="(max-width: 768px)" />
-        <img src="/images/heros/fund-hero.jpg" alt="" className="absolute inset-0 w-full h-full object-cover pointer-events-none select-none" loading="eager" decoding="async" />
+        <source srcSet="/images/heros/fund-hero-sm.png" media="(max-width: 768px)" />
+        <img src="/images/heros/fund-hero.png" alt="" className="absolute inset-0 w-full h-full object-cover pointer-events-none select-none" loading="eager" decoding="async" />
       </picture>
-      <div className="absolute inset-0 bg-gradient-to-r from-black/85 via-black/55 to-black/30 pointer-events-none" />
+      {/* 2026-06-05: GHL img 28 (light glow photo). Dark scrim removed; copy is
+          black + red, in the navbar's max-w-[1440px] container (left edge under
+          the logo). */}
 
-      <div className="container-max mx-auto px-4 sm:px-6 lg:px-8 relative z-10 pt-40 pb-44">
+      <div className="w-full max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8 relative z-10 pt-40 pb-44">
         <AnimatedSection>
           {/* Breadcrumb */}
-          <nav className="flex items-center space-x-2 text-sm text-white mb-8">
-            <Link href="/" className="text-white hover:text-brand-red transition-colors flex items-center">
+          <nav className="flex items-center space-x-2 text-sm text-brand-grey mb-8">
+            <Link href="/" className="text-brand-black hover:text-brand-red transition-colors flex items-center">
               <Home className="w-3.5 h-3.5 mr-1" /> Home
             </Link>
             <ChevronRight className="w-3.5 h-3.5" />
@@ -43,11 +45,11 @@ function FundHero() {
             <Shield className="w-4 h-4 text-brand-red mr-2" />
             <span className="text-brand-red text-sm font-medium">SEBI Reg: {BRAND.sebi}</span>
           </a>
-          <h1 className="text-2xl md:text-3xl lg:text-4xl font-bold text-white mt-2 mb-5 leading-tight">
+          <h1 className="text-2xl md:text-3xl lg:text-4xl font-bold text-brand-black mt-2 mb-5 leading-tight">
             Institutional Access.<br />
             <span className="text-gradient-shimmer">HNI Returns.</span>
           </h1>
-          <p className="text-base text-gray-300 max-w-3xl leading-relaxed">
+          <p className="text-base text-gray-700 max-w-3xl leading-relaxed">
             A Category II Alternative Investment Fund designed to deliver superior risk-adjusted returns
             through stressed real estate resolution across India.
           </p>

@@ -195,26 +195,27 @@ export default function InsightsPage() {
   return (
     <>
       {/* Hero */}
-      <section className="relative min-h-[80vh] flex items-center overflow-hidden bg-brand-black">
+      <section className="relative min-h-[80vh] flex items-center overflow-hidden bg-white">
         <picture aria-hidden="true">
-          <source srcSet="/images/heros/insights-hero-sm.jpg" media="(max-width: 768px)" />
-          <img src="/images/heros/insights-hero.jpg" alt="" className="absolute inset-0 w-full h-full object-cover pointer-events-none select-none" loading="eager" decoding="async" />
+          <source srcSet="/images/heros/insights-hero-sm.png" media="(max-width: 768px)" />
+          <img src="/images/heros/insights-hero.png" alt="" className="absolute inset-0 w-full h-full object-cover pointer-events-none select-none" loading="eager" decoding="async" />
         </picture>
-        <div className="absolute inset-0 bg-gradient-to-r from-black/85 via-black/55 to-black/30 pointer-events-none" />
-        <div className="container-max mx-auto px-4 sm:px-6 lg:px-8 relative z-10 pt-40 pb-12">
+        {/* 2026-06-05: GHL img 30 (light/white). Dark scrim removed; copy is
+            black + red in the navbar's max-w-[1440px] container. */}
+        <div className="w-full max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8 relative z-10 pt-40 pb-12">
           <AnimatedSection>
-            <nav className="flex items-center space-x-2 text-sm text-white mb-8">
-              <Link href="/" className="text-white hover:text-brand-red transition-colors">Home</Link>
+            <nav className="flex items-center space-x-2 text-sm text-brand-grey mb-8">
+              <Link href="/" className="text-brand-black hover:text-brand-red transition-colors">Home</Link>
               <ChevronRight className="w-3.5 h-3.5" />
-              <span className="text-white/80">Education</span>
+              <span className="text-brand-black/70">Education</span>
               <ChevronRight className="w-3.5 h-3.5" />
               <span className="text-brand-red font-medium">Insights</span>
             </nav>
-            <h1 className="text-2xl md:text-3xl lg:text-4xl font-bold text-white mb-4 leading-tight">
+            <h1 className="text-2xl md:text-3xl lg:text-4xl font-bold text-brand-black mb-4 leading-tight">
               Investor Education<br />
               <span className="text-gradient">Hub</span>
             </h1>
-            <p className="text-gray-400 text-sm md:text-base max-w-xl leading-relaxed">
+            <p className="text-gray-700 text-sm md:text-base max-w-xl leading-relaxed">
               53 Articles · 8 Categories · One Mission: Informed Investing
             </p>
           </AnimatedSection>

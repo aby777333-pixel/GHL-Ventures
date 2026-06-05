@@ -308,24 +308,25 @@ export default function FinancialIQPage() {
   return (
     <>
       {/* Hero */}
-      <section className="pt-40 pb-44 md:pb-56 lg:pb-64 relative overflow-hidden bg-brand-black">
+      <section className="pt-40 pb-44 md:pb-56 lg:pb-64 relative overflow-hidden bg-white">
         <picture aria-hidden="true">
-          <source srcSet="/images/heros/financial-iq-hero-sm.jpg" media="(max-width: 768px)" />
-          <img src="/images/heros/financial-iq-hero.jpg" alt="" className="absolute inset-0 w-full h-full object-cover pointer-events-none select-none" loading="eager" decoding="async" />
+          <source srcSet="/images/heros/financial-iq-hero-sm.png" media="(max-width: 768px)" />
+          <img src="/images/heros/financial-iq-hero.png" alt="" className="absolute inset-0 w-full h-full object-cover pointer-events-none select-none" loading="eager" decoding="async" />
         </picture>
-        <div className="absolute inset-0 bg-gradient-to-r from-black/85 via-black/60 to-black/35 pointer-events-none" />
-        <div className="container-max mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+        {/* 2026-06-05: GHL img 26 (light sky / slope). Dark scrim removed; copy is
+            black + red in the navbar's max-w-[1440px] container. */}
+        <div className="w-full max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
           <AnimatedSection>
             <div className="max-w-4xl">
               <div className="inline-flex items-center px-4 py-1.5 bg-brand-red/10 border border-brand-red/20 rounded-full mb-6">
                 <GraduationCap className="w-4 h-4 text-brand-red mr-2" />
                 <span className="text-brand-red text-sm font-semibold">Financial IQ</span>
               </div>
-              <h1 className="text-2xl md:text-3xl lg:text-4xl font-bold text-white leading-tight mb-5">
+              <h1 className="text-2xl md:text-3xl lg:text-4xl font-bold text-brand-black leading-tight mb-5">
                 The Intelligent Investor&apos;s{' '}
                 <span className="text-gradient-shimmer">Resource Hub</span>
               </h1>
-              <p className="text-base text-gray-300 max-w-2xl leading-relaxed">
+              <p className="text-base text-gray-700 max-w-2xl leading-relaxed">
                 Knowledge is the best investment you can make.
               </p>
             </div>
