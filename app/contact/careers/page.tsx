@@ -358,7 +358,7 @@ export default function CareersPage() {
         </picture>
         {/* 2026-06-05: GHL img 29(2) (red lighthouse). Scrim removed; the photo is
             red, so copy is WHITE, left-aligned in the navbar's max-w-[1440px]. */}
-        <div className="w-full max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+        <div className="w-full max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8 relative z-10 [text-shadow:0_2px_4px_rgba(0,0,0,0.8),0_0_22px_rgba(0,0,0,0.5)]">
           <AnimatedSection>
             <span className="eyebrow text-white/90">Join Our Team</span>
             <h1 className="text-4xl md:text-5xl lg:text-6xl font-extrabold text-white mt-3 mb-5">

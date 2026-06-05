@@ -638,11 +638,13 @@ function InvestmentCapabilities() {
 
   return (
     <section className="pillars-section relative section-padding overflow-hidden">
-      {/* Background image — riverside red-dome temple (image 11) */}
+      {/* 2026-06-05: background swapped to GHL img 28 (light glow). No scrim;
+          the .pillars-* title copy is dark (globals.css) to contrast on the
+          bright top of the photo. */}
       <picture className="pillars-bg absolute inset-0 pointer-events-none select-none">
-        <source srcSet="/images/home/pillars-bg-sm.jpg" media="(max-width: 768px)" />
+        <source srcSet="/images/home/pillars-bg-sm.png" media="(max-width: 768px)" />
         <img
-          src="/images/home/pillars-bg.jpg"
+          src="/images/home/pillars-bg.png"
           alt=""
           aria-hidden="true"
           className="w-full h-full object-cover"
@@ -922,29 +924,29 @@ function FinancialIQTeaser() {
   return (
     <section className="relative py-14 md:py-20 overflow-hidden bg-brand-black">
       <img
-        src="/images/home/financial-iq-bg.jpg"
+        src="/images/home/financial-iq-bg.png"
         alt=""
         aria-hidden="true"
         className="absolute inset-0 w-full h-full object-cover pointer-events-none select-none"
         loading="lazy"
       />
-      <div className="absolute inset-0 bg-black/45 pointer-events-none" />
-      <div className="absolute top-0 right-0 w-96 h-96 bg-brand-red/20 rounded-full blur-[120px] pointer-events-none" />
+      {/* 2026-06-05: bg swapped to GHL img 25 (sailboat). The darkening overlay
+          + glass card are removed so the photo shows clear; the centered white
+          copy carries a strong text-shadow to stay legible over the mixed
+          (dark-left / light-right) image. */}
 
-      <div className="container-max mx-auto px-4 sm:px-6 lg:px-8 relative z-10 text-center">
+      <div className="container-max mx-auto px-4 sm:px-6 lg:px-8 relative z-10 text-center [text-shadow:0_2px_4px_rgba(0,0,0,0.8),0_0_22px_rgba(0,0,0,0.55)]">
         <AnimatedSection>
-          <div className="inline-block mx-auto px-8 py-10 md:px-12 md:py-12 rounded-2xl bg-white/10 backdrop-blur-md border border-white/20 shadow-2xl">
-            <span className="eyebrow !text-brand-red">Learn &amp; Grow</span>
-            <h2 className="section-title mt-3 text-white">Build Your Financial IQ</h2>
-            <p className="text-gray-100 text-base max-w-2xl mx-auto mt-3 mb-8" style={{ textShadow: '0 1px 6px rgba(0,0,0,0.7)' }}>
-              Knowledge is the ultimate edge. Explore curated content designed to sharpen your investment acumen.
-            </p>
-            <AnimatedSection delay={200}>
-              <Link href="/financial-iq" className="btn-primary">
-                Explore Financial IQ <ArrowRight className="ml-2 w-5 h-5" />
-              </Link>
-            </AnimatedSection>
-          </div>
+          <span className="eyebrow !text-white">Learn &amp; Grow</span>
+          <h2 className="section-title mt-3 text-white">Build Your Financial IQ</h2>
+          <p className="text-gray-100 text-base max-w-2xl mx-auto mt-3 mb-8">
+            Knowledge is the ultimate edge. Explore curated content designed to sharpen your investment acumen.
+          </p>
+          <AnimatedSection delay={200}>
+            <Link href="/financial-iq" className="btn-primary">
+              Explore Financial IQ <ArrowRight className="ml-2 w-5 h-5" />
+            </Link>
+          </AnimatedSection>
         </AnimatedSection>
       </div>
     </section>

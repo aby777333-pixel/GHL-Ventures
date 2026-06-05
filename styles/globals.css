@@ -4711,21 +4711,24 @@ button[type="submit"].inline-flex {
    + subtitle get strong text-shadows so they stay legible against any
    region of the photograph. */
 .pillars-section {
-  background-color: #2a3a1f;
+  /* 2026-06-05: fallback tone matched to GHL img 28 (light) */
+  background-color: #f3ece9;
 }
 .pillars-heading {
-  color: #ffffff !important;
+  /* 2026-06-05: bg is now GHL img 28 (light glow) — dark heading contrasts on
+     the bright top; soft white halo keeps it crisp over any lighter patch. */
+  color: #0d0d0d !important;
   text-shadow:
-    0 2px 8px rgba(0, 0, 0, 0.7),
-    0 0 28px rgba(0, 0, 0, 0.5);
+    0 1px 2px rgba(255, 255, 255, 0.65),
+    0 0 16px rgba(255, 255, 255, 0.45);
 }
 .pillars-eyebrow {
-  color: rgba(255, 255, 255, 0.92) !important;
-  text-shadow: 0 1px 6px rgba(0, 0, 0, 0.75);
+  color: #d0021b !important;
+  text-shadow: 0 1px 2px rgba(255, 255, 255, 0.7);
 }
 .pillars-subtitle {
-  color: rgba(255, 255, 255, 0.92) !important;
-  text-shadow: 0 1px 8px rgba(0, 0, 0, 0.75);
+  color: #1f2937 !important;
+  text-shadow: 0 1px 2px rgba(255, 255, 255, 0.7);
 }
 
 /* Contact / "Start Your Investment Journey" — moody green fields
