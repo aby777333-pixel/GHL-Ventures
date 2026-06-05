@@ -6,7 +6,7 @@ import {
   Upload, Plus, Search, Calendar, Tag, Lock, Globe,
   HardDrive, Shield, AlertTriangle, Clock, CheckCircle2,
   Laptop, Server, File, FolderClosed, Trash2, Sparkles,
-  Wand2,
+  Wand2, Loader2,
 } from 'lucide-react'
 import AdminGlass from '../shared/AdminGlass'
 import AdminDataTable, { type Column } from '../shared/AdminDataTable'
@@ -91,6 +91,9 @@ export default function AssetDocModule({ subTab, navigate, showToast }: AssetDoc
   // 2026-05-13: Upload to Library + Document Builder
   const [uploadOpen, setUploadOpen] = useState(false)
   const [builderOpen, setBuilderOpen] = useState(false)
+  // 2026-05-15: View Library modal — gallery of uploaded files with
+  // Preview + Download + Insert (for images) actions.
+  const [libraryOpen, setLibraryOpen] = useState(false)
 
   const loadData = useCallback(async () => {
     setLoading(true)
@@ -167,6 +170,14 @@ export default function AssetDocModule({ subTab, navigate, showToast }: AssetDoc
             Upload to Library
           </button>
           <button
+            onClick={() => setLibraryOpen(true)}
+            className="flex items-center gap-2 px-3.5 py-2.5 rounded-xl text-sm font-semibold text-emerald-100 bg-emerald-500/15 border border-emerald-500/30 hover:bg-emerald-500/25 transition-colors admin-btn-press"
+            title="Browse every file uploaded to the library and insert images into the Document Builder"
+          >
+            <Eye className="w-4 h-4" />
+            View Library
+          </button>
+          <button
             onClick={() => setFolderPickerOpen(true)}
             className="flex items-center gap-2 px-3.5 py-2.5 rounded-xl text-sm font-semibold text-rose-100 bg-rose-500/20 border border-rose-500/30 hover:bg-rose-500/30 transition-colors admin-btn-press"
           >
@@ -208,6 +219,13 @@ export default function AssetDocModule({ subTab, navigate, showToast }: AssetDoc
         open={builderOpen}
         onClose={() => setBuilderOpen(false)}
         showToast={showToast}
+      />
+
+      <LibraryViewerModal
+        open={libraryOpen}
+        onClose={() => setLibraryOpen(false)}
+        showToast={showToast}
+        documents={documents.filter(d => !d.isTemplate)}
       />
 
       <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
@@ -1150,5 +1168,200 @@ function DocumentTrackingTab({ showToast }: { showToast: (msg: string, type?: 's
         </div>
       </AdminModal>
     </AdminGlass>
+  )
+}
+
+// ─────────────────────────────────────────────────────────────────
+// LibraryViewerModal — visual gallery of every file uploaded via
+// Upload to Library. Images get an "Insert into Builder" action
+// that broadcasts the same event the inline Document Builder listens
+// for; non-image files (PDFs, Word, Excel) get View + Download.
+// 2026-05-15.
+// ─────────────────────────────────────────────────────────────────
+function LibraryViewerModal({
+  open, onClose, showToast, documents,
+}: {
+  open: boolean
+  onClose: () => void
+  showToast: (msg: string, type?: 'success' | 'error' | 'info' | 'warning') => void
+  documents: AdminDocument[]
+}) {
+  const [search, setSearch] = useState('')
+  const [tab, setTab] = useState<'all' | 'images' | 'pdf' | 'other'>('all')
+  const [insertingId, setInsertingId] = useState<string | null>(null)
+  const [resolvedUrls, setResolvedUrls] = useState<Record<string, string>>({})
+
+  const isImage = (d: AdminDocument) => /^(PNG|JPG|JPEG|GIF|WEBP|SVG)$/i.test(d.type || '')
+  const isPdf = (d: AdminDocument) => /^PDF$/i.test(d.type || '')
+
+  const filtered = useMemo(() => {
+    let out = documents
+    if (tab === 'images') out = out.filter(isImage)
+    else if (tab === 'pdf') out = out.filter(isPdf)
+    else if (tab === 'other') out = out.filter(d => !isImage(d) && !isPdf(d))
+    if (search.trim()) {
+      const q = search.toLowerCase()
+      out = out.filter(d => (d.name || '').toLowerCase().includes(q) || (d.category || '').toLowerCase().includes(q))
+    }
+    return out
+  }, [documents, tab, search])
+
+  // Resolve signed/public URLs once per modal open for thumbnail rendering.
+  useEffect(() => {
+    if (!open) return
+    let cancelled = false
+    const probe = async () => {
+      const need = filtered.filter(d => isImage(d) && !resolvedUrls[d.id])
+      for (const d of need.slice(0, 30)) {
+        try {
+          const r = await resolveDocumentUrl(d)
+          if (cancelled) return
+          if (r.url) setResolvedUrls(prev => ({ ...prev, [d.id]: r.url }))
+        } catch { /* ignore */ }
+      }
+    }
+    probe()
+    return () => { cancelled = true }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, filtered])
+
+  const handleInsert = async (d: AdminDocument) => {
+    if (!isImage(d)) {
+      showToast('Only images can be inserted directly into the Builder. PDFs/Docs can still be linked from a Paragraph block.', 'info')
+      return
+    }
+    setInsertingId(d.id)
+    try {
+      const { url, error } = await resolveDocumentUrl(d)
+      if (!url) throw new Error(error || 'Could not resolve URL')
+      // Trigger the existing library refresh event AND notify the Builder
+      // with the chosen image so it can drop an Image block immediately.
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('ghl-library-insert-image', {
+          detail: { url, title: d.name, fileName: d.name },
+        }))
+      }
+      showToast(`Sent "${d.name}" to the Document Builder canvas`, 'success')
+      onClose()
+    } catch (e: any) {
+      showToast(e?.message || 'Insert failed', 'error')
+    } finally {
+      setInsertingId(null)
+    }
+  }
+
+  const handleDownload = async (d: AdminDocument) => {
+    try {
+      const { url, error } = await resolveDocumentUrl(d)
+      if (!url) throw new Error(error || 'Could not resolve URL')
+      const a = document.createElement('a')
+      a.href = url
+      a.download = d.name || 'file'
+      a.target = '_blank'
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
+    } catch (e: any) {
+      showToast(e?.message || 'Download failed', 'error')
+    }
+  }
+
+  const handleView = async (d: AdminDocument) => {
+    try {
+      const { url, error } = await resolveDocumentUrl(d)
+      if (!url) throw new Error(error || 'Could not resolve URL')
+      window.open(url, '_blank', 'noopener,noreferrer')
+    } catch (e: any) {
+      showToast(e?.message || 'Open failed', 'error')
+    }
+  }
+
+  return (
+    <AdminModal
+      isOpen={open}
+      onClose={onClose}
+      title="Library"
+      subtitle={`${documents.length} file${documents.length === 1 ? '' : 's'} uploaded — click Insert on an image to drop it into the Document Builder canvas.`}
+      maxWidth="max-w-5xl"
+      footer={<ModalButton onClick={onClose}>Close</ModalButton>}
+    >
+      <div className="space-y-3">
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="flex gap-1 p-1 bg-white/[0.03] rounded-xl border border-white/[0.06]">
+            {(['all', 'images', 'pdf', 'other'] as const).map(t => (
+              <button
+                key={t}
+                onClick={() => setTab(t)}
+                className={`px-3 py-1.5 rounded-lg text-[11px] font-medium transition-colors ${
+                  tab === t ? 'bg-brand-red/20 text-white border border-brand-red/30' : 'text-gray-400 hover:text-white hover:bg-white/[0.04]'
+                }`}
+              >
+                {t === 'all' ? 'All' : t === 'images' ? 'Images' : t === 'pdf' ? 'PDFs' : 'Other'}
+              </button>
+            ))}
+          </div>
+          <input
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            placeholder="Search by name or category…"
+            className="flex-1 min-w-[180px] bg-white/[0.04] border border-white/[0.08] rounded-lg px-3 py-1.5 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-brand-red/40"
+          />
+        </div>
+
+        {filtered.length === 0 ? (
+          <AdminEmptyState
+            icon={FolderOpen}
+            title="No library files match"
+            description={documents.length === 0 ? 'Click Upload to Library to add the first file.' : 'Try a different filter or search term.'}
+          />
+        ) : (
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+            {filtered.map(d => {
+              const image = isImage(d)
+              const pdf = isPdf(d)
+              const thumb = image ? resolvedUrls[d.id] : null
+              return (
+                <div key={d.id} className="rounded-xl border border-white/[0.08] bg-white/[0.02] overflow-hidden hover:bg-white/[0.04] transition-colors">
+                  <div className="aspect-square bg-white/[0.03] flex items-center justify-center overflow-hidden">
+                    {thumb ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={thumb} alt={d.name} className="w-full h-full object-cover" />
+                    ) : pdf ? (
+                      <div className="flex flex-col items-center justify-center gap-1 text-red-300">
+                        <File className="w-8 h-8" />
+                        <span className="text-[9px] uppercase tracking-wider font-bold">PDF</span>
+                      </div>
+                    ) : (
+                      <div className="flex flex-col items-center justify-center gap-1 text-gray-500">
+                        <FileText className="w-8 h-8" />
+                        <span className="text-[9px] uppercase tracking-wider">{d.type}</span>
+                      </div>
+                    )}
+                  </div>
+                  <div className="p-2.5 space-y-1">
+                    <p className="text-[11px] font-medium text-white truncate" title={d.name}>{d.name}</p>
+                    <p className="text-[10px] text-gray-500 truncate">{d.size} · {d.category}</p>
+                    <div className="flex items-center gap-1 pt-1">
+                      <button onClick={() => handleView(d)} className="flex-1 flex items-center justify-center gap-1 px-2 py-1 rounded-md text-[10px] font-medium text-blue-300 bg-blue-500/10 border border-blue-500/30 hover:bg-blue-500/20 transition-colors" title="View"><Eye className="w-3 h-3" /></button>
+                      <button onClick={() => handleDownload(d)} className="flex-1 flex items-center justify-center gap-1 px-2 py-1 rounded-md text-[10px] font-medium text-emerald-300 bg-emerald-500/10 border border-emerald-500/30 hover:bg-emerald-500/20 transition-colors" title="Download"><Download className="w-3 h-3" /></button>
+                      {image && (
+                        <button
+                          onClick={() => handleInsert(d)}
+                          disabled={insertingId === d.id}
+                          className="flex-1 flex items-center justify-center gap-1 px-2 py-1 rounded-md text-[10px] font-medium text-amber-200 bg-amber-500/15 border border-amber-500/30 hover:bg-amber-500/25 transition-colors disabled:opacity-50"
+                          title="Insert into Document Builder canvas"
+                        >
+                          {insertingId === d.id ? <Loader2 className="w-3 h-3 animate-spin" /> : <Plus className="w-3 h-3" />}
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        )}
+      </div>
+    </AdminModal>
   )
 }
