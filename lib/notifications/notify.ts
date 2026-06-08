@@ -12,7 +12,20 @@
    best-effort side effects, never block the user-facing action.
    ════════════════════════════════════════════════════════════════ */
 
-const FN_BASE = '/.netlify/functions'
+// 08-06-2026: the production site (ghlindiaventures.com) is a self-hosted
+// `next start` server that does NOT serve /.netlify/functions/* — those calls
+// fall through to the Next app and return HTML. Route function calls to the
+// Netlify functions host on the custom domain (mirrors getFunctionBase() used
+// by login / register / broadcast / password-reset). On *.netlify.app or
+// localhost we keep the same-origin path.
+const NETLIFY_FUNCTIONS_HOST = 'https://ghl-india-ventures-2025.netlify.app'
+function fnBase(): string {
+  if (typeof window === 'undefined') return '/.netlify/functions'
+  const origin = window.location.origin
+  if (origin.includes('localhost')) return 'http://localhost:8888/.netlify/functions'
+  if (origin.endsWith('.netlify.app')) return `${origin}/.netlify/functions`
+  return `${NETLIFY_FUNCTIONS_HOST}/.netlify/functions`
+}
 
 export type WhatsAppPayload = {
   to: string
@@ -34,7 +47,7 @@ export type EmailPayload = {
 export async function sendWhatsApp(payload: WhatsAppPayload): Promise<boolean> {
   if (!payload.to) return false
   try {
-    const res = await fetch(`${FN_BASE}/whatsapp-send`, {
+    const res = await fetch(`${fnBase()}/whatsapp-send`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
@@ -54,7 +67,7 @@ export async function sendWhatsApp(payload: WhatsAppPayload): Promise<boolean> {
 export async function sendEmail(payload: EmailPayload): Promise<boolean> {
   if (!payload.recipients || payload.recipients.length === 0) return false
   try {
-    const res = await fetch(`${FN_BASE}/send-email`, {
+    const res = await fetch(`${fnBase()}/send-email`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),

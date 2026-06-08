@@ -11,6 +11,21 @@
 
 import { supabase, isSupabaseConfigured, getAuthToken } from './client'
 
+// 08-06-2026: production (ghlindiaventures.com) is a self-hosted `next start`
+// server that does NOT serve /.netlify/functions/* — a relative call there
+// returns the app's HTML, so "Add Employee" / email-change silently failed.
+// Route to the Netlify functions host on the custom domain (same pattern as
+// getFunctionBase() in login/register/password-reset). On *.netlify.app or
+// localhost keep the same-origin path.
+const NETLIFY_FUNCTIONS_HOST = 'https://ghl-india-ventures-2025.netlify.app'
+function fnBase(): string {
+  if (typeof window === 'undefined') return '/.netlify/functions'
+  const origin = window.location.origin
+  if (origin.includes('localhost')) return 'http://localhost:8888/.netlify/functions'
+  if (origin.endsWith('.netlify.app')) return `${origin}/.netlify/functions`
+  return `${NETLIFY_FUNCTIONS_HOST}/.netlify/functions`
+}
+
 // ── Update auth login email via admin endpoint ────────────
 // profiles.email is just a display mirror; the real login email lives in
 // auth.users.email and only the service-role can change it. Without this,
@@ -19,7 +34,7 @@ async function updateAuthEmail(userId: string, email: string): Promise<{ success
   try {
     const token = await getAuthToken()
     if (!token) return { success: false, error: 'Authentication required' }
-    const response = await fetch('/.netlify/functions/update-employee-email', {
+    const response = await fetch(`${fnBase()}/update-employee-email`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
       body: JSON.stringify({ userId, email }),
@@ -83,7 +98,7 @@ export async function createEmployee(input: {
     if (!token) {
       return { success: false, error: 'Authentication required — please log in again' }
     }
-    const response = await fetch('/.netlify/functions/create-employee', {
+    const response = await fetch(`${fnBase()}/create-employee`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
       body: JSON.stringify(input),
