@@ -7,7 +7,7 @@ import {
   Trophy, Zap, Filter, Plus, Clock, CheckCircle2, XCircle,
   Star, BarChart3, Percent, DollarSign, UserPlus, Upload,
   ArrowRightLeft, Loader2, RefreshCw, Trash2, Check, Square, CheckSquare, X, ChevronDown,
-  Truck, Pencil, Hash,
+  Truck, Pencil, Hash, Search, Download,
 } from 'lucide-react'
 import DocumentTrackingModal from './DocumentTrackingModal'
 import AdminGlass from '../shared/AdminGlass'
@@ -3223,6 +3223,8 @@ function InvestmentPlansTab({ showToast }: { showToast: (m: string, t?: 'success
   const [uploading, setUploading] = useState<'image' | 'pdf' | null>(null)
   const [strategyDraft, setStrategyDraft] = useState('')
   const [minRangeDraft, setMinRangeDraft] = useState('')
+  // 08-06-2026: client-side search across the plan cards (name / type / country).
+  const [planSearch, setPlanSearch] = useState('')
 
   const emptyForm = useMemo(() => ({
     fund_name: '',
@@ -3366,6 +3368,21 @@ function InvestmentPlansTab({ showToast }: { showToast: (m: string, t?: 'success
     else showToast(res.error || 'Delete failed', 'error')
   }
 
+  const q = planSearch.trim().toLowerCase()
+  const filteredPlans = q
+    ? plans.filter(p => [p.fund_name, p.fund_type_name, p.country, p.status]
+        .some(v => String(v || '').toLowerCase().includes(q)))
+    : plans
+
+  const handleExportPlans = async () => {
+    const headers = ['Fund Name', 'Type', 'Country', 'Status', 'Tenure', 'Yearly Return', 'Lock-in', 'Tax', 'Bank Accounts']
+    const esc = (v: any) => { const s = String(v ?? ''); return s.includes(',') || s.includes('"') ? `"${s.replace(/"/g, '""')}"` : s }
+    const rows = filteredPlans.map(p => [p.fund_name, p.fund_type_name || '', p.country || '', p.status, p.tenure || '', p.yearly_return || '', p.locking_period || '', p.tax || '', p.banks.length].map(esc).join(','))
+    const blob = new Blob([`﻿${headers.join(',')}\n${rows.join('\n')}`], { type: 'text/csv;charset=utf-8' })
+    const { saveBlobAs } = await import('@/lib/supabase/storageService')
+    await saveBlobAs(blob, 'investment-plans.csv')
+  }
+
   return (
     <AdminGlass>
       <div className="flex flex-wrap items-start justify-between gap-3 mb-4">
@@ -3373,12 +3390,31 @@ function InvestmentPlansTab({ showToast }: { showToast: (m: string, t?: 'success
           <h2 className="text-base font-semibold text-white">Investment Plans</h2>
           <p className="text-xs text-gray-500 mt-0.5">Pre-defined plans (tenure, returns, locking period) admins can attach to investments. Each row supports View / Edit / Delete.</p>
         </div>
-        <button
-          onClick={() => setCreateOpen(true)}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-brand-red/20 border border-brand-red/30 text-xs font-medium text-white hover:bg-brand-red/30 transition-colors"
-        >
-          <Plus className="w-3.5 h-3.5" /> Add Plan
-        </button>
+        <div className="flex items-center gap-2">
+          <div className="relative">
+            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-500" />
+            <input
+              type="text"
+              value={planSearch}
+              onChange={e => setPlanSearch(e.target.value)}
+              placeholder="Search plans…"
+              className="pl-8 pr-3 py-1.5 text-xs bg-white/[0.04] border border-white/[0.08] rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-brand-red/40 focus:ring-1 focus:ring-brand-red/20 w-44"
+            />
+          </div>
+          <button
+            onClick={handleExportPlans}
+            disabled={plans.length === 0}
+            className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-gray-400 bg-white/[0.04] border border-white/[0.08] rounded-lg hover:bg-white/[0.08] hover:text-white transition-colors disabled:opacity-40"
+          >
+            <Download className="w-3.5 h-3.5" /> Export
+          </button>
+          <button
+            onClick={() => setCreateOpen(true)}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-brand-red/20 border border-brand-red/30 text-xs font-medium text-white hover:bg-brand-red/30 transition-colors"
+          >
+            <Plus className="w-3.5 h-3.5" /> Add Plan
+          </button>
+        </div>
       </div>
 
       {loading ? (
@@ -3389,9 +3425,11 @@ function InvestmentPlansTab({ showToast }: { showToast: (m: string, t?: 'success
           title="No investment plans yet"
           description="Plans configured here become selectable when admins approve an investment application."
         />
+      ) : filteredPlans.length === 0 ? (
+        <div className="py-10 text-center text-xs text-gray-500">No plans match “{planSearch}”.</div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
-          {plans.map(p => (
+          {filteredPlans.map(p => (
             <div key={p.id} className="rounded-2xl border border-white/[0.08] bg-white/[0.02] p-4 hover:bg-white/[0.03] transition-colors">
               <div className="flex items-start justify-between gap-2 mb-2">
                 <div className="min-w-0">

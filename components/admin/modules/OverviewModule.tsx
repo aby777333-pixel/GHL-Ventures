@@ -123,8 +123,8 @@ export default function OverviewModule({ navigate, showToast }: OverviewModulePr
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
         <StatCard title="Total KYC" value={stats.totalKyc} icon="las la-id-card" href="compliance/kyc-queue" navigate={navigate} accent={INDIGO} />
         <StatCard title="Pending" value={stats.pendingKyc} icon="las la-clock" href="compliance/kyc-queue" navigate={navigate} accent={AMBER} />
-        <StatCard title="Approved" value={stats.approvedKyc} icon="las la-check-circle" href="compliance/kyc-queue" navigate={navigate} accent={EMERALD} />
-        <StatCard title="Rejected" value={stats.rejectedKyc} icon="las la-times-circle" href="compliance/kyc-queue" navigate={navigate} accent={BRAND} />
+        <StatCard title="Approved" value={stats.approvedKyc} icon="las la-check-circle" href="compliance/kyc-approved" navigate={navigate} accent={EMERALD} />
+        <StatCard title="Rejected" value={stats.rejectedKyc} icon="las la-times-circle" href="compliance/kyc-rejected" navigate={navigate} accent={BRAND} />
       </div>
 
       {/* Investment Section */}

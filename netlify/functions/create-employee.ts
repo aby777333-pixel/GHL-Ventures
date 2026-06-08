@@ -183,14 +183,22 @@ export default async (request: Request) => {
     if (!rpcResponse.ok) {
       const rpcError = await rpcResponse.text()
       console.error('[create-employee] RPC failed:', rpcError)
-      // Still return success since the auth user was created
+      // Don't report a false success: without the staff_profiles row the new
+      // hire never shows up in the directory. Roll back the orphaned auth user
+      // so the admin can safely retry, then surface the real error.
+      try {
+        await fetch(`${supabaseUrl}/auth/v1/admin/users/${userId}`, {
+          method: 'DELETE',
+          headers: { 'Authorization': `Bearer ${serviceRoleKey}`, 'apikey': serviceRoleKey },
+        })
+      } catch (cleanupErr) {
+        console.error('[create-employee] orphaned auth user cleanup failed:', cleanupErr)
+      }
+      let parsed = rpcError
+      try { const j = JSON.parse(rpcError); parsed = j.message || j.error || j.hint || rpcError } catch {}
       return new Response(
-        JSON.stringify({
-          success: true,
-          userId,
-          warning: 'Auth account created but profile records may need manual setup',
-        }),
-        { status: 201, headers: { 'Content-Type': 'application/json', ...getCorsHeaders(request) } },
+        JSON.stringify({ error: `Could not create employee profile: ${parsed}` }),
+        { status: 500, headers: { 'Content-Type': 'application/json', ...getCorsHeaders(request) } },
       )
     }
 

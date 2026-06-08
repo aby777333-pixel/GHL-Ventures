@@ -18,7 +18,7 @@ import AdminKPICard from '../shared/AdminKPICard'
 import AdminEmptyState from '../shared/AdminEmptyState'
 import AdminCRUDPlaceholder from '../shared/AdminCRUDPlaceholder'
 import { createEmployee, updateEmployee, getEmployeeDirectory, type EmployeeRecord } from '@/lib/supabase/employeeService'
-import { fetchCareerApplications, updateCareerApplicationStatus, getResumeSignedUrl, deleteEmployeeSafe, type CareerApplication } from '@/lib/supabase/adminDataService'
+import { fetchCareerApplications, updateCareerApplicationStatus, getResumeSignedUrl, deleteEmployeeSafe, fetchCustomRoles, type CareerApplication, type AdminRoleRow } from '@/lib/supabase/adminDataService'
 import { supabase, isSupabaseConfigured } from '@/lib/supabase/client'
 import {
   fetchAllAnnouncements,
@@ -72,6 +72,10 @@ export default function EmployeeModule({ subTab, navigate, showToast }: Employee
   const [loading, setLoading] = useState(true)
   const [creating, setCreating] = useState(false)
   const [pendingLeaveCount, setPendingLeaveCount] = useState(0)
+  // 08-06-2026: custom roles defined in Settings → Roles (admin_roles) must
+  // also appear in the Add/Edit Employee "Role / Designation" picker, so a
+  // newly-created role is immediately selectable here.
+  const [customRoles, setCustomRoles] = useState<AdminRoleRow[]>([])
 
   const loadData = useCallback(async () => {
     setLoading(true)
@@ -102,6 +106,10 @@ export default function EmployeeModule({ subTab, navigate, showToast }: Employee
 
   useEffect(() => { loadData() }, [loadData])
 
+  // Load custom roles once so they're available in the role dropdown. Refreshed
+  // whenever the Add/Edit modal opens so roles created in another tab show up.
+  useEffect(() => { fetchCustomRoles().then(setCustomRoles).catch(() => {}) }, [])
+
   const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null)
   const [addEmployeeOpen, setAddEmployeeOpen] = useState(false)
   const [folderPickerOpen, setFolderPickerOpen] = useState(false)
@@ -114,6 +122,7 @@ export default function EmployeeModule({ subTab, navigate, showToast }: Employee
   })
 
   useEffect(() => {
+    if (addEmployeeOpen) fetchCustomRoles().then(setCustomRoles).catch(() => {})
     if (editEmployee && addEmployeeOpen) {
       setEmpForm({
         name: editEmployee.name, email: editEmployee.email, phone: editEmployee.phone || '',
@@ -457,6 +466,13 @@ export default function EmployeeModule({ subTab, navigate, showToast }: Employee
                   <option value="general-employee" className="bg-neutral-900">General Employee</option>
                   <option value="intern" className="bg-neutral-900">Intern / Trainee</option>
                 </optgroup>
+                {customRoles.filter(r => r.is_active).length > 0 && (
+                  <optgroup label="Custom Roles" className="bg-neutral-900">
+                    {customRoles.filter(r => r.is_active).map(r => (
+                      <option key={r.id} value={r.key} className="bg-neutral-900">{r.name}</option>
+                    ))}
+                  </optgroup>
+                )}
               </select>
             </div>
             {/* Employee Type */}

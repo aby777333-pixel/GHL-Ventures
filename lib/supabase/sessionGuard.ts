@@ -19,9 +19,11 @@ import { useEffect, useRef } from 'react'
 import { supabase, isSupabaseConfigured } from './client'
 
 const CHECK_INTERVAL_MS = 60_000          // re-verify every minute
-// Testing Report 2 (2026-04-25 #2): logout should only fire after a full
-// hour of inactivity, never while the user is actively using the site.
-const INACTIVITY_MS = 60 * 60_000          // 60 minutes idle → logout
+// 08-06-2026: admins reported being logged out mid-work (~30 min). The custom
+// admin session lasts 8h (adminAuthService), so the idle timeout should not
+// kick in earlier — raise it to match an 8-hour working session so nobody is
+// signed out while actively using the panel.
+const INACTIVITY_MS = 8 * 60 * 60_000      // 8 hours idle → logout (matches session)
 const ACTIVITY_EVENTS: (keyof WindowEventMap)[] = [
   'mousemove', 'mousedown', 'keydown', 'scroll', 'touchstart', 'click',
 ]
@@ -39,6 +41,12 @@ export function useSessionGuard(params: {
   const { isAuthenticated, onInvalidated, extraCheck } = params
   const invokedRef = useRef(false)
   const lastActivityRef = useRef<number>(Date.now())
+  // 08-06-2026: tolerate a single failed probe. A backgrounded tab can let the
+  // access token lapse a moment before auto-refresh catches up, and getUser()
+  // would then return an error — logging the admin out mid-session. Only treat
+  // it as a real invalidation after two consecutive failures (and after trying
+  // an explicit refresh first).
+  const probeFailRef = useRef(0)
 
   useEffect(() => {
     if (!isAuthenticated || !isSupabaseConfigured()) return
@@ -49,6 +57,7 @@ export function useSessionGuard(params: {
       invokedRef.current = true
       try { onInvalidated(reason) } catch { /* ignore */ }
     }
+    probeFailRef.current = 0
 
     // 1) auth state changes
     const { data: sub } = supabase.auth.onAuthStateChange((event) => {
@@ -62,14 +71,32 @@ export function useSessionGuard(params: {
     const probe = async () => {
       if (invokedRef.current) return
       try {
-        const { data, error } = await supabase.auth.getUser()
-        if (error || !data?.user) { invalidate('user_missing'); return }
+        let { data, error } = await supabase.auth.getUser()
+        // Token may have just lapsed (e.g. tab was backgrounded). Try one
+        // explicit refresh before deciding the session is gone.
+        if (error || !data?.user) {
+          await supabase.auth.refreshSession().catch(() => {})
+          ;({ data, error } = await supabase.auth.getUser())
+        }
+        if (error || !data?.user) {
+          probeFailRef.current += 1
+          // Only log out after two consecutive failures — a single transient
+          // failure (network blip / refresh race) must not end the session.
+          if (probeFailRef.current >= 2) invalidate('user_missing')
+          return
+        }
+        probeFailRef.current = 0
         if (extraCheck) {
           const ok = await extraCheck()
-          if (!ok) invalidate('user_missing')
+          if (!ok) {
+            probeFailRef.current += 1
+            if (probeFailRef.current >= 2) invalidate('user_missing')
+            return
+          }
+          probeFailRef.current = 0
         }
       } catch {
-        // network blip → ignore this tick
+        // network blip → ignore this tick (don't count toward failures)
       }
     }
     const probeTimer = window.setInterval(probe, CHECK_INTERVAL_MS)

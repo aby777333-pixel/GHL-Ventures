@@ -1,0 +1,17 @@
+-- 08-06-2026: "Not able to add employee" fix.
+--
+-- Two overloads of create_employee_profile existed:
+--   • 8-arg, no p_email  (from migration 028_employee_onboarding_rm_assign.sql)
+--   • 9-arg, with p_email (the current, email-aware version)
+--
+-- Both callers (netlify/functions/create-employee.ts and
+-- app/api/create-employee/route.ts) POST a payload that includes p_email, so
+-- PostgREST has to disambiguate an overloaded function. That can resolve to an
+-- ambiguous-function error (PGRST203); create-employee.ts then silently
+-- swallowed the failure and returned success, so the admin saw "created" but
+-- no staff_profiles row was inserted and the employee never appeared in the
+-- directory.
+--
+-- The old 8-arg overload is unused — drop it so a single, unambiguous function
+-- remains.
+DROP FUNCTION IF EXISTS public.create_employee_profile(uuid, text, text, text, text, text, date, uuid);

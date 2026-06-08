@@ -635,18 +635,43 @@ export default function DocumentBuilderModal({ open, onClose, showToast, inline 
     return () => window.removeEventListener('ghl-library-insert-image', handler)
   }, [open, inline, insertImageFromLibrary])
 
-  // Field templates — drop a Heading + KV List block pair sourced from
-  // DOCUMENT_TEMPLATES so the admin doesn't have to type the placeholder
-  // table from scratch.
+  // Field templates — drop a ready-made document sourced from
+  // DOCUMENT_TEMPLATES (Acknowledgement, Debenture Agreement, Allotment Letter,
+  // Debenture Certificate). 08-06-2026: previously this only inserted a heading
+  // + field list; now it lays out the full document — headline, the field table
+  // (pre-filled with each field's default or a {{TOKEN}} placeholder), the body
+  // paragraphs and the footer — so the admin gets a complete, fill-in template
+  // rather than a bare field list.
   const insertFieldTemplate = useCallback((kind: DocumentKind) => {
     const t = DOCUMENT_TEMPLATES[kind]
     if (!t) return
-    setBlocks(bs => ([
-      ...bs,
-      { id: `b-${Math.random().toString(36).slice(2, 10)}`, kind: 'heading', text: t.headline, level: 1, align: 'center' },
-      { id: `b-${Math.random().toString(36).slice(2, 10)}`, kind: 'kv-list', rows: t.fields.map(f => ({ label: f.label, value: `{{${f.key}}}` })) },
-    ]))
-    showToast(`Added ${t.title} template fields.`, 'success')
+    const uid = () => `b-${Math.random().toString(36).slice(2, 10)}`
+    const tplBlocks: Block[] = [
+      { id: uid(), kind: 'heading', text: t.headline, level: 1, align: 'center' },
+      { id: uid(), kind: 'kv-list', rows: t.fields.map(f => ({ label: f.label, value: f.defaultValue || `{{${f.key}}}` })) },
+    ]
+    // Body is an array where '' marks a paragraph break — group runs of
+    // non-empty lines into one paragraph block each.
+    let group: string[] = []
+    const flush = () => {
+      if (group.length) { tplBlocks.push({ id: uid(), kind: 'paragraph', text: group.join('\n'), justify: true }); group = [] }
+    }
+    for (const line of t.body) {
+      if (line === '') flush()
+      else group.push(line)
+    }
+    flush()
+    if (t.footer) tplBlocks.push({ id: uid(), kind: 'paragraph', text: t.footer, justify: false })
+
+    setBlocks(bs => {
+      // Replace the pristine default canvas; otherwise append so in-progress
+      // work isn't lost.
+      const isPristine = bs.length <= 2
+        && bs.every(b => (b.kind === 'heading' && b.text === 'Untitled Document') || (b.kind === 'paragraph' && !(b as ParagraphBlock).text))
+      return isPristine ? tplBlocks : [...bs, ...tplBlocks]
+    })
+    setDocTitle(prev => (prev && prev !== 'Untitled Document') ? prev : t.title)
+    showToast(`Inserted the ${t.title} template.`, 'success')
   }, [showToast])
 
   // ── Export: PDF ──────────────────────────────────────────────
@@ -1210,19 +1235,20 @@ export default function DocumentBuilderModal({ open, onClose, showToast, inline 
             )
           })}
 
-          {/* Field Templates — click to drop a ready-made Heading + Field
-              List for one of the four known document kinds. */}
+          {/* Document Templates — click to load a ready-made document (fields
+              + body) for one of the four known kinds, incl. Allotment Letter
+              and Debenture Certificate. */}
           <div className="pt-3 border-t border-white/[0.06]">
-            <div className="text-[10px] uppercase tracking-wider text-gray-500 px-1 mb-1.5">Field Templates</div>
+            <div className="text-[10px] uppercase tracking-wider text-gray-500 px-1 mb-1.5">Document Templates</div>
             <div className="grid grid-cols-2 gap-1.5">
               {(Object.keys(DOCUMENT_TEMPLATES) as DocumentKind[]).map(k => (
                 <button
                   key={k}
                   onClick={() => insertFieldTemplate(k)}
                   className="px-2 py-1.5 rounded-lg bg-amber-500/10 border border-amber-500/20 text-[10px] font-medium text-amber-200 hover:bg-amber-500/20 transition-colors text-left"
-                  title={`Insert ${DOCUMENT_TEMPLATES[k].title} fields`}
+                  title={`Load the ${DOCUMENT_TEMPLATES[k].title} template`}
                 >
-                  {DOCUMENT_TEMPLATES[k].title.replace(' Letter', '').replace('Debenture ', '')}
+                  {DOCUMENT_TEMPLATES[k].title}
                 </button>
               ))}
             </div>

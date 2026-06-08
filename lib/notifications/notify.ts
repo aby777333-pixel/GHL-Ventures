@@ -101,13 +101,27 @@ export async function notifyInvestmentSubmittedAdmin(opts: {
 }
 
 export async function notifyKycDecisionInvestor(opts: {
-  investorPhone: string; investorName: string;
+  investorPhone?: string; investorEmail?: string; investorName: string;
   decision: 'approved' | 'rejected'; reason?: string
 }): Promise<void> {
   const text = opts.decision === 'approved'
     ? `✅ KYC Approved\nHi ${opts.investorName}, your KYC has been approved. You can now invest on GHL India Ventures.`
     : `❌ KYC Update\nHi ${opts.investorName}, your KYC could not be approved.${opts.reason ? `\nReason: ${opts.reason}` : ''}\nPlease log in to update and resubmit.`
-  await sendWhatsApp({ to: opts.investorPhone, text })
+
+  // 08-06-2026: notify the investor by both WhatsApp and email so an approved
+  // KYC always reaches them even if no phone is on file.
+  const tasks: Promise<unknown>[] = []
+  if (opts.investorPhone) tasks.push(sendWhatsApp({ to: opts.investorPhone, text }))
+  if (opts.investorEmail) {
+    const subject = opts.decision === 'approved'
+      ? 'Your KYC has been approved — GHL India Ventures'
+      : 'Update on your KYC — GHL India Ventures'
+    const body = opts.decision === 'approved'
+      ? `Dear ${opts.investorName},\n\nWe are pleased to inform you that your KYC has been approved. Your account is now fully verified and you can start investing on GHL India Ventures.\n\nLog in to your dashboard to explore the available investment opportunities.\n\nWarm regards,\nGHL India Ventures`
+      : `Dear ${opts.investorName},\n\nWe were unable to approve your KYC at this time.${opts.reason ? `\n\nReason: ${opts.reason}` : ''}\n\nPlease log in to your dashboard to review and resubmit your details.\n\nWarm regards,\nGHL India Ventures`
+    tasks.push(sendEmail({ recipients: [opts.investorEmail], subject, body, senderName: 'GHL India Ventures' }))
+  }
+  await Promise.all(tasks)
 }
 
 export async function notifyInvestmentDecisionInvestor(opts: {

@@ -40,7 +40,10 @@ export default function AdminDataTable<T extends Record<string, any>>({
   searchKeys = [],
   onRowClick,
   emptyMessage = 'No data found',
-  exportable = false,
+  // 08-06-2026: Export is now on by default so every admin list ships a CSV
+  // Export button without each call-site opting in. Pass exportable={false} to
+  // hide it on a specific table. Search is likewise on by default (searchable).
+  exportable = true,
   title,
   actions,
 }: AdminDataTableProps<T>) {

@@ -92,10 +92,14 @@ export async function getOperationalStats() {
       payoutsResult,
       ticketsResult, ticketsOpenResult, ticketsClosedResult,
     ] = await Promise.all([
-      sb.from('clients').select('*', { count: 'exact', head: true }),
-      sb.from('clients').select('*', { count: 'exact', head: true }).gt('total_invested', 0),
+      // DASH-d (08-06-2026): exclude soft-deleted clients (deleted_at IS NOT
+      // NULL) so the dashboard tiles match the Users list, which filters them
+      // out. Previously the count tiles included trashed clients, so Total
+      // Users / Invested Users / KYC totals read higher than the actual list.
+      sb.from('clients').select('*', { count: 'exact', head: true }).is('deleted_at', null),
+      sb.from('clients').select('*', { count: 'exact', head: true }).gt('total_invested', 0).is('deleted_at', null),
       // DASH-a: count clients by kyc_status — one row per investor.
-      sb.from('clients').select('kyc_status'),
+      sb.from('clients').select('kyc_status').is('deleted_at', null),
       sb.from('investment_applications').select('investment_amount, fund_vehicle, status, created_at, final_investment_date, credit_given_at, credit_given'),
       // DASH-c: pull payout rows with both payment_status and payment_date so
       // we can compute "paid only" totals + "this month" via payment_date.
@@ -630,7 +634,7 @@ export async function approveClientKYC(clientId: string, adminUserId: string) {
       if (ident?.pan_number) await sb.from('clients').update({ pan: ident.pan_number }).eq('id', clientId)
     } catch { /* non-fatal */ }
     await sb.from('clients').update({ kyc_status: 'verified' }).eq('id', clientId)
-    const { data: client } = await sb.from('clients').select('user_id, full_name, phone').eq('id', clientId).single()
+    const { data: client } = await sb.from('clients').select('user_id, full_name, phone, email').eq('id', clientId).single()
     if (client?.user_id) {
       await sb.from('notifications').insert({
         user_id: client.user_id,
@@ -641,11 +645,13 @@ export async function approveClientKYC(clientId: string, adminUserId: string) {
       })
     }
     // Pending 30-04-2026 #12.d: WhatsApp the investor.
+    // 08-06-2026: also email the investor once KYC is approved.
     try {
-      if (client?.phone) {
+      if (client?.phone || client?.email) {
         const { notifyKycDecisionInvestor } = await import('@/lib/notifications/notify')
         await notifyKycDecisionInvestor({
           investorPhone: client.phone,
+          investorEmail: client.email,
           investorName: client.full_name || 'Investor',
           decision: 'approved',
         })
@@ -668,7 +674,7 @@ export async function rejectClientKYC(clientId: string, adminUserId: string, rea
     if (adminUserId && /^[0-9a-f-]{36}$/i.test(adminUserId)) patch.kyc_rejected_by = adminUserId
 
     await sb.from('clients').update(patch).eq('id', clientId)
-    const { data: client } = await sb.from('clients').select('user_id, full_name, phone').eq('id', clientId).single()
+    const { data: client } = await sb.from('clients').select('user_id, full_name, phone, email').eq('id', clientId).single()
     if (client?.user_id) {
       await sb.from('notifications').insert({
         user_id: client.user_id,
@@ -679,11 +685,13 @@ export async function rejectClientKYC(clientId: string, adminUserId: string, rea
       })
     }
     // Pending 30-04-2026 #12.d: WhatsApp the investor.
+    // 08-06-2026: also email the investor on the decision.
     try {
-      if (client?.phone) {
+      if (client?.phone || client?.email) {
         const { notifyKycDecisionInvestor } = await import('@/lib/notifications/notify')
         await notifyKycDecisionInvestor({
           investorPhone: client.phone,
+          investorEmail: client.email,
           investorName: client.full_name || 'Investor',
           decision: 'rejected',
           reason: reason || undefined,
@@ -3870,8 +3878,16 @@ export async function deleteFundPlan(id: string): Promise<{ ok: boolean; error?:
   if (!isSupabaseConfigured()) return { ok: false, error: 'Service unavailable' }
   try {
     const sb = supabase as any
-    const { error } = await sb.from('fund_plans').delete().eq('id', id)
+    // 08-06-2026: a row-level-security denial (e.g. when the admin's Supabase
+    // token has lapsed so auth.uid() is null) makes DELETE affect 0 rows WITHOUT
+    // raising an error — the UI then showed a false "deleted". Ask for the
+    // deleted row back and treat an empty result as a real failure so the admin
+    // gets a clear message instead of a silent no-op.
+    const { data, error } = await sb.from('fund_plans').delete().eq('id', id).select('id')
     if (error) return { ok: false, error: error.message }
+    if (!data || (data as any[]).length === 0) {
+      return { ok: false, error: 'Delete did not apply — your session may have expired or you lack permission. Please log in again and retry.' }
+    }
     return { ok: true }
   } catch (e: any) {
     return { ok: false, error: e?.message || 'Delete failed' }
@@ -3905,7 +3921,10 @@ export async function updateFundPlan(id: string, input: {
     const sb = supabase as any
     if (!id) return { ok: false, error: 'Plan id is required' }
     if (!input.fund_name?.trim()) return { ok: false, error: 'Fund name is required' }
-    const { error } = await sb
+    // 08-06-2026: return the updated row so a silent RLS denial (0 rows, no
+    // error — e.g. lapsed admin token / auth.uid() null) is caught instead of
+    // reporting a false success.
+    const { data: updated, error } = await sb
       .from('fund_plans')
       .update({
         fund_name: input.fund_name.trim(),
@@ -3926,7 +3945,11 @@ export async function updateFundPlan(id: string, input: {
         pdf_url: input.pdf_url || null,
       })
       .eq('id', id)
+      .select('id')
     if (error) return { ok: false, error: error.message }
+    if (!updated || (updated as any[]).length === 0) {
+      return { ok: false, error: 'Update did not apply — your session may have expired or you lack permission. Please log in again and retry.' }
+    }
 
     // Replace bank rows. If the caller didn't pass `banks`, leave existing
     // ones in place — only an explicit empty array clears them.

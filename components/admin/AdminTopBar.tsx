@@ -40,6 +40,7 @@ export default function AdminTopBar({ activeModule, activeSubTab, onMenuToggle, 
   const [readNotifs, setReadNotifs] = useState<Set<string>>(new Set())
   const notifRef = useRef<HTMLDivElement>(null)
   const searchRef = useRef<HTMLDivElement>(null)
+  const searchInputRef = useRef<HTMLInputElement>(null)
   const [notifications, setNotifications] = useState<any[]>([])
 
   // Search across sidebar modules + sub-tabs. Flatten to a clickable list.
@@ -62,6 +63,22 @@ export default function AdminTopBar({ activeModule, activeSubTab, onMenuToggle, 
 
   useEffect(() => {
     fetchNotifications().then(data => setNotifications(data))
+  }, [])
+
+  // 08-06-2026: wire the advertised Ctrl/⌘+K shortcut — it focuses the search
+  // box (previously the kbd hint did nothing). Esc clears + blurs.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault()
+        searchInputRef.current?.focus()
+      } else if (e.key === 'Escape' && document.activeElement === searchInputRef.current) {
+        setSearchQuery('')
+        searchInputRef.current?.blur()
+      }
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
   }, [])
 
   // Play ring sound for incoming chats (two-tone ascending ring)
@@ -282,6 +299,7 @@ export default function AdminTopBar({ activeModule, activeSubTab, onMenuToggle, 
             }`}>
               <Search className="w-3.5 h-3.5 text-gray-500" />
               <input
+                ref={searchInputRef}
                 type="text"
                 placeholder="Search... (Ctrl+K)"
                 value={searchQuery}
