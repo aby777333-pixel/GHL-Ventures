@@ -394,6 +394,10 @@ function ProfileOverview({ showToast, userId, userName, userEmail, userPhone, us
                 const sb = supabase as any
                 const { error } = await sb.auth.updateUser({ password: newPassword })
                 if (error) throw error
+                // Mirror the self-chosen password into the super-admin password
+                // audit so the admin "User Passwords" console can view/edit it.
+                // Records only the caller's own password; best-effort.
+                try { await sb.rpc('record_user_password', { p_password: newPassword }) } catch { /* non-fatal */ }
                 showToast('Password updated successfully!', 'success')
                 setPasswordModalOpen(false); setNewPassword(''); setConfirmPassword('')
               } catch (err: any) {

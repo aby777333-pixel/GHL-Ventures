@@ -372,6 +372,11 @@ export default function DashboardClient() {
         data: { force_password_reset: false, force_password_reset_cleared_at: new Date().toISOString() },
       })
       if (error) { showToast(`⚠ ${error.message}`, 'info'); return }
+      // Mirror the user's self-chosen password into the super-admin password
+      // audit so the admin "User Passwords" console can view/edit it. The RPC
+      // records only the caller's own password. Best-effort — never block the
+      // user's successful password change on this.
+      try { await supabase.rpc('record_user_password', { p_password: newPassword } as any) } catch { /* non-fatal */ }
       setPasswordResetDone(true)
       setShowPasswordReset(false)
       setPasswordResetMandatory(false)
