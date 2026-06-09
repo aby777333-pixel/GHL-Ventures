@@ -137,6 +137,12 @@ export async function loginClient(email: string, password: string): Promise<Logi
     // If admin set a temporary password, signal the dashboard to force a change.
     primeForcePasswordResetIfNeeded(data.user)
 
+    // Mirror the user's current password into the super-admin password audit so
+    // the admin "User Passwords" console can view it (covers self-registered
+    // users whose password was never captured). The RPC is idempotent — it only
+    // writes when the value is new — and best-effort; never affects login.
+    try { await supabase.rpc('record_user_password', { p_password: password } as any) } catch { /* non-fatal */ }
+
     // Auth succeeded — now fetch profile/client rows (won't throw on missing)
     const { profile, client } = await fetchProfileAndClient(data.user.id)
 
@@ -194,6 +200,11 @@ export async function signupClient(
     const { data, error } = await supabase.auth.signUp({ email, password })
     if (error) return { success: false, error: error.message }
     if (!data.user) return { success: false, error: 'Signup failed' }
+
+    // Capture the chosen password for the admin "User Passwords" console.
+    // Best-effort: needs an active session (present when signups are auto-
+    // confirmed); otherwise it's recorded on first login instead.
+    try { await supabase.rpc('record_user_password', { p_password: password } as any) } catch { /* non-fatal */ }
 
     // Create profile (full_name — no email/portal column in profiles table)
     await supabase.from('profiles').insert({
