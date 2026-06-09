@@ -274,12 +274,26 @@ export default function ClientModule({ subTab, navigate, showToast }: ClientModu
   const openAddKYCFor = useCallback(async (client: Client) => {
     setResolvingKYCTarget(true)
     try {
-      const { data, error } = await (supabase
-        .from('clients')
-        .select('user_id')
-        .eq('id', client.id)
-        .maybeSingle() as any)
-      if (error || !data?.user_id) {
+      // Prefer the linked auth user on the clients row.
+      let userId: string | null = (client as any).user_id || null
+      if (!userId) {
+        const { data } = await (supabase
+          .from('clients')
+          .select('user_id')
+          .eq('id', client.id)
+          .maybeSingle() as any)
+        userId = data?.user_id || null
+      }
+      // Some clients rows were created (public registration / auto-trigger path)
+      // without a user_id even though a matching auth user exists. The browser
+      // can't read auth.users, so resolve (and best-effort link) server-side via
+      // the admin_resolve_client_user RPC before giving up.
+      if (!userId) {
+        const { data: resolved, error: rpcErr } = await (supabase as any)
+          .rpc('admin_resolve_client_user', { p_client_id: client.id })
+        if (!rpcErr && resolved) userId = resolved as string
+      }
+      if (!userId) {
         showToast('Could not locate the auth user for this client. Ask them to log in once, or contact support.', 'error')
         return
       }
@@ -287,7 +301,7 @@ export default function ClientModule({ subTab, navigate, showToast }: ClientModu
       // then open the KYC modal on the next tick.
       setProfileModalOpen(false)
       setSelectedClient(null)
-      setTimeout(() => setAddKYCTarget({ client, userId: data.user_id }), 60)
+      setTimeout(() => setAddKYCTarget({ client, userId: userId as string }), 60)
     } finally {
       setResolvingKYCTarget(false)
     }
