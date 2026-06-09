@@ -305,11 +305,17 @@ export async function fetchClients(opts?: { includeTrashed?: boolean; trashedOnl
     }
 
     if (error || !data) {
-      // Fallback: no join
-      const { data: plain } = await (supabase
+      // Fallback: no join. MUST apply the same trashed filter as the primary
+      // query above — otherwise a join error silently leaks soft-deleted
+      // clients back into the All Clients list (they reappear after trashing,
+      // and "of N" counts them). Mirror the opts handling exactly.
+      let pq: any = supabase
         .from('clients')
         .select('*')
-        .order('created_at', { ascending: false }) as any)
+        .order('created_at', { ascending: false })
+      if (opts?.trashedOnly) pq = pq.not('deleted_at', 'is', null)
+      else if (!opts?.includeTrashed) pq = pq.is('deleted_at', null)
+      const { data: plain } = await (pq as any)
       if (!plain) return []
       return (plain as any[]).map((c: any) => ({
         id: c.id,
