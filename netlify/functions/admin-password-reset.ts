@@ -533,14 +533,42 @@ export default async (request: Request) => {
         reason = j.msg || j.message || j.error_description || j.error || ''
       } catch { /* fall through */ }
       const detail = reason || errText.slice(0, 200) || `HTTP ${patchRes.status}`
-      await logAudit({
-        supabaseUrl, serviceRoleKey, request,
-        targetUserId, targetEmail, targetKind,
-        method: 'temp_password', adminId, adminEmail,
-        success: false, errorMessage: `admin update failed: ${patchRes.status} ${detail}`,
-        notes: body.notes || null,
-      })
-      return json(patchRes.status, { error: `Failed to set temporary password: ${detail}` }, request)
+
+      // Supabase's leaked/weak-password protection (HaveIBeenPwned) rejects
+      // common passwords like "Orange@123" even for admin-set TEMPORARY
+      // passwords. The admin explicitly chose it and the user is forced to
+      // change it at next login, so fall back to setting the bcrypt hash
+      // directly via the gated admin_force_set_password RPC (called with the
+      // admin's own JWT so its auth.uid() admin check passes). Any OTHER
+      // failure (user not found, too short, etc.) still surfaces as before.
+      let fellBack = false
+      if (/weak|easy to guess|leaked|pwned|compromis|breach/i.test(detail)) {
+        try {
+          const rpcRes = await fetch(`${supabaseUrl}/rest/v1/rpc/admin_force_set_password`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': authHeader, // admin JWT → auth.uid() gate in the RPC
+              'apikey': anonKey || serviceRoleKey,
+            },
+            body: JSON.stringify({ p_user_id: targetUserId, p_password: tempPassword }),
+          })
+          if (rpcRes.ok) fellBack = (await rpcRes.json().catch(() => null)) === true
+        } catch { /* fall through to the error response below */ }
+      }
+
+      if (!fellBack) {
+        await logAudit({
+          supabaseUrl, serviceRoleKey, request,
+          targetUserId, targetEmail, targetKind,
+          method: 'temp_password', adminId, adminEmail,
+          success: false, errorMessage: `admin update failed: ${patchRes.status} ${detail}`,
+          notes: body.notes || null,
+        })
+        return json(patchRes.status, { error: `Failed to set temporary password: ${detail}` }, request)
+      }
+      // Fallback succeeded — continue to the shared success path (logout,
+      // audit, vault) below exactly as if the Admin API had accepted it.
     }
 
     // Best-effort: revoke any existing refresh tokens so the user is forced
