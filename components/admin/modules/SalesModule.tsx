@@ -1158,6 +1158,17 @@ function LeadDetailContent({ lead }: { lead: Lead }) {
 // INVESTMENTS TAB
 // ═══════════════════════════════════════════════════════════════
 
+// Default Allotment Letter body shown in the pre-generation form's Content
+// textarea. Tokens substitute on generate. When the admin leaves it
+// untouched, the original HTML body (with its <strong> emphasis) is used so
+// the default letter stays byte-identical to the pre-form output.
+const ALLOT_DEFAULT_BODY = `This is with reference to your Investment, I am directed by the Board of Directors to inform you that you have been allotted [NUM_DEB] [FUND] of Rs.10/- each. The tenure of debentures is for [TENURE].
+
+These debentures are allotted to you as per the resolution passed at the Board meeting held on [DATE] and as per the terms and conditions of Articles of Association of the company.`
+
+const ALLOT_DEFAULT_BODY_HTML = `<p>This is with reference to your Investment, I am directed by the Board of Directors to inform you that you have been allotted <strong>[NUM_DEB] [FUND]</strong> of Rs.10/- each. The tenure of debentures is for [TENURE].</p>
+      <p>These debentures are allotted to you as per the resolution passed at the Board meeting held on [DATE] and as per the terms and conditions of Articles of Association of the company.</p>`
+
 async function generateInvestmentDocument(
   type: 'acknowledgement' | 'allotment' | 'certificate' | 'agreement',
   app: any,
@@ -1175,6 +1186,12 @@ async function generateInvestmentDocument(
     amount?: string
     rate?: string
     tenure?: string
+    // 2026-06-12 second pass: free-form letter body (tokens [NUM_DEB],
+    // [FUND], [TENURE], [DATE] auto-substitute), an uploaded logo
+    // (data-URL, rendered top-center), and a bottom-center address block.
+    body?: string
+    footerAddress?: string
+    logoDataUrl?: string
   }
 ) {
   // Tests 28-04-2026 #10: pull every investor field straight from KYC so
@@ -1347,12 +1364,12 @@ async function generateInvestmentDocument(
       </body>`,
 
     allotment: `${css}<body>
+      [LOGO_ALLOT]
       <p>To <span style="float:right;">Date: [DATE]</span></p>
       <p><strong>[NAME]</strong>,<br/>[ADDRESS]</p>
       <p class="center bold">Subject: Allotment of [FUND]</p>
       <p>Dear [NAME],</p>
-      <p>This is with reference to your Investment, I am directed by the Board of Directors to inform you that you have been allotted <strong>[NUM_DEB] [FUND]</strong> of Rs.10/- each. The tenure of debentures is for [TENURE].</p>
-      <p>These debentures are allotted to you as per the resolution passed at the Board meeting held on [DATE] and as per the terms and conditions of Articles of Association of the company.</p>
+      [BODY_ALLOT]
       <p>Details of allotment are as follows:</p>
       <table style="font-size:10px;">
         <tr>
@@ -1378,6 +1395,7 @@ async function generateInvestmentDocument(
       </table>
       <p class="mt">Duly signed and executed debenture certificate will be sent to you.</p>
       <p class="mt center"><em>* This is a computer generated document and does not require signature. *</em></p>
+      [FOOTER_ADDR_ALLOT]
       </body>`,
 
     certificate: `${css}
@@ -1719,7 +1737,28 @@ async function generateInvestmentDocument(
   const safeDistinctiveTo = distinctiveTo.toLocaleString('en-IN')
   const safeNumDebWords = escapeHtml(numberToWords(numDebentures))
 
+  // ── Allotment-only layout fragments (logo top-center, custom body,
+  //    bottom-center address). Replaced FIRST so any [NUM_DEB]/[FUND]/
+  //    [TENURE]/[DATE] tokens the admin keeps in the body text are
+  //    substituted by the chain below. Function-form replacements so
+  //    user-typed `$` sequences are never treated as regex specials.
+  //    With no overrides every fragment collapses to the original markup.
+  const allotBodyText = (overrides?.body || '').trim()
+  const allotBodyHtml = (!allotBodyText || allotBodyText === ALLOT_DEFAULT_BODY.trim())
+    ? ALLOT_DEFAULT_BODY_HTML
+    : allotBodyText.split(/\n{2,}/).map(p => `<p>${escapeHtml(p).replace(/\n/g, '<br/>')}</p>`).join('\n      ')
+  const allotLogoHtml = (overrides?.logoDataUrl || '').startsWith('data:image/')
+    ? `<div style="text-align:center;margin:6mm 0 8mm;"><img src="${overrides!.logoDataUrl}" alt="Logo" style="max-height:70px;max-width:220px;object-fit:contain;" /></div>`
+    : ''
+  const allotFooterAddr = (overrides?.footerAddress || '').trim()
+  const allotFooterHtml = allotFooterAddr
+    ? `<div style="text-align:center;margin-top:36px;border-top:1px solid #ccc;padding-top:10px;font-size:10px;color:#555;">${escapeHtml(allotFooterAddr).replace(/\n/g, '<br/>')}</div>`
+    : ''
+
   const populated = templates[type]
+    .replace(/\[LOGO_ALLOT\]/g, () => allotLogoHtml)
+    .replace(/\[BODY_ALLOT\]/g, () => allotBodyHtml)
+    .replace(/\[FOOTER_ADDR_ALLOT\]/g, () => allotFooterHtml)
     // Order matters: replace the more specific placeholders BEFORE
     // the bare ones (NAME_CAPS before NAME) so the bare regex
     // doesn't eat the prefix of the specific name.
@@ -2262,7 +2301,8 @@ function InvestmentsTab({ showToast, statusFilter }: { showToast: (m: string, t?
   // so an untouched form produces the same letter as the old one-click flow.
   const [allotmentFormOpen, setAllotmentFormOpen] = useState(false)
   const [allotmentForm, setAllotmentForm] = useState({
-    date: '', folio: '', numDebentures: '', distinctiveFrom: '', distinctiveTo: '', amount: '', rate: '', tenure: '',
+    dateIso: '', folio: '', numDebentures: '', distinctiveFrom: '', distinctiveTo: '', amount: '', rate: '', tenure: '',
+    body: '', footerAddress: '', logoDataUrl: '',
   })
 
   const openAllotmentForm = () => {
@@ -2271,8 +2311,9 @@ function InvestmentsTab({ showToast, statusFilter }: { showToast: (m: string, t?
     const numDeb = Math.floor(amount / 10)
     const investmentDate = selectedApp.final_investment_date || selectedApp.investment_date || selectedApp.created_at || new Date().toISOString()
     const d = new Date(investmentDate)
+    const pad = (n: number) => String(n).padStart(2, '0')
     setAllotmentForm({
-      date: isFinite(d.getTime()) ? d.toLocaleDateString('en-IN', { day: '2-digit', month: 'long', year: 'numeric' }) : '',
+      dateIso: isFinite(d.getTime()) ? `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}` : '',
       folio: `D${(selectedApp.id || '').replace(/-/g, '').slice(0, 4).toUpperCase()}`,
       numDebentures: String(numDeb),
       distinctiveFrom: '1010001',
@@ -2280,8 +2321,22 @@ function InvestmentsTab({ showToast, statusFilter }: { showToast: (m: string, t?
       amount: String(amount),
       rate: '1% (per month)',
       tenure: selectedApp.tenure_preference || '3 years',
+      body: ALLOT_DEFAULT_BODY,
+      footerAddress: '',
+      logoDataUrl: '',
     })
     setAllotmentFormOpen(true)
+  }
+
+  // Read the chosen logo image as a data-URL so the print window can embed
+  // it directly — no storage upload, the preview window is ephemeral.
+  const handleAllotmentLogo = (file: File | null) => {
+    if (!file) return
+    if (!file.type.startsWith('image/')) { showToast('Please choose an image file (PNG/JPG)', 'warning'); return }
+    if (file.size > 4 * 1024 * 1024) { showToast('Logo image must be under 4 MB', 'warning'); return }
+    const reader = new FileReader()
+    reader.onload = () => setAllotmentForm(prev => ({ ...prev, logoDataUrl: String(reader.result || '') }))
+    reader.readAsDataURL(file)
   }
 
   return (
@@ -2655,7 +2710,7 @@ function InvestmentsTab({ showToast, statusFilter }: { showToast: (m: string, t?
           onClose={() => setAllotmentFormOpen(false)}
           title="Allotment Letter — Values"
           subtitle={`For ${selectedApp._client?.full_name || 'this investor'} — edit any value before generating`}
-          maxWidth="max-w-lg"
+          maxWidth="max-w-2xl"
           footer={
             <>
               <ModalButton onClick={() => setAllotmentFormOpen(false)}>Cancel</ModalButton>
@@ -2665,7 +2720,14 @@ function InvestmentsTab({ showToast, statusFilter }: { showToast: (m: string, t?
                   setAllotmentFormOpen(false)
                   showToast('Generating Allotment Letter...', 'info')
                   try {
-                    await generateInvestmentDocument('allotment', selectedApp, allotmentForm)
+                    const { dateIso, ...rest } = allotmentForm
+                    await generateInvestmentDocument('allotment', selectedApp, {
+                      ...rest,
+                      // Convert the picker's ISO date to the letter's display
+                      // format (e.g. "10 June 2026"). T12:00 keeps the day
+                      // stable across timezones.
+                      date: dateIso ? new Date(`${dateIso}T12:00:00`).toLocaleDateString('en-IN', { day: '2-digit', month: 'long', year: 'numeric' }) : '',
+                    })
                   } catch (e: any) {
                     showToast(`Failed to generate Allotment Letter: ${e?.message || 'unknown'}`, 'error')
                   }
@@ -2676,32 +2738,90 @@ function InvestmentsTab({ showToast, statusFilter }: { showToast: (m: string, t?
             </>
           }
         >
-          <div className="grid grid-cols-2 gap-3">
-            {([
-              { key: 'date', label: 'Date' },
-              { key: 'folio', label: 'Folio No' },
-              { key: 'numDebentures', label: 'No. of Debentures' },
-              { key: 'amount', label: 'Amount Received (₹)' },
-              { key: 'distinctiveFrom', label: 'Distinctive No. — From' },
-              { key: 'distinctiveTo', label: 'Distinctive No. — To' },
-              { key: 'rate', label: 'Rate of Interest' },
-              { key: 'tenure', label: 'Tenure' },
-            ] as { key: keyof typeof allotmentForm; label: string }[]).map(f => (
-              <div key={f.key}>
-                <label className="block text-[11px] text-gray-500 mb-1">{f.label}</label>
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-[11px] text-gray-500 mb-1">Date (top right of the letter)</label>
                 <input
-                  type="text"
-                  value={allotmentForm[f.key]}
-                  onChange={e => setAllotmentForm(prev => ({ ...prev, [f.key]: e.target.value }))}
-                  className="w-full bg-white/[0.04] border border-white/[0.08] rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-brand-red/40"
+                  type="date"
+                  value={allotmentForm.dateIso}
+                  onChange={e => setAllotmentForm(prev => ({ ...prev, dateIso: e.target.value }))}
+                  className="w-full bg-white/[0.04] border border-white/[0.08] rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-brand-red/40 [color-scheme:dark]"
                 />
               </div>
-            ))}
+              {([
+                { key: 'folio', label: 'Folio No' },
+                { key: 'numDebentures', label: 'No. of Debentures' },
+                { key: 'amount', label: 'Amount Received (₹)' },
+                { key: 'distinctiveFrom', label: 'Distinctive No. — From' },
+                { key: 'distinctiveTo', label: 'Distinctive No. — To' },
+                { key: 'rate', label: 'Rate of Interest' },
+                { key: 'tenure', label: 'Tenure' },
+              ] as { key: keyof typeof allotmentForm; label: string }[]).map(f => (
+                <div key={f.key}>
+                  <label className="block text-[11px] text-gray-500 mb-1">{f.label}</label>
+                  <input
+                    type="text"
+                    value={allotmentForm[f.key]}
+                    onChange={e => setAllotmentForm(prev => ({ ...prev, [f.key]: e.target.value }))}
+                    className="w-full bg-white/[0.04] border border-white/[0.08] rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-brand-red/40"
+                  />
+                </div>
+              ))}
+            </div>
+
+            <div>
+              <label className="block text-[11px] text-gray-500 mb-1">Logo (top center of the letter, optional)</label>
+              {allotmentForm.logoDataUrl ? (
+                <div className="flex items-center gap-3 bg-white/[0.03] border border-white/[0.06] rounded-lg px-3 py-2">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={allotmentForm.logoDataUrl} alt="Logo preview" className="h-10 max-w-[140px] object-contain bg-white rounded p-1" />
+                  <button
+                    onClick={() => setAllotmentForm(prev => ({ ...prev, logoDataUrl: '' }))}
+                    className="text-[11px] text-red-400 hover:text-red-300 font-medium"
+                  >
+                    Remove
+                  </button>
+                </div>
+              ) : (
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={e => handleAllotmentLogo(e.target.files?.[0] || null)}
+                  className="w-full text-xs text-gray-400 file:mr-3 file:px-3 file:py-2 file:rounded-lg file:border-0 file:bg-white/[0.06] file:text-gray-300 file:text-xs file:cursor-pointer hover:file:bg-white/[0.1]"
+                />
+              )}
+            </div>
+
+            <div>
+              <label className="block text-[11px] text-gray-500 mb-1">Letter content</label>
+              <textarea
+                rows={6}
+                value={allotmentForm.body}
+                onChange={e => setAllotmentForm(prev => ({ ...prev, body: e.target.value }))}
+                className="w-full bg-white/[0.04] border border-white/[0.08] rounded-lg px-3 py-2 text-xs text-white leading-relaxed focus:outline-none focus:border-brand-red/40 resize-y"
+              />
+              <p className="text-[10px] text-gray-600 mt-1">
+                Blank line = new paragraph. The tokens <span className="font-mono text-gray-500">[NUM_DEB] [FUND] [TENURE] [DATE]</span> auto-fill from the values above.
+              </p>
+            </div>
+
+            <div>
+              <label className="block text-[11px] text-gray-500 mb-1">Address (bottom center of the letter, optional)</label>
+              <textarea
+                rows={2}
+                value={allotmentForm.footerAddress}
+                onChange={e => setAllotmentForm(prev => ({ ...prev, footerAddress: e.target.value }))}
+                placeholder="e.g. company / office address — leave blank for no footer"
+                className="w-full bg-white/[0.04] border border-white/[0.08] rounded-lg px-3 py-2 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-brand-red/40 resize-y"
+              />
+            </div>
+
+            <p className="text-[10px] text-gray-600">
+              Values are pre-filled from the application. Name &amp; address (addressee) come from the client&apos;s KYC
+              and stay editable in the print window (click any highlighted field there).
+            </p>
           </div>
-          <p className="text-[10px] text-gray-600 mt-3">
-            Values are pre-filled from the application. Name &amp; address come from the client&apos;s KYC
-            and stay editable in the print window (click any highlighted field there).
-          </p>
         </AdminModal>
       )}
 
