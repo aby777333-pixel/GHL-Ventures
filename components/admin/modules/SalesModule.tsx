@@ -1160,7 +1160,22 @@ function LeadDetailContent({ lead }: { lead: Lead }) {
 
 async function generateInvestmentDocument(
   type: 'acknowledgement' | 'allotment' | 'certificate' | 'agreement',
-  app: any
+  app: any,
+  // 2026-06-12: Allotment Letter values can be admin-supplied via the
+  // pre-generation form (openAllotmentForm). Blank/invalid entries fall
+  // back to the derived defaults, and no other document type passes
+  // overrides — so acknowledgement/certificate/agreement output is
+  // byte-identical to before.
+  overrides?: {
+    date?: string
+    folio?: string
+    numDebentures?: string
+    distinctiveFrom?: string
+    distinctiveTo?: string
+    amount?: string
+    rate?: string
+    tenure?: string
+  }
 ) {
   // Tests 28-04-2026 #10: pull every investor field straight from KYC so
   // documents are ready to download without admin edits. We hydrate from
@@ -1198,8 +1213,16 @@ async function generateInvestmentDocument(
     }
   } catch { /* fall back to whatever the application row already had */ }
 
-  const amount = Number(app.final_investment_amount) || Number(app.investment_amount) || 0
-  const numDebentures = Math.floor(amount / 10)
+  let amount = Number(app.final_investment_amount) || Number(app.investment_amount) || 0
+  if (overrides?.amount) {
+    const n = Number(String(overrides.amount).replace(/[^0-9.]/g, ''))
+    if (isFinite(n) && n > 0) amount = n
+  }
+  let numDebentures = Math.floor(amount / 10)
+  if (overrides?.numDebentures) {
+    const n = Number(String(overrides.numDebentures).replace(/[^0-9]/g, ''))
+    if (isFinite(n) && n > 0) numDebentures = n
+  }
   const amountWords = numberToWords(amount)
   const fund = app.fund_vehicle || 'Alternate route to Invest in AIF via Debenture'
   const investmentDate = app.final_investment_date || app.investment_date || app.created_at || new Date().toISOString()
@@ -1216,9 +1239,9 @@ async function generateInvestmentDocument(
     const fyCode = `${String(startYear).slice(-2)}${String(startYear + 1).slice(-2)}`
     return `GHLVEN/100/${fyCode}`
   })()
-  const folioNo = `D${(app.id || '').replace(/-/g,'').slice(0,4).toUpperCase()}`
+  const folioNo = (overrides?.folio || '').trim() || `D${(app.id || '').replace(/-/g,'').slice(0,4).toUpperCase()}`
   const certNo = `${(app.id || '').replace(/-/g,'').slice(0, 3).toUpperCase()}`
-  const tenure = app.tenure_preference || '3 years'
+  const tenure = (overrides?.tenure || '').trim() || app.tenure_preference || '3 years'
 
   const css = `<style>
     /* 2026-05-16: bumped top print margin to 32mm so the first line of the
@@ -1345,11 +1368,11 @@ async function generateInvestmentDocument(
         <tr>
           <td>[FOLIO]</td>
           <td>[NUM_DEB]</td>
-          <td>1010001</td>
-          <td>[NUM_DEB_RAW]</td>
+          <td>[DIST_FROM_ALLOT]</td>
+          <td>[DIST_TO_ALLOT]</td>
           <td>[AMOUNT]</td>
           <td style="font-size:9px;">[FUND]</td>
-          <td>1% (per month)</td>
+          <td>[RATE_ALLOT]</td>
           <td>[TENURE]</td>
         </tr>
       </table>
@@ -1706,7 +1729,7 @@ async function generateInvestmentDocument(
     .replace(/\[NAME\]/g, safeName)
     .replace(/\[EMAIL\]/g, safeEmail)
     .replace(/\[PHONE\]/g, safePhone)
-    .replace(/\[DATE\]/g, escapeHtml(longDateStr || dateStr))
+    .replace(/\[DATE\]/g, escapeHtml((overrides?.date || '').trim() || longDateStr || dateStr))
     .replace(/\[ADDRESS\]/g, safeAddress)
     .replace(/\[AMOUNT\]/g, safeAmt)
     .replace(/\[AMOUNT_WORDS\]/g, safeAmtWords)
@@ -1724,6 +1747,11 @@ async function generateInvestmentDocument(
     .replace(/\[INTEREST_AMOUNT\]/g, safeInterestAmount)
     .replace(/\[DISTINCTIVE_FROM\]/g, safeDistinctiveFrom)
     .replace(/\[DISTINCTIVE_TO\]/g, safeDistinctiveTo)
+    // Allotment-table cells — defaults reproduce the previous hard-coded
+    // values exactly ('1010001', raw debenture count, '1% (per month)').
+    .replace(/\[DIST_FROM_ALLOT\]/g, escapeHtml((overrides?.distinctiveFrom || '').trim() || '1010001'))
+    .replace(/\[DIST_TO_ALLOT\]/g, escapeHtml((overrides?.distinctiveTo || '').trim() || safeNumDebRaw))
+    .replace(/\[RATE_ALLOT\]/g, escapeHtml((overrides?.rate || '').trim() || '1% (per month)'))
 
   const fullPage = `<!DOCTYPE html><html><head><title>${escapeHtml(titles[type])} - ${safeName}</title>${css}
   <style>#docContent{max-width:210mm;margin:0 auto;background:#fff;padding:20mm;box-shadow:0 2px 20px rgba(0,0,0,0.1);}@media print{#docContent{max-width:none;padding:0;box-shadow:none;}body{padding-top:0!important;}}</style>
@@ -2228,6 +2256,34 @@ function InvestmentsTab({ showToast, statusFilter }: { showToast: (m: string, t?
     finally { setDocUploading(false) }
   }
 
+  // Allotment Letter pre-generation form (2026-06-12): the admin reviews /
+  // edits the letter's values per client BEFORE the print window opens.
+  // Defaults mirror the exact derivations inside generateInvestmentDocument,
+  // so an untouched form produces the same letter as the old one-click flow.
+  const [allotmentFormOpen, setAllotmentFormOpen] = useState(false)
+  const [allotmentForm, setAllotmentForm] = useState({
+    date: '', folio: '', numDebentures: '', distinctiveFrom: '', distinctiveTo: '', amount: '', rate: '', tenure: '',
+  })
+
+  const openAllotmentForm = () => {
+    if (!selectedApp) return
+    const amount = Number(selectedApp.final_investment_amount) || Number(selectedApp.investment_amount) || 0
+    const numDeb = Math.floor(amount / 10)
+    const investmentDate = selectedApp.final_investment_date || selectedApp.investment_date || selectedApp.created_at || new Date().toISOString()
+    const d = new Date(investmentDate)
+    setAllotmentForm({
+      date: isFinite(d.getTime()) ? d.toLocaleDateString('en-IN', { day: '2-digit', month: 'long', year: 'numeric' }) : '',
+      folio: `D${(selectedApp.id || '').replace(/-/g, '').slice(0, 4).toUpperCase()}`,
+      numDebentures: String(numDeb),
+      distinctiveFrom: '1010001',
+      distinctiveTo: String(numDeb),
+      amount: String(amount),
+      rate: '1% (per month)',
+      tenure: selectedApp.tenure_preference || '3 years',
+    })
+    setAllotmentFormOpen(true)
+  }
+
   return (
     <div className="space-y-6">
       {/* KPIs */}
@@ -2565,6 +2621,9 @@ function InvestmentsTab({ showToast, statusFilter }: { showToast: (m: string, t?
                       <button
                         key={doc.type}
                         onClick={async () => {
+                          // Allotment Letter: collect/confirm the values first
+                          // (per-client input form), then generate from there.
+                          if (doc.type === 'allotment') { openAllotmentForm(); return }
                           showToast(`Generating ${doc.label}...`, 'info')
                           try {
                             await generateInvestmentDocument(doc.type, selectedApp)
@@ -2584,6 +2643,65 @@ function InvestmentsTab({ showToast, statusFilter }: { showToast: (m: string, t?
               <p className="text-[10px] text-gray-600 mt-2">Documents open in a new window for printing to PDF. Please allow popups if prompted.</p>
             </div>
           </div>
+        </AdminModal>
+      )}
+
+      {/* Allotment Letter value form (2026-06-12): admin inputs the values
+          that fill the letter for this client, then generates. Same sibling
+          stacking pattern as the reject-transaction modal below. */}
+      {selectedApp && allotmentFormOpen && (
+        <AdminModal
+          isOpen={allotmentFormOpen}
+          onClose={() => setAllotmentFormOpen(false)}
+          title="Allotment Letter — Values"
+          subtitle={`For ${selectedApp._client?.full_name || 'this investor'} — edit any value before generating`}
+          maxWidth="max-w-lg"
+          footer={
+            <>
+              <ModalButton onClick={() => setAllotmentFormOpen(false)}>Cancel</ModalButton>
+              <ModalButton
+                variant="primary"
+                onClick={async () => {
+                  setAllotmentFormOpen(false)
+                  showToast('Generating Allotment Letter...', 'info')
+                  try {
+                    await generateInvestmentDocument('allotment', selectedApp, allotmentForm)
+                  } catch (e: any) {
+                    showToast(`Failed to generate Allotment Letter: ${e?.message || 'unknown'}`, 'error')
+                  }
+                }}
+              >
+                Generate Letter
+              </ModalButton>
+            </>
+          }
+        >
+          <div className="grid grid-cols-2 gap-3">
+            {([
+              { key: 'date', label: 'Date' },
+              { key: 'folio', label: 'Folio No' },
+              { key: 'numDebentures', label: 'No. of Debentures' },
+              { key: 'amount', label: 'Amount Received (₹)' },
+              { key: 'distinctiveFrom', label: 'Distinctive No. — From' },
+              { key: 'distinctiveTo', label: 'Distinctive No. — To' },
+              { key: 'rate', label: 'Rate of Interest' },
+              { key: 'tenure', label: 'Tenure' },
+            ] as { key: keyof typeof allotmentForm; label: string }[]).map(f => (
+              <div key={f.key}>
+                <label className="block text-[11px] text-gray-500 mb-1">{f.label}</label>
+                <input
+                  type="text"
+                  value={allotmentForm[f.key]}
+                  onChange={e => setAllotmentForm(prev => ({ ...prev, [f.key]: e.target.value }))}
+                  className="w-full bg-white/[0.04] border border-white/[0.08] rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-brand-red/40"
+                />
+              </div>
+            ))}
+          </div>
+          <p className="text-[10px] text-gray-600 mt-3">
+            Values are pre-filled from the application. Name &amp; address come from the client&apos;s KYC
+            and stay editable in the print window (click any highlighted field there).
+          </p>
         </AdminModal>
       )}
 
