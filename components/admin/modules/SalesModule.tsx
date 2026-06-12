@@ -2193,6 +2193,41 @@ function InvestmentsTab({ showToast, statusFilter }: { showToast: (m: string, t?
     finally { setDocUploading(false) }
   }
 
+  // Super-admin uploads the SIGNED copy of an existing investment document
+  // (e.g. the debenture agreement the investor signed on paper and sent back).
+  // Updates signed_copy_url/signed_at on the SAME row — the existing green
+  // "Signed" link (here and on the investor dashboard) then displays it.
+  // RLS: inv_docs_admin_all already grants admin/super_admin full access.
+  const handleUploadSignedCopy = async (doc: any) => {
+    if (!selectedApp) return
+    setDocUploading(true)
+    try {
+      const { pickAndUploadFiles } = await import('@/lib/supabase/storageService')
+      const { supabase } = await import('@/lib/supabase/client')
+      const results = await pickAndUploadFiles('general', {
+        accept: '.pdf,.jpg,.jpeg,.png',
+        multiple: false,
+        entityType: 'investment',
+        entityId: selectedApp.id,
+        category: 'investment-document',
+      })
+      if (results?.[0]?.success && results[0].file) {
+        const f = results[0].file
+        const { data, error } = await (supabase as any)
+          .from('investment_documents')
+          .update({ signed_copy_url: f.url, signed_at: new Date().toISOString(), status: 'signed' })
+          .eq('id', doc.id)
+          .select()
+          .single()
+        if (!error && data) {
+          showToast('Signed copy uploaded', 'success')
+          setAppDocs(prev => prev.map((d: any) => (d.id === doc.id ? data : d)))
+        } else { showToast('Failed to save signed copy', 'error') }
+      }
+    } catch { showToast('Upload failed', 'error') }
+    finally { setDocUploading(false) }
+  }
+
   return (
     <div className="space-y-6">
       {/* KPIs */}
@@ -2436,7 +2471,21 @@ function InvestmentsTab({ showToast, statusFilter }: { showToast: (m: string, t?
                             <CheckCircle2 className="w-3 h-3" /> Signed
                           </a>
                         ) : (doc.document_type === 'debenture_agreement' || doc.document_type === 'agreement') ? (
-                          <span className="text-[10px] text-amber-500" title="Waiting for investor to upload signed copy">Unsigned</span>
+                          <>
+                            <span className="text-[10px] text-amber-500" title="Waiting for investor to upload signed copy">Unsigned</span>
+                            {/* Super-admin can also attach the signed copy directly
+                                (e.g. received on paper / via email) — fills the same
+                                signed_copy_url the investor-side upload uses. */}
+                            <button
+                              onClick={() => handleUploadSignedCopy(doc)}
+                              disabled={docUploading}
+                              className="flex items-center gap-1 px-2 py-1 rounded-md text-[10px] font-semibold text-emerald-300 bg-emerald-500/10 border border-emerald-500/25 hover:bg-emerald-500/20 transition-colors disabled:opacity-50"
+                              title="Upload the signed copy of this document on the investor's behalf"
+                            >
+                              <Upload className="w-3 h-3" />
+                              {docUploading ? 'Uploading…' : 'Upload Signed'}
+                            </button>
+                          </>
                         ) : null}
                       </div>
                     </div>
