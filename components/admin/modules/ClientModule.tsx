@@ -822,7 +822,10 @@ function ClientListTab({
           </div>
           <div>
             <p className="text-sm font-medium text-white">{row.name}</p>
-            <p className="text-[11px] text-gray-500">{row.id}</p>
+            {/* Show the human GHL ID (clients.ghl_id) like the Investments
+                table does — the row UUID is meaningless to the admin. Fall
+                back to the UUID only if a row somehow has no GHL ID yet. */}
+            <p className="text-[11px] text-gray-500 font-mono">{(row as any).ghlId || row.id}</p>
           </div>
         </div>
       ),
@@ -925,7 +928,7 @@ function ClientListTab({
       <AdminDataTable<Client>
         columns={columns}
         data={clients}
-        searchKeys={['name', 'email', 'id', 'pan', 'assignedRM']}
+        searchKeys={['name', 'email', 'id', 'ghlId', 'pan', 'assignedRM']}
         searchPlaceholder="Search clients by name, ID, PAN..."
         onRowClick={onViewClient}
         exportable
