@@ -316,8 +316,11 @@ function RegisterPageInner() {
         }
       } catch { /* non-blocking */ }
 
-      // Record referral if a referral code was used (non-blocking)
-      if (form.referral && form.referral.startsWith('GHL-')) {
+      // Record referral if a referral code was used (non-blocking).
+      // Codes are now the referrer's GHL ID (e.g. GHL570045 — no dash);
+      // legacy GHL-XXXXXXXX links must keep working too, so accept any
+      // GHL-prefixed code.
+      if (form.referral && form.referral.trim().toUpperCase().startsWith('GHL')) {
         try {
           const { recordReferral } = await import('@/lib/supabase/dashboardDataService')
           await recordReferral(form.referral, form.name, form.email)

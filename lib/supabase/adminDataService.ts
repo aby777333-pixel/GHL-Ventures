@@ -2817,11 +2817,22 @@ export async function setClientReferrer(
     const code = (referrerCode || '').trim()
     if (!code) return { ok: false, error: 'Referrer code cannot be empty' }
 
-    const { data: refClient } = await sb
+    let { data: refClient } = await sb
       .from('clients')
       .select('id, full_name, email, phone, referral_code')
       .eq('referral_code', code)
       .maybeSingle()
+    // 2026-06-12: referral codes are the referrer's GHL ID now, so also
+    // resolve by clients.ghl_id (case-insensitive). The referral_code
+    // column lookup above stays first for any legacy custom codes.
+    if (!refClient) {
+      const { data: byGhl } = await sb
+        .from('clients')
+        .select('id, full_name, email, phone, ghl_id')
+        .ilike('ghl_id', code)
+        .maybeSingle()
+      if (byGhl) refClient = byGhl
+    }
 
     const { data: thisClient } = await sb
       .from('clients')

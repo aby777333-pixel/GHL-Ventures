@@ -898,10 +898,16 @@ export default function DashboardClient() {
   }, [clientId, user?.id]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // ─── Referral Hooks (must be before early returns) ──────
+  // 2026-06-12: the referral code IS the investor's GHL ID (clients.ghl_id,
+  // e.g. GHL570045) so admins/investors quote one identifier everywhere.
+  // Falls back to the legacy GHL-<uuid8> derived code until ghlId loads /
+  // for any account without a ghl_id. Stats/list lookups match BOTH codes
+  // (fetchReferralStats/List), so legacy referred_by rows keep counting.
   const referralCode = useMemo(() => {
+    if (ghlId) return ghlId
     if (!user?.id) return 'GHL-UNKNOWN'
     return `GHL-${user.id.replace(/-/g, '').substring(0, 8).toUpperCase()}`
-  }, [user?.id])
+  }, [ghlId, user?.id])
 
   const [referralLink, setReferralLink] = useState('')
   useEffect(() => {

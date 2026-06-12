@@ -892,26 +892,54 @@ export function generateReferralCode(userId: string): string {
  * Fetch referral stats for a user (how many referred, any rewards).
  * Uses clients.referred_by or leads with source='referral' and metadata.
  */
+// 2026-06-12: an investor's referral code is now their GHL ID (clients.ghl_id),
+// but legacy signups stored the derived GHL-<uuid8> code in referred_by. Both
+// must keep matching, so the stats/list helpers resolve ALL codes for the user
+// and aggregate. A referred client's referred_by is a single string, so summing
+// across distinct codes can never double-count.
+async function resolveReferralCodes(userId: string): Promise<string[]> {
+  const codes = [generateReferralCode(userId)]
+  try {
+    const { data: c } = await sb
+      .from('clients')
+      .select('ghl_id, referral_code')
+      .eq('user_id', userId)
+      .maybeSingle()
+    const ghl = ((c as any)?.ghl_id || '').trim()
+    const custom = ((c as any)?.referral_code || '').trim()
+    if (ghl && !codes.includes(ghl)) codes.push(ghl)
+    if (custom && !codes.includes(custom)) codes.push(custom)
+  } catch { /* fall back to the derived code only */ }
+  return codes
+}
+
 export async function fetchReferralStats(userId?: string): Promise<{ referred: number; earned: number }> {
   if (!isSupabaseConfigured() || !userId) return { referred: 0, earned: 0 }
 
-  const code = generateReferralCode(userId)
+  const codes = await resolveReferralCodes(userId)
 
   try {
-    // Use RPC to count clients who signed up with this referral code
-    // (clients table stores referred_by during registration)
-    const { data, error } = await sb.rpc('get_referral_stats', { p_referral_code: code })
-
-    if (error || !data || data.length === 0) {
-      // Fallback: query clients table directly for referred_by
-      const { data: referredClients } = await sb
-        .from('clients')
-        .select('id')
-        .eq('referred_by', code)
-      return { referred: referredClients?.length || 0, earned: 0 }
+    // Use RPC to count clients who signed up with each of this user's
+    // referral codes (clients.referred_by stores the code used at signup).
+    let referred = 0
+    let earned = 0
+    let anyOk = false
+    for (const code of codes) {
+      const { data, error } = await sb.rpc('get_referral_stats', { p_referral_code: code })
+      if (!error && data && data.length > 0) {
+        anyOk = true
+        referred += Number(data[0]?.referred) || 0
+        earned += Number(data[0]?.earned) || 0
+      }
     }
+    if (anyOk) return { referred, earned }
 
-    return { referred: Number(data[0]?.referred) || 0, earned: Number(data[0]?.earned) || 0 }
+    // Fallback: query clients table directly for referred_by
+    const { data: referredClients } = await sb
+      .from('clients')
+      .select('id')
+      .in('referred_by', codes)
+    return { referred: referredClients?.length || 0, earned: 0 }
   } catch {
     return { referred: 0, earned: 0 }
   }
@@ -922,12 +950,18 @@ export async function fetchReferralStats(userId?: string): Promise<{ referred: n
  */
 export async function fetchReferralList(userId?: string): Promise<{ name: string; date: string; status: string }[]> {
   if (!isSupabaseConfigured() || !userId) return []
-  const code = generateReferralCode(userId)
+  const codes = await resolveReferralCodes(userId)
   try {
-    // Use SECURITY DEFINER RPC to bypass client RLS
-    const { data, error } = await sb.rpc('get_referral_list', { p_referral_code: code })
-    if (!error && data && data.length > 0) {
-      return data.map((c: any) => ({
+    // Use SECURITY DEFINER RPC to bypass client RLS — once per code the
+    // user may have been referred under (GHL ID + legacy derived code).
+    const merged: any[] = []
+    for (const code of codes) {
+      const { data, error } = await sb.rpc('get_referral_list', { p_referral_code: code })
+      if (!error && data && data.length > 0) merged.push(...data)
+    }
+    if (merged.length > 0) {
+      merged.sort((a: any, b: any) => new Date(b.joined_date || 0).getTime() - new Date(a.joined_date || 0).getTime())
+      return merged.map((c: any) => ({
         name: c.name || c.email || 'Referred User',
         date: c.joined_date ? new Date(c.joined_date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : '—',
         status: c.kyc_status === 'verified' ? 'Verified' : 'Pending',
@@ -940,7 +974,7 @@ export async function fetchReferralList(userId?: string): Promise<{ name: string
     const { data: fallback } = await sb
       .from('clients')
       .select('full_name, email, created_at, joined_at, kyc_status')
-      .eq('referred_by', code)
+      .in('referred_by', codes)
       .order('created_at', { ascending: false })
     if (!fallback || fallback.length === 0) return []
     return fallback.map((c: any) => {
@@ -973,19 +1007,36 @@ export async function recordReferral(referralCode: string, referredName: string,
       metadata: { referral_code: referralCode, referred_at: new Date().toISOString() },
     })
 
-    // Find the referrer by matching code to user ID
-    // Referral codes are GHL-{first 8 chars of UUID uppercase}
-    const codePrefix = referralCode.replace('GHL-', '').toLowerCase()
-    const { data: allClients } = await sb.from('clients').select('user_id, full_name')
-
+    // Find the referrer. Codes are either the referrer's GHL ID
+    // (clients.ghl_id, e.g. GHL570045 — current format) or the legacy
+    // GHL-{first 8 chars of UUID uppercase} derived code. Try the exact
+    // GHL ID / referral_code match first, then the legacy prefix scan.
     let referrerId: string | null = null
     let referrerName = 'A user'
-    if (allClients) {
-      for (const c of allClients) {
-        if (c.user_id && c.user_id.replace(/-/g, '').substring(0, 8).toLowerCase() === codePrefix) {
-          referrerId = c.user_id
-          referrerName = c.full_name || 'A user'
-          break
+    const codeExact = referralCode.trim()
+    try {
+      const { data: byGhl } = await sb
+        .from('clients')
+        .select('user_id, full_name')
+        .ilike('ghl_id', codeExact)
+        .not('user_id', 'is', null)
+        .maybeSingle()
+      if (byGhl?.user_id) {
+        referrerId = byGhl.user_id
+        referrerName = byGhl.full_name || 'A user'
+      }
+    } catch { /* best-effort — fall through to the legacy scan */ }
+
+    if (!referrerId) {
+      const codePrefix = referralCode.replace('GHL-', '').toLowerCase()
+      const { data: allClients } = await sb.from('clients').select('user_id, full_name')
+      if (allClients) {
+        for (const c of allClients) {
+          if (c.user_id && c.user_id.replace(/-/g, '').substring(0, 8).toLowerCase() === codePrefix) {
+            referrerId = c.user_id
+            referrerName = c.full_name || 'A user'
+            break
+          }
         }
       }
     }

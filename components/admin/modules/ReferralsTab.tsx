@@ -10,11 +10,13 @@ import AdminKPICard from '../shared/AdminKPICard'
 import AdminEmptyState from '../shared/AdminEmptyState'
 import {
   fetchReferralsWithInvestment,
+  setClientReferrer,
   updateReferral,
   updateReferralCommission,
   type ReferralWithInvestment,
 } from '@/lib/supabase/adminDataService'
 import { formatDate, formatINR } from '@/lib/admin/adminHooks'
+import { supabase } from '@/lib/supabase/client'
 
 type ShowToast = (msg: string, type?: 'success' | 'error' | 'info' | 'warning') => void
 
@@ -28,6 +30,42 @@ export default function ReferralsTab({ showToast, channelPartnerOnly }: { showTo
   const [commRate, setCommRate] = useState('1')
   const [commStatus, setCommStatus] = useState<'pending' | 'accrued' | 'paid' | 'cancelled'>('pending')
 
+  // 2026-06-12: admin can manually link a referral by GHL ID (the investor's
+  // referral code IS their GHL ID). Each input resolves to a live client and
+  // shows name/email read-only; Submit routes through setClientReferrer so
+  // the clients.referred_by + referrals-row bookkeeping matches the organic
+  // registration flow exactly.
+  type GhlMatch = { id: string; full_name: string | null; email: string | null; ghl_id: string | null } | null
+  const [addOpen, setAddOpen] = useState(false)
+  const [refereeCode, setRefereeCode] = useState('')
+  const [referrerCode, setReferrerCode] = useState('')
+  const [refereeMatch, setRefereeMatch] = useState<GhlMatch>(null)
+  const [referrerMatch, setReferrerMatch] = useState<GhlMatch>(null)
+  const [savingAdd, setSavingAdd] = useState(false)
+
+  const lookupByGhlId = async (code: string): Promise<GhlMatch> => {
+    const c = code.trim()
+    if (!c) return null
+    try {
+      const { data } = await (supabase as any)
+        .from('clients')
+        .select('id, full_name, email, ghl_id')
+        .ilike('ghl_id', c)
+        .is('deleted_at', null)
+        .maybeSingle()
+      return data || null
+    } catch { return null }
+  }
+
+  useEffect(() => {
+    const t = setTimeout(() => { lookupByGhlId(refereeCode).then(setRefereeMatch) }, 400)
+    return () => clearTimeout(t)
+  }, [refereeCode]) // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    const t = setTimeout(() => { lookupByGhlId(referrerCode).then(setReferrerMatch) }, 400)
+    return () => clearTimeout(t)
+  }, [referrerCode]) // eslint-disable-line react-hooks/exhaustive-deps
+
   const load = useCallback(async () => {
     setLoading(true)
     setItems(await fetchReferralsWithInvestment())
@@ -35,6 +73,22 @@ export default function ReferralsTab({ showToast, channelPartnerOnly }: { showTo
   }, [])
 
   useEffect(() => { load() }, [load])
+
+  const handleAddReferral = async () => {
+    if (!refereeMatch || !referrerMatch) { showToast('Enter valid GHL IDs for both investors', 'warning'); return }
+    if (refereeMatch.id === referrerMatch.id) { showToast('A client cannot refer themselves', 'warning'); return }
+    setSavingAdd(true)
+    const res = await setClientReferrer(refereeMatch.id, (referrerMatch.ghl_id || referrerCode).trim())
+    setSavingAdd(false)
+    if (res.ok) {
+      showToast('Referral linked', 'success')
+      setAddOpen(false)
+      setRefereeCode(''); setReferrerCode(''); setRefereeMatch(null); setReferrerMatch(null)
+      load()
+    } else {
+      showToast(res.error || 'Failed to link referral', 'error')
+    }
+  }
   useEffect(() => {
     setNotes(selected?.admin_notes || '')
     setCommRate(String(selected?.commission_rate ?? '1'))
@@ -154,6 +208,17 @@ export default function ReferralsTab({ showToast, channelPartnerOnly }: { showTo
 
   return (
     <AdminGlass>
+      {!channelPartnerOnly && (
+        <div className="flex justify-end mb-4">
+          <button
+            onClick={() => setAddOpen(true)}
+            className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold text-white bg-brand-red hover:bg-brand-red/80 transition-colors"
+            title="Manually link a referred investor to their referrer using GHL IDs"
+          >
+            <UserPlus className="w-3.5 h-3.5" /> Add Referral
+          </button>
+        </div>
+      )}
       <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 mb-5">
         <AdminKPICard title="Total Referrals" value={kpis.total} icon={Users} color="#3B82F6" delay={0} />
         <AdminKPICard title="Pending" value={kpis.pending} icon={UserPlus} color="#F59E0B" delay={50} />
@@ -297,6 +362,63 @@ export default function ReferralsTab({ showToast, channelPartnerOnly }: { showTo
                 placeholder="Follow-up notes..."
                 className="w-full px-3 py-2 text-xs text-gray-200 rounded-lg bg-white/[0.04] border border-white/[0.06] focus:outline-none focus:border-brand-red/50" />
             </div>
+          </div>
+        </AdminModal>
+      )}
+
+      {addOpen && (
+        <AdminModal
+          isOpen={addOpen}
+          onClose={() => { if (!savingAdd) setAddOpen(false) }}
+          title="Add Referral"
+          subtitle="Link a referred investor to their referrer — the referral code is the referrer's GHL ID"
+          maxWidth="max-w-2xl"
+          footer={
+            <>
+              <ModalButton onClick={() => setAddOpen(false)} disabled={savingAdd}>Cancel</ModalButton>
+              <ModalButton variant="primary" onClick={handleAddReferral} disabled={savingAdd || !refereeMatch || !referrerMatch}>
+                {savingAdd ? 'Saving…' : 'Submit'}
+              </ModalButton>
+            </>
+          }
+        >
+          <div className="space-y-5">
+            {[
+              { label: 'Referred Investor — GHL ID', value: refereeCode, set: setRefereeCode, match: refereeMatch, hint: 'The investor who was referred (their referred-by will be updated)' },
+              { label: 'Referrer — GHL ID', value: referrerCode, set: setReferrerCode, match: referrerMatch, hint: 'The existing investor whose GHL ID is the referral code' },
+            ].map(f => (
+              <div key={f.label}>
+                <label className="block text-[11px] uppercase tracking-wider text-gray-500 mb-2">{f.label} <span className="text-brand-red">*</span></label>
+                <div className="grid sm:grid-cols-3 gap-2">
+                  <input
+                    type="text"
+                    value={f.value}
+                    onChange={e => f.set(e.target.value)}
+                    placeholder="e.g. GHL570045"
+                    className="bg-white/[0.04] border border-white/[0.08] rounded-lg px-3 py-2 text-sm text-white font-mono placeholder-gray-600 focus:outline-none focus:border-brand-red/40"
+                  />
+                  <input
+                    type="text"
+                    value={f.match?.full_name || ''}
+                    readOnly
+                    placeholder="Name"
+                    className="bg-white/[0.02] border border-white/[0.05] rounded-lg px-3 py-2 text-sm text-gray-300 placeholder-gray-700 outline-none cursor-default"
+                  />
+                  <input
+                    type="text"
+                    value={f.match?.email || ''}
+                    readOnly
+                    placeholder="Email"
+                    className="bg-white/[0.02] border border-white/[0.05] rounded-lg px-3 py-2 text-sm text-gray-300 placeholder-gray-700 outline-none cursor-default"
+                  />
+                </div>
+                {f.value.trim() && !f.match ? (
+                  <p className="text-[11px] text-amber-400 mt-1">No active client found with this GHL ID</p>
+                ) : (
+                  <p className="text-[11px] text-gray-600 mt-1">{f.hint}</p>
+                )}
+              </div>
+            ))}
           </div>
         </AdminModal>
       )}
