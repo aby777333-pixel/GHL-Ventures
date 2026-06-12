@@ -54,6 +54,8 @@ interface UserRow {
   last_password_set_at?: string | null
   last_password_value?: string | null
   last_password_set_by?: string | null
+  // From admin_get_auth_providers (auth schema) — e.g. ['email'], ['google']
+  auth_providers?: string[] | null
 }
 
 export default function UserPasswordsModule({ role, showToast }: Props) {
@@ -91,17 +93,32 @@ export default function UserPasswordsModule({ role, showToast }: Props) {
           }
         } catch { /* table may not exist yet — module still renders the user list */ }
       }
+      // Auth-schema info (canonical email + identity providers) so the UI can
+      // tell password accounts from Google-OAuth accounts (which have NO
+      // password). Best-effort — if the RPC isn't deployed yet, the module
+      // renders exactly as before.
+      let providerMap = new Map<string, any>()
+      if (ids.length > 0) {
+        try {
+          const { data: prov, error: provErr } = await sb.rpc('admin_get_auth_providers', { p_user_ids: ids })
+          if (!provErr) {
+            for (const row of (prov || []) as any[]) providerMap.set(row.user_id, row)
+          }
+        } catch { /* RPC may not exist yet — fall back to profile data only */ }
+      }
       const rows: UserRow[] = ((profiles || []) as any[]).map(p => {
         const a = auditMap.get(p.id)
+        const auth = providerMap.get(p.id)
         return {
           id: p.id,
           full_name: p.full_name || null,
-          email: p.email || null,
+          email: p.email || auth?.email || null,
           role: p.role || null,
           created_at: p.created_at || null,
           last_password_value: a?.password_plain || null,
           last_password_set_at: a?.created_at || null,
           last_password_set_by: a?.set_by || null,
+          auth_providers: auth?.providers || null,
         }
       })
       setUsers(rows)
@@ -286,8 +303,13 @@ export default function UserPasswordsModule({ role, showToast }: Props) {
                             </button>
                             <span className="text-[10px] text-gray-600">set {formatDate(u.last_password_set_at || '')}</span>
                           </div>
+                        ) : u.auth_providers && u.auth_providers.length > 0 && !u.auth_providers.includes('email') ? (
+                          // OAuth-only account — there is no password to show.
+                          <span className="text-sky-400/80 text-[11px] italic">
+                            {u.auth_providers.includes('google') ? 'Google sign-in — no password' : `${u.auth_providers.join(', ')} sign-in — no password`}
+                          </span>
                         ) : (
-                          <span className="text-gray-600 text-[11px] italic">User-set (hashed) — not retrievable</span>
+                          <span className="text-gray-600 text-[11px] italic">User-set — captured at their next login</span>
                         )}
                       </td>
                       <td className="px-5 py-3 text-right">

