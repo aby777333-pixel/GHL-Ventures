@@ -3743,6 +3743,7 @@ export interface FundPlanRow {
   minimum_investment_range: string[]
   status: string
   country: string | null
+  description: string | null
   image_url: string | null
   pdf_url: string | null
   banks: FundPlanBankRow[]
@@ -3805,6 +3806,7 @@ export async function fetchFundPlans(): Promise<FundPlanRow[]> {
       minimum_investment_range: Array.isArray(p.minimum_investment_range) ? p.minimum_investment_range : [],
       status: p.status,
       country: p.country,
+      description: p.description ?? null,
       image_url: p.image_url,
       pdf_url: p.pdf_url,
       banks: bankMap.get(p.id) || [],
@@ -3831,6 +3833,7 @@ export async function createFundPlan(input: {
   minimum_investment_range?: string[]
   status?: string
   country?: string
+  description?: string
   image_url?: string | null
   pdf_url?: string | null
   banks?: FundPlanBankRow[]
@@ -3856,6 +3859,7 @@ export async function createFundPlan(input: {
         minimum_investment_range: input.minimum_investment_range || [],
         status: input.status || 'active',
         country: input.country || null,
+        description: input.description?.trim() || null,
         image_url: input.image_url || null,
         pdf_url: input.pdf_url || null,
       })
@@ -3929,6 +3933,7 @@ export async function updateFundPlan(id: string, input: {
   minimum_investment_range?: string[]
   status?: string
   country?: string
+  description?: string
   image_url?: string | null
   pdf_url?: string | null
   banks?: FundPlanBankRow[]
@@ -3958,6 +3963,7 @@ export async function updateFundPlan(id: string, input: {
         minimum_investment_range: input.minimum_investment_range || [],
         status: input.status || 'active',
         country: input.country || null,
+        description: input.description?.trim() || null,
         image_url: input.image_url || null,
         pdf_url: input.pdf_url || null,
       })

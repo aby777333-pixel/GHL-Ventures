@@ -29,6 +29,8 @@ import {
   submitInvestmentApplication,
   registerInterest,
   fetchInvestorPayouts,
+  fetchActiveFundPlans,
+  type ActiveFundPlan,
 } from '@/lib/supabase/dashboardDataService'
 import {
   useInvestmentApplications,
@@ -123,6 +125,55 @@ const FUNDS = [
   },
 ]
 
+// ── Admin-managed plans → fund-tab shape ───────────────────
+// Admin-configured investment plans (from fund_plans) are surfaced as
+// extra fund tabs alongside the two static routes above. Returns/amounts
+// are stored as free text in the admin form, so parse leniently and fall
+// back to safe defaults — never throw on a malformed value.
+function parseLeadingNumber(s?: string | null): number {
+  if (!s) return 0
+  const m = String(s).replace(/,/g, '').match(/-?\d+(\.\d+)?/)
+  return m ? parseFloat(m[0]) : 0
+}
+function parseMoney(s?: string | null): number {
+  if (!s) return 0
+  const digits = String(s).replace(/[^\d]/g, '')
+  return digits ? parseInt(digits, 10) : 0
+}
+function mapPlanToFund(p: ActiveFundPlan) {
+  const interest = parseLeadingNumber(p.yearly_return)
+  const capitalAppreciation = parseLeadingNumber(p.yearly_appreciation)
+  const minInvestment = p.minimum_investment_range.length ? parseMoney(p.minimum_investment_range[0]) : 0
+  const keyTerms = ([
+    p.tenure && { label: 'Tenure', value: p.tenure },
+    p.yearly_return && { label: 'Yearly Return', value: p.yearly_return },
+    p.yearly_appreciation && { label: 'Yearly Appreciation', value: p.yearly_appreciation },
+    p.yearly_tds && { label: 'Yearly TDS', value: p.yearly_tds },
+    p.tax && { label: 'Tax', value: p.tax },
+    p.capital_gain && { label: 'Capital Gain', value: p.capital_gain },
+    p.tds_of_tax && { label: 'TDS of Tax', value: p.tds_of_tax },
+    p.locking_period && { label: 'Locking Period', value: p.locking_period },
+    p.minimum_investment_range.length > 0 && { label: 'Minimum Investment', value: p.minimum_investment_range.join(', ') },
+  ].filter(Boolean)) as { label: string; value: string }[]
+  return {
+    id: `plan-${p.id}`,
+    name: p.fund_name,
+    fundType: p.fund_type_name || '',
+    focus: '',
+    minInvestment,
+    interest,
+    capitalAppreciation,
+    totalAssuredReturns: interest + capitalAppreciation,
+    tenure: p.tenure || '',
+    termsHref: p.pdf_url || '',
+    keyTerms,
+    strategy: p.investment_strategy || [],
+    documents: [] as string[],
+    security: [] as string[],
+    description: p.description || '',
+  }
+}
+
 // ── Props ──────────────────────────────────────────────────
 interface InvestmentFlowTabProps {
   theme: string
@@ -148,7 +199,25 @@ export default function InvestmentFlowTab({
 
   // Sub-tab state
   const [subTab, setSubTab] = useState<'funds' | 'invest' | 'history' | 'documents' | 'schedule'>('funds')
-  const [selectedFund, setSelectedFund] = useState(FUNDS[0])
+  // selectedFund is typed loosely because the two static routes and the
+  // admin-managed plans share the same shape but differ in inferred type.
+  const [selectedFund, setSelectedFund] = useState<any>(FUNDS[0])
+
+  // Admin-managed investment plans (fund_plans, status='active') surfaced as
+  // extra fund tabs next to the static routes. Read-only; failures degrade to
+  // just the two built-in routes so the page never breaks.
+  const [adminPlans, setAdminPlans] = useState<ReturnType<typeof mapPlanToFund>[]>([])
+  useEffect(() => {
+    let cancelled = false
+    ;(async () => {
+      try {
+        const rows = await fetchActiveFundPlans()
+        if (!cancelled) setAdminPlans(rows.map(mapPlanToFund))
+      } catch { if (!cancelled) setAdminPlans([]) }
+    })()
+    return () => { cancelled = true }
+  }, [])
+  const allFunds = useMemo(() => [...FUNDS, ...adminPlans], [adminPlans])
   const [investAmount, setInvestAmount] = useState(1000000)
   const [investTenure, setInvestTenure] = useState(3)
   const [selectedApp, setSelectedApp] = useState<any>(null)
@@ -580,7 +649,7 @@ export default function InvestmentFlowTab({
         <div className="space-y-4">
           {/* Fund selector */}
           <div className="flex flex-wrap gap-2">
-            {FUNDS.map(f => (
+            {allFunds.map(f => (
               <button key={f.id} onClick={() => setSelectedFund(f)}
                 className={`px-4 py-2 rounded-xl text-xs font-semibold transition-all ${selectedFund.id === f.id ? 'bg-brand-red/20 text-white border border-brand-red/30' : t('bg-white/[0.03] text-gray-500 border border-white/[0.06]','bg-gray-100 text-gray-600 border border-gray-200')}`}>
                 {f.name}
@@ -594,17 +663,23 @@ export default function InvestmentFlowTab({
                 the Invest screen via the bottom "Invest" CTA only. */}
             <div className="flex items-start justify-between mb-6">
               <h3 className={`text-lg font-bold ${t('text-white','text-gray-900')}`}>{selectedFund.name}</h3>
-              <div className="flex gap-2">
-                <a
-                  href={(selectedFund as any).termsHref || '/downloads/investing-and-payment-terms.pdf'}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="px-4 py-2 rounded-lg text-xs font-bold text-white bg-brand-red/80 hover:bg-brand-red flex items-center gap-1"
-                >
-                  <Download className="w-3 h-3" /> Download Terms
-                </a>
-              </div>
+              {(selectedFund as any).termsHref && (
+                <div className="flex gap-2">
+                  <a
+                    href={(selectedFund as any).termsHref}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="px-4 py-2 rounded-lg text-xs font-bold text-white bg-brand-red/80 hover:bg-brand-red flex items-center gap-1"
+                  >
+                    <Download className="w-3 h-3" /> Download Terms
+                  </a>
+                </div>
+              )}
             </div>
+
+            {(selectedFund as any).description && (
+              <p className={`text-sm leading-relaxed mb-6 whitespace-pre-wrap ${t('text-gray-400','text-gray-700')}`}>{(selectedFund as any).description}</p>
+            )}
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               {/* Left: Key terms table */}
@@ -614,7 +689,7 @@ export default function InvestmentFlowTab({
                     {[
                       { label: 'Fund Type', value: selectedFund.fundType },
                       { label: 'Focus', value: selectedFund.focus },
-                    ].map((r, i) => (
+                    ].filter(r => r.value).map((r, i) => (
                       <tr key={i} className={`border-b ${t('border-white/[0.06]','border-gray-200')}`}>
                         <td className={`py-3 pr-4 text-xs font-semibold ${t('text-gray-400','text-gray-600')}`}>{r.label}</td>
                         <td className={`py-3 text-xs ${t('text-gray-300','text-gray-800')}`}>{r.value}</td>
@@ -643,30 +718,36 @@ export default function InvestmentFlowTab({
 
               {/* Right: Strategy, Documents, Security */}
               <div className="space-y-4">
-                <div>
-                  <h4 className={`text-xs font-bold uppercase tracking-wider mb-2 ${t('text-gray-500','text-gray-600')}`}>Investment Strategy</h4>
-                  <ul className="space-y-1">
-                    {selectedFund.strategy.map((s, i) => (
-                      <li key={i} className={`text-xs leading-relaxed ${t('text-gray-400','text-gray-700')}`}>• {s}</li>
-                    ))}
-                  </ul>
-                </div>
-                <div>
-                  <h4 className={`text-xs font-bold uppercase tracking-wider mb-2 ${t('text-gray-500','text-gray-600')}`}>Documents Provided</h4>
-                  <ul className="space-y-1">
-                    {selectedFund.documents.map((doc, i) => (
-                      <li key={i} className={`text-xs ${t('text-gray-400','text-gray-700')}`}>• {doc}</li>
-                    ))}
-                  </ul>
-                </div>
-                <div>
-                  <h4 className={`text-xs font-bold uppercase tracking-wider mb-2 ${t('text-gray-500','text-gray-600')}`}>Security Structure</h4>
-                  <ul className="space-y-1">
-                    {selectedFund.security.map((s, i) => (
-                      <li key={i} className={`text-xs ${t('text-gray-400','text-gray-700')}`}>• {s}</li>
-                    ))}
-                  </ul>
-                </div>
+                {selectedFund.strategy.length > 0 && (
+                  <div>
+                    <h4 className={`text-xs font-bold uppercase tracking-wider mb-2 ${t('text-gray-500','text-gray-600')}`}>Investment Strategy</h4>
+                    <ul className="space-y-1">
+                      {selectedFund.strategy.map((s: string, i: number) => (
+                        <li key={i} className={`text-xs leading-relaxed ${t('text-gray-400','text-gray-700')}`}>• {s}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+                {selectedFund.documents.length > 0 && (
+                  <div>
+                    <h4 className={`text-xs font-bold uppercase tracking-wider mb-2 ${t('text-gray-500','text-gray-600')}`}>Documents Provided</h4>
+                    <ul className="space-y-1">
+                      {selectedFund.documents.map((doc: string, i: number) => (
+                        <li key={i} className={`text-xs ${t('text-gray-400','text-gray-700')}`}>• {doc}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+                {selectedFund.security.length > 0 && (
+                  <div>
+                    <h4 className={`text-xs font-bold uppercase tracking-wider mb-2 ${t('text-gray-500','text-gray-600')}`}>Security Structure</h4>
+                    <ul className="space-y-1">
+                      {selectedFund.security.map((s: string, i: number) => (
+                        <li key={i} className={`text-xs ${t('text-gray-400','text-gray-700')}`}>• {s}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
               </div>
             </div>
 

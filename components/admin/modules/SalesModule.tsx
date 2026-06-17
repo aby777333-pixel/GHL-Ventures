@@ -3528,6 +3528,7 @@ function InvestmentPlansTab({ showToast }: { showToast: (m: string, t?: 'success
     minimum_investment_range: [] as string[],
     status: 'active',
     country: '',
+    description: '',
     image_url: '' as string | null,
     pdf_url: '' as string | null,
   }), [])
@@ -3629,6 +3630,7 @@ function InvestmentPlansTab({ showToast }: { showToast: (m: string, t?: 'success
       minimum_investment_range: Array.isArray(row.minimum_investment_range) ? [...row.minimum_investment_range] : [],
       status: row.status || 'active',
       country: row.country || '',
+      description: row.description || '',
       image_url: row.image_url || null,
       pdf_url: row.pdf_url || null,
     })
@@ -3797,6 +3799,18 @@ function InvestmentPlansTab({ showToast }: { showToast: (m: string, t?: 'success
             </div>
           </div>
 
+          {/* Description (free text) */}
+          <div>
+            <label className="block text-[10px] uppercase tracking-wider text-gray-500 font-medium mb-1">Description</label>
+            <textarea
+              value={form.description}
+              onChange={e => setForm(p => ({ ...p, description: e.target.value }))}
+              placeholder="Optional overview shown to investors on the plan tab"
+              rows={4}
+              className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-brand-red/40 focus:ring-1 focus:ring-brand-red/20 resize-y"
+            />
+          </div>
+
           {/* Investment Strategy (list) */}
           <div>
             <label className="block text-[10px] uppercase tracking-wider text-gray-500 font-medium mb-1">Investment Strategy</label>
@@ -3926,6 +3940,12 @@ function InvestmentPlansTab({ showToast }: { showToast: (m: string, t?: 'success
               <Kv k="Status" v={viewing.status} />
               <Kv k="Country" v={viewing.country} />
             </div>
+            {viewing.description && (
+              <div>
+                <p className="text-[10px] uppercase tracking-wider text-gray-500 mb-1">Description</p>
+                <p className="text-[12px] text-gray-300 whitespace-pre-wrap">{viewing.description}</p>
+              </div>
+            )}
             {viewing.investment_strategy.length > 0 && (
               <div>
                 <p className="text-[10px] uppercase tracking-wider text-gray-500 mb-1">Investment Strategy</p>

@@ -1319,3 +1319,74 @@ export async function uploadClientDocument(doc: {
   if (error) { console.warn('[dashboard] Upload client doc error:', error.message); return null }
   return data
 }
+
+// ── Active investment plans (admin-managed) ───────────────────
+// Read-only view of admin-configured fund_plans for the investor
+// dashboard. Backed by the fund_plans_public_read RLS policy
+// (status='active' only). Bank details are intentionally NOT read
+// here — that table has no public-read policy and isn't needed for
+// the plan tab. Mirrors the admin fetchFundPlans mapping minus banks.
+export interface ActiveFundPlan {
+  id: string
+  fund_name: string
+  fund_type_name: string | null
+  tenure: string | null
+  yearly_return: string | null
+  yearly_appreciation: string | null
+  yearly_tds: string | null
+  tax: string | null
+  capital_gain: string | null
+  tds_of_tax: string | null
+  locking_period: string | null
+  investment_strategy: string[]
+  minimum_investment_range: string[]
+  country: string | null
+  description: string | null
+  pdf_url: string | null
+  image_url: string | null
+}
+
+export async function fetchActiveFundPlans(): Promise<ActiveFundPlan[]> {
+  if (!isSupabaseConfigured()) return []
+  try {
+    const { data: plans, error } = await sb
+      .from('fund_plans')
+      .select('*')
+      .eq('status', 'active')
+      .order('sort_order', { ascending: true })
+      .order('created_at', { ascending: false })
+    if (error) { console.warn('[dashboard] fetchActiveFundPlans:', error.message); return [] }
+    const rows = (plans as any[]) || []
+
+    // Resolve category names in one query (fund_categories has a public-read policy).
+    const typeIds = Array.from(new Set(rows.map(p => p.fund_type_id).filter(Boolean)))
+    const typeMap = new Map<string, string>()
+    if (typeIds.length > 0) {
+      const { data: types } = await sb.from('fund_categories').select('id, type').in('id', typeIds)
+      for (const tp of ((types as any[]) || [])) typeMap.set(tp.id, tp.type)
+    }
+
+    return rows.map(p => ({
+      id: p.id,
+      fund_name: p.fund_name,
+      fund_type_name: p.fund_type_id ? (typeMap.get(p.fund_type_id) || null) : null,
+      tenure: p.tenure ?? null,
+      yearly_return: p.yearly_return ?? null,
+      yearly_appreciation: p.yearly_appreciation ?? null,
+      yearly_tds: p.yearly_tds ?? null,
+      tax: p.tax ?? null,
+      capital_gain: p.capital_gain ?? null,
+      tds_of_tax: p.tds_of_tax ?? null,
+      locking_period: p.locking_period ?? null,
+      investment_strategy: Array.isArray(p.investment_strategy) ? p.investment_strategy : [],
+      minimum_investment_range: Array.isArray(p.minimum_investment_range) ? p.minimum_investment_range : [],
+      country: p.country ?? null,
+      description: p.description ?? null,
+      pdf_url: p.pdf_url ?? null,
+      image_url: p.image_url ?? null,
+    }))
+  } catch (e: any) {
+    console.warn('[dashboard] fetchActiveFundPlans error:', e?.message)
+    return []
+  }
+}
