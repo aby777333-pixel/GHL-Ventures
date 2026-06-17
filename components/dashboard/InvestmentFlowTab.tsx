@@ -677,10 +677,6 @@ export default function InvestmentFlowTab({
               )}
             </div>
 
-            {(selectedFund as any).description && (
-              <p className={`text-sm leading-relaxed mb-6 whitespace-pre-wrap ${t('text-gray-400','text-gray-700')}`}>{(selectedFund as any).description}</p>
-            )}
-
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               {/* Left: Key terms table */}
               <div>
@@ -716,8 +712,11 @@ export default function InvestmentFlowTab({
                 </table>
               </div>
 
-              {/* Right: Strategy, Documents, Security */}
+              {/* Right: Description (admin plans) + Strategy, Documents, Security */}
               <div className="space-y-4">
+                {(selectedFund as any).description && (
+                  <p className={`text-sm leading-relaxed whitespace-pre-wrap ${t('text-gray-400','text-gray-700')}`}>{(selectedFund as any).description}</p>
+                )}
                 {selectedFund.strategy.length > 0 && (
                   <div>
                     <h4 className={`text-xs font-bold uppercase tracking-wider mb-2 ${t('text-gray-500','text-gray-600')}`}>Investment Strategy</h4>
