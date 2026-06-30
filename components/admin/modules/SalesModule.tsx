@@ -2295,6 +2295,27 @@ function InvestmentsTab({ showToast, statusFilter }: { showToast: (m: string, t?
     finally { setDocUploading(false) }
   }
 
+  // Delete an uploaded investment document. Admin/super_admin only — the
+  // inv_docs_admin_all / inv_docs_admin_delete RLS policies gate this on
+  // profiles.role, so the client-side delete with the admin's JWT succeeds.
+  // Removing the row also clears it from the investor's view (they read the
+  // same investment_documents rows) and lets the matching Upload/Generate
+  // button reappear (those are filtered by whether a real file exists).
+  const handleDeleteInvestmentDoc = async (doc: any) => {
+    const label = doc.title || doc.document_type || 'this document'
+    if (!window.confirm(`Delete "${label}"? This removes it for the investor too and cannot be undone.`)) return
+    setDocUploading(true)
+    try {
+      const { supabase } = await import('@/lib/supabase/client')
+      const { error } = await (supabase as any).from('investment_documents').delete().eq('id', doc.id)
+      if (error) { showToast(`Failed to delete document: ${error.message}`, 'error'); return }
+      setAppDocs(prev => prev.filter((d: any) => d.id !== doc.id))
+      showToast('Document deleted', 'success')
+    } catch (e: any) {
+      showToast(`Failed to delete document: ${e?.message || 'unknown error'}`, 'error')
+    } finally { setDocUploading(false) }
+  }
+
   // Allotment Letter pre-generation form (2026-06-12): the admin reviews /
   // edits the letter's values per client BEFORE the print window opens.
   // Defaults mirror the exact derivations inside generateInvestmentDocument,
@@ -2598,6 +2619,16 @@ function InvestmentsTab({ showToast, statusFilter }: { showToast: (m: string, t?
                             </button>
                           </>
                         ) : null}
+                        {/* Delete an uploaded document (admin/super_admin only). */}
+                        <button
+                          onClick={() => handleDeleteInvestmentDoc(doc)}
+                          disabled={docUploading}
+                          className="flex items-center gap-1 px-2 py-1 rounded-md text-[10px] font-semibold text-red-300 bg-red-500/10 border border-red-500/25 hover:bg-red-500/20 transition-colors disabled:opacity-50"
+                          title="Delete this document (also removes it for the investor)"
+                        >
+                          <Trash2 className="w-3 h-3" />
+                          Delete
+                        </button>
                       </div>
                     </div>
                   ))}

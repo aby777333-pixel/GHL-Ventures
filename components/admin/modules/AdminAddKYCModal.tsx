@@ -27,6 +27,7 @@ import {
   upsertKYCDematDetails, addNominee, updateNominee, deleteNominee,
   submitKYCForReview,
 } from '@/lib/supabase/dashboardDataService'
+import { approveClientKYC } from '@/lib/supabase/adminDataService'
 import { uploadFile } from '@/lib/supabase/storageService'
 
 type StageId = 'basic' | 'identity' | 'bank' | 'demat' | 'nominee' | 'done'
@@ -74,6 +75,10 @@ export default function AdminAddKYCModal({ clientId, userId, initialName, initia
   const [saving, setSaving] = useState(false)
   const [uploading, setUploading] = useState(false)
   const [errors, setErrors] = useState<Record<string, string>>({})
+  // Admin can approve the KYC right after completing it on the client's
+  // behalf (instead of only submitting it for review). Tracks that flow.
+  const [approving, setApproving] = useState(false)
+  const [approved, setApproved] = useState(false)
 
   // ── Stage 1: Basic ──────────────────────────────────────────
   const [basic, setBasic] = useState({
@@ -340,20 +345,35 @@ export default function AdminAddKYCModal({ clientId, userId, initialName, initia
     else showToast('Failed to remove nominee', 'error')
   }
 
-  const submitKYC = async () => {
+  const submitKYC = async (alsoApprove = false) => {
     if (nominees.length === 0) { showToast('Add at least one nominee first', 'warning'); return }
     const totalPct = nominees.reduce((s, n) => s + (Number(n.percentage) || 0), 0)
     if (Math.abs(totalPct - 100) > 0.01) { showToast(`Nominee percentages must total 100% (currently ${totalPct}%)`, 'warning'); return }
     setSaving(true)
     const ok = await submitKYCForReview(clientId)
-    setSaving(false)
-    if (ok) {
-      showToast('KYC submitted for review', 'success')
-      setActiveStage('done')
-      onComplete?.()
-    } else {
-      showToast('Failed to submit KYC', 'error')
+    if (!ok) { setSaving(false); showToast('Failed to submit KYC', 'error'); return }
+    showToast('KYC submitted for review', 'success')
+    // Admin completing KYC on the client's behalf can approve it in the same
+    // step. Approval keys on client_id and tolerates a null user_id (the
+    // notify step is guarded), so it works for clients with no auth account.
+    if (alsoApprove) {
+      const okApprove = await approveClientKYC(clientId, 'admin')
+      if (okApprove) { setApproved(true); showToast('KYC approved', 'success') }
+      else showToast('KYC submitted, but approval failed — approve it from the KYC Queue.', 'warning')
     }
+    setSaving(false)
+    setActiveStage('done')
+    onComplete?.()
+  }
+
+  // Approve from the "done" screen when the admin first submitted for review
+  // and then decides to approve.
+  const approveNow = async () => {
+    setApproving(true)
+    const ok = await approveClientKYC(clientId, 'admin')
+    setApproving(false)
+    if (ok) { setApproved(true); showToast('KYC approved', 'success'); onComplete?.() }
+    else showToast('Failed to approve KYC', 'error')
   }
 
   const renderFileUpload = (label: string, currentUrl: string, setter: (url: string) => void, errorKey?: string, idSuffix?: string) => (
@@ -383,8 +403,22 @@ export default function AdminAddKYCModal({ clientId, userId, initialName, initia
             <CheckCircle className="w-7 h-7 text-emerald-400" />
           </div>
         </div>
-        <h3 className="text-lg font-semibold text-white mb-1">KYC submitted</h3>
-        <p className="text-xs text-gray-400">The client&apos;s KYC is now under review. You can close this dialog.</p>
+        {approved ? (
+          <>
+            <h3 className="text-lg font-semibold text-white mb-1">KYC approved</h3>
+            <p className="text-xs text-gray-400">The client&apos;s KYC has been approved and verified. You can close this dialog.</p>
+          </>
+        ) : (
+          <>
+            <h3 className="text-lg font-semibold text-white mb-1">KYC submitted</h3>
+            <p className="text-xs text-gray-400 mb-5">The client&apos;s KYC is now under review.</p>
+            <button type="button" onClick={approveNow} disabled={approving} className={btnPrimary + ' mx-auto'}>
+              {approving ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle className="w-4 h-4" />}
+              Approve KYC now
+            </button>
+            <p className="text-[11px] text-gray-500 mt-2">Or leave it for review and approve later from the KYC Queue.</p>
+          </>
+        )}
       </div>
     )
   }
@@ -720,11 +754,16 @@ export default function AdminAddKYCModal({ clientId, userId, initialName, initia
             </div>
           </div>
 
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between gap-2">
             <button type="button" onClick={() => setActiveStage('demat')} className={btnOutline}><ChevronLeft className="w-4 h-4" /> Back</button>
-            <button type="button" onClick={submitKYC} disabled={saving || nominees.length === 0} className={btnPrimary}>
-              {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle className="w-4 h-4" />} Submit KYC
-            </button>
+            <div className="flex items-center gap-2">
+              <button type="button" onClick={() => submitKYC(false)} disabled={saving || nominees.length === 0} className={btnOutline}>
+                {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle className="w-4 h-4" />} Submit for Review
+              </button>
+              <button type="button" onClick={() => submitKYC(true)} disabled={saving || nominees.length === 0} className={btnPrimary}>
+                {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle className="w-4 h-4" />} Submit &amp; Approve
+              </button>
+            </div>
           </div>
         </div>
       )}
