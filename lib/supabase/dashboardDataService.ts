@@ -256,9 +256,9 @@ export async function fetchKYCBasicDetails(clientId?: string) {
   return safeFetch(() => sb.from('kyc_basic_details').select('*').eq('client_id', clientId).maybeSingle(), null, 'fetchKYCBasic')
 }
 
-export async function upsertKYCBasicDetails(clientId: string, userId: string, data: Record<string, any>) {
+export async function upsertKYCBasicDetails(clientId: string, userId: string | null, data: Record<string, any>) {
   if (!isSupabaseConfigured()) return null
-  const row = { ...data, client_id: clientId, user_id: userId, status: 'submitted' }
+  const row = { ...data, client_id: clientId, user_id: userId || null, status: 'submitted' }
   const { data: result, error } = await sb.from('kyc_basic_details').upsert(row, { onConflict: 'client_id' }).select().single()
   if (error) { console.warn('[kyc] upsert basic error:', error.message); return null }
   await sb.from('clients').update({ kyc_step: Math.max(1, data.kyc_step || 1) }).eq('id', clientId)
@@ -270,9 +270,9 @@ export async function fetchKYCIdentityDetails(clientId?: string) {
   return safeFetch(() => sb.from('kyc_identity_details').select('*').eq('client_id', clientId).maybeSingle(), null, 'fetchKYCIdentity')
 }
 
-export async function upsertKYCIdentityDetails(clientId: string, userId: string, data: Record<string, any>) {
+export async function upsertKYCIdentityDetails(clientId: string, userId: string | null, data: Record<string, any>) {
   if (!isSupabaseConfigured()) return null
-  const row = { ...data, client_id: clientId, user_id: userId, status: 'submitted' }
+  const row = { ...data, client_id: clientId, user_id: userId || null, status: 'submitted' }
   const { data: result, error } = await sb.from('kyc_identity_details').upsert(row, { onConflict: 'client_id' }).select().single()
   if (error) { console.warn('[kyc] upsert identity error:', error.message); return null }
   try { await sb.from('clients').update({ kyc_step: Math.max(2, data.kyc_step || 2) }).eq('id', clientId) } catch (e) { console.warn('[kyc] kyc_step update non-fatal:', (e as any)?.message) }
@@ -284,9 +284,9 @@ export async function fetchKYCBankDetails(clientId?: string) {
   return safeFetch(() => sb.from('kyc_bank_details').select('*').eq('client_id', clientId).maybeSingle(), null, 'fetchKYCBank')
 }
 
-export async function upsertKYCBankDetails(clientId: string, userId: string, data: Record<string, any>) {
+export async function upsertKYCBankDetails(clientId: string, userId: string | null, data: Record<string, any>) {
   if (!isSupabaseConfigured()) return null
-  const row = { ...data, client_id: clientId, user_id: userId, status: 'submitted' }
+  const row = { ...data, client_id: clientId, user_id: userId || null, status: 'submitted' }
   const { data: result, error } = await sb.from('kyc_bank_details').upsert(row, { onConflict: 'client_id' }).select().single()
   if (error) { console.warn('[kyc] upsert bank error:', error.message); return null }
   // Bug #5: The bank row saved successfully above. Don't let a kyc_step update
@@ -300,9 +300,9 @@ export async function fetchKYCDematDetails(clientId?: string) {
   return safeFetch(() => sb.from('kyc_demat_details').select('*').eq('client_id', clientId).maybeSingle(), null, 'fetchKYCDemat')
 }
 
-export async function upsertKYCDematDetails(clientId: string, userId: string, data: Record<string, any>) {
+export async function upsertKYCDematDetails(clientId: string, userId: string | null, data: Record<string, any>) {
   if (!isSupabaseConfigured()) return null
-  const row = { ...data, client_id: clientId, user_id: userId, status: data.skipped ? 'skipped' : 'submitted' }
+  const row = { ...data, client_id: clientId, user_id: userId || null, status: data.skipped ? 'skipped' : 'submitted' }
   const { data: result, error } = await sb.from('kyc_demat_details').upsert(row, { onConflict: 'client_id' }).select().single()
   if (error) { console.warn('[kyc] upsert demat error:', error.message); return null }
   try { await sb.from('clients').update({ kyc_step: Math.max(4, data.kyc_step || 4) }).eq('id', clientId) } catch (e) { console.warn('[kyc] kyc_step update non-fatal:', (e as any)?.message) }
@@ -314,9 +314,9 @@ export async function fetchNominees(clientId?: string) {
   return safeFetch(() => sb.from('nominees').select('*').eq('client_id', clientId).eq('status', 'active').order('created_at'), [], 'fetchNominees')
 }
 
-export async function addNominee(clientId: string, userId: string, data: Record<string, any>) {
+export async function addNominee(clientId: string, userId: string | null, data: Record<string, any>) {
   if (!isSupabaseConfigured()) return null
-  const row = { ...data, client_id: clientId, user_id: userId, status: 'active' }
+  const row = { ...data, client_id: clientId, user_id: userId || null, status: 'active' }
   const { data: result, error } = await sb.from('nominees').insert(row).select().single()
   if (error) { console.warn('[kyc] add nominee error:', error.message); return null }
   return result

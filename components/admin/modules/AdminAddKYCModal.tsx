@@ -58,7 +58,10 @@ function isValidDOB(dateStr: string): boolean {
 
 interface Props {
   clientId: string
-  userId: string
+  // May be null for leads/imported clients with no auth account yet. KYC is
+  // keyed on client_id and written via the role-gated admin_insert_kyc_*
+  // policies, so a null user_id is valid (the column is nullable).
+  userId: string | null
   initialName?: string
   initialEmail?: string
   initialPhone?: string

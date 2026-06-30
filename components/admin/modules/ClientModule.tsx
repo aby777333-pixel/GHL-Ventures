@@ -58,7 +58,10 @@ export default function ClientModule({ subTab, navigate, showToast }: ClientModu
   const [clientForm, setClientForm] = useState({ full_name: '', email: '', phone: '', pan: '', risk_profile: 'moderate', assigned_rm: '', total_invested: '', referred_by: '', joined_at: '' })
   // Add KYC on behalf of an existing client created without KYC.
   // addKYCTarget holds the client + resolved user_id (looked up on open).
-  const [addKYCTarget, setAddKYCTarget] = useState<{ client: Client; userId: string } | null>(null)
+  // userId may be null for leads/imported clients who have no auth account
+  // yet — KYC is keyed on client_id and the admin_insert_kyc_* RLS policies
+  // are role-gated, so the admin can still complete KYC in that case.
+  const [addKYCTarget, setAddKYCTarget] = useState<{ client: Client; userId: string | null } | null>(null)
   const [resolvingKYCTarget, setResolvingKYCTarget] = useState(false)
 
   const [clients, setClients] = useState<any[]>([])
@@ -293,15 +296,24 @@ export default function ClientModule({ subTab, navigate, showToast }: ClientModu
           .rpc('admin_resolve_client_user', { p_client_id: client.id })
         if (!rpcErr && resolved) userId = resolved as string
       }
+      // No auth account linked yet (e.g. a lead / imported client who never
+      // registered, so no auth.users row exists for their email). Previously
+      // this aborted with "Could not locate the auth user", blocking the
+      // admin entirely. KYC rows are keyed on client_id and the
+      // admin_insert_kyc_* / admin_update_kyc_* RLS policies are role-gated
+      // (they do NOT require the client's auth.uid), and kyc_*.user_id is
+      // nullable — so the admin can still complete KYC on the client's
+      // behalf. We save the rows with a null user_id; the client's dashboard
+      // reads KYC by client_id, so it stays visible to them once they get a
+      // login (admin can provision one via the key / reset icon).
       if (!userId) {
-        showToast('Could not locate the auth user for this client. Ask them to log in once, or contact support.', 'error')
-        return
+        showToast('No login account is linked to this client yet — saving KYC to the client record. Use the key icon to create their login when ready.', 'info')
       }
       // Close the profile modal first to avoid stacked-modal backdrop issues,
       // then open the KYC modal on the next tick.
       setProfileModalOpen(false)
       setSelectedClient(null)
-      setTimeout(() => setAddKYCTarget({ client, userId: userId as string }), 60)
+      setTimeout(() => setAddKYCTarget({ client, userId }), 60)
     } finally {
       setResolvingKYCTarget(false)
     }
