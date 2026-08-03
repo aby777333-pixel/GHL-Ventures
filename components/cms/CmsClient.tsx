@@ -58,6 +58,18 @@ export default function CmsClient({ subTab }: { subTab?: string | null }) {
     return () => { alive = false }
   }, [])
 
+  /* Portal shells mark the body so globals.css can opt them out of the
+     marketing-site text rules — AdminShell/StaffClient/DashboardShell all
+     do this. Without it, the rule
+       [class*="bg-[#0"] [class*="text-gray-"] { color: rgba(255,255,255,.78) !important }
+     painted the editor's body text white on its white page, so saved
+     articles looked empty. Reusing 'admin-active' rather than inventing a
+     new class means every existing exclusion selector already covers us. */
+  useEffect(() => {
+    document.body.classList.add('admin-active')
+    return () => { document.body.classList.remove('admin-active') }
+  }, [])
+
   const showToast = useCallback((msg: string, type: Toast['type'] = 'info') => {
     const id = Date.now() + Math.floor(Math.random() * 1000)
     setToasts((t) => [...t, { id, msg, type }])

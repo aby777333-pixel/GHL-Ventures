@@ -230,7 +230,13 @@ export default function RichTextEditor({
           onBlur={emit}
           data-placeholder={placeholder}
           style={{ minHeight }}
-          className="cms-editor article-body w-full p-5 bg-white text-gray-800 focus:outline-none overflow-y-auto"
+          /* Deliberately NO `text-gray-*` utility here. globals.css has
+             `[class*="bg-[#0"] [class*="text-gray-"] { color: rgba(255,255,255,.78) !important }`
+             for the marketing site, and this white editing surface sits
+             inside the console's `bg-[#0B090A]` shell — so a text-gray class
+             made the author's own text white-on-white. The colour comes from
+             `.cms-editor` in blog.css instead, which that selector cannot match. */
+          className="cms-editor article-body w-full p-5 bg-white focus:outline-none overflow-y-auto"
         />
       )}
 

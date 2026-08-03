@@ -200,10 +200,48 @@
    two the browser decides to apply.
    ──────────────────────────────────────────────────────────── */
 select.cms-select option {
-  background-color: #FFFFFF;
-  color: #111827;
+  background-color: #FFFFFF !important;
+  color: #111827 !important;
+  /* Chrome/WebKit paint option text via -webkit-text-fill-color when it is
+     set anywhere up the tree, so `color` alone is not enough. */
+  -webkit-text-fill-color: #111827 !important;
 }
-select.cms-select option:checked {
-  background-color: #BA181B;
-  color: #FFFFFF;
+select.cms-select option:checked,
+select.cms-select option:hover {
+  background-color: #BA181B !important;
+  color: #FFFFFF !important;
+  -webkit-text-fill-color: #FFFFFF !important;
+}
+
+/* ── Editor surface ──────────────────────────────────────────
+   The contentEditable is a white page sitting inside the dark console.
+   globals.css force-whitens `text-gray-*` inside dark containers, which
+   made saved article text invisible. The body class set by CmsClient /
+   AdminShell excludes us from that rule; these declarations are the
+   belt-and-braces so the writing surface is never unreadable.
+   ──────────────────────────────────────────────────────────── */
+.cms-editor.article-body,
+.dark .cms-editor.article-body,
+.cms-editor.article-body p,
+.cms-editor.article-body li,
+.cms-editor.article-body td,
+.cms-editor.article-body span,
+.cms-editor.article-body div {
+  color: #374151 !important;
+  -webkit-text-fill-color: #374151 !important;
+}
+.cms-editor.article-body h1, .cms-editor.article-body h2,
+.cms-editor.article-body h3, .cms-editor.article-body h4,
+.cms-editor.article-body h5, .cms-editor.article-body h6,
+.cms-editor.article-body strong, .cms-editor.article-body b {
+  color: #111827 !important;
+  -webkit-text-fill-color: #111827 !important;
+}
+.cms-editor.article-body a {
+  color: #BA181B !important;
+  -webkit-text-fill-color: #BA181B !important;
+}
+.cms-editor.article-body th {
+  color: #FFFFFF !important;
+  -webkit-text-fill-color: #FFFFFF !important;
 }
