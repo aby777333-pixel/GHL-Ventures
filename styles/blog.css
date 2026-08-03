@@ -264,3 +264,19 @@ select.cms-select option:hover {
   -webkit-text-fill-color: rgba(255, 255, 255, 0.45) !important;
 }
 .newsletter-card button[type="submit"] { color: #FFFFFF !important; }
+
+/* ── Date/time inputs in the CMS ─────────────────────────────
+   `color-scheme: dark` tells the browser to render its built-in widgets
+   (the calendar picker icon and the picker panel itself) for a dark
+   surface. Without it Chrome draws a near-black icon on our near-black
+   field, which was effectively invisible.
+   ──────────────────────────────────────────────────────────── */
+.cms-datetime {
+  color-scheme: dark;
+}
+.cms-datetime::-webkit-calendar-picker-indicator {
+  filter: invert(1) brightness(1.6);
+  opacity: 0.85;
+  cursor: pointer;
+}
+.cms-datetime::-webkit-calendar-picker-indicator:hover { opacity: 1; }

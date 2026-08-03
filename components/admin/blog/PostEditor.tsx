@@ -26,7 +26,7 @@ import CmsSelect from './CmsSelect'
 import {
   createPost, updatePost, setPostStatus, trashPost, autosavePost, clearAutosave,
   listRevisions, restoreRevision, suggestInternalLinks, slugify, estimateReadTime,
-  duplicatePost, listCategoriesAdmin, listAuthorsAdmin,
+  duplicatePost, listCategoriesAdmin, listAuthorsAdmin, getPostById,
 } from '@/lib/blog/adminService'
 import type { CmsPost, CmsCategory, CmsAuthor } from '@/lib/blog/cmsService'
 
@@ -177,6 +177,38 @@ export default function PostEditor({ postId, onBack, onSaved, showToast, initial
     }, 20_000)
     return () => { if (autosaveTimer.current) clearTimeout(autosaveTimer.current) }
   }, [id, dirty, form.content])
+
+  /* pg_cron publishes due posts within a minute, but an editor left open
+     kept showing "Scheduled" long after the article had gone live, because
+     nothing re-read the row. Watch for the moment it is due and refresh just
+     the status fields — never the whole form, so unsaved typing is safe. */
+  useEffect(() => {
+    if (!id || form.status !== 'scheduled' || !form.scheduled_at) return
+    const dueAt = new Date(form.scheduled_at).getTime()
+    if (Number.isNaN(dueAt)) return
+
+    let cancelled = false
+    const check = async () => {
+      if (cancelled || Date.now() < dueAt) return
+      const fresh = await getPostById(id)
+      if (cancelled || !fresh || fresh.status === 'scheduled') return
+      setForm((f) => ({
+        ...f,
+        status: fresh.status,
+        published: fresh.published,
+        published_at: fresh.published_at,
+        scheduled_at: fresh.scheduled_at,
+      }))
+      showToast('This article has gone live as scheduled.', 'success')
+    }
+
+    // fire shortly after the due moment, then keep checking in case the
+    // cron run is a few seconds behind
+    const firstDelay = Math.max(2000, dueAt - Date.now() + 5000)
+    const timer = setTimeout(check, firstDelay)
+    const poll = setInterval(check, 30_000)
+    return () => { cancelled = true; clearTimeout(timer); clearInterval(poll) }
+  }, [id, form.status, form.scheduled_at, showToast])
 
   const set = useCallback(<K extends keyof CmsPost>(key: K, value: any) => {
     setForm((f) => ({ ...f, [key]: value }))
@@ -590,7 +622,10 @@ export default function PostEditor({ postId, onBack, onSaved, showToast, initial
                 type="datetime-local"
                 value={scheduleAt}
                 onChange={(e) => setScheduleAt(e.target.value)}
-                className={inputCls}
+                /* `cms-datetime` sets color-scheme:dark so the browser draws
+                   its built-in calendar icon light instead of near-black on
+                   this dark field, where it was effectively invisible. */
+                className={`${inputCls} cms-datetime`}
               />
               <button
                 type="button"
