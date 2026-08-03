@@ -41,6 +41,7 @@ export const ROLE_PERMISSIONS: Record<AdminRole, Permission[]> = {
     'view:allotments', 'create:allotments', 'edit:allotments', 'export:allotments',
     'view:payouts', 'create:payouts', 'edit:payouts', 'export:payouts',
     'view:content', 'create:content', 'edit:content', 'delete:content',
+    'view:blog', 'create:blog', 'edit:blog', 'delete:blog', 'export:blog', 'configure:blog',
   ],
 
   'compliance-officer': [
@@ -55,6 +56,7 @@ export const ROLE_PERMISSIONS: Record<AdminRole, Permission[]> = {
     'view:reports', 'export:reports',
     'view:allotments', 'view:payouts', 'export:payouts',
     'view:content',
+    'view:blog',
   ],
 
   'fund-manager': [
@@ -92,6 +94,8 @@ export const ROLE_PERMISSIONS: Record<AdminRole, Permission[]> = {
     'view:ai-ops', 'create:ai-ops',
     'view:realty-brokers',
     'view:reports', 'create:reports', 'export:reports',
+    // Owns the blog end-to-end, including deleting and configuring it.
+    'view:blog', 'create:blog', 'edit:blog', 'delete:blog', 'export:blog', 'configure:blog',
   ],
 
   'marketing-executive': [
@@ -101,6 +105,8 @@ export const ROLE_PERMISSIONS: Record<AdminRole, Permission[]> = {
     'view:analytics',
     'view:comms',
     'view:ai-ops', 'create:ai-ops',
+    // Can write and edit articles but not delete them or change CMS settings.
+    'view:blog', 'create:blog', 'edit:blog',
   ],
 
   'sales': [
@@ -173,7 +179,7 @@ export function getVisibleModules(role: AdminRole): PermissionModule[] {
   const all: PermissionModule[] = [
     'overview', 'clients', 'sales', 'realty-brokers', 'employees', 'assets',
     'ai-ops', 'compliance', 'financial', 'analytics', 'comms', 'marketing', 'reports', 'settings',
-    'allotments', 'payouts', 'content', 'user-passwords',
+    'allotments', 'payouts', 'content', 'blog', 'user-passwords',
   ]
   return all.filter(mod => hasModuleAccess(role, mod))
 }

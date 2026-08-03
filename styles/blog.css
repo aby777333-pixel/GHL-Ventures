@@ -1,0 +1,190 @@
+/* ============================================================
+   GHL India Ventures — Editorial / blog typography
+   Scoped to .article-body so it cannot leak into any existing
+   page. The project has no @tailwindcss/typography plugin, so
+   rendered CMS HTML is styled here by hand, to a standard
+   suited to an institutional investment publication.
+   ============================================================ */
+
+.article-body {
+  color: var(--text-body, #374151);
+  font-size: 1.0625rem;
+  line-height: 1.8;
+  letter-spacing: -0.003em;
+}
+
+@media (min-width: 768px) {
+  .article-body { font-size: 1.125rem; line-height: 1.85; }
+}
+
+/* ----- headings ----- */
+.article-body h1,
+.article-body h2,
+.article-body h3,
+.article-body h4,
+.article-body h5,
+.article-body h6 {
+  color: var(--text-heading, #111827);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.25;
+  scroll-margin-top: 7rem;
+}
+.article-body h2 {
+  font-size: 1.65rem;
+  margin: 2.75rem 0 1rem;
+  padding-bottom: 0.6rem;
+  border-bottom: 1px solid var(--color-grey-soft, #D3D3D3);
+}
+.article-body h3 { font-size: 1.3rem;   margin: 2.25rem 0 0.75rem; }
+.article-body h4 { font-size: 1.1rem;   margin: 1.75rem 0 0.6rem; }
+.article-body h5,
+.article-body h6 { font-size: 1rem; margin: 1.5rem 0 0.5rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-muted, #6B7280); }
+
+@media (min-width: 768px) {
+  .article-body h2 { font-size: 1.9rem; }
+  .article-body h3 { font-size: 1.45rem; }
+}
+
+/* ----- text ----- */
+.article-body p { margin: 0 0 1.35rem; }
+.article-body strong, .article-body b { color: var(--text-heading, #111827); font-weight: 650; }
+.article-body em { font-style: italic; }
+.article-body a {
+  color: var(--color-red, #BA181B);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  text-decoration-thickness: 1px;
+  transition: color .15s ease;
+}
+.article-body a:hover { color: var(--color-red-dark, #660708); }
+
+/* ----- lists ----- */
+.article-body ul,
+.article-body ol { margin: 0 0 1.35rem; padding-left: 1.35rem; }
+.article-body ul { list-style: disc; }
+.article-body ol { list-style: decimal; }
+.article-body li { margin-bottom: 0.5rem; padding-left: 0.25rem; }
+.article-body li::marker { color: var(--color-red, #BA181B); }
+.article-body ul ul, .article-body ol ol,
+.article-body ul ol, .article-body ol ul { margin: 0.5rem 0 0.5rem; }
+
+/* ----- quotes ----- */
+.article-body blockquote {
+  margin: 2rem 0;
+  padding: 1.1rem 1.5rem;
+  border-left: 3px solid var(--color-red, #BA181B);
+  background: var(--color-offwhite, #F5F3F4);
+  border-radius: 0 0.6rem 0.6rem 0;
+  color: var(--text-heading, #111827);
+  font-size: 1.075rem;
+  font-style: italic;
+}
+.article-body blockquote p:last-child { margin-bottom: 0; }
+
+/* ----- tables ----- */
+.article-body .table-scroll { overflow-x: auto; margin: 1.75rem 0; }
+.article-body table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.95rem;
+  min-width: 32rem;
+}
+.article-body thead { background: var(--color-black, #0B090A); }
+.article-body th {
+  color: #fff;
+  text-align: left;
+  font-weight: 600;
+  padding: 0.7rem 0.9rem;
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  white-space: nowrap;
+}
+.article-body td {
+  padding: 0.7rem 0.9rem;
+  border-bottom: 1px solid var(--color-grey-soft, #D3D3D3);
+  vertical-align: top;
+}
+.article-body tbody tr:nth-child(even) { background: var(--color-offwhite, #F5F3F4); }
+
+/* ----- media ----- */
+.article-body img,
+.article-body video,
+.article-body iframe {
+  max-width: 100%;
+  height: auto;
+  border-radius: 0.75rem;
+  margin: 1.75rem 0;
+  display: block;
+}
+.article-body iframe { width: 100%; aspect-ratio: 16 / 9; height: auto; border: 0; }
+.article-body figure { margin: 1.75rem 0; }
+.article-body figure img { margin: 0; }
+.article-body figcaption {
+  margin-top: 0.6rem;
+  font-size: 0.85rem;
+  color: var(--text-muted, #6B7280);
+  text-align: center;
+}
+
+/* ----- code ----- */
+.article-body code {
+  background: var(--color-offwhite, #F5F3F4);
+  border: 1px solid var(--color-grey-soft, #D3D3D3);
+  border-radius: 0.3rem;
+  padding: 0.1rem 0.35rem;
+  font-size: 0.9em;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+.article-body pre {
+  background: var(--color-black, #0B090A);
+  color: #E5E7EB;
+  padding: 1rem 1.15rem;
+  border-radius: 0.75rem;
+  overflow-x: auto;
+  margin: 1.75rem 0;
+  font-size: 0.9rem;
+}
+.article-body pre code { background: none; border: 0; padding: 0; color: inherit; }
+
+/* ----- rules & buttons ----- */
+.article-body hr {
+  border: 0;
+  height: 1px;
+  background: var(--section-divider, linear-gradient(90deg, transparent, #BA181B, transparent));
+  margin: 2.5rem 0;
+}
+.article-body .btn,
+.article-body a.button {
+  display: inline-block;
+  background: var(--color-red, #BA181B);
+  color: #fff !important;
+  padding: 0.7rem 1.4rem;
+  border-radius: 0.75rem;
+  font-weight: 600;
+  text-decoration: none;
+  transition: background .15s ease;
+}
+.article-body .btn:hover,
+.article-body a.button:hover { background: var(--color-red-dark, #660708); }
+
+/* Quill alignment classes (the CMS editor emits these) */
+.article-body .ql-align-center { text-align: center; }
+.article-body .ql-align-right  { text-align: right; }
+.article-body .ql-align-justify{ text-align: justify; }
+
+/* ----- reading-progress bar ----- */
+.blog-progress {
+  position: fixed;
+  top: 0; left: 0;
+  height: 3px;
+  background: linear-gradient(90deg, var(--color-red, #BA181B), var(--color-red-light, #E5383B));
+  z-index: 60;
+  transition: width .1s linear;
+  pointer-events: none;
+}
+
+/* ----- line clamps used by the cards ----- */
+.blog-clamp-2 { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.blog-clamp-3 { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }

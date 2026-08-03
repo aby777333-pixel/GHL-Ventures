@@ -1,194 +1,119 @@
 'use client'
 
+/* ─────────────────────────────────────────────────────────────
+   Blog landing page — fully CMS-driven.
+
+   Every article, category and featured slot is read live from the
+   central CMS, so anything published in the admin panel appears
+   here immediately — on ghlindiaventures.com/blog/ and on
+   blog.ghlindiaventures.com, which now serves from this same app.
+
+   The hero photo treatment, brand chips and section rhythm are
+   carried over from the pre-CMS page so the visual identity is
+   unchanged. If the CMS is unreachable the page falls back to the
+   legacy BLOG_POSTS constant and can never render empty.
+   ───────────────────────────────────────────────────────────── */
+
+import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
-import Image from 'next/image'
 import AnimatedSection from '@/components/AnimatedSection'
-import PlaceholderImage from '@/components/PlaceholderImage'
-import { BLOG_POSTS, FUND_ARTICLES } from '@/lib/constants'
+import PostCard from '@/components/blog/PostCard'
+import NewsletterSignup from '@/components/blog/NewsletterSignup'
+import { BLOG_POSTS } from '@/lib/constants'
 import {
-  BarChart3,
-  Clock,
-  Calendar,
-  ArrowRight,
-  Search,
-  BookOpen,
-  TrendingUp,
-  Building2,
-  Lightbulb,
-  GraduationCap,
-  Newspaper,
-  Mail,
-  User,
+  getPublishedPosts, getCategories, getFeaturedPost, getEditorsPicks,
+  getPopularPosts, POSTS_PER_PAGE, readTimeLabel,
+  type CmsPost, type CmsCategory,
+} from '@/lib/blog/cmsService'
+import {
+  Search, BookOpen, TrendingUp, Clock, ArrowRight,
+  FileText, Archive, Flame, Bookmark, Tag as TagIcon, Rss,
 } from 'lucide-react'
-import { useState, useEffect } from 'react'
-import { supabase as _sb, isSupabaseConfigured } from '@/lib/supabase/client'
 
-const sb = _sb as any
-
-// Static posts from constants
-const staticPosts = [
-  ...BLOG_POSTS.map((p) => ({
-    ...p,
-    author: 'GHL Research Team',
-    linkPrefix: '/blog' as const,
-    coverImage: '',
-    source: 'static' as const,
-  })),
-  ...FUND_ARTICLES.map((a) => ({
-    ...a,
-    image: '/blog/default.jpg',
-    author: 'GHL Editorial',
-    linkPrefix: '/fund' as const,
-    coverImage: '',
-    source: 'static' as const,
-  })),
-]
-
-const CATEGORIES = [
-  'All',
-  'Real Estate',
-  'Startups',
-  'Market Analysis',
-  'Investor Education',
-  'Fund News',
-  'Tax & Compliance',
-] as const
-
-const categoryIcons: Record<string, React.ElementType> = {
-  'Real Estate': Building2,
-  Startups: Lightbulb,
-  'Market Analysis': TrendingUp,
-  'Investor Education': GraduationCap,
-  'Fund News': Newspaper,
-}
-
-function getCategoryForPost(post: any): string {
-  const cat = post.category.toLowerCase()
-  if (cat.includes('education') || cat.includes('basics') || cat.includes('fundamentals') || cat.includes('strategy'))
-    return 'Investor Education'
-  if (cat.includes('market') || cat.includes('insights') || cat.includes('esg') || cat.includes('risk'))
-    return 'Market Analysis'
-  if (
-    cat.includes('fintech') ||
-    cat.includes('technology') ||
-    cat.includes('ecosystem') ||
-    cat.includes('sector')
-  )
-    return 'Startups'
-  if (cat.includes('regulation') || cat.includes('fund'))
-    return 'Fund News'
-  if (cat.includes('green') || cat.includes('real estate'))
-    return 'Real Estate'
-  return 'Market Analysis'
-}
-
-function getCardIcon(mappedCategory: string) {
-  return categoryIcons[mappedCategory] || BarChart3
-}
-
-function getCardGradient(mappedCategory: string): string {
-  switch (mappedCategory) {
-    case 'Real Estate':
-      return 'from-amber-500/15 to-orange-500/10'
-    case 'Startups':
-      return 'from-violet-500/15 to-purple-500/10'
-    case 'Market Analysis':
-      return 'from-blue-500/15 to-cyan-500/10'
-    case 'Investor Education':
-      return 'from-emerald-500/15 to-green-500/10'
-    case 'Fund News':
-      return 'from-brand-red/15 to-rose-500/10'
-    default:
-      return 'from-brand-red/10 to-brand-red/5'
-  }
-}
-
-function getPlaceholderTheme(mappedCategory: string): string {
-  switch (mappedCategory) {
-    case 'Real Estate':
-      return 'real-estate'
-    case 'Startups':
-      return 'startup'
-    case 'Market Analysis':
-      return 'analytics'
-    case 'Investor Education':
-      return 'education'
-    case 'Fund News':
-      return 'fund'
-    default:
-      return 'finance'
-  }
-}
+/** Fallback built from the legacy constant — used only when the CMS
+ *  cannot be reached, so the route is never blank. */
+const FALLBACK: CmsPost[] = (BLOG_POSTS as readonly any[]).map((p, i) => ({
+  id: `fallback-${i}`, slug: p.slug, title: p.title, subtitle: null,
+  excerpt: p.excerpt, content: '', content_format: 'paragraphs', legacy_component: null,
+  author: 'GHL Research Team', author_id: null, category: p.category, category_id: null,
+  tags: [], cover_image: null, thumbnail_image: null, og_image: null, gallery: [],
+  video_url: null, status: 'published', published: true, featured: false,
+  editors_pick: false, allow_comments: false, noindex: false, canonical_url: null,
+  read_time: parseInt(String(p.readTime), 10) || 6, views: 0,
+  meta_title: null, meta_description: null, meta_keywords: null,
+  published_at: p.date, scheduled_at: null, created_at: p.date, updated_at: p.date,
+})) as CmsPost[]
 
 export default function BlogPage() {
-  const [search, setSearch] = useState('')
-  const [activeCategory, setActiveCategory] = useState<string>('All')
-  const [dynamicPosts, setDynamicPosts] = useState<any[]>([])
+  const [posts, setPosts] = useState<CmsPost[]>([])
+  const [categories, setCategories] = useState<(CmsCategory & { post_count?: number })[]>([])
+  const [featured, setFeatured] = useState<CmsPost | null>(null)
+  const [picks, setPicks] = useState<CmsPost[]>([])
+  const [popular, setPopular] = useState<CmsPost[]>([])
+  const [loading, setLoading] = useState(true)
 
-  // Fetch dynamic blog posts from Supabase
+  const [query, setQuery] = useState('')
+  const [activeCat, setActiveCat] = useState<string>('all')
+  const [page, setPage] = useState(1)
+
   useEffect(() => {
-    if (!isSupabaseConfigured()) return
-    sb.from('blog_posts')
-      .select('*')
-      .eq('published', true)
-      .order('published_at', { ascending: false })
-      .then(({ data }: any) => {
-        if (data && data.length > 0) {
-          const mapped = data.map((p: any) => ({
-            slug: p.slug,
-            title: p.title,
-            excerpt: p.excerpt || '',
-            content: p.content || '',
-            date: p.published_at || p.created_at,
-            readTime: p.read_time ? `${p.read_time} min read` : '5 min read',
-            category: p.category || 'Market Analysis',
-            author: p.author || 'GHL Research Team',
-            linkPrefix: '/blog' as const,
-            coverImage: p.cover_image || '',
-            source: 'dynamic' as const,
-          }))
-          setDynamicPosts(mapped)
-        }
-      })
+    let alive = true
+    ;(async () => {
+      const [all, cats, feat, ep, pop] = await Promise.all([
+        getPublishedPosts(),
+        getCategories({ withCounts: true }),
+        getFeaturedPost(),
+        getEditorsPicks(3),
+        getPopularPosts(5),
+      ])
+      if (!alive) return
+      const list = all.length ? all : FALLBACK
+      setPosts(list)
+      setCategories(cats.filter((c) => (c.post_count ?? 0) > 0))
+      setFeatured(feat || list[0] || null)
+      setPicks(ep)
+      setPopular(pop)
+      setLoading(false)
+    })()
+    return () => { alive = false }
   }, [])
 
-  // Merge dynamic posts (first) with static posts, deduplicate by slug
-  const allPosts = (() => {
-    const seenSlugs = new Set<string>()
-    const merged: any[] = []
-    for (const p of [...dynamicPosts, ...staticPosts]) {
-      if (!seenSlugs.has(p.slug)) {
-        seenSlugs.add(p.slug)
-        merged.push(p)
-      }
+  useEffect(() => { setPage(1) }, [query, activeCat])
+
+  const filtered = useMemo(() => {
+    let out = posts.filter((p) => !featured || p.id !== featured.id)
+    if (activeCat !== 'all') {
+      out = out.filter((p) => (p.blog_categories?.slug || '') === activeCat)
     }
-    return merged
-  })()
+    const q = query.trim().toLowerCase()
+    if (q) {
+      out = out.filter((p) =>
+        [p.title, p.excerpt, p.category, p.author, ...(p.tags || [])]
+          .filter(Boolean).some((f) => String(f).toLowerCase().includes(q)),
+      )
+    }
+    return out
+  }, [posts, activeCat, query, featured])
 
-  const filtered = allPosts.filter((post: any) => {
-    const matchesSearch =
-      search === '' ||
-      post.title.toLowerCase().includes(search.toLowerCase()) ||
-      post.excerpt.toLowerCase().includes(search.toLowerCase())
-    const mappedCat = getCategoryForPost(post)
-    const matchesCategory = activeCategory === 'All' || mappedCat === activeCategory
-    return matchesSearch && matchesCategory
-  })
-
-  const featuredPost = allPosts[0]
-  const featuredCategory = getCategoryForPost(featuredPost)
+  const totalPages = Math.max(1, Math.ceil(filtered.length / POSTS_PER_PAGE))
+  const current = Math.min(page, totalPages)
+  const visible = filtered.slice((current - 1) * POSTS_PER_PAGE, current * POSTS_PER_PAGE)
+  const showHighlights = !query && activeCat === 'all'
 
   return (
     <>
-      {/* SEO-optimized Hero */}
-      <section className="pt-40 pb-44 md:pb-56 lg:pb-64 relative overflow-hidden bg-brand-black">
+      {/* ── Hero (photo treatment preserved from the original page) ── */}
+      <section className="pt-40 pb-32 md:pb-40 relative overflow-hidden bg-brand-black">
         <picture aria-hidden="true">
           <source srcSet="/images/heros/blog-hero-sm.jpg" media="(max-width: 768px)" />
-          <img src="/images/heros/blog-hero.jpg" alt="" className="absolute inset-0 w-full h-full object-cover pointer-events-none select-none" loading="eager" decoding="async" />
+          <img
+            src="/images/heros/blog-hero.jpg"
+            alt=""
+            className="absolute inset-0 w-full h-full object-cover pointer-events-none select-none"
+            loading="eager"
+            decoding="async"
+          />
         </picture>
-        {/* 2026-06-05: dark scrim removed so the photo shows clear. White copy
-            still reads on the dusk-blue photo, in the navbar's max-w-[1440px]
-            container (left edge perpendicular to the GHL logo). */}
         <div className="w-full max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
           <AnimatedSection>
             <span className="inline-flex items-center px-4 py-1.5 bg-brand-red/10 border border-brand-red/20 rounded-full text-brand-red text-xs font-semibold uppercase tracking-wider mb-6">
@@ -199,241 +124,274 @@ export default function BlogPage() {
               Financial Intelligence.{' '}
               <span className="text-gradient-shimmer">Delivered.</span>
             </h1>
-            <p className="text-base md:text-lg text-gray-300 max-w-3xl leading-relaxed">
+            <p className="text-base md:text-lg text-gray-300 max-w-3xl leading-relaxed mb-8">
               Market insights, sector deep-dives, and thought leadership from the GHL India Ventures
               research team. Stay ahead of the curve in alternative investments.
             </p>
-          </AnimatedSection>
-        </div>
-      </section>
 
-      {/* Featured Article */}
-      <section className="bg-white py-12">
-        <div className="container-max mx-auto px-4 sm:px-6 lg:px-8">
-          <AnimatedSection>
-            <div className="relative rounded-2xl overflow-hidden bg-gradient-to-r from-brand-black via-gray-900 to-brand-black border border-gray-800 group glow-card-red">
-              <div className="grid lg:grid-cols-2 gap-0">
-                {/* Image — cover or placeholder */}
-                <div className="min-h-[280px]">
-                  {featuredPost.coverImage ? (
-                    <div className="h-64 lg:h-full w-full relative overflow-hidden">
-                      <img src={featuredPost.coverImage} alt={featuredPost.title} className="w-full h-full object-cover" loading="lazy" />
-                    </div>
-                  ) : (
-                    <PlaceholderImage theme={getPlaceholderTheme(featuredCategory)} aspectRatio="h-64 lg:h-full w-full" label="Featured Article" className="rounded-none" />
-                  )}
-                </div>
-                {/* Content */}
-                <div className="p-8 lg:p-12 flex flex-col justify-center">
-                  <span className="inline-block px-3 py-1 bg-brand-red text-white text-xs font-bold uppercase tracking-wider rounded-full w-fit mb-4">
-                    {featuredCategory}
-                  </span>
-                  <h2 className="text-2xl md:text-3xl font-bold text-white mb-6 group-hover:text-brand-red transition-colors leading-snug">
-                    {featuredPost.title}
-                  </h2>
-                  <p className="text-white/80 mb-6 leading-relaxed">
-                    {featuredPost.excerpt}
-                  </p>
-                  <div className="flex items-center gap-4 mb-6 text-sm text-white/70">
-                    <span className="flex items-center">
-                      <User className="w-4 h-4 mr-1.5" />
-                      {(featuredPost as any).author}
-                    </span>
-                    <span className="flex items-center">
-                      <Calendar className="w-4 h-4 mr-1.5" />
-                      {new Date(featuredPost.date).toLocaleDateString('en-IN', {
-                        year: 'numeric',
-                        month: 'long',
-                        day: 'numeric',
-                      })}
-                    </span>
-                    <span className="flex items-center">
-                      <Clock className="w-4 h-4 mr-1.5" />
-                      {featuredPost.readTime}
-                    </span>
-                  </div>
-                  <Link
-                    href={`${(featuredPost as any).linkPrefix}/${featuredPost.slug}`}
-                    className="inline-flex items-center text-brand-red font-bold hover:underline group/link"
-                  >
-                    Read Full Article
-                    <ArrowRight className="ml-2 w-4 h-4 group-hover/link:translate-x-1 transition-transform" />
-                  </Link>
-                </div>
-              </div>
-            </div>
-          </AnimatedSection>
-        </div>
-      </section>
-
-      <hr className="section-divider-animated" />
-
-      {/* Filter Tabs + Search */}
-      <section className="bg-white border-b border-gray-200 sticky top-20 z-30">
-        <div className="container-max mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <div className="flex flex-col md:flex-row items-center gap-4">
-            {/* Search bar */}
-            <div className="relative flex-1 w-full md:max-w-sm">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-brand-grey dark:text-gray-300" />
+            <div className="relative max-w-xl">
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-white/50 pointer-events-none" />
               <input
-                type="text"
-                placeholder="Search articles..."
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                className="input-field pl-10 text-sm"
+                type="search"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder="Search articles, topics, regulations…"
                 aria-label="Search articles"
+                className="w-full pl-11 pr-4 py-3.5 rounded-xl bg-black/40 backdrop-blur-sm border border-white/20 text-white placeholder-white/50 text-sm focus:outline-none focus:border-brand-red transition-colors"
               />
             </div>
-            {/* Category tabs — 2026-05-12 site corrections: chip
-                contrast lifted (gray-200 surface + slate-800 text +
-                border) so the inactive chip labels remain legible when
-                the filter bar floats over the red CTA strip below the
-                "Real Estate" hero card. */}
-            <div className="flex flex-wrap gap-2">
-              {CATEGORIES.map((cat) => (
+
+            <div className="flex flex-wrap items-center gap-5 mt-6 text-xs text-gray-300">
+              <Link href="/blog/reports" className="inline-flex items-center gap-1.5 hover:text-white transition-colors">
+                <FileText className="w-3.5 h-3.5" /> Free research reports
+              </Link>
+              <Link href="/blog/archive" className="inline-flex items-center gap-1.5 hover:text-white transition-colors">
+                <Archive className="w-3.5 h-3.5" /> Archive
+              </Link>
+              <a href="/blog/rss.xml" className="inline-flex items-center gap-1.5 hover:text-white transition-colors">
+                <Rss className="w-3.5 h-3.5" /> RSS
+              </a>
+            </div>
+          </AnimatedSection>
+        </div>
+      </section>
+
+      {/* ── Featured ─────────────────────────────────────── */}
+      {featured && showHighlights && (
+        <section className="bg-brand-offwhite py-12">
+          <div className="container-max mx-auto px-4 sm:px-6 lg:px-8">
+            <AnimatedSection>
+              <div className="flex items-center gap-2 mb-5">
+                <Flame className="w-4 h-4 text-brand-red" />
+                <h2 className="text-xs font-bold uppercase tracking-[0.18em] text-brand-black">Featured</h2>
+              </div>
+              <PostCard post={featured} variant="hero" priority />
+            </AnimatedSection>
+          </div>
+        </section>
+      )}
+
+      {/* ── Editor's picks ───────────────────────────────── */}
+      {picks.length > 0 && showHighlights && (
+        <section className="bg-white pt-12">
+          <div className="container-max mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="flex items-center gap-2 mb-5">
+              <Bookmark className="w-4 h-4 text-brand-red" />
+              <h2 className="text-xs font-bold uppercase tracking-[0.18em] text-brand-black">Editor&rsquo;s picks</h2>
+            </div>
+            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+              {picks.map((p) => <PostCard key={p.id} post={p} />)}
+            </div>
+          </div>
+        </section>
+      )}
+
+      {/* ── Main grid + sidebar ──────────────────────────── */}
+      <section className="bg-white py-12">
+        <div className="container-max mx-auto px-4 sm:px-6 lg:px-8">
+
+          {categories.length > 0 && (
+            <div className="flex flex-wrap gap-2 mb-8 pb-6 border-b border-gray-200">
+              <button
+                onClick={() => setActiveCat('all')}
+                className={`px-4 py-2 rounded-full text-xs font-semibold transition-colors ${
+                  activeCat === 'all'
+                    ? 'bg-brand-red text-white shadow-lg shadow-brand-red/25'
+                    : 'bg-gray-200 text-slate-800 border border-gray-300 hover:bg-gray-300'
+                }`}
+              >
+                All articles
+              </button>
+              {categories.map((c) => (
                 <button
-                  key={cat}
-                  onClick={() => setActiveCategory(cat)}
-                  className={`px-4 py-2 rounded-full text-sm font-semibold transition-all ${
-                    activeCategory === cat
+                  key={c.id}
+                  onClick={() => setActiveCat(c.slug)}
+                  className={`px-4 py-2 rounded-full text-xs font-semibold transition-colors ${
+                    activeCat === c.slug
                       ? 'bg-brand-red text-white shadow-lg shadow-brand-red/25'
-                      : 'bg-gray-200 text-slate-800 border border-gray-300 hover:bg-gray-300 hover:text-slate-900'
+                      : 'bg-gray-200 text-slate-800 border border-gray-300 hover:bg-gray-300'
                   }`}
                 >
-                  {cat}
+                  {c.name}
+                  {typeof c.post_count === 'number' && <span className="ml-1.5 opacity-60">{c.post_count}</span>}
                 </button>
               ))}
             </div>
+          )}
+
+          <div className="grid lg:grid-cols-[1fr_20rem] gap-10 items-start">
+            <div className="min-w-0">
+              {loading ? (
+                <div className="grid sm:grid-cols-2 gap-6">
+                  {Array.from({ length: 6 }).map((_, i) => (
+                    <div key={i} className="bg-white rounded-2xl border border-gray-200 overflow-hidden animate-pulse">
+                      <div className="aspect-[16/10] bg-gray-200" />
+                      <div className="p-5 space-y-3">
+                        <div className="h-3 w-20 bg-gray-200 rounded" />
+                        <div className="h-4 w-full bg-gray-200 rounded" />
+                        <div className="h-4 w-2/3 bg-gray-200 rounded" />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : visible.length === 0 ? (
+                <div className="text-center py-16 bg-brand-offwhite rounded-2xl">
+                  <BookOpen className="w-14 h-14 text-gray-300 mx-auto mb-4" />
+                  <h3 className="text-lg font-bold text-brand-black mb-2">No articles found</h3>
+                  <p className="text-gray-600 mb-5">
+                    {query ? `Nothing matches “${query}”.` : 'No articles in this category yet.'}
+                  </p>
+                  <button
+                    onClick={() => { setQuery(''); setActiveCat('all') }}
+                    className="text-sm font-semibold text-brand-red hover:underline"
+                  >
+                    Show all articles
+                  </button>
+                </div>
+              ) : (
+                <>
+                  <div className="flex items-center justify-between gap-4 mb-5 flex-wrap">
+                    <h2 className="text-xs font-bold uppercase tracking-[0.18em] text-brand-black">
+                      {query
+                        ? 'Search results'
+                        : activeCat === 'all'
+                          ? 'Latest articles'
+                          : categories.find((c) => c.slug === activeCat)?.name}
+                    </h2>
+                    <span className="text-xs text-gray-500">
+                      {filtered.length} article{filtered.length === 1 ? '' : 's'}
+                    </span>
+                  </div>
+
+                  <div className="grid sm:grid-cols-2 gap-6">
+                    {visible.map((p, i) => (
+                      <AnimatedSection key={p.id} delay={i * 60}>
+                        <PostCard post={p} priority={i < 2} />
+                      </AnimatedSection>
+                    ))}
+                  </div>
+
+                  {totalPages > 1 && (
+                    <nav className="flex items-center justify-center gap-1.5 mt-10 flex-wrap" aria-label="Pagination">
+                      <button
+                        onClick={() => setPage(current - 1)} disabled={current === 1}
+                        className="px-3.5 py-2 rounded-lg border border-gray-200 text-sm text-gray-600 disabled:opacity-40 disabled:cursor-not-allowed hover:border-brand-red hover:text-brand-red transition-colors"
+                      >
+                        Previous
+                      </button>
+                      {Array.from({ length: totalPages }).map((_, i) => {
+                        const n = i + 1
+                        const near = Math.abs(n - current) <= 1 || n === 1 || n === totalPages
+                        if (!near) {
+                          return (n === current - 2 || n === current + 2)
+                            ? <span key={n} className="px-1.5 text-gray-400">…</span> : null
+                        }
+                        return (
+                          <button
+                            key={n} onClick={() => setPage(n)}
+                            aria-current={n === current ? 'page' : undefined}
+                            className={`w-9 h-9 rounded-lg text-sm font-medium transition-colors ${
+                              n === current
+                                ? 'bg-brand-red text-white'
+                                : 'border border-gray-200 text-gray-600 hover:border-brand-red hover:text-brand-red'
+                            }`}
+                          >
+                            {n}
+                          </button>
+                        )
+                      })}
+                      <button
+                        onClick={() => setPage(current + 1)} disabled={current === totalPages}
+                        className="px-3.5 py-2 rounded-lg border border-gray-200 text-sm text-gray-600 disabled:opacity-40 disabled:cursor-not-allowed hover:border-brand-red hover:text-brand-red transition-colors"
+                      >
+                        Next
+                      </button>
+                    </nav>
+                  )}
+                </>
+              )}
+            </div>
+
+            {/* sidebar */}
+            <aside className="space-y-8 lg:sticky lg:top-28">
+              {popular.length > 0 && (
+                <div>
+                  <div className="flex items-center gap-2 mb-4">
+                    <TrendingUp className="w-4 h-4 text-brand-red" />
+                    <h3 className="text-xs font-bold uppercase tracking-[0.18em] text-brand-black">Most read</h3>
+                  </div>
+                  <ol className="space-y-4">
+                    {popular.map((p, i) => (
+                      <li key={p.id} className="flex gap-3">
+                        <span className="text-lg font-bold text-gray-200 leading-none w-6 flex-shrink-0">
+                          {String(i + 1).padStart(2, '0')}
+                        </span>
+                        <Link href={`/blog/${p.slug}`} className="group min-w-0">
+                          <h4 className="text-sm font-semibold text-brand-black group-hover:text-brand-red transition-colors blog-clamp-2 leading-snug">
+                            {p.title}
+                          </h4>
+                          <div className="flex items-center gap-3 mt-1 text-[11px] text-gray-500">
+                            <span className="flex items-center gap-1"><Clock className="w-3 h-3" />{readTimeLabel(p)}</span>
+                          </div>
+                        </Link>
+                      </li>
+                    ))}
+                  </ol>
+                </div>
+              )}
+
+              {categories.length > 0 && (
+                <div>
+                  <div className="flex items-center gap-2 mb-4">
+                    <TagIcon className="w-4 h-4 text-brand-red" />
+                    <h3 className="text-xs font-bold uppercase tracking-[0.18em] text-brand-black">Browse by topic</h3>
+                  </div>
+                  <ul className="space-y-1">
+                    {categories.map((c) => (
+                      <li key={c.id}>
+                        <Link
+                          href={`/blog/category/${c.slug}`}
+                          className="flex items-center justify-between gap-2 py-1.5 text-sm text-gray-600 hover:text-brand-red transition-colors group"
+                        >
+                          <span className="truncate">{c.name}</span>
+                          <span className="text-xs text-gray-400 group-hover:text-brand-red">{c.post_count}</span>
+                        </Link>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              <NewsletterSignup
+                variant="card"
+                heading="Get our research"
+                subheading="Analysis on India’s alternative investment market, delivered to your inbox."
+                source="blog-sidebar"
+              />
+
+              <Link
+                href="/blog/reports"
+                className="block bg-brand-offwhite rounded-2xl p-5 hover:bg-gray-200 transition-colors group"
+              >
+                <FileText className="w-6 h-6 text-brand-red mb-3" />
+                <h3 className="text-sm font-bold text-brand-black mb-1">Research reports</h3>
+                <p className="text-xs text-gray-600 mb-3">
+                  Download our in-depth PDF research on India&rsquo;s alternative investment market.
+                </p>
+                <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-brand-red">
+                  Browse reports <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
+                </span>
+              </Link>
+            </aside>
           </div>
         </div>
       </section>
 
-      {/* Masonry-style Blog Grid */}
-      <section className="section-padding bg-brand-offwhite">
-        <div className="container-max mx-auto">
-          {filtered.length === 0 ? (
-            <div className="text-center py-20">
-              <BookOpen className="w-16 h-16 text-brand-grey dark:text-gray-300/40 mx-auto mb-4" />
-              <h3 className="text-xl font-bold text-brand-black dark:text-white mb-2">No articles found</h3>
-              <p className="text-brand-grey dark:text-gray-300">
-                Try adjusting your search or filter criteria.
-              </p>
-            </div>
-          ) : (
-            <div className="columns-1 md:columns-2 lg:columns-3 gap-8 space-y-8">
-              {filtered.map((post, i) => {
-                const mappedCat = getCategoryForPost(post)
-                const glowColors = ['glow-card-red', 'glow-card-blue', 'glow-card-violet', 'glow-card-emerald', 'glow-card-amber', 'glow-card-cyan']
-
-                return (
-                  <AnimatedSection key={post.slug} delay={i * 80}>
-                    <div
-                      className={`card group hover-lift break-inside-avoid quote-card ${glowColors[i % glowColors.length]}`}
-                      id={post.slug}
-                    >
-                      {/* 16:9 Image — use cover image if available, fallback to placeholder */}
-                      {post.coverImage ? (
-                        <div className="aspect-video relative rounded-xl mb-4 overflow-hidden bg-gray-100">
-                          <img src={post.coverImage} alt={post.title} className="w-full h-full object-cover" loading="lazy" />
-                        </div>
-                      ) : (
-                        <PlaceholderImage theme={getPlaceholderTheme(mappedCat)} aspectRatio="aspect-video" label={post.title} className="rounded-xl mb-4" />
-                      )}
-
-                      {/* Category tag pill */}
-                      <span className="inline-block px-3 py-1 bg-brand-red/10 text-brand-red text-xs font-bold uppercase tracking-wider rounded-full mb-3">
-                        {mappedCat}
-                      </span>
-
-                      {/* Title (max 2 lines) */}
-                      <h3 className="font-bold text-lg text-brand-black dark:text-white mb-2 group-hover:text-brand-red transition-colors line-clamp-2 leading-snug">
-                        {post.title}
-                      </h3>
-
-                      {/* Author + date + read time */}
-                      <div className="flex items-center gap-3 mb-3">
-                        {/* Avatar placeholder */}
-                        <div className="w-7 h-7 rounded-full bg-gradient-to-br from-brand-red/20 to-brand-red/10 flex items-center justify-center flex-shrink-0">
-                          <User className="w-3.5 h-3.5 text-brand-red/60" />
-                        </div>
-                        <div className="flex items-center gap-2 text-xs text-brand-grey dark:text-gray-300">
-                          <span className="font-medium text-gray-700 dark:text-gray-300">
-                            {(post as any).author}
-                          </span>
-                          <span className="text-gray-300">|</span>
-                          <span className="flex items-center">
-                            <Calendar className="w-3 h-3 mr-1" />
-                            {new Date(post.date).toLocaleDateString('en-IN', {
-                              year: 'numeric',
-                              month: 'short',
-                              day: 'numeric',
-                            })}
-                          </span>
-                          <span className="flex items-center">
-                            <Clock className="w-3 h-3 mr-1" />
-                            {post.readTime}
-                          </span>
-                        </div>
-                      </div>
-
-                      {/* Excerpt (2 lines) */}
-                      <p className="text-brand-grey dark:text-gray-300 text-sm mb-4 line-clamp-2 leading-relaxed">
-                        {post.excerpt}
-                      </p>
-
-                      {/* Read Article link */}
-                      <Link
-                        href={`${(post as any).linkPrefix}/${post.slug}`}
-                        className="inline-flex items-center text-brand-red text-sm font-semibold hover:underline group/link mt-auto"
-                      >
-                        Read Article
-                        <ArrowRight className="ml-1.5 w-3.5 h-3.5 group-hover/link:translate-x-1 transition-transform" />
-                      </Link>
-                    </div>
-                  </AnimatedSection>
-                )
-              })}
-            </div>
-          )}
-        </div>
-      </section>
-
-      {/* Newsletter Signup Block */}
-      <section className="section-padding bg-brand-black relative overflow-hidden">
-        <div className="absolute inset-0 overflow-hidden pointer-events-none">
-          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-[600px] bg-brand-red/5 rounded-full blur-3xl" />
-        </div>
-        <div className="container-max mx-auto relative z-10">
-          <AnimatedSection>
-            <div className="max-w-2xl mx-auto text-center">
-              <div className="w-16 h-16 bg-brand-red/10 rounded-2xl flex items-center justify-center mx-auto mb-6">
-                <Mail className="w-8 h-8 text-brand-red" />
-              </div>
-              <h2 className="text-2xl md:text-3xl font-bold text-white mb-3">
-                Get investment insights delivered to your inbox.
-              </h2>
-              <p className="text-gray-400 text-base mb-6">
-                Curated market analysis, sector deep-dives, and exclusive research from our team.
-              </p>
-              <div className="flex flex-col sm:flex-row justify-center gap-3 max-w-lg mx-auto">
-                <input
-                  type="email"
-                  placeholder="Enter your email address"
-                  className="input-field flex-1"
-                  aria-label="Email for newsletter"
-                />
-                <button className="inline-flex items-center justify-center px-8 py-3 bg-brand-red text-white font-bold rounded-lg hover:bg-red-700 transition-all whitespace-nowrap shadow-lg shadow-brand-red/25">
-                  Subscribe
-                  <ArrowRight className="ml-2 w-4 h-4" />
-                </button>
-              </div>
-              <p className="text-gray-600 text-sm mt-4">
-                No spam. Unsubscribe anytime.
-              </p>
-            </div>
-          </AnimatedSection>
-        </div>
-      </section>
+      <NewsletterSignup
+        heading="Get investment insights delivered to your inbox."
+        subheading="Curated market analysis, sector deep-dives, and exclusive research from our team."
+        source="blog-landing"
+      />
     </>
   )
 }

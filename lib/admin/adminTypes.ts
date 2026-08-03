@@ -37,7 +37,7 @@ export interface AdminSession {
 
 // ── Permissions ───────────────────────────────────────────────────
 export type PermissionAction = 'view' | 'create' | 'edit' | 'approve' | 'delete' | 'export' | 'configure'
-export type PermissionModule = 'overview' | 'clients' | 'sales' | 'realty-brokers' | 'employees' | 'assets' | 'ai-ops' | 'compliance' | 'financial' | 'analytics' | 'comms' | 'marketing' | 'reports' | 'settings' | 'allotments' | 'payouts' | 'content' | 'user-passwords'
+export type PermissionModule = 'overview' | 'clients' | 'sales' | 'realty-brokers' | 'employees' | 'assets' | 'ai-ops' | 'compliance' | 'financial' | 'analytics' | 'comms' | 'marketing' | 'reports' | 'settings' | 'allotments' | 'payouts' | 'content' | 'blog' | 'user-passwords'
 export type Permission = `${PermissionAction}:${PermissionModule}` | '*'
 
 // ── Navigation ────────────────────────────────────────────────────
@@ -59,6 +59,7 @@ export type AdminModule =
   | 'allotments'
   | 'payouts'
   | 'content'
+  | 'blog'
   | 'user-passwords'
 
 export interface AdminNavItem {

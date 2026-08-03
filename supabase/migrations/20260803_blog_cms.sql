@@ -1,0 +1,60 @@
+-- ============================================================
+-- Blog CMS — central publishing system
+-- Applied to project obugyxjgwnwijhsfyfxp on 2026-08-03.
+--
+-- This file is the repo record of the migrations applied live,
+-- in the order they ran:
+--
+--   1. blog_cms_core_schema
+--        · helper public.is_blog_editor() (SECURITY DEFINER, so it
+--          bypasses RLS on profiles and avoids policy recursion)
+--        · new tables: blog_authors, blog_categories (self-
+--          referencing for subcategories), blog_tags,
+--          blog_post_tags, blog_related_posts, blog_media,
+--          blog_revisions, blog_redirects, blog_comments,
+--          blog_post_views, blog_reports, blog_report_leads,
+--          blog_settings
+--        · ADDITIVE columns on the existing blog_posts table
+--          (status, scheduling, SEO, media, counters, soft
+--          delete, legacy_component, autosave)
+--        · trigger blog_posts_sync_published keeps the legacy
+--          `published` boolean in lockstep with the new `status`
+--          in BOTH directions, so pre-CMS code paths (the basic
+--          ContentManagerModule editor, DynamicBlogViewer,
+--          lib/supabase/blogService.ts) keep working untouched
+--        · trigger blog_posts_log_slug_redirect writes a 301 into
+--          blog_redirects automatically whenever a slug changes
+--        · RLS: public reads published content; writes gated on
+--          is_blog_editor(); comments land pending; view events
+--          and report leads are insert-only for anon
+--
+--   2. blog_cms_seed_taxonomy
+--        unified category tree + authors + default settings
+--
+--   3. blog_cms_import_legacy_constants_posts
+--        the 13 posts previously hardcoded in lib/constants.ts
+--
+--   4. blog_cms_backfill_existing_rows
+--        content_format, category/author links, read times, tags
+--
+--   5. blog_cms_media_index_and_rpcs
+--        media-library index + increment_blog_post_view,
+--        record_blog_read_progress, publish_due_blog_posts,
+--        resolve_blog_redirect, blog_posts_snapshot_revision
+--
+--   6. blog_cms_schedule_cron
+--        pg_cron job 'publish-due-blog-posts', every minute
+--
+--   7. blog_cms_report_download_counter
+--        register_blog_report_download(uuid)
+--
+-- Content migrated from the standalone "GHL Blogs" project
+-- (xktbkmadjhynualgrbeb) by scripts/migrate-blog-subdomain-to-cms.mjs,
+-- which also copied every referenced storage asset into the
+-- ghl-media bucket and rewrote the URLs. That project is left
+-- intact as a backup and is no longer read by anything.
+--
+-- The full statements are recoverable from the Supabase migration
+-- history (supabase migration list / the dashboard), which is the
+-- authoritative record for this project.
+-- ============================================================

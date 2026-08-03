@@ -3,5 +3,10 @@ Allow: /
 Disallow: /login
 Disallow: /register
 Disallow: /admin/
+Disallow: /staff/
+Disallow: /dashboard/
+Disallow: /investor/
+Disallow: /agent/
+Disallow: /auth/
 
-Sitemap: https://ghl-india-ventures-2025.netlify.app/sitemap.xml
+Sitemap: https://ghlindiaventures.com/sitemap.xml

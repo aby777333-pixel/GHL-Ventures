@@ -23,24 +23,25 @@ import ReportsModule from './modules/ReportsModule'
 import AllotmentModule from './modules/AllotmentModule'
 import PayoutModule from './modules/PayoutModule'
 import ContentManagerModule from './modules/ContentManagerModule'
+import BlogCMSModule from './modules/BlogCMSModule'
 import UserPasswordsModule from './modules/UserPasswordsModule'
 import { useAdminAuth, useAdminToast } from '@/lib/admin/adminHooks'
 import { getAdminSession } from '@/lib/supabase/adminAuthService'
 import type { AdminModule } from '@/lib/admin/adminTypes'
 import { MODULE_LABELS, FEATURE_FLAGS } from '@/lib/admin/adminConstants'
-import { hasModuleAccess } from '@/lib/admin/adminRBAC'
+import { hasModuleAccess, canPerformAction } from '@/lib/admin/adminRBAC'
 import {
   LayoutDashboard, Users, TrendingUp, UserCheck, FolderOpen, Sparkles,
   Shield, IndianRupee, BarChart3, MessageSquare, Settings, Construction,
   Lock, Building2, Megaphone, FileBarChart, FileCheck, Banknote, Newspaper,
-  Key,
+  Key, PenSquare,
 } from 'lucide-react'
 
 // ── Valid Modules ──────────────────────────────────────────────────
 const VALID_MODULES: AdminModule[] = [
   'overview', 'clients', 'sales', 'realty-brokers', 'employees', 'assets',
   'ai-ops', 'compliance', 'financial', 'analytics', 'comms', 'marketing', 'reports', 'settings',
-  'allotments', 'payouts', 'content', 'user-passwords',
+  'allotments', 'payouts', 'content', 'blog', 'user-passwords',
 ]
 
 const MODULE_ICONS: Record<AdminModule, React.ComponentType<{ className?: string }>> = {
@@ -61,6 +62,7 @@ const MODULE_ICONS: Record<AdminModule, React.ComponentType<{ className?: string
   allotments: FileCheck,
   payouts: Banknote,
   content: Newspaper,
+  blog: PenSquare,
   'user-passwords': Key,
 }
 
@@ -265,6 +267,16 @@ export default function AdminClient() {
         return <PayoutModule subTab={activeSubTab} navigate={navigate} showToast={showToast} />
       case 'content':
         return <ContentManagerModule subTab={activeSubTab} navigate={navigate} showToast={showToast} />
+      case 'blog':
+        return (
+          <BlogCMSModule
+            subTab={activeSubTab}
+            navigate={navigate}
+            showToast={showToast}
+            canEdit={canPerformAction(role, 'edit', 'blog', overrides) || canPerformAction(role, 'create', 'blog', overrides)}
+            canDelete={canPerformAction(role, 'delete', 'blog', overrides)}
+          />
+        )
       case 'user-passwords':
         return <UserPasswordsModule role={role} showToast={showToast} />
       default:

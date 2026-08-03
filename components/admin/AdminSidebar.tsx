@@ -7,7 +7,7 @@ import {
   Shield, IndianRupee, BarChart3, MessageSquare, Settings, ChevronDown,
   ChevronRight, LogOut, HelpCircle, ExternalLink, X, Menu,
   Building2, Megaphone, BadgeCheck, FileCheck, Banknote, Newspaper,
-  FileBarChart, Key,
+  FileBarChart, Key, PenSquare,
 } from 'lucide-react'
 import Logo from '@/components/Logo'
 import SocialLinks from '@/components/SocialLinks'
@@ -22,6 +22,7 @@ const ICON_MAP: Record<string, React.ComponentType<{ className?: string }>> = {
   LayoutDashboard, Users, TrendingUp, UserCheck, FolderOpen, Sparkles,
   Shield, IndianRupee, BarChart3, MessageSquare, Settings,
   Building2, Megaphone, FileCheck, Banknote, Newspaper, FileBarChart, Key,
+  PenSquare,
 }
 
 // ── Per-module accent glow palette (UI Aesthetic 2026-05-14) ─────
@@ -40,6 +41,7 @@ const MODULE_ACCENTS: Record<string, string> = {
   referral: '#22D3EE',          // cyan   — Referral
   contact: '#60A5FA',           // blue   — Contact
   'support-ticket': '#FCA5A5',  // coral  — Support Ticket
+  blog: '#F0ABFC',              // orchid — Blog CMS
   cms: '#5EEAD4',               // teal   — CMS
   employee: '#C4B5FD',          // lavender — Employee
   leads: '#FB923C',             // orange — Leads

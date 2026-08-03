@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import '@/styles/blog.css';
 
 const SITE_URL = 'https://ghlindiaventures.com';
 

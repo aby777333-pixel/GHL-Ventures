@@ -44,6 +44,16 @@ export default function DynamicBlogViewer({ slug }: { slug: string }) {
         .maybeSingle()
 
       if (error || !data) {
+        // Before giving up, check whether this URL was renamed. The CMS
+        // records a redirect automatically whenever a slug changes, so an
+        // old link keeps working even between deploys.
+        try {
+          const { data: target } = await sb.rpc('resolve_blog_redirect', { p_path: `/blog/${slug}` })
+          if (target && typeof target === 'string' && target !== `/blog/${slug}`) {
+            router.replace(target)
+            return
+          }
+        } catch { /* fall through to not-found */ }
         setNotFound(true)
         setLoading(false)
         return
@@ -63,7 +73,7 @@ export default function DynamicBlogViewer({ slug }: { slug: string }) {
       setLoading(false)
     }
     load()
-  }, [slug])
+  }, [slug, router])
 
   if (loading) {
     return (

@@ -154,15 +154,36 @@ export const ADMIN_SIDEBAR_ITEMS: SidebarItem[] = [
       { id: 'content/tickets-rejected', label: 'Rejected' },
     ],
   },
-  // 10. CMS
+  // 10. Blog CMS — the full publishing system behind
+  // ghlindiaventures.com/blog and blog.ghlindiaventures.com.
+  {
+    id: 'blog',
+    module: 'blog',
+    label: 'Blog CMS',
+    iconName: 'PenSquare',
+    permission: 'view:blog',
+    subItems: [
+      { id: 'blog', label: 'Posts' },
+      { id: 'blog/media', label: 'Media library' },
+      { id: 'blog/categories', label: 'Categories & tags' },
+      { id: 'blog/authors', label: 'Authors' },
+      { id: 'blog/comments', label: 'Comments' },
+      { id: 'blog/reports', label: 'Reports & leads' },
+      { id: 'blog/subscribers', label: 'Subscribers' },
+      { id: 'blog/analytics', label: 'Analytics' },
+      { id: 'blog/seo', label: 'SEO & redirects' },
+      { id: 'blog/trash', label: 'Trash' },
+    ],
+  },
+  // 11. CMS (other site content)
   {
     id: 'cms',
     module: 'content',
-    label: 'CMS',
+    label: 'Site content',
     iconName: 'Newspaper',
     permission: 'view:content',
     subItems: [
-      { id: 'content', label: 'Blog' },
+      { id: 'content', label: 'Blog (basic editor)' },
       { id: 'content/financial-iq', label: 'Financial IQ' },
       { id: 'content/faq', label: 'FAQ' },
       { id: 'content/broadcast', label: 'Broadcast' },
@@ -254,6 +275,7 @@ export const MODULE_LABELS: Record<AdminModule, string> = {
   allotments: 'Allotments',
   payouts: 'Finance Payout',
   content: 'CMS & Support',
+  blog: 'Blog CMS',
   'user-passwords': 'Users Password',
 }
 
@@ -379,6 +401,17 @@ export const ALL_ADMIN_TAB_PARAMS = [
   // 2026-05-12: Super-Admin menu spec routes
   { tab: ['content', 'tickets-resolved'] },
   { tab: ['content', 'tickets-rejected'] },
+  // Blog CMS
+  { tab: ['blog'] },
+  { tab: ['blog', 'media'] },
+  { tab: ['blog', 'categories'] },
+  { tab: ['blog', 'authors'] },
+  { tab: ['blog', 'comments'] },
+  { tab: ['blog', 'reports'] },
+  { tab: ['blog', 'subscribers'] },
+  { tab: ['blog', 'analytics'] },
+  { tab: ['blog', 'seo'] },
+  { tab: ['blog', 'trash'] },
   { tab: ['reports'] },
   { tab: ['reports', 'builder'] },
   { tab: ['reports', 'financial'] },
