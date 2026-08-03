@@ -124,7 +124,13 @@ export default function PostEditor({ postId, onBack, onSaved, showToast, initial
   const [revisions, setRevisions] = useState<any[]>([])
   const [showRevisions, setShowRevisions] = useState(false)
   const [links, setLinks] = useState<{ slug: string; title: string; reason: string }[]>([])
-  const [openPanel, setOpenPanel] = useState<string | null>('seo')
+  const [linksState, setLinksState] = useState<'idle' | 'loading' | 'done'>('idle')
+  // Multiple panels may be open at once — editors need SEO and Images
+  // visible together while writing.
+  const [openPanels, setOpenPanels] = useState<string[]>(['seo'])
+  const togglePanel = useCallback((id: string) => {
+    setOpenPanels((prev) => (prev.includes(id) ? prev.filter((p) => p !== id) : [...prev, id]))
+  }, [])
   const [copied, setCopied] = useState(false)
   const [errors, setErrors] = useState<Record<string, string>>({})
 
@@ -298,15 +304,23 @@ export default function PostEditor({ postId, onBack, onSaved, showToast, initial
   }
 
   async function loadLinkSuggestions() {
-    const s = await suggestInternalLinks({
-      id: id || undefined,
-      title: String(form.title || ''),
-      content: String(form.content || ''),
-      category_id: form.category_id,
-      tags: form.tags,
-    })
-    setLinks(s)
-    if (!s.length) showToast('No obvious internal links to suggest yet.', 'info')
+    setLinksState('loading')
+    try {
+      const found = await suggestInternalLinks({
+        id: id || undefined,
+        title: String(form.title || ''),
+        content: String(form.content || ''),
+        category_id: form.category_id,
+        tags: form.tags,
+      })
+      setLinks(found)
+      setLinksState('done')
+      if (found.length) showToast(`${found.length} related article${found.length === 1 ? '' : 's'} found.`, 'success')
+    } catch {
+      setLinks([])
+      setLinksState('done')
+      showToast('Could not fetch link suggestions. Please try again.', 'error')
+    }
   }
 
   async function onRestoreRevision(revId: string) {
@@ -522,14 +536,24 @@ export default function PostEditor({ postId, onBack, onSaved, showToast, initial
           )}
 
           {/* internal links */}
-          <Panel id="links" title="Internal link suggestions" icon={Link2} open={openPanel === 'links'} onToggle={() => setOpenPanel(openPanel === 'links' ? null : 'links')}>
+          <Panel id="links" title="Internal link suggestions" icon={Link2} open={openPanels.includes('links')} onToggle={() => togglePanel('links')}>
             <button
               type="button"
               onClick={loadLinkSuggestions}
-              className="px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/15 text-white text-xs font-semibold inline-flex items-center gap-1.5 transition-colors"
+              disabled={linksState === 'loading'}
+              className="px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/15 disabled:opacity-60 text-white text-xs font-semibold inline-flex items-center gap-1.5 transition-colors"
             >
-              <Sparkles className="w-3.5 h-3.5" /> Suggest links for this article
+              {linksState === 'loading'
+                ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                : <Sparkles className="w-3.5 h-3.5" />}
+              {linksState === 'loading' ? 'Looking for related articles…' : 'Suggest links for this article'}
             </button>
+            {linksState === 'done' && links.length === 0 && (
+              <p className="text-xs text-white/45 mt-1">
+                No related articles found yet. Add a category and a few tags, or write more of the
+                body, then try again.
+              </p>
+            )}
             {links.length > 0 && (
               <ul className="space-y-2 mt-2">
                 {links.map((l) => (
@@ -558,7 +582,7 @@ export default function PostEditor({ postId, onBack, onSaved, showToast, initial
         {/* ── sidebar ─────────────────────────────────────── */}
         <aside className="space-y-3">
           {/* publishing */}
-          <Panel id="publish" title="Publishing" icon={Send} open={openPanel === 'publish'} onToggle={() => setOpenPanel(openPanel === 'publish' ? null : 'publish')}>
+          <Panel id="publish" title="Publishing" icon={Send} open={openPanels.includes('publish')} onToggle={() => togglePanel('publish')}>
             <div>
               <label className={labelCls}>Schedule for (IST)</label>
               <input
@@ -611,7 +635,7 @@ export default function PostEditor({ postId, onBack, onSaved, showToast, initial
           </Panel>
 
           {/* organisation */}
-          <Panel id="organise" title="Organisation" icon={Bookmark} open={openPanel === 'organise'} onToggle={() => setOpenPanel(openPanel === 'organise' ? null : 'organise')}>
+          <Panel id="organise" title="Organisation" icon={Bookmark} open={openPanels.includes('organise')} onToggle={() => togglePanel('organise')}>
             <div>
               <label className={labelCls}>Category</label>
               <select
@@ -704,7 +728,7 @@ export default function PostEditor({ postId, onBack, onSaved, showToast, initial
           </Panel>
 
           {/* media */}
-          <Panel id="media" title="Images & video" icon={ImagePlus} open={openPanel === 'media'} onToggle={() => setOpenPanel(openPanel === 'media' ? null : 'media')}>
+          <Panel id="media" title="Images & video" icon={ImagePlus} open={openPanels.includes('media')} onToggle={() => togglePanel('media')}>
             {([
               ['cover_image', 'Featured image'],
               ['thumbnail_image', 'Thumbnail (card)'],
@@ -748,7 +772,7 @@ export default function PostEditor({ postId, onBack, onSaved, showToast, initial
           </Panel>
 
           {/* SEO */}
-          <Panel id="seo" title="SEO & social" icon={SearchIcon} open={openPanel === 'seo'} onToggle={() => setOpenPanel(openPanel === 'seo' ? null : 'seo')}>
+          <Panel id="seo" title="SEO & social" icon={SearchIcon} open={openPanels.includes('seo')} onToggle={() => togglePanel('seo')}>
             <div>
               <label className={labelCls}>
                 SEO title <span className={metaTitle.length > 60 ? 'text-amber-300' : 'text-white/25'}>({metaTitle.length}/60)</span>
@@ -759,6 +783,22 @@ export default function PostEditor({ postId, onBack, onSaved, showToast, initial
                 placeholder={String(form.title || 'Page title for Google')}
                 className={inputCls}
               />
+              <div className="flex items-center justify-between gap-2 mt-1">
+                <p className="text-[10px] text-white/30">
+                  {form.meta_title
+                    ? 'Custom title — this is what Google shows.'
+                    : 'Empty, so the headline is used. Type here to override it.'}
+                </p>
+                {!form.meta_title && form.title && (
+                  <button
+                    type="button"
+                    onClick={() => set('meta_title', String(form.title || ''))}
+                    className="text-[10px] font-semibold text-brand-red hover:underline whitespace-nowrap"
+                  >
+                    Copy headline
+                  </button>
+                )}
+              </div>
             </div>
             <div>
               <label className={labelCls}>
@@ -771,6 +811,22 @@ export default function PostEditor({ postId, onBack, onSaved, showToast, initial
                 placeholder={String(form.excerpt || 'Description shown under the title in search results')}
                 className={`${inputCls} resize-y`}
               />
+              <div className="flex items-center justify-between gap-2 mt-1">
+                <p className="text-[10px] text-white/30">
+                  {form.meta_description
+                    ? 'Custom description — this is what Google shows.'
+                    : 'Empty, so the summary is used. Type here to override it.'}
+                </p>
+                {!form.meta_description && form.excerpt && (
+                  <button
+                    type="button"
+                    onClick={() => set('meta_description', String(form.excerpt || ''))}
+                    className="text-[10px] font-semibold text-brand-red hover:underline whitespace-nowrap"
+                  >
+                    Copy summary
+                  </button>
+                )}
+              </div>
             </div>
             <div>
               <label className={labelCls}>Focus keywords</label>
@@ -852,7 +908,7 @@ export default function PostEditor({ postId, onBack, onSaved, showToast, initial
 
           {/* revisions */}
           {id && (
-            <Panel id="revisions" title={`Revision history (${revisions.length})`} icon={History} open={openPanel === 'revisions'} onToggle={() => setOpenPanel(openPanel === 'revisions' ? null : 'revisions')}>
+            <Panel id="revisions" title={`Revision history (${revisions.length})`} icon={History} open={openPanels.includes('revisions')} onToggle={() => togglePanel('revisions')}>
               {revisions.length === 0 ? (
                 <p className="text-xs text-white/35">No revisions yet — they are captured automatically on each save.</p>
               ) : (
