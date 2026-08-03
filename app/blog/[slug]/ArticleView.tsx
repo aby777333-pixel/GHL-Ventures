@@ -114,13 +114,18 @@ export default function ArticleView({ post, preview = false }: { post: CmsPost; 
       {/* ── Cover ────────────────────────────────────────── */}
       <section className="bg-white">
         <div className="container-max mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="max-w-4xl mx-auto -mt-4 rounded-2xl overflow-hidden shadow-xl">
+          {/* `relative z-10` matters: the hero above is positioned, so without
+              it the hero painted OVER the -mt-4 overlap and clipped the top of
+              the cover. And the image is shown at its own aspect ratio rather
+              than cropped to a fixed height — covers are often designed
+              graphics whose top and bottom carry meaning. */}
+          <div className="max-w-4xl mx-auto relative z-10 -mt-4 rounded-2xl overflow-hidden shadow-xl">
             {post.cover_image ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img
                 src={post.cover_image}
                 alt={post.title}
-                className="w-full max-h-[480px] object-cover"
+                className="w-full h-auto block"
                 loading="eager"
                 decoding="async"
               />

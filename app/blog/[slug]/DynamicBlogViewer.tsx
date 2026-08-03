@@ -150,9 +150,12 @@ export default function DynamicBlogViewer({ slug }: { slug: string }) {
       {/* Cover Image */}
       {post.cover_image && (
         <section className="bg-white">
-          <div className="container-max mx-auto px-4 sm:px-6 lg:px-8 -mt-4">
-            <div className="rounded-2xl overflow-hidden shadow-xl max-h-[480px]">
-              <img src={post.cover_image} alt={post.title} className="w-full h-full object-cover" />
+          <div className="container-max mx-auto px-4 sm:px-6 lg:px-8">
+            {/* Matches ArticleView: `relative z-10` so the positioned hero
+                above cannot paint over the -mt-4 overlap, and the image keeps
+                its own aspect ratio instead of being cropped to 480px. */}
+            <div className="relative z-10 -mt-4 rounded-2xl overflow-hidden shadow-xl">
+              <img src={post.cover_image} alt={post.title} className="w-full h-auto block" loading="eager" decoding="async" />
             </div>
           </div>
         </section>
