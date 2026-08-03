@@ -62,6 +62,42 @@ const EMPTY: Partial<CmsPost> = {
   meta_title: '', meta_description: '', meta_keywords: '',
 }
 
+/* Collapsible sidebar panel.
+
+   Defined at module scope, NOT inside PostEditor. When it lived inside the
+   component it got a fresh function identity on every render, so React saw a
+   different component type each time and tore down + rebuilt the whole panel
+   subtree — which destroyed the button being clicked before its handler could
+   settle. That is why "Choose from library" appeared to do nothing. */
+function Panel({
+  id, title, icon: Icon, open, onToggle, children,
+}: {
+  id: string
+  title: string
+  icon: React.ElementType
+  open: boolean
+  onToggle: () => void
+  children: React.ReactNode
+}) {
+  return (
+    <div className="rounded-xl border border-white/10 bg-white/[0.03] overflow-hidden">
+      <button
+        type="button"
+        onClick={onToggle}
+        aria-expanded={open}
+        aria-controls={`panel-${id}`}
+        className="w-full flex justify-between items-center gap-2 px-4 py-3 text-left hover:bg-white/5 transition-colors"
+      >
+        <span className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-white/70">
+          <Icon className="w-3.5 h-3.5 text-brand-red" /> {title}
+        </span>
+        {open ? <ChevronUp className="w-4 h-4 text-white/40" /> : <ChevronDown className="w-4 h-4 text-white/40" />}
+      </button>
+      {open && <div id={`panel-${id}`} className="px-4 pb-4 space-y-3">{children}</div>}
+    </div>
+  )
+}
+
 interface Props {
   postId: string | null
   onBack: () => void
@@ -90,6 +126,11 @@ export default function PostEditor({ postId, onBack, onSaved, showToast, initial
   const [links, setLinks] = useState<{ slug: string; title: string; reason: string }[]>([])
   const [openPanel, setOpenPanel] = useState<string | null>('seo')
   const [copied, setCopied] = useState(false)
+  const [errors, setErrors] = useState<Record<string, string>>({})
+
+  const titleRef = useRef<HTMLInputElement>(null)
+  const excerptRef = useRef<HTMLTextAreaElement>(null)
+  const bodyRef = useRef<HTMLDivElement>(null)
 
   const autosaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const isComponentPost = form.content_format === 'component'
@@ -133,6 +174,12 @@ export default function PostEditor({ postId, onBack, onSaved, showToast, initial
   const set = useCallback(<K extends keyof CmsPost>(key: K, value: any) => {
     setForm((f) => ({ ...f, [key]: value }))
     setDirty(true)
+    setErrors((prev) => {
+      if (!prev[key as string]) return prev
+      const next = { ...prev }
+      delete next[key as string]
+      return next
+    })
   }, [])
 
   // auto-slug from title until the slug is edited by hand
@@ -146,9 +193,53 @@ export default function PostEditor({ postId, onBack, onSaved, showToast, initial
     [form.content],
   )
 
+  /** Plain text of the body, so `<p><br></p>` from the editor does not
+   *  count as content. */
+  const bodyText = useMemo(
+    () => String(form.content || '')
+      .replace(/<[^>]*>/g, ' ')
+      .replace(/&nbsp;/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim(),
+    [form.content],
+  )
+
+  /** Required fields differ by intent: a draft only needs a headline, but
+   *  going live also needs a body. Returns a field → message map. */
+  function validate(intent: 'draft' | 'live'): Record<string, string> {
+    const e: Record<string, string> = {}
+    if (!String(form.title || '').trim()) e.title = 'A headline is required.'
+    if (intent === 'live' && !isComponentPost && !bodyText) {
+      e.content = 'Write the article body before publishing.'
+    }
+    return e
+  }
+
+  function focusFirstError(e: Record<string, string>) {
+    if (e.title) { titleRef.current?.focus(); titleRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' }); return }
+    if (e.excerpt) { excerptRef.current?.focus(); excerptRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' }); return }
+    if (e.content) bodyRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+  }
+
   // ── save ─────────────────────────────────────────────────
   async function save(nextStatus?: CmsPost['status']): Promise<CmsPost | null> {
-    if (!String(form.title || '').trim()) { showToast('Give the article a title first.', 'error'); return null }
+    const intent: 'draft' | 'live' =
+      nextStatus === 'published' || nextStatus === 'scheduled' ? 'live' : 'draft'
+
+    const errs = validate(intent)
+    setErrors(errs)
+    if (Object.keys(errs).length > 0) {
+      const list = Object.values(errs)
+      showToast(
+        list.length === 1
+          ? list[0]
+          : `${list.length} fields need attention before ${intent === 'live' ? 'publishing' : 'saving'}.`,
+        'error',
+      )
+      focusFirstError(errs)
+      return null
+    }
+
     setSaving(true)
 
     const payload: Partial<CmsPost> = {
@@ -241,25 +332,6 @@ export default function PostEditor({ postId, onBack, onSaved, showToast, initial
     archived: 'bg-white/5 text-white/40 border border-white/10',
   }
 
-  function Panel({ id: pid, title, icon: Icon, children }: { id: string; title: string; icon: React.ElementType; children: React.ReactNode }) {
-    const open = openPanel === pid
-    return (
-      <div className="rounded-xl border border-white/10 bg-white/[0.03] overflow-hidden">
-        <button
-          type="button"
-          onClick={() => setOpenPanel(open ? null : pid)}
-          className="w-full flex items-center justify-between gap-2 px-4 py-3 text-left hover:bg-white/5 transition-colors"
-        >
-          <span className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-white/70">
-            <Icon className="w-3.5 h-3.5 text-brand-red" /> {title}
-          </span>
-          {open ? <ChevronUp className="w-4 h-4 text-white/40" /> : <ChevronDown className="w-4 h-4 text-white/40" />}
-        </button>
-        {open && <div className="px-4 pb-4 space-y-3">{children}</div>}
-      </div>
-    )
-  }
-
   const inputCls = 'cms-select w-full px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-sm text-white placeholder-white/30 focus:outline-none focus:border-brand-red transition-colors'
   const labelCls = 'block text-[11px] font-semibold uppercase tracking-wider text-white/45 mb-1.5'
 
@@ -282,6 +354,12 @@ export default function PostEditor({ postId, onBack, onSaved, showToast, initial
               </span>
               {form.status === 'scheduled' && form.scheduled_at && (
                 <span className="text-[10px] text-amber-300/70">→ {istLabel(form.scheduled_at)}</span>
+              )}
+              {Object.keys(errors).length > 0 && (
+                <span className="text-[10px] text-red-400 inline-flex items-center gap-1">
+                  <AlertTriangle className="w-3 h-3" />
+                  {Object.keys(errors).length} field{Object.keys(errors).length === 1 ? '' : 's'} need attention
+                </span>
               )}
               {dirty && <span className="text-[10px] text-amber-300">Unsaved changes</span>}
               {!dirty && lastSaved && <span className="text-[10px] text-white/30">{lastSaved}</span>}
@@ -333,12 +411,24 @@ export default function PostEditor({ postId, onBack, onSaved, showToast, initial
       <div className="grid lg:grid-cols-[1fr_22rem] gap-6 items-start">
         {/* ── main column ─────────────────────────────────── */}
         <div className="min-w-0 space-y-4">
-          <input
-            value={String(form.title || '')}
-            onChange={(e) => set('title', e.target.value)}
-            placeholder="Article headline"
-            className="w-full px-0 py-1 bg-transparent border-0 border-b border-white/10 text-2xl font-bold text-white placeholder-white/20 focus:outline-none focus:border-brand-red transition-colors"
-          />
+          <div>
+            <input
+              ref={titleRef}
+              value={String(form.title || '')}
+              onChange={(e) => set('title', e.target.value)}
+              placeholder="Article headline *"
+              aria-invalid={!!errors.title}
+              aria-describedby={errors.title ? 'err-title' : undefined}
+              className={`w-full px-0 py-1 bg-transparent border-0 border-b text-2xl font-bold text-white placeholder-white/20 focus:outline-none transition-colors ${
+                errors.title ? 'border-red-500' : 'border-white/10 focus:border-brand-red'
+              }`}
+            />
+            {errors.title && (
+              <p id="err-title" className="mt-1.5 text-xs text-red-400 flex items-center gap-1.5">
+                <AlertTriangle className="w-3.5 h-3.5 flex-shrink-0" /> {errors.title}
+              </p>
+            )}
+          </div>
 
           <input
             value={String(form.subtitle || '')}
@@ -365,6 +455,7 @@ export default function PostEditor({ postId, onBack, onSaved, showToast, initial
           <div>
             <label className={labelCls}>Excerpt / summary</label>
             <textarea
+              ref={excerptRef}
               value={String(form.excerpt || '')}
               onChange={(e) => set('excerpt', e.target.value)}
               rows={2}
@@ -405,26 +496,33 @@ export default function PostEditor({ postId, onBack, onSaved, showToast, initial
           ) : (
             <div>
               <div className="flex items-center justify-between gap-3 mb-1.5 flex-wrap">
-                <label className={`${labelCls} mb-0`}>Article body</label>
+                <label className={`${labelCls} mb-0`}>Article body *</label>
                 {form.content_format === 'paragraphs' && (
                   <span className="text-[10px] text-white/35">
                     Plain-text article — saving from the editor upgrades it to rich text.
                   </span>
                 )}
               </div>
-              <RichTextEditor
-                value={String(form.content || '')}
-                onChange={(html) => {
-                  set('content', html)
-                  if (form.content_format === 'paragraphs') set('content_format', 'html')
-                }}
-                onRequestMedia={(insert) => setPicker({ onPick: (url, alt) => { insert(url, alt); setPicker(null) } })}
-              />
+              <div ref={bodyRef} className={errors.content ? 'rounded-xl ring-1 ring-red-500' : undefined}>
+                <RichTextEditor
+                  value={String(form.content || '')}
+                  onChange={(html) => {
+                    set('content', html)
+                    if (form.content_format === 'paragraphs') set('content_format', 'html')
+                  }}
+                  onRequestMedia={(insert) => setPicker({ onPick: (url, alt) => { insert(url, alt); setPicker(null) } })}
+                />
+              </div>
+              {errors.content && (
+                <p className="mt-1.5 text-xs text-red-400 flex items-center gap-1.5">
+                  <AlertTriangle className="w-3.5 h-3.5 flex-shrink-0" /> {errors.content}
+                </p>
+              )}
             </div>
           )}
 
           {/* internal links */}
-          <Panel id="links" title="Internal link suggestions" icon={Link2}>
+          <Panel id="links" title="Internal link suggestions" icon={Link2} open={openPanel === 'links'} onToggle={() => setOpenPanel(openPanel === 'links' ? null : 'links')}>
             <button
               type="button"
               onClick={loadLinkSuggestions}
@@ -460,7 +558,7 @@ export default function PostEditor({ postId, onBack, onSaved, showToast, initial
         {/* ── sidebar ─────────────────────────────────────── */}
         <aside className="space-y-3">
           {/* publishing */}
-          <Panel id="publish" title="Publishing" icon={Send}>
+          <Panel id="publish" title="Publishing" icon={Send} open={openPanel === 'publish'} onToggle={() => setOpenPanel(openPanel === 'publish' ? null : 'publish')}>
             <div>
               <label className={labelCls}>Schedule for (IST)</label>
               <input
@@ -513,7 +611,7 @@ export default function PostEditor({ postId, onBack, onSaved, showToast, initial
           </Panel>
 
           {/* organisation */}
-          <Panel id="organise" title="Organisation" icon={Bookmark}>
+          <Panel id="organise" title="Organisation" icon={Bookmark} open={openPanel === 'organise'} onToggle={() => setOpenPanel(openPanel === 'organise' ? null : 'organise')}>
             <div>
               <label className={labelCls}>Category</label>
               <select
@@ -606,7 +704,7 @@ export default function PostEditor({ postId, onBack, onSaved, showToast, initial
           </Panel>
 
           {/* media */}
-          <Panel id="media" title="Images & video" icon={ImagePlus}>
+          <Panel id="media" title="Images & video" icon={ImagePlus} open={openPanel === 'media'} onToggle={() => setOpenPanel(openPanel === 'media' ? null : 'media')}>
             {([
               ['cover_image', 'Featured image'],
               ['thumbnail_image', 'Thumbnail (card)'],
@@ -650,7 +748,7 @@ export default function PostEditor({ postId, onBack, onSaved, showToast, initial
           </Panel>
 
           {/* SEO */}
-          <Panel id="seo" title="SEO & social" icon={SearchIcon}>
+          <Panel id="seo" title="SEO & social" icon={SearchIcon} open={openPanel === 'seo'} onToggle={() => setOpenPanel(openPanel === 'seo' ? null : 'seo')}>
             <div>
               <label className={labelCls}>
                 SEO title <span className={metaTitle.length > 60 ? 'text-amber-300' : 'text-white/25'}>({metaTitle.length}/60)</span>
@@ -754,7 +852,7 @@ export default function PostEditor({ postId, onBack, onSaved, showToast, initial
 
           {/* revisions */}
           {id && (
-            <Panel id="revisions" title={`Revision history (${revisions.length})`} icon={History}>
+            <Panel id="revisions" title={`Revision history (${revisions.length})`} icon={History} open={openPanel === 'revisions'} onToggle={() => setOpenPanel(openPanel === 'revisions' ? null : 'revisions')}>
               {revisions.length === 0 ? (
                 <p className="text-xs text-white/35">No revisions yet — they are captured automatically on each save.</p>
               ) : (

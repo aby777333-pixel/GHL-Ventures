@@ -245,3 +245,22 @@ select.cms-select option:hover {
   color: #FFFFFF !important;
   -webkit-text-fill-color: #FFFFFF !important;
 }
+
+/* ── Newsletter card ─────────────────────────────────────────
+   These sit on a black surface, but globals.css forces marketing-site text
+   dark in light mode, which rendered the heading black-on-black and the
+   inputs unreadable. Pin the colours for this component only.
+   ──────────────────────────────────────────────────────────── */
+.newsletter-card h2,
+.newsletter-card h3 { color: #FFFFFF !important; }
+.newsletter-card p  { color: rgba(255, 255, 255, 0.65) !important; }
+.newsletter-card input {
+  color: #FFFFFF !important;
+  -webkit-text-fill-color: #FFFFFF !important;
+  background-color: rgba(255, 255, 255, 0.10) !important;
+}
+.newsletter-card input::placeholder {
+  color: rgba(255, 255, 255, 0.45) !important;
+  -webkit-text-fill-color: rgba(255, 255, 255, 0.45) !important;
+}
+.newsletter-card button[type="submit"] { color: #FFFFFF !important; }

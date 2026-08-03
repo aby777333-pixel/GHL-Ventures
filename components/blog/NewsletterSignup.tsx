@@ -32,6 +32,11 @@ export default function NewsletterSignup({
     if (res.ok) { setEmail(''); setName('') }
   }
 
+  // `stacked` = never lay the controls out horizontally. The card variant sits
+  // in a narrow sidebar, and `sm:` breakpoints track the viewport rather than
+  // the container, so on a wide screen the row squashed the inputs to stubs.
+  const stacked = variant === 'card'
+
   const form = (
     <form onSubmit={onSubmit} className="w-full">
       {state === 'done' ? (
@@ -41,7 +46,7 @@ export default function NewsletterSignup({
         </div>
       ) : (
         <>
-          <div className="flex flex-col sm:flex-row gap-3">
+          <div className={`flex gap-3 ${stacked ? "flex-col" : "flex-col sm:flex-row"}`}>
             <input
               type="text"
               value={name}
@@ -79,9 +84,9 @@ export default function NewsletterSignup({
 
   if (variant === 'inline') {
     return (
-      <div className="bg-brand-black rounded-2xl p-6 md:p-8">
-        <h3 className="text-lg font-bold text-white mb-1.5">{heading}</h3>
-        <p className="text-sm text-white/60 mb-5 max-w-xl">{subheading}</p>
+      <div className="newsletter-card bg-brand-black rounded-2xl p-6 md:p-8">
+        <h3 className="text-lg font-bold mb-1.5" style={{ color: '#FFFFFF' }}>{heading}</h3>
+        <p className="text-sm mb-5 max-w-xl" style={{ color: 'rgba(255,255,255,0.65)' }}>{subheading}</p>
         {form}
       </div>
     )
@@ -89,24 +94,24 @@ export default function NewsletterSignup({
 
   if (variant === 'card') {
     return (
-      <div className="bg-brand-black rounded-2xl p-6">
+      <div className="newsletter-card bg-brand-black rounded-2xl p-6">
         <Mail className="w-6 h-6 text-brand-red mb-3" />
-        <h3 className="text-base font-bold text-white mb-1.5">{heading}</h3>
-        <p className="text-xs text-white/60 mb-4">{subheading}</p>
+        <h3 className="text-base font-bold mb-1.5" style={{ color: '#FFFFFF' }}>{heading}</h3>
+        <p className="text-xs mb-4" style={{ color: 'rgba(255,255,255,0.65)' }}>{subheading}</p>
         {form}
       </div>
     )
   }
 
   return (
-    <section className="bg-brand-black py-14 md:py-20">
+    <section className="newsletter-card bg-brand-black py-14 md:py-20">
       <div className="container-max mx-auto px-4 sm:px-6 lg:px-8">
         <div className="max-w-3xl mx-auto text-center">
           <div className="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-brand-red/15 border border-brand-red/25 mb-5">
             <Mail className="w-5 h-5 text-brand-red" />
           </div>
-          <h2 className="text-2xl md:text-3xl font-bold text-white mb-3">{heading}</h2>
-          <p className="text-white/60 mb-8 max-w-xl mx-auto leading-relaxed">{subheading}</p>
+          <h2 className="text-2xl md:text-3xl font-bold mb-3" style={{ color: '#FFFFFF' }}>{heading}</h2>
+          <p className="mb-8 max-w-xl mx-auto leading-relaxed" style={{ color: 'rgba(255,255,255,0.65)' }}>{subheading}</p>
           <div className="max-w-2xl mx-auto text-left">{form}</div>
         </div>
       </div>

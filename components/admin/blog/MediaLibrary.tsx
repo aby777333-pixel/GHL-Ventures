@@ -58,7 +58,9 @@ export default function MediaLibrary({
     setBusy(true)
     let okCount = 0
     for (const file of Array.from(files)) {
-      if (file.size > 25 * 1024 * 1024) { toast(`${file.name} is over 25 MB — skipped.`, 'error'); continue }
+      // Matches the ghl-media bucket's own 50 MB per-file limit, so the UI
+      // never rejects a file the server would have accepted (or vice versa).
+      if (file.size > 50 * 1024 * 1024) { toast(`${file.name} is over the 50 MB limit — skipped.`, 'error'); continue }
       const target = folder === 'all' ? 'general' : folder
       const res = await uploadMedia(file, target)
       if (res.ok) okCount++

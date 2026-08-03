@@ -8,7 +8,7 @@
    both immediately.
    ───────────────────────────────────────────────────────────── */
 
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   FileText, Plus, Search, Trash2, RotateCcw, Eye, EyeOff, Clock, Star,
   Bookmark, Pencil, Image as ImageIcon, FolderTree, Users, MessageSquare,
@@ -645,6 +645,20 @@ function ReportsTab({ showToast, canEdit }: { showToast: Props['showToast']; can
   const [draft, setDraft] = useState<any>({ title: '', status: 'draft', gated: true })
   const [uploading, setUploading] = useState(false)
   const [view, setView] = useState<'reports' | 'leads'>('reports')
+  const [coverBusy, setCoverBusy] = useState(false)
+  const [coverPicker, setCoverPicker] = useState(false)
+  const coverRef = useRef<HTMLInputElement>(null)
+
+  async function onCover(file?: File | null) {
+    if (!file) return
+    setCoverBusy(true)
+    const res = await uploadMedia(file, 'covers')
+    setCoverBusy(false)
+    if (res.ok && res.data) {
+      setDraft((d: any) => ({ ...d, cover_image: res.data!.public_url }))
+      showToast('Cover image uploaded.', 'success')
+    } else showToast(res.message || 'Upload failed.', 'error')
+  }
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -686,6 +700,15 @@ function ReportsTab({ showToast, canEdit }: { showToast: Props['showToast']; can
           </button>
         ))}
       </div>
+
+      {coverPicker && (
+        <MediaLibrary
+          mode="picker"
+          onPick={(url) => { setDraft((d: any) => ({ ...d, cover_image: url })); setCoverPicker(false) }}
+          onClose={() => setCoverPicker(false)}
+          showToast={showToast}
+        />
+      )}
 
       {view === 'leads' ? (
         <div className={`${card} overflow-hidden`}>
@@ -778,8 +801,49 @@ function ReportsTab({ showToast, canEdit }: { showToast: Props['showToast']; can
                 {uploading && <p className="text-[11px] text-white/40 mt-1 inline-flex items-center gap-1.5"><Loader2 className="w-3 h-3 animate-spin" /> Uploading…</p>}
               </div>
               <div>
-                <label className={label}>Cover image URL</label>
-                <input value={draft.cover_image || ''} onChange={(e) => setDraft({ ...draft, cover_image: e.target.value })} className={input} />
+                <label className={label}>Cover image</label>
+                {draft.cover_image ? (
+                  <div className="relative rounded-lg overflow-hidden border border-white/10 group mb-2">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={draft.cover_image} alt="Report cover" className="w-full h-24 object-cover" />
+                    <button
+                      type="button"
+                      onClick={() => setDraft({ ...draft, cover_image: '' })}
+                      className="absolute top-1 right-1 p-1 rounded bg-black/70 text-white/70 hover:text-white opacity-0 group-hover:opacity-100 transition-opacity"
+                      aria-label="Remove cover image"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                ) : null}
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => coverRef.current?.click()}
+                    disabled={coverBusy}
+                    className={`${btnGhost} flex-1 justify-center`}
+                  >
+                    {coverBusy ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <ImageIcon className="w-3.5 h-3.5" />}
+                    {draft.cover_image ? 'Replace image' : 'Upload cover image'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setCoverPicker(true)}
+                    className={`${btnGhost} flex-1 justify-center`}
+                  >
+                    <FolderTree className="w-3.5 h-3.5" /> Library
+                  </button>
+                </div>
+                <input
+                  ref={coverRef}
+                  type="file"
+                  accept="image/*"
+                  hidden
+                  onChange={(e) => onCover(e.target.files?.[0])}
+                />
+                <p className="mt-1.5 text-[10px] text-white/30">
+                  Shown on the Reports page card. Landscape images work best.
+                </p>
               </div>
               <div>
                 <label className={label}>Status</label>
