@@ -179,7 +179,7 @@ export default function CmsClient({ subTab }: { subTab?: string | null }) {
       )}
 
       {/* ── main ────────────────────────────────────────── */}
-      <div className="flex-1 min-w-0">
+      <div className="flex-1 min-w-0 max-w-full overflow-x-clip">
         <header className="lg:hidden sticky top-0 z-30 flex items-center gap-3 px-4 py-3 bg-[#0B090A]/95 backdrop-blur border-b border-white/10">
           <button onClick={() => setNavOpen(true)} className="p-1.5 text-white/60 hover:text-white" aria-label="Open menu">
             <Menu className="w-5 h-5" />
@@ -187,7 +187,7 @@ export default function CmsClient({ subTab }: { subTab?: string | null }) {
           <span className="text-sm font-bold">Content Studio</span>
         </header>
 
-        <main className="px-4 sm:px-6 py-6">
+        <main className="px-4 sm:px-6 py-6 min-w-0 max-w-full">
           <BlogCMSModule
             subTab={active === 'posts' ? null : active}
             navigate={navigate}

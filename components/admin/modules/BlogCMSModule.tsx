@@ -94,7 +94,7 @@ export default function BlogCMSModule({ subTab, navigate, showToast, canEdit = t
   }
 
   return (
-    <div className="pb-16">
+    <div className="pb-16 min-w-0 max-w-full">
       <div className="flex items-start justify-between gap-4 mb-5 flex-wrap">
         <div>
           <h1 className="text-xl font-bold text-white">Blog CMS</h1>
@@ -371,7 +371,7 @@ function CategoriesTab({ showToast, canEdit }: { showToast: Props['showToast']; 
 
   return (
     <div className="grid lg:grid-cols-[1fr_20rem] gap-5 items-start">
-      <div className="space-y-2">
+      <div className="min-w-0 space-y-2">
         {loading ? <div className="h-40 rounded-xl bg-white/5 animate-pulse" /> : cats.map((c) => (
           <div key={c.id} className={`${card} p-3 flex items-center gap-3`}>
             <div className="min-w-0 flex-1">
@@ -431,7 +431,7 @@ function CategoriesTab({ showToast, canEdit }: { showToast: Props['showToast']; 
       </div>
 
       {canEdit && (
-        <form onSubmit={submit} className={`${card} p-4 space-y-3`}>
+        <form onSubmit={submit} className={`${card} min-w-0 p-4 space-y-3`}>
           <h3 className="text-xs font-bold uppercase tracking-wider text-white/45">
             {draft.id ? 'Edit category' : 'New category'}
           </h3>
@@ -485,7 +485,7 @@ function AuthorsTab({ showToast, canEdit }: { showToast: Props['showToast']; can
 
   return (
     <div className="grid lg:grid-cols-[1fr_20rem] gap-5 items-start">
-      <div className="space-y-2">
+      <div className="min-w-0 space-y-2">
         {loading ? <div className="h-40 rounded-xl bg-white/5 animate-pulse" /> : authors.map((a) => (
           <div key={a.id} className={`${card} p-3 flex items-center gap-3`}>
             <div className="w-10 h-10 rounded-full bg-brand-red/10 flex items-center justify-center overflow-hidden flex-shrink-0">
@@ -522,7 +522,7 @@ function AuthorsTab({ showToast, canEdit }: { showToast: Props['showToast']; can
       </div>
 
       {canEdit && (
-        <form onSubmit={submit} className={`${card} p-4 space-y-3`}>
+        <form onSubmit={submit} className={`${card} min-w-0 p-4 space-y-3`}>
           <h3 className="text-xs font-bold uppercase tracking-wider text-white/45">{draft.id ? 'Edit author' : 'New author'}</h3>
           {([['name', 'Name'], ['title', 'Job title'], ['email', 'Email'], ['avatar_url', 'Avatar URL'], ['linkedin_url', 'LinkedIn URL'], ['twitter_url', 'X / Twitter URL']] as const).map(([k, l]) => (
             <div key={k}>
@@ -743,7 +743,7 @@ function ReportsTab({ showToast, canEdit }: { showToast: Props['showToast']; can
         </div>
       ) : (
         <div className="grid lg:grid-cols-[1fr_20rem] gap-5 items-start">
-          <div className="space-y-2">
+          <div className="min-w-0 space-y-2">
             {loading ? <div className="h-40 rounded-xl bg-white/5 animate-pulse" /> : reports.map((r) => (
               <div key={r.id} className={`${card} p-3 flex items-center gap-3`}>
                 <div className="min-w-0 flex-1">
@@ -751,7 +751,7 @@ function ReportsTab({ showToast, canEdit }: { showToast: Props['showToast']; can
                     {r.title}
                     <span className={`ml-2 px-1.5 py-0.5 rounded text-[9px] font-bold uppercase ${STATUS_STYLE[r.status] || STATUS_STYLE.draft}`}>{r.status}</span>
                   </p>
-                  <p className="text-[11px] text-white/30 truncate">{r.pdf_filename} · {r.download_count} downloads</p>
+                  <p className="text-[11px] text-white/30 truncate min-w-0">{r.pdf_filename} · {r.download_count} downloads</p>
                 </div>
                 <a href={r.pdf_url} target="_blank" rel="noopener noreferrer" className="p-2 rounded-lg text-white/40 hover:text-white hover:bg-white/10 transition-colors" title="Open PDF">
                   <ExternalLink className="w-3.5 h-3.5" />
@@ -783,7 +783,7 @@ function ReportsTab({ showToast, canEdit }: { showToast: Props['showToast']; can
                 showToast(res.ok ? 'Report saved.' : (res.message || 'Save failed.'), res.ok ? 'success' : 'error')
                 if (res.ok) { setDraft({ title: '', status: 'draft', gated: true }); load() }
               }}
-              className={`${card} p-4 space-y-3`}
+              className={`${card} min-w-0 p-4 space-y-3`}
             >
               <h3 className="text-xs font-bold uppercase tracking-wider text-white/45">{draft.id ? 'Edit report' : 'New report'}</h3>
               <div>
@@ -1091,7 +1091,7 @@ function SeoTab({ showToast }: { showToast: Props['showToast'] }) {
       </div>
 
       <div className="grid lg:grid-cols-[1fr_20rem] gap-5 items-start">
-        <div className={`${card} overflow-hidden`}>
+        <div className={`${card} min-w-0 overflow-hidden`}>
           <div className="p-4 border-b border-white/10">
             <h3 className="text-xs font-bold uppercase tracking-wider text-white/45">301 redirects</h3>
             <p className="text-[11px] text-white/35 mt-1">

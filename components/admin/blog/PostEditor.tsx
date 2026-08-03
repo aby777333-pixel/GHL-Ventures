@@ -336,7 +336,7 @@ export default function PostEditor({ postId, onBack, onSaved, showToast, initial
   const labelCls = 'block text-[11px] font-semibold uppercase tracking-wider text-white/45 mb-1.5'
 
   return (
-    <div className="pb-24">
+    <div className="pb-24 min-w-0 max-w-full">
       {/* ── sticky action bar ─────────────────────────────── */}
       <div className="sticky top-0 z-30 -mx-4 sm:-mx-6 px-4 sm:px-6 py-3 bg-[#0B090A]/95 backdrop-blur border-b border-white/10 mb-6">
         <div className="flex items-center gap-3 flex-wrap">
