@@ -7,6 +7,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import {
   Upload, Trash2, Copy, Check, Search, X, Loader2, ImageIcon, FileText, Info,
 } from 'lucide-react'
+import CmsSelect from './CmsSelect'
 import {
   listMedia, uploadMedia, deleteMedia, updateMediaAlt, type MediaItem,
 } from '@/lib/blog/adminService'
@@ -114,13 +115,14 @@ export default function MediaLibrary({
             className="w-full pl-9 pr-3 py-2 rounded-lg bg-white/5 border border-white/10 text-sm text-white placeholder-white/30 focus:outline-none focus:border-brand-red"
           />
         </div>
-        <select
-          value={folder}
-          onChange={(e) => setFolder(e.target.value)}
-          className="cms-select px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-sm text-white focus:outline-none focus:border-brand-red"
-        >
-          {FOLDERS.map((f) => <option key={f} value={f} className="bg-[#161A1D]">{f === 'all' ? 'All folders' : f}</option>)}
-        </select>
+        <div className="sm:w-44 flex-shrink-0">
+          <CmsSelect
+            ariaLabel="Filter by folder"
+            value={folder}
+            onChange={setFolder}
+            options={FOLDERS.map((f) => ({ value: f, label: f === 'all' ? 'All folders' : f }))}
+          />
+        </div>
         <button
           type="button"
           onClick={() => fileRef.current?.click()}

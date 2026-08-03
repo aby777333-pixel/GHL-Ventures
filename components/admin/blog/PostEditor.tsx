@@ -22,6 +22,7 @@ import {
 } from 'lucide-react'
 import RichTextEditor, { sanitizeEditorHtml } from './RichTextEditor'
 import MediaLibrary from './MediaLibrary'
+import CmsSelect from './CmsSelect'
 import {
   createPost, updatePost, setPostStatus, trashPost, autosavePost, clearAutosave,
   listRevisions, restoreRevision, suggestInternalLinks, slugify, estimateReadTime,
@@ -638,40 +639,38 @@ export default function PostEditor({ postId, onBack, onSaved, showToast, initial
           <Panel id="organise" title="Organisation" icon={Bookmark} open={openPanels.includes('organise')} onToggle={() => togglePanel('organise')}>
             <div>
               <label className={labelCls}>Category</label>
-              <select
+              <CmsSelect
+                ariaLabel="Category"
                 value={form.category_id || ''}
-                onChange={(e) => {
-                  const cid = e.target.value || null
+                onChange={(v) => {
+                  const cid = v || null
                   set('category_id', cid)
                   const c = categories.find((x) => x.id === cid)
                   set('category', c?.name || null)
                 }}
-                className={inputCls}
-              >
-                <option value="" className="bg-[#161A1D]">— none —</option>
-                {categories.map((c) => (
-                  <option key={c.id} value={c.id} className="bg-[#161A1D]">
-                    {c.parent_id ? '— ' : ''}{c.name}
-                  </option>
-                ))}
-              </select>
+                options={[
+                  { value: '', label: '— none —' },
+                  ...categories.map((c) => ({ value: c.id, label: c.name, indent: !!c.parent_id })),
+                ]}
+              />
             </div>
 
             <div>
               <label className={labelCls}>Author</label>
-              <select
+              <CmsSelect
+                ariaLabel="Author"
                 value={form.author_id || ''}
-                onChange={(e) => {
-                  const aid = e.target.value || null
+                onChange={(v) => {
+                  const aid = v || null
                   set('author_id', aid)
                   const a = authors.find((x) => x.id === aid)
                   set('author', a?.name || null)
                 }}
-                className={inputCls}
-              >
-                <option value="" className="bg-[#161A1D]">— none —</option>
-                {authors.map((a) => <option key={a.id} value={a.id} className="bg-[#161A1D]">{a.name}</option>)}
-              </select>
+                options={[
+                  { value: '', label: '— none —' },
+                  ...authors.map((a) => ({ value: a.id, label: a.name })),
+                ]}
+              />
             </div>
 
             <div>

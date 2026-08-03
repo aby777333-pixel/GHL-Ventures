@@ -17,6 +17,7 @@ import {
 } from 'lucide-react'
 import PostEditor from '../blog/PostEditor'
 import MediaLibrary from '../blog/MediaLibrary'
+import CmsSelect from '../blog/CmsSelect'
 import {
   listPosts, getPostById, setPostStatus, trashPost, restorePost, deletePostForever,
   duplicatePost, listCategoriesAdmin, saveCategory, deleteCategory,
@@ -187,11 +188,16 @@ function PostsTab({ onEdit, showToast, canEdit, canDelete }: {
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/30 pointer-events-none" />
           <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search by title or slug…" className={`${input} pl-9`} />
         </div>
-        <select value={status} onChange={(e) => setStatus(e.target.value)} className="cms-select px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-sm text-white focus:outline-none focus:border-brand-red">
-          {['all', 'published', 'draft', 'scheduled', 'archived'].map((s) => (
-            <option key={s} value={s} className="bg-[#161A1D]">{s === 'all' ? 'All statuses' : s}</option>
-          ))}
-        </select>
+        <div className="sm:w-44 flex-shrink-0">
+          <CmsSelect
+            ariaLabel="Filter by status"
+            value={status}
+            onChange={setStatus}
+            options={['all', 'published', 'draft', 'scheduled', 'archived'].map((s) => ({
+              value: s, label: s === 'all' ? 'All statuses' : s.charAt(0).toUpperCase() + s.slice(1),
+            }))}
+          />
+        </div>
       </div>
 
       {status === 'all' && !loading && (
@@ -449,12 +455,15 @@ function CategoriesTab({ showToast, canEdit }: { showToast: Props['showToast']; 
           </div>
           <div>
             <label className={label}>Parent category</label>
-            <select value={draft.parent_id || ''} onChange={(e) => setDraft({ ...draft, parent_id: e.target.value || null })} className={input}>
-              <option value="" className="bg-[#161A1D]">— top level —</option>
-              {cats.filter((c) => !c.parent_id && c.id !== draft.id).map((c) => (
-                <option key={c.id} value={c.id} className="bg-[#161A1D]">{c.name}</option>
-              ))}
-            </select>
+            <CmsSelect
+              ariaLabel="Parent category"
+              value={draft.parent_id || ''}
+              onChange={(v) => setDraft({ ...draft, parent_id: v || null })}
+              options={[
+                { value: '', label: '— top level —' },
+                ...cats.filter((c) => !c.parent_id && c.id !== draft.id).map((c) => ({ value: c.id, label: c.name })),
+              ]}
+            />
           </div>
           <div className="flex gap-2">
             <button type="submit" className={btnPrimary}>{draft.id ? 'Save changes' : 'Add category'}</button>
@@ -847,9 +856,14 @@ function ReportsTab({ showToast, canEdit }: { showToast: Props['showToast']; can
               </div>
               <div>
                 <label className={label}>Status</label>
-                <select value={draft.status || 'draft'} onChange={(e) => setDraft({ ...draft, status: e.target.value })} className={input}>
-                  {['draft', 'published', 'archived'].map((s) => <option key={s} value={s} className="bg-[#161A1D]">{s}</option>)}
-                </select>
+                <CmsSelect
+                  ariaLabel="Report status"
+                  value={draft.status || 'draft'}
+                  onChange={(v) => setDraft({ ...draft, status: v })}
+                  options={['draft', 'published', 'archived'].map((s) => ({
+                    value: s, label: s.charAt(0).toUpperCase() + s.slice(1),
+                  }))}
+                />
               </div>
               <label className="flex items-center gap-2.5 cursor-pointer">
                 <input type="checkbox" checked={draft.gated ?? true} onChange={(e) => setDraft({ ...draft, gated: e.target.checked })} className="w-4 h-4 rounded accent-[#BA181B]" />
