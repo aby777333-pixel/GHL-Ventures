@@ -368,7 +368,15 @@ export default function PostEditor({ postId, onBack, onSaved, showToast, initial
     listRevisions(id).then(setRevisions)
   }
 
-  const previewUrl = id ? `${SITE_URL}/blog/${form.slug}` : ''
+  // A published article previews on the live URL; anything else must go
+  // through /cms/preview, because the public route only serves published
+  // rows and returned "Article Not Found" for drafts.
+  const liveUrl = id ? `${SITE_URL}/blog/${form.slug}` : ''
+  const previewUrl = !id
+    ? ''
+    : form.status === 'published'
+      ? liveUrl
+      : `/cms/preview?slug=${encodeURIComponent(String(form.slug || ''))}`
   const metaTitle = String(form.meta_title || form.title || '')
   const metaDesc = String(form.meta_description || form.excerpt || '')
 
@@ -420,7 +428,7 @@ export default function PostEditor({ postId, onBack, onSaved, showToast, initial
               target="_blank"
               rel="noopener noreferrer"
               className="px-3 py-2 rounded-lg border border-white/10 text-white/70 hover:text-white hover:bg-white/10 text-xs font-semibold inline-flex items-center gap-1.5 transition-colors"
-              title={form.status === 'published' ? 'Open the live article' : 'Preview — drafts render for admins via the direct URL'}
+              title={form.status === 'published' ? 'Open the live article' : 'Preview this draft exactly as it will publish'}
             >
               <ExternalLink className="w-3.5 h-3.5" /> Preview
             </a>
@@ -718,7 +726,8 @@ export default function PostEditor({ postId, onBack, onSaved, showToast, initial
                       type="button"
                       onClick={() => set('tags', (form.tags || []).filter((x) => x !== t))}
                       className="hover:text-white"
-                      aria-label={`Remove ${t}`}
+                      title={`Remove "${t}" from this article only — the tag itself is kept`}
+                      aria-label={`Remove ${t} from this article`}
                     >
                       <X className="w-3 h-3" />
                     </button>
@@ -739,6 +748,10 @@ export default function PostEditor({ postId, onBack, onSaved, showToast, initial
                 placeholder="Type a tag and press Enter"
                 className={inputCls}
               />
+              <p className="mt-1 text-[10px] text-white/30">
+                &times; removes a tag from this article only. Tags are created automatically and
+                managed under Categories &amp; tags.
+              </p>
             </div>
 
             <div className="space-y-2 pt-1">
@@ -929,7 +942,7 @@ export default function PostEditor({ postId, onBack, onSaved, showToast, initial
               <button
                 type="button"
                 onClick={() => {
-                  navigator.clipboard?.writeText(previewUrl)
+                  navigator.clipboard?.writeText(previewUrl.startsWith('http') ? previewUrl : `${SITE_URL}${previewUrl}`)
                   setCopied(true); setTimeout(() => setCopied(false), 1800)
                 }}
                 className="w-full px-3 py-2 rounded-lg border border-white/10 text-white/60 hover:bg-white/10 text-xs font-semibold inline-flex items-center justify-center gap-1.5 transition-colors"

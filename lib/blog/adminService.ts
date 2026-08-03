@@ -260,6 +260,23 @@ export async function listTags(): Promise<(CmsTag & { post_count: number })[]> {
   } catch { return [] }
 }
 
+/** Create a tag up front. Tags are normally created implicitly when an
+ *  author types one into an article; this lets the vocabulary be curated
+ *  in advance and gives a way back after one is deleted. */
+export async function createTag(name: string): Promise<AdminResult> {
+  const g = guard(); if (g) return g
+  const clean = (name || '').trim()
+  if (!clean) return fail('Enter a tag name.')
+  const slug = slugify(clean)
+  if (!slug) return fail('That name has no usable characters.')
+  try {
+    const { data: existing } = await sb.from('blog_tags').select('id').eq('slug', slug).maybeSingle()
+    if (existing) return fail('That tag already exists.')
+    const { error } = await sb.from('blog_tags').insert({ slug, name: clean })
+    return error ? fail(error.message) : ok()
+  } catch (e: any) { return fail(e?.message || 'Could not create the tag.') }
+}
+
 export async function deleteTag(id: string): Promise<AdminResult> {
   const g = guard(); if (g) return g
   const { error } = await sb.from('blog_tags').delete().eq('id', id)

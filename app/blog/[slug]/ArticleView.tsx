@@ -27,7 +27,7 @@ import {
   BLOG_SITE_URL, type CmsPost,
 } from '@/lib/blog/cmsService'
 
-export default function ArticleView({ post }: { post: CmsPost }) {
+export default function ArticleView({ post, preview = false }: { post: CmsPost; preview?: boolean }) {
   const [related, setRelated] = useState<CmsPost[]>([])
 
   useEffect(() => {
@@ -45,7 +45,14 @@ export default function ArticleView({ post }: { post: CmsPost }) {
 
   return (
     <>
-      <BlogAnalytics slug={post.slug} />
+      {!preview && <BlogAnalytics slug={post.slug} />}
+
+      {preview && (
+        <div className="sticky top-0 z-50 bg-amber-500 text-black text-center text-xs font-bold py-2 px-4">
+          PREVIEW — {String(post.status).toUpperCase()}. This is how the article will look once published.
+          Views are not counted here.
+        </div>
+      )}
 
       {/* ── Hero ─────────────────────────────────────────── */}
       <section className="pt-32 pb-10 gradient-dark relative overflow-hidden">

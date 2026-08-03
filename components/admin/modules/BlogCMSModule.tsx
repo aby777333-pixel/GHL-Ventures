@@ -21,7 +21,7 @@ import CmsSelect from '../blog/CmsSelect'
 import {
   listPosts, getPostById, setPostStatus, trashPost, restorePost, deletePostForever,
   duplicatePost, listCategoriesAdmin, saveCategory, deleteCategory,
-  listAuthorsAdmin, saveAuthor, deleteAuthor, listTags, deleteTag,
+  listAuthorsAdmin, saveAuthor, deleteAuthor, listTags, deleteTag, createTag,
   listComments, moderateComment, deleteComment, listRedirects, saveRedirect,
   deleteRedirect, listReportsAdmin, saveReport, deleteReport, listReportLeads,
   listSubscribers, setSubscriberActive, getAnalyticsSummary, saveSetting,
@@ -359,6 +359,7 @@ function CategoriesTab({ showToast, canEdit }: { showToast: Props['showToast']; 
   const [cats, setCats] = useState<(CmsCategory & { post_count: number })[]>([])
   const [tags, setTags] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
+  const [newTag, setNewTag] = useState('')
   const [draft, setDraft] = useState<Partial<CmsCategory> & { id?: string }>({ name: '', slug: '' })
 
   const load = useCallback(async () => {
@@ -409,9 +410,36 @@ function CategoriesTab({ showToast, canEdit }: { showToast: Props['showToast']; 
           </div>
         ))}
 
-        {tags.length > 0 && (
-          <div className={`${card} p-4 mt-5`}>
-            <h3 className="text-xs font-bold uppercase tracking-wider text-white/45 mb-3">Tags</h3>
+        <div className={`${card} p-4 mt-5`}>
+            <h3 className="text-xs font-bold uppercase tracking-wider text-white/45 mb-1">Tags</h3>
+            <p className="text-[11px] text-white/35 mb-3">
+              Tags are created automatically when you type one into an article. Add one here to have
+              it ready in advance. Removing a tag here deletes it everywhere and unlinks it from every
+              article; the &times; inside an article only removes it from that article.
+            </p>
+
+            {canEdit && (
+              <form
+                onSubmit={async (e) => {
+                  e.preventDefault()
+                  const name = newTag.trim()
+                  if (!name) return
+                  const res = await createTag(name)
+                  showToast(res.ok ? `Tag "${name}" added.` : (res.message || 'Could not add the tag.'), res.ok ? 'success' : 'error')
+                  if (res.ok) { setNewTag(''); load() }
+                }}
+                className="flex gap-2 mb-3"
+              >
+                <input
+                  value={newTag}
+                  onChange={(e) => setNewTag(e.target.value)}
+                  placeholder="New tag name"
+                  className={`${input} flex-1`}
+                />
+                <button type="submit" className={btnPrimary}>Add tag</button>
+              </form>
+            )}
+
             <div className="flex flex-wrap gap-1.5">
               {tags.map((t) => (
                 <span key={t.id} className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-white/5 text-[11px] text-white/70">
@@ -419,7 +447,9 @@ function CategoriesTab({ showToast, canEdit }: { showToast: Props['showToast']; 
                   {canEdit && (
                     <button
                       onClick={async () => {
-                        if (!window.confirm(`Delete tag “${t.name}”?`)) return
+                        if (!window.confirm(`Delete the tag “${t.name}” everywhere?
+
+It will be removed from all ${t.post_count} article(s) that use it. This cannot be undone.`)) return
                         const r = await deleteTag(t.id)
                         showToast(r.ok ? 'Tag deleted.' : (r.message || 'Delete failed.'), r.ok ? 'success' : 'error')
                         if (r.ok) load()
@@ -431,9 +461,9 @@ function CategoriesTab({ showToast, canEdit }: { showToast: Props['showToast']; 
                   )}
                 </span>
               ))}
+              {tags.length === 0 && <p className="text-xs text-white/30">No tags yet.</p>}
             </div>
           </div>
-        )}
       </div>
 
       {canEdit && (
@@ -959,6 +989,7 @@ function SubscribersTab({ showToast }: { showToast: Props['showToast'] }) {
 function AnalyticsTab() {
   const [data, setData] = useState<BlogAnalyticsSummary | null>(null)
   const [days, setDays] = useState(30)
+  const [hovered, setHovered] = useState<{ date: string; count: number } | null>(null)
 
   useEffect(() => { let a = true; getAnalyticsSummary(days).then((d) => { if (a) setData(d) }); return () => { a = false } }, [days])
 
@@ -1007,13 +1038,41 @@ function AnalyticsTab() {
             No view data yet — tracking starts as soon as the updated site is live.
           </p>
         ) : (
-          <div className="flex items-end gap-[2px] h-32">
-            {data.daily.map((d) => (
-              <div key={d.date} className="flex-1 bg-brand-red/70 hover:bg-brand-red rounded-t transition-colors min-h-[2px]"
-                style={{ height: `${(d.count / peak) * 100}%` }}
-                title={`${d.date}: ${d.count} view${d.count === 1 ? '' : 's'}`} />
-            ))}
-          </div>
+          <>
+            {/* Hovering a bar shows its date and count here, and each bar
+                also carries a native tooltip. The chart was unreadable
+                without any numbers against it. */}
+            <div className="flex items-baseline justify-between gap-3 mb-2 text-[11px]">
+              <span className="text-white/50">
+                {hovered
+                  ? <><span className="text-white font-semibold">{hovered.count}</span> view{hovered.count === 1 ? '' : 's'} on {istDate(hovered.date)}</>
+                  : <>Peak <span className="text-white font-semibold">{peak}</span> view{peak === 1 ? '' : 's'} in a day · {data.viewsLast30} total</>}
+              </span>
+              <span className="text-white/25">hover a bar for detail</span>
+            </div>
+
+            <div className="relative flex items-end gap-[2px] h-32 border-b border-white/10">
+              {/* peak gridline so the bar heights mean something */}
+              <span className="absolute left-0 right-0 top-0 border-t border-dashed border-white/10" aria-hidden="true" />
+              <span className="absolute -top-2 right-0 text-[9px] text-white/25">{peak}</span>
+              {data.daily.map((d) => (
+                <div
+                  key={d.date}
+                  onMouseEnter={() => setHovered(d)}
+                  onMouseLeave={() => setHovered(null)}
+                  className={`flex-1 rounded-t transition-colors min-h-[2px] cursor-default ${
+                    hovered?.date === d.date ? 'bg-brand-red' : 'bg-brand-red/70 hover:bg-brand-red'
+                  }`}
+                  style={{ height: `${(d.count / peak) * 100}%` }}
+                  title={`${istDate(d.date)}: ${d.count} view${d.count === 1 ? '' : 's'}`}
+                />
+              ))}
+            </div>
+            <div className="flex justify-between mt-1.5 text-[9px] text-white/25">
+              <span>{istDate(data.daily[0]?.date)}</span>
+              <span>{istDate(data.daily[data.daily.length - 1]?.date)}</span>
+            </div>
+          </>
         )}
       </div>
 

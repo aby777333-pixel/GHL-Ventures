@@ -11,7 +11,7 @@
    finance or other people's profiles.
    ───────────────────────────────────────────────────────────── */
 
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import {
   FileText, Image as ImageIcon, FolderTree, Users, MessageSquare,
@@ -43,6 +43,8 @@ const NAV = [
 
 /** Sidebar body, shared by the desktop rail and the mobile drawer.
  *  Module scope so React keeps one component identity. */
+const NAV_SCROLL_KEY = 'ghl_cms_nav_scroll'
+
 function SidebarContent({
   active, session, onNavigate, onChangePassword, onSignOut,
 }: {
@@ -52,6 +54,28 @@ function SidebarContent({
   onChangePassword: () => void
   onSignOut: () => void
 }) {
+  /* Navigating remounts this component, which would send the menu back to
+     the top every time. Restore the previous offset and keep it in sync. */
+  const navRef = useRef<HTMLElement>(null)
+  useEffect(() => {
+    const el = navRef.current
+    if (!el) return
+    try {
+      const saved = Number(sessionStorage.getItem(NAV_SCROLL_KEY) || '0')
+      if (saved > 0) el.scrollTop = saved
+    } catch { /* private mode */ }
+
+    let frame = 0
+    const onScroll = () => {
+      cancelAnimationFrame(frame)
+      frame = requestAnimationFrame(() => {
+        try { sessionStorage.setItem(NAV_SCROLL_KEY, String(el.scrollTop)) } catch { /* ignore */ }
+      })
+    }
+    el.addEventListener('scroll', onScroll, { passive: true })
+    return () => { cancelAnimationFrame(frame); el.removeEventListener('scroll', onScroll) }
+  }, [])
+
   return (
     <>
       <div className="p-5 border-b border-white/10 flex items-center gap-2.5 min-w-0">
@@ -64,7 +88,7 @@ function SidebarContent({
         </div>
       </div>
 
-      <nav className="flex-1 overflow-y-auto p-3 space-y-0.5">
+      <nav ref={navRef} className="flex-1 overflow-y-auto p-3 space-y-0.5">
         {NAV.map((n) => {
           const Icon = n.icon
           const on = active === n.id
