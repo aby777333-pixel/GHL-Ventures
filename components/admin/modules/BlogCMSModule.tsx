@@ -51,6 +51,9 @@ interface Props {
   showToast: (msg: string, type?: 'success' | 'error' | 'info') => void
   canEdit?: boolean
   canDelete?: boolean
+  /** The standalone /cms console has its own sidebar, so it suppresses
+   *  this module's internal tab strip rather than showing both. */
+  hideTabs?: boolean
 }
 
 const card = 'rounded-xl border border-white/10 bg-white/[0.03]'
@@ -73,7 +76,7 @@ const STATUS_STYLE: Record<string, string> = {
   archived: 'bg-white/5 text-white/35',
 }
 
-export default function BlogCMSModule({ subTab, navigate, showToast, canEdit = true, canDelete = true }: Props) {
+export default function BlogCMSModule({ subTab, navigate, showToast, canEdit = true, canDelete = true, hideTabs = false }: Props) {
   const active = (TABS.some((t) => t.id === subTab) ? subTab : 'posts') as TabId
   const [editing, setEditing] = useState<{ id: string | null; post: CmsPost | null } | null>(null)
 
@@ -108,7 +111,7 @@ export default function BlogCMSModule({ subTab, navigate, showToast, canEdit = t
       </div>
 
       {/* tabs */}
-      <div className="flex gap-1 mb-6 overflow-x-auto pb-1 -mx-1 px-1">
+      <div className={`gap-1 mb-6 overflow-x-auto pb-1 -mx-1 px-1 ${hideTabs ? 'hidden' : 'flex'}`}>
         {TABS.map((t) => {
           const Icon = t.icon
           const on = active === t.id

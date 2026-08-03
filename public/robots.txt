@@ -3,6 +3,7 @@ Allow: /
 Disallow: /login
 Disallow: /register
 Disallow: /admin/
+Disallow: /cms/
 Disallow: /staff/
 Disallow: /dashboard/
 Disallow: /investor/

@@ -58,3 +58,60 @@
 -- history (supabase migration list / the dashboard), which is the
 -- authoritative record for this project.
 -- ============================================================
+
+-- ============================================================
+-- Follow-up, same day: standalone Content Studio (/cms)
+-- so the external SEO team can publish WITHOUT admin access.
+--
+--   8. blog_cms_add_editor_roles_enum
+--        user_role gains 'blog_editor' and 'blog_author'.
+--        Deliberately NOT added to adminAuthService's ADMIN_ROLES,
+--        so these accounts cannot sign in to /admin at all.
+--
+--   9. blog_cms_editor_role_policies
+--        · is_blog_editor() widened to the two new roles (write)
+--        · new is_blog_admin() for delete + CMS settings
+--          (blog_author excluded)
+--        · blog_posts gains cms insert/update/delete policies
+--          alongside the untouched pre-existing admin policy
+--        · blog_posts_public_read was `USING (true)` and exposed
+--          unpublished drafts to anonymous visitors — tightened
+--        · the FOR ALL policies on the CMS tables were split into
+--          insert/update (editor) and delete (blog admin)
+--
+--  10. kyc_close_public_service_policies    ⚠ SECURITY FIX
+--        kyc_basic_service / kyc_identity_service / kyc_bank_service
+--        / kyc_demat_service / nominees_service were all
+--        FOR ALL, roles={public}, USING true, WITH CHECK true.
+--        roles={public} means EVERY role, so anon could read and
+--        write all PAN / Aadhaar / bank / demat / nominee data.
+--        Verified live before the fix: an anon caller returned 87
+--        basic, 69 identity, 64 bank and 64 nominee rows.
+--        Dropped, plus table-level grants revoked from anon.
+--        Admin and client-owner policies already covered every
+--        legitimate path; both re-verified after the change.
+--
+--  11. blog_only_roles_denied_business_data
+--        Many pre-existing policies are `TO authenticated
+--        USING (true)` (monthly_payouts, allotments,
+--        debenture_certificates, document_tracking,
+--        marketing_content, assets, staff_profiles, tickets,
+--        chat_sessions, chat_messages, lead_* lookups,
+--        investment_documents, investment_transactions).
+--        Rather than rewrite them — which would risk the admin and
+--        staff portals that rely on them — each gained
+--        `AND NOT public.is_blog_only()`. The predicate is false for
+--        every pre-existing user, so their access is unchanged;
+--        only blog_editor / blog_author are excluded.
+--        Also removes the empty auto-created clients row that the
+--        signup trigger makes for a content account.
+--
+-- ⚠ STILL OPEN (pre-existing, out of scope, flagged to the owner):
+--     · storage ghl_media_anon_insert / _update / _delete let ANY
+--       anonymous caller write to and delete from the public
+--       ghl-media bucket, which now holds every blog image and
+--       report PDF.
+--     · email_otp_codes has `TO anon` SELECT and UPDATE USING (true).
+--     · chat_sessions / chat_messages / staff_profiles / tickets
+--       remain readable by any authenticated user (and some by anon).
+-- ============================================================
