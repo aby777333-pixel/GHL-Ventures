@@ -6,6 +6,10 @@ import { FUND_ARTICLES, FINANCIAL_IQ_ARTICLES } from '@/lib/constants'
 
 const SITE_URL = 'https://ghlindiaventures.com'
 
+/* Regenerated hourly on the droplet so newly published articles enter
+   the sitemap without a deploy. Ignored by the static export. */
+export const revalidate = 3600
+
 /* Replaces the hand-maintained public/sitemap.xml, which had gone
    stale (16 URLs) and — worse — pointed every <loc> at the
    ghl-india-ventures-2025.netlify.app mirror instead of the real

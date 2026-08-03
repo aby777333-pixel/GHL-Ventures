@@ -4,6 +4,7 @@ import { getPublishedPosts, excerptOf } from '@/lib/blog/cmsService'
    the static export for the Netlify mirror; on the droplet (a real
    next start server) the same handler is re-evaluated on rebuild. */
 export const dynamic = 'force-static'
+export const revalidate = 3600
 
 const SITE_URL = 'https://ghlindiaventures.com'
 

@@ -31,6 +31,11 @@ const DynamicBlogViewer = dynamic(() => import('./DynamicBlogViewer'), { ssr: fa
 
 const SITE_URL = 'https://ghlindiaventures.com'
 
+/* On the droplet (a real next start server) this makes each article
+   re-render at most once a minute, so a CMS edit goes live without a
+   deploy. The static export used for the Netlify mirror ignores it. */
+export const revalidate = 60
+
 // ─── Bespoke article components, keyed by blog_posts.legacy_component ───
 const RICH_BLOG_COMPONENTS: Record<string, React.ComponentType> = {
   Blog1CategoryIIAIF,
