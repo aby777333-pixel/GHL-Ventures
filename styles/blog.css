@@ -188,3 +188,22 @@
 /* ----- line clamps used by the cards ----- */
 .blog-clamp-2 { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 .blog-clamp-3 { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+
+/* ── CMS dropdowns ───────────────────────────────────────────
+   globals.css sets `select option { background-color:#1A1A1A; color:#fff }`
+   for the dark site. Chrome on Windows renders the native popup with a white
+   background and honours the colour but not the background, so those options
+   came out white-on-white and looked empty.
+
+   Higher specificity than the global rule (select.cms-select option), so no
+   !important needed. Dark text on a light popup is readable whichever of the
+   two the browser decides to apply.
+   ──────────────────────────────────────────────────────────── */
+select.cms-select option {
+  background-color: #FFFFFF;
+  color: #111827;
+}
+select.cms-select option:checked {
+  background-color: #BA181B;
+  color: #FFFFFF;
+}

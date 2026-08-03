@@ -115,7 +115,7 @@ export default function MediaLibrary({
         <select
           value={folder}
           onChange={(e) => setFolder(e.target.value)}
-          className="px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-sm text-white focus:outline-none focus:border-brand-red"
+          className="cms-select px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-sm text-white focus:outline-none focus:border-brand-red"
         >
           {FOLDERS.map((f) => <option key={f} value={f} className="bg-[#161A1D]">{f === 'all' ? 'All folders' : f}</option>)}
         </select>

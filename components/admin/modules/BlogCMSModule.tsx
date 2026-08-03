@@ -57,7 +57,7 @@ interface Props {
 }
 
 const card = 'rounded-xl border border-white/10 bg-white/[0.03]'
-const input = 'w-full px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-sm text-white placeholder-white/30 focus:outline-none focus:border-brand-red transition-colors'
+const input = 'cms-select w-full px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-sm text-white placeholder-white/30 focus:outline-none focus:border-brand-red transition-colors'
 const label = 'block text-[11px] font-semibold uppercase tracking-wider text-white/45 mb-1.5'
 const btnPrimary = 'px-4 py-2 rounded-lg bg-brand-red hover:bg-brand-red-deep disabled:opacity-60 text-white text-xs font-semibold inline-flex items-center gap-1.5 transition-colors'
 const btnGhost = 'px-3 py-2 rounded-lg border border-white/10 text-white/70 hover:bg-white/10 hover:text-white text-xs font-semibold inline-flex items-center gap-1.5 transition-colors'
@@ -187,7 +187,7 @@ function PostsTab({ onEdit, showToast, canEdit, canDelete }: {
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/30 pointer-events-none" />
           <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search by title or slug…" className={`${input} pl-9`} />
         </div>
-        <select value={status} onChange={(e) => setStatus(e.target.value)} className="px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-sm text-white focus:outline-none focus:border-brand-red">
+        <select value={status} onChange={(e) => setStatus(e.target.value)} className="cms-select px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-sm text-white focus:outline-none focus:border-brand-red">
           {['all', 'published', 'draft', 'scheduled', 'archived'].map((s) => (
             <option key={s} value={s} className="bg-[#161A1D]">{s === 'all' ? 'All statuses' : s}</option>
           ))}

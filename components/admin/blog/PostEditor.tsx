@@ -260,7 +260,7 @@ export default function PostEditor({ postId, onBack, onSaved, showToast, initial
     )
   }
 
-  const inputCls = 'w-full px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-sm text-white placeholder-white/30 focus:outline-none focus:border-brand-red transition-colors'
+  const inputCls = 'cms-select w-full px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-sm text-white placeholder-white/30 focus:outline-none focus:border-brand-red transition-colors'
   const labelCls = 'block text-[11px] font-semibold uppercase tracking-wider text-white/45 mb-1.5'
 
   return (

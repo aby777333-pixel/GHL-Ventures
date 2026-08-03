@@ -114,7 +114,9 @@ export default function CmsClient({ subTab }: { subTab?: string | null }) {
               <button
                 key={n.id}
                 onClick={() => navigate('blog', n.id === 'posts' ? undefined : n.id)}
-                className={`w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm font-medium text-left transition-colors ${
+                /* `justify-start` is required, not decorative: globals.css
+                   centres any full-width rounded button that does not opt out. */
+                className={`w-full flex justify-start items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm font-medium text-left transition-colors ${
                   on ? 'bg-brand-red text-white' : 'text-white/55 hover:text-white hover:bg-white/5'
                 }`}
               >
@@ -130,21 +132,21 @@ export default function CmsClient({ subTab }: { subTab?: string | null }) {
             href={`${SITE_URL}/blog/`}
             target="_blank"
             rel="noopener noreferrer"
-            className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm text-white/55 hover:text-white hover:bg-white/5 transition-colors"
+            className="w-full flex justify-start items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm text-white/55 hover:text-white hover:bg-white/5 transition-colors"
           >
             <ExternalLink className="w-4 h-4 flex-shrink-0" />
             <span className="truncate">View live blog</span>
           </a>
           <button
             onClick={() => setPwOpen(true)}
-            className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm text-white/55 hover:text-white hover:bg-white/5 transition-colors"
+            className="w-full flex justify-start items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm text-white/55 hover:text-white hover:bg-white/5 transition-colors"
           >
             <KeyRound className="w-4 h-4 flex-shrink-0" />
             <span className="truncate">Change password</span>
           </button>
           <button
             onClick={async () => { await logoutFromCms(); setSession(null) }}
-            className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm text-white/55 hover:text-white hover:bg-white/5 transition-colors"
+            className="w-full flex justify-start items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm text-white/55 hover:text-white hover:bg-white/5 transition-colors"
           >
             <LogOut className="w-4 h-4 flex-shrink-0" />
             <span className="truncate">Sign out</span>

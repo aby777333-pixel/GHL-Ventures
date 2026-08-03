@@ -10,6 +10,10 @@
    ───────────────────────────────────────────────────────────── */
 
 import { useCallback, useEffect, useRef, useState } from 'react'
+// The editing surface reuses the public .article-body typography so what the
+// author sees matches the published page. Imported here rather than in a
+// layout so it loads in BOTH the admin portal and the standalone /cms console.
+import '@/styles/blog.css'
 import {
   Bold, Italic, Underline, List, ListOrdered, Link2, Quote, Table2,
   Image as ImageIcon, Video, Minus, Code2, Heading2, Heading3, Heading4,
