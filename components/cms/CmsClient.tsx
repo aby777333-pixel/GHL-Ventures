@@ -40,6 +40,88 @@ const NAV = [
   { id: 'trash',       label: 'Trash',            icon: Trash2 },
 ] as const
 
+
+/** Sidebar body, shared by the desktop rail and the mobile drawer.
+ *  Module scope so React keeps one component identity. */
+function SidebarContent({
+  active, session, onNavigate, onChangePassword, onSignOut,
+}: {
+  active: string
+  session: CmsSession
+  onNavigate: (module: string, tab?: string) => void
+  onChangePassword: () => void
+  onSignOut: () => void
+}) {
+  return (
+    <>
+      <div className="p-5 border-b border-white/10 flex items-center gap-2.5 min-w-0">
+        <span className="w-8 h-8 rounded-lg bg-brand-red flex items-center justify-center flex-shrink-0">
+          <PenSquare className="w-4 h-4 text-white" />
+        </span>
+        <div className="min-w-0">
+          <p className="text-sm font-bold leading-tight truncate text-white">Content Studio</p>
+          <p className="text-[10px] text-white/35 truncate">GHL India Ventures</p>
+        </div>
+      </div>
+
+      <nav className="flex-1 overflow-y-auto p-3 space-y-0.5">
+        {NAV.map((n) => {
+          const Icon = n.icon
+          const on = active === n.id
+          return (
+            <button
+              key={n.id}
+              onClick={() => onNavigate('blog', n.id === 'posts' ? undefined : n.id)}
+              /* `justify-start` is required, not decorative: globals.css
+                 centres any full-width rounded button that does not opt out. */
+              className={`w-full flex justify-start items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm font-medium text-left transition-colors ${
+                on ? 'bg-brand-red text-white' : 'text-white/60 hover:text-white hover:bg-white/5'
+              }`}
+            >
+              <Icon className="w-4 h-4 flex-shrink-0" />
+              <span className="truncate">{n.label}</span>
+            </button>
+          )
+        })}
+      </nav>
+
+      <div className="p-3 border-t border-white/10 space-y-0.5">
+        <a
+          href={`${SITE_URL}/blog/`}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="w-full flex justify-start items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm text-white/60 hover:text-white hover:bg-white/5 transition-colors"
+        >
+          <ExternalLink className="w-4 h-4 flex-shrink-0" />
+          <span className="truncate">View live blog</span>
+        </a>
+        <button
+          onClick={onChangePassword}
+          className="w-full flex justify-start items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm text-white/60 hover:text-white hover:bg-white/5 transition-colors"
+        >
+          <KeyRound className="w-4 h-4 flex-shrink-0" />
+          <span className="truncate">Change password</span>
+        </button>
+        <button
+          onClick={onSignOut}
+          className="w-full flex justify-start items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm text-white/60 hover:text-white hover:bg-white/5 transition-colors"
+        >
+          <LogOut className="w-4 h-4 flex-shrink-0" />
+          <span className="truncate">Sign out</span>
+        </button>
+
+        <div className="mt-2 px-3 py-2.5 rounded-lg bg-white/5">
+          <p className="text-xs font-semibold truncate text-white">{session.user.name}</p>
+          <p className="text-[10px] text-white/35 truncate">{session.user.email}</p>
+          <span className="inline-block mt-1.5 px-1.5 py-0.5 rounded bg-brand-red/15 text-brand-red text-[9px] font-bold uppercase tracking-wider">
+            {ROLE_LABEL[session.user.role]}
+          </span>
+        </div>
+      </div>
+    </>
+  )
+}
+
 type Toast = { id: number; msg: string; type: 'success' | 'error' | 'info' }
 
 export default function CmsClient({ subTab }: { subTab?: string | null }) {
@@ -58,17 +140,15 @@ export default function CmsClient({ subTab }: { subTab?: string | null }) {
     return () => { alive = false }
   }, [])
 
-  /* Portal shells mark the body so globals.css can opt them out of the
-     marketing-site text rules — AdminShell/StaffClient/DashboardShell all
-     do this. Without it, the rule
-       [class*="bg-[#0"] [class*="text-gray-"] { color: rgba(255,255,255,.78) !important }
-     painted the editor's body text white on its white page, so saved
-     articles looked empty. Reusing 'admin-active' rather than inventing a
-     new class means every existing exclusion selector already covers us. */
-  useEffect(() => {
-    document.body.classList.add('admin-active')
-    return () => { document.body.classList.remove('admin-active') }
-  }, [])
+  /* NOTE: this console deliberately does NOT set the `admin-active` body
+     class. globals.css contains
+       body.admin-active .fixed:not(.admin-portal) { visibility: hidden !important }
+     which hid the sidebar and every modal (including the media picker) while
+     they still occupied layout. The marketing chrome is already excluded from
+     /cms by MainSiteOnly, and the editor's text colour no longer depends on
+     that class, so it buys nothing here. Any fixed overlay below carries
+     `admin-portal`, which is the sanctioned exemption when this module is
+     rendered inside the admin portal, where AdminShell DOES set the class. */
 
   const showToast = useCallback((msg: string, type: Toast['type'] = 'info') => {
     const id = Date.now() + Math.floor(Math.random() * 1000)
@@ -97,85 +177,45 @@ export default function CmsClient({ subTab }: { subTab?: string | null }) {
 
   return (
     <div className="min-h-screen bg-[#0B090A] text-white flex">
-      {/* ── sidebar ─────────────────────────────────────── */}
+      {/* ── sidebar ───────────────────────────────────────
+          Desktop and mobile are rendered as SEPARATE elements on
+          purpose. The previous single element toggled between
+          `-translate-x-full` and `lg:translate-x-0`, and when those two
+          utilities raced the sidebar ended up translated off-screen
+          while still occupying its 16rem of layout — the column looked
+          empty. Desktop now never carries a transform at all. */}
+      <aside className="hidden lg:flex lg:sticky top-0 left-0 h-screen w-64 flex-shrink-0 bg-[#111315] border-r border-white/10 flex-col z-40">
+        <SidebarContent
+          active={active}
+          session={session}
+          onNavigate={navigate}
+          onChangePassword={() => setPwOpen(true)}
+          onSignOut={async () => { await logoutFromCms(); setSession(null) }}
+        />
+      </aside>
+
+      {/* mobile drawer */}
       <aside
-        className={`fixed lg:sticky top-0 left-0 z-50 h-screen w-64 flex-shrink-0 bg-[#111315] border-r border-white/10 flex flex-col transition-transform lg:translate-x-0 ${
+        className={`admin-portal fixed inset-y-0 left-0 z-50 w-64 bg-[#111315] border-r border-white/10 flex flex-col lg:hidden transition-transform duration-200 ${
           navOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
       >
-        <div className="p-5 border-b border-white/10 flex items-center justify-between gap-2">
-          <div className="flex items-center gap-2.5 min-w-0">
-            <span className="w-8 h-8 rounded-lg bg-brand-red flex items-center justify-center flex-shrink-0">
-              <PenSquare className="w-4 h-4 text-white" />
-            </span>
-            <div className="min-w-0">
-              <p className="text-sm font-bold leading-tight truncate">Content Studio</p>
-              <p className="text-[10px] text-white/35 truncate">GHL India Ventures</p>
-            </div>
-          </div>
-          <button onClick={() => setNavOpen(false)} className="lg:hidden p-1 text-white/40 hover:text-white" aria-label="Close menu">
+        <div className="flex items-center justify-end p-3 border-b border-white/10">
+          <button onClick={() => setNavOpen(false)} className="p-1.5 text-white/50 hover:text-white" aria-label="Close menu">
             <X className="w-5 h-5" />
           </button>
         </div>
-
-        <nav className="flex-1 overflow-y-auto p-3 space-y-0.5">
-          {NAV.map((n) => {
-            const Icon = n.icon
-            const on = active === n.id
-            return (
-              <button
-                key={n.id}
-                onClick={() => navigate('blog', n.id === 'posts' ? undefined : n.id)}
-                /* `justify-start` is required, not decorative: globals.css
-                   centres any full-width rounded button that does not opt out. */
-                className={`w-full flex justify-start items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm font-medium text-left transition-colors ${
-                  on ? 'bg-brand-red text-white' : 'text-white/55 hover:text-white hover:bg-white/5'
-                }`}
-              >
-                <Icon className="w-4 h-4 flex-shrink-0" />
-                <span className="truncate">{n.label}</span>
-              </button>
-            )
-          })}
-        </nav>
-
-        <div className="p-3 border-t border-white/10 space-y-0.5">
-          <a
-            href={`${SITE_URL}/blog/`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="w-full flex justify-start items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm text-white/55 hover:text-white hover:bg-white/5 transition-colors"
-          >
-            <ExternalLink className="w-4 h-4 flex-shrink-0" />
-            <span className="truncate">View live blog</span>
-          </a>
-          <button
-            onClick={() => setPwOpen(true)}
-            className="w-full flex justify-start items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm text-white/55 hover:text-white hover:bg-white/5 transition-colors"
-          >
-            <KeyRound className="w-4 h-4 flex-shrink-0" />
-            <span className="truncate">Change password</span>
-          </button>
-          <button
-            onClick={async () => { await logoutFromCms(); setSession(null) }}
-            className="w-full flex justify-start items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm text-white/55 hover:text-white hover:bg-white/5 transition-colors"
-          >
-            <LogOut className="w-4 h-4 flex-shrink-0" />
-            <span className="truncate">Sign out</span>
-          </button>
-
-          <div className="mt-2 px-3 py-2.5 rounded-lg bg-white/5">
-            <p className="text-xs font-semibold truncate">{session.user.name}</p>
-            <p className="text-[10px] text-white/35 truncate">{session.user.email}</p>
-            <span className="inline-block mt-1.5 px-1.5 py-0.5 rounded bg-brand-red/15 text-brand-red text-[9px] font-bold uppercase tracking-wider">
-              {ROLE_LABEL[session.user.role]}
-            </span>
-          </div>
-        </div>
+        <SidebarContent
+          active={active}
+          session={session}
+          onNavigate={navigate}
+          onChangePassword={() => { setPwOpen(true); setNavOpen(false) }}
+          onSignOut={async () => { await logoutFromCms(); setSession(null) }}
+        />
       </aside>
 
       {navOpen && (
-        <div className="fixed inset-0 z-40 bg-black/60 lg:hidden" onClick={() => setNavOpen(false)} aria-hidden="true" />
+        <div className="admin-portal fixed inset-0 z-40 bg-black/60 lg:hidden" onClick={() => setNavOpen(false)} aria-hidden="true" />
       )}
 
       {/* ── main ────────────────────────────────────────── */}
@@ -200,7 +240,7 @@ export default function CmsClient({ subTab }: { subTab?: string | null }) {
       </div>
 
       {/* ── toasts ──────────────────────────────────────── */}
-      <div className="fixed bottom-4 right-4 z-[200] space-y-2 max-w-sm">
+      <div className="admin-portal fixed bottom-4 right-4 z-[200] space-y-2 max-w-sm">
         {toasts.map((t) => {
           const Icon = t.type === 'success' ? CheckCircle2 : t.type === 'error' ? AlertCircle : Info
           const tone = t.type === 'success'
@@ -238,7 +278,7 @@ function ChangePassword({ onClose, showToast }: { onClose: () => void; showToast
   }
 
   return (
-    <div className="fixed inset-0 z-[150] flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm" role="dialog" aria-modal="true">
+    <div className="admin-portal fixed inset-0 z-[150] flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm" role="dialog" aria-modal="true">
       <form onSubmit={submit} className="bg-[#161A1D] border border-white/10 rounded-2xl w-full max-w-sm p-5 space-y-3">
         <div className="flex items-center justify-between gap-3">
           <h2 className="text-sm font-bold">Change your password</h2>

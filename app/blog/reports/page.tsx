@@ -152,7 +152,7 @@ function DownloadModal({ report, onClose }: { report: CmsReport; onClose: () => 
   }
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm" role="dialog" aria-modal="true" aria-label={`Download ${report.title}`}>
+    <div className="admin-portal fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm" role="dialog" aria-modal="true" aria-label={`Download ${report.title}`}>
       <div className="bg-white rounded-2xl w-full max-w-md overflow-hidden shadow-2xl">
         <div className="flex items-start justify-between gap-4 p-5 border-b border-gray-200">
           <div className="min-w-0">

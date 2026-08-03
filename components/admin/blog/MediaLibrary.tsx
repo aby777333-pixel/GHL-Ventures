@@ -247,7 +247,7 @@ export default function MediaLibrary({
 
   if (mode === 'picker') {
     return (
-      <div className="fixed inset-0 z-[120] flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm" role="dialog" aria-modal="true" aria-label="Media library">
+      <div className="admin-portal fixed inset-0 z-[120] flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm" role="dialog" aria-modal="true" aria-label="Media library">
         <div className="bg-[#161A1D] border border-white/10 rounded-2xl w-full max-w-5xl max-h-[85vh] overflow-hidden flex flex-col shadow-2xl">
           <div className="flex items-center justify-between gap-4 p-4 border-b border-white/10">
             <h2 className="text-sm font-bold text-white">Media library</h2>
