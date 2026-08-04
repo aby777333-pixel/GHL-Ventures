@@ -4893,3 +4893,41 @@ body {
     transform: translateX(-50%);
   }
 }
+
+/* ── White text on an element that IS the dark surface ────────
+   The light-mode safety net (~L3892) flips `text-white` to near-black
+   whenever it sits inside a light card/section, to catch genuine
+   white-on-white mistakes. Its escape hatch (~L3923) only ever covered
+   white text on a dark ANCESTOR — e.g. `.bg-brand-red [class~="text-white"]`.
+
+   It never covered the SAME-element case: a `bg-brand-red text-white`
+   button sitting inside a white card. That is why the report download
+   buttons on /blog/reports (and their icons, which inherit via
+   currentColor) rendered with black labels on red.
+
+   Two tiers are needed, because the safety net has branches of differing
+   specificity: `.bg-white [class~="text-white"]` is (0,7,1) but
+   `section.bg-white [class~="text-white"]` is (0,7,2). The plain selectors
+   below tie the first (and win on source order, being last in the file);
+   the tag-qualified ones tie the second. The report cards sit in a
+   `section.bg-white`, which is exactly why the first tier alone left them
+   black while the modal button — inside a plain div.bg-white — went white. */
+:root:not(.dark) body:not(.dashboard-active):not(.admin-active):not(.staff-active) .bg-brand-red[class~="text-white"],
+:root:not(.dark) body:not(.dashboard-active):not(.admin-active):not(.staff-active) .bg-brand-red[class*="text-white/"],
+:root:not(.dark) body:not(.dashboard-active):not(.admin-active):not(.staff-active) .bg-brand-red-deep[class~="text-white"],
+:root:not(.dark) body:not(.dashboard-active):not(.admin-active):not(.staff-active) .bg-brand-black[class~="text-white"],
+:root:not(.dark) body:not(.dashboard-active):not(.admin-active):not(.staff-active) .bg-brand-darkgrey[class~="text-white"],
+:root:not(.dark) body:not(.dashboard-active):not(.admin-active):not(.staff-active) .bg-black[class~="text-white"],
+/* tag-qualified tier — beats the `section.bg-white …` branch */
+:root:not(.dark) body:not(.dashboard-active):not(.admin-active):not(.staff-active) button.bg-brand-red[class~="text-white"],
+:root:not(.dark) body:not(.dashboard-active):not(.admin-active):not(.staff-active) button.bg-brand-red[class*="text-white/"],
+:root:not(.dark) body:not(.dashboard-active):not(.admin-active):not(.staff-active) a.bg-brand-red[class~="text-white"],
+:root:not(.dark) body:not(.dashboard-active):not(.admin-active):not(.staff-active) a.bg-brand-red[class*="text-white/"],
+:root:not(.dark) body:not(.dashboard-active):not(.admin-active):not(.staff-active) button.bg-brand-red-deep[class~="text-white"],
+:root:not(.dark) body:not(.dashboard-active):not(.admin-active):not(.staff-active) a.bg-brand-red-deep[class~="text-white"],
+:root:not(.dark) body:not(.dashboard-active):not(.admin-active):not(.staff-active) button.bg-brand-black[class~="text-white"],
+:root:not(.dark) body:not(.dashboard-active):not(.admin-active):not(.staff-active) a.bg-brand-black[class~="text-white"],
+:root:not(.dark) body:not(.dashboard-active):not(.admin-active):not(.staff-active) button.bg-black[class~="text-white"],
+:root:not(.dark) body:not(.dashboard-active):not(.admin-active):not(.staff-active) a.bg-black[class~="text-white"] {
+  color: #ffffff !important;
+}
