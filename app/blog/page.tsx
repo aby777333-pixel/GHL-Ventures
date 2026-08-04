@@ -14,7 +14,7 @@
    legacy BLOG_POSTS constant and can never render empty.
    ───────────────────────────────────────────────────────────── */
 
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
 import AnimatedSection from '@/components/AnimatedSection'
 import PostCard from '@/components/blog/PostCard'
@@ -94,6 +94,21 @@ export default function BlogPage() {
     }
     return out
   }, [posts, activeCat, query, featured])
+
+  // Top of the article list. Pagination scrolls back here so a page change
+  // doesn't leave the reader stranded at the bottom of the next page.
+  const listTopRef = useRef<HTMLDivElement | null>(null)
+
+  const goToPage = (n: number) => {
+    setPage(n)
+    const el = listTopRef.current
+    if (!el) return
+    // The header is fixed, so offset the target by its height instead of
+    // using scrollIntoView (which would tuck the heading underneath it).
+    const HEADER_OFFSET = 104
+    const top = el.getBoundingClientRect().top + window.scrollY - HEADER_OFFSET
+    window.scrollTo({ top: Math.max(0, top), behavior: 'smooth' })
+  }
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / POSTS_PER_PAGE))
   const current = Math.min(page, totalPages)
@@ -250,7 +265,7 @@ export default function BlogPage() {
                 </div>
               ) : (
                 <>
-                  <div className="flex items-center justify-between gap-4 mb-5 flex-wrap">
+                  <div ref={listTopRef} className="flex items-center justify-between gap-4 mb-5 flex-wrap">
                     <h2 className="text-xs font-bold uppercase tracking-[0.18em] text-brand-black">
                       {query
                         ? 'Search results'
@@ -274,7 +289,7 @@ export default function BlogPage() {
                   {totalPages > 1 && (
                     <nav className="flex items-center justify-center gap-1.5 mt-10 flex-wrap" aria-label="Pagination">
                       <button
-                        onClick={() => setPage(current - 1)} disabled={current === 1}
+                        onClick={() => goToPage(current - 1)} disabled={current === 1}
                         className="px-3.5 py-2 rounded-lg border border-gray-200 text-sm text-gray-600 disabled:opacity-40 disabled:cursor-not-allowed hover:border-brand-red hover:text-brand-red transition-colors"
                       >
                         Previous
@@ -288,7 +303,7 @@ export default function BlogPage() {
                         }
                         return (
                           <button
-                            key={n} onClick={() => setPage(n)}
+                            key={n} onClick={() => goToPage(n)}
                             aria-current={n === current ? 'page' : undefined}
                             className={`w-9 h-9 rounded-lg text-sm font-medium transition-colors ${
                               n === current
@@ -301,7 +316,7 @@ export default function BlogPage() {
                         )
                       })}
                       <button
-                        onClick={() => setPage(current + 1)} disabled={current === totalPages}
+                        onClick={() => goToPage(current + 1)} disabled={current === totalPages}
                         className="px-3.5 py-2 rounded-lg border border-gray-200 text-sm text-gray-600 disabled:opacity-40 disabled:cursor-not-allowed hover:border-brand-red hover:text-brand-red transition-colors"
                       >
                         Next

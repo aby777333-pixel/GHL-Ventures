@@ -159,7 +159,7 @@ export default function FundArticleClient({ article, content, relatedArticles, s
                   </p>
                 </div>
                 <a
-                  href="https://linkedin.com/company/ghl-india-ventures"
+                  href="https://www.linkedin.com/company/ghl-india-ventures-fund/"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="text-brand-grey hover:text-brand-red transition-colors shrink-0"

@@ -15,6 +15,7 @@ import {
   Calendar, Clock, ArrowLeft, User, Tag as TagIcon, Eye, ArrowRight,
 } from 'lucide-react'
 import ArticleBody from '@/components/blog/ArticleBody'
+import ImageZoom from '@/components/blog/ImageZoom'
 import ShareButtons from '@/components/blog/ShareButtons'
 import PostCard from '@/components/blog/PostCard'
 import NewsletterSignup from '@/components/blog/NewsletterSignup'
@@ -111,6 +112,10 @@ export default function ArticleView({ post, preview = false }: { post: CmsPost; 
         </div>
       </section>
 
+      {/* ImageZoom wraps the cover + body + gallery so every article image
+          is click-to-zoom. Related-post cards are deliberately outside it —
+          those are links, and should navigate rather than open a lightbox. */}
+      <ImageZoom>
       {/* ── Cover ────────────────────────────────────────── */}
       <section className="bg-white">
         <div className="container-max mx-auto px-4 sm:px-6 lg:px-8">
@@ -217,6 +222,7 @@ export default function ArticleView({ post, preview = false }: { post: CmsPost; 
           <CommentsSection postId={post.id} enabled={!!post.allow_comments} />
         </div>
       </section>
+      </ImageZoom>
 
       {/* ── Related ──────────────────────────────────────── */}
       {related.length > 0 && (

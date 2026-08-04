@@ -95,6 +95,13 @@ export default function Navbar() {
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
 
+  // Active state for a plain (non-dropdown) nav item. Dropdown parents already
+  // matched on a prefix, but plain links used an exact `pathname === href`
+  // compare, so Blog and Financial IQ went unhighlighted on their own child
+  // pages (/blog/<slug>, /financial-iq/<slug>). Match the section instead.
+  const isSectionActive = (href: string) =>
+    href === '/' ? pathname === '/' : pathname === href || pathname.startsWith(`${href}/`)
+
   // Check if About submenu item is active
   const isAboutActive = pathname === '/about' || pathname === '/tools' || pathname === '/downloads'
 
@@ -175,7 +182,7 @@ export default function Navbar() {
                   const isContact = link.label === 'Contact'
                   const isActive = hasChildren
                     ? (isAbout ? isAboutActive : isFund ? isFundActive : isEducation ? isEducationActive : isContactActive)
-                    : pathname === link.href
+                    : isSectionActive(link.href)
 
                   if (hasChildren) {
                     const dropdownOpen = isAbout ? aboutOpen : isFund ? fundOpen : isEducation ? educationOpen : contactOpen
@@ -483,7 +490,7 @@ export default function Navbar() {
                 }
 
                 // Regular mobile nav link
-                const isActive = pathname === link.href
+                const isActive = isSectionActive(link.href)
                 return (
                   <Link
                     key={link.href}

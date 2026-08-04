@@ -4,6 +4,7 @@ import { useState } from 'react'
 import Link from 'next/link'
 import AnimatedSection from '@/components/AnimatedSection'
 import PlaceholderImage from '@/components/PlaceholderImage'
+import ImageZoom from '@/components/blog/ImageZoom'
 import {
   ArrowLeft, ArrowRight, Clock, Calendar, Tag, BookOpen,
   Share2, Linkedin, Copy, Check, MessageCircle,
@@ -253,7 +254,7 @@ export function FAQSection({ faqs }: { faqs: { q: string; a: string }[] }) {
 /* ─── Main Rich Blog Article Layout ─── */
 export default function RichBlogArticle({ article, children, relatedArticles, sebiReg, schemas }: Props) {
   return (
-    <>
+    <ImageZoom>
       {/* Schema.org structured data */}
       {schemas?.map((schema, i) => (
         <script
@@ -327,7 +328,7 @@ export default function RichBlogArticle({ article, children, relatedArticles, se
                   </p>
                 </div>
                 <a
-                  href="https://linkedin.com/company/ghl-india-ventures"
+                  href="https://www.linkedin.com/company/ghl-india-ventures-fund/"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="text-brand-grey hover:text-brand-red transition-colors shrink-0"
@@ -461,6 +462,6 @@ export default function RichBlogArticle({ article, children, relatedArticles, se
           </div>
         </div>
       </section>
-    </>
+    </ImageZoom>
   )
 }

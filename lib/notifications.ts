@@ -20,7 +20,9 @@ export const NOTIFICATIONS: Notification[] = [
     description: 'The latest Net Asset Value report for GHL India Ventures Fund is now available.',
     date: '2025-01-15',
     read: false,
-    link: '/downloads',
+    // /downloads is gated to 404 (see app/downloads/page.tsx), so this
+    // notification used to dead-end. Reports now live in the blog CMS.
+    link: '/blog/reports',
   },
   {
     id: 'n2',

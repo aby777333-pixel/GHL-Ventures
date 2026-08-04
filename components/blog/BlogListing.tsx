@@ -4,7 +4,7 @@
    search and archive pages. Handles client-side search, sorting
    and pagination over an already-fetched set of posts. */
 
-import { useMemo, useState, useEffect } from 'react'
+import { useMemo, useRef, useState, useEffect } from 'react'
 import Link from 'next/link'
 import { Search, SlidersHorizontal, FileText, ArrowLeft } from 'lucide-react'
 import PostCard from './PostCard'
@@ -57,6 +57,19 @@ export default function BlogListing({
     return sorted
   }, [posts, query, sort])
 
+  // Top of the list. Paging scrolls back here so the reader doesn't land
+  // mid-page (or above the footer) after clicking Next/Previous.
+  const listTopRef = useRef<HTMLDivElement | null>(null)
+
+  const goToPage = (n: number) => {
+    setPage(n)
+    const el = listTopRef.current
+    if (!el) return
+    const HEADER_OFFSET = 104 // fixed site header
+    const top = el.getBoundingClientRect().top + window.scrollY - HEADER_OFFSET
+    window.scrollTo({ top: Math.max(0, top), behavior: 'smooth' })
+  }
+
   const totalPages = Math.max(1, Math.ceil(filtered.length / perPage))
   const current = Math.min(page, totalPages)
   const slice = filtered.slice((current - 1) * perPage, current * perPage)
@@ -80,7 +93,7 @@ export default function BlogListing({
   }
 
   return (
-    <div>
+    <div ref={listTopRef}>
       {(showSearch || showSort) && (
         <div className="flex flex-col sm:flex-row gap-3 mb-8">
           {showSearch && (
@@ -145,7 +158,7 @@ export default function BlogListing({
       {totalPages > 1 && (
         <nav className="flex items-center justify-center gap-1.5 mt-10 flex-wrap" aria-label="Pagination">
           <button
-            onClick={() => setPage(current - 1)}
+            onClick={() => goToPage(current - 1)}
             disabled={current === 1}
             className="px-3.5 py-2 rounded-lg border border-gray-200 text-sm text-gray-600 disabled:opacity-40 disabled:cursor-not-allowed hover:border-brand-red hover:text-brand-red transition-colors"
           >
@@ -162,7 +175,7 @@ export default function BlogListing({
             return (
               <button
                 key={n}
-                onClick={() => setPage(n)}
+                onClick={() => goToPage(n)}
                 aria-current={n === current ? 'page' : undefined}
                 className={`w-9 h-9 rounded-lg text-sm font-medium transition-colors ${
                   n === current
@@ -175,7 +188,7 @@ export default function BlogListing({
             )
           })}
           <button
-            onClick={() => setPage(current + 1)}
+            onClick={() => goToPage(current + 1)}
             disabled={current === totalPages}
             className="px-3.5 py-2 rounded-lg border border-gray-200 text-sm text-gray-600 disabled:opacity-40 disabled:cursor-not-allowed hover:border-brand-red hover:text-brand-red transition-colors"
           >

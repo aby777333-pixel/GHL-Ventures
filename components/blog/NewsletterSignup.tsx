@@ -73,8 +73,12 @@ export default function NewsletterSignup({
               Subscribe
             </button>
           </div>
-          {state === 'error' && <p className="mt-2 text-xs text-brand-red-light">{message}</p>}
-          <p className="mt-3 text-[11px] text-white/40">
+          {state === 'error' && <p className="mt-2 text-xs" style={{ color: '#FF6B6B' }}>{message}</p>}
+          {/* Colour pinned inline, like the heading and subheading above.
+              The `card` variant renders inside the light marketing sidebar,
+              where a `text-white/*` utility loses to the inherited colour and
+              the disclaimer rendered near-black on the near-black card. */}
+          <p className="mt-3 text-[11px]" style={{ color: 'rgba(255,255,255,0.45)' }}>
             We use your email only to send our research. Unsubscribe at any time.
           </p>
         </>

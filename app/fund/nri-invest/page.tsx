@@ -6,6 +6,7 @@ import AnimatedSection from '@/components/AnimatedSection'
 import { BRAND } from '@/lib/constants'
 import { NRIHandbookProvider, useNRIHandbook } from '@/components/NRIHandbook'
 import FundCalculatorSection from '@/components/FundCalculatorSection'
+import FlagIcon from '@/components/FlagIcon'
 import {
   ArrowRight, ArrowLeft, Shield, Globe, Building2, TrendingUp,
   Users, CheckCircle, FileText, Phone, Mail, ChevronRight,
@@ -474,24 +475,34 @@ function NRIInvestContent() {
           {/* Country flags / regions */}
           <AnimatedSection>
             <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-7 gap-4 max-w-5xl mx-auto mb-12">
-              {[
-                { country: 'UAE', flag: '🇦🇪', city: 'Dubai, Abu Dhabi' },
-                { country: 'USA', flag: '🇺🇸', city: 'NYC, SF, Houston' },
-                { country: 'UK', flag: '🇬🇧', city: 'London, Manchester' },
-                { country: 'Singapore', flag: '🇸🇬', city: 'Singapore' },
-                { country: 'Canada', flag: '🇨🇦', city: 'Toronto, Vancouver' },
-                { country: 'Australia', flag: '🇦🇺', city: 'Sydney, Melbourne' },
-                { country: 'Oman', flag: '🇴🇲', city: 'Muscat' },
-                { country: 'Kuwait', flag: '🇰🇼', city: 'Kuwait City' },
-                { country: 'Bahrain', flag: '🇧🇭', city: 'Manama' },
-                { country: 'Qatar', flag: '🇶🇦', city: 'Doha' },
-                { country: 'Germany', flag: '🇩🇪', city: 'Berlin, Munich' },
-                { country: 'Hong Kong', flag: '🇭🇰', city: 'Hong Kong' },
-                { country: 'Malaysia', flag: '🇲🇾', city: 'KL' },
-                { country: 'New Zealand', flag: '🇳🇿', city: 'Auckland' },
-              ].map((item) => (
-                <div key={item.country} className="card p-3 rounded-xl text-center hover:shadow-md transition-all">
-                  <div className="text-2xl mb-1">{item.flag}</div>
+              {/* Flags are inline SVG (components/FlagIcon). Emoji flags are
+                  regional-indicator pairs and Windows renders them as bare
+                  letters — "AE", "US" — instead of a flag. */}
+              {([
+                { code: 'AE', country: 'UAE', city: 'Dubai, Abu Dhabi' },
+                { code: 'US', country: 'USA', city: 'NYC, SF, Houston' },
+                { code: 'GB', country: 'UK', city: 'London, Manchester' },
+                { code: 'SG', country: 'Singapore', city: 'Singapore' },
+                { code: 'CA', country: 'Canada', city: 'Toronto, Vancouver' },
+                { code: 'AU', country: 'Australia', city: 'Sydney, Melbourne' },
+                { code: 'OM', country: 'Oman', city: 'Muscat' },
+                { code: 'KW', country: 'Kuwait', city: 'Kuwait City' },
+                { code: 'BH', country: 'Bahrain', city: 'Manama' },
+                { code: 'QA', country: 'Qatar', city: 'Doha' },
+                { code: 'DE', country: 'Germany', city: 'Berlin, Munich' },
+                { code: 'HK', country: 'Hong Kong', city: 'Hong Kong' },
+                { code: 'MY', country: 'Malaysia', city: 'KL' },
+                { code: 'NZ', country: 'New Zealand', city: 'Auckland' },
+              ] as const).map((item) => (
+                <div
+                  key={item.country}
+                  className="card p-3 rounded-xl text-center transition-all duration-300 hover:shadow-md hover:-translate-y-0.5"
+                >
+                  <FlagIcon
+                    code={item.code}
+                    title={`${item.country} flag`}
+                    className="w-9 h-6 mx-auto mb-2 rounded-[3px] shadow-sm"
+                  />
                   <div className="text-xs font-bold text-brand-black dark:text-white">{item.country}</div>
                   <div className="text-[10px] text-brand-grey dark:text-gray-300">{item.city}</div>
                 </div>

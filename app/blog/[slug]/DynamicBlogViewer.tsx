@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { supabase as _sb, isSupabaseConfigured } from '@/lib/supabase/client'
+import ImageZoom from '@/components/blog/ImageZoom'
 import {
   Calendar, Clock, ArrowLeft, User, Tag, Share2, BookOpen,
 } from 'lucide-react'
@@ -110,7 +111,7 @@ export default function DynamicBlogViewer({ slug }: { slug: string }) {
   const paragraphs = post.content.split(/\n\n|\n/).filter(p => p.trim())
 
   return (
-    <>
+    <ImageZoom>
       {/* Hero */}
       <section className="pt-32 pb-8 gradient-dark relative overflow-hidden">
         <div className="absolute inset-0 overflow-hidden pointer-events-none">
@@ -238,6 +239,6 @@ export default function DynamicBlogViewer({ slug }: { slug: string }) {
           </div>
         </div>
       </section>
-    </>
+    </ImageZoom>
   )
 }
