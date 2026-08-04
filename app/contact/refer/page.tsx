@@ -126,16 +126,33 @@ export default function ReferPage() {
           <source srcSet="/images/heros/refer-hero-sm.png" media="(max-width: 768px)" />
           <img src="/images/heros/refer-hero.png" alt="" className="absolute inset-0 w-full h-full object-cover pointer-events-none select-none" loading="eager" decoding="async" />
         </picture>
-        {/* 2026-06-05: dark scrim removed; copy left-aligned in the navbar's
-            max-w-[1440px] container (left edge under the logo). White copy
-            reads on the dark library photo. */}
+        {/* 2026-06-05: flat dark scrim removed; copy left-aligned in the
+            navbar's max-w-[1440px] container (left edge under the logo).
+            2026-08-04: the photo has light areas behind the sub-copy, so the
+            supporting text was washing out. Re-added contrast as a DIRECTIONAL
+            scrim — dark where the copy sits, clear on the right — rather than
+            the flat overlay that was removed, so the photograph still reads. */}
+        <div
+          aria-hidden="true"
+          className="absolute inset-0 pointer-events-none"
+          style={{
+            background:
+              'linear-gradient(100deg, rgba(0,0,0,0.82) 0%, rgba(0,0,0,0.62) 35%, rgba(0,0,0,0.28) 62%, rgba(0,0,0,0) 85%)',
+          }}
+        />
         <div className="w-full max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
           <AnimatedSection>
             <span className="eyebrow text-brand-red">Referral Programme</span>
-            <h1 className="text-4xl md:text-5xl lg:text-6xl font-extrabold text-white mt-3 mb-5">
+            <h1
+              className="text-4xl md:text-5xl lg:text-6xl font-extrabold text-white mt-3 mb-5"
+              style={{ textShadow: '0 2px 18px rgba(0,0,0,0.55)' }}
+            >
               Refer an <span className="text-gradient">Investor</span>
             </h1>
-            <p className="text-white/80 text-base md:text-lg max-w-2xl">
+            <p
+              className="text-white/95 text-base md:text-lg max-w-2xl"
+              style={{ textShadow: '0 1px 12px rgba(0,0,0,0.6)' }}
+            >
               Know someone who could benefit from institutional-grade alternative investments? Introduce them to GHL India Ventures.
             </p>
           </AnimatedSection>

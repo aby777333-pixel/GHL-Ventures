@@ -277,6 +277,41 @@ export default function FinancialIQPage() {
         }
       })
   }, [])
+  /* ── Keep the reader's place when the article grid lands ──────────
+     The grid above is fetched client-side, so on a Back navigation the
+     page re-mounts empty (and short), the browser restores the previous
+     offset against that short page, and then these cards insert ABOVE
+     the later sections and push everything down. The reader ends up at an
+     earlier section — Financial Glossary instead of Downloadable Guides.
+
+     Snapshot the offset/height while the grid is still empty, and once it
+     renders, add back exactly the height it inserted. Inert on a fresh
+     visit (offset is 0, which is above the grid, so nothing happens). */
+  const articlesGridRef = useRef<HTMLDivElement>(null)
+  const preInsertRef = useRef<{ y: number; h: number; gridTop: number } | null>(null)
+  const compensatedRef = useRef(false)
+
+  useEffect(() => {
+    if (dynamicFIQArticles.length > 0 || compensatedRef.current) return
+    const gridEl = articlesGridRef.current
+    preInsertRef.current = {
+      y: window.scrollY,
+      h: document.documentElement.scrollHeight,
+      gridTop: gridEl ? gridEl.getBoundingClientRect().top + window.scrollY : 0,
+    }
+  })
+
+  useEffect(() => {
+    if (compensatedRef.current) return
+    const snap = preInsertRef.current
+    if (!snap || dynamicFIQArticles.length === 0) return
+    compensatedRef.current = true
+    const delta = document.documentElement.scrollHeight - snap.h
+    // Only correct a reader who was BELOW the insertion point.
+    if (delta <= 0 || snap.y <= snap.gridTop) return
+    window.scrollTo({ top: snap.y + delta, behavior: 'auto' })
+  }, [dynamicFIQArticles])
+
   const [activeLetter, setActiveLetter] = useState<string | null>(null)
   const [sipMonthly, setSipMonthly] = useState(25000)
   const [sipYears, setSipYears] = useState(10)
@@ -375,7 +410,7 @@ export default function FinancialIQPage() {
             </p>
           </AnimatedSection>
 
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+          <div ref={articlesGridRef} className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
             {/* Dynamic articles from database first */}
             {dynamicFIQArticles.map((article, i) => (
               <AnimatedSection key={`dyn-${article.slug}`} delay={i * 80}>

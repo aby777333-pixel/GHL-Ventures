@@ -119,12 +119,15 @@ export default function ArticleView({ post, preview = false }: { post: CmsPost; 
       {/* ── Cover ────────────────────────────────────────── */}
       <section className="bg-white">
         <div className="container-max mx-auto px-4 sm:px-6 lg:px-8">
-          {/* `relative z-10` matters: the hero above is positioned, so without
-              it the hero painted OVER the -mt-4 overlap and clipped the top of
-              the cover. And the image is shown at its own aspect ratio rather
-              than cropped to a fixed height — covers are often designed
-              graphics whose top and bottom carry meaning. */}
-          <div className="max-w-4xl mx-auto relative z-10 -mt-4 rounded-2xl overflow-hidden shadow-xl">
+          {/* The cover used to sit at `-mt-4`, deliberately overlapping the
+              hero — but that pulled it into the author/date/read-time row, so
+              on narrower screens (where the metadata wraps onto two lines) the
+              image covered it. It now sits clearly BELOW the header with real
+              spacing. `relative z-10` is kept because the hero above is
+              positioned. The image keeps its own aspect ratio rather than
+              being cropped — covers are often designed graphics whose top and
+              bottom carry meaning. */}
+          <div className="max-w-4xl mx-auto relative z-10 mt-8 rounded-2xl overflow-hidden shadow-xl">
             {post.cover_image ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img

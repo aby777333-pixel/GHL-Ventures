@@ -1,6 +1,6 @@
 'use client'
 
-import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react'
+import { createContext, useContext, useState, useEffect, useCallback, useRef, ReactNode } from 'react'
 import {
   X, BookOpen, ChevronRight, ChevronLeft, Download, Mail,
   Globe, Shield, Building2, FileText, Users, TrendingUp,
@@ -226,6 +226,14 @@ function NRIHandbookModal({ onClose }: { onClose: () => void }) {
   const [emailSubmitted, setEmailSubmitted] = useState(false)
   const [showTOC, setShowTOC] = useState(true)
 
+  // The chapter body is its own scroll container, so moving to the next
+  // chapter kept the previous chapter's scroll offset and dropped the reader
+  // in the middle of the new one. Reset it on every chapter change.
+  const chapterScrollRef = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    chapterScrollRef.current?.scrollTo({ top: 0 })
+  }, [currentChapter])
+
   // Check if user previously submitted email
   useEffect(() => {
     try {
@@ -392,7 +400,7 @@ function NRIHandbookModal({ onClose }: { onClose: () => void }) {
           )}
 
           {/* Chapter content */}
-          <div className="flex-1 overflow-y-auto">
+          <div ref={chapterScrollRef} className="flex-1 overflow-y-auto">
             <div className="max-w-2xl mx-auto px-4 sm:px-8 py-6 sm:py-10">
               {/* Chapter heading */}
               <div className="flex items-center gap-3 mb-6">

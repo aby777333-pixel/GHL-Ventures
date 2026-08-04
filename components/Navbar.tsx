@@ -95,24 +95,33 @@ export default function Navbar() {
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
 
-  // Active state for a plain (non-dropdown) nav item. Dropdown parents already
-  // matched on a prefix, but plain links used an exact `pathname === href`
-  // compare, so Blog and Financial IQ went unhighlighted on their own child
-  // pages (/blog/<slug>, /financial-iq/<slug>). Match the section instead.
-  const isSectionActive = (href: string) =>
-    href === '/' ? pathname === '/' : pathname === href || pathname.startsWith(`${href}/`)
+  // `output: 'export'` emits trailing slashes, so usePathname() gives
+  // "/contact/careers/" — which never equals "/contact/careers". Every exact
+  // compare below silently failed, which is why About/Contact pages and ALL
+  // submenu items showed no active state while Fund (a startsWith check) did.
+  // Normalise once and compare against normalised hrefs.
+  const norm = (p: string) => (p !== '/' && p.endsWith('/') ? p.slice(0, -1) : p)
+  const path = norm(pathname)
+  const isSamePath = (href: string) => path === norm(href)
+
+  // Active state for a plain (non-dropdown) nav item — matches the whole
+  // section so Blog and Financial IQ stay lit on /blog/<slug> etc.
+  const isSectionActive = (href: string) => {
+    const h = norm(href)
+    return h === '/' ? path === '/' : path === h || path.startsWith(`${h}/`)
+  }
 
   // Check if About submenu item is active
-  const isAboutActive = pathname === '/about' || pathname === '/tools' || pathname === '/downloads'
+  const isAboutActive = ['/about', '/tools', '/downloads'].some(isSamePath)
 
   // Check if Fund submenu item is active
-  const isFundActive = pathname.startsWith('/fund')
+  const isFundActive = isSectionActive('/fund')
 
   // Check if Education submenu item is active
-  const isEducationActive = pathname.startsWith('/education')
+  const isEducationActive = isSectionActive('/education')
 
   // Check if Contact submenu item is active
-  const isContactActive = pathname === '/contact' || pathname === '/contact/faqs' || pathname === '/contact/refer' || pathname === '/contact/startup-apply' || pathname === '/contact/grievance' || pathname === '/contact/careers'
+  const isContactActive = isSectionActive('/contact')
 
   const handleAboutEnter = () => {
     if (aboutTimeout.current) clearTimeout(aboutTimeout.current)
@@ -242,7 +251,7 @@ export default function Navbar() {
                             style={{ backdropFilter: 'blur(20px)' }}
                           >
                             {link.children.map((child) => {
-                              const childActive = pathname === child.href
+                              const childActive = isSamePath(child.href)
                               return (
                                 <Link
                                   key={child.href}
@@ -469,7 +478,7 @@ export default function Navbar() {
                         }`}
                       >
                         {link.children.map((child) => {
-                          const childActive = pathname === child.href
+                          const childActive = isSamePath(child.href)
                           return (
                             <Link
                               key={child.href}

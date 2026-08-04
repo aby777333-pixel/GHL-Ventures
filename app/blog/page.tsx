@@ -14,7 +14,7 @@
    legacy BLOG_POSTS constant and can never render empty.
    ───────────────────────────────────────────────────────────── */
 
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
 import AnimatedSection from '@/components/AnimatedSection'
 import PostCard from '@/components/blog/PostCard'
@@ -81,7 +81,12 @@ export default function BlogPage() {
   useEffect(() => { setPage(1) }, [query, activeCat])
 
   const filtered = useMemo(() => {
-    let out = posts.filter((p) => !featured || p.id !== featured.id)
+    // The featured post is normally held out of the list because it already
+    // has its own hero card — but that also made it unsearchable, so a search
+    // for its exact title returned nothing. Keep it in the pool when the
+    // reader is actually searching (the hero card is hidden then anyway).
+    const searching = query.trim().length > 0
+    let out = searching ? posts : posts.filter((p) => !featured || p.id !== featured.id)
     if (activeCat !== 'all') {
       out = out.filter((p) => (p.blog_categories?.slug || '') === activeCat)
     }
@@ -99,8 +104,7 @@ export default function BlogPage() {
   // doesn't leave the reader stranded at the bottom of the next page.
   const listTopRef = useRef<HTMLDivElement | null>(null)
 
-  const goToPage = (n: number) => {
-    setPage(n)
+  const scrollToListTop = useCallback(() => {
     const el = listTopRef.current
     if (!el) return
     // The header is fixed, so offset the target by its height instead of
@@ -108,6 +112,21 @@ export default function BlogPage() {
     const HEADER_OFFSET = 104
     const top = el.getBoundingClientRect().top + window.scrollY - HEADER_OFFSET
     window.scrollTo({ top: Math.max(0, top), behavior: 'smooth' })
+  }, [])
+
+  // Scroll AFTER React has committed the new page. Doing it inside the click
+  // handler measured and scrolled against the OLD list, so the browser ended
+  // up re-clamping to the bottom and the reader stayed down by the footer.
+  const pendingScrollRef = useRef(false)
+  useEffect(() => {
+    if (!pendingScrollRef.current) return
+    pendingScrollRef.current = false
+    scrollToListTop()
+  })
+
+  const goToPage = (n: number) => {
+    pendingScrollRef.current = true
+    setPage(n)
   }
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / POSTS_PER_PAGE))
@@ -144,7 +163,15 @@ export default function BlogPage() {
               research team. Stay ahead of the curve in alternative investments.
             </p>
 
-            <div className="relative max-w-xl">
+            {/* The results list sits about a screen-and-a-half below this
+                box, so typing here changed nothing the reader could see and
+                the search looked broken. Submitting now jumps to the results,
+                and a live count gives immediate feedback either way. */}
+            <form
+              className="relative max-w-xl"
+              onSubmit={(e) => { e.preventDefault(); scrollToListTop() }}
+              role="search"
+            >
               <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-white/50 pointer-events-none" />
               <input
                 type="search"
@@ -154,7 +181,25 @@ export default function BlogPage() {
                 aria-label="Search articles"
                 className="w-full pl-11 pr-4 py-3.5 rounded-xl bg-black/40 backdrop-blur-sm border border-white/20 text-white placeholder-white/50 text-sm focus:outline-none focus:border-brand-red transition-colors"
               />
-            </div>
+            </form>
+
+            {query.trim() && (
+              <button
+                type="button"
+                onClick={scrollToListTop}
+                aria-live="polite"
+                className="mt-2.5 inline-flex items-center gap-1.5 text-xs text-white/80 hover:text-white transition-colors"
+              >
+                {filtered.length === 0
+                  ? <>No articles match &ldquo;{query.trim()}&rdquo;</>
+                  : <>
+                      {filtered.length === 1
+                        ? <>1 article matches &ldquo;{query.trim()}&rdquo;</>
+                        : <>{filtered.length} articles match &ldquo;{query.trim()}&rdquo;</>}
+                      <span className="text-brand-red font-semibold">· View results</span>
+                    </>}
+              </button>
+            )}
 
             <div className="flex flex-wrap items-center gap-5 mt-6 text-xs text-gray-300">
               <Link href="/blog/reports" className="inline-flex items-center gap-1.5 hover:text-white transition-colors">

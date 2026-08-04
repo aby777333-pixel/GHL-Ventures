@@ -152,10 +152,12 @@ export default function DynamicBlogViewer({ slug }: { slug: string }) {
       {post.cover_image && (
         <section className="bg-white">
           <div className="container-max mx-auto px-4 sm:px-6 lg:px-8">
-            {/* Matches ArticleView: `relative z-10` so the positioned hero
-                above cannot paint over the -mt-4 overlap, and the image keeps
-                its own aspect ratio instead of being cropped to 480px. */}
-            <div className="relative z-10 -mt-4 rounded-2xl overflow-hidden shadow-xl">
+            {/* Matches ArticleView: the cover sits BELOW the article header
+                with real spacing (it used to be -mt-4, which pulled it into
+                the author/date/read-time row). `relative z-10` is kept because
+                the hero above is positioned, and the image keeps its own
+                aspect ratio instead of being cropped to 480px. */}
+            <div className="relative z-10 mt-8 rounded-2xl overflow-hidden shadow-xl">
               <img src={post.cover_image} alt={post.title} className="w-full h-auto block" loading="eager" decoding="async" />
             </div>
           </div>
