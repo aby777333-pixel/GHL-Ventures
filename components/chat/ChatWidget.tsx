@@ -16,6 +16,7 @@ import {
   getActiveSessionForVisitor,
   resolveChatSession,
   pollNewMessages,
+  getOnlineStaff,
 } from '@/lib/supabase/chatService'
 import type { ChatSession, ChatMessage } from '@/lib/supabase/chatService'
 
@@ -50,7 +51,15 @@ export default function ChatWidget() {
   const isPortal = PORTAL_PREFIXES.some(p => pathname.startsWith(p))
   const [isOpen, setIsOpen] = useState(false)
   const [chatState, setChatState] = useState<'pre-form' | 'active'>('pre-form')
-  const [messages, setMessages] = useState<ChatMessageUI[]>([])
+  // ARIA and Live Chat keep SEPARATE transcripts. They used to share one
+  // array, so anything typed at the bot (and its reply) also appeared in the
+  // Live Chat tab even though no live session had been started.
+  // `messages` / `setMessages` below resolve to whichever transcript is on
+  // screen, so every existing call site keeps working; the few places that
+  // must target a specific transcript regardless of the visible tab use
+  // setAriaMessages / setLiveMessages explicitly.
+  const [ariaMessages, setAriaMessages] = useState<ChatMessageUI[]>([])
+  const [liveMessages, setLiveMessages] = useState<ChatMessageUI[]>([])
   const [input, setInput] = useState('')
   const [isTyping, setIsTyping] = useState(false)
   const [quickReplies, setQuickReplies] = useState<string[]>([])
@@ -66,6 +75,15 @@ export default function ChatWidget() {
   const [agentConnected, setAgentConnected] = useState(false)
   const [showRating, setShowRating] = useState(false)
   const [rated, setRated] = useState(false)
+  // Set when the Connect tab's Video Call request finds no video widget mounted.
+  const [videoUnavailable, setVideoUnavailable] = useState(false)
+  // Real staffed-agent count from get_online_staff(). null = not checked yet.
+  const [agentsOnline, setAgentsOnline] = useState<number | null>(null)
+
+  // The transcript currently on screen. 'connect' has no transcript of its
+  // own; it borrows ARIA's so returning from the Connect tab is seamless.
+  const messages = chatMode === 'live' ? liveMessages : ariaMessages
+  const setMessages = chatMode === 'live' ? setLiveMessages : setAriaMessages
 
   // Supabase-backed live chat session
   const [chatSession, setChatSession] = useState<ChatSession | null>(null)
@@ -92,7 +110,16 @@ export default function ChatWidget() {
       if (savedHistory) {
         const h = JSON.parse(savedHistory)
         if (h.timestamp && Date.now() - h.timestamp < 24 * 60 * 60 * 1000) {
-          setMessages(h.messages.map((m: ChatMessageUI) => ({ ...m, timestamp: new Date(m.timestamp) })))
+          const revive = (list: ChatMessageUI[] | undefined) =>
+            (list || []).map((m: ChatMessageUI) => ({ ...m, timestamp: new Date(m.timestamp) }))
+          if (h.ariaMessages || h.liveMessages) {
+            setAriaMessages(revive(h.ariaMessages))
+            setLiveMessages(revive(h.liveMessages))
+          } else if (h.messages) {
+            // Pre-split format: one merged transcript. Restore it as ARIA —
+            // the live transcript is re-fetched from Supabase anyway.
+            setAriaMessages(revive(h.messages))
+          }
           setChatState('active')
         } else {
           localStorage.removeItem('ghl-chat-history')
@@ -121,7 +148,9 @@ export default function ChatWidget() {
           }))
           // Track seen IDs to prevent duplicate display
           history.forEach(m => seenMsgIds.current.add(m.id))
-          setMessages(prev => prev.length > 0 ? prev : uiMessages)
+          // Server-side history belongs to the LIVE transcript. chatMode is
+          // still 'aria' at this point, so target it explicitly.
+          setLiveMessages(prev => prev.length > 0 ? prev : uiMessages)
           // Set poll timestamp to last message
           lastPollTimeRef.current = history[history.length - 1].created_at
         }
@@ -239,12 +268,15 @@ export default function ChatWidget() {
     }
   }, [isOpen, chatState])
 
-  // Save history
+  // Save history — both transcripts, kept apart.
   useEffect(() => {
-    if (messages.length > 0) {
-      localStorage.setItem('ghl-chat-history', JSON.stringify({ messages, timestamp: Date.now() }))
+    if (ariaMessages.length > 0 || liveMessages.length > 0) {
+      localStorage.setItem(
+        'ghl-chat-history',
+        JSON.stringify({ ariaMessages, liveMessages, timestamp: Date.now() }),
+      )
     }
-  }, [messages])
+  }, [ariaMessages, liveMessages])
 
   const addWelcome = useCallback((name?: string) => {
     const welcome: ChatMessageUI = {
@@ -253,7 +285,8 @@ export default function ChatWidget() {
       sender: 'aria',
       timestamp: new Date(),
     }
-    setMessages([welcome])
+    // The welcome always belongs to ARIA, never the live transcript.
+    setAriaMessages([welcome])
     setQuickReplies(['Investment Routes', 'Minimum Investment', 'How to Invest', 'Talk to Advisor'])
   }, [])
 
@@ -317,7 +350,9 @@ export default function ChatWidget() {
         sender: 'system',
         timestamp: new Date(),
       }
-      setMessages(prev => [...prev, msg])
+      // Target lists explicitly here: chatMode has only just been set, so the
+      // derived setMessages still points at the transcript we're leaving.
+      setAriaMessages(prev => [...prev, msg])
       setQuickReplies(['Investment Routes', 'Minimum Investment', 'How to Invest', 'Talk to Advisor'])
       setChatState('active')
       setAgentConnected(false)
@@ -330,9 +365,33 @@ export default function ChatWidget() {
         sender: 'system',
         timestamp: new Date(),
       }
-      setMessages(prev => [...prev, connectMsg])
+      setLiveMessages(prev => [...prev, connectMsg])
       setChatState('active')
       setIsTyping(true)
+
+      // Is anyone actually staffing the desk? get_online_staff() already
+      // ignores stale heartbeats (status online/away AND last_seen within
+      // 5 minutes), so an empty list means genuinely nobody is there.
+      // Without this the widget claimed "Live Agent · Online now" whenever a
+      // rep row existed, and visitors sat waiting for a reply that never came.
+      const online = await getOnlineStaff()
+      setAgentsOnline(online.length)
+
+      if (online.length === 0) {
+        setIsTyping(false)
+        setAgentConnected(false)
+        const offlineMsg: ChatMessageUI = {
+          id: uid(),
+          text: `**No agents are currently available.**\n\nLeave your question here and our team will follow up by email, or switch to **ARIA Bot** for instant answers.\n\nYou can also reach us on **+91 7200 255 252** or **info@ghlindiaventures.com**.`,
+          sender: 'system',
+          timestamp: new Date(),
+        }
+        setLiveMessages(prev => [...prev, offlineMsg])
+        setQuickReplies(['Switch to ARIA Bot', 'Leave a message'])
+        // Still open the session so the message reaches the CS queue.
+        await startLiveChatSession()
+        return
+      }
 
       // Create a Supabase chat session for real-time routing
       const session = await startLiveChatSession()
@@ -349,7 +408,7 @@ export default function ChatWidget() {
             sender: 'system',
             timestamp: new Date(),
           }
-          setMessages(prev => [...prev, agentMsg])
+          setLiveMessages(prev => [...prev, agentMsg])
           setQuickReplies(['Tell me about AIF', 'Investment options', 'Schedule a call', 'SEBI Co-Invest'])
         }, 1500)
       } else {
@@ -362,7 +421,7 @@ export default function ChatWidget() {
             sender: 'system',
             timestamp: new Date(),
           }
-          setMessages(prev => [...prev, queueMsg])
+          setLiveMessages(prev => [...prev, queueMsg])
           setQuickReplies(['Switch to ARIA Bot', 'I\'ll wait'])
         }, 2500)
       }
@@ -560,10 +619,31 @@ export default function ChatWidget() {
                   <span className="text-white font-semibold text-sm">
                     {chatMode === 'aria' ? 'ARIA Bot' : chatMode === 'live' ? (agentConnected ? agentName : 'Live Chat') : 'Connect'}
                   </span>
-                  <span className={`w-2 h-2 rounded-full ${chatMode === 'live' && agentConnected ? 'bg-emerald-400 animate-pulse' : 'bg-emerald-400'}`} />
+                  {/* Both branches used to be emerald, so the dot read
+                      "online" even with nobody staffing the desk. In live mode
+                      it now follows the real agent count. */}
+                  <span
+                    className={`w-2 h-2 rounded-full ${
+                      chatMode !== 'live'
+                        ? 'bg-emerald-400'
+                        : agentConnected
+                          ? 'bg-emerald-400 animate-pulse'
+                          : agentsOnline === 0
+                            ? 'bg-gray-500'
+                            : 'bg-amber-400'
+                    }`}
+                  />
                 </div>
                 <p className="text-[10px] text-gray-500">
-                  {chatMode === 'aria' ? 'AI Assistant · Instant replies' : chatMode === 'live' ? (agentConnected ? 'Live Agent · Online now' : 'Connecting to agent...') : 'Choose how to reach us'}
+                  {chatMode === 'aria'
+                    ? 'AI Assistant · Instant replies'
+                    : chatMode === 'live'
+                      ? agentConnected
+                        ? 'Live Agent · Online now'
+                        : agentsOnline === 0
+                          ? 'No agents available · Leave a message'
+                          : 'Connecting to agent...'
+                      : 'Choose how to reach us'}
                 </p>
               </div>
             </div>
@@ -680,13 +760,21 @@ export default function ChatWidget() {
                 <ArrowRight className="w-4 h-4 text-gray-500" />
               </a>
 
-              {/* Video Call */}
+              {/* Video Call — only closes the popup if the video widget is
+                  actually mounted to handle the request. VideoCallWidget is
+                  currently commented out of app/layout.tsx, so previously this
+                  closed the popup and nothing happened. The widget acks by
+                  cancelling the event; no ack → show the booking fallback. */}
               <button
                 onClick={() => {
-                  setIsOpen(false)
-                  setTimeout(() => {
-                    window.dispatchEvent(new CustomEvent('ghl-open-video-call'))
-                  }, 300)
+                  const ev = new CustomEvent('ghl-open-video-call', { cancelable: true })
+                  const handled = !window.dispatchEvent(ev)
+                  if (handled) {
+                    setVideoUnavailable(false)
+                    setIsOpen(false)
+                    return
+                  }
+                  setVideoUnavailable(true)
                 }}
                 className="w-full flex items-center space-x-3 p-3 rounded-xl transition-all hover:scale-[1.02] mb-2.5 text-left"
                 style={{ background: 'rgba(59,130,246,0.12)', border: '1px solid rgba(59,130,246,0.25)' }}
@@ -700,6 +788,28 @@ export default function ChatWidget() {
                 </div>
                 <ArrowRight className="w-4 h-4 text-gray-500" />
               </button>
+
+              {videoUnavailable && (
+                <div
+                  className="rounded-xl p-3 mb-2.5 -mt-0.5"
+                  style={{ background: 'rgba(245,158,11,0.10)', border: '1px solid rgba(245,158,11,0.25)' }}
+                >
+                  <p className="text-amber-300 text-xs font-semibold mb-1">
+                    Instant video calls aren&rsquo;t available right now
+                  </p>
+                  <p className="text-gray-400 text-[11px] leading-relaxed mb-2">
+                    Book a consultation and an advisor will confirm a slot with you, or reach us on
+                    WhatsApp or phone below.
+                  </p>
+                  <a
+                    href="/contact"
+                    className="block w-full py-2 rounded-lg text-white text-xs font-semibold text-center transition-all hover:opacity-90"
+                    style={{ background: 'linear-gradient(135deg, #3B82F6, #2563EB)' }}
+                  >
+                    Book a consultation
+                  </a>
+                </div>
+              )}
 
               {/* Email */}
               <a

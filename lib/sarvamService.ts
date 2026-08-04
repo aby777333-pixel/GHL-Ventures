@@ -159,9 +159,63 @@ export function isSarvamTTSLanguage(langCode: string): boolean {
   return SARVAM_TTS_LANGUAGES.includes(sarvamCode)
 }
 
+// ── Netlify function host ───────────────────────────────────
+// The droplet (`next start`) does NOT host or proxy /.netlify/functions/*,
+// so a RELATIVE path there falls through to the Next catch-all and 308s
+// instead of reaching the function. Browser calls must therefore use an
+// absolute base on the custom domain. Same pattern as login/register.
+const NETLIFY_FUNCTIONS_HOST = 'https://ghl-india-ventures-2025.netlify.app'
+
+const TTS_PROXY = '/.netlify/functions/sarvam-tts-public'
+
+export function sarvamFunctionBase(): string {
+  if (typeof window === 'undefined') return ''
+  const origin = window.location.origin
+  if (origin.includes('localhost')) return 'http://localhost:8888'
+  // Any *.netlify.app origin (prod + deploy previews) hosts its own functions.
+  if (origin.endsWith('.netlify.app')) return origin
+  return NETLIFY_FUNCTIONS_HOST
+}
+
 // ── Text-to-Speech ──────────────────────────────────────────
 
 export async function sarvamTTS(req: SarvamTTSRequest): Promise<string | null> {
+  const isBrowser = typeof window !== 'undefined'
+
+  // In the browser we go through the server-side proxy so the paid Sarvam
+  // key is never shipped in the client bundle. (It previously relied on
+  // NEXT_PUBLIC_SARVAM_API_KEY, which the droplet build does not define —
+  // so this returned null before making a request and the speaker button
+  // was a silent no-op.) Server-side callers still hit Sarvam directly.
+  if (isBrowser) {
+    try {
+      const res = await fetch(`${sarvamFunctionBase()}${TTS_PROXY}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          text: req.text.slice(0, 2500),
+          target_language_code: req.targetLanguage,
+          speaker: req.speaker || SARVAM_AVATAR_VOICES.abe,
+          model: req.model || 'bulbul:v3',
+          pace: req.pace || 1.0,
+          speech_sample_rate: req.sampleRate || 24000,
+          ...(req.pronunciationDictionaryId
+            ? { pronunciation_dictionary_id: req.pronunciationDictionaryId }
+            : {}),
+        }),
+      })
+      if (!res.ok) {
+        console.warn('[sarvam] TTS proxy error:', res.status, res.statusText)
+        return null
+      }
+      const data: SarvamTTSResponse = await res.json()
+      return data.audios?.[0] || null
+    } catch (err) {
+      console.warn('[sarvam] TTS proxy exception:', err)
+      return null
+    }
+  }
+
   if (!isSarvamConfigured()) return null
 
   try {
@@ -278,7 +332,11 @@ const TRANSLATE_PROXY = '/.netlify/functions/sarvam-translate-public'
 export async function sarvamTranslate(req: SarvamTranslateRequest): Promise<SarvamTranslateResponse | null> {
   // For SSR / non-browser contexts, fall back to the direct call.
   const isBrowser = typeof window !== 'undefined'
-  const url = isBrowser ? TRANSLATE_PROXY : `${SARVAM_BASE_URL}/translate`
+  // Absolute base in the browser: this path used to be relative, which 308s
+  // into the Next catch-all on ghlindiaventures.com (the droplet does not
+  // serve /.netlify/functions/*), so translation silently died on the live
+  // domain while working on the netlify.app mirror.
+  const url = isBrowser ? `${sarvamFunctionBase()}${TRANSLATE_PROXY}` : `${SARVAM_BASE_URL}/translate`
   const requestHeaders: Record<string, string> = isBrowser
     ? { 'Content-Type': 'application/json' }
     : headers('application/json')

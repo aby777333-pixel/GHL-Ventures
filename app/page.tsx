@@ -269,15 +269,20 @@ function LiveFinancialTV() {
               belowLineFillColorGrowingBottom: 'rgba(41, 98, 255, 0)',
               belowLineFillColorFallingBottom: 'rgba(41, 98, 255, 0)',
               symbolActiveColor: 'rgba(233, 30, 99, 0.12)',
+              // Only symbols TradingView's free embed actually quotes.
+              // Every NSE:* symbol (NIFTY, BANKNIFTY, CNXBANK, …) comes back
+              // empty on this widget — NSE index data isn't redistributed on
+              // the free tier — which is why the tab rendered blank rows and
+              // "No data here yet". BSE:BANKEX / SENSEX50 / MIDCAP / SMLCAP
+              // are dead here too. Each symbol below was verified live.
               tabs: [
                 {
                   title: 'Indices',
                   symbols: [
                     { s: 'BSE:SENSEX', d: 'SENSEX' },
-                    { s: 'NSE:NIFTY', d: 'NIFTY 50' },
-                    { s: 'NSE:BANKNIFTY', d: 'Bank Nifty' },
-                    { s: 'BSE:SMLCAP', d: 'Small Cap' },
-                    { s: 'BSE:MIDCAP', d: 'Mid Cap' },
+                    { s: 'BSE:BSE100', d: 'BSE 100' },
+                    { s: 'BSE:BSE200', d: 'BSE 200' },
+                    { s: 'BSE:BSE500', d: 'BSE 500' },
                   ],
                 },
                 {
@@ -288,6 +293,9 @@ function LiveFinancialTV() {
                     { s: 'BSE:HDFCBANK', d: 'HDFC Bank' },
                     { s: 'BSE:INFY', d: 'Infosys' },
                     { s: 'BSE:ICICIBANK', d: 'ICICI Bank' },
+                    { s: 'BSE:SBIN', d: 'SBI' },
+                    { s: 'BSE:ITC', d: 'ITC' },
+                    { s: 'BSE:LT', d: 'Larsen & Toubro' },
                   ],
                 },
               ],

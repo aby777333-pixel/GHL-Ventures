@@ -54,7 +54,13 @@ export default function VideoCallWidget() {
 
   // Listen for external open events (from ARIA chatbot, Voice widget, etc.)
   useEffect(() => {
-    const handleExternalOpen = () => {
+    const handleExternalOpen = (e: Event) => {
+      // Acknowledge the request so the caller can tell the widget is mounted.
+      // This component is currently commented out of app/layout.tsx, and
+      // without an ack the chat widget's "Video Call" entry just closed the
+      // popup and nothing happened. Callers dispatch a cancelable event and
+      // treat "was cancelled" as "handled".
+      e.preventDefault()
       // Prevent duplicate: if already open, just bring to focus
       if (isOpen) {
         // Widget is already open — scroll into view / pulse effect
