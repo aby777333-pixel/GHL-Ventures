@@ -4827,3 +4827,69 @@ button[type="submit"].inline-flex {
   min-height: 60vh;
 }
 
+
+/* ════════════════════════════════════════════════════════════
+   RESPONSIVE HARDENING (2026-08-04)
+   ════════════════════════════════════════════════════════════ */
+
+/* ── Never let the page be dragged sideways ──────────────────
+   The portals already guard this (body.dashboard-active and
+   body.admin-active both set overflow-x: hidden), but the public
+   marketing site never did. Any single element poking past the
+   viewport — a decorative element animating to translateX(100vw + n),
+   a long unbroken string, a grid that doesn't fit — made the whole
+   document wider than the screen. On a phone that shows up as a page
+   you can drag left/right, so the header logo and body copy look
+   clipped and shifted even though nothing is individually broken.
+
+   `clip` rather than `hidden`: it does NOT create a scroll container,
+   so position: sticky, scroll-behaviour and scroll anchoring keep
+   working exactly as before. `hidden` is the fallback for engines
+   without `clip` (behaviourally the same here, since nothing on the
+   public site relies on horizontal scrolling of the document).       */
+html,
+body {
+  overflow-x: hidden;
+  max-width: 100%;
+}
+@supports (overflow-x: clip) {
+  html,
+  body {
+    overflow-x: clip;
+  }
+}
+
+/* ── Floating widget placement on small screens ──────────────
+   Both of these were pinned into the middle of the screen, so on a
+   phone they sat directly on top of body copy (see the hero and the
+   timeline). Desktop placement is unchanged — only <768px moves. */
+
+/* Smarty launcher: left-middle on desktop, bottom-left corner on
+   phones (clear of the WhatsApp/chat stack, which lives bottom-right). */
+.smarty-launcher-anchor {
+  left: 20px;
+  top: 50%;
+  transform: translateY(-50%);
+}
+@media (max-width: 767px) {
+  .smarty-launcher-anchor {
+    top: auto;
+    bottom: 104px;
+    left: 12px;
+    transform: none;
+  }
+}
+
+/* Live visitor pill: sat at left:120px / bottom:28px, i.e. across the
+   middle of the content. Centre it on the bottom edge on phones. */
+.live-visitor-pill {
+  bottom: 28px;
+  left: 120px;
+}
+@media (max-width: 767px) {
+  .live-visitor-pill {
+    bottom: 14px;
+    left: 50%;
+    transform: translateX(-50%);
+  }
+}

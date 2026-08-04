@@ -457,11 +457,10 @@ export default function SarvamWidget() {
 
   return (
     <div id="ghl-sarvam-widget" data-ghl-widget="sarvam">
-      {/* ── Floating Launcher — left middle ── */}
-      <div
-        className="fixed z-[9998] pointer-events-auto"
-        style={{ left: '20px', top: '50%', transform: 'translateY(-50%)' }}
-      >
+      {/* ── Floating Launcher — left middle on desktop, bottom-left on
+          phones (see .smarty-launcher-anchor in globals.css). Pinned to
+          top:50% it sat right on top of the body copy on a phone. ── */}
+      <div className="fixed z-[9998] pointer-events-auto smarty-launcher-anchor">
         {!isOpen && (
           <button
             onClick={() => setIsOpen(true)}
