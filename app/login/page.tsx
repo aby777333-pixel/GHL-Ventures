@@ -207,8 +207,11 @@ export default function LoginPage() {
     setLoading(false)
   }
 
+  // `pt` clears the 56px fixed header with a small gap. It was pt-32 (128px),
+  // which left ~72px of empty white below the header before the panel even
+  // started — and the panel then added its own py on top of that.
   return (
-    <section className="min-h-screen flex pt-32">
+    <section className="min-h-screen flex pt-20">
       {/* LEFT: Dark Brand Visual */}
       <div className="hidden lg:flex lg:w-[45%] relative bg-brand-black overflow-hidden">
         <div className="absolute inset-0">
@@ -238,7 +241,7 @@ export default function LoginPage() {
       </div>
 
       {/* RIGHT: White Form Panel */}
-      <div className="flex-1 flex items-center justify-center bg-white px-6 py-20 lg:py-12">
+      <div className="flex-1 flex items-center justify-center bg-white px-6 py-10 lg:py-12">
         <div className="w-full max-w-md">
           {/* Mobile logo */}
           <div className="lg:hidden text-center mb-8">

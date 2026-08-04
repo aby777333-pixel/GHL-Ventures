@@ -26,8 +26,9 @@ interface SocialLinksProps {
   direction?: 'row' | 'col'
   /** Size of each icon button */
   size?: 'sm' | 'md'
-  /** Visual variant */
-  variant?: 'glass' | 'ghost' | 'outline'
+  /** Visual variant. `glass` is built for dark surfaces (white-on-white and
+   *  therefore invisible on a light one) — use `solid` on light backgrounds. */
+  variant?: 'glass' | 'ghost' | 'outline' | 'solid'
   className?: string
 }
 
@@ -45,6 +46,9 @@ export default function SocialLinks({
     glass: 'bg-white/[0.06] border border-white/[0.08] text-white/60 hover:bg-brand-red hover:text-white hover:border-brand-red',
     ghost: 'text-gray-400 hover:text-brand-red',
     outline: 'border border-gray-700 text-gray-400 hover:border-brand-red hover:text-brand-red',
+    // Light-surface counterpart of `glass` — matches the grey chip styling the
+    // dashboard already uses for inactive controls in light mode.
+    solid: 'bg-gray-100 border border-gray-200 text-gray-600 hover:bg-brand-red hover:text-white hover:border-brand-red',
   }[variant]
 
   return (

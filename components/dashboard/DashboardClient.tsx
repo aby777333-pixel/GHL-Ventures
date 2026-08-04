@@ -322,6 +322,27 @@ export default function DashboardClient() {
     router.push(url, { scroll: false })
   }, [router])
 
+  // ─── Sidebar scroll memory ───────────────────────────────────────
+  // Picking a menu item is a router.push, which remounts this component —
+  // so the sidebar's scroll container was recreated at scrollTop 0 and the
+  // reader lost their place in the menu every time they clicked something
+  // near the bottom. Remember the offset and put it back on mount.
+  const sidebarNavRef = useRef<HTMLElement | null>(null)
+  const SIDEBAR_SCROLL_KEY = 'ghl-dash-sidebar-scroll'
+  useEffect(() => {
+    const el = sidebarNavRef.current
+    if (!el) return
+    try {
+      const saved = Number(sessionStorage.getItem(SIDEBAR_SCROLL_KEY) || 0)
+      if (saved > 0) el.scrollTop = saved
+    } catch { /* private mode */ }
+    const onScroll = () => {
+      try { sessionStorage.setItem(SIDEBAR_SCROLL_KEY, String(el.scrollTop)) } catch { /* ignore */ }
+    }
+    el.addEventListener('scroll', onScroll, { passive: true })
+    return () => el.removeEventListener('scroll', onScroll)
+  }, [])
+
   // ─── Password Reset Detection (from /auth/callback recovery flow) ──
   const [showPasswordReset, setShowPasswordReset] = useState(false)
   const [passwordResetMandatory, setPasswordResetMandatory] = useState(false)
@@ -1027,7 +1048,7 @@ export default function DashboardClient() {
             per Investor Dashboard Corrections (2026-05). Sections without a
             heading (Dashboard/Invest top group, General, Referral) always
             render their items. The General + Referral groups stay flat. */}
-        <nav className="flex-1 px-3 space-y-0.5 overflow-y-auto dashboard-sidebar-scroll">
+        <nav ref={sidebarNavRef} className="flex-1 px-3 space-y-0.5 overflow-y-auto dashboard-sidebar-scroll">
           {SIDEBAR_SECTIONS.map((section, sIdx) => {
             const sectionKey = section.section || `_${sIdx}`
             const collapsible = ['Profile', 'Investment', 'Support'].includes(section.section || '')
@@ -1082,9 +1103,11 @@ export default function DashboardClient() {
             <LogOut className="w-[18px] h-[18px]" />
             Sign Out
           </button>
-          {/* Social links */}
-          <div className="pt-2 border-t border-white/[0.06] mt-2">
-            <SocialLinks size="sm" variant="glass" />
+          {/* Social links — the `glass` variant is white-on-white, so it
+              washed out completely in light mode. Use the light-surface
+              variant (and a visible divider) when the theme is light. */}
+          <div className={`pt-2 mt-2 border-t ${t('border-white/[0.06]', 'border-gray-200')}`}>
+            <SocialLinks size="sm" variant={isDark ? 'glass' : 'solid'} />
           </div>
         </div>
       </aside>
@@ -3426,11 +3449,16 @@ export default function DashboardClient() {
             <div><h4 className={`text-sm font-bold ${t('text-white','text-gray-900')}`}>Appearance</h4><p className={`text-xs ${t('text-gray-500','text-gray-700')}`}>Theme and display preferences</p></div>
           </div>
           <div className="flex gap-3">
-            <button onClick={() => setTheme('light')} className={`flex-1 p-3 rounded-xl text-center text-sm font-medium transition-all ${theme === 'light' ? 'bg-brand-red/15 text-brand-red border border-brand-red/20' : t('bg-white/[0.04] text-gray-400 border border-white/[0.06] hover:border-white/[0.1]','bg-gray-100 text-gray-600 border border-gray-200 hover:border-gray-300')}`}>
-              <Sun className="w-5 h-5 mx-auto mb-1" /> Light Mode
+            {/* globals.css forces `display:inline-flex; align-items:center;
+                gap:.375rem` on any button[class*="rounded-xl"], which turned
+                the intended icon-above-label stack into a lopsided row and
+                made `mx-auto mb-1` / `text-center` no-ops. Declare the column
+                and centring explicitly and let that gap do the spacing. */}
+            <button onClick={() => setTheme('light')} className={`flex-1 p-3 rounded-xl flex-col items-center justify-center text-center text-sm font-medium transition-all ${theme === 'light' ? 'bg-brand-red/15 text-brand-red border border-brand-red/20' : t('bg-white/[0.04] text-gray-400 border border-white/[0.06] hover:border-white/[0.1]','bg-gray-100 text-gray-600 border border-gray-200 hover:border-gray-300')}`}>
+              <Sun className="w-5 h-5" /> Light Mode
             </button>
-            <button onClick={() => setTheme('dark')} className={`flex-1 p-3 rounded-xl text-center text-sm font-medium transition-all ${theme === 'dark' ? 'bg-brand-red/15 text-white border border-brand-red/20' : t('bg-white/[0.04] text-gray-400 border border-white/[0.06] hover:border-white/[0.1]','bg-gray-100 text-gray-600 border border-gray-200 hover:border-gray-300')}`}>
-              <Moon className="w-5 h-5 mx-auto mb-1" /> Dark Mode
+            <button onClick={() => setTheme('dark')} className={`flex-1 p-3 rounded-xl flex-col items-center justify-center text-center text-sm font-medium transition-all ${theme === 'dark' ? 'bg-brand-red/15 text-white border border-brand-red/20' : t('bg-white/[0.04] text-gray-400 border border-white/[0.06] hover:border-white/[0.1]','bg-gray-100 text-gray-600 border border-gray-200 hover:border-gray-300')}`}>
+              <Moon className="w-5 h-5" /> Dark Mode
             </button>
           </div>
           <p className={`text-[10px] mt-3 flex items-center gap-1 ${t('text-gray-600','text-gray-500')}`}><Shield className="w-3 h-3" /> {isDark ? 'Optimized for low-light, premium viewing experience' : 'Clean, bright interface for daytime use'}</p>

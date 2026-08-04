@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef, useMemo } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, usePathname } from 'next/navigation'
 import {
   Search, ArrowRight, Home, Users, Briefcase, BookOpen,
   FileText, Phone, Download, GraduationCap, Calculator,
@@ -52,6 +52,26 @@ export default function CommandPalette({ onOpenQuiz, onOpenCalc }: CommandPalett
   const inputRef = useRef<HTMLInputElement>(null)
   const listRef = useRef<HTMLDivElement>(null)
   const router = useRouter()
+  const pathname = usePathname()
+
+  // Index of the entry for the page we're actually on, so opening the palette
+  // highlights that instead of always falling back to Home. Pathnames carry a
+  // trailing slash under `output: 'export'`, so normalise both sides.
+  const norm = (p: string) => (p !== '/' && p.endsWith('/') ? p.slice(0, -1) : p)
+  const currentIndex = useMemo(() => {
+    const here = norm(pathname || '/')
+    // Prefer an exact match; otherwise the deepest section that contains us
+    // (so /fund/direct-aif beats /fund, and /blog/<slug> still lights Blog).
+    let bestIdx = -1
+    let bestLen = -1
+    PALETTE_ITEMS.forEach((item, i) => {
+      if (!item.href) return
+      const h = norm(item.href)
+      const match = here === h || (h !== '/' && here.startsWith(`${h}/`))
+      if (match && h.length > bestLen) { bestLen = h.length; bestIdx = i }
+    })
+    return bestIdx
+  }, [pathname])
 
   // Keyboard shortcut: Ctrl+K / Cmd+K
   useEffect(() => {
@@ -70,10 +90,11 @@ export default function CommandPalette({ onOpenQuiz, onOpenCalc }: CommandPalett
   useEffect(() => {
     if (isOpen) {
       setQuery('')
-      setSelectedIndex(0)
+      // Start on the page we're currently viewing rather than always Home.
+      setSelectedIndex(currentIndex >= 0 ? currentIndex : 0)
       setTimeout(() => inputRef.current?.focus(), 100)
     }
-  }, [isOpen])
+  }, [isOpen, currentIndex])
 
   // Filtered items
   const filtered = useMemo(() => {

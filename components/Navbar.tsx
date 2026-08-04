@@ -380,10 +380,17 @@ export default function Navbar() {
                 <ArrowRight className="w-3 h-3" />
               </Link>
 
-              {/* Hamburger — mobile / tablet */}
+              {/* Hamburger — mobile / tablet.
+                  `rounded-[8px]` instead of `rounded-lg` on purpose (same 8px
+                  radius): globals.css has
+                    button[class*="rounded-lg"] { display: inline-flex }
+                  whose specificity (0,1,1) beats the `.xl\:hidden` utility
+                  (0,1,0), so this button kept rendering on desktop next to the
+                  full nav — and did nothing there, because the overlay it
+                  toggles is itself xl:hidden. */}
               <button
                 onClick={() => setIsOpen(!isOpen)}
-                className="xl:hidden p-2 rounded-lg transition-colors duration-200 text-white hover:bg-white/10"
+                className="xl:hidden p-2 rounded-[8px] transition-colors duration-200 text-white hover:bg-white/10"
                 aria-expanded={isOpen}
                 aria-label="Toggle menu"
               >
