@@ -243,6 +243,19 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         {/* hreflang for multilingual content (primary English-India, with x-default) */}
         <link rel="alternate" hrefLang="en-IN" href={SITE_URL} />
         <link rel="alternate" hrefLang="x-default" href={SITE_URL} />
+        {/* Google Tag Manager — container GTM-KKNXRNB6.
+            Loaded via next/script (afterInteractive) rather than a raw <script>
+            so it works under both `output: 'export'` (Netlify) and `next start`
+            (the droplet). The ID is intentionally hardcoded, not a NEXT_PUBLIC_*
+            env var, because those inline at build time and the droplet's
+            .env.local does not carry it. */}
+        <Script id="gtm-loader" strategy="afterInteractive">
+          {`(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
+new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
+j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
+'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
+})(window,document,'script','dataLayer','GTM-KKNXRNB6');`}
+        </Script>
         {/* Google Analytics (GA4) */}
         <Script
           src="https://www.googletagmanager.com/gtag/js?id=G-2944C8HHTK"
@@ -270,6 +283,18 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         />
       </head>
       <body className="min-h-screen flex flex-col">
+        {/* Google Tag Manager (noscript) — must stay the first child of <body>.
+            Hidden and zero-sized, so it is not focusable and does not affect
+            the skip-to-content link below it. */}
+        <noscript>
+          <iframe
+            src="https://www.googletagmanager.com/ns.html?id=GTM-KKNXRNB6"
+            height="0"
+            width="0"
+            style={{ display: 'none', visibility: 'hidden' }}
+            title="Google Tag Manager"
+          />
+        </noscript>
         {/* Skip navigation link for accessibility (WCAG 2.1 AA) */}
         <a href="#main-content" className="skip-to-content">
           Skip to main content
