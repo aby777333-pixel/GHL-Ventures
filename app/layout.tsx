@@ -269,6 +269,25 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
             gtag('config', 'G-2944C8HHTK');
           `}
         </Script>
+        {/* Meta Pixel — ID 1355725663399152.
+            Same delivery as the GTM/GA4 tags above: next/script with
+            strategy="afterInteractive", so it runs under both
+            `output: 'export'` (the Netlify mirror) and `next start` (the
+            droplet). The vendor snippet below is byte-for-byte unmodified.
+            ID is hardcoded rather than NEXT_PUBLIC_*, because those inline at
+            build time and the droplet's .env.local does not carry it. */}
+        <Script id="meta-pixel" strategy="afterInteractive">
+          {`!function(f,b,e,v,n,t,s)
+{if(f.fbq)return;n=f.fbq=function(){n.callMethod?
+n.callMethod.apply(n,arguments):n.queue.push(arguments)};
+if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
+n.queue=[];t=b.createElement(e);t.async=!0;
+t.src=v;s=b.getElementsByTagName(e)[0];
+s.parentNode.insertBefore(t,s)}(window, document,'script',
+'https://connect.facebook.net/en_US/fbevents.js');
+fbq('init', '1355725663399152');
+fbq('track', 'PageView');`}
+        </Script>
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationSchema) }}
@@ -293,6 +312,20 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
             width="0"
             style={{ display: 'none', visibility: 'hidden' }}
             title="Google Tag Manager"
+          />
+        </noscript>
+        {/* Meta Pixel (noscript fallback). Zero-sized and display:none, so it
+            neither is focusable nor displaces the skip-to-content link below.
+            Kept in <body> rather than <head> because an <img> inside <head> is
+            invalid HTML that the browser parser relocates into <body>, which
+            would desync React's hydration. */}
+        <noscript>
+          <img
+            height="1"
+            width="1"
+            style={{ display: 'none' }}
+            src="https://www.facebook.com/tr?id=1355725663399152&ev=PageView&noscript=1"
+            alt=""
           />
         </noscript>
         {/* Skip navigation link for accessibility (WCAG 2.1 AA) */}
