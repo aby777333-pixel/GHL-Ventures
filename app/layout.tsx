@@ -318,16 +318,23 @@ fbq('track', 'PageView');`}
             neither is focusable nor displaces the skip-to-content link below.
             Kept in <body> rather than <head> because an <img> inside <head> is
             invalid HTML that the browser parser relocates into <body>, which
-            would desync React's hydration. */}
-        <noscript>
-          <img
-            height="1"
-            width="1"
-            style={{ display: 'none' }}
-            src="https://www.facebook.com/tr?id=1355725663399152&ev=PageView&noscript=1"
-            alt=""
-          />
-        </noscript>
+            would desync React's hydration.
+
+            Written as raw HTML rather than a JSX <img> on purpose: React's SSR
+            image preloading does not skip <noscript>, so a JSX <img> here makes
+            Next emit `<link rel="preload" as="image">` for it into <head>. That
+            fires this no-JS fallback for EVERY visitor — inflating the pixel
+            with a duplicate noscript=1 PageView and logging an "preloaded ...
+            but not used" warning on every page load. dangerouslySetInnerHTML
+            keeps the markup opaque to React, so no preload is generated.
+            (The GTM noscript above avoids this only because <iframe> is never
+            preloaded.) */}
+        <noscript
+          dangerouslySetInnerHTML={{
+            __html:
+              '<img height="1" width="1" style="display:none" src="https://www.facebook.com/tr?id=1355725663399152&ev=PageView&noscript=1" alt="" />',
+          }}
+        />
         {/* Skip navigation link for accessibility (WCAG 2.1 AA) */}
         <a href="#main-content" className="skip-to-content">
           Skip to main content
