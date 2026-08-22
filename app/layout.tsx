@@ -269,7 +269,7 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
             gtag('config', 'G-2944C8HHTK');
           `}
         </Script>
-        {/* Meta Pixel — ID 1355725663399152.
+        {/* Meta Pixel — ID 2509470962864850.
             Same delivery as the GTM/GA4 tags above: next/script with
             strategy="afterInteractive", so it runs under both
             `output: 'export'` (the Netlify mirror) and `next start` (the
@@ -285,7 +285,7 @@ n.queue=[];t=b.createElement(e);t.async=!0;
 t.src=v;s=b.getElementsByTagName(e)[0];
 s.parentNode.insertBefore(t,s)}(window, document,'script',
 'https://connect.facebook.net/en_US/fbevents.js');
-fbq('init', '1355725663399152');
+fbq('init', '2509470962864850');
 fbq('track', 'PageView');`}
         </Script>
         <script
@@ -332,7 +332,7 @@ fbq('track', 'PageView');`}
         <noscript
           dangerouslySetInnerHTML={{
             __html:
-              '<img height="1" width="1" style="display:none" src="https://www.facebook.com/tr?id=1355725663399152&ev=PageView&noscript=1" alt="" />',
+              '<img height="1" width="1" style="display:none" src="https://www.facebook.com/tr?id=2509470962864850&ev=PageView&noscript=1" alt="" />',
           }}
         />
         {/* Skip navigation link for accessibility (WCAG 2.1 AA) */}
