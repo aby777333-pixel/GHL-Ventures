@@ -221,6 +221,12 @@ async function sendLeadNotification(payload: {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
+      // Callers fire this without awaiting, and the contact form now navigates
+      // to /contact/thankyou/ straight after a successful submit. Without
+      // keepalive the browser would cancel this in-flight request on unload and
+      // the team would silently stop receiving lead emails. Payload is a few
+      // hundred bytes, well inside the 64KB keepalive limit.
+      keepalive: true,
     })
   } catch (err) {
     // Email notification is best-effort — don't block form submission

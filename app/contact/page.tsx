@@ -96,7 +96,25 @@ export default function ContactPage() {
         setError('Something went wrong. Please try again, or email info@ghlindiaventures.com.')
         return
       }
+
+      // Kept as a fallback: if the navigation below is blocked or slow, the
+      // visitor still sees a confirmation instead of a stuck form.
       setSubmitted(true)
+
+      // Send the visitor to the dedicated /contact/thankyou/ page so Meta can
+      // key a URL-based custom conversion on it.
+      //
+      // This MUST be a real browser navigation, not router.push(): the
+      // site-wide Pixel in app/layout.tsx fires fbq('track','PageView') once
+      // on initial load and has no route-change listener, so a client-side
+      // push would leave Meta with no PageView at the thank-you URL. A full
+      // load re-runs the Pixel and reports the correct URL.
+      //
+      // The lead-notification email is an un-awaited fetch, so it is sent
+      // with keepalive (see sendLeadNotification) to survive this navigation.
+      if (typeof window !== 'undefined') {
+        window.location.assign('/contact/thankyou/')
+      }
     } catch (err) {
       console.warn('Form submission to Supabase failed:', err)
       setError('Something went wrong. Please try again.')
