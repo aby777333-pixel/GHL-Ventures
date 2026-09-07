@@ -4933,12 +4933,12 @@ body {
 }
 
 /* ─────────────────────────────────────────────────────────────────────
-   Admin + Staff legibility uplift (2026-09-07)
+   Admin + Staff legibility uplift (2026-09-07, raised same day)
    ---------------------------------------------------------------------
    Both consoles sit on a near-black shell, where Tailwind's mid greys
-   (#4B5563 / #6B7280) fall well under a readable contrast ratio — module
-   tabs, table meta, helper text and placeholders were effectively
-   invisible.
+   (#4B5563 / #6B7280) fall well under a readable contrast ratio - module
+   tabs, sidebar labels, KPI captions, table meta, helper text and
+   placeholders were all effectively invisible.
 
    Rather than rewriting ~2000 utility classes across every module (high
    blast radius, easy to regress), the whole console is lifted here in one
@@ -4946,42 +4946,49 @@ body {
    by AdminShell and StaffClient, and the two-class selector outranks
    Tailwind's single-class utility without needing !important.
 
-   The ramp keeps the original hierarchy intact — 600 stays dimmer than
-   500, which stays dimmer than 400 — so emphasis still reads correctly;
-   everything simply clears the legibility floor.
+   The ramp keeps the original hierarchy intact - 600 stays dimmer than
+   500, dimmer than 400, dimmer than 300 - so emphasis still reads
+   correctly; everything simply clears the legibility floor.
 
    To revert: delete this block. Nothing else depends on it.
    ------------------------------------------------------------------- */
 body.admin-active .text-gray-600,
-body.staff-active .text-gray-600 { color: #9CA3AF; }
+body.staff-active .text-gray-600 { color: #AEB7C4; }
 
 body.admin-active .text-gray-500,
-body.staff-active .text-gray-500 { color: #C3CAD5; }
+body.staff-active .text-gray-500 { color: #D7DDE5; }
 
 body.admin-active .text-gray-400,
-body.staff-active .text-gray-400 { color: #D6DBE2; }
+body.staff-active .text-gray-400 { color: #E6EAEF; }
+
+body.admin-active .text-gray-300,
+body.staff-active .text-gray-300 { color: #EEF1F5; }
 
 body.admin-active .text-white\/40,
-body.staff-active .text-white\/40 { color: rgba(255,255,255,0.66); }
+body.staff-active .text-white\/40 { color: rgba(255,255,255,0.75); }
 
 body.admin-active .text-white\/50,
-body.staff-active .text-white\/50 { color: rgba(255,255,255,0.72); }
+body.staff-active .text-white\/50 { color: rgba(255,255,255,0.8); }
 
 body.admin-active .text-white\/60,
-body.staff-active .text-white\/60 { color: rgba(255,255,255,0.8); }
+body.staff-active .text-white\/60 { color: rgba(255,255,255,0.86); }
 
-/* Placeholders were the worst offenders — gray-600 on near-black. */
+body.admin-active .text-white\/70,
+body.staff-active .text-white\/70 { color: rgba(255,255,255,0.9); }
+
+/* Placeholders were the worst offenders - gray-600 on near-black. */
 body.admin-active .placeholder-gray-600::placeholder,
-body.staff-active .placeholder-gray-600::placeholder { color: #98A1AE; }
+body.staff-active .placeholder-gray-600::placeholder { color: #AAB3C0; }
 
 body.admin-active .placeholder-gray-500::placeholder,
-body.staff-active .placeholder-gray-500::placeholder { color: #A8B0BC; }
+body.staff-active .placeholder-gray-500::placeholder { color: #BAC2CE; }
 
-/* Escape hatch — genuine light/white surfaces inside the dark console
+/* Escape hatch - genuine light/white surfaces inside the dark console
    (blog Google/social previews, the rich-text editor body, the report
    preview modal). Brightening grey text there would push it toward
    white-on-white, so restore Tailwind's defaults. RichTextEditor already
-   carries a comment about exactly that failure mode. */
+   carries a comment about exactly that failure mode. Any NEW light panel
+   added to admin or staff must carry .ghl-on-light. */
 body.admin-active .ghl-on-light .text-gray-600,
 body.staff-active .ghl-on-light .text-gray-600 { color: #4B5563; }
 
@@ -4990,3 +4997,6 @@ body.staff-active .ghl-on-light .text-gray-500 { color: #6B7280; }
 
 body.admin-active .ghl-on-light .text-gray-400,
 body.staff-active .ghl-on-light .text-gray-400 { color: #9CA3AF; }
+
+body.admin-active .ghl-on-light .text-gray-300,
+body.staff-active .ghl-on-light .text-gray-300 { color: #D1D5DB; }
