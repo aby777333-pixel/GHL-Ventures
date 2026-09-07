@@ -84,7 +84,7 @@ export default function SettingsModule({ subTab, navigate, showToast }: Settings
               key={tab.id}
               onClick={() => handleTabClick(tab.id)}
               className={`flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-xs font-medium transition-all duration-300 ${
-                isActive ? 'bg-brand-red/20 text-white border border-brand-red/30' : 'text-gray-500 hover:text-gray-300 hover:bg-white/[0.04]'
+                isActive ? 'bg-brand-red/20 text-white border border-brand-red/30' : 'text-gray-300 hover:text-white hover:bg-white/[0.08]'
               }`}
             >
               <Icon className="w-3.5 h-3.5" />
@@ -654,7 +654,7 @@ function PermissionsTab({ showToast }: { showToast: Toast }) {
               key={v.id}
               onClick={() => setPermView(v.id)}
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-medium whitespace-nowrap transition-all ${
-                permView === v.id ? 'bg-brand-red/20 text-white border border-brand-red/30' : 'text-gray-500 hover:text-gray-300 hover:bg-white/[0.04]'
+                permView === v.id ? 'bg-brand-red/20 text-white border border-brand-red/30' : 'text-gray-300 hover:text-white hover:bg-white/[0.08]'
               }`}
             >
               <Icon className="w-3.5 h-3.5" />

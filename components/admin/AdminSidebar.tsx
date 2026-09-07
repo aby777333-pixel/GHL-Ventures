@@ -59,6 +59,11 @@ interface AdminSidebarProps {
   userRole: AdminRole
   userName: string
   onLogout: () => void
+  /** sidebar item id -> number of unseen rows (see useAdminActivity). Optional
+   *  so the sidebar keeps working untouched if a caller doesn't pass it. */
+  activityCounts?: Record<string, number>
+  /** called when the admin looks at a menu, so its light can be cleared. */
+  onActivitySeen?: (itemId: string) => void
 }
 
 export default function AdminSidebar({
@@ -70,6 +75,8 @@ export default function AdminSidebar({
   userRole,
   userName,
   onLogout,
+  activityCounts = {},
+  onActivitySeen,
 }: AdminSidebarProps) {
   // Accordion behavior (bug #30): only one module expanded at a time
   const [expandedModule, setExpandedModule] = useState<string | null>(activeModule)
@@ -153,6 +160,45 @@ export default function AdminSidebar({
           color: var(--ac, #fff);
           filter: drop-shadow(0 0 5px color-mix(in srgb, var(--ac, #fff) 55%, transparent));
         }
+        /* Activity light (2026-09-07) — blinking dot beside a menu that has
+           new records since this admin last opened it. Uses the row's own
+           --ac accent so each menu keeps its identity. */
+        .ghl-nav-dot {
+          position: relative;
+          width: 8px;
+          height: 8px;
+          flex-shrink: 0;
+          display: inline-block;
+        }
+        .ghl-nav-dot-core {
+          position: absolute;
+          inset: 0;
+          border-radius: 9999px;
+          background: var(--ac, #fff);
+          box-shadow: 0 0 8px var(--ac, #fff);
+          animation: ghl-dot-blink 1.25s ease-in-out infinite;
+        }
+        .ghl-nav-dot::after {
+          content: '';
+          position: absolute;
+          inset: -4px;
+          border-radius: 9999px;
+          border: 1px solid color-mix(in srgb, var(--ac, #fff) 55%, transparent);
+          animation: ghl-dot-ping 1.9s cubic-bezier(0, 0, 0.2, 1) infinite;
+        }
+        @keyframes ghl-dot-blink {
+          0%, 100% { opacity: 1; }
+          50%      { opacity: 0.2; }
+        }
+        @keyframes ghl-dot-ping {
+          0%       { transform: scale(0.7); opacity: 0.85; }
+          80%,100% { transform: scale(1.8); opacity: 0; }
+        }
+        /* Respect reduced-motion: keep the dot, drop the animation. */
+        @media (prefers-reduced-motion: reduce) {
+          .ghl-nav-dot-core { animation: none; opacity: 1; }
+          .ghl-nav-dot::after { animation: none; opacity: 0.35; }
+        }
       `}</style>
 
       {/* Sidebar — UI Aesthetic 2026-05-14: glossy-black carbon finish.
@@ -217,6 +263,7 @@ export default function AdminSidebar({
             const isExpanded = expandedModule === item.id
             const hasSubItems = item.subItems && item.subItems.length > 0
             const accent = MODULE_ACCENTS[item.id] || DEFAULT_ACCENT
+            const activityCount = activityCounts[item.id] || 0
 
             return (
               <div key={item.id} style={{ ['--ac' as any]: accent }}>
@@ -224,6 +271,8 @@ export default function AdminSidebar({
                 <button
                   data-active={isActive ? 'true' : 'false'}
                   onClick={() => {
+                    // Opening a menu counts as looking at it — clear its light.
+                    if (activityCount > 0) onActivitySeen?.(item.id)
                     if (hasSubItems) {
                       // Bug #15: Parent should ONLY toggle dropdown, not navigate
                       toggleModule(item.id)
@@ -242,6 +291,18 @@ export default function AdminSidebar({
                   )}
                   <Icon className={`ghl-nav-icon w-[18px] h-[18px] flex-shrink-0 ${isActive ? '' : 'text-white/60'}`} />
                   <span className="flex-1 text-left">{item.label}</span>
+
+                  {/* Activity light — something new arrived in this menu's
+                      source table since the admin last opened it. */}
+                  {activityCount > 0 && (
+                    <span
+                      className="ghl-nav-dot"
+                      title={`${activityCount} new since you last looked`}
+                      aria-label={`${activityCount} new item${activityCount === 1 ? '' : 's'}`}
+                    >
+                      <span className="ghl-nav-dot-core" />
+                    </span>
+                  )}
 
                   {/* Badge */}
                   {item.badge && (
@@ -275,7 +336,10 @@ export default function AdminSidebar({
                         <button
                           key={sub.id}
                           data-active={isSubActive ? 'true' : 'false'}
-                          onClick={() => handleNavClick(sub.id)}
+                          onClick={() => {
+                            if (activityCount > 0) onActivitySeen?.(item.id)
+                            handleNavClick(sub.id)
+                          }}
                           className={`ghl-sub-btn w-full flex items-center justify-start text-left px-3 py-1.5 rounded-lg text-[13px]
                             ${isSubActive ? 'text-white font-semibold' : 'text-white/60 hover:text-white'}`}
                         >

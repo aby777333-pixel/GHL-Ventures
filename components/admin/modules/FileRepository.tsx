@@ -315,7 +315,7 @@ export default function FileRepository({ showToast, navigate }: Props) {
               className="w-full pl-9 pr-3 py-2 rounded-lg bg-white/[0.04] border border-white/[0.08] text-xs text-white placeholder:text-gray-600 focus:outline-none focus:border-brand-red/30"
             />
             {searchQuery && (
-              <button onClick={() => setSearchQuery('')} className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-300">
+              <button onClick={() => setSearchQuery('')} className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-300 hover:text-white">
                 <X className="w-3 h-3" />
               </button>
             )}
@@ -327,7 +327,7 @@ export default function FileRepository({ showToast, navigate }: Props) {
               <button
                 key={mode}
                 onClick={() => setViewMode(mode)}
-                className={`p-1.5 rounded-md transition-colors ${viewMode === mode ? 'bg-brand-red/20 text-white' : 'text-gray-500 hover:text-gray-300'}`}
+                className={`p-1.5 rounded-md transition-colors ${viewMode === mode ? 'bg-brand-red/20 text-white' : 'text-gray-300 hover:text-white'}`}
               >
                 <Icon className="w-3.5 h-3.5" />
               </button>
@@ -493,7 +493,7 @@ export default function FileRepository({ showToast, navigate }: Props) {
                   else { setSortField('date'); setSortDir('desc') }
                 }}
                 className={`flex items-center gap-1 px-2 py-1 rounded text-[10px] transition-colors ${
-                  sortField === 'date' ? 'text-white bg-white/[0.06]' : 'text-gray-500 hover:text-gray-300'
+                  sortField === 'date' ? 'text-white bg-white/[0.06]' : 'text-gray-300 hover:text-white'
                 }`}
               >
                 <Clock className="w-3 h-3" /> Date {sortField === 'date' && (sortDir === 'asc' ? '↑' : '↓')}
@@ -504,7 +504,7 @@ export default function FileRepository({ showToast, navigate }: Props) {
                   else { setSortField('name'); setSortDir('asc') }
                 }}
                 className={`flex items-center gap-1 px-2 py-1 rounded text-[10px] transition-colors ${
-                  sortField === 'name' ? 'text-white bg-white/[0.06]' : 'text-gray-500 hover:text-gray-300'
+                  sortField === 'name' ? 'text-white bg-white/[0.06]' : 'text-gray-300 hover:text-white'
                 }`}
               >
                 <ArrowUpDown className="w-3 h-3" /> Name {sortField === 'name' && (sortDir === 'asc' ? '↑' : '↓')}
@@ -515,7 +515,7 @@ export default function FileRepository({ showToast, navigate }: Props) {
                   else { setSortField('size'); setSortDir('desc') }
                 }}
                 className={`flex items-center gap-1 px-2 py-1 rounded text-[10px] transition-colors ${
-                  sortField === 'size' ? 'text-white bg-white/[0.06]' : 'text-gray-500 hover:text-gray-300'
+                  sortField === 'size' ? 'text-white bg-white/[0.06]' : 'text-gray-300 hover:text-white'
                 }`}
               >
                 <File className="w-3 h-3" /> Size {sortField === 'size' && (sortDir === 'asc' ? '↑' : '↓')}
@@ -1027,7 +1027,7 @@ function FileTableView({ files, selectedFiles, onSelect, onOpen, onStar, onDownl
                         <Star className="w-3 h-3" fill={file.starred ? 'currentColor' : 'none'} />
                       </button>
                       <button onClick={e => { e.stopPropagation(); onDownload(file) }}
-                        className="p-1 rounded text-gray-500 hover:text-gray-300 transition-colors">
+                        className="p-1 rounded text-gray-300 hover:text-white transition-colors">
                         <Download className="w-3 h-3" />
                       </button>
                       <button onClick={e => { e.stopPropagation(); onDelete(file.id, file.title) }}
@@ -1126,7 +1126,7 @@ function FileDetailContent({ file, versions, auditLog, onDownload, onDelete, sho
             key={tab}
             onClick={() => setActiveDetailTab(tab)}
             className={`flex-1 px-2 py-1.5 rounded-md text-[10px] font-medium capitalize transition-colors ${
-              activeDetailTab === tab ? 'bg-brand-red/20 text-white' : 'text-gray-500 hover:text-gray-300'
+              activeDetailTab === tab ? 'bg-brand-red/20 text-white' : 'text-gray-300 hover:text-white'
             }`}
           >
             {tab}

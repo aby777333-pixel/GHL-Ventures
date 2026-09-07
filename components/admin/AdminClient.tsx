@@ -3,6 +3,7 @@
 import { useState, useMemo, useCallback, useEffect } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
 import AdminSidebar from './AdminSidebar'
+import { useAdminActivity } from '@/lib/admin/useAdminActivity'
 import AdminTopBar from './AdminTopBar'
 import AdminToast from './shared/AdminToast'
 import AdminGlass from './shared/AdminGlass'
@@ -121,6 +122,11 @@ export default function AdminClient() {
   const { session, user, role, isAuthenticated, loading, logout } = useAdminAuth()
   const { toast, showToast, dismissToast } = useAdminToast()
   const [sidebarOpen, setSidebarOpen] = useState(false)
+
+  // Sidebar activity lights — polls each menu's source table for rows newer
+  // than this admin's last look. Fully self-contained and failure-tolerant;
+  // if it can't reach Supabase the sidebar simply shows no dots.
+  const { activityCounts, markActivitySeen } = useAdminActivity()
 
   // ── Routing Logic ───────────────────────────────────────────────
   const { activeModule, activeSubTab } = useMemo(() => {
@@ -310,6 +316,8 @@ export default function AdminClient() {
         userRole={role}
         userName={user?.name || 'Admin'}
         onLogout={handleLogout}
+        activityCounts={activityCounts}
+        onActivitySeen={markActivitySeen}
       />
 
       {/* Main Content Area */}

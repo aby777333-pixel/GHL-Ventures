@@ -434,7 +434,7 @@ function CampaignsTab({ showToast, campaigns, refetch }: { showToast: (m: string
         <div className="flex items-center gap-2">
           <div className="flex bg-white/[0.03] rounded-lg border border-white/[0.06] p-0.5">
             {(['cards', 'table'] as const).map(mode => (
-              <button key={mode} onClick={() => setViewMode(mode)} className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${viewMode === mode ? 'bg-brand-red/20 text-white' : 'text-gray-500 hover:text-gray-300'}`}>
+              <button key={mode} onClick={() => setViewMode(mode)} className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${viewMode === mode ? 'bg-brand-red/20 text-white' : 'text-gray-300 hover:text-white'}`}>
                 {mode === 'cards' ? 'Cards' : 'Table'}
               </button>
             ))}
