@@ -31,13 +31,20 @@ declare global {
   }
 }
 
+// Module-scope guard. A useRef lives per component INSTANCE, so it does not
+// survive a remount — and this page was observed firing `generate_lead` twice
+// on a single production page load, which would double-count the conversion in
+// Meta. A module-level flag is created once per JS context (i.e. once per real
+// page load) and therefore holds across remounts, while a genuine new visit
+// still gets a fresh module and fires again, which is what we want.
+let conversionFired = false
+
 export default function ContactThankYouPage() {
   const fired = useRef(false)
 
   useEffect(() => {
-    // React 18 StrictMode double-invokes effects in dev; the ref keeps the
-    // conversion to one per page view.
-    if (fired.current) return
+    if (conversionFired || fired.current) return
+    conversionFired = true
     fired.current = true
     try {
       window.fbq?.('track', 'Lead', {
