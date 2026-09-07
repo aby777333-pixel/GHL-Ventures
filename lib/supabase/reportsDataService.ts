@@ -311,6 +311,25 @@ function parseInvestmentRange(range?: string): number {
 }
 
 // ── Lead Submission (from website forms) ────────────────────
+// Client-side UUID so the lead row never needs an INSERT ... RETURNING
+// (see the RLS note in submitLead below). Falls back to a manual v4 for
+// browsers that expose crypto but not randomUUID (non-secure contexts).
+function newUuid(): string {
+  const c: any = typeof crypto !== 'undefined' ? crypto : undefined
+  if (c?.randomUUID) return c.randomUUID()
+  if (c?.getRandomValues) {
+    const b = c.getRandomValues(new Uint8Array(16))
+    b[6] = (b[6] & 0x0f) | 0x40
+    b[8] = (b[8] & 0x3f) | 0x80
+    const h = Array.from(b as Uint8Array, (x: number) => x.toString(16).padStart(2, '0')).join('')
+    return `${h.slice(0, 8)}-${h.slice(8, 12)}-${h.slice(12, 16)}-${h.slice(16, 20)}-${h.slice(20)}`
+  }
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (ch) => {
+    const r = (Math.random() * 16) | 0
+    return (ch === 'x' ? r : (r & 0x3) | 0x8).toString(16)
+  })
+}
+
 export async function submitLead(leadData: {
   firstName: string
   lastName?: string
@@ -322,6 +341,7 @@ export async function submitLead(leadData: {
   estimatedInvestment?: number
   investmentRange?: string
   message?: string
+  contactMethod?: string
 }) {
   // Fire email notification (best-effort, non-blocking)
   sendLeadNotification({
@@ -349,7 +369,17 @@ export async function submitLead(leadData: {
     //   notes / message kept  → notes
     // Existing semantic columns (investment_interest, estimated_value) are
     // still populated so any other consumer continues to work.
-    const { data, error } = await supabase.from('leads').insert({
+    // NEVER chain .select()/.single() here. RLS on `leads` allows anon INSERT
+    // (policy `leads_insert`, WITH CHECK true) but restricts SELECT to
+    // is_admin_or_above() OR assigned_to = get_my_staff_id(). PostgREST turns
+    // .select() into INSERT ... RETURNING, the RETURNING is denied, and Postgres
+    // rejects the WHOLE statement with the misleading
+    //   42501: new row violates row-level security policy for table "leads"
+    // — which silently dropped every website lead until 2026-09-07. We mint the
+    // id client-side instead, so nothing has to be read back.
+    const leadId = newUuid()
+    const { error } = await supabase.from('leads').insert({
+      id: leadId,
       first_name: leadData.firstName,
       last_name: leadData.lastName || '',
       email: leadData.email,
@@ -360,15 +390,18 @@ export async function submitLead(leadData: {
       estimated_value: leadData.estimatedInvestment || parseInvestmentRange(leadData.investmentRange) || 0,
       income_bracket: leadData.investmentRange || null,
       planning: leadData.investmentInterest || null,
-      preferred_contact_method: 'phone',
+      preferred_contact_method: (leadData.contactMethod || 'phone').toLowerCase(),
       status: 'new',
       stage: 'new',
       notes: leadData.message || null,
-    } as any).select().single() as any
+    } as any) as any
     if (error) throw error
 
-    // Track UTM/source data in the dedicated tracking table
-    if (data?.id) {
+    // Everything below is enrichment — it must never fail the lead capture.
+    // `lead_source_tracking` has no anon INSERT policy (staff-only), so for
+    // anonymous website visitors this write always fails; UTM data is still
+    // captured on contact_submissions by submitContactForm.
+    try {
       const utmSource = typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('utm_source') : null
       const utmMedium = typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('utm_medium') : null
       const utmCampaign = typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('utm_campaign') : null
@@ -376,23 +409,27 @@ export async function submitLead(leadData: {
       const referrer = typeof document !== 'undefined' ? document.referrer : ''
 
       if (utmSource || landingPage || referrer) {
-        await supabase.from('lead_source_tracking' as any).insert({
-          lead_id: (data as any).id,
+        const { error: trackErr } = await supabase.from('lead_source_tracking' as any).insert({
+          lead_id: leadId,
           utm_source: utmSource,
           utm_medium: utmMedium,
           utm_campaign: utmCampaign,
           referrer_url: referrer || null,
           landing_page_url: landingPage || null,
-        } as any)
+        } as any) as any
+        if (trackErr) console.debug('[reportsData] lead_source_tracking skipped:', trackErr.message)
       }
-
-      // Auto-assign lead to least-loaded staff (round-robin, non-blocking)
-      import('./leadAssignmentService').then(({ autoAssignLead }) => {
-        autoAssignLead((data as any).id).catch(() => {})
-      }).catch(() => {})
+    } catch (e: any) {
+      console.debug('[reportsData] lead_source_tracking skipped:', e?.message || e)
     }
 
-    return { success: true, data }
+    // Auto-assign lead to least-loaded staff (round-robin, non-blocking).
+    // Also staff-only under RLS, so this is a no-op for anonymous submissions.
+    import('./leadAssignmentService').then(({ autoAssignLead }) => {
+      autoAssignLead(leadId).catch(() => {})
+    }).catch(() => {})
+
+    return { success: true, data: { id: leadId } }
   } catch (err) {
     console.warn('[reportsData] Lead submission error:', err)
     return { success: false, error: err }

@@ -57,12 +57,16 @@ export default function ContactPage() {
     setError('')
     setSubmitting(true)
     try {
-      await Promise.all([
+      // Both helpers swallow their own errors and report via the returned
+      // { success } flag — so inspect the results rather than relying on a
+      // rejected promise (that is how a broken lead write went unnoticed).
+      const [contactRes, leadRes] = await Promise.all([
         submitContactForm({
           formType: formData.inquiryType || 'contact',
           fullName: formData.name,
           email: formData.email,
           phone: formData.phone,
+          city: formData.city,
           message: formData.message,
           investmentRange: formData.investmentRange,
           investmentInterest: formData.inquiryType,
@@ -78,8 +82,20 @@ export default function ContactPage() {
           investmentInterest: formData.inquiryType,
           investmentRange: formData.investmentRange,
           message: formData.message,
+          contactMethod: formData.contactMethod,
         }),
       ])
+
+      if (!contactRes?.success) console.warn('[contact] contact_submissions write failed:', (contactRes as any)?.error)
+      if (!leadRes?.success) console.warn('[contact] leads write failed:', (leadRes as any)?.error)
+
+      // Only hard-fail when nothing persisted. If one of the two landed the
+      // enquiry is still reachable by the team (Comms → Contact, or the CRM),
+      // and showing an error would only push the visitor into resubmitting.
+      if (!contactRes?.success && !leadRes?.success) {
+        setError('Something went wrong. Please try again, or email info@ghlindiaventures.com.')
+        return
+      }
       setSubmitted(true)
     } catch (err) {
       console.warn('Form submission to Supabase failed:', err)
