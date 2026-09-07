@@ -115,7 +115,7 @@ export default function MarketNewsTicker() {
                 className={`flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-medium transition-all ${
                   filter === f.key
                     ? 'bg-brand-red/20 text-brand-red'
-                    : 'text-gray-500 hover:text-gray-300 hover:bg-white/5'
+                    : 'text-gray-300 hover:text-white hover:bg-white/10'
                 }`}
               >
                 {f.icon}

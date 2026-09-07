@@ -235,7 +235,12 @@ export async function signupClient(
         email,
         phone: phone || null,
         source: 'website',
-        status: 'won',
+        // 'new', not 'won': registering creates an account, it does not win a
+        // deal. The genuine conversion path (leadService.convertLeadToClient)
+        // is what sets 'won', alongside a deal value. Marking signups 'won'
+        // hid every registration from the new-lead pipeline and inflated the
+        // conversion stat in leadService.getLeadStats().
+        status: 'new',
         investment_interest: 'AIF Investment',
         metadata: { auto_created: true, source: 'email_signup' },
       } as any)

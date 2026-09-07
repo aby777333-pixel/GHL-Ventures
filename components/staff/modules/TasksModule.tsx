@@ -229,7 +229,7 @@ function MyTasksView({ showToast, tasks, onRefresh }: { showToast: TasksModulePr
               className={`px-2.5 py-1.5 rounded-md text-[11px] font-medium transition-all ${
                 statusFilter === opt.value
                   ? 'bg-teal-500/20 text-teal-300 border border-teal-500/30'
-                  : 'text-gray-500 hover:text-gray-300 hover:bg-white/[0.04] border border-transparent'
+                  : 'text-gray-300 hover:text-white hover:bg-white/[0.08] border border-transparent'
               }`}
             >
               {opt.label}
@@ -244,7 +244,7 @@ function MyTasksView({ showToast, tasks, onRefresh }: { showToast: TasksModulePr
               className={`px-2.5 py-1.5 rounded-md text-[11px] font-medium transition-all ${
                 priorityFilter === opt.value
                   ? 'bg-teal-500/20 text-teal-300 border border-teal-500/30'
-                  : 'text-gray-500 hover:text-gray-300 hover:bg-white/[0.04] border border-transparent'
+                  : 'text-gray-300 hover:text-white hover:bg-white/[0.08] border border-transparent'
               }`}
             >
               {opt.label}

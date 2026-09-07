@@ -909,7 +909,7 @@ export default function PostEditor({ postId, onBack, onSaved, showToast, initial
             {/* google preview */}
             <div className="pt-2 border-t border-white/10">
               <p className={labelCls}>Google preview</p>
-              <div className="rounded-lg bg-white p-3">
+              <div className="ghl-on-light rounded-lg bg-white p-3">
                 <p className="text-[11px] text-[#202124] truncate">{SITE_URL}/blog/{form.slug || 'slug'}</p>
                 <p className="text-[15px] text-[#1a0dab] leading-snug truncate">{metaTitle || 'Article title'}</p>
                 <p className="text-[12px] text-[#4d5156] leading-snug blog-clamp-2">
@@ -921,7 +921,7 @@ export default function PostEditor({ postId, onBack, onSaved, showToast, initial
             {/* social preview */}
             <div>
               <p className={labelCls}>Social share preview</p>
-              <div className="rounded-lg overflow-hidden border border-white/10 bg-white">
+              <div className="ghl-on-light rounded-lg overflow-hidden border border-white/10 bg-white">
                 {(form.og_image || form.cover_image) ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img src={String(form.og_image || form.cover_image)} alt="" className="w-full h-28 object-cover" />

@@ -745,7 +745,7 @@ function BuilderTab({ showToast }: { showToast: Props['showToast'] }) {
                         </div>
                       </div>
                     ) : block.type === 'logo' ? (
-                      <div className="mt-3 py-4 rounded-lg bg-white border border-white/[0.04] flex items-center justify-center">
+                      <div className="ghl-on-light mt-3 py-4 rounded-lg bg-white border border-white/[0.04] flex items-center justify-center">
                         {/* eslint-disable-next-line @next/next/no-img-element */}
                         <img src="/images/brand/ghl-logo-full-red.png" alt="GHL India Ventures" style={{ height: 40, width: 'auto' }} />
                       </div>
@@ -1001,7 +1001,7 @@ function BuilderTab({ showToast }: { showToast: Props['showToast'] }) {
           onClick={() => setShowPreview(false)}
         >
           <div
-            className="relative bg-white rounded-xl shadow-2xl max-w-[860px] w-full max-h-[90vh] overflow-hidden"
+            className="ghl-on-light relative bg-white rounded-xl shadow-2xl max-w-[860px] w-full max-h-[90vh] overflow-hidden"
             onClick={e => e.stopPropagation()}
           >
             {/* Modal header */}

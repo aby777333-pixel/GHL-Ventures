@@ -250,7 +250,10 @@ async function ensureProfile(user: { id: string; email?: string; user_metadata?:
           email: user.email || '',
           phone: meta.phone || null,
           source: 'website',
-          status: 'won',
+          // 'new', not 'won' — see the note in clientAuthService.signupClient.
+          // converted_client_id below still links this lead to the client row
+          // that registration created.
+          status: 'new',
           investment_interest: 'AIF Investment',
           converted_client_id: (newClient as any)?.id || null,
           converted_at: new Date().toISOString(),

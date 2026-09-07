@@ -131,7 +131,7 @@ export default function EconomicCalendar() {
               className={`flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-medium transition-all ${
                 tab === 'india'
                   ? 'bg-orange-500/20 text-orange-400'
-                  : 'text-gray-500 hover:text-gray-300 hover:bg-white/5'
+                  : 'text-gray-300 hover:text-white hover:bg-white/10'
               }`}
             >
               <IndianRupee className="w-2.5 h-2.5" />
@@ -142,7 +142,7 @@ export default function EconomicCalendar() {
               className={`flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-medium transition-all ${
                 tab === 'global'
                   ? 'bg-blue-500/20 text-blue-400'
-                  : 'text-gray-500 hover:text-gray-300 hover:bg-white/5'
+                  : 'text-gray-300 hover:text-white hover:bg-white/10'
               }`}
             >
               <Globe className="w-2.5 h-2.5" />

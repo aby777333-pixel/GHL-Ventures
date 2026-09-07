@@ -236,7 +236,7 @@ export default function RichTextEditor({
              inside the console's `bg-[#0B090A]` shell — so a text-gray class
              made the author's own text white-on-white. The colour comes from
              `.cms-editor` in blog.css instead, which that selector cannot match. */
-          className="cms-editor article-body w-full p-5 bg-white focus:outline-none overflow-y-auto"
+          className="ghl-on-light cms-editor article-body w-full p-5 bg-white focus:outline-none overflow-y-auto"
         />
       )}
 
