@@ -4933,70 +4933,92 @@ body {
 }
 
 /* ─────────────────────────────────────────────────────────────────────
-   Admin + Staff legibility uplift (2026-09-07, raised same day)
+   Admin + Staff legibility uplift (2026-09-07)
    ---------------------------------------------------------------------
-   Both consoles sit on a near-black shell, where Tailwind's mid greys
-   (#4B5563 / #6B7280) fall well under a readable contrast ratio - module
-   tabs, sidebar labels, KPI captions, table meta, helper text and
-   placeholders were all effectively invisible.
+   Both consoles sit on a near-black shell, but this stylesheet already
+   forces Tailwind's greys DARKER for the public light-mode site, with
+   !important and no theme scoping:
 
-   Rather than rewriting ~2000 utility classes across every module (high
-   blast radius, easy to regress), the whole console is lifted here in one
-   scoped block. `body.admin-active` / `body.staff-active` are already set
-   by AdminShell and StaffClient, and the two-class selector outranks
-   Tailwind's single-class utility without needing !important.
+       .text-gray-500              { color:#4B5563 !important; }  (~L556)
+       html:not(.dark) .text-gray-500 { color:#4B5563 !important; }  (~L3683)
 
-   The ramp keeps the original hierarchy intact - 600 stays dimmer than
-   500, dimmer than 400, dimmer than 300 - so emphasis still reads
-   correctly; everything simply clears the legibility floor.
+   The consoles render without the `.dark` class, so those rules won and
+   every sidebar label, KPI caption, tab and placeholder was painted
+   #4B5563 on near-black - far under any readable contrast ratio. Two
+   earlier attempts at this block failed for exactly one reason: they had
+   no !important, so they lost to the rules above no matter the
+   specificity.
+
+   Hence: !important, plus an `html body.<console>` prefix (0,2,2) that
+   outranks `html:not(.dark) .text-gray-500` (0,2,1) outright rather than
+   relying on source order.
+
+   Scoped to the two console shells, so the public marketing site keeps
+   its light-mode contrast rules untouched.
+
+   The ramp stays monotonic - 600 dimmer than 500, dimmer than 400,
+   dimmer than 300 - so emphasis hierarchy is preserved.
 
    To revert: delete this block. Nothing else depends on it.
    ------------------------------------------------------------------- */
-body.admin-active .text-gray-600,
-body.staff-active .text-gray-600 { color: #AEB7C4; }
+html body.admin-active .text-gray-600,
+html body.staff-active .text-gray-600 { color: #AEB7C4 !important; }
 
-body.admin-active .text-gray-500,
-body.staff-active .text-gray-500 { color: #D7DDE5; }
+html body.admin-active .text-gray-500,
+html body.staff-active .text-gray-500 { color: #D7DDE5 !important; }
 
-body.admin-active .text-gray-400,
-body.staff-active .text-gray-400 { color: #E6EAEF; }
+html body.admin-active .text-gray-400,
+html body.staff-active .text-gray-400 { color: #E6EAEF !important; }
 
-body.admin-active .text-gray-300,
-body.staff-active .text-gray-300 { color: #EEF1F5; }
+html body.admin-active .text-gray-300,
+html body.staff-active .text-gray-300 { color: #EEF1F5 !important; }
 
-body.admin-active .text-white\/40,
-body.staff-active .text-white\/40 { color: rgba(255,255,255,0.75); }
+/* Tailwind emits some of these as arbitrary/compound classes too, and the
+   pre-existing dark-mode rules use [class*=...]; match that reach so a
+   compound utility can't slip back to the dark value. */
+html body.admin-active [class*="text-gray-500"],
+html body.staff-active [class*="text-gray-500"] { color: #D7DDE5 !important; }
 
-body.admin-active .text-white\/50,
-body.staff-active .text-white\/50 { color: rgba(255,255,255,0.8); }
+html body.admin-active [class*="text-gray-600"],
+html body.staff-active [class*="text-gray-600"] { color: #AEB7C4 !important; }
 
-body.admin-active .text-white\/60,
-body.staff-active .text-white\/60 { color: rgba(255,255,255,0.86); }
+html body.admin-active .text-white\/40,
+html body.staff-active .text-white\/40 { color: rgba(255,255,255,0.75) !important; }
 
-body.admin-active .text-white\/70,
-body.staff-active .text-white\/70 { color: rgba(255,255,255,0.9); }
+html body.admin-active .text-white\/50,
+html body.staff-active .text-white\/50 { color: rgba(255,255,255,0.8) !important; }
+
+html body.admin-active .text-white\/60,
+html body.staff-active .text-white\/60 { color: rgba(255,255,255,0.86) !important; }
+
+html body.admin-active .text-white\/70,
+html body.staff-active .text-white\/70 { color: rgba(255,255,255,0.9) !important; }
 
 /* Placeholders were the worst offenders - gray-600 on near-black. */
-body.admin-active .placeholder-gray-600::placeholder,
-body.staff-active .placeholder-gray-600::placeholder { color: #AAB3C0; }
+html body.admin-active .placeholder-gray-600::placeholder,
+html body.staff-active .placeholder-gray-600::placeholder { color: #AAB3C0 !important; }
 
-body.admin-active .placeholder-gray-500::placeholder,
-body.staff-active .placeholder-gray-500::placeholder { color: #BAC2CE; }
+html body.admin-active .placeholder-gray-500::placeholder,
+html body.staff-active .placeholder-gray-500::placeholder { color: #BAC2CE !important; }
 
 /* Escape hatch - genuine light/white surfaces inside the dark console
    (blog Google/social previews, the rich-text editor body, the report
    preview modal). Brightening grey text there would push it toward
-   white-on-white, so restore Tailwind's defaults. RichTextEditor already
-   carries a comment about exactly that failure mode. Any NEW light panel
-   added to admin or staff must carry .ghl-on-light. */
-body.admin-active .ghl-on-light .text-gray-600,
-body.staff-active .ghl-on-light .text-gray-600 { color: #4B5563; }
+   white-on-white, so restore readable dark-on-light values. Higher
+   specificity (0,3,2) than the uplift above, so it wins inside them.
+   Any NEW light panel added to admin or staff must carry .ghl-on-light. */
+html body.admin-active .ghl-on-light .text-gray-600,
+html body.staff-active .ghl-on-light .text-gray-600,
+html body.admin-active .ghl-on-light [class*="text-gray-600"],
+html body.staff-active .ghl-on-light [class*="text-gray-600"] { color: #374151 !important; }
 
-body.admin-active .ghl-on-light .text-gray-500,
-body.staff-active .ghl-on-light .text-gray-500 { color: #6B7280; }
+html body.admin-active .ghl-on-light .text-gray-500,
+html body.staff-active .ghl-on-light .text-gray-500,
+html body.admin-active .ghl-on-light [class*="text-gray-500"],
+html body.staff-active .ghl-on-light [class*="text-gray-500"] { color: #4B5563 !important; }
 
-body.admin-active .ghl-on-light .text-gray-400,
-body.staff-active .ghl-on-light .text-gray-400 { color: #9CA3AF; }
+html body.admin-active .ghl-on-light .text-gray-400,
+html body.staff-active .ghl-on-light .text-gray-400 { color: #6B7280 !important; }
 
-body.admin-active .ghl-on-light .text-gray-300,
-body.staff-active .ghl-on-light .text-gray-300 { color: #D1D5DB; }
+html body.admin-active .ghl-on-light .text-gray-300,
+html body.staff-active .ghl-on-light .text-gray-300 { color: #9CA3AF !important; }
