@@ -14,6 +14,7 @@
    KYC Gate: Blocks entire flow if KYC not verified.
    ═══════════════════════════════════════════════════════════════ */
 
+import { getPlanDocs, getPlanKind, slotMatches, isSignableType } from '@/lib/investmentDocs'
 import { useState, useMemo, useCallback, useEffect } from 'react'
 import {
   Building2, FileText, Download, Upload, Eye, CheckCircle, Clock,
@@ -1062,16 +1063,21 @@ export default function InvestmentFlowTab({
                 </p>
               </div>
               {(() => {
+                const isDirectAif = getPlanKind(selectedApp) === 'direct_aif'
                 const docsForApp = (investDocs || []).filter((d: any) => d.investment_app_id === selectedApp.id)
-                if (docsForApp.length === 0) {
-                  return (
-                    <div className="p-10 text-center">
-                      <FileText className={`w-10 h-10 mx-auto mb-3 ${t('text-gray-600','text-gray-400')}`} />
-                      <p className={`text-sm font-medium ${t('text-gray-400','text-gray-600')}`}>No investment documents yet</p>
-                      <p className={`text-xs mt-1 ${t('text-gray-600','text-gray-500')}`}>Documents will appear here after admin processes your investment.</p>
-                    </div>
-                  )
-                }
+                const usedIds = new Set<any>()
+                const docRows: any[] = getPlanDocs(selectedApp).map((slot) => {
+                  const matches = docsForApp.filter((d: any) => slotMatches(slot, (d.document_type || '').toLowerCase()))
+                  matches.forEach((d: any) => usedIds.add(d.id))
+                  const doc = matches.find((d: any) => d.file_url) || matches[0] || null
+                  return { key: `slot-${slot.type}`, slot, doc, label: slot.label }
+                })
+                docsForApp.filter((d: any) => !usedIds.has(d.id)).forEach((d: any) => {
+                  docRows.push({
+                    key: d.id, slot: null, doc: d,
+                    label: (d.title || '').startsWith('TDS Certificate') ? 'TDS Certificate' : (d.title || 'Document'),
+                  })
+                })
                 return (
                   <div className="overflow-x-auto">
                     <table className="w-full text-sm">
@@ -1083,19 +1089,20 @@ export default function InvestmentFlowTab({
                         </tr>
                       </thead>
                       <tbody>
-                        {docsForApp.map((doc: any, i: number) => {
+                        {docRows.map((row: any, i: number) => {
+                          const doc: any = row.doc || {}
                           const docType = (doc.document_type || '').toLowerCase()
                           const docTitleLower = (doc.title || '').toLowerCase()
-                          const autoGen = ['acknowledgement_letter', 'acknowledgement'].includes(docType) && !doc.file_url
+                          const autoGen = !isDirectAif && !!row.doc && ['acknowledgement_letter', 'acknowledgement'].includes(docType) && !doc.file_url
                           const ready = !!doc.file_url || autoGen
                           // Only the Debenture Agreement gets a signed-copy slot
                           // (Testing Report 2 — 2026-04-25 #6). Match the same
                           // rule used by the bulk view further down: by
                           // document_type or by a title containing "agreement".
-                          const isSignable = docType === 'debenture_agreement' || docType === 'agreement' || /agreement/.test(docTitleLower)
+                          const isSignable = !!row.doc && (row.slot ? !!row.slot.signable : (isSignableType(docType) || /agreement/.test(docTitleLower)))
                           return (
-                            <tr key={doc.id || i} className={`border-b ${t('border-white/[0.04]','border-gray-100')}`}>
-                              <td className={`py-3 px-5 text-xs font-medium ${t('text-white','text-gray-900')}`}>{doc.title || 'Document'}</td>
+                            <tr key={row.key || i} className={`border-b ${t('border-white/[0.04]','border-gray-100')}`}>
+                              <td className={`py-3 px-5 text-xs font-medium ${t('text-white','text-gray-900')}`}>{row.label}</td>
                               <td className="py-3 px-5">
                                 {doc.file_url ? (
                                   <button onClick={() => handleViewDoc(doc.file_url)} className="inline-flex items-center gap-1 text-[11px] font-bold px-3 py-1.5 rounded-lg bg-brand-red/15 text-brand-red hover:bg-brand-red/25 transition-colors">
@@ -1107,7 +1114,7 @@ export default function InvestmentFlowTab({
                                   </button>
                                 ) : (
                                   <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-1 rounded-full bg-amber-500/15 text-amber-500">
-                                    <Clock className="w-3 h-3" /> Processing
+                                    <Clock className="w-3 h-3" /> {row.doc ? 'Processing' : 'Pending'}
                                   </span>
                                 )}
                               </td>

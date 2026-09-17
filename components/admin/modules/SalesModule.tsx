@@ -1,5 +1,6 @@
 'use client'
 
+import { getPlanDocs, getPlanKind, slotMatches, isSignableType } from '@/lib/investmentDocs'
 import { useState, useEffect, useMemo, useCallback } from 'react'
 import {
   TrendingUp, Users, Target, IndianRupee, Phone, Mail,
@@ -2602,7 +2603,7 @@ function InvestmentsTab({ showToast, statusFilter }: { showToast: (m: string, t?
                           <a href={doc.signed_copy_url} target="_blank" rel="noopener noreferrer" className="text-xs text-emerald-400 hover:text-emerald-300 inline-flex items-center gap-1" title={doc.signed_at ? `Signed ${formatDate(doc.signed_at)}` : 'Signed copy'}>
                             <CheckCircle2 className="w-3 h-3" /> Signed
                           </a>
-                        ) : (doc.document_type === 'debenture_agreement' || doc.document_type === 'agreement') ? (
+                        ) : isSignableType(doc.document_type) ? (
                           <>
                             <span className="text-[10px] text-amber-500" title="Waiting for investor to upload signed copy">Unsigned</span>
                             {/* Super-admin can also attach the signed copy directly
@@ -2641,12 +2642,9 @@ function InvestmentsTab({ showToast, statusFilter }: { showToast: (m: string, t?
                   upload many TDS certificates. */}
               {(() => {
                 const hasReal = (t: string) => appDocs.some((d: any) => d.document_type === t && d.file_url)
-                const slots = [
-                  { type: 'acknowledgement', label: 'Upload Acknowledgement' },
-                  { type: 'agreement', label: 'Upload Debenture Agreement' },
-                  { type: 'allotment', label: 'Upload Allotment Letter' },
-                  { type: 'certificate', label: 'Upload Debenture Certificate' },
-                ].filter(d => !hasReal(d.type))
+                const slots = getPlanDocs(selectedApp)
+                  .filter(sl => !appDocs.some((d: any) => slotMatches(sl, d.document_type) && d.file_url))
+                  .map(sl => ({ type: sl.type, label: `Upload ${sl.label}` }))
                 return (
                   <div className="grid grid-cols-2 gap-2">
                     {slots.map(d => (
@@ -2690,12 +2688,18 @@ function InvestmentsTab({ showToast, statusFilter }: { showToast: (m: string, t?
                   certificate→certificate, agreement→agreement. */}
               {(() => {
                 const hasReal = (t: string) => appDocs.some((d: any) => d.document_type === t && d.file_url)
+                const isDebentureRoute = getPlanKind(selectedApp) === 'debenture'
                 const genSlots = [
                   { type: 'acknowledgement' as const, label: 'Acknowledgement Letter' },
                   { type: 'allotment' as const, label: 'Allotment Letter' },
                   { type: 'certificate' as const, label: 'Debenture Certificate' },
                   { type: 'agreement' as const, label: 'Debenture Agreement' },
-                ].filter(d => !hasReal(d.type))
+                ].filter(d => isDebentureRoute && !hasReal(d.type))
+                if (!isDebentureRoute) {
+                  return (
+                    <p className="text-[11px] text-gray-500 italic">Auto-generation is available only for the Debenture route. Please upload Direct AIF documents in the section above.</p>
+                  )
+                }
                 if (genSlots.length === 0) {
                   return (
                     <p className="text-[11px] text-gray-500 italic">All documents have been uploaded. Generation is hidden to prevent duplicates.</p>
