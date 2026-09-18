@@ -2443,6 +2443,73 @@ export default function DashboardClient() {
   // ═══════════════════════════════════════════════════════════
   // TRANSACTIONS TAB
   // ═══════════════════════════════════════════════════════════
+  // Investor Dashboard Correction #6 + #9: the Transactions tab used to show
+  // only `investment_transactions` (investor-submitted payments). Investments
+  // that admin credited directly never produced such a row, so investors saw
+  // nothing — or only one entry despite several investments. The ledger below
+  // merges the credited investment records with the payment submissions.
+  const txnLedger = (() => {
+    const rows: any[] = []
+    for (const app of (investmentApps || []) as any[]) {
+      if (!['approved', 'credited', 'completed'].includes(app.status)) continue
+      rows.push({
+        key: `app-${app.id}`,
+        date: app.final_investment_date || app.investment_date || app.created_at,
+        kind: 'Investment',
+        fund: app.fund_vehicle || '—',
+        reference: app.commitment_id || app.reference_number || '—',
+        amount: Number(app.investment_amount) || 0,
+        status: app.status,
+        proofUrl: null,
+      })
+    }
+    for (const txn of (investmentTxns || []) as any[]) {
+      rows.push({
+        key: `txn-${txn.id}`,
+        date: txn.transaction_date || txn.created_at,
+        kind: 'Payment',
+        fund: txn.fund_vehicle || '—',
+        reference: txn.transaction_id || '—',
+        amount: Number(txn.transaction_amount) || 0,
+        status: txn.status || 'pending',
+        proofUrl: txn.transaction_proof_url || txn.proof_url || null,
+      })
+    }
+    // Only credited rows are shown to the investor — pending/approved
+    // payment submissions stay out of the statement. Applies to the table,
+    // the CSV export and the PDF alike.
+    return rows
+      .filter(r => String(r.status).toLowerCase() === 'credited')
+      .sort((a, b) => new Date(b.date || 0).getTime() - new Date(a.date || 0).getTime())
+  })()
+
+  const fmtLedgerDate = (d: any) => (d ? new Date(d).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '—')
+
+  const downloadTxnPdf = () => {
+    const rowsHtml = txnLedger.map(r => `<tr><td>${fmtLedgerDate(r.date)}</td><td>${r.kind}</td><td>${r.fund}</td><td>${r.reference}</td><td style="text-align:right">&#8377; ${new Intl.NumberFormat('en-IN').format(r.amount)}</td><td>${String(r.status).toUpperCase()}</td></tr>`).join('')
+    const total = txnLedger.filter(r => r.kind === 'Investment').reduce((sum, r) => sum + r.amount, 0)
+    const html = `<!doctype html><html><head><title>Transaction Statement</title><style>
+      body{font-family:Georgia,'Times New Roman',serif;padding:40px;color:#111}
+      h1{color:#8B0000;font-size:22px;margin:0 0 4px;text-align:center}
+      .sub{text-align:center;color:#555;font-size:12px;margin-bottom:24px}
+      table{width:100%;border-collapse:collapse;font-size:12px}
+      th{background:#8B0000;color:#fff;text-align:left;padding:8px}
+      td{padding:8px;border-bottom:1px solid #ddd}
+      .tot{margin-top:16px;text-align:right;font-size:13px;font-weight:bold}
+      @media print{.noprint{display:none}}
+    </style></head><body>
+      <h1>Transaction Statement</h1>
+      <p class="sub">GHL India Ventures Trust &middot; Generated ${new Date().toLocaleDateString('en-IN')}</p>
+      <table><thead><tr><th>Date</th><th>Type</th><th>Fund</th><th>Reference</th><th style="text-align:right">Amount</th><th>Status</th></tr></thead>
+      <tbody>${rowsHtml || '<tr><td colspan="6">No transactions</td></tr>'}</tbody></table>
+      <p class="tot">Total Invested: &#8377; ${new Intl.NumberFormat('en-IN').format(total)}</p>
+      <p class="noprint" style="margin-top:28px;text-align:center"><button onclick="window.print()" style="padding:8px 20px;background:#8B0000;color:#fff;border:0;border-radius:6px;cursor:pointer">Print / Save as PDF</button></p>
+    </body></html>`
+    const w = window.open('', '_blank')
+    if (!w) { showToast('Please allow popups to download the statement', 'info'); return }
+    w.document.write(html); w.document.close()
+  }
+
   const renderTransactionsTab = () => (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -2453,12 +2520,13 @@ export default function DashboardClient() {
         <button onClick={async () => {
           showToast('Exporting transactions...', 'info')
           const bom = '\uFEFF'
-          const rows = transactions.map((tx: any) => `${tx.date},${tx.type},${tx.fund},${tx.amount},${tx.status}`)
-          const csv = `${bom}Date,Type,Fund,Amount,Status\n${rows.join('\n')}`
+          const rows = txnLedger.map((r: any) => `${fmtLedgerDate(r.date)},${r.kind},"${r.fund}",${r.reference},${r.amount},${r.status}`)
+          const csv = `${bom}Date,Type,Fund,Reference,Amount,Status\n${rows.join('\n')}`
           const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' })
           const filename = `GHL_Transactions_${new Date().toISOString().slice(0,10)}.csv`
           await saveBlobAs(blob, filename, showToast as any)
         }} className="flex items-center gap-2 text-xs text-brand-red font-semibold"><Download className="w-3.5 h-3.5" /> Export CSV</button>
+          <button onClick={downloadTxnPdf} className="flex items-center gap-2 text-xs text-brand-red font-semibold ml-4"><Download className="w-3.5 h-3.5" /> Download PDF</button>
       </div>
       {/* Investor Dashboard Corrections 2026-05-12 #14: the generic
           Date/Type/Fund/Amount/Status table that previously rendered
@@ -2474,52 +2542,46 @@ export default function DashboardClient() {
           table removed (2026-05-12 #14), this panel is now the sole
           surface for the Transactions tab and renders an empty state
           when no submissions exist. */}
-      {investmentTxns.length > 0 ? (
+      {txnLedger.length > 0 ? (
         <>
-          <h3 className={`text-base font-bold mb-3 ${t('text-white','text-gray-900')}`}>Investment Transaction Submissions</h3>
+          <h3 className={`text-base font-bold mb-3 ${t('text-white','text-gray-900')}`}>Transaction History</h3>
           <Glass className="overflow-hidden" hover={false} theme={theme}>
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
                   <tr className={`border-b ${t('border-white/[0.06]','border-gray-200/50')}`}>
-                    {['Investment Date', 'Capital Amount', 'Transaction Amount', 'Transaction ID', 'Transaction Proof', 'Approval Date', 'Status'].map(h => (
+                    {['Date', 'Type', 'Fund', 'Reference', 'Amount', 'Proof', 'Status'].map(h => (
                       <th key={h} className={`text-left text-xs font-medium py-3 px-5 ${t('text-gray-500','text-gray-600')}`}>{h}</th>
                     ))}
                   </tr>
                 </thead>
                 <tbody>
-                  {investmentTxns.map((txn: any, i: number) => {
-                    const approvalDate = txn.approved_at || txn.approval_date || (txn.status === 'approved' ? txn.updated_at : null)
-                    const proofUrl = txn.transaction_proof_url || txn.proof_url
-                    return (
-                      <tr key={txn.id || i} className={`border-b ${t('border-white/[0.03] hover:bg-white/[0.02]','border-gray-100 hover:bg-gray-50')}`}>
-                        <td className={`py-3 px-5 text-xs ${t('text-gray-400','text-gray-700')}`}>{txn.created_at ? new Date(txn.created_at).toLocaleDateString('en-IN') : '—'}</td>
-                        <td className={`py-3 px-5 text-xs font-semibold ${t('text-white','text-gray-900')}`}>₹{new Intl.NumberFormat('en-IN').format(Number(txn.capital_amount) || 0)}</td>
-                        <td className={`py-3 px-5 text-xs font-semibold ${t('text-white','text-gray-900')}`}>₹{new Intl.NumberFormat('en-IN').format(Number(txn.transaction_amount) || 0)}</td>
-                        <td className={`py-3 px-5 text-xs font-mono ${t('text-gray-400','text-gray-600')}`}>{txn.transaction_id || '—'}</td>
-                        <td className="py-3 px-5">
-                          {proofUrl ? (
-                            <a
-                              href={proofUrl}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              title="View transaction proof"
-                              className={`inline-flex items-center justify-center w-8 h-8 rounded-lg transition-colors ${t('bg-brand-red/15 text-brand-red hover:bg-brand-red/25','bg-brand-red/10 text-brand-red hover:bg-brand-red/20')}`}>
-                              <Eye className="w-3.5 h-3.5" />
-                            </a>
-                          ) : (
-                            <span className={`text-[10px] ${t('text-gray-600','text-gray-400')}`}>—</span>
-                          )}
-                        </td>
-                        <td className={`py-3 px-5 text-xs ${t('text-gray-400','text-gray-700')}`}>{approvalDate ? new Date(approvalDate).toLocaleDateString('en-IN') : '—'}</td>
-                        <td className="py-3 px-5">
-                          <span className={`inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full ${txn.status === 'approved' ? 'text-emerald-400 bg-emerald-500/15' : txn.status === 'rejected' ? 'text-red-400 bg-red-500/15' : 'text-amber-400 bg-amber-500/15'}`}>
-                            {(txn.status || 'pending').charAt(0).toUpperCase() + (txn.status || 'pending').slice(1)}
-                          </span>
-                        </td>
-                      </tr>
-                    )
-                  })}
+                  {txnLedger.map((r: any) => (
+                    <tr key={r.key} className={`border-b ${t('border-white/[0.03] hover:bg-white/[0.02]','border-gray-100 hover:bg-gray-50')}`}>
+                      <td className={`py-3 px-5 text-xs ${t('text-gray-400','text-gray-700')}`}>{fmtLedgerDate(r.date)}</td>
+                      <td className="py-3 px-5">
+                        <span className={`inline-flex text-[10px] font-semibold px-2 py-0.5 rounded-full ${r.kind === 'Investment' ? 'text-blue-400 bg-blue-500/15' : 'text-purple-400 bg-purple-500/15'}`}>{r.kind}</span>
+                      </td>
+                      <td className={`py-3 px-5 text-xs ${t('text-gray-400','text-gray-700')}`}>{r.fund}</td>
+                      <td className={`py-3 px-5 text-xs font-mono ${t('text-gray-400','text-gray-600')}`}>{r.reference}</td>
+                      <td className={`py-3 px-5 text-xs font-semibold ${t('text-white','text-gray-900')}`}>&#8377;{new Intl.NumberFormat('en-IN').format(r.amount)}</td>
+                      <td className="py-3 px-5">
+                        {r.proofUrl ? (
+                          <a href={r.proofUrl} target="_blank" rel="noopener noreferrer" title="View transaction proof"
+                            className={`inline-flex items-center justify-center w-8 h-8 rounded-lg transition-colors ${t('bg-brand-red/15 text-brand-red hover:bg-brand-red/25','bg-brand-red/10 text-brand-red hover:bg-brand-red/20')}`}>
+                            <Eye className="w-3.5 h-3.5" />
+                          </a>
+                        ) : (
+                          <span className={`text-[10px] ${t('text-gray-600','text-gray-400')}`}>&mdash;</span>
+                        )}
+                      </td>
+                      <td className="py-3 px-5">
+                        <span className={`inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full ${['approved', 'credited', 'completed'].includes(r.status) ? 'text-emerald-400 bg-emerald-500/15' : r.status === 'rejected' ? 'text-red-400 bg-red-500/15' : 'text-amber-400 bg-amber-500/15'}`}>
+                          {String(r.status || 'pending').charAt(0).toUpperCase() + String(r.status || 'pending').slice(1)}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
                 </tbody>
               </table>
             </div>
