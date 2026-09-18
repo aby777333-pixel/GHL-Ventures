@@ -1922,7 +1922,16 @@ function InvestmentsTab({ showToast, statusFilter }: { showToast: (m: string, t?
       const s = INV_STATUS_MAP[row.status] || { label: row.status, variant: 'info' as const }
       return <AdminBadge label={s.label} variant={s.variant} size="sm" dot />
     }},
-    { key: 'created_at', label: 'Date', sortable: true, render: (row) => <span className="text-gray-500 text-xs">{formatDate(row.created_at)}</span> },
+    // Venture Dashboard Changes #12: this column must show the CREDIT date
+    // (set by Give Credit), not the application-submitted date. Falls back
+    // through approval date / created_at so not-yet-credited rows still
+    // show something rather than a dash.
+    { key: 'final_investment_date', label: 'Credit Date', sortable: true, render: (row) => {
+      const credited = row.final_investment_date || row.credit_given_at
+      return credited
+        ? <span className="text-gray-300 text-xs">{formatDate(credited)}</span>
+        : <span className="text-gray-500 text-xs">{formatDate(row.investment_date || row.created_at)}<span className="text-[10px] text-gray-600 ml-1">(applied)</span></span>
+    }},
     { key: 'actions', label: '', width: '230px', render: (row) => {
       const isApproved = ['approved', 'credited', 'completed'].includes(row.status)
       return (
