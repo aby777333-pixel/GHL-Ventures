@@ -226,6 +226,7 @@ export default function PayoutModule({ subTab, navigate, showToast }: PayoutModu
         .select('*')
         .gte('due_date', start)
         .lte('due_date', end)
+        .order('investment_date', { ascending: true, nullsFirst: false })
         .order('due_date', { ascending: true })
 
       if (error) throw error
@@ -594,7 +595,16 @@ export default function PayoutModule({ subTab, navigate, showToast }: PayoutModu
       p.account_number, p.account_holder_name, p.bank_name, p.ifsc_code,
       p.aadhar_number, p.pan_number,
     ])
-    return [headers, ...rows].map(r => r.map(c => `"${c}"`).join(',')).join('\n')
+    // Venture Dashboard Changes #14: prefix long numeric identifiers with an
+    // apostrophe so Excel treats them as text instead of mangling them into
+    // scientific notation (e.g. 9.1234E+11) or dropping leading zeros.
+    const TEXT_COLS = new Set(['Account Number'])
+    const asText = (v: any) => {
+      const str = String(v ?? '')
+      return str && str !== '-' && /^[0-9]+$/.test(str) ? `'${str}` : str
+    }
+    const body = rows.map(r => r.map((c, i) => (TEXT_COLS.has(headers[i]) ? asText(c) : c)))
+    return [headers, ...body].map(r => r.map(c => `"${c}"`).join(',')).join('\n')
   }
 
   // Pending 30-04-2026 follow-up: export now respects a scope selector
@@ -706,6 +716,9 @@ export default function PayoutModule({ subTab, navigate, showToast }: PayoutModu
       </div>
     )},
     { key: 'fund_type', label: 'Fund', sortable: true, width: '100px' },
+    { key: 'investment_date', label: 'Investment Date', sortable: true, width: '110px', render: (row: any) => (
+      <span className="text-xs text-gray-300">{formatDate(row.investment_date)}</span>
+    ) },
     { key: 'due_date', label: 'Due Date', sortable: true, width: '100px', render: (row) => (
       <span className="text-gray-300 text-xs">{formatDate(row.due_date)}</span>
     )},
