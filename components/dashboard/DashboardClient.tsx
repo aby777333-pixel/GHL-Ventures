@@ -3267,11 +3267,24 @@ export default function DashboardClient() {
                 return [
                   ['Nominee Name', primaryNominee?.name || savedProfileData.nominee_name || user?.nominee_name || 'Not provided'],
                   ['Relationship', primaryNominee?.relationship || savedProfileData.nominee_relation || user?.nominee_relation || 'Not provided'],
-                  ['Nominee PAN', savedProfileData.nominee_pan || user?.nominee_pan || 'Not provided'],
+                  // Investor Dashboard Correction #2: the KYC flow captures an
+                  // uploaded ID proof for the nominee, not a typed PAN number,
+                  // so this row now reflects what was actually submitted.
+                  ['ID Proof', primaryNominee?.proof_url
+                    ? (primaryNominee.proof_type || 'Uploaded')
+                    : (savedProfileData.nominee_pan || user?.nominee_pan || 'Not provided')],
                   ['Share', (primaryNominee?.percentage != null ? `${primaryNominee.percentage}%` : (savedProfileData.nominee_share || user?.nominee_share || 'Not provided'))],
                 ]
               })().map(([l,v],i) => (
-                <div key={i}><p className={`text-[10px] uppercase tracking-wider mb-1 ${t('text-gray-600','text-gray-600')}`}>{l}</p><p className={`text-sm font-medium ${v === 'Not provided' ? 'text-gray-600 italic' : t('text-white','text-gray-900')}`}>{v}</p></div>
+                <div key={i}>
+                  <p className={`text-[10px] uppercase tracking-wider mb-1 ${t('text-gray-600','text-gray-600')}`}>{l}</p>
+                  <p className={`text-sm font-medium ${v === 'Not provided' ? 'text-gray-600 italic' : t('text-white','text-gray-900')}`}>
+                    {v}
+                    {l === 'ID Proof' && (kycNominees as any[])?.[0]?.proof_url ? (
+                      <a href={(kycNominees as any[])[0].proof_url} target="_blank" rel="noopener noreferrer" className="ml-2 text-xs text-brand-red hover:underline">View</a>
+                    ) : null}
+                  </p>
+                </div>
               ))}
             </div>
           </Glass>
@@ -3433,7 +3446,6 @@ export default function DashboardClient() {
                 {[
                   { key: 'nominee_name', label: 'Nominee Name', placeholder: 'Full legal name of nominee' },
                   { key: 'nominee_relation', label: 'Relationship', placeholder: 'e.g. Spouse, Parent, Child' },
-                  { key: 'nominee_pan', label: 'Nominee PAN', placeholder: 'ABCDE1234F' },
                   { key: 'nominee_share', label: 'Share %', placeholder: '100%' },
                 ].map(f => (
                   <div key={f.key} className="mb-3">
