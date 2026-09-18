@@ -14,7 +14,7 @@
    KYC Gate: Blocks entire flow if KYC not verified.
    ═══════════════════════════════════════════════════════════════ */
 
-import { getPlanDocs, getPlanKind, slotMatches, isSignableType } from '@/lib/investmentDocs'
+import { getPlanDocs, getInvestorDocs, getPlanKind, slotMatches, isSignableType } from '@/lib/investmentDocs'
 import { useState, useMemo, useCallback, useEffect } from 'react'
 import {
   Building2, FileText, Download, Upload, Eye, CheckCircle, Clock,
@@ -1066,7 +1066,7 @@ export default function InvestmentFlowTab({
                 const isDirectAif = getPlanKind(selectedApp) === 'direct_aif'
                 const docsForApp = (investDocs || []).filter((d: any) => d.investment_app_id === selectedApp.id)
                 const usedIds = new Set<any>()
-                const docRows: any[] = getPlanDocs(selectedApp).map((slot) => {
+                const docRows: any[] = getInvestorDocs(selectedApp).map((slot) => {
                   const matches = docsForApp.filter((d: any) => slotMatches(slot, (d.document_type || '').toLowerCase()))
                   matches.forEach((d: any) => usedIds.add(d.id))
                   const doc = matches.find((d: any) => d.file_url) || matches[0] || null

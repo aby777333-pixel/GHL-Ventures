@@ -8,6 +8,7 @@ export interface PlanDocSlot {
   label: string         // name shown to investor / admin
   aliases?: string[]    // older document_type values that mean the same doc
   signable?: boolean    // investor must upload a signed copy
+  hideFromInvestor?: boolean // admin-only slot; not listed in the investor dashboard
   generatable?: boolean // admin can auto-generate from template
 }
 
@@ -20,10 +21,10 @@ export const PLAN_DOCS: Record<PlanKind, PlanDocSlot[]> = {
   ],
   direct_aif: [
     { type: 'acknowledgement', label: 'Acknowledgment Letter' },
-    { type: 'ppm', label: 'PPM (Private Placement Memorandum)' },
+    { type: 'unit_allotment', label: 'Unit Allotment Letter', aliases: ['ppm'] },
     { type: 'contribution_agreement', label: 'Contribution Agreement', signable: true },
     { type: 'capital_call_notice', label: 'Capital Call Notice' },
-    { type: 'nav_statement', label: 'NAV Statement' },
+    { type: 'nav_statement', label: 'NAV Statement', hideFromInvestor: true },
   ],
 }
 
@@ -47,6 +48,11 @@ export function getPlanKind(src: any): PlanKind {
 
 export function getPlanDocs(src: any): PlanDocSlot[] {
   return PLAN_DOCS[getPlanKind(src)]
+}
+
+/** Investor-facing subset — admin-only slots are filtered out. */
+export function getInvestorDocs(src: any): PlanDocSlot[] {
+  return getPlanDocs(src).filter(s => !s.hideFromInvestor)
 }
 
 export function slotMatches(slot: PlanDocSlot, docType?: string | null): boolean {
