@@ -6,7 +6,7 @@ import {
   Megaphone, AlertTriangle, CheckCircle2, Clock, Eye,
   Plus, Search, Filter, Hash, AtSign, Paperclip,
   Video, Phone, Star, Archive, Trash2, Reply, Inbox,
-  User, RefreshCw,
+  User, RefreshCw, Download,
 } from 'lucide-react'
 import AdminGlass from '../shared/AdminGlass'
 import AdminBadge from '../shared/AdminBadge'
@@ -1292,6 +1292,58 @@ function ContactSubmissionsTab({ showToast }: { showToast: (msg: string, type?: 
     } else showToast(res.error || 'Update failed', 'error')
   }
 
+  // Export the currently filtered contact submissions as CSV.
+  // The public form stores structured extras (resume link, position, …) as a
+  // JSON blob in `message`, so pull any URL-looking value out into its own
+  // Attachment column and keep the rest as readable text.
+  const handleExportCsv = () => {
+    const parseMessage = (raw: string | null): { text: string; attachment: string } => {
+      const val = (raw || '').trim()
+      if (!val.startsWith('{')) return { text: val, attachment: '' }
+      try {
+        const obj = JSON.parse(val)
+        let attachment = ''
+        const parts: string[] = []
+        for (const [k, v] of Object.entries(obj)) {
+          const sv = typeof v === 'string' ? v : JSON.stringify(v)
+          if (!sv) continue
+          if (!attachment && /^https?:\/\//i.test(sv) && /resume|attach|file|cv|doc|upload/i.test(k + sv)) attachment = sv
+          else parts.push(`${k}: ${sv}`)
+        }
+        return { text: parts.join(' | '), attachment }
+      } catch { return { text: val, attachment: '' } }
+    }
+
+    const esc = (v: any) => `"${String(v ?? '').replace(/"/g, '""').replace(/\r?\n/g, ' ')}"`
+    const headers = ['Date', 'Name', 'Email', 'Phone', 'Subject', 'Type', 'Company', 'Message', 'Attachment', 'Status']
+    const body = filtered.map((r: ContactSubmissionRow) => {
+      const m = parseMessage(r.message)
+      return [
+        r.created_at ? new Date(r.created_at).toLocaleString('en-IN') : '',
+        r.full_name || '',
+        r.email || '',
+        r.phone || '',
+        r.subject || '',
+        r.form_type || '',
+        r.company || '',
+        m.text,
+        m.attachment,
+        r.is_processed ? 'Replied' : 'Pending',
+      ].map(esc).join(',')
+    })
+    const csv = '\uFEFF' + [headers.map(esc).join(','), ...body].join('\n')
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `contact_submissions_${new Date().toISOString().slice(0, 10)}.csv`
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    URL.revokeObjectURL(url)
+    showToast(`Exported ${filtered.length} submission${filtered.length === 1 ? '' : 's'}`, 'success')
+  }
+
   const handleDelete = async (row: ContactSubmissionRow) => {
     if (!window.confirm(`Delete submission from ${row.full_name || 'unknown'}?`)) return
     const res = await deleteContactSubmission(row.id)
@@ -1322,6 +1374,15 @@ function ContactSubmissionsTab({ showToast }: { showToast: (msg: string, type?: 
             <option value="pending">Pending</option>
             <option value="processed">Replied</option>
           </select>
+          <button
+            onClick={handleExportCsv}
+            disabled={filtered.length === 0}
+            title="Export the submissions currently shown (search + filter applied)"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/[0.04] border border-white/[0.08] text-xs font-medium text-gray-300 hover:bg-white/[0.08] hover:text-white transition-colors disabled:opacity-40"
+          >
+            <Download className="w-3.5 h-3.5" />
+            Export CSV
+          </button>
           <button
             onClick={() => setOpenCreate(true)}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-brand-red/20 border border-brand-red/30 text-xs font-medium text-white hover:bg-brand-red/30 transition-colors"
