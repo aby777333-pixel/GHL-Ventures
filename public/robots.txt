@@ -1,7 +1,20 @@
+# https://ghlindiaventures.com/robots.txt
+#
+# robots.txt controls CRAWLING, not indexing. A URL that is Disallow-ed here
+# can still be listed in search results as a bare link, because the crawler is
+# forbidden from fetching the page and therefore never sees the noindex tag.
+# For anything that must genuinely stay out of the index, allow the crawl and
+# serve `X-Robots-Tag: noindex` instead — see the [[headers]] blocks in
+# netlify.toml.
+#
+# NOTE ON GROUPS: a crawler obeys exactly ONE group — the most specific one
+# matching its user-agent — and ignores every other group, including `*`.
+# That is why the Disallow list below is repeated verbatim in each named
+# group. Removing a line from one group does not remove it from the others.
+
 User-agent: *
 Allow: /
-Disallow: /login
-Disallow: /register
+Disallow: /api/
 Disallow: /admin/
 Disallow: /cms/
 Disallow: /staff/
@@ -9,5 +22,74 @@ Disallow: /dashboard/
 Disallow: /investor/
 Disallow: /agent/
 Disallow: /auth/
+Disallow: /forbidden/
+Disallow: /maintenance/
+Disallow: /*?*utm_
+Disallow: /*?*fbclid
+# /login/ and /register/ are deliberately crawlable and carry X-Robots-Tag:
+# noindex, follow. See the note at the top of this file.
+
+# ───────────────────────────────────────────────────────────────────────────
+# AI retrieval crawlers — these fetch pages live to answer a user's question
+# inside ChatGPT, Claude and Perplexity. Blocking them removes GHL from those
+# answers with no upside, so they are allowed on the same terms as Googlebot.
+# ───────────────────────────────────────────────────────────────────────────
+User-agent: OAI-SearchBot
+User-agent: Claude-SearchBot
+User-agent: PerplexityBot
+User-agent: Applebot
+Allow: /
+Disallow: /api/
+Disallow: /admin/
+Disallow: /cms/
+Disallow: /staff/
+Disallow: /dashboard/
+Disallow: /investor/
+Disallow: /agent/
+Disallow: /auth/
+Disallow: /forbidden/
+Disallow: /maintenance/
+
+# ───────────────────────────────────────────────────────────────────────────
+# AI training crawlers — a deliberate choice, not a default. Allowing them
+# helps long-term entity recognition ("who is GHL India Ventures"). Blocking
+# them has no effect whatsoever on Google Search ranking, so the only thing
+# at stake is whether the models learn the brand exists.
+# ───────────────────────────────────────────────────────────────────────────
+User-agent: GPTBot
+User-agent: ClaudeBot
+User-agent: Google-Extended
+User-agent: Applebot-Extended
+Allow: /
+Disallow: /api/
+Disallow: /admin/
+Disallow: /cms/
+Disallow: /staff/
+Disallow: /dashboard/
+Disallow: /investor/
+Disallow: /agent/
+Disallow: /auth/
+Disallow: /forbidden/
+Disallow: /maintenance/
+
+# ───────────────────────────────────────────────────────────────────────────
+# Aggressive, low-return scrapers. Throttled rather than blocked outright —
+# an outright block tends to push them onto an unidentified user-agent.
+# ───────────────────────────────────────────────────────────────────────────
+User-agent: Bytespider
+User-agent: Amazonbot
+User-agent: meta-externalagent
+Crawl-delay: 10
+Allow: /
+Disallow: /api/
+Disallow: /admin/
+Disallow: /cms/
+Disallow: /staff/
+Disallow: /dashboard/
+Disallow: /investor/
+Disallow: /agent/
+Disallow: /auth/
+Disallow: /forbidden/
+Disallow: /maintenance/
 
 Sitemap: https://ghlindiaventures.com/sitemap.xml

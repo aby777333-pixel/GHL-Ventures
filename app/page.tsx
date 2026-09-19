@@ -190,13 +190,43 @@ const STARS = [
 function LiveFinancialTV() {
   const [widgetLoaded, setWidgetLoaded] = useState(false)
   const [tvTab, setTvTab] = useState<'bloomberg' | 'india' | 'news'>('bloomberg')
+  const shellRef = useRef<HTMLDivElement>(null)
 
+  /* Mount the embeds when the panel is about to scroll into view, not on
+     hydration. This block carries an autoplaying YouTube live stream and two
+     TradingView iframes; mounting them immediately meant three third-party
+     frames competing for the main thread while the hero was still settling,
+     which is exactly what shows up as a poor INP and a slow LCP on a mid-tier
+     Android over 4G — a large share of the audience.
+
+     rootMargin pre-loads 400px early, so by the time the panel is actually on
+     screen the embeds are already there: no pop-in, nothing else changes.
+     Tab switching, the iframe URLs and every style below are untouched.
+
+     The fallback matters: if IntersectionObserver is missing (old browser) or
+     the ref never attaches, mount immediately rather than leave a viewer
+     staring at an empty black panel. */
   useEffect(() => {
-    setWidgetLoaded(true)
+    if (typeof IntersectionObserver === 'undefined' || !shellRef.current) {
+      setWidgetLoaded(true)
+      return
+    }
+    const el = shellRef.current
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setWidgetLoaded(true)
+          observer.disconnect()
+        }
+      },
+      { rootMargin: '400px' },
+    )
+    observer.observe(el)
+    return () => observer.disconnect()
   }, [])
 
   return (
-    <div className="relative rounded-2xl overflow-hidden border border-white/10 bg-black/40 backdrop-blur-sm">
+    <div ref={shellRef} className="relative rounded-2xl overflow-hidden border border-white/10 bg-black/40 backdrop-blur-sm">
       {/* Tab switcher */}
       <div className="flex items-center gap-1 px-3 pt-3 pb-1 relative z-20">
         <div className="flex items-center gap-0.5 bg-white/5 rounded-full p-0.5 flex-wrap">

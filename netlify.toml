@@ -9,6 +9,29 @@
 [build.environment]
   NODE_VERSION = "18"
 
+# Host canonicalisation — www → apex, 301.
+# Both hosts were serving 200 (verified live), which splits every page into two
+# crawlable URLs. The self-referencing <link rel="canonical"> on www already
+# points at the apex, so Google was consolidating them, but a canonical is a
+# hint and a 301 is an instruction — and the AI retrieval crawlers that do not
+# render JavaScript are much less careful about following hints.
+# Must stay ABOVE every path-based rule below: a full-URL `from` matches on
+# host, so it only fires for www and never touches apex traffic.
+[[redirects]]
+  from = "https://www.ghlindiaventures.com/*"
+  to = "https://ghlindiaventures.com/:splat"
+  status = 301
+  force = true
+
+# /feed.xml — the conventional feed path. The real document is emitted by the
+# static export at /blog/rss.xml; this serves it at the expected path too
+# (status 200 = rewrite, not a redirect, so both paths return the feed
+# directly). Keep it above the catch-all /* → /404.html below.
+[[redirects]]
+  from = "/feed.xml"
+  to = "/blog/rss.xml"
+  status = 200
+
 # API proxy alias — Netlify Functions live at /.netlify/functions/<name> by
 # default. Several client modules (admin/staff/client claudeApi, chatKnowledge,
 # VoiceCompanion) call the shorter /api/<name> path. Without this rewrite the
@@ -92,3 +115,89 @@
   [headers.values]
     Content-Type = "text/plain"
     Cache-Control = "public, max-age=86400"
+
+[[headers]]
+  for = "/llms.txt"
+  [headers.values]
+    Content-Type = "text/plain; charset=utf-8"
+    Cache-Control = "public, max-age=86400"
+
+[[headers]]
+  for = "/blog/rss.xml"
+  [headers.values]
+    Content-Type = "application/rss+xml; charset=utf-8"
+    Cache-Control = "public, max-age=3600"
+
+# ───────────────────────────────────────────────────────────────────────────
+# X-Robots-Tag: noindex on everything that must not appear in search.
+#
+# This is the half of the job robots.txt cannot do. robots.txt controls
+# CRAWLING; a Disallow-ed URL can still be listed as a bare link because the
+# crawler never fetches the page and so never sees a noindex. Serving the
+# directive as a response header removes the URL from the index for certain.
+#
+# /login/ and /register/ are additionally allowed in robots.txt precisely so
+# these headers get read. The gated consoles below stay Disallow-ed as well —
+# belt and braces, since they are behind auth anyway.
+# Each route needs both the bare and the splat form: "/login/*" alone does not
+# reliably match "/login/" itself.
+# ───────────────────────────────────────────────────────────────────────────
+[[headers]]
+  for = "/login/"
+  [headers.values]
+    X-Robots-Tag = "noindex, follow"
+
+[[headers]]
+  for = "/login/*"
+  [headers.values]
+    X-Robots-Tag = "noindex, follow"
+
+[[headers]]
+  for = "/register/"
+  [headers.values]
+    X-Robots-Tag = "noindex, follow"
+
+[[headers]]
+  for = "/register/*"
+  [headers.values]
+    X-Robots-Tag = "noindex, follow"
+
+[[headers]]
+  for = "/admin/*"
+  [headers.values]
+    X-Robots-Tag = "noindex, nofollow"
+
+[[headers]]
+  for = "/cms/*"
+  [headers.values]
+    X-Robots-Tag = "noindex, nofollow"
+
+[[headers]]
+  for = "/staff/*"
+  [headers.values]
+    X-Robots-Tag = "noindex, nofollow"
+
+[[headers]]
+  for = "/dashboard/*"
+  [headers.values]
+    X-Robots-Tag = "noindex, nofollow"
+
+[[headers]]
+  for = "/investor/*"
+  [headers.values]
+    X-Robots-Tag = "noindex, nofollow"
+
+[[headers]]
+  for = "/agent/*"
+  [headers.values]
+    X-Robots-Tag = "noindex, nofollow"
+
+[[headers]]
+  for = "/auth/*"
+  [headers.values]
+    X-Robots-Tag = "noindex, nofollow"
+
+[[headers]]
+  for = "/contact/thankyou/*"
+  [headers.values]
+    X-Robots-Tag = "noindex, follow"
