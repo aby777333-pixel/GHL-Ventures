@@ -190,13 +190,43 @@ const STARS = [
 function LiveFinancialTV() {
   const [widgetLoaded, setWidgetLoaded] = useState(false)
   const [tvTab, setTvTab] = useState<'bloomberg' | 'india' | 'news'>('bloomberg')
+  const shellRef = useRef<HTMLDivElement>(null)
 
+  /* Mount the embeds when the panel is about to scroll into view, not on
+     hydration. This block carries an autoplaying YouTube live stream and two
+     TradingView iframes; mounting them immediately meant three third-party
+     frames competing for the main thread while the hero was still settling,
+     which is exactly what shows up as a poor INP and a slow LCP on a mid-tier
+     Android over 4G — a large share of the audience.
+
+     rootMargin pre-loads 400px early, so by the time the panel is actually on
+     screen the embeds are already there: no pop-in, nothing else changes.
+     Tab switching, the iframe URLs and every style below are untouched.
+
+     The fallback matters: if IntersectionObserver is missing (old browser) or
+     the ref never attaches, mount immediately rather than leave a viewer
+     staring at an empty black panel. */
   useEffect(() => {
-    setWidgetLoaded(true)
+    if (typeof IntersectionObserver === 'undefined' || !shellRef.current) {
+      setWidgetLoaded(true)
+      return
+    }
+    const el = shellRef.current
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setWidgetLoaded(true)
+          observer.disconnect()
+        }
+      },
+      { rootMargin: '400px' },
+    )
+    observer.observe(el)
+    return () => observer.disconnect()
   }, [])
 
   return (
-    <div className="relative rounded-2xl overflow-hidden border border-white/10 bg-black/40 backdrop-blur-sm">
+    <div ref={shellRef} className="relative rounded-2xl overflow-hidden border border-white/10 bg-black/40 backdrop-blur-sm">
       {/* Tab switcher */}
       <div className="flex items-center gap-1 px-3 pt-3 pb-1 relative z-20">
         <div className="flex items-center gap-0.5 bg-white/5 rounded-full p-0.5 flex-wrap">
@@ -472,49 +502,6 @@ function HeroSection() {
       <div className="absolute bottom-8 left-1/2 -translate-x-1/2 animate-bounce z-10">
         <div className="w-7 h-11 border-2 rounded-full flex justify-center pt-2" style={{ borderColor: 'rgba(51, 65, 85, 0.45)' }}>
           <div className="w-1.5 h-3 rounded-full" style={{ background: 'rgba(51, 65, 85, 0.65)' }} />
-        </div>
-      </div>
-    </section>
-  )
-}
-
-/* ================================================================
-   SECTION 1.5: News Scroller — World & India Headlines
-   ================================================================ */
-function NewsScroller() {
-  const headlines = [
-    { label: '🇮🇳 India', text: 'SENSEX rallies 450 points; NIFTY crosses 23,800 on strong FII buying' },
-    { label: '🌍 Global', text: 'US Fed signals potential rate cut in June as inflation eases to 2.3%' },
-    { label: '🇮🇳 India', text: 'India GDP growth revised upward to 7.2% for FY26 by IMF' },
-    { label: '🌍 Global', text: 'China manufacturing PMI expands at fastest pace in 14 months' },
-    { label: '🇮🇳 India', text: 'RBI holds repo rate at 6.25% — maintains accommodative stance' },
-    { label: '🌍 Global', text: 'European markets open higher on easing trade tensions' },
-    { label: '🇮🇳 India', text: 'Indian startup funding sees 40% jump in Q1 2026 — $4.2B raised' },
-    { label: '🌍 Global', text: 'Gold surges past $2,400/oz as safe-haven demand spikes worldwide' },
-    { label: '🇮🇳 India', text: 'SEBI tightens AIF disclosure norms — enhanced reporting from Q3 2026' },
-    { label: '🌍 Global', text: 'Crude oil drops below $72/bbl as OPEC+ signals production increase' },
-    { label: '🇮🇳 India', text: 'Real estate sector sees 25% growth in Chennai micro-markets' },
-    { label: '🌍 Global', text: 'Japan Nikkei 225 gains 1.8% on tech rally and weak yen boost' },
-  ]
-
-  const feed = headlines.map(h => `${h.label}  ${h.text}`).join('  \u00A0\u00A0\u2022\u00A0\u00A0  ')
-
-  return (
-    <section className="dark-surface relative py-2.5" style={{ backgroundColor: '#0D0D0D', borderTop: '1px solid rgba(208,2,27,0.15)', borderBottom: '1px solid rgba(208,2,27,0.15)' }}>
-      <div className="container-max mx-auto overflow-hidden">
-        <div className="flex items-center">
-          <span className="shrink-0 px-4 py-1 bg-brand-red text-white text-[10px] font-bold uppercase tracking-widest rounded-r-full mr-4">
-            Live News
-          </span>
-          <div className="flex-1 overflow-hidden">
-            <div className="flex whitespace-nowrap animate-marquee">
-              {[0, 1].map(i => (
-                <span key={i} className="inline-block text-gray-300 text-xs font-medium tracking-wide px-4">
-                  {feed}
-                </span>
-              ))}
-            </div>
-          </div>
         </div>
       </div>
     </section>
@@ -1656,7 +1643,14 @@ export default function HomePage() {
         </div>
       </div>
 
-      <NewsScroller />
+      {/* NewsScroller removed 2026-09-19. The band was labelled "Live News"
+          but rendered 12 hardcoded headlines — SENSEX up 450 points, RBI at
+          6.25%, gold past $2,400 — none of them live, none of them sourced.
+          Publishing unverifiable market data as current, from a
+          SEBI-registered entity, is both a compliance exposure and a direct
+          search-quality liability on a money-and-life topic. Real market data
+          is already on the page: MarketDataMarquee and CurrencyTicker above,
+          and the TradingView "Headlines" tab inside <WhoWeAre />. */}
       <WhoWeAre />
       <hr className="section-divider-animated" />
       <InvestmentCapabilities />

@@ -264,7 +264,7 @@ export const TEAM_MEMBERS = [
   },
   {
     name: 'Abe Abrams',
-    role: 'IT Head',
+    role: 'Director - IT',
     quote: 'Technology is the silent engine behind smart investing — we leverage innovation to give our stakeholders an edge in every market.',
     image: '/images/team/Abe-Abrams.jpg',
   },

@@ -16,6 +16,14 @@ if (typeof window !== 'undefined' && (!supabaseUrl || !supabaseAnonKey)) {
   console.warn('[supabase/client] Supabase credentials are not configured. Set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY environment variables.')
 }
 
+/* NOTE — do not add `cache: 'no-store'` to this client's fetch.
+   It looks like the right fix for stale build-time reads, but this client is
+   used by app/sitemap.ts, which is a statically generated route: a no-store
+   fetch inside one throws "Dynamic server usage", the sitemap's try/catch
+   swallows it, and the sitemap ships with every blog URL missing. Verified by
+   doing exactly that. Build freshness is handled by clearing the Netlify
+   build cache on deploy instead — see docs/SEO_DEPLOYMENT.md. */
+
 // Supabase client — uses empty placeholder during build when env vars are missing
 // (static export bakes env vars at build time; isSupabaseConfigured() gates all calls)
 export const supabase = createClient<Database>(

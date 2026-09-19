@@ -16,6 +16,7 @@ import { ArticleReaderProvider } from '@/components/ArticleReader'
 import ThemeProvider from '@/lib/ThemeProvider'
 import SocialProofToasts from '@/components/SocialProofToasts'
 import LiveVisitorCount from '@/components/LiveVisitorCount'
+import { TEAM_MEMBERS } from '@/lib/constants'
 
 // Lazy-load heavy widgets (reduces initial page load by ~2s)
 const ChatWidget = dynamic(() => import('@/components/chat/ChatWidget'), { ssr: false })
@@ -92,9 +93,23 @@ export const metadata: Metadata = {
     canonical: SITE_URL,
   },
   metadataBase: new URL(SITE_URL),
+  /* Search Console / Bing Webmaster Tools ownership.
+     Set NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION (and optionally
+     NEXT_PUBLIC_BING_SITE_VERIFICATION) in the Netlify build environment and
+     the meta tag appears on every page; leave them unset and nothing is
+     emitted at all, which is why this is safe to ship before the codes exist.
+     NEXT_PUBLIC_* values inline at build time, so a change needs a redeploy.
+
+     The DNS TXT "Domain property" is the better verification method — it
+     covers www, the apex and both protocols in one property — but the meta
+     tag is the fallback when DNS is not immediately available. */
   verification: {
-    // Add Google Search Console verification when available
-    // google: 'your-verification-code',
+    ...(process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION
+      ? { google: process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION }
+      : {}),
+    ...(process.env.NEXT_PUBLIC_BING_SITE_VERIFICATION
+      ? { other: { 'msvalidate.01': process.env.NEXT_PUBLIC_BING_SITE_VERIFICATION } }
+      : {}),
   },
 }
 
@@ -161,6 +176,36 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         },
       ],
     },
+    /* SEBI registration as a machine-readable identifier. Search and AI
+       retrieval systems can verify this number against SEBI's own
+       intermediary register, which is what turns "claims to be regulated"
+       into a checkable fact. */
+    identifier: {
+      '@type': 'PropertyValue',
+      name: 'SEBI Registration Number',
+      value: 'IN/AIF2/24-25/1517',
+    },
+    hasCredential: {
+      '@type': 'EducationalOccupationalCredential',
+      credentialCategory: 'Regulatory Registration',
+      recognizedBy: {
+        '@type': 'GovernmentOrganization',
+        name: 'Securities and Exchange Board of India',
+        url: 'https://www.sebi.gov.in/',
+      },
+    },
+    /* Named leadership, tied to the organisation node. Expertise attached to
+       real people is an explicit quality criterion for finance topics, and it
+       is what lets an engine resolve "Padmanabhan N" to this entity rather
+       than to an unrelated namesake. Sourced from the same TEAM_MEMBERS
+       constant the visible team section renders, so the two cannot drift. */
+    employee: TEAM_MEMBERS.map((m) => ({
+      '@type': 'Person',
+      name: m.name,
+      jobTitle: m.role,
+      image: `${SITE_URL}${m.image}`,
+      worksFor: { '@id': `${SITE_URL}/#organization` },
+    })),
     sameAs: [
       'https://www.instagram.com/ghl_india_venture/',
       'https://x.com/ghlindiaventure',
@@ -170,19 +215,54 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     ],
   }
 
-  // BreadcrumbList schema
-  const breadcrumbSchema = {
+  /* WebSite node — names the site as a distinct entity from the organisation
+     and declares the on-site search endpoint. */
+  const webSiteSchema = {
     '@context': 'https://schema.org',
-    '@type': 'BreadcrumbList',
+    '@type': 'WebSite',
+    '@id': `${SITE_URL}/#website`,
+    url: `${SITE_URL}/`,
+    name: 'GHL India Ventures',
+    inLanguage: 'en-IN',
+    publisher: { '@id': `${SITE_URL}/#organization` },
+    potentialAction: {
+      '@type': 'SearchAction',
+      target: {
+        '@type': 'EntryPoint',
+        urlTemplate: `${SITE_URL}/blog/search/?q={search_term_string}`,
+      },
+      'query-input': 'required name=search_term_string',
+    },
+  }
+
+  /* Primary navigation.
+     This used to be a BreadcrumbList, which was wrong in two ways: a
+     breadcrumb describes the trail to the CURRENT page, and this block is
+     rendered by the root layout, so every page in the site was claiming the
+     identical seven-step trail. Worse, article pages emit their own correct
+     BreadcrumbList (app/blog/[slug]/page.tsx), so those pages shipped two
+     contradictory ones and an engine had no way to tell which to believe.
+     SiteNavigationElement is the type that actually describes a nav menu, so
+     the per-page breadcrumbs are now the only breadcrumbs on the site. */
+  const siteNavigationSchema = {
+    '@context': 'https://schema.org',
+    '@type': 'ItemList',
+    name: 'GHL India Ventures — primary navigation',
     itemListElement: [
-      { '@type': 'ListItem', position: 1, name: 'Home', item: SITE_URL },
-      { '@type': 'ListItem', position: 2, name: 'About', item: `${SITE_URL}/about` },
-      { '@type': 'ListItem', position: 3, name: 'Fund', item: `${SITE_URL}/fund` },
-      { '@type': 'ListItem', position: 4, name: 'Portfolio', item: `${SITE_URL}/portfolio` },
-      { '@type': 'ListItem', position: 5, name: 'Blog', item: `${SITE_URL}/blog` },
-      { '@type': 'ListItem', position: 6, name: 'Financial IQ', item: `${SITE_URL}/financial-iq` },
-      { '@type': 'ListItem', position: 7, name: 'Contact', item: `${SITE_URL}/contact` },
-    ],
+      { name: 'Home',         url: `${SITE_URL}/` },
+      { name: 'About',        url: `${SITE_URL}/about/` },
+      { name: 'Why AIFs',     url: `${SITE_URL}/why-aifs/` },
+      { name: 'Fund',         url: `${SITE_URL}/fund/` },
+      { name: 'Portfolio',    url: `${SITE_URL}/portfolio/` },
+      { name: 'Blog',         url: `${SITE_URL}/blog/` },
+      { name: 'Financial IQ', url: `${SITE_URL}/financial-iq/` },
+      { name: 'Education',    url: `${SITE_URL}/education/` },
+      { name: 'Contact',      url: `${SITE_URL}/contact/` },
+    ].map((n, i) => ({
+      '@type': 'ListItem',
+      position: i + 1,
+      item: { '@type': 'SiteNavigationElement', name: n.name, url: n.url },
+    })),
   }
 
   // FAQPage schema for common investor questions
@@ -243,6 +323,17 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         {/* hreflang for multilingual content (primary English-India, with x-default) */}
         <link rel="alternate" hrefLang="en-IN" href={SITE_URL} />
         <link rel="alternate" hrefLang="x-default" href={SITE_URL} />
+        {/* Feed discovery. The feed itself has existed at /blog/rss.xml since
+            August but was never advertised in <head>, so newsreaders and the
+            AI retrieval systems that poll feeds for freshness had no way to
+            find it. /feed.xml is the conventional path and is rewritten to the
+            same document in netlify.toml. */}
+        <link
+          rel="alternate"
+          type="application/rss+xml"
+          title="GHL India Ventures — Insights"
+          href={`${SITE_URL}/blog/rss.xml`}
+        />
         {/* Google Tag Manager — container GTM-KKNXRNB6.
             Loaded via next/script (afterInteractive) rather than a raw <script>
             so it works under both `output: 'export'` (Netlify) and `next start`
@@ -294,7 +385,11 @@ fbq('track', 'PageView');`}
         />
         <script
           type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbSchema) }}
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(webSiteSchema) }}
+        />
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(siteNavigationSchema) }}
         />
         <script
           type="application/ld+json"

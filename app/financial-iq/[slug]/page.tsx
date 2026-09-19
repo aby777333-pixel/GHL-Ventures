@@ -6,6 +6,15 @@ const DynamicFIQViewer = dynamic(() => import('./DynamicFIQViewer'), { ssr: fals
 
 const SITE_URL = 'https://ghlindiaventures.com'
 
+/* DO NOT give this file's Supabase client a `cache: 'no-store'` fetch.
+   It is the obvious-looking fix for generateStaticParams() reading a stale
+   article list out of a warm .next/cache, but under `output: 'export'` a
+   no-store fetch marks the route dynamic and Next then emits NO static pages
+   for it at all — the build still succeeds and still logs "pre-building 26",
+   while out/financial-iq/ ends up containing only the index. Verified by
+   doing exactly that. Build freshness comes from clearing the Netlify build
+   cache on deploy instead — see docs/SEO_DEPLOYMENT.md. */
+
 // Baseline list of known Financial IQ slugs. Used as a fallback when the
 // build environment cannot reach Supabase (e.g. local dev without env vars)
 // so the static export still succeeds. When Supabase IS reachable at build
