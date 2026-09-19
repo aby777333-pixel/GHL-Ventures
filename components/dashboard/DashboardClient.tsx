@@ -3255,6 +3255,41 @@ export default function DashboardClient() {
             </div>
           </Glass>
 
+          {/* Address & Identity — Investor Dashboard Correction #1: the KYC
+              identity step captures the permanent and courier addresses plus
+              the supporting ID details, but none of it surfaced on Profile.
+              Aadhaar is masked to the last four digits. */}
+          <Glass className="p-6" hover theme={theme}>
+            <div className="flex items-center justify-between mb-4">
+              <h4 className={`text-sm font-bold ${t('text-white','text-gray-900')}`}>Address &amp; Identity</h4>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {(() => {
+                const ki = (kycIdentity as any) || {}
+                const maskAadhaar = (v: any) => {
+                  const digits = String(v || '').replace(/\D/g, '')
+                  return digits.length >= 4 ? `XXXX XXXX ${digits.slice(-4)}` : 'Not provided'
+                }
+                return [
+                  ['Name on Document', ki.name_on_document || 'Not provided'],
+                  ["Father's Name", ki.father_name || 'Not provided'],
+                  ['Aadhaar Number', ki.aadhar_number ? maskAadhaar(ki.aadhar_number) : 'Not provided'],
+                  ['Permanent Address', ki.address || 'Not provided'],
+                  ['Courier Address', ki.courier_address || 'Not provided'],
+                  ['City', ki.city || 'Not provided'],
+                  ['State', ki.state || 'Not provided'],
+                  ['Pincode', ki.pincode || 'Not provided'],
+                  ['Country', ki.country || 'Not provided'],
+                ]
+              })().map(([l, v], i) => (
+                <div key={i}>
+                  <p className={`text-[10px] uppercase tracking-wider mb-1 ${t('text-gray-600','text-gray-600')}`}>{l}</p>
+                  <p className={`text-sm font-medium ${v === 'Not provided' ? 'text-gray-600 italic' : t('text-white','text-gray-900')}`}>{v}</p>
+                </div>
+              ))}
+            </div>
+          </Glass>
+
           {/* Nominee Details */}
           <Glass className="p-6" hover theme={theme}>
             <div className="flex items-center justify-between mb-4">
