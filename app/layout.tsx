@@ -48,6 +48,18 @@ const SarvamWidget = dynamic(() => import('@/components/sarvam/SarvamWidget'), {
 
 const SITE_URL = 'https://ghlindiaventures.com'
 
+/* Google Search Console ownership code.
+   Hardcoded as the default for the same reason the GTM / GA4 / Meta Pixel IDs
+   below are hardcoded: NEXT_PUBLIC_* values inline at BUILD time, and the
+   droplet's .env.local does not carry them — so an env-only tag would ship on
+   the Netlify mirror and go silently missing on ghlindiaventures.com, which is
+   the host Search Console actually fetches.
+   NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION still wins when set, so the code can be
+   rotated from the Netlify build environment without touching this file. */
+const GOOGLE_SITE_VERIFICATION =
+  process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION ||
+  'YXtYaGeczTs0voGVTbBGSxPxMa_VleoTV_P7htxqIkw'
+
 export const metadata: Metadata = {
   title: {
     default: 'GHL India Ventures | SEBI Registered AIF Chennai',
@@ -94,19 +106,20 @@ export const metadata: Metadata = {
   },
   metadataBase: new URL(SITE_URL),
   /* Search Console / Bing Webmaster Tools ownership.
-     Set NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION (and optionally
-     NEXT_PUBLIC_BING_SITE_VERIFICATION) in the Netlify build environment and
-     the meta tag appears on every page; leave them unset and nothing is
-     emitted at all, which is why this is safe to ship before the codes exist.
+
+     Google: emitted on every page from GOOGLE_SITE_VERIFICATION above, which
+     Next renders as
+       <meta name="google-site-verification" content="..." />
+     Bing stays env-gated — set NEXT_PUBLIC_BING_SITE_VERIFICATION in the
+     Netlify build environment and its tag appears; leave it unset and nothing
+     is emitted, which is why it is safe to ship before that code exists.
      NEXT_PUBLIC_* values inline at build time, so a change needs a redeploy.
 
      The DNS TXT "Domain property" is the better verification method — it
      covers www, the apex and both protocols in one property — but the meta
      tag is the fallback when DNS is not immediately available. */
   verification: {
-    ...(process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION
-      ? { google: process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION }
-      : {}),
+    google: GOOGLE_SITE_VERIFICATION,
     ...(process.env.NEXT_PUBLIC_BING_SITE_VERIFICATION
       ? { other: { 'msvalidate.01': process.env.NEXT_PUBLIC_BING_SITE_VERIFICATION } }
       : {}),

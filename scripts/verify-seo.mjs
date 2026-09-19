@@ -167,6 +167,15 @@ try {
 
   html.includes('application/rss+xml') ? ok('RSS advertised in <head>') : bad('RSS advertised in <head>')
 
+  /* Search Console ownership. The code is hardcoded in app/layout.tsx, so it
+     should be present on BOTH hosts — if this fails on ghlindiaventures.com
+     the droplet is serving a stale build, and Google will report the property
+     as unverified no matter what Netlify is serving. */
+  const gsc = html.match(/<meta name="google-site-verification" content="([^"]+)"/)
+  gsc
+    ? ok('google-site-verification tag', gsc[1])
+    : bad('google-site-verification tag', 'absent from <head>')
+
   // The fake "Live News" ticker must stay gone.
   const tickerIsBack = /SENSEX rallies 450|>Live News</.test(html)
   tickerIsBack
