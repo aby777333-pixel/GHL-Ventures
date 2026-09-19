@@ -5,6 +5,71 @@ that has already bitten us once.
 
 ---
 
+## 0. There are two hosts, and they deploy separately
+
+**`ghlindiaventures.com` is NOT served by Netlify.** It resolves to
+`128.199.16.91` — a DigitalOcean droplet running nginx in front of a live
+Next.js server (`x-nextjs-cache: HIT` in the response headers confirms a real
+server, not a static export).
+
+`ghl-india-ventures-2025.netlify.app` is a mirror, built from the same repo as
+a static export (`output: 'export'`).
+
+| | droplet (production) | Netlify (mirror) |
+| --- | --- | --- |
+| Serves | `ghlindiaventures.com`, `www.` | `*.netlify.app` |
+| Stack | nginx → `next start` | static export on Netlify CDN |
+| Deploy | manual, on the droplet | `netlify deploy --prod --dir=out` |
+| Honours `netlify.toml`? | **no** | yes |
+
+The practical consequence: **anything in `netlify.toml` does not exist on the
+production site.** That currently means three things need equivalent nginx
+rules on the droplet, or they simply do not apply there:
+
+1. `X-Robots-Tag: noindex` on `/login/`, `/register/`, the gated consoles and
+   `/contact/thankyou/`. *(Partly covered anyway — those routes also carry a
+   `<meta name="robots">` noindex from their layouts, which works on both
+   hosts. The header is belt-and-braces.)*
+2. The `www` → apex 301. `www.ghlindiaventures.com` is a DNS alias of the
+   apex, so it lands on the droplet and currently serves **200**, splitting
+   every page into two crawlable URLs.
+3. The `/feed.xml` → `/blog/rss.xml` rewrite. `/blog/rss.xml` itself works on
+   both hosts and is what `<head>` advertises, so this is cosmetic.
+
+nginx equivalents for (1) and (2):
+
+```nginx
+# www → apex, 301
+server {
+    listen 443 ssl;
+    server_name www.ghlindiaventures.com;
+    return 301 https://ghlindiaventures.com$request_uri;
+}
+
+# inside the apex server block
+location ~ ^/(login|register|admin|cms|staff|dashboard|investor|agent|auth)/ {
+    add_header X-Robots-Tag "noindex, follow" always;
+    proxy_pass http://127.0.0.1:3000;   # keep whatever proxy_pass is already there
+}
+
+location = /feed.xml {
+    return 301 /blog/rss.xml;
+}
+```
+
+### Verify after either deploy
+
+```bash
+npm run verify:seo                                            # production
+npm run verify:seo https://ghl-india-ventures-2025.netlify.app  # mirror
+```
+
+Exits non-zero on failure. It checks the discovery files, robots.txt groups,
+sitemap hygiene, that every sitemap URL returns 200, the JSON-LD blocks, the
+noindex directives, and that the hardcoded market ticker has not come back.
+
+---
+
 ## 1. Always clear the Netlify build cache when content changed
 
 **This is not optional housekeeping. It decides whether new articles get

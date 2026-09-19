@@ -8,7 +8,8 @@
     "start": "next start",
     "lint": "next lint",
     "export": "next build",
-    "indexnow": "node scripts/indexnow-ping.mjs"
+    "indexnow": "node scripts/indexnow-ping.mjs",
+    "verify:seo": "node scripts/verify-seo.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.97.0",
