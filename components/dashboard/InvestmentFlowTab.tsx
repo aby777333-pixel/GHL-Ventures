@@ -14,7 +14,7 @@
    KYC Gate: Blocks entire flow if KYC not verified.
    ═══════════════════════════════════════════════════════════════ */
 
-import { getPlanDocs, getInvestorDocs, getPlanKind, slotMatches, isSignableType } from '@/lib/investmentDocs'
+import { getPlanDocs, getInvestorDocs, getPlanKind, slotMatches, isSignableType, unitsFor } from '@/lib/investmentDocs'
 import { useState, useMemo, useCallback, useEffect } from 'react'
 import {
   Building2, FileText, Download, Upload, Eye, CheckCircle, Clock,
@@ -779,7 +779,7 @@ export default function InvestmentFlowTab({
                       { label: 'CAPITAL INVESTED', value: `₹${fmtINR(investAmount)}`, bold: true },
                       // Venture Dashboard Changes #10: units = invest amount / 10,
                       // same formula for every plan.
-                      { label: 'NO. OF UNITS', value: fmtINR(Math.floor(investAmount / 10)), bold: true },
+                      { label: 'NO. OF UNITS', value: fmtINR(unitsFor(investAmount, selectedFund?.name)), bold: true },
                       { label: 'Locking Period', value: `${investTenure} years`, bold: false },
                       { label: 'MONTHLY RETURNS', value: `₹${fmtINR(monthlyInterest)}`, bold: true },
                       { label: 'NET INTEREST', value: `₹${fmtINR(netInterest)}`, bold: false },
@@ -809,7 +809,7 @@ export default function InvestmentFlowTab({
                   min={selectedFund.minInvestment > 0 ? selectedFund.minInvestment : 1} max={FUND_SIZE_CAP} step={100000} />
                 <div className={`flex items-center justify-between px-4 py-2.5 rounded-xl ${t('bg-white/[0.03] border border-white/[0.06]','bg-gray-50 border border-gray-200')}`}>
                   <span className={`text-xs font-medium ${t('text-gray-400','text-gray-600')}`}>No. of Units</span>
-                  <span className={`text-sm font-bold ${t('text-white','text-gray-900')}`}>{fmtINR(Math.floor(investAmount / 10))}</span>
+                  <span className={`text-sm font-bold ${t('text-white','text-gray-900')}`}>{fmtINR(unitsFor(investAmount, selectedFund?.name))}</span>
                 </div>
                 {investAmount > FUND_SIZE_CAP - 1 && (
                   <p className={`text-[11px] ${t('text-amber-400','text-amber-600')}`}>Capped at fund size (₹{fmtINR(FUND_SIZE_CAP)}).</p>
@@ -971,7 +971,7 @@ export default function InvestmentFlowTab({
                           <div className="flex items-center gap-2">
                             <Clock className={`w-3.5 h-3.5 ${t('text-gray-500','text-gray-500')}`} />
                             <span className={`text-[11px] ${t('text-gray-400','text-gray-600')}`}>No. of Units</span>
-                            <span className={`ml-auto text-[11px] font-semibold ${t('text-white','text-gray-900')}`}>{fmtINR(Math.floor((Number(app.investment_amount) || 0) / 10))}</span>
+                            <span className={`ml-auto text-[11px] font-semibold ${t('text-white','text-gray-900')}`}>{fmtINR(unitsFor(Number(app.investment_amount) || 0, app))}</span>
                           </div>
                           <div className="flex items-center gap-2">
                             <Clock className={`w-3.5 h-3.5 ${t('text-gray-500','text-gray-500')}`} />

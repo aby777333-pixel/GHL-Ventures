@@ -267,6 +267,13 @@ export async function getClientSession(): Promise<ClientSession | null> {
     // Use .maybeSingle() to avoid throwing on missing rows
     const { profile, client } = await fetchProfileAndClient(session.user.id)
 
+    // Investor Dashboard Correction #8: never auto-create a client record for
+    // an admin/staff account. Admins opening /dashboard (to view an investor
+    // via ?as=) previously got a blank "demo investor" client row minted for
+    // them, which is what made the portal bounce them to that fake account.
+    const isStaffAccount = ['admin', 'super_admin', 'superadmin', 'staff', 'manager', 'viewer']
+      .includes(String((profile as any)?.role || '').toLowerCase())
+
     // Auto-repair: create missing profile/client rows for authenticated users
     if (!profile) {
       try {
@@ -279,7 +286,7 @@ export async function getClientSession(): Promise<ClientSession | null> {
         } as any)
       } catch { /* non-blocking auto-repair */ }
     }
-    if (!client) {
+    if (!client && !isStaffAccount) {
       try {
         const meta = session.user.user_metadata ?? {}
         await supabase.from('clients').insert({

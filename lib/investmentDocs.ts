@@ -64,3 +64,10 @@ export function isSignableType(docType?: string | null): boolean {
   if (!docType) return false
   return Object.values(PLAN_DOCS).flat().some(s => s.signable && slotMatches(s, docType))
 }
+
+/** No. of units for an investment amount.
+ *  Direct AIF: 1 unit = Rs 1,000. Debenture route: 1 unit = Rs 10. */
+export function unitsFor(amount: number, planSrc: any): number {
+  const per = getPlanKind(planSrc) === 'direct_aif' ? 1000 : 10
+  return Math.floor((Number(amount) || 0) / per)
+}

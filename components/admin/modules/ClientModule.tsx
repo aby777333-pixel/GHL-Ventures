@@ -6,7 +6,7 @@ import {
   ShieldCheck, AlertTriangle, FileText, Filter, CheckCircle2,
   XCircle, Clock, MoreHorizontal, ArrowUpRight, ChevronRight,
   Search, UserCircle, FileSearch, PieChart, Activity, Building2, Upload, Trash2, KeyRound,
-  Link2, RotateCcw, ArchiveX,
+  Link2, RotateCcw, ArchiveX, ExternalLink,
 } from 'lucide-react'
 import AdminGlass from '../shared/AdminGlass'
 import AdminDataTable, { type Column } from '../shared/AdminDataTable'
@@ -899,6 +899,16 @@ function ClientListTab({
               title="Reset password"
             >
               <KeyRound className="w-4 h-4" />
+            </button>
+            {/* Investor Dashboard Correction #8: open this investor's own
+                dashboard in a new tab. The dashboard verifies the admin role
+                server-side before honouring ?as=. */}
+            <button
+              onClick={(e) => { e.stopPropagation(); window.open(`/dashboard?as=${row.id}`, '_blank', 'noopener') }}
+              className="p-1.5 rounded-lg hover:bg-sky-500/10 text-gray-500 hover:text-sky-300 transition-colors"
+              title="Open this investor's dashboard"
+            >
+              <ExternalLink className="w-4 h-4" />
             </button>
             {/* Pending Testing 30-04-2026 #5: quick Set Referrer
                 action so admin doesn't need to open the full edit

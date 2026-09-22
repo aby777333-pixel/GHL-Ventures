@@ -419,7 +419,7 @@ export default function DashboardClient() {
   }
 
   // ─── Auth ────────────────────────────────────────────────
-  const { user, clientId, ghlId, isAuthenticated, emailVerified, loading: authLoading, logout } = useClientAuth()
+  const { user, clientId, ghlId, isAuthenticated, emailVerified, loading: authLoading, logout, impersonating } = useClientAuth()
 
   // Auth guard — redirect to login only when the underlying Supabase session
   // is truly invalid (not for a transient null while hydrating). Tests
