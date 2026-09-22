@@ -83,7 +83,13 @@ export async function getOperationalStats() {
     const now = new Date()
     const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1)
     const startOfMonthIso = startOfMonth.toISOString()
-    const startOfMonthDate = startOfMonthIso.split('T')[0]
+    // Correction: toISOString() is UTC, so in IST the month start came out
+    // as the last day of the previous month and those credits leaked into
+    // "This Month". Build local YYYY-MM-DD bounds instead, with an upper cap.
+    const pad2 = (n: number) => String(n).padStart(2, '0')
+    const localDate = (d: Date) => `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`
+    const startOfMonthDate = localDate(startOfMonth)
+    const startOfNextMonthDate = localDate(new Date(now.getFullYear(), now.getMonth() + 1, 1))
 
     const [
       clientsResult, investedClientsResult,
@@ -132,10 +138,10 @@ export async function getOperationalStats() {
     // become "investment this month" until money landed.
     const investmentDateOf = (r: any): string | null => {
       if (r.final_investment_date) return String(r.final_investment_date) // YYYY-MM-DD
-      if (r.credit_given_at)        return String(r.credit_given_at).split('T')[0]
+      if (r.credit_given_at)        return localDate(new Date(r.credit_given_at))
       return null
     }
-    const inThisMonth = (d: string | null) => !!d && d >= startOfMonthDate
+    const inThisMonth = (d: string | null) => !!d && d >= startOfMonthDate && d < startOfNextMonthDate
 
     // ── Payouts (DASH-c) ──
     const payRows = (payoutsResult.data || []) as any[]
@@ -143,7 +149,7 @@ export async function getOperationalStats() {
     const paidThisMonth = (r: any) => {
       if (!isPaid(r)) return false
       const d = r.payment_date || r.due_date
-      return !!d && String(d) >= startOfMonthDate
+      return !!d && String(d).slice(0, 10) >= startOfMonthDate && String(d).slice(0, 10) < startOfNextMonthDate
     }
 
     const totalTix = ticketsResult.count ?? 0

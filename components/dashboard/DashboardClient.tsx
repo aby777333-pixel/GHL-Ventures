@@ -2460,7 +2460,13 @@ export default function DashboardClient() {
         reference: app.commitment_id || app.reference_number || '—',
         amount: Number(app.investment_amount) || 0,
         status: app.status,
-        proofUrl: null,
+        // Correction: surface the payment proof the investor submitted for
+        // this investment, so the credited row's View button opens it.
+        proofUrl: (((investmentTxns || []) as any[]).find((tx: any) =>
+          tx.investment_app_id === app.id && (tx.transaction_proof_url || tx.proof_url)) || {}).transaction_proof_url
+          || (((investmentTxns || []) as any[]).find((tx: any) =>
+          tx.investment_app_id === app.id && tx.proof_url) || {}).proof_url
+          || null,
       })
     }
     for (const txn of (investmentTxns || []) as any[]) {

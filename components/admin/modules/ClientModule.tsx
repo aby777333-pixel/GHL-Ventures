@@ -388,9 +388,15 @@ export default function ClientModule({ subTab, navigate, showToast }: ClientModu
 
       {/* Tab Content */}
       <div className="admin-tab-switch">
+        {subTab === 'invested' && activeTab === 'list' && (
+          <div className="mb-3 flex items-center gap-2 text-xs">
+            <span className="px-2.5 py-1 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-300">Showing invested users only</span>
+            <button type="button" onClick={() => navigate('clients')} className="text-gray-400 hover:text-white underline underline-offset-2">Show all</button>
+          </div>
+        )}
         {activeTab === 'list' && (
           <ClientListTab
-            clients={clients}
+            clients={subTab === 'invested' ? clients.filter((c: any) => Number(c.investedAmount || c.total_invested || 0) > 0) : clients}
             onViewClient={(c) => { setSelectedClient(c); setProfileModalOpen(true) }}
             onDeleteClient={handleDeleteClient}
             onResetPassword={openResetForClient}
