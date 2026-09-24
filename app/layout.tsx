@@ -60,6 +60,10 @@ const GOOGLE_SITE_VERIFICATION =
   process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION ||
   'YXtYaGeczTs0voGVTbBGSxPxMa_VleoTV_P7htxqIkw'
 
+/* Pulse crawler ownership code — hardcoded for the same reason as Google's.
+   The same value is also served at /.well-known/pulse-verify.txt (public/). */
+const PULSE_SITE_VERIFICATION = '06789e6eba9241bf92b38dc74c20390f'
+
 export const metadata: Metadata = {
   title: {
     default: 'GHL India Ventures | SEBI Registered AIF Chennai',
@@ -120,9 +124,12 @@ export const metadata: Metadata = {
      tag is the fallback when DNS is not immediately available. */
   verification: {
     google: GOOGLE_SITE_VERIFICATION,
-    ...(process.env.NEXT_PUBLIC_BING_SITE_VERIFICATION
-      ? { other: { 'msvalidate.01': process.env.NEXT_PUBLIC_BING_SITE_VERIFICATION } }
-      : {}),
+    other: {
+      'pulse-site-verification': PULSE_SITE_VERIFICATION,
+      ...(process.env.NEXT_PUBLIC_BING_SITE_VERIFICATION
+        ? { 'msvalidate.01': process.env.NEXT_PUBLIC_BING_SITE_VERIFICATION }
+        : {}),
+    },
   },
 }
 
