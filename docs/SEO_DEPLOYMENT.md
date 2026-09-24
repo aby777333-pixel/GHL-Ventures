@@ -187,13 +187,24 @@ throws fails the deploy, and an indexing ping is not worth that risk.
 
 ## 6. Search Console / Bing verification
 
-Set in the Netlify build environment, then redeploy (`NEXT_PUBLIC_*` values
-inline at build time):
+**Google is hardcoded** in `app/layout.tsx` as `GOOGLE_SITE_VERIFICATION`
+(`YXtYaGeczTs0voGVTbBGSxPxMa_VleoTV_P7htxqIkw`), for the same reason the GTM /
+GA4 / Meta Pixel IDs are: `NEXT_PUBLIC_*` values inline at build time and the
+droplet's `.env.local` does not carry them, so an env-only tag ships on the
+Netlify mirror and goes missing on `ghlindiaventures.com` — the host Search
+Console actually fetches. Setting `NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION` in the
+Netlify build environment still overrides it, for rotating the code without a
+code change.
 
-- `NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION`
-- `NEXT_PUBLIC_BING_SITE_VERIFICATION`
+**Both hosts must be redeployed** for the tag to count. Confirm with:
 
-Leave them unset and no meta tag is emitted at all.
+```bash
+curl -s https://ghlindiaventures.com/ | grep google-site-verification
+```
+
+Bing is still env-gated — set `NEXT_PUBLIC_BING_SITE_VERIFICATION` in the
+Netlify build environment and redeploy; leave it unset and no Bing meta tag is
+emitted at all.
 
 The DNS TXT **Domain property** is the better method — one property covers the
 apex, `www` and both protocols — and it is what the Pages / Indexing report
