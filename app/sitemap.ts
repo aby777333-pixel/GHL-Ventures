@@ -43,7 +43,8 @@ const STATIC_ROUTES: { path: string; priority: number; freq: MetadataRoute.Sitem
   { path: '/fund/debenture-route',   priority: 0.8,  freq: 'monthly' },
   { path: '/fund/nri-invest',        priority: 0.7,  freq: 'monthly' },
   { path: '/portfolio',              priority: 0.8,  freq: 'monthly' },
-  { path: '/education',              priority: 0.7,  freq: 'monthly' },
+  // '/education' omitted: it only redirects (client-side) to
+  // /education/insights and is noindex — see app/education/page.tsx.
   { path: '/education/insights',     priority: 0.7,  freq: 'monthly' },
   { path: '/financial-iq',           priority: 0.7,  freq: 'weekly'  },
   // '/downloads' intentionally omitted: app/downloads/page.tsx calls notFound()

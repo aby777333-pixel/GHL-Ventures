@@ -25,7 +25,7 @@ import Blog2StressedRealEstate from '@/components/blog/Blog2StressedRealEstate'
 import Blog3EarlyStageGrowth from '@/components/blog/Blog3EarlyStageGrowth'
 import Blog4GovernanceTransparency from '@/components/blog/Blog4GovernanceTransparency'
 import Blog5PillarGuide from '@/components/blog/Blog5PillarGuide'
-import { getAllPublishedSlugs, getPostBySlug, type CmsPost } from '@/lib/blog/cmsService'
+import { getAllPublishedSlugs, getPostBySlug, getPostPublishState, type CmsPost } from '@/lib/blog/cmsService'
 
 const DynamicBlogViewer = dynamic(() => import('./DynamicBlogViewer'), { ssr: false })
 
@@ -77,16 +77,29 @@ export async function generateMetadata({ params }: { params: { slug: string } })
 
   const title = post?.meta_title || post?.title || legacy?.title
   const description = post?.meta_description || post?.excerpt || legacy?.excerpt
-  if (!title) return { title: 'Article Not Found' }
+  if (!title) {
+    // Same definite-answer rule as `retired` below.
+    const gone = !post && (await getPostPublishState(params.slug)) === 'unpublished'
+    return { title: 'Article Not Found', ...(gone ? { robots: { index: false, follow: true } } : {}) }
+  }
 
   const canonical = post?.canonical_url?.trim() || `${SITE_URL}/blog/${params.slug}`
   const image = post?.og_image || post?.cover_image || `${SITE_URL}/og-image.jpg`
+
+  /* A legacy BLOG_POSTS slug whose CMS post is archived / unpublished still
+     gets a pre-built page here (title from the legacy list), but the browser
+     viewer then renders "Article Not Found" — a soft 404 served as
+     "index, follow" (Pulse: H1_MISSING on these). Keep such pages out of the
+     index. Only on a definite CMS answer: if the CMS is unreachable during a
+     build, `post` is null for EVERY article and this must not noindex them. */
+  const retired = !post && (await getPostPublishState(params.slug)) === 'unpublished'
 
   return {
     title: post?.meta_title || `${title} | GHL India Ventures Blog`,
     description,
     keywords: post?.meta_keywords || undefined,
     ...(post?.noindex ? { robots: { index: false, follow: false } } : {}),
+    ...(retired ? { robots: { index: false, follow: true } } : {}),
     alternates: { canonical },
     openGraph: {
       title,

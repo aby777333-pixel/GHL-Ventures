@@ -1,17 +1,14 @@
-'use client'
+import type { Metadata } from 'next'
+import EducationRedirect from './EducationRedirect'
 
-import { useEffect } from 'react'
-import { useRouter } from 'next/navigation'
+/* /education/ is only a client-side hop to /education/insights/. It was in
+   the sitemap as "index" with no <h1> (Pulse: H1_MISSING) — a soft redirect.
+   Page-level metadata, so it does not affect /education/insights/ (which
+   has its own layout). The redirect itself is unchanged. */
+export const metadata: Metadata = {
+  robots: { index: false, follow: true },
+}
 
 export default function EducationPage() {
-  const router = useRouter()
-  useEffect(() => {
-    router.replace('/education/insights')
-  }, [router])
-
-  return (
-    <div className="min-h-screen flex items-center justify-center">
-      <p className="text-gray-400 text-sm">Redirecting to Education Insights…</p>
-    </div>
-  )
+  return <EducationRedirect />
 }

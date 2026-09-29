@@ -26,9 +26,9 @@ export default function ForbiddenPage() {
           </div>
         </div>
 
-        <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold text-white mb-4">
+        <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold text-white mb-4 tracking-[-0.02em]">
           Access Denied
-        </h2>
+        </h1>
         <p className="text-gray-400 text-lg max-w-lg mx-auto mb-10 leading-relaxed">
           You don&apos;t have permission to access this page. If you believe this is an error, please contact your administrator or log in with appropriate credentials.
         </p>

@@ -1,8 +1,32 @@
 import { Suspense } from 'react'
-import dynamic from 'next/dynamic'
 import { createClient } from '@supabase/supabase-js'
+import DynamicFIQViewer from './DynamicFIQViewer'
 
-const DynamicFIQViewer = dynamic(() => import('./DynamicFIQViewer'), { ssr: false })
+/* The viewer used to be imported with `ssr: false`, so every article shipped
+   as an empty shell with a spinner: no <h1>, no body text (Pulse: H1_MISSING
+   on all of them) and nothing at all for crawlers that do not run JS. It is
+   now server-rendered from the post fetched below; in the browser it still
+   re-fetches from Supabase exactly as before. */
+async function getArticle(slug: string) {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+  if (!url || !key) return { post: null, related: [] }
+  try {
+    const sb = createClient(url, key)
+    const [{ data: post }, { data: related }] = await Promise.all([
+      sb.from('financial_iq_posts').select('*').eq('slug', slug).eq('is_published', true).maybeSingle(),
+      sb.from('financial_iq_posts')
+        .select('id, title, slug, excerpt, category, cover_image, author, published_at, read_time')
+        .eq('is_published', true)
+        .neq('slug', slug)
+        .order('published_at', { ascending: false })
+        .limit(3),
+    ])
+    return { post: (post as any) || null, related: ((related as any[]) || []) }
+  } catch {
+    return { post: null, related: [] }
+  }
+}
 
 const SITE_URL = 'https://ghlindiaventures.com'
 
@@ -98,10 +122,11 @@ export async function generateMetadata({ params }: { params: { slug: string } })
   }
 }
 
-export default function FinancialIQArticlePage({ params }: { params: { slug: string } }) {
+export default async function FinancialIQArticlePage({ params }: { params: { slug: string } }) {
+  const { post, related } = await getArticle(params.slug)
   return (
     <Suspense fallback={<div className="min-h-screen bg-brand-black flex items-center justify-center"><div className="w-8 h-8 border-2 border-brand-red border-t-transparent rounded-full animate-spin" /></div>}>
-      <DynamicFIQViewer slug={params.slug} />
+      <DynamicFIQViewer slug={params.slug} initialPost={post} initialRelated={related} />
     </Suspense>
   )
 }

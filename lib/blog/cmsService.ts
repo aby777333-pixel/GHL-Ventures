@@ -194,6 +194,21 @@ export async function getSitemapPosts(): Promise<
   } catch { return [] }
 }
 
+/** 'unpublished' only when the CMS positively answered that no live
+ *  published row exists for this slug (archived, draft, deleted or never
+ *  created). Any failure — env missing, network, query error — returns
+ *  'unknown', so callers can safely act only on a definite answer. */
+export async function getPostPublishState(slug: string): Promise<'published' | 'unpublished' | 'unknown'> {
+  if (!isSupabaseConfigured() || !slug) return 'unknown'
+  try {
+    const { data, error } = await sb
+      .from('blog_posts').select('slug').eq('slug', slug)
+      .eq('status', 'published').is('deleted_at', null).maybeSingle()
+    if (error) return 'unknown'
+    return data ? 'published' : 'unpublished'
+  } catch { return 'unknown' }
+}
+
 /** Used by generateStaticParams — slugs only, cheap. */
 export async function getAllPublishedSlugs(): Promise<string[]> {
   if (!isSupabaseConfigured()) return []

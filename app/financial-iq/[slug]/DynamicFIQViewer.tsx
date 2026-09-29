@@ -68,15 +68,40 @@ function resolveSlug(propSlug: string): string {
   return propSlug
 }
 
-export default function DynamicFIQViewer({ slug: propSlug }: { slug: string }) {
-  const [post, setPost] = useState<FIQPost | null>(null)
-  const [loading, setLoading] = useState(true)
+// Dates are formatted in IST on both server and client. The article is now
+// server-rendered, and formatting in the runtime's local zone would let the
+// build server (UTC) and an IST browser disagree on the day → hydration
+// mismatch.
+const DATE_TZ = 'Asia/Kolkata'
+
+export default function DynamicFIQViewer({
+  slug: propSlug,
+  initialPost = null,
+  initialRelated = [],
+}: {
+  slug: string
+  /** Pre-fetched at build time by page.tsx so crawlers receive the full
+   *  article (H1 + body) in the HTML instead of a loading spinner. */
+  initialPost?: FIQPost | null
+  initialRelated?: FIQPost[]
+}) {
+  const [post, setPost] = useState<FIQPost | null>(initialPost)
+  const [loading, setLoading] = useState(!initialPost)
   const [notFound, setNotFound] = useState(false)
-  const [relatedPosts, setRelatedPosts] = useState<FIQPost[]>([])
+  const [relatedPosts, setRelatedPosts] = useState<FIQPost[]>(initialRelated)
   const slug = resolveSlug(propSlug)
 
   useEffect(() => {
     if (!isSupabaseConfigured()) { setLoading(false); setNotFound(true); return }
+    // This HTML may be the Netlify fallback shell for a different article
+    // (see resolveSlug). Drop the pre-rendered post and show the loader, as
+    // before. When it IS this article, keep it on screen and refresh it
+    // silently below, so CMS edits still appear without a rebuild.
+    if (!initialPost || initialPost.slug !== slug) {
+      setPost(null)
+      setRelatedPosts([])
+      setLoading(true)
+    }
     async function load() {
       const { data, error } = await sb
         .from('financial_iq_posts')
@@ -108,6 +133,7 @@ export default function DynamicFIQViewer({ slug: propSlug }: { slug: string }) {
       setLoading(false)
     }
     load()
+    // initialPost is build-time data and never changes for this page
   }, [slug])
 
   if (loading) {
@@ -138,7 +164,7 @@ export default function DynamicFIQViewer({ slug: propSlug }: { slug: string }) {
 
   const publishDate = post.published_at || post.created_at
   const formattedDate = new Date(publishDate).toLocaleDateString('en-IN', {
-    day: 'numeric', month: 'long', year: 'numeric',
+    day: 'numeric', month: 'long', year: 'numeric', timeZone: DATE_TZ,
   })
 
   const articleSchema = {
@@ -268,7 +294,7 @@ export default function DynamicFIQViewer({ slug: propSlug }: { slug: string }) {
                       </h3>
                       <p className="text-sm text-gray-600 line-clamp-2">{rp.excerpt}</p>
                       <div className="flex items-center gap-3 mt-3 text-xs text-gray-400">
-                        <span className="flex items-center gap-1"><Calendar className="w-3 h-3" /> {rp.published_at ? new Date(rp.published_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }) : ''}</span>
+                        <span className="flex items-center gap-1"><Calendar className="w-3 h-3" /> {rp.published_at ? new Date(rp.published_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', timeZone: DATE_TZ }) : ''}</span>
                         <span className="flex items-center gap-1"><Clock className="w-3 h-3" /> {rp.read_time || 5} min</span>
                       </div>
                     </div>

@@ -46,6 +46,25 @@
   .article-body h3 { font-size: 1.45rem; }
 }
 
+/* An <h1> inside article content, demoted to <h2> by ArticleBody so the page
+   keeps a single <h1>. It must render exactly as that body <h1> did:
+   weight / line-height / letter-spacing / colour come from the shared
+   `.article-body h1, h2…` rule above (same for both tags); size came from the
+   global h1 scale in globals.css (56 / 40 / 32px); margin, padding and border
+   were 0 (preflight). Undo the h2-only rules to get back there. */
+.article-body h2.article-h1 {
+  font-size: 56px;
+  margin: 0;
+  padding-bottom: 0;
+  border-bottom: 0;
+}
+@media (max-width: 1024px) {
+  .article-body h2.article-h1 { font-size: 40px; }
+}
+@media (max-width: 640px) {
+  .article-body h2.article-h1 { font-size: 32px; }
+}
+
 /* ----- text ----- */
 .article-body p { margin: 0 0 1.35rem; }
 .article-body strong, .article-body b { color: var(--text-heading, #111827); font-weight: 650; }

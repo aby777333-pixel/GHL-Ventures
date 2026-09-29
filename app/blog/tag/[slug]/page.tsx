@@ -10,7 +10,10 @@ export async function generateStaticParams() {
 
 export function generateMetadata({ params }: { params: { slug: string } }) {
   const pretty = params.slug.replace(/-/g, ' ').replace(/\b\w/g, (m) => m.toUpperCase())
-  const title = `${pretty} | Insights | GHL India Ventures`
+  // Distinct from the category pattern ("<Name> | Insights | …"): a tag and a
+  // category can share a name (real-estate, startups), which produced
+  // identical <title>s on two URLs (Pulse: TITLE_DUPLICATE).
+  const title = `Tagged: ${pretty} | GHL India Ventures Insights`
   const description = `Every GHL India Ventures article tagged ${pretty}.`
   return {
     title,

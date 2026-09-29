@@ -36,9 +36,9 @@ export default function MaintenancePage() {
           </div>
         </div>
 
-        <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold text-white mb-4">
+        <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold text-white mb-4 tracking-[-0.02em]">
           Under Maintenance
-        </h2>
+        </h1>
         <p className="text-gray-400 text-lg max-w-lg mx-auto mb-4 leading-relaxed">
           We&apos;re performing scheduled maintenance to improve your experience.
           This won&apos;t take long.

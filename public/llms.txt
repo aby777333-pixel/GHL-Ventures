@@ -60,5 +60,5 @@ performance is not indicative of future results.
 
 ## Optional
 
-- [Education hub](https://ghlindiaventures.com/education/): Structured learning paths for first-time alternative investors.
+- [Education hub](https://ghlindiaventures.com/education/insights/): Structured learning paths for first-time alternative investors.
 - [Tools](https://ghlindiaventures.com/tools/): Calculators and portfolio modelling aids.

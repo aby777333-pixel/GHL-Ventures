@@ -15,10 +15,22 @@ interface Props {
 /** Wrap bare <table> in a scroll container so wide tables never
  *  force the page to scroll sideways on a phone. */
 function prepareHtml(html: string): string {
-  return html.replace(
+  return demoteH1(html).replace(
     /<table(?![^>]*data-wrapped)/gi,
     '<div class="table-scroll"><table data-wrapped="1"',
   ).replace(/<\/table>/gi, '</table></div>')
+}
+
+/** The article page already renders the post title as the page's one <h1>.
+ *  Content pasted into the CMS (often straight from ChatGPT) brings its own
+ *  <h1>s, giving the page 2–3 of them (Pulse: H1_MULTIPLE). Render those as
+ *  <h2 class="article-h1">; blog.css styles that class exactly as the body
+ *  <h1> looked, so nothing changes visually. Our class goes first so it
+ *  wins over any class="" the pasted tag already carries. */
+function demoteH1(html: string): string {
+  return html
+    .replace(/<h1(?=[\s>])/gi, '<h2 class="article-h1"')
+    .replace(/<\/h1\s*>/gi, '</h2>')
 }
 
 /** Minimal, dependency-free markdown → HTML for the subset the
