@@ -4,7 +4,7 @@ import '@/styles/blog.css';
 const SITE_URL = 'https://ghlindiaventures.com';
 
 export const metadata: Metadata = {
-  title: 'Insights & Blog | Alternative Investment Research | GHL India Ventures',
+  title: 'Insights & Blog | AIF Research | GHL India Ventures',
   description:
     "Expert insights on alternative investments, stressed real estate, startup investing, AIF regulations, and wealth management strategies from GHL India Ventures' research team.",
   keywords: [

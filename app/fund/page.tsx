@@ -24,7 +24,7 @@ function FundHero() {
     <section className="relative min-h-[95vh] flex items-center bg-white overflow-hidden">
       <picture aria-hidden="true">
         <source srcSet="/images/heros/fund-hero-sm.png" media="(max-width: 768px)" />
-        <img src="/images/heros/fund-hero.png" alt="" className="absolute inset-0 w-full h-full object-cover pointer-events-none select-none" loading="eager" decoding="async" />
+        <img src="/images/heros/fund-hero.png" alt="A lone figure on a glowing curved path at sunrise" className="absolute inset-0 w-full h-full object-cover pointer-events-none select-none" loading="eager" decoding="async" />
       </picture>
       {/* 2026-06-05: GHL img 28 (light glow photo). Dark scrim removed; copy is
           black + red, in the navbar's max-w-[1440px] container (left edge under
@@ -340,15 +340,15 @@ function FundStructure() {
               {/* Simplified text-based structure */}
               <div className="grid md:grid-cols-3 gap-6 text-left">
                 <div className="card rounded-xl p-6">
-                  <h4 className="font-bold  mb-2 text-sm">Investors (LPs)</h4>
+                  <h3 className="font-bold  mb-2 text-sm tracking-normal">Investors (LPs)</h3>
                   <p className=" text-xs">HNIs, Family Offices, Institutional Investors contribute capital to the Fund.</p>
                 </div>
                 <div className="card rounded-xl p-6 border-2 border-brand-red/20">
-                  <h4 className="font-bold text-brand-red mb-2 text-sm">GHL India Ventures AIF</h4>
+                  <h3 className="font-bold text-brand-red mb-2 text-sm tracking-normal">GHL India Ventures AIF</h3>
                   <p className=" text-xs">Category II AIF registered with SEBI. Managed by GHL India Ventures as Investment Manager.</p>
                 </div>
                 <div className="card rounded-xl p-6">
-                  <h4 className="font-bold  mb-2 text-sm">Portfolio Assets</h4>
+                  <h3 className="font-bold  mb-2 text-sm tracking-normal">Portfolio Assets</h3>
                   <p className=" text-xs">Stressed Real Estate Projects acquired through NCLT/IBC and direct distressed-asset routes.</p>
                 </div>
               </div>
@@ -470,7 +470,7 @@ function InvestmentProcess() {
                   <div className="lg:hidden w-10 h-10 bg-brand-red rounded-full flex items-center justify-center mx-auto mb-3">
                     <s.icon className="w-5 h-5 text-white" />
                   </div>
-                  <h4 className="font-bold text-sm mb-2" style={{ color: 'var(--text-heading)' }}>{s.title}</h4>
+                  <h3 className="font-bold text-sm mb-2 tracking-normal" style={{ color: 'var(--text-heading)' }}>{s.title}</h3>
                   <p className="text-xs leading-relaxed" style={{ color: 'var(--text-muted)' }}>{s.desc}</p>
                 </div>
               </AnimatedSection>

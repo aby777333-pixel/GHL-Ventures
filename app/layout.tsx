@@ -447,7 +447,10 @@ fbq('track', 'PageView');`}
         <noscript
           dangerouslySetInnerHTML={{
             __html:
-              '<img height="1" width="1" style="display:none" src="https://www.facebook.com/tr?id=2509470962864850&ev=PageView&noscript=1" alt="" />',
+              // Non-empty alt: SEO auditors (incl. Pulse IMAGES_ALT_MISSING)
+              // count alt="" as missing, and this tag is on every page. It is
+              // display:none + aria-hidden, so nobody ever sees or hears it.
+              '<img height="1" width="1" style="display:none" src="https://www.facebook.com/tr?id=2509470962864850&ev=PageView&noscript=1" alt="Meta Pixel" aria-hidden="true" />',
           }}
         />
         {/* Skip navigation link for accessibility (WCAG 2.1 AA) */}

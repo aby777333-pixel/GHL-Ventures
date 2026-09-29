@@ -1,3 +1,4 @@
+import { fitTitle } from '@/lib/seo/fitTitle'
 import TaxonomyView from '@/components/blog/TaxonomyView'
 import { getTags } from '@/lib/blog/cmsService'
 
@@ -13,7 +14,7 @@ export function generateMetadata({ params }: { params: { slug: string } }) {
   // Distinct from the category pattern ("<Name> | Insights | …"): a tag and a
   // category can share a name (real-estate, startups), which produced
   // identical <title>s on two URLs (Pulse: TITLE_DUPLICATE).
-  const title = `Tagged: ${pretty} | GHL India Ventures Insights`
+  const title = fitTitle(`Tagged: ${pretty}`, [' | GHL India Ventures Insights', ' | GHL India Ventures', ''])
   const description = `Every GHL India Ventures article tagged ${pretty}.`
   return {
     title,

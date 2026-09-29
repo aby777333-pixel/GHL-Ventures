@@ -228,7 +228,7 @@ export default function FundArticleClient({ article, content, relatedArticles, s
 
                 {/* ─── CTA: Want to Invest? ─── */}
                 <div className="mt-12 bg-gradient-to-r from-brand-black to-gray-800 rounded-2xl p-8 text-center">
-                  <h3 className="text-2xl font-bold text-white mb-3">Want to invest?</h3>
+                  <h2 className="text-2xl font-bold text-white mb-3 tracking-[-0.01em]">Want to invest?</h2>
                   <p className="text-gray-400 text-sm mb-6 max-w-lg mx-auto">
                     Learn how our SEBI-registered Category II AIF can help you access
                     institutional-grade alternative investments as per SEBI AIF Regulations.

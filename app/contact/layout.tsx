@@ -3,7 +3,7 @@ import type { Metadata } from 'next';
 const SITE_URL = 'https://ghlindiaventures.com';
 
 export const metadata: Metadata = {
-  title: 'Contact GHL India Ventures | Schedule a Consultation | Chennai AIF',
+  title: 'Contact GHL India Ventures | Book an AIF Consultation',
   description:
     'Get in touch with GHL India Ventures\u0027 investment advisory team. Schedule a consultation, visit our Chennai office, or call +91 7200 255 252. SEBI Registered Category II AIF.',
   keywords: [

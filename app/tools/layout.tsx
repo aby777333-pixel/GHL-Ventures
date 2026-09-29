@@ -3,7 +3,7 @@ import type { Metadata } from 'next';
 const SITE_URL = 'https://ghlindiaventures.com';
 
 export const metadata: Metadata = {
-  title: 'Investment Calculators & Tools | AIF Planning Tools | GHL India Ventures',
+  title: 'AIF Investment Calculators & Tools | GHL India Ventures',
   description:
     'Free investment calculators and financial planning tools — SIP calculator, AIF return estimator, compound interest calculator, tax planning tools, and more from GHL India Ventures.',
   keywords: [

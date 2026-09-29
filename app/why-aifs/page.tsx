@@ -18,7 +18,7 @@ function WhyAIFsHero() {
     <section className="relative min-h-[80vh] flex items-center bg-white overflow-hidden">
       <picture aria-hidden="true">
         <source srcSet="/images/heros/why-aifs-hero-sm.jpg" media="(max-width: 768px)" />
-        <img src="/images/heros/why-aifs-hero.jpg" alt="" className="absolute inset-0 w-full h-full object-cover pointer-events-none select-none" loading="eager" decoding="async" />
+        <img src="/images/heros/why-aifs-hero.jpg" alt="A question mark sculpted in light concrete" className="absolute inset-0 w-full h-full object-cover pointer-events-none select-none" loading="eager" decoding="async" />
       </picture>
       {/* 2026-06-05: hero photo swapped to GHL img 33 (light, question-mark
           concrete). No scrim — the copy is black + red so it contrasts on
@@ -348,7 +348,7 @@ function HowItWorks() {
                 <div className="w-16 h-16 rounded-full bg-brand-offwhite border-2 border-gray-200 flex items-center justify-center mx-auto mb-4 z-10 relative hover:border-brand-red hover:bg-brand-red/5 transition-all">
                   <span className="text-brand-red font-mono font-bold text-sm">{step.num}</span>
                 </div>
-                <h4 className="font-bold text-brand-black dark:text-white text-sm mb-2">{step.title}</h4>
+                <h3 className="font-bold text-brand-black dark:text-white text-sm mb-2 tracking-normal">{step.title}</h3>
                 <p className="text-brand-grey dark:text-gray-300 text-xs leading-relaxed">{step.desc}</p>
               </div>
             </AnimatedSection>

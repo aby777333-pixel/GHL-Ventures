@@ -3,7 +3,7 @@ import type { Metadata } from 'next';
 const SITE_URL = 'https://ghlindiaventures.com';
 
 export const metadata: Metadata = {
-  title: 'Grievance Redressal | Investor Complaint Resolution | GHL India Ventures',
+  title: 'Investor Grievance Redressal | GHL India Ventures',
   description:
     "GHL India Ventures' investor grievance redressal mechanism. Lodge a complaint, track resolution status, and contact our compliance officer. SEBI-mandated investor protection measures for Category II AIF investors.",
   keywords: [

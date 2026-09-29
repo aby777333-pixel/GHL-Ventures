@@ -45,7 +45,7 @@ function NRIInvestContent() {
           <source srcSet="/images/nri/hero-bg.webp" type="image/webp" />
           <img
             src="/images/nri/hero-bg.jpg"
-            alt=""
+            alt="An airplane on a misty mountain runway"
             aria-hidden="true"
             className="w-full h-full object-cover"
           />
@@ -217,7 +217,7 @@ function NRIInvestContent() {
                       <span className="text-brand-red font-bold text-sm text-center leading-tight">{item.stat}</span>
                     </div>
                     <div>
-                      <h4 className="font-bold text-brand-black dark:text-white text-sm">{item.label}</h4>
+                      <h3 className="font-bold text-brand-black dark:text-white text-sm tracking-normal">{item.label}</h3>
                       <p className="text-xs text-brand-grey dark:text-gray-300">{item.detail}</p>
                     </div>
                   </div>
@@ -606,7 +606,7 @@ function NRIInvestContent() {
                     <source srcSet="/images/nri/handbook-bg.webp" type="image/webp" />
                     <img
                       src="/images/nri/handbook-bg.jpg"
-                      alt=""
+                      alt="An airport runway at dusk"
                       aria-hidden="true"
                       className="w-full h-full object-cover"
                     />

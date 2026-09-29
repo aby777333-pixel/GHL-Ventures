@@ -17,7 +17,7 @@ export default function DirectAIFPage() {
       <section className="relative pt-40 pb-44 md:pb-56 lg:pb-64 overflow-hidden bg-brand-red">
         <picture aria-hidden="true">
           <source srcSet="/images/heros/direct-aif-hero-sm.jpg" media="(max-width: 768px)" />
-          <img src="/images/heros/direct-aif-hero.jpg" alt="" className="absolute inset-0 w-full h-full object-cover pointer-events-none select-none" loading="eager" decoding="async" />
+          <img src="/images/heros/direct-aif-hero.jpg" alt="A vivid red maze seen from above" className="absolute inset-0 w-full h-full object-cover pointer-events-none select-none" loading="eager" decoding="async" />
         </picture>
         {/* 2026-06-05: GHL img 38 (vivid-red maze photo). No scrim; the photo is
             bright red, so the copy is WHITE (white-on-red contrast) and the

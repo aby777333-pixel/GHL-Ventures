@@ -1,9 +1,23 @@
+import { fitTitle } from '@/lib/seo/fitTitle'
 import { FUND_ARTICLES, BRAND } from '@/lib/constants'
 import { notFound } from 'next/navigation'
 import FundArticleClient from './FundArticleClient'
 
 export function generateStaticParams() {
   return FUND_ARTICLES.map((article) => ({ slug: article.slug }))
+}
+
+/* <title> topics for articles whose full headline is over 60 characters on
+   its own (Pulse: TITLE_LONG). SEO title only — the on-page headline, og:title
+   and everything else keep article.title. */
+const SEO_TOPIC: Record<string, string> = {
+  'understanding-category-ii-aifs-complete-guide': 'Category II AIFs: A Complete Guide for HNI Investors',
+  'stressed-real-estate-india-opportunity': 'Stressed Real Estate in India: Opportunity in Distress',
+  'sebi-aif-framework-sophisticated-investor': "SEBI's AIF Framework for Sophisticated Investors",
+  'portfolio-diversification-beyond-mutual-funds': 'Diversify Beyond Mutual Funds: The AIF Advantage',
+  'chennai-real-estate-data-driven-thesis-2025': 'Chennai Real Estate 2025: A Data-Driven Thesis',
+  'tax-efficiency-category-ii-aif-pass-through': 'Category II AIF Tax: Pass-Through Status Explained',
+  'risk-adjusted-returns-alternative-investments': 'Risk-Adjusted Returns of Alternative Investments',
 }
 
 export function generateMetadata({ params }: { params: { slug: string } }) {
@@ -14,7 +28,7 @@ export function generateMetadata({ params }: { params: { slug: string } }) {
      fund hub while the sitemap listed it as indexable (Pulse: SITEMAP_CONFLICT). */
   const url = `https://ghlindiaventures.com/fund/${article.slug}`
   return {
-    title: `${article.title} | GHL India Ventures Fund Insights`,
+    title: fitTitle(SEO_TOPIC[article.slug] ?? article.title, [' | GHL India Ventures Fund Insights', ' | GHL India Ventures', '']),
     description: article.excerpt,
     alternates: { canonical: url },
     openGraph: {

@@ -3,7 +3,7 @@ import type { Metadata } from 'next';
 const SITE_URL = 'https://ghlindiaventures.com';
 
 export const metadata: Metadata = {
-  title: 'Startup Application Portal | Apply for GHL India Ventures Funding',
+  title: 'Apply for Startup Funding | GHL India Ventures',
   description:
     "Apply for investment from GHL India Ventures' startup programme. We invest in early-stage, pre-Series A startups across fintech, healthtech, cleantech, and SaaS with strong unit economics and experienced founders.",
   keywords: [

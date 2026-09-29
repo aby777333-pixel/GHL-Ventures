@@ -1578,7 +1578,7 @@ export default function ToolsPage() {
       <section className="relative min-h-[80vh] flex items-center overflow-hidden bg-white">
         <picture aria-hidden="true">
           <source srcSet="/images/heros/tools-hero-sm.png" media="(max-width: 768px)" />
-          <img src="/images/heros/tools-hero.png" alt="" className="absolute inset-0 w-full h-full object-cover pointer-events-none select-none" loading="eager" decoding="async" />
+          <img src="/images/heros/tools-hero.png" alt="A red sphere resting on a cliff edge" className="absolute inset-0 w-full h-full object-cover pointer-events-none select-none" loading="eager" decoding="async" />
         </picture>
 
         <div className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8 w-full relative z-10 pt-40 pb-12">

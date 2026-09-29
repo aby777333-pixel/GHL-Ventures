@@ -179,7 +179,7 @@ export default function PortfolioPage() {
 
                     {/* Highlights */}
                     <div className="lg:col-span-2">
-                      <h4 className="text-sm font-bold text-brand-black dark:text-white uppercase tracking-wider mb-4">Key Highlights</h4>
+                      <h3 className="text-sm font-bold text-brand-black dark:text-white uppercase tracking-wider mb-4">Key Highlights</h3>
                       <ul className="space-y-3">
                         {project.highlights.map((h, hi) => (
                           <li key={hi} className="flex items-start gap-3">

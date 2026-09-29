@@ -373,7 +373,7 @@ function HeroSection() {
         <source srcSet="/images/home/hero-hpbg-sm.jpg" media="(max-width: 768px)" />
         <img
           src="/images/home/hero-hpbg.jpg"
-          alt=""
+          alt="An elephant beside racing greyhounds under a SEBI-registered ribbon"
           className="absolute inset-0 w-full h-full object-cover pointer-events-none select-none"
           style={{ objectPosition: 'center 38%' }}
           loading="eager"
@@ -640,7 +640,7 @@ function InvestmentCapabilities() {
         <source srcSet="/images/home/pillars-bg-sm.png" media="(max-width: 768px)" />
         <img
           src="/images/home/pillars-bg.png"
-          alt=""
+          alt="Racehorses thundering down a track"
           aria-hidden="true"
           className="w-full h-full object-cover"
         />
@@ -920,7 +920,7 @@ function FinancialIQTeaser() {
     <section className="relative py-14 md:py-20 overflow-hidden bg-brand-black">
       <img
         src="/images/home/financial-iq-bg.png"
-        alt=""
+        alt="Abstract flowing waves of grey and deep red"
         aria-hidden="true"
         className="absolute inset-0 w-full h-full object-cover pointer-events-none select-none"
         loading="lazy"
@@ -1091,7 +1091,7 @@ function ContactFormSection() {
         <source srcSet="/images/home/contact-bg-sm.png" media="(max-width: 768px)" />
         <img
           src="/images/home/contact-bg.png"
-          alt=""
+          alt="A blueprint transforming into a city skyline"
           aria-hidden="true"
           className="w-full h-full object-cover"
         />

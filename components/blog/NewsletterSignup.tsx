@@ -100,7 +100,7 @@ export default function NewsletterSignup({
     return (
       <div className="newsletter-card bg-brand-black rounded-2xl p-6">
         <Mail className="w-6 h-6 text-brand-red mb-3" />
-        <h3 className="text-base font-bold mb-1.5" style={{ color: '#FFFFFF' }}>{heading}</h3>
+        <h2 className="text-base font-bold mb-1.5 tracking-[-0.01em]" style={{ color: '#FFFFFF' }}>{heading}</h2>
         <p className="text-xs mb-4" style={{ color: 'rgba(255,255,255,0.65)' }}>{subheading}</p>
         {form}
       </div>

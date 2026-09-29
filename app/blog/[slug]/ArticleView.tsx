@@ -23,13 +23,26 @@ import CommentsSection from '@/components/blog/CommentsSection'
 import BlogAnalytics from '@/components/blog/BlogAnalytics'
 import BlogBreadcrumbs from '@/components/blog/BlogBreadcrumbs'
 import PlaceholderImage from '@/components/PlaceholderImage'
+import ArticleNeighbours, { type Neighbour } from '@/components/ArticleNeighbours'
 import {
   getRelatedPosts, formatDate, readTimeLabel, canonicalFor,
   BLOG_SITE_URL, type CmsPost,
 } from '@/lib/blog/cmsService'
 
-export default function ArticleView({ post, preview = false }: { post: CmsPost; preview?: boolean }) {
-  const [related, setRelated] = useState<CmsPost[]>([])
+export default function ArticleView({
+  post, preview = false, initialRelated = [], neighbours,
+}: {
+  post: CmsPost
+  preview?: boolean
+  /** Previous / next article by publish date (build-time; none in CMS preview). */
+  neighbours?: { prev: Neighbour | null; next: Neighbour | null }
+  /** Fetched at build by page.tsx so the related-article links are in the
+   *  HTML crawlers read (they do not run the effect below, which left most
+   *  articles with a single inbound link — Pulse: LINKING_WEAK). The effect
+   *  still refreshes the list in the browser exactly as before. */
+  initialRelated?: CmsPost[]
+}) {
+  const [related, setRelated] = useState<CmsPost[]>(initialRelated)
 
   useEffect(() => {
     let alive = true
@@ -220,6 +233,8 @@ export default function ArticleView({ post, preview = false }: { post: CmsPost; 
                 </div>
               </div>
             )}
+
+            {neighbours && <ArticleNeighbours prev={neighbours.prev} next={neighbours.next} className="mt-10" />}
           </article>
 
           <CommentsSection postId={post.id} enabled={!!post.allow_comments} />

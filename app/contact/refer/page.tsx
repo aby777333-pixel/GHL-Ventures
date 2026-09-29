@@ -124,7 +124,7 @@ export default function ReferPage() {
       <section className="relative overflow-hidden pt-40 pb-40 min-h-[80vh] flex items-center bg-brand-black">
         <picture aria-hidden="true">
           <source srcSet="/images/heros/refer-hero-sm.png" media="(max-width: 768px)" />
-          <img src="/images/heros/refer-hero.png" alt="" className="absolute inset-0 w-full h-full object-cover pointer-events-none select-none" loading="eager" decoding="async" />
+          <img src="/images/heros/refer-hero.png" alt="A hiker crossing a natural stone bridge above the clouds" className="absolute inset-0 w-full h-full object-cover pointer-events-none select-none" loading="eager" decoding="async" />
         </picture>
         {/* 2026-06-05: flat dark scrim removed; copy left-aligned in the
             navbar's max-w-[1440px] container (left edge under the logo).

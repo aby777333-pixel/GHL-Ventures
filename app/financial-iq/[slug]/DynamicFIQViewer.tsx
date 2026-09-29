@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { supabase as _sb, isSupabaseConfigured } from '@/lib/supabase/client'
 import { resolveFIQCoverImage, makeFIQImageErrorHandler } from '@/lib/fiqFallbackImages'
+import ArticleNeighbours, { type Neighbour } from '@/components/ArticleNeighbours'
 import {
   Calendar, Clock, ArrowLeft, User, Tag, BookOpen, GraduationCap,
 } from 'lucide-react'
@@ -78,17 +79,21 @@ export default function DynamicFIQViewer({
   slug: propSlug,
   initialPost = null,
   initialRelated = [],
+  initialNeighbours = null,
 }: {
   slug: string
   /** Pre-fetched at build time by page.tsx so crawlers receive the full
    *  article (H1 + body) in the HTML instead of a loading spinner. */
   initialPost?: FIQPost | null
   initialRelated?: FIQPost[]
+  /** Previous / next article by publish date, computed for THIS slug at build. */
+  initialNeighbours?: { prev: Neighbour | null; next: Neighbour | null } | null
 }) {
   const [post, setPost] = useState<FIQPost | null>(initialPost)
   const [loading, setLoading] = useState(!initialPost)
   const [notFound, setNotFound] = useState(false)
   const [relatedPosts, setRelatedPosts] = useState<FIQPost[]>(initialRelated)
+  const [neighbours, setNeighbours] = useState(initialNeighbours)
   const slug = resolveSlug(propSlug)
 
   useEffect(() => {
@@ -100,6 +105,7 @@ export default function DynamicFIQViewer({
     if (!initialPost || initialPost.slug !== slug) {
       setPost(null)
       setRelatedPosts([])
+      setNeighbours(null) // they belong to the shell's article, not this one
       setLoading(true)
     }
     async function load() {
@@ -265,6 +271,10 @@ export default function DynamicFIQViewer({
                 ))}
               </div>
             </div>
+          )}
+
+          {neighbours && (
+            <ArticleNeighbours prev={neighbours.prev} next={neighbours.next} className="max-w-3xl mx-auto mt-8" />
           )}
         </div>
       </section>

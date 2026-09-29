@@ -50,7 +50,7 @@ export default function ContactPage() {
           <source srcSet="/images/home/contact-hero-bg-sm.png" media="(max-width: 768px)" />
           <img
             src="/images/home/contact-hero-bg.png"
-            alt=""
+            alt="A corporate handshake over a red ribbon"
             className="absolute inset-0 w-full h-full object-cover pointer-events-none select-none"
             loading="eager"
             decoding="async"

@@ -3,7 +3,7 @@ import type { Metadata } from 'next';
 const SITE_URL = 'https://ghlindiaventures.com';
 
 export const metadata: Metadata = {
-  title: 'Careers at GHL India Ventures | Join Our Alternative Investment Team',
+  title: 'Careers at GHL India Ventures | Alternative Investments',
   description:
     'Explore career opportunities at GHL India Ventures — a SEBI-registered Category II AIF based in Chennai. We are hiring across investment analysis, compliance, real estate, startup due diligence, and client relations.',
   keywords: [

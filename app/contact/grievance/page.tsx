@@ -132,7 +132,7 @@ export default function GrievancePage() {
       <section className="relative overflow-hidden pt-40 pb-44 md:pb-56 lg:pb-64 min-h-[80vh] flex items-center bg-white">
         <picture aria-hidden="true">
           <source srcSet="/images/heros/grievance-hero-sm.png" media="(max-width: 768px)" />
-          <img src="/images/heros/grievance-hero.png" alt="" className="absolute inset-0 w-full h-full object-cover pointer-events-none select-none" loading="eager" decoding="async" />
+          <img src="/images/heros/grievance-hero.png" alt="A climber reaching a mountain summit by a red ladder" className="absolute inset-0 w-full h-full object-cover pointer-events-none select-none" loading="eager" decoding="async" />
         </picture>
         {/* 2026-06-05: GHL img 31 (bright sky / ladder). Scrim removed; copy is
             black + red, left-aligned in the navbar's max-w-[1440px] container. */}
@@ -158,21 +158,21 @@ export default function GrievancePage() {
                 <div className="w-12 h-12 bg-brand-red/10 rounded-xl flex items-center justify-center mx-auto mb-3">
                   <Shield className="w-6 h-6 text-brand-red" />
                 </div>
-                <h3 className="font-bold text-brand-black dark:text-white mb-1 text-sm">SEBI Mandated</h3>
+                <h2 className="font-bold text-brand-black dark:text-white mb-1 text-sm tracking-[-0.01em]">SEBI Mandated</h2>
                 <p className="text-brand-grey text-xs">Compliant with SEBI AIF grievance redressal guidelines</p>
               </div>
               <div className="card glow-card-emerald text-center">
                 <div className="w-12 h-12 bg-brand-red/10 rounded-xl flex items-center justify-center mx-auto mb-3">
                   <AlertTriangle className="w-6 h-6 text-brand-red" />
                 </div>
-                <h3 className="font-bold text-brand-black dark:text-white mb-1 text-sm">2-Day Acknowledgement</h3>
+                <h2 className="font-bold text-brand-black dark:text-white mb-1 text-sm tracking-[-0.01em]">2-Day Acknowledgement</h2>
                 <p className="text-brand-grey text-xs">All complaints acknowledged within 2 working days</p>
               </div>
               <div className="card glow-card-violet text-center">
                 <div className="w-12 h-12 bg-brand-red/10 rounded-xl flex items-center justify-center mx-auto mb-3">
                   <Scale className="w-6 h-6 text-brand-red" />
                 </div>
-                <h3 className="font-bold text-brand-black dark:text-white mb-1 text-sm">30-Day Resolution</h3>
+                <h2 className="font-bold text-brand-black dark:text-white mb-1 text-sm tracking-[-0.01em]">30-Day Resolution</h2>
                 <p className="text-brand-grey text-xs">Target resolution within 30 calendar days per SEBI norms</p>
               </div>
             </div>

@@ -403,9 +403,21 @@ export async function getTags(opts?: { withCounts?: boolean }): Promise<(CmsTag 
     const { data } = await sb.from('blog_tags').select('*').order('name')
     if (!data) return []
     if (!opts?.withCounts) return data
-    const { data: links } = await sb.from('blog_post_tags').select('tag_id')
+    /* Count only live published posts, as getCategories does. Counting every
+       link included drafts and trashed posts, so a tag whose only article was
+       in the trash still went into the sitemap as an empty page
+       (Pulse: LINKING_WEAK on /blog/tag/metrics, /blog/tag/fund-evaluation). */
+    const [{ data: links }, { data: live }] = await Promise.all([
+      sb.from('blog_post_tags').select('tag_id, post_id'),
+      sb.from('blog_posts').select('id').eq('status', 'published').is('deleted_at', null),
+    ])
+    // if the posts query failed, fall back to counting every link (old behaviour)
+    const liveIds = live ? new Set(live.map((p: any) => p.id)) : null
     const counts = new Map<string, number>()
-    for (const l of links || []) counts.set(l.tag_id, (counts.get(l.tag_id) || 0) + 1)
+    for (const l of links || []) {
+      if (liveIds && !liveIds.has(l.post_id)) continue
+      counts.set(l.tag_id, (counts.get(l.tag_id) || 0) + 1)
+    }
     return data.map((t: CmsTag) => ({ ...t, post_count: counts.get(t.id) || 0 }))
   } catch { return [] }
 }

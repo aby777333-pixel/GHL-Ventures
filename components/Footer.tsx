@@ -151,9 +151,9 @@ export default function Footer() {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 lg:gap-10 mb-12 text-left">
             {/* Col 1: About GHL */}
             <div className="text-left">
-              <h3 className="text-sm font-semibold uppercase tracking-wider text-white/40 mb-5">
+              <h2 className="text-sm font-semibold uppercase tracking-wider text-white/40 mb-5">
                 About GHL
-              </h3>
+              </h2>
               <p className="text-gray-400 text-sm leading-relaxed mb-6">
                 {BRAND.description} We bridge growth capital gaps through strategic
                 investments in stressed real estate across India.
@@ -179,9 +179,9 @@ export default function Footer() {
 
             {/* Col 2: Quick Links */}
             <div className="text-left">
-              <h3 className="text-sm font-semibold uppercase tracking-wider text-white/40 mb-5">
+              <h2 className="text-sm font-semibold uppercase tracking-wider text-white/40 mb-5">
                 Quick Links
-              </h3>
+              </h2>
               <ul className="space-y-3">
                 {QUICK_LINKS_PRIMARY.map((link) => (
                   <li key={link.href} className="text-left">
@@ -200,9 +200,9 @@ export default function Footer() {
 
             {/* Col 3: More Links (replaces former Downloads column) */}
             <div className="text-left">
-              <h3 className="text-sm font-semibold uppercase tracking-wider text-white/40 mb-5">
+              <h2 className="text-sm font-semibold uppercase tracking-wider text-white/40 mb-5">
                 More Links
-              </h3>
+              </h2>
               <ul className="space-y-3">
                 {QUICK_LINKS_SECONDARY.map((link) => (
                   <li key={link.href} className="text-left">
@@ -221,9 +221,9 @@ export default function Footer() {
 
             {/* Col 4: Contact & Social */}
             <div className="text-left">
-              <h3 className="text-sm font-semibold uppercase tracking-wider text-white/40 mb-5">
+              <h2 className="text-sm font-semibold uppercase tracking-wider text-white/40 mb-5">
                 Contact Us
-              </h3>
+              </h2>
               <ul className="space-y-4 text-left">
                 <li className="text-left">
                   <a

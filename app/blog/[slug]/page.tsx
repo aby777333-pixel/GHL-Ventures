@@ -15,6 +15,7 @@
    as an offline fallback — the CMS is the source of truth.
    ───────────────────────────────────────────────────────────── */
 
+import { fitTitle } from '@/lib/seo/fitTitle'
 import { BLOG_POSTS, BRAND } from '@/lib/constants'
 import { Suspense } from 'react'
 import dynamic from 'next/dynamic'
@@ -25,7 +26,8 @@ import Blog2StressedRealEstate from '@/components/blog/Blog2StressedRealEstate'
 import Blog3EarlyStageGrowth from '@/components/blog/Blog3EarlyStageGrowth'
 import Blog4GovernanceTransparency from '@/components/blog/Blog4GovernanceTransparency'
 import Blog5PillarGuide from '@/components/blog/Blog5PillarGuide'
-import { getAllPublishedSlugs, getPostBySlug, getPostPublishState, type CmsPost } from '@/lib/blog/cmsService'
+import { getAllPublishedSlugs, getPostBySlug, getPostPublishState, getRelatedPosts, getPublishedPosts, type CmsPost } from '@/lib/blog/cmsService'
+import { neighboursIn } from '@/components/ArticleNeighbours'
 
 const DynamicBlogViewer = dynamic(() => import('./DynamicBlogViewer'), { ssr: false })
 
@@ -95,7 +97,7 @@ export async function generateMetadata({ params }: { params: { slug: string } })
   const retired = !post && (await getPostPublishState(params.slug)) === 'unpublished'
 
   return {
-    title: post?.meta_title || `${title} | GHL India Ventures Blog`,
+    title: post?.meta_title || fitTitle(title, [' | GHL India Ventures Blog', ' | GHL India Ventures', '']),
     description,
     keywords: post?.meta_keywords || undefined,
     ...(post?.noindex ? { robots: { index: false, follow: false } } : {}),
@@ -260,6 +262,9 @@ export default async function BlogArticlePage({ params }: { params: { slug: stri
   // ── 1. bespoke component article ──────────────────────
   const RichComponent = post.legacy_component ? RICH_BLOG_COMPONENTS[post.legacy_component] : undefined
 
+  // Previous / next article by publish date (newest-first list).
+  const neighbours = neighboursIn(await getPublishedPosts(), post.slug, (s) => `/blog/${s}/`)
+
   if (RichComponent) {
     const relatedArticles = BLOG_POSTS
       .filter((p) => p.slug !== post.slug)
@@ -281,6 +286,7 @@ export default async function BlogArticlePage({ params }: { params: { slug: stri
         }}
         relatedArticles={relatedArticles}
         sebiReg={BRAND.sebi}
+        neighbours={neighbours}
         schemas={schemas}
       >
         <RichComponent />
@@ -298,7 +304,7 @@ export default async function BlogArticlePage({ params }: { params: { slug: stri
           dangerouslySetInnerHTML={{ __html: JSON.stringify(s) }}
         />
       ))}
-      <ArticleView post={post} />
+      <ArticleView post={post} initialRelated={await getRelatedPosts(post, 3)} neighbours={neighbours} />
     </>
   )
 }

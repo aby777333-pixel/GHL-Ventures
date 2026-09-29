@@ -3,7 +3,7 @@ import type { Metadata } from 'next';
 const SITE_URL = 'https://ghlindiaventures.com';
 
 export const metadata: Metadata = {
-  title: 'Investment Fund | Category II AIF — Stressed Real Estate Recovery | GHL India Ventures',
+  title: 'Category II AIF: Stressed Real Estate | GHL India Ventures',
   description:
     "Explore GHL India Ventures' SEBI-registered Category II AIF — focused on stressed real estate recovery via NCLT/IBC. Available through the Direct AIF route as per SEBI regulations or the SEBI Co-Invest Framework.",
   keywords: [

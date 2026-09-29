@@ -84,7 +84,7 @@ function AboutHero() {
         <source srcSet="/images/about/hero-bg-sm.jpg" media="(max-width: 768px)" />
         <img
           src="/images/about/hero-bg.jpg"
-          alt=""
+          alt="A lone rower on calm water beside a whale"
           aria-hidden="true"
           className="w-full h-full object-cover"
         />

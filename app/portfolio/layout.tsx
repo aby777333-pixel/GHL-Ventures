@@ -3,7 +3,7 @@ import type { Metadata } from 'next';
 const SITE_URL = 'https://ghlindiaventures.com';
 
 export const metadata: Metadata = {
-  title: 'Portfolio & Track Record | Investment Performance | GHL India Ventures',
+  title: 'Portfolio & Track Record | GHL India Ventures',
   description:
     "View GHL India Ventures' investment portfolio — stressed real estate recovery projects, startup investments, sector allocation, and performance metrics.",
   keywords: [

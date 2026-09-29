@@ -142,7 +142,7 @@ export default function BlogPage() {
           <source srcSet="/images/heros/blog-hero-sm.jpg" media="(max-width: 768px)" />
           <img
             src="/images/heros/blog-hero.jpg"
-            alt=""
+            alt="A GHL India Ventures Blog billboard on a rooftop"
             className="absolute inset-0 w-full h-full object-cover pointer-events-none select-none"
             loading="eager"
             decoding="async"
@@ -434,7 +434,7 @@ export default function BlogPage() {
                 className="block bg-brand-offwhite rounded-2xl p-5 hover:bg-gray-200 transition-colors group"
               >
                 <FileText className="w-6 h-6 text-brand-red mb-3" />
-                <h3 className="text-sm font-bold text-brand-black mb-1">Research reports</h3>
+                <h2 className="text-sm font-bold text-brand-black mb-1 tracking-[-0.01em]">Research reports</h2>
                 <p className="text-xs text-gray-600 mb-3">
                   Download our in-depth PDF research on India&rsquo;s alternative investment market.
                 </p>

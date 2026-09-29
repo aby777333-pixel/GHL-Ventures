@@ -198,7 +198,7 @@ export default function InsightsPage() {
       <section className="relative min-h-[80vh] flex items-center overflow-hidden bg-white">
         <picture aria-hidden="true">
           <source srcSet="/images/heros/insights-hero-sm.png" media="(max-width: 768px)" />
-          <img src="/images/heros/insights-hero.png" alt="" className="absolute inset-0 w-full h-full object-cover pointer-events-none select-none" loading="eager" decoding="async" />
+          <img src="/images/heros/insights-hero.png" alt="Professionals walking a red carpet path toward a leader in a red tie" className="absolute inset-0 w-full h-full object-cover pointer-events-none select-none" loading="eager" decoding="async" />
         </picture>
         {/* 2026-06-05: GHL img 30 (light/white). Dark scrim removed; copy is
             black + red in the navbar's max-w-[1440px] container. */}
@@ -454,9 +454,9 @@ export default function InsightsPage() {
                         </div>
 
                         {/* Title */}
-                        <h3 className="text-sm font-semibold text-brand-black dark:text-white group-hover:text-brand-red transition-colors mb-2 line-clamp-2 leading-snug">
+                        <h2 className="text-sm font-semibold text-brand-black dark:text-white group-hover:text-brand-red transition-colors mb-2 line-clamp-2 leading-snug tracking-[-0.01em]">
                           {art.title}
-                        </h3>
+                        </h2>
 
                         {/* Description */}
                         <p className="text-xs text-brand-grey line-clamp-2 flex-1 leading-relaxed">
@@ -501,7 +501,7 @@ export default function InsightsPage() {
                 <div className="w-20 h-20 rounded-2xl card flex items-center justify-center mx-auto mb-6">
                   <FileText className="w-10 h-10 text-brand-grey" />
                 </div>
-                <h3 className="text-xl font-bold text-brand-black dark:text-white mb-3">Complete Education Compendium</h3>
+                <h2 className="text-xl font-bold text-brand-black dark:text-white mb-3 tracking-[-0.01em]">Complete Education Compendium</h2>
                 <p className="text-sm text-brand-grey mb-2">
                   All 53 articles compiled into a single PDF document for offline reading and reference.
                 </p>

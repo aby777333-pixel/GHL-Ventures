@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import AnimatedSection from '@/components/AnimatedSection'
+import ArticleNeighbours, { type Neighbour } from '@/components/ArticleNeighbours'
 import PlaceholderImage from '@/components/PlaceholderImage'
 import ImageZoom from '@/components/blog/ImageZoom'
 import {
@@ -26,6 +27,8 @@ interface Props {
   relatedArticles: readonly Article[]
   sebiReg: string
   schemas?: object[]
+  /** Previous / next article by publish date (build-time). */
+  neighbours?: { prev: Neighbour | null; next: Neighbour | null }
 }
 
 /* ─── Floating Share Sidebar ─── */
@@ -206,7 +209,7 @@ export function NumberedList({ items }: { items: { title: string; desc: string }
 export function HighlightBox({ children, title }: { children: React.ReactNode; title?: string }) {
   return (
     <div className="my-8 bg-gradient-to-br from-brand-red/5 to-red-50 dark:from-brand-red/10 dark:to-brand-red/[0.06] border border-brand-red/20 rounded-xl p-6">
-      {title && <h4 className="font-bold text-brand-black mb-3 text-lg">{title}</h4>}
+      {title && <h3 className="font-bold text-brand-black mb-3 text-lg tracking-normal">{title}</h3>}
       <div className="text-brand-grey text-base leading-relaxed">{children}</div>
     </div>
   )
@@ -252,7 +255,7 @@ export function FAQSection({ faqs }: { faqs: { q: string; a: string }[] }) {
 }
 
 /* ─── Main Rich Blog Article Layout ─── */
-export default function RichBlogArticle({ article, children, relatedArticles, sebiReg, schemas }: Props) {
+export default function RichBlogArticle({ article, children, relatedArticles, sebiReg, schemas, neighbours }: Props) {
   return (
     <ImageZoom>
       {/* Schema.org structured data */}
@@ -386,6 +389,8 @@ export default function RichBlogArticle({ article, children, relatedArticles, se
                     <MessageCircle className="w-3.5 h-3.5" />
                   </a>
                 </div>
+
+                {neighbours && <ArticleNeighbours prev={neighbours.prev} next={neighbours.next} className="mt-10" />}
 
                 {/* ─── CTA: Want to Invest? ─── */}
                 <AnimatedSection>

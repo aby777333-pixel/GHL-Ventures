@@ -354,7 +354,7 @@ export default function CareersPage() {
       <section className="relative overflow-hidden pt-40 pb-44 md:pb-56 lg:pb-64 min-h-[80vh] flex items-center bg-brand-red">
         <picture aria-hidden="true">
           <source srcSet="/images/heros/careers-hero-sm.png" media="(max-width: 768px)" />
-          <img src="/images/heros/careers-hero.png" alt="" className="absolute inset-0 w-full h-full object-cover pointer-events-none select-none" loading="eager" decoding="async" />
+          <img src="/images/heros/careers-hero.png" alt="A red lighthouse on a rocky coast" className="absolute inset-0 w-full h-full object-cover pointer-events-none select-none" loading="eager" decoding="async" />
         </picture>
         {/* 2026-06-05: GHL img 29(2) (red lighthouse). Scrim removed; the photo is
             red, so copy is WHITE, left-aligned in the navbar's max-w-[1440px]. */}

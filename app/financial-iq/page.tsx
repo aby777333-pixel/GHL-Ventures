@@ -346,7 +346,7 @@ export default function FinancialIQPage() {
       <section className="pt-40 pb-44 md:pb-56 lg:pb-64 relative overflow-hidden bg-white">
         <picture aria-hidden="true">
           <source srcSet="/images/heros/financial-iq-hero-sm.png" media="(max-width: 768px)" />
-          <img src="/images/heros/financial-iq-hero.png" alt="" className="absolute inset-0 w-full h-full object-cover pointer-events-none select-none" loading="eager" decoding="async" />
+          <img src="/images/heros/financial-iq-hero.png" alt="A man pushing a red boulder up a mountain slope" className="absolute inset-0 w-full h-full object-cover pointer-events-none select-none" loading="eager" decoding="async" />
         </picture>
         {/* 2026-06-05: GHL img 26 (light sky / slope). Dark scrim removed; copy is
             black + red in the navbar's max-w-[1440px] container. */}
@@ -531,7 +531,7 @@ export default function FinancialIQPage() {
                           {item.term.slice(0, 3)}
                         </span>
                         <div>
-                          <h4 className="font-bold text-brand-black dark:text-white text-lg">{item.term}</h4>
+                          <h3 className="font-bold text-brand-black dark:text-white text-lg tracking-normal">{item.term}</h3>
                           <p className="text-brand-grey dark:text-gray-300 text-sm mt-1 leading-relaxed">{item.definition}</p>
                         </div>
                       </div>

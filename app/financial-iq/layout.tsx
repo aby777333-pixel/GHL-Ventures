@@ -3,7 +3,7 @@ import type { Metadata } from 'next';
 const SITE_URL = 'https://ghlindiaventures.com';
 
 export const metadata: Metadata = {
-  title: 'Financial IQ — Investment Education & Resources | GHL India Ventures',
+  title: 'Financial IQ — Investor Education | GHL India Ventures',
   description:
     "Build your investment knowledge with GHL India Ventures' Financial IQ resources — guides on AIFs, stressed real estate, startup investing, tax planning, and wealth management.",
   keywords: [

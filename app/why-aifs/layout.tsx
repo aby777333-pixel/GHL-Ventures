@@ -3,7 +3,7 @@ import type { Metadata } from 'next'
 const SITE_URL = 'https://ghlindiaventures.com'
 
 export const metadata: Metadata = {
-  title: 'What is an AIF? | Alternative Investment Funds Explained | GHL India Ventures',
+  title: 'What Is an AIF? AIFs Explained | GHL India Ventures',
   description:
     'Comprehensive guide to Alternative Investment Funds (AIFs) in India — what they are, how they work, SEBI regulations, three categories, advantages, comparison with mutual funds & PMS, and how GHL India Ventures delivers institutional-grade AIF strategies.',
   keywords: [

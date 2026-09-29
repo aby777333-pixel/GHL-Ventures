@@ -9,7 +9,7 @@ const SITE_URL = 'https://ghlindiaventures.com';
    SITEMAP_CONFLICT). This layout only supplies the page's own metadata;
    it renders children untouched. */
 export const metadata: Metadata = {
-  title: 'Free Research Reports — AIF & Alternative Investments | GHL India Ventures',
+  title: 'Free AIF Research Reports | GHL India Ventures',
   description:
     "Free in-depth PDF research on India's alternative investment market — AIF strategy, distressed real estate, startup investing and wealth management from GHL India Ventures.",
   openGraph: {

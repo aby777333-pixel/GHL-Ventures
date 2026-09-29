@@ -17,7 +17,7 @@ export default function DebentureRoutePage() {
       <section className="relative pt-40 pb-44 md:pb-56 lg:pb-64 overflow-hidden bg-brand-black">
         <picture aria-hidden="true">
           <source srcSet="/images/heros/debenture-route-hero-sm.jpg" media="(max-width: 768px)" />
-          <img src="/images/heros/debenture-route-hero.jpg" alt="" className="absolute inset-0 w-full h-full object-cover pointer-events-none select-none" loading="eager" decoding="async" />
+          <img src="/images/heros/debenture-route-hero.jpg" alt="A flag flying against a stormy sky" className="absolute inset-0 w-full h-full object-cover pointer-events-none select-none" loading="eager" decoding="async" />
         </picture>
         {/* 2026-06-05: dark scrim removed so the photo shows clear. White copy
             reads on the dark flag/storm photo, in the navbar's max-w-[1440px]

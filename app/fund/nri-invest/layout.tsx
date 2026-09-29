@@ -3,7 +3,7 @@ import type { Metadata } from 'next'
 const SITE_URL = 'https://ghlindiaventures.com'
 
 export const metadata: Metadata = {
-  title: 'NRI Invest — Invest in India from Abroad | GHL India Ventures',
+  title: 'NRI Investment in India from Abroad | GHL India Ventures',
   description:
     'NRI-focused SEBI-registered Category II AIF. Invest in India\'s stressed real estate & startups from anywhere in the world. FEMA/RBI-compliant structure, NRO/NRE routing. AIF as per SEBI regulations or SEBI Co-Invest Framework.',
   keywords: [

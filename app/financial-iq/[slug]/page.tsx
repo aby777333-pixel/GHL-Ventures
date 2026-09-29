@@ -1,6 +1,8 @@
+import { fitTitle } from '@/lib/seo/fitTitle'
 import { Suspense } from 'react'
 import { createClient } from '@supabase/supabase-js'
 import DynamicFIQViewer from './DynamicFIQViewer'
+import { neighboursIn } from '@/components/ArticleNeighbours'
 
 /* The viewer used to be imported with `ssr: false`, so every article shipped
    as an empty shell with a spinner: no <h1>, no body text (Pulse: H1_MISSING
@@ -10,10 +12,10 @@ import DynamicFIQViewer from './DynamicFIQViewer'
 async function getArticle(slug: string) {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL
   const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-  if (!url || !key) return { post: null, related: [] }
+  if (!url || !key) return { post: null, related: [], neighbours: null }
   try {
     const sb = createClient(url, key)
-    const [{ data: post }, { data: related }] = await Promise.all([
+    const [{ data: post }, { data: related }, { data: all }] = await Promise.all([
       sb.from('financial_iq_posts').select('*').eq('slug', slug).eq('is_published', true).maybeSingle(),
       sb.from('financial_iq_posts')
         .select('id, title, slug, excerpt, category, cover_image, author, published_at, read_time')
@@ -21,10 +23,14 @@ async function getArticle(slug: string) {
         .neq('slug', slug)
         .order('published_at', { ascending: false })
         .limit(3),
+      // newest first, for the previous / next article links
+      sb.from('financial_iq_posts').select('slug, title').eq('is_published', true)
+        .order('published_at', { ascending: false }),
     ])
-    return { post: (post as any) || null, related: ((related as any[]) || []) }
+    const neighbours = post ? neighboursIn((all as any[]) || [], slug, (s) => `/financial-iq/${s}/`) : null
+    return { post: (post as any) || null, related: ((related as any[]) || []), neighbours }
   } catch {
-    return { post: null, related: [] }
+    return { post: null, related: [], neighbours: null }
   }
 }
 
@@ -99,7 +105,8 @@ export async function generateMetadata({ params }: { params: { slug: string } })
     if (!data) {
       return { title: 'Article Not Found | GHL India Ventures' }
     }
-    const title = (data as any).meta_title || `${(data as any).title} | Financial IQ — GHL India Ventures`
+    const title = (data as any).meta_title ||
+      fitTitle((data as any).title, [' | Financial IQ — GHL India Ventures', ' | GHL India Ventures', ' | Financial IQ', ''])
     const description = (data as any).meta_description || (data as any).excerpt || ''
     const keywords = Array.isArray((data as any).tags) ? (data as any).tags.join(', ') : undefined
     return {
@@ -123,10 +130,10 @@ export async function generateMetadata({ params }: { params: { slug: string } })
 }
 
 export default async function FinancialIQArticlePage({ params }: { params: { slug: string } }) {
-  const { post, related } = await getArticle(params.slug)
+  const { post, related, neighbours } = await getArticle(params.slug)
   return (
     <Suspense fallback={<div className="min-h-screen bg-brand-black flex items-center justify-center"><div className="w-8 h-8 border-2 border-brand-red border-t-transparent rounded-full animate-spin" /></div>}>
-      <DynamicFIQViewer slug={params.slug} initialPost={post} initialRelated={related} />
+      <DynamicFIQViewer slug={params.slug} initialPost={post} initialRelated={related} initialNeighbours={neighbours} />
     </Suspense>
   )
 }
