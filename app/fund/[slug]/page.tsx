@@ -9,9 +9,24 @@ export function generateStaticParams() {
 export function generateMetadata({ params }: { params: { slug: string } }) {
   const article = FUND_ARTICLES.find((a) => a.slug === params.slug)
   if (!article) return { title: 'Article Not Found' }
+  /* Self-canonical. Without it every article inherited app/fund/layout.tsx's
+     `canonical: /fund` (and its og:url), declaring each one a duplicate of the
+     fund hub while the sitemap listed it as indexable (Pulse: SITEMAP_CONFLICT). */
+  const url = `https://ghlindiaventures.com/fund/${article.slug}`
   return {
     title: `${article.title} | GHL India Ventures Fund Insights`,
     description: article.excerpt,
+    alternates: { canonical: url },
+    openGraph: {
+      title: article.title,
+      description: article.excerpt,
+      url,
+      siteName: 'GHL India Ventures',
+      type: 'article',
+      publishedTime: article.date,
+      images: [{ url: 'https://ghlindiaventures.com/og-image.jpg', width: 1200, height: 630, alt: article.title }],
+      locale: 'en_IN',
+    },
   }
 }
 

@@ -177,6 +177,23 @@ export async function getPostBySlug(slug: string, opts?: { allowDraft?: boolean 
   } catch { return null }
 }
 
+/** Used by app/sitemap.ts. getPublishedPosts() selects CARD_FIELDS, which
+ *  omits noindex, canonical_url and updated_at — so the sitemap could not
+ *  see them and listed noindexed / canonicalised-away posts. Same published
+ *  filter (publishedQuery), just the columns the sitemap needs. */
+export async function getSitemapPosts(): Promise<
+  Pick<CmsPost, 'slug' | 'featured' | 'noindex' | 'canonical_url' | 'updated_at' | 'published_at' | 'created_at'>[]
+> {
+  if (!isSupabaseConfigured()) return []
+  try {
+    const { data, error } = await publishedQuery(
+      'slug, featured, noindex, canonical_url, updated_at, published_at, created_at',
+    ).order('published_at', { ascending: false, nullsFirst: false })
+    if (error || !data) { if (error) console.warn('[cms] getSitemapPosts:', error.message); return [] }
+    return (data as any[]).filter((r) => r?.slug)
+  } catch { return [] }
+}
+
 /** Used by generateStaticParams — slugs only, cheap. */
 export async function getAllPublishedSlugs(): Promise<string[]> {
   if (!isSupabaseConfigured()) return []

@@ -1,6 +1,6 @@
 import type { MetadataRoute } from 'next'
 import {
-  getPublishedPosts, getCategories, getTags, getAuthors, getReports,
+  getSitemapPosts, getCategories, getTags, getAuthors, getReports,
 } from '@/lib/blog/cmsService'
 import { FUND_ARTICLES } from '@/lib/constants'
 
@@ -46,7 +46,9 @@ const STATIC_ROUTES: { path: string; priority: number; freq: MetadataRoute.Sitem
   { path: '/education',              priority: 0.7,  freq: 'monthly' },
   { path: '/education/insights',     priority: 0.7,  freq: 'monthly' },
   { path: '/financial-iq',           priority: 0.7,  freq: 'weekly'  },
-  { path: '/downloads',              priority: 0.6,  freq: 'monthly' },
+  // '/downloads' intentionally omitted: app/downloads/page.tsx calls notFound()
+  // while the page is parked (2026-05 repositioning), so it serves a 404.
+  // Re-add it here when page.disabled.tsx is restored.
   { path: '/tools',                  priority: 0.6,  freq: 'monthly' },
   { path: '/contact',                priority: 0.7,  freq: 'monthly' },
   { path: '/contact/faqs',           priority: 0.6,  freq: 'monthly' },
@@ -72,13 +74,28 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   // ── blog articles ──────────────────────────────────────
   const articleEntries: MetadataRoute.Sitemap = []
   try {
-    const posts = await getPublishedPosts()
+    const posts = await getSitemapPosts()
     for (const p of posts) {
       if (p.noindex) continue
+      /* A post whose CMS canonical_url points at a different article is a
+         declared duplicate — listing it tells crawlers "index this" while the
+         page says "index that one instead" (Pulse: SITEMAP_CONFLICT). The
+         canonical target is listed in its own right. */
+      const ownUrl = abs(`/blog/${p.slug}`)
+      const declared = p.canonical_url?.trim()
+      if (declared) {
+        let pointsElsewhere = false
+        try {
+          const u = new URL(declared, SITE_URL)
+          pointsElsewhere =
+            !/^(www\.)?ghlindiaventures\.com$/i.test(u.hostname) || abs(u.pathname) !== ownUrl
+        } catch { /* unparseable value — keep previous behaviour and list it */ }
+        if (pointsElsewhere) continue
+      }
       const stamp = new Date(p.updated_at || p.published_at || p.created_at)
       if (!Number.isNaN(stamp.getTime()) && stamp > newestPost) newestPost = stamp
       articleEntries.push({
-        url: abs(`/blog/${p.slug}`),
+        url: ownUrl,
         lastModified: Number.isNaN(stamp.getTime()) ? STATIC_LASTMOD : stamp,
         changeFrequency: 'monthly',
         priority: p.featured ? 0.9 : 0.7,
