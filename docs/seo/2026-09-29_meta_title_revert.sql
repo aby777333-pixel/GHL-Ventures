@@ -58,3 +58,10 @@ update financial_iq_posts p set meta_title = v.t from (values
 --   had a stray empty '<h3></h3>' at the very start (removed). To restore:
 --   update blog_posts set content = '<h3></h3>' || E'\n' || content
 --   where slug = 'how-stressed-real-estate-investing-works-category-ii-aif';
+-- Broken-link fix: blog_posts 'invest-in-something-that-provides-and-protects-category-ii-aif-explained'
+--   .content had this "Related reading" line (target archived + trashed), removed:
+--   <p>Related reading: <a href="/blog/afraid-of-losing-your-job-invest-for-security">Afraid of Losing Your Job? Here's How Smart Investing Can Secure Your Family's Future</a></p>
+-- Broken-link fix: blog_posts 'category-ii-aif-investments-benefits-for-long-term-investors'.content
+--   "Related reading" link swapped from the archived post to a live one:
+--   was  <a href="/blog/startup-investing-beyond-the-hype">Startup Investing Beyond the Hype: A Disciplined Approach</a>
+--   now  <a href="/blog/india-startup-ecosystem-2025">India's Startup Ecosystem 2025: Where Smart Money Is Flowing</a>

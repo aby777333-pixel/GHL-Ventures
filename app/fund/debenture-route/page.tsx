@@ -252,10 +252,12 @@ export default function DebentureRoutePage() {
                 Get Started Today <ArrowRight className="ml-2 w-4 h-4" />
               </Link>
               <Link
-                href="/blog/afraid-of-losing-your-job-invest-for-security"
+                // 2026-09-29: was /blog/afraid-of-losing-your-job-invest-for-security,
+                // which is archived + in the CMS trash and rendered "Article Not Found".
+                href="/blog/sebi-co-invest-framework-professionals-guide/"
                 className="inline-flex items-center justify-center px-6 py-2.5 text-sm border-2 border-white/20 text-white font-bold rounded-lg hover:bg-white/10 transition-all"
               >
-                Read: Why Salaried Professionals Should Invest
+                Read: The Co-Invest Guide for Professionals
               </Link>
             </div>
           </AnimatedSection>

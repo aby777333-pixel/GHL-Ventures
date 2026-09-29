@@ -263,11 +263,17 @@ export default async function BlogArticlePage({ params }: { params: { slug: stri
   const RichComponent = post.legacy_component ? RICH_BLOG_COMPONENTS[post.legacy_component] : undefined
 
   // Previous / next article by publish date (newest-first list).
-  const neighbours = neighboursIn(await getPublishedPosts(), post.slug, (s) => `/blog/${s}/`)
+  const publishedPosts = await getPublishedPosts()
+  const neighbours = neighboursIn(publishedPosts, post.slug, (s) => `/blog/${s}/`)
 
   if (RichComponent) {
+    /* BLOG_POSTS is a legacy constant that still lists archived posts
+       (e.g. startup-investing-beyond-the-hype), so these cards linked to
+       "Article Not Found" pages. Keep only posts the CMS lists as published;
+       if the CMS was unreachable (empty list), keep the old behaviour. */
+    const published = new Set(publishedPosts.map((p) => p.slug))
     const relatedArticles = BLOG_POSTS
-      .filter((p) => p.slug !== post.slug)
+      .filter((p) => p.slug !== post.slug && (published.size === 0 || published.has(p.slug)))
       .slice(0, 3)
       .map((p) => ({
         slug: p.slug, title: p.title, excerpt: p.excerpt,
