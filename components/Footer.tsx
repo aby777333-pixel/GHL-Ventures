@@ -73,6 +73,8 @@ const QUICK_LINKS_PRIMARY = [
   { label: 'Fund Overview', href: '/fund' },
   { label: 'Direct AIF Route', href: '/fund/direct-aif' },
   { label: 'SEBI Co-Invest Framework', href: '/fund/debenture-route' },
+  // 2026-09-29: restored so the page has more than its own self-link (Pulse: LINKING_WEAK)
+  { label: 'Portfolio', href: '/portfolio' },
 ] as const
 
 // 2026-05-12 site corrections: More Links trimmed to the top five
@@ -86,6 +88,8 @@ const QUICK_LINKS_SECONDARY = [
   { label: 'Financial IQ', href: '/financial-iq' },
   { label: 'FAQs', href: '/contact/faqs' },
   { label: 'Careers', href: '/contact/careers' },
+  // 2026-09-29: restored for the same reason as Portfolio above
+  { label: 'Startup Application', href: '/contact/startup-apply' },
 ] as const
 
 const PORTAL_PREFIXES = ['/staff', '/admin', '/dashboard']
