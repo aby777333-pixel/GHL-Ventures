@@ -124,7 +124,12 @@ export default function DynamicFIQViewer({
       setPost(data as FIQPost)
 
       // Track view counter (fire-and-forget)
-      try { sb.rpc('increment_fiq_views', { p_slug: slug }) } catch { /* ok */ }
+      // Supabase query builders are lazy: the request is only sent once the
+      // builder is awaited or .then()'d. Without the .then() this call was
+      // never made and every article sat at 0 views. Same pattern as
+      // recordView() in lib/blog/cmsService.ts; errors are swallowed so the
+      // counter can never break the page.
+      try { sb.rpc('increment_fiq_views', { p_slug: slug }).then(() => {}, () => {}) } catch { /* ok */ }
 
       // Related: 3 most recent published articles excluding the current one
       const { data: related } = await sb
