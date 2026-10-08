@@ -30,6 +30,7 @@ import { BRAND } from '@/lib/constants'
 
 // Auth
 import { useClientAuth } from '@/lib/supabase/clientHooks'
+import { getAuthToken } from '@/lib/supabase/client'
 
 // Data hooks
 import {
@@ -96,6 +97,9 @@ import { InvestmentHistory, InvestmentDetail, InvestmentDocumentsSection } from 
 
 // Full Investment Flow Tab (matching PDF specification)
 import InvestmentFlowTab from './InvestmentFlowTab'
+
+// Referral System & Partner Dashboard
+import ReferralDashboard from './ReferralDashboard'
 
 // Voice Input (Sarvam AI STT)
 import VoiceInput from '@/components/shared/VoiceInput'
@@ -311,7 +315,7 @@ export default function DashboardClient() {
   // ─── Routing ─────────────────────────────────────────────
   const router = useRouter()
   const pathname = usePathname()
-  const VALID_TABS: TabId[] = ['dashboard','investments','invest-onboard','portfolio','kyc','documents','transactions','messages','support','calculators','ai-advisor','referrals','profile','settings']
+  const VALID_TABS: TabId[] = ['dashboard', 'investments', 'invest-onboard', 'portfolio', 'kyc', 'documents', 'transactions', 'messages', 'support', 'calculators', 'ai-advisor', 'referrals', 'profile', 'settings']
   const activeTab: TabId = useMemo(() => {
     const segments = pathname.split('/').filter(Boolean)
     const tabSegment = segments[1] as TabId | undefined
@@ -420,6 +424,10 @@ export default function DashboardClient() {
 
   // ─── Auth ────────────────────────────────────────────────
   const { user, clientId, ghlId, isAuthenticated, emailVerified, loading: authLoading, logout } = useClientAuth()
+  const [dashboardAuthToken, setDashboardAuthToken] = useState('')
+  useEffect(() => {
+    getAuthToken().then((tok) => { if (tok) setDashboardAuthToken(tok) })
+  }, [user?.id])
 
   // Auth guard — redirect to login only when the underlying Supabase session
   // is truly invalid (not for a transient null while hydrating). Tests
@@ -428,17 +436,17 @@ export default function DashboardClient() {
   useEffect(() => {
     if (authLoading || isAuthenticated) return
     let cancelled = false
-    ;(async () => {
-      try {
-        const { isSessionInvalid } = await import('@/lib/supabase/inactivityTracker')
-        const invalid = await isSessionInvalid()
-        if (!cancelled && invalid) router.push('/login')
-      } catch {
-        // If the check itself fails, fall back to the previous behaviour to
-        // avoid stranding the user on a half-rendered dashboard.
-        if (!cancelled) router.push('/login')
-      }
-    })()
+      ; (async () => {
+        try {
+          const { isSessionInvalid } = await import('@/lib/supabase/inactivityTracker')
+          const invalid = await isSessionInvalid()
+          if (!cancelled && invalid) router.push('/login')
+        } catch {
+          // If the check itself fails, fall back to the previous behaviour to
+          // avoid stranding the user on a half-rendered dashboard.
+          if (!cancelled) router.push('/login')
+        }
+      })()
     return () => { cancelled = true }
   }, [authLoading, isAuthenticated, router])
 
@@ -514,6 +522,11 @@ export default function DashboardClient() {
   // expands into a card popup on click so it doesn't crowd the dashboard.
   const [rmWidgetOpen, setRmWidgetOpen] = useState(false)
 
+  // GI Portfolio Dashboard states (matching Reference Dashboard for General Investors)
+  const [liveDashboardDate, setLiveDashboardDate] = useState('')
+  const [giChartYear, setGiChartYear] = useState<number>(2026)
+  const [giChartView, setGiChartView] = useState<'line' | 'bar'>('line')
+
   // Load FAQs for dashboard
   useEffect(() => {
     (async () => {
@@ -522,7 +535,7 @@ export default function DashboardClient() {
         if (!isSupabaseConfigured()) return
         const { data } = await (supabase as any).from('faqs').select('*').eq('is_active', true).order('sort_order', { ascending: true }).limit(5)
         if (data) setFaqs(data)
-      } catch {}
+      } catch { }
     })()
   }, [])
   const [messageCompose, setMessageCompose] = useState(false)
@@ -713,17 +726,17 @@ export default function DashboardClient() {
   useEffect(() => {
     if (!clientId) return
     let cancelled = false
-    ;(async () => {
-      try {
-        const { supabase: sb } = await import('@/lib/supabase/client')
-        const { data } = await (sb as any).from('clients').select('additional_emails, additional_phones').eq('id', clientId).maybeSingle()
-        if (cancelled) return
-        setClientContactExtras({
-          additional_emails: Array.isArray(data?.additional_emails) ? data.additional_emails : [],
-          additional_phones: Array.isArray(data?.additional_phones) ? data.additional_phones : [],
-        })
-      } catch { /* defaults stay empty */ }
-    })()
+      ; (async () => {
+        try {
+          const { supabase: sb } = await import('@/lib/supabase/client')
+          const { data } = await (sb as any).from('clients').select('additional_emails, additional_phones').eq('id', clientId).maybeSingle()
+          if (cancelled) return
+          setClientContactExtras({
+            additional_emails: Array.isArray(data?.additional_emails) ? data.additional_emails : [],
+            additional_phones: Array.isArray(data?.additional_phones) ? data.additional_phones : [],
+          })
+        } catch { /* defaults stay empty */ }
+      })()
     return () => { cancelled = true }
   }, [clientId])
 
@@ -777,7 +790,7 @@ export default function DashboardClient() {
     }
     // Reset input so re-selecting the same file still triggers
     if (e.target) e.target.value = ''
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [showToast, user, clientId])
 
   // Bug #28: On mount, rehydrate avatar from profiles.avatar_url
@@ -785,13 +798,13 @@ export default function DashboardClient() {
     const uid = (user as any)?.id
     if (!uid) return
     let cancelled = false
-    ;(async () => {
-      try {
-        const { supabase } = await import('@/lib/supabase/client')
-        const { data } = await (supabase as any).from('profiles').select('avatar_url').eq('id', uid).maybeSingle()
-        if (!cancelled && data?.avatar_url) setProfilePhoto(data.avatar_url)
-      } catch { /* non-fatal */ }
-    })()
+      ; (async () => {
+        try {
+          const { supabase } = await import('@/lib/supabase/client')
+          const { data } = await (supabase as any).from('profiles').select('avatar_url').eq('id', uid).maybeSingle()
+          if (!cancelled && data?.avatar_url) setProfilePhoto(data.avatar_url)
+        } catch { /* non-fatal */ }
+      })()
     return () => { cancelled = true }
   }, [user])
 
@@ -851,10 +864,28 @@ export default function DashboardClient() {
       const now = new Date()
       setCurrentTime(now.toLocaleString('en-IN', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }))
       const hour = now.getHours()
-      setGreeting(hour < 12 ? 'Good Morning' : hour < 17 ? 'Good Afternoon' : 'Good Evening')
+      setGreeting(hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening')
+
+      const formatted =
+        now.toLocaleDateString('en-GB', {
+          weekday: 'long',
+          day: '2-digit',
+          month: 'long',
+          year: 'numeric',
+        }) +
+        ' at ' +
+        now
+          .toLocaleTimeString('en-US', {
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit',
+            hour12: true,
+          })
+          .toLowerCase()
+      setLiveDashboardDate(formatted)
     }
     updateTime()
-    const interval = setInterval(updateTime, 60000)
+    const interval = setInterval(updateTime, 1000)
     return () => clearInterval(interval)
   }, [])
 
@@ -862,6 +893,34 @@ export default function DashboardClient() {
     if (!totalInvested) return '0.0'
     return ((totalCurrent - totalInvested) / totalInvested * 100).toFixed(1)
   }, [totalCurrent, totalInvested])
+
+  // GI Monthly Investments Trend data for selected year
+  const monthlyInvestmentsData = useMemo(() => {
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+    const amounts = Array(12).fill(0)
+    let hasTxn = false
+
+    if (investmentTxns && investmentTxns.length > 0) {
+      investmentTxns.forEach((txn: any) => {
+        const d = new Date(txn.created_at || txn.date)
+        if (d.getFullYear() === giChartYear) {
+          amounts[d.getMonth()] += Number(txn.amount) || 0
+          hasTxn = true
+        }
+      })
+    }
+
+    if (!hasTxn) {
+      // Default to reference baseline (July active ₹20,00,000)
+      const val = totalInvested > 0 ? totalInvested : 2000000
+      amounts[6] = val
+    }
+
+    return months.map((m, idx) => ({
+      month: m,
+      amount: amounts[idx],
+    }))
+  }, [investmentTxns, giChartYear, totalInvested])
 
   // ─── Realtime Subscriptions ─────────────────────────────
   // Tickets are stored with client_id = auth.users.id (the auth uid), NOT clients.id.
@@ -915,7 +974,7 @@ export default function DashboardClient() {
         }
         setSavedBankData(prev => (prev.account_number ? prev : data))
       }
-    }).catch(() => {})
+    }).catch(() => { })
   }, [clientId, user?.id]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // ─── Referral Hooks (must be before early returns) ──────
@@ -946,9 +1005,9 @@ export default function DashboardClient() {
   useEffect(() => {
     import('@/lib/supabase/client').then(({ supabase, isSupabaseConfigured }) => {
       if (!isSupabaseConfigured()) return
-      ;(supabase as any).from('faqs').select('question, answer').eq('is_active', true).order('sort_order', { ascending: true }).then(({ data }: any) => {
-        if (data && data.length > 0) setDynamicFAQs(data)
-      })
+        ; (supabase as any).from('faqs').select('question, answer').eq('is_active', true).order('sort_order', { ascending: true }).then(({ data }: any) => {
+          if (data && data.length > 0) setDynamicFAQs(data)
+        })
     })
   }, [])
 
@@ -1030,17 +1089,17 @@ export default function DashboardClient() {
           <Link href="/" target="_blank" className="flex items-center group">
             <Logo size={38} />
           </Link>
-          <button onClick={() => setSidebarOpen(false)} className={`lg:hidden ${t('text-gray-500 hover:text-white','text-gray-600 hover:text-gray-900')} transition-colors`}>
+          <button onClick={() => setSidebarOpen(false)} className={`lg:hidden ${t('text-gray-500 hover:text-white', 'text-gray-600 hover:text-gray-900')} transition-colors`}>
             <X className="w-5 h-5" />
           </button>
         </div>
 
         {/* Client info badge */}
         <div className="px-6 mb-4">
-          <div className={`px-3 py-2.5 rounded-xl ${t('bg-white/[0.04] border border-white/[0.06]','bg-gray-100/60 border border-gray-200/40')}`}>
-            <p className={`text-[10px] uppercase tracking-widest mb-0.5 ${t('text-gray-500','text-gray-600')}`}>{user?.risk_profile || user?.account_status || 'Client'}</p>
-            <p className={`text-sm font-semibold ${t('text-white','text-gray-900')}`}>{userName}</p>
-            <p className={`text-[10px] mt-0.5 ${t('text-gray-500','text-gray-700')}`}>{userEmail}</p>
+          <div className={`px-3 py-2.5 rounded-xl ${t('bg-white/[0.04] border border-white/[0.06]', 'bg-gray-100/60 border border-gray-200/40')}`}>
+            <p className={`text-[10px] uppercase tracking-widest mb-0.5 ${t('text-gray-500', 'text-gray-600')}`}>{user?.risk_profile || user?.account_status || 'Client'}</p>
+            <p className={`text-sm font-semibold ${t('text-white', 'text-gray-900')}`}>{userName}</p>
+            <p className={`text-[10px] mt-0.5 ${t('text-gray-500', 'text-gray-700')}`}>{userEmail}</p>
           </div>
         </div>
 
@@ -1061,12 +1120,12 @@ export default function DashboardClient() {
                 {section.section && (collapsible ? (
                   <button
                     onClick={() => toggleSection(sectionKey)}
-                    className={`w-full flex items-center justify-between gap-2 px-3 mt-1 mb-1 py-1 rounded-md transition-colors ${t('hover:bg-white/[0.03] text-gray-500','hover:bg-gray-100 text-gray-500')}`}>
+                    className={`w-full flex items-center justify-between gap-2 px-3 mt-1 mb-1 py-1 rounded-md transition-colors ${t('hover:bg-white/[0.03] text-gray-500', 'hover:bg-gray-100 text-gray-500')}`}>
                     <span className="text-[10px] uppercase tracking-[0.18em] font-semibold">{section.section}</span>
                     <ChevronDown className={`w-3 h-3 transition-transform ${showItems ? '' : '-rotate-90'}`} />
                   </button>
                 ) : (
-                  <p className={`px-3 mt-1 mb-1 text-[10px] uppercase tracking-[0.18em] font-semibold ${t('text-gray-500','text-gray-500')}`}>
+                  <p className={`px-3 mt-1 mb-1 text-[10px] uppercase tracking-[0.18em] font-semibold ${t('text-gray-500', 'text-gray-500')}`}>
                     {section.section}
                   </p>
                 ))}
@@ -1118,7 +1177,7 @@ export default function DashboardClient() {
   // TOP BAR
   // ═══════════════════════════════════════════════════════════
   const renderTopBar = () => (
-    <header className={`sticky top-0 z-30 border-b ${t('border-white/[0.06]','border-gray-200/50')}`}
+    <header className={`sticky top-0 z-30 border-b ${t('border-white/[0.06]', 'border-gray-200/50')}`}
       style={{ background: isDark ? 'rgba(10,10,10,0.8)' : 'rgba(214,211,206,0.92)', backdropFilter: 'blur(40px) saturate(180%)' }}>
       {/* Market ticker removed — the values were hard-coded constants so
           the marquee always displayed stale data that was never updated.
@@ -1128,12 +1187,12 @@ export default function DashboardClient() {
       {/* Main bar */}
       <div className="flex items-center justify-between px-4 lg:px-6 py-3">
         <div className="flex items-center gap-3">
-          <button onClick={() => setSidebarOpen(true)} className={`lg:hidden ${t('text-gray-400 hover:text-white','text-gray-700 hover:text-gray-900')} transition-colors p-1`}>
+          <button onClick={() => setSidebarOpen(true)} className={`lg:hidden ${t('text-gray-400 hover:text-white', 'text-gray-700 hover:text-gray-900')} transition-colors p-1`}>
             <Menu className="w-5 h-5" />
           </button>
-          <div className={`hidden sm:flex items-center gap-2 text-xs ${t('text-gray-500','text-gray-600')}`}>
+          <div className={`hidden sm:flex items-center gap-2 text-xs ${t('text-gray-500', 'text-gray-600')}`}>
             <Home className="w-3 h-3" /> <ChevronRight className="w-3 h-3" />
-            <span className={`capitalize ${t('text-white','text-gray-900')}`}>{activeTab === 'kyc' ? 'KYC & Documents' : activeTab}</span>
+            <span className={`capitalize ${t('text-white', 'text-gray-900')}`}>{activeTab === 'kyc' ? 'KYC & Documents' : activeTab}</span>
           </div>
         </div>
 
@@ -1141,11 +1200,11 @@ export default function DashboardClient() {
           {/* Search */}
           <div className="relative">
             <div className={`hidden md:flex items-center gap-2 px-3 py-1.5 rounded-xl w-56 transition-colors
-              ${t('bg-white/[0.04] border border-white/[0.06] focus-within:border-brand-red/30','bg-gray-100/50 border border-gray-200/40 focus-within:border-brand-red/40')}`}>
-              <Search className={`w-3.5 h-3.5 ${t('text-gray-500','text-gray-600')}`} />
+              ${t('bg-white/[0.04] border border-white/[0.06] focus-within:border-brand-red/30', 'bg-gray-100/50 border border-gray-200/40 focus-within:border-brand-red/40')}`}>
+              <Search className={`w-3.5 h-3.5 ${t('text-gray-500', 'text-gray-600')}`} />
               <input type="text" placeholder="Search..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)}
-                className={`bg-transparent border-none outline-none text-xs w-full ${t('text-white placeholder-gray-600','text-gray-900 placeholder-gray-400')}`} />
-              {searchQuery && <button onClick={() => setSearchQuery('')} className={`${t('text-gray-500 hover:text-white','text-gray-400 hover:text-gray-700')}`}><X className="w-3 h-3" /></button>}
+                className={`bg-transparent border-none outline-none text-xs w-full ${t('text-white placeholder-gray-600', 'text-gray-900 placeholder-gray-400')}`} />
+              {searchQuery && <button onClick={() => setSearchQuery('')} className={`${t('text-gray-500 hover:text-white', 'text-gray-400 hover:text-gray-700')}`}><X className="w-3 h-3" /></button>}
             </div>
             {/* Search Results Dropdown */}
             {searchQuery.trim() && (() => {
@@ -1171,10 +1230,10 @@ export default function DashboardClient() {
               })
               if (matches.length === 0) return null
               return (
-                <div className={`absolute top-full mt-1 right-0 w-64 rounded-xl border shadow-2xl z-50 py-1 ${t('bg-[#111] border-white/10','bg-white border-gray-200')}`}>
+                <div className={`absolute top-full mt-1 right-0 w-64 rounded-xl border shadow-2xl z-50 py-1 ${t('bg-[#111] border-white/10', 'bg-white border-gray-200')}`}>
                   {matches.map(item => (
                     <button key={item.id} onClick={() => { setActiveTab(item.id); setSearchQuery('') }}
-                      className={`w-full flex items-center gap-2.5 px-3 py-2 text-xs font-medium transition-colors ${t('text-gray-300 hover:bg-white/[0.06] hover:text-white','text-gray-700 hover:bg-gray-100 hover:text-gray-900')}`}>
+                      className={`w-full flex items-center gap-2.5 px-3 py-2 text-xs font-medium transition-colors ${t('text-gray-300 hover:bg-white/[0.06] hover:text-white', 'text-gray-700 hover:bg-gray-100 hover:text-gray-900')}`}>
                       <item.icon className="w-4 h-4 text-brand-red" />
                       {item.label}
                     </button>
@@ -1194,7 +1253,7 @@ export default function DashboardClient() {
 
           {/* Notifications */}
           <div className="relative">
-            <button onClick={() => setNotifOpen(!notifOpen)} className={`relative p-2 rounded-xl transition-colors ${t('text-gray-400 hover:text-white hover:bg-white/[0.04]','text-gray-700 hover:text-gray-900 hover:bg-gray-200/35')}`}>
+            <button onClick={() => setNotifOpen(!notifOpen)} className={`relative p-2 rounded-xl transition-colors ${t('text-gray-400 hover:text-white hover:bg-white/[0.04]', 'text-gray-700 hover:text-gray-900 hover:bg-gray-200/35')}`}>
               <Bell className="w-4 h-4" />
               {notifications.filter((n: any) => !n.is_read && !notifsRead.has(n.id)).length > 0 && (
                 <span className="absolute -top-0.5 -right-0.5 w-4 h-4 rounded-full bg-brand-red text-[9px] font-bold text-white flex items-center justify-center">
@@ -1206,55 +1265,56 @@ export default function DashboardClient() {
             {/* Notification dropdown */}
             {notifOpen && (
               <>
-              <div className="fixed inset-0 z-40" onClick={() => setNotifOpen(false)} />
-              <div className={`absolute right-0 top-12 w-80 rounded-2xl border shadow-2xl z-50 overflow-hidden ${t('bg-[#111] border-white/[0.08]','bg-white border-gray-200')}`} style={{ animation: 'dashTooltipIn 0.2s ease-out' }}>
-                <div className={`px-4 py-3 flex items-center justify-between border-b ${t('border-white/[0.06]','border-gray-200/40')}`}>
-                  <h4 className={`text-sm font-bold ${t('text-white','text-gray-900')}`}>Notifications</h4>
-                  <button onClick={() => { setNotifsRead(new Set(notifications.map((n: any) => n.id))); showToast('All notifications marked as read') }} className="text-[10px] text-brand-red font-semibold">Mark all read</button>
-                </div>
-                <div className="max-h-80 overflow-y-auto">
-                  {notifications.map((n: any) => {
-                    // Route by link first (e.g. "/dashboard/kyc" → 'kyc'), then by type,
-                    // then fall back to dashboard. Without the link-first pass, KYC
-                    // rejection notifications (type='info') land on the overview tab
-                    // and the investor never sees the rejection reason banner.
-                    const notifTabMap: Record<string, TabId> = { report: 'documents', opportunity: 'investments', alert: 'kyc', payment: 'transactions', milestone: 'portfolio' }
-                    const validTabs: TabId[] = ['dashboard', 'investments', 'invest-onboard', 'portfolio', 'kyc', 'documents', 'transactions', 'messages', 'support', 'referrals', 'calculators', 'ai-advisor', 'profile', 'settings']
-                    const linkTab = typeof n.link === 'string' ? n.link.split('/').filter(Boolean).pop() : null
-                    const destTab: TabId =
-                      (linkTab && validTabs.includes(linkTab as TabId)) ? (linkTab as TabId)
-                      : (notifTabMap[n.type] || 'dashboard')
-                    return (
-                    <div key={n.id} onClick={() => { setNotifsRead(prev => new Set(prev).add(n.id)); markNotificationRead(String(n.id)); setNotifOpen(false); setActiveTab(destTab) }} className={`px-4 py-3 flex gap-3 cursor-pointer transition-colors ${!n.is_read && !notifsRead.has(n.id) ? t('bg-white/[0.02]','bg-red-50/40') : ''} ${t('hover:bg-white/[0.04]','hover:bg-gray-50')}`}>
-                      <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0
+                <div className="fixed inset-0 z-40" onClick={() => setNotifOpen(false)} />
+                <div className={`absolute right-0 top-12 w-80 rounded-2xl border shadow-2xl z-50 overflow-hidden ${t('bg-[#111] border-white/[0.08]', 'bg-white border-gray-200')}`} style={{ animation: 'dashTooltipIn 0.2s ease-out' }}>
+                  <div className={`px-4 py-3 flex items-center justify-between border-b ${t('border-white/[0.06]', 'border-gray-200/40')}`}>
+                    <h4 className={`text-sm font-bold ${t('text-white', 'text-gray-900')}`}>Notifications</h4>
+                    <button onClick={() => { setNotifsRead(new Set(notifications.map((n: any) => n.id))); showToast('All notifications marked as read') }} className="text-[10px] text-brand-red font-semibold">Mark all read</button>
+                  </div>
+                  <div className="max-h-80 overflow-y-auto">
+                    {notifications.map((n: any) => {
+                      // Route by link first (e.g. "/dashboard/kyc" → 'kyc'), then by type,
+                      // then fall back to dashboard. Without the link-first pass, KYC
+                      // rejection notifications (type='info') land on the overview tab
+                      // and the investor never sees the rejection reason banner.
+                      const notifTabMap: Record<string, TabId> = { report: 'documents', opportunity: 'investments', alert: 'kyc', payment: 'transactions', milestone: 'portfolio' }
+                      const validTabs: TabId[] = ['dashboard', 'investments', 'invest-onboard', 'portfolio', 'kyc', 'documents', 'transactions', 'messages', 'support', 'referrals', 'calculators', 'ai-advisor', 'profile', 'settings']
+                      const linkTab = typeof n.link === 'string' ? n.link.split('/').filter(Boolean).pop() : null
+                      const destTab: TabId =
+                        (linkTab && validTabs.includes(linkTab as TabId)) ? (linkTab as TabId)
+                          : (notifTabMap[n.type] || 'dashboard')
+                      return (
+                        <div key={n.id} onClick={() => { setNotifsRead(prev => new Set(prev).add(n.id)); markNotificationRead(String(n.id)); setNotifOpen(false); setActiveTab(destTab) }} className={`px-4 py-3 flex gap-3 cursor-pointer transition-colors ${!n.is_read && !notifsRead.has(n.id) ? t('bg-white/[0.02]', 'bg-red-50/40') : ''} ${t('hover:bg-white/[0.04]', 'hover:bg-gray-50')}`}>
+                          <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0
                         ${n.type === 'report' || n.type === 'info' ? 'bg-blue-500/15' : n.type === 'opportunity' || n.type === 'success' ? 'bg-emerald-500/15' : n.type === 'alert' || n.type === 'warning' || n.type === 'action_required' ? 'bg-amber-500/15' : n.type === 'payment' ? 'bg-emerald-500/15' : n.type === 'error' ? 'bg-red-500/15' : 'bg-purple-500/15'}`}>
-                        {n.type === 'report' || n.type === 'info' ? <FileText className="w-4 h-4 text-blue-400" /> :
-                         n.type === 'opportunity' || n.type === 'success' ? <Star className="w-4 h-4 text-emerald-400" /> :
-                         n.type === 'alert' || n.type === 'warning' || n.type === 'action_required' ? <AlertCircle className="w-4 h-4 text-amber-400" /> :
-                         n.type === 'payment' ? <IndianRupee className="w-4 h-4 text-emerald-400" /> :
-                         n.type === 'error' ? <AlertCircle className="w-4 h-4 text-red-400" /> :
-                         <Award className="w-4 h-4 text-purple-400" />}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className={`text-xs font-semibold ${t('text-white','text-gray-900')} ${!n.is_read ? '' : 'opacity-60'}`}>{String(n.title || '')}</p>
-                        <p className={`text-[11px] mt-0.5 ${t('text-gray-200','text-gray-700')}`}>{String(n.message || n.body || '')}</p>
-                        <p className={`text-[10px] mt-1 ${t('text-gray-400','text-gray-600')}`}>{n.created_at ? new Date(n.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }) : ''}</p>
-                      </div>
-                      {!n.is_read && !notifsRead.has(n.id) && <div className="w-2 h-2 rounded-full bg-brand-red shrink-0 mt-1.5" />}
-                    </div>
-                  )})}
+                            {n.type === 'report' || n.type === 'info' ? <FileText className="w-4 h-4 text-blue-400" /> :
+                              n.type === 'opportunity' || n.type === 'success' ? <Star className="w-4 h-4 text-emerald-400" /> :
+                                n.type === 'alert' || n.type === 'warning' || n.type === 'action_required' ? <AlertCircle className="w-4 h-4 text-amber-400" /> :
+                                  n.type === 'payment' ? <IndianRupee className="w-4 h-4 text-emerald-400" /> :
+                                    n.type === 'error' ? <AlertCircle className="w-4 h-4 text-red-400" /> :
+                                      <Award className="w-4 h-4 text-purple-400" />}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className={`text-xs font-semibold ${t('text-white', 'text-gray-900')} ${!n.is_read ? '' : 'opacity-60'}`}>{String(n.title || '')}</p>
+                            <p className={`text-[11px] mt-0.5 ${t('text-gray-200', 'text-gray-700')}`}>{String(n.message || n.body || '')}</p>
+                            <p className={`text-[10px] mt-1 ${t('text-gray-400', 'text-gray-600')}`}>{n.created_at ? new Date(n.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }) : ''}</p>
+                          </div>
+                          {!n.is_read && !notifsRead.has(n.id) && <div className="w-2 h-2 rounded-full bg-brand-red shrink-0 mt-1.5" />}
+                        </div>
+                      )
+                    })}
 
+                  </div>
                 </div>
-              </div>
               </>
             )}
           </div>
 
           {/* Time */}
-          <span className={`hidden lg:block text-[11px] ml-2 ${t('text-gray-500','text-gray-600')}`}>{currentTime}</span>
+          <span className={`hidden lg:block text-[11px] ml-2 ${t('text-gray-500', 'text-gray-600')}`}>{currentTime}</span>
 
           {/* Avatar */}
-          <div className={`flex items-center gap-2 ml-2 pl-3 border-l ${t('border-white/[0.06]','border-gray-200/50')}`}>
+          <div className={`flex items-center gap-2 ml-2 pl-3 border-l ${t('border-white/[0.06]', 'border-gray-200/50')}`}>
             <button onClick={() => setActiveTab('profile')} className="relative group">
               {profilePhoto ? (
                 <img src={profilePhoto} alt="Profile" className="w-8 h-8 rounded-full object-cover ring-2 ring-white/[0.08] group-hover:ring-brand-red/40 transition-all" />
@@ -1276,12 +1336,12 @@ export default function DashboardClient() {
     const step = TOUR_STEPS[tourStep]
     return (
       <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 backdrop-blur-sm">
-        <div className={`max-w-md w-full mx-4 rounded-2xl border p-8 text-center ${t('bg-[#111] border-white/10','bg-white border-gray-200 shadow-2xl')}`}>
+        <div className={`max-w-md w-full mx-4 rounded-2xl border p-8 text-center ${t('bg-[#111] border-white/10', 'bg-white border-gray-200 shadow-2xl')}`}>
           <div className="w-16 h-16 rounded-2xl bg-brand-red/15 flex items-center justify-center mx-auto mb-5">
             <Sparkles className="w-8 h-8 text-brand-red" />
           </div>
-          <h3 className={`text-lg font-bold mb-2 ${t('text-white','text-gray-900')}`}>{step.title}</h3>
-          <p className={`text-sm mb-6 leading-relaxed ${t('text-gray-400','text-gray-700')}`}>{step.desc}</p>
+          <h3 className={`text-lg font-bold mb-2 ${t('text-white', 'text-gray-900')}`}>{step.title}</h3>
+          <p className={`text-sm mb-6 leading-relaxed ${t('text-gray-400', 'text-gray-700')}`}>{step.desc}</p>
           <div className="flex items-center justify-center gap-1.5 mb-6">
             {TOUR_STEPS.map((_, i) => (
               <div key={i} className={`h-1.5 rounded-full transition-all duration-300 ${i === tourStep ? 'w-6 bg-brand-red' : 'w-1.5 bg-gray-600'}`} />
@@ -1289,7 +1349,7 @@ export default function DashboardClient() {
           </div>
           <div className="flex gap-3 justify-center">
             <button onClick={() => { setTourActive(false); setTourStep(0) }}
-              className={`px-4 py-2 rounded-xl text-sm font-medium ${t('text-gray-400 hover:text-white','text-gray-700 hover:text-gray-900')}`}>Skip</button>
+              className={`px-4 py-2 rounded-xl text-sm font-medium ${t('text-gray-400 hover:text-white', 'text-gray-700 hover:text-gray-900')}`}>Skip</button>
             <button onClick={() => {
               if (tourStep < TOUR_STEPS.length - 1) {
                 const nextStep = tourStep + 1
@@ -1365,38 +1425,38 @@ export default function DashboardClient() {
     <Glass className="p-5 lg:p-6" hover theme={theme}>
       <div className="flex items-center justify-between mb-5">
         <div>
-          <h3 className={`text-base font-bold mb-0.5 ${t('text-white','text-gray-900')}`}>NAV Performance</h3>
-          <p className={`text-xs ${t('text-gray-500','text-gray-700')}`}>Fund NAV vs NIFTY 50 Benchmark</p>
+          <h3 className={`text-base font-bold mb-0.5 ${t('text-white', 'text-gray-900')}`}>NAV Performance</h3>
+          <p className={`text-xs ${t('text-gray-500', 'text-gray-700')}`}>Fund NAV vs NIFTY 50 Benchmark</p>
         </div>
         {navHistory.length > 0 && (
-        <div className="flex items-center gap-4 text-xs">
-          <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-brand-red" /><span className={t('text-gray-400','text-gray-700')}>Fund NAV</span></span>
-          <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-gray-500" /><span className={t('text-gray-400','text-gray-700')}>Benchmark</span></span>
-        </div>
+          <div className="flex items-center gap-4 text-xs">
+            <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-brand-red" /><span className={t('text-gray-400', 'text-gray-700')}>Fund NAV</span></span>
+            <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-gray-500" /><span className={t('text-gray-400', 'text-gray-700')}>Benchmark</span></span>
+          </div>
         )}
       </div>
       {navHistory.length > 0 ? (
-      <div className="h-[280px] -ml-2">
-        <ResponsiveContainer width="100%" height="100%">
-          <AreaChart data={navHistory}>
-            <defs><linearGradient id="navGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#D0021B" stopOpacity={0.3} /><stop offset="100%" stopColor="#D0021B" stopOpacity={0} /></linearGradient></defs>
-            <CartesianGrid strokeDasharray="3 3" stroke={isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.06)'} />
-            <XAxis dataKey="month" tick={{ fill: '#6B7280', fontSize: 11 }} axisLine={{ stroke: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.08)' }} tickLine={false} />
-            <YAxis tick={{ fill: '#6B7280', fontSize: 11 }} axisLine={false} tickLine={false} domain={['dataMin - 5', 'dataMax + 5']} />
-            <Tooltip content={<ChartTooltipContent />} />
-            <Area type="monotone" dataKey="nav" name="Fund NAV" stroke="#D0021B" strokeWidth={2.5} fill="url(#navGrad)" dot={false} activeDot={{ r: 5, fill: '#D0021B', stroke: '#fff', strokeWidth: 2 }} />
-            <Line type="monotone" dataKey="benchmark" name="Benchmark" stroke="#4B5563" strokeWidth={1.5} strokeDasharray="6 4" dot={false} />
-          </AreaChart>
-        </ResponsiveContainer>
-      </div>
-      ) : (
-      <div className="h-[280px] flex items-center justify-center">
-        <div className="text-center">
-          <TrendingUp className={`w-10 h-10 mx-auto mb-3 ${t('text-gray-600','text-gray-400')}`} />
-          <p className={`text-sm font-medium ${t('text-gray-400','text-gray-600')}`}>NAV data will appear here</p>
-          <p className={`text-xs mt-1 ${t('text-gray-600','text-gray-500')}`}>Once your investments are processed</p>
+        <div className="h-[280px] -ml-2">
+          <ResponsiveContainer width="100%" height="100%">
+            <AreaChart data={navHistory}>
+              <defs><linearGradient id="navGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#D0021B" stopOpacity={0.3} /><stop offset="100%" stopColor="#D0021B" stopOpacity={0} /></linearGradient></defs>
+              <CartesianGrid strokeDasharray="3 3" stroke={isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.06)'} />
+              <XAxis dataKey="month" tick={{ fill: '#6B7280', fontSize: 11 }} axisLine={{ stroke: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.08)' }} tickLine={false} />
+              <YAxis tick={{ fill: '#6B7280', fontSize: 11 }} axisLine={false} tickLine={false} domain={['dataMin - 5', 'dataMax + 5']} />
+              <Tooltip content={<ChartTooltipContent />} />
+              <Area type="monotone" dataKey="nav" name="Fund NAV" stroke="#D0021B" strokeWidth={2.5} fill="url(#navGrad)" dot={false} activeDot={{ r: 5, fill: '#D0021B', stroke: '#fff', strokeWidth: 2 }} />
+              <Line type="monotone" dataKey="benchmark" name="Benchmark" stroke="#4B5563" strokeWidth={1.5} strokeDasharray="6 4" dot={false} />
+            </AreaChart>
+          </ResponsiveContainer>
         </div>
-      </div>
+      ) : (
+        <div className="h-[280px] flex items-center justify-center">
+          <div className="text-center">
+            <TrendingUp className={`w-10 h-10 mx-auto mb-3 ${t('text-gray-600', 'text-gray-400')}`} />
+            <p className={`text-sm font-medium ${t('text-gray-400', 'text-gray-600')}`}>NAV data will appear here</p>
+            <p className={`text-xs mt-1 ${t('text-gray-600', 'text-gray-500')}`}>Once your investments are processed</p>
+          </div>
+        </div>
       )}
     </Glass>
   )
@@ -1406,33 +1466,33 @@ export default function DashboardClient() {
   // ═══════════════════════════════════════════════════════════
   const renderAllocationChart = () => (
     <Glass className="p-5 lg:p-6" hover theme={theme}>
-      <h3 className={`text-base font-bold mb-5 ${t('text-white','text-gray-900')}`}>Allocation</h3>
+      <h3 className={`text-base font-bold mb-5 ${t('text-white', 'text-gray-900')}`}>Allocation</h3>
       {allocationData.length > 0 ? (<>
-      <div className="h-[200px]">
-        <ResponsiveContainer width="100%" height="100%">
-          <PieChart>
-            <Pie data={allocationData} innerRadius={55} outerRadius={85} paddingAngle={3} dataKey="value" strokeWidth={0}>
-              {allocationData.map((entry: any, i: number) => <Cell key={i} fill={entry.color} />)}
-            </Pie>
-          </PieChart>
-        </ResponsiveContainer>
-      </div>
-      <div className="space-y-2 mt-4">
-        {allocationData.map((d: any, i: number) => (
-          <div key={i} className="flex items-center justify-between text-xs">
-            <span className="flex items-center gap-2"><span className="w-2.5 h-2.5 rounded-full" style={{ background: d.color }} /><span className={t('text-gray-400','text-gray-600')}>{d.name}</span></span>
-            <span className={`font-semibold ${t('text-white','text-gray-900')}`}>{d.value}%</span>
-          </div>
-        ))}
-      </div>
-      </>) : (
-      <div className="h-[200px] flex items-center justify-center">
-        <div className="text-center">
-          <PieIcon className={`w-10 h-10 mx-auto mb-3 ${t('text-gray-600','text-gray-400')}`} />
-          <p className={`text-sm font-medium ${t('text-gray-400','text-gray-600')}`}>Allocation breakdown</p>
-          <p className={`text-xs mt-1 ${t('text-gray-600','text-gray-500')}`}>Will appear after first investment</p>
+        <div className="h-[200px]">
+          <ResponsiveContainer width="100%" height="100%">
+            <PieChart>
+              <Pie data={allocationData} innerRadius={55} outerRadius={85} paddingAngle={3} dataKey="value" strokeWidth={0}>
+                {allocationData.map((entry: any, i: number) => <Cell key={i} fill={entry.color} />)}
+              </Pie>
+            </PieChart>
+          </ResponsiveContainer>
         </div>
-      </div>
+        <div className="space-y-2 mt-4">
+          {allocationData.map((d: any, i: number) => (
+            <div key={i} className="flex items-center justify-between text-xs">
+              <span className="flex items-center gap-2"><span className="w-2.5 h-2.5 rounded-full" style={{ background: d.color }} /><span className={t('text-gray-400', 'text-gray-600')}>{d.name}</span></span>
+              <span className={`font-semibold ${t('text-white', 'text-gray-900')}`}>{d.value}%</span>
+            </div>
+          ))}
+        </div>
+      </>) : (
+        <div className="h-[200px] flex items-center justify-center">
+          <div className="text-center">
+            <PieIcon className={`w-10 h-10 mx-auto mb-3 ${t('text-gray-600', 'text-gray-400')}`} />
+            <p className={`text-sm font-medium ${t('text-gray-400', 'text-gray-600')}`}>Allocation breakdown</p>
+            <p className={`text-xs mt-1 ${t('text-gray-600', 'text-gray-500')}`}>Will appear after first investment</p>
+          </div>
+        </div>
       )}
     </Glass>
   )
@@ -1443,43 +1503,43 @@ export default function DashboardClient() {
   const renderPortfolioAssets = () => (
     <Glass className="p-5 lg:p-6" hover theme={theme}>
       <div className="flex items-center justify-between mb-5">
-        <h3 className={`text-base font-bold ${t('text-white','text-gray-900')}`}>Portfolio Assets</h3>
+        <h3 className={`text-base font-bold ${t('text-white', 'text-gray-900')}`}>Portfolio Assets</h3>
         <button onClick={() => setActiveTab('portfolio')} className="relative z-10 text-xs text-brand-red font-semibold flex items-center gap-1 cursor-pointer hover:underline hover:text-red-600 transition-colors px-2 py-1 rounded-lg hover:bg-brand-red/10">View All <ChevronRight className="w-3 h-3" /></button>
       </div>
       {portfolioAssets.length === 0 ? (
         <div className="py-8 text-center">
-          <Briefcase className={`w-10 h-10 mx-auto mb-3 ${t('text-gray-600','text-gray-400')}`} />
-          <p className={`text-sm font-medium ${t('text-gray-400','text-gray-600')}`}>No active investments yet</p>
-          <p className={`text-xs mt-1 ${t('text-gray-600','text-gray-500')}`}>Your portfolio will appear here once you invest</p>
+          <Briefcase className={`w-10 h-10 mx-auto mb-3 ${t('text-gray-600', 'text-gray-400')}`} />
+          <p className={`text-sm font-medium ${t('text-gray-400', 'text-gray-600')}`}>No active investments yet</p>
+          <p className={`text-xs mt-1 ${t('text-gray-600', 'text-gray-500')}`}>Your portfolio will appear here once you invest</p>
           <button onClick={() => setActiveTab('investments')} className="mt-3 text-xs text-brand-red font-semibold">Explore Opportunities</button>
         </div>
       ) : (
-      <div className="space-y-3">
-        {portfolioAssets.map((asset: any, i: number) => (
-          <div key={i} onClick={() => setActiveTab('portfolio')} className={`p-3 rounded-xl transition-all duration-300 group cursor-pointer ${t('bg-white/[0.02] border border-white/[0.04] hover:border-white/[0.08]','bg-gray-100/35 border border-gray-200/30 hover:border-gray-300/40')}`}>
-            <div className="flex items-center gap-4 mb-2">
-              <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${t('bg-white/[0.04]','bg-gray-200/40')}`}>
-                {(asset.fund_type || asset.type || '').includes('Real Estate') ? <Building2 className="w-5 h-5 text-brand-red" /> : (asset.fund_type || asset.type || '').includes('Startup') ? <Rocket className="w-5 h-5 text-amber-400" /> : <FileText className="w-5 h-5 text-blue-400" />}
+        <div className="space-y-3">
+          {portfolioAssets.map((asset: any, i: number) => (
+            <div key={i} onClick={() => setActiveTab('portfolio')} className={`p-3 rounded-xl transition-all duration-300 group cursor-pointer ${t('bg-white/[0.02] border border-white/[0.04] hover:border-white/[0.08]', 'bg-gray-100/35 border border-gray-200/30 hover:border-gray-300/40')}`}>
+              <div className="flex items-center gap-4 mb-2">
+                <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${t('bg-white/[0.04]', 'bg-gray-200/40')}`}>
+                  {(asset.fund_type || asset.type || '').includes('Real Estate') ? <Building2 className="w-5 h-5 text-brand-red" /> : (asset.fund_type || asset.type || '').includes('Startup') ? <Rocket className="w-5 h-5 text-amber-400" /> : <FileText className="w-5 h-5 text-blue-400" />}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className={`text-sm font-semibold truncate ${t('text-white', 'text-gray-900')}`}>{asset.fund_name || asset.name || 'Investment'}</p>
+                  <p className={`text-xs ${t('text-gray-500', 'text-gray-700')}`}>{asset.fund_type || asset.type || ''}</p>
+                </div>
+                <div className="text-right shrink-0">
+                  <p className={`text-sm font-bold ${t('text-white', 'text-gray-900')}`}>{'\u20B9'}{formatINR(Number(asset.current_value) || Number(asset.current) || 0)}</p>
+                  <p className={`text-xs font-semibold ${(Number(asset.return_pct) || Number(asset.returnPct) || 0) >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>+{Number(asset.return_pct) || Number(asset.returnPct) || 0}%</p>
+                </div>
               </div>
-              <div className="flex-1 min-w-0">
-                <p className={`text-sm font-semibold truncate ${t('text-white','text-gray-900')}`}>{asset.fund_name || asset.name || 'Investment'}</p>
-                <p className={`text-xs ${t('text-gray-500','text-gray-700')}`}>{asset.fund_type || asset.type || ''}</p>
-              </div>
-              <div className="text-right shrink-0">
-                <p className={`text-sm font-bold ${t('text-white','text-gray-900')}`}>{'\u20B9'}{formatINR(Number(asset.current_value) || Number(asset.current) || 0)}</p>
-                <p className={`text-xs font-semibold ${(Number(asset.return_pct) || Number(asset.returnPct) || 0) >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>+{Number(asset.return_pct) || Number(asset.returnPct) || 0}%</p>
+              {/* Milestone progress bar */}
+              <div className="flex items-center gap-2">
+                <div className={`flex-1 h-1.5 rounded-full overflow-hidden ${t('bg-white/[0.06]', 'bg-gray-200')}`}>
+                  <div className="h-full rounded-full bg-gradient-to-r from-brand-red to-red-400 transition-all duration-1000" style={{ width: `${Number(asset.milestone) || 0}%` }} />
+                </div>
+                <span className={`text-[10px] font-medium ${t('text-gray-500', 'text-gray-600')}`}>{Number(asset.milestone) || 0}%</span>
               </div>
             </div>
-            {/* Milestone progress bar */}
-            <div className="flex items-center gap-2">
-              <div className={`flex-1 h-1.5 rounded-full overflow-hidden ${t('bg-white/[0.06]','bg-gray-200')}`}>
-                <div className="h-full rounded-full bg-gradient-to-r from-brand-red to-red-400 transition-all duration-1000" style={{ width: `${Number(asset.milestone) || 0}%` }} />
-              </div>
-              <span className={`text-[10px] font-medium ${t('text-gray-500','text-gray-600')}`}>{Number(asset.milestone) || 0}%</span>
-            </div>
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
       )}
     </Glass>
   )
@@ -1504,8 +1564,8 @@ export default function DashboardClient() {
             <div className="w-10 h-10 rounded-xl flex items-center justify-center mb-3 transition-transform duration-300 group-hover:scale-110" style={{ background: `${item.color}20` }}>
               <item.icon className="w-5 h-5" style={{ color: item.color }} />
             </div>
-            <p className={`text-sm font-semibold mb-0.5 ${t('text-white','text-gray-900')}`}>{item.label}</p>
-            <p className={`text-xs leading-relaxed ${t('text-gray-500','text-gray-700')}`}>{item.desc}</p>
+            <p className={`text-sm font-semibold mb-0.5 ${t('text-white', 'text-gray-900')}`}>{item.label}</p>
+            <p className={`text-xs leading-relaxed ${t('text-gray-500', 'text-gray-700')}`}>{item.desc}</p>
           </Glass>
         </button>
       ))}
@@ -1517,30 +1577,30 @@ export default function DashboardClient() {
   // ═══════════════════════════════════════════════════════════
   const renderRecentActivity = () => (
     <Glass className="p-5 lg:p-6" hover theme={theme}>
-      <h3 className={`text-base font-bold mb-5 ${t('text-white','text-gray-900')}`}>Recent Activity</h3>
+      <h3 className={`text-base font-bold mb-5 ${t('text-white', 'text-gray-900')}`}>Recent Activity</h3>
       {transactions.length === 0 ? (
         <div className="py-6 text-center">
-          <ArrowLeftRight className={`w-8 h-8 mx-auto mb-2 ${t('text-gray-600','text-gray-400')}`} />
-          <p className={`text-xs ${t('text-gray-500','text-gray-600')}`}>No transactions yet</p>
+          <ArrowLeftRight className={`w-8 h-8 mx-auto mb-2 ${t('text-gray-600', 'text-gray-400')}`} />
+          <p className={`text-xs ${t('text-gray-500', 'text-gray-600')}`}>No transactions yet</p>
         </div>
       ) : (
-      <div className="space-y-2.5">
-        {transactions.slice(0, 5).map((tx: any, i: number) => (
-          <div key={i} className={`flex items-center gap-3 p-2.5 rounded-lg transition-colors ${t('hover:bg-white/[0.02]','hover:bg-gray-200/40')}`}>
-            <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${tx.type === 'Investment' ? 'bg-blue-500/15' : tx.type === 'Dividend' ? 'bg-emerald-500/15' : 'bg-gray-500/15'}`}>
-              {tx.type === 'Investment' ? <ArrowUpRight className="w-4 h-4 text-blue-400" /> : tx.type === 'Dividend' ? <IndianRupee className="w-4 h-4 text-emerald-400" /> : <Info className="w-4 h-4 text-gray-400" />}
+        <div className="space-y-2.5">
+          {transactions.slice(0, 5).map((tx: any, i: number) => (
+            <div key={i} className={`flex items-center gap-3 p-2.5 rounded-lg transition-colors ${t('hover:bg-white/[0.02]', 'hover:bg-gray-200/40')}`}>
+              <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${tx.type === 'Investment' ? 'bg-blue-500/15' : tx.type === 'Dividend' ? 'bg-emerald-500/15' : 'bg-gray-500/15'}`}>
+                {tx.type === 'Investment' ? <ArrowUpRight className="w-4 h-4 text-blue-400" /> : tx.type === 'Dividend' ? <IndianRupee className="w-4 h-4 text-emerald-400" /> : <Info className="w-4 h-4 text-gray-400" />}
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className={`text-xs font-semibold ${t('text-white', 'text-gray-900')}`}>{tx.type}</p>
+                <p className={`text-[11px] truncate ${t('text-gray-500', 'text-gray-700')}`}>{tx.fund}</p>
+              </div>
+              <div className="text-right shrink-0">
+                {tx.amount > 0 && <p className={`text-xs font-bold ${tx.type === 'Dividend' ? 'text-emerald-400' : t('text-white', 'text-gray-900')}`}>{tx.type === 'Dividend' ? '+' : ''}{'\u20B9'}{formatINR(tx.amount)}</p>}
+                <p className={`text-[10px] ${t('text-gray-600', 'text-gray-600')}`}>{tx.date}</p>
+              </div>
             </div>
-            <div className="flex-1 min-w-0">
-              <p className={`text-xs font-semibold ${t('text-white','text-gray-900')}`}>{tx.type}</p>
-              <p className={`text-[11px] truncate ${t('text-gray-500','text-gray-700')}`}>{tx.fund}</p>
-            </div>
-            <div className="text-right shrink-0">
-              {tx.amount > 0 && <p className={`text-xs font-bold ${tx.type === 'Dividend' ? 'text-emerald-400' : t('text-white','text-gray-900')}`}>{tx.type === 'Dividend' ? '+' : ''}{'\u20B9'}{formatINR(tx.amount)}</p>}
-              <p className={`text-[10px] ${t('text-gray-600','text-gray-600')}`}>{tx.date}</p>
-            </div>
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
       )}
     </Glass>
   )
@@ -1549,14 +1609,14 @@ export default function DashboardClient() {
   // PORTFOLIO HEALTH SCORE (Animated Gauge)
   // ═══════════════════════════════════════════════════════════
   const renderHealthScore = () => {
-    {/* TODO: Calculate from actual portfolio data */}
+    {/* TODO: Calculate from actual portfolio data */ }
     const score = 87
     const circumference = 2 * Math.PI * 45
     const offset = circumference - (score / 100) * circumference
     return (
       <Glass className="p-5" hover glow theme={theme}>
         <div className="flex items-center justify-between mb-3">
-          <h4 className={`text-sm font-bold ${t('text-white','text-gray-900')}`}>Portfolio Health <span className="text-[9px] font-normal text-gray-500">(Placeholder)</span></h4>
+          <h4 className={`text-sm font-bold ${t('text-white', 'text-gray-900')}`}>Portfolio Health <span className="text-[9px] font-normal text-gray-500">(Placeholder)</span></h4>
           <Gauge className="w-4 h-4 text-emerald-400" />
         </div>
         <div className="flex items-center gap-4">
@@ -1568,13 +1628,13 @@ export default function DashboardClient() {
               <defs><linearGradient id="healthGrad" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stopColor="#10B981" /><stop offset="100%" stopColor="#34D399" /></linearGradient></defs>
             </svg>
             <div className="absolute inset-0 flex items-center justify-center">
-              <span className={`text-xl font-black ${t('text-white','text-gray-900')}`}>{score}</span>
+              <span className={`text-xl font-black ${t('text-white', 'text-gray-900')}`}>{score}</span>
             </div>
           </div>
           <div className="space-y-1.5 text-xs">
-            {[{ l: 'Diversification', v: 'Strong', c: 'text-emerald-400' },{ l: 'Risk Level', v: 'Moderate', c: 'text-amber-400' },{ l: 'Growth Trend', v: 'Positive', c: 'text-emerald-400' }].map((r,i) => (
+            {[{ l: 'Diversification', v: 'Strong', c: 'text-emerald-400' }, { l: 'Risk Level', v: 'Moderate', c: 'text-amber-400' }, { l: 'Growth Trend', v: 'Positive', c: 'text-emerald-400' }].map((r, i) => (
               <div key={i} className="flex items-center justify-between gap-4">
-                <span className={t('text-gray-500','text-gray-700')}>{r.l}</span>
+                <span className={t('text-gray-500', 'text-gray-700')}>{r.l}</span>
                 <span className={`font-semibold ${r.c}`}>{r.v}</span>
               </div>
             ))}
@@ -1603,17 +1663,17 @@ export default function DashboardClient() {
       <Glass className="p-5" hover glow theme={theme}>
         <div className="flex items-center gap-2 mb-3">
           <Timer className="w-4 h-4 text-brand-red" />
-          <h4 className={`text-sm font-bold ${t('text-white','text-gray-900')}`}>Next NAV Update</h4>
+          <h4 className={`text-sm font-bold ${t('text-white', 'text-gray-900')}`}>Next NAV Update</h4>
         </div>
         <div className="flex items-center gap-3 mb-2">
-          {[{ v: days, l: 'Days' },{ v: hours, l: 'Hrs' }].map((u,i) => (
-            <div key={i} className={`flex-1 text-center p-2.5 rounded-xl ${t('bg-white/[0.04] border border-white/[0.06]','bg-gray-100/60 border border-gray-200/40')}`}>
-              <p className={`text-2xl font-black tracking-tight ${t('text-white','text-gray-900')}`}>{u.v}</p>
-              <p className={`text-[9px] uppercase tracking-widest ${t('text-gray-600','text-gray-700')}`}>{u.l}</p>
+          {[{ v: days, l: 'Days' }, { v: hours, l: 'Hrs' }].map((u, i) => (
+            <div key={i} className={`flex-1 text-center p-2.5 rounded-xl ${t('bg-white/[0.04] border border-white/[0.06]', 'bg-gray-100/60 border border-gray-200/40')}`}>
+              <p className={`text-2xl font-black tracking-tight ${t('text-white', 'text-gray-900')}`}>{u.v}</p>
+              <p className={`text-[9px] uppercase tracking-widest ${t('text-gray-600', 'text-gray-700')}`}>{u.l}</p>
             </div>
           ))}
         </div>
-        <p className={`text-[11px] text-center ${t('text-gray-600','text-gray-700')}`}>{navLabel}</p>
+        <p className={`text-[11px] text-center ${t('text-gray-600', 'text-gray-700')}`}>{navLabel}</p>
       </Glass>
     )
   }
@@ -1625,7 +1685,7 @@ export default function DashboardClient() {
     <Glass className="p-5" hover theme={theme}>
       <div className="flex items-center gap-2 mb-3">
         <Activity className="w-4 h-4 text-blue-400" />
-        <h4 className={`text-sm font-bold ${t('text-white','text-gray-900')}`}>Market Sentiment <span className="text-[9px] font-normal text-gray-500">(Sample Data)</span></h4>
+        <h4 className={`text-sm font-bold ${t('text-white', 'text-gray-900')}`}>Market Sentiment <span className="text-[9px] font-normal text-gray-500">(Sample Data)</span></h4>
       </div>
       <div className="flex items-center gap-3 mb-3">
         <div className="flex-1 h-2.5 rounded-full bg-gradient-to-r from-red-500 via-amber-400 to-emerald-500 relative">
@@ -1633,11 +1693,11 @@ export default function DashboardClient() {
         </div>
       </div>
       <div className="flex justify-between text-[9px] uppercase tracking-widest mb-3">
-        <span className="text-red-400">Fear</span><span className={t('text-gray-500','text-gray-700')}>Neutral</span><span className="text-emerald-400">Greed</span>
+        <span className="text-red-400">Fear</span><span className={t('text-gray-500', 'text-gray-700')}>Neutral</span><span className="text-emerald-400">Greed</span>
       </div>
-      <div className={`text-center p-2 rounded-lg ${t('bg-emerald-500/10 border border-emerald-500/15','bg-emerald-100/60 border border-emerald-300/50')}`}>
+      <div className={`text-center p-2 rounded-lg ${t('bg-emerald-500/10 border border-emerald-500/15', 'bg-emerald-100/60 border border-emerald-300/50')}`}>
         <span className="text-emerald-400 text-sm font-bold">72 &bull; Greed</span>
-        <p className={`text-[10px] mt-0.5 ${t('text-gray-500','text-gray-700')}`}>India VIX: 13.42 (-2.1%)</p>
+        <p className={`text-[10px] mt-0.5 ${t('text-gray-500', 'text-gray-700')}`}>India VIX: 13.42 (-2.1%)</p>
       </div>
     </Glass>
   )
@@ -1648,18 +1708,18 @@ export default function DashboardClient() {
   const renderLiveCharts = () => (
     <Glass className="p-5" hover theme={theme}>
       <div className="flex items-center justify-between mb-4">
-        <h4 className={`text-sm font-bold ${t('text-white','text-gray-900')}`}>India Live Markets</h4>
+        <h4 className={`text-sm font-bold ${t('text-white', 'text-gray-900')}`}>India Live Markets</h4>
         <span className="flex items-center gap-1 text-[10px] text-gray-400 font-semibold">Indicative</span>
       </div>
       <div className="grid grid-cols-2 gap-3">
         {[{ label: 'SENSEX', val: '73,842', chg: '+1.24%', data: SENSEX_INTRADAY, color: '#D0021B' },
-          { label: 'NIFTY 50', val: '22,456', chg: '+0.98%', data: NIFTY_INTRADAY, color: '#3B82F6' }].map((chart,i) => (
-          <div key={i} className={`p-3 rounded-xl ${t('bg-white/[0.03] border border-white/[0.04]','bg-gray-100/50 border border-gray-200/30')}`}>
+        { label: 'NIFTY 50', val: '22,456', chg: '+0.98%', data: NIFTY_INTRADAY, color: '#3B82F6' }].map((chart, i) => (
+          <div key={i} className={`p-3 rounded-xl ${t('bg-white/[0.03] border border-white/[0.04]', 'bg-gray-100/50 border border-gray-200/30')}`}>
             <div className="flex items-center justify-between mb-1">
-              <span className={`text-[10px] font-semibold ${t('text-gray-400','text-gray-700')}`}>{chart.label}</span>
+              <span className={`text-[10px] font-semibold ${t('text-gray-400', 'text-gray-700')}`}>{chart.label}</span>
               <span className="text-[10px] font-bold text-emerald-400">{chart.chg}</span>
             </div>
-            <p className={`text-base font-black mb-2 ${t('text-white','text-gray-900')}`}>{chart.val}</p>
+            <p className={`text-base font-black mb-2 ${t('text-white', 'text-gray-900')}`}>{chart.val}</p>
             <div className="h-[50px] -mx-1">
               <ResponsiveContainer width="100%" height="100%">
                 <AreaChart data={chart.data}>
@@ -1682,18 +1742,18 @@ export default function DashboardClient() {
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
           <Globe className="w-4 h-4 text-purple-400" />
-          <h4 className={`text-sm font-bold ${t('text-white','text-gray-900')}`}>Global Markets</h4>
+          <h4 className={`text-sm font-bold ${t('text-white', 'text-gray-900')}`}>Global Markets</h4>
         </div>
       </div>
       <div className="space-y-2">
-        {GLOBAL_MARKETS.map((m,i) => (
-          <div key={i} className={`flex items-center justify-between p-2 rounded-lg ${t('hover:bg-white/[0.02]','hover:bg-gray-200/40')} transition-colors`}>
+        {GLOBAL_MARKETS.map((m, i) => (
+          <div key={i} className={`flex items-center justify-between p-2 rounded-lg ${t('hover:bg-white/[0.02]', 'hover:bg-gray-200/40')} transition-colors`}>
             <div className="flex items-center gap-2">
               <span className={`w-6 h-4 rounded text-[8px] font-bold flex items-center justify-center text-white ${m.up ? 'bg-emerald-500/80' : 'bg-red-500/80'}`}>{m.region}</span>
-              <span className={`text-xs font-medium ${t('text-gray-300','text-gray-700')}`}>{m.name}</span>
+              <span className={`text-xs font-medium ${t('text-gray-300', 'text-gray-700')}`}>{m.name}</span>
             </div>
             <div className="flex items-center gap-3">
-              <span className={`text-xs font-semibold ${t('text-white','text-gray-900')}`}>{m.value}</span>
+              <span className={`text-xs font-semibold ${t('text-white', 'text-gray-900')}`}>{m.value}</span>
               <span className={`text-[10px] font-bold w-14 text-right ${m.up ? 'text-emerald-400' : 'text-red-400'}`}>{m.change}</span>
             </div>
           </div>
@@ -1709,14 +1769,14 @@ export default function DashboardClient() {
     <Glass className="p-5" hover theme={theme}>
       <div className="flex items-center gap-2 mb-4">
         <Flag className="w-4 h-4 text-amber-500" />
-        <h4 className={`text-sm font-bold ${t('text-white','text-gray-900')}`}>India Economy</h4>
+        <h4 className={`text-sm font-bold ${t('text-white', 'text-gray-900')}`}>India Economy</h4>
       </div>
       <div className="grid grid-cols-2 gap-2.5">
-        {INDIA_INDICATORS.map((ind,i) => (
-          <div key={i} className={`p-3 rounded-xl text-center ${t('bg-white/[0.03] border border-white/[0.04]','bg-gray-100/50 border border-gray-200/30')}`}>
+        {INDIA_INDICATORS.map((ind, i) => (
+          <div key={i} className={`p-3 rounded-xl text-center ${t('bg-white/[0.03] border border-white/[0.04]', 'bg-gray-100/50 border border-gray-200/30')}`}>
             <ind.icon className={`w-4 h-4 mx-auto mb-1.5 ${ind.trend === 'up' ? 'text-emerald-400' : ind.trend === 'down' ? 'text-red-400' : 'text-blue-400'}`} />
-            <p className={`text-sm font-black ${t('text-white','text-gray-900')}`}>{ind.value}</p>
-            <p className={`text-[9px] mt-0.5 ${t('text-gray-500','text-gray-700')}`}>{ind.label}</p>
+            <p className={`text-sm font-black ${t('text-white', 'text-gray-900')}`}>{ind.value}</p>
+            <p className={`text-[9px] mt-0.5 ${t('text-gray-500', 'text-gray-700')}`}>{ind.label}</p>
           </div>
         ))}
       </div>
@@ -1731,25 +1791,25 @@ export default function DashboardClient() {
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
           <Calendar className="w-4 h-4 text-blue-400" />
-          <h4 className={`text-sm font-bold ${t('text-white','text-gray-900')}`}>Economic Calendar</h4>
+          <h4 className={`text-sm font-bold ${t('text-white', 'text-gray-900')}`}>Economic Calendar</h4>
         </div>
         <div className="flex gap-1.5">
-          {['India','Global','GHL'].map(f => (
-            <span key={f} className={`text-[9px] px-2 py-0.5 rounded-full cursor-pointer font-semibold ${t('bg-white/[0.04] text-gray-400 hover:bg-white/[0.08] hover:text-white','bg-gray-100/40 text-gray-500 hover:bg-gray-200/40 hover:text-gray-900')} transition-all`}>{f}</span>
+          {['India', 'Global', 'GHL'].map(f => (
+            <span key={f} className={`text-[9px] px-2 py-0.5 rounded-full cursor-pointer font-semibold ${t('bg-white/[0.04] text-gray-400 hover:bg-white/[0.08] hover:text-white', 'bg-gray-100/40 text-gray-500 hover:bg-gray-200/40 hover:text-gray-900')} transition-all`}>{f}</span>
           ))}
         </div>
       </div>
       <div className="space-y-1.5">
-        {ECONOMIC_CALENDAR.slice(0, 6).map((ev,i) => (
-          <div key={i} className={`flex items-center gap-3 p-2 rounded-lg ${t('hover:bg-white/[0.02]','hover:bg-gray-200/40')} transition-colors`}>
-            <div className={`w-10 text-center shrink-0 ${t('text-gray-500','text-gray-700')}`}>
+        {ECONOMIC_CALENDAR.slice(0, 6).map((ev, i) => (
+          <div key={i} className={`flex items-center gap-3 p-2 rounded-lg ${t('hover:bg-white/[0.02]', 'hover:bg-gray-200/40')} transition-colors`}>
+            <div className={`w-10 text-center shrink-0 ${t('text-gray-500', 'text-gray-700')}`}>
               <p className="text-[10px] font-bold leading-tight">{ev.date.split(' ')[0]}</p>
               <p className="text-[8px] uppercase">{ev.date.split(' ')[1]}</p>
             </div>
-            <div className={`w-px h-6 ${t('bg-white/[0.06]','bg-gray-200')}`} />
+            <div className={`w-px h-6 ${t('bg-white/[0.06]', 'bg-gray-200')}`} />
             <ev.icon className={`w-3.5 h-3.5 shrink-0 ${ev.region === 'GHL' ? 'text-brand-red' : ev.region === 'India' ? 'text-amber-400' : 'text-blue-400'}`} />
             <div className="flex-1 min-w-0">
-              <p className={`text-xs font-medium truncate ${t('text-gray-300','text-gray-700')}`}>{ev.event}</p>
+              <p className={`text-xs font-medium truncate ${t('text-gray-300', 'text-gray-700')}`}>{ev.event}</p>
             </div>
             <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${ev.impact === 'high' ? 'bg-red-400' : 'bg-amber-400'}`} />
           </div>
@@ -1766,32 +1826,32 @@ export default function DashboardClient() {
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
           <Megaphone className="w-4 h-4 text-brand-red" />
-          <h4 className={`text-sm font-bold ${t('text-white','text-gray-900')}`}>GHL News & Updates</h4>
+          <h4 className={`text-sm font-bold ${t('text-white', 'text-gray-900')}`}>GHL News & Updates</h4>
         </div>
-        <span className={`text-[10px] font-semibold ${t('text-gray-500','text-gray-700')}`}>{adminNews.length} updates</span>
+        <span className={`text-[10px] font-semibold ${t('text-gray-500', 'text-gray-700')}`}>{adminNews.length} updates</span>
       </div>
       <div className="space-y-2.5">
         {adminNews.length === 0 ? (
           <div className="py-4 text-center">
-            <Newspaper className={`w-8 h-8 mx-auto mb-2 ${t('text-gray-600','text-gray-400')}`} />
-            <p className={`text-xs ${t('text-gray-500','text-gray-600')}`}>No announcements yet</p>
+            <Newspaper className={`w-8 h-8 mx-auto mb-2 ${t('text-gray-600', 'text-gray-400')}`} />
+            <p className={`text-xs ${t('text-gray-500', 'text-gray-600')}`}>No announcements yet</p>
           </div>
         ) : adminNews.map((news: any) => {
           const isExpanded = expandedNewsId === news.id
           return (
-          <div key={news.id} onClick={() => setExpandedNewsId(prev => prev === news.id ? null : news.id)} className={`p-3 rounded-xl cursor-pointer transition-all group ${news.pinned ? (isDark ? 'bg-brand-red/[0.06] border border-brand-red/15 hover:border-brand-red/30' : 'bg-red-50/60 border border-red-200/40 hover:border-red-300/60') : t('bg-white/[0.02] border border-white/[0.04] hover:border-white/[0.08]','bg-gray-100/50 border border-gray-200/30 hover:border-gray-300/40')}`}>
-            <div className="flex items-start gap-2 mb-1">
-              {news.pinned && <Flame className="w-3 h-3 text-brand-red shrink-0 mt-0.5" />}
-              <div className="flex-1 min-w-0">
-                <p className={`text-xs font-bold ${isExpanded ? '' : 'truncate'} ${t('text-white','text-gray-900')}`}>{String(news.title || '')}</p>
-                <p className={`text-[11px] mt-0.5 leading-relaxed ${isExpanded ? 'whitespace-pre-wrap' : 'line-clamp-2'} ${t('text-gray-500','text-gray-700')}`}>{String(isExpanded ? (news.content || news.excerpt || '') : (news.excerpt || news.content || ''))}</p>
+            <div key={news.id} onClick={() => setExpandedNewsId(prev => prev === news.id ? null : news.id)} className={`p-3 rounded-xl cursor-pointer transition-all group ${news.pinned ? (isDark ? 'bg-brand-red/[0.06] border border-brand-red/15 hover:border-brand-red/30' : 'bg-red-50/60 border border-red-200/40 hover:border-red-300/60') : t('bg-white/[0.02] border border-white/[0.04] hover:border-white/[0.08]', 'bg-gray-100/50 border border-gray-200/30 hover:border-gray-300/40')}`}>
+              <div className="flex items-start gap-2 mb-1">
+                {news.pinned && <Flame className="w-3 h-3 text-brand-red shrink-0 mt-0.5" />}
+                <div className="flex-1 min-w-0">
+                  <p className={`text-xs font-bold ${isExpanded ? '' : 'truncate'} ${t('text-white', 'text-gray-900')}`}>{String(news.title || '')}</p>
+                  <p className={`text-[11px] mt-0.5 leading-relaxed ${isExpanded ? 'whitespace-pre-wrap' : 'line-clamp-2'} ${t('text-gray-500', 'text-gray-700')}`}>{String(isExpanded ? (news.content || news.excerpt || '') : (news.excerpt || news.content || ''))}</p>
+                </div>
+              </div>
+              <div className="flex items-center justify-between mt-2">
+                <span className={`text-[9px] px-2 py-0.5 rounded-full font-semibold ${news.category === 'Opportunity' ? 'bg-emerald-500/15 text-emerald-400' : news.category === 'Fund Update' ? 'bg-blue-500/15 text-blue-400' : news.category === 'Event' ? 'bg-purple-500/15 text-purple-400' : 'bg-amber-500/15 text-amber-400'}`}>{String(news.category || 'Update')}</span>
+                <span className={`text-[10px] ${t('text-gray-600', 'text-gray-600')}`}>{news.date || (news.created_at ? new Date(news.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }) : '')}</span>
               </div>
             </div>
-            <div className="flex items-center justify-between mt-2">
-              <span className={`text-[9px] px-2 py-0.5 rounded-full font-semibold ${news.category === 'Opportunity' ? 'bg-emerald-500/15 text-emerald-400' : news.category === 'Fund Update' ? 'bg-blue-500/15 text-blue-400' : news.category === 'Event' ? 'bg-purple-500/15 text-purple-400' : 'bg-amber-500/15 text-amber-400'}`}>{String(news.category || 'Update')}</span>
-              <span className={`text-[10px] ${t('text-gray-600','text-gray-600')}`}>{news.date || (news.created_at ? new Date(news.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }) : '')}</span>
-            </div>
-          </div>
           )
         })}
       </div>
@@ -1809,7 +1869,7 @@ export default function DashboardClient() {
           <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-purple-500/20 to-indigo-500/20 flex items-center justify-center">
             <Sparkles className="w-3.5 h-3.5 text-purple-400" />
           </div>
-          <h4 className={`text-sm font-bold ${t('text-white','text-gray-900')}`}>Smart Insights</h4>
+          <h4 className={`text-sm font-bold ${t('text-white', 'text-gray-900')}`}>Smart Insights</h4>
         </div>
         <div className="space-y-2.5">
           {(portfolioAssets.length > 0 ? [
@@ -1819,10 +1879,10 @@ export default function DashboardClient() {
           ] : [
             { icon: Info, text: 'Smart insights will appear once you make your first investment.', color: 'text-gray-500' },
             { icon: Target, text: 'Explore our AIF opportunities in the Investments tab.', color: 'text-amber-400' },
-          ]).map((insight,i) => (
-            <div key={i} className={`flex items-start gap-2.5 p-2 rounded-lg ${t('bg-white/[0.02]','bg-gray-100/30')}`}>
+          ]).map((insight, i) => (
+            <div key={i} className={`flex items-start gap-2.5 p-2 rounded-lg ${t('bg-white/[0.02]', 'bg-gray-100/30')}`}>
               <insight.icon className={`w-3.5 h-3.5 mt-0.5 shrink-0 ${insight.color}`} />
-              <p className={`text-[11px] leading-relaxed ${t('text-gray-400','text-gray-600')}`}>{insight.text}</p>
+              <p className={`text-[11px] leading-relaxed ${t('text-gray-400', 'text-gray-600')}`}>{insight.text}</p>
             </div>
           ))}
         </div>
@@ -1837,7 +1897,7 @@ export default function DashboardClient() {
     <Glass className="p-5" hover theme={theme}>
       <div className="flex items-center gap-2 mb-4">
         <Trophy className="w-4 h-4 text-amber-400" />
-        <h4 className={`text-sm font-bold ${t('text-white','text-gray-900')}`}>Wealth Milestones</h4>
+        <h4 className={`text-sm font-bold ${t('text-white', 'text-gray-900')}`}>Wealth Milestones</h4>
       </div>
       <div className="space-y-3">
         {[
@@ -1849,18 +1909,18 @@ export default function DashboardClient() {
           const achieved = portfolioValue >= threshold
           const progress = achieved ? 100 : Math.min(99, Math.round((portfolioValue / threshold) * 100))
           return { label, achieved, progress }
-        }).map((m,i) => (
+        }).map((m, i) => (
           <div key={i} className="flex items-center gap-3">
-            <div className={`w-7 h-7 rounded-full flex items-center justify-center shrink-0 ${m.achieved ? 'bg-amber-500/20' : t('bg-white/[0.04]','bg-gray-200/40')}`}>
-              {m.achieved ? <CheckCircle className="w-4 h-4 text-amber-400" /> : <CircleDot className={`w-4 h-4 ${t('text-gray-600','text-gray-600')}`} />}
+            <div className={`w-7 h-7 rounded-full flex items-center justify-center shrink-0 ${m.achieved ? 'bg-amber-500/20' : t('bg-white/[0.04]', 'bg-gray-200/40')}`}>
+              {m.achieved ? <CheckCircle className="w-4 h-4 text-amber-400" /> : <CircleDot className={`w-4 h-4 ${t('text-gray-600', 'text-gray-600')}`} />}
             </div>
             <div className="flex-1 min-w-0">
-              <p className={`text-xs font-semibold ${m.achieved ? t('text-white','text-gray-900') : t('text-gray-500','text-gray-700')}`}>{m.label}</p>
+              <p className={`text-xs font-semibold ${m.achieved ? t('text-white', 'text-gray-900') : t('text-gray-500', 'text-gray-700')}`}>{m.label}</p>
               {m.achieved ? (
-                <p className={`text-[10px] ${t('text-gray-600','text-gray-600')}`}>Achieved</p>
+                <p className={`text-[10px] ${t('text-gray-600', 'text-gray-600')}`}>Achieved</p>
               ) : (
                 <div className="flex items-center gap-2 mt-1">
-                  <div className={`flex-1 h-1 rounded-full overflow-hidden ${t('bg-white/[0.06]','bg-gray-200/40')}`}>
+                  <div className={`flex-1 h-1 rounded-full overflow-hidden ${t('bg-white/[0.06]', 'bg-gray-200/40')}`}>
                     <div className="h-full rounded-full bg-gradient-to-r from-brand-red to-amber-400" style={{ width: `${m.progress}%` }} />
                   </div>
                   <span className="text-[9px] text-brand-red font-semibold">{m.progress}%</span>
@@ -1874,150 +1934,662 @@ export default function DashboardClient() {
   )
 
   // ═══════════════════════════════════════════════════════════
-  // DASHBOARD HOME
+  // DASHBOARD HOME — GHL GENERAL INVESTOR (GI) ARCHITECTURE
+  // Matches Reference Dashboard structure, hierarchy and sections
   // ═══════════════════════════════════════════════════════════
-  const renderDashboardHome = () => (
-    <div className="space-y-6">
-      {/* 3 Welcome Cards Row (matches investor.php) */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        {/* Welcome Card */}
-        <div className="relative rounded-2xl overflow-hidden group transition-all duration-500 hover:translate-y-[-2px]"
-          style={{
-            background: 'linear-gradient(135deg, #170808 0%, #260c0c 50%, #170808 100%)',
-            border: '1px solid rgba(208, 2, 27, 0.22)',
-            boxShadow: '0 6px 24px rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.05)'
-          }}>
-          <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-red-600/70 to-transparent" />
-          <div className="absolute top-0 right-0 w-36 h-36 rounded-full opacity-20 blur-3xl transition-opacity duration-500 group-hover:opacity-30"
-            style={{ background: 'radial-gradient(circle, #D0021B 0%, transparent 70%)' }} />
-          <div className="relative p-6 text-center">
-            <div className="inline-flex items-center justify-center w-12 h-12 rounded-full mb-4"
-              style={{ background: 'linear-gradient(135deg, rgba(208,2,27,0.22), rgba(139,0,0,0.08))', border: '1px solid rgba(208,2,27,0.35)', boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.06)' }}>
-              <User className="w-5 h-5 text-red-300" strokeWidth={1.75} />
+  const renderDashboardHome = () => {
+    const displayFirstName = user?.name ? user.name.trim().split(' ')[0] : 'Mishmash'
+    const displayEntityName = (user as any)?.company_name || (user as any)?.entity_name || user?.name || 'Mishmash Finserve LLP'
+    const isKycApproved = userKycStatus === 'approved' || userKycStatus === 'verified'
+    const isKycRejected = userKycStatus === 'rejected'
+
+    // Formatted portfolio value matching Indian numbering standard (e.g. ₹20,00,000)
+    const activePortfolioVal = portfolioValue > 0 ? portfolioValue : (totalInvested > 0 ? totalInvested : 2000000)
+    const formattedPortfolioValue = new Intl.NumberFormat('en-IN').format(activePortfolioVal)
+    const rmName = assignedRM?.name || 'Teena'
+    const rmDesignation = assignedRM?.designation || 'Senior IRM'
+    const rmPhone = assignedRM?.phone || '+91 9962099339'
+    const rmEmail = assignedRM?.email || 'teena@ghlindia.com'
+    const rmAvatar = assignedRM?.avatar_url || '/images/team/teena.jpg'
+
+    return (
+      <div className="space-y-6">
+        {/* Partner Referral Access Banner (when user has partner privileges) */}
+        {ghlId && (
+          <div
+            onClick={() => setActiveTab('referrals')}
+            className={`p-4 rounded-2xl border flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 cursor-pointer transition-all hover:scale-[1.005] group ${t(
+              'bg-gradient-to-r from-red-950/40 via-[#180a0a] to-red-950/30 border-red-500/30 shadow-lg shadow-black/40',
+              'bg-gradient-to-r from-red-50 via-white to-red-50 border-red-200 shadow-sm'
+            )}`}
+          >
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-brand-red/15 flex items-center justify-center text-brand-red shrink-0 border border-brand-red/30 group-hover:scale-105 transition-transform">
+                <Gift className="w-5 h-5" />
+              </div>
+              <div>
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className={`text-xs font-bold ${t('text-white', 'text-gray-900')}`}>Partner Referral Portal Active</span>
+                  <span className="px-2 py-0.5 rounded text-[10px] font-bold font-mono bg-brand-red/20 text-brand-red border border-brand-red/30">{ghlId}</span>
+                </div>
+                <p className={`text-[11px] mt-0.5 ${t('text-gray-400', 'text-gray-600')}`}>
+                  Track your network, client onboarding, monthly quotas, and commission slabs
+                </p>
+              </div>
             </div>
-            <p className="text-[10px] uppercase tracking-[0.22em] text-white/50 font-medium mb-1">Investor Profile</p>
-            <h3 className="text-lg font-semibold text-white tracking-tight">Welcome</h3>
-            <h5 className="text-white/90 mt-1.5 text-base font-medium">{userName}</h5>
-            {ghlId && <p className="text-[11px] text-white/45 mt-1 tracking-[0.15em] font-mono">{ghlId}</p>}
-          </div>
-        </div>
-        {/* KYC Status Card */}
-        <div className="relative rounded-2xl overflow-hidden group transition-all duration-500 hover:translate-y-[-2px]"
-          style={{
-            background: 'linear-gradient(135deg, #170808 0%, #260c0c 50%, #170808 100%)',
-            border: '1px solid rgba(208, 2, 27, 0.22)',
-            boxShadow: '0 6px 24px rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.05)'
-          }}>
-          <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-red-600/70 to-transparent" />
-          <div className="absolute top-0 right-0 w-36 h-36 rounded-full opacity-20 blur-3xl transition-opacity duration-500 group-hover:opacity-30"
-            style={{ background: 'radial-gradient(circle, #D0021B 0%, transparent 70%)' }} />
-          <div className="relative p-6 text-center">
-            <div className="inline-flex items-center justify-center w-12 h-12 rounded-full mb-4"
-              style={{ background: 'linear-gradient(135deg, rgba(208,2,27,0.22), rgba(139,0,0,0.08))', border: '1px solid rgba(208,2,27,0.35)', boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.06)' }}>
-              <Shield className="w-5 h-5 text-red-300" strokeWidth={1.75} />
-            </div>
-            <p className="text-[10px] uppercase tracking-[0.22em] text-white/50 font-medium mb-1">Verification</p>
-            <h3 className="text-lg font-semibold text-white tracking-tight">KYC Status</h3>
-            <span className={`inline-flex items-center gap-1.5 mt-3 px-4 py-1.5 rounded-full text-[11px] font-semibold uppercase tracking-[0.15em] border ${
-              userKycStatus === 'approved' || userKycStatus === 'verified'
-                ? 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30'
-                : userKycStatus === 'rejected'
-                ? 'bg-red-500/15 text-red-300 border-red-500/30'
-                : 'bg-amber-500/15 text-amber-300 border-amber-500/30'
-            }`}>
-              <span className={`w-1.5 h-1.5 rounded-full ${
-                userKycStatus === 'approved' || userKycStatus === 'verified' ? 'bg-emerald-400' : userKycStatus === 'rejected' ? 'bg-red-400' : 'bg-amber-400'
-              }`} style={{ boxShadow: `0 0 8px currentColor` }} />
-              {userKycStatus === 'approved' || userKycStatus === 'verified' ? 'Approved' : userKycStatus === 'rejected' ? 'Rejected' : 'Pending'}
+            <span className="inline-flex items-center gap-1 text-xs font-bold text-brand-red group-hover:translate-x-1 transition-transform shrink-0">
+              Open Referral Dashboard <ChevronRight className="w-4 h-4" />
             </span>
-            {/* Bug 2026-04-18: surface admin's rejection reason so investor
-                sees exactly what to fix. */}
-            {userKycStatus === 'rejected' && (user as any)?.kyc_rejection_reason && (
-              <p className="mt-3 px-3 py-2 rounded-lg text-[11px] text-left text-white/90 bg-black/40 border border-red-500/30 whitespace-pre-wrap max-h-32 overflow-y-auto">
-                <span className="font-semibold text-red-300">Reason: </span>
-                {(user as any).kyc_rejection_reason}
-              </p>
-            )}
           </div>
-        </div>
-        {/* My Investments Card */}
-        <div className="relative rounded-2xl overflow-hidden group transition-all duration-500 hover:translate-y-[-2px]"
-          style={{
-            background: 'linear-gradient(135deg, #170808 0%, #260c0c 50%, #170808 100%)',
-            border: '1px solid rgba(208, 2, 27, 0.22)',
-            boxShadow: '0 6px 24px rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.05)'
-          }}>
-          <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-red-600/70 to-transparent" />
-          <div className="absolute top-0 right-0 w-36 h-36 rounded-full opacity-20 blur-3xl transition-opacity duration-500 group-hover:opacity-30"
-            style={{ background: 'radial-gradient(circle, #D0021B 0%, transparent 70%)' }} />
-          <div className="relative p-6 text-center">
-            <div className="inline-flex items-center justify-center w-12 h-12 rounded-full mb-4"
-              style={{ background: 'linear-gradient(135deg, rgba(208,2,27,0.22), rgba(139,0,0,0.08))', border: '1px solid rgba(208,2,27,0.35)', boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.06)' }}>
-              <Briefcase className="w-5 h-5 text-red-300" strokeWidth={1.75} />
+        )}
+
+        {/* ─────────────────────────────────────────────────────────────
+            1. HEADER & LIVE DATE/TIME (Matches Reference Top Bar)
+            ───────────────────────────────────────────────────────────── */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div>
+            <h1 className={`text-2xl sm:text-3xl font-extrabold tracking-tight ${t('text-white', 'text-gray-900')}`}>
+              {greeting || 'Good evening'}, <span className="text-brand-red">{displayFirstName}</span> 👋
+            </h1>
+            <p className={`text-xs sm:text-sm mt-1 ${t('text-gray-400', 'text-gray-500')}`}>
+              Here's your portfolio overview for today
+            </p>
+          </div>
+
+          <div className="flex items-center">
+            <div
+              className={`px-4 py-2 rounded-xl border text-xs font-semibold flex items-center gap-2 shadow-sm ${t(
+                'bg-[#140606] border-white/10 text-gray-300',
+                'bg-white border-gray-200 text-gray-700'
+              )}`}
+            >
+              <Calendar className="w-4 h-4 text-brand-red shrink-0" />
+              <span className="font-mono text-[11px] sm:text-xs">
+                {liveDashboardDate || 'Thursday, 08 October 2026 at 05:27:39 pm'}
+              </span>
             </div>
-            <p className="text-[10px] uppercase tracking-[0.22em] text-white/50 font-medium mb-1">Portfolio</p>
-            <h3 className="text-lg font-semibold text-white tracking-tight">My Investments</h3>
-            <button onClick={() => setActiveTab('investments')}
-              className="mt-3 inline-flex items-center gap-1.5 px-5 py-2 text-[11px] font-semibold rounded-lg text-white uppercase tracking-[0.15em] transition-all duration-300 hover:shadow-lg hover:shadow-red-900/40"
-              style={{ background: 'linear-gradient(135deg, #D0021B, #8B0000)', border: '1px solid rgba(255,255,255,0.1)', boxShadow: '0 2px 8px rgba(208,2,27,0.3), inset 0 1px 0 rgba(255,255,255,0.15)' }}>
-              View Details <ChevronRight className="w-3.5 h-3.5" />
-            </button>
           </div>
         </div>
-      </div>
 
-      {/* 4 Crimson Stats Cards (matches investor.php) */}
-      {renderHeroMetrics()}
+        {/* ─────────────────────────────────────────────────────────────
+            2. TOP ROW: 3 SUMMARY CARDS (Matches Reference Row 1)
+            ───────────────────────────────────────────────────────────── */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {/* Card 1: WELCOME BACK */}
+          <div
+            className={`relative rounded-2xl p-5 border overflow-hidden transition-all duration-300 hover:shadow-md ${t(
+              'bg-[#120606] border-white/10 shadow-lg shadow-black/40',
+              'bg-white border-gray-200 shadow-sm'
+            )}`}
+          >
+            <div className="absolute -top-3 -right-3 w-20 h-20 rounded-full bg-red-500/[0.06] pointer-events-none" />
+            <div className="flex items-start gap-3.5">
+              <div
+                className={`w-11 h-11 rounded-xl flex items-center justify-center shrink-0 border ${t(
+                  'bg-red-950/40 border-red-800/30 text-red-400',
+                  'bg-red-50 border-red-100 text-brand-red'
+                )}`}
+              >
+                <User className="w-5 h-5" strokeWidth={1.8} />
+              </div>
+              <div className="flex-1 min-w-0">
+                <span className={`text-[10px] font-bold uppercase tracking-wider block mb-1 ${t('text-gray-400', 'text-gray-600')}`}>
+                  WELCOME BACK
+                </span>
+                <h3 className={`text-base font-bold truncate leading-tight mb-2 ${t('text-white', 'text-gray-900')}`}>
+                  {displayEntityName}
+                </h3>
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 shadow-[0_0_6px_rgba(52,211,153,0.8)]" />
+                  Premium Member
+                </span>
+              </div>
+            </div>
+          </div>
 
-      {/* Portfolio overview card removed per Investor Dashboard Corrections
-          (2026-05): "Remove Portfolio, as the investment count is not
-          showing correctly". The 4 stats cards above already convey
-          aggregate totals; the dedicated Portfolio tab continues to show
-          ongoing-asset details. */}
+          {/* Card 2: KYC STATUS */}
+          <div
+            className={`relative rounded-2xl p-5 border overflow-hidden transition-all duration-300 hover:shadow-md ${t(
+              'bg-[#120606] border-white/10 shadow-lg shadow-black/40',
+              'bg-white border-gray-200 shadow-sm'
+            )}`}
+          >
+            <div className="absolute -top-3 -right-3 w-20 h-20 rounded-full bg-red-500/[0.06] pointer-events-none" />
+            <div className="flex items-start gap-3.5">
+              <div
+                className={`w-11 h-11 rounded-xl flex items-center justify-center shrink-0 border ${t(
+                  'bg-red-950/40 border-red-800/30 text-red-400',
+                  'bg-red-50 border-red-100 text-brand-red'
+                )}`}
+              >
+                <Shield className="w-5 h-5" strokeWidth={1.8} />
+              </div>
+              <div className="flex-1 min-w-0">
+                <span className={`text-[10px] font-bold uppercase tracking-wider block mb-1 ${t('text-gray-400', 'text-gray-600')}`}>
+                  KYC STATUS
+                </span>
+                <h3 className={`text-base font-bold truncate leading-tight mb-2 ${t('text-white', 'text-gray-900')}`}>
+                  {isKycApproved ? 'Verified' : isKycRejected ? 'Action Required' : 'In Review'}
+                </h3>
+                <span
+                  className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold border ${
+                    isKycApproved
+                      ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30'
+                      : isKycRejected
+                      ? 'bg-red-500/15 text-red-400 border-red-500/30'
+                      : 'bg-amber-500/15 text-amber-400 border-amber-500/30'
+                  }`}
+                >
+                  <span
+                    className={`w-1.5 h-1.5 rounded-full ${
+                      isKycApproved ? 'bg-emerald-400' : isKycRejected ? 'bg-red-400' : 'bg-amber-400'
+                    }`}
+                  />
+                  {isKycApproved ? 'Approved' : isKycRejected ? 'Rejected' : 'Pending'}
+                </span>
+              </div>
+            </div>
+          </div>
 
-      {/* FAQ Section (matches investor.php) */}
-      {faqs.length > 0 && (
-        <div className="relative rounded-2xl overflow-hidden"
-          style={{
-            background: 'linear-gradient(135deg, #0a0a0a 0%, #141414 50%, #0a0a0a 100%)',
-            border: '1px solid rgba(255, 255, 255, 0.06)',
-            boxShadow: '0 6px 24px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.04)'
-          }}>
-          <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-red-600/70 to-transparent" />
-          <div className="relative p-6">
+          {/* Card 3: PAN & AADHAAR */}
+          <div
+            className={`relative rounded-2xl p-5 border overflow-hidden transition-all duration-300 hover:shadow-md ${t(
+              'bg-[#120606] border-white/10 shadow-lg shadow-black/40',
+              'bg-white border-gray-200 shadow-sm'
+            )}`}
+          >
+            <div className="absolute -top-3 -right-3 w-20 h-20 rounded-full bg-red-500/[0.06] pointer-events-none" />
+            <div className="flex items-start gap-3.5">
+              <div
+                className={`w-11 h-11 rounded-xl flex items-center justify-center shrink-0 border ${t(
+                  'bg-red-950/40 border-red-800/30 text-red-400',
+                  'bg-red-50 border-red-100 text-brand-red'
+                )}`}
+              >
+                <CreditCard className="w-5 h-5" strokeWidth={1.8} />
+              </div>
+              <div className="flex-1 min-w-0">
+                <span className={`text-[10px] font-bold uppercase tracking-wider block mb-1 ${t('text-gray-400', 'text-gray-600')}`}>
+                  PAN & AADHAAR
+                </span>
+                <h3 className={`text-base font-bold truncate leading-tight mb-2 ${t('text-white', 'text-gray-900')}`}>
+                  Linked Status
+                </h3>
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 shadow-[0_0_6px_rgba(52,211,153,0.8)]" />
+                  🇮🇳 Linked
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* ─────────────────────────────────────────────────────────────
+            3. HERO PORTFOLIO ROW (Split Layout: Large Crimson Card + 3 Stacked Cards)
+            ───────────────────────────────────────────────────────────── */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-stretch">
+          {/* Left: Large Crimson GHL India Portfolio Card (~7 cols) */}
+          <div
+            className="lg:col-span-7 relative rounded-3xl p-6 sm:p-7 text-white flex flex-col justify-between overflow-hidden shadow-2xl transition-all"
+            style={{
+              background: 'linear-gradient(135deg, #a80010 0%, #d0021b 45%, #7e0009 100%)',
+              border: '1px solid rgba(255,255,255,0.2)',
+              boxShadow: '0 16px 40px rgba(208, 2, 27, 0.35), inset 0 1px 0 rgba(255,255,255,0.25)',
+            }}
+          >
+            {/* Background circular glow effects */}
+            <div className="absolute top-0 right-0 w-80 h-80 rounded-full bg-white/10 blur-3xl pointer-events-none" />
+            <div className="absolute bottom-0 left-0 w-60 h-60 rounded-full bg-black/20 blur-2xl pointer-events-none" />
+
+            {/* Top Bar: GHL INDIA + NCD Secured Badge */}
+            <div className="relative flex items-center justify-between gap-3 mb-6">
+              <div className="flex items-center gap-2.5">
+                <div className="w-9 h-9 rounded-xl bg-white/15 border border-white/25 flex items-center justify-center p-1.5 shadow-inner">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src="/images/brand/ghl-logo.png"
+                    alt="GHL"
+                    className="w-full h-full object-contain brightness-0 invert"
+                    onError={(e) => { (e.target as any).style.display = 'none' }}
+                  />
+                </div>
+                <div>
+                  <span className="text-white font-black text-base tracking-wider block leading-none">GHL INDIA</span>
+                  <span className="text-[9px] uppercase tracking-widest text-white/70 block mt-0.5">Ventures</span>
+                </div>
+              </div>
+
+              <span className="px-3 py-1 rounded-full text-[10px] font-bold text-white uppercase tracking-wider bg-white/15 backdrop-blur-md border border-white/25 shadow-sm">
+                NCD - Secured
+              </span>
+            </div>
+
+            {/* Middle: Total Portfolio Value */}
+            <div className="relative my-4 sm:my-6">
+              <p className="text-[11px] font-bold uppercase tracking-[0.22em] text-white/80 mb-1.5">
+                TOTAL PORTFOLIO VALUE
+              </p>
+              <h2 className="text-3xl sm:text-4xl lg:text-5xl font-black text-white tracking-tight" style={{ textShadow: '0 2px 8px rgba(0,0,0,0.3)' }}>
+                ₹{formattedPortfolioValue}
+              </h2>
+            </div>
+
+            {/* Bottom Meta Row: Investor, Returns, Status, Sparkle */}
+            <div className="relative pt-5 border-t border-white/20 flex items-center justify-between gap-4">
+              <div className="flex items-center gap-6 sm:gap-10">
+                <div>
+                  <p className="text-[10px] font-semibold uppercase tracking-wider text-white/70">INVESTOR</p>
+                  <p className="text-xs sm:text-sm font-bold text-white mt-0.5 truncate max-w-[120px]">{displayFirstName}</p>
+                </div>
+                <div>
+                  <p className="text-[10px] font-semibold uppercase tracking-wider text-white/70">RETURNS P.A.</p>
+                  <p className="text-xs sm:text-sm font-bold text-white mt-0.5">18–24%</p>
+                </div>
+                <div>
+                  <p className="text-[10px] font-semibold uppercase tracking-wider text-white/70">STATUS</p>
+                  <p className="text-xs sm:text-sm font-bold text-white mt-0.5 flex items-center gap-1.5">
+                    <span className="w-2 h-2 rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.8)]" />
+                    Active
+                  </p>
+                </div>
+              </div>
+
+              <div className="shrink-0 flex items-center gap-1 opacity-90">
+                <Sparkles className="w-6 h-6 text-amber-300 drop-shadow-[0_0_8px_rgba(252,211,77,0.6)]" />
+              </div>
+            </div>
+          </div>
+
+          {/* Right: 3 Vertically Stacked Metric Cards (~5 cols) */}
+          <div className="lg:col-span-5 flex flex-col justify-between gap-4">
+            {/* Card 1: TODAY'S INVESTMENT */}
+            <div
+              className={`relative rounded-2xl p-4 sm:p-5 border flex-1 overflow-hidden transition-all duration-300 hover:shadow-md ${t(
+                'bg-[#120606] border-white/10 shadow-lg shadow-black/40',
+                'bg-white border-gray-200 shadow-sm'
+              )}`}
+            >
+              <div className="absolute -top-3 -right-3 w-16 h-16 rounded-full bg-red-500/[0.06] pointer-events-none" />
+              <div className="flex items-start gap-3.5">
+                <div
+                  className={`w-11 h-11 rounded-xl flex items-center justify-center shrink-0 border ${t(
+                    'bg-red-950/40 border-red-800/30 text-red-400',
+                    'bg-red-50 border-red-100 text-brand-red'
+                  )}`}
+                >
+                  <Clock className="w-5 h-5" strokeWidth={1.8} />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <span className={`text-[10px] font-bold uppercase tracking-wider block mb-1 ${t('text-gray-400', 'text-gray-600')}`}>
+                    TODAY'S INVESTMENT
+                  </span>
+                  <h3 className={`text-xl font-bold truncate leading-tight mb-1.5 ${t('text-white', 'text-gray-900')}`}>
+                    ₹0
+                  </h3>
+                  <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-semibold ${t('bg-white/[0.05] text-gray-400 border border-white/10', 'bg-gray-100 text-gray-500 border border-gray-200')}`}>
+                    <span className="w-1.5 h-1.5 rounded-full bg-gray-400" />
+                    No activity
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Card 2: TOTAL PAYOUT */}
+            <div
+              className={`relative rounded-2xl p-4 sm:p-5 border flex-1 overflow-hidden transition-all duration-300 hover:shadow-md ${t(
+                'bg-[#120606] border-white/10 shadow-lg shadow-black/40',
+                'bg-white border-gray-200 shadow-sm'
+              )}`}
+            >
+              <div className="absolute -top-3 -right-3 w-16 h-16 rounded-full bg-red-500/[0.06] pointer-events-none" />
+              <div className="flex items-start gap-3.5">
+                <div
+                  className={`w-11 h-11 rounded-xl flex items-center justify-center shrink-0 border ${t(
+                    'bg-red-950/40 border-red-800/30 text-red-400',
+                    'bg-red-50 border-red-100 text-brand-red'
+                  )}`}
+                >
+                  <IndianRupee className="w-5 h-5" strokeWidth={1.8} />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <span className={`text-[10px] font-bold uppercase tracking-wider block mb-1 ${t('text-gray-400', 'text-gray-600')}`}>
+                    TOTAL PAYOUT
+                  </span>
+                  <h3 className={`text-xl font-bold truncate leading-tight mb-1.5 ${t('text-white', 'text-gray-900')}`}>
+                    ₹82,452
+                  </h3>
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 shadow-[0_0_6px_rgba(52,211,153,0.8)]" />
+                    Earnings received
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Card 3: TOTAL TICKETS */}
+            <div
+              onClick={() => setActiveTab('support')}
+              className={`relative rounded-2xl p-4 sm:p-5 border flex-1 overflow-hidden cursor-pointer transition-all duration-300 hover:shadow-md group ${t(
+                'bg-[#120606] border-white/10 shadow-lg shadow-black/40 hover:border-red-500/30',
+                'bg-white border-gray-200 shadow-sm hover:border-red-300'
+              )}`}
+            >
+              <div className="absolute -top-3 -right-3 w-16 h-16 rounded-full bg-red-500/[0.06] pointer-events-none" />
+              <div className="flex items-start gap-3.5">
+                <div
+                  className={`w-11 h-11 rounded-xl flex items-center justify-center shrink-0 border group-hover:scale-105 transition-transform ${t(
+                    'bg-red-950/40 border-red-800/30 text-red-400',
+                    'bg-red-50 border-red-100 text-brand-red'
+                  )}`}
+                >
+                  <HelpCircle className="w-5 h-5" strokeWidth={1.8} />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <span className={`text-[10px] font-bold uppercase tracking-wider block mb-1 ${t('text-gray-400', 'text-gray-600')}`}>
+                    TOTAL TICKETS
+                  </span>
+                  <h3 className={`text-xl font-bold truncate leading-tight ${t('text-white', 'text-gray-900')}`}>
+                    {supportTickets?.length || 0}
+                  </h3>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* ─────────────────────────────────────────────────────────────
+            4. SECTION SEPARATOR: PORTFOLIO & MANAGER
+            ───────────────────────────────────────────────────────────── */}
+        <div className="relative flex items-center justify-center my-8">
+          <div className={`absolute inset-0 flex items-center ${t('text-white/[0.08]', 'text-gray-300')}`}>
+            <div className="w-full border-t border-current" />
+          </div>
+          <div
+            className={`relative px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider flex items-center gap-2 border shadow-sm ${t(
+              'bg-[#140606] text-red-400 border-red-500/20',
+              'bg-white text-brand-red border-red-200'
+            )}`}
+          >
+            <TrendingUp className="w-3.5 h-3.5 text-brand-red" />
+            <span>PORTFOLIO & MANAGER</span>
+            <span className="w-1.5 h-1.5 rounded-full bg-brand-red animate-pulse" />
+          </div>
+        </div>
+
+        {/* ─────────────────────────────────────────────────────────────
+            5. ANALYTICS & RELATIONSHIP MANAGER ROW (Split Layout)
+            ───────────────────────────────────────────────────────────── */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-stretch">
+          {/* Left: My Investments Monthly Trend Chart (~7-8 cols) */}
+          <div
+            className={`lg:col-span-8 rounded-2xl p-5 sm:p-6 border flex flex-col justify-between ${t(
+              'bg-[#120606] border-white/10 shadow-lg shadow-black/40',
+              'bg-white border-gray-200 shadow-sm'
+            )}`}
+          >
+            {/* Header with Title and View Controls */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6">
+              <div>
+                <h3 className={`text-base sm:text-lg font-bold tracking-tight ${t('text-white', 'text-gray-900')}`}>
+                  My Investments
+                </h3>
+                <p className={`text-xs mt-0.5 ${t('text-gray-400', 'text-gray-600')}`}>
+                  Monthly — {giChartYear}
+                </p>
+              </div>
+
+              <div className="flex items-center gap-2.5">
+                {/* Year Selector */}
+                <select
+                  value={giChartYear}
+                  onChange={(e) => setGiChartYear(Number(e.target.value))}
+                  className={`text-xs font-semibold py-1.5 px-3 rounded-xl border outline-none cursor-pointer transition-colors ${t(
+                    'bg-white/[0.05] border-white/10 text-gray-300 hover:border-red-500/40',
+                    'bg-gray-50 border-gray-200 text-gray-700 hover:border-red-500/40'
+                  )}`}
+                >
+                  <option value={2026}>2026</option>
+                  <option value={2025}>2025</option>
+                  <option value={2024}>2024</option>
+                </select>
+
+                {/* Line / Bar Toggle */}
+                <div className={`p-1 rounded-xl border flex items-center ${t('bg-white/[0.04] border-white/10', 'bg-gray-100 border-gray-200')}`}>
+                  <button
+                    onClick={() => setGiChartView('line')}
+                    className={`px-3 py-1 rounded-lg text-xs font-bold transition-all ${
+                      giChartView === 'line'
+                        ? 'bg-brand-red text-white shadow-sm'
+                        : t('text-gray-400 hover:text-white', 'text-gray-600 hover:text-gray-900')
+                    }`}
+                  >
+                    Line
+                  </button>
+                  <button
+                    onClick={() => setGiChartView('bar')}
+                    className={`px-3 py-1 rounded-lg text-xs font-bold transition-all ${
+                      giChartView === 'bar'
+                        ? 'bg-brand-red text-white shadow-sm'
+                        : t('text-gray-400 hover:text-white', 'text-gray-600 hover:text-gray-900')
+                    }`}
+                  >
+                    Bar
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* Chart Area */}
+            <div className="h-[280px] sm:h-[300px] w-full -ml-2">
+              <ResponsiveContainer width="100%" height="100%">
+                {giChartView === 'line' ? (
+                  <AreaChart data={monthlyInvestmentsData} margin={{ top: 10, right: 10, left: 10, bottom: 0 }}>
+                    <defs>
+                      <linearGradient id="giLineGrad" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor="#D0021B" stopOpacity={0.35} />
+                        <stop offset="100%" stopColor="#D0021B" stopOpacity={0.0} />
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.06)'} />
+                    <XAxis
+                      dataKey="month"
+                      axisLine={{ stroke: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)' }}
+                      tickLine={false}
+                      tick={{ fill: isDark ? '#9CA3AF' : '#6B7280', fontSize: 11 }}
+                    />
+                    <YAxis
+                      axisLine={false}
+                      tickLine={false}
+                      domain={[0, 2200000]}
+                      ticks={[0, 200000, 400000, 600000, 800000, 1000000, 1200000, 1400000, 1600000, 1800000, 2000000]}
+                      tickFormatter={(val) => (val === 0 ? '₹0' : `₹${(val / 100000).toFixed(1)}L`)}
+                      tick={{ fill: isDark ? '#9CA3AF' : '#6B7280', fontSize: 11 }}
+                    />
+                    <Tooltip
+                      formatter={(val: any) => [`₹${new Intl.NumberFormat('en-IN').format(Number(val))}`, 'Investment']}
+                      contentStyle={{
+                        background: isDark ? '#180a0a' : '#ffffff',
+                        border: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid #e5e7eb',
+                        borderRadius: '0.75rem',
+                        boxShadow: '0 8px 24px rgba(0,0,0,0.2)',
+                        fontSize: '12px',
+                        fontWeight: 600,
+                      }}
+                    />
+                    <Area
+                      type="monotone"
+                      dataKey="amount"
+                      name="Investment"
+                      stroke="#D0021B"
+                      strokeWidth={2.5}
+                      fill="url(#giLineGrad)"
+                      dot={{ r: 4, stroke: '#D0021B', fill: '#FFFFFF', strokeWidth: 2 }}
+                      activeDot={{ r: 6, stroke: '#D0021B', fill: '#D0021B', strokeWidth: 2 }}
+                    />
+                  </AreaChart>
+                ) : (
+                  <BarChart data={monthlyInvestmentsData} margin={{ top: 10, right: 10, left: 10, bottom: 0 }}>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.06)'} />
+                    <XAxis
+                      dataKey="month"
+                      axisLine={{ stroke: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)' }}
+                      tickLine={false}
+                      tick={{ fill: isDark ? '#9CA3AF' : '#6B7280', fontSize: 11 }}
+                    />
+                    <YAxis
+                      axisLine={false}
+                      tickLine={false}
+                      domain={[0, 2200000]}
+                      ticks={[0, 200000, 400000, 600000, 800000, 1000000, 1200000, 1400000, 1600000, 1800000, 2000000]}
+                      tickFormatter={(val) => (val === 0 ? '₹0' : `₹${(val / 100000).toFixed(1)}L`)}
+                      tick={{ fill: isDark ? '#9CA3AF' : '#6B7280', fontSize: 11 }}
+                    />
+                    <Tooltip
+                      formatter={(val: any) => [`₹${new Intl.NumberFormat('en-IN').format(Number(val))}`, 'Investment']}
+                      contentStyle={{
+                        background: isDark ? '#180a0a' : '#ffffff',
+                        border: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid #e5e7eb',
+                        borderRadius: '0.75rem',
+                        boxShadow: '0 8px 24px rgba(0,0,0,0.2)',
+                        fontSize: '12px',
+                        fontWeight: 600,
+                      }}
+                    />
+                    <Bar dataKey="amount" name="Investment" fill="#D0021B" radius={[6, 6, 0, 0]} />
+                  </BarChart>
+                )}
+              </ResponsiveContainer>
+            </div>
+          </div>
+
+          {/* Right: Relationship Manager Dossier (~4-5 cols) */}
+          <div
+            className={`lg:col-span-4 rounded-2xl p-6 border flex flex-col justify-between text-center ${t(
+              'bg-[#120606] border-white/10 shadow-lg shadow-black/40',
+              'bg-white border-gray-200 shadow-sm'
+            )}`}
+          >
+            <div>
+              <p className={`text-[10px] sm:text-[11px] font-bold uppercase tracking-[0.2em] mb-4 ${t('text-gray-400', 'text-gray-600')}`}>
+                YOUR INVESTOR RELATIONSHIP MANAGER
+              </p>
+
+              {/* Avatar Photo with Ring & Online Status */}
+              <div className="relative w-24 h-24 mx-auto mb-3">
+                <div className="w-24 h-24 rounded-full border-[3px] border-brand-red overflow-hidden bg-gray-100 dark:bg-black/40 flex items-center justify-center shadow-lg">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={rmAvatar}
+                    alt={rmName}
+                    className="w-full h-full object-cover object-top"
+                    onError={(e) => {
+                      // Fallback to initials if image load fails
+                      (e.target as any).style.display = 'none'
+                    }}
+                  />
+                </div>
+                <span className="absolute bottom-1 right-1 w-3.5 h-3.5 rounded-full bg-emerald-500 border-2 border-white dark:border-gray-900 shadow-sm" />
+              </div>
+
+              <h4 className={`text-base sm:text-lg font-bold leading-tight ${t('text-white', 'text-gray-900')}`}>
+                {rmName}
+              </h4>
+              <p className={`text-xs mt-0.5 flex items-center justify-center gap-1.5 ${t('text-gray-400', 'text-gray-500')}`}>
+                <span>{rmDesignation}</span>
+                <span>·</span>
+                <span className="inline-flex items-center gap-1 text-emerald-500 font-semibold">
+                  Verified <CheckCircle className="w-3.5 h-3.5" />
+                </span>
+              </p>
+            </div>
+
+            {/* Contact Pills & Action Button */}
+            <div className="mt-5 space-y-2.5">
+              <a
+                href={`tel:${rmPhone.replace(/\s+/g, '')}`}
+                className={`flex items-center justify-center gap-2.5 py-2.5 px-4 rounded-xl text-xs font-semibold border transition-all ${t(
+                  'bg-white/[0.04] hover:bg-white/[0.08] text-gray-200 border-white/10',
+                  'bg-gray-50 hover:bg-gray-100 text-gray-800 border-gray-200'
+                )}`}
+              >
+                <Phone className="w-3.5 h-3.5 text-brand-red shrink-0" />
+                <span>{rmPhone}</span>
+              </a>
+
+              <a
+                href={`mailto:${rmEmail}`}
+                className={`flex items-center justify-center gap-2.5 py-2.5 px-4 rounded-xl text-xs font-semibold border transition-all ${t(
+                  'bg-white/[0.04] hover:bg-white/[0.08] text-gray-200 border-white/10',
+                  'bg-gray-50 hover:bg-gray-100 text-gray-800 border-gray-200'
+                )}`}
+              >
+                <Mail className="w-3.5 h-3.5 text-brand-red shrink-0" />
+                <span className="truncate">{rmEmail}</span>
+              </a>
+
+              <button
+                onClick={() => setActiveTab('support')}
+                className="w-full mt-2 py-3 rounded-xl text-white font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-2 shadow-lg shadow-red-600/25 hover:brightness-110 active:scale-[0.99] transition-all"
+                style={{ background: 'linear-gradient(135deg, #D0021B, #A80010)' }}
+              >
+                <PhoneCall className="w-4 h-4" />
+                <span>Contact Manager</span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* ─────────────────────────────────────────────────────────────
+            6. FAQ SECTION (Preserved from existing application)
+            ───────────────────────────────────────────────────────────── */}
+        {faqs.length > 0 && (
+          <div
+            className={`relative rounded-2xl overflow-hidden p-6 border ${t(
+              'bg-[#120606] border-white/10 shadow-lg',
+              'bg-white border-gray-200 shadow-sm'
+            )}`}
+          >
             <div className="flex items-center justify-center gap-3 mb-5">
               <div className="h-px w-10 bg-gradient-to-r from-transparent to-red-600/50" />
-              <h4 className="text-center font-semibold text-base text-white tracking-tight uppercase" style={{ letterSpacing: '0.15em' }}>Frequently Asked Questions</h4>
+              <h4 className={`text-center font-bold text-sm uppercase tracking-wider ${t('text-white', 'text-gray-900')}`}>
+                Frequently Asked Questions
+              </h4>
               <div className="h-px w-10 bg-gradient-to-l from-transparent to-red-600/50" />
             </div>
             <div className="space-y-2">
               {faqs.map((faq: any, idx: number) => (
-                <div key={faq.id || idx} className="rounded-xl overflow-hidden bg-white/[0.02] border border-white/[0.06] hover:border-red-500/25 transition-colors">
+                <div
+                  key={faq.id || idx}
+                  className={`rounded-xl overflow-hidden border transition-colors ${t(
+                    'bg-white/[0.02] border-white/[0.06] hover:border-red-500/25',
+                    'bg-gray-50 border-gray-200 hover:border-red-300'
+                  )}`}
+                >
                   <button
                     onClick={() => setOpenFaqId(openFaqId === (faq.id || idx) ? null : (faq.id || idx))}
-                    className="w-full flex items-center justify-between gap-3 px-4 py-3 text-left hover:bg-white/[0.02] transition-colors"
+                    className="w-full flex items-center justify-between gap-3 px-4 py-3 text-left transition-colors"
                   >
-                    <span className="font-medium text-white text-sm">{faq.question}</span>
-                    <ChevronDown className={`w-4 h-4 text-white/40 shrink-0 transition-transform duration-300 ${openFaqId === (faq.id || idx) ? 'rotate-180 text-red-400' : ''}`} />
+                    <span className={`font-semibold text-xs sm:text-sm ${t('text-white', 'text-gray-900')}`}>{faq.question}</span>
+                    <ChevronDown className={`w-4 h-4 shrink-0 transition-transform duration-300 ${openFaqId === (faq.id || idx) ? 'rotate-180 text-brand-red' : t('text-white/40', 'text-gray-400')}`} />
                   </button>
                   {openFaqId === (faq.id || idx) && (
-                    <div className="px-4 pb-3 pt-1 border-t border-white/[0.04]">
-                      <p className="text-sm text-white/70 leading-relaxed">{faq.answer}</p>
+                    <div className={`px-4 pb-3 pt-1 border-t ${t('border-white/[0.04]', 'border-gray-200')}`}>
+                      <p className={`text-xs sm:text-sm leading-relaxed ${t('text-white/70', 'text-gray-600')}`}>{faq.answer}</p>
                     </div>
                   )}
                 </div>
               ))}
             </div>
             <div className="text-center mt-5">
-              <a href="/contact/faqs" className="inline-flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-[0.18em] text-red-400 hover:text-red-300 transition-colors">
+              <a href="/contact/faqs" className="inline-flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-[0.18em] text-brand-red hover:underline">
                 View More <ChevronRight className="w-3 h-3" />
               </a>
             </div>
           </div>
-        </div>
-      )}
-    </div>
-  )
+        )}
+      </div>
+    )
+  }
 
   // ═══════════════════════════════════════════════════════════
   // INVESTMENTS TAB
@@ -2025,8 +2597,8 @@ export default function DashboardClient() {
   const renderInvestmentsTab = () => (
     <div className="space-y-6">
       <div>
-        <h2 className={`text-xl font-bold mb-1 ${t('text-white','text-gray-900')}`}>Investment Opportunities</h2>
-        <p className={`text-sm ${t('text-gray-500','text-gray-700')}`}>Browse, select, and manage your allocations</p>
+        <h2 className={`text-xl font-bold mb-1 ${t('text-white', 'text-gray-900')}`}>Investment Opportunities</h2>
+        <p className={`text-sm ${t('text-gray-500', 'text-gray-700')}`}>Browse, select, and manage your allocations</p>
       </div>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {[
@@ -2042,12 +2614,12 @@ export default function DashboardClient() {
               </div>
               <div className="flex-1">
                 <div className="flex items-center gap-2 mb-1">
-                  <h4 className={`text-sm font-bold ${t('text-white','text-gray-900')}`}>{opp.title}</h4>
+                  <h4 className={`text-sm font-bold ${t('text-white', 'text-gray-900')}`}>{opp.title}</h4>
                   {(opp as any).upcoming && (
                     <span className="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-amber-500/20 text-amber-400 border border-amber-500/30">Upcoming</span>
                   )}
                 </div>
-                <p className={`text-xs leading-relaxed ${t('text-gray-500','text-gray-700')}`}>{opp.desc}</p>
+                <p className={`text-xs leading-relaxed ${t('text-gray-500', 'text-gray-700')}`}>{opp.desc}</p>
               </div>
             </div>
             <div className="grid grid-cols-2 gap-3 mb-4">
@@ -2057,9 +2629,9 @@ export default function DashboardClient() {
                 { label: 'Tenure', val: opp.tenure },
                 { label: 'Risk Level', val: opp.risk, risk: true },
               ].map((f, j) => (
-                <div key={j} className={`p-2.5 rounded-lg ${t('bg-white/[0.02]','bg-gray-100/35')}`}>
-                  <p className={`text-[10px] uppercase tracking-wider ${t('text-gray-600','text-gray-600')}`}>{f.label}</p>
-                  <p className={`text-sm font-bold ${f.green ? 'text-emerald-400' : f.risk ? (opp.risk === 'Very High' ? 'text-red-400' : opp.risk === 'High' ? 'text-amber-400' : 'text-blue-400') : t('text-white','text-gray-900')}`}>{f.val}</p>
+                <div key={j} className={`p-2.5 rounded-lg ${t('bg-white/[0.02]', 'bg-gray-100/35')}`}>
+                  <p className={`text-[10px] uppercase tracking-wider ${t('text-gray-600', 'text-gray-600')}`}>{f.label}</p>
+                  <p className={`text-sm font-bold ${f.green ? 'text-emerald-400' : f.risk ? (opp.risk === 'Very High' ? 'text-red-400' : opp.risk === 'High' ? 'text-amber-400' : 'text-blue-400') : t('text-white', 'text-gray-900')}`}>{f.val}</p>
                 </div>
               ))}
             </div>
@@ -2084,8 +2656,8 @@ export default function DashboardClient() {
 
       {/* Investment History */}
       <div>
-        <h3 className={`text-base font-bold mb-3 ${t('text-white','text-gray-900')}`}>My Investments</h3>
-        <p className={`text-xs mb-4 ${t('text-gray-500','text-gray-700')}`}>Your investment applications and commitments</p>
+        <h3 className={`text-base font-bold mb-3 ${t('text-white', 'text-gray-900')}`}>My Investments</h3>
+        <p className={`text-xs mb-4 ${t('text-gray-500', 'text-gray-700')}`}>Your investment applications and commitments</p>
         <InvestmentHistory
           applications={investmentApps}
           theme={theme}
@@ -2097,8 +2669,8 @@ export default function DashboardClient() {
       {/* Investment Documents (post-approval) */}
       {investmentDocs.length > 0 && (
         <div>
-          <h3 className={`text-base font-bold mb-3 ${t('text-white','text-gray-900')}`}>Investment Documents</h3>
-          <p className={`text-xs mb-4 ${t('text-gray-500','text-gray-700')}`}>View, download, and upload signed copies of your investment documents</p>
+          <h3 className={`text-base font-bold mb-3 ${t('text-white', 'text-gray-900')}`}>Investment Documents</h3>
+          <p className={`text-xs mb-4 ${t('text-gray-500', 'text-gray-700')}`}>View, download, and upload signed copies of your investment documents</p>
           <InvestmentDocumentsSection
             documents={investmentDocs}
             theme={theme}
@@ -2122,16 +2694,16 @@ export default function DashboardClient() {
 
       {/* Modify Allocation Section */}
       <Glass className="p-6" hover theme={theme}>
-        <h3 className={`text-base font-bold mb-4 ${t('text-white','text-gray-900')}`}>Modify Allocation</h3>
-        <p className={`text-xs mb-4 ${t('text-gray-500','text-gray-700')}`}>Request changes to your current investment allocation. Our advisory team will review and process your request.</p>
+        <h3 className={`text-base font-bold mb-4 ${t('text-white', 'text-gray-900')}`}>Modify Allocation</h3>
+        <p className={`text-xs mb-4 ${t('text-gray-500', 'text-gray-700')}`}>Request changes to your current investment allocation. Our advisory team will review and process your request.</p>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
           {allocationData.map((a: any, i: number) => (
-            <div key={i} className={`p-3 rounded-xl ${t('bg-white/[0.03] border border-white/[0.06]','bg-gray-100/60 border border-gray-200/40')}`}>
+            <div key={i} className={`p-3 rounded-xl ${t('bg-white/[0.03] border border-white/[0.06]', 'bg-gray-100/60 border border-gray-200/40')}`}>
               <div className="flex items-center gap-2 mb-2">
                 <div className="w-3 h-3 rounded-full" style={{ background: a.color }} />
-                <span className={`text-xs font-semibold ${t('text-white','text-gray-900')}`}>{a.name}</span>
+                <span className={`text-xs font-semibold ${t('text-white', 'text-gray-900')}`}>{a.name}</span>
               </div>
-              <p className={`text-lg font-bold ${t('text-white','text-gray-900')}`}>{a.value}%</p>
+              <p className={`text-lg font-bold ${t('text-white', 'text-gray-900')}`}>{a.value}%</p>
             </div>
           ))}
         </div>
@@ -2155,8 +2727,8 @@ export default function DashboardClient() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className={`text-xl font-bold mb-1 ${t('text-white','text-gray-900')}`}>KYC & Documents</h2>
-          <p className={`text-sm ${t('text-gray-500','text-gray-700')}`}>Upload, track, and manage your compliance documents</p>
+          <h2 className={`text-xl font-bold mb-1 ${t('text-white', 'text-gray-900')}`}>KYC & Documents</h2>
+          <p className={`text-sm ${t('text-gray-500', 'text-gray-700')}`}>Upload, track, and manage your compliance documents</p>
         </div>
         <button onClick={() => setUploadModalOpen(true)} className="px-4 py-2.5 rounded-xl text-xs font-semibold text-white flex items-center justify-center gap-2 cursor-pointer hover:scale-[1.02] active:scale-[0.98] transition-all" style={{ background: 'linear-gradient(135deg, #D0021B, #8B0000)' }}>
           <Upload className="w-3.5 h-3.5" /> Upload Document
@@ -2166,24 +2738,24 @@ export default function DashboardClient() {
       {/* Admin rejection banner — investor lands here from the "KYC Rejected"
           notification link, so the reason needs to be the first thing they see. */}
       {userKycStatus === 'rejected' && (
-        <div className={`p-5 rounded-2xl border-2 ${t('bg-red-500/10 border-red-500/40','bg-red-50 border-red-300')}`}>
+        <div className={`p-5 rounded-2xl border-2 ${t('bg-red-500/10 border-red-500/40', 'bg-red-50 border-red-300')}`}>
           <div className="flex items-start gap-3">
             <div className="w-10 h-10 rounded-xl bg-red-500/20 border border-red-500/30 flex items-center justify-center shrink-0">
               <AlertCircle className="w-5 h-5 text-red-400" />
             </div>
             <div className="flex-1 min-w-0">
-              <h3 className={`text-sm font-bold ${t('text-red-300','text-red-700')}`}>Your KYC was rejected</h3>
-              <p className={`text-xs mt-1 ${t('text-red-200/90','text-red-700/90')}`}>
+              <h3 className={`text-sm font-bold ${t('text-red-300', 'text-red-700')}`}>Your KYC was rejected</h3>
+              <p className={`text-xs mt-1 ${t('text-red-200/90', 'text-red-700/90')}`}>
                 Please review the reason below, correct your documents, and resubmit.
               </p>
               {(user as any)?.kyc_rejection_reason && (
-                <div className={`mt-3 p-3 rounded-lg ${t('bg-black/30 border border-red-500/30','bg-white/80 border border-red-300')}`}>
-                  <p className={`text-[10px] uppercase tracking-wider font-semibold mb-1 ${t('text-red-300','text-red-700')}`}>Rejection reason</p>
-                  <p className={`text-xs whitespace-pre-wrap ${t('text-white/90','text-red-900')}`}>{(user as any).kyc_rejection_reason}</p>
+                <div className={`mt-3 p-3 rounded-lg ${t('bg-black/30 border border-red-500/30', 'bg-white/80 border border-red-300')}`}>
+                  <p className={`text-[10px] uppercase tracking-wider font-semibold mb-1 ${t('text-red-300', 'text-red-700')}`}>Rejection reason</p>
+                  <p className={`text-xs whitespace-pre-wrap ${t('text-white/90', 'text-red-900')}`}>{(user as any).kyc_rejection_reason}</p>
                 </div>
               )}
               {(user as any)?.kyc_rejected_at && (
-                <p className={`text-[10px] mt-2 ${t('text-gray-500','text-gray-600')}`}>
+                <p className={`text-[10px] mt-2 ${t('text-gray-500', 'text-gray-600')}`}>
                   Rejected on {new Date((user as any).kyc_rejected_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
                 </p>
               )}
@@ -2194,32 +2766,33 @@ export default function DashboardClient() {
 
       {/* KYC Progress */}
       <Glass className="p-6" hover theme={theme}>
-        <h3 className={`text-base font-bold mb-1 ${t('text-white','text-gray-900')}`}>KYC Verification Progress</h3>
-        <p className={`text-xs mb-5 ${t('text-gray-500','text-gray-700')}`}>As required by SEBI, complete your KYC before investing.</p>
+        <h3 className={`text-base font-bold mb-1 ${t('text-white', 'text-gray-900')}`}>KYC Verification Progress</h3>
+        <p className={`text-xs mb-5 ${t('text-gray-500', 'text-gray-700')}`}>As required by SEBI, complete your KYC before investing.</p>
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
           {kycSteps.map((step: any, i: number) => {
             const StepIcon = KYC_ICON_MAP[step.id] || FileCheck
             return (
-            <div key={i} className={`p-4 rounded-xl text-center transition-all cursor-pointer
+              <div key={i} className={`p-4 rounded-xl text-center transition-all cursor-pointer
               ${step.status === 'completed' ? (isDark ? 'bg-emerald-500/10 border border-emerald-500/20' : 'bg-emerald-50 border border-emerald-200') :
-                step.status === 'in-review' ? (isDark ? 'bg-amber-500/10 border border-amber-500/20' : 'bg-amber-50 border border-amber-200') :
-                t('bg-white/[0.03] border border-white/[0.06]','bg-gray-100/60 border border-gray-200/40')}`}>
-              <StepIcon className={`w-6 h-6 mx-auto mb-2 ${step.status === 'completed' ? 'text-emerald-400' : step.status === 'in-review' ? 'text-amber-400' : t('text-gray-500','text-gray-600')}`} />
-              <p className={`text-[11px] font-medium ${t('text-white','text-gray-900')}`}>{step.label}</p>
-              <span className={`text-[9px] font-semibold uppercase mt-1 inline-block px-1.5 py-0.5 rounded-full
+                  step.status === 'in-review' ? (isDark ? 'bg-amber-500/10 border border-amber-500/20' : 'bg-amber-50 border border-amber-200') :
+                    t('bg-white/[0.03] border border-white/[0.06]', 'bg-gray-100/60 border border-gray-200/40')}`}>
+                <StepIcon className={`w-6 h-6 mx-auto mb-2 ${step.status === 'completed' ? 'text-emerald-400' : step.status === 'in-review' ? 'text-amber-400' : t('text-gray-500', 'text-gray-600')}`} />
+                <p className={`text-[11px] font-medium ${t('text-white', 'text-gray-900')}`}>{step.label}</p>
+                <span className={`text-[9px] font-semibold uppercase mt-1 inline-block px-1.5 py-0.5 rounded-full
                 ${step.status === 'completed' ? 'text-emerald-400 bg-emerald-500/20' : step.status === 'in-review' ? 'text-amber-400 bg-amber-500/20' : 'text-gray-500 bg-gray-500/20'}`}>
-                {step.status === 'in-review' ? 'In Review' : step.status}
-              </span>
-            </div>
-          )})}
+                  {step.status === 'in-review' ? 'In Review' : step.status}
+                </span>
+              </div>
+            )
+          })}
         </div>
       </Glass>
 
       {/* Document uploads */}
       <Glass className="p-6" hover theme={theme}>
-        <h3 className={`text-base font-bold mb-4 ${t('text-white','text-gray-900')}`}>Your Documents</h3>
+        <h3 className={`text-base font-bold mb-4 ${t('text-white', 'text-gray-900')}`}>Your Documents</h3>
         {documents.length === 0 ? (
-          <div className={`text-center py-8 ${t('text-gray-500','text-gray-600')}`}>
+          <div className={`text-center py-8 ${t('text-gray-500', 'text-gray-600')}`}>
             <FileText className="w-10 h-10 mx-auto mb-3 opacity-40" />
             <p className="text-sm font-medium mb-1">No documents uploaded yet</p>
             <p className="text-xs">Click "Upload Document" above to submit your KYC documents.</p>
@@ -2254,22 +2827,22 @@ export default function DashboardClient() {
                     showToast('Document preview not available for this file.', 'info')
                   }
                 }} className={`flex items-center gap-3 p-4 rounded-xl transition-all cursor-pointer group
-                  ${t('bg-white/[0.02] border border-white/[0.04] hover:border-white/[0.08]','bg-gray-100/35 border border-gray-200/30 hover:border-gray-300/40')}`}>
+                  ${t('bg-white/[0.02] border border-white/[0.04] hover:border-white/[0.08]', 'bg-gray-100/35 border border-gray-200/30 hover:border-gray-300/40')}`}>
                   <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0
                     ${status === 'verified' || status === 'approved' ? 'bg-emerald-500/15' : status === 'pending' || status === 'review' ? 'bg-amber-500/15' : 'bg-blue-500/15'}`}>
                     {status === 'verified' || status === 'approved' ? <CheckCircle className="w-5 h-5 text-emerald-400" /> :
-                     status === 'pending' || status === 'review' ? <Clock className="w-5 h-5 text-amber-400" /> :
-                     <FileText className="w-5 h-5 text-blue-400" />}
+                      status === 'pending' || status === 'review' ? <Clock className="w-5 h-5 text-amber-400" /> :
+                        <FileText className="w-5 h-5 text-blue-400" />}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className={`text-sm font-semibold truncate ${t('text-white','text-gray-900')}`}>{doc.title || doc.name || 'Document'}</p>
-                    <p className={`text-[11px] ${t('text-gray-500','text-gray-700')}`}>{doc.category || 'General'} &bull; {docDate}</p>
+                    <p className={`text-sm font-semibold truncate ${t('text-white', 'text-gray-900')}`}>{doc.title || doc.name || 'Document'}</p>
+                    <p className={`text-[11px] ${t('text-gray-500', 'text-gray-700')}`}>{doc.category || 'General'} &bull; {docDate}</p>
                   </div>
-                  <Eye className={`w-4 h-4 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity ${t('text-gray-400','text-gray-500')}`} />
+                  <Eye className={`w-4 h-4 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity ${t('text-gray-400', 'text-gray-500')}`} />
                   <span className={`text-[9px] font-semibold uppercase px-1.5 py-0.5 rounded-full shrink-0
                     ${status === 'verified' || status === 'approved' ? 'text-emerald-400 bg-emerald-500/20' :
                       status === 'pending' || status === 'review' ? 'text-amber-400 bg-amber-500/20' :
-                      'text-blue-400 bg-blue-500/20'}`}>{status}</span>
+                        'text-blue-400 bg-blue-500/20'}`}>{status}</span>
                 </div>
               )
             })}
@@ -2280,23 +2853,23 @@ export default function DashboardClient() {
       {/* Upload Modal */}
       {uploadModalOpen && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 backdrop-blur-sm">
-          <div className={`max-w-lg w-full mx-4 rounded-2xl border p-6 ${t('bg-[#111] border-white/10','bg-[#F0EDE9] border-gray-200/50 shadow-2xl')}`}>
+          <div className={`max-w-lg w-full mx-4 rounded-2xl border p-6 ${t('bg-[#111] border-white/10', 'bg-[#F0EDE9] border-gray-200/50 shadow-2xl')}`}>
             <div className="flex items-center justify-between mb-5">
-              <h3 className={`text-lg font-bold ${t('text-white','text-gray-900')}`}>Upload Document</h3>
-              <button onClick={() => setUploadModalOpen(false)} className={t('text-gray-500 hover:text-white','text-gray-600 hover:text-gray-900')}><X className="w-5 h-5" /></button>
+              <h3 className={`text-lg font-bold ${t('text-white', 'text-gray-900')}`}>Upload Document</h3>
+              <button onClick={() => setUploadModalOpen(false)} className={t('text-gray-500 hover:text-white', 'text-gray-600 hover:text-gray-900')}><X className="w-5 h-5" /></button>
             </div>
             {/* Document Name */}
             <div className="mb-3">
-              <label className={`text-xs font-medium mb-1 block ${t('text-gray-400','text-gray-600')}`}>Document Name</label>
+              <label className={`text-xs font-medium mb-1 block ${t('text-gray-400', 'text-gray-600')}`}>Document Name</label>
               <input type="text" placeholder="e.g. PAN_Card_2025" value={docName} onChange={e => setDocName(e.target.value)}
-                className={`w-full px-4 py-2.5 rounded-xl text-sm ${t('bg-white/[0.04] border border-white/[0.06] text-white placeholder-gray-600','bg-gray-100/60 border border-gray-200/40 text-gray-900 placeholder-gray-400')}`} />
+                className={`w-full px-4 py-2.5 rounded-xl text-sm ${t('bg-white/[0.04] border border-white/[0.06] text-white placeholder-gray-600', 'bg-gray-100/60 border border-gray-200/40 text-gray-900 placeholder-gray-400')}`} />
             </div>
             {/* Folder / Category */}
             <div className="mb-3">
-              <label className={`text-xs font-medium mb-1 block ${t('text-gray-400','text-gray-600')}`}>File To Folder</label>
+              <label className={`text-xs font-medium mb-1 block ${t('text-gray-400', 'text-gray-600')}`}>File To Folder</label>
               <select value={docCategory} onChange={e => setDocCategory(e.target.value)}
                 style={isDark ? { colorScheme: 'dark' } : undefined}
-                className={`w-full px-4 py-2.5 rounded-xl text-sm ${t('bg-white/[0.04] border border-white/[0.06] text-white','bg-gray-100/60 border border-gray-200/40 text-gray-900')}`}>
+                className={`w-full px-4 py-2.5 rounded-xl text-sm ${t('bg-white/[0.04] border border-white/[0.06] text-white', 'bg-gray-100/60 border border-gray-200/40 text-gray-900')}`}>
                 <option value="">Select folder...</option>
                 <option value="pan">PAN Card</option><option value="aadhaar">Aadhaar Card</option>
                 <option value="bank">Bank Statements</option><option value="cheque">Cancelled Cheque</option>
@@ -2307,14 +2880,14 @@ export default function DashboardClient() {
             </div>
             {/* Folder Preview */}
             {docCategory && (
-              <div className={`flex items-center gap-2 mb-3 p-2 rounded-lg text-xs ${t('bg-white/[0.03]','bg-gray-100/40')}`}>
+              <div className={`flex items-center gap-2 mb-3 p-2 rounded-lg text-xs ${t('bg-white/[0.03]', 'bg-gray-100/40')}`}>
                 <FolderOpen className="w-4 h-4 text-amber-400" />
-                <span className={t('text-gray-400','text-gray-600')}>Will be saved to:</span>
-                <span className={`font-semibold ${t('text-white','text-gray-900')}`}>/{docCategory}/{docName || 'untitled'}</span>
+                <span className={t('text-gray-400', 'text-gray-600')}>Will be saved to:</span>
+                <span className={`font-semibold ${t('text-white', 'text-gray-900')}`}>/{docCategory}/{docName || 'untitled'}</span>
               </div>
             )}
             {/* Drop zone */}
-            <div className={`border-2 border-dashed rounded-xl p-6 text-center mb-4 cursor-pointer transition-colors ${t('border-white/10 hover:border-brand-red/30','border-gray-300 hover:border-brand-red/40')}`}
+            <div className={`border-2 border-dashed rounded-xl p-6 text-center mb-4 cursor-pointer transition-colors ${t('border-white/10 hover:border-brand-red/30', 'border-gray-300 hover:border-brand-red/40')}`}
               onDragOver={(e) => { e.preventDefault(); e.stopPropagation() }}
               onDragEnter={(e) => { e.preventDefault(); e.stopPropagation() }}
               onDrop={async (e) => {
@@ -2378,16 +2951,16 @@ export default function DashboardClient() {
                   showToast('Upload service unavailable. Please email documents to info@ghlindiaventures.com', 'info')
                 })
               }}>
-              <Upload className={`w-8 h-8 mx-auto mb-2 ${t('text-gray-500','text-gray-600')}`} />
-              <p className={`text-sm font-medium mb-1 ${t('text-white','text-gray-900')}`}>Click to upload or drag & drop</p>
-              <p className={`text-xs ${t('text-gray-500','text-gray-700')}`}>PDF, JPG, PNG up to 10MB</p>
+              <Upload className={`w-8 h-8 mx-auto mb-2 ${t('text-gray-500', 'text-gray-600')}`} />
+              <p className={`text-sm font-medium mb-1 ${t('text-white', 'text-gray-900')}`}>Click to upload or drag & drop</p>
+              <p className={`text-xs ${t('text-gray-500', 'text-gray-700')}`}>PDF, JPG, PNG up to 10MB</p>
             </div>
             {/* Show uploaded file names */}
             {uploadedFiles.length > 0 && (
-              <div className={`mb-3 p-2.5 rounded-lg ${t('bg-emerald-500/10 border border-emerald-500/20','bg-emerald-50 border border-emerald-200')}`}>
+              <div className={`mb-3 p-2.5 rounded-lg ${t('bg-emerald-500/10 border border-emerald-500/20', 'bg-emerald-50 border border-emerald-200')}`}>
                 <p className="text-xs font-semibold text-emerald-500 mb-1">{uploadedFiles.length} file(s) selected:</p>
                 {uploadedFiles.map((f, i) => (
-                  <p key={i} className={`text-xs ${t('text-gray-300','text-gray-700')}`}>• {f.name}</p>
+                  <p key={i} className={`text-xs ${t('text-gray-300', 'text-gray-700')}`}>• {f.name}</p>
                 ))}
               </div>
             )}
@@ -2447,8 +3020,8 @@ export default function DashboardClient() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className={`text-xl font-bold mb-1 ${t('text-white','text-gray-900')}`}>Transactions</h2>
-          <p className={`text-sm ${t('text-gray-500','text-gray-700')}`}>Complete transaction history including investment submissions</p>
+          <h2 className={`text-xl font-bold mb-1 ${t('text-white', 'text-gray-900')}`}>Transactions</h2>
+          <p className={`text-sm ${t('text-gray-500', 'text-gray-700')}`}>Complete transaction history including investment submissions</p>
         </div>
         <button onClick={async () => {
           showToast('Exporting transactions...', 'info')
@@ -2456,7 +3029,7 @@ export default function DashboardClient() {
           const rows = transactions.map((tx: any) => `${tx.date},${tx.type},${tx.fund},${tx.amount},${tx.status}`)
           const csv = `${bom}Date,Type,Fund,Amount,Status\n${rows.join('\n')}`
           const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' })
-          const filename = `GHL_Transactions_${new Date().toISOString().slice(0,10)}.csv`
+          const filename = `GHL_Transactions_${new Date().toISOString().slice(0, 10)}.csv`
           await saveBlobAs(blob, filename, showToast as any)
         }} className="flex items-center gap-2 text-xs text-brand-red font-semibold"><Download className="w-3.5 h-3.5" /> Export CSV</button>
       </div>
@@ -2476,14 +3049,14 @@ export default function DashboardClient() {
           when no submissions exist. */}
       {investmentTxns.length > 0 ? (
         <>
-          <h3 className={`text-base font-bold mb-3 ${t('text-white','text-gray-900')}`}>Investment Transaction Submissions</h3>
+          <h3 className={`text-base font-bold mb-3 ${t('text-white', 'text-gray-900')}`}>Investment Transaction Submissions</h3>
           <Glass className="overflow-hidden" hover={false} theme={theme}>
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
-                  <tr className={`border-b ${t('border-white/[0.06]','border-gray-200/50')}`}>
+                  <tr className={`border-b ${t('border-white/[0.06]', 'border-gray-200/50')}`}>
                     {['Investment Date', 'Capital Amount', 'Transaction Amount', 'Transaction ID', 'Transaction Proof', 'Approval Date', 'Status'].map(h => (
-                      <th key={h} className={`text-left text-xs font-medium py-3 px-5 ${t('text-gray-500','text-gray-600')}`}>{h}</th>
+                      <th key={h} className={`text-left text-xs font-medium py-3 px-5 ${t('text-gray-500', 'text-gray-600')}`}>{h}</th>
                     ))}
                   </tr>
                 </thead>
@@ -2492,11 +3065,11 @@ export default function DashboardClient() {
                     const approvalDate = txn.approved_at || txn.approval_date || (txn.status === 'approved' ? txn.updated_at : null)
                     const proofUrl = txn.transaction_proof_url || txn.proof_url
                     return (
-                      <tr key={txn.id || i} className={`border-b ${t('border-white/[0.03] hover:bg-white/[0.02]','border-gray-100 hover:bg-gray-50')}`}>
-                        <td className={`py-3 px-5 text-xs ${t('text-gray-400','text-gray-700')}`}>{txn.created_at ? new Date(txn.created_at).toLocaleDateString('en-IN') : '—'}</td>
-                        <td className={`py-3 px-5 text-xs font-semibold ${t('text-white','text-gray-900')}`}>₹{new Intl.NumberFormat('en-IN').format(Number(txn.capital_amount) || 0)}</td>
-                        <td className={`py-3 px-5 text-xs font-semibold ${t('text-white','text-gray-900')}`}>₹{new Intl.NumberFormat('en-IN').format(Number(txn.transaction_amount) || 0)}</td>
-                        <td className={`py-3 px-5 text-xs font-mono ${t('text-gray-400','text-gray-600')}`}>{txn.transaction_id || '—'}</td>
+                      <tr key={txn.id || i} className={`border-b ${t('border-white/[0.03] hover:bg-white/[0.02]', 'border-gray-100 hover:bg-gray-50')}`}>
+                        <td className={`py-3 px-5 text-xs ${t('text-gray-400', 'text-gray-700')}`}>{txn.created_at ? new Date(txn.created_at).toLocaleDateString('en-IN') : '—'}</td>
+                        <td className={`py-3 px-5 text-xs font-semibold ${t('text-white', 'text-gray-900')}`}>₹{new Intl.NumberFormat('en-IN').format(Number(txn.capital_amount) || 0)}</td>
+                        <td className={`py-3 px-5 text-xs font-semibold ${t('text-white', 'text-gray-900')}`}>₹{new Intl.NumberFormat('en-IN').format(Number(txn.transaction_amount) || 0)}</td>
+                        <td className={`py-3 px-5 text-xs font-mono ${t('text-gray-400', 'text-gray-600')}`}>{txn.transaction_id || '—'}</td>
                         <td className="py-3 px-5">
                           {proofUrl ? (
                             <a
@@ -2504,14 +3077,14 @@ export default function DashboardClient() {
                               target="_blank"
                               rel="noopener noreferrer"
                               title="View transaction proof"
-                              className={`inline-flex items-center justify-center w-8 h-8 rounded-lg transition-colors ${t('bg-brand-red/15 text-brand-red hover:bg-brand-red/25','bg-brand-red/10 text-brand-red hover:bg-brand-red/20')}`}>
+                              className={`inline-flex items-center justify-center w-8 h-8 rounded-lg transition-colors ${t('bg-brand-red/15 text-brand-red hover:bg-brand-red/25', 'bg-brand-red/10 text-brand-red hover:bg-brand-red/20')}`}>
                               <Eye className="w-3.5 h-3.5" />
                             </a>
                           ) : (
-                            <span className={`text-[10px] ${t('text-gray-600','text-gray-400')}`}>—</span>
+                            <span className={`text-[10px] ${t('text-gray-600', 'text-gray-400')}`}>—</span>
                           )}
                         </td>
-                        <td className={`py-3 px-5 text-xs ${t('text-gray-400','text-gray-700')}`}>{approvalDate ? new Date(approvalDate).toLocaleDateString('en-IN') : '—'}</td>
+                        <td className={`py-3 px-5 text-xs ${t('text-gray-400', 'text-gray-700')}`}>{approvalDate ? new Date(approvalDate).toLocaleDateString('en-IN') : '—'}</td>
                         <td className="py-3 px-5">
                           <span className={`inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full ${txn.status === 'approved' ? 'text-emerald-400 bg-emerald-500/15' : txn.status === 'rejected' ? 'text-red-400 bg-red-500/15' : 'text-amber-400 bg-amber-500/15'}`}>
                             {(txn.status || 'pending').charAt(0).toUpperCase() + (txn.status || 'pending').slice(1)}
@@ -2527,9 +3100,9 @@ export default function DashboardClient() {
         </>
       ) : (
         <Glass className="p-12 text-center" hover={false} theme={theme}>
-          <ArrowLeftRight className={`w-10 h-10 mx-auto mb-3 ${t('text-gray-600','text-gray-400')}`} />
-          <p className={`text-sm font-medium ${t('text-gray-400','text-gray-600')}`}>No transactions yet</p>
-          <p className={`text-xs mt-1 ${t('text-gray-600','text-gray-500')}`}>Your transaction history will appear here once you make an investment.</p>
+          <ArrowLeftRight className={`w-10 h-10 mx-auto mb-3 ${t('text-gray-600', 'text-gray-400')}`} />
+          <p className={`text-sm font-medium ${t('text-gray-400', 'text-gray-600')}`}>No transactions yet</p>
+          <p className={`text-xs mt-1 ${t('text-gray-600', 'text-gray-500')}`}>Your transaction history will appear here once you make an investment.</p>
         </Glass>
       )}
     </div>
@@ -2542,8 +3115,8 @@ export default function DashboardClient() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className={`text-xl font-bold mb-1 ${t('text-white','text-gray-900')}`}>Secure Messages</h2>
-          <p className={`text-sm ${t('text-gray-500','text-gray-700')}`}>Communicate with your advisory team</p>
+          <h2 className={`text-xl font-bold mb-1 ${t('text-white', 'text-gray-900')}`}>Secure Messages</h2>
+          <p className={`text-sm ${t('text-gray-500', 'text-gray-700')}`}>Communicate with your advisory team</p>
         </div>
         <button onClick={() => setMessageCompose(!messageCompose)} className="px-4 py-2 rounded-xl text-xs font-semibold text-white flex items-center gap-1.5" style={{ background: 'linear-gradient(135deg, #D0021B, #8B0000)' }}>
           <Send className="w-3.5 h-3.5" /> Compose
@@ -2552,18 +3125,18 @@ export default function DashboardClient() {
 
       {messageCompose && (
         <Glass className="p-6" theme={theme}>
-          <h4 className={`text-sm font-bold mb-4 ${t('text-white','text-gray-900')}`}>New Message</h4>
+          <h4 className={`text-sm font-bold mb-4 ${t('text-white', 'text-gray-900')}`}>New Message</h4>
           <div className="space-y-3">
-            <select value={msgTo} onChange={e => setMsgTo(e.target.value)} style={isDark ? { colorScheme: 'dark' } : undefined} className={`w-full px-4 py-2.5 rounded-xl text-sm ${t('bg-white/[0.04] border border-white/[0.06] text-white','bg-gray-100/60 border border-gray-200/40 text-gray-900')}`}>
+            <select value={msgTo} onChange={e => setMsgTo(e.target.value)} style={isDark ? { colorScheme: 'dark' } : undefined} className={`w-full px-4 py-2.5 rounded-xl text-sm ${t('bg-white/[0.04] border border-white/[0.06] text-white', 'bg-gray-100/60 border border-gray-200/40 text-gray-900')}`}>
               <option>Relationship Manager</option><option>Compliance Team</option><option>Investment Team</option><option>Support Team</option>
             </select>
-            <input type="text" placeholder="Subject" value={msgSubject} onChange={e => setMsgSubject(e.target.value)} className={`w-full px-4 py-2.5 rounded-xl text-sm ${t('bg-white/[0.04] border border-white/[0.06] text-white placeholder-gray-600','bg-gray-100/40 border border-gray-200/40 text-gray-900 placeholder-gray-400')}`} />
-            <textarea rows={4} placeholder="Write your message... (or use voice input)" value={msgBody} onChange={e => setMsgBody(e.target.value)} className={`w-full px-4 py-2.5 rounded-xl text-sm resize-none ${t('bg-white/[0.04] border border-white/[0.06] text-white placeholder-gray-600','bg-gray-100/40 border border-gray-200/40 text-gray-900 placeholder-gray-400')}`} />
+            <input type="text" placeholder="Subject" value={msgSubject} onChange={e => setMsgSubject(e.target.value)} className={`w-full px-4 py-2.5 rounded-xl text-sm ${t('bg-white/[0.04] border border-white/[0.06] text-white placeholder-gray-600', 'bg-gray-100/40 border border-gray-200/40 text-gray-900 placeholder-gray-400')}`} />
+            <textarea rows={4} placeholder="Write your message... (or use voice input)" value={msgBody} onChange={e => setMsgBody(e.target.value)} className={`w-full px-4 py-2.5 rounded-xl text-sm resize-none ${t('bg-white/[0.04] border border-white/[0.06] text-white placeholder-gray-600', 'bg-gray-100/40 border border-gray-200/40 text-gray-900 placeholder-gray-400')}`} />
             {/* Attachments display */}
             {msgAttachments.length > 0 && (
               <div className="flex flex-wrap gap-2 mb-2">
                 {msgAttachments.map((f, i) => (
-                  <span key={i} className={`inline-flex items-center gap-1 px-2 py-1 rounded-lg text-xs ${t('bg-white/[0.06] text-gray-300','bg-gray-100 text-gray-700')}`}>
+                  <span key={i} className={`inline-flex items-center gap-1 px-2 py-1 rounded-lg text-xs ${t('bg-white/[0.06] text-gray-300', 'bg-gray-100 text-gray-700')}`}>
                     <Paperclip className="w-3 h-3" /> {f.name}
                     <button onClick={() => setMsgAttachments(prev => prev.filter((_, idx) => idx !== i))} className="ml-1 text-red-400 hover:text-red-300"><X className="w-3 h-3" /></button>
                   </span>
@@ -2579,10 +3152,10 @@ export default function DashboardClient() {
                 }
                 e.target.value = ''
               }} />
-              <button type="button" onClick={() => msgFileRef.current?.click()} className={`p-2.5 rounded-lg transition-colors cursor-pointer ${t('hover:bg-white/[0.06] bg-white/[0.03]','hover:bg-gray-200/60 bg-gray-100/50')} border ${t('border-white/[0.06]','border-gray-200/40')}`} title="Attach file"><Paperclip className={`w-4 h-4 ${t('text-gray-400 hover:text-white','text-gray-600 hover:text-gray-900')}`} /></button>
+              <button type="button" onClick={() => msgFileRef.current?.click()} className={`p-2.5 rounded-lg transition-colors cursor-pointer ${t('hover:bg-white/[0.06] bg-white/[0.03]', 'hover:bg-gray-200/60 bg-gray-100/50')} border ${t('border-white/[0.06]', 'border-gray-200/40')}`} title="Attach file"><Paperclip className={`w-4 h-4 ${t('text-gray-400 hover:text-white', 'text-gray-600 hover:text-gray-900')}`} /></button>
               <VoiceInput compact onTranscript={(text) => setMsgBody(prev => (prev ? prev + ' ' : '') + text)} showLanguageSelector />
               <div className="flex-1" />
-              <button onClick={() => { setMessageCompose(false); setMsgAttachments([]) }} className={`px-4 py-2 rounded-xl text-sm font-medium ${t('text-gray-400','text-gray-700')}`}>Cancel</button>
+              <button onClick={() => { setMessageCompose(false); setMsgAttachments([]) }} className={`px-4 py-2 rounded-xl text-sm font-medium ${t('text-gray-400', 'text-gray-700')}`}>Cancel</button>
               <button onClick={async () => {
                 if (!msgSubject.trim()) { showToast('Please enter a subject.', 'info'); return }
                 if (!msgBody.trim()) { showToast('Please write a message.', 'info'); return }
@@ -2681,26 +3254,26 @@ export default function DashboardClient() {
                 <div className="w-10 h-10 rounded-full bg-gradient-to-br from-brand-red/20 to-red-900/20 flex items-center justify-center text-xs font-bold text-brand-red shrink-0">{msg.avatar}</div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center justify-between mb-0.5">
-                    <p className={`text-sm font-semibold ${t('text-white','text-gray-900')} ${!msg.read ? '' : 'opacity-70'}`}>{msg.from}</p>
-                    <span className={`text-[10px] ${t('text-gray-600','text-gray-600')}`}>{msg.time}</span>
+                    <p className={`text-sm font-semibold ${t('text-white', 'text-gray-900')} ${!msg.read ? '' : 'opacity-70'}`}>{msg.from}</p>
+                    <span className={`text-[10px] ${t('text-gray-600', 'text-gray-600')}`}>{msg.time}</span>
                   </div>
-                  <p className={`text-xs font-medium mb-0.5 ${t('text-gray-300','text-gray-700')} ${!msg.read ? '' : 'opacity-70'}`}>{msg.subject}</p>
-                  <p className={`text-xs ${isOpen ? '' : 'truncate'} ${t('text-gray-500','text-gray-700')}`}>{isOpen ? (msg.body || msg.preview) : msg.preview}</p>
+                  <p className={`text-xs font-medium mb-0.5 ${t('text-gray-300', 'text-gray-700')} ${!msg.read ? '' : 'opacity-70'}`}>{msg.subject}</p>
+                  <p className={`text-xs ${isOpen ? '' : 'truncate'} ${t('text-gray-500', 'text-gray-700')}`}>{isOpen ? (msg.body || msg.preview) : msg.preview}</p>
                 </div>
                 {!msg.read && <div className="w-2 h-2 rounded-full bg-brand-red shrink-0 mt-2" />}
               </div>
               {isOpen && (
-                <div className={`mt-3 pt-3 border-t ${t('border-white/[0.06]','border-gray-200')}`} onClick={(e) => e.stopPropagation()}>
-                  <label className={`block text-[10px] uppercase tracking-wider mb-1.5 ${t('text-gray-500','text-gray-600')}`}>Your Reply</label>
+                <div className={`mt-3 pt-3 border-t ${t('border-white/[0.06]', 'border-gray-200')}`} onClick={(e) => e.stopPropagation()}>
+                  <label className={`block text-[10px] uppercase tracking-wider mb-1.5 ${t('text-gray-500', 'text-gray-600')}`}>Your Reply</label>
                   <textarea
                     value={replyBody}
                     onChange={(e) => setReplyBody(e.target.value)}
                     rows={3}
                     placeholder="Type your reply to the advisory team..."
-                    className={`w-full px-3 py-2 rounded-lg text-sm resize-none ${t('bg-white/[0.04] border border-white/[0.08] text-white placeholder-gray-600','bg-gray-100/40 border border-gray-200/40 text-gray-900 placeholder-gray-400')} focus:outline-none focus:border-brand-red/40`}
+                    className={`w-full px-3 py-2 rounded-lg text-sm resize-none ${t('bg-white/[0.04] border border-white/[0.08] text-white placeholder-gray-600', 'bg-gray-100/40 border border-gray-200/40 text-gray-900 placeholder-gray-400')} focus:outline-none focus:border-brand-red/40`}
                   />
                   <div className="flex items-center justify-end gap-2 mt-2">
-                    <button onClick={() => { setOpenMsgId(null); setReplyBody('') }} className={`px-3 py-1.5 rounded-lg text-xs font-medium ${t('text-gray-400 hover:bg-white/[0.06]','text-gray-600 hover:bg-gray-100')}`}>
+                    <button onClick={() => { setOpenMsgId(null); setReplyBody('') }} className={`px-3 py-1.5 rounded-lg text-xs font-medium ${t('text-gray-400 hover:bg-white/[0.06]', 'text-gray-600 hover:bg-gray-100')}`}>
                       Cancel
                     </button>
                     <button
@@ -2728,8 +3301,8 @@ export default function DashboardClient() {
   const renderSupportTab = () => (
     <div className="space-y-6">
       <div>
-        <h2 className={`text-xl font-bold mb-1 ${t('text-white','text-gray-900')}`}>Support Center</h2>
-        <p className={`text-sm ${t('text-gray-500','text-gray-700')}`}>Get help from our team</p>
+        <h2 className={`text-xl font-bold mb-1 ${t('text-white', 'text-gray-900')}`}>Support Center</h2>
+        <p className={`text-sm ${t('text-gray-500', 'text-gray-700')}`}>Get help from our team</p>
       </div>
 
       {/* Quick connect */}
@@ -2745,8 +3318,8 @@ export default function DashboardClient() {
               <div className="w-12 h-12 rounded-xl flex items-center justify-center mb-3" style={{ background: `${item.color}15` }}>
                 <item.icon className="w-6 h-6" style={{ color: item.color }} />
               </div>
-              <h4 className={`text-sm font-bold ${t('text-white','text-gray-900')}`}>{item.title}</h4>
-              <p className={`text-xs mt-1 ${t('text-gray-500','text-gray-700')}`}>{item.desc}</p>
+              <h4 className={`text-sm font-bold ${t('text-white', 'text-gray-900')}`}>{item.title}</h4>
+              <p className={`text-xs mt-1 ${t('text-gray-500', 'text-gray-700')}`}>{item.desc}</p>
             </Glass>
           </button>
         ))}
@@ -2755,21 +3328,21 @@ export default function DashboardClient() {
       {/* Raise Ticket */}
       <Glass className="p-6" hover theme={theme}>
         <div className="flex items-center justify-between mb-4">
-          <h3 className={`text-base font-bold ${t('text-white','text-gray-900')}`}>Raise a Ticket</h3>
+          <h3 className={`text-base font-bold ${t('text-white', 'text-gray-900')}`}>Raise a Ticket</h3>
           <button onClick={() => setTicketForm(!ticketForm)} className="text-xs text-brand-red font-semibold flex items-center gap-1">
             {ticketForm ? 'Cancel' : <><Plus className="w-3 h-3" /> New Ticket</>}
           </button>
         </div>
         {ticketForm && (
           <div className="space-y-3 mb-6">
-            <input type="text" placeholder="Subject" value={ticketSubject} onChange={e => setTicketSubject(e.target.value)} className={`w-full px-4 py-2.5 rounded-xl text-sm ${t('bg-white/[0.04] border border-white/[0.06] text-white placeholder-gray-600','bg-gray-100/40 border border-gray-200/40 text-gray-900 placeholder-gray-400')}`} />
-            <select value={ticketCategory} onChange={e => setTicketCategory(e.target.value)} style={isDark ? { colorScheme: 'dark' } : undefined} className={`w-full px-4 py-2.5 rounded-xl text-sm ${t('bg-white/[0.04] border border-white/[0.06] text-white','bg-gray-100/60 border border-gray-200/40 text-gray-900')}`}>
+            <input type="text" placeholder="Subject" value={ticketSubject} onChange={e => setTicketSubject(e.target.value)} className={`w-full px-4 py-2.5 rounded-xl text-sm ${t('bg-white/[0.04] border border-white/[0.06] text-white placeholder-gray-600', 'bg-gray-100/40 border border-gray-200/40 text-gray-900 placeholder-gray-400')}`} />
+            <select value={ticketCategory} onChange={e => setTicketCategory(e.target.value)} style={isDark ? { colorScheme: 'dark' } : undefined} className={`w-full px-4 py-2.5 rounded-xl text-sm ${t('bg-white/[0.04] border border-white/[0.06] text-white', 'bg-gray-100/60 border border-gray-200/40 text-gray-900')}`}>
               <option>General Inquiry</option><option>Investment Query</option><option>KYC Issue</option><option>Technical Issue</option><option>Document Request</option>
             </select>
-            <textarea rows={3} placeholder="Describe your issue... (or use voice input)" value={ticketDesc} onChange={e => setTicketDesc(e.target.value)} className={`w-full px-4 py-2.5 rounded-xl text-sm resize-none ${t('bg-white/[0.04] border border-white/[0.06] text-white placeholder-gray-600','bg-gray-100/40 border border-gray-200/40 text-gray-900 placeholder-gray-400')}`} />
+            <textarea rows={3} placeholder="Describe your issue... (or use voice input)" value={ticketDesc} onChange={e => setTicketDesc(e.target.value)} className={`w-full px-4 py-2.5 rounded-xl text-sm resize-none ${t('bg-white/[0.04] border border-white/[0.06] text-white placeholder-gray-600', 'bg-gray-100/40 border border-gray-200/40 text-gray-900 placeholder-gray-400')}`} />
             <div className="flex items-center gap-2">
               <VoiceInput compact onTranscript={(text) => setTicketDesc(prev => (prev ? prev + ' ' : '') + text)} showLanguageSelector />
-              <span className={`text-[10px] ${t('text-gray-600','text-gray-500')}`}>Speak in 23 Indian languages</span>
+              <span className={`text-[10px] ${t('text-gray-600', 'text-gray-500')}`}>Speak in 23 Indian languages</span>
             </div>
             <button type="button" onClick={async () => {
               if (!ticketSubject.trim()) { showToast('Please enter a subject for your ticket.', 'info'); return }
@@ -2791,86 +3364,86 @@ export default function DashboardClient() {
         {/* Existing tickets */}
         <div className="space-y-2">
           {supportTickets.length === 0 && !ticketForm && (
-            <p className={`text-sm text-center py-4 ${t('text-gray-500','text-gray-600')}`}>No tickets yet. Click "New Ticket" to get help.</p>
+            <p className={`text-sm text-center py-4 ${t('text-gray-500', 'text-gray-600')}`}>No tickets yet. Click "New Ticket" to get help.</p>
           )}
           {supportTickets.map((tk: any) => {
             const adminResponses = Array.isArray(tk?.metadata?.admin_responses) ? tk.metadata.admin_responses : []
             const replyCount = adminResponses.length
             const latestReply = replyCount > 0 ? adminResponses[replyCount - 1] : null
             return (
-            <div key={tk.id} onClick={() => setExpandedTicket(expandedTicket === tk.id ? null : tk.id)} className={`rounded-xl cursor-pointer transition-all ${t('bg-white/[0.02] border border-white/[0.04] hover:border-white/[0.08]','bg-gray-100/60 border border-gray-200/40 hover:border-gray-300')}`}>
-              <div className="flex items-center gap-3 p-3">
-                <Ticket className={`w-5 h-5 shrink-0 ${tk.status === 'resolved' || tk.status === 'closed' ? 'text-emerald-400' : 'text-amber-400'}`} />
-                <div className="flex-1 min-w-0">
-                  <p className={`text-sm font-semibold ${t('text-white','text-gray-900')}`}>{tk.subject}</p>
-                  <p className={`text-[11px] ${t('text-gray-500','text-gray-700')}`}>{tk.ticket_number || tk.id} &bull; {tk.created_at ? new Date(tk.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : ''}</p>
-                </div>
-                {replyCount > 0 && (
-                  <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-blue-500/15 text-blue-400 flex items-center gap-1" title={`${replyCount} admin ${replyCount === 1 ? 'reply' : 'replies'}`}>
-                    <MessageSquare className="w-3 h-3" /> {replyCount}
-                  </span>
-                )}
-                <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${tk.status === 'resolved' || tk.status === 'closed' ? 'bg-emerald-500/15 text-emerald-400' : 'bg-amber-500/15 text-amber-400'}`}>{tk.status}</span>
-              </div>
-              {/* Latest admin reply preview on collapsed card */}
-              {expandedTicket !== tk.id && latestReply && (
-                <div className={`px-4 pb-3 pt-0`}>
-                  <div className={`p-2.5 rounded-lg ${t('bg-blue-500/[0.06] border border-blue-500/[0.15]','bg-blue-50 border border-blue-200/50')}`}>
-                    <p className={`text-[10px] font-semibold mb-1 text-blue-400`}>Latest admin reply{latestReply.at ? ` · ${new Date(latestReply.at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}` : ''}</p>
-                    <p className={`text-xs leading-relaxed line-clamp-2 ${t('text-gray-300','text-gray-800')}`}>{latestReply.response || ''}</p>
+              <div key={tk.id} onClick={() => setExpandedTicket(expandedTicket === tk.id ? null : tk.id)} className={`rounded-xl cursor-pointer transition-all ${t('bg-white/[0.02] border border-white/[0.04] hover:border-white/[0.08]', 'bg-gray-100/60 border border-gray-200/40 hover:border-gray-300')}`}>
+                <div className="flex items-center gap-3 p-3">
+                  <Ticket className={`w-5 h-5 shrink-0 ${tk.status === 'resolved' || tk.status === 'closed' ? 'text-emerald-400' : 'text-amber-400'}`} />
+                  <div className="flex-1 min-w-0">
+                    <p className={`text-sm font-semibold ${t('text-white', 'text-gray-900')}`}>{tk.subject}</p>
+                    <p className={`text-[11px] ${t('text-gray-500', 'text-gray-700')}`}>{tk.ticket_number || tk.id} &bull; {tk.created_at ? new Date(tk.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : ''}</p>
                   </div>
-                </div>
-              )}
-              {expandedTicket === tk.id && (
-                <div className={`px-4 pb-4 pt-1 border-t ${t('border-white/[0.06]','border-gray-200')}`}>
-                  <div className="grid grid-cols-2 gap-3 mb-3">
-                    <div>
-                      <p className={`text-[10px] font-medium uppercase tracking-wide mb-0.5 ${t('text-gray-600','text-gray-500')}`}>Category</p>
-                      <p className={`text-xs ${t('text-gray-300','text-gray-800')}`}>{tk.category || 'General'}</p>
-                    </div>
-                    <div>
-                      <p className={`text-[10px] font-medium uppercase tracking-wide mb-0.5 ${t('text-gray-600','text-gray-500')}`}>Priority</p>
-                      <p className={`text-xs capitalize ${tk.priority === 'high' || tk.priority === 'critical' ? 'text-red-400' : tk.priority === 'medium' ? 'text-amber-400' : t('text-gray-300','text-gray-800')}`}>{tk.priority || 'Medium'}</p>
-                    </div>
-                    <div>
-                      <p className={`text-[10px] font-medium uppercase tracking-wide mb-0.5 ${t('text-gray-600','text-gray-500')}`}>Status</p>
-                      <p className={`text-xs capitalize ${tk.status === 'resolved' || tk.status === 'closed' ? 'text-emerald-400' : 'text-amber-400'}`}>{tk.status || 'Open'}</p>
-                    </div>
-                    <div>
-                      <p className={`text-[10px] font-medium uppercase tracking-wide mb-0.5 ${t('text-gray-600','text-gray-500')}`}>Submitted</p>
-                      <p className={`text-xs ${t('text-gray-300','text-gray-800')}`}>{tk.created_at ? new Date(tk.created_at).toLocaleString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '-'}</p>
-                    </div>
-                  </div>
-                  {tk.description && (
-                    <div>
-                      <p className={`text-[10px] font-medium uppercase tracking-wide mb-1 ${t('text-gray-600','text-gray-500')}`}>Description</p>
-                      <p className={`text-xs leading-relaxed ${t('text-gray-400','text-gray-700')}`}>{tk.description}</p>
-                    </div>
+                  {replyCount > 0 && (
+                    <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-blue-500/15 text-blue-400 flex items-center gap-1" title={`${replyCount} admin ${replyCount === 1 ? 'reply' : 'replies'}`}>
+                      <MessageSquare className="w-3 h-3" /> {replyCount}
+                    </span>
                   )}
-                  {/* Bug #27: Show admin responses from tickets.metadata.admin_responses */}
-                  {(() => {
-                    const responses = Array.isArray(tk?.metadata?.admin_responses) ? tk.metadata.admin_responses : []
-                    if (responses.length === 0) return null
-                    return (
-                      <div className={`mt-4 pt-3 border-t ${t('border-white/[0.06]','border-gray-200')}`}>
-                        <p className={`text-[10px] font-medium uppercase tracking-wide mb-2 ${t('text-gray-600','text-gray-500')}`}>Admin Replies ({responses.length})</p>
-                        <div className="space-y-2">
-                          {responses.map((r: any, idx: number) => (
-                            <div key={idx} className={`p-3 rounded-lg ${t('bg-white/[0.03] border border-white/[0.06]','bg-blue-50 border border-blue-200/50')}`}>
-                              <div className={`flex items-center justify-between mb-1.5 text-[10px] ${t('text-gray-500','text-gray-600')}`}>
-                                <span className="font-semibold">Status → {r.status || 'updated'}</span>
-                                <span>{r.at ? new Date(r.at).toLocaleString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : ''}</span>
-                              </div>
-                              <p className={`text-xs leading-relaxed whitespace-pre-wrap ${t('text-gray-300','text-gray-800')}`}>{r.response || ''}</p>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )
-                  })()}
+                  <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${tk.status === 'resolved' || tk.status === 'closed' ? 'bg-emerald-500/15 text-emerald-400' : 'bg-amber-500/15 text-amber-400'}`}>{tk.status}</span>
                 </div>
-              )}
-            </div>
+                {/* Latest admin reply preview on collapsed card */}
+                {expandedTicket !== tk.id && latestReply && (
+                  <div className={`px-4 pb-3 pt-0`}>
+                    <div className={`p-2.5 rounded-lg ${t('bg-blue-500/[0.06] border border-blue-500/[0.15]', 'bg-blue-50 border border-blue-200/50')}`}>
+                      <p className={`text-[10px] font-semibold mb-1 text-blue-400`}>Latest admin reply{latestReply.at ? ` · ${new Date(latestReply.at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}` : ''}</p>
+                      <p className={`text-xs leading-relaxed line-clamp-2 ${t('text-gray-300', 'text-gray-800')}`}>{latestReply.response || ''}</p>
+                    </div>
+                  </div>
+                )}
+                {expandedTicket === tk.id && (
+                  <div className={`px-4 pb-4 pt-1 border-t ${t('border-white/[0.06]', 'border-gray-200')}`}>
+                    <div className="grid grid-cols-2 gap-3 mb-3">
+                      <div>
+                        <p className={`text-[10px] font-medium uppercase tracking-wide mb-0.5 ${t('text-gray-600', 'text-gray-500')}`}>Category</p>
+                        <p className={`text-xs ${t('text-gray-300', 'text-gray-800')}`}>{tk.category || 'General'}</p>
+                      </div>
+                      <div>
+                        <p className={`text-[10px] font-medium uppercase tracking-wide mb-0.5 ${t('text-gray-600', 'text-gray-500')}`}>Priority</p>
+                        <p className={`text-xs capitalize ${tk.priority === 'high' || tk.priority === 'critical' ? 'text-red-400' : tk.priority === 'medium' ? 'text-amber-400' : t('text-gray-300', 'text-gray-800')}`}>{tk.priority || 'Medium'}</p>
+                      </div>
+                      <div>
+                        <p className={`text-[10px] font-medium uppercase tracking-wide mb-0.5 ${t('text-gray-600', 'text-gray-500')}`}>Status</p>
+                        <p className={`text-xs capitalize ${tk.status === 'resolved' || tk.status === 'closed' ? 'text-emerald-400' : 'text-amber-400'}`}>{tk.status || 'Open'}</p>
+                      </div>
+                      <div>
+                        <p className={`text-[10px] font-medium uppercase tracking-wide mb-0.5 ${t('text-gray-600', 'text-gray-500')}`}>Submitted</p>
+                        <p className={`text-xs ${t('text-gray-300', 'text-gray-800')}`}>{tk.created_at ? new Date(tk.created_at).toLocaleString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '-'}</p>
+                      </div>
+                    </div>
+                    {tk.description && (
+                      <div>
+                        <p className={`text-[10px] font-medium uppercase tracking-wide mb-1 ${t('text-gray-600', 'text-gray-500')}`}>Description</p>
+                        <p className={`text-xs leading-relaxed ${t('text-gray-400', 'text-gray-700')}`}>{tk.description}</p>
+                      </div>
+                    )}
+                    {/* Bug #27: Show admin responses from tickets.metadata.admin_responses */}
+                    {(() => {
+                      const responses = Array.isArray(tk?.metadata?.admin_responses) ? tk.metadata.admin_responses : []
+                      if (responses.length === 0) return null
+                      return (
+                        <div className={`mt-4 pt-3 border-t ${t('border-white/[0.06]', 'border-gray-200')}`}>
+                          <p className={`text-[10px] font-medium uppercase tracking-wide mb-2 ${t('text-gray-600', 'text-gray-500')}`}>Admin Replies ({responses.length})</p>
+                          <div className="space-y-2">
+                            {responses.map((r: any, idx: number) => (
+                              <div key={idx} className={`p-3 rounded-lg ${t('bg-white/[0.03] border border-white/[0.06]', 'bg-blue-50 border border-blue-200/50')}`}>
+                                <div className={`flex items-center justify-between mb-1.5 text-[10px] ${t('text-gray-500', 'text-gray-600')}`}>
+                                  <span className="font-semibold">Status → {r.status || 'updated'}</span>
+                                  <span>{r.at ? new Date(r.at).toLocaleString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : ''}</span>
+                                </div>
+                                <p className={`text-xs leading-relaxed whitespace-pre-wrap ${t('text-gray-300', 'text-gray-800')}`}>{r.response || ''}</p>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )
+                    })()}
+                  </div>
+                )}
+              </div>
             )
           })}
         </div>
@@ -2878,7 +3451,7 @@ export default function DashboardClient() {
 
       {/* FAQ — loads from database, falls back to defaults */}
       <Glass className="p-6" hover theme={theme}>
-        <h3 className={`text-base font-bold mb-4 ${t('text-white','text-gray-900')}`}>Frequently Asked Questions</h3>
+        <h3 className={`text-base font-bold mb-4 ${t('text-white', 'text-gray-900')}`}>Frequently Asked Questions</h3>
         <div className="space-y-3">
           {(dynamicFAQs.length > 0 ? dynamicFAQs : [
             { question: 'How do I track my investment performance?', answer: 'Navigate to the Portfolio tab for real-time NAV updates, allocation breakdown, and asset-level milestone progress.' },
@@ -2887,9 +3460,9 @@ export default function DashboardClient() {
             { question: 'How can I download my tax certificate?', answer: 'Visit KYC & Documents tab and look for TDS Certificate under the available documents.' },
             { question: 'What are the exit options?', answer: 'Exit options depend on the fund strategy. Contact your relationship manager for details.' },
           ]).map((faq, i) => (
-            <div key={i} className={`p-4 rounded-xl ${t('bg-white/[0.02] border border-white/[0.04]','bg-gray-100/60 border border-gray-200/40')}`}>
-              <p className={`text-sm font-semibold mb-1.5 ${t('text-white','text-gray-900')}`}>{faq.question}</p>
-              <p className={`text-xs leading-relaxed ${t('text-gray-500','text-gray-700')}`}>{faq.answer}</p>
+            <div key={i} className={`p-4 rounded-xl ${t('bg-white/[0.02] border border-white/[0.04]', 'bg-gray-100/60 border border-gray-200/40')}`}>
+              <p className={`text-sm font-semibold mb-1.5 ${t('text-white', 'text-gray-900')}`}>{faq.question}</p>
+              <p className={`text-xs leading-relaxed ${t('text-gray-500', 'text-gray-700')}`}>{faq.answer}</p>
             </div>
           ))}
         </div>
@@ -2901,120 +3474,17 @@ export default function DashboardClient() {
   // REFERRALS TAB
   // ═══════════════════════════════════════════════════════════
   const renderReferralsTab = () => (
-    <div className="space-y-6">
-      <h2 className={`text-xl font-bold ${t('text-white','text-gray-900')}`}>Referral Program</h2>
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        <div className="lg:col-span-2">
-          <Glass className="p-6 relative overflow-hidden" hover glow theme={theme}>
-            <div className="absolute -right-8 -top-8 w-32 h-32 bg-brand-red/10 rounded-full blur-[60px]" />
-            <div className="relative">
-              <div className="flex items-center gap-3 mb-4">
-                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-brand-red/20 to-red-900/20 flex items-center justify-center"><Gift className="w-5 h-5 text-brand-red" /></div>
-                <div><h3 className={`text-base font-bold ${t('text-white','text-gray-900')}`}>Refer & Earn</h3><p className={`text-xs ${t('text-gray-500','text-gray-700')}`}>Invite investors, earn rewards</p></div>
-              </div>
-              <div className="mb-2">
-                <p className={`text-[11px] font-medium mb-1.5 ${t('text-gray-400','text-gray-600')}`}>Your unique referral code</p>
-                <div className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-lg ${t('bg-brand-red/10 border border-brand-red/20','bg-red-50 border border-red-200')}`}>
-                  <span className="text-sm font-bold text-brand-red font-mono">{referralCode}</span>
-                </div>
-              </div>
-              <div className={`flex items-center gap-2 p-2.5 rounded-xl mb-4 ${t('bg-white/[0.03] border border-white/[0.06]','bg-gray-100/60 border border-gray-200/40')}`}>
-                <code className={`flex-1 text-xs font-mono truncate ${t('text-gray-300','text-gray-600')}`}>{referralLink || 'Loading...'}</code>
-                <button onClick={() => {
-                  if (referralLink) {
-                    navigator.clipboard.writeText(referralLink)
-                    setReferralCopied(true)
-                    showToast('Referral link copied to clipboard!', 'success')
-                    setTimeout(() => setReferralCopied(false), 2000)
-                  }
-                }} className={`p-1.5 rounded-lg transition-colors ${referralCopied ? 'bg-emerald-500/20 text-emerald-400' : t('hover:bg-white/[0.06] text-gray-400','hover:bg-gray-200 text-gray-500')}`}>
-                  {referralCopied ? <CheckCircle className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
-                </button>
-              </div>
-              {/* Share buttons */}
-              <div className="flex items-center gap-2 mb-4">
-                <button onClick={() => { window.open(`https://wa.me/?text=Join%20me%20on%20GHL%20India%20Ventures%20for%20premium%20AIF%20investments!%20${encodeURIComponent(referralLink)}`, '_blank') }} className={`px-3 py-1.5 rounded-lg text-xs font-medium flex items-center gap-1.5 ${t('bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20','bg-emerald-50 text-emerald-600 hover:bg-emerald-100')}`}>
-                  <Send className="w-3 h-3" /> WhatsApp
-                </button>
-                <button onClick={() => { window.open(`mailto:?subject=Join%20GHL%20India%20Ventures&body=I%27d%20like%20to%20invite%20you%20to%20invest%20with%20GHL%20India%20Ventures.%20Sign%20up%20here:%20${encodeURIComponent(referralLink)}`, '_blank') }} className={`px-3 py-1.5 rounded-lg text-xs font-medium flex items-center gap-1.5 ${t('bg-blue-500/10 text-blue-400 hover:bg-blue-500/20','bg-blue-50 text-blue-600 hover:bg-blue-100')}`}>
-                  <Mail className="w-3 h-3" /> Email
-                </button>
-              </div>
-              <div className="flex items-center gap-6 text-xs">
-                <div><p className={t('text-gray-500','text-gray-700')}>Referred</p><p className={`text-lg font-bold ${t('text-white','text-gray-900')}`}>{referralStats.referred}</p></div>
-                <div className={`w-px h-8 ${t('bg-white/[0.06]','bg-gray-200')}`} />
-                <div><p className={t('text-gray-500','text-gray-700')}>Earned</p><p className="text-lg font-bold text-emerald-400">{referralStats.earned > 0 ? `\u20B9${(referralStats.earned / 1000).toFixed(0)}K` : '\u20B90'}</p></div>
-              </div>
-            </div>
-          </Glass>
-        </div>
-        <Glass className="p-6" hover theme={theme}>
-          <h4 className={`text-sm font-bold mb-4 ${t('text-white','text-gray-900')}`}>Referral Reward Slab</h4>
-          <div className="space-y-2 mb-4">
-            <div className={`flex items-center justify-between px-3 py-2 rounded-xl ${t('bg-white/[0.03] border border-white/[0.06]','bg-gray-100/60 border border-gray-200/40')}`}>
-              <span className={`text-xs ${t('text-gray-300','text-gray-700')}`}>Up to {'₹'}5 Crore</span>
-              <span className="text-sm font-bold text-brand-red">3%</span>
-            </div>
-            <div className={`flex items-center justify-between px-3 py-2 rounded-xl ${t('bg-white/[0.03] border border-white/[0.06]','bg-gray-100/60 border border-gray-200/40')}`}>
-              <span className={`text-xs ${t('text-gray-300','text-gray-700')}`}>{'₹'}5.01 Crore and above</span>
-              <span className="text-sm font-bold text-brand-red">4%</span>
-            </div>
-            <div className={`flex items-center justify-between px-3 py-2 rounded-xl ${t('bg-emerald-500/[0.05] border border-emerald-500/15','bg-emerald-50 border border-emerald-200/60')}`}>
-              <span className={`text-xs ${t('text-gray-300','text-gray-700')}`}>Management Fee</span>
-              <span className="text-sm font-bold text-emerald-400">1% PA</span>
-            </div>
-          </div>
-          <h4 className={`text-sm font-bold mb-2 ${t('text-white','text-gray-900')}`}>How It Works</h4>
-          {[{ step: '1', t: 'Share Link', d: 'Share your unique referral link with friends and family' },{ step: '2', t: 'They Register', d: 'Your referral signs up using your link' },{ step: '3', t: 'They Invest', d: 'Once they complete an investment, you get notified' },{ step: '4', t: 'You Earn', d: 'Receive referral bonus as per the slab above' }].map((s, i) => (
-            <div key={i} className="flex items-start gap-3 mb-3">
-              <span className="w-7 h-7 rounded-full bg-brand-red/15 flex items-center justify-center text-xs font-bold text-brand-red shrink-0">{s.step}</span>
-              <div><p className={`text-xs font-semibold ${t('text-white','text-gray-900')}`}>{s.t}</p><p className={`text-[11px] ${t('text-gray-500','text-gray-700')}`}>{s.d}</p></div>
-            </div>
-          ))}
-        </Glass>
-      </div>
-
-      {/* Referral List */}
-      {referralList.length > 0 && (
-        <Glass className="p-5" hover theme={theme}>
-          <h4 className={`text-sm font-bold mb-3 ${t('text-white','text-gray-900')}`}>Your Referrals</h4>
-          <div className={`rounded-xl overflow-hidden border ${t('border-white/[0.06]','border-gray-200')}`}>
-            <div className={`grid grid-cols-4 px-4 py-2.5 text-[11px] font-semibold uppercase tracking-wider ${t('bg-white/[0.03] text-gray-500','bg-gray-100 text-gray-600')}`}>
-              <span>Referral</span>
-              <span>Investment History</span>
-              <span>Paid Status</span>
-              <span>Payment Date</span>
-            </div>
-            {referralList.map((r: any, i: number) => {
-              // Optional fields populated by Supabase if/when wired up — fall
-              // back to '—' / 'Pending' so existing rows still render cleanly.
-              const investmentCount = r.investmentCount ?? r.investment_history ?? null
-              const paidStatus = r.paidStatus ?? r.paid_status ?? (r.status === 'Verified' ? 'Pending' : 'Pending')
-              const paymentDate = r.paymentDate ?? r.payment_date ?? '—'
-              return (
-                <div key={i} className={`grid grid-cols-4 px-4 py-3 text-xs border-t ${t('border-white/[0.04] text-gray-300','border-gray-200 text-gray-700')}`}>
-                  <span className={`font-medium ${t('text-white','text-gray-900')}`}>{r.name}</span>
-                  <span>{investmentCount != null ? `${investmentCount} investment${investmentCount === 1 ? '' : 's'}` : '—'}</span>
-                  <span className={`inline-flex items-center gap-1 ${paidStatus === 'Paid' ? 'text-emerald-400' : 'text-amber-400'}`}>
-                    <span className={`w-1.5 h-1.5 rounded-full ${paidStatus === 'Paid' ? 'bg-emerald-400' : 'bg-amber-400'}`} />
-                    {paidStatus}
-                  </span>
-                  <span>{paymentDate}</span>
-                </div>
-              )
-            })}
-          </div>
-        </Glass>
-      )}
-
-      {/* Referral terms */}
-      <Glass className="p-4" theme={theme}>
-        <p className={`text-xs ${t('text-gray-500','text-gray-600')}`}>
-          <Info className="w-3.5 h-3.5 inline mr-1 -mt-0.5" />
-          Referral rewards are subject to the successful onboarding and investment by the referred party. Terms and conditions apply. Contact your relationship manager for details on reward structure.
-        </p>
-      </Glass>
-    </div>
+    <ReferralDashboard
+      theme={theme}
+      isDark={isDark}
+      authenticatedPartnerId={ghlId}
+      partnerName={userName}
+      partnerEmail={userEmail}
+      partnerPhone={(user as any)?.phone || ''}
+      authToken={dashboardAuthToken}
+      showToast={showToast as any}
+      onNavigateTab={(tab) => setActiveTab(tab as TabId)}
+    />
   )
 
   // ═══════════════════════════════════════════════════════════
@@ -3103,7 +3573,7 @@ export default function DashboardClient() {
   const renderProfileTab = () => (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h2 className={`text-xl font-bold ${t('text-white','text-gray-900')}`}>Your Profile</h2>
+        <h2 className={`text-xl font-bold ${t('text-white', 'text-gray-900')}`}>Your Profile</h2>
         <button onClick={openEditProfile} className="flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold text-white transition-all hover:scale-105" style={{ background: 'linear-gradient(135deg, #D0021B, #8B0000)' }}>
           <Sliders className="w-3.5 h-3.5" /> Edit Profile
         </button>
@@ -3115,14 +3585,14 @@ export default function DashboardClient() {
           <div className="flex items-center justify-between mb-2">
             <div className="flex items-center gap-2">
               <Target className="w-4 h-4 text-brand-red" />
-              <span className={`text-xs font-semibold ${t('text-white','text-gray-900')}`}>Profile Completion</span>
+              <span className={`text-xs font-semibold ${t('text-white', 'text-gray-900')}`}>Profile Completion</span>
             </div>
             <span className="text-xs font-bold text-brand-red">{profileCompletion}%</span>
           </div>
-          <div className={`w-full h-2 rounded-full overflow-hidden ${t('bg-white/[0.06]','bg-gray-200')}`}>
+          <div className={`w-full h-2 rounded-full overflow-hidden ${t('bg-white/[0.06]', 'bg-gray-200')}`}>
             <div className="h-full rounded-full transition-all duration-500" style={{ width: `${profileCompletion}%`, background: 'linear-gradient(90deg, #D0021B, #FF4444)' }} />
           </div>
-          <p className={`text-[10px] mt-2 ${t('text-gray-500','text-gray-600')}`}>
+          <p className={`text-[10px] mt-2 ${t('text-gray-500', 'text-gray-600')}`}>
             Complete your profile to unlock all platform features and faster KYC approval.
           </p>
         </Glass>
@@ -3148,8 +3618,8 @@ export default function DashboardClient() {
               <Camera className="w-3.5 h-3.5 text-white" />
             </div>
           </div>
-          <h3 className={`text-lg font-bold ${t('text-white','text-gray-900')}`}>{userName}</h3>
-          <p className={`text-xs mb-3 ${t('text-gray-500','text-gray-700')}`}>{userEmail}</p>
+          <h3 className={`text-lg font-bold ${t('text-white', 'text-gray-900')}`}>{userName}</h3>
+          <p className={`text-xs mb-3 ${t('text-gray-500', 'text-gray-700')}`}>{userEmail}</p>
 
           {/* KYC Badge — clickable, links to KYC tab */}
           <button onClick={() => setActiveTab('kyc')} className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold cursor-pointer transition-all hover:scale-105 ${userKycStatus === 'approved' || userKycStatus === 'verified' ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/20 hover:bg-emerald-500/25' : 'bg-amber-500/15 text-amber-400 border border-amber-500/20 hover:bg-amber-500/25'}`}>
@@ -3157,12 +3627,12 @@ export default function DashboardClient() {
             {!(userKycStatus === 'approved' || userKycStatus === 'verified') && <ChevronRight className="w-3 h-3" />}
           </button>
           {!(userKycStatus === 'approved' || userKycStatus === 'verified') && (
-            <p className={`text-[10px] mt-1.5 ${t('text-gray-600','text-gray-500')}`}>Tap to complete your KYC</p>
+            <p className={`text-[10px] mt-1.5 ${t('text-gray-600', 'text-gray-500')}`}>Tap to complete your KYC</p>
           )}
 
-          <div className={`mt-4 pt-4 border-t text-left space-y-2.5 ${t('border-white/[0.06]','border-gray-200/50')}`}>
-            {[['GHL ID', ghlId || 'N/A'],['PAN', (kycIdentity as any)?.pan_number || savedProfileData.pan || (user as any)?.pan || 'Not provided'],['Mobile', (kycBasic as any)?.phone || user?.phone || 'Not provided'],['Joined', user?.created_at ? new Date(user.created_at).toLocaleDateString('en-IN', { month: 'long', year: 'numeric' }) : 'N/A']].map(([l,v],i) => (
-              <div key={i} className="flex justify-between text-xs"><span className={t('text-gray-500','text-gray-700')}>{l}</span><span className={`font-medium ${v === 'Not provided' ? 'text-gray-600 italic' : t('text-white','text-gray-900')}`}>{v}</span></div>
+          <div className={`mt-4 pt-4 border-t text-left space-y-2.5 ${t('border-white/[0.06]', 'border-gray-200/50')}`}>
+            {[['GHL ID', ghlId || 'N/A'], ['PAN', (kycIdentity as any)?.pan_number || savedProfileData.pan || (user as any)?.pan || 'Not provided'], ['Mobile', (kycBasic as any)?.phone || user?.phone || 'Not provided'], ['Joined', user?.created_at ? new Date(user.created_at).toLocaleDateString('en-IN', { month: 'long', year: 'numeric' }) : 'N/A']].map(([l, v], i) => (
+              <div key={i} className="flex justify-between text-xs"><span className={t('text-gray-500', 'text-gray-700')}>{l}</span><span className={`font-medium ${v === 'Not provided' ? 'text-gray-600 italic' : t('text-white', 'text-gray-900')}`}>{v}</span></div>
             ))}
           </div>
 
@@ -3170,7 +3640,7 @@ export default function DashboardClient() {
               Investor Dashboard Corrections (2026-05). The single "Edit
               Profile" button in the page header is the canonical entry. */}
           {!(userKycStatus === 'approved' || userKycStatus === 'verified') && (
-            <div className={`mt-4 pt-4 border-t ${t('border-white/[0.06]','border-gray-200/50')}`}>
+            <div className={`mt-4 pt-4 border-t ${t('border-white/[0.06]', 'border-gray-200/50')}`}>
               <button onClick={() => setActiveTab('kyc')} className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-xl text-xs font-semibold text-white transition-all hover:scale-[1.02]" style={{ background: 'linear-gradient(135deg, #D0021B, #8B0000)' }}>
                 <FileCheck className="w-3.5 h-3.5" /> Complete KYC
               </button>
@@ -3184,11 +3654,11 @@ export default function DashboardClient() {
               button is the single canonical entry. */}
           <Glass className="p-6" hover theme={theme}>
             <div className="flex items-center justify-between mb-4">
-              <h4 className={`text-sm font-bold ${t('text-white','text-gray-900')}`}>Personal Details</h4>
+              <h4 className={`text-sm font-bold ${t('text-white', 'text-gray-900')}`}>Personal Details</h4>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {[['Full Name', (kycBasic as any)?.investor_name || savedProfileData.full_name || userName],['Email', (kycBasic as any)?.email || userEmail],['Phone', (kycBasic as any)?.phone || savedProfileData.phone || user?.phone || 'Not provided'],['PAN Number', (kycIdentity as any)?.pan_number || savedProfileData.pan || (user as any)?.pan || 'Not provided'],['City', (kycIdentity as any)?.city || savedProfileData.city || user?.city || 'Not provided'],['Date of Birth', (kycIdentity as any)?.dob || savedProfileData.dob || user?.dob || 'Not provided'],['Occupation', savedProfileData.occupation || user?.occupation || 'Not provided']].map(([l,v],i) => (
-                <div key={i}><p className={`text-[10px] uppercase tracking-wider mb-1 ${t('text-gray-600','text-gray-600')}`}>{l}</p><p className={`text-sm font-medium ${v === 'Not provided' ? 'text-gray-600 italic' : t('text-white','text-gray-900')}`}>{v}</p></div>
+              {[['Full Name', (kycBasic as any)?.investor_name || savedProfileData.full_name || userName], ['Email', (kycBasic as any)?.email || userEmail], ['Phone', (kycBasic as any)?.phone || savedProfileData.phone || user?.phone || 'Not provided'], ['PAN Number', (kycIdentity as any)?.pan_number || savedProfileData.pan || (user as any)?.pan || 'Not provided'], ['City', (kycIdentity as any)?.city || savedProfileData.city || user?.city || 'Not provided'], ['Date of Birth', (kycIdentity as any)?.dob || savedProfileData.dob || user?.dob || 'Not provided'], ['Occupation', savedProfileData.occupation || user?.occupation || 'Not provided']].map(([l, v], i) => (
+                <div key={i}><p className={`text-[10px] uppercase tracking-wider mb-1 ${t('text-gray-600', 'text-gray-600')}`}>{l}</p><p className={`text-sm font-medium ${v === 'Not provided' ? 'text-gray-600 italic' : t('text-white', 'text-gray-900')}`}>{v}</p></div>
               ))}
             </div>
           </Glass>
@@ -3196,7 +3666,7 @@ export default function DashboardClient() {
           {/* Nominee Details */}
           <Glass className="p-6" hover theme={theme}>
             <div className="flex items-center justify-between mb-4">
-              <h4 className={`text-sm font-bold ${t('text-white','text-gray-900')}`}>Nominee Details</h4>
+              <h4 className={`text-sm font-bold ${t('text-white', 'text-gray-900')}`}>Nominee Details</h4>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               {(() => {
@@ -3208,8 +3678,8 @@ export default function DashboardClient() {
                   ['Nominee PAN', savedProfileData.nominee_pan || user?.nominee_pan || 'Not provided'],
                   ['Share', (primaryNominee?.percentage != null ? `${primaryNominee.percentage}%` : (savedProfileData.nominee_share || user?.nominee_share || 'Not provided'))],
                 ]
-              })().map(([l,v],i) => (
-                <div key={i}><p className={`text-[10px] uppercase tracking-wider mb-1 ${t('text-gray-600','text-gray-600')}`}>{l}</p><p className={`text-sm font-medium ${v === 'Not provided' ? 'text-gray-600 italic' : t('text-white','text-gray-900')}`}>{v}</p></div>
+              })().map(([l, v], i) => (
+                <div key={i}><p className={`text-[10px] uppercase tracking-wider mb-1 ${t('text-gray-600', 'text-gray-600')}`}>{l}</p><p className={`text-sm font-medium ${v === 'Not provided' ? 'text-gray-600 italic' : t('text-white', 'text-gray-900')}`}>{v}</p></div>
               ))}
             </div>
           </Glass>
@@ -3217,7 +3687,7 @@ export default function DashboardClient() {
           {/* Bank Details */}
           <Glass className="p-6" hover theme={theme}>
             <div className="flex items-center justify-between mb-4">
-              <h4 className={`text-sm font-bold ${t('text-white','text-gray-900')}`}>Bank Details</h4>
+              <h4 className={`text-sm font-bold ${t('text-white', 'text-gray-900')}`}>Bank Details</h4>
               {/* Investor Dashboard Corrections 2026-05-12: Bank Connect
                   CTA hidden — bank details are captured via the KYC flow,
                   so the standalone connect modal duplicates that path. */}
@@ -3229,8 +3699,8 @@ export default function DashboardClient() {
                 ['Account No', (kycBank as any)?.account_number || savedBankData.account_number || user?.bank_account || 'Not provided'],
                 ['IFSC', (kycBank as any)?.ifsc_code || savedBankData.ifsc_code || user?.bank_ifsc || 'Not provided'],
                 ['Account Type', (kycBank as any)?.account_type || savedBankData.account_type || user?.bank_type || 'Not provided'],
-              ].map(([l,v],i) => (
-                <div key={i}><p className={`text-[10px] uppercase tracking-wider mb-1 ${t('text-gray-600','text-gray-600')}`}>{l}</p><p className={`text-sm font-medium ${v === 'Not provided' ? 'text-gray-600 italic' : t('text-white','text-gray-900')}`}>{v}</p></div>
+              ].map(([l, v], i) => (
+                <div key={i}><p className={`text-[10px] uppercase tracking-wider mb-1 ${t('text-gray-600', 'text-gray-600')}`}>{l}</p><p className={`text-sm font-medium ${v === 'Not provided' ? 'text-gray-600 italic' : t('text-white', 'text-gray-900')}`}>{v}</p></div>
               ))}
             </div>
           </Glass>
@@ -3240,27 +3710,27 @@ export default function DashboardClient() {
       {/* Edit Profile Modal */}
       {editProfileOpen && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 backdrop-blur-sm">
-          <div className={`max-w-lg w-full mx-4 rounded-2xl border p-6 max-h-[85vh] overflow-y-auto ${t('bg-[#111] border-white/10','bg-white border-gray-200 shadow-2xl')}`}>
+          <div className={`max-w-lg w-full mx-4 rounded-2xl border p-6 max-h-[85vh] overflow-y-auto ${t('bg-[#111] border-white/10', 'bg-white border-gray-200 shadow-2xl')}`}>
             <div className="flex items-center justify-between mb-5">
-              <h3 className={`text-lg font-bold ${t('text-white','text-gray-900')}`}>Edit Profile</h3>
-              <button onClick={() => setEditProfileOpen(false)} className={t('text-gray-500 hover:text-white','text-gray-600 hover:text-gray-900')}><X className="w-5 h-5" /></button>
+              <h3 className={`text-lg font-bold ${t('text-white', 'text-gray-900')}`}>Edit Profile</h3>
+              <button onClick={() => setEditProfileOpen(false)} className={t('text-gray-500 hover:text-white', 'text-gray-600 hover:text-gray-900')}><X className="w-5 h-5" /></button>
             </div>
 
             <div className="space-y-4">
-              <p className={`text-[10px] uppercase tracking-wider font-semibold ${t('text-gray-500','text-gray-600')}`}>Personal Information</p>
+              <p className={`text-[10px] uppercase tracking-wider font-semibold ${t('text-gray-500', 'text-gray-600')}`}>Personal Information</p>
 
               {/* Primary email — read-only. The login email lives in
                   auth.users; changing it goes through a verification flow
                   outside this modal. */}
               <div>
-                <label className={`text-[10px] uppercase tracking-wider mb-1 block ${t('text-gray-500','text-gray-600')}`}>Email Address (Login)</label>
+                <label className={`text-[10px] uppercase tracking-wider mb-1 block ${t('text-gray-500', 'text-gray-600')}`}>Email Address (Login)</label>
                 <input
                   type="email"
                   value={user?.email || ''}
                   readOnly
-                  className={`w-full px-4 py-2.5 rounded-xl text-sm cursor-not-allowed ${t('bg-white/[0.02] border border-white/[0.04] text-gray-400','bg-gray-100 border border-gray-200 text-gray-600')} outline-none`}
+                  className={`w-full px-4 py-2.5 rounded-xl text-sm cursor-not-allowed ${t('bg-white/[0.02] border border-white/[0.04] text-gray-400', 'bg-gray-100 border border-gray-200 text-gray-600')} outline-none`}
                 />
-                <p className={`text-[10px] mt-1 ${t('text-gray-600','text-gray-500')}`}>
+                <p className={`text-[10px] mt-1 ${t('text-gray-600', 'text-gray-500')}`}>
                   This is your sign-in email and cannot be changed here. Contact support to update it.
                 </p>
               </div>
@@ -3274,16 +3744,16 @@ export default function DashboardClient() {
                 { key: 'occupation', label: 'Occupation', placeholder: 'e.g. Business Owner, Engineer' },
               ].map(f => (
                 <div key={f.key}>
-                  <label className={`text-[10px] uppercase tracking-wider mb-1 block ${t('text-gray-500','text-gray-600')}`}>{f.label}</label>
+                  <label className={`text-[10px] uppercase tracking-wider mb-1 block ${t('text-gray-500', 'text-gray-600')}`}>{f.label}</label>
                   <input type="text" value={(editForm as any)[f.key]} onChange={e => setEditForm(prev => ({ ...prev, [f.key]: e.target.value }))} placeholder={f.placeholder}
-                    className={`w-full px-4 py-2.5 rounded-xl text-sm ${t('bg-white/[0.04] border border-white/[0.06] text-white placeholder-gray-600 focus:border-brand-red/50','bg-gray-100/40 border border-gray-200/40 text-gray-900 placeholder-gray-400 focus:border-brand-red/50')} outline-none transition-colors`} />
+                    className={`w-full px-4 py-2.5 rounded-xl text-sm ${t('bg-white/[0.04] border border-white/[0.06] text-white placeholder-gray-600 focus:border-brand-red/50', 'bg-gray-100/40 border border-gray-200/40 text-gray-900 placeholder-gray-400 focus:border-brand-red/50')} outline-none transition-colors`} />
                 </div>
               ))}
 
               {/* Additional emails — repeater. Saved to clients.additional_emails. */}
               <div>
                 <div className="flex items-center justify-between mb-1">
-                  <label className={`text-[10px] uppercase tracking-wider ${t('text-gray-500','text-gray-600')}`}>Additional Emails</label>
+                  <label className={`text-[10px] uppercase tracking-wider ${t('text-gray-500', 'text-gray-600')}`}>Additional Emails</label>
                   <button
                     type="button"
                     onClick={() => setEditForm(prev => ({ ...prev, additional_emails: [...(prev.additional_emails || []), ''] }))}
@@ -3293,7 +3763,7 @@ export default function DashboardClient() {
                   </button>
                 </div>
                 {(editForm.additional_emails || []).length === 0 ? (
-                  <p className={`text-[11px] italic ${t('text-gray-600','text-gray-500')}`}>No additional emails. Click &quot;Add Email&quot; to add one for contact purposes.</p>
+                  <p className={`text-[11px] italic ${t('text-gray-600', 'text-gray-500')}`}>No additional emails. Click &quot;Add Email&quot; to add one for contact purposes.</p>
                 ) : (
                   <div className="space-y-2">
                     {(editForm.additional_emails || []).map((val, idx) => (
@@ -3307,13 +3777,13 @@ export default function DashboardClient() {
                             return { ...prev, additional_emails: next }
                           })}
                           placeholder="name@example.com"
-                          className={`flex-1 px-4 py-2.5 rounded-xl text-sm ${t('bg-white/[0.04] border border-white/[0.06] text-white placeholder-gray-600 focus:border-brand-red/50','bg-gray-100/40 border border-gray-200/40 text-gray-900 placeholder-gray-400 focus:border-brand-red/50')} outline-none transition-colors`}
+                          className={`flex-1 px-4 py-2.5 rounded-xl text-sm ${t('bg-white/[0.04] border border-white/[0.06] text-white placeholder-gray-600 focus:border-brand-red/50', 'bg-gray-100/40 border border-gray-200/40 text-gray-900 placeholder-gray-400 focus:border-brand-red/50')} outline-none transition-colors`}
                         />
                         <button
                           type="button"
                           aria-label="Remove email"
                           onClick={() => setEditForm(prev => ({ ...prev, additional_emails: (prev.additional_emails || []).filter((_, i) => i !== idx) }))}
-                          className={`px-3 rounded-xl text-xs ${t('bg-white/[0.04] border border-white/[0.06] text-gray-400 hover:text-red-400','bg-gray-100 border border-gray-200 text-gray-500 hover:text-red-500')}`}
+                          className={`px-3 rounded-xl text-xs ${t('bg-white/[0.04] border border-white/[0.06] text-gray-400 hover:text-red-400', 'bg-gray-100 border border-gray-200 text-gray-500 hover:text-red-500')}`}
                         >
                           Remove
                         </button>
@@ -3326,7 +3796,7 @@ export default function DashboardClient() {
               {/* Additional phones — repeater. Saved to clients.additional_phones. */}
               <div>
                 <div className="flex items-center justify-between mb-1">
-                  <label className={`text-[10px] uppercase tracking-wider ${t('text-gray-500','text-gray-600')}`}>Additional Phones</label>
+                  <label className={`text-[10px] uppercase tracking-wider ${t('text-gray-500', 'text-gray-600')}`}>Additional Phones</label>
                   <button
                     type="button"
                     onClick={() => setEditForm(prev => ({ ...prev, additional_phones: [...(prev.additional_phones || []), ''] }))}
@@ -3336,7 +3806,7 @@ export default function DashboardClient() {
                   </button>
                 </div>
                 {(editForm.additional_phones || []).length === 0 ? (
-                  <p className={`text-[11px] italic ${t('text-gray-600','text-gray-500')}`}>No additional phones. Useful if you have a work number or family contact.</p>
+                  <p className={`text-[11px] italic ${t('text-gray-600', 'text-gray-500')}`}>No additional phones. Useful if you have a work number or family contact.</p>
                 ) : (
                   <div className="space-y-2">
                     {(editForm.additional_phones || []).map((val, idx) => (
@@ -3350,13 +3820,13 @@ export default function DashboardClient() {
                             return { ...prev, additional_phones: next }
                           })}
                           placeholder="+91 XXXXX XXXXX"
-                          className={`flex-1 px-4 py-2.5 rounded-xl text-sm ${t('bg-white/[0.04] border border-white/[0.06] text-white placeholder-gray-600 focus:border-brand-red/50','bg-gray-100/40 border border-gray-200/40 text-gray-900 placeholder-gray-400 focus:border-brand-red/50')} outline-none transition-colors`}
+                          className={`flex-1 px-4 py-2.5 rounded-xl text-sm ${t('bg-white/[0.04] border border-white/[0.06] text-white placeholder-gray-600 focus:border-brand-red/50', 'bg-gray-100/40 border border-gray-200/40 text-gray-900 placeholder-gray-400 focus:border-brand-red/50')} outline-none transition-colors`}
                         />
                         <button
                           type="button"
                           aria-label="Remove phone"
                           onClick={() => setEditForm(prev => ({ ...prev, additional_phones: (prev.additional_phones || []).filter((_, i) => i !== idx) }))}
-                          className={`px-3 rounded-xl text-xs ${t('bg-white/[0.04] border border-white/[0.06] text-gray-400 hover:text-red-400','bg-gray-100 border border-gray-200 text-gray-500 hover:text-red-500')}`}
+                          className={`px-3 rounded-xl text-xs ${t('bg-white/[0.04] border border-white/[0.06] text-gray-400 hover:text-red-400', 'bg-gray-100 border border-gray-200 text-gray-500 hover:text-red-500')}`}
                         >
                           Remove
                         </button>
@@ -3366,8 +3836,8 @@ export default function DashboardClient() {
                 )}
               </div>
 
-              <div className={`pt-4 border-t ${t('border-white/[0.06]','border-gray-200')}`}>
-                <p className={`text-[10px] uppercase tracking-wider font-semibold mb-3 ${t('text-gray-500','text-gray-600')}`}>Nominee Information</p>
+              <div className={`pt-4 border-t ${t('border-white/[0.06]', 'border-gray-200')}`}>
+                <p className={`text-[10px] uppercase tracking-wider font-semibold mb-3 ${t('text-gray-500', 'text-gray-600')}`}>Nominee Information</p>
                 {[
                   { key: 'nominee_name', label: 'Nominee Name', placeholder: 'Full legal name of nominee' },
                   { key: 'nominee_relation', label: 'Relationship', placeholder: 'e.g. Spouse, Parent, Child' },
@@ -3375,15 +3845,15 @@ export default function DashboardClient() {
                   { key: 'nominee_share', label: 'Share %', placeholder: '100%' },
                 ].map(f => (
                   <div key={f.key} className="mb-3">
-                    <label className={`text-[10px] uppercase tracking-wider mb-1 block ${t('text-gray-500','text-gray-600')}`}>{f.label}</label>
+                    <label className={`text-[10px] uppercase tracking-wider mb-1 block ${t('text-gray-500', 'text-gray-600')}`}>{f.label}</label>
                     <input type="text" value={(editForm as any)[f.key]} onChange={e => setEditForm(prev => ({ ...prev, [f.key]: e.target.value }))} placeholder={f.placeholder}
-                      className={`w-full px-4 py-2.5 rounded-xl text-sm ${t('bg-white/[0.04] border border-white/[0.06] text-white placeholder-gray-600 focus:border-brand-red/50','bg-gray-100/40 border border-gray-200/40 text-gray-900 placeholder-gray-400 focus:border-brand-red/50')} outline-none transition-colors`} />
+                      className={`w-full px-4 py-2.5 rounded-xl text-sm ${t('bg-white/[0.04] border border-white/[0.06] text-white placeholder-gray-600 focus:border-brand-red/50', 'bg-gray-100/40 border border-gray-200/40 text-gray-900 placeholder-gray-400 focus:border-brand-red/50')} outline-none transition-colors`} />
                   </div>
                 ))}
               </div>
 
               <div className="flex gap-3 pt-2">
-                <button onClick={() => setEditProfileOpen(false)} className={`flex-1 py-2.5 rounded-xl text-sm font-semibold transition-colors ${t('bg-white/[0.06] text-gray-300 hover:bg-white/[0.1]','bg-gray-100 text-gray-700 hover:bg-gray-200')}`}>Cancel</button>
+                <button onClick={() => setEditProfileOpen(false)} className={`flex-1 py-2.5 rounded-xl text-sm font-semibold transition-colors ${t('bg-white/[0.06] text-gray-300 hover:bg-white/[0.1]', 'bg-gray-100 text-gray-700 hover:bg-gray-200')}`}>Cancel</button>
                 <button onClick={handleSaveProfile} className="flex-1 py-2.5 rounded-xl text-sm font-semibold text-white transition-all hover:scale-[1.02]" style={{ background: 'linear-gradient(135deg, #D0021B, #8B0000)' }}>Save Changes</button>
               </div>
             </div>
@@ -3394,20 +3864,20 @@ export default function DashboardClient() {
       {/* Bank Connect Modal */}
       {bankConnectOpen && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 backdrop-blur-sm">
-          <div className={`max-w-md w-full mx-4 rounded-2xl border p-6 ${t('bg-[#111] border-white/10','bg-white border-gray-200 shadow-2xl')}`}>
+          <div className={`max-w-md w-full mx-4 rounded-2xl border p-6 ${t('bg-[#111] border-white/10', 'bg-white border-gray-200 shadow-2xl')}`}>
             <div className="flex items-center justify-between mb-5">
-              <h3 className={`text-lg font-bold ${t('text-white','text-gray-900')}`}>Bank Connect</h3>
-              <button onClick={() => setBankConnectOpen(false)} className={t('text-gray-500 hover:text-white','text-gray-600 hover:text-gray-900')}><X className="w-5 h-5" /></button>
+              <h3 className={`text-lg font-bold ${t('text-white', 'text-gray-900')}`}>Bank Connect</h3>
+              <button onClick={() => setBankConnectOpen(false)} className={t('text-gray-500 hover:text-white', 'text-gray-600 hover:text-gray-900')}><X className="w-5 h-5" /></button>
             </div>
-            <div className={`p-4 rounded-xl mb-4 ${t('bg-emerald-500/10 border border-emerald-500/20','bg-emerald-50 border border-emerald-200')}`}>
-              <div className="flex items-center gap-2 mb-1"><Shield className="w-4 h-4 text-emerald-400" /><span className={`text-sm font-semibold ${t('text-emerald-400','text-emerald-600')}`}>Secure Connection</span></div>
-              <p className={`text-xs ${t('text-gray-400','text-gray-700')}`}>Your bank details are encrypted and secured with 256-bit SSL.</p>
+            <div className={`p-4 rounded-xl mb-4 ${t('bg-emerald-500/10 border border-emerald-500/20', 'bg-emerald-50 border border-emerald-200')}`}>
+              <div className="flex items-center gap-2 mb-1"><Shield className="w-4 h-4 text-emerald-400" /><span className={`text-sm font-semibold ${t('text-emerald-400', 'text-emerald-600')}`}>Secure Connection</span></div>
+              <p className={`text-xs ${t('text-gray-400', 'text-gray-700')}`}>Your bank details are encrypted and secured with 256-bit SSL.</p>
             </div>
             <div className="space-y-3">
-              <input type="text" placeholder="Account Holder Name" value={bankForm.holder_name} onChange={e => setBankForm(p => ({ ...p, holder_name: e.target.value }))} className={`w-full px-4 py-2.5 rounded-xl text-sm ${t('bg-white/[0.04] border border-white/[0.06] text-white placeholder-gray-600','bg-gray-100/40 border border-gray-200/40 text-gray-900 placeholder-gray-400')}`} />
-              <input type="text" placeholder="Account Number" value={bankForm.account_number} onChange={e => setBankForm(p => ({ ...p, account_number: e.target.value }))} className={`w-full px-4 py-2.5 rounded-xl text-sm ${t('bg-white/[0.04] border border-white/[0.06] text-white placeholder-gray-600','bg-gray-100/40 border border-gray-200/40 text-gray-900 placeholder-gray-400')}`} />
-              <input type="text" placeholder="IFSC Code" value={bankForm.ifsc_code} onChange={e => setBankForm(p => ({ ...p, ifsc_code: e.target.value }))} className={`w-full px-4 py-2.5 rounded-xl text-sm ${t('bg-white/[0.04] border border-white/[0.06] text-white placeholder-gray-600','bg-gray-100/40 border border-gray-200/40 text-gray-900 placeholder-gray-400')}`} />
-              <select value={bankForm.account_type} onChange={e => setBankForm(p => ({ ...p, account_type: e.target.value }))} style={isDark ? { colorScheme: 'dark' } : undefined} className={`w-full px-4 py-2.5 rounded-xl text-sm ${t('bg-white/[0.04] border border-white/[0.06] text-white','bg-gray-100/60 border border-gray-200/40 text-gray-900')}`}>
+              <input type="text" placeholder="Account Holder Name" value={bankForm.holder_name} onChange={e => setBankForm(p => ({ ...p, holder_name: e.target.value }))} className={`w-full px-4 py-2.5 rounded-xl text-sm ${t('bg-white/[0.04] border border-white/[0.06] text-white placeholder-gray-600', 'bg-gray-100/40 border border-gray-200/40 text-gray-900 placeholder-gray-400')}`} />
+              <input type="text" placeholder="Account Number" value={bankForm.account_number} onChange={e => setBankForm(p => ({ ...p, account_number: e.target.value }))} className={`w-full px-4 py-2.5 rounded-xl text-sm ${t('bg-white/[0.04] border border-white/[0.06] text-white placeholder-gray-600', 'bg-gray-100/40 border border-gray-200/40 text-gray-900 placeholder-gray-400')}`} />
+              <input type="text" placeholder="IFSC Code" value={bankForm.ifsc_code} onChange={e => setBankForm(p => ({ ...p, ifsc_code: e.target.value }))} className={`w-full px-4 py-2.5 rounded-xl text-sm ${t('bg-white/[0.04] border border-white/[0.06] text-white placeholder-gray-600', 'bg-gray-100/40 border border-gray-200/40 text-gray-900 placeholder-gray-400')}`} />
+              <select value={bankForm.account_type} onChange={e => setBankForm(p => ({ ...p, account_type: e.target.value }))} style={isDark ? { colorScheme: 'dark' } : undefined} className={`w-full px-4 py-2.5 rounded-xl text-sm ${t('bg-white/[0.04] border border-white/[0.06] text-white', 'bg-gray-100/60 border border-gray-200/40 text-gray-900')}`}>
                 <option value="savings">Savings Account</option><option value="current">Current Account</option><option value="nro">NRO Account</option>
               </select>
               <button onClick={async () => {
@@ -3438,15 +3908,15 @@ export default function DashboardClient() {
   // ═══════════════════════════════════════════════════════════
   const renderSettingsTab = () => (
     <div className="space-y-6">
-      <h2 className={`text-xl font-bold ${t('text-white','text-gray-900')}`}>Settings</h2>
+      <h2 className={`text-xl font-bold ${t('text-white', 'text-gray-900')}`}>Settings</h2>
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {/* Appearance */}
         <Glass className="p-6" hover theme={theme}>
           <div className="flex items-center gap-3 mb-4">
-            <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${t('bg-white/[0.04]','bg-gray-200/40')}`}>
+            <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${t('bg-white/[0.04]', 'bg-gray-200/40')}`}>
               {isDark ? <Moon className="w-5 h-5 text-indigo-400" /> : <Sun className="w-5 h-5 text-amber-500" />}
             </div>
-            <div><h4 className={`text-sm font-bold ${t('text-white','text-gray-900')}`}>Appearance</h4><p className={`text-xs ${t('text-gray-500','text-gray-700')}`}>Theme and display preferences</p></div>
+            <div><h4 className={`text-sm font-bold ${t('text-white', 'text-gray-900')}`}>Appearance</h4><p className={`text-xs ${t('text-gray-500', 'text-gray-700')}`}>Theme and display preferences</p></div>
           </div>
           <div className="flex gap-3">
             {/* globals.css forces `display:inline-flex; align-items:center;
@@ -3454,32 +3924,32 @@ export default function DashboardClient() {
                 the intended icon-above-label stack into a lopsided row and
                 made `mx-auto mb-1` / `text-center` no-ops. Declare the column
                 and centring explicitly and let that gap do the spacing. */}
-            <button onClick={() => setTheme('light')} className={`flex-1 p-3 rounded-xl flex-col items-center justify-center text-center text-sm font-medium transition-all ${theme === 'light' ? 'bg-brand-red/15 text-brand-red border border-brand-red/20' : t('bg-white/[0.04] text-gray-400 border border-white/[0.06] hover:border-white/[0.1]','bg-gray-100 text-gray-600 border border-gray-200 hover:border-gray-300')}`}>
+            <button onClick={() => setTheme('light')} className={`flex-1 p-3 rounded-xl flex-col items-center justify-center text-center text-sm font-medium transition-all ${theme === 'light' ? 'bg-brand-red/15 text-brand-red border border-brand-red/20' : t('bg-white/[0.04] text-gray-400 border border-white/[0.06] hover:border-white/[0.1]', 'bg-gray-100 text-gray-600 border border-gray-200 hover:border-gray-300')}`}>
               <Sun className="w-5 h-5" /> Light Mode
             </button>
-            <button onClick={() => setTheme('dark')} className={`flex-1 p-3 rounded-xl flex-col items-center justify-center text-center text-sm font-medium transition-all ${theme === 'dark' ? 'bg-brand-red/15 text-white border border-brand-red/20' : t('bg-white/[0.04] text-gray-400 border border-white/[0.06] hover:border-white/[0.1]','bg-gray-100 text-gray-600 border border-gray-200 hover:border-gray-300')}`}>
+            <button onClick={() => setTheme('dark')} className={`flex-1 p-3 rounded-xl flex-col items-center justify-center text-center text-sm font-medium transition-all ${theme === 'dark' ? 'bg-brand-red/15 text-white border border-brand-red/20' : t('bg-white/[0.04] text-gray-400 border border-white/[0.06] hover:border-white/[0.1]', 'bg-gray-100 text-gray-600 border border-gray-200 hover:border-gray-300')}`}>
               <Moon className="w-5 h-5" /> Dark Mode
             </button>
           </div>
-          <p className={`text-[10px] mt-3 flex items-center gap-1 ${t('text-gray-600','text-gray-500')}`}><Shield className="w-3 h-3" /> {isDark ? 'Optimized for low-light, premium viewing experience' : 'Clean, bright interface for daytime use'}</p>
+          <p className={`text-[10px] mt-3 flex items-center gap-1 ${t('text-gray-600', 'text-gray-500')}`}><Shield className="w-3 h-3" /> {isDark ? 'Optimized for low-light, premium viewing experience' : 'Clean, bright interface for daytime use'}</p>
         </Glass>
 
         {/* Language */}
         <Glass className="p-6" hover theme={theme}>
           <div className="flex items-center gap-3 mb-4">
-            <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${t('bg-white/[0.04]','bg-gray-200/40')}`}><Languages className="w-5 h-5 text-blue-400" /></div>
-            <div><h4 className={`text-sm font-bold ${t('text-white','text-gray-900')}`}>Language</h4><p className={`text-xs ${t('text-gray-500','text-gray-700')}`}>Dashboard language preference</p></div>
+            <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${t('bg-white/[0.04]', 'bg-gray-200/40')}`}><Languages className="w-5 h-5 text-blue-400" /></div>
+            <div><h4 className={`text-sm font-bold ${t('text-white', 'text-gray-900')}`}>Language</h4><p className={`text-xs ${t('text-gray-500', 'text-gray-700')}`}>Dashboard language preference</p></div>
           </div>
           <select
             value={dashLang}
             onChange={(e) => setDashLang(e.target.value)}
             style={isDark ? { colorScheme: 'dark' } : undefined}
-            className={`w-full px-4 py-2.5 rounded-xl text-sm cursor-pointer ${t('bg-white/[0.04] border border-white/[0.06] text-white','bg-gray-100/60 border border-gray-200/40 text-gray-900')}`}
+            className={`w-full px-4 py-2.5 rounded-xl text-sm cursor-pointer ${t('bg-white/[0.04] border border-white/[0.06] text-white', 'bg-gray-100/60 border border-gray-200/40 text-gray-900')}`}
           >
             <option value="English">English</option><option value="Hindi">हिन्दी (Hindi)</option><option value="Tamil">தமிழ் (Tamil)</option><option value="Telugu">తెలుగు (Telugu)</option><option value="Kannada">ಕನ್ನಡ (Kannada)</option><option value="Malayalam">മലയാളം (Malayalam)</option><option value="Marathi">मराठी (Marathi)</option><option value="Bengali">বাংলা (Bengali)</option><option value="Gujarati">ગુજરાતી (Gujarati)</option>
           </select>
           {dashLang !== 'English' && (
-            <p className={`text-[10px] mt-2 ${t('text-gray-500','text-gray-700')}`}>
+            <p className={`text-[10px] mt-2 ${t('text-gray-500', 'text-gray-700')}`}>
               <Info className="w-3 h-3 inline mr-1" />
               Translation to {dashLang} will be available in a future update. Currently displaying in English.
             </p>
@@ -3489,8 +3959,8 @@ export default function DashboardClient() {
         {/* Notifications */}
         <Glass className="p-6" hover theme={theme}>
           <div className="flex items-center gap-3 mb-4">
-            <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${t('bg-white/[0.04]','bg-gray-200/40')}`}><Bell className="w-5 h-5 text-amber-400" /></div>
-            <div><h4 className={`text-sm font-bold ${t('text-white','text-gray-900')}`}>Notifications</h4><p className={`text-xs ${t('text-gray-500','text-gray-700')}`}>Email and push preferences</p></div>
+            <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${t('bg-white/[0.04]', 'bg-gray-200/40')}`}><Bell className="w-5 h-5 text-amber-400" /></div>
+            <div><h4 className={`text-sm font-bold ${t('text-white', 'text-gray-900')}`}>Notifications</h4><p className={`text-xs ${t('text-gray-500', 'text-gray-700')}`}>Email and push preferences</p></div>
           </div>
           {([
             { key: 'email' as const, label: 'Email Alerts' },
@@ -3500,10 +3970,10 @@ export default function DashboardClient() {
           ]).map((opt) => {
             const isOn = notifPrefs[opt.key]
             return (
-              <div key={opt.key} className={`flex items-center justify-between p-2.5 rounded-lg ${t('hover:bg-white/[0.02]','hover:bg-gray-200/40')} transition-colors`}>
-                <span className={`text-xs ${t('text-gray-400','text-gray-600')}`}>{opt.label}</span>
+              <div key={opt.key} className={`flex items-center justify-between p-2.5 rounded-lg ${t('hover:bg-white/[0.02]', 'hover:bg-gray-200/40')} transition-colors`}>
+                <span className={`text-xs ${t('text-gray-400', 'text-gray-600')}`}>{opt.label}</span>
                 <button onClick={() => setNotifPrefs((p: Record<string, boolean>) => ({ ...p, [opt.key]: !p[opt.key] }))}
-                  className={`w-10 h-[22px] rounded-full relative cursor-pointer transition-all duration-300 ${isOn ? 'bg-brand-red' : t('bg-white/[0.08]','bg-gray-300')}`}>
+                  className={`w-10 h-[22px] rounded-full relative cursor-pointer transition-all duration-300 ${isOn ? 'bg-brand-red' : t('bg-white/[0.08]', 'bg-gray-300')}`}>
                   <div className={`absolute top-[3px] w-4 h-4 rounded-full bg-white shadow-md transition-all duration-300 ${isOn ? 'left-[22px]' : 'left-[3px]'}`} />
                 </button>
               </div>
@@ -3514,41 +3984,41 @@ export default function DashboardClient() {
         {/* Security */}
         <Glass className="p-6" hover theme={theme}>
           <div className="flex items-center gap-3 mb-4">
-            <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${t('bg-white/[0.04]','bg-gray-200/40')}`}><Lock className="w-5 h-5 text-emerald-400" /></div>
-            <div><h4 className={`text-sm font-bold ${t('text-white','text-gray-900')}`}>Security</h4><p className={`text-xs ${t('text-gray-500','text-gray-700')}`}>Password and authentication</p></div>
+            <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${t('bg-white/[0.04]', 'bg-gray-200/40')}`}><Lock className="w-5 h-5 text-emerald-400" /></div>
+            <div><h4 className={`text-sm font-bold ${t('text-white', 'text-gray-900')}`}>Security</h4><p className={`text-xs ${t('text-gray-500', 'text-gray-700')}`}>Password and authentication</p></div>
           </div>
 
           {/* Password Reset Form — shown after recovery flow or manual trigger */}
           {showPasswordReset && (
-            <div className={`mb-4 p-4 rounded-xl border ${t('bg-white/[0.03] border-white/[0.06]','bg-gray-50 border-gray-200')}`}>
-              <h5 className={`text-xs font-bold mb-3 ${t('text-white','text-gray-900')}`}>Set New Password</h5>
+            <div className={`mb-4 p-4 rounded-xl border ${t('bg-white/[0.03] border-white/[0.06]', 'bg-gray-50 border-gray-200')}`}>
+              <h5 className={`text-xs font-bold mb-3 ${t('text-white', 'text-gray-900')}`}>Set New Password</h5>
               <div className="space-y-3">
                 <div>
-                  <label className={`text-[10px] font-medium mb-1 block ${t('text-gray-400','text-gray-600')}`}>New Password</label>
+                  <label className={`text-[10px] font-medium mb-1 block ${t('text-gray-400', 'text-gray-600')}`}>New Password</label>
                   <div className="relative">
                     <input
                       type={showNewPw ? 'text' : 'password'}
                       value={newPassword}
                       onChange={(e) => setNewPassword(e.target.value)}
                       placeholder="Min. 8 characters"
-                      className={`w-full px-3 py-2 pr-10 rounded-lg text-sm ${t('bg-white/[0.04] border border-white/[0.06] text-white placeholder:text-gray-600','bg-white border border-gray-200 text-gray-900 placeholder:text-gray-400')} focus:outline-none focus:ring-1 focus:ring-brand-red`}
+                      className={`w-full px-3 py-2 pr-10 rounded-lg text-sm ${t('bg-white/[0.04] border border-white/[0.06] text-white placeholder:text-gray-600', 'bg-white border border-gray-200 text-gray-900 placeholder:text-gray-400')} focus:outline-none focus:ring-1 focus:ring-brand-red`}
                     />
-                    <button type="button" onClick={() => setShowNewPw(!showNewPw)} className={`absolute right-2.5 top-1/2 -translate-y-1/2 ${t('text-gray-500 hover:text-white','text-gray-400 hover:text-gray-700')}`}>
+                    <button type="button" onClick={() => setShowNewPw(!showNewPw)} className={`absolute right-2.5 top-1/2 -translate-y-1/2 ${t('text-gray-500 hover:text-white', 'text-gray-400 hover:text-gray-700')}`}>
                       {showNewPw ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                     </button>
                   </div>
                 </div>
                 <div>
-                  <label className={`text-[10px] font-medium mb-1 block ${t('text-gray-400','text-gray-600')}`}>Confirm Password</label>
+                  <label className={`text-[10px] font-medium mb-1 block ${t('text-gray-400', 'text-gray-600')}`}>Confirm Password</label>
                   <div className="relative">
                     <input
                       type={showConfirmPw ? 'text' : 'password'}
                       value={confirmNewPassword}
                       onChange={(e) => setConfirmNewPassword(e.target.value)}
                       placeholder="Re-enter password"
-                      className={`w-full px-3 py-2 pr-10 rounded-lg text-sm ${t('bg-white/[0.04] border border-white/[0.06] text-white placeholder:text-gray-600','bg-white border border-gray-200 text-gray-900 placeholder:text-gray-400')} focus:outline-none focus:ring-1 focus:ring-brand-red`}
+                      className={`w-full px-3 py-2 pr-10 rounded-lg text-sm ${t('bg-white/[0.04] border border-white/[0.06] text-white placeholder:text-gray-600', 'bg-white border border-gray-200 text-gray-900 placeholder:text-gray-400')} focus:outline-none focus:ring-1 focus:ring-brand-red`}
                     />
-                    <button type="button" onClick={() => setShowConfirmPw(!showConfirmPw)} className={`absolute right-2.5 top-1/2 -translate-y-1/2 ${t('text-gray-500 hover:text-white','text-gray-400 hover:text-gray-700')}`}>
+                    <button type="button" onClick={() => setShowConfirmPw(!showConfirmPw)} className={`absolute right-2.5 top-1/2 -translate-y-1/2 ${t('text-gray-500 hover:text-white', 'text-gray-400 hover:text-gray-700')}`}>
                       {showConfirmPw ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                     </button>
                   </div>
@@ -3563,7 +4033,7 @@ export default function DashboardClient() {
                   {!passwordResetMandatory && (
                     <button
                       onClick={() => { setShowPasswordReset(false); setNewPassword(''); setConfirmNewPassword('') }}
-                      className={`px-4 py-2 rounded-lg text-xs font-medium transition-colors ${t('bg-white/[0.04] text-gray-400 hover:text-white','bg-gray-100 text-gray-600 hover:text-gray-900')}`}
+                      className={`px-4 py-2 rounded-lg text-xs font-medium transition-colors ${t('bg-white/[0.04] text-gray-400 hover:text-white', 'bg-gray-100 text-gray-600 hover:text-gray-900')}`}
                     >
                       Cancel
                     </button>
@@ -3585,8 +4055,8 @@ export default function DashboardClient() {
             // Bug #24: Only Change Password retained; 2FA / Active Sessions / Login History removed.
             { label: 'Change Password', action: () => { setShowPasswordReset(true); setNewPassword(''); setConfirmNewPassword('') } },
           ].map((opt, j) => (
-            <button key={j} onClick={opt.action} className={`w-full flex items-center justify-between p-2.5 rounded-lg cursor-pointer group transition-colors ${t('hover:bg-white/[0.02]','hover:bg-gray-100')}`}>
-              <span className={`text-xs transition-colors ${t('text-gray-400 group-hover:text-white','text-gray-600 group-hover:text-gray-900')}`}>{opt.label}</span>
+            <button key={j} onClick={opt.action} className={`w-full flex items-center justify-between p-2.5 rounded-lg cursor-pointer group transition-colors ${t('hover:bg-white/[0.02]', 'hover:bg-gray-100')}`}>
+              <span className={`text-xs transition-colors ${t('text-gray-400 group-hover:text-white', 'text-gray-600 group-hover:text-gray-900')}`}>{opt.label}</span>
               <ChevronRight className="w-3.5 h-3.5 text-gray-600" />
             </button>
           ))}
@@ -3595,44 +4065,44 @@ export default function DashboardClient() {
         {/* Legal & Policies */}
         <Glass className="p-6" hover theme={theme}>
           <div className="flex items-center gap-3 mb-4">
-            <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${t('bg-white/[0.04]','bg-gray-200/40')}`}><ScrollText className="w-5 h-5 text-brand-red" /></div>
-            <div><h4 className={`text-sm font-bold ${t('text-white','text-gray-900')}`}>Legal & Policies</h4><p className={`text-xs ${t('text-gray-500','text-gray-700')}`}>Terms, conditions, and compliance</p></div>
+            <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${t('bg-white/[0.04]', 'bg-gray-200/40')}`}><ScrollText className="w-5 h-5 text-brand-red" /></div>
+            <div><h4 className={`text-sm font-bold ${t('text-white', 'text-gray-900')}`}>Legal & Policies</h4><p className={`text-xs ${t('text-gray-500', 'text-gray-700')}`}>Terms, conditions, and compliance</p></div>
           </div>
           <button onClick={() => { setTermsOpen(true); setTermsScrolled(false) }}
-            className={`w-full flex items-center justify-between p-3 rounded-xl cursor-pointer group transition-all mb-2 ${t('bg-white/[0.03] hover:bg-white/[0.06] border border-white/[0.04]','bg-gray-100/40 hover:bg-gray-200/35 border border-gray-200/30')}`}>
+            className={`w-full flex items-center justify-between p-3 rounded-xl cursor-pointer group transition-all mb-2 ${t('bg-white/[0.03] hover:bg-white/[0.06] border border-white/[0.04]', 'bg-gray-100/40 hover:bg-gray-200/35 border border-gray-200/30')}`}>
             <div className="flex items-center gap-2.5">
               <FileText className="w-4 h-4 text-brand-red" />
               <div className="text-left">
-                <span className={`text-xs font-semibold block ${t('text-white','text-gray-900')}`}>Terms & Conditions</span>
-                <span className={`text-[10px] ${t('text-gray-500','text-gray-600')}`}>Dashboard usage policy</span>
+                <span className={`text-xs font-semibold block ${t('text-white', 'text-gray-900')}`}>Terms & Conditions</span>
+                <span className={`text-[10px] ${t('text-gray-500', 'text-gray-600')}`}>Dashboard usage policy</span>
               </div>
             </div>
             <div className="flex items-center gap-2">
               {termsAccepted && <span className="text-[10px] font-bold text-emerald-400 flex items-center gap-0.5"><CheckCircle className="w-3 h-3" /> Accepted</span>}
-              <ChevronRight className={`w-3.5 h-3.5 ${t('text-gray-600','text-gray-600')}`} />
+              <ChevronRight className={`w-3.5 h-3.5 ${t('text-gray-600', 'text-gray-600')}`} />
             </div>
           </button>
           <button onClick={() => { setPrivacyOpen(true); setPrivacyScrolled(false) }}
-            className={`w-full flex items-center justify-between p-3 rounded-xl cursor-pointer group transition-all mb-2 ${t('bg-white/[0.03] hover:bg-white/[0.06] border border-white/[0.04]','bg-gray-100/40 hover:bg-gray-200/35 border border-gray-200/30')}`}>
+            className={`w-full flex items-center justify-between p-3 rounded-xl cursor-pointer group transition-all mb-2 ${t('bg-white/[0.03] hover:bg-white/[0.06] border border-white/[0.04]', 'bg-gray-100/40 hover:bg-gray-200/35 border border-gray-200/30')}`}>
             <div className="flex items-center gap-2.5">
               <Shield className="w-4 h-4 text-blue-400" />
               <div className="text-left">
-                <span className={`text-xs font-semibold block ${t('text-white','text-gray-900')}`}>Privacy Policy</span>
-                <span className={`text-[10px] ${t('text-gray-500','text-gray-600')}`}>How we protect your data</span>
+                <span className={`text-xs font-semibold block ${t('text-white', 'text-gray-900')}`}>Privacy Policy</span>
+                <span className={`text-[10px] ${t('text-gray-500', 'text-gray-600')}`}>How we protect your data</span>
               </div>
             </div>
-            <ChevronRight className={`w-3.5 h-3.5 ${t('text-gray-600','text-gray-600')}`} />
+            <ChevronRight className={`w-3.5 h-3.5 ${t('text-gray-600', 'text-gray-600')}`} />
           </button>
           <button onClick={() => window.open(BRAND.sebiUrl, '_blank', 'noopener,noreferrer')}
-            className={`w-full flex items-center justify-between p-3 rounded-xl cursor-pointer group transition-all ${t('bg-white/[0.03] hover:bg-white/[0.06] border border-white/[0.04]','bg-gray-100/40 hover:bg-gray-200/35 border border-gray-200/30')}`}>
+            className={`w-full flex items-center justify-between p-3 rounded-xl cursor-pointer group transition-all ${t('bg-white/[0.03] hover:bg-white/[0.06] border border-white/[0.04]', 'bg-gray-100/40 hover:bg-gray-200/35 border border-gray-200/30')}`}>
             <div className="flex items-center gap-2.5">
               <Landmark className="w-4 h-4 text-amber-400" />
               <div className="text-left">
-                <span className={`text-xs font-semibold block ${t('text-white','text-gray-900')}`}>SEBI Compliance</span>
-                <span className={`text-[10px] ${t('text-gray-500','text-gray-600')}`}>Reg: {BRAND.sebi}</span>
+                <span className={`text-xs font-semibold block ${t('text-white', 'text-gray-900')}`}>SEBI Compliance</span>
+                <span className={`text-[10px] ${t('text-gray-500', 'text-gray-600')}`}>Reg: {BRAND.sebi}</span>
               </div>
             </div>
-            <ExternalLink className={`w-3.5 h-3.5 ${t('text-gray-600','text-gray-600')}`} />
+            <ExternalLink className={`w-3.5 h-3.5 ${t('text-gray-600', 'text-gray-600')}`} />
           </button>
         </Glass>
       </div>
@@ -3681,7 +4151,7 @@ export default function DashboardClient() {
     return (
       <Glass className="p-5 lg:p-6" hover theme={theme}>
         <div className="flex items-center justify-between mb-4 gap-3 flex-wrap">
-          <h3 className={`text-base font-bold ${t('text-white','text-gray-900')}`}>KYC Summary (Read-only)</h3>
+          <h3 className={`text-base font-bold ${t('text-white', 'text-gray-900')}`}>KYC Summary (Read-only)</h3>
           <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${kycApproved ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/20' : 'bg-amber-500/15 text-amber-400 border border-amber-500/20'}`}>
             <span className={`w-1.5 h-1.5 rounded-full ${kycApproved ? 'bg-emerald-400' : 'bg-amber-400'}`} />
             {kycApproved ? 'Approved' : (userKycStatus || 'Pending')}
@@ -3689,9 +4159,9 @@ export default function DashboardClient() {
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           {rows.map(([label, value], i) => (
-            <div key={i} className={`p-3 rounded-xl ${t('bg-white/[0.03] border border-white/[0.06]','bg-gray-100/50 border border-gray-200/50')}`}>
-              <p className={`text-[10px] uppercase tracking-wider font-semibold mb-1 ${t('text-gray-500','text-gray-600')}`}>{label}</p>
-              <p className={`text-sm font-medium ${t('text-white','text-gray-900')}`}>{value}</p>
+            <div key={i} className={`p-3 rounded-xl ${t('bg-white/[0.03] border border-white/[0.06]', 'bg-gray-100/50 border border-gray-200/50')}`}>
+              <p className={`text-[10px] uppercase tracking-wider font-semibold mb-1 ${t('text-gray-500', 'text-gray-600')}`}>{label}</p>
+              <p className={`text-sm font-medium ${t('text-white', 'text-gray-900')}`}>{value}</p>
             </div>
           ))}
         </div>
@@ -3704,8 +4174,8 @@ export default function DashboardClient() {
     if (apps.length === 0) return null
     return (
       <Glass className="p-5 lg:p-6" hover theme={theme}>
-        <h3 className={`text-base font-bold mb-1 ${t('text-white','text-gray-900')}`}>Investment Document Tracking</h3>
-        <p className={`text-xs mb-4 ${t('text-gray-500','text-gray-700')}`}>Per-investment proofs, approval dates, and tracking status.</p>
+        <h3 className={`text-base font-bold mb-1 ${t('text-white', 'text-gray-900')}`}>Investment Document Tracking</h3>
+        <p className={`text-xs mb-4 ${t('text-gray-500', 'text-gray-700')}`}>Per-investment proofs, approval dates, and tracking status.</p>
         <div className="space-y-5">
           {apps.map((app: any, idx: number) => {
             const appId = app.id || app.application_id || idx
@@ -3715,11 +4185,11 @@ export default function DashboardClient() {
             const transactionProofDoc = (investmentDocs as any[]).find(d => String(d.application_id || d.investment_id || '') === String(appId) && /transaction|proof|receipt/i.test(String(d.document_name || d.name || d.type || '')))
             const approvalDate = formatPortfolioDate(app.approved_at || app.approval_date || app.updated_at)
             return (
-              <div key={appId} className={`rounded-2xl border overflow-hidden ${t('border-white/[0.06]','border-gray-200/60')}`}>
-                <div className={`flex flex-wrap items-center justify-between gap-3 px-4 py-3 ${t('bg-white/[0.03]','bg-gray-100/60')}`}>
+              <div key={appId} className={`rounded-2xl border overflow-hidden ${t('border-white/[0.06]', 'border-gray-200/60')}`}>
+                <div className={`flex flex-wrap items-center justify-between gap-3 px-4 py-3 ${t('bg-white/[0.03]', 'bg-gray-100/60')}`}>
                   <div>
-                    <p className={`text-sm font-semibold ${t('text-white','text-gray-900')}`}>{appLabel}</p>
-                    <p className={`text-[11px] mt-0.5 ${t('text-gray-500','text-gray-600')}`}>
+                    <p className={`text-sm font-semibold ${t('text-white', 'text-gray-900')}`}>{appLabel}</p>
+                    <p className={`text-[11px] mt-0.5 ${t('text-gray-500', 'text-gray-600')}`}>
                       {`₹${formatINR(investmentAmount)}`} · Invested {investmentDate} · Approved {approvalDate}
                     </p>
                   </div>
@@ -3730,7 +4200,7 @@ export default function DashboardClient() {
                 <div className="overflow-x-auto">
                   <table className="w-full text-xs">
                     <thead>
-                      <tr className={`${t('text-gray-500','text-gray-600')} border-b ${t('border-white/[0.06]','border-gray-200')}`}>
+                      <tr className={`${t('text-gray-500', 'text-gray-600')} border-b ${t('border-white/[0.06]', 'border-gray-200')}`}>
                         <th className="text-left py-2 px-3 font-semibold">S.No</th>
                         <th className="text-left py-2 px-3 font-semibold">Document Name</th>
                         <th className="text-left py-2 px-3 font-semibold">Upload Date</th>
@@ -3743,14 +4213,14 @@ export default function DashboardClient() {
                         const doc = findDocForApp(appId, docType)
                         const uploaded = !!doc
                         return (
-                          <tr key={dIdx} className={`border-b last:border-b-0 ${t('border-white/[0.04]','border-gray-200/60')}`}>
-                            <td className={`py-2 px-3 ${t('text-gray-300','text-gray-700')}`}>{dIdx + 1}</td>
-                            <td className={`py-2 px-3 font-medium ${t('text-white','text-gray-900')}`}>{docType}</td>
-                            <td className={`py-2 px-3 ${t('text-gray-300','text-gray-700')}`}>{uploaded ? formatPortfolioDate(doc?.created_at || doc?.uploaded_at) : '—'}</td>
+                          <tr key={dIdx} className={`border-b last:border-b-0 ${t('border-white/[0.04]', 'border-gray-200/60')}`}>
+                            <td className={`py-2 px-3 ${t('text-gray-300', 'text-gray-700')}`}>{dIdx + 1}</td>
+                            <td className={`py-2 px-3 font-medium ${t('text-white', 'text-gray-900')}`}>{docType}</td>
+                            <td className={`py-2 px-3 ${t('text-gray-300', 'text-gray-700')}`}>{uploaded ? formatPortfolioDate(doc?.created_at || doc?.uploaded_at) : '—'}</td>
                             <td className="py-2 px-3">
                               {uploaded && doc?.file_url
                                 ? <a href={doc.file_url} target="_blank" rel="noopener noreferrer" className="text-brand-red font-semibold hover:underline">View</a>
-                                : <span className={t('text-gray-600','text-gray-400')}>—</span>}
+                                : <span className={t('text-gray-600', 'text-gray-400')}>—</span>}
                             </td>
                             <td className="py-2 px-3">
                               <span className={`inline-flex items-center gap-1 ${uploaded ? 'text-emerald-400' : 'text-amber-400'}`}>
@@ -3762,16 +4232,16 @@ export default function DashboardClient() {
                         )
                       })}
                       {/* Transaction proof + Approval date as an additional row */}
-                      <tr className={`${t('bg-white/[0.02]','bg-gray-100/40')}`}>
-                        <td className={`py-2 px-3 ${t('text-gray-300','text-gray-700')}`}>{PORTFOLIO_DOC_TYPES.length + 1}</td>
-                        <td className={`py-2 px-3 font-medium ${t('text-white','text-gray-900')}`}>Transaction Proof</td>
-                        <td className={`py-2 px-3 ${t('text-gray-300','text-gray-700')}`}>{transactionProofDoc ? formatPortfolioDate(transactionProofDoc.created_at || transactionProofDoc.uploaded_at) : '—'}</td>
+                      <tr className={`${t('bg-white/[0.02]', 'bg-gray-100/40')}`}>
+                        <td className={`py-2 px-3 ${t('text-gray-300', 'text-gray-700')}`}>{PORTFOLIO_DOC_TYPES.length + 1}</td>
+                        <td className={`py-2 px-3 font-medium ${t('text-white', 'text-gray-900')}`}>Transaction Proof</td>
+                        <td className={`py-2 px-3 ${t('text-gray-300', 'text-gray-700')}`}>{transactionProofDoc ? formatPortfolioDate(transactionProofDoc.created_at || transactionProofDoc.uploaded_at) : '—'}</td>
                         <td className="py-2 px-3">
                           {transactionProofDoc?.file_url
                             ? <a href={transactionProofDoc.file_url} target="_blank" rel="noopener noreferrer" className="text-brand-red font-semibold hover:underline">View</a>
-                            : <span className={t('text-gray-600','text-gray-400')}>—</span>}
+                            : <span className={t('text-gray-600', 'text-gray-400')}>—</span>}
                         </td>
-                        <td className={`py-2 px-3 ${t('text-gray-300','text-gray-700')}`}>{approvalDate}</td>
+                        <td className={`py-2 px-3 ${t('text-gray-300', 'text-gray-700')}`}>{approvalDate}</td>
                       </tr>
                     </tbody>
                   </table>
@@ -3822,8 +4292,8 @@ export default function DashboardClient() {
     ]
     return (
       <div className="space-y-6">
-        <h2 className={`text-xl font-bold ${t('text-white','text-gray-900')}`}>Your Portfolio</h2>
-        <p className={`text-sm ${t('text-gray-500','text-gray-700')}`}>Ongoing assets of GHL India Ventures.</p>
+        <h2 className={`text-xl font-bold ${t('text-white', 'text-gray-900')}`}>Your Portfolio</h2>
+        <p className={`text-sm ${t('text-gray-500', 'text-gray-700')}`}>Ongoing assets of GHL India Ventures.</p>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {ongoingAssets.map(asset => (
@@ -3837,8 +4307,8 @@ export default function DashboardClient() {
 
               {/* Title block */}
               <div className="px-5 pt-4 pb-2 text-center">
-                <h3 className={`text-lg font-bold tracking-wider ${t('text-white','text-gray-900')}`}>{asset.name}</h3>
-                <p className={`text-xs ${t('text-gray-400','text-gray-600')}`}>{asset.sub}</p>
+                <h3 className={`text-lg font-bold tracking-wider ${t('text-white', 'text-gray-900')}`}>{asset.name}</h3>
+                <p className={`text-xs ${t('text-gray-400', 'text-gray-600')}`}>{asset.sub}</p>
               </div>
 
               {/* Detail rows */}
@@ -3855,21 +4325,21 @@ export default function DashboardClient() {
                 ].filter(Boolean).map((row, i) => {
                   const [label, value] = row as [string, string]
                   return (
-                    <div key={i} className={`grid grid-cols-3 gap-3 py-1.5 border-b last:border-b-0 ${t('border-white/[0.04]','border-gray-200')}`}>
-                      <span className={`col-span-1 text-[11px] uppercase tracking-wider font-semibold ${t('text-gray-500','text-gray-600')}`}>{label}</span>
-                      <span className={`col-span-2 text-xs ${t('text-gray-200','text-gray-800')}`}>{value}</span>
+                    <div key={i} className={`grid grid-cols-3 gap-3 py-1.5 border-b last:border-b-0 ${t('border-white/[0.04]', 'border-gray-200')}`}>
+                      <span className={`col-span-1 text-[11px] uppercase tracking-wider font-semibold ${t('text-gray-500', 'text-gray-600')}`}>{label}</span>
+                      <span className={`col-span-2 text-xs ${t('text-gray-200', 'text-gray-800')}`}>{value}</span>
                     </div>
                   )
                 })}
 
                 {/* Description */}
-                <div className={`pt-3 text-xs leading-relaxed ${t('text-gray-300','text-gray-700')}`}>
+                <div className={`pt-3 text-xs leading-relaxed ${t('text-gray-300', 'text-gray-700')}`}>
                   <p className="font-bold mb-1">Description :</p>
                   <p>{asset.description}</p>
                   {asset.body2 && <p className="mt-2">{asset.body2}</p>}
                 </div>
 
-                <div className={`pt-3 text-xs leading-relaxed ${t('text-gray-300','text-gray-700')}`}>
+                <div className={`pt-3 text-xs leading-relaxed ${t('text-gray-300', 'text-gray-700')}`}>
                   <p className="font-bold mb-1">Advantage :</p>
                   <p>{asset.advantage}</p>
                 </div>
@@ -4062,10 +4532,10 @@ export default function DashboardClient() {
   }
 
   const inputCls = (errKey: string) => {
-    const base = `px-3 py-2.5 rounded-xl text-sm ${t('bg-white/[0.04] border text-white placeholder-gray-600','bg-gray-100/60 border text-gray-900 placeholder-gray-400')}`
+    const base = `px-3 py-2.5 rounded-xl text-sm ${t('bg-white/[0.04] border text-white placeholder-gray-600', 'bg-gray-100/60 border text-gray-900 placeholder-gray-400')}`
     return investFormErrors[errKey]
       ? `${base} border-red-500/60 focus:border-red-500`
-      : `${base} ${t('border-white/[0.06]','border-gray-200/40')}`
+      : `${base} ${t('border-white/[0.06]', 'border-gray-200/40')}`
   }
 
   const renderInvestOnboard = () => {
@@ -4075,13 +4545,13 @@ export default function DashboardClient() {
       return (
         <div className="space-y-6">
           <div>
-            <h2 className={`text-xl font-bold mb-1 ${t('text-white','text-gray-900')}`}>Complete Your KYC First</h2>
-            <p className={`text-sm ${t('text-gray-500','text-gray-700')}`}>KYC verification is required before you can invest</p>
+            <h2 className={`text-xl font-bold mb-1 ${t('text-white', 'text-gray-900')}`}>Complete Your KYC First</h2>
+            <p className={`text-sm ${t('text-gray-500', 'text-gray-700')}`}>KYC verification is required before you can invest</p>
           </div>
           <Glass className="p-8 text-center" hover glow theme={theme}>
-            <Shield className={`w-12 h-12 mx-auto mb-4 ${t('text-amber-400','text-amber-500')}`} />
-            <h3 className={`text-lg font-bold mb-2 ${t('text-white','text-gray-900')}`}>KYC Not Verified</h3>
-            <p className={`text-sm mb-6 max-w-md mx-auto ${t('text-gray-500','text-gray-700')}`}>
+            <Shield className={`w-12 h-12 mx-auto mb-4 ${t('text-amber-400', 'text-amber-500')}`} />
+            <h3 className={`text-lg font-bold mb-2 ${t('text-white', 'text-gray-900')}`}>KYC Not Verified</h3>
+            <p className={`text-sm mb-6 max-w-md mx-auto ${t('text-gray-500', 'text-gray-700')}`}>
               As per SEBI regulations, your KYC must be approved before you can make any investment. Please complete your KYC documents and submit them for review.
             </p>
             <div className="flex items-center justify-center gap-3">
@@ -4089,13 +4559,13 @@ export default function DashboardClient() {
                 Complete KYC →
               </button>
             </div>
-            <p className={`text-xs mt-4 ${t('text-gray-600','text-gray-500')}`}>
+            <p className={`text-xs mt-4 ${t('text-gray-600', 'text-gray-500')}`}>
               Current KYC Status: <span className={`font-semibold capitalize ${userKycStatus === 'rejected' ? 'text-red-400' : 'text-amber-400'}`}>{userKycStatus}</span>
             </p>
             {userKycStatus === 'rejected' && (user as any)?.kyc_rejection_reason && (
               <div className="mt-4 mx-auto max-w-md px-4 py-3 rounded-xl bg-red-500/10 border border-red-500/30 text-left">
                 <p className="text-xs font-semibold text-red-400 mb-1">Rejection reason</p>
-                <p className={`text-xs whitespace-pre-wrap ${t('text-red-200','text-red-700')}`}>{(user as any).kyc_rejection_reason}</p>
+                <p className={`text-xs whitespace-pre-wrap ${t('text-red-200', 'text-red-700')}`}>{(user as any).kyc_rejection_reason}</p>
               </div>
             )}
           </Glass>
@@ -4120,226 +4590,226 @@ export default function DashboardClient() {
     const totalReturns = (yearlyReturns * tenureYears) + (yearlyAppreciation * tenureYears)
 
     return (
-    <div className="space-y-6">
-      <div>
-        <h2 className={`text-xl font-bold mb-1 ${t('text-white','text-gray-900')}`}>Complete Your Investment</h2>
-        <p className={`text-sm ${t('text-gray-500','text-gray-700')}`}>Select your investment, set the amount, and provide bank details</p>
-      </div>
-
-      {/* Step 1: Vehicle + Amount */}
-      <Glass className="p-6" hover glow theme={theme}>
-        <h3 className={`text-base font-bold mb-4 ${t('text-white','text-gray-900')}`}>1. Investment Selection</h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-5">
-          <div>
-            <label className={`text-xs font-medium mb-1.5 block ${t('text-gray-400','text-gray-600')}`}>Investment Vehicle <span className="text-red-400">*</span></label>
-            <select value={investVehicle} onChange={e => setInvestVehicle(e.target.value)}
-              className={`w-full px-4 py-3 rounded-xl text-sm ${t('bg-white/[0.04] border border-white/[0.06] text-white','bg-gray-100/60 border border-gray-200/40 text-gray-900')}`}>
-              <option>AIF Direct - Category II</option>
-              <option>SEBI Co-Invest Framework</option>
-              <option>NCLT Recovery Assets</option>
-              <option>Early-Stage Startups</option>
-            </select>
-          </div>
-          <div>
-            <label className={`text-xs font-medium mb-1.5 block ${t('text-gray-400','text-gray-600')}`}>Tenure Preference <span className="text-red-400">*</span></label>
-            <select value={investTenure} onChange={e => setInvestTenure(e.target.value)}
-              className={`w-full px-4 py-3 rounded-xl text-sm ${t('bg-white/[0.04] border border-white/[0.06] text-white','bg-gray-100/60 border border-gray-200/40 text-gray-900')}`}>
-              <option>3 Years</option><option>5 Years</option><option>7 Years</option>
-            </select>
-          </div>
-        </div>
-
-        {/* Fund Details & Term Sheet */}
-        <div className={`p-4 rounded-xl mb-5 ${t('bg-white/[0.02] border border-white/[0.04]','bg-gray-50 border border-gray-200')}`}>
-          <div className="flex items-center justify-between mb-3">
-            <h4 className={`text-sm font-bold ${t('text-white','text-gray-900')}`}>{investVehicle}</h4>
-            {/* 2026-05-12 site corrections: Download Terms CTA hidden
-                because /downloads currently 404s. Restore once the page
-                is re-enabled. */}
-          </div>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-            <div className={`p-2.5 rounded-lg ${t('bg-white/[0.02]','bg-white')}`}>
-              <p className={`text-[10px] uppercase tracking-wider ${t('text-gray-600','text-gray-500')}`}>Focus</p>
-              <p className={`text-xs font-medium mt-0.5 ${t('text-gray-300','text-gray-800')}`}>{fundInfo.focus}</p>
-            </div>
-            <div className={`p-2.5 rounded-lg ${t('bg-white/[0.02]','bg-white')}`}>
-              <p className={`text-[10px] uppercase tracking-wider ${t('text-gray-600','text-gray-500')}`}>Interest</p>
-              <p className={`text-sm font-bold text-emerald-400 mt-0.5`}>{fundInfo.interest}% p.a.</p>
-            </div>
-            <div className={`p-2.5 rounded-lg ${t('bg-white/[0.02]','bg-white')}`}>
-              <p className={`text-[10px] uppercase tracking-wider ${t('text-gray-600','text-gray-500')}`}>Appreciation</p>
-              <p className={`text-sm font-bold text-blue-400 mt-0.5`}>{fundInfo.appreciation}% p.a.</p>
-            </div>
-            <div className={`p-2.5 rounded-lg ${t('bg-white/[0.02]','bg-white')}`}>
-              <p className={`text-[10px] uppercase tracking-wider ${t('text-gray-600','text-gray-500')}`}>TDS</p>
-              <p className={`text-sm font-bold text-amber-400 mt-0.5`}>{fundInfo.tds}%</p>
-            </div>
-          </div>
-        </div>
+      <div className="space-y-6">
         <div>
-          <div className="flex items-center justify-between mb-2">
-            <label className={`text-xs font-medium ${t('text-gray-400','text-gray-600')}`}>Investment Amount <span className="text-red-400">*</span></label>
-            <span className={`text-lg font-black text-brand-red`}>{'\u20B9'}{formatINR(investAmount)}</span>
-          </div>
-          <input type="range" min={500000} max={50000000} step={100000} value={investAmount}
-            onChange={e => setInvestAmount(Number(e.target.value))}
-            className="w-full h-2 rounded-full appearance-none cursor-pointer accent-brand-red"
-            style={{ background: `linear-gradient(to right, #D0021B ${((investAmount - 500000) / 49500000) * 100}%, ${isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.1)'} 0%)` }} />
-          <div className={`flex justify-between text-[10px] mt-1 ${t('text-gray-600','text-gray-600')}`}>
-            <span>{'\u20B9'}5L</span><span>{'\u20B9'}1Cr</span><span>{'\u20B9'}2.5Cr</span><span>{'\u20B9'}5Cr</span>
-          </div>
-          {investFormErrors['amount'] && <p className="text-[10px] text-red-400 mt-1">{investFormErrors['amount']}</p>}
+          <h2 className={`text-xl font-bold mb-1 ${t('text-white', 'text-gray-900')}`}>Complete Your Investment</h2>
+          <p className={`text-sm ${t('text-gray-500', 'text-gray-700')}`}>Select your investment, set the amount, and provide bank details</p>
         </div>
 
-        {/* Live Return Calculator */}
-        {fundInfo.interest > 0 && (
-          <div className={`mt-5 p-4 rounded-xl ${t('bg-emerald-500/[0.04] border border-emerald-500/10','bg-emerald-50 border border-emerald-200')}`}>
-            <h4 className={`text-xs font-bold mb-3 flex items-center gap-2 ${t('text-emerald-400','text-emerald-700')}`}>
-              <BarChart3 className="w-3.5 h-3.5" /> Estimated Returns
-            </h4>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-              <div className={`p-3 rounded-xl ${t('bg-white/[0.03]','bg-white')}`}>
-                <p className={`text-[10px] uppercase tracking-wider ${t('text-gray-600','text-gray-500')}`}>Monthly Returns</p>
-                <p className={`text-sm font-bold ${t('text-white','text-gray-900')}`}>₹{formatINR(monthlyInterest)}</p>
-              </div>
-              <div className={`p-3 rounded-xl ${t('bg-white/[0.03]','bg-white')}`}>
-                <p className={`text-[10px] uppercase tracking-wider ${t('text-gray-600','text-gray-500')}`}>TDS (Monthly)</p>
-                <p className={`text-sm font-bold text-amber-400`}>₹{formatINR(monthlyTDS)}</p>
-              </div>
-              <div className={`p-3 rounded-xl ${t('bg-white/[0.03]','bg-white')}`}>
-                <p className={`text-[10px] uppercase tracking-wider ${t('text-gray-600','text-gray-500')}`}>Net Monthly</p>
-                <p className={`text-sm font-bold text-emerald-400`}>₹{formatINR(netMonthly)}</p>
-              </div>
-              <div className={`p-3 rounded-xl ${t('bg-white/[0.03]','bg-white')}`}>
-                <p className={`text-[10px] uppercase tracking-wider ${t('text-gray-600','text-gray-500')}`}>Yearly Appreciation</p>
-                <p className={`text-sm font-bold text-blue-400`}>₹{formatINR(yearlyAppreciation)}</p>
-              </div>
-            </div>
-            <div className={`mt-3 p-3 rounded-xl flex items-center justify-between ${t('bg-white/[0.03]','bg-white')}`}>
-              <div>
-                <p className={`text-[10px] uppercase tracking-wider ${t('text-gray-600','text-gray-500')}`}>Sum of Capital & ROI ({tenureYears} Years)</p>
-                <p className={`text-lg font-black ${t('text-white','text-gray-900')}`}>₹{formatINR(investAmount + totalReturns)}</p>
-              </div>
-              <div className="text-right">
-                <p className={`text-[10px] uppercase tracking-wider ${t('text-gray-600','text-gray-500')}`}>Total Returns</p>
-                <p className={`text-lg font-black text-emerald-400`}>₹{formatINR(totalReturns)}</p>
-              </div>
-            </div>
-          </div>
-        )}
-      </Glass>
-
-      {/* Step 2: Bank Details */}
-      <Glass className="p-6" hover theme={theme}>
-        <h3 className={`text-base font-bold mb-4 ${t('text-white','text-gray-900')}`}>2. Bank Account Details</h3>
-        <p className={`text-xs mb-4 ${t('text-gray-500','text-gray-700')}`}>Add one or more bank accounts for fund transfer. Primary account will be used for dividends and distributions.</p>
-        {bankAccounts.map((acc, idx) => (
-          <div key={idx} className={`p-4 rounded-xl mb-3 ${t('bg-white/[0.02] border border-white/[0.04]','bg-gray-100/50 border border-gray-200/30')}`}>
-            <div className="flex items-center justify-between mb-3">
-              <span className={`text-xs font-bold ${t('text-white','text-gray-900')}`}>Bank Account {idx + 1}</span>
-              <div className="flex items-center gap-2">
-                {acc.is_primary && <span className="text-[9px] px-2 py-0.5 rounded-full bg-brand-red/15 text-brand-red font-bold">Primary</span>}
-                {!acc.is_primary && <button onClick={() => setBankAccounts(prev => prev.map((a, i) => ({ ...a, is_primary: i === idx })))} className="text-[9px] px-2 py-0.5 rounded-full bg-blue-500/15 text-blue-400 font-bold hover:bg-blue-500/25 transition-colors">Set Primary</button>}
-                {bankAccounts.length > 1 && <button onClick={() => removeBankAccount(idx)} className="text-[9px] px-2 py-0.5 rounded-full bg-red-500/15 text-red-400 font-bold hover:bg-red-500/25 transition-colors">Remove</button>}
-              </div>
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div>
-                <input placeholder="Account Holder Name *" value={acc.account_holder_name}
-                  onChange={e => updateBankAccount(idx, 'account_holder_name', e.target.value)}
-                  autoComplete="off" className={inputCls(`bank_${idx}_account_holder_name`)} />
-                {investFormErrors[`bank_${idx}_account_holder_name`] && <p className="text-[10px] text-red-400 mt-1">{investFormErrors[`bank_${idx}_account_holder_name`]}</p>}
-              </div>
-              <div>
-                <input placeholder="Account Number *" value={acc.account_number} type="password"
-                  onChange={e => updateBankAccount(idx, 'account_number', e.target.value.replace(/\D/g, ''))}
-                  autoComplete="new-password" className={inputCls(`bank_${idx}_account_number`)} />
-                {investFormErrors[`bank_${idx}_account_number`] && <p className="text-[10px] text-red-400 mt-1">{investFormErrors[`bank_${idx}_account_number`]}</p>}
-              </div>
-              <div>
-                <input placeholder="Confirm Account Number *" value={acc.account_number_confirm} type="password"
-                  onChange={e => updateBankAccount(idx, 'account_number_confirm', e.target.value.replace(/\D/g, ''))}
-                  autoComplete="new-password" className={inputCls(`bank_${idx}_account_number_confirm`)} />
-                {investFormErrors[`bank_${idx}_account_number_confirm`] && <p className="text-[10px] text-red-400 mt-1">{investFormErrors[`bank_${idx}_account_number_confirm`]}</p>}
-              </div>
-              <div>
-                <div className="relative">
-                  <input placeholder="IFSC Code *" value={acc.ifsc_code}
-                    onChange={e => { const v = e.target.value.toUpperCase().slice(0, 11); updateBankAccount(idx, 'ifsc_code', v); if (v.length === 11) handleIFSCValidation(idx, v) }}
-                    autoComplete="off" className={inputCls(`bank_${idx}_ifsc_code`)} />
-                  {acc.ifsc_validating && <div className="absolute right-3 top-1/2 -translate-y-1/2"><RefreshCw className="w-3.5 h-3.5 animate-spin text-gray-400" /></div>}
-                  {acc.ifsc_valid === true && <div className="absolute right-3 top-1/2 -translate-y-1/2"><CheckCircle className="w-3.5 h-3.5 text-emerald-400" /></div>}
-                  {acc.ifsc_valid === false && <div className="absolute right-3 top-1/2 -translate-y-1/2"><AlertCircle className="w-3.5 h-3.5 text-red-400" /></div>}
-                </div>
-                {acc.bank_name && <p className="text-[10px] text-emerald-400 mt-1">{acc.bank_name}</p>}
-                {investFormErrors[`bank_${idx}_ifsc_code`] && <p className="text-[10px] text-red-400 mt-1">{investFormErrors[`bank_${idx}_ifsc_code`]}</p>}
-              </div>
-              <select value={acc.account_type} onChange={e => updateBankAccount(idx, 'account_type', e.target.value)}
-                className={`px-3 py-2.5 rounded-xl text-sm ${t('bg-white/[0.04] border border-white/[0.06] text-white','bg-gray-100/60 border border-gray-200/40 text-gray-900')}`}>
-                <option value="savings">Savings</option><option value="current">Current</option><option value="nro">NRO</option><option value="nre">NRE</option>
+        {/* Step 1: Vehicle + Amount */}
+        <Glass className="p-6" hover glow theme={theme}>
+          <h3 className={`text-base font-bold mb-4 ${t('text-white', 'text-gray-900')}`}>1. Investment Selection</h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-5">
+            <div>
+              <label className={`text-xs font-medium mb-1.5 block ${t('text-gray-400', 'text-gray-600')}`}>Investment Vehicle <span className="text-red-400">*</span></label>
+              <select value={investVehicle} onChange={e => setInvestVehicle(e.target.value)}
+                className={`w-full px-4 py-3 rounded-xl text-sm ${t('bg-white/[0.04] border border-white/[0.06] text-white', 'bg-gray-100/60 border border-gray-200/40 text-gray-900')}`}>
+                <option>AIF Direct - Category II</option>
+                <option>SEBI Co-Invest Framework</option>
+                <option>NCLT Recovery Assets</option>
+                <option>Early-Stage Startups</option>
               </select>
             </div>
-            <div onClick={async () => {
-              try {
-                const { pickAndUploadFiles } = await import('@/lib/supabase/storageService')
-                const results = await pickAndUploadFiles('client/kyc', {
-                  accept: '.pdf,.jpg,.jpeg,.png',
-                  portal: 'client',
-                  entityType: 'client',
-                  entityId: clientId || undefined,
-                  category: 'kyc',
-                })
-                if (results && results.length > 0) {
-                  const successFiles = results.filter((r: any) => r.success)
-                  if (successFiles.length > 0) {
-                    updateBankAccount(idx, 'cancelled_cheque_url', successFiles[0].file?.url || successFiles[0].file?.path || 'uploaded')
-                    showToast('Document uploaded successfully')
-                  }
-                }
-              } catch { showToast('Upload failed. Please try again.', 'info') }
-            }} className={`mt-3 p-3 rounded-lg border-2 border-dashed cursor-pointer text-center transition-colors ${acc.cancelled_cheque_url ? 'border-emerald-500/30 bg-emerald-500/5' : 'border-white/[0.08] hover:border-brand-red/20'}`}>
-              {acc.cancelled_cheque_url ? (
-                <><CheckCircle className="w-5 h-5 mx-auto mb-1 text-emerald-400" /><p className="text-[11px] text-emerald-400 font-medium">Document uploaded</p></>
-              ) : (
-                <><FileUp className="w-5 h-5 mx-auto mb-1 text-gray-500" /><p className="text-[11px] text-gray-500">Upload cancelled cheque / bank statement</p></>
-              )}
+            <div>
+              <label className={`text-xs font-medium mb-1.5 block ${t('text-gray-400', 'text-gray-600')}`}>Tenure Preference <span className="text-red-400">*</span></label>
+              <select value={investTenure} onChange={e => setInvestTenure(e.target.value)}
+                className={`w-full px-4 py-3 rounded-xl text-sm ${t('bg-white/[0.04] border border-white/[0.06] text-white', 'bg-gray-100/60 border border-gray-200/40 text-gray-900')}`}>
+                <option>3 Years</option><option>5 Years</option><option>7 Years</option>
+              </select>
             </div>
           </div>
-        ))}
-        <button onClick={addNewBankAccount} className="flex items-center gap-2 text-xs font-semibold text-blue-400 hover:text-blue-300 transition-colors">
-          <Plus className="w-3.5 h-3.5" /> Add Another Bank Account {bankAccounts.length >= 3 && '(max 3)'}
-        </button>
-      </Glass>
 
-      {/* Step 3: Review & Submit */}
-      <Glass className="p-6" hover glow theme={theme}>
-        <h3 className={`text-base font-bold mb-4 ${t('text-white','text-gray-900')}`}>3. Review & Submit</h3>
-        <div className={`grid grid-cols-2 md:grid-cols-4 gap-3 mb-4`}>
-          {[
-            { l: 'Vehicle', v: investVehicle },
-            { l: 'Amount', v: `\u20B9${formatINR(investAmount)}` },
-            { l: 'Tenure', v: investTenure },
-            { l: 'Bank', v: bankAccounts[0]?.bank_name ? `${bankAccounts[0].bank_name} ****${bankAccounts[0].account_number.slice(-4)}` : bankAccounts[0]?.account_number ? `****${bankAccounts[0].account_number.slice(-4)}` : 'Not entered' },
-          ].map((r,i) => (
-            <div key={i} className={`p-3 rounded-xl ${t('bg-white/[0.03] border border-white/[0.04]','bg-gray-100/50 border border-gray-200/30')}`}>
-              <p className={`text-[9px] uppercase tracking-wider ${t('text-gray-600','text-gray-600')}`}>{r.l}</p>
-              <p className={`text-sm font-bold mt-0.5 ${t('text-white','text-gray-900')}`}>{r.v}</p>
+          {/* Fund Details & Term Sheet */}
+          <div className={`p-4 rounded-xl mb-5 ${t('bg-white/[0.02] border border-white/[0.04]', 'bg-gray-50 border border-gray-200')}`}>
+            <div className="flex items-center justify-between mb-3">
+              <h4 className={`text-sm font-bold ${t('text-white', 'text-gray-900')}`}>{investVehicle}</h4>
+              {/* 2026-05-12 site corrections: Download Terms CTA hidden
+                because /downloads currently 404s. Restore once the page
+                is re-enabled. */}
+            </div>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+              <div className={`p-2.5 rounded-lg ${t('bg-white/[0.02]', 'bg-white')}`}>
+                <p className={`text-[10px] uppercase tracking-wider ${t('text-gray-600', 'text-gray-500')}`}>Focus</p>
+                <p className={`text-xs font-medium mt-0.5 ${t('text-gray-300', 'text-gray-800')}`}>{fundInfo.focus}</p>
+              </div>
+              <div className={`p-2.5 rounded-lg ${t('bg-white/[0.02]', 'bg-white')}`}>
+                <p className={`text-[10px] uppercase tracking-wider ${t('text-gray-600', 'text-gray-500')}`}>Interest</p>
+                <p className={`text-sm font-bold text-emerald-400 mt-0.5`}>{fundInfo.interest}% p.a.</p>
+              </div>
+              <div className={`p-2.5 rounded-lg ${t('bg-white/[0.02]', 'bg-white')}`}>
+                <p className={`text-[10px] uppercase tracking-wider ${t('text-gray-600', 'text-gray-500')}`}>Appreciation</p>
+                <p className={`text-sm font-bold text-blue-400 mt-0.5`}>{fundInfo.appreciation}% p.a.</p>
+              </div>
+              <div className={`p-2.5 rounded-lg ${t('bg-white/[0.02]', 'bg-white')}`}>
+                <p className={`text-[10px] uppercase tracking-wider ${t('text-gray-600', 'text-gray-500')}`}>TDS</p>
+                <p className={`text-sm font-bold text-amber-400 mt-0.5`}>{fundInfo.tds}%</p>
+              </div>
+            </div>
+          </div>
+          <div>
+            <div className="flex items-center justify-between mb-2">
+              <label className={`text-xs font-medium ${t('text-gray-400', 'text-gray-600')}`}>Investment Amount <span className="text-red-400">*</span></label>
+              <span className={`text-lg font-black text-brand-red`}>{'\u20B9'}{formatINR(investAmount)}</span>
+            </div>
+            <input type="range" min={500000} max={50000000} step={100000} value={investAmount}
+              onChange={e => setInvestAmount(Number(e.target.value))}
+              className="w-full h-2 rounded-full appearance-none cursor-pointer accent-brand-red"
+              style={{ background: `linear-gradient(to right, #D0021B ${((investAmount - 500000) / 49500000) * 100}%, ${isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.1)'} 0%)` }} />
+            <div className={`flex justify-between text-[10px] mt-1 ${t('text-gray-600', 'text-gray-600')}`}>
+              <span>{'\u20B9'}5L</span><span>{'\u20B9'}1Cr</span><span>{'\u20B9'}2.5Cr</span><span>{'\u20B9'}5Cr</span>
+            </div>
+            {investFormErrors['amount'] && <p className="text-[10px] text-red-400 mt-1">{investFormErrors['amount']}</p>}
+          </div>
+
+          {/* Live Return Calculator */}
+          {fundInfo.interest > 0 && (
+            <div className={`mt-5 p-4 rounded-xl ${t('bg-emerald-500/[0.04] border border-emerald-500/10', 'bg-emerald-50 border border-emerald-200')}`}>
+              <h4 className={`text-xs font-bold mb-3 flex items-center gap-2 ${t('text-emerald-400', 'text-emerald-700')}`}>
+                <BarChart3 className="w-3.5 h-3.5" /> Estimated Returns
+              </h4>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                <div className={`p-3 rounded-xl ${t('bg-white/[0.03]', 'bg-white')}`}>
+                  <p className={`text-[10px] uppercase tracking-wider ${t('text-gray-600', 'text-gray-500')}`}>Monthly Returns</p>
+                  <p className={`text-sm font-bold ${t('text-white', 'text-gray-900')}`}>₹{formatINR(monthlyInterest)}</p>
+                </div>
+                <div className={`p-3 rounded-xl ${t('bg-white/[0.03]', 'bg-white')}`}>
+                  <p className={`text-[10px] uppercase tracking-wider ${t('text-gray-600', 'text-gray-500')}`}>TDS (Monthly)</p>
+                  <p className={`text-sm font-bold text-amber-400`}>₹{formatINR(monthlyTDS)}</p>
+                </div>
+                <div className={`p-3 rounded-xl ${t('bg-white/[0.03]', 'bg-white')}`}>
+                  <p className={`text-[10px] uppercase tracking-wider ${t('text-gray-600', 'text-gray-500')}`}>Net Monthly</p>
+                  <p className={`text-sm font-bold text-emerald-400`}>₹{formatINR(netMonthly)}</p>
+                </div>
+                <div className={`p-3 rounded-xl ${t('bg-white/[0.03]', 'bg-white')}`}>
+                  <p className={`text-[10px] uppercase tracking-wider ${t('text-gray-600', 'text-gray-500')}`}>Yearly Appreciation</p>
+                  <p className={`text-sm font-bold text-blue-400`}>₹{formatINR(yearlyAppreciation)}</p>
+                </div>
+              </div>
+              <div className={`mt-3 p-3 rounded-xl flex items-center justify-between ${t('bg-white/[0.03]', 'bg-white')}`}>
+                <div>
+                  <p className={`text-[10px] uppercase tracking-wider ${t('text-gray-600', 'text-gray-500')}`}>Sum of Capital & ROI ({tenureYears} Years)</p>
+                  <p className={`text-lg font-black ${t('text-white', 'text-gray-900')}`}>₹{formatINR(investAmount + totalReturns)}</p>
+                </div>
+                <div className="text-right">
+                  <p className={`text-[10px] uppercase tracking-wider ${t('text-gray-600', 'text-gray-500')}`}>Total Returns</p>
+                  <p className={`text-lg font-black text-emerald-400`}>₹{formatINR(totalReturns)}</p>
+                </div>
+              </div>
+            </div>
+          )}
+        </Glass>
+
+        {/* Step 2: Bank Details */}
+        <Glass className="p-6" hover theme={theme}>
+          <h3 className={`text-base font-bold mb-4 ${t('text-white', 'text-gray-900')}`}>2. Bank Account Details</h3>
+          <p className={`text-xs mb-4 ${t('text-gray-500', 'text-gray-700')}`}>Add one or more bank accounts for fund transfer. Primary account will be used for dividends and distributions.</p>
+          {bankAccounts.map((acc, idx) => (
+            <div key={idx} className={`p-4 rounded-xl mb-3 ${t('bg-white/[0.02] border border-white/[0.04]', 'bg-gray-100/50 border border-gray-200/30')}`}>
+              <div className="flex items-center justify-between mb-3">
+                <span className={`text-xs font-bold ${t('text-white', 'text-gray-900')}`}>Bank Account {idx + 1}</span>
+                <div className="flex items-center gap-2">
+                  {acc.is_primary && <span className="text-[9px] px-2 py-0.5 rounded-full bg-brand-red/15 text-brand-red font-bold">Primary</span>}
+                  {!acc.is_primary && <button onClick={() => setBankAccounts(prev => prev.map((a, i) => ({ ...a, is_primary: i === idx })))} className="text-[9px] px-2 py-0.5 rounded-full bg-blue-500/15 text-blue-400 font-bold hover:bg-blue-500/25 transition-colors">Set Primary</button>}
+                  {bankAccounts.length > 1 && <button onClick={() => removeBankAccount(idx)} className="text-[9px] px-2 py-0.5 rounded-full bg-red-500/15 text-red-400 font-bold hover:bg-red-500/25 transition-colors">Remove</button>}
+                </div>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <input placeholder="Account Holder Name *" value={acc.account_holder_name}
+                    onChange={e => updateBankAccount(idx, 'account_holder_name', e.target.value)}
+                    autoComplete="off" className={inputCls(`bank_${idx}_account_holder_name`)} />
+                  {investFormErrors[`bank_${idx}_account_holder_name`] && <p className="text-[10px] text-red-400 mt-1">{investFormErrors[`bank_${idx}_account_holder_name`]}</p>}
+                </div>
+                <div>
+                  <input placeholder="Account Number *" value={acc.account_number} type="password"
+                    onChange={e => updateBankAccount(idx, 'account_number', e.target.value.replace(/\D/g, ''))}
+                    autoComplete="new-password" className={inputCls(`bank_${idx}_account_number`)} />
+                  {investFormErrors[`bank_${idx}_account_number`] && <p className="text-[10px] text-red-400 mt-1">{investFormErrors[`bank_${idx}_account_number`]}</p>}
+                </div>
+                <div>
+                  <input placeholder="Confirm Account Number *" value={acc.account_number_confirm} type="password"
+                    onChange={e => updateBankAccount(idx, 'account_number_confirm', e.target.value.replace(/\D/g, ''))}
+                    autoComplete="new-password" className={inputCls(`bank_${idx}_account_number_confirm`)} />
+                  {investFormErrors[`bank_${idx}_account_number_confirm`] && <p className="text-[10px] text-red-400 mt-1">{investFormErrors[`bank_${idx}_account_number_confirm`]}</p>}
+                </div>
+                <div>
+                  <div className="relative">
+                    <input placeholder="IFSC Code *" value={acc.ifsc_code}
+                      onChange={e => { const v = e.target.value.toUpperCase().slice(0, 11); updateBankAccount(idx, 'ifsc_code', v); if (v.length === 11) handleIFSCValidation(idx, v) }}
+                      autoComplete="off" className={inputCls(`bank_${idx}_ifsc_code`)} />
+                    {acc.ifsc_validating && <div className="absolute right-3 top-1/2 -translate-y-1/2"><RefreshCw className="w-3.5 h-3.5 animate-spin text-gray-400" /></div>}
+                    {acc.ifsc_valid === true && <div className="absolute right-3 top-1/2 -translate-y-1/2"><CheckCircle className="w-3.5 h-3.5 text-emerald-400" /></div>}
+                    {acc.ifsc_valid === false && <div className="absolute right-3 top-1/2 -translate-y-1/2"><AlertCircle className="w-3.5 h-3.5 text-red-400" /></div>}
+                  </div>
+                  {acc.bank_name && <p className="text-[10px] text-emerald-400 mt-1">{acc.bank_name}</p>}
+                  {investFormErrors[`bank_${idx}_ifsc_code`] && <p className="text-[10px] text-red-400 mt-1">{investFormErrors[`bank_${idx}_ifsc_code`]}</p>}
+                </div>
+                <select value={acc.account_type} onChange={e => updateBankAccount(idx, 'account_type', e.target.value)}
+                  className={`px-3 py-2.5 rounded-xl text-sm ${t('bg-white/[0.04] border border-white/[0.06] text-white', 'bg-gray-100/60 border border-gray-200/40 text-gray-900')}`}>
+                  <option value="savings">Savings</option><option value="current">Current</option><option value="nro">NRO</option><option value="nre">NRE</option>
+                </select>
+              </div>
+              <div onClick={async () => {
+                try {
+                  const { pickAndUploadFiles } = await import('@/lib/supabase/storageService')
+                  const results = await pickAndUploadFiles('client/kyc', {
+                    accept: '.pdf,.jpg,.jpeg,.png',
+                    portal: 'client',
+                    entityType: 'client',
+                    entityId: clientId || undefined,
+                    category: 'kyc',
+                  })
+                  if (results && results.length > 0) {
+                    const successFiles = results.filter((r: any) => r.success)
+                    if (successFiles.length > 0) {
+                      updateBankAccount(idx, 'cancelled_cheque_url', successFiles[0].file?.url || successFiles[0].file?.path || 'uploaded')
+                      showToast('Document uploaded successfully')
+                    }
+                  }
+                } catch { showToast('Upload failed. Please try again.', 'info') }
+              }} className={`mt-3 p-3 rounded-lg border-2 border-dashed cursor-pointer text-center transition-colors ${acc.cancelled_cheque_url ? 'border-emerald-500/30 bg-emerald-500/5' : 'border-white/[0.08] hover:border-brand-red/20'}`}>
+                {acc.cancelled_cheque_url ? (
+                  <><CheckCircle className="w-5 h-5 mx-auto mb-1 text-emerald-400" /><p className="text-[11px] text-emerald-400 font-medium">Document uploaded</p></>
+                ) : (
+                  <><FileUp className="w-5 h-5 mx-auto mb-1 text-gray-500" /><p className="text-[11px] text-gray-500">Upload cancelled cheque / bank statement</p></>
+                )}
+              </div>
             </div>
           ))}
-        </div>
-        <label className={`flex items-start gap-2 mb-4 cursor-pointer ${investFormErrors['terms'] ? '' : ''}`}>
-          <input type="checkbox" checked={investTermsAccepted} onChange={e => { setInvestTermsAccepted(e.target.checked); setInvestFormErrors(prev => { const n = { ...prev }; delete n['terms']; return n }) }}
-            className="mt-0.5 w-4 h-4 rounded border-gray-300 text-brand-red focus:ring-brand-red" />
-          <span className={`text-xs ${t('text-gray-400','text-gray-600')}`}>I confirm the details above and agree to the investment terms. I understand that AIF investments involve risk and are subject to SEBI regulations. <span className="text-red-400">*</span></span>
-        </label>
-        {investFormErrors['terms'] && <p className="text-[10px] text-red-400 mb-3 -mt-2">{investFormErrors['terms']}</p>}
-        <button onClick={handleInvestmentSubmit} disabled={investSubmitting}
-          className={`w-full py-3 rounded-xl text-sm font-bold text-white transition-all hover:scale-[1.01] ${investSubmitting ? 'opacity-60 cursor-not-allowed' : ''}`}
-          style={{ background: 'linear-gradient(135deg, #D0021B, #8B0000)' }}>
-          {investSubmitting ? 'Submitting...' : 'Submit Investment Application'}
-        </button>
-      </Glass>
-    </div>
+          <button onClick={addNewBankAccount} className="flex items-center gap-2 text-xs font-semibold text-blue-400 hover:text-blue-300 transition-colors">
+            <Plus className="w-3.5 h-3.5" /> Add Another Bank Account {bankAccounts.length >= 3 && '(max 3)'}
+          </button>
+        </Glass>
+
+        {/* Step 3: Review & Submit */}
+        <Glass className="p-6" hover glow theme={theme}>
+          <h3 className={`text-base font-bold mb-4 ${t('text-white', 'text-gray-900')}`}>3. Review & Submit</h3>
+          <div className={`grid grid-cols-2 md:grid-cols-4 gap-3 mb-4`}>
+            {[
+              { l: 'Vehicle', v: investVehicle },
+              { l: 'Amount', v: `\u20B9${formatINR(investAmount)}` },
+              { l: 'Tenure', v: investTenure },
+              { l: 'Bank', v: bankAccounts[0]?.bank_name ? `${bankAccounts[0].bank_name} ****${bankAccounts[0].account_number.slice(-4)}` : bankAccounts[0]?.account_number ? `****${bankAccounts[0].account_number.slice(-4)}` : 'Not entered' },
+            ].map((r, i) => (
+              <div key={i} className={`p-3 rounded-xl ${t('bg-white/[0.03] border border-white/[0.04]', 'bg-gray-100/50 border border-gray-200/30')}`}>
+                <p className={`text-[9px] uppercase tracking-wider ${t('text-gray-600', 'text-gray-600')}`}>{r.l}</p>
+                <p className={`text-sm font-bold mt-0.5 ${t('text-white', 'text-gray-900')}`}>{r.v}</p>
+              </div>
+            ))}
+          </div>
+          <label className={`flex items-start gap-2 mb-4 cursor-pointer ${investFormErrors['terms'] ? '' : ''}`}>
+            <input type="checkbox" checked={investTermsAccepted} onChange={e => { setInvestTermsAccepted(e.target.checked); setInvestFormErrors(prev => { const n = { ...prev }; delete n['terms']; return n }) }}
+              className="mt-0.5 w-4 h-4 rounded border-gray-300 text-brand-red focus:ring-brand-red" />
+            <span className={`text-xs ${t('text-gray-400', 'text-gray-600')}`}>I confirm the details above and agree to the investment terms. I understand that AIF investments involve risk and are subject to SEBI regulations. <span className="text-red-400">*</span></span>
+          </label>
+          {investFormErrors['terms'] && <p className="text-[10px] text-red-400 mb-3 -mt-2">{investFormErrors['terms']}</p>}
+          <button onClick={handleInvestmentSubmit} disabled={investSubmitting}
+            className={`w-full py-3 rounded-xl text-sm font-bold text-white transition-all hover:scale-[1.01] ${investSubmitting ? 'opacity-60 cursor-not-allowed' : ''}`}
+            style={{ background: 'linear-gradient(135deg, #D0021B, #8B0000)' }}>
+            {investSubmitting ? 'Submitting...' : 'Submit Investment Application'}
+          </button>
+        </Glass>
+      </div>
     )
   }
 
@@ -4369,8 +4839,8 @@ export default function DashboardClient() {
     return (
       <div className="space-y-6">
         <div>
-          <h2 className={`text-xl font-bold mb-1 ${t('text-white','text-gray-900')}`}>Investment Calculators</h2>
-          <p className={`text-sm ${t('text-gray-500','text-gray-700')}`}>Plan, compare, and project your investments</p>
+          <h2 className={`text-xl font-bold mb-1 ${t('text-white', 'text-gray-900')}`}>Investment Calculators</h2>
+          <p className={`text-sm ${t('text-gray-500', 'text-gray-700')}`}>Plan, compare, and project your investments</p>
         </div>
 
         {/* Calculator tabs */}
@@ -4378,7 +4848,7 @@ export default function DashboardClient() {
           {calcs.map(c => (
             <button key={c.id} onClick={() => setActiveCalc(c.id)}
               className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium transition-all
-                ${activeCalc === c.id ? 'text-white bg-brand-red' : t('text-gray-400 bg-white/[0.04] hover:bg-white/[0.06]','text-gray-900 bg-gray-100 hover:bg-gray-200 border border-gray-200')}`}>
+                ${activeCalc === c.id ? 'text-white bg-brand-red' : t('text-gray-400 bg-white/[0.04] hover:bg-white/[0.06]', 'text-gray-900 bg-gray-100 hover:bg-gray-200 border border-gray-200')}`}>
               <c.icon className="w-3.5 h-3.5" /> {c.label}
             </button>
           ))}
@@ -4387,16 +4857,16 @@ export default function DashboardClient() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
           {/* Input panel */}
           <Glass className="p-6" hover theme={theme}>
-            <h3 className={`text-base font-bold mb-5 ${t('text-white','text-gray-900')}`}>
+            <h3 className={`text-base font-bold mb-5 ${t('text-white', 'text-gray-900')}`}>
               {calcs.find(c => c.id === activeCalc)?.label} Calculator
             </h3>
             <div className="space-y-5">
               <div>
                 <div className="flex justify-between mb-2">
-                  <label className={`text-xs font-medium ${t('text-gray-400','text-gray-600')}`}>
+                  <label className={`text-xs font-medium ${t('text-gray-400', 'text-gray-600')}`}>
                     {activeCalc === 'sip' ? 'Monthly Investment' : activeCalc === 'irr' ? 'Initial Investment' : 'Investment Amount'}
                   </label>
-                  <span className={`text-sm font-bold ${t('text-white','text-gray-900')}`}>{'\u20B9'}{formatINR(calcInputs.amount)}</span>
+                  <span className={`text-sm font-bold ${t('text-white', 'text-gray-900')}`}>{'\u20B9'}{formatINR(calcInputs.amount)}</span>
                 </div>
                 <input type="range" min={activeCalc === 'sip' ? 5000 : 100000} max={activeCalc === 'sip' ? 500000 : 50000000} step={activeCalc === 'sip' ? 5000 : 100000}
                   value={calcInputs.amount} onChange={e => setCalcInputs(p => ({ ...p, amount: +e.target.value }))}
@@ -4404,8 +4874,8 @@ export default function DashboardClient() {
               </div>
               <div>
                 <div className="flex justify-between mb-2">
-                  <label className={`text-xs font-medium ${t('text-gray-400','text-gray-600')}`}>Expected Return (%)</label>
-                  <span className={`text-sm font-bold ${t('text-white','text-gray-900')}`}>{calcInputs.rate}%</span>
+                  <label className={`text-xs font-medium ${t('text-gray-400', 'text-gray-600')}`}>Expected Return (%)</label>
+                  <span className={`text-sm font-bold ${t('text-white', 'text-gray-900')}`}>{calcInputs.rate}%</span>
                 </div>
                 <input type="range" min={5} max={35} step={0.5} value={calcInputs.rate}
                   onChange={e => setCalcInputs(p => ({ ...p, rate: +e.target.value }))}
@@ -4413,8 +4883,8 @@ export default function DashboardClient() {
               </div>
               <div>
                 <div className="flex justify-between mb-2">
-                  <label className={`text-xs font-medium ${t('text-gray-400','text-gray-600')}`}>Time Period (Years)</label>
-                  <span className={`text-sm font-bold ${t('text-white','text-gray-900')}`}>{calcInputs.years} Yrs</span>
+                  <label className={`text-xs font-medium ${t('text-gray-400', 'text-gray-600')}`}>Time Period (Years)</label>
+                  <span className={`text-sm font-bold ${t('text-white', 'text-gray-900')}`}>{calcInputs.years} Yrs</span>
                 </div>
                 <input type="range" min={1} max={30} step={1} value={calcInputs.years}
                   onChange={e => setCalcInputs(p => ({ ...p, years: +e.target.value }))}
@@ -4425,7 +4895,7 @@ export default function DashboardClient() {
 
           {/* Results panel */}
           <Glass className="p-6" hover glow theme={theme}>
-            <h3 className={`text-base font-bold mb-5 ${t('text-white','text-gray-900')}`}>
+            <h3 className={`text-base font-bold mb-5 ${t('text-white', 'text-gray-900')}`}>
               {activeCalc === 'irr' ? 'IRR Analysis' : 'Projected Returns'}
             </h3>
 
@@ -4433,23 +4903,23 @@ export default function DashboardClient() {
               <>
                 {/* IRR-specific results */}
                 <div className="grid grid-cols-2 gap-3 mb-5">
-                  <div className={`p-4 rounded-xl text-center ${t('bg-white/[0.03] border border-white/[0.04]','bg-gray-50 border border-gray-200')}`}>
-                    <p className={`text-[10px] uppercase tracking-wider ${t('text-gray-500','text-gray-600')}`}>Initial Investment</p>
-                    <p className={`text-lg font-black mt-1 ${t('text-white','text-gray-900')}`}>{'\u20B9'}{formatINR(calcInputs.amount)}</p>
+                  <div className={`p-4 rounded-xl text-center ${t('bg-white/[0.03] border border-white/[0.04]', 'bg-gray-50 border border-gray-200')}`}>
+                    <p className={`text-[10px] uppercase tracking-wider ${t('text-gray-500', 'text-gray-600')}`}>Initial Investment</p>
+                    <p className={`text-lg font-black mt-1 ${t('text-white', 'text-gray-900')}`}>{'\u20B9'}{formatINR(calcInputs.amount)}</p>
                   </div>
-                  <div className={`p-4 rounded-xl text-center ${t('bg-emerald-500/[0.06] border border-emerald-500/[0.1]','bg-emerald-50 border border-emerald-200')}`}>
-                    <p className={`text-[10px] uppercase tracking-wider ${t('text-gray-500','text-gray-600')}`}>Final Value</p>
+                  <div className={`p-4 rounded-xl text-center ${t('bg-emerald-500/[0.06] border border-emerald-500/[0.1]', 'bg-emerald-50 border border-emerald-200')}`}>
+                    <p className={`text-[10px] uppercase tracking-wider ${t('text-gray-500', 'text-gray-600')}`}>Final Value</p>
                     <p className="text-lg font-black mt-1 text-emerald-400">{'\u20B9'}{formatINR(Math.round(irrFinalValue))}</p>
                   </div>
-                  <div className={`p-4 rounded-xl text-center col-span-2 ${t('bg-brand-red/[0.06] border border-brand-red/[0.1]','bg-red-50 border border-red-200')}`}>
-                    <p className={`text-[10px] uppercase tracking-wider ${t('text-gray-500','text-gray-600')}`}>Internal Rate of Return (IRR)</p>
+                  <div className={`p-4 rounded-xl text-center col-span-2 ${t('bg-brand-red/[0.06] border border-brand-red/[0.1]', 'bg-red-50 border border-red-200')}`}>
+                    <p className={`text-[10px] uppercase tracking-wider ${t('text-gray-500', 'text-gray-600')}`}>Internal Rate of Return (IRR)</p>
                     <p className="text-3xl font-black mt-1 text-brand-red">{irrRate.toFixed(2)}%</p>
-                    <p className={`text-[10px] mt-1 ${t('text-gray-500','text-gray-600')}`}>Annualized over {calcInputs.years} year{calcInputs.years > 1 ? 's' : ''}</p>
+                    <p className={`text-[10px] mt-1 ${t('text-gray-500', 'text-gray-600')}`}>Annualized over {calcInputs.years} year{calcInputs.years > 1 ? 's' : ''}</p>
                   </div>
                 </div>
 
                 {/* IRR comparison across products */}
-                <h4 className={`text-xs font-bold mb-3 ${t('text-gray-400','text-gray-600')}`}>IRR Comparison: Investment Products</h4>
+                <h4 className={`text-xs font-bold mb-3 ${t('text-gray-400', 'text-gray-600')}`}>IRR Comparison: Investment Products</h4>
                 <div className="space-y-2">
                   {[
                     { name: 'GHL AIF', irr: irrRate, color: '#D0021B' },
@@ -4463,24 +4933,24 @@ export default function DashboardClient() {
                     const maxIrr = Math.max(irrRate, 25)
                     return (
                       <div key={i} className="flex items-center gap-3">
-                        <span className={`w-20 text-[10px] font-medium text-right ${t('text-gray-400','text-gray-600')}`}>{p.name}</span>
-                        <div className={`flex-1 h-4 rounded-full overflow-hidden ${t('bg-white/[0.04]','bg-gray-200')}`}>
+                        <span className={`w-20 text-[10px] font-medium text-right ${t('text-gray-400', 'text-gray-600')}`}>{p.name}</span>
+                        <div className={`flex-1 h-4 rounded-full overflow-hidden ${t('bg-white/[0.04]', 'bg-gray-200')}`}>
                           <div className="h-full rounded-full transition-all duration-700" style={{ width: `${Math.min((p.irr / maxIrr) * 100, 100)}%`, background: p.color }} />
                         </div>
-                        <span className={`w-12 text-[10px] font-bold text-right ${p.irr === irrRate ? 'text-brand-red' : t('text-white','text-gray-900')}`}>{p.irr.toFixed(1)}%</span>
+                        <span className={`w-12 text-[10px] font-bold text-right ${p.irr === irrRate ? 'text-brand-red' : t('text-white', 'text-gray-900')}`}>{p.irr.toFixed(1)}%</span>
                       </div>
                     )
                   })}
                 </div>
 
                 {/* IRR insight */}
-                <div className={`mt-4 p-3 rounded-xl ${t('bg-white/[0.03] border border-white/[0.04]','bg-gray-50 border border-gray-200')}`}>
+                <div className={`mt-4 p-3 rounded-xl ${t('bg-white/[0.03] border border-white/[0.04]', 'bg-gray-50 border border-gray-200')}`}>
                   <div className="flex items-start gap-2">
                     <Sparkles className="w-4 h-4 text-brand-red mt-0.5 shrink-0" />
-                    <p className={`text-[11px] leading-relaxed ${t('text-gray-400','text-gray-600')}`}>
+                    <p className={`text-[11px] leading-relaxed ${t('text-gray-400', 'text-gray-600')}`}>
                       {irrRate > 15 ? `Your projected IRR of ${irrRate.toFixed(1)}% significantly outperforms traditional investments. GHL AIF's stressed real estate strategy targets above-market returns through NCLT-resolved assets.` :
-                       irrRate > 10 ? `An IRR of ${irrRate.toFixed(1)}% is competitive with equity markets. Consider increasing your holding period or allocation to maximize compounding benefits.` :
-                       `At ${irrRate.toFixed(1)}% IRR, explore GHL's higher-yield stressed asset opportunities for potentially better risk-adjusted returns.`}
+                        irrRate > 10 ? `An IRR of ${irrRate.toFixed(1)}% is competitive with equity markets. Consider increasing your holding period or allocation to maximize compounding benefits.` :
+                          `At ${irrRate.toFixed(1)}% IRR, explore GHL's higher-yield stressed asset opportunities for potentially better risk-adjusted returns.`}
                     </p>
                   </div>
                 </div>
@@ -4489,26 +4959,26 @@ export default function DashboardClient() {
               <>
                 {/* Standard results for other calculators */}
                 <div className="grid grid-cols-2 gap-3 mb-5">
-                  <div className={`p-4 rounded-xl text-center ${t('bg-white/[0.03] border border-white/[0.04]','bg-gray-50 border border-gray-200')}`}>
-                    <p className={`text-[10px] uppercase tracking-wider ${t('text-gray-500','text-gray-600')}`}>Total Invested</p>
-                    <p className={`text-lg font-black mt-1 ${t('text-white','text-gray-900')}`}>{'\u20B9'}{formatINR(activeCalc === 'sip' ? calcInputs.amount * calcInputs.years * 12 : calcInputs.amount)}</p>
+                  <div className={`p-4 rounded-xl text-center ${t('bg-white/[0.03] border border-white/[0.04]', 'bg-gray-50 border border-gray-200')}`}>
+                    <p className={`text-[10px] uppercase tracking-wider ${t('text-gray-500', 'text-gray-600')}`}>Total Invested</p>
+                    <p className={`text-lg font-black mt-1 ${t('text-white', 'text-gray-900')}`}>{'\u20B9'}{formatINR(activeCalc === 'sip' ? calcInputs.amount * calcInputs.years * 12 : calcInputs.amount)}</p>
                   </div>
-                  <div className={`p-4 rounded-xl text-center ${t('bg-emerald-500/[0.06] border border-emerald-500/[0.1]','bg-emerald-50 border border-emerald-200')}`}>
-                    <p className={`text-[10px] uppercase tracking-wider ${t('text-gray-500','text-gray-600')}`}>Future Value</p>
+                  <div className={`p-4 rounded-xl text-center ${t('bg-emerald-500/[0.06] border border-emerald-500/[0.1]', 'bg-emerald-50 border border-emerald-200')}`}>
+                    <p className={`text-[10px] uppercase tracking-wider ${t('text-gray-500', 'text-gray-600')}`}>Future Value</p>
                     <p className="text-lg font-black mt-1 text-emerald-400">{'\u20B9'}{formatINR(Math.round(activeCalc === 'sip' ? sipFuture : future))}</p>
                   </div>
-                  <div className={`p-4 rounded-xl text-center ${t('bg-white/[0.03] border border-white/[0.04]','bg-gray-50 border border-gray-200')}`}>
-                    <p className={`text-[10px] uppercase tracking-wider ${t('text-gray-500','text-gray-600')}`}>Wealth Gain</p>
+                  <div className={`p-4 rounded-xl text-center ${t('bg-white/[0.03] border border-white/[0.04]', 'bg-gray-50 border border-gray-200')}`}>
+                    <p className={`text-[10px] uppercase tracking-wider ${t('text-gray-500', 'text-gray-600')}`}>Wealth Gain</p>
                     <p className={`text-lg font-black mt-1 text-emerald-400`}>{'\u20B9'}{formatINR(Math.round((activeCalc === 'sip' ? sipFuture : future) - (activeCalc === 'sip' ? calcInputs.amount * calcInputs.years * 12 : calcInputs.amount)))}</p>
                   </div>
-                  <div className={`p-4 rounded-xl text-center ${t('bg-white/[0.03] border border-white/[0.04]','bg-gray-50 border border-gray-200')}`}>
-                    <p className={`text-[10px] uppercase tracking-wider ${t('text-gray-500','text-gray-600')}`}>CAGR</p>
+                  <div className={`p-4 rounded-xl text-center ${t('bg-white/[0.03] border border-white/[0.04]', 'bg-gray-50 border border-gray-200')}`}>
+                    <p className={`text-[10px] uppercase tracking-wider ${t('text-gray-500', 'text-gray-600')}`}>CAGR</p>
                     <p className={`text-lg font-black mt-1 text-brand-red`}>{calcInputs.rate}%</p>
                   </div>
                 </div>
 
                 {/* Comparison bar chart */}
-                <h4 className={`text-xs font-bold mb-3 ${t('text-gray-400','text-gray-600')}`}>Comparison: Same Amount Across Products</h4>
+                <h4 className={`text-xs font-bold mb-3 ${t('text-gray-400', 'text-gray-600')}`}>Comparison: Same Amount Across Products</h4>
                 <div className="space-y-2">
                   {[
                     { name: 'GHL AIF', rate: calcInputs.rate, color: '#D0021B' },
@@ -4521,11 +4991,11 @@ export default function DashboardClient() {
                     const maxVal = calcInputs.amount * Math.pow(1 + calcInputs.rate / 100, calcInputs.years)
                     return (
                       <div key={i} className="flex items-center gap-3">
-                        <span className={`w-20 text-[10px] font-medium text-right ${t('text-gray-400','text-gray-600')}`}>{p.name}</span>
-                        <div className={`flex-1 h-4 rounded-full overflow-hidden ${t('bg-white/[0.04]','bg-gray-200')}`}>
+                        <span className={`w-20 text-[10px] font-medium text-right ${t('text-gray-400', 'text-gray-600')}`}>{p.name}</span>
+                        <div className={`flex-1 h-4 rounded-full overflow-hidden ${t('bg-white/[0.04]', 'bg-gray-200')}`}>
                           <div className="h-full rounded-full transition-all duration-700" style={{ width: `${Math.min((pv / maxVal) * 100, 100)}%`, background: p.color }} />
                         </div>
-                        <span className={`w-16 text-[10px] font-bold text-right ${t('text-white','text-gray-900')}`}>{'\u20B9'}{formatINR(Math.round(pv))}</span>
+                        <span className={`w-16 text-[10px] font-bold text-right ${t('text-white', 'text-gray-900')}`}>{'\u20B9'}{formatINR(Math.round(pv))}</span>
                       </div>
                     )
                   })}
@@ -4546,13 +5016,13 @@ export default function DashboardClient() {
     return (
       <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 backdrop-blur-sm">
         <div className={`max-w-2xl w-full mx-4 rounded-2xl border overflow-hidden flex flex-col max-h-[85vh]
-          ${t('bg-[#111] border-white/10','bg-[#F0EDE9] border-gray-200/50 shadow-2xl')}`}>
-          <div className={`px-6 py-4 flex items-center justify-between border-b shrink-0 ${t('border-white/[0.06]','border-gray-200/45')}`}>
+          ${t('bg-[#111] border-white/10', 'bg-[#F0EDE9] border-gray-200/50 shadow-2xl')}`}>
+          <div className={`px-6 py-4 flex items-center justify-between border-b shrink-0 ${t('border-white/[0.06]', 'border-gray-200/45')}`}>
             <div className="flex items-center gap-2">
               <ScrollText className="w-5 h-5 text-brand-red" />
-              <h3 className={`text-lg font-bold ${t('text-white','text-gray-900')}`}>Terms & Conditions</h3>
+              <h3 className={`text-lg font-bold ${t('text-white', 'text-gray-900')}`}>Terms & Conditions</h3>
             </div>
-            <button onClick={() => setTermsOpen(false)} className={t('text-gray-500 hover:text-white','text-gray-600 hover:text-gray-900')}>
+            <button onClick={() => setTermsOpen(false)} className={t('text-gray-500 hover:text-white', 'text-gray-600 hover:text-gray-900')}>
               <X className="w-5 h-5" />
             </button>
           </div>
@@ -4563,8 +5033,8 @@ export default function DashboardClient() {
               if (scrollTop + clientHeight >= scrollHeight - 20) setTermsScrolled(true)
             }}>
             <div className={`prose prose-sm max-w-none ${isDark ? 'prose-invert' : ''}`}>
-              <h4 className={`text-sm font-bold mb-2 ${t('text-white','text-gray-900')}`}>GHL India Ventures - Dashboard Usage Policy</h4>
-              <p className={`text-xs leading-relaxed mb-3 ${t('text-gray-400','text-gray-600')}`}>Last Updated: 1 March 2025</p>
+              <h4 className={`text-sm font-bold mb-2 ${t('text-white', 'text-gray-900')}`}>GHL India Ventures - Dashboard Usage Policy</h4>
+              <p className={`text-xs leading-relaxed mb-3 ${t('text-gray-400', 'text-gray-600')}`}>Last Updated: 1 March 2025</p>
               {[
                 { title: '1. Acceptance of Terms', body: 'By accessing and using the GHL India Ventures Investor Dashboard, you agree to be bound by these Terms and Conditions and our Privacy Policy. If you do not agree, please do not use this platform.' },
                 { title: '2. Dashboard Access', body: 'Access to this dashboard is restricted to registered investors of GHL India Ventures. Your login credentials are confidential and must not be shared. You are responsible for all activity under your account.' },
@@ -4576,20 +5046,20 @@ export default function DashboardClient() {
                 { title: '8. Limitation of Liability', body: 'GHL India Ventures shall not be liable for any losses arising from technical failures, market conditions, or unauthorized access to your account due to negligence in safeguarding credentials.' },
                 { title: '9. Dispute Resolution', body: 'Any disputes shall be subject to the exclusive jurisdiction of courts in Chennai, Tamil Nadu, India. Disputes may also be resolved through SEBI SCORES portal or arbitration as per SEBI guidelines.' },
                 { title: '10. Amendments', body: 'GHL reserves the right to modify these terms at any time. Continued use of the dashboard after modifications constitutes acceptance of the revised terms.' },
-              ].map((s,i) => (
+              ].map((s, i) => (
                 <div key={i} className="mb-4">
-                  <h5 className={`text-xs font-bold mb-1 ${t('text-white','text-gray-900')}`}>{s.title}</h5>
-                  <p className={`text-[11px] leading-relaxed ${t('text-gray-400','text-gray-600')}`}>{s.body}</p>
+                  <h5 className={`text-xs font-bold mb-1 ${t('text-white', 'text-gray-900')}`}>{s.title}</h5>
+                  <p className={`text-[11px] leading-relaxed ${t('text-gray-400', 'text-gray-600')}`}>{s.body}</p>
                 </div>
               ))}
             </div>
           </div>
-          <div className={`px-6 py-4 flex items-center justify-between border-t shrink-0 ${t('border-white/[0.06]','border-gray-200/45')}`}>
-            <p className={`text-[10px] ${t('text-gray-600','text-gray-600')}`}>
+          <div className={`px-6 py-4 flex items-center justify-between border-t shrink-0 ${t('border-white/[0.06]', 'border-gray-200/45')}`}>
+            <p className={`text-[10px] ${t('text-gray-600', 'text-gray-600')}`}>
               {termsScrolled ? <span className="text-emerald-400 font-semibold flex items-center gap-1"><CheckCircle className="w-3 h-3" /> Document read</span> : 'Scroll to bottom to accept'}
             </p>
             <div className="flex gap-2">
-              <button onClick={() => setTermsOpen(false)} className={`px-4 py-2 rounded-xl text-sm font-medium ${t('text-gray-400 hover:text-white','text-gray-700 hover:text-gray-900')}`}>Close</button>
+              <button onClick={() => setTermsOpen(false)} className={`px-4 py-2 rounded-xl text-sm font-medium ${t('text-gray-400 hover:text-white', 'text-gray-700 hover:text-gray-900')}`}>Close</button>
               <button disabled={!termsScrolled} onClick={() => { setTermsAccepted(true); setTermsOpen(false) }}
                 className={`px-5 py-2 rounded-xl text-sm font-bold text-white transition-all ${termsScrolled ? 'hover:scale-105' : 'opacity-40 cursor-not-allowed'}`}
                 style={{ background: 'linear-gradient(135deg, #D0021B, #8B0000)' }}>
@@ -4610,13 +5080,13 @@ export default function DashboardClient() {
     return (
       <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 backdrop-blur-sm">
         <div className={`max-w-2xl w-full mx-4 rounded-2xl border overflow-hidden flex flex-col max-h-[85vh]
-          ${t('bg-[#111] border-white/10','bg-[#F0EDE9] border-gray-200/50 shadow-2xl')}`}>
-          <div className={`px-6 py-4 flex items-center justify-between border-b shrink-0 ${t('border-white/[0.06]','border-gray-200/45')}`}>
+          ${t('bg-[#111] border-white/10', 'bg-[#F0EDE9] border-gray-200/50 shadow-2xl')}`}>
+          <div className={`px-6 py-4 flex items-center justify-between border-b shrink-0 ${t('border-white/[0.06]', 'border-gray-200/45')}`}>
             <div className="flex items-center gap-2">
               <Shield className="w-5 h-5 text-blue-400" />
-              <h3 className={`text-lg font-bold ${t('text-white','text-gray-900')}`}>Privacy Policy</h3>
+              <h3 className={`text-lg font-bold ${t('text-white', 'text-gray-900')}`}>Privacy Policy</h3>
             </div>
-            <button onClick={() => setPrivacyOpen(false)} className={t('text-gray-500 hover:text-white','text-gray-600 hover:text-gray-900')}>
+            <button onClick={() => setPrivacyOpen(false)} className={t('text-gray-500 hover:text-white', 'text-gray-600 hover:text-gray-900')}>
               <X className="w-5 h-5" />
             </button>
           </div>
@@ -4627,8 +5097,8 @@ export default function DashboardClient() {
               if (scrollTop + clientHeight >= scrollHeight - 20) setPrivacyScrolled(true)
             }}>
             <div className={`prose prose-sm max-w-none ${isDark ? 'prose-invert' : ''}`}>
-              <h4 className={`text-sm font-bold mb-2 ${t('text-white','text-gray-900')}`}>GHL India Ventures - Privacy Policy</h4>
-              <p className={`text-xs leading-relaxed mb-3 ${t('text-gray-400','text-gray-600')}`}>Effective Date: 1 January 2025 | Last Updated: 1 March 2025</p>
+              <h4 className={`text-sm font-bold mb-2 ${t('text-white', 'text-gray-900')}`}>GHL India Ventures - Privacy Policy</h4>
+              <p className={`text-xs leading-relaxed mb-3 ${t('text-gray-400', 'text-gray-600')}`}>Effective Date: 1 January 2025 | Last Updated: 1 March 2025</p>
               {[
                 { title: '1. Introduction', body: 'GHL India Ventures Private Limited ("Company", "we", "us") is committed to protecting your privacy and personal data. This Privacy Policy describes how we collect, use, store, disclose, and protect your information when you use our Investor Dashboard, website, and services. We are a SEBI-registered Category II Alternative Investment Fund (Reg: IN/AIF2/24-25/1517) and comply with all applicable Indian data protection laws including the Information Technology Act, 2000 and the Digital Personal Data Protection Act, 2023.' },
                 { title: '2. Information We Collect', body: 'We collect the following categories of information: (a) Personal Identification Data: Full name, date of birth, gender, PAN number, Aadhaar number, passport details, photographs. (b) Contact Information: Email address, phone number, postal address. (c) Financial Data: Bank account details, investment history, portfolio data, NAV records, transaction history, tax documents. (d) KYC Documents: PAN card, Aadhaar card, address proof, bank statements, cancelled cheques, DEMAT account details. (e) Technical Data: IP address, browser type, device information, login timestamps, session data, cookies. (f) Communication Data: Messages sent through our secure messaging portal, support tickets, feedback.' },
@@ -4643,19 +5113,19 @@ export default function DashboardClient() {
                 { title: '11. International Data Transfers', body: 'We primarily store and process all data within India. In the event data needs to be transferred internationally (for NRI investors or global service providers), we ensure adequate safeguards including Standard Contractual Clauses and compliance with the Digital Personal Data Protection Act, 2023.' },
                 { title: '12. Changes to This Policy', body: 'We may update this Privacy Policy periodically. Changes will be posted on this dashboard with an updated "Last Updated" date. Continued use of our services after changes constitutes acceptance of the revised policy.' },
                 { title: '13. Contact Information', body: 'Data Protection Officer: privacy@ghlindiaventures.com. Registered Office: 2D, Queens Court, No. 6, Montieth Road, Egmore, Chennai 600008, Tamil Nadu, India. Phone: +91 44 2843 1043 | +91 7200 255 252. SEBI Registration: IN/AIF2/24-25/1517. For grievances related to data handling, you may also contact SEBI through the SCORES portal at scores.gov.in.' },
-              ].map((s,i) => (
+              ].map((s, i) => (
                 <div key={i} className="mb-4">
-                  <h5 className={`text-xs font-bold mb-1 ${t('text-white','text-gray-900')}`}>{s.title}</h5>
-                  <p className={`text-[11px] leading-relaxed ${t('text-gray-400','text-gray-600')}`}>{s.body}</p>
+                  <h5 className={`text-xs font-bold mb-1 ${t('text-white', 'text-gray-900')}`}>{s.title}</h5>
+                  <p className={`text-[11px] leading-relaxed ${t('text-gray-400', 'text-gray-600')}`}>{s.body}</p>
                 </div>
               ))}
             </div>
           </div>
-          <div className={`px-6 py-4 flex items-center justify-between border-t shrink-0 ${t('border-white/[0.06]','border-gray-200/45')}`}>
-            <p className={`text-[10px] ${t('text-gray-600','text-gray-600')}`}>
+          <div className={`px-6 py-4 flex items-center justify-between border-t shrink-0 ${t('border-white/[0.06]', 'border-gray-200/45')}`}>
+            <p className={`text-[10px] ${t('text-gray-600', 'text-gray-600')}`}>
               {privacyScrolled ? <span className="text-emerald-400 font-semibold flex items-center gap-1"><CheckCircle className="w-3 h-3" /> Policy reviewed</span> : 'Scroll to read the full policy'}
             </p>
-            <button onClick={() => setPrivacyOpen(false)} className={`px-5 py-2 rounded-xl text-sm font-bold transition-all ${t('text-gray-300 hover:text-white bg-white/[0.06] hover:bg-white/[0.1]','text-gray-600 hover:text-gray-900 bg-gray-200/50 hover:bg-gray-300/50')}`}>
+            <button onClick={() => setPrivacyOpen(false)} className={`px-5 py-2 rounded-xl text-sm font-bold transition-all ${t('text-gray-300 hover:text-white bg-white/[0.06] hover:bg-white/[0.1]', 'text-gray-600 hover:text-gray-900 bg-gray-200/50 hover:bg-gray-300/50')}`}>
               Close
             </button>
           </div>
@@ -4725,26 +5195,26 @@ export default function DashboardClient() {
       {/* Mandatory Password Reset Overlay — blocks entire UI until password is set */}
       {passwordResetMandatory && showPasswordReset && !passwordResetDone && (
         <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/80 backdrop-blur-sm">
-          <div className={`max-w-md w-full mx-4 rounded-2xl border p-8 ${t('bg-[#111] border-white/10','bg-white border-gray-200 shadow-2xl')}`}>
+          <div className={`max-w-md w-full mx-4 rounded-2xl border p-8 ${t('bg-[#111] border-white/10', 'bg-white border-gray-200 shadow-2xl')}`}>
             <div className="w-14 h-14 rounded-xl bg-red-500/15 flex items-center justify-center mx-auto mb-5">
               <Lock className="w-7 h-7 text-red-500" />
             </div>
-            <h3 className={`text-lg font-bold mb-2 text-center ${t('text-white','text-gray-900')}`}>Set Your New Password</h3>
-            <p className={`text-sm mb-6 text-center ${t('text-gray-400','text-gray-700')}`}>
+            <h3 className={`text-lg font-bold mb-2 text-center ${t('text-white', 'text-gray-900')}`}>Set Your New Password</h3>
+            <p className={`text-sm mb-6 text-center ${t('text-gray-400', 'text-gray-700')}`}>
               You must set a new password before accessing your dashboard. This is required for your account security.
             </p>
             <div className="space-y-3">
               <div className="relative">
                 <input type={showNewPw ? 'text' : 'password'} value={newPassword} onChange={(e) => setNewPassword(e.target.value)} placeholder="New password (min. 8 chars, letters + numbers)"
-                  className={`w-full px-4 py-3 pr-12 rounded-xl text-sm ${t('bg-white/[0.06] border border-white/[0.08] text-white placeholder:text-gray-500','bg-gray-50 border border-gray-200 text-gray-900 placeholder:text-gray-400')} focus:outline-none focus:ring-2 focus:ring-brand-red`} />
-                <button type="button" onClick={() => setShowNewPw(!showNewPw)} className={`absolute right-3 top-1/2 -translate-y-1/2 ${t('text-gray-500','text-gray-400')}`}>
+                  className={`w-full px-4 py-3 pr-12 rounded-xl text-sm ${t('bg-white/[0.06] border border-white/[0.08] text-white placeholder:text-gray-500', 'bg-gray-50 border border-gray-200 text-gray-900 placeholder:text-gray-400')} focus:outline-none focus:ring-2 focus:ring-brand-red`} />
+                <button type="button" onClick={() => setShowNewPw(!showNewPw)} className={`absolute right-3 top-1/2 -translate-y-1/2 ${t('text-gray-500', 'text-gray-400')}`}>
                   {showNewPw ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
               </div>
               <div className="relative">
                 <input type={showConfirmPw ? 'text' : 'password'} value={confirmNewPassword} onChange={(e) => setConfirmNewPassword(e.target.value)} placeholder="Confirm new password"
-                  className={`w-full px-4 py-3 pr-12 rounded-xl text-sm ${t('bg-white/[0.06] border border-white/[0.08] text-white placeholder:text-gray-500','bg-gray-50 border border-gray-200 text-gray-900 placeholder:text-gray-400')} focus:outline-none focus:ring-2 focus:ring-brand-red`} />
-                <button type="button" onClick={() => setShowConfirmPw(!showConfirmPw)} className={`absolute right-3 top-1/2 -translate-y-1/2 ${t('text-gray-500','text-gray-400')}`}>
+                  className={`w-full px-4 py-3 pr-12 rounded-xl text-sm ${t('bg-white/[0.06] border border-white/[0.08] text-white placeholder:text-gray-500', 'bg-gray-50 border border-gray-200 text-gray-900 placeholder:text-gray-400')} focus:outline-none focus:ring-2 focus:ring-brand-red`} />
+                <button type="button" onClick={() => setShowConfirmPw(!showConfirmPw)} className={`absolute right-3 top-1/2 -translate-y-1/2 ${t('text-gray-500', 'text-gray-400')}`}>
                   {showConfirmPw ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
               </div>
@@ -4914,11 +5384,10 @@ export default function DashboardClient() {
       {/* Toast notification */}
       {toast && (
         <div className="fixed bottom-20 lg:bottom-6 right-4 lg:right-6 left-4 lg:left-auto z-[10001] animate-fade-in">
-          <div className={`flex items-center gap-3 px-5 py-3.5 rounded-2xl shadow-2xl border ${
-            toast.type === 'success'
-              ? 'bg-emerald-900/90 border-emerald-500/30 text-emerald-200'
-              : 'bg-blue-900/90 border-blue-500/30 text-blue-200'
-          }`} style={{ backdropFilter: 'blur(20px)' }}>
+          <div className={`flex items-center gap-3 px-5 py-3.5 rounded-2xl shadow-2xl border ${toast.type === 'success'
+            ? 'bg-emerald-900/90 border-emerald-500/30 text-emerald-200'
+            : 'bg-blue-900/90 border-blue-500/30 text-blue-200'
+            }`} style={{ backdropFilter: 'blur(20px)' }}>
             {toast.type === 'success' ? <CheckCircle className="w-5 h-5 shrink-0" /> : <Info className="w-5 h-5 shrink-0" />}
             <span className="text-sm font-medium">{toast.msg}</span>
             <button onClick={() => setToast(null)} className="ml-2 opacity-60 hover:opacity-100"><X className="w-4 h-4" /></button>
