@@ -6,7 +6,7 @@ import {
   ShieldCheck, AlertTriangle, FileText, Filter, CheckCircle2,
   XCircle, Clock, MoreHorizontal, ArrowUpRight, ChevronRight,
   Search, UserCircle, FileSearch, PieChart, Activity, Building2, Upload, Trash2, KeyRound,
-  Link2, RotateCcw, ArchiveX, ExternalLink,
+  Link2, RotateCcw, ArchiveX, ExternalLink, Pencil,
 } from 'lucide-react'
 import AdminGlass from '../shared/AdminGlass'
 import AdminDataTable, { type Column } from '../shared/AdminDataTable'
@@ -49,6 +49,16 @@ export default function ClientModule({ subTab, navigate, showToast }: ClientModu
   const [selectedClient, setSelectedClient] = useState<Client | null>(null)
   const [profileModalOpen, setProfileModalOpen] = useState(false)
   const [kycFilter, setKycFilter] = useState<KYCStatus | 'all'>('all')
+  // GHL ID editor: the human ID is denormalised onto monthly_payouts, so the
+  // change goes through admin_change_ghl_id() which updates clients.ghl_id,
+  // clients.client_code and every payout row inside one transaction.
+  const [ghlEditClient, setGhlEditClient] = useState<any | null>(null)
+  const [ghlEditValue, setGhlEditValue] = useState('')
+  const [ghlSaving, setGhlSaving] = useState(false)
+  const openEditGhlId = useCallback((c: any) => {
+    setGhlEditClient(c)
+    setGhlEditValue(String(c?.ghlId || ''))
+  }, [])
   const [addClientOpen, setAddClientOpen] = useState(false)
   const [folderPickerOpen, setFolderPickerOpen] = useState(false)
   const [editingClient, setEditingClient] = useState<Client | null>(null)
@@ -338,6 +348,27 @@ export default function ClientModule({ subTab, navigate, showToast }: ClientModu
     navigate(tabId === 'list' ? 'clients' : `clients/${tabId}`)
   }
 
+  const saveGhlId = async () => {
+    if (!ghlEditClient) return
+    const next = ghlEditValue.trim().toUpperCase()
+    if (!next) return
+    setGhlSaving(true)
+    try {
+      const { supabase } = await import('@/lib/supabase/client')
+      const { data, error } = await (supabase as any).rpc('admin_change_ghl_id', {
+        p_client_id: ghlEditClient.id,
+        p_new_ghl_id: next,
+      })
+      if (error) { showToast(error.message || 'Update failed', 'error'); return }
+      if (!data || data.ok !== true) { showToast((data && data.error) || 'Update failed', 'error'); return }
+      showToast('GHL ID changed to ' + data.new + ' (' + (data.payout_rows || 0) + ' payout rows synced)', 'success')
+      setGhlEditClient(null)
+      loadData()
+    } catch (e: any) {
+      showToast(e?.message || 'Update failed', 'error')
+    } finally { setGhlSaving(false) }
+  }
+
   return (
     <div className="space-y-6 admin-section-enter">
       {/* Header */}
@@ -401,6 +432,7 @@ export default function ClientModule({ subTab, navigate, showToast }: ClientModu
             onDeleteClient={handleDeleteClient}
             onResetPassword={openResetForClient}
             onSetReferrer={openSetReferrer}
+            onEditGhlId={openEditGhlId}
             resolvingReset={resolvingResetTarget}
             showToast={showToast}
           />
@@ -423,6 +455,7 @@ export default function ClientModule({ subTab, navigate, showToast }: ClientModu
             onDeleteClient={handleDeleteClient}
             onResetPassword={openResetForClient}
             onSetReferrer={openSetReferrer}
+            onEditGhlId={openEditGhlId}
             resolvingReset={resolvingResetTarget}
             showToast={showToast}
           />
@@ -755,6 +788,34 @@ export default function ClientModule({ subTab, navigate, showToast }: ClientModu
         portal="admin"
       />
 
+      {/* GHL ID editor */}
+      {ghlEditClient && (
+        <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
+          <div className="w-full max-w-md rounded-2xl border border-white/10 bg-[#141420] p-6 shadow-2xl">
+            <h3 className="text-base font-semibold text-white mb-1">Edit GHL ID</h3>
+            <p className="text-xs text-gray-500 mb-4">{ghlEditClient.name}</p>
+            <label className="block text-[11px] font-medium text-gray-400 mb-1.5">Current</label>
+            <p className="font-mono text-sm text-gray-300 mb-4">{ghlEditClient.ghlId || '-'}</p>
+            <label className="block text-[11px] font-medium text-gray-400 mb-1.5">New GHL ID</label>
+            <input
+              value={ghlEditValue}
+              onChange={e => setGhlEditValue(e.target.value.toUpperCase())}
+              placeholder="GHL123456"
+              className="w-full bg-white/[0.04] border border-white/[0.08] rounded-lg px-3 py-2 font-mono text-sm text-white placeholder-gray-600 focus:outline-none focus:border-brand-red/40"
+            />
+            <p className="text-[10px] text-gray-500 mt-2">Updates clients.ghl_id, client_code and every monthly_payouts row in one transaction. PDFs already generated keep the old ID.</p>
+            <div className="flex justify-end gap-2 mt-5">
+              <button onClick={() => setGhlEditClient(null)} disabled={ghlSaving}
+                className="px-4 py-2 rounded-lg text-xs font-medium text-gray-400 hover:text-white disabled:opacity-50">Cancel</button>
+              <button onClick={saveGhlId} disabled={ghlSaving || !ghlEditValue.trim()}
+                className="px-4 py-2 rounded-lg text-xs font-semibold text-white bg-brand-red hover:bg-brand-red/80 disabled:opacity-50">
+                {ghlSaving ? 'Saving...' : 'Update ID'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Password Reset Modal — admin chooses email-link or temp-password flow */}
       <PasswordResetModal
         isOpen={!!resetTarget}
@@ -818,6 +879,7 @@ function ClientListTab({
   onDeleteClient,
   onResetPassword,
   onSetReferrer,
+  onEditGhlId,
   resolvingReset,
   showToast,
 }: {
@@ -826,6 +888,7 @@ function ClientListTab({
   onDeleteClient: (c: Client) => void
   onResetPassword: (c: Client) => void
   onSetReferrer: (c: any) => void
+  onEditGhlId: (c: any) => void
   resolvingReset: boolean
   showToast: (msg: string, type?: 'success' | 'error' | 'info' | 'warning') => void
 }) {
@@ -843,7 +906,32 @@ function ClientListTab({
             {/* Show the human GHL ID (clients.ghl_id) like the Investments
                 table does — the row UUID is meaningless to the admin. Fall
                 back to the UUID only if a row somehow has no GHL ID yet. */}
-            <p className="text-[11px] text-gray-500 font-mono">{(row as any).ghlId || row.id}</p>
+            <div className="flex items-center gap-1.5">
+              <p className="text-[11px] text-gray-500 font-mono">{(row as any).ghlId || row.id}</p>
+              <button onClick={(e) => { e.stopPropagation(); onEditGhlId(row) }} title="Edit GHL ID"
+                className="p-0.5 rounded text-gray-600 hover:text-brand-red transition-colors">
+                <Pencil className="w-3 h-3" />
+              </button>
+            </div>
+            {/* Contact line + referrer, so admin can identify an investor
+                without opening the profile drawer. */}
+            <p className="text-[11px] text-gray-500 truncate max-w-[280px]">
+              {[(row as any).email, (row as any).phone].filter(Boolean).join(' · ') || '—'}
+            </p>
+            {(() => {
+              // referralCode = this investor's own code; referredBy = the code
+              // that brought them in. Both matter to the referral team.
+              const own = (row as any).referralCode || (row as any).referral_code
+              const via = (row as any).referredBy || (row as any).referred_by
+              if (!own && !via) return null
+              return (
+                <p className="text-[10px] text-gray-600">
+                  {own ? (<>Ref: <span className="font-mono text-gray-500">{String(own)}</span></>) : null}
+                  {own && via ? ' \u00b7 ' : ''}
+                  {via ? (<>Via: <span className="font-mono text-gray-500">{String(via)}</span></>) : null}
+                </p>
+              )
+            })()}
           </div>
         </div>
       ),
