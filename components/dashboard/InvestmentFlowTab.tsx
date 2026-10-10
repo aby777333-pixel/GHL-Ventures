@@ -1710,6 +1710,14 @@ export default function InvestmentFlowTab({
                 <div className={`px-4 py-2 text-[10px] uppercase tracking-wider ${t('text-emerald-400 bg-emerald-500/[0.06]','text-emerald-700 bg-emerald-50')}`}>
                   Schedule approved — {investorPayouts.length} payout{investorPayouts.length === 1 ? '' : 's'} ready for processing
                 </div>
+                {/* Payout-day policy, shown above the schedule so investors
+                    know both the credit date and the period it covers. */}
+                <div className={`px-4 py-2.5 text-[11px] leading-relaxed border-b ${t('text-gray-400 bg-white/[0.02] border-white/[0.06]','text-gray-600 bg-gray-50 border-gray-200')}`}>
+                  <strong className={t('text-gray-300','text-gray-800')}>Payout schedule:</strong>{' '}
+                  Payouts are generally processed on the 6th of every month. However, depending
+                  on Sundays and public holidays, payouts may be processed between the 6th and the
+                  10th, or at the earliest possible date.
+                </div>
                 <table className="w-full text-xs">
                   <thead>
                     <tr className={`border-b ${t('border-white/[0.06] bg-white/[0.02]','border-gray-200 bg-gray-50')}`}>

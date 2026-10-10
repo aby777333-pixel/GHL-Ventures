@@ -1580,16 +1580,39 @@ export async function generateFullPayoutSchedule(app: any) {
     const trailingNet = +(trailingGross - trailingTds).toFixed(2)
 
     // Build all due_dates until maturity.
-    // Testing 2026-04-18 #4: monthly payouts fall on the 5th of each month.
+    // Testing 2026-04-18 #4: monthly payouts fall on the 6th of each month.
     // AIF yearly payouts keep their anniversary date (matches redemption ops).
+    // 2026-10-10: payouts move to the 6th, and two date bugs are fixed.
+    //  1. setMonth() on a 29/30/31-day start date overflowed into the month
+    //     AFTER next (31 Aug + 1 month = 1 Oct), so a whole payout went
+    //     missing. Anchoring to day 1 before shifting the month avoids it.
+    //  2. toISOString() renders UTC, so a local 6th was stored as the 5th
+    //     in IST. Dates are now formatted from the local Y/M/D parts.
+    // Each payout stays on the 6th and covers the PRECEDING calendar month.
+    const PAYOUT_DAY = 6
+    const isoLocal = (d: Date) =>
+      d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0')
+    const addMonthsSafe = (d: Date, n: number, day: number) => {
+      const out = new Date(d.getFullYear(), d.getMonth(), 1)
+      out.setMonth(out.getMonth() + n)
+      const lastDay = new Date(out.getFullYear(), out.getMonth() + 1, 0).getDate()
+      out.setDate(Math.min(day, lastDay))
+      return out
+    }
+    const stepDue = (from: Date): Date => {
+      if (isAIF) {
+        const c = new Date(from)
+        c.setMonth(c.getMonth() + frequencyMonths)
+        return c
+      }
+      return addMonthsSafe(from, frequencyMonths, PAYOUT_DAY)
+    }
+
     const dueDates: string[] = []
-    const cursor = new Date(startDate)
-    cursor.setMonth(cursor.getMonth() + frequencyMonths)
-    if (!isAIF) cursor.setDate(5)
+    let cursor = stepDue(startDate)
     while (cursor <= maturity) {
-      dueDates.push(cursor.toISOString().split('T')[0])
-      cursor.setMonth(cursor.getMonth() + frequencyMonths)
-      if (!isAIF) cursor.setDate(5)
+      dueDates.push(isoLocal(cursor))
+      cursor = stepDue(cursor)
     }
     if (dueDates.length === 0) return 0
 
@@ -1598,9 +1621,7 @@ export async function generateFullPayoutSchedule(app: any) {
     let trailingDueDate: string | null = null
     if (needsProrate && trailingGross > 0) {
       const lastRegular = new Date(dueDates[dueDates.length - 1] + 'T00:00:00')
-      lastRegular.setMonth(lastRegular.getMonth() + frequencyMonths)
-      if (!isAIF) lastRegular.setDate(5)
-      trailingDueDate = lastRegular.toISOString().split('T')[0]
+      trailingDueDate = isoLocal(stepDue(lastRegular))
       dueDates.push(trailingDueDate)
     }
 
