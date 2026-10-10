@@ -539,8 +539,9 @@ async function getFallbackDashboardData(previewId?: string, year?: number, _mont
     } catch { /* non-blocking */ }
   }
 
-  // 4. Default Seed/Sample Data when no DB referrals exist for testing/auditing
-  if (rawReferrals.length === 0) {
+  // 4. Default Seed/Sample Data when no DB referrals exist for testing/auditing (Development only)
+  const isProduction = process.env.NODE_ENV === 'production'
+  if (rawReferrals.length === 0 && !isProduction) {
     if (role === 'CPL' || pId === 'CPLGHL24376') {
       userName = userName !== 'Partner Investor' ? userName : 'Sourin Chandra Buragohain'
       userEmail = userEmail || 'sourin.cpl@ghlindiaventures.com'
