@@ -399,6 +399,26 @@ export default function AdminTopBar({ activeModule, activeSubTab, onMenuToggle, 
                       crm: 'sales',
                       kyc: 'compliance',
                     }
+                    // Correction: many rows store links like "/admin?tab=clients".
+                    // After stripping "/admin" only "?tab=clients" was left, which
+                    // routed to /admin/?tab=… i.e. the dashboard. Pull the tab out.
+                    if (targetModule.startsWith('?')) {
+                      targetModule = new URLSearchParams(targetModule).get('tab') || 'overview'
+                    }
+                    // Links meant for the staff / investor portals are meaningless
+                    // here — send them to the closest admin module instead.
+                    if (/^(staff|dashboard)\//i.test(targetModule)) {
+                      targetModule = /chat|message/i.test(targetModule) ? 'comms' : 'sales/investments'
+                    }
+                    // Title-based routing so each notification opens the tab it is about.
+                    const t = String(notif.title || '').toLowerCase()
+                    if (/investment application|investment approved|investment credited/.test(t)) targetModule = 'sales/investments'
+                    else if (/investment transaction|payment/.test(t)) targetModule = 'sales/investments'
+                    else if (/kyc/.test(t)) targetModule = 'compliance'
+                    else if (/ticket|support/.test(t)) targetModule = 'support'
+                    else if (/contact|enquiry|lead/.test(t)) targetModule = 'comms/contact'
+                    else if (/grievance/.test(t)) targetModule = 'compliance/grievances'
+                    else if (/referral/.test(t)) targetModule = 'sales/referrals'
                     const head = targetModule.split('/')[0]
                     if (MODULE_ALIASES[head]) {
                       targetModule = targetModule.replace(head, MODULE_ALIASES[head])

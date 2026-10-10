@@ -83,7 +83,13 @@ export async function getOperationalStats() {
     const now = new Date()
     const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1)
     const startOfMonthIso = startOfMonth.toISOString()
-    const startOfMonthDate = startOfMonthIso.split('T')[0]
+    // Correction: toISOString() is UTC, so in IST the month start came out
+    // as the last day of the previous month and those credits leaked into
+    // "This Month". Build local YYYY-MM-DD bounds instead, with an upper cap.
+    const pad2 = (n: number) => String(n).padStart(2, '0')
+    const localDate = (d: Date) => `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`
+    const startOfMonthDate = localDate(startOfMonth)
+    const startOfNextMonthDate = localDate(new Date(now.getFullYear(), now.getMonth() + 1, 1))
 
     const [
       clientsResult, investedClientsResult,
@@ -132,10 +138,10 @@ export async function getOperationalStats() {
     // become "investment this month" until money landed.
     const investmentDateOf = (r: any): string | null => {
       if (r.final_investment_date) return String(r.final_investment_date) // YYYY-MM-DD
-      if (r.credit_given_at)        return String(r.credit_given_at).split('T')[0]
+      if (r.credit_given_at)        return localDate(new Date(r.credit_given_at))
       return null
     }
-    const inThisMonth = (d: string | null) => !!d && d >= startOfMonthDate
+    const inThisMonth = (d: string | null) => !!d && d >= startOfMonthDate && d < startOfNextMonthDate
 
     // ── Payouts (DASH-c) ──
     const payRows = (payoutsResult.data || []) as any[]
@@ -143,7 +149,7 @@ export async function getOperationalStats() {
     const paidThisMonth = (r: any) => {
       if (!isPaid(r)) return false
       const d = r.payment_date || r.due_date
-      return !!d && String(d) >= startOfMonthDate
+      return !!d && String(d).slice(0, 10) >= startOfMonthDate && String(d).slice(0, 10) < startOfNextMonthDate
     }
 
     const totalTix = ticketsResult.count ?? 0
@@ -2664,6 +2670,15 @@ export type InvDocTrackingRow = {
   courier_code: string | null
   courier_partner: string | null
   courier_tracking_url: string | null
+  // Investor Dashboard Correction #5: two couriers are sent — the first
+  // carries the Acknowledgement Letter + Debenture Agreement, the second
+  // the Allotment Letter + Debenture Certificate. Each has its own
+  // tracking details and delivery flag.
+  courier2_code: string | null
+  courier2_partner: string | null
+  courier2_tracking_url: string | null
+  courier2_started_at: string | null
+  courier2_received_at: string | null
   notes: string | null
   created_at: string
   updated_at: string
@@ -2711,6 +2726,8 @@ export type DocTrackingStage =
   | 'soft_copy_uploaded'
   | 'courier_process_started'
   | 'courier_delivered'
+  | 'courier2_process_started'
+  | 'courier2_delivered'
 
 const STAGE_TO_COLUMN: Record<DocTrackingStage, keyof InvDocTrackingRow> = {
   invested: 'invested_at',
@@ -2719,6 +2736,8 @@ const STAGE_TO_COLUMN: Record<DocTrackingStage, keyof InvDocTrackingRow> = {
   soft_copy_uploaded: 'soft_copy_at',
   courier_process_started: 'courier_started_at',
   courier_delivered: 'courier_received_at',
+  courier2_process_started: 'courier2_started_at',
+  courier2_delivered: 'courier2_received_at',
 }
 
 // Ensure a tracking row exists for the given investment, returning it.
@@ -2782,16 +2801,17 @@ export async function setInvestmentDocTrackingStage(
 
 export async function setInvestmentCourierTracking(
   investmentAppId: string,
-  payload: { code?: string | null; partner?: string | null; trackingUrl?: string | null },
+  payload: { code?: string | null; partner?: string | null; trackingUrl?: string | null; courier?: 1 | 2 },
 ): Promise<DeleteResult> {
   if (!isSupabaseConfigured()) return { ok: false, error: 'Service unavailable' }
   try {
     const sb = supabase as any
     await ensureInvestmentDocTracking(investmentAppId)
+    const prefix = payload.courier === 2 ? 'courier2' : 'courier'
     const updates: Record<string, any> = {}
-    if (payload.code !== undefined) updates.courier_code = payload.code
-    if (payload.partner !== undefined) updates.courier_partner = payload.partner
-    if (payload.trackingUrl !== undefined) updates.courier_tracking_url = payload.trackingUrl
+    if (payload.code !== undefined) updates[`${prefix}_code`] = payload.code
+    if (payload.partner !== undefined) updates[`${prefix}_partner`] = payload.partner
+    if (payload.trackingUrl !== undefined) updates[`${prefix}_tracking_url`] = payload.trackingUrl
     const { error } = await sb
       .from('investment_doc_tracking')
       .update(updates)

@@ -115,7 +115,7 @@ export default function OverviewModule({ navigate, showToast }: OverviewModulePr
       <SectionEyebrow label="Users" />
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
         <StatCard title="Total Users" value={stats.totalUsers} icon="las la-user" href="clients" navigate={navigate} accent={INDIGO} />
-        <StatCard title="Invested Users" value={stats.investedUsers} icon="las la-user-check" href="clients" navigate={navigate} accent={EMERALD} />
+        <StatCard title="Invested Users" value={stats.investedUsers} icon="las la-user-check" href="clients/invested" navigate={navigate} accent={EMERALD} />
       </div>
 
       {/* KYC Section */}

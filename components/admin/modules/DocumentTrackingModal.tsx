@@ -41,8 +41,10 @@ const STAGES: { stage: DocTrackingStage; label: string; flagKey: keyof InvDocTra
   { stage: 'acknowledgement_process', flagKey: 'acknowledgement_at',    label: 'Acknowledgement Process', icon: FileText,      auto: false, hint: 'Manual' },
   { stage: 'document_preparing',      flagKey: 'document_prep_at',      label: 'Document Preparing',      icon: FileText,      auto: false, hint: 'Manual' },
   { stage: 'soft_copy_uploaded',      flagKey: 'soft_copy_at',          label: 'Soft Copy Uploaded',      icon: Inbox,         auto: true,  hint: 'Auto when all 4 docs uploaded' },
-  { stage: 'courier_process_started', flagKey: 'courier_started_at',    label: 'Courier Process Started', icon: Truck,         auto: true,  hint: 'Auto when tracking code is saved' },
-  { stage: 'courier_delivered',       flagKey: 'courier_received_at',   label: 'Courier Delivered',       icon: Package,       auto: false, hint: 'Manual — mark when investor receives the courier' },
+  { stage: 'courier_process_started', flagKey: 'courier_started_at',    label: 'Courier 1 Process Started', icon: Truck,   auto: true,  hint: 'Acknowledgement Letter & Debenture Agreement' },
+  { stage: 'courier_delivered',       flagKey: 'courier_received_at',   label: 'Courier Delivered — Acknowledgement Letter & Debenture Agreement', icon: Package, auto: false, hint: 'Manual — mark when investor receives courier 1' },
+  { stage: 'courier2_process_started', flagKey: 'courier2_started_at',  label: 'Courier 2 Process Started', icon: Truck,   auto: false, hint: 'Allotment Letter & Debenture Certificate' },
+  { stage: 'courier2_delivered',      flagKey: 'courier2_received_at',  label: 'Courier Delivered — Allotment Letter & Debenture Certificate', icon: Package, auto: false, hint: 'Manual — mark when investor receives courier 2' },
 ]
 
 export default function DocumentTrackingModal({ isOpen, onClose, investmentAppId, investorName, showToast }: Props) {
@@ -52,6 +54,9 @@ export default function DocumentTrackingModal({ isOpen, onClose, investmentAppId
   const [courierCode, setCourierCode] = useState('')
   const [courierPartner, setCourierPartner] = useState('')
   const [courierUrl, setCourierUrl] = useState('')
+  const [courier2Code, setCourier2Code] = useState('')
+  const [courier2Partner, setCourier2Partner] = useState('')
+  const [courier2Url, setCourier2Url] = useState('')
 
   const reload = useCallback(async () => {
     if (!investmentAppId) { setRow(null); return }
@@ -63,6 +68,9 @@ export default function DocumentTrackingModal({ isOpen, onClose, investmentAppId
       setCourierCode(r?.courier_code || '')
       setCourierPartner(r?.courier_partner || '')
       setCourierUrl(r?.courier_tracking_url || '')
+      setCourier2Code(r?.courier2_code || '')
+      setCourier2Partner(r?.courier2_partner || '')
+      setCourier2Url(r?.courier2_tracking_url || '')
     } finally { setLoading(false) }
   }, [investmentAppId])
 
@@ -79,16 +87,17 @@ export default function DocumentTrackingModal({ isOpen, onClose, investmentAppId
     } finally { setSaving(false) }
   }
 
-  const saveCourier = async () => {
+  const saveCourier = async (which: 1 | 2 = 1) => {
     if (!investmentAppId) return
     setSaving(true)
     try {
       const res = await setInvestmentCourierTracking(investmentAppId, {
-        code: courierCode.trim() || null,
-        partner: courierPartner.trim() || null,
-        trackingUrl: courierUrl.trim() || null,
+        code: (which === 2 ? courier2Code : courierCode).trim() || null,
+        partner: (which === 2 ? courier2Partner : courierPartner).trim() || null,
+        trackingUrl: (which === 2 ? courier2Url : courierUrl).trim() || null,
+        courier: which,
       })
-      if (res.ok) { showToast('Courier details saved', 'success'); reload() }
+      if (res.ok) { showToast(`Courier ${which} details saved`, 'success'); reload() }
       else showToast(res.error || 'Save failed', 'error')
     } finally { setSaving(false) }
   }
@@ -145,7 +154,7 @@ export default function DocumentTrackingModal({ isOpen, onClose, investmentAppId
 
           {/* Courier */}
           <div className="border-t border-white/[0.06] pt-4 space-y-3">
-            <h4 className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Courier Tracking</h4>
+            <h4 className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Courier 1 — Acknowledgement Letter &amp; Debenture Agreement</h4>
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="block text-[11px] font-medium text-gray-400 mb-1">Tracking Code</label>
@@ -178,10 +187,53 @@ export default function DocumentTrackingModal({ isOpen, onClose, investmentAppId
             <div className="flex justify-end">
               <button
                 disabled={saving}
-                onClick={saveCourier}
+                onClick={() => saveCourier(1)}
                 className="px-4 py-2 text-xs font-semibold rounded-lg text-white bg-brand-red hover:bg-brand-red/80 disabled:opacity-50 transition-colors"
               >
-                Save Courier Details
+                Save Courier 1 Details
+              </button>
+            </div>
+          </div>
+
+          {/* Courier 2 — Allotment Letter & Debenture Certificate */}
+          <div className="border-t border-white/[0.06] pt-4 space-y-3">
+            <h4 className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Courier 2 — Allotment Letter &amp; Debenture Certificate</h4>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-[11px] font-medium text-gray-400 mb-1">Tracking Code</label>
+                <input
+                  value={courier2Code}
+                  onChange={e => setCourier2Code(e.target.value)}
+                  placeholder="e.g. DHL2024ABC"
+                  className="w-full bg-white/[0.04] border border-white/[0.08] rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-brand-red/40"
+                />
+              </div>
+              <div>
+                <label className="block text-[11px] font-medium text-gray-400 mb-1">Courier Partner</label>
+                <input
+                  value={courier2Partner}
+                  onChange={e => setCourier2Partner(e.target.value)}
+                  placeholder="e.g. BlueDart, DHL, India Post"
+                  className="w-full bg-white/[0.04] border border-white/[0.08] rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-brand-red/40"
+                />
+              </div>
+              <div className="col-span-2">
+                <label className="block text-[11px] font-medium text-gray-400 mb-1">Tracking Page URL</label>
+                <input
+                  value={courier2Url}
+                  onChange={e => setCourier2Url(e.target.value)}
+                  placeholder="https://www.bluedart.com/track?awb=…"
+                  className="w-full bg-white/[0.04] border border-white/[0.08] rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-brand-red/40"
+                />
+              </div>
+            </div>
+            <div className="flex justify-end">
+              <button
+                disabled={saving}
+                onClick={() => saveCourier(2)}
+                className="px-4 py-2 text-xs font-semibold rounded-lg text-white bg-brand-red hover:bg-brand-red/80 disabled:opacity-50 transition-colors"
+              >
+                Save Courier 2 Details
               </button>
             </div>
           </div>

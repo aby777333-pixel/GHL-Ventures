@@ -6,7 +6,7 @@ import {
   ShieldCheck, AlertTriangle, FileText, Filter, CheckCircle2,
   XCircle, Clock, MoreHorizontal, ArrowUpRight, ChevronRight,
   Search, UserCircle, FileSearch, PieChart, Activity, Building2, Upload, Trash2, KeyRound,
-  Link2, RotateCcw, ArchiveX,
+  Link2, RotateCcw, ArchiveX, ExternalLink,
 } from 'lucide-react'
 import AdminGlass from '../shared/AdminGlass'
 import AdminDataTable, { type Column } from '../shared/AdminDataTable'
@@ -388,9 +388,15 @@ export default function ClientModule({ subTab, navigate, showToast }: ClientModu
 
       {/* Tab Content */}
       <div className="admin-tab-switch">
+        {subTab === 'invested' && activeTab === 'list' && (
+          <div className="mb-3 flex items-center gap-2 text-xs">
+            <span className="px-2.5 py-1 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-300">Showing invested users only</span>
+            <button type="button" onClick={() => navigate('clients')} className="text-gray-400 hover:text-white underline underline-offset-2">Show all</button>
+          </div>
+        )}
         {activeTab === 'list' && (
           <ClientListTab
-            clients={clients}
+            clients={subTab === 'invested' ? clients.filter((c: any) => Number(c.investedAmount || c.total_invested || 0) > 0) : clients}
             onViewClient={(c) => { setSelectedClient(c); setProfileModalOpen(true) }}
             onDeleteClient={handleDeleteClient}
             onResetPassword={openResetForClient}
@@ -899,6 +905,16 @@ function ClientListTab({
               title="Reset password"
             >
               <KeyRound className="w-4 h-4" />
+            </button>
+            {/* Investor Dashboard Correction #8: open this investor's own
+                dashboard in a new tab. The dashboard verifies the admin role
+                server-side before honouring ?as=. */}
+            <button
+              onClick={(e) => { e.stopPropagation(); window.open(`/dashboard?as=${row.id}`, '_blank', 'noopener') }}
+              className="p-1.5 rounded-lg hover:bg-sky-500/10 text-gray-500 hover:text-sky-300 transition-colors"
+              title="Open this investor's dashboard"
+            >
+              <ExternalLink className="w-4 h-4" />
             </button>
             {/* Pending Testing 30-04-2026 #5: quick Set Referrer
                 action so admin doesn't need to open the full edit

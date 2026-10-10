@@ -96,6 +96,10 @@ export default function KYCWizard({ clientId, userId, userName, userEmail, userP
   const [bankDocUrl, setBankDocUrl] = useState('')
   const [dematDocUrl, setDematDocUrl] = useState('')
   const [nomineeProofUrl, setNomineeProofUrl] = useState('')
+  // Investor Dashboard Correction #3: track WHICH document was uploaded as
+  // the nominee's ID proof so admin sees "PAN Card" / "Aadhaar Card" instead
+  // of an untyped file.
+  const [nomineeProofType, setNomineeProofType] = useState('PAN Card')
 
   // Pre-fill from existing data
   useEffect(() => {
@@ -362,6 +366,7 @@ export default function KYCWizard({ clientId, userId, userName, userEmail, userP
     if (!nomineeForm.percentage) errs.nominee_percentage = 'Percentage is required'
     else if (isNaN(pct) || pct <= 0 || pct > 100) errs.nominee_percentage = 'Percentage must be between 1 and 100'
     if (!nomineeProofUrl) errs.nominee_proof = 'Please upload nominee ID proof (PAN/Aadhaar)'
+    if (!nomineeProofType) errs.nominee_proof_type = 'Please select which ID proof was uploaded'
     if (Object.keys(errs).length > 0) {
       setErrors(errs)
       onToast('⚠ Please fill all the highlighted fields', 'info')
@@ -371,13 +376,14 @@ export default function KYCWizard({ clientId, userId, userName, userEmail, userP
     setErrors({})
     setSaving(true)
     if (editingNomineeId) {
-      await updateNominee(editingNomineeId, { ...nomineeForm, phone: phoneDigits, percentage: pct, proof_url: nomineeProofUrl })
+      await updateNominee(editingNomineeId, { ...nomineeForm, phone: phoneDigits, percentage: pct, proof_url: nomineeProofUrl, proof_type: nomineeProofType })
     } else {
-      await addNominee(clientId, userId, { ...nomineeForm, phone: phoneDigits, percentage: pct, proof_url: nomineeProofUrl })
+      await addNominee(clientId, userId, { ...nomineeForm, phone: phoneDigits, percentage: pct, proof_url: nomineeProofUrl, proof_type: nomineeProofType })
     }
     setSaving(false)
     setNomineeForm({ name: '', dob: '', phone: '', relationship: '', percentage: '' })
     setNomineeProofUrl('')
+    setNomineeProofType('PAN Card')
     setShowNomineeForm(false)
     setEditingNomineeId(null)
     refetchNominees()
@@ -442,7 +448,7 @@ export default function KYCWizard({ clientId, userId, userName, userEmail, userP
       { label: 'PAN Card', verified: !!(identityData as any)?.pan_doc_url, url: (identityData as any)?.pan_doc_url },
       { label: 'Aadhar Card', verified: !!(identityData as any)?.aadhar_doc_url, url: (identityData as any)?.aadhar_doc_url, back: (identityData as any)?.aadhar_back_url },
       { label: 'Bank Proof', verified: !!(bankData as any)?.bank_doc_url, url: (bankData as any)?.bank_doc_url },
-      { label: 'Nominee ID Proof', verified: !!primaryNominee?.proof_url, url: primaryNominee?.proof_url },
+      { label: `Nominee ID Proof${primaryNominee?.proof_type ? ` (${primaryNominee.proof_type})` : ''}`, verified: !!primaryNominee?.proof_url, url: primaryNominee?.proof_url },
     ]
     const subCardCls = isDark
       ? 'rounded-xl border border-white/[0.06] bg-white/[0.03]'
@@ -676,7 +682,7 @@ export default function KYCWizard({ clientId, userId, userName, userEmail, userP
             <>
               <div className="flex items-center justify-between mb-6">
                 <h3 className={`text-lg font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>Nominee Details</h3>
-                <button className={btnPrimary + ' !px-4 !py-2 text-xs'} onClick={() => { setShowNomineeForm(true); setEditingNomineeId(null); setNomineeForm({ name: '', dob: '', phone: '', relationship: '', percentage: '' }); setNomineeProofUrl('') }}>
+                <button className={btnPrimary + ' !px-4 !py-2 text-xs'} onClick={() => { setShowNomineeForm(true); setEditingNomineeId(null); setNomineeForm({ name: '', dob: '', phone: '', relationship: '', percentage: '' }); setNomineeProofUrl(''); setNomineeProofType('PAN Card') }}>
                   <Plus className="w-3.5 h-3.5 inline mr-1" />Add Nominee
                 </button>
               </div>
@@ -694,7 +700,7 @@ export default function KYCWizard({ clientId, userId, userName, userEmail, userP
                           <td className="py-2.5">{idx + 1}</td>
                           <td className="py-2.5">
                             <div className="flex items-center gap-1">
-                              <button onClick={() => { setEditingNomineeId(n.id); setNomineeForm({ name: n.name, dob: n.dob || '', phone: n.phone || '', relationship: n.relationship || '', percentage: String(n.percentage || '') }); setNomineeProofUrl(n.proof_url || ''); setShowNomineeForm(true) }} className="text-blue-400 hover:text-blue-300 p-1"><FileText className="w-3.5 h-3.5" /></button>
+                              <button onClick={() => { setEditingNomineeId(n.id); setNomineeForm({ name: n.name, dob: n.dob || '', phone: n.phone || '', relationship: n.relationship || '', percentage: String(n.percentage || '') }); setNomineeProofUrl(n.proof_url || ''); setNomineeProofType(n.proof_type || 'PAN Card'); setShowNomineeForm(true) }} className="text-blue-400 hover:text-blue-300 p-1"><FileText className="w-3.5 h-3.5" /></button>
                               <button onClick={async () => { await deleteNominee(n.id); refetchNominees(); onToast('Nominee removed', 'success') }} className="text-red-400 hover:text-red-300 p-1"><Trash2 className="w-3.5 h-3.5" /></button>
                             </div>
                           </td>
@@ -703,7 +709,7 @@ export default function KYCWizard({ clientId, userId, userName, userEmail, userP
                           <td className="py-2.5">{n.phone || '-'}</td>
                           <td className="py-2.5">{n.relationship || '-'}</td>
                           <td className="py-2.5">{n.percentage}%</td>
-                          <td className="py-2.5">{n.proof_url ? <a href={n.proof_url} target="_blank" rel="noopener"><Eye className="w-4 h-4 text-red-500" /></a> : '-'}</td>
+                          <td className="py-2.5">{n.proof_url ? (<span className="inline-flex items-center gap-1.5"><a href={n.proof_url} target="_blank" rel="noopener"><Eye className="w-4 h-4 text-red-500" /></a><span className="text-[11px] text-gray-500">{n.proof_type || 'ID proof'}</span></span>) : '-'}</td>
                         </tr>
                       ))}
                     </tbody>
@@ -722,7 +728,22 @@ export default function KYCWizard({ clientId, userId, userName, userEmail, userP
                       {renderError('nominee_phone')}
                       {!errors.nominee_phone && nomineeForm.phone && nomineeForm.phone.replace(/\D/g, '').length !== 10 && <p className="text-xs text-red-500 mt-1">Must be a valid 10-digit mobile number</p>}
                     </div>
-                    {renderFileUpload('Upload Nominee ID Proof (PAN/Aadhaar)', nomineeProofUrl, setNomineeProofUrl, 'nominee_proof')}
+                    <div data-field="nominee_proof_type">
+                      <label className={labelCls}>ID Proof Type *</label>
+                      <select
+                        className={inputCls + errorRing('nominee_proof_type')}
+                        value={nomineeProofType}
+                        onChange={e => { setNomineeProofType(e.target.value); clearError('nominee_proof_type') }}
+                      >
+                        <option value="PAN Card">PAN Card</option>
+                        <option value="Aadhaar Card">Aadhaar Card</option>
+                        <option value="Passport">Passport</option>
+                        <option value="Voter ID">Voter ID</option>
+                        <option value="Driving Licence">Driving Licence</option>
+                      </select>
+                      {renderError('nominee_proof_type')}
+                    </div>
+                    {renderFileUpload(`Upload Nominee ${nomineeProofType}`, nomineeProofUrl, setNomineeProofUrl, 'nominee_proof')}
                     <div data-field="nominee_relationship"><label className={labelCls}>Nominee Relationship *</label>
                       <select className={inputCls + errorRing('nominee_relationship')} value={nomineeForm.relationship} onChange={e => { setNomineeForm({ ...nomineeForm, relationship: e.target.value }); clearError('nominee_relationship') }}>
                         <option value="">Select Relationship</option><option value="spouse">Spouse</option><option value="father">Father</option><option value="mother">Mother</option><option value="son">Son</option><option value="daughter">Daughter</option><option value="brother">Brother</option><option value="sister">Sister</option><option value="other">Other</option>

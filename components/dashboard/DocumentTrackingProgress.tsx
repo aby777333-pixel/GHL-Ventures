@@ -24,6 +24,11 @@ type TrackingRow = {
   courier_code: string | null
   courier_partner: string | null
   courier_tracking_url: string | null
+  courier2_started_at: string | null
+  courier2_received_at: string | null
+  courier2_code: string | null
+  courier2_partner: string | null
+  courier2_tracking_url: string | null
 }
 
 const STAGES: { key: keyof TrackingRow; label: string; icon: any }[] = [
@@ -31,8 +36,10 @@ const STAGES: { key: keyof TrackingRow; label: string; icon: any }[] = [
   { key: 'acknowledgement_at',   label: 'Acknowledgement Process', icon: FileText },
   { key: 'document_prep_at',     label: 'Document Preparation',    icon: FileText },
   { key: 'soft_copy_at',         label: 'Soft Copy Uploaded',      icon: Inbox },
-  { key: 'courier_started_at',   label: 'Courier Process Started', icon: Truck },
-  { key: 'courier_received_at',  label: 'Courier Received',        icon: Package },
+  { key: 'courier_started_at',   label: 'Courier 1 Dispatched',    icon: Truck },
+  { key: 'courier_received_at',  label: 'Delivered — Acknowledgement Letter & Debenture Agreement', icon: Package },
+  { key: 'courier2_started_at',  label: 'Courier 2 Dispatched',    icon: Truck },
+  { key: 'courier2_received_at', label: 'Delivered — Allotment Letter & Debenture Certificate', icon: Package },
 ]
 
 export default function DocumentTrackingProgress({
@@ -89,16 +96,20 @@ export default function DocumentTrackingProgress({
             </p>
           )}
         </div>
-        {r.courier_tracking_url ? (
-          <a
-            href={r.courier_tracking_url}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-[11px] font-semibold text-brand-red hover:underline inline-flex items-center gap-1 shrink-0"
-          >
-            Track Courier <ExternalLink className="w-3 h-3" />
-          </a>
-        ) : null}
+        <div className="flex flex-col items-end gap-1 shrink-0">
+          {r.courier_tracking_url ? (
+            <a href={r.courier_tracking_url} target="_blank" rel="noopener noreferrer"
+              className="text-[11px] font-semibold text-brand-red hover:underline inline-flex items-center gap-1">
+              Track Courier 1 <ExternalLink className="w-3 h-3" />
+            </a>
+          ) : null}
+          {r.courier2_tracking_url ? (
+            <a href={r.courier2_tracking_url} target="_blank" rel="noopener noreferrer"
+              className="text-[11px] font-semibold text-brand-red hover:underline inline-flex items-center gap-1">
+              Track Courier 2 <ExternalLink className="w-3 h-3" />
+            </a>
+          ) : null}
+        </div>
       </div>
 
       {/* Horizontal stepper */}
@@ -131,24 +142,28 @@ export default function DocumentTrackingProgress({
         })}
       </div>
 
-      {(r.courier_code || r.courier_partner) && (
-        <div className={`mt-4 pt-4 border-t ${dark ? 'border-white/[0.06]' : 'border-gray-200/60'}`}>
+      {[
+        { title: 'Courier 1 — Acknowledgement Letter & Debenture Agreement', partner: r.courier_partner, code: r.courier_code },
+        { title: 'Courier 2 — Allotment Letter & Debenture Certificate', partner: r.courier2_partner, code: r.courier2_code },
+      ].filter(c => c.partner || c.code).map(c => (
+        <div key={c.title} className={`mt-4 pt-4 border-t ${dark ? 'border-white/[0.06]' : 'border-gray-200/60'}`}>
+          <p className={`text-[10px] font-semibold uppercase tracking-wider mb-2 ${dark ? 'text-gray-400' : 'text-gray-600'}`}>{c.title}</p>
           <div className="grid grid-cols-2 gap-3 text-xs">
-            {r.courier_partner && (
+            {c.partner && (
               <div>
                 <p className={`text-[10px] uppercase tracking-wider ${dark ? 'text-gray-500' : 'text-gray-500'}`}>Courier Partner</p>
-                <p className={dark ? 'text-white font-medium' : 'text-gray-900 font-medium'}>{r.courier_partner}</p>
+                <p className={dark ? 'text-white font-medium' : 'text-gray-900 font-medium'}>{c.partner}</p>
               </div>
             )}
-            {r.courier_code && (
+            {c.code && (
               <div>
                 <p className={`text-[10px] uppercase tracking-wider ${dark ? 'text-gray-500' : 'text-gray-500'}`}>Tracking Code</p>
-                <p className={`font-mono ${dark ? 'text-white' : 'text-gray-900'}`}>{r.courier_code}</p>
+                <p className={`font-mono ${dark ? 'text-white' : 'text-gray-900'}`}>{c.code}</p>
               </div>
             )}
           </div>
         </div>
-      )}
+      ))}
     </div>
   )
 }

@@ -1,5 +1,6 @@
 'use client'
 
+import { getPlanDocs, getPlanKind, slotMatches, isSignableType } from '@/lib/investmentDocs'
 import { useState, useEffect, useMemo, useCallback } from 'react'
 import {
   TrendingUp, Users, Target, IndianRupee, Phone, Mail,
@@ -1203,12 +1204,13 @@ async function generateInvestmentDocument(
   let clientPhone: string = app._client?.phone || ''
   let clientAddress = ''
   let clientPan = ''
+  let clientGender = ''
   try {
     if (app.client_id) {
       const { supabase: sb } = await import('@/lib/supabase/client')
       const sbAny: any = sb
       const [basicRes, identityRes, clientRes] = await Promise.all([
-        sbAny.from('kyc_basic_details').select('investor_name, email, phone, address').eq('client_id', app.client_id).maybeSingle(),
+        sbAny.from('kyc_basic_details').select('investor_name, email, phone, address, gender').eq('client_id', app.client_id).maybeSingle(),
         sbAny.from('kyc_identity_details').select('pan_number, address, city, state, pincode, dob').eq('client_id', app.client_id).maybeSingle(),
         sbAny.from('clients').select('full_name, email, phone, pan, city').eq('id', app.client_id).maybeSingle(),
       ])
@@ -1219,6 +1221,7 @@ async function generateInvestmentDocument(
       clientEmail = basic.email || c.email || clientEmail
       clientPhone = basic.phone || c.phone || clientPhone
       clientPan = identity.pan_number || c.pan || ''
+      clientGender = String(basic.gender || '').trim().toLowerCase()
       const addressParts = [
         basic.address,
         identity.address,
@@ -1229,6 +1232,19 @@ async function generateInvestmentDocument(
       clientAddress = Array.from(new Set(addressParts.map((s: any) => String(s).trim()))).join(', ')
     }
   } catch { /* fall back to whatever the application row already had */ }
+
+  // Salutation fallback: if the combined KYC read above returned nothing
+  // (e.g. duplicate kyc_basic_details rows make maybeSingle() error out),
+  // look the gender up on its own so male -> Mr. / female -> Ms. still work.
+  if (!clientGender && app.client_id) {
+    try {
+      const { supabase: sbG } = await import('@/lib/supabase/client')
+      const { data: gRows } = await (sbG as any)
+        .from('kyc_basic_details').select('gender')
+        .eq('client_id', app.client_id).not('gender', 'is', null).limit(1)
+      clientGender = String(gRows?.[0]?.gender || '').trim().toLowerCase()
+    } catch { /* leave blank -> no salutation */ }
+  }
 
   let amount = Number(app.final_investment_amount) || Number(app.investment_amount) || 0
   if (overrides?.amount) {
@@ -1458,220 +1474,156 @@ async function generateInvestmentDocument(
     // unused in this body.
     agreement: `${css}
       <style>
-        /* 2026-05-19: handwritten review — justify body pages, remove the
-           signature dashes (bare names only), 30px breathing room around
-           paragraphs/tables, bold cover & signature roles, drop the bold
-           from the centred "BETWEEN", and force a clean page break before
-           each of the three sections the reviewer marked (Page-2: "IT IS
-           NOW AGREED AS UNDER", Page-3: "7. Representations and Warranties",
-           Page-5: "12. Miscellaneous"). */
-        p,li{orphans:3;widows:3;}
-        .agreement-body p,.agreement-body li{text-align:justify;}
-        .agreement-body{padding:30px;}
-        .clause{margin-bottom:10px;line-height:1.6;break-inside:avoid;page-break-inside:avoid;}
-        .clause-title{font-weight:700;margin-top:18px;margin-bottom:8px;font-size:13px;break-after:avoid;page-break-after:avoid;}
-        .schedule-table{break-inside:avoid;page-break-inside:avoid;margin-top:30px;}
-        .schedule-table td,.schedule-table th{border:1px solid #999;padding:10px 12px;font-size:11px;}
-        .schedule-table tr{break-inside:avoid;page-break-inside:avoid;}
-        .page-break{page-break-after:always;break-after:page;}
-        .stamp-spacer{height:135mm;}
-        .agreement-cover{min-height:220mm;display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;font-size:14px;line-height:2.2;break-inside:avoid;page-break-inside:avoid;font-weight:700;}
-        .agreement-cover p{font-weight:700;}
-        .notices-table{width:100%;border-collapse:collapse;font-size:11px;margin:8px 0 30px;break-inside:avoid;page-break-inside:avoid;}
-        .notices-table thead{display:table-header-group;}
-        .notices-table tr{break-inside:avoid;page-break-inside:avoid;}
-        .notices-table th,.notices-table td{border:1px solid #999;padding:8px 12px;vertical-align:top;}
-        .sig-row{display:flex;justify-content:space-between;align-items:flex-start;break-inside:avoid;page-break-inside:avoid;}
-        .sig-block{width:45%;break-inside:avoid;page-break-inside:avoid;}
-        /* No underline beneath signatures — names sit on their own,
-           with 30px of space above where the dash used to be. */
-        .sig-line{padding-top:0;font-size:11px;margin-top:30px;font-weight:700;}
-        ol.whereas{padding-left:22px;}
-        ol.whereas li{margin-bottom:12px;line-height:1.6;break-inside:avoid;page-break-inside:avoid;}
-        h2,h3{break-after:avoid;page-break-after:avoid;}
+        @page{size:A4;margin:34mm 20mm 25mm 25mm;}
+        .da{font-family:'Times New Roman',Times,serif;font-size:11pt;line-height:1.23;color:#000;}
+        .da p{margin:0;}
+        .da b{font-weight:700;}
+        .da .pb{page-break-after:always;break-after:page;}
+        .da .bb{page-break-before:always;break-before:page;}
+        .da .c{text-align:center;}
+        .da .j{text-align:justify;}
+        .da .h1{font-size:16pt;font-weight:700;text-align:center;}
+        .da .h2{font-size:13pt;font-weight:700;text-decoration:underline;text-align:center;}
+        .da .h3{font-size:12pt;font-weight:700;text-align:center;}
+        .da .h4{font-size:11pt;font-weight:700;text-align:center;}
+        .da .p1{padding-left:28.45pt;}
+        .da .stamp{height:150mm;}
+        .da .lead{line-height:1.9;}
+        .da .sig{display:flex;margin-top:22pt;}
+        .da .sig .l{width:50%;}
+        .da .sig .r{width:32%;text-align:center;}
+        .da .sig .gap{height:44pt;}
+        .da .cover{padding-top:66mm;}
+        .da .cover p{margin:0;}
+        .da .cl{display:flex;font-weight:700;margin-top:16pt;}
+        .da .cl span:first-child{min-width:18.1pt;}
+        .da .bd{padding-left:18.1pt;text-align:justify;line-height:1.24;margin-top:8pt;}
+        .da .sub{display:flex;padding-left:18.1pt;text-align:justify;line-height:1.24;margin-top:11pt;}
+        .da .sub > span:first-child{min-width:24pt;font-weight:700;}
+        .da .sub2{display:flex;padding-left:40pt;text-align:justify;line-height:1.24;margin-top:8pt;}
+        .da .sub2 > span:first-child{min-width:30pt;font-weight:700;}
+        .da .wh{display:flex;padding-left:18.1pt;text-align:justify;line-height:1.25;margin-top:14pt;}
+        .da .wh > span:first-child{min-width:18pt;}
+        .da table{width:164.6mm;border-collapse:collapse;table-layout:fixed;margin:10pt 0 4pt 18.1pt;}
+        .da table td,.da table th{border:1px solid #000;padding:4pt 5pt;font-size:11pt;line-height:1.2;vertical-align:top;background:none;font-weight:400;text-align:left;}
+        .da table th{font-weight:700;text-align:center;}
+        .da table.sch{margin-left:0;}
+        .da table.sch td,.da table.sch th{text-align:center;vertical-align:middle;}
+        @media screen{.da .pb{border-bottom:1px dashed #bbb;padding-bottom:18mm;margin-bottom:18mm;}.da .bb{border-top:1px dashed #bbb;padding-top:18mm;margin-top:18mm!important;}}
       </style>
-      <body>
-      <div class="agreement-body">
+      <div class="da">
 
-      <!-- ── Page 1 — Stamp paper preamble ─────────────
-           Top half is left blank intentionally so a physical
-           Rs. 100 non-judicial stamp paper can be affixed by
-           the company. The agreement preamble + signatures
-           sit in the lower half. -->
-      <div class="stamp-spacer"></div>
-      <p style="line-height:1.7;">This Stamp paper form part of Debenture Investment Agreement dated <strong>[LONG_DATE_ORDINAL]</strong>, entered between <strong>LANDMAXO PROPERTIES PRIVATE LIMITED</strong> and <strong>[NAME]</strong>.</p>
-
-      <div class="sig-row" style="margin-top:32mm;">
-        <div class="sig-block">
-          <p class="bold">For Landmaxo Properties Pvt Ltd</p>
-          <p class="sig-line">V. Rajkumar<br/>(Authorised Signatory)</p>
-        </div>
-        <div class="sig-block" style="text-align:left;">
-          <p class="bold">Investor</p>
-          <p class="sig-line">[NAME]<br/>(Investor)</p>
+      <div class="pb p1">
+        <div class="stamp"></div>
+        <p class="lead">This Stamp paper form part of Debenture Investment Agreement dated [LONG_DATE_ORDINAL] entered between <b>LANDMAXO PROPERTIES PRIVATE LIMITED</b> and <b>[SAL] [NAME]</b></p>
+        <div class="sig" style="margin-top:30mm;">
+          <div class="l"><b>For Landmaxo Properties Pvt Ltd</b><div class="gap" style="height:20mm;"></div>V. Rajkumar<br/><b>(Authorised Signatory)</b></div>
+          <div class="r"><b>Investor</b><div class="gap" style="height:20mm;"></div>[SAL] [NAME]<br/><b>(Investor)</b></div>
         </div>
       </div>
 
-      <div class="page-break"></div>
-
-      <!-- ── Page 2 — Title / Cover (fully bold per review) ──────── -->
-      <div class="agreement-cover">
-        <p style="font-size:16px;font-weight:700;letter-spacing:1px;margin:0 0 24px;">DEBENTURE INVESTMENT AGREEMENT</p>
-        <p style="margin:0 0 24px;font-weight:700;">EXECUTED BETWEEN</p>
-        <p style="font-weight:700;margin:0 0 4px;">LANDMAXO PROPERTIES PRIVATE LIMITED</p>
-        <p style="margin:0 0 24px;font-weight:700;">(&ldquo;COMPANY&rdquo;)</p>
-        <p style="margin:0 0 24px;font-weight:700;">AND</p>
-        <p style="font-weight:700;margin:0 0 4px;">[NAME_CAPS]</p>
-        <p style="margin:0;font-weight:700;">(&ldquo;INVESTOR&rdquo;)</p>
+      <div class="pb cover">
+        <p class="h1" style="margin-bottom:13mm;">DEBENTURE INVESTMENT AGREEMENT</p>
+        <p class="c" style="font-size:11.5pt;margin-bottom:12mm;"><b>EXECUTED BETWEEN</b></p>
+        <p class="h3" style="margin-bottom:2mm;">LANDMAXO PROPERTIES PRIVATE LIMITED</p>
+        <p class="c" style="margin-bottom:12mm;"><b>("COMPANY")</b></p>
+        <p class="c" style="font-size:11.5pt;margin-bottom:12mm;"><b>AND</b></p>
+        <p class="h3" style="margin-bottom:2mm;">[SAL_CAPS] [NAME_CAPS]</p>
+        <p class="c"><b>("INVESTOR")</b></p>
       </div>
 
-      <div class="page-break"></div>
+      <div>
+        <p class="h2">DEBENTURE INVESTMENT AGREEMENT</p>
+        <p style="margin-top:14pt;">This <b>DEBENTURE INVESTMENT AGREEMENT</b> is made on this [LONG_DATE_ORDINAL],</p>
+        <p class="h4" style="margin-top:14pt;">BETWEEN</p>
+        <p class="j" style="line-height:1.25;margin-top:12pt;"><b>M/s. Landmaxo Properties Private Limited</b> (CIN: U70109TN2022PTC151180) a private limited Company incorporated under the Companies Act, 2013 and having Registered office at 2D, Queens Court, No. 6, Montieth Road, Egmore, Chennai - 600008 (hereinafter referred to as the <b>"Company"</b>), represented through its Authorised Signatory Mr. V.Rajkumar of the <b>FIRST PART</b>; and</p>
+        <p class="j" style="line-height:1.25;margin-top:12pt;"><b>[SAL] [NAME]</b> Residing At [ADDRESS] (hereinafter referred to as the <b>"Investor"</b>) and shall unless it be repugnant to the context or meaning thereof be deemed to mean and include him/herself and his/her nominees to the extent specified herein and their respective heirs, executors, administrators and assigns of the <b>SECOND PART</b></p>
 
-      <!-- ── Page 3 (Page-1 in review) — Title, parties intro, WHEREAS ── -->
-      <h2 class="center">DEBENTURE INVESTMENT AGREEMENT</h2>
-      <p class="mt">This <strong>DEBENTURE INVESTMENT AGREEMENT</strong> is made on this <strong>[LONG_DATE_ORDINAL]</strong>,</p>
-      <p class="center">BETWEEN</p>
-      <p class="clause"><strong>M/s. Landmaxo Properties Private Limited</strong> (CIN: U70109TN2022PTC151180) a private limited Company incorporated under the Companies Act, 2013 and having Registered office at 2D, Queens Court, No. 6, Montieth Road, Egmore, Chennai - 600008 (hereinafter referred to as the &ldquo;<strong>Company</strong>&rdquo;), represented through its Authorised Signatory Mr. V.Rajkumar of the <strong>FIRST PART</strong>; and</p>
-      <p class="clause"><strong>[NAME]</strong>, Residing At [ADDRESS] (hereinafter referred to as the &ldquo;<strong>Investor</strong>&rdquo;) and shall unless it be repugnant to the context or meaning thereof be deemed to mean and include him/herself and his/her nominees to the extent specified herein and their respective heirs, executors, administrators and assigns of the <strong>SECOND PART</strong>;</p>
+        <p style="margin-top:14pt;"><b>WHEREAS:</b></p>
+        <div class="wh"><span>1.</span><span>The Company is engaged in the business of Flipping of Stressed Real Estate Asset, by investing its fund into the units of various AIF registered with the Securities and Exchange Board of India.</span></div>
+        <div class="wh"><span>2.</span><span>The Investor has accepted the offer made by the Company for the subscription of <b>12% Redeemable, Secured, Non-Convertible Debentures</b> with premium for redemption @12% per Annum <b>(total 24%)</b> (hereinafter referred to as the <b>"Debentures"</b>) for a minimum term of <b>three (3) years</b> and maximum term of <b>ten (10) years</b>, and the Company has agreed to issue and allot the said Debentures to the Investor.</span></div>
+        <div class="wh"><span>3.</span><span>The Parties now wish to record the terms and conditions of their mutual understanding in respect of this Transaction.</span></div>
 
-      <p class="mt"><strong>WHEREAS:</strong></p>
-      <ol class="whereas">
-        <li>The Company is engaged in the business of Flipping of Stressed Real Estate Asset, by investing its fund into the units of various AIF registered with the Securities and Exchange Board of India.</li>
-        <li>The Investor has accepted the offer made by the Company for the subscription of <strong>12% Redeemable, Secured, Non-Convertible Debentures</strong> with premium for redemption @12% per Annum <strong>(total 24%)</strong> (hereinafter referred to as the &ldquo;<strong>Debentures</strong>&rdquo;) for a minimum term of <strong>three (3) years</strong> and maximum term of <strong>ten (10) years</strong>, and the Company has agreed to issue and allot the said Debentures to the Investor.</li>
-        <li>The Parties now wish to record the terms and conditions of their mutual understanding in respect of this Transaction.</li>
-      </ol>
+        <p class="bb"><b>IT IS NOW AGREED AS UNDER:</b></p>
 
-      <div class="page-break"></div>
+        <div class="cl"><span>1.</span><span>Subscription for Debenture</span></div>
+        <p class="bd">Investor agrees to subscribe for, and the Company agrees to issue and allot to Investor, such number of Debentures at such price as is set out against their name in <b>"Schedule I"</b>.</p>
 
-      <!-- ── Page 4 (Page-2 in review) — Clauses 1 through 6 ── -->
-      <p><strong>IT IS NOW AGREED AS UNDER:</strong></p>
+        <div class="cl"><span>2.</span><span>Interest</span></div>
+        <p class="bd">The Interest for the Debenture is fixed at 12 % per annum (payable @ 1%/month). TDS shall be deductible as per the rate specified in Income Tax act, 1961. The total sum of interest payable per annum inclusive of TDS is Rs. [INTEREST_AMOUNT]/Annum ([INTEREST_AMOUNT_WORDS] only)</p>
 
-      <div class="clause-title">1. Subscription for Debenture</div>
-      <p class="clause">Investor agrees to subscribe for, and the Company agrees to issue and allot to Investor, such number of Debentures at such price as is set out against their name in <strong>&ldquo;Schedule I&rdquo;</strong>.</p>
+        <div class="cl"><span>3.</span><span>Appreciation</span></div>
+        <p class="bd">The Debenture Value shall accrue appreciation at the rate of twelve percent (<b>12%</b>) <b>per annum</b>, calculated on a simple interest basis and not on a compounding basis. Such appreciation shall be added to the principal Debenture Value as premium and at the time of redemption which shall be treated as premium payable upon redemption. The applicable appreciation rates, accrual methodology, and the corresponding redemption values shall be as published and updated from time to time in the Investor Dashboard section of the GHL India Ventures website, and such published information shall be deemed to form an integral and binding part of this Agreement.</p>
 
-      <div class="clause-title">2. Interest</div>
-      <p class="clause">The Interest for the Debenture is fixed at 12 % per annum (payable @ 1%/month). TDS shall be deductible as per the rate specified in Income Tax act, 1961. The total sum of interest payable per annum inclusive of TDS is Rs. [INTEREST_AMOUNT]/Annum ([INTEREST_AMOUNT_WORDS] only)</p>
+        <div class="cl"><span>4.</span><span>Tenure</span></div>
+        <p class="bd">Total tenure is 10 years with option to redeem at any time after 3 years at the option of the investor.</p>
 
-      <div class="clause-title">3. Appreciation</div>
-      <p class="clause">The Debenture Value shall accrue appreciation at the rate of twelve percent <strong>(12%) per annum</strong>, calculated on a simple interest basis and not on a compounding basis. Such appreciation shall be added to the principal Debenture Value as premium and at the time of redemption which shall be treated as premium payable upon redemption. The applicable appreciation rates, accrual methodology, and the corresponding redemption values shall be as published and updated from time to time in the Investor Dashboard section of the GHL India Ventures website, and such published information shall be deemed to form an integral and binding part of this Agreement.</p>
+        <div class="cl"><span>5.</span><span>Redemption</span></div>
+        <p class="bd">The Debentures will be redeemed at a premium @ 12% per Annum by the Company at the end of the tenure. Upon full and final payment towards redemption of debentures, the Company shall file a Satisfaction of charge with the Registrar of Companies.</p>
 
-      <div class="clause-title">4. Tenure</div>
-      <p class="clause">Total tenure is 10 years with option to redeem at any time after 3 years at the option of the investor.</p>
+        <div class="cl"><span>6.</span><span>Security Creation</span></div>
+        <p class="bd">The Company shall, for securing the due repayment of the Debentures together with interest, appoint a Debenture Trustee in accordance with applicable laws. Upon completion of the issue and allotment of the Debentures, the Company shall execute a Mortgage Deed - Pledge Agreement in respect of the identified asset (Property, Units of AIF) in favour of the Debenture Trustee, who shall hold the same for the benefit of and in trust for the Debenture-holders.</p>
 
-      <div class="clause-title">5. Redemption</div>
-      <p class="clause">The Debentures will be redeemed at a premium @ 12% per Annum by the Company at the end of the tenure. Upon full and final payment towards redemption of debentures, the Company shall file a Satisfaction of charge with the Registrar of Companies.</p>
+        <div class="cl bb" style="margin-top:0;"><span>7.</span><span>Representations and Warranties</span></div>
+        <p class="bd" style="margin-top:9pt;">The Company represents to the Investor that:</p>
+        <p class="bd" style="margin-top:10pt;">The Company is a duly incorporated and validly existing Company under the laws of India, and has full power and authority to enter into this Agreement and to perform its obligations under this Agreement;</p>
+        <p class="bd" style="margin-top:10pt;">The execution and delivery of this Agreement by the Company and the performance of its obligations under this Agreement have been duly and validly authorized by all necessary corporate action. This Agreement constitutes a legal, valid, and binding obligation of the Company, enforceable against the Company in accordance with the terms contained herein.</p>
+        <p class="bd" style="margin-top:10pt;">The Company has the power and authority to issue Debentures to the Investor.</p>
 
-      <div class="clause-title">6. Security Creation</div>
-      <p class="clause">The Company shall, for securing the due repayment of the Debentures together with interest, appoint a Debenture Trustee in accordance with applicable laws. Upon completion of the issue and allotment of the Debentures, the Company shall execute a Mortgage Deed - Pledge Agreement in respect of the identified asset (Property, Units of AIF) in favour of the Debenture Trustee, who shall hold the same for the benefit of and in trust for the Debenture-holders.</p>
+        <div class="cl"><span>8.</span><span>Termination</span></div>
+        <div class="sub"><span>8.1</span><span>This Agreement shall terminate in the manner stated below:</span></div>
+        <div class="sub2"><span>8.1.1</span><span>With respect to any Party, upon transfer of a Debenture, such Party ceases to hold any Debenture or</span></div>
+        <div class="sub2"><span>8.1.2</span><span>With respect to any Party, upon redemption of a Debenture, such Party ceases to hold any Debenture or</span></div>
+        <div class="sub"><span>8.2</span><span>The rights and obligations of the Parties under this Agreement, which either expressly or by their nature survive the termination of this Agreement, shall not be extinguished by the termination of this Agreement.</span></div>
+        <div class="sub"><span>8.3</span><span>The termination of this Agreement in any of the circumstances aforesaid shall not in any way affect or prejudice any right accrued to any Party against the other Parties, prior to such termination</span></div>
 
-      <div class="page-break"></div>
+        <div class="cl"><span>9.</span><span>Notices</span></div>
+        <div class="sub"><span>9.1</span><span>All notices which are required to be given hereunder shall be in writing and shall be sent to the address of the recipient set out in the Agreement or such other address as the recipient may designate by notice given in writing to all the Parties. Any such notice may be delivered personally or by registered post, with acknowledgement of delivery due, e-mail, or facsimile transmission (receipt confirmed).</span></div>
+        <p class="bd" style="margin-top:11pt;">Unless otherwise changed by notice delivered in the manner provided above, the addresses to which notices and other communications shall be sent shall be as follows:</p>
+        <table class="bb" style="margin-top:0;">
+          <colgroup><col style="width:50%;"/><col style="width:50%;"/></colgroup>
+          <tr><th>If to the Company:</th><th>If to the Investor:</th></tr>
+          <tr><td><b>Kind Attn:</b> Mr. V. Rajkumar</td><td><b>Kind Attn:</b> [SAL] [NAME]</td></tr>
+          <tr><td><b>Address:</b> Landmaxo Properties Private Limited, 2D, Queens Court, No. 6, Montieth Road, Egmore, Chennai - 600008</td><td><b>Address:</b> [ADDRESS]</td></tr>
+          <tr><td><b>e-mail ID:</b> sales@ghlindiaventures.com</td><td><b>e-mail ID:</b> [EMAIL]</td></tr>
+        </table>
 
-      <!-- ── Page 5 (Page-3 in review) — Clauses 7 through 11 ── -->
-      <div class="clause-title">7. Representations and Warranties</div>
-      <p class="clause">The Company represents to the Investor that:</p>
-      <p class="clause">The Company is a duly incorporated and validly existing Company under the laws of India, and has full power and authority to enter into this Agreement and to perform its obligations under this Agreement;</p>
-      <p class="clause">The execution and delivery of this Agreement by the Company and the performance of its obligations under this Agreement have been duly and validly authorized by all necessary corporate action. This Agreement constitutes a legal, valid, and binding obligation of the Company, enforceable against the Company in accordance with the terms contained herein.</p>
-      <p class="clause">The Company has the power and authority to issue Debentures to the Investor.</p>
+        <div class="cl"><span>10.</span><span>Dispute Resolution:</span></div>
+        <div class="sub"><span>10.1</span><span>If any dispute arises between any of the Parties hereto during the subsistence or thereafter, in connection with the validity, interpretation, implementation or alleged breach of any provision of this Agreement or regarding any question, including the question as to whether the termination of this Agreement by any Party hereto has been legitimate, the Parties hereto shall endeavour to settle such dispute amicably. The attempt to bring about an amicable settlement is considered to have failed as soon as one of the Parties hereto, after reasonable attempts, which attempt shall continue for not less than 15 (fifteen) days, gives 15 (fifteen) days notice thereof to the other Party in writing.</span></div>
+        <div class="sub"><span>10.2</span><span>In case of such failure, the dispute shall be referred to a sole arbitrator. The arbitration proceedings shall be governed by the provisions of the Arbitration and Conciliation Act, 1996. In the event of a failure to agree upon a sole arbitrator within a period of 15 (fifteen) days of receipt of notice, 1 (one) arbitrator each shall be appointed by the Company, on the one hand, and the Investor, on the other hand. The two arbitrators so appointed shall together appoint a third arbitrator, who shall be the chairperson of the arbitral panel. It is expressly clarified that these dispute resolution provisions apply to claims or disputes concerning any and all Parties to this Agreement and not just to disputes between the Company and the Investor.</span></div>
+        <div class="sub"><span>10.3</span><span>The arbitration proceedings shall be held at Chennai. The arbitration proceedings shall be in English language. The award shall be substantiated in writing. The court of arbitration shall also decide on the costs of the arbitration proceedings. The award shall be binding on the disputing Parties subject to applicable laws and the award shall be enforceable in any competent court of law. The provisions of this survive the termination of this Agreement for any reason whatsoever. The courts at Chennai shall have exclusive jurisdiction.</span></div>
 
-      <div class="clause-title">8. Termination</div>
-      <p class="clause"><strong>8.1</strong> This Agreement shall terminate in the manner stated below:</p>
-      <p class="clause" style="padding-left:18px;"><strong>8.1.1</strong> With respect to any Party, upon transfer of a Debenture, such Party ceases to hold any Debenture or</p>
-      <p class="clause" style="padding-left:18px;"><strong>8.1.2</strong> With respect to any Party, upon redemption of a Debenture, such Party ceases to hold any Debenture or</p>
-      <p class="clause"><strong>8.2</strong> The rights and obligations of the Parties under this Agreement, which either expressly or by their nature survive the termination of this Agreement, shall not be extinguished by the termination of this Agreement.</p>
-      <p class="clause"><strong>8.3</strong> The termination of this Agreement in any of the circumstances aforesaid shall not in any way affect or prejudice any right accrued to any Party against the other Parties, prior to such termination</p>
+        <div class="cl"><span>11.</span><span>Governing Jurisdiction:</span></div>
+        <p class="bd">This Agreement shall be governed by the laws of the Republic of India. Incase dispute araised between the parties to the agreement is not resolved through Court of Arbitration, then the parties shall approach the High Courts in Chennai, India which has exclusive jurisdiction in respect of all disputes arising out of this Agreement.</p>
 
-      <div class="clause-title">9. Notices</div>
-      <p class="clause"><strong>9.1</strong> All notices which are required to be given hereunder shall be in writing and shall be sent to the address of the recipient set out in the Agreement or such other address as the recipient may designate by notice given in writing to all the Parties. Any such notice may be delivered personally or by registered post, with acknowledgement of delivery due, e-mail, or facsimile transmission (receipt confirmed).</p>
-      <p class="clause">Unless otherwise changed by notice delivered in the manner provided above, the addresses to which notices and other communications shall be sent shall be as follows:</p>
+        <div class="cl bb" style="margin-top:0;"><span>12.</span><span>Miscellaneous</span></div>
+        <div class="sub"><span>12.1</span><span><b>Amendment:</b> No variation of this Agreement shall be valid unless it is in writing and signed by the Company and by the Investor.</span></div>
+        <div class="sub"><span>12.2</span><span><b>Non-disclosure:</b> Each of the parties agrees to keep secret and confidential and not to use, disclose or divulge to any third party or to enable or cause any person to become aware of (except for the purposes of the Company's business) any confidential information relating to the Company including but not limited to IP Rights (whether owned or licensed by the Company), lists of customers, reports, notes, memoranda and all other documentary records pertaining to the Company or its business affairs, finances, suppliers, customers or contractual or other arrangements but excluding any information which is in the public domain (otherwise than through the wrongful disclosure of any party) or which a party is required to disclose by law or by the rules of any regulatory body to it or the Company is subject.</span></div>
+        <div class="sub"><span>12.3</span><span>The Company shall bear the costs and disbursements incurred in negotiating and closing this Agreement and of matters incidental to this Agreement.</span></div>
+        <div class="sub"><span>12.4</span><span>The Company shall not be considered in breach of this Agreement to the extent that performance of their respective obligations is prevented by an Event of Force Majeure.</span></div>
+        <div class="sub"><span>12.5</span><span>This Agreement shall be binding on and endure for the benefit of each party's personal representatives and successors in title. This includes any successor to any Debenture in the Company transferred in accordance with this Agreement.</span></div>
+        <div class="sub"><span>12.6</span><span>Nothing in this Agreement establishes a partnership between the parties.</span></div>
+        <div class="sub"><span>12.7</span><span>This Agreement may be executed in any number of counterparts each of which when executed by one or more of the parties hereto shall constitute an original but all of which shall constitute one and the same instrument.</span></div>
+        <div class="sub"><span>12.8</span><span>This Agreement has been executed and delivered on the Execution Date.</span></div>
 
-      <table class="notices-table">
-        <thead>
-          <tr>
-            <th>If to the Company:</th>
-            <th>If to the Investor:</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr>
-            <td><strong>Kind Attn:</strong> Mr. V. Rajkumar</td>
-            <td><strong>Kind Attn:</strong> [NAME]</td>
-          </tr>
-          <tr>
-            <td><strong>Address:</strong> Landmaxo Properties Private Limited, 2D, Queens Court, No. 6, Montieth Road, Egmore, Chennai - 600008</td>
-            <td><strong>Address:</strong> [ADDRESS]</td>
-          </tr>
-          <tr>
-            <td><strong>e-mail ID:</strong> sales@ghlindiaventures.com</td>
-            <td><strong>e-mail ID:</strong> [EMAIL]</td>
-          </tr>
-        </tbody>
-      </table>
-
-      <div class="clause-title">10. Dispute Resolution:</div>
-      <p class="clause"><strong>10.1</strong> If any dispute arises between any of the Parties hereto during the subsistence or thereafter, in connection with the validity, interpretation, implementation or alleged breach of any provision of this Agreement or regarding any question, including the question as to whether the termination of this Agreement by any Party hereto has been legitimate, the Parties hereto shall endeavour to settle such dispute amicably. The attempt to bring about an amicable settlement is considered to have failed as soon as one of the Parties hereto, after reasonable attempts, which attempt shall continue for not less than 15 (fifteen) days, gives 15 (fifteen) days notice thereof to the other Party in writing.</p>
-      <p class="clause"><strong>10.2</strong> In case of such failure, the dispute shall be referred to a sole arbitrator. The arbitration proceedings shall be governed by the provisions of the Arbitration and Conciliation Act, 1996. In the event of a failure to agree upon a sole arbitrator within a period of 15 (fifteen) days of receipt of notice, 1 (one) arbitrator each shall be appointed by the Company, on the one hand, and the Investor, on the other hand. The two arbitrators so appointed shall together appoint a third arbitrator, who shall be the chairperson of the arbitral panel. It is expressly clarified that these dispute resolution provisions apply to claims or disputes concerning any and all Parties to this Agreement and not just to disputes between the Company and the Investor.</p>
-      <p class="clause"><strong>10.3</strong> The arbitration proceedings shall be held at Chennai. The arbitration proceedings shall be in English language. The award shall be substantiated in writing. The court of arbitration shall also decide on the costs of the arbitration proceedings. The award shall be binding on the disputing Parties subject to applicable laws and the award shall be enforceable in any competent court of law. The provisions of this survive the termination of this Agreement for any reason whatsoever. Clause 9 shall The courts at Chennai shall have exclusive jurisdiction.</p>
-
-      <div class="clause-title">11. Governing Jurisdiction:</div>
-      <p class="clause">This Agreement shall be governed by the laws of the Republic of India. Incase dispute araised between the parties to the agreement is not resolved through Court of Arbitration, then the parties shall approach the High Courts in Chennai, India which has exclusive jurisdiction in respect of all disputes arising out of this Agreement.</p>
-
-      <div class="page-break"></div>
-
-      <!-- ── Page 6 (Page-5 in review) — Miscellaneous + signatures ── -->
-      <div class="clause-title">12. Miscellaneous</div>
-      <p class="clause"><strong>12.1 Amendment:</strong> No variation of this Agreement shall be valid unless it is in writing and signed by the Company and by the Investor.</p>
-      <p class="clause"><strong>12.2 Non-disclosure:</strong> Each of the parties agrees to keep secret and confidential and not to use, disclose or divulge to any third party or to enable or cause any person to become aware of (except for the purposes of the Company&rsquo;s business) any confidential information relating to the Company including but not limited to IP Rights (whether owned or licensed by the Company), lists of customers, reports, notes, memoranda and all other documentary records pertaining to the Company or its business affairs, finances, suppliers, customers or contractual or other arrangements but excluding any information which is in the public domain (otherwise than through the wrongful disclosure of any party) or which a party is required to disclose by law or by the rules of any regulatory body to it or the Company is subject.</p>
-      <p class="clause"><strong>12.3</strong> The Company shall bear the costs and disbursements incurred in negotiating and closing this Agreement and of matters incidental to this Agreement.</p>
-      <p class="clause"><strong>12.4</strong> The Company shall not be considered in breach of this Agreement to the extent that performance of their respective obligations is prevented by an Event of Force Majeure.</p>
-      <p class="clause"><strong>12.5</strong> This Agreement shall be binding on and endure for the benefit of each party&rsquo;s personal representatives and successors in title. This includes any successor to any Debenture in the Company transferred in accordance with this Agreement.</p>
-      <p class="clause"><strong>12.6</strong> Nothing in this Agreement establishes a partnership between the parties.</p>
-      <p class="clause"><strong>12.7</strong> This Agreement may be executed in any number of counterparts each of which when executed by one or more of the parties hereto shall constitute an original but all of which shall constitute one and the same instrument.</p>
-      <p class="clause"><strong>12.8</strong> This Agreement has been executed and delivered on the Execution Date.</p>
-
-      <p class="mt"><strong>Signature:</strong></p>
-
-      <div class="sig-row" style="margin-top:16px;">
-        <div class="sig-block">
-          <p class="bold">For Landmaxo Properties Pvt Ltd</p>
-          <p class="sig-line">V. Rajkumar<br/>(Authorised Signatory)</p>
-        </div>
-        <div class="sig-block" style="text-align:left;">
-          <p class="bold">Investor</p>
-          <p class="sig-line">[NAME]<br/>(Investor)</p>
+        <p style="margin-top:22pt;"><b>Signature:</b></p>
+        <div class="sig pb">
+          <div class="l"><b>For Landmaxo Properties Pvt Ltd</b><div class="gap"></div>V. Rajkumar<br/><b>(Authorised Signatory)</b></div>
+          <div class="r"><b>Investor</b><div class="gap"></div>[SAL] [NAME]<br/><b>(Investor)</b></div>
         </div>
       </div>
 
-      <div class="page-break"></div>
-
-      <!-- ── Schedule I (Page-6 in review) ────────────── -->
-      <h3 class="center" style="margin-top:0;">Schedule - I</h3>
-      <table class="schedule-table">
-        <thead>
-          <tr>
-            <th>S.No</th>
-            <th>Date</th>
-            <th>Name</th>
-            <th>No. of Debentures</th>
-            <th>Nominal Value (in Rs.)</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr>
-            <td>1.</td>
-            <td>[SHORT_DATE]</td>
-            <td>[NAME]</td>
-            <td>[NUM_DEB]</td>
-            <td>[AMOUNT]</td>
-          </tr>
-          <tr>
-            <td colspan="3" class="right bold">Total</td>
-            <td class="bold">[NUM_DEB]</td>
-            <td class="bold">[AMOUNT]</td>
-          </tr>
-        </tbody>
-      </table>
+      <div>
+        <p class="h2">SCHEDULE - I</p>
+        <table class="sch" style="margin-top:18pt;">
+          <colgroup><col style="width:7.9%;"/><col style="width:18.2%;"/><col style="width:37.9%;"/><col style="width:18%;"/><col style="width:18%;"/></colgroup>
+          <tr><th>S.No</th><th>Date</th><th>Name</th><th>No. of Debentures</th><th>Nominal Value (in Rs.)</th></tr>
+          <tr><td>1.</td><td>[SHORT_DATE]</td><td>[SAL] [NAME]</td><td>[NUM_DEB]</td><td>[AMOUNT]</td></tr>
+          <tr><td></td><td colspan="2" style="text-align:right;"><b>Total</b></td><td><b>[NUM_DEB]</b></td><td><b>[AMOUNT]</b></td></tr>
+        </table>
       </div>
-      </body>`,
+
+      </div>`,
   }
 
   // Tests 28-04-2026 #10: render the document directly with KYC data
@@ -1755,7 +1707,13 @@ async function generateInvestmentDocument(
     ? `<div style="text-align:center;margin-top:36px;border-top:1px solid #ccc;padding-top:10px;font-size:10px;color:#555;">${escapeHtml(allotFooterAddr).replace(/\n/g, '<br/>')}</div>`
     : ''
 
+  // Debenture Agreement salutation from KYC gender (female first so
+  // 'ms'/'mrs' never match the male prefix check).
+  const salutation = /^(f|ms|mrs|miss|woman)/.test(clientGender) ? 'Ms.'
+    : /^(m|man)/.test(clientGender) ? 'Mr.' : ''
   const populated = templates[type]
+    .replace(/\[SAL_CAPS\]/g, salutation.toUpperCase())
+    .replace(/\[SAL\]/g, salutation)
     .replace(/\[LOGO_ALLOT\]/g, () => allotLogoHtml)
     .replace(/\[BODY_ALLOT\]/g, () => allotBodyHtml)
     .replace(/\[FOOTER_ADDR_ALLOT\]/g, () => allotFooterHtml)
@@ -1921,7 +1879,16 @@ function InvestmentsTab({ showToast, statusFilter }: { showToast: (m: string, t?
       const s = INV_STATUS_MAP[row.status] || { label: row.status, variant: 'info' as const }
       return <AdminBadge label={s.label} variant={s.variant} size="sm" dot />
     }},
-    { key: 'created_at', label: 'Date', sortable: true, render: (row) => <span className="text-gray-500 text-xs">{formatDate(row.created_at)}</span> },
+    // Venture Dashboard Changes #12: this column must show the CREDIT date
+    // (set by Give Credit), not the application-submitted date. Falls back
+    // through approval date / created_at so not-yet-credited rows still
+    // show something rather than a dash.
+    { key: 'final_investment_date', label: 'Credit Date', sortable: true, render: (row) => {
+      const credited = row.final_investment_date || row.credit_given_at
+      return credited
+        ? <span className="text-gray-300 text-xs">{formatDate(credited)}</span>
+        : <span className="text-gray-500 text-xs">{formatDate(row.investment_date || row.created_at)}<span className="text-[10px] text-gray-600 ml-1">(applied)</span></span>
+    }},
     { key: 'actions', label: '', width: '230px', render: (row) => {
       const isApproved = ['approved', 'credited', 'completed'].includes(row.status)
       return (
@@ -2602,7 +2569,7 @@ function InvestmentsTab({ showToast, statusFilter }: { showToast: (m: string, t?
                           <a href={doc.signed_copy_url} target="_blank" rel="noopener noreferrer" className="text-xs text-emerald-400 hover:text-emerald-300 inline-flex items-center gap-1" title={doc.signed_at ? `Signed ${formatDate(doc.signed_at)}` : 'Signed copy'}>
                             <CheckCircle2 className="w-3 h-3" /> Signed
                           </a>
-                        ) : (doc.document_type === 'debenture_agreement' || doc.document_type === 'agreement') ? (
+                        ) : isSignableType(doc.document_type) ? (
                           <>
                             <span className="text-[10px] text-amber-500" title="Waiting for investor to upload signed copy">Unsigned</span>
                             {/* Super-admin can also attach the signed copy directly
@@ -2641,12 +2608,9 @@ function InvestmentsTab({ showToast, statusFilter }: { showToast: (m: string, t?
                   upload many TDS certificates. */}
               {(() => {
                 const hasReal = (t: string) => appDocs.some((d: any) => d.document_type === t && d.file_url)
-                const slots = [
-                  { type: 'acknowledgement', label: 'Upload Acknowledgement' },
-                  { type: 'agreement', label: 'Upload Debenture Agreement' },
-                  { type: 'allotment', label: 'Upload Allotment Letter' },
-                  { type: 'certificate', label: 'Upload Debenture Certificate' },
-                ].filter(d => !hasReal(d.type))
+                const slots = getPlanDocs(selectedApp)
+                  .filter(sl => !appDocs.some((d: any) => slotMatches(sl, d.document_type) && d.file_url))
+                  .map(sl => ({ type: sl.type, label: `Upload ${sl.label}` }))
                 return (
                   <div className="grid grid-cols-2 gap-2">
                     {slots.map(d => (
@@ -2690,12 +2654,18 @@ function InvestmentsTab({ showToast, statusFilter }: { showToast: (m: string, t?
                   certificate→certificate, agreement→agreement. */}
               {(() => {
                 const hasReal = (t: string) => appDocs.some((d: any) => d.document_type === t && d.file_url)
+                const isDebentureRoute = getPlanKind(selectedApp) === 'debenture'
                 const genSlots = [
                   { type: 'acknowledgement' as const, label: 'Acknowledgement Letter' },
                   { type: 'allotment' as const, label: 'Allotment Letter' },
                   { type: 'certificate' as const, label: 'Debenture Certificate' },
                   { type: 'agreement' as const, label: 'Debenture Agreement' },
-                ].filter(d => !hasReal(d.type))
+                ].filter(d => isDebentureRoute && !hasReal(d.type))
+                if (!isDebentureRoute) {
+                  return (
+                    <p className="text-[11px] text-gray-500 italic">Auto-generation is available only for the Debenture route. Please upload Direct AIF documents in the section above.</p>
+                  )
+                }
                 if (genSlots.length === 0) {
                   return (
                     <p className="text-[11px] text-gray-500 italic">All documents have been uploaded. Generation is hidden to prevent duplicates.</p>
@@ -3228,7 +3198,6 @@ function AdminCreateInvestmentModal({
               <option>Alternate route to Invest in AIF via Debenture</option>
               <option>Direct AIF Route</option>
               <option>Alternate route to Invest in AIF via LLP</option>
-              <option>Co-Investment Route</option>
             </select>
           </div>
           <div>

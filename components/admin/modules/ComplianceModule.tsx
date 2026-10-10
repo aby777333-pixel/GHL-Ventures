@@ -142,6 +142,9 @@ function KYCQueueTab({ kycQueue, showToast, onRefresh, initialStatusFilter }: { 
   // user sees the filtered cohort immediately. The filter chips remain
   // interactive so admins can still pivot to "all" or other states.
   const [statusFilter, setStatusFilter] = useState<string>(initialStatusFilter || 'all')
+  // Venture Dashboard Changes #13: search the KYC list by investor name,
+  // email or GHL/client id. Works alongside the status chips.
+  const [kycSearch, setKycSearch] = useState('')
   useEffect(() => { if (initialStatusFilter) setStatusFilter(initialStatusFilter) }, [initialStatusFilter])
   const [selectedKYC, setSelectedKYC] = useState<any | null>(null)
   const [viewingKYC, setViewingKYC] = useState<any | null>(null)
@@ -220,6 +223,16 @@ function KYCQueueTab({ kycQueue, showToast, onRefresh, initialStatusFilter }: { 
     })
   }, [statusFilter, clientGroups])
 
+  const searched = useMemo(() => {
+    const q = kycSearch.trim().toLowerCase()
+    if (!q) return filtered
+    return filtered.filter(g => {
+      const extra = (g.items[0] as any) || {}
+      return [g.clientName, g.clientEmail, g.clientId, extra.ghlId, extra.ghl_id, extra.clientPhone, extra.phone]
+        .some(v => typeof v === 'string' && v.toLowerCase().includes(q))
+    })
+  }, [filtered, kycSearch])
+
   const pendingCount = kycQueue.filter(k => k.status === 'submitted' || k.status === 'pending').length
   // 2026-05-16: the badge labels the cohort that's awaiting decisions, so it only
   // belongs on the unfiltered "All" view or the explicit "Pending/Submitted"
@@ -281,23 +294,37 @@ function KYCQueueTab({ kycQueue, showToast, onRefresh, initialStatusFilter }: { 
             </button>
           ))}
         </div>
+        <div className="flex items-center gap-2">
+          <div className="relative">
+            <Search className="w-3.5 h-3.5 text-gray-500 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+            <input
+              value={kycSearch}
+              onChange={e => setKycSearch(e.target.value)}
+              placeholder="Search by name, email or ID..."
+              className="w-56 pl-9 pr-8 py-1.5 rounded-lg text-xs bg-white/[0.03] border border-white/[0.06] text-white placeholder-gray-500 focus:outline-none focus:border-brand-red/40"
+            />
+            {kycSearch && (
+              <button onClick={() => setKycSearch('')} className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 hover:text-white text-xs" title="Clear">x</button>
+            )}
+          </div>
         {showPendingBadge && pendingCount > 0 && (
           <span className="px-3 py-1 rounded-full text-xs font-semibold bg-amber-500/20 text-amber-400 border border-amber-500/30">
             {pendingCount} pending review
           </span>
         )}
+        </div>
       </div>
 
-      {filtered.length === 0 ? (
+      {searched.length === 0 ? (
         <AdminGlass>
           <AdminEmptyState
-            title="No KYC submissions"
-            description="When investors submit KYC documents, they will appear here for your review and approval."
+            title={kycSearch ? 'No matching investors' : 'No KYC submissions'}
+            description={kycSearch ? `No KYC records match "${kycSearch}". Try a different name, email or ID.` : 'When investors submit KYC documents, they will appear here for your review and approval.'}
           />
         </AdminGlass>
       ) : (
         <div className="space-y-4">
-          {filtered.map(group => (
+          {searched.map(group => (
             <AdminGlass key={group.clientId} padding="p-5">
               <div className="flex items-start justify-between mb-4">
                 <div className="flex items-center gap-3">

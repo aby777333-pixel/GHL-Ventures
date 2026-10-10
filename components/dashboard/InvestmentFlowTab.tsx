@@ -14,6 +14,7 @@
    KYC Gate: Blocks entire flow if KYC not verified.
    ═══════════════════════════════════════════════════════════════ */
 
+import { getPlanDocs, getInvestorDocs, getPlanKind, slotMatches, isSignableType, unitsFor } from '@/lib/investmentDocs'
 import { useState, useMemo, useCallback, useEffect } from 'react'
 import {
   Building2, FileText, Download, Upload, Eye, CheckCircle, Clock,
@@ -776,6 +777,9 @@ export default function InvestmentFlowTab({
                     {[
                       { label: 'MINIMUM INVESTMENT', value: selectedFund.minInvestment > 0 ? `₹ ${fmtINR(selectedFund.minInvestment)}` : 'No minimum', bold: true },
                       { label: 'CAPITAL INVESTED', value: `₹${fmtINR(investAmount)}`, bold: true },
+                      // Venture Dashboard Changes #10: units = invest amount / 10,
+                      // same formula for every plan.
+                      { label: 'NO. OF UNITS', value: fmtINR(unitsFor(investAmount, selectedFund?.name)), bold: true },
                       { label: 'Locking Period', value: `${investTenure} years`, bold: false },
                       { label: 'MONTHLY RETURNS', value: `₹${fmtINR(monthlyInterest)}`, bold: true },
                       { label: 'NET INTEREST', value: `₹${fmtINR(netInterest)}`, bold: false },
@@ -803,6 +807,10 @@ export default function InvestmentFlowTab({
                   }}
                   className={`w-full px-4 py-3 rounded-xl text-lg font-bold ${t('bg-white/[0.04] border border-white/[0.08] text-white','bg-gray-100 border border-gray-200 text-gray-900')}`}
                   min={selectedFund.minInvestment > 0 ? selectedFund.minInvestment : 1} max={FUND_SIZE_CAP} step={100000} />
+                <div className={`flex items-center justify-between px-4 py-2.5 rounded-xl ${t('bg-white/[0.03] border border-white/[0.06]','bg-gray-50 border border-gray-200')}`}>
+                  <span className={`text-xs font-medium ${t('text-gray-400','text-gray-600')}`}>No. of Units</span>
+                  <span className={`text-sm font-bold ${t('text-white','text-gray-900')}`}>{fmtINR(unitsFor(investAmount, selectedFund?.name))}</span>
+                </div>
                 {investAmount > FUND_SIZE_CAP - 1 && (
                   <p className={`text-[11px] ${t('text-amber-400','text-amber-600')}`}>Capped at fund size (₹{fmtINR(FUND_SIZE_CAP)}).</p>
                 )}
@@ -959,6 +967,12 @@ export default function InvestmentFlowTab({
                             <span className={`text-[11px] ${t('text-gray-400','text-gray-600')}`}>Invest Amount</span>
                             <span className={`ml-auto text-[12px] font-bold ${t('text-white','text-gray-900')}`}>₹{fmtINR(Number(app.investment_amount) || 0)}</span>
                           </div>
+                          {/* Venture Dashboard Changes #10: units = invest amount / 10 */}
+                          <div className="flex items-center gap-2">
+                            <Clock className={`w-3.5 h-3.5 ${t('text-gray-500','text-gray-500')}`} />
+                            <span className={`text-[11px] ${t('text-gray-400','text-gray-600')}`}>No. of Units</span>
+                            <span className={`ml-auto text-[11px] font-semibold ${t('text-white','text-gray-900')}`}>{fmtINR(unitsFor(Number(app.investment_amount) || 0, app))}</span>
+                          </div>
                           <div className="flex items-center gap-2">
                             <Clock className={`w-3.5 h-3.5 ${t('text-gray-500','text-gray-500')}`} />
                             <span className={`text-[11px] ${t('text-gray-400','text-gray-600')}`}>Maturity Date</span>
@@ -1062,16 +1076,21 @@ export default function InvestmentFlowTab({
                 </p>
               </div>
               {(() => {
+                const isDirectAif = getPlanKind(selectedApp) === 'direct_aif'
                 const docsForApp = (investDocs || []).filter((d: any) => d.investment_app_id === selectedApp.id)
-                if (docsForApp.length === 0) {
-                  return (
-                    <div className="p-10 text-center">
-                      <FileText className={`w-10 h-10 mx-auto mb-3 ${t('text-gray-600','text-gray-400')}`} />
-                      <p className={`text-sm font-medium ${t('text-gray-400','text-gray-600')}`}>No investment documents yet</p>
-                      <p className={`text-xs mt-1 ${t('text-gray-600','text-gray-500')}`}>Documents will appear here after admin processes your investment.</p>
-                    </div>
-                  )
-                }
+                const usedIds = new Set<any>()
+                const docRows: any[] = getInvestorDocs(selectedApp).map((slot) => {
+                  const matches = docsForApp.filter((d: any) => slotMatches(slot, (d.document_type || '').toLowerCase()))
+                  matches.forEach((d: any) => usedIds.add(d.id))
+                  const doc = matches.find((d: any) => d.file_url) || matches[0] || null
+                  return { key: `slot-${slot.type}`, slot, doc, label: slot.label }
+                })
+                docsForApp.filter((d: any) => !usedIds.has(d.id)).forEach((d: any) => {
+                  docRows.push({
+                    key: d.id, slot: null, doc: d,
+                    label: (d.title || '').startsWith('TDS Certificate') ? 'TDS Certificate' : (d.title || 'Document'),
+                  })
+                })
                 return (
                   <div className="overflow-x-auto">
                     <table className="w-full text-sm">
@@ -1083,19 +1102,20 @@ export default function InvestmentFlowTab({
                         </tr>
                       </thead>
                       <tbody>
-                        {docsForApp.map((doc: any, i: number) => {
+                        {docRows.map((row: any, i: number) => {
+                          const doc: any = row.doc || {}
                           const docType = (doc.document_type || '').toLowerCase()
                           const docTitleLower = (doc.title || '').toLowerCase()
-                          const autoGen = ['acknowledgement_letter', 'acknowledgement'].includes(docType) && !doc.file_url
+                          const autoGen = !isDirectAif && !!row.doc && ['acknowledgement_letter', 'acknowledgement'].includes(docType) && !doc.file_url
                           const ready = !!doc.file_url || autoGen
                           // Only the Debenture Agreement gets a signed-copy slot
                           // (Testing Report 2 — 2026-04-25 #6). Match the same
                           // rule used by the bulk view further down: by
                           // document_type or by a title containing "agreement".
-                          const isSignable = docType === 'debenture_agreement' || docType === 'agreement' || /agreement/.test(docTitleLower)
+                          const isSignable = !!row.doc && (row.slot ? !!row.slot.signable : (isSignableType(docType) || /agreement/.test(docTitleLower)))
                           return (
-                            <tr key={doc.id || i} className={`border-b ${t('border-white/[0.04]','border-gray-100')}`}>
-                              <td className={`py-3 px-5 text-xs font-medium ${t('text-white','text-gray-900')}`}>{doc.title || 'Document'}</td>
+                            <tr key={row.key || i} className={`border-b ${t('border-white/[0.04]','border-gray-100')}`}>
+                              <td className={`py-3 px-5 text-xs font-medium ${t('text-white','text-gray-900')}`}>{row.label}</td>
                               <td className="py-3 px-5">
                                 {doc.file_url ? (
                                   <button onClick={() => handleViewDoc(doc.file_url)} className="inline-flex items-center gap-1 text-[11px] font-bold px-3 py-1.5 rounded-lg bg-brand-red/15 text-brand-red hover:bg-brand-red/25 transition-colors">
@@ -1107,7 +1127,7 @@ export default function InvestmentFlowTab({
                                   </button>
                                 ) : (
                                   <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-1 rounded-full bg-amber-500/15 text-amber-500">
-                                    <Clock className="w-3 h-3" /> Processing
+                                    <Clock className="w-3 h-3" /> {row.doc ? 'Processing' : 'Pending'}
                                   </span>
                                 )}
                               </td>

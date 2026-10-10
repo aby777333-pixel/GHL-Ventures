@@ -419,7 +419,7 @@ export default function DashboardClient() {
   }
 
   // ─── Auth ────────────────────────────────────────────────
-  const { user, clientId, ghlId, isAuthenticated, emailVerified, loading: authLoading, logout } = useClientAuth()
+  const { user, clientId, ghlId, isAuthenticated, emailVerified, loading: authLoading, logout, impersonating } = useClientAuth()
 
   // Auth guard — redirect to login only when the underlying Supabase session
   // is truly invalid (not for a transient null while hydrating). Tests
@@ -2443,6 +2443,79 @@ export default function DashboardClient() {
   // ═══════════════════════════════════════════════════════════
   // TRANSACTIONS TAB
   // ═══════════════════════════════════════════════════════════
+  // Investor Dashboard Correction #6 + #9: the Transactions tab used to show
+  // only `investment_transactions` (investor-submitted payments). Investments
+  // that admin credited directly never produced such a row, so investors saw
+  // nothing — or only one entry despite several investments. The ledger below
+  // merges the credited investment records with the payment submissions.
+  const txnLedger = (() => {
+    const rows: any[] = []
+    for (const app of (investmentApps || []) as any[]) {
+      if (!['approved', 'credited', 'completed'].includes(app.status)) continue
+      rows.push({
+        key: `app-${app.id}`,
+        date: app.final_investment_date || app.investment_date || app.created_at,
+        kind: 'Investment',
+        fund: app.fund_vehicle || '—',
+        reference: app.commitment_id || app.reference_number || '—',
+        amount: Number(app.investment_amount) || 0,
+        status: app.status,
+        // Correction: surface the payment proof the investor submitted for
+        // this investment, so the credited row's View button opens it.
+        proofUrl: (((investmentTxns || []) as any[]).find((tx: any) =>
+          tx.investment_app_id === app.id && (tx.transaction_proof_url || tx.proof_url)) || {}).transaction_proof_url
+          || (((investmentTxns || []) as any[]).find((tx: any) =>
+          tx.investment_app_id === app.id && tx.proof_url) || {}).proof_url
+          || null,
+      })
+    }
+    for (const txn of (investmentTxns || []) as any[]) {
+      rows.push({
+        key: `txn-${txn.id}`,
+        date: txn.transaction_date || txn.created_at,
+        kind: 'Payment',
+        fund: txn.fund_vehicle || '—',
+        reference: txn.transaction_id || '—',
+        amount: Number(txn.transaction_amount) || 0,
+        status: txn.status || 'pending',
+        proofUrl: txn.transaction_proof_url || txn.proof_url || null,
+      })
+    }
+    // Only credited rows are shown to the investor — pending/approved
+    // payment submissions stay out of the statement. Applies to the table,
+    // the CSV export and the PDF alike.
+    return rows
+      .filter(r => String(r.status).toLowerCase() === 'credited')
+      .sort((a, b) => new Date(b.date || 0).getTime() - new Date(a.date || 0).getTime())
+  })()
+
+  const fmtLedgerDate = (d: any) => (d ? new Date(d).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '—')
+
+  const downloadTxnPdf = () => {
+    const rowsHtml = txnLedger.map(r => `<tr><td>${fmtLedgerDate(r.date)}</td><td>${r.kind}</td><td>${r.fund}</td><td>${r.reference}</td><td style="text-align:right">&#8377; ${new Intl.NumberFormat('en-IN').format(r.amount)}</td><td>${String(r.status).toUpperCase()}</td></tr>`).join('')
+    const total = txnLedger.filter(r => r.kind === 'Investment').reduce((sum, r) => sum + r.amount, 0)
+    const html = `<!doctype html><html><head><title>Transaction Statement</title><style>
+      body{font-family:Georgia,'Times New Roman',serif;padding:40px;color:#111}
+      h1{color:#8B0000;font-size:22px;margin:0 0 4px;text-align:center}
+      .sub{text-align:center;color:#555;font-size:12px;margin-bottom:24px}
+      table{width:100%;border-collapse:collapse;font-size:12px}
+      th{background:#8B0000;color:#fff;text-align:left;padding:8px}
+      td{padding:8px;border-bottom:1px solid #ddd}
+      .tot{margin-top:16px;text-align:right;font-size:13px;font-weight:bold}
+      @media print{.noprint{display:none}}
+    </style></head><body>
+      <h1>Transaction Statement</h1>
+      <p class="sub">GHL India Ventures Trust &middot; Generated ${new Date().toLocaleDateString('en-IN')}</p>
+      <table><thead><tr><th>Date</th><th>Type</th><th>Fund</th><th>Reference</th><th style="text-align:right">Amount</th><th>Status</th></tr></thead>
+      <tbody>${rowsHtml || '<tr><td colspan="6">No transactions</td></tr>'}</tbody></table>
+      <p class="tot">Total Invested: &#8377; ${new Intl.NumberFormat('en-IN').format(total)}</p>
+      <p class="noprint" style="margin-top:28px;text-align:center"><button onclick="window.print()" style="padding:8px 20px;background:#8B0000;color:#fff;border:0;border-radius:6px;cursor:pointer">Print / Save as PDF</button></p>
+    </body></html>`
+    const w = window.open('', '_blank')
+    if (!w) { showToast('Please allow popups to download the statement', 'info'); return }
+    w.document.write(html); w.document.close()
+  }
+
   const renderTransactionsTab = () => (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -2453,12 +2526,13 @@ export default function DashboardClient() {
         <button onClick={async () => {
           showToast('Exporting transactions...', 'info')
           const bom = '\uFEFF'
-          const rows = transactions.map((tx: any) => `${tx.date},${tx.type},${tx.fund},${tx.amount},${tx.status}`)
-          const csv = `${bom}Date,Type,Fund,Amount,Status\n${rows.join('\n')}`
+          const rows = txnLedger.map((r: any) => `${fmtLedgerDate(r.date)},${r.kind},"${r.fund}",${r.reference},${r.amount},${r.status}`)
+          const csv = `${bom}Date,Type,Fund,Reference,Amount,Status\n${rows.join('\n')}`
           const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' })
           const filename = `GHL_Transactions_${new Date().toISOString().slice(0,10)}.csv`
           await saveBlobAs(blob, filename, showToast as any)
         }} className="flex items-center gap-2 text-xs text-brand-red font-semibold"><Download className="w-3.5 h-3.5" /> Export CSV</button>
+          <button onClick={downloadTxnPdf} className="flex items-center gap-2 text-xs text-brand-red font-semibold ml-4"><Download className="w-3.5 h-3.5" /> Download PDF</button>
       </div>
       {/* Investor Dashboard Corrections 2026-05-12 #14: the generic
           Date/Type/Fund/Amount/Status table that previously rendered
@@ -2474,52 +2548,46 @@ export default function DashboardClient() {
           table removed (2026-05-12 #14), this panel is now the sole
           surface for the Transactions tab and renders an empty state
           when no submissions exist. */}
-      {investmentTxns.length > 0 ? (
+      {txnLedger.length > 0 ? (
         <>
-          <h3 className={`text-base font-bold mb-3 ${t('text-white','text-gray-900')}`}>Investment Transaction Submissions</h3>
+          <h3 className={`text-base font-bold mb-3 ${t('text-white','text-gray-900')}`}>Transaction History</h3>
           <Glass className="overflow-hidden" hover={false} theme={theme}>
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
                   <tr className={`border-b ${t('border-white/[0.06]','border-gray-200/50')}`}>
-                    {['Investment Date', 'Capital Amount', 'Transaction Amount', 'Transaction ID', 'Transaction Proof', 'Approval Date', 'Status'].map(h => (
+                    {['Date', 'Type', 'Fund', 'Reference', 'Amount', 'Proof', 'Status'].map(h => (
                       <th key={h} className={`text-left text-xs font-medium py-3 px-5 ${t('text-gray-500','text-gray-600')}`}>{h}</th>
                     ))}
                   </tr>
                 </thead>
                 <tbody>
-                  {investmentTxns.map((txn: any, i: number) => {
-                    const approvalDate = txn.approved_at || txn.approval_date || (txn.status === 'approved' ? txn.updated_at : null)
-                    const proofUrl = txn.transaction_proof_url || txn.proof_url
-                    return (
-                      <tr key={txn.id || i} className={`border-b ${t('border-white/[0.03] hover:bg-white/[0.02]','border-gray-100 hover:bg-gray-50')}`}>
-                        <td className={`py-3 px-5 text-xs ${t('text-gray-400','text-gray-700')}`}>{txn.created_at ? new Date(txn.created_at).toLocaleDateString('en-IN') : '—'}</td>
-                        <td className={`py-3 px-5 text-xs font-semibold ${t('text-white','text-gray-900')}`}>₹{new Intl.NumberFormat('en-IN').format(Number(txn.capital_amount) || 0)}</td>
-                        <td className={`py-3 px-5 text-xs font-semibold ${t('text-white','text-gray-900')}`}>₹{new Intl.NumberFormat('en-IN').format(Number(txn.transaction_amount) || 0)}</td>
-                        <td className={`py-3 px-5 text-xs font-mono ${t('text-gray-400','text-gray-600')}`}>{txn.transaction_id || '—'}</td>
-                        <td className="py-3 px-5">
-                          {proofUrl ? (
-                            <a
-                              href={proofUrl}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              title="View transaction proof"
-                              className={`inline-flex items-center justify-center w-8 h-8 rounded-lg transition-colors ${t('bg-brand-red/15 text-brand-red hover:bg-brand-red/25','bg-brand-red/10 text-brand-red hover:bg-brand-red/20')}`}>
-                              <Eye className="w-3.5 h-3.5" />
-                            </a>
-                          ) : (
-                            <span className={`text-[10px] ${t('text-gray-600','text-gray-400')}`}>—</span>
-                          )}
-                        </td>
-                        <td className={`py-3 px-5 text-xs ${t('text-gray-400','text-gray-700')}`}>{approvalDate ? new Date(approvalDate).toLocaleDateString('en-IN') : '—'}</td>
-                        <td className="py-3 px-5">
-                          <span className={`inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full ${txn.status === 'approved' ? 'text-emerald-400 bg-emerald-500/15' : txn.status === 'rejected' ? 'text-red-400 bg-red-500/15' : 'text-amber-400 bg-amber-500/15'}`}>
-                            {(txn.status || 'pending').charAt(0).toUpperCase() + (txn.status || 'pending').slice(1)}
-                          </span>
-                        </td>
-                      </tr>
-                    )
-                  })}
+                  {txnLedger.map((r: any) => (
+                    <tr key={r.key} className={`border-b ${t('border-white/[0.03] hover:bg-white/[0.02]','border-gray-100 hover:bg-gray-50')}`}>
+                      <td className={`py-3 px-5 text-xs ${t('text-gray-400','text-gray-700')}`}>{fmtLedgerDate(r.date)}</td>
+                      <td className="py-3 px-5">
+                        <span className={`inline-flex text-[10px] font-semibold px-2 py-0.5 rounded-full ${r.kind === 'Investment' ? 'text-blue-400 bg-blue-500/15' : 'text-purple-400 bg-purple-500/15'}`}>{r.kind}</span>
+                      </td>
+                      <td className={`py-3 px-5 text-xs ${t('text-gray-400','text-gray-700')}`}>{r.fund}</td>
+                      <td className={`py-3 px-5 text-xs font-mono ${t('text-gray-400','text-gray-600')}`}>{r.reference}</td>
+                      <td className={`py-3 px-5 text-xs font-semibold ${t('text-white','text-gray-900')}`}>&#8377;{new Intl.NumberFormat('en-IN').format(r.amount)}</td>
+                      <td className="py-3 px-5">
+                        {r.proofUrl ? (
+                          <a href={r.proofUrl} target="_blank" rel="noopener noreferrer" title="View transaction proof"
+                            className={`inline-flex items-center justify-center w-8 h-8 rounded-lg transition-colors ${t('bg-brand-red/15 text-brand-red hover:bg-brand-red/25','bg-brand-red/10 text-brand-red hover:bg-brand-red/20')}`}>
+                            <Eye className="w-3.5 h-3.5" />
+                          </a>
+                        ) : (
+                          <span className={`text-[10px] ${t('text-gray-600','text-gray-400')}`}>&mdash;</span>
+                        )}
+                      </td>
+                      <td className="py-3 px-5">
+                        <span className={`inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full ${['approved', 'credited', 'completed'].includes(r.status) ? 'text-emerald-400 bg-emerald-500/15' : r.status === 'rejected' ? 'text-red-400 bg-red-500/15' : 'text-amber-400 bg-amber-500/15'}`}>
+                          {String(r.status || 'pending').charAt(0).toUpperCase() + String(r.status || 'pending').slice(1)}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
                 </tbody>
               </table>
             </div>
@@ -3193,6 +3261,41 @@ export default function DashboardClient() {
             </div>
           </Glass>
 
+          {/* Address & Identity — Investor Dashboard Correction #1: the KYC
+              identity step captures the permanent and courier addresses plus
+              the supporting ID details, but none of it surfaced on Profile.
+              Aadhaar is masked to the last four digits. */}
+          <Glass className="p-6" hover theme={theme}>
+            <div className="flex items-center justify-between mb-4">
+              <h4 className={`text-sm font-bold ${t('text-white','text-gray-900')}`}>Address &amp; Identity</h4>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {(() => {
+                const ki = (kycIdentity as any) || {}
+                const maskAadhaar = (v: any) => {
+                  const digits = String(v || '').replace(/\D/g, '')
+                  return digits.length >= 4 ? `XXXX XXXX ${digits.slice(-4)}` : 'Not provided'
+                }
+                return [
+                  ['Name on Document', ki.name_on_document || 'Not provided'],
+                  ["Father's Name", ki.father_name || 'Not provided'],
+                  ['Aadhaar Number', ki.aadhar_number ? maskAadhaar(ki.aadhar_number) : 'Not provided'],
+                  ['Permanent Address', ki.address || 'Not provided'],
+                  ['Courier Address', ki.courier_address || 'Not provided'],
+                  ['City', ki.city || 'Not provided'],
+                  ['State', ki.state || 'Not provided'],
+                  ['Pincode', ki.pincode || 'Not provided'],
+                  ['Country', ki.country || 'Not provided'],
+                ]
+              })().map(([l, v], i) => (
+                <div key={i}>
+                  <p className={`text-[10px] uppercase tracking-wider mb-1 ${t('text-gray-600','text-gray-600')}`}>{l}</p>
+                  <p className={`text-sm font-medium ${v === 'Not provided' ? 'text-gray-600 italic' : t('text-white','text-gray-900')}`}>{v}</p>
+                </div>
+              ))}
+            </div>
+          </Glass>
+
           {/* Nominee Details */}
           <Glass className="p-6" hover theme={theme}>
             <div className="flex items-center justify-between mb-4">
@@ -3205,11 +3308,24 @@ export default function DashboardClient() {
                 return [
                   ['Nominee Name', primaryNominee?.name || savedProfileData.nominee_name || user?.nominee_name || 'Not provided'],
                   ['Relationship', primaryNominee?.relationship || savedProfileData.nominee_relation || user?.nominee_relation || 'Not provided'],
-                  ['Nominee PAN', savedProfileData.nominee_pan || user?.nominee_pan || 'Not provided'],
+                  // Investor Dashboard Correction #2: the KYC flow captures an
+                  // uploaded ID proof for the nominee, not a typed PAN number,
+                  // so this row now reflects what was actually submitted.
+                  ['ID Proof', primaryNominee?.proof_url
+                    ? (primaryNominee.proof_type || 'Uploaded')
+                    : (savedProfileData.nominee_pan || user?.nominee_pan || 'Not provided')],
                   ['Share', (primaryNominee?.percentage != null ? `${primaryNominee.percentage}%` : (savedProfileData.nominee_share || user?.nominee_share || 'Not provided'))],
                 ]
               })().map(([l,v],i) => (
-                <div key={i}><p className={`text-[10px] uppercase tracking-wider mb-1 ${t('text-gray-600','text-gray-600')}`}>{l}</p><p className={`text-sm font-medium ${v === 'Not provided' ? 'text-gray-600 italic' : t('text-white','text-gray-900')}`}>{v}</p></div>
+                <div key={i}>
+                  <p className={`text-[10px] uppercase tracking-wider mb-1 ${t('text-gray-600','text-gray-600')}`}>{l}</p>
+                  <p className={`text-sm font-medium ${v === 'Not provided' ? 'text-gray-600 italic' : t('text-white','text-gray-900')}`}>
+                    {v}
+                    {l === 'ID Proof' && (kycNominees as any[])?.[0]?.proof_url ? (
+                      <a href={(kycNominees as any[])[0].proof_url} target="_blank" rel="noopener noreferrer" className="ml-2 text-xs text-brand-red hover:underline">View</a>
+                    ) : null}
+                  </p>
+                </div>
               ))}
             </div>
           </Glass>
@@ -3371,7 +3487,6 @@ export default function DashboardClient() {
                 {[
                   { key: 'nominee_name', label: 'Nominee Name', placeholder: 'Full legal name of nominee' },
                   { key: 'nominee_relation', label: 'Relationship', placeholder: 'e.g. Spouse, Parent, Child' },
-                  { key: 'nominee_pan', label: 'Nominee PAN', placeholder: 'ABCDE1234F' },
                   { key: 'nominee_share', label: 'Share %', placeholder: '100%' },
                 ].map(f => (
                   <div key={f.key} className="mb-3">
