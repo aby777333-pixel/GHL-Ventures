@@ -206,19 +206,26 @@ export async function GET(request: NextRequest) {
     // Saved in clients.notes or stored as a structured JSON object
     let monthlyGoal = {
       month: new Date().toLocaleDateString('en-IN', { month: 'long', year: 'numeric' }),
-      directTarget: 5000000, // ₹50 Lakh default target
+      directTarget: 0,
       directAchieved: Number(clientRecord?.total_invested) || 0,
       directProgress: 0,
-      referralTarget: 10000000, // ₹1 Crore default referral target
+      referralTarget: 0,
       referralAchieved: totalInvestment,
       referralProgress: 0,
     }
 
     try {
       if (clientRecord?.notes && clientRecord.notes.includes('ghl_goals:')) {
-        const parsed = JSON.parse(clientRecord.notes.replace(/^.*?ghl_goals:/, ''))
-        if (parsed.directTarget) monthlyGoal.directTarget = Number(parsed.directTarget)
-        if (parsed.referralTarget) monthlyGoal.referralTarget = Number(parsed.referralTarget)
+        const match = clientRecord.notes.match(/ghl_goals:(\{.*?\})/)
+        if (match && match[1]) {
+          const parsed = JSON.parse(match[1])
+          if (parsed.directTarget !== undefined && !isNaN(Number(parsed.directTarget))) {
+            monthlyGoal.directTarget = Number(parsed.directTarget)
+          }
+          if (parsed.referralTarget !== undefined && !isNaN(Number(parsed.referralTarget))) {
+            monthlyGoal.referralTarget = Number(parsed.referralTarget)
+          }
+        }
       }
     } catch { /* fallback to defaults */ }
 
@@ -533,18 +540,36 @@ export async function POST(request: NextRequest) {
   if (action === 'update_goal') {
     if (authUser?.id) {
       try {
+        const numDirect = directTarget !== undefined && directTarget !== '' && !isNaN(Number(directTarget)) ? Number(directTarget) : 0
+        const numReferral = referralTarget !== undefined && referralTarget !== '' && !isNaN(Number(referralTarget)) ? Number(referralTarget) : 0
         const goalsJson = JSON.stringify({
-          directTarget: Number(directTarget) || 5000000,
-          referralTarget: Number(referralTarget) || 10000000,
+          directTarget: numDirect,
+          referralTarget: numReferral,
           updatedAt: new Date().toISOString(),
         })
 
+        // Fetch existing notes so we don't wipe out other client annotations
+        let existingNotes = ''
+        try {
+          const { data: c } = await sbClient.from('clients').select('notes').eq('user_id', authUser.id).maybeSingle()
+          existingNotes = c?.notes || ''
+        } catch { /* continue */ }
+
+        let updatedNotes = ''
+        if (existingNotes.includes('ghl_goals:')) {
+          updatedNotes = existingNotes.replace(/ghl_goals:\{.*?\}/, `ghl_goals:${goalsJson}`)
+        } else if (existingNotes.trim()) {
+          updatedNotes = `${existingNotes.trim()} ghl_goals:${goalsJson}`
+        } else {
+          updatedNotes = `ghl_goals:${goalsJson}`
+        }
+
         await sbClient
           .from('clients')
-          .update({ notes: `ghl_goals:${goalsJson}` })
+          .update({ notes: updatedNotes })
           .eq('user_id', authUser.id)
 
-        return NextResponse.json({ success: true, goals: { directTarget, referralTarget } })
+        return NextResponse.json({ success: true, goals: { directTarget: numDirect, referralTarget: numReferral } })
       } catch (err: any) {
         return NextResponse.json({ error: err?.message || 'Failed to persist goals' }, { status: 500 })
       }

@@ -155,7 +155,7 @@ export async function fetchPartnerDashboard(
   if (year) queryParams.set('year', String(year))
   if (month && month !== 'all') queryParams.set('month', month)
 
-  const url = `/api/dashboard/referral${queryParams.toString() ? `?${queryParams.toString()}` : ''}`
+  const url = `/api/dashboard/referral/${queryParams.toString() ? `?${queryParams.toString()}` : ''}`
 
   const headers: Record<string, string> = { 'Content-Type': 'application/json' }
   if (token) headers['Authorization'] = `Bearer ${token}`
@@ -184,7 +184,7 @@ export async function createGeneralInvestor(
   if (token) headers['Authorization'] = `Bearer ${token}`
 
   try {
-    const res = await fetch('/api/dashboard/referral', {
+    const res = await fetch('/api/dashboard/referral/', {
       method: 'POST',
       headers,
       body: JSON.stringify({ action: 'create_investor', ...input }),
@@ -228,7 +228,7 @@ export async function createChannelPartner(
   if (token) headers['Authorization'] = `Bearer ${token}`
 
   try {
-    const res = await fetch('/api/dashboard/referral', {
+    const res = await fetch('/api/dashboard/referral/', {
       method: 'POST',
       headers,
       body: JSON.stringify({ action: 'create_partner', ...input }),
@@ -253,7 +253,7 @@ export async function updateMonthlyGoals(
   if (token) headers['Authorization'] = `Bearer ${token}`
 
   try {
-    const res = await fetch('/api/dashboard/referral', {
+    const res = await fetch('/api/dashboard/referral/', {
       method: 'POST',
       headers,
       body: JSON.stringify({ action: 'update_goal', ...input }),
@@ -353,8 +353,8 @@ export async function generateAgreementPDF(options: {
       {
         num: '3. COMMISSION & OVERRIDES SCHEDULE',
         text: isMaster
-          ? 'Master Channel Partner Compensation:\n• Direct Referral Reward: Up to 5.50% on capital commitments successfully realized.\n• Overriding Commission: 1.00% on all aggregated investment volumes realized through Sub-Channel Partners.\n• Trail Distribution: 1.25% per annum on active under-management commitments.'
-          : 'Channel Partner Compensation:\n• Base Referral Commission: 3.50% on first-tier investor capital realized.\n• High Volume Slab: 4.50% for volume exceeding ₹10 Crore, 5.00% above ₹25 Crore.\n• Trail Distribution: 1.25% per annum paid on active AUM.'
+          ? 'Master Channel Partner Compensation:\n• Sale of Associate Channel Partner: 3.00% (₹1,00,00,000 to ₹5,00,00,000), 4.00% (₹5,00,00,000 to Above).\n• Sale of Master Channel Partner: 0.50% on Any Investment.'
+          : 'Associate Channel Partner Compensation:\n• ₹1,00,00,000 to ₹5,00,00,000: 3.00%\n• ₹5,00,00,000 to Above: 4.00%'
       },
       {
         num: '4. CONFIDENTIALITY & DATA PROTECTION',
@@ -432,6 +432,7 @@ async function getFallbackDashboardData(previewId?: string, year?: number, _mont
   let userPhone = ''
   let clientInvested = 0
   let authenticPartnerId = previewId || ''
+  let clientNotes = ''
 
   if (isSupabaseConfigured()) {
     try {
@@ -441,7 +442,7 @@ async function getFallbackDashboardData(previewId?: string, year?: number, _mont
         userName = authData.user.user_metadata?.full_name || userName
         const { data: c } = await (supabase as any)
           .from('clients')
-          .select('full_name, email, phone, total_invested, ghl_id, client_code')
+          .select('full_name, email, phone, total_invested, ghl_id, client_code, notes')
           .eq('user_id', authData.user.id)
           .maybeSingle()
         if (c) {
@@ -450,6 +451,7 @@ async function getFallbackDashboardData(previewId?: string, year?: number, _mont
           userPhone = c.phone || ''
           clientInvested = Number(c.total_invested) || 0
           authenticPartnerId = authenticPartnerId || c.ghl_id || c.client_code || ''
+          clientNotes = c.notes || ''
         }
       }
     } catch { /* non-blocking */ }
@@ -461,20 +463,17 @@ async function getFallbackDashboardData(previewId?: string, year?: number, _mont
 
   const slabs = {
     GI: [
-      { tier: 'Tier 1', volume: 'Up to ₹5 Crore', rate: '3.0%', note: 'Direct Referral Bonus' },
-      { tier: 'Tier 2', volume: '₹5.01 Crore and above', rate: '4.0%', note: 'Accelerated Referral Bonus' },
-      { tier: 'Management Fee', volume: 'All AUM', rate: '1.0% PA', note: 'Annual Fee Sharing' },
+      { tier: 'Tier 1', volume: '₹1,00,00,000 to ₹5,00,00,000', rate: '3.00%', note: 'Sale of Associate Channel Partner' },
+      { tier: 'Tier 2', volume: '₹5,00,00,000 to Above', rate: '4.00%', note: 'Sale of Associate Channel Partner' },
     ],
     CPL: [
-      { tier: 'Base Slab', volume: 'Up to ₹10 Crore', rate: '3.5%', note: 'Channel Partner Standard' },
-      { tier: 'Performance Slab', volume: '₹10.01 Cr – ₹25 Cr', rate: '4.5%', note: 'Tier 1 Incentive' },
-      { tier: 'Elite Slab', volume: 'Above ₹25 Crore', rate: '5.0%', note: 'High Volume Producer' },
-      { tier: 'Trail Commission', volume: 'Active AUM', rate: '1.25% PA', note: 'Quarterly Trail Payout' },
+      { tier: 'Tier 1', volume: '₹1,00,00,000 to ₹5,00,00,000', rate: '3.00%', note: 'Sale of Associate Channel Partner' },
+      { tier: 'Tier 2', volume: '₹5,00,00,000 to Above', rate: '4.00%', note: 'Sale of Associate Channel Partner' },
     ],
     MCP: [
-      { tier: 'Master Direct', volume: 'Direct Referrals', rate: '5.5%', note: 'Maximum Direct Incentive' },
-      { tier: 'Master Overrides', volume: 'All Sub-CPL Network Volume', rate: '1.0%', note: 'Overriding Commission' },
-      { tier: 'Quarterly Bonus Pool', volume: 'Network AUM > ₹50 Cr', rate: '0.5%', note: 'Master Partner Pool' },
+      { tier: 'Tier 1', volume: '₹1,00,00,000 to ₹5,00,00,000', rate: '3.00%', note: 'Sale of Associate Channel Partner' },
+      { tier: 'Tier 2', volume: '₹5,00,00,000 to Above', rate: '4.00%', note: 'Sale of Associate Channel Partner' },
+      { tier: 'Master Override', volume: 'Any Investment', rate: '0.50%', note: 'Sale of Master Channel Partner' },
     ],
   }
 
@@ -580,13 +579,36 @@ async function getFallbackDashboardData(previewId?: string, year?: number, _mont
   // Monthly goals
   const monthlyGoal: MonthlyGoal = {
     month: new Date().toLocaleDateString('en-IN', { month: 'long', year: 'numeric' }),
-    directTarget: 5000000,
+    directTarget: 0,
     directAchieved: clientInvested,
-    directProgress: clientInvested > 0 ? Math.min(100, Math.round((clientInvested / 5000000) * 100)) : 0,
-    referralTarget: 10000000,
+    directProgress: 0,
+    referralTarget: 0,
     referralAchieved: finalTotalInvested,
-    referralProgress: finalTotalInvested > 0 ? Math.min(100, Math.round((finalTotalInvested / 10000000) * 100)) : 0,
+    referralProgress: 0,
   }
+
+  try {
+    if (clientNotes && clientNotes.includes('ghl_goals:')) {
+      const match = clientNotes.match(/ghl_goals:(\{.*?\})/)
+      if (match && match[1]) {
+        const parsed = JSON.parse(match[1])
+        if (parsed.directTarget !== undefined && !isNaN(Number(parsed.directTarget))) {
+          monthlyGoal.directTarget = Number(parsed.directTarget)
+        }
+        if (parsed.referralTarget !== undefined && !isNaN(Number(parsed.referralTarget))) {
+          monthlyGoal.referralTarget = Number(parsed.referralTarget)
+        }
+      }
+    }
+  } catch { /* non-blocking */ }
+
+  monthlyGoal.directProgress = monthlyGoal.directTarget > 0
+    ? Math.min(100, Math.round((monthlyGoal.directAchieved / monthlyGoal.directTarget) * 100))
+    : 0
+
+  monthlyGoal.referralProgress = monthlyGoal.referralTarget > 0
+    ? Math.min(100, Math.round((monthlyGoal.referralAchieved / monthlyGoal.referralTarget) * 100))
+    : 0
 
   // Chart data
   const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']

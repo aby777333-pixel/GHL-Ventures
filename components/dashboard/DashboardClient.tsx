@@ -2189,40 +2189,25 @@ export default function DashboardClient() {
             3. HERO PORTFOLIO ROW (Split Layout: Large Crimson Card + 3 Stacked Cards)
             ───────────────────────────────────────────────────────────── */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-stretch">
-          {/* Left: Large Crimson GHL India Portfolio Card (~7 cols) */}
+          {/* Left: GHL India Application Red Gradient Portfolio Card */}
           <div
             className="lg:col-span-4 relative rounded-3xl p-6 sm:p-7 text-white flex flex-col justify-between overflow-hidden shadow-2xl transition-all"
             style={{
-              background: 'linear-gradient(135deg, #a80010 0%, #d0021b 45%, #7e0009 100%)',
+              background: 'linear-gradient(135deg, #BA181B 0%, #A4161A 50%, #660708 100%)',
               border: '1px solid rgba(255,255,255,0.2)',
-              boxShadow: '0 16px 40px rgba(208, 2, 27, 0.35), inset 0 1px 0 rgba(255,255,255,0.25)',
+              boxShadow: '0 16px 40px rgba(186, 24, 27, 0.35), inset 0 1px 0 rgba(255,255,255,0.25)',
             }}
           >
             {/* Background circular glow effects */}
             <div className="absolute top-0 right-0 w-80 h-80 rounded-full bg-white/10 blur-3xl pointer-events-none" />
             <div className="absolute bottom-0 left-0 w-60 h-60 rounded-full bg-black/20 blur-2xl pointer-events-none" />
 
-            {/* Top Bar: GHL INDIA + NCD Secured Badge */}
+            {/* Top Bar: GHL INDIA Ventures */}
             <div className="relative flex items-center justify-between gap-3 mb-6">
-              <div className="flex items-center gap-2.5">
-                <div className="w-9 h-9 rounded-xl bg-white/15 border border-white/25 flex items-center justify-center p-1.5 shadow-inner">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src="/images/brand/ghl-logo.png"
-                    alt="GHL"
-                    className="w-full h-full object-contain brightness-0 invert"
-                    onError={(e) => { (e.target as any).style.display = 'none' }}
-                  />
-                </div>
-                <div>
-                  <span className="text-white font-black text-base tracking-wider block leading-none">GHL INDIA</span>
-                  <span className="text-[9px] uppercase tracking-widest text-white/70 block mt-0.5">Ventures</span>
-                </div>
+              <div>
+                <span className="text-white font-black text-base tracking-wider block leading-none">GHL INDIA</span>
+                <span className="text-[9px] uppercase tracking-widest text-white/70 block mt-0.5">Ventures</span>
               </div>
-
-              <span className="px-3 py-1 rounded-full text-[10px] font-bold text-white uppercase tracking-wider bg-white/15 backdrop-blur-md border border-white/25 shadow-sm">
-                NCD - Secured
-              </span>
             </div>
 
             {/* Middle: Total Portfolio Value */}
@@ -2240,11 +2225,11 @@ export default function DashboardClient() {
               <div className="flex items-center gap-6 sm:gap-10">
                 <div>
                   <p className="text-[10px] font-semibold uppercase tracking-wider text-white/70">INVESTOR</p>
-                  <p className="text-xs sm:text-sm font-bold text-white mt-0.5 truncate max-w-[120px]">{displayFirstName}</p>
+                  <p className="text-xs sm:text-sm font-bold text-white mt-0.5 truncate max-w-[120px] capitalize">{displayFirstName}</p>
                 </div>
                 <div>
                   <p className="text-[10px] font-semibold uppercase tracking-wider text-white/70">RETURNS P.A.</p>
-                  <p className="text-xs sm:text-sm font-bold text-white mt-0.5">18–24%</p>
+                  <p className="text-xs sm:text-sm font-bold text-white mt-0.5">Upto 12%</p>
                 </div>
                 <div>
                   <p className="text-[10px] font-semibold uppercase tracking-wider text-white/70">STATUS</p>
@@ -2497,7 +2482,6 @@ export default function DashboardClient() {
           >
             <TrendingUp className="w-3.5 h-3.5 text-brand-red" />
             <span>PORTFOLIO & MANAGER</span>
-            <span className="w-1.5 h-1.5 rounded-full bg-brand-red animate-pulse" />
           </div>
         </div>
 

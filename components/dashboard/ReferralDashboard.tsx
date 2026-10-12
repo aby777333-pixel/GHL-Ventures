@@ -9,6 +9,7 @@ import {
   Calendar,
   Download,
   Plus,
+  PlusCircle,
   Search,
   Filter,
   CheckCircle,
@@ -33,6 +34,7 @@ import {
   ExternalLink,
   ChevronDown,
   Eye,
+  AlertCircle,
 } from 'lucide-react'
 import {
   AreaChart,
@@ -82,52 +84,8 @@ export interface ReferralDocumentRow {
   hasPdc: boolean
 }
 
-interface ReferralDashboardProps {
-  theme?: 'dark' | 'light'
-  isDark?: boolean
-  authenticatedPartnerId?: string | null
-  partnerName?: string
-  partnerEmail?: string
-  partnerPhone?: string
-  authToken?: string
-  showToast?: (msg: string, type?: 'success' | 'info') => void
-  onNavigateTab?: (tab: string) => void
-}
-
-export default function ReferralDashboard({
-  theme = 'dark',
-  isDark = true,
-  authenticatedPartnerId,
-  partnerName = 'Partner Investor',
-  partnerEmail = '',
-  partnerPhone = '',
-  authToken = '',
-  showToast = () => {},
-  onNavigateTab,
-}: ReferralDashboardProps) {
-  // Theme utility
-  const t = (darkClass: string, lightClass: string) => (isDark ? darkClass : lightClass)
-
-  const [data, setData] = useState<PartnerDashboardResponse | null>(null)
-
-  // Determine active partner role strictly from authentic profile:
-  // 1. Authentic database role returned by Supabase (data?.partner?.role)
-  // 2. Authenticated partner ID passed from user session (ghlId)
-  // 3. Defaults to 'GI' (General Investor)
-  const partnerRole: PartnerRole = useMemo(() => {
-    if (data?.partner?.role) return data.partner.role
-    if (authenticatedPartnerId) return getPartnerRole(authenticatedPartnerId)
-    return 'GI'
-  }, [data?.partner?.role, authenticatedPartnerId])
-
-  // Determine effective GHL/Partner ID:
-  const effectiveId = useMemo(() => {
-    if (authenticatedPartnerId) return authenticatedPartnerId
-    if (data?.partner?.partnerId && data.partner.partnerId !== 'GHL-PARTNER') return data.partner.partnerId
-    return data?.partner?.partnerId || (partnerRole === 'MCP' ? 'MCP-PARTNER' : partnerRole === 'CPL' ? 'CPL-PARTNER' : 'GHL-PARTNER')
-  }, [authenticatedPartnerId, data?.partner?.partnerId, partnerRole])
-
-  // Live Clock State (Matches Reference Header)
+// Live Clock component (isolated timer so parent dashboard doesn't re-render every second)
+const LiveClock = React.memo(function LiveClock() {
   const [liveDateString, setLiveDateString] = useState('')
 
   useEffect(() => {
@@ -155,6 +113,87 @@ export default function ReferralDashboard({
     const timer = setInterval(updateTime, 1000)
     return () => clearInterval(timer)
   }, [])
+
+  return (
+    <span className="font-mono text-[11px]">
+      {liveDateString || 'Thursday, 08 October 2026 at 04:48:04 pm'}
+    </span>
+  )
+})
+
+// Section Separator matching Reference Dashboard style (Static, zero animations, stable outside parent)
+const SectionSeparator = React.memo(function SectionSeparator({
+  label,
+  icon: Icon,
+  isDark = true,
+}: {
+  label: string
+  icon?: any
+  isDark?: boolean
+}) {
+  return (
+    <div className="relative flex items-center justify-center my-8">
+      <div className={`absolute inset-0 flex items-center ${isDark ? 'text-white/[0.08]' : 'text-gray-300'}`}>
+        <div className="w-full border-t border-current" />
+      </div>
+      <div
+        className={`relative px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider flex items-center gap-2 border shadow-sm ${isDark
+          ? 'bg-[#140606] text-red-400 border-red-500/20'
+          : 'bg-white text-red-600 border-red-200'
+          }`}
+      >
+        {Icon && <Icon className="w-3.5 h-3.5 text-brand-red" />}
+        <span>{label}</span>
+      </div>
+    </div>
+  )
+})
+
+interface ReferralDashboardProps {
+  theme?: 'dark' | 'light'
+  isDark?: boolean
+  authenticatedPartnerId?: string | null
+  partnerName?: string
+  partnerEmail?: string
+  partnerPhone?: string
+  authToken?: string
+  showToast?: (msg: string, type?: 'success' | 'info') => void
+  onNavigateTab?: (tab: string) => void
+}
+
+export default function ReferralDashboard({
+  theme = 'dark',
+  isDark = true,
+  authenticatedPartnerId,
+  partnerName = 'Partner Investor',
+  partnerEmail = '',
+  partnerPhone = '',
+  authToken = '',
+  showToast = () => { },
+  onNavigateTab,
+}: ReferralDashboardProps) {
+  // Theme utility
+  const t = (darkClass: string, lightClass: string) => (isDark ? darkClass : lightClass)
+
+  const [data, setData] = useState<PartnerDashboardResponse | null>(null)
+
+  // Determine active partner role strictly from authentic profile:
+  // 1. Authentic database role returned by Supabase (data?.partner?.role)
+  // 2. Authenticated partner ID passed from user session (ghlId)
+  // 3. Defaults to 'GI' (General Investor)
+  const partnerRole: PartnerRole = useMemo(() => {
+    if (data?.partner?.role) return data.partner.role
+    if (authenticatedPartnerId) return getPartnerRole(authenticatedPartnerId)
+    return 'GI'
+  }, [data?.partner?.role, authenticatedPartnerId])
+
+  // Determine effective GHL/Partner ID:
+  const effectiveId = useMemo(() => {
+    if (authenticatedPartnerId) return authenticatedPartnerId
+    if (data?.partner?.partnerId && data.partner.partnerId !== 'GHL-PARTNER') return data.partner.partnerId
+    return data?.partner?.partnerId || (partnerRole === 'MCP' ? 'MCP-PARTNER' : partnerRole === 'CPL' ? 'CPL-PARTNER' : 'GHL-PARTNER')
+  }, [authenticatedPartnerId, data?.partner?.partnerId, partnerRole])
+
 
   // Filters & Views (Default to Oct 2026 matching Reference screenshots)
   const [selectedYear, setSelectedYear] = useState<number>(2026)
@@ -212,9 +251,12 @@ export default function ReferralDashboard({
     notes: '',
   })
 
-  const [goalForm, setGoalForm] = useState({
-    directTarget: 5000000,
-    referralTarget: 10000000,
+  const [goalForm, setGoalForm] = useState<{
+    directTarget: string | number
+    referralTarget: string | number
+  }>({
+    directTarget: '',
+    referralTarget: '',
   })
 
   // Load dashboard data
@@ -227,8 +269,8 @@ export default function ReferralDashboard({
         setData(res)
         if (res.monthlyGoal) {
           setGoalForm({
-            directTarget: res.monthlyGoal.directTarget,
-            referralTarget: res.monthlyGoal.referralTarget,
+            directTarget: res.monthlyGoal.directTarget && res.monthlyGoal.directTarget > 0 ? res.monthlyGoal.directTarget : '',
+            referralTarget: res.monthlyGoal.referralTarget && res.monthlyGoal.referralTarget > 0 ? res.monthlyGoal.referralTarget : '',
           })
         }
       } else {
@@ -348,10 +390,13 @@ export default function ReferralDashboard({
     e.preventDefault()
     setSubmittingAction(true)
     try {
+      const cleanDirect = Number(String(goalForm.directTarget).replace(/[^0-9.]/g, '')) || 0
+      const cleanReferral = Number(String(goalForm.referralTarget).replace(/[^0-9.]/g, '')) || 0
+
       const res = await updateMonthlyGoals(
         {
-          directTarget: Number(goalForm.directTarget),
-          referralTarget: Number(goalForm.referralTarget),
+          directTarget: cleanDirect,
+          referralTarget: cleanReferral,
         },
         authToken
       )
@@ -485,15 +530,18 @@ export default function ReferralDashboard({
     return sum
   }, [giReferrals, selectedMonth, selectedYear, data?.chartData])
 
-  // Determine active GI slab:
-  // 1 L - 4.99 L (2.5%), 5 L - 14.99 L (3%), 15 L - 49.99 L (3.5%), 50 L above (4%)
+  // Determine active Sale of Associate Channel Partner slab:
+  // ₹1,00,00,000 to ₹5,00,00,000 (3.00%), ₹5,00,00,000 to Above (4.00%)
   const { giRate, giActiveIndex, giEarned } = useMemo(() => {
-    let rate = 2.5
+    let rate = 3.00
     let activeIdx = 0
-    if (giVolume >= 5000000) { rate = 4.0; activeIdx = 3 }
-    else if (giVolume >= 1500000) { rate = 3.5; activeIdx = 2 }
-    else if (giVolume >= 500000) { rate = 3.0; activeIdx = 1 }
-    else { rate = 2.5; activeIdx = 0 }
+    if (giVolume >= 50000000) {
+      rate = 4.00
+      activeIdx = 1
+    } else {
+      rate = 3.00
+      activeIdx = 0
+    }
     const earned = (giVolume * rate) / 100
     return { giRate: rate, giActiveIndex: activeIdx, giEarned: earned }
   }, [giVolume])
@@ -504,10 +552,11 @@ export default function ReferralDashboard({
     return subVolume + directCpVolume
   }, [data?.subChannelPartners, cpReferrals])
 
+  // Sale of Master Channel Partner: Any Investment -> 0.50%
   const { cpRate, cpActiveIndex, cpEarned } = useMemo(() => {
-    const rate = cpVolume >= 10000000 ? 1.0 : (cpVolume >= 100000 ? 0.5 : 0.0)
-    const activeIdx = cpVolume >= 10000000 ? 1 : 0
-    const earned = (cpVolume * (rate || 0.5)) / 100
+    const rate = 0.50
+    const activeIdx = 0
+    const earned = (cpVolume * rate) / 100
     return { cpRate: rate, cpActiveIndex: activeIdx, cpEarned: earned }
   }, [cpVolume])
 
@@ -566,34 +615,16 @@ export default function ReferralDashboard({
     return 0
   }, [displayTableRows, giVolume])
 
-  // Section Separator matching Reference Dashboard style
-  const SectionSeparator = ({ label, icon: Icon }: { label: string; icon?: any }) => (
-    <div className="relative flex items-center justify-center my-8">
-      <div className={`absolute inset-0 flex items-center ${t('text-white/[0.08]', 'text-gray-300')}`}>
-        <div className="w-full border-t border-current" />
-      </div>
-      <div
-        className={`relative px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider flex items-center gap-2 border shadow-sm ${t(
-          'bg-[#140606] text-red-400 border-red-500/20',
-          'bg-white text-red-600 border-red-200'
-        )}`}
-      >
-        {Icon && <Icon className="w-3.5 h-3.5 text-brand-red" />}
-        <span>{label}</span>
-        <span className="w-1.5 h-1.5 rounded-full bg-brand-red animate-pulse" />
-      </div>
-    </div>
-  )
 
   const partnerDisplayName =
     data?.partner?.name ||
     (partnerName && partnerName !== 'Partner Investor'
       ? partnerName
       : partnerRole === 'CPL'
-      ? 'Channel Partner'
-      : partnerRole === 'MCP'
-      ? 'Master Channel Partner'
-      : 'Partner Investor')
+        ? 'Channel Partner'
+        : partnerRole === 'MCP'
+          ? 'Master Channel Partner'
+          : 'Partner Investor')
 
   // Map documents solely from authentic partner referrals (Zero mock/seeded data)
   const allDocRecords = useMemo<ReferralDocumentRow[]>(() => {
@@ -734,7 +765,7 @@ export default function ReferralDashboard({
   // ─────────────────────────────────────────────────────────────
   if (viewDocumentsPage) {
     return (
-      <div className="space-y-5 animate-fade-in">
+      <div className="space-y-5">
         {/* 1. Welcome Header (Matches screenshot: Welcome - Mishmash Finserve LLP) */}
         <div>
           <h1 className={`text-2xl sm:text-3xl font-black tracking-tight ${t('text-white', 'text-gray-900')}`}>
@@ -939,11 +970,10 @@ export default function ReferralDashboard({
               <button
                 disabled={docCurrentPage === 1}
                 onClick={() => setDocCurrentPage((p) => Math.max(1, p - 1))}
-                className={`px-3 py-1.5 rounded-lg border transition-all ${
-                  docCurrentPage === 1
-                    ? 'opacity-40 cursor-not-allowed border-gray-200 text-gray-400'
-                    : t('border-white/10 hover:bg-white/10 text-white', 'border-gray-300 hover:bg-gray-100 text-gray-700')
-                }`}
+                className={`px-3 py-1.5 rounded-lg border transition-all ${docCurrentPage === 1
+                  ? 'opacity-40 cursor-not-allowed border-gray-200 text-gray-400'
+                  : t('border-white/10 hover:bg-white/10 text-white', 'border-gray-300 hover:bg-gray-100 text-gray-700')
+                  }`}
               >
                 &lsaquo; Prev
               </button>
@@ -961,11 +991,10 @@ export default function ReferralDashboard({
                   <button
                     key={`page-${pg}`}
                     onClick={() => setDocCurrentPage(Number(pg))}
-                    className={`min-w-[32px] h-8 px-2 rounded-lg font-bold text-xs transition-all ${
-                      isCurrent
-                        ? 'bg-brand-red text-white shadow-sm'
-                        : t('hover:bg-white/10 text-gray-300 border border-white/10', 'hover:bg-gray-100 text-gray-700 border border-gray-300')
-                    }`}
+                    className={`min-w-[32px] h-8 px-2 rounded-lg font-bold text-xs transition-all ${isCurrent
+                      ? 'bg-brand-red text-white shadow-sm'
+                      : t('hover:bg-white/10 text-gray-300 border border-white/10', 'hover:bg-gray-100 text-gray-700 border border-gray-300')
+                      }`}
                   >
                     {pg}
                   </button>
@@ -975,11 +1004,10 @@ export default function ReferralDashboard({
               <button
                 disabled={docCurrentPage === totalDocPages}
                 onClick={() => setDocCurrentPage((p) => Math.min(totalDocPages, p + 1))}
-                className={`px-3 py-1.5 rounded-lg border transition-all ${
-                  docCurrentPage === totalDocPages
-                    ? 'opacity-40 cursor-not-allowed border-gray-200 text-gray-400'
-                    : t('border-white/10 hover:bg-white/10 text-white', 'border-gray-300 hover:bg-gray-100 text-gray-700')
-                }`}
+                className={`px-3 py-1.5 rounded-lg border transition-all ${docCurrentPage === totalDocPages
+                  ? 'opacity-40 cursor-not-allowed border-gray-200 text-gray-400'
+                  : t('border-white/10 hover:bg-white/10 text-white', 'border-gray-300 hover:bg-gray-100 text-gray-700')
+                  }`}
               >
                 Next &rsaquo;
               </button>
@@ -1002,6 +1030,7 @@ export default function ReferralDashboard({
         partnerPhone={data?.partner?.phone || partnerPhone}
         data={data}
         loading={loading}
+        error={error}
         filterYear={selectedYear}
         filterMonth={selectedMonth}
         onYearChange={setSelectedYear}
@@ -1014,7 +1043,7 @@ export default function ReferralDashboard({
   }
 
   return (
-    <div className="space-y-6 animate-fade-in">
+    <div className="space-y-6">
       {/* ─────────────────────────────────────────────────────────────
           1. HEADER & LIVE DATE/TIME (Matches Reference Header)
           ───────────────────────────────────────────────────────────── */}
@@ -1037,7 +1066,7 @@ export default function ReferralDashboard({
             )}`}
           >
             <Calendar className="w-3.5 h-3.5 text-brand-red shrink-0" />
-            <span className="font-mono text-[11px]">{liveDateString || 'Thursday, 08 October 2026 at 04:48:04 pm'}</span>
+            <LiveClock />
           </div>
 
           {/* Refresh Data Button */}
@@ -1054,6 +1083,22 @@ export default function ReferralDashboard({
           </button>
         </div>
       </div>
+
+      {/* Error state notification if API failure */}
+      {error && (
+        <div className="p-4 rounded-2xl bg-red-500/10 border border-red-500/30 text-red-500 text-xs sm:text-sm flex items-center justify-between gap-3 shadow-md">
+          <div className="flex items-center gap-2.5">
+            <AlertCircle className="w-4 h-4 shrink-0 text-red-500" />
+            <span>{error}</span>
+          </div>
+          <button
+            onClick={loadData}
+            className="px-3 py-1.5 rounded-xl bg-red-500/20 hover:bg-red-500/30 text-red-400 text-xs font-bold transition-all active:scale-95 shrink-0"
+          >
+            Retry
+          </button>
+        </div>
+      )}
 
       {/* ─────────────────────────────────────────────────────────────
           2. WELCOME BANNER (Gradient Red Banner - Image 2)
@@ -1072,8 +1117,8 @@ export default function ReferralDashboard({
               {partnerRole === 'MCP'
                 ? 'WELCOME — MASTER CHANNEL PARTNER'
                 : partnerRole === 'CPL'
-                ? 'WELCOME — CHANNEL PARTNER'
-                : 'WELCOME — GENERAL INVESTOR'}
+                  ? 'WELCOME — CHANNEL PARTNER'
+                  : 'WELCOME — GENERAL INVESTOR'}
             </span>
             <h2 className="text-xl sm:text-2xl font-black tracking-tight text-white drop-shadow-sm">
               {partnerDisplayName}
@@ -1103,13 +1148,12 @@ export default function ReferralDashboard({
           - MCP: 4 cards (General Investor, Channel Partner, MCP Terms, CP Terms)
           ───────────────────────────────────────────────────────────── */}
       <div
-        className={`grid gap-4 ${
-          partnerRole === 'MCP'
-            ? 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-4'
-            : partnerRole === 'CPL'
+        className={`grid gap-4 ${partnerRole === 'MCP'
+          ? 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-4'
+          : partnerRole === 'CPL'
             ? 'grid-cols-1 sm:grid-cols-2'
             : 'grid-cols-1 sm:grid-cols-2 max-w-xl'
-        }`}
+          }`}
       >
         {/* Card 1: Create General Investor (All Roles) */}
         <div
@@ -1317,12 +1361,11 @@ export default function ReferralDashboard({
               setTodayReferralModalOpen(true)
             }
           }}
-          className={`relative overflow-hidden rounded-2xl p-5 border transition-all group ${
-            hasTodayReferrals ? 'hover:-translate-y-0.5 cursor-pointer hover:border-red-500/40' : 'cursor-default'
-          } ${t(
-            'bg-[#150606] border-white/10 shadow-lg',
-            'bg-white border-gray-200 shadow-sm'
-          )}`}
+          className={`relative overflow-hidden rounded-2xl p-5 border transition-all group ${hasTodayReferrals ? 'hover:-translate-y-0.5 cursor-pointer hover:border-red-500/40' : 'cursor-default'
+            } ${t(
+              'bg-[#150606] border-white/10 shadow-lg',
+              'bg-white border-gray-200 shadow-sm'
+            )}`}
           title={hasTodayReferrals ? "Click to view today's referrals" : "No referrals recorded today"}
         >
           <div className={`w-16 h-16 rounded-full absolute -top-3 -right-3 pointer-events-none ${t('bg-red-500/10', 'bg-red-500/[0.06]')}`} />
@@ -1338,12 +1381,10 @@ export default function ReferralDashboard({
             <h3 className={`text-xl sm:text-2xl font-black tracking-tight ${t('text-white', 'text-gray-900')}`}>
               {loading ? '—' : (data?.kpis?.todayReferrals || 0)}
             </h3>
-            <span className={`inline-flex items-center gap-1 text-[11px] font-semibold ${
-              hasTodayReferrals ? 'text-emerald-400 group-hover:underline' : t('text-gray-500', 'text-gray-400')
-            }`}>
-              <span className={`w-1.5 h-1.5 rounded-full ${
-                hasTodayReferrals ? 'bg-emerald-400' : 'bg-gray-500'
-              }`} />
+            <span className={`inline-flex items-center gap-1 text-[11px] font-semibold ${hasTodayReferrals ? 'text-emerald-400 group-hover:underline' : t('text-gray-500', 'text-gray-400')
+              }`}>
+              <span className={`w-1.5 h-1.5 rounded-full ${hasTodayReferrals ? 'bg-emerald-400' : 'bg-gray-500'
+                }`} />
               <span>{hasTodayReferrals ? 'View details' : 'No activity'}</span>
             </span>
           </div>
@@ -1397,7 +1438,7 @@ export default function ReferralDashboard({
               <Download className="w-5 h-5" />
             </div>
             <span className={`text-[10px] font-bold uppercase tracking-wider ${t('text-gray-400', 'text-gray-500')}`}>
-              DOWNLOAD / DOCUMENTS
+              DOCUMENTS
             </span>
           </div>
           <div className="flex items-baseline justify-between mt-1">
@@ -1415,7 +1456,7 @@ export default function ReferralDashboard({
       {/* ─────────────────────────────────────────────────────────────
           5. SECTION INDICATOR: MONTHLY GOAL
           ───────────────────────────────────────────────────────────── */}
-      <SectionSeparator label="MONTHLY GOAL" icon={Target} />
+      <SectionSeparator label="MONTHLY GOAL" icon={Target} isDark={isDark} />
 
       {/* ─────────────────────────────────────────────────────────────
           6. MONTHLY GOAL BANNER CARD (Image 2)
@@ -1440,37 +1481,13 @@ export default function ReferralDashboard({
             <p className="text-xs text-white/85 leading-relaxed">
               Pick a target amount and a member count — we&apos;ll chart your progress automatically.
             </p>
-
-            {/* Progress indicators when goals exist */}
-            {data?.monthlyGoal && (data.monthlyGoal.directTarget > 0 || data.monthlyGoal.referralTarget > 0) && (
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-4 pt-4 border-t border-white/20 text-xs">
-                <div>
-                  <div className="flex justify-between text-[11px] font-semibold mb-1">
-                    <span>Direct Investment: {data.monthlyGoal.directProgress}%</span>
-                    <span>₹{formatINR(data.monthlyGoal.directAchieved)} / ₹{formatINR(data.monthlyGoal.directTarget)}</span>
-                  </div>
-                  <div className="h-1.5 rounded-full bg-black/30 overflow-hidden">
-                    <div className="h-full bg-white transition-all duration-700" style={{ width: `${Math.min(100, data.monthlyGoal.directProgress)}%` }} />
-                  </div>
-                </div>
-                <div>
-                  <div className="flex justify-between text-[11px] font-semibold mb-1">
-                    <span>Referral Network: {data.monthlyGoal.referralProgress}%</span>
-                    <span>₹{formatINR(data.monthlyGoal.referralAchieved)} / ₹{formatINR(data.monthlyGoal.referralTarget)}</span>
-                  </div>
-                  <div className="h-1.5 rounded-full bg-black/30 overflow-hidden">
-                    <div className="h-full bg-emerald-300 transition-all duration-700" style={{ width: `${Math.min(100, data.monthlyGoal.referralProgress)}%` }} />
-                  </div>
-                </div>
-              </div>
-            )}
           </div>
 
           <button
             onClick={() => setGoalModalOpen(true)}
             className="px-5 py-2.5 rounded-full text-xs font-bold text-brand-red bg-white hover:bg-gray-100 flex items-center gap-2 transition-all shadow-lg shrink-0 hover:scale-105"
           >
-            <Plus className="w-4 h-4" />
+            <PlusCircle className="w-4 h-4" />
             <span>Set Your Goal</span>
           </button>
         </div>
@@ -1479,7 +1496,7 @@ export default function ReferralDashboard({
       {/* ─────────────────────────────────────────────────────────────
           7. SECTION INDICATOR: DIRECT INVESTMENTS
           ───────────────────────────────────────────────────────────── */}
-      <SectionSeparator label="DIRECT INVESTMENTS" icon={TrendingUp} />
+      <SectionSeparator label="DIRECT INVESTMENTS" icon={TrendingUp} isDark={isDark} />
 
       {/* ─────────────────────────────────────────────────────────────
           8. REFERRAL INVESTMENTS CHART (Image 3)
@@ -1521,21 +1538,19 @@ export default function ReferralDashboard({
             <div className={`p-1 rounded-xl border flex items-center ${t('bg-white/[0.04] border-white/10', 'bg-gray-100 border-gray-300')}`}>
               <button
                 onClick={() => setChartView('line')}
-                className={`px-3 py-1 rounded-lg text-xs font-bold transition-all ${
-                  chartView === 'line'
-                    ? 'bg-brand-red text-white shadow-sm'
-                    : t('text-gray-400 hover:text-white', 'text-gray-600 hover:text-gray-900')
-                }`}
+                className={`px-3 py-1 rounded-lg text-xs font-bold transition-all ${chartView === 'line'
+                  ? 'bg-brand-red text-white shadow-sm'
+                  : t('text-gray-400 hover:text-white', 'text-gray-600 hover:text-gray-900')
+                  }`}
               >
                 Line
               </button>
               <button
                 onClick={() => setChartView('bar')}
-                className={`px-3 py-1 rounded-lg text-xs font-bold transition-all ${
-                  chartView === 'bar'
-                    ? 'bg-brand-red text-white shadow-sm'
-                    : t('text-gray-400 hover:text-white', 'text-gray-600 hover:text-gray-900')
-                }`}
+                className={`px-3 py-1 rounded-lg text-xs font-bold transition-all ${chartView === 'bar'
+                  ? 'bg-brand-red text-white shadow-sm'
+                  : t('text-gray-400 hover:text-white', 'text-gray-600 hover:text-gray-900')
+                  }`}
               >
                 Bar
               </button>
@@ -1673,20 +1688,20 @@ export default function ReferralDashboard({
       {/* ─────────────────────────────────────────────────────────────
           10. SECTION INDICATOR: EARNING CHART
           ───────────────────────────────────────────────────────────── */}
-      <SectionSeparator label="EARNING CHART" icon={Award} />
+      <SectionSeparator label="EARNING CHART" icon={Award} isDark={isDark} />
 
       {/* ─────────────────────────────────────────────────────────────
           11. EARNING CHART SECTION (Image 1)
           ───────────────────────────────────────────────────────────── */}
       <div
-        className={`rounded-2xl p-6 sm:p-7 border transition-all ${t(
+        className={`rounded-2xl p-6 sm:p-7 border${t(
           'bg-[#150606] border-white/10 shadow-lg',
           'bg-white border-gray-200 shadow-sm'
         )}`}
       >
         <div className="flex items-center gap-3 mb-1">
           <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-red-500/20 text-brand-red border border-red-500/30 flex items-center gap-1.5">
-            <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />
+            <span className="w-1.5 h-1.5 rounded-full bg-red-500" />
             LIVE
           </span>
           <h3 className={`text-base sm:text-lg font-bold ${t('text-white', 'text-gray-900')}`}>
@@ -1697,51 +1712,45 @@ export default function ReferralDashboard({
           Volume of investment by lakhs (income percentage) — earning
         </p>
 
-        {/* Group 1: General Investor (All Roles) */}
+        {/* Group 1: Sale of Associate Channel Partner */}
         <div className={`space-y-3 ${partnerRole === 'MCP' ? 'mb-8' : ''}`}>
-          {partnerRole === 'MCP' && (
-            <h4 className={`text-sm font-bold ${t('text-white', 'text-gray-900')}`}>
-              General Investor
-            </h4>
-          )}
+          <h4 className={`text-sm font-bold ${t('text-white', 'text-gray-900')}`}>
+            Sale of Associate Channel Partner
+          </h4>
 
           {/* Income Pill */}
           <div className="inline-flex items-center px-4 py-1.5 rounded-full text-xs font-bold bg-red-500/15 text-brand-red border border-red-500/30 shadow-sm">
-            Your Income ₹{formatINR(giVolume)} ( {giRate}% ) — ₹{formatINR(giEarned)}
+            Your Income ₹{formatINR(giVolume)} ( {giRate.toFixed(2)}% ) — ₹{formatINR(giEarned)}
           </div>
 
           {/* Progress bar track */}
-          <div className="grid grid-cols-4 gap-2 mb-2">
-            {[0, 1, 2, 3].map((stepIdx) => (
+          <div className="grid grid-cols-2 gap-2 mb-2">
+            {[0, 1].map((stepIdx) => (
               <div
                 key={stepIdx}
-                className={`h-2 rounded-full overflow-hidden ${
-                  stepIdx <= giActiveIndex ? 'bg-red-500' : t('bg-white/[0.08]', 'bg-gray-200')
-                }`}
+                className={`h-2 rounded-full overflow-hidden ${stepIdx <= giActiveIndex ? 'bg-red-500' : t('bg-white/[0.08]', 'bg-gray-200')
+                  }`}
               />
             ))}
           </div>
 
           {/* Slabs Grid */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {[
-              { label: '1 L - 4.99 L', rate: '2.5%', index: 0 },
-              { label: '5 L - 14.99 L', rate: '3%', index: 1 },
-              { label: '15 L - 49.99 L', rate: '3.5%', index: 2 },
-              { label: '50 L above', rate: '4%', index: 3 },
+              { label: '₹1,00,00,000 to ₹5,00,00,000', rate: '3.00%', index: 0 },
+              { label: '₹5,00,00,000 to Above', rate: '4.00%', index: 1 },
             ].map((slab) => {
               const isActive = slab.index === giActiveIndex
               return (
                 <div
                   key={slab.index}
-                  className={`p-3.5 rounded-xl border text-center transition-all ${
-                    isActive
-                      ? t(
-                          'bg-emerald-500/10 border-emerald-500/40 text-emerald-400 font-bold shadow-sm ring-1 ring-emerald-500/20',
-                          'bg-[#e8f5e9] border-[#a5d6a7] text-[#1b5e20] font-bold shadow-sm'
-                        )
-                      : t('bg-white/[0.02] border-white/10 text-gray-300', 'bg-gray-50 border-gray-200 text-gray-700')
-                  }`}
+                  className={`p-3.5 rounded-xl border text-center transition-all ${isActive
+                    ? t(
+                      'bg-emerald-500/10 border-emerald-500/40 text-emerald-400 font-bold shadow-sm ring-1 ring-emerald-500/20',
+                      'bg-[#e8f5e9] border-[#a5d6a7] text-[#1b5e20] font-bold shadow-sm'
+                    )
+                    : t('bg-white/[0.02] border-white/10 text-gray-300', 'bg-gray-50 border-gray-200 text-gray-700')
+                    }`}
                 >
                   <p className="text-xs font-bold mb-1">{slab.label}</p>
                   <p className={`text-xs font-semibold ${isActive ? (isDark ? 'text-emerald-400 font-black' : 'text-[#1b5e20] font-black') : 'text-gray-400'}`}>
@@ -1753,48 +1762,42 @@ export default function ReferralDashboard({
           </div>
         </div>
 
-        {/* Group 2: Channel Partner (ONLY for MCP — HIDDEN for CPL and GI!) */}
+        {/* Group 2: Sale of Master Channel Partner (ONLY for MCP — HIDDEN for CPL and GI!) */}
         {partnerRole === 'MCP' && (
           <div className="space-y-3 pt-6 border-t border-white/10">
             <h4 className={`text-sm font-bold ${t('text-white', 'text-gray-900')}`}>
-              Channel Partner Network Overrides
+              Sale of Master Channel Partner
             </h4>
 
             {/* Income Pill */}
             <div className="inline-flex items-center px-4 py-1.5 rounded-full text-xs font-bold bg-red-500/15 text-brand-red border border-red-500/30 shadow-sm">
-              Your Income ₹{formatINR(cpVolume)} ( {cpRate}% ) — ₹{formatINR(cpEarned)}
+              Your Income ₹{formatINR(cpVolume)} ( {cpRate.toFixed(2)}% ) — ₹{formatINR(cpEarned)}
             </div>
 
             {/* Progress bar track */}
-            <div className="grid grid-cols-2 gap-2 mb-2">
-              {[0, 1].map((stepIdx) => (
-                <div
-                  key={stepIdx}
-                  className={`h-2 rounded-full overflow-hidden ${
-                    stepIdx <= cpActiveIndex && cpVolume > 0 ? 'bg-red-500' : t('bg-white/[0.08]', 'bg-gray-200')
+            <div className="grid grid-cols-1 gap-2 mb-2">
+              <div
+                className={`h-2 rounded-full overflow-hidden ${cpVolume > 0 ? 'bg-red-500' : t('bg-white/[0.08]', 'bg-gray-200')
                   }`}
-                />
-              ))}
+              />
             </div>
 
             {/* Slabs Grid */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 gap-3">
               {[
-                { label: '1 L - 9.99 L', rate: '0.5%', index: 0 },
-                { label: '1 Crore & above', rate: '1%', index: 1 },
+                { label: 'Any Investment', rate: '0.50%', index: 0 },
               ].map((slab) => {
-                const isActive = slab.index === cpActiveIndex && cpVolume > 0
+                const isActive = cpVolume > 0
                 return (
                   <div
                     key={slab.index}
-                    className={`p-3.5 rounded-xl border text-center transition-all ${
-                      isActive
-                        ? t(
-                            'bg-emerald-500/10 border-emerald-500/40 text-emerald-400 font-bold shadow-sm ring-1 ring-emerald-500/20',
-                            'bg-[#e8f5e9] border-[#a5d6a7] text-[#1b5e20] font-bold shadow-sm'
-                          )
-                        : t('bg-white/[0.02] border-white/10 text-gray-300', 'bg-gray-50 border-gray-200 text-gray-700')
-                    }`}
+                    className={`p-3.5 rounded-xl border text-center transition-all ${isActive
+                      ? t(
+                        'bg-emerald-500/10 border-emerald-500/40 text-emerald-400 font-bold shadow-sm ring-1 ring-emerald-500/20',
+                        'bg-[#e8f5e9] border-[#a5d6a7] text-[#1b5e20] font-bold shadow-sm'
+                      )
+                      : t('bg-white/[0.02] border-white/10 text-gray-300', 'bg-gray-50 border-gray-200 text-gray-700')
+                      }`}
                   >
                     <p className="text-xs font-bold mb-1">{slab.label}</p>
                     <p className={`text-xs font-semibold ${isActive ? (isDark ? 'text-emerald-400 font-black' : 'text-[#1b5e20] font-black') : 'text-gray-400'}`}>
@@ -1811,7 +1814,7 @@ export default function ReferralDashboard({
       {/* ─────────────────────────────────────────────────────────────
           12. SECTION INDICATOR: REFERRAL LIST
           ───────────────────────────────────────────────────────────── */}
-      <SectionSeparator label="REFERRAL LIST" icon={Users} />
+      <SectionSeparator label="REFERRAL LIST" icon={Users} isDark={isDark} />
 
       {/* ─────────────────────────────────────────────────────────────
           13. REFERRAL MEMBERS DIRECTORY TABLE (Image 1)
@@ -1834,21 +1837,19 @@ export default function ReferralDashboard({
               <div className={`p-1 rounded-xl border flex items-center ${t('bg-white/[0.04] border-white/10', 'bg-gray-100 border-gray-300')}`}>
                 <button
                   onClick={() => setTableCohort('investors')}
-                  className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${
-                    tableCohort === 'investors'
-                      ? 'bg-brand-red text-white shadow-sm'
-                      : t('text-gray-400 hover:text-white', 'text-gray-600 hover:text-gray-900')
-                  }`}
+                  className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${tableCohort === 'investors'
+                    ? 'bg-brand-red text-white shadow-sm'
+                    : t('text-gray-400 hover:text-white', 'text-gray-600 hover:text-gray-900')
+                    }`}
                 >
                   General Investor
                 </button>
                 <button
                   onClick={() => setTableCohort('partners')}
-                  className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${
-                    tableCohort === 'partners'
-                      ? 'bg-brand-red text-white shadow-sm'
-                      : t('text-gray-400 hover:text-white', 'text-gray-600 hover:text-gray-900')
-                  }`}
+                  className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${tableCohort === 'partners'
+                    ? 'bg-brand-red text-white shadow-sm'
+                    : t('text-gray-400 hover:text-white', 'text-gray-600 hover:text-gray-900')
+                    }`}
                 >
                   Channel Partner
                 </button>
@@ -2224,92 +2225,112 @@ export default function ReferralDashboard({
       )}
 
       {/* ─────────────────────────────────────────────────────────────
-          MODAL 3: GOAL MANAGEMENT
+          MODAL 3: GOAL MANAGEMENT (Set Your Goal)
           ───────────────────────────────────────────────────────────── */}
       {goalModalOpen && (
-        <div className="fixed inset-0 z-[10000] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fade-in">
+        <div className="fixed inset-0 z-[10000] flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm animate-fade-in">
           <div
-            className={`w-full max-w-md rounded-2xl border p-6 shadow-2xl relative ${t(
-              'bg-[#140606] border-red-500/30 text-white',
+            className={`w-full max-w-md rounded-2xl overflow-hidden shadow-2xl relative border ${t(
+              'bg-[#140606] border-white/10 text-white',
               'bg-white border-gray-200 text-gray-900'
             )}`}
           >
-            <button
-              onClick={() => setGoalModalOpen(false)}
-              className="absolute top-5 right-5 p-1 rounded-lg text-gray-400 hover:text-white"
+            {/* Modal Header Bar with Deep Burgundy to Crimson Gradient */}
+            <div
+              className="px-6 py-4 flex items-center justify-between"
+              style={{
+                background: 'linear-gradient(90deg, #1f0307 0%, #8b0000 50%, #bf081d 100%)',
+              }}
             >
-              <X className="w-5 h-5" />
-            </button>
-
-            <div className="flex items-center gap-3 mb-5">
-              <div className="w-10 h-10 rounded-xl bg-brand-red/20 flex items-center justify-center text-brand-red">
-                <Target className="w-5 h-5" />
-              </div>
-              <div>
-                <h3 className="text-lg font-bold">Monthly Quota & Goals</h3>
-                <p className="text-xs text-gray-400">Configure target capital commitments in Indian Rupees</p>
-              </div>
+              <h3 className="text-lg font-bold text-white tracking-tight">Set Your Goal</h3>
+              <button
+                type="button"
+                onClick={() => setGoalModalOpen(false)}
+                className="w-8 h-8 rounded-lg bg-white/15 hover:bg-white/25 flex items-center justify-center text-white/90 hover:text-white transition-all"
+                aria-label="Close"
+              >
+                <X className="w-4 h-4" />
+              </button>
             </div>
 
-            <form onSubmit={handleUpdateGoals} className="space-y-4">
-              <div>
-                <label className="block text-xs font-semibold mb-1 text-gray-300">
-                  Direct Investment Target (₹)
-                </label>
-                <input
-                  type="number"
-                  min="0"
-                  step="500000"
-                  value={goalForm.directTarget}
-                  onChange={(e) => setGoalForm({ ...goalForm, directTarget: Number(e.target.value) })}
-                  className={`w-full px-3.5 py-2.5 rounded-xl text-sm border outline-none ${t(
-                    'bg-white/[0.06] border-white/10 text-white focus:border-brand-red',
-                    'bg-gray-50 border-gray-300 text-gray-900 focus:border-brand-red'
-                  )}`}
-                />
-                <span className="text-[10px] text-gray-400 mt-1 block">
-                  Current: ₹{formatINR(goalForm.directTarget)}
-                </span>
+            {/* Modal Body */}
+            <div className="p-6">
+              {/* Dual Indicator Preview Bars */}
+              <div className="space-y-2 mb-6">
+                <div className="h-3.5 rounded-full bg-[#fde8e8] dark:bg-red-950/40 overflow-hidden">
+                  {data?.monthlyGoal?.directProgress ? (
+                    <div
+                      className="h-full bg-red-400 rounded-full transition-all duration-700"
+                      style={{ width: `${Math.min(100, data.monthlyGoal.directProgress)}%` }}
+                    />
+                  ) : null}
+                </div>
+                <div className="h-3.5 rounded-full bg-[#def7ec] dark:bg-emerald-950/40 overflow-hidden">
+                  {data?.monthlyGoal?.referralProgress ? (
+                    <div
+                      className="h-full bg-emerald-400 rounded-full transition-all duration-700"
+                      style={{ width: `${Math.min(100, data.monthlyGoal.referralProgress)}%` }}
+                    />
+                  ) : null}
+                </div>
               </div>
 
-              <div>
-                <label className="block text-xs font-semibold mb-1 text-gray-300">
-                  Referral Network Target (₹)
-                </label>
-                <input
-                  type="number"
-                  min="0"
-                  step="1000000"
-                  value={goalForm.referralTarget}
-                  onChange={(e) => setGoalForm({ ...goalForm, referralTarget: Number(e.target.value) })}
-                  className={`w-full px-3.5 py-2.5 rounded-xl text-sm border outline-none ${t(
-                    'bg-white/[0.06] border-white/10 text-white focus:border-brand-red',
-                    'bg-gray-50 border-gray-300 text-gray-900 focus:border-brand-red'
-                  )}`}
-                />
-                <span className="text-[10px] text-gray-400 mt-1 block">
-                  Current: ₹{formatINR(goalForm.referralTarget)}
-                </span>
-              </div>
+              {/* Goal Form */}
+              <form onSubmit={handleUpdateGoals}>
+                <div className="mb-4">
+                  <label className="block text-xs font-semibold text-slate-500 dark:text-gray-400 mb-1.5">
+                    Target Investment
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="Target Investment"
+                    value={goalForm.directTarget}
+                    onChange={(e) => setGoalForm({ ...goalForm, directTarget: e.target.value })}
+                    className={`w-full px-4 py-3 rounded-xl text-sm border outline-none transition-all ${t(
+                      'bg-white/[0.06] border-white/10 text-white placeholder:text-gray-500 focus:border-brand-red',
+                      'bg-[#f1f3f7] border-[#e2e5eb] text-slate-800 placeholder:text-slate-400 focus:border-brand-red focus:bg-white'
+                    )}`}
+                  />
+                </div>
 
-              <div className="flex items-center justify-end gap-3 pt-3">
-                <button
-                  type="button"
-                  onClick={() => setGoalModalOpen(false)}
-                  className="px-4 py-2 rounded-xl text-xs font-semibold text-gray-400 hover:text-white"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={submittingAction}
-                  className="px-6 py-2.5 rounded-xl text-xs font-bold text-white shadow-lg disabled:opacity-50"
-                  style={{ background: 'linear-gradient(135deg, #D0021B, #8B0000)' }}
-                >
-                  Save Goals
-                </button>
-              </div>
-            </form>
+                <div className="mb-6">
+                  <label className="block text-xs font-semibold text-slate-500 dark:text-gray-400 mb-1.5">
+                    Target Members
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="Target Members"
+                    value={goalForm.referralTarget}
+                    onChange={(e) => setGoalForm({ ...goalForm, referralTarget: e.target.value })}
+                    className={`w-full px-4 py-3 rounded-xl text-sm border outline-none transition-all ${t(
+                      'bg-white/[0.06] border-white/10 text-white placeholder:text-gray-500 focus:border-brand-red',
+                      'bg-[#f1f3f7] border-[#e2e5eb] text-slate-800 placeholder:text-slate-400 focus:border-brand-red focus:bg-white'
+                    )}`}
+                  />
+                </div>
+
+                {/* Footer Buttons */}
+                <div className="flex items-center justify-end gap-3 pt-3 border-t border-gray-100 dark:border-white/10">
+                  <button
+                    type="button"
+                    onClick={() => setGoalModalOpen(false)}
+                    className={`px-6 py-2.5 rounded-xl text-xs font-bold transition-all border ${t(
+                      'bg-white/10 hover:bg-white/15 text-gray-300 border-white/10',
+                      'bg-[#eef1f6] hover:bg-[#e2e6ed] text-slate-700 border-[#d8dce6]'
+                    )}`}
+                  >
+                    Close
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={submittingAction}
+                    className="px-6 py-2.5 rounded-xl text-xs font-bold text-white bg-[#e01625] hover:bg-[#c0101d] shadow-md shadow-red-600/30 transition-all hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50"
+                  >
+                    Update
+                  </button>
+                </div>
+              </form>
+            </div>
           </div>
         </div>
       )}
@@ -2482,11 +2503,10 @@ export default function ReferralDashboard({
                         <td className="p-3 text-right font-mono text-brand-red font-bold">{r.commissionRate}%</td>
                         <td className="p-3 text-right font-mono text-emerald-400 font-bold">₹{formatINR(r.commissionAmount)}</td>
                         <td className="p-3 text-center">
-                          <span className={`inline-block px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider ${
-                            r.commissionStatus === 'paid'
-                              ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30'
-                              : 'bg-amber-500/15 text-amber-400 border border-amber-500/30'
-                          }`}>
+                          <span className={`inline-block px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider ${r.commissionStatus === 'paid'
+                            ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30'
+                            : 'bg-amber-500/15 text-amber-400 border border-amber-500/30'
+                            }`}>
                             {r.commissionStatus}
                           </span>
                         </td>
@@ -2598,11 +2618,10 @@ export default function ReferralDashboard({
                         <td className="p-3 text-right font-mono text-brand-red font-bold">{r.commissionRate}%</td>
                         <td className="p-3 text-right font-mono text-emerald-400 font-bold">₹{formatINR(r.commissionAmount)}</td>
                         <td className="p-3 text-center">
-                          <span className={`inline-block px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider ${
-                            r.commissionStatus === 'paid'
-                              ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30'
-                              : 'bg-amber-500/15 text-amber-400 border border-amber-500/30'
-                          }`}>
+                          <span className={`inline-block px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider ${r.commissionStatus === 'paid'
+                            ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30'
+                            : 'bg-amber-500/15 text-amber-400 border border-amber-500/30'
+                            }`}>
                             {r.commissionStatus}
                           </span>
                         </td>
@@ -2714,11 +2733,10 @@ export default function ReferralDashboard({
                         <td className="p-3 text-right font-mono text-brand-red font-bold">{r.commissionRate}%</td>
                         <td className="p-3 text-right font-mono text-emerald-400 font-bold">₹{formatINR(r.commissionAmount)}</td>
                         <td className="p-3 text-center">
-                          <span className={`inline-block px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider ${
-                            r.commissionStatus === 'paid'
-                              ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30'
-                              : 'bg-amber-500/15 text-amber-400 border border-amber-500/30'
-                          }`}>
+                          <span className={`inline-block px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider ${r.commissionStatus === 'paid'
+                            ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30'
+                            : 'bg-amber-500/15 text-amber-400 border border-amber-500/30'
+                            }`}>
                             {r.commissionStatus}
                           </span>
                         </td>
@@ -2830,11 +2848,10 @@ export default function ReferralDashboard({
                         <td className="p-3 text-right font-mono text-brand-red font-bold">{r.commissionRate}%</td>
                         <td className="p-3 text-right font-mono text-emerald-400 font-bold">₹{formatINR(r.commissionAmount)}</td>
                         <td className="p-3 text-center">
-                          <span className={`inline-block px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider ${
-                            r.commissionStatus === 'paid'
-                              ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30'
-                              : 'bg-amber-500/15 text-amber-400 border border-amber-500/30'
-                          }`}>
+                          <span className={`inline-block px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider ${r.commissionStatus === 'paid'
+                            ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30'
+                            : 'bg-amber-500/15 text-amber-400 border border-amber-500/30'
+                            }`}>
                             {r.commissionStatus}
                           </span>
                         </td>
@@ -2891,8 +2908,8 @@ export default function ReferralDashboard({
                       {partnerRole === 'MCP'
                         ? 'Master Channel Partner Agreement'
                         : partnerRole === 'CPL'
-                        ? 'Channel Partner Agreement'
-                        : 'Investor Referral Partner Agreement'}
+                          ? 'Channel Partner Agreement'
+                          : 'Investor Referral Partner Agreement'}
                     </span>
                     <span className="text-[10px] uppercase font-bold px-2 py-0.5 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-emerald-400">
                       Active
@@ -3018,28 +3035,22 @@ export default function ReferralDashboard({
                     </thead>
                     <tbody className={`divide-y ${t('divide-white/[0.05]', 'divide-gray-100')}`}>
                       <tr>
-                        <td className="p-3 font-semibold text-white">Tier 1 — Introductory</td>
-                        <td className="p-3 text-gray-300">₹1,00,000 to ₹9,99,999</td>
-                        <td className="p-3 text-right font-mono font-bold text-brand-red">1.0%</td>
+                        <td className="p-3 font-semibold text-white">Sale of Associate Channel Partner</td>
+                        <td className="p-3 text-gray-300">₹1,00,00,000 to ₹5,00,00,000</td>
+                        <td className="p-3 text-right font-mono font-bold text-brand-red">3.00%</td>
                         <td className="p-3 text-right text-gray-400">2% Sec. 194H</td>
                       </tr>
                       <tr>
-                        <td className="p-3 font-semibold text-white">Tier 2 — Growth Volume</td>
-                        <td className="p-3 text-gray-300">₹10,00,000 to ₹24,99,999</td>
-                        <td className="p-3 text-right font-mono font-bold text-brand-red">2.0%</td>
-                        <td className="p-3 text-right text-gray-400">2% Sec. 194H</td>
-                      </tr>
-                      <tr>
-                        <td className="p-3 font-semibold text-white">Tier 3 — High Net Worth</td>
-                        <td className="p-3 text-gray-300">₹25,00,000 and Above</td>
-                        <td className="p-3 text-right font-mono font-bold text-brand-red">2.5% – 3.0%</td>
+                        <td className="p-3 font-semibold text-white">Sale of Associate Channel Partner</td>
+                        <td className="p-3 text-gray-300">₹5,00,00,000 to Above</td>
+                        <td className="p-3 text-right font-mono font-bold text-brand-red">4.00%</td>
                         <td className="p-3 text-right text-gray-400">2% Sec. 194H</td>
                       </tr>
                       {partnerRole === 'MCP' && (
                         <tr className="bg-red-500/5">
-                          <td className="p-3 font-semibold text-amber-300">Master Override (Sub-CP)</td>
-                          <td className="p-3 text-gray-300">All Sub-Channel Partner Network Volume</td>
-                          <td className="p-3 text-right font-mono font-bold text-amber-400">0.5% – 1.0%</td>
+                          <td className="p-3 font-semibold text-amber-300">Sale of Master Channel Partner</td>
+                          <td className="p-3 text-gray-300">Any Investment</td>
+                          <td className="p-3 text-right font-mono font-bold text-amber-400">0.50%</td>
                           <td className="p-3 text-right text-gray-400">2% Sec. 194H</td>
                         </tr>
                       )}
