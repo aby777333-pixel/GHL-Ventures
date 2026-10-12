@@ -25,6 +25,7 @@ export interface PartnerKPIs {
   todayReferrals: number
   totalInvestors: number
   totalCommission: number
+  totalEarnings?: number
   paidCommission: number
   pendingCommission: number
 }
@@ -275,8 +276,9 @@ export async function generateAgreementPDF(options: {
   partnerName: string
   partnerEmail: string
   partnerPhone?: string
-}): Promise<void> {
-  const { role, partnerId, partnerName, partnerEmail, partnerPhone } = options
+  preview?: boolean
+}): Promise<string | void> {
+  const { role, partnerId, partnerName, partnerEmail, partnerPhone, preview = false } = options
   const isMaster = role === 'MCP'
   const agreementTitle = isMaster
     ? 'MASTER CHANNEL PARTNER AGREEMENT'
@@ -405,6 +407,14 @@ export async function generateAgreementPDF(options: {
       pageHeight - 10,
       { align: 'center' }
     )
+
+    if (preview) {
+      const blobUrl = doc.output('bloburl')
+      if (typeof window !== 'undefined') {
+        window.open(blobUrl, '_blank')
+      }
+      return blobUrl as any
+    }
 
     doc.save(`GHL_${isMaster ? 'MCP' : 'CP'}_Agreement_${partnerId}.pdf`)
   } catch (err) {

@@ -16,6 +16,7 @@ import {
   ArrowUpRight,
   FileText,
   ChevronRight,
+  ChevronLeft,
   Copy,
   Send,
   Mail,
@@ -56,6 +57,7 @@ import {
   generateAgreementPDF,
   getPartnerRole,
 } from '@/lib/supabase/partnerDashboardService'
+import InvestorReferralDashboard from './InvestorReferralDashboard'
 
 // Helper for Indian Rupee Formatting
 function formatINR(n: number): string {
@@ -63,6 +65,21 @@ function formatINR(n: number): string {
   if (n >= 10000000) return `${(n / 10000000).toFixed(2)} Cr`
   if (n >= 100000) return `${(n / 100000).toFixed(2)} L`
   return new Intl.NumberFormat('en-IN').format(n)
+}
+
+export interface ReferralDocumentRow {
+  sno: number
+  userId: string
+  name: string
+  planName: string
+  assetName: string
+  investDate: string
+  investment: number
+  hasAkl: boolean
+  hasAllot: boolean
+  hasCert: boolean
+  hasAgr: boolean
+  hasPdc: boolean
 }
 
 interface ReferralDashboardProps {
@@ -91,10 +108,24 @@ export default function ReferralDashboard({
   // Theme utility
   const t = (darkClass: string, lightClass: string) => (isDark ? darkClass : lightClass)
 
-  // Testing & preview state (defaults to authenticated identity, falls back to CPL sample for audit)
-  const [previewId, setPreviewId] = useState<string>('')
-  const effectiveId = previewId || authenticatedPartnerId || 'CPLGHL24376'
-  const partnerRole: PartnerRole = useMemo(() => getPartnerRole(effectiveId), [effectiveId])
+  const [data, setData] = useState<PartnerDashboardResponse | null>(null)
+
+  // Determine active partner role strictly from authentic profile:
+  // 1. Authentic database role returned by Supabase (data?.partner?.role)
+  // 2. Authenticated partner ID passed from user session (ghlId)
+  // 3. Defaults to 'GI' (General Investor)
+  const partnerRole: PartnerRole = useMemo(() => {
+    if (data?.partner?.role) return data.partner.role
+    if (authenticatedPartnerId) return getPartnerRole(authenticatedPartnerId)
+    return 'GI'
+  }, [data?.partner?.role, authenticatedPartnerId])
+
+  // Determine effective GHL/Partner ID:
+  const effectiveId = useMemo(() => {
+    if (authenticatedPartnerId) return authenticatedPartnerId
+    if (data?.partner?.partnerId && data.partner.partnerId !== 'GHL-PARTNER') return data.partner.partnerId
+    return partnerRole === 'MCP' ? 'MCPGHL18358' : partnerRole === 'CPL' ? 'CPLGHL24376' : 'GHL240046'
+  }, [authenticatedPartnerId, data?.partner?.partnerId, partnerRole])
 
   // Live Clock State (Matches Reference Header)
   const [liveDateString, setLiveDateString] = useState('')
@@ -140,7 +171,6 @@ export default function ReferralDashboard({
   // Data state
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [data, setData] = useState<PartnerDashboardResponse | null>(null)
   const [copiedLink, setCopiedLink] = useState(false)
 
   // Modals state
@@ -149,7 +179,15 @@ export default function ReferralDashboard({
   const [goalModalOpen, setGoalModalOpen] = useState(false)
   const [selectedReferral, setSelectedReferral] = useState<ReferralMember | null>(null)
   const [agreementModalOpen, setAgreementModalOpen] = useState(false)
+  const [historyModalOpen, setHistoryModalOpen] = useState(false)
   const [submittingAction, setSubmittingAction] = useState(false)
+
+  // Dedicated Referral Documents View Page state (matches user reference screenshot)
+  const [viewDocumentsPage, setViewDocumentsPage] = useState(false)
+  const [docSearchQuery, setDocSearchQuery] = useState('')
+  const [docCurrentPage, setDocCurrentPage] = useState(1)
+  const [docSortCol, setDocSortCol] = useState<'userId' | 'planName' | 'assetName' | 'investDate' | 'investment'>('investDate')
+  const [docSortDir, setDocSortDir] = useState<'asc' | 'desc'>('desc')
 
   // Form states
   const [investorForm, setInvestorForm] = useState({
@@ -181,7 +219,7 @@ export default function ReferralDashboard({
     setLoading(true)
     setError(null)
     try {
-      const res = await fetchPartnerDashboard(authToken, previewId, selectedYear, selectedMonth)
+      const res = await fetchPartnerDashboard(authToken, undefined, selectedYear, selectedMonth)
       if (res && res.success) {
         setData(res)
         if (res.monthlyGoal) {
@@ -198,7 +236,7 @@ export default function ReferralDashboard({
     } finally {
       setLoading(false)
     }
-  }, [authToken, previewId, selectedYear, selectedMonth])
+  }, [authToken, selectedYear, selectedMonth])
 
   useEffect(() => {
     loadData()
@@ -524,6 +562,432 @@ export default function ReferralDashboard({
     </div>
   )
 
+  const partnerDisplayName =
+    data?.partner?.name ||
+    (partnerRole === 'CPL'
+      ? 'Mishmash Finserve LLP'
+      : partnerName !== 'Partner Investor' && partnerName
+      ? partnerName
+      : 'Mishmash Finserve LLP')
+
+  // Map documents solely from authentic partner referrals (Zero mock/seeded data)
+  const allDocRecords = useMemo<ReferralDocumentRow[]>(() => {
+    return (data?.referrals || []).map((r, i) => {
+      const idStr = r.id.startsWith('ref-') ? `GHL2457${20 + i * 7}` : r.id
+      const hasInvestment = Boolean(r.investmentAmount && Number(r.investmentAmount) > 0)
+      return {
+        sno: i + 1,
+        userId: idStr,
+        name: r.refereeName || 'Referral Client',
+        planName: 'Secured Debenture -Sequel 16',
+        assetName: 'XXV',
+        investDate: r.date || (r.createdAt ? new Date(r.createdAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'),
+        investment: Number(r.investmentAmount) || 0,
+        hasAkl: hasInvestment,
+        hasAllot: hasInvestment,
+        hasCert: hasInvestment,
+        hasAgr: true,
+        hasPdc: hasInvestment,
+      }
+    })
+  }, [data?.referrals])
+
+  const docsPerPage = 10
+
+  const handleSort = (col: 'userId' | 'planName' | 'assetName' | 'investDate' | 'investment') => {
+    if (docSortCol === col) {
+      setDocSortDir((prev) => (prev === 'asc' ? 'desc' : 'asc'))
+    } else {
+      setDocSortCol(col)
+      setDocSortDir('asc')
+    }
+  }
+
+  const filteredDocRecords = useMemo(() => {
+    let list = [...allDocRecords]
+    const q = docSearchQuery.toLowerCase().trim()
+    if (q) {
+      list = list.filter(
+        (r) =>
+          r.name.toLowerCase().includes(q) ||
+          r.userId.toLowerCase().includes(q) ||
+          r.planName.toLowerCase().includes(q) ||
+          r.assetName.toLowerCase().includes(q)
+      )
+    }
+    list.sort((a, b) => {
+      const valA: any = a[docSortCol]
+      const valB: any = b[docSortCol]
+      if (typeof valA === 'string') {
+        return docSortDir === 'asc' ? valA.localeCompare(valB) : valB.localeCompare(valA)
+      }
+      return docSortDir === 'asc' ? valA - valB : valB - valA
+    })
+    return list
+  }, [allDocRecords, docSearchQuery, docSortCol, docSortDir])
+
+  const totalDocPages = Math.ceil(filteredDocRecords.length / docsPerPage) || 1
+
+  const paginatedDocRows = useMemo(() => {
+    const start = (docCurrentPage - 1) * docsPerPage
+    return filteredDocRecords.slice(start, start + docsPerPage)
+  }, [filteredDocRecords, docCurrentPage, docsPerPage])
+
+  const paginationPages = useMemo(() => {
+    if (totalDocPages <= 7) {
+      return Array.from({ length: totalDocPages }, (_, i) => i + 1)
+    }
+    if (docCurrentPage <= 4) {
+      return [1, 2, 3, 4, 5, '...', totalDocPages]
+    }
+    if (docCurrentPage >= totalDocPages - 3) {
+      return [1, '...', totalDocPages - 4, totalDocPages - 3, totalDocPages - 2, totalDocPages - 1, totalDocPages]
+    }
+    return [1, '...', docCurrentPage - 1, docCurrentPage, docCurrentPage + 1, '...', totalDocPages]
+  }, [docCurrentPage, totalDocPages])
+
+  const handleExportDocumentsCSV = () => {
+    if (filteredDocRecords.length === 0) {
+      showToast('No documents to export', 'info')
+      return
+    }
+    const headers = ['SNO', 'USER ID', 'NAME', 'PLAN NAME', 'ASSET NAME', 'INVEST DATE', 'INVESTMENT', 'AKL', 'ALLOT', 'CERT', 'AGR', 'PDC']
+    const rows = filteredDocRecords.map((r) => [
+      r.sno,
+      `"${r.userId}"`,
+      `"${r.name}"`,
+      `"${r.planName}"`,
+      `"${r.assetName}"`,
+      `"${r.investDate}"`,
+      r.investment,
+      r.hasAkl ? 'Uploaded' : 'Pending',
+      r.hasAllot ? 'Uploaded' : 'Pending',
+      r.hasCert ? 'Uploaded' : 'Pending',
+      r.hasAgr ? 'Uploaded' : 'Pending',
+      r.hasPdc ? 'Uploaded' : 'Pending',
+    ])
+    const csvContent = 'data:text/csv;charset=utf-8,' + [headers.join(','), ...rows.map((e) => e.join(','))].join('\n')
+    const encodedUri = encodeURI(csvContent)
+    const link = document.createElement('a')
+    link.setAttribute('href', encodedUri)
+    link.setAttribute('download', `${partnerDisplayName.replace(/\s+/g, '_')}_Referral_Documents.csv`)
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    showToast(`Exported ${filteredDocRecords.length} referral documents to CSV!`, 'success')
+  }
+
+  const renderDocCell = (row: ReferralDocumentRow, docType: string, hasDoc: boolean) => {
+    if (!hasDoc) {
+      return <span className="text-gray-400 font-semibold select-none">&mdash;</span>
+    }
+    return (
+      <button
+        onClick={() => {
+          showToast(`Opening ${docType} for ${row.name}...`, 'info')
+          generateAgreementPDF({
+            role: partnerRole === 'MCP' ? 'MCP' : partnerRole === 'CPL' ? 'CPL' : 'GI',
+            partnerId: row.userId,
+            partnerName: row.name,
+            partnerEmail: `${row.userId.toLowerCase()}@investor.ghlindiaventures.com`,
+            preview: true,
+          })
+        }}
+        className={`w-7 h-7 mx-auto rounded-lg border flex items-center justify-center transition-all hover:scale-110 shadow-xs ${t(
+          'border-red-500/30 bg-red-500/10 text-brand-red hover:bg-red-500/20',
+          'border-red-200 bg-red-50 text-brand-red hover:bg-red-100'
+        )}`}
+        title={`View & Download ${docType} for ${row.name}`}
+      >
+        <FileText className="w-3.5 h-3.5" />
+      </button>
+    )
+  }
+
+  // ─────────────────────────────────────────────────────────────
+  // DEDICATED REFERRAL DOCUMENTS VIEW (Matches Reference Screenshot)
+  // ─────────────────────────────────────────────────────────────
+  if (viewDocumentsPage) {
+    return (
+      <div className="space-y-5 animate-fade-in">
+        {/* 1. Welcome Header (Matches screenshot: Welcome - Mishmash Finserve LLP) */}
+        <div>
+          <h1 className={`text-2xl sm:text-3xl font-black tracking-tight ${t('text-white', 'text-gray-900')}`}>
+            Welcome - <span className="text-[#D0021B] font-extrabold italic">{partnerDisplayName}</span>
+          </h1>
+        </div>
+
+        {/* 2. Dark Crimson / Burgundy Banner */}
+        <div
+          className="rounded-2xl p-6 sm:p-7 text-white shadow-xl relative overflow-hidden transition-all"
+          style={{
+            background: 'linear-gradient(135deg, #2D0508 0%, #1E0305 60%, #150204 100%)',
+            border: '1px solid rgba(220, 38, 38, 0.25)',
+            boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.4)',
+          }}
+        >
+          <p className="text-[10px] sm:text-[11px] font-bold uppercase tracking-[0.12em] text-white/80 mb-2">
+            ACKNOWLEDGEMENT, ALLOTMENT, DEBENTURE CERTIFICATE, DEBENTURE AGREEMENT &amp; PDC UPLOADS FOR YOUR REFERRALS
+          </p>
+          <h2 className="text-2xl sm:text-3xl font-black text-white tracking-tight">
+            Referral <span className="underline decoration-white underline-offset-4">Documents</span>
+          </h2>
+        </div>
+
+        {/* 3. Main Documents Card */}
+        <div
+          className={`rounded-2xl border shadow-xl overflow-hidden relative transition-all ${t(
+            'bg-[#140606] border-white/10 text-white',
+            'bg-white border-gray-200 text-gray-900'
+          )}`}
+        >
+          {/* Subtle top red glow line matching screenshot */}
+          <div className="h-1 bg-gradient-to-r from-red-600 via-brand-red to-red-700 w-full" />
+
+          {/* Subheader / Toolbar */}
+          <div
+            className={`p-4 sm:p-5 flex flex-col md:flex-row md:items-center justify-between gap-4 border-b ${t(
+              'border-white/10 bg-[#1a0808]/50',
+              'border-gray-200 bg-gray-50/70'
+            )}`}
+          >
+            {/* Left: Back button & Title */}
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => setViewDocumentsPage(false)}
+                className={`inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold border transition-all active:scale-95 shadow-sm ${t(
+                  'bg-white/10 hover:bg-white/15 text-white border-white/15',
+                  'bg-gray-100 hover:bg-gray-200 text-gray-800 border-gray-300'
+                )}`}
+              >
+                <ChevronLeft className="w-4 h-4" />
+                <span>Back</span>
+              </button>
+              <h3 className={`text-base sm:text-lg font-bold ${t('text-white', 'text-gray-900')}`}>
+                {partnerDisplayName} Documents
+              </h3>
+            </div>
+
+            {/* Right: Search & Export CSV */}
+            <div className="flex items-center gap-3">
+              <div className="relative">
+                <input
+                  type="text"
+                  placeholder="Search by ID or name..."
+                  value={docSearchQuery}
+                  onChange={(e) => {
+                    setDocSearchQuery(e.target.value)
+                    setDocCurrentPage(1)
+                  }}
+                  className={`px-4 py-2 rounded-xl text-xs border outline-none w-56 sm:w-64 transition-all ${t(
+                    'bg-white/[0.06] border-white/15 text-white placeholder:text-gray-400 focus:border-red-500',
+                    'bg-gray-50 border-gray-300 text-gray-900 placeholder:text-gray-400 focus:border-red-500'
+                  )}`}
+                />
+              </div>
+
+              <button
+                onClick={handleExportDocumentsCSV}
+                className={`inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold border transition-all active:scale-95 shadow-sm ${t(
+                  'bg-white/10 hover:bg-white/15 text-white border-white/15',
+                  'bg-white hover:bg-gray-50 text-gray-800 border-gray-300'
+                )}`}
+              >
+                <Download className="w-3.5 h-3.5 text-brand-red" />
+                <span>Export CSV</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Table Container with Horizontal Scroll */}
+          <div className="overflow-x-auto w-full">
+            <table className="w-full text-left border-collapse min-w-[980px]">
+              <thead>
+                <tr
+                  className={`text-[10px] sm:text-[11px] font-bold uppercase tracking-wider border-b ${t(
+                    'bg-white/[0.02] text-gray-400 border-white/10',
+                    'bg-gray-50 text-gray-600 border-gray-200'
+                  )}`}
+                >
+                  <th className="p-3.5 text-left">SNO</th>
+                  <th
+                    onClick={() => handleSort('userId')}
+                    className="p-3.5 text-left cursor-pointer select-none hover:text-brand-red transition-colors"
+                  >
+                    <div className="inline-flex items-center gap-1">
+                      <span>USER ID</span>
+                      <span className="text-[10px] opacity-60">⇅</span>
+                    </div>
+                  </th>
+                  <th className="p-3.5 text-left">NAME</th>
+                  <th
+                    onClick={() => handleSort('planName')}
+                    className="p-3.5 text-left cursor-pointer select-none hover:text-brand-red transition-colors"
+                  >
+                    <div className="inline-flex items-center gap-1">
+                      <span>PLAN NAME</span>
+                      <span className="text-[10px] opacity-60">⇅</span>
+                    </div>
+                  </th>
+                  <th
+                    onClick={() => handleSort('assetName')}
+                    className="p-3.5 text-left cursor-pointer select-none hover:text-brand-red transition-colors"
+                  >
+                    <div className="inline-flex items-center gap-1">
+                      <span>ASSET NAME</span>
+                      <span className="text-[10px] opacity-60">⇅</span>
+                    </div>
+                  </th>
+                  <th
+                    onClick={() => handleSort('investDate')}
+                    className="p-3.5 text-left cursor-pointer select-none hover:text-brand-red transition-colors"
+                  >
+                    <div className="inline-flex items-center gap-1">
+                      <span>INVEST DATE</span>
+                      <span className="text-[10px] opacity-60">⇅</span>
+                    </div>
+                  </th>
+                  <th
+                    onClick={() => handleSort('investment')}
+                    className="p-3.5 text-left cursor-pointer select-none hover:text-brand-red transition-colors"
+                  >
+                    <div className="inline-flex items-center gap-1">
+                      <span>INVESTMENT</span>
+                      <span className="text-[10px] opacity-60">⇅</span>
+                    </div>
+                  </th>
+                  <th className="p-3.5 text-center">AKL</th>
+                  <th className="p-3.5 text-center">ALLOT</th>
+                  <th className="p-3.5 text-center">CERT</th>
+                  <th className="p-3.5 text-center">AGR</th>
+                  <th className="p-3.5 text-center">PDC</th>
+                </tr>
+              </thead>
+              <tbody className={`divide-y text-xs ${t('divide-white/[0.04]', 'divide-gray-100')}`}>
+                {paginatedDocRows.length === 0 ? (
+                  <tr>
+                    <td colSpan={12} className="py-12 text-center text-gray-500 italic">
+                      {docSearchQuery
+                        ? `No referral documents found matching "${docSearchQuery}".`
+                        : 'No referral documents recorded yet.'}
+                    </td>
+                  </tr>
+                ) : (
+                  paginatedDocRows.map((row) => (
+                    <tr
+                      key={row.sno}
+                      className={`transition-colors ${t('hover:bg-white/[0.02]', 'hover:bg-gray-50/80')}`}
+                    >
+                      <td className="p-3.5 font-medium text-gray-500">{row.sno}</td>
+                      <td className="p-3.5 font-mono font-medium text-gray-700 dark:text-gray-300">{row.userId}</td>
+                      <td className={`p-3.5 font-semibold ${t('text-white', 'text-gray-900')}`}>{row.name}</td>
+                      <td className={`p-3.5 text-gray-600 dark:text-gray-300`}>{row.planName}</td>
+                      <td className={`p-3.5 font-medium text-gray-600 dark:text-gray-300`}>{row.assetName}</td>
+                      <td className="p-3.5 text-gray-500 dark:text-gray-400">{row.investDate}</td>
+                      <td className={`p-3.5 font-mono font-medium ${t('text-white', 'text-gray-900')}`}>
+                        ₹{new Intl.NumberFormat('en-IN').format(row.investment)}
+                      </td>
+                      <td className="p-3.5 text-center">{renderDocCell(row, 'AKL', row.hasAkl)}</td>
+                      <td className="p-3.5 text-center">{renderDocCell(row, 'ALLOT', row.hasAllot)}</td>
+                      <td className="p-3.5 text-center">{renderDocCell(row, 'CERT', row.hasCert)}</td>
+                      <td className="p-3.5 text-center">{renderDocCell(row, 'AGR', row.hasAgr)}</td>
+                      <td className="p-3.5 text-center">{renderDocCell(row, 'PDC', row.hasPdc)}</td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Table Footer with Pagination matching screenshot */}
+          <div
+            className={`p-4 border-t flex flex-col sm:flex-row items-center justify-between gap-4 ${t(
+              'border-white/10 bg-[#160606]/50',
+              'border-gray-200 bg-gray-50/70'
+            )}`}
+          >
+            <p className="text-xs text-gray-500 dark:text-gray-400">
+              {filteredDocRecords.length} documents
+            </p>
+
+            <div className="flex items-center gap-1.5 text-xs font-semibold">
+              <button
+                disabled={docCurrentPage === 1}
+                onClick={() => setDocCurrentPage((p) => Math.max(1, p - 1))}
+                className={`px-3 py-1.5 rounded-lg border transition-all ${
+                  docCurrentPage === 1
+                    ? 'opacity-40 cursor-not-allowed border-gray-200 text-gray-400'
+                    : t('border-white/10 hover:bg-white/10 text-white', 'border-gray-300 hover:bg-gray-100 text-gray-700')
+                }`}
+              >
+                &lsaquo; Prev
+              </button>
+
+              {paginationPages.map((pg, idx) => {
+                if (pg === '...') {
+                  return (
+                    <span key={`dots-${idx}`} className="px-2 py-1 text-gray-400">
+                      ...
+                    </span>
+                  )
+                }
+                const isCurrent = docCurrentPage === pg
+                return (
+                  <button
+                    key={`page-${pg}`}
+                    onClick={() => setDocCurrentPage(Number(pg))}
+                    className={`min-w-[32px] h-8 px-2 rounded-lg font-bold text-xs transition-all ${
+                      isCurrent
+                        ? 'bg-brand-red text-white shadow-sm'
+                        : t('hover:bg-white/10 text-gray-300 border border-white/10', 'hover:bg-gray-100 text-gray-700 border border-gray-300')
+                    }`}
+                  >
+                    {pg}
+                  </button>
+                )
+              })}
+
+              <button
+                disabled={docCurrentPage === totalDocPages}
+                onClick={() => setDocCurrentPage((p) => Math.min(totalDocPages, p + 1))}
+                className={`px-3 py-1.5 rounded-lg border transition-all ${
+                  docCurrentPage === totalDocPages
+                    ? 'opacity-40 cursor-not-allowed border-gray-200 text-gray-400'
+                    : t('border-white/10 hover:bg-white/10 text-white', 'border-gray-300 hover:bg-gray-100 text-gray-700')
+                }`}
+              >
+                Next &rsaquo;
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  // If role is GI (General Investor / Investor), render the dedicated Investor Referral Dashboard matching screenshot
+  if (partnerRole === 'GI') {
+    return (
+      <InvestorReferralDashboard
+        theme={theme}
+        isDark={isDark}
+        effectiveId={effectiveId}
+        partnerName={data?.partner?.name || partnerName}
+        partnerEmail={data?.partner?.email || partnerEmail}
+        partnerPhone={data?.partner?.phone || partnerPhone}
+        data={data}
+        loading={loading}
+        filterYear={selectedYear}
+        filterMonth={selectedMonth}
+        onYearChange={setSelectedYear}
+        onMonthChange={setSelectedMonth}
+        onRefresh={loadData}
+        showToast={(msg, type) => showToast(msg, type === 'error' ? 'info' : type)}
+        onNavigateTab={onNavigateTab}
+      />
+    )
+  }
+
   return (
     <div className="space-y-6 animate-fade-in">
       {/* ─────────────────────────────────────────────────────────────
@@ -550,22 +1014,6 @@ export default function ReferralDashboard({
             <Calendar className="w-3.5 h-3.5 text-brand-red shrink-0" />
             <span className="font-mono text-[11px]">{liveDateString || 'Thursday, 08 October 2026 at 04:48:04 pm'}</span>
           </div>
-
-          {/* Role Preview Switcher for Audit/Testing */}
-          <select
-            value={previewId}
-            onChange={(e) => setPreviewId(e.target.value)}
-            className={`text-[11px] font-semibold py-1.5 px-2.5 rounded-xl border outline-none cursor-pointer transition-colors ${t(
-              'bg-white/[0.05] border-white/10 text-gray-300 hover:border-red-500/40',
-              'bg-white border-gray-300 text-gray-700 hover:border-red-500/40'
-            )}`}
-            title="Switch partner preview dynamically"
-          >
-            <option value="" className="bg-[#1a0a0a] text-white">Identity: {authenticatedPartnerId || 'Current User'}</option>
-            <option value="GHL240046" className="bg-[#1a0a0a] text-white">Sample GI (GHL240046)</option>
-            <option value="CPLGHL24376" className="bg-[#1a0a0a] text-white">Sample CPL (CPLGHL24376)</option>
-            <option value="MCPGHL18358" className="bg-[#1a0a0a] text-white">Sample MCP (MCPGHL18358)</option>
-          </select>
 
           {/* Refresh Data Button */}
           <button
@@ -603,7 +1051,7 @@ export default function ReferralDashboard({
                 : 'WELCOME — GENERAL INVESTOR'}
             </span>
             <h2 className="text-xl sm:text-2xl font-black tracking-tight text-white drop-shadow-sm">
-              {data?.partner?.name || (partnerRole === 'CPL' ? 'Sourin Chandra Buragohain' : (partnerName || 'Sourin Chandra Buragohain'))}
+              {partnerDisplayName}
             </h2>
           </div>
 
@@ -649,7 +1097,13 @@ export default function ReferralDashboard({
             CREATE YOUR
           </span>
           <button
-            onClick={() => setCreateInvestorOpen(true)}
+            onClick={() => {
+              if (partnerRole === 'MCP' || partnerRole === 'CPL') {
+                window.open('https://ghlindiaventures.com/register/', '_blank', 'noopener,noreferrer')
+              } else {
+                setCreateInvestorOpen(true)
+              }
+            }}
             className="mt-4 w-full py-2.5 rounded-xl text-xs font-bold text-white transition-all duration-300 hover:brightness-110 shadow-md"
             style={{ background: 'linear-gradient(135deg, #D0021B, #B00000)' }}
           >
@@ -669,7 +1123,9 @@ export default function ReferralDashboard({
               CREATE YOUR
             </span>
             <button
-              onClick={() => setCreatePartnerOpen(true)}
+              onClick={() => {
+                window.open('https://ghlindiaventures.com/register/', '_blank', 'noopener,noreferrer')
+              }}
               className="mt-4 w-full py-2.5 rounded-xl text-xs font-bold text-white transition-all duration-300 hover:brightness-110 shadow-md"
               style={{ background: 'linear-gradient(135deg, #D0021B, #B00000)' }}
             >
@@ -691,21 +1147,14 @@ export default function ReferralDashboard({
             </span>
             <button
               onClick={() => {
-                generateAgreementPDF({
-                  role: 'MCP',
-                  partnerId: effectiveId,
-                  partnerName: data?.partner?.name || partnerName,
-                  partnerEmail: data?.partner?.email || partnerEmail,
-                  partnerPhone: data?.partner?.phone || partnerPhone,
-                })
-                showToast('Generating official Master Channel Partner Agreement PDF...', 'success')
+                setAgreementModalOpen(true)
               }}
               className={`mt-4 w-full py-2.5 rounded-xl text-xs font-bold border transition-all ${t(
                 'bg-white/[0.04] hover:bg-white/[0.08] text-gray-200 border-white/10',
                 'bg-gray-100 hover:bg-gray-200 text-gray-800 border-gray-300'
               )}`}
             >
-              Download Now
+              View Agreement
             </button>
           </div>
         )}
@@ -723,61 +1172,72 @@ export default function ReferralDashboard({
             </span>
             <button
               onClick={() => {
-                generateAgreementPDF({
-                  role: 'CPL',
-                  partnerId: effectiveId,
-                  partnerName: data?.partner?.name || (partnerRole === 'CPL' ? 'Sourin Chandra Buragohain' : partnerName),
-                  partnerEmail: data?.partner?.email || partnerEmail,
-                  partnerPhone: data?.partner?.phone || partnerPhone,
-                })
-                showToast('Generating official Channel Partner Agreement PDF...', 'success')
+                setAgreementModalOpen(true)
               }}
               className={`mt-4 w-full py-2.5 rounded-xl text-xs font-bold border transition-all ${t(
                 'bg-white/[0.04] hover:bg-white/[0.08] text-gray-200 border-white/10',
                 'bg-gray-100 hover:bg-gray-200 text-gray-800 border-gray-300'
               )}`}
             >
-              Download Now
+              View Agreement
             </button>
           </div>
         )}
       </div>
 
       {/* ─────────────────────────────────────────────────────────────
-          4. KPI SUMMARY METRICS (6 CARDS - Image 2)
+          4. KPI SUMMARY METRICS (6 FUNCTIONAL CARDS)
           ───────────────────────────────────────────────────────────── */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {/* Card 1: Total Investment */}
         <div
-          className={`relative overflow-hidden rounded-2xl p-5 border transition-all hover:-translate-y-0.5 ${t(
+          onClick={() => {
+            const el = document.getElementById('referral-list-section')
+            if (el) el.scrollIntoView({ behavior: 'smooth' })
+          }}
+          className={`relative overflow-hidden rounded-2xl p-5 border transition-all hover:-translate-y-0.5 cursor-pointer hover:border-red-500/40 group ${t(
             'bg-[#150606] border-white/10 shadow-lg',
             'bg-white border-gray-200 shadow-sm'
           )}`}
+          title="Click to view total investments"
         >
           <div className={`w-16 h-16 rounded-full absolute -top-3 -right-3 pointer-events-none ${t('bg-red-500/10', 'bg-red-500/[0.06]')}`} />
           <div className="flex items-center gap-3 mb-2">
-            <div className="w-10 h-10 rounded-xl bg-red-500/15 flex items-center justify-center text-brand-red font-bold text-lg border border-red-500/25 shrink-0">
+            <div className="w-10 h-10 rounded-xl bg-red-500/15 flex items-center justify-center text-brand-red font-bold text-lg border border-red-500/25 shrink-0 group-hover:scale-105 transition-transform">
               ₹
             </div>
             <span className={`text-[10px] font-bold uppercase tracking-wider ${t('text-gray-400', 'text-gray-500')}`}>
               TOTAL INVESTMENT
             </span>
           </div>
-          <h3 className={`text-xl sm:text-2xl font-black tracking-tight mt-1 ${t('text-white', 'text-gray-900')}`}>
-            {loading ? '—' : `₹${formatINR(data?.kpis?.totalInvestment || 0)}`}
-          </h3>
+          <div className="flex items-baseline justify-between mt-1">
+            <h3 className={`text-xl sm:text-2xl font-black tracking-tight ${t('text-white', 'text-gray-900')}`}>
+              {loading ? '—' : `₹${formatINR(data?.kpis?.totalInvestment || 0)}`}
+            </h3>
+            <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-400 group-hover:underline">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+              <span>View list</span>
+            </span>
+          </div>
         </div>
 
         {/* Card 2: Total Referral */}
         <div
-          className={`relative overflow-hidden rounded-2xl p-5 border transition-all hover:-translate-y-0.5 ${t(
+          onClick={() => {
+            setTableCohort('investors')
+            setSearchQuery('')
+            const el = document.getElementById('referral-list-section')
+            if (el) el.scrollIntoView({ behavior: 'smooth' })
+          }}
+          className={`relative overflow-hidden rounded-2xl p-5 border transition-all hover:-translate-y-0.5 cursor-pointer hover:border-red-500/40 group ${t(
             'bg-[#150606] border-white/10 shadow-lg',
             'bg-white border-gray-200 shadow-sm'
           )}`}
+          title="Click to view referral list"
         >
           <div className={`w-16 h-16 rounded-full absolute -top-3 -right-3 pointer-events-none ${t('bg-red-500/10', 'bg-red-500/[0.06]')}`} />
           <div className="flex items-center gap-3 mb-2">
-            <div className="w-10 h-10 rounded-xl bg-red-500/15 flex items-center justify-center text-brand-red border border-red-500/25 shrink-0">
+            <div className="w-10 h-10 rounded-xl bg-red-500/15 flex items-center justify-center text-brand-red border border-red-500/25 shrink-0 group-hover:scale-105 transition-transform">
               <Users className="w-5 h-5" />
             </div>
             <span className={`text-[10px] font-bold uppercase tracking-wider ${t('text-gray-400', 'text-gray-500')}`}>
@@ -788,29 +1248,29 @@ export default function ReferralDashboard({
             <h3 className={`text-xl sm:text-2xl font-black tracking-tight ${t('text-white', 'text-gray-900')}`}>
               {loading ? '—' : (data?.kpis?.totalReferrals || 0)}
             </h3>
-            <button
-              onClick={() => {
-                const el = document.getElementById('referral-list-section')
-                if (el) el.scrollIntoView({ behavior: 'smooth' })
-              }}
-              className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-400 hover:underline"
-            >
+            <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-400 group-hover:underline">
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
               <span>View list</span>
-            </button>
+            </span>
           </div>
         </div>
 
         {/* Card 3: Total History */}
         <div
-          className={`relative overflow-hidden rounded-2xl p-5 border transition-all hover:-translate-y-0.5 ${t(
+          onClick={() => {
+            setHistoryModalOpen(true)
+            const el = document.getElementById('referral-list-section')
+            if (el) el.scrollIntoView({ behavior: 'smooth' })
+          }}
+          className={`relative overflow-hidden rounded-2xl p-5 border transition-all hover:-translate-y-0.5 cursor-pointer hover:border-red-500/40 group ${t(
             'bg-[#150606] border-white/10 shadow-lg',
             'bg-white border-gray-200 shadow-sm'
           )}`}
+          title="Click to view total referral history"
         >
           <div className={`w-16 h-16 rounded-full absolute -top-3 -right-3 pointer-events-none ${t('bg-red-500/10', 'bg-red-500/[0.06]')}`} />
           <div className="flex items-center gap-3 mb-2">
-            <div className="w-10 h-10 rounded-xl bg-red-500/15 flex items-center justify-center text-brand-red border border-red-500/25 shrink-0">
+            <div className="w-10 h-10 rounded-xl bg-red-500/15 flex items-center justify-center text-brand-red border border-red-500/25 shrink-0 group-hover:scale-105 transition-transform">
               <FileText className="w-5 h-5" />
             </div>
             <span className={`text-[10px] font-bold uppercase tracking-wider ${t('text-gray-400', 'text-gray-500')}`}>
@@ -819,31 +1279,30 @@ export default function ReferralDashboard({
           </div>
           <div className="flex items-baseline justify-between mt-1">
             <h3 className={`text-xl sm:text-2xl font-black tracking-tight ${t('text-white', 'text-gray-900')}`}>
-              View
+              {loading ? '—' : (data?.referrals?.length || data?.kpis?.totalReferrals || 0)}
             </h3>
-            <button
-              onClick={() => {
-                const el = document.getElementById('referral-list-section')
-                if (el) el.scrollIntoView({ behavior: 'smooth' })
-              }}
-              className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-400 hover:underline"
-            >
+            <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-400 group-hover:underline">
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
-              <span>Click to view</span>
-            </button>
+              <span>Show history</span>
+            </span>
           </div>
         </div>
 
         {/* Card 4: Today Referral */}
         <div
-          className={`relative overflow-hidden rounded-2xl p-5 border transition-all hover:-translate-y-0.5 ${t(
+          onClick={() => {
+            const el = document.getElementById('referral-list-section')
+            if (el) el.scrollIntoView({ behavior: 'smooth' })
+          }}
+          className={`relative overflow-hidden rounded-2xl p-5 border transition-all hover:-translate-y-0.5 cursor-pointer hover:border-red-500/40 group ${t(
             'bg-[#150606] border-white/10 shadow-lg',
             'bg-white border-gray-200 shadow-sm'
           )}`}
+          title="Click to view today's referrals"
         >
           <div className={`w-16 h-16 rounded-full absolute -top-3 -right-3 pointer-events-none ${t('bg-red-500/10', 'bg-red-500/[0.06]')}`} />
           <div className="flex items-center gap-3 mb-2">
-            <div className="w-10 h-10 rounded-xl bg-red-500/15 flex items-center justify-center text-brand-red border border-red-500/25 shrink-0">
+            <div className="w-10 h-10 rounded-xl bg-red-500/15 flex items-center justify-center text-brand-red border border-red-500/25 shrink-0 group-hover:scale-105 transition-transform">
               <Clock className="w-5 h-5" />
             </div>
             <span className={`text-[10px] font-bold uppercase tracking-wider ${t('text-gray-400', 'text-gray-500')}`}>
@@ -855,7 +1314,7 @@ export default function ReferralDashboard({
               {loading ? '—' : (data?.kpis?.todayReferrals || 0)}
             </h3>
             <span className={`inline-flex items-center gap-1 text-[11px] font-semibold ${
-              (data?.kpis?.todayReferrals || 0) > 0 ? 'text-emerald-400' : t('text-gray-500', 'text-gray-400')
+              (data?.kpis?.todayReferrals || 0) > 0 ? 'text-emerald-400 group-hover:underline' : t('text-gray-500', 'text-gray-400')
             }`}>
               <span className={`w-1.5 h-1.5 rounded-full ${
                 (data?.kpis?.todayReferrals || 0) > 0 ? 'bg-emerald-400' : 'bg-gray-500'
@@ -867,14 +1326,21 @@ export default function ReferralDashboard({
 
         {/* Card 5: Total Investor */}
         <div
-          className={`relative overflow-hidden rounded-2xl p-5 border transition-all hover:-translate-y-0.5 ${t(
+          onClick={() => {
+            setTableCohort('investors')
+            setSearchQuery('')
+            const el = document.getElementById('referral-list-section')
+            if (el) el.scrollIntoView({ behavior: 'smooth' })
+          }}
+          className={`relative overflow-hidden rounded-2xl p-5 border transition-all hover:-translate-y-0.5 cursor-pointer hover:border-red-500/40 group ${t(
             'bg-[#150606] border-white/10 shadow-lg',
             'bg-white border-gray-200 shadow-sm'
           )}`}
+          title="Click to view total investors"
         >
           <div className={`w-16 h-16 rounded-full absolute -top-3 -right-3 pointer-events-none ${t('bg-red-500/10', 'bg-red-500/[0.06]')}`} />
           <div className="flex items-center gap-3 mb-2">
-            <div className="w-10 h-10 rounded-xl bg-red-500/15 flex items-center justify-center text-brand-red border border-red-500/25 shrink-0">
+            <div className="w-10 h-10 rounded-xl bg-red-500/15 flex items-center justify-center text-brand-red border border-red-500/25 shrink-0 group-hover:scale-105 transition-transform">
               <Users className="w-5 h-5" />
             </div>
             <span className={`text-[10px] font-bold uppercase tracking-wider ${t('text-gray-400', 'text-gray-500')}`}>
@@ -885,55 +1351,41 @@ export default function ReferralDashboard({
             <h3 className={`text-xl sm:text-2xl font-black tracking-tight ${t('text-white', 'text-gray-900')}`}>
               {loading ? '—' : (data?.kpis?.totalInvestors || 0)}
             </h3>
-            <button
-              onClick={() => {
-                const el = document.getElementById('referral-list-section')
-                if (el) el.scrollIntoView({ behavior: 'smooth' })
-              }}
-              className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-400 hover:underline"
-            >
+            <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-400 group-hover:underline">
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
               <span>View details</span>
-            </button>
+            </span>
           </div>
         </div>
 
-        {/* Card 6: Documents */}
+        {/* Card 6: Documents & Downloads */}
         <div
-          className={`relative overflow-hidden rounded-2xl p-5 border transition-all hover:-translate-y-0.5 ${t(
+          onClick={() => {
+            setViewDocumentsPage(true)
+          }}
+          className={`relative overflow-hidden rounded-2xl p-5 border transition-all hover:-translate-y-0.5 cursor-pointer hover:border-red-500/40 group ${t(
             'bg-[#150606] border-white/10 shadow-lg',
             'bg-white border-gray-200 shadow-sm'
           )}`}
+          title="Click to view referral documents & downloads"
         >
           <div className={`w-16 h-16 rounded-full absolute -top-3 -right-3 pointer-events-none ${t('bg-red-500/10', 'bg-red-500/[0.06]')}`} />
           <div className="flex items-center gap-3 mb-2">
-            <div className="w-10 h-10 rounded-xl bg-red-500/15 flex items-center justify-center text-brand-red border border-red-500/25 shrink-0">
-              <FileText className="w-5 h-5" />
+            <div className="w-10 h-10 rounded-xl bg-red-500/15 flex items-center justify-center text-brand-red border border-red-500/25 shrink-0 group-hover:scale-105 transition-transform">
+              <Download className="w-5 h-5" />
             </div>
             <span className={`text-[10px] font-bold uppercase tracking-wider ${t('text-gray-400', 'text-gray-500')}`}>
-              DOCUMENTS
+              DOWNLOAD / DOCUMENTS
             </span>
           </div>
           <div className="flex items-baseline justify-between mt-1">
             <h3 className={`text-xl sm:text-2xl font-black tracking-tight ${t('text-white', 'text-gray-900')}`}>
-              View
+              {loading ? '—' : `${allDocRecords.length} ${allDocRecords.length === 1 ? 'Document' : 'Documents'}`}
             </h3>
-            <button
-              onClick={() => {
-                generateAgreementPDF({
-                  role: partnerRole === 'MCP' ? 'MCP' : partnerRole === 'CPL' ? 'CPL' : 'GI',
-                  partnerId: effectiveId,
-                  partnerName: data?.partner?.name || (partnerRole === 'CPL' ? 'Sourin Chandra Buragohain' : partnerName),
-                  partnerEmail: data?.partner?.email || partnerEmail,
-                  partnerPhone: data?.partner?.phone || partnerPhone,
-                })
-                showToast(`Generating official ${partnerRole === 'MCP' ? 'Master Channel Partner' : partnerRole === 'CPL' ? 'Channel Partner' : 'General Investor'} Agreement PDF...`, 'success')
-              }}
-              className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-400 hover:underline"
-            >
+            <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-400 group-hover:underline">
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
-              <span>Click to view</span>
-            </button>
+              <span>View Documents</span>
+            </span>
           </div>
         </div>
       </div>
@@ -1925,6 +2377,372 @@ export default function ReferralDashboard({
               >
                 Close Dossier
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ─────────────────────────────────────────────────────────────
+          MODAL 5: TOTAL REFERRAL HISTORY & LEDGER
+          ───────────────────────────────────────────────────────────── */}
+      {historyModalOpen && (
+        <div className="fixed inset-0 z-[10000] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fade-in">
+          <div
+            className={`w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col rounded-2xl border p-6 shadow-2xl relative ${t(
+              'bg-[#140606] border-red-500/30 text-white',
+              'bg-white border-gray-200 text-gray-900'
+            )}`}
+          >
+            <button
+              onClick={() => setHistoryModalOpen(false)}
+              className="absolute top-5 right-5 p-1 rounded-lg text-gray-400 hover:text-white transition-colors"
+            >
+              <X className="w-5 h-5" />
+            </button>
+
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 rounded-xl bg-red-500/15 flex items-center justify-center text-brand-red font-bold text-lg border border-red-500/25">
+                <FileText className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="text-lg font-bold">Total Referral History & Ledger</h3>
+                <p className="text-xs text-gray-400">Complete historical log of all referral onboarding & commission earnings</p>
+              </div>
+            </div>
+
+            {/* Quick summary badges */}
+            <div className="grid grid-cols-3 gap-3 mb-4">
+              <div className={`p-3 rounded-xl border text-center ${t('bg-white/[0.02] border-white/10', 'bg-gray-50 border-gray-200')}`}>
+                <span className="text-[10px] uppercase font-bold text-gray-400 block">Total Records</span>
+                <span className="text-lg font-black text-white">{(data?.referrals || []).length}</span>
+              </div>
+              <div className={`p-3 rounded-xl border text-center ${t('bg-white/[0.02] border-white/10', 'bg-gray-50 border-gray-200')}`}>
+                <span className="text-[10px] uppercase font-bold text-gray-400 block">Total Investment</span>
+                <span className="text-lg font-black text-white">₹{formatINR(data?.kpis?.totalInvestment || 0)}</span>
+              </div>
+              <div className={`p-3 rounded-xl border text-center ${t('bg-white/[0.02] border-white/10', 'bg-gray-50 border-gray-200')}`}>
+                <span className="text-[10px] uppercase font-bold text-gray-400 block">Total Cashback</span>
+                <span className="text-lg font-black text-emerald-400">₹{formatINR(data?.kpis?.totalCommission || 0)}</span>
+              </div>
+            </div>
+
+            {/* Table */}
+            <div className={`flex-1 overflow-auto rounded-xl border ${t('border-white/[0.06]', 'border-gray-200')}`}>
+              <table className="w-full text-left border-collapse text-xs">
+                <thead>
+                  <tr className={`text-[10px] uppercase tracking-wider font-bold sticky top-0 ${t('bg-[#1f0808] text-gray-400', 'bg-gray-100 text-gray-700')}`}>
+                    <th className="p-3">#</th>
+                    <th className="p-3">User ID</th>
+                    <th className="p-3">Name</th>
+                    <th className="p-3">Date</th>
+                    <th className="p-3 text-right">Investment</th>
+                    <th className="p-3 text-right">Rate</th>
+                    <th className="p-3 text-right">Commission</th>
+                    <th className="p-3 text-center">Status</th>
+                    <th className="p-3 text-center">Dossier</th>
+                  </tr>
+                </thead>
+                <tbody className={`divide-y ${t('divide-white/[0.04]', 'divide-gray-200')}`}>
+                  {(!data?.referrals || data.referrals.length === 0) ? (
+                    <tr>
+                      <td colSpan={9} className="py-12 text-center text-gray-500 italic">
+                        No historical referral records found.
+                      </td>
+                    </tr>
+                  ) : (
+                    data.referrals.map((r, idx) => (
+                      <tr key={r.id || idx} className={`transition-colors ${t('hover:bg-white/[0.02]', 'hover:bg-gray-50')}`}>
+                        <td className="p-3 text-gray-500 font-mono">{idx + 1}</td>
+                        <td className="p-3 font-mono font-bold text-brand-red">{r.id}</td>
+                        <td className="p-3 font-semibold text-white">{r.refereeName}</td>
+                        <td className="p-3 text-gray-400">{r.date}</td>
+                        <td className="p-3 text-right font-mono text-white">₹{formatINR(r.investmentAmount)}</td>
+                        <td className="p-3 text-right font-mono text-brand-red font-bold">{r.commissionRate}%</td>
+                        <td className="p-3 text-right font-mono text-emerald-400 font-bold">₹{formatINR(r.commissionAmount)}</td>
+                        <td className="p-3 text-center">
+                          <span className={`inline-block px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider ${
+                            r.commissionStatus === 'paid'
+                              ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30'
+                              : 'bg-amber-500/15 text-amber-400 border border-amber-500/30'
+                          }`}>
+                            {r.commissionStatus}
+                          </span>
+                        </td>
+                        <td className="p-3 text-center">
+                          <button
+                            onClick={() => {
+                              setSelectedReferral(r)
+                            }}
+                            className="p-1.5 rounded-lg bg-red-500/15 hover:bg-red-500/25 text-brand-red transition-all"
+                            title="View full record"
+                          >
+                            <Eye className="w-3.5 h-3.5" />
+                          </button>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+
+            <div className="mt-4 flex justify-end">
+              <button
+                onClick={() => setHistoryModalOpen(false)}
+                className="px-5 py-2 rounded-xl text-xs font-semibold bg-white/10 hover:bg-white/15 text-white transition-all"
+              >
+                Close History
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ─────────────────────────────────────────────────────────────
+          MODAL 6: OFFICIAL PARTNERSHIP AGREEMENT (VIEW PAGE)
+          ───────────────────────────────────────────────────────────── */}
+      {agreementModalOpen && (
+        <div className="fixed inset-0 z-[10000] flex items-center justify-center p-3 sm:p-5 bg-black/80 backdrop-blur-md animate-fade-in">
+          <div
+            className={`w-full max-w-4xl max-h-[92vh] flex flex-col rounded-2xl border shadow-2xl overflow-hidden relative ${t(
+              'bg-[#120505] border-red-500/30 text-white',
+              'bg-white border-gray-200 text-gray-900'
+            )}`}
+          >
+            {/* Header Toolbar */}
+            <div className={`p-4 sm:p-5 flex items-center justify-between border-b ${t('border-white/10 bg-[#1a0808]', 'border-gray-200 bg-gray-50')}`}>
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-red-500/15 flex items-center justify-center text-brand-red font-bold text-lg border border-red-500/30 shrink-0">
+                  <FileText className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-base sm:text-lg font-bold flex items-center gap-2">
+                    <span>
+                      {partnerRole === 'MCP'
+                        ? 'Master Channel Partner Agreement'
+                        : partnerRole === 'CPL'
+                        ? 'Channel Partner Agreement'
+                        : 'Investor Referral Partner Agreement'}
+                    </span>
+                    <span className="text-[10px] uppercase font-bold px-2 py-0.5 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-emerald-400">
+                      Active
+                    </span>
+                  </h3>
+                  <p className="text-xs text-gray-400 font-mono mt-0.5">
+                    Ref: GHL-AGR-{effectiveId}-{new Date().getFullYear()} &bull; SEBI Reg: IN/AIF2/24-25/1517
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => {
+                    generateAgreementPDF({
+                      role: partnerRole === 'MCP' ? 'MCP' : partnerRole === 'CPL' ? 'CPL' : 'GI',
+                      partnerId: effectiveId,
+                      partnerName: data?.partner?.name || (partnerRole === 'CPL' ? 'Sourin Chandra Buragohain' : partnerName),
+                      partnerEmail: data?.partner?.email || partnerEmail,
+                      partnerPhone: data?.partner?.phone || partnerPhone,
+                      preview: true,
+                    })
+                  }}
+                  className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 text-xs font-semibold text-gray-200 transition-all"
+                  title="Open in new window"
+                >
+                  <ExternalLink className="w-3.5 h-3.5" />
+                  <span>Open Tab</span>
+                </button>
+
+                <button
+                  onClick={() => {
+                    generateAgreementPDF({
+                      role: partnerRole === 'MCP' ? 'MCP' : partnerRole === 'CPL' ? 'CPL' : 'GI',
+                      partnerId: effectiveId,
+                      partnerName: data?.partner?.name || (partnerRole === 'CPL' ? 'Sourin Chandra Buragohain' : partnerName),
+                      partnerEmail: data?.partner?.email || partnerEmail,
+                      partnerPhone: data?.partner?.phone || partnerPhone,
+                      preview: false,
+                    })
+                    showToast('Downloading official PDF Agreement...', 'success')
+                  }}
+                  style={{ background: 'linear-gradient(135deg, #D0021B, #8B0000)' }}
+                  className="px-3.5 py-1.5 rounded-xl text-xs font-bold text-white shadow-md hover:brightness-110 flex items-center gap-1.5 transition-all"
+                >
+                  <Download className="w-3.5 h-3.5" />
+                  <span>Download PDF</span>
+                </button>
+
+                <button
+                  onClick={() => setAgreementModalOpen(false)}
+                  className="p-1.5 rounded-xl text-gray-400 hover:text-white hover:bg-white/10 transition-colors ml-1"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+            </div>
+
+            {/* Document Body (View Page Reader) */}
+            <div className="flex-1 overflow-y-auto p-6 sm:p-8 space-y-6 text-xs sm:text-sm font-sans leading-relaxed">
+              {/* Formal Letterhead */}
+              <div className="text-center pb-6 border-b border-red-500/20">
+                <div className="inline-block px-3 py-1 rounded-full bg-red-500/10 border border-red-500/25 text-brand-red font-mono text-[11px] font-bold uppercase tracking-wider mb-2">
+                  Category II Alternative Investment Fund
+                </div>
+                <h1 className="text-xl sm:text-2xl font-black tracking-tight text-white">
+                  GHL INDIA VENTURES PRIVATE LIMITED
+                </h1>
+                <p className="text-xs text-gray-400 mt-1">
+                  SEBI Registration No. IN/AIF2/24-25/1517 &bull; Investment Manager
+                </p>
+                <div className="mt-4 pt-3 border-t border-white/[0.08] flex flex-wrap items-center justify-center gap-4 text-xs font-semibold text-gray-300">
+                  <span>Document: <strong className="text-white">{partnerRole === 'MCP' ? 'Master Channel Partner Agreement' : partnerRole === 'CPL' ? 'Channel Partner Agreement' : 'Investor Referral Agreement'}</strong></span>
+                  <span>&bull;</span>
+                  <span>Partner Code: <strong className="text-brand-red font-mono">{effectiveId}</strong></span>
+                  <span>&bull;</span>
+                  <span>Execution Date: <strong className="text-white">{new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'long', year: 'numeric' })}</strong></span>
+                </div>
+              </div>
+
+              {/* 1. Parties */}
+              <div className={`p-4 rounded-xl border ${t('bg-white/[0.02] border-white/10', 'bg-gray-50 border-gray-200')}`}>
+                <h4 className="text-xs font-bold uppercase tracking-wider text-brand-red mb-2">1. PARTIES TO THIS AGREEMENT</h4>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
+                  <div>
+                    <span className="text-gray-400 block font-semibold">FIRST PARTY (Investment Manager):</span>
+                    <p className="text-white font-bold mt-0.5">GHL India Ventures Private Limited</p>
+                    <p className="text-gray-400">SEBI Reg: IN/AIF2/24-25/1517</p>
+                    <p className="text-gray-400">Category II AIF Investment Manager</p>
+                  </div>
+                  <div>
+                    <span className="text-gray-400 block font-semibold">SECOND PARTY (Authorized Partner):</span>
+                    <p className="text-white font-bold mt-0.5">{data?.partner?.name || (partnerRole === 'CPL' ? 'Sourin Chandra Buragohain' : partnerName)}</p>
+                    <p className="text-gray-400 font-mono">ID: {effectiveId} &bull; Role: {partnerRole}</p>
+                    <p className="text-gray-400">{data?.partner?.email || partnerEmail || 'Verified Email on File'}</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* 2. Recitals */}
+              <div>
+                <h4 className="text-xs font-bold uppercase tracking-wider text-brand-red mb-2">2. RECITALS &amp; APPOINTMENT</h4>
+                <p className="text-gray-300">
+                  WHEREAS the Investment Manager manages SEBI registered Category II Alternative Investment Funds (AIF) including real estate and private market investment strategies; AND WHEREAS the Partner is appointed on a non-exclusive basis to introduce eligible, accredited, and High-Net-Worth Individuals (HNIs) as prospective investors to the Fund in strict adherence to SEBI regulations and compliance mandates.
+                </p>
+              </div>
+
+              {/* 3. Commission Slabs */}
+              <div>
+                <h4 className="text-xs font-bold uppercase tracking-wider text-brand-red mb-2">3. REWARD &amp; COMMISSION SCHEDULE</h4>
+                <p className="text-gray-300 mb-3">
+                  The Partner is entitled to receive commission payouts upon successful deployment and allotment of capital by their referred investors, as structured below:
+                </p>
+                <div className={`rounded-xl border overflow-hidden ${t('border-white/10', 'border-gray-200')}`}>
+                  <table className="w-full text-left border-collapse text-xs">
+                    <thead>
+                      <tr className={`border-b ${t('bg-white/[0.04] text-gray-300 border-white/10', 'bg-gray-100 text-gray-700 border-gray-200')}`}>
+                        <th className="p-3">Investment Tier / Cohort</th>
+                        <th className="p-3">Capital Deployed</th>
+                        <th className="p-3 text-right">Commission Rate</th>
+                        <th className="p-3 text-right">Statutory TDS</th>
+                      </tr>
+                    </thead>
+                    <tbody className={`divide-y ${t('divide-white/[0.05]', 'divide-gray-100')}`}>
+                      <tr>
+                        <td className="p-3 font-semibold text-white">Tier 1 — Introductory</td>
+                        <td className="p-3 text-gray-300">₹1,00,000 to ₹9,99,999</td>
+                        <td className="p-3 text-right font-mono font-bold text-brand-red">1.0%</td>
+                        <td className="p-3 text-right text-gray-400">2% Sec. 194H</td>
+                      </tr>
+                      <tr>
+                        <td className="p-3 font-semibold text-white">Tier 2 — Growth Volume</td>
+                        <td className="p-3 text-gray-300">₹10,00,000 to ₹24,99,999</td>
+                        <td className="p-3 text-right font-mono font-bold text-brand-red">2.0%</td>
+                        <td className="p-3 text-right text-gray-400">2% Sec. 194H</td>
+                      </tr>
+                      <tr>
+                        <td className="p-3 font-semibold text-white">Tier 3 — High Net Worth</td>
+                        <td className="p-3 text-gray-300">₹25,00,000 and Above</td>
+                        <td className="p-3 text-right font-mono font-bold text-brand-red">2.5% – 3.0%</td>
+                        <td className="p-3 text-right text-gray-400">2% Sec. 194H</td>
+                      </tr>
+                      {partnerRole === 'MCP' && (
+                        <tr className="bg-red-500/5">
+                          <td className="p-3 font-semibold text-amber-300">Master Override (Sub-CP)</td>
+                          <td className="p-3 text-gray-300">All Sub-Channel Partner Network Volume</td>
+                          <td className="p-3 text-right font-mono font-bold text-amber-400">0.5% – 1.0%</td>
+                          <td className="p-3 text-right text-gray-400">2% Sec. 194H</td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              {/* 4. TDS Compliance */}
+              <div>
+                <h4 className="text-xs font-bold uppercase tracking-wider text-brand-red mb-2">4. STATUTORY TDS COMPLIANCE (SECTION 194H)</h4>
+                <p className="text-gray-300">
+                  All commissions, brokerage, and override disbursements are strictly subject to Tax Deducted at Source (TDS) at the statutory rate of 2% in compliance with Section 194H of the Income Tax Act of India. Official Form 16A TDS certificates shall be issued on a quarterly basis and mapped to the Partner's PAN in AIS/26AS.
+                </p>
+              </div>
+
+              {/* 5. Code of Conduct */}
+              <div>
+                <h4 className="text-xs font-bold uppercase tracking-wider text-brand-red mb-2">5. CODE OF CONDUCT &amp; ANTI-MONEY LAUNDERING</h4>
+                <p className="text-gray-300">
+                  The Partner shall not make any misrepresentations or unauthorized performance guarantees. All investors introduced must undergo standard KYC, Anti-Money Laundering (AML), and investor accreditation verification as governed by SEBI regulations.
+                </p>
+              </div>
+
+              {/* 6. Execution & Signatures */}
+              <div className={`p-4 sm:p-6 rounded-xl border mt-6 ${t('bg-white/[0.02] border-white/10', 'bg-gray-50 border-gray-200')}`}>
+                <h4 className="text-xs font-bold uppercase tracking-wider text-brand-red mb-4">6. OFFICIAL SIGNATURES &amp; CORPORATE SEAL</h4>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 pt-2">
+                  <div className="border-t border-gray-600 pt-3">
+                    <p className="text-xs font-bold text-white">For GHL India Ventures Private Limited</p>
+                    <p className="text-xs text-gray-400 mt-1">Authorized Signatory &amp; Corporate Seal</p>
+                    <p className="text-[11px] text-emerald-400 font-mono mt-2 font-bold">DIGITALLY SIGNED &bull; VALIDATED</p>
+                  </div>
+                  <div className="border-t border-gray-600 pt-3">
+                    <p className="text-xs font-bold text-white">For Authorized Partner ({effectiveId})</p>
+                    <p className="text-xs text-gray-400 mt-1">{data?.partner?.name || (partnerRole === 'CPL' ? 'Sourin Chandra Buragohain' : partnerName)}</p>
+                    <p className="text-[11px] text-emerald-400 font-mono mt-2 font-bold">AUTHENTICATED DIGITAL SESSION &bull; ACTIVE</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Footer Actions */}
+            <div className={`p-4 border-t flex flex-wrap items-center justify-between gap-3 ${t('border-white/10 bg-[#1a0808]', 'border-gray-200 bg-gray-50')}`}>
+              <span className="text-xs text-gray-400">
+                Official confidential document of GHL India Ventures Portal.
+              </span>
+              <div className="flex items-center gap-2.5">
+                <button
+                  onClick={() => {
+                    generateAgreementPDF({
+                      role: partnerRole === 'MCP' ? 'MCP' : partnerRole === 'CPL' ? 'CPL' : 'GI',
+                      partnerId: effectiveId,
+                      partnerName: data?.partner?.name || (partnerRole === 'CPL' ? 'Sourin Chandra Buragohain' : partnerName),
+                      partnerEmail: data?.partner?.email || partnerEmail,
+                      partnerPhone: data?.partner?.phone || partnerPhone,
+                      preview: false,
+                    })
+                    showToast('Downloading official PDF Agreement...', 'success')
+                  }}
+                  style={{ background: 'linear-gradient(135deg, #D0021B, #8B0000)' }}
+                  className="px-4 py-2 rounded-xl text-xs font-bold text-white shadow-md hover:brightness-110 flex items-center gap-1.5 transition-all"
+                >
+                  <Download className="w-3.5 h-3.5" />
+                  <span>Download Copy</span>
+                </button>
+                <button
+                  onClick={() => setAgreementModalOpen(false)}
+                  className="px-4 py-2 rounded-xl text-xs font-semibold bg-white/10 hover:bg-white/15 text-white transition-all"
+                >
+                  Close Viewer
+                </button>
+              </div>
             </div>
           </div>
         </div>

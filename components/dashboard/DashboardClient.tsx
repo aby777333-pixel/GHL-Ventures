@@ -3477,7 +3477,7 @@ export default function DashboardClient() {
     <ReferralDashboard
       theme={theme}
       isDark={isDark}
-      authenticatedPartnerId={ghlId}
+      authenticatedPartnerId={ghlId || referralCode}
       partnerName={userName}
       partnerEmail={userEmail}
       partnerPhone={(user as any)?.phone || ''}
