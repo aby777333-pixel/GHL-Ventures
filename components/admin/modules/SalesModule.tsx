@@ -20,6 +20,7 @@ import AdminEmptyState from '../shared/AdminEmptyState'
 import AdminCRUDPlaceholder from '../shared/AdminCRUDPlaceholder'
 import LeadManagementModule from '../../shared/LeadManagementModule'
 import ReferralsTab from './ReferralsTab'
+import PartnerCommissionTab from './PartnerCommissionTab'
 import StartupApplicationsTab from './StartupApplicationsTab'
 import NRIConsultationsTab from './NRIConsultationsTab'
 import CreateAccountTab from './CreateAccountTab'
@@ -51,7 +52,8 @@ const SALES_TABS = [
   { id: 'leads', label: 'Lead List', icon: Users },
   { id: 'lead-search', label: 'Lead Search', icon: Users },
   { id: 'referrals', label: 'Referrals', icon: Users },
-  { id: 'cp-referrals', label: 'CP Referrals', icon: Users },
+  { id: 'cp-referrals', label: 'Channel Partner', icon: Users },
+  { id: 'mcp-referrals', label: 'Master Channel Partner', icon: Users },
   { id: 'startup-applications', label: 'Startup Apps', icon: Target },
   { id: 'nri-consultations', label: 'NRI Consult', icon: Zap },
   { id: 'commissions', label: 'Commissions', icon: IndianRupee },
@@ -370,7 +372,8 @@ export default function SalesModule({ subTab, navigate, showToast }: SalesModule
         {activeTab === 'referrals' && <ReferralsTab showToast={showToast} />}
         {/* 2026-05-12: CP (Channel Partner) Referrals filters the
             existing referrals list to channel-partner sourced rows. */}
-        {activeTab === 'cp-referrals' && <ReferralsTab showToast={showToast} channelPartnerOnly />}
+        {activeTab === 'cp-referrals' && <PartnerCommissionTab tier="cp" showToast={showToast} />}
+        {activeTab === 'mcp-referrals' && <PartnerCommissionTab tier="mcp" showToast={showToast} />}
         {activeTab === 'startup-applications' && <StartupApplicationsTab showToast={showToast} />}
         {activeTab === 'nri-consultations' && <NRIConsultationsTab showToast={showToast} />}
         {activeTab === 'commissions' && <CommissionsTab showToast={showToast} />}

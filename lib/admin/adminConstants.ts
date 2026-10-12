@@ -129,7 +129,8 @@ export const ADMIN_SIDEBAR_ITEMS: SidebarItem[] = [
     permission: 'view:sales',
     subItems: [
       { id: 'sales/referrals', label: 'Referral Income History' },
-      { id: 'sales/cp-referrals', label: 'CP Referral Income History' },
+      { id: 'sales/cp-referrals', label: 'Channel Partner Referral' },
+      { id: 'sales/mcp-referrals', label: 'Master Channel Partner Referral' },
     ],
   },
   // 8. Contact

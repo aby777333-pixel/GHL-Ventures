@@ -489,15 +489,26 @@ export default function InvestmentFlowTab({
     // Bug #11: Require proof upload before submission.
     if (!txnForm.proofUrl) { showToast('Please upload transaction proof before submitting', 'error'); return }
     setTxnSubmitting(true)
-    const res = await submitInvestmentTransaction({
-      investment_app_id: selectedApp.id,
-      client_id: clientId,
-      capital_amount: capital,
-      transaction_amount: txnAmt,
-      transaction_id: txnForm.transactionId || undefined,
-      transaction_proof_url: txnForm.proofUrl,
-      bank_account_id: txnBank || undefined,
-    })
+    // bank_account_id is a uuid column: anything else (a bank name, an index)
+    // makes Postgres reject the whole insert, so only send a real uuid.
+    const isUuid = (v: any) =>
+      typeof v === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(v)
+    let res: any = null
+    try {
+      res = await submitInvestmentTransaction({
+        investment_app_id: selectedApp.id,
+        client_id: clientId,
+        capital_amount: capital,
+        transaction_amount: txnAmt,
+        transaction_id: txnForm.transactionId || undefined,
+        transaction_proof_url: txnForm.proofUrl,
+        bank_account_id: isUuid(txnBank) ? txnBank : undefined,
+      })
+    } catch (e: any) {
+      showToast(e?.message || 'Failed to submit transaction', 'error')
+      setTxnSubmitting(false)
+      return
+    }
     if (res) {
       showToast('Transaction submitted for admin approval!', 'success')
       setTxnForm({ capitalAmount: '', transactionAmount: '', transactionId: '', proofUrl: '' })

@@ -762,7 +762,15 @@ export async function submitInvestmentTransaction(txn: {
     ...txn,
     status: 'pending',
   }).select().single()
-  if (error) { console.warn('[dashboard] Submit txn error:', error.message); return null }
+  if (error) {
+    // Surface the real Postgres/PostgREST message. Returning a bare null here
+    // left the investor with "Failed to submit transaction" and no way to tell
+    // a missing column from an RLS refusal.
+    console.warn('[dashboard] Submit txn error:', error)
+    const detail = [error.message, (error as any).details, (error as any).hint]
+      .filter(Boolean).join(' | ')
+    throw new Error(detail || 'Transaction could not be saved')
+  }
 
   // Notify admins
   try {
