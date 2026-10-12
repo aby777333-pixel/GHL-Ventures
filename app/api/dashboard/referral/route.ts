@@ -83,7 +83,7 @@ export async function GET(request: NextRequest) {
     const partnerRole = determinePartnerRole(effectivePartnerId)
 
     const partnerName = clientRecord?.full_name || (authUser?.user_metadata?.full_name) || (
-      isProduction ? 'Partner Client' : (partnerRole === 'CPL' ? 'Sourin Chandra Buragohain' : 'Partner Investor')
+      partnerRole === 'CPL' ? 'Channel Partner' : partnerRole === 'MCP' ? 'Master Channel Partner' : 'Partner Investor'
     )
     const partnerEmail = clientRecord?.email || authUser?.email || ''
     const partnerPhone = clientRecord?.phone || ''
@@ -179,95 +179,7 @@ export async function GET(request: NextRequest) {
       }
     } catch { /* non-blocking */ }
 
-  // 4. Default Seed/Sample Data when no DB referrals exist for testing/auditing (Development only)
-    if (rawReferrals.length === 0 && !isProduction) {
-      if (partnerRole === 'CPL' || effectivePartnerId === 'CPLGHL24376') {
-        const effectiveName = partnerName !== 'Partner Investor' ? partnerName : 'Sourin Chandra Buragohain'
-        const effectiveEmail = partnerEmail || 'sourin.cpl@ghlindiaventures.com'
-        rawReferrals = [
-          {
-            id: 'GHL245721',
-            referrer_name: effectiveName,
-            referrer_email: effectiveEmail,
-            referee_name: 'Abhishek Choudhary',
-            referee_email: 'abhishek.choudhary@example.com',
-            referee_phone: '+91 98401 23456',
-            referee_city: 'Chennai',
-            relationship: 'general_investor',
-            status: 'converted',
-            investment_amount: 1000000,
-            commission_rate: 3.0,
-            commission_amount: 20000,
-            commission_status: 'accrued',
-            created_at: '2026-10-08T10:00:00.000Z',
-          },
-          {
-            id: 'GHL245102',
-            referrer_name: effectiveName,
-            referrer_email: effectiveEmail,
-            referee_name: 'Rajesh Singhania',
-            referee_email: 'rajesh.singhania@example.com',
-            referee_phone: '+91 98200 45678',
-            referee_city: 'Mumbai',
-            relationship: 'general_investor',
-            status: 'converted',
-            investment_amount: 1000000,
-            commission_rate: 3.0,
-            commission_amount: 30000,
-            commission_status: 'paid',
-            created_at: '2026-08-15T11:30:00.000Z',
-          },
-          {
-            id: 'GHL244890',
-            referrer_name: effectiveName,
-            referrer_email: effectiveEmail,
-            referee_name: 'Priya Mehra',
-            referee_email: 'priya.mehra@example.com',
-            referee_phone: '+91 98111 78901',
-            referee_city: 'Delhi',
-            relationship: 'general_investor',
-            status: 'converted',
-            investment_amount: 1000000,
-            commission_rate: 3.0,
-            commission_amount: 30000,
-            commission_status: 'paid',
-            created_at: '2026-06-20T14:00:00.000Z',
-          },
-          {
-            id: 'GHL243210',
-            referrer_name: effectiveName,
-            referrer_email: effectiveEmail,
-            referee_name: 'Vikram Malhotra',
-            referee_email: 'vikram.malhotra@example.com',
-            referee_phone: '+91 98300 23456',
-            referee_city: 'Kolkata',
-            relationship: 'general_investor',
-            status: 'converted',
-            investment_amount: 1000000,
-            commission_rate: 3.0,
-            commission_amount: 30000,
-            commission_status: 'paid',
-            created_at: '2026-04-12T09:45:00.000Z',
-          },
-          {
-            id: 'GHL241050',
-            referrer_name: effectiveName,
-            referrer_email: effectiveEmail,
-            referee_name: 'Ananya Sharma',
-            referee_email: 'ananya.sharma@example.com',
-            referee_phone: '+91 98800 67890',
-            referee_city: 'Bangalore',
-            relationship: 'general_investor',
-            status: 'converted',
-            investment_amount: 1000000,
-            commission_rate: 3.0,
-            commission_amount: 30000,
-            commission_status: 'paid',
-            created_at: '2026-02-05T16:20:00.000Z',
-          },
-        ]
-      }
-    }
+
 
     // Compute 5 KPIs
     const totalReferrals = Math.max(summary.total_referrals, rawReferrals.length)

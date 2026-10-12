@@ -1095,11 +1095,39 @@ export default function DashboardClient() {
         </div>
 
         {/* Client info badge */}
-        <div className="px-6 mb-4">
-          <div className={`px-3 py-2.5 rounded-xl ${t('bg-white/[0.04] border border-white/[0.06]', 'bg-gray-100/60 border border-gray-200/40')}`}>
-            <p className={`text-[10px] uppercase tracking-widest mb-0.5 ${t('text-gray-500', 'text-gray-600')}`}>{user?.risk_profile || user?.account_status || 'Client'}</p>
-            <p className={`text-sm font-semibold ${t('text-white', 'text-gray-900')}`}>{userName}</p>
-            <p className={`text-[10px] mt-0.5 ${t('text-gray-500', 'text-gray-700')}`}>{userEmail}</p>
+        <div className="px-3 mb-3">
+          <div
+            onClick={() => { setActiveTab('profile'); setSidebarOpen(false) }}
+            className={`px-3 py-2.5 rounded-xl border transition-all cursor-pointer group overflow-hidden ${t(
+              'bg-white/[0.04] border-white/[0.08] hover:bg-white/[0.07] hover:border-brand-red/30',
+              'bg-white/80 border-gray-200/80 shadow-xs hover:bg-white hover:border-brand-red/40'
+            )}`}
+            title="View Profile"
+          >
+            <div className="flex items-center justify-between gap-1.5 mb-1 min-w-0">
+              <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[9px] font-bold uppercase tracking-wider shrink-0 ${String(user?.risk_profile || '').toLowerCase() === 'aggressive'
+                ? 'bg-red-500/10 text-red-600 dark:text-red-400 border border-red-500/20'
+                : String(user?.risk_profile || '').toLowerCase() === 'conservative'
+                  ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20'
+                  : 'bg-amber-500/10 text-amber-700 dark:text-amber-400 border border-amber-500/20'
+                }`}>
+                <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${String(user?.risk_profile || '').toLowerCase() === 'aggressive' ? 'bg-red-500' :
+                  String(user?.risk_profile || '').toLowerCase() === 'conservative' ? 'bg-emerald-500' : 'bg-amber-500'
+                  }`} />
+                <span className="truncate max-w-[110px]">{user?.risk_profile || user?.account_status || 'Client'}</span>
+              </span>
+              {ghlId ? (
+                <span className="font-mono text-[9px] text-gray-400 dark:text-gray-500 font-semibold truncate shrink-0" title={`Client ID: ${ghlId}`}>
+                  {ghlId}
+                </span>
+              ) : null}
+            </div>
+            <p className={`text-xs sm:text-sm font-bold truncate leading-tight group-hover:text-brand-red transition-colors ${t('text-white', 'text-gray-900')}`} title={userName}>
+              {userName}
+            </p>
+            <p className={`text-[10px] mt-0.5 truncate font-medium leading-tight block w-full overflow-hidden text-ellipsis whitespace-nowrap ${t('text-gray-400', 'text-gray-600')}`} title={userEmail}>
+              {userEmail}
+            </p>
           </div>
         </div>
 
@@ -2072,18 +2100,16 @@ export default function DashboardClient() {
                   {isKycApproved ? 'Verified' : isKycRejected ? 'Action Required' : 'In Review'}
                 </h3>
                 <span
-                  className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold border ${
-                    isKycApproved
-                      ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30'
-                      : isKycRejected
+                  className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold border ${isKycApproved
+                    ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30'
+                    : isKycRejected
                       ? 'bg-red-500/15 text-red-400 border-red-500/30'
                       : 'bg-amber-500/15 text-amber-400 border-amber-500/30'
-                  }`}
+                    }`}
                 >
                   <span
-                    className={`w-1.5 h-1.5 rounded-full ${
-                      isKycApproved ? 'bg-emerald-400' : isKycRejected ? 'bg-red-400' : 'bg-amber-400'
-                    }`}
+                    className={`w-1.5 h-1.5 rounded-full ${isKycApproved ? 'bg-emerald-400' : isKycRejected ? 'bg-red-400' : 'bg-amber-400'
+                      }`}
                   />
                   {isKycApproved ? 'Approved' : isKycRejected ? 'Rejected' : 'Pending'}
                 </span>
@@ -2130,7 +2156,7 @@ export default function DashboardClient() {
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-stretch">
           {/* Left: Large Crimson GHL India Portfolio Card (~7 cols) */}
           <div
-            className="lg:col-span-7 relative rounded-3xl p-6 sm:p-7 text-white flex flex-col justify-between overflow-hidden shadow-2xl transition-all"
+            className="lg:col-span-4 relative rounded-3xl p-6 sm:p-7 text-white flex flex-col justify-between overflow-hidden shadow-2xl transition-all"
             style={{
               background: 'linear-gradient(135deg, #a80010 0%, #d0021b 45%, #7e0009 100%)',
               border: '1px solid rgba(255,255,255,0.2)',
@@ -2201,7 +2227,7 @@ export default function DashboardClient() {
           </div>
 
           {/* Right: 3 Vertically Stacked Metric Cards (~5 cols) */}
-          <div className="lg:col-span-5 flex flex-col justify-between gap-4">
+          <div className="lg:col-span-4 flex flex-col justify-between gap-4">
             {/* Card 1: TODAY'S INVESTMENT */}
             <div
               className={`relative rounded-2xl p-4 sm:p-5 border flex-1 overflow-hidden transition-all duration-300 hover:shadow-md ${t(
@@ -2295,6 +2321,82 @@ export default function DashboardClient() {
               </div>
             </div>
           </div>
+          {/* Right: Relationship Manager Dossier (~4-5 cols) */}
+          <div
+            className={`lg:col-span-4 rounded-2xl p-6 border flex flex-col justify-between text-center ${t(
+              'bg-[#120606] border-white/10 shadow-lg shadow-black/40',
+              'bg-white border-gray-200 shadow-sm'
+            )}`}
+          >
+            <div>
+              <p className={`text-[10px] sm:text-[11px] font-bold uppercase tracking-[0.2em] mb-4 ${t('text-gray-400', 'text-gray-600')}`}>
+                YOUR INVESTOR RELATIONSHIP MANAGER
+              </p>
+
+              {/* Avatar Photo with Ring & Online Status */}
+              <div className="relative w-24 h-24 mx-auto mb-3">
+                <div className="w-24 h-24 rounded-full border-[3px] border-brand-red overflow-hidden bg-gray-100 dark:bg-black/40 flex items-center justify-center shadow-lg">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={rmAvatar}
+                    alt={rmName}
+                    className="w-full h-full object-cover object-top"
+                    onError={(e) => {
+                      // Fallback to initials if image load fails
+                      (e.target as any).style.display = 'none'
+                    }}
+                  />
+                </div>
+                <span className="absolute bottom-1 right-1 w-3.5 h-3.5 rounded-full bg-emerald-500 border-2 border-white dark:border-gray-900 shadow-sm" />
+              </div>
+
+              <h4 className={`text-base sm:text-lg font-bold leading-tight ${t('text-white', 'text-gray-900')}`}>
+                {rmName}
+              </h4>
+              <p className={`text-xs mt-0.5 flex items-center justify-center gap-1.5 ${t('text-gray-400', 'text-gray-500')}`}>
+                <span>{rmDesignation}</span>
+                <span>·</span>
+                <span className="inline-flex items-center gap-1 text-emerald-500 font-semibold">
+                  Verified <CheckCircle className="w-3.5 h-3.5" />
+                </span>
+              </p>
+            </div>
+
+            {/* Contact Pills & Action Button */}
+            <div className="mt-5 space-y-2.5">
+              <a
+                href={`tel:${rmPhone.replace(/\s+/g, '')}`}
+                className={`flex items-center justify-center gap-2.5 py-2.5 px-4 rounded-xl text-xs font-semibold border transition-all ${t(
+                  'bg-white/[0.04] hover:bg-white/[0.08] text-gray-200 border-white/10',
+                  'bg-gray-50 hover:bg-gray-100 text-gray-800 border-gray-200'
+                )}`}
+              >
+                <Phone className="w-3.5 h-3.5 text-brand-red shrink-0" />
+                <span>{rmPhone}</span>
+              </a>
+
+              <a
+                href={`mailto:${rmEmail}`}
+                className={`flex items-center justify-center gap-2.5 py-2.5 px-4 rounded-xl text-xs font-semibold border transition-all ${t(
+                  'bg-white/[0.04] hover:bg-white/[0.08] text-gray-200 border-white/10',
+                  'bg-gray-50 hover:bg-gray-100 text-gray-800 border-gray-200'
+                )}`}
+              >
+                <Mail className="w-3.5 h-3.5 text-brand-red shrink-0" />
+                <span className="truncate">{rmEmail}</span>
+              </a>
+
+              <button
+                onClick={() => setActiveTab('support')}
+                className="w-full mt-2 py-3 rounded-xl text-white font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-2 shadow-lg shadow-red-600/25 hover:brightness-110 active:scale-[0.99] transition-all"
+                style={{ background: 'linear-gradient(135deg, #D0021B, #A80010)' }}
+              >
+                <PhoneCall className="w-4 h-4" />
+                <span>Contact Manager</span>
+              </button>
+            </div>
+          </div>
+
         </div>
 
         {/* ─────────────────────────────────────────────────────────────
@@ -2319,7 +2421,7 @@ export default function DashboardClient() {
         {/* ─────────────────────────────────────────────────────────────
             5. ANALYTICS & RELATIONSHIP MANAGER ROW (Split Layout)
             ───────────────────────────────────────────────────────────── */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-stretch">
+        <div className="grid grid-cols-1 lg:grid-cols-8 gap-5 items-stretch">
           {/* Left: My Investments Monthly Trend Chart (~7-8 cols) */}
           <div
             className={`lg:col-span-8 rounded-2xl p-5 sm:p-6 border flex flex-col justify-between ${t(
@@ -2357,21 +2459,19 @@ export default function DashboardClient() {
                 <div className={`p-1 rounded-xl border flex items-center ${t('bg-white/[0.04] border-white/10', 'bg-gray-100 border-gray-200')}`}>
                   <button
                     onClick={() => setGiChartView('line')}
-                    className={`px-3 py-1 rounded-lg text-xs font-bold transition-all ${
-                      giChartView === 'line'
-                        ? 'bg-brand-red text-white shadow-sm'
-                        : t('text-gray-400 hover:text-white', 'text-gray-600 hover:text-gray-900')
-                    }`}
+                    className={`px-3 py-1 rounded-lg text-xs font-bold transition-all ${giChartView === 'line'
+                      ? 'bg-brand-red text-white shadow-sm'
+                      : t('text-gray-400 hover:text-white', 'text-gray-600 hover:text-gray-900')
+                      }`}
                   >
                     Line
                   </button>
                   <button
                     onClick={() => setGiChartView('bar')}
-                    className={`px-3 py-1 rounded-lg text-xs font-bold transition-all ${
-                      giChartView === 'bar'
-                        ? 'bg-brand-red text-white shadow-sm'
-                        : t('text-gray-400 hover:text-white', 'text-gray-600 hover:text-gray-900')
-                    }`}
+                    className={`px-3 py-1 rounded-lg text-xs font-bold transition-all ${giChartView === 'bar'
+                      ? 'bg-brand-red text-white shadow-sm'
+                      : t('text-gray-400 hover:text-white', 'text-gray-600 hover:text-gray-900')
+                      }`}
                   >
                     Bar
                   </button>
@@ -2459,82 +2559,6 @@ export default function DashboardClient() {
                   </BarChart>
                 )}
               </ResponsiveContainer>
-            </div>
-          </div>
-
-          {/* Right: Relationship Manager Dossier (~4-5 cols) */}
-          <div
-            className={`lg:col-span-4 rounded-2xl p-6 border flex flex-col justify-between text-center ${t(
-              'bg-[#120606] border-white/10 shadow-lg shadow-black/40',
-              'bg-white border-gray-200 shadow-sm'
-            )}`}
-          >
-            <div>
-              <p className={`text-[10px] sm:text-[11px] font-bold uppercase tracking-[0.2em] mb-4 ${t('text-gray-400', 'text-gray-600')}`}>
-                YOUR INVESTOR RELATIONSHIP MANAGER
-              </p>
-
-              {/* Avatar Photo with Ring & Online Status */}
-              <div className="relative w-24 h-24 mx-auto mb-3">
-                <div className="w-24 h-24 rounded-full border-[3px] border-brand-red overflow-hidden bg-gray-100 dark:bg-black/40 flex items-center justify-center shadow-lg">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src={rmAvatar}
-                    alt={rmName}
-                    className="w-full h-full object-cover object-top"
-                    onError={(e) => {
-                      // Fallback to initials if image load fails
-                      (e.target as any).style.display = 'none'
-                    }}
-                  />
-                </div>
-                <span className="absolute bottom-1 right-1 w-3.5 h-3.5 rounded-full bg-emerald-500 border-2 border-white dark:border-gray-900 shadow-sm" />
-              </div>
-
-              <h4 className={`text-base sm:text-lg font-bold leading-tight ${t('text-white', 'text-gray-900')}`}>
-                {rmName}
-              </h4>
-              <p className={`text-xs mt-0.5 flex items-center justify-center gap-1.5 ${t('text-gray-400', 'text-gray-500')}`}>
-                <span>{rmDesignation}</span>
-                <span>·</span>
-                <span className="inline-flex items-center gap-1 text-emerald-500 font-semibold">
-                  Verified <CheckCircle className="w-3.5 h-3.5" />
-                </span>
-              </p>
-            </div>
-
-            {/* Contact Pills & Action Button */}
-            <div className="mt-5 space-y-2.5">
-              <a
-                href={`tel:${rmPhone.replace(/\s+/g, '')}`}
-                className={`flex items-center justify-center gap-2.5 py-2.5 px-4 rounded-xl text-xs font-semibold border transition-all ${t(
-                  'bg-white/[0.04] hover:bg-white/[0.08] text-gray-200 border-white/10',
-                  'bg-gray-50 hover:bg-gray-100 text-gray-800 border-gray-200'
-                )}`}
-              >
-                <Phone className="w-3.5 h-3.5 text-brand-red shrink-0" />
-                <span>{rmPhone}</span>
-              </a>
-
-              <a
-                href={`mailto:${rmEmail}`}
-                className={`flex items-center justify-center gap-2.5 py-2.5 px-4 rounded-xl text-xs font-semibold border transition-all ${t(
-                  'bg-white/[0.04] hover:bg-white/[0.08] text-gray-200 border-white/10',
-                  'bg-gray-50 hover:bg-gray-100 text-gray-800 border-gray-200'
-                )}`}
-              >
-                <Mail className="w-3.5 h-3.5 text-brand-red shrink-0" />
-                <span className="truncate">{rmEmail}</span>
-              </a>
-
-              <button
-                onClick={() => setActiveTab('support')}
-                className="w-full mt-2 py-3 rounded-xl text-white font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-2 shadow-lg shadow-red-600/25 hover:brightness-110 active:scale-[0.99] transition-all"
-                style={{ background: 'linear-gradient(135deg, #D0021B, #A80010)' }}
-              >
-                <PhoneCall className="w-4 h-4" />
-                <span>Contact Manager</span>
-              </button>
             </div>
           </div>
         </div>
