@@ -353,8 +353,8 @@ export async function generateAgreementPDF(options: {
       {
         num: '3. COMMISSION & OVERRIDES SCHEDULE',
         text: isMaster
-          ? 'Master Channel Partner Compensation:\n• Direct Referral Reward: Up to 5.50% on capital commitments successfully realized.\n• Overriding Commission: 1.00% on all aggregated investment volumes realized through Sub-Channel Partners.\n• Trail Distribution: 1.25% per annum on active under-management commitments.'
-          : 'Channel Partner Compensation:\n• Base Referral Commission: 3.50% on first-tier investor capital realized.\n• High Volume Slab: 4.50% for volume exceeding ₹10 Crore, 5.00% above ₹25 Crore.\n• Trail Distribution: 1.25% per annum paid on active AUM.'
+          ? 'Master Channel Partner Compensation:\n• Sale of Associate Channel Partner: 3.00% (₹1,00,00,000 to ₹5,00,00,000), 4.00% (₹5,00,00,000 to Above).\n• Sale of Master Channel Partner: 0.50% on Any Investment.'
+          : 'Associate Channel Partner Compensation:\n• ₹1,00,00,000 to ₹5,00,00,000: 3.00%\n• ₹5,00,00,000 to Above: 4.00%'
       },
       {
         num: '4. CONFIDENTIALITY & DATA PROTECTION',
@@ -461,20 +461,17 @@ async function getFallbackDashboardData(previewId?: string, year?: number, _mont
 
   const slabs = {
     GI: [
-      { tier: 'Tier 1', volume: 'Up to ₹5 Crore', rate: '3.0%', note: 'Direct Referral Bonus' },
-      { tier: 'Tier 2', volume: '₹5.01 Crore and above', rate: '4.0%', note: 'Accelerated Referral Bonus' },
-      { tier: 'Management Fee', volume: 'All AUM', rate: '1.0% PA', note: 'Annual Fee Sharing' },
+      { tier: 'Tier 1', volume: '₹1,00,00,000 to ₹5,00,00,000', rate: '3.00%', note: 'Sale of Associate Channel Partner' },
+      { tier: 'Tier 2', volume: '₹5,00,00,000 to Above', rate: '4.00%', note: 'Sale of Associate Channel Partner' },
     ],
     CPL: [
-      { tier: 'Base Slab', volume: 'Up to ₹10 Crore', rate: '3.5%', note: 'Channel Partner Standard' },
-      { tier: 'Performance Slab', volume: '₹10.01 Cr – ₹25 Cr', rate: '4.5%', note: 'Tier 1 Incentive' },
-      { tier: 'Elite Slab', volume: 'Above ₹25 Crore', rate: '5.0%', note: 'High Volume Producer' },
-      { tier: 'Trail Commission', volume: 'Active AUM', rate: '1.25% PA', note: 'Quarterly Trail Payout' },
+      { tier: 'Tier 1', volume: '₹1,00,00,000 to ₹5,00,00,000', rate: '3.00%', note: 'Sale of Associate Channel Partner' },
+      { tier: 'Tier 2', volume: '₹5,00,00,000 to Above', rate: '4.00%', note: 'Sale of Associate Channel Partner' },
     ],
     MCP: [
-      { tier: 'Master Direct', volume: 'Direct Referrals', rate: '5.5%', note: 'Maximum Direct Incentive' },
-      { tier: 'Master Overrides', volume: 'All Sub-CPL Network Volume', rate: '1.0%', note: 'Overriding Commission' },
-      { tier: 'Quarterly Bonus Pool', volume: 'Network AUM > ₹50 Cr', rate: '0.5%', note: 'Master Partner Pool' },
+      { tier: 'Tier 1', volume: '₹1,00,00,000 to ₹5,00,00,000', rate: '3.00%', note: 'Sale of Associate Channel Partner' },
+      { tier: 'Tier 2', volume: '₹5,00,00,000 to Above', rate: '4.00%', note: 'Sale of Associate Channel Partner' },
+      { tier: 'Master Override', volume: 'Any Investment', rate: '0.50%', note: 'Sale of Master Channel Partner' },
     ],
   }
 
@@ -580,12 +577,12 @@ async function getFallbackDashboardData(previewId?: string, year?: number, _mont
   // Monthly goals
   const monthlyGoal: MonthlyGoal = {
     month: new Date().toLocaleDateString('en-IN', { month: 'long', year: 'numeric' }),
-    directTarget: 5000000,
+    directTarget: 0,
     directAchieved: clientInvested,
-    directProgress: clientInvested > 0 ? Math.min(100, Math.round((clientInvested / 5000000) * 100)) : 0,
-    referralTarget: 10000000,
+    directProgress: 0,
+    referralTarget: 0,
     referralAchieved: finalTotalInvested,
-    referralProgress: finalTotalInvested > 0 ? Math.min(100, Math.round((finalTotalInvested / 10000000) * 100)) : 0,
+    referralProgress: 0,
   }
 
   // Chart data
