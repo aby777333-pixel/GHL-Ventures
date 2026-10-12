@@ -106,9 +106,9 @@ export default function InvestorReferralDashboard({
   // Referral link
   const referralLink = useMemo(() => {
     if (typeof window !== 'undefined') {
-      return `${window.location.origin}/register?ref=${effectiveId}`
+      return `${window.location.origin}/register/?ref=${effectiveId}`
     }
-    return `https://ghlindiaventures.com/register?ref=${effectiveId}`
+    return `https://ghlindiaventures.com/register/?ref=${effectiveId}`
   }, [effectiveId])
 
   const copyReferralLink = useCallback(() => {

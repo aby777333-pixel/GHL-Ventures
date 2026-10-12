@@ -1018,7 +1018,7 @@ export async function recordReferral(referralCode: string, referredName: string,
       const { data: byGhl } = await sb
         .from('clients')
         .select('user_id, full_name')
-        .ilike('ghl_id', codeExact)
+        .or(`ghl_id.ilike.${codeExact},client_code.ilike.${codeExact}`)
         .not('user_id', 'is', null)
         .maybeSingle()
       if (byGhl?.user_id) {

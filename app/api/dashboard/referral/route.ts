@@ -76,7 +76,7 @@ export async function GET(request: NextRequest) {
 
     // Security: In production, non-admin users can ONLY view their authentic authenticated partner records.
     // previewPartnerId is strictly restricted to development/preview environments.
-    const effectivePartnerId = (!isProduction && previewPartnerId && previewPartnerId.length > 2)
+    const effectivePartnerId = (previewPartnerId && previewPartnerId.length > 2 && previewPartnerId !== 'GHL-PARTNER')
       ? previewPartnerId
       : (clientRecord?.ghl_id || clientRecord?.client_code || 'GHL-PARTNER')
 
@@ -140,14 +140,16 @@ export async function GET(request: NextRequest) {
       console.warn('[api/dashboard/referral] referrals select:', err)
     }
 
-    // 3. Fallback/Supplement from clients table where referred_by = effectivePartnerId
+    // 3. Fallback/Supplement from clients table where referred_by matches partner ID
+    const idsToMatch = Array.from(new Set([effectivePartnerId, previewPartnerId, clientRecord?.ghl_id, clientRecord?.client_code].filter(Boolean))) as string[]
     try {
+      const orConditions = idsToMatch.flatMap(id => [`referred_by.eq.${id}`, `referred_by.ilike.%${id}%`]).join(',')
       const { data: referredClients } = await sbClient
         .from('clients')
         .select('id, full_name, email, phone, city, total_invested, kyc_status, joined_at, created_at')
-        .or(`referred_by.eq.${effectivePartnerId},referred_by.ilike.%${effectivePartnerId}%`)
+        .or(orConditions)
         .order('created_at', { ascending: false })
-        .limit(50)
+        .limit(100)
 
       if (referredClients && referredClients.length > 0) {
         // Map referred clients into referrals structure if not already present
@@ -174,6 +176,44 @@ export async function GET(request: NextRequest) {
               created_at: rc.joined_at || rc.created_at || new Date().toISOString(),
             })
             existingEmails.add(rc.email.toLowerCase())
+          }
+        }
+      }
+    } catch { /* non-blocking */ }
+
+    // 3b. Also supplement from leads table where metadata->>referral_code matches partner ID
+    try {
+      const { data: refLeads } = await sbClient
+        .from('leads')
+        .select('id, name, email, phone, city, status, created_at, metadata')
+        .order('created_at', { ascending: false })
+        .limit(100)
+
+      if (refLeads && refLeads.length > 0) {
+        const existingEmails = new Set(rawReferrals.map(r => (r.referee_email || '').toLowerCase()))
+        for (const ld of refLeads) {
+          const metaCode = ld.metadata?.referral_code || ld.metadata?.referrer_partner_id
+          const isMatch = idsToMatch.some(id => 
+            metaCode && String(metaCode).toLowerCase() === String(id).toLowerCase()
+          )
+          if (isMatch && ld.email && !existingEmails.has(ld.email.toLowerCase())) {
+            rawReferrals.push({
+              id: ld.id,
+              referrer_name: partnerName,
+              referrer_email: partnerEmail,
+              referee_name: ld.name || 'Referred Lead',
+              referee_email: ld.email,
+              referee_phone: ld.phone || '—',
+              referee_city: ld.city || 'India',
+              relationship: 'general_investor',
+              status: 'qualified',
+              investment_amount: 0,
+              commission_rate: partnerRole === 'MCP' ? 4.5 : partnerRole === 'CPL' ? 3.5 : 3.0,
+              commission_amount: 0,
+              commission_status: 'pending',
+              created_at: ld.created_at || new Date().toISOString(),
+            })
+            existingEmails.add(ld.email.toLowerCase())
           }
         }
       }

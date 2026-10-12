@@ -222,7 +222,8 @@ export default function ReferralDashboard({
     setLoading(true)
     setError(null)
     try {
-      const res = await fetchPartnerDashboard(authToken, undefined, selectedYear, selectedMonth)
+      const partnerIdParam = authenticatedPartnerId || effectiveId
+      const res = await fetchPartnerDashboard(authToken, partnerIdParam, selectedYear, selectedMonth)
       if (res && res.success) {
         setData(res)
         if (res.monthlyGoal) {
@@ -239,7 +240,7 @@ export default function ReferralDashboard({
     } finally {
       setLoading(false)
     }
-  }, [authToken, selectedYear, selectedMonth])
+  }, [authToken, authenticatedPartnerId, effectiveId, selectedYear, selectedMonth])
 
   useEffect(() => {
     loadData()
@@ -248,9 +249,9 @@ export default function ReferralDashboard({
   // Referral link
   const referralLink = useMemo(() => {
     if (typeof window !== 'undefined') {
-      return `${window.location.origin}/register?ref=${effectiveId}`
+      return `${window.location.origin}/register/?ref=${effectiveId}`
     }
-    return `https://ghlindiaventures.com/register?ref=${effectiveId}`
+    return `https://ghlindiaventures.com/register/?ref=${effectiveId}`
   }, [effectiveId])
 
   const copyReferralLink = () => {
@@ -1123,11 +1124,9 @@ export default function ReferralDashboard({
           </span>
           <button
             onClick={() => {
-              if (partnerRole === 'MCP' || partnerRole === 'CPL') {
-                window.open('https://ghlindiaventures.com/register/', '_blank', 'noopener,noreferrer')
-              } else {
-                setCreateInvestorOpen(true)
-              }
+              const base = typeof window !== 'undefined' ? window.location.origin : 'https://ghlindiaventures.com'
+              const url = `${base}/register/?ref=${encodeURIComponent(effectiveId)}&type=investor`
+              window.open(url, '_blank', 'noopener,noreferrer')
             }}
             className="mt-4 w-full py-2.5 rounded-xl text-xs font-bold text-white transition-all duration-300 hover:brightness-110 shadow-md"
             style={{ background: 'linear-gradient(135deg, #D0021B, #B00000)' }}
@@ -1149,7 +1148,9 @@ export default function ReferralDashboard({
             </span>
             <button
               onClick={() => {
-                window.open('https://ghlindiaventures.com/register/', '_blank', 'noopener,noreferrer')
+                const base = typeof window !== 'undefined' ? window.location.origin : 'https://ghlindiaventures.com'
+                const url = `${base}/register/?ref=${encodeURIComponent(effectiveId)}&type=channel_partner`
+                window.open(url, '_blank', 'noopener,noreferrer')
               }}
               className="mt-4 w-full py-2.5 rounded-xl text-xs font-bold text-white transition-all duration-300 hover:brightness-110 shadow-md"
               style={{ background: 'linear-gradient(135deg, #D0021B, #B00000)' }}

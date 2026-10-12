@@ -155,10 +155,17 @@ export async function fetchPartnerDashboard(
   if (year) queryParams.set('year', String(year))
   if (month && month !== 'all') queryParams.set('month', month)
 
-  const url = `/api/dashboard/referral${queryParams.toString() ? `?${queryParams.toString()}` : ''}`
+  const url = `/api/dashboard/referral/${queryParams.toString() ? `?${queryParams.toString()}` : ''}`
 
   const headers: Record<string, string> = { 'Content-Type': 'application/json' }
-  if (token) headers['Authorization'] = `Bearer ${token}`
+  let activeToken = token
+  if (!activeToken && isSupabaseConfigured()) {
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (session?.access_token) activeToken = session.access_token
+    } catch { /* ignore */ }
+  }
+  if (activeToken) headers['Authorization'] = `Bearer ${activeToken}`
 
   try {
     const res = await fetch(url, { headers, cache: 'no-store' })
@@ -181,10 +188,17 @@ export async function createGeneralInvestor(
   token?: string
 ): Promise<{ success: boolean; referral?: any; error?: string }> {
   const headers: Record<string, string> = { 'Content-Type': 'application/json' }
-  if (token) headers['Authorization'] = `Bearer ${token}`
+  let activeToken = token
+  if (!activeToken && isSupabaseConfigured()) {
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (session?.access_token) activeToken = session.access_token
+    } catch { /* ignore */ }
+  }
+  if (activeToken) headers['Authorization'] = `Bearer ${activeToken}`
 
   try {
-    const res = await fetch('/api/dashboard/referral', {
+    const res = await fetch('/api/dashboard/referral/', {
       method: 'POST',
       headers,
       body: JSON.stringify({ action: 'create_investor', ...input }),
@@ -225,10 +239,17 @@ export async function createChannelPartner(
   token?: string
 ): Promise<{ success: boolean; partner?: any; error?: string }> {
   const headers: Record<string, string> = { 'Content-Type': 'application/json' }
-  if (token) headers['Authorization'] = `Bearer ${token}`
+  let activeToken = token
+  if (!activeToken && isSupabaseConfigured()) {
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (session?.access_token) activeToken = session.access_token
+    } catch { /* ignore */ }
+  }
+  if (activeToken) headers['Authorization'] = `Bearer ${activeToken}`
 
   try {
-    const res = await fetch('/api/dashboard/referral', {
+    const res = await fetch('/api/dashboard/referral/', {
       method: 'POST',
       headers,
       body: JSON.stringify({ action: 'create_partner', ...input }),
@@ -250,10 +271,17 @@ export async function updateMonthlyGoals(
   token?: string
 ): Promise<{ success: boolean; error?: string }> {
   const headers: Record<string, string> = { 'Content-Type': 'application/json' }
-  if (token) headers['Authorization'] = `Bearer ${token}`
+  let activeToken = token
+  if (!activeToken && isSupabaseConfigured()) {
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (session?.access_token) activeToken = session.access_token
+    } catch { /* ignore */ }
+  }
+  if (activeToken) headers['Authorization'] = `Bearer ${activeToken}`
 
   try {
-    const res = await fetch('/api/dashboard/referral', {
+    const res = await fetch('/api/dashboard/referral/', {
       method: 'POST',
       headers,
       body: JSON.stringify({ action: 'update_goal', ...input }),
@@ -547,6 +575,42 @@ async function getFallbackDashboardData(previewId?: string, year?: number, _mont
               created_at: rc.joined_at || rc.created_at || new Date().toISOString(),
             })
             seen.add(rc.email.toLowerCase())
+          }
+        }
+      }
+    } catch { /* non-blocking */ }
+  }
+
+  // 4. Supplement with leads table where metadata->>referral_code = pId
+  if (isSupabaseConfigured()) {
+    try {
+      const { data: refLeads } = await (supabase as any)
+        .from('leads')
+        .select('id, name, email, phone, city, status, created_at, metadata')
+        .order('created_at', { ascending: false })
+        .limit(50)
+      if (refLeads && refLeads.length > 0) {
+        const seen = new Set(rawReferrals.map((r: any) => (r.referee_email || '').toLowerCase()))
+        for (const ld of refLeads) {
+          const metaCode = ld.metadata?.referral_code || ld.metadata?.referrer_partner_id
+          if (metaCode && String(metaCode).toLowerCase() === String(pId).toLowerCase() && ld.email && !seen.has(ld.email.toLowerCase())) {
+            rawReferrals.push({
+              id: ld.id,
+              referrer_name: userName,
+              referrer_email: userEmail,
+              referee_name: ld.name || 'Referred Lead',
+              referee_email: ld.email,
+              referee_phone: ld.phone || '—',
+              referee_city: ld.city || 'India',
+              relationship: 'general_investor',
+              status: 'qualified',
+              investment_amount: 0,
+              commission_rate: role === 'MCP' ? 4.5 : role === 'CPL' ? 3.5 : 3.0,
+              commission_amount: 0,
+              commission_status: 'pending',
+              created_at: ld.created_at || new Date().toISOString(),
+            })
+            seen.add(ld.email.toLowerCase())
           }
         }
       }

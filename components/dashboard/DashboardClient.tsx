@@ -2158,7 +2158,7 @@ export default function DashboardClient() {
           <div
             className="lg:col-span-4 relative rounded-3xl p-6 sm:p-7 text-white flex flex-col justify-between overflow-hidden shadow-2xl transition-all"
             style={{
-              background: 'linear-gradient(135deg, #a80010 0%, #d0021b 45%, #7e0009 100%)',
+              background: 'linear-gradient(135deg, #a70011ff 0%, #d0021b 45%, #7e0009 100%)',
               border: '1px solid rgba(255,255,255,0.2)',
               boxShadow: '0 16px 40px rgba(208, 2, 27, 0.35), inset 0 1px 0 rgba(255,255,255,0.25)',
             }}

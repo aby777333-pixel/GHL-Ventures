@@ -33,11 +33,27 @@ function RegisterPageInner() {
   const searchParams = useSearchParams()
   const [showPassword, setShowPassword] = useState(false)
   const [submitted, setSubmitted] = useState(false)
+  // Initialize referral and account type synchronously from searchParams and window.location
+  const getInitialParam = (param: string): string => {
+    const fromSearch = searchParams.get(param)
+    if (fromSearch) return fromSearch.trim()
+    if (typeof window !== 'undefined') {
+      const sp = new URLSearchParams(window.location.search)
+      return (sp.get(param) || '').trim()
+    }
+    return ''
+  }
+
+  const initialRef = getInitialParam('ref') || getInitialParam('referral') || getInitialParam('referred_by')
+  const initialType = getInitialParam('type') || null
+
   const [form, setForm] = useState({
-    name: '', email: '', mobile: '', password: '', referral: '', terms: false,
+    name: '', email: '', mobile: '', password: '', referral: initialRef, terms: false,
   })
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+  const [isLockedReferral, setIsLockedReferral] = useState(Boolean(initialRef))
+  const [accountType, setAccountType] = useState<string | null>(initialType)
 
   // OTP state
   const [otpSent, setOtpSent] = useState(false)
@@ -47,21 +63,41 @@ function RegisterPageInner() {
   const [otpError, setOtpError] = useState('')
   const [otpCooldown, setOtpCooldown] = useState(0)
 
-  // Capture referral code from URL (?ref=GHL-XXXXXXXX)
+  // Capture / sync referral code from URL
   useEffect(() => {
-    const refCode = searchParams.get('ref')
+    let refCode = searchParams.get('ref') || searchParams.get('referral') || searchParams.get('referred_by')
+    let typeParam = searchParams.get('type')
+    if (!refCode && typeof window !== 'undefined') {
+      const sp = new URLSearchParams(window.location.search)
+      refCode = sp.get('ref') || sp.get('referral') || sp.get('referred_by')
+      if (!typeParam) typeParam = sp.get('type')
+    }
     if (refCode) {
-      setForm(prev => ({ ...prev, referral: refCode }))
+      setForm(prev => ({ ...prev, referral: refCode!.trim() }))
+      setIsLockedReferral(true)
+    }
+    if (typeParam) {
+      setAccountType(typeParam.trim().toLowerCase())
     }
   }, [searchParams])
 
-  // Redirect if already authenticated
+  // Redirect if already authenticated ONLY when NOT arriving via a referral / invite link
   useEffect(() => {
     if (!isSupabaseConfigured()) return
+    let hasRef = searchParams.get('ref') || searchParams.get('referral') || searchParams.get('referred_by')
+    if (!hasRef && typeof window !== 'undefined') {
+      const sp = new URLSearchParams(window.location.search)
+      hasRef = sp.get('ref') || sp.get('referral') || sp.get('referred_by')
+    }
+    if (hasRef) {
+      // Arrived via partner referral link or invite — DO NOT redirect away!
+      return
+    }
+
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session?.user) router.replace('/dashboard')
     })
-  }, [router])
+  }, [router, searchParams])
 
   // OTP cooldown timer
   useEffect(() => {
@@ -174,8 +210,8 @@ function RegisterPageInner() {
     let callbackUrl = ''
     if (typeof window !== 'undefined') {
       const cb = new URL('/auth/callback?flow=signup', window.location.origin)
-      if (form.referral && form.referral.startsWith('GHL-')) {
-        cb.searchParams.set('ref', form.referral)
+      if (form.referral && form.referral.trim()) {
+        cb.searchParams.set('ref', form.referral.trim())
       }
       callbackUrl = cb.toString()
     }
@@ -234,6 +270,14 @@ function RegisterPageInner() {
 
     setLoading(true)
     try {
+      // If a partner is currently logged in while registering a new user, sign out to ensure clean signup
+      try {
+        const { data: currentSession } = await supabase.auth.getSession()
+        if (currentSession?.session) {
+          await supabase.auth.signOut()
+        }
+      } catch { /* best effort */ }
+
       const { data, error: signupError } = await supabase.auth.signUp({
         email: cleanEmail,
         password: cleanPassword,
@@ -317,13 +361,10 @@ function RegisterPageInner() {
       } catch { /* non-blocking */ }
 
       // Record referral if a referral code was used (non-blocking).
-      // Codes are now the referrer's GHL ID (e.g. GHL570045 — no dash);
-      // legacy GHL-XXXXXXXX links must keep working too, so accept any
-      // GHL-prefixed code.
-      if (form.referral && form.referral.trim().toUpperCase().startsWith('GHL')) {
+      if (form.referral && form.referral.trim()) {
         try {
           const { recordReferral } = await import('@/lib/supabase/dashboardDataService')
-          await recordReferral(form.referral, form.name, form.email)
+          await recordReferral(form.referral.trim(), form.name, form.email)
         } catch { /* non-blocking */ }
       }
 
@@ -424,6 +465,17 @@ function RegisterPageInner() {
           </div>
 
           <h1 className="text-2xl font-bold text-brand-black mb-1">Register to <span className="text-brand-red">GHL India Ventures</span></h1>
+          {accountType && (
+            <div className="mb-3">
+              <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold ${
+                accountType === 'channel_partner'
+                  ? 'bg-amber-50 text-amber-800 border border-amber-200'
+                  : 'bg-red-50 text-brand-red border border-red-200'
+              }`}>
+                {accountType === 'channel_partner' ? 'Channel Partner Registration' : 'General Investor Registration'}
+              </span>
+            </div>
+          )}
           <div className="w-full h-0.5 bg-brand-red/20 mb-6" />
 
           {/* Google OAuth */}
@@ -605,11 +657,14 @@ function RegisterPageInner() {
 
             <div>
               <label htmlFor="reg-referral" className="block text-xs font-medium text-brand-black mb-1">Referred By</label>
-              {form.referral && form.referral.startsWith('GHL-') ? (
+              {isLockedReferral && form.referral ? (
                 <div className="flex items-center gap-2">
                   <input id="reg-referral" type="text" className="input-field font-mono font-semibold" value={form.referral} readOnly
                     style={{ background: '#f0fdf4', border: '1px solid #86efac', color: '#16a34a' }} />
-                  <CheckCircle className="w-5 h-5 text-green-500 shrink-0" />
+                  <div className="flex items-center gap-1.5 text-green-700 bg-green-50 px-2.5 py-2 rounded-lg border border-green-200 shrink-0 shadow-sm">
+                    <CheckCircle className="w-4 h-4 text-green-600 shrink-0" />
+                    <span className="text-xs font-bold tracking-tight">Verified Partner</span>
+                  </div>
                 </div>
               ) : (
                 <input id="reg-referral" type="text" className="input-field" placeholder="Enter Referral Code" value={form.referral} onChange={(e) => handleChange('referral', e.target.value)} />
