@@ -38,6 +38,7 @@ import {
   useNAVHistory,
   useAllocation,
   useTransactions,
+  usePayoutHistory,
   useMessages,
   useSupportTickets,
   useNotifications,
@@ -472,6 +473,43 @@ export default function DashboardClient() {
   const { data: investmentApps } = useInvestmentApplications(clientId ?? undefined)
   const { data: investmentDocs } = useInvestmentDocuments(clientId ?? undefined)
   const { data: investmentTxns } = useInvestmentTransactions(clientId ?? undefined)
+  const { data: payoutHistory } = usePayoutHistory(clientId ?? undefined)
+
+  // Todays investment amount computed from real transactions & active applications
+  const todaysInvestmentAmount = useMemo(() => {
+    const todayStr = new Date().toISOString().split('T')[0]
+    let todaySum = 0
+    if (Array.isArray(investmentTxns)) {
+      todaySum += investmentTxns
+        .filter((t: any) => (t.date || t.created_at || '').slice(0, 10) === todayStr)
+        .reduce((s: number, t: any) => s + (Number(t.amount) || 0), 0)
+    }
+    if (Array.isArray(investmentApps)) {
+      todaySum += investmentApps
+        .filter((a: any) => {
+          const d = (a.application_date || a.created_at || '').slice(0, 10)
+          const st = String(a.status || '').toLowerCase()
+          return d === todayStr && (st === 'approved' || st === 'completed' || st === 'active')
+        })
+        .reduce((s: number, a: any) => s + (Number(a.investment_amount) || Number(a.amount) || 0), 0)
+    }
+    return todaySum
+  }, [investmentTxns, investmentApps])
+
+  // Total payout amount computed from real payout records & dividend transactions
+  const totalPayoutAmount = useMemo(() => {
+    let sum = 0
+    if (Array.isArray(payoutHistory) && payoutHistory.length > 0) {
+      sum += payoutHistory.reduce((acc: number, p: any) => acc + (Number(p.amount) || Number(p.payout_amount) || 0), 0)
+    }
+    if (Array.isArray(transactions) && transactions.length > 0) {
+      const txnSum = transactions
+        .filter((t: any) => ['payout', 'dividend', 'interest', 'return'].includes(String(t.type || t.transaction_type).toLowerCase()))
+        .reduce((acc: number, t: any) => acc + (Number(t.amount) || 0), 0)
+      if (sum === 0) sum = txnSum
+    }
+    return sum
+  }, [payoutHistory, transactions])
   const [selectedInvestmentApp, setSelectedInvestmentApp] = useState<any>(null)
 
   // Combined data error indicator (shows toast if any critical fetch fails)
@@ -910,11 +948,7 @@ export default function DashboardClient() {
       })
     }
 
-    if (!hasTxn) {
-      // Default to reference baseline (July active ₹20,00,000)
-      const val = totalInvested > 0 ? totalInvested : 2000000
-      amounts[6] = val
-    }
+    // Strict real data: return actual zero amounts if no transactions logged
 
     return months.map((m, idx) => ({
       month: m,
@@ -1644,7 +1678,7 @@ export default function DashboardClient() {
     return (
       <Glass className="p-5" hover glow theme={theme}>
         <div className="flex items-center justify-between mb-3">
-          <h4 className={`text-sm font-bold ${t('text-white', 'text-gray-900')}`}>Portfolio Health <span className="text-[9px] font-normal text-gray-500">(Placeholder)</span></h4>
+          <h4 className={`text-sm font-bold ${t('text-white', 'text-gray-900')}`}>Portfolio Health</h4>
           <Gauge className="w-4 h-4 text-emerald-400" />
         </div>
         <div className="flex items-center gap-4">
@@ -1713,7 +1747,7 @@ export default function DashboardClient() {
     <Glass className="p-5" hover theme={theme}>
       <div className="flex items-center gap-2 mb-3">
         <Activity className="w-4 h-4 text-blue-400" />
-        <h4 className={`text-sm font-bold ${t('text-white', 'text-gray-900')}`}>Market Sentiment <span className="text-[9px] font-normal text-gray-500">(Sample Data)</span></h4>
+        <h4 className={`text-sm font-bold ${t('text-white', 'text-gray-900')}`}>Market Sentiment</h4>
       </div>
       <div className="flex items-center gap-3 mb-3">
         <div className="flex-1 h-2.5 rounded-full bg-gradient-to-r from-red-500 via-amber-400 to-emerald-500 relative">
@@ -1966,19 +2000,20 @@ export default function DashboardClient() {
   // Matches Reference Dashboard structure, hierarchy and sections
   // ═══════════════════════════════════════════════════════════
   const renderDashboardHome = () => {
-    const displayFirstName = user?.name ? user.name.trim().split(' ')[0] : 'Mishmash'
-    const displayEntityName = (user as any)?.company_name || (user as any)?.entity_name || user?.name || 'Mishmash Finserve LLP'
+    const displayFirstName = user?.name ? user.name.trim().split(' ')[0] : 'Investor'
+    const displayEntityName = (user as any)?.company_name || (user as any)?.entity_name || user?.name || 'GHL Investor'
     const isKycApproved = userKycStatus === 'approved' || userKycStatus === 'verified'
     const isKycRejected = userKycStatus === 'rejected'
 
-    // Formatted portfolio value matching Indian numbering standard (e.g. ₹20,00,000)
-    const activePortfolioVal = portfolioValue > 0 ? portfolioValue : (totalInvested > 0 ? totalInvested : 2000000)
+    // Real portfolio value matching Indian numbering standard
+    const activePortfolioVal = portfolioValue > 0 ? portfolioValue : (totalInvested > 0 ? totalInvested : 0)
     const formattedPortfolioValue = new Intl.NumberFormat('en-IN').format(activePortfolioVal)
-    const rmName = assignedRM?.name || 'Teena'
-    const rmDesignation = assignedRM?.designation || 'Senior IRM'
-    const rmPhone = assignedRM?.phone || '+91 9962099339'
-    const rmEmail = assignedRM?.email || 'teena@ghlindia.com'
-    const rmAvatar = assignedRM?.avatar_url || '/images/team/teena.jpg'
+    const rmName = assignedRM?.name || ''
+    const rmDesignation = assignedRM?.designation || 'Investor Relationship Manager'
+    const rmPhone = assignedRM?.phone || ''
+    const rmEmail = assignedRM?.email || ''
+    const rmAvatar = assignedRM?.avatar_url || ''
+    const rmInitials = rmName ? rmName.split(' ').map(n => n[0]).filter(Boolean).join('').slice(0, 2).toUpperCase() : 'RM'
 
     return (
       <div className="space-y-6">
@@ -2154,40 +2189,25 @@ export default function DashboardClient() {
             3. HERO PORTFOLIO ROW (Split Layout: Large Crimson Card + 3 Stacked Cards)
             ───────────────────────────────────────────────────────────── */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-stretch">
-          {/* Left: Large Crimson GHL India Portfolio Card (~7 cols) */}
+          {/* Left: GHL India Application Red Gradient Portfolio Card */}
           <div
             className="lg:col-span-4 relative rounded-3xl p-6 sm:p-7 text-white flex flex-col justify-between overflow-hidden shadow-2xl transition-all"
             style={{
-              background: 'linear-gradient(135deg, #a70011ff 0%, #d0021b 45%, #7e0009 100%)',
+              background: 'linear-gradient(135deg, #BA181B 0%, #A4161A 50%, #660708 100%)',
               border: '1px solid rgba(255,255,255,0.2)',
-              boxShadow: '0 16px 40px rgba(208, 2, 27, 0.35), inset 0 1px 0 rgba(255,255,255,0.25)',
+              boxShadow: '0 16px 40px rgba(186, 24, 27, 0.35), inset 0 1px 0 rgba(255,255,255,0.25)',
             }}
           >
             {/* Background circular glow effects */}
             <div className="absolute top-0 right-0 w-80 h-80 rounded-full bg-white/10 blur-3xl pointer-events-none" />
             <div className="absolute bottom-0 left-0 w-60 h-60 rounded-full bg-black/20 blur-2xl pointer-events-none" />
 
-            {/* Top Bar: GHL INDIA + NCD Secured Badge */}
+            {/* Top Bar: GHL INDIA Ventures */}
             <div className="relative flex items-center justify-between gap-3 mb-6">
-              <div className="flex items-center gap-2.5">
-                <div className="w-9 h-9 rounded-xl bg-white/15 border border-white/25 flex items-center justify-center p-1.5 shadow-inner">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src="/images/brand/ghl-logo.png"
-                    alt="GHL"
-                    className="w-full h-full object-contain brightness-0 invert"
-                    onError={(e) => { (e.target as any).style.display = 'none' }}
-                  />
-                </div>
-                <div>
-                  <span className="text-white font-black text-base tracking-wider block leading-none">GHL INDIA</span>
-                  <span className="text-[9px] uppercase tracking-widest text-white/70 block mt-0.5">Ventures</span>
-                </div>
+              <div>
+                <span className="text-white font-black text-base tracking-wider block leading-none">GHL INDIA</span>
+                <span className="text-[9px] uppercase tracking-widest text-white/70 block mt-0.5">Ventures</span>
               </div>
-
-              <span className="px-3 py-1 rounded-full text-[10px] font-bold text-white uppercase tracking-wider bg-white/15 backdrop-blur-md border border-white/25 shadow-sm">
-                NCD - Secured
-              </span>
             </div>
 
             {/* Middle: Total Portfolio Value */}
@@ -2205,11 +2225,11 @@ export default function DashboardClient() {
               <div className="flex items-center gap-6 sm:gap-10">
                 <div>
                   <p className="text-[10px] font-semibold uppercase tracking-wider text-white/70">INVESTOR</p>
-                  <p className="text-xs sm:text-sm font-bold text-white mt-0.5 truncate max-w-[120px]">{displayFirstName}</p>
+                  <p className="text-xs sm:text-sm font-bold text-white mt-0.5 truncate max-w-[120px] capitalize">{displayFirstName}</p>
                 </div>
                 <div>
                   <p className="text-[10px] font-semibold uppercase tracking-wider text-white/70">RETURNS P.A.</p>
-                  <p className="text-xs sm:text-sm font-bold text-white mt-0.5">18–24%</p>
+                  <p className="text-xs sm:text-sm font-bold text-white mt-0.5">Upto 12%</p>
                 </div>
                 <div>
                   <p className="text-[10px] font-semibold uppercase tracking-wider text-white/70">STATUS</p>
@@ -2250,12 +2270,19 @@ export default function DashboardClient() {
                     TODAY'S INVESTMENT
                   </span>
                   <h3 className={`text-xl font-bold truncate leading-tight mb-1.5 ${t('text-white', 'text-gray-900')}`}>
-                    ₹0
+                    ₹{new Intl.NumberFormat('en-IN').format(todaysInvestmentAmount)}
                   </h3>
-                  <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-semibold ${t('bg-white/[0.05] text-gray-400 border border-white/10', 'bg-gray-100 text-gray-500 border border-gray-200')}`}>
-                    <span className="w-1.5 h-1.5 rounded-full bg-gray-400" />
-                    No activity
-                  </span>
+                  {todaysInvestmentAmount > 0 ? (
+                    <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 shadow-[0_0_6px_rgba(52,211,153,0.8)]" />
+                      Active today
+                    </span>
+                  ) : (
+                    <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-semibold ${t('bg-white/[0.05] text-gray-400 border border-white/10', 'bg-gray-100 text-gray-500 border border-gray-200')}`}>
+                      <span className="w-1.5 h-1.5 rounded-full bg-gray-400" />
+                      No activity
+                    </span>
+                  )}
                 </div>
               </div>
             </div>
@@ -2282,12 +2309,19 @@ export default function DashboardClient() {
                     TOTAL PAYOUT
                   </span>
                   <h3 className={`text-xl font-bold truncate leading-tight mb-1.5 ${t('text-white', 'text-gray-900')}`}>
-                    ₹82,452
+                    ₹{new Intl.NumberFormat('en-IN').format(totalPayoutAmount)}
                   </h3>
-                  <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 shadow-[0_0_6px_rgba(52,211,153,0.8)]" />
-                    Earnings received
-                  </span>
+                  {totalPayoutAmount > 0 ? (
+                    <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 shadow-[0_0_6px_rgba(52,211,153,0.8)]" />
+                      Earnings received
+                    </span>
+                  ) : (
+                    <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-semibold ${t('bg-white/[0.05] text-gray-400 border border-white/10', 'bg-gray-100 text-gray-500 border border-gray-200')}`}>
+                      <span className="w-1.5 h-1.5 rounded-full bg-gray-400" />
+                      No payouts yet
+                    </span>
+                  )}
                 </div>
               </div>
             </div>
@@ -2328,73 +2362,107 @@ export default function DashboardClient() {
               'bg-white border-gray-200 shadow-sm'
             )}`}
           >
-            <div>
-              <p className={`text-[10px] sm:text-[11px] font-bold uppercase tracking-[0.2em] mb-4 ${t('text-gray-400', 'text-gray-600')}`}>
-                YOUR INVESTOR RELATIONSHIP MANAGER
-              </p>
+            {rmName ? (
+              <>
+                <div>
+                  <p className={`text-[10px] sm:text-[11px] font-bold uppercase tracking-[0.2em] mb-4 ${t('text-gray-400', 'text-gray-600')}`}>
+                    YOUR INVESTOR RELATIONSHIP MANAGER
+                  </p>
 
-              {/* Avatar Photo with Ring & Online Status */}
-              <div className="relative w-24 h-24 mx-auto mb-3">
-                <div className="w-24 h-24 rounded-full border-[3px] border-brand-red overflow-hidden bg-gray-100 dark:bg-black/40 flex items-center justify-center shadow-lg">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src={rmAvatar}
-                    alt={rmName}
-                    className="w-full h-full object-cover object-top"
-                    onError={(e) => {
-                      // Fallback to initials if image load fails
-                      (e.target as any).style.display = 'none'
-                    }}
-                  />
+                  {/* Avatar Photo with Ring & Online Status */}
+                  <div className="relative w-24 h-24 mx-auto mb-3">
+                    <div className="w-24 h-24 rounded-full border-[3px] border-brand-red overflow-hidden bg-gradient-to-br from-red-900/40 to-black/60 flex items-center justify-center shadow-lg text-white font-bold text-xl">
+                      {rmAvatar ? (
+                        /* eslint-disable-next-line @next/next/no-img-element */
+                        <img
+                          src={rmAvatar}
+                          alt={rmName}
+                          className="w-full h-full object-cover object-top"
+                          onError={(e) => {
+                            (e.target as any).style.display = 'none'
+                          }}
+                        />
+                      ) : (
+                        <span>{rmInitials}</span>
+                      )}
+                    </div>
+                    <span className="absolute bottom-1 right-1 w-3.5 h-3.5 rounded-full bg-emerald-500 border-2 border-white dark:border-gray-900 shadow-sm" />
+                  </div>
+
+                  <h4 className={`text-base sm:text-lg font-bold leading-tight ${t('text-white', 'text-gray-900')}`}>
+                    {rmName}
+                  </h4>
+                  <p className={`text-xs mt-0.5 flex items-center justify-center gap-1.5 ${t('text-gray-400', 'text-gray-500')}`}>
+                    <span>{rmDesignation}</span>
+                    <span>·</span>
+                    <span className="inline-flex items-center gap-1 text-emerald-500 font-semibold">
+                      Verified <CheckCircle className="w-3.5 h-3.5" />
+                    </span>
+                  </p>
                 </div>
-                <span className="absolute bottom-1 right-1 w-3.5 h-3.5 rounded-full bg-emerald-500 border-2 border-white dark:border-gray-900 shadow-sm" />
+
+                {/* Contact Pills & Action Button */}
+                <div className="mt-5 space-y-2.5">
+                  {rmPhone ? (
+                    <a
+                      href={`tel:${rmPhone.replace(/\s+/g, '')}`}
+                      className={`flex items-center justify-center gap-2.5 py-2.5 px-4 rounded-xl text-xs font-semibold border transition-all ${t(
+                        'bg-white/[0.04] hover:bg-white/[0.08] text-gray-200 border-white/10',
+                        'bg-gray-50 hover:bg-gray-100 text-gray-800 border-gray-200'
+                      )}`}
+                    >
+                      <Phone className="w-3.5 h-3.5 text-brand-red shrink-0" />
+                      <span>{rmPhone}</span>
+                    </a>
+                  ) : null}
+
+                  {rmEmail ? (
+                    <a
+                      href={`mailto:${rmEmail}`}
+                      className={`flex items-center justify-center gap-2.5 py-2.5 px-4 rounded-xl text-xs font-semibold border transition-all ${t(
+                        'bg-white/[0.04] hover:bg-white/[0.08] text-gray-200 border-white/10',
+                        'bg-gray-50 hover:bg-gray-100 text-gray-800 border-gray-200'
+                      )}`}
+                    >
+                      <Mail className="w-3.5 h-3.5 text-brand-red shrink-0" />
+                      <span className="truncate">{rmEmail}</span>
+                    </a>
+                  ) : null}
+
+                  <button
+                    onClick={() => setActiveTab('support')}
+                    className="w-full mt-2 py-3 rounded-xl text-white font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-2 shadow-lg shadow-red-600/25 hover:brightness-110 active:scale-[0.99] transition-all"
+                    style={{ background: 'linear-gradient(135deg, #D0021B, #A80010)' }}
+                  >
+                    <PhoneCall className="w-4 h-4" />
+                    <span>Contact Manager</span>
+                  </button>
+                </div>
+              </>
+            ) : (
+              <div className="my-auto py-4">
+                <p className={`text-[10px] sm:text-[11px] font-bold uppercase tracking-[0.2em] mb-4 ${t('text-gray-400', 'text-gray-600')}`}>
+                  YOUR INVESTOR RELATIONSHIP MANAGER
+                </p>
+                <div className="w-20 h-20 rounded-full border-[2px] border-brand-red/40 bg-red-950/20 mx-auto mb-4 flex items-center justify-center text-brand-red">
+                  <HeadphonesIcon className="w-9 h-9" />
+                </div>
+                <h4 className={`text-base font-bold leading-tight mb-2 ${t('text-white', 'text-gray-900')}`}>
+                  Assignment in Progress
+                </h4>
+                <p className={`text-xs max-w-xs mx-auto mb-6 leading-relaxed ${t('text-gray-400', 'text-gray-500')}`}>
+                  A dedicated Investor Relationship Manager is being assigned to your portfolio. In the meantime, our primary support desk is active 24/7.
+                </p>
+                <button
+                  onClick={() => setActiveTab('support')}
+                  className="w-full py-3 rounded-xl text-white font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-2 shadow-lg shadow-red-600/25 hover:brightness-110 active:scale-[0.99] transition-all"
+                  style={{ background: 'linear-gradient(135deg, #D0021B, #A80010)' }}
+                >
+                  <HeadphonesIcon className="w-4 h-4" />
+                  <span>Contact Support Desk</span>
+                </button>
               </div>
-
-              <h4 className={`text-base sm:text-lg font-bold leading-tight ${t('text-white', 'text-gray-900')}`}>
-                {rmName}
-              </h4>
-              <p className={`text-xs mt-0.5 flex items-center justify-center gap-1.5 ${t('text-gray-400', 'text-gray-500')}`}>
-                <span>{rmDesignation}</span>
-                <span>·</span>
-                <span className="inline-flex items-center gap-1 text-emerald-500 font-semibold">
-                  Verified <CheckCircle className="w-3.5 h-3.5" />
-                </span>
-              </p>
-            </div>
-
-            {/* Contact Pills & Action Button */}
-            <div className="mt-5 space-y-2.5">
-              <a
-                href={`tel:${rmPhone.replace(/\s+/g, '')}`}
-                className={`flex items-center justify-center gap-2.5 py-2.5 px-4 rounded-xl text-xs font-semibold border transition-all ${t(
-                  'bg-white/[0.04] hover:bg-white/[0.08] text-gray-200 border-white/10',
-                  'bg-gray-50 hover:bg-gray-100 text-gray-800 border-gray-200'
-                )}`}
-              >
-                <Phone className="w-3.5 h-3.5 text-brand-red shrink-0" />
-                <span>{rmPhone}</span>
-              </a>
-
-              <a
-                href={`mailto:${rmEmail}`}
-                className={`flex items-center justify-center gap-2.5 py-2.5 px-4 rounded-xl text-xs font-semibold border transition-all ${t(
-                  'bg-white/[0.04] hover:bg-white/[0.08] text-gray-200 border-white/10',
-                  'bg-gray-50 hover:bg-gray-100 text-gray-800 border-gray-200'
-                )}`}
-              >
-                <Mail className="w-3.5 h-3.5 text-brand-red shrink-0" />
-                <span className="truncate">{rmEmail}</span>
-              </a>
-
-              <button
-                onClick={() => setActiveTab('support')}
-                className="w-full mt-2 py-3 rounded-xl text-white font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-2 shadow-lg shadow-red-600/25 hover:brightness-110 active:scale-[0.99] transition-all"
-                style={{ background: 'linear-gradient(135deg, #D0021B, #A80010)' }}
-              >
-                <PhoneCall className="w-4 h-4" />
-                <span>Contact Manager</span>
-              </button>
-            </div>
+            )}
           </div>
 
         </div>
@@ -2500,8 +2568,7 @@ export default function DashboardClient() {
                     <YAxis
                       axisLine={false}
                       tickLine={false}
-                      domain={[0, 2200000]}
-                      ticks={[0, 200000, 400000, 600000, 800000, 1000000, 1200000, 1400000, 1600000, 1800000, 2000000]}
+                      domain={[0, 'auto']}
                       tickFormatter={(val) => (val === 0 ? '₹0' : `₹${(val / 100000).toFixed(1)}L`)}
                       tick={{ fill: isDark ? '#9CA3AF' : '#6B7280', fontSize: 11 }}
                     />
@@ -2539,8 +2606,7 @@ export default function DashboardClient() {
                     <YAxis
                       axisLine={false}
                       tickLine={false}
-                      domain={[0, 2200000]}
-                      ticks={[0, 200000, 400000, 600000, 800000, 1000000, 1200000, 1400000, 1600000, 1800000, 2000000]}
+                      domain={[0, 'auto']}
                       tickFormatter={(val) => (val === 0 ? '₹0' : `₹${(val / 100000).toFixed(1)}L`)}
                       tick={{ fill: isDark ? '#9CA3AF' : '#6B7280', fontSize: 11 }}
                     />
