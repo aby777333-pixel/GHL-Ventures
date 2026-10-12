@@ -25,6 +25,7 @@ export interface PartnerKPIs {
   todayReferrals: number
   totalInvestors: number
   totalCommission: number
+  totalEarnings?: number
   paidCommission: number
   pendingCommission: number
 }
@@ -275,8 +276,9 @@ export async function generateAgreementPDF(options: {
   partnerName: string
   partnerEmail: string
   partnerPhone?: string
-}): Promise<void> {
-  const { role, partnerId, partnerName, partnerEmail, partnerPhone } = options
+  preview?: boolean
+}): Promise<string | void> {
+  const { role, partnerId, partnerName, partnerEmail, partnerPhone, preview = false } = options
   const isMaster = role === 'MCP'
   const agreementTitle = isMaster
     ? 'MASTER CHANNEL PARTNER AGREEMENT'
@@ -406,6 +408,14 @@ export async function generateAgreementPDF(options: {
       { align: 'center' }
     )
 
+    if (preview) {
+      const blobUrl = doc.output('bloburl')
+      if (typeof window !== 'undefined') {
+        window.open(blobUrl, '_blank')
+      }
+      return blobUrl as any
+    }
+
     doc.save(`GHL_${isMaster ? 'MCP' : 'CP'}_Agreement_${partnerId}.pdf`)
   } catch (err) {
     console.error('[partnerDashboardService] generateAgreementPDF failed:', err)
@@ -417,7 +427,35 @@ export async function generateAgreementPDF(options: {
  * Live direct Supabase query when API route is offline or in static export mode
  */
 async function getFallbackDashboardData(previewId?: string, year?: number, _month?: string): Promise<PartnerDashboardResponse> {
-  const pId = previewId || 'GHL240046'
+  let userEmail = ''
+  let userName = 'Partner Investor'
+  let userPhone = ''
+  let clientInvested = 0
+  let authenticPartnerId = previewId || ''
+
+  if (isSupabaseConfigured()) {
+    try {
+      const { data: authData } = await supabase.auth.getUser()
+      if (authData?.user) {
+        userEmail = authData.user.email || ''
+        userName = authData.user.user_metadata?.full_name || userName
+        const { data: c } = await (supabase as any)
+          .from('clients')
+          .select('full_name, email, phone, total_invested, ghl_id, client_code')
+          .eq('user_id', authData.user.id)
+          .maybeSingle()
+        if (c) {
+          userEmail = c.email || userEmail
+          userName = c.full_name || userName
+          userPhone = c.phone || ''
+          clientInvested = Number(c.total_invested) || 0
+          authenticPartnerId = authenticPartnerId || c.ghl_id || c.client_code || ''
+        }
+      }
+    } catch { /* non-blocking */ }
+  }
+
+  const pId = authenticPartnerId || previewId || 'GHL-PARTNER'
   const role = getPartnerRole(pId)
   const filterYear = year || new Date().getFullYear()
 
@@ -438,30 +476,6 @@ async function getFallbackDashboardData(previewId?: string, year?: number, _mont
       { tier: 'Master Overrides', volume: 'All Sub-CPL Network Volume', rate: '1.0%', note: 'Overriding Commission' },
       { tier: 'Quarterly Bonus Pool', volume: 'Network AUM > ₹50 Cr', rate: '0.5%', note: 'Master Partner Pool' },
     ],
-  }
-
-  let userEmail = ''
-  let userName = 'Partner Investor'
-  let clientInvested = 0
-
-  if (isSupabaseConfigured()) {
-    try {
-      const { data: authData } = await supabase.auth.getUser()
-      if (authData?.user) {
-        userEmail = authData.user.email || ''
-        userName = authData.user.user_metadata?.full_name || userName
-        const { data: c } = await (supabase as any)
-          .from('clients')
-          .select('full_name, email, phone, total_invested, ghl_id')
-          .eq('user_id', authData.user.id)
-          .maybeSingle()
-        if (c) {
-          userEmail = c.email || userEmail
-          userName = c.full_name || userName
-          clientInvested = Number(c.total_invested) || 0
-        }
-      }
-    } catch { /* non-blocking */ }
   }
 
   // 1. Query referrer_summary view
@@ -537,97 +551,6 @@ async function getFallbackDashboardData(previewId?: string, year?: number, _mont
         }
       }
     } catch { /* non-blocking */ }
-  }
-
-  // 4. Default Seed/Sample Data when no DB referrals exist for testing/auditing (Development only)
-  const isProduction = process.env.NODE_ENV === 'production'
-  if (rawReferrals.length === 0 && !isProduction) {
-    if (role === 'CPL' || pId === 'CPLGHL24376') {
-      userName = userName !== 'Partner Investor' ? userName : 'Sourin Chandra Buragohain'
-      userEmail = userEmail || 'sourin.cpl@ghlindiaventures.com'
-      rawReferrals = [
-        {
-          id: 'GHL245721',
-          referrer_name: userName,
-          referrer_email: userEmail,
-          referee_name: 'Abhishek Choudhary',
-          referee_email: 'abhishek.choudhary@example.com',
-          referee_phone: '+91 98401 23456',
-          referee_city: 'Chennai',
-          relationship: 'general_investor',
-          status: 'converted',
-          investment_amount: 1000000,
-          commission_rate: 3.0,
-          commission_amount: 20000,
-          commission_status: 'accrued',
-          created_at: '2026-10-08T10:00:00.000Z',
-        },
-        {
-          id: 'GHL245102',
-          referrer_name: userName,
-          referrer_email: userEmail,
-          referee_name: 'Rajesh Singhania',
-          referee_email: 'rajesh.singhania@example.com',
-          referee_phone: '+91 98200 45678',
-          referee_city: 'Mumbai',
-          relationship: 'general_investor',
-          status: 'converted',
-          investment_amount: 1000000,
-          commission_rate: 3.0,
-          commission_amount: 30000,
-          commission_status: 'paid',
-          created_at: '2026-08-15T11:30:00.000Z',
-        },
-        {
-          id: 'GHL244890',
-          referrer_name: userName,
-          referrer_email: userEmail,
-          referee_name: 'Priya Mehra',
-          referee_email: 'priya.mehra@example.com',
-          referee_phone: '+91 98111 78901',
-          referee_city: 'Delhi',
-          relationship: 'general_investor',
-          status: 'converted',
-          investment_amount: 1000000,
-          commission_rate: 3.0,
-          commission_amount: 30000,
-          commission_status: 'paid',
-          created_at: '2026-06-20T14:00:00.000Z',
-        },
-        {
-          id: 'GHL243210',
-          referrer_name: userName,
-          referrer_email: userEmail,
-          referee_name: 'Vikram Malhotra',
-          referee_email: 'vikram.malhotra@example.com',
-          referee_phone: '+91 98300 23456',
-          referee_city: 'Kolkata',
-          relationship: 'general_investor',
-          status: 'converted',
-          investment_amount: 1000000,
-          commission_rate: 3.0,
-          commission_amount: 30000,
-          commission_status: 'paid',
-          created_at: '2026-04-12T09:45:00.000Z',
-        },
-        {
-          id: 'GHL241050',
-          referrer_name: userName,
-          referrer_email: userEmail,
-          referee_name: 'Ananya Sharma',
-          referee_email: 'ananya.sharma@example.com',
-          referee_phone: '+91 98800 67890',
-          referee_city: 'Bangalore',
-          relationship: 'general_investor',
-          status: 'converted',
-          investment_amount: 1000000,
-          commission_rate: 3.0,
-          commission_amount: 30000,
-          commission_status: 'paid',
-          created_at: '2026-02-05T16:20:00.000Z',
-        },
-      ]
-    }
   }
 
   // Compute 5 KPIs
@@ -727,8 +650,8 @@ async function getFallbackDashboardData(previewId?: string, year?: number, _mont
     partner: {
       partnerId: pId,
       name: userName,
-      email: userEmail || 'partner@ghlindiaventures.com',
-      phone: '+91 44 2843 1043',
+      email: userEmail || '',
+      phone: userPhone || '',
       role,
       referralCode: pId,
       referralLink: typeof window !== 'undefined' ? `${window.location.origin}/register?ref=${pId}` : `https://ghlindiaventures.com/register?ref=${pId}`,

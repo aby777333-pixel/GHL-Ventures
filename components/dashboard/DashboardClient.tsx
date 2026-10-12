@@ -17,8 +17,7 @@ import {
   Home, Mail, BellRing, Archive, Trash2, ImageIcon, Flag,
   Activity, Gauge, Timer, Newspaper, AlarmClock, TrendingDown,
   Flame, DollarSign, Megaphone, Trophy, Heart, Banknote,
-  Calculator, FolderOpen, FileUp, Sliders, ScrollText, Brain,
-  Layers,
+  Calculator, FolderOpen, FileUp, Sliders, ScrollText, Brain
 } from 'lucide-react'
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip,
@@ -102,18 +101,6 @@ import InvestmentFlowTab from './InvestmentFlowTab'
 
 // Referral System & Partner Dashboard
 import ReferralDashboard from './ReferralDashboard'
-import {
-  PartnerRole,
-  PartnerDashboardResponse,
-  ReferralMember,
-  SubChannelPartner,
-  fetchPartnerDashboard,
-  createGeneralInvestor,
-  createChannelPartner,
-  updateMonthlyGoals,
-  generateAgreementPDF,
-  getPartnerRole,
-} from '@/lib/supabase/partnerDashboardService'
 
 // Voice Input (Sarvam AI STT)
 import VoiceInput from '@/components/shared/VoiceInput'
@@ -469,7 +456,6 @@ export default function DashboardClient() {
   const { data: navHistory } = useNAVHistory(clientId ?? undefined)
   const { data: allocationData } = useAllocation(clientId ?? undefined)
   const { data: transactions } = useTransactions(clientId ?? undefined)
-  const { data: payoutHistory } = usePayoutHistory(clientId ?? undefined)
   const { data: messagesData, refetch: refetchMessages } = useMessages(clientId ?? undefined)
   const { data: supportTickets, loading: ticketsLoading, error: ticketsError, refetch: refetchTickets } = useSupportTickets(clientId ?? undefined)
   const { data: notifications, refetch: refetchNotifications } = useNotifications(clientId ?? undefined)
@@ -487,7 +473,7 @@ export default function DashboardClient() {
   const { data: investmentApps } = useInvestmentApplications(clientId ?? undefined)
   const { data: investmentDocs } = useInvestmentDocuments(clientId ?? undefined)
   const { data: investmentTxns } = useInvestmentTransactions(clientId ?? undefined)
-
+  const { data: payoutHistory } = usePayoutHistory(clientId ?? undefined)
 
   // Todays investment amount computed from real transactions & active applications
   const todaysInvestmentAmount = useMemo(() => {
@@ -578,95 +564,6 @@ export default function DashboardClient() {
   const [liveDashboardDate, setLiveDashboardDate] = useState('')
   const [giChartYear, setGiChartYear] = useState<number>(2026)
   const [giChartView, setGiChartView] = useState<'line' | 'bar'>('line')
-
-  // Dashboard role portal view: 'all' (together), 'ghl', 'cpl', or 'mcp'
-  const userPartnerRole: PartnerRole = useMemo(() => {
-    const explicit = (user as any)?.partner_role || (user as any)?.role
-    if (explicit === 'MCP' || explicit === 'CPL' || explicit === 'GI') return explicit
-    if (ghlId) {
-      const upper = ghlId.trim().toUpperCase()
-      if (upper.startsWith('MCP')) return 'MCP'
-      if (upper.startsWith('CPL') || upper.startsWith('CP')) return 'CPL'
-    }
-    return 'GI'
-  }, [ghlId, user])
-
-  const [dashboardView, setDashboardView] = useState<'all' | 'ghl' | 'cpl' | 'mcp'>('ghl')
-
-  useEffect(() => {
-    if (userPartnerRole === 'MCP') setDashboardView('mcp')
-    else if (userPartnerRole === 'CPL') setDashboardView('cpl')
-  }, [userPartnerRole])
-
-  // CPL & MCP Partner Dashboard states (restored from original implementation)
-  const [partnerYear, setPartnerYear] = useState<number>(2026)
-  const [partnerMonth, setPartnerMonth] = useState<string>('Oct')
-  const [partnerFilterMonthInput, setPartnerFilterMonthInput] = useState<string>('Oct')
-  const [partnerFilterYearInput, setPartnerFilterYearInput] = useState<number>(2026)
-  const [partnerChartView, setPartnerChartView] = useState<'line' | 'bar'>('line')
-  const [partnerTableCohort, setPartnerTableCohort] = useState<'investors' | 'partners'>('investors')
-  const [partnerSearchQuery, setPartnerSearchQuery] = useState('')
-  const [partnerLoading, setPartnerLoading] = useState(false)
-  const [partnerData, setPartnerData] = useState<PartnerDashboardResponse | null>(null)
-  const [partnerCopiedLink, setPartnerCopiedLink] = useState(false)
-
-  // Partner Modals state
-  const [createInvestorOpen, setCreateInvestorOpen] = useState(false)
-  const [createPartnerOpen, setCreatePartnerOpen] = useState(false)
-  const [goalModalOpen, setGoalModalOpen] = useState(false)
-  const [selectedPartnerReferral, setSelectedPartnerReferral] = useState<ReferralMember | null>(null)
-  const [submittingPartnerAction, setSubmittingPartnerAction] = useState(false)
-
-  // Form states
-  const [investorForm, setInvestorForm] = useState({
-    name: '',
-    email: '',
-    phone: '',
-    city: '',
-    surplus: '₹25 Lakhs – ₹50 Lakhs',
-    notes: '',
-  })
-
-  const [partnerForm, setPartnerForm] = useState({
-    agencyName: '',
-    contactName: '',
-    email: '',
-    phone: '',
-    city: '',
-    expectedVolume: '₹5 Crore – ₹10 Crore',
-    notes: '',
-  })
-
-  const [goalForm, setGoalForm] = useState({
-    directTarget: 5000000,
-    referralTarget: 10000000,
-  })
-
-  const loadPartnerData = useCallback(async () => {
-    setPartnerLoading(true)
-    try {
-      const res = await fetchPartnerDashboard(dashboardAuthToken, undefined, partnerYear, partnerMonth)
-      if (res && res.success) {
-        setPartnerData(res)
-        if (res.monthlyGoal) {
-          setGoalForm({
-            directTarget: res.monthlyGoal.directTarget,
-            referralTarget: res.monthlyGoal.referralTarget,
-          })
-        }
-      }
-    } catch (err: any) {
-      console.warn('Failed to load partner dashboard data:', err)
-    } finally {
-      setPartnerLoading(false)
-    }
-  }, [dashboardAuthToken, partnerYear, partnerMonth])
-
-  useEffect(() => {
-    if (activeTab === 'dashboard' && (dashboardView === 'cpl' || dashboardView === 'mcp' || dashboardView === 'all')) {
-      loadPartnerData()
-    }
-  }, [activeTab, dashboardView, loadPartnerData])
 
   // Load FAQs for dashboard
   useEffect(() => {
@@ -1232,11 +1129,39 @@ export default function DashboardClient() {
         </div>
 
         {/* Client info badge */}
-        <div className="px-6 mb-4">
-          <div className={`px-3 py-2.5 rounded-xl ${t('bg-white/[0.04] border border-white/[0.06]', 'bg-gray-100/60 border border-gray-200/40')}`}>
-            <p className={`text-[10px] uppercase tracking-widest mb-0.5 ${t('text-gray-500', 'text-gray-600')}`}>{user?.risk_profile || user?.account_status || 'Client'}</p>
-            <p className={`text-sm font-semibold ${t('text-white', 'text-gray-900')}`}>{userName}</p>
-            <p className={`text-[10px] mt-0.5 ${t('text-gray-500', 'text-gray-700')}`}>{userEmail}</p>
+        <div className="px-3 mb-3">
+          <div
+            onClick={() => { setActiveTab('profile'); setSidebarOpen(false) }}
+            className={`px-3 py-2.5 rounded-xl border transition-all cursor-pointer group overflow-hidden ${t(
+              'bg-white/[0.04] border-white/[0.08] hover:bg-white/[0.07] hover:border-brand-red/30',
+              'bg-white/80 border-gray-200/80 shadow-xs hover:bg-white hover:border-brand-red/40'
+            )}`}
+            title="View Profile"
+          >
+            <div className="flex items-center justify-between gap-1.5 mb-1 min-w-0">
+              <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[9px] font-bold uppercase tracking-wider shrink-0 ${String(user?.risk_profile || '').toLowerCase() === 'aggressive'
+                ? 'bg-red-500/10 text-red-600 dark:text-red-400 border border-red-500/20'
+                : String(user?.risk_profile || '').toLowerCase() === 'conservative'
+                  ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20'
+                  : 'bg-amber-500/10 text-amber-700 dark:text-amber-400 border border-amber-500/20'
+                }`}>
+                <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${String(user?.risk_profile || '').toLowerCase() === 'aggressive' ? 'bg-red-500' :
+                  String(user?.risk_profile || '').toLowerCase() === 'conservative' ? 'bg-emerald-500' : 'bg-amber-500'
+                  }`} />
+                <span className="truncate max-w-[110px]">{user?.risk_profile || user?.account_status || 'Client'}</span>
+              </span>
+              {ghlId ? (
+                <span className="font-mono text-[9px] text-gray-400 dark:text-gray-500 font-semibold truncate shrink-0" title={`Client ID: ${ghlId}`}>
+                  {ghlId}
+                </span>
+              ) : null}
+            </div>
+            <p className={`text-xs sm:text-sm font-bold truncate leading-tight group-hover:text-brand-red transition-colors ${t('text-white', 'text-gray-900')}`} title={userName}>
+              {userName}
+            </p>
+            <p className={`text-[10px] mt-0.5 truncate font-medium leading-tight block w-full overflow-hidden text-ellipsis whitespace-nowrap ${t('text-gray-400', 'text-gray-600')}`} title={userEmail}>
+              {userEmail}
+            </p>
           </div>
         </div>
 
@@ -2071,887 +1996,6 @@ export default function DashboardClient() {
   )
 
   // ═══════════════════════════════════════════════════════════
-
-  // Helper for Indian Rupee Formatting
-  const formatINRLocal = (n: number) => {
-    if (!n || isNaN(n)) return '0'
-    if (n >= 10000000) return (n / 10000000).toFixed(2) + ' Cr'
-    if (n >= 100000) return (n / 100000).toFixed(2) + ' L'
-    return new Intl.NumberFormat('en-IN').format(n)
-  }
-
-  // Handle Create General Investor
-  const handleCreateInvestor = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!investorForm.name || !investorForm.email) {
-      showToast('Please enter full name and email', 'info')
-      return
-    }
-
-    setSubmittingPartnerAction(true)
-    try {
-      const res = await createGeneralInvestor(
-        {
-          partnerId: ghlId || 'GHL-PARTNER',
-          referrerName: partnerData?.partner?.name || userName,
-          referrerEmail: partnerData?.partner?.email || userEmail,
-          referrerPhone: user?.phone || '',
-          refereeName: investorForm.name,
-          refereeEmail: investorForm.email,
-          refereePhone: investorForm.phone,
-          refereeCity: investorForm.city,
-          investableSurplus: investorForm.surplus,
-          message: investorForm.notes,
-        },
-        dashboardAuthToken
-      )
-
-      if (res.success) {
-        showToast('General Investor referral created successfully!', 'success')
-        setCreateInvestorOpen(false)
-        setInvestorForm({ name: '', email: '', phone: '', city: '', surplus: '₹25 Lakhs – ₹50 Lakhs', notes: '' })
-        loadPartnerData()
-      } else {
-        showToast('Failed: ' + (res.error || 'Check fields and try again'), 'info')
-      }
-    } catch (err: any) {
-      showToast(err?.message || 'Submission error', 'info')
-    } finally {
-      setSubmittingPartnerAction(false)
-    }
-  }
-
-  // Handle Create Channel Partner (MCP only)
-  const handleCreatePartner = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!partnerForm.agencyName || !partnerForm.email) {
-      showToast('Please enter agency name and email', 'info')
-      return
-    }
-
-    setSubmittingPartnerAction(true)
-    try {
-      const res = await createChannelPartner(
-        {
-          partnerId: ghlId || (user as any)?.ghl_id || 'PARTNER',
-          referrerName: partnerData?.partner?.name || userName,
-          referrerEmail: partnerData?.partner?.email || userEmail,
-          refereeName: partnerForm.agencyName + ' (' + partnerForm.contactName + ')',
-          refereeEmail: partnerForm.email,
-          refereePhone: partnerForm.phone,
-          refereeCity: partnerForm.city,
-          investableSurplus: partnerForm.expectedVolume,
-          message: partnerForm.notes,
-        },
-        dashboardAuthToken
-      )
-
-      if (res.success) {
-        showToast('Channel Partner successfully registered!', 'success')
-        setCreatePartnerOpen(false)
-        setPartnerForm({ agencyName: '', contactName: '', email: '', phone: '', city: '', expectedVolume: '₹5 Crore – ₹10 Crore', notes: '' })
-        loadPartnerData()
-      } else {
-        showToast('Failed: ' + (res.error || 'Check fields and try again'), 'info')
-      }
-    } catch (err: any) {
-      showToast(err?.message || 'Submission error', 'info')
-    } finally {
-      setSubmittingPartnerAction(false)
-    }
-  }
-
-  // Handle Update Monthly Goals
-  const handleUpdateGoals = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setSubmittingPartnerAction(true)
-    try {
-      const res = await updateMonthlyGoals(
-        {
-          directTarget: Number(goalForm.directTarget),
-          referralTarget: Number(goalForm.referralTarget),
-        },
-        dashboardAuthToken
-      )
-
-      if (res.success) {
-        showToast('Monthly investment goals updated!', 'success')
-        setGoalModalOpen(false)
-        loadPartnerData()
-      } else {
-        showToast('Failed: ' + res.error, 'info')
-      }
-    } catch (err: any) {
-      showToast(err?.message || 'Goal update failed', 'info')
-    } finally {
-      setSubmittingPartnerAction(false)
-    }
-  }
-
-  // Section Separator helper
-  const SectionSeparator = ({ label, icon: Icon }: { label: string; icon?: any }) => (
-    <div className="relative flex items-center justify-center my-8">
-      <div className={'absolute inset-0 flex items-center ' + t('text-white/[0.08]', 'text-gray-300')}>
-        <div className="w-full border-t border-current" />
-      </div>
-      <div
-        className={'relative px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider flex items-center gap-2 border shadow-sm ' + t(
-          'bg-[#140606] text-red-400 border-red-500/20',
-          'bg-white text-red-600 border-red-200'
-        )}
-      >
-        {Icon && <Icon className="w-3.5 h-3.5 text-brand-red" />}
-        <span>{label}</span>
-        <span className="w-1.5 h-1.5 rounded-full bg-brand-red animate-pulse" />
-      </div>
-    </div>
-  )
-
-  // Custom Chart Tooltip
-  const CustomPartnerTooltip = ({ active, payload, label }: any) => {
-    if (active && payload && payload.length) {
-      return (
-        <div
-          className={'p-3 rounded-xl border text-xs shadow-xl ' + t(
-            'bg-[#1a0a0a]/95 border-red-500/30 text-white',
-            'bg-white border-gray-200 text-gray-900'
-          )}
-          style={{ backdropFilter: 'blur(16px)' }}
-        >
-          <p className="font-bold mb-1">{label}</p>
-          <p className="text-red-400 font-medium">
-            Investment: ₹{formatINRLocal(payload[0]?.value || 0)}
-          </p>
-          {payload[1] && (
-            <p className="text-emerald-400 font-medium">
-              Earnings: ₹{formatINRLocal(payload[1]?.value || 0)}
-            </p>
-          )}
-        </div>
-      )
-    }
-    return null
-  }
-
-  // Render CPL or MCP Portal Section
-  const renderPartnerPortalContent = (portalRole: 'CPL' | 'MCP') => {
-    const effectivePartnerId = ghlId || (user as any)?.ghl_id || (portalRole === 'MCP' ? 'MCP' : 'CPL')
-    const partnerReferralLink = typeof window !== 'undefined'
-      ? window.location.origin + '/register?ref=' + effectivePartnerId
-      : 'https://ghlindiaventures.com/register?ref=' + effectivePartnerId
-
-    const copyPartnerReferralLink = () => {
-      if (typeof navigator !== 'undefined') {
-        navigator.clipboard.writeText(partnerReferralLink)
-        setPartnerCopiedLink(true)
-        showToast('Referral link copied to clipboard!', 'success')
-        setTimeout(() => setPartnerCopiedLink(false), 2000)
-      }
-    }
-
-    const giReferrals = (partnerData?.referrals || []).filter(r => r.memberType === 'General Investor' || !r.memberType)
-    const cpReferrals = (partnerData?.referrals || []).filter(r => r.memberType === 'Channel Partner')
-
-    const giVolume = (() => {
-      const relevant = giReferrals.filter(r => {
-        if (partnerMonth !== 'all' && r.createdAt) {
-          const d = new Date(r.createdAt)
-          const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
-          if (monthNames[d.getMonth()] !== partnerMonth) return false
-          if (d.getFullYear() !== partnerYear) return false
-        }
-        return true
-      })
-      const sum = relevant.reduce((acc, r) => acc + (r.investmentAmount || 0), 0)
-      if (sum > 0) return sum
-      if (partnerMonth !== 'all' && partnerData?.chartData) {
-        const point = partnerData.chartData.find(c => c.month.toLowerCase() === partnerMonth.toLowerCase())
-        if (point && point.referralInvestment > 0) return point.referralInvestment
-      }
-      if (partnerMonth === 'all') {
-        return giReferrals.reduce((acc, r) => acc + (r.investmentAmount || 0), 0)
-      }
-      return sum || 0
-    })()
-
-    let giRate = 2.5
-    let giActiveIndex = 0
-    if (giVolume >= 5000000) { giRate = 4.0; giActiveIndex = 3 }
-    else if (giVolume >= 1500000) { giRate = 3.5; giActiveIndex = 2 }
-    else if (giVolume >= 500000) { giRate = 3.0; giActiveIndex = 1 }
-    else { giRate = 2.5; giActiveIndex = 0 }
-    const giEarned = (giVolume * giRate) / 100
-
-    const subVolume = (partnerData?.subChannelPartners || []).reduce((sum, p) => sum + (p.volumeGenerated || 0), 0)
-    const directCpVolume = cpReferrals.reduce((sum, r) => sum + (r.investmentAmount || 0), 0)
-    const cpVolume = subVolume + directCpVolume
-
-    const cpRate = cpVolume >= 10000000 ? 1.0 : (cpVolume >= 100000 ? 0.5 : 0.0)
-    const cpActiveIndex = cpVolume >= 10000000 ? 1 : 0
-    const cpEarned = (cpVolume * (cpRate || 0.5)) / 100
-
-    const displayTableRows = (() => {
-      if (partnerTableCohort === 'partners' && portalRole === 'MCP') {
-        const partnersList = (partnerData?.subChannelPartners || [])
-        return partnersList
-          .filter((p) => {
-            const q = partnerSearchQuery.toLowerCase()
-            return !q || p.agencyName.toLowerCase().includes(q) || p.cplId.toLowerCase().includes(q)
-          })
-          .map((p, idx) => ({
-            sno: idx + 1,
-            userId: p.cplId,
-            name: p.agencyName,
-            totalInvest: p.volumeGenerated,
-            cashback: p.overrideEarned,
-            raw: {
-              id: p.id,
-              refereeName: p.agencyName,
-              refereeEmail: p.contactEmail,
-              refereePhone: p.contactPhone,
-              refereeCity: p.city,
-              memberType: 'Channel Partner' as const,
-              kycStatus: 'Verified' as const,
-              date: p.createdAt ? new Date(p.createdAt).toLocaleDateString('en-IN') : 'Active',
-              createdAt: p.createdAt,
-              investmentAmount: p.volumeGenerated,
-              commissionRate: p.overrideRate,
-              commissionAmount: p.overrideEarned,
-              commissionStatus: 'accrued' as const,
-              status: p.status,
-            },
-          }))
-      }
-
-      return (partnerData?.referrals || [])
-        .filter(r => {
-          if (partnerMonth !== 'all' && r.createdAt) {
-            const d = new Date(r.createdAt)
-            const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
-            if (monthNames[d.getMonth()] !== partnerMonth) return false
-            if (d.getFullYear() !== partnerYear) return false
-          } else if (partnerYear && r.createdAt) {
-            const d = new Date(r.createdAt)
-            if (d.getFullYear() !== partnerYear) return false
-          }
-          const q = partnerSearchQuery.toLowerCase()
-          return !q || r.refereeName.toLowerCase().includes(q) || r.refereeEmail.toLowerCase().includes(q) || (r.id && r.id.toLowerCase().includes(q))
-        })
-        .map((r, idx) => {
-          const idStr = r.id
-          return {
-            sno: idx + 1,
-            userId: idStr,
-            name: r.refereeName,
-            totalInvest: r.investmentAmount,
-            cashback: r.commissionAmount || Math.round((r.investmentAmount * (r.commissionRate || 3.0)) / 100),
-            raw: r,
-          }
-        })
-    })()
-
-    const monthInvestmentTotal = (() => {
-      const tableSum = displayTableRows.reduce((acc, row) => acc + (Number(row.totalInvest) || 0), 0)
-      if (tableSum > 0) return tableSum
-      if (giVolume > 0) return giVolume
-      return 0
-    })()
-
-    return (
-      <div className="space-y-6">
-        {/* Welcome Banner */}
-        <div
-          className="relative rounded-2xl overflow-hidden p-6 text-white shadow-xl transition-all"
-          style={{
-            background: 'linear-gradient(135deg, #8B0000 0%, #D0021B 55%, #7A0000 100%)',
-            border: '1px solid rgba(255,255,255,0.15)',
-          }}
-        >
-          <div className="absolute top-0 right-0 w-96 h-96 rounded-full bg-white/5 blur-3xl pointer-events-none" />
-          <div className="relative flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-            <div>
-              <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-white/80 block mb-1">
-                {portalRole === 'MCP' ? 'WELCOME — MASTER CHANNEL PARTNER' : 'WELCOME — CHANNEL PARTNER'}
-              </span>
-              <h2 className="text-xl sm:text-2xl font-black tracking-tight text-white drop-shadow-sm">
-                {partnerData?.partner?.name || userName || (portalRole === 'CPL' ? 'Channel Partner' : 'Master Channel Partner')}
-              </h2>
-            </div>
-
-            <div className="flex items-center gap-2">
-              <span className="px-3 py-1 rounded-full text-xs font-mono font-bold bg-black/25 text-white border border-white/20">
-                {effectivePartnerId}
-              </span>
-              <button
-                type="button"
-                onClick={copyPartnerReferralLink}
-                className="px-3 py-1 rounded-full text-xs font-semibold bg-white text-brand-red hover:bg-gray-100 flex items-center gap-1 transition-all shadow-sm cursor-pointer"
-                title="Copy referral link"
-              >
-                {partnerCopiedLink ? <CheckCircle className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
-                <span>{partnerCopiedLink ? 'Copied' : 'Share Link'}</span>
-              </button>
-            </div>
-          </div>
-        </div>
-
-        {/* Top Action Cards Row */}
-        <div className={'grid gap-4 ' + (portalRole === 'MCP' ? 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-4' : 'grid-cols-1 sm:grid-cols-2')}>
-          {/* Card 1: Create General Investor */}
-          <div className={'rounded-2xl p-5 border flex flex-col justify-between transition-all hover:scale-[1.01] ' + t('bg-[#150606] border-white/10 shadow-lg', 'bg-white border-gray-200 shadow-sm')}>
-            <span className={'text-[10px] font-bold uppercase tracking-wider block ' + t('text-gray-400', 'text-gray-500')}>
-              CREATE YOUR
-            </span>
-            <button
-              type="button"
-              onClick={() => setCreateInvestorOpen(true)}
-              className="mt-4 w-full py-2.5 rounded-xl text-xs font-bold text-white transition-all duration-300 hover:brightness-110 shadow-md cursor-pointer"
-              style={{ background: 'linear-gradient(135deg, #D0021B, #B00000)' }}
-            >
-              General Investor
-            </button>
-          </div>
-
-          {/* Card 2: Create Channel Partner (MCP ONLY) */}
-          {portalRole === 'MCP' && (
-            <div className={'rounded-2xl p-5 border flex flex-col justify-between transition-all hover:scale-[1.01] ' + t('bg-[#150606] border-white/10 shadow-lg', 'bg-white border-gray-200 shadow-sm')}>
-              <span className={'text-[10px] font-bold uppercase tracking-wider block ' + t('text-gray-400', 'text-gray-500')}>
-                CREATE YOUR
-              </span>
-              <button
-                type="button"
-                onClick={() => setCreatePartnerOpen(true)}
-                className="mt-4 w-full py-2.5 rounded-xl text-xs font-bold text-white transition-all duration-300 hover:brightness-110 shadow-md cursor-pointer"
-                style={{ background: 'linear-gradient(135deg, #D0021B, #B00000)' }}
-              >
-                Channel Partner
-              </button>
-            </div>
-          )}
-
-          {/* Card 3: Master Channel Partner Terms (MCP ONLY) */}
-          {portalRole === 'MCP' && (
-            <div className={'rounded-2xl p-5 border flex flex-col justify-between transition-all hover:scale-[1.01] ' + t('bg-[#150606] border-white/10 shadow-lg', 'bg-white border-gray-200 shadow-sm')}>
-              <span className={'text-[10px] font-bold uppercase tracking-wider block truncate ' + t('text-gray-400', 'text-gray-500')}>
-                MASTER CHANNEL PARTNER TERMS
-              </span>
-              <button
-                type="button"
-                onClick={() => {
-                  generateAgreementPDF({
-                    role: 'MCP',
-                    partnerId: effectivePartnerId,
-                    partnerName: partnerData?.partner?.name || userName || 'Master Channel Partner',
-                    partnerEmail: partnerData?.partner?.email || userEmail || '',
-                    partnerPhone: user?.phone || '',
-                  })
-                  showToast('Generating official Master Channel Partner Agreement PDF...', 'success')
-                }}
-                className={'mt-4 w-full py-2.5 rounded-xl text-xs font-bold border transition-all cursor-pointer ' + t(
-                  'bg-white/[0.04] hover:bg-white/[0.08] text-gray-200 border-white/10',
-                  'bg-gray-100 hover:bg-gray-200 text-gray-800 border-gray-300'
-                )}
-              >
-                Download Now
-              </button>
-            </div>
-          )}
-
-          {/* Card 4: Channel Partner Terms (CPL & MCP) */}
-          <div className={'rounded-2xl p-5 border flex flex-col justify-between transition-all hover:scale-[1.01] ' + t('bg-[#150606] border-white/10 shadow-lg', 'bg-white border-gray-200 shadow-sm')}>
-            <span className={'text-[10px] font-bold uppercase tracking-wider block truncate ' + t('text-gray-400', 'text-gray-500')}>
-              CHANNEL PARTNER TERMS
-            </span>
-            <button
-              type="button"
-              onClick={() => {
-                generateAgreementPDF({
-                  role: 'CPL',
-                  partnerId: effectivePartnerId,
-                  partnerName: partnerData?.partner?.name || userName || 'Channel Partner',
-                  partnerEmail: partnerData?.partner?.email || userEmail || '',
-                  partnerPhone: user?.phone || '',
-                })
-                showToast('Generating official Channel Partner Agreement PDF...', 'success')
-              }}
-              className={'mt-4 w-full py-2.5 rounded-xl text-xs font-bold border transition-all cursor-pointer ' + t(
-                'bg-white/[0.04] hover:bg-white/[0.08] text-gray-200 border-white/10',
-                'bg-gray-100 hover:bg-gray-200 text-gray-800 border-gray-300'
-              )}
-            >
-              Download Now
-            </button>
-          </div>
-        </div>
-
-        {/* 6 KPI Summary Metrics */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          <div className={'relative overflow-hidden rounded-2xl p-5 border transition-all hover:-translate-y-0.5 ' + t('bg-[#150606] border-white/10 shadow-lg', 'bg-white border-gray-200 shadow-sm')}>
-            <div className={'w-16 h-16 rounded-full absolute -top-3 -right-3 pointer-events-none ' + t('bg-red-500/10', 'bg-red-500/[0.06]')} />
-            <div className="flex items-center gap-3 mb-2">
-              <div className="w-10 h-10 rounded-xl bg-red-500/15 flex items-center justify-center text-brand-red font-bold text-lg border border-red-500/25 shrink-0">₹</div>
-              <span className={'text-[10px] font-bold uppercase tracking-wider ' + t('text-gray-400', 'text-gray-500')}>TOTAL INVESTMENT</span>
-            </div>
-            <h3 className={'text-xl sm:text-2xl font-black tracking-tight mt-1 ' + t('text-white', 'text-gray-900')}>
-              {partnerLoading ? '—' : '₹' + formatINRLocal(partnerData?.kpis?.totalInvestment || 0)}
-            </h3>
-          </div>
-
-          <div className={'relative overflow-hidden rounded-2xl p-5 border transition-all hover:-translate-y-0.5 ' + t('bg-[#150606] border-white/10 shadow-lg', 'bg-white border-gray-200 shadow-sm')}>
-            <div className={'w-16 h-16 rounded-full absolute -top-3 -right-3 pointer-events-none ' + t('bg-red-500/10', 'bg-red-500/[0.06]')} />
-            <div className="flex items-center gap-3 mb-2">
-              <div className="w-10 h-10 rounded-xl bg-red-500/15 flex items-center justify-center text-brand-red border border-red-500/25 shrink-0"><Users className="w-5 h-5" /></div>
-              <span className={'text-[10px] font-bold uppercase tracking-wider ' + t('text-gray-400', 'text-gray-500')}>TOTAL REFERRAL</span>
-            </div>
-            <div className="flex items-baseline justify-between mt-1">
-              <h3 className={'text-xl sm:text-2xl font-black tracking-tight ' + t('text-white', 'text-gray-900')}>
-                {partnerLoading ? '—' : (partnerData?.kpis?.totalReferrals || 0)}
-              </h3>
-              <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-400">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
-                <span>Active</span>
-              </span>
-            </div>
-          </div>
-
-          <div className={'relative overflow-hidden rounded-2xl p-5 border transition-all hover:-translate-y-0.5 ' + t('bg-[#150606] border-white/10 shadow-lg', 'bg-white border-gray-200 shadow-sm')}>
-            <div className={'w-16 h-16 rounded-full absolute -top-3 -right-3 pointer-events-none ' + t('bg-red-500/10', 'bg-red-500/[0.06]')} />
-            <div className="flex items-center gap-3 mb-2">
-              <div className="w-10 h-10 rounded-xl bg-red-500/15 flex items-center justify-center text-brand-red border border-red-500/25 shrink-0"><FileText className="w-5 h-5" /></div>
-              <span className={'text-[10px] font-bold uppercase tracking-wider ' + t('text-gray-400', 'text-gray-500')}>TOTAL HISTORY</span>
-            </div>
-            <div className="flex items-baseline justify-between mt-1">
-              <h3 className={'text-xl sm:text-2xl font-black tracking-tight ' + t('text-white', 'text-gray-900')}>
-                {partnerLoading ? '—' : (partnerData?.referrals?.length || 0) + ' entries'}
-              </h3>
-              <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-400">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
-                <span>Recorded</span>
-              </span>
-            </div>
-          </div>
-
-          <div className={'relative overflow-hidden rounded-2xl p-5 border transition-all hover:-translate-y-0.5 ' + t('bg-[#150606] border-white/10 shadow-lg', 'bg-white border-gray-200 shadow-sm')}>
-            <div className={'w-16 h-16 rounded-full absolute -top-3 -right-3 pointer-events-none ' + t('bg-red-500/10', 'bg-red-500/[0.06]')} />
-            <div className="flex items-center gap-3 mb-2">
-              <div className="w-10 h-10 rounded-xl bg-red-500/15 flex items-center justify-center text-brand-red border border-red-500/25 shrink-0"><Clock className="w-5 h-5" /></div>
-              <span className={'text-[10px] font-bold uppercase tracking-wider ' + t('text-gray-400', 'text-gray-500')}>TODAY REFERRAL</span>
-            </div>
-            <div className="flex items-baseline justify-between mt-1">
-              <h3 className={'text-xl sm:text-2xl font-black tracking-tight ' + t('text-white', 'text-gray-900')}>
-                {partnerLoading ? '—' : (partnerData?.kpis?.todayReferrals || 0)}
-              </h3>
-              <span className={'inline-flex items-center gap-1 text-[11px] font-semibold ' + ((partnerData?.kpis?.todayReferrals || 0) > 0 ? 'text-emerald-400' : t('text-gray-500', 'text-gray-400'))}>
-                <span className={'w-1.5 h-1.5 rounded-full ' + ((partnerData?.kpis?.todayReferrals || 0) > 0 ? 'bg-emerald-400' : 'bg-gray-500')} />
-                <span>{(partnerData?.kpis?.todayReferrals || 0) > 0 ? 'Active today' : 'No activity'}</span>
-              </span>
-            </div>
-          </div>
-        </div>
-
-        {/* Section: Monthly Goal */}
-        <SectionSeparator label="MONTHLY GOAL" icon={Target} />
-        <div
-          className="rounded-2xl p-6 sm:p-7 text-white shadow-xl transition-all relative overflow-hidden"
-          style={{
-            background: 'linear-gradient(135deg, #8B0000 0%, #D0021B 60%, #900000 100%)',
-            border: '1px solid rgba(255,255,255,0.15)',
-          }}
-        >
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-5">
-            <div className="max-w-2xl">
-              <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-white/80 block mb-1">
-                {partnerData?.monthlyGoal?.referralTarget && partnerData.monthlyGoal.referralTarget > 0
-                  ? (partnerData.monthlyGoal.month || 'OCTOBER').toUpperCase() + ' TARGET ACTIVE'
-                  : 'NO TARGET SET FOR ' + (partnerData?.monthlyGoal?.month || 'OCTOBER').toUpperCase()}
-              </span>
-              <h3 className="text-xl sm:text-2xl font-black tracking-tight text-white mb-1.5">
-                Set a monthly goal & track it live
-              </h3>
-              <p className="text-xs text-white/85 leading-relaxed">
-                Pick a target amount and a member count — we&apos;ll chart your progress automatically.
-              </p>
-            </div>
-
-            <button
-              type="button"
-              onClick={() => setGoalModalOpen(true)}
-              className="px-5 py-2.5 rounded-full text-xs font-bold text-brand-red bg-white hover:bg-gray-100 flex items-center gap-2 transition-all shadow-lg shrink-0 hover:scale-105 cursor-pointer"
-            >
-              <Plus className="w-4 h-4" />
-              <span>Set Your Goal</span>
-            </button>
-          </div>
-        </div>
-
-        {/* Section: Direct Investments Chart */}
-        <SectionSeparator label="DIRECT INVESTMENTS" icon={TrendingUp} />
-        <div className={'rounded-2xl p-6 border transition-all ' + t('bg-[#150606] border-white/10 shadow-lg', 'bg-white border-gray-200 shadow-sm')}>
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
-            <div>
-              <h3 className={'text-base font-bold ' + t('text-white', 'text-gray-900')}>
-                Referral Investments
-              </h3>
-              <p className={'text-xs mt-0.5 ' + t('text-gray-400', 'text-gray-600')}>
-                Monthly — {partnerYear}
-              </p>
-            </div>
-
-            <div className="flex items-center gap-3">
-              <select
-                value={partnerYear}
-                onChange={(e) => setPartnerYear(Number(e.target.value))}
-                className={'text-xs font-semibold py-1.5 px-3 rounded-xl border outline-none cursor-pointer ' + t(
-                  'bg-white/[0.05] border-white/10 text-gray-200',
-                  'bg-gray-100 border-gray-300 text-gray-800'
-                )}
-              >
-                {[2024, 2025, 2026].map((yr) => (
-                  <option key={yr} value={yr} className="bg-[#1a0a0a] text-white">
-                    {yr}
-                  </option>
-                ))}
-              </select>
-
-              <div className={'p-1 rounded-xl border flex items-center ' + t('bg-white/[0.04] border-white/10', 'bg-gray-100 border-gray-300')}>
-                <button
-                  type="button"
-                  onClick={() => setPartnerChartView('line')}
-                  className={'px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ' + (
-                    partnerChartView === 'line'
-                      ? 'bg-brand-red text-white shadow-sm'
-                      : t('text-gray-400 hover:text-white', 'text-gray-600 hover:text-gray-900')
-                  )}
-                >
-                  Line
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setPartnerChartView('bar')}
-                  className={'px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ' + (
-                    partnerChartView === 'bar'
-                      ? 'bg-brand-red text-white shadow-sm'
-                      : t('text-gray-400 hover:text-white', 'text-gray-600 hover:text-gray-900')
-                  )}
-                >
-                  Bar
-                </button>
-              </div>
-            </div>
-          </div>
-
-          <div className="h-[280px] w-full">
-            <ResponsiveContainer width="100%" height="100%">
-              {partnerChartView === 'line' ? (
-                <AreaChart data={partnerData?.chartData || []} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
-                  <defs>
-                    <linearGradient id={'invRedCurve' + portalRole} x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#D0021B" stopOpacity={0.35} />
-                      <stop offset="95%" stopColor="#D0021B" stopOpacity={0.0} />
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid strokeDasharray="3 3" stroke={isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)'} />
-                  <XAxis dataKey="month" stroke={isDark ? '#6B7280' : '#9CA3AF'} fontSize={11} tickLine={false} />
-                  <YAxis stroke={isDark ? '#6B7280' : '#9CA3AF'} fontSize={10} tickLine={false} tickFormatter={(val) => '₹' + formatINRLocal(val)} />
-                  <Tooltip content={CustomPartnerTooltip} />
-                  <Area type="monotone" dataKey="referralInvestment" name="Investment" stroke="#D0021B" strokeWidth={2.5} fillOpacity={1} fill={'url(#invRedCurve' + portalRole + ')'} />
-                </AreaChart>
-              ) : (
-                <BarChart data={partnerData?.chartData || []} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke={isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)'} />
-                  <XAxis dataKey="month" stroke={isDark ? '#6B7280' : '#9CA3AF'} fontSize={11} tickLine={false} />
-                  <YAxis stroke={isDark ? '#6B7280' : '#9CA3AF'} fontSize={10} tickLine={false} tickFormatter={(val) => '₹' + formatINRLocal(val)} />
-                  <Tooltip content={CustomPartnerTooltip} />
-                  <Bar dataKey="referralInvestment" name="Investment" fill="#D0021B" radius={[6, 6, 0, 0]} />
-                </BarChart>
-              )}
-            </ResponsiveContainer>
-          </div>
-        </div>
-
-        {/* Filter Bar Card */}
-        <div className={'rounded-2xl p-6 border transition-all ' + t('bg-[#150606] border-white/10 shadow-lg', 'bg-white border-gray-200 shadow-sm')}>
-          <span className={'text-[10px] font-bold uppercase tracking-wider block mb-3 ' + t('text-gray-400', 'text-gray-500')}>
-            FILTER EARNINGS & REFERRAL LIST BY MONTH / YEAR
-          </span>
-          <form
-            onSubmit={(e) => {
-              e.preventDefault()
-              setPartnerMonth(partnerFilterMonthInput)
-              setPartnerYear(partnerFilterYearInput)
-              loadPartnerData()
-              showToast('Filtered dashboard for ' + partnerFilterMonthInput + ' ' + partnerFilterYearInput, 'info')
-            }}
-            className="flex flex-wrap items-center gap-4"
-          >
-            <div>
-              <label className={'text-[11px] block mb-1 font-semibold ' + t('text-gray-400', 'text-gray-600')}>Month</label>
-              <select
-                value={partnerFilterMonthInput}
-                onChange={(e) => setPartnerFilterMonthInput(e.target.value)}
-                className={'py-2 px-4 rounded-xl text-xs font-semibold outline-none border cursor-pointer ' + t('bg-white/[0.05] border-white/10 text-white', 'bg-gray-100 border-gray-300 text-gray-900')}
-              >
-                {['all', 'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'].map((m) => (
-                  <option key={m} value={m} className="bg-[#1a0a0a] text-white">
-                    {m === 'all' ? 'All Months' : m}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div>
-              <label className={'text-[11px] block mb-1 font-semibold ' + t('text-gray-400', 'text-gray-600')}>Year</label>
-              <select
-                value={partnerFilterYearInput}
-                onChange={(e) => setPartnerFilterYearInput(Number(e.target.value))}
-                className={'py-2 px-4 rounded-xl text-xs font-semibold outline-none border cursor-pointer ' + t('bg-white/[0.05] border-white/10 text-white', 'bg-gray-100 border-gray-300 text-gray-900')}
-              >
-                {[2024, 2025, 2026].map((yr) => (
-                  <option key={yr} value={yr} className="bg-[#1a0a0a] text-white">
-                    {yr}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div className="self-end flex items-center gap-3">
-              <button
-                type="submit"
-                className="px-6 py-2 rounded-xl text-xs font-bold text-white shadow-md transition-all hover:scale-105 cursor-pointer"
-                style={{ background: 'linear-gradient(135deg, #D0021B, #B00000)' }}
-              >
-                Submit
-              </button>
-              <span className={'text-[11px] ' + t('text-gray-500', 'text-gray-500')}>
-                Applies to Earning Chart and Referral List below
-              </span>
-            </div>
-          </form>
-        </div>
-
-        {/* Section: Earning Chart */}
-        <SectionSeparator label="EARNING CHART" icon={Award} />
-        <div className={'rounded-2xl p-6 sm:p-7 border transition-all ' + t('bg-[#150606] border-white/10 shadow-lg', 'bg-white border-gray-200 shadow-sm')}>
-          <div className="flex items-center gap-3 mb-1">
-            <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-red-500/20 text-brand-red border border-red-500/30 flex items-center gap-1.5">
-              <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />
-              LIVE
-            </span>
-            <h3 className={'text-base sm:text-lg font-bold ' + t('text-white', 'text-gray-900')}>
-              Earning Chart {partnerMonth !== 'all' ? partnerMonth : 'Oct'} {partnerYear}
-            </h3>
-          </div>
-          <p className={'text-xs mb-6 ' + t('text-gray-400', 'text-gray-600')}>
-            Volume of investment by lakhs (income percentage) — earning
-          </p>
-
-          {/* Group 1: General Investor */}
-          <div className={'space-y-3 ' + (portalRole === 'MCP' ? 'mb-8' : '')}>
-            {portalRole === 'MCP' && (
-              <h4 className={'text-sm font-bold ' + t('text-white', 'text-gray-900')}>General Investor</h4>
-            )}
-
-            <div className="inline-flex items-center px-4 py-1.5 rounded-full text-xs font-bold bg-red-500/15 text-brand-red border border-red-500/30 shadow-sm">
-              Your Income ₹{formatINRLocal(giVolume)} ( {giRate}% ) — ₹{formatINRLocal(giEarned)}
-            </div>
-
-            <div className="grid grid-cols-4 gap-2 mb-2">
-              {[0, 1, 2, 3].map((stepIdx) => (
-                <div
-                  key={stepIdx}
-                  className={'h-2 rounded-full overflow-hidden ' + (
-                    stepIdx <= giActiveIndex ? 'bg-red-500' : t('bg-white/[0.08]', 'bg-gray-200')
-                  )}
-                />
-              ))}
-            </div>
-
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-              {[
-                { label: '1 L - 4.99 L', rate: '2.5%', index: 0 },
-                { label: '5 L - 14.99 L', rate: '3%', index: 1 },
-                { label: '15 L - 49.99 L', rate: '3.5%', index: 2 },
-                { label: '50 L above', rate: '4%', index: 3 },
-              ].map((slab) => {
-                const isActive = slab.index === giActiveIndex
-                return (
-                  <div
-                    key={slab.index}
-                    className={'p-3.5 rounded-xl border text-center transition-all ' + (
-                      isActive
-                        ? t('bg-emerald-500/10 border-emerald-500/40 text-emerald-400 font-bold shadow-sm ring-1 ring-emerald-500/20', 'bg-[#e8f5e9] border-[#a5d6a7] text-[#1b5e20] font-bold shadow-sm')
-                        : t('bg-white/[0.02] border-white/10 text-gray-300', 'bg-gray-50 border-gray-200 text-gray-700')
-                    )}
-                  >
-                    <p className="text-xs font-bold mb-1">{slab.label}</p>
-                    <p className={'text-xs font-semibold ' + (isActive ? (isDark ? 'text-emerald-400 font-black' : 'text-[#1b5e20] font-black') : 'text-gray-400')}>
-                      {slab.rate}
-                    </p>
-                  </div>
-                )
-              })}
-            </div>
-          </div>
-
-          {/* Group 2: Channel Partner Network Overrides (MCP ONLY) */}
-          {portalRole === 'MCP' && (
-            <div className="space-y-3 pt-6 border-t border-white/10">
-              <h4 className={'text-sm font-bold ' + t('text-white', 'text-gray-900')}>Channel Partner Network Overrides</h4>
-
-              <div className="inline-flex items-center px-4 py-1.5 rounded-full text-xs font-bold bg-red-500/15 text-brand-red border border-red-500/30 shadow-sm">
-                Your Income ₹{formatINRLocal(cpVolume)} ( {cpRate}% ) — ₹{formatINRLocal(cpEarned)}
-              </div>
-
-              <div className="grid grid-cols-2 gap-2 mb-2">
-                {[0, 1].map((stepIdx) => (
-                  <div
-                    key={stepIdx}
-                    className={'h-2 rounded-full overflow-hidden ' + (
-                      stepIdx <= cpActiveIndex && cpVolume > 0 ? 'bg-red-500' : t('bg-white/[0.08]', 'bg-gray-200')
-                    )}
-                  />
-                ))}
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                {[
-                  { label: '1 L - 9.99 L', rate: '0.5%', index: 0 },
-                  { label: '1 Crore & above', rate: '1%', index: 1 },
-                ].map((slab) => {
-                  const isActive = slab.index === cpActiveIndex && cpVolume > 0
-                  return (
-                    <div
-                      key={slab.index}
-                      className={'p-3.5 rounded-xl border text-center transition-all ' + (
-                        isActive
-                          ? t('bg-emerald-500/10 border-emerald-500/40 text-emerald-400 font-bold shadow-sm ring-1 ring-emerald-500/20', 'bg-[#e8f5e9] border-[#a5d6a7] text-[#1b5e20] font-bold shadow-sm')
-                          : t('bg-white/[0.02] border-white/10 text-gray-300', 'bg-gray-50 border-gray-200 text-gray-700')
-                      )}
-                    >
-                      <p className="text-xs font-bold mb-1">{slab.label}</p>
-                      <p className={'text-xs font-semibold ' + (isActive ? (isDark ? 'text-emerald-400 font-black' : 'text-[#1b5e20] font-black') : 'text-gray-400')}>
-                        {slab.rate}
-                      </p>
-                    </div>
-                  )
-                })}
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* Section: Referral List */}
-        <SectionSeparator label="REFERRAL LIST" icon={Users} />
-        <div id={'referral-list-' + portalRole.toLowerCase()} className={'rounded-2xl p-6 border transition-all ' + t('bg-[#150606] border-white/10 shadow-lg', 'bg-white border-gray-200 shadow-sm')}>
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
-            <h3 className={'text-lg font-bold ' + t('text-white', 'text-gray-900')}>Referral Members</h3>
-
-            <div className="flex flex-wrap items-center gap-3">
-              {portalRole === 'MCP' ? (
-                <div className={'p-1 rounded-xl border flex items-center ' + t('bg-white/[0.04] border-white/10', 'bg-gray-100 border-gray-300')}>
-                  <button
-                    type="button"
-                    onClick={() => setPartnerTableCohort('investors')}
-                    className={'px-4 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ' + (
-                      partnerTableCohort === 'investors'
-                        ? 'bg-brand-red text-white shadow-sm'
-                        : t('text-gray-400 hover:text-white', 'text-gray-600 hover:text-gray-900')
-                    )}
-                  >
-                    General Investor
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setPartnerTableCohort('partners')}
-                    className={'px-4 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ' + (
-                      partnerTableCohort === 'partners'
-                        ? 'bg-brand-red text-white shadow-sm'
-                        : t('text-gray-400 hover:text-white', 'text-gray-600 hover:text-gray-900')
-                    )}
-                  >
-                    Channel Partner
-                  </button>
-                </div>
-              ) : (
-                <div className="px-4 py-2 rounded-xl text-xs font-bold text-white shadow-sm" style={{ background: 'linear-gradient(135deg, #D0021B, #B00000)' }}>
-                  General Investor
-                </div>
-              )}
-
-              <div className="relative">
-                <input
-                  type="text"
-                  placeholder="Search by ID or name..."
-                  value={partnerSearchQuery}
-                  onChange={(e) => setPartnerSearchQuery(e.target.value)}
-                  className={'px-3.5 py-1.5 rounded-xl text-xs border outline-none transition-all ' + t(
-                    'bg-white/[0.05] border-white/10 text-white placeholder:text-gray-500 focus:border-red-500',
-                    'bg-gray-50 border-gray-300 text-gray-900 placeholder:text-gray-400 focus:border-red-500'
-                  )}
-                />
-              </div>
-            </div>
-          </div>
-
-          <div className={'overflow-x-auto rounded-xl border ' + t('border-white/[0.06]', 'border-gray-200')}>
-            <table className="w-full text-left border-collapse">
-              <thead>
-                <tr className={'text-[11px] font-bold uppercase tracking-wider ' + t('bg-white/[0.03] text-gray-400', 'bg-gray-100 text-gray-700')}>
-                  <th className="p-3.5">SNO</th>
-                  <th className="p-3.5">USER ID</th>
-                  <th className="p-3.5">NAME</th>
-                  <th className="p-3.5 text-right">TOTAL INVEST</th>
-                  <th className="p-3.5 text-right">CASHBACK</th>
-                  <th className="p-3.5 text-center">VIEW HISTORY</th>
-                </tr>
-              </thead>
-              <tbody className={'divide-y text-xs ' + t('divide-white/[0.04]', 'divide-gray-200')}>
-                {displayTableRows.length === 0 ? (
-                  <tr>
-                    <td colSpan={6} className="py-12 text-center text-gray-500">
-                      No referral members recorded in this category yet.
-                    </td>
-                  </tr>
-                ) : (
-                  displayTableRows.map((row, idx) => (
-                    <tr key={idx} className={'transition-colors ' + t('hover:bg-white/[0.02]', 'hover:bg-gray-50')}>
-                      <td className="p-3.5 font-semibold text-gray-400">{row.sno}</td>
-                      <td className="p-3.5 font-mono font-bold text-brand-red">{row.userId}</td>
-                      <td className={'p-3.5 font-bold ' + t('text-white', 'text-gray-900')}>{row.name}</td>
-                      <td className={'p-3.5 text-right font-semibold ' + t('text-white', 'text-gray-800')}>
-                        {row.totalInvest > 0 ? '₹' + formatINRLocal(row.totalInvest) : '0'}
-                      </td>
-                      <td className="p-3.5 text-right font-black text-emerald-400">
-                        {row.cashback > 0 ? '₹' + formatINRLocal(row.cashback) : '0'}
-                      </td>
-                      <td className="p-3.5 text-center">
-                        <button
-                          type="button"
-                          onClick={() => setSelectedPartnerReferral(row.raw)}
-                          className="w-8 h-8 rounded-full bg-red-500/15 hover:bg-red-500/25 text-brand-red inline-flex items-center justify-center transition-transform hover:scale-110 border border-red-500/30 cursor-pointer"
-                          title="View History / Dossier"
-                        >
-                          <Eye className="w-4 h-4" />
-                        </button>
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
-
-          <div className={'pt-4 px-2 flex justify-end items-center border-t mt-3 ' + t('border-white/[0.06]', 'border-gray-100')}>
-            <p className={'text-xs font-bold ' + t('text-gray-300', 'text-gray-900')}>
-              {(partnerMonth !== 'all' ? partnerMonth : 'Oct') + ' ' + partnerYear + ' Total Investment — '}
-              <span className="text-brand-red font-black">{'₹' + formatINRLocal(monthInvestmentTotal)}</span>
-            </p>
-          </div>
-        </div>
-      </div>
-    )
-  }
-
   // DASHBOARD HOME — GHL GENERAL INVESTOR (GI) ARCHITECTURE
   // Matches Reference Dashboard structure, hierarchy and sections
   // ═══════════════════════════════════════════════════════════
@@ -2973,1164 +2017,678 @@ export default function DashboardClient() {
 
     return (
       <div className="space-y-6">
-        {/* ═══════════════════════════════════════════════════════════════
-            DASHBOARD PORTAL SELECTOR: GHL · CPL · MCP
-            ═══════════════════════════════════════════════════════════════ */}
-        {/* <div className={`p-2 rounded-2xl border flex flex-wrap items-center justify-between gap-3 ${t(
-          'bg-gradient-to-r from-red-950/30 via-[#160808] to-black/40 border-red-500/20 shadow-lg shadow-black/40',
-          'bg-gradient-to-r from-red-50/70 via-white to-red-50/70 border-red-200/80 shadow-sm'
-        )}`}>
-          <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
-            <button
-              type="button"
-              onClick={() => setDashboardView('ghl')}
-              className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 cursor-pointer ${dashboardView === 'ghl'
-                ? 'bg-brand-red text-white shadow-md shadow-red-600/30 ring-1 ring-white/20'
-                : t('text-gray-300 hover:text-white hover:bg-white/[0.05]', 'text-gray-700 hover:text-gray-900 hover:bg-gray-100')
-                }`}
-            >
-              <Briefcase className="w-3.5 h-3.5 shrink-0" />
-              <span>GHL (General Investor)</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setDashboardView('cpl')}
-              className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 cursor-pointer ${dashboardView === 'cpl'
-                ? 'bg-brand-red text-white shadow-md shadow-red-600/30 ring-1 ring-white/20'
-                : t('text-gray-300 hover:text-white hover:bg-white/[0.05]', 'text-gray-700 hover:text-gray-900 hover:bg-gray-100')
-                }`}
-            >
-              <Users className="w-3.5 h-3.5 shrink-0" />
-              <span>CPL (Channel Partner)</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setDashboardView('mcp')}
-              className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 cursor-pointer ${dashboardView === 'mcp'
-                ? 'bg-brand-red text-white shadow-md shadow-red-600/30 ring-1 ring-white/20'
-                : t('text-gray-300 hover:text-white hover:bg-white/[0.05]', 'text-gray-700 hover:text-gray-900 hover:bg-gray-100')
-                }`}
-            >
-              <Building2 className="w-3.5 h-3.5 shrink-0" />
-              <span>MCP (Master Channel Partner)</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setDashboardView('all')}
-              className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 cursor-pointer ${dashboardView === 'all'
-                ? 'bg-brand-red text-white shadow-md shadow-red-600/30 ring-1 ring-white/20'
-                : t('text-gray-300 hover:text-white hover:bg-white/[0.05]', 'text-gray-700 hover:text-gray-900 hover:bg-gray-100')
-                }`}
-            >
-              <Layers className="w-3.5 h-3.5 shrink-0" />
-              <span>View All Together</span>
-            </button>
-          </div>
-
-          <div className="flex items-center gap-2 px-2 text-[11px] font-mono font-semibold">
-            <span className={`hidden sm:inline ${t('text-gray-400', 'text-gray-500')}`}>Active Identity:</span>
-            <span className="px-2 py-0.5 rounded bg-brand-red/15 text-brand-red border border-brand-red/30">
-              {ghlId || 'GHL-PARTNER'}
+        {/* Partner Referral Access Banner (when user has partner privileges) */}
+        {ghlId && (
+          <div
+            onClick={() => setActiveTab('referrals')}
+            className={`p-4 rounded-2xl border flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 cursor-pointer transition-all hover:scale-[1.005] group ${t(
+              'bg-gradient-to-r from-red-950/40 via-[#180a0a] to-red-950/30 border-red-500/30 shadow-lg shadow-black/40',
+              'bg-gradient-to-r from-red-50 via-white to-red-50 border-red-200 shadow-sm'
+            )}`}
+          >
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-brand-red/15 flex items-center justify-center text-brand-red shrink-0 border border-brand-red/30 group-hover:scale-105 transition-transform">
+                <Gift className="w-5 h-5" />
+              </div>
+              <div>
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className={`text-xs font-bold ${t('text-white', 'text-gray-900')}`}>Partner Referral Portal Active</span>
+                  <span className="px-2 py-0.5 rounded text-[10px] font-bold font-mono bg-brand-red/20 text-brand-red border border-brand-red/30">{ghlId}</span>
+                </div>
+                <p className={`text-[11px] mt-0.5 ${t('text-gray-400', 'text-gray-600')}`}>
+                  Track your network, client onboarding, monthly quotas, and commission slabs
+                </p>
+              </div>
+            </div>
+            <span className="inline-flex items-center gap-1 text-xs font-bold text-brand-red group-hover:translate-x-1 transition-transform shrink-0">
+              Open Referral Dashboard <ChevronRight className="w-4 h-4" />
             </span>
           </div>
-        </div> */}
+        )}
 
-        {/* ─── 1. GHL (GENERAL INVESTOR) DASHBOARD SECTION ─── */}
-        {dashboardView === 'ghl' && (
-          <div className="space-y-6">
-
-
-            {/* Partner Referral Access Banner (when user has partner privileges) */}
-            {ghlId && (
-              <div
-                onClick={() => setActiveTab('referrals')}
-                className={`p-4 rounded-2xl border flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 cursor-pointer transition-all hover:scale-[1.005] group ${t(
-                  'bg-gradient-to-r from-red-950/40 via-[#180a0a] to-red-950/30 border-red-500/30 shadow-lg shadow-black/40',
-                  'bg-gradient-to-r from-red-50 via-white to-red-50 border-red-200 shadow-sm'
-                )}`}
-              >
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-brand-red/15 flex items-center justify-center text-brand-red shrink-0 border border-brand-red/30 group-hover:scale-105 transition-transform">
-                    <Gift className="w-5 h-5" />
-                  </div>
-                  <div>
-                    <div className="flex flex-wrap items-center gap-2">
-                      <span className={`text-xs font-bold ${t('text-white', 'text-gray-900')}`}>Partner Referral Portal Active</span>
-                      <span className="px-2 py-0.5 rounded text-[10px] font-bold font-mono bg-brand-red/20 text-brand-red border border-brand-red/30">{ghlId}</span>
-                    </div>
-                    <p className={`text-[11px] mt-0.5 ${t('text-gray-400', 'text-gray-600')}`}>
-                      Track your network, client onboarding, monthly quotas, and commission slabs
-                    </p>
-                  </div>
-                </div>
-                <span className="inline-flex items-center gap-1 text-xs font-bold text-brand-red group-hover:translate-x-1 transition-transform shrink-0">
-                  Open Referral Dashboard <ChevronRight className="w-4 h-4" />
-                </span>
-              </div>
-            )}
-
-            {/* ─────────────────────────────────────────────────────────────
+        {/* ─────────────────────────────────────────────────────────────
             1. HEADER & LIVE DATE/TIME (Matches Reference Top Bar)
             ───────────────────────────────────────────────────────────── */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div>
+            <h1 className={`text-2xl sm:text-3xl font-extrabold tracking-tight ${t('text-white', 'text-gray-900')}`}>
+              {greeting || 'Good evening'}, <span className="text-brand-red">{displayFirstName}</span> 👋
+            </h1>
+            <p className={`text-xs sm:text-sm mt-1 ${t('text-gray-400', 'text-gray-500')}`}>
+              Here's your portfolio overview for today
+            </p>
+          </div>
+
+          <div className="flex items-center">
+            <div
+              className={`px-4 py-2 rounded-xl border text-xs font-semibold flex items-center gap-2 shadow-sm ${t(
+                'bg-[#140606] border-white/10 text-gray-300',
+                'bg-white border-gray-200 text-gray-700'
+              )}`}
+            >
+              <Calendar className="w-4 h-4 text-brand-red shrink-0" />
+              <span className="font-mono text-[11px] sm:text-xs">
+                {liveDashboardDate || 'Thursday, 08 October 2026 at 05:27:39 pm'}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        {/* ─────────────────────────────────────────────────────────────
+            2. TOP ROW: 3 SUMMARY CARDS (Matches Reference Row 1)
+            ───────────────────────────────────────────────────────────── */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {/* Card 1: WELCOME BACK */}
+          <div
+            className={`relative rounded-2xl p-5 border overflow-hidden transition-all duration-300 hover:shadow-md ${t(
+              'bg-[#120606] border-white/10 shadow-lg shadow-black/40',
+              'bg-white border-gray-200 shadow-sm'
+            )}`}
+          >
+            <div className="absolute -top-3 -right-3 w-20 h-20 rounded-full bg-red-500/[0.06] pointer-events-none" />
+            <div className="flex items-start gap-3.5">
+              <div
+                className={`w-11 h-11 rounded-xl flex items-center justify-center shrink-0 border ${t(
+                  'bg-red-950/40 border-red-800/30 text-red-400',
+                  'bg-red-50 border-red-100 text-brand-red'
+                )}`}
+              >
+                <User className="w-5 h-5" strokeWidth={1.8} />
+              </div>
+              <div className="flex-1 min-w-0">
+                <span className={`text-[10px] font-bold uppercase tracking-wider block mb-1 ${t('text-gray-400', 'text-gray-600')}`}>
+                  WELCOME BACK
+                </span>
+                <h3 className={`text-base font-bold truncate leading-tight mb-2 ${t('text-white', 'text-gray-900')}`}>
+                  {displayEntityName}
+                </h3>
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 shadow-[0_0_6px_rgba(52,211,153,0.8)]" />
+                  Premium Member
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {/* Card 2: KYC STATUS */}
+          <div
+            className={`relative rounded-2xl p-5 border overflow-hidden transition-all duration-300 hover:shadow-md ${t(
+              'bg-[#120606] border-white/10 shadow-lg shadow-black/40',
+              'bg-white border-gray-200 shadow-sm'
+            )}`}
+          >
+            <div className="absolute -top-3 -right-3 w-20 h-20 rounded-full bg-red-500/[0.06] pointer-events-none" />
+            <div className="flex items-start gap-3.5">
+              <div
+                className={`w-11 h-11 rounded-xl flex items-center justify-center shrink-0 border ${t(
+                  'bg-red-950/40 border-red-800/30 text-red-400',
+                  'bg-red-50 border-red-100 text-brand-red'
+                )}`}
+              >
+                <Shield className="w-5 h-5" strokeWidth={1.8} />
+              </div>
+              <div className="flex-1 min-w-0">
+                <span className={`text-[10px] font-bold uppercase tracking-wider block mb-1 ${t('text-gray-400', 'text-gray-600')}`}>
+                  KYC STATUS
+                </span>
+                <h3 className={`text-base font-bold truncate leading-tight mb-2 ${t('text-white', 'text-gray-900')}`}>
+                  {isKycApproved ? 'Verified' : isKycRejected ? 'Action Required' : 'In Review'}
+                </h3>
+                <span
+                  className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold border ${isKycApproved
+                    ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30'
+                    : isKycRejected
+                      ? 'bg-red-500/15 text-red-400 border-red-500/30'
+                      : 'bg-amber-500/15 text-amber-400 border-amber-500/30'
+                    }`}
+                >
+                  <span
+                    className={`w-1.5 h-1.5 rounded-full ${isKycApproved ? 'bg-emerald-400' : isKycRejected ? 'bg-red-400' : 'bg-amber-400'
+                      }`}
+                  />
+                  {isKycApproved ? 'Approved' : isKycRejected ? 'Rejected' : 'Pending'}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {/* Card 3: PAN & AADHAAR */}
+          <div
+            className={`relative rounded-2xl p-5 border overflow-hidden transition-all duration-300 hover:shadow-md ${t(
+              'bg-[#120606] border-white/10 shadow-lg shadow-black/40',
+              'bg-white border-gray-200 shadow-sm'
+            )}`}
+          >
+            <div className="absolute -top-3 -right-3 w-20 h-20 rounded-full bg-red-500/[0.06] pointer-events-none" />
+            <div className="flex items-start gap-3.5">
+              <div
+                className={`w-11 h-11 rounded-xl flex items-center justify-center shrink-0 border ${t(
+                  'bg-red-950/40 border-red-800/30 text-red-400',
+                  'bg-red-50 border-red-100 text-brand-red'
+                )}`}
+              >
+                <CreditCard className="w-5 h-5" strokeWidth={1.8} />
+              </div>
+              <div className="flex-1 min-w-0">
+                <span className={`text-[10px] font-bold uppercase tracking-wider block mb-1 ${t('text-gray-400', 'text-gray-600')}`}>
+                  PAN & AADHAAR
+                </span>
+                <h3 className={`text-base font-bold truncate leading-tight mb-2 ${t('text-white', 'text-gray-900')}`}>
+                  Linked Status
+                </h3>
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 shadow-[0_0_6px_rgba(52,211,153,0.8)]" />
+                  🇮🇳 Linked
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* ─────────────────────────────────────────────────────────────
+            3. HERO PORTFOLIO ROW (Split Layout: Large Crimson Card + 3 Stacked Cards)
+            ───────────────────────────────────────────────────────────── */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-stretch">
+          {/* Left: Large Crimson GHL India Portfolio Card (~7 cols) */}
+          <div
+            className="lg:col-span-4 relative rounded-3xl p-6 sm:p-7 text-white flex flex-col justify-between overflow-hidden shadow-2xl transition-all"
+            style={{
+              background: 'linear-gradient(135deg, #a80010 0%, #d0021b 45%, #7e0009 100%)',
+              border: '1px solid rgba(255,255,255,0.2)',
+              boxShadow: '0 16px 40px rgba(208, 2, 27, 0.35), inset 0 1px 0 rgba(255,255,255,0.25)',
+            }}
+          >
+            {/* Background circular glow effects */}
+            <div className="absolute top-0 right-0 w-80 h-80 rounded-full bg-white/10 blur-3xl pointer-events-none" />
+            <div className="absolute bottom-0 left-0 w-60 h-60 rounded-full bg-black/20 blur-2xl pointer-events-none" />
+
+            {/* Top Bar: GHL INDIA + NCD Secured Badge */}
+            <div className="relative flex items-center justify-between gap-3 mb-6">
+              <div className="flex items-center gap-2.5">
+                <div className="w-9 h-9 rounded-xl bg-white/15 border border-white/25 flex items-center justify-center p-1.5 shadow-inner">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src="/images/brand/ghl-logo.png"
+                    alt="GHL"
+                    className="w-full h-full object-contain brightness-0 invert"
+                    onError={(e) => { (e.target as any).style.display = 'none' }}
+                  />
+                </div>
+                <div>
+                  <span className="text-white font-black text-base tracking-wider block leading-none">GHL INDIA</span>
+                  <span className="text-[9px] uppercase tracking-widest text-white/70 block mt-0.5">Ventures</span>
+                </div>
+              </div>
+
+              <span className="px-3 py-1 rounded-full text-[10px] font-bold text-white uppercase tracking-wider bg-white/15 backdrop-blur-md border border-white/25 shadow-sm">
+                NCD - Secured
+              </span>
+            </div>
+
+            {/* Middle: Total Portfolio Value */}
+            <div className="relative my-4 sm:my-6">
+              <p className="text-[11px] font-bold uppercase tracking-[0.22em] text-white/80 mb-1.5">
+                TOTAL PORTFOLIO VALUE
+              </p>
+              <h2 className="text-3xl sm:text-4xl lg:text-5xl font-black text-white tracking-tight" style={{ textShadow: '0 2px 8px rgba(0,0,0,0.3)' }}>
+                ₹{formattedPortfolioValue}
+              </h2>
+            </div>
+
+            {/* Bottom Meta Row: Investor, Returns, Status, Sparkle */}
+            <div className="relative pt-5 border-t border-white/20 flex items-center justify-between gap-4">
+              <div className="flex items-center gap-6 sm:gap-10">
+                <div>
+                  <p className="text-[10px] font-semibold uppercase tracking-wider text-white/70">INVESTOR</p>
+                  <p className="text-xs sm:text-sm font-bold text-white mt-0.5 truncate max-w-[120px]">{displayFirstName}</p>
+                </div>
+                <div>
+                  <p className="text-[10px] font-semibold uppercase tracking-wider text-white/70">RETURNS P.A.</p>
+                  <p className="text-xs sm:text-sm font-bold text-white mt-0.5">18–24%</p>
+                </div>
+                <div>
+                  <p className="text-[10px] font-semibold uppercase tracking-wider text-white/70">STATUS</p>
+                  <p className="text-xs sm:text-sm font-bold text-white mt-0.5 flex items-center gap-1.5">
+                    <span className="w-2 h-2 rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.8)]" />
+                    Active
+                  </p>
+                </div>
+              </div>
+
+              <div className="shrink-0 flex items-center gap-1 opacity-90">
+                <Sparkles className="w-6 h-6 text-amber-300 drop-shadow-[0_0_8px_rgba(252,211,77,0.6)]" />
+              </div>
+            </div>
+          </div>
+
+          {/* Right: 3 Vertically Stacked Metric Cards (~5 cols) */}
+          <div className="lg:col-span-4 flex flex-col justify-between gap-4">
+            {/* Card 1: TODAY'S INVESTMENT */}
+            <div
+              className={`relative rounded-2xl p-4 sm:p-5 border flex-1 overflow-hidden transition-all duration-300 hover:shadow-md ${t(
+                'bg-[#120606] border-white/10 shadow-lg shadow-black/40',
+                'bg-white border-gray-200 shadow-sm'
+              )}`}
+            >
+              <div className="absolute -top-3 -right-3 w-16 h-16 rounded-full bg-red-500/[0.06] pointer-events-none" />
+              <div className="flex items-start gap-3.5">
+                <div
+                  className={`w-11 h-11 rounded-xl flex items-center justify-center shrink-0 border ${t(
+                    'bg-red-950/40 border-red-800/30 text-red-400',
+                    'bg-red-50 border-red-100 text-brand-red'
+                  )}`}
+                >
+                  <Clock className="w-5 h-5" strokeWidth={1.8} />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <span className={`text-[10px] font-bold uppercase tracking-wider block mb-1 ${t('text-gray-400', 'text-gray-600')}`}>
+                    TODAY'S INVESTMENT
+                  </span>
+                  <h3 className={`text-xl font-bold truncate leading-tight mb-1.5 ${t('text-white', 'text-gray-900')}`}>
+                    ₹{new Intl.NumberFormat('en-IN').format(todaysInvestmentAmount)}
+                  </h3>
+                  {todaysInvestmentAmount > 0 ? (
+                    <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 shadow-[0_0_6px_rgba(52,211,153,0.8)]" />
+                      Active today
+                    </span>
+                  ) : (
+                    <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-semibold ${t('bg-white/[0.05] text-gray-400 border border-white/10', 'bg-gray-100 text-gray-500 border border-gray-200')}`}>
+                      <span className="w-1.5 h-1.5 rounded-full bg-gray-400" />
+                      No activity
+                    </span>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Card 2: TOTAL PAYOUT */}
+            <div
+              className={`relative rounded-2xl p-4 sm:p-5 border flex-1 overflow-hidden transition-all duration-300 hover:shadow-md ${t(
+                'bg-[#120606] border-white/10 shadow-lg shadow-black/40',
+                'bg-white border-gray-200 shadow-sm'
+              )}`}
+            >
+              <div className="absolute -top-3 -right-3 w-16 h-16 rounded-full bg-red-500/[0.06] pointer-events-none" />
+              <div className="flex items-start gap-3.5">
+                <div
+                  className={`w-11 h-11 rounded-xl flex items-center justify-center shrink-0 border ${t(
+                    'bg-red-950/40 border-red-800/30 text-red-400',
+                    'bg-red-50 border-red-100 text-brand-red'
+                  )}`}
+                >
+                  <IndianRupee className="w-5 h-5" strokeWidth={1.8} />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <span className={`text-[10px] font-bold uppercase tracking-wider block mb-1 ${t('text-gray-400', 'text-gray-600')}`}>
+                    TOTAL PAYOUT
+                  </span>
+                  <h3 className={`text-xl font-bold truncate leading-tight mb-1.5 ${t('text-white', 'text-gray-900')}`}>
+                    ₹{new Intl.NumberFormat('en-IN').format(totalPayoutAmount)}
+                  </h3>
+                  {totalPayoutAmount > 0 ? (
+                    <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 shadow-[0_0_6px_rgba(52,211,153,0.8)]" />
+                      Earnings received
+                    </span>
+                  ) : (
+                    <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-semibold ${t('bg-white/[0.05] text-gray-400 border border-white/10', 'bg-gray-100 text-gray-500 border border-gray-200')}`}>
+                      <span className="w-1.5 h-1.5 rounded-full bg-gray-400" />
+                      No payouts yet
+                    </span>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Card 3: TOTAL TICKETS */}
+            <div
+              onClick={() => setActiveTab('support')}
+              className={`relative rounded-2xl p-4 sm:p-5 border flex-1 overflow-hidden cursor-pointer transition-all duration-300 hover:shadow-md group ${t(
+                'bg-[#120606] border-white/10 shadow-lg shadow-black/40 hover:border-red-500/30',
+                'bg-white border-gray-200 shadow-sm hover:border-red-300'
+              )}`}
+            >
+              <div className="absolute -top-3 -right-3 w-16 h-16 rounded-full bg-red-500/[0.06] pointer-events-none" />
+              <div className="flex items-start gap-3.5">
+                <div
+                  className={`w-11 h-11 rounded-xl flex items-center justify-center shrink-0 border group-hover:scale-105 transition-transform ${t(
+                    'bg-red-950/40 border-red-800/30 text-red-400',
+                    'bg-red-50 border-red-100 text-brand-red'
+                  )}`}
+                >
+                  <HelpCircle className="w-5 h-5" strokeWidth={1.8} />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <span className={`text-[10px] font-bold uppercase tracking-wider block mb-1 ${t('text-gray-400', 'text-gray-600')}`}>
+                    TOTAL TICKETS
+                  </span>
+                  <h3 className={`text-xl font-bold truncate leading-tight ${t('text-white', 'text-gray-900')}`}>
+                    {supportTickets?.length || 0}
+                  </h3>
+                </div>
+              </div>
+            </div>
+          </div>
+          {/* Right: Relationship Manager Dossier (~4-5 cols) */}
+          <div
+            className={`lg:col-span-4 rounded-2xl p-6 border flex flex-col justify-between text-center ${t(
+              'bg-[#120606] border-white/10 shadow-lg shadow-black/40',
+              'bg-white border-gray-200 shadow-sm'
+            )}`}
+          >
+            {rmName ? (
+              <>
+                <div>
+                  <p className={`text-[10px] sm:text-[11px] font-bold uppercase tracking-[0.2em] mb-4 ${t('text-gray-400', 'text-gray-600')}`}>
+                    YOUR INVESTOR RELATIONSHIP MANAGER
+                  </p>
+
+                  {/* Avatar Photo with Ring & Online Status */}
+                  <div className="relative w-24 h-24 mx-auto mb-3">
+                    <div className="w-24 h-24 rounded-full border-[3px] border-brand-red overflow-hidden bg-gradient-to-br from-red-900/40 to-black/60 flex items-center justify-center shadow-lg text-white font-bold text-xl">
+                      {rmAvatar ? (
+                        /* eslint-disable-next-line @next/next/no-img-element */
+                        <img
+                          src={rmAvatar}
+                          alt={rmName}
+                          className="w-full h-full object-cover object-top"
+                          onError={(e) => {
+                            (e.target as any).style.display = 'none'
+                          }}
+                        />
+                      ) : (
+                        <span>{rmInitials}</span>
+                      )}
+                    </div>
+                    <span className="absolute bottom-1 right-1 w-3.5 h-3.5 rounded-full bg-emerald-500 border-2 border-white dark:border-gray-900 shadow-sm" />
+                  </div>
+
+                  <h4 className={`text-base sm:text-lg font-bold leading-tight ${t('text-white', 'text-gray-900')}`}>
+                    {rmName}
+                  </h4>
+                  <p className={`text-xs mt-0.5 flex items-center justify-center gap-1.5 ${t('text-gray-400', 'text-gray-500')}`}>
+                    <span>{rmDesignation}</span>
+                    <span>·</span>
+                    <span className="inline-flex items-center gap-1 text-emerald-500 font-semibold">
+                      Verified <CheckCircle className="w-3.5 h-3.5" />
+                    </span>
+                  </p>
+                </div>
+
+                {/* Contact Pills & Action Button */}
+                <div className="mt-5 space-y-2.5">
+                  {rmPhone ? (
+                    <a
+                      href={`tel:${rmPhone.replace(/\s+/g, '')}`}
+                      className={`flex items-center justify-center gap-2.5 py-2.5 px-4 rounded-xl text-xs font-semibold border transition-all ${t(
+                        'bg-white/[0.04] hover:bg-white/[0.08] text-gray-200 border-white/10',
+                        'bg-gray-50 hover:bg-gray-100 text-gray-800 border-gray-200'
+                      )}`}
+                    >
+                      <Phone className="w-3.5 h-3.5 text-brand-red shrink-0" />
+                      <span>{rmPhone}</span>
+                    </a>
+                  ) : null}
+
+                  {rmEmail ? (
+                    <a
+                      href={`mailto:${rmEmail}`}
+                      className={`flex items-center justify-center gap-2.5 py-2.5 px-4 rounded-xl text-xs font-semibold border transition-all ${t(
+                        'bg-white/[0.04] hover:bg-white/[0.08] text-gray-200 border-white/10',
+                        'bg-gray-50 hover:bg-gray-100 text-gray-800 border-gray-200'
+                      )}`}
+                    >
+                      <Mail className="w-3.5 h-3.5 text-brand-red shrink-0" />
+                      <span className="truncate">{rmEmail}</span>
+                    </a>
+                  ) : null}
+
+                  <button
+                    onClick={() => setActiveTab('support')}
+                    className="w-full mt-2 py-3 rounded-xl text-white font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-2 shadow-lg shadow-red-600/25 hover:brightness-110 active:scale-[0.99] transition-all"
+                    style={{ background: 'linear-gradient(135deg, #D0021B, #A80010)' }}
+                  >
+                    <PhoneCall className="w-4 h-4" />
+                    <span>Contact Manager</span>
+                  </button>
+                </div>
+              </>
+            ) : (
+              <div className="my-auto py-4">
+                <p className={`text-[10px] sm:text-[11px] font-bold uppercase tracking-[0.2em] mb-4 ${t('text-gray-400', 'text-gray-600')}`}>
+                  YOUR INVESTOR RELATIONSHIP MANAGER
+                </p>
+                <div className="w-20 h-20 rounded-full border-[2px] border-brand-red/40 bg-red-950/20 mx-auto mb-4 flex items-center justify-center text-brand-red">
+                  <HeadphonesIcon className="w-9 h-9" />
+                </div>
+                <h4 className={`text-base font-bold leading-tight mb-2 ${t('text-white', 'text-gray-900')}`}>
+                  Assignment in Progress
+                </h4>
+                <p className={`text-xs max-w-xs mx-auto mb-6 leading-relaxed ${t('text-gray-400', 'text-gray-500')}`}>
+                  A dedicated Investor Relationship Manager is being assigned to your portfolio. In the meantime, our primary support desk is active 24/7.
+                </p>
+                <button
+                  onClick={() => setActiveTab('support')}
+                  className="w-full py-3 rounded-xl text-white font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-2 shadow-lg shadow-red-600/25 hover:brightness-110 active:scale-[0.99] transition-all"
+                  style={{ background: 'linear-gradient(135deg, #D0021B, #A80010)' }}
+                >
+                  <HeadphonesIcon className="w-4 h-4" />
+                  <span>Contact Support Desk</span>
+                </button>
+              </div>
+            )}
+          </div>
+
+        </div>
+
+        {/* ─────────────────────────────────────────────────────────────
+            4. SECTION SEPARATOR: PORTFOLIO & MANAGER
+            ───────────────────────────────────────────────────────────── */}
+        <div className="relative flex items-center justify-center my-8">
+          <div className={`absolute inset-0 flex items-center ${t('text-white/[0.08]', 'text-gray-300')}`}>
+            <div className="w-full border-t border-current" />
+          </div>
+          <div
+            className={`relative px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider flex items-center gap-2 border shadow-sm ${t(
+              'bg-[#140606] text-red-400 border-red-500/20',
+              'bg-white text-brand-red border-red-200'
+            )}`}
+          >
+            <TrendingUp className="w-3.5 h-3.5 text-brand-red" />
+            <span>PORTFOLIO & MANAGER</span>
+            <span className="w-1.5 h-1.5 rounded-full bg-brand-red animate-pulse" />
+          </div>
+        </div>
+
+        {/* ─────────────────────────────────────────────────────────────
+            5. ANALYTICS & RELATIONSHIP MANAGER ROW (Split Layout)
+            ───────────────────────────────────────────────────────────── */}
+        <div className="grid grid-cols-1 lg:grid-cols-8 gap-5 items-stretch">
+          {/* Left: My Investments Monthly Trend Chart (~7-8 cols) */}
+          <div
+            className={`lg:col-span-8 rounded-2xl p-5 sm:p-6 border flex flex-col justify-between ${t(
+              'bg-[#120606] border-white/10 shadow-lg shadow-black/40',
+              'bg-white border-gray-200 shadow-sm'
+            )}`}
+          >
+            {/* Header with Title and View Controls */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6">
               <div>
-                <h1 className={`text-2xl sm:text-3xl font-extrabold tracking-tight ${t('text-white', 'text-gray-900')}`}>
-                  {greeting || 'Good evening'}, <span className="text-brand-red">{displayFirstName}</span> 👋
-                </h1>
-                <p className={`text-xs sm:text-sm mt-1 ${t('text-gray-400', 'text-gray-500')}`}>
-                  Here's your portfolio overview for today
+                <h3 className={`text-base sm:text-lg font-bold tracking-tight ${t('text-white', 'text-gray-900')}`}>
+                  My Investments
+                </h3>
+                <p className={`text-xs mt-0.5 ${t('text-gray-400', 'text-gray-600')}`}>
+                  Monthly — {giChartYear}
                 </p>
               </div>
 
-              <div className="flex items-center">
-                <div
-                  className={`px-4 py-2 rounded-xl border text-xs font-semibold flex items-center gap-2 shadow-sm ${t(
-                    'bg-[#140606] border-white/10 text-gray-300',
-                    'bg-white border-gray-200 text-gray-700'
+              <div className="flex items-center gap-2.5">
+                {/* Year Selector */}
+                <select
+                  value={giChartYear}
+                  onChange={(e) => setGiChartYear(Number(e.target.value))}
+                  className={`text-xs font-semibold py-1.5 px-3 rounded-xl border outline-none cursor-pointer transition-colors ${t(
+                    'bg-white/[0.05] border-white/10 text-gray-300 hover:border-red-500/40',
+                    'bg-gray-50 border-gray-200 text-gray-700 hover:border-red-500/40'
                   )}`}
                 >
-                  <Calendar className="w-4 h-4 text-brand-red shrink-0" />
-                  <span className="font-mono text-[11px] sm:text-xs">
-                    {liveDashboardDate || 'Thursday, 08 October 2026 at 05:27:39 pm'}
-                  </span>
+                  <option value={2026}>2026</option>
+                  <option value={2025}>2025</option>
+                  <option value={2024}>2024</option>
+                </select>
+
+                {/* Line / Bar Toggle */}
+                <div className={`p-1 rounded-xl border flex items-center ${t('bg-white/[0.04] border-white/10', 'bg-gray-100 border-gray-200')}`}>
+                  <button
+                    onClick={() => setGiChartView('line')}
+                    className={`px-3 py-1 rounded-lg text-xs font-bold transition-all ${giChartView === 'line'
+                      ? 'bg-brand-red text-white shadow-sm'
+                      : t('text-gray-400 hover:text-white', 'text-gray-600 hover:text-gray-900')
+                      }`}
+                  >
+                    Line
+                  </button>
+                  <button
+                    onClick={() => setGiChartView('bar')}
+                    className={`px-3 py-1 rounded-lg text-xs font-bold transition-all ${giChartView === 'bar'
+                      ? 'bg-brand-red text-white shadow-sm'
+                      : t('text-gray-400 hover:text-white', 'text-gray-600 hover:text-gray-900')
+                      }`}
+                  >
+                    Bar
+                  </button>
                 </div>
               </div>
             </div>
 
-            {/* ─────────────────────────────────────────────────────────────
-            2. TOP ROW: 3 SUMMARY CARDS (Matches Reference Row 1)
-            ───────────────────────────────────────────────────────────── */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              {/* Card 1: WELCOME BACK */}
-              <div
-                className={`relative rounded-2xl p-5 border overflow-hidden transition-all duration-300 hover:shadow-md ${t(
-                  'bg-[#120606] border-white/10 shadow-lg shadow-black/40',
-                  'bg-white border-gray-200 shadow-sm'
-                )}`}
-              >
-                <div className="absolute -top-3 -right-3 w-20 h-20 rounded-full bg-red-500/[0.06] pointer-events-none" />
-                <div className="flex items-start gap-3.5">
-                  <div
-                    className={`w-11 h-11 rounded-xl flex items-center justify-center shrink-0 border ${t(
-                      'bg-red-950/40 border-red-800/30 text-red-400',
-                      'bg-red-50 border-red-100 text-brand-red'
-                    )}`}
-                  >
-                    <User className="w-5 h-5" strokeWidth={1.8} />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <span className={`text-[10px] font-bold uppercase tracking-wider block mb-1 ${t('text-gray-400', 'text-gray-600')}`}>
-                      WELCOME BACK
-                    </span>
-                    <h3 className={`text-base font-bold truncate leading-tight mb-2 ${t('text-white', 'text-gray-900')}`}>
-                      {displayEntityName}
-                    </h3>
-                    <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
-                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 shadow-[0_0_6px_rgba(52,211,153,0.8)]" />
-                      Premium Member
-                    </span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Card 2: KYC STATUS */}
-              <div
-                className={`relative rounded-2xl p-5 border overflow-hidden transition-all duration-300 hover:shadow-md ${t(
-                  'bg-[#120606] border-white/10 shadow-lg shadow-black/40',
-                  'bg-white border-gray-200 shadow-sm'
-                )}`}
-              >
-                <div className="absolute -top-3 -right-3 w-20 h-20 rounded-full bg-red-500/[0.06] pointer-events-none" />
-                <div className="flex items-start gap-3.5">
-                  <div
-                    className={`w-11 h-11 rounded-xl flex items-center justify-center shrink-0 border ${t(
-                      'bg-red-950/40 border-red-800/30 text-red-400',
-                      'bg-red-50 border-red-100 text-brand-red'
-                    )}`}
-                  >
-                    <Shield className="w-5 h-5" strokeWidth={1.8} />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <span className={`text-[10px] font-bold uppercase tracking-wider block mb-1 ${t('text-gray-400', 'text-gray-600')}`}>
-                      KYC STATUS
-                    </span>
-                    <h3 className={`text-base font-bold truncate leading-tight mb-2 ${t('text-white', 'text-gray-900')}`}>
-                      {isKycApproved ? 'Verified' : isKycRejected ? 'Action Required' : 'In Review'}
-                    </h3>
-                    <span
-                      className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold border ${isKycApproved
-                        ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30'
-                        : isKycRejected
-                          ? 'bg-red-500/15 text-red-400 border-red-500/30'
-                          : 'bg-amber-500/15 text-amber-400 border-amber-500/30'
-                        }`}
-                    >
-                      <span
-                        className={`w-1.5 h-1.5 rounded-full ${isKycApproved ? 'bg-emerald-400' : isKycRejected ? 'bg-red-400' : 'bg-amber-400'
-                          }`}
-                      />
-                      {isKycApproved ? 'Approved' : isKycRejected ? 'Rejected' : 'Pending'}
-                    </span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Card 3: PAN & AADHAAR */}
-              <div
-                className={`relative rounded-2xl p-5 border overflow-hidden transition-all duration-300 hover:shadow-md ${t(
-                  'bg-[#120606] border-white/10 shadow-lg shadow-black/40',
-                  'bg-white border-gray-200 shadow-sm'
-                )}`}
-              >
-                <div className="absolute -top-3 -right-3 w-20 h-20 rounded-full bg-red-500/[0.06] pointer-events-none" />
-                <div className="flex items-start gap-3.5">
-                  <div
-                    className={`w-11 h-11 rounded-xl flex items-center justify-center shrink-0 border ${t(
-                      'bg-red-950/40 border-red-800/30 text-red-400',
-                      'bg-red-50 border-red-100 text-brand-red'
-                    )}`}
-                  >
-                    <CreditCard className="w-5 h-5" strokeWidth={1.8} />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <span className={`text-[10px] font-bold uppercase tracking-wider block mb-1 ${t('text-gray-400', 'text-gray-600')}`}>
-                      PAN & AADHAAR
-                    </span>
-                    <h3 className={`text-base font-bold truncate leading-tight mb-2 ${t('text-white', 'text-gray-900')}`}>
-                      Linked Status
-                    </h3>
-                    <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
-                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 shadow-[0_0_6px_rgba(52,211,153,0.8)]" />
-                      🇮🇳 Linked
-                    </span>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* ─────────────────────────────────────────────────────────────
-            3. HERO PORTFOLIO ROW (Split Layout: Large Crimson Card + 3 Stacked Cards)
-            ───────────────────────────────────────────────────────────── */}
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-stretch">
-              {/* Left: Large Crimson GHL India Portfolio Card (~7 cols) */}
-              <div
-                className="lg:col-span-4 relative rounded-3xl p-6 sm:p-7 text-white flex flex-col justify-between overflow-hidden shadow-2xl transition-all"
-                style={{
-                  background: 'linear-gradient(135deg, #a80010 0%, #d0021b 45%, #7e0009 100%)',
-                  border: '1px solid rgba(255,255,255,0.2)',
-                  boxShadow: '0 16px 40px rgba(208, 2, 27, 0.35), inset 0 1px 0 rgba(255,255,255,0.25)',
-                }}
-              >
-                {/* Background circular glow effects */}
-                <div className="absolute top-0 right-0 w-80 h-80 rounded-full bg-white/10 blur-3xl pointer-events-none" />
-                <div className="absolute bottom-0 left-0 w-60 h-60 rounded-full bg-black/20 blur-2xl pointer-events-none" />
-
-                {/* Top Bar: GHL INDIA + NCD Secured Badge */}
-                <div className="relative flex items-center justify-between gap-3 mb-6">
-                  <div className="flex items-center gap-2.5">
-                    <div className="w-9 h-9 rounded-xl bg-white/15 border border-white/25 flex items-center justify-center p-1.5 shadow-inner">
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img
-                        src="/images/brand/ghl-logo.png"
-                        alt="GHL"
-                        className="w-full h-full object-contain brightness-0 invert"
-                        onError={(e) => { (e.target as any).style.display = 'none' }}
-                      />
-                    </div>
-                    <div>
-                      <span className="text-white font-black text-base tracking-wider block leading-none">GHL INDIA</span>
-                      <span className="text-[9px] uppercase tracking-widest text-white/70 block mt-0.5">Ventures</span>
-                    </div>
-                  </div>
-
-                  <span className="px-3 py-1 rounded-full text-[10px] font-bold text-white uppercase tracking-wider bg-white/15 backdrop-blur-md border border-white/25 shadow-sm">
-                    NCD - Secured
-                  </span>
-                </div>
-
-                {/* Middle: Total Portfolio Value */}
-                <div className="relative my-4 sm:my-6">
-                  <p className="text-[11px] font-bold uppercase tracking-[0.22em] text-white/80 mb-1.5">
-                    TOTAL PORTFOLIO VALUE
-                  </p>
-                  <h2 className="text-3xl sm:text-4xl lg:text-5xl font-black text-white tracking-tight" style={{ textShadow: '0 2px 8px rgba(0,0,0,0.3)' }}>
-                    ₹{formattedPortfolioValue}
-                  </h2>
-                </div>
-
-                {/* Bottom Meta Row: Investor, Returns, Status, Sparkle */}
-                <div className="relative pt-5 border-t border-white/20 flex items-center justify-between gap-4">
-                  <div className="flex items-center gap-6 sm:gap-10">
-                    <div>
-                      <p className="text-[10px] font-semibold uppercase tracking-wider text-white/70">INVESTOR</p>
-                      <p className="text-xs sm:text-sm font-bold text-white mt-0.5 truncate max-w-[120px]">{displayFirstName}</p>
-                    </div>
-                    <div>
-                      <p className="text-[10px] font-semibold uppercase tracking-wider text-white/70">RETURNS P.A.</p>
-                      <p className="text-xs sm:text-sm font-bold text-white mt-0.5">18–24%</p>
-                    </div>
-                    <div>
-                      <p className="text-[10px] font-semibold uppercase tracking-wider text-white/70">STATUS</p>
-                      <p className="text-xs sm:text-sm font-bold text-white mt-0.5 flex items-center gap-1.5">
-                        <span className="w-2 h-2 rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.8)]" />
-                        Active
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="shrink-0 flex items-center gap-1 opacity-90">
-                    <Sparkles className="w-6 h-6 text-amber-300 drop-shadow-[0_0_8px_rgba(252,211,77,0.6)]" />
-                  </div>
-                </div>
-              </div>
-
-              {/* Right: 3 Vertically Stacked Metric Cards (~5 cols) */}
-              <div className="lg:col-span-4 flex flex-col justify-between gap-4">
-                {/* Card 1: TODAY'S INVESTMENT */}
-                <div
-                  className={`relative rounded-2xl p-4 sm:p-5 border flex-1 overflow-hidden transition-all duration-300 hover:shadow-md ${t(
-                    'bg-[#120606] border-white/10 shadow-lg shadow-black/40',
-                    'bg-white border-gray-200 shadow-sm'
-                  )}`}
-                >
-                  <div className="absolute -top-3 -right-3 w-16 h-16 rounded-full bg-red-500/[0.06] pointer-events-none" />
-                  <div className="flex items-start gap-3.5">
-                    <div
-                      className={`w-11 h-11 rounded-xl flex items-center justify-center shrink-0 border ${t(
-                        'bg-red-950/40 border-red-800/30 text-red-400',
-                        'bg-red-50 border-red-100 text-brand-red'
-                      )}`}
-                    >
-                      <Clock className="w-5 h-5" strokeWidth={1.8} />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <span className={`text-[10px] font-bold uppercase tracking-wider block mb-1 ${t('text-gray-400', 'text-gray-600')}`}>
-                        TODAY'S INVESTMENT
-                      </span>
-                      <h3 className={`text-xl font-bold truncate leading-tight mb-1.5 ${t('text-white', 'text-gray-900')}`}>
-                        ₹{new Intl.NumberFormat('en-IN').format(todaysInvestmentAmount)}
-                      </h3>
-                      {todaysInvestmentAmount > 0 ? (
-                        <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
-                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 shadow-[0_0_6px_rgba(52,211,153,0.8)]" />
-                          Active today
-                        </span>
-                      ) : (
-                        <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-semibold ${t('bg-white/[0.05] text-gray-400 border border-white/10', 'bg-gray-100 text-gray-500 border border-gray-200')}`}>
-                          <span className="w-1.5 h-1.5 rounded-full bg-gray-400" />
-                          No activity
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                </div>
-
-                {/* Card 2: TOTAL PAYOUT */}
-                <div
-                  className={`relative rounded-2xl p-4 sm:p-5 border flex-1 overflow-hidden transition-all duration-300 hover:shadow-md ${t(
-                    'bg-[#120606] border-white/10 shadow-lg shadow-black/40',
-                    'bg-white border-gray-200 shadow-sm'
-                  )}`}
-                >
-                  <div className="absolute -top-3 -right-3 w-16 h-16 rounded-full bg-red-500/[0.06] pointer-events-none" />
-                  <div className="flex items-start gap-3.5">
-                    <div
-                      className={`w-11 h-11 rounded-xl flex items-center justify-center shrink-0 border ${t(
-                        'bg-red-950/40 border-red-800/30 text-red-400',
-                        'bg-red-50 border-red-100 text-brand-red'
-                      )}`}
-                    >
-                      <IndianRupee className="w-5 h-5" strokeWidth={1.8} />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <span className={`text-[10px] font-bold uppercase tracking-wider block mb-1 ${t('text-gray-400', 'text-gray-600')}`}>
-                        TOTAL PAYOUT
-                      </span>
-                      <h3 className={`text-xl font-bold truncate leading-tight mb-1.5 ${t('text-white', 'text-gray-900')}`}>
-                        ₹{new Intl.NumberFormat('en-IN').format(totalPayoutAmount)}
-                      </h3>
-                      {totalPayoutAmount > 0 ? (
-                        <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
-                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 shadow-[0_0_6px_rgba(52,211,153,0.8)]" />
-                          Earnings received
-                        </span>
-                      ) : (
-                        <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-semibold ${t('bg-white/[0.05] text-gray-400 border border-white/10', 'bg-gray-100 text-gray-500 border border-gray-200')}`}>
-                          <span className="w-1.5 h-1.5 rounded-full bg-gray-400" />
-                          No payouts yet
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                </div>
-
-                {/* Card 3: TOTAL TICKETS */}
-                <div
-                  onClick={() => setActiveTab('support')}
-                  className={`relative rounded-2xl p-4 sm:p-5 border flex-1 overflow-hidden cursor-pointer transition-all duration-300 hover:shadow-md group ${t(
-                    'bg-[#120606] border-white/10 shadow-lg shadow-black/40 hover:border-red-500/30',
-                    'bg-white border-gray-200 shadow-sm hover:border-red-300'
-                  )}`}
-                >
-                  <div className="absolute -top-3 -right-3 w-16 h-16 rounded-full bg-red-500/[0.06] pointer-events-none" />
-                  <div className="flex items-start gap-3.5">
-                    <div
-                      className={`w-11 h-11 rounded-xl flex items-center justify-center shrink-0 border group-hover:scale-105 transition-transform ${t(
-                        'bg-red-950/40 border-red-800/30 text-red-400',
-                        'bg-red-50 border-red-100 text-brand-red'
-                      )}`}
-                    >
-                      <HelpCircle className="w-5 h-5" strokeWidth={1.8} />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <span className={`text-[10px] font-bold uppercase tracking-wider block mb-1 ${t('text-gray-400', 'text-gray-600')}`}>
-                        TOTAL TICKETS
-                      </span>
-                      <h3 className={`text-xl font-bold truncate leading-tight ${t('text-white', 'text-gray-900')}`}>
-                        {supportTickets?.length || 0}
-                      </h3>
-                    </div>
-                  </div>
-                </div>
-              </div>
-              {/* Right: Relationship Manager Dossier (~4-5 cols) */}
-              <div
-                className={`lg:col-span-4 rounded-2xl p-6 border flex flex-col justify-between text-center ${t(
-                  'bg-[#120606] border-white/10 shadow-lg shadow-black/40',
-                  'bg-white border-gray-200 shadow-sm'
-                )}`}
-              >
-                {rmName ? (
-                  <>
-                    <div>
-                      <p className={`text-[10px] sm:text-[11px] font-bold uppercase tracking-[0.2em] mb-4 ${t('text-gray-400', 'text-gray-600')}`}>
-                        YOUR INVESTOR RELATIONSHIP MANAGER
-                      </p>
-
-                      {/* Avatar Photo with Ring & Online Status */}
-                      <div className="relative w-24 h-24 mx-auto mb-3">
-                        <div className="w-24 h-24 rounded-full border-[3px] border-brand-red overflow-hidden bg-gradient-to-br from-red-900/40 to-black/60 flex items-center justify-center shadow-lg text-white font-bold text-xl">
-                          {rmAvatar ? (
-                            /* eslint-disable-next-line @next/next/no-img-element */
-                            <img
-                              src={rmAvatar}
-                              alt={rmName}
-                              className="w-full h-full object-cover object-top"
-                              onError={(e) => {
-                                (e.target as any).style.display = 'none'
-                              }}
-                            />
-                          ) : (
-                            <span>{rmInitials}</span>
-                          )}
-                        </div>
-                        <span className="absolute bottom-1 right-1 w-3.5 h-3.5 rounded-full bg-emerald-500 border-2 border-white dark:border-gray-900 shadow-sm" />
-                      </div>
-
-                      <h4 className={`text-base sm:text-lg font-bold leading-tight ${t('text-white', 'text-gray-900')}`}>
-                        {rmName}
-                      </h4>
-                      <p className={`text-xs mt-0.5 flex items-center justify-center gap-1.5 ${t('text-gray-400', 'text-gray-500')}`}>
-                        <span>{rmDesignation}</span>
-                        <span>·</span>
-                        <span className="inline-flex items-center gap-1 text-emerald-500 font-semibold">
-                          Verified <CheckCircle className="w-3.5 h-3.5" />
-                        </span>
-                      </p>
-                    </div>
-
-                    {/* Contact Pills & Action Button */}
-                    <div className="mt-5 space-y-2.5">
-                      {rmPhone ? (
-                        <a
-                          href={`tel:${rmPhone.replace(/\s+/g, '')}`}
-                          className={`flex items-center justify-center gap-2.5 py-2.5 px-4 rounded-xl text-xs font-semibold border transition-all ${t(
-                            'bg-white/[0.04] hover:bg-white/[0.08] text-gray-200 border-white/10',
-                            'bg-gray-50 hover:bg-gray-100 text-gray-800 border-gray-200'
-                          )}`}
-                        >
-                          <Phone className="w-3.5 h-3.5 text-brand-red shrink-0" />
-                          <span>{rmPhone}</span>
-                        </a>
-                      ) : null}
-
-                      {rmEmail ? (
-                        <a
-                          href={`mailto:${rmEmail}`}
-                          className={`flex items-center justify-center gap-2.5 py-2.5 px-4 rounded-xl text-xs font-semibold border transition-all ${t(
-                            'bg-white/[0.04] hover:bg-white/[0.08] text-gray-200 border-white/10',
-                            'bg-gray-50 hover:bg-gray-100 text-gray-800 border-gray-200'
-                          )}`}
-                        >
-                          <Mail className="w-3.5 h-3.5 text-brand-red shrink-0" />
-                          <span className="truncate">{rmEmail}</span>
-                        </a>
-                      ) : null}
-
-                      <button
-                        onClick={() => setActiveTab('support')}
-                        className="w-full mt-2 py-3 rounded-xl text-white font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-2 shadow-lg shadow-red-600/25 hover:brightness-110 active:scale-[0.99] transition-all"
-                        style={{ background: 'linear-gradient(135deg, #D0021B, #A80010)' }}
-                      >
-                        <PhoneCall className="w-4 h-4" />
-                        <span>Contact Manager</span>
-                      </button>
-                    </div>
-                  </>
+            {/* Chart Area */}
+            <div className="h-[280px] sm:h-[300px] w-full -ml-2">
+              <ResponsiveContainer width="100%" height="100%">
+                {giChartView === 'line' ? (
+                  <AreaChart data={monthlyInvestmentsData} margin={{ top: 10, right: 10, left: 10, bottom: 0 }}>
+                    <defs>
+                      <linearGradient id="giLineGrad" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor="#D0021B" stopOpacity={0.35} />
+                        <stop offset="100%" stopColor="#D0021B" stopOpacity={0.0} />
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.06)'} />
+                    <XAxis
+                      dataKey="month"
+                      axisLine={{ stroke: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)' }}
+                      tickLine={false}
+                      tick={{ fill: isDark ? '#9CA3AF' : '#6B7280', fontSize: 11 }}
+                    />
+                    <YAxis
+                      axisLine={false}
+                      tickLine={false}
+                      domain={[0, 'auto']}
+                      tickFormatter={(val) => (val === 0 ? '₹0' : `₹${(val / 100000).toFixed(1)}L`)}
+                      tick={{ fill: isDark ? '#9CA3AF' : '#6B7280', fontSize: 11 }}
+                    />
+                    <Tooltip
+                      formatter={(val: any) => [`₹${new Intl.NumberFormat('en-IN').format(Number(val))}`, 'Investment']}
+                      contentStyle={{
+                        background: isDark ? '#180a0a' : '#ffffff',
+                        border: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid #e5e7eb',
+                        borderRadius: '0.75rem',
+                        boxShadow: '0 8px 24px rgba(0,0,0,0.2)',
+                        fontSize: '12px',
+                        fontWeight: 600,
+                      }}
+                    />
+                    <Area
+                      type="monotone"
+                      dataKey="amount"
+                      name="Investment"
+                      stroke="#D0021B"
+                      strokeWidth={2.5}
+                      fill="url(#giLineGrad)"
+                      dot={{ r: 4, stroke: '#D0021B', fill: '#FFFFFF', strokeWidth: 2 }}
+                      activeDot={{ r: 6, stroke: '#D0021B', fill: '#D0021B', strokeWidth: 2 }}
+                    />
+                  </AreaChart>
                 ) : (
-                  <div className="my-auto py-4">
-                    <p className={`text-[10px] sm:text-[11px] font-bold uppercase tracking-[0.2em] mb-4 ${t('text-gray-400', 'text-gray-600')}`}>
-                      YOUR INVESTOR RELATIONSHIP MANAGER
-                    </p>
-                    <div className="w-20 h-20 rounded-full border-[2px] border-brand-red/40 bg-red-950/20 mx-auto mb-4 flex items-center justify-center text-brand-red">
-                      <HeadphonesIcon className="w-9 h-9" />
-                    </div>
-                    <h4 className={`text-base font-bold leading-tight mb-2 ${t('text-white', 'text-gray-900')}`}>
-                      Assignment in Progress
-                    </h4>
-                    <p className={`text-xs max-w-xs mx-auto mb-6 leading-relaxed ${t('text-gray-400', 'text-gray-500')}`}>
-                      A dedicated Investor Relationship Manager is being assigned to your portfolio. In the meantime, our primary support desk is active 24/7.
-                    </p>
-                    <button
-                      onClick={() => setActiveTab('support')}
-                      className="w-full py-3 rounded-xl text-white font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-2 shadow-lg shadow-red-600/25 hover:brightness-110 active:scale-[0.99] transition-all"
-                      style={{ background: 'linear-gradient(135deg, #D0021B, #A80010)' }}
-                    >
-                      <HeadphonesIcon className="w-4 h-4" />
-                      <span>Contact Support Desk</span>
-                    </button>
-                  </div>
+                  <BarChart data={monthlyInvestmentsData} margin={{ top: 10, right: 10, left: 10, bottom: 0 }}>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.06)'} />
+                    <XAxis
+                      dataKey="month"
+                      axisLine={{ stroke: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)' }}
+                      tickLine={false}
+                      tick={{ fill: isDark ? '#9CA3AF' : '#6B7280', fontSize: 11 }}
+                    />
+                    <YAxis
+                      axisLine={false}
+                      tickLine={false}
+                      domain={[0, 'auto']}
+                      tickFormatter={(val) => (val === 0 ? '₹0' : `₹${(val / 100000).toFixed(1)}L`)}
+                      tick={{ fill: isDark ? '#9CA3AF' : '#6B7280', fontSize: 11 }}
+                    />
+                    <Tooltip
+                      formatter={(val: any) => [`₹${new Intl.NumberFormat('en-IN').format(Number(val))}`, 'Investment']}
+                      contentStyle={{
+                        background: isDark ? '#180a0a' : '#ffffff',
+                        border: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid #e5e7eb',
+                        borderRadius: '0.75rem',
+                        boxShadow: '0 8px 24px rgba(0,0,0,0.2)',
+                        fontSize: '12px',
+                        fontWeight: 600,
+                      }}
+                    />
+                    <Bar dataKey="amount" name="Investment" fill="#D0021B" radius={[6, 6, 0, 0]} />
+                  </BarChart>
                 )}
-              </div>
+              </ResponsiveContainer>
             </div>
+          </div>
+        </div>
 
-            {/* ─────────────────────────────────────────────────────────────
-            4. SECTION SEPARATOR: PORTFOLIO & MANAGER
-            ───────────────────────────────────────────────────────────── */}
-            <div className="relative flex items-center justify-center my-8">
-              <div className={`absolute inset-0 flex items-center ${t('text-white/[0.08]', 'text-gray-300')}`}>
-                <div className="w-full border-t border-current" />
-              </div>
-              <div
-                className={`relative px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider flex items-center gap-2 border shadow-sm ${t(
-                  'bg-[#140606] text-red-400 border-red-500/20',
-                  'bg-white text-brand-red border-red-200'
-                )}`}
-              >
-                <TrendingUp className="w-3.5 h-3.5 text-brand-red" />
-                <span>PORTFOLIO & MANAGER</span>
-                <span className="w-1.5 h-1.5 rounded-full bg-brand-red animate-pulse" />
-              </div>
-            </div>
-
-            {/* ─────────────────────────────────────────────────────────────
-            5. ANALYTICS & RELATIONSHIP MANAGER ROW (Split Layout)
-            ───────────────────────────────────────────────────────────── */}
-            <div className="grid grid-cols-1 lg:grid-cols-8 items-stretch">
-              {/* Left: My Investments Monthly Trend Chart (~7-8 cols) */}
-              <div
-                className={`lg:col-span-8 rounded-2xl p-5 sm:p-6 border flex flex-col justify-between ${t(
-                  'bg-[#120606] border-white/10 shadow-lg shadow-black/40',
-                  'bg-white border-gray-200 shadow-sm'
-                )}`}
-              >
-                {/* Header with Title and View Controls */}
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6">
-                  <div>
-                    <h3 className={`text-base sm:text-lg font-bold tracking-tight ${t('text-white', 'text-gray-900')}`}>
-                      My Investments
-                    </h3>
-                    <p className={`text-xs mt-0.5 ${t('text-gray-400', 'text-gray-600')}`}>
-                      Monthly — {giChartYear}
-                    </p>
-                  </div>
-
-                  <div className="flex items-center gap-2.5">
-                    {/* Year Selector */}
-                    <select
-                      value={giChartYear}
-                      onChange={(e) => setGiChartYear(Number(e.target.value))}
-                      className={`text-xs font-semibold py-1.5 px-3 rounded-xl border outline-none cursor-pointer transition-colors ${t(
-                        'bg-white/[0.05] border-white/10 text-gray-300 hover:border-red-500/40',
-                        'bg-gray-50 border-gray-200 text-gray-700 hover:border-red-500/40'
-                      )}`}
-                    >
-                      <option value={2026}>2026</option>
-                      <option value={2025}>2025</option>
-                      <option value={2024}>2024</option>
-                    </select>
-
-                    {/* Line / Bar Toggle */}
-                    <div className={`p-1 rounded-xl border flex items-center ${t('bg-white/[0.04] border-white/10', 'bg-gray-100 border-gray-200')}`}>
-                      <button
-                        onClick={() => setGiChartView('line')}
-                        className={`px-3 py-1 rounded-lg text-xs font-bold transition-all ${giChartView === 'line'
-                          ? 'bg-brand-red text-white shadow-sm'
-                          : t('text-gray-400 hover:text-white', 'text-gray-600 hover:text-gray-900')
-                          }`}
-                      >
-                        Line
-                      </button>
-                      <button
-                        onClick={() => setGiChartView('bar')}
-                        className={`px-3 py-1 rounded-lg text-xs font-bold transition-all ${giChartView === 'bar'
-                          ? 'bg-brand-red text-white shadow-sm'
-                          : t('text-gray-400 hover:text-white', 'text-gray-600 hover:text-gray-900')
-                          }`}
-                      >
-                        Bar
-                      </button>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Chart Area */}
-                <div className="h-[280px] sm:h-[300px] w-full -ml-2">
-                  <ResponsiveContainer width="100%" height="100%">
-                    {giChartView === 'line' ? (
-                      <AreaChart data={monthlyInvestmentsData} margin={{ top: 10, right: 10, left: 10, bottom: 0 }}>
-                        <defs>
-                          <linearGradient id="giLineGrad" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="0%" stopColor="#D0021B" stopOpacity={0.35} />
-                            <stop offset="100%" stopColor="#D0021B" stopOpacity={0.0} />
-                          </linearGradient>
-                        </defs>
-                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.06)'} />
-                        <XAxis
-                          dataKey="month"
-                          axisLine={{ stroke: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)' }}
-                          tickLine={false}
-                          tick={{ fill: isDark ? '#9CA3AF' : '#6B7280', fontSize: 11 }}
-                        />
-                        <YAxis
-                          axisLine={false}
-                          tickLine={false}
-                          domain={[0, 'auto']}
-                          tickFormatter={(val) => (val === 0 ? '₹0' : `₹${(val / 100000).toFixed(1)}L`)}
-                          tick={{ fill: isDark ? '#9CA3AF' : '#6B7280', fontSize: 11 }}
-                        />
-                        <Tooltip
-                          formatter={(val: any) => [`₹${new Intl.NumberFormat('en-IN').format(Number(val))}`, 'Investment']}
-                          contentStyle={{
-                            background: isDark ? '#180a0a' : '#ffffff',
-                            border: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid #e5e7eb',
-                            borderRadius: '0.75rem',
-                            boxShadow: '0 8px 24px rgba(0,0,0,0.2)',
-                            fontSize: '12px',
-                            fontWeight: 600,
-                          }}
-                        />
-                        <Area
-                          type="monotone"
-                          dataKey="amount"
-                          name="Investment"
-                          stroke="#D0021B"
-                          strokeWidth={2.5}
-                          fill="url(#giLineGrad)"
-                          dot={{ r: 4, stroke: '#D0021B', fill: '#FFFFFF', strokeWidth: 2 }}
-                          activeDot={{ r: 6, stroke: '#D0021B', fill: '#D0021B', strokeWidth: 2 }}
-                        />
-                      </AreaChart>
-                    ) : (
-                      <BarChart data={monthlyInvestmentsData} margin={{ top: 10, right: 10, left: 10, bottom: 0 }}>
-                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.06)'} />
-                        <XAxis
-                          dataKey="month"
-                          axisLine={{ stroke: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)' }}
-                          tickLine={false}
-                          tick={{ fill: isDark ? '#9CA3AF' : '#6B7280', fontSize: 11 }}
-                        />
-                        <YAxis
-                          axisLine={false}
-                          tickLine={false}
-                          domain={[0, 'auto']}
-                          tickFormatter={(val) => (val === 0 ? '₹0' : `₹${(val / 100000).toFixed(1)}L`)}
-                          tick={{ fill: isDark ? '#9CA3AF' : '#6B7280', fontSize: 11 }}
-                        />
-                        <Tooltip
-                          formatter={(val: any) => [`₹${new Intl.NumberFormat('en-IN').format(Number(val))}`, 'Investment']}
-                          contentStyle={{
-                            background: isDark ? '#180a0a' : '#ffffff',
-                            border: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid #e5e7eb',
-                            borderRadius: '0.75rem',
-                            boxShadow: '0 8px 24px rgba(0,0,0,0.2)',
-                            fontSize: '12px',
-                            fontWeight: 600,
-                          }}
-                        />
-                        <Bar dataKey="amount" name="Investment" fill="#D0021B" radius={[6, 6, 0, 0]} />
-                      </BarChart>
-                    )}
-                  </ResponsiveContainer>
-                </div>
-              </div>
-            </div>
-
-            {/* ─────────────────────────────────────────────────────────────
+        {/* ─────────────────────────────────────────────────────────────
             6. FAQ SECTION (Preserved from existing application)
             ───────────────────────────────────────────────────────────── */}
-            {faqs.length > 0 && (
-              <div
-                className={`relative rounded-2xl overflow-hidden p-6 border ${t(
-                  'bg-[#120606] border-white/10 shadow-lg',
-                  'bg-white border-gray-200 shadow-sm'
-                )}`}
-              >
-                <div className="flex items-center justify-center gap-3 mb-5">
-                  <div className="h-px w-10 bg-gradient-to-r from-transparent to-red-600/50" />
-                  <h4 className={`text-center font-bold text-sm uppercase tracking-wider ${t('text-white', 'text-gray-900')}`}>
-                    Frequently Asked Questions
-                  </h4>
-                  <div className="h-px w-10 bg-gradient-to-l from-transparent to-red-600/50" />
-                </div>
-                <div className="space-y-2">
-                  {faqs.map((faq: any, idx: number) => (
-                    <div
-                      key={faq.id || idx}
-                      className={`rounded-xl overflow-hidden border transition-colors ${t(
-                        'bg-white/[0.02] border-white/[0.06] hover:border-red-500/25',
-                        'bg-gray-50 border-gray-200 hover:border-red-300'
-                      )}`}
-                    >
-                      <button
-                        onClick={() => setOpenFaqId(openFaqId === (faq.id || idx) ? null : (faq.id || idx))}
-                        className="w-full flex items-center justify-between gap-3 px-4 py-3 text-left transition-colors"
-                      >
-                        <span className={`font-semibold text-xs sm:text-sm ${t('text-white', 'text-gray-900')}`}>{faq.question}</span>
-                        <ChevronDown className={`w-4 h-4 shrink-0 transition-transform duration-300 ${openFaqId === (faq.id || idx) ? 'rotate-180 text-brand-red' : t('text-white/40', 'text-gray-400')}`} />
-                      </button>
-                      {openFaqId === (faq.id || idx) && (
-                        <div className={`px-4 pb-3 pt-1 border-t ${t('border-white/[0.04]', 'border-gray-200')}`}>
-                          <p className={`text-xs sm:text-sm leading-relaxed ${t('text-white/70', 'text-gray-600')}`}>{faq.answer}</p>
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                </div>
-                <div className="text-center mt-5">
-                  <a href="/contact/faqs" className="inline-flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-[0.18em] text-brand-red hover:underline">
-                    View More <ChevronRight className="w-3 h-3" />
-                  </a>
-                </div>
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* ─── 2. CPL (CHANNEL PARTNER) DASHBOARD SECTION ─── */}
-        {dashboardView === 'cpl' && (
-          <div className="space-y-6">
-
-            {renderPartnerPortalContent('CPL')}
-          </div>
-        )}
-
-        {/* ─── 3. MCP (MASTER CHANNEL PARTNER) DASHBOARD SECTION ─── */}
-        {dashboardView === 'mcp' && (
-          <div className="space-y-6">
-
-            {renderPartnerPortalContent('MCP')}
-          </div>
-        )}
-
-        {/* MODAL 1: CREATE GENERAL INVESTOR */}
-        {createInvestorOpen && (
-          <div className="fixed inset-0 z-[10000] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fade-in">
-            <div className={`w-full max-w-lg rounded-2xl border p-6 shadow-2xl relative ${t('bg-[#140606] border-red-500/30 text-white', 'bg-white border-gray-200 text-gray-900')}`}>
-              <button
-                type="button"
-                onClick={() => setCreateInvestorOpen(false)}
-                className="absolute top-5 right-5 p-1 rounded-lg text-gray-400 hover:text-white cursor-pointer"
-              >
-                <X className="w-5 h-5" />
-              </button>
-
-              <div className="flex items-center gap-3 mb-5">
-                <div className="w-10 h-10 rounded-xl bg-brand-red/20 flex items-center justify-center text-brand-red">
-                  <Plus className="w-5 h-5" />
-                </div>
-                <div>
-                  <h3 className="text-lg font-bold">Onboard General Investor</h3>
-                  <p className="text-xs text-gray-400">
-                    Register investor lead under Partner ID <span className="font-mono text-brand-red">{ghlId || 'GHL-PARTNER'}</span>
-                  </p>
-                </div>
-              </div>
-
-              <form onSubmit={handleCreateInvestor} className="space-y-4">
-                <div>
-                  <label className="block text-xs font-semibold mb-1 text-gray-300">Investor Full Name *</label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="e.g. Anand Mahindra"
-                    value={investorForm.name}
-                    onChange={(e) => setInvestorForm({ ...investorForm, name: e.target.value })}
-                    className={`w-full px-3.5 py-2.5 rounded-xl text-sm border outline-none ${t('bg-white/[0.06] border-white/10 text-white focus:border-brand-red', 'bg-gray-50 border-gray-300 text-gray-900 focus:border-brand-red')}`}
-                  />
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-xs font-semibold mb-1 text-gray-300">Email Address *</label>
-                    <input
-                      type="email"
-                      required
-                      placeholder="investor@example.com"
-                      value={investorForm.email}
-                      onChange={(e) => setInvestorForm({ ...investorForm, email: e.target.value })}
-                      className={`w-full px-3.5 py-2.5 rounded-xl text-sm border outline-none ${t('bg-white/[0.06] border-white/10 text-white focus:border-brand-red', 'bg-gray-50 border-gray-300 text-gray-900 focus:border-brand-red')}`}
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-semibold mb-1 text-gray-300">Phone Number</label>
-                    <input
-                      type="tel"
-                      placeholder="+91 98765 43210"
-                      value={investorForm.phone}
-                      onChange={(e) => setInvestorForm({ ...investorForm, phone: e.target.value })}
-                      className={`w-full px-3.5 py-2.5 rounded-xl text-sm border outline-none ${t('bg-white/[0.06] border-white/10 text-white focus:border-brand-red', 'bg-gray-50 border-gray-300 text-gray-900 focus:border-brand-red')}`}
-                    />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-xs font-semibold mb-1 text-gray-300">City / Jurisdiction</label>
-                    <input
-                      type="text"
-                      placeholder="e.g. Chennai / Mumbai"
-                      value={investorForm.city}
-                      onChange={(e) => setInvestorForm({ ...investorForm, city: e.target.value })}
-                      className={`w-full px-3.5 py-2.5 rounded-xl text-sm border outline-none ${t('bg-white/[0.06] border-white/10 text-white focus:border-brand-red', 'bg-gray-50 border-gray-300 text-gray-900 focus:border-brand-red')}`}
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-semibold mb-1 text-gray-300">Investable Surplus</label>
-                    <select
-                      value={investorForm.surplus}
-                      onChange={(e) => setInvestorForm({ ...investorForm, surplus: e.target.value })}
-                      className={`w-full px-3.5 py-2.5 rounded-xl text-sm border outline-none ${t('bg-white/[0.06] border-white/10 text-white focus:border-brand-red', 'bg-gray-50 border-gray-300 text-gray-900 focus:border-brand-red')}`}
-                    >
-                      <option value="₹25 Lakhs – ₹50 Lakhs" className="bg-[#140606]">₹25 Lakhs – ₹50 Lakhs</option>
-                      <option value="₹50 Lakhs – ₹1 Crore" className="bg-[#140606]">₹50 Lakhs – ₹1 Crore</option>
-                      <option value="₹1 Crore – ₹5 Crore" className="bg-[#140606]">₹1 Crore – ₹5 Crore</option>
-                      <option value="₹5 Crore+" className="bg-[#140606]">₹5 Crore+</option>
-                    </select>
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold mb-1 text-gray-300">Investment Notes / Preferences</label>
-                  <textarea
-                    rows={2}
-                    placeholder="e.g. Interested in Category II Debentures, tenure 3 years"
-                    value={investorForm.notes}
-                    onChange={(e) => setInvestorForm({ ...investorForm, notes: e.target.value })}
-                    className={`w-full px-3.5 py-2 rounded-xl text-sm border outline-none resize-none ${t('bg-white/[0.06] border-white/10 text-white focus:border-brand-red', 'bg-gray-50 border-gray-300 text-gray-900 focus:border-brand-red')}`}
-                  />
-                </div>
-
-                <div className="flex items-center justify-end gap-3 pt-3">
-                  <button
-                    type="button"
-                    onClick={() => setCreateInvestorOpen(false)}
-                    className="px-4 py-2 rounded-xl text-xs font-semibold text-gray-400 hover:text-white cursor-pointer"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    disabled={submittingPartnerAction}
-                    className="px-6 py-2.5 rounded-xl text-xs font-bold text-white shadow-lg disabled:opacity-50 cursor-pointer"
-                    style={{ background: 'linear-gradient(135deg, #D0021B, #8B0000)' }}
-                  >
-                    {submittingPartnerAction ? 'Registering...' : 'Register Investor'}
-                  </button>
-                </div>
-              </form>
+        {faqs.length > 0 && (
+          <div
+            className={`relative rounded-2xl overflow-hidden p-6 border ${t(
+              'bg-[#120606] border-white/10 shadow-lg',
+              'bg-white border-gray-200 shadow-sm'
+            )}`}
+          >
+            <div className="flex items-center justify-center gap-3 mb-5">
+              <div className="h-px w-10 bg-gradient-to-r from-transparent to-red-600/50" />
+              <h4 className={`text-center font-bold text-sm uppercase tracking-wider ${t('text-white', 'text-gray-900')}`}>
+                Frequently Asked Questions
+              </h4>
+              <div className="h-px w-10 bg-gradient-to-l from-transparent to-red-600/50" />
             </div>
-          </div>
-        )}
-
-        {/* MODAL 2: CREATE CHANNEL PARTNER (MCP ONLY) */}
-        {createPartnerOpen && (
-          <div className="fixed inset-0 z-[10000] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fade-in">
-            <div className={`w-full max-w-lg rounded-2xl border p-6 shadow-2xl relative ${t('bg-[#140606] border-purple-500/30 text-white', 'bg-white border-gray-200 text-gray-900')}`}>
-              <button
-                type="button"
-                onClick={() => setCreatePartnerOpen(false)}
-                className="absolute top-5 right-5 p-1 rounded-lg text-gray-400 hover:text-white cursor-pointer"
-              >
-                <X className="w-5 h-5" />
-              </button>
-
-              <div className="flex items-center gap-3 mb-5">
-                <div className="w-10 h-10 rounded-xl bg-purple-500/20 flex items-center justify-center text-purple-400">
-                  <Building2 className="w-5 h-5" />
-                </div>
-                <div>
-                  <h3 className="text-lg font-bold">Onboard Channel Partner (CPL)</h3>
-                  <p className="text-xs text-purple-300">
-                    Register distribution agency under Master Partner <span className="font-mono">{ghlId || (user as any)?.ghl_id || 'PARTNER'}</span>
-                  </p>
-                </div>
-              </div>
-
-              <form onSubmit={handleCreatePartner} className="space-y-4">
-                <div>
-                  <label className="block text-xs font-semibold mb-1 text-gray-300">Agency / Firm Name *</label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="e.g. Apex Wealth Partners LLP"
-                    value={partnerForm.agencyName}
-                    onChange={(e) => setPartnerForm({ ...partnerForm, agencyName: e.target.value })}
-                    className={`w-full px-3.5 py-2.5 rounded-xl text-sm border outline-none ${t('bg-white/[0.06] border-white/10 text-white focus:border-purple-500', 'bg-gray-50 border-gray-300 text-gray-900 focus:border-purple-500')}`}
-                  />
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-xs font-semibold mb-1 text-gray-300">Primary Contact Person</label>
-                    <input
-                      type="text"
-                      placeholder="e.g. Rajesh Kumar"
-                      value={partnerForm.contactName}
-                      onChange={(e) => setPartnerForm({ ...partnerForm, contactName: e.target.value })}
-                      className={`w-full px-3.5 py-2.5 rounded-xl text-sm border outline-none ${t('bg-white/[0.06] border-white/10 text-white focus:border-purple-500', 'bg-gray-50 border-gray-300 text-gray-900 focus:border-purple-500')}`}
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-semibold mb-1 text-gray-300">Partner Email Address *</label>
-                    <input
-                      type="email"
-                      required
-                      placeholder="partner@agency.com"
-                      value={partnerForm.email}
-                      onChange={(e) => setPartnerForm({ ...partnerForm, email: e.target.value })}
-                      className={`w-full px-3.5 py-2.5 rounded-xl text-sm border outline-none ${t('bg-white/[0.06] border-white/10 text-white focus:border-purple-500', 'bg-gray-50 border-gray-300 text-gray-900 focus:border-purple-500')}`}
-                    />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-xs font-semibold mb-1 text-gray-300">Contact Phone</label>
-                    <input
-                      type="tel"
-                      placeholder="+91 98400 12345"
-                      value={partnerForm.phone}
-                      onChange={(e) => setPartnerForm({ ...partnerForm, phone: e.target.value })}
-                      className={`w-full px-3.5 py-2.5 rounded-xl text-sm border outline-none ${t('bg-white/[0.06] border-white/10 text-white focus:border-purple-500', 'bg-gray-50 border-gray-300 text-gray-900 focus:border-purple-500')}`}
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-semibold mb-1 text-gray-300">Target Volume Commitment</label>
-                    <select
-                      value={partnerForm.expectedVolume}
-                      onChange={(e) => setPartnerForm({ ...partnerForm, expectedVolume: e.target.value })}
-                      className={`w-full px-3.5 py-2.5 rounded-xl text-sm border outline-none ${t('bg-white/[0.06] border-white/10 text-white focus:border-purple-500', 'bg-gray-50 border-gray-300 text-gray-900 focus:border-purple-500')}`}
-                    >
-                      <option value="₹5 Crore – ₹10 Crore" className="bg-[#140606]">₹5 Crore – ₹10 Crore</option>
-                      <option value="₹10 Crore – ₹25 Crore" className="bg-[#140606]">₹10 Crore – ₹25 Crore</option>
-                      <option value="₹25 Crore+" className="bg-[#140606]">₹25 Crore+</option>
-                    </select>
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold mb-1 text-gray-300">City / Operating Territory</label>
-                  <input
-                    type="text"
-                    placeholder="e.g. Bangalore / Chennai / Hyderabad"
-                    value={partnerForm.city}
-                    onChange={(e) => setPartnerForm({ ...partnerForm, city: e.target.value })}
-                    className={`w-full px-3.5 py-2.5 rounded-xl text-sm border outline-none ${t('bg-white/[0.06] border-white/10 text-white focus:border-purple-500', 'bg-gray-50 border-gray-300 text-gray-900 focus:border-purple-500')}`}
-                  />
-                </div>
-
-                <div className="flex items-center justify-end gap-3 pt-3">
-                  <button
-                    type="button"
-                    onClick={() => setCreatePartnerOpen(false)}
-                    className="px-4 py-2 rounded-xl text-xs font-semibold text-gray-400 hover:text-white cursor-pointer"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    disabled={submittingPartnerAction}
-                    className="px-6 py-2.5 rounded-xl text-xs font-bold text-white shadow-lg disabled:opacity-50 cursor-pointer"
-                    style={{ background: 'linear-gradient(135deg, #7C3AED, #4C1D95)' }}
-                  >
-                    {submittingPartnerAction ? 'Onboarding...' : 'Register Channel Partner'}
-                  </button>
-                </div>
-              </form>
-            </div>
-          </div>
-        )}
-
-        {/* MODAL 3: GOAL MANAGEMENT */}
-        {goalModalOpen && (
-          <div className="fixed inset-0 z-[10000] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fade-in">
-            <div className={`w-full max-w-md rounded-2xl border p-6 shadow-2xl relative ${t('bg-[#140606] border-red-500/30 text-white', 'bg-white border-gray-200 text-gray-900')}`}>
-              <button
-                type="button"
-                onClick={() => setGoalModalOpen(false)}
-                className="absolute top-5 right-5 p-1 rounded-lg text-gray-400 hover:text-white cursor-pointer"
-              >
-                <X className="w-5 h-5" />
-              </button>
-
-              <div className="flex items-center gap-3 mb-5">
-                <div className="w-10 h-10 rounded-xl bg-brand-red/20 flex items-center justify-center text-brand-red">
-                  <Target className="w-5 h-5" />
-                </div>
-                <div>
-                  <h3 className="text-lg font-bold">Set Your Goal</h3>
-                </div>
-              </div>
-
-              <form onSubmit={handleUpdateGoals} className="space-y-4">
-                <div>
-                  <label className="block text-xs font-semibold mb-1 text-gray-300">
-                    Target Investment
-                  </label>
-                  <input
-                    type="number"
-                    min="0"
-                    step="500000"
-                    value={goalForm.directTarget}
-                    onChange={(e) => setGoalForm({ ...goalForm, directTarget: Number(e.target.value) })}
-                    className={`w-full px-3.5 py-2.5 rounded-xl text-sm border outline-none ${t('bg-white/[0.06] border-white/10 text-white focus:border-brand-red', 'bg-gray-50 border-gray-300 text-gray-900 focus:border-brand-red')}`}
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold mb-1 text-gray-300">
-                    Target Members
-                  </label>
-                  <input
-                    type="number"
-                    min="0"
-                    step="1000000"
-                    value={goalForm.referralTarget}
-                    onChange={(e) => setGoalForm({ ...goalForm, referralTarget: Number(e.target.value) })}
-                    className={`w-full px-3.5 py-2.5 rounded-xl text-sm border outline-none ${t('bg-white/[0.06] border-white/10 text-white focus:border-brand-red', 'bg-gray-50 border-gray-300 text-gray-900 focus:border-brand-red')}`}
-                  />
-                  <span className="text-[10px] text-gray-400 mt-1 block">
-                    Current: ₹{formatINRLocal(goalForm.referralTarget)}
-                  </span>
-                </div>
-
-                <div className="flex items-center justify-end gap-3 pt-3">
-                  <button
-                    type="button"
-                    onClick={() => setGoalModalOpen(false)}
-                    className="px-4 py-2 rounded-xl text-xs font-semibold text-gray-400 hover:text-white cursor-pointer"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    disabled={submittingPartnerAction}
-                    className="px-6 py-2.5 rounded-xl text-xs font-bold text-white shadow-lg disabled:opacity-50 cursor-pointer"
-                    style={{ background: 'linear-gradient(135deg, #D0021B, #8B0000)' }}
-                  >
-                    Save Goals
-                  </button>
-                </div>
-              </form>
-            </div>
-          </div>
-        )}
-
-        {/* MODAL 4: REFERRAL DETAILS DRILL-DOWN */}
-        {selectedPartnerReferral && (
-          <div className="fixed inset-0 z-[10000] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fade-in">
-            <div className={`w-full max-w-lg rounded-2xl border p-6 shadow-2xl relative ${t('bg-[#140606] border-red-500/30 text-white', 'bg-white border-gray-200 text-gray-900')}`}>
-              <button
-                type="button"
-                onClick={() => setSelectedPartnerReferral(null)}
-                className="absolute top-5 right-5 p-1 rounded-lg text-gray-400 hover:text-white cursor-pointer"
-              >
-                <X className="w-5 h-5" />
-              </button>
-
-              <div className="flex items-center gap-3 mb-5">
-                <div className="w-12 h-12 rounded-2xl bg-brand-red/15 flex items-center justify-center text-brand-red font-bold text-lg">
-                  {selectedPartnerReferral.refereeName.charAt(0).toUpperCase()}
-                </div>
-                <div>
-                  <h3 className="text-lg font-bold">{selectedPartnerReferral.refereeName}</h3>
-                  <p className="text-xs text-gray-400">{selectedPartnerReferral.memberType} &bull; Onboarded {selectedPartnerReferral.date}</p>
-                </div>
-              </div>
-
-              <div className="space-y-4 text-xs">
-                <div className={`grid grid-cols-2 gap-3 p-3.5 rounded-xl border ${t('bg-white/[0.02] border-white/[0.06]', 'bg-gray-50 border-gray-200')}`}>
-                  <div>
-                    <span className="text-[10px] uppercase text-gray-400 block mb-0.5">Email</span>
-                    <span className="font-semibold">{selectedPartnerReferral.refereeEmail}</span>
-                  </div>
-                  <div>
-                    <span className="text-[10px] uppercase text-gray-400 block mb-0.5">Phone</span>
-                    <span className="font-semibold">{selectedPartnerReferral.refereePhone}</span>
-                  </div>
-                  <div>
-                    <span className="text-[10px] uppercase text-gray-400 block mb-0.5">City / Jurisdiction</span>
-                    <span className="font-semibold">{selectedPartnerReferral.refereeCity}</span>
-                  </div>
-                  <div>
-                    <span className="text-[10px] uppercase text-gray-400 block mb-0.5">KYC Status</span>
-                    <span className="font-bold text-emerald-400">{selectedPartnerReferral.kycStatus}</span>
-                  </div>
-                </div>
-
-                <div className={`p-3.5 rounded-xl border ${t('bg-white/[0.02] border-white/[0.06]', 'bg-gray-50 border-gray-200')}`}>
-                  <h4 className="font-bold text-sm mb-3">Financial Commitment & Reward Breakdown</h4>
-                  <div className="grid grid-cols-3 gap-3 text-center">
-                    <div className="p-2 rounded-lg bg-black/20">
-                      <span className="text-[9px] uppercase text-gray-400 block">Invested</span>
-                      <span className="text-sm font-black text-white">₹{formatINRLocal(selectedPartnerReferral.investmentAmount)}</span>
-                    </div>
-                    <div className="p-2 rounded-lg bg-black/20">
-                      <span className="text-[9px] uppercase text-gray-400 block">Reward Rate</span>
-                      <span className="text-sm font-black text-brand-red">{selectedPartnerReferral.commissionRate}%</span>
-                    </div>
-                    <div className="p-2 rounded-lg bg-black/20">
-                      <span className="text-[9px] uppercase text-gray-400 block">Commission</span>
-                      <span className="text-sm font-black text-emerald-400">₹{formatINRLocal(selectedPartnerReferral.commissionAmount)}</span>
-                    </div>
-                  </div>
-                  <div className="mt-3 flex items-center justify-between text-[11px] pt-2 border-t border-white/[0.06]">
-                    <span className="text-gray-400">Payout Status:</span>
-                    <span className="font-bold text-amber-400 uppercase tracking-wider">{selectedPartnerReferral.commissionStatus}</span>
-                  </div>
-                </div>
-
-                {selectedPartnerReferral.notes && (
-                  <div className={`p-3 rounded-xl border ${t('bg-white/[0.02] border-white/[0.06]', 'bg-gray-50 border-gray-200')}`}>
-                    <span className="text-[10px] uppercase text-gray-400 block mb-1">Notes</span>
-                    <p className="text-gray-300 leading-relaxed">{selectedPartnerReferral.notes}</p>
-                  </div>
-                )}
-              </div>
-
-              <div className="mt-6 flex justify-end">
-                <button
-                  type="button"
-                  onClick={() => setSelectedPartnerReferral(null)}
-                  className="px-5 py-2 rounded-xl text-xs font-semibold bg-white/10 hover:bg-white/15 text-white cursor-pointer"
+            <div className="space-y-2">
+              {faqs.map((faq: any, idx: number) => (
+                <div
+                  key={faq.id || idx}
+                  className={`rounded-xl overflow-hidden border transition-colors ${t(
+                    'bg-white/[0.02] border-white/[0.06] hover:border-red-500/25',
+                    'bg-gray-50 border-gray-200 hover:border-red-300'
+                  )}`}
                 >
-                  Close Dossier
-                </button>
-              </div>
+                  <button
+                    onClick={() => setOpenFaqId(openFaqId === (faq.id || idx) ? null : (faq.id || idx))}
+                    className="w-full flex items-center justify-between gap-3 px-4 py-3 text-left transition-colors"
+                  >
+                    <span className={`font-semibold text-xs sm:text-sm ${t('text-white', 'text-gray-900')}`}>{faq.question}</span>
+                    <ChevronDown className={`w-4 h-4 shrink-0 transition-transform duration-300 ${openFaqId === (faq.id || idx) ? 'rotate-180 text-brand-red' : t('text-white/40', 'text-gray-400')}`} />
+                  </button>
+                  {openFaqId === (faq.id || idx) && (
+                    <div className={`px-4 pb-3 pt-1 border-t ${t('border-white/[0.04]', 'border-gray-200')}`}>
+                      <p className={`text-xs sm:text-sm leading-relaxed ${t('text-white/70', 'text-gray-600')}`}>{faq.answer}</p>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+            <div className="text-center mt-5">
+              <a href="/contact/faqs" className="inline-flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-[0.18em] text-brand-red hover:underline">
+                View More <ChevronRight className="w-3 h-3" />
+              </a>
             </div>
           </div>
         )}
@@ -5024,7 +3582,7 @@ export default function DashboardClient() {
     <ReferralDashboard
       theme={theme}
       isDark={isDark}
-      authenticatedPartnerId={ghlId}
+      authenticatedPartnerId={ghlId || referralCode}
       partnerName={userName}
       partnerEmail={userEmail}
       partnerPhone={(user as any)?.phone || ''}
@@ -6834,6 +5392,96 @@ export default function DashboardClient() {
                 <span className="block text-xs font-semibold leading-tight mt-0.5 max-w-[140px] truncate">{assignedRM.name}</span>
               </span>
             </button>
+          )}
+
+          {/* Expanded popup card */}
+          {rmWidgetOpen && (
+            <>
+              <div
+                className="fixed inset-0 z-[10000] bg-black/40 backdrop-blur-sm animate-fade-in"
+                onClick={() => setRmWidgetOpen(false)}
+                aria-hidden
+              />
+              <div
+                role="dialog"
+                aria-label="Investor Relationship Manager details"
+                className="fixed bottom-24 lg:bottom-24 right-4 lg:right-6 z-[10001] w-[calc(100vw-2rem)] sm:w-[360px] bg-white rounded-2xl shadow-2xl border border-gray-200 p-5 animate-fade-in"
+              >
+                <div className="flex items-start justify-between mb-3">
+                  <p className="text-xs font-bold tracking-[0.18em] text-gray-400">
+                    YOUR INVESTOR RELATIONSHIP MANAGER
+                  </p>
+                  <button
+                    onClick={() => setRmWidgetOpen(false)}
+                    aria-label="Close"
+                    className="text-gray-400 hover:text-gray-700 -mt-1 -mr-1 p-1"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+                <div className="flex flex-col items-center">
+                  <div className="relative w-20 h-20 mb-3">
+                    <div className="w-20 h-20 rounded-full border-[3px] border-brand-red overflow-hidden bg-gray-100 flex items-center justify-center">
+                      {assignedRM.avatar_url ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={assignedRM.avatar_url} alt={assignedRM.name} className="w-full h-full object-cover" />
+                      ) : (
+                        <span className="text-2xl font-bold text-brand-red">
+                          {assignedRM.name.trim().charAt(0).toUpperCase()}
+                        </span>
+                      )}
+                    </div>
+                    <span className="absolute bottom-0.5 right-0.5 w-3.5 h-3.5 rounded-full bg-emerald-500 border-2 border-white" />
+                  </div>
+                  <h4 className="text-base font-bold text-gray-900">{assignedRM.name}</h4>
+                  <p className="text-xs text-gray-500 mt-0.5 flex items-center gap-1.5">
+                    <span>{assignedRM.designation}</span>
+                    <span>·</span>
+                    <span className="inline-flex items-center gap-1">Verified <CheckCircle className="w-3.5 h-3.5 text-emerald-500" /></span>
+                  </p>
+                </div>
+                <div className="mt-4 space-y-2">
+                  {assignedRM.phone ? (
+                    <a
+                      href={`tel:${assignedRM.phone.replace(/\s+/g, '')}`}
+                      className="flex items-center gap-3 px-3.5 py-2.5 rounded-xl bg-gray-100 hover:bg-gray-200 transition-colors"
+                    >
+                      <Phone className="w-4 h-4 text-brand-red shrink-0" />
+                      <span className="text-sm text-gray-800">{assignedRM.phone}</span>
+                    </a>
+                  ) : (
+                    <div className="flex items-center gap-3 px-3.5 py-2.5 rounded-xl bg-gray-50 border border-dashed border-gray-200">
+                      <Phone className="w-4 h-4 text-gray-300 shrink-0" />
+                      <span className="text-sm text-gray-400">Phone not available</span>
+                    </div>
+                  )}
+                  {assignedRM.email ? (
+                    <a
+                      href={`mailto:${assignedRM.email}`}
+                      className="flex items-center gap-3 px-3.5 py-2.5 rounded-xl bg-gray-100 hover:bg-gray-200 transition-colors"
+                    >
+                      <Mail className="w-4 h-4 text-brand-red shrink-0" />
+                      <span className="text-sm text-gray-800 truncate">{assignedRM.email}</span>
+                    </a>
+                  ) : (
+                    <div className="flex items-center gap-3 px-3.5 py-2.5 rounded-xl bg-gray-50 border border-dashed border-gray-200">
+                      <Mail className="w-4 h-4 text-gray-300 shrink-0" />
+                      <span className="text-sm text-gray-400">Email not available</span>
+                    </div>
+                  )}
+                </div>
+                {(assignedRM.phone || assignedRM.email) && (
+                  <a
+                    href={assignedRM.phone ? `tel:${assignedRM.phone.replace(/\s+/g, '')}` : `mailto:${assignedRM.email}`}
+                    className="mt-4 flex items-center justify-center gap-2 w-full py-2.5 rounded-xl text-white font-semibold transition-all hover:scale-[1.01]"
+                    style={{ background: 'linear-gradient(135deg, #D0021B, #8B0000)' }}
+                  >
+                    <PhoneCall className="w-4 h-4" />
+                    Contact Manager
+                  </a>
+                )}
+              </div>
+            </>
           )}
         </>
       )}
