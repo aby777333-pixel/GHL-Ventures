@@ -63,41 +63,101 @@ function RegisterPageInner() {
   const [otpError, setOtpError] = useState('')
   const [otpCooldown, setOtpCooldown] = useState(0)
 
-  // Capture / sync referral code from URL
+  // Method 2: Capture / sync referral code from active partner session, storage, or URL without exposing in address bar
   useEffect(() => {
-    let refCode = searchParams.get('ref') || searchParams.get('referral') || searchParams.get('referred_by')
-    let typeParam = searchParams.get('type')
-    if (!refCode && typeof window !== 'undefined') {
-      const sp = new URLSearchParams(window.location.search)
-      refCode = sp.get('ref') || sp.get('referral') || sp.get('referred_by')
-      if (!typeParam) typeParam = sp.get('type')
+    let isCancelled = false
+
+    const detectReferrer = async () => {
+      let refCode = searchParams.get('ref') || searchParams.get('referral') || searchParams.get('referred_by')
+      let typeParam = searchParams.get('type')
+
+      if (typeof window !== 'undefined') {
+        const sp = new URLSearchParams(window.location.search)
+        if (!refCode) {
+          refCode = sp.get('ref') || sp.get('referral') || sp.get('referred_by')
+        }
+        if (!typeParam) {
+          typeParam = sp.get('type')
+        }
+
+        // Method 2: Check stored partner referrer context (saved when partner clicked Create Investor/Partner in portal)
+        if (!refCode) {
+          refCode = sessionStorage.getItem('ghl_partner_referrer_id') || localStorage.getItem('ghl_partner_referrer_id')
+        }
+        if (!typeParam) {
+          typeParam = sessionStorage.getItem('ghl_partner_account_type') || localStorage.getItem('ghl_partner_account_type')
+        }
+
+        // Method 2: Check active authenticated Supabase partner session if on the same device/browser
+        if (!refCode && isSupabaseConfigured()) {
+          try {
+            const { data: { session } } = await supabase.auth.getSession()
+            if (session?.user) {
+              const { data: clientRow } = await (supabase as any)
+                .from('clients')
+                .select('ghl_id, client_code, full_name')
+                .eq('user_id', session.user.id)
+                .maybeSingle()
+              const detectedPartnerId = (clientRow as any)?.ghl_id || (clientRow as any)?.client_code || session.user.user_metadata?.ghl_id || session.user.user_metadata?.partner_id
+              if (detectedPartnerId) {
+                refCode = detectedPartnerId
+              }
+            }
+          } catch { /* best-effort */ }
+        }
+
+        // Method 2 Clean URL: Strip any ?ref=... or ?type=... from the browser address bar
+        // keeps URL strictly https://ghlindiaventures.com/register/ while preserving the referral in state
+        if (sp.has('ref') || sp.has('referral') || sp.has('referred_by') || sp.has('type')) {
+          try {
+            window.history.replaceState({}, '', window.location.pathname)
+          } catch { /* non-fatal */ }
+        }
+      }
+
+      if (isCancelled) return
+
+      if (refCode) {
+        const cleanRef = refCode.trim()
+        setForm(prev => ({ ...prev, referral: cleanRef }))
+        setIsLockedReferral(true)
+        if (typeof window !== 'undefined') {
+          sessionStorage.setItem('ghl_partner_referrer_id', cleanRef)
+          localStorage.setItem('ghl_partner_referrer_id', cleanRef)
+        }
+      }
+
+      if (typeParam) {
+        const cleanType = typeParam.trim().toLowerCase()
+        setAccountType(cleanType)
+        if (typeof window !== 'undefined') {
+          sessionStorage.setItem('ghl_partner_account_type', cleanType)
+          localStorage.setItem('ghl_partner_account_type', cleanType)
+        }
+      }
     }
-    if (refCode) {
-      setForm(prev => ({ ...prev, referral: refCode!.trim() }))
-      setIsLockedReferral(true)
-    }
-    if (typeParam) {
-      setAccountType(typeParam.trim().toLowerCase())
-    }
+
+    detectReferrer()
+    return () => { isCancelled = true }
   }, [searchParams])
 
-  // Redirect if already authenticated ONLY when NOT arriving via a referral / invite link
+  // Redirect if already authenticated ONLY when NOT in candidate onboarding mode
   useEffect(() => {
     if (!isSupabaseConfigured()) return
     let hasRef = searchParams.get('ref') || searchParams.get('referral') || searchParams.get('referred_by')
     if (!hasRef && typeof window !== 'undefined') {
       const sp = new URLSearchParams(window.location.search)
-      hasRef = sp.get('ref') || sp.get('referral') || sp.get('referred_by')
+      hasRef = sp.get('ref') || sp.get('referral') || sp.get('referred_by') || sessionStorage.getItem('ghl_partner_referrer_id') || localStorage.getItem('ghl_partner_referrer_id')
     }
-    if (hasRef) {
-      // Arrived via partner referral link or invite — DO NOT redirect away!
+    if (hasRef || isLockedReferral || form.referral) {
+      // Arrived via partner referral link, active partner session, or stored referral — DO NOT redirect away!
       return
     }
 
     supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session?.user) router.replace('/dashboard')
+      if (session?.user && !form.referral) router.replace('/dashboard')
     })
-  }, [router, searchParams])
+  }, [router, searchParams, isLockedReferral, form.referral])
 
   // OTP cooldown timer
   useEffect(() => {
@@ -362,9 +422,79 @@ function RegisterPageInner() {
 
       // Record referral if a referral code was used (non-blocking).
       if (form.referral && form.referral.trim()) {
+        const cleanRef = form.referral.trim()
+        const pRole = cleanRef.toUpperCase().startsWith('MCP') ? 'MCP' : cleanRef.toUpperCase().startsWith('CPL') ? 'CPL' : 'GI'
+        const commRate = pRole === 'MCP' ? 4.5 : pRole === 'CPL' ? 3.5 : 3.0
+
+        // 1. Post to API route for server-side persistence & DB insertion
+        try {
+          await fetch('/api/dashboard/referral/', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              action: 'record_signup_referral',
+              referralCode: cleanRef,
+              name: form.name.trim(),
+              email: cleanEmail,
+              phone: mobileDigits,
+              accountType: accountType || 'investor',
+            }),
+          })
+        } catch { /* best effort */ }
+
+        // 2. Direct client insert into public.referrals (without .select() to avoid RLS error)
+        try {
+          await (supabase as any).from('referrals').insert({
+            referrer_name: cleanRef,
+            referrer_email: `${cleanRef.toLowerCase()}@ghlindiaventures.com`,
+            referee_name: form.name.trim(),
+            referee_email: cleanEmail,
+            referee_phone: mobileDigits,
+            relationship: accountType === 'channel_partner' ? 'channel_partner' : 'general_investor',
+            status: 'qualified',
+            commission_rate: commRate,
+            commission_amount: 0,
+            commission_status: 'pending',
+            investment_amount: 0,
+            message: `Signup via referral code ${cleanRef}`,
+          })
+        } catch { /* best effort */ }
+
+        // 3. Cache locally in browser localStorage for immediate UI display
+        try {
+          if (typeof window !== 'undefined') {
+            const localRefs = JSON.parse(localStorage.getItem('ghl_local_referrals') || '[]')
+            localRefs.unshift({
+              id: `REF-${Date.now().toString().slice(-4)}`,
+              referralCode: cleanRef,
+              referrer_name: cleanRef,
+              referrer_email: `${cleanRef.toLowerCase()}@ghlindiaventures.com`,
+              refereeName: form.name.trim(),
+              referee_name: form.name.trim(),
+              refereeEmail: cleanEmail,
+              referee_email: cleanEmail,
+              refereePhone: mobileDigits,
+              referee_phone: mobileDigits,
+              memberType: accountType === 'channel_partner' ? 'Channel Partner' : 'General Investor',
+              relationship: accountType === 'channel_partner' ? 'channel_partner' : 'general_investor',
+              kycStatus: 'Verified',
+              status: 'qualified',
+              date: new Date().toLocaleDateString('en-IN'),
+              createdAt: new Date().toISOString(),
+              created_at: new Date().toISOString(),
+              investmentAmount: 0,
+              commissionRate: commRate,
+              commissionAmount: 0,
+              commissionStatus: 'pending',
+            })
+            localStorage.setItem('ghl_local_referrals', JSON.stringify(localRefs))
+          }
+        } catch { /* best effort */ }
+
+        // 4. Also call standard dashboardDataService recordReferral for notification/CRM leads
         try {
           const { recordReferral } = await import('@/lib/supabase/dashboardDataService')
-          await recordReferral(form.referral.trim(), form.name, form.email)
+          await recordReferral(cleanRef, form.name.trim(), cleanEmail)
         } catch { /* non-blocking */ }
       }
 
@@ -658,16 +788,22 @@ function RegisterPageInner() {
             <div>
               <label htmlFor="reg-referral" className="block text-xs font-medium text-brand-black mb-1">Referred By</label>
               {isLockedReferral && form.referral ? (
-                <div className="flex items-center gap-2">
-                  <input id="reg-referral" type="text" className="input-field font-mono font-semibold" value={form.referral} readOnly
-                    style={{ background: '#f0fdf4', border: '1px solid #86efac', color: '#16a34a' }} />
-                  <div className="flex items-center gap-1.5 text-green-700 bg-green-50 px-2.5 py-2 rounded-lg border border-green-200 shrink-0 shadow-sm">
-                    <CheckCircle className="w-4 h-4 text-green-600 shrink-0" />
-                    <span className="text-xs font-bold tracking-tight">Verified Partner</span>
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2">
+                    <input id="reg-referral" type="text" className="input-field font-mono font-semibold" value={form.referral} readOnly
+                      style={{ background: '#f0fdf4', border: '1px solid #86efac', color: '#16a34a' }} />
+                    <div className="flex items-center gap-1.5 text-green-700 bg-green-50 px-2.5 py-2 rounded-lg border border-green-200 shrink-0 shadow-sm">
+                      <CheckCircle className="w-4 h-4 text-green-600 shrink-0" />
+                      <span className="text-xs font-bold tracking-tight">Verified Partner</span>
+                    </div>
                   </div>
+                  <p className="text-[11px] text-green-700 font-medium flex items-center gap-1">
+                    <span>✓ Automatically attributed to partner ID:</span>
+                    <span className="font-mono font-bold">{form.referral}</span>
+                  </p>
                 </div>
               ) : (
-                <input id="reg-referral" type="text" className="input-field" placeholder="Enter Referral Code" value={form.referral} onChange={(e) => handleChange('referral', e.target.value)} />
+                <input id="reg-referral" type="text" className="input-field font-mono" placeholder="Enter Referral Code (e.g. GHL09098)" value={form.referral} onChange={(e) => handleChange('referral', e.target.value)} />
               )}
             </div>
 

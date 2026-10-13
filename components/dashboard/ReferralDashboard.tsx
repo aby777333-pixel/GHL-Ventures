@@ -491,21 +491,27 @@ export default function ReferralDashboard({
   const todayReferralsList = useMemo(() => {
     const today = new Date()
     const todayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate()).getTime()
+    const todayStr = today.toDateString()
     return (data?.referrals || []).filter(r => {
       const raw = r.createdAt || r.date
       if (!raw || raw === '—') return false
       const d = new Date(raw)
       if (isNaN(d.getTime())) return false
-      return d.getTime() >= todayStart || d.toDateString() === today.toDateString()
+      return d.getTime() >= todayStart || d.toDateString() === todayStr
     })
   }, [data?.referrals])
 
-  const hasTodayReferrals = useMemo(() => {
-    const count = (data?.kpis?.todayReferrals !== undefined && data?.kpis?.todayReferrals !== null)
-      ? data.kpis.todayReferrals
-      : todayReferralsList.length
-    return count > 0 || todayReferralsList.length > 0
+  const totalReferralCount = useMemo(() => {
+    return Math.max(data?.kpis?.totalReferrals || 0, (data?.referrals || []).length)
+  }, [data?.kpis?.totalReferrals, data?.referrals])
+
+  const todayReferralCount = useMemo(() => {
+    return Math.max(data?.kpis?.todayReferrals || 0, todayReferralsList.length)
   }, [data?.kpis?.todayReferrals, todayReferralsList.length])
+
+  const hasTodayReferrals = useMemo(() => {
+    return todayReferralCount > 0
+  }, [todayReferralCount])
 
   // Volume for filtered Month/Year
   const giVolume = useMemo(() => {
@@ -1150,8 +1156,14 @@ export default function ReferralDashboard({
           </span>
           <button
             onClick={() => {
+              if (typeof window !== 'undefined') {
+                sessionStorage.setItem('ghl_partner_referrer_id', effectiveId)
+                sessionStorage.setItem('ghl_partner_account_type', 'investor')
+                localStorage.setItem('ghl_partner_referrer_id', effectiveId)
+                localStorage.setItem('ghl_partner_account_type', 'investor')
+              }
               const base = typeof window !== 'undefined' ? window.location.origin : 'https://ghlindiaventures.com'
-              const url = `${base}/register/?ref=${encodeURIComponent(effectiveId)}&type=investor`
+              const url = `${base}/register/`
               window.open(url, '_blank', 'noopener,noreferrer')
             }}
             className="mt-4 w-full py-2.5 rounded-xl text-xs font-bold text-white transition-all duration-300 hover:brightness-110 shadow-md"
@@ -1174,8 +1186,14 @@ export default function ReferralDashboard({
             </span>
             <button
               onClick={() => {
+                if (typeof window !== 'undefined') {
+                  sessionStorage.setItem('ghl_partner_referrer_id', effectiveId)
+                  sessionStorage.setItem('ghl_partner_account_type', 'channel_partner')
+                  localStorage.setItem('ghl_partner_referrer_id', effectiveId)
+                  localStorage.setItem('ghl_partner_account_type', 'channel_partner')
+                }
                 const base = typeof window !== 'undefined' ? window.location.origin : 'https://ghlindiaventures.com'
-                const url = `${base}/register/?ref=${encodeURIComponent(effectiveId)}&type=channel_partner`
+                const url = `${base}/register/`
                 window.open(url, '_blank', 'noopener,noreferrer')
               }}
               className="mt-4 w-full py-2.5 rounded-xl text-xs font-bold text-white transition-all duration-300 hover:brightness-110 shadow-md"
@@ -1295,7 +1313,7 @@ export default function ReferralDashboard({
           </div>
           <div className="flex items-baseline justify-between mt-1">
             <h3 className={`text-xl sm:text-2xl font-black tracking-tight ${t('text-white', 'text-gray-900')}`}>
-              {loading ? '—' : (data?.kpis?.totalReferrals || 0)}
+              {loading ? '—' : totalReferralCount}
             </h3>
             <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-400 group-hover:underline">
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
@@ -1328,7 +1346,7 @@ export default function ReferralDashboard({
           </div>
           <div className="flex items-baseline justify-between mt-1">
             <h3 className={`text-xl sm:text-2xl font-black tracking-tight ${t('text-white', 'text-gray-900')}`}>
-              {loading ? '—' : (data?.referrals?.length || data?.kpis?.totalReferrals || 0)}
+              {loading ? '—' : (totalReferralCount || data?.referrals?.length || 0)}
             </h3>
             <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-400 group-hover:underline">
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
@@ -1362,7 +1380,7 @@ export default function ReferralDashboard({
           </div>
           <div className="flex items-baseline justify-between mt-1">
             <h3 className={`text-xl sm:text-2xl font-black tracking-tight ${t('text-white', 'text-gray-900')}`}>
-              {loading ? '—' : (data?.kpis?.todayReferrals || 0)}
+              {loading ? '—' : todayReferralCount}
             </h3>
             <span className={`inline-flex items-center gap-1 text-[11px] font-semibold ${hasTodayReferrals ? 'text-emerald-400 group-hover:underline' : t('text-gray-500', 'text-gray-400')
               }`}>
@@ -2342,7 +2360,10 @@ export default function ReferralDashboard({
               </div>
               <div>
                 <h3 className="text-lg font-bold">{selectedReferral.refereeName}</h3>
-                <p className="text-xs text-gray-400">{selectedReferral.memberType} &bull; Onboarded {selectedReferral.date}</p>
+                <p className="text-xs text-gray-400">
+                  <span className="font-mono text-brand-red font-bold mr-1.5">{selectedReferral.id}</span>
+                  &bull; {selectedReferral.memberType} &bull; Onboarded {selectedReferral.date}
+                </p>
               </div>
             </div>
 
@@ -2555,7 +2576,7 @@ export default function ReferralDashboard({
             <div className="grid grid-cols-3 gap-3 mb-4">
               <div className={`p-3 rounded-xl border text-center ${t('bg-white/[0.02] border-white/10', 'bg-gray-50 border-gray-200')}`}>
                 <span className={`text-[10px] uppercase font-bold block ${t('text-gray-400', 'text-gray-500')}`}>Total Referrals</span>
-                <span className={`text-lg font-black ${t('text-white', 'text-gray-900')}`}>{(data?.referrals || []).length || (data?.kpis?.totalReferrals || 0)}</span>
+                <span className={`text-lg font-black ${t('text-white', 'text-gray-900')}`}>{totalReferralCount}</span>
               </div>
               <div className={`p-3 rounded-xl border text-center ${t('bg-white/[0.02] border-white/10', 'bg-gray-50 border-gray-200')}`}>
                 <span className={`text-[10px] uppercase font-bold block ${t('text-gray-400', 'text-gray-500')}`}>Total Investment</span>
@@ -2785,15 +2806,15 @@ export default function ReferralDashboard({
             <div className="grid grid-cols-3 gap-3 mb-4">
               <div className={`p-3 rounded-xl border text-center ${t('bg-white/[0.02] border-white/10', 'bg-gray-50 border-gray-200')}`}>
                 <span className={`text-[10px] uppercase font-bold block ${t('text-gray-400', 'text-gray-500')}`}>Today's Referrals</span>
-                <span className={`text-lg font-black ${t('text-white', 'text-gray-900')}`}>{todayReferralsList.length}</span>
+                <span className={`text-lg font-black ${t('text-white', 'text-gray-900')}`}>{todayReferralCount}</span>
               </div>
               <div className={`p-3 rounded-xl border text-center ${t('bg-white/[0.02] border-white/10', 'bg-gray-50 border-gray-200')}`}>
                 <span className={`text-[10px] uppercase font-bold block ${t('text-gray-400', 'text-gray-500')}`}>Today's Investment</span>
-                <span className={`text-lg font-black ${t('text-white', 'text-gray-900')}`}>₹{formatINR(todayReferralsList.reduce((sum, r) => sum + (r.investmentAmount || 0), 0))}</span>
+                <span className={`text-lg font-black ${t('text-white', 'text-gray-900')}`}>₹{formatINR((todayReferralsList.length > 0 ? todayReferralsList : (data?.referrals || [])).reduce((sum, r) => sum + (r.investmentAmount || 0), 0))}</span>
               </div>
               <div className={`p-3 rounded-xl border text-center ${t('bg-white/[0.02] border-white/10', 'bg-gray-50 border-gray-200')}`}>
                 <span className={`text-[10px] uppercase font-bold block ${t('text-gray-400', 'text-gray-500')}`}>Today's Cashback</span>
-                <span className="text-lg font-black text-emerald-400">₹{formatINR(todayReferralsList.reduce((sum, r) => sum + (r.commissionAmount || 0), 0))}</span>
+                <span className="text-lg font-black text-emerald-400">₹{formatINR((todayReferralsList.length > 0 ? todayReferralsList : (data?.referrals || [])).reduce((sum, r) => sum + (r.commissionAmount || 0), 0))}</span>
               </div>
             </div>
 
@@ -2814,14 +2835,14 @@ export default function ReferralDashboard({
                   </tr>
                 </thead>
                 <tbody className={`divide-y ${t('divide-white/[0.04]', 'divide-gray-200')}`}>
-                  {todayReferralsList.length === 0 ? (
+                  {((todayReferralsList.length > 0 ? todayReferralsList : (data?.referrals || [])).length === 0) ? (
                     <tr>
                       <td colSpan={9} className="py-12 text-center text-gray-500 italic">
                         No referrals recorded today.
                       </td>
                     </tr>
                   ) : (
-                    todayReferralsList.map((r, idx) => (
+                    (todayReferralsList.length > 0 ? todayReferralsList : (data?.referrals || [])).map((r, idx) => (
                       <tr key={r.id || idx} className={`transition-colors ${t('hover:bg-white/[0.02]', 'hover:bg-gray-50')}`}>
                         <td className="p-3 text-gray-500 font-mono">{idx + 1}</td>
                         <td className="p-3 font-mono font-bold text-brand-red">{r.id}</td>

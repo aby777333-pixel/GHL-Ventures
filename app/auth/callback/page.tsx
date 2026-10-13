@@ -283,6 +283,21 @@ async function handleReferral(user: { id: string; email?: string; user_metadata?
     const { recordReferral } = await import('@/lib/supabase/dashboardDataService')
     await recordReferral(trimmedCode, name, user.email || '')
 
+    // Post to API route for persistent server and local JSON recording
+    try {
+      await fetch('/api/dashboard/referral/', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'record_signup_referral',
+          referralCode: trimmedCode,
+          name,
+          email: user.email || '',
+          accountType: url.searchParams.get('type') || 'investor',
+        }),
+      })
+    } catch { /* best effort */ }
+
     try {
       const { supabase } = await import('@/lib/supabase/client')
       await (supabase as any)

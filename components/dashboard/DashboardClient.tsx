@@ -892,7 +892,9 @@ export default function DashboardClient() {
   // show what's actually active in their portfolio — sourced from
   // fetchPortfolioAssets, which already filters by approved/active/credited
   // on the investment_applications fallback path.
-  const portfolioValue = useAnimatedCounter(totalInvested || 0)
+  const dbInvested = Math.max(totalInvested || 0, Number(user?.aum) || 0)
+  const portfolioValue = useAnimatedCounter(dbInvested)
+  const animatedPayout = useAnimatedCounter(totalPayoutAmount || 0)
   const aifInvestment = useAnimatedCounter(aifTotal || 0)
   const coInvestValue = useAnimatedCounter(debentureTotal || 0)
   const currentNAV = useAnimatedCounter(navHistory.length ? (navHistory[navHistory.length - 1]?.nav_value || navHistory[navHistory.length - 1]?.nav || 0) * 100 : 0)
@@ -928,9 +930,11 @@ export default function DashboardClient() {
   }, [])
 
   const totalReturn = useMemo(() => {
-    if (!totalInvested) return '0.0'
-    return ((totalCurrent - totalInvested) / totalInvested * 100).toFixed(1)
-  }, [totalCurrent, totalInvested])
+    const baseInvest = totalInvested > 0 ? totalInvested : (Number(user?.aum) || 0)
+    if (!baseInvest) return '0.0'
+    const currentVal = totalCurrent > 0 ? totalCurrent : baseInvest
+    return ((currentVal - baseInvest) / baseInvest * 100).toFixed(1)
+  }, [totalCurrent, totalInvested, user?.aum])
 
   // GI Monthly Investments Trend data for selected year
   const monthlyInvestmentsData = useMemo(() => {
@@ -1437,7 +1441,7 @@ export default function DashboardClient() {
   const renderHeroMetrics = () => {
     const metrics = [
       { label: 'Total Investment', sublabel: 'Aggregate Capital', value: `\u20B9${formatINR(portfolioValue)}`, change: `+${totalReturn}%`, up: true, icon: Wallet, iconColor: '#D0021B' },
-      { label: 'Total Payout', sublabel: 'Distributions', value: `\u20B9${formatINR(0)}`, change: '\u2014', up: true, icon: IndianRupee, iconColor: '#A855F7' },
+      { label: 'Total Payout', sublabel: 'Distributions', value: `\u20B9${formatINR(animatedPayout)}`, change: totalPayoutAmount > 0 ? '+100%' : '\u2014', up: true, icon: IndianRupee, iconColor: '#A855F7' },
       { label: 'AIF Investment', sublabel: 'Alternative Funds', value: `\u20B9${formatINR(aifInvestment)}`, change: '\u2014', up: true, icon: Building2, iconColor: '#10B981' },
       { label: 'Debenture', sublabel: 'Fixed Income', value: `\u20B9${formatINR(coInvestValue)}`, change: '\u2014', up: true, icon: FileText, iconColor: '#3B82F6' },
     ]
@@ -2006,7 +2010,7 @@ export default function DashboardClient() {
     const isKycRejected = userKycStatus === 'rejected'
 
     // Real portfolio value matching Indian numbering standard
-    const activePortfolioVal = portfolioValue > 0 ? portfolioValue : (totalInvested > 0 ? totalInvested : 0)
+    const activePortfolioVal = portfolioValue > 0 ? portfolioValue : (totalInvested > 0 ? totalInvested : (Number(user?.aum) || 0))
     const formattedPortfolioValue = new Intl.NumberFormat('en-IN').format(activePortfolioVal)
     const rmName = assignedRM?.name || ''
     const rmDesignation = assignedRM?.designation || 'Investor Relationship Manager'

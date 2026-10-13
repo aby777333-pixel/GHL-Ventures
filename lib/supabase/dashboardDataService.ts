@@ -57,27 +57,49 @@ export async function fetchPortfolioAssets(clientId?: string) {
       .in('status', ['approved', 'active', 'credited']),
     [], 'fetchPortfolioAssets:applications',
   )
-  // Map to the shape expected by the dashboard (invested_amount, current_value, fund_type, fund_name)
-  return (apps as any[]).map((a: any) => {
-    const fv = a.fund_vehicle || ''
-    let fundType = 'Other'
-    if (fv.includes('AIF Direct') || fv === 'Direct AIF Route') fundType = 'AIF'
-    else if (fv.toLowerCase().includes('debenture')) fundType = 'Debenture'
-    else if (fv.toLowerCase().includes('llp')) fundType = 'LLP'
-    else if (fv.toLowerCase().includes('co-invest')) fundType = 'Co-Invest'
-    const amount = Number(a.final_investment_amount) || Number(a.investment_amount) || 0
-    return {
-      id: a.id,
-      client_id: a.client_id,
-      fund_name: fv,
-      fund_type: fundType,
-      invested_amount: amount,
-      current_value: amount, // No mark-to-market yet
-      return_pct: 0,
-      status: a.status === 'approved' || a.status === 'credited' ? 'active' : a.status,
-      invested_at: a.investment_date || a.created_at,
+  if ((apps as any[]).length > 0) {
+    return (apps as any[]).map((a: any) => {
+      const fv = a.fund_vehicle || ''
+      let fundType = 'Other'
+      if (fv.includes('AIF Direct') || fv === 'Direct AIF Route') fundType = 'AIF'
+      else if (fv.toLowerCase().includes('debenture')) fundType = 'Debenture'
+      else if (fv.toLowerCase().includes('llp')) fundType = 'LLP'
+      else if (fv.toLowerCase().includes('co-invest')) fundType = 'Co-Invest'
+      const amount = Number(a.final_investment_amount) || Number(a.investment_amount) || 0
+      return {
+        id: a.id,
+        client_id: a.client_id,
+        fund_name: fv,
+        fund_type: fundType,
+        invested_amount: amount,
+        current_value: amount, // No mark-to-market yet
+        return_pct: 0,
+        status: a.status === 'approved' || a.status === 'credited' ? 'active' : a.status,
+        invested_at: a.investment_date || a.created_at,
+      }
+    })
+  }
+
+  // 3rd level fallback: check clients.total_invested from database
+  try {
+    const { data: clientRow } = await sb.from('clients').select('id, total_invested, created_at').eq('id', clientId).maybeSingle()
+    const invested = Number(clientRow?.total_invested) || 0
+    if (invested > 0) {
+      return [{
+        id: `client-inv-${clientId}`,
+        client_id: clientId,
+        fund_name: 'Secured Debenture Portfolio',
+        fund_type: 'Debenture',
+        invested_amount: invested,
+        current_value: invested,
+        return_pct: 0,
+        status: 'active',
+        invested_at: clientRow?.created_at || new Date().toISOString(),
+      }]
     }
-  })
+  } catch { /* non-fatal */ }
+
+  return []
 }
 
 export async function fetchNAVHistory(clientId?: string) {
@@ -152,10 +174,38 @@ export async function fetchTransactions(clientId?: string) {
 
 export async function fetchPayoutHistory(clientId?: string) {
   if (!isSupabaseConfigured() || !clientId) return []
-  return safeFetch(
-    () => sb.from('transactions').select('*').eq('client_id', clientId).eq('type', 'Dividend').order('date', { ascending: false }),
-    [], 'fetchPayoutHistory',
-  )
+  try {
+    const [txRows, monthlyRows] = await Promise.all([
+      safeFetch(
+        () => sb.from('transactions').select('*').eq('client_id', clientId).order('date', { ascending: false }),
+        [], 'fetchPayoutHistory:transactions',
+      ),
+      safeFetch(
+        () => sb.from('monthly_payouts').select('*').eq('client_id', clientId).order('due_date', { ascending: false }),
+        [], 'fetchPayoutHistory:monthly_payouts',
+      ),
+    ])
+
+    const dividendTxns = (txRows as any[]).filter((t: any) =>
+      ['dividend', 'payout', 'interest', 'return'].includes(String(t.type || t.transaction_type || '').toLowerCase())
+    )
+
+    const paidMonthly = (monthlyRows as any[])
+      .filter((m: any) => ['paid', 'completed'].includes(String(m.payment_status || '').toLowerCase()))
+      .map((m: any) => ({
+        id: m.id,
+        client_id: m.client_id,
+        type: 'Dividend',
+        amount: Number(m.net_interest) || Number(m.gross_amount) || 0,
+        date: m.payment_date || m.due_date ? new Date(m.payment_date || m.due_date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : '—',
+        status: 'Completed',
+        description: `Distribution for ${m.fund_type || 'Investment'}`,
+      }))
+
+    return [...dividendTxns, ...paidMonthly]
+  } catch {
+    return []
+  }
 }
 
 export async function fetchMessages(clientId?: string) {
@@ -1006,6 +1056,26 @@ export async function recordReferral(referralCode: string, referredName: string,
       status: 'new',
       metadata: { referral_code: referralCode, referred_at: new Date().toISOString() },
     })
+
+    // Insert into referrals table so referrer_summary and referral ledger update immediately
+    const cleanRef = referralCode.trim()
+    const pRole = cleanRef.toUpperCase().startsWith('MCP') ? 'MCP' : cleanRef.toUpperCase().startsWith('CPL') ? 'CPL' : 'GI'
+    const commRate = pRole === 'MCP' ? 4.5 : pRole === 'CPL' ? 3.5 : 3.0
+    try {
+      await (sb as any).from('referrals').insert({
+        referrer_name: cleanRef,
+        referrer_email: `${cleanRef.toLowerCase()}@ghlindiaventures.com`,
+        referee_name: referredName.trim(),
+        referee_email: referredEmail.trim().toLowerCase(),
+        relationship: pRole === 'MCP' ? 'channel_partner' : 'general_investor',
+        status: 'qualified',
+        commission_rate: commRate,
+        commission_amount: 0,
+        commission_status: 'pending',
+        investment_amount: 0,
+        message: `Referral registered via code ${cleanRef}`,
+      })
+    } catch { /* non-fatal */ }
 
     // Find the referrer. Codes are either the referrer's GHL ID
     // (clients.ghl_id, e.g. GHL570045 — current format) or the legacy
