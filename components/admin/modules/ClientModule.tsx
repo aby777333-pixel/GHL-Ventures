@@ -28,9 +28,21 @@ import { supabase } from '@/lib/supabase/client'
 // It reuses ClientListTab with a filter so the Channel-Partner cohort
 // is surfaced via the same row layout (and the same View / Edit /
 // Delete actions) as the rest of the client base.
+// Partner cohorts live on clients.ghl_id (clients.referral_code is unused):
+//   CPLGHL*** / CPGHL***  -> Channel Partner
+//   MCPGHL***             -> Master Channel Partner
+const partnerCode = (c: any) =>
+  String(c?.ghlId || c?.ghl_id || c?.clientCode || c?.client_code || '').trim().toUpperCase()
+const isMcpClient = (c: any) => partnerCode(c).startsWith('MCPGHL')
+const isCpClient = (c: any) => {
+  const k = partnerCode(c)
+  return !k.startsWith('MCPGHL') && (k.startsWith('CPLGHL') || k.startsWith('CPGHL'))
+}
+
 const CLIENT_TABS = [
   { id: 'list', label: 'Client List', icon: Users },
   { id: 'channel-partners', label: 'Channel Partners', icon: Users },
+  { id: 'master-channel-partners', label: 'Master Channel Partners', icon: Users },
   { id: 'kyc-queue', label: 'KYC Queue', icon: ShieldCheck },
   { id: 'trash', label: 'Trash', icon: Trash2 },
   { id: 'analytics', label: 'Client Analytics', icon: PieChart },
@@ -444,13 +456,19 @@ export default function ClientModule({ subTab, navigate, showToast }: ClientModu
             or a non-empty `channel_partner_id`. */}
         {activeTab === 'channel-partners' && (
           <ClientListTab
-            clients={clients.filter((c: any) => {
-              const role = String(c.role || c.user_type || '').toLowerCase()
-              const code = String(c.referrer_code || '').toLowerCase()
-              if (role.includes('channel') || role === 'cp') return true
-              if (code.startsWith('cp')) return true
-              return !!c.channel_partner_id
-            })}
+            clients={clients.filter((c: any) => isCpClient(c))}
+            onViewClient={(c) => { setSelectedClient(c); setProfileModalOpen(true) }}
+            onDeleteClient={handleDeleteClient}
+            onResetPassword={openResetForClient}
+            onSetReferrer={openSetReferrer}
+            onEditGhlId={openEditGhlId}
+            resolvingReset={resolvingResetTarget}
+            showToast={showToast}
+          />
+        )}
+        {activeTab === 'master-channel-partners' && (
+          <ClientListTab
+            clients={clients.filter((c: any) => isMcpClient(c))}
             onViewClient={(c) => { setSelectedClient(c); setProfileModalOpen(true) }}
             onDeleteClient={handleDeleteClient}
             onResetPassword={openResetForClient}

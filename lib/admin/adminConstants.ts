@@ -60,6 +60,7 @@ export const ADMIN_SIDEBAR_ITEMS: SidebarItem[] = [
     subItems: [
       { id: 'clients', label: 'All Users' },
       { id: 'clients/channel-partners', label: 'Channel Partner' },
+      { id: 'clients/master-channel-partners', label: 'Master Channel Partners' },
       { id: 'clients/trash', label: 'Trash' },
     ],
   },
