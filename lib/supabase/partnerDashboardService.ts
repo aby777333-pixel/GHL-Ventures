@@ -905,7 +905,7 @@ async function getFallbackDashboardData(previewId?: string, year?: number, _mont
       phone: userPhone || '',
       role,
       referralCode: pId,
-      referralLink: typeof window !== 'undefined' ? `${window.location.origin}/register?ref=${pId}` : `https://ghlindiaventures.com/register?ref=${pId}`,
+      referralLink: `https://ghlindiaventures.com/register/?ref=${encodeURIComponent(pId)}&type=investor`,
     },
     kpis,
     monthlyGoal,

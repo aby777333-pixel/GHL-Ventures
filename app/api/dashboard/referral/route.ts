@@ -632,7 +632,7 @@ export async function GET(request: NextRequest) {
         phone: partnerPhone,
         role: partnerRole,
         referralCode: effectivePartnerId,
-        referralLink: `${origin}/register?ref=${effectivePartnerId}`,
+        referralLink: `https://ghlindiaventures.com/register/?ref=${effectivePartnerId}&type=investor`,
       },
       kpis: {
         totalInvestment,

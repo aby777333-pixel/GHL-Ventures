@@ -108,10 +108,7 @@ export default function InvestorReferralDashboard({
 
   // Referral link
   const referralLink = useMemo(() => {
-    if (typeof window !== 'undefined') {
-      return `${window.location.origin}/register/?ref=${effectiveId}`
-    }
-    return `https://ghlindiaventures.com/register/?ref=${effectiveId}`
+    return `https://ghlindiaventures.com/register/?ref=${encodeURIComponent(effectiveId)}&type=investor`
   }, [effectiveId])
 
   const copyReferralLink = useCallback(() => {
@@ -810,14 +807,32 @@ export default function InvestorReferralDashboard({
                   </span>
                 </div>
 
-                <button
-                  onClick={copyReferralLink}
-                  style={{ background: 'linear-gradient(135deg, #D0021B, #8B0000)' }}
-                  className="hover:brightness-110 text-white font-bold px-6 py-3 rounded-xl text-xs sm:text-sm flex items-center justify-center gap-2 transition-all shadow-md active:scale-95 shrink-0"
-                >
-                  {copiedLink ? <Check className="w-4 h-4 text-emerald-300" /> : <Copy className="w-4 h-4" />}
-                  <span>{copiedLink ? 'Copied Link' : 'Copy Link'}</span>
-                </button>
+                <div className="flex items-center gap-2 shrink-0">
+                  <button
+                    onClick={copyReferralLink}
+                    style={{ background: 'linear-gradient(135deg, #D0021B, #8B0000)' }}
+                    className="hover:brightness-110 text-white font-bold px-5 py-3 rounded-xl text-xs sm:text-sm flex items-center justify-center gap-2 transition-all shadow-md active:scale-95"
+                  >
+                    {copiedLink ? <Check className="w-4 h-4 text-emerald-300" /> : <Copy className="w-4 h-4" />}
+                    <span>{copiedLink ? 'Copied Link' : 'Copy Link'}</span>
+                  </button>
+                  <button
+                    onClick={() => {
+                      const win = window.open(referralLink, '_blank', 'noopener,noreferrer')
+                      if (!win || win.closed || typeof win.closed === 'undefined') {
+                        window.location.href = referralLink
+                      }
+                    }}
+                    className={`hover:brightness-110 font-bold px-4 py-3 rounded-xl text-xs sm:text-sm flex items-center justify-center gap-2 transition-all shadow-md active:scale-95 border ${t(
+                      'bg-white/10 hover:bg-white/15 text-white border-white/20',
+                      'bg-gray-100 hover:bg-gray-200 text-gray-800 border-gray-300'
+                    )}`}
+                    title="Open live registration page"
+                  >
+                    <ExternalLink className="w-4 h-4" />
+                    <span>Open Link</span>
+                  </button>
+                </div>
               </div>
 
               {/* Quick Actions (WhatsApp & Email Share + Referral Code) */}

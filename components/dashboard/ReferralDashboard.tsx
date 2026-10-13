@@ -241,10 +241,12 @@ export default function ReferralDashboard({
 
   // Determine effective GHL/Partner ID:
   const effectiveId = useMemo(() => {
-    if (authenticatedPartnerId) return authenticatedPartnerId
-    if (data?.partner?.partnerId && data.partner.partnerId !== 'GHL-PARTNER') return data.partner.partnerId
-    return data?.partner?.partnerId || (partnerRole === 'MCP' ? 'MCP-PARTNER' : partnerRole === 'CPL' ? 'CPL-PARTNER' : 'GHL-PARTNER')
-  }, [authenticatedPartnerId, data?.partner?.partnerId, partnerRole])
+    if (authenticatedPartnerId && authenticatedPartnerId !== 'GHL-PARTNER' && authenticatedPartnerId !== 'MCP-PARTNER' && authenticatedPartnerId !== 'CPL-PARTNER') return authenticatedPartnerId
+    if (data?.partner?.referralCode && data.partner.referralCode !== 'GHL-PARTNER' && data.partner.referralCode !== 'MCP-PARTNER' && data.partner.referralCode !== 'CPL-PARTNER') return data.partner.referralCode
+    if (data?.partner?.partnerId && data.partner.partnerId !== 'GHL-PARTNER' && data.partner.partnerId !== 'MCP-PARTNER' && data.partner.partnerId !== 'CPL-PARTNER') return data.partner.partnerId
+    if (authenticatedPartnerId && authenticatedPartnerId !== 'GHL-PARTNER') return authenticatedPartnerId
+    return data?.partner?.partnerId || (partnerRole === 'MCP' ? 'MCPGHL920237' : partnerRole === 'CPL' ? 'CPLGHL24100' : 'GHL-PARTNER')
+  }, [authenticatedPartnerId, data?.partner?.partnerId, data?.partner?.referralCode, partnerRole])
 
   const displayPartnerName = useMemo(() => {
     if (data?.partner?.name && data.partner.name !== 'Partner Investor') return data.partner.name
@@ -362,10 +364,7 @@ export default function ReferralDashboard({
 
   // Referral link
   const referralLink = useMemo(() => {
-    if (typeof window !== 'undefined') {
-      return `${window.location.origin}/register?ref=${effectiveId}`
-    }
-    return `https://ghlindiaventures.com/register?ref=${effectiveId}`
+    return `https://ghlindiaventures.com/register/?ref=${encodeURIComponent(effectiveId)}&type=investor`
   }, [effectiveId])
 
   const copyReferralLink = () => {
@@ -1325,6 +1324,22 @@ export default function ReferralDashboard({
               {copiedLink ? <CheckCircle className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
               <span>{copiedLink ? 'Copied' : 'Share Link'}</span>
             </button>
+            <button
+              onClick={() => {
+                const liveUrl = `https://ghlindiaventures.com/register/?ref=${encodeURIComponent(effectiveId)}&type=investor`
+                if (typeof window !== 'undefined') {
+                  const win = window.open(liveUrl, '_blank', 'noopener,noreferrer')
+                  if (!win || win.closed || typeof win.closed === 'undefined') {
+                    window.location.href = liveUrl
+                  }
+                }
+              }}
+              className="px-3 py-1 rounded-full text-xs font-semibold bg-white/20 text-white hover:bg-white/30 flex items-center gap-1 transition-all shadow-sm border border-white/30"
+              title="Open live registration page"
+            >
+              <ExternalLink className="w-3.5 h-3.5" />
+              <span>Open Link</span>
+            </button>
           </div>
         </div>
       </div>
@@ -1355,7 +1370,21 @@ export default function ReferralDashboard({
           </span>
           <button
             onClick={() => {
-              setCreateInvestorOpen(true)
+              if (typeof window !== 'undefined') {
+                try {
+                  sessionStorage.setItem('ghl_partner_referrer_id', effectiveId)
+                  sessionStorage.setItem('ghl_partner_account_type', 'investor')
+                  localStorage.setItem('ghl_partner_referrer_id', effectiveId)
+                  localStorage.setItem('ghl_partner_account_type', 'investor')
+                } catch { /* ignore */ }
+              }
+              const liveUrl = `https://ghlindiaventures.com/register/?ref=${encodeURIComponent(effectiveId)}&type=investor`
+              if (typeof window !== 'undefined') {
+                const win = window.open(liveUrl, '_blank', 'noopener,noreferrer')
+                if (!win || win.closed || typeof win.closed === 'undefined') {
+                  window.location.href = liveUrl
+                }
+              }
             }}
             className="mt-4 w-full py-2.5 rounded-xl text-xs font-bold text-white transition-all duration-300 hover:brightness-110 shadow-md flex items-center justify-center gap-1.5"
             style={{ background: 'linear-gradient(135deg, #D0021B, #B00000)' }}
@@ -1378,7 +1407,21 @@ export default function ReferralDashboard({
             </span>
             <button
               onClick={() => {
-                setCreatePartnerOpen(true)
+                if (typeof window !== 'undefined') {
+                  try {
+                    sessionStorage.setItem('ghl_partner_referrer_id', effectiveId)
+                    sessionStorage.setItem('ghl_partner_account_type', 'channel_partner')
+                    localStorage.setItem('ghl_partner_referrer_id', effectiveId)
+                    localStorage.setItem('ghl_partner_account_type', 'channel_partner')
+                  } catch { /* ignore */ }
+                }
+                const liveUrl = `https://ghlindiaventures.com/register/?ref=${encodeURIComponent(effectiveId)}&type=channel_partner`
+                if (typeof window !== 'undefined') {
+                  const win = window.open(liveUrl, '_blank', 'noopener,noreferrer')
+                  if (!win || win.closed || typeof win.closed === 'undefined') {
+                    window.location.href = liveUrl
+                  }
+                }
               }}
               className="mt-4 w-full py-2.5 rounded-xl text-xs font-bold text-white transition-all duration-300 hover:brightness-110 shadow-md flex items-center justify-center gap-1.5"
               style={{ background: 'linear-gradient(135deg, #D0021B, #B00000)' }}

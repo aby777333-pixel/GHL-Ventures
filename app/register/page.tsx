@@ -106,13 +106,7 @@ function RegisterPageInner() {
           } catch { /* best-effort */ }
         }
 
-        // Method 2 Clean URL: Strip any ?ref=... or ?type=... from the browser address bar
-        // keeps URL strictly https://ghlindiaventures.com/register/ while preserving the referral in state
-        if (sp.has('ref') || sp.has('referral') || sp.has('referred_by') || sp.has('type')) {
-          try {
-            window.history.replaceState({}, '', window.location.pathname)
-          } catch { /* non-fatal */ }
-        }
+        // Preserve query parameters (?ref=... and ?type=...) in the address bar so the referral ID is clearly visible
       }
 
       if (isCancelled) return
