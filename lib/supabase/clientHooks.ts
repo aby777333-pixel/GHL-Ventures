@@ -45,10 +45,12 @@ export function useClientAuth() {
         if (!cancelledRef?.cancelled) setEmailVerified(false)
       }
       try {
-        const { data } = await supabase.from('clients').select('id, ghl_id').eq('user_id', s.user.id).single() as { data: { id: string; ghl_id?: string } | null }
+        const { data: { session: authSession } } = await supabase.auth.getSession()
+        const metaPartnerId = authSession?.user?.user_metadata?.partner_id || authSession?.user?.user_metadata?.ghl_id || authSession?.user?.user_metadata?.client_code || null
+        const { data } = await supabase.from('clients').select('id, ghl_id, client_code').eq('user_id', s.user.id).maybeSingle() as { data: { id: string; ghl_id?: string; client_code?: string } | null }
         if (!cancelledRef?.cancelled) {
           setClientId(data?.id ?? null)
-          setGhlId(data?.ghl_id ?? null)
+          setGhlId(data?.ghl_id || data?.client_code || metaPartnerId || null)
         }
       } catch {
         if (!cancelledRef?.cancelled) { setClientId(null); setGhlId(null) }

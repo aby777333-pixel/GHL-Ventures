@@ -1,4 +1,4 @@
-@import url('https://fonts.cdnfonts.com/css/tt-norms-pro');
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -222,7 +222,7 @@
     focus:ring-offset-2;
     background: var(--cta-gradient);
     box-shadow: 0 4px 20px rgba(208, 2, 27, 0.3);
-    focus-ring-color: var(--color-red);
+    --tw-ring-color: var(--color-red);
     color: #FFFFFF !important;
   }
   .btn-primary, .btn-primary * {
@@ -232,7 +232,7 @@
     box-shadow: 0 6px 28px rgba(208, 2, 27, 0.45);
   }
   .btn-primary:focus {
-    ring-color: var(--color-red);
+    --tw-ring-color: var(--color-red);
   }
 
   /* Secondary */
@@ -1031,7 +1031,7 @@ a.flex {
   background-color: var(--global-override-card) !important;
   color: var(--global-override-text) !important;
   border-color: var(--global-override-text) !important;
-  border-opacity: 0.2;
+  --tw-border-opacity: 0.2;
 }
 
 [data-global-override="true"] h1,
@@ -2724,6 +2724,7 @@ body.dashboard-active .scroll-progress-bar { display: none !important; }
   padding: 1px;
   background: linear-gradient(135deg, rgba(208, 2, 27, 0.15), transparent 50%, rgba(208, 2, 27, 0.08));
   -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
   -webkit-mask-composite: xor;
   mask-composite: exclude;
   pointer-events: none;

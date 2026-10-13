@@ -69,7 +69,7 @@ function G({ children, className = '', theme }: { children: React.ReactNode; cla
 // size is set to ₹10L. Direct AIF Route is purely SEBI-regulated AIF
 // (no startup exposure), with Interest 12% pa, Capital Appreciation 12% pa,
 // Total Assured Returns 24% pa.
-const FUNDS = [
+export const FUNDS = [
   {
     id: 'debenture',
     name: 'Alternate route to Invest in AIF via Debenture',

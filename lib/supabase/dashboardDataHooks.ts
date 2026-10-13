@@ -162,3 +162,12 @@ export function useAssignedRM(clientId?: string) {
     clientId,
   )
 }
+
+// ── Client Subscription ─────────────────────────────────────
+export function useClientSubscription(clientId?: string) {
+  return useQuery<svc.ClientSubscriptionInfo | null>(
+    () => svc.fetchClientSubscription(clientId),
+    null,
+    clientId,
+  )
+}

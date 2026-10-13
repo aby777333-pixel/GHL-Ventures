@@ -273,14 +273,39 @@ async function handleReferral(user: { id: string; email?: string; user_metadata?
   try {
     if (typeof window === 'undefined') return
     const url = new URL(window.location.href)
-    const refCode = url.searchParams.get('ref')
-    if (!refCode || !refCode.startsWith('GHL-')) return
+    const refCode = url.searchParams.get('ref') || url.searchParams.get('referral') || url.searchParams.get('referred_by')
+    if (!refCode || !refCode.trim()) return
 
+    const trimmedCode = refCode.trim()
     const meta = user.user_metadata ?? {}
     const name = meta.full_name || meta.name || user.email?.split('@')[0] || 'New User'
 
     const { recordReferral } = await import('@/lib/supabase/dashboardDataService')
-    await recordReferral(refCode, name, user.email || '')
+    await recordReferral(trimmedCode, name, user.email || '')
+
+    // Post to API route for persistent server and local JSON recording
+    try {
+      await fetch('/api/dashboard/referral/', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'record_signup_referral',
+          referralCode: trimmedCode,
+          name,
+          email: user.email || '',
+          accountType: url.searchParams.get('type') || 'investor',
+        }),
+      })
+    } catch { /* best effort */ }
+
+    try {
+      const { supabase } = await import('@/lib/supabase/client')
+      await (supabase as any)
+        .from('clients')
+        .update({ referred_by: trimmedCode })
+        .eq('user_id', user.id)
+        .is('referred_by', null)
+    } catch { /* best effort */ }
   } catch {
     console.warn('[auth/callback] Could not record referral')
   }
