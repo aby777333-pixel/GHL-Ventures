@@ -26,6 +26,7 @@ import {
   Building2,
   Check,
   Percent,
+  AlertCircle,
 } from 'lucide-react'
 import {
   PartnerDashboardResponse,
@@ -55,6 +56,7 @@ interface InvestorReferralDashboardProps {
   partnerPhone?: string
   data: PartnerDashboardResponse | null
   loading: boolean
+  error?: string | null
   filterYear: number
   filterMonth: string
   onYearChange: (year: number) => void
@@ -75,6 +77,7 @@ export default function InvestorReferralDashboard({
   partnerPhone = '',
   data,
   loading,
+  error,
   filterYear,
   filterMonth,
   onYearChange,
@@ -267,6 +270,22 @@ export default function InvestorReferralDashboard({
         </button>
       </div>
 
+      {/* Error state notification if API failure */}
+      {error && (
+        <div className="p-4 rounded-2xl bg-red-500/10 border border-red-500/30 text-red-500 text-xs sm:text-sm flex items-center justify-between gap-3 shadow-md">
+          <div className="flex items-center gap-2.5">
+            <AlertCircle className="w-4 h-4 shrink-0 text-red-500" />
+            <span>{error}</span>
+          </div>
+          <button
+            onClick={onRefresh}
+            className="px-3 py-1.5 rounded-xl bg-red-500/20 hover:bg-red-500/30 text-red-400 text-xs font-bold transition-all active:scale-95 shrink-0"
+          >
+            Retry
+          </button>
+        </div>
+      )}
+
       {/* ─────────────────────────────────────────────────────────────
           1. TOP CRIMSON BANNER (Matches Reference Header)
           ───────────────────────────────────────────────────────────── */}
@@ -331,11 +350,10 @@ export default function InvestorReferralDashboard({
           style={{
             background: activeTab === 'referral' ? 'linear-gradient(135deg, #D0021B, #8B0000)' : undefined,
           }}
-          className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all duration-200 ${
-            activeTab === 'referral'
-              ? 'text-white shadow-md'
-              : t('text-gray-400 hover:text-white hover:bg-white/[0.05]', 'text-gray-600 hover:text-gray-900 hover:bg-gray-100')
-          }`}
+          className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all duration-200 ${activeTab === 'referral'
+            ? 'text-white shadow-md'
+            : t('text-gray-400 hover:text-white hover:bg-white/[0.05]', 'text-gray-600 hover:text-gray-900 hover:bg-gray-100')
+            }`}
         >
           <Share2 className="w-3.5 h-3.5" />
           <span>Referral</span>
@@ -346,11 +364,10 @@ export default function InvestorReferralDashboard({
           style={{
             background: activeTab === 'income' ? 'linear-gradient(135deg, #D0021B, #8B0000)' : undefined,
           }}
-          className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all duration-200 ${
-            activeTab === 'income'
-              ? 'text-white shadow-md'
-              : t('text-gray-400 hover:text-white hover:bg-white/[0.05]', 'text-gray-600 hover:text-gray-900 hover:bg-gray-100')
-          }`}
+          className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all duration-200 ${activeTab === 'income'
+            ? 'text-white shadow-md'
+            : t('text-gray-400 hover:text-white hover:bg-white/[0.05]', 'text-gray-600 hover:text-gray-900 hover:bg-gray-100')
+            }`}
         >
           <TrendingUp className="w-3.5 h-3.5" />
           <span>New Income</span>
@@ -361,11 +378,10 @@ export default function InvestorReferralDashboard({
           style={{
             background: activeTab === 'list' ? 'linear-gradient(135deg, #D0021B, #8B0000)' : undefined,
           }}
-          className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all duration-200 ${
-            activeTab === 'list'
-              ? 'text-white shadow-md'
-              : t('text-gray-400 hover:text-white hover:bg-white/[0.05]', 'text-gray-600 hover:text-gray-900 hover:bg-gray-100')
-          }`}
+          className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all duration-200 ${activeTab === 'list'
+            ? 'text-white shadow-md'
+            : t('text-gray-400 hover:text-white hover:bg-white/[0.05]', 'text-gray-600 hover:text-gray-900 hover:bg-gray-100')
+            }`}
         >
           <Users className="w-3.5 h-3.5" />
           <span>Referral List</span>
@@ -376,11 +392,10 @@ export default function InvestorReferralDashboard({
           style={{
             background: activeTab === 'tds' ? 'linear-gradient(135deg, #D0021B, #8B0000)' : undefined,
           }}
-          className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all duration-200 ${
-            activeTab === 'tds'
-              ? 'text-white shadow-md'
-              : t('text-gray-400 hover:text-white hover:bg-white/[0.05]', 'text-gray-600 hover:text-gray-900 hover:bg-gray-100')
-          }`}
+          className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all duration-200 ${activeTab === 'tds'
+            ? 'text-white shadow-md'
+            : t('text-gray-400 hover:text-white hover:bg-white/[0.05]', 'text-gray-600 hover:text-gray-900 hover:bg-gray-100')
+            }`}
         >
           <FileText className="w-3.5 h-3.5" />
           <span>Referral TDS</span>
@@ -398,28 +413,28 @@ export default function InvestorReferralDashboard({
             'bg-white border-gray-200 shadow-sm'
           )}`}>
             <span className={`text-xs sm:text-sm font-bold mr-1 ${t('text-white', 'text-gray-900')}`}>
-              Income Slabs (Oct 2025+):
+              Income Slabs:
             </span>
 
             <span className={`font-bold px-3 py-1 rounded-full text-xs border ${t(
               'bg-blue-500/10 border-blue-500/30 text-blue-400',
               'bg-blue-50 border-blue-200 text-blue-700'
             )}`}>
-              1% — ₹1L to ₹9.99L
+              3.00% — ₹1 Cr to ₹5 Cr
             </span>
 
             <span className={`font-bold px-3 py-1 rounded-full text-xs border ${t(
               'bg-emerald-500/10 border-emerald-500/30 text-emerald-400',
               'bg-[#e8f5e9] border-[#a5d6a7] text-[#1b5e20]'
             )}`}>
-              2% — ₹10L to ₹24.99L
+              4.00% — ₹5 Cr &amp; Above
             </span>
 
             <span className={`font-bold px-3 py-1 rounded-full text-xs border ${t(
               'bg-amber-500/10 border-amber-500/30 text-amber-400',
               'bg-amber-50 border-amber-200 text-amber-700'
             )}`}>
-              2.5% — ₹25L &amp; Above
+              0.50% — Master CP (Any Investment)
             </span>
 
             <span className={`text-xs font-medium ml-1 ${t('text-gray-400', 'text-gray-500')}`}>
@@ -663,7 +678,7 @@ export default function InvestorReferralDashboard({
                   ) : (
                     filteredReferrals.map((r, i) => {
                       const amount = Number(r.investmentAmount) || 0
-                      const slabRate = r.commissionRate || (amount >= 2500000 ? 2.5 : amount >= 1000000 ? 2.0 : 1.0)
+                      const slabRate = r.commissionRate || (amount >= 50000000 ? 4.00 : 3.00)
                       const gross = Number(r.commissionAmount) || (amount * slabRate) / 100
                       const tds = gross * 0.02
                       const net = gross - tds
@@ -705,11 +720,10 @@ export default function InvestorReferralDashboard({
                             {formatINR(net)}
                           </td>
                           <td className="py-3.5 px-3.5 text-right">
-                            <span className={`inline-block px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${
-                              r.commissionStatus === 'paid'
-                                ? t('bg-emerald-500/15 text-emerald-400 border border-emerald-500/30', 'bg-emerald-50 text-emerald-700 border border-emerald-200')
-                                : t('bg-amber-500/15 text-amber-400 border border-amber-500/30', 'bg-amber-50 text-amber-700 border border-amber-200')
-                            }`}>
+                            <span className={`inline-block px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${r.commissionStatus === 'paid'
+                              ? t('bg-emerald-500/15 text-emerald-400 border border-emerald-500/30', 'bg-emerald-50 text-emerald-700 border border-emerald-200')
+                              : t('bg-amber-500/15 text-amber-400 border border-amber-500/30', 'bg-amber-50 text-amber-700 border border-amber-200')
+                              }`}>
                               {r.commissionStatus || 'accrued'}
                             </span>
                           </td>
@@ -987,11 +1001,10 @@ export default function InvestorReferralDashboard({
                       <td className={`py-3.5 px-4 font-mono ${t('text-gray-400', 'text-gray-500')}`}>{r.refereePhone || '—'}</td>
                       <td className={`py-3.5 px-4 ${t('text-gray-400', 'text-gray-500')}`}>{r.date || '—'}</td>
                       <td className="py-3.5 px-4">
-                        <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold ${
-                          r.kycStatus === 'Verified'
-                            ? t('bg-emerald-500/15 text-emerald-400 border border-emerald-500/30', 'bg-emerald-50 text-emerald-700 border border-emerald-200')
-                            : t('bg-amber-500/15 text-amber-400 border border-amber-500/30', 'bg-amber-50 text-amber-700 border border-amber-200')
-                        }`}>
+                        <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold ${r.kycStatus === 'Verified'
+                          ? t('bg-emerald-500/15 text-emerald-400 border border-emerald-500/30', 'bg-emerald-50 text-emerald-700 border border-emerald-200')
+                          : t('bg-amber-500/15 text-amber-400 border border-amber-500/30', 'bg-amber-50 text-amber-700 border border-amber-200')
+                          }`}>
                           <span className={`w-1.5 h-1.5 rounded-full ${r.kycStatus === 'Verified' ? 'bg-emerald-400' : 'bg-amber-400'}`} />
                           {r.kycStatus || 'Verified'}
                         </span>
