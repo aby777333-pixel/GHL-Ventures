@@ -618,17 +618,27 @@ export default function ReferralDashboard({
     })
   }, [data?.referrals])
 
+  const totalInvestmentSum = useMemo(() => {
+    const fromReferrals = (data?.referrals || []).reduce((acc, r) => acc + (Number(r.investmentAmount) || 0), 0)
+    return fromReferrals > 0 ? fromReferrals : (Number(data?.kpis?.totalInvestment) || 0)
+  }, [data?.referrals, data?.kpis?.totalInvestment])
+
   const totalReferralCount = useMemo(() => {
     return Math.max(data?.kpis?.totalReferrals || 0, (data?.referrals || []).length)
   }, [data?.kpis?.totalReferrals, data?.referrals])
 
   const todayReferralCount = useMemo(() => {
-    return Math.max(data?.kpis?.todayReferrals || 0, todayReferralsList.length)
-  }, [data?.kpis?.todayReferrals, todayReferralsList.length])
+    return todayReferralsList.length
+  }, [todayReferralsList.length])
 
   const hasTodayReferrals = useMemo(() => {
     return todayReferralCount > 0
   }, [todayReferralCount])
+
+  const totalInvestorsCount = useMemo(() => {
+    const list = (data?.referrals || []).filter(r => (Number(r.investmentAmount) || 0) > 0 || r.status === 'converted')
+    return list.length > 0 ? list.length : (Number(data?.kpis?.totalInvestors) || 0)
+  }, [data?.referrals, data?.kpis?.totalInvestors])
 
   // Volume for filtered Month/Year
   const giVolume = useMemo(() => {
@@ -901,6 +911,7 @@ export default function ReferralDashboard({
         theme={theme}
         isDark={theme === 'dark'}
         initialNetworkInvestments={data?.networkInvestments}
+        referrals={data?.referrals || []}
       />
     )
   }
@@ -1344,20 +1355,13 @@ export default function ReferralDashboard({
           </span>
           <button
             onClick={() => {
-              if (typeof window !== 'undefined') {
-                sessionStorage.setItem('ghl_partner_referrer_id', effectiveId)
-                sessionStorage.setItem('ghl_partner_account_type', 'investor')
-                localStorage.setItem('ghl_partner_referrer_id', effectiveId)
-                localStorage.setItem('ghl_partner_account_type', 'investor')
-              }
-              const base = typeof window !== 'undefined' ? window.location.origin : 'https://ghlindiaventures.com'
-              const url = `${base}/register/`
-              window.open(url, '_blank', 'noopener,noreferrer')
+              setCreateInvestorOpen(true)
             }}
-            className="mt-4 w-full py-2.5 rounded-xl text-xs font-bold text-white transition-all duration-300 hover:brightness-110 shadow-md"
+            className="mt-4 w-full py-2.5 rounded-xl text-xs font-bold text-white transition-all duration-300 hover:brightness-110 shadow-md flex items-center justify-center gap-1.5"
             style={{ background: 'linear-gradient(135deg, #D0021B, #B00000)' }}
           >
-            General Investor
+            <Plus className="w-3.5 h-3.5" />
+            <span>General Investor</span>
           </button>
         </div>
 
@@ -1374,20 +1378,13 @@ export default function ReferralDashboard({
             </span>
             <button
               onClick={() => {
-                if (typeof window !== 'undefined') {
-                  sessionStorage.setItem('ghl_partner_referrer_id', effectiveId)
-                  sessionStorage.setItem('ghl_partner_account_type', 'channel_partner')
-                  localStorage.setItem('ghl_partner_referrer_id', effectiveId)
-                  localStorage.setItem('ghl_partner_account_type', 'channel_partner')
-                }
-                const base = typeof window !== 'undefined' ? window.location.origin : 'https://ghlindiaventures.com'
-                const url = `${base}/register/`
-                window.open(url, '_blank', 'noopener,noreferrer')
+                setCreatePartnerOpen(true)
               }}
-              className="mt-4 w-full py-2.5 rounded-xl text-xs font-bold text-white transition-all duration-300 hover:brightness-110 shadow-md"
+              className="mt-4 w-full py-2.5 rounded-xl text-xs font-bold text-white transition-all duration-300 hover:brightness-110 shadow-md flex items-center justify-center gap-1.5"
               style={{ background: 'linear-gradient(135deg, #D0021B, #B00000)' }}
             >
-              Channel Partner
+              <Plus className="w-3.5 h-3.5" />
+              <span>Channel Partner</span>
             </button>
           </div>
         )}
@@ -1470,7 +1467,7 @@ export default function ReferralDashboard({
           </div>
           <div className="flex items-baseline justify-between mt-1">
             <h3 className={`text-xl sm:text-2xl font-black tracking-tight ${t('text-white', 'text-gray-900')}`}>
-              {loading ? '—' : `₹${formatINR(data?.kpis?.totalInvestment || 0)}`}
+              {loading ? '—' : `₹${formatINR(totalInvestmentSum)}`}
             </h3>
             <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-400 group-hover:underline">
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
@@ -1544,16 +1541,13 @@ export default function ReferralDashboard({
         {/* Card 4: Today Referral */}
         <div
           onClick={() => {
-            if (hasTodayReferrals) {
-              setTodayReferralModalOpen(true)
-            }
+            setTodayReferralModalOpen(true)
           }}
-          className={`relative overflow-hidden rounded-2xl p-5 border transition-all group ${hasTodayReferrals ? 'hover:-translate-y-0.5 cursor-pointer hover:border-red-500/40' : 'cursor-default'
-            } ${t(
-              'bg-[#150606] border-white/10 shadow-lg',
-              'bg-white border-gray-200 shadow-sm'
-            )}`}
-          title={hasTodayReferrals ? "Click to view today's referrals" : "No referrals recorded today"}
+          className={`relative overflow-hidden rounded-2xl p-5 border transition-all hover:-translate-y-0.5 cursor-pointer hover:border-red-500/40 group ${t(
+            'bg-[#150606] border-white/10 shadow-lg',
+            'bg-white border-gray-200 shadow-sm'
+          )}`}
+          title={hasTodayReferrals ? "Click to view today's referrals" : "Click to view today's ledger"}
         >
           <div className={`w-16 h-16 rounded-full absolute -top-3 -right-3 pointer-events-none ${t('bg-red-500/10', 'bg-red-500/[0.06]')}`} />
           <div className="flex items-center gap-3 mb-2">
@@ -1599,7 +1593,7 @@ export default function ReferralDashboard({
           </div>
           <div className="flex items-baseline justify-between mt-1">
             <h3 className={`text-xl sm:text-2xl font-black tracking-tight ${t('text-white', 'text-gray-900')}`}>
-              {loading ? '—' : (data?.kpis?.totalInvestors || 0)}
+              {loading ? '—' : totalInvestorsCount}
             </h3>
             <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-400 group-hover:underline">
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
@@ -2650,11 +2644,11 @@ export default function ReferralDashboard({
               </div>
               <div className={`p-3 rounded-xl border text-center ${t('bg-white/[0.02] border-white/10', 'bg-gray-50 border-gray-200')}`}>
                 <span className={`text-[10px] uppercase font-bold block ${t('text-gray-400', 'text-gray-500')}`}>Today's Investment</span>
-                <span className={`text-lg font-black ${t('text-white', 'text-gray-900')}`}>₹{formatINR((todayReferralsList.length > 0 ? todayReferralsList : (data?.referrals || [])).reduce((sum, r) => sum + (r.investmentAmount || 0), 0))}</span>
+                <span className={`text-lg font-black ${t('text-white', 'text-gray-900')}`}>₹{formatINR(todayReferralsList.reduce((sum, r) => sum + (r.investmentAmount || 0), 0))}</span>
               </div>
               <div className={`p-3 rounded-xl border text-center ${t('bg-white/[0.02] border-white/10', 'bg-gray-50 border-gray-200')}`}>
                 <span className={`text-[10px] uppercase font-bold block ${t('text-gray-400', 'text-gray-500')}`}>Today's Cashback</span>
-                <span className="text-lg font-black text-emerald-400">₹{formatINR((todayReferralsList.length > 0 ? todayReferralsList : (data?.referrals || [])).reduce((sum, r) => sum + (r.commissionAmount || 0), 0))}</span>
+                <span className="text-lg font-black text-emerald-400">₹{formatINR(todayReferralsList.reduce((sum, r) => sum + (r.commissionAmount || 0), 0))}</span>
               </div>
             </div>
 
@@ -2675,17 +2669,17 @@ export default function ReferralDashboard({
                   </tr>
                 </thead>
                 <tbody className={`divide-y ${t('divide-white/[0.04]', 'divide-gray-200')}`}>
-                  {((todayReferralsList.length > 0 ? todayReferralsList : (data?.referrals || [])).length === 0) ? (
+                  {todayReferralsList.length === 0 ? (
                     <tr>
                       <td colSpan={9} className="py-12 text-center text-gray-500 italic">
                         No referrals recorded today.
                       </td>
                     </tr>
                   ) : (
-                    (todayReferralsList.length > 0 ? todayReferralsList : (data?.referrals || [])).map((r, idx) => (
+                    todayReferralsList.map((r, idx) => (
                       <tr key={r.id || idx} className={`transition-colors ${t('hover:bg-white/[0.02]', 'hover:bg-gray-50')}`}>
                         <td className="p-3 text-gray-500 font-mono">{idx + 1}</td>
-                        <td className="p-3 font-mono font-bold text-brand-red">{r.id}</td>
+                        <td className="p-3 font-mono font-bold text-brand-red">{r.userId || r.id}</td>
                         <td className={`p-3 font-semibold ${t('text-white', 'text-gray-900')}`}>{r.refereeName}</td>
                         <td className="p-3 text-gray-400">{r.date}</td>
                         <td className={`p-3 text-right font-mono ${t('text-white', 'text-gray-900')}`}>₹{formatINR(r.investmentAmount)}</td>

@@ -2068,7 +2068,7 @@ export default function DashboardClient() {
     })()
 
     // Real portfolio value matching Indian numbering standard
-    const activePortfolioVal = portfolioValue > 0 ? portfolioValue : (totalInvested > 0 ? totalInvested : 0)
+    const activePortfolioVal = portfolioValue > 0 ? portfolioValue : Math.max(totalInvested || 0, Number(user?.aum) || 0)
     const formattedPortfolioValue = new Intl.NumberFormat('en-IN').format(activePortfolioVal)
     const rmName = assignedRM?.name || ''
     const rmDesignation = assignedRM?.designation || 'Investor Relationship Manager'

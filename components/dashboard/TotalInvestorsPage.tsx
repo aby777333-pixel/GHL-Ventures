@@ -13,6 +13,7 @@ import {
 import {
   fetchMasterPartnerNetworkInvestments,
   NetworkInvestmentRow,
+  ReferralMember,
 } from '@/lib/supabase/partnerDashboardService'
 import { fetchActiveFundPlans } from '@/lib/supabase/dashboardDataService'
 import { FUNDS } from './InvestmentFlowTab'
@@ -27,6 +28,7 @@ interface TotalInvestorsPageProps {
   theme?: 'light' | 'dark'
   isDark?: boolean
   initialNetworkInvestments?: NetworkInvestmentRow[]
+  referrals?: ReferralMember[]
 }
 
 type SortField = 'sno' | 'userId' | 'name' | 'planName' | 'investDate' | 'investAmount' | 'maturityDate' | 'maturityStatus' | 'returnDate'
@@ -46,9 +48,12 @@ export default function TotalInvestorsPage({
   showToast,
   isDark = true,
   initialNetworkInvestments,
+  referrals,
 }: TotalInvestorsPageProps) {
   // ── States ─────────────────────────────────────────────────────────────
-  const [investments, setInvestments] = useState<NetworkInvestmentRow[]>(initialNetworkInvestments || [])
+  const [investments, setInvestments] = useState<NetworkInvestmentRow[]>(
+    (initialNetworkInvestments || []).filter((c) => Number(c.investAmount) > 0)
+  )
   const [loading, setLoading] = useState<boolean>(!initialNetworkInvestments || initialNetworkInvestments.length === 0)
   const [error, setError] = useState<string | null>(null)
 
@@ -83,7 +88,40 @@ export default function TotalInvestorsPage({
     try {
       // 1. Fetch network investments
       const data = await fetchMasterPartnerNetworkInvestments(partnerId, partnerEmail, authToken)
-      setInvestments(data)
+      let combined = (data || []).slice()
+
+      // Also ensure any referral who invested is included
+      if (Array.isArray(referrals)) {
+        const existingUserIds = new Set(combined.map((c) => (c.userId || '').toLowerCase()))
+        referrals.forEach((r, idx) => {
+          const invAmt = Number(r.investmentAmount) || 0
+          const uId = r.userId || r.id || `GHL${246000 + idx}`
+          if (invAmt > 0 && !existingUserIds.has(uId.toLowerCase())) {
+            const dRaw = r.createdAt || r.date || new Date().toISOString()
+            const mat = new Date(dRaw)
+            mat.setFullYear(mat.getFullYear() + 3)
+            combined.push({
+              id: `ref-inv-${r.id || idx}`,
+              sno: combined.length + 1,
+              userId: uId,
+              name: r.refereeName || 'Network Investor',
+              planName: invAmt >= 10000000 ? 'Direct AIF Route' : 'Alternate route to Invest in AIF via Debenture',
+              investDate: r.date || new Date(dRaw).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }),
+              investDateRaw: dRaw,
+              investAmount: invAmt,
+              maturityDate: mat.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }),
+              maturityDateRaw: mat.toISOString(),
+              maturityStatus: r.commissionStatus === 'paid' ? 'Paid' : 'Unpaid',
+              returnDate: '—',
+            })
+            existingUserIds.add(uId.toLowerCase())
+          }
+        })
+      }
+
+      // STRICT REQUIREMENT: Only list candidates who actually invested (> 0)
+      combined = combined.filter((c) => Number(c.investAmount) > 0)
+      setInvestments(combined)
 
       // 2. Fetch active fund plans from DB to combine with built-in FUNDS
       try {
@@ -101,7 +139,7 @@ export default function TotalInvestorsPage({
     } finally {
       setLoading(false)
     }
-  }, [partnerId, partnerEmail, authToken, showToast])
+  }, [partnerId, partnerEmail, authToken, referrals, showToast])
 
   useEffect(() => {
     loadData()
@@ -200,6 +238,9 @@ export default function TotalInvestorsPage({
         const matchesName = item.name.toLowerCase().includes(q)
         if (!matchesId && !matchesName) return false
       }
+
+      // Strictly only candidates who have an actual investment (> 0)
+      if (Number(item.investAmount) <= 0) return false
 
       return true
     })

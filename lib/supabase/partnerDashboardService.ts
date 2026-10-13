@@ -765,7 +765,8 @@ async function getFallbackDashboardData(previewId?: string, year?: number, _mont
     const d = new Date(rawDate)
     return !isNaN(d.getTime()) && (d.getTime() >= today.getTime() || d.toDateString() === todayStr)
   }).length
-  const uniqueInvestors = new Set(rawReferrals.map(r => r.referee_email || r.referee_name)).size
+  const investedReferrals = rawReferrals.filter(r => (Number(r.investment_amount) || 0) > 0 || r.status === 'converted')
+  const uniqueInvestors = new Set(investedReferrals.map(r => (r.referee_email || r.referee_name || '').toLowerCase()).filter(Boolean)).size
 
   const kpis: PartnerKPIs = {
     totalInvestment: finalTotalInvested,
@@ -928,19 +929,45 @@ export async function fetchReferralDetailsInvestments(
   if (!isSupabaseConfigured()) return []
   try {
     let resolvedClientId = clientId
-    if (!resolvedClientId && (clientCode || email)) {
-      const q = (supabase as any).from('clients').select('id')
-      if (clientCode) q.eq('client_code', clientCode)
-      else if (email) q.eq('email', email)
-      const { data: cRow } = await q.maybeSingle()
-      if (cRow?.id) resolvedClientId = cRow.id
+    let userId: string | null = null
+    let clientTotalInvested = 0
+    let clientCreatedAt = ''
+
+    const idFilters: string[] = []
+    if (resolvedClientId) {
+      idFilters.push(`id.eq.${resolvedClientId}`, `client_code.eq.${resolvedClientId}`, `ghl_id.eq.${resolvedClientId}`)
     }
-    if (!resolvedClientId) return []
+    if (clientCode && clientCode !== resolvedClientId) {
+      idFilters.push(`client_code.eq.${clientCode}`, `ghl_id.eq.${clientCode}`)
+    }
+    if (email) {
+      idFilters.push(`email.eq.${email}`)
+    }
+
+    if (idFilters.length > 0) {
+      try {
+        const { data: cRow } = await (supabase as any)
+          .from('clients')
+          .select('id, user_id, client_code, ghl_id, total_invested, created_at')
+          .or(idFilters.join(','))
+          .maybeSingle()
+        if (cRow) {
+          resolvedClientId = cRow.id || resolvedClientId
+          userId = cRow.user_id || null
+          clientTotalInvested = Number(cRow.total_invested) || 0
+          clientCreatedAt = cRow.created_at || ''
+        }
+      } catch { /* non-fatal */ }
+    }
+    if (!resolvedClientId && !userId && !clientCode) return []
+
+    const targetIds = Array.from(new Set([resolvedClientId, userId, clientId, clientCode].filter(Boolean))) as string[]
+    const orCondition = targetIds.map(id => `client_id.eq.${id},user_id.eq.${id}`).join(',')
 
     const { data: apps } = await (supabase as any)
       .from('investment_applications')
       .select('id, investment_amount, investment_date, maturity_date, status, created_at')
-      .eq('client_id', resolvedClientId)
+      .or(orCondition)
       .order('created_at', { ascending: false })
 
     if (apps && apps.length > 0) {
@@ -957,7 +984,7 @@ export async function fetchReferralDetailsInvestments(
     const { data: direct } = await (supabase as any)
       .from('investments')
       .select('id, amount, start_date, maturity_date, status, created_at')
-      .eq('client_id', resolvedClientId)
+      .or(orCondition)
       .order('created_at', { ascending: false })
 
     if (direct && direct.length > 0) {
@@ -969,6 +996,17 @@ export async function fetchReferralDetailsInvestments(
         maturityDate: d.maturity_date || null,
         status: d.status ? (d.status.charAt(0).toUpperCase() + d.status.slice(1).toLowerCase()) : 'Approved',
       }))
+    }
+
+    if (clientTotalInvested > 0) {
+      return [{
+        id: `client-inv-${resolvedClientId}`,
+        sno: 1,
+        amount: clientTotalInvested,
+        investmentDate: clientCreatedAt || new Date().toISOString(),
+        maturityDate: null,
+        status: 'Approved',
+      }]
     }
 
     return []

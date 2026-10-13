@@ -371,7 +371,8 @@ export async function GET(request: NextRequest) {
       return !isNaN(d.getTime()) && (d.getTime() >= todayStart.getTime() || d.toDateString() === todayStr)
     }).length
 
-    const uniqueInvestors = new Set(rawReferrals.map(r => r.referee_email || r.referee_name)).size
+    const investedReferrals = rawReferrals.filter(r => (Number(r.investment_amount) || 0) > 0 || r.status === 'converted')
+    const uniqueInvestors = new Set(investedReferrals.map(r => (r.referee_email || r.referee_name || '').toLowerCase()).filter(Boolean)).size
 
     // 4. Monthly Goals
     // Saved in clients.notes or stored as a structured JSON object

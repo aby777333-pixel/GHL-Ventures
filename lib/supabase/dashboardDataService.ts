@@ -33,28 +33,40 @@ async function safeFetch<T>(
 
 export async function fetchPortfolioAssets(clientId?: string) {
   if (!isSupabaseConfigured() || !clientId) return []
-  // 2026-05-16: investor dashboard's Total Investment must reflect
-  // ACTIVE investments only. Both paths below filter on status. The
-  // investments table's `status` enum uses values like 'active' /
-  // 'matured' / 'redeemed' / 'pending'; we accept 'active' only here
-  // for safety. The investment_applications fallback already filtered
-  // by status (approved / active / credited).
+
+  // Resolve all identifier aliases for this client (UUID, auth user_id, client_code, ghl_id)
+  const idList: string[] = [clientId]
+  let clientRow: any = null
+  try {
+    const { data: c } = await sb.from('clients')
+      .select('id, user_id, client_code, ghl_id, total_invested, created_at')
+      .or(`id.eq.${clientId},user_id.eq.${clientId},client_code.eq.${clientId},ghl_id.eq.${clientId}`)
+      .maybeSingle()
+    if (c) {
+      clientRow = c
+      if (c.id && !idList.includes(c.id)) idList.push(c.id)
+      if (c.user_id && !idList.includes(c.user_id)) idList.push(c.user_id)
+      if (c.client_code && !idList.includes(c.client_code)) idList.push(c.client_code)
+      if (c.ghl_id && !idList.includes(c.ghl_id)) idList.push(c.ghl_id)
+    }
+  } catch { /* non-blocking */ }
+
+  const orFilter = idList.map(id => `client_id.eq.${id},user_id.eq.${id}`).join(',')
+
+  // 1. Check investments table
   const primary = await safeFetch(
-    () => sb.from('investments').select('*').eq('client_id', clientId).eq('status', 'active'),
+    () => sb.from('investments').select('*').or(orFilter).eq('status', 'active'),
     [], 'fetchPortfolioAssets:investments',
   )
   if ((primary as any[]).length > 0) return primary
 
-  // Fallback: derive portfolio from investment_applications (Laravel: investments table)
+  // 2. Fallback: derive portfolio from investment_applications (Laravel: investments table)
   // Maps fund_vehicle to fund types matching the PHP source
   const apps = await safeFetch(
     () => sb.from('investment_applications')
-      // Include `credited` — once admin hits Give Credit, the app moves out
-      // of `approved`. Previously this filter dropped credited investments
-      // from the investor's portfolio view.
-      .select('id, client_id, fund_vehicle, investment_amount, final_investment_amount, status, created_at, investment_date')
-      .eq('client_id', clientId)
-      .in('status', ['approved', 'active', 'credited']),
+      .select('id, client_id, user_id, fund_vehicle, investment_amount, final_investment_amount, status, created_at, investment_date')
+      .or(orFilter)
+      .in('status', ['approved', 'active', 'credited', 'completed', 'paid']),
     [], 'fetchPortfolioAssets:applications',
   )
   if ((apps as any[]).length > 0) {
@@ -68,8 +80,8 @@ export async function fetchPortfolioAssets(clientId?: string) {
       const amount = Number(a.final_investment_amount) || Number(a.investment_amount) || 0
       return {
         id: a.id,
-        client_id: a.client_id,
-        fund_name: fv,
+        client_id: a.client_id || clientId,
+        fund_name: fv || 'Alternate route to Invest in AIF via Debenture',
         fund_type: fundType,
         invested_amount: amount,
         current_value: amount, // No mark-to-market yet
@@ -82,12 +94,11 @@ export async function fetchPortfolioAssets(clientId?: string) {
 
   // 3rd level fallback: check clients.total_invested from database
   try {
-    const { data: clientRow } = await sb.from('clients').select('id, total_invested, created_at').eq('id', clientId).maybeSingle()
     const invested = Number(clientRow?.total_invested) || 0
     if (invested > 0) {
       return [{
-        id: `client-inv-${clientId}`,
-        client_id: clientId,
+        id: `client-inv-${clientRow?.id || clientId}`,
+        client_id: clientRow?.id || clientId,
         fund_name: 'Secured Debenture Portfolio',
         fund_type: 'Debenture',
         invested_amount: invested,
