@@ -35,6 +35,8 @@ import {
   ChevronDown,
   Eye,
   AlertCircle,
+  ArrowLeft,
+  ArrowUpDown,
 } from 'lucide-react'
 import {
   AreaChart,
@@ -51,8 +53,10 @@ import {
   PartnerRole,
   PartnerDashboardResponse,
   ReferralMember,
+  ReferralInvestmentItem,
   SubChannelPartner,
   fetchPartnerDashboard,
+  fetchReferralDetailsInvestments,
   createGeneralInvestor,
   createChannelPartner,
   updateMonthlyGoals,
@@ -60,6 +64,9 @@ import {
   getPartnerRole,
 } from '@/lib/supabase/partnerDashboardService'
 import InvestorReferralDashboard from './InvestorReferralDashboard'
+import TotalInvestorsPage from './TotalInvestorsPage'
+import TotalReferralsPage from './TotalReferralsPage'
+import TotalHistoryPage from './TotalHistoryPage'
 
 // Helper for Indian Rupee Formatting
 function formatINR(n: number): string {
@@ -67,6 +74,51 @@ function formatINR(n: number): string {
   if (n >= 10000000) return `${(n / 10000000).toFixed(2)} Cr`
   if (n >= 100000) return `${(n / 100000).toFixed(2)} L`
   return new Intl.NumberFormat('en-IN').format(n)
+}
+
+function formatIndianNumber(n: number): string {
+  if (!n || isNaN(n)) return '0'
+  return new Intl.NumberFormat('en-IN').format(Math.round(n))
+}
+
+const GHL_2_TIER_SLABS = [
+  {
+    tier: 'Tier 1',
+    rateDisplay: '3%',
+    rangeDisplay: '1 Cr – 5 Cr',
+    bgClass: 'bg-gradient-to-r from-amber-500 to-amber-600',
+  },
+  {
+    tier: 'Tier 2',
+    rateDisplay: '4%',
+    rangeDisplay: '5 Cr & Above',
+    bgClass: 'bg-gradient-to-r from-rose-500 to-red-600',
+  },
+]
+
+function getGrossRateForAmount(amount: number): number {
+  if (!amount || amount <= 0) return 0
+  if (amount > 50000000) return 4.0
+  return 3.0
+}
+
+function formatDateDisplay(d?: string | null): string {
+  if (!d) return '—'
+  const dateObj = new Date(d)
+  if (isNaN(dateObj.getTime())) return d
+  return dateObj.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
+}
+
+function formatDateHyphen(d?: string | null): string {
+  if (!d) return '—'
+  const dateObj = new Date(d)
+  if (isNaN(dateObj.getTime())) {
+    return d.replace(/\//g, '-')
+  }
+  const day = String(dateObj.getDate()).padStart(2, '0')
+  const month = String(dateObj.getMonth() + 1).padStart(2, '0')
+  const year = dateObj.getFullYear()
+  return `${day}-${month}-${year}`
 }
 
 export interface ReferralDocumentRow {
@@ -194,6 +246,11 @@ export default function ReferralDashboard({
     return data?.partner?.partnerId || (partnerRole === 'MCP' ? 'MCP-PARTNER' : partnerRole === 'CPL' ? 'CPL-PARTNER' : 'GHL-PARTNER')
   }, [authenticatedPartnerId, data?.partner?.partnerId, partnerRole])
 
+  const displayPartnerName = useMemo(() => {
+    if (data?.partner?.name && data.partner.name !== 'Partner Investor') return data.partner.name
+    if (partnerName && partnerName !== 'Partner Investor') return partnerName
+    return 'Mishmash Finserve LLP'
+  }, [data?.partner?.name, partnerName])
 
   // Filters & Views (Default to Oct 2026 matching Reference screenshots)
   const [selectedYear, setSelectedYear] = useState<number>(2026)
@@ -219,10 +276,25 @@ export default function ReferralDashboard({
   const [selectedReferral, setSelectedReferral] = useState<ReferralMember | null>(null)
   const [agreementModalOpen, setAgreementModalOpen] = useState(false)
   const [historyModalOpen, setHistoryModalOpen] = useState(false)
-  const [totalReferralModalOpen, setTotalReferralModalOpen] = useState(false)
-  const [totalInvestorModalOpen, setTotalInvestorModalOpen] = useState(false)
+  // Referral Income History States (Matches Reference Screenshots)
+  const [historyCohort, setHistoryCohort] = useState<'general_investor' | 'channel_partner'>('general_investor')
+  const [historyYear, setHistoryYear] = useState<number>(2026)
+  const [selectedMonthHistory, setSelectedMonthHistory] = useState<{
+    monthIndex: number
+    monthName: string
+    year: number
+    totalAmount: number
+    referrals: ReferralMember[]
+  } | null>(null)
+  const [viewTotalInvestorsPage, setViewTotalInvestorsPage] = useState(false)
+  const [viewTotalReferralsPage, setViewTotalReferralsPage] = useState(false)
+  const [viewTotalHistoryPage, setViewTotalHistoryPage] = useState(false)
   const [todayReferralModalOpen, setTodayReferralModalOpen] = useState(false)
   const [submittingAction, setSubmittingAction] = useState(false)
+
+  // Referral Details Modal (selectedReferral) States
+  const [detailsInvestments, setDetailsInvestments] = useState<ReferralInvestmentItem[]>([])
+  const [loadingDetailsInvestments, setLoadingDetailsInvestments] = useState(false)
 
   // Dedicated Referral Documents View Page state (matches user reference screenshot)
   const [viewDocumentsPage, setViewDocumentsPage] = useState(false)
@@ -303,6 +375,50 @@ export default function ReferralDashboard({
       setTimeout(() => setCopiedLink(false), 2000)
     }
   }
+
+
+
+  // Open Referral Details Modal & Load Real Investments
+  const handleOpenReferralDetails = async (referral: ReferralMember) => {
+    setSelectedReferral(referral)
+    if (Array.isArray(referral.investments) && referral.investments.length > 0) {
+      setDetailsInvestments(referral.investments)
+      return
+    }
+    setLoadingDetailsInvestments(true)
+    try {
+      const invs = await fetchReferralDetailsInvestments(
+        referral.clientId,
+        referral.userId || referral.id,
+        referral.refereeEmail
+      )
+      if (invs && invs.length > 0) {
+        setDetailsInvestments(invs)
+      } else if (referral.investmentAmount > 0) {
+        setDetailsInvestments([
+          {
+            id: `inv-${referral.id}`,
+            sno: 1,
+            amount: referral.investmentAmount,
+            investmentDate: referral.createdAt || referral.date,
+            maturityDate: null,
+            status: referral.status === 'converted' ? 'Approved' : 'Approved',
+          },
+        ])
+      } else {
+        setDetailsInvestments([])
+      }
+    } catch {
+      setDetailsInvestments([])
+    } finally {
+      setLoadingDetailsInvestments(false)
+    }
+  }
+
+  const totalInvestmentAmount = useMemo(() => {
+    if (!detailsInvestments || detailsInvestments.length === 0) return 0
+    return detailsInvestments.reduce((sum, item) => sum + (Number(item.amount) || 0), 0)
+  }, [detailsInvestments])
 
   // Handle Create General Investor
   const handleCreateInvestor = async (e: React.FormEvent) => {
@@ -533,14 +649,17 @@ export default function ReferralDashboard({
   // Determine active Sale of Associate Channel Partner slab:
   // ₹1,00,00,000 to ₹5,00,00,000 (3.00%), ₹5,00,00,000 to Above (4.00%)
   const { giRate, giActiveIndex, giEarned } = useMemo(() => {
-    let rate = 3.00
-    let activeIdx = 0
+    let rate = 0
+    let activeIdx = -1
     if (giVolume >= 50000000) {
       rate = 4.00
       activeIdx = 1
-    } else {
+    } else if (giVolume >= 10000000) {
       rate = 3.00
       activeIdx = 0
+    } else {
+      rate = giVolume > 0 ? 3.00 : 0.00
+      activeIdx = -1
     }
     const earned = (giVolume * rate) / 100
     return { giRate: rate, giActiveIndex: activeIdx, giEarned: earned }
@@ -554,8 +673,8 @@ export default function ReferralDashboard({
 
   // Sale of Master Channel Partner: Any Investment -> 0.50%
   const { cpRate, cpActiveIndex, cpEarned } = useMemo(() => {
-    const rate = 0.50
-    const activeIdx = 0
+    const rate = cpVolume > 0 ? 0.50 : 0.00
+    const activeIdx = cpVolume > 0 ? 0 : -1
     const earned = (cpVolume * rate) / 100
     return { cpRate: rate, cpActiveIndex: activeIdx, cpEarned: earned }
   }, [cpVolume])
@@ -757,6 +876,57 @@ export default function ReferralDashboard({
       >
         <FileText className="w-3.5 h-3.5" />
       </button>
+    )
+  }
+
+  // ─────────────────────────────────────────────────────────────
+  // DEDICATED TOTAL INVESTORS VIEW (Matches Reference Screenshot)
+  // ─────────────────────────────────────────────────────────────
+  if (viewTotalInvestorsPage) {
+    return (
+      <TotalInvestorsPage
+        partnerDisplayName={partnerDisplayName}
+        partnerId={effectiveId}
+        partnerEmail={partnerEmail}
+        authToken={authToken}
+        onBack={() => setViewTotalInvestorsPage(false)}
+        showToast={showToast}
+        theme={theme}
+        isDark={theme === 'dark'}
+        initialNetworkInvestments={data?.networkInvestments}
+      />
+    )
+  }
+
+  // ─────────────────────────────────────────────────────────────
+  // DEDICATED TOTAL REFERRALS VIEW
+  // ─────────────────────────────────────────────────────────────
+  if (viewTotalReferralsPage) {
+    return (
+      <TotalReferralsPage
+        partnerDisplayName={partnerDisplayName}
+        referrals={data?.referrals || []}
+        onBack={() => setViewTotalReferralsPage(false)}
+        onOpenReferralDetails={handleOpenReferralDetails}
+        theme={theme}
+        isDark={theme === 'dark'}
+      />
+    )
+  }
+
+  // ─────────────────────────────────────────────────────────────
+  // DEDICATED TOTAL HISTORY VIEW
+  // ─────────────────────────────────────────────────────────────
+  if (viewTotalHistoryPage) {
+    return (
+      <TotalHistoryPage
+        partnerDisplayName={partnerDisplayName}
+        referrals={data?.referrals || []}
+        onBack={() => setViewTotalHistoryPage(false)}
+        showToast={showToast}
+        theme={theme}
+        isDark={theme === 'dark'}
+      />
     )
   }
 
@@ -1276,7 +1446,7 @@ export default function ReferralDashboard({
               ₹
             </div>
             <span className={`text-[10px] font-bold uppercase tracking-wider ${t('text-gray-400', 'text-gray-500')}`}>
-              TOTAL INVESTMENT
+              TOTAL INVESTMENTS
             </span>
           </div>
           <div className="flex items-baseline justify-between mt-1">
@@ -1293,7 +1463,7 @@ export default function ReferralDashboard({
         {/* Card 2: Total Referral */}
         <div
           onClick={() => {
-            setTotalReferralModalOpen(true)
+            setViewTotalReferralsPage(true)
           }}
           className={`relative overflow-hidden rounded-2xl p-5 border transition-all hover:-translate-y-0.5 cursor-pointer hover:border-red-500/40 group ${t(
             'bg-[#150606] border-white/10 shadow-lg',
@@ -1307,7 +1477,7 @@ export default function ReferralDashboard({
               <Users className="w-5 h-5" />
             </div>
             <span className={`text-[10px] font-bold uppercase tracking-wider ${t('text-gray-400', 'text-gray-500')}`}>
-              TOTAL REFERRAL
+              TOTAL REFERRALS
             </span>
           </div>
           <div className="flex items-baseline justify-between mt-1">
@@ -1324,9 +1494,7 @@ export default function ReferralDashboard({
         {/* Card 3: Total History */}
         <div
           onClick={() => {
-            setHistoryModalOpen(true)
-            const el = document.getElementById('referral-list-section')
-            if (el) el.scrollIntoView({ behavior: 'smooth' })
+            setViewTotalHistoryPage(true)
           }}
           className={`relative overflow-hidden rounded-2xl p-5 border transition-all hover:-translate-y-0.5 cursor-pointer hover:border-red-500/40 group ${t(
             'bg-[#150606] border-white/10 shadow-lg',
@@ -1345,7 +1513,7 @@ export default function ReferralDashboard({
           </div>
           <div className="flex items-baseline justify-between mt-1">
             <h3 className={`text-xl sm:text-2xl font-black tracking-tight ${t('text-white', 'text-gray-900')}`}>
-              {loading ? '—' : (data?.referrals?.length || data?.kpis?.totalReferrals || 0)}
+              {loading ? '—' : (data?.referrals ? data.referrals.length : (data?.kpis?.totalReferrals || 0))}
             </h3>
             <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-400 group-hover:underline">
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
@@ -1374,7 +1542,7 @@ export default function ReferralDashboard({
               <Clock className="w-5 h-5" />
             </div>
             <span className={`text-[10px] font-bold uppercase tracking-wider ${t('text-gray-400', 'text-gray-500')}`}>
-              TODAY REFERRAL
+              TODAY'S REFERRALS
             </span>
           </div>
           <div className="flex items-baseline justify-between mt-1">
@@ -1393,7 +1561,7 @@ export default function ReferralDashboard({
         {/* Card 5: Total Investor */}
         <div
           onClick={() => {
-            setTotalInvestorModalOpen(true)
+            setViewTotalInvestorsPage(true)
           }}
           className={`relative overflow-hidden rounded-2xl p-5 border transition-all hover:-translate-y-0.5 cursor-pointer hover:border-red-500/40 group ${t(
             'bg-[#150606] border-white/10 shadow-lg',
@@ -1407,7 +1575,7 @@ export default function ReferralDashboard({
               <Users className="w-5 h-5" />
             </div>
             <span className={`text-[10px] font-bold uppercase tracking-wider ${t('text-gray-400', 'text-gray-500')}`}>
-              TOTAL INVESTOR
+              TOTAL INVESTORS
             </span>
           </div>
           <div className="flex items-baseline justify-between mt-1">
@@ -1417,37 +1585,6 @@ export default function ReferralDashboard({
             <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-400 group-hover:underline">
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
               <span>View details</span>
-            </span>
-          </div>
-        </div>
-
-        {/* Card 6: Documents & Downloads */}
-        <div
-          onClick={() => {
-            setViewDocumentsPage(true)
-          }}
-          className={`relative overflow-hidden rounded-2xl p-5 border transition-all hover:-translate-y-0.5 cursor-pointer hover:border-red-500/40 group ${t(
-            'bg-[#150606] border-white/10 shadow-lg',
-            'bg-white border-gray-200 shadow-sm'
-          )}`}
-          title="Click to view referral documents & downloads"
-        >
-          <div className={`w-16 h-16 rounded-full absolute -top-3 -right-3 pointer-events-none ${t('bg-red-500/10', 'bg-red-500/[0.06]')}`} />
-          <div className="flex items-center gap-3 mb-2">
-            <div className="w-10 h-10 rounded-xl bg-red-500/15 flex items-center justify-center text-brand-red border border-red-500/25 shrink-0 group-hover:scale-105 transition-transform">
-              <Download className="w-5 h-5" />
-            </div>
-            <span className={`text-[10px] font-bold uppercase tracking-wider ${t('text-gray-400', 'text-gray-500')}`}>
-              DOCUMENTS
-            </span>
-          </div>
-          <div className="flex items-baseline justify-between mt-1">
-            <h3 className={`text-xl sm:text-2xl font-black tracking-tight ${t('text-white', 'text-gray-900')}`}>
-              {loading ? '—' : `${allDocRecords.length} ${allDocRecords.length === 1 ? 'Document' : 'Documents'}`}
-            </h3>
-            <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-400 group-hover:underline">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
-              <span>View Documents</span>
             </span>
           </div>
         </div>
@@ -1728,7 +1865,7 @@ export default function ReferralDashboard({
             {[0, 1].map((stepIdx) => (
               <div
                 key={stepIdx}
-                className={`h-2 rounded-full overflow-hidden ${stepIdx <= giActiveIndex ? 'bg-red-500' : t('bg-white/[0.08]', 'bg-gray-200')
+                className={`h-2 rounded-full overflow-hidden ${giActiveIndex >= 0 && stepIdx <= giActiveIndex ? 'bg-red-500' : t('bg-white/[0.08]', 'bg-gray-200')
                   }`}
               />
             ))}
@@ -1740,7 +1877,7 @@ export default function ReferralDashboard({
               { label: '₹1,00,00,000 to ₹5,00,00,000', rate: '3.00%', index: 0 },
               { label: '₹5,00,00,000 to Above', rate: '4.00%', index: 1 },
             ].map((slab) => {
-              const isActive = slab.index === giActiveIndex
+              const isActive = giActiveIndex >= 0 && slab.index === giActiveIndex
               return (
                 <div
                   key={slab.index}
@@ -1914,7 +2051,7 @@ export default function ReferralDashboard({
                     </td>
                     <td className="p-3.5 text-center">
                       <button
-                        onClick={() => setSelectedReferral(row.raw)}
+                        onClick={() => handleOpenReferralDetails(row.raw)}
                         className="w-8 h-8 rounded-full bg-red-500/15 hover:bg-red-500/25 text-brand-red inline-flex items-center justify-center transition-transform hover:scale-110 border border-red-500/30"
                         title="View History / Dossier"
                       >
@@ -2338,433 +2475,120 @@ export default function ReferralDashboard({
       {/* ─────────────────────────────────────────────────────────────
           MODAL 4: REFERRAL DETAILS DRILL-DOWN
           ───────────────────────────────────────────────────────────── */}
+      {/* ─────────────────────────────────────────────────────────────
+          MODAL 4: REFERRAL DETAILS DRILL-DOWN (Matches Screenshot 2)
+          ───────────────────────────────────────────────────────────── */}
       {selectedReferral && (
-        <div className="fixed inset-0 z-[10000] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fade-in">
+        <div className="fixed inset-0 z-[10010] flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm animate-fade-in">
           <div
-            className={`w-full max-w-lg rounded-2xl border p-6 shadow-2xl relative ${t(
+            className={`w-full max-w-xl rounded-2xl overflow-hidden shadow-2xl relative border ${t(
               'bg-[#140606] border-red-500/30 text-white',
               'bg-white border-gray-200 text-gray-900'
             )}`}
           >
-            <button
-              onClick={() => setSelectedReferral(null)}
-              className="absolute top-5 right-5 p-1 rounded-lg text-gray-400 hover:text-white"
-            >
-              <X className="w-5 h-5" />
-            </button>
-
-            <div className="flex items-center gap-3 mb-5">
-              <div className="w-12 h-12 rounded-2xl bg-brand-red/15 flex items-center justify-center text-brand-red font-bold text-lg">
-                {selectedReferral.refereeName.charAt(0).toUpperCase()}
+            {/* Header: Red Gradient Banner */}
+            <div className="bg-gradient-to-r from-[#1c0205] via-[#7d0010] to-[#c70b20] p-4 sm:p-5 flex items-center justify-between text-white">
+              <div className="flex items-center gap-2.5">
+                <Eye className="w-5 h-5 text-white" />
+                <h3 className="text-base font-bold text-white tracking-wide">
+                  Referral Details
+                </h3>
               </div>
-              <div>
-                <h3 className="text-lg font-bold">{selectedReferral.refereeName}</h3>
-                <p className="text-xs text-gray-400">{selectedReferral.memberType} &bull; Onboarded {selectedReferral.date}</p>
-              </div>
-            </div>
-
-            <div className="space-y-4 text-xs">
-              <div className={`grid grid-cols-2 gap-3 p-3.5 rounded-xl border ${t('bg-white/[0.02] border-white/[0.06]', 'bg-gray-50 border-gray-200')}`}>
-                <div>
-                  <span className="text-[10px] uppercase text-gray-400 block mb-0.5">Email</span>
-                  <span className="font-semibold">{selectedReferral.refereeEmail}</span>
-                </div>
-                <div>
-                  <span className="text-[10px] uppercase text-gray-400 block mb-0.5">Phone</span>
-                  <span className="font-semibold">{selectedReferral.refereePhone}</span>
-                </div>
-                <div>
-                  <span className="text-[10px] uppercase text-gray-400 block mb-0.5">City / Jurisdiction</span>
-                  <span className="font-semibold">{selectedReferral.refereeCity}</span>
-                </div>
-                <div>
-                  <span className="text-[10px] uppercase text-gray-400 block mb-0.5">KYC Status</span>
-                  <span className="font-bold text-emerald-400">{selectedReferral.kycStatus}</span>
-                </div>
-              </div>
-
-              <div className={`p-3.5 rounded-xl border ${t('bg-white/[0.02] border-white/[0.06]', 'bg-gray-50 border-gray-200')}`}>
-                <h4 className="font-bold text-sm mb-3">Financial Commitment & Reward Breakdown</h4>
-                <div className="grid grid-cols-3 gap-3 text-center">
-                  <div className="p-2 rounded-lg bg-black/20">
-                    <span className="text-[9px] uppercase text-gray-400 block">Invested</span>
-                    <span className="text-sm font-black text-white">₹{formatINR(selectedReferral.investmentAmount)}</span>
-                  </div>
-                  <div className="p-2 rounded-lg bg-black/20">
-                    <span className="text-[9px] uppercase text-gray-400 block">Reward Rate</span>
-                    <span className="text-sm font-black text-brand-red">{selectedReferral.commissionRate}%</span>
-                  </div>
-                  <div className="p-2 rounded-lg bg-black/20">
-                    <span className="text-[9px] uppercase text-gray-400 block">Commission</span>
-                    <span className="text-sm font-black text-emerald-400">₹{formatINR(selectedReferral.commissionAmount)}</span>
-                  </div>
-                </div>
-                <div className="mt-3 flex items-center justify-between text-[11px] pt-2 border-t border-white/[0.06]">
-                  <span className="text-gray-400">Payout Status:</span>
-                  <span className="font-bold text-amber-400 uppercase tracking-wider">{selectedReferral.commissionStatus}</span>
-                </div>
-              </div>
-
-              {selectedReferral.notes && (
-                <div className={`p-3 rounded-xl border ${t('bg-white/[0.02] border-white/[0.06]', 'bg-gray-50 border-gray-200')}`}>
-                  <span className="text-[10px] uppercase text-gray-400 block mb-1">Notes</span>
-                  <p className="text-gray-300 leading-relaxed">{selectedReferral.notes}</p>
-                </div>
-              )}
-            </div>
-
-            <div className="mt-6 flex justify-end">
               <button
                 onClick={() => setSelectedReferral(null)}
-                className="px-5 py-2 rounded-xl text-xs font-semibold bg-white/10 hover:bg-white/15 text-white"
+                className="p-1 rounded-lg bg-white/10 hover:bg-white/20 text-white transition-colors"
+                title="Close"
               >
-                Close Dossier
+                <X className="w-4 h-4" />
               </button>
             </div>
-          </div>
-        </div>
-      )}
 
-      {/* ─────────────────────────────────────────────────────────────
-          MODAL 5: TOTAL REFERRAL HISTORY & LEDGER
-          ───────────────────────────────────────────────────────────── */}
-      {historyModalOpen && (
-        <div className="fixed inset-0 z-[10000] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fade-in">
-          <div
-            className={`w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col rounded-2xl border p-6 shadow-2xl relative ${t(
-              'bg-[#140606] border-red-500/30 text-white',
-              'bg-white border-gray-200 text-gray-900'
-            )}`}
-          >
-            <button
-              onClick={() => setHistoryModalOpen(false)}
-              className={`absolute top-5 right-5 p-1 rounded-lg transition-colors ${t('text-gray-400 hover:text-white', 'text-gray-500 hover:text-gray-900')}`}
-            >
-              <X className="w-5 h-5" />
-            </button>
-
-            <div className="flex items-center gap-3 mb-4">
-              <div className="w-10 h-10 rounded-xl bg-red-500/15 flex items-center justify-center text-brand-red font-bold text-lg border border-red-500/25">
-                <FileText className="w-5 h-5" />
-              </div>
+            {/* Modal Body */}
+            <div className="p-6">
               <div>
-                <h3 className="text-lg font-bold">Total Referral History & Ledger</h3>
-                <p className={`text-xs ${t('text-gray-400', 'text-gray-500')}`}>Complete historical log of all referral onboarding & commission earnings</p>
+                <h2 className="text-lg font-bold text-gray-900 dark:text-white">
+                  {selectedReferral.refereeName} ({selectedReferral.userId || selectedReferral.id})
+                </h2>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 font-medium">
+                  Joined On: {formatDateHyphen(selectedReferral.createdAt || selectedReferral.date)}
+                </p>
               </div>
-            </div>
 
-            {/* Quick summary badges */}
-            <div className="grid grid-cols-3 gap-3 mb-4">
-              <div className={`p-3 rounded-xl border text-center ${t('bg-white/[0.02] border-white/10', 'bg-gray-50 border-gray-200')}`}>
-                <span className={`text-[10px] uppercase font-bold block ${t('text-gray-400', 'text-gray-500')}`}>Total Records</span>
-                <span className={`text-lg font-black ${t('text-white', 'text-gray-900')}`}>{(data?.referrals || []).length}</span>
-              </div>
-              <div className={`p-3 rounded-xl border text-center ${t('bg-white/[0.02] border-white/10', 'bg-gray-50 border-gray-200')}`}>
-                <span className={`text-[10px] uppercase font-bold block ${t('text-gray-400', 'text-gray-500')}`}>Total Investment</span>
-                <span className={`text-lg font-black ${t('text-white', 'text-gray-900')}`}>₹{formatINR(data?.kpis?.totalInvestment || 0)}</span>
-              </div>
-              <div className={`p-3 rounded-xl border text-center ${t('bg-white/[0.02] border-white/10', 'bg-gray-50 border-gray-200')}`}>
-                <span className={`text-[10px] uppercase font-bold block ${t('text-gray-400', 'text-gray-500')}`}>Total Cashback</span>
-                <span className="text-lg font-black text-emerald-400">₹{formatINR(data?.kpis?.totalCommission || 0)}</span>
-              </div>
-            </div>
-
-            {/* Table */}
-            <div className={`flex-1 overflow-auto rounded-xl border ${t('border-white/[0.06]', 'border-gray-200')}`}>
-              <table className="w-full text-left border-collapse text-xs">
-                <thead>
-                  <tr className={`text-[10px] uppercase tracking-wider font-bold sticky top-0 ${t('bg-[#1f0808] text-gray-400', 'bg-gray-100 text-gray-700')}`}>
-                    <th className="p-3">#</th>
-                    <th className="p-3">User ID</th>
-                    <th className="p-3">Name</th>
-                    <th className="p-3">Date</th>
-                    <th className="p-3 text-right">Investment</th>
-                    <th className="p-3 text-right">Rate</th>
-                    <th className="p-3 text-right">Commission</th>
-                    <th className="p-3 text-center">Status</th>
-                    <th className="p-3 text-center">Dossier</th>
-                  </tr>
-                </thead>
-                <tbody className={`divide-y ${t('divide-white/[0.04]', 'divide-gray-200')}`}>
-                  {(!data?.referrals || data.referrals.length === 0) ? (
-                    <tr>
-                      <td colSpan={9} className="py-12 text-center text-gray-500 italic">
-                        No historical referral records found.
-                      </td>
+              {/* Clean Investment Table */}
+              <div className="mt-4 border border-gray-200 dark:border-white/10 rounded-lg overflow-hidden bg-white dark:bg-transparent">
+                <table className="w-full text-left border-collapse text-xs">
+                  <thead>
+                    <tr className={`border-b ${t('bg-white/[0.04] text-gray-200 border-white/10', 'bg-white text-gray-800 border-gray-200')}`}>
+                      <th className="p-3 border-r border-gray-200 dark:border-white/10 text-[11px] font-bold uppercase tracking-wider">
+                        S.NO
+                      </th>
+                      <th className="p-3 border-r border-gray-200 dark:border-white/10 text-[11px] font-bold uppercase tracking-wider">
+                        INVESTMENT AMOUNT (₹)
+                      </th>
+                      <th className="p-3 border-r border-gray-200 dark:border-white/10 text-[11px] font-bold uppercase tracking-wider">
+                        INSVESTMENT DATE
+                      </th>
+                      <th className="p-3 border-r border-gray-200 dark:border-white/10 text-[11px] font-bold uppercase tracking-wider">
+                        MATURITY DATE
+                      </th>
+                      <th className="p-3 text-[11px] font-bold uppercase tracking-wider">
+                        STATUS
+                      </th>
                     </tr>
-                  ) : (
-                    data.referrals.map((r, idx) => (
-                      <tr key={r.id || idx} className={`transition-colors ${t('hover:bg-white/[0.02]', 'hover:bg-gray-50')}`}>
-                        <td className="p-3 text-gray-500 font-mono">{idx + 1}</td>
-                        <td className="p-3 font-mono font-bold text-brand-red">{r.id}</td>
-                        <td className={`p-3 font-semibold ${t('text-white', 'text-gray-900')}`}>{r.refereeName}</td>
-                        <td className="p-3 text-gray-400">{r.date}</td>
-                        <td className={`p-3 text-right font-mono ${t('text-white', 'text-gray-900')}`}>₹{formatINR(r.investmentAmount)}</td>
-                        <td className="p-3 text-right font-mono text-brand-red font-bold">{r.commissionRate}%</td>
-                        <td className="p-3 text-right font-mono text-emerald-400 font-bold">₹{formatINR(r.commissionAmount)}</td>
-                        <td className="p-3 text-center">
-                          <span className={`inline-block px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider ${r.commissionStatus === 'paid'
-                            ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30'
-                            : 'bg-amber-500/15 text-amber-400 border border-amber-500/30'
-                            }`}>
-                            {r.commissionStatus}
-                          </span>
-                        </td>
-                        <td className="p-3 text-center">
-                          <button
-                            onClick={() => {
-                              setSelectedReferral(r)
-                            }}
-                            className="p-1.5 rounded-lg bg-red-500/15 hover:bg-red-500/25 text-brand-red transition-all"
-                            title="View full record"
-                          >
-                            <Eye className="w-3.5 h-3.5" />
-                          </button>
+                  </thead>
+                  <tbody className={`divide-y ${t('divide-white/10', 'divide-gray-200')}`}>
+                    {loadingDetailsInvestments ? (
+                      <tr>
+                        <td colSpan={5} className="p-6 text-center text-gray-400">
+                          <RefreshCw className="w-4 h-4 animate-spin mx-auto mb-1.5 text-[#e01625]" />
+                          Loading investment records...
                         </td>
                       </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
-            </div>
-
-            <div className="mt-4 flex justify-end">
-              <button
-                onClick={() => setHistoryModalOpen(false)}
-                className={`px-5 py-2 rounded-xl text-xs font-semibold transition-all ${t('bg-white/10 hover:bg-white/15 text-white', 'bg-gray-100 hover:bg-gray-200 text-gray-800')}`}
-              >
-                Close History
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ─────────────────────────────────────────────────────────────
-          MODAL: TOTAL REFERRAL DIRECTORY
-          ───────────────────────────────────────────────────────────── */}
-      {totalReferralModalOpen && (
-        <div className="fixed inset-0 z-[10000] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fade-in">
-          <div
-            className={`w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col rounded-2xl border p-6 shadow-2xl relative ${t(
-              'bg-[#140606] border-red-500/30 text-white',
-              'bg-white border-gray-200 text-gray-900'
-            )}`}
-          >
-            <button
-              onClick={() => setTotalReferralModalOpen(false)}
-              className={`absolute top-5 right-5 p-1 rounded-lg transition-colors ${t('text-gray-400 hover:text-white', 'text-gray-500 hover:text-gray-900')}`}
-            >
-              <X className="w-5 h-5" />
-            </button>
-
-            <div className="flex items-center gap-3 mb-4">
-              <div className="w-10 h-10 rounded-xl bg-red-500/15 flex items-center justify-center text-brand-red font-bold text-lg border border-red-500/25">
-                <Users className="w-5 h-5" />
-              </div>
-              <div>
-                <h3 className="text-lg font-bold">Total Referral Directory & Ledger</h3>
-                <p className={`text-xs ${t('text-gray-400', 'text-gray-500')}`}>Complete directory of all registered referrals & commission allocations</p>
-              </div>
-            </div>
-
-            {/* Quick summary badges */}
-            <div className="grid grid-cols-3 gap-3 mb-4">
-              <div className={`p-3 rounded-xl border text-center ${t('bg-white/[0.02] border-white/10', 'bg-gray-50 border-gray-200')}`}>
-                <span className={`text-[10px] uppercase font-bold block ${t('text-gray-400', 'text-gray-500')}`}>Total Referrals</span>
-                <span className={`text-lg font-black ${t('text-white', 'text-gray-900')}`}>{(data?.referrals || []).length || (data?.kpis?.totalReferrals || 0)}</span>
-              </div>
-              <div className={`p-3 rounded-xl border text-center ${t('bg-white/[0.02] border-white/10', 'bg-gray-50 border-gray-200')}`}>
-                <span className={`text-[10px] uppercase font-bold block ${t('text-gray-400', 'text-gray-500')}`}>Total Investment</span>
-                <span className={`text-lg font-black ${t('text-white', 'text-gray-900')}`}>₹{formatINR(data?.kpis?.totalInvestment || 0)}</span>
-              </div>
-              <div className={`p-3 rounded-xl border text-center ${t('bg-white/[0.02] border-white/10', 'bg-gray-50 border-gray-200')}`}>
-                <span className={`text-[10px] uppercase font-bold block ${t('text-gray-400', 'text-gray-500')}`}>Total Cashback</span>
-                <span className="text-lg font-black text-emerald-400">₹{formatINR(data?.kpis?.totalCommission || 0)}</span>
-              </div>
-            </div>
-
-            {/* Table */}
-            <div className={`flex-1 overflow-auto rounded-xl border ${t('border-white/[0.06]', 'border-gray-200')}`}>
-              <table className="w-full text-left border-collapse text-xs">
-                <thead>
-                  <tr className={`text-[10px] uppercase tracking-wider font-bold sticky top-0 ${t('bg-[#1f0808] text-gray-400', 'bg-gray-100 text-gray-700')}`}>
-                    <th className="p-3">#</th>
-                    <th className="p-3">User ID</th>
-                    <th className="p-3">Name</th>
-                    <th className="p-3">Date</th>
-                    <th className="p-3 text-right">Investment</th>
-                    <th className="p-3 text-right">Rate</th>
-                    <th className="p-3 text-right">Commission</th>
-                    <th className="p-3 text-center">Status</th>
-                    <th className="p-3 text-center">Dossier</th>
-                  </tr>
-                </thead>
-                <tbody className={`divide-y ${t('divide-white/[0.04]', 'divide-gray-200')}`}>
-                  {(!data?.referrals || data.referrals.length === 0) ? (
-                    <tr>
-                      <td colSpan={9} className="py-12 text-center text-gray-500 italic">
-                        No referral records found.
-                      </td>
-                    </tr>
-                  ) : (
-                    data.referrals.map((r, idx) => (
-                      <tr key={r.id || idx} className={`transition-colors ${t('hover:bg-white/[0.02]', 'hover:bg-gray-50')}`}>
-                        <td className="p-3 text-gray-500 font-mono">{idx + 1}</td>
-                        <td className="p-3 font-mono font-bold text-brand-red">{r.id}</td>
-                        <td className={`p-3 font-semibold ${t('text-white', 'text-gray-900')}`}>{r.refereeName}</td>
-                        <td className="p-3 text-gray-400">{r.date}</td>
-                        <td className={`p-3 text-right font-mono ${t('text-white', 'text-gray-900')}`}>₹{formatINR(r.investmentAmount)}</td>
-                        <td className="p-3 text-right font-mono text-brand-red font-bold">{r.commissionRate}%</td>
-                        <td className="p-3 text-right font-mono text-emerald-400 font-bold">₹{formatINR(r.commissionAmount)}</td>
-                        <td className="p-3 text-center">
-                          <span className={`inline-block px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider ${r.commissionStatus === 'paid'
-                            ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30'
-                            : 'bg-amber-500/15 text-amber-400 border border-amber-500/30'
-                            }`}>
-                            {r.commissionStatus}
-                          </span>
-                        </td>
-                        <td className="p-3 text-center">
-                          <button
-                            onClick={() => {
-                              setSelectedReferral(r)
-                            }}
-                            className="p-1.5 rounded-lg bg-red-500/15 hover:bg-red-500/25 text-brand-red transition-all"
-                            title="View full record"
-                          >
-                            <Eye className="w-3.5 h-3.5" />
-                          </button>
+                    ) : detailsInvestments.length === 0 ? (
+                      <tr>
+                        <td colSpan={5} className="p-6 text-center text-gray-500 italic">
+                          No investment records found for this referral.
                         </td>
                       </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
-            </div>
-
-            <div className="mt-4 flex justify-end">
-              <button
-                onClick={() => setTotalReferralModalOpen(false)}
-                className={`px-5 py-2 rounded-xl text-xs font-semibold transition-all ${t('bg-white/10 hover:bg-white/15 text-white', 'bg-gray-100 hover:bg-gray-200 text-gray-800')}`}
-              >
-                Close Referrals
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ─────────────────────────────────────────────────────────────
-          MODAL: TOTAL INVESTOR DIRECTORY
-          ───────────────────────────────────────────────────────────── */}
-      {totalInvestorModalOpen && (
-        <div className="fixed inset-0 z-[10000] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fade-in">
-          <div
-            className={`w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col rounded-2xl border p-6 shadow-2xl relative ${t(
-              'bg-[#140606] border-red-500/30 text-white',
-              'bg-white border-gray-200 text-gray-900'
-            )}`}
-          >
-            <button
-              onClick={() => setTotalInvestorModalOpen(false)}
-              className={`absolute top-5 right-5 p-1 rounded-lg transition-colors ${t('text-gray-400 hover:text-white', 'text-gray-500 hover:text-gray-900')}`}
-            >
-              <X className="w-5 h-5" />
-            </button>
-
-            <div className="flex items-center gap-3 mb-4">
-              <div className="w-10 h-10 rounded-xl bg-red-500/15 flex items-center justify-center text-brand-red font-bold text-lg border border-red-500/25">
-                <Users className="w-5 h-5" />
-              </div>
-              <div>
-                <h3 className="text-lg font-bold">Total Investors Directory & Ledger</h3>
-                <p className={`text-xs ${t('text-gray-400', 'text-gray-500')}`}>Complete directory of all registered general investors & their portfolio allocations</p>
-              </div>
-            </div>
-
-            {/* Quick summary badges */}
-            <div className="grid grid-cols-3 gap-3 mb-4">
-              <div className={`p-3 rounded-xl border text-center ${t('bg-white/[0.02] border-white/10', 'bg-gray-50 border-gray-200')}`}>
-                <span className={`text-[10px] uppercase font-bold block ${t('text-gray-400', 'text-gray-500')}`}>Total Investors</span>
-                <span className={`text-lg font-black ${t('text-white', 'text-gray-900')}`}>{giReferrals.length || (data?.kpis?.totalInvestors || 0)}</span>
-              </div>
-              <div className={`p-3 rounded-xl border text-center ${t('bg-white/[0.02] border-white/10', 'bg-gray-50 border-gray-200')}`}>
-                <span className={`text-[10px] uppercase font-bold block ${t('text-gray-400', 'text-gray-500')}`}>Investor Investment</span>
-                <span className={`text-lg font-black ${t('text-white', 'text-gray-900')}`}>₹{formatINR(giReferrals.reduce((sum, r) => sum + (r.investmentAmount || 0), 0))}</span>
-              </div>
-              <div className={`p-3 rounded-xl border text-center ${t('bg-white/[0.02] border-white/10', 'bg-gray-50 border-gray-200')}`}>
-                <span className={`text-[10px] uppercase font-bold block ${t('text-gray-400', 'text-gray-500')}`}>Total Commission</span>
-                <span className="text-lg font-black text-emerald-400">₹{formatINR(giReferrals.reduce((sum, r) => sum + (r.commissionAmount || 0), 0))}</span>
-              </div>
-            </div>
-
-            {/* Table */}
-            <div className={`flex-1 overflow-auto rounded-xl border ${t('border-white/[0.06]', 'border-gray-200')}`}>
-              <table className="w-full text-left border-collapse text-xs">
-                <thead>
-                  <tr className={`text-[10px] uppercase tracking-wider font-bold sticky top-0 ${t('bg-[#1f0808] text-gray-400', 'bg-gray-100 text-gray-700')}`}>
-                    <th className="p-3">#</th>
-                    <th className="p-3">User ID</th>
-                    <th className="p-3">Name</th>
-                    <th className="p-3">Date</th>
-                    <th className="p-3 text-right">Investment</th>
-                    <th className="p-3 text-right">Rate</th>
-                    <th className="p-3 text-right">Commission</th>
-                    <th className="p-3 text-center">Status</th>
-                    <th className="p-3 text-center">Dossier</th>
-                  </tr>
-                </thead>
-                <tbody className={`divide-y ${t('divide-white/[0.04]', 'divide-gray-200')}`}>
-                  {giReferrals.length === 0 ? (
-                    <tr>
-                      <td colSpan={9} className="py-12 text-center text-gray-500 italic">
-                        No investor records found.
-                      </td>
-                    </tr>
-                  ) : (
-                    giReferrals.map((r, idx) => (
-                      <tr key={r.id || idx} className={`transition-colors ${t('hover:bg-white/[0.02]', 'hover:bg-gray-50')}`}>
-                        <td className="p-3 text-gray-500 font-mono">{idx + 1}</td>
-                        <td className="p-3 font-mono font-bold text-brand-red">{r.id}</td>
-                        <td className={`p-3 font-semibold ${t('text-white', 'text-gray-900')}`}>{r.refereeName}</td>
-                        <td className="p-3 text-gray-400">{r.date}</td>
-                        <td className={`p-3 text-right font-mono ${t('text-white', 'text-gray-900')}`}>₹{formatINR(r.investmentAmount)}</td>
-                        <td className="p-3 text-right font-mono text-brand-red font-bold">{r.commissionRate}%</td>
-                        <td className="p-3 text-right font-mono text-emerald-400 font-bold">₹{formatINR(r.commissionAmount)}</td>
-                        <td className="p-3 text-center">
-                          <span className={`inline-block px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider ${r.commissionStatus === 'paid'
-                            ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30'
-                            : 'bg-amber-500/15 text-amber-400 border border-amber-500/30'
-                            }`}>
-                            {r.commissionStatus}
-                          </span>
+                    ) : (
+                      detailsInvestments.map((inv, idx) => (
+                        <tr key={inv.id || idx} className={t('hover:bg-white/[0.02]', 'hover:bg-gray-50/60')}>
+                          <td className={`p-3 border-r ${t('border-white/10 text-gray-300', 'border-gray-200 text-gray-700')} font-medium`}>
+                            {inv.sno || idx + 1}
+                          </td>
+                          <td className={`p-3 border-r ${t('border-white/10 text-white', 'border-gray-200 text-gray-900')} font-medium`}>
+                            {new Intl.NumberFormat('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(inv.amount)}
+                          </td>
+                          <td className={`p-3 border-r ${t('border-white/10 text-gray-300', 'border-gray-200 text-gray-700')}`}>
+                            {formatDateHyphen(inv.investmentDate)}
+                          </td>
+                          <td className={`p-3 border-r ${t('border-white/10 text-gray-300', 'border-gray-200 text-gray-700')}`}>
+                            {formatDateHyphen(inv.maturityDate)}
+                          </td>
+                          <td className="p-3 text-gray-700 dark:text-gray-300 font-medium">
+                            {inv.status}
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                  {detailsInvestments.length > 0 && (
+                    <tfoot>
+                      <tr className={`border-t font-bold ${t('bg-white/[0.02] border-white/10', 'bg-white border-gray-200')}`}>
+                        <td className={`p-3 border-r ${t('border-white/10 text-white', 'border-gray-200 text-gray-900')}`}>
+                          Total
                         </td>
-                        <td className="p-3 text-center">
-                          <button
-                            onClick={() => {
-                              setSelectedReferral(r)
-                            }}
-                            className="p-1.5 rounded-lg bg-red-500/15 hover:bg-red-500/25 text-brand-red transition-all"
-                            title="View full record"
-                          >
-                            <Eye className="w-3.5 h-3.5" />
-                          </button>
+                        <td className={`p-3 border-r ${t('border-white/10 text-white', 'border-gray-200 text-gray-900')} font-bold`}>
+                          ₹ {new Intl.NumberFormat('en-IN').format(totalInvestmentAmount)}
                         </td>
+                        <td className={`p-3 border-r ${t('border-white/10', 'border-gray-200')}`}></td>
+                        <td className={`p-3 border-r ${t('border-white/10', 'border-gray-200')}`}></td>
+                        <td className="p-3"></td>
                       </tr>
-                    ))
+                    </tfoot>
                   )}
-                </tbody>
-              </table>
-            </div>
-
-            <div className="mt-4 flex justify-end">
-              <button
-                onClick={() => setTotalInvestorModalOpen(false)}
-                className={`px-5 py-2 rounded-xl text-xs font-semibold transition-all ${t('bg-white/10 hover:bg-white/15 text-white', 'bg-gray-100 hover:bg-gray-200 text-gray-800')}`}
-              >
-                Close Investors
-              </button>
+                </table>
+              </div>
             </div>
           </div>
         </div>
@@ -2858,7 +2682,7 @@ export default function ReferralDashboard({
                         <td className="p-3 text-center">
                           <button
                             onClick={() => {
-                              setSelectedReferral(r)
+                              handleOpenReferralDetails(r)
                             }}
                             className="p-1.5 rounded-lg bg-red-500/15 hover:bg-red-500/25 text-brand-red transition-all"
                             title="View full record"

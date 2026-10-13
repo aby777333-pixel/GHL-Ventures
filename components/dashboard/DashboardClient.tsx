@@ -47,6 +47,8 @@ import {
   useKYCIdentityDetails,
   useKYCBankDetails,
   useNominees,
+  useKYCOverallStatus,
+  useClientSubscription,
   useDocuments,
   useAdminNews,
   useAssignedRM,
@@ -464,9 +466,11 @@ export default function DashboardClient() {
   // actually submitted (PAN, DOB, address, bank, nominees), instead of falling
   // back to incomplete values from the auth metadata.
   const { data: kycBasic } = useKYCBasicDetails(clientId ?? undefined)
-  const { data: kycIdentity } = useKYCIdentityDetails(clientId ?? undefined)
+  const { data: kycIdentity, loading: kycIdentityLoading } = useKYCIdentityDetails(clientId ?? undefined)
   const { data: kycBank } = useKYCBankDetails(clientId ?? undefined)
   const { data: kycNominees } = useNominees(clientId ?? undefined)
+  const { data: kycOverall, loading: kycOverallLoading } = useKYCOverallStatus(clientId ?? undefined)
+  const { data: clientSub, loading: subLoading } = useClientSubscription(clientId ?? undefined)
   const { data: documents, loading: docsLoading, error: docsError, refetch: refetchDocs } = useDocuments(clientId ?? undefined)
   const { data: adminNews } = useAdminNews()
   const { data: assignedRM } = useAssignedRM(clientId ?? undefined)
@@ -2000,10 +2004,64 @@ export default function DashboardClient() {
   // Matches Reference Dashboard structure, hierarchy and sections
   // ═══════════════════════════════════════════════════════════
   const renderDashboardHome = () => {
-    const displayFirstName = user?.name ? user.name.trim().split(' ')[0] : 'Investor'
-    const displayEntityName = (user as any)?.company_name || (user as any)?.entity_name || user?.name || 'GHL Investor'
-    const isKycApproved = userKycStatus === 'approved' || userKycStatus === 'verified'
-    const isKycRejected = userKycStatus === 'rejected'
+    // ─── 1. Card 1 Data: Authenticated User & Subscription ───
+    const displayFirstName = user?.name ? user.name.trim().split(' ')[0] : (authLoading ? '...' : 'Investor')
+    // Display authenticated user's actual name using profile/user/kyc data; no fallback mock strings
+    const displayEntityName = (user as any)?.company || (user as any)?.company_name || (kycBasic as any)?.investor_name || user?.name || (user?.email ? user.email.split('@')[0] : '')
+
+    // Subscription / Membership state
+    const isMembershipLoading = authLoading || (!!clientId && subLoading)
+    const isConfirmedPremium = !isMembershipLoading && clientSub?.is_premium === true
+    const membershipLabel = isMembershipLoading
+      ? 'Checking...'
+      : (clientSub?.membership_label || 'Standard Member')
+
+    // ─── 2. Card 2 Data: KYC Status ───
+    // Real persisted status from user.kyc_status or kycOverall.status
+    const rawKycStatus = (user?.kyc_status || kycOverall?.status || '').toLowerCase().trim()
+    const isKycLoading = authLoading || (!!clientId && kycOverallLoading)
+
+    const isKycApproved = !isKycLoading && (rawKycStatus === 'approved' || rawKycStatus === 'verified')
+    const isKycRejected = !isKycLoading && rawKycStatus === 'rejected'
+    const isKycInReview = !isKycLoading && (rawKycStatus === 'submitted' || rawKycStatus === 'in_review' || rawKycStatus === 'under_review')
+    const isKycPending = !isKycLoading && rawKycStatus === 'pending'
+    const isKycUnknown = !isKycLoading && !isKycApproved && !isKycRejected && !isKycInReview && !isKycPending
+
+    // ─── 3. Card 3 Data: PAN & Aadhaar ───
+    const isIdentityLoading = authLoading || (!!clientId && kycIdentityLoading)
+    const panVerified = kycIdentity?.pan_verified === true
+    const aadharVerified = kycIdentity?.aadhar_verified === true
+    const panAadhaarLinked = kycIdentity?.pan_aadhaar_linked
+
+    // Authoritative document status for PAN
+    const panDocStatus: 'Verified' | 'In Review' | 'Doc Pending' | 'Rejected' | 'Not Provided' = (() => {
+      if (panVerified) return 'Verified'
+      if (kycIdentity?.status === 'approved' && kycIdentity?.pan_number && kycIdentity?.pan_doc_url) return 'Verified'
+      if (kycIdentity?.status === 'rejected') return 'Rejected'
+      if (kycIdentity?.pan_doc_url) return 'In Review'
+      if (kycIdentity?.pan_number) return 'Doc Pending'
+      return 'Not Provided'
+    })()
+
+    // Authoritative document status for Aadhaar
+    const aadharDocStatus: 'Verified' | 'In Review' | 'Doc Pending' | 'Rejected' | 'Not Provided' = (() => {
+      if (aadharVerified) return 'Verified'
+      if (kycIdentity?.status === 'approved' && kycIdentity?.aadhar_number && kycIdentity?.aadhar_doc_url) return 'Verified'
+      if (kycIdentity?.status === 'rejected') return 'Rejected'
+      if (kycIdentity?.aadhar_doc_url) return 'In Review'
+      if (kycIdentity?.aadhar_number) return 'Doc Pending'
+      return 'Not Provided'
+    })()
+
+    // Summary heading for Card 3
+    const documentStatusHeading = (() => {
+      if (isIdentityLoading) return 'Checking Documents...'
+      if (panDocStatus === 'Verified' && aadharDocStatus === 'Verified') return 'PAN & Aadhaar Verified'
+      if (panDocStatus === 'In Review' && aadharDocStatus === 'In Review') return 'Documents In Review'
+      if (panDocStatus === 'Not Provided' && aadharDocStatus === 'Not Provided') return 'Documents Not Provided'
+      if (panDocStatus === 'Rejected' && aadharDocStatus === 'Rejected') return 'Documents Rejected'
+      return `PAN: ${panDocStatus} · Aadhaar: ${aadharDocStatus}`
+    })()
 
     // Real portfolio value matching Indian numbering standard
     const activePortfolioVal = portfolioValue > 0 ? portfolioValue : (totalInvested > 0 ? totalInvested : 0)
@@ -2100,12 +2158,33 @@ export default function DashboardClient() {
                   WELCOME BACK
                 </span>
                 <h3 className={`text-base font-bold truncate leading-tight mb-2 ${t('text-white', 'text-gray-900')}`}>
-                  {displayEntityName}
+                  {authLoading ? (
+                    <span className="opacity-50">Loading...</span>
+                  ) : (
+                    displayEntityName || 'Investor'
+                  )}
                 </h3>
-                <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 shadow-[0_0_6px_rgba(52,211,153,0.8)]" />
-                  Premium Member
-                </span>
+                {isMembershipLoading ? (
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-gray-500/15 text-gray-400 border border-gray-500/30 animate-pulse">
+                    <span className="w-1.5 h-1.5 rounded-full bg-gray-400" />
+                    Checking...
+                  </span>
+                ) : isConfirmedPremium ? (
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 shadow-[0_0_6px_rgba(52,211,153,0.8)]" />
+                    Premium Member
+                  </span>
+                ) : clientSub?.membership_tier === 'inactive' ? (
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-gray-500/15 text-gray-400 border border-gray-500/30">
+                    <span className="w-1.5 h-1.5 rounded-full bg-gray-400" />
+                    Inactive Member
+                  </span>
+                ) : (
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-blue-500/15 text-blue-400 border border-blue-500/30">
+                    <span className="w-1.5 h-1.5 rounded-full bg-blue-400" />
+                    {membershipLabel}
+                  </span>
+                )}
               </div>
             </div>
           </div>
@@ -2132,22 +2211,49 @@ export default function DashboardClient() {
                   KYC STATUS
                 </span>
                 <h3 className={`text-base font-bold truncate leading-tight mb-2 ${t('text-white', 'text-gray-900')}`}>
-                  {isKycApproved ? 'Verified' : isKycRejected ? 'Action Required' : 'In Review'}
+                  {isKycLoading
+                    ? 'Checking...'
+                    : isKycApproved
+                      ? 'Verified'
+                      : isKycRejected
+                        ? 'Action Required'
+                        : isKycInReview
+                          ? 'In Review'
+                          : isKycPending
+                            ? 'Pending'
+                            : 'Status Unavailable'}
                 </h3>
-                <span
-                  className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold border ${isKycApproved
-                    ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30'
-                    : isKycRejected
-                      ? 'bg-red-500/15 text-red-400 border-red-500/30'
-                      : 'bg-amber-500/15 text-amber-400 border-amber-500/30'
-                    }`}
-                >
-                  <span
-                    className={`w-1.5 h-1.5 rounded-full ${isKycApproved ? 'bg-emerald-400' : isKycRejected ? 'bg-red-400' : 'bg-amber-400'
-                      }`}
-                  />
-                  {isKycApproved ? 'Approved' : isKycRejected ? 'Rejected' : 'Pending'}
-                </span>
+                {isKycLoading ? (
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-gray-500/15 text-gray-400 border border-gray-500/30 animate-pulse">
+                    <span className="w-1.5 h-1.5 rounded-full bg-gray-400" />
+                    Loading
+                  </span>
+                ) : isKycApproved ? (
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 shadow-[0_0_6px_rgba(52,211,153,0.8)]" />
+                    Approved
+                  </span>
+                ) : isKycRejected ? (
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-red-500/15 text-red-400 border border-red-500/30">
+                    <span className="w-1.5 h-1.5 rounded-full bg-red-400" />
+                    Rejected
+                  </span>
+                ) : isKycInReview ? (
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-amber-500/15 text-amber-400 border border-amber-500/30">
+                    <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
+                    In Review
+                  </span>
+                ) : isKycPending ? (
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-amber-500/15 text-amber-400 border border-amber-500/30">
+                    <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
+                    Pending
+                  </span>
+                ) : (
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-gray-500/15 text-gray-400 border border-gray-500/30">
+                    <span className="w-1.5 h-1.5 rounded-full bg-gray-400" />
+                    Unavailable
+                  </span>
+                )}
               </div>
             </div>
           </div>
@@ -2173,13 +2279,38 @@ export default function DashboardClient() {
                 <span className={`text-[10px] font-bold uppercase tracking-wider block mb-1 ${t('text-gray-400', 'text-gray-600')}`}>
                   PAN & AADHAAR
                 </span>
-                <h3 className={`text-base font-bold truncate leading-tight mb-2 ${t('text-white', 'text-gray-900')}`}>
-                  Linked Status
+                <h3
+                  className={`text-base font-bold truncate leading-tight mb-2 ${t('text-white', 'text-gray-900')}`}
+                  title={documentStatusHeading}
+                >
+                  {documentStatusHeading}
                 </h3>
-                <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 shadow-[0_0_6px_rgba(52,211,153,0.8)]" />
-                  🇮🇳 Linked
-                </span>
+                {isIdentityLoading ? (
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-gray-500/15 text-gray-400 border border-gray-500/30 animate-pulse">
+                    <span className="w-1.5 h-1.5 rounded-full bg-gray-400" />
+                    Checking...
+                  </span>
+                ) : panAadhaarLinked === true ? (
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 shadow-[0_0_6px_rgba(52,211,153,0.8)]" />
+                    Linked
+                  </span>
+                ) : panAadhaarLinked === false ? (
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-red-500/15 text-red-400 border border-red-500/30">
+                    <span className="w-1.5 h-1.5 rounded-full bg-red-400" />
+                    Not Linked
+                  </span>
+                ) : panDocStatus === 'Not Provided' && aadharDocStatus === 'Not Provided' ? (
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-gray-500/15 text-gray-400 border border-gray-500/30">
+                    <span className="w-1.5 h-1.5 rounded-full bg-gray-400" />
+                    Not Provided
+                  </span>
+                ) : (
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-amber-500/15 text-amber-400 border border-amber-500/30">
+                    <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
+                    Linkage Unconfirmed
+                  </span>
+                )}
               </div>
             </div>
           </div>

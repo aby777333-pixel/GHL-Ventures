@@ -125,74 +125,87 @@ export async function GET(request: NextRequest) {
       console.warn('[api/dashboard/referral] referrer_summary query:', err)
     }
 
-    // 2. Fetch Detailed Referrals List
+    // 2. Fetch Detailed Referrals List strictly for this partner's unique email
     let rawReferrals: any[] = []
-    try {
-      const query = sbClient.from('referrals').select('*')
-      if (partnerEmail) {
-        query.or(`referrer_email.eq.${partnerEmail},referrer_name.eq.${partnerName}`)
+    if (partnerEmail) {
+      try {
+        const query = sbClient
+          .from('referrals')
+          .select('*')
+          .eq('referrer_email', partnerEmail)
+
+        const { data: refs } = await query.order('created_at', { ascending: false }).limit(100)
+        if (refs && refs.length > 0) {
+          // Filter out self-referrals
+          rawReferrals = refs.filter((r: any) => {
+            const refEmail = (r.referee_email || '').toLowerCase().trim()
+            return refEmail !== partnerEmail.toLowerCase().trim()
+          })
+        }
+      } catch (err) {
+        console.warn('[api/dashboard/referral] referrals select:', err)
       }
-      const { data: refs } = await query.order('created_at', { ascending: false }).limit(100)
-      if (refs && refs.length > 0) {
-        rawReferrals = refs
-      }
-    } catch (err) {
-      console.warn('[api/dashboard/referral] referrals select:', err)
     }
 
-    // 3. Fallback/Supplement from clients table where referred_by = effectivePartnerId
-    try {
-      const { data: referredClients } = await sbClient
-        .from('clients')
-        .select('id, full_name, email, phone, city, total_invested, kyc_status, joined_at, created_at')
-        .or(`referred_by.eq.${effectivePartnerId},referred_by.ilike.%${effectivePartnerId}%`)
-        .order('created_at', { ascending: false })
-        .limit(50)
+    // 3. Fallback/Supplement from clients table ONLY when partner has an authentic partner ID (not generic placeholder)
+    const isRealPartnerId = !!effectivePartnerId &&
+      effectivePartnerId !== 'GHL-PARTNER' &&
+      effectivePartnerId !== 'MCP-PARTNER' &&
+      effectivePartnerId !== 'CPL-PARTNER'
 
-      if (referredClients && referredClients.length > 0) {
-        // Map referred clients into referrals structure if not already present
-        const existingEmails = new Set(rawReferrals.map(r => (r.referee_email || '').toLowerCase()))
-        for (const rc of referredClients) {
-          if (rc.email && !existingEmails.has(rc.email.toLowerCase())) {
-            const invested = Number(rc.total_invested) || 0
-            const rate = partnerRole === 'MCP' ? 4.5 : partnerRole === 'CPL' ? 3.5 : (invested > 50000000 ? 4.0 : 3.0)
-            const commission = (invested * rate) / 100
-            rawReferrals.push({
-              id: rc.id,
-              referrer_name: partnerName,
-              referrer_email: partnerEmail,
-              referee_name: rc.full_name || 'Referred Client',
-              referee_email: rc.email,
-              referee_phone: rc.phone || '—',
-              referee_city: rc.city || 'India',
-              relationship: 'general_investor',
-              status: invested > 0 ? 'converted' : 'qualified',
-              investment_amount: invested,
-              commission_rate: rate,
-              commission_amount: commission,
-              commission_status: invested > 0 ? 'accrued' : 'pending',
-              created_at: rc.joined_at || rc.created_at || new Date().toISOString(),
-            })
-            existingEmails.add(rc.email.toLowerCase())
+    if (isRealPartnerId) {
+      try {
+        const { data: referredClients } = await sbClient
+          .from('clients')
+          .select('id, client_code, ghl_id, full_name, email, phone, city, total_invested, kyc_status, joined_at, created_at')
+          .or(`referred_by.eq.${effectivePartnerId},referred_by.ilike.%${effectivePartnerId}%`)
+          .order('created_at', { ascending: false })
+          .limit(100)
+
+        if (referredClients && referredClients.length > 0) {
+          // Map referred clients into referrals structure if not already present
+          const existingEmails = new Set(rawReferrals.map(r => (r.referee_email || '').toLowerCase()))
+          for (const rc of referredClients) {
+            // NEVER include the partner themselves
+            if (clientRecord?.id && rc.id === clientRecord.id) continue
+            if (partnerEmail && rc.email && rc.email.toLowerCase().trim() === partnerEmail.toLowerCase().trim()) continue
+
+            if (rc.email && !existingEmails.has(rc.email.toLowerCase())) {
+              const invested = Number(rc.total_invested) || 0
+              const rate = partnerRole === 'MCP' ? 4.5 : partnerRole === 'CPL' ? 3.5 : (invested > 50000000 ? 4.0 : 3.0)
+              const commission = (invested * rate) / 100
+              rawReferrals.push({
+                id: rc.client_code || rc.ghl_id || rc.id,
+                client_id: rc.id,
+                user_id: rc.client_code || rc.ghl_id,
+                referrer_name: partnerName,
+                referrer_email: partnerEmail,
+                referee_name: rc.full_name || 'Referred Client',
+                referee_email: rc.email,
+                referee_phone: rc.phone || '—',
+                referee_city: rc.city || 'India',
+                relationship: 'general_investor',
+                status: invested > 0 ? 'converted' : 'qualified',
+                investment_amount: invested,
+                commission_rate: rate,
+                commission_amount: commission,
+                commission_status: invested > 0 ? 'accrued' : 'pending',
+                created_at: rc.joined_at || rc.created_at || new Date().toISOString(),
+              })
+              existingEmails.add(rc.email.toLowerCase())
+            }
           }
         }
-      }
-    } catch { /* non-blocking */ }
+      } catch { /* non-blocking */ }
+    }
 
-
-
-    // Compute 5 KPIs
-    const totalReferrals = Math.max(summary.total_referrals, rawReferrals.length)
-    const convertedReferrals = Math.max(
-      summary.converted_count,
-      rawReferrals.filter(r => r.status === 'converted' || Number(r.investment_amount) > 0).length
-    )
-
+    // Compute 5 KPIs strictly from authentic data
+    const totalReferrals = rawReferrals.length
+    const convertedReferrals = rawReferrals.filter(r => r.status === 'converted' || Number(r.investment_amount) > 0).length
     const sumInvested = rawReferrals.reduce((acc, r) => acc + (Number(r.investment_amount) || 0), 0)
-    const totalInvestment = Math.max(summary.total_invested, sumInvested)
-
+    const totalInvestment = sumInvested
     const sumCommission = rawReferrals.reduce((acc, r) => acc + (Number(r.commission_amount) || 0), 0)
-    const totalCommission = Math.max(summary.total_commission, sumCommission)
+    const totalCommission = sumCommission
     const paidCommission = summary.paid_commission
     const pendingCommission = Math.max(0, totalCommission - paidCommission)
 
@@ -303,23 +316,136 @@ export async function GET(request: NextRequest) {
     }
 
     // 8. Format referrals for frontend table
-    const formattedReferrals = rawReferrals.map((r, i) => ({
-      id: r.id || `ref-${i}`,
-      refereeName: r.referee_name || 'Referral Contact',
-      refereeEmail: r.referee_email || '—',
-      refereePhone: r.referee_phone || '—',
-      refereeCity: r.referee_city || '—',
-      memberType: r.relationship === 'channel_partner' ? 'Channel Partner' : 'General Investor',
-      kycStatus: r.status === 'converted' ? 'Verified' : r.status === 'qualified' ? 'Verified' : 'Pending',
-      date: r.created_at ? new Date(r.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : '—',
-      createdAt: r.created_at,
-      investmentAmount: Number(r.investment_amount) || 0,
-      commissionRate: Number(r.commission_rate) || (partnerRole === 'MCP' ? 4.5 : partnerRole === 'CPL' ? 3.5 : 3.0),
-      commissionAmount: Number(r.commission_amount) || 0,
-      commissionStatus: r.commission_status || (Number(r.investment_amount) > 0 ? 'accrued' : 'pending'),
-      status: r.status || 'new',
-      notes: r.message || r.admin_notes || '',
-    }))
+    const formattedReferrals = rawReferrals.map((r, i) => {
+      const uId = r.client_code || r.ghl_id || r.user_id || (typeof r.id === 'string' && r.id.startsWith('GHL') ? r.id : (r.client_id ? `GHL${String(r.client_id).replace(/\D/g, '').slice(0, 6)}` : `GHL${246000 + i}`))
+      const dStr = r.created_at || r.joined_at
+      const dateFormatted = dStr ? new Date(dStr).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'
+      const hyphenDate = dStr ? new Date(dStr).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' }).replace(/\//g, '-') : '—'
+
+      return {
+        id: r.id || `ref-${i}`,
+        userId: uId,
+        clientId: r.client_id || r.id,
+        refereeName: r.referee_name || 'Referral Contact',
+        refereeEmail: r.referee_email || '—',
+        refereePhone: r.referee_phone || '—',
+        refereeCity: r.referee_city || '—',
+        memberType: r.relationship === 'channel_partner' ? 'Channel Partner' : 'General Investor',
+        kycStatus: r.status === 'converted' ? 'Verified' : r.status === 'qualified' ? 'Verified' : 'Pending',
+        date: dateFormatted,
+        joinedOnDate: hyphenDate,
+        createdAt: r.created_at || new Date().toISOString(),
+        updatedAt: r.updated_at || r.created_at || new Date().toISOString(),
+        investmentAmount: Number(r.investment_amount) || 0,
+        commissionRate: Number(r.commission_rate) || (partnerRole === 'MCP' ? 4.5 : partnerRole === 'CPL' ? 3.5 : 3.0),
+        commissionAmount: Number(r.commission_amount) || 0,
+        commissionStatus: r.commission_status || (Number(r.investment_amount) > 0 ? 'accrued' : 'pending'),
+        status: r.status || 'new',
+        notes: r.message || r.admin_notes || '',
+        investments: Array.isArray(r.investments) ? r.investments : [],
+      }
+    })
+
+    // 9. Fetch Network Investments (For Total Investors Page)
+    const networkInvestments: any[] = []
+    try {
+      const clientIds = rawReferrals.map((r: any) => r.client_id || r.id).filter(Boolean)
+      if (clientIds.length > 0) {
+        const { data: apps } = await sbClient
+          .from('investment_applications')
+          .select('id, client_id, user_id, fund_vehicle, investment_amount, investment_date, maturity_date, tenure_preference, status, created_at, updated_at')
+          .in('client_id', clientIds)
+          .order('investment_date', { ascending: false })
+
+        const { data: payouts } = await sbClient
+          .from('monthly_payouts')
+          .select('investment_id, client_id, payment_status, payment_date')
+          .in('client_id', clientIds)
+
+        const payoutMap = new Map<string, any>()
+        if (payouts) {
+          for (const p of payouts) {
+            if (p.investment_id && (p.payment_status === 'paid' || p.payment_date)) {
+              payoutMap.set(p.investment_id, p)
+            }
+          }
+        }
+
+        if (apps && apps.length > 0) {
+          apps.forEach((app: any, idx: number) => {
+            const client = rawReferrals.find((r: any) => r.client_id === app.client_id || r.id === app.client_id)
+            const uId = client?.user_id || client?.client_code || client?.ghl_id || (app.user_id ? `GHL${String(app.user_id).replace(/\D/g, '').slice(0, 6)}` : `GHL${246000 + idx}`)
+            const name = client?.referee_name || client?.full_name || 'Network Investor'
+            const investDateRaw = app.investment_date || app.created_at || new Date().toISOString()
+            const investDateFormatted = new Date(investDateRaw).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
+            const amount = Number(app.investment_amount) || 0
+
+            let maturityDateRaw = app.maturity_date || ''
+            if (!maturityDateRaw) {
+              const tenureYears = Number(String(app.tenure_preference || '').replace(/[^0-9]/g, '')) || 3
+              const mat = new Date(investDateRaw)
+              mat.setFullYear(mat.getFullYear() + tenureYears)
+              maturityDateRaw = mat.toISOString()
+            }
+            const maturityDateFormatted = maturityDateRaw ? new Date(maturityDateRaw).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'
+
+            const po = payoutMap.get(app.id)
+            const isPaid = po || app.status === 'completed' || app.status === 'paid'
+            const maturityStatus: 'Paid' | 'Unpaid' = isPaid ? 'Paid' : 'Unpaid'
+            const returnDate = po?.payment_date
+              ? new Date(po.payment_date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
+              : '—'
+
+            networkInvestments.push({
+              id: app.id,
+              sno: idx + 1,
+              userId: uId,
+              name,
+              planName: app.fund_vehicle || 'Alternate route to Invest in AIF via Debenture',
+              investDate: investDateFormatted,
+              investDateRaw,
+              investAmount: amount,
+              maturityDate: maturityDateFormatted,
+              maturityDateRaw,
+              maturityStatus,
+              returnDate,
+            })
+          })
+        }
+      }
+    } catch (netErr) {
+      console.warn('[api/dashboard/referral] networkInvestments error:', netErr)
+    }
+
+    // Supplement with rawReferrals who have investment_amount > 0 without separate applications
+    const accountedIds = new Set(networkInvestments.map(ni => ni.id))
+    rawReferrals.forEach((r, idx) => {
+      const inv = Number(r.investment_amount) || 0
+      if (inv > 0 && !accountedIds.has(r.id)) {
+        const uId = r.client_code || r.ghl_id || r.user_id || (typeof r.id === 'string' && r.id.startsWith('GHL') ? r.id : `GHL${246000 + idx}`)
+        const dRaw = r.created_at || r.joined_at || new Date().toISOString()
+        const investDateFormatted = new Date(dRaw).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
+        const mat = new Date(dRaw)
+        mat.setFullYear(mat.getFullYear() + 3)
+        const maturityDateFormatted = mat.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
+        const isPaid = r.commission_status === 'paid' || r.status === 'converted'
+
+        networkInvestments.push({
+          id: `ref-inv-${r.id || idx}`,
+          sno: networkInvestments.length + 1,
+          userId: uId,
+          name: r.referee_name || 'Network Investor',
+          planName: r.notes_plan || (inv >= 10000000 ? 'Direct AIF Route' : 'Alternate route to Invest in AIF via Debenture'),
+          investDate: investDateFormatted,
+          investDateRaw: dRaw,
+          investAmount: inv,
+          maturityDate: maturityDateFormatted,
+          maturityDateRaw: mat.toISOString(),
+          maturityStatus: isPaid ? 'Paid' : 'Unpaid',
+          returnDate: isPaid && r.updated_at ? new Date(r.updated_at).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : '—',
+        })
+      }
+    })
 
     const origin = request.nextUrl?.origin || 'https://ghlindiaventures.com'
 
@@ -347,6 +473,7 @@ export async function GET(request: NextRequest) {
       monthlyGoal,
       chartData,
       referrals: formattedReferrals,
+      networkInvestments,
       subChannelPartners,
       slabs: slabs[partnerRole] || slabs.GI,
       availableSlabs: slabs,

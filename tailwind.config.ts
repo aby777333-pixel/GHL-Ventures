@@ -31,6 +31,7 @@ const config: Config = {
       },
       fontFamily: {
         sans: [
+          'Plus Jakarta Sans',
           'TT Norms Pro',
           'Helvetica Neue',
           'Helvetica',

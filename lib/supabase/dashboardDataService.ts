@@ -1390,3 +1390,97 @@ export async function fetchActiveFundPlans(): Promise<ActiveFundPlan[]> {
     return []
   }
 }
+
+// ── Client Subscription / Membership ────────────────────────
+export interface ClientSubscriptionInfo {
+  plan_name: string | null
+  status: string | null
+  is_premium: boolean
+  membership_tier: 'premium' | 'standard' | 'inactive' | 'none'
+  membership_label: string
+}
+
+export async function fetchClientSubscription(clientId?: string): Promise<ClientSubscriptionInfo | null> {
+  if (!isSupabaseConfigured() || !clientId) return null
+  try {
+    // 1. Check subscriptions table for active subscription record
+    const { data: subData, error: subError } = await sb
+      .from('subscriptions')
+      .select('plan_name, status, amount, start_date, end_date')
+      .eq('client_id', clientId)
+      .eq('status', 'active')
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle()
+
+    if (subError) {
+      console.warn('[dashboard] fetchClientSubscription (subscriptions):', subError.message)
+    }
+
+    // 2. Also check clients table tags & active state
+    const { data: clientData, error: clientError } = await sb
+      .from('clients')
+      .select('tags, is_active')
+      .eq('id', clientId)
+      .maybeSingle()
+
+    if (clientError) {
+      console.warn('[dashboard] fetchClientSubscription (clients):', clientError.message)
+    }
+
+    if (!subData && !clientData) {
+      return null
+    }
+
+    const tags: string[] = Array.isArray(clientData?.tags)
+      ? clientData.tags.map((t: string) => String(t).toLowerCase())
+      : []
+    const isClientActive = clientData?.is_active !== false
+
+    const hasPremiumTag = tags.some((t: string) => t.includes('premium') || t.includes('vip') || t.includes('hnw'))
+    const planName = subData?.plan_name ? String(subData.plan_name).trim() : null
+    const subStatus = subData?.status ? String(subData.status).trim() : null
+    const isPremiumPlan = planName ? planName.toLowerCase().includes('premium') : false
+
+    if (isPremiumPlan || hasPremiumTag) {
+      return {
+        plan_name: planName || 'Premium',
+        status: subStatus || (isClientActive ? 'active' : 'inactive'),
+        is_premium: true,
+        membership_tier: 'premium',
+        membership_label: 'Premium Member',
+      }
+    }
+
+    if (planName) {
+      return {
+        plan_name: planName,
+        status: subStatus || 'active',
+        is_premium: false,
+        membership_tier: 'standard',
+        membership_label: `${planName} Member`,
+      }
+    }
+
+    if (!isClientActive) {
+      return {
+        plan_name: null,
+        status: 'inactive',
+        is_premium: false,
+        membership_tier: 'inactive',
+        membership_label: 'Inactive Member',
+      }
+    }
+
+    return {
+      plan_name: null,
+      status: 'active',
+      is_premium: false,
+      membership_tier: 'standard',
+      membership_label: 'Standard Member',
+    }
+  } catch (err: any) {
+    console.warn('[dashboard] fetchClientSubscription exception:', err?.message || err)
+    return null
+  }
+}
