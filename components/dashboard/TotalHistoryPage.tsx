@@ -286,27 +286,25 @@ export default function TotalHistoryPage({
         <div className="flex items-center gap-2">
           <button
             onClick={() => setHistoryCohort('general_investor')}
-            className={`px-5 py-2 rounded-full text-xs font-bold transition-all shadow-sm ${
-              historyCohort === 'general_investor'
-                ? 'bg-[#C8102E] text-white shadow-red-500/20'
-                : t(
-                    'bg-white/5 text-gray-300 border border-white/15 hover:bg-white/10',
-                    'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
-                  )
-            }`}
+            className={`px-5 py-2 rounded-full text-xs font-bold transition-all shadow-sm ${historyCohort === 'general_investor'
+              ? 'bg-[#C8102E] text-white shadow-red-500/20'
+              : t(
+                'bg-white/5 text-gray-300 border border-white/15 hover:bg-white/10',
+                'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
+              )
+              }`}
           >
             General Investor
           </button>
           <button
             onClick={() => setHistoryCohort('channel_partner')}
-            className={`px-5 py-2 rounded-full text-xs font-bold transition-all shadow-sm ${
-              historyCohort === 'channel_partner'
-                ? 'bg-[#C8102E] text-white shadow-red-500/20'
-                : t(
-                    'bg-white/5 text-gray-300 border border-white/15 hover:bg-white/10',
-                    'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
-                  )
-            }`}
+            className={`px-5 py-2 rounded-full text-xs font-bold transition-all shadow-sm ${historyCohort === 'channel_partner'
+              ? 'bg-[#C8102E] text-white shadow-red-500/20'
+              : t(
+                'bg-white/5 text-gray-300 border border-white/15 hover:bg-white/10',
+                'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
+              )
+              }`}
           >
             Channel Partner
           </button>

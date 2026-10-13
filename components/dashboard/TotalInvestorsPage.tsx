@@ -372,12 +372,7 @@ export default function TotalInvestorsPage({
           2. CRIMSON / BURGUNDY GRADIENT BANNER
           ───────────────────────────────────────────────────────────── */}
       <div
-        className="rounded-2xl p-6 sm:p-7 text-white shadow-xl relative overflow-hidden transition-all"
-        style={{
-          background: 'linear-gradient(135deg, #4A080E 0%, #2D0508 60%, #1A0305 100%)',
-          border: '1px solid rgba(200, 16, 46, 0.3)',
-          boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.4)',
-        }}
+        className="w-full rounded-2xl bg-gradient-to-r from-[#1c0205] via-[#850012] to-[#db081f] p-6 sm:p-7 text-white shadow-xl relative overflow-hidden"
       >
         <p className="text-[10px] sm:text-[11px] font-bold uppercase tracking-[0.14em] text-white/80 mb-2">
           EVERY INVESTMENT MADE ACROSS MASTER CHANNEL PARTNER&apos;S REFERRAL NETWORK
@@ -784,14 +779,13 @@ export default function TotalInvestorsPage({
                   key={`page-${item}`}
                   onClick={() => setCurrentPage(Number(item))}
                   disabled={loading}
-                  className={`w-7 h-7 sm:w-8 sm:h-8 rounded-lg text-xs font-bold transition-all ${
-                    currentPage === item
+                  className={`w-7 h-7 sm:w-8 sm:h-8 rounded-lg text-xs font-bold transition-all ${currentPage === item
                       ? 'bg-[#C8102E] text-white shadow-sm'
                       : t(
-                          'border border-white/10 bg-white/5 hover:bg-white/10 text-gray-300',
-                          'border border-gray-200 bg-white hover:bg-gray-100 text-gray-700 shadow-sm'
-                        )
-                  }`}
+                        'border border-white/10 bg-white/5 hover:bg-white/10 text-gray-300',
+                        'border border-gray-200 bg-white hover:bg-gray-100 text-gray-700 shadow-sm'
+                      )
+                    }`}
                 >
                   {item}
                 </button>
