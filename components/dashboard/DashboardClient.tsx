@@ -918,7 +918,13 @@ export default function DashboardClient() {
   // show what's actually active in their portfolio — sourced from
   // fetchPortfolioAssets, which already filters by approved/active/credited
   // on the investment_applications fallback path.
-  const dbInvested = Math.max(totalInvested || 0, Number(user?.aum) || 0)
+  // The card must read what the investor actually put in, which is the sum of
+  // their investment applications. clients.total_invested (surfaced here as
+  // user.aum) is admin-set and goes stale, so it only stands in while the
+  // portfolio is still loading.
+  const dbInvested = (portfolioLoading && totalInvested === 0)
+    ? (Number(user?.aum) || 0)
+    : totalInvested
   const portfolioValue = useAnimatedCounter(dbInvested)
   const animatedPayout = useAnimatedCounter(totalPayoutAmount || 0)
   const aifInvestment = useAnimatedCounter(aifTotal || 0)
@@ -2090,7 +2096,7 @@ export default function DashboardClient() {
     })()
 
     // Real portfolio value matching Indian numbering standard
-    const activePortfolioVal = portfolioValue > 0 ? portfolioValue : Math.max(totalInvested || 0, Number(user?.aum) || 0)
+    const activePortfolioVal = portfolioValue > 0 ? portfolioValue : totalInvested
     const formattedPortfolioValue = new Intl.NumberFormat('en-IN').format(activePortfolioVal)
     const rmName = assignedRM?.name || ''
     const rmDesignation = assignedRM?.designation || 'Investor Relationship Manager'

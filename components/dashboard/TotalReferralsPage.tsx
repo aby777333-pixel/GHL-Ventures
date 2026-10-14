@@ -47,6 +47,7 @@ export default function TotalReferralsPage({
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc')
   const [page, setPage] = useState<number>(1)
   const PAGE_SIZE = 10
+  const [investorModal, setInvestorModal] = useState<ReferralMember | null>(null)
 
   // Available Years
   const availableYears = useMemo(() => {
@@ -297,6 +298,8 @@ export default function TotalReferralsPage({
                     <ArrowUpDown className="w-3 h-3 text-gray-400" />
                   </div>
                 </th>
+                <th className="py-3.5 px-4 text-left font-bold">PHONE</th>
+                <th className="py-3.5 px-4 text-left font-bold">EMAIL</th>
                 <th
                   onClick={() => handleToggleSort('joinedOn')}
                   className="py-3.5 px-4 text-left font-bold cursor-pointer hover:text-[#C8102E] transition-colors"
@@ -306,13 +309,15 @@ export default function TotalReferralsPage({
                     <ArrowUpDown className="w-3 h-3 text-gray-400" />
                   </div>
                 </th>
-                <th className="py-3.5 px-4 text-center font-bold w-20">VIEW</th>
+                <th className="py-3.5 px-4 text-left font-bold">KYC STATUS</th>
+                <th className="py-3.5 px-4 text-center font-bold">INVESTMENTS</th>
+                <th className="py-3.5 px-4 text-center font-bold w-32">VIEW INVESTMENT</th>
               </tr>
             </thead>
             <tbody className={`divide-y ${t('divide-white/[0.04]', 'divide-gray-100')}`}>
               {paginatedReferrals.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="py-14 text-center text-gray-500 italic">
+                  <td colSpan={9} className="py-14 text-center text-gray-500 italic">
                     No referrals found matching the filter criteria.
                   </td>
                 </tr>
@@ -347,7 +352,19 @@ export default function TotalReferralsPage({
                         {r.userId || r.id}
                       </td>
                       <td className={`py-3.5 px-4 font-semibold ${t('text-white', 'text-gray-900')}`}>
-                        {r.refereeName}
+                        <button
+                          onClick={() => onOpenReferralDetails(r)}
+                          className="hover:text-[#C8102E] transition-colors text-left"
+                          title="View referral details"
+                        >
+                          {r.refereeName}
+                        </button>
+                      </td>
+                      <td className={`py-3.5 px-4 ${t('text-gray-400', 'text-gray-600')}`}>
+                        {r.refereePhone || '\u2014'}
+                      </td>
+                      <td className={`py-3.5 px-4 ${t('text-gray-400', 'text-gray-600')}`}>
+                        {r.refereeEmail || '\u2014'}
                       </td>
                       <td className={`py-3.5 px-4 ${t('text-gray-400', 'text-gray-600')}`}>
                         <div className="flex items-center gap-2">
@@ -359,11 +376,23 @@ export default function TotalReferralsPage({
                           )}
                         </div>
                       </td>
+                      <td className="py-3.5 px-4">
+                        <span className={`inline-flex px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                          r.kycStatus === 'Verified'
+                            ? 'bg-emerald-500/15 text-emerald-500'
+                            : 'bg-amber-500/15 text-amber-500'
+                        }`}>
+                          {r.kycStatus || 'Pending'}
+                        </span>
+                      </td>
+                      <td className={`py-3.5 px-4 text-center font-semibold ${t('text-gray-200', 'text-gray-800')}`}>
+                        {(r as any).investmentCount ?? (r.investments || []).length}
+                      </td>
                       <td className="py-3.5 px-4 text-center">
                         <button
-                          onClick={() => onOpenReferralDetails(r)}
+                          onClick={() => setInvestorModal(r)}
                           className="p-1.5 rounded-lg bg-red-50 hover:bg-red-100 dark:bg-red-500/15 dark:hover:bg-red-500/25 text-[#C8102E] transition-colors inline-flex items-center justify-center shadow-sm"
-                          title="View Referral Details"
+                          title="View investments"
                         >
                           <Eye className="w-4 h-4" />
                         </button>
@@ -375,6 +404,82 @@ export default function TotalReferralsPage({
             </tbody>
           </table>
         </div>
+
+        {investorModal && (
+          <div
+            className="fixed inset-0 z-[120] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
+            onClick={() => setInvestorModal(null)}
+          >
+            <div
+              onClick={(e) => e.stopPropagation()}
+              className={`w-full max-w-4xl rounded-2xl border shadow-2xl overflow-hidden ${t(
+                'bg-[#140606] border-white/10',
+                'bg-white border-gray-200'
+              )}`}
+            >
+              <div className={`flex items-start justify-between gap-4 px-6 py-4 border-b ${t('border-white/10', 'border-gray-200')}`}>
+                <div>
+                  <h3 className={`text-base font-bold ${t('text-white', 'text-gray-900')}`}>
+                    {investorModal.refereeName} \u2014 investments
+                  </h3>
+                  <p className="text-[11px] text-gray-500 font-mono mt-0.5">
+                    {investorModal.userId || investorModal.id}
+                  </p>
+                </div>
+                <button
+                  onClick={() => setInvestorModal(null)}
+                  className={`p-1.5 rounded-lg transition-colors ${t('hover:bg-white/10 text-gray-400', 'hover:bg-gray-100 text-gray-500')}`}
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              <div className="max-h-[60vh] overflow-auto">
+                {(investorModal.investments || []).length === 0 ? (
+                  <p className="py-14 text-center text-xs text-gray-500 italic">
+                    No investments recorded for this referral yet.
+                  </p>
+                ) : (
+                  <table className="w-full text-left text-xs whitespace-nowrap">
+                    <thead>
+                      <tr className={`border-b text-[10px] font-bold uppercase tracking-wider ${t(
+                        'bg-[#1a0808] border-white/10 text-gray-400',
+                        'bg-gray-50 border-gray-200 text-gray-600'
+                      )}`}>
+                        <th className="py-3 px-5 text-left">INVEST PLAN</th>
+                        <th className="py-3 px-5 text-left">DATE</th>
+                        <th className="py-3 px-5 text-right">AMOUNT</th>
+                        <th className="py-3 px-5 text-left">MATURITY STATUS</th>
+                        <th className="py-3 px-5 text-left">PAID DATE</th>
+                      </tr>
+                    </thead>
+                    <tbody className={`divide-y ${t('divide-white/[0.04]', 'divide-gray-100')}`}>
+                      {(investorModal.investments || []).map((iv: any, i: number) => (
+                        <tr key={iv.id || i}>
+                          <td className={`py-3 px-5 ${t('text-gray-200', 'text-gray-800')}`}>{iv.planName || '\u2014'}</td>
+                          <td className={`py-3 px-5 ${t('text-gray-400', 'text-gray-600')}`}>{iv.investDate || '\u2014'}</td>
+                          <td className={`py-3 px-5 text-right font-semibold ${t('text-white', 'text-gray-900')}`}>
+                            {'\u20B9'}{new Intl.NumberFormat('en-IN').format(Number(iv.investAmount) || 0)}
+                          </td>
+                          <td className="py-3 px-5">
+                            <span className={`inline-flex px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                              iv.maturityStatus === 'Paid'
+                                ? 'bg-emerald-500/15 text-emerald-500'
+                                : 'bg-amber-500/15 text-amber-500'
+                            }`}>
+                              {iv.maturityStatus || 'Unpaid'}
+                            </span>
+                          </td>
+                          <td className={`py-3 px-5 ${t('text-gray-400', 'text-gray-600')}`}>{iv.returnDate || '\u2014'}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* ── CARD FOOTER / PAGINATION ─────────────────────────────── */}
         <div

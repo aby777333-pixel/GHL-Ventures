@@ -313,6 +313,61 @@ export async function GET(request: NextRequest) {
       } catch { /* non-blocking */ }
     }
 
+    // 3a. A master partner earns on everything the channel partners beneath
+    // them bring in, so the network has to walk one level deeper: anyone a CP
+    // under this MCP referred counts as an indirect referral. Without this
+    // step the Total Investor list and the indirect history were always empty.
+    for (const r of rawReferrals as any[]) {
+      if (!r.source) r.source = 'direct'
+    }
+    if (isRealPartnerId && partnerRole === 'MCP') {
+      try {
+        const cpCodes = (rawReferrals as any[])
+          .map((r: any) => String(r.user_id || r.id || '').trim())
+          .filter((c: string) => /^(CPL|CP)GHL/i.test(c))
+
+        if (cpCodes.length > 0) {
+          const { data: indirectClients } = await sbClient
+            .from('clients')
+            .select('id, client_code, ghl_id, full_name, email, phone, city, total_invested, kyc_status, joined_at, created_at, referred_by')
+            .in('referred_by', cpCodes)
+            .order('created_at', { ascending: false })
+            .limit(200)
+
+          const seenEmails = new Set((rawReferrals as any[]).map((r: any) => (r.referee_email || '').toLowerCase()))
+          for (const rc of (indirectClients || [])) {
+            if (clientRecord?.id && rc.id === clientRecord.id) continue
+            const em = (rc.email || '').toLowerCase()
+            if (em && seenEmails.has(em)) continue
+            const invested = Number(rc.total_invested) || 0
+            rawReferrals.push({
+              id: rc.client_code || rc.ghl_id || rc.id,
+              client_id: rc.id,
+              user_id: rc.client_code || rc.ghl_id,
+              referrer_name: partnerName,
+              referrer_email: partnerEmail,
+              referee_name: rc.full_name || 'Referred Client',
+              referee_email: rc.email,
+              referee_phone: rc.phone || '\u2014',
+              referee_city: rc.city || 'India',
+              relationship: 'general_investor',
+              status: invested > 0 ? 'converted' : 'qualified',
+              investment_amount: invested,
+              commission_rate: 0.5,
+              commission_amount: (invested * 0.5) / 100,
+              commission_status: invested > 0 ? 'accrued' : 'pending',
+              created_at: rc.joined_at || rc.created_at || new Date().toISOString(),
+              source: 'indirect',
+              via_partner: rc.referred_by,
+            })
+            if (em) seenEmails.add(em)
+          }
+        }
+      } catch (indErr) {
+        console.warn('[api/dashboard/referral] indirect referral note:', indErr)
+      }
+    }
+
     // 3b. Also supplement from leads table where metadata->>referral_code matches partner ID
     try {
       const { data: refLeads } = await sbClient
@@ -517,6 +572,8 @@ export async function GET(request: NextRequest) {
         status: r.status || 'new',
         notes: r.message || r.admin_notes || '',
         investments: Array.isArray(r.investments) ? r.investments : [],
+        source: r.source === 'indirect' ? 'indirect' : 'direct',
+        viaPartner: r.via_partner || '',
       }
     })
 
@@ -583,6 +640,8 @@ export async function GET(request: NextRequest) {
               maturityDateRaw,
               maturityStatus,
               returnDate,
+              source: client?.source === 'indirect' ? 'indirect' : 'direct',
+              viaPartner: client?.via_partner || '',
             })
           })
         }
@@ -616,10 +675,31 @@ export async function GET(request: NextRequest) {
           maturityDate: maturityDateFormatted,
           maturityDateRaw: mat.toISOString(),
           maturityStatus: isPaid ? 'Paid' : 'Unpaid',
+          source: r.source === 'indirect' ? 'indirect' : 'direct',
+          viaPartner: r.via_partner || '',
           returnDate: isPaid && r.updated_at ? new Date(r.updated_at).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : '—',
         })
       }
     })
+
+    // Hang each referral's own investments off the referral row so the Total
+    // Referrals list can show a count and open a per-investor breakdown with
+    // no second round trip. Grouped on the same userId the list renders.
+    const investmentsByUser = new Map<string, any[]>()
+    for (const ni of networkInvestments) {
+      const key = String(ni.userId || '').trim().toUpperCase()
+      if (!key) continue
+      if (!investmentsByUser.has(key)) investmentsByUser.set(key, [])
+      investmentsByUser.get(key)!.push(ni)
+    }
+    for (const fr of formattedReferrals as any[]) {
+      const mine = investmentsByUser.get(String(fr.userId || '').trim().toUpperCase()) || []
+      fr.investments = mine
+      fr.investmentCount = mine.length
+      if (!fr.investmentAmount) {
+        fr.investmentAmount = mine.reduce((sum: number, m: any) => sum + (Number(m.investAmount) || 0), 0)
+      }
+    }
 
     const origin = request.nextUrl?.origin || 'https://ghlindiaventures.com'
 

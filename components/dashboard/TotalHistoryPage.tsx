@@ -23,7 +23,7 @@ const GHL_2_TIER_SLABS = [
   {
     tier: 'Tier 1',
     rateDisplay: '3%',
-    rangeDisplay: '1 Cr – 5 Cr',
+    rangeDisplay: '1 Cr – 4.99 Cr',
     bgClass: 'bg-gradient-to-r from-amber-500 to-amber-600',
   },
   {
@@ -31,6 +31,20 @@ const GHL_2_TIER_SLABS = [
     rateDisplay: '4%',
     rangeDisplay: '5 Cr and Above',
     bgClass: 'bg-gradient-to-r from-red-600 to-red-700',
+  },
+]
+
+// A master partner is paid a flat half a percent on anything a channel
+// partner beneath them brings in, whatever the volume. Only their own direct
+// sales climb the slab.
+const INDIRECT_RATE = 0.5
+
+const INDIRECT_SLABS = [
+  {
+    tier: 'Indirect',
+    rateDisplay: '0.5%',
+    rangeDisplay: 'Any Investment',
+    bgClass: 'bg-gradient-to-r from-sky-600 to-sky-700',
   },
 ]
 
@@ -72,7 +86,7 @@ export default function TotalHistoryPage({
 
   // State
   const [historyYear, setHistoryYear] = useState<number>(new Date().getFullYear())
-  const [historyCohort, setHistoryCohort] = useState<'general_investor' | 'channel_partner'>('general_investor')
+  const [historyCohort, setHistoryCohort] = useState<'direct' | 'indirect'>('direct')
   const [selectedMonthHistory, setSelectedMonthHistory] = useState<{
     monthIndex: number
     monthName: string
@@ -114,15 +128,17 @@ export default function TotalHistoryPage({
         const m = d.getMonth()
         if (yr !== historyYear || m !== idx) return false
 
-        if (historyCohort === 'general_investor') {
-          return r.memberType !== 'Channel Partner'
-        } else {
-          return r.memberType === 'Channel Partner'
-        }
+        // Indirect means it came through a channel partner. A general
+        // investor the master partner referred himself is always direct, so
+        // nobody is counted on both sides.
+        const src = (r as any).source === 'indirect' ? 'indirect' : 'direct'
+        return src === historyCohort
       })
 
       const totalInsAmount = matchingRefs.reduce((acc, r) => acc + (Number(r.investmentAmount) || 0), 0)
-      const grossRate = getGrossRateForAmount(totalInsAmount)
+      const grossRate = historyCohort === 'indirect'
+        ? INDIRECT_RATE
+        : getGrossRateForAmount(totalInsAmount)
       const grossRateDisplay = totalInsAmount > 0 ? `${grossRate}%` : '0%'
       const grossRefIncome = Math.round((totalInsAmount * grossRate) / 100)
       const tds = Math.round(grossRefIncome * 0.02)
@@ -177,7 +193,7 @@ export default function TotalHistoryPage({
 
   // Export CSV
   const handleExportHistoryCSV = () => {
-    const cohortLabel = historyCohort === 'general_investor' ? 'General_Investor' : 'Channel_Partner'
+    const cohortLabel = historyCohort === 'indirect' ? 'Indirect' : 'Direct'
     const headers = [
       'SNO',
       'MONTH',
@@ -254,7 +270,7 @@ export default function TotalHistoryPage({
           REFERRAL GROSS % SLAB (REFERENCE)
         </div>
         <div className="flex flex-wrap items-center justify-center gap-4">
-          {GHL_2_TIER_SLABS.map((slab) => (
+          {(historyCohort === 'indirect' ? INDIRECT_SLABS : GHL_2_TIER_SLABS).map((slab) => (
             <div
               key={slab.tier}
               className={`px-8 py-3.5 rounded-2xl text-white shadow-md text-center min-w-[150px] ${slab.bgClass}`}
@@ -285,8 +301,8 @@ export default function TotalHistoryPage({
 
         <div className="flex items-center gap-2">
           <button
-            onClick={() => setHistoryCohort('general_investor')}
-            className={`px-5 py-2 rounded-full text-xs font-bold transition-all shadow-sm ${historyCohort === 'general_investor'
+            onClick={() => setHistoryCohort('direct')}
+            className={`px-5 py-2 rounded-full text-xs font-bold transition-all shadow-sm ${historyCohort === 'direct'
               ? 'bg-[#C8102E] text-white shadow-red-500/20'
               : t(
                 'bg-white/5 text-gray-300 border border-white/15 hover:bg-white/10',
@@ -294,11 +310,11 @@ export default function TotalHistoryPage({
               )
               }`}
           >
-            General Investor
+            Direct
           </button>
           <button
-            onClick={() => setHistoryCohort('channel_partner')}
-            className={`px-5 py-2 rounded-full text-xs font-bold transition-all shadow-sm ${historyCohort === 'channel_partner'
+            onClick={() => setHistoryCohort('indirect')}
+            className={`px-5 py-2 rounded-full text-xs font-bold transition-all shadow-sm ${historyCohort === 'indirect'
               ? 'bg-[#C8102E] text-white shadow-red-500/20'
               : t(
                 'bg-white/5 text-gray-300 border border-white/15 hover:bg-white/10',
@@ -306,7 +322,7 @@ export default function TotalHistoryPage({
               )
               }`}
           >
-            Channel Partner
+            Indirect
           </button>
         </div>
       </div>
@@ -328,7 +344,7 @@ export default function TotalHistoryPage({
           )}`}
         >
           <h2 className="text-base sm:text-lg font-black tracking-tight">
-            {historyCohort === 'general_investor' ? 'General Investor' : 'Channel Partner'} — Monthly Investment ({historyYear})
+            {historyCohort === 'direct' ? 'Direct' : 'Indirect'} — Monthly Investment ({historyYear})
           </h2>
 
           <div className="flex items-center gap-2 flex-wrap">
@@ -480,7 +496,7 @@ export default function TotalHistoryPage({
                   <Eye className="w-4 h-4" />
                 </div>
                 <h3 className="text-base font-bold text-white tracking-tight">
-                  {selectedMonthHistory.monthName} {selectedMonthHistory.year} — {historyCohort === 'general_investor' ? 'General Investor' : 'Channel Partner'}
+                  {selectedMonthHistory.monthName} {selectedMonthHistory.year} — {historyCohort === 'direct' ? 'Direct' : 'Indirect'}
                 </h3>
               </div>
               <button

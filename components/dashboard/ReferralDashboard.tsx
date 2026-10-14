@@ -76,6 +76,8 @@ function formatINR(n: number): string {
   return new Intl.NumberFormat('en-IN').format(n)
 }
 
+const GOAL_MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+
 function formatIndianNumber(n: number): string {
   if (!n || isNaN(n)) return '0'
   return new Intl.NumberFormat('en-IN').format(Math.round(n))
@@ -291,6 +293,8 @@ export default function ReferralDashboard({
   const [viewTotalInvestorsPage, setViewTotalInvestorsPage] = useState(false)
   const [viewTotalReferralsPage, setViewTotalReferralsPage] = useState(false)
   const [viewTotalHistoryPage, setViewTotalHistoryPage] = useState(false)
+  const [goalMonth, setGoalMonth] = useState(new Date().getMonth())
+  const [goalYear, setGoalYear] = useState(new Date().getFullYear())
   const [todayReferralModalOpen, setTodayReferralModalOpen] = useState(false)
   const [submittingAction, setSubmittingAction] = useState(false)
 
@@ -633,6 +637,35 @@ export default function ReferralDashboard({
   const hasTodayReferrals = useMemo(() => {
     return todayReferralCount > 0
   }, [todayReferralCount])
+
+  // Goal against what the chosen month actually brought in. The targets come
+  // from the partner's own goal; the actuals are counted off their referral
+  // list, so the table fills as the month goes on.
+  const goalProgress = useMemo(() => {
+    const list: any[] = (data?.referrals as any[]) || []
+    let investment = 0
+    let members = 0
+    for (const r of list) {
+      const raw = r.createdAt || r.date
+      if (!raw) continue
+      const x = new Date(raw)
+      if (isNaN(x.getTime())) continue
+      if (x.getFullYear() !== goalYear || x.getMonth() !== goalMonth) continue
+      members += 1
+      investment += Number(r.investmentAmount) || 0
+    }
+    const investTarget = Number(data?.monthlyGoal?.directTarget) || 0
+    const memberTarget = Number(data?.monthlyGoal?.referralTarget) || 0
+    const pct = (a: number, b: number) => (b > 0 ? Math.min(100, Math.round((a / b) * 100)) : 0)
+    return {
+      investment,
+      members,
+      investTarget,
+      memberTarget,
+      investPct: pct(investment, investTarget),
+      memberPct: pct(members, memberTarget),
+    }
+  }, [data?.referrals, data?.monthlyGoal, goalMonth, goalYear])
 
   const totalInvestorsCount = useMemo(() => {
     const list = (data?.referrals || []).filter(r => (Number(r.investmentAmount) || 0) > 0 || r.status === 'converted')
@@ -1628,6 +1661,113 @@ export default function ReferralDashboard({
             <PlusCircle className="w-4 h-4" />
             <span>Set Your Goal</span>
           </button>
+        </div>
+      </div>
+
+      {/* Goal against the month that was actually delivered. */}
+      <div
+        className={`rounded-2xl p-5 border transition-all ${t(
+          'bg-[#150606] border-white/10 shadow-lg',
+          'bg-white border-gray-200 shadow-sm'
+        )}`}
+      >
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
+          <div>
+            <h3 className={`text-base font-bold ${t('text-white', 'text-gray-900')}`}>Goal vs Achieved</h3>
+            <p className={`text-xs mt-0.5 ${t('text-gray-400', 'text-gray-600')}`}>
+              What the goal asks for, against what the month actually brought in
+            </p>
+          </div>
+          <div className="flex items-center gap-2">
+            <select
+              value={goalMonth}
+              onChange={(e) => setGoalMonth(Number(e.target.value))}
+              className={`text-xs font-semibold py-1.5 px-3 rounded-xl border outline-none cursor-pointer ${t(
+                'bg-white/[0.05] border-white/10 text-gray-200',
+                'bg-gray-100 border-gray-300 text-gray-800'
+              )}`}
+            >
+              {GOAL_MONTHS.map((m, i) => (
+                <option key={m} value={i} className="bg-[#1a0a0a] text-white">{m}</option>
+              ))}
+            </select>
+            <select
+              value={goalYear}
+              onChange={(e) => setGoalYear(Number(e.target.value))}
+              className={`text-xs font-semibold py-1.5 px-3 rounded-xl border outline-none cursor-pointer ${t(
+                'bg-white/[0.05] border-white/10 text-gray-200',
+                'bg-gray-100 border-gray-300 text-gray-800'
+              )}`}
+            >
+              {[2024, 2025, 2026, 2027].map((yr) => (
+                <option key={yr} value={yr} className="bg-[#1a0a0a] text-white">{yr}</option>
+              ))}
+            </select>
+          </div>
+        </div>
+
+        <div className="overflow-x-auto">
+          <table className="w-full text-left text-xs">
+            <thead>
+              <tr className={`border-b text-[10px] font-bold uppercase tracking-wider ${t(
+                'border-white/10 text-gray-400',
+                'border-gray-200 text-gray-600'
+              )}`}>
+                <th className="py-2.5 pr-4">GOAL</th>
+                <th className="py-2.5 pr-4">TARGET</th>
+                <th className="py-2.5 pr-4">ACHIEVED</th>
+                <th className="py-2.5 w-1/3">PROGRESS</th>
+              </tr>
+            </thead>
+            <tbody className={`divide-y ${t('divide-white/[0.05]', 'divide-gray-100')}`}>
+              <tr>
+                <td className={`py-3 pr-4 font-semibold ${t('text-gray-200', 'text-gray-800')}`}>Investment</td>
+                <td className={`py-3 pr-4 ${t('text-gray-300', 'text-gray-700')}`}>
+                  {goalProgress.investTarget > 0
+                    ? '\u20B9' + formatIndianNumber(goalProgress.investTarget)
+                    : 'Not set'}
+                </td>
+                <td className={`py-3 pr-4 font-semibold ${t('text-white', 'text-gray-900')}`}>
+                  {'\u20B9'}{formatIndianNumber(goalProgress.investment)}
+                </td>
+                <td className="py-3">
+                  <div className="flex items-center gap-2">
+                    <div className={`h-2 flex-1 rounded-full overflow-hidden ${t('bg-white/10', 'bg-gray-200')}`}>
+                      <div
+                        className="h-full rounded-full bg-gradient-to-r from-amber-500 to-red-600 transition-all"
+                        style={{ width: goalProgress.investPct + '%' }}
+                      />
+                    </div>
+                    <span className={`text-[11px] font-bold w-10 text-right ${t('text-gray-300', 'text-gray-700')}`}>
+                      {goalProgress.investPct}%
+                    </span>
+                  </div>
+                </td>
+              </tr>
+              <tr>
+                <td className={`py-3 pr-4 font-semibold ${t('text-gray-200', 'text-gray-800')}`}>Members</td>
+                <td className={`py-3 pr-4 ${t('text-gray-300', 'text-gray-700')}`}>
+                  {goalProgress.memberTarget > 0 ? goalProgress.memberTarget : 'Not set'}
+                </td>
+                <td className={`py-3 pr-4 font-semibold ${t('text-white', 'text-gray-900')}`}>
+                  {goalProgress.members}
+                </td>
+                <td className="py-3">
+                  <div className="flex items-center gap-2">
+                    <div className={`h-2 flex-1 rounded-full overflow-hidden ${t('bg-white/10', 'bg-gray-200')}`}>
+                      <div
+                        className="h-full rounded-full bg-gradient-to-r from-sky-500 to-emerald-500 transition-all"
+                        style={{ width: goalProgress.memberPct + '%' }}
+                      />
+                    </div>
+                    <span className={`text-[11px] font-bold w-10 text-right ${t('text-gray-300', 'text-gray-700')}`}>
+                      {goalProgress.memberPct}%
+                    </span>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
         </div>
       </div>
 

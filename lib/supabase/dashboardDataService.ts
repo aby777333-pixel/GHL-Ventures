@@ -92,24 +92,11 @@ export async function fetchPortfolioAssets(clientId?: string) {
     })
   }
 
-  // 3rd level fallback: check clients.total_invested from database
-  try {
-    const invested = Number(clientRow?.total_invested) || 0
-    if (invested > 0) {
-      return [{
-        id: `client-inv-${clientRow?.id || clientId}`,
-        client_id: clientRow?.id || clientId,
-        fund_name: 'Secured Debenture Portfolio',
-        fund_type: 'Debenture',
-        invested_amount: invested,
-        current_value: invested,
-        return_pct: 0,
-        status: 'active',
-        invested_at: clientRow?.created_at || new Date().toISOString(),
-      }]
-    }
-  } catch { /* non-fatal */ }
-
+  // There used to be a third fallback here that invented a single
+  // "Secured Debenture Portfolio" asset out of clients.total_invested. That
+  // column is admin-set and goes stale, so it showed investors money they had
+  // not actually put in. The portfolio now reflects the investments table and
+  // the investment applications behind it, and nothing else.
   return []
 }
 

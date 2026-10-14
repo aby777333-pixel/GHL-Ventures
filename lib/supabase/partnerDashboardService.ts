@@ -77,7 +77,8 @@ export interface ReferralMember {
   commissionStatus: 'pending' | 'accrued' | 'paid' | 'cancelled'
   status: string
   notes?: string
-  investments?: ReferralInvestmentItem[]
+  investments?: any[]
+  investmentCount?: number
 }
 
 export interface SubChannelPartner {
