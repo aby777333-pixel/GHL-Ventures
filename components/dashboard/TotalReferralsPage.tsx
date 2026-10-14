@@ -7,7 +7,6 @@ import {
   Search,
   X,
   ArrowUpDown,
-  Eye,
 } from 'lucide-react'
 import { ReferralMember } from '@/lib/supabase/partnerDashboardService'
 
@@ -15,7 +14,7 @@ interface TotalReferralsPageProps {
   partnerDisplayName: string
   referrals: ReferralMember[]
   onBack: () => void
-  onOpenReferralDetails: (referral: ReferralMember) => void
+  onOpenReferralDetails?: (referral: ReferralMember) => void
   theme?: 'light' | 'dark'
   isDark?: boolean
 }
@@ -31,7 +30,6 @@ export default function TotalReferralsPage({
   partnerDisplayName,
   referrals,
   onBack,
-  onOpenReferralDetails,
   isDark = true,
 }: TotalReferralsPageProps) {
   // Theme helper
@@ -43,7 +41,7 @@ export default function TotalReferralsPage({
   // Filters & State
   const [yearFilter, setYearFilter] = useState<string>('all')
   const [searchQuery, setSearchQuery] = useState<string>('')
-  const [sortCol, setSortCol] = useState<'userId' | 'name' | 'joinedOn'>('joinedOn')
+  const [sortCol, setSortCol] = useState<'userId' | 'name' | 'email' | 'phone' | 'kycStatus' | 'joinedOn'>('joinedOn')
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc')
   const [page, setPage] = useState<number>(1)
   const PAGE_SIZE = 10
@@ -76,13 +74,16 @@ export default function TotalReferralsPage({
       })
     }
 
-    // 2. Search query (search by user ID or name)
+    // 2. Search query (search by user ID, name, email, phone or KYC status)
     if (searchQuery.trim()) {
       const q = searchQuery.trim().toLowerCase()
       list = list.filter((r) => {
         const idMatch = (r.userId || r.id || '').toLowerCase().includes(q)
         const nameMatch = (r.refereeName || '').toLowerCase().includes(q)
-        return idMatch || nameMatch
+        const emailMatch = (r.refereeEmail || '').toLowerCase().includes(q)
+        const phoneMatch = (r.refereePhone || '').toLowerCase().includes(q)
+        const kycMatch = (r.kycStatus || '').toLowerCase().includes(q)
+        return idMatch || nameMatch || emailMatch || phoneMatch || kycMatch
       })
     }
 
@@ -96,6 +97,21 @@ export default function TotalReferralsPage({
       if (sortCol === 'name') {
         const aVal = (a.refereeName || '').toLowerCase()
         const bVal = (b.refereeName || '').toLowerCase()
+        return sortDir === 'asc' ? aVal.localeCompare(bVal) : bVal.localeCompare(aVal)
+      }
+      if (sortCol === 'email') {
+        const aVal = (a.refereeEmail || '').toLowerCase()
+        const bVal = (b.refereeEmail || '').toLowerCase()
+        return sortDir === 'asc' ? aVal.localeCompare(bVal) : bVal.localeCompare(aVal)
+      }
+      if (sortCol === 'phone') {
+        const aVal = (a.refereePhone || '').toLowerCase()
+        const bVal = (b.refereePhone || '').toLowerCase()
+        return sortDir === 'asc' ? aVal.localeCompare(bVal) : bVal.localeCompare(aVal)
+      }
+      if (sortCol === 'kycStatus') {
+        const aVal = (a.kycStatus || 'Pending').toLowerCase()
+        const bVal = (b.kycStatus || 'Pending').toLowerCase()
         return sortDir === 'asc' ? aVal.localeCompare(bVal) : bVal.localeCompare(aVal)
       }
       // default: joinedOn
@@ -114,7 +130,7 @@ export default function TotalReferralsPage({
     return filteredReferrals.slice(start, start + PAGE_SIZE)
   }, [filteredReferrals, page])
 
-  const handleToggleSort = (col: 'userId' | 'name' | 'joinedOn') => {
+  const handleToggleSort = (col: 'userId' | 'name' | 'email' | 'phone' | 'kycStatus' | 'joinedOn') => {
     if (sortCol === col) {
       setSortDir((prev) => (prev === 'asc' ? 'desc' : 'asc'))
     } else {
@@ -242,7 +258,7 @@ export default function TotalReferralsPage({
               <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
               <input
                 type="text"
-                placeholder="Search by ID or name..."
+                placeholder="Search by ID, name, email or phone..."
                 value={searchQuery}
                 onChange={(e) => {
                   setSearchQuery(e.target.value)
@@ -278,7 +294,7 @@ export default function TotalReferralsPage({
                   'bg-gray-50 border-gray-200 text-gray-600'
                 )}`}
               >
-                <th className="py-3.5 px-4 text-left font-bold w-16">SNO</th>
+                <th className="py-3.5 px-4 text-left font-bold w-14">SNO</th>
                 <th
                   onClick={() => handleToggleSort('userId')}
                   className="py-3.5 px-4 text-left font-bold cursor-pointer hover:text-[#C8102E] transition-colors"
@@ -298,6 +314,33 @@ export default function TotalReferralsPage({
                   </div>
                 </th>
                 <th
+                  onClick={() => handleToggleSort('email')}
+                  className="py-3.5 px-4 text-left font-bold cursor-pointer hover:text-[#C8102E] transition-colors"
+                >
+                  <div className="flex items-center gap-1">
+                    <span>EMAIL</span>
+                    <ArrowUpDown className="w-3 h-3 text-gray-400" />
+                  </div>
+                </th>
+                <th
+                  onClick={() => handleToggleSort('phone')}
+                  className="py-3.5 px-4 text-left font-bold cursor-pointer hover:text-[#C8102E] transition-colors"
+                >
+                  <div className="flex items-center gap-1">
+                    <span>PHONE NO</span>
+                    <ArrowUpDown className="w-3 h-3 text-gray-400" />
+                  </div>
+                </th>
+                <th
+                  onClick={() => handleToggleSort('kycStatus')}
+                  className="py-3.5 px-4 text-left font-bold cursor-pointer hover:text-[#C8102E] transition-colors"
+                >
+                  <div className="flex items-center gap-1">
+                    <span>KYC STATUS</span>
+                    <ArrowUpDown className="w-3 h-3 text-gray-400" />
+                  </div>
+                </th>
+                <th
                   onClick={() => handleToggleSort('joinedOn')}
                   className="py-3.5 px-4 text-left font-bold cursor-pointer hover:text-[#C8102E] transition-colors"
                 >
@@ -306,13 +349,12 @@ export default function TotalReferralsPage({
                     <ArrowUpDown className="w-3 h-3 text-gray-400" />
                   </div>
                 </th>
-                <th className="py-3.5 px-4 text-center font-bold w-20">VIEW</th>
               </tr>
             </thead>
             <tbody className={`divide-y ${t('divide-white/[0.04]', 'divide-gray-100')}`}>
               {paginatedReferrals.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="py-14 text-center text-gray-500 italic">
+                  <td colSpan={7} className="py-14 text-center text-gray-500 italic">
                     No referrals found matching the filter criteria.
                   </td>
                 </tr>
@@ -332,6 +374,9 @@ export default function TotalReferralsPage({
                       )
                     })()
 
+                  const isVerified = (r.kycStatus || '').toLowerCase() === 'verified'
+                  const isSubmitted = (r.kycStatus || '').toLowerCase() === 'submitted'
+
                   return (
                     <tr
                       key={r.id || idx}
@@ -349,6 +394,48 @@ export default function TotalReferralsPage({
                       <td className={`py-3.5 px-4 font-semibold ${t('text-white', 'text-gray-900')}`}>
                         {r.refereeName}
                       </td>
+                      <td className={`py-3.5 px-4 font-mono text-xs ${t('text-gray-300', 'text-gray-700')}`}>
+                        {r.refereeEmail && r.refereeEmail !== '—' ? (
+                          <a
+                            href={`mailto:${r.refereeEmail}`}
+                            className="hover:text-brand-red hover:underline transition-colors"
+                          >
+                            {r.refereeEmail}
+                          </a>
+                        ) : (
+                          <span className="text-gray-400">—</span>
+                        )}
+                      </td>
+                      <td className={`py-3.5 px-4 font-mono text-xs ${t('text-gray-300', 'text-gray-700')}`}>
+                        {r.refereePhone && r.refereePhone !== '—' ? (
+                          <a
+                            href={`tel:${r.refereePhone}`}
+                            className="hover:text-brand-red hover:underline transition-colors"
+                          >
+                            {r.refereePhone}
+                          </a>
+                        ) : (
+                          <span className="text-gray-400">—</span>
+                        )}
+                      </td>
+                      <td className="py-3.5 px-4">
+                        <span
+                          className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold ${
+                            isVerified
+                              ? t('bg-emerald-500/15 text-emerald-400 border border-emerald-500/30', 'bg-emerald-50 text-emerald-700 border border-emerald-200')
+                              : isSubmitted
+                              ? t('bg-blue-500/15 text-blue-400 border border-blue-500/30', 'bg-blue-50 text-blue-700 border border-blue-200')
+                              : t('bg-amber-500/15 text-amber-400 border border-amber-500/30', 'bg-amber-50 text-amber-700 border border-amber-200')
+                          }`}
+                        >
+                          <span
+                            className={`w-1.5 h-1.5 rounded-full ${
+                              isVerified ? 'bg-emerald-400' : isSubmitted ? 'bg-blue-400' : 'bg-amber-400'
+                            }`}
+                          />
+                          {r.kycStatus || 'Pending'}
+                        </span>
+                      </td>
                       <td className={`py-3.5 px-4 ${t('text-gray-400', 'text-gray-600')}`}>
                         <div className="flex items-center gap-2">
                           <span>{formatDateDisplay(r.createdAt || r.date)}</span>
@@ -358,15 +445,6 @@ export default function TotalReferralsPage({
                             </span>
                           )}
                         </div>
-                      </td>
-                      <td className="py-3.5 px-4 text-center">
-                        <button
-                          onClick={() => onOpenReferralDetails(r)}
-                          className="p-1.5 rounded-lg bg-red-50 hover:bg-red-100 dark:bg-red-500/15 dark:hover:bg-red-500/25 text-[#C8102E] transition-colors inline-flex items-center justify-center shadow-sm"
-                          title="View Referral Details"
-                        >
-                          <Eye className="w-4 h-4" />
-                        </button>
                       </td>
                     </tr>
                   )

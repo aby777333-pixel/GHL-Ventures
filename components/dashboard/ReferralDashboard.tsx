@@ -239,14 +239,22 @@ export default function ReferralDashboard({
     return 'GI'
   }, [data?.partner?.role, authenticatedPartnerId])
 
+  // Bulletproof MCP role detection across all auth indicators
+  const isMcp = useMemo(() => {
+    const roleUpper = String(partnerRole || data?.partner?.role || '').toUpperCase()
+    const authUpper = String(authenticatedPartnerId || '').toUpperCase()
+    const pIdUpper = String(data?.partner?.partnerId || data?.partner?.referralCode || '').toUpperCase()
+    return roleUpper === 'MCP' || authUpper.startsWith('MCP') || pIdUpper.startsWith('MCP')
+  }, [partnerRole, data?.partner?.role, authenticatedPartnerId, data?.partner?.partnerId, data?.partner?.referralCode])
+
   // Determine effective GHL/Partner ID:
   const effectiveId = useMemo(() => {
     if (authenticatedPartnerId && authenticatedPartnerId !== 'GHL-PARTNER' && authenticatedPartnerId !== 'MCP-PARTNER' && authenticatedPartnerId !== 'CPL-PARTNER') return authenticatedPartnerId
     if (data?.partner?.referralCode && data.partner.referralCode !== 'GHL-PARTNER' && data.partner.referralCode !== 'MCP-PARTNER' && data.partner.referralCode !== 'CPL-PARTNER') return data.partner.referralCode
     if (data?.partner?.partnerId && data.partner.partnerId !== 'GHL-PARTNER' && data.partner.partnerId !== 'MCP-PARTNER' && data.partner.partnerId !== 'CPL-PARTNER') return data.partner.partnerId
     if (authenticatedPartnerId && authenticatedPartnerId !== 'GHL-PARTNER') return authenticatedPartnerId
-    return data?.partner?.partnerId || (partnerRole === 'MCP' ? 'MCPGHL920237' : partnerRole === 'CPL' ? 'CPLGHL24100' : 'GHL-PARTNER')
-  }, [authenticatedPartnerId, data?.partner?.partnerId, data?.partner?.referralCode, partnerRole])
+    return data?.partner?.partnerId || (isMcp ? 'MCPGHL920237' : partnerRole === 'CPL' ? 'CPLGHL24100' : 'GHL-PARTNER')
+  }, [authenticatedPartnerId, data?.partner?.partnerId, data?.partner?.referralCode, partnerRole, isMcp])
 
   const displayPartnerName = useMemo(() => {
     if (data?.partner?.name && data.partner.name !== 'Partner Investor') return data.partner.name
@@ -623,8 +631,11 @@ export default function ReferralDashboard({
   }, [data?.referrals, data?.kpis?.totalInvestment])
 
   const totalReferralCount = useMemo(() => {
-    return Math.max(data?.kpis?.totalReferrals || 0, (data?.referrals || []).length)
-  }, [data?.kpis?.totalReferrals, data?.referrals])
+    if (Array.isArray(data?.referrals) && data.referrals.length > 0) {
+      return data.referrals.length
+    }
+    return data?.kpis?.totalReferrals || 0
+  }, [data?.referrals, data?.kpis?.totalReferrals])
 
   const todayReferralCount = useMemo(() => {
     return todayReferralsList.length
@@ -635,7 +646,7 @@ export default function ReferralDashboard({
   }, [todayReferralCount])
 
   const totalInvestorsCount = useMemo(() => {
-    const list = (data?.referrals || []).filter(r => (Number(r.investmentAmount) || 0) > 0 || r.status === 'converted')
+    const list = (data?.referrals || []).filter(r => r.memberType !== 'Channel Partner' || (Number(r.investmentAmount) || 0) > 0 || r.status === 'converted')
     return list.length > 0 ? list.length : (Number(data?.kpis?.totalInvestors) || 0)
   }, [data?.referrals, data?.kpis?.totalInvestors])
 
@@ -695,7 +706,7 @@ export default function ReferralDashboard({
     return { cpRate: rate, cpActiveIndex: activeIdx, cpEarned: earned }
   }, [cpVolume])
 
-  // Table Rows matching Reference Columns: SNO, USER ID, NAME, TOTAL INVEST, CASHBACK, VIEW HISTORY
+  // Table Rows matching Reference Columns: SNO, USER ID / CPL ID, NAME / AGENCY, TOTAL INVEST, VIEW HISTORY
   const displayTableRows = useMemo(() => {
     if (tableCohort === 'partners') {
       const partnersList = (data?.subChannelPartners || [])
@@ -706,30 +717,35 @@ export default function ReferralDashboard({
         })
         .map((p, idx) => ({
           sno: idx + 1,
-          userId: p.cplId,
+          userId: p.cplId, // Strictly CPL ID
           name: p.agencyName,
           totalInvest: p.volumeGenerated,
           cashback: p.overrideEarned,
           raw: {
-            id: p.id,
+            id: p.cplId,
+            userId: p.cplId,
+            clientId: p.id,
             refereeName: p.agencyName,
             refereeEmail: p.contactEmail,
             refereePhone: p.contactPhone,
             refereeCity: p.city,
             memberType: 'Channel Partner' as const,
-            kycStatus: 'Verified' as const,
-            date: p.createdAt ? new Date(p.createdAt).toLocaleDateString('en-IN') : 'Active',
+            kycStatus: (p.status === 'Active' ? 'Verified' : 'Pending') as any,
+            date: p.createdAt ? formatDateHyphen(p.createdAt) : 'Active',
+            joinedOnDate: p.createdAt ? formatDateHyphen(p.createdAt) : 'Active',
             createdAt: p.createdAt,
             investmentAmount: p.volumeGenerated,
-            commissionRate: p.overrideRate,
-            commissionAmount: p.overrideEarned,
-            commissionStatus: 'accrued' as const,
+            commissionRate: p.overrideRate || 0.5,
+            commissionAmount: p.overrideEarned || 0,
+            commissionStatus: (p.overrideEarned > 0 ? 'accrued' : 'pending') as any,
             status: p.status,
           },
         }))
     }
 
-    return filteredReferrals.map((r, idx) => {
+    // GENERAL INVESTOR TAB: strictly General Investors (memberType !== 'Channel Partner')
+    const giList = filteredReferrals.filter(r => r.memberType !== 'Channel Partner')
+    return giList.map((r, idx) => {
       const idStr = r.id || `REF-${idx + 1}`
       return {
         sno: idx + 1,
@@ -939,6 +955,11 @@ export default function ReferralDashboard({
       <TotalHistoryPage
         partnerDisplayName={partnerDisplayName}
         referrals={data?.referrals || []}
+        subChannelPartners={data?.subChannelPartners || []}
+        networkInvestments={data?.networkInvestments || []}
+        partnerRole={isMcp ? 'MCP' : partnerRole}
+        authenticatedPartnerId={effectiveId}
+        authToken={authToken}
         onBack={() => setViewTotalHistoryPage(false)}
         showToast={showToast}
         theme={theme}
@@ -1486,7 +1507,7 @@ export default function ReferralDashboard({
       {/* ─────────────────────────────────────────────────────────────
           4. KPI SUMMARY METRICS (6 FUNCTIONAL CARDS)
           ───────────────────────────────────────────────────────────── */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
         {/* Card 1: Total Investment */}
         <div
           onClick={() => {
@@ -1570,10 +1591,10 @@ export default function ReferralDashboard({
               TOTAL HISTORY
             </span>
           </div>
-          <div className="flex items-baseline justify-between mt-1">
-            <h3 className={`text-xl sm:text-2xl font-black tracking-tight ${t('text-white', 'text-gray-900')}`}>
-              {loading ? '—' : (data?.referrals ? data.referrals.length : (totalReferralCount || data?.kpis?.totalReferrals || 0))}
-            </h3>
+          <div className="flex items-center justify-between mt-3">
+            <span className={`text-base sm:text-lg font-black tracking-tight ${t('text-white', 'text-gray-900')}`}>
+              Total History
+            </span>
             <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-400 group-hover:underline">
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
               <span>Show history</span>
@@ -2027,7 +2048,7 @@ export default function ReferralDashboard({
 
           <div className="flex flex-wrap items-center gap-3">
             {/* If MCP: Show toggle segment buttons between General Investor and Channel Partner */}
-            {partnerRole === 'MCP' ? (
+            {isMcp ? (
               <div className={`p-1 rounded-xl border flex items-center ${t('bg-white/[0.04] border-white/10', 'bg-gray-100 border-gray-300')}`}>
                 <button
                   onClick={() => setTableCohort('investors')}
@@ -2080,17 +2101,16 @@ export default function ReferralDashboard({
             <thead>
               <tr className={`text-[11px] font-bold uppercase tracking-wider ${t('bg-white/[0.03] text-gray-400', 'bg-gray-100 text-gray-700')}`}>
                 <th className="p-3.5">SNO</th>
-                <th className="p-3.5">USER ID</th>
-                <th className="p-3.5">NAME</th>
-                <th className="p-3.5 text-right">TOTAL INVEST</th>
-                <th className="p-3.5 text-right">CASHBACK</th>
+                <th className="p-3.5">{tableCohort === 'partners' ? 'CPL ID' : 'USER ID'}</th>
+                <th className="p-3.5">{tableCohort === 'partners' ? 'CHANNEL PARTNER / AGENCY' : 'NAME'}</th>
+                <th className="p-3.5 text-right">{tableCohort === 'partners' ? 'VOLUME GENERATED' : 'TOTAL INVEST'}</th>
                 <th className="p-3.5 text-center">VIEW HISTORY</th>
               </tr>
             </thead>
             <tbody className={`divide-y text-xs ${t('divide-white/[0.04]', 'divide-gray-200')}`}>
               {displayTableRows.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="py-12 text-center text-gray-500">
+                  <td colSpan={5} className="py-12 text-center text-gray-500">
                     No referral members recorded in this category yet.
                   </td>
                 </tr>
@@ -2102,9 +2122,6 @@ export default function ReferralDashboard({
                     <td className={`p-3.5 font-bold ${t('text-white', 'text-gray-900')}`}>{row.name}</td>
                     <td className={`p-3.5 text-right font-semibold ${t('text-white', 'text-gray-800')}`}>
                       {row.totalInvest > 0 ? `₹${formatINR(row.totalInvest)}` : '0'}
-                    </td>
-                    <td className="p-3.5 text-right font-black text-emerald-400">
-                      {row.cashback > 0 ? `₹${formatINR(row.cashback)}` : '0'}
                     </td>
                     <td className="p-3.5 text-center">
                       <button
@@ -2563,89 +2580,149 @@ export default function ReferralDashboard({
             {/* Modal Body */}
             <div className="p-6">
               <div>
-                <h2 className="text-lg font-bold text-gray-900 dark:text-white">
-                  {selectedReferral.refereeName} ({selectedReferral.userId || selectedReferral.id})
-                </h2>
+                <div className="flex items-center gap-2">
+                  <h2 className="text-lg font-bold text-gray-900 dark:text-white">
+                    {selectedReferral.refereeName}
+                  </h2>
+                  <span className="px-2 py-0.5 rounded text-[11px] font-mono font-bold bg-brand-red/15 text-brand-red border border-brand-red/25">
+                    {selectedReferral.userId || selectedReferral.id}
+                  </span>
+                </div>
                 <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 font-medium">
-                  Joined On: {formatDateHyphen(selectedReferral.createdAt || selectedReferral.date)}
+                  {selectedReferral.memberType === 'Channel Partner' ? 'Enrolled As Channel Partner On:' : 'Joined On:'} {formatDateHyphen(selectedReferral.createdAt || selectedReferral.date)}
                 </p>
               </div>
 
-              {/* Clean Investment Table */}
-              <div className="mt-4 border border-gray-200 dark:border-white/10 rounded-lg overflow-hidden bg-white dark:bg-transparent">
-                <table className="w-full text-left border-collapse text-xs">
-                  <thead>
-                    <tr className={`border-b ${t('bg-white/[0.04] text-gray-200 border-white/10', 'bg-white text-gray-800 border-gray-200')}`}>
-                      <th className="p-3 border-r border-gray-200 dark:border-white/10 text-[11px] font-bold uppercase tracking-wider">
-                        S.NO
-                      </th>
-                      <th className="p-3 border-r border-gray-200 dark:border-white/10 text-[11px] font-bold uppercase tracking-wider">
-                        INVESTMENT AMOUNT (₹)
-                      </th>
-                      <th className="p-3 border-r border-gray-200 dark:border-white/10 text-[11px] font-bold uppercase tracking-wider">
-                        INSVESTMENT DATE
-                      </th>
-                      <th className="p-3 border-r border-gray-200 dark:border-white/10 text-[11px] font-bold uppercase tracking-wider">
-                        MATURITY DATE
-                      </th>
-                      <th className="p-3 text-[11px] font-bold uppercase tracking-wider">
-                        STATUS
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className={`divide-y ${t('divide-white/10', 'divide-gray-200')}`}>
-                    {loadingDetailsInvestments ? (
-                      <tr>
-                        <td colSpan={5} className="p-6 text-center text-gray-400">
-                          <RefreshCw className="w-4 h-4 animate-spin mx-auto mb-1.5 text-[#e01625]" />
-                          Loading investment records...
-                        </td>
+              {selectedReferral.memberType === 'Channel Partner' ? (
+                /* CHANNEL PARTNER DOSSIER CARD & OVERRIDE SUMMARY */
+                <div className="mt-4 space-y-4">
+                  <div className={`p-4 rounded-xl border grid grid-cols-2 gap-3 ${t('bg-white/[0.02] border-white/10', 'bg-gray-50 border-gray-200')}`}>
+                    <div>
+                      <span className="text-[10px] uppercase font-bold text-gray-400 block">CPL ID</span>
+                      <span className="text-sm font-mono font-bold text-[#C8102E]">{selectedReferral.userId || selectedReferral.id}</span>
+                    </div>
+                    <div>
+                      <span className="text-[10px] uppercase font-bold text-gray-400 block">Agency / Partner Name</span>
+                      <span className={`text-sm font-bold ${t('text-white', 'text-gray-900')}`}>{selectedReferral.refereeName}</span>
+                    </div>
+                    <div>
+                      <span className="text-[10px] uppercase font-bold text-gray-400 block">Contact Email</span>
+                      <span className={`text-xs font-medium truncate block ${t('text-gray-300', 'text-gray-700')}`}>{selectedReferral.refereeEmail || '—'}</span>
+                    </div>
+                    <div>
+                      <span className="text-[10px] uppercase font-bold text-gray-400 block">Contact Phone</span>
+                      <span className={`text-xs font-medium block ${t('text-gray-300', 'text-gray-700')}`}>{selectedReferral.refereePhone || '—'}</span>
+                    </div>
+                    <div>
+                      <span className="text-[10px] uppercase font-bold text-gray-400 block">Status</span>
+                      <span className="inline-flex items-center gap-1 text-xs font-bold text-emerald-400">
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+                        {selectedReferral.status || 'Active'}
+                      </span>
+                    </div>
+                    <div>
+                      <span className="text-[10px] uppercase font-bold text-gray-400 block">Location</span>
+                      <span className={`text-xs font-medium ${t('text-gray-300', 'text-gray-700')}`}>{selectedReferral.refereeCity || 'India'}</span>
+                    </div>
+                  </div>
+
+                  {/* Volume & Override Breakdown */}
+                  <div className={`p-4 rounded-xl border grid grid-cols-2 gap-3 ${t('bg-red-950/20 border-red-500/25', 'bg-red-50 border-red-200')}`}>
+                    <div>
+                      <span className={`text-[10px] uppercase font-bold block ${t('text-red-300', 'text-red-700')}`}>Volume Generated</span>
+                      <span className={`text-lg font-black ${t('text-white', 'text-gray-900')}`}>₹{formatINR(Number(selectedReferral.investmentAmount) || 0)}</span>
+                    </div>
+                    <div>
+                      <span className={`text-[10px] uppercase font-bold block ${t('text-red-300', 'text-red-700')}`}>Master Override Rate</span>
+                      <span className="text-lg font-black text-emerald-400">{selectedReferral.commissionRate || 0.5}%</span>
+                    </div>
+                    <div>
+                      <span className={`text-[10px] uppercase font-bold block ${t('text-red-300', 'text-red-700')}`}>Override Income Earned</span>
+                      <span className="text-sm font-bold text-emerald-400">₹{formatINR(Number(selectedReferral.commissionAmount) || 0)}</span>
+                    </div>
+                    <div>
+                      <span className={`text-[10px] uppercase font-bold block ${t('text-red-300', 'text-red-700')}`}>Payout Status</span>
+                      <span className={`text-sm font-bold capitalize ${t('text-gray-300', 'text-gray-700')}`}>{selectedReferral.commissionStatus || 'Accrued'}</span>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                /* Clean Investment Table for General Investor */
+                <div className="mt-4 border border-gray-200 dark:border-white/10 rounded-lg overflow-hidden bg-white dark:bg-transparent">
+                  <table className="w-full text-left border-collapse text-xs">
+                    <thead>
+                      <tr className={`border-b ${t('bg-white/[0.04] text-gray-200 border-white/10', 'bg-white text-gray-800 border-gray-200')}`}>
+                        <th className="p-3 border-r border-gray-200 dark:border-white/10 text-[11px] font-bold uppercase tracking-wider">
+                          S.NO
+                        </th>
+                        <th className="p-3 border-r border-gray-200 dark:border-white/10 text-[11px] font-bold uppercase tracking-wider">
+                          INVESTMENT AMOUNT (₹)
+                        </th>
+                        <th className="p-3 border-r border-gray-200 dark:border-white/10 text-[11px] font-bold uppercase tracking-wider">
+                          INSVESTMENT DATE
+                        </th>
+                        <th className="p-3 border-r border-gray-200 dark:border-white/10 text-[11px] font-bold uppercase tracking-wider">
+                          MATURITY DATE
+                        </th>
+                        <th className="p-3 text-[11px] font-bold uppercase tracking-wider">
+                          STATUS
+                        </th>
                       </tr>
-                    ) : detailsInvestments.length === 0 ? (
-                      <tr>
-                        <td colSpan={5} className="p-6 text-center text-gray-500 italic">
-                          No investment records found for this referral.
-                        </td>
-                      </tr>
-                    ) : (
-                      detailsInvestments.map((inv, idx) => (
-                        <tr key={inv.id || idx} className={t('hover:bg-white/[0.02]', 'hover:bg-gray-50/60')}>
-                          <td className={`p-3 border-r ${t('border-white/10 text-gray-300', 'border-gray-200 text-gray-700')} font-medium`}>
-                            {inv.sno || idx + 1}
-                          </td>
-                          <td className={`p-3 border-r ${t('border-white/10 text-white', 'border-gray-200 text-gray-900')} font-medium`}>
-                            {new Intl.NumberFormat('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(inv.amount)}
-                          </td>
-                          <td className={`p-3 border-r ${t('border-white/10 text-gray-300', 'border-gray-200 text-gray-700')}`}>
-                            {formatDateHyphen(inv.investmentDate)}
-                          </td>
-                          <td className={`p-3 border-r ${t('border-white/10 text-gray-300', 'border-gray-200 text-gray-700')}`}>
-                            {formatDateHyphen(inv.maturityDate)}
-                          </td>
-                          <td className="p-3 text-gray-700 dark:text-gray-300 font-medium">
-                            {inv.status}
+                    </thead>
+                    <tbody className={`divide-y ${t('divide-white/10', 'divide-gray-200')}`}>
+                      {loadingDetailsInvestments ? (
+                        <tr>
+                          <td colSpan={5} className="p-6 text-center text-gray-400">
+                            <RefreshCw className="w-4 h-4 animate-spin mx-auto mb-1.5 text-[#e01625]" />
+                            Loading investment records...
                           </td>
                         </tr>
-                      ))
+                      ) : detailsInvestments.length === 0 ? (
+                        <tr>
+                          <td colSpan={5} className="p-6 text-center text-gray-500 italic">
+                            No investment records found for this referral.
+                          </td>
+                        </tr>
+                      ) : (
+                        detailsInvestments.map((inv, idx) => (
+                          <tr key={inv.id || idx} className={t('hover:bg-white/[0.02]', 'hover:bg-gray-50/60')}>
+                            <td className={`p-3 border-r ${t('border-white/10 text-gray-300', 'border-gray-200 text-gray-700')} font-medium`}>
+                              {inv.sno || idx + 1}
+                            </td>
+                            <td className={`p-3 border-r ${t('border-white/10 text-white', 'border-gray-200 text-gray-900')} font-medium`}>
+                              {new Intl.NumberFormat('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(inv.amount)}
+                            </td>
+                            <td className={`p-3 border-r ${t('border-white/10 text-gray-300', 'border-gray-200 text-gray-700')}`}>
+                              {formatDateHyphen(inv.investmentDate)}
+                            </td>
+                            <td className={`p-3 border-r ${t('border-white/10 text-gray-300', 'border-gray-200 text-gray-700')}`}>
+                              {formatDateHyphen(inv.maturityDate)}
+                            </td>
+                            <td className="p-3 text-gray-700 dark:text-gray-300 font-medium">
+                              {inv.status}
+                            </td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                    {detailsInvestments.length > 0 && (
+                      <tfoot>
+                        <tr className={`border-t font-bold ${t('bg-white/[0.02] border-white/10', 'bg-white border-gray-200')}`}>
+                          <td className={`p-3 border-r ${t('border-white/10 text-white', 'border-gray-200 text-gray-900')}`}>
+                            Total
+                          </td>
+                          <td className={`p-3 border-r ${t('border-white/10 text-white', 'border-gray-200 text-gray-900')} font-bold`}>
+                            ₹ {new Intl.NumberFormat('en-IN').format(totalInvestmentAmount)}
+                          </td>
+                          <td className={`p-3 border-r ${t('border-white/10', 'border-gray-200')}`}></td>
+                          <td className={`p-3 border-r ${t('border-white/10', 'border-gray-200')}`}></td>
+                          <td className="p-3"></td>
+                        </tr>
+                      </tfoot>
                     )}
-                  </tbody>
-                  {detailsInvestments.length > 0 && (
-                    <tfoot>
-                      <tr className={`border-t font-bold ${t('bg-white/[0.02] border-white/10', 'bg-white border-gray-200')}`}>
-                        <td className={`p-3 border-r ${t('border-white/10 text-white', 'border-gray-200 text-gray-900')}`}>
-                          Total
-                        </td>
-                        <td className={`p-3 border-r ${t('border-white/10 text-white', 'border-gray-200 text-gray-900')} font-bold`}>
-                          ₹ {new Intl.NumberFormat('en-IN').format(totalInvestmentAmount)}
-                        </td>
-                        <td className={`p-3 border-r ${t('border-white/10', 'border-gray-200')}`}></td>
-                        <td className={`p-3 border-r ${t('border-white/10', 'border-gray-200')}`}></td>
-                        <td className="p-3"></td>
-                      </tr>
-                    </tfoot>
-                  )}
-                </table>
-              </div>
+                  </table>
+                </div>
+              )}
             </div>
           </div>
         </div>

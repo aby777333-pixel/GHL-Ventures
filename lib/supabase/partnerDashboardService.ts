@@ -113,7 +113,7 @@ export interface NetworkInvestmentRow {
   investAmount: number
   maturityDate: string
   maturityDateRaw: string
-  maturityStatus: 'Paid' | 'Unpaid'
+  maturityStatus: 'Paid' | 'Unpaid' | 'Pending'
   returnDate: string
 }
 
@@ -535,8 +535,7 @@ async function getFallbackDashboardData(previewId?: string, year?: number, _mont
       { tier: 'Tier 2', volume: '₹5,00,00,000 to Above', rate: '4.00%', note: 'Sale of Associate Channel Partner' },
     ],
     CPL: [
-      { tier: 'Tier 1', volume: '₹1,00,00,000 to ₹5,00,00,000', rate: '3.00%', note: 'Sale of Associate Channel Partner' },
-      { tier: 'Tier 2', volume: '₹5,00,00,000 to Above', rate: '4.00%', note: 'Sale of Associate Channel Partner' },
+      { tier: 'Channel Partner Override', volume: 'Any Investment', rate: '0.50%', note: 'Channel Partner Standard' },
     ],
     MCP: [
       { tier: 'Tier 1', volume: '₹1,00,00,000 to ₹5,00,00,000', rate: '3.00%', note: 'Sale of Associate Channel Partner' },
@@ -876,21 +875,22 @@ async function getFallbackDashboardData(previewId?: string, year?: number, _mont
 
   // Sub channel partners for MCP
   const subChannelPartners: SubChannelPartner[] = rawReferrals
-    .filter(r => r.relationship === 'channel_partner' || (r.referee_email && r.referee_email.includes('partner')))
+    .filter(r => r.relationship === 'channel_partner' || r.memberType === 'Channel Partner' || (r.referee_name && r.referee_name.toLowerCase().includes('mcp')) || (r.referee_email && r.referee_email.includes('partner')))
     .map((p, idx) => {
       const vol = Number(p.investment_amount) || 0
-      const overrideRate = 1.0
+      const overrideRate = 0.5
+      const cplId = (p.id && String(p.id).startsWith('CPL')) ? String(p.id) : `CPLGHL${24000 + idx * 100}`
       return {
         id: p.id || `sub-${idx}`,
-        cplId: `CPLGHL${24100 + idx * 50}`,
+        cplId,
         agencyName: p.referee_name || `Partner Agency ${idx + 1}`,
         contactEmail: p.referee_email,
         contactPhone: p.referee_phone || '—',
-        city: p.referee_city || 'Chennai',
+        city: p.referee_city || 'India',
         totalInvestors: Math.max(1, Math.round(vol / 2500000)),
         volumeGenerated: vol,
         overrideRate,
-        overrideEarned: (vol * overrideRate) / 100,
+        overrideEarned: Math.round((vol * overrideRate) / 100),
         status: p.status === 'converted' ? 'Active' : 'Onboarding',
         createdAt: p.created_at || new Date().toISOString(),
       }
@@ -1160,13 +1160,13 @@ export async function fetchMasterPartnerNetworkInvestments(
     allReferred.forEach((c, idx) => {
       const inv = Number(c.total_invested) || 0
       const uId = c.client_code || c.ghl_id || `GHL${246000 + idx}`
-      if (inv > 0 && !accounted.has(uId)) {
+      if (!accounted.has(uId)) {
         const dRaw = c.joined_at || c.created_at || new Date().toISOString()
         const investDateFormatted = new Date(dRaw).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
         const mat = new Date(dRaw)
         mat.setFullYear(mat.getFullYear() + 3)
         const maturityDateFormatted = mat.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
-        const isPaid = c.kyc_status === 'Verified'
+        const isPaid = c.kyc_status === 'Verified' && inv > 0
 
         rows.push({
           id: `ref-inv-${c.id || idx}`,
@@ -1179,7 +1179,7 @@ export async function fetchMasterPartnerNetworkInvestments(
           investAmount: inv,
           maturityDate: maturityDateFormatted,
           maturityDateRaw: mat.toISOString(),
-          maturityStatus: isPaid ? 'Paid' : 'Unpaid',
+          maturityStatus: isPaid ? 'Paid' : (inv > 0 ? 'Unpaid' : 'Pending'),
           returnDate: '—',
         })
       }

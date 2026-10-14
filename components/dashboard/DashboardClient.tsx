@@ -3701,7 +3701,13 @@ export default function DashboardClient() {
     <ReferralDashboard
       theme={theme}
       isDark={isDark}
-      authenticatedPartnerId={ghlId || referralCode}
+      authenticatedPartnerId={
+        ghlId ||
+        referralCode ||
+        (user as any)?.user_metadata?.partner_id ||
+        (user as any)?.user_metadata?.ghl_id ||
+        (typeof window !== 'undefined' ? localStorage.getItem('ghl_partner_id') || localStorage.getItem('ghl_user_id') : null)
+      }
       partnerName={userName}
       partnerEmail={userEmail}
       partnerPhone={(user as any)?.phone || ''}

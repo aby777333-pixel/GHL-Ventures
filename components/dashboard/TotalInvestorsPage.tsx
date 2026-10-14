@@ -52,7 +52,7 @@ export default function TotalInvestorsPage({
 }: TotalInvestorsPageProps) {
   // ── States ─────────────────────────────────────────────────────────────
   const [investments, setInvestments] = useState<NetworkInvestmentRow[]>(
-    (initialNetworkInvestments || []).filter((c) => Number(c.investAmount) > 0)
+    initialNetworkInvestments || []
   )
   const [loading, setLoading] = useState<boolean>(!initialNetworkInvestments || initialNetworkInvestments.length === 0)
   const [error, setError] = useState<string | null>(null)
@@ -90,13 +90,16 @@ export default function TotalInvestorsPage({
       const data = await fetchMasterPartnerNetworkInvestments(partnerId, partnerEmail, authToken)
       let combined = (data || []).slice()
 
-      // Also ensure any referral who invested is included
+      // Also ensure any referral who is an investor is included
       if (Array.isArray(referrals)) {
         const existingUserIds = new Set(combined.map((c) => (c.userId || '').toLowerCase()))
         referrals.forEach((r, idx) => {
+          const isInvestor = r.memberType !== 'Channel Partner' || (Number(r.investmentAmount) || 0) > 0 || r.status === 'converted'
+          if (!isInvestor) return
+
           const invAmt = Number(r.investmentAmount) || 0
           const uId = r.userId || r.id || `GHL${246000 + idx}`
-          if (invAmt > 0 && !existingUserIds.has(uId.toLowerCase())) {
+          if (!existingUserIds.has(uId.toLowerCase())) {
             const dRaw = r.createdAt || r.date || new Date().toISOString()
             const mat = new Date(dRaw)
             mat.setFullYear(mat.getFullYear() + 3)
@@ -105,13 +108,13 @@ export default function TotalInvestorsPage({
               sno: combined.length + 1,
               userId: uId,
               name: r.refereeName || 'Network Investor',
-              planName: invAmt >= 10000000 ? 'Direct AIF Route' : 'Alternate route to Invest in AIF via Debenture',
+              planName: (r.investments?.[0] as any)?.planName || (invAmt >= 10000000 ? 'Direct AIF Route' : 'Alternate route to Invest in AIF via Debenture'),
               investDate: r.date || new Date(dRaw).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }),
               investDateRaw: dRaw,
               investAmount: invAmt,
               maturityDate: mat.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }),
               maturityDateRaw: mat.toISOString(),
-              maturityStatus: r.commissionStatus === 'paid' ? 'Paid' : 'Unpaid',
+              maturityStatus: r.commissionStatus === 'paid' ? 'Paid' : (invAmt > 0 ? 'Unpaid' : 'Pending'),
               returnDate: '—',
             })
             existingUserIds.add(uId.toLowerCase())
@@ -119,8 +122,6 @@ export default function TotalInvestorsPage({
         })
       }
 
-      // STRICT REQUIREMENT: Only list candidates who actually invested (> 0)
-      combined = combined.filter((c) => Number(c.investAmount) > 0)
       setInvestments(combined)
 
       // 2. Fetch active fund plans from DB to combine with built-in FUNDS
@@ -238,9 +239,6 @@ export default function TotalInvestorsPage({
         const matchesName = item.name.toLowerCase().includes(q)
         if (!matchesId && !matchesName) return false
       }
-
-      // Strictly only candidates who have an actual investment (> 0)
-      if (Number(item.investAmount) <= 0) return false
 
       return true
     })
@@ -764,6 +762,11 @@ export default function TotalInvestorsPage({
                           <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 dark:bg-emerald-500/15 dark:text-emerald-400 dark:border-emerald-500/30">
                             <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
                             Paid
+                          </span>
+                        ) : inv.maturityStatus === 'Pending' ? (
+                          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-amber-50 text-amber-700 border border-amber-200 dark:bg-amber-500/15 dark:text-amber-400 dark:border-amber-500/30">
+                            <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
+                            Pending
                           </span>
                         ) : (
                           <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-rose-50 text-rose-700 border border-rose-200 dark:bg-rose-500/15 dark:text-rose-400 dark:border-rose-500/30">

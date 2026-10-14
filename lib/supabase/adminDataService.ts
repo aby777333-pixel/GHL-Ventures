@@ -2907,6 +2907,44 @@ export async function fetchReferralsWithInvestment(): Promise<ReferralWithInvest
       .select('*')
       .order('created_at', { ascending: false })
     const list = (refs as any[]) || []
+
+    // Also pull referred clients directly from clients table where referred_by is set
+    try {
+      const { data: referredClients } = await sb
+        .from('clients')
+        .select('id, client_code, ghl_id, full_name, email, phone, city, referred_by, total_invested, kyc_status, joined_at, created_at')
+        .not('referred_by', 'is', null)
+        .order('created_at', { ascending: false })
+
+      if (referredClients && referredClients.length > 0) {
+        const existingEmails = new Set(list.map((r: any) => (r.referee_email || '').toLowerCase()))
+        for (const c of referredClients) {
+          const cEmail = (c.email || '').toLowerCase().trim()
+          if (cEmail && !existingEmails.has(cEmail)) {
+            const isCp = c.referred_by?.toUpperCase().startsWith('MCP') || c.full_name?.toLowerCase().includes('mcp') || c.email?.includes('mcp')
+            list.push({
+              id: c.client_code || c.ghl_id || c.id,
+              referee_client_id: c.id,
+              referrer_name: c.referred_by || 'Partner',
+              referrer_email: `${(c.referred_by || 'partner').toLowerCase()}@ghlindiaventures.com`,
+              referee_name: c.full_name || 'Referred Candidate',
+              referee_email: c.email,
+              referee_phone: c.phone || null,
+              referee_city: c.city || 'India',
+              relationship: isCp ? 'channel_partner' : 'general_investor',
+              status: Number(c.total_invested) > 0 ? 'converted' : 'qualified',
+              commission_rate: isCp ? 4.5 : 3.0,
+              commission_amount: 0,
+              commission_status: 'pending',
+              investment_amount: Number(c.total_invested) || 0,
+              created_at: c.joined_at || c.created_at || new Date().toISOString(),
+            })
+            existingEmails.add(cEmail)
+          }
+        }
+      }
+    } catch { /* non-blocking */ }
+
     if (list.length === 0) return []
 
     // Try to auto-link any referrals whose referee_client_id is null
