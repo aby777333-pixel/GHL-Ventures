@@ -1,0 +1,306 @@
+/* ==========================================================================
+   GHL India - gold accent dashboard theme
+   --------------------------------------------------------------------------
+   Scoped two ways so nothing outside the investor dashboard is touched:
+     1. [data-ghl-gold]  - set on .dashboard-root by DashboardShell
+     2. html:not(.dark)  - the reference design is a light theme, so dark
+                           mode keeps the existing palette untouched
+   Tailwind utilities already in the markup are re-pointed at these tokens,
+   which restyles every dashboard page without editing the page components.
+   ========================================================================== */
+
+[data-ghl-gold] {
+  --ghl-cream:            #FDFBF7;
+  --ghl-cream-2:          #FAF6EA;
+  --ghl-card:             #FFFFFF;
+  --ghl-gold:             #C9A227;
+  --ghl-gold-line:        rgba(201, 162, 39, 0.42);
+  --ghl-gold-line-strong: rgba(201, 162, 39, 0.72);
+  --ghl-crimson:          #B00C1F;
+  --ghl-crimson-mid:      #A80C1E;
+  --ghl-crimson-deep:     #7A0812;
+  --ghl-ink:              #1A1416;
+  --ghl-muted:            #6B6460;
+  --ghl-radius:           14px;
+  --ghl-shadow:           0 1px 2px rgba(122, 8, 18, 0.04),
+                          0 10px 28px -18px rgba(122, 8, 18, 0.22);
+  --ghl-shadow-lift:      0 2px 4px rgba(122, 8, 18, 0.05),
+                          0 18px 40px -22px rgba(122, 8, 18, 0.3);
+}
+
+/* --- page canvas ---------------------------------------------------------- */
+
+html:not(.dark) [data-ghl-gold] .bg-\[\#E8E5E0\] { background-color: var(--ghl-cream); }
+html:not(.dark) [data-ghl-gold] .bg-gray-50      { background-color: var(--ghl-cream-2); }
+html:not(.dark) [data-ghl-gold] .bg-gray-100     { background-color: var(--ghl-cream-2); }
+
+/* --- hairlines: every grey border becomes a gold hairline ----------------- */
+
+html:not(.dark) [data-ghl-gold] .border-gray-100,
+html:not(.dark) [data-ghl-gold] .border-gray-200 { border-color: var(--ghl-gold-line); }
+html:not(.dark) [data-ghl-gold] .border-gray-300 { border-color: var(--ghl-gold-line-strong); }
+html:not(.dark) [data-ghl-gold] .divide-gray-200 > * + * { border-color: var(--ghl-gold-line); }
+
+/* --- cards: white panel, gold hairline, soft warm shadow ------------------ */
+
+html:not(.dark) [data-ghl-gold] .bg-white.rounded-2xl,
+html:not(.dark) [data-ghl-gold] .bg-white.rounded-xl,
+html:not(.dark) [data-ghl-gold] .bg-white.rounded-3xl {
+  border: 1px solid var(--ghl-gold-line);
+  box-shadow: var(--ghl-shadow);
+}
+
+/* the stock Tailwind shadows are cool grey - warm them to the brand */
+html:not(.dark) [data-ghl-gold] .shadow-lg,
+html:not(.dark) [data-ghl-gold] .shadow-xl  { box-shadow: var(--ghl-shadow); }
+html:not(.dark) [data-ghl-gold] .shadow-2xl { box-shadow: var(--ghl-shadow-lift); }
+
+/* --- crimson: flatten the old #D0021B reds into the deeper brand gradient - */
+
+html:not(.dark) [data-ghl-gold] [style*="D0021B"],
+html:not(.dark) [data-ghl-gold] [style*="d0021b"] {
+  background: linear-gradient(135deg, var(--ghl-crimson-mid) 0%, var(--ghl-crimson-deep) 100%) !important;
+}
+html:not(.dark) [data-ghl-gold] .bg-brand-red   { background-color: var(--ghl-crimson); }
+html:not(.dark) [data-ghl-gold] .text-brand-red { color: var(--ghl-crimson); }
+html:not(.dark) [data-ghl-gold] .bg-red-600,
+html:not(.dark) [data-ghl-gold] .bg-red-700     { background-color: var(--ghl-crimson); }
+
+/* --- type ----------------------------------------------------------------- */
+
+html:not(.dark) [data-ghl-gold] .text-gray-900,
+html:not(.dark) [data-ghl-gold] .text-black     { color: var(--ghl-ink); }
+html:not(.dark) [data-ghl-gold] .text-gray-700,
+html:not(.dark) [data-ghl-gold] .text-gray-600,
+html:not(.dark) [data-ghl-gold] .text-gray-500  { color: var(--ghl-muted); }
+
+/* --- form controls -------------------------------------------------------- */
+
+html:not(.dark) [data-ghl-gold] input,
+html:not(.dark) [data-ghl-gold] select,
+html:not(.dark) [data-ghl-gold] textarea { border-color: var(--ghl-gold-line); }
+html:not(.dark) [data-ghl-gold] input:focus,
+html:not(.dark) [data-ghl-gold] select:focus,
+html:not(.dark) [data-ghl-gold] textarea:focus {
+  border-color: var(--ghl-gold);
+  outline-color: var(--ghl-gold);
+}
+
+/* ==========================================================================
+   Opt-in classes - use these when rebuilding a page to match the reference
+   exactly, instead of fighting the utility overrides above.
+   ========================================================================== */
+
+.ghl-hero {
+  position: relative;
+  overflow: hidden;
+  border-radius: var(--ghl-radius);
+  padding: 1.75rem 2rem;
+  color: #fff;
+  background: linear-gradient(110deg, var(--ghl-crimson-mid) 0%, var(--ghl-crimson-deep) 100%);
+  box-shadow: var(--ghl-shadow-lift);
+}
+.ghl-hero__eyebrow {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: #E8C66A;
+}
+.ghl-hero__title { font-size: 1.6rem; font-weight: 700; line-height: 1.2; margin-top: 0.35rem; }
+
+.ghl-card {
+  background: var(--ghl-card);
+  border: 1px solid var(--ghl-gold-line);
+  border-radius: var(--ghl-radius);
+  box-shadow: var(--ghl-shadow);
+}
+
+.ghl-tile {
+  background: var(--ghl-card);
+  border: 1px solid var(--ghl-gold-line);
+  border-radius: var(--ghl-radius);
+  box-shadow: var(--ghl-shadow);
+  padding: 1rem 1.1rem;
+}
+.ghl-tile__label {
+  font-size: 0.74rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ghl-ink);
+  line-height: 1.25;
+}
+.ghl-tile__value { font-size: 1.9rem; font-weight: 700; color: var(--ghl-ink); letter-spacing: -0.02em; }
+.ghl-tile__link  { font-size: 0.72rem; color: var(--ghl-muted); }
+
+.ghl-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.1rem;
+  height: 2.1rem;
+  border-radius: 9px;
+  background: var(--ghl-cream-2);
+  border: 1px solid var(--ghl-gold-line);
+  color: var(--ghl-crimson);
+  font-weight: 700;
+}
+
+.ghl-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.45rem 1.1rem;
+  border-radius: 999px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  border: 1px solid var(--ghl-gold-line-strong);
+  color: #E8C66A;
+  background: transparent;
+  transition: background-color 0.18s ease, color 0.18s ease;
+}
+.ghl-pill:hover      { background: rgba(255, 255, 255, 0.08); }
+.ghl-pill--solid     { background: #fff; color: var(--ghl-crimson); border-color: #fff; }
+.ghl-pill--solid:hover { background: #FFF6F6; }
+
+.ghl-eyebrow {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ghl-gold);
+}
+.ghl-eyebrow::before {
+  content: "";
+  width: 4px;
+  height: 4px;
+  border-radius: 999px;
+  background: var(--ghl-gold);
+}
+
+/* --- sidebar + top bar ----------------------------------------------------
+   Both paint their background with an inline style attribute, so the only
+   way to re-skin them from a stylesheet is !important on a matching
+   [style*=] selector. Keyed on the old warm-grey rgb so nothing else is hit.
+   -------------------------------------------------------------------------- */
+
+html:not(.dark) [data-ghl-gold] aside[style*="214,211,206"] {
+  background: linear-gradient(180deg, #FFFDF9 0%, var(--ghl-cream) 100%) !important;
+  border-right: 1px solid var(--ghl-gold-line) !important;
+}
+
+html:not(.dark) [data-ghl-gold] header[style*="214,211,206"] {
+  background: rgba(253, 251, 247, 0.92) !important;
+  border-bottom-color: var(--ghl-gold-line);
+}
+
+/* section headings become gold, each with the small gold dot from the design */
+html:not(.dark) [data-ghl-gold] nav .tracking-\[0\.18em\] {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  color: var(--ghl-gold);
+}
+html:not(.dark) [data-ghl-gold] nav .tracking-\[0\.18em\]::before {
+  content: "";
+  flex: none;
+  width: 4px;
+  height: 4px;
+  border-radius: 999px;
+  background: var(--ghl-gold);
+}
+
+/* active nav item: cream pill with a gold edge, no red marker bar */
+html:not(.dark) [data-ghl-gold] nav .bg-red-50 {
+  background-color: var(--ghl-cream-2);
+  border-color: var(--ghl-gold-line-strong);
+}
+html:not(.dark) [data-ghl-gold] nav .border-red-200 { border-color: var(--ghl-gold-line-strong); }
+html:not(.dark) [data-ghl-gold] nav .w-\[3px\]      { display: none; }
+
+/* hover on an inactive item */
+html:not(.dark) [data-ghl-gold] nav .hover\:bg-gray-200\/35:hover {
+  background-color: rgba(201, 162, 39, 0.10);
+}
+
+/* top-bar search field */
+html:not(.dark) [data-ghl-gold] header .bg-gray-100\/50 {
+  background-color: #FFFDF9;
+  border-color: var(--ghl-gold-line);
+}
+
+/* --- white surface revision ----------------------------------------------
+   Page canvas and sidebar go pure white; the gold hairline and the soft
+   warm shadow are what separate a card from the page now, so no tint is
+   needed behind either. Sidebar type is black at 600.
+
+   These rules carry !important only where an earlier rule in this file is
+   more specific (the .text-gray-* overrides above outrank a plain
+   descendant selector), not as a habit.
+   -------------------------------------------------------------------------- */
+
+[data-ghl-gold] {
+  --ghl-cream:   #FFFFFF;
+  --ghl-cream-2: #FFFBF0;
+  --ghl-ink:     #0B090A;
+  --ghl-muted:   #57514D;
+}
+
+html:not(.dark) body.dashboard-active { background: #FFFFFF; }
+
+html:not(.dark) [data-ghl-gold] aside[style*="214,211,206"] {
+  background: #FFFFFF !important;
+}
+html:not(.dark) [data-ghl-gold] header[style*="214,211,206"] {
+  background: rgba(255, 255, 255, 0.94) !important;
+}
+
+/* sidebar type: black, 600 */
+html:not(.dark) [data-ghl-gold] aside nav button,
+html:not(.dark) [data-ghl-gold] aside nav a {
+  color: var(--ghl-ink) !important;
+  font-weight: 600 !important;
+}
+html:not(.dark) [data-ghl-gold] nav .tracking-\[0\.18em\] { font-weight: 600; }
+
+/* active item is marked by the gold edge, not by a colour change */
+html:not(.dark) [data-ghl-gold] nav .bg-red-50 {
+  background-color: var(--ghl-cream-2);
+  border-color: var(--ghl-gold-line-strong);
+}
+
+/* nav icons: muted gold at rest, crimson on the active item */
+html:not(.dark) [data-ghl-gold] aside nav button svg { color: #B59418; }
+html:not(.dark) [data-ghl-gold] aside nav button svg.text-brand-red { color: var(--ghl-crimson); }
+
+/* sign out stays secondary until hovered */
+html:not(.dark) [data-ghl-gold] aside .pb-28 button { color: var(--ghl-muted) !important; }
+html:not(.dark) [data-ghl-gold] aside .pb-28 button:hover { color: var(--ghl-crimson) !important; }
+
+/* profile card sits on white, so it needs its own edge */
+html:not(.dark) [data-ghl-gold] aside .bg-white\/80 {
+  background-color: #FFFFFF;
+  border-color: var(--ghl-gold-line);
+}
+
+/* --- inline-style surfaces -----------------------------------------------
+   The earlier [style*="214,211,206"] selectors never matched: the browser
+   serialises an inline rgba() with spaces after each comma, so the attribute
+   actually reads rgba(214, 211, 206, 0.98). Matching on the mere presence of
+   a style attribute is both simpler and immune to that formatting - the
+   dashboard has exactly one <aside> and one <header>.
+   -------------------------------------------------------------------------- */
+
+html:not(.dark) [data-ghl-gold] aside[style] {
+  background: #FFFFFF !important;
+  border-right: 1px solid var(--ghl-gold-line) !important;
+}
+
+html:not(.dark) [data-ghl-gold] header[style] {
+  background: rgba(255, 255, 255, 0.94) !important;
+  border-bottom-color: var(--ghl-gold-line) !important;
+}

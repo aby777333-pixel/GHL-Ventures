@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import DashboardShell from '@/components/dashboard/DashboardShell'
+import '@/styles/ghl-gold.css'
 
 export const metadata: Metadata = {
   title: 'Investor Dashboard | GHL India Ventures',

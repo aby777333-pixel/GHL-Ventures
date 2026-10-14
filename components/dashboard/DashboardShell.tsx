@@ -10,5 +10,5 @@ export default function DashboardShell({ children }: { children: React.ReactNode
     }
   }, [])
 
-  return <div className="dashboard-root">{children}</div>
+  return <div className="dashboard-root" data-ghl-gold="">{children}</div>
 }
