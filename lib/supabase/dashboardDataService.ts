@@ -51,7 +51,15 @@ export async function fetchPortfolioAssets(clientId?: string) {
     }
   } catch { /* non-blocking */ }
 
-  const orFilter = idList.map(id => `client_id.eq.${id},user_id.eq.${id}`).join(',')
+  // client_id / user_id are uuid columns. Passing a non-uuid alias such as
+  // ghl_id ("GHL536025") or client_code makes PostgREST reject the WHOLE
+  // request with 22P02 invalid input syntax for type uuid; safeFetch then
+  // swallows that into an empty array and the portfolio silently reads 0.
+  // Only uuid-shaped identifiers may go into the filter.
+  const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+  const uuidIds = idList.filter(id => UUID_RE.test(String(id || '')))
+  if (uuidIds.length === 0) return []
+  const orFilter = uuidIds.map(id => `client_id.eq.${id},user_id.eq.${id}`).join(',')
 
   // 1. Check investments table
   const primary = await safeFetch(
